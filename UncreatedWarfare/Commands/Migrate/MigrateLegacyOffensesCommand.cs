@@ -10,7 +10,7 @@ using Uncreated.Warfare.Moderation.Punishments;
 using Uncreated.Warfare.Moderation.Records;
 using Uncreated.Warfare.Moderation.Reports;
 
-namespace Uncreated.Warfare.Commands.MigrateCommand;
+namespace Uncreated.Warfare.Commands;
 
 [Command("offenses"), HideFromHelp, SubCommandOf(typeof(MigrateCommand))]
 public class MigrateLegacyOffensesCommand : IExecutableCommand

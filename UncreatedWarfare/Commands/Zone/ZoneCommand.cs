@@ -12,7 +12,7 @@ public class ZoneCommandTranslations : PropertiesTranslationCollection
 {
     protected override string FileName => "Commands/Zone";
 
-    [TranslationData("Send the caller's location and angle.", Parameters = [ "X (m)", "Y (m)", "Z (m)", "Yaw (°)" ])]
+    [TranslationData("Send the caller's location and angle.", Parameters = ["X (m)", "Y (m)", "Z (m)", "Yaw (°)"])]
     public readonly Translation<float, float, float, float> ZoneUtilLocation = new Translation<float, float, float, float>("<#e6e3d5>Location: {0}, {1}, {2} | Yaw: {3}°.", arg0Fmt: "0.##", arg1Fmt: "0.##", arg2Fmt: "0.##", arg3Fmt: "0.##");
 
     [TranslationData("Response to the caller when they're not in a zone and try to run a zone command.")]
@@ -24,7 +24,7 @@ public class ZoneCommandTranslations : PropertiesTranslationCollection
     [TranslationData("Response to the caller when they try to run a zone command but their input doesn't match an active zone and they're not in a zone.")]
     public readonly Translation ZoneNoResults = new Translation("<#ff8c69>You must be in a zone or specify a valid zone name to use this command.");
 
-    [TranslationData("Sent when a player visualizes a zone's border.", Parameters = [ "Number of border particles spawned", "Zone name" ])]
+    [TranslationData("Sent when a player visualizes a zone's border.", Parameters = ["Number of border particles spawned", "Zone name"])]
     public readonly Translation<int, Zone> ZoneVisualizeSuccess = new Translation<int, Zone>("<#e6e3d5>Spawned {0} particles around <color=#cedcde>{1}</color>.", arg1Fmt: Flags.NameFormat);
 
     [TranslationData("Sent after a player teleports to a zone.", IsPriorityTranslation = false)]

@@ -17,7 +17,7 @@ namespace Uncreated.Warfare.Tests;
 public class LoggingFormattingTests
 {
     private ITranslationValueFormatter _formatter;
-    private IContainer _container;
+    public IContainer Container;
 
     [SetUp]
     public void Setup()
@@ -61,9 +61,9 @@ public class LoggingFormattingTests
 
         bldr.Populate([ ]);
 
-        _container = bldr.Build();
+        Container = bldr.Build();
 
-        _formatter = _container.Resolve<ITranslationValueFormatter>();
+        _formatter = Container.Resolve<ITranslationValueFormatter>();
     }
 
     [Test]

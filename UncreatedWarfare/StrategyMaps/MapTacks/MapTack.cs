@@ -1,7 +1,4 @@
-﻿using SDG.Unturned;
-using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Util;
@@ -26,7 +23,7 @@ internal class MapTack : IDisposable
 
         Transform mapTackTransform = BarricadeManager.dropNonPlantedBarricade(
             new Barricade(MarkerAsset.GetAssetOrFail()), worldCoordinatesOnTable, rotation, 0, 0
-            );
+        );
 
         BarricadeDrop marker = BarricadeManager.FindBarricadeByRootTransform(mapTackTransform);
         Marker = new BuildableBarricade(marker);

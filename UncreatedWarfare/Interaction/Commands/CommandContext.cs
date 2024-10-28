@@ -32,6 +32,7 @@ public class CommandContext : ControlException
     private readonly ChatService _chatService;
     private readonly string[] _parameters;
     private readonly int _argumentCount;
+    private ILogger? _logger;
 
     private int _argumentOffset;
 
@@ -186,6 +187,14 @@ public class CommandContext : ControlException
     /// Reference to the common translation set.
     /// </summary>
     public CommonTranslations CommonTranslations { get; }
+
+    /// <summary>
+    /// Logger created for the executing command type.
+    /// </summary>
+    public ILogger Logger
+    {
+        get => _logger ??= ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(CommandInfo.Type);
+    }
 
     private CommandContext(ICommandUser user, IServiceProvider serviceProvider)
     {

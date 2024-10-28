@@ -93,6 +93,16 @@ public class Translation : IDisposable
         return arguments.ValueSet.GetValueString(arguments.UseIMGUI, arguments.UseUncoloredTranslation, (arguments.Options & TranslationOptions.ForTerminal) != 0);
     }
 
+    /// <summary>
+    /// Checks if the translation has a value specifically for <paramref name="language"/>.
+    /// </summary>
+    public bool HasLanguage(LanguageInfo? language)
+    {
+        string langCode = language?.Code ?? LanguageService.DefaultCultureCode;
+
+        return Table.ContainsKey(langCode);
+    }
+
     protected internal void AssertInitialized()
     {
         if (!IsInitialized)

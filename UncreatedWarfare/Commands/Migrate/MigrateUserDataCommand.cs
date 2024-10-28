@@ -11,7 +11,7 @@ using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Util;
 
-namespace Uncreated.Warfare.Commands.MigrateCommand;
+namespace Uncreated.Warfare.Commands;
 
 [Command("userdata"), HideFromHelp, SubCommandOf(typeof(MigrateCommand))]
 public class MigrateUserDataCommand : IExecutableCommand

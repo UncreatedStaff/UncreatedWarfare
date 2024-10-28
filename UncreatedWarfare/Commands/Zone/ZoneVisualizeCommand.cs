@@ -1,5 +1,4 @@
-﻿using System;
-using Uncreated.Warfare.Interaction.Commands;
+﻿using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Zones;
 
@@ -36,7 +35,7 @@ public class ZoneVisualizeCommand : IExecutableCommand
         }
 
         int particleCount = Context.Player.Component<ZoneVisualizerComponent>().SpawnPoints(zone);
-        
+
         Context.Reply(_translations.ZoneVisualizeSuccess, particleCount, zone);
         return UniTask.CompletedTask;
     }

@@ -1,38 +1,31 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections.Generic;
-using System.Text;
-using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.StrategyMaps;
 using Uncreated.Warfare.StrategyMaps.MapTacks;
 
-namespace Uncreated.Warfare.Commands.WarfareDev.StrategyMaps;
+namespace Uncreated.Warfare.Commands;
 
 [Command("addtack"), SubCommandOf(typeof(DebugStrategyMaps))]
 internal class DebugSquadUI : IExecutableCommand
 {
     private readonly StrategyMapManager _strategyMapManager;
-    private readonly ILogger _logger;
 
     public CommandContext Context { get; set; }
 
-    public DebugSquadUI(IServiceProvider serviceProvider, ILogger<DebugSquadUI> logger)
+    public DebugSquadUI(IServiceProvider serviceProvider)
     {
         _strategyMapManager = serviceProvider.GetRequiredService<StrategyMapManager>();
-        _logger = logger;
     }
 
     public UniTask ExecuteAsync(CancellationToken token)
     {
-        _logger.LogInformation("sss");
-        if (!Context.TryGet(0, out ItemBarricadeAsset? markerAsset, out bool multipleFound))
+        if (!Context.TryGet(0, out ItemBarricadeAsset? markerAsset, out _))
         {
             throw Context.ReplyString("Could not find the specified Map Tack barricade asset.");
         }
 
-        _logger.LogInformation("yuh");
         if (!Context.TryGet(1, out float featureWorldX))
         {
             throw Context.SendHelp();

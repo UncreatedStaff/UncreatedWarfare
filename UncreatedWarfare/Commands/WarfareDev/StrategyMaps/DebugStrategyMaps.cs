@@ -1,14 +1,6 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using System;
-using System.Collections.Generic;
-using System.Text;
-using Uncreated.Warfare.Database.Abstractions;
-using Uncreated.Warfare.Interaction.Commands;
-using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.StrategyMaps;
-using Uncreated.Warfare.Teams;
-using Uncreated.Warfare.Translations;
+﻿using Uncreated.Warfare.Interaction.Commands;
 
-namespace Uncreated.Warfare.Commands.WarfareDev.StrategyMaps;
+namespace Uncreated.Warfare.Commands;
+
 [Command("strategymaps", "strt"), SubCommandOf(typeof(WarfareDevCommand))]
 internal class DebugStrategyMaps : ICommand;

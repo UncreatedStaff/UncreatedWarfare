@@ -1,6 +1,6 @@
-﻿using System;
+﻿using StackCleaner;
+using System;
 using System.Globalization;
-using StackCleaner;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Translations.Util;
@@ -9,6 +9,27 @@ public static class TranslationFormattingUtility
     private const string ColorEndTag = "</color>";
     private const string ColorStartTag = "color=#";
 #pragma warning disable CS8500
+
+    /// <summary>
+    /// Adds the correct color tags around text for TMPro or Unity rich text.
+    /// </summary>
+    /// <param name="imgui">Use Unity rich text instead of TMPro.</param>
+    public static string Colorize(ReadOnlySpan<char> text, Color32 color, bool imgui = false)
+    {
+        return Colorize(text, color, imgui ? TranslationOptions.TranslateWithUnityRichText : TranslationOptions.None, StackColorFormatType.None);
+    }
+
+    /// <summary>
+    /// Adds the correct color tags around text for TMPro or Unity rich text.
+    /// </summary>
+    /// <param name="imgui">Use Unity rich text instead of TMPro.</param>
+    public static string Colorize(ReadOnlySpan<char> text, string hexColor, bool imgui = false)
+    {
+        if (!HexStringHelper.TryParseHexColor32(hexColor, out Color32 color))
+            color = Color.white;
+
+        return Colorize(text, color, imgui ? TranslationOptions.TranslateWithUnityRichText : TranslationOptions.None, StackColorFormatType.None);
+    }
 
     /// <summary>
     /// Adds the correct color tags around text based on which flags are enabled in <paramref name="options"/>.
@@ -78,18 +99,6 @@ public static class TranslationFormattingUtility
                 ColorEndTag.AsSpan().CopyTo(span[index..]);
             });
         }
-    }
-    public static unsafe string Colorize(ReadOnlySpan<char> text, Color32 color)
-    {
-        return Colorize(text, color, TranslationOptions.None, StackColorFormatType.None);
-    }
-    public static unsafe string Colorize(ReadOnlySpan<char> text, string hexColor)
-    {
-        Color32 color;
-        if (!HexStringHelper.TryParseHexColor32(hexColor, out color))
-            color = Color.white;
-
-        return Colorize(text, color, TranslationOptions.None, StackColorFormatType.None);
     }
     private unsafe struct ColorizeState
     {

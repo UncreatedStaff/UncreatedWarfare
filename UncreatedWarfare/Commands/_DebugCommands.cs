@@ -132,7 +132,7 @@ public class DebugCommand : IExecutableCommand
         }
         catch (Exception ex)
         {
-            _serviceProvider.GetRequiredService<ILogger<DebugCommand>>().LogError(ex.InnerException ?? ex, "Error executing test command.");
+            Context.Logger.LogError(ex.InnerException ?? ex, "Error executing test command.");
             throw Context.ReplyString($"Ran into an error while executing: <#ff758f>{testFunction.Name}</color> - <#ff758f>{Accessor.Formatter.Format((ex.InnerException ?? ex).GetType())}</color>.", "ff8c69");
         }
     }

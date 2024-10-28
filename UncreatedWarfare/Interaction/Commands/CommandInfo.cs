@@ -3,19 +3,17 @@ using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.ComponentModel.Design;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json.Serialization;
+using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Interaction.Commands;
-public class CommandInfo
+public class CommandInfo : ICommandDescriptor
 {
-    private static readonly ServiceContainer EmptyServiceProvider = new ServiceContainer();
-
     internal List<CommandWaitTask> WaitTasks = new List<CommandWaitTask>(0);
     private readonly List<CommandInfo> _subCommands;
 
@@ -66,7 +64,7 @@ public class CommandInfo
     /// <summary>
     /// If this command is hid from /help by a <see cref="HideFromHelpAttribute"/>.
     /// </summary>
-    public bool HideFromHelp { get; }
+    public bool HideFromHelp { get; set; }
 
     /// <summary>
     /// Typing '/command help' will not switch to /help if this is <see langword="true"/>, which can be set using the <see cref="DisableAutoHelpAttribute"/>.
@@ -100,7 +98,7 @@ public class CommandInfo
     /// <summary>
     /// List of all sub-commands for a command. These commands may also have sub-commands.
     /// </summary>
-    public IReadOnlyList<CommandInfo> SubCommands { get; private set; }
+    public IReadOnlyList<CommandInfo> SubCommands { get; }
 
     /// <summary>
     /// If this command is a sub-command, this is the info for the parent command.
@@ -127,7 +125,7 @@ public class CommandInfo
         VanillaCommand = vanillaCommand;
         CommandName = vanillaCommand.command;
         Aliases = Array.Empty<string>();
-        Metadata = DefaultMetadata(vanillaCommand.command, vanillaCommand.info);
+        Metadata = DefaultMetadata(vanillaCommand.command, vanillaCommand.info, true);
         OtherPermissionsAreAnd = true;
         OtherPermissions = Array.Empty<PermissionLeaf>();
         DefaultPermission = new PermissionLeaf("commands." + CommandName, unturned: true, warfare: false);
@@ -194,32 +192,10 @@ public class CommandInfo
         AutoHelpDisabled = classType.IsDefinedSafe<DisableAutoHelpAttribute>();
         HideFromHelp = parent is { HideFromHelp: true } || classType.IsDefinedSafe<HideFromHelpAttribute>();
 
+        bool isFileMetadata = false;
         if (!HideFromHelp)
         {
-            Metadata = ReadHelpMetadata(classType, logger, parent == null)!;
-
-            // add metadata to parent's parameters
-            if (Metadata != null && parent != null)
-            {
-                bool foundAny = false;
-                for (int i = 0; i < parent.Metadata.Parameters.Length; ++i)
-                {
-                    CommandMetadata paramMeta = parent.Metadata.Parameters[i];
-                    if (!paramMeta.Name.Equals(CommandName, StringComparison.InvariantCultureIgnoreCase))
-                        continue;
-
-                    foundAny = true;
-                    break;
-                }
-                
-                if (!foundAny)
-                {
-                    CommandMetadata[] parentMeta = parent.Metadata.Parameters;
-                    Array.Resize(ref parentMeta, parentMeta.Length + 1);
-                    parentMeta[^1] = Metadata;
-                    parent.Metadata.Parameters = parentMeta;
-                }
-            }
+            Metadata = ReadHelpMetadata(classType, logger, false)!;
 
             // get metadata from parent's parameters
             if (Metadata == null && parent?.Metadata != null)
@@ -234,20 +210,67 @@ public class CommandInfo
                     break;
                 }
             }
-
-            if (Metadata == null)
+            else if (Metadata != null)
+                isFileMetadata = true;
+        }
+        else if (parent != null)
+        {
+            for (int i = 0; i < parent.Metadata.Parameters.Length; ++i)
             {
-                logger.LogWarning("Missing help metadata for command type {0}.", classType);
+                CommandMetadata paramMeta = parent.Metadata.Parameters[i];
+                if (!paramMeta.Name.Equals(CommandName, StringComparison.InvariantCultureIgnoreCase))
+                    continue;
+
+                CommandMetadata[] m = parent.Metadata.Parameters;
+                CollectionUtility.RemoveFromArray(ref m, i);
+                parent.Metadata.Parameters = m;
+                logger.LogWarning("Removed metadata for subcommand {0} in parent command {1} because it's hidden from help.", classType, parent.Type);
+                break;
             }
         }
 
         if (Metadata == null)
         {
-            Metadata = DefaultMetadata(CommandName, null);
+            Metadata = DefaultMetadata(CommandName, null, false);
         }
         else if (Metadata.Name == null)
         {
             Metadata.Name = CommandName;
+        }
+        else if (!Metadata.Name.Equals(CommandName, StringComparison.Ordinal))
+        {
+            Metadata.Name = CommandName;
+            logger.LogWarning("Metadata name for {0} out of sync.", classType);
+        }
+
+        Metadata.Aliases = Aliases;
+
+        // add metadata to parent's parameters
+        if (parent != null)
+        {
+            bool foundAny = false;
+            for (int i = 0; i < parent.Metadata.Parameters.Length; ++i)
+            {
+                CommandMetadata paramMeta = parent.Metadata.Parameters[i];
+                if (!paramMeta.Name.Equals(CommandName, StringComparison.InvariantCultureIgnoreCase))
+                    continue;
+
+                if (isFileMetadata)
+                {
+                    parent.Metadata.Parameters[i] = Metadata;
+                    logger.LogWarning("Duplicate metadata file found in subcommand {0} replacing metadata in parent command {1}.", classType, parent.Type);
+                }
+                foundAny = true;
+                break;
+            }
+
+            if (!foundAny)
+            {
+                CommandMetadata[] parentMeta = parent.Metadata.Parameters;
+                Array.Resize(ref parentMeta, parentMeta.Length + 1);
+                parentMeta[^1] = Metadata;
+                parent.Metadata.Parameters = parentMeta;
+            }
         }
 
         if (parent?.SynchronizedSemaphore != null || classType.IsDefinedSafe<SynchronizedCommandAttribute>())
@@ -312,14 +335,16 @@ public class CommandInfo
         }
     }
 
-    private static CommandMetadata DefaultMetadata(string name, string? desc)
+    private static CommandMetadata DefaultMetadata(string name, string? desc, bool vanilla)
     {
         return new CommandMetadata
         {
             Name = name,
             Description = desc == null ? null : new TranslationList(desc),
-            Parameters =
-            [
+            Type = CommandSyntaxFormatter.Verbatim,
+            Types = [ CommandSyntaxFormatter.Verbatim ],
+            ResolvedTypes = [ typeof(VerbatimParameterType) ],
+            Parameters = vanilla ? [
                 new CommandMetadata
                 {
                     Name = "Args",
@@ -329,7 +354,7 @@ public class CommandInfo
                     Type = typeof(object).AssemblyQualifiedName,
                     Types = [ typeof(object).AssemblyQualifiedName ]
                 }
-            ]
+            ] : []
         };
     }
 
@@ -407,14 +432,14 @@ public class CommandInfo
             }
         }
 
-        IConfiguration? config = null;
+        IConfigurationRoot? config = null;
         try
         {
             config = new ConfigurationBuilder()
                 .AddYamlStream(stream)
                 .Build();
 
-            CommandMetadata meta = ReflectionUtility.CreateInstanceFixed<CommandMetadata>(EmptyServiceProvider, [ config ]);
+            CommandMetadata meta = new CommandMetadata();
             config.Bind(meta);
             meta.Clean(classType);
             logger.LogDebug("Read command metadata for command type {0} from resource \"{1}\" in assembly {2}.", classType, resource, asm.FullName);
@@ -432,4 +457,12 @@ public class CommandInfo
                 disp.Dispose();
         }
     }
+
+    IReadOnlyList<string> ICommandDescriptor.Aliases => Aliases;
+    bool ICommandDescriptor.IsVanillaCommand => VanillaCommand != null;
+    ICommandDescriptor? ICommandDescriptor.ParentCommand => ParentCommand;
+    ICommandDescriptor? ICommandDescriptor.RedirectCommandInfo => RedirectCommandInfo;
+    ICommandParameterDescriptor ICommandDescriptor.Metadata => Metadata;
+    IReadOnlyList<ICommandDescriptor> ICommandDescriptor.SubCommands => SubCommands;
+    IReadOnlyList<PermissionLeaf> ICommandDescriptor.OtherPermissions => OtherPermissions;
 }

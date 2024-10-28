@@ -1758,21 +1758,4 @@ internal static class T
     [TranslationData(SectionOptions, "Sent to the caller when the value given for the option is set.", "Option name", "Value of option")]
     public static readonly Translation<string, string> OptionsSet = new Translation<string, string>("<#ff8c69>Option <#ddd>{0}</color> sucessfully set to <#ddd>{1}</color>.");
     #endregion
-
-    #region Help Command
-    private const string SectionHelp = "Help";
-
-    [TranslationData(SectionHelp, "Output from help describing how to use /discord.")]
-    public static readonly Translation HelpOutputDiscord = new Translation("<#b3ffb3>For more info, join our <#7483c4>Discord</color> server: <#fff>/discord</color>.");
-    
-    [TranslationData(SectionHelp, "Output from help describing how to use /request.")]
-    public static readonly Translation HelpOutputRequest = new Translation("<#b3ffb3>To get gear, look at a sign in the barracks and type <#fff>/request</color> (or <#fff>/req</color>).");
-    
-    [TranslationData(SectionHelp, "Output from help describing how to use /deploy.")]
-    public static readonly Translation HelpOutputDeploy = new Translation("<#b3ffb3>To deploy to battle, type <#fff>/deploy <location></color>. The locations are on the left side of your screen.");
-    
-    [TranslationData(SectionHelp, "Output from help describing how to use /deploy.")]
-    public static readonly Translation HelpOutputCombined = new Translation("<#b3ffb3>To get gear, look at a sign in the barracks and type <#fff>/request</color> (or <#fff>/req</color>). To deploy to battle, type <#fff>/deploy <location></color> with any of the FOBs listed on the left of your screen. For more info, join our <#7483c4>Discord</color> server: <#fff>/discord</color>.");
-
-    #endregion
 }

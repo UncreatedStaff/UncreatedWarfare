@@ -17,6 +17,7 @@ namespace Uncreated.Warfare.Networking.Parsers;
 [RpcParser(typeof(CSteamID))]
 public class CSteamIDSerializer : BinaryTypeParser<CSteamID>
 {
+    // todo replace with setter
     private static readonly MethodInfo SetErrorCodeOvf = typeof(RpcOverflowException)
         .GetProperty(nameof(RpcOverflowException.ErrorCode), BindingFlags.Public | BindingFlags.Instance)!
         .GetSetMethod(true);

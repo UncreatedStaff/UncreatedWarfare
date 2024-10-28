@@ -1,6 +1,8 @@
 ﻿using DanielWillett.ReflectionTools;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Util;
 
@@ -9,7 +11,7 @@ namespace Uncreated.Warfare.Interaction.Commands;
 /// <summary>
 /// Information about the layout of a command from a configuration file.
 /// </summary>
-public class CommandMetadata
+public class CommandMetadata : ICommandParameterDescriptor
 {
     private CommandMetadata? _parent;
 
@@ -80,7 +82,7 @@ public class CommandMetadata
     /// Number of sub-parameters to chain into one 'parameter' including this one. Requires that all child parameters up to that amount have only one parameter.
     /// </summary>
     /// <remarks>Example: <c>/tp [x y z|location|player]</c> where <c>x.ChainDisplayAmount = 3</c>.</remarks>
-    public int ChainLength { get; set; }
+    public int Chain { get; set; }
 
     /// <summary>
     /// Recursively clean this metadata and all it's parameters.
@@ -92,6 +94,9 @@ public class CommandMetadata
         {
             Name = commandType.TryGetAttributeSafe(out CommandAttribute command) ? command.CommandName : commandType.Name;
         }
+
+        if (Chain < 0)
+            Chain = 0;
 
         // aliases
         List<string> tempAliases = new List<string>(Aliases?.Length ?? 1);
@@ -112,45 +117,48 @@ public class CommandMetadata
 
         Aliases = tempAliases.ToArray();
         Alias = Aliases.Length == 1 ? Aliases[0] : null;
-        
+
         // types
         if (_parent == null)
         {
-            Types = [ "Verbatim" ];
-            Type = "Verbatim";
+            Types = [ CommandSyntaxFormatter.Verbatim ];
+            Type = CommandSyntaxFormatter.Verbatim;
             ResolvedTypes = [ typeof(VerbatimParameterType) ];
         }
         else
         {
             List<Type> tempTypes = new List<Type>(Types?.Length ?? 1);
 
-            Type? type;
+            Type? resolvedType;
             if (Types != null)
             {
                 foreach (string? typeName in Types)
                 {
-                    if (!ContextualTypeResolver.TryResolveType(typeName, out type) || tempTypes.Contains(type))
-                        continue;
-
-                    tempTypes.Add(type);
+                    resolvedType = ResolveType(typeName);
+                    if (resolvedType != null && !tempTypes.Contains(resolvedType))
+                        tempTypes.Add(resolvedType);
                 }
             }
-            if (ContextualTypeResolver.TryResolveType(Type, out type) && !tempTypes.Contains(type))
-            {
-                tempTypes.Add(type);
-            }
+
+            resolvedType = ResolveType(Type);
+            if (resolvedType != null && !tempTypes.Contains(resolvedType))
+                tempTypes.Add(resolvedType);
 
             ResolvedTypes = tempTypes.ToArray();
             string[] typeNames = new string[ResolvedTypes.Length];
             for (int i = 0; i < typeNames.Length; ++i)
             {
-                typeNames[i] = ResolvedTypes[i].AssemblyQualifiedName!;
+                resolvedType = ResolvedTypes[i];
+                typeNames[i] = resolvedType == typeof(VerbatimParameterType)
+                    ? CommandSyntaxFormatter.Verbatim
+                    : resolvedType.AssemblyQualifiedName!;
             }
 
             Types = typeNames;
             Type = typeNames.Length == 1 ? typeNames[0] : null;
         }
 
+        // flags
         int nonNull = 0;
         if (Flags is not { Length: > 0 })
         {
@@ -185,7 +193,10 @@ public class CommandMetadata
 
         // parameters
         if (Parameters == null)
+        {
+            Parameters = Array.Empty<CommandMetadata>();
             return;
+        }
 
         nonNull = 0;
         for (int i = 0; i < Parameters.Length; ++i)
@@ -220,7 +231,31 @@ public class CommandMetadata
         }
     }
 
-    public class FlagMetadata
+    private static Type? ResolveType([NotNullWhen(true)] string? typeName)
+    {
+        if (typeName == null)
+            return null;
+
+        if (typeName.Equals(CommandSyntaxFormatter.Verbatim, StringComparison.OrdinalIgnoreCase))
+            return typeof(VerbatimParameterType);
+
+        if (typeName.StartsWith("Look/", StringComparison.OrdinalIgnoreCase))
+        {
+            Type? resolvedInner = ResolveType(typeName.Substring(5));
+            if (resolvedInner != null)
+                return typeof(LookAtInteractionParameterType<>).MakeGenericType(resolvedInner);
+        }
+
+        return ContextualTypeResolver.ResolveType(typeName);
+    }
+
+    ICommandParameterDescriptor? ICommandParameterDescriptor.Parent => _parent;
+    IReadOnlyList<string> ICommandParameterDescriptor.Aliases => Aliases;
+    IReadOnlyList<Type> ICommandParameterDescriptor.Types => ResolvedTypes;
+    IReadOnlyList<ICommandParameterDescriptor> ICommandParameterDescriptor.Parameters => Parameters;
+    IReadOnlyList<ICommandFlagDescriptor> ICommandParameterDescriptor.Flags => Flags;
+
+    public class FlagMetadata : ICommandFlagDescriptor
     {
         /// <summary>
         /// Flag name without the dash.
@@ -244,3 +279,9 @@ public class CommandMetadata
 /// Type representing the 'verbatim' parameter type.
 /// </summary>
 public static class VerbatimParameterType;
+
+/// <summary>
+/// Type representing the 'looking at <typeparamref name="TInteractionType"/>' parameter type.
+/// </summary>
+// ReSharper disable once UnusedTypeParameter
+public static class LookAtInteractionParameterType<TInteractionType>;

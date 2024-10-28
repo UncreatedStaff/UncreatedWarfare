@@ -14,6 +14,7 @@ using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Permissions;
+using Uncreated.Warfare.Plugins;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Collections;
@@ -46,9 +47,22 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
         Parser = new CommandParser(this);
 
         // discover commands
+        List<CommandInfo> parentCommands = DiscoverAssemblyCommands(_logger, serviceProvider.GetRequiredService<WarfarePluginLoader>());
+
+        Commands = new ReadOnlyCollection<CommandInfo>(parentCommands);
+
+        ChatManager.onCheckPermissions += OnChatProcessing;
+        CommandWindow.onCommandWindowInputted += OnCommandInput;
+    }
+
+    internal static List<CommandInfo> DiscoverAssemblyCommands(ILogger logger, WarfarePluginLoader? pluginLoader)
+    {
         Assembly warfareAssembly = Assembly.GetExecutingAssembly();
 
         List<Assembly> assemblies = [ warfareAssembly ];
+
+        if (pluginLoader != null)
+            assemblies.AddRange(pluginLoader.Plugins.Select(x => x.LoadedAssembly));
 
         foreach (AssemblyName referencedAssembly in warfareAssembly.GetReferencedAssemblies())
         {
@@ -58,7 +72,7 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
             }
             catch
             {
-                _logger.LogDebug("Unable to load referenced assembly {0}.", referencedAssembly);
+                logger.LogDebug("Unable to load referenced assembly {0}.", referencedAssembly);
             }
         }
 
@@ -69,11 +83,11 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
         List<Type> rootCommandTypes = types.Where(x => !x.IsAbstract && !x.IsDefinedSafe<SubCommandOfAttribute>()).ToList();
 
         List<CommandInfo> allCommands = new List<CommandInfo>(types.Count);
-        List<CommandInfo> parentCommands = new List<CommandInfo>(types.Count + Commander.commands.Count);
+        List<CommandInfo> parentCommands = new List<CommandInfo>(types.Count + (Commander.commands?.Count ?? 0));
 
         foreach (Type commandType in rootCommandTypes)
         {
-            CommandInfo info = new CommandInfo(commandType, _logger, null);
+            CommandInfo info = new CommandInfo(commandType, logger, null);
             allCommands.Add(info);
             parentCommands.Add(info);
 
@@ -89,8 +103,8 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
 
                     if (allCommands.Exists(x => x.Type == commandType))
                         throw new InvalidOperationException($"Circular reference detected in parent commands. {Accessor.ExceptionFormatter.Format(parentType)} <- ... -> {Accessor.ExceptionFormatter.Format(commandType)}.");
-                    
-                    CommandInfo info = new CommandInfo(commandType, _logger, parentInfo);
+
+                    CommandInfo info = new CommandInfo(commandType, logger, parentInfo);
                     allCommands.Add(info);
                     ReigsterSubCommands(commandType, info);
                 }
@@ -102,7 +116,7 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
             if (commandType.IsAbstract || allCommands.Exists(x => x.Type == commandType))
                 continue;
 
-            _logger.LogWarning("Sub command type {0} does not exist for command {1}.",
+            logger.LogWarning("Sub command type {0} does not exist for command {1}.",
                 commandType.TryGetAttributeSafe(out SubCommandOfAttribute attribute) ? attribute.ParentType : "null",
                 commandType
             );
@@ -111,8 +125,11 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
         parentCommands.Sort((a, b) => b.Priority.CompareTo(a.Priority));
 
         // add vanilla commands
-        parentCommands.AddRange(Commander.commands.Select(vanillaCommand => new CommandInfo(vanillaCommand)));
-        
+        if (Commander.commands != null)
+        {
+            parentCommands.AddRange(Commander.commands.Select(vanillaCommand => new CommandInfo(vanillaCommand)));
+        }
+
         // register redirects
         foreach (CommandInfo command in allCommands)
         {
@@ -124,21 +141,39 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
             command.RedirectCommandInfo = allCommands.Find(x => x.Type == redirAttribute.CommandType);
             if (command.RedirectCommandInfo == null)
             {
-                _logger.LogWarning("Redirect command {0} not registered.", redirAttribute.CommandType);
+                logger.LogWarning("Redirect command {0} not registered.", redirAttribute.CommandType);
             }
 
             command.IsExecutable = command.VanillaCommand != null || (command.RedirectCommandInfo == null && typeof(IExecutableCommand).IsAssignableFrom(command.Type));
             if (command is { IsExecutable: false, SubCommands.Count: 0, RedirectCommandInfo: null })
             {
-                _logger.LogWarning("Command type {0} isn't executable and has no sub-commands, which is practically useless.", command.Type);
+                logger.LogWarning("Command type {0} isn't executable and has no sub-commands, which is practically useless.", command.Type);
+                command.HideFromHelp = true;
+            }
+
+            if (command.RedirectCommandInfo != null && IsSubCommandRecursive(command, command.RedirectCommandInfo))
+            {
+                command.RedirectCommandInfo.Metadata.Optional = true;
             }
         }
 
-        Commands = new ReadOnlyCollection<CommandInfo>(parentCommands);
+        return parentCommands;
 
-        ChatManager.onCheckPermissions += OnChatProcessing;
-        CommandWindow.onCommandWindowInputted += OnCommandInput;
+        bool IsSubCommandRecursive(CommandInfo c1, CommandInfo c2)
+        {
+            foreach (CommandInfo subCommand in c1.SubCommands)
+            {
+                if (subCommand == c2)
+                    return true;
+
+                if (IsSubCommandRecursive(subCommand, c2))
+                    return true;
+            }
+
+            return false;
+        }
     }
+
     UniTask IHostedService.StartAsync(CancellationToken token) => UniTask.CompletedTask;
     UniTask IHostedService.StopAsync(CancellationToken token) => UniTask.CompletedTask;
 
@@ -334,6 +369,7 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
         originalMessage ??= string.Empty;
 
         int offset;
+        CommandInfo rootCommand = command;
         if (!command.IsSubCommand)
         {
             ResolveSubCommand(ref command, args, out offset);
@@ -343,13 +379,19 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
             BacktrackSubCommand(command, ref args, out offset);
         }
 
+        // handle input like: "/clear inventory help" and redirect to help command
         if (command.Type != typeof(HelpCommand) && offset < args.Length && (string.Equals(args[offset], "help", StringComparison.InvariantCultureIgnoreCase)
                                                                             || string.Equals(args[offset], "hlep", StringComparison.InvariantCultureIgnoreCase)
                                                                             || string.Equals(args[offset], "?", StringComparison.InvariantCultureIgnoreCase)))
         {
             CommandInfo? helpCommand = FindCommand(typeof(HelpCommand));
             if (helpCommand != null)
+            {
+                Array.Copy(args, 0, args, 1, offset);
+                offset = 0;
+                args[0] = rootCommand.CommandName;
                 command = helpCommand;
+            }
         }
 
 #if DEBUG
@@ -650,7 +692,7 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
                                             || args[^1].Equals("?", StringComparison.InvariantCultureIgnoreCase)))
                     {
                         // remove ending help in cases such as '/clear inventory help' and insert old command name as first argument
-                        Array.Copy(args, 0, args, 1, args.Length);
+                        Array.Copy(args, 0, args, 1, args.Length - 1);
                         args[0] = command.CommandName;
                     }
                     else

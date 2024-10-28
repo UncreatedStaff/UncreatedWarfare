@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Reflection;
 
 namespace Uncreated.Warfare.Util;
@@ -119,12 +120,15 @@ internal static class ContextualTypeResolver
         }
 
         // search by actual type name
-        _allTypesCache ??= Accessor.GetTypesSafe(ThisAssembly);
+        if (_allTypesCache == null)
+        {
+            LoadAllTypes();
+        }
         
         Interlocked.MemoryBarrier();
 
         int index = -1;
-        for (int i = 0; i < _allTypesCache.Count; ++i)
+        for (int i = 0; i < _allTypesCache!.Count; ++i)
         {
             Type t = _allTypesCache[i];
 
@@ -151,5 +155,23 @@ internal static class ContextualTypeResolver
 
         type = _allTypesCache[index];
         return true;
+    }
+
+    private static void LoadAllTypes()
+    {
+        Assembly warfareAssembly = Assembly.GetExecutingAssembly();
+
+        List<Assembly> assemblies = [ warfareAssembly ];
+
+        foreach (AssemblyName referencedAssembly in warfareAssembly.GetReferencedAssemblies())
+        {
+            try
+            {
+                assemblies.Add(Assembly.Load(referencedAssembly));
+            }
+            catch { /* ignored */ }
+        }
+
+        _allTypesCache = Accessor.GetTypesSafe(assemblies);
     }
 }

@@ -2,51 +2,44 @@
 Description: "Manage kits."
 Aliases: [ k, whale ]
 Parameters:
-    # /kit give [kit | loadout <class>] [player]
+    # /kit give <[⌖] kit | 'loadout' class> [player]
   - Name: give
     Alias: g
     Type: Verbatim
-    Description: "Grant <param 'kit' /> or the kit on <target /> sign to <param 'Player' />."
+    Description: "Grants a <param 'kit' /> or <param 'loadout' /> to a <param 'player' /> or the <caller/>."
     Parameters:
       - Name: kit
-        Type: Uncreated.Warfare.Models.Kits.Kit
-        Optional: true
-        Description: "Grant <param 'kit' /> to <caller />."
+        Types: [ Uncreated.Warfare.Models.Kits.Kit, Look/SDG.Unturned.ItemBarricadeAsset ]
+        Description: "Grants a <param 'kit' /> to <param 'player' /> or <caller/>."
         Parameters:
           - Name: player
             Type: Uncreated.Warfare.Players.IPlayer
             Optional: true
-            Description: "Grant <param 'Kit' /> to <param 'Player' />."
-      - Name: player
-        Type: Uncreated.Warfare.Players.IPlayer
-        Optional: true
-        Description: "Grant the kit on <target /> sign to <param 'player' />."
-        LinkWithChain: ~/loadout/class/player # todo automate this
+            Description: "Grants a <param 'kit' /> to <param 'player' />."
       - Name: "loadout"
         Alias: "l"
         Type: Verbatim
-        Optional: true
-        Description: "Grant <param 'Kit' /> to <caller />."
-        Chain: 1
+        Description: "Grants the default loadout for a <param 'class' /> to <param 'player' /> or <caller/>."
+        Chain: 2
         Parameters:
           - Name: class
             Type: Uncreated.Warfare.Kits.Class
-            Description: "Grant the default inventory for a <param 'Class'/> loadout to <caller />."
+            Description: "Grants the default inventory for a <param 'class'/> loadout to <caller />."
             Parameters:
               - Name: player
                 Type: Uncreated.Warfare.Players.IPlayer
                 Optional: true
-                Description: "Grant the default inventory for a <param 'Class'/> loadout to <param 'Player' />."
+                Description: "Grants the default inventory for a <param 'class'/> loadout to <param 'player' />."
     # /kit hotkey <slot>
   - Name: hotkey
     Aliases: [ keybind, bind ]
     Type: Verbatim
-    Description: "Manage automatically assigned hotkey's for your equipped kit."
+    Description: "Manage automatically assigned hotkey's for the <caller/>'s equipped kit."
     Parameters:
       - Name: add
         Aliases: [ create, new ]
         Type: Verbatim
-        Description: "Add a hotkey bind to your currently held item that will be assigned when you request your current kit."
+        Description: "Adds a hotkey bind to a <param 'slot' /> to the <caller/>'s currently held item that will be assigned when they request their current kit."
         Parameters:
           - Name: slot
             Type: byte
@@ -54,54 +47,50 @@ Parameters:
       - Name: remove
         Aliases: [ delete, cancel ]
         Type: Verbatim
-        Description: "Remove a hotkey bind from an item for your current kit."
+        Description: "Removes a hotkey bind from a <param 'slot' /> for whatever item is currently binded to it."
         Parameters:
           - Name: slot
             Type: byte
             Range: "#[3,4,5,6,7,8,9,0]"
-      - Name: slot
-        Type: byte
-        Range: "#[3,4,5,6,7,8,9,0]"
-        Description: "Add a hotkey bind to your currently held item that will be assigned when you request your current kit."
   # /kit favorite [kit]
   - Name: favorite
     Aliases: [ favourite, favour, favor, fav, star ]
     Type: Verbatim
-    Description: "Star or favorite a kit so it's highlighted and shows up higher in the Kit menu."
+    Description: "Stars or favorites a kit so it's highlighted for the <caller/>."
     Parameters:
       - Name: kit
         Type: Uncreated.Warfare.Models.Kits.Kit
         Optional: true
-        Description: "Star or favorite <param 'kit' /> so it's highlighted and shows up higher in the Kit menu."
+        Description: "Stars or favorites <param 'kit' /> so it's highlighted for the <caller/>."
   # /kit unfavorite [kit]
   - Name: unfavorite
     Aliases: [ unfavourite, unfavour, unfavor, unfav, unstar ]
     Type: Verbatim
-    Description: "Remove the star or favorite on a previously favorited kit."
+    Description: "Removes the star or favorite on a previously favorited kit for the <caller/>."
     Parameters:
       - Name: kit
         Type: Uncreated.Warfare.Models.Kits.Kit
         Optional: true
-        Description: "Remove the star or favorite on <param 'kit' />."
+        Description: "Removes the star or favorite on <param 'kit' /> for the <caller/>.."
   # /kit layout <save|reset>
   - Name: layout
     Aliases: [ loadout, items, order, customize ]
     Type: Verbatim
-    Description: "Customize the layout of non-equippable items in your kit."
+    Description: "Customizes the layout of non-equippable items in the <caller/>'s kit."
     Parameters:
       - Name: save
         Aliases: [ confirm, keep ]
         Type: Verbatim
-        Description: "Save your current inventory as the new layout for your kit."
+        Description: "Saves the <caller/>'s current inventory as the new layout for their kit."
       - Name: reset
         Aliases: [ delete, cancel, remove ]
         Type: Verbatim
-        Description: "Reset the layout for your current kit to defaults."
+        Description: "Resets the layout for the <caller/>'s current kit to defaults."
   # /kit rename <name... >
   - Name: rename
     Aliases: [ rname, name ]
     Type: Verbatim
-    Description: "Change the display name of your loadout at any time."
+    Description: "Changes the display name of the <caller/>'s loadout at any time."
     Parameters:
       - Name: name
         Type: string
@@ -110,7 +99,7 @@ Parameters:
   - Name: create
     Aliases: [ c, override ]
     Type: Verbatim
-    Description: "Create a new kit or override the items in an existing kit."
+    Description: "Creates a new kit or override the items in an existing kit."
     Parameters:
       - Name: name
         Type: string
@@ -130,7 +119,7 @@ Parameters:
   - Name: delete
     Aliases: [ d, remove ]
     Type: Verbatim
-    Description: "Delete an existing kit."
+    Description: "Deletes an existing <param 'kit'/>."
     Parameters:
       - Name: kit
         Type: Uncreated.Warfare.Models.Kits.Kit
@@ -139,10 +128,10 @@ Parameters:
   - Name: upgrade
     Aliases: [ update, upg ]
     Type: Verbatim
-    Description: "Upgrade a kit created in a previous season. Usually this will be a loadout."
+    Description: "Upgrades a <param 'kit'/> created in a previous season and changes it's <param 'class' />. Usually this will be a loadout."
     Parameters:
-      - Name: Uncreated.Warfare.Models.Kits.Kit
-        Type: string
+      - Name: kit
+        Type: Uncreated.Warfare.Models.Kits.Kit
         Parameters:
           - Name: class
             Type: Uncreated.Warfare.Kits.Class
@@ -150,7 +139,7 @@ Parameters:
   - Name: unlock
     Aliases: [ unl, ul ]
     Type: Verbatim
-    Description: "Unlocks a kit that's currently being worked on by staff and gives the owner access."
+    Description: "Unlocks a <param 'kit'/> that's currently being worked on by staff and gives the owner access."
     Parameters:
       - Name: kit
         Type: Uncreated.Warfare.Models.Kits.Kit
@@ -158,7 +147,7 @@ Parameters:
   # /kit lock <kit... >
   - Name: lock
     Type: Verbatim
-    Description: "Locks a kit that's about to be worked on by staff to prevent the owner from using it."
+    Description: "Locks a <param 'kit'/> that's about to be worked on by staff to prevent the owner from using it."
     Parameters:
       - Name: kit
         Type: Uncreated.Warfare.Models.Kits.Kit
@@ -167,10 +156,11 @@ Parameters:
   - Name: set
     Aliases: [ s ]
     Type: Verbatim
-    Description: "Sets values of a kit's properties."
+    Description: "Sets values of a <param 'kit'/>'s properties."
     Parameters:
       - Name: sign
         Type: Verbatim
+        Description: "Sets the <param 'display-text'/> of a <param 'kit'/> for a certain <param 'language'/>."
         Parameters:
           - Name: kit
             Type: Uncreated.Warfare.Models.Kits.Kit
@@ -178,7 +168,7 @@ Parameters:
               - Name: language
                 Type: Uncreated.Warfare.Models.Localization.LanguageInfo
                 Parameters:
-                  - Name: text
+                  - Name: display-text
                     Type: string
                     IsRemainder: true
       - Name: property
@@ -194,7 +184,7 @@ Parameters:
   - Name: giveaccess
     Aliases: [ givea, ga ]
     Type: Verbatim
-    Description: "Give a <param 'player' /> access to a <param 'kit' />."
+    Description: "Gives a <param 'player' /> access to a <param 'kit' />."
     Parameters:
       - Name: player
         Type: Uncreated.Warfare.Players.IPlayer
@@ -209,29 +199,29 @@ Parameters:
   - Name: giveaccess
     Aliases: [ givea, ga ]
     Type: Verbatim
-    Description: "Revoke access of <param 'kit' /> from a <param 'player' />."
+    Description: "Revokes access of a <param 'kit' /> for <param 'player' />."
     Parameters:
       - Name: player
         Type: Uncreated.Warfare.Players.IPlayer
         Parameters:
           - Name: kit
             Type: Uncreated.Warfare.Models.Kits.Kit
-  # /kit copyfrom <old kit> <new kit id>
+  # /kit copyfrom <old-kit> <new-kit-id>
   - Name: copyfrom
     Aliases: [ copy, cf ]
     Type: Verbatim
-    Description: "Copy <param 'old kit' /> properties into a new kit with the given <param 'new kit id'/>."
+    Description: "Copies <param 'old-kit' />'s properties into a new kit with the given <param 'new-kit-id'/>."
     Parameters:
-      - Name: old kit
+      - Name: old-kit
         Type: Uncreated.Warfare.Models.Kits.Kit
         Parameters:
-          - Name: new kit id
+          - Name: new-kit-id
             Type: string
-  # /kit createloadout <player> <class> [sign text...]
+  # /kit createloadout <player> <class> <display-text... >
   - Name: createloadout
     Aliases: [ cloadout, cl ]
     Type: Verbatim
-    Description: "Create a new loadout with a <param 'class'/> and custom <param 'sign text'/> for <param 'player'/>."
+    Description: "Creates a new loadout with a <param 'class'/> and custom <param 'display-text'/> for a <param 'player'/>."
     Parameters:
       - Name: player
         Type: Uncreated.Warfare.Players.IPlayer
@@ -239,14 +229,14 @@ Parameters:
           - Name: class
             Type: Uncreated.Warfare.Kits.Class
             Parameters:
-              - Name: sign text
+              - Name: display-text
                 Type: string
                 IsRemainder: true
   # /kit skills <kit> <add|remove> <skill> [level]
   - Name: skills
     Aliases: [ skillset, skillsets ]
     Type: Verbatim
-    Description: "Add or remove <param 'skill'/> as a default skill for a <param 'kit'/>."
+    Description: "Adds or removes <param 'skill'/> as a default skill for a <param 'kit'/>."
     Parameters:
       - Name: kit
         Type: Uncreated.Warfare.Models.Kits.Kit
@@ -254,6 +244,7 @@ Parameters:
           - Name: add
             Aliases: [ set ]
             Type: Verbatim
+            Description: "Adds <param 'skill'/> as a default skill for a <param 'kit'/>."
             Parameters:
               - Name: skill
                 Type: Uncreated.Warfare.Players.Skillsets.Skillset
@@ -263,6 +254,7 @@ Parameters:
           - Name: remove
             Aliases: [ delete, clear ]
             Type: Verbatim
+            Description: "Removes <param 'skill'/> as a default skill for a <param 'kit'/>."
             Parameters:
               - Name: skill
                 Type: Uncreated.Warfare.Players.Skillsets.Skillset

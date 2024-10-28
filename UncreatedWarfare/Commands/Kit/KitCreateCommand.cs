@@ -20,7 +20,6 @@ internal class KitCreateCommand : IExecutableCommand
     private readonly IFactionDataStore _factionStorage;
     private readonly CommandDispatcher _commandDispatcher;
     private readonly IKitsDbContext _dbContext;
-    private readonly ILogger<KitCreateCommand> _logger;
     public CommandContext Context { get; set; }
 
     public KitCreateCommand(IServiceProvider serviceProvider)
@@ -30,8 +29,6 @@ internal class KitCreateCommand : IExecutableCommand
         _factionStorage = serviceProvider.GetRequiredService<IFactionDataStore>();
         _commandDispatcher = serviceProvider.GetRequiredService<CommandDispatcher>();
         _dbContext = serviceProvider.GetRequiredService<IKitsDbContext>();
-
-        _logger = serviceProvider.GetRequiredService<ILogger<KitCreateCommand>>();
 
         _dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
     }
@@ -71,6 +68,7 @@ internal class KitCreateCommand : IExecutableCommand
             _dbContext.Update(existingKit);
             await _dbContext.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
 
+            ILogger logger = Context.Logger;
             _ = Task.Run(async () =>
             {
                 try
@@ -79,7 +77,7 @@ internal class KitCreateCommand : IExecutableCommand
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error invoking OnItemsChangedLayoutHandler.");
+                    logger.LogError(ex, "Error invoking OnItemsChangedLayoutHandler.");
                 }
             }, CancellationToken.None);
             
