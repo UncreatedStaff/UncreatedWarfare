@@ -49,4 +49,16 @@ public class NullPlayerService : IPlayerService
 
     /// <inheritdoc />
     void IPlayerService.ReleasePlayerConnectionLock() { }
+
+    /// <inheritdoc />
+    public bool IsPlayerOnline(ulong steam64)
+    {
+        return false;
+    }
+
+    /// <inheritdoc />
+    public bool IsPlayerOnlineThreadSafe(ulong steam64)
+    {
+        return false;
+    }
 }

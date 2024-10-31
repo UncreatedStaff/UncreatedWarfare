@@ -57,11 +57,6 @@ public class SpottedComponent : MonoBehaviour
 #endif
     public void Initialize(Spotted type, Team ownerTeam, IServiceProvider serviceProvider)
     {
-        _serviceProvider = serviceProvider;
-        _playerService = serviceProvider.GetRequiredService<IPlayerService>();
-
-        _logger = serviceProvider.GetRequiredService<ILogger<SpottedComponent>>();
-
         _ownerTeam = ownerTeam;
         _vehicle = null;
         VehicleType = null;
@@ -78,6 +73,8 @@ public class SpottedComponent : MonoBehaviour
         Type = type;
         CurrentSpotter = null;
         IsLaserTarget = type == Spotted.FOB;
+
+        InitializeCommon(serviceProvider);
 
         AssetConfiguration assetConfig = serviceProvider.GetRequiredService<AssetConfiguration>();
 
@@ -119,13 +116,13 @@ public class SpottedComponent : MonoBehaviour
     }
     public void Initialize(VehicleType type, InteractableVehicle vehicle, IServiceProvider serviceProvider)
     {
-        _serviceProvider = serviceProvider;
-        _playerService = serviceProvider.GetRequiredService<IPlayerService>();
 
         CurrentSpotter = null;
         IsLaserTarget = type.IsGroundVehicle();
         _vehicle = vehicle;
         VehicleType = type;
+
+        InitializeCommon(serviceProvider);
 
         AssetConfiguration assetConfig = serviceProvider.GetRequiredService<AssetConfiguration>();
         IAssetLink<EffectAsset>? effect;
@@ -252,6 +249,15 @@ public class SpottedComponent : MonoBehaviour
 
         _logger.LogConditional("Spotter initialized: {0}.", this);
     }
+
+    private void InitializeCommon(IServiceProvider serviceProvider)
+    {
+        _serviceProvider = serviceProvider;
+        _playerService = serviceProvider.GetRequiredService<IPlayerService>();
+
+        _logger = serviceProvider.GetRequiredService<ILogger<SpottedComponent>>();
+    }
+
 #if ENABLE_SPOTTED_BUFF
     private static void OnExitVehicle(ExitVehicle e)
     {
@@ -479,7 +485,7 @@ public class SpottedComponent : MonoBehaviour
         if (IsActive)
             return;
 
-        ToastMessage.QueueMessage(spotter, new ToastMessage(ToastMessageStyle.Mini, T.SpottedToast.Translate(spotter)));
+        spotter.SendToast(new ToastMessage(ToastMessageStyle.Mini, T.SpottedToast.Translate(spotter)));
 
         Team t = spotter.Team;
         Color t1 = t.Faction.Color;

@@ -1,9 +1,9 @@
 ﻿using System;
 using Uncreated.Warfare.FOBs.Deployment;
-using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.NewQuests;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Addons;
@@ -97,7 +97,7 @@ public class RequestTranslations : PropertiesTranslationCollection
     public readonly Translation<int> RequestKitLimited = new Translation<int>("<#a8918a>Your team already has a max of <#d9e882>{0}</color> players using this kit. Try again later.");
 
     [TranslationData("Sent when a player tries to request a kit but they're too low level.", "Name of the level needed", "Number of the level needed")]
-    public readonly Translation<LevelData, LevelData> RequestKitLowLevel = new Translation<LevelData, LevelData>("<#b3ab9f>You must be <#ffc29c>{0}</color> (L {1}) to use this kit.", arg0Fmt: LevelData.FormatName, arg1Fmt: LevelData.FormatNumeric);
+    public readonly Translation<WarfareRank, WarfareRank> RequestKitLowLevel = new Translation<WarfareRank, WarfareRank>("<#b3ab9f>You must be <#ffc29c>{0}</color> ({1}) to use this kit.", arg0Fmt: WarfareRank.FormatName, arg1Fmt: WarfareRank.FormatLPrefixedNumeric);
 
     [TranslationData("Sent when a player tries to request a kit but they're missing a completed quest.", "Name of the quest")]
     public readonly Translation<QuestAsset> RequestKitQuestIncomplete = new Translation<QuestAsset>("<#b3ab9f>You have to complete {0} to request this kit.", arg0Fmt: QuestTemplate.FormatColorQuestAsset);
@@ -130,7 +130,7 @@ public class RequestTranslations : PropertiesTranslationCollection
     public readonly Translation<Class> RequestVehicleWrongClass = new Translation<Class>("<#b3ab9f>You need a <#cedcde><uppercase>{0}</uppercase></color> kit in order to request this vehicle.");
 
     [TranslationData("Sent when a player tries to request a vehicle but they're too low level.", "Name of the level needed", "Number of the level needed")]
-    public readonly Translation<LevelData, LevelData> RequestVehicleMissingLevels = new Translation<LevelData, LevelData>("<#b3ab9f>You must be <#ffc29c>{0}</color> (L {1}) to request this vehicle.", arg0Fmt: LevelData.FormatName, arg1Fmt: LevelData.FormatNumeric);
+    public readonly Translation<WarfareRank, WarfareRank> RequestVehicleMissingLevels = new Translation<WarfareRank, WarfareRank>("<#b3ab9f>You must be <#ffc29c>{0}</color> ({1}) to request this vehicle.", arg0Fmt: WarfareRank.FormatName, arg1Fmt: WarfareRank.FormatLPrefixedNumeric);
 
     [TranslationData("Sent when a player tries to request a vehicle but they're missing a completed quest.", "Name of the quest")]
     public readonly Translation<QuestAsset> RequestVehicleQuestIncomplete = new Translation<QuestAsset>("<#b3ab9f>You have to complete {0} to request this vehicle.", arg0Fmt: QuestTemplate.FormatColorQuestAsset);

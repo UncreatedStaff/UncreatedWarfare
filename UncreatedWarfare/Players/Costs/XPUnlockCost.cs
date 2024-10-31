@@ -1,7 +1,4 @@
-﻿using System;
-using Uncreated.Warfare.Levels;
-
-namespace Uncreated.Warfare.Players.Costs;
+﻿namespace Uncreated.Warfare.Players.Costs;
 
 #if false
 /// <summary>

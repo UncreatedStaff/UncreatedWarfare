@@ -45,6 +45,24 @@ public class PlayerReputationComponent : IPlayerComponent, IDisposable
         }
     }
 
+    /// <summary>
+    /// Sets the reputation value for a player.
+    /// </summary>
+    /// <remarks>Thread-safe</remarks>
+    public void SetReputation(int reputation)
+    {
+        reputation = Player.UnturnedPlayer.skills.reputation - reputation;
+        if (GameThread.IsCurrent)
+        {
+            _pendingReputation = 0;
+            ModifyReputationIntl(reputation);
+        }
+        else
+        {
+            _pendingReputation = reputation;
+        }
+    }
+
     private void ModifyReputationIntl(int deltaReputation)
     {
         Patches.CancelReputationPatch.IsSettingReputation = true;

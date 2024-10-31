@@ -2,7 +2,6 @@
 using StackCleaner;
 using System;
 using System.Globalization;
-using System.IO;
 using Uncreated.Framework.UI;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Deaths;
@@ -17,6 +16,7 @@ using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.UI;
+using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Util;
@@ -98,6 +98,7 @@ public class PlayerInjureComponent : MonoBehaviour,
     private IPlayerService _playerService;
     private EventDispatcher2 _eventDispatcher;
     private AssetConfiguration _assetConfiguration;
+    private PointsTranslations _xpTranslations;
     private bool _isInjured;
     private bool _isReviving;
     private WarfarePlayer? _reviver;
@@ -139,9 +140,11 @@ public class PlayerInjureComponent : MonoBehaviour,
         _assetConfiguration = serviceProvider.GetRequiredService<AssetConfiguration>();
         _eventDispatcher = serviceProvider.GetRequiredService<EventDispatcher2>();
         _cooldownManager = serviceProvider.GetRequiredService<CooldownManager>();
+        _xpTranslations = serviceProvider.GetRequiredService<TranslationInjection<PointsTranslations>>().Value;
 
         if (!isOnJoin)
             return;
+
 
         PlayerKeys.PressedPluginKey3 += OnPressedGiveUp;
         PlayerKeys.PressedPluginKey2 += OnPressedReviveSelf;
@@ -249,7 +252,10 @@ public class PlayerInjureComponent : MonoBehaviour,
         {
             // send Injured toast to killer
             Team killerTeam = killer.Team;
-            ToastMessage.QueueMessage(killer, new ToastMessage(ToastMessageStyle.Mini, (killerTeam != player.Team ? T.XPToastEnemyInjured : T.XPToastFriendlyInjured).Translate(killer)));
+            killer.SendToast(new ToastMessage(ToastMessageStyle.Mini, (killerTeam != player.Team
+                ? _xpTranslations.XPToastEnemyInjured
+                : _xpTranslations.XPToastFriendlyInjured)
+                .Translate(killer)));
         }
 
         PlayerInjured args = new PlayerInjured(in _injureParameters)
@@ -468,10 +474,10 @@ public class PlayerInjureComponent : MonoBehaviour,
         }
         else
         {
-            ToastMessage.QueueMessage(e.Medic, new ToastMessage(ToastMessageStyle.Mini,
-                T.XPToastGainXP.Translate(0, e.Medic, false)
-                + "\n"
-                + TranslationFormattingUtility.Colorize(T.XPToastHealedTeammate.Translate(e.Medic), new Color32(173, 173, 173, 255), TranslationOptions.TMProUI, StackColorFormatType.None) ));
+            e.Medic.SendToast(new ToastMessage(ToastMessageStyle.Mini,
+                _xpTranslations.XPToastGainXP.Translate(0, e.Medic, false)
+                +"\n"
+                + TranslationFormattingUtility.Colorize(_xpTranslations.XPToastHealedTeammate.Translate(e.Medic), new Color32(173, 173, 173, 255), TranslationOptions.TMProUI, StackColorFormatType.None) ));
         }
     }
 

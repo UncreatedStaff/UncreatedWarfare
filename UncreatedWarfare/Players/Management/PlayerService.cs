@@ -303,6 +303,23 @@ public class PlayerService : IPlayerService
     }
 
     /// <inheritdoc />
+    public bool IsPlayerOnline(ulong steam64)
+    {
+        GameThread.AssertCurrent();
+
+        return _onlinePlayersDictionary.ContainsPlayer(steam64);
+    }
+
+    /// <inheritdoc />
+    public bool IsPlayerOnlineThreadSafe(ulong steam64)
+    {
+        lock (_onlinePlayersDictionary)
+        {
+            return _onlinePlayersDictionary.ContainsPlayer(steam64);
+        }
+    }
+
+    /// <inheritdoc />
     public WarfarePlayer GetOnlinePlayer(ulong steam64)
     {
         GameThread.AssertCurrent();
@@ -366,11 +383,4 @@ public class PlayerOfflineException : Exception
     {
 
     }
-}
-
-public class PlayerComponentNotFoundException : Exception
-{
-    public PlayerComponentNotFoundException(Type type, WarfarePlayer player)
-        : base($"The component {Accessor.ExceptionFormatter.Format(type)} could not be found on player {player.Steam64.m_SteamID.ToString(CultureInfo.InvariantCulture)}.")
-    { }
 }

@@ -13,6 +13,7 @@ using Uncreated.Warfare.Exceptions;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Models.Factions;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Util;
 
@@ -24,9 +25,11 @@ namespace Uncreated.Warfare.Layouts.Teams;
 public class TwoSidedTeamManager : ITeamManager<Team>
 {
     private readonly ILogger<TwoSidedTeamManager> _logger;
+    private readonly PointsService _points;
     private readonly IServiceProvider _serviceProvider;
     private readonly Team[] _teams = new Team[2];
     private readonly EventDispatcher2 _eventDispatcher;
+    private readonly IPointsStore _pointsSql;
     private int _blufor;
     private int _opfor;
 
@@ -63,13 +66,15 @@ public class TwoSidedTeamManager : ITeamManager<Team>
     /// <exception cref="InvalidOperationException">There is no Opfor team.</exception>
     public Team Opfor => _opfor == -1 ? throw new InvalidOperationException("This layout does not have an Opfor team.") : _teams[_opfor];
 
-    public TwoSidedTeamManager(ILogger<TwoSidedTeamManager> logger, IServiceProvider serviceProvider)
+    public TwoSidedTeamManager(ILogger<TwoSidedTeamManager> logger, PointsService points, IServiceProvider serviceProvider)
     {
         _logger = logger;
+        _points = points;
         _serviceProvider = serviceProvider;
         AllTeams = new ReadOnlyCollection<Team>(_teams);
 
         _eventDispatcher = serviceProvider.GetRequiredService<EventDispatcher2>();
+        _pointsSql = serviceProvider.GetRequiredService<IPointsStore>();
     }
 
     /// <inheritdoc />
@@ -88,6 +93,7 @@ public class TwoSidedTeamManager : ITeamManager<Team>
     public async UniTask JoinTeamAsync(WarfarePlayer player, Team team, CancellationToken token = default)
     {
         await UniTask.SwitchToMainThread(token);
+
         team ??= Team.NoTeam;
         Team oldTeam = player.Team;
 
@@ -98,11 +104,31 @@ public class TwoSidedTeamManager : ITeamManager<Team>
         {
             player.UnturnedPlayer.quests.leaveGroup(force: true);
         }
-        else if (!player.UnturnedPlayer.quests.ServerAssignToGroup(team.GroupId, EPlayerGroupRank.MEMBER, bypassMemberLimit: true))
+        else
         {
-            throw new ArgumentException($"Group for team {team.Faction.Name} doesn't exist.", nameof(team));
+            if (player.UnturnedPlayer.quests.isMemberOfAGroup)
+            {
+                player.UnturnedPlayer.quests.leaveGroup(force: true);
+            }
+
+            // download points for new team
+            PlayerPoints pts = await _pointsSql.GetPointsAsync(player.Steam64, team.Faction.PrimaryKey, CancellationToken.None).ConfigureAwait(false);
+
+            // setup default credit value if there was no row in the db
+            if (!pts.WasFound)
+            {
+                pts = await _pointsSql.AddToCreditsAsync(player.Steam64, team.Faction.PrimaryKey, _points.DefaultCredits, CancellationToken.None).ConfigureAwait(false);
+            }
+
+            await UniTask.SwitchToMainThread(CancellationToken.None);
+
+            if (!player.UnturnedPlayer.quests.ServerAssignToGroup(team.GroupId, EPlayerGroupRank.MEMBER, bypassMemberLimit: true))
+                throw new ArgumentException($"Group for team {team.Faction.Name} doesn't exist.", nameof(team));
+
+            player.CachedPoints = pts;
         }
 
+        player.UpdateTeam(team);
         PlayerTeamChanged args = new PlayerTeamChanged
         {
             GroupId = team.GroupId,

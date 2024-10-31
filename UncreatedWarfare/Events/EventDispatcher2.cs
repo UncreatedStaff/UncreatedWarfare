@@ -75,6 +75,7 @@ public partial class EventDispatcher2 : IHostedService
         /* Vehicles */
         VehicleManager.OnToggleVehicleLockRequested += VehicleManagerOnToggleVehicleLockRequested;
         VehicleManager.OnToggledVehicleLock += VehicleManagerOnToggledVehicleLock;
+        VehicleManager.OnVehicleExploded += VehicleManagerOnVehicleExploded;
 
         /* Items */
         ItemManager.onTakeItemRequested += ItemManagerOnTakeItemRequested;
@@ -114,6 +115,7 @@ public partial class EventDispatcher2 : IHostedService
         /* Vehicles */
         VehicleManager.OnToggleVehicleLockRequested -= VehicleManagerOnToggleVehicleLockRequested;
         VehicleManager.OnToggledVehicleLock -= VehicleManagerOnToggledVehicleLock;
+        VehicleManager.OnVehicleExploded -= VehicleManagerOnVehicleExploded;
 
         /* Items */
         ItemManager.onTakeItemRequested -= ItemManagerOnTakeItemRequested;

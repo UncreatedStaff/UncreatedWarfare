@@ -107,9 +107,20 @@ public class GroupCommand : IExecutableCommand
                 throw Context.Reply(_translations.GroupNotFound, groupId.ToString(Data.LocalLocale));
             }
 
-            if (!Context.Player.UnturnedPlayer.quests.ServerAssignToGroup(groupInfo.groupID, EPlayerGroupRank.MEMBER, true))
+            if (newTeam.IsValid)
             {
-                throw Context.Reply(_translations.GroupNotFound, groupId.ToString(Data.LocalLocale));
+                await _teamManager.JoinTeamAsync(Context.Player, newTeam, token);
+                if (Context.Player.Team != newTeam)
+                {
+                    throw Context.Reply(_translations.GroupNotFound, groupId.ToString(Data.LocalLocale));
+                }
+            }
+            else
+            {
+                if (!Context.Player.UnturnedPlayer.quests.ServerAssignToGroup(groupInfo.groupID, EPlayerGroupRank.MEMBER, true))
+                {
+                    throw Context.Reply(_translations.GroupNotFound, groupId.ToString(Data.LocalLocale));
+                }
             }
 
             if (newTeam != null && newTeam.IsValid)

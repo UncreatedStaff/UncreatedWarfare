@@ -1,7 +1,5 @@
 ﻿using DanielWillett.ReflectionTools;
-using Stripe;
 using System;
-using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 
@@ -69,7 +67,17 @@ public class SingleUseTypeDictionary<TType> where TType : notnull
 
 public class ComponentNotFoundException : Exception
 {
+    public Type Type { get; }
+
     public ComponentNotFoundException(Type type, object context)
         : base($"The component {Accessor.ExceptionFormatter.Format(type)} could not be found on {context}.")
-    { }
+    {
+        Type = type;
+    }
+
+    public ComponentNotFoundException(Type type, string message)
+        : base(message)
+    {
+        Type = type;
+    }
 }

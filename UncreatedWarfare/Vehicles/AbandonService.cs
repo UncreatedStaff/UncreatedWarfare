@@ -105,7 +105,7 @@ public class AbandonService
         }
         else if (owner != null)
         {
-            ToastMessage.QueueMessage(owner, new ToastMessage(ToastMessageStyle.Mini, _formatter.Colorize(_translations.AbandonCompensationToastTransferred.Translate(owner), new Color32(173, 173, 173, 255), TranslationOptions.TMProUI)));
+            owner.SendToast(new ToastMessage(ToastMessageStyle.Mini, _formatter.Colorize(_translations.AbandonCompensationToastTransferred.Translate(owner), new Color32(173, 173, 173, 255), TranslationOptions.TMProUI)));
         }
 
         await _vehicleService.DeleteVehicleAsync(vehicle, token);

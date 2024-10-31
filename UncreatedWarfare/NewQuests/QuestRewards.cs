@@ -2,7 +2,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Translations;
 
@@ -39,7 +38,7 @@ public class XPReward : IQuestReward
     {
         ITranslationValueFormatter formatter = serviceProvider.GetRequiredService<ITranslationValueFormatter>();
 
-        XPParameters parameters = new XPParameters(player, player.Team, XP, tracker.Quest.Name.ToUpper() + " REWARD", false);
+        // todo XPParameters parameters = new XPParameters(player, player.Team, XP, tracker.Quest.Name.ToUpper() + " REWARD", false);
 
         // await Points.AwardXPAsync(parameters, token).ConfigureAwait(false);
     }
@@ -70,7 +69,7 @@ public class CreditsReward : IQuestReward
     {
         ITranslationValueFormatter formatter = serviceProvider.GetRequiredService<ITranslationValueFormatter>();
 
-        CreditsParameters parameters = new CreditsParameters(player, player.Team, Credits, tracker.Quest.Name.ToUpper() + " REWARD");
+        // todo CreditsParameters parameters = new CreditsParameters(player, player.Team, Credits, tracker.Quest.Name.ToUpper() + " REWARD");
 
         // await Points.AwardCreditsAsync(parameters, token).ConfigureAwait(false);
     }

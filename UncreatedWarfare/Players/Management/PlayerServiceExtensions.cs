@@ -201,6 +201,23 @@ public static class PlayerServiceExtensions
     }
 
     /// <summary>
+    /// Quickly check if a player is online.
+    /// </summary>
+    /// <exception cref="GameThreadException"/>
+    public static bool IsPlayerOnline(this IPlayerService playerService, CSteamID steamId)
+    {
+        return playerService.IsPlayerOnline(steamId.m_SteamID);
+    }
+
+    /// <summary>
+    /// Quickly check if a player is online.
+    /// </summary>
+    public static bool IsPlayerOnlineThreadSafe(this IPlayerService playerService, CSteamID steamId)
+    {
+        return playerService.IsPlayerOnlineThreadSafe(steamId.m_SteamID);
+    }
+
+    /// <summary>
     /// Search for a player by their name.
     /// </summary>
     public static WarfarePlayer? GetOnlinePlayerOrNull(this IPlayerService playerService, string searchTerm, [InstantHandle] IEnumerable<WarfarePlayer> selection, PlayerNameType preferredName = PlayerNameType.CharacterName)

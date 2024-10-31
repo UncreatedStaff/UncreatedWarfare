@@ -1,5 +1,4 @@
 ﻿using SDG.NetTransport;
-using Stripe.BillingPortal;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -9,6 +8,7 @@ using Uncreated.Warfare.Models.GameData;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Saves;
+using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Steam.Models;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Util;
@@ -33,6 +33,7 @@ public class WarfarePlayer : IPlayer, ICommandUser, IComponentContainer<IPlayerC
     private readonly CancellationTokenSource _disconnectTokenSource;
     private readonly ILogger _logger;
     private PlayerNames _playerNameHelper;
+    private PlayerPoints _cachedPoints;
     private readonly uint _acctId;
     private readonly SingleUseTypeDictionary<IPlayerComponent> _components;
 
@@ -46,6 +47,7 @@ public class WarfarePlayer : IPlayer, ICommandUser, IComponentContainer<IPlayerC
     public SemaphoreSlim PurchaseSync { get; }
     public PlayerSummary SteamSummary { get; internal set; }
     public SessionRecord CurrentSession { get; internal set; }
+    public ref PlayerPoints CachedPoints => ref _cachedPoints;
 
     /// <summary>
     /// List of steam IDs of this player's friends, if theyre public.
@@ -135,7 +137,7 @@ public class WarfarePlayer : IPlayer, ICommandUser, IComponentContainer<IPlayerC
     /// Get the given component type from <see cref="Components"/>.
     /// </summary>
     /// <remarks>Always returns a value or throws.</remarks>
-    /// <exception cref="PlayerComponentNotFoundException">Component not found.</exception>
+    /// <exception cref="ComponentNotFoundException">Component not found.</exception>
     [Pure]
     public TComponentType Component<TComponentType>() where TComponentType : IPlayerComponent
     {

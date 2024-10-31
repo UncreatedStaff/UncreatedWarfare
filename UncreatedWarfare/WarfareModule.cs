@@ -28,14 +28,12 @@ using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.ListenerProviders;
 using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.FOBs.Deployment;
-using Uncreated.Warfare.FOBs.UI;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Whitelists;
 using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.Layouts.UI;
-using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Lobby;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Maps;
@@ -52,6 +50,8 @@ using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Signs;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Squads.UI;
+using Uncreated.Warfare.Stats;
+using Uncreated.Warfare.Stats.EventHandlers;
 using Uncreated.Warfare.Steam;
 using Uncreated.Warfare.StrategyMaps;
 using Uncreated.Warfare.Teams;
@@ -422,8 +422,7 @@ public sealed class WarfareModule
         bldr.RegisterType<FlagListUI>().SingleInstance();
         bldr.RegisterType<StagingUI>().SingleInstance();
         bldr.RegisterType<WinToastUI>().SingleInstance();
-        bldr.RegisterType<XPUI>().SingleInstance();
-        bldr.RegisterType<CreditsUI>().SingleInstance();
+        bldr.RegisterType<PointsUI>().SingleInstance();
         bldr.RegisterType<TeamSelectorUI>().SingleInstance();
         bldr.RegisterType<VehicleHUD>().SingleInstance();
 
@@ -520,6 +519,21 @@ public sealed class WarfareModule
             .SingleInstance();
 
         bldr.RegisterType<LobbyHudUI>()
+            .SingleInstance();
+
+        // Stats
+        bldr.RegisterType<EventHandlerDestroyVehicle>()
+            .AsImplementedInterfaces();
+
+        bldr.RegisterType<MySqlPointsStore>()
+            .As<IPointsStore>()
+            .SingleInstance();
+
+        bldr.RegisterType<PointsConfiguration>()
+            .SingleInstance();
+
+        bldr.RegisterType<PointsService>()
+            .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
 
         // Kits

@@ -1,16 +1,11 @@
-﻿using Autofac.Features.OwnedInstances;
-using Microsoft.Extensions.Configuration;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Layouts.Teams;
-using Uncreated.Warfare.Levels;
-using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Timing;
 

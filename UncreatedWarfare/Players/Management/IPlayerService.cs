@@ -54,4 +54,15 @@ public interface IPlayerService
     /// Re-allow players to join after calling <see cref="TakePlayerConnectionLock"/>.
     /// </summary>
     void ReleasePlayerConnectionLock();
+
+    /// <summary>
+    /// Quickly check if a player is online.
+    /// </summary>
+    /// <exception cref="GameThreadException"/>
+    bool IsPlayerOnline(ulong steam64);
+
+    /// <summary>
+    /// Quickly check if a player is online.
+    /// </summary>
+    bool IsPlayerOnlineThreadSafe(ulong steam64);
 }

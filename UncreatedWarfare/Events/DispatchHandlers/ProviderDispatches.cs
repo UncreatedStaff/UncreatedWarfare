@@ -34,6 +34,8 @@ partial class EventDispatcher2
         Team team = Team.NoTeam;
         if (steamPlayer.player.quests.isMemberOfAGroup)
         {
+            steamPlayer.player.quests.leaveGroup(true);
+            /* todo make some kind of 'joining previous team...' section of the lobby
             if (!_warfare.IsLayoutActive())
             {
                 steamPlayer.player.quests.leaveGroup(true);
@@ -44,6 +46,7 @@ partial class EventDispatcher2
                 if (team == Team.NoTeam)
                     steamPlayer.player.quests.leaveGroup(true);
             }
+            */
         }
 
         ulong s64 = steam64.m_SteamID;

@@ -1,14 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Uncreated.Warfare.Configuration;
+﻿using Uncreated.Warfare.Configuration;
 
 namespace Uncreated.Warfare.FOBs.Construction;
 public class ShovelableInfo
 {
-    required public IAssetLink<ItemPlaceableAsset> Foundation { get; set; }
-    required public ShovelableType ConstuctionType { get; set; }
-    required public int RequiredHits { get; set; }
+    public required IAssetLink<ItemPlaceableAsset>? Foundation { get; set; }
+    public required ShovelableType ConstuctionType { get; set; }
+    public required int RequiredHits { get; set; }
     public IAssetLink<ItemPlaceableAsset>? CompletedStructure { get; set; }
     public IAssetLink<EffectAsset>? CompletedEffect { get; set; }
     public EmplacementInfo? Emplacement { get; set; }

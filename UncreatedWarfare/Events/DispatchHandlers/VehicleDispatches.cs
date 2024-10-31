@@ -2,6 +2,7 @@
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models.Vehicles;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 
@@ -91,6 +92,58 @@ partial class EventDispatcher2
         {
             Player = player,
             Vehicle = vehicle
+        };
+
+        _ = DispatchEventAsync(args, CancellationToken.None);
+    }
+
+    /// <summary>
+    /// Invoked by <see cref="VehicleManager.OnVehicleExploded"/> when a vehicle is destroyed.
+    /// </summary>
+    private void VehicleManagerOnVehicleExploded(InteractableVehicle vehicle)
+    {
+        VehicleComponent component = vehicle.gameObject.GetOrAddComponent<VehicleComponent>();
+
+        ITeamManager<Team>? teamManager = _warfare.IsLayoutActive() ? _warfare.ScopedProvider.Resolve<ITeamManager<Team>>() : null;
+
+        WarfarePlayer? instigator = null, lastDriver = null;
+        CSteamID instigatorId = CSteamID.Nil, lastDriverId = CSteamID.Nil;
+
+        Team? instigatorTeam = null;
+
+        WarfarePlayer? owner = _playerService.GetOnlinePlayerOrNull(vehicle.lockedOwner);
+
+        if (component.LastInstigator != 0)
+        {
+            instigatorId = new CSteamID(component.LastInstigator);
+            instigator = _playerService.GetOnlinePlayerOrNull(instigatorId);
+
+            instigatorTeam = instigator == null ? null : teamManager?.GetTeam(instigator.UnturnedPlayer.quests.groupID);
+        }
+
+        if (component.LastDriver != 0)
+        {
+            lastDriverId = new CSteamID(component.LastDriver);
+            lastDriver = _playerService.GetOnlinePlayerOrNull(instigatorId);
+        }
+
+        EDamageOrigin origin = component.LastDamageOrigin;
+        InteractableVehicle? activeVehicle = component.LastDamagedFromVehicle;
+
+        VehicleExploded args = new VehicleExploded
+        {
+            Vehicle = vehicle,
+            Component = component,
+            DamageOrigin = origin,
+            InstigatorVehicle = activeVehicle,
+            Team = teamManager?.GetTeam(vehicle.lockedGroup) ?? Team.NoTeam,
+            Instigator = instigator,
+            InstigatorId = instigatorId,
+            InstigatorTeam = instigatorTeam,
+            LastDriver = lastDriver,
+            LastDriverId = lastDriverId,
+            Owner = owner,
+            OwnerId = vehicle.lockedOwner
         };
 
         _ = DispatchEventAsync(args, CancellationToken.None);

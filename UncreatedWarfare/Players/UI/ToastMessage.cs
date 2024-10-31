@@ -54,35 +54,4 @@ public struct ToastMessage
 
         return new ToastMessage(state, ToastMessageStyle.Popup, args!);
     }
-    public static void QueueMessage(LanguageSet set, in ToastMessage message)
-    {
-        while (set.MoveNext())
-        {
-            set.Next.Component<ToastManager>().Queue(in message);
-        }
-    }
-    public static void QueueMessage(WarfarePlayer player, in ToastMessage message)
-    {
-        player.Component<ToastManager>().Queue(in message);
-    }
-    public static void QueueMessage(SteamPlayer player, in ToastMessage message)
-    {
-        // todo if (UCPlayer.FromSteamPlayer(player) is { } pl)
-        // todo     pl.Toasts.Queue(in message);
-    }
-    public static void QueueMessage(Player player, in ToastMessage message)
-    {
-        // todo if (UCPlayer.FromPlayer(player) is { } pl)
-        // todo     pl.Toasts.Queue(in message);
-    }
-    public static void QueueMessage(ulong steam64, in ToastMessage message)
-    {
-        // todo if (UCPlayer.FromID(steam64) is { } pl)
-        // todo     pl.Toasts.Queue(in message);
-    }
-    public static void QueueMessage(CSteamID steam64, in ToastMessage message)
-    {
-        // todo if (UCPlayer.FromCSteamID(steam64) is { } pl)
-        // todo     pl.Toasts.Queue(in message);
-    }
 }

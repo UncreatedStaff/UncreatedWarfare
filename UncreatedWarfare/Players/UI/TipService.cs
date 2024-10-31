@@ -66,7 +66,7 @@ public class TipService : ILayoutHostedService, IEventListener<PlayerLeft>
 
     private static void GiveTip(WarfarePlayer player, string translation)
     {
-        ToastMessage.QueueMessage(player, new ToastMessage(ToastMessageStyle.Tip, translation) { Resend = Data.PluginKeyMatch.IsMatch(translation) });
+        player.SendToast(new ToastMessage(ToastMessageStyle.Tip, translation) { Resend = Data.PluginKeyMatch.IsMatch(translation) });
     }
 
 }

@@ -55,8 +55,8 @@ public partial class FobManager :
     }
     private void CreateShoveable(BarricadePlaced e, BuildableContainer container, BuildableFob? newFob)
     {
-        ShovelableInfo? shovelableInfo = _configuration.GetRequiredSection("Shovelables").Get<List<ShovelableInfo>>()
-        .FirstOrDefault(s => s.Foundation.Guid == e.Buildable.Asset.GUID);
+        ShovelableInfo? shovelableInfo = (_configuration.GetRequiredSection("Shovelables").Get<IEnumerable<ShovelableInfo>>() ?? Array.Empty<ShovelableInfo>())
+            .FirstOrDefault(s => s.Foundation != null && s.Foundation.Guid == e.Buildable.Asset.GUID);
 
         if (shovelableInfo != null)
         {
