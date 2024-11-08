@@ -1,12 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using SDG.NetTransport;
-using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Xml.Linq;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Data;
 using Uncreated.Framework.UI.Patterns;
@@ -19,7 +14,6 @@ using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace Uncreated.Warfare.Squads.UI;
 
@@ -54,18 +48,16 @@ internal class SquadMenuUI :
 
         int index = Array.FindIndex(Squads, e => e.SquadJoinLeaveButton.Button == button);
         List<Squad> friendlySquads = _squadManager.Squads.Where(s => s.Team == warfarePlayer.Team).ToList();
-        Console.WriteLine("index: " + index);
-        Console.WriteLine("friendlySquads: " + friendlySquads.Count);
+
         if (index >= friendlySquads.Count)
             return;
 
         Squad squad = friendlySquads[index];
-        Console.WriteLine("squad members: " + squad.Members.Count);
 
-        if (squad.ConstainsPlayer(warfarePlayer))
-            _squadManager.RemoveMemberFromSquad(warfarePlayer, squad);
+        if (squad.ContainsPlayer(warfarePlayer))
+            squad.RemoveMember(warfarePlayer);
         else
-            _squadManager.AddMemberToSquad(warfarePlayer, squad);
+            squad.AddMember(warfarePlayer);
     }
 
     private void CloseMenuButton_OnClicked(UnturnedButton button, Player player)
@@ -85,6 +77,10 @@ internal class SquadMenuUI :
         _squadManager.CreateSquad(squadleader, squadName);
     }
     public void HandleEvent(SquadCreated e, IServiceProvider serviceProvider)
+    {
+        UpdateForViewingPlayers(e.Squad.Team);
+    }
+    public void HandleEvent(SquadLockUpdated e, IServiceProvider serviceProvider)
     {
         UpdateForViewingPlayers(e.Squad.Team);
     }
@@ -145,7 +141,6 @@ internal class SquadMenuUI :
     }
     private void UpdateForPlayer(WarfarePlayer player)
     {
-
         List<Squad> friendlySquads = _squadManager.Squads.Where(s => s.Team == player.Team).ToList();
         for (int i = 0; i < Squads.Length; i++)
         {
@@ -168,7 +163,7 @@ internal class SquadMenuUI :
         element.MemberCount.SetText(player, $"{squad.Members.Count}/{Squad.MaxMembers}");
 
         element.SquadJoinLeaveButton.Enable(player);
-        if (squad.ConstainsPlayer(player))
+        if (squad.ContainsPlayer(player))
             element.SquadJoinLeaveButton.SetText(player.Connection, "Leave");
         else if (player.Component<SquadPlayerComponent>().Squad != null)
             element.SquadJoinLeaveButton.Disable(player);

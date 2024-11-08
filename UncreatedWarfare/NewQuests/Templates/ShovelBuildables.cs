@@ -17,14 +17,14 @@ public class ShovelBuildables : QuestTemplate<ShovelBuildables, ShovelBuildables
     public AssetParameterTemplate<ItemPlaceableAsset> Base { get; set; }
     public EnumParameterTemplate<ShovelableType> Type { get; set; }
     public ShovelBuildables(IConfiguration templateConfig, IServiceProvider serviceProvider) : base(templateConfig, serviceProvider) { }
-    public class State : BaseState
+    public class State : IQuestState<ShovelBuildables>
     {
         [RewardField("a")]
         public QuestParameterValue<int> Amount { get; set; }
         public QuestParameterValue<Guid>? Base { get; set; }
         public QuestParameterValue<ShovelableType>? Type { get; set; }
-        public override QuestParameterValue<int> FlagValue => Amount;
-        public override UniTask CreateFromConfigurationAsync(IConfiguration configuration, IServiceProvider serviceProvider, CancellationToken token)
+        public QuestParameterValue<int> FlagValue => Amount;
+        public UniTask CreateFromConfigurationAsync(IConfiguration configuration, IServiceProvider serviceProvider, CancellationToken token)
         {
             string? amountStr = configuration["Amount"],
                     baseStr = configuration["Base"],
@@ -47,7 +47,7 @@ public class ShovelBuildables : QuestTemplate<ShovelBuildables, ShovelBuildables
             Type = type;
             return UniTask.CompletedTask;
         }
-        public override async UniTask CreateFromTemplateAsync(ShovelBuildables data, CancellationToken token)
+        public async UniTask CreateFromTemplateAsync(ShovelBuildables data, CancellationToken token)
         {
             Amount = await data.Amount.CreateValue(data.ServiceProvider);
 

@@ -47,8 +47,11 @@ public static class FactionDataStoreExtensions
     /// <summary>
     /// Search a faction using text.
     /// </summary>
-    public static FactionInfo? FindFaction(this IFactionDataStore dataStore, string search, bool exact = true, bool onlyOneMatch = true)
+    public static FactionInfo? FindFaction(this IFactionDataStore dataStore, [NotNullWhen(true)] string? search, bool exact = true, bool onlyOneMatch = true)
     {
+        if (search == null)
+            return null;
+
         IReadOnlyList<FactionInfo> factions = dataStore.Factions;
         foreach (FactionInfo faction in factions)
         {

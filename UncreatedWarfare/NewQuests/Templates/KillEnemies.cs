@@ -2,7 +2,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Text.Json;
-using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Exceptions;
@@ -10,10 +9,10 @@ using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.NewQuests.Parameters;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Util;
-using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.NewQuests.Templates;
 public class KillEnemies : QuestTemplate<KillEnemies, KillEnemies.Tracker, KillEnemies.State>
@@ -32,7 +31,7 @@ public class KillEnemies : QuestTemplate<KillEnemies, KillEnemies.Tracker, KillE
     public bool RequireAttack { get; set; }
     public bool RequireObjective { get; set; }
     public KillEnemies(IConfiguration templateConfig, IServiceProvider serviceProvider) : base(templateConfig, serviceProvider) { }
-    public class State : BaseState
+    public class State : IQuestState<KillEnemies>
     {
         [RewardField("k")]
         public QuestParameterValue<int> Kills { get; set; }
@@ -50,8 +49,8 @@ public class KillEnemies : QuestTemplate<KillEnemies, KillEnemies.Tracker, KillE
         public bool RequireDefense { get; set; }
         public bool RequireAttack { get; set; }
         public bool RequireObjective { get; set; }
-        public override QuestParameterValue<int> FlagValue => Kills;
-        public override async UniTask CreateFromConfigurationAsync(IConfiguration configuration, IServiceProvider serviceProvider, CancellationToken token)
+        public QuestParameterValue<int> FlagValue => Kills;
+        public async UniTask CreateFromConfigurationAsync(IConfiguration configuration, IServiceProvider serviceProvider, CancellationToken token)
         {
             string? killsStr = configuration["Kills"],
                     rangeStr = configuration["Range"],
@@ -111,7 +110,7 @@ public class KillEnemies : QuestTemplate<KillEnemies, KillEnemies.Tracker, KillE
             KitClass = kitClass;
             KitBranch = kitBranch;
         }
-        public override async UniTask CreateFromTemplateAsync(KillEnemies data, CancellationToken token)
+        public async UniTask CreateFromTemplateAsync(KillEnemies data, CancellationToken token)
         {
             Kills = await data.Kills.CreateValue(data.ServiceProvider);
 
@@ -169,7 +168,6 @@ public class KillEnemies : QuestTemplate<KillEnemies, KillEnemies.Tracker, KillE
             _needsObjective = state.RequireObjective && (_needsDefense || _needsAttack);
         }
 
-        [EventListener(RequiresMainThread = false)]
         void IEventListener<PlayerDied>.HandleEvent(PlayerDied e, IServiceProvider serviceProvider)
         {
             if (e.Instigator.m_SteamID != Player.Steam64.m_SteamID || !e.WasEffectiveKill || e.Cause == EDeathCause.SHRED)
@@ -256,16 +254,16 @@ public class KillEnemies : QuestTemplate<KillEnemies, KillEnemies.Tracker, KillE
                     return;
             }
 
-            // todo // squads
-            // todo if (_needsSquad && Player.Squad is not { Members.Count: > 1 })
-            // todo {
-            // todo     return;
-            // todo }
-            // todo 
-            // todo if (_squadMustBeFull && Player.Squad is not { Members.Count: SquadManager.SQUAD_MAX_MEMBERS })
-            // todo {
-            // todo     return;
-            // todo }
+            // squads
+            if (_needsSquad && Player.GetSquad() is not { Members.Count: > 1 })
+            {
+                return;
+            }
+            
+            if (_squadMustBeFull && Player.GetSquad() is not { Members.Count: Squad.MaxMembers })
+            {
+                return;
+            }
 
             // objectives
             bool obj = false;

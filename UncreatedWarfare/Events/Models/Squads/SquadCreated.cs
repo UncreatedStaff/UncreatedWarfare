@@ -1,16 +1,21 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Squads;
 
 namespace Uncreated.Warfare.Events.Models.Squads;
+
 /// <summary>
 /// Event listener args which fires after a <see cref="Squad"/> is created.
 /// </summary>
-internal class SquadCreated
+[EventModel(SynchronizedModelTags = [ "squads" ])]
+public class SquadCreated : SquadUpdated, IPlayerEvent
 {
     /// <summary>
-    /// The <see cref="Squad"/> that was created.
+    /// The player that created the squad.
     /// </summary>
-    public required Squad Squad { get; init; }
+    public required WarfarePlayer Player { get; init; }
+
+    /// <summary>
+    /// The ID of the player that created the squad.
+    /// </summary>
+    public CSteamID Steam64 => Player.Steam64;
 }

@@ -3,6 +3,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Database.Abstractions;
+using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Models.Kits;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Kits.Translations;
@@ -25,6 +27,7 @@ public class KitRequests
     private readonly RequestTranslations _translations;
     private readonly ITranslationValueFormatter _valueFormatter;
     private readonly LanguageService _languageService;
+    private readonly EventDispatcher2 _eventDispatcher;
     private readonly IServiceProvider _serviceProvider;
     private readonly IPlayerService _playerService;
     private readonly ILogger<KitRequests> _logger;
@@ -39,6 +42,7 @@ public class KitRequests
         _playerService = serviceProvider.GetRequiredService<IPlayerService>();
         _cooldownManager = serviceProvider.GetRequiredService<CooldownManager>();
         _logger = serviceProvider.GetRequiredService<ILogger<KitRequests>>();
+        _eventDispatcher = serviceProvider.GetRequiredService<EventDispatcher2>();
         _serviceProvider = serviceProvider;
         Manager = manager;
     }
@@ -318,8 +322,18 @@ public class KitRequests
         if (kit == null)
         {
             ItemUtility.ClearInventoryAndSlots(player, true);
+            _ = _eventDispatcher.DispatchEventAsync(new PlayerKitChanged { Player = player, Class = Class.None, Kit = null, KitId = 0, KitName = null });
             return;
         }
+
+        PlayerKitChanged args = new PlayerKitChanged
+        {
+            KitId = kit.PrimaryKey,
+            Kit = kit,
+            KitName = kit.InternalName,
+            Class = kit.Class,
+            Player = player
+        };
 
         Manager.Distribution.DistributeKitItems(player, kit, _logger, true, tip, false);
 
@@ -356,6 +370,8 @@ public class KitRequests
             if (asset != null && KitEx.CanBindHotkeyTo(asset, page))
                 player.UnturnedPlayer.equipment.ServerBindItemHotkey(index, asset, (byte)page, x, y);
         }
+
+        _ = _eventDispatcher.DispatchEventAsync(args);
     }
     internal async Task RemoveKit(WarfarePlayer player, bool manual, CancellationToken token = default, bool psLock = true)
     {

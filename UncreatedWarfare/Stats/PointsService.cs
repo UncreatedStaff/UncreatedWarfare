@@ -18,6 +18,8 @@ public class PointsService
     private readonly PointsConfiguration _configuration;
     private readonly IPointsStore _pointsSql;
     private readonly IPlayerService _playerService;
+    private readonly ILogger<PointsService> _logger;
+    private readonly PointsUI _ui;
     private readonly IConfigurationSection _event;
     private readonly PointsTranslations _translations;
     private readonly WarfareRank _startingRank;
@@ -34,12 +36,20 @@ public class PointsService
     /// </summary>
     public IReadOnlyList<WarfareRank> Ranks { get; }
 
-    public PointsService(PointsConfiguration configuration, IPointsStore pointsSql, IPlayerService playerService, TranslationInjection<PointsTranslations> translations)
+    public PointsService(
+        PointsConfiguration configuration,
+        IPointsStore pointsSql,
+        IPlayerService playerService,
+        TranslationInjection<PointsTranslations> translations,
+        ILogger<PointsService> logger,
+        PointsUI ui)
     {
         _translations = translations.Value;
         _configuration = configuration;
         _pointsSql = pointsSql;
         _playerService = playerService;
+        _logger = logger;
+        _ui = ui;
         _event = configuration.GetSection("Events");
         IConfigurationSection levelsSection = configuration.GetSection("Levels");
 
@@ -123,11 +133,17 @@ public class PointsService
         return new EventInfo(_event.GetSection(eventId));
     }
 
+    /// <summary>
+    /// Apply an event and trigger updates for the necessary UI for the current season.
+    /// </summary>
     public Task ApplyEvent(CSteamID playerId, uint factionId, ResolvedEventInfo @event, CancellationToken token = default)
     {
         return ApplyEvent(playerId, factionId, WarfareModule.Season, @event, token);
     }
 
+    /// <summary>
+    /// Apply an event and trigger updates for the necessary UI.
+    /// </summary>
     public async Task ApplyEvent(CSteamID playerId, uint factionId, int season, ResolvedEventInfo @event, CancellationToken token = default)
     {
         await UniTask.SwitchToMainThread(token);
@@ -162,11 +178,23 @@ public class PointsService
 
         PlayerPoints newPoints = await _pointsSql.AddToPointsAsync(playerId, factionId, season, xp, credits, token).ConfigureAwait(false);
 
-        await _pointsSql.AddToReputationAsync(playerId, rep, token).ConfigureAwait(false);
+        double newRep = await _pointsSql.AddToReputationAsync(playerId, rep, token).ConfigureAwait(false);
+
+        _logger.LogConditional("Applied event {0}. XP: {1} -> {2}, Credits: {3} -> {4}. Reputation: {5}. Faction: {6}, Season: {7}.",
+            @event.EventName,
+            oldPoints.XP,
+            newPoints.XP,
+            oldPoints.Credits,
+            newPoints.Credits,
+            newRep,
+            factionId,
+            season
+        );
 
         await UniTask.SwitchToMainThread(token);
 
-        player?.AddReputation((int)Math.Round(rep));
+        player = _playerService.GetOnlinePlayerOrNull(playerId);
+
         if (player is { IsOnline: true } && !hideToast)
         {
             // XP toast
@@ -193,6 +221,14 @@ public class PointsService
                 player.SendToast(new ToastMessage(ToastMessageStyle.Mini, text));
             }
         }
+
+        // update UI
+        if (player is { IsOnline: true })
+        {
+            player.CachedPoints = newPoints;
+            player.AddReputation((int)Math.Round(rep));
+            _ui.UpdatePointsUI(player, this);
+        }
     }
 }
 
@@ -206,12 +242,14 @@ public class ResolvedEventInfo
     public bool IgnoresBoosts { get; }
     public bool IgnoresGlobalMultiplier { get; }
     public string? Message { get; set; }
+    public string? EventName { get; set; }
     public ResolvedEventInfo(EventInfo @event) : this(@event, null, null, null) { }
     public ResolvedEventInfo(EventInfo @event, double? overrideXp, double? overrideCredits, double? overrideReputation)
     {
         XP = overrideXp ?? @event.XP;
         Credits = overrideCredits ?? @event.Credits;
         Reputation = overrideReputation ?? @event.Reputation;
+        EventName = @event.Name;
 
         HideToast = @event.Configuration.GetValue("HideToast", false);
         ExcludeFromLeaderboard = @event.Configuration.GetValue("ExcludeFromLeaderboard", false);
@@ -271,7 +309,8 @@ public class ResolvedEventInfo
 public readonly struct EventInfo
 {   
     public IConfigurationSection Configuration { get; }
-    public double XP => Configuration.GetValue("XP", 0d);
+    public string? Name => Configuration?.Key;
+    public double XP => Configuration?.GetValue("XP", 0d) ?? 0d;
     public double Credits => ParsePercentageOrValueOfXP("Credits", 0.15);
     public double Reputation => ParsePercentageOrValueOfXP("Reputation", 0);
     public EventInfo(IConfigurationSection configuration)
@@ -281,6 +320,9 @@ public readonly struct EventInfo
 
     private double ParsePercentageOrValueOfXP(string key, double defaultPercentage)
     {
+        if (Configuration == null)
+            return 0d;
+
         string? valueStr = Configuration[key];
         if (string.IsNullOrWhiteSpace(valueStr))
         {

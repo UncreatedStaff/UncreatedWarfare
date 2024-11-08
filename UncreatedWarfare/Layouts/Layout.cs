@@ -10,6 +10,7 @@ using System.Reflection;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Layouts.Phases;
 using Uncreated.Warfare.Layouts.Teams;
+using Uncreated.Warfare.Models.GameData;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
 
@@ -29,6 +30,21 @@ public class Layout : IDisposable
     protected ILogger<Layout> Logger;
 
     private readonly LayoutFactory _factory;
+
+    /// <summary>
+    /// A unique ID to this layout.
+    /// </summary>
+    public ulong LayoutId { get; private set; }
+
+    /// <summary>
+    /// Whether or not the layout was able to fully start.
+    /// </summary>
+    public bool WasStarted { get; private set; }
+
+    /// <summary>
+    /// Reference to a database entry for this layout.
+    /// </summary>
+    public GameRecord LayoutStats { get; private set; }
 
     /// <summary>
     /// If the layout is currently running.
@@ -98,7 +114,7 @@ public class Layout : IDisposable
         ServiceProvider = serviceProvider;
         LayoutInfo = layoutInfo;
         Logger = (ILogger<Layout>)serviceProvider.Resolve(typeof(ILogger<>).MakeGenericType(GetType()));
-
+        
         _disposableVariationConfigurationRoots = new List<IDisposable>();
         PhaseList = new List<ILayoutPhase>();
         Phases = new ReadOnlyCollection<ILayoutPhase>(PhaseList);
@@ -230,8 +246,11 @@ public class Layout : IDisposable
     /// <summary>
     /// Invoked just before <see cref="BeginLayoutAsync"/> as a chance for values to be initialized from <see cref="LayoutConfiguration"/>.
     /// </summary>
-    protected internal virtual async UniTask InitializeLayoutAsync(CancellationToken token = default)
+    protected internal virtual async UniTask InitializeLayoutAsync(GameRecord stats, CancellationToken token = default)
     {
+        LayoutId = stats.GameId;
+        LayoutStats = stats;
+
         await ReadTeamInfoAsync(token);
 
         await ReadPhasesAsync(token);
@@ -244,6 +263,8 @@ public class Layout : IDisposable
         {
             await phase.InitializePhaseAsync(token);
         }
+
+        WasStarted = true;
     }
 
 
@@ -506,8 +527,6 @@ public class Layout : IDisposable
     private async UniTask ReadPhasesAsync(CancellationToken token = default)
     {
         IConfigurationSection phaseSection = LayoutConfiguration.GetSection("Phases");
-
-        Assembly thisAsm = Assembly.GetExecutingAssembly();
 
         int index = -1;
         foreach (IConfigurationSection phaseConfig in phaseSection.GetChildren())

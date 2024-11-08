@@ -101,4 +101,10 @@ public class SessionRecord
     public bool StartedGame { get; set; }
     public bool FinishedGame { get; set; }
     public bool UnexpectedTermination { get; set; }
+
+
+    [NotMapped]
+    internal int EventCount;
+
+    public void MarkDirty() => ++EventCount;
 }

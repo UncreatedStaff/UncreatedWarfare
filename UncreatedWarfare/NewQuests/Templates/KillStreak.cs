@@ -15,15 +15,15 @@ public class KillStreak : QuestTemplate<KillStreak, KillStreak.Tracker, KillStre
     public Int32ParameterTemplate StreakCount { get; set; }
     public Int32ParameterTemplate StreakLength { get; set; }
     public KillStreak(IConfiguration templateConfig, IServiceProvider serviceProvider) : base(templateConfig, serviceProvider) { }
-    public class State : BaseState
+    public class State : IQuestState<KillStreak>
     {
         [RewardField("strNum")]
         public QuestParameterValue<int> StreakCount { get; set; }
 
         [RewardField("strLen")]
         public QuestParameterValue<int> StreakLength { get; set; }
-        public override QuestParameterValue<int> FlagValue => StreakCount;
-        public override UniTask CreateFromConfigurationAsync(IConfiguration configuration, IServiceProvider serviceProvider, CancellationToken token)
+        public QuestParameterValue<int> FlagValue => StreakCount;
+        public UniTask CreateFromConfigurationAsync(IConfiguration configuration, IServiceProvider serviceProvider, CancellationToken token)
         {
             string? streakCountStr = configuration["StreakCount"],
                     streakLenStr = configuration["StreakLength"];
@@ -38,7 +38,7 @@ public class KillStreak : QuestTemplate<KillStreak, KillStreak.Tracker, KillStre
             StreakLength = streakLength;
             return UniTask.CompletedTask;
         }
-        public override async UniTask CreateFromTemplateAsync(KillStreak data, CancellationToken token)
+        public async UniTask CreateFromTemplateAsync(KillStreak data, CancellationToken token)
         {
             StreakCount = await data.StreakCount.CreateValue(data.ServiceProvider);
 

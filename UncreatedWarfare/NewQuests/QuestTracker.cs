@@ -24,7 +24,7 @@ public abstract class QuestTracker
     public QuestTemplate Quest { get; }
     public IQuestState State { get; }
     public IQuestPreset? Preset { get; }
-    public QuestTracker(WarfarePlayer player, IServiceProvider serviceProvider, QuestTemplate quest, IQuestState state, IQuestPreset? preset)
+    protected QuestTracker(WarfarePlayer player, IServiceProvider serviceProvider, QuestTemplate quest, IQuestState state, IQuestPreset? preset)
     {
         Player = player;
         ServiceProvider = serviceProvider;

@@ -1,12 +1,9 @@
-﻿using DanielWillett.ReflectionTools;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using Uncreated.Warfare.NewQuests.Parameters;
-using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Util;
@@ -27,10 +24,10 @@ public abstract class QuestTemplate<TSelf, TTracker, TState> : QuestTemplate
     /// <inheritdoc />
     protected override async UniTask<IQuestPreset?> ReadPreset(IConfiguration configuration, CancellationToken token)
     {
-        TemplatePreset preset = configuration.Get<TemplatePreset>();
+        TemplatePreset? preset = configuration.Get<TemplatePreset>();
         TState? state = await ReadState(configuration.GetSection("State"), token);
 
-        if (state == null)
+        if (preset == null || state == null)
             return null;
 
         preset.StateIntl = state;
@@ -45,14 +42,6 @@ public abstract class QuestTemplate<TSelf, TTracker, TState> : QuestTemplate
         TState state = new TState();
         await state.CreateFromConfigurationAsync(configuration, ServiceProvider, token);
         return state;
-    }
-
-    public abstract class BaseState : IQuestState<TSelf>
-    {
-        public abstract QuestParameterValue<int> FlagValue { get; }
-        public abstract UniTask CreateFromConfigurationAsync(IConfiguration configuration, IServiceProvider serviceProvider, CancellationToken token);
-        public abstract UniTask CreateFromTemplateAsync(TSelf data, CancellationToken token);
-        public virtual bool IsEligible(WarfarePlayer player) => true;
     }
 
     protected internal class TemplatePreset : IQuestPreset
@@ -125,7 +114,7 @@ public abstract class QuestTemplate : ITranslationArgument
         Name = _config["Name"] ?? GetType().Name;
 
         IConfiguration desc = _config.GetSection("Text");
-        Text = desc.GetChildren().Any() ? desc.Get<TranslationList>() : new TranslationList(_config["Text"]);
+        Text = desc.GetChildren().Any() ? (desc.Get<TranslationList>() ?? new TranslationList()) : new TranslationList(_config["Text"] ?? GetType().Name);
 
         _config.GetSection("Properties").Bind(this);
         _config.Bind(this);
@@ -136,7 +125,7 @@ public abstract class QuestTemplate : ITranslationArgument
             RewardExpression? reward = await ReadReward(singleReward, token);
             if (reward != null)
             {
-                RewardExpression[] rewards = [reward];
+                RewardExpression[] rewards = [ reward ];
                 Rewards = new ReadOnlyCollection<RewardExpression>(rewards);
             }
             else
@@ -200,7 +189,7 @@ public abstract class QuestTemplate : ITranslationArgument
     /// </summary>
     protected virtual UniTask<RewardExpression?> ReadReward(IConfiguration configuration, CancellationToken token)
     {
-        string typeStr = configuration["Type"];
+        string? typeStr = configuration["Type"];
         Type? type = null;
         if (!string.IsNullOrEmpty(typeStr))
         {

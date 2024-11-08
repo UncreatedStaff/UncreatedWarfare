@@ -7,6 +7,9 @@ using System.IO;
 using System.Linq;
 using System.Runtime.ExceptionServices;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Database.Abstractions;
+using Uncreated.Warfare.Maps;
+using Uncreated.Warfare.Models.GameData;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Plugins;
 using Uncreated.Warfare.Services;
@@ -20,12 +23,24 @@ public class LayoutFactory : IHostedService
 {
     private readonly WarfareModule _warfare;
     private readonly ILogger<LayoutFactory> _logger;
+    private readonly IGameDataDbContext _dbContext;
+    private readonly MapScheduler _mapScheduler;
+    private readonly byte _region;
     private UniTask _setupTask;
 
-    public LayoutFactory(WarfareModule warfare, ILogger<LayoutFactory> logger)
+    public LayoutFactory(
+        WarfareModule warfare,
+        ILogger<LayoutFactory> logger,
+        IGameDataDbContext dbContext,
+        MapScheduler mapScheduler,
+        IConfiguration systemConfig)
     {
         _warfare = warfare;
         _logger = logger;
+        _dbContext = dbContext;
+        _dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
+        _mapScheduler = mapScheduler;
+        _region = systemConfig.GetValue<byte>("region");
     }
 
     /// <inheritdoc />
@@ -189,8 +204,20 @@ public class LayoutFactory : IHostedService
             _warfare.SetActiveLayout(layout);
         }
 
-        using CombinedTokenSources tokens = token.CombineTokensIfNeeded(layout.UnloadToken);
-        await layout.InitializeLayoutAsync(CancellationToken.None);
+        GameRecord record = new GameRecord
+        {
+            Season = WarfareModule.Season,
+            StartTimestamp = DateTimeOffset.UtcNow,
+            Gamemode = layoutInfo.DisplayName,
+            Map = _mapScheduler.Current,
+            Region = _region
+        };
+        _dbContext.Games.Add(record);
+
+        await _dbContext.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
+
+        await UniTask.SwitchToMainThread(CancellationToken.None);
+        await layout.InitializeLayoutAsync(record, CancellationToken.None);
 
         if (Level.isLoaded)
         {
@@ -449,7 +476,13 @@ public class LayoutFactory : IHostedService
 
         // handles if a service failed to start up, unloads the services that did start up and ends the layout.
         if (errIndex == -1)
+        {
+            layout.LayoutStats.StartTimestamp = DateTimeOffset.UtcNow;
+            _dbContext.Update(layout.LayoutStats);
+            await _dbContext.SaveChangesAsync(CancellationToken.None);
+            _logger.LogDebug("Layout {0} hosted.", layout);
             return;
+        }
         
         await UniTask.SwitchToMainThread();
 
@@ -496,6 +529,18 @@ public class LayoutFactory : IHostedService
     /// </summary>
     internal async UniTask UnhostLayoutAsync(Layout layout, CancellationToken token)
     {
+        if (layout.WasStarted)
+        {
+            layout.LayoutStats.EndTimestamp ??= DateTimeOffset.UtcNow;
+            _dbContext.Update(layout.LayoutStats);
+        }
+        else
+        {
+            _dbContext.Remove(layout.LayoutStats);
+        }
+
+        await _dbContext.SaveChangesAsync(token);
+
         if (layout.UnloadedHostedServices)
             return;
 

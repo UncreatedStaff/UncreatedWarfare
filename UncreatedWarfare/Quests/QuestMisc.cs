@@ -191,28 +191,28 @@ public static class QuestJsonEx
 
 public interface INotifyTracker
 {
-    public WarfarePlayer? Player { get; }
+    WarfarePlayer? Player { get; }
 }
 
 public interface IQuestPreset
 {
-    public Guid Key { get; }
-    public IQuestState State { get; }
-    public IQuestReward[]? RewardOverrides { get; }
-    public ulong TeamFilter { get; }
-    public ushort Flag { get; }
+    Guid Key { get; }
+    IQuestState State { get; }
+    IQuestReward[]? RewardOverrides { get; }
+    ulong TeamFilter { get; }
+    ushort Flag { get; }
 }
 
 /// <summary>Stores information about the values of variations of <see cref="BaseQuestData"/>.</summary>
 public interface IQuestState
 {
-    public QuestParameterValue<int> FlagValue { get; }
-    public bool IsEligible(WarfarePlayer player);
-    public UniTask CreateFromConfigurationAsync(IConfiguration configuration, IServiceProvider serviceProvider, CancellationToken token = default);
+    QuestParameterValue<int> FlagValue { get; }
+    bool IsEligible(WarfarePlayer player) => true;
+    UniTask CreateFromConfigurationAsync(IConfiguration configuration, IServiceProvider serviceProvider, CancellationToken token = default);
 }
 /// <inheritdoc/>
 /// <typeparam name="TQuestData">Class deriving from <see cref="BaseQuestData"/> used as a template for random variations to be created.</typeparam>
 public interface IQuestState<in TQuestData> : IQuestState where TQuestData : QuestTemplate
 {
-    public UniTask CreateFromTemplateAsync(TQuestData data, CancellationToken token = default);
+    UniTask CreateFromTemplateAsync(TQuestData data, CancellationToken token = default);
 }

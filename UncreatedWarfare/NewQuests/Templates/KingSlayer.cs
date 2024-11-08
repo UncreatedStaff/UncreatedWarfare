@@ -18,12 +18,12 @@ public class KingSlayer : QuestTemplate<KingSlayer, KingSlayer.Tracker, KingSlay
 {
     public Int32ParameterTemplate Kills { get; set; }
     public KingSlayer(IConfiguration templateConfig, IServiceProvider serviceProvider) : base(templateConfig, serviceProvider) { }
-    public class State : BaseState
+    public class State : IQuestState<KingSlayer>
     {
         [RewardField("k")]
         public QuestParameterValue<int> Kills { get; set; }
-        public override QuestParameterValue<int> FlagValue => Kills;
-        public override UniTask CreateFromConfigurationAsync(IConfiguration configuration, IServiceProvider serviceProvider, CancellationToken token)
+        public QuestParameterValue<int> FlagValue => Kills;
+        public UniTask CreateFromConfigurationAsync(IConfiguration configuration, IServiceProvider serviceProvider, CancellationToken token)
         {
             string? killsStr = configuration["Kills"];
 
@@ -33,7 +33,7 @@ public class KingSlayer : QuestTemplate<KingSlayer, KingSlayer.Tracker, KingSlay
             Kills = kills;
             return UniTask.CompletedTask;
         }
-        public override async UniTask CreateFromTemplateAsync(KingSlayer data, CancellationToken token)
+        public async UniTask CreateFromTemplateAsync(KingSlayer data, CancellationToken token)
         {
             Kills = await data.Kills.CreateValue(data.ServiceProvider);
         }
@@ -59,7 +59,7 @@ public class KingSlayer : QuestTemplate<KingSlayer, KingSlayer.Tracker, KingSlay
 
             WarfarePlayer? kingSlayer = serviceProvider.GetRequiredService<IPlayerService>().OnlinePlayers
                 .Where(player => player.Team == e.DeadTeam)
-                .Aggregate((kingSlayer, next) => next /* todo next.CachedXP > kingSlayer.CachedXP ? next : kingSlayer */);
+                .Aggregate((kingSlayer, next) => next.CachedPoints.XP > kingSlayer.CachedPoints.XP ? next : kingSlayer);
             
             if (kingSlayer.Steam64 == e.Player.Steam64)
             {

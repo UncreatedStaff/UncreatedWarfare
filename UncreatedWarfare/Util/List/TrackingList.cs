@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 
 namespace Uncreated.Warfare.Util.List;
 public class TrackingList<T> : IList<T>
@@ -116,6 +117,7 @@ public class TrackingList<T> : IList<T>
         return false;
     }
     public ReadOnlyTrackingList<T> AsReadOnly() => new ReadOnlyTrackingList<T>(this);
+    public T[] ToArray() => _list.ToArray();
 }
 
 public class ReadOnlyTrackingList<T> : IReadOnlyList<T>
@@ -144,4 +146,6 @@ public class ReadOnlyTrackingList<T> : IReadOnlyList<T>
     public void CopyTo(T[] array, int arrayIndex) => _list.CopyTo(array, arrayIndex);
 
     public bool TryGet(int index, out T? item) => _list.TryGet(index, out item);
+
+    public T[] ToArray() => _list.ToArray();
 }

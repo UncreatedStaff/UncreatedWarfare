@@ -88,7 +88,7 @@ public class LobbyZoneManager : IHostedService, ILevelHostedService, IEventListe
             FactionInfo? faction = _factionDataStore.FindFaction(teamStr);
             if (faction == null)
                 throw new GameConfigurationException("Invalid faction \"" + teamStr + "\"", _lobbyConfig.FilePath);
-            
+
             ObjectInfo foundObject = default;
             foreach (ObjectInfo obj in LevelObjectUtility.EnumerateObjects())
             {

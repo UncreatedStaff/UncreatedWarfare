@@ -23,7 +23,6 @@ public class PointsUI : UnturnedUI
     ];
 
     private readonly PointsConfiguration _config;
-    private readonly PointsService _points;
     private readonly ImageProgressBar _xpBar       = new ImageProgressBar("XpProgress") { NeedsToSetLabel = false };
     private readonly UnturnedLabel _lblCurrentRank = new UnturnedLabel("LabelCurrentRank");
     private readonly UnturnedLabel _lblNextRank    = new UnturnedLabel("LabelNextRank");
@@ -31,11 +30,10 @@ public class PointsUI : UnturnedUI
     private readonly UnturnedLabel _lblUsername    = new UnturnedLabel("LabelUsername");
     private readonly UnturnedLabel _lblStatistic   = new UnturnedLabel("LabelStatistic");
 
-    public PointsUI(PointsConfiguration config, PointsService points, AssetConfiguration assetConfig, ILoggerFactory loggerFactory)
+    public PointsUI(PointsConfiguration config, AssetConfiguration assetConfig, ILoggerFactory loggerFactory)
         : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:Points"))
     {
         _config = config;
-        _points = points;
     }
 
     private PointsUIData GetUIData(CSteamID steam64)
@@ -61,7 +59,7 @@ public class PointsUI : UnturnedUI
     /// Updates all elements on the points UI if they need to be updated.
     /// </summary>
     /// <remarks>The UI will be cleared if the player is not on a team.</remarks>
-    public void UpdatePointsUI(WarfarePlayer player)
+    public void UpdatePointsUI(WarfarePlayer player, PointsService pointsService)
     {
         GameThread.AssertCurrent();
 
@@ -89,7 +87,7 @@ public class PointsUI : UnturnedUI
             data.Position = 0;
         }
 
-        WarfareRank rank = _points.GetRankFromExperience(player.CachedPoints.XP);
+        WarfareRank rank = pointsService.GetRankFromExperience(player.CachedPoints.XP);
 
         int displayedXp = (int)Math.Round(player.CachedPoints.XP);
         int displayedPartialXp = (int)Math.Round(player.CachedPoints.XP - rank.CumulativeExperience);

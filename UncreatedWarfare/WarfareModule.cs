@@ -47,6 +47,7 @@ using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Plugins;
 using Uncreated.Warfare.Services;
+using Uncreated.Warfare.Sessions;
 using Uncreated.Warfare.Signs;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Squads.UI;
@@ -238,11 +239,20 @@ public sealed class WarfareModule
         {
             collection.AddLogging(bldr =>
             {
-                bldr.SetMinimumLevel(LogLevel.Trace)
-                    .AddFilter("Microsoft", LogLevel.Information)
-                    .AddFilter("Uncreated.Warfare.Database", LogLevel.Information)
-                    .AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Warning)
-                    .AddFilter("Microsoft.EntityFrameworkCore.Infrastructure", LogLevel.Warning);
+                // configure logging from config
+                IConfigurationSection loggingSection = Configuration.GetSection("logging");
+
+                string? logLvl = loggingSection["minimum_level"];
+                bldr.SetMinimumLevel(logLvl == null
+                    ? LogLevel.Trace
+                    : Enum.Parse<LogLevel>(loggingSection["minimum_level"],
+                        ignoreCase: true)
+                );
+
+                foreach (IConfigurationSection value in loggingSection.GetSection("filters").GetChildren())
+                {
+                    bldr.AddFilter(value.Key, Enum.Parse<LogLevel>(value.Value, ignoreCase: true));
+                }
             });
         });
 
@@ -338,6 +348,9 @@ public sealed class WarfareModule
 
         bldr.RegisterType<MapScheduler>()
             .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
+
+        bldr.RegisterType<ServerHeartbeatTimer>()
             .SingleInstance();
 
         // global zones (not used for layouts)
@@ -534,6 +547,10 @@ public sealed class WarfareModule
 
         bldr.RegisterType<PointsService>()
             .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
+
+        bldr.RegisterType<SessionManager>()
+            .AsImplementedInterfaces().AsSelf()
             .SingleInstance();
 
         // Kits
@@ -839,7 +856,7 @@ public sealed class WarfareModule
             try
             {
                 _logger.LogDebug("Unhosting {0}.", hostedService.GetType());
-                tasks[i] = hostedService.StopAsync(token);
+                tasks[i] = hostedService.StopAsync(token).Preserve();
             }
             catch (OperationCanceledException) when (token.IsCancellationRequested)
             {
@@ -953,7 +970,7 @@ public sealed class WarfareModule
             {
                 IHostedService hostedService = hostedServices[i];
                 _logger.LogDebug("Unhosting {0}.", hostedService.GetType());
-                tasks[i] = hostedService.StopAsync(CancellationToken.None);
+                tasks[i] = hostedService.StopAsync(CancellationToken.None).Preserve();
             }
             catch (Exception ex)
             {
@@ -996,7 +1013,7 @@ public sealed class WarfareModule
             {
                 IHostedService hostedService = hostedServices[i];
                 _logger.LogDebug("Unhosting {0}.", hostedService.GetType());
-                tasks[i] = hostedService.StopAsync(timeoutSource.Token);
+                tasks[i] = hostedService.StopAsync(timeoutSource.Token).Preserve();
             }
             catch (Exception ex)
             {

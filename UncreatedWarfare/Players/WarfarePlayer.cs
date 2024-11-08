@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics.CodeAnalysis;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Models.GameData;
@@ -204,34 +205,53 @@ public class WarfarePlayer : IPlayer, ICommandUser, IComponentContainer<IPlayerC
         return new OfflinePlayer(in _playerNameHelper).Translate(formatter, in parameters);
     }
 
-    public bool Equals(IPlayer other)
+    public bool Equals([NotNullWhen(true)] IPlayer? other)
     {
-        return Steam64.m_SteamID == other.Steam64.m_SteamID;
+        return other != null && Steam64.m_SteamID == other.Steam64.m_SteamID;
     }
 
-    public bool Equals(WarfarePlayer other)
+    public bool Equals([NotNullWhen(true)] WarfarePlayer? other)
     {
-        return Steam64.m_SteamID == other.Steam64.m_SteamID;
+        return other != null && Steam64.m_SteamID == other.Steam64.m_SteamID;
     }
 
-    public bool Equals(Player other)
+    public bool Equals([NotNullWhen(true)] Player? other)
     {
-        return Steam64.m_SteamID == other.channel.owner.playerID.steamID.m_SteamID;
+        return other != null && Steam64.m_SteamID == other.channel.owner.playerID.steamID.m_SteamID;
     }
     
-    public bool Equals(SteamPlayer other)
+    public bool Equals([NotNullWhen(true)] SteamPlayer? other)
     {
-        return Steam64.m_SteamID == other.playerID.steamID.m_SteamID;
+        return other != null && Steam64.m_SteamID == other.playerID.steamID.m_SteamID;
     }
     
-    public bool Equals(SteamPlayerID other)
+    public bool Equals([NotNullWhen(true)] SteamPlayerID? other)
     {
-        return Steam64.m_SteamID == other.steamID.m_SteamID;
+        return other != null && Steam64.m_SteamID == other.steamID.m_SteamID;
+    }
+    
+    public bool Equals(CSteamID steam64)
+    {
+        return Steam64.m_SteamID == steam64.m_SteamID;
+    }
+    
+    public bool Equals(ulong steam64)
+    {
+        return Steam64.m_SteamID == steam64;
     }
 
-    public override bool Equals(object? obj)
+    public override bool Equals([NotNullWhen(true)] object? obj)
     {
-        return obj is IPlayer player && Steam64.m_SteamID == player.Steam64.m_SteamID;
+        return obj switch
+        {
+            IPlayer player => Steam64.m_SteamID == player.Steam64.m_SteamID,
+            Player uPlayer => Steam64.m_SteamID == uPlayer.channel.owner.playerID.steamID.m_SteamID,
+            SteamPlayer stPlayer => Steam64.m_SteamID == stPlayer.playerID.steamID.m_SteamID,
+            SteamPlayerID stPlayerID => Steam64.m_SteamID == stPlayerID.steamID.m_SteamID,
+            ulong id => Steam64.m_SteamID == id,
+            CSteamID cid => Steam64.m_SteamID == cid.m_SteamID,
+            _ => false
+        };
     }
 
     public override int GetHashCode()
