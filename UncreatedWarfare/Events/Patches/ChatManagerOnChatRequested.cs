@@ -1,0 +1,351 @@
+﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools.Formatting;
+using HarmonyLib;
+using StackCleaner;
+using System;
+using System.Globalization;
+using System.Linq;
+using System.Reflection;
+using Uncreated.Warfare.Events.Models.Players;
+using Uncreated.Warfare.Interaction;
+using Uncreated.Warfare.Layouts.Teams;
+using Uncreated.Warfare.Logging;
+using Uncreated.Warfare.Logging.Formatting;
+using Uncreated.Warfare.Patches;
+using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Extensions;
+using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Players.Permissions;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Util;
+using static Uncreated.Warfare.Harmony.Patches;
+
+namespace Uncreated.Warfare.Events.Patches;
+
+[UsedImplicitly]
+internal class ChatManagerOnChatRequested : IHarmonyPatch
+{
+    private static MethodInfo? _target;
+    private static readonly string[] ChatLevelsRaw = [ "GLO", "A/S", "GRP" ];
+    private static readonly string[] ChatLevelsANSI = [ "\u001b[42mGLO\u001b[49m", "\u001b[41mA/S\u001b[49m", "\u001b[43mGRP\u001b[49m" ];
+    private static readonly string[] ChatLevelsExtendedANSI = ChatLevelsANSI;
+
+    public static readonly PermissionLeaf AdminChatPermissions = new PermissionLeaf("features.admin_chat", false, true);
+
+    void IHarmonyPatch.Patch(ILogger logger)
+    {
+        _target = Accessor.GetMethod(ChatManager.ReceiveChatRequest);
+
+        if (_target != null)
+        {
+            Patcher.Patch(_target, prefix: Accessor.GetMethod(Prefix));
+            logger.LogDebug("Patched {0} for receive chat message method.", _target);
+            return;
+        }
+
+        logger.LogError("Failed to find method: {0}.",
+            new MethodDefinition(nameof(ChatManager.ReceiveChatRequest))
+                .DeclaredIn<ChatManager>(isStatic: true)
+                .WithParameter<ServerInvocationContext>("context", ByRefTypeMode.In)
+                .WithParameter<byte>("flags")
+                .WithParameter<string>("text")
+                .ReturningVoid()
+        );
+    }
+
+    void IHarmonyPatch.Unpatch(ILogger logger)
+    {
+        if (_target == null)
+            return;
+
+        Patcher.Unpatch(_target, Accessor.GetMethod(Prefix));
+        logger.LogDebug("Unpatched {0} for receive chat message method.", _target);
+        _target = null;
+    }
+
+    private static ILogger? _chatLogger;
+
+    // SDG.Unturned.ChatManager
+    /// <summary>
+    /// Postfix of <see cref="ChatManager.ReceiveChatRequest"/> to redo how chat messages are processed.
+    /// </summary>
+    [HarmonyPatch(typeof(ChatManager), nameof(ChatManager.ReceiveChatRequest))]
+    [HarmonyPrefix]
+    [UsedImplicitly]
+    static bool Prefix(in ServerInvocationContext context, byte flags, string text)
+    {
+        SteamPlayer steamPlayer = context.GetCallingPlayer();
+
+        ILifetimeScope serviceProvider = WarfareModule.Singleton.ServiceProvider;
+
+        IPlayerService playerService = serviceProvider.Resolve<IPlayerService>();
+
+        WarfarePlayer player = playerService.GetOnlinePlayer(steamPlayer);
+
+        if (!player.IsOnline || Time.realtimeSinceStartup - steamPlayer.lastChat < ChatManager.chatrate)
+        {
+            return false;
+        }
+
+        steamPlayer.lastChat = Time.realtimeSinceStartup;
+
+        EChatMode mode = (EChatMode)(flags & 0b01111111);
+        if (mode is not EChatMode.GLOBAL and not EChatMode.LOCAL and not EChatMode.GROUP)
+        {
+            return false;
+        }
+
+        bool fromUnityEvent = (flags & (1 << 7)) != 0;
+
+        if (text.Length < 2 || fromUnityEvent && !Provider.configData.UnityEvents.Allow_Client_Messages)
+        {
+            return false;
+        }
+
+        text = text.Trim();
+
+        if (text.Length > ChatManager.MAX_MESSAGE_LENGTH)
+        {
+            text = text[..ChatManager.MAX_MESSAGE_LENGTH];
+        }
+
+        text = text.Replace("noparse", string.Empty);
+
+        CancellationToken token = player.DisconnectToken;
+        UniTask.Create(async () =>
+        {
+            UserPermissionStore permission = serviceProvider.Resolve<UserPermissionStore>();
+            EventDispatcher2 eventDispatcher = serviceProvider.Resolve<EventDispatcher2>();
+
+            bool onDuty = await permission.HasPermissionAsync(player, AdminChatPermissions, token);
+
+            await UniTask.SwitchToMainThread(token);
+
+            Color color = onDuty ? Palette.ADMIN : Palette.AMBIENT;
+            bool isRich = false;
+            bool isVisible = true;
+
+            ChatManager.onChatted?.Invoke(steamPlayer, mode, ref color, ref isRich, text, ref isVisible);
+            if (!ChatManager.process(steamPlayer, text, fromUnityEvent) || !isVisible)
+            {
+                return;
+            }
+
+            string pfx = GetDefaultPrefix(mode, onDuty, player.Team);
+
+            PlayerChatRequested argsRequested = new PlayerChatRequested
+            {
+                Player = player,
+                PlayerName = player.Names,
+                HasAdminChatPermissions = onDuty,
+                Text = text,
+                OriginalText = text,
+                AllowRichText = isRich,
+                MessageColor = color,
+                ChatMode = mode,
+                Prefix = pfx,
+                IsUnityMessage = fromUnityEvent,
+                TargetPlayers = args =>
+                {
+                    const float localSqrRadius = 128 * 128;
+                    Vector3 pos = args.Player.Position;
+                    return args.ChatMode switch
+                    {
+                        EChatMode.LOCAL => playerService.OnlinePlayers.Where(x => (pos - x.Position).sqrMagnitude <= localSqrRadius || x.IsInSquadWith(x)),
+                        EChatMode.GROUP => playerService.OnlinePlayers.Where(x => x.Team == args.Player.Team),
+                        _ => playerService.OnlinePlayers
+                    };
+                }
+            };
+
+            if (!await eventDispatcher.DispatchEventAsync(argsRequested, token))
+            {
+                return;
+            }
+
+            await UniTask.SwitchToMainThread(token);
+
+            if (player.IsDisconnected)
+            {
+                return;
+            }
+
+            _chatLogger ??= serviceProvider.Resolve<ILoggerFactory>().CreateLogger("Unturned.Chat");
+
+            if (CommandWindow.shouldLogChat)
+            {
+                LogChatMessage(argsRequested, serviceProvider.Resolve<ITranslationValueFormatter>());
+            }
+
+            if (ReferenceEquals(argsRequested.Prefix, pfx) && mode != argsRequested.ChatMode)
+            {
+                argsRequested.Prefix = GetDefaultPrefix(argsRequested.ChatMode, onDuty, player.Team);
+            }
+
+            if (!string.IsNullOrEmpty(argsRequested.Prefix))
+            {
+                text = argsRequested.Prefix + argsRequested.Text;
+            }
+
+            ChatService chatService = serviceProvider.Resolve<ChatService>();
+
+            string tmproText = onDuty ? text : ("<noparse>" + text);
+            foreach (WarfarePlayer destPlayer in argsRequested.TargetPlayers(argsRequested))
+            {
+                if (destPlayer.IsDisconnected)
+                    continue;
+
+                string name;
+                if (onDuty)
+                {
+                    // on duty admins should always display using their display name
+                    name = argsRequested.PlayerName.GetDisplayNameOrPlayerName();
+                }
+                else if (destPlayer.Team == argsRequested.Player.Team)
+                {
+                    name = argsRequested.PlayerName.NickName;
+                }
+                else
+                {
+                    name = argsRequested.PlayerName.CharacterName;
+                }
+
+                string targetText = (destPlayer.Save.IMGUI ? GetIMGUIText(text, onDuty, player.Team) : tmproText).Replace("%SPEAKER%", name);
+
+                chatService.Send(destPlayer, targetText, argsRequested.MessageColor, argsRequested.ChatMode, argsRequested.IconUrlOverride, argsRequested.AllowRichText);
+            }
+
+            PlayerChatSent argsSent = new PlayerChatSent
+            {
+                Player = player,
+                Text = argsRequested.Text,
+                OriginalText = argsRequested.OriginalText,
+                PlayerName = argsRequested.PlayerName,
+                ChatMode = argsRequested.ChatMode,
+                AllowRichText = argsRequested.AllowRichText,
+                MessageColor = argsRequested.MessageColor,
+                Prefix = argsRequested.Prefix
+            };
+
+            _ = eventDispatcher.DispatchEventAsync(argsSent, CancellationToken.None);
+        });
+
+        return false;
+    }
+
+    private static readonly (int, ConsoleColor) ChatColor = (TerminalColorHelper.ToArgb(new Color32(180, 180, 100, 255)), ConsoleColor.DarkYellow);
+
+    private static void LogChatMessage(PlayerChatRequested args, ITranslationValueFormatter formatter)
+    {
+        if (!_chatLogger!.IsEnabled(LogLevel.Information))
+            return;
+
+        string log;
+
+        StackColorFormatType coloring = formatter.TranslationService.TerminalColoring;
+
+        string[] chatLevels = coloring switch
+        {
+            StackColorFormatType.ExtendedANSIColor => ChatLevelsExtendedANSI,
+            StackColorFormatType.ANSIColor => ChatLevelsANSI,
+            _ => ChatLevelsRaw
+        };
+
+        string modePrefix = chatLevels[(int)args.ChatMode];
+
+        string fileMessage = $"[{args.Steam64.m_SteamID:D17}] {args.PlayerName.PlayerName.Truncate(20),-20} \"{args.OriginalText}\"";
+        string logMessage = fileMessage;
+        if (coloring is StackColorFormatType.ExtendedANSIColor or StackColorFormatType.ANSIColor)
+        {
+            bool extended = coloring == StackColorFormatType.ExtendedANSIColor;
+
+            int strLen = TerminalColorHelper.GetTerminalColorSequenceLength(WarfareFormattedLogValues.GetArgb(extended, in WarfareFormattedLogValues.StructDefault))
+                         + TerminalColorHelper.GetTerminalColorSequenceLength(WarfareFormattedLogValues.GetArgb(extended, WarfareFormattedLogValues.Colors[typeof(string)]))
+                         + TerminalColorHelper.GetTerminalColorSequenceLength(WarfareFormattedLogValues.GetArgb(extended, ChatColor))
+                         + args.OriginalText.Length
+                         + 41;
+
+            MakeLogMessageState state = default;
+            state.Args = args;
+            state.Extended = extended;
+
+            logMessage = string.Create(strLen, state, static (span, state) =>
+            {
+                int index = TerminalColorHelper.WriteTerminalColorSequence(span, WarfareFormattedLogValues.GetArgb(state.Extended, in WarfareFormattedLogValues.StructDefault));
+                state.Args.Steam64.m_SteamID.TryFormat(span[index..], out _, "D17", CultureInfo.InvariantCulture);
+                index += 17;
+
+                span[index] = ' ';
+                ++index;
+
+                index += TerminalColorHelper.WriteTerminalColorSequence(span[index..], WarfareFormattedLogValues.GetArgb(state.Extended, WarfareFormattedLogValues.Colors[typeof(string)]));
+                ReadOnlySpan<char> nameSpan = state.Args.PlayerName.PlayerName;
+                if (nameSpan.Length <= 20)
+                {
+                    nameSpan.CopyTo(span[index..]);
+                    index += nameSpan.Length;
+                    for (int i = nameSpan.Length; i < 20; ++i)
+                    {
+                        span[index] = ' ';
+                        ++index;
+                    }
+                }
+                else
+                {
+                    nameSpan[..20].CopyTo(span[index..]);
+                    index += 20;
+                }
+
+                index += TerminalColorHelper.WriteTerminalColorSequence(span[index..], WarfareFormattedLogValues.GetArgb(state.Extended, in ChatColor));
+
+                span[index] = ' ';
+                ++index;
+                span[index] = '"';
+                ++index;
+
+                state.Args.OriginalText.AsSpan().CopyTo(span[index..]);
+                index += state.Args.OriginalText.Length;
+
+                span[index] = '"';
+            });
+        }
+
+        string terminalLog = WarfareLogger.CreateString(formatter, "Unturned.Chat", null, null, logMessage,
+                                                        DateTime.UtcNow, LogLevel.Information, false, modePrefix, false, true);
+
+        string fileLog = WarfareLogger.CreateString(formatter, "Unturned.Chat", null, null, fileMessage,
+                                                    DateTime.UtcNow, LogLevel.Information, true, ChatLevelsRaw[(int)args.ChatMode], false, true);
+
+        WarfareLoggerProvider.WriteToLogRaw(LogLevel.Information, terminalLog, fileLog);
+
+        if (args.IsUnityMessage)
+        {
+            UnturnedLog.info($"UnityEventMsg {args.Steam64.m_SteamID}: \"{args.OriginalText}\"", ConsoleColor.Gray);
+        }
+    }
+
+    private struct MakeLogMessageState
+    {
+        public PlayerChatRequested Args;
+        public bool Extended;
+    }
+
+    private static string GetDefaultPrefix(EChatMode mode, bool onDuty, Team team)
+    {
+        Color32 color = onDuty ? Palette.ADMIN : team.Faction.Color;
+        return mode switch
+        {
+            EChatMode.GROUP => $"[G] <color=#{HexStringHelper.FormatHexColor(color)}>%SPEAKER%</color>: ",
+            EChatMode.LOCAL => $"[A] <color=#{HexStringHelper.FormatHexColor(color)}>%SPEAKER%</color>: ",
+            _ => $"<color=#{HexStringHelper.FormatHexColor(color)}>%SPEAKER%</color>: "
+        };
+    }
+
+    private static string GetIMGUIText(string text, bool isAdmin, Team team)
+    {
+        return isAdmin
+            ? $"<color=#{HexStringHelper.FormatHexColor(Palette.ADMIN)}>%SPEAKER%</color>: {text}"
+            : $"<color=#{HexStringHelper.FormatHexColor(team.Faction.Color)}>%SPEAKER%</color>: {text.Replace('<', '{').Replace('>', '}')}";
+    }
+
+}

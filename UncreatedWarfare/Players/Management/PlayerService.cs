@@ -60,7 +60,8 @@ public class PlayerService : IPlayerService
         typeof(GodPlayerComponent),
         typeof(PlayerJumpComponent),
         typeof(VanishPlayerComponent),
-        typeof(PlayerReputationComponent)
+        typeof(PlayerReputationComponent),
+        typeof(PlayerModerationCacheComponent)
     ];
 
     /// <summary>
@@ -70,7 +71,9 @@ public class PlayerService : IPlayerService
     public static readonly Type[] PlayerTasks =
     [
         typeof(LanguagePreferencesPlayerTask),
-        typeof(SteamApiSummaryTask)
+        typeof(SteamApiSummaryTask),
+        typeof(CheckReputationPlayerTask),
+        typeof(UpdateUserDataTask)
     ];
 
     // keep up with a separate array that's replaced every time so the value can be used in multi-threaded operations

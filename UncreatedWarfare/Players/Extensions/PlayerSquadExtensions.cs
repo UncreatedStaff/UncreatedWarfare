@@ -48,7 +48,7 @@ public static class PlayerSquadExtensions
             return false;
 
         if (other is WarfarePlayer pl)
-            return squad.ContainsPlayer(pl);
+            return pl.Component<SquadPlayerComponent>().Squad == squad;
         
         foreach (WarfarePlayer member in squad.Members)
         {

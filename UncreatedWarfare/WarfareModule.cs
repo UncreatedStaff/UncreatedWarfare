@@ -445,7 +445,10 @@ public sealed class WarfareModule
 
         // event handlers
         bldr.RegisterType<VehicleSpawnedHandler>()
-            .AsImplementedInterfaces().AsSelf();
+            .AsImplementedInterfaces();
+        
+        bldr.RegisterType<SendChatMutedEventHandler>()
+            .AsImplementedInterfaces();
 
         bldr.RegisterType<WarfareSteamApiService>()
             .As<ISteamApiService>()
@@ -648,6 +651,10 @@ public sealed class WarfareModule
 
         bldr.RegisterType<ChatService>()
             .AsSelf()
+            .SingleInstance();
+
+        bldr.RegisterType<NerdService>()
+            .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
 
         // Translations

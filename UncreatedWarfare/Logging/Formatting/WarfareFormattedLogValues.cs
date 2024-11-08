@@ -22,14 +22,14 @@ internal struct WarfareFormattedLogValues
     [ThreadStatic]
     private static char[] _formatBuffer;
 
-    private static readonly ColorSetting NumberDefault = (TerminalColorHelper.ToArgb(new Color32(181, 206, 168, 255)), ConsoleColor.DarkYellow);
-    private static readonly ColorSetting StructDefault = (TerminalColorHelper.ToArgb(new Color32(134, 198, 145, 255)), ConsoleColor.DarkGreen);
-    private static readonly ColorSetting EnumDefault = (TerminalColorHelper.ToArgb(new Color32(184, 215, 163, 255)), ConsoleColor.DarkYellow);
-    private static readonly ColorSetting InterfaceDefault = (TerminalColorHelper.ToArgb(new Color32(184, 215, 163, 255)), ConsoleColor.DarkYellow);
-    private static readonly ColorSetting ObjectDefault = (TerminalColorHelper.ToArgb(new Color32(78, 201, 176, 255)), ConsoleColor.DarkCyan);
-    private static readonly ColorSetting SymbolsDefault = (TerminalColorHelper.ToArgb(new Color32(220, 220, 220, 255)), ConsoleColor.Gray);
+    internal static readonly ColorSetting NumberDefault = (TerminalColorHelper.ToArgb(new Color32(181, 206, 168, 255)), ConsoleColor.DarkYellow);
+    internal static readonly ColorSetting StructDefault = (TerminalColorHelper.ToArgb(new Color32(134, 198, 145, 255)), ConsoleColor.DarkGreen);
+    internal static readonly ColorSetting EnumDefault = (TerminalColorHelper.ToArgb(new Color32(184, 215, 163, 255)), ConsoleColor.DarkYellow);
+    internal static readonly ColorSetting InterfaceDefault = (TerminalColorHelper.ToArgb(new Color32(184, 215, 163, 255)), ConsoleColor.DarkYellow);
+    internal static readonly ColorSetting ObjectDefault = (TerminalColorHelper.ToArgb(new Color32(78, 201, 176, 255)), ConsoleColor.DarkCyan);
+    internal static readonly ColorSetting SymbolsDefault = (TerminalColorHelper.ToArgb(new Color32(220, 220, 220, 255)), ConsoleColor.Gray);
 
-    private static readonly Dictionary<Type, ColorSetting> Colors = new Dictionary<Type, (int, ConsoleColor)>(36)
+    internal static readonly Dictionary<Type, ColorSetting> Colors = new Dictionary<Type, (int, ConsoleColor)>(36)
     {
         // number types
         { typeof(byte),     NumberDefault },
@@ -287,7 +287,7 @@ internal struct WarfareFormattedLogValues
         prefixSize = TerminalColorHelper.GetTerminalColorSequenceLength(argb, false);
     }
 
-    private static int GetArgb(bool extended, in ColorSetting setting)
+    internal static int GetArgb(bool extended, in ColorSetting setting)
     {
         return extended ? setting.ExtendedColor : (int)setting.BasicColor;
     }

@@ -7,7 +7,7 @@ public static class TrackingListExtensions
     /// <summary>
     /// Pass through the hashing capability of <see cref="TrackingList{T}"/> without actually copying the full list.
     /// </summary>
-    public static TrackingWhereEnumerable<T> Where<T>(this TrackingList<T> list, Func<T, bool> predicate)
+    public static TrackingWhereEnumerable<T> Where<T>(TrackingList<T> list, Func<T, bool> predicate)
     {
         if (list == null)
             throw new ArgumentNullException(nameof(list));
@@ -18,7 +18,7 @@ public static class TrackingListExtensions
     /// <summary>
     /// Pass through the hashing capability of <see cref="ReadOnlyTrackingList{T}"/> without actually copying the full list.
     /// </summary>
-    public static TrackingWhereEnumerable<T> Where<T>(this ReadOnlyTrackingList<T> list, Func<T, bool> predicate)
+    public static TrackingWhereEnumerable<T> Where<T>(ReadOnlyTrackingList<T> list, Func<T, bool> predicate)
     {
         if (list == null)
             throw new ArgumentNullException(nameof(list));

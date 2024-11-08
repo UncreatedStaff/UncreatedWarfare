@@ -7,7 +7,7 @@ namespace Uncreated.Warfare.Players.Saves;
 public class BinaryPlayerSave : ISaveableState
 {
     private const string Directory = "PlayerStates";
-    private const byte DataVersion = 1;
+    private const byte DataVersion = 2;
 
     private readonly ILogger _logger;
 
@@ -21,6 +21,7 @@ public class BinaryPlayerSave : ISaveableState
     public bool IMGUI { get; set; }
     public bool WasNitroBoosting { get; set; }
     public bool TrackQuests { get; set; }
+    public bool IsNerd { get; set; }
 
     /// <summary>
     /// If this save has been read from or written to a file.
@@ -56,7 +57,9 @@ public class BinaryPlayerSave : ISaveableState
         block.writeBoolean(IMGUI);
         block.writeBoolean(WasNitroBoosting);
         block.writeBoolean(TrackQuests);
+        block.writeBoolean(IsNerd);
 
+        Thread.BeginCriticalRegion();
         try
         {
             ServerSavedata.writeBlock(GetPath(Steam64), block);
@@ -64,6 +67,10 @@ public class BinaryPlayerSave : ISaveableState
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to save {0}'s BinaryPlayerSave because an exception was thrown.", Steam64);
+        }
+        finally
+        {
+            Thread.EndCriticalRegion();
         }
 
         WasReadFromFile = true;
@@ -90,7 +97,7 @@ public class BinaryPlayerSave : ISaveableState
 
         block.longBinaryData = true;
 
-        _ = block.readByte();
+        byte v = block.readByte();
         TeamId = block.readInt32();
         KitId = block.readUInt32();
         SquadName = block.readString();
@@ -100,6 +107,9 @@ public class BinaryPlayerSave : ISaveableState
         IMGUI = block.readBoolean();
         WasNitroBoosting = block.readBoolean();
         TrackQuests = block.readBoolean();
+        if (v > 1)
+            IsNerd = block.readBoolean();
+
         WasReadFromFile = true;
 
         Save();

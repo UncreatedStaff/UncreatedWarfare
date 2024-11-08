@@ -236,9 +236,13 @@ public class CommandContext : ControlException
 
     public CommandContext(ICommandUser user, CancellationToken token, string[] args, string originalMessage, CommandInfo commandInfo, IServiceProvider serviceProvider) : this(user, serviceProvider)
     {
-        Caller = user;
-        Token = token;
         CommandInfo = commandInfo;
+
+        if (user is TerminalUser)
+            user = new TerminalUser(Logger);
+
+        Token = token;
+        Caller = user;
         Player = user as WarfarePlayer;
 
         OriginalMessage = originalMessage;

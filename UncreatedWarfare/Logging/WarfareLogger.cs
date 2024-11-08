@@ -1,6 +1,5 @@
 ﻿using StackCleaner;
 using System;
-using System.Buffers;
 using System.Collections.Generic;
 using System.Globalization;
 using Uncreated.Warfare.Logging.Formatting;
@@ -18,7 +17,6 @@ public class WarfareLogger : ILogger
     private readonly string _categoryName;
     private readonly WarfareLoggerProvider _loggerProvider;
     private readonly ITranslationValueFormatter? _formatter;
-    private readonly SpanAction<char, CreateLogStringState> _createLogAction;
 
     private List<Scope>? _scopeHierarchy;
 
@@ -43,11 +41,9 @@ public class WarfareLogger : ILogger
 
         _loggerProvider = loggerProvider;
         _formatter = formatter;
-
-        _createLogAction = CreateLog;
     }
 
-    public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
+    public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
     {
         DateTime timeStamp = DateTime.Now;
 
@@ -66,8 +62,8 @@ public class WarfareLogger : ILogger
         if (logLevel is < LogLevel.Trace or > LogLevel.Critical)
             logLevel = LogLevel.Information;
 
-        formattedText = CreateString(formattedText, timeStamp, logLevel, false);
-        unformattedText = CreateString(unformattedText, timeStamp, logLevel, true);
+        formattedText = CreateString(_formatter, _categoryName, _scopeHierarchy, this, formattedText, timeStamp, logLevel, false);
+        unformattedText = CreateString(_formatter, _categoryName, _scopeHierarchy, this, unformattedText, timeStamp, logLevel, true);
 
         if (exception != null)
         {
@@ -85,16 +81,16 @@ public class WarfareLogger : ILogger
     }
 
     [MustUseReturnValue("Must be disposed after use to cancel the scope.")]
-    public IDisposable BeginScope<TState>(TState state)
+    public IDisposable BeginScope<TState>(TState state) where TState : notnull
     {
         return new Scope<TState>(state, this);
     }
 
-    private string CreateString(string message, DateTime timestamp, LogLevel logLevel, bool forFileLog)
+    internal static string CreateString(ITranslationValueFormatter? formatter, string categoryName, List<Scope>? scopeHierarchy, object? locker, string message, DateTime timestamp, LogLevel logLevel, bool forFileLog, string? logLevelText = null, bool writeMessageColor = true, bool excludeCategory = false)
     {
         message ??= string.Empty;
 
-        StackColorFormatType coloring = forFileLog || _formatter == null ? StackColorFormatType.None : _formatter.TranslationService.TerminalColoring;
+        StackColorFormatType coloring = forFileLog || formatter == null ? StackColorFormatType.None : formatter.TranslationService.TerminalColoring;
 
         string[] array = coloring switch
         {
@@ -103,37 +99,42 @@ public class WarfareLogger : ILogger
             _ => LogLevelsRaw
         };
 
-        string logLevelText = array[(int)logLevel];
+        logLevelText ??= array[(int)logLevel];
 
         int dateTimeLength = forFileLog ? 19 : 8;
         int logLevelLength = logLevelText.Length;
         if (forFileLog)
             logLevelLength += 2;
 
-        int length = 7 + _categoryName.Length + message.Length + dateTimeLength + logLevelLength;
+        int length = 4 + message.Length + dateTimeLength + logLevelLength;
 
-        if (!forFileLog && coloring != StackColorFormatType.None)
+        if (!excludeCategory)
+        {
+            length += 3 + categoryName.Length;
+        }
+
+        if (coloring != StackColorFormatType.None)
         {
             length += TerminalColorHelper.GetTerminalColorSequenceLength(ConsoleColor.Black, false);
             length += TerminalColorHelper.GetTerminalColorSequenceLength(ConsoleColor.DarkGray, false);
-            if (logLevel is not LogLevel.Debug and not LogLevel.Trace)
+            if (logLevel is not LogLevel.Debug and not LogLevel.Trace && writeMessageColor)
                 length += TerminalColorHelper.GetTerminalColorSequenceLength(ConsoleColor.DarkCyan, false);
         }
 
         bool lockTaken = false;
-        if (_scopeHierarchy != null)
+        if (scopeHierarchy != null)
         {
-            Monitor.Enter(this, ref lockTaken);
-            if (_scopeHierarchy is { Count: > 0 })
+            Monitor.Enter(locker, ref lockTaken);
+            if (scopeHierarchy is { Count: > 0 })
             {
                 length += 5;
 
-                foreach (Scope scope in _scopeHierarchy)
+                foreach (Scope scope in scopeHierarchy)
                     length += scope.Format(forFileLog).Length;
 
-                length += (_scopeHierarchy.Count - 1) * 3 /* ", " */;
+                length += (scopeHierarchy.Count - 1) * 3 /* ", " */;
 
-                if (coloring != StackColorFormatType.None) length += _scopeHierarchy.Count * 5;
+                if (coloring != StackColorFormatType.None && writeMessageColor) length += scopeHierarchy.Count * 5;
             }
         }
 
@@ -146,17 +147,21 @@ public class WarfareLogger : ILogger
             state.LogLevel = logLevel;
             state.Timestamp = timestamp;
             state.Message = message;
+            state.WriteMessageColor = writeMessageColor;
+            state.ExcludeCategory = excludeCategory;
+            state.CategoryName = categoryName;
+            state.ScopeHierarchy = scopeHierarchy;
 
-            return string.Create(length, state, _createLogAction);
+            return string.Create(length, state, CreateLog);
         }
         finally
         {
             if (lockTaken)
-                Monitor.Exit(this);
+                Monitor.Exit(locker);
         }
     }
 
-    private void CreateLog(Span<char> span, CreateLogStringState state)
+    private static void CreateLog(Span<char> span, CreateLogStringState state)
     {
         int index;
         if (state.ForFileLog)
@@ -189,19 +194,22 @@ public class WarfareLogger : ILogger
             span[index++] = ' ';
         }
 
-        span[index++] = '[';
-        _categoryName.AsSpan().CopyTo(span[index..]);
-        index += _categoryName.Length;
-        span[index++] = ']';
-        span[index++] = ' ';
+        if (!state.ExcludeCategory)
+        {
+            span[index++] = '[';
+            state.CategoryName.AsSpan().CopyTo(span[index..]);
+            index += state.CategoryName.Length;
+            span[index++] = ']';
+            span[index++] = ' ';
+        }
 
-        if (_scopeHierarchy is { Count: > 0 })
+        if (state.ScopeHierarchy is { Count: > 0 })
         {
             span[index++] = '|';
             span[index++] = ' ';
 
             bool any = false;
-            foreach (Scope scope in _scopeHierarchy)
+            foreach (Scope scope in state.ScopeHierarchy)
             {
                 if (!any)
                     any = true;
@@ -226,7 +234,7 @@ public class WarfareLogger : ILogger
             span[index++] = ' ';
         }
 
-        if (state.ColorType != StackColorFormatType.None)
+        if (state.WriteMessageColor && state.ColorType != StackColorFormatType.None)
         {
             ConsoleColor textColor = state.LogLevel switch
             {
@@ -268,9 +276,13 @@ public class WarfareLogger : ILogger
         public LogLevel LogLevel;
         public bool ForFileLog;
         public string Message;
+        public bool ExcludeCategory;
+        public bool WriteMessageColor;
+        public List<Scope>? ScopeHierarchy;
+        public string CategoryName;
     }
 
-    private abstract class Scope : IDisposable
+    internal abstract class Scope : IDisposable
     {
         protected readonly WarfareLogger Logger;
         protected Scope(WarfareLogger logger)

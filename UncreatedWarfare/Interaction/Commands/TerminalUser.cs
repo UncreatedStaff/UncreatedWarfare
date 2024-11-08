@@ -5,7 +5,8 @@ namespace Uncreated.Warfare.Interaction.Commands;
 [CannotApplyEqualityOperator]
 public class TerminalUser : ICommandUser
 {
-    public static TerminalUser Instance { get; } = new TerminalUser();
+    private readonly ILogger _logger;
+    public static TerminalUser Instance { get; } = new TerminalUser(WarfareModule.Singleton.GlobalLogger);
     static TerminalUser() { }
 
     public bool IsSuperUser => true;
@@ -14,12 +15,15 @@ public class TerminalUser : ICommandUser
     public bool IsDisconnected => false;
     public CSteamID Steam64 => CSteamID.Nil;
 
-    private TerminalUser() { }
+    public TerminalUser(ILogger logger)
+    {
+        _logger = logger;
+    }
 
     public void SendMessage(string message)
     {
         GameThread.AssertCurrent();
-        CommandWindow.Log(message);
+        _logger.LogInformation(message);
     }
 
     public override int GetHashCode() => 990;

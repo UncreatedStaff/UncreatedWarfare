@@ -19,19 +19,19 @@ public class WarfareLoggerProvider : ILoggerProvider
 
     internal StackTraceCleaner StackCleaner;
 
-    private readonly StaticGetter<LogFile> _getDebugLog = Accessor.GenerateStaticGetter<Logs, LogFile>("debugLog", throwOnError: true)!;
+    private static readonly StaticGetter<LogFile> GetDebugLog = Accessor.GenerateStaticGetter<Logs, LogFile>("debugLog", throwOnError: true)!;
 
-    private readonly Action<string> _callLogInfoIntl =
+    private static readonly Action<string> CallLogInfoIntl =
         (Action<string>)typeof(CommandWindow)
             .GetMethod("internalLogInformation", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)!
             .CreateDelegate(typeof(Action<string>), Dedicator.commandWindow);
 
-    private readonly Action<string> _callLogWarningIntl =
+    private static readonly Action<string> CallLogWarningIntl =
         (Action<string>)typeof(CommandWindow)
             .GetMethod("internalLogWarning", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)!
             .CreateDelegate(typeof(Action<string>), Dedicator.commandWindow);
 
-    private readonly Action<string> _callLogErrorIntl =
+    private static readonly Action<string> CallLogErrorIntl =
         (Action<string>)typeof(CommandWindow)
             .GetMethod("internalLogError", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)!
             .CreateDelegate(typeof(Action<string>), Dedicator.commandWindow);
@@ -90,8 +90,18 @@ public class WarfareLoggerProvider : ILoggerProvider
         StackCleaner = new StackTraceCleaner(config);
     }
 
+    /// <summary>
+    /// Log something to the console and file.
+    /// </summary>
+    /// <exception cref="GameThreadException"/>
+    public static void WriteToLogRaw(LogLevel logLevel, string text, string? unformattedLog)
+    {
+        GameThread.AssertCurrent();
 
-    private void LogIntl(LogLevel logLevel, string text, string? unformattedLog)
+        LogIntl(logLevel, text, unformattedLog);
+    }
+
+    private static void LogIntl(LogLevel logLevel, string text, string? unformattedLog)
     {
         if (!WarfareModule.IsActive)
         {
@@ -103,26 +113,26 @@ public class WarfareLoggerProvider : ILoggerProvider
         switch (logLevel)
         {
             default:
-                _callLogInfoIntl.Invoke(text);
+                CallLogInfoIntl.Invoke(text);
                 break;
 
             case LogLevel.Warning:
-                _callLogWarningIntl.Invoke(text);
+                CallLogWarningIntl.Invoke(text);
                 break;
 
             case LogLevel.Critical:
             case LogLevel.Error:
-                _callLogErrorIntl.Invoke(text);
+                CallLogErrorIntl.Invoke(text);
                 break;
         }
 
         try
         {
-            _getDebugLog().writeLine(unformattedLog);
+            GetDebugLog().writeLine(unformattedLog);
         }
         catch (Exception ex)
         {
-            _callLogErrorIntl("Failed to write error: " + ex);
+            CallLogErrorIntl("Failed to write error: " + ex);
         }
     }
 

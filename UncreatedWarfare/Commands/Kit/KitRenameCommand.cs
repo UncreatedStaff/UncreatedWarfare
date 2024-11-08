@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System;
 using Uncreated.Warfare.Database.Abstractions;
+using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Logging;
@@ -76,7 +77,7 @@ internal class KitRenameCommand : IExecutableCommand
             throw Context.SendHelp();
         }
 
-        if (Data.GetChatFilterViolation(name) is { } filterViolation)
+        if (ChatFilterHelper.GetChatFilterViolation(name) is { } filterViolation)
         {
             throw Context.Reply(_translations.KitRenameFilterVoilation, filterViolation);
         }
