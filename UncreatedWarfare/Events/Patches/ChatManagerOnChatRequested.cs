@@ -122,7 +122,7 @@ internal class ChatManagerOnChatRequested : IHarmonyPatch
             await UniTask.SwitchToMainThread(token);
 
             Color color = onDuty ? Palette.ADMIN : Palette.AMBIENT;
-            bool isRich = false;
+            bool isRich = true;
             bool isVisible = true;
 
             ChatManager.onChatted?.Invoke(steamPlayer, mode, ref color, ref isRich, text, ref isVisible);
@@ -182,14 +182,11 @@ internal class ChatManagerOnChatRequested : IHarmonyPatch
                 argsRequested.Prefix = GetDefaultPrefix(argsRequested.ChatMode, onDuty, player.Team);
             }
 
-            if (!string.IsNullOrEmpty(argsRequested.Prefix))
-            {
-                text = argsRequested.Prefix + argsRequested.Text;
-            }
+            string tmproText = argsRequested.Prefix + (!onDuty ? "<noparse>" + text : text);
+            string? imguiText = null;
 
             ChatService chatService = serviceProvider.Resolve<ChatService>();
 
-            string tmproText = onDuty ? text : ("<noparse>" + text);
             foreach (WarfarePlayer destPlayer in argsRequested.TargetPlayers(argsRequested))
             {
                 if (destPlayer.IsDisconnected)
@@ -210,7 +207,17 @@ internal class ChatManagerOnChatRequested : IHarmonyPatch
                     name = argsRequested.PlayerName.CharacterName;
                 }
 
-                string targetText = (destPlayer.Save.IMGUI ? GetIMGUIText(text, onDuty, player.Team) : tmproText).Replace("%SPEAKER%", name);
+                string t;
+                if (destPlayer.Save.IMGUI)
+                {
+                    t = imguiText ??= argsRequested.Prefix + (!onDuty ? text.Replace('<', '{').Replace('>', '}') : text);
+                }
+                else
+                {
+                    t = tmproText;
+                }
+
+                string targetText = t.Replace("%SPEAKER%", name);
 
                 chatService.Send(destPlayer, targetText, argsRequested.MessageColor, argsRequested.ChatMode, argsRequested.IconUrlOverride, argsRequested.AllowRichText);
             }
@@ -239,8 +246,6 @@ internal class ChatManagerOnChatRequested : IHarmonyPatch
     {
         if (!_chatLogger!.IsEnabled(LogLevel.Information))
             return;
-
-        string log;
 
         StackColorFormatType coloring = formatter.TranslationService.TerminalColoring;
 
@@ -336,16 +341,8 @@ internal class ChatManagerOnChatRequested : IHarmonyPatch
         return mode switch
         {
             EChatMode.GROUP => $"[G] <color=#{HexStringHelper.FormatHexColor(color)}>%SPEAKER%</color>: ",
-            EChatMode.LOCAL => $"[A] <color=#{HexStringHelper.FormatHexColor(color)}>%SPEAKER%</color>: ",
+            EChatMode.LOCAL => $"[A/S] <color=#{HexStringHelper.FormatHexColor(color)}>%SPEAKER%</color>: ",
             _ => $"<color=#{HexStringHelper.FormatHexColor(color)}>%SPEAKER%</color>: "
         };
     }
-
-    private static string GetIMGUIText(string text, bool isAdmin, Team team)
-    {
-        return isAdmin
-            ? $"<color=#{HexStringHelper.FormatHexColor(Palette.ADMIN)}>%SPEAKER%</color>: {text}"
-            : $"<color=#{HexStringHelper.FormatHexColor(team.Faction.Color)}>%SPEAKER%</color>: {text.Replace('<', '{').Replace('>', '}')}";
-    }
-
 }

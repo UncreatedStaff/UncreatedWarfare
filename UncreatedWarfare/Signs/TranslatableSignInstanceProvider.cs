@@ -20,6 +20,9 @@ internal class TranslatableSignInstanceProvider : ISignInstanceProvider
     /// <inheritdoc />
     bool ISignInstanceProvider.CanBatchTranslate => true;
 
+    /// <inheritdoc />
+    string ISignInstanceProvider.FallbackText => _translationKey;
+
     public TranslatableSignInstanceProvider(ITranslationService translationService)
     {
         _translationService = translationService;

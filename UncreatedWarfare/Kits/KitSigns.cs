@@ -204,11 +204,11 @@ public class KitSigns
         }
         else if (player == null)
         {
-            _signs.UpdateSigns<KitSignInstanceProvider>((_, provider) => provider.KitId.Equals(kitId, StringComparison.Ordinal));
+            _signs.UpdateSigns<KitSignInstanceProvider>((_, provider) => string.Equals(provider.KitId, kitId, StringComparison.Ordinal));
         }
         else
         {
-            _signs.UpdateSigns<KitSignInstanceProvider>(player, (_, provider) => provider.KitId.Equals(kitId, StringComparison.Ordinal));
+            _signs.UpdateSigns<KitSignInstanceProvider>(player, (_, provider) => string.Equals(provider.KitId, kitId, StringComparison.Ordinal));
         }
     }
 }

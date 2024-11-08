@@ -126,6 +126,9 @@ public class WarfareLoggerProvider : ILoggerProvider
                 break;
         }
 
+        if (unformattedLog == null)
+            return;
+
         try
         {
             GetDebugLog().writeLine(unformattedLog);

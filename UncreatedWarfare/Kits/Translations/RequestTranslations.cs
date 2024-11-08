@@ -49,7 +49,7 @@ public class RequestTranslations : PropertiesTranslationCollection
     public readonly Translation RequestNoTarget = new Translation("<#a4baa9>You must be looking at a request sign or vehicle.");
     
     [TranslationData("Sent when a player buys a kit using /buy.", "Number of credits spent")]
-    public readonly Translation<int> RequestKitBought = new Translation<int>("<#c4a36a>Kit bought for <#c$credits$>C </color><#ffffff>{0}</color>. Request it with '<#b3b0ab>/request</color>'.");
+    public readonly Translation<int> RequestKitBought = new Translation<int>("<#c4a36a>Kit bought for <#b8ffc1>C </color><#ffffff>{0}</color>. Request it with '<#b3b0ab>/request</color>'.");
 
     [TranslationData("Sent when a player tries to buy a loadout from an empty loadout sign.")]
     public readonly Translation RequestBuyLoadout = new Translation("<#a8918a>Join our discord (/discord) to purchase a custom loadout..");
@@ -82,10 +82,10 @@ public class RequestTranslations : PropertiesTranslationCollection
     public readonly Translation RequestKitMissingNitro = new Translation("<#a8918a>You must be <#e00ec9>NITRO BOOSTING</color> to use this kit.");
 
     [TranslationData("Sent when a player tries to request a kit that requires purchasing.", "Total credits required")]
-    public readonly Translation<int> RequestKitNotBought = new Translation<int>("<#99918d>Look at this sign and type '<#ffe2ab>/buy</color>' to unlock this kit permanently for <#c$credits$>C </color><#ffffff>{0}</color>.");
+    public readonly Translation<int> RequestKitNotBought = new Translation<int>("<#99918d>Look at this sign and type '<#ffe2ab>/buy</color>' to unlock this kit permanently for <#b8ffc1>C </color><#ffffff>{0}</color>.");
 
     [TranslationData("Sent when a player tries to request a kit that requires purchasing, but they can't afford the kit yet.", "Number of credits missing", "Total credits required")]
-    public readonly Translation<int, int> RequestKitCantAfford = new Translation<int, int>("<#a8918a>You are missing <#c$credits$>C </color><#ffffff>{0}</color> / <#c$credits$>C </color><#ffffff>{1}</color> needed to unlock this kit.");
+    public readonly Translation<int, int> RequestKitCantAfford = new Translation<int, int>("<#a8918a>You are missing <#b8ffc1>C </color><#ffffff>{0}</color> / <#b8ffc1>C </color><#ffffff>{1}</color> needed to unlock this kit.");
 
     [TranslationData("Sent when a player tries to request a kit that belongs to the other team.", "The team that owns the kit.")]
     public readonly Translation<FactionInfo> RequestKitWrongTeam = new Translation<FactionInfo>("<#a8918a>You must be part of {0} to request this kit.", arg0Fmt: FactionInfo.FormatShortName);
@@ -109,7 +109,7 @@ public class RequestTranslations : PropertiesTranslationCollection
     public readonly Translation RequestLoadoutNotOwned = new Translation("<#a8918a>You do not own this loadout.");
     
     [TranslationData("Sent when a player tries to request a vehicle but they don't have enough credits.", "Number of credits missing", "Total credits required")]
-    public readonly Translation<int, int> RequestVehicleCantAfford = new Translation<int, int>("<#a8918a>You are missing <#c$credits$>C </color><#ffffff>{0}</color> / <#c$credits$>C </color><#ffffff>{1}</color> needed to request this vehicle.");
+    public readonly Translation<int, int> RequestVehicleCantAfford = new Translation<int, int>("<#a8918a>You are missing <#b8ffc1>C </color><#ffffff>{0}</color> / <#b8ffc1>C </color><#ffffff>{1}</color> needed to request this vehicle.");
     
     [TranslationData("Sent when a player tries to request a vehicle too soon after requesting a previous vehicle.", "Time left")]
     public readonly Translation<Cooldown> RequestVehicleCooldown = new Translation<Cooldown>("<#b3ab9f>This vehicle can't be requested for another: <#ffe2ab>{0}</color>.", arg0Fmt: Cooldown.FormatTimeShort);

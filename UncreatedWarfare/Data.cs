@@ -54,7 +54,6 @@ public static class Data
     internal static ClientInstanceMethod<Guid, byte, byte[], bool>? SendWearVest;
     internal static ClientInstanceMethod<Guid, byte, byte[], bool>? SendWearMask;
     internal static ClientInstanceMethod<Guid, byte, byte[], bool>? SendWearGlasses;
-    internal static ClientInstanceMethod<string> SendChangeText;
     internal static ClientStaticMethod<uint, byte, byte>? SendSwapVehicleSeats;
     internal static ClientInstanceMethod? SendInventory;
     // internal static ClientInstanceMethod? SendScreenshotDestination;

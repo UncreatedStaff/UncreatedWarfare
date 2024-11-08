@@ -1,10 +1,17 @@
-﻿using System;
+﻿using Microsoft.Extensions.Configuration;
+using System;
 using System.Globalization;
+using System.Text;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Players.Unlocks;
+using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.Addons;
+using Uncreated.Warfare.Translations.Util;
 
 namespace Uncreated.Warfare.Signs;
 
@@ -13,12 +20,26 @@ namespace Uncreated.Warfare.Signs;
 public class KitSignInstanceProvider : ISignInstanceProvider
 {
     private readonly KitManager _kitManager;
+    private readonly IPlayerService _playerService;
+    private readonly IConfiguration _systemConfig;
+    private readonly KitSignTranslations _translations;
+    private readonly StringBuilder _kitSignBuffer = new StringBuilder(230);
+
+    private static readonly Color32 ColorKitFavoritedName = new Color32(255, 255, 153, 255);
+    private static readonly Color32 ColorKitUnfavoritedName = new Color32(255, 255, 255, 255);
+
     bool ISignInstanceProvider.CanBatchTranslate => false;
+
+    /// <inheritdoc />
+    string ISignInstanceProvider.FallbackText => KitId ?? ("Loadout " + LoadoutNumber.ToString(CultureInfo.InvariantCulture));
     public string KitId { get; private set; }
     public int LoadoutNumber { get; private set; }
-    public KitSignInstanceProvider(KitManager kitManager)
+    public KitSignInstanceProvider(KitManager kitManager, TranslationInjection<KitSignTranslations> translations, IPlayerService playerService, IConfiguration systemConfig)
     {
         _kitManager = kitManager;
+        _playerService = playerService;
+        _systemConfig = systemConfig;
+        _translations = translations.Value;
         LoadoutNumber = -1;
         KitId = null!;
     }
@@ -45,10 +66,22 @@ public class KitSignInstanceProvider : ISignInstanceProvider
 
     public string Translate(ITranslationValueFormatter formatter, IServiceProvider serviceProvider, LanguageInfo language, CultureInfo culture, WarfarePlayer? player)
     {
-        if (LoadoutNumber != -1)
+        // reuse the same string builder since this'll be called a lot
+
+        if (LoadoutNumber >= 0)
         {
-            // todo move translation methods
-            return "Loadout " + LoadoutIdHelper.GetLoadoutLetter(LoadoutNumber); // todo LocalizationOld.TranslateLoadoutSign(checked ( (byte)LoadoutNumber ), player!);
+            if (LoadoutNumber == 0)
+                return "Invalid Loadout";
+
+            try
+            {
+                TranslateLoadoutSign(_kitSignBuffer, LoadoutNumber, language, culture, player);
+                return _kitSignBuffer.ToString();
+            }
+            finally
+            {
+                _kitSignBuffer.Clear();
+            }
         }
 
         if (!_kitManager.Cache.KitDataById.TryGetValue(KitId, out Kit kit))
@@ -56,6 +89,240 @@ public class KitSignInstanceProvider : ISignInstanceProvider
             return KitId;
         }
 
-        return KitId; // todo LocalizationOld.TranslateKitSign(kit, player!);
+        try
+        {
+            TranslateKitSign(_kitSignBuffer, kit, language, culture, player);
+            return _kitSignBuffer.ToString();
+        }
+        finally
+        {
+            _kitSignBuffer.Clear();
+        }
     }
+
+    /*
+     *  - KIT NAME WITH A
+     *     MAYBE NEWLINE  or OPEN LINE IF NOT NEEDED
+     *  * EMPTY LINE IF NO WEAPON TEXT
+     *  - COST
+     *  - WEAPON TEXT [optional]
+     *  - PLAYER COUNT
+     */
+
+    private void TranslateKitSign(StringBuilder bldr, Kit kit, LanguageInfo language, CultureInfo culture, WarfarePlayer? player)
+    {
+        string kitName = kit.GetDisplayName(null!, language, false);
+
+        // if the name has a newline we want to skip the empty line so all the text is roughly the same size
+        bool nameHasNewLine = kitName.IndexOf('\n', StringComparison.Ordinal) >= 0;
+
+        bool isFavorited = player != null && _kitManager.IsFavoritedQuick(kit.PrimaryKey, player);
+
+        bldr.Append("<b>")
+            .AppendColorized(kitName.ToUpper(culture), isFavorited ? ColorKitFavoritedName : ColorKitUnfavoritedName)
+            .Append('\n');
+
+        if (!nameHasNewLine)
+            bldr.Append('\n');
+
+        bool hasWeaponText = string.IsNullOrWhiteSpace(kit.WeaponText);
+
+        if (!hasWeaponText)
+            bldr.Append('\n');
+
+        AppendCost(bldr, kit, language, culture, player);
+        bldr.Append('\n');
+
+        if (hasWeaponText)
+            bldr.Append(kit.WeaponText!.ToUpper(culture)).Append('\n');
+
+        AppendPlayerCount(bldr, player, kit, language, culture, useClassLimit: false);
+    }
+
+    private void AppendPlayerCount(StringBuilder bldr, WarfarePlayer? player, Kit kit, LanguageInfo language, CultureInfo culture, bool useClassLimit)
+    {
+        if (player == null || !kit.TeamLimit.HasValue || kit.TeamLimit.Value is >= 1f or <= 0f)
+        {
+            bldr.Append(_translations.KitUnlimited.Translate(language));
+        }
+        else if (useClassLimit
+                     ? kit.IsClassLimited(_playerService, out int currentPlayers, out int allowedPlayers, player.Team)
+                     : kit.IsLimited(_playerService, out currentPlayers, out allowedPlayers, player.Team)
+                )
+        {
+            bldr.Append(_translations.KitPlayerCountUnavailable.Translate(currentPlayers, allowedPlayers, language, culture));
+        }
+        else
+        {
+            bldr.Append(_translations.KitPlayerCountAvailable.Translate(currentPlayers, allowedPlayers, language, culture));
+        }
+    }
+
+    private void AppendCost(StringBuilder bldr, Kit kit, LanguageInfo language, CultureInfo culture, WarfarePlayer? player)
+    {
+        string cost;
+        if (kit.RequiresNitro)
+        {
+            if (player != null && _kitManager.Boosting.IsNitroBoostingQuick(player.Steam64.m_SteamID))
+            {
+                cost = _translations.KitNitroBoostOwned.Translate(language);
+            }
+            else
+            {
+                bldr.Append(_translations.KitNitroBoostNotOwned.Translate(language));
+                return;
+            }
+        }
+        else if (kit.Type != KitType.Public)
+        {
+            if (player != null && _kitManager.HasAccessQuick(kit, player))
+            {
+                cost = _translations.KitPremiumOwned.Translate(language);
+            }
+            else if (kit.Type == KitType.Special)
+            {
+                bldr.Append(_translations.KitExclusive.Translate(language));
+                return;
+            }
+            else
+            {
+                bldr.Append(_translations.KitPremiumCost.Translate(decimal.Round(kit.PremiumCost, 2), language, culture));
+                return;
+            }
+        }
+        else
+        {
+            if (kit.CreditCost <= 0)
+            {
+                cost = _translations.KitFree.Translate(language);
+            }
+            else if (player != null && _kitManager.HasAccessQuick(kit, player))
+            {
+                cost = _translations.KitPublicOwned.Translate(language);
+            }
+            else
+            {
+                bldr.Append(_translations.KitCreditCost.Translate(kit.CreditCost, language, culture));
+                return;
+            }
+        }
+
+        if (kit.UnlockRequirements is { Length: > 0 })
+        {
+            foreach (UnlockRequirement req in kit.UnlockRequirements)
+            {
+                if (player != null && req.CanAccessFast(player))
+                    continue;
+
+                bldr.Append(req.GetSignText(player, language, culture));
+                return;
+            }
+        }
+
+        bldr.Append(cost);
+    }
+
+    private void TranslateLoadoutSign(StringBuilder bldr, int loadoutIndex, LanguageInfo language, CultureInfo culture, WarfarePlayer? player)
+    {
+        Kit? kit = player == null ? null : _kitManager.Loadouts.GetLoadoutQuick(player.Steam64, loadoutIndex);
+
+        if (kit == null)
+        {
+            bldr.Append(_translations.LoadoutNumber.Translate(loadoutIndex, language, culture));
+            bldr.Append('\n', 4);
+            bldr.Append(_translations.KitPremiumCost.Translate(_systemConfig.GetValue<decimal>("kits:loadout_cost_usd")));
+            return;
+        }
+
+        string kitName = kit.GetDisplayName(null!, language, false);
+
+        // if the name has a newline we want to skip the empty line so all the text is roughly the same size
+        bool nameHasNewLine = kitName.IndexOf('\n', StringComparison.Ordinal) >= 0;
+
+        bool isFavorited = player != null && _kitManager.IsFavoritedQuick(kit.PrimaryKey, player);
+
+        bldr.Append("<b>")
+            .AppendColorized(kitName.ToUpper(culture), isFavorited ? ColorKitFavoritedName : ColorKitUnfavoritedName)
+            .Append("</b>")
+            .Append('\n');
+
+        bool hasWeaponText = string.IsNullOrWhiteSpace(kit.WeaponText);
+
+        if (!hasWeaponText)
+            bldr.Append('\n');
+
+        if (!nameHasNewLine)
+            bldr.Append('\n');
+
+        string loadoutLetter = LoadoutIdHelper.GetLoadoutLetter(LoadoutIdHelper.ParseNumber(kit.InternalName));
+        bldr.Append(_translations.LoadoutLetter.Translate(loadoutLetter, language, culture))
+            .Append('\n');
+
+        if (hasWeaponText)
+            bldr.Append(kit.WeaponText!.ToUpper(culture)).Append('\n');
+
+        AppendPlayerCount(bldr, player, kit, language, culture, useClassLimit: true);
+    }
+}
+
+public class KitSignTranslations : PropertiesTranslationCollection
+{
+    protected override string FileName => "Kit Signs";
+
+    [TranslationData("Shown on a kit sign when a kit is available without purchase (in-game or monetary).")]
+    public readonly Translation KitFree = new Translation("<#66ffcc>FREE</color>");
+
+    [TranslationData("Shown on a kit sign when a kit is unable to be given access through normal means. Usually this is for event kits.")]
+    public readonly Translation KitExclusive = new Translation("<#96ffb2>EXCLUSIVE</color>");
+
+    [TranslationData("Shown on a kit sign when a kit requires nitro boosting and the person looking at the sign is boosting.")]
+    public readonly Translation KitNitroBoostOwned = new Translation("<#f66fe6>BOOSTING</color>");
+
+    [TranslationData("Shown on a kit sign when a kit requires nitro boosting and the person looking at the sign is not boosting.")]
+    public readonly Translation KitNitroBoostNotOwned = new Translation("<#9b59b6>NITRO BOOST</color>");
+
+    [TranslationData(IsPriorityTranslation = false)]
+    public readonly Translation<decimal> KitPremiumCost = new Translation<decimal>("<#7878ff>$ {0}</color>", arg0Fmt: "N2");
+
+    [TranslationData("Shown on a kit sign when the player isn't high enough rank to access it.", Parameters = [ "Rank", "Color depending on player's current rank." ])]
+    public readonly Translation<WarfareRank, Color> KitRequiredRank = new Translation<WarfareRank, Color>("<#{1}>Rank: {0}</color>");
+
+    [TranslationData("Shown on a kit sign when the player needs to complete a quest to access it.", Parameters = [ "Quest", "Color depending on whether the player has completed the quest." ])]
+    public readonly Translation<QuestAsset, Color> KitRequiredQuest = new Translation<QuestAsset, Color>("<#{1}>Quest: <#fff>{0}</color></color>");
+
+    [TranslationData("Shown on a kit sign when the player needs to complete multiple quests to access it.", Parameters = [ "Number of quests needed.", "Color depending on whether the player has completed the quest(s).", "s if {0} != 1" ])]
+    public readonly Translation<int, Color> KitRequiredQuestsMultiple = new Translation<int, Color>("<#{1}>Finish <#fff>{0}</color> quests.</color>");
+
+    [TranslationData("Shown on a kit sign when the player has completed all required quests to unlock the kit.")]
+    public readonly Translation KitRequiredQuestsComplete = new Translation("<#ff974d>UNLOCKED</color>");
+
+    [TranslationData("Shown on a kit sign when the player has purchased the kit (with credits).")]
+    public readonly Translation KitPublicOwned = new Translation("<#769fb5>UNLOCKED</color>");
+    
+    [TranslationData("Shown on a kit sign when the player has purchased the kit (with real money).")]
+    public readonly Translation KitPremiumOwned = new Translation("<#769fb5>PURCHASED</color>");
+
+    [TranslationData("Shown on a kit sign when the player has not purchased the kit with credits.", IsPriorityTranslation = false)]
+    public readonly Translation<int> KitCreditCost = new Translation<int>("<#b8ffc1>C</color> <#fff>{0}</color>");
+
+    [TranslationData("Shown on a kit sign when there is no limit to how many other players can be using the kit.")]
+    public readonly Translation KitUnlimited = new Translation("<#111111>unlimited</color>");
+
+    [TranslationData("Shown on an unused loadout sign.", "The number of the loadout sign.")]
+    public readonly Translation<int> LoadoutNumber = new Translation<int>("<b><#7878ff>LOADOUT #{0}</color></b>");
+    
+    [TranslationData("Shown on a used loadout sign so players can see what loadout letter each kit is.", "The letter of the loadout sign.")]
+    public readonly Translation<string> LoadoutLetter = new Translation<string>("<sub><#7878ff>LOADOUT {0}</color></sub>", arg0Fmt: UppercaseAddon.Instance);
+    
+    [TranslationData(IsPriorityTranslation = false)]
+    public readonly Translation<int, int> KitPlayerCountUnavailable = new Translation<int, int>("<#c2603e>{0}/{1}</color>");
+    
+    [TranslationData(IsPriorityTranslation = false)]
+    public readonly Translation<int, int> KitPlayerCountAvailable = new Translation<int, int>("<#96ffb2>{0}/{1}</color>");
+
+    [TranslationData(IsPriorityTranslation = false)]
+    public readonly Translation KitLoadoutUpgrade = new Translation("<#33cc33>/req upgrade</color>");
+
+    [TranslationData("Shown on a loadout or kit sign when it's locked by the admins while it's being worked on.")]
+    public readonly Translation KitLoadoutSetup = new Translation("<#3399ff>PENDING SETUP</color>");
 }

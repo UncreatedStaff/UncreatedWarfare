@@ -106,7 +106,7 @@ public class SignTranslations : PropertiesTranslationCollection
     public static readonly SignTranslation SignTutorialGetKitPart2 = new SignTranslation("tutorial_get_kit_2", "<#cEcEcE>Look at kit sign and type <#2df332>/req</color> in chat to recieve the kit.");
 
     [TranslationData("Tells the player about kits and how to request them (part 3).")]
-    public static readonly SignTranslation SignTutorialGetKitPart3 = new SignTranslation("tutorial_get_kit_3", "<#cEcEcE>Some kits are unlocked using <#c$credits$>credits</color>. Look at the sign and do <#2df332>/buy</color> to unlock the kit.");
+    public static readonly SignTranslation SignTutorialGetKitPart3 = new SignTranslation("tutorial_get_kit_3", "<#cEcEcE>Some kits are unlocked using <#b8ffc1>credits</color>. Look at the sign and do <#2df332>/buy</color> to unlock the kit.");
 
     [TranslationData("Tells the player about vehicles and how to request them (part 1).")]
     public static readonly SignTranslation SignTutorialGetVehiclePart1 = new SignTranslation("tutorial_get_vehicle_1", "<#ff6600><b>How do I get a vehicle?</b>");

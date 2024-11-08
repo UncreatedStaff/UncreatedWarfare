@@ -17,6 +17,7 @@ using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Languages;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Kits;
 
@@ -44,11 +45,15 @@ public class KitLoadouts(KitManager manager, IServiceProvider serviceProvider) :
     }
 
     /// <summary>
-    /// Indexed from 1. Use with purchase sync.
+    /// Indexed from 1.
     /// </summary>
+    /// <exception cref="GameThreadException"/>
+    /// <exception cref="ArgumentOutOfRangeException">Loadout ID less than or equal to zero.</exception>
     [Pure]
-    public async Task<Kit?> GetLoadoutQuick(CSteamID steam64, int loadoutId, CancellationToken token = default)
+    public Kit? GetLoadoutQuick(CSteamID steam64, int loadoutId, CancellationToken token = default)
     {
+        GameThread.AssertCurrent();
+
         if (loadoutId <= 0)
             throw new ArgumentOutOfRangeException(nameof(loadoutId));
 
@@ -60,8 +65,6 @@ public class KitLoadouts(KitManager manager, IServiceProvider serviceProvider) :
 
         if (_playerService.GetOnlinePlayerOrNull(steam64) is { } player)
         {
-            await UniTask.SwitchToMainThread(token);
-
             kits = kits
                 .OrderByDescending(x => Manager.IsFavoritedQuick(x.PrimaryKey, player))
                 .ThenBy(x => x.InternalName ?? string.Empty);

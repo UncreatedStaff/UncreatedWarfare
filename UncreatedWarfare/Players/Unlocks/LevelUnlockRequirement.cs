@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Globalization;
 using System.Text.Json;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Models.Kits;
+using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles;
 
@@ -18,13 +20,13 @@ public class LevelUnlockRequirement : UnlockRequirement
     }
 
     /// <inheritdoc />
-    public override string GetSignText(WarfarePlayer player)
+    public override string GetSignText(WarfarePlayer? player, LanguageInfo language, CultureInfo culture)
     {
         if (UnlockLevel == 0)
-            return string.Empty;
+            return "not implemented";
 
         // int lvl = Points.GetLevel(player.CachedXP);
-        return string.Empty; // todo T.KitRequiredLevel.Translate(player, false, LevelData.GetRankAbbreviation(UnlockLevel), lvl >= UnlockLevel ? UCWarfare.GetColor("kit_level_available") : UCWarfare.GetColor("kit_level_unavailable"));
+        return "not implemented"; // todo T.KitRequiredLevel.Translate(player, false, LevelData.GetRankAbbreviation(UnlockLevel), lvl >= UnlockLevel ? UCWarfare.GetColor("kit_level_available") : UCWarfare.GetColor("kit_level_unavailable"));
     }
 
     /// <inheritdoc />

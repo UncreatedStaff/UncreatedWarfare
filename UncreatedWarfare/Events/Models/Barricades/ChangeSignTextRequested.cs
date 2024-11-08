@@ -1,4 +1,5 @@
-﻿using Uncreated.Warfare.Buildables;
+﻿using System;
+using Uncreated.Warfare.Buildables;
 
 namespace Uncreated.Warfare.Events.Models.Barricades;
 
@@ -61,9 +62,16 @@ public class ChangeSignTextRequested : CancellablePlayerEvent
     /// New text on the sign.
     /// </summary>
     /// <remarks>This can be changed.</remarks>
+    /// <exception cref="ArgumentException"/>
     public required string Text
     {
         get => _text;
-        set => _text = value ?? string.Empty;
+        set
+        {
+            value = Sign.trimText(value);
+            if (!Sign.isTextValid(value))
+                throw new ArgumentException("Invalid text. Must be less than 230 UTF-8 bytes.");
+            _text = value ?? string.Empty;
+        }
     }
 }

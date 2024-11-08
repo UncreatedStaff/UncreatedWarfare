@@ -267,6 +267,16 @@ partial class EventDispatcher2
             return;
         }
 
+        text = sign.trimText(text);
+
+        if (!sign.isTextValid(text))
+        {
+            _logger.LogWarning("Invalid text: {0} in sign.", text);
+            shouldallow = false;
+            return;
+        }
+
+
         BarricadeData data = drop.GetServersideData();
 
         WarfarePlayer instigatorPlayer = _playerService.GetOnlinePlayer(instigator);
@@ -280,7 +290,7 @@ partial class EventDispatcher2
             Region = region,
             Sign = sign,
             ServersideData = data,
-            Text = sign.text
+            Text = text
         };
 
         EventContinuations.Dispatch(args, this, _unloadToken, out shouldallow, continuation: args =>

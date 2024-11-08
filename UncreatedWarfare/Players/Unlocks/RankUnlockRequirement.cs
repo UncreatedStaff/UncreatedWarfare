@@ -1,8 +1,9 @@
 ﻿using System;
+using System.Globalization;
 using System.Text.Json;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Models.Kits;
-using Uncreated.Warfare.Traits;
+using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles;
 
@@ -20,7 +21,7 @@ public class RankUnlockRequirement : UnlockRequirement
     }
 
     /// <inheritdoc />
-    public override string GetSignText(WarfarePlayer player)
+    public override string GetSignText(WarfarePlayer? player, LanguageInfo language, CultureInfo culture)
     {
         // ref Ranks.RankData data = ref Ranks.RankManager.GetRank(player, out bool success);
         // ref Ranks.RankData reqData = ref Ranks.RankManager.GetRank(UnlockRank, out _);

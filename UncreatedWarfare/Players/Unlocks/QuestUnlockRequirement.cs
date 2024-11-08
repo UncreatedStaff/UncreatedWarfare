@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text.Json;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits.Translations;
 using Uncreated.Warfare.Models.Kits;
+using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Translations;
@@ -35,11 +37,11 @@ public class QuestUnlockRequirement : UnlockRequirement, IEquatable<QuestUnlockR
     }
 
     /// <inheritdoc />
-    public override string GetSignText(WarfarePlayer player)
+    public override string GetSignText(WarfarePlayer? player, LanguageInfo language, CultureInfo culture)
     {
         bool access = CanAccessFast(player);
-        if (access)
-            return T.KitRequiredQuestsComplete.Translate(player);
+        //if (access)
+        //    return T.KitRequiredQuestsComplete.Translate(player);
         // if (Assets.find(QuestId) is QuestAsset quest)
         //     return T.KitRequiredQuest.Translate(quest, UCWarfare.GetColor("kit_level_unavailable"), player);
 

@@ -32,3 +32,12 @@ Parameters:
       - Name: menu
         Type: Verbatim
         Description: "Open the squad UI."
+
+  # /warfaredev sign
+  - Name: sign
+    Type: Verbatim
+    Description: "Print the server-side text on the sign you're looking at."
+    Parameters:
+      - Name: sign
+        Type: "Look/SDG.Unturned.ItemBarricadeAsset"
+        Description: "The sign to fetch the text from."

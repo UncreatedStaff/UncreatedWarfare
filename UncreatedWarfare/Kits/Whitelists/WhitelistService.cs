@@ -251,14 +251,12 @@ public class WhitelistService :
         }
     }
 
-    [EventListener(RequiresMainThread = true)]
+    [EventListener(RequiresMainThread = false)]
     async UniTask IAsyncEventListener<ChangeSignTextRequested>.HandleEventAsync(ChangeSignTextRequested e, IServiceProvider serviceProvider, CancellationToken token)
     {
         UserPermissionStore permissions = serviceProvider.GetRequiredService<UserPermissionStore>();
-        if (!await permissions.HasPermissionAsync(e.Player, PermissionChangeSignText, token))
+        if (await permissions.HasPermissionAsync(e.Player, PermissionChangeSignText, token))
         {
-            CommonTranslations translations = serviceProvider.GetRequiredService<TranslationInjection<CommonTranslations>>().Value;
-            _chatService.Send(e.Player, translations.NoPermissionsSpecific, PermissionChangeSignText);
             return;
         }
 
@@ -271,10 +269,14 @@ public class WhitelistService :
 
         ItemWhitelist? whitelist = await GetWhitelistAsync(asset, token).ConfigureAwait(false);
 
-        if (whitelist is not { Amount: not 0 })
+        if (whitelist is { Amount: > 0 })
         {
-            e.Cancel();
+            return;
         }
+
+        CommonTranslations translations = serviceProvider.GetRequiredService<TranslationInjection<CommonTranslations>>().Value;
+        _chatService.Send(e.Player, translations.NoPermissionsSpecific, PermissionChangeSignText);
+        e.Cancel();
     }
 
     [EventListener(RequiresMainThread = true)]

@@ -1058,10 +1058,10 @@ public class KitMenuUITranslations : PropertiesTranslationCollection
     public readonly Translation KitMenuUIActionRequestKitLabel = new Translation("Request Kit", TranslationOptions.TMProUI);
     
     [TranslationData("Label actions button action 2, buy kit (can afford).", "Credit cost")]
-    public readonly Translation<int> KitMenuUIActionBuyPublicKitCanAffordLabel = new Translation<int>("<#ccffff>Buy Kit <#c$credits$>C</color> <#fff>{0}</color>", TranslationOptions.TMProUI);
+    public readonly Translation<int> KitMenuUIActionBuyPublicKitCanAffordLabel = new Translation<int>("<#ccffff>Buy Kit <#b8ffc1>C</color> <#fff>{0}</color>", TranslationOptions.TMProUI);
     
     [TranslationData("Label actions button action 2, buy kit (can't afford).", "Credit cost")]
-    public readonly Translation<int> KitMenuUIActionBuyPublicKitCantAffordLabel = new Translation<int>("<#ff6666>Requires <#c$credits$>C</color> <#fff>{0}</color>", TranslationOptions.TMProUI);
+    public readonly Translation<int> KitMenuUIActionBuyPublicKitCantAffordLabel = new Translation<int>("<#ff6666>Requires <#b8ffc1>C</color> <#fff>{0}</color>", TranslationOptions.TMProUI);
     
     [TranslationData("Label actions button action 3, order kit.", "Price", "Currency Prefix")]
     public readonly Translation<decimal, string> KitMenuUIActionBuyPremiumKitLabel = new Translation<decimal, string>("<#ccffff>Open Ticket <#c$kit_level_dollars$>{1}</color> <#fff>{0}</color>", TranslationOptions.TMProUI, "C");

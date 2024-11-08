@@ -2,6 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Text;
 using System.Text.Json;
@@ -9,6 +10,7 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Kits;
+using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles;
 
@@ -46,7 +48,7 @@ public abstract class UnlockRequirement : ICloneable
     /// <summary>
     /// Get the text that shows on a sign when the player is missing the requirement.
     /// </summary>
-    public abstract string GetSignText(WarfarePlayer player);
+    public abstract string GetSignText(WarfarePlayer? player, LanguageInfo language, CultureInfo culture);
 
     /// <summary>
     /// Read from JSON in the newer format, which does store the type.

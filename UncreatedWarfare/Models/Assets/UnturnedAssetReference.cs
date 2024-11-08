@@ -107,6 +107,12 @@ public readonly struct UnturnedAssetReference
             text = text[..index];
         }
 
+        if (text.IsWhiteSpace())
+        {
+            result = default;
+            return true;
+        }
+
         if (ushort.TryParse(text, NumberStyles.Number, CultureInfo.InvariantCulture, out ushort id))
         {
             result = new UnturnedAssetReference(id);

@@ -1,6 +1,7 @@
 ﻿using StackCleaner;
 using System;
 using System.Globalization;
+using System.Text;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Translations.Util;
@@ -9,6 +10,32 @@ public static class TranslationFormattingUtility
     private const string ColorEndTag = "</color>";
     private const string ColorStartTag = "color=#";
 #pragma warning disable CS8500
+
+    /// <summary>
+    /// Adds the correct color tags around text for TMPro or Unity rich text and appends it to a <see cref="StringBuilder"/>.
+    /// </summary>
+    /// <param name="imgui">Use Unity rich text instead of TMPro.</param>
+    public static StringBuilder AppendColorized(this StringBuilder stringBuilder, ReadOnlySpan<char> text, Color32 color, bool imgui = false, bool end = true)
+    {
+        if (text.Length == 0)
+            return stringBuilder;
+
+        Span<char> colorSpan = stackalloc char[color.a == 255 ? 6 : 8];
+
+        HexStringHelper.FormatHexColor(color, colorSpan);
+
+        stringBuilder.Append(imgui ? "<color=#" : "<#")
+                     .Append(colorSpan)
+                     .Append(">")
+                     .Append(text);
+
+        if (end)
+        {
+            stringBuilder.Append(ColorEndTag);
+        }
+
+        return stringBuilder;
+    }
 
     /// <summary>
     /// Adds the correct color tags around text for TMPro or Unity rich text.

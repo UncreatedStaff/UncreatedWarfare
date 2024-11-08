@@ -188,7 +188,7 @@ Other formats are stored in the most prominant class of the interface (`UCPlayer
 <br>**Color substitution from color dictionary**
 
 `c$value$` will be replaced by the color `value` from the color dictionary on startup.
-<br> Example: `You need 100 more <#c$credits$>credits</color>.`
+<br> Example: `You need 100 more <#b8ffc1>credits</color>.`
 
 <br>**Conditional pluralization of existing terms**
 

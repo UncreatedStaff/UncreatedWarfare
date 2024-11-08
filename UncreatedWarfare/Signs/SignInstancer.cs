@@ -18,9 +18,12 @@ namespace Uncreated.Warfare.Signs;
 /// <summary>
 /// Handles sending specific sign data to specific players.
 /// </summary>
-public class SignInstancer : IHostedService, ILevelHostedService, IEventListener<BarricadePlaced>, IEventListener<BarricadeDestroyed>
+public class SignInstancer : ILayoutHostedService, IEventListener<BarricadePlaced>, IEventListener<BarricadeDestroyed>, IEventListener<SignTextChanged>
 {
-    private readonly IServiceProvider _serviceProvider;
+    private static readonly ClientInstanceMethod<string> SendChangeText = ReflectionUtility.FindRequiredRpc<InteractableSign, ClientInstanceMethod<string>>("SendChangeText");
+
+    private readonly WarfareModule _warfare;
+    private IServiceProvider? _serviceProvider;
     private readonly SignInstanceData[] _types;
     private readonly string?[] _batchBuffer;
     private readonly Dictionary<uint, ISignInstanceProvider> _signProviders = new Dictionary<uint, ISignInstanceProvider>(256);
@@ -28,9 +31,9 @@ public class SignInstancer : IHostedService, ILevelHostedService, IEventListener
     private readonly ILogger<SignInstancer> _logger;
     private readonly ITranslationService _translationService;
 
-    public SignInstancer(IServiceProvider serviceProvider, ILogger<SignInstancer> logger, ITranslationService translationService)
+    public SignInstancer(WarfareModule module, ILogger<SignInstancer> logger, ITranslationService translationService)
     {
-        _serviceProvider = serviceProvider;
+        _warfare = module;
         _logger = logger;
         _translationService = translationService;
 
@@ -54,10 +57,10 @@ public class SignInstancer : IHostedService, ILevelHostedService, IEventListener
         _types = instances.ToArray();
         _batchBuffer = new string[_types.Length];
     }
-    UniTask IHostedService.StartAsync(CancellationToken token) => UniTask.CompletedTask;
-    UniTask IHostedService.StopAsync(CancellationToken token) => UniTask.CompletedTask;
-    UniTask ILevelHostedService.LoadLevelAsync(CancellationToken token)
+
+    UniTask ILayoutHostedService.StartAsync(CancellationToken token)
     {
+        _serviceProvider = _warfare.ScopedProvider.Resolve<IServiceProvider>();
         foreach (BarricadeInfo barricade in BarricadeUtility.EnumerateBarricades())
         {
             CheckBarricadeForInit(barricade.Drop);
@@ -66,6 +69,17 @@ public class SignInstancer : IHostedService, ILevelHostedService, IEventListener
         return UniTask.CompletedTask;
     }
 
+    UniTask ILayoutHostedService.StopAsync(CancellationToken token)
+    {
+        ResetAllSigns();
+        _serviceProvider = null;
+        return UniTask.CompletedTask;
+    }
+    
+    /// <summary>
+    /// Check if a specific sign is being instanced.
+    /// </summary>
+    /// <exception cref="GameThreadException"/>
     public bool IsInstanced(BarricadeDrop drop)
     {
         GameThread.AssertCurrent();
@@ -76,6 +90,10 @@ public class SignInstancer : IHostedService, ILevelHostedService, IEventListener
         return _signProviders.ContainsKey(drop.instanceID);
     }
 
+    /// <summary>
+    /// Get the sign provider for a specific sign.
+    /// </summary>
+    /// <exception cref="GameThreadException"/>
     public ISignInstanceProvider? GetSignProvider(BarricadeDrop drop)
     {
         GameThread.AssertCurrent();
@@ -87,6 +105,10 @@ public class SignInstancer : IHostedService, ILevelHostedService, IEventListener
         return provider;
     }
 
+    /// <summary>
+    /// Get the text that would show on a sign for any player with the given <paramref name="language"/> and <paramref name="culture"/>.
+    /// </summary>
+    /// <exception cref="GameThreadException"/>
     public string GetSignText(BarricadeDrop drop, LanguageInfo language, CultureInfo culture)
     {
         GameThread.AssertCurrent();
@@ -101,9 +123,15 @@ public class SignInstancer : IHostedService, ILevelHostedService, IEventListener
             return sign.text;
         }
 
-        return provider.Translate(_translationService.ValueFormatter, _serviceProvider, language, culture, null);
+        return _serviceProvider == null
+            ? provider.FallbackText
+            : provider.Translate(_translationService.ValueFormatter, _serviceProvider, language, culture, null);
     }
 
+    /// <summary>
+    /// Get the text that would show on a sign for a player.
+    /// </summary>
+    /// <exception cref="GameThreadException"/>
     public string GetSignText(BarricadeDrop drop, WarfarePlayer player)
     {
         GameThread.AssertCurrent();
@@ -118,9 +146,15 @@ public class SignInstancer : IHostedService, ILevelHostedService, IEventListener
             return sign.text;
         }
 
-        return provider.Translate(_translationService.ValueFormatter, _serviceProvider, player.Locale.LanguageInfo, player.Locale.CultureInfo, player);
+        return _serviceProvider == null
+            ? provider.FallbackText
+            : provider.Translate(_translationService.ValueFormatter, _serviceProvider, player.Locale.LanguageInfo, player.Locale.CultureInfo, player);
     }
 
+    /// <summary>
+    /// Update all signs.
+    /// </summary>
+    /// <exception cref="GameThreadException"/>
     public int UpdateSigns()
     {
         GameThread.AssertCurrent();
@@ -134,6 +168,10 @@ public class SignInstancer : IHostedService, ILevelHostedService, IEventListener
         return ct;
     }
 
+    /// <summary>
+    /// Update all signs with a certain provider type.
+    /// </summary>
+    /// <exception cref="GameThreadException"/>
     public int UpdateSigns<TProvider>() where TProvider : class, ISignInstanceProvider
     {
         GameThread.AssertCurrent();
@@ -147,6 +185,10 @@ public class SignInstancer : IHostedService, ILevelHostedService, IEventListener
         return ct;
     }
 
+    /// <summary>
+    /// Update all signs that match a predicate with a certain provider type.
+    /// </summary>
+    /// <exception cref="GameThreadException"/>
     public int UpdateSigns<TProvider>(Func<InteractableSign, TProvider, bool> selector) where TProvider : class, ISignInstanceProvider
     {
         GameThread.AssertCurrent();
@@ -160,15 +202,31 @@ public class SignInstancer : IHostedService, ILevelHostedService, IEventListener
         return ct;
     }
 
+    /// <summary>
+    /// Update all signs for a player.
+    /// </summary>
+    /// <exception cref="GameThreadException"/>
     public int UpdateSigns(WarfarePlayer player)
         => UpdateSigns(new LanguageSet(player));
 
+    /// <summary>
+    /// Update all signs with a certain provider type for a player.
+    /// </summary>
+    /// <exception cref="GameThreadException"/>
     public int UpdateSigns<TProvider>(WarfarePlayer player) where TProvider : class, ISignInstanceProvider
         => UpdateSigns<TProvider>(new LanguageSet(player));
 
+    /// <summary>
+    /// Update all signs that match a predicate with a certain provider type for a player.
+    /// </summary>
+    /// <exception cref="GameThreadException"/>
     public int UpdateSigns<TProvider>(WarfarePlayer player, Func<InteractableSign, TProvider, bool> selector) where TProvider : class, ISignInstanceProvider
         => UpdateSigns(new LanguageSet(player), selector);
 
+    /// <summary>
+    /// Update all signs for a set of players.
+    /// </summary>
+    /// <exception cref="GameThreadException"/>
     public int UpdateSigns(LanguageSet set)
     {
         GameThread.AssertCurrent();
@@ -195,6 +253,10 @@ public class SignInstancer : IHostedService, ILevelHostedService, IEventListener
         return ct;
     }
 
+    /// <summary>
+    /// Update all signs with a certain provider type for a set of players.
+    /// </summary>
+    /// <exception cref="GameThreadException"/>
     public int UpdateSigns<TProvider>(LanguageSet set) where TProvider : class, ISignInstanceProvider
     {
         GameThread.AssertCurrent();
@@ -218,6 +280,10 @@ public class SignInstancer : IHostedService, ILevelHostedService, IEventListener
         return ct;
     }
 
+    /// <summary>
+    /// Update all signs that match a predicate with a certain provider type for a set of players.
+    /// </summary>
+    /// <exception cref="GameThreadException"/>
     public int UpdateSigns<TProvider>(LanguageSet set, Func<InteractableSign, TProvider, bool> selector) where TProvider : class, ISignInstanceProvider
     {
         GameThread.AssertCurrent();
@@ -241,6 +307,65 @@ public class SignInstancer : IHostedService, ILevelHostedService, IEventListener
         return ct;
     }
 
+    /// <summary>
+    /// Update a specific sign.
+    /// </summary>
+    /// <exception cref="GameThreadException"/>
+    public void UpdateSign(BarricadeDrop barricade)
+    {
+        GameThread.AssertCurrent();
+
+        if (barricade.interactable is not InteractableSign sign || !BarricadeManager.tryGetRegion(barricade.model, out byte x, out byte y, out ushort plant, out _))
+            return;
+
+        // index isn't needed
+        BarricadeInfo info = plant == ushort.MaxValue
+            ? new BarricadeInfo(barricade, -1, new RegionCoord(x, y))
+            : new BarricadeInfo(barricade, -1, plant);
+
+        LanguageSetEnumerator enumerator = plant == ushort.MaxValue
+            ? _translationService.SetOf.PlayersInArea(x, y, BarricadeManager.BARRICADE_REGIONS)
+            : _translationService.SetOf.AllPlayers();
+
+        ISignInstanceProvider? provider = GetSignProvider(barricade);
+        if (provider == null)
+        {
+            CheckBarricadeForInit(barricade);
+            provider = GetSignProvider(barricade);
+
+            if (provider == null)
+                return;
+        }
+
+        foreach (LanguageSet set in enumerator)
+        {
+            bool canBatch = true;
+            bool hasCanBatch = false;
+            string? batch = null;
+
+            BroadcastUpdate(set, provider, in info, sign, ref canBatch, ref hasCanBatch, ref batch);
+        }
+    }
+
+    private void ResetAllSigns()
+    {
+        GameThread.AssertCurrent();
+
+        foreach (BarricadeInfo barricade in BarricadeUtility.EnumerateBarricades())
+        {
+            if (barricade.Drop.interactable is not InteractableSign sign)
+                continue;
+
+            if (!_signProviders.ContainsKey(barricade.Drop.instanceID))
+                continue;
+
+            SendChangeText.Invoke(sign.GetNetId(), ENetReliability.Unreliable, BarricadeManager.GatherClientConnections(barricade.Coord.x, barricade.Coord.y, barricade.Plant), sign.text);
+        }
+
+        _signProviders.Clear();
+        _signProviderTypeIndexes.Clear();
+    }
+
     private void BroadcastUpdate(LanguageSet set, ISignInstanceProvider provider, in BarricadeInfo barricade, InteractableSign sign, ref bool canBatch, ref bool hasCanBatch, ref string? batchTranslate)
     {
         NetId netId = sign.GetNetId();
@@ -255,17 +380,30 @@ public class SignInstancer : IHostedService, ILevelHostedService, IEventListener
         string? text;
         if (canBatch)
         {
-            text = batchTranslate ??= provider.Translate(_translationService.ValueFormatter, _serviceProvider, set.Language, set.Culture, null);
-            Data.SendChangeText.Invoke(netId, ENetReliability.Unreliable, set.GatherTransportConnections(region.x, region.y, BarricadeManager.BARRICADE_REGIONS), text);
+            text = batchTranslate ??= _serviceProvider == null
+                ? provider.FallbackText
+                : provider.Translate(_translationService.ValueFormatter, _serviceProvider, set.Language, set.Culture, null);
+
+            SendChangeText.Invoke(
+                netId,
+                ENetReliability.Unreliable,
+                barricade.Plant != ushort.MaxValue
+                ? set.GatherTransportConnections()
+                : set.GatherTransportConnections(region.x, region.y, BarricadeManager.BARRICADE_REGIONS),
+                text
+            );
         }
         else while (set.MoveNext())
         {
             PlayerMovement movement = set.Next.UnturnedPlayer.movement;
-            if (!Regions.checkArea(movement.region_x, movement.region_y, region.x, region.y, BarricadeManager.BARRICADE_REGIONS))
+            if (barricade.Plant == ushort.MaxValue && !Regions.checkArea(movement.region_x, movement.region_y, region.x, region.y, BarricadeManager.BARRICADE_REGIONS))
                 continue;
 
-            text = provider.Translate(_translationService.ValueFormatter, _serviceProvider, set.Language, set.Culture, set.Next);
-            Data.SendChangeText.Invoke(netId, ENetReliability.Unreliable, set.Next.Connection, text);
+            text = _serviceProvider == null
+                ? provider.FallbackText
+                : provider.Translate(_translationService.ValueFormatter, _serviceProvider, set.Language, set.Culture, set.Next);
+
+            SendChangeText.Invoke(netId, ENetReliability.Unreliable, set.Next.Connection, text);
         }
     }
 
@@ -289,8 +427,7 @@ public class SignInstancer : IHostedService, ILevelHostedService, IEventListener
 
     void IEventListener<BarricadeDestroyed>.HandleEvent(BarricadeDestroyed e, IServiceProvider serviceProvider)
     {
-        _signProviderTypeIndexes.Remove(e.InstanceId);
-        _signProviders.Remove(e.InstanceId);
+        RemoveBarricade(e.Barricade);
     }
 
     void IEventListener<BarricadePlaced>.HandleEvent(BarricadePlaced e, IServiceProvider serviceProvider)
@@ -298,18 +435,38 @@ public class SignInstancer : IHostedService, ILevelHostedService, IEventListener
         CheckBarricadeForInit(e.Barricade);
     }
 
-    private void CheckBarricadeForInit(BarricadeDrop barricade)
+    void IEventListener<SignTextChanged>.HandleEvent(SignTextChanged e, IServiceProvider serviceProvider)
     {
-        if (barricade.interactable is not InteractableSign sign)
+        CheckBarricadeForInit(e.Barricade, remove: true);
+    }
+
+    private void RemoveBarricade(BarricadeDrop barricade)
+    {
+        _signProviderTypeIndexes.Remove(barricade.instanceID);
+        _signProviders.Remove(barricade.instanceID);
+    }
+
+    private void CheckBarricadeForInit(BarricadeDrop barricade, bool remove = false)
+    {
+        if (barricade.interactable is not InteractableSign sign || _serviceProvider == null)
             return;
 
         string? text = sign.text;
-        if (text == null || !TryGetProviderType(text, out int dataIndex))
+        if (string.IsNullOrEmpty(text) || !TryGetProviderType(text, out int dataIndex))
         {
             return;
         }
 
         ref SignInstanceData data = ref _types[dataIndex];
+
+        if (remove)
+        {
+            RemoveBarricade(barricade);
+        }
+        else if (_signProviders.ContainsKey(barricade.instanceID))
+        {
+            return;
+        }
 
         ISignInstanceProvider provider = (ISignInstanceProvider)ActivatorUtilities.CreateInstance(_serviceProvider, data.Type);
         _signProviders.Add(barricade.instanceID, provider);
@@ -324,6 +481,8 @@ public class SignInstancer : IHostedService, ILevelHostedService, IEventListener
         {
             _logger.LogError(ex, "Error initializing sign provider {0} for barricade {1} #{2}.", data.Type, barricade.asset.itemName, barricade.instanceID);
         }
+
+        UpdateSign(barricade);
     }
 
     private struct SignInstanceData

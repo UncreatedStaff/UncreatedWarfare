@@ -176,7 +176,7 @@ public class StructureCommand : IExecutableCommand
             }
             else if (Context.TryGetBarricadeTarget(out BarricadeDrop? barricade))
             {
-                if (!await _saver.DiscardStructureAsync(barricade.instanceID, token))
+                if (!await _saver.DiscardBarricadeAsync(barricade.instanceID, token))
                 {
                     throw Context.Reply(_translations.StructureAlreadyUnsaved, barricade.asset);
                 }

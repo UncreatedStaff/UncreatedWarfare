@@ -356,10 +356,10 @@ public class PointsTranslations : PropertiesTranslationCollection
     public readonly Translation<double> XPToastLoseXP = new Translation<double>("-{0} XP", TranslationOptions.TMProUI, "F0");
 
     [TranslationData(IsPriorityTranslation = false)]
-    public readonly Translation<double> XPToastGainCredits = new Translation<double>("+{0} <color=#c$credits$>C</color>", TranslationOptions.TMProUI, "F0");
+    public readonly Translation<double> XPToastGainCredits = new Translation<double>("+{0} <color=#b8ffc1>C</color>", TranslationOptions.TMProUI, "F0");
 
     [TranslationData(IsPriorityTranslation = false)]
-    public readonly Translation<double> XPToastPurchaseCredits = new Translation<double>("-{0} <color=#c$credits$>C</color>", TranslationOptions.TMProUI, "F0");
+    public readonly Translation<double> XPToastPurchaseCredits = new Translation<double>("-{0} <color=#b8ffc1>C</color>", TranslationOptions.TMProUI, "F0");
 
     [TranslationData(IsPriorityTranslation = false)]
     public readonly Translation<double> XPToastLoseCredits = new Translation<double>("-{0} <color=#d69898>C</color>", TranslationOptions.TMProUI, "F0");

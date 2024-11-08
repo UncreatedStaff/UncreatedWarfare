@@ -151,5 +151,5 @@ public class AbandonTranslations : PropertiesTranslationCollection
     public readonly Translation AbandonCompensationToast = new Translation("RETURNED VEHICLE", TranslationOptions.TMProUI);
 
     [TranslationData(Description = "Credits toast for returning a vehicle soon after requesting it, but not getting anything because the vehicle was transferred.")]
-    public readonly Translation AbandonCompensationToastTransferred = new Translation("+0 <color=#c$credits$>C</color> [GIVEN]\nRETURNED VEHICLE", TranslationOptions.TMProUI);
+    public readonly Translation AbandonCompensationToastTransferred = new Translation("+0 <color=#b8ffc1>C</color> [GIVEN]\nRETURNED VEHICLE", TranslationOptions.TMProUI);
 }

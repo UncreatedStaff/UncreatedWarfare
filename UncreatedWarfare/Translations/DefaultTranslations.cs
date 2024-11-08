@@ -48,7 +48,7 @@ internal static class T
      * Color substitution from color dictionary.
      *
      * "c$value$" will be replaced by the color "value" from the color dictionary on startup.
-     *  Example: You need 100 more <#c$credits$>credits</color>.
+     *  Example: You need 100 more <#b8ffc1>credits</color>.
      *
      *
      * Conditional pluralization of existing terms.
@@ -1216,49 +1216,6 @@ internal static class T
 
     #region Request Signs
     private const string SectionRequestSigns = "Kit Signs";
-    [TranslationData(SectionRequestSigns)]
-    public static readonly Translation KitFree = new Translation("<#c$kit_free$>FREE</color>");
-    [TranslationData(SectionRequestSigns)]
-    public static readonly Translation KitExclusive = new Translation("<#c$kit_level_dollars_exclusive$>EXCLUSIVE</color>");
-    [TranslationData(SectionRequestSigns)]
-    public static readonly Translation KitNitroBoostOwned = new Translation("<#f66fe6>BOOSTING</color>");
-    [TranslationData(SectionRequestSigns)]
-    public static readonly Translation KitNitroBoostNotOwned = new Translation("<#9b59b6>NITRO BOOST</color>");
-    [TranslationData(SectionRequestSigns, IsPriorityTranslation = false)]
-    public static readonly Translation<string> KitName = new Translation<string>("<b>{0}</b>");
-    [TranslationData(SectionRequestSigns, IsPriorityTranslation = false)]
-    public static readonly Translation<string> KitWeapons = new Translation<string>("<b>{0}</b>");
-    [TranslationData(SectionRequestSigns, IsPriorityTranslation = false)]
-    public static readonly Translation<decimal> KitPremiumCost = new Translation<decimal>("<#c$kit_level_dollars$>$ {0}</color>", arg0Fmt: "N2");
-    [TranslationData(SectionRequestSigns, Parameters = [ "Level", "Color depending on player's current level." ])]
-    public static readonly Translation<string, Color> KitRequiredLevel = new Translation<string, Color>("<#f0a31c>Rank:</color> <#{1}>{0}</color>");
-
-    // [TranslationData(SectionRequestSigns, Parameters = [ "Rank", "Color depending on player's current rank." ])]
-    // public static readonly Translation<RankData, Color> KitRequiredRank = new Translation<RankData, Color>("<#{1}>Rank: {0}</color>");
-    [TranslationData(SectionRequestSigns, Parameters = [ "Quest", "Color depending on whether the player has completed the quest." ])]
-    public static readonly Translation<QuestAsset, Color> KitRequiredQuest = new Translation<QuestAsset, Color>("<#{1}>Quest: <#fff>{0}</color></color>");
-    [TranslationData(SectionRequestSigns, Parameters = [ "Number of quests needed.", "Color depending on whether the player has completed the quest(s).", "s if {0} != 1" ])]
-    public static readonly Translation<int, Color, string> KitRequiredQuestsMultiple = new Translation<int, Color, string>("<#{1}>Finish <#fff>{0}</color> quest{2}.</color>");
-    [TranslationData(SectionRequestSigns)]
-    public static readonly Translation KitRequiredQuestsComplete = new Translation("<#ff974d>Kit Unlocked</color>");
-    [TranslationData(SectionRequestSigns)]
-    public static readonly Translation KitPremiumOwned = new Translation("<#c$kit_level_dollars_owned$>OWNED</color>");
-    [TranslationData(SectionRequestSigns)]
-    public static readonly Translation KitCommanderTakenByViewer = new Translation("<#c$kit_level_dollars_owned$>You are the <#cedcde>COMMANDER</color>.</color>");
-    [TranslationData(SectionRequestSigns)]
-    public static readonly Translation<IPlayer> KitCommanderTaken = new Translation<IPlayer>("<#f0a31c>Taken by <#fff>{0}</color></color>", arg0Fmt: WarfarePlayer.FormatNickName);
-    [TranslationData(SectionRequestSigns, IsPriorityTranslation = false)]
-    public static readonly Translation<int> KitCreditCost = new Translation<int>("<#c$credits$>C</color> <#fff>{0}</color>");
-    [TranslationData(SectionRequestSigns)]
-    public static readonly Translation KitUnlimited = new Translation("<#c$kit_unlimited_players$>unlimited</color>");
-    [TranslationData(SectionRequestSigns, IsPriorityTranslation = false)]
-    public static readonly Translation<int, int> KitPlayerCount = new Translation<int, int>("{0}/{1}");
-    [TranslationData(SectionRequestSigns, IsPriorityTranslation = false)]
-    public static readonly Translation<string> LoadoutName = new Translation<string>("<#c$kit_level_dollars$>LOADOUT {0}</color>", arg0Fmt: UppercaseAddon.Instance);
-    [TranslationData(SectionRequestSigns, IsPriorityTranslation = false)]
-    public static readonly Translation KitLoadoutUpgrade = new Translation("<#33cc33>/req upgrade</color>");
-    [TranslationData(SectionRequestSigns)]
-    public static readonly Translation KitLoadoutSetup = new Translation("<#3399ff>PENDING SETUP</color>");
     #endregion
 
     #region Vehicle Bay Signs
