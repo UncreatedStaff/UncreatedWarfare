@@ -63,7 +63,31 @@ partial class EventDispatcher2
 
         PlayerService.PlayerTaskData data = implPlayerService.PendingTasks[index];
         implPlayerService.PendingTasks.RemoveAt(index);
-        implPlayerService.PendingTasks.RemoveAll(x => !Provider.pending.Exists(y => y.playerID.steamID.m_SteamID == x.Player.Steam64.m_SteamID));
+
+        for (int i = implPlayerService.PendingTasks.Count - 1; i >= 0; --i)
+        {
+            PlayerService.PlayerTaskData d = implPlayerService.PendingTasks[i];
+            if (Provider.pending.Exists(y => y.playerID.steamID.m_SteamID == d.Player.Steam64.m_SteamID))
+                continue;
+
+            implPlayerService.PendingTasks.RemoveAt(i);
+            if (d.Scope == null)
+                continue;
+
+            Task.Run(async () =>
+            {
+                try
+                {
+                    await d.Scope.DisposeAsync();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Error disposing player task scope for {0}.", d.Player.Steam64);
+                }
+            }, CancellationToken.None);
+        }
+
+        ILifetimeScope? scope = data.Scope;
 
         WarfarePlayer newPlayer = implPlayerService.CreateWarfarePlayer(steamPlayer.player, in data);
         newPlayer.UpdateTeam(team);
@@ -75,7 +99,12 @@ partial class EventDispatcher2
             IsNewPlayer = !newPlayer.Save.WasReadFromFile
         };
 
-        _ = DispatchEventAsync(args, newPlayer.DisconnectToken);
+        UniTask.Create(async () =>
+        {
+            await DispatchEventAsync(args, newPlayer.DisconnectToken);
+            if (scope != null)
+                await scope.DisposeAsync();
+        });
     }
 
     /// <summary>
@@ -128,9 +157,6 @@ partial class EventDispatcher2
             ILogger logger = GetLogger(typeof(Provider), nameof(Provider.onServerDisconnected));
             logger.LogError(ex, "Failed to remove player {0} from player manager.", steam64);
         }
-
-        // collect player data, including the large voice buffer
-        GC.Collect(2, GCCollectionMode.Optimized, blocking: false, compacting: true);
     }
 
     /// <summary>

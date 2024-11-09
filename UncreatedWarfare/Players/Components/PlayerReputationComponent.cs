@@ -1,8 +1,11 @@
 ﻿using SDG.Framework.Utilities;
 using System;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Players.Components;
+
+[PlayerComponent]
 public class PlayerReputationComponent : IPlayerComponent, IDisposable
 {
     private int _pendingReputation;

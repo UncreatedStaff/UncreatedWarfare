@@ -13,9 +13,11 @@ using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Players.ItemTracking;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Skillsets;
+using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Languages;
 using Uncreated.Warfare.Util;
@@ -136,109 +138,110 @@ public class KitRequests
         if (!kit.IsFactionAllowed(ctx.Player.Team.Faction.NullIfDefault()))
             throw ctx.Reply(_translations.RequestKitFactionBlacklisted);
 
-        // // check credits bought
-        // if (kit is { IsPublicKit: true, CreditCost: > 0 } && !Manager.HasAccessQuick(kit, ctx.Player) && !UCWarfare.Config.OverrideKitRequirements)
-        // {
-        //     if (ctx.Caller.CachedCredits >= kit.CreditCost)
-        //         throw ctx.Reply(_translations.RequestKitNotBought, kit.CreditCost);
-        //     
-        //     throw ctx.Reply(_translations.RequestKitCantAfford, ctx.Caller.CachedCredits, kit.CreditCost);
-        // }
-        // 
-        // // elite access
-        // if (kit is { IsPublicKit: false, RequiresNitro: false } && !Manager.HasAccessQuick(kit, ctx.Caller) && !UCWarfare.Config.OverrideKitRequirements)
-        //     throw ctx.Reply(_translations.RequestKitMissingAccess);
-        // 
-        // // team limits
-        // if (kit.IsLimited(out _, out int allowedPlayers, team) || kit.Type == KitType.Loadout && kit.IsClassLimited(out _, out allowedPlayers, team))
-        //     throw ctx.Reply(_translations.RequestKitLimited, allowedPlayers);
-        // 
-        // // squad leader limit
-        // if (kit.Class == Class.Squadleader && ctx.Caller.Squad is not null && !ctx.Caller.IsSquadLeader())
-        //     throw ctx.Reply(_translations.RequestKitNotSquadleader);
-        // 
-        // // cooldowns
-        // if (
-        //     _cooldownManager.HasCooldown(ctx.Player, CooldownType.RequestKit, out Cooldown requestCooldown) &&
-        //     !ctx.Caller.OnDutyOrAdmin() &&
-        //     !UCWarfare.Config.OverrideKitRequirements &&
-        //     kit.Class is not Class.Crewman and not Class.Pilot)
-        //     throw ctx.Reply(T.KitOnGlobalCooldown, requestCooldown);
-        // 
-        // if (kit is { IsPaid: true, RequestCooldown: > 0f } &&
-        //     _cooldownManager.HasCooldown(ctx.Player, CooldownType.PremiumKit, out Cooldown premiumCooldown, kit.InternalName) &&
-        //     !ctx.Caller.OnDutyOrAdmin() &&
-        //     !UCWarfare.Config.OverrideKitRequirements)
-        //     throw ctx.Reply(T.KitOnCooldown, premiumCooldown);
-        // 
-        // // unlock requirements
-        // if (kit.UnlockRequirements != null)
-        // {
-        //     for (int i = 0; i < kit.UnlockRequirements.Length; i++)
-        //     {
-        //         UnlockRequirement req = kit.UnlockRequirements[i];
-        //         if (req == null || req.CanAccess(ctx.Caller))
-        //             continue;
-        //         throw req.RequestKitFailureToMeet(ctx, kit);
-        //     }
-        // }
-        // 
-        // bool hasAccess = kit is { CreditCost: 0, IsPublicKit: true } || UCWarfare.Config.OverrideKitRequirements;
-        // if (!hasAccess)
-        // {
-        //     // double check access against database
-        //     hasAccess = await Manager.HasAccess(kit, ctx.CallerId, token).ConfigureAwait(false);
-        //     await UniTask.SwitchToMainThread(token);
-        //     if (!hasAccess)
-        //     {
-        //         // check nitro boost status
-        //         if (kit.RequiresNitro)
-        //         {
-        //             try
-        //             {
-        //                 bool nitroBoosting = await Manager.Boosting.IsNitroBoosting(ctx.CallerId.m_SteamID, token).ConfigureAwait(false) ?? ctx.Caller.Save.WasNitroBoosting;
-        //                 await UniTask.SwitchToMainThread(token);
-        //                 if (!nitroBoosting)
-        //                     throw ctx.Reply(_translations.RequestKitMissingNitro);
-        //             }
-        //             catch (TimeoutException)
-        //             {
-        //                 throw ctx.Reply(T.UnknownError);
-        //             }
-        //         }
-        //         else if (kit.IsPaid)
-        //             throw ctx.Reply(_translations.RequestKitMissingAccess);
-        //         else if (ctx.Caller.CachedCredits >= kit.CreditCost)
-        //             throw ctx.Reply(_translations.RequestKitNotBought, kit.CreditCost);
-        //         else
-        //             throw ctx.Reply(_translations.RequestKitCantAfford, ctx.Caller.CachedCredits, kit.CreditCost);
-        //     }
-        // }
-        // // recheck limits to make sure people can't request at the same time to avoid limits.
-        // if (kit.IsLimited(out _, out allowedPlayers, team) || kit.Type == KitType.Loadout && kit.IsClassLimited(out _, out allowedPlayers, team))
-        //     throw ctx.Reply(_translations.RequestKitLimited, allowedPlayers);
-        // 
-        // ctx.LogAction(ActionLogType.RequestKit, $"Kit {kit.InternalName}, Team {team}, Class: {_valueFormatter.FormatEnum(kit.Class, ctx.Language)}");
-        // 
-        // if (!await GrantKitRequest(ctx, kit, token).ConfigureAwait(false))
-        // {
-        //     await UniTask.SwitchToMainThread(token);
-        //     throw ctx.SendUnknownError();
-        // }
-        // 
-        // if (kit.Class == Class.Squadleader)
-        // {
-        //     if (SquadManager.MaxSquadsReached(team))
-        //         ctx.Reply(T.SquadsTooMany, SquadManager.ListUI.Squads.Length);
-        //     else if (SquadManager.AreSquadLimited(team, out int requiredTeammatesForMoreSquads))
-        //         ctx.Reply(T.SquadsTooManyPlayerCount, requiredTeammatesForMoreSquads);
-        //     else
-        //     {
-        //         await UniTask.SwitchToMainThread(token);
-        //         if (Manager.IsLoaded)
-        //             Manager.TryCreateSquadOnRequestSquadleaderKit(ctx);
-        //     }
-        // }
+        // check credits bought
+        if (kit is { IsPublicKit: true, CreditCost: > 0 } && !Manager.HasAccessQuick(kit, ctx.Player))
+        {
+            if (ctx.Player.CachedPoints.Credits >= kit.CreditCost)
+                throw ctx.Reply(_translations.RequestKitNotBought, kit.CreditCost);
+            
+            throw ctx.Reply(_translations.RequestKitCantAfford, (int)ctx.Player.CachedPoints.Credits, kit.CreditCost);
+        }
+        
+        // elite access
+        if (kit is { IsPublicKit: false, RequiresNitro: false } && !Manager.HasAccessQuick(kit, ctx.Player))
+            throw ctx.Reply(_translations.RequestKitMissingAccess);
+        
+        // team limits
+        if (kit.IsLimited(_playerService, out _, out int allowedPlayers, ctx.Player.Team) ||
+            kit.Type == KitType.Loadout && kit.IsClassLimited(_playerService, out _, out allowedPlayers, ctx.Player.Team))
+            throw ctx.Reply(_translations.RequestKitLimited, allowedPlayers);
+        
+        // squad leader limit
+        if (kit.Class == Class.Squadleader && ctx.Player.IsInSquad() && !ctx.Player.IsSquadLeader())
+            throw ctx.Reply(_translations.RequestKitNotSquadleader);
+        
+        // cooldowns
+        if (
+            _cooldownManager.HasCooldown(ctx.Player, CooldownType.RequestKit, out Cooldown requestCooldown) &&
+            kit.Class is not Class.Crewman and not Class.Pilot)
+            throw ctx.Reply(_translations.RequestKitOnGlobalCooldown, requestCooldown);
+        
+        if (kit is { IsPaid: true, RequestCooldown: > 0f } &&
+            _cooldownManager.HasCooldown(ctx.Player, CooldownType.PremiumKit, out Cooldown premiumCooldown, kit.InternalName))
+            throw ctx.Reply(_translations.RequestKitOnCooldown, premiumCooldown);
+        
+        // unlock requirements
+        if (kit.UnlockRequirements != null)
+        {
+            for (int i = 0; i < kit.UnlockRequirements.Length; i++)
+            {
+                UnlockRequirement req = kit.UnlockRequirements[i];
+                if (req == null || await req.CanAccessAsync(ctx.Player, token))
+                    continue;
+                
+                throw req.RequestKitFailureToMeet(ctx, kit);
+            }
+        }
+        
+        bool hasAccess = kit is { CreditCost: 0, IsPublicKit: true };
+        if (!hasAccess)
+        {
+            // double check access against database
+            hasAccess = await Manager.HasAccess(kit, ctx.CallerId, token).ConfigureAwait(false);
+            await UniTask.SwitchToMainThread(token);
+            if (!hasAccess)
+            {
+                // check nitro boost status
+                if (kit.RequiresNitro)
+                {
+                    try
+                    {
+                        bool nitroBoosting = await Manager.Boosting.IsNitroBoosting(ctx.CallerId.m_SteamID, token).ConfigureAwait(false) ?? ctx.Player.Save.WasNitroBoosting;
+                        await UniTask.SwitchToMainThread(token);
+                        if (!nitroBoosting)
+                            throw ctx.Reply(_translations.RequestKitMissingNitro);
+                    }
+                    catch (TimeoutException)
+                    {
+                        throw ctx.SendUnknownError();
+                    }
+                }
+                else if (kit.IsPaid)
+                    throw ctx.Reply(_translations.RequestKitMissingAccess);
+                else if (ctx.Player.CachedPoints.Credits >= kit.CreditCost)
+                    throw ctx.Reply(_translations.RequestKitNotBought, kit.CreditCost);
+                else
+                    throw ctx.Reply(_translations.RequestKitCantAfford, (int)ctx.Player.CachedPoints.Credits, kit.CreditCost);
+            }
+        }
+        
+        // recheck limits to make sure people can't request at the same time to avoid limits.
+        if (kit.IsLimited(_playerService, out _, out allowedPlayers, ctx.Player.Team)
+            || kit.Type == KitType.Loadout && kit.IsClassLimited(_playerService, out _, out allowedPlayers, ctx.Player.Team))
+            throw ctx.Reply(_translations.RequestKitLimited, allowedPlayers);
+        
+        ctx.LogAction(ActionLogType.RequestKit, $"Kit {kit.InternalName}, Team {ctx.Player.Team.Faction.Name}, Class: {_valueFormatter.FormatEnum(kit.Class, ctx.Language)}");
+        
+        if (!await GrantKitRequest(ctx, kit, token).ConfigureAwait(false))
+        {
+            await UniTask.SwitchToMainThread(token);
+            throw ctx.SendUnknownError();
+        }
+        
+        // todo create squad if squad leader
+        //if (kit.Class == Class.Squadleader)
+        //{
+        //    if (SquadManager.MaxSquadsReached(team))
+        //        ctx.Reply(T.SquadsTooMany, SquadManager.ListUI.Squads.Length);
+        //    else if (SquadManager.AreSquadLimited(team, out int requiredTeammatesForMoreSquads))
+        //        ctx.Reply(T.SquadsTooManyPlayerCount, requiredTeammatesForMoreSquads);
+        //    else
+        //    {
+        //        await UniTask.SwitchToMainThread(token);
+        //        if (Manager.IsLoaded)
+        //            Manager.TryCreateSquadOnRequestSquadleaderKit(ctx);
+        //    }
+        //}
     }
     internal async Task GiveKit(WarfarePlayer player, Kit? kit, bool manual, bool tip, CancellationToken token = default, bool psLock = true)
     {
@@ -284,6 +287,9 @@ public class KitRequests
     {
         await _droppedItemTracker.DestroyItemsDroppedByPlayerAsync(ctx.CallerId, false, token);
         await GiveKit(ctx.Player, kit, true, true, token).ConfigureAwait(false);
+
+        await UniTask.SwitchToMainThread(token);
+        
         // string id = kit.InternalName;
         // StatsManager.ModifyKit(id, k => k.TimesRequested++);
         // StatsManager.ModifyStats(ctx.CallerID, s =>
@@ -306,6 +312,7 @@ public class KitRequests
 
         return true;
     }
+
     private void GrantKit(WarfarePlayer player, Kit? kit, bool tip = true)
     {
         GameThread.AssertCurrent();

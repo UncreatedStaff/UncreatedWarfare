@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Globalization;
 using System.Text;
-using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Util;
 
-namespace Uncreated.Warfare.Commands;
+// ReSharper disable once CheckNamespace
+namespace Uncreated.Warfare.Interaction.Commands.Syntax;
 
 public class TMProSyntaxWriter : ISyntaxWriter
 {

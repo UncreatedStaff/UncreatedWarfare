@@ -1,11 +1,17 @@
-﻿using Uncreated.Warfare.Configuration;
+﻿using System;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Interaction.Commands;
+using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Models.Kits;
+using Uncreated.Warfare.Moderation.Punishments;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Permissions;
+using Uncreated.Warfare.Players.Unlocks;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Commands;
 
-[SynchronizedCommand, Command("request", "req")]
-public class RequestCommand : ICompoundingCooldownCommand
+public class RequestCommand2 : ICompoundingCooldownCommand
 {
     private static readonly IAssetLink<ItemBarricadeAsset> KitSign = AssetLink.Create<ItemBarricadeAsset>("275dd81d60ae443e91f0655b8b7aa920");
 
@@ -48,143 +54,6 @@ public class RequestCommand : ICompoundingCooldownCommand
         Context.AssertHelpCheck(0, Syntax + " - " + Help);
         BarricadeDrop? drop;
         string? kitId = null;
-        if (Context.HasArgs(1))
-        {
-            if (!Context.MatchParameter(0, "upgrade", "update"))
-            {
-                throw Context.SendCorrectUsage(Syntax + " - " + Help);
-            }
-
-            await Context.AssertPermissions(PermissionUpgrade, token);
-            await UniTask.SwitchToMainThread(token);
-
-            if (!Context.TryGetBarricadeTarget(out drop) && !Context.TryGet(1, out kitId))
-            {
-                throw Context.Reply(T.RequestNoTarget);
-            }
-
-            Context.AssertRanByPlayer();
-            ulong discordId = await Data.AdminSql.GetDiscordID(Context.CallerId.m_SteamID, token).ConfigureAwait(false);
-            if (discordId == 0)
-            {
-                await UniTask.SwitchToMainThread(token);
-                Context.Reply(T.DiscordNotLinked);
-                throw Context.Reply(T.DiscordNotLinked2, Context.Player);
-            }
-
-            bool? inDiscordServer = await PlayerManager.IsUserInDiscordServer(discordId).ConfigureAwait(false);
-            await UniTask.SwitchToMainThread(token);
-            if (inDiscordServer.HasValue)
-            {
-                if (!inDiscordServer.Value)
-                    throw Context.Reply(T.RequestUpgradeNotInDiscordServer);
-            }
-            else
-                throw Context.Reply(T.RequestUpgradeNotConnected);
-                    
-            KitManager? manager = KitManager.GetSingletonQuick();
-            if (manager == null)
-                throw Context.SendGamemodeError();
-
-            Kit? kit;
-            if (drop != null && kitId == null)
-            {
-                StructureSaver? saver = StructureSaver.GetSingletonQuick();
-                InteractableSign? sign = drop.interactable as InteractableSign;
-                if (saver != null && await saver.GetSave(drop, token).ConfigureAwait(false) == null)
-                {
-                    await UniTask.SwitchToMainThread(token);
-                    throw Context.Reply(T.RequestKitNotRegistered);
-                }
-                await UniTask.SwitchToMainThread(token);
-                if (sign != null)
-                {
-                    kit = await manager.GetKitFromSign(drop, Context.Player, token);
-                }
-                else throw Context.Reply(T.RequestNoTarget);
-            }
-            else if (kitId != null)
-            {
-                kit = await manager.FindKit(kitId, token, false);
-            }
-            else throw Context.SendUnknownError();
-
-            if (kit == null)
-                throw Context.Reply(T.KitNotFound, kitId ?? "???");
-
-            if (kit.Type != KitType.Loadout)
-                throw Context.Reply(T.RequestUpgradeOnKit, kit);
-
-            if (!kit.NeedsUpgrade)
-                throw Context.Reply(T.DoesNotNeedUpgrade, kit);
-
-            int id = KitEx.ParseStandardLoadoutId(kit.InternalName, out ulong playerId);
-            if (Context.CallerId.m_SteamID != playerId)
-            {
-                // requesting upgrade for a different player's kit
-                Context.AssertOnDuty();
-
-                discordId = await Data.AdminSql.GetDiscordID(playerId, token).ConfigureAwait(false);
-                if (discordId == 0)
-                {
-                    await UniTask.SwitchToMainThread(token);
-                    throw Context.Reply(T.DiscordNotLinked);
-                }
-                inDiscordServer = await PlayerManager.IsUserInDiscordServer(discordId).ConfigureAwait(false);
-                await UniTask.SwitchToMainThread(token);
-                if (inDiscordServer.HasValue)
-                {
-                    if (!inDiscordServer.Value)
-                        throw Context.Reply(T.RequestUpgradeNotInDiscordServer);
-                }
-                else
-                    throw Context.Reply(T.RequestUpgradeNotConnected);
-            }
-            if (UCWarfare.CanUseNetCall)
-            {
-#if false // todo
-                RequestResponse response = await KitEx.NetCalls.RequestIsModifyLoadoutTicketOpen.RequestAck(UCWarfare.I.NetClient!, discordId, id, 7500);
-                if (!response.Responded)
-                {
-                    await UniTask.SwitchToMainThread(token);
-                    throw Context.Reply(T.RequestUpgradeNotConnected);
-                }
-                if (response.ErrorCode is not (int)StandardErrorCode.NotFound)
-                {
-                    await UniTask.SwitchToMainThread(token);
-                    if (response.ErrorCode is (int)StandardErrorCode.Success)
-                    {
-                        throw Context.Reply(T.RequestUpgradeAlreadyOpen, kit);
-                    }
-
-                    if (response.ErrorCode is (int)StandardErrorCode.NotSupported)
-                    {
-                        throw Context.Reply(T.RequestUpgradeTooManyTicketsOpen);
-                    }
-
-                    throw Context.Reply(T.RequestUpgradeError, response.ErrorCode.HasValue ? ((StandardErrorCode)response.ErrorCode.Value).ToString() : "NULL");
-                }
-#endif
-            }
-            else
-            {
-                await UniTask.SwitchToMainThread(token);
-                throw Context.Reply(T.RequestUpgradeNotConnected);
-            }
-            if (!kit.NeedsUpgrade)
-            {
-                await UniTask.SwitchToMainThread(token);
-                throw Context.Reply(T.DoesNotNeedUpgrade, kit);
-            }
-
-            bool success = await KitEx.OpenUpgradeTicket(kit.GetDisplayName(), kit.Class, id, playerId, discordId, token).ConfigureAwait(false);
-            await UniTask.SwitchToMainThread(token);
-            if (!success)
-                throw Context.Reply(T.RequestUpgradeNotConnected);
-
-            throw Context.Reply(T.TicketOpened, kit);
-
-        }
 
         await Context.AssertPermissions(PermissionRequest, token);
         await UniTask.SwitchToMainThread(token);
@@ -201,42 +70,6 @@ public class RequestCommand : ICompoundingCooldownCommand
                 throw Context.Reply(T.RequestKitNotRegistered);
             }
             await UniTask.SwitchToMainThread(token);
-            if (sign != null)
-            {
-                Kit? kit = Signs.GetKitFromSign(drop, out int loadoutId);
-                if (kit != null || loadoutId > 0)
-                {
-                    Context.AssertGamemode(out IKitRequests gm);
-                    KitManager manager = gm.KitManager;
-
-                    if (loadoutId > 0)
-                        await manager.Requests.RequestLoadout(loadoutId, Context, token).ConfigureAwait(false);
-                    else
-                    {
-                        kit = await manager.GetKit(kit!.PrimaryKey, token, x => KitManager.RequestableSet(x, true)).ConfigureAwait(false);
-
-                        if (kit == null)
-                            throw Context.Reply(T.RequestNoTarget);
-
-                        await manager.Requests.RequestKit(kit, Context, token).ConfigureAwait(false);
-                    }
-                    return;
-                }
-                if (TraitManager.Loaded && sign.text.StartsWith(Signs.Prefix + Signs.TraitPrefix, StringComparison.OrdinalIgnoreCase))
-                {
-                    Context.AssertGamemode<ITraits>();
-
-                    if (!TraitManager.Loaded)
-                        throw Context.SendGamemodeError();
-
-                    TraitData? d = TraitManager.GetData(sign.text.Substring(Signs.Prefix.Length + Signs.TraitPrefix.Length));
-                    if (d == null)
-                        throw Context.Reply(T.RequestNoTarget);
-
-                    TraitManager.RequestTrait(d, Context);
-                    return;
-                }
-            }
 
             if (!Data.Is(out IVehicles vgm) || !vgm.VehicleSpawner.TryGetSpawn(drop, out SqlItem<VehicleSpawn> vbsign))
                 throw Context.Reply(T.RequestNoTarget);

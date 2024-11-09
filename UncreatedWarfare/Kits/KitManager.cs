@@ -1111,7 +1111,14 @@ public partial class KitManager :
             player.PurchaseSync.Release();
         }
 
-        await Distribution.DequipKit(player, true, token);
+        UniTask.Create(async () =>
+        {
+            await UniTask.SwitchToMainThread();
+            if (player.Component<KitPlayerComponent>().ActiveKitKey == kit.PrimaryKey)
+            {
+                await Distribution.DequipKit(player, true, token);
+            }
+        });
         return access;
     }
 
@@ -1120,7 +1127,7 @@ public partial class KitManager :
     {
         if (kit.PrimaryKey == 0)
             return false;
-        WarfarePlayer? online = _playerService.GetOnlinePlayerOrNull(player);
+        WarfarePlayer? online = _playerService.GetOnlinePlayerOrNullThreadSafe(player);
         if (online is { IsOnline: true })
             return await RemoveAccess(kit, online, token).ConfigureAwait(false);
         bool res = await RemoveAccessRow(kit.PrimaryKey, player, token).ConfigureAwait(false);
@@ -1180,7 +1187,7 @@ public partial class KitManager :
     {
         if (kit == 0)
             return new ValueTask<bool>(false);
-        WarfarePlayer? pl = _playerService.GetOnlinePlayerOrNull(player);
+        WarfarePlayer? pl = _playerService.GetOnlinePlayerOrNullThreadSafe(player);
         if (pl != null && pl.IsOnline)
             return new ValueTask<bool>(HasAccessQuick(kit, pl));
         return new ValueTask<bool>(HasAccess(kit, player, token));
@@ -1280,7 +1287,7 @@ public partial class KitManager :
             return;
 
         // dequip kit after losing access
-        WarfarePlayer? pl = _playerService.GetOnlinePlayerOrNull(player);
+        WarfarePlayer? pl = _playerService.GetOnlinePlayerOrNullThreadSafe(player);
         if (pl == null || kit == null)
             return;
 

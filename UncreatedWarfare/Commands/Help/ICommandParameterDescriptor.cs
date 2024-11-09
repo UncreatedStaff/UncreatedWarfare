@@ -2,7 +2,8 @@
 using System.Collections.Generic;
 using Uncreated.Warfare.Players.Permissions;
 
-namespace Uncreated.Warfare.Commands;
+// ReSharper disable once CheckNamespace
+namespace Uncreated.Warfare.Interaction.Commands.Syntax;
 
 /// <summary>
 /// Describes a command or parameter for a command (including sub-commands).

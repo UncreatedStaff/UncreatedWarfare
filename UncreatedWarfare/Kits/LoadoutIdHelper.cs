@@ -51,6 +51,15 @@ public static class LoadoutIdHelper
     public static int ParseNumber(ReadOnlySpan<char> chars)
     {
         int id = 0;
+        if (chars.Length > 18)
+        {
+            id = Parse(chars, out _);
+            if (id > 0)
+                return id;
+
+            id = 0;
+        }
+
         for (int i = chars.Length - 1; i >= 0; --i)
         {
             int c = chars[i];

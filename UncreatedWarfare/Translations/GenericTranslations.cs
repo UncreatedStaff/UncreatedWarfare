@@ -12,6 +12,7 @@ public class Translation<T0> : Translation
 
     public override int ArgumentCount => 1;
     public ArgumentFormat FormatArg0 { get; set; }
+
     public Translation(string defaultValue, TranslationOptions options = default, ArgumentFormat arg0Fmt = default)
         : base(defaultValue, options)
     {

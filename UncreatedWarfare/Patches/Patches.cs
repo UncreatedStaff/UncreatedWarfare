@@ -1,14 +1,11 @@
 ﻿using DanielWillett.ReflectionTools;
 using HarmonyLib;
-using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using Uncreated.Warfare.Components;
-using Uncreated.Warfare.FOBs;
-using Uncreated.Warfare.Patches;
 using Module = SDG.Framework.Modules.Module;
 
 // ReSharper disable InconsistentNaming
@@ -23,34 +20,6 @@ public static partial class Patches
     /// <summary>Patch methods</summary>
     public static void DoPatching(Module module, IServiceProvider serviceProvider)
     {
-        ILoggerFactory loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
-        // patch all IHarmonyPatch instances in all referenced assemblies.
-        foreach (Type type in Accessor.GetTypesSafe(module.assemblies).Where(typeof(IHarmonyPatch).IsAssignableFrom))
-        {
-            if (type.IsAbstract)
-                continue;
-
-            ILogger logger = loggerFactory.CreateLogger(type);
-
-            ConstructorInfo? ctor = type.GetConstructor(Type.EmptyTypes);
-            if (ctor == null)
-            {
-                logger.LogWarning("IHarmonyPatch {0} does not have a parameter-less constructor.", type);
-                continue;
-            }
-
-            IHarmonyPatch patch = (IHarmonyPatch)ctor.Invoke(Array.Empty<object>());
-            try
-            {
-                patch.Patch(logger);
-                logger.LogDebug("Applied harmony patch: {0}.", type);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Failed to patch {0}.", type);
-            }
-        }
-
         Patcher.PatchAll();
         // if (!UCWarfare.Config.DisableMissingAssetKick)
         //     InternalPatches.ServerMessageHandler_ValidateAssets_Patch.Patch(Patcher);
@@ -58,29 +27,6 @@ public static partial class Patches
     /// <summary>Unpatch methods</summary>
     public static void Unpatch(IServiceProvider serviceProvider)
     {
-        ILoggerFactory loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
-        foreach (Type type in Accessor.GetTypesSafe(AppDomain.CurrentDomain.GetAssemblies()).Where(typeof(IHarmonyPatch).IsAssignableFrom))
-        {
-            if (type.IsAbstract)
-                continue;
-
-            ConstructorInfo? ctor = type.GetConstructor(Type.EmptyTypes);
-            if (ctor == null)
-                continue;
-
-            ILogger logger = loggerFactory.CreateLogger(type);
-
-            IHarmonyPatch patch = (IHarmonyPatch)ctor.Invoke(Array.Empty<object>());
-            try
-            {
-                patch.Unpatch(logger);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Failed to unpatch {0}.", type);
-            }
-        }
-
         Patcher.UnpatchAll("network.uncreated.warfare");
     }
     public delegate void BarricadeDroppedEventArgs(BarricadeDrop drop, BarricadeRegion region, Barricade barricade, Vector3 point, Quaternion rotation, ulong owner, ulong group);

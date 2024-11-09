@@ -5,8 +5,11 @@ using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Items;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
 
 namespace Uncreated.Warfare.Kits.Items;
+
+[PlayerComponent]
 internal class HotkeyPlayerComponent : IPlayerComponent, IEventListener<ItemDropped>
 {
     private KitManager _kitManager = null!;

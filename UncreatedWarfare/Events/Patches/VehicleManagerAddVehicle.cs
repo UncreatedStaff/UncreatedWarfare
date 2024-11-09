@@ -4,7 +4,6 @@ using System;
 using System.Reflection;
 using Uncreated.Warfare.Events.Models.Vehicles;
 using Uncreated.Warfare.Patches;
-using static Uncreated.Warfare.Harmony.Patches;
 
 namespace Uncreated.Warfare.Events.Patches;
 
@@ -13,7 +12,7 @@ internal class VehicleManagerAddVehicle : IHarmonyPatch
 {
     private static MethodInfo? _target;
 
-    void IHarmonyPatch.Patch(ILogger logger)
+    void IHarmonyPatch.Patch(ILogger logger, HarmonyLib.Harmony patcher)
     {
         _target = typeof(VehicleManager).GetMethod("addVehicle", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance, null, CallingConventions.Any,
             [ 
@@ -27,7 +26,7 @@ internal class VehicleManagerAddVehicle : IHarmonyPatch
 
         if (_target != null)
         {
-            Patcher.Patch(_target, postfix: Accessor.GetMethod(Postfix));
+            patcher.Patch(_target, postfix: Accessor.GetMethod(Postfix));
             logger.LogDebug("Patched {0} for vehicle spawned event.", _target);
             return;
         }
@@ -62,12 +61,12 @@ internal class VehicleManagerAddVehicle : IHarmonyPatch
         );
     }
 
-    void IHarmonyPatch.Unpatch(ILogger logger)
+    void IHarmonyPatch.Unpatch(ILogger logger, HarmonyLib.Harmony patcher)
     {
         if (_target == null)
             return;
 
-        Patcher.Unpatch(_target, Accessor.GetMethod(Postfix));
+        patcher.Unpatch(_target, Accessor.GetMethod(Postfix));
         logger.LogDebug("Unpatched {0} for destroy structure event.", _target);
         _target = null;
     }

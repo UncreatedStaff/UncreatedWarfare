@@ -3,6 +3,7 @@ using SDG.NetTransport;
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Logging;
@@ -299,25 +300,31 @@ public static class BarricadeUtility
     /// </summary>
     /// <exception cref="NotSupportedException">Not on main thread.</exception>
     /// <exception cref="ArgumentException"><paramref name="barricade"/> is not a sign.</exception>
-    public static void SetServersideSignText(BarricadeDrop barricade, string text)
+    public static void SetServersideSignText(BarricadeDrop barricade, ReadOnlySpan<char> text)
     {
         GameThread.AssertCurrent();
         
         if (barricade.interactable is not InteractableSign sign)
             throw new ArgumentException("Barricade must be a sign.", nameof(barricade));
 
-        byte[] state = barricade.GetServersideData().barricade.state;
-        byte[] bytes = Encoding.UTF8.GetBytes(text);
-        if (17 + bytes.Length > byte.MaxValue)
+        int byteCt = Encoding.UTF8.GetByteCount(text);
+        if (byteCt + 17 > byte.MaxValue)
         {
-            WarfareModule.Singleton.GlobalLogger.LogWarning(text + " is too long to go on a sign! (SetServersideSignText)");
-            return;
+            WarfareModule.Singleton.GlobalLogger.LogWarning(text.Concat(" is too long to go on a sign! (SetServersideSignText)"));
+            text = text[..(byte.MaxValue - 17)];
         }
-        byte[] newState = new byte[17 + bytes.Length];
-        Buffer.BlockCopy(state, 0, newState, 0, 16);
-        newState[16] = (byte)bytes.Length;
-        if (bytes.Length != 0)
-            Buffer.BlockCopy(bytes, 0, newState, 17, bytes.Length);
+        
+        byte[] newState = new byte[byteCt + 17];
+
+        Unsafe.WriteUnaligned(ref newState[0], sign.owner.m_SteamID);
+        Unsafe.WriteUnaligned(ref newState[8], sign.group.m_SteamID);
+        newState[16] = (byte)byteCt;
+
+        if (byteCt != 0)
+        {
+            Encoding.UTF8.GetBytes(text, newState.AsSpan(17));
+        }
+
         BarricadeManager.updateState(barricade.model, newState, newState.Length);
         sign.updateState(barricade.asset, newState);
     }
@@ -338,9 +345,9 @@ public static class BarricadeUtility
 
         length += 7;
         if (storage.displayTags != null)
-            length += storage.displayTags.Length;
+            length += Encoding.UTF8.GetByteCount(storage.displayTags);
         if (storage.displayDynamicProps != null)
-            length += storage.displayDynamicProps.Length;
+            length += Encoding.UTF8.GetByteCount(storage.displayDynamicProps);
 
         return length;
     }
@@ -353,23 +360,24 @@ public static class BarricadeUtility
     /// <exception cref="OverflowException">Displayed item's state or display metadata is longer than 255 elements.</exception>
     public static int WriteClientsideStorageState(Span<byte> output, InteractableStorage storage, CSteamID owner, CSteamID group)
     {
-        if (output.Length < sizeof(ulong) * 2)
+        if (output.Length < 27)
             throw new ArgumentException("Output not long enough for state.", nameof(output));
 
-        BitConverter.TryWriteBytes(output, owner.m_SteamID);
-        BitConverter.TryWriteBytes(output[sizeof(ulong)..], group.m_SteamID);
-        int index = sizeof(ulong) * 2;
+        MemoryMarshal.Write(output, ref Unsafe.As<CSteamID, ulong>(ref owner));
+        MemoryMarshal.Write(output[8..], ref Unsafe.As<CSteamID, ulong>(ref group));
+
+        int index = 16;
 
         if (!storage.isDisplay)
             return index;
 
-        if (output.Length - index < 11)
-            throw new ArgumentException("Output not long enough for state.", nameof(output));
-
+        ushort tempRef2;
         if (storage.displayItem != null)
         {
-            BitConverter.TryWriteBytes(output[index..], storage.displayItem.id);
+            tempRef2 = storage.displayItem.id;
+            MemoryMarshal.Write(output[index..], ref tempRef2);
             index += sizeof(ushort);
+
             output[index++] = storage.displayItem.quality;
             output[index++] = checked( (byte)(storage.displayItem.state?.Length ?? 0) );
             if (storage.displayItem.state is { Length: > 0 })
@@ -388,17 +396,18 @@ public static class BarricadeUtility
             index += sizeof(int);
         }
 
-        BitConverter.TryWriteBytes(output[index..], storage.displaySkin);
+        tempRef2 = storage.displaySkin;
+        MemoryMarshal.Write(output[index..], ref tempRef2);
         index += sizeof(ushort);
-        BitConverter.TryWriteBytes(output[index..], storage.displayMythic);
+
+        tempRef2 = storage.displayMythic;
+        MemoryMarshal.Write(output[index..], ref tempRef2);
         index += sizeof(ushort);
 
         if (!string.IsNullOrEmpty(storage.displayTags))
         {
-            byte byteCt   = checked( (byte)Encoding.UTF8.GetByteCount(storage.displayTags) );
-            if (output.Length - index < byteCt + 3)
-                throw new ArgumentException("Output not long enough for state.", nameof(output));
-            output[index] = checked( (byte)Encoding.UTF8.GetBytes(storage.displayTags, output.Slice(index + 1, byteCt)) );
+            byte byteCt = checked( (byte)Encoding.UTF8.GetBytes(storage.displayTags, output[(index + 1)..]) );
+            output[index] = byteCt;
             index += byteCt + 1;
         }
         else
@@ -409,10 +418,8 @@ public static class BarricadeUtility
 
         if (!string.IsNullOrEmpty(storage.displayDynamicProps))
         {
-            byte byteCt   = checked( (byte)Encoding.UTF8.GetByteCount(storage.displayDynamicProps) );
-            if (output.Length - index < byteCt + 2)
-                throw new ArgumentException("Output not long enough for state.", nameof(output));
-            output[index] = checked( (byte)Encoding.UTF8.GetBytes(storage.displayDynamicProps, output.Slice(index + 1, byteCt)) );
+            byte byteCt = checked( (byte)Encoding.UTF8.GetBytes(storage.displayDynamicProps, output[(index + 1)..]) );
+            output[index] = byteCt;
             index += byteCt + 1;
         }
         else
@@ -551,7 +558,7 @@ public static class BarricadeUtility
                     return false;
 
                 state = new byte[GetClientsideStorageStateLength(storage)];
-                WriteClientsideStorageState(state, storage, new CSteamID(o), new CSteamID(g));
+                WriteClientsideStorageState(state, storage, Unsafe.As<ulong, CSteamID>(ref o), Unsafe.As<ulong, CSteamID>(ref g));
                 Data.SendUpdateBarricadeState.Invoke(drop.GetNetId(), ENetReliability.Reliable, BarricadeManager.GatherRemoteClientConnections(x, y, plant), state);
                 return true;
 

@@ -182,13 +182,8 @@ Abbreviation: 德国
 • FormatTimeShort_HH_MM_SS  "tshort2"   Turns time to: 01:03:04, etc.
    Time can be int, uint, float (all in seconds), or TimeSpan
 ```
-Other formats are stored in the most prominant class of the interface (`UCPlayer` for `IPlayer`, `FOB` for `IDeployable`, etc.)
+Other formats are stored in the most prominent class of the interface (`WarfarePlayer` for `IPlayer`, `Fob` for `IDeployable`, etc.)
 <br>Anything that would work in `T[N].ToString(string, IFormatProvider)` will work here.
-
-<br>**Color substitution from color dictionary**
-
-`c$value$` will be replaced by the color `value` from the color dictionary on startup.
-<br> Example: `You need 100 more <#b8ffc1>credits</color>.`
 
 <br>**Conditional pluralization of existing terms**
 

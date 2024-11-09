@@ -74,8 +74,8 @@ public class VehicleInfoStore : IHostedService, IDisposable, IUnlockRequirementP
                 .AddYamlFile(_fileProvider, Path.GetRelativePath(_fileProvider.Root, file), false, true)
                 .Build();
 
-            WarfareVehicleInfo vehicle = config.Get<WarfareVehicleInfo>();
-            if (vehicle.Vehicle == null)
+            WarfareVehicleInfo? vehicle = config.Get<WarfareVehicleInfo>();
+            if (vehicle?.Vehicle == null)
             {
                 _logger.LogWarning("Invalid file {0} missing 'Vehicle' property.", file);
                 continue;
@@ -139,8 +139,8 @@ public class VehicleInfoStore : IHostedService, IDisposable, IUnlockRequirementP
                     .AddYamlFile(_fileProvider, file, false, true)
                     .Build();
 
-                WarfareVehicleInfo vehicle = config.Get<WarfareVehicleInfo>();
-                if (vehicle.Vehicle == null)
+                WarfareVehicleInfo? vehicle = config.Get<WarfareVehicleInfo>();
+                if (vehicle?.Vehicle == null)
                 {
                     _logger.LogWarning("Invalid file {0} missing 'Vehicle' property.", file);
                     continue;
@@ -204,12 +204,15 @@ public class VehicleInfoStore : IHostedService, IDisposable, IUnlockRequirementP
     /// <summary>
     /// Invoked when a vehicle's file is changed.
     /// </summary>
-    private void ReloadVehicleInfoConfiguration(object stateBox)
+    private void ReloadVehicleInfoConfiguration(object? stateBox)
     {
-        WarfareVehicleInfo state = (WarfareVehicleInfo)stateBox;
+        WarfareVehicleInfo state = (WarfareVehicleInfo)stateBox!;
 
         // not binding for thread safety reasons
-        WarfareVehicleInfo newVehicle = state.Configuration.Get<WarfareVehicleInfo>();
+        WarfareVehicleInfo? newVehicle = state.Configuration.Get<WarfareVehicleInfo>();
+        
+        if (newVehicle?.Vehicle == null)
+            return;
 
         if (newVehicle.Vehicle.Equals(state.Vehicle))
         {

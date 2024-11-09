@@ -23,11 +23,12 @@ public class KitSignInstanceProvider : ISignInstanceProvider
     private readonly IPlayerService _playerService;
     private readonly IConfiguration _systemConfig;
     private readonly KitSignTranslations _translations;
-    private readonly StringBuilder _kitSignBuffer = new StringBuilder(230);
+    private static readonly StringBuilder KitSignBuffer = new StringBuilder(230);
 
     private static readonly Color32 ColorKitFavoritedName = new Color32(255, 255, 153, 255);
     private static readonly Color32 ColorKitUnfavoritedName = new Color32(255, 255, 255, 255);
 
+    /// <inheritdoc />
     bool ISignInstanceProvider.CanBatchTranslate => false;
 
     /// <inheritdoc />
@@ -75,12 +76,12 @@ public class KitSignInstanceProvider : ISignInstanceProvider
 
             try
             {
-                TranslateLoadoutSign(_kitSignBuffer, LoadoutNumber, language, culture, player);
-                return _kitSignBuffer.ToString();
+                TranslateLoadoutSign(KitSignBuffer, LoadoutNumber, language, culture, player);
+                return KitSignBuffer.ToString();
             }
             finally
             {
-                _kitSignBuffer.Clear();
+                KitSignBuffer.Clear();
             }
         }
 
@@ -91,12 +92,12 @@ public class KitSignInstanceProvider : ISignInstanceProvider
 
         try
         {
-            TranslateKitSign(_kitSignBuffer, kit, language, culture, player);
-            return _kitSignBuffer.ToString();
+            TranslateKitSign(KitSignBuffer, kit, language, culture, player);
+            return KitSignBuffer.ToString();
         }
         finally
         {
-            _kitSignBuffer.Clear();
+            KitSignBuffer.Clear();
         }
     }
 
@@ -270,59 +271,59 @@ public class KitSignTranslations : PropertiesTranslationCollection
     protected override string FileName => "Kit Signs";
 
     [TranslationData("Shown on a kit sign when a kit is available without purchase (in-game or monetary).")]
-    public readonly Translation KitFree = new Translation("<#66ffcc>FREE</color>");
+    public readonly Translation KitFree = new Translation("<#66ffcc>FREE</color>", TranslationOptions.TMProSign);
 
     [TranslationData("Shown on a kit sign when a kit is unable to be given access through normal means. Usually this is for event kits.")]
-    public readonly Translation KitExclusive = new Translation("<#96ffb2>EXCLUSIVE</color>");
+    public readonly Translation KitExclusive = new Translation("<#96ffb2>EXCLUSIVE</color>", TranslationOptions.TMProSign);
 
     [TranslationData("Shown on a kit sign when a kit requires nitro boosting and the person looking at the sign is boosting.")]
-    public readonly Translation KitNitroBoostOwned = new Translation("<#f66fe6>BOOSTING</color>");
+    public readonly Translation KitNitroBoostOwned = new Translation("<#f66fe6>BOOSTING</color>", TranslationOptions.TMProSign);
 
     [TranslationData("Shown on a kit sign when a kit requires nitro boosting and the person looking at the sign is not boosting.")]
-    public readonly Translation KitNitroBoostNotOwned = new Translation("<#9b59b6>NITRO BOOST</color>");
+    public readonly Translation KitNitroBoostNotOwned = new Translation("<#9b59b6>NITRO BOOST</color>", TranslationOptions.TMProSign);
 
     [TranslationData(IsPriorityTranslation = false)]
-    public readonly Translation<decimal> KitPremiumCost = new Translation<decimal>("<#7878ff>$ {0}</color>", arg0Fmt: "N2");
+    public readonly Translation<decimal> KitPremiumCost = new Translation<decimal>("<#7878ff>$ {0}</color>", TranslationOptions.TMProSign, arg0Fmt: "N2");
 
     [TranslationData("Shown on a kit sign when the player isn't high enough rank to access it.", Parameters = [ "Rank", "Color depending on player's current rank." ])]
-    public readonly Translation<WarfareRank, Color> KitRequiredRank = new Translation<WarfareRank, Color>("<#{1}>Rank: {0}</color>");
+    public readonly Translation<WarfareRank, Color> KitRequiredRank = new Translation<WarfareRank, Color>("<#{1}>Rank: {0}</color>", TranslationOptions.TMProSign);
 
     [TranslationData("Shown on a kit sign when the player needs to complete a quest to access it.", Parameters = [ "Quest", "Color depending on whether the player has completed the quest." ])]
-    public readonly Translation<QuestAsset, Color> KitRequiredQuest = new Translation<QuestAsset, Color>("<#{1}>Quest: <#fff>{0}</color></color>");
+    public readonly Translation<QuestAsset, Color> KitRequiredQuest = new Translation<QuestAsset, Color>("<#{1}>Quest: <#fff>{0}</color></color>", TranslationOptions.TMProSign);
 
     [TranslationData("Shown on a kit sign when the player needs to complete multiple quests to access it.", Parameters = [ "Number of quests needed.", "Color depending on whether the player has completed the quest(s).", "s if {0} != 1" ])]
-    public readonly Translation<int, Color> KitRequiredQuestsMultiple = new Translation<int, Color>("<#{1}>Finish <#fff>{0}</color> quests.</color>");
+    public readonly Translation<int, Color> KitRequiredQuestsMultiple = new Translation<int, Color>("<#{1}>Finish <#fff>{0}</color> quests.</color>", TranslationOptions.TMProSign);
 
     [TranslationData("Shown on a kit sign when the player has completed all required quests to unlock the kit.")]
-    public readonly Translation KitRequiredQuestsComplete = new Translation("<#ff974d>UNLOCKED</color>");
+    public readonly Translation KitRequiredQuestsComplete = new Translation("<#ff974d>UNLOCKED</color>", TranslationOptions.TMProSign);
 
     [TranslationData("Shown on a kit sign when the player has purchased the kit (with credits).")]
-    public readonly Translation KitPublicOwned = new Translation("<#769fb5>UNLOCKED</color>");
+    public readonly Translation KitPublicOwned = new Translation("<#769fb5>UNLOCKED</color>", TranslationOptions.TMProSign);
     
     [TranslationData("Shown on a kit sign when the player has purchased the kit (with real money).")]
-    public readonly Translation KitPremiumOwned = new Translation("<#769fb5>PURCHASED</color>");
+    public readonly Translation KitPremiumOwned = new Translation("<#769fb5>PURCHASED</color>", TranslationOptions.TMProSign);
 
     [TranslationData("Shown on a kit sign when the player has not purchased the kit with credits.", IsPriorityTranslation = false)]
-    public readonly Translation<int> KitCreditCost = new Translation<int>("<#b8ffc1>C</color> <#fff>{0}</color>");
+    public readonly Translation<int> KitCreditCost = new Translation<int>("<#b8ffc1>C</color> <#fff>{0}</color>", TranslationOptions.TMProSign);
 
     [TranslationData("Shown on a kit sign when there is no limit to how many other players can be using the kit.")]
-    public readonly Translation KitUnlimited = new Translation("<#111111>unlimited</color>");
+    public readonly Translation KitUnlimited = new Translation("<#111111>unlimited</color>", TranslationOptions.TMProSign);
 
     [TranslationData("Shown on an unused loadout sign.", "The number of the loadout sign.")]
-    public readonly Translation<int> LoadoutNumber = new Translation<int>("<b><#7878ff>LOADOUT #{0}</color></b>");
+    public readonly Translation<int> LoadoutNumber = new Translation<int>("<b><#7878ff>LOADOUT #{0}</color></b>", TranslationOptions.TMProSign);
     
     [TranslationData("Shown on a used loadout sign so players can see what loadout letter each kit is.", "The letter of the loadout sign.")]
-    public readonly Translation<string> LoadoutLetter = new Translation<string>("<sub><#7878ff>LOADOUT {0}</color></sub>", arg0Fmt: UppercaseAddon.Instance);
+    public readonly Translation<string> LoadoutLetter = new Translation<string>("<sub><#7878ff>LOADOUT {0}</color></sub>", TranslationOptions.TMProSign, arg0Fmt: UppercaseAddon.Instance);
     
     [TranslationData(IsPriorityTranslation = false)]
-    public readonly Translation<int, int> KitPlayerCountUnavailable = new Translation<int, int>("<#c2603e>{0}/{1}</color>");
+    public readonly Translation<int, int> KitPlayerCountUnavailable = new Translation<int, int>("<#c2603e>{0}/{1}</color>", TranslationOptions.TMProSign);
     
     [TranslationData(IsPriorityTranslation = false)]
-    public readonly Translation<int, int> KitPlayerCountAvailable = new Translation<int, int>("<#96ffb2>{0}/{1}</color>");
+    public readonly Translation<int, int> KitPlayerCountAvailable = new Translation<int, int>("<#96ffb2>{0}/{1}</color>", TranslationOptions.TMProSign);
 
     [TranslationData(IsPriorityTranslation = false)]
-    public readonly Translation KitLoadoutUpgrade = new Translation("<#33cc33>/req upgrade</color>");
+    public readonly Translation KitLoadoutUpgrade = new Translation("<#33cc33>/req upgrade</color>", TranslationOptions.TMProSign);
 
     [TranslationData("Shown on a loadout or kit sign when it's locked by the admins while it's being worked on.")]
-    public readonly Translation KitLoadoutSetup = new Translation("<#3399ff>PENDING SETUP</color>");
+    public readonly Translation KitLoadoutSetup = new Translation("<#3399ff>PENDING SETUP</color>", TranslationOptions.TMProSign);
 }

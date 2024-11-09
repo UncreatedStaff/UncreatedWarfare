@@ -68,7 +68,7 @@ public class VehicleSpawnerStore : ILayoutHostedService
             _spawns.Add(spawnInfo);
         }
 
-        SaveIntl(GetFilePath());
+        Save(GetFilePath());
     }
 
     /// <summary>
@@ -81,7 +81,7 @@ public class VehicleSpawnerStore : ILayoutHostedService
         if (!_spawns.Remove(spawnInfo))
             return false;
 
-        SaveIntl(GetFilePath());
+        Save(GetFilePath());
         return true;
     }
 
@@ -92,7 +92,7 @@ public class VehicleSpawnerStore : ILayoutHostedService
     {
         await UniTask.SwitchToMainThread(token);
 
-        SaveIntl(GetFilePath());
+        Save(GetFilePath());
     }
 
     private static string GetFilePath()
@@ -117,7 +117,7 @@ public class VehicleSpawnerStore : ILayoutHostedService
         string filePath = GetFilePath();
         if (!File.Exists(filePath))
         {
-            SaveIntl(filePath);
+            Save(filePath);
             return;
         }
 
@@ -146,8 +146,6 @@ public class VehicleSpawnerStore : ILayoutHostedService
 
         for (int i = 0; i < spawnCount; ++i)
         {
-            VehicleSpawnInfo spawnInfo = new VehicleSpawnInfo();
-
             Guid vehicleGuid = reader.ReadGuid();
 
             Vector3 spawnPosition = reader.ReadVector3();
@@ -155,6 +153,7 @@ public class VehicleSpawnerStore : ILayoutHostedService
             Guid spawnAsset = reader.ReadGuid();
             bool isSpawnStructure = reader.ReadBool();
 
+            IBuildable? spawner = null;
             if (isSpawnStructure)
             {
                 StructureInfo spawnerInfo = StructureUtility.FindStructure(spawnInstanceId, AssetLink.Create<ItemStructureAsset>(spawnAsset), spawnPosition);
@@ -164,7 +163,7 @@ public class VehicleSpawnerStore : ILayoutHostedService
                 }
                 else
                 {
-                    spawnInfo.Spawner = new BuildableStructure(spawnerInfo.Drop);
+                    spawner = new BuildableStructure(spawnerInfo.Drop);
                 }
             }
             else
@@ -176,11 +175,17 @@ public class VehicleSpawnerStore : ILayoutHostedService
                 }
                 else
                 {
-                    spawnInfo.Spawner = new BuildableBarricade(spawnerInfo.Drop);
+                    spawner = new BuildableBarricade(spawnerInfo.Drop);
                 }
             }
 
-            bool willSkip = spawnInfo.Spawner == null;
+            bool willSkip = spawner == null;
+
+            VehicleSpawnInfo spawnInfo = new VehicleSpawnInfo
+            {
+                Vehicle = AssetLink.Create<VehicleAsset>(vehicleGuid),
+                Spawner = spawner!
+            };
 
             int signCount = reader.ReadInt32();
             if (!willSkip && spawnInfo.SignInstanceIds is List<IBuildable> list)
@@ -211,6 +216,19 @@ public class VehicleSpawnerStore : ILayoutHostedService
             {
                 _spawns.Add(spawnInfo);
             }
+        }
+    }
+
+    private void Save(string filePath)
+    {
+        Thread.BeginCriticalRegion();
+        try
+        {
+            SaveIntl(filePath);
+        }
+        finally
+        {
+            Thread.EndCriticalRegion();
         }
     }
 

@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Players.Permissions;
 
-namespace Uncreated.Warfare.Commands;
+// ReSharper disable once CheckNamespace
+namespace Uncreated.Warfare.Interaction.Commands.Syntax;
 
 /// <summary>
 /// Defines information about a single command or sub-command.

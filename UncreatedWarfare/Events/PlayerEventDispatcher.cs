@@ -8,6 +8,7 @@ namespace Uncreated.Warfare.Events;
 /// <summary>
 /// Handles dispatching instance events from players.
 /// </summary>
+[PlayerComponent]
 internal class PlayerEventDispatcher : IPlayerComponent, IDisposable
 {
     private DroppedItemTracker _droppedItemTracker = null!;

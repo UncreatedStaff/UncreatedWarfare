@@ -7,6 +7,7 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using Uncreated.Warfare.Configuration;
 
 namespace Uncreated.Warfare.Plugins;
@@ -15,12 +16,36 @@ public class WarfarePluginLoader
     private readonly WarfareModule _warfare;
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<WarfarePluginLoader> _logger;
+    private Assembly[]? _allAssemblies;
     public IReadOnlyList<WarfarePlugin> Plugins { get; private set; }
     public WarfarePluginLoader(WarfareModule warfare, ILoggerFactory loggerFactory)
     {
         _warfare = warfare;
         _loggerFactory = loggerFactory;
         _logger = _loggerFactory.CreateLogger<WarfarePluginLoader>();
+    }
+
+    /// <summary>
+    /// List of all assemblies including this assembly and all plugin assemblies.
+    /// </summary>
+    internal Assembly[] AllAssemblies
+    {
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        get
+        {
+            if (_allAssemblies != null)
+                return _allAssemblies;
+
+            Assembly[] arr = new Assembly[Plugins.Count + 1];
+            arr[0] = Assembly.GetExecutingAssembly();
+            for (int i = 0; i < Plugins.Count; ++i)
+            {
+                arr[i + 1] = Plugins[i].LoadedAssembly;
+            }
+
+            _allAssemblies = arr;
+            return arr;
+        }
     }
 
     internal void LoadPlugins()

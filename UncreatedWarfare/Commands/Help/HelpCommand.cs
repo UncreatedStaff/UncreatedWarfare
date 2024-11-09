@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System.Linq;
 using Uncreated.Warfare.Interaction.Commands;
+using Uncreated.Warfare.Interaction.Commands.Syntax;
 using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Translations;
 

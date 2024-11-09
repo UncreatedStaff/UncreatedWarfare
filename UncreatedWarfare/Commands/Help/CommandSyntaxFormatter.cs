@@ -3,12 +3,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Util;
 
-namespace Uncreated.Warfare.Commands;
+// ReSharper disable once CheckNamespace
+namespace Uncreated.Warfare.Interaction.Commands.Syntax;
 
 public class CommandSyntaxFormatter : IDisposable
 {

@@ -11,7 +11,6 @@ using Uncreated.Warfare.Patches;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Util;
-using static Uncreated.Warfare.Harmony.Patches;
 
 namespace Uncreated.Warfare.Events.Patches;
 
@@ -19,14 +18,15 @@ namespace Uncreated.Warfare.Events.Patches;
 internal class StructureManagerDestroyStructure : IHarmonyPatch
 {
     private static MethodInfo? _target;
+    private static readonly List<IManualOnDestroy> DestroyEventComponents = new List<IManualOnDestroy>(4);
 
-    void IHarmonyPatch.Patch(ILogger logger)
+    void IHarmonyPatch.Patch(ILogger logger, HarmonyLib.Harmony patcher)
     {
         _target = Accessor.GetMethod(new Action<StructureDrop, byte, byte, Vector3, bool>(StructureManager.destroyStructure));
 
         if (_target != null)
         {
-            Patcher.Patch(_target, transpiler: Accessor.GetMethod(Transpiler));
+            patcher.Patch(_target, transpiler: Accessor.GetMethod(Transpiler));
             logger.LogDebug("Patched {0} for destroy structure event.", _target);
             return;
         }
@@ -43,12 +43,12 @@ internal class StructureManagerDestroyStructure : IHarmonyPatch
         );
     }
 
-    void IHarmonyPatch.Unpatch(ILogger logger)
+    void IHarmonyPatch.Unpatch(ILogger logger, HarmonyLib.Harmony patcher)
     {
         if (_target == null)
             return;
 
-        Patcher.Unpatch(_target, Accessor.GetMethod(Transpiler));
+        patcher.Unpatch(_target, Accessor.GetMethod(Transpiler));
         logger.LogDebug("Unpatched {0} for destroy structure event.", _target);
         _target = null;
     }
@@ -134,6 +134,28 @@ internal class StructureManagerDestroyStructure : IHarmonyPatch
         };
 
         BuildableExtensions.SetDestroyInfo(structure.model, args, null);
+
+        try
+        {
+            structure.model.GetComponents(DestroyEventComponents);
+            ILogger? logger = null;
+            foreach (IManualOnDestroy eventHandler in DestroyEventComponents)
+            {
+                try
+                {
+                    eventHandler.ManualOnDestroy();
+                }
+                catch (Exception ex)
+                {
+                    (logger ??= WarfareModule.Singleton.ServiceProvider.Resolve<ILogger<StructureManagerDestroyStructure>>())
+                        .LogError(ex, "Error dispatching {0} in type {1}.", typeof(IManualOnDestroy), eventHandler.GetType());
+                }
+            }
+        }
+        finally
+        {
+            DestroyEventComponents.Clear();
+        }
 
         _ = WarfareModule.EventDispatcher.DispatchEventAsync(args);
     }

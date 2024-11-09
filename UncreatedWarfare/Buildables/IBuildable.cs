@@ -1,6 +1,6 @@
-﻿using System;
+﻿using DanielWillett.ReflectionTools;
+using System;
 using System.Runtime.CompilerServices;
-using DanielWillett.ReflectionTools;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Buildables;
@@ -9,7 +9,15 @@ namespace Uncreated.Warfare.Buildables;
 /// Any structure or barricade. Can be <see cref="BuildableBarricade"/> or <see cref="BuildableStructure"/>.
 /// </summary>
 [CannotApplyEqualityOperator]
-public interface IBuildable : IEquatable<IBuildable>, ITransformObject
+public interface IBuildable :
+    IEquatable<IBuildable>,
+    IEquatable<BuildableBarricade>,
+    IEquatable<BarricadeDrop>,
+    IEquatable<BarricadeData>,
+    IEquatable<BuildableStructure>,
+    IEquatable<StructureDrop>,
+    IEquatable<StructureData>,
+    ITransformObject
 {
     /// <summary>
     /// The instance ID of this buildable specific to it's buildable type.
@@ -95,7 +103,7 @@ public interface IBuildable : IEquatable<IBuildable>, ITransformObject
 }
 
 [CannotApplyEqualityOperator]
-public class BuildableBarricade : IBuildable, IEquatable<BuildableBarricade>, IEquatable<BarricadeDrop>
+public class BuildableBarricade : IBuildable
 {
     public uint InstanceId => Drop.instanceID;
     public bool IsStructure => false;
@@ -152,16 +160,20 @@ public class BuildableBarricade : IBuildable, IEquatable<BuildableBarricade>, IE
         set => throw new NotSupportedException();
     }
 
+    public bool Equals(BarricadeData? other) => other is not null && other.instanceID == Drop.instanceID;
     public bool Equals(BarricadeDrop? other) => other is not null && other.instanceID == Drop.instanceID;
     public bool Equals(BuildableBarricade? other) => other is not null && other.Drop.instanceID == Drop.instanceID;
     public bool Equals(IBuildable? other) => other is not null && !other.IsStructure && other.InstanceId == Drop.instanceID;
+    bool IEquatable<StructureData>.Equals(StructureData? other) => false;
+    bool IEquatable<StructureDrop>.Equals(StructureDrop? other) => false;
+    bool IEquatable<BuildableStructure>.Equals(BuildableStructure? other) => false;
     public override bool Equals(object? obj) => obj is IBuildable b && Equals(b);
     public override int GetHashCode() => unchecked ( (int)Drop.instanceID );
     public override string ToString() =>  $"BuildableBarricade[InstanceId: {InstanceId} Asset itemName: {Asset.itemName} Asset GUID: {Asset.GUID:N} Owner: {Owner} Group: {Group} IsDead: {IsDead}]";
 }
 
 [CannotApplyEqualityOperator]
-public class BuildableStructure : IBuildable, IEquatable<BuildableStructure>, IEquatable<StructureDrop>
+public class BuildableStructure : IBuildable
 {
     public uint InstanceId => Drop.instanceID;
     public bool IsStructure => true;
@@ -217,8 +229,12 @@ public class BuildableStructure : IBuildable, IEquatable<BuildableStructure>, IE
         set => throw new NotSupportedException();
     }
 
+    public bool Equals(StructureData? other) => other is not null && other.instanceID == Drop.instanceID;
     public bool Equals(StructureDrop? other) => other is not null && other.instanceID == Drop.instanceID;
     public bool Equals(BuildableStructure? other) => other is not null && other.Drop.instanceID == Drop.instanceID;
+    bool IEquatable<BarricadeData>.Equals(BarricadeData? other) => false;
+    bool IEquatable<BarricadeDrop>.Equals(BarricadeDrop? other) => false;
+    bool IEquatable<BuildableBarricade>.Equals(BuildableBarricade? other) => false;
     public bool Equals(IBuildable? other) => other is not null && other.IsStructure && other.InstanceId == Drop.instanceID;
     public override bool Equals(object? obj) => obj is IBuildable b && Equals(b);
     public override int GetHashCode() => unchecked ( (int)Drop.instanceID );

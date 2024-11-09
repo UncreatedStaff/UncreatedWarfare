@@ -13,6 +13,8 @@ using Uncreated.Warfare.Zones;
 using static Uncreated.Warfare.Lobby.LobbyZoneManager;
 
 namespace Uncreated.Warfare.Lobby;
+
+[PlayerComponent]
 public class PlayerLobbyComponent : IPlayerComponent
 {
     private LobbyZoneManager _lobbyManager;

@@ -8,10 +8,10 @@ public interface IHarmonyPatch
     /// <summary>
     /// Apply the patch.
     /// </summary>
-    void Patch(ILogger logger);
+    void Patch(ILogger logger, HarmonyLib.Harmony patcher);
 
     /// <summary>
     /// Undo the patch.
     /// </summary>
-    void Unpatch(ILogger logger);
+    void Unpatch(ILogger logger, HarmonyLib.Harmony patcher);
 }

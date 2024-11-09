@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using DanielWillett.ModularRpcs.Async;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Interaction;
@@ -43,6 +44,19 @@ public class KitLoadouts(KitManager manager, IServiceProvider serviceProvider) :
     {
         _loadoutCreationSemaphore.Dispose();
     }
+
+    /// <summary>
+    /// Attempts
+    /// </summary>
+    /// <param name="discordId"></param>
+    /// <param name="steam64"></param>
+    /// <param name="loadoutLetter"></param>
+    /// <param name="newClass"></param>
+    /// <param name="newDisplayName"></param>
+    /// <returns></returns>
+    [RpcSend, RpcTimeout(15 * Timeouts.Seconds)]
+    public virtual RpcTask<OpenUpgradeTicketResult> TryOpenUpgradeTicket(ulong discordId, ulong steam64, int loadoutLetter, Class newClass, string newDisplayName)
+        => RpcTask<OpenUpgradeTicketResult>.NotImplemented;
 
     /// <summary>
     /// Indexed from 1.
@@ -508,5 +522,12 @@ public class KitLoadouts(KitManager manager, IServiceProvider serviceProvider) :
         {
             _loadoutCreationSemaphore.Release();
         }
+    }
+
+    public enum OpenUpgradeTicketResult : byte
+    {
+        Success,
+        TooManyTickets,
+        AlreadyOpen
     }
 }

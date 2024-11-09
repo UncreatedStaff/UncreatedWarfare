@@ -6,12 +6,14 @@ using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Models.Users;
 using Uncreated.Warfare.Moderation;
+using Uncreated.Warfare.Players.Management;
 
 namespace Uncreated.Warfare.Players.PendingTasks;
 
 /// <summary>
 /// Updates a player's IP addresses, HWIDs, and user data in our database.
 /// </summary>
+[PlayerTask]
 public class UpdateUserDataTask : IPlayerPendingTask
 {
     private readonly IUserDataService _userDataService;

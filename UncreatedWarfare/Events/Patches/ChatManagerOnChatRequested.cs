@@ -18,7 +18,6 @@ using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
-using static Uncreated.Warfare.Harmony.Patches;
 
 namespace Uncreated.Warfare.Events.Patches;
 
@@ -32,13 +31,13 @@ internal class ChatManagerOnChatRequested : IHarmonyPatch
 
     public static readonly PermissionLeaf AdminChatPermissions = new PermissionLeaf("features.admin_chat", false, true);
 
-    void IHarmonyPatch.Patch(ILogger logger)
+    void IHarmonyPatch.Patch(ILogger logger, HarmonyLib.Harmony patcher)
     {
         _target = Accessor.GetMethod(ChatManager.ReceiveChatRequest);
 
         if (_target != null)
         {
-            Patcher.Patch(_target, prefix: Accessor.GetMethod(Prefix));
+            patcher.Patch(_target, prefix: Accessor.GetMethod(Prefix));
             logger.LogDebug("Patched {0} for receive chat message method.", _target);
             return;
         }
@@ -53,12 +52,12 @@ internal class ChatManagerOnChatRequested : IHarmonyPatch
         );
     }
 
-    void IHarmonyPatch.Unpatch(ILogger logger)
+    void IHarmonyPatch.Unpatch(ILogger logger, HarmonyLib.Harmony patcher)
     {
         if (_target == null)
             return;
 
-        Patcher.Unpatch(_target, Accessor.GetMethod(Prefix));
+        patcher.Unpatch(_target, Accessor.GetMethod(Prefix));
         logger.LogDebug("Unpatched {0} for receive chat message method.", _target);
         _target = null;
     }

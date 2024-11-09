@@ -1,8 +1,11 @@
 ﻿using System;
 using Uncreated.Warfare.Events.Models.Players;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Stats;
 
 namespace Uncreated.Warfare.Players.PendingTasks;
+
+[PlayerTask]
 internal class CheckReputationPlayerTask(IPointsStore pointsSql) : IPlayerPendingTask
 {
     private double _reputation;

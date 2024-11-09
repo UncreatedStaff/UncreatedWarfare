@@ -26,6 +26,7 @@ namespace Uncreated.Warfare.Injures;
 /// <summary>
 /// Replacement for ReviveManager. Injures no longer have a centralized 'manager', only a player component.
 /// </summary>
+[PlayerComponent]
 public class PlayerInjureComponent : MonoBehaviour,
     IPlayerComponent,
     IDisposable,

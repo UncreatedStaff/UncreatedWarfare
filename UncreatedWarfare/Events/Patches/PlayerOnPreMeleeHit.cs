@@ -1,34 +1,25 @@
-﻿using DanielWillett.ReflectionTools.Formatting;
-using DanielWillett.ReflectionTools;
-using System;
-using System.Collections.Generic;
+﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools.Formatting;
 using System.Reflection;
-using System.Text;
-using Uncreated.Warfare.Events.Models.Items;
-using Uncreated.Warfare.Kits.Items;
-using Uncreated.Warfare.Patches;
-using Uncreated.Warfare.Players.Management;
-using Uncreated.Warfare.Players;
-using static Uncreated.Warfare.Harmony.Patches;
 using Uncreated.Warfare.Events.Models.Players;
-using Uncreated.Warfare.Logging;
-using Uncreated.Warfare.Players.PendingTasks;
-using Uncreated.Warfare.Players.Saves;
-using Uncreated.Warfare.Events.Models.Fobs;
+using Uncreated.Warfare.Patches;
+using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
 
 namespace Uncreated.Warfare.Events.Patches;
+
 // OnPreMeleeHit(UseableMelee __instance)
 [UsedImplicitly]
 internal class PlayerOnPreMeleeHit : IHarmonyPatch
 {
     private static MethodInfo? _target;
 
-    void IHarmonyPatch.Patch(ILogger logger)
+    void IHarmonyPatch.Patch(ILogger logger, HarmonyLib.Harmony patcher)
     {
         _target = typeof(UseableMelee).GetMethod("fire", BindingFlags.Instance | BindingFlags.NonPublic);
         if (_target != null)
         {
-            Patcher.Patch(_target, prefix: Accessor.GetMethod(Prefix));
+            patcher.Patch(_target, prefix: Accessor.GetMethod(Prefix));
             logger.LogDebug("Patched {0} for on melee hit event.", _target);
             return;
         }
@@ -41,12 +32,12 @@ internal class PlayerOnPreMeleeHit : IHarmonyPatch
         );
     }
 
-    void IHarmonyPatch.Unpatch(ILogger logger)
+    void IHarmonyPatch.Unpatch(ILogger logger, HarmonyLib.Harmony patcher)
     {
         if (_target == null)
             return;
 
-        Patcher.Unpatch(_target, Accessor.GetMethod(Prefix));
+        patcher.Unpatch(_target, Accessor.GetMethod(Prefix));
         logger.LogDebug("Unpatched {0} for on melee hit event.", _target);
         _target = null;
     }

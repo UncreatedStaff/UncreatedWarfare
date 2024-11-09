@@ -4,12 +4,14 @@ using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Items;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.ItemTracking;
+using Uncreated.Warfare.Players.Management;
 
 namespace Uncreated.Warfare.Kits.Items;
 
 /// <summary>
 /// Helps keep up with where items have been moved to track held item's back to their original kit item.
 /// </summary>
+[PlayerComponent]
 internal class ItemTrackingPlayerComponent : IPlayerComponent, IEventListener<ItemDropped>, IEventListener<ItemMoved>, IEventListener<ItemDestroyed>
 {
     internal List<ItemTransformation> ItemTransformations = new List<ItemTransformation>(16);

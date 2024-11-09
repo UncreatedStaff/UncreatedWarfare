@@ -12,6 +12,7 @@ using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.FOBs.Deployment;
 
+[PlayerComponent]
 internal class DeploymentComponent : MonoBehaviour, IPlayerComponent
 {
     private const float TickSpeedSeconds = 0.25f;

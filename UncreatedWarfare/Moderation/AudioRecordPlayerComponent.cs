@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Util;
 using Unity.Collections;
 
@@ -15,6 +16,7 @@ namespace Uncreated.Warfare.Moderation;
 /// <summary>
 /// Highly-effecient voice data recorder that stores a bunch of different packets in one block of bytes.
 /// </summary>
+[PlayerComponent]
 public class AudioRecordPlayerComponent : IPlayerComponent
 {
     private static readonly ByteWriter MetaWriter = new ByteWriter(capacity: 0);

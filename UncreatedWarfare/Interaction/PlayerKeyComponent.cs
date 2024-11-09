@@ -5,6 +5,8 @@ using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Interaction;
+
+[PlayerComponent]
 public class PlayerKeyComponent : IPlayerComponent
 {
     private static readonly KeyDown?[] KeyDownListeners = new KeyDown?[PlayerKeys.KeyCount];

@@ -2,7 +2,6 @@
 using DanielWillett.ReflectionTools.Formatting;
 using System.Reflection;
 using Uncreated.Warfare.Patches;
-using static Uncreated.Warfare.Harmony.Patches;
 
 namespace Uncreated.Warfare.Events.Patches;
 
@@ -10,13 +9,13 @@ namespace Uncreated.Warfare.Events.Patches;
 internal class StructureManagerSaveDirecction : IHarmonyPatch
 {
     private static MethodInfo? _target;
-    void IHarmonyPatch.Patch(ILogger logger)
+    void IHarmonyPatch.Patch(ILogger logger, HarmonyLib.Harmony patcher)
     {
         _target = Accessor.GetMethod(StructureManager.damage);
 
         if (_target != null)
         {
-            Patcher.Patch(_target, prefix: Accessor.GetMethod(Prefix));
+            patcher.Patch(_target, prefix: Accessor.GetMethod(Prefix));
             logger.LogDebug("Patched {0} for structure damage (get direction) event.", _target);
             return;
         }
@@ -35,12 +34,12 @@ internal class StructureManagerSaveDirecction : IHarmonyPatch
         );
     }
 
-    void IHarmonyPatch.Unpatch(ILogger logger)
+    void IHarmonyPatch.Unpatch(ILogger logger, HarmonyLib.Harmony patcher)
     {
         if (_target == null)
             return;
 
-        Patcher.Unpatch(_target, Accessor.GetMethod(Prefix));
+        patcher.Unpatch(_target, Accessor.GetMethod(Prefix));
         logger.LogDebug("Unpatched {0} for structure damage (get direction) event.", _target);
         _target = null;
     }

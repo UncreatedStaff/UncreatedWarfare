@@ -15,6 +15,12 @@ public class RequestTranslations : PropertiesTranslationCollection
 {
     protected override string FileName => "Requests";
 
+    [TranslationData("Gets sent to a player who's discord is not linked to their steam account (part 1).")]
+    public readonly Translation DiscordNotLinked1 = new Translation("<#9cffb3>Your account must be linked in our Discord server to use this command.");
+
+    [TranslationData("Gets sent to a player who's discord is not linked to their steam account (part 2).", "Player's Steam64 ID")]
+    public readonly Translation<IPlayer> DiscordNotLinked2 = new Translation<IPlayer>("<#9cffb3>Type <#7483c4>/discord</color> then type <#fff>/link {0}</color> in <#c480d9>#warfare-stats</color>.", arg0Fmt: WarfarePlayer.FormatColoredSteam64);
+
     [TranslationData("Sent to a player when they try to take a player's access to a kit that already doesn't have access.", IsPriorityTranslation = false)]
     public readonly Translation<Cooldown> RequestKitOnCooldown = new Translation<Cooldown>("<#ff8c69>You can request this kit again in: <#bafeff>{0}</color>.", arg0Fmt: Cooldown.FormatTimeShort);
 

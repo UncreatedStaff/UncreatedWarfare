@@ -7,7 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json.Serialization;
-using Uncreated.Warfare.Commands;
+using Uncreated.Warfare.Interaction.Commands.Syntax;
 using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Util;
 

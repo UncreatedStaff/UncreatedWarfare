@@ -2,20 +2,46 @@
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Vehicles;
-public class VehicleService
+public class VehicleService : ILayoutHostedService
 {
     private const float VehicleSpawnOffset = 5f;
     public const ushort MaxBatteryCharge = 10000;
     private readonly ILogger<VehicleService> _logger;
     private readonly VehicleInfoStore _vehicleInfoStore;
+    private readonly VehicleSpawnerStore _spawnerStore;
 
-    public VehicleService(ILogger<VehicleService> logger, VehicleInfoStore vehicleInfoStore)
+    public VehicleService(ILogger<VehicleService> logger, VehicleInfoStore vehicleInfoStore, VehicleSpawnerStore spawnerStore)
     {
         _logger = logger;
         _vehicleInfoStore = vehicleInfoStore;
+        _spawnerStore = spawnerStore;
+    }
+
+    UniTask ILayoutHostedService.StartAsync(CancellationToken token)
+    {
+        foreach (VehicleSpawnInfo spawn in _spawnerStore.Spawns)
+        {
+            spawn.Spawner.Model.GetOrAddComponent<VehicleSpawnerComponent>().Init(spawn);
+        }
+
+        return UniTask.CompletedTask;
+    }
+
+    UniTask ILayoutHostedService.StopAsync(CancellationToken token)
+    {
+        foreach (VehicleSpawnInfo spawn in _spawnerStore.Spawns)
+        {
+            if (spawn.Spawner.Model.TryGetComponent(out VehicleSpawnerComponent comp))
+            {
+                Object.Destroy(comp);
+            }
+        }
+
+        return UniTask.CompletedTask;
     }
 
     /// <summary>
@@ -191,6 +217,10 @@ public class VehicleService
                 continue;
 
             VehicleManager.forceRemovePlayer(vehicle, pl.playerID.steamID);
+            
+            if (vehicle.asset.engine is not EEngine.BLIMP and not EEngine.HELICOPTER and not EEngine.PLANE)
+                continue;
+
             Vector3 p = pl.player.transform.position;
             float y = TerrainUtility.GetHighestPoint(in p, 1f);
             if (Mathf.Abs(p.y - y) > 5f)

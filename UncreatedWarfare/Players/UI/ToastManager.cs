@@ -6,9 +6,12 @@ using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Layouts.UI;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Players.UI;
+
+[PlayerComponent]
 public sealed class ToastManager : IPlayerComponent
 {
     private static int _channelCount;

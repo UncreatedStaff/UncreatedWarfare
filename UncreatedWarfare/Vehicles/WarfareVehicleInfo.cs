@@ -23,6 +23,15 @@ public class WarfareVehicleInfo : IEquatable<WarfareVehicleInfo>, ITranslationAr
     public IAssetLink<VehicleAsset> Vehicle { get; set; }
     public VehicleType Type { get; set; }
     public Branch Branch { get; set; }
+    public Class Class { get; set; }
+    public int TicketCost { get; set; }
+    public TimeSpan RespawnTime { get; set; }
+    public TimeSpan Cooldown { get; set; }
+
+    /// <remarks>
+    /// Some vehicles like the F15-E have names that are too long and result in the final sign having too many characters.
+    /// </remarks>
+    public string? ShortName { get; set; }
 
     public CrewInfo Crew { get; set; }
     public RearmInfo Rearm { get; set; }
@@ -31,6 +40,7 @@ public class WarfareVehicleInfo : IEquatable<WarfareVehicleInfo>, ITranslationAr
     public IReadOnlyList<UnlockRequirement> UnlockRequirements { get; set; } = Array.Empty<UnlockRequirement>();
     public IReadOnlyList<UnlockCost> UnlockCosts { get; set; } = Array.Empty<UnlockCost>();
     public IReadOnlyList<TrunkItem> Trunk { get; set; } = Array.Empty<TrunkItem>();
+    public IReadOnlyList<RequestItem> RequestItems { get; set; } = Array.Empty<RequestItem>();
     //public IReadOnlyList<Delay> Delays { get; set; } = Array.Empty<Delay>();
 
     public class CrewInfo
@@ -56,12 +66,19 @@ public class WarfareVehicleInfo : IEquatable<WarfareVehicleInfo>, ITranslationAr
         public double ValueLossSpeed { get; set; } = 0.125d;
     }
 
-    public class TrunkItem
+    public class RequestItem
     {
         public IAssetLink<ItemAsset> Item { get; set; }
+        public byte[]? State { get; set; }
+        public int Amount { get; set; } = 1;
+    }
+
+    public class TrunkItem
+    {
         public byte X { get; set; }
         public byte Y { get; set; }
         public byte Rotation { get; set; }
+        public IAssetLink<ItemAsset> Item { get; set; }
         public byte[]? State { get; set; }
     }
 
@@ -74,6 +91,12 @@ public class WarfareVehicleInfo : IEquatable<WarfareVehicleInfo>, ITranslationAr
 
         Type = other.Type;
         Branch = other.Branch;
+        Class = other.Class;
+        TicketCost = other.TicketCost;
+        RespawnTime = other.RespawnTime;
+        Cooldown = other.Cooldown;
+
+        RequestItems = other.RequestItems;
 
         Crew.Seats = other.Crew.Seats;
         Crew.Invincible = other.Crew.Invincible;
@@ -93,6 +116,10 @@ public class WarfareVehicleInfo : IEquatable<WarfareVehicleInfo>, ITranslationAr
         if (DependantInfo != null && DependantInfo.TryGetTarget(out WarfareVehicleInfo? info))
         {
             info.UpdateFrom(other);
+        }
+        else
+        {
+            DependantInfo = null;
         }
     }
 

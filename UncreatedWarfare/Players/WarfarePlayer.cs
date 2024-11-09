@@ -45,6 +45,8 @@ public class WarfarePlayer : IPlayer, ICommandUser, IComponentContainer<IPlayerC
     public Team Team { get; private set; }
     public BinaryPlayerSave Save { get; }
     public WarfarePlayerLocale Locale { get; }
+
+    [Obsolete]
     public SemaphoreSlim PurchaseSync { get; }
     public PlayerSummary SteamSummary { get; internal set; }
     public SessionRecord CurrentSession { get; internal set; }
@@ -105,7 +107,7 @@ public class WarfarePlayer : IPlayer, ICommandUser, IComponentContainer<IPlayerC
     /// A <see cref="CancellationToken"/> that cancels after the player leaves.
     /// </summary>
     public CancellationToken DisconnectToken => _disconnectTokenSource.Token;
-    internal WarfarePlayer(Player player, in PlayerService.PlayerTaskData taskData, ILogger logger, IPlayerComponent[] components, IServiceProvider serviceProvider)
+    internal WarfarePlayer(PlayerService playerService, Player player, in PlayerService.PlayerTaskData taskData, ILogger logger, IPlayerComponent[] components, IServiceProvider serviceProvider)
     {
         _disconnectTokenSource = taskData.TokenSource;
         _logger = logger;
@@ -120,7 +122,7 @@ public class WarfarePlayer : IPlayer, ICommandUser, IComponentContainer<IPlayerC
 
         Locale = new WarfarePlayerLocale(this, new LanguagePreferences { Steam64 = Steam64.m_SteamID }, serviceProvider);
 
-        _components = new SingleUseTypeDictionary<IPlayerComponent>(PlayerService.PlayerComponents, components);
+        _components = new SingleUseTypeDictionary<IPlayerComponent>(playerService.PlayerComponents, components);
         Components = new ReadOnlyCollection<IPlayerComponent>(_components.Values);
 
         Team = Team.NoTeam;

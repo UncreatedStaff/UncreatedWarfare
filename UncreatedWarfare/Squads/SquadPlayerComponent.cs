@@ -1,8 +1,10 @@
 ﻿using System;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
 
 namespace Uncreated.Warfare.Squads;
 
+[PlayerComponent]
 internal class SquadPlayerComponent : IPlayerComponent
 {
     public WarfarePlayer Player { get; private set; }

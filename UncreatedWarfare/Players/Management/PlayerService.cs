@@ -3,26 +3,14 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Runtime.CompilerServices;
-using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
-using Uncreated.Warfare.FOBs.Deployment;
-using Uncreated.Warfare.Injures;
-using Uncreated.Warfare.Interaction;
-using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Kits.Items;
-using Uncreated.Warfare.Lobby;
-using Uncreated.Warfare.Moderation;
-using Uncreated.Warfare.Players.Components;
 using Uncreated.Warfare.Players.PendingTasks;
-using Uncreated.Warfare.Players.Skillsets;
-using Uncreated.Warfare.Players.UI;
-using Uncreated.Warfare.Squads;
-using Uncreated.Warfare.Tweaks;
+using Uncreated.Warfare.Plugins;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.List;
-using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Players.Management;
 
@@ -42,39 +30,13 @@ public class PlayerService : IPlayerService
     /// 
     /// Components can receive events, but any <see cref="IPlayerEvent"/> args will only be received if they're about the player that owns the component.
     /// </remarks>
-    public static readonly Type[] PlayerComponents =
-    [
-        typeof(KitPlayerComponent),
-        typeof(PlayerKeyComponent),
-        typeof(PlayerLobbyComponent),
-        typeof(ItemTrackingPlayerComponent),
-        typeof(HotkeyPlayerComponent),
-        typeof(AudioRecordPlayerComponent),
-        typeof(PlayerEventDispatcher),
-        typeof(DeploymentComponent),
-        typeof(ToastManager),
-        typeof(ZoneVisualizerComponent),
-        typeof(PlayerInjureComponent),
-        typeof(SkillsetPlayerComponent),
-        typeof(SquadPlayerComponent),
-        typeof(GodPlayerComponent),
-        typeof(PlayerJumpComponent),
-        typeof(VanishPlayerComponent),
-        typeof(PlayerReputationComponent),
-        typeof(PlayerModerationCacheComponent)
-    ];
+    public readonly Type[] PlayerComponents;
 
     /// <summary>
     /// All types here will be created when a player starts to join (<see cref="PlayerPending"/>).
     /// They must implement <see cref="IPlayerPendingTask"/> and can not be <see cref="MonoBehaviour"/> components.
     /// </summary>
-    public static readonly Type[] PlayerTasks =
-    [
-        typeof(LanguagePreferencesPlayerTask),
-        typeof(SteamApiSummaryTask),
-        typeof(CheckReputationPlayerTask),
-        typeof(UpdateUserDataTask)
-    ];
+    public readonly Type[] PlayerTasks;
 
     // keep up with a separate array that's replaced every time so the value can be used in multi-threaded operations
     private WarfarePlayer[] _threadsafeList;
@@ -102,18 +64,25 @@ public class PlayerService : IPlayerService
 
     private readonly ILoggerFactory _loggerFactory; 
     private readonly IServiceProvider _serviceProvider;
+    private readonly ILifetimeScope _container;
     private readonly ReadOnlyTrackingList<WarfarePlayer> _readOnlyOnlinePlayers;
 
-    public PlayerService(ILoggerFactory loggerFactory, IServiceProvider serviceProvider)
+    public PlayerService(ILoggerFactory loggerFactory, ILifetimeScope lifetimeScope)
     {
-        _serviceProvider = serviceProvider;
+        _container = lifetimeScope;
+        _serviceProvider = lifetimeScope.Resolve<IServiceProvider>();
         _onlinePlayers = new TrackingList<WarfarePlayer>();
         _threadsafeList = Array.Empty<WarfarePlayer>();
         _onlinePlayersDictionary = new PlayerDictionary<WarfarePlayer>(Provider.maxPlayers);
         _readOnlyOnlinePlayers = _onlinePlayers.AsReadOnly();
         _loggerFactory = loggerFactory;
 
-        _warfare = serviceProvider.GetRequiredService<WarfareModule>();
+        _warfare = lifetimeScope.Resolve<WarfareModule>();
+
+        List<Type> allTypes = Accessor.GetTypesSafe(lifetimeScope.Resolve<WarfarePluginLoader>().AllAssemblies);
+
+        PlayerComponents = allTypes.Where(x => !x.IsAbstract && typeof(IPlayerComponent).IsAssignableFrom(x) && x.IsDefinedSafe<PlayerComponentAttribute>()).ToArray();
+        PlayerTasks = allTypes.Where(x => !x.IsAbstract && typeof(IPlayerPendingTask).IsAssignableFrom(x) && x.IsDefinedSafe<PlayerTaskAttribute>()).ToArray();
     }
 
     /// <inheritdoc />
@@ -166,7 +135,7 @@ public class PlayerService : IPlayerService
 
             IPlayerComponent[] components = AddComponents(player);
 
-            WarfarePlayer joined = new WarfarePlayer(player, in taskData, logger, components, _serviceProvider);
+            WarfarePlayer joined = new WarfarePlayer(this, player, in taskData, logger, components, _serviceProvider);
             _onlinePlayers.Add(joined);
             _onlinePlayersDictionary.Add(joined, joined);
 
@@ -265,6 +234,9 @@ public class PlayerService : IPlayerService
 
     internal PlayerTaskData StartPendingPlayerTasks(PlayerPending args, CancellationTokenSource src, CancellationToken token)
     {
+        ILifetimeScope scope = _container.BeginLifetimeScope();
+        IServiceProvider sp = scope.Resolve<IServiceProvider>();
+
         IPlayerPendingTask[] playerTasks = new IPlayerPendingTask[PlayerTasks.Length];
         Task<bool>[] tasks = new Task<bool>[playerTasks.Length];
         for (int i = 0; i < PlayerTasks.Length; i++)
@@ -276,7 +248,7 @@ public class PlayerService : IPlayerService
                                                     $"implement {Accessor.ExceptionFormatter.Format<IPlayerPendingTask>()}.");
             }
 
-            IPlayerPendingTask task = (IPlayerPendingTask)ReflectionUtility.CreateInstanceFixed(_serviceProvider, type, [args]);
+            IPlayerPendingTask task = (IPlayerPendingTask)ReflectionUtility.CreateInstanceFixed(sp, type, [args]);
             playerTasks[i] = task;
             Task<bool> t = task.RunAsync(args, token);
 
@@ -302,7 +274,7 @@ public class PlayerService : IPlayerService
             }
         }
 
-        return new PlayerTaskData(args, src, playerTasks, tasks);
+        return new PlayerTaskData(args, src, playerTasks, tasks, scope);
     }
 
     /// <inheritdoc />
@@ -366,13 +338,13 @@ public class PlayerService : IPlayerService
         }
     }
 
-    internal struct PlayerTaskData(PlayerPending player, CancellationTokenSource tokenSource, IPlayerPendingTask[] pendingTasks, Task<bool>[] tasks)
-    {
-        public readonly PlayerPending Player = player;
-        public readonly CancellationTokenSource TokenSource = tokenSource;
-        public readonly IPlayerPendingTask[] PendingTasks = pendingTasks;
-        public readonly Task<bool>[] Tasks = tasks;
-    }
+    internal record struct PlayerTaskData(
+        PlayerPending Player,
+        CancellationTokenSource TokenSource,
+        IPlayerPendingTask[] PendingTasks,
+        Task<bool>[] Tasks,
+        ILifetimeScope? Scope
+    );
 }
 
 /// <summary>

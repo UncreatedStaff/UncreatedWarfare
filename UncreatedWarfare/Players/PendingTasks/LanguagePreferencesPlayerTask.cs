@@ -1,5 +1,6 @@
 ﻿using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Translations.Languages;
 
 namespace Uncreated.Warfare.Players.PendingTasks;
@@ -7,6 +8,7 @@ namespace Uncreated.Warfare.Players.PendingTasks;
 /// <summary>
 /// Downloads the player's language preferences.
 /// </summary>
+[PlayerTask]
 internal class LanguagePreferencesPlayerTask(ILanguageDataStore languageDataStore) : IPlayerPendingTask
 {
     private LanguagePreferences? _preferences;

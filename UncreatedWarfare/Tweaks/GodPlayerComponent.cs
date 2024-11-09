@@ -1,5 +1,6 @@
 ﻿using System;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Permissions;
 
 namespace Uncreated.Warfare.Tweaks;
@@ -7,6 +8,7 @@ namespace Uncreated.Warfare.Tweaks;
 /// <summary>
 /// Manages the player's ability to take damage.
 /// </summary>
+[PlayerComponent]
 public class GodPlayerComponent : IPlayerComponent
 {
     public static readonly PermissionLeaf GodPermission = new PermissionLeaf("warfare::features.god");

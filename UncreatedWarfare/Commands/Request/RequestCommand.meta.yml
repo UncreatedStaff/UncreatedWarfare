@@ -1,0 +1,16 @@
+﻿# RequestCommand
+Description: "Request kits or vehicles."
+Aliases: [ req, r ]
+Parameters:
+  - Name: sign
+    Type: "Look/SDG.Unturned.ItemBarricadeAsset"
+    Description: "The kit or vehicle sign for the kit or vehicle the <caller /> is requesting."
+    Parameters:
+      - Name: upgrade
+        Type: Verbatim
+        Description: "Request an upgrade for an outdated loadout."
+        Optional: true
+
+  - Name: vehicle
+    Type: "Look/SDG.Unturned.VehicleAsset"
+    Description: "The vehicle the <caller /> is requesting."

@@ -11,7 +11,6 @@ using Uncreated.Warfare.Patches;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Util;
-using static Uncreated.Warfare.Harmony.Patches;
 
 namespace Uncreated.Warfare.Events.Patches;
 
@@ -20,13 +19,13 @@ internal class BarricadeManagerDestroyBarricade : IHarmonyPatch
 {
     private static MethodInfo? _target;
 
-    void IHarmonyPatch.Patch(ILogger logger)
+    void IHarmonyPatch.Patch(ILogger logger, HarmonyLib.Harmony patcher)
     {
         _target = Accessor.GetMethod(new Action<BarricadeDrop, byte, byte, ushort>(BarricadeManager.destroyBarricade));
 
         if (_target != null)
         {
-            Patcher.Patch(_target, transpiler: Accessor.GetMethod(Transpiler));
+            patcher.Patch(_target, transpiler: Accessor.GetMethod(Transpiler));
             logger.LogDebug("Patched {0} for destroy barricade event.", _target);
             return;
         }
@@ -42,12 +41,12 @@ internal class BarricadeManagerDestroyBarricade : IHarmonyPatch
         );
     }
 
-    void IHarmonyPatch.Unpatch(ILogger logger)
+    void IHarmonyPatch.Unpatch(ILogger logger, HarmonyLib.Harmony patcher)
     {
         if (_target == null)
             return;
 
-        Patcher.Unpatch(_target, Accessor.GetMethod(Transpiler));
+        patcher.Unpatch(_target, Accessor.GetMethod(Transpiler));
         logger.LogDebug("Unpatched {0} for destroy barricade event.", _target);
         _target = null;
     }

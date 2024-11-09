@@ -6,7 +6,6 @@ using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Patches;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
-using static Uncreated.Warfare.Harmony.Patches;
 
 namespace Uncreated.Warfare.Events.Patches;
 
@@ -16,7 +15,7 @@ internal class PlayerClothingAskWearClothing : IHarmonyPatch
     private static MethodInfo?[]? _targets;
     private static MethodInfo[]? _patches;
 
-    void IHarmonyPatch.Patch(ILogger logger)
+    void IHarmonyPatch.Patch(ILogger logger, HarmonyLib.Harmony patcher)
     {
         _targets =
         [
@@ -45,7 +44,7 @@ internal class PlayerClothingAskWearClothing : IHarmonyPatch
             MethodInfo? target = _targets[i];
             if (target != null)
             {
-                Patcher.Patch(target, postfix: _patches[i]);
+                patcher.Patch(target, postfix: _patches[i]);
                 logger.LogDebug("Patched {0} for clothing swapped event.", target);
                 continue;
             }
@@ -61,7 +60,7 @@ internal class PlayerClothingAskWearClothing : IHarmonyPatch
         }
     }
 
-    void IHarmonyPatch.Unpatch(ILogger logger)
+    void IHarmonyPatch.Unpatch(ILogger logger, HarmonyLib.Harmony patcher)
     {
         if (_targets == null)
             return;
@@ -72,7 +71,7 @@ internal class PlayerClothingAskWearClothing : IHarmonyPatch
             if (target == null)
                 continue;
 
-            Patcher.Unpatch(target, _patches![i]);
+            patcher.Unpatch(target, _patches![i]);
             logger.LogDebug("Unpatched {0} for clothing swapped event.", target);
         }
 

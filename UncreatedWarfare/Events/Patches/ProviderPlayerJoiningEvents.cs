@@ -9,7 +9,6 @@ using Uncreated.Warfare.Patches;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.PendingTasks;
 using Uncreated.Warfare.Players.Saves;
-using static Uncreated.Warfare.Harmony.Patches;
 
 namespace Uncreated.Warfare.Events.Patches;
 
@@ -18,14 +17,14 @@ internal class ProviderPlayerJoiningEvents : IHarmonyPatch
 {
     private static MethodInfo? _target;
 
-    void IHarmonyPatch.Patch(ILogger logger)
+    void IHarmonyPatch.Patch(ILogger logger, HarmonyLib.Harmony patcher)
     {
         _target = typeof(SteamPending).GetMethod("sendVerifyPacket",
             BindingFlags.Instance | BindingFlags.Public, null, CallingConventions.Any, Type.EmptyTypes, null);
 
         if (_target != null)
         {
-            Patcher.Patch(_target, prefix: Accessor.GetMethod(Prefix));
+            patcher.Patch(_target, prefix: Accessor.GetMethod(Prefix));
             logger.LogDebug("Patched {0} for player joining event.", _target);
             return;
         }
@@ -38,12 +37,12 @@ internal class ProviderPlayerJoiningEvents : IHarmonyPatch
         );
     }
 
-    void IHarmonyPatch.Unpatch(ILogger logger)
+    void IHarmonyPatch.Unpatch(ILogger logger, HarmonyLib.Harmony patcher)
     {
         if (_target == null)
             return;
 
-        Patcher.Unpatch(_target, Accessor.GetMethod(Prefix));
+        patcher.Unpatch(_target, Accessor.GetMethod(Prefix));
         logger.LogDebug("Unpatched {0} for player joining event.", _target);
         _target = null;
     }
@@ -101,7 +100,7 @@ internal class ProviderPlayerJoiningEvents : IHarmonyPatch
         }
         else
         {
-            data = new PlayerService.PlayerTaskData(args, src, Array.Empty<IPlayerPendingTask>(), Array.Empty<Task<bool>>());
+            data = new PlayerService.PlayerTaskData(args, src, Array.Empty<IPlayerPendingTask>(), Array.Empty<Task<bool>>(), null);
         }
 
         CancellationToken token = WarfareModule.Singleton.UnloadToken;
@@ -164,6 +163,11 @@ internal class ProviderPlayerJoiningEvents : IHarmonyPatch
                 isCancelled = !await WarfareModule.EventDispatcher.DispatchEventAsync(args, newToken);
             }
 
+            if (isCancelled && taskData.Scope != null)
+            {
+                await taskData.Scope.DisposeAsync();
+            }
+
             await UniTask.SwitchToMainThread(newToken);
 
             if (isCancelled)
@@ -186,6 +190,9 @@ internal class ProviderPlayerJoiningEvents : IHarmonyPatch
         catch (Exception ex)
         {
             logger.LogError(ex, "Error connecting player {0}.", args.Steam64);
+            if (taskData.Scope != null)
+                await taskData.Scope.DisposeAsync();
+
             await UniTask.SwitchToMainThread();
             Provider.reject(args.PendingPlayer.transportConnection, ESteamRejection.PLUGIN, "Unexpected error - " + Accessor.Formatter.Format((ex.GetBaseException() ?? ex).GetType()));
         }

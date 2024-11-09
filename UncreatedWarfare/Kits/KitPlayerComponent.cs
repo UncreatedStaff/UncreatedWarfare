@@ -5,8 +5,11 @@ using System.Linq;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
 
 namespace Uncreated.Warfare.Kits;
+
+[PlayerComponent]
 internal class KitPlayerComponent : IPlayerComponent
 {
     private KitManager _kitManager;

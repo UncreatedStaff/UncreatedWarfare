@@ -1,4 +1,5 @@
 ﻿using Uncreated.Warfare.Interaction.Commands;
+using Uncreated.Warfare.Interaction.Commands.Syntax;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Translations.Util;
 

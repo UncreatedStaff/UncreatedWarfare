@@ -10,12 +10,12 @@ public class VehicleSpawnInfo
     /// <summary>
     /// The asset used to spawn vehicles.
     /// </summary>
-    public IAssetLink<VehicleAsset> Vehicle { get; set; }
+    public required IAssetLink<VehicleAsset> Vehicle { get; set; }
 
     /// <summary>
     /// Barricade or structure where vehicles are spawned above.
     /// </summary>
-    public IBuildable Spawner { get; set; }
+    public required IBuildable Spawner { get; set; }
 
     /// <summary>
     /// List of sign barricades linked to this spawn.

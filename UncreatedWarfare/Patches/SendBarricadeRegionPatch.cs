@@ -11,7 +11,6 @@ using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Signs;
 using Uncreated.Warfare.Util;
-using static Uncreated.Warfare.Harmony.Patches;
 
 namespace Uncreated.Warfare.Patches;
 internal class SendBarricadeRegionPatch : IHarmonyPatch
@@ -19,20 +18,20 @@ internal class SendBarricadeRegionPatch : IHarmonyPatch
     private static readonly ClientStaticMethod? SendMultipleBarricades = ReflectionUtility.FindRpc<BarricadeManager, ClientStaticMethod>("SendMultipleBarricades");
 
     private static MethodInfo? _target;
-    void IHarmonyPatch.Patch(ILogger logger)
+    void IHarmonyPatch.Patch(ILogger logger, HarmonyLib.Harmony patcher)
     {
         _target = typeof(BarricadeManager).GetMethod("SendRegion", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static);
 
-        if (SendMultipleBarricades == null)
-        {
-            logger.LogError("Failed to find SendMultipleBarricades net call. Unable to patch {0}.", _target);
-            _target = null;
-            return;
-        }
-
         if (_target != null)
         {
-            Patcher.Patch(_target, prefix: Accessor.GetMethod(Prefix));
+            if (SendMultipleBarricades == null)
+            {
+                logger.LogError("Failed to find SendMultipleBarricades net call. Unable to patch {0}.", _target);
+                _target = null;
+                return;
+            }
+
+            patcher.Patch(_target, prefix: Accessor.GetMethod(Prefix));
             logger.LogDebug("Patched {0} for overriding send region.", _target);
             return;
         }
@@ -50,12 +49,12 @@ internal class SendBarricadeRegionPatch : IHarmonyPatch
         );
     }
 
-    void IHarmonyPatch.Unpatch(ILogger logger)
+    void IHarmonyPatch.Unpatch(ILogger logger, HarmonyLib.Harmony patcher)
     {
         if (_target == null)
             return;
 
-        Patcher.Unpatch(_target, Accessor.GetMethod(Prefix));
+        patcher.Unpatch(_target, Accessor.GetMethod(Prefix));
         logger.LogDebug("Unpatched {0} for overriding send region.", _target);
         _target = null;
     }

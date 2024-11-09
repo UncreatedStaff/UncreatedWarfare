@@ -1,15 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using Autofac;
+﻿using Autofac;
 using Microsoft.Extensions.Logging;
 using NUnit.Framework;
-using Uncreated.Warfare.Commands;
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Threading;
+using System.Threading.Tasks;
 using Uncreated.Warfare.Interaction.Commands;
+using Uncreated.Warfare.Interaction.Commands.Syntax;
 
 namespace Uncreated.Warfare.Tests;
 public class SyntaxFormatterTests

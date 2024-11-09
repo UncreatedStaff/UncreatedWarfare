@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Globalization;
 using System.Text;
-using Uncreated.Warfare.Interaction.Commands;
 
-namespace Uncreated.Warfare.Commands;
+// ReSharper disable once CheckNamespace
+namespace Uncreated.Warfare.Interaction.Commands.Syntax;
 
 public class PlainTextSyntaxWriter : ISyntaxWriter
 {

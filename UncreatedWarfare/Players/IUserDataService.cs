@@ -289,6 +289,15 @@ public class UserDataService : IUserDataService, IDisposable
 public static class UserDataServiceExtensions
 {
     /// <summary>
+    /// Get a player's Discord ID, or 0 if their Discord is not linked.
+    /// </summary>
+    public static async Task<ulong> GetDiscordIdAsync(this IUserDataService dataService, ulong steam64, CancellationToken token = default)
+    {
+        WarfareUserData? userData = await dataService.ReadAsync(steam64, token).ConfigureAwait(false);
+        return userData?.DiscordId ?? 0ul;
+    }
+
+    /// <summary>
     /// Search all players that have ever joined by their usernames, and add them to a collection as they're found.
     /// </summary>
     /// <param name="prioritizedName">The type of name to prioritize.</param>

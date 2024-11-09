@@ -5,6 +5,7 @@ using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
@@ -14,6 +15,7 @@ namespace Uncreated.Warfare.Tweaks;
 /// <summary>
 /// Manages the player's ability to teleport to where they're looking by right-click punching.
 /// </summary>
+[PlayerComponent]
 public class PlayerJumpComponent : IPlayerComponent, IAsyncEventListener<PlayerPunched>
 {
     public static readonly PermissionLeaf AutoJumpPermission = new PermissionLeaf("warfare::commands.teleport");

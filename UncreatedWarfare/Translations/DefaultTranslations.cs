@@ -159,12 +159,6 @@ internal static class T
     #region Players
     private const string SectionPlayers = "Players";
 
-    [TranslationData(SectionPlayers, "Gets sent to a player who's discord is not linked to their steam account (part 1).")]
-    public static readonly Translation DiscordNotLinked = new Translation("<#9cffb3>Your account must be linked in our Discord server to use this command.");
-
-    [TranslationData(SectionPlayers, "Gets sent to a player who's discord is not linked to their steam account (part 2).", "Player's Steam64 ID")]
-    public static readonly Translation<IPlayer> DiscordNotLinked2 = new Translation<IPlayer>("<#9cffb3>Type <#7483c4>/discord</color> then type <#fff>/link {0}</color> in <#c480d9>#warfare-stats</color>.", arg0Fmt: WarfarePlayer.FormatColoredSteam64);
-
     [TranslationData(SectionPlayers, "Gets broadcasted when a player connects.", "Connecting player")]
     public static readonly Translation<IPlayer> PlayerConnected = new Translation<IPlayer>("<#e6e3d5>{0} joined the server.");
 
@@ -938,7 +932,6 @@ internal static class T
 
     #region Vehicles
     private const string SectionVehicles = "Vehicles";
-    private const string SectionVehicleBay = "Vehicle Bay";
     [TranslationData(SectionVehicles)]
     public static readonly Translation<VehicleAsset> VehicleStaging = new Translation<VehicleAsset>("<#b3a6a2>You can't enter a {0} during the <#cedcde>STAGING PHASE</color>.");
     [TranslationData(SectionVehicles)]
@@ -1014,71 +1007,6 @@ internal static class T
     public static readonly Translation<IPlayer> VehicleSwapRequestAccepted = new Translation<IPlayer>("<#d1bda7>Accepted {0}'s swap request.", arg0Fmt: WarfarePlayer.FormatColoredNickName);
     [TranslationData(SectionVehicles)]
     public static readonly Translation<VehicleAsset> VehicleTooFarAway = new Translation<VehicleAsset>("<#ff8c69>Your {0} is too far away.");
-
-    [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
-    public static readonly Translation<VehicleAsset> VehicleBayAdded = new Translation<VehicleAsset>("<#a0ad8e>Added {0} to the vehicle bay.", arg0Fmt: RarityColorAddon.Instance);
-    [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
-    public static readonly Translation<VehicleAsset> VehicleBayRemoved = new Translation<VehicleAsset>("<#a0ad8e>Removed {0} from the vehicle bay.", arg0Fmt: RarityColorAddon.Instance);
-    [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
-    public static readonly Translation<string, VehicleAsset, string> VehicleBaySetProperty = new Translation<string, VehicleAsset, string>("<#a0ad8e>Set <#8ce4ff>{0}</color> for vehicle {1} to: <#ffffff>{2}</color>.", arg1Fmt: RarityColorAddon.Instance);
-    [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
-    public static readonly Translation<VehicleAsset> VehicleBaySavedMeta = new Translation<VehicleAsset>("<#a0ad8e>Successfuly set the rearm list for vehicle {0} from your inventory.", arg0Fmt: RarityColorAddon.Instance);
-    [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
-    public static readonly Translation<VehicleAsset> VehicleBayClearedItems = new Translation<VehicleAsset>("<#a0ad8e>Successfuly cleared the rearm list for vehicle {0} from your inventory.", arg0Fmt: RarityColorAddon.Instance);
-    [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
-    public static readonly Translation<VehicleAsset, int> VehicleBaySetItems = new Translation<VehicleAsset, int>("<#a0ad8e>Successfuly set the rearm list for vehicle {0} from your inventory. It will now drop <#8ce4ff>{1}</color> ${p:1:item} on restock.", arg0Fmt: RarityColorAddon.Instance);
-    [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
-    public static readonly Translation<byte, VehicleAsset> VehicleBaySeatAdded = new Translation<byte, VehicleAsset>("<#a0ad8e>Made seat <#ffffff>#{0}</color> a crewman seat for {1}.", arg1Fmt: RarityColorAddon.Instance);
-    [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
-    public static readonly Translation<byte, VehicleAsset> VehicleBaySeatAlreadyAdded = new Translation<byte, VehicleAsset>("<#a0ad8e>Set <#ffffff>#{0}</color> was already a crewman seat for {1}.", arg1Fmt: RarityColorAddon.Instance);
-    [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
-    public static readonly Translation<byte, VehicleAsset> VehicleBaySeatRemoved = new Translation<byte, VehicleAsset>("<#a0ad8e>Seat <#ffffff>#{0}</color> is no longer a crewman seat for {1}.", arg1Fmt: RarityColorAddon.Instance);
-    [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
-    public static readonly Translation<byte, VehicleAsset> VehicleBaySeatNotAdded = new Translation<byte, VehicleAsset>("<#a0ad8e>Seat <#ffffff>#{0}</color> wasn't a crewman seat for {1}.", arg1Fmt: RarityColorAddon.Instance);
-    [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
-    public static readonly Translation VehicleBayNoTarget = new Translation("<#ff8c69>Look at a vehicle, spawn pad, or sign to use this command.");
-    [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
-    public static readonly Translation<VehicleAsset> VehicleBayAlreadyAdded = new Translation<VehicleAsset>("<#ff8c69>{0} is already added to the vehicle bay.", arg0Fmt: RarityColorAddon.Instance);
-    [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
-    public static readonly Translation<VehicleAsset> VehicleBayNotAdded = new Translation<VehicleAsset>("<#ff8c69>{0} has not been added to the vehicle bay.", arg0Fmt: RarityColorAddon.Instance);
-    [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
-    public static readonly Translation<string> VehicleBayInvalidProperty = new Translation<string>("<#ff8c69>{0} isn't a valid a vehicle property. Try putting 'Faction', 'RespawnTime', 'CreditCost' etc.");
-    [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
-    public static readonly Translation<string, string> VehicleBayInvalidSetValue = new Translation<string, string>("<#ff8c69><#ddd>{0}</color> isn't a valid value for vehicle property: <#a0ad8e>{1}</color>.");
-    [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
-    public static readonly Translation<string> VehicleBayNotCommandSettable = new Translation<string>("<#ff8c69><#a0ad8e>{0}</color> is not marked as settable.");
-    [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
-    public static readonly Translation<byte, VehicleAsset> VehicleBayCrewSeatAlreadySet = new Translation<byte, VehicleAsset>("<#ff8c69><#ffffff>#{0}</color> is already marked as a crew seat in {1}.", arg1Fmt: new ArgumentFormat(PluralAddon.Always(), RarityColorAddon.Instance));
-    [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
-    public static readonly Translation<byte, VehicleAsset> VehicleBayCrewSeatNotSet = new Translation<byte, VehicleAsset>("<#ff8c69><#ffffff>#{0}</color> isn't marked as a crew seat in {1}.", arg1Fmt: new ArgumentFormat(PluralAddon.Always(), RarityColorAddon.Instance));
-    [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
-    public static readonly Translation<DelayType, float, string?> VehicleBayAddedDelay = new Translation<DelayType, float, string?>("<#a0ad8e>Added delay of type <#fff>{0}</color>:<#ddd>{1}</color> during <#ddd>{2}</color> gamemode.", arg1Fmt: "N1");
-    [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
-    public static readonly Translation<int> VehicleBayRemovedDelay = new Translation<int>("<#a0ad8e>Removed {0} matching ${p:0:delay}.");
-    [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
-    public static readonly Translation<VehicleAsset> VehicleBaySpawnRegistered = new Translation<VehicleAsset>("<#a0ad8e>Successfully registered spawn. {0} will spawn here.", arg0Fmt: new ArgumentFormat(PluralAddon.Always(), RarityColorAddon.Instance));
-    [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
-    public static readonly Translation<VehicleAsset> VehicleBaySpawnDeregistered = new Translation<VehicleAsset>("<#a0ad8e>Successfully deregistered {0} spawn.", arg0Fmt: RarityColorAddon.Instance);
-    [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
-    public static readonly Translation VehicleBayLinkStarted = new Translation("<#a0ad8e>Started linking, do <#ddd>/vb link</color> on the sign now.");
-    [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
-    public static readonly Translation<VehicleAsset> VehicleBayLinkFinished = new Translation<VehicleAsset>("<#a0ad8e>Successfully linked vehicle sign to a {0} vehicle bay.", arg0Fmt: RarityColorAddon.Instance);
-    [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
-    public static readonly Translation<VehicleAsset> VehicleBayUnlinked = new Translation<VehicleAsset>("<#a0ad8e>Successfully unlinked {0} vehicle sign.", arg0Fmt: RarityColorAddon.Instance);
-    [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
-    public static readonly Translation VehicleBayLinkNotStarted = new Translation("<#ff8c69>You must do /vb link on a vehicle bay first.");
-    [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
-    public static readonly Translation<VehicleAsset> VehicleBayForceSuccess = new Translation<VehicleAsset>("<#a0ad8e>Skipped timer for that {0} vehicle bay.", arg0Fmt: RarityColorAddon.Instance);
-    [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
-    public static readonly Translation<string> VehicleBayInvalidInput = new Translation<string>("<#ff8c69><#fff>{0}</color> is not a valid vehicle.");
-    [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
-    public static readonly Translation<ItemAsset> VehicleBayInvalidBayItem = new Translation<ItemAsset>("<#ff8c69>{0} are not valid vehicle bays.", arg0Fmt: new ArgumentFormat(PluralAddon.Always(), RarityColorAddon.Instance));
-    [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
-    public static readonly Translation<VehicleAsset> VehicleBaySpawnAlreadyRegistered = new Translation<VehicleAsset>("<#ff8c69>This spawn is already registered to a {0}. Unregister it first with <#fff>/vb unreg</color>.", arg0Fmt: RarityColorAddon.Instance);
-    [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
-    public static readonly Translation VehicleBaySpawnNotRegistered = new Translation("<#ff8c69>This vehicle bay is not registered.");
-    [TranslationData(SectionVehicleBay, IsPriorityTranslation = false)]
-    public static readonly Translation<uint, VehicleAsset, ushort> VehicleBayCheck = new Translation<uint, VehicleAsset, ushort>("<#a0ad8e>This spawn (<#8ce4ff>{0}</color>) is registered with vehicle: {1} <#fff>({2})</color>.", arg1Fmt: RarityColorAddon.Instance);
     #endregion
 
     #region Vehicle Deaths
@@ -1220,16 +1148,6 @@ internal static class T
 
     #region Vehicle Bay Signs
     private const string SectionVBS = "Vehicle Signs";
-    [TranslationData(SectionVBS)]
-    public static readonly Translation<int> VBSTickets = new Translation<int>("<#c$vbs_ticket_number$>{0}</color> <#c$vbs_ticket_label$>Tickets</color>");
-    [TranslationData(SectionVBS)]
-    public static readonly Translation VBSStateReady = new Translation("<#c$vbs_ready$>Ready!</color> <#aaa><b>/request</b></color>");
-    [TranslationData(SectionVBS, Parameters = [ "Minutes", "Seconds" ], IsPriorityTranslation = false)]
-    public static readonly Translation<int, int> VBSStateDead = new Translation<int, int>("<#c$vbs_dead$>{0}:{1}</color>", arg1Fmt: "D2");
-    [TranslationData(SectionVBS, Parameters = [ "Nearest location." ], IsPriorityTranslation = false)]
-    public static readonly Translation<string> VBSStateActive = new Translation<string>("<#c$vbs_active$>{0}</color>");
-    [TranslationData(SectionVBS, Parameters = [ "Minutes", "Seconds" ])]
-    public static readonly Translation<int, int> VBSStateIdle = new Translation<int, int>("<#c$vbs_idle$>Idle: {0}:{1}</color>", arg1Fmt: "D2");
     [TranslationData(SectionVBS)]
     public static readonly Translation VBSDelayStaging = new Translation("<#c$vbs_delay$>Locked Until Start</color>");
     [TranslationData(SectionVBS, Parameters = [ "Minutes", "Seconds" ])]

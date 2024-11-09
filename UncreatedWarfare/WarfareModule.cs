@@ -24,6 +24,7 @@ using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Database.Manual;
 using Uncreated.Warfare.Deaths;
+using Uncreated.Warfare.Discord;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.ListenerProviders;
 using Uncreated.Warfare.Fobs;
@@ -499,6 +500,10 @@ public sealed class WarfareModule
         bldr.RegisterType<VehicleService>()
             .AsImplementedInterfaces().AsSelf()
             .SingleInstance();
+        
+        bldr.RegisterType<VehicleSpawnerStore>()
+            .AsImplementedInterfaces().AsSelf()
+            .SingleInstance();
 
         bldr.RegisterType<UnityLoopTickerFactory>()
             .As<ILoopTickerFactory>();
@@ -591,6 +596,9 @@ public sealed class WarfareModule
 
         bldr.RegisterType<StripeService>()
             .As<IStripeService>();
+
+        bldr.RegisterRpcType<DiscordUserService>()
+            .SingleInstance();
 
         bldr.RegisterType<PurchaseRecordsInterface>()
             .As<IPurchaseRecordsInterface>();

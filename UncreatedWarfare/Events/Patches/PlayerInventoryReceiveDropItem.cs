@@ -12,7 +12,6 @@ using Uncreated.Warfare.Patches;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Util.Region;
-using static Uncreated.Warfare.Harmony.Patches;
 
 namespace Uncreated.Warfare.Events.Patches;
 
@@ -29,7 +28,7 @@ internal class PlayerInventoryReceiveDropItem : IHarmonyPatch
     private static readonly FieldInfo LastPlayEffectField = typeof(PlayerInventoryReceiveDropItem).GetField(nameof(LastPlayEffect), BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static)!;
     private static readonly FieldInfo LastIsDroppedField = typeof(PlayerInventoryReceiveDropItem).GetField(nameof(LastIsDropped), BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static)!;
     private static readonly FieldInfo LastWideSpreadField = typeof(PlayerInventoryReceiveDropItem).GetField(nameof(LastWideSpread), BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static)!;
-    void IHarmonyPatch.Patch(ILogger logger)
+    void IHarmonyPatch.Patch(ILogger logger, HarmonyLib.Harmony patcher)
     {
         _removeItemMtd = typeof(PlayerInventory).GetMethod(nameof(PlayerInventory.removeItem));
         if (_removeItemMtd == null)
@@ -48,7 +47,7 @@ internal class PlayerInventoryReceiveDropItem : IHarmonyPatch
 
         if (_target != null)
         {
-            Patcher.Patch(_target, transpiler: Accessor.GetMethod(Transpiler));
+            patcher.Patch(_target, transpiler: Accessor.GetMethod(Transpiler));
             logger.LogDebug("Patched {0} for drop item event.", _target);
             return;
         }
@@ -63,12 +62,12 @@ internal class PlayerInventoryReceiveDropItem : IHarmonyPatch
         );
     }
 
-    void IHarmonyPatch.Unpatch(ILogger logger)
+    void IHarmonyPatch.Unpatch(ILogger logger, HarmonyLib.Harmony patcher)
     {
         if (_target == null)
             return;
 
-        Patcher.Unpatch(_target, Accessor.GetMethod(Transpiler));
+        patcher.Unpatch(_target, Accessor.GetMethod(Transpiler));
         logger.LogDebug("Unpatched {0} for drop item event.", _target);
         _target = null;
     }

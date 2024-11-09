@@ -1,6 +1,7 @@
 ﻿using Uncreated.Warfare.Players.Permissions;
 
-namespace Uncreated.Warfare.Commands;
+// ReSharper disable once CheckNamespace
+namespace Uncreated.Warfare.Interaction.Commands.Syntax;
 
 /// <summary>
 /// Describes a flag parameter (like '-e') for a command.

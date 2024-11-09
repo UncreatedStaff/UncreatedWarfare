@@ -81,7 +81,7 @@ public class HarmonyPatchService
                 IHarmonyPatch patch = (IHarmonyPatch)ActivatorUtilities.CreateInstance(_serviceProvider, type);
                 try
                 {
-                    patch.Patch(_loggerFactory.CreateLogger(type));
+                    patch.Patch(_loggerFactory.CreateLogger(type), Patcher);
                     _appliedPatches.Add(patch);
 
                     _logger.LogDebug("Applied harmony patch: {0}.", type);
@@ -118,7 +118,7 @@ public class HarmonyPatchService
             Type patchType = patch.GetType();
             try
             {
-                patch.Unpatch(_loggerFactory.CreateLogger(patchType));
+                patch.Unpatch(_loggerFactory.CreateLogger(patchType), Patcher);
             }
             catch (Exception ex)
             {

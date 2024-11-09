@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
+using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Logging;
@@ -1341,6 +1342,47 @@ public class CommandContext : ControlException
 
         drop = StructureManager.FindStructureByRootTransform(info.transform);
         return drop != null;
+    }
+
+    /// <summary>
+    /// Get the <see cref="BarricadeDrop"/> or <see cref="StructureDrop"/> the user is looking at.
+    /// </summary>
+    /// <param name="distance">Default distance is 4m.</param>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
+    public bool TryGetBuildableTarget([MaybeNullWhen(false)] out IBuildable drop, float distance = 4f)
+    {
+        GameThread.AssertCurrent();
+
+        if (Player is null || !Player.IsOnline)
+        {
+            drop = null;
+            return false;
+        }
+
+        Transform aim = Player.UnturnedPlayer.look.aim;
+        RaycastInfo info = DamageTool.raycast(new Ray(aim.position, aim.forward), distance, RayMasks.BARRICADE | RayMasks.STRUCTURE, Player.UnturnedPlayer);
+        if (info.transform == null)
+        {
+            drop = null;
+            return false;
+        }
+
+        BarricadeDrop? barricade = BarricadeManager.FindBarricadeByRootTransform(info.transform);
+        if (barricade != null)
+        {
+            drop = new BuildableBarricade(barricade);
+            return true;
+        }
+
+        StructureDrop? structure = StructureManager.FindStructureByRootTransform(info.transform);
+        if (structure != null)
+        {
+            drop = new BuildableStructure(structure);
+            return true;
+        }
+
+        drop = null;
+        return false;
     }
 
     /// <summary>

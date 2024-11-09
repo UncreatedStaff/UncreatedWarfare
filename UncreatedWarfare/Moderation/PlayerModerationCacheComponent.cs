@@ -4,8 +4,11 @@ using System.Linq;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Moderation.Punishments;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
 
 namespace Uncreated.Warfare.Moderation;
+
+[PlayerComponent]
 internal class PlayerModerationCacheComponent : IPlayerComponent
 {
     private DatabaseInterface _moderationSql;

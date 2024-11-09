@@ -5,7 +5,6 @@ using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Patches;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
-using static Uncreated.Warfare.Harmony.Patches;
 
 namespace Uncreated.Warfare.Events.Patches;
 
@@ -14,13 +13,13 @@ internal class InteractableBedReceiveClaimRequest : IHarmonyPatch
 {
     private static MethodInfo? _target;
 
-    void IHarmonyPatch.Patch(ILogger logger)
+    void IHarmonyPatch.Patch(ILogger logger, HarmonyLib.Harmony patcher)
     {
         _target = typeof(InteractableBed).GetMethod(nameof(InteractableBed.ReceiveClaimRequest), BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
 
         if (_target != null)
         {
-            Patcher.Patch(_target, prefix: Accessor.GetMethod(Prefix));
+            patcher.Patch(_target, prefix: Accessor.GetMethod(Prefix));
             logger.LogDebug("Patched {0} for bedroll claim requested.", _target);
             return;
         }
@@ -33,19 +32,19 @@ internal class InteractableBedReceiveClaimRequest : IHarmonyPatch
         );
     }
 
-    void IHarmonyPatch.Unpatch(ILogger logger)
+    void IHarmonyPatch.Unpatch(ILogger logger, HarmonyLib.Harmony patcher)
     {
         if (_target == null)
             return;
 
-        Patcher.Unpatch(_target, Accessor.GetMethod(Prefix));
+        patcher.Unpatch(_target, Accessor.GetMethod(Prefix));
         logger.LogDebug("Unpatched {0} for sign text updated event.", _target);
         _target = null;
     }
 
     // SDG.Unturned.InteractableSign
     /// <summary>
-    /// Postfix of <see cref="InteractableBed.ReceiveClaimRequest(in ServerInvocationContext)"/> to invoke <see cref="SignTextChanged"/>.
+    /// Postfix of <see cref="InteractableBed.ReceiveClaimRequest"/> to invoke <see cref="SignTextChanged"/>.
     /// </summary>
     private static bool Prefix(InteractableBed __instance, in ServerInvocationContext context)
     {

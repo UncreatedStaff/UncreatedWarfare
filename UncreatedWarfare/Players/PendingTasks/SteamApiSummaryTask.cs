@@ -1,4 +1,5 @@
 ﻿using Uncreated.Warfare.Events.Models.Players;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Steam;
 using Uncreated.Warfare.Steam.Models;
 
@@ -7,6 +8,7 @@ namespace Uncreated.Warfare.Players.PendingTasks;
 /// <summary>
 /// Queries the Steam API to get a player's summary.
 /// </summary>
+[PlayerTask]
 public class SteamApiSummaryTask : IPlayerPendingTask
 {
     private readonly ISteamApiService _apiService;

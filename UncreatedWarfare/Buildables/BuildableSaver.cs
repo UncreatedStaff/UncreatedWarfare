@@ -108,7 +108,18 @@ public class BuildableSaver : ILayoutHostedService, IDisposable
     }
 
     /// <summary>
-    /// Save a barricade, or update the save if it's already saved.
+    /// Save a buildable or update the save if it's already saved.
+    /// </summary>
+    /// <returns><see langword="true"/> if the buildable was saved, <see langword="false"/> if it was just updated.</returns>
+    public UniTask<bool> SaveBuildableAsync(IBuildable buildable, CancellationToken token = default)
+    {
+        return buildable.IsStructure
+            ? SaveStructureAsync(buildable.GetDrop<StructureDrop>(), token)
+            : SaveBarricadeAsync(buildable.GetDrop<BarricadeDrop>(), token);
+    }
+
+    /// <summary>
+    /// Save a barricade or update the save if it's already saved.
     /// </summary>
     /// <returns><see langword="true"/> if the barricade was saved, <see langword="false"/> if it was just updated.</returns>
     public async UniTask<bool> SaveBarricadeAsync(BarricadeDrop barricade, CancellationToken token = default)
@@ -157,7 +168,7 @@ public class BuildableSaver : ILayoutHostedService, IDisposable
             if (barricade.interactable is InteractableStorage storage)
             {
                 await UniTask.SwitchToMainThread(token);
-                
+
                 int ct = storage.items.getItemCount();
 
                 newSave.Items = new List<BuildableStorageItem>(ct);
@@ -256,7 +267,7 @@ public class BuildableSaver : ILayoutHostedService, IDisposable
     }
 
     /// <summary>
-    /// Save a structure, or update the save if it's already saved.
+    /// Save a structure or update the save if it's already saved.
     /// </summary>
     /// <returns><see langword="true"/> if the structure was saved, <see langword="false"/> if it was just updated.</returns>
     public async UniTask<bool> SaveStructureAsync(StructureDrop structure, CancellationToken token = default)
@@ -300,7 +311,8 @@ public class BuildableSaver : ILayoutHostedService, IDisposable
                     MeasurementTool.byteToAngle(MeasurementTool.angleToByte(rot.z))
                 ),
                 MapId = _mapScheduler.Current,
-                Items = new List<BuildableStorageItem>(0)
+                Items = new List<BuildableStorageItem>(0),
+                State = Array.Empty<byte>()
             };
 
             BuildableInstanceId instanceId = new BuildableInstanceId
@@ -441,6 +453,15 @@ public class BuildableSaver : ILayoutHostedService, IDisposable
     public UniTask<bool> DiscardStructureAsync(uint instanceId, CancellationToken token = default)
     {
         return DiscardBuildableAsync(instanceId, true, token);
+    }
+
+    /// <summary>
+    /// Remove the save for a buildable.
+    /// </summary>
+    /// <returns><see langword="true"/> if the buildable's save was removed, otherwise <see langword="false"/>.</returns>
+    public UniTask<bool> DiscardBuildableAsync(IBuildable buildable, CancellationToken token = default)
+    {
+        return DiscardBuildableAsync(buildable.InstanceId, buildable.IsStructure, token);
     }
 
     /// <summary>

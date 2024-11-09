@@ -229,6 +229,8 @@ public class PointsService
             player.AddReputation((int)Math.Round(rep));
             _ui.UpdatePointsUI(player, this);
         }
+
+        // todo 'promoted'/'demoted' message
     }
 }
 

@@ -89,6 +89,8 @@
     <None Remove="Commands\BuyCommand.meta.yml" />
     <None Remove="Commands\DeployCommand.meta.yml" />
     <None Remove="Commands\Kit\KitCommand.meta.yml" />
+    <None Remove="Commands\Request\RequestCommand.meta.yml" />
+    <None Remove="Commands\VehicleBay\VehicleBayCommand.meta.yml" />
     <None Remove="Commands\WarfareDev\WarfareDevCommand.meta.yml" />
     <None Remove="Commands\Zone\ZoneCommand.meta.yml" />
   </ItemGroup>
@@ -193,6 +195,8 @@
     <EmbeddedResource Include="Commands\Clear\ClearCommand.meta.yml" />
     <EmbeddedResource Include="Commands\AbandonCommand.meta.yml" />
     <EmbeddedResource Include="Commands\Kit\KitCommand.meta.yml" />
+    <EmbeddedResource Include="Commands\Request\RequestCommand.meta.yml" />
+    <EmbeddedResource Include="Commands\VehicleBay\VehicleBayCommand.meta.yml" />
     <EmbeddedResource Include="Commands\WarfareDev\WarfareDevCommand.meta.yml" />
     <EmbeddedResource Include="Commands\Zone\ZoneCommand.meta.yml" />
 
@@ -305,10 +309,6 @@
       <HintPath>$(UnturnedDllPath)/UnityEngine.AssetBundleModule.dll</HintPath>
       <Private>!$(CopyToModule)</Private>
     </Reference>
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Commands\VehicleBay\" />
   </ItemGroup>
 
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent" Condition="exists('$(ServerPath)/Unturned_Data/Managed/Assembly-CSharp.dll')">

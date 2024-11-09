@@ -8,14 +8,14 @@ namespace Uncreated.Warfare.Util;
 /// </summary>
 public static class GameThread
 {
-    /// <summary>
-    /// <see langword="true"/> when fetched on the main thread, otherwise <see langword="false"/>.
-    /// </summary>
-    /// <remarks>Much more effecient than <see cref="ThreadUtil.IsGameThread"/>.</remarks>
     [ThreadStatic]
     // ReSharper disable once FieldCanBeMadeReadOnly.Local (this is broken in mono for some reason)
     private static bool _isCurrent = true;
 
+    /// <summary>
+    /// <see langword="true"/> when fetched on the main thread, otherwise <see langword="false"/>.
+    /// </summary>
+    /// <remarks>Much more effecient than <see cref="ThreadUtil.IsGameThread"/>.</remarks>
     public static bool IsCurrent
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

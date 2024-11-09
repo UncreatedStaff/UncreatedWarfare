@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Text;
 
-namespace Uncreated.Warfare.Commands;
+// ReSharper disable once CheckNamespace
+namespace Uncreated.Warfare.Interaction.Commands.Syntax;
 
 /// <summary>
 /// Non-thread-safe command syntax formatter/writer.

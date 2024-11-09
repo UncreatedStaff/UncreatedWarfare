@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Zones;
@@ -9,6 +10,7 @@ namespace Uncreated.Warfare.Zones;
 /// <summary>
 /// Handles showing effects around an active zone.
 /// </summary>
+[PlayerComponent]
 public class ZoneVisualizerComponent : IPlayerComponent
 {
     private class SpawnRoundInfo

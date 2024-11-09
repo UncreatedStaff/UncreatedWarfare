@@ -1,11 +1,12 @@
-﻿using System;
+﻿using DanielWillett.ReflectionTools;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using DanielWillett.ReflectionTools;
-using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Players;
 
-namespace Uncreated.Warfare.Commands;
+// ReSharper disable once CheckNamespace
+namespace Uncreated.Warfare.Interaction.Commands.Syntax;
+
 public static class SyntaxColorPalette
 {
     public const char LookAtTargetInGameSymbol = 'ʘ';
