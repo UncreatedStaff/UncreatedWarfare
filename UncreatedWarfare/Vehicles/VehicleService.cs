@@ -1,4 +1,5 @@
 ﻿using System;
+using DanielWillett.ReflectionTools;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
@@ -6,6 +7,8 @@ using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Vehicles;
+
+[Priority(-2 /* run after VehicleSpawnerStore */)]
 public class VehicleService : ILayoutHostedService
 {
     private const float VehicleSpawnOffset = 5f;

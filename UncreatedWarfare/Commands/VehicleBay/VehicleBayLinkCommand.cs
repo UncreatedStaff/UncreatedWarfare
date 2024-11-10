@@ -52,6 +52,9 @@ public class VehicleBayLinkCommand : IExecutableCommand
             if (info == null)
                 throw Context.Reply(_translations.SpawnNotRegistered);
 
+            // updates sign instance via the SignTextChanged event
+            BarricadeUtility.SetServersideSignText(drop, "vbs_" + info.Vehicle.Guid.ToString("N", CultureInfo.InvariantCulture));
+
             await _buildableSaver.SaveBuildableAsync(buildable, token);
 
             await UniTask.SwitchToMainThread(token);
@@ -60,9 +63,6 @@ public class VehicleBayLinkCommand : IExecutableCommand
             await _spawnerStore.AddOrUpdateSpawnAsync(info, token);
 
             await UniTask.SwitchToMainThread(token);
-
-            // updates sign instance via the SignTextChanged event
-            BarricadeUtility.SetServersideSignText(drop, "vbs_" + info.Vehicle.Guid.ToString("N", CultureInfo.InvariantCulture));
 
             Context.Reply(_translations.VehicleBayLinkFinished, info.Vehicle.GetAsset()!);
             Context.LogAction(ActionLogType.LinkedVehicleBaySign,
@@ -75,6 +75,7 @@ public class VehicleBayLinkCommand : IExecutableCommand
         }
         else
         {
+            Context.Logger.LogConditional("Spawner doesn't have VehicleSpawnerComponent.");
             Context.Reply(_translations.SpawnNotRegistered);
         }
     }

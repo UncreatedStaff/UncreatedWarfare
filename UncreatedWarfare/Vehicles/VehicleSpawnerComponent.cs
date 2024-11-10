@@ -5,6 +5,8 @@ using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Vehicles;
 
+#pragma warning disable IDE0051 // unity messages
+
 /// <summary>
 /// Handles logic for spawning vehicles.
 /// </summary>
@@ -20,6 +22,11 @@ public class VehicleSpawnerComponent : MonoBehaviour, IManualOnDestroy
         SpawnInfo = spawnInfo;
     }
 
+    [UsedImplicitly]
+    private void Update()
+    {
+
+    }
 
     void IManualOnDestroy.ManualOnDestroy()
     {
@@ -62,7 +69,6 @@ public class VehicleSpawnerComponent : MonoBehaviour, IManualOnDestroy
     {
         public VehicleSpawnerComponent? Spawner;
 
-#pragma warning disable IDE0051
         [UsedImplicitly]
         private IEnumerator Start()
         {
@@ -70,7 +76,6 @@ public class VehicleSpawnerComponent : MonoBehaviour, IManualOnDestroy
             Destroy(this);
             Spawner = null;
         }
-#pragma warning restore IDE0051
     }
 }
 
@@ -81,3 +86,4 @@ public enum VehicleSpawnerState
     Idle,
     Ready
 }
+#pragma warning restore IDE0051
