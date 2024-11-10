@@ -29,9 +29,9 @@ public readonly struct GridLocation : ITranslationArgument
             if (cartographyVolume != null)
             {
                 Vector3 box = cartographyVolume.GetBoxSize();
-                GetMapMetrics(Mathf.RoundToInt(box.x), Mathf.RoundToInt(box.z), out int sectionsX, out int sectionsY, out _, out _, out int border);
-                float bdrx = (border / box.x);
-                float bdry = (border / box.z);
+                GetMapMetrics(Mathf.RoundToInt(box.x), Mathf.RoundToInt(box.z), out int sectionsX, out int sectionsY, out _, out _, out double border);
+                float bdrx = (float)(border / box.x);
+                float bdry = (float)(border / box.z);
                 float sizeX = 1f - bdrx * 2f;
                 float sizeY = 1f - bdry * 2f;
                 Vector3 pos = cartographyVolume.transform.TransformPoint(
@@ -188,9 +188,9 @@ public readonly struct GridLocation : ITranslationArgument
         {
             Vector3 local = cartographyVolume.transform.InverseTransformPoint(pos);
             Vector3 box = cartographyVolume.GetBoxSize();
-            GetMapMetrics(Mathf.RoundToInt(box.x), Mathf.RoundToInt(box.z), out int sectionsX, out int sectionsY, out _, out _, out int border);
-            float bdrx = border / box.x;
-            float bdry = border / box.z;
+            GetMapMetrics(Mathf.RoundToInt(box.x), Mathf.RoundToInt(box.z), out int sectionsX, out int sectionsY, out _, out _, out double border);
+            float bdrx = (float)(border / box.x);
+            float bdry = (float)(border / box.z);
             local.x += 0.5f;
             local.z = 0.5f - local.z;
             int subgridx = Mathf.FloorToInt((local.x - bdrx) / ((1f - bdrx * 2f) / (sectionsX * SUBGRID_AMOUNT)));
@@ -249,70 +249,79 @@ public readonly struct GridLocation : ITranslationArgument
 
         _toStringCache = ToString(X, Y, Index);
     }
+
+    /// <summary>
+    /// Get the size of the map's border based on a legacy size.
+    /// </summary>
+    public static int GetLegacyBorderSize(ELevelSize size) => size switch
+    {
+        ELevelSize.TINY => 16,
+        ELevelSize.SMALL or ELevelSize.MEDIUM or ELevelSize.LARGE => 64,
+        ELevelSize.INSANE => 128,
+        _ => 0,
+    };
+
     /// <summary>
     /// Only works with maps without a cartography volume.
     /// </summary>
     /// <param name="sectionWidth">world scale</param>
-    /// <param name="border">world scale</param>
-    public static void GetMapMetrics(ELevelSize size, out int sections, out int sectionWidth, out int border)
+    /// <param name="borderSize">world scale</param>
+    public static void GetMapMetrics(ELevelSize size, out int gridSize, out double sectionWidth, out double borderSize)
     {
         int fullSize = (int)Math.Pow(2, (int)size + 9);
-        float actualSize = fullSize / (fullSize / (fullSize - (size switch
-        {
-            ELevelSize.TINY => 16f,
-            ELevelSize.SMALL or ELevelSize.MEDIUM or ELevelSize.LARGE => 64f,
-            ELevelSize.INSANE => 128f,
-            _ => 0f
-        }) * 2f));
-        border = Mathf.RoundToInt(actualSize * BORDER_PERCENTAGE);
-        sections = GetLegacyGridSize(size);
-        sectionWidth = Mathf.RoundToInt((actualSize - border * 2) / sections);
+        float actualSize = fullSize - GetLegacyBorderSize(size) * 2f;
+        borderSize = actualSize * BORDER_PERCENTAGE;
+        gridSize = GetLegacyGridSize(size);
+        sectionWidth = (actualSize - borderSize * 2d) / gridSize;
     }
+
     /// <summary>
     /// Only works with maps with a cartography volume.
     /// </summary>
-    /// <param name="length">world scale</param>
-    /// <param name="width">world scale</param>
-    /// <param name="sectionWidthX">world scale</param>
-    /// <param name="sectionWidthY">world scale</param>
-    /// <param name="border">world scale</param>
-    public static void GetMapMetrics(int length, int width, out int sectionsX, out int sectionsY, out int sectionWidthX, out int sectionWidthY, out int border)
+    /// <remarks>Used by grid generator in Discord bot.</remarks>
+    public static void GetMapMetrics(int imgSizeX, int imgSizeY, out int gridSizeX, out int gridSizeY, out double sectionWidthX, out double sectionWidthY, out double borderSize)
     {
-        border = Mathf.RoundToInt(Math.Min(length, width) * BORDER_PERCENTAGE);
-        int l2 = length - border * 2;
-        int w2 = width - border * 2;
-        sectionsX = l2 / OPTIMAL_GRID_SIZE_WORLD_SCALE;
-        int xmod = l2 % OPTIMAL_GRID_SIZE_WORLD_SCALE;
-        if (xmod != 0)
+        borderSize = Math.Min(imgSizeX, imgSizeY) * BORDER_PERCENTAGE;
+
+        double gridAreaX = imgSizeX - borderSize * 2;
+        double gridAreaY = imgSizeY - borderSize * 2;
+
+        gridSizeX = (int)(gridAreaX / OPTIMAL_GRID_SIZE_WORLD_SCALE);
+
+        int remX = (int)gridAreaX % OPTIMAL_GRID_SIZE_WORLD_SCALE;
+        if (remX != 0)
         {
-            if (xmod > OPTIMAL_GRID_SIZE_WORLD_SCALE / 2)
-                ++sectionsX;
-            sectionWidthX = l2 / sectionsX;
+            if (remX > OPTIMAL_GRID_SIZE_WORLD_SCALE / 2)
+                ++gridSizeX;
+            sectionWidthX = gridAreaX / gridSizeX;
         }
         else
             sectionWidthX = OPTIMAL_GRID_SIZE_WORLD_SCALE;
-        sectionsY = w2 / OPTIMAL_GRID_SIZE_WORLD_SCALE;
-        int ymod = w2 % OPTIMAL_GRID_SIZE_WORLD_SCALE;
-        if (ymod != 0)
+
+        gridSizeY = (int)(gridAreaY / OPTIMAL_GRID_SIZE_WORLD_SCALE);
+
+        int remY = (int)gridAreaY % OPTIMAL_GRID_SIZE_WORLD_SCALE;
+        if (remY != 0)
         {
-            if (xmod > OPTIMAL_GRID_SIZE_WORLD_SCALE / 2)
-                ++sectionsY;
-            sectionWidthY = w2 / sectionsY;
+            if (remX > OPTIMAL_GRID_SIZE_WORLD_SCALE / 2)
+                ++gridSizeY;
+            sectionWidthY = gridAreaY / gridSizeY;
         }
         else
             sectionWidthY = OPTIMAL_GRID_SIZE_WORLD_SCALE;
-        if (sectionsX > 26)
-        {
-            sectionsX = 26;
-            sectionWidthX = l2 / sectionsX;
-        }
-        if (sectionsY > 26)
-        {
-            sectionsY = 26;
-            sectionWidthY = w2 / sectionsY;
-        }
-    }
 
+        if (gridSizeX > 26)
+        {
+            gridSizeX = 26;
+            sectionWidthX = gridAreaX / gridSizeX;
+        }
+
+        if (gridSizeY <= 26)
+            return;
+
+        gridSizeY = 26;
+        sectionWidthY = gridAreaY / gridSizeY;
+    }
     public static (int X, int Y) ImageSize => (_lvl ??= new LevelData()).MapImageSize;
     public static bool LegacyMapping => (_lvl ??= new LevelData()).LegacyMapping;
     public static Vector2 CaptureSize => (_lvl ??= new LevelData()).CaptureSize;

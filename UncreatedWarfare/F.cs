@@ -1433,7 +1433,7 @@ public static class F
         if (list.ContainsKey(lang))
         {
             L.LogWarning("Duplicate language entry found for TranslationList with entry #" + reader.GetInt32(0) +
-                         " (" + reader.GetColumnSchema().FirstOrDefault()?.ColumnName + "). " +
+                         ". " +
                          "Value (\"" + reader.GetString(colOffset + 2) + "\") is being ignored.");
         }
         else list.Add(lang, reader.GetString(colOffset + 2));
