@@ -425,11 +425,9 @@ namespace Uncreated.Warfare.Migrations
 
                     b.HasIndex("MapId");
 
-                    b.HasIndex("NextSessionId")
-                        .IsUnique();
+                    b.HasIndex("NextSessionId");
 
-                    b.HasIndex("PreviousSessionId")
-                        .IsUnique();
+                    b.HasIndex("PreviousSessionId");
 
                     b.HasIndex("SeasonId");
 
@@ -2081,13 +2079,13 @@ namespace Uncreated.Warfare.Migrations
                         .IsRequired();
 
                     b.HasOne("Uncreated.Warfare.Models.GameData.SessionRecord", "NextSession")
-                        .WithOne()
-                        .HasForeignKey("Uncreated.Warfare.Models.GameData.SessionRecord", "NextSessionId")
+                        .WithMany()
+                        .HasForeignKey("NextSessionId")
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("Uncreated.Warfare.Models.GameData.SessionRecord", "PreviousSession")
-                        .WithOne()
-                        .HasForeignKey("Uncreated.Warfare.Models.GameData.SessionRecord", "PreviousSessionId")
+                        .WithMany()
+                        .HasForeignKey("PreviousSessionId")
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("Uncreated.Warfare.Models.Seasons.SeasonData", "Season")

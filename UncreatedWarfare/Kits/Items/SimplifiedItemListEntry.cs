@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Teams;
 
@@ -19,9 +20,8 @@ internal readonly struct SimplifiedItemListEntry
         RedirectType = redirectType;
     }
 
-    internal static List<SimplifiedItemListEntry> GetSimplifiedItemList(Kit kit)
+    internal static List<SimplifiedItemListEntry> GetSimplifiedItemList(Kit kit, AssetRedirectService assetRedirectService, IFactionDataStore factionDataStore)
     {
-        FactionInfo? faction = null;// todo TeamManager.GetFactionInfo(kit.FactionId);
         List<SimplifiedItemListEntry> groups = new List<SimplifiedItemListEntry>(16);
         List<IKitItem> items = new List<IKitItem>(kit.Items.OrderBy(x => x is not IPageKitItem jar || jar.Page > Page.Secondary));
         items.Sort((a, b) => a.CompareTo(b));
@@ -66,7 +66,7 @@ internal readonly struct SimplifiedItemListEntry
             }
             else
             {
-                ItemAsset? asset = item.GetItem(kit, faction, out _, out _);
+                ItemAsset? asset = item.GetItem(kit, Team.NoTeam, out _, out _, assetRedirectService, factionDataStore);
                 if (asset != null)
                 {
                     if (asset.id > 30000 && asset is ItemClothingAsset)

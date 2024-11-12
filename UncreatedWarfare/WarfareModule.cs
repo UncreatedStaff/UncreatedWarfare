@@ -564,6 +564,10 @@ public sealed class WarfareModule
         // Kits
         KitManager.ConfigureServices(bldr);
 
+        bldr.RegisterType<AssetRedirectService>()
+            .AsSelf().AsImplementedInterfaces()
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+
         bldr.RegisterType<DroppedItemTracker>()
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();

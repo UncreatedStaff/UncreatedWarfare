@@ -1,10 +1,12 @@
-﻿using SDG.NetPak;
+﻿using DanielWillett.ReflectionTools;
+using SDG.NetPak;
 using SDG.NetTransport;
 using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Items;
-using Uncreated.Warfare.Logging;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Teams;
@@ -17,10 +19,56 @@ namespace Uncreated.Warfare.Util;
 /// </summary>
 public static class ItemUtility
 {
+    private static readonly ClientInstanceMethod<Guid, byte, byte[], bool>? SendWearShirt
+        = ReflectionUtility.FindRpc<PlayerClothing, ClientInstanceMethod<Guid, byte, byte[], bool>>("SendWearShirt");
+    private static readonly ClientInstanceMethod<Guid, byte, byte[], bool>? SendWearPants
+        = ReflectionUtility.FindRpc<PlayerClothing, ClientInstanceMethod<Guid, byte, byte[], bool>>("SendWearPants");
+    private static readonly ClientInstanceMethod<Guid, byte, byte[], bool>? SendWearHat
+        = ReflectionUtility.FindRpc<PlayerClothing, ClientInstanceMethod<Guid, byte, byte[], bool>>("SendWearHat");
+    private static readonly ClientInstanceMethod<Guid, byte, byte[], bool>? SendWearBackpack
+        = ReflectionUtility.FindRpc<PlayerClothing, ClientInstanceMethod<Guid, byte, byte[], bool>>("SendWearBackpack");
+    private static readonly ClientInstanceMethod<Guid, byte, byte[], bool>? SendWearVest
+        = ReflectionUtility.FindRpc<PlayerClothing, ClientInstanceMethod<Guid, byte, byte[], bool>>("SendWearVest");
+    private static readonly ClientInstanceMethod<Guid, byte, byte[], bool>? SendWearMask
+        = ReflectionUtility.FindRpc<PlayerClothing, ClientInstanceMethod<Guid, byte, byte[], bool>>("SendWearMask");
+    private static readonly ClientInstanceMethod<Guid, byte, byte[], bool>? SendWearGlasses
+        = ReflectionUtility.FindRpc<PlayerClothing, ClientInstanceMethod<Guid, byte, byte[], bool>>("SendWearGlasses");
+
+    private static readonly ClientInstanceMethod? SendInventory
+        = ReflectionUtility.FindRpc<PlayerInventory, ClientInstanceMethod>("SendInventory");
+
+    private static readonly InstanceGetter<Items, bool[,]>? GetItemsSlots
+        = Accessor.GenerateInstanceGetter<Items, bool[,]>("slots", throwOnError: false);
+
+    private static readonly InstanceSetter<PlayerInventory, bool>? SetOwnerHasInventory
+        = Accessor.GenerateInstanceSetter<PlayerInventory, bool>("ownerHasInventory", throwOnError: false);
+    private static readonly InstanceGetter<PlayerInventory, bool>? GetOwnerHasInventory
+        = Accessor.GenerateInstanceGetter<PlayerInventory, bool>("ownerHasInventory", throwOnError: false);
+
+    private static readonly Action<PlayerInventory, byte, ItemJar>? SendItemRemove
+        = Accessor.GenerateInstanceCaller<PlayerInventory, Action<PlayerInventory, byte, ItemJar>>("sendItemRemove", throwOnError: false, allowUnsafeTypeBinding: true);
+
     internal static event ItemDestroyed? OnItemDestroyed;
     internal delegate void ItemDestroyed(in ItemInfo item, bool despawned, bool pickedUp, CSteamID pickUpPlayer, Page pickupPage, byte pickupX, byte pickupY, byte pickupRot);
 
     internal static ClientStaticMethod<byte, byte, uint, bool> SendDestroyItem = ReflectionUtility.FindRequiredRpc<ItemManager, ClientStaticMethod<byte, byte, uint, bool>>("SendDestroyItem");
+
+    /// <summary>
+    /// If all the reflection succeeded needed for fast item distribution.
+    /// </summary>
+    public static bool SupportsFastKits { get; }
+        = SendWearShirt != null
+          && SendWearPants != null
+          && SendWearHat != null
+          && SendWearBackpack != null
+          && SendWearVest != null
+          && SendWearMask != null
+          && SendWearGlasses != null
+          && SendInventory != null
+          && SetOwnerHasInventory != null
+          && GetOwnerHasInventory != null
+          && SendItemRemove != null
+          && GetItemsSlots != null;
 
     /// <summary>
     /// Enumerate items along the grid instead of the order they were added.
@@ -471,9 +519,27 @@ public static class ItemUtility
     }
 
     /// <summary>
+    /// Prevents modifications to the inventory from being replicated. Only works if <see cref="SupportsFastKits"/> is <see langword="true"/>.
+    /// </summary>
+    public static void IsolateInventory(Player player, out bool oldValue)
+    {
+        oldValue = GetOwnerHasInventory!(player.inventory);
+        SetOwnerHasInventory!(player.inventory, false);
+    }
+
+    /// <summary>
+    /// Reverses <see cref="IsolateInventory"/> which prevents modifications to the inventory from being replicated. Only works if <see cref="SupportsFastKits"/> is <see langword="true"/>.
+    /// </summary>
+    public static void UndoIsolateInventory(Player player, bool oldValue)
+    {
+        if (oldValue)
+            SetOwnerHasInventory!(player.inventory, true);
+    }
+
+    /// <summary>
     /// Get an array of kit item abstractions from a player's inventory and clothing.
     /// </summary>
-    public static IKitItem[] ItemsFromInventory(WarfarePlayer player, bool addClothes = true, bool addItems = true, bool findAssetRedirects = false)
+    public static IKitItem[] ItemsFromInventory(WarfarePlayer player, bool addClothes = true, bool addItems = true, AssetRedirectService? assetRedirectService = null)
     {
         GameThread.AssertCurrent();
         if (!addItems && !addClothes)
@@ -498,8 +564,7 @@ public static class ItemUtility
                     ItemAsset asset = jar.GetAsset();
                     if (asset == null)
                         continue;
-                    string? variant = null;
-                    if (findAssetRedirects && false/* (type = TeamManager.GetRedirectInfo(asset.GUID, out _, out string? variant, false)) != RedirectType.None*/)
+                    if (assetRedirectService != null && assetRedirectService.TryFindRedirectType(asset, out type, out _, out string? variant))
                         items.Add(new AssetRedirectPageKitItem(0u, jar.x, jar.y, jar.rot, (Page)page, type, variant));
                     else items.Add(new SpecificPageKitItem(0u, new UnturnedAssetReference(asset.GUID), jar.x, jar.y, jar.rot, (Page)page, jar.item.amount, jar.item.state));
                 }
@@ -509,52 +574,51 @@ public static class ItemUtility
         {
             FactionInfo? playerFaction = player.Team.Faction;
             PlayerClothing playerClothes = player.UnturnedPlayer.clothing;
-            string variant = null;
             if (playerClothes.shirtAsset != null)
             {
-                if (findAssetRedirects && playerFaction != null && false /*(type = TeamManager.GetClothingRedirect(playerClothes.shirtAsset.GUID, out string? variant, playerFaction)) != RedirectType.None*/)
+                if (playerFaction != null && assetRedirectService != null && assetRedirectService.TryFindRedirectType(playerClothes.shirtAsset, out type, out FactionInfo? faction, out string? variant, clothingOnly: true) && (faction == null || faction == playerFaction))
                     items.Add(new AssetRedirectClothingKitItem(0u, type, ClothingType.Shirt, variant));
                 else
                     items.Add(new SpecificClothingKitItem(0u, new UnturnedAssetReference(playerClothes.shirtAsset.GUID), ClothingType.Shirt, playerClothes.shirtState));
             }
             if (playerClothes.pantsAsset != null)
             {
-                if (findAssetRedirects && playerFaction != null && false/*(type = TeamManager.GetClothingRedirect(playerClothes.pantsAsset.GUID, out string? variant, playerFaction)) != RedirectType.None*/)
+                if (playerFaction != null && assetRedirectService != null && assetRedirectService.TryFindRedirectType(playerClothes.pantsAsset, out type, out FactionInfo? faction, out string? variant, clothingOnly: true) && (faction == null || faction == playerFaction))
                     items.Add(new AssetRedirectClothingKitItem(0u, type, ClothingType.Pants, variant));
                 else
                     items.Add(new SpecificClothingKitItem(0u, new UnturnedAssetReference(playerClothes.pantsAsset.GUID), ClothingType.Pants, playerClothes.pantsState));
             }
             if (playerClothes.vestAsset != null)
             {
-                if (findAssetRedirects && playerFaction != null && false/*(type = TeamManager.GetClothingRedirect(playerClothes.vestAsset.GUID, out string? variant, playerFaction)) != RedirectType.None*/)
+                if (playerFaction != null && assetRedirectService != null && assetRedirectService.TryFindRedirectType(playerClothes.vestAsset, out type, out FactionInfo? faction, out string? variant, clothingOnly: true) && (faction == null || faction == playerFaction))
                     items.Add(new AssetRedirectClothingKitItem(0u, type, ClothingType.Vest, variant));
                 else
                     items.Add(new SpecificClothingKitItem(0u, new UnturnedAssetReference(playerClothes.vestAsset.GUID), ClothingType.Vest, playerClothes.vestState));
             }
             if (playerClothes.hatAsset != null)
             {
-                if (findAssetRedirects && playerFaction != null && false/*(type = TeamManager.GetClothingRedirect(playerClothes.hatAsset.GUID, out string? variant, playerFaction)) != RedirectType.None*/)
+                if (playerFaction != null && assetRedirectService != null && assetRedirectService.TryFindRedirectType(playerClothes.hatAsset, out type, out FactionInfo? faction, out string? variant, clothingOnly: true) && (faction == null || faction == playerFaction))
                     items.Add(new AssetRedirectClothingKitItem(0u, type, ClothingType.Hat, variant));
                 else
                     items.Add(new SpecificClothingKitItem(0u, new UnturnedAssetReference(playerClothes.hatAsset.GUID), ClothingType.Hat, playerClothes.hatState));
             }
             if (playerClothes.maskAsset != null)
             {
-                if (findAssetRedirects && playerFaction != null && false/*(type = TeamManager.GetClothingRedirect(playerClothes.maskAsset.GUID, out string? variant, playerFaction)) != RedirectType.None*/)
+                if (playerFaction != null && assetRedirectService != null && assetRedirectService.TryFindRedirectType(playerClothes.maskAsset, out type, out FactionInfo? faction, out string? variant, clothingOnly: true) && (faction == null || faction == playerFaction))
                     items.Add(new AssetRedirectClothingKitItem(0u, type, ClothingType.Mask, variant));
                 else
                     items.Add(new SpecificClothingKitItem(0u, new UnturnedAssetReference(playerClothes.maskAsset.GUID), ClothingType.Mask, playerClothes.maskState));
             }
             if (playerClothes.backpackAsset != null)
             {
-                if (findAssetRedirects && playerFaction != null && false/*(type = TeamManager.GetClothingRedirect(playerClothes.backpackAsset.GUID, out string? variant, playerFaction)) != RedirectType.None*/)
+                if (playerFaction != null && assetRedirectService != null && assetRedirectService.TryFindRedirectType(playerClothes.backpackAsset, out type, out FactionInfo? faction, out string? variant, clothingOnly: true) && (faction == null || faction == playerFaction))
                     items.Add(new AssetRedirectClothingKitItem(0u, type, ClothingType.Backpack, variant));
                 else
                     items.Add(new SpecificClothingKitItem(0u, new UnturnedAssetReference(playerClothes.backpackAsset.GUID), ClothingType.Backpack, playerClothes.backpackState));
             }
             if (playerClothes.glassesAsset != null)
             {
-                if (findAssetRedirects && playerFaction != null && false/* (type = TeamManager.GetClothingRedirect(playerClothes.glassesAsset.GUID, out string? variant, playerFaction)) != RedirectType.None*/)
+                if (playerFaction != null && assetRedirectService != null && assetRedirectService.TryFindRedirectType(playerClothes.glassesAsset, out type, out FactionInfo? faction, out string? variant, clothingOnly: true) && (faction == null || faction == playerFaction))
                     items.Add(new AssetRedirectClothingKitItem(0u, type, ClothingType.Glasses, variant));
                 else
                     items.Add(new SpecificClothingKitItem(0u, new UnturnedAssetReference(playerClothes.glassesAsset.GUID), ClothingType.Glasses, playerClothes.glassesState));
@@ -585,7 +649,29 @@ public static class ItemUtility
         player.UnturnedPlayer.equipment.sendSlot(0);
         player.UnturnedPlayer.equipment.sendSlot(1);
     }
-    
+
+    /// <summary>
+    /// Sets and replicates the player's clothing at a given slot.
+    /// </summary>
+    /// <remarks>Requires <see cref="SupportsFastKits"/> to be <see langword="true"/>.</remarks>
+    public static void SendWearClothing(Player player, ItemAsset? asset, ClothingType type, byte quality, byte[] state, bool playEffect)
+    {
+        ClientInstanceMethod<Guid, byte, byte[], bool> inv =
+            (type switch
+            {
+                ClothingType.Shirt => SendWearShirt,
+                ClothingType.Pants => SendWearPants,
+                ClothingType.Hat => SendWearHat,
+                ClothingType.Backpack => SendWearBackpack,
+                ClothingType.Vest => SendWearVest,
+                ClothingType.Mask => SendWearMask,
+                ClothingType.Glasses => SendWearGlasses,
+                _ => null
+            })!;
+
+        inv.InvokeAndLoopback(player.clothing.GetNetId(), ENetReliability.Reliable, Provider.GatherRemoteClientConnections(), asset?.GUID ?? Guid.Empty, quality, state, playEffect);
+    }
+
     /// <summary>
     /// Effeciently remove all items and clothes from a player's inventory.
     /// </summary>
@@ -601,8 +687,9 @@ public static class ItemUtility
             comp.ItemTransformations.Clear();
             comp.ItemDropTransformations.Clear();
         }
+
         Player nativePlayer = player.UnturnedPlayer;
-        if (false /*Data.UseFastKits*/)
+        if (SupportsFastKits)
         {
             // clears the inventory quickly
             nativePlayer.equipment.dequip();
@@ -623,14 +710,14 @@ public static class ItemUtility
                 byte c = inv[i].getItemCount();
                 for (byte it = 0; it < c; ++it)
                 {
-                    //player.SendItemRemove(i, inv[i].items[it]);
+                    SendItemRemove!.Invoke(nativePlayer.inventory, i, inv[i].items[it]);
                 }
             }
 
             Items pg = inv[PlayerInventory.SLOTS];
             pg.clear();
 
-            bool[,] itemMask = Data.GetItemsSlots(pg);
+            bool[,] itemMask = GetItemsSlots!(pg);
             for (int x = 0; x < pg.width; ++x)
             {
                 for (int y = 0; y < pg.height; ++y)
@@ -649,19 +736,19 @@ public static class ItemUtility
                 byte[] blank = Array.Empty<byte>();
                 NetId id = nativePlayer.clothing.GetNetId();
                 if (nativePlayer.clothing.shirt != 0)
-                    Data.SendWearShirt!.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.GatherRemoteClientConnections(), Guid.Empty, 100, blank, false);
+                    SendWearShirt!.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.GatherRemoteClientConnections(), Guid.Empty, 100, blank, false);
                 if (nativePlayer.clothing.pants != 0)
-                    Data.SendWearPants!.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.GatherRemoteClientConnections(), Guid.Empty, 100, blank, false);
+                    SendWearPants!.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.GatherRemoteClientConnections(), Guid.Empty, 100, blank, false);
                 if (nativePlayer.clothing.hat != 0)
-                    Data.SendWearHat!.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.GatherRemoteClientConnections(), Guid.Empty, 100, blank, false);
+                    SendWearHat!.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.GatherRemoteClientConnections(), Guid.Empty, 100, blank, false);
                 if (nativePlayer.clothing.backpack != 0)
-                    Data.SendWearBackpack!.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.GatherRemoteClientConnections(), Guid.Empty, 100, blank, false);
+                    SendWearBackpack!.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.GatherRemoteClientConnections(), Guid.Empty, 100, blank, false);
                 if (nativePlayer.clothing.vest != 0)
-                    Data.SendWearVest!.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.GatherRemoteClientConnections(), Guid.Empty, 100, blank, false);
+                    SendWearVest!.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.GatherRemoteClientConnections(), Guid.Empty, 100, blank, false);
                 if (nativePlayer.clothing.mask != 0)
-                    Data.SendWearMask!.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.GatherRemoteClientConnections(), Guid.Empty, 100, blank, false);
+                    SendWearMask!.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.GatherRemoteClientConnections(), Guid.Empty, 100, blank, false);
                 if (nativePlayer.clothing.glasses != 0)
-                    Data.SendWearGlasses!.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.GatherRemoteClientConnections(), Guid.Empty, 100, blank, false);
+                    SendWearGlasses!.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.GatherRemoteClientConnections(), Guid.Empty, 100, blank, false);
             }
         }
         else
@@ -712,7 +799,7 @@ public static class ItemUtility
     /// <summary>
     /// Replace a player's inventory with the given kit item abstractions.
     /// </summary>
-    public static void GiveItems(WarfarePlayer player, IKitItem[] items, ILogger logger, bool clear)
+    public static void GiveItems(WarfarePlayer player, IKitItem[] items, ILogger logger, AssetRedirectService assetRedirectService, IFactionDataStore factionDataStore, bool clear)
     {
         GameThread.AssertCurrent();
         if (!player.IsOnline)
@@ -721,82 +808,51 @@ public static class ItemUtility
         if (clear)
             ClearInventory(player, true);
 
-        FactionInfo faction = player.Team.Faction;
+        Team team = player.Team;
         Player nativePlayer = player.UnturnedPlayer;
 
-        if (Data.UseFastKits)
+        if (SupportsFastKits)
         {
-            NetId id = nativePlayer.clothing.GetNetId();
-            byte flag = 0;
+            int flag = 0;
             bool hasPlayedEffect = false;
             for (int i = 0; i < items.Length; ++i)
             {
                 IKitItem item = items[i];
                 if (item is not IClothingKitItem clothingJar)
                     continue;
-                ItemAsset? asset = item.GetItem(null, faction, out _, out byte[] state);
+                ItemAsset? asset = item.GetItem(null, team, out _, out byte[] state, assetRedirectService, factionDataStore);
                 if (asset == null || asset.type != clothingJar.Type.GetItemType())
                     continue;
 
                 if ((flag & (1 << (int)clothingJar.Type)) != 0)
                     continue;
                 
-                flag |= (byte)(1 << (int)clothingJar.Type);
-                ClientInstanceMethod<Guid, byte, byte[], bool>? inv =
-                    clothingJar.Type switch
-                    {
-                        ClothingType.Shirt => Data.SendWearShirt,
-                        ClothingType.Pants => Data.SendWearPants,
-                        ClothingType.Hat => Data.SendWearHat,
-                        ClothingType.Backpack => Data.SendWearBackpack,
-                        ClothingType.Vest => Data.SendWearVest,
-                        ClothingType.Mask => Data.SendWearMask,
-                        ClothingType.Glasses => Data.SendWearGlasses,
-                        _ => null
-                    };
-
-                if (inv == null)
-                    continue;
-
-                inv.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.GatherRemoteClientConnections(), asset.GUID, 100, state, !hasPlayedEffect);
+                flag |= 1 << (int)clothingJar.Type;
+                SendWearClothing(nativePlayer, asset, clothingJar.Type, 100, state, !hasPlayedEffect);
                 hasPlayedEffect = true;
             }
 
             byte[] blank = Array.Empty<byte>();
             for (int i = 0; i < 7; ++i)
             {
-                if (((flag >> i) & 1) == 1)
+                if (((flag >> i) & 1) != 0)
                     continue;
 
-                ((ClothingType)i switch
-                {
-                    ClothingType.Shirt => Data.SendWearShirt,
-                    ClothingType.Pants => Data.SendWearPants,
-                    ClothingType.Hat => Data.SendWearHat,
-                    ClothingType.Backpack => Data.SendWearBackpack,
-                    ClothingType.Vest => Data.SendWearVest,
-                    ClothingType.Mask => Data.SendWearMask,
-                    ClothingType.Glasses => Data.SendWearGlasses,
-                    _ => null
-                })?.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.GatherRemoteClientConnections(), Guid.Empty, 100, blank, false);
+                SendWearClothing(nativePlayer, null, (ClothingType)i, 100, blank, false);
             }
 
             Items[] p = nativePlayer.inventory.items;
 
-            bool oldOwnerHasInventoryValue = Data.GetOwnerHasInventory(nativePlayer.inventory);
-            if (oldOwnerHasInventoryValue)
-            {
-                Data.SetOwnerHasInventory(nativePlayer.inventory, false);
-            }
+            IsolateInventory(nativePlayer, out bool oldValue);
 
-            List<(Item, IPageKitItem)>? toAddLater = null;
+            List<Item>? toAddLater = null;
             for (int i = 0; i < items.Length; ++i)
             {
                 IKitItem item = items[i];
                 if (item is not IPageKitItem jar)
                     continue;
 
-                ItemAsset? asset = item.GetItem(null, faction, out byte amt, out byte[] state);
+                ItemAsset? asset = item.GetItem(null, team, out byte amt, out byte[] state, assetRedirectService, factionDataStore);
                 if ((int)jar.Page < PlayerInventory.PAGES - 2 && asset != null)
                 {
                     Items page = p[(int)jar.Page];
@@ -808,14 +864,14 @@ public static class ItemUtility
                         {
                             logger.LogWarning("[GIVE ITEMS] Duplicate {0} defined: {1}.", jar.Page.ToString().ToLowerInvariant(), item);
                             logger.LogInformation("[GIVE ITEMS] Removing {0} in place of duplicate.", page.items[0].GetAsset().itemName);
-                            (toAddLater ??= new List<(Item, IPageKitItem)>(2)).Add((page.items[0].item, jar));
+                            (toAddLater ??= new List<Item>(4)).Add(page.items[0].item);
                             page.removeItem(0);
                         }
                     }
                     else if (IsOutOfBounds(page, jar.X, jar.Y, asset.size_x, asset.size_y, jar.Rotation))
                     {
                         logger.LogWarning("Out of bounds item in {0} defined: {1}.", jar.Page, item);
-                        (toAddLater ??= new List<(Item, IPageKitItem)>(2)).Add((itm, jar));
+                        (toAddLater ??= new List<Item>(4)).Add(itm);
                         continue;
                     }
 
@@ -829,7 +885,7 @@ public static class ItemUtility
                         logger.LogWarning("[GIVE ITEMS] Overlapping item in {0} defined: {1}.", jar.Page, item);
                         logger.LogInformation("[GIVE ITEMS] Removing {0} ({1}, {2} @ {3}), in place of duplicate.", jar2.GetAsset().itemName, jar2.x, jar2.y, jar2.rot);
                         page.removeItem((byte)j--);
-                        (toAddLater ??= new List<(Item, IPageKitItem)>(2)).Add((jar2.item, jar));
+                        (toAddLater ??= new List<Item>(4)).Add(jar2.item);
                     }
 
                     page.addItem(jar.X, jar.Y, jar.Rotation, itm);
@@ -845,7 +901,7 @@ public static class ItemUtility
             {
                 for (int i = 0; i < toAddLater.Count; ++i)
                 {
-                    (Item item, _) = toAddLater[i];
+                    Item item = toAddLater[i];
                     logger.LogWarning("[GIVE ITEMS] Had to re-add item: {0}.", item.GetAsset()?.itemName);
                     if (!nativePlayer.inventory.tryAddItemAuto(item, false, false, false, !hasPlayedEffect))
                     {
@@ -857,11 +913,7 @@ public static class ItemUtility
                 }
             }
 
-            if (oldOwnerHasInventoryValue)
-            {
-                Data.SetOwnerHasInventory(nativePlayer.inventory, true);
-            }
-
+            UndoIsolateInventory(nativePlayer, oldValue);
             SendPages(player);
         }
         else
@@ -871,7 +923,7 @@ public static class ItemUtility
                 if (item is not IClothingKitItem clothing)
                     continue;
 
-                ItemAsset? asset = item.GetItem(null, faction, out byte amt, out byte[] state);
+                ItemAsset? asset = item.GetItem(null, team, out byte amt, out byte[] state, assetRedirectService, factionDataStore);
                 if (asset is null)
                 {
                     logger.LogWarning("[GIVE ITEMS] Unknown asset: {0}.", clothing);
@@ -937,7 +989,7 @@ public static class ItemUtility
                 if (item is IClothingKitItem)
                     continue;
 
-                ItemAsset? asset = item.GetItem(null, faction, out byte amt, out byte[] state);
+                ItemAsset? asset = item.GetItem(null, team, out byte amt, out byte[] state, assetRedirectService, factionDataStore);
                 if (asset is null)
                 {
                     logger.LogWarning("[GIVE ITEMS] Unknown asset: {0}.", item);
@@ -966,8 +1018,9 @@ public static class ItemUtility
         GameThread.AssertCurrent();
         if (!player.IsOnline)
             return;
+
         Items[] il = player.UnturnedPlayer.inventory.items;
-        Data.SendInventory!.Invoke(player.UnturnedPlayer.inventory.GetNetId(), ENetReliability.Reliable, player.Connection,
+        SendInventory!.Invoke(player.UnturnedPlayer.inventory.GetNetId(), ENetReliability.Reliable, player.Connection,
             writer =>
             {
                 for (int i = 0; i < PlayerInventory.PAGES - 2; ++i)

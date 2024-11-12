@@ -136,24 +136,32 @@ public class WarfarePlayer : IPlayer, ICommandUser, IComponentContainer<IPlayerC
         }
     }
 
-    /// <summary>
-    /// Get the given component type from <see cref="Components"/>.
-    /// </summary>
-    /// <remarks>Always returns a value or throws.</remarks>
-    /// <exception cref="ComponentNotFoundException">Component not found.</exception>
+    /// <inheritdoc />
     [Pure]
-    public TComponentType Component<TComponentType>() where TComponentType : IPlayerComponent
+    public TComponentType Component<TComponentType>() where TComponentType : class, IPlayerComponent
     {
         return _components.Get<TComponentType, WarfarePlayer>(this);
     }
 
-    /// <summary>
-    /// Get the given component type from <see cref="Components"/>.
-    /// </summary>
+    /// <inheritdoc />
     [Pure]
-    public TComponentType? ComponentOrNull<TComponentType>() where TComponentType : IPlayerComponent
+    public TComponentType? ComponentOrNull<TComponentType>() where TComponentType : class, IPlayerComponent
     {
-        return _components.TryGet(out TComponentType? comp) ? comp : default;
+        return _components.TryGet(out TComponentType? comp) ? comp : null;
+    }
+
+    /// <inheritdoc />
+    [Pure]
+    public object Component(Type t)
+    {
+        return _components.Get(t, this);
+    }
+
+    /// <inheritdoc />
+    [Pure]
+    public object? ComponentOrNull(Type t)
+    {
+        return _components.TryGet(t, out object? comp) ? comp : null;
     }
 
     public void UpdateTeam(Team team)

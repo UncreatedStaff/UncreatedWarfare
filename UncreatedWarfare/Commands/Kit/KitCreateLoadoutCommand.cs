@@ -17,6 +17,7 @@ internal class KitCreateLoadoutCommand : IExecutableCommand
     private readonly KitManager _kitManager;
     private readonly IKitsDbContext _dbContext;
     private readonly IUserDataService _userDataService;
+    private readonly AssetRedirectService _assetRedirectService;
     public CommandContext Context { get; set; }
 
     public KitCreateLoadoutCommand(IServiceProvider serviceProvider)
@@ -25,6 +26,7 @@ internal class KitCreateLoadoutCommand : IExecutableCommand
         _translations = serviceProvider.GetRequiredService<TranslationInjection<KitCommandTranslations>>().Value;
         _dbContext = serviceProvider.GetRequiredService<IKitsDbContext>();
         _userDataService = serviceProvider.GetRequiredService<IUserDataService>();
+        _assetRedirectService = serviceProvider.GetRequiredService<AssetRedirectService>();
 
         _dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
     }
@@ -45,7 +47,7 @@ internal class KitCreateLoadoutCommand : IExecutableCommand
 
         Kit loadout = await _kitManager.Loadouts.CreateLoadout(_dbContext, Context.CallerId, steam64, @class, signText, token).ConfigureAwait(false);
         
-        loadout.SetItemArray(ItemUtility.ItemsFromInventory(Context.Player, findAssetRedirects: true), _dbContext);
+        loadout.SetItemArray(ItemUtility.ItemsFromInventory(Context.Player, assetRedirectService: _assetRedirectService), _dbContext);
 
         await _dbContext.SaveChangesAsync(CancellationToken.None);
 

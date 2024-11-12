@@ -9,6 +9,7 @@ using Uncreated.Framework.UI.Patterns;
 using Uncreated.Framework.UI.Reflection;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Interaction.Commands;
+using Uncreated.Warfare.Interaction.Requests;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Models.Kits;
@@ -512,7 +513,7 @@ public class KitMenuUI : UnturnedUI
         
         ValInfoType.SetText(c, GetTypeString(player, kit.Type));
 
-        List<SimplifiedItemListEntry> groups = kit.SimplifiedItemList;
+        List<SimplifiedItemListEntry> groups = new List<SimplifiedItemListEntry>(0);// todo kit.SimplifiedItemList;
         int index = 0;
         for (int i = 0; i < groups.Count; ++i)
         {
@@ -797,7 +798,7 @@ public class KitMenuUI : UnturnedUI
                 if (kit == null)
                     return;
 
-                await kitManager.Requests.RequestKit(kit, CommandContext.CreateTemporary(ucp, _serviceProvider), tkn);
+                await kitManager.Requests.RequestAsync(ucp, kit, /* todo custom result handler */ ActivatorUtilities.CreateInstance<RequestCommandResultHandler>(_serviceProvider), tkn);
             }
             catch (Exception ex)
             {

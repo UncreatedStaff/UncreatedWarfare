@@ -1,4 +1,5 @@
 ﻿using System;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Teams;
@@ -47,9 +48,10 @@ public class SpecificClothingKitItem : IClothingKitItem, ISpecificKitItem
     {
         return HashCode.Combine(Type, Item, State.Length);
     }
-    public ItemAsset? GetItem(Kit? kit, FactionInfo? targetTeam, out byte amount, out byte[] state)
+    public ItemAsset? GetItem(Kit? kit, Team targetTeam, out byte amount, out byte[] state, AssetRedirectService assetRedirectService, IFactionDataStore factionDataStore)
     {
-        if (!Provider.isInitialized) throw new InvalidOperationException("Not loaded.");
+        if (!Provider.isInitialized)
+            throw new InvalidOperationException("Not loaded.");
 
         amount = 1;
 

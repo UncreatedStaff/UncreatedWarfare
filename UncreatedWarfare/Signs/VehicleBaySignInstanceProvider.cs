@@ -21,20 +21,22 @@ public class VehicleBaySignInstanceProvider : ISignInstanceProvider
     private static readonly StringBuilder LoadoutSignBuffer = new StringBuilder(230);
 
     private static readonly Color32 VbsBranchColor = new Color32(155, 171, 171, 255);
+    private static readonly Color32 VbsNameColor = new Color32(255, 255, 255, 255);
 
     private readonly VehicleSpawnerStore _spawnerStore;
     private readonly VehicleInfoStore _infoStore;
     private readonly ITranslationValueFormatter _valueFormatter;
     private readonly VehicleBaySignTranslations _translations;
-    private WarfareVehicleInfo? _vehicle;
-    private VehicleSpawnInfo? _spawnInfo;
     private Guid _fallbackGuid;
     private VehicleAsset? _fallbackAsset;
     private BarricadeDrop _barricade;
     private VehicleSpawnerComponent? _component;
 
+    public VehicleSpawnInfo? Spawn { get; private set; }
+    public WarfareVehicleInfo? Vehicle { get; private set; }
+
     /// <inheritdoc />
-    bool ISignInstanceProvider.CanBatchTranslate => _vehicle == null || _spawnInfo == null || _vehicle.Class == Class.None;
+    bool ISignInstanceProvider.CanBatchTranslate => Vehicle == null || Spawn == null || Vehicle.Class == Class.None;
 
     /// <inheritdoc />
     string ISignInstanceProvider.FallbackText => _fallbackAsset != null ? _fallbackAsset.vehicleName : _fallbackGuid.ToString("N", CultureInfo.InvariantCulture);
@@ -56,28 +58,27 @@ public class VehicleBaySignInstanceProvider : ISignInstanceProvider
         if (Guid.TryParseExact(extraInfo, "N", out _fallbackGuid))
             _fallbackAsset = Assets.find<VehicleAsset>(_fallbackGuid);
 
-        uint instId = barricade.instanceID;
-
-        _spawnInfo = _spawnerStore.Spawns.FirstOrDefault(x => x.SignInstanceIds.Any(x => x.InstanceId == instId));
-        _vehicle = _spawnInfo == null ? null : _infoStore.Vehicles.FirstOrDefault(x => x.Vehicle.MatchAsset(_spawnInfo.Vehicle));
         _barricade = barricade;
     }
 
     public string Translate(ITranslationValueFormatter formatter, IServiceProvider serviceProvider, LanguageInfo language, CultureInfo culture, WarfarePlayer? player)
     {
+        Spawn ??= _spawnerStore.Spawns.FirstOrDefault(x => x.SignInstanceIds.Any(x => x.InstanceId == _barricade.instanceID));
+        Vehicle ??= Spawn == null ? null : _infoStore.Vehicles.FirstOrDefault(x => x.Vehicle.MatchAsset(Spawn.Vehicle));
+
         if (_component == null)
         {
-            _component = _barricade.model.GetComponent<VehicleSpawnerComponent>();
+            _component = Spawn?.Spawner.Model.GetComponent<VehicleSpawnerComponent>();
         }
 
-        if (_vehicle == null || _spawnInfo == null || _component == null)
+        if (Vehicle == null || Spawn == null || _component == null)
         {
             return _fallbackAsset?.vehicleName ?? _fallbackGuid.ToString("N", CultureInfo.InvariantCulture);
         }
 
         try
         {
-            TranslateKitSign(LoadoutSignBuffer, _vehicle, _component, language, culture, player);
+            TranslateKitSign(LoadoutSignBuffer, Vehicle, _component, language, culture, player);
             return LoadoutSignBuffer.ToString();
         }
         finally
@@ -89,7 +90,7 @@ public class VehicleBaySignInstanceProvider : ISignInstanceProvider
     private void TranslateKitSign(StringBuilder bldr, WarfareVehicleInfo info, VehicleSpawnerComponent component, LanguageInfo language, CultureInfo culture, WarfarePlayer? player)
     {
         string name = info.ShortName ?? info.Vehicle.GetAsset()?.FriendlyName ?? info.Vehicle.ToString();
-        bldr.Append(name)
+        bldr.AppendColorized(name, VbsNameColor)
             .Append('\n')
             .AppendColorized(_valueFormatter.FormatEnum(info.Branch, language), VbsBranchColor)
             .Append('\n');

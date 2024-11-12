@@ -332,7 +332,7 @@ public class VehicleComponent : MonoBehaviour
             // Data.Singletons.GetSingleton<FOBManager>()?.FindNearestFOB<FOB>(e.Player.Position, e.Player.GetTeam()) == null
             )
         {
-            _tipService.TryGiveTip(e.Player, 300, T.TipPlaceRadio);
+            // todo _tipService.TryGiveTip(e.Player, 300, T.TipPlaceRadio);
         }
 
         if (e.Vehicle.passengers.Length > 0 && e.Vehicle.passengers[0] == null || e.Vehicle.passengers[0].player == null ||

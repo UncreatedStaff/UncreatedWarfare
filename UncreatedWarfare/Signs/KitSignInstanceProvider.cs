@@ -2,6 +2,7 @@
 using System;
 using System.Globalization;
 using System.Text;
+using Uncreated.Warfare.Interaction.Requests;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Localization;
@@ -17,7 +18,7 @@ namespace Uncreated.Warfare.Signs;
 
 [SignPrefix("kit_")]
 [SignPrefix("loadout_")]
-public class KitSignInstanceProvider : ISignInstanceProvider
+public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>
 {
     private readonly KitManager _kitManager;
     private readonly IPlayerService _playerService;

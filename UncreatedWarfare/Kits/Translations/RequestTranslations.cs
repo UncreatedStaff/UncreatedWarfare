@@ -1,5 +1,6 @@
 ﻿using System;
 using Uncreated.Warfare.FOBs.Deployment;
+using Uncreated.Warfare.Interaction.Requests;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.NewQuests;
 using Uncreated.Warfare.Players;
@@ -13,7 +14,26 @@ using Uncreated.Warfare.Zones;
 namespace Uncreated.Warfare.Kits.Translations;
 public class RequestTranslations : PropertiesTranslationCollection
 {
-    protected override string FileName => "Requests";
+    protected override string FileName => "Requests/Common";
+
+    [TranslationData("Sends a generic request error that's used to abstract requests a bit more.")]
+    public readonly Translation<string> RequestError = new Translation<string>("<#ff8c69>Unable to fufill request: {0}.");
+    
+    [TranslationData("Sends a generic successful request message that's used to abstract requests a bit more.")]
+    public readonly Translation<IRequestable<object>> RequestedSuccess = new Translation<IRequestable<object>>("<#9cffb3>Fufilled request for {0}.");
+
+    [TranslationData("Sent when a player tries to request something that requires purchasing.", "Total credits required")]
+    public readonly Translation<int> RequestNotOwnedCreditsCanAfford = new Translation<int>("<#99918d>Look at this sign and type '<#ffe2ab>/buy</color>' to unlock this permanently for <#b8ffc1>C </color><#ffffff>{0}</color>.");
+
+    [TranslationData("Sent when a player tries to request something that requires purchasing, but they can't afford the kit yet.", "The player's current balance", "Total credits required")]
+    public readonly Translation<int, int> RequestNotOwnedCreditsCantAfford = new Translation<int, int>("<#a8918a>You only have <#b8ffc1>C </color><#ffffff>{0}</color> / <#b8ffc1>C </color><#ffffff>{1}</color> needed to unlock this.");
+
+    [TranslationData("Sent when a player tries to request something that costs real money.")]
+    public readonly Translation<string> RequestNotOwnedDonor = new Translation<string>("<#a8918a>You don't have access to this premium content. This is available for <#ffffff>{0}</color> and can be purchased in our <#7483c4>Discord</color>.");
+
+    [TranslationData("Sent when a player tries to request something that they haven't been given access to, such as an exclusive kit.")]
+    public readonly Translation RequestMissingAccess = new Translation("<#a8918a>You don't have access to this content.");
+
 
     [TranslationData("Gets sent to a player who's discord is not linked to their steam account (part 1).")]
     public readonly Translation DiscordNotLinked1 = new Translation("<#9cffb3>Your account must be linked in our Discord server to use this command.");
@@ -61,13 +81,10 @@ public class RequestTranslations : PropertiesTranslationCollection
     public readonly Translation RequestBuyLoadout = new Translation("<#a8918a>Join our discord (/discord) to purchase a custom loadout..");
 
     [TranslationData("Sent when a player tries to request a kit but the sign isn't linked to an existing kit.")]
-    public readonly Translation RequestKitNotRegistered = new Translation("<#a8918a>This kit has not been created yet.");
+    public readonly Translation RequestKitNotRegistered = new Translation("<#a8918a>This has not been created yet.");
 
     [TranslationData("Sent when a player tries to request a kit they already have.")]
     public readonly Translation RequestKitAlreadyOwned = new Translation("<#a8918a>You already have this kit. Type /ammo on an <#cedcde>AMMO CRATE</color> to restock your kit.");
-
-    [TranslationData("Sent when a player tries to request a kit that needs upgraded from a previous season.")]
-    public readonly Translation RequestKitNeedsUpgrade = new Translation("<#a8918a>This kit needs to be upgraded. Use <#fff>/request upgrade</color> to start a ticket.");
 
     [TranslationData("Sent when a player tries to request a kit that is currently being upgraded.")]
     public readonly Translation RequestKitNeedsSetup = new Translation("<#a8918a>This kit needs to be setup by an admin. Check your upgrade ticket.");
@@ -81,17 +98,8 @@ public class RequestTranslations : PropertiesTranslationCollection
     [TranslationData("Sent when a player tries to request a kit that is blacklisted for the player's team.")]
     public readonly Translation RequestKitFactionBlacklisted = new Translation("<#a8918a>Your team is not allowed to use this kit.");
 
-    [TranslationData("Sent when a player tries to request a kit that they haven't been given access to, such as an elite kit.")]
-    public readonly Translation RequestKitMissingAccess = new Translation("<#a8918a>You don't have access to this kit.");
-
     [TranslationData("Sent when a player tries to request a kit that requires Nitro boosting the Discord server.")]
     public readonly Translation RequestKitMissingNitro = new Translation("<#a8918a>You must be <#e00ec9>NITRO BOOSTING</color> to use this kit.");
-
-    [TranslationData("Sent when a player tries to request a kit that requires purchasing.", "Total credits required")]
-    public readonly Translation<int> RequestKitNotBought = new Translation<int>("<#99918d>Look at this sign and type '<#ffe2ab>/buy</color>' to unlock this kit permanently for <#b8ffc1>C </color><#ffffff>{0}</color>.");
-
-    [TranslationData("Sent when a player tries to request a kit that requires purchasing, but they can't afford the kit yet.", "Number of credits missing", "Total credits required")]
-    public readonly Translation<int, int> RequestKitCantAfford = new Translation<int, int>("<#a8918a>You are missing <#b8ffc1>C </color><#ffffff>{0}</color> / <#b8ffc1>C </color><#ffffff>{1}</color> needed to unlock this kit.");
 
     [TranslationData("Sent when a player tries to request a kit that belongs to the other team.", "The team that owns the kit.")]
     public readonly Translation<FactionInfo> RequestKitWrongTeam = new Translation<FactionInfo>("<#a8918a>You must be part of {0} to request this kit.", arg0Fmt: FactionInfo.FormatShortName);
@@ -99,21 +107,12 @@ public class RequestTranslations : PropertiesTranslationCollection
     [TranslationData("Sent when a player tries to buy a kit that's either free or not purchasable using in-game currency.")]
     public readonly Translation RequestNotBuyable = new Translation("<#a8918a>This kit cannot be purchased with credits.");
 
-    [TranslationData("Sent when a player tries to request a kit but there are too many players already using it.")]
-    public readonly Translation<int> RequestKitLimited = new Translation<int>("<#a8918a>Your team already has a max of <#d9e882>{0}</color> players using this kit. Try again later.");
-
     [TranslationData("Sent when a player tries to request a kit but they're too low level.", "Name of the level needed", "Number of the level needed")]
     public readonly Translation<WarfareRank, WarfareRank> RequestKitLowLevel = new Translation<WarfareRank, WarfareRank>("<#b3ab9f>You must be <#ffc29c>{0}</color> ({1}) to use this kit.", arg0Fmt: WarfareRank.FormatName, arg1Fmt: WarfareRank.FormatLPrefixedNumeric);
 
     [TranslationData("Sent when a player tries to request a kit but they're missing a completed quest.", "Name of the quest")]
     public readonly Translation<QuestAsset> RequestKitQuestIncomplete = new Translation<QuestAsset>("<#b3ab9f>You have to complete {0} to request this kit.", arg0Fmt: QuestTemplate.FormatColorQuestAsset);
 
-    [TranslationData("Sent when a player tries to request a kit but they have to be a Squad Leader.")]
-    public readonly Translation RequestKitNotSquadleader = new Translation("<#b3ab9f>You must be a <#cedcde>SQUAD LEADER</color> in order to get this kit.");
-
-    [TranslationData("Sent when a player tries to request a loadout from an empty loadout sign.")]
-    public readonly Translation RequestLoadoutNotOwned = new Translation("<#a8918a>You do not own this loadout.");
-    
     [TranslationData("Sent when a player tries to request a vehicle but they don't have enough credits.", "Number of credits missing", "Total credits required")]
     public readonly Translation<int, int> RequestVehicleCantAfford = new Translation<int, int>("<#a8918a>You are missing <#b8ffc1>C </color><#ffffff>{0}</color> / <#b8ffc1>C </color><#ffffff>{1}</color> needed to request this vehicle.");
     
@@ -252,4 +251,46 @@ public class RequestTranslations : PropertiesTranslationCollection
     [TranslationData("Sent when a player tries to request a trait but it's delayed by a minimum teammate count delay.")]
     public readonly Translation<int> RequestTraitTeammatesDelay = new Translation<int>("<#b3ab9f>This trait is delayed until <#c$vbs_delay$>{0}v{0}</color> players online.");
     #endregion
+}
+
+public class RequestKitsTranslations : PropertiesTranslationCollection
+{
+    protected override string FileName => "Requests/Kits";
+
+    [TranslationData("Sent when a player tries to request a kit that needs upgraded from a previous season.")]
+    public readonly Translation NeedsUpgrade = new Translation("Upgrade required");
+
+    [TranslationData("Sent when a player tries to request a kit that needs to be set up by an admin, or is in the process of being set up.")]
+    public readonly Translation NeedsSetup = new Translation("Set up required by admin");
+
+    [TranslationData("Sent when a player tries to request a kit that is disabled or out of date.")]
+    public readonly Translation KitDisabled = new Translation("Kit disabled");
+
+    [TranslationData("Sent when a player tries to request a kit that is disabled on the current map.")]
+    public readonly Translation KitMapNotAllowed = new Translation("Kit not allowed on this map");
+
+    [TranslationData("Sent when a player tries to request a kit that is disabled for their team.")]
+    public readonly Translation KitTeamNotAllowed = new Translation("Kit not allowed for your team");
+
+    [TranslationData("Sent when a player tries to request a kit but there are too many players already using it.")]
+    public readonly Translation<int> RequestKitLimited = new Translation<int>("Too many players (<#d9e882>{0}</color>) using kit");
+    
+    [TranslationData("Sent when a player tries to request a kit but there are too many players already using the same class of kit.")]
+    public readonly Translation<int, Class> RequestKitClassLimited = new Translation<int, Class>("Too many players (<#d9e882>{0}</color>) using <#cedcde>{1}</color>", arg1Fmt: UppercaseAddon.Instance);
+
+    [TranslationData("Sent when a player tries to request a kit but they have to be a Squad Leader.")]
+    public readonly Translation RequestKitNotSquadleader = new Translation("<#cedcde>SQUAD LEADER</color> required");
+
+    [TranslationData("Sent when a player tries to request a kit but it's already equipped.")]
+    public readonly Translation AlreadyEquipped = new Translation("Kit already equipped. Use /ammo to refill your kit");
+
+    [TranslationData("Sent when a player tries to request a kit but they're on a global cooldown.")]
+    public readonly Translation<Cooldown> OnGlobalCooldown = new Translation<Cooldown>("On cooldown for another <#bafeff>{0}</color>", arg0Fmt: Cooldown.FormatTimeShort);
+
+    [TranslationData("Sent when a player tries to request a premium kit but they're on a cooldown.")]
+    public readonly Translation<Cooldown> OnCooldown = new Translation<Cooldown>("Premium kit on cooldown for another <#bafeff>{0}</color>", arg0Fmt: Cooldown.FormatTimeShort);
+    
+    [TranslationData("Sent when a player tries to request a premium kit that requires boosting in Discord but they aren't.")]
+    public readonly Translation<Cooldown> RequiresNitroBoost = new Translation<Cooldown>("Requires <#e00ec9>NITRO BOOST</color> in <#7483c4>Discord</color>", arg0Fmt: Cooldown.FormatTimeShort);
+
 }

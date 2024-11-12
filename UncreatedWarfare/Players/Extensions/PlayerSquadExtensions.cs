@@ -30,6 +30,15 @@ public static class PlayerSquadExtensions
     }
 
     /// <summary>
+    /// Gets if a player is currently a member in a squad but not a leader.
+    /// </summary>
+    public static bool IsNonLeaderSquadMember(this WarfarePlayer player)
+    {
+        Squad? squad = player.Component<SquadPlayerComponent>().Squad;
+        return squad != null && !squad.Leader.Equals(player);
+    }
+
+    /// <summary>
     /// Gets if a player is currently in a squad which can no longer fit any more members.
     /// </summary>
     public static bool IsInFullSquad(this WarfarePlayer player)

@@ -1,11 +1,11 @@
-﻿using DanielWillett.ModularRpcs.Reflection;
+﻿using DanielWillett.ModularRpcs.Annotations;
+using DanielWillett.ModularRpcs.Reflection;
 using DanielWillett.ModularRpcs.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using DanielWillett.ModularRpcs.Annotations;
 using Uncreated.Framework.UI;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database.Abstractions;
@@ -14,7 +14,6 @@ using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Items;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Kits.Items;
-using Uncreated.Warfare.Kits.Whitelists;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Models.Factions;
 using Uncreated.Warfare.Models.Kits;
@@ -49,7 +48,8 @@ public partial class KitManager :
     private readonly IPlayerService _playerService;
     private readonly ILifetimeScope _lifetimeScope;
     private readonly LanguageService _languageService;
-    private readonly WhitelistService _whitelistService;
+    private readonly AssetRedirectService _assetRedirectService;
+    private readonly IFactionDataStore _factionDataStore;
     private readonly WarfareModule _module;
 
     public const string DefaultKitId = "default";
@@ -85,7 +85,8 @@ public partial class KitManager :
         _logger = lifetimeScope.Resolve<ILogger<KitManager>>();
         _playerService = lifetimeScope.Resolve<IPlayerService>();
         _languageService = lifetimeScope.Resolve<LanguageService>();
-        _whitelistService = lifetimeScope.Resolve<WhitelistService>();
+        _assetRedirectService = lifetimeScope.Resolve<AssetRedirectService>();
+        _factionDataStore = lifetimeScope.Resolve<IFactionDataStore>();
         _module = lifetimeScope.Resolve<WarfareModule>();
 
         MenuUI = lifetimeScope.Resolve<KitMenuUI>();
@@ -144,8 +145,8 @@ public partial class KitManager :
     internal static void ConfigureServices(ContainerBuilder serviceCollection)
     {
         serviceCollection.RegisterRpcType<KitManager>()
-            .AsSelf().AsImplementedInterfaces()
-            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+                         .AsSelf().AsImplementedInterfaces()
+                         .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
 
         serviceCollection.Register(serviceProvider => serviceProvider.Resolve<KitManager>().Cache)
                          .AsSelf().AsImplementedInterfaces()
@@ -603,7 +604,7 @@ public partial class KitManager :
         if (asset == null)
             return null;
 
-        FactionInfo faction = player.Team.Faction;
+        Team team = player.Team;
         foreach (IKitItem item2 in kit.Items)
         {
             if (item2 is not IPageKitItem jar2 || jar2.Page != page || jar2.X != x || jar2.Y != y)
@@ -614,7 +615,7 @@ public partial class KitManager :
                 if (pgItem.Item.Equals(asset.GUID))
                     return jar2;
             }
-            else if (item2.GetItem(kit, faction, out _, out _) is { } asset2 && asset2.GUID == asset.GUID)
+            else if (item2.GetItem(kit, team, out _, out _, _assetRedirectService, _factionDataStore) is { } asset2 && asset2.GUID == asset.GUID)
                 return jar2;
 
             break;
@@ -664,7 +665,7 @@ public partial class KitManager :
                 
                 float percentage = (float)jar.item.amount / asset.amount;
 
-                bool notInKit = !active.ContainsItem(asset.GUID, player?.Team ?? Team.NoTeam);
+                bool notInKit = !active.ContainsItem(asset.GUID, player?.Team ?? Team.NoTeam, _assetRedirectService, _factionDataStore);
                 if (notInKit || (percentage < 0.3f && asset.type != EItemType.GUN))
                 {
                     if (notInKit)
@@ -794,30 +795,6 @@ public partial class KitManager :
         List<Kit> kits = new List<Kit>(Cache.KitDataByKey.Values.Where(x => x is { IsPublicKit: true, Requestable: true }));
         return kits.Count == 0 ? null : kits[RandomUtility.GetIndex((ICollection)kits)];
     }
-
-    // public bool TryCreateSquadOnRequestSquadleaderKit(CommandContext ctx)
-    // {
-    //     if (ctx.Caller.Squad is not null && !ctx.Caller.IsSquadLeader())
-    //     {
-    //         ctx.Reply(T.RequestKitNotSquadleader);
-    //         return false;
-    //     }
-    // 
-    //     if (ctx.Caller.Squad is not null)
-    //         return false;
-    //     
-    //     ulong team = ctx.Caller.GetTeam();
-    //     if (SquadManager.Squads.Count(x => x.Team == team) < 8)
-    //     {
-    //         // create a squad automatically if someone requests a squad leader kit.
-    //         Squad squad = SquadManager.CreateSquad(ctx.Caller, team);
-    //         ctx.Reply(T.SquadCreated, squad);
-    //         return true;
-    //     }
-    // 
-    //     ctx.Reply(T.SquadsTooMany, SquadManager.ListUI.Squads.Length);
-    //     return false;
-    // }
 
     private void ValidateKit(Kit kit, IDbContext context)
     {

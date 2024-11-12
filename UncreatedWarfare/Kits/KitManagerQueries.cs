@@ -307,7 +307,7 @@ partial class KitManager
                     }
                     else continue;
                 }
-                else if (jar.GetItem(kit, player.Team.Faction, out _, out _) is { } ia)
+                else if (jar.GetItem(kit, player.Team, out _, out _, _assetRedirectService, _factionDataStore) is { } ia)
                 {
                     sizeX1 = ia.size_x;
                     sizeY1 = ia.size_y;

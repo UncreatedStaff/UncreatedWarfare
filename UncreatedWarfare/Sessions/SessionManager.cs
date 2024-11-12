@@ -63,6 +63,7 @@ public class SessionManager :
         _logger = logger;
         _dbContext = dbContext;
         _dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
+        _dbContext.ChangeTracker.QueryTrackingBehavior = QueryTrackingBehavior.NoTracking;
         _playerService = playerService;
         _heartbeatTimer = heartbeatTimer;
         _region = systemConfig.GetValue<byte>("region");
@@ -148,8 +149,13 @@ public class SessionManager :
 
             if (previousSession != null)
             {
-                EndPreviousSessionIntl(previousSession, record, record.Steam64);
+                bool removeAndResave = EndPreviousSessionIntl(previousSession, record, record.Steam64);
                 await _dbContext.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
+                if (removeAndResave)
+                {
+                    _dbContext.Remove(previousSession);
+                    await _dbContext.SaveChangesAsync(CancellationToken.None);
+                }
             }
 
             _logger.LogDebug("Created session {0} for: {1}.", record.SessionId, player);
@@ -171,6 +177,7 @@ public class SessionManager :
             WarfarePlayer[] onlinePlayers = _playerService.OnlinePlayers.ToArray();
             SessionRecordPair[] sessionData = new SessionRecordPair[onlinePlayers.Length];
             bool anyPrev = false;
+            List<SessionRecord>? previousToRemove = null;
 
             for (int i = 0; i < onlinePlayers.Length; ++i)
             {
@@ -199,10 +206,21 @@ public class SessionManager :
                     if (previous == null)
                         continue;
 
-                    EndPreviousSessionIntl(previous, sessionData[i].Current, previous.Steam64);
+                    if (!EndPreviousSessionIntl(previous, sessionData[i].Current, previous.Steam64))
+                        continue;
+
+                    (previousToRemove ??= new List<SessionRecord>(4)).Add(previous);
                 }
 
                 await _dbContext.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
+
+                if (previousToRemove != null)
+                {
+                    foreach (SessionRecord r in previousToRemove)
+                        _dbContext.Remove(r);
+
+                    await _dbContext.SaveChangesAsync(CancellationToken.None);
+                }
             }
 
             _logger.LogDebug("Created sessions for all players.");
@@ -213,8 +231,10 @@ public class SessionManager :
         }
     }
 
-    private void EndPreviousSessionIntl(SessionRecord previousSession, SessionRecord record, ulong player)
+    /// <returns>If <paramref name="previousSession"/> needs to be removed after saving changes.</returns>
+    private bool EndPreviousSessionIntl(SessionRecord previousSession, SessionRecord record, ulong player)
     {
+        bool needsRemove = false;
         // check if session is insignificant (no events and elapsed time < 5 seconds)
         if (IsInsignificant(previousSession))
         {
@@ -225,13 +245,18 @@ public class SessionManager :
                 record.PreviousSessionId = doublePreviousSession.SessionId;
                 record.PreviousSession = doublePreviousSession;
                 doublePreviousSession.NextSessionId = record.SessionId;
-                doublePreviousSession.PreviousSession = null;
                 doublePreviousSession.FinishedGame = previousSession.FinishedGame;
                 doublePreviousSession.EndedTimestamp = previousSession.EndedTimestamp;
                 doublePreviousSession.LengthSeconds = (doublePreviousSession.EndedTimestamp!.Value - doublePreviousSession.StartedTimestamp).TotalSeconds;
 
                 FixupSession(_dbContext, doublePreviousSession);
                 _dbContext.Update(doublePreviousSession);
+                if (doublePreviousSession.PreviousSession != null)
+                {
+                    _dbContext.Entry(doublePreviousSession.PreviousSession).State = EntityState.Detached;
+                    doublePreviousSession.PreviousSession = null;
+                }
+                needsRemove = true;
             }
             else
             {
@@ -244,22 +269,28 @@ public class SessionManager :
                 }
             }
 
-            _dbContext.Remove(previousSession);
             _dbContext.Update(record);
+            if (!needsRemove)
+                _dbContext.Remove(previousSession);
 
             _logger.LogConditional("Cut insignificant session {0} for {1}.", previousSession.SessionId, new CSteamID(player));
         }
         else
         {
             previousSession.NextSessionId = record.SessionId;
-
-            // prevent memory leak by keeping every single session since the player joined. the ID is still set
-            previousSession.PreviousSession = null;
             _dbContext.Update(previousSession);
+
+            if (previousSession.PreviousSession != null)
+            {
+                // prevent memory leak by keeping every single session since the player joined. the ID is still set
+                _dbContext.Entry(previousSession.PreviousSession).State = EntityState.Detached;
+                previousSession.PreviousSession = null;
+            }
         }
 
         FixupSession(_dbContext, previousSession);
         FixupSession(_dbContext, record);
+        return needsRemove;
     }
 
     private SessionRecord StartCreatingSession(WarfarePlayer player, bool startedGame, out SessionRecord? previous)
@@ -417,6 +448,22 @@ public class SessionManager :
     void IEventListener<PlayerJoined>.HandleEvent(PlayerJoined e, IServiceProvider serviceProvider)
     {
         _logger.LogDebug("Creating session for {0}. (joined)", e.Player);
+        if (_sessions.TryRemove(e.Steam64.m_SteamID, out SessionRecord r))
+        {
+            _logger.LogWarning("Removed pre-existing session for {0} on join. This should never happen.", e.Player);
+            Task.Run(async () =>
+            {
+                await _semaphore.WaitAsync();
+                try
+                {
+                    _dbContext.Entry(r).State = EntityState.Detached;
+                }
+                finally
+                {
+                    _semaphore.Release();
+                }
+            });
+        }
 
         Task.Run(async () =>
         {

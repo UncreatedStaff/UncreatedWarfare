@@ -1,49 +1,73 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
+using DanielWillett.ReflectionTools;
+using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Containers;
 
 namespace Uncreated.Warfare.Buildables;
 public class BuildableContainer : MonoBehaviour, IComponentContainer<IBuildableComponent>, IManualOnDestroy
 {
+    private readonly List<IBuildableComponent> _components = new List<IBuildableComponent>();
+
     public IBuildable Buildable { get; private set; }
     public DateTime CreateTime { get; private set; }
-    private readonly List<IBuildableComponent> _components = new List<IBuildableComponent>();
 
     public void AddComponent(IBuildableComponent newComponent)
     {
-        if (_components.Exists(c => c.GetType() == newComponent.GetType()))
+        GameThread.AssertCurrent();
+
+        lock (_components)
         {
-            throw new InvalidOperationException($"Container already has a component of type {typeof(T)}. Multiple instances of the same component type are not supported.");
+            if (_components.Exists(c => c.GetType() == newComponent.GetType()))
+            {
+                throw new InvalidOperationException($"Container already has a component of type {typeof(T)}. Multiple instances of the same component type are not supported.");
+            }
+
+            _components.Add(newComponent);
+        }
+    }
+    public T Component<T>() where T : class, IBuildableComponent
+    {
+        return ComponentOrNull<T>() ?? throw new ArgumentException($"Component of type {typeof(T)} not found.");
+    }
+
+    public T? ComponentOrNull<T>() where T : class, IBuildableComponent
+    {
+        IBuildableComponent? component;
+        if (GameThread.IsCurrent)
+        {
+            // ReSharper disable once InconsistentlySynchronizedField
+            component = _components.Find(x => x is T);
+        }
+        else
+        {
+            lock (_components)
+                component = _components.Find(x => x is T);
         }
 
-        _components.Add(newComponent);
-    }
-    public T Component<T>() where T : IBuildableComponent
-    {
-        IBuildableComponent? component = _components.FirstOrDefault(t => t is T);
-        if (component == null)
-            throw new ArgumentException($"Component of type {typeof(T)} not found.");
-        return (T)component;
-    }
-
-    public T? ComponentOrNull<T>() where T : IBuildableComponent
-    {
-        IBuildableComponent? component = _components.FirstOrDefault(t => t is T);
-        if (component == null)
-            return default;
         return (T?)component;
-
     }
-    public bool TryGetFromContainer<T>(out T? result) where T : IBuildableComponent
-    {
-        result = default;
-        IBuildableComponent? component = _components.FirstOrDefault(t => t is T);
-        if (component == null)
-            return false;
-        result = (T?)component;
-        return true;
 
+    public object Component(Type t)
+    {
+        return ComponentOrNull(t) ?? throw new ArgumentException($"Component of type {Accessor.ExceptionFormatter.Format(t)} not found.");
+    }
+
+    public object? ComponentOrNull(Type t)
+    {
+        IBuildableComponent? component;
+        if (GameThread.IsCurrent)
+        {
+            // ReSharper disable once InconsistentlySynchronizedField
+            component = _components.Find(t.IsInstanceOfType);
+        }
+        else
+        {
+            lock (_components)
+                component = _components.Find(t.IsInstanceOfType);
+        }
+
+        return component;
     }
 
     public void Init(IBuildable buildable)
@@ -52,10 +76,13 @@ public class BuildableContainer : MonoBehaviour, IComponentContainer<IBuildableC
         CreateTime = DateTime.Now;
     }
 
-    public void ManualOnDestroy()
+    void IManualOnDestroy.ManualOnDestroy()
     {
-        foreach (var component in _components)
-            component.Dispose();
+        lock (_components)
+        {
+            foreach (var component in _components)
+                component.Dispose();
+        }
 
         Destroy(this);
     }

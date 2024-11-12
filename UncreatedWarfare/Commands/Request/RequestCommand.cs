@@ -1,11 +1,15 @@
-﻿using System.Linq;
+﻿using DanielWillett.ReflectionTools;
+using System;
+using System.Linq;
+using System.Reflection;
+using Microsoft.Extensions.DependencyInjection;
 using Uncreated.Warfare.Interaction.Commands;
-using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Interaction.Requests;
 using Uncreated.Warfare.Kits.Translations;
-using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Signs;
 using Uncreated.Warfare.Translations;
-using Uncreated.Warfare.Vehicles;
+using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Util.Containers;
 
 namespace Uncreated.Warfare.Commands;
 
@@ -13,8 +17,7 @@ namespace Uncreated.Warfare.Commands;
 public sealed class RequestCommand : ICompoundingCooldownCommand
 {
     private readonly SignInstancer _signInstancer;
-    private readonly VehicleSpawnerStore _vehicleSpawners;
-    private readonly KitManager _kitManager;
+    private readonly WarfareModule _module;
     private readonly RequestTranslations _translations;
     public float CompoundMultiplier => 2f;
     public float MaxCooldown => 900f; // 15 mins
@@ -25,12 +28,10 @@ public sealed class RequestCommand : ICompoundingCooldownCommand
     public RequestCommand(
         TranslationInjection<RequestTranslations> translations,
         SignInstancer signInstancer,
-        VehicleSpawnerStore vehicleSpawners,
-        KitManager kitManager)
+        WarfareModule module)
     {
         _signInstancer = signInstancer;
-        _vehicleSpawners = vehicleSpawners;
-        _kitManager = kitManager;
+        _module = module;
         _translations = translations.Value;
     }
 
@@ -39,63 +40,61 @@ public sealed class RequestCommand : ICompoundingCooldownCommand
     {
         Context.AssertRanByPlayer();
 
-        BarricadeDrop? sign = null;
-        InteractableVehicle? vehicle = null;
+        IRequestable<object>? requestable = GetRequestable();
 
-        if (Context.TryGetBarricadeTarget(out BarricadeDrop? barricade))
-        {
-            if (barricade.interactable is InteractableSign)
-                sign = barricade;
-        }
-
-        if (sign == null && !Context.TryGetVehicleTarget(out vehicle, tryCallersVehicleFirst: false))
+        if (requestable == null)
         {
             throw Context.Reply(_translations.RequestNoTarget);
         }
 
-        int? loadoutId = null;
-        string? kitId = null;
-        VehicleSpawnInfo? spawn = null;
+        Type requestSourceType = requestable.GetType();
 
-        if (sign != null)
-        {
-            ISignInstanceProvider? provider = _signInstancer.GetSignProvider(sign);
-            switch (provider)
-            {
-                case KitSignInstanceProvider kit:
-                    loadoutId = kit.LoadoutNumber > 0 ? kit.LoadoutNumber : null;
-                    kitId = kit.KitId;
-                    break;
+        // get value of IRequestable< ? > for 'requestable'
+        Type requestValueType = requestSourceType.GetInterfaces()
+            .First(x => x.IsGenericType && x.GetGenericTypeDefinition() == typeof(IRequestable<>))
+            .GetGenericArguments()[0];
 
-                // todo vehicle bay sign
-            }
-        }
-        else if (vehicle != null)
+        //                           \/ requestSourceType     \/ requestValueType
+        // example: IRequestHandler<KitSignInstanceProvider, Kit>
+        Type requestType = typeof(IRequestHandler<,>).MakeGenericType(requestSourceType, requestValueType);
+
+        object? reqHandler = _module.ScopedProvider.ResolveOptional(requestType);
+        if (reqHandler == null)
         {
-            spawn = _vehicleSpawners.Spawns.FirstOrDefault(x => x.LinkedVehicle == vehicle);
+            Context.Logger.LogError("Missing service for request handler {0}.", requestType);
+            throw Context.SendGamemodeError();
         }
 
-        if (loadoutId.HasValue)
-        {
-            await _kitManager.Requests.RequestLoadout(loadoutId.Value, Context, token);
-        }
-        else if (kitId != null)
-        {
-            Kit? kit = await _kitManager.FindKit(kitId, token, exactMatchOnly: true, static x => KitManager.RequestableSet(x, true));
+        RequestCommandResultHandler resultHandler = ActivatorUtilities.CreateInstance<RequestCommandResultHandler>(_module.ScopedProvider.Resolve<IServiceProvider>());
 
-            if (kit == null)
-                throw Context.Reply(_translations.RequestKitNotRegistered);
+        // gets the implemented RequestAsync method for an interface
+        MethodInfo method = requestType.GetMethod("RequestAsync", BindingFlags.Public | BindingFlags.Instance)!;
+        method = Accessor.GetImplementedMethod(reqHandler.GetType(), method)!;
 
-            await _kitManager.Requests.RequestKit(kit, Context, token);
-        }
-        else if (spawn != null)
+        // call RequestAsync
+        await (Task<bool>)method.Invoke(reqHandler, [ Context.Player, requestable, resultHandler, token ]);
+        Context.Defer();
+    }
+
+    private IRequestable<object>? GetRequestable()
+    {
+        if (!Context.TryGetTargetTransform(out Transform? transform))
         {
-            // todo
-            throw Context.SendNotImplemented();
+            return null;
         }
-        else
+
+        IRequestable<object>? requestable = ContainerHelper.FindComponent<IRequestable<object>>(transform);
+        if (requestable != null)
         {
-            throw Context.Reply(_translations.RequestNoTarget);
+            return requestable;
         }
+
+        if (!Context.TryGetBarricadeTarget(out BarricadeDrop? drop) || drop.interactable is not InteractableSign)
+        {
+            return null;
+        }
+
+        ISignInstanceProvider? provider = _signInstancer.GetSignProvider(drop);
+        return provider as IRequestable<object>;
     }
 }

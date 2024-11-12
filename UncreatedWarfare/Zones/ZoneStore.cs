@@ -185,6 +185,76 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService
     }
 
     /// <summary>
+    /// Finds the closest zone to a point based on it's border.
+    /// </summary>
+    public Zone? FindClosestZone(in Vector3 point, ZoneType? type = null)
+    {
+        return FindClosestZone(in point, out _, type);
+    }
+
+    /// <summary>
+    /// Finds the closest zone to a point based on it's border. Zones with the point inside their borders will return the square distance from the border but negative.
+    /// </summary>
+    public Zone? FindClosestZone(in Vector3 point, out float sqrDistance, ZoneType? type = null)
+    {
+        if (ProximityZones == null)
+        {
+            sqrDistance = float.NaN;
+            return null;
+        }
+
+        float minSqrDistance = float.NaN;
+        Zone? minZone = null;
+        foreach (ZoneProximity proximity in ProximityZones)
+        {
+            Vector3 closestPoint = proximity.Proximity.GetNearestPointOnBorder(in point);
+
+            float d = (point - closestPoint).sqrMagnitude * (proximity.Proximity.TestPoint(in point) ? -1 : 1);
+
+            if (minZone != null && d >= minSqrDistance)
+                continue;
+
+            minZone = proximity.Zone;
+            minSqrDistance = d;
+        }
+
+        sqrDistance = minSqrDistance;
+        return minZone;
+    }
+    
+
+    /// <summary>
+    /// Finds the closest zone to a point based on it's border. Zones with the point inside their borders will return the square distance from the border but negative.
+    /// </summary>
+    public Zone? FindClosestZone(Vector2 point, out float sqrDistance, ZoneType? type = null)
+    {
+        if (ProximityZones == null)
+        {
+            sqrDistance = float.NaN;
+            return null;
+        }
+
+        Vector3 p = new Vector3(point.x, 0f, point.y);
+        float minSqrDistance = float.NaN;
+        Zone? minZone = null;
+        foreach (ZoneProximity proximity in ProximityZones)
+        {
+            Vector3 closestPoint = proximity.Proximity.GetNearestPointOnBorder(in p);
+
+            float d = MathUtility.SquaredDistance(in p, in closestPoint, true) * (proximity.Proximity.TestPoint(in point) ? -1 : 1);
+
+            if (minZone != null && d >= minSqrDistance)
+                continue;
+
+            minZone = proximity.Zone;
+            minSqrDistance = d;
+        }
+
+        sqrDistance = minSqrDistance;
+        return minZone;
+    }
+
+    /// <summary>
     /// Enumerate through all zones that <paramref name="point"/> is inside.
     /// </summary>
     public IEnumerable<Zone> EnumerateInsideZones(Vector3 point, ZoneType? type = null)

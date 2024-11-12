@@ -20,6 +20,7 @@ internal class KitCreateCommand : IExecutableCommand
     private readonly IFactionDataStore _factionStorage;
     private readonly CommandDispatcher _commandDispatcher;
     private readonly IKitsDbContext _dbContext;
+    private readonly AssetRedirectService _assetRedirectService;
     public CommandContext Context { get; set; }
 
     public KitCreateCommand(IServiceProvider serviceProvider)
@@ -29,6 +30,7 @@ internal class KitCreateCommand : IExecutableCommand
         _factionStorage = serviceProvider.GetRequiredService<IFactionDataStore>();
         _commandDispatcher = serviceProvider.GetRequiredService<CommandDispatcher>();
         _dbContext = serviceProvider.GetRequiredService<IKitsDbContext>();
+        _assetRedirectService = serviceProvider.GetRequiredService<AssetRedirectService>();
 
         _dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
     }
@@ -60,7 +62,7 @@ internal class KitCreateCommand : IExecutableCommand
             }
 
             IKitItem[] oldItems = existingKit.Items;
-            IKitItem[] items = ItemUtility.ItemsFromInventory(Context.Player, findAssetRedirects: true);
+            IKitItem[] items = ItemUtility.ItemsFromInventory(Context.Player, assetRedirectService: _assetRedirectService);
             existingKit.SetItemArray(items, _dbContext);
             existingKit.WeaponText = _kitManager.GetWeaponText(existingKit);
             existingKit.UpdateLastEdited(Context.CallerId);
@@ -131,7 +133,7 @@ internal class KitCreateCommand : IExecutableCommand
 
         await UniTask.SwitchToMainThread(token);
 
-        IKitItem[] newItems = ItemUtility.ItemsFromInventory(Context.Player, findAssetRedirects: true);
+        IKitItem[] newItems = ItemUtility.ItemsFromInventory(Context.Player, assetRedirectService: _assetRedirectService);
         kit.SetItemArray(newItems, _dbContext);
 
         kit.Creator = kit.LastEditor = Context.CallerId.m_SteamID;

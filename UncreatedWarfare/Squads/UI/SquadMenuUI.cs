@@ -30,7 +30,7 @@ internal class SquadMenuUI :
     public LabeledButton CloseMenuButton { get; } = new LabeledButton("SquadMenuCloseButton");
     public LabeledStateButton CreateSquadButton { get; } = new LabeledStateButton("CreateSquadButton", "./Label", "./ButtonState");
     public UnturnedTextBox CreateSquadInput { get; } = new UnturnedTextBox("CreateSquadInput") { UseData = true };
-    public SquadMenuElement[] Squads { get; } = ElementPatterns.CreateArray<SquadMenuElement>("ScrollView/Viewport/Content/Squad_{0}/Squad{1}_{0}", 1, to: 8);
+    public SquadMenuElement[] Squads { get; } = ElementPatterns.CreateArray<SquadMenuElement>("ScrollView/Viewport/Content/Squad_{0}/Squad{1}_{0}", 1, to: SquadManager.MaxSquadCount);
     
     public SquadMenuUI(IServiceProvider serviceProvider, AssetConfiguration assetConfig, ILoggerFactory loggerFactory)
         : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:SquadMenuHUD"), /* todo turn off */ debugLogging: true)

@@ -239,8 +239,7 @@ namespace Uncreated.Warfare.Migrations
 
                     b.HasIndex("PlayerDataSteam64");
 
-                    b.HasIndex("PreviousSessionId")
-                        .IsUnique();
+                    b.HasIndex("PreviousSessionId");
 
                     b.HasIndex("SeasonId");
 

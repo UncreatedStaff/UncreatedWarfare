@@ -15,8 +15,7 @@ namespace Uncreated.Warfare.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_stats_sessions_NextSession",
                 table: "stats_sessions",
-                column: "NextSession",
-                unique: true);
+                column: "NextSession");
 
             migrationBuilder.AddForeignKey(
                 name: "FK_stats_sessions_stats_sessions_NextSession",

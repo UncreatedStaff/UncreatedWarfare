@@ -109,6 +109,42 @@ public static class MathUtility
     }
 
     /// <summary>
+    /// Find square distance between two 2D points.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static float SquaredDistance(in Vector2 pos1, in Vector2 pos2)
+    {
+        float dx = pos1.x - pos2.x,
+              dz = pos1.y - pos2.y;
+
+        return dx * dx + dz * dz;
+    }
+
+    /// <summary>
+    /// Find square distance between two 2D points.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static float SquaredDistance(in Vector2 pos1, in Vector3 pos2)
+    {
+        float dx = pos1.x - pos2.x,
+              dz = pos1.y - pos2.z;
+
+        return dx * dx + dz * dz;
+    }
+    
+    /// <summary>
+    /// Find square distance between two 2D points.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static float SquaredDistance(in Vector3 pos1, in Vector2 pos2)
+    {
+        float dx = pos1.x - pos2.x,
+              dz = pos1.z - pos2.y;
+
+        return dx * dx + dz * dz;
+    }
+
+    /// <summary>
     /// Returns true if <paramref name="pos1"/> and <paramref name="pos2"/> are less than <paramref name="range"/> units away from each other, otherwise false. Compares using square magnitude for speed.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

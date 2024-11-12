@@ -1,8 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using SDG.Unturned;
 using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Components;
@@ -155,7 +152,7 @@ public class BasePlayableFob : IResourceFob, IDisposable
     }
     private float GetProxyScore(WarfarePlayer enemy)
     {
-        if (enemy.UnturnedPlayer.life.isDead /*|| enemy.IsInVehicle*/) // todo: check if in vehicle
+        if (enemy.UnturnedPlayer.life.isDead || enemy.UnturnedPlayer.movement.getVehicle() != null)
             return 0;
 
         float distanceFromFob = (enemy.Position - Position).magnitude;

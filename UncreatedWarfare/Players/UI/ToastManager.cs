@@ -4,6 +4,7 @@ using SDG.NetTransport;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Layouts.UI;
 using Uncreated.Warfare.Players.Management;
@@ -14,6 +15,8 @@ namespace Uncreated.Warfare.Players.UI;
 [PlayerComponent]
 public sealed class ToastManager : IPlayerComponent
 {
+    internal static readonly Regex PluginKeyMatch = new Regex(@"\<plugin_\d\/\>", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
     private static int _channelCount;
     private static bool _initialized;
 
@@ -39,16 +42,16 @@ public sealed class ToastManager : IPlayerComponent
 
     void IPlayerComponent.Init(IServiceProvider serviceProvider, bool isOnJoin)
     {
+        if (!_initialized)
+        {
+            InitToastData(serviceProvider);
+        }
+
         if (isOnJoin)
         {
             Channels = new ToastMessageChannel[_channelCount];
             for (int i = 0; i < Channels.Length; ++i)
                 Channels[i] = new ToastMessageChannel(this, i);
-        }
-
-        if (!_initialized)
-        {
-            InitToastData(serviceProvider);
         }
     }
 
@@ -108,10 +111,16 @@ public sealed class ToastManager : IPlayerComponent
         int maxChannel = -1;
         for (int i = 0; i < len; ++i)
         {
-            if (ToastMessages == null)
+            ToastMessageInfo msg = ToastMessages[i];
+
+            if (msg == null)
+            {
                 logger.LogWarning($"Toast not configured: {(ToastMessageStyle)i}.");
-            else if (ToastMessages[i].Channel > maxChannel)
-                maxChannel = ToastMessages[i].Channel;
+            }
+            else if (msg.Channel > maxChannel)
+            {
+                maxChannel = msg.Channel;
+            }
         }
 
         _channelCount = maxChannel + 1;

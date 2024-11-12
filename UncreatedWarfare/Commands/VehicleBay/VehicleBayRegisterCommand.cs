@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Interaction.Commands;
@@ -14,6 +15,7 @@ public class VehicleBayRegisterCommand : IExecutableCommand
     private readonly BuildableSaver _buildableSaver;
     private readonly VehicleSpawnerStore _spawnerStore;
     private readonly VehicleInfoStore _vehicleInfo;
+    private readonly WarfareModule _module;
     private readonly VehicleBayCommandTranslations _translations;
 
     /// <inheritdoc />
@@ -23,11 +25,13 @@ public class VehicleBayRegisterCommand : IExecutableCommand
         TranslationInjection<VehicleBayCommandTranslations> translations,
         BuildableSaver buildableSaver,
         VehicleSpawnerStore spawnerStore,
-        VehicleInfoStore vehicleInfo)
+        VehicleInfoStore vehicleInfo,
+        WarfareModule module)
     {
         _buildableSaver = buildableSaver;
         _spawnerStore = spawnerStore;
         _vehicleInfo = vehicleInfo;
+        _module = module;
         _translations = translations.Value;
     }
 
@@ -84,8 +88,11 @@ public class VehicleBayRegisterCommand : IExecutableCommand
         Context.LogAction(ActionLogType.RegisteredSpawn,
             $"{spawn.Vehicle.ToDisplayString()} - Spawner Instance ID: {spawn.Spawner.InstanceId} ({(spawn.Spawner.IsStructure ? "STRUCTURE" : "BARRICADE")}.");
 
+        if (_module.IsLayoutActive())
+        {
+            spawn.Spawner.Model.GetOrAddComponent<VehicleSpawnerComponent>().Init(spawn, info, _module.GetActiveLayout().ServiceProvider.Resolve<IServiceProvider>());
+        }
 
-        spawn.Spawner.Model.GetOrAddComponent<VehicleSpawnerComponent>().Init(spawn);
         Context.Reply(_translations.SpawnRegistered, vehicleType);
     }
 }

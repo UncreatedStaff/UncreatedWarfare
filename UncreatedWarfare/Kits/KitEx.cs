@@ -109,9 +109,8 @@ public static class KitEx
         kit.LastEditedTimestamp = DateTimeOffset.UtcNow;
     }
 
-    public static bool ContainsItem(this Kit kit, Guid guid, Team team, bool checkClothes = false)
+    public static bool ContainsItem(this Kit kit, Guid guid, Team team, AssetRedirectService assetRedirectService, IFactionDataStore factionDataStore, bool checkClothes = false)
     {
-        FactionInfo? faction = team.Faction.NullIfDefault();
         for (int i = 0; i < kit.Items.Length; ++i)
         {
             IKitItem itm = kit.Items[i];
@@ -127,7 +126,7 @@ public static class KitEx
             }
             else if (itm is IAssetRedirectKitItem && (checkClothes || itm is not IClothingKitItem))
             {
-                ItemAsset? asset = itm.GetItem(kit, faction, out _, out _);
+                ItemAsset? asset = itm.GetItem(kit, team, out _, out _, assetRedirectService, factionDataStore);
                 if (asset != null && asset.GUID == guid)
                     return true;
             }
@@ -136,13 +135,13 @@ public static class KitEx
         return false;
     }
 
-    public static bool ContainsItem(this Kit kit, IAssetLink<ItemAsset>? assetLink, Team team, bool checkClothes = false)
+    public static bool ContainsItem(this Kit kit, IAssetLink<ItemAsset>? assetLink, Team team, AssetRedirectService assetRedirectService, IFactionDataStore factionDataStore, bool checkClothes = false)
     {
         if (assetLink == null)
             return false;
 
         Guid guid = assetLink.Guid;
-        return kit.ContainsItem(guid, team, checkClothes);
+        return kit.ContainsItem(guid, team, assetRedirectService, factionDataStore, checkClothes);
     }
 
     public static int CountItems(this Kit kit, IAssetLink<ItemAsset>? assetLink, bool checkClothes = false)

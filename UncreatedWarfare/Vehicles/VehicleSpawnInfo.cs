@@ -48,6 +48,11 @@ public class VehicleSpawnInfo
         {
             newVehicleComponent.LinkToSpawn(this);
         }
+
+        if (Spawner.Model.TryGetComponent(out VehicleSpawnerComponent comp))
+        {
+            comp.UpdateLinkedSigns();
+        }
     }
 
     /// <summary>
@@ -62,6 +67,12 @@ public class VehicleSpawnInfo
             return;
 
         LinkedVehicle = null;
+
+        if (Spawner.Model.TryGetComponent(out VehicleSpawnerComponent comp))
+        {
+            comp.UpdateLinkedSigns();
+        }
+
         if (oldVehicle == null || !oldVehicle.TryGetComponent(out VehicleComponent oldVehicleComponent))
         {
             return;

@@ -1285,28 +1285,6 @@ internal static class T
     public static readonly Translation DailyQuestsOneHourRemaining = new Translation("<#66ccff>You have one hour until new daily quests will be generated!");
     #endregion
 
-    #region Tips
-    private const string SectionTips = "In-game Tips";
-    [TranslationData(SectionTips)]
-    public static readonly Translation<IPlayer> TipUAVRequest = new Translation<IPlayer>("<#d9c69a>{0} Requested a UAV!", TranslationOptions.TMProUI, WarfarePlayer.FormatColoredNickName);
-    [TranslationData(SectionTips)]
-    public static readonly Translation TipPlaceRadio = new Translation("Place a <#ababab>FOB RADIO</color>.", TranslationOptions.TMProUI);
-    [TranslationData(SectionTips)]
-    public static readonly Translation TipPlaceBunker = new Translation("Build a <#a5c3d9>FOB BUNKER</color> so that your team can spawn.", TranslationOptions.TMProUI);
-    [TranslationData(SectionTips)]
-    public static readonly Translation TipUnloadSupplies = new Translation("<#d9c69a>DROP SUPPLIES</color> onto the FOB.", TranslationOptions.TMProUI);
-    [TranslationData(SectionTips)]
-    public static readonly Translation<IPlayer> TipHelpBuild = new Translation<IPlayer>("<#d9c69a>{0} needs help building!", TranslationOptions.TMProUI, WarfarePlayer.FormatColoredNickName);
-    [TranslationData(SectionTips)]
-    public static readonly Translation<VehicleType> TipLogisticsVehicleResupplied = new Translation<VehicleType>("Your <#009933>{0}</color> has been auto resupplied.", TranslationOptions.TMProUI, UppercaseAddon.Instance);
-    [TranslationData(SectionTips)]
-    public static readonly Translation TipActionMenu = new Translation("Press <#a5c3d9><plugin_1/></color> for field actions", TranslationOptions.TMProUI);
-    [TranslationData(SectionTips)]
-    public static readonly Translation TipActionMenuSl = new Translation("Press <#a5c3d9><plugin_1/></color> for <#85c996>squad actions</color>", TranslationOptions.TMProUI);
-    [TranslationData(SectionTips)]
-    public static readonly Translation TipCallMedic = new Translation("You are hurt. Press <#d9a5bb><plugin_1/></color> to call for a medic.", TranslationOptions.TMProUI);
-    #endregion
-
     #region Teams
     private const string SectionTeams = "Teams";
     [TranslationData(SectionTeams, "Gets sent to the player when they walk or teleport into main base.")]

@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Linq;
 using DanielWillett.ReflectionTools;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
 
@@ -16,19 +18,27 @@ public class VehicleService : ILayoutHostedService
     private readonly ILogger<VehicleService> _logger;
     private readonly VehicleInfoStore _vehicleInfoStore;
     private readonly VehicleSpawnerStore _spawnerStore;
+    private readonly WarfareModule _module;
 
-    public VehicleService(ILogger<VehicleService> logger, VehicleInfoStore vehicleInfoStore, VehicleSpawnerStore spawnerStore)
+    public VehicleService(ILogger<VehicleService> logger, VehicleInfoStore vehicleInfoStore, VehicleSpawnerStore spawnerStore, WarfareModule module)
     {
         _logger = logger;
         _vehicleInfoStore = vehicleInfoStore;
         _spawnerStore = spawnerStore;
+        _module = module;
     }
 
     UniTask ILayoutHostedService.StartAsync(CancellationToken token)
     {
+        IServiceProvider serviceProvider = _module.ScopedProvider.Resolve<IServiceProvider>();
         foreach (VehicleSpawnInfo spawn in _spawnerStore.Spawns)
         {
-            spawn.Spawner.Model.GetOrAddComponent<VehicleSpawnerComponent>().Init(spawn);
+            WarfareVehicleInfo? info = _vehicleInfoStore.Vehicles.FirstOrDefault(x => x.Vehicle.MatchAsset(spawn.Vehicle));
+
+            if (info == null)
+                continue;
+            
+            spawn.Spawner.Model.GetOrAddComponent<VehicleSpawnerComponent>().Init(spawn, info, serviceProvider);
         }
 
         return UniTask.CompletedTask;
@@ -90,7 +100,7 @@ public class VehicleService : ILayoutHostedService
         await UniTask.SwitchToMainThread(token);
 
         spawn.LinkVehicle(vehicle);
-        // todo update sign
+
         _logger.LogDebug("Spawned new {0} at {1}.", spawn.Vehicle.ToDisplayString(), spawnPosition);
         return vehicle;
     }
@@ -245,5 +255,10 @@ public class VehicleService : ILayoutHostedService
         {
             _logger.LogError(ex, "Failed to unlink vehicle spawn for vehicle {0} ({1}).", vehicle.asset.FriendlyName, vehicle.asset.GUID);
         }
+    }
+
+    public async Task RequestVehicle(CommandContext ctx)
+    {
+        
     }
 }

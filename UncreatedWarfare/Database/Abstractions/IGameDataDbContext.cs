@@ -19,15 +19,16 @@ public interface IGameDataDbContext : IFactionDbContext, ISeasonsDbContext
             .WithOne(x => x.Game)
             .OnDelete(DeleteBehavior.Restrict);
 
+        // need to use WithMany here for these because deleting a row is a lot harder if a unique key gets added
         modelBuilder.Entity<SessionRecord>()
             .HasOne(x => x.PreviousSession)
-            .WithOne()
+            .WithMany()
             .IsRequired(false)
             .OnDelete(DeleteBehavior.SetNull);
 
         modelBuilder.Entity<SessionRecord>()
             .HasOne(x => x.NextSession)
-            .WithOne()
+            .WithMany()
             .IsRequired(false)
             .OnDelete(DeleteBehavior.SetNull);
 

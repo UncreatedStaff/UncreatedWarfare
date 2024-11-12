@@ -5,21 +5,12 @@ using DanielWillett.ReflectionTools;
 using SDG.NetTransport;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using Uncreated.Warfare.Components;
-using Uncreated.Warfare.Interaction;
-using Uncreated.Warfare.Sessions;
-using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Translations.Languages;
-
-#if NETSTANDARD || NETFRAMEWORK
-using Uncreated.Warfare.Networking.Purchasing;
-#endif
 
 namespace Uncreated.Warfare;
 
@@ -41,26 +32,13 @@ public static class Data
 
     public const string SuppressCategory = "Microsoft.Performance";
     public const string SuppressID = "IDE0051";
-    public static readonly Regex PluginKeyMatch = new Regex(@"\<plugin_\d\/\>", RegexOptions.IgnoreCase | RegexOptions.Compiled);
     public static CultureInfo LocalLocale = Languages.CultureEnglishUS; // todo set from config
     public static Dictionary<ulong, UCPlayerData> PlaytimeComponents;
-    public static bool UseFastKits;
     public static bool UseElectricalGrid;
     internal static ClientInstanceMethod<byte[]>? SendUpdateBarricadeState;
-    internal static ClientInstanceMethod<Guid, byte, byte[], bool>? SendWearShirt;
-    internal static ClientInstanceMethod<Guid, byte, byte[], bool>? SendWearPants;
-    internal static ClientInstanceMethod<Guid, byte, byte[], bool>? SendWearHat;
-    internal static ClientInstanceMethod<Guid, byte, byte[], bool>? SendWearBackpack;
-    internal static ClientInstanceMethod<Guid, byte, byte[], bool>? SendWearVest;
-    internal static ClientInstanceMethod<Guid, byte, byte[], bool>? SendWearMask;
-    internal static ClientInstanceMethod<Guid, byte, byte[], bool>? SendWearGlasses;
     internal static ClientStaticMethod<uint, byte, byte>? SendSwapVehicleSeats;
-    internal static ClientInstanceMethod? SendInventory;
     // internal static ClientInstanceMethod? SendScreenshotDestination;
 
-    internal static InstanceSetter<PlayerInventory, bool> SetOwnerHasInventory;
-    internal static InstanceGetter<PlayerInventory, bool> GetOwnerHasInventory;
-    internal static InstanceGetter<Items, bool[,]> GetItemsSlots;
     internal static InstanceGetter<UseableGun, bool>? GetUseableGunReloading;
     internal static InstanceGetter<PlayerLife, CSteamID>? GetRecentKiller;
     internal static Action<Vector3, Vector3, string, Transform?, List<ITransportConnection>>? ServerSpawnLegacyImpact;

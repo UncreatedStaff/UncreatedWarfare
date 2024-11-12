@@ -107,4 +107,20 @@ public static class BuildableExtensions
             WorkingSalvageInfo.Clear();
         }
     }
+
+    /// <summary>
+    /// Creates a <see cref="IBuildable"/> from a root transform of a barricade or structure.
+    /// </summary>
+    public static IBuildable? GetBuildableFromRootTransform(Transform transform)
+    {
+        BarricadeDrop? barricade = BarricadeManager.FindBarricadeByRootTransform(transform);
+        if (barricade != null)
+            return new BuildableBarricade(barricade);
+
+        StructureDrop? structure = StructureManager.FindStructureByRootTransform(transform);
+        if (structure != null)
+            return new BuildableStructure(structure);
+
+        return null;
+    }
 }

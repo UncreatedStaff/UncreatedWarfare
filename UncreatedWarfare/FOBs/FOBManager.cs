@@ -1,26 +1,14 @@
-﻿using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Uncreated.Warfare.Buildables;
-using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Events.Models;
-using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Events.Models.Fobs;
-using Uncreated.Warfare.Events.Models.Items;
-using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.FOBs;
-using Uncreated.Warfare.FOBs.Construction;
-using Uncreated.Warfare.FOBs.SupplyCrates;
-using Uncreated.Warfare.Interaction;
-using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Services;
-using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.List;
-using Uncreated.Warfare.Util.Timing;
 
 namespace Uncreated.Warfare.Fobs;
 
@@ -28,8 +16,6 @@ public partial class FobManager : ILayoutHostedService
 {
     private readonly FobConfiguration _configuration;
     private readonly AssetConfiguration _assetConfiguration;
-    private readonly TranslationInjection<FobTranslations> _translations;
-    private readonly ChatService _chatService;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<FobManager> _logger;
     private readonly TrackingList<IFobItem> _floatingItems;
@@ -49,8 +35,6 @@ public partial class FobManager : ILayoutHostedService
     {
         _configuration = serviceProvider.GetRequiredService<FobConfiguration>();
         _assetConfiguration = serviceProvider.GetRequiredService<AssetConfiguration>();
-        _translations = serviceProvider.GetRequiredService<TranslationInjection<FobTranslations>>();
-        _chatService = serviceProvider.GetRequiredService<ChatService>();
         _serviceProvider = serviceProvider;
         _logger = logger;
         _fobs = new TrackingList<IFob>(24);
@@ -73,7 +57,7 @@ public partial class FobManager : ILayoutHostedService
     public BuildableFob RegisterFob(IBuildable fobBuildable)
     {
         GridLocation griddy = new GridLocation(fobBuildable.Position);
-        string fobName = $"FOB {griddy.LetterXPhoneticName}-{griddy.Y + 1}";
+        string fobName = $"FOB {NATOPhoneticAlphabetHelper.GetProperCase(griddy.LetterX)}-{griddy.Y + 1}";
 
         BuildableFob fob = new BuildableFob(_serviceProvider, fobName, fobBuildable);
         _fobs.Add(fob);

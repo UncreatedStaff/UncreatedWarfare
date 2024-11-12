@@ -6,6 +6,7 @@ using Uncreated.Warfare.Events.Models.Items;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Kits.Items;
 
@@ -15,6 +16,8 @@ internal class HotkeyPlayerComponent : IPlayerComponent, IEventListener<ItemDrop
     private KitManager _kitManager = null!;
     private WarfareModule _module = null!;
     private ILogger<HotkeyPlayerComponent> _logger = null!;
+    private AssetRedirectService _assetRedirectService;
+    private IFactionDataStore _factionDataStore;
     public WarfarePlayer Player { get; private set; }
 
     // used to trace items back to their original position in the kit
@@ -25,6 +28,8 @@ internal class HotkeyPlayerComponent : IPlayerComponent, IEventListener<ItemDrop
         _kitManager = serviceProvider.GetRequiredService<KitManager>();
         _module = serviceProvider.GetRequiredService<WarfareModule>();
         _logger = serviceProvider.GetRequiredService<ILogger<HotkeyPlayerComponent>>();
+        _assetRedirectService = serviceProvider.GetRequiredService<AssetRedirectService>();
+        _factionDataStore = serviceProvider.GetRequiredService<IFactionDataStore>();
     }
 
     void IEventListener<ItemDropped>.HandleEvent(ItemDropped e, IServiceProvider serviceProvider)
@@ -109,7 +114,7 @@ internal class HotkeyPlayerComponent : IPlayerComponent, IEventListener<ItemDrop
                 if (binding.Kit != activeKit.PrimaryKey || binding.Item.X != origX || binding.Item.Y != origY || binding.Item.Page != origPage)
                     continue;
 
-                ItemAsset? asset = binding.GetAsset(activeKit, 0ul /* todo e.PickUpPlayer.Team */);
+                ItemAsset? asset = binding.GetAsset(activeKit, e.PickUpPlayer.Team, _assetRedirectService, _factionDataStore);
                 if (asset == null)
                     continue;
 
@@ -194,7 +199,7 @@ internal class HotkeyPlayerComponent : IPlayerComponent, IEventListener<ItemDrop
                 ItemAsset? asset = b.Item switch
                 {
                     ISpecificKitItem item3 => item3.Item.GetAsset<ItemAsset>(),
-                    IKitItem ki => ki.GetItem(activeKit, Player.Team.Faction, out _, out _),
+                    IKitItem ki => ki.GetItem(activeKit, Player.Team, out _, out _, _assetRedirectService, _factionDataStore),
                     _ => null
                 };
 
@@ -263,7 +268,7 @@ internal class HotkeyPlayerComponent : IPlayerComponent, IEventListener<ItemDrop
 
                 if (binding.Item.X == origX && binding.Item.Y == origY && binding.Item.Page == origPage)
                 {
-                    ItemAsset? asset = binding.GetAsset(kit, 0/* todo Player.Team */);
+                    ItemAsset? asset = binding.GetAsset(kit, Player.Team, _assetRedirectService, _factionDataStore);
                     if (asset != null && KitEx.CanBindHotkeyTo(asset, e.NewPage))
                     {
                         Player.UnturnedPlayer.equipment.ServerBindItemHotkey(index, asset, (byte)e.NewPage, e.NewX, e.NewY);
@@ -276,7 +281,7 @@ internal class HotkeyPlayerComponent : IPlayerComponent, IEventListener<ItemDrop
                 }
                 else if (binding.Item.X == swapOrigX && binding.Item.Y == swapOrigY && binding.Item.Page == swapOrigPage)
                 {
-                    ItemAsset? asset = binding.GetAsset(kit, 0/* todo Player.Team */);
+                    ItemAsset? asset = binding.GetAsset(kit, Player.Team, _assetRedirectService, _factionDataStore);
                     if (asset != null && !KitEx.CanBindHotkeyTo(asset, e.OldPage))
                     {
                         Player.UnturnedPlayer.equipment.ServerBindItemHotkey(index, asset, (byte)e.OldPage, e.OldX, e.OldY);

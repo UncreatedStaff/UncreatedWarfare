@@ -1,5 +1,7 @@
 ﻿using Uncreated.Warfare.Kits.Items;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Models.Kits;
+using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Kits;
 public struct HotkeyBinding
@@ -15,13 +17,14 @@ public struct HotkeyBinding
         Item = item;
         Model = model;
     }
-    public ItemAsset? GetAsset(Kit? kit, ulong team)
+
+    public ItemAsset? GetAsset(Kit? kit, Team team, AssetRedirectService assetRedirectService, IFactionDataStore factionDataStore)
     {
         return Item switch
         {
             null => null,
             ISpecificKitItem item => item.Item.GetAsset<ItemAsset>(),
-            _ => Item.GetItem(kit, null/* todo TeamManager.GetFactionSafe(team) */, out _, out _)
+            _ => Item.GetItem(kit, team, out _, out _, assetRedirectService, factionDataStore)
         };
     }
 }

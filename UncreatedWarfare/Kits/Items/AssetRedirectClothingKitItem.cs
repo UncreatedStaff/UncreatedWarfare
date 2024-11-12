@@ -1,4 +1,5 @@
 ﻿using System;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Teams;
 
@@ -39,12 +40,12 @@ public class AssetRedirectClothingKitItem : IClothingKitItem, IAssetRedirectKitI
 
         return -1;
     }
-    public ItemAsset? GetItem(Kit? kit, FactionInfo? targetTeam, out byte amount, out byte[] state)
+    public ItemAsset? GetItem(Kit? kit, Team targetTeam, out byte amount, out byte[] state, AssetRedirectService assetRedirectService, IFactionDataStore factionDataStore)
     {
-        if (!Provider.isInitialized) throw new InvalidOperationException("Not loaded.");
-        state = Array.Empty<byte>();
-        amount = 1;
-        return null;// todo TeamManager.GetRedirectInfo(RedirectType, RedirectVariant ?? string.Empty, kit?.FactionInfo, targetTeam, out state, out amount);
+        if (!Provider.isInitialized)
+            throw new InvalidOperationException("Not loaded.");
+
+        return assetRedirectService.ResolveRedirect(RedirectType, RedirectVariant ?? string.Empty, factionDataStore.FindFaction(kit?.FactionId), targetTeam, out state, out amount);
     }
 
     public KitItemModel CreateModel(Kit kit)

@@ -10,6 +10,7 @@ using System.Linq;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database.Abstractions;
+using Uncreated.Warfare.Interaction.Requests;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Maps;
@@ -30,7 +31,7 @@ namespace Uncreated.Warfare.Models.Kits;
 
 // todo add delays to kits
 [Table("kits")]
-public class Kit : ITranslationArgument, ICloneable
+public class Kit : ITranslationArgument, ICloneable, IRequestable<Kit>
 {
     private int _listItemArrayVersion = -1;
     private int _listUnlockRequirementsArrayVersion = -1;
@@ -155,22 +156,22 @@ public class Kit : ITranslationArgument, ICloneable
     [NotMapped]
     internal bool IsLoadDirty { get; set; }
 
-    [JsonIgnore]
-    [NotMapped]
-    internal List<SimplifiedItemListEntry> SimplifiedItemList
-    {
-        get
-        {
-            int v = ItemModels.GetListVersion();
-            if (_listSimplifiedListVersion != v || _simplifiedItemList == null)
-            {
-                _simplifiedItemList = SimplifiedItemListEntry.GetSimplifiedItemList(this);
-                _listSimplifiedListVersion = v;
-            }
-
-            return _simplifiedItemList;
-        }
-    }
+    //[JsonIgnore]
+    //[NotMapped]
+    //internal List<SimplifiedItemListEntry> SimplifiedItemList
+    //{
+    //    get
+    //    {
+    //        int v = ItemModels.GetListVersion();
+    //        if (_listSimplifiedListVersion != v || _simplifiedItemList == null)
+    //        {
+    //            _simplifiedItemList = SimplifiedItemListEntry.GetSimplifiedItemList(this);
+    //            _listSimplifiedListVersion = v;
+    //        }
+    //
+    //        return _simplifiedItemList;
+    //    }
+    //}
 
     [JsonIgnore]
     [NotMapped]

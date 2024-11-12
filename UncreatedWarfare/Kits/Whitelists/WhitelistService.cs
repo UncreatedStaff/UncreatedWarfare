@@ -6,7 +6,6 @@ using System.Globalization;
 using System.Linq;
 using Uncreated.Framework.UI;
 using Uncreated.Warfare.Buildables;
-using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Events;
@@ -21,6 +20,7 @@ using Uncreated.Warfare.Models;
 using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players.Permissions;
+using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Collections;
 using Uncreated.Warfare.Util;
@@ -48,8 +48,12 @@ public class WhitelistService :
     private readonly BuildableSaver _buildableSaver;
     private readonly SemaphoreSlim _semaphore;
     private readonly WhitelistTranslations _translations;
+    private readonly AssetRedirectService _assetRedirectService;
+    private readonly IFactionDataStore _factionDataStore;
 
-    public WhitelistService(IWhitelistDbContext dbContext, ZoneStore zoneStore, ChatService chatService, WarfareModule module, BuildableSaver buildableSaver, TranslationInjection<WhitelistTranslations> translations)
+    public WhitelistService(IWhitelistDbContext dbContext, ZoneStore zoneStore, ChatService chatService,
+        WarfareModule module, BuildableSaver buildableSaver, TranslationInjection<WhitelistTranslations> translations,
+        AssetRedirectService assetRedirectService, IFactionDataStore factionDataStore)
     {
         _dbContext = dbContext;
         _dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
@@ -58,6 +62,8 @@ public class WhitelistService :
         _chatService = chatService;
         _module = module;
         _buildableSaver = buildableSaver;
+        _assetRedirectService = assetRedirectService;
+        _factionDataStore = factionDataStore;
         _translations = translations.Value;
 
         _semaphore = new SemaphoreSlim(1, 1);
@@ -264,7 +270,7 @@ public class WhitelistService :
         Kit? kit = e.Player.Component<KitPlayerComponent>().CachedKit;
 
         ItemAsset asset = e.Buildable.Asset;
-        if (kit != null && kit.ContainsItem(asset.GUID, e.Player.Team))
+        if (kit != null && kit.ContainsItem(asset.GUID, e.Player.Team, _assetRedirectService, _factionDataStore))
             return;
 
         ItemWhitelist? whitelist = await GetWhitelistAsync(asset, token).ConfigureAwait(false);
@@ -529,7 +535,7 @@ public class WhitelistService :
         Kit? kit = e.Player.Component<KitPlayerComponent>().CachedKit;
 
         ItemAsset asset = e.Buildable.Asset;
-        if (kit != null && kit.ContainsItem(asset.GUID, e.Player.Team))
+        if (kit != null && kit.ContainsItem(asset.GUID, e.Player.Team, _assetRedirectService, _factionDataStore))
             return;
 
         ItemWhitelist? whitelist = await GetWhitelistAsync(asset, token).ConfigureAwait(false);

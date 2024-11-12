@@ -3,6 +3,7 @@ using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Models.Kits;
+using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Commands;
@@ -12,11 +13,15 @@ internal class KitHotkeyAddCommand : IExecutableCommand
 {
     private readonly KitCommandTranslations _translations;
     private readonly KitManager _kitManager;
+    private readonly AssetRedirectService _assetRedirectService;
+    private readonly IFactionDataStore _factionDataStore;
     public CommandContext Context { get; set; }
 
-    public KitHotkeyAddCommand(TranslationInjection<KitCommandTranslations> translations, KitManager kitManager)
+    public KitHotkeyAddCommand(TranslationInjection<KitCommandTranslations> translations, KitManager kitManager, AssetRedirectService assetRedirectService, IFactionDataStore factionDataStore)
     {
         _kitManager = kitManager;
+        _assetRedirectService = assetRedirectService;
+        _factionDataStore = factionDataStore;
         _translations = translations.Value;
     }
 
@@ -53,7 +58,7 @@ internal class KitHotkeyAddCommand : IExecutableCommand
                 throw Context.Reply(_translations.KitHotkeyNotHoldingItem);
             }
 
-            ItemAsset? asset = item is ISpecificKitItem i2 ? i2.Item.GetAsset<ItemAsset>() : item.GetItem(kit, Context.Player.Team.Faction, out _, out _);
+            ItemAsset? asset = item is ISpecificKitItem i2 ? i2.Item.GetAsset<ItemAsset>() : item.GetItem(kit, Context.Player.Team, out _, out _, _assetRedirectService, _factionDataStore);
             if (asset == null)
                 throw Context.Reply(_translations.KitHotkeyNotHoldingItem);
 

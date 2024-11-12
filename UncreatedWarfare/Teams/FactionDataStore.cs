@@ -43,6 +43,14 @@ public static class FactionDataStoreExtensions
     {
         return dataStore.Factions.FirstOrDefault(f => f.PrimaryKey == primaryKey);
     }
+    
+    /// <summary>
+    /// Search a faction from it's primary key.
+    /// </summary>
+    public static FactionInfo? FindFaction(this IFactionDataStore dataStore, uint? primaryKey)
+    {
+        return primaryKey.HasValue ? dataStore.Factions.FirstOrDefault(f => f.PrimaryKey == primaryKey.Value) : null;
+    }
 
     /// <summary>
     /// Search a faction using text.

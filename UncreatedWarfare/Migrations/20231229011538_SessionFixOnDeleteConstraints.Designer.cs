@@ -255,11 +255,9 @@ namespace Uncreated.Warfare.Migrations
 
                     b.HasIndex("MapId");
 
-                    b.HasIndex("NextSessionId")
-                        .IsUnique();
+                    b.HasIndex("NextSessionId");
 
-                    b.HasIndex("PreviousSessionId")
-                        .IsUnique();
+                    b.HasIndex("PreviousSessionId");
 
                     b.HasIndex("SeasonId");
 
