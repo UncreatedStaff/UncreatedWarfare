@@ -14,11 +14,13 @@ public abstract class UnlockCost : ICloneable
     /// Try to subtract the cost from the player if they can afford it.
     /// If this returns <see langword="false"/>, all already applied costs need to be undone.
     /// </summary>
+    /// <remarks>May not be on main thread at start.</remarks>
     public abstract UniTask<bool> TryApply(WarfarePlayer player, Team team, CancellationToken token = default);
 
     /// <summary>
     /// Check if this cost can be met by the player.
     /// </summary>
+    /// <remarks>May not be on main thread at start.</remarks>
     public abstract UniTask<bool> CanApply(WarfarePlayer player, Team team, CancellationToken token = default);
     
     /// <summary>

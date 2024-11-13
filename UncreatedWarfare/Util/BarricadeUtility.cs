@@ -32,7 +32,7 @@ public static class BarricadeUtility
     /// <summary>
     /// Enumerate through non-planted barricades (barricades not on a vehicle) around the center of the level, then planted barricades (barricades on a vehicle).
     /// </summary>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static BarricadeIterator EnumerateBarricades()
     {
@@ -44,7 +44,7 @@ public static class BarricadeUtility
     /// <summary>
     /// Enumerate through non-planted barricades (barricades not on a vehicle) around <paramref name="center"/>, then planted barricades (barricades on a vehicle).
     /// </summary>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static BarricadeIterator EnumerateBarricades(Vector3 center)
     {
@@ -62,7 +62,7 @@ public static class BarricadeUtility
     /// Enumerate through non-planted barricades (barricades not on a vehicle) around <paramref name="center"/>, then planted barricades (barricades on a vehicle).
     /// </summary>
     /// <remarks>The square enumerated will have a size of <c><paramref name="maxRegionDistance"/> * 2 + 1</c> regions.</remarks>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static BarricadeIterator EnumerateBarricades(Vector3 center, byte maxRegionDistance)
     {
@@ -79,7 +79,7 @@ public static class BarricadeUtility
     /// <summary>
     /// Enumerate through non-planted barricades (barricades not on a vehicle) around region <paramref name="x"/>, <paramref name="y"/>, then planted barricades (barricades on a vehicle).
     /// </summary>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static BarricadeIterator EnumerateBarricades(byte x, byte y)
     {
@@ -91,7 +91,7 @@ public static class BarricadeUtility
     /// <summary>
     /// Enumerate through non-planted barricades (barricades not on a vehicle) around <paramref name="region"/>, then planted barricades (barricades on a vehicle).
     /// </summary>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static BarricadeIterator EnumerateBarricades(RegionCoord region)
     {
@@ -104,7 +104,7 @@ public static class BarricadeUtility
     /// Enumerate through non-planted barricades (barricades not on a vehicle) around region <paramref name="x"/>, <paramref name="y"/>, then planted barricades (barricades on a vehicle).
     /// </summary>
     /// <remarks>The square enumerated will have a size of <c><paramref name="maxRegionDistance"/> * 2 + 1</c> regions.</remarks>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static BarricadeIterator EnumerateBarricades(byte x, byte y, byte maxRegionDistance)
     {
@@ -117,7 +117,7 @@ public static class BarricadeUtility
     /// Enumerate through non-planted barricades (barricades not on a vehicle) around <paramref name="region"/>, then planted barricades (barricades on a vehicle).
     /// </summary>
     /// <remarks>The square enumerated will have a size of <c><paramref name="maxRegionDistance"/> * 2 + 1</c> regions.</remarks>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static BarricadeIterator EnumerateBarricades(RegionCoord region, byte maxRegionDistance)
     {
@@ -129,7 +129,7 @@ public static class BarricadeUtility
     /// <summary>
     /// Enumerate through non-planted barricades (barricades not on a vehicle) around the center of the level.
     /// </summary>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static BarricadeIterator EnumerateNonPlantedBarricades()
     {
@@ -141,7 +141,7 @@ public static class BarricadeUtility
     /// <summary>
     /// Enumerate through non-planted barricades (barricades not on a vehicle) around <paramref name="center"/>.
     /// </summary>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static BarricadeIterator EnumerateNonPlantedBarricades(Vector3 center)
     {
@@ -159,7 +159,7 @@ public static class BarricadeUtility
     /// Enumerate through non-planted barricades (barricades not on a vehicle) around <paramref name="center"/>.
     /// </summary>
     /// <remarks>The square enumerated will have a size of <c><paramref name="maxRegionDistance"/> * 2 + 1</c> regions.</remarks>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static BarricadeIterator EnumerateNonPlantedBarricades(Vector3 center, byte maxRegionDistance)
     {
@@ -176,7 +176,7 @@ public static class BarricadeUtility
     /// <summary>
     /// Enumerate through non-planted barricades (barricades not on a vehicle) around region <paramref name="x"/>, <paramref name="y"/>.
     /// </summary>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static BarricadeIterator EnumerateNonPlantedBarricades(byte x, byte y)
     {
@@ -188,7 +188,7 @@ public static class BarricadeUtility
     /// <summary>
     /// Enumerate through non-planted barricades (barricades not on a vehicle) around <paramref name="region"/>.
     /// </summary>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static BarricadeIterator EnumerateNonPlantedBarricades(RegionCoord region)
     {
@@ -201,7 +201,7 @@ public static class BarricadeUtility
     /// Enumerate through non-planted barricades (barricades not on a vehicle) around region <paramref name="x"/>, <paramref name="y"/>.
     /// </summary>
     /// <remarks>The square enumerated will have a size of <c><paramref name="maxRegionDistance"/> * 2 + 1</c> regions.</remarks>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static BarricadeIterator EnumerateNonPlantedBarricades(byte x, byte y, byte maxRegionDistance)
     {
@@ -214,7 +214,7 @@ public static class BarricadeUtility
     /// Enumerate through non-planted barricades (barricades not on a vehicle) around <paramref name="region"/>.
     /// </summary>
     /// <remarks>The square enumerated will have a size of <c><paramref name="maxRegionDistance"/> * 2 + 1</c> regions.</remarks>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static BarricadeIterator EnumerateNonPlantedBarricades(RegionCoord region, byte maxRegionDistance)
     {
@@ -226,7 +226,7 @@ public static class BarricadeUtility
     /// <summary>
     /// Enumerate through planted barricades (barricades on a vehicle).
     /// </summary>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static BarricadeIterator EnumeratePlantedBarricades()
     {
@@ -238,7 +238,7 @@ public static class BarricadeUtility
     /// <summary>
     /// Find a barricade by it's instance ID.
     /// </summary>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static BarricadeInfo FindBarricade(uint instanceId)
     {
@@ -249,7 +249,7 @@ public static class BarricadeUtility
     /// Find a barricade by it's instance ID, with help from a position to prevent having to search every region.
     /// </summary>
     /// <remarks>All regions will be searched if it's not found near the expected position.</remarks>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static BarricadeInfo FindBarricade(uint instanceId, Vector3 expectedPosition)
     {
@@ -262,7 +262,7 @@ public static class BarricadeUtility
     /// Find a barricade by it's instance ID, with help from an expected region to prevent having to search every region.
     /// </summary>
     /// <remarks>All regions will be searched if it's not found in the expected region.</remarks>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static BarricadeInfo FindBarricade(uint instanceId, byte expectedRegionX, byte expectedRegionY)
     {
@@ -298,7 +298,7 @@ public static class BarricadeUtility
     /// <summary>
     /// Sets the sign text without replicating to clients.
     /// </summary>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     /// <exception cref="ArgumentException"><paramref name="barricade"/> is not a sign.</exception>
     public static void SetServersideSignText(BarricadeDrop barricade, ReadOnlySpan<char> text)
     {
@@ -436,7 +436,7 @@ public static class BarricadeUtility
     /// Sends the given <paramref name="stateToReplicate"/>, which defaults to the barricade's state if <see langword="null"/> to all relevant clients.
     /// </summary>
     /// <returns><see langword="true"/> if the barricade state was replicated, otherwise <see langword="false"/> (due to reflection failure or out of bounds barricade).</returns>
-    public static bool ReplicateBarricadeState(BarricadeDrop drop, IServiceProvider? serviceProvider, byte[]? stateToReplicate = null)
+    public static bool ReplicateBarricadeState(BarricadeDrop drop, IServiceProvider serviceProvider, byte[]? stateToReplicate = null)
     {
         return ReplicateBarricadeState(drop, serviceProvider.GetRequiredService<IPlayerService>(), serviceProvider.GetService<SignInstancer>(), stateToReplicate);
     }
@@ -691,7 +691,7 @@ public static class BarricadeUtility
     /// Find a barricade by it's instance ID, with help from an expected region to prevent having to search every region.
     /// </summary>
     /// <remarks>All regions will be searched if it's not found in the expected region. Only instance ID is checked on planted barricades.</remarks>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static BarricadeInfo FindBarricade(uint instanceId, IAssetLink<ItemBarricadeAsset> expectedAsset, Vector3 expectedPosition)
     {
@@ -754,7 +754,7 @@ public static class BarricadeUtility
     /// </summary>
     /// <remarks>Planted barricades are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static bool IsBarricadeInRange(Vector3 position, float radius, IAssetLink<ItemBarricadeAsset> asset, bool horizontalDistanceOnly = false)
     {
@@ -766,7 +766,7 @@ public static class BarricadeUtility
     /// </summary>
     /// <remarks>Planted barricades are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static bool IsBarricadeInRange(Vector3 position, float radius, Predicate<BarricadeDrop> barricadeSelector, bool horizontalDistanceOnly = false)
     {
@@ -777,7 +777,7 @@ public static class BarricadeUtility
     /// Check for a nearby barricade to <paramref name="position"/> within the given <paramref name="radius"/>.
     /// </summary>
     /// <remarks>Planted barricades are ignored.</remarks>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static bool IsBarricadeInRange(Vector3 position, float radius, bool horizontalDistanceOnly = false)
     {
@@ -789,7 +789,7 @@ public static class BarricadeUtility
     /// </summary>
     /// <remarks>Planted barricades are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static bool IsBarricadeInRange(Vector3 position, float radius, ulong group, IAssetLink<ItemBarricadeAsset> asset, bool horizontalDistanceOnly = false)
     {
@@ -801,7 +801,7 @@ public static class BarricadeUtility
     /// </summary>
     /// <remarks>Planted barricades are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static bool IsBarricadeInRange(Vector3 position, float radius, ulong group, Predicate<BarricadeDrop> barricadeSelector, bool horizontalDistanceOnly = false)
     {
@@ -812,7 +812,7 @@ public static class BarricadeUtility
     /// Check for a nearby barricade to <paramref name="position"/> within the given <paramref name="radius"/> and <paramref name="group"/>.
     /// </summary>
     /// <remarks>Planted barricades are ignored.</remarks>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static bool IsBarricadeInRange(Vector3 position, float radius, ulong group, bool horizontalDistanceOnly = false)
     {
@@ -824,7 +824,7 @@ public static class BarricadeUtility
     /// </summary>
     /// <remarks>Planted barricades are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static BarricadeInfo GetClosestBarricadeInRange(Vector3 position, float radius, IAssetLink<ItemBarricadeAsset> asset, bool horizontalDistanceOnly = false)
     {
@@ -863,7 +863,7 @@ public static class BarricadeUtility
     /// </summary>
     /// <remarks>Planted barricades are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static BarricadeInfo GetClosestBarricade(Vector3 position, IAssetLink<ItemBarricadeAsset> asset, bool horizontalDistanceOnly = false)
     {
@@ -906,7 +906,7 @@ public static class BarricadeUtility
     /// </summary>
     /// <remarks>Planted barricades are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static BarricadeInfo GetClosestBarricadeInRange(Vector3 position, float radius, ulong group, IAssetLink<ItemBarricadeAsset> asset, bool horizontalDistanceOnly = false)
     {
@@ -948,7 +948,7 @@ public static class BarricadeUtility
     /// </summary>
     /// <remarks>Planted barricades are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static BarricadeInfo GetClosestBarricade(Vector3 position, ulong group, IAssetLink<ItemBarricadeAsset> asset, bool horizontalDistanceOnly = false)
     {
@@ -993,7 +993,7 @@ public static class BarricadeUtility
     /// Find the closest barricade to <paramref name="position"/> within the given <paramref name="radius"/>.
     /// </summary>
     /// <remarks>Planted barricades are ignored.</remarks>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static BarricadeInfo GetClosestBarricadeInRange(Vector3 position, float radius, bool horizontalDistanceOnly = false)
     {
@@ -1028,7 +1028,7 @@ public static class BarricadeUtility
     /// Find the closest barricade to <paramref name="position"/>.
     /// </summary>
     /// <remarks>Planted barricades are ignored.</remarks>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static BarricadeInfo GetClosestBarricade(Vector3 position, bool horizontalDistanceOnly = false)
     {
@@ -1067,7 +1067,7 @@ public static class BarricadeUtility
     /// Find the closest barricade to <paramref name="position"/> within the given <paramref name="radius"/> and <paramref name="group"/>.
     /// </summary>
     /// <remarks>Planted barricades are ignored.</remarks>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static BarricadeInfo GetClosestBarricadeInRange(Vector3 position, float radius, ulong group, bool horizontalDistanceOnly = false)
     {
@@ -1106,7 +1106,7 @@ public static class BarricadeUtility
     /// Find the closest barricade to <paramref name="position"/> with the given <paramref name="group"/>.
     /// </summary>
     /// <remarks>Planted barricades are ignored.</remarks>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static BarricadeInfo GetClosestBarricade(Vector3 position, ulong group, bool horizontalDistanceOnly = false)
     {
@@ -1150,7 +1150,7 @@ public static class BarricadeUtility
     /// </summary>
     /// <remarks>Planted barricades are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static BarricadeInfo GetClosestBarricadeWhere(Vector3 position, float radius, Predicate<BarricadeDrop> barricadeSelector, bool horizontalDistanceOnly = false)
     {
@@ -1189,7 +1189,7 @@ public static class BarricadeUtility
     /// </summary>
     /// <remarks>Planted barricades are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static BarricadeInfo GetClosestBarricadeWhere(Vector3 position, Predicate<BarricadeDrop> barricadeSelector, bool horizontalDistanceOnly = false)
     {
@@ -1232,7 +1232,7 @@ public static class BarricadeUtility
     /// </summary>
     /// <remarks>Planted barricades are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static BarricadeInfo GetClosestBarricadeWhere(Vector3 position, float radius, ulong group, Predicate<BarricadeDrop> barricadeSelector, bool horizontalDistanceOnly = false)
     {
@@ -1275,7 +1275,7 @@ public static class BarricadeUtility
     /// </summary>
     /// <remarks>Planted barricades are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static BarricadeInfo GetClosestBarricadeWhere(Vector3 position, ulong group, Predicate<BarricadeDrop> barricadeSelector, bool horizontalDistanceOnly = false)
     {
@@ -1322,7 +1322,7 @@ public static class BarricadeUtility
     /// </summary>
     /// <remarks>Planted barricades are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static int CountBarricadesWhere(Vector3 position, float radius, Predicate<BarricadeDrop> barricadeSelector, int max = -1, bool horizontalDistanceOnly = false)
     {
@@ -1362,7 +1362,7 @@ public static class BarricadeUtility
     /// Count the number of barricades in the given radius matching a predicate.
     /// </summary>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static int CountBarricadesWhere(Predicate<BarricadeDrop> barricadeSelector, int max = -1)
     {
@@ -1418,7 +1418,7 @@ public static class BarricadeUtility
     /// </summary>
     /// <remarks>Planted barricades are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static int CountBarricadesInRange(Vector3 position, float radius, IAssetLink<ItemBarricadeAsset> asset, int max = -1, bool horizontalDistanceOnly = false)
     {
@@ -1458,7 +1458,7 @@ public static class BarricadeUtility
     /// Count the number of barricades in the given radius matching an <paramref name="asset"/>.
     /// </summary>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static int CountBarricades(IAssetLink<ItemBarricadeAsset> asset, int max = -1)
     {
@@ -1512,7 +1512,7 @@ public static class BarricadeUtility
     /// <summary>
     /// Count the number of barricades in the given radius.
     /// </summary>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static int CountBarricadesInRange(Vector3 position, float radius, int max = -1, bool horizontalDistanceOnly = false)
     {
@@ -1543,6 +1543,26 @@ public static class BarricadeUtility
         }
 
         return totalBarricadesFound;
+    }
+
+    /// <summary>
+    /// Prevent this barricade from dropping it's items if its about to be destroyed.
+    /// </summary>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
+    public static void PreventItemDrops(BarricadeDrop drop)
+    {
+        GameThread.AssertCurrent();
+
+        switch (drop.interactable)
+        {
+            case InteractableStorage storage:
+                storage.despawnWhenDestroyed = true;
+                break;
+
+            case InteractableMannequin mannequin:
+                mannequin.clearClothes();
+                break;
+        }
     }
 }
 

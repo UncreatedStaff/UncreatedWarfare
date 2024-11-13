@@ -73,7 +73,7 @@ public static class ItemUtility
     /// <summary>
     /// Enumerate items along the grid instead of the order they were added.
     /// </summary>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     public static ItemPageIterator EnumerateAlongGrid(Items items, bool reverse = false)
     {
         if (items == null)
@@ -87,7 +87,7 @@ public static class ItemUtility
     /// <summary>
     /// Enumerate through all dropped items around the center of the level.
     /// </summary>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static DroppedItemIterator EnumerateDroppedItems()
     {
@@ -99,7 +99,7 @@ public static class ItemUtility
     /// <summary>
     /// Enumerate through all dropped items around the center of the level.
     /// </summary>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static DroppedItemIterator EnumerateDroppedItems(Vector3 center)
     {
@@ -117,7 +117,7 @@ public static class ItemUtility
     /// Enumerate through all dropped items around the center of the level.
     /// </summary>
     /// <remarks>The square enumerated will have a size of <c><paramref name="maxRegionDistance"/> * 2 + 1</c> regions.</remarks>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static DroppedItemIterator EnumerateDroppedItems(Vector3 center, byte maxRegionDistance)
     {
@@ -134,7 +134,7 @@ public static class ItemUtility
     /// <summary>
     /// Enumerate through all dropped items around the given <paramref name="region"/>.
     /// </summary>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static DroppedItemIterator EnumerateDroppedItems(RegionCoord region)
     {
@@ -146,7 +146,7 @@ public static class ItemUtility
     /// <summary>
     /// Enumerate through all dropped items around the region <paramref name="x"/>, <paramref name="y"/>.
     /// </summary>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static DroppedItemIterator EnumerateDroppedItems(byte x, byte y)
     {
@@ -159,7 +159,7 @@ public static class ItemUtility
     /// Enumerate through all dropped items around the given <paramref name="region"/>.
     /// </summary>
     /// <remarks>The square enumerated will have a size of <c><paramref name="maxRegionDistance"/> * 2 + 1</c> regions.</remarks>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static DroppedItemIterator EnumerateDroppedItems(RegionCoord region, byte maxRegionDistance)
     {
@@ -172,7 +172,7 @@ public static class ItemUtility
     /// Enumerate through all dropped items around the region <paramref name="x"/>, <paramref name="y"/>.
     /// </summary>
     /// <remarks>The square enumerated will have a size of <c><paramref name="maxRegionDistance"/> * 2 + 1</c> regions.</remarks>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static DroppedItemIterator EnumerateDroppedItems(byte x, byte y, byte maxRegionDistance)
     {
@@ -185,7 +185,7 @@ public static class ItemUtility
     /// Check if there is at least one item in the player's inventory that has the given <paramref name="asset"/>.
     /// </summary>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     public static bool HasItem(Player player, IAssetLink<ItemAsset> asset)
     {
         return CountItems(player, asset, 1) > 0;
@@ -195,7 +195,7 @@ public static class ItemUtility
     /// Check if there is at least one item in the player's inventory that matches a predicate.
     /// </summary>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     public static bool HasItem(Player player, Predicate<ItemJar> itemSelector)
     {
         return CountItems(player, itemSelector, 1) > 0;
@@ -205,7 +205,7 @@ public static class ItemUtility
     /// Count the number of items in the player's inventory that have the given <paramref name="asset"/>.
     /// </summary>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     public static int CountItems(Player player, IAssetLink<ItemAsset> asset, int max = -1)
     {
         if (asset == null)
@@ -243,7 +243,7 @@ public static class ItemUtility
     /// Count the number of items in the player's inventory that match a predicate.
     /// </summary>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     public static int CountItems(Player player, Predicate<ItemJar> itemSelector, int max = -1)
     {
         if (itemSelector == null)
@@ -298,7 +298,7 @@ public static class ItemUtility
     /// </summary>
     /// <param name="pickUpPlayer">The player that is picking up the items, if any.</param>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     /// <returns>Number of items destroyed.</returns>
     public static int DestroyDroppedItemsInRange(Vector3 position, float radius, IAssetLink<ItemAsset> asset, bool playTakeItemSound, int max = -1, bool horizontalDistanceOnly = false, CSteamID pickUpPlayer = default, Page pickupPage = (Page)byte.MaxValue, byte pickupX = 0, byte pickupY = 0, byte pickupRot = 0)
     {
@@ -341,7 +341,7 @@ public static class ItemUtility
     /// </summary>
     /// <param name="pickUpPlayer">The player that is picking up the items, if any.</param>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     /// <returns>Number of items destroyed.</returns>
     public static int DestroyDroppedItemsInRange(Vector3 position, float radius, Predicate<ItemData> itemSelector, bool playTakeItemSound, int max = -1, bool horizontalDistanceOnly = false, CSteamID pickUpPlayer = default, Page pickupPage = (Page)byte.MaxValue, byte pickupX = 0, byte pickupY = 0, byte pickupRot = 0)
     {
@@ -384,7 +384,7 @@ public static class ItemUtility
     /// </summary>
     /// <param name="pickUpPlayer">The player that is picking up the items, if any.</param>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     /// <returns>Number of items destroyed.</returns>
     public static int DestroyDroppedItemsInRange(Vector3 position, float radius, bool playTakeItemSound, int max = -1, bool horizontalDistanceOnly = false, CSteamID pickUpPlayer = default, Page pickupPage = (Page)byte.MaxValue, byte pickupX = 0, byte pickupY = 0, byte pickupRot = 0)
     {
@@ -423,7 +423,7 @@ public static class ItemUtility
     /// Property clean up and replicate destroying (taking) a dropped item.
     /// </summary>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     public static bool DestroyDroppedItem(ItemData item, bool despawned, bool playTakeItemSound = false)
     {
         if (item == null)
@@ -445,7 +445,7 @@ public static class ItemUtility
     /// Property clean up and replicate destroying (taking) a dropped item that was picked up by a player.
     /// </summary>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     public static bool DestroyDroppedItem(ItemData item, bool despawned, WarfarePlayer pickUpPlayer, Page pickupPage = (Page)byte.MaxValue, byte pickupX = 0, byte pickupY = 0, byte pickupRot = 0, bool playTakeItemSound = false)
     {
         if (item == null)
@@ -467,7 +467,7 @@ public static class ItemUtility
     /// Property clean up and replicate destroying (taking) a dropped item.
     /// </summary>
     /// <exception cref="ArgumentOutOfRangeException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     public static void DestroyDroppedItem(byte x, byte y, int index, bool despawned, bool playTakeItemSound = false)
     {
         GameThread.AssertCurrent();
@@ -485,7 +485,7 @@ public static class ItemUtility
     /// Property clean up and replicate destroying (taking) a dropped item that was picked up by a player.
     /// </summary>
     /// <exception cref="ArgumentOutOfRangeException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     public static void DestroyDroppedItem(byte x, byte y, int index, bool despawned, WarfarePlayer pickUpPlayer, bool playTakeItemSound, Page pickupPage, byte pickupX, byte pickupY, byte pickupRot)
     {
         GameThread.AssertCurrent();
@@ -1130,7 +1130,7 @@ public static class ItemUtility
     /// <summary>
     /// Find a item by it's instance ID.
     /// </summary>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static ItemInfo FindItem(uint instanceId)
     {
@@ -1141,7 +1141,7 @@ public static class ItemUtility
     /// Find a item by it's instance ID, with help from a position to prevent having to search every region.
     /// </summary>
     /// <remarks>All regions will be searched if it's not found near the expected position.</remarks>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static ItemInfo FindItem(uint instanceId, Vector3 expectedPosition)
     {
@@ -1154,7 +1154,7 @@ public static class ItemUtility
     /// Find a item by it's instance ID, with help from an expected region to prevent having to search every region.
     /// </summary>
     /// <remarks>All regions will be searched if it's not found in the expected region.</remarks>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static ItemInfo FindItem(uint instanceId, byte expectedRegionX, byte expectedRegionY)
     {
@@ -1179,7 +1179,7 @@ public static class ItemUtility
     /// Find a item by it's instance ID, with help from an expected region to prevent having to search every region.
     /// </summary>
     /// <remarks>All regions will be searched if it's not found in the expected region.</remarks>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static ItemInfo FindItem(uint instanceId, IAssetLink<ItemAsset> expectedAsset, Vector3 expectedPosition)
     {
@@ -1228,7 +1228,7 @@ public static class ItemUtility
     /// Check for a nearby item with the given <paramref name="asset"/> to <paramref name="position"/> within the given <paramref name="radius"/>.
     /// </summary>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static bool IsItemInRange(Vector3 position, float radius, IAssetLink<ItemAsset> asset, bool horizontalDistanceOnly = false)
     {
@@ -1239,7 +1239,7 @@ public static class ItemUtility
     /// Check for a nearby item matching a predicate to <paramref name="position"/> within the given <paramref name="radius"/>.
     /// </summary>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static bool IsItemInRange(Vector3 position, float radius, Predicate<ItemData> itemSelector, bool horizontalDistanceOnly = false)
     {
@@ -1249,7 +1249,7 @@ public static class ItemUtility
     /// <summary>
     /// Check for a nearby item to <paramref name="position"/> within the given <paramref name="radius"/>.
     /// </summary>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static bool IsItemInRange(Vector3 position, float radius, bool horizontalDistanceOnly = false)
     {
@@ -1260,7 +1260,7 @@ public static class ItemUtility
     /// Find the closest item with the given <paramref name="asset"/> to <paramref name="position"/> within the given <paramref name="radius"/>.
     /// </summary>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static ItemInfo GetClosestItemInRange(Vector3 position, float radius, IAssetLink<ItemAsset> asset, bool horizontalDistanceOnly = false)
     {
@@ -1299,7 +1299,7 @@ public static class ItemUtility
     /// Find the closest item with the given <paramref name="asset"/> to <paramref name="position"/>.
     /// </summary>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static ItemInfo GetClosestItem(Vector3 position, IAssetLink<ItemAsset> asset, bool horizontalDistanceOnly = false)
     {
@@ -1341,7 +1341,7 @@ public static class ItemUtility
     /// <summary>
     /// Find the closest item to <paramref name="position"/> within the given <paramref name="radius"/>.
     /// </summary>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static ItemInfo GetClosestItemInRange(Vector3 position, float radius, bool horizontalDistanceOnly = false)
     {
@@ -1376,7 +1376,7 @@ public static class ItemUtility
     /// <summary>
     /// Find the closest item to <paramref name="position"/>.
     /// </summary>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static ItemInfo GetClosestItem(Vector3 position, bool horizontalDistanceOnly = false)
     {
@@ -1416,7 +1416,7 @@ public static class ItemUtility
     /// Find the closest item matching a predicate to <paramref name="position"/> within a given <paramref name="radius"/>.
     /// </summary>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static ItemInfo GetClosestItemWhere(Vector3 position, float radius, Predicate<ItemData> itemSelector, bool horizontalDistanceOnly = false)
     {
@@ -1455,7 +1455,7 @@ public static class ItemUtility
     /// Find the closest item matching a predicate to <paramref name="position"/>.
     /// </summary>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static ItemInfo GetClosestItemWhere(Vector3 position, Predicate<ItemData> itemSelector, bool horizontalDistanceOnly = false)
     {
@@ -1498,7 +1498,7 @@ public static class ItemUtility
     /// Count the number of items in the given <paramref name="radius"/> matching a predicate.
     /// </summary>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static int CountItemsWhere(Vector3 position, float radius, Predicate<ItemData> itemSelector, int max = -1, bool horizontalDistanceOnly = false)
     {
@@ -1539,7 +1539,7 @@ public static class ItemUtility
     /// Count the number of items in the given radius matching a predicate.
     /// </summary>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static int CountItemsWhere(Predicate<ItemData> itemSelector, int max = -1)
     {
@@ -1575,7 +1575,7 @@ public static class ItemUtility
     /// Count the number of items in the given <paramref name="radius"/> matching an <paramref name="asset"/>.
     /// </summary>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static int CountItemsInRange(Vector3 position, float radius, IAssetLink<ItemAsset> asset, int max = -1, bool horizontalDistanceOnly = false)
     {
@@ -1616,7 +1616,7 @@ public static class ItemUtility
     /// Count the number of items in the given radius matching an <paramref name="asset"/>.
     /// </summary>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static int CountItems(IAssetLink<ItemAsset> asset, int max = -1)
     {
@@ -1651,7 +1651,7 @@ public static class ItemUtility
     /// <summary>
     /// Count the number of items in the given radius.
     /// </summary>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static int CountItemsInRange(Vector3 position, float radius, int max = -1, bool horizontalDistanceOnly = false)
     {

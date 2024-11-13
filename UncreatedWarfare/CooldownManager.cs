@@ -13,7 +13,7 @@ using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare;
 
-public class CooldownManager : IHostedService
+public class CooldownManager : IHostedService, ILayoutHostedService
 {
     internal List<Cooldown> Cooldowns = new List<Cooldown>(128);
     internal CooldownConfig Config = new CooldownConfig();
@@ -24,24 +24,23 @@ public class CooldownManager : IHostedService
     {
         _playerService = playerService;
     }
-    public UniTask StartAsync(CancellationToken token)
+
+
+    UniTask IHostedService.StartAsync(CancellationToken token)
     {
         Config.SetDefaults();
         return UniTask.CompletedTask;
     }
-
-    public UniTask StopAsync(CancellationToken token)
+    UniTask ILayoutHostedService.StartAsync(CancellationToken token)
     {
+        Cooldowns.RemoveAll(x => ShouldResetOnGameStart(x.CooldownType));
         return UniTask.CompletedTask;
     }
 
-    // todo
-    private void OnGameStarting()
-    {
-        GameThread.AssertCurrent();
+    UniTask IHostedService.StopAsync(CancellationToken token) => UniTask.CompletedTask;
+    UniTask ILayoutHostedService.StopAsync(CancellationToken token) => UniTask.CompletedTask;
 
-        Cooldowns.RemoveAll(x => x.CooldownType is not CooldownType.Report);
-    }
+    public static bool ShouldResetOnGameStart(CooldownType type) => type != CooldownType.Report;
 
     /// <exception cref="SingletonUnloadedException"/>
     public void StartCooldown(WarfarePlayer player, CooldownType type, float seconds, params object[] data)
@@ -55,38 +54,15 @@ public class CooldownManager : IHostedService
         else
             Cooldowns.Add(new Cooldown(player, type, seconds, data));
     }
+
     /// <exception cref="SingletonUnloadedException"/>
     public bool HasCooldown(WarfarePlayer player, CooldownType type, out Cooldown cooldown, params object[] data)
     {
         GameThread.AssertCurrent();
 
         Cooldowns.RemoveAll(c => c.Player == null || c.SecondsLeft <= 0f);
-        cooldown = Cooldowns.Find(c => c.CooldownType == type && c.Player.Steam64 == player.Steam64 && StatesEqual(data, c.Parameters));
+        cooldown = Cooldowns.Find(c => c.CooldownType == type && c.Player.Steam64 == player.Steam64 && data.SequenceEqual(c.Parameters));
         return cooldown != null;
-    }
-    private bool StatesEqual(object[] state1, object[] state2)
-    {
-        if (state1 is null && state2 is null) return true;
-        if (state1 is null) return state2.Length == 0;
-        if (state2 is null) return state1.Length == 0;
-
-        if (state1.Length != state2.Length) return false;
-
-        for (int i = 0; i < state1.Length; ++i)
-        {
-            object objA = state1[i], objB = state2[i];
-
-            if (!ReferenceEquals(objA, objB))
-                return false;
-            if ((objA is IComparable || objB is IComparable) && Comparer.Default.Compare(objA, objB) != 0)
-                return false;
-            if (objA != null ^ objB != null)
-            {
-                if (objA != null && !objA.Equals(objB))
-                    return false;
-            }
-        }
-        return true;
     }
 
     /// <exception cref="SingletonUnloadedException"/>

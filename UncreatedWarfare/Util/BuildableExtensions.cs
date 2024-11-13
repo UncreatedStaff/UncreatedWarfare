@@ -1,12 +1,49 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Models;
+using Uncreated.Warfare.Models.Buildables;
 
 namespace Uncreated.Warfare.Util;
 public static class BuildableExtensions
 {
+    /// <summary>
+    /// Destroyes every buildable that isn't currently saved.
+    /// </summary>
+    /// <remarks>Storages won't drop their items.</remarks>
+    public static async Task<int> DestroyUnsavedBuildables(this BuildableSaver buildableSaver, CSteamID instigator = default, CancellationToken token = default)
+    {
+        List<BuildableSave> saves = await buildableSaver.GetAllSavesAsync(token).ConfigureAwait(false);
+
+        await UniTask.SwitchToMainThread(token);
+
+        int ct = 0;
+        foreach (BarricadeInfo barricade in BarricadeUtility.EnumerateBarricades()
+                     .Where(structure => !saves.Exists(x => !x.IsStructure && x.InstanceId == structure.Drop.instanceID))
+                     .ToList()
+                )
+        {
+            BarricadeUtility.PreventItemDrops(barricade.Drop);
+            SetSalvageInfo(barricade.Drop.model, instigator, true, null);
+            BarricadeManager.destroyBarricade(barricade.Drop, barricade.Coord.x, barricade.Coord.y, barricade.Plant);
+            ++ct;
+        }
+
+        foreach (StructureInfo structure in StructureUtility.EnumerateStructures()
+                     .Where(structure => !saves.Exists(x => x.IsStructure && x.InstanceId == structure.Drop.instanceID))
+                     .ToList()
+                )
+        {
+            SetSalvageInfo(structure.Drop.model, instigator, true, null);
+            StructureManager.destroyStructure(structure.Drop, structure.Coord.x, structure.Coord.y, Vector3.zero);
+            ++ct;
+        }
+
+        return ct;
+    }
+
     /// <summary>
     /// Destroy the structure or barricade.
     /// </summary>

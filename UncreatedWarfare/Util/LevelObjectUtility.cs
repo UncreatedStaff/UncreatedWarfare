@@ -13,7 +13,7 @@ public static class LevelObjectUtility
     /// <summary>
     /// Enumerate through all level objects around the center of the level.
     /// </summary>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static ObjectIterator EnumerateObjects()
     {
@@ -26,7 +26,7 @@ public static class LevelObjectUtility
     /// <summary>
     /// Enumerate through all level objects around the center of the level.
     /// </summary>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static ObjectIterator EnumerateObjects(Vector3 center)
     {
@@ -44,7 +44,7 @@ public static class LevelObjectUtility
     /// Enumerate through all level objects around the center of the level.
     /// </summary>
     /// <remarks>The square enumerated will have a size of <c><paramref name="maxRegionDistance"/> * 2 + 1</c> regions.</remarks>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static ObjectIterator EnumerateObjects(Vector3 center, byte maxRegionDistance)
     {
@@ -61,7 +61,7 @@ public static class LevelObjectUtility
     /// <summary>
     /// Enumerate through all level objects around the given <paramref name="region"/>.
     /// </summary>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static ObjectIterator EnumerateObjects(RegionCoord region)
     {
@@ -73,7 +73,7 @@ public static class LevelObjectUtility
     /// <summary>
     /// Enumerate through all level objects around the region <paramref name="x"/>, <paramref name="y"/>.
     /// </summary>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static ObjectIterator EnumerateObjects(byte x, byte y)
     {
@@ -86,7 +86,7 @@ public static class LevelObjectUtility
     /// Enumerate through all level objects around the given <paramref name="region"/>.
     /// </summary>
     /// <remarks>The square enumerated will have a size of <c><paramref name="maxRegionDistance"/> * 2 + 1</c> regions.</remarks>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static ObjectIterator EnumerateObjects(RegionCoord region, byte maxRegionDistance)
     {
@@ -99,7 +99,7 @@ public static class LevelObjectUtility
     /// Enumerate through all level objects around the region <paramref name="x"/>, <paramref name="y"/>.
     /// </summary>
     /// <remarks>The square enumerated will have a size of <c><paramref name="maxRegionDistance"/> * 2 + 1</c> regions.</remarks>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static ObjectIterator EnumerateObjects(byte x, byte y, byte maxRegionDistance)
     {
@@ -139,7 +139,7 @@ public static class LevelObjectUtility
     /// <summary>
     /// Find a object by it's instance ID.
     /// </summary>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static ObjectInfo FindObject(uint instanceId)
     {
@@ -149,7 +149,7 @@ public static class LevelObjectUtility
     /// <summary>
     /// Find a object by it's Unity <see cref="Transform"/>.
     /// </summary>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static ObjectInfo FindObject(Transform transform)
     {
@@ -204,7 +204,7 @@ public static class LevelObjectUtility
     /// Find a object by it's instance ID, with help from a position to prevent having to search every region.
     /// </summary>
     /// <remarks>All regions will be searched if it's not found near the expected position.</remarks>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static ObjectInfo FindObject(uint instanceId, Vector3 expectedPosition)
     {
@@ -217,7 +217,7 @@ public static class LevelObjectUtility
     /// Find a object by it's instance ID, with help from an expected region to prevent having to search every region.
     /// </summary>
     /// <remarks>All regions will be searched if it's not found in the expected region.</remarks>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static ObjectInfo FindObject(uint instanceId, byte expectedRegionX, byte expectedRegionY)
     {
@@ -242,7 +242,7 @@ public static class LevelObjectUtility
     /// Find a object by it's instance ID, with help from an expected region to prevent having to search every region.
     /// </summary>
     /// <remarks>All regions will be searched if it's not found in the expected region.</remarks>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static ObjectInfo FindObject(uint instanceId, IAssetLink<ObjectAsset> expectedAsset, Vector3 expectedPosition)
     {
@@ -292,7 +292,7 @@ public static class LevelObjectUtility
     /// Check for a nearby object with the given <paramref name="asset"/> to <paramref name="position"/> within the given <paramref name="radius"/>.
     /// </summary>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static bool IsObjectInRange(Vector3 position, float radius, IAssetLink<ObjectAsset> asset, bool horizontalDistanceOnly = false)
     {
@@ -303,7 +303,7 @@ public static class LevelObjectUtility
     /// Check for a nearby object matching a predicate to <paramref name="position"/> within the given <paramref name="radius"/>.
     /// </summary>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static bool IsObjectInRange(Vector3 position, float radius, Predicate<LevelObject> objectSelector, bool horizontalDistanceOnly = false)
     {
@@ -313,7 +313,7 @@ public static class LevelObjectUtility
     /// <summary>
     /// Check for a nearby object to <paramref name="position"/> within the given <paramref name="radius"/>.
     /// </summary>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static bool IsObjectInRange(Vector3 position, float radius, bool horizontalDistanceOnly = false)
     {
@@ -324,7 +324,7 @@ public static class LevelObjectUtility
     /// Find the closest object with the given <paramref name="asset"/> to <paramref name="position"/> within the given <paramref name="radius"/>.
     /// </summary>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static ObjectInfo GetClosestObjectInRange(Vector3 position, float radius, IAssetLink<ObjectAsset> asset, bool horizontalDistanceOnly = false)
     {
@@ -363,7 +363,7 @@ public static class LevelObjectUtility
     /// Find the closest object with the given <paramref name="asset"/> to <paramref name="position"/>.
     /// </summary>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static ObjectInfo GetClosestObject(Vector3 position, IAssetLink<ObjectAsset> asset, bool horizontalDistanceOnly = false)
     {
@@ -405,7 +405,7 @@ public static class LevelObjectUtility
     /// <summary>
     /// Find the closest object to <paramref name="position"/> within the given <paramref name="radius"/>.
     /// </summary>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static ObjectInfo GetClosestObjectInRange(Vector3 position, float radius, bool horizontalDistanceOnly = false)
     {
@@ -440,7 +440,7 @@ public static class LevelObjectUtility
     /// <summary>
     /// Find the closest object to <paramref name="position"/>.
     /// </summary>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static ObjectInfo GetClosestObject(Vector3 position, bool horizontalDistanceOnly = false)
     {
@@ -480,7 +480,7 @@ public static class LevelObjectUtility
     /// Find the closest object matching a predicate to <paramref name="position"/> within a given <paramref name="radius"/>.
     /// </summary>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static ObjectInfo GetClosestObjectWhere(Vector3 position, float radius, Predicate<LevelObject> objectSelector, bool horizontalDistanceOnly = false)
     {
@@ -519,7 +519,7 @@ public static class LevelObjectUtility
     /// Find the closest object matching a predicate to <paramref name="position"/>.
     /// </summary>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static ObjectInfo GetClosestObjectWhere(Vector3 position, Predicate<LevelObject> objectSelector, bool horizontalDistanceOnly = false)
     {
@@ -562,7 +562,7 @@ public static class LevelObjectUtility
     /// Count the number of objects in the given <paramref name="radius"/> matching a predicate.
     /// </summary>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static int CountObjectsWhere(Vector3 position, float radius, Predicate<LevelObject> objectSelector, int max = -1, bool horizontalDistanceOnly = false)
     {
@@ -603,7 +603,7 @@ public static class LevelObjectUtility
     /// Count the number of objects in the given radius matching a predicate.
     /// </summary>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static int CountObjectsWhere(Predicate<LevelObject> objectSelector, int max = -1)
     {
@@ -639,7 +639,7 @@ public static class LevelObjectUtility
     /// Count the number of objects in the given <paramref name="radius"/> matching an <paramref name="asset"/>.
     /// </summary>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static int CountObjectsInRange(Vector3 position, float radius, IAssetLink<ObjectAsset> asset, int max = -1, bool horizontalDistanceOnly = false)
     {
@@ -680,7 +680,7 @@ public static class LevelObjectUtility
     /// Count the number of objects in the given radius matching an <paramref name="asset"/>.
     /// </summary>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static int CountObjects(IAssetLink<ObjectAsset> asset, int max = -1)
     {
@@ -715,7 +715,7 @@ public static class LevelObjectUtility
     /// <summary>
     /// Count the number of objects in the given radius.
     /// </summary>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static int CountObjectsInRange(Vector3 position, float radius, int max = -1, bool horizontalDistanceOnly = false)
     {

@@ -2,6 +2,7 @@
 using System;
 using System.Linq;
 using Uncreated.Warfare.Buildables;
+using Uncreated.Warfare.Interaction.Requests;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Players;
@@ -17,7 +18,7 @@ namespace Uncreated.Warfare.Vehicles;
 /// <summary>
 /// Handles logic for spawning vehicles.
 /// </summary>
-public class VehicleSpawnerComponent : MonoBehaviour, IManualOnDestroy
+public class VehicleSpawnerComponent : MonoBehaviour, IManualOnDestroy, IRequestable<VehicleSpawnInfo>
 {
     public const float IdleDistance = 200;
     public const float EnemyIdleDistance = 20;
@@ -34,16 +35,31 @@ public class VehicleSpawnerComponent : MonoBehaviour, IManualOnDestroy
     private ZoneStore _zoneStore;
     private Zone? _lastLocation;
     private Vector2 _lastZoneCheckPos;
+    private VehicleSpawnerState _state = VehicleSpawnerState.Uninitialized;
 
     public VehicleSpawnInfo SpawnInfo { get; private set; }
     public WarfareVehicleInfo VehicleInfo { get; private set; }
-    public VehicleSpawnerState State { get; private set; }
+
+    public VehicleSpawnerState State
+    {
+        get => _state;
+        private set
+        {
+            if (_state == value)
+                return;
+
+            // todo back to auto-property
+            WarfareModule.Singleton.GlobalLogger.LogConditional("State updated for {0}. {1} -> {2}.", VehicleInfo.Vehicle.ToDisplayString(), _state, value);
+            _state = value;
+        }
+    }
 
     public void Init(VehicleSpawnInfo spawnInfo, WarfareVehicleInfo vehicle, IServiceProvider serviceProvider)
     {
         SpawnInfo = spawnInfo;
         VehicleInfo = vehicle;
 
+        _state = VehicleSpawnerState.Uninitialized;
         _signInstancer = serviceProvider.GetRequiredService<SignInstancer>();
         _playerService = serviceProvider.GetRequiredService<IPlayerService>();
         _teamManager = serviceProvider.GetRequiredService<ITeamManager<Team>>();
@@ -70,8 +86,8 @@ public class VehicleSpawnerComponent : MonoBehaviour, IManualOnDestroy
         float rt = Time.realtimeSinceStartup;
         return State switch
         {
-            VehicleSpawnerState.Destroyed => TimeSpan.FromSeconds(rt - _destroyedTime),
-            VehicleSpawnerState.Idle => TimeSpan.FromSeconds(rt - _idleTime),
+            VehicleSpawnerState.Destroyed => TimeSpan.FromSeconds(VehicleInfo.RespawnTime.TotalSeconds - (rt - _destroyedTime)),
+            VehicleSpawnerState.Idle => TimeSpan.FromSeconds(VehicleInfo.RespawnTime.TotalSeconds - (rt - _idleTime)),
             _ => TimeSpan.Zero
         };
     }
@@ -79,12 +95,25 @@ public class VehicleSpawnerComponent : MonoBehaviour, IManualOnDestroy
     [UsedImplicitly]
     private void Update()
     {
-        float rt = Time.realtimeSinceStartup;
+        Update(Time.realtimeSinceStartup);
+    }
+
+    private void Update(float rt)
+    {
 
         bool forceUpdate = false;
 
+        if (State == VehicleSpawnerState.Uninitialized)
+        {
+            RespawnVehicle();
+            State = VehicleSpawnerState.Ready;
+            forceUpdate = true;
+            _lastLocation = null;
+            _idleTime = 0;
+            _destroyedTime = 0;
+        }
         // Destroyed
-        if (SpawnInfo.LinkedVehicle is null || SpawnInfo.LinkedVehicle.isExploded)
+        else if (SpawnInfo.LinkedVehicle == null || SpawnInfo.LinkedVehicle.isExploded || SpawnInfo.LinkedVehicle.isDead || SpawnInfo.LinkedVehicle.isDrowned)
         {
             if (State != VehicleSpawnerState.Destroyed)
             {
@@ -106,6 +135,8 @@ public class VehicleSpawnerComponent : MonoBehaviour, IManualOnDestroy
                 State = VehicleSpawnerState.Ready;
                 _lastLocation = null;
                 forceUpdate = true;
+                _idleTime = 0;
+                _destroyedTime = 0;
             }
         }
         // Idle
@@ -166,15 +197,15 @@ public class VehicleSpawnerComponent : MonoBehaviour, IManualOnDestroy
         Vector3 pos = vehicle.transform.position;
         Team vehicleTeam = _teamManager.GetTeam(vehicle.lockedGroup);
 
-        return !_playerService.OnlinePlayers.Any(x => x.InRadiusOf(pos, EnemyIdleDistance) || x.Team.IsFriendly(vehicleTeam) && x.InRadiusOf(pos, IdleDistance));
+        return !_playerService.OnlinePlayers.Any(x => x.InRadiusOf(in pos, EnemyIdleDistance) || x.Team.IsFriendly(vehicleTeam) && x.InRadiusOf(in pos, IdleDistance));
     }
 
     private void CheckRespawn(float rt)
     {
-        if (State == VehicleSpawnerState.Ready)
+        if (State is not VehicleSpawnerState.Idle and not VehicleSpawnerState.Destroyed)
             return;
 
-        if (rt - _destroyedTime >= VehicleInfo.RespawnTime.TotalSeconds)
+        if (rt - (State == VehicleSpawnerState.Idle ? _idleTime : _destroyedTime) >= VehicleInfo.RespawnTime.TotalSeconds)
         {
             RespawnVehicle();
         }
@@ -182,13 +213,19 @@ public class VehicleSpawnerComponent : MonoBehaviour, IManualOnDestroy
 
     public void RespawnVehicle()
     {
+        // WarfareModule.Singleton.GlobalLogger.LogInformation("Respawning");
+        if (SpawnInfo.LinkedVehicle != null && !(SpawnInfo.LinkedVehicle.isExploded || SpawnInfo.LinkedVehicle.isDead))
+        {
+            VehicleManager.askVehicleDestroy(SpawnInfo.LinkedVehicle);
+        }
+
         _ = _vehicleService.SpawnVehicleAsync(SpawnInfo, CancellationToken.None);
     }
 
     private void UpdateLinkedSignsTick(float rt)
     {
         // basically wait until realtime ticks from .997 to 1.014 or whatever, keeps signs in sync with each other
-        if (_lastSignUpdate < 1 || (int)Math.Round(rt) != (int)Math.Floor(rt) || (int)Math.Round(_lastRealtime) != (int)Math.Floor(_lastRealtime) - 1)
+        if (_lastSignUpdate < 1 || _lastRealtime > (int)Math.Floor(rt))
         {
             return;
         }
@@ -201,12 +238,16 @@ public class VehicleSpawnerComponent : MonoBehaviour, IManualOnDestroy
         GameThread.AssertCurrent();
 
         _lastSignUpdate = 0;
-        Update();
-        UpdateLinkedSigns(Time.realtimeSinceStartup);
+        float rt = Time.realtimeSinceStartup;
+        Update(rt);
+        
+        if (_lastSignUpdate != rt)
+            UpdateLinkedSigns(rt);
     }
 
     private void UpdateLinkedSigns(float rt)
     {
+        // WarfareModule.Singleton.GlobalLogger.LogInformation("Update sign");
         _lastSignUpdate = rt;
         foreach (IBuildable sign in SpawnInfo.SignInstanceIds)
         {
@@ -266,6 +307,7 @@ public enum VehicleSpawnerState
     Destroyed,
     Deployed,
     Idle,
-    Ready
+    Ready,
+    Uninitialized
 }
 #pragma warning restore IDE0051

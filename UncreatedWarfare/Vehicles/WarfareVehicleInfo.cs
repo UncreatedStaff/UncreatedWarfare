@@ -27,6 +27,7 @@ public class WarfareVehicleInfo : IEquatable<WarfareVehicleInfo>, ITranslationAr
     public int TicketCost { get; set; }
     public TimeSpan RespawnTime { get; set; }
     public TimeSpan Cooldown { get; set; }
+    public Color32 PaintColor { get; set; }
 
     /// <remarks>
     /// Some vehicles like the F15-E have names that are too long and result in the final sign having too many characters.

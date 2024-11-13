@@ -1,14 +1,9 @@
-﻿using DanielWillett.ReflectionTools;
-using System;
-using System.Linq;
-using System.Reflection;
-using Microsoft.Extensions.DependencyInjection;
+﻿using System;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Interaction.Requests;
 using Uncreated.Warfare.Kits.Translations;
 using Uncreated.Warfare.Signs;
 using Uncreated.Warfare.Translations;
-using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Containers;
 
 namespace Uncreated.Warfare.Commands;
@@ -47,32 +42,14 @@ public sealed class RequestCommand : ICompoundingCooldownCommand
             throw Context.Reply(_translations.RequestNoTarget);
         }
 
-        Type requestSourceType = requestable.GetType();
+        await RequestHelper.RequestAsync(
+            Context.Player,
+            requestable,
+            Context.Logger,
+            _module.ScopedProvider.Resolve<IServiceProvider>(),
+            token
+        );
 
-        // get value of IRequestable< ? > for 'requestable'
-        Type requestValueType = requestSourceType.GetInterfaces()
-            .First(x => x.IsGenericType && x.GetGenericTypeDefinition() == typeof(IRequestable<>))
-            .GetGenericArguments()[0];
-
-        //                           \/ requestSourceType     \/ requestValueType
-        // example: IRequestHandler<KitSignInstanceProvider, Kit>
-        Type requestType = typeof(IRequestHandler<,>).MakeGenericType(requestSourceType, requestValueType);
-
-        object? reqHandler = _module.ScopedProvider.ResolveOptional(requestType);
-        if (reqHandler == null)
-        {
-            Context.Logger.LogError("Missing service for request handler {0}.", requestType);
-            throw Context.SendGamemodeError();
-        }
-
-        RequestCommandResultHandler resultHandler = ActivatorUtilities.CreateInstance<RequestCommandResultHandler>(_module.ScopedProvider.Resolve<IServiceProvider>());
-
-        // gets the implemented RequestAsync method for an interface
-        MethodInfo method = requestType.GetMethod("RequestAsync", BindingFlags.Public | BindingFlags.Instance)!;
-        method = Accessor.GetImplementedMethod(reqHandler.GetType(), method)!;
-
-        // call RequestAsync
-        await (Task<bool>)method.Invoke(reqHandler, [ Context.Player, requestable, resultHandler, token ]);
         Context.Defer();
     }
 
@@ -84,17 +61,18 @@ public sealed class RequestCommand : ICompoundingCooldownCommand
         }
 
         IRequestable<object>? requestable = ContainerHelper.FindComponent<IRequestable<object>>(transform);
-        if (requestable != null)
+        if (requestable != null || !transform.CompareTag("Barricade"))
         {
             return requestable;
         }
 
-        if (!Context.TryGetBarricadeTarget(out BarricadeDrop? drop) || drop.interactable is not InteractableSign)
+        BarricadeDrop? barricade = BarricadeManager.FindBarricadeByRootTransform(transform);
+        if (barricade?.interactable is not InteractableSign)
         {
             return null;
         }
 
-        ISignInstanceProvider? provider = _signInstancer.GetSignProvider(drop);
+        ISignInstanceProvider? provider = _signInstancer.GetSignProvider(barricade);
         return provider as IRequestable<object>;
     }
 }

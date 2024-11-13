@@ -495,7 +495,7 @@ public sealed class WarfareModule
 
         bldr.RegisterType<AbandonService>()
             .AsImplementedInterfaces().AsSelf()
-            .SingleInstance();
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
 
         bldr.RegisterType<VehicleService>()
             .AsImplementedInterfaces().AsSelf()

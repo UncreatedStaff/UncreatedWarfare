@@ -22,13 +22,13 @@ public interface IRequestResultHandler
     void NotFoundOrRegistered(WarfarePlayer player);
 
     /// <summary>
-    /// Called when a generic requirement isn't met for this loadout.
+    /// Called when a generic requirement isn't met for this requestable object.
     /// </summary>
     /// <exception cref="GameThreadException"/>
     void MissingRequirement(WarfarePlayer player, IRequestable<object> value, string localizedRequirement);
 
     /// <summary>
-    /// Called when a generic requirement isn't met for this loadout.
+    /// Called when a generic requirement isn't met for this requestable object.
     /// </summary>
     /// <exception cref="GameThreadException"/>
     void Success(WarfarePlayer player, IRequestable<object> value);

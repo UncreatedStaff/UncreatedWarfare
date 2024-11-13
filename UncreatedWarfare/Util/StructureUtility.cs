@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Util.Region;
 
 namespace Uncreated.Warfare.Util;
@@ -15,7 +13,7 @@ public static class StructureUtility
     /// <summary>
     /// Enumerate through all structures around the center of the level.
     /// </summary>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static StructureIterator EnumerateStructures()
     {
@@ -27,7 +25,7 @@ public static class StructureUtility
     /// <summary>
     /// Enumerate through all structures around <paramref name="center"/>.
     /// </summary>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static StructureIterator EnumerateStructures(Vector3 center)
     {
@@ -44,7 +42,7 @@ public static class StructureUtility
     /// <summary>
     /// Enumerate through all structures around region <paramref name="x"/>, <paramref name="y"/>.
     /// </summary>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static StructureIterator EnumerateStructures(byte x, byte y)
     {
@@ -56,7 +54,7 @@ public static class StructureUtility
     /// <summary>
     /// Enumerate through all structures around <paramref name="region"/>.
     /// </summary>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static StructureIterator EnumerateStructures(RegionCoord region)
     {
@@ -80,7 +78,7 @@ public static class StructureUtility
     /// <summary>
     /// Find a structure by it's instance ID.
     /// </summary>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static StructureInfo FindStructure(uint instanceId)
     {
@@ -91,7 +89,7 @@ public static class StructureUtility
     /// Find a structure by it's instance ID, with help from a position to prevent having to search every region.
     /// </summary>
     /// <remarks>All regions will be searched if it's not found near the expected position.</remarks>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static StructureInfo FindStructure(uint instanceId, Vector3 expectedPosition)
     {
@@ -104,7 +102,7 @@ public static class StructureUtility
     /// Find a structure by it's instance ID, with help from an expected region to prevent having to search every region.
     /// </summary>
     /// <remarks>All regions will be searched if it's not found in the expected region.</remarks>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static StructureInfo FindStructure(uint instanceId, byte expectedRegionX, byte expectedRegionY)
     {
@@ -129,7 +127,7 @@ public static class StructureUtility
     /// Find a structure by it's instance ID, with help from an expected region to prevent having to search every region.
     /// </summary>
     /// <remarks>All regions will be searched if it's not found in the expected region. Only instance ID is checked on planted structures.</remarks>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static StructureInfo FindStructure(uint instanceId, IAssetLink<ItemStructureAsset> expectedAsset, Vector3 expectedPosition)
     {
@@ -179,7 +177,7 @@ public static class StructureUtility
     /// Check for a nearby structure with the given <paramref name="asset"/> to <paramref name="position"/> within the given <paramref name="radius"/>.
     /// </summary>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static bool IsStructureInRange(Vector3 position, float radius, IAssetLink<ItemStructureAsset> asset, bool horizontalDistanceOnly = false)
     {
@@ -190,7 +188,7 @@ public static class StructureUtility
     /// Check for a nearby structure matching a predicate to <paramref name="position"/> within the given <paramref name="radius"/>.
     /// </summary>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static bool IsStructureInRange(Vector3 position, float radius, Predicate<StructureDrop> structureSelector, bool horizontalDistanceOnly = false)
     {
@@ -200,7 +198,7 @@ public static class StructureUtility
     /// <summary>
     /// Check for a nearby structure to <paramref name="position"/> within the given <paramref name="radius"/>.
     /// </summary>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static bool IsStructureInRange(Vector3 position, float radius, bool horizontalDistanceOnly = false)
     {
@@ -211,7 +209,7 @@ public static class StructureUtility
     /// Check for a nearby structure with the given <paramref name="asset"/> to <paramref name="position"/> within the given <paramref name="radius"/> and <paramref name="group"/>.
     /// </summary>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static bool IsStructureInRange(Vector3 position, float radius, ulong group, IAssetLink<ItemStructureAsset> asset, bool horizontalDistanceOnly = false)
     {
@@ -222,7 +220,7 @@ public static class StructureUtility
     /// Check for a nearby structure matching a predicate to <paramref name="position"/> within the given <paramref name="radius"/> and <paramref name="group"/>.
     /// </summary>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static bool IsStructureInRange(Vector3 position, float radius, ulong group, Predicate<StructureDrop> structureSelector, bool horizontalDistanceOnly = false)
     {
@@ -232,7 +230,7 @@ public static class StructureUtility
     /// <summary>
     /// Check for a nearby structure to <paramref name="position"/> within the given <paramref name="radius"/> and <paramref name="group"/>.
     /// </summary>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static bool IsStructureInRange(Vector3 position, float radius, ulong group, bool horizontalDistanceOnly = false)
     {
@@ -243,7 +241,7 @@ public static class StructureUtility
     /// Find the closest structure with the given <paramref name="asset"/> to <paramref name="position"/> within the given <paramref name="radius"/>.
     /// </summary>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static StructureInfo GetClosestStructureInRange(Vector3 position, float radius, IAssetLink<ItemStructureAsset> asset, bool horizontalDistanceOnly = false)
     {
@@ -281,7 +279,7 @@ public static class StructureUtility
     /// Find the closest structure with the given <paramref name="asset"/> to <paramref name="position"/>.
     /// </summary>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static StructureInfo GetClosestStructure(Vector3 position, IAssetLink<ItemStructureAsset> asset, bool horizontalDistanceOnly = false)
     {
@@ -323,7 +321,7 @@ public static class StructureUtility
     /// Find the closest structure with the given <paramref name="asset"/> to <paramref name="position"/> within the given <paramref name="radius"/> and <paramref name="group"/>.
     /// </summary>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static StructureInfo GetClosestStructureInRange(Vector3 position, float radius, ulong group, IAssetLink<ItemStructureAsset> asset, bool horizontalDistanceOnly = false)
     {
@@ -365,7 +363,7 @@ public static class StructureUtility
     /// Find the closest structure with the given <paramref name="asset"/> to <paramref name="position"/> with the given <paramref name="group"/>.
     /// </summary>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static StructureInfo GetClosestStructure(Vector3 position, ulong group, IAssetLink<ItemStructureAsset> asset, bool horizontalDistanceOnly = false)
     {
@@ -410,7 +408,7 @@ public static class StructureUtility
     /// <summary>
     /// Find the closest structure to <paramref name="position"/> within the given <paramref name="radius"/>.
     /// </summary>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static StructureInfo GetClosestStructureInRange(Vector3 position, float radius, bool horizontalDistanceOnly = false)
     {
@@ -444,7 +442,7 @@ public static class StructureUtility
     /// <summary>
     /// Find the closest structure to <paramref name="position"/>.
     /// </summary>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static StructureInfo GetClosestStructure(Vector3 position, bool horizontalDistanceOnly = false)
     {
@@ -482,7 +480,7 @@ public static class StructureUtility
     /// <summary>
     /// Find the closest structure to <paramref name="position"/> within the given <paramref name="radius"/> and <paramref name="group"/>.
     /// </summary>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static StructureInfo GetClosestStructureInRange(Vector3 position, float radius, ulong group, bool horizontalDistanceOnly = false)
     {
@@ -520,7 +518,7 @@ public static class StructureUtility
     /// <summary>
     /// Find the closest structure to <paramref name="position"/> with the given <paramref name="group"/>.
     /// </summary>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static StructureInfo GetClosestStructure(Vector3 position, ulong group, bool horizontalDistanceOnly = false)
     {
@@ -563,7 +561,7 @@ public static class StructureUtility
     /// Find the closest structure matching a predicate to <paramref name="position"/> within a given <paramref name="radius"/>.
     /// </summary>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static StructureInfo GetClosestStructureWhere(Vector3 position, float radius, Predicate<StructureDrop> structureSelector, bool horizontalDistanceOnly = false)
     {
@@ -601,7 +599,7 @@ public static class StructureUtility
     /// Find the closest structure matching a predicate to <paramref name="position"/>.
     /// </summary>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static StructureInfo GetClosestStructureWhere(Vector3 position, Predicate<StructureDrop> structureSelector, bool horizontalDistanceOnly = false)
     {
@@ -643,7 +641,7 @@ public static class StructureUtility
     /// Find the closest structure matching a predicate to <paramref name="position"/> within a given <paramref name="radius"/> and <paramref name="group"/>.
     /// </summary>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static StructureInfo GetClosestStructureWhere(Vector3 position, float radius, ulong group, Predicate<StructureDrop> structureSelector, bool horizontalDistanceOnly = false)
     {
@@ -685,7 +683,7 @@ public static class StructureUtility
     /// Find the closest structure matching a predicate to <paramref name="position"/> with the given <paramref name="group"/>.
     /// </summary>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static StructureInfo GetClosestStructureWhere(Vector3 position, ulong group, Predicate<StructureDrop> structureSelector, bool horizontalDistanceOnly = false)
     {
@@ -731,7 +729,7 @@ public static class StructureUtility
     /// Count the number of structures in the given <paramref name="radius"/> matching a predicate.
     /// </summary>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static int CountStructuresWhere(Vector3 position, float radius, Predicate<StructureDrop> structureSelector, int max = -1, bool horizontalDistanceOnly = false)
     {
@@ -771,7 +769,7 @@ public static class StructureUtility
     /// Count the number of structures in the given radius matching a predicate.
     /// </summary>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static int CountStructuresWhere(Predicate<StructureDrop> structureSelector, int max = -1)
     {
@@ -807,7 +805,7 @@ public static class StructureUtility
     /// Count the number of structures in the given <paramref name="radius"/> matching an <paramref name="asset"/>.
     /// </summary>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static int CountStructuresInRange(Vector3 position, float radius, IAssetLink<ItemStructureAsset> asset, int max = -1, bool horizontalDistanceOnly = false)
     {
@@ -847,7 +845,7 @@ public static class StructureUtility
     /// Count the number of structures in the given radius matching an <paramref name="asset"/>.
     /// </summary>
     /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static int CountStructures(IAssetLink<ItemStructureAsset> asset, int max = -1)
     {
@@ -882,7 +880,7 @@ public static class StructureUtility
     /// <summary>
     /// Count the number of structures in the given radius.
     /// </summary>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
     [Pure]
     public static int CountStructuresInRange(Vector3 position, float radius, int max = -1, bool horizontalDistanceOnly = false)
     {

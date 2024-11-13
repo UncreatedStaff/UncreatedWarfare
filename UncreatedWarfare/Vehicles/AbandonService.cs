@@ -1,10 +1,12 @@
 ﻿using System.Collections.Generic;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Addons;
+using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Vehicles;
 
@@ -17,20 +19,24 @@ public class AbandonService
     private readonly VehicleService _vehicleService;
     private readonly ITranslationValueFormatter _formatter;
     private readonly AbandonTranslations _translations;
+    private readonly ZoneStore _zoneStore;
+    private readonly ITeamManager<Team> _teamManager;
 
-    public AbandonService(IPlayerService playerService, VehicleService vehicleService, TranslationInjection<AbandonTranslations> translations, ITranslationValueFormatter formatter)
+    public AbandonService(IPlayerService playerService, VehicleService vehicleService, TranslationInjection<AbandonTranslations> translations, ITranslationValueFormatter formatter, ZoneStore zoneStore, ITeamManager<Team> teamManager)
     {
         _playerService = playerService;
         _vehicleService = vehicleService;
         _formatter = formatter;
+        _zoneStore = zoneStore;
+        _teamManager = teamManager;
         _translations = translations.Value;
     }
+
     public async UniTask AbandonAllVehiclesAsync(bool respawn, CancellationToken token = default)
     {
         await UniTask.SwitchToMainThread(token);
 
         List<InteractableVehicle> candidates = new List<InteractableVehicle>(16);
-#if false
         for (int i = 0; i < VehicleManager.vehicles.Count; ++i)
         {
             InteractableVehicle vehicle = VehicleManager.vehicles[i];
@@ -43,14 +49,12 @@ public class AbandonService
             if (vehicleComponent.Spawn == null)
                 continue;
 
-            ulong t = vehicle.lockedGroup.m_SteamID.GetTeam();
-            if (t == 1ul && TeamManager.Team1Main.IsInside(vehicle.transform.position) ||
-                t == 2ul && TeamManager.Team2Main.IsInside(vehicle.transform.position))
+            Team t = _teamManager.GetTeam(vehicle.lockedGroup);
+            if (t.IsValid && _zoneStore.IsInsideZone(vehicle.transform.position, ZoneType.MainBase, t.Faction))
             {
                 candidates.Add(vehicle);
             }
         }
-#endif
 
         foreach (InteractableVehicle vehicle in candidates)
         {
@@ -77,7 +81,7 @@ public class AbandonService
         VehicleSpawnInfo? originalSpawn = vehicleComponent.Spawn;
         if (originalSpawn != null)
         {
-#if false
+#if false // todo
             VehicleBayComponent? component =
                 originalSpawn.Spawner?.Model == null
                 ? null

@@ -50,7 +50,7 @@ public static class TransformObjectExtensions
     /// <summary>
     /// Check if this object is within a radius of <paramref name="position"/>.
     /// </summary>
-    public static bool InRadiusOf(this ITransformObject @object, Vector3 position, float radius, bool is2d = false)
+    public static bool InRadiusOf(this ITransformObject @object, in Vector3 position, float radius, bool is2d = false)
     {
         Vector3 pos = @object.Position;
         float x = pos.x - position.x;
@@ -59,6 +59,6 @@ public static class TransformObjectExtensions
         y *= y;
         float z = pos.z - position.z;
         z *= z;
-        return (x + ((!is2d ? 1 : 0) * y) + z) <= radius;
+        return (x + ((!is2d ? 1 : 0) * y) + z) <= radius * radius;
     }
 }

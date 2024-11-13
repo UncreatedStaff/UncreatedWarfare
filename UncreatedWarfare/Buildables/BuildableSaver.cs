@@ -35,7 +35,6 @@ public class BuildableSaver : ILayoutHostedService, IDisposable
     public BuildableSaver(IServiceProvider serviceProvider)
     {
         _dbContext = serviceProvider.GetRequiredService<IBuildablesDbContext>();
-        _dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
 
         _signs = serviceProvider.GetService<SignInstancer>();
         _logger = serviceProvider.GetRequiredService<ILogger<BuildableSaver>>();
@@ -53,7 +52,7 @@ public class BuildableSaver : ILayoutHostedService, IDisposable
         byte region = _region;
         int mapId = _mapScheduler.Current;
 
-        await _semaphore.WaitAsync(token);
+        await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
             List<BuildableSave> saves = await _dbContext.Saves
@@ -72,24 +71,17 @@ public class BuildableSaver : ILayoutHostedService, IDisposable
 
             await UniTask.SwitchToMainThread(token);
 
-            // todo need to load this on level load
             List<BuildableSave> newSaves = _saves;
 
             for (int i = newSaves.Count - 1; i >= 0; i--)
             {
                 BuildableSave save = newSaves[i];
-                uint oldInstanceId = save.InstanceId;
-                if (!RestoreSave(newSaves, i, save))
-                    continue;
-                
-                _dbContext.Update(save);
-                if (save.InstanceIds?.FirstOrDefault(instanceId => instanceId.RegionId == _region) is { } instId && instId.InstanceId != oldInstanceId)
-                {
-                    _dbContext.Update(instId);
-                }
+                RestoreSave(newSaves, i, save);
             }
 
             await _dbContext.SaveChangesAsync(token);
+
+            _dbContext.ChangeTracker.Clear();
         }
         finally
         {
@@ -127,25 +119,28 @@ public class BuildableSaver : ILayoutHostedService, IDisposable
         BarricadeData data = barricade.GetServersideData();
         await UniTask.SwitchToThreadPool();
 
-        BuildableSave newSave;
-        List<BuildableSave> saves;
+        bool removedAny;
 
-        await _semaphore.WaitAsync(token);
+        await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
             byte region = _region;
             int mapId = _mapScheduler.Current;
             uint instId = barricade.instanceID;
 
-            saves = await _dbContext.Saves
+            List<BuildableSave> saves = await _dbContext.Saves
                 .Include(save => save.InstanceIds)
-                .Where(save => !save.IsStructure && save.MapId.HasValue && save.MapId.Value == mapId && save.InstanceIds!.Any(instanceId => instanceId.RegionId == region && instanceId.InstanceId == instId))
+                .Where(save => !save.IsStructure
+                               && save.MapId.HasValue
+                               && save.MapId.Value == mapId
+                               && save.InstanceIds!.Any(instanceId => instanceId.RegionId == region && instanceId.InstanceId == instId)
+                        )
                 .ToListAsync(token);
 
-            _dbContext.RemoveRange(saves);
+            _dbContext.Saves.RemoveRange(saves);
 
             Vector3 rot = data.rotation.eulerAngles;
-            newSave = new BuildableSave
+            BuildableSave newSave = new BuildableSave
             {
                 Buildable = new BuildableBarricade(barricade),
                 InstanceId = instId,
@@ -229,34 +224,26 @@ public class BuildableSaver : ILayoutHostedService, IDisposable
                 Save = newSave
             };
 
+            newSave.InstanceIds.Add(instanceId);
+
             _dbContext.Add(newSave);
             _dbContext.Add(instanceId);
 
             await _dbContext.SaveChangesAsync(token);
-        }
-        finally
-        {
-            _semaphore.Release();
-        }
 
-        bool removedAny = saves.Count == 0;
+            removedAny = saves.Count == 0;
 
-        if (!data.barricade.isDead)
-            return removedAny;
+            if (data.barricade.isDead)
+            {
+                await UniTask.SwitchToMainThread(CancellationToken.None);
 
-        await UniTask.SwitchToMainThread(CancellationToken.None);
+                if (RestoreSave(null, 0, newSave))
+                {
+                    await _dbContext.SaveChangesAsync(token);
+                }
+            }
 
-        if (!RestoreSave(null, 0, newSave))
-            return removedAny;
-
-        await _semaphore.WaitAsync(token);
-        try
-        {
-            _dbContext.Update(newSave);
-            if (newSave.InstanceIds.FirstOrDefault(x => x.RegionId == _region) is { } instanceId)
-                _dbContext.Update(instanceId);
-
-            await _dbContext.SaveChangesAsync(token);
+            _dbContext.ChangeTracker.Clear();
         }
         finally
         {
@@ -275,25 +262,28 @@ public class BuildableSaver : ILayoutHostedService, IDisposable
         StructureData data = structure.GetServersideData();
         await UniTask.SwitchToThreadPool();
 
-        BuildableSave newSave;
-        List<BuildableSave> saves;
+        bool removedAny;
 
-        await _semaphore.WaitAsync(token);
+        await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
             byte region = _region;
             int mapId = _mapScheduler.Current;
             uint instId = structure.instanceID;
 
-            saves = await _dbContext.Saves
+            List<BuildableSave> saves = await _dbContext.Saves
                 .Include(save => save.InstanceIds)
-                .Where(save => save.IsStructure && save.MapId.HasValue && save.MapId.Value == mapId && save.InstanceIds!.Any(instanceId => instanceId.RegionId == region && instanceId.InstanceId == instId))
+                .Where(save => save.IsStructure
+                               && save.MapId.HasValue
+                               && save.MapId.Value == mapId
+                               && save.InstanceIds!.Any(instanceId => instanceId.RegionId == region && instanceId.InstanceId == instId)
+                        )
                 .ToListAsync(token);
 
-            _dbContext.RemoveRange(saves);
+            _dbContext.Saves.RemoveRange(saves);
 
             Vector3 rot = data.rotation.eulerAngles;
-            newSave = new BuildableSave
+            BuildableSave newSave = new BuildableSave
             {
                 Buildable = new BuildableStructure(structure),
                 InstanceId = instId,
@@ -326,30 +316,20 @@ public class BuildableSaver : ILayoutHostedService, IDisposable
             _dbContext.Add(instanceId);
 
             await _dbContext.SaveChangesAsync(token);
-        }
-        finally
-        {
-            _semaphore.Release();
-        }
 
-        bool removedAny = saves.Count == 0;
+            removedAny = saves.Count == 0;
 
-        if (!data.structure.isDead)
-            return removedAny;
-        
-        await UniTask.SwitchToMainThread(CancellationToken.None);
+            if (data.structure.isDead)
+            {
+                await UniTask.SwitchToMainThread(CancellationToken.None);
 
-        if (!RestoreSave(null, 0, newSave))
-            return removedAny;
-        
-        await _semaphore.WaitAsync(token);
-        try
-        {
-            _dbContext.Update(newSave);
-            if (newSave.InstanceIds.FirstOrDefault(x => x.RegionId == _region) is { } instanceId)
-                _dbContext.Update(instanceId);
+                if (RestoreSave(null, 0, newSave))
+                {
+                    await _dbContext.SaveChangesAsync(token);
+                }
+            }
 
-            await _dbContext.SaveChangesAsync(token);
+            _dbContext.ChangeTracker.Clear();
         }
         finally
         {
@@ -359,6 +339,14 @@ public class BuildableSaver : ILayoutHostedService, IDisposable
         return removedAny;
     }
 
+    /// <summary>
+    /// Check if a buildable is saved or not.
+    /// </summary>
+    public UniTask<bool> IsBuildableSavedAsync(IBuildable buildable, CancellationToken token = default)
+    {
+        return IsBuildableSavedAsync(buildable.InstanceId, buildable.IsStructure, token);
+    }
+    
     /// <summary>
     /// Check if a barricade is saved or not.
     /// </summary>
@@ -380,22 +368,34 @@ public class BuildableSaver : ILayoutHostedService, IDisposable
     /// </summary>
     public async UniTask<bool> IsBuildableSavedAsync(uint instanceId, bool isStructure, CancellationToken token = default)
     {
-        await _semaphore.WaitAsync(token);
+        await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
             byte region = _region;
             int mapId = _mapScheduler.Current;
 
-            return await _dbContext.Saves
+            bool any = await _dbContext.Saves
+                .AsNoTracking()
                 .Where(save => save.IsStructure == isStructure
                                && save.MapId.HasValue && save.MapId.Value == mapId
                                && save.InstanceIds!.Any(instId => instId.RegionId == region && instId.InstanceId == instanceId))
                 .AnyAsync(token);
+
+            _dbContext.ChangeTracker.Clear();
+            return any;
         }
         finally
         {
             _semaphore.Release();
         }
+    }
+
+    /// <summary>
+    /// Get the save info of a buildable, or <see langword="null"/> if it's not saved.
+    /// </summary>
+    public UniTask<BuildableSave?> GetBuildableSaveAsync(IBuildable buildable, CancellationToken token = default)
+    {
+        return GetBuildableSaveAsync(buildable.InstanceId, buildable.IsStructure, token);
     }
 
     /// <summary>
@@ -419,17 +419,57 @@ public class BuildableSaver : ILayoutHostedService, IDisposable
     /// </summary>
     public async UniTask<BuildableSave?> GetBuildableSaveAsync(uint instanceId, bool isStructure, CancellationToken token = default)
     {
-        await _semaphore.WaitAsync(token);
+        await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
             byte region = _region;
             int mapId = _mapScheduler.Current;
 
-            return await _dbContext.Saves
+            BuildableSave? save = await _dbContext.Saves
+                .AsNoTracking()
                 .Where(save => save.IsStructure == isStructure
                                && save.MapId.HasValue && save.MapId.Value == mapId
                                && save.InstanceIds!.Any(instId => instId.RegionId == region && instId.InstanceId == instanceId))
                 .FirstOrDefaultAsync(token);
+
+            _dbContext.ChangeTracker.Clear();
+            return save;
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
+    }
+
+    /// <summary>
+    /// Gets a list of all buildables that are saved.
+    /// </summary>
+    public async Task<List<BuildableSave>> GetAllSavesAsync(CancellationToken token = default)
+    {
+        await _semaphore.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            byte region = _region;
+            int mapId = _mapScheduler.Current;
+
+            List<BuildableSave> saves = await _dbContext.Saves
+                .AsNoTracking()
+                .Include(save => save.DisplayData)
+                .Include(save => save.InstanceIds)
+                .Include(save => save.Items)
+                .Where(save => save.MapId.HasValue
+                               && save.MapId.Value == mapId
+                               && save.InstanceIds!.Any(instId => instId.RegionId == region)
+                )
+                .ToListAsync(token);
+
+            foreach (BuildableSave save in saves)
+            {
+                save.InstanceId = save.InstanceIds!.First(instanceId => instanceId.RegionId == _region).InstanceId;
+            }
+
+            _dbContext.ChangeTracker.Clear();
+            return saves;
         }
         finally
         {
@@ -472,7 +512,7 @@ public class BuildableSaver : ILayoutHostedService, IDisposable
     {
         await UniTask.SwitchToThreadPool();
 
-        await _semaphore.WaitAsync(token);
+        await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
             byte region = _region;
@@ -497,6 +537,7 @@ public class BuildableSaver : ILayoutHostedService, IDisposable
     /// <summary>
     /// Sync an exitsing buildable with a buildable save, or replace the buildable if it's missing.
     /// </summary>
+    /// <returns>If the save needs to be re-synced with the database.</returns>
     private bool RestoreSave(List<BuildableSave>? saves, int index, BuildableSave save)
     {
         object? drop = save.IsStructure

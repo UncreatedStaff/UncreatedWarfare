@@ -292,5 +292,37 @@ public class RequestKitsTranslations : PropertiesTranslationCollection
     
     [TranslationData("Sent when a player tries to request a premium kit that requires boosting in Discord but they aren't.")]
     public readonly Translation<Cooldown> RequiresNitroBoost = new Translation<Cooldown>("Requires <#e00ec9>NITRO BOOST</color> in <#7483c4>Discord</color>", arg0Fmt: Cooldown.FormatTimeShort);
+}
 
+public class RequestVehicleTranslations : PropertiesTranslationCollection
+{
+    protected override string FileName => "Requests/Vehicles";
+
+
+    [TranslationData("Sent when a player tries to request a vehicle that isn't spawned.")]
+    public readonly Translation NotAvailable = new Translation("Vehicle not ready");
+
+    [TranslationData("Sent when a player tries to request a vehicle that is already owned.")]
+    public readonly Translation AlreadyRequested = new Translation("Vehicle already owned");
+
+    [TranslationData("Sent when a player tries to request a vehicle that is in another team's main base.")]
+    public readonly Translation IncorrectTeam = new Translation("Vehicle not allowed for your team");
+
+    [TranslationData("Sent when a player tries to request a vehicle that requires a specific class.")]
+    public readonly Translation<Class> IncorrectKitClass = new Translation<Class>("<#cedcde>{0}</color> required", arg0Fmt: UppercaseAddon.Instance);
+
+    [TranslationData("Sent when a player tries to request a vehicle but already owns one nearby.")]
+    public readonly Translation<VehicleAsset> AnotherVehicleAlreadyOwned = new Translation<VehicleAsset>("<#cedcde>{0}</color> already requested", arg0Fmt: RarityColorAddon.Instance);
+
+    [TranslationData("Sent when a player is asset banned over all vehicles permanently.")]
+    public readonly Translation AssetBannedGlobalPermanent = new Translation("Permanently asset banned");
+
+    [TranslationData("Sent when a player is asset banned over all vehicles for a set time.")]
+    public readonly Translation<TimeSpan> AssetBannedGlobal = new Translation<TimeSpan>("Asset banned for another <#fff>{0}</color>", arg0Fmt: TimeAddon.Create(TimeFormatType.Short));
+
+    [TranslationData("Sent when a player is asset banned over all vehicles permanently.")]
+    public readonly Translation<string> AssetBannedPermanent = new Translation<string>("Permanently asset banned from: <#ddd>{0}</color>");
+
+    [TranslationData("Sent when a player is asset banned over all vehicles for a set time.")]
+    public readonly Translation<string, TimeSpan> AssetBanned = new Translation<string, TimeSpan>("Asset banned from: <#ddd>{0}</color> fpr another <#fff>{1}</color>", arg1Fmt: TimeAddon.Create(TimeFormatType.Short));
 }

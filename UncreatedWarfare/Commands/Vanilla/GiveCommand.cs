@@ -7,6 +7,7 @@ using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Translations.Util;
 
 namespace Uncreated.Warfare.Commands;
 
@@ -15,6 +16,7 @@ namespace Uncreated.Warfare.Commands;
 public class GiveCommand : IExecutableCommand
 {
     private readonly IFactionDataStore _factionDataStore;
+    private readonly AssetRedirectService _assetRedirectService;
     
     private const int MaxItems = 100;
 
@@ -37,9 +39,10 @@ public class GiveCommand : IExecutableCommand
         };
     }
 
-    public GiveCommand(IFactionDataStore factionDataStore)
+    public GiveCommand(IFactionDataStore factionDataStore, AssetRedirectService assetRedirectService)
     {
         _factionDataStore = factionDataStore;
+        _assetRedirectService = assetRedirectService;
     }
 
     /// <inheritdoc />
@@ -110,7 +113,7 @@ public class GiveCommand : IExecutableCommand
                 itemSt = Array.Empty<byte>();
                 if (asset != null)
                     itemAmt = asset.amount;
-                if (Context.TryGet(1, out int amt) && amount <= MaxItems && amount > 0)
+                if (Context.TryGet(1, out int amt) && amt is <= MaxItems and > 0)
                     amount = amt;
                 else if (Context.HasArgs(2))
                     amountWasValid = false;
@@ -121,17 +124,17 @@ public class GiveCommand : IExecutableCommand
         {
             if (Context.TryGet(0, out RedirectType type))
             {
-                // todo FactionInfo? kitFaction = (await Context.Player.GetActiveKit(token))?.FactionInfo;
-                //      
-                //      await UniTask.SwitchToMainThread(token);
-                //      
-                //      asset = TeamManager.GetRedirectInfo(type, string.Empty, kitFaction, Context.Player.Faction, out byte[] state, out byte amt);
-                //      if (asset != null)
-                //      {
-                //          itemAmt = amt;
-                //          itemSt = state;
-                //          goto foundItem;
-                //      }
+                FactionInfo? kitFaction = _factionDataStore.FindFaction((await Context.Player.Component<KitPlayerComponent>().GetActiveKitAsync(token))?.Faction);
+                
+                await UniTask.SwitchToMainThread(token);
+                
+                asset = _assetRedirectService.ResolveRedirect(type, string.Empty, kitFaction, Context.Player.Team, out byte[] state, out byte amt);
+                if (asset != null)
+                {
+                    itemAmt = amt;
+                    itemSt = state;
+                    goto foundItem;
+                }
             }
             if (Guid.TryParse(Context.Get(0)!, out Guid guid))
             {
@@ -165,15 +168,15 @@ public class GiveCommand : IExecutableCommand
                 {
                     FactionInfo? kitFaction = _factionDataStore.FindFaction((await Context.Player.Component<KitPlayerComponent>().GetActiveKitAsync(token))?.Faction);
 
-                    //await UniTask.SwitchToMainThread(token);
-                    //
-                    //asset = TeamManager.GetRedirectInfo(type, string.Empty, kitFaction, Context.Player.Faction, out byte[] state, out byte amt);
-                    //if (asset != null)
-                    //{
-                    //    itemAmt = amt;
-                    //    itemSt = state;
-                    //    goto foundItem;
-                    //}
+                    await UniTask.SwitchToMainThread(token);
+
+                    asset = _assetRedirectService.ResolveRedirect(type, amountWasValid ? string.Empty : (Context.Get(1) ?? string.Empty), kitFaction, Context.Player.Team, out byte[] state, out byte amt);
+                    if (asset != null)
+                    {
+                        itemAmt = amt;
+                        itemSt = state;
+                        goto foundItem;
+                    }
                 }
                 if (Context.TryGet(0, out shortID) && Assets.find(EAssetType.ITEM, shortID) is ItemAsset asset2)
                 {
@@ -189,22 +192,22 @@ public class GiveCommand : IExecutableCommand
                 }
             }
             // now try find an asset using all arguments except the last, which could be treated as a number.
-            if (Context.TryGet(Context.ArgumentCount - 1, out amount) && amount <= MaxItems && amount > 0) // if this runs, then the last ID is treated as an amount
+            if (Context.TryGet(Context.ArgumentCount - 1, out amount) && amount is <= MaxItems and > 0) // if this runs, then the last ID is treated as an amount
             {
                 itemName = Context.GetRange(0, Context.ArgumentCount - 1)!;
                 if (Enum.TryParse(itemName, true, out RedirectType type))
                 {
                     FactionInfo? kitFaction = _factionDataStore.FindFaction((await Context.Player.Component<KitPlayerComponent>().GetActiveKitAsync(token))?.Faction);
 
-                    //await UniTask.SwitchToMainThread(token);
-                    //
-                    //asset = TeamManager.GetRedirectInfo(type, string.Empty, kitFaction, Context.Player.Faction, out byte[] state, out byte amt);
-                    //if (asset != null)
-                    //{
-                    //    itemAmt = amt;
-                    //    itemSt = state;
-                    //    goto foundItem;
-                    //}
+                    await UniTask.SwitchToMainThread(token);
+
+                    asset = _assetRedirectService.ResolveRedirect(type, Context.GetRange(1, Context.ArgumentCount - 2) ?? string.Empty, kitFaction, Context.Player.Team, out byte[] state, out byte amt);
+                    if (asset != null)
+                    {
+                        itemAmt = amt;
+                        itemSt = state;
+                        goto foundItem;
+                    }
                 }
                 asset = UCAssetManager.FindItemAsset(itemName, out similarNamesCount, true);
                 if (asset == null)
@@ -218,15 +221,15 @@ public class GiveCommand : IExecutableCommand
                 {
                     FactionInfo? kitFaction = _factionDataStore.FindFaction((await Context.Player.Component<KitPlayerComponent>().GetActiveKitAsync(token))?.Faction);
 
-                    // await UniTask.SwitchToMainThread(token);
-                    // 
-                    // asset = TeamManager.GetRedirectInfo(type, string.Empty, kitFaction, Context.Player.Faction, out byte[] state, out byte amt);
-                    // if (asset != null)
-                    // {
-                    //     itemAmt = amt;
-                    //     itemSt = state;
-                    //     goto foundItem;
-                    // }
+                    await UniTask.SwitchToMainThread(token);
+
+                    asset = _assetRedirectService.ResolveRedirect(type, Context.GetRange(1) ?? string.Empty, kitFaction, Context.Player.Team, out byte[] state, out byte amt);
+                    if (asset != null)
+                    {
+                        itemAmt = amt;
+                        itemSt = state;
+                        goto foundItem;
+                    }
                 }
                 asset = UCAssetManager.FindItemAsset(itemName.Trim(), out similarNamesCount, true);
                 if (asset == null)
@@ -247,12 +250,12 @@ public class GiveCommand : IExecutableCommand
                 ItemManager.dropItem(itemFromID, Context.Player.Position, true, true, true);
         }
 
-        string message = $"Giving you {(amount == 1 ? "a" : (amount.ToString(Data.LocalLocale) + "x")/*.Colorize("9dc9f5")*/)} <color=#ffdf91>{asset.itemName}</color> - <color=#a7b6c4>{asset.id}</color>"/*.Colorize("bfb9ac")*/;
+        string message = TranslationFormattingUtility.Colorize($"Giving you {(amount == 1 ? "a" : TranslationFormattingUtility.Colorize(amount.ToString(Data.LocalLocale) + "x", "9dc9f5"))} <color=#ffdf91>{asset.itemName}</color> - <color=#a7b6c4>{asset.id}</color>", "bfb9ac");
 
         if (!amountWasValid)
-            message += " (the amount your tried to put was invalid)"/*.Colorize("7f8182")*/;
+            message += TranslationFormattingUtility.Colorize(" (the amount your tried to put was invalid)", "7f8182");
         else if (similarNamesCount > 0)
-            message += $" ({similarNamesCount} similarly named items exist)"/*.Colorize("7f8182")*/;
+            message += TranslationFormattingUtility.Colorize($" ({similarNamesCount} similarly named items exist)", "7f8182");
 
         Context.ReplyString(message);
         Context.LogAction(ActionLogType.GiveItem, $"GAVE {amount}x {asset.ActionLogDisplay()}");

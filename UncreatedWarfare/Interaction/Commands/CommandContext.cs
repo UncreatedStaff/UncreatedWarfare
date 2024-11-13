@@ -1213,7 +1213,7 @@ public class CommandContext : ControlException
         }
 
         Transform aim = Player.UnturnedPlayer.look.aim;
-        RaycastInfo info = DamageTool.raycast(new Ray(aim.position, aim.forward), distance, mask == 0 ? RayMasks.PLAYER_INTERACT : mask, Player.UnturnedPlayer);
+        RaycastInfo info = DamageTool.raycast(new Ray(aim.position, aim.forward), distance, mask == 0 ? (RayMasks.PLAYER_INTERACT & ~RayMasks.ENEMY) : mask, Player.UnturnedPlayer);
         transform = info.transform;
         return transform != null;
     }
@@ -1224,7 +1224,7 @@ public class CommandContext : ControlException
     /// <param name="mask">Raycast mask, could also use <see cref="ERayMask"/>.</param>
     /// <param name="distance">Default distance is 4m.</param>
     /// <exception cref="GameThreadException">Not on main thread.</exception>
-    public bool TryGetTargetInfo([MaybeNullWhen(false)] out RaycastInfo info, int mask, float distance = 4)
+    public bool TryGetTargetInfo([MaybeNullWhen(false)] out RaycastInfo info, int mask = 0, float distance = 4)
     {
         GameThread.AssertCurrent();
 
@@ -1235,7 +1235,7 @@ public class CommandContext : ControlException
         }
 
         Transform aim = Player.UnturnedPlayer.look.aim;
-        info = DamageTool.raycast(new Ray(aim.position, aim.forward), distance, mask == 0 ? RayMasks.PLAYER_INTERACT : mask, Player.UnturnedPlayer);
+        info = DamageTool.raycast(new Ray(aim.position, aim.forward), distance, mask == 0 ? (RayMasks.PLAYER_INTERACT & ~RayMasks.ENEMY) : mask, Player.UnturnedPlayer);
         return info.transform != null;
     }
 
@@ -1256,7 +1256,7 @@ public class CommandContext : ControlException
         }
 
         Transform aim = Player.UnturnedPlayer.look.aim;
-        RaycastInfo info = DamageTool.raycast(new Ray(aim.position, aim.forward), distance, mask == 0 ? RayMasks.PLAYER_INTERACT : mask, Player.UnturnedPlayer);
+        RaycastInfo info = DamageTool.raycast(new Ray(aim.position, aim.forward), distance, mask == 0 ? (RayMasks.PLAYER_INTERACT & ~RayMasks.ENEMY) : mask, Player.UnturnedPlayer);
         if (info.transform == null)
         {
             interactable = null!;

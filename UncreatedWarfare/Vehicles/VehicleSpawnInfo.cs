@@ -2,10 +2,11 @@
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Interaction.Requests;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Vehicles;
-public class VehicleSpawnInfo
+public class VehicleSpawnInfo : IRequestable<VehicleSpawnInfo>
 {
     /// <summary>
     /// The asset used to spawn vehicles.

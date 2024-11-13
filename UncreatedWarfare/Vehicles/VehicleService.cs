@@ -1,31 +1,53 @@
-﻿using System;
+﻿using DanielWillett.ReflectionTools;
+using System;
 using System.Linq;
-using DanielWillett.ReflectionTools;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Interaction.Commands;
+using Uncreated.Warfare.Interaction.Requests;
+using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Kits.Translations;
+using Uncreated.Warfare.Layouts.Teams;
+using Uncreated.Warfare.Moderation;
+using Uncreated.Warfare.Moderation.Punishments;
+using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Extensions;
+using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Services;
+using Uncreated.Warfare.Signs;
+using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Vehicles;
 
 [Priority(-2 /* run after VehicleSpawnerStore */)]
-public class VehicleService : ILayoutHostedService
+public class VehicleService : ILayoutHostedService,
+    IRequestHandler<VehicleSpawnerComponent, VehicleSpawnInfo>,
+    IRequestHandler<VehicleBaySignInstanceProvider, VehicleSpawnInfo>,
+    IRequestHandler<VehicleSpawnInfo, VehicleSpawnInfo>
 {
     private const float VehicleSpawnOffset = 5f;
     public const ushort MaxBatteryCharge = 10000;
-    private readonly ILogger<VehicleService> _logger;
+    private readonly RequestVehicleTranslations _reqTranslations;
     private readonly VehicleInfoStore _vehicleInfoStore;
     private readonly VehicleSpawnerStore _spawnerStore;
+    private readonly ILogger<VehicleService> _logger;
     private readonly WarfareModule _module;
+    private readonly ZoneStore _globalZoneStore;
+    private readonly DatabaseInterface _moderationSql;
 
-    public VehicleService(ILogger<VehicleService> logger, VehicleInfoStore vehicleInfoStore, VehicleSpawnerStore spawnerStore, WarfareModule module)
+    private const float MaxVehicleAbandonmentDistance = 300;
+
+    public VehicleService(ILogger<VehicleService> logger, VehicleInfoStore vehicleInfoStore, VehicleSpawnerStore spawnerStore, WarfareModule module, TranslationInjection<RequestVehicleTranslations> reqTranslations, ZoneStore globalZoneStore, DatabaseInterface moderationSql)
     {
         _logger = logger;
         _vehicleInfoStore = vehicleInfoStore;
         _spawnerStore = spawnerStore;
         _module = module;
+        _globalZoneStore = globalZoneStore;
+        _moderationSql = moderationSql;
+        _reqTranslations = reqTranslations.Value;
     }
 
     UniTask ILayoutHostedService.StartAsync(CancellationToken token)
@@ -57,6 +79,165 @@ public class VehicleService : ILayoutHostedService
         return UniTask.CompletedTask;
     }
 
+    Task<bool> IRequestHandler<VehicleBaySignInstanceProvider, VehicleSpawnInfo>.RequestAsync(WarfarePlayer player, VehicleBaySignInstanceProvider? sign, IRequestResultHandler resultHandler, CancellationToken token)
+    {
+        if (sign?.Spawn == null || !sign.Spawn.Spawner.Model.TryGetComponent(out VehicleSpawnerComponent component) || component.SpawnInfo == null)
+        {
+            resultHandler.NotFoundOrRegistered(player);
+            return Task.FromResult(false);
+        }
+
+        return RequestAsync(player, component.SpawnInfo, resultHandler, token);
+    }
+
+    Task<bool> IRequestHandler<VehicleSpawnerComponent, VehicleSpawnInfo>.RequestAsync(WarfarePlayer player, VehicleSpawnerComponent? spawner, IRequestResultHandler resultHandler, CancellationToken token)
+    {
+        if (spawner?.SpawnInfo == null)
+        {
+            resultHandler.NotFoundOrRegistered(player);
+            return Task.FromResult(false);
+        }
+
+        return RequestAsync(player, spawner.SpawnInfo, resultHandler, token);
+    }
+
+    /// <summary>
+    /// Request unlocking a vehicle from a spawn.
+    /// </summary>
+    /// <remarks>Thread-safe</remarks>
+    public async Task<bool> RequestAsync(WarfarePlayer player, VehicleSpawnInfo? spawn, IRequestResultHandler resultHandler, CancellationToken token = default)
+    {
+        await UniTask.SwitchToMainThread(token);
+
+        if (!player.IsOnline)
+        {
+            return false;
+        }
+
+        if (spawn == null || spawn.Spawner.IsDead || !spawn.Vehicle.TryGetAsset(out VehicleAsset? vehicleAsset))
+        {
+            resultHandler.NotFoundOrRegistered(player);
+            return false;
+        }
+
+        WarfareVehicleInfo? vehicleInfo = _vehicleInfoStore.Vehicles.FirstOrDefault(x => x.Vehicle.MatchAsset(vehicleAsset));
+        if (vehicleInfo == null)
+        {
+            resultHandler.NotFoundOrRegistered(player);
+            return false;
+        }
+
+        AssetBan? existingAssetBan = await _moderationSql.GetActiveAssetBan(player.Steam64, vehicleInfo.Type, token: token).ConfigureAwait(false);
+
+        await UniTask.SwitchToMainThread(token);
+
+        if (!player.IsOnline)
+        {
+            return false;
+        }
+
+        // asset ban
+        if (existingAssetBan != null && existingAssetBan.IsAssetBanned(vehicleInfo.Type, true, true))
+        {
+            if (existingAssetBan.VehicleTypeFilter.Length == 0)
+            {
+                resultHandler.MissingRequirement(player, spawn,
+                    existingAssetBan.IsPermanent
+                        ? _reqTranslations.AssetBannedGlobalPermanent.Translate(player)
+                        : _reqTranslations.AssetBannedGlobal.Translate(existingAssetBan.GetTimeUntilExpiry(false), player)
+                );
+                return false;
+            }
+
+            string commaList = existingAssetBan.GetCommaList(false, player.Locale.LanguageInfo);
+            resultHandler.MissingRequirement(player, spawn,
+                existingAssetBan.IsPermanent
+                    ? _reqTranslations.AssetBannedPermanent.Translate(commaList, player)
+                    : _reqTranslations.AssetBanned.Translate(commaList, existingAssetBan.GetTimeUntilExpiry(false), player)
+            );
+        }
+
+        InteractableVehicle? vehicle = spawn.LinkedVehicle;
+        if (vehicle == null || vehicle.isDead || vehicle.isExploded || vehicle.isDrowned || !vehicle.asset.canBeLocked)
+        {
+            resultHandler.MissingRequirement(player, spawn, _reqTranslations.NotAvailable.Translate(player));
+            return false;
+        }
+
+        if (vehicle.lockedGroup.m_SteamID != 0 || vehicle.lockedOwner.m_SteamID != 0)
+        {
+            resultHandler.MissingRequirement(player, spawn, _reqTranslations.AlreadyRequested.Translate(player));
+            return false;
+        }
+
+        Team team = player.Team;
+        Zone? mainZone = _globalZoneStore.EnumerateInsideZones(spawn.Spawner.Position, ZoneType.MainBase).FirstOrDefault();
+        if (mainZone?.Faction != null && !mainZone.Faction.Equals(team.Faction.FactionId, StringComparison.OrdinalIgnoreCase))
+        {
+            resultHandler.MissingRequirement(player, spawn, _reqTranslations.IncorrectTeam.Translate(player));
+            return false;
+        }
+
+        KitPlayerComponent comp = player.Component<KitPlayerComponent>();
+
+        if (vehicleInfo.Class > Class.Unarmed && comp.ActiveClass != vehicleInfo.Class || vehicleInfo.Class == Class.Squadleader && !player.IsSquadLeader())
+        {
+            resultHandler.MissingRequirement(player, spawn, _reqTranslations.IncorrectKitClass.Translate(vehicleInfo.Class, player));
+            return false;
+        }
+
+        Vector3 pos = player.Position;
+        foreach (VehicleSpawnInfo otherSpawn in _spawnerStore.Spawns)
+        {
+            if (otherSpawn == spawn || otherSpawn.LinkedVehicle == null || otherSpawn.LinkedVehicle.isDead || otherSpawn.LinkedVehicle.isExploded || otherSpawn.LinkedVehicle.isDrowned)
+                continue;
+
+            InteractableVehicle v = otherSpawn.LinkedVehicle;
+            if (v.lockedOwner.m_SteamID != player.Steam64.m_SteamID || MathUtility.SquaredDistance(v.transform.position, in pos) > MaxVehicleAbandonmentDistance * MaxVehicleAbandonmentDistance)
+                continue;
+
+            resultHandler.MissingRequirement(player, spawn, _reqTranslations.AnotherVehicleAlreadyOwned.Translate(v.asset, player));
+            return false;
+        }
+
+        if (vehicleInfo.UnlockRequirements != null)
+        {
+            foreach (UnlockRequirement requirement in vehicleInfo.UnlockRequirements)
+            {
+                bool canAccess = await requirement.CanAccessAsync(player, token);
+                await UniTask.SwitchToMainThread(token);
+                if (!player.IsOnline)
+                    return false;
+
+                if (canAccess)
+                    continue;
+
+                resultHandler.MissingUnlockRequirement(player, spawn, requirement);
+                return false;
+            }
+        }
+
+        if (!await RequestHelper.TryApplyCosts(vehicleInfo.UnlockCosts, spawn, resultHandler, player, team, token))
+        {
+            return false;
+        }
+
+        await UniTask.SwitchToMainThread(token);
+
+        if (spawn.LinkedVehicle == null || spawn.LinkedVehicle.isDead || spawn.LinkedVehicle.isDrowned || spawn.LinkedVehicle.isExploded)
+        {
+            spawn.UnlinkVehicle();
+            await SpawnVehicleAsync(spawn, token);
+            await UniTask.SwitchToMainThread(token);
+        }
+
+        vehicle = spawn.LinkedVehicle;
+
+        VehicleManager.ServerSetVehicleLock(vehicle, player.Steam64, player.Team.GroupId, true);
+        resultHandler.Success(player, spawn);
+        return true;
+    }
+
     /// <summary>
     /// Spawn a vehicle at a given vehicle spawner.
     /// </summary>
@@ -72,7 +253,7 @@ public class VehicleService : ILayoutHostedService
 
         if (spawn.LinkedVehicle != null)
         {
-            if (!spawn.LinkedVehicle.isDead)
+            if (!spawn.LinkedVehicle.isDead && !spawn.LinkedVehicle.isExploded)
             {
                 throw new NotSupportedException($"There can only be one vehicle per spawn, and this spawn already has a vehicle: {spawn.Vehicle.ToDisplayString()}.");
             }
@@ -96,7 +277,7 @@ public class VehicleService : ILayoutHostedService
 
         Vector3 spawnPosition = spawner.Position + Vector3.up * VehicleSpawnOffset;
 
-        InteractableVehicle vehicle = await SpawnVehicleAsync(spawn.Vehicle, spawnPosition, spawnRotation, group: spawner.Group, token: token);
+        InteractableVehicle vehicle = await SpawnVehicleAsync(spawn.Vehicle, spawnPosition, spawnRotation, paintColor: vehicleInfo.PaintColor, token: token);
         await UniTask.SwitchToMainThread(token);
 
         spawn.LinkVehicle(vehicle);
@@ -117,6 +298,7 @@ public class VehicleService : ILayoutHostedService
         Quaternion rotation,
         CSteamID owner = default,
         CSteamID group = default,
+        Color32 paintColor = default,
         bool locked = true,
         CancellationToken token = default)
     {
@@ -137,8 +319,7 @@ public class VehicleService : ILayoutHostedService
 
         InteractableVehicle? veh = VehicleManager.SpawnVehicleV3(asset, 0, 0, 0f, position, rotation, false, false, false, false,
                                                                  asset.fuel, asset.health, MaxBatteryCharge, owner, group, locked, turrets,
-                                                                 byte.MaxValue, default
-                                                                );
+                                                                 byte.MaxValue, paintColor: paintColor);
         if (veh == null)
             throw new Exception($"Failed to spawn vehicle {vehicle.ToDisplayString()} due to vanilla code, possible a misconfigured vehicle.");
 
@@ -255,10 +436,5 @@ public class VehicleService : ILayoutHostedService
         {
             _logger.LogError(ex, "Failed to unlink vehicle spawn for vehicle {0} ({1}).", vehicle.asset.FriendlyName, vehicle.asset.GUID);
         }
-    }
-
-    public async Task RequestVehicle(CommandContext ctx)
-    {
-        
     }
 }

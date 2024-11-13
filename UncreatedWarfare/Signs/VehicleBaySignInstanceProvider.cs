@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Interaction.Requests;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
@@ -16,7 +17,7 @@ using Uncreated.Warfare.Vehicles;
 namespace Uncreated.Warfare.Signs;
 
 [SignPrefix("vbs_")]
-public class VehicleBaySignInstanceProvider : ISignInstanceProvider
+public class VehicleBaySignInstanceProvider : ISignInstanceProvider, IRequestable<VehicleSpawnInfo>
 {
     private static readonly StringBuilder LoadoutSignBuffer = new StringBuilder(230);
 

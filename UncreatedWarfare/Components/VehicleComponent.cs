@@ -26,9 +26,6 @@ public class VehicleComponent : MonoBehaviour
     private TipService _tipService;
     private VehicleHUD _hud;
 
-    private Zone? _noDropZone;
-    private Zone? _noPickZone;
-    private Zone? _safezoneZone;
     private Vector3 _lastPosInterval;
     private float _totalDistance;
     private float _lastCheck;
@@ -67,8 +64,8 @@ public class VehicleComponent : MonoBehaviour
     /// <summary>
     /// The spawn the vehicle was created at, if any.
     /// </summary>
-    // todo fill this value
     public VehicleSpawnInfo? Spawn { get; private set; }
+
 #if false
     public Zone? SafezoneZone
     {

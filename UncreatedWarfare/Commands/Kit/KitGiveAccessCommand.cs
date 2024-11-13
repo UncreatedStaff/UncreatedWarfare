@@ -64,8 +64,6 @@ internal class KitGiveAccessCommand : IExecutableCommand
             throw Context.Reply(_translations.KitAlreadyHasAccess, player, kit);
         }
 
-        // todo KitSync.OnAccessChanged(steam64.m_SteamID);
-
         await UniTask.SwitchToMainThread(token);
 
         Context.LogAction(ActionLogType.ChangeKitAccess, steam64.m_SteamID.ToString(CultureInfo.InvariantCulture) + " GIVEN ACCESS TO " + kitName + ", REASON: " + accessType);
