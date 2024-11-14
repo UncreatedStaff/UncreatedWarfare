@@ -37,6 +37,11 @@ public interface ITransformObject
     void SetPositionAndRotation(Vector3 position, Quaternion rotation);
 
     /// <summary>
+    /// If this object is still alive.
+    /// </summary>
+    bool Alive { get; }
+
+    /// <summary>
     /// This object's position relative to the map grid.
     /// </summary>
     GridLocation GridLocation
@@ -54,11 +59,8 @@ public static class TransformObjectExtensions
     {
         Vector3 pos = @object.Position;
         float x = pos.x - position.x;
-        x *= x;
         float y = pos.y - position.y;
-        y *= y;
         float z = pos.z - position.z;
-        z *= z;
-        return (x + ((!is2d ? 1 : 0) * y) + z) <= radius * radius;
+        return ((x * x) + ((!is2d ? 1 : 0) * (y * y)) + (z * z)) <= (radius * radius);
     }
 }

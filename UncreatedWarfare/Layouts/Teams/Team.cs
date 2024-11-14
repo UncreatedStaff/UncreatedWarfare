@@ -3,6 +3,7 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Layouts.Teams;
@@ -12,6 +13,15 @@ namespace Uncreated.Warfare.Layouts.Teams;
 /// </summary>
 public class Team : IEquatable<Team>
 {
+    internal Func<WarfarePlayer, bool> PlayerSelector;
+    private bool PlayerSelectorIntl(WarfarePlayer player) => player.Team.GroupId.m_SteamID == GroupId.m_SteamID;
+
+    public Team()
+    {
+        PlayerSelector = PlayerSelectorIntl;
+    }
+
+
     public static readonly Team NoTeam = new Team
     {
         Id = 0,

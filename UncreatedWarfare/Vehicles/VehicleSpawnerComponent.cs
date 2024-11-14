@@ -21,13 +21,14 @@ namespace Uncreated.Warfare.Vehicles;
 public class VehicleSpawnerComponent : MonoBehaviour, IManualOnDestroy, IRequestable<VehicleSpawnInfo>
 {
     public const float IdleDistance = 200;
-    public const float EnemyIdleDistance = 20;
+    public const float EnemyIdleDistance = 40;
 
     private SignInstancer _signInstancer;
     private IPlayerService _playerService;
     private ITeamManager<Team> _teamManager;
     private VehicleService _vehicleService;
 
+    private bool _hasInitialized;
     private float _destroyedTime;
     private float _idleTime;
     private float _lastSignUpdate;
@@ -36,6 +37,7 @@ public class VehicleSpawnerComponent : MonoBehaviour, IManualOnDestroy, IRequest
     private Zone? _lastLocation;
     private Vector2 _lastZoneCheckPos;
     private VehicleSpawnerState _state = VehicleSpawnerState.Uninitialized;
+    private bool _isSpawningVehicle;
 
     public VehicleSpawnInfo SpawnInfo { get; private set; }
     public WarfareVehicleInfo VehicleInfo { get; private set; }
@@ -100,17 +102,27 @@ public class VehicleSpawnerComponent : MonoBehaviour, IManualOnDestroy, IRequest
 
     private void Update(float rt)
     {
-
+        if (_isSpawningVehicle)
+            return;
+     
         bool forceUpdate = false;
 
         if (State == VehicleSpawnerState.Uninitialized)
         {
-            RespawnVehicle();
-            State = VehicleSpawnerState.Ready;
-            forceUpdate = true;
-            _lastLocation = null;
-            _idleTime = 0;
-            _destroyedTime = 0;
+            if (!_hasInitialized)
+            {
+                RespawnVehicle();
+                _hasInitialized = true;
+            }
+
+            if (SpawnInfo.LinkedVehicle != null && !SpawnInfo.LinkedVehicle.isExploded && !SpawnInfo.LinkedVehicle.isDead && !SpawnInfo.LinkedVehicle.isDrowned)
+            {
+                State = VehicleSpawnerState.Ready;
+                forceUpdate = true;
+                _lastLocation = null;
+                _idleTime = 0;
+                _destroyedTime = 0;
+            }
         }
         // Destroyed
         else if (SpawnInfo.LinkedVehicle == null || SpawnInfo.LinkedVehicle.isExploded || SpawnInfo.LinkedVehicle.isDead || SpawnInfo.LinkedVehicle.isDrowned)
@@ -188,7 +200,7 @@ public class VehicleSpawnerComponent : MonoBehaviour, IManualOnDestroy, IRequest
 
     private bool IsIdle(InteractableVehicle vehicle)
     {
-        if (vehicle.isDrowned)
+        if (vehicle.isDrowned || Provider.clients.Count == 0)
             return true;
 
         if (vehicle.anySeatsOccupied)
@@ -217,9 +229,25 @@ public class VehicleSpawnerComponent : MonoBehaviour, IManualOnDestroy, IRequest
         if (SpawnInfo.LinkedVehicle != null && !(SpawnInfo.LinkedVehicle.isExploded || SpawnInfo.LinkedVehicle.isDead))
         {
             VehicleManager.askVehicleDestroy(SpawnInfo.LinkedVehicle);
+            SpawnInfo.UnlinkVehicle();
         }
 
-        _ = _vehicleService.SpawnVehicleAsync(SpawnInfo, CancellationToken.None);
+        UniTask.Create(async () =>
+        {
+            _isSpawningVehicle = true;
+            try
+            {
+                await _vehicleService.SpawnVehicleAsync(SpawnInfo, CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                WarfareModule.Singleton.GlobalLogger.LogError(ex, "Error respawning vehicle at spawner {0}.", VehicleInfo.Vehicle);
+            }
+            finally
+            {
+                _isSpawningVehicle = false;
+            }
+        });
     }
 
     private void UpdateLinkedSignsTick(float rt)
@@ -249,6 +277,8 @@ public class VehicleSpawnerComponent : MonoBehaviour, IManualOnDestroy, IRequest
     {
         // WarfareModule.Singleton.GlobalLogger.LogInformation("Update sign");
         _lastSignUpdate = rt;
+        if (Provider.clients.Count == 0)
+            return;
         foreach (IBuildable sign in SpawnInfo.SignInstanceIds)
         {
             if (sign.IsStructure || sign.IsDead)

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace Uncreated.Warfare.Util.List;
 
@@ -32,14 +31,47 @@ public readonly struct TrackingWhereEnumerable<T> : IEnumerable<T>
         return ((ReadOnlyTrackingList<T>)_list!).Contains(value) && _predicate(value);
     }
 
-    public IEnumerator<T> GetEnumerator()
+    public Enumerator GetEnumerator()
     {
-        // theres already an extension method called Where so we need to explicitly use the LINQ one.
-        if (_list is TrackingList<T> writeList)
-            return Enumerable.Where(writeList, _predicate).GetEnumerator();
-
-        return Enumerable.Where((ReadOnlyTrackingList<T>)_list!, _predicate).GetEnumerator();
+        return new Enumerator(_list is TrackingList<T> tl ? tl.GetEnumerator() : ((ReadOnlyTrackingList<T>?)_list!).GetEnumerator(), _predicate);
     }
 
+    IEnumerator<T> IEnumerable<T>.GetEnumerator() => GetEnumerator();
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+    public struct Enumerator : IEnumerator<T>
+    {
+        private readonly Func<T, bool> _predicate;
+        private List<T>.Enumerator _enumerator;
+        public Enumerator(List<T>.Enumerator enumerator, Func<T, bool> predicate)
+        {
+            _enumerator = enumerator;
+            _predicate = predicate;
+        }
+
+        public bool MoveNext()
+        {
+            while (_enumerator.MoveNext())
+            {
+                if (_predicate(_enumerator.Current))
+                    return true;
+            }
+
+            return false;
+        }
+
+        public void Reset()
+        {
+            IEnumerator enumerator = _enumerator;
+            enumerator.Reset();
+            _enumerator = (List<T>.Enumerator)enumerator;
+        }
+
+        public T Current => _enumerator.Current;
+        object? IEnumerator.Current => _enumerator.Current;
+        public void Dispose()
+        {
+            _enumerator.Dispose();
+        }
+    }
 }

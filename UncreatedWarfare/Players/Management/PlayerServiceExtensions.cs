@@ -17,7 +17,7 @@ public static class PlayerServiceExtensions
     /// List of all online players on a given team. Not to be invoked from any thread other than the game thread.
     /// </summary>
     /// <exception cref="GameThreadException"/>
-    public static TrackingWhereEnumerable<WarfarePlayer> OnlinePlayersOnTeam(this IPlayerService playerService, Team team) => TrackingListExtensions.Where(playerService.OnlinePlayers, p => p.Team == team);
+    public static TrackingWhereEnumerable<WarfarePlayer> OnlinePlayersOnTeam(this IPlayerService playerService, Team team) => TrackingListExtensions.Where(playerService.OnlinePlayers, team.PlayerSelector);
 
     /// <summary>
     /// Gets an array of the Steam64 IDs of all online players as an array for database queries.

@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Interaction.Icons;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Models.Kits;
@@ -27,11 +28,14 @@ public class AmmoBagComponent : MonoBehaviour
         ITeamManager<Team> teamManager = serviceProvider.GetRequiredService<ITeamManager<Team>>();
 
         AssetConfiguration assetConfig = serviceProvider.GetRequiredService<AssetConfiguration>();
-        if (assetConfig.GetAssetLink<EffectAsset>("Effects:Ammo").TryGetAsset(out EffectAsset? asset))
+        if (assetConfig.GetAssetLink<EffectAsset>("Effects:Ammo") is { } ammoAsset && ammoAsset.TryGetAsset(out _))
         {
             Team team = teamManager.GetTeam(new CSteamID(drop.GetServersideData().group));
-            if (team.IsValid)
-                serviceProvider.GetRequiredService<IconManager>().AttachIcon(asset.GUID, drop.model, team, 1f);
+            if (!team.IsValid)
+                return;
+
+            WorldIconManager iconManager = serviceProvider.GetRequiredService<WorldIconManager>();
+            iconManager.CreateIcon(new WorldIconInfo(transform, ammoAsset, team) { TickSpeed = 1f });
         }
 
         //ResuppliedPlayers = new Dictionary<ulong, int>();

@@ -302,4 +302,6 @@ public class WarfarePlayer : IPlayer, ICommandUser, IComponentContainer<IPlayerC
         GameThread.AssertCurrent();
         UnturnedPlayer.teleportToLocationUnsafe(position, rotation.eulerAngles.y);
     }
+
+    bool ITransformObject.Alive => IsOnline;
 }

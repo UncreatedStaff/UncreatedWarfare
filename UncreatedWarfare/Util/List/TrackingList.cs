@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 
 namespace Uncreated.Warfare.Util.List;
 public class TrackingList<T> : IList<T>
@@ -29,7 +28,6 @@ public class TrackingList<T> : IList<T>
 
     public List<T>.Enumerator GetEnumerator() => _list.GetEnumerator();
     IEnumerator<T> IEnumerable<T>.GetEnumerator() => _list.GetEnumerator();
-
     IEnumerator IEnumerable.GetEnumerator() => _list.GetEnumerator();
 
     public int IndexOf(T item) => _list.IndexOf(item);

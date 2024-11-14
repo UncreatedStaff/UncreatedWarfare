@@ -50,8 +50,10 @@ public class VehicleService : ILayoutHostedService,
         _reqTranslations = reqTranslations.Value;
     }
 
-    UniTask ILayoutHostedService.StartAsync(CancellationToken token)
+    async UniTask ILayoutHostedService.StartAsync(CancellationToken token)
     {
+        await DeleteAllVehiclesAsync(token);
+
         IServiceProvider serviceProvider = _module.ScopedProvider.Resolve<IServiceProvider>();
         foreach (VehicleSpawnInfo spawn in _spawnerStore.Spawns)
         {
@@ -62,8 +64,6 @@ public class VehicleService : ILayoutHostedService,
             
             spawn.Spawner.Model.GetOrAddComponent<VehicleSpawnerComponent>().Init(spawn, info, serviceProvider);
         }
-
-        return UniTask.CompletedTask;
     }
 
     UniTask ILayoutHostedService.StopAsync(CancellationToken token)

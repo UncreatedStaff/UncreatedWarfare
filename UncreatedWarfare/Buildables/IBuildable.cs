@@ -151,6 +151,7 @@ public class BuildableBarricade : IBuildable
         BarricadeManager.ServerSetBarricadeTransform(Drop.model, position, rotation);
     }
 
+    bool ITransformObject.Alive => !Data.barricade.isDead;
     object IBuildable.Drop => Drop;
     object IBuildable.Data => Data;
     object IBuildable.Item => Data.barricade;
@@ -220,6 +221,7 @@ public class BuildableStructure : IBuildable
         StructureManager.ServerSetStructureTransform(Drop.model, position, rotation);
     }
 
+    bool ITransformObject.Alive => !Data.structure.isDead;
     object IBuildable.Drop => Drop;
     object IBuildable.Data => Data;
     object IBuildable.Item => Data.structure;

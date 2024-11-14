@@ -31,6 +31,7 @@ using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Interaction.Commands;
+using Uncreated.Warfare.Interaction.Icons;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Whitelists;
 using Uncreated.Warfare.Layouts;
@@ -628,6 +629,10 @@ public sealed class WarfareModule
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
 
+        bldr.RegisterType<WorldIconManager>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
+
         bldr.RegisterType<FobConfiguration>()
             .SingleInstance();
 
@@ -683,7 +688,7 @@ public sealed class WarfareModule
 
         bldr.RegisterType<ItemIconProvider>()
             .SingleInstance();
-
+        
         bldr.RegisterType<AnnouncementService>()
             .AsSelf().AsImplementedInterfaces();
 
