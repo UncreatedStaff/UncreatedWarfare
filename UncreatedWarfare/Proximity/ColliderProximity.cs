@@ -95,16 +95,15 @@ public class ColliderProximity : MonoBehaviour, ITrackingProximity<WarfarePlayer
                 break;
 
             case IPolygonProximity polygon:
-                Mesh mesh = polygon.CreateMesh(triCount: -1, originOverride: null, out Vector3 origin);
+                Bounds b = polygon.worldBounds;
+                transform.position = b.center;
+                
+                boxCollider = gameObject.AddComponent<BoxCollider>();
+                boxCollider.center = Vector3.zero;
+                boxCollider.size = b.size;
+                boxCollider.isTrigger = true;
 
-                transform.position = origin;
-
-                MeshCollider meshCollider = gameObject.AddComponent<MeshCollider>();
-                meshCollider.sharedMesh = mesh;
-                meshCollider.convex = true;
-                meshCollider.isTrigger = true;
-
-                _collider = meshCollider;
+                _collider = boxCollider;
                 break;
 
             default:

@@ -10,7 +10,7 @@ using Uncreated.Warfare.Translations.Languages;
 
 namespace Uncreated.Warfare.Commands;
 
-[Command("add", "give", "award"), MetadataFile]
+[Command("add", "give", "award"), SubCommandOf(typeof(PointsExperienceCommand))]
 public sealed class PointsAddExperienceCommand : IExecutableCommand
 {
     private readonly PointsService _pointsService;

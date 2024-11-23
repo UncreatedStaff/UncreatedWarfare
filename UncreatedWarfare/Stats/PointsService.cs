@@ -15,7 +15,7 @@ using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Stats;
-public class PointsService : IEventListener<PlayerTeamChanged>
+public class PointsService : IEventListener<PlayerTeamChanged> // todo player equipment changed
 {
     private readonly PointsConfiguration _configuration;
     private readonly IPointsStore _pointsSql;
