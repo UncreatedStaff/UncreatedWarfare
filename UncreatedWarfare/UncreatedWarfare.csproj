@@ -195,6 +195,7 @@
     <EmbeddedResource Include="Commands\Clear\ClearCommand.meta.yml" />
     <EmbeddedResource Include="Commands\AbandonCommand.meta.yml" />
     <EmbeddedResource Include="Commands\Kit\KitCommand.meta.yml" />
+    <EmbeddedResource Include="Commands\Points\PointsCommand.meta.yml" />
     <EmbeddedResource Include="Commands\Request\RequestCommand.meta.yml" />
     <EmbeddedResource Include="Commands\VehicleBay\VehicleBayCommand.meta.yml" />
     <EmbeddedResource Include="Commands\WarfareDev\WarfareDevCommand.meta.yml" />

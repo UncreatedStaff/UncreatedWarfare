@@ -3,6 +3,8 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
+using Uncreated.Warfare.Events.Models;
+using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Players.Management;
@@ -13,7 +15,7 @@ using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Stats;
-public class PointsService
+public class PointsService : IEventListener<PlayerTeamChanged>
 {
     private readonly PointsConfiguration _configuration;
     private readonly IPointsStore _pointsSql;
@@ -126,6 +128,15 @@ public class PointsService
     }
 
     /// <summary>
+    /// Get an event meant for admin commands. Adds raw point values.
+    /// </summary>
+    public ResolvedEventInfo GetAdminEvent(in LanguageSet set, double? xp, double? credits, double? reputation)
+    {
+        return new ResolvedEventInfo(default, xp, credits, reputation)
+            .WithTranslation(_translations.XPToastFromOperator, set);
+    }
+
+    /// <summary>
     /// Get an event from settings.
     /// </summary>
     public EventInfo GetEvent(string eventId)
@@ -231,6 +242,11 @@ public class PointsService
         }
 
         // todo 'promoted'/'demoted' message
+    }
+
+    public void HandleEvent(PlayerTeamChanged e, IServiceProvider serviceProvider)
+    {
+        _ui.UpdatePointsUI(e.Player, this);
     }
 }
 
