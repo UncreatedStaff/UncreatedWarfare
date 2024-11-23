@@ -167,8 +167,7 @@ public sealed class WarfareModule
         GameThread.AssertCurrent();
 
         // setup UniTask
-        if (!PlayerLoopHelper.HasBeenInitialized)
-            PlayerLoopHelper.Init();
+        InitializeUniTask();
 
         // this needs to be separated to give the above events time to be subscribed before loading types
         Init();
@@ -1155,6 +1154,56 @@ public sealed class WarfareModule
             return typeof(System.Runtime.CompilerServices.Unsafe).Assembly;
 
         return null;
+    }
+    private void InitializeUniTask()
+    {
+        if (PlayerLoopHelper.IsInjectedUniTaskPlayerLoop())
+        {
+            CommandWindow.Log("UniTask already initialized.");
+            return;
+        }
+
+        MethodInfo? initMethod = typeof(PlayerLoopHelper).GetMethod("Init",
+            BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static, null, CallingConventions.Any, Type.EmptyTypes, null
+        );
+
+        if (initMethod != null)
+        {
+            initMethod.Invoke(null, Array.Empty<object>());
+            CommandWindow.Log("Initialized UniTask.");
+        }
+        else
+            CommandWindow.LogError("Failed to initialize UniTask.");
+
+        UniTaskScheduler.UnobservedTaskException += UnitaskExceptionUnobserved;
+        UniTaskScheduler.DispatchUnityMainThread = false;
+        UniTaskScheduler.PropagateOperationCanceledException = true;
+    }
+
+    private void UnitaskExceptionUnobserved(Exception ex)
+    {
+        if (ServiceProvider == null)
+        {
+            if (GameThread.IsCurrent)
+            {
+                CommandWindow.LogError("UniTask caught an unobserved exception.");
+                CommandWindow.LogError(ex);
+            }
+            else
+            {
+                Exception ex2 = ex;
+                UniTask.Create(async () =>
+                {
+                    await UniTask.SwitchToMainThread();
+                    CommandWindow.LogError("UniTask caught an unobserved exception.");
+                    CommandWindow.LogError(ex2);
+                });
+            }
+        }
+        else
+        {
+            ServiceProvider.Resolve<ILogger<UniTask>>().LogError(ex, "UniTask caught an unobserved exception.");
+        }
     }
 }
 
