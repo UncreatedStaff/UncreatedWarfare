@@ -29,7 +29,7 @@ jobs:
     - name: SetupDotNet
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '5.0.x'
+        dotnet-version: '9.x.x'
         
     - name: Build
       run: dotnet build "./UncreatedWarfare/UncreatedWarfare.csproj" --configuration Release "/p:VersionPrefix=${{ inputs.version_prefix }};VersionSuffix=${{ inputs.version_suffix }};PackageReleaseNotes=${{ inputs.change_notes }};IsInGitHubActions=True"
