@@ -11,7 +11,7 @@ namespace Uncreated.Warfare.Logging;
 public class WarfareLogger : ILogger
 {
     private static readonly string[] LogLevelsRaw = [ "TRC", "DBG", "INF", "WRN", "ERR", "CRT" ];
-    private static readonly string[] LogLevelsANSI = [ "\u001b[47mTRC\u001b[49m", "\u001b[47mDBG\u001b[49m", "\u001b[46mINF\u001b[49m", "\u001b[43mWRN\u001b[49m", "\u001b[41mERR\u001b[49m", "\u001b[101mCRT\u001b[49m" ];
+    private static readonly string[] LogLevelsANSI = [ "\e[47mTRC\e[49m", "\e[47mDBG\e[49m", "\e[46mINF\e[49m", "\e[43mWRN\e[49m", "\e[41mERR\e[49m", "\e[101mCRT\e[49m" ];
     private static readonly string[] LogLevelsExtendedANSI = LogLevelsANSI;
 
     private readonly string _categoryName;

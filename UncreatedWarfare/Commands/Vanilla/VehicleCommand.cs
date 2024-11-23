@@ -296,7 +296,7 @@ public class VehicleCommand : IExecutableCommand
 #endif
         await Context.AssertPermissions(PermissionSpawn, token);
 
-        bool enter = Context.MatchFlag("e", "enter");
+        bool enter = Context.MatchFlag('e', "enter");
 
         Context.AssertArgs(1, AdminSyntax);
 

@@ -6,8 +6,10 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.ExceptionServices;
+using Autofac.Builder;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database.Abstractions;
+using Uncreated.Warfare.Exceptions;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Models.GameData;
 using Uncreated.Warfare.Players.Management;
@@ -185,14 +187,8 @@ public class LayoutFactory : IHostedService
             throw new ArgumentException($"Type {Accessor.ExceptionFormatter.Format(layoutInfo.LayoutType)} is not assignable to Layout.", nameof(layoutInfo));
         }
 
-        Action<ContainerBuilder>? lifetimeAction = null;
-
         // load plugin services
-        IConfigurationSection serviceInfo = layoutInfo.Layout.GetSection("Services");
-        if (serviceInfo.GetChildren().Any())
-        {
-            lifetimeAction = TryLoadServicesFromServiceList(layoutInfo, serviceInfo);
-        }
+        Action<ContainerBuilder> lifetimeAction = GetServiceChildLifetimeFactory(layoutInfo, layoutInfo.Layout.GetSection("Services"), layoutInfo.Layout.GetSection("Components"));
 
         ILifetimeScope scopedProvider = await _warfare.CreateScopeAsync(lifetimeAction, token);
         await UniTask.SwitchToMainThread(token);
@@ -253,7 +249,7 @@ public class LayoutFactory : IHostedService
     /// <summary>
     /// Loads all instances of <see cref="ILayoutServiceConfigurer"/> from the 'Services' list in the config and creates a lifetime scope builder using them.
     /// </summary>
-    private Action<ContainerBuilder> TryLoadServicesFromServiceList(LayoutInfo layoutInfo, IConfiguration serviceInfo)
+    private Action<ContainerBuilder> GetServiceChildLifetimeFactory(LayoutInfo layoutInfo, IConfiguration serviceInfo, IConfiguration collectionInfo)
     {
         List<(string?, Type?)> types = serviceInfo.GetChildren()
             .Select(x => (x.Value, ContextualTypeResolver.ResolveType(x.Value, typeof(ILayoutServiceConfigurer))))
@@ -273,10 +269,42 @@ public class LayoutFactory : IHostedService
             throw new AggregateException(missingTypeExceptions);
         }
 
+        List<(IConfigurationSection, Type)> componentTypes = new List<(IConfigurationSection, Type)>();
+
+        bool anyComponentFailed = false;
+        foreach (IConfigurationSection section in collectionInfo.GetChildren())
+        {
+            string? componentTypeStr = section["Type"];
+            if (!ContextualTypeResolver.TryResolveType(componentTypeStr, out Type? type))
+            {
+                _logger.LogError("Unknown component type: {0}.", componentTypeStr);
+                anyComponentFailed = true;
+                continue;
+            }
+
+            componentTypes.Add((section, type));
+        }
+
+        if (anyComponentFailed)
+            throw new LayoutConfigurationException("At least one component type couldn't be found.");
+
         object[] parameters = [ layoutInfo, serviceInfo ];
         return bldr =>
         {
             IServiceProvider serviceProvider = _warfare.ServiceProvider.Resolve<IServiceProvider>();
+
+            for (int i = 0; i < componentTypes.Count; i++)
+            {
+                (IConfigurationSection section, Type type) = componentTypes[i];
+                IRegistrationBuilder<object, ConcreteReflectionActivatorData, SingleRegistrationStyle> reg = bldr.RegisterType(type);
+
+                type.ForEachBaseType((x, _) => reg.As(x));
+                reg.AsImplementedInterfaces();
+
+                reg.SingleInstance();
+                reg.WithParameter(TypedParameter.From<IConfiguration>(section));
+            }
+
             foreach ((_, Type? configurerType) in types)
             {
                 ILayoutServiceConfigurer configurer =

@@ -292,7 +292,7 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
     /// <summary>
     /// Start executing a parsed command.
     /// </summary>
-    internal void ExecuteCommand(CommandInfo command, ICommandUser user, string[] args, string originalMessage)
+    internal void ExecuteCommand(CommandInfo command, ICommandUser user, string[] args, CommandFlagInfo[] flags, string originalMessage)
     {
         GameThread.AssertCurrent();
 
@@ -339,7 +339,7 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
         if (foundTasks != null && foundTasks.Exists(task => (task.Options & CommandWaitOptions.BlockOriginalExecution) != 0))
         {
             Lazy<CommandContext> contextFactory = new Lazy<CommandContext>(
-                () => new CommandContext(user, CancellationToken.None, args, originalMessage, command, _module.ScopedProvider.Resolve<IServiceProvider>()),
+                () => new CommandContext(user, CancellationToken.None, args, flags, originalMessage, command, _module.ScopedProvider.Resolve<IServiceProvider>()),
                     LazyThreadSafetyMode.ExecutionAndPublication);
 
             foreach (CommandWaitTask task in foundTasks)
@@ -351,14 +351,14 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
 
         UniTask.Create(async () =>
         {
-            await ExecuteCommandAsync(command, user, args, originalMessage, foundTasks, user is WarfarePlayer player ? player.DisconnectToken : CancellationToken.None);
+            await ExecuteCommandAsync(command, user, args, flags, originalMessage, foundTasks, user is WarfarePlayer player ? player.DisconnectToken : CancellationToken.None);
         });
     }
 
     /// <summary>
     /// Execute a parsed command.
     /// </summary>
-    public async UniTask ExecuteCommandAsync(CommandInfo command, ICommandUser user, string[] args, string originalMessage, List<CommandWaitTask>? waitTasks, CancellationToken token = default)
+    public async UniTask ExecuteCommandAsync(CommandInfo command, ICommandUser user, string[] args, CommandFlagInfo[] flags, string originalMessage, List<CommandWaitTask>? waitTasks, CancellationToken token = default)
     {
         if (user == null)
             throw new ArgumentNullException(nameof(user));
@@ -403,7 +403,7 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
             return;
         }
 
-        await ExecuteCommandAsync(command, user, args, originalMessage, offset, waitTasks, token);
+        await ExecuteCommandAsync(command, user, args, flags, originalMessage, offset, waitTasks, token);
 #if DEBUG
         sw.Stop();
         _logger.LogDebug("Comamnd {0} exited in {1} ms: /{2} with args: {3}.", command.Type, sw.GetElapsedMilliseconds(), command.CommandName, args);
@@ -516,7 +516,7 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
 
         Type commandType = vanillaCommand.GetType();
 
-        CommandContext ctx = new CommandContext(user, token, args, originalMessage, commandInfo, _module.ScopedProvider.Resolve<IServiceProvider>());
+        CommandContext ctx = new CommandContext(user, token, args, Array.Empty<CommandFlagInfo>(), originalMessage, commandInfo, _module.ScopedProvider.Resolve<IServiceProvider>());
         VanillaCommandListener listener = new VanillaCommandListener(ctx);
         Dedicator.commandWindow.addIOHandler(listener);
         try
@@ -549,7 +549,7 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
     /// <summary>
     /// Execute a custom command.
     /// </summary>
-    private async UniTask ExecuteCommandAsync(CommandInfo command, ICommandUser user, string[] args, string originalMessage, int argumentOffset, List<CommandWaitTask>? waitTasks, CancellationToken token = default)
+    private async UniTask ExecuteCommandAsync(CommandInfo command, ICommandUser user, string[] args, CommandFlagInfo[] flags, string originalMessage, int argumentOffset, List<CommandWaitTask>? waitTasks, CancellationToken token = default)
     {
         SemaphoreSlim? lockTaken = command.SynchronizedSemaphore;
         if (lockTaken != null)
@@ -568,7 +568,7 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
 
             await UniTask.SwitchToMainThread();
 
-            CommandContext ctx = new CommandContext(user, linkedSrc.Token, args, originalMessage, command, serviceProvider)
+            CommandContext ctx = new CommandContext(user, linkedSrc.Token, args, flags, originalMessage, command, serviceProvider)
             {
                 ArgumentOffset = argumentOffset
             };
@@ -686,7 +686,7 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
                 // special argument transformation handling for /help
                 if (switchInfo.Type == typeof(HelpCommand))
                 {
-                    args = ctx.ParametersWithFlags;
+                    args = ctx.Parameters.ToArray();
                     if (args.Length > 0 && (args[^1].Equals("help", StringComparison.InvariantCultureIgnoreCase)
                                             || args[^1].Equals("hlep", StringComparison.InvariantCultureIgnoreCase)
                                             || args[^1].Equals("?", StringComparison.InvariantCultureIgnoreCase)))
@@ -734,7 +734,7 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
         if (switchInfo == null)
             return;
 
-        await ExecuteCommandAsync(switchInfo, user, args, originalMessage, null, token);
+        await ExecuteCommandAsync(switchInfo, user, args, flags, originalMessage, null, token);
     }
 
     /// <summary>
@@ -780,15 +780,9 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
         shouldExecuteCommand = false;
         ReadOnlySpan<char> textSpan = text;
 
-        // remove accidental \ when pressing enter
-        if (textSpan.Length > 0 && textSpan[^1] == '\\')
-        {
-            textSpan = textSpan[..^1];
-        }
-
         try
         {
-            if (!Parser.TryRunCommand(pl, textSpan, ref shouldList, true) && !shouldList)
+            if (!TryRunCommand(pl, text, ref shouldList, true) && !shouldList)
             {
                 CommonTranslations translations = _module.ScopedProvider.Resolve<TranslationInjection<CommonTranslations>>().Value;
                 _chatService.Send(pl, translations.UnknownCommand);
@@ -802,11 +796,57 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
         }
     }
     
+    private bool TryRunCommand(ICommandUser user, ReadOnlySpan<char> textSpan, ref bool shouldList, bool requirePrefix)
+    {
+        ParsedCommandInfo info = Parser.ParseCommandInput(textSpan, requirePrefix);
+        if (info.CommandName == null)
+            return false;
+
+        shouldList = false;
+
+        CommandInfo? c = FindCommandForExecution(info.CommandName);
+        if (c == null)
+            return false;
+
+        ExecuteCommand(c, user, info.Arguments, info.Flags, info.ToString());
+        return true;
+    }
+
+    private CommandInfo? FindCommandForExecution(string commandName)
+    {
+        using IEnumerator<CommandInfo> enumerator = Commands.GetEnumerator();
+
+        while (enumerator.MoveNext())
+        {
+            CommandInfo c = enumerator.Current!;
+            if (c.CommandName.Equals(commandName, StringComparison.InvariantCultureIgnoreCase))
+            {
+                return c;
+            }
+        }
+
+        enumerator.Reset();
+
+        while (enumerator.MoveNext())
+        {
+            CommandInfo c = enumerator.Current!;
+            for (int i = 0; i < c.Aliases.Length; ++i)
+            {
+                if (c.Aliases[i].Equals(commandName, StringComparison.InvariantCultureIgnoreCase))
+                {
+                    return c;
+                }
+            }
+        }
+
+        return null;
+    }
+    
     private void OnCommandInput(string text, ref bool shouldExecuteCommand)
     {
         try
         {
-            if (shouldExecuteCommand && Parser.TryRunCommand(TerminalUser.Instance, text, ref shouldExecuteCommand, false))
+            if (shouldExecuteCommand && TryRunCommand(TerminalUser.Instance, text, ref shouldExecuteCommand, false))
             {
                 shouldExecuteCommand = false;
             }

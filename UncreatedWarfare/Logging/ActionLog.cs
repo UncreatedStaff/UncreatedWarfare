@@ -47,8 +47,8 @@ public class ActionLog : MonoBehaviour
                 _types = new char[(int)ActionLogType.Max + 1][];
                 for (int i = 0; i < _types.Length; ++i)
                 {
-                    FieldInfo? field = fields.FirstOrDefault(x => (byte)x.GetValue(null) == (byte)i && !x.Name.Equals(nameof(ActionLogType.Max)));
-                    if (field == null || Attribute.GetCustomAttribute(field, typeof(TranslatableAttribute)) is not TranslatableAttribute { Default.Length: > 0 } tr)
+                    FieldInfo? enumField = fields.FirstOrDefault(x => (byte)x.GetValue(null) == (byte)i && !x.Name.Equals(nameof(ActionLogType.Max)));
+                    if (enumField == null || Attribute.GetCustomAttribute(enumField, typeof(TranslatableAttribute)) is not TranslatableAttribute { Default.Length: > 0 } tr)
                         _types[i] = ((ActionLogType)i).ToString().ToCharArray();
                     else
                     {
@@ -60,6 +60,7 @@ public class ActionLog : MonoBehaviour
             return _types;
         }
     }
+
 #pragma warning restore CS0618
     private static char[] NewLineChars => _nl ??= Environment.NewLine.ToCharArray();
     [UsedImplicitly]

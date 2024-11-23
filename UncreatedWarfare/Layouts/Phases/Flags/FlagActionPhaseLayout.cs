@@ -25,6 +25,7 @@ public class FlagActionPhaseLayout : IFlagRotationPhase
     private ActiveZoneCluster[]? _zones;
 
     public bool IsActive { get; private set; }
+
     public FlagPhaseSettings Flags { get; set; } = new FlagPhaseSettings();
 
     /// <inheritdoc />
@@ -70,8 +71,8 @@ public class FlagActionPhaseLayout : IFlagRotationPhase
         await _zoneStore.Initialize(token);
 
         // load pathing provider
-        IConfigurationSection config = Configuration.GetSection("PathingData");
-        IZonePathingProvider pathingProvider = (IZonePathingProvider)ReflectionUtility.CreateInstanceFixed(_serviceProvider, pathingProviderType, [ _zoneStore, this, config ]);
+        IConfigurationSection config = Configuration.GetSection("Flags:PathingData");
+        IZonePathingProvider pathingProvider = (IZonePathingProvider)ReflectionUtility.CreateInstanceFixed(_serviceProvider, pathingProviderType, [ _zoneStore, config ]);
 
         config.Bind(pathingProvider);
 

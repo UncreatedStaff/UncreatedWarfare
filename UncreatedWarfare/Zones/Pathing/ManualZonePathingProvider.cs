@@ -10,7 +10,9 @@ public class ManualZonePathingProvider : IZonePathingProvider
 {
     private readonly ILogger<ManualZonePathingProvider> _logger;
     private readonly ZoneStore _zones;
+
     public string[]? Zones { get; set; }
+
     public ManualZonePathingProvider(ILogger<ManualZonePathingProvider> logger, ZoneStore zones)
     {
         _logger = logger;
@@ -58,7 +60,8 @@ public class ManualZonePathingProvider : IZonePathingProvider
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void Fail(ILayoutPhase phase)
+    [ContractAnnotation("=> halt")]
+    private static void Fail(ILayoutPhase phase)
     {
         throw new LayoutConfigurationException(phase, "Failed to create a path using ManualZonePathingProvider.");
     }

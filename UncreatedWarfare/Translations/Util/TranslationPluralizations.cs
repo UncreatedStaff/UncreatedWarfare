@@ -10,7 +10,7 @@ internal static class TranslationPluralizations
     /// </summary>
     /// <remarks>
     /// Also supports some present tense verbs that get switched to past tense when pluralized.
-    /// 'a ' or 'an ' (with the space) can be pluralized to an empty string to go from 'a apple' to 'apples', for example.
+    /// 'a' or 'an' can be pluralized to an empty string to go from 'a apple' to 'apples', for example.
     /// </remarks>
     internal static string Pluralize(ReadOnlySpan<char> word, LanguageInfo language)
     {
@@ -37,9 +37,9 @@ internal static class TranslationPluralizations
             return "they";
         if (word.Equals("It", StringComparison.InvariantCulture))
             return "They";
-        if (word.Equals("a ", StringComparison.InvariantCulture) || word.Equals(" a", StringComparison.InvariantCulture))
+        if (word.Equals("a ", StringComparison.InvariantCulture) || word.Equals(" a", StringComparison.InvariantCulture) || word.Equals("a", StringComparison.InvariantCulture))
             return string.Empty;
-        if (word.Equals("an ", StringComparison.InvariantCulture) || word.Equals(" an", StringComparison.InvariantCulture))
+        if (word.Equals("an ", StringComparison.InvariantCulture) || word.Equals(" an", StringComparison.InvariantCulture) || word.Equals("an", StringComparison.InvariantCulture))
             return string.Empty;
 
         if (word.Length < 3)

@@ -45,7 +45,7 @@ public sealed class HelpCommand : IExecutableCommand
         CommandSyntaxFormatter.SyntaxStringInfo syntaxInfo = await formatter.GetSyntaxString(
             foundCommand,
             Context.Parameters.Slice(1, Context.Parameters.Count - 1),
-            Context.Flags.LastOrDefault(),
+            Context.Flags.LastOrDefault().FlagName,
             Context.Caller,
             commandName,
             token

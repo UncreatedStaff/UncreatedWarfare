@@ -1,369 +1,394 @@
 ﻿using System;
-using System.Collections.Generic;
-using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Interaction.Commands;
 
 public class CommandParser(CommandDispatcher dispatcher)
 {
-    private readonly ArgumentInfo[] _argumentBuffer = new ArgumentInfo[MaxArgCount];
+    private static readonly ParsedCommandInfo Failure = new ParsedCommandInfo(null, Array.Empty<string>(), Array.Empty<CommandFlagInfo>());
+    public CommandDispatcher Dispatcher { get; } = dispatcher;
 
-    public const int MaxArgCount = 32;
-
-    private static readonly char[] Prefixes = { '/', '@', '\\' };
-    private static readonly char[] ContinueArgChars = { '\'', '"', '`', '“', '”', '‘', '’' };
-    public CommandDispatcher Dispatcher => dispatcher;
-
-    /// <summary>
-    /// It works, trust me (parses arguments out of a command).
-    /// </summary>
-    public unsafe bool TryRunCommand(ICommandUser user, ReadOnlySpan<char> message, ref bool shouldList, bool requirePrefix)
+    public ParsedCommandInfo ParseCommandInput(ReadOnlySpan<char> originalMessage, bool requirePrefix)
     {
-        GameThread.AssertCurrent();
+        // remove slash that gets put at the end a lot since its right next to enter.
+        originalMessage = originalMessage.TrimEnd('\\').TrimStart();
 
-        if (message == null || message.Length < (requirePrefix ? 2 : 1)) goto notCommand;
-        int cmdStart = -1;
-        int cmdEnd = -1;
-        int argCt = -1;
-        bool foundPrefix = false;
-        int len = message.Length;
-        int cmdInd = -1;
-        bool inArg = false;
-        fixed (char* ptr = message)
+        if (originalMessage.Length < (requirePrefix ? 1 : 0) + 1)
+            return Failure;
+
+        ReadOnlySpan<char> startArgChars = [ '"', '\'', '`', '´', '“', '‘' ];
+        ReadOnlySpan<char> endArgChars = [ '"', '\'', '`', '´', '”', '’' ];
+
+        // yes these are all different characters
+        ReadOnlySpan<char> flagPrefixes = [ '-', '–', '—', '−' ];
+
+        if (requirePrefix)
         {
-            for (int i = 0; i < len; ++i)
-            {
-                char c = *(ptr + i);
+            ReadOnlySpan<char> prefixes = [ '/', '@', '\\' ];
+            char prefix = originalMessage[0];
+            if (prefixes.IndexOf(prefix) < 0)
+                return Failure;
 
-                // check for '/' prefix
-                if (!foundPrefix && requirePrefix)
-                {
-                    if (c == ' ') continue;
-                    for (int j = 0; j < Prefixes.Length; ++j)
-                    {
-                        if (c == Prefixes[j])
-                        {
-                            foundPrefix = true;
-                            break;
-                        }
-                    }
-                    if (!foundPrefix) goto notCommand;
-                    continue;
-                }
-
-                // start finding command name
-                if (cmdStart == -1)
-                {
-                    if (c == ' ') goto c;
-                    if (!requirePrefix)
-                    {
-                        // skip prefix
-                        for (int j = 0; j < Prefixes.Length; ++j)
-                        {
-                            if (c == Prefixes[j]) goto c;
-                        }
-                    }
-                    cmdStart = i;
-                c:;
-                }
-
-                // finish finding command name
-                if (cmdEnd == -1)
-                {
-                    if (i != len - 1)
-                    {
-                        if (c == ' ')
-                        {
-                            // space after command name, check if next is a quotation mark
-                            // if there's a character after the space start the next argument
-                            char next = message[i + 1];
-                            if (next != ' ')
-                            {
-                                for (int j = 0; j < ContinueArgChars.Length; ++j)
-                                {
-                                    if (next == ContinueArgChars[j])
-                                        goto c;
-                                }
-
-                                ref ArgumentInfo info = ref _argumentBuffer[++argCt];
-                                info.End = -1;
-                                info.Start = i + 1;
-                            }
-
-                            c:
-                            cmdEnd = i - 1;
-                            goto getCommand;
-                        }
-
-                        // quotation mark directly after the command name
-                        for (int j = 0; j < ContinueArgChars.Length; ++j)
-                        {
-                            if (c == ContinueArgChars[j])
-                            {
-                                ref ArgumentInfo info = ref _argumentBuffer[++argCt];
-                                inArg = true;
-                                info.End = -1;
-                                info.Start = i + 1;
-                                cmdEnd = i - 1;
-                                goto getCommand;
-                            }
-                        }
-
-                        continue;
-                    }
-
-                    // end the command at the last letter
-                    cmdEnd = c == ' ' ? i - 1 : i;
-                    goto getCommand;
-                }
-
-                // quotation mark
-                for (int j = 0; j < ContinueArgChars.Length; ++j)
-                {
-                    if (c == ContinueArgChars[j])
-                        goto contArgChr;
-                }
-
-                // space while not in quotation marks
-                if (c == ' ' && !inArg)
-                {
-                    // end current argument if space at end of string
-                    if (i == len - 1)
-                    {
-                        if (argCt != -1)
-                        {
-                            ref ArgumentInfo info2 = ref _argumentBuffer[argCt];
-                            if (info2.End == -1)
-                                info2.End = i - 1;
-                        }
-                        break;
-                    }
-
-                    // end current argument if double space
-                    char next = message[i + 1];
-                    if (next == ' ')
-                    {
-                        if (argCt != -1)
-                        {
-                            ref ArgumentInfo info2 = ref _argumentBuffer[argCt];
-                            if (info2.End == -1)
-                                info2.End = i - 1;
-                        }
-                        continue;
-                    }
-
-                    // if next is a quotation mark continue to next character which will end the current argument
-                    for (int j = 0; j < ContinueArgChars.Length; ++j)
-                    {
-                        if (next == ContinueArgChars[j])
-                            goto c;
-                    }
-                    goto n;
-                    c:
-                    continue;
-                    n:
-                    // end the current argument
-                    if (argCt != -1)
-                    {
-                        ref ArgumentInfo info2 = ref _argumentBuffer[argCt];
-                        if (info2.End == -1)
-                            info2.End = i - 1;
-                    }
-                    if (i == len - 1) break;
-                    if (argCt >= MaxArgCount - 1)
-                        goto runCommand;
-
-                    // start next argument
-                    ref ArgumentInfo info = ref _argumentBuffer[++argCt];
-                    info.End = -1;
-                    info.Start = i + 1;
-                }
-                continue;
-
-                contArgChr:
-                if (inArg)
-                {
-                    // end current quotation mark argument
-                    ref ArgumentInfo info = ref _argumentBuffer[argCt];
-                    info.End = i - 1;
-                    inArg = false;
-                    if (i < len - 1 && argCt < MaxArgCount - 1)
-                    {
-                        char next = message[i + 1];
-                        bool cont = next == ' ';
-                        // check for argument right after current and start a new one
-                        if (!cont)
-                        {
-                            for (int j = 0; j < ContinueArgChars.Length; ++j)
-                            {
-                                if (next == ContinueArgChars[j])
-                                {
-                                    cont = true;
-                                    break;
-                                }
-                            }
-                            if (!cont)
-                            {
-                                info = ref _argumentBuffer[++argCt];
-                                info.Start = i + 1;
-                                info.End = -1;
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    // end current argument and start a quotation mark argument
-                    if (argCt != -1)
-                    {
-                        ref ArgumentInfo info2 = ref _argumentBuffer[argCt];
-                        if (info2.End == -1)
-                        {
-                            if (message[i - 1] == ' ')
-                                info2.End = i - 2;
-                            else
-                                info2.End = i - 1;
-                        }
-                    }
-                    if (i == len - 1) break;
-                    if (argCt >= MaxArgCount - 1)
-                        goto runCommand;
-                    ref ArgumentInfo info = ref _argumentBuffer[++argCt];
-                    info.Start = i + 1;
-                    info.End = -1;
-                    inArg = true;
-                }
-                continue;
-
-                getCommand:
-                shouldList = false;
-                if (cmdStart < 0 || cmdEnd - cmdStart < 0)
-                    goto notCommand;
-
-                // find command, assumes already sorted by priority
-                string command = new string(ptr, cmdStart, cmdEnd - cmdStart + 1);
-                for (int k = 0; k < dispatcher.Commands.Count; ++k)
-                {
-                    CommandInfo cmd = dispatcher.Commands[k];
-                    string c2 = cmd.CommandName;
-                    if (command.Equals(c2, StringComparison.InvariantCultureIgnoreCase))
-                    {
-                        cmdInd = k;
-                        break;
-                    }
-
-                    // check aliases
-                    IList<string> aliases = cmd.Aliases;
-                    if (aliases is { Count: > 0 })
-                    {
-                        for (int a = 0; a < aliases.Count; ++a)
-                        {
-                            string alias = aliases[a];
-                            if (command.Equals(alias, StringComparison.InvariantCultureIgnoreCase))
-                            {
-                                cmdInd = k;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (cmdInd != -1)
-                        break;
-                }
-
-                if (cmdInd == -1)
-                    goto notCommand;
-                if (i == len - 1) goto runCommand;
-            }
-            if (argCt != -1)
-            {
-                ref ArgumentInfo info = ref _argumentBuffer[argCt];
-                // check last argument for quotation mark
-                if (info.End == -1)
-                {
-                    bool endIsQuote = false;
-                    char end = message[len - 1];
-                    for (int j = 0; j < ContinueArgChars.Length; ++j)
-                    {
-                        if (end == ContinueArgChars[j])
-                        {
-                            endIsQuote = true;
-                            break;
-                        }
-                    }
-                    if (endIsQuote)
-                    {
-                        info.End = len - 2;
-                    }
-                    else
-                    {
-                        info.End = len;
-                        // trim argument
-                        do --info.End;
-                        while (message[info.End] == ' ' && info.End > -1);
-                        if (info.End > 0)
-                        {
-                            endIsQuote = false;
-                            end = message[info.End];
-                            for (int j = 0; j < ContinueArgChars.Length; ++j)
-                            {
-                                if (end == ContinueArgChars[j])
-                                {
-                                    endIsQuote = true;
-                                    break;
-                                }
-                            }
-                            if (endIsQuote) --info.End;
-                        }
-                    }
-                }
-            }
-
-            // prepare command for execution
-            runCommand:
-            if (cmdInd == -1) goto notCommand;
-            int ct2 = 0;
-            for (int i = 0; i <= argCt; ++i)
-            {
-                ref ArgumentInfo ai = ref _argumentBuffer[i];
-                if (ai.End > 0) ct2++;
-            }
-
-            int i3 = -1;
-            // prepare argument array
-            string[] args = argCt == -1 ? Array.Empty<string>() : new string[ct2];
-            for (int i = 0; i <= argCt; ++i)
-            {
-                ref ArgumentInfo ai = ref _argumentBuffer[i];
-                if (ai.End < 1) continue;
-                args[++i3] = new string(ptr, ai.Start, ai.End - ai.Start + 1);
-            }
-
-            string originalMessage = message.ToString();
-            if (!requirePrefix && Prefixes.Length > 0)
-            {
-                // add prefix for consistancy if left out
-                char prefix = originalMessage[0];
-                for (int i = 0; i < Prefixes.Length; ++i)
-                {
-                    if (Prefixes[i] == prefix)
-                        goto brk2;
-                }
-
-                originalMessage = Prefixes[0] + originalMessage;
-            }
-            brk2:
-            dispatcher.ExecuteCommand(dispatcher.Commands[cmdInd], user, args, originalMessage);
+            originalMessage = originalMessage[1..].TrimStart();
         }
 
-        shouldList = false;
-        return true;
-        notCommand:
+        if (originalMessage.Length < 1)
+            return Failure;
+
+        ReadOnlySpan<char> command = null;
+
+        // rare but supported case of something like: '/"command name" [args..]'
+        int startQuote = startArgChars.IndexOf(originalMessage[0]);
+        if (startQuote >= 0 && originalMessage.Length > 1)
+        {
+            int endQuote = originalMessage[1..].IndexOf(endArgChars[startQuote]);
+
+            if (endQuote == 0)
+            {
+                originalMessage = originalMessage[2..].TrimStart();
+            }
+            else
+            {
+                if (endQuote < 0)
+                    endQuote = originalMessage.Length - 1;
+
+                command = originalMessage[1..(endQuote + 1)];
+                originalMessage = endQuote == originalMessage.Length - 1 ? ReadOnlySpan<char>.Empty : originalMessage[(endQuote + 2)..].TrimStart();
+            }
+        }
+
+        if (command.IsEmpty)
+        {
+            int firstWhiteSpace = 0;
+            while (firstWhiteSpace < originalMessage.Length && !char.IsWhiteSpace(originalMessage[firstWhiteSpace]))
+                ++firstWhiteSpace;
+
+            command = originalMessage[..firstWhiteSpace];
+            originalMessage = originalMessage[firstWhiteSpace..].TrimStart();
+        }
+
+        if (originalMessage.Length == 0)
+            return new ParsedCommandInfo(command.IsEmpty ? null : new string(command), Array.Empty<string>(), Array.Empty<CommandFlagInfo>());
+
+        // count args
+        int argCt = 0, flagCt = 0;
+
+        ReadOnlySpan<char> args = originalMessage;
+        while (!args.IsEmpty)
+        {
+            ReadOnlySpan<char> next = GetNextArg(ref args, startArgChars, endArgChars, flagPrefixes, out bool isEmpty, out int flagDashCt);
+            if (!isEmpty && next.IsEmpty)
+                break;
+
+            if (flagDashCt > 0)
+                ++flagCt;
+            else
+                ++argCt;
+        }
+
+        string[] argOutput = argCt == 0 ? Array.Empty<string>() : new string[argCt];
+        CommandFlagInfo[] flagOutput = flagCt == 0 ? Array.Empty<CommandFlagInfo>() : new CommandFlagInfo[flagCt];
+        argCt = -1;
+        flagCt = -1;
+        while (!originalMessage.IsEmpty)
+        {
+            ReadOnlySpan<char> next = GetNextArg(ref originalMessage, startArgChars, endArgChars, flagPrefixes, out bool isEmpty, out int flagDashCt);
+            if (!isEmpty && next.IsEmpty)
+                break;
+
+            string str = new string(next);
+            if (flagDashCt > 0)
+                flagOutput[++flagCt] = new CommandFlagInfo(str, flagDashCt, argCt);
+            else
+                argOutput[++argCt] = str;
+        }
+
+        return new ParsedCommandInfo(new string(command), argOutput, flagOutput);
+    }
+
+    private static ReadOnlySpan<char> GetNextArg(ref ReadOnlySpan<char> args, ReadOnlySpan<char> startArgChars, ReadOnlySpan<char> endArgChars, ReadOnlySpan<char> flagPrefixes, out bool isEmpty, out int flagDashCt)
+    {
+        while (!args.IsEmpty)
+        {
+            ReadOnlySpan<char> arg;
+            char c = args[0];
+            int startQuote = startArgChars.IndexOf(c);
+            if (startQuote >= 0)
+            {
+                int endQuote = args[1..].IndexOf(endArgChars[startQuote]);
+
+                isEmpty = endQuote == 0;
+
+                if (endQuote < 0)
+                    endQuote = args.Length - 1;
+
+                arg = args[1..(endQuote + 1)];
+                flagDashCt = 0;
+                args = endQuote == args.Length - 1 ? ReadOnlySpan<char>.Empty : args[(endQuote + 2)..].TrimStart();
+
+                while (!arg.IsEmpty && endArgChars.IndexOf(arg[^1]) >= 0)
+                    arg = arg[..^1];
+
+                return arg;
+            }
+
+            isEmpty = false;
+            int flagPrefix = flagPrefixes.IndexOf(c);
+            if (flagPrefix >= 0)
+            {
+                int firstNonFlag = 1;
+                while (firstNonFlag < args.Length && flagPrefixes[flagPrefix] == args[firstNonFlag])
+                    ++firstNonFlag;
+
+                if (firstNonFlag is 1 or 2)
+                {
+                    args = args[firstNonFlag..];
+                    ReadOnlySpan<char> span = GetNextArg(ref args, startArgChars, endArgChars, flagPrefixes, out isEmpty, out flagDashCt);
+                    flagDashCt = firstNonFlag;
+                    return span;
+                }
+            }
+
+            int firstWhiteSpace = 0;
+            while (firstWhiteSpace < args.Length && !(char.IsWhiteSpace(args[firstWhiteSpace]) || startArgChars.IndexOf(args[firstWhiteSpace]) >= 0))
+                ++firstWhiteSpace;
+
+            arg = args[..firstWhiteSpace];
+            args = args[firstWhiteSpace..].TrimStart();
+
+            flagDashCt = 0;
+            while (!arg.IsEmpty && endArgChars.IndexOf(arg[^1]) >= 0)
+                arg = arg[..^1];
+
+            return arg;
+        }
+
+        flagDashCt = 0;
+        isEmpty = false;
+        return ReadOnlySpan<char>.Empty;
+    }
+}
+
+/// <summary>
+/// Output data for <see cref="ICommandParser"/> implementations.
+/// </summary>
+public readonly struct ParsedCommandInfo(string? commandName, string[] arguments, CommandFlagInfo[] flags)
+{
+    /// <summary>
+    /// The first 'word' in the command string.
+    /// </summary>
+    public readonly string? CommandName = commandName;
+
+    /// <summary>
+    /// List of all arguments entered by the user.
+    /// </summary>
+    public readonly string[] Arguments = arguments;
+
+    /// <summary>
+    /// List of all flags entered by the user.
+    /// </summary>
+    public readonly CommandFlagInfo[] Flags = flags;
+
+    /// <summary>
+    /// Format a round-trip string that could be used later to accurately re-parse the command.
+    /// </summary>
+    public override string ToString()
+    {
+        if (string.IsNullOrEmpty(CommandName))
+            return "{Command not found}";
+
+        int argCt = Arguments.Length;
+        int ct = argCt + Flags.Length;
+        int len = 1 + CommandName.Length + ct;
+
+        if (ContainsWhiteSpaceOrQuotes(CommandName))
+            len += 2;
+
+        for (int i = 0; i < ct; ++i)
+        {
+            string str;
+            if (i >= argCt)
+            {
+                ref CommandFlagInfo info = ref Flags[i - argCt];
+                str = info.FlagName;
+                len += info.DashCount;
+            }
+            else
+            {
+                str = Arguments[i];
+            }
+
+            len += str.Length;
+
+            // quotes
+            if (ContainsWhiteSpaceOrQuotes(str) || IsFlag(str))
+                len += 2;
+        }
+
+        return string.Create(len, this, (span, state) =>
+        {
+            char quote1, quote2 = '\0';
+            int writeIndex = 1;
+            span[0] = '/';
+            bool ws = ContainsWhiteSpaceOrQuotes(state.CommandName!);
+            if (ws)
+            {
+                ChooseQuotes(state.CommandName!, out quote1, out quote2);
+                span[writeIndex] = quote1;
+                ++writeIndex;
+            }
+            state.CommandName.AsSpan().CopyTo(span[writeIndex..]);
+            writeIndex += state.CommandName!.Length;
+            if (ws)
+            {
+                span[writeIndex] = quote2;
+                ++writeIndex;
+            }
+
+            int argIndex = 0;
+            int flagIndex = 0;
+            while (true)
+            {
+                for (; flagIndex < state.Flags.Length; ++flagIndex)
+                {
+                    ref CommandFlagInfo info = ref state.Flags[flagIndex];
+                    if (info.ArgumentPosition >= argIndex)
+                    {
+                        break;
+                    }
+
+                    ++flagIndex;
+                    span[writeIndex] = ' ';
+                    ++writeIndex;
+                    ws = ContainsWhiteSpaceOrQuotes(info.FlagName) || IsFlag(info.FlagName);
+                    span.Slice(writeIndex, info.DashCount).Fill('-');
+                    writeIndex += info.DashCount;
+                    if (ws)
+                    {
+                        ChooseQuotes(info.FlagName, out quote1, out quote2);
+                        span[writeIndex] = quote1;
+                        ++writeIndex;
+                    }
+                    info.FlagName.AsSpan().CopyTo(span[writeIndex..]);
+                    writeIndex += info.FlagName.Length;
+                    if (ws)
+                    {
+                        span[writeIndex] = quote2;
+                        ++writeIndex;
+                    }
+                }
+
+                if (argIndex >= state.Arguments.Length)
+                {
+                    break;
+                }
+
+                string arg = state.Arguments[argIndex];
+                span[writeIndex] = ' ';
+                ++writeIndex;
+                ws = ContainsWhiteSpaceOrQuotes(arg) || IsFlag(arg);
+                if (ws)
+                {
+                    ChooseQuotes(arg, out quote1, out quote2);
+                    span[writeIndex] = quote1;
+                    ++writeIndex;
+                }
+                arg.AsSpan().CopyTo(span[writeIndex..]);
+                writeIndex += arg.Length;
+                if (ws)
+                {
+                    span[writeIndex] = quote2;
+                    ++writeIndex;
+                }
+                ++argIndex;
+            }
+        });
+    }
+
+    private static void ChooseQuotes(string str, out char start, out char end)
+    {
+        ReadOnlySpan<char> startArgChars = [ '"', '\'', '`', '´', '“', '‘' ];
+        ReadOnlySpan<char> endArgChars = [ '"', '\'', '`', '´', '”', '’' ];
+
+        ReadOnlySpan<char> span = str.AsSpan();
+
+        int candidate = 0;
+        for (int i = candidate; i < startArgChars.Length; ++i)
+        {
+            char c1 = startArgChars[i];
+            char c2 = endArgChars[i];
+            if (span.IndexOf(c1) < 0 && (c2 == c1 || span.IndexOf(c2) < 0))
+            {
+                start = c1;
+                end = c2;
+                return;
+            }
+        }
+
+        start = '"';
+        end = '"';
+    }
+
+    private static bool IsFlag(string str)
+    {
+        if (str.Length < 2)
+            return false;
+
+        ReadOnlySpan<char> flagPrefixes = [ '-', '–', '—', '−' ];
+        if (flagPrefixes.IndexOf(str[0]) < 0)
+            return false;
+
+        return str.Length < 2 && flagPrefixes.IndexOf(str[1]) >= 0 || flagPrefixes.IndexOf(str[1]) < 0 || flagPrefixes.IndexOf(str[2]) < 0;
+    }
+
+    private static bool ContainsWhiteSpaceOrQuotes(string str)
+    {
+        if (str.Length == 0)
+            return true;
+
+        ReadOnlySpan<char> allQuoteChars = [ '"', '\'', '`', '´', '“', '”', '‘', '’' ];
+        for (int j = 0; j < str.Length; ++j)
+        {
+            char c = str[j];
+            if (char.IsWhiteSpace(c) || allQuoteChars.IndexOf(c) > 0)
+                return true;
+        }
+
         return false;
     }
-    private struct ArgumentInfo
+}
+
+/// <summary>
+/// Provides basic information about command flags.
+/// </summary>
+/// <param name="dashCount">Number of dashes, either 1 or 2.</param>
+/// <param name="argumentPosition">The argument before the flag, where 1 is the first argument. A value of zero indicates this flag was before the first argument.</param>
+public readonly struct CommandFlagInfo(string name, int dashCount, int argumentPosition)
+{
+    /// <summary>
+    /// Name of the flag not including the dashes.
+    /// </summary>
+    public readonly string FlagName = name;
+
+    /// <summary>
+    /// Number of dashes, either 1 or 2.
+    /// </summary>
+    public readonly int DashCount = dashCount;
+
+    /// <summary>
+    /// The argument before the flag, where 1 is the first argument. A value of zero indicates this flag was before the first argument.
+    /// </summary>
+    /// <remarks>Note that there can be more than one flag with the same argument position.</remarks>
+    public readonly int ArgumentPosition = argumentPosition;
+
+    /// <summary>
+    /// Returns the flag as it was entered.
+    /// </summary>
+    public override string ToString()
     {
-        public int Start;
-        public int End;
+        return string.Create(DashCount + FlagName.Length, this, (span, state) =>
+        {
+            span[..state.DashCount].Fill('-');
+            state.FlagName.AsSpan().CopyTo(span[state.DashCount..]);
+        });
     }
 }

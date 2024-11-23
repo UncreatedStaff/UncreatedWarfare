@@ -26,7 +26,7 @@ internal class ChatManagerOnChatRequested : IHarmonyPatch
 {
     private static MethodInfo? _target;
     private static readonly string[] ChatLevelsRaw = [ "GLO", "A/S", "GRP" ];
-    private static readonly string[] ChatLevelsANSI = [ "\u001b[42mGLO\u001b[49m", "\u001b[41mA/S\u001b[49m", "\u001b[43mGRP\u001b[49m" ];
+    private static readonly string[] ChatLevelsANSI = [ "\e[42mGLO\e[49m", "\e[41mA/S\e[49m", "\e[43mGRP\e[49m" ];
     private static readonly string[] ChatLevelsExtendedANSI = ChatLevelsANSI;
 
     public static readonly PermissionLeaf AdminChatPermissions = new PermissionLeaf("features.admin_chat", false, true);

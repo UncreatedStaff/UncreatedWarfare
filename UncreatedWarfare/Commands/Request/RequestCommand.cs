@@ -47,6 +47,7 @@ public sealed class RequestCommand : ICompoundingCooldownCommand
             requestable,
             Context.Logger,
             _module.ScopedProvider.Resolve<IServiceProvider>(),
+            typeof(RequestCommandResultHandler),
             token
         );
 

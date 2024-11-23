@@ -70,8 +70,13 @@ public static class RequestHelper
     /// <summary>
     /// Attempts to fufill a request for an object of an unknown type for <paramref name="player"/>.
     /// </summary>
-    public static Task<bool> RequestAsync(WarfarePlayer player, IRequestable<object> requestable, ILogger logger, IServiceProvider serviceProvider, CancellationToken token = default)
+    public static Task<bool> RequestAsync(WarfarePlayer player, IRequestable<object> requestable, ILogger logger, IServiceProvider serviceProvider, Type requestResultHandlerType, CancellationToken token = default)
     {
+        if (!typeof(IRequestResultHandler).IsAssignableFrom(requestResultHandlerType))
+        {
+            throw new ArgumentException($"Request result handler type must implement {Accessor.ExceptionFormatter.Format<IRequestResultHandler>()}.");
+        }
+
         Type requestSourceType = requestable.GetType();
 
         // get value of IRequestable< ? > for 'requestable'
@@ -91,7 +96,7 @@ public static class RequestHelper
             return Task.FromResult(false);
         }
 
-        RequestCommandResultHandler resultHandler = ActivatorUtilities.CreateInstance<RequestCommandResultHandler>(serviceProvider);
+        IRequestResultHandler resultHandler = (IRequestResultHandler)ActivatorUtilities.CreateInstance(serviceProvider, requestResultHandlerType);
 
         // gets the implemented RequestAsync method for an interface
         MethodInfo method = requestType.GetMethod("RequestAsync", BindingFlags.Public | BindingFlags.Instance)!;

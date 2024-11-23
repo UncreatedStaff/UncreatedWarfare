@@ -27,6 +27,7 @@ internal static class TranslationArgumentModifiers
     {
         if (arguments.Length != indices.Length)
             throw new ArgumentException("Arguments and indices lists must match in length.");
+
         int length = input.Length;
         int argCt = arguments.Length;
         if (argCt == 0)
@@ -52,8 +53,15 @@ internal static class TranslationArgumentModifiers
             }
 
             int segmentLength = nextIndex - segmentIndex;
+
             int argLength = argSpan.Length;
             length += segmentLength - argLength;
+
+            // clean join spaces
+            if (segmentLength == 0 && (argSpan.StartIndex <= 0 || input[argSpan.StartIndex - 1] == ' ') && (argSpan.StartIndex + argSpan.Length >= input.Length || input[argSpan.StartIndex + argSpan.Length] == ' '))
+            {
+                --length;
+            }
         }
 
         ReplaceModifiersState state = default;
@@ -96,6 +104,16 @@ internal static class TranslationArgumentModifiers
                 int startIndex = argSpan.StartIndex + state.ArgumentStartIndexOffset;
 
                 int lenToCopy = startIndex - index;
+                // clean join spaces
+                if (segmentLength == 0 && argSpan.StartIndex > 0 && input[argSpan.StartIndex - 1] == ' ' && (argSpan.StartIndex + argSpan.Length >= input.Length || input[argSpan.StartIndex + argSpan.Length] == ' '))
+                {
+                    --lenToCopy;
+                }
+                else if (segmentLength == 0 && (argSpan.StartIndex <= 0 || input[argSpan.StartIndex - 1] == ' ') && argSpan.StartIndex + argSpan.Length < input.Length && input[argSpan.StartIndex + argSpan.Length] == ' ')
+                {
+                    ++startIndex;
+                }
+
                 input.Slice(index, lenToCopy).CopyTo(span[outputIndex..]);
                 outputIndex += lenToCopy;
 

@@ -2652,8 +2652,8 @@ public static class WarfareLoggingExtensions
         }
     }
 
-    private static readonly Func<WarfareFormattedLogValues, Exception, string> MessageFormatter = MessageFormatterMtd;
-    private static string MessageFormatterMtd(WarfareFormattedLogValues state, Exception error)
+    private static readonly Func<WarfareFormattedLogValues, Exception?, string> MessageFormatter = MessageFormatterMtd;
+    private static string MessageFormatterMtd(WarfareFormattedLogValues state, Exception? error)
     {
         return state.ToString();
     }

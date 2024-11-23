@@ -9,17 +9,17 @@ public static class TerminalColorHelper
     /// ANSI escape character for virtual terminal sequences.
     /// </summary>>
     /// <remarks>See <see href="https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences#text-formatting"/>.</remarks>
-    public const char ConsoleEscapeCharacter = '\u001b';
+    public const char ConsoleEscapeCharacter = '\e';
 
     /// <summary>
     /// Visual ANSI virtual termianl sequence for reseting the foreground color.
     /// </summary>
-    public const string ForegroundResetSequence = "\u001b[39m";
+    public const string ForegroundResetSequence = "\e[39m";
 
     /// <summary>
     /// Visual ANSI virtual termianl sequence for reseting the background color.
     /// </summary>
-    public const string BackgroundResetSequence = "\u001b[49m";
+    public const string BackgroundResetSequence = "\e[49m";
 
     private const int DefaultForeground = -9013642;  // gray
     private const int DefaultBackground = -15987700; // black

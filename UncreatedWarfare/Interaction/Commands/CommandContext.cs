@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
+using System.Runtime.InteropServices;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Events;
@@ -96,22 +97,10 @@ public class CommandContext : ControlException
     public int ArgumentCount { get; private set; }
 
     /// <summary>
-    /// Original argument array including flags.
-    /// </summary>
-    /// <remarks>This is not affected by <see cref="ArgumentOffset"/>.</remarks>
-    public string[] ParametersWithFlags { get; }
-
-    /// <summary>
-    /// Number of arguments provided (not including flags).
-    /// </summary>
-    /// <remarks>This is not affected by <see cref="ArgumentOffset"/>.</remarks>
-    public int ArgumentCountWithFlags { get; }
-
-    /// <summary>
     /// All command flags.
     /// </summary>
     /// <remarks>This is not affected by <see cref="ArgumentOffset"/>.</remarks>
-    public string[] Flags { get; }
+    public CommandFlagInfo[] Flags { get; }
 
     /// <summary>
     /// Steam 64 id of the caller.
@@ -225,8 +214,7 @@ public class CommandContext : ControlException
         }
 
         _parameters = Array.Empty<string>();
-        ParametersWithFlags = Array.Empty<string>();
-        Flags = Array.Empty<string>();
+        Flags = Array.Empty<CommandFlagInfo>();
         OriginalMessage = string.Empty;
         Command = null!;
         CommandInfo = null!;
@@ -235,7 +223,7 @@ public class CommandContext : ControlException
         CallerId = user.Steam64;
     }
 
-    public CommandContext(ICommandUser user, CancellationToken token, string[] args, string originalMessage, CommandInfo commandInfo, IServiceProvider serviceProvider) : this(user, serviceProvider)
+    public CommandContext(ICommandUser user, CancellationToken token, string[] args, CommandFlagInfo[] flags, string originalMessage, CommandInfo commandInfo, IServiceProvider serviceProvider) : this(user, serviceProvider)
     {
         CommandInfo = commandInfo;
 
@@ -250,45 +238,12 @@ public class CommandContext : ControlException
         args ??= Array.Empty<string>();
 
         // flag parsing
-        int flags = 0;
-        for (int i = 0; i < args.Length; ++i)
-        {
-            if (IsFlag(args[i]))
-                ++flags;
-        }
 
-        string[] nonFlagParameters = flags == 0 ? args : new string[args.Length - flags];
-
-        if (flags > 0)
-        {
-            Flags = new string[flags];
-            for (int i = args.Length - 1; i >= 0; --i)
-            {
-                if (IsFlag(args[i]))
-                    Flags[--flags] = args[i][1..];
-            }
-
-            flags = args.Length - Flags.Length;
-            for (int i = args.Length - 1; i >= 0; --i)
-            {
-                if (!IsFlag(args[i]))
-                    nonFlagParameters[--flags] = args[i];
-            }
-
-            for (int i = 0; i < nonFlagParameters.Length; ++i)
-            {
-                if (IsEscapedFlag(nonFlagParameters[i]))
-                    nonFlagParameters[i] = nonFlagParameters[i][1..];
-            }
-        }
-
-        ArgumentCountWithFlags = args.Length;
-        ParametersWithFlags = args;
-
-        _parameters = nonFlagParameters;
-        _argumentCount = nonFlagParameters.Length;
+        _parameters = args;
+        _argumentCount = args.Length;
+        Flags = flags;
         ArgumentCount = _argumentCount;
-        Parameters = new ArraySegment<string>(nonFlagParameters);
+        Parameters = new ArraySegment<string>(_parameters, 0, _parameters.Length);
     }
 
     /// <summary>
@@ -297,16 +252,6 @@ public class CommandContext : ControlException
     public static CommandContext CreateTemporary(ICommandUser user, IServiceProvider serviceProvider)
     {
         return new CommandContext(user ?? throw new ArgumentNullException(nameof(user)), serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider)));
-    }
-
-    private static bool IsFlag(string arg)
-    {
-        return arg.Length > 1 && arg[0] == '-' && !char.IsDigit(arg[1]) && arg[1] != '.';
-    }
-
-    private static bool IsEscapedFlag(string arg)
-    {
-        return arg.Length > 2 && arg[0] == '\\' && arg[1] == '-' && !char.IsDigit(arg[2]) && arg[2] != '.';
     }
 
     /// <summary>
@@ -414,123 +359,59 @@ public class CommandContext : ControlException
         return false;
     }
 
+    private bool CheckFlag(ReadOnlySpan<char> check, bool canBeWord)
+    {
+        ReadOnlySpan<char> flagPrefixes = [ '-', '–', '—', '−' ];
+
+        int flagStart = 0;
+        while (flagStart < check.Length && flagPrefixes.IndexOf(check[flagStart]) >= 0)
+            ++flagStart;
+
+        if (flagStart > 2 || flagStart == check.Length)
+            return false;
+
+        check = check[flagStart..];
+
+        if (canBeWord)
+        {
+            for (int i = 0; i < Flags.Length; ++i)
+            {
+                ref CommandFlagInfo info = ref Flags[i];
+                if (info.DashCount == 2 && check.Equals(info.FlagName, StringComparison.InvariantCultureIgnoreCase))
+                    return true;
+            }
+        }
+
+        if (check.Length != 1)
+            return false;
+
+        for (int i = 0; i < Flags.Length; ++i)
+        {
+            ref CommandFlagInfo info = ref Flags[i];
+            if (info.DashCount == 1 && info.FlagName.IndexOf(check[0]) != 0)
+                return true;
+        }
+
+        return false;
+    }
+
     /// <summary>
-    /// Compare the value of all flags with <paramref name="value"/>. Case and culture insensitive.
+    /// Compare the value of all flags with <paramref name="letter"/>. Case and culture insensitive.
     /// </summary>
     /// <returns><see langword="true"/> if the parameter matches.</returns>
-    public bool MatchFlag(string value)
+    public bool MatchFlag(string letter)
     {
-        if (value.Length < 1 || value[0] == '-' && value.Length < 2)
-            return false;
-
-        if (value[0] == '-')
-            value = value.Substring(1);
-
-        for (int i = 0; i < Flags.Length; ++i)
-        {
-            if (Flags[i].Equals(value, StringComparison.InvariantCultureIgnoreCase))
-                return true;
-        }
-
+        CheckFlag(letter, true);
         return false;
     }
 
     /// <summary>
-    /// Compare the value of all flags with <paramref name="value"/> and <paramref name="alternate"/>. Case and culture insensitive.
+    /// Checks to see if a flag with the given <paramref name="letter"/> and <paramref name="word"/> is matched, where <paramref name="word"/> is case-insensitive.
     /// </summary>
-    /// <returns><see langword="true"/> if one of the parameters match.</returns>
-    public bool MatchFlag(string value, string alternate)
+    /// <remarks>Example: <c>('e', "enter")</c></remarks>
+    public bool MatchFlag(char letter, string word)
     {
-        if (value.Length >= 1 && (value[0] != '-' || value.Length >= 2))
-        {
-            if (value[0] == '-')
-                value = value.Substring(1);
-            for (int i = 0; i < Flags.Length; ++i)
-            {
-                if (Flags[i].Equals(value, StringComparison.InvariantCultureIgnoreCase))
-                    return true;
-            }
-        }
-
-        if (alternate.Length < 1 || alternate[0] == '-' && alternate.Length < 2)
-            return false;
-
-        if (alternate[0] == '-')
-            alternate = alternate.Substring(1);
-
-        for (int i = 0; i < Flags.Length; ++i)
-        {
-            if (Flags[i].Equals(alternate, StringComparison.InvariantCultureIgnoreCase))
-                return true;
-        }
-
-        return false;
-    }
-
-    /// <summary>
-    /// Compare the value of all flags with <paramref name="value"/>, <paramref name="alternate1"/>, and <paramref name="alternate2"/>. Case and culture insensitive.
-    /// </summary>
-    /// <returns><see langword="true"/> if one of the parameters match.</returns>
-    public bool MatchFlag(string value, string alternate1, string alternate2)
-    {
-        if (value.Length >= 1 && (value[0] != '-' || value.Length >= 2))
-        {
-            if (value[0] == '-')
-                value = value.Substring(1);
-            for (int i = 0; i < Flags.Length; ++i)
-            {
-                if (Flags[i].Equals(value, StringComparison.InvariantCultureIgnoreCase))
-                    return true;
-            }
-        }
-
-        if (alternate1.Length >= 1 && (alternate1[0] != '-' || alternate1.Length >= 2))
-        {
-            if (alternate1[0] == '-')
-                alternate1 = alternate1.Substring(1);
-            for (int i = 0; i < Flags.Length; ++i)
-            {
-                if (Flags[i].Equals(alternate1, StringComparison.InvariantCultureIgnoreCase))
-                    return true;
-            }
-        }
-
-        if (alternate2.Length < 1 || alternate2[0] == '-' && alternate2.Length < 2)
-            return false;
-
-        if (alternate2[0] == '-')
-            alternate2 = alternate2.Substring(1);
-
-        for (int i = 0; i < Flags.Length; ++i)
-        {
-            if (Flags[i].Equals(alternate2, StringComparison.InvariantCultureIgnoreCase))
-                return true;
-        }
-
-        return false;
-    }
-
-    /// <summary>
-    /// Compare the value of all flags with all <paramref name="alternates"/>. Case insensitive.
-    /// </summary>
-    /// <returns><see langword="true"/> if one of the parameters match.</returns>
-    public bool MatchFlag(params string[] alternates)
-    {
-        for (int i = 0; i < alternates.Length; ++i)
-        {
-            string value = alternates[i];
-            if (value.Length < 1 || value[0] == '-' && value.Length < 2)
-                continue;
-            if (value[0] == '-')
-                value = value.Substring(1);
-            for (int j = 0; j < Flags.Length; ++j)
-            {
-                if (Flags[j].Equals(value, StringComparison.InvariantCultureIgnoreCase))
-                    return true;
-            }
-        }
-
-        return false;
+        return CheckFlag(word, true) || CheckFlag(MemoryMarshal.CreateSpan(ref letter, 1), false);
     }
 
 
