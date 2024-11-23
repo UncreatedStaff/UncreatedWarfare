@@ -1,26 +1,18 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using Stripe;
 using System;
-using System.Linq;
-using System.Xml.Linq;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Patterns;
-using Uncreated.Framework.UI.Presets;
 using Uncreated.Framework.UI.Reflection;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Flags;
 using Uncreated.Warfare.Events.Models.Players;
-using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.Layouts.Flags;
-using Uncreated.Warfare.Layouts.Phases.Flags;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Layouts.Tickets;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
-using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Util;
-using static Uncreated.Warfare.Squads.UI.FobHUD;
 
 namespace Uncreated.Warfare.Layouts.UI;
 

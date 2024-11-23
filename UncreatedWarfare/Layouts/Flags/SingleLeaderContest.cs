@@ -1,12 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
-using System.Text;
 using Uncreated.Warfare.Layouts.Teams;
-using Uncreated.Warfare.Players;
 
-namespace Uncreated.Warfare.Layouts.Phases.Flags;
+namespace Uncreated.Warfare.Layouts.Flags;
 public class SingleLeaderContest
 {
     public int MaxPossiblePoints { get; }

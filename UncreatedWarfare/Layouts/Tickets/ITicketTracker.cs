@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Uncreated.Warfare.Layouts.Phases.Flags;
-using Uncreated.Warfare.Layouts.Teams;
+﻿using Uncreated.Warfare.Layouts.Teams;
 
 namespace Uncreated.Warfare.Layouts.Tickets;
 public interface ITicketTracker

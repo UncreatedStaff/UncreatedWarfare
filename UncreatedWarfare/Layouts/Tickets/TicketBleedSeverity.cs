@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Uncreated.Warfare.Layouts.Tickets;
+﻿namespace Uncreated.Warfare.Layouts.Tickets;
 public enum TicketBleedSeverity
 {
     None,

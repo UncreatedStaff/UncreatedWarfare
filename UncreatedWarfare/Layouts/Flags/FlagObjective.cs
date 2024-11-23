@@ -1,17 +1,13 @@
-﻿using SDG.Unturned;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using Uncreated.Warfare.Events.Models.Flags;
-using Uncreated.Warfare.Events.Models.Fobs;
+using Uncreated.Warfare.Layouts.Phases.Flags;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
-using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Util.List;
 using Uncreated.Warfare.Zones;
 
-namespace Uncreated.Warfare.Layouts.Phases.Flags;
+namespace Uncreated.Warfare.Layouts.Flags;
 public class FlagObjective : IDisposable
 {
     private HashSet<Team> _previousOwners;

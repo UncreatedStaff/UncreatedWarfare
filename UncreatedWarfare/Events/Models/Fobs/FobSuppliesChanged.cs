@@ -1,10 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Uncreated.Warfare.Fobs;
-using Uncreated.Warfare.FOBs;
+﻿using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.FOBs.SupplyCrates;
-using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Events.Models.Fobs;
 

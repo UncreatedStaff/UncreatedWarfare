@@ -1,28 +1,16 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Flags;
-using Uncreated.Warfare.Exceptions;
-using Uncreated.Warfare.Layouts;
-using Uncreated.Warfare.Layouts.Flags;
-using Uncreated.Warfare.Layouts.Phases.Flags;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Layouts.UI;
-using Uncreated.Warfare.Moderation.Records;
-using Uncreated.Warfare.Players;
-using Uncreated.Warfare.Services;
-using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
-using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Timing;
-using Uncreated.Warfare.Zones;
 
-namespace Uncreated.Warfare.AdvanceAndSecure.Logic;
+namespace Uncreated.Warfare.Layouts.Flags;
 public abstract class DualSideFlagService : 
     BaseFlagService,
     IEventListener<FlagCaptured>,

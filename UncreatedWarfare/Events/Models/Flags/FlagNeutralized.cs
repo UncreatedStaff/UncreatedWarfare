@@ -1,12 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Uncreated.Warfare.Fobs;
-using Uncreated.Warfare.Layouts.Phases.Flags;
+﻿using Uncreated.Warfare.Layouts.Flags;
 using Uncreated.Warfare.Layouts.Teams;
-using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Events.Models.Flags;
+
 /// <summary>
 /// Event listener args which fires after a <see cref="FlagObjective"/> is neutralized.
 /// "Neutralized" means one team successfully reduced the former owner team's contest points to zero, 

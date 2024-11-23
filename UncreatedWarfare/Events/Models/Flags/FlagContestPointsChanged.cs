@@ -1,12 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Uncreated.Warfare.Fobs;
-using Uncreated.Warfare.Layouts.Phases.Flags;
-using Uncreated.Warfare.Layouts.Teams;
-using Uncreated.Warfare.Players;
+﻿using Uncreated.Warfare.Layouts.Flags;
 
 namespace Uncreated.Warfare.Events.Models.Flags;
+
 /// <summary>
 /// Event listener args which fires after a flag's <see cref="FlagObjective.Contest"/>'s points change are altered.
 /// </summary>

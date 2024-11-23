@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using Uncreated.Warfare.Events.Models;
-using Uncreated.Warfare.Events.Models.Flags;
-using Uncreated.Warfare.Layouts.Phases.Flags;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;

@@ -1,12 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Uncreated.Warfare.Fobs;
-using Uncreated.Warfare.Layouts.Phases.Flags;
+﻿using Uncreated.Warfare.Layouts.Flags;
 using Uncreated.Warfare.Layouts.Teams;
-using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Events.Models.Flags;
+
 /// <summary>
 /// Event listener args which fires after a <see cref="FlagObjective"/> is captured. "Captured" means that a flag's <see cref="FlagObjective.Owner"/> changed to
 /// a winning <see cref="Team"/> after they won the flag contest of a neutral flag.
