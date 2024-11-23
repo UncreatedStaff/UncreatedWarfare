@@ -1,17 +1,12 @@
 ﻿using SDG.Framework.Utilities;
-using SDG.Unturned;
 using System;
-using System.Collections.Generic;
-using System.Text;
 using Uncreated.Warfare.Buildables;
-using Uncreated.Warfare.Migrations;
 using Uncreated.Warfare.Util;
-using Uncreated.Warfare.Util.Timing;
-using UnityEngine;
 
 namespace Uncreated.Warfare.FOBs.SupplyCrates;
+
 // Create an instance of this class using an ItemDrop to make it turn into a Barricade after it hits the ground.
-internal class FallingBuildable
+public class FallingBuildable
 {
     private ItemData _itemData;
     private ItemBarricadeAsset _barricadeToPlace;

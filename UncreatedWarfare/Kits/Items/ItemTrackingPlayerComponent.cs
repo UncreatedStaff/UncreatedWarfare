@@ -12,7 +12,7 @@ namespace Uncreated.Warfare.Kits.Items;
 /// Helps keep up with where items have been moved to track held item's back to their original kit item.
 /// </summary>
 [PlayerComponent]
-internal class ItemTrackingPlayerComponent : IPlayerComponent, IEventListener<ItemDropped>, IEventListener<ItemMoved>, IEventListener<ItemDestroyed>
+public class ItemTrackingPlayerComponent : IPlayerComponent, IEventListener<ItemDropped>, IEventListener<ItemMoved>, IEventListener<ItemDestroyed>
 {
     internal List<ItemTransformation> ItemTransformations = new List<ItemTransformation>(16);
     internal List<ItemDropTransformation> ItemDropTransformations = new List<ItemDropTransformation>(16);

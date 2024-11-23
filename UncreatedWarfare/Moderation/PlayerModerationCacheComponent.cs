@@ -9,7 +9,7 @@ using Uncreated.Warfare.Players.Management;
 namespace Uncreated.Warfare.Moderation;
 
 [PlayerComponent]
-internal class PlayerModerationCacheComponent : IPlayerComponent
+public class PlayerModerationCacheComponent : IPlayerComponent
 {
     private DatabaseInterface _moderationSql;
     public WarfarePlayer Player { get; private set; }

@@ -10,7 +10,7 @@ using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Timing;
 
 namespace Uncreated.Warfare.FOBs.Construction;
-internal class RepairStation : IBuildableComponent, IFobItem
+public class RepairStation : IBuildableComponent, IFobItem
 {
     private readonly FobManager _fobManager;
     private readonly AssetConfiguration _assetConfiguration;

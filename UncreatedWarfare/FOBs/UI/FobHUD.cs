@@ -1,33 +1,22 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using SDG.NetTransport;
-using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Xml.Linq;
 using Uncreated.Framework.UI;
-using Uncreated.Framework.UI.Data;
 using Uncreated.Framework.UI.Patterns;
-using Uncreated.Framework.UI.Presets;
 using Uncreated.Framework.UI.Reflection;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Fobs;
-using Uncreated.Warfare.Events.Models.Squads;
-using Uncreated.Warfare.Fobs;
-using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Translations.Util;
-using static System.Net.Mime.MediaTypeNames;
 
-namespace Uncreated.Warfare.Squads.UI;
+namespace Uncreated.Warfare.Fobs.UI;
 
 [UnturnedUI(BasePath = "FobList")]
-internal class FobHUD : 
+public class FobHUD : 
     UnturnedUI,
     IEventListener<FobRegistered>,
     IEventListener<FobDeregistered>,

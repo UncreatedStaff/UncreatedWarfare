@@ -1,14 +1,12 @@
 ﻿using HarmonyLib;
 using System;
-using System.Collections.Generic;
-using System.Text;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Moderation.Punishments;
 using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.FOBs.Construction;
-internal abstract class PointsShoveable : IShovelable
+
+public abstract class PointsShoveable : IShovelable
 {
     public ShovelableInfo Info { get; }
     public int HitsRemaining { get; private set; }

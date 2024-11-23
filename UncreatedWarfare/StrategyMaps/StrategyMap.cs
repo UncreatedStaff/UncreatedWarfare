@@ -1,28 +1,22 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using SDG.Provider.Services.Translation;
-using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Barricades;
-using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Fobs;
-using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Interaction;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.StrategyMaps.MapTacks;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.List;
-using UnityEngine;
 
 namespace Uncreated.Warfare.StrategyMaps;
-internal class StrategyMap : IDisposable, IEventListener<ClaimBedRequested>
+
+public class StrategyMap : IDisposable, IEventListener<ClaimBedRequested>
 {
     private readonly MapTableInfo _tableInfo;
     private readonly TrackingList<MapTack> _activeMapTacks;

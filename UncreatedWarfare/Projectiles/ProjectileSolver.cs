@@ -4,12 +4,11 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using Uncreated.Warfare.Components;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Util;
 using UnityEngine.SceneManagement;
 
 namespace Uncreated.Warfare.Projectiles;
-internal class ProjectileSolver : MonoBehaviour
+public class ProjectileSolver : MonoBehaviour
 {
     private Scene _simScene;
     private Scene _mainScene;

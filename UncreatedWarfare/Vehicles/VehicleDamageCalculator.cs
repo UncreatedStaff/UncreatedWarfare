@@ -5,9 +5,9 @@ using Uncreated.Warfare.Components;
 
 namespace Uncreated.Warfare.Vehicles;
 
-internal class VehicleDamageCalculator
+public class VehicleDamageCalculator
 {
-    private static readonly Dictionary<InteractableVehicle, float> damageRegister = new Dictionary<InteractableVehicle, float>();
+    private static readonly Dictionary<InteractableVehicle, float> _damageRegister = new Dictionary<InteractableVehicle, float>();
     // TODO: move this to config later
     private static readonly List<Guid> AirAttackOnly = new List<Guid>()
     {
@@ -64,10 +64,10 @@ internal class VehicleDamageCalculator
     }
     public static void RegisterForAdvancedDamage(InteractableVehicle vehicle, float multiplier)
     {
-        if (damageRegister.ContainsKey(vehicle))
-            damageRegister[vehicle] = multiplier;
+        if (_damageRegister.ContainsKey(vehicle))
+            _damageRegister[vehicle] = multiplier;
         else
-            damageRegister.Add(vehicle, multiplier);
+            _damageRegister.Add(vehicle, multiplier);
 
         vehicle.StartCoroutine(TimeOutDamage(vehicle));
     }
@@ -76,7 +76,7 @@ internal class VehicleDamageCalculator
         VehicleComponent? vehicleComponent = vehicle.transform.GetComponentInChildren<VehicleComponent>();
 
         //L.LogDebug("Attempting to apply damage...");
-        if (damageRegister.TryGetValue(vehicle, out float multiplier))
+        if (_damageRegister.TryGetValue(vehicle, out float multiplier))
         {
             finalDamage = (ushort)Mathf.RoundToInt(finalDamage * multiplier);
 
@@ -86,7 +86,7 @@ internal class VehicleDamageCalculator
             if (GroundAttackOnly.Contains(vehicleComponent.LastItem) && vehicleComponent.IsAircraft)
                 finalDamage = (ushort)Mathf.RoundToInt(finalDamage * 0.1f);
 
-            damageRegister.Remove(vehicle);
+            _damageRegister.Remove(vehicle);
             //L.LogDebug($"Successfully applied {multiplier}x damage: {finalDamage}");
         }
         else if (!IgnoreArmorMultiplier.Contains(vehicleComponent.LastItem) && !vehicleComponent.IsEmplacement)
@@ -98,6 +98,6 @@ internal class VehicleDamageCalculator
     private static IEnumerator<WaitForFixedUpdate> TimeOutDamage(InteractableVehicle vehicle)
     {
         yield return new WaitForFixedUpdate();
-        damageRegister.Remove(vehicle);
+        _damageRegister.Remove(vehicle);
     }
 }

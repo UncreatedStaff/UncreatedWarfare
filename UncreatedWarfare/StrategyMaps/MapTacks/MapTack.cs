@@ -4,7 +4,8 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.StrategyMaps.MapTacks;
-internal class MapTack : IDisposable
+
+public class MapTack : IDisposable
 {
     public IAssetLink<ItemBarricadeAsset> MarkerAsset { get; }
     public IBuildable Marker { get; private set; }

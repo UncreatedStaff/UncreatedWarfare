@@ -28,6 +28,7 @@ using Uncreated.Warfare.Discord;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.ListenerProviders;
 using Uncreated.Warfare.Fobs;
+using Uncreated.Warfare.Fobs.UI;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Interaction.Commands;

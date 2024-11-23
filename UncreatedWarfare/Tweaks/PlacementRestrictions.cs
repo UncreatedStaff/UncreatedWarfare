@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Linq;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Barricades;
@@ -10,6 +9,7 @@ using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Tweaks;
+
 internal class PlacementRestrictions : IEventListener<PlaceBarricadeRequested>, IEventListener<PlaceStructureRequested>, IEventListener<TriggerTrapRequested>
 {
     private readonly ZoneStore _globalZoneStore;

@@ -1,17 +1,13 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using SDG.Unturned;
 using System;
-using System.Collections.Generic;
-using System.Text;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles;
-using UnityEngine;
 
 namespace Uncreated.Warfare.FOBs.Construction;
-internal class ShovelableBuildable : PointsShoveable
+public class ShovelableBuildable : PointsShoveable
 {
     private readonly ShovelableInfo _info;
     private readonly IBuildable _foundation;

@@ -10,7 +10,7 @@ using Uncreated.Warfare.Players.Management;
 namespace Uncreated.Warfare.Kits;
 
 [PlayerComponent]
-internal class KitPlayerComponent : IPlayerComponent
+public class KitPlayerComponent : IPlayerComponent
 {
     private KitManager _kitManager;
     internal List<uint>? AccessibleKits;

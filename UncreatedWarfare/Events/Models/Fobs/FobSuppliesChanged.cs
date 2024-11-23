@@ -6,7 +6,7 @@ namespace Uncreated.Warfare.Events.Models.Fobs;
 /// <summary>
 /// Event listener args which fires after supplies are added or removed from a <see cref="IResourceFob"/>.
 /// </summary>
-internal class FobSuppliesChanged
+public class FobSuppliesChanged
 {
     /// <summary>
     /// The <see cref="IResourceFob"/> where supplies were added or removed.

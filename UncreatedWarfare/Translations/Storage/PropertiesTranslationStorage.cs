@@ -159,6 +159,7 @@ public class PropertiesTranslationStorage : ITranslationStorage
             {
                 writer.WriteComment(argBuilder.ToString());
             }
+            argBuilder.Clear();
         }
 
         // write default value if it doesn't match current value.

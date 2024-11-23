@@ -11,7 +11,7 @@ using Uncreated.Warfare.Teams;
 namespace Uncreated.Warfare.Kits.Items;
 
 [PlayerComponent]
-internal class HotkeyPlayerComponent : IPlayerComponent, IEventListener<ItemDropped>
+public class HotkeyPlayerComponent : IPlayerComponent, IEventListener<ItemDropped>
 {
     private KitManager _kitManager = null!;
     private WarfareModule _module = null!;

@@ -3,24 +3,19 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Events.Models.Fobs;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Layouts.Teams;
-using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Services;
-using Uncreated.Warfare.StrategyMaps;
 using Uncreated.Warfare.StrategyMaps.MapTacks;
 using Uncreated.Warfare.Util.List;
-using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.StrategyMaps;
-internal class StrategyMapManager : 
+public class StrategyMapManager : 
     ILayoutHostedService,
     IEventListenerProvider,
     IEventListener<BarricadePlaced>,

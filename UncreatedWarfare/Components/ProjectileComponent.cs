@@ -4,7 +4,7 @@ using Uncreated.Warfare.Events;
 
 namespace Uncreated.Warfare.Components;
 
-internal class ProjectileComponent : MonoBehaviour
+public class ProjectileComponent : MonoBehaviour
 {
     internal ulong Owner;
     internal Guid GunId;

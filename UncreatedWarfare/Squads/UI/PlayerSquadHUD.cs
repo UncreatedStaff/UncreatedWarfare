@@ -1,42 +1,23 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using SDG.NetTransport;
-using SDG.Unturned;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Xml.Linq;
+﻿using System;
 using Uncreated.Framework.UI;
-using Uncreated.Framework.UI.Data;
 using Uncreated.Framework.UI.Patterns;
-using Uncreated.Framework.UI.Presets;
 using Uncreated.Framework.UI.Reflection;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Squads;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
-using Uncreated.Warfare.Players.Management;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace Uncreated.Warfare.Squads.UI;
 
 [UnturnedUI(BasePath = "PlayerSquad")]
-internal class PlayerSquadHUD : UnturnedUI, IEventListener<SquadMemberJoined>, IEventListener<SquadMemberLeft>
+public class PlayerSquadHUD : UnturnedUI, IEventListener<SquadMemberJoined>, IEventListener<SquadMemberLeft>
 {
-    private readonly SquadManager _squadManager;
-    private readonly IPlayerService _playerService;
     public UnturnedLabel SquadName { get; } = new UnturnedLabel("PlayerSquadName");
     public UnturnedLabel[] SquadMembers { get; } = ElementPatterns.CreateArray<UnturnedLabel>("PlayerSquadMember_{0}", 1, to: 6);
 
-    public PlayerSquadHUD(IServiceProvider serviceProvider, AssetConfiguration assetConfig, ILoggerFactory loggerFactory)
-        : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:PlayerSquadHUD"), /* todo turn off */ debugLogging: true)
-    {
-        _squadManager = serviceProvider.GetRequiredService<SquadManager>();
-        _playerService = serviceProvider.GetRequiredService<IPlayerService>();
-    }
+    public PlayerSquadHUD(AssetConfiguration assetConfig, ILoggerFactory loggerFactory)
+        : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:PlayerSquadHUD")) { }
     public void HandleEvent(SquadMemberJoined e, IServiceProvider serviceProvider)
     {
         SendToPlayer(e.Player.Connection);

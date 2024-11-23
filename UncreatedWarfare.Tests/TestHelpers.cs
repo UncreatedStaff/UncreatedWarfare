@@ -1,6 +1,7 @@
 ﻿using SDG.Unturned;
 using System.Reflection;
 using System.Threading;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Tests;
 internal class TestHelpers
@@ -9,5 +10,7 @@ internal class TestHelpers
     {
         typeof(ThreadUtil).GetProperty("gameThread", BindingFlags.Static | BindingFlags.Public)!
             .GetSetMethod(true)!.Invoke(null, [ Thread.CurrentThread ]);
+
+        GameThread.Setup();
     }
 }

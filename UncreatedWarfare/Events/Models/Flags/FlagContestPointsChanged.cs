@@ -5,7 +5,7 @@ namespace Uncreated.Warfare.Events.Models.Flags;
 /// <summary>
 /// Event listener args which fires after a flag's <see cref="FlagObjective.Contest"/>'s points change are altered.
 /// </summary>
-internal class FlagContestPointsChanged
+public class FlagContestPointsChanged
 {
     /// <summary>
     /// The flag that is being contested.
