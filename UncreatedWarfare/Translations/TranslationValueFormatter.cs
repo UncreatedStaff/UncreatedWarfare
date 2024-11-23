@@ -15,6 +15,8 @@ public class TranslationValueFormatter : ITranslationValueFormatter
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly Type _enumFormatter;
+    private LanguageService _languageService;
+    private ITranslationService _translationService;
 
     private const string NullNoColor = "null";
     private const string NullColorUnity = "<color=#569cd6><b>null</b></color>";
@@ -22,8 +24,8 @@ public class TranslationValueFormatter : ITranslationValueFormatter
     private const string NullANSI = "\e[94mnull\e[39m";
     private const string NullExtendedANSI = "\e[38;2;86;156;214mnull\e[39m";
 
-    public LanguageService LanguageService => field ??= _serviceProvider.GetRequiredService<LanguageService>();
-    public ITranslationService TranslationService => field ??= _serviceProvider.GetRequiredService<ITranslationService>();
+    public LanguageService LanguageService => _languageService ??= _serviceProvider.GetRequiredService<LanguageService>();
+    public ITranslationService TranslationService => _translationService ??= _serviceProvider.GetRequiredService<ITranslationService>();
 
     private readonly ConcurrentDictionary<Type, object> _valueFormatters = new ConcurrentDictionary<Type, object>();
     public TranslationValueFormatter(IServiceProvider serviceProvider, IConfiguration systemConfig)
@@ -43,6 +45,8 @@ public class TranslationValueFormatter : ITranslationValueFormatter
         typeof(FormattableValueFormatter<>),
         new ToStringValueFormatter()
     };
+
+
 
     /// <inheritdoc />
     public string Format<T>(T? value, in ValueFormatParameters parameters)
