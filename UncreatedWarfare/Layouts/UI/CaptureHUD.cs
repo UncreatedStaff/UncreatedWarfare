@@ -1,9 +1,13 @@
-﻿using System;
+﻿using Cysharp.Threading.Tasks;
+using System;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Data;
 using Uncreated.Framework.UI.Reflection;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Events.Models;
+using Uncreated.Warfare.Events.Models.Flags;
 using Uncreated.Warfare.Interaction.UI;
+using Uncreated.Warfare.Layouts.Phases.Flags;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Translations;
@@ -12,12 +16,21 @@ using Uncreated.Warfare.Util;
 namespace Uncreated.Warfare.Layouts.UI;
 
 [UnturnedUI(BasePath = "Box")]
-public class CaptureUI : UnturnedUI
+public class CaptureHUD : 
+    UnturnedUI,
+    IEventListener<FlagContestPointsChanged>,
+    IEventListener<PlayerEnteredFlagRegion>,
+    IEventListener<PlayerExitedFlagRegion>
 {
+    private readonly CaptureUITranslations _translations;
+
     public UnturnedLabel Title { get; } = new UnturnedLabel("TitleLabel");
     public ImageProgressBar CaptureProgress { get; } = new ImageProgressBar("CaptureProgress");
-    public CaptureUI(AssetConfiguration assetConfig, ILoggerFactory loggerFactory)
-        : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:CaptureProgress"), reliable: false) { }
+    public CaptureHUD(TranslationInjection<CaptureUITranslations> translations, AssetConfiguration assetConfig, ILoggerFactory loggerFactory)
+        : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:CaptureHUD"), reliable: false)
+    {
+        _translations = translations.Value;
+    }
 
     public void UpdateCaptureUI(WarfarePlayer player, in CaptureUIState state)
     {
@@ -39,6 +52,7 @@ public class CaptureUI : UnturnedUI
                 data.HasUI = true;
                 data.LastColor = default;
                 data.IsProgressLabelHidden = false;
+                data.LastLabel = null;
                 SendToPlayer(player.Connection);
             }
 
@@ -56,6 +70,7 @@ public class CaptureUI : UnturnedUI
                     CaptureProgress.Label.Hide(player);
                     data.IsProgressLabelHidden = true;
                 }
+                CaptureProgress.SetProgress(player.Connection, 1);
             }
             else
             {
@@ -67,7 +82,6 @@ public class CaptureUI : UnturnedUI
                 CaptureProgress.SetProgress(player.Connection, state.Progress);
             }
 
-
             if (!string.Equals(data.LastLabel, text, StringComparison.Ordinal))
             {
                 Title.SetText(player, text);
@@ -75,7 +89,67 @@ public class CaptureUI : UnturnedUI
             }
         }
     }
+    private void UpdateUIForPlayers(FlagObjective flag)
+    {
+        // todo SetOf.PlayersIn(cluster.Players)
+        foreach (WarfarePlayer player in flag.Players)
+        {
+            if (!player.Team.IsValid)
+            {
+                HideCaptureUI(player);
+                continue;
+            }
 
+            LanguageSet languageSet = new LanguageSet(player);
+            CaptureUIState state = EvaluateCaptureUI(flag, languageSet);
+
+            UpdateCaptureUI(languageSet, in state);
+        }
+    }
+
+    private CaptureUIState EvaluateCaptureUI(FlagObjective flag, LanguageSet languageSet)
+    {
+        Team team = languageSet.Team;
+
+        SingleLeaderContest contest = flag.Contest;
+
+        if (contest.LeaderPoints == contest.MaxPossiblePoints)
+        {
+            if (team == flag.Owner)
+            {
+                Logger.LogInformation($"Sending Secured state for flag: {flag}");
+
+                return CaptureUIState.Secured(_translations, flag.Name);
+            }
+            else
+            {
+                return CaptureUIState.Lost(_translations, flag.Owner, flag.Name);
+            }
+        }
+        else if (contest.LeaderPoints == 0)
+        {
+            return CaptureUIState.Neutralized(_translations, flag.Name);
+        }
+        else
+        {
+            float progress = contest.LeaderPoints / (float) contest.MaxPossiblePoints;
+            
+            if (flag.IsContested)
+            {
+                return CaptureUIState.Contesting(_translations, progress, flag.Name);
+            }
+
+            if (team == contest.Leader)
+            {
+                return CaptureUIState.Capturing(_translations, progress, contest.Leader, flag.Name);
+            }
+            else
+            {
+                return CaptureUIState.Losing(_translations, progress, contest.Leader, flag.Name);
+            }
+        }
+
+    }
     public void HideCaptureUI(LanguageSet set)
     {
         while (set.MoveNext())
@@ -97,6 +171,22 @@ public class CaptureUI : UnturnedUI
     private CaptureUIData GetOrAddData(WarfarePlayer player)
     {
         return GetOrAddData(player.Steam64, steam64 => new CaptureUIData(steam64, this));
+    }
+
+    void IEventListener<FlagContestPointsChanged>.HandleEvent(FlagContestPointsChanged e, IServiceProvider serviceProvider)
+    {
+        UpdateUIForPlayers(e.Flag);
+    }
+
+    void IEventListener<PlayerEnteredFlagRegion>.HandleEvent(PlayerEnteredFlagRegion e, IServiceProvider serviceProvider)
+    {
+        CaptureUIState state = EvaluateCaptureUI(e.Flag, new LanguageSet(e.Player));
+        UpdateCaptureUI(e.Player, state);
+    }
+
+    void IEventListener<PlayerExitedFlagRegion>.HandleEvent(PlayerExitedFlagRegion e, IServiceProvider serviceProvider)
+    {
+        HideCaptureUI(e.Player);
     }
 
     private class CaptureUIData : IUnturnedUIData
@@ -214,6 +304,18 @@ public readonly struct CaptureUIState
         }
         
         return Translation.GetValueForLanguage(set.Language).Value;
+    }
+
+    public override string ToString()
+    {
+        return $"CaptureUIState: " +
+               $"Translation = {Translation}, " +
+               $"Team = {(Team?.ToString() ?? "null")}, " +
+               $"ProminentOtherTeam = {(ProminentOtherTeam?.ToString() ?? "null")}, " +
+               $"OverrideColor = #{OverrideColor.r:X2}{OverrideColor.g:X2}{OverrideColor.b:X2}{OverrideColor.a:X2}, " +
+               $"UseEnemyColor = {UseEnemyColor}, " +
+               $"Location = {(string.IsNullOrEmpty(Location) ? "null" : Location)}, " +
+               $"Progress = {(float.IsNaN(Progress) ? "NaN" : Progress.ToString("0.##"))}";
     }
 }
 

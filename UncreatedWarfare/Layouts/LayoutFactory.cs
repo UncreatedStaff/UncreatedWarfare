@@ -448,7 +448,9 @@ public class LayoutFactory : IHostedService
             switch (layout)
             {
                 case FileInfo { Length: > 0 } yamlFile:
-                    baseLayoutConfigs.Add(yamlFile);
+                    if (YamlUtility.CheckMatchesMapFilter(yamlFile.FullName))
+                        baseLayoutConfigs.Add(yamlFile);
+
                     break;
 
                 case DirectoryInfo dir:

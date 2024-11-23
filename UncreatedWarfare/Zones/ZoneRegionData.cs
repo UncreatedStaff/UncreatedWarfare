@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Zones;
-public class ActiveZoneData : IDisposable
+public class ZoneRegionData : IDisposable
 {
-    private readonly ActiveZoneCluster _cluster;
+    private readonly ZoneRegion _region;
     private readonly Dictionary<Type, object> _types;
 
     /// <summary>
@@ -16,10 +16,10 @@ public class ActiveZoneData : IDisposable
     /// <summary>
     /// The cluster linked to this data.
     /// </summary>
-    public ActiveZoneCluster Cluster => _cluster;
-    public ActiveZoneData(ActiveZoneCluster cluster)
+    public ZoneRegion Cluster => _region;
+    public ZoneRegionData(ZoneRegion cluster)
     {
-        _cluster = cluster;
+        _region = cluster;
         _types = new Dictionary<Type, object>();
     }
 
@@ -48,7 +48,7 @@ public class ActiveZoneData : IDisposable
         {
             if (!_types.TryGetValue(typeof(TComponent), out object component))
             {
-                _types.Add(typeof(TComponent), component = ReflectionUtility.CreateInstanceFixed(serviceProvider, typeof(TComponent), [ _cluster ]));
+                _types.Add(typeof(TComponent), component = ReflectionUtility.CreateInstanceFixed(serviceProvider, typeof(TComponent), [ _region ]));
             }
 
             return (TComponent)component;

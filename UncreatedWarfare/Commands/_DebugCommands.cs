@@ -145,7 +145,7 @@ public class DebugCommand : IExecutableCommand
 
         Context.AssertRanByPlayer();
 
-        CaptureUI captureUi = _serviceProvider.GetRequiredService<CaptureUI>();
+        CaptureHUD captureUi = _serviceProvider.GetRequiredService<CaptureHUD>();
 
         if (Context.MatchParameter(0, "clear"))
         {

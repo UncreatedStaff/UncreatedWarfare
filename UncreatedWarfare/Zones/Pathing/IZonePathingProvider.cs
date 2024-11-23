@@ -9,5 +9,5 @@ namespace Uncreated.Warfare.Zones.Pathing;
 public interface IZonePathingProvider
 {
     /// <returns>A list of zones, including 2 main bases as the first and last elements to indicate which order the zones are in.</returns>
-    UniTask<IList<Zone>> CreateZonePathAsync(ILayoutPhase forPhase, CancellationToken token = default);
+    UniTask<IList<Zone>> CreateZonePathAsync(CancellationToken token = default);
 }

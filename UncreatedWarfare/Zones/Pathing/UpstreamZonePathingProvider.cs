@@ -22,13 +22,13 @@ public class UpstreamZonePathingProvider : IZonePathingProvider
         _logger = logger;
     }
 
-    public UniTask<IList<Zone>> CreateZonePathAsync(ILayoutPhase forPhase, CancellationToken token = default)
+    public UniTask<IList<Zone>> CreateZonePathAsync(CancellationToken token = default)
     {
         Zone? seedZone = FindSeedZone();
         if (seedZone == null)
         {
             _logger.LogError("Unable to detect the seed zone from the available zones. One main needs upstream zones defined, which will act as the seed zone.");
-            Fail(forPhase);
+            Fail();
         }
 
         const int maxZoneCount = 10;
@@ -39,7 +39,7 @@ public class UpstreamZonePathingProvider : IZonePathingProvider
             outputList.Clear();
             outputList.Add(seedZone!);
 
-            int nextIndex = ChooseUpstreamZone(forPhase, seedZone!);
+            int nextIndex = ChooseUpstreamZone(seedZone!);
             bool failed = false;
             while (_zones.Zones[nextIndex].Type != ZoneType.MainBase)
             {
@@ -53,7 +53,7 @@ public class UpstreamZonePathingProvider : IZonePathingProvider
                 }
 
                 outputList.Add(zone);
-                nextIndex = ChooseUpstreamZone(forPhase, zone);
+                nextIndex = ChooseUpstreamZone(zone);
             }
 
             if (failed)
@@ -64,7 +64,7 @@ public class UpstreamZonePathingProvider : IZonePathingProvider
             if (outputList[^1] == outputList[0])
             {
                 _logger.LogError("Zone path started and ended at the same main base from the following path: {{{0}}}.", string.Join(" -> ", outputList.Select(zone => zone.Name)));
-                Fail(forPhase);
+                Fail();
             }
 
             if (outputList.Count < 3)
@@ -86,12 +86,12 @@ public class UpstreamZonePathingProvider : IZonePathingProvider
         return new UniTask<IList<Zone>>(outputList);
     }
 
-    private int ChooseUpstreamZone(ILayoutPhase forPhase, Zone zone)
+    private int ChooseUpstreamZone(Zone zone)
     {
         if (zone.UpstreamZones.Count == 0)
         {
             _logger.LogError("Zone {0} doesn't have any upstream zones.", zone.Name);
-            Fail(forPhase);
+            Fail();
         }
 
         int upstreamIndex = RandomUtility.GetIndex(zone.UpstreamZones, upstream => upstream.Weight);
@@ -101,7 +101,7 @@ public class UpstreamZonePathingProvider : IZonePathingProvider
         if (index == -1)
         {
             _logger.LogError("Unknown zone \"{0}\" in upstream list for zone {1}.", zoneName, zone.Name);
-            Fail(forPhase);
+            Fail();
         }
 
         return index;
@@ -142,8 +142,8 @@ public class UpstreamZonePathingProvider : IZonePathingProvider
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void Fail(ILayoutPhase phase)
+    private void Fail()
     {
-        throw new LayoutConfigurationException(phase, "Failed to create a path using UpstreamZonePathingProvider.");
+        throw new LayoutConfigurationException("Failed to create a path using UpstreamZonePathingProvider.");
     }
 }

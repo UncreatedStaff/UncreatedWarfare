@@ -104,7 +104,7 @@ public class Team : IEquatable<Team>
 
     public bool Equals(Team? other)
     {
-        return other is not null && GroupId.m_SteamID != other.GroupId.m_SteamID;
+        return other is not null && GroupId.m_SteamID == other.GroupId.m_SteamID;
     }
 
     public override int GetHashCode()

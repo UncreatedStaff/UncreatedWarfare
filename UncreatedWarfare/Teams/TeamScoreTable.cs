@@ -14,10 +14,10 @@ public class TeamScoreTable
     private readonly double[] _scores;
     private double _neutralScore;
     public IReadOnlyList<Team> Teams { get; set; }
-    public double TotalScore { get; }
+    public double MaxScore { get; }
     public TeamScoreTable(IReadOnlyList<Team> teams, double neutralScore)
     {
-        TotalScore = neutralScore;
+        MaxScore = neutralScore;
 
         int maxId = 0;
         Teams = new ReadOnlyCollection<Team>(teams.ToArray());
@@ -54,7 +54,7 @@ public class TeamScoreTable
     /// </summary>
     public void DistributeUniformly()
     {
-        double amount = TotalScore / _scores.Length;
+        double amount = MaxScore / _scores.Length;
         lock (_scores)
         {
             for (int i = 0; i < _scores.Length; ++i)
@@ -86,7 +86,7 @@ public class TeamScoreTable
         if (ttl == 0)
             throw new ArgumentException("Ratio contains only zeros.", nameof(ratio));
 
-        ttl /= TotalScore;
+        ttl /= MaxScore;
 
         lock (_scores)
         {
@@ -111,7 +111,7 @@ public class TeamScoreTable
                 _scores[i] = 0;
             }
 
-            _neutralScore = TotalScore;
+            _neutralScore = MaxScore;
         }
     }
     
@@ -131,7 +131,7 @@ public class TeamScoreTable
             for (int i = 0; i < _scores.Length; ++i)
             {
                 if (i == team.Id - 1)
-                    _scores[i] = TotalScore;
+                    _scores[i] = MaxScore;
                 else
                     _scores[i] = 0;
             }
@@ -389,7 +389,7 @@ public class TeamScoreTable
                 int tableCharWidth = (table._scores.Length + 1) * 2;
                 const int tableCharHeight = totalCharHeight - 2;
 
-                double yTop = table.TotalScore;
+                double yTop = table.MaxScore;
                 if (state.ScaleToMaximum)
                 {
                     yTop = table._neutralScore;
@@ -438,8 +438,13 @@ public class TeamScoreTable
                 }
             });
         }
-    }
 
+    }
+    public override string ToString()
+    {
+        var teamScores = string.Join(", ", Teams.Select((team, index) => $"{team.Id}: {_scores[index]}"));
+        return $"Team Scores: [{teamScores}], Neutral Score: {_neutralScore}, Max Score: {MaxScore}";
+    }
     private struct GraphState
     {
         public TeamScoreTable Table;

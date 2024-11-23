@@ -49,7 +49,7 @@ public class TeamScoreTableTests
 
         ttl += tests[null];
 
-        Assert.That(ttl, Is.EqualTo(tests.TotalScore).Within(Threshold));
+        Assert.That(ttl, Is.EqualTo(tests.MaxScore).Within(Threshold));
     }
 
     [Test]
@@ -241,5 +241,21 @@ public class TeamScoreTableTests
         Console.WriteLine(tests.ToGraph(true));
 
         AssertTotalSameAsStartingValue(tests);
+    }
+    [Test]
+    public void HelpHelpMe()
+    {
+        TeamScoreTable score = new TeamScoreTable(CreateTeamList(2), 64);
+
+        Team team1 = score.Teams[0];
+        Team team2 = score.Teams[1];
+
+        score.MaximizeTeam(team1);
+        Console.WriteLine(score.ToGraph(true));
+        Console.WriteLine(score);
+
+        score.IncrementPoints(team2, 32);
+        Console.WriteLine(score.ToGraph(true));
+        Console.WriteLine(score);
     }
 }

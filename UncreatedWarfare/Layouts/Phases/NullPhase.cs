@@ -22,7 +22,7 @@ public class NullPhase : ILayoutPhase
     public UniTask InitializePhaseAsync(CancellationToken token = default) => UniTask.CompletedTask;
 
     /// <inheritdoc />
-    public UniTask BeginPhaseAsync(CancellationToken token = default) => UniTask.CompletedTask;
+    public UniTask BeginPhaseAsync(object[] dataFromPreviousPhase, CancellationToken token = default) => UniTask.CompletedTask;
 
     /// <inheritdoc />
     public UniTask EndPhaseAsync(CancellationToken token = default) => UniTask.CompletedTask;

@@ -348,7 +348,7 @@ public class Layout : IDisposable
         }
     }
 
-    public virtual async UniTask MoveToNextPhase(CancellationToken token = default)
+    public virtual async UniTask MoveToNextPhase(CancellationToken token = default, params object[] dataFromCurrentPhase)
     {
         // keep moving to the next phase until one is activated by BeginPhase.
         ILayoutPhase newPhase;
@@ -421,7 +421,7 @@ public class Layout : IDisposable
 
             try
             {
-                await newPhase.BeginPhaseAsync(CancellationToken.None);
+                await newPhase.BeginPhaseAsync(dataFromCurrentPhase, CancellationToken.None);
             }
             catch (Exception ex)
             {

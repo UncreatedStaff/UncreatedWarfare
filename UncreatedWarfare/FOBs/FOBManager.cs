@@ -57,7 +57,7 @@ public partial class FobManager : ILayoutHostedService
     public BuildableFob RegisterFob(IBuildable fobBuildable)
     {
         GridLocation griddy = new GridLocation(fobBuildable.Position);
-        string fobName = $"FOB {NATOPhoneticAlphabetHelper.GetProperCase(griddy.LetterX)}-{griddy.Y + 1}";
+        string fobName = $"{NATOPhoneticAlphabetHelper.GetProperCase(griddy.LetterX)}-{griddy.Y + 1}";
 
         BuildableFob fob = new BuildableFob(_serviceProvider, fobName, fobBuildable);
         _fobs.Add(fob);

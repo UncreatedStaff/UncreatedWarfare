@@ -21,7 +21,7 @@ public class LeaderboardPhase : BasePhase<PhaseTeamSettings>, IDisposable
     }
 
     /// <inheritdoc />
-    public override async UniTask BeginPhaseAsync(CancellationToken token = default)
+    public override async UniTask BeginPhaseAsync(object[] dataFromPreviousPhase, CancellationToken token = default)
     {
         await UniTask.SwitchToMainThread(token);
 
@@ -36,7 +36,7 @@ public class LeaderboardPhase : BasePhase<PhaseTeamSettings>, IDisposable
             UniTask.Create(() => _session.MoveToNextPhase(CancellationToken.None));
         });
 
-        await base.BeginPhaseAsync(token);
+        await base.BeginPhaseAsync(dataFromPreviousPhase, token);
     }
 
     /// <inheritdoc />

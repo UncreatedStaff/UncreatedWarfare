@@ -14,11 +14,11 @@ namespace Uncreated.Warfare.Zones;
 /// <summary>
 /// Represents a zone or cluster of zones linked with their <see cref="IProximity"/> instances.
 /// </summary>
-public class ActiveZoneCluster : IDisposable
+public class ZoneRegion : IDisposable
 {
     private readonly ZoneProximity[] _zones;
     private readonly ITeamManager<Team> _teamManager;
-    private ActiveZoneData? _data;
+    private ZoneRegionData? _data;
     private bool _disposed;
     private readonly TrackingList<WarfarePlayer> _players = new TrackingList<WarfarePlayer>(8);
     private TeamCountTable? _teamCounts;
@@ -26,12 +26,12 @@ public class ActiveZoneCluster : IDisposable
     /// <summary>
     /// Invoked when a player goes in proximity of any zone in the cluster.
     /// </summary>
-    public event Action<ActiveZoneCluster, WarfarePlayer>? OnPlayerEntered;
+    public event Action<ZoneRegion, WarfarePlayer>? OnPlayerEntered;
 
     /// <summary>
     /// Invoked when a player leaves proximity of any zone in the cluster.
     /// </summary>
-    public event Action<ActiveZoneCluster, WarfarePlayer>? OnPlayerExited;
+    public event Action<ZoneRegion, WarfarePlayer>? OnPlayerExited;
 
     /// <summary>
     /// List of all players currently inside the zone.
@@ -54,7 +54,7 @@ public class ActiveZoneCluster : IDisposable
                 return _teamCounts;
 
             if (_disposed)
-                throw new ObjectDisposedException(nameof(ActiveZoneCluster));
+                throw new ObjectDisposedException(nameof(ZoneRegion));
 
             lock (_players)
             {
@@ -76,7 +76,7 @@ public class ActiveZoneCluster : IDisposable
     /// <summary>
     /// Abstract data linked to a zone.
     /// </summary>
-    public ActiveZoneData Data
+    public ZoneRegionData Data
     {
         get
         {
@@ -84,9 +84,9 @@ public class ActiveZoneCluster : IDisposable
                 return _data;
 
             if (_disposed)
-                throw new ObjectDisposedException(nameof(ActiveZoneCluster));
+                throw new ObjectDisposedException(nameof(ZoneRegion));
 
-            ActiveZoneData data = new ActiveZoneData(this);
+            ZoneRegionData data = new ZoneRegionData(this);
             if (Interlocked.CompareExchange(ref _data, data, null) == null)
             {
                 data.Dispose();
@@ -122,7 +122,7 @@ public class ActiveZoneCluster : IDisposable
     /// </summary>
     public int Count => _zones.Length;
 
-    internal ActiveZoneCluster(ZoneProximity[] zones, ITeamManager<Team> teamManager)
+    internal ZoneRegion(ZoneProximity[] zones, ITeamManager<Team> teamManager)
     {
         if (zones.Length == 0)
             throw new ArgumentException("A zone group must consist of at least one zone.", nameof(zones));
@@ -213,6 +213,8 @@ public class ActiveZoneCluster : IDisposable
 
     private void OnObjectEnteredAnyZone(WarfarePlayer player)
     {
+        Console.WriteLine($"Player {player} entered zone {this}");
+
         if (!_players.AddIfNotExists(player))
             return;
 
@@ -279,7 +281,7 @@ public class ActiveZoneCluster : IDisposable
         }
         else
         {
-            ActiveZoneData? data = Interlocked.Exchange(ref _data, null);
+            ZoneRegionData? data = Interlocked.Exchange(ref _data, null);
             data?.Dispose();
             if (_disposed)
                 return;
@@ -294,7 +296,7 @@ public class ActiveZoneCluster : IDisposable
 
     private void DisposeIntl()
     {
-        ActiveZoneData? data = Interlocked.Exchange(ref _data, null);
+        ZoneRegionData? data = Interlocked.Exchange(ref _data, null);
 
         lock (_players)
             _teamCounts = null;

@@ -432,9 +432,7 @@ public sealed class WarfareModule
             .AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
         bldr.RegisterType<PopupUI>().SingleInstance();
-        bldr.RegisterType<CaptureUI>().SingleInstance();
         bldr.RegisterType<ConventionalLeaderboardUI>().SingleInstance();
-        bldr.RegisterType<FlagListUI>().SingleInstance();
         bldr.RegisterType<StagingUI>().SingleInstance();
         bldr.RegisterType<WinToastUI>().SingleInstance();
         bldr.RegisterType<PointsUI>().SingleInstance();

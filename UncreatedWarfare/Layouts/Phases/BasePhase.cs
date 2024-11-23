@@ -47,7 +47,7 @@ public class BasePhase<TTeamSettings> : ILayoutPhase where TTeamSettings : Phase
         return UniTask.CompletedTask;
     }
 
-    public virtual UniTask BeginPhaseAsync(CancellationToken token = default)
+    public virtual UniTask BeginPhaseAsync(object[] dataFromPreviousPhase, CancellationToken token = default)
     {
         IsActive = true;
         return UniTask.CompletedTask;
