@@ -10,8 +10,4 @@ public interface IFlagRotationService
 {
     public IReadOnlyList<FlagObjective> ActiveFlags { get; }
     public FlagObjective? GetObjective(Team team);
-
-    public ZoneRegion StartingTeam { get; }
-
-    public ZoneRegion EndingTeam { get; }
 }

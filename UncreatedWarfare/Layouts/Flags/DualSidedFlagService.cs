@@ -11,13 +11,27 @@ using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Zones;
 using Uncreated.Warfare.Zones.Pathing;
+using Uncreated.Warfare.Zones;
+using Uncreated.Warfare.Services;
+using Uncreated.Warfare.Events.Models.Fobs;
+using Uncreated.Warfare.Events.Models.Flags;
+using Uncreated.Warfare.Events.Models;
+using Uncreated.Warfare.Util.Timing;
+using Stripe;
 
 namespace Uncreated.Warfare.Layouts.Flags;
-public abstract class BaseFlagService : ILayoutHostedService, IFlagRotationService
+public abstract class DualSidedFlagService : 
+    ILayoutHostedService,
+    IFlagRotationService,
+    IEventListener<FlagCaptured>,
+    IEventListener<FlagNeutralized>
 {
+    private readonly ILoopTickerFactory _loopTickerFactory;
+    private ILoopTicker? _loopTicker;
     protected readonly ILogger Logger;
     protected readonly IServiceProvider ServiceProvider;
     protected readonly ITeamManager<Team> TeamManager;
+    protected readonly Layout Layout;
     protected IList<Zone>? PathingResult { get; private set; }
     protected ZoneStore ZoneStore { get; private set; }
     protected FlagPhaseSettings FlagSettings { get; private set; }
@@ -35,15 +49,17 @@ public abstract class BaseFlagService : ILayoutHostedService, IFlagRotationServi
     public IReadOnlyList<FlagObjective> ActiveFlags { get; private set; } = Array.Empty<FlagObjective>();
 
     /// <inheritdoc />
-    public ZoneRegion StartingTeam { get; private set; }
+    public FlagObjective StartingTeam { get; private set; }
 
     /// <inheritdoc />
-    public ZoneRegion EndingTeam { get; private set; }
+    public FlagObjective EndingTeam { get; private set; }
 
-    public BaseFlagService(IServiceProvider serviceProvider, IConfiguration config)
+    public DualSidedFlagService(IServiceProvider serviceProvider, IConfiguration config)
     {
+        _loopTickerFactory = serviceProvider.GetRequiredService<ILoopTickerFactory>();
         Logger = serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(GetType());
         ServiceProvider = serviceProvider;
+        Layout = serviceProvider.GetRequiredService<Layout>();
         TeamManager = serviceProvider.GetRequiredService<ITeamManager<Team>>();
         FlagSettings = new FlagPhaseSettings();
         Configuration = config;
@@ -56,6 +72,12 @@ public abstract class BaseFlagService : ILayoutHostedService, IFlagRotationServi
         await CreateZonePaths(token);
         await UniTask.SwitchToMainThread(token);
         SetupFlags();
+
+        TimeSpan tickSpeed = Configuration.GetValue("TickSpeed", TimeSpan.FromSeconds(4d));
+
+        RecalculateObjectives();
+
+        _loopTicker = _loopTickerFactory.CreateTicker(tickSpeed, tickSpeed, true, OnTick);
     }
 
     public virtual UniTask StopAsync(CancellationToken token)
@@ -68,6 +90,8 @@ public abstract class BaseFlagService : ILayoutHostedService, IFlagRotationServi
         _flags = null;
         ActiveFlags = Array.Empty<FlagObjective>();
         IsActive = false;
+
+        Interlocked.Exchange(ref _loopTicker, null)?.Dispose();
 
         return UniTask.CompletedTask;
     }
@@ -132,10 +156,49 @@ public abstract class BaseFlagService : ILayoutHostedService, IFlagRotationServi
         }
 
         ActiveFlags = new ReadOnlyCollection<FlagObjective>(new ArraySegment<FlagObjective>(_flags, 1, _flags.Length - 2));
-        StartingTeam = _flags[0].Region;
-        EndingTeam = _flags[^1].Region;
+        StartingTeam = new FlagObjective(_flags[0].Region, TeamManager, TeamManager.AllTeams.First());
+        EndingTeam = new FlagObjective(_flags[^1].Region, TeamManager, TeamManager.AllTeams.Last());
         IsActive = true;
+
+        _ = WarfareModule.EventDispatcher.DispatchEventAsync(new FlagsSetUp { ActiveFlags = ActiveFlags, FlagService = this });
+    }
+    protected void TriggerVictory(Team winner)
+    {
+        _ = Layout.MoveToNextPhase(token: default, winner);
+    }
+    private void OnTick(ILoopTicker ticker, TimeSpan timeSinceStart, TimeSpan deltaTime)
+    {
+        foreach (FlagObjective flag in ActiveFlags)
+        {
+            FlagContestResult contestResult = GetContestResult(flag, Layout.TeamManager.AllTeams);
+            if (contestResult.State == FlagContestResult.ContestState.OneTeamIsLeading)
+            {
+                flag.MarkContested(false);
+                flag.Contest.AwardPoints(contestResult.Leader!, 12);
+            }
+            else if (contestResult.State == FlagContestResult.ContestState.Contested)
+                flag.MarkContested(true);
+        }
+    }
+    void IEventListener<FlagNeutralized>.HandleEvent(FlagNeutralized e, IServiceProvider serviceProvider)
+    {
+        RecalculateObjectives();
     }
 
+    void IEventListener<FlagCaptured>.HandleEvent(FlagCaptured e, IServiceProvider serviceProvider)
+    {
+        RecalculateObjectives();
+
+        foreach (Team team in Layout.TeamManager.AllTeams)
+        {
+            if (ActiveFlags.All(f => f.Owner == team))
+            {
+                TriggerVictory(team);
+                return;
+            }
+        }
+    }
+    protected abstract void RecalculateObjectives();
+    public abstract FlagContestResult GetContestResult(FlagObjective flag, IEnumerable<Team> possibleContestingTeams);
     public abstract FlagObjective? GetObjective(Team team);
 }
