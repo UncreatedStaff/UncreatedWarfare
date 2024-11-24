@@ -351,22 +351,18 @@ public class Layout : IDisposable
     public virtual async UniTask MoveToNextPhase(CancellationToken token = default, params object[] dataFromCurrentPhase)
     {
         // keep moving to the next phase until one is activated by BeginPhase.
-        ILayoutPhase newPhase;
+        ILayoutPhase? newPhase;
         do
         {
             await UniTask.SwitchToMainThread(token);
 
-            if (_activePhase >= Phases.Count - 1)
-            {
-                await _factory.StartNextLayout(CancellationToken.None);
-                throw new OperationCanceledException();
-            }
+            bool isEnd = _activePhase >= Phases.Count - 1;
 
             ILayoutPhase? oldPhase = ActivePhase;
 
             _activePhase = Math.Max(0, _activePhase + 1);
 
-            newPhase = Phases[_activePhase];
+            newPhase = isEnd ? null : Phases[_activePhase];
 
             if (oldPhase != null)
             {
@@ -417,7 +413,14 @@ public class Layout : IDisposable
                 }
             }
 
-            Logger.LogDebug("Starting next phase: {0}.", newPhase.GetType());
+            if (isEnd)
+            {
+                Logger.LogDebug("Ending layout: {0}.", LayoutInfo.FilePath);
+                await _factory.StartNextLayout(CancellationToken.None);
+                throw new OperationCanceledException();
+            }
+
+            Logger.LogDebug("Starting next phase: {0}.", newPhase!.GetType());
 
             try
             {

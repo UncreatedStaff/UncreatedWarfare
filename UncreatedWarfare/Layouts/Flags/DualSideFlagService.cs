@@ -61,7 +61,6 @@ public abstract class DualSideFlagService :
         foreach (FlagObjective flag in ActiveFlags)
         {
             FlagContestResult contestResult = GetContestResult(flag, _layout.TeamManager.AllTeams);
-            Logger.LogInformation("contest result: " + contestResult.State.ToString());
             if (contestResult.State == FlagContestResult.ContestState.OneTeamIsLeading)
             {
                 flag.MarkContested(false);

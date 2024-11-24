@@ -1,4 +1,5 @@
-﻿using DanielWillett.ReflectionTools;
+﻿using Autofac.Builder;
+using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
@@ -6,7 +7,6 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.ExceptionServices;
-using Autofac.Builder;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Exceptions;
@@ -101,6 +101,7 @@ public class LayoutFactory : IHostedService
 
         UniTask.Create(async () =>
         {
+            bool hasPlayerConnectionLock = true;
             try
             {
                 if (_setupTask.Status == UniTaskStatus.Pending)
@@ -111,7 +112,8 @@ public class LayoutFactory : IHostedService
                 // invoke ILevelHostedService
                 await _warfare.InvokeLevelLoaded(CancellationToken.None);
 
-                await StartPendingLayoutAsync();
+                await StartPendingLayoutAsync(hasPlayerConnectionLock);
+                hasPlayerConnectionLock = false;
             }
             catch (Exception ex)
             {
@@ -120,7 +122,8 @@ public class LayoutFactory : IHostedService
             }
             finally
             {
-                _warfare.ServiceProvider.ResolveOptional<IPlayerService>()?.ReleasePlayerConnectionLock();
+                if (hasPlayerConnectionLock)
+                    _warfare.ServiceProvider.ResolveOptional<IPlayerService>()?.ReleasePlayerConnectionLock();
             }
         });
     }
@@ -166,21 +169,28 @@ public class LayoutFactory : IHostedService
                 playerJoinLockTaken = true;
             }
 
-            await CreateLayoutAsync(newLayout, CancellationToken.None);
+            await CreateLayoutAsync(newLayout, playerJoinLockTaken, CancellationToken.None);
         }
-        finally
+        catch (Exception ex)
         {
-            if (Level.isLoaded && playerJoinLockTaken && playerServiceImpl != null)
+            if (playerJoinLockTaken && playerServiceImpl != null)
             {
                 playerServiceImpl.ReleasePlayerConnectionLock();
             }
+
+            _logger.LogError(ex, "Error creating layout {0}.", newLayout.FilePath);
+            UniTask.Create(async () =>
+            {
+                await UniTask.NextFrame();
+                await StartNextLayout(token);
+            });
         }
     }
 
     /// <summary>
     /// Actually creates a new layout with <paramref name="layoutInfo"/> as it's startup args.
     /// </summary>
-    public async UniTask CreateLayoutAsync(LayoutInfo layoutInfo, CancellationToken token = default)
+    private async UniTask CreateLayoutAsync(LayoutInfo layoutInfo, bool playerJoinLockTaken, CancellationToken token = default)
     {
         if (!typeof(Layout).IsAssignableFrom(layoutInfo.LayoutType))
         {
@@ -215,13 +225,18 @@ public class LayoutFactory : IHostedService
         await UniTask.SwitchToMainThread(CancellationToken.None);
         await layout.InitializeLayoutAsync(record, CancellationToken.None);
 
+        if (scopedProvider.Resolve<IPlayerService>() is PlayerService playerServiceImpl)
+        {
+            playerServiceImpl.ReinitializeScopedPlayerComponentServices();
+        }
+
         if (Level.isLoaded)
         {
-            await StartPendingLayoutAsync();
+            await StartPendingLayoutAsync(playerJoinLockTaken);
         }
     }
 
-    private async Task StartPendingLayoutAsync()
+    private async Task StartPendingLayoutAsync(bool playerJoinLockTaken)
     {
         Layout layout = _warfare.GetActiveLayout();
 
@@ -244,6 +259,11 @@ public class LayoutFactory : IHostedService
         }
 
         await layout.BeginLayoutAsync(CancellationToken.None);
+
+        if (playerJoinLockTaken)
+        {
+            layout.ServiceProvider.ResolveOptional<IPlayerService>()?.ReleasePlayerConnectionLock();
+        }
     }
 
     /// <summary>

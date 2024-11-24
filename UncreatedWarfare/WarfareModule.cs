@@ -1092,11 +1092,6 @@ public sealed class WarfareModule
         ILifetimeScope? oldScope = Interlocked.Exchange(ref _activeScope, newScope);
         _logger.LogInformation("Created new layout scope.");
 
-        if (ServiceProvider.Resolve<IPlayerService>() is PlayerService playerServiceImpl)
-        {
-            playerServiceImpl.ReinitializeScopedPlayerComponentServices();
-        }
-
         if (oldScope != null)
         {
             await oldScope.DisposeAsync().ConfigureAwait(false);

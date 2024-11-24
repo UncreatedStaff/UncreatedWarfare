@@ -4,14 +4,13 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Text;
 using Uncreated.Warfare.Exceptions;
 using Uncreated.Warfare.Layouts.Phases.Flags;
 using Uncreated.Warfare.Layouts.Teams;
-using Uncreated.Warfare.Util;
-using Uncreated.Warfare.Zones.Pathing;
-using Uncreated.Warfare.Zones;
 using Uncreated.Warfare.Services;
+using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Zones;
+using Uncreated.Warfare.Zones.Pathing;
 
 namespace Uncreated.Warfare.Layouts.Flags;
 public abstract class BaseFlagService : ILayoutHostedService, IFlagRotationService
@@ -30,7 +29,6 @@ public abstract class BaseFlagService : ILayoutHostedService, IFlagRotationServi
 
     public bool IsActive { get; private set; }
 
-    /// <inheritdoc />
     public IConfiguration Configuration { get; }
 
     /// <inheritdoc />

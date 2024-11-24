@@ -138,6 +138,42 @@ public static class ConfigurationHelper
 
         return index == 0 ? "_" : new string(newName[..index]);
     }
+
+    /// <summary>
+    /// Checks to see if <paramref name="longerPath"/> is a child folder or file of the directory <paramref name="shorterPath"/>.
+    /// </summary>
+    [Pure]
+    public static bool IsChildOf(string? shorterPath, string longerPath, bool includeSubDirectories = true)
+    {
+        if (string.IsNullOrEmpty(shorterPath))
+            return true;
+        if (string.IsNullOrEmpty(longerPath))
+            return false;
+        DirectoryInfo parent = new DirectoryInfo(shorterPath);
+        DirectoryInfo child = new DirectoryInfo(longerPath);
+        return IsChildOf(parent, child, includeSubDirectories);
+    }
+
+    /// <summary>
+    /// Checks to see if <paramref name="longerPath"/> is a child folder or file of the directory <paramref name="shorterPath"/>.
+    /// </summary>
+    [Pure]
+    public static bool IsChildOf(DirectoryInfo shorterPath, DirectoryInfo longerPath, bool includeSubDirectories = true)
+    {
+        string shortFullname = shorterPath.FullName;
+        if (!includeSubDirectories)
+            return longerPath.Parent != null && longerPath.Parent.FullName.Equals(shortFullname, StringComparison.Ordinal);
+        while (longerPath.Parent != null)
+        {
+            if (longerPath.Parent.FullName.Equals(shortFullname, StringComparison.Ordinal))
+                return true;
+            longerPath = longerPath.Parent;
+        }
+
+        return false;
+    }
+
+
     private class EmptyConfigurationSection : IConfigurationSection, IChangeToken, IDisposable
     {
         public string Key => string.Empty;
