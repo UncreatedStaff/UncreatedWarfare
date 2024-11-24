@@ -88,6 +88,8 @@ public class FactionInfo : ICloneable, ITranslationArgument
 
     [JsonPropertyName("radio")]
     public IAssetLink<ItemBarricadeAsset>? FOBRadio { get; set; }
+    [JsonPropertyName("maptackflag")]
+    public IAssetLink<ItemBarricadeAsset>? MapTackFlag { get; set; }
 
     [JsonPropertyName("backpacks")]
     public AssetVariantDictionary<ItemBackpackAsset> Backpacks { get; set; }
@@ -214,6 +216,7 @@ public class FactionInfo : ICloneable, ITranslationArgument
         Build = model.Build;
         RallyPoint = model.RallyPoint;
         FOBRadio = model.FOBRadio;
+        MapTackFlag = model.MapTackFlag;
     }
 
     internal Faction CreateModel(ICachableLanguageDataStore languageDataStore)
@@ -343,6 +346,16 @@ public class FactionInfo : ICloneable, ITranslationArgument
                 Faction = faction,
                 FactionId = faction.Key,
                 Redirect = RedirectType.Radio
+            });
+        }
+        if (MapTackFlag is not null)
+        {
+            faction.Assets.Add(new FactionAsset
+            {
+                Asset = UnturnedAssetReference.FromAssetLink(MapTackFlag),
+                Faction = faction,
+                FactionId = faction.Key,
+                Redirect = RedirectType.MapTackFlag
             });
         }
         if (Backpacks != null)
@@ -506,13 +519,15 @@ public class FactionInfo : ICloneable, ITranslationArgument
             Build = null;
             RallyPoint = null;
             FOBRadio = null;
+            MapTackFlag = null;
             return;
         }
 
-        Ammo       = FindAsset(model, RedirectType.AmmoSupply)  ?.Asset.GetAssetLink<ItemAsset>();
-        Build      = FindAsset(model, RedirectType.BuildSupply) ?.Asset.GetAssetLink<ItemAsset>();
-        RallyPoint = FindAsset(model, RedirectType.RallyPoint)  ?.Asset.GetAssetLink<ItemBarricadeAsset>();
-        FOBRadio   = FindAsset(model, RedirectType.Radio)       ?.Asset.GetAssetLink<ItemBarricadeAsset>();
+        Ammo        = FindAsset(model, RedirectType.AmmoSupply)  ?.Asset.GetAssetLink<ItemAsset>();
+        Build       = FindAsset(model, RedirectType.BuildSupply) ?.Asset.GetAssetLink<ItemAsset>();
+        RallyPoint  = FindAsset(model, RedirectType.RallyPoint)  ?.Asset.GetAssetLink<ItemBarricadeAsset>();
+        FOBRadio    = FindAsset(model, RedirectType.Radio)       ?.Asset.GetAssetLink<ItemBarricadeAsset>();
+        MapTackFlag = FindAsset(model, RedirectType.MapTackFlag) ?.Asset.GetAssetLink<ItemBarricadeAsset>();
 
         foreach (FactionAsset asset in model.Assets)
         {
@@ -624,6 +639,7 @@ public class FactionInfo : ICloneable, ITranslationArgument
             Build = Build?.Clone() as IAssetLink<ItemAsset>,
             RallyPoint = RallyPoint?.Clone() as IAssetLink<ItemBarricadeAsset>,
             FOBRadio = FOBRadio?.Clone() as IAssetLink<ItemBarricadeAsset>,
+            MapTackFlag = MapTackFlag?.Clone() as IAssetLink<ItemBarricadeAsset>,
             Backpacks = Backpacks.Clone(),
             Shirts = Shirts.Clone(),
             Pants = Pants.Clone(),

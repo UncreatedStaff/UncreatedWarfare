@@ -81,6 +81,8 @@ public enum RedirectType : byte
     [Translatable(Languages.ChineseSimplified, "激光指示器")]
     [Translatable("Laser Designator")]
     LaserDesignator,
+    [Translatable("Map Tack Flag", IsPrioritizedTranslation = false)]
+    MapTackFlag,
     [Translatable("Generic Ammo", IsPrioritizedTranslation = false)]
     StandardAmmoIcon,
     [Translatable("Generic Knife", IsPrioritizedTranslation = false)]

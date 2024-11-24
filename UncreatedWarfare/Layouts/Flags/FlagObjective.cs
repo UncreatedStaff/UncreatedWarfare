@@ -12,6 +12,7 @@ public class FlagObjective : IDisposable
 {
     private HashSet<Team> _previousOwners;
     public ZoneRegion Region { get; }
+    public Vector3 Center => Region.Primary.Zone.Center;
     public string Name => Region.Name;
     public ReadOnlyTrackingList<WarfarePlayer> Players => Region.Players;
     public Team Owner => Contest.IsWon ? Contest.Leader : Team.NoTeam;
@@ -69,12 +70,12 @@ public class FlagObjective : IDisposable
     }
     public override string ToString()
     {
-        return $"FlagObjective: {Name}\n" +
-               $"Region: {Region}\n" +
-               $"Owner: {Owner}\n" +
-               $"Players Count: {Players.Count}\n" +
-               $"Is Contested: {IsContested}\n" +
-               $"Contest: {Contest}\n";
+        return $"FlagObjective: {Name} [" +
+               $"Region: {Region}" +
+               $"Owner: {Owner}" +
+               $"Players Count: {Players.Count}" +
+               $"Is Contested: {IsContested}" +
+               $"Contest: [{Contest}]]";
     }
 
     public override bool Equals(object? obj)
