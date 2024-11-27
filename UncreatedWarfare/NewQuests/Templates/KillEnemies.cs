@@ -33,10 +33,10 @@ public class KillEnemies : QuestTemplate<KillEnemies, KillEnemies.Tracker, KillE
     public KillEnemies(IConfiguration templateConfig, IServiceProvider serviceProvider) : base(templateConfig, serviceProvider) { }
     public class State : IQuestState<KillEnemies>
     {
-        [RewardField("k")]
+        [RewardVariable("k")]
         public QuestParameterValue<int> Kills { get; set; }
 
-        [RewardField("d")]
+        [RewardVariable("d")]
         public QuestParameterValue<float>? Range { get; set; }
         public QuestParameterValue<Guid>? Weapons { get; set; }
         public QuestParameterValue<Guid>? Turrets { get; set; }

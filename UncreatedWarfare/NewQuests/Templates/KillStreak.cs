@@ -17,10 +17,10 @@ public class KillStreak : QuestTemplate<KillStreak, KillStreak.Tracker, KillStre
     public KillStreak(IConfiguration templateConfig, IServiceProvider serviceProvider) : base(templateConfig, serviceProvider) { }
     public class State : IQuestState<KillStreak>
     {
-        [RewardField("strNum")]
+        [RewardVariable("strNum")]
         public QuestParameterValue<int> StreakCount { get; set; }
 
-        [RewardField("strLen")]
+        [RewardVariable("strLen")]
         public QuestParameterValue<int> StreakLength { get; set; }
         public QuestParameterValue<int> FlagValue => StreakCount;
         public UniTask CreateFromConfigurationAsync(IConfiguration configuration, IServiceProvider serviceProvider, CancellationToken token)

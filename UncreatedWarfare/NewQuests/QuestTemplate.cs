@@ -210,7 +210,7 @@ public abstract class QuestTemplate : ITranslationArgument
 
         try
         {
-            RewardExpression rewardExpression = new RewardExpression(type, GetType(), expression, _logger);
+            RewardExpression rewardExpression = new QuestRewardExpression(type, GetType(), expression, _logger);
 
             return UniTask.FromResult<RewardExpression?>(rewardExpression);
         }
