@@ -12,7 +12,7 @@ public class LobbyHudUI : UnturnedUI
     public readonly UnturnedLabel FactionName = new UnturnedLabel("FactionName");
     public readonly UnturnedLabel[] FactionInfo = ElementPatterns.CreateArray<UnturnedLabel>("FactionBar/FactionInfo_{0}", 0, to: 25);
     public readonly UnturnedUIElement LogicClear = new UnturnedUIElement("~/Logic_Clear");
-    public LobbyHudUI(AssetConfiguration assetConfig, ILoggerFactory loggerFactory) : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:LobbyHud")) { }
+    public LobbyHudUI(AssetConfiguration assetConfig, ILoggerFactory loggerFactory) : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:LobbyHud"), staticKey: true) { }
 
     /// <summary>
     /// Sets <see cref="FactionInfo"/> #s 2-25 inclusive to empty text.

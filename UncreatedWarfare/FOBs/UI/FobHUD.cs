@@ -30,7 +30,7 @@ public class FobHUD :
     public FobElement[] Fobs { get; } = ElementPatterns.CreateArray<FobElement>("Fob_{0}/Fob{1}_{0}", 1, to: 12);
 
     public FobHUD(IServiceProvider serviceProvider, AssetConfiguration assetConfig, ILoggerFactory loggerFactory)
-        : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:FobHUD"), /* todo turn off */ debugLogging: true)
+        : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:FobHUD"), /* todo turn off */ debugLogging: true, staticKey: true)
     {
         _fobManager = serviceProvider.GetRequiredService<FobManager>();
         _playerService = serviceProvider.GetRequiredService<IPlayerService>();

@@ -14,7 +14,7 @@ public class StagingUI : UnturnedUI
 {
     public readonly UnturnedLabel Top = new UnturnedLabel("Top");
     public readonly UnturnedLabel Bottom = new UnturnedLabel("Bottom");
-    public StagingUI(AssetConfiguration assetConfig, ILoggerFactory loggerFactory) : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:Header")) { }
+    public StagingUI(AssetConfiguration assetConfig, ILoggerFactory loggerFactory) : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:Header"), staticKey: true) { }
     public void SetText(ITransportConnection connection, string top, string bottom)
     {
         Top.SetText(connection, top);

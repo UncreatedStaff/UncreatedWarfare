@@ -33,7 +33,7 @@ internal class SquadMenuUI :
     public SquadMenuElement[] Squads { get; } = ElementPatterns.CreateArray<SquadMenuElement>("ScrollView/Viewport/Content/Squad_{0}/Squad{1}_{0}", 1, to: SquadManager.MaxSquadCount);
     
     public SquadMenuUI(IServiceProvider serviceProvider, AssetConfiguration assetConfig, ILoggerFactory loggerFactory)
-        : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:SquadMenuHUD"), /* todo turn off */ debugLogging: true)
+        : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:SquadMenuHUD"), /* todo turn off */ debugLogging: true, staticKey: true)
     {
         _squadManager = serviceProvider.GetRequiredService<SquadManager>();
         _playerService = serviceProvider.GetRequiredService<IPlayerService>();

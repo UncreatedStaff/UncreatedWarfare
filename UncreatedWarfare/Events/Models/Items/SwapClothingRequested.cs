@@ -95,8 +95,6 @@ public class SwapClothingRequested : CancellablePlayerEvent
         EquippingItem = jar?.item;
         EquippingClothing = clothing;
         IsRemoving = page == (Page)byte.MaxValue;
-
-        UpdateOriginalPositions();
     }
 
     /// <summary>
@@ -149,7 +147,7 @@ public class SwapClothingRequested : CancellablePlayerEvent
         return true;
     }
 
-    private void UpdateOriginalPositions()
+    internal void UpdateOriginalPositions()
     {
         if (EquippingPage == (Page)byte.MaxValue)
         {

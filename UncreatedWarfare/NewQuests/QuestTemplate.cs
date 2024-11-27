@@ -8,6 +8,7 @@ using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Translations.ValueFormatters;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.NewQuests;
 

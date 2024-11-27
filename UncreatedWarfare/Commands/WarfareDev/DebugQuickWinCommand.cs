@@ -1,11 +1,12 @@
-﻿using Uncreated.Warfare.Interaction.Commands;
+﻿using DanielWillett.ReflectionTools;
+using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Layouts;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
-using Uncreated.Warfare.Sessions;
 
 namespace Uncreated.Warfare.Commands;
 
-[Command("quickwin"), SubCommandOf(typeof(WarfareDevCommand))]
+[Command("quickwin", "nextphase"), SubCommandOf(typeof(WarfareDevCommand))]
 internal class DebugQuickWinCommand : IExecutableCommand
 {
     private readonly Layout _layout;
@@ -18,9 +19,28 @@ internal class DebugQuickWinCommand : IExecutableCommand
 
     public async UniTask ExecuteAsync(CancellationToken token)
     {
-        while (_layout.IsActive)
+        Team? winner = (Context.Caller as WarfarePlayer)?.Team;
+        if (winner == null || !winner.IsValid || Context.HasArgs(1))
+        {
+            if (Context.TryGetRange(0, out string? teamLookup))
+            {
+                winner = _layout.TeamManager.FindTeam(teamLookup);
+            }
+
+            if (winner == null || !winner.IsValid)
+                throw Context.ReplyString("Winning team not found.");
+        }
+
+        _layout.Data[KnownLayoutDataKeys.WinnerTeam] = winner;
+
+        if (_layout.IsActive)
         {
             await _layout.MoveToNextPhase(token);
+            Context.ReplyString($"Moved to next phase: {(_layout.ActivePhase?.GetType() is { } t ? Accessor.ExceptionFormatter.Format(t) : "null")}");
+        }
+        else
+        {
+            Context.ReplyString("Not active.");
         }
     }
 }

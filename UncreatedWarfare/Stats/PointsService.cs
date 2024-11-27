@@ -239,6 +239,20 @@ public class PointsService : IEventListener<PlayerTeamChanged> // todo player eq
             player.CachedPoints = newPoints;
             player.AddReputation((int)Math.Round(rep));
             _ui.UpdatePointsUI(player, this);
+
+            if (!@event.ExcludeFromLeaderboard)
+            {
+                PlayerGameStatsComponent? comp = player.ComponentOrNull<PlayerGameStatsComponent>();
+                if (comp != null)
+                {
+                    if (credits != 0)
+                        comp.AddToStat(KnownStatNames.Credits, credits);
+                    if (rep != 0)
+                        comp.AddToStat(KnownStatNames.Reputation, rep);
+                    if (xp != 0)
+                        comp.AddToStat(KnownStatNames.XP, xp);
+                }
+            }
         }
 
         // todo 'promoted'/'demoted' message
@@ -269,10 +283,14 @@ public class ResolvedEventInfo
         Reputation = overrideReputation ?? @event.Reputation;
         EventName = @event.Name;
 
-        HideToast = @event.Configuration.GetValue("HideToast", false);
-        ExcludeFromLeaderboard = @event.Configuration.GetValue("ExcludeFromLeaderboard", false);
-        IgnoresBoosts = @event.Configuration.GetValue("IgnoresBoosts", false);
-        IgnoresGlobalMultiplier = @event.Configuration.GetValue("IgnoresGlobalMultiplier", false);
+        IConfiguration? c = @event.Configuration;
+        if (c == null)
+            return;
+
+        HideToast = c.GetValue("HideToast", false);
+        ExcludeFromLeaderboard = c.GetValue("ExcludeFromLeaderboard", false);
+        IgnoresBoosts = c.GetValue("IgnoresBoosts", false);
+        IgnoresGlobalMultiplier = c.GetValue("IgnoresGlobalMultiplier", false);
     }
 
     public ResolvedEventInfo WithTranslation(Translation translation, WarfarePlayer? player)

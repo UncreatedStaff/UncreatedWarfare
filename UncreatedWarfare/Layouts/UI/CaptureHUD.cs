@@ -1,5 +1,4 @@
-﻿using Cysharp.Threading.Tasks;
-using System;
+﻿using System;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Data;
 using Uncreated.Framework.UI.Reflection;
@@ -8,7 +7,6 @@ using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Flags;
 using Uncreated.Warfare.Interaction.UI;
 using Uncreated.Warfare.Layouts.Flags;
-using Uncreated.Warfare.Layouts.Phases.Flags;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Translations;
@@ -28,9 +26,10 @@ public class CaptureHUD :
     public UnturnedLabel Title { get; } = new UnturnedLabel("TitleLabel");
     public ImageProgressBar CaptureProgress { get; } = new ImageProgressBar("CaptureProgress");
     public CaptureHUD(TranslationInjection<CaptureUITranslations> translations, AssetConfiguration assetConfig, ILoggerFactory loggerFactory)
-        : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:CaptureHUD"), reliable: false)
+        : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:CaptureHUD"), reliable: false, staticKey: true)
     {
         _translations = translations.Value;
+        IsSendReliable = true;
     }
 
     public void UpdateCaptureUI(WarfarePlayer player, in CaptureUIState state)

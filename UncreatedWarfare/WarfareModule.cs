@@ -37,6 +37,7 @@ using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Whitelists;
 using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.Layouts.UI;
+using Uncreated.Warfare.Layouts.UI.Leaderboards;
 using Uncreated.Warfare.Lobby;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Maps;

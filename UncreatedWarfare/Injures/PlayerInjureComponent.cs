@@ -371,7 +371,7 @@ public class PlayerInjureComponent : MonoBehaviour,
         {
             Vector3 position = Player.Position;
 
-            PooledTransportConnectionList medicList = Data.GetPooledTransportConnectionList();
+            PooledTransportConnectionList medicList = TransportConnectionPoolHelper.Claim();
             foreach (WarfarePlayer player in _playerService.OnlinePlayers)
             {
                 if (player.IsInjured()

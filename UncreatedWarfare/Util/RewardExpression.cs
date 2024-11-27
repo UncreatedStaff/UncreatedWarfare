@@ -7,11 +7,11 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 
-namespace Uncreated.Warfare.Quests;
+namespace Uncreated.Warfare.Util;
 
 public class RewardExpression
 {
-    private static readonly char[] TokenSplits = ['*', '/', '+', '-', '%', '(', ')', '[', ']', '{', '}', ',', '^'];
+    private static readonly char[] TokenSplits = [ '*', '/', '+', '-', '%', '(', ')', '[', ']', '{', '}', ',', '^' ];
     private readonly string _methodName;
     private readonly Type _methodReturnType;
     private readonly Type _dataReturnType;
@@ -96,7 +96,7 @@ public class RewardExpression
                                 next = true;
                                 continue;
                             }
-                        f:
+                            f:
                             if (--pLvl <= 0)
                             {
                                 spanSt = j;
@@ -163,10 +163,6 @@ public class RewardExpression
 
         _expression2 = string.Join(string.Empty, tokens);
         _tokens = tokens;
-
-
-    error:
-        throw new ArgumentException("Invalid exrpession: \"" + (_expression2 ?? _expression) + "\"", nameof(expression));
     }
 
     protected virtual void TransformResult(IOpCodeEmitter emitter, ref int stackSize)
@@ -525,18 +521,13 @@ public class RewardExpression
                 f = ms[i];
                 break;
             }
-        next:;
+            next:;
         }
         return f;
     }
     public object? TryEvaluate(object arg)
     {
-        if (_method == null)
-        {
-            _method = CreateMethod();
-            _logger.LogError("Tried to evaluate an invalid RewardExpression.");
-            return null;
-        }
+        _method ??= CreateMethod();
 
         try
         {
@@ -559,7 +550,7 @@ public class RewardExpression
     {
         List<string>? tokens = _tokens;
 
-        Type[] parameters = [_inputType ?? typeof(object)];
+        Type[] parameters = [ typeof(object) ];
         if (_dataReturnType == typeof(string))
         {
             DynamicMethod strMethod = new DynamicMethod(_methodName, typeof(object), parameters, _ownerType, true);
@@ -717,6 +708,10 @@ public class RewardExpression
                 if (_variable.DeclaringType is { IsValueType: true })
                 {
                     il.LoadUnboxedAddress(_variable.DeclaringType);
+                }
+                else
+                {
+                    il.CastReference(_variable.DeclaringType!);
                 }
             }
 

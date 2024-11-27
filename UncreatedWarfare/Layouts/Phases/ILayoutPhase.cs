@@ -26,7 +26,7 @@ public interface ILayoutPhase
     /// Activates the phase. This should happen just after the old phase ended if there was one.
     /// </summary>
     /// <remarks>Must set <see cref="IsActive"/> to <see langword="true"/> or the phase will be skipped.</remarks>
-    UniTask BeginPhaseAsync(object[] dataFromPreviousPhase, CancellationToken token = default);
+    UniTask BeginPhaseAsync(CancellationToken token = default);
 
     /// <summary>
     /// Deactivates the phase.

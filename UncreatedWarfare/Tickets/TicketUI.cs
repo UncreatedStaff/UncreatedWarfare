@@ -11,5 +11,5 @@ public class TicketUI : UnturnedUI
     public readonly UnturnedLabel Tickets = new UnturnedLabel("Tickets");
     public readonly UnturnedLabel Bleed = new UnturnedLabel("Bleed");
     public readonly UnturnedLabel Status = new UnturnedLabel("Status");
-    public TicketUI(AssetConfiguration assetConfig, ILoggerFactory loggerFactory) : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:Tickets")) { }
+    public TicketUI(AssetConfiguration assetConfig, ILoggerFactory loggerFactory) : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:Tickets"), staticKey: true) { }
 }

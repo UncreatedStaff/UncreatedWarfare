@@ -110,7 +110,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
             : ("DataEmpty/Scalar/BottomContainer/Stats/ColumnGroupRight/ColumnLeft/playerstats_" + index.ToString(CultureInfo.InvariantCulture) + "_v")
     ), 0, to: 11);
 
-    public ConventionalLeaderboardUI(AssetConfiguration assetConfig, ILoggerFactory loggerFactory) : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:Leaderboard"), reliable: false)
+    public ConventionalLeaderboardUI(AssetConfiguration assetConfig, ILoggerFactory loggerFactory) : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:Leaderboard"), reliable: false, staticKey: true)
     {
         IsSendReliable = true;
     }

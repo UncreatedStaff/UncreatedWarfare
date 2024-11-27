@@ -191,7 +191,7 @@ public class TimerLoopTickerFactory : ILoopTickerFactory
     /// <inheritdoc />
     public ILoopTicker CreateTicker(TimeSpan initialDelay, TimeSpan periodicDelay, bool queueOnGameThread, TickerCallback<ILoopTicker>? onTick = null)
     {
-        return new TimerLoopTicker<object>(periodicDelay, _logger, periodicDelay, null, queueOnGameThread, onTick);
+        return new TimerLoopTicker<object>(initialDelay, _logger, periodicDelay, null, queueOnGameThread, onTick);
     }
 
     /// <inheritdoc />
@@ -203,6 +203,6 @@ public class TimerLoopTickerFactory : ILoopTickerFactory
     /// <inheritdoc />
     public ILoopTicker<TState> CreateTicker<TState>(TimeSpan initialDelay, TimeSpan periodicDelay, TState? state, bool queueOnGameThread, TickerCallback<ILoopTicker<TState>>? onTick = null)
     {
-        return new TimerLoopTicker<TState>(periodicDelay, _logger, periodicDelay, state, queueOnGameThread, onTick);
+        return new TimerLoopTicker<TState>(initialDelay, _logger, periodicDelay, state, queueOnGameThread, onTick);
     }
 }

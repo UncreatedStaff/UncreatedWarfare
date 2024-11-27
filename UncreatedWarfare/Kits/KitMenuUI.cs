@@ -203,7 +203,7 @@ public class KitMenuUI : UnturnedUI
 
     public string[]? DefaultLanguageCache;
 
-    public KitMenuUI(IServiceProvider serviceProvider) : base(serviceProvider.GetRequiredService<ILoggerFactory>(), serviceProvider.GetRequiredService<AssetConfiguration>().GetAssetLink<EffectAsset>("UI:KitMenu"))
+    public KitMenuUI(IServiceProvider serviceProvider) : base(serviceProvider.GetRequiredService<ILoggerFactory>(), serviceProvider.GetRequiredService<AssetConfiguration>().GetAssetLink<EffectAsset>("UI:KitMenu"), staticKey: true)
     {
         _serviceProvider = serviceProvider;
         _playerService = serviceProvider.GetRequiredService<IPlayerService>();

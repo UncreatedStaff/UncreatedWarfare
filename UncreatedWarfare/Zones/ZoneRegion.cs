@@ -326,6 +326,12 @@ public class ZoneRegion : IDisposable
             }
         }
     }
+
+    /// <inheritdoc />
+    public override string ToString()
+    {
+        return ShortName != null ? $"{Name} [{ShortName}]" : Name;
+    }
 }
 
 /// <summary>

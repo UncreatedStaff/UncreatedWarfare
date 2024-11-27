@@ -2,6 +2,7 @@
 using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.Configuration;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
@@ -30,6 +31,12 @@ public class Layout : IDisposable
     protected ILogger<Layout> Logger;
 
     private readonly LayoutFactory _factory;
+
+    /// <summary>
+    /// Data that can be accessed and updated over the lifetime of the layout.
+    /// </summary>
+    /// <remarks>Known keys are stored in <see cref="KnownLayoutDataKeys"/>.</remarks>
+    public IDictionary<string, object> Data { get; } = new ConcurrentDictionary<string, object>(StringComparer.Ordinal);
 
     /// <summary>
     /// A unique ID to this layout.
@@ -103,6 +110,16 @@ public class Layout : IDisposable
     /// The currently active phase, or <see langword="null"/> if there are no active phases.
     /// </summary>
     public ILayoutPhase? ActivePhase => _activePhase == -1 ? null : Phases[_activePhase];
+
+    /// <summary>
+    /// The phase after the current phase, or <see langword="null"/> if we are on the last phase.
+    /// </summary>
+    public ILayoutPhase? NextPhase => _activePhase < -1 || _activePhase + 1 >= Phases.Count ? null : Phases[_activePhase + 1];
+    
+    /// <summary>
+    /// The phase before the current phase, or <see langword="null"/> if we are on the first phase.
+    /// </summary>
+    public ILayoutPhase? PreviousPhase => _activePhase < 1 || _activePhase > Phases.Count ? null : Phases[_activePhase - 1];
 
     /// <summary>
     /// Create a new <see cref="Layout"/>.
@@ -348,7 +365,7 @@ public class Layout : IDisposable
         }
     }
 
-    public virtual async UniTask MoveToNextPhase(CancellationToken token = default, params object[] dataFromCurrentPhase)
+    public virtual async UniTask MoveToNextPhase(CancellationToken token = default)
     {
         // keep moving to the next phase until one is activated by BeginPhase.
         ILayoutPhase? newPhase;
@@ -360,7 +377,8 @@ public class Layout : IDisposable
 
             ILayoutPhase? oldPhase = ActivePhase;
 
-            _activePhase = Math.Max(0, _activePhase + 1);
+            if (!isEnd)
+                _activePhase = Math.Max(0, _activePhase + 1);
 
             newPhase = isEnd ? null : Phases[_activePhase];
 
@@ -424,7 +442,7 @@ public class Layout : IDisposable
 
             try
             {
-                await newPhase.BeginPhaseAsync(dataFromCurrentPhase, CancellationToken.None);
+                await newPhase.BeginPhaseAsync(CancellationToken.None);
             }
             catch (Exception ex)
             {

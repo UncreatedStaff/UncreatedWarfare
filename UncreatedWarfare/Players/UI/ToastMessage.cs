@@ -1,6 +1,4 @@
-﻿using Uncreated.Warfare.Translations;
-
-namespace Uncreated.Warfare.Players.UI;
+﻿namespace Uncreated.Warfare.Players.UI;
 public struct ToastMessage
 {
     public ToastMessageStyle Style { get; }

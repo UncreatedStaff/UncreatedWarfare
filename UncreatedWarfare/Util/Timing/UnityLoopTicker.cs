@@ -1,7 +1,6 @@
 ﻿using SDG.Framework.Utilities;
 using System;
 using Uncreated.Warfare.Components;
-using Uncreated.Warfare.Logging;
 
 namespace Uncreated.Warfare.Util.Timing;
 
@@ -74,7 +73,14 @@ public class UnityLoopTicker<TState> : ILoopTicker<TState>
             }
 
             _component = component;
-            _coroutine = _component.StartCoroutine(Coroutine(initialDelay));
+            try
+            {
+                _coroutine = _component.StartCoroutine(Coroutine(initialDelay));
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Failed to start ticker.", ex);
+            }
         }
         else
         {
@@ -94,7 +100,14 @@ public class UnityLoopTicker<TState> : ILoopTicker<TState>
                         return;
                 }
 
-                _coroutine = _component.StartCoroutine(Coroutine(invokedAlready ? TimeSpan.Zero : newInitialDelay));
+                try
+                {
+                    _coroutine = _component.StartCoroutine(Coroutine(invokedAlready ? TimeSpan.Zero : newInitialDelay));
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception("Failed to start ticker.", ex);
+                }
             });
         }
     }
@@ -212,7 +225,7 @@ public class UnityLoopTickerFactory : ILoopTickerFactory
     /// <inheritdoc />
     public ILoopTicker CreateTicker(TimeSpan initialDelay, TimeSpan periodicDelay, bool queueOnGameThread, TickerCallback<ILoopTicker>? onTick = null)
     {
-        return new UnityLoopTicker<object>(_component, _logger, periodicDelay, periodicDelay, null, onTick);
+        return new UnityLoopTicker<object>(_component, _logger, initialDelay, periodicDelay, null, onTick);
     }
 
     /// <inheritdoc />
@@ -224,6 +237,6 @@ public class UnityLoopTickerFactory : ILoopTickerFactory
     /// <inheritdoc />
     public ILoopTicker<TState> CreateTicker<TState>(TimeSpan initialDelay, TimeSpan periodicDelay, TState? state, bool queueOnGameThread, TickerCallback<ILoopTicker<TState>>? onTick = null)
     {
-        return new UnityLoopTicker<TState>(_component, _logger, periodicDelay, periodicDelay, state, onTick);
+        return new UnityLoopTicker<TState>(_component, _logger, initialDelay, periodicDelay, state, onTick);
     }
 }

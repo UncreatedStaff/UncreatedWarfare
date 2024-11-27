@@ -3,9 +3,11 @@ using DanielWillett.ReflectionTools.Formatting;
 using HarmonyLib;
 using StackCleaner;
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using SDG.Framework.Utilities;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Layouts.Teams;
@@ -64,6 +66,7 @@ internal class ChatManagerOnChatRequested : IHarmonyPatch
 
     private static ILogger? _chatLogger;
 
+
     // SDG.Unturned.ChatManager
     /// <summary>
     /// Postfix of <see cref="ChatManager.ReceiveChatRequest"/> to redo how chat messages are processed.
@@ -73,8 +76,11 @@ internal class ChatManagerOnChatRequested : IHarmonyPatch
     [UsedImplicitly]
     static bool Prefix(in ServerInvocationContext context, byte flags, string text)
     {
-        SteamPlayer steamPlayer = context.GetCallingPlayer();
+        return SimulateChatRequest(context.GetCallingPlayer(), text, (EChatMode)(flags & 0b01111111), (flags & (1 << 7)) != 0);
+    }
 
+    public static bool SimulateChatRequest(SteamPlayer steamPlayer, string text, EChatMode mode, bool fromUnityEvent)
+    {
         ILifetimeScope serviceProvider = WarfareModule.Singleton.ServiceProvider;
 
         IPlayerService playerService = serviceProvider.Resolve<IPlayerService>();
@@ -88,13 +94,11 @@ internal class ChatManagerOnChatRequested : IHarmonyPatch
 
         steamPlayer.lastChat = Time.realtimeSinceStartup;
 
-        EChatMode mode = (EChatMode)(flags & 0b01111111);
         if (mode is not EChatMode.GLOBAL and not EChatMode.LOCAL and not EChatMode.GROUP)
         {
             return false;
         }
 
-        bool fromUnityEvent = (flags & (1 << 7)) != 0;
 
         if (text.Length < 2 || fromUnityEvent && !Provider.configData.UnityEvents.Allow_Client_Messages)
         {
@@ -139,11 +143,13 @@ internal class ChatManagerOnChatRequested : IHarmonyPatch
                 HasAdminChatPermissions = onDuty,
                 Text = text,
                 OriginalText = text,
+                IconUrlOverride = null,
                 AllowRichText = isRich,
                 MessageColor = color,
                 ChatMode = mode,
                 Prefix = pfx,
                 IsUnityMessage = fromUnityEvent,
+                ShouldReplicate = true,
                 TargetPlayers = args =>
                 {
                     const float localSqrRadius = 128 * 128;
@@ -186,10 +192,9 @@ internal class ChatManagerOnChatRequested : IHarmonyPatch
 
             ChatService chatService = serviceProvider.Resolve<ChatService>();
 
-            foreach (WarfarePlayer destPlayer in argsRequested.TargetPlayers(argsRequested))
+            string? FormatFunc(WarfarePlayer destPlayer, bool imgui)
             {
-                if (destPlayer.IsDisconnected)
-                    continue;
+                if (destPlayer.IsDisconnected) return null;
 
                 string name;
                 if (onDuty)
@@ -207,7 +212,7 @@ internal class ChatManagerOnChatRequested : IHarmonyPatch
                 }
 
                 string t;
-                if (destPlayer.Save.IMGUI)
+                if (imgui)
                 {
                     t = imguiText ??= argsRequested.Prefix + (!onDuty ? text.Replace('<', '{').Replace('>', '}') : text);
                 }
@@ -218,7 +223,27 @@ internal class ChatManagerOnChatRequested : IHarmonyPatch
 
                 string targetText = t.Replace("%SPEAKER%", name);
 
-                chatService.Send(destPlayer, targetText, argsRequested.MessageColor, argsRequested.ChatMode, argsRequested.IconUrlOverride, argsRequested.AllowRichText);
+                return targetText;
+            }
+
+            Func<PlayerChatRequested, IEnumerable<WarfarePlayer>> targetPlayers = argsRequested.TargetPlayers;
+            List<WarfarePlayer>? list = null;
+            if (argsRequested.ShouldReplicate)
+            {
+                IEnumerable<WarfarePlayer> enumerable = argsRequested.TargetPlayers(argsRequested);
+
+                list = ListPool<WarfarePlayer>.claim();
+                foreach (WarfarePlayer destPlayer in enumerable)
+                {
+                    string? msg = FormatFunc(destPlayer, destPlayer.Save.IMGUI);
+                    if (msg == null)
+                        continue;
+
+                    list.Add(destPlayer);
+                    chatService.Send(destPlayer, msg, argsRequested.MessageColor, argsRequested.ChatMode, argsRequested.IconUrlOverride, argsRequested.AllowRichText);
+                }
+
+                targetPlayers = _ => list;
             }
 
             PlayerChatSent argsSent = new PlayerChatSent
@@ -230,10 +255,24 @@ internal class ChatManagerOnChatRequested : IHarmonyPatch
                 ChatMode = argsRequested.ChatMode,
                 AllowRichText = argsRequested.AllowRichText,
                 MessageColor = argsRequested.MessageColor,
-                Prefix = argsRequested.Prefix
+                WasReplicated = argsRequested.ShouldReplicate,
+                IconUrlOverride = string.IsNullOrWhiteSpace(argsRequested.IconUrlOverride) ? null : argsRequested.IconUrlOverride,
+                Prefix = argsRequested.Prefix,
+                Request = argsRequested,
+                FormatHandler = FormatFunc,
+                TargetPlayers = targetPlayers
             };
 
-            _ = eventDispatcher.DispatchEventAsync(argsSent, CancellationToken.None);
+            if (list == null)
+            {
+                _ = eventDispatcher.DispatchEventAsync(argsSent, CancellationToken.None);
+            }
+            else
+            {
+                await eventDispatcher.DispatchEventAsync(argsSent, CancellationToken.None);
+                await UniTask.SwitchToMainThread(CancellationToken.None);
+                ListPool<WarfarePlayer>.release(list);
+            }
         });
 
         return false;
@@ -344,4 +383,5 @@ internal class ChatManagerOnChatRequested : IHarmonyPatch
             _ => $"<color=#{HexStringHelper.FormatHexColor(color)}>%SPEAKER%</color>: "
         };
     }
+
 }

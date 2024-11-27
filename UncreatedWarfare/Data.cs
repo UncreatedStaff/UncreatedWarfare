@@ -47,53 +47,6 @@ public static class Data
     internal static SteamPlayer NilSteamPlayer;
 
 
-    public static PooledTransportConnectionList GetPooledTransportConnectionList(int capacity = -1)
-    {
-        PooledTransportConnectionList? rtn = null;
-        Exception? ex2 = null;
-        if (PullFromTransportConnectionListPool != null)
-        {
-            try
-            {
-                rtn = PullFromTransportConnectionListPool();
-            }
-            catch (Exception ex)
-            {
-                ex2 = ex;
-                CommandWindow.LogError(ex);
-            }
-        }
-        if (rtn == null)
-        {
-            if (capacity == -1)
-                capacity = Provider.clients.Count;
-            try
-            {
-                rtn = (PooledTransportConnectionList?)Activator.CreateInstance(typeof(PooledTransportConnectionList),
-                    BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance, null, new object[] { capacity }, CultureInfo.InvariantCulture, null);
-            }
-            catch (Exception ex)
-            {
-                CommandWindow.LogError(ex);
-                if (ex2 != null)
-                    throw new AggregateException("Unable to create pooled transport connection!", ex2, ex);
-
-                throw new Exception("Unable to create pooled transport connection!", ex);
-            }
-
-            if (rtn == null)
-                throw new Exception("Unable to create pooled transport connection, returned null!");
-        }
-
-        return rtn;
-    }
-    public static PooledTransportConnectionList GetPooledTransportConnectionList(IEnumerable<ITransportConnection> selector, int capacity = -1)
-    {
-        PooledTransportConnectionList rtn = GetPooledTransportConnectionList(capacity);
-        rtn.AddRange(selector);
-        return rtn;
-    }
-
     internal static readonly List<KeyValuePair<Type, string?>> TranslatableEnumTypes = new List<KeyValuePair<Type, string?>>()
     {
         new KeyValuePair<Type, string?>(typeof(EDamageOrigin), "Damage Origin"),

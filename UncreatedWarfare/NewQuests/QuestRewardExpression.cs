@@ -7,6 +7,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using Uncreated.Warfare.NewQuests.Parameters;
 using Uncreated.Warfare.Quests;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.NewQuests;
 
@@ -144,6 +145,10 @@ public class QuestRewardExpression : RewardExpression
                 if (_variable.DeclaringType is { IsValueType: true })
                 {
                     il.LoadUnboxedAddress(_variable.DeclaringType);
+                }
+                else
+                {
+                    il.CastReference(_variable.DeclaringType!);
                 }
             }
 

@@ -88,6 +88,7 @@ public class FactionInfo : ICloneable, ITranslationArgument
 
     [JsonPropertyName("radio")]
     public IAssetLink<ItemBarricadeAsset>? FOBRadio { get; set; }
+
     [JsonPropertyName("maptackflag")]
     public IAssetLink<ItemBarricadeAsset>? MapTackFlag { get; set; }
 

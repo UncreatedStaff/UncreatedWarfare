@@ -31,7 +31,7 @@ public class PointsUI : UnturnedUI
     private readonly UnturnedLabel _lblStatistic   = new UnturnedLabel("LabelStatistic");
 
     public PointsUI(PointsConfiguration config, AssetConfiguration assetConfig, ILoggerFactory loggerFactory)
-        : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:Points"))
+        : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:Points"), staticKey: true)
     {
         _config = config;
     }

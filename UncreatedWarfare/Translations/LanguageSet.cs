@@ -4,6 +4,7 @@ using System.Globalization;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Translations;
 
@@ -14,8 +15,10 @@ public struct LanguageSet : IEnumerable<WarfarePlayer>, IEnumerator<WarfarePlaye
     private bool _isSinglePlayer;
     internal int StartIndex;
     internal int Count;
-    public readonly ArraySegment<WarfarePlayer> Players => _players;
+
     public WarfarePlayer Next;
+
+    public readonly ArraySegment<WarfarePlayer> Players => _players;
     public readonly WarfarePlayer Current => Next;
     readonly object IEnumerator.Current => Next;
     public LanguageInfo Language { get; }
@@ -52,6 +55,18 @@ public struct LanguageSet : IEnumerable<WarfarePlayer>, IEnumerator<WarfarePlaye
         Team = player.Team;
     }
 
+    public readonly LanguageSet Preserve()
+    {
+        LanguageSet set = new LanguageSet(Language, Culture, IMGUI, Team);
+        set.SetPlayers(_isSinglePlayer
+            ? _players
+            : new ArraySegment<WarfarePlayer>(_players.ToArray())
+        );
+        set.StartIndex = 0;
+        set.Count = _players.Count;
+        return set;
+    }
+
     internal void SetPlayers(ArraySegment<WarfarePlayer> players)
     {
         if (players.Count == 1)
@@ -84,16 +99,20 @@ public struct LanguageSet : IEnumerable<WarfarePlayer>, IEnumerator<WarfarePlaye
     {
         if (_isSinglePlayer)
         {
-            PooledTransportConnectionList list = Data.GetPooledTransportConnectionList(1);
+            PooledTransportConnectionList list = TransportConnectionPoolHelper.Claim(1);
             if (Next.IsOnline)
                 list.Add(Next.Connection);
             return list;
         }
         else
         {
-            PooledTransportConnectionList list = Data.GetPooledTransportConnectionList(Players.Count);
-            foreach (WarfarePlayer pl in Players)
+            PooledTransportConnectionList list = TransportConnectionPoolHelper.Claim(_players.Count);
+            WarfarePlayer[] arr = _players.Array!;
+            int i = _players.Offset;
+            int ct = i + _players.Count;
+            for (; i < ct; i++)
             {
+                WarfarePlayer pl = arr[i];
                 if (pl.IsOnline)
                     list.Add(pl.Connection);
             }
@@ -106,7 +125,7 @@ public struct LanguageSet : IEnumerable<WarfarePlayer>, IEnumerator<WarfarePlaye
     {
         if (_isSinglePlayer)
         {
-            PooledTransportConnectionList list = Data.GetPooledTransportConnectionList(1);
+            PooledTransportConnectionList list = TransportConnectionPoolHelper.Claim(1);
             PlayerMovement movement = Next.UnturnedPlayer.movement;
             if (Next.IsOnline && Regions.checkArea(movement.region_x, movement.region_y, x, y, area))
                 list.Add(Next.Connection);
@@ -114,10 +133,14 @@ public struct LanguageSet : IEnumerable<WarfarePlayer>, IEnumerator<WarfarePlaye
         }
         else
         {
-            PooledTransportConnectionList list = Data.GetPooledTransportConnectionList(Players.Count);
-            foreach (WarfarePlayer pl in Players)
+            PooledTransportConnectionList list = TransportConnectionPoolHelper.Claim(_players.Count);
+            WarfarePlayer[] arr = _players.Array!;
+            int i = _players.Offset;
+            int ct = i + _players.Count;
+            for (; i < ct; i++)
             {
                 PlayerMovement movement = Next.UnturnedPlayer.movement;
+                WarfarePlayer pl = arr[i];
                 if (pl.IsOnline && Regions.checkArea(movement.region_x, movement.region_y, x, y, area))
                     list.Add(pl.Connection);
             }
@@ -151,13 +174,13 @@ public struct LanguageSet : IEnumerable<WarfarePlayer>, IEnumerator<WarfarePlaye
         return true;
     }
 
-    public LanguageSet GetEnumerator()
+    public readonly LanguageSet GetEnumerator()
     {
         return this with { _index = -1 };
     }
 
-    IEnumerator<WarfarePlayer> IEnumerable<WarfarePlayer>.GetEnumerator() => GetEnumerator();
-    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+    readonly IEnumerator<WarfarePlayer> IEnumerable<WarfarePlayer>.GetEnumerator() => GetEnumerator();
+    readonly IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
     public readonly void Dispose() { }
 }

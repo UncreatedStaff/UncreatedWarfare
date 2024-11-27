@@ -4,23 +4,31 @@ using System;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Interaction;
+
 public class ChatService
 {
+    public delegate void SendingChatMessage(WarfarePlayer recipient, string text, Color color, EChatMode mode, string? iconURL, bool richText, ref bool shouldReplicate);
+
     private readonly ITranslationService _translationService;
     private readonly ILogger<ChatService> _logger;
+    private readonly IPlayerService _playerService;
     private readonly ClientStaticMethod<CSteamID, string, EChatMode, Color, bool, string>? _sendChatIndividual;
 
     public const int MaxMessageSize = 2047;
 
-    public ChatService(ITranslationService translationService, ILogger<ChatService> logger)
+    public event SendingChatMessage? OnSendingChatMessage;
+
+    public ChatService(ITranslationService translationService, ILogger<ChatService> logger, IPlayerService playerService)
     {
         _translationService = translationService;
         _logger = logger;
+        _playerService = playerService;
 
         _sendChatIndividual = ReflectionUtility.FindRpc<ChatManager, ClientStaticMethod<CSteamID, string, EChatMode, Color, bool, string>>("SendChatEntry");
     }
@@ -41,11 +49,11 @@ public class ChatService
 
         if (GameThread.IsCurrent)
         {
-            SendRawMessage(text, color, mode, iconUrl, richText, player.SteamPlayer);
+            SendRawMessage(text, color, mode, iconUrl, richText, player);
         }
         else
         {
-            SteamPlayer steamPlayer = player.SteamPlayer;
+            WarfarePlayer wp = player;
             string text2 = text;
             Color c2 = color;
             EChatMode mode2 = mode;
@@ -55,9 +63,189 @@ public class ChatService
             {
                 await UniTask.SwitchToMainThread();
 
-                if (steamPlayer.player != null)
-                    SendRawMessage(text2, c2, mode2, icon2, rt, steamPlayer);
+                if (wp.IsOnline)
+                    SendRawMessage(text2, c2, mode2, icon2, rt, wp);
             });
+        }
+    }
+
+    /// <summary>
+    /// Send a raw message directly to all players, and replace TMPro rich text with Unity tags if needed.
+    /// </summary>
+    public void Broadcast(string text, Color color, EChatMode mode, string? iconUrl, bool richText)
+    {
+        if (!richText)
+        {
+            BroadcastNonRichText(text, color, mode, iconUrl);
+            return;
+        }
+
+        if (GameThread.IsCurrent)
+        {
+            BroadcastRichTextGameThread(text, color, mode, iconUrl);
+        }
+        else
+        {
+            string text2 = text;
+            Color c2 = color;
+            EChatMode mode2 = mode;
+            string? icon2 = iconUrl;
+            UniTask.Create(async () =>
+            {
+                await UniTask.SwitchToMainThread();
+                BroadcastRichTextGameThread(text2, c2, mode2, icon2);
+            });
+        }
+    }
+
+    /// <summary>
+    /// Send a raw message directly to a set of players, and replace TMPro rich text with Unity tags if needed.
+    /// </summary>
+    public void Broadcast(in LanguageSet players, string text, Color color, EChatMode mode, string? iconUrl, bool richText)
+    {
+        if (!richText)
+        {
+            if (GameThread.IsCurrent)
+            {
+                BroadcastNonRichTextGameThread(text, color, mode, iconUrl, players);
+            }
+            else
+            {
+                string text2 = text;
+                Color c2 = color;
+                EChatMode mode2 = mode;
+                string? icon2 = iconUrl;
+                LanguageSet set = players.Preserve();
+                UniTask.Create(async () =>
+                {
+                    await UniTask.SwitchToMainThread();
+                    BroadcastNonRichTextGameThread(text2, c2, mode2, icon2, set);
+                });
+            }
+            return;
+        }
+
+        if (GameThread.IsCurrent)
+        {
+            BroadcastRichTextGameThread(text, color, mode, iconUrl, players);
+        }
+        else
+        {
+            string text2 = text;
+            Color c2 = color;
+            EChatMode mode2 = mode;
+            string? icon2 = iconUrl;
+            LanguageSet set = players.Preserve();
+            UniTask.Create(async () =>
+            {
+                await UniTask.SwitchToMainThread();
+                BroadcastRichTextGameThread(text2, c2, mode2, icon2, set);
+            });
+        }
+    }
+
+    private void BroadcastNonRichText(string text, Color color, EChatMode mode, string? iconUrl)
+    {
+        if (GameThread.IsCurrent)
+        {
+            BroadcastNonRichTextGameThread(text, color, mode, iconUrl);
+        }
+        else
+        {
+            string text2 = text;
+            Color c2 = color;
+            EChatMode mode2 = mode;
+            string? icon2 = iconUrl;
+            UniTask.Create(async () =>
+            {
+                await UniTask.SwitchToMainThread();
+                BroadcastNonRichTextGameThread(text2, c2, mode2, icon2);
+            });
+        }
+    }
+
+    private void BroadcastRichTextGameThread(string text, Color color, EChatMode mode, string? iconUrl)
+    {
+        foreach (LanguageSet set in _translationService.SetOf.AllPlayers())
+        {
+            BroadcastRichTextGameThread(text, color, mode, iconUrl, set);
+        }
+    }
+
+    private void BroadcastRichTextGameThread(string text, Color color, EChatMode mode, string? iconUrl, LanguageSet set)
+    {
+        Color? c = TranslationFormattingUtility.ExtractColor(text, out int index, out int length);
+        color = c ?? color;
+        text = set.IMGUI
+            ? TranslationFormattingUtility.CreateIMGUIString(text.AsSpan(index, length))
+            : text.Substring(index, length);
+
+        PooledTransportConnectionList list = set.GatherTransportConnections();
+        if (OnSendingChatMessage != null)
+        {
+            RemoveDisallowedFromTcList(ref set, text, color, mode, iconUrl, list);
+            if (list.Count == 0)
+                return;
+        }
+
+        SendRawMessageBatch(text, color, mode, iconUrl, true, list);
+    }
+
+    private void BroadcastNonRichTextGameThread(string text, Color color, EChatMode mode, string? iconUrl)
+    {
+        PooledTransportConnectionList list;
+        if (OnSendingChatMessage != null)
+        {
+            list = null!;
+            foreach (WarfarePlayer player in _playerService.OnlinePlayers)
+            {
+                bool shouldAllow = true;
+                OnSendingChatMessage?.Invoke(player, text, color, mode, iconUrl, true, ref shouldAllow);
+                if (shouldAllow)
+                {
+                    (list ??= TransportConnectionPoolHelper.Claim(Provider.clients.Count)).Add(player.Connection);
+                }
+            }
+
+            if (list == null)
+                return;
+        }
+        else
+        {
+            list = Provider.GatherClientConnections();
+        }
+
+        SendRawMessageBatch(text, color, mode, iconUrl, false, list);
+    }
+
+    private void BroadcastNonRichTextGameThread(string text, Color color, EChatMode mode, string? iconUrl, LanguageSet set)
+    {
+        PooledTransportConnectionList list = set.GatherTransportConnections();
+        if (OnSendingChatMessage != null)
+        {
+            RemoveDisallowedFromTcList(ref set, text, color, mode, iconUrl, list);
+            if (list.Count == 0)
+                return;
+        }
+
+        SendRawMessageBatch(text, color, mode, iconUrl, false, list);
+    }
+
+    private void RemoveDisallowedFromTcList(ref LanguageSet set, string text, Color color, EChatMode mode, string? iconUrl, PooledTransportConnectionList list)
+    {
+        int ind = 0;
+        while (set.MoveNext())
+        {
+            bool shouldAllow = true;
+            OnSendingChatMessage?.Invoke(set.Next, text, color, mode, iconUrl, true, ref shouldAllow);
+            if (!shouldAllow)
+            {
+                list.RemoveAt(ind);
+            }
+            else
+            {
+                ++ind;
+            }
         }
     }
 
@@ -97,20 +285,20 @@ public class ChatService
 
         if (GameThread.IsCurrent)
         {
-            SendRawMessage(text, textColor ?? Color.white, EChatMode.SAY, null, rt, player.SteamPlayer);
+            SendRawMessage(text, textColor ?? Color.white, EChatMode.SAY, null, rt, player);
         }
         else
         {
             string vl2 = text;
-            SteamPlayer steamPlayer = player.SteamPlayer;
+            WarfarePlayer wp = player;
             Color cl2 = textColor ?? Color.white;
             bool rt2 = rt;
             UniTask.Create(async () =>
             {
                 await UniTask.SwitchToMainThread();
 
-                if (steamPlayer.player != null)
-                    SendRawMessage(vl2, cl2, EChatMode.SAY, null, rt2, steamPlayer);
+                if (wp.IsOnline)
+                    SendRawMessage(vl2, cl2, EChatMode.SAY, null, rt2, wp);
             });
         }
     }
@@ -186,20 +374,20 @@ public class ChatService
 
         if (GameThread.IsCurrent)
         {
-            SendRawMessage(text, textColor, EChatMode.SAY, null, rt, player.SteamPlayer);
+            SendRawMessage(text, textColor, EChatMode.SAY, null, rt, player);
         }
         else
         {
             string vl2 = text;
-            SteamPlayer steamPlayer = player.SteamPlayer;
+            WarfarePlayer wp = player;
             Color cl2 = textColor;
             bool rt2 = rt;
             UniTask.Create(async () =>
             {
                 await UniTask.SwitchToMainThread();
 
-                if (steamPlayer.player != null)
-                    SendRawMessage(vl2, cl2, EChatMode.SAY, null, rt2, steamPlayer);
+                if (wp.IsOnline)
+                    SendRawMessage(vl2, cl2, EChatMode.SAY, null, rt2, wp);
             });
         }
     }
@@ -1434,28 +1622,33 @@ public class ChatService
     /// <summary>
     /// Send a raw message directly to a player without processing.
     /// </summary>
-    private void SendRawMessage(string text, Color color, EChatMode mode, string? iconURL, bool richText, SteamPlayer recipient)
+    private void SendRawMessage(string text, Color color, EChatMode mode, string? iconURL, bool richText, WarfarePlayer recipient)
     {
         GameThread.AssertCurrent();
 
         iconURL ??= string.Empty;
 
+        bool shouldAllow = true;
+        OnSendingChatMessage?.Invoke(recipient, text, color, mode, iconURL, richText, ref shouldAllow);
+        if (!shouldAllow)
+            return;
+
         if (_sendChatIndividual == null)
         {
-            ChatManager.serverSendMessage(text, color, null, recipient, mode, iconURL, richText);
+            ChatManager.serverSendMessage(text, color, null, recipient.SteamPlayer, mode, iconURL, richText);
             return;
         }
 
         try
         {
-            ChatManager.onServerSendingMessage?.Invoke(ref text, ref color, null, recipient, mode, ref iconURL, ref richText);
+            ChatManager.onServerSendingMessage?.Invoke(ref text, ref color, null, recipient.SteamPlayer, mode, ref iconURL, ref richText);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error invoking ChatManager.onServerSendingMessage event.");
         }
 
-        _sendChatIndividual.Invoke(ENetReliability.Reliable, recipient.transportConnection, CSteamID.Nil, iconURL, mode, color, richText, text);
+        _sendChatIndividual.Invoke(ENetReliability.Reliable, recipient.Connection, CSteamID.Nil, iconURL, mode, color, richText, text);
     }
 
     /// <summary>
@@ -1487,7 +1680,7 @@ public class ChatService
         if (GameThread.IsCurrent)
         {
             CheckTranslationLength(player.Locale.LanguageInfo, ref value, translation, ref textColor, player.Save.IMGUI);
-            SendRawMessage(value, textColor, EChatMode.SAY, null, (translation.Options & TranslationOptions.NoRichText) == 0, player.SteamPlayer);
+            SendRawMessage(value, textColor, EChatMode.SAY, null, (translation.Options & TranslationOptions.NoRichText) == 0, player);
         }
         else
         {
@@ -1504,7 +1697,7 @@ public class ChatService
                     return;
 
                 CheckTranslationLength(lang2, ref vl2, tr2, ref cl2, pl2.Save.IMGUI);
-                SendRawMessage(vl2, cl2, EChatMode.SAY, null, (tr2.Options & TranslationOptions.NoRichText) == 0, pl2.SteamPlayer);
+                SendRawMessage(vl2, cl2, EChatMode.SAY, null, (tr2.Options & TranslationOptions.NoRichText) == 0, pl2);
             });
         }
     }
@@ -1532,27 +1725,38 @@ public class ChatService
         if (GameThread.IsCurrent)
         {
             CheckTranslationLength(set.Language, ref value, translation, ref textColor, set.IMGUI);
+
+            PooledTransportConnectionList list = set.GatherTransportConnections();
+            if (OnSendingChatMessage != null)
+            {
+                LanguageSet set2 = set;
+                RemoveDisallowedFromTcList(ref set2, value, textColor, EChatMode.SAY, null, list);
+                if (list.Count == 0)
+                    return;
+            }
+
             SendRawMessageBatch(value, textColor, EChatMode.SAY, null, (translation.Options & TranslationOptions.NoRichText) == 0, set.GatherTransportConnections());
         }
         else
         {
             string vl2 = value;
-            WarfarePlayer[] players = set.Players.ToArray();
             LanguageInfo lang = set.Language;
             bool imgui = set.IMGUI;
             Color cl2 = textColor;
             Translation tr2 = translation;
+            LanguageSet set2 = set.Preserve();
             UniTask.Create(async () =>
             {
                 await UniTask.SwitchToMainThread();
 
                 CheckTranslationLength(lang, ref vl2, tr2, ref cl2, imgui);
-                PooledTransportConnectionList list = Data.GetPooledTransportConnectionList(players.Length);
-                for (int i = 0; i < players.Length; ++i)
+
+                PooledTransportConnectionList list = set2.GatherTransportConnections();
+                if (OnSendingChatMessage != null)
                 {
-                    WarfarePlayer p = players[i];
-                    if (p.IsOnline)
-                        list.Add(p.Connection);
+                    RemoveDisallowedFromTcList(ref set2, vl2, cl2, EChatMode.SAY, null, list);
+                    if (list.Count == 0)
+                        return;
                 }
 
                 SendRawMessageBatch(vl2, cl2, EChatMode.SAY, null, (tr2.Options & TranslationOptions.NoRichText) == 0, list);

@@ -15,15 +15,15 @@ internal class LayoutPhaseEventListenerProvider : IEventListenerProvider
     // allows the current phase to handle events
     IEnumerable<IEventListener<TEventArgs>> IEventListenerProvider.EnumerateNormalListeners<TEventArgs>(TEventArgs args)
     {
-        return _module.IsLayoutActive() && _module.GetActiveLayout().ActivePhase is IEventListener<TEventArgs> phase
-            ? Enumerable.Repeat(phase, 1)
+        return _module.IsLayoutActive()
+            ? _module.GetActiveLayout().Phases.OfType<IEventListener<TEventArgs>>()
             : Enumerable.Empty<IEventListener<TEventArgs>>();
     }
 
     IEnumerable<IAsyncEventListener<TEventArgs>> IEventListenerProvider.EnumerateAsyncListeners<TEventArgs>(TEventArgs args)
     {
-        return _module.IsLayoutActive() && _module.GetActiveLayout().ActivePhase is IAsyncEventListener<TEventArgs> phase
-            ? Enumerable.Repeat(phase, 1)
+        return _module.IsLayoutActive()
+            ? _module.GetActiveLayout().Phases.OfType<IAsyncEventListener<TEventArgs>>()
             : Enumerable.Empty<IAsyncEventListener<TEventArgs>>();
     }
 }
