@@ -13,6 +13,7 @@ public abstract class PointsShoveable : IShovelable
     public bool IsCompleted => HitsRemaining <= 0;
     public TickResponsibilityCollection Builders { get; }
     public IBuildable Buildable { get; }
+
     private readonly EffectAsset? _shovelEffect;
     private readonly Guid _sessionId;
 
@@ -21,7 +22,7 @@ public abstract class PointsShoveable : IShovelable
         Info = info;
         Buildable = buildable;
         _shovelEffect = shovelEffect?.GetAssetOrFail();
-        HitsRemaining = info.RequiredHits;
+        HitsRemaining = info.SupplyCost;
         Builders = new TickResponsibilityCollection();
         _sessionId = Guid.NewGuid();
     }

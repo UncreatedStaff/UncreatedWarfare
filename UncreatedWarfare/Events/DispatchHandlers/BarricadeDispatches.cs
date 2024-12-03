@@ -147,7 +147,8 @@ partial class EventDispatcher2
             Region = region
         };
 
-        _ = DispatchEventAsync(args, CancellationToken.None);
+        _ = WarfareModule.EventDispatcher.DispatchEventAsync(args);
+
     }
 
     /// <summary>

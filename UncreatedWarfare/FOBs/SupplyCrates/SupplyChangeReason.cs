@@ -7,9 +7,10 @@ public enum SupplyChangeReason
 {
     Unknown,
     ResupplyFob,
-    ConsumeShovelHit,
+    ResupplyShoveableSalvaged,
+    ConsumeGeneral,
+    ConsumeShovelablePlaced,
     ConsumeRepairBuildable,
     ConsumeRepairVehicle,
-    ConsumeResupplyTeam,
-    ConsumeSuppliesSalvaged
+    ConsumeSuppliesDestroyed
 }

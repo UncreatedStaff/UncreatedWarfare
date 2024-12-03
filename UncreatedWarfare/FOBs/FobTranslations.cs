@@ -23,9 +23,6 @@ public class FobTranslations : PropertiesTranslationCollection
     [TranslationData("Sent to the player when they do /build.")]
     public readonly Translation BuildLegacyExplanation = new Translation("<#ffab87>Hit the foundation with your Entrenching Tool to build it.");
 
-    [TranslationData("Indicates that a buildable can only be placed within the radius of a FOB Radio.", "Maximum radius")]
-    public readonly Translation<float> BuildNoRadio = new Translation<float>("<#ffab87>This can only be placed within {0}m of a friendly <#cedcde>FOB RADIO</color>.", arg0Fmt: "N0");
-
     [TranslationData("Indicates that the maximum amount of buildables of the given type have already been built on this FOB.", "Maximum amount", "Buildable type")]
     public readonly Translation<int, ShovelableInfo> BuildLimitReached = new Translation<int, ShovelableInfo>("<#ffab87>This FOB already has {0} {1}.", arg0Fmt: "F0", arg1Fmt: PluralAddon.WhenArgument(0));
 
@@ -38,8 +35,11 @@ public class FobTranslations : PropertiesTranslationCollection
     [TranslationData("Indicates that a buildable can only be placed within a friendly FOB.")]
     public readonly Translation BuildEnemy = new Translation("<#ffab87>You may not build on an enemy FOB.");
 
-    [TranslationData("Indicates that a buildable needs more building supplies to be built.", "Total supplies available", "Required supplies")]
-    public readonly Translation<int, int> BuildMissingSupplies = new Translation<int, int>("<#ffab87>You're missing nearby build! <#c$build$>Building Supplies: <#e0d8b8>{0}/{1}</color></color>.");
+    [TranslationData("Indicates that a buildable needs more building supplies to be built.", "Progress shovel hits", "Required shovel hits")]
+    public readonly Translation<int, int> BuildMissingSupplies = new Translation<int, int>("<#ffab87>You're missing nearby building supplies! <#c$build$>Build required: <#e0d8b8>{0}/{1}</color></color>.");
+
+    [TranslationData("Indicates that a buildable can only be placed nearby a supply crate.")]
+    public readonly Translation BuildFOBNoSupplyCrate = new Translation("<#ffab87>You must be near a friendly <#cedcde>SUPPLY CRATE</color> in order to build a FOB.");
 
     [TranslationData("Indicates that no more FOBs can be built because the maximum amount has been reached.")]
     public readonly Translation BuildMaxFOBsHit = new Translation("<#ffab87>The max number of FOBs on your team has been reached.");
@@ -57,7 +57,7 @@ public class FobTranslations : PropertiesTranslationCollection
     public readonly Translation BuildNoLogisticsVehicle = new Translation("<#ffab87>You must be near a friendly <#cedcde>LOGISTICS VEHICLE</color> to place a FOB radio.");
 
     [TranslationData("Indicates that a FOB can't be built because another FOB is already nearby.", "The existing FOB's name", "Distance from the existing FOB", "Minimum distance needed")]
-    public readonly Translation<IFob, float, float> BuildFOBTooClose = new Translation<IFob, float, float>("<#ffa238>You are too close to an existing FOB Radio ({0}: {1}m away). You must be at least {2}m away to place a new radio.", arg0Fmt: Flags.ColorNameFormat, arg1Fmt: "F0", arg2Fmt: "F0");
+    public readonly Translation<IFob, float, float> BuildFOBTooClose = new Translation<IFob, float, float>("<#ffa238>You are too close to an existing FOB ({0}: {1}m away). You must be at least {2}m away to place a new FOB.", arg0Fmt: Flags.ColorNameFormat, arg1Fmt: "F0", arg2Fmt: "F0");
 
     [TranslationData("Indicates that a FOB can't be built because another FOB bunker is already nearby.", "Distance from the existing bunker", "Minimum distance needed")]
     public readonly Translation<float, float> BuildBunkerTooClose = new Translation<float, float>("<#ffa238>You are too close to an existing FOB Bunker ({0}m away). You must be at least {1}m away to place a new radio.", arg0Fmt: "F0", arg1Fmt: "F0");

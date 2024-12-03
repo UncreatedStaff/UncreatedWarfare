@@ -68,7 +68,13 @@ public class FobHUD :
                     element.BuildCount.Show(player);
                     element.AmmoCount.Show(player);
                     element.BuildCount.SetText(player, resourceFob.BuildCount.ToString());
+                    
                     element.AmmoCount.SetText(player, resourceFob.AmmoCount.ToString());
+                }
+                else
+                {
+                    element.BuildCount.Hide(player);
+                    element.AmmoCount.Hide(player);
                 }
             }
         }
@@ -83,7 +89,6 @@ public class FobHUD :
 
     public void HandleEvent(FobRegistered e, IServiceProvider serviceProvider)
     {
-        Console.WriteLine("sending FOB UI for team: " + e.Fob.Team);
         UpdateForTeam(e.Fob.Team);
     }
 

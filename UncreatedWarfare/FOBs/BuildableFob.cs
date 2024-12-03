@@ -13,6 +13,7 @@ namespace Uncreated.Warfare.FOBs;
 public class BuildableFob : BasePlayableFob
 {
     public bool IsBuilt { get; private set; }
+    public bool HasBeenRebuilt { get; private set; }
     public override Color32 Color
     {
         get
@@ -26,16 +27,18 @@ public class BuildableFob : BasePlayableFob
     public BuildableFob(IServiceProvider serviceProvider, string name, IBuildable buildable) : base(serviceProvider, name, buildable)
     {
         IsBuilt = false;
+        HasBeenRebuilt = false;
     }
-    public void MarkBuilt(IBuildable completedFob)
+    public void MarkBuilt(IBuildable newBuildable)
     {
-        Buildable = completedFob;
         IsBuilt = true;
+        HasBeenRebuilt = true;
+        Buildable = newBuildable;
     }
-    public void MarkUnbuilt(IBuildable unbuiltFob)
+    public void MarkUnbuilt(IBuildable newBuildable)
     {
-        Buildable = unbuiltFob;
         IsBuilt = false;
+        Buildable = newBuildable;
     }
     public override bool CheckDeployableToTick(WarfarePlayer player, ChatService chatService, DeploymentTranslations translations, in DeploySettings settings)
     {

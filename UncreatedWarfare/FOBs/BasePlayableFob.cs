@@ -57,7 +57,6 @@ public class BasePlayableFob : IResourceFob, IDisposable
     /// <inheritdoc />
     public Vector3 Position => Buildable.Position;
     public float EffectiveRadius => 70f;
-    public SupplyCrateGroup SupplyCrates => new SupplyCrateGroup(_fobManager, Buildable.Position, Team);
     public bool IsProxied { get; private set; }
     public ISphereProximity FriendlyProximity { get; private set; }
     public ISphereProximity EnemyProximity { get; private set; }
@@ -149,6 +148,9 @@ public class BasePlayableFob : IResourceFob, IDisposable
                 _ = WarfareModule.EventDispatcher.DispatchEventAsync(new FobProxyChanged { Fob = this, IsProxied = newProxyState });
             }
         };
+        NearbySupplyCrates supplyCrates = NearbySupplyCrates.FindNearbyCrates(Position, Team.GroupId, _fobManager);
+        ChangeSupplies(SupplyType.Build, supplyCrates.BuildCount);
+        ChangeSupplies(SupplyType.Ammo, supplyCrates.AmmoCount);
     }
     private float GetProxyScore(WarfarePlayer enemy)
     {
@@ -163,6 +165,13 @@ public class BasePlayableFob : IResourceFob, IDisposable
         return 0.15f * EffectiveRadius / distanceFromFob;
     }
     public bool IsWithinRadius(Vector3 point) => MathUtility.WithinRange(Position, point, EffectiveRadius);
+    public void ChangeSupplies(SupplyType supplyType, int amount)
+    {
+        if (supplyType == SupplyType.Build)
+            BuildCount += amount;
+        else if (supplyType == SupplyType.Ammo)
+            AmmoCount += amount;
+    }
     public UniTask DestroyAsync(CancellationToken token = default)
     {
         return UniTask.CompletedTask;

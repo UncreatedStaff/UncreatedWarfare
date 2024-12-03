@@ -5,8 +5,10 @@ using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models.Fobs;
 using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Services;
+using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.List;
 
@@ -15,6 +17,7 @@ namespace Uncreated.Warfare.Fobs;
 public partial class FobManager : ILayoutHostedService
 {
     private readonly FobConfiguration _configuration;
+    private readonly FobTranslations _translations;
     private readonly AssetConfiguration _assetConfiguration;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<FobManager> _logger;
@@ -34,6 +37,7 @@ public partial class FobManager : ILayoutHostedService
     public FobManager(IServiceProvider serviceProvider, ILogger<FobManager> logger)
     {
         _configuration = serviceProvider.GetRequiredService<FobConfiguration>();
+        _translations = serviceProvider.GetRequiredService<TranslationInjection<FobTranslations>>().Value;
         _assetConfiguration = serviceProvider.GetRequiredService<AssetConfiguration>();
         _serviceProvider = serviceProvider;
         _logger = logger;

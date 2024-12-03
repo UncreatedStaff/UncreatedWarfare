@@ -28,7 +28,7 @@ public class RepairStation : IBuildableComponent, IFobItem
         _ticker = loopTickerFactory.CreateTicker(TimeSpan.FromSeconds(4), false, true);
         _ticker.OnTick += (ticker, timeSinceStart, deltaTime) =>
         {
-            var supplyCrateGroup = new SupplyCrateGroup(fobManager, buildable.Position, team);
+            var supplyCrateGroup = NearbySupplyCrates.FindNearbyCrates(buildable.Position, team.GroupId, fobManager);
 
             List<InteractableVehicle> vehicles = new List<InteractableVehicle>();
             VehicleManager.getVehiclesInRadius(buildable.Position, Mathf.Pow(AircraftRepairRadius, 2), vehicles);

@@ -284,7 +284,7 @@ public class KitRequests : IRequestHandler<KitSignInstanceProvider, Kit>, IReque
         return true;
     }
 
-    internal async Task GiveKit(WarfarePlayer player, Kit? kit, bool manual, bool tip, CancellationToken token = default)
+    internal async Task GiveKit(WarfarePlayer player, Kit? kit, bool manual, bool tip, CancellationToken token = default) // todo: remove manual and tip
     {
         if (!player.IsOnline)
             return;

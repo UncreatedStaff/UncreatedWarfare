@@ -9,6 +9,7 @@ public interface IShovelable : IBuildableComponent
 {
     ShovelableInfo Info { get; }
     TickResponsibilityCollection Builders { get; }
+    int HitsRemaining { get; }
     bool Shovel(WarfarePlayer shoveler, Vector3 point);
     void Complete(WarfarePlayer shoveler);
 }

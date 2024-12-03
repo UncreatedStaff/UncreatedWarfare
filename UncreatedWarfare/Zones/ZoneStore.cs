@@ -207,6 +207,9 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService
         Zone? minZone = null;
         foreach (ZoneProximity proximity in ProximityZones)
         {
+            if (type != null && type != proximity.Zone.Type)
+                continue;
+
             Vector3 closestPoint = proximity.Proximity.GetNearestPointOnBorder(in point);
 
             float d = (point - closestPoint).sqrMagnitude * (proximity.Proximity.TestPoint(in point) ? -1 : 1);
@@ -287,7 +290,7 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService
     /// <summary>
     /// Find the first zone matching the given zone type and faction.
     /// </summary>
-    public Zone? SearchZone(ZoneType type, FactionInfo? faction)
+    public Zone? SearchZone(ZoneType type, FactionInfo? faction = null)
     {
         return faction == null
             ? Zones.FirstOrDefault(zone => zone.Type == type)

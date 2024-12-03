@@ -13,6 +13,7 @@ public class SupplyCrate : IFobItem
     public IBuildable Buildable { get; private set; }
     public SupplyType Type { get; }
     public int SupplyCount { get; set; }
+    public int MaxSupplyCount { get; }
     public int SupplyRadius { get; set; }
 
     public SupplyCrate(SupplyCrateInfo info, IBuildable buildable)
@@ -20,6 +21,7 @@ public class SupplyCrate : IFobItem
         Type = info.Type;
         Buildable = buildable;
         SupplyCount = info.StartingSupplies;
+        MaxSupplyCount = info.StartingSupplies;
         SupplyRadius = info.SupplyRadius;
     }
     public bool IsWithinRadius(Vector3 point) => MathUtility.WithinRange(Buildable.Position, point, SupplyRadius);
