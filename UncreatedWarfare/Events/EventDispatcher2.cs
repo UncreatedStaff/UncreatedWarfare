@@ -76,6 +76,8 @@ public partial class EventDispatcher2 : IHostedService
         VehicleManager.OnToggleVehicleLockRequested += VehicleManagerOnToggleVehicleLockRequested;
         VehicleManager.OnToggledVehicleLock += VehicleManagerOnToggledVehicleLock;
         VehicleManager.OnVehicleExploded += VehicleManagerOnVehicleExploded;
+        VehicleManager.onExitVehicleRequested += VehicleManagerOnPassengerExitRequested;
+        VehicleManager.onSwapSeatRequested += VehicleManagerOnSwapSeatRequested;
 
         /* Items */
         ItemManager.onTakeItemRequested += ItemManagerOnTakeItemRequested;
@@ -85,6 +87,7 @@ public partial class EventDispatcher2 : IHostedService
         UseableConsumeable.onPerformingAid += UseableConsumeableOnPlayerPerformingAid;
         PlayerEquipment.OnPunch_Global += PlayerEquipmentOnPlayerPunch;
         PlayerQuests.onGroupChanged += PlayerQuestsOnGroupChanged;
+        PlayerEquipment.OnUseableChanged_Global += PlayerEquipmentUseableChanged;
 
         /* Objects */
         ObjectManager.OnQuestObjectUsed += ObjectManagerOnQuestObjectUsed;
@@ -116,6 +119,8 @@ public partial class EventDispatcher2 : IHostedService
         VehicleManager.OnToggleVehicleLockRequested -= VehicleManagerOnToggleVehicleLockRequested;
         VehicleManager.OnToggledVehicleLock -= VehicleManagerOnToggledVehicleLock;
         VehicleManager.OnVehicleExploded -= VehicleManagerOnVehicleExploded;
+        VehicleManager.onExitVehicleRequested -= VehicleManagerOnPassengerExitRequested;
+        VehicleManager.onSwapSeatRequested -= VehicleManagerOnSwapSeatRequested;
 
         /* Items */
         ItemManager.onTakeItemRequested -= ItemManagerOnTakeItemRequested;
@@ -125,6 +130,7 @@ public partial class EventDispatcher2 : IHostedService
         UseableConsumeable.onPerformingAid -= UseableConsumeableOnPlayerPerformingAid;
         PlayerEquipment.OnPunch_Global -= PlayerEquipmentOnPlayerPunch;
         PlayerQuests.onGroupChanged -= PlayerQuestsOnGroupChanged;
+        PlayerEquipment.OnUseableChanged_Global -= PlayerEquipmentUseableChanged;
 
         _timeComponent = null!;
         return UniTask.CompletedTask;

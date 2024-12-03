@@ -332,7 +332,7 @@ public class Layout : IDisposable
         foreach (object service in listeners)
         {
             Type type = service.GetType();
-            Type implIntxType = type.GetInterfaces().First(x => x.GetGenericTypeDefinition() == typeof(ILayoutPhaseListener<>) && intxType.IsAssignableFrom(x));
+            Type implIntxType = type.GetInterfaces().First(x => x.IsConstructedGenericType && x.GetGenericTypeDefinition() == typeof(ILayoutPhaseListener<>) && intxType.IsAssignableFrom(x));
 
             // invoke method from an unknown generic interface type
             MethodInfo implementation = implIntxType.GetMethod(

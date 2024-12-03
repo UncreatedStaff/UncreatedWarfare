@@ -417,7 +417,6 @@ public sealed class WarfareModule
 
         // UI
         bldr.RegisterType<ModerationUI>().SingleInstance();
-        bldr.RegisterType<KitMenuUI>().SingleInstance();
         bldr.RegisterType<ActionMenuUI>().SingleInstance();
         bldr.RegisterType<SquadMenuUI>()
             .AsSelf()
@@ -436,7 +435,7 @@ public sealed class WarfareModule
         bldr.RegisterType<ConventionalLeaderboardUI>().SingleInstance();
         bldr.RegisterType<StagingUI>().SingleInstance();
         bldr.RegisterType<WinToastUI>().SingleInstance();
-        bldr.RegisterType<PointsUI>().SingleInstance();
+        bldr.RegisterType<PointsUI>().AsSelf().AsImplementedInterfaces().SingleInstance();
         bldr.RegisterType<TeamSelectorUI>().SingleInstance();
         bldr.RegisterType<VehicleHUD>().SingleInstance();
 

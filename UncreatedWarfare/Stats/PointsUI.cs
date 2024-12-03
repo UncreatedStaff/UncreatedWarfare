@@ -1,9 +1,15 @@
-﻿using System;
+﻿using DanielWillett.ReflectionTools;
+using Microsoft.Extensions.DependencyInjection;
+using System;
 using System.Globalization;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Data;
 using Uncreated.Framework.UI.Reflection;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Models;
+using Uncreated.Warfare.Events.Models.Players;
+using Uncreated.Warfare.Events.Models.Vehicles;
 using Uncreated.Warfare.Interaction.UI;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Translations.Util;
@@ -12,14 +18,30 @@ using Uncreated.Warfare.Util;
 namespace Uncreated.Warfare.Stats;
 
 [UnturnedUI(BasePath = "Container/Box")]
-public class PointsUI : UnturnedUI
+public class PointsUI : UnturnedUI,
+    IEventListener<PlayerUseableEquipped>,
+    IEventListener<VehicleSwappedSeat>,
+    IEventListener<EnterVehicle>,
+    IEventListener<ExitVehicle>
 {
-    private static readonly UnturnedUIElement[] PositionElements =
+    private static readonly InstanceGetter<VehicleAsset, bool>? GetUsesEngineRpmAndGears = Accessor.GenerateInstancePropertyGetter<VehicleAsset, bool>("UsesEngineRpmAndGears", allowUnsafeTypeBinding: true);
+
+    private readonly Func<CSteamID, PointsUIData> _createData;
+
+    private readonly UnturnedUIElement[] _positionElements =
     [ 
-        new UnturnedUIElement("LogicPositionBase"),
-        new UnturnedUIElement("LogicPositionGun"),
-        new UnturnedUIElement("LogicPositionVehicle"),
-        new UnturnedUIElement("LogicPositionGunAndVehicle")
+        new UnturnedUIElement("~/LogicPositionBase"),
+        new UnturnedUIElement("~/LogicPositionGun"),
+        new UnturnedUIElement("~/LogicPositionVehicle0"),
+        new UnturnedUIElement("~/LogicPositionVehicle1"),
+        new UnturnedUIElement("~/LogicPositionVehicle2"),
+        new UnturnedUIElement("~/LogicPositionVehicle3"),
+        new UnturnedUIElement("~/LogicPositionVehicle4"),
+        new UnturnedUIElement("~/LogicPositionTurret0"),
+        new UnturnedUIElement("~/LogicPositionTurret1"),
+        new UnturnedUIElement("~/LogicPositionTurret2"),
+        new UnturnedUIElement("~/LogicPositionTurret3"),
+        new UnturnedUIElement("~/LogicPositionTurret4")
     ];
 
     private readonly PointsConfiguration _config;
@@ -31,18 +53,46 @@ public class PointsUI : UnturnedUI
     private readonly UnturnedLabel _lblStatistic   = new UnturnedLabel("LabelStatistic");
 
     public PointsUI(PointsConfiguration config, AssetConfiguration assetConfig, ILoggerFactory loggerFactory)
-        : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:Points"), staticKey: true)
+        : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:Points"), staticKey: true, debugLogging: true)
     {
         _config = config;
+
+        _createData = steam64 => new PointsUIData(steam64, this);
     }
 
     private PointsUIData GetUIData(CSteamID steam64)
     {
-        return GetOrAddData(steam64, (steam64) => new PointsUIData(steam64, this));
+        return GetOrAddData(steam64, _createData);
+    }
+
+    [EventListener(MustRunInstantly = true)]
+    void IEventListener<PlayerUseableEquipped>.HandleEvent(PlayerUseableEquipped e, IServiceProvider serviceProvider)
+    {
+        UpdatePointsUI(e.Player, serviceProvider.GetRequiredService<PointsService>());
+    }
+
+    [EventListener(MustRunInstantly = true)]
+    void IEventListener<VehicleSwappedSeat>.HandleEvent(VehicleSwappedSeat e, IServiceProvider serviceProvider)
+    {
+        UpdatePointsUI(e.Player, serviceProvider.GetRequiredService<PointsService>());
+    }
+    
+    [EventListener(MustRunInstantly = true)]
+    void IEventListener<EnterVehicle>.HandleEvent(EnterVehicle e, IServiceProvider serviceProvider)
+    {
+        UpdatePointsUI(e.Player, serviceProvider.GetRequiredService<PointsService>());
+    }
+    
+    [EventListener(MustRunInstantly = true)]
+    void IEventListener<ExitVehicle>.HandleEvent(ExitVehicle e, IServiceProvider serviceProvider)
+    {
+        UpdatePointsUI(e.Player, serviceProvider.GetRequiredService<PointsService>());
     }
 
     private static int GetPositionLogicIndex(WarfarePlayer player)
     {
+        bool gunBoxVisible = player.UnturnedPlayer.equipment.useable is UseableGun;
+
         InteractableVehicle? vehicle = player.UnturnedPlayer.movement.getVehicle();
 
         bool vehicleBoxVisible = vehicle != null &&
@@ -50,9 +100,24 @@ public class PointsUI : UnturnedUI
                                  player.UnturnedPlayer.movement.getSeat() == 0 &&
                                  player.UnturnedPlayer.isPluginWidgetFlagActive(EPluginWidgetFlags.ShowVehicleStatus);
 
-        bool gunBoxVisible = player.UnturnedPlayer.equipment.useable is UseableGun;
+        if (!vehicleBoxVisible)
+        {
+            return gunBoxVisible ? 1 : 0;
+        }
 
-        return (gunBoxVisible ? 1 : 0) + (vehicleBoxVisible ? 1 : 0) * 2;
+        int index = 2;
+        index += (vehicle!.usesFuel || vehicle.asset.isStaminaPowered) ? 1 : 0;
+        index += vehicle.usesHealth ? 1 : 0;
+        index += vehicle.usesBattery ? 1 : 0;
+        index += (GetUsesEngineRpmAndGears != null && GetUsesEngineRpmAndGears(vehicle.asset) && vehicle.asset.AllowsEngineRpmAndGearsInHud) ? 1 : 0;
+
+        if (gunBoxVisible)
+        {
+            // keeps it from going too high up for one frame if the player's holding a gun when they enter a vehicle
+            gunBoxVisible = vehicle.passengers[0].turret != null;
+        }
+
+        return (gunBoxVisible ? 1 : 0) * 5 + index;
     }
 
     /// <summary>
@@ -118,10 +183,11 @@ public class PointsUI : UnturnedUI
         }
 
         int expectedPosition = GetPositionLogicIndex(player);
+        GetLogger().LogInformation("POSITION: {0}", expectedPosition);
         if (data.Position != expectedPosition)
         {
             data.Position = expectedPosition;
-            PositionElements[expectedPosition].Show(player);
+            _positionElements[expectedPosition].Show(player);
         }
 
         if (!wasJustSent)

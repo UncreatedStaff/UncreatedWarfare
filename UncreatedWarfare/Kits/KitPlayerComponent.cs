@@ -14,6 +14,9 @@ public class KitPlayerComponent : IPlayerComponent
 {
     private KitManager _kitManager;
     internal List<uint>? AccessibleKits;
+    internal List<uint>? FavoritedKits;
+    internal bool FavoritesDirty;
+
     public WarfarePlayer Player { get; private set; }
 
     /// <summary>

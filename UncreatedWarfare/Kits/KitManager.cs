@@ -6,7 +6,6 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Uncreated.Framework.UI;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Events;
@@ -60,7 +59,6 @@ public partial class KitManager :
         new Guid("010de9d7d1fd49d897dc41249a22d436")  // Laser Rangefinder
     };
 
-    public KitMenuUI MenuUI { get; }
     public KitDataCache Cache { get; }
     public KitDistribution Distribution { get; }
     public KitRequests Requests { get; }
@@ -77,7 +75,6 @@ public partial class KitManager :
     /// </summary>
     public event KitChanged? OnManualKitChanged;
     public event KitAccessCallback? OnKitAccessChanged;
-    public event Action? OnFavoritesRefreshed;
 
     public KitManager(ILifetimeScope lifetimeScope)
     {
@@ -88,8 +85,6 @@ public partial class KitManager :
         _assetRedirectService = lifetimeScope.Resolve<AssetRedirectService>();
         _factionDataStore = lifetimeScope.Resolve<IFactionDataStore>();
         _module = lifetimeScope.Resolve<WarfareModule>();
-
-        MenuUI = lifetimeScope.Resolve<KitMenuUI>();
 
         if (!_hasRegisteredKitSettables)
         {
@@ -359,13 +354,31 @@ public partial class KitManager :
     public async Task SaveAllPlayerFavorites(CancellationToken token)
     {
         await UniTask.SwitchToMainThread(token);
+
+        bool any = false;
+        foreach (WarfarePlayer player in _playerService.OnlinePlayers)
+        {
+            if (!player.Component<KitPlayerComponent>().FavoritesDirty)
+                continue;
+
+            any = true;
+            break;
+        }
+
+        if (!any)
+            return;
+
         List<Task> tasks = new List<Task>(4);
         foreach (WarfarePlayer player in _playerService.OnlinePlayers)
         {
-            if (UnturnedUIDataSource.GetData<KitMenuUIData>(player.Steam64, MenuUI.Parent) is not { FavoritesDirty: true, FavoriteKits: { } fk })
-                continue;
+            KitPlayerComponent component = player.Component<KitPlayerComponent>();
+            lock (component)
+            {
+                if (component is not { FavoritesDirty: true, FavoritedKits: { } fk })
+                    continue;
 
-            tasks.Add(SaveFavorites(player, fk, token));
+                tasks.Add(SaveFavorites(player, fk, token));
+            }
         }
 
         await Task.WhenAll(tasks);
@@ -1170,7 +1183,6 @@ public partial class KitManager :
         return new ValueTask<bool>(HasAccess(kit, player, token));
     }
 
-    /// <summary>Use with purchase sync.</summary>
     public bool IsFavoritedQuick(uint kit, WarfarePlayer player)
     {
         GameThread.AssertCurrent();
@@ -1178,58 +1190,48 @@ public partial class KitManager :
         if (kit == 0)
             return false;
 
-        if (UnturnedUIDataSource.GetData<KitMenuUIData>(player.Steam64, MenuUI.Parent) is not { FavoriteKits: { } favs })
+        KitPlayerComponent comp = player.Component<KitPlayerComponent>();
+
+        List<uint>? favoritedKits = comp.FavoritedKits;
+        if (favoritedKits == null)
             return false;
 
-        for (int i = 0; i < favs.Count; ++i)
+        for (int i = 0; i < favoritedKits.Count; ++i)
         {
-            if (favs[i] == kit)
+            if (favoritedKits[i] == kit)
                 return true;
         }
 
         return false;
     }
 
-    public async Task RefreshFavorites(WarfarePlayer player, bool psLock, CancellationToken token = default)
+    public async Task<List<uint>> GetFavorites(ulong playerId, CancellationToken token = default)
     {
-        CombinedTokenSources tokens = token.CombineTokensIfNeeded(player.DisconnectToken, _module.UnloadToken);
-        if (psLock)
-            await player.PurchaseSync.WaitAsync(token);
-        try
+        await using ILifetimeScope scope = _lifetimeScope.BeginLifetimeScope();
+        await using IKitsDbContext dbContext = scope.Resolve<IKitsDbContext>();
+
+        return await dbContext.KitFavorites
+            .Where(x => x.Steam64 == playerId)
+            .Select(x => x.KitId)
+            .ToListAsync(token)
+            .ConfigureAwait(false);
+    }
+
+    public async Task RefreshFavorites(WarfarePlayer player, CancellationToken token = default)
+    {
+        using CombinedTokenSources tokens = token.CombineTokensIfNeeded(player.DisconnectToken, _module.UnloadToken);
+
+        List<uint> kits = await GetFavorites(player.Steam64.m_SteamID, token).ConfigureAwait(false);
+
+        KitPlayerComponent comp = player.Component<KitPlayerComponent>();
+        lock (comp)
         {
-            await using ILifetimeScope scope = _lifetimeScope.BeginLifetimeScope();
-            await using IKitsDbContext dbContext = scope.Resolve<IKitsDbContext>();
-            ulong s64 = player.Steam64.m_SteamID;
+            comp.FavoritedKits = kits;
 
-            await UniTask.SwitchToMainThread(token);
-            if (UnturnedUIDataSource.GetData<KitMenuUIData>(player.Steam64, MenuUI.Parent) is not { } data)
-            {
-                data = new KitMenuUIData(MenuUI, MenuUI.Parent, player, _lifetimeScope.Resolve<IServiceProvider>());
-                UnturnedUIDataSource.AddData(data);
-            }
-
-            data.FavoriteKits = await dbContext.KitFavorites
-                .Where(x => x.Steam64 == s64)
-                .Select(x => x.KitId)
-                .ToListAsync(token);
-
-            data.FavoritesDirty = false;
-        }
-        finally
-        {
-            if (psLock)
-                player.PurchaseSync.Release();
+            comp.FavoritesDirty = false;
         }
 
-        UniTask.Create(async () =>
-        {
-            await UniTask.SwitchToMainThread(CancellationToken.None);
-
-            tokens.Dispose();
-            OnFavoritesRefreshed?.Invoke();
-            MenuUI.OnFavoritesRefreshed(player);
-            Signs.UpdateSigns(player);
-        });
+        Signs.UpdateSigns(player);
     }
 
     public string GetWeaponText(Kit kit)
@@ -1384,16 +1386,24 @@ public partial class KitManager :
     void IEventListener<PlayerLeft>.HandleEvent(PlayerLeft e, IServiceProvider serviceProvider)
     {
         OnTeamPlayerCountChanged();
-        if (UnturnedUIDataSource.GetData<KitMenuUIData>(e.Steam64, MenuUI.Parent) is not { FavoritesDirty: true, FavoriteKits: { } fk })
+        KitPlayerComponent comp = e.Player.Component<KitPlayerComponent>();
+
+        List<uint> kits;
+        lock (comp)
         {
-            return;
+            if (comp is not { FavoritesDirty: true, FavoritedKits: { } fk })
+            {
+                return;
+            }
+
+            kits = fk;
         }
 
         Task.Run(async () =>
         {
             try
             {
-                await SaveFavorites(e.Player, fk, CancellationToken.None);
+                await SaveFavorites(e.Player, kits, CancellationToken.None);
             }
             catch (Exception ex)
             {

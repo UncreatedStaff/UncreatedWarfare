@@ -141,20 +141,7 @@ public static partial class Patches
         }
 #endif
 
-        // SDG.Unturned.PlayerClothing
-        /// <summary>
-        /// Prefix of <see cref="PlayerClothing.ReceiveVisualToggleRequest(EVisualToggleType)"/> to use an event to cancel it.
-        /// </summary>
-        [HarmonyPatch(typeof(PlayerClothing), nameof(PlayerClothing.ReceiveVisualToggleRequest))]
-        [HarmonyPrefix]
-        [UsedImplicitly]
-        static bool CancelCosmeticChangesPrefix(EVisualToggleType type, PlayerClothing __instance)
-        {
-            EVisualToggleType newtype = type;
-            bool allow = true;
-            OnPlayerTogglesCosmetics_Global?.Invoke(ref newtype, __instance.player.channel.owner, ref allow);
-            return allow;
-        }
+
         // SDG.Unturned.VehicleManager
         /// <summary>
         /// Prefix of <see cref="VehicleManager.ReceiveStealVehicleBattery"/> to disable the removal of batteries from vehicles.

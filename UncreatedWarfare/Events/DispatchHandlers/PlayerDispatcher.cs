@@ -110,4 +110,22 @@ partial class EventDispatcher2
 
         _ = DispatchEventAsync(args, _unloadToken);
     }
+
+    /// <summary>
+    /// Invoked by <see cref="PlayerEquipment.OnUseableChanged_Global"/> when a player equips or dequips an item.
+    /// </summary>
+    private void PlayerEquipmentUseableChanged(PlayerEquipment equipment)
+    {
+        WarfarePlayer player = _playerService.GetOnlinePlayer(equipment);
+
+        PlayerUseableEquipped args = new PlayerUseableEquipped
+        {
+            Player = player,
+            Item = equipment.asset,
+            Useable = equipment.useable
+        };
+
+        _ = DispatchEventAsync(args, _unloadToken);
+    }
+
 }
