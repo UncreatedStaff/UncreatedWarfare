@@ -64,7 +64,7 @@ public class VehicleComponent : MonoBehaviour
     /// <summary>
     /// The spawn the vehicle was created at, if any.
     /// </summary>
-    public VehicleSpawnInfo? Spawn { get; private set; }
+    public VehicleSpawnerComponent? Spawn { get; private set; }
 
 #if false
     public Zone? SafezoneZone
@@ -157,14 +157,14 @@ public class VehicleComponent : MonoBehaviour
         ReloadCountermeasures();
     }
 
-    internal void UnlinkFromSpawn(VehicleSpawnInfo spawnInfo)
+    internal void UnlinkFromSpawn(VehicleSpawnerComponent spawn)
     {
         GameThread.AssertCurrent();
 
-        if (spawnInfo == null)
-            throw new ArgumentNullException(nameof(spawnInfo));
+        if (spawn == null)
+            throw new ArgumentNullException(nameof(spawn));
 
-        if (!Equals(Spawn, spawnInfo))
+        if (!Equals(Spawn, spawn))
         {
             throw new InvalidOperationException("The given spawn is not linked to this vehicle.");
         }
@@ -177,19 +177,19 @@ public class VehicleComponent : MonoBehaviour
         Spawn = null;
     }
 
-    internal void LinkToSpawn(VehicleSpawnInfo spawnInfo)
+    internal void LinkToSpawn(VehicleSpawnerComponent spawn)
     {
         GameThread.AssertCurrent();
 
-        if (spawnInfo == null)
-            throw new ArgumentNullException(nameof(spawnInfo));
+        if (spawn == null)
+            throw new ArgumentNullException(nameof(spawn));
 
-        if (spawnInfo.LinkedVehicle != Vehicle)
+        if (spawn.LinkedVehicle != Vehicle)
         {
             throw new InvalidOperationException("The given spawn is not linked to this vehicle.");
         }
 
-        Spawn = spawnInfo;
+        Spawn = spawn;
     }
 
     public static void TryAddOwnerToHistory(InteractableVehicle vehicle, ulong steam64)

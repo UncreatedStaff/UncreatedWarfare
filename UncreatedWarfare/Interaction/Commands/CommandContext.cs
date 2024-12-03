@@ -1073,7 +1073,6 @@ public class CommandContext : ControlException
             asset = null;
             return false;
         }
-
         return UCAssetManager.TryGetAsset(p, out asset, out multipleResultsFound, allowMultipleResults, selector);
     }
 

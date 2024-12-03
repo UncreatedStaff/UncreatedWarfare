@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
@@ -8,6 +9,10 @@ using Uncreated.Warfare.Util;
 namespace Uncreated.Warfare.Vehicles;
 public class VehicleSpawnInfo : IRequestable<VehicleSpawnInfo>
 {
+    /// <summary>
+    /// A unique name to identify this spawner.
+    /// </summary>
+    public required string UniqueName { get; set; }
     /// <summary>
     /// The asset used to spawn vehicles.
     /// </summary>
@@ -21,67 +26,16 @@ public class VehicleSpawnInfo : IRequestable<VehicleSpawnInfo>
     /// <summary>
     /// List of sign barricades linked to this spawn.
     /// </summary>
-    public IList<IBuildable> SignInstanceIds { get; } = new List<IBuildable>(1);
+    public IList<IBuildable> Signs { get; } = new List<IBuildable>(1);
 
-    /// <summary>
-    /// A vehicle that has been spawned from this spawn.
-    /// </summary>
-    public InteractableVehicle? LinkedVehicle { get; private set; }
-    
-    /// <summary>
-    /// Link this spawn to a vehicle.
-    /// </summary>
-    internal void LinkVehicle(InteractableVehicle vehicle)
+    public override string ToString()
     {
-        GameThread.AssertCurrent();
-
-        if (vehicle == LinkedVehicle)
-            return;
-
-        InteractableVehicle? oldVehicle = LinkedVehicle;
-        LinkedVehicle = vehicle;
-        if (oldVehicle != null && oldVehicle.TryGetComponent(out VehicleComponent oldVehicleComponent) && oldVehicleComponent.Spawn == this)
-        {
-            oldVehicleComponent.UnlinkFromSpawn(this);
-        }
-
-        if (vehicle.TryGetComponent(out VehicleComponent newVehicleComponent))
-        {
-            newVehicleComponent.LinkToSpawn(this);
-        }
-
-        if (Spawner.Model.TryGetComponent(out VehicleSpawnerComponent comp))
-        {
-            comp.UpdateLinkedSigns();
-        }
+        return $"VehicleSpawnInfo [" +
+               $"UniqueName: {UniqueName}  " +
+               $"Vehicle: {Vehicle} " +
+               $"Spawner: {Spawner.InstanceId} ({(Spawner.IsStructure ? "STRUCTURE" : "BARRICADE")}) " +
+               $"Signs = [{string.Join(", ", Signs.Select(s => s.InstanceId))}]" +
+               $"]";
     }
 
-    /// <summary>
-    /// Unlink this spawn from it's <see cref="LinkedVehicle"/>.
-    /// </summary>
-    internal void UnlinkVehicle()
-    {
-        GameThread.AssertCurrent();
-
-        InteractableVehicle? oldVehicle = LinkedVehicle;
-        if (oldVehicle is null)
-            return;
-
-        LinkedVehicle = null;
-
-        if (Spawner.Model.TryGetComponent(out VehicleSpawnerComponent comp))
-        {
-            comp.UpdateLinkedSigns();
-        }
-
-        if (oldVehicle == null || !oldVehicle.TryGetComponent(out VehicleComponent oldVehicleComponent))
-        {
-            return;
-        }
-
-        if (oldVehicleComponent.Spawn == this)
-        {
-            oldVehicleComponent.UnlinkFromSpawn(this);
-        }
-    }
 }

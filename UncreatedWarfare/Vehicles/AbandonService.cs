@@ -78,7 +78,7 @@ public class AbandonService
 
         WarfarePlayer? owner = _playerService.GetOnlinePlayer(vehicle.lockedOwner.m_SteamID);
         bool found = false;
-        VehicleSpawnInfo? originalSpawn = vehicleComponent.Spawn;
+        VehicleSpawnInfo? originalSpawn = vehicleComponent.Spawn?.SpawnInfo;
         if (originalSpawn != null)
         {
 #if false // todo

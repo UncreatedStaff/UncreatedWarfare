@@ -1,12 +1,16 @@
 ﻿using DanielWillett.ReflectionTools;
+using HarmonyLib;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Linq;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Interaction.Requests;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Translations;
+using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Moderation.Punishments;
@@ -29,6 +33,7 @@ public class VehicleService : ILayoutHostedService,
 {
     private const float VehicleSpawnOffset = 5f;
     public const ushort MaxBatteryCharge = 10000;
+    private readonly IServiceProvider _serviceProvider;
     private readonly RequestVehicleTranslations _reqTranslations;
     private readonly VehicleInfoStore _vehicleInfoStore;
     private readonly VehicleSpawnerStore _spawnerStore;
@@ -39,29 +44,32 @@ public class VehicleService : ILayoutHostedService,
 
     private const float MaxVehicleAbandonmentDistance = 300;
 
-    public VehicleService(ILogger<VehicleService> logger, VehicleInfoStore vehicleInfoStore, VehicleSpawnerStore spawnerStore, WarfareModule module, TranslationInjection<RequestVehicleTranslations> reqTranslations, ZoneStore globalZoneStore, DatabaseInterface moderationSql)
+    public VehicleService(IServiceProvider serviceProvider, ILogger<VehicleService> logger)
     {
+        _serviceProvider = serviceProvider;
         _logger = logger;
-        _vehicleInfoStore = vehicleInfoStore;
-        _spawnerStore = spawnerStore;
-        _module = module;
-        _globalZoneStore = globalZoneStore;
-        _moderationSql = moderationSql;
-        _reqTranslations = reqTranslations.Value;
+        _vehicleInfoStore = serviceProvider.GetRequiredService<VehicleInfoStore>();
+        _spawnerStore = serviceProvider.GetRequiredService<VehicleSpawnerStore>();
+        _module = serviceProvider.GetRequiredService<WarfareModule>();
+        _globalZoneStore = serviceProvider.GetRequiredService<ZoneStore>();
+        _moderationSql = serviceProvider.GetRequiredService<DatabaseInterface>();
+        _reqTranslations = serviceProvider.GetRequiredService<TranslationInjection<RequestVehicleTranslations>>().Value;
     }
 
     async UniTask ILayoutHostedService.StartAsync(CancellationToken token)
     {
         await DeleteAllVehiclesAsync(token);
 
+        
         IServiceProvider serviceProvider = _module.ScopedProvider.Resolve<IServiceProvider>();
+
         foreach (VehicleSpawnInfo spawn in _spawnerStore.Spawns)
         {
             WarfareVehicleInfo? info = _vehicleInfoStore.Vehicles.FirstOrDefault(x => x.Vehicle.MatchAsset(spawn.Vehicle));
 
             if (info == null)
                 continue;
-            
+
             spawn.Spawner.Model.GetOrAddComponent<VehicleSpawnerComponent>().Init(spawn, info, serviceProvider);
         }
     }
@@ -114,7 +122,7 @@ public class VehicleService : ILayoutHostedService,
             return false;
         }
 
-        if (spawn == null || spawn.Spawner.IsDead || !spawn.Vehicle.TryGetAsset(out VehicleAsset? vehicleAsset))
+        if (spawn == null || spawn.Spawner.IsDead || !spawn.Spawner.Model.TryGetComponent(out VehicleSpawnerComponent spawnerComponent) || !spawn.Vehicle.TryGetAsset(out VehicleAsset? vehicleAsset))
         {
             resultHandler.NotFoundOrRegistered(player);
             return false;
@@ -157,7 +165,7 @@ public class VehicleService : ILayoutHostedService,
             );
         }
 
-        InteractableVehicle? vehicle = spawn.LinkedVehicle;
+        InteractableVehicle? vehicle = spawnerComponent.LinkedVehicle;
         if (vehicle == null || vehicle.isDead || vehicle.isExploded || vehicle.isDrowned || !vehicle.asset.canBeLocked)
         {
             resultHandler.MissingRequirement(player, spawn, _reqTranslations.NotAvailable.Translate(player));
@@ -189,10 +197,13 @@ public class VehicleService : ILayoutHostedService,
         Vector3 pos = player.Position;
         foreach (VehicleSpawnInfo otherSpawn in _spawnerStore.Spawns)
         {
-            if (otherSpawn == spawn || otherSpawn.LinkedVehicle == null || otherSpawn.LinkedVehicle.isDead || otherSpawn.LinkedVehicle.isExploded || otherSpawn.LinkedVehicle.isDrowned)
+            if (!spawn.Spawner.Model.TryGetComponent(out VehicleSpawnerComponent otherComponent))
                 continue;
 
-            InteractableVehicle v = otherSpawn.LinkedVehicle;
+            if (otherSpawn == spawn || otherComponent.LinkedVehicle == null || otherComponent.LinkedVehicle.isDead || otherComponent.LinkedVehicle.isExploded || otherComponent.LinkedVehicle.isDrowned)
+                continue;
+
+            InteractableVehicle v = otherComponent.LinkedVehicle;
             if (v.lockedOwner.m_SteamID != player.Steam64.m_SteamID || MathUtility.SquaredDistance(v.transform.position, in pos) > MaxVehicleAbandonmentDistance * MaxVehicleAbandonmentDistance)
                 continue;
 
@@ -224,14 +235,14 @@ public class VehicleService : ILayoutHostedService,
 
         await UniTask.SwitchToMainThread(token);
 
-        if (spawn.LinkedVehicle == null || spawn.LinkedVehicle.isDead || spawn.LinkedVehicle.isDrowned || spawn.LinkedVehicle.isExploded)
+        if (spawnerComponent.LinkedVehicle == null || spawnerComponent.LinkedVehicle.isDead || spawnerComponent.LinkedVehicle.isDrowned || spawnerComponent.LinkedVehicle.isExploded)
         {
-            spawn.UnlinkVehicle();
+            spawnerComponent.UnlinkVehicle();
             await SpawnVehicleAsync(spawn, token);
             await UniTask.SwitchToMainThread(token);
         }
 
-        vehicle = spawn.LinkedVehicle;
+        vehicle = spawnerComponent.LinkedVehicle;
 
         VehicleManager.ServerSetVehicleLock(vehicle, player.Steam64, player.Team.GroupId, true);
         resultHandler.Success(player, spawn);
@@ -247,42 +258,42 @@ public class VehicleService : ILayoutHostedService,
     /// <exception cref="RecordsNotFoundException">Unable to find any <see cref="WarfareVehicleInfo"/> for the vehicle.</exception>
     /// <exception cref="InvalidOperationException">The spawner buildable doesn't exist. -OR- Failed to unlink or link the vehicle to it's spawn.</exception>
     /// <exception cref="Exception">Game failed to spawn the vehicle.</exception>
-    public async UniTask<InteractableVehicle> SpawnVehicleAsync(VehicleSpawnInfo spawn, CancellationToken token = default)
+    public async UniTask<InteractableVehicle> SpawnVehicleAsync(VehicleSpawnInfo spawnInfo, CancellationToken token = default)
     {
         await UniTask.SwitchToMainThread(token);
 
-        if (spawn.LinkedVehicle != null)
+        if (spawnInfo.Spawner.Model.TryGetComponent(out VehicleSpawnerComponent? spawner) && spawner!.LinkedVehicle != null)
         {
-            if (!spawn.LinkedVehicle.isDead && !spawn.LinkedVehicle.isExploded)
+            if (!spawner.LinkedVehicle.isDead && !spawner.LinkedVehicle.isExploded)
             {
-                throw new NotSupportedException($"There can only be one vehicle per spawn, and this spawn already has a vehicle: {spawn.Vehicle.ToDisplayString()}.");
+                throw new NotSupportedException($"There can only be one vehicle per spawn, and this spawn already has a vehicle: {spawnInfo.Vehicle.ToDisplayString()}.");
             }
 
-            spawn.UnlinkVehicle();
+            spawner.UnlinkVehicle();
         }
 
-        WarfareVehicleInfo? vehicleInfo = _vehicleInfoStore.GetVehicleInfo(spawn.Vehicle);
+        WarfareVehicleInfo? vehicleInfo = _vehicleInfoStore.GetVehicleInfo(spawnInfo.Vehicle);
         if (vehicleInfo == null)
         {
-            throw new RecordsNotFoundException($"WarfareVehicleInfo not available for {spawn.Vehicle.ToDisplayString()}");
+            throw new RecordsNotFoundException($"WarfareVehicleInfo not available for {spawnInfo.Vehicle.ToDisplayString()}");
         }
 
-        IBuildable? spawner = spawn.Spawner;
-        if (spawner == null || spawner.IsDead)
+        IBuildable? spawnerBuildable = spawnInfo.Spawner;
+        if (spawnerBuildable == null || spawnerBuildable.IsDead)
         {
             throw new InvalidOperationException("Spawner buildable no longer exists.");
         }
 
-        Quaternion spawnRotation = spawner.Rotation * BarricadeUtility.InverseDefaultBarricadeRotation;
+        Quaternion spawnRotation = spawnerBuildable.Rotation * BarricadeUtility.InverseDefaultBarricadeRotation;
 
-        Vector3 spawnPosition = spawner.Position + Vector3.up * VehicleSpawnOffset;
+        Vector3 spawnPosition = spawnerBuildable.Position + Vector3.up * VehicleSpawnOffset;
 
-        InteractableVehicle vehicle = await SpawnVehicleAsync(spawn.Vehicle, spawnPosition, spawnRotation, paintColor: vehicleInfo.PaintColor, token: token);
+        InteractableVehicle vehicle = await SpawnVehicleAsync(spawnInfo.Vehicle, spawnPosition, spawnRotation, paintColor: vehicleInfo.PaintColor, token: token);
         await UniTask.SwitchToMainThread(token);
 
-        spawn.LinkVehicle(vehicle);
+        spawner?.LinkVehicle(vehicle);
 
-        _logger.LogDebug("Spawned new {0} at {1}.", spawn.Vehicle.ToDisplayString(), spawnPosition);
+        _logger.LogDebug("Spawned new {0} at {1}.", spawnInfo.Vehicle.ToDisplayString(), spawnPosition);
         return vehicle;
     }
 

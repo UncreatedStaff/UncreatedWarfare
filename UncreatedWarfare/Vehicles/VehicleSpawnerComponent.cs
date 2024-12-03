@@ -2,6 +2,7 @@
 using System;
 using System.Linq;
 using Uncreated.Warfare.Buildables;
+using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Interaction.Requests;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Locations;
@@ -10,6 +11,8 @@ using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Signs;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Zones;
+using UnityEngine;
+using YamlDotNet.Core;
 
 namespace Uncreated.Warfare.Vehicles;
 
@@ -23,10 +26,12 @@ public class VehicleSpawnerComponent : MonoBehaviour, IManualOnDestroy, IRequest
     public const float IdleDistance = 200;
     public const float EnemyIdleDistance = 40;
 
+    private ILogger _logger;
     private SignInstancer _signInstancer;
     private IPlayerService _playerService;
     private ITeamManager<Team> _teamManager;
     private VehicleService _vehicleService;
+    private VehicleSpawnerSelector? _vehicleSpawnerSelector;
 
     private bool _hasInitialized;
     private float _destroyedTime;
@@ -36,11 +41,15 @@ public class VehicleSpawnerComponent : MonoBehaviour, IManualOnDestroy, IRequest
     private ZoneStore _zoneStore;
     private Zone? _lastLocation;
     private Vector2 _lastZoneCheckPos;
-    private VehicleSpawnerState _state = VehicleSpawnerState.Uninitialized;
+    private VehicleSpawnerState _state = VehicleSpawnerState.Initializing;
     private bool _isSpawningVehicle;
 
     public VehicleSpawnInfo SpawnInfo { get; private set; }
     public WarfareVehicleInfo VehicleInfo { get; private set; }
+    /// <summary>
+    /// A vehicle that has been spawned from this spawn.
+    /// </summary>
+    public InteractableVehicle? LinkedVehicle { get; private set; }
 
     public VehicleSpawnerState State
     {
@@ -51,7 +60,6 @@ public class VehicleSpawnerComponent : MonoBehaviour, IManualOnDestroy, IRequest
                 return;
 
             // todo back to auto-property
-            WarfareModule.Singleton.GlobalLogger.LogConditional("State updated for {0}. {1} -> {2}.", VehicleInfo.Vehicle.ToDisplayString(), _state, value);
             _state = value;
         }
     }
@@ -61,12 +69,17 @@ public class VehicleSpawnerComponent : MonoBehaviour, IManualOnDestroy, IRequest
         SpawnInfo = spawnInfo;
         VehicleInfo = vehicle;
 
-        _state = VehicleSpawnerState.Uninitialized;
+        _logger = serviceProvider.GetRequiredService<ILogger<VehicleSpawnerComponent>>();
         _signInstancer = serviceProvider.GetRequiredService<SignInstancer>();
         _playerService = serviceProvider.GetRequiredService<IPlayerService>();
         _teamManager = serviceProvider.GetRequiredService<ITeamManager<Team>>();
         _zoneStore = serviceProvider.GetRequiredService<ZoneStore>();
         _vehicleService = serviceProvider.GetRequiredService<VehicleService>();
+        _vehicleSpawnerSelector = serviceProvider.GetService<VehicleSpawnerSelector>();
+        State = IsEnabledInLayout() ? VehicleSpawnerState.Initializing : VehicleSpawnerState.LayoutDisabled;
+        _hasInitialized = false;
+
+        _logger.LogDebug($"Initialized spawner: {spawnInfo.UniqueName}");
     }
 
     /// <summary>
@@ -102,12 +115,32 @@ public class VehicleSpawnerComponent : MonoBehaviour, IManualOnDestroy, IRequest
 
     private void Update(float rt)
     {
+        if (Mathf.Round(rt) % 10 == 0)
+        {
+            
+            if (!IsEnabledInLayout())
+            {
+                State = VehicleSpawnerState.LayoutDisabled;
+                TryDestroyLinkedVehicle();
+
+                UpdateLinkedSigns(rt);
+            }
+            else if (State == VehicleSpawnerState.LayoutDisabled)
+            {
+                State = VehicleSpawnerState.Initializing;
+                _hasInitialized = false;
+            }
+        }
+
+        if (State == VehicleSpawnerState.LayoutDisabled)
+            return;
+
         if (_isSpawningVehicle)
             return;
      
         bool forceUpdate = false;
 
-        if (State == VehicleSpawnerState.Uninitialized)
+        if (State == VehicleSpawnerState.Initializing)
         {
             if (!_hasInitialized)
             {
@@ -115,7 +148,7 @@ public class VehicleSpawnerComponent : MonoBehaviour, IManualOnDestroy, IRequest
                 _hasInitialized = true;
             }
 
-            if (SpawnInfo.LinkedVehicle != null && !SpawnInfo.LinkedVehicle.isExploded && !SpawnInfo.LinkedVehicle.isDead && !SpawnInfo.LinkedVehicle.isDrowned)
+            if (LinkedVehicle != null && !LinkedVehicle.isExploded && !LinkedVehicle.isDead && !LinkedVehicle.isDrowned)
             {
                 State = VehicleSpawnerState.Ready;
                 forceUpdate = true;
@@ -125,7 +158,7 @@ public class VehicleSpawnerComponent : MonoBehaviour, IManualOnDestroy, IRequest
             }
         }
         // Destroyed
-        else if (SpawnInfo.LinkedVehicle == null || SpawnInfo.LinkedVehicle.isExploded || SpawnInfo.LinkedVehicle.isDead || SpawnInfo.LinkedVehicle.isDrowned)
+        else if (LinkedVehicle == null || LinkedVehicle.isExploded || LinkedVehicle.isDead || LinkedVehicle.isDrowned)
         {
             if (State != VehicleSpawnerState.Destroyed)
             {
@@ -140,7 +173,7 @@ public class VehicleSpawnerComponent : MonoBehaviour, IManualOnDestroy, IRequest
             UpdateLinkedSignsTick(rt);
         }
         // Ready
-        else if (SpawnInfo.LinkedVehicle.lockedOwner.m_SteamID == 0 && SpawnInfo.LinkedVehicle.isLocked)
+        else if (LinkedVehicle.lockedOwner.m_SteamID == 0 && LinkedVehicle.isLocked)
         {
             if (State != VehicleSpawnerState.Ready)
             {
@@ -152,7 +185,7 @@ public class VehicleSpawnerComponent : MonoBehaviour, IManualOnDestroy, IRequest
             }
         }
         // Idle
-        else if (IsIdle(SpawnInfo.LinkedVehicle))
+        else if (IsIdle(LinkedVehicle))
         {
             if (State != VehicleSpawnerState.Idle)
             {
@@ -177,7 +210,7 @@ public class VehicleSpawnerComponent : MonoBehaviour, IManualOnDestroy, IRequest
                 State = VehicleSpawnerState.Deployed;
             }
 
-            Vector3 vehiclePos = SpawnInfo.LinkedVehicle.transform.position;
+            Vector3 vehiclePos = LinkedVehicle.transform.position;
 
             // every 2.5 meters moved horizontally re-check closest zone to update sign's in-use location
             if (_lastLocation == null || MathUtility.SquaredDistance(in vehiclePos, in _lastZoneCheckPos) > 2.5 * 2.5)
@@ -214,7 +247,7 @@ public class VehicleSpawnerComponent : MonoBehaviour, IManualOnDestroy, IRequest
 
     private void CheckRespawn(float rt)
     {
-        if (State is not VehicleSpawnerState.Idle and not VehicleSpawnerState.Destroyed)
+        if (State is not VehicleSpawnerState.Idle and not VehicleSpawnerState.Destroyed and not VehicleSpawnerState.LayoutDisabled)
             return;
 
         if (rt - (State == VehicleSpawnerState.Idle ? _idleTime : _destroyedTime) >= VehicleInfo.RespawnTime.TotalSeconds)
@@ -225,12 +258,7 @@ public class VehicleSpawnerComponent : MonoBehaviour, IManualOnDestroy, IRequest
 
     public void RespawnVehicle()
     {
-        // WarfareModule.Singleton.GlobalLogger.LogInformation("Respawning");
-        if (SpawnInfo.LinkedVehicle != null && !(SpawnInfo.LinkedVehicle.isExploded || SpawnInfo.LinkedVehicle.isDead))
-        {
-            VehicleManager.askVehicleDestroy(SpawnInfo.LinkedVehicle);
-            SpawnInfo.UnlinkVehicle();
-        }
+        TryDestroyLinkedVehicle();
 
         UniTask.Create(async () =>
         {
@@ -248,6 +276,14 @@ public class VehicleSpawnerComponent : MonoBehaviour, IManualOnDestroy, IRequest
                 _isSpawningVehicle = false;
             }
         });
+    }
+    public void TryDestroyLinkedVehicle()
+    {
+        if (LinkedVehicle != null && !(LinkedVehicle.isExploded || LinkedVehicle.isDead))
+        {
+            VehicleManager.askVehicleDestroy(LinkedVehicle);
+            UnlinkVehicle();
+        }
     }
 
     private void UpdateLinkedSignsTick(float rt)
@@ -279,7 +315,7 @@ public class VehicleSpawnerComponent : MonoBehaviour, IManualOnDestroy, IRequest
         _lastSignUpdate = rt;
         if (Provider.clients.Count == 0)
             return;
-        foreach (IBuildable sign in SpawnInfo.SignInstanceIds)
+        foreach (IBuildable sign in SpawnInfo.Signs)
         {
             if (sign.IsStructure || sign.IsDead)
                 continue;
@@ -310,9 +346,60 @@ public class VehicleSpawnerComponent : MonoBehaviour, IManualOnDestroy, IRequest
             return null;
 
         VehicleSpawnInfo info = comp.Spawner.SpawnInfo;
-        Destroy(comp.Spawner);
+        Destroy(comp);
         return info;
     }
+    /// <summary>
+    /// Link this spawn to a vehicle.
+    /// </summary>
+    internal void LinkVehicle(InteractableVehicle vehicle)
+    {
+        GameThread.AssertCurrent();
+
+        if (vehicle == LinkedVehicle)
+            return;
+
+        InteractableVehicle? oldVehicle = LinkedVehicle;
+        LinkedVehicle = vehicle;
+        if (oldVehicle != null && oldVehicle.TryGetComponent(out VehicleComponent oldVehicleComponent) && oldVehicleComponent.Spawn == this)
+        {
+            oldVehicleComponent.UnlinkFromSpawn(this);
+        }
+
+        if (vehicle.TryGetComponent(out VehicleComponent newVehicleComponent))
+        {
+            newVehicleComponent.LinkToSpawn(this);
+        }
+
+        UpdateLinkedSigns();
+    }
+    
+
+    /// <summary>
+    /// Unlink this spawn from it's <see cref="LinkedVehicle"/>.
+    /// </summary>
+    internal void UnlinkVehicle()
+    {
+        GameThread.AssertCurrent();
+
+        InteractableVehicle? oldVehicle = LinkedVehicle;
+        if (oldVehicle is null)
+            return;
+        LinkedVehicle = null;
+
+        UpdateLinkedSigns();
+
+        if (oldVehicle == null || !oldVehicle.TryGetComponent(out VehicleComponent oldVehicleComponent))
+        {
+            return;
+        }
+
+        if (oldVehicleComponent.Spawn == this)
+        {
+            oldVehicleComponent.UnlinkFromSpawn(this);
+        }
+    }
+    public bool IsEnabledInLayout() => _vehicleSpawnerSelector?.IsEnabledInLayout(SpawnInfo) ?? true;
 
     /// <summary>
     /// Tracks the spawner the player is linking a sign to.
@@ -338,6 +425,7 @@ public enum VehicleSpawnerState
     Deployed,
     Idle,
     Ready,
-    Uninitialized
+    Initializing,
+    LayoutDisabled,
 }
 #pragma warning restore IDE0051

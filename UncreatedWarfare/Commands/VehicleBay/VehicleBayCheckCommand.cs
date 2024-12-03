@@ -41,6 +41,6 @@ public class VehicleBayCheckCommand : IExecutableCommand
             throw Context.Reply(_translations.SpawnNotRegistered);
         }
 
-        Context.Reply(_translations.VehicleBayCheck, spawn.Spawner.InstanceId, spawn.Vehicle.GetAsset()!, spawn.Vehicle.Guid);
+        Context.Reply(_translations.VehicleBayCheck, spawn.UniqueName, spawn.Spawner.InstanceId, spawn.Vehicle.GetAsset()!, spawn.Vehicle.Guid);
     }
 }

@@ -52,14 +52,12 @@ public class VehicleBayLinkCommand : IExecutableCommand
             if (info == null)
                 throw Context.Reply(_translations.SpawnNotRegistered);
 
-            // updates sign instance via the SignTextChanged event
-            BarricadeUtility.SetServersideSignText(drop, "vbs_" + info.Vehicle.Guid.ToString("N", CultureInfo.InvariantCulture));
-
-            await _buildableSaver.SaveBuildableAsync(buildable, token);
-
+            
             await UniTask.SwitchToMainThread(token);
 
-            info.SignInstanceIds.Add(buildable);
+            if (!info.Signs.Any(s => s.Equals(buildable)))
+                info.Signs.Add(buildable);
+
             await _spawnerStore.AddOrUpdateSpawnAsync(info, token);
 
             await UniTask.SwitchToMainThread(token);
@@ -67,6 +65,12 @@ public class VehicleBayLinkCommand : IExecutableCommand
             Context.Reply(_translations.VehicleBayLinkFinished, info.Vehicle.GetAsset()!);
             Context.LogAction(ActionLogType.LinkedVehicleBaySign,
                 $"{drop.asset.ActionLogDisplay()} ID: {drop.instanceID} - Spawner Instance ID: {info.Spawner.InstanceId} ({(info.Spawner.IsStructure ? "STRUCTURE" : "BARRICADE")}");
+
+            // updates sign instance via the SignTextChanged event
+            BarricadeUtility.SetServersideSignText(drop, "vbs_" + info.Vehicle.Guid.ToString("N", CultureInfo.InvariantCulture));
+
+            await _buildableSaver.SaveBuildableAsync(buildable, token);
+
         }
         else if (spawn.Spawner.Model.TryGetComponent(out VehicleSpawnerComponent component))
         {

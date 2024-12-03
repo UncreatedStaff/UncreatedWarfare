@@ -9,6 +9,7 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using Uncreated.Warfare.Util;
+using YamlDotNet.Core.Tokens;
 
 namespace Uncreated.Warfare;
 
@@ -131,6 +132,7 @@ public static class UCAssetManager
         if (Guid.TryParse(assetName, out Guid guid))
         {
             asset = Assets.find<TAsset>(guid);
+            
             multipleResultsFound = false;
             return asset is not null && (selector is null || selector(asset));
         }

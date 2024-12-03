@@ -4,6 +4,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Data;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
@@ -1053,7 +1054,7 @@ public class AssetLinkYamlConverter : IYamlTypeConverter
 {
     public bool Accepts(Type type)
     {
-        return type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IAssetLink<>);
+        return Array.Exists(type.GetInterfaces(), i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IAssetLink<>));
     }
 
     public object? ReadYaml(IParser parser, Type type, ObjectDeserializer rootDeserializer)

@@ -43,13 +43,13 @@ public class VehicleBayUnlinkCommand : IExecutableCommand
         VehicleAsset? firstUnlink = null;
         foreach (VehicleSpawnInfo spawner in _spawnerStore.Spawns)
         {
-            int index = spawner.SignInstanceIds.IndexOf(buildable);
+            int index = spawner.Signs.IndexOf(buildable);
             if (index == -1)
             {
                 continue;
             }
 
-            spawner.SignInstanceIds.RemoveAt(index);
+            spawner.Signs.RemoveAt(index);
             anyUpdates = true;
             firstUnlink ??= spawner.Vehicle.GetAsset();
         }

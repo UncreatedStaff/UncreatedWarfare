@@ -4,6 +4,7 @@ using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Commands;
@@ -49,7 +50,7 @@ public class VehicleBayDeregisterCommand : IExecutableCommand
         await _spawnerStore.RemoveSpawnAsync(spawn, token);
         await _buildableSaver.DiscardBuildableAsync(buildable, token);
 
-        List<IBuildable> signs = spawn.SignInstanceIds.ToList();
+        List<IBuildable> signs = spawn.Signs.ToList();
         foreach (IBuildable sign in signs)
         {
             await _buildableSaver.DiscardBuildableAsync(sign, token);
@@ -64,8 +65,10 @@ public class VehicleBayDeregisterCommand : IExecutableCommand
             }
         }
 
+        GameObject.Destroy(spawn.Spawner.Model.GetComponent<VehicleSpawnerComponent>());
+
         Context.LogAction(ActionLogType.DeregisteredSpawn,
-            $"{spawn.Vehicle.ToDisplayString()} - Spawner Instance ID: {spawn.Spawner.InstanceId} ({(spawn.Spawner.IsStructure ? "STRUCTURE" : "BARRICADE")}.");
-        Context.Reply(_translations.SpawnDeregistered!, spawn.Vehicle.GetAsset());
+            $"{spawn.Vehicle.ToDisplayString()} - Spawner '{spawn.UniqueName}' (Instance ID: {spawn.Spawner.InstanceId} {(spawn.Spawner.IsStructure ? "STRUCTURE" : "BARRICADE")}..");
+        Context.Reply(_translations.SpawnDeregistered!, spawn.UniqueName, spawn.Vehicle.GetAsset());
     }
 }

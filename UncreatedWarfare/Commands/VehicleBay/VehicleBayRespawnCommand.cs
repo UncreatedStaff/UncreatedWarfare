@@ -39,8 +39,7 @@ public class VehicleBayRespawnCommand : IExecutableCommand
 
         await UniTask.SwitchToMainThread(token);
 
-        VehicleSpawnInfo? spawn = _spawnerStore.Spawns.FirstOrDefault(x => x.Spawner.Equals(buildable));
-        if (spawn == null)
+        if (!buildable.Model.TryGetComponent(out VehicleSpawnerComponent spawn))
         {
             throw Context.Reply(_translations.SpawnNotRegistered);
         }
@@ -51,9 +50,9 @@ public class VehicleBayRespawnCommand : IExecutableCommand
             spawn.UnlinkVehicle();
         }
 
-        await _vehicleService.SpawnVehicleAsync(spawn, token);
+        await _vehicleService.SpawnVehicleAsync(spawn.SpawnInfo, token);
         Context.LogAction(ActionLogType.VehicleBayForceSpawn,
-            $"{spawn.Vehicle.ToDisplayString()} - Spawner Instance ID: {spawn.Spawner.InstanceId} ({(spawn.Spawner.IsStructure ? "STRUCTURE" : "BARRICADE")}.");
-        Context.Reply(_translations.VehicleBayForceSuccess!, spawn.Vehicle.GetAsset());
+            $"{spawn.SpawnInfo.Vehicle.ToDisplayString()} - Spawner Instance ID: {buildable.InstanceId} ({(buildable.IsStructure ? "STRUCTURE" : "BARRICADE")}.");
+        Context.Reply(_translations.VehicleBayForceSuccess!, spawn.SpawnInfo.Vehicle.GetAsset());
     }
 }

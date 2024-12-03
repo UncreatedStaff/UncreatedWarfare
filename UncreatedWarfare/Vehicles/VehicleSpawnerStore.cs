@@ -1,14 +1,23 @@
 ﻿using DanielWillett.ReflectionTools;
 using DanielWillett.SpeedBytes;
 using DanielWillett.SpeedBytes.Unity;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.FileProviders;
+using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Database;
+using Uncreated.Warfare.Events.Models.Fobs;
+using Uncreated.Warfare.Events.Models.Vehicles;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
+using UnityEngine;
+using UnityEngine.Profiling;
 
 namespace Uncreated.Warfare.Vehicles;
 
@@ -20,8 +29,21 @@ namespace Uncreated.Warfare.Vehicles;
 [Priority(-1 /* load after BuildableSaver */)]
 public class VehicleSpawnerStore : ILayoutHostedService
 {
+    public class VehicleSpawnRecord
+    {
+        public required string UniqueName { get; set; }
+        public required uint BuildableInstanceId { get; set; }
+        public required IAssetLink<VehicleAsset> VehicleAsset { get; set; }
+        public required List<uint> SignInstanceIds { get; set; }
+        public bool IsStructure { get; set; } = false;
+    }
+
+    private YamlDataStore<List<VehicleSpawnRecord>> _dataStore;
+    private readonly WarfareModule _warfare;
+    private readonly IConfiguration _configuration;
     private readonly ILogger<VehicleSpawnerStore> _logger;
     private readonly List<VehicleSpawnInfo> _spawns;
+    private PhysicalFileProvider _fileProvider;
 
     /// <summary>
     /// List of all spawns.
@@ -29,9 +51,12 @@ public class VehicleSpawnerStore : ILayoutHostedService
     /// <remarks>Use <see cref="SaveAsync"/> or <see cref="AddOrUpdateSpawnAsync"/> when making changes.</remarks>
     public IReadOnlyList<VehicleSpawnInfo> Spawns { get; }
 
-    public VehicleSpawnerStore(ILogger<VehicleSpawnerStore> logger)
+    public VehicleSpawnerStore(WarfareModule warfare, IConfiguration configuration, ILogger<VehicleSpawnerStore> logger)
     {
+        _warfare = warfare;
+        _configuration = configuration;
         _logger = logger;
+        _dataStore = new YamlDataStore<List<VehicleSpawnRecord>>(GetFolderPath(), logger, reloadOnFileChanged: false, () => new List<VehicleSpawnRecord>());
         _spawns = new List<VehicleSpawnInfo>(32);
         Spawns = new ReadOnlyCollection<VehicleSpawnInfo>(_spawns);
     }
@@ -53,7 +78,29 @@ public class VehicleSpawnerStore : ILayoutHostedService
     UniTask ILayoutHostedService.StopAsync(CancellationToken token)
     {
         Level.onLevelLoaded -= OnLevelLoaded;
+        _dataStore?.Dispose();
         return UniTask.CompletedTask;
+    }
+    private void OnLevelLoaded(int level)
+    {
+        if (level != Level.BUILD_INDEX_GAME)
+            return;
+
+        Level.onLevelLoaded -= OnLevelLoaded;
+
+        _dataStore.Reload();
+        ReloadVehicleSpawns(_dataStore.Data);
+    }
+    private static string GetFolderPath()
+    {
+        return Path.Combine(
+            UnturnedPaths.RootDirectory.FullName,
+            ServerSavedata.directoryName,
+            Provider.serverID,
+            "Level",
+            Level.info.name,
+            "VehicleSpawners.yml"
+        );
     }
 
     /// <summary>
@@ -63,12 +110,42 @@ public class VehicleSpawnerStore : ILayoutHostedService
     {
         await UniTask.SwitchToMainThread(token);
 
-        if (!_spawns.Contains(spawnInfo))
+
+        int existingSpawnerIndex = _spawns.FindIndex(s => s.Spawner.Equals(spawnInfo.Spawner));
+
+        if (existingSpawnerIndex != -1)
+        {
+            _spawns[existingSpawnerIndex] = spawnInfo;
+        }
+        else
         {
             _spawns.Add(spawnInfo);
         }
 
-        Save(GetFilePath());
+        int existingRecordIndex = _dataStore.Data.FindIndex(s => s.BuildableInstanceId == spawnInfo.Spawner.InstanceId && s.IsStructure == spawnInfo.Spawner.IsStructure);
+
+        VehicleSpawnRecord record = new VehicleSpawnRecord
+        {
+            UniqueName = spawnInfo.UniqueName,
+            BuildableInstanceId = spawnInfo.Spawner.InstanceId,
+            VehicleAsset = spawnInfo.Vehicle,
+            SignInstanceIds = spawnInfo.Signs.Select(s => s.InstanceId).ToList(),
+            IsStructure = spawnInfo.Spawner.IsStructure
+        };
+
+        if (existingSpawnerIndex != -1)
+        {
+            _dataStore.Data[existingSpawnerIndex] = record;
+        }
+        else
+        {
+            _dataStore.Data.Add(record);
+        }
+
+        _dataStore.Data.Sort((x, y) => x.UniqueName.CompareTo(y.UniqueName));
+        _dataStore.Save();
+
+        PrintSpawns();
     }
 
     /// <summary>
@@ -78,10 +155,17 @@ public class VehicleSpawnerStore : ILayoutHostedService
     {
         await UniTask.SwitchToMainThread(token);
 
-        if (!_spawns.Remove(spawnInfo))
+        int removed = _dataStore.Data.RemoveAll(s => s.BuildableInstanceId == spawnInfo.Spawner.InstanceId && s.IsStructure == spawnInfo.Spawner.IsStructure);
+
+        _spawns.Remove(spawnInfo);
+
+        _dataStore.Save();
+
+        PrintSpawns();
+
+        if (removed != 1)
             return false;
 
-        Save(GetFilePath());
         return true;
     }
 
@@ -92,74 +176,24 @@ public class VehicleSpawnerStore : ILayoutHostedService
     {
         await UniTask.SwitchToMainThread(token);
 
-        Save(GetFilePath());
+        _dataStore.Save(); // todo: make an async Save() function
     }
 
-    private static string GetFilePath()
+    private void ReloadVehicleSpawns(List<VehicleSpawnRecord> records)
     {
-        return Path.Combine(
-            UnturnedPaths.RootDirectory.FullName,
-            ServerSavedata.directoryName,
-            Provider.serverID,
-            "Level",
-            Level.info.name,
-            "VehicleSaves.dat"
-        );
-    }
-
-    private void OnLevelLoaded(int level)
-    {
-        if (level != Level.BUILD_INDEX_GAME)
-            return;
-
-        Level.onLevelLoaded -= OnLevelLoaded;
-
-        string filePath = GetFilePath();
-        if (!File.Exists(filePath))
-        {
-            Save(filePath);
-            return;
-        }
-
-        try
-        {
-            LoadIntl(filePath);
-        }
-        catch (IOException ex)
-        {
-            _logger.LogWarning(ex, "Failed to load data file.");
-        }
-    }
-
-    private void LoadIntl(string filePath)
-    {
-        using FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-        ByteReader reader = new ByteReader();
-        reader.LoadNew(fs);
-
-        // version
-        _ = reader.ReadUInt8();
-
-        int spawnCount = reader.ReadInt32();
-
         _spawns.Clear();
-
-        for (int i = 0; i < spawnCount; ++i)
+        _logger.LogDebug($"Vehicle Spawner Store loading spawns...");
+        foreach (VehicleSpawnRecord rec in records)
         {
-            Guid vehicleGuid = reader.ReadGuid();
-
-            Vector3 spawnPosition = reader.ReadVector3();
-            uint spawnInstanceId = reader.ReadUInt32();
-            Guid spawnAsset = reader.ReadGuid();
-            bool isSpawnStructure = reader.ReadBool();
-
             IBuildable? spawner = null;
-            if (isSpawnStructure)
+            if (rec.IsStructure)
             {
-                StructureInfo spawnerInfo = StructureUtility.FindStructure(spawnInstanceId, AssetLink.Create<ItemStructureAsset>(spawnAsset), spawnPosition);
+                StructureInfo spawnerInfo = StructureUtility.FindStructure(rec.BuildableInstanceId);
                 if (spawnerInfo.Drop == null)
                 {
-                    _logger.LogWarning("Missing spawner structure {0}, instance ID {1} at {2} for vehicle spawner for {3}.", spawnAsset, spawnInstanceId, spawnPosition, vehicleGuid);
+                    _logger.LogWarning("Missing spawner structure for vehicle spawner '{0}' (Instance ID: {1} Vehicle Asset: {2}. " +
+                        "This spawner may be removed from config, or fixed by editing the Instance ID.",
+                        rec.UniqueName, rec.BuildableInstanceId, rec.VehicleAsset);
                 }
                 else
                 {
@@ -168,10 +202,12 @@ public class VehicleSpawnerStore : ILayoutHostedService
             }
             else
             {
-                BarricadeInfo spawnerInfo = BarricadeUtility.FindBarricade(spawnInstanceId, AssetLink.Create<ItemBarricadeAsset>(spawnAsset), spawnPosition);
+                BarricadeInfo spawnerInfo = BarricadeUtility.FindBarricade(rec.BuildableInstanceId);
                 if (spawnerInfo.Drop == null)
                 {
-                    _logger.LogWarning("Missing spawner barricade {0}, instance ID {1} at {2} for vehicle spawner for {3}.", spawnAsset, spawnInstanceId, spawnPosition, vehicleGuid);
+                    _logger.LogWarning("Missing spawner barricade for vehicle spawner '{0}' (Instance ID: {1} Vehicle Asset: {2}. " +
+                        "This spawner may be removed from config, or fixed by editing the Instance ID.",
+                        rec.UniqueName, rec.BuildableInstanceId, rec.VehicleAsset);
                 }
                 else
                 {
@@ -179,97 +215,40 @@ public class VehicleSpawnerStore : ILayoutHostedService
                 }
             }
 
-            bool willSkip = spawner == null;
+            if (spawner == null)
+                continue;
 
             VehicleSpawnInfo spawnInfo = new VehicleSpawnInfo
             {
-                Vehicle = AssetLink.Create<VehicleAsset>(vehicleGuid),
-                Spawner = spawner!
+                UniqueName = rec.UniqueName,
+                Vehicle = AssetLink.Create<VehicleAsset>(rec.VehicleAsset),
+                Spawner = spawner
             };
 
-            int signCount = reader.ReadInt32();
-            if (!willSkip && spawnInfo.SignInstanceIds is List<IBuildable> list)
+            foreach (uint signInstanceId in rec.SignInstanceIds)
             {
-                list.Capacity = signCount;
-            }
-
-            for (int j = 0; j < signCount; ++j)
-            {
-                Vector3 position = reader.ReadVector3();
-                uint instanceId = reader.ReadUInt32();
-                Guid asset = reader.ReadGuid();
-                if (willSkip)
-                    continue;
-
-                BarricadeInfo signInfo = BarricadeUtility.FindBarricade(instanceId, AssetLink.Create<ItemBarricadeAsset>(asset), position);
+                BarricadeInfo signInfo = BarricadeUtility.FindBarricade(signInstanceId);
                 if (signInfo.Drop == null)
                 {
-                    _logger.LogInformation("Missing sign {0}, instance ID {1} at {2} for vehicle spawner for {3}.", asset, instanceId, position, vehicleGuid);
+                    _logger.LogWarning("Missing sign barricade for linked vehicle spawner '{0}' (Sign Instance ID: {1}). " +
+                        "This sign may be removed from config, or fixed by editing the Instance ID.",
+                        rec.UniqueName, signInstanceId, rec.VehicleAsset);
                 }
                 else
                 {
-                    spawnInfo.SignInstanceIds.Add(new BuildableBarricade(signInfo.Drop));
+                    spawnInfo.Signs.Add(new BuildableBarricade(signInfo.Drop));
                 }
             }
-
-            if (!willSkip)
-            {
-                _spawns.Add(spawnInfo);
-            }
+            _spawns.Add(spawnInfo);
         }
+        _logger.LogDebug($"Vehicle Spawner Store loaded {_dataStore.Data.Count} spawns.");
+        PrintSpawns();
     }
-
-    private void Save(string filePath)
+    private void PrintSpawns()
     {
-        Thread.BeginCriticalRegion();
-        try
+        foreach(var spawn in _spawns)
         {
-            SaveIntl(filePath);
+            _logger.LogDebug($"     {spawn}");
         }
-        finally
-        {
-            Thread.EndCriticalRegion();
-        }
-    }
-
-    private void SaveIntl(string filePath)
-    {
-        using FileStream fs = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.Read);
-
-        ByteWriter writer = new ByteWriter
-        {
-            Stream = fs
-        };
-
-        // version
-        writer.Write((byte)0);
-
-        int spawnCount = _spawns.Count;
-        writer.Write(spawnCount);
-        for (int i = 0; i < spawnCount; ++i)
-        {
-            VehicleSpawnInfo spawnInfo = _spawns[i];
-
-            writer.Write(spawnInfo.Vehicle.Guid);
-
-            writer.Write(spawnInfo.Spawner.Position);
-            writer.Write(spawnInfo.Spawner.InstanceId);
-            writer.Write(spawnInfo.Spawner.Asset.GUID);
-            writer.Write(spawnInfo.Spawner.IsStructure);
-
-            IList<IBuildable> signs = spawnInfo.SignInstanceIds;
-            int signCount = signs.Count;
-
-            writer.Write(signCount);
-            for (int s = 0; s < signCount; ++s)
-            {
-                IBuildable sign = signs[s];
-                writer.Write(sign.Position);
-                writer.Write(sign.InstanceId);
-                writer.Write(sign.Asset.GUID);
-            }
-        }
-
-        writer.Flush();
     }
 }

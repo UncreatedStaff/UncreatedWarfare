@@ -12,6 +12,9 @@ Parameters:
         Type: Look/SDG.Unturned.ItemPlaceableAsset
         Description: "The <param 'spawner'/> to link."
         Parameters:
+          - Name: uniqueName
+            Type: string
+            Description: "A unique name to identify this <param 'spawner'/>."
           - Name: vehicle
             Type: SDG.Unturned.VehicleAsset
             Description: "The <param 'vehicle'/> to be linked to the <param 'spawner'/>."
