@@ -1,7 +1,7 @@
 ﻿using Uncreated.Warfare.Services;
 
 namespace Uncreated.Warfare.Zones;
-public class ElectricalGridService : IHostedService
+public class ElectricalGridService : ILevelHostedService
 {
     private readonly ILogger<ElectricalGridService> _logger;
 
@@ -12,11 +12,9 @@ public class ElectricalGridService : IHostedService
         _logger = logger;
     }
 
-    UniTask IHostedService.StartAsync(CancellationToken token)
+    /// <inheritdoc />
+    public UniTask LoadLevelAsync(CancellationToken token)
     {
-        // todo run this on level load.
-        return UniTask.CompletedTask;
-        
         if (!Level.info.configData.Has_Global_Electricity)
         {
             _logger.LogWarning("Level does not have global electricity enabled, electrical grid effects will not work!");
@@ -27,11 +25,6 @@ public class ElectricalGridService : IHostedService
             Enabled = true;
         }
 
-        return UniTask.CompletedTask;
-    }
-
-    UniTask IHostedService.StopAsync(CancellationToken token)
-    {
         return UniTask.CompletedTask;
     }
 }

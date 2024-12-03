@@ -50,7 +50,6 @@ public class VehicleSpawnerComponent : MonoBehaviour, IManualOnDestroy, IRequest
             if (_state == value)
                 return;
 
-            // todo back to auto-property
             WarfareModule.Singleton.GlobalLogger.LogConditional("State updated for {0}. {1} -> {2}.", VehicleInfo.Vehicle.ToDisplayString(), _state, value);
             _state = value;
         }

@@ -7,6 +7,7 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Injures;
+using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
@@ -138,7 +139,7 @@ public class DeathTracker : IHostedService
         e.Cause = cause;
         e.MessageCause = cause;
         e.Point = dead.Position;
-       // todo e.Session = dead.CurrentSession;
+        e.Session = dead.CurrentSession;
         switch (cause)
         {
             // death causes only possible through PvE:
@@ -179,11 +180,12 @@ public class DeathTracker : IHostedService
         e.Killer = killer;
         if (killer != null)
         {
-            // todo e.KillerSession = killer.CurrentSession;
-            // todo e.KillerPoint = killer.Position;
-            // todo e.KillerKitName = killer.ActiveKitName;
-            // todo e.KillerClass = killer.KitClass;
-            // todo e.KillerBranch = killer.KitBranch;
+            e.KillerSession = killer.CurrentSession;
+            e.KillerPoint = killer.Position;
+            KitPlayerComponent killerKitComp = killer.Component<KitPlayerComponent>();
+            e.KillerKitName = killerKitComp.ActiveKitId;
+            e.KillerClass = killerKitComp.ActiveClass;
+            e.KillerBranch = killerKitComp.ActiveBranch;
         }
         else
         {
@@ -272,8 +274,8 @@ public class DeathTracker : IHostedService
                     e.ThirdParty = triggerer;
                     e.ThirdPartyId = triggerer.Steam64;
                     e.ThirdPartyPoint = triggerer.Position;
-                    // todo e.ThirdPartySession = triggerer.CurrentSession;
-                    // todo e.ThirdPartyTeam = triggerer.GetTeam();
+                    e.ThirdPartySession = triggerer.CurrentSession;
+                    e.ThirdPartyTeam = triggerer.Team;
 
                     // if all 3 parties are on the same team count it as a teamkill on the triggerer, as it's likely intentional
                     if (triggerer.Team == deadTeam && killer != null && killer.Team == deadTeam)
@@ -358,7 +360,7 @@ public class DeathTracker : IHostedService
                             e.ThirdParty = e.DriverAssist;
                             e.ThirdPartyId = e.DriverAssist.Steam64;
                             e.ThirdPartyPoint = e.DriverAssist.Position;
-                            // todo e.ThirdPartySession = e.DriverAssist.CurrentSession;
+                            e.ThirdPartySession = e.DriverAssist.CurrentSession;
                             e.MessageFlags |= DeathFlags.Player3;
                         }
                     }
@@ -479,7 +481,7 @@ public class DeathTracker : IHostedService
                         e.ThirdParty = e.DriverAssist;
                         e.ThirdPartyId = e.DriverAssist.Steam64;
                         e.ThirdPartyPoint = e.DriverAssist.Position;
-                        // todo e.ThirdPartySession = e.DriverAssist.CurrentSession;
+                        e.ThirdPartySession = e.DriverAssist.CurrentSession;
                         e.MessageFlags |= DeathFlags.Player3;
                     }
                 }
@@ -510,7 +512,7 @@ public class DeathTracker : IHostedService
                                 e.ThirdParty = e.DriverAssist;
                                 e.ThirdPartyId = e.DriverAssist.Steam64;
                                 e.ThirdPartyPoint = e.DriverAssist.Position;
-                                // todo e.ThirdPartySession = e.DriverAssist.CurrentSession;
+                                e.ThirdPartySession = e.DriverAssist.CurrentSession;
                                 e.MessageFlags |= DeathFlags.Player3;
                             }
                         }

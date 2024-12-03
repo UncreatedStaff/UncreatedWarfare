@@ -21,7 +21,6 @@ public class FobItemRecord : InstigatedPlayerRecord
 
     public FobRecord Fob { get; set; }
 
-    //[ExcludedEnum(ShovelableType.Radio)] todo: what's this?
     public ShovelableType Type { get; set; }
 
     [DefaultValue(0)]

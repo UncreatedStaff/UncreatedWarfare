@@ -46,71 +46,9 @@ public static partial class Patches
     public static event PlayerGesture OnPlayerGesture_Global;
     public static event PlayerMarker OnPlayerMarker_Global;
 
-
-
-    // this was used to delay hiding the loading screen. i dont think we need this now
-
-    public static void SendInitialPlayerStateForce(PlayerInventory inventory, SteamPlayer client)
-    {
-        InternalPatches.ShouldAllowSendInitialPlayerState = true;
-        try
-        {
-            Data.SendInitialInventoryState(inventory, client);
-        }
-        finally
-        {
-            InternalPatches.ShouldAllowSendInitialPlayerState = false;
-        }
-    }
     [HarmonyPatch]
     public static class InternalPatches
     {
-        internal static bool ShouldAllowSendInitialPlayerState;
-
-        // this was used to delay hiding the loading screen. i dont think we need this now
-
-        //[HarmonyPatch(typeof(PlayerInventory), "SendInitialPlayerState")]
-        //[HarmonyPrefix]
-        //[UsedImplicitly]
-        //private static bool SendInitialPlayerState(PlayerInventory __instance, SteamPlayer client)
-        //{
-        //    return __instance.player != client.player || ShouldAllowSendInitialPlayerState;
-        //}
-
-        /*
-        //private static readonly string LOG_MESSAGE_ID_STR = L.NetCalls.SendLogMessage.ID.ToString(Data.Locale);
-        // SDG.Unturned.Provider
-        /// <summary>
-        /// Prefix of <see cref="Console.WriteLine(string)"/> to send any logs to the tcp server and log them.
-        /// </summary>
-        [HarmonyPatch(typeof(Console), nameof(Console.WriteLine), typeof(string))]
-        [HarmonyPrefix]
-        static void ConsolePatch(string value)
-        {
-            if (!L.isRequestingLog || value.StartsWith("Sent over TCP server on", StringComparison.Ordinal) || value.StartsWith("Error writing to", StringComparison.Ordinal)) return;
-            string[] splits = value.Split('\n');
-            for (int i = 0; i < splits.Length; i++)
-            {
-                LogMessage log = new LogMessage(splits[i], Console.ForegroundColor);
-                L.AddLog(log);
-                if (UCWarfare.CanUsNetCallOrigin && value.IndexOf(LOG_MESSAGE_ID_STR, StringComparison.Ordinal) != 21)
-                    L.NetCalls.SendLogMessage.Invoke(Data.NetClient!, log, 0);
-            }
-        }*/
-
-        [HarmonyPatch(typeof(SteamPlayerID), "BypassIntegrityChecks", MethodType.Getter)]
-        [HarmonyPostfix]
-        [UsedImplicitly]
-        static void GetBypassIntegrityChecksPrefix(SteamPlayerID __instance, ref bool __result)
-        {
-#if DEBUG
-            __result = true;
-#else
-            if (!__result && __instance.steamID.m_SteamID == 76561198267927009UL || __instance.steamID.m_SteamID == 76561198857595123UL)
-                __result = true;
-#endif
-        }
-
 #if false
         // SDG.Unturned.Provider
         /// <summary>
@@ -230,90 +168,6 @@ public static partial class Patches
             OnBatterySteal_Global?.Invoke(context.GetCallingPlayer(), ref allow);
             return allow;
         }
-
-        
-
-#if false
-        // SDG.Unturned.UseableMelee
-        /// <summary>
-        /// prefix of <see cref="UseableMelee.fire()"/> to determine hits with the Entrenching Tool.
-        /// </summary>
-        [HarmonyPatch(typeof(UseableMelee), "fire")]
-        [HarmonyPrefix]
-        [UsedImplicitly]
-        static void OnPreMeleeHit(UseableMelee __instance)
-        {
-            ItemWeaponAsset weaponAsset = ((ItemWeaponAsset)__instance.player.equipment.asset);
-
-            RaycastInfo info = DamageTool.raycast(new Ray(__instance.player.look.aim.position, __instance.player.look.aim.forward), weaponAsset.range, RayMasks.BARRICADE | RayMasks.STRUCTURE | RayMasks.VEHICLE, __instance.player);
-            if (info.transform != null)
-            {
-                UCPlayer? builder = UCPlayer.FromPlayer(__instance.player);
-                if (builder == null || !Gamemode.Config.ItemEntrenchingTool.MatchGuid(__instance.equippedMeleeAsset.GUID)) return;
-                BarricadeDrop? barricade = BarricadeManager.FindBarricadeByRootTransform(info.transform);
-                if (barricade != null)
-                {
-                    if (builder.GetTeam() != barricade.GetServersideData().group.GetTeam())
-                        return;
-                    barricade.model.GetComponents(WorkingShovelable);
-                    try
-                    {
-                        for (int i = 0; i < WorkingShovelable.Count; ++i)
-                        {
-                            if (WorkingShovelable[i].Shovel(builder, info.point))
-                                break;
-                        }
-                    }
-                    finally
-                    {
-                        WorkingShovelable.Clear();
-                    }
-                }
-                else
-                {
-                    StructureDrop? structure = StructureManager.FindStructureByRootTransform(info.transform);
-                    if (structure != null)
-                    {
-                        if (builder.GetTeam() != structure.GetServersideData().group.GetTeam())
-                            return;
-
-                        structure.model.GetComponents(WorkingShovelable);
-                        try
-                        {
-                            for (int i = 0; i < WorkingShovelable.Count; ++i)
-                            {
-                                if (WorkingShovelable[i].Shovel(builder, info.point))
-                                    break;
-                            }
-                        }
-                        finally
-                        {
-                            WorkingShovelable.Clear();
-                        }
-                    }
-                    else if (info.vehicle != null)
-                    {
-                        if (builder.GetTeam() != info.vehicle.lockedGroup.m_SteamID.GetTeam())
-                            return;
-
-                        info.vehicle.gameObject.GetComponents(WorkingShovelable);
-                        try
-                        {
-                            for (int i = 0; i < WorkingShovelable.Count; ++i)
-                            {
-                                if (WorkingShovelable[i].Shovel(builder, info.point))
-                                    break;
-                            }
-                        }
-                        finally
-                        {
-                            WorkingShovelable.Clear();
-                        }
-                    }
-                }
-            }
-        }
-#endif
 
         [HarmonyPatch(typeof(Rocket), "OnTriggerEnter")]
         [HarmonyPrefix]
