@@ -11,10 +11,10 @@ public interface ILayoutPhaseListener<in TPhaseType> where TPhaseType : ILayoutP
     /// <summary>
     /// Runs after <see cref="ILayoutPhase.BeginPhaseAsync"/>.
     /// </summary>
-    UniTask OnPhaseStarted(TPhaseType phase, CancellationToken token = default);
+    UniTask OnPhaseStarted(TPhaseType phase, CancellationToken token);
 
     /// <summary>
     /// Runs after <see cref="ILayoutPhase.EndPhaseAsync"/>.
     /// </summary>
-    UniTask OnPhaseEnded(TPhaseType phase, CancellationToken token = default);
+    UniTask OnPhaseEnded(TPhaseType phase, CancellationToken token);
 }

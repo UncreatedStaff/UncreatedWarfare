@@ -1408,16 +1408,6 @@ internal static class T
     public static readonly Translation<IPlayer, ulong> PermissionRevokeAlready = new Translation<IPlayer, ulong>("<#bfb9ac><#7f8182>{0}</color> <#ddd>({1})</color> is already a <#ffdf91>member</color>.");
     #endregion
 
-    #region Win UI
-    private const string SectionWinUI = "Win UI";
-    [TranslationData(SectionWinUI)]
-    public static readonly Translation<int> WinUIValueTickets = new Translation<int>("{0} ${p:0:Ticket}", TranslationOptions.UnityUI);
-    [TranslationData(SectionWinUI)]
-    public static readonly Translation<int> WinUIValueCaches = new Translation<int>("{0} ${p:0:Cache} Left", TranslationOptions.UnityUI);
-    [TranslationData(SectionWinUI)]
-    public static readonly Translation<FactionInfo> WinUIHeaderWinner = new Translation<FactionInfo>("{0}\r\nhas won the battle!", TranslationOptions.UnityUI, FactionInfo.FormatColorDisplayName);
-    #endregion
-
     #region UAV
     private const string SectionUAV = "UAVs";
     [TranslationData(SectionUAV, "Sent to the owner of a UAV when it's destroyed as an event of their death.")]

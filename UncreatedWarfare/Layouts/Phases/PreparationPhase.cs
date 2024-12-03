@@ -27,11 +27,11 @@ public class PreparationPhase : BasePhase<PhaseTeamSettings>, IDisposable
     }
 
     /// <inheritdoc />
-    public override UniTask BeginPhaseAsync(object[] dataFromPreviousPhase, CancellationToken token = default)
+    public override UniTask BeginPhaseAsync(CancellationToken token = default)
     {
         StartBroadcastingStagingUI();
 
-        return base.BeginPhaseAsync(dataFromPreviousPhase, token);
+        return base.BeginPhaseAsync(token);
     }
 
     /// <inheritdoc />

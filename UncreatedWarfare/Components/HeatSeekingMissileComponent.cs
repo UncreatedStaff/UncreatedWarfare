@@ -52,7 +52,6 @@ public class HeatSeekingMissileComponent : MonoBehaviour
                 }
             }
         }
-        // TODO: add support for non-vehicle controller
 
         _projectile = projectile;
         _maxTurnDegrees = responsiveness;

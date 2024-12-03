@@ -3,112 +3,41 @@ using DanielWillett.ReflectionTools.Emit;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
-using Uncreated.Warfare.NewQuests;
-using Uncreated.Warfare.NewQuests.Parameters;
 
-namespace Uncreated.Warfare.Quests;
+namespace Uncreated.Warfare.Util;
 
 public class RewardExpression
 {
     private static readonly char[] TokenSplits = [ '*', '/', '+', '-', '%', '(', ')', '[', ']', '{', '}', ',', '^' ];
+    private readonly string _methodName;
+    private readonly Type _methodReturnType;
+    private readonly Type _dataReturnType;
+    private readonly Type? _inputType;
+    private readonly Type _ownerType;
+    private readonly IReadOnlyList<IEmittableVariable> _variables;
     private readonly string _expression;
-    private readonly string _expression2;
-    private readonly EvaluateDelegate _method;
+    private string _expression2;
+    private EvaluateDelegate? _method;
     private static MethodInfo[]? _mathMethods;
-    private readonly ConstructorInfo _createCtor;
     private readonly ILogger _logger;
+    private List<string>? _tokens;
     private const bool DebugLogging = false;
-    public Type QuestType { get; }
-    public Type StateType { get; }
-    public Type RewardType { get; }
-    public RewardExpression(Type rewardType, Type questType, string expression, ILogger logger)
+    public RewardExpression(string methodName, Type methodReturnType, Type dataReturnType, Type? inputType, Type ownerType, IReadOnlyList<IEmittableVariable> variables, string expression, ILogger logger)
     {
-        if (!typeof(IQuestReward).IsAssignableFrom(rewardType) || rewardType.IsInterface || rewardType.IsAbstract)
-        {
-            throw new ArgumentException("Reward type must be a non-abstract class or struct that implements IQuestReward.");
-        }
-
-        if (!questType.IsSubclassOf(typeof(QuestTemplate)) || rewardType.IsAbstract)
-        {
-            throw new ArgumentException("Quest type must be a non-abstract class that inherits QuestTemplate.");
-        }
-
-        _logger = logger;
-        Type? returnType = null;
-        foreach (ConstructorInfo ctor in rewardType.GetConstructors())
-        {
-            ParameterInfo[] parameters = ctor.GetParameters();
-            if (parameters.Length != 1)
-                continue;
-
-            Type paramType = parameters[0].ParameterType;
-            if ((!paramType.IsPrimitive || paramType == typeof(char) || paramType == typeof(bool)) && paramType != typeof(string))
-                continue;
-
-            returnType = paramType;
-            _createCtor = ctor;
-            break;
-        }
-
-
-        if (returnType == null)
-        {
-            throw new ArgumentException("No valid construtors found with a single parameter of type string or a primitive number.", nameof(rewardType));
-        }
-
-        Type? stateType = null;
-        questType.ForEachBaseType((type, _) =>
-        {
-            if (!type.IsGenericType || type.GetGenericTypeDefinition() != typeof(QuestTemplate<,,>))
-                return true;
-
-            stateType = type.GetGenericArguments()[2];
-            return false;
-        });
-
-        if (stateType == null)
-        {
-            Type[] ts = questType.GetNestedTypes();
-            for (int i = 0; i < ts.Length; ++i)
-            {
-                Type t = ts[i];
-                if (!typeof(IQuestState).IsAssignableFrom(t))
-                    continue;
-
-                stateType = t;
-                break;
-            }
-
-            if (stateType == null)
-            {
-                throw new ArgumentException($"Unable to identify the state type of quest type {Accessor.ExceptionFormatter.Format(questType)}.");
-            }
-        }
-
-        QuestType = questType;
-        StateType = stateType;
-        RewardType = rewardType;
+        _methodName = methodName;
+        _methodReturnType = methodReturnType;
+        _dataReturnType = dataReturnType;
+        _inputType = inputType;
+        _ownerType = ownerType;
+        _variables = variables;
         _expression = expression;
+        _logger = logger;
 
-        if (returnType == typeof(string))
+        if (dataReturnType == typeof(string))
         {
-            DynamicMethod strMethod = new DynamicMethod($"EvaluateReward_{QuestType.Name}_{RewardType.Name}", typeof(IQuestReward), [ typeof(IQuestState) ], RewardType, true);
-            strMethod.DefineParameter(0, ParameterAttributes.None, "state");
-
-            IOpCodeEmitter strIl = strMethod.AsEmitter(debuggable: DebugLogging);
-            strIl.Emit(OpCodes.Ldstr, _expression);
-            strIl.Emit(OpCodes.Newobj, _createCtor!);
-
-            if (rewardType.IsValueType)
-                strIl.Emit(OpCodes.Box, rewardType);
-
-            strIl.Emit(OpCodes.Ret);
-
-            _method = (EvaluateDelegate)strMethod.CreateDelegate(typeof(EvaluateDelegate));
-            _expression2 = expression;
-
             return;
         }
 
@@ -145,7 +74,7 @@ public class RewardExpression
             {
                 int spanSt = i - 1;
                 int spanEnd = i + 1;
-                if (spanSt < 0 || spanEnd > tokens.Count - 1 || (spanSt > 0 && tokens[spanSt - 1][0] is '(' or '[' or '{' && spanEnd < tokens.Count - 1 && tokens[spanEnd + 1][0] is ')' or ']' or '}'))
+                if (spanSt < 0 || spanEnd > tokens.Count - 1 || spanSt > 0 && tokens[spanSt - 1][0] is '(' or '[' or '{' && spanEnd < tokens.Count - 1 && tokens[spanEnd + 1][0] is ')' or ']' or '}')
                     continue;
                 bool next = false;
                 char v;
@@ -167,7 +96,7 @@ public class RewardExpression
                                 next = true;
                                 continue;
                             }
-                        f:
+                            f:
                             if (--pLvl <= 0)
                             {
                                 spanSt = j;
@@ -233,140 +162,14 @@ public class RewardExpression
 
 
         _expression2 = string.Join(string.Empty, tokens);
-
-        Dictionary<int, KeyValuePair<KeyValuePair<FieldInfo, MethodInfo>, int>> vars = new Dictionary<int, KeyValuePair<KeyValuePair<FieldInfo, MethodInfo>, int>>(tokens.Count);
-        FieldInfo[] fields = stateType.GetFields(BindingFlags.Public | BindingFlags.Instance);
-        DynamicMethod method = new DynamicMethod($"EvaluateReward_{QuestType.Name}_{RewardType.Name}", typeof(IQuestReward), [ typeof(IQuestState) ], RewardType, true);
-        method.DefineParameter(0, ParameterAttributes.None, "state");
-
-        IOpCodeEmitter il = method.AsEmitter(debuggable: DebugLogging);
-        int lcl = 0;
-        for (int i = 0; i < tokens.Count; ++i)
-        {
-            for (int f = 0; f < fields.Length; ++f)
-            {
-                FieldInfo field = fields[f];
-                string name = field.Name;
-                if (Attribute.GetCustomAttribute(field, typeof(RewardFieldAttribute)) is RewardFieldAttribute rfa)
-                {
-                    if (rfa.DisallowVariableUsage)
-                        continue;
-                    else if (rfa.Name is not null)
-                        name = rfa.Name;
-                }
-
-                if (!name.Equals(tokens[i], StringComparison.OrdinalIgnoreCase))
-                    continue;
-                
-                foreach (KeyValuePair<int, KeyValuePair<KeyValuePair<FieldInfo, MethodInfo>, int>> pair in vars)
-                {
-                    if (pair.Value.Key.Key != field)
-                        continue;
-                    
-                    vars.Add(i, new KeyValuePair<KeyValuePair<FieldInfo, MethodInfo>, int>(pair.Value.Key, pair.Value.Value));
-                    goto skip;
-                }
-
-                MethodInfo? m2 = field.FieldType.GetMethod(nameof(QuestParameterValue<object>.GetSingleValue), BindingFlags.Public | BindingFlags.Instance | BindingFlags.FlattenHierarchy);
-                if (m2 != null)
-                {
-                    if (!m2.ReturnType.IsPrimitive || m2.ReturnType == typeof(char) || m2.ReturnType == typeof(bool))
-                    {
-                        _logger.LogError("Invalid variable type: {0}, {1}", tokens[i], m2.ReturnType);
-                        goto error;
-                    }
-
-                    il.DeclareLocal(typeof(double));
-                    if (DebugLogging)
-                    {
-                        il.Comment("Variable #" + (lcl + 1) + " " + field.Name);
-                    }
-
-                    vars.Add(i, new KeyValuePair<KeyValuePair<FieldInfo, MethodInfo>, int>(new KeyValuePair<FieldInfo, MethodInfo>(field, m2), lcl));
-                    il.Emit(OpCodes.Ldarg_0);
-                    if (field.DeclaringType is { IsValueType: true })
-                    {
-                        il.Emit(OpCodes.Unbox, field.DeclaringType);
-                    }
-
-                    il.Emit(OpCodes.Ldfld, field);
-                    il.Emit(OpCodes.Callvirt, m2);
-                    if (m2.ReturnType != typeof(double))
-                    {
-                        il.Emit(OpCodes.Conv_R8);
-                    }
-                    if (lcl < byte.MaxValue)
-                    {
-                        il.Emit(OpCodes.Stloc_S, (byte)lcl);
-                    }
-                    else
-                    {
-                        il.Emit(OpCodes.Stloc, lcl);
-                    }
-                    ++lcl;
-                }
-                skip:;
-            }
-        }
-        int stackSize = 0;
-        int index = 0;
-
-        if (!Evaluate(ref index, il, tokens, vars, ref stackSize))
-            goto error;
-
-        if (returnType == typeof(int))
-        {
-            il.Emit(OpCodes.Conv_I4);
-        }
-        else if (returnType == typeof(float))
-        {
-            il.Emit(OpCodes.Conv_R4);
-        }
-        else if (returnType == typeof(uint))
-        {
-            il.Emit(OpCodes.Conv_U4);
-        }
-        else if (returnType == typeof(short))
-        {
-            il.Emit(OpCodes.Conv_I2);
-        }
-        else if (returnType == typeof(ushort))
-        {
-            il.Emit(OpCodes.Conv_U2);
-        }
-        else if (returnType == typeof(long))
-        {
-            il.Emit(OpCodes.Conv_I8);
-        }
-        else if (returnType == typeof(ulong))
-        {
-            il.Emit(OpCodes.Conv_U8);
-        }
-        else if (returnType == typeof(byte))
-        {
-            il.Emit(OpCodes.Conv_U1);
-        }
-        else if (returnType == typeof(sbyte))
-        {
-            il.Emit(OpCodes.Conv_I1);
-        }
-
-        if (stackSize < 1)
-            goto error;
-
-        il.Emit(OpCodes.Newobj, _createCtor!);
-
-        if (rewardType.IsValueType)
-            il.Emit(OpCodes.Box, rewardType);
-
-        il.Emit(OpCodes.Ret);
-
-        _method = (EvaluateDelegate)method.CreateDelegate(typeof(EvaluateDelegate));
-        return;
-    error:
-        throw new ArgumentException("Invalid exrpession: \"" + (_expression2 ?? _expression) + "\"", nameof(expression));
+        _tokens = tokens;
     }
-    private bool Evaluate(ref int stPos, IOpCodeEmitter il, List<string> tokens, Dictionary<int, KeyValuePair<KeyValuePair<FieldInfo, MethodInfo>, int>> vars, ref int stackSize)
+
+    protected virtual void TransformResult(IOpCodeEmitter emitter, ref int stackSize)
+    {
+    }
+
+    private bool Evaluate(ref int stPos, IOpCodeEmitter il, List<string> tokens, Dictionary<int, VariableInfo> vars, ref int stackSize)
     {
         bool emitted = false;
         for (int i = stPos; i < tokens.Count;)
@@ -456,7 +259,7 @@ public class RewardExpression
         }
         return emitted;
     }
-    private bool TwoCodeCall(OpCode code, IOpCodeEmitter il, List<string> tokens, Dictionary<int, KeyValuePair<KeyValuePair<FieldInfo, MethodInfo>, int>> vars, ref int i, ref int stackSize)
+    private bool TwoCodeCall(OpCode code, IOpCodeEmitter il, List<string> tokens, Dictionary<int, VariableInfo> vars, ref int i, ref int stackSize)
     {
         if (stackSize < 1)
             return false;
@@ -479,7 +282,7 @@ public class RewardExpression
 
         return false;
     }
-    private bool PowerTwoCall(IOpCodeEmitter il, List<string> tokens, Dictionary<int, KeyValuePair<KeyValuePair<FieldInfo, MethodInfo>, int>> vars, ref int i, ref int stackSize)
+    private bool PowerTwoCall(IOpCodeEmitter il, List<string> tokens, Dictionary<int, VariableInfo> vars, ref int i, ref int stackSize)
     {
         if (stackSize < 1)
             return false;
@@ -508,7 +311,7 @@ public class RewardExpression
 
         return false;
     }
-    private bool Load(ref int index, IOpCodeEmitter il, List<string> tokens, Dictionary<int, KeyValuePair<KeyValuePair<FieldInfo, MethodInfo>, int>> vars, ref int stackSize)
+    private bool Load(ref int index, IOpCodeEmitter il, List<string> tokens, Dictionary<int, VariableInfo> vars, ref int stackSize)
     {
         if (tokens[index][0] is '(' or '[' or '{')
         {
@@ -543,22 +346,14 @@ public class RewardExpression
         }
         return false;
     }
-    private bool LoadVariable(int index, IOpCodeEmitter il, List<string> tokens, Dictionary<int, KeyValuePair<KeyValuePair<FieldInfo, MethodInfo>, int>> vars, ref int stackSize)
+    private bool LoadVariable(int index, IOpCodeEmitter il, List<string> tokens, Dictionary<int, VariableInfo> vars, ref int stackSize)
     {
         if (index >= tokens.Count)
             return false;
-        if (vars.TryGetValue(index, out KeyValuePair<KeyValuePair<FieldInfo, MethodInfo>, int> mi))
+        if (vars.TryGetValue(index, out VariableInfo mi))
         {
-            if (mi.Value < byte.MaxValue)
-            {
-                il.Emit(OpCodes.Ldloc_S, (byte)mi.Value);
-            }
-            else
-            {
-                il.Emit(OpCodes.Ldloc, mi.Value);
-            }
-            if (mi.Key.Value.ReturnType != typeof(void))
-                ++stackSize;
+            il.LoadLocalValue(mi.Local);
+            ++stackSize;
             return true;
         }
         else
@@ -614,7 +409,7 @@ public class RewardExpression
     {
         il.Emit(OpCodes.Ldc_R8, c);
     }
-    private bool LoadMethod(ref int index, IOpCodeEmitter il, List<string> tokens, Dictionary<int, KeyValuePair<KeyValuePair<FieldInfo, MethodInfo>, int>> vars, ref int stackSize)
+    private bool LoadMethod(ref int index, IOpCodeEmitter il, List<string> tokens, Dictionary<int, VariableInfo> vars, ref int stackSize)
     {
         if (index >= tokens.Count - 2)
             return false;
@@ -702,7 +497,7 @@ public class RewardExpression
             }
         }
 
-        index = ind2 != -1 ? (ind2 + 2) : tokens.Count;
+        index = ind2 != -1 ? ind2 + 2 : tokens.Count;
         return true;
     }
     private static MethodInfo? GetMethod(string name, int pCt, MethodInfo[] ms)
@@ -730,17 +525,13 @@ public class RewardExpression
         }
         return f;
     }
-    public IQuestReward? TryEvaluate(IQuestState state)
+    public object? TryEvaluate(object arg)
     {
-        if (_method == null)
-        {
-            _logger.LogError("Tried to evaluate an invalid RewardExpression.");
-            return null;
-        }
+        _method ??= CreateMethod();
 
         try
         {
-            return _method(state);
+            return _method(arg);
         }
         catch (Exception ex)
         {
@@ -749,20 +540,223 @@ public class RewardExpression
         }
     }
 
-    private delegate IQuestReward EvaluateDelegate(IQuestState state);
+    private struct VariableInfo
+    {
+        public IEmittableVariable Variable;
+        public LocalReference Local;
+    }
+
+    private EvaluateDelegate CreateMethod()
+    {
+        List<string>? tokens = _tokens;
+
+        Type[] parameters = [ typeof(object) ];
+        if (_dataReturnType == typeof(string))
+        {
+            DynamicMethod strMethod = new DynamicMethod(_methodName, typeof(object), parameters, _ownerType, true);
+
+            if (parameters.Length > 0)
+                strMethod.DefineParameter(0, ParameterAttributes.None, "arg0");
+
+            IOpCodeEmitter strIl = strMethod.AsEmitter(debuggable: DebugLogging);
+            strIl.Emit(OpCodes.Ldstr, _expression);
+            int stackSize2 = 1;
+
+            TransformResult(strIl, ref stackSize2);
+
+            if (_methodReturnType.IsValueType)
+                strIl.Box(_methodReturnType);
+
+            strIl.Emit(OpCodes.Ret);
+
+            _method = (EvaluateDelegate)strMethod.CreateDelegate(typeof(EvaluateDelegate));
+            _expression2 = _expression;
+            _tokens = null;
+            return _method;
+        }
+
+        Dictionary<int, VariableInfo> variables = new Dictionary<int, VariableInfo>();
+
+        DynamicMethod method = new DynamicMethod(_methodName, typeof(object), parameters, _ownerType, true);
+
+        if (parameters.Length > 0)
+            method.DefineParameter(0, ParameterAttributes.None, "arg0");
+
+        IOpCodeEmitter il = method.AsEmitter(debuggable: DebugLogging);
+        for (int i = 0; i < tokens!.Count; ++i)
+        {
+            foreach (IEmittableVariable variable in _variables)
+            {
+                if (!variable.Names.Any(x => x.Equals(tokens[i], StringComparison.OrdinalIgnoreCase)))
+                    continue;
+
+                foreach (VariableInfo existing in variables.Values)
+                {
+                    if (existing.Variable != variable)
+                        continue;
+
+                    variables.Add(i, existing);
+                    goto skip;
+                }
+
+                il.AddLocal<double>(out LocalBuilder local);
+                if (DebugLogging)
+                {
+                    il.Comment($"Variable #{local.LocalIndex} {variable.Names[0]}");
+                }
+
+                variables.Add(i, new VariableInfo
+                {
+                    Local = local,
+                    Variable = variable
+                });
+
+            skip:;
+            }
+        }
+        int stackSize = 0;
+        int index = 0;
+
+        if (!Evaluate(ref index, il, tokens, variables, ref stackSize))
+            throw new InvalidOperationException("Invalid expression.");
+
+        if (_dataReturnType == typeof(int))
+        {
+            il.Emit(OpCodes.Conv_I4);
+        }
+        else if (_dataReturnType == typeof(float))
+        {
+            il.Emit(OpCodes.Conv_R4);
+        }
+        else if (_dataReturnType == typeof(uint))
+        {
+            il.Emit(OpCodes.Conv_U4);
+        }
+        else if (_dataReturnType == typeof(short))
+        {
+            il.Emit(OpCodes.Conv_I2);
+        }
+        else if (_dataReturnType == typeof(ushort))
+        {
+            il.Emit(OpCodes.Conv_U2);
+        }
+        else if (_dataReturnType == typeof(long))
+        {
+            il.Emit(OpCodes.Conv_I8);
+        }
+        else if (_dataReturnType == typeof(ulong))
+        {
+            il.Emit(OpCodes.Conv_U8);
+        }
+        else if (_dataReturnType == typeof(byte))
+        {
+            il.Emit(OpCodes.Conv_U1);
+        }
+        else if (_dataReturnType == typeof(sbyte))
+        {
+            il.Emit(OpCodes.Conv_I1);
+        }
+
+        if (stackSize < 1)
+            throw new InvalidOperationException("Invalid expression.");
+
+        TransformResult(il, ref stackSize);
+        if (_methodReturnType.IsValueType)
+        {
+            il.Box(_methodReturnType);
+        }
+
+        il.Emit(OpCodes.Ret);
+
+        _method = (EvaluateDelegate)method.CreateDelegate(typeof(EvaluateDelegate));
+        _tokens = null;
+        return _method;
+    }
+
+    private delegate object EvaluateDelegate(object state);
+
+    public interface IEmittableVariable
+    {
+        string[] Names { get; }
+
+        Type OutputType { get; }
+
+        void Preload(LocalReference local, IOpCodeEmitter emitter, ILogger logger);
+    }
+
+    public class EmittableVariable : IEmittableVariable
+    {
+        private readonly IVariable _variable;
+
+        public string[] Names { get; }
+
+        public Type OutputType { get; }
+
+        public EmittableVariable(IVariable variable)
+        {
+            _variable = variable;
+            Names = [_variable.Member.Name];
+            OutputType = _variable.MemberType;
+        }
+
+        /// <inheritdoc />
+        public void Preload(LocalReference local, IOpCodeEmitter il, ILogger logger)
+        {
+            if (!_variable.IsStatic)
+            {
+                il.LoadArgument(0);
+                if (_variable.DeclaringType is { IsValueType: true })
+                {
+                    il.LoadUnboxedAddress(_variable.DeclaringType);
+                }
+                else
+                {
+                    il.CastReference(_variable.DeclaringType!);
+                }
+            }
+
+            if (_variable.IsField)
+            {
+                il.LoadInstanceFieldValue((FieldInfo)_variable.Member);
+            }
+            else
+            {
+                il.Invoke(((PropertyInfo)_variable).GetMethod);
+            }
+
+            if (_variable.MemberType != typeof(double))
+            {
+                if (_variable.MemberType == typeof(object))
+                {
+                    il.LoadUnboxedValue<double>();
+                }
+                else if (Operators.FindCast(_variable.MemberType, typeof(double), preferCheckedOperator: true) is { } castMethod)
+                {
+                    il.Invoke(castMethod);
+                }
+                else
+                {
+                    il.ConvertToDouble();
+                }
+            }
+
+            il.SetLocalValue(local);
+        }
+    }
 }
 
-[AttributeUsage(AttributeTargets.Property)]
-public sealed class RewardFieldAttribute : Attribute
+
+[AttributeUsage(AttributeTargets.Property | AttributeTargets.Field)]
+public sealed class RewardVariableAttribute : Attribute
 {
     public string? Name { get; }
     public bool DisallowVariableUsage { get; }
-    public RewardFieldAttribute(string nameOverride)
+    public RewardVariableAttribute(string nameOverride)
     {
         Name = nameOverride;
         DisallowVariableUsage = false;
     }
-    public RewardFieldAttribute(bool disableVariableUsage)
+    public RewardVariableAttribute(bool disableVariableUsage)
     {
         Name = null;
         DisallowVariableUsage = disableVariableUsage;

@@ -35,10 +35,8 @@ public class Kit : ITranslationArgument, ICloneable, IRequestable<Kit>
 {
     private int _listItemArrayVersion = -1;
     private int _listUnlockRequirementsArrayVersion = -1;
-    private int _listSimplifiedListVersion = -1;
     private IKitItem[]? _items;
     private UnlockRequirement[]? _unlockRequirements;
-    private List<SimplifiedItemListEntry>? _simplifiedItemList;
 
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -155,23 +153,6 @@ public class Kit : ITranslationArgument, ICloneable, IRequestable<Kit>
     [JsonIgnore]
     [NotMapped]
     internal bool IsLoadDirty { get; set; }
-
-    //[JsonIgnore]
-    //[NotMapped]
-    //internal List<SimplifiedItemListEntry> SimplifiedItemList
-    //{
-    //    get
-    //    {
-    //        int v = ItemModels.GetListVersion();
-    //        if (_listSimplifiedListVersion != v || _simplifiedItemList == null)
-    //        {
-    //            _simplifiedItemList = SimplifiedItemListEntry.GetSimplifiedItemList(this);
-    //            _listSimplifiedListVersion = v;
-    //        }
-    //
-    //        return _simplifiedItemList;
-    //    }
-    //}
 
     [JsonIgnore]
     [NotMapped]
@@ -360,7 +341,6 @@ public class Kit : ITranslationArgument, ICloneable, IRequestable<Kit>
     public void MarkRemoteItemsDirty()
     {
         _items = null;
-        _simplifiedItemList = null;
     }
     public void MarkRemoteUnlockRequirementsDirty()
     {

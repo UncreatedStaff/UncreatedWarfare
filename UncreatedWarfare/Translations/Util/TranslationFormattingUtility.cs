@@ -59,6 +59,50 @@ public static class TranslationFormattingUtility
     }
 
     /// <summary>
+    /// Adds the correct color tags around text for TMPro or Unity rich text.
+    /// </summary>
+    /// <param name="imgui">Use Unity rich text instead of TMPro.</param>
+    public static string Colorize(string text, Color32 color, bool imgui = false)
+    {
+        return Colorize(text, color, imgui ? TranslationOptions.TranslateWithUnityRichText : TranslationOptions.None, StackColorFormatType.None);
+    }
+
+    /// <summary>
+    /// Adds the correct color tags around text for TMPro or Unity rich text.
+    /// </summary>
+    /// <param name="imgui">Use Unity rich text instead of TMPro.</param>
+    public static string Colorize(string text, string hexColor, bool imgui = false)
+    {
+        if (!HexStringHelper.TryParseHexColor32(hexColor, out Color32 color))
+            color = Color.white;
+
+        return Colorize(text, color, imgui ? TranslationOptions.TranslateWithUnityRichText : TranslationOptions.None, StackColorFormatType.None);
+    }
+
+    /// <summary>
+    /// Adds the correct color tags around text based on which flags are enabled in <paramref name="options"/>.
+    /// </summary>
+    public static string Colorize(string text, Color32 color, TranslationOptions options, StackColorFormatType terminalColoring)
+    {
+        if ((options & TranslationOptions.NoRichText) != 0)
+        {
+            return text;
+        }
+
+        if ((options & TranslationOptions.TranslateWithTerminalRichText) != 0)
+        {
+            return terminalColoring switch
+            {
+                StackColorFormatType.ExtendedANSIColor => TerminalColorHelper.WrapMessageWithTerminalColorSequence(TerminalColorHelper.ToArgb(color), text),
+                StackColorFormatType.ANSIColor => TerminalColorHelper.WrapMessageWithTerminalColorSequence(TerminalColorHelper.ToConsoleColor(TerminalColorHelper.ToArgb(color)), text),
+                _ => text
+            };
+        }
+
+        return Colorize(text.AsSpan(), color, options, terminalColoring);
+    }
+
+    /// <summary>
     /// Adds the correct color tags around text based on which flags are enabled in <paramref name="options"/>.
     /// </summary>
     public static unsafe string Colorize(ReadOnlySpan<char> text, Color32 color, TranslationOptions options, StackColorFormatType terminalColoring)

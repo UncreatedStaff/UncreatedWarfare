@@ -37,6 +37,7 @@ using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Whitelists;
 using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.Layouts.UI;
+using Uncreated.Warfare.Layouts.UI.Leaderboards;
 using Uncreated.Warfare.Lobby;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Maps;
@@ -416,7 +417,6 @@ public sealed class WarfareModule
 
         // UI
         bldr.RegisterType<ModerationUI>().SingleInstance();
-        bldr.RegisterType<KitMenuUI>().SingleInstance();
         bldr.RegisterType<ActionMenuUI>().SingleInstance();
         bldr.RegisterType<SquadMenuUI>()
             .AsSelf()
@@ -435,7 +435,7 @@ public sealed class WarfareModule
         bldr.RegisterType<ConventionalLeaderboardUI>().SingleInstance();
         bldr.RegisterType<StagingUI>().SingleInstance();
         bldr.RegisterType<WinToastUI>().SingleInstance();
-        bldr.RegisterType<PointsUI>().SingleInstance();
+        bldr.RegisterType<PointsUI>().AsSelf().AsImplementedInterfaces().SingleInstance();
         bldr.RegisterType<TeamSelectorUI>().SingleInstance();
         bldr.RegisterType<VehicleHUD>().SingleInstance();
 
@@ -1091,11 +1091,6 @@ public sealed class WarfareModule
 
         ILifetimeScope? oldScope = Interlocked.Exchange(ref _activeScope, newScope);
         _logger.LogInformation("Created new layout scope.");
-
-        if (ServiceProvider.Resolve<IPlayerService>() is PlayerService playerServiceImpl)
-        {
-            playerServiceImpl.ReinitializeScopedPlayerComponentServices();
-        }
 
         if (oldScope != null)
         {

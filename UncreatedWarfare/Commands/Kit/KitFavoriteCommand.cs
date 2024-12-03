@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using Uncreated.Framework.UI;
+﻿using System.Collections.Generic;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Models.Kits;
@@ -15,19 +13,19 @@ internal class KitFavoriteCommand : IExecutableCommand
     private readonly SignInstancer _signs;
     private readonly KitCommandTranslations _translations;
     private readonly KitManager _kitManager;
-    private readonly IServiceProvider _serviceProvider;
     public CommandContext Context { get; set; }
 
-    public KitFavoriteCommand(TranslationInjection<KitCommandTranslations> translations, SignInstancer signs, KitManager kitManager, IServiceProvider serviceProvider)
+    public KitFavoriteCommand(TranslationInjection<KitCommandTranslations> translations, SignInstancer signs, KitManager kitManager)
     {
         _signs = signs;
         _kitManager = kitManager;
         _translations = translations.Value;
-        _serviceProvider = serviceProvider;
     }
 
     public async UniTask ExecuteAsync(CancellationToken token)
     {
+        // ReSharper disable InconsistentlySynchronizedField
+
         Context.AssertRanByPlayer();
 
         string? kitId = null;
@@ -64,33 +62,23 @@ internal class KitFavoriteCommand : IExecutableCommand
             throw Context.Reply(_translations.KitNotFound, kitId);
         }
 
-        await Context.Player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
-        try
+        await UniTask.SwitchToMainThread(token);
+
+        KitPlayerComponent comp = Context.Player.Component<KitPlayerComponent>();
+        lock (comp)
         {
-            await UniTask.SwitchToMainThread(token);
-            
-            if (_kitManager.IsFavoritedQuick(kit.PrimaryKey, Context.Player))
+            if (comp.FavoritedKits != null && comp.FavoritedKits.Contains(kit.PrimaryKey))
             {
                 throw Context.Reply(_translations.KitFavoriteAlreadyFavorited, kit);
             }
 
-            KitMenuUIData? data = UnturnedUIDataSource.GetData<KitMenuUIData>(Context.CallerId, _kitManager.MenuUI.Parent);
-            if (data == null)
-            {
-                data = new KitMenuUIData(_kitManager.MenuUI, _kitManager.MenuUI.Parent, Context.Player, _serviceProvider);
-                UnturnedUIDataSource.AddData(data);
-            }
-
-            (data.FavoriteKits ??= new List<uint>(8)).Add(kit.PrimaryKey);
-            data.FavoritesDirty = true;
-
-            await _kitManager.SaveFavorites(Context.Player, data.FavoriteKits, token).ConfigureAwait(false);
-
-            Context.Reply(_translations.KitFavorited, kit);
+            (comp.FavoritedKits ??= new List<uint>(8)).Add(kit.PrimaryKey);
+            comp.FavoritesDirty = true;
         }
-        finally
-        {
-            Context.Player.PurchaseSync.Release();
-        }
+
+        Context.Reply(_translations.KitFavorited, kit);
+
+
+        // ReSharper restore InconsistentlySynchronizedField
     }
 }

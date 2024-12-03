@@ -8,6 +8,7 @@ using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Translations.ValueFormatters;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.NewQuests;
 
@@ -210,7 +211,7 @@ public abstract class QuestTemplate : ITranslationArgument
 
         try
         {
-            RewardExpression rewardExpression = new RewardExpression(type, GetType(), expression, _logger);
+            RewardExpression rewardExpression = new QuestRewardExpression(type, GetType(), expression, _logger);
 
             return UniTask.FromResult<RewardExpression?>(rewardExpression);
         }

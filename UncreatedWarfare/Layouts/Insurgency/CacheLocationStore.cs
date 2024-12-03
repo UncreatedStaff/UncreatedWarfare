@@ -8,7 +8,6 @@ using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Layouts.Insurgency;
 
-[SessionHostedService(EnabledByDefault = false)]
 public class CacheLocationStore : ILayoutHostedService
 {
     private readonly ILogger<CacheLocationStore> _logger;

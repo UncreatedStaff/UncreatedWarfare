@@ -10,7 +10,6 @@ using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.List;
 using Uncreated.Warfare.Vehicles;
-using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Components;
 
@@ -291,9 +290,10 @@ public class VehicleComponent : MonoBehaviour
     }
     internal void OnPlayerEnteredVehicle(EnterVehicle e)
     {
+        // todo
         WarfarePlayer player = e.Player;
 
-        byte toSeat = e.PassengerIndex;
+        byte toSeat = (byte)e.PassengerIndex;
         if (toSeat == 0)
         {
             LastDriver = player.Steam64.m_SteamID;
@@ -362,9 +362,10 @@ public class VehicleComponent : MonoBehaviour
             TransportTable.Remove(e.Player);
         }
     }
-    public void OnPlayerSwapSeatRequested(VehicleSwapSeat e)
+    public void OnPlayerSwapSeatRequested(VehicleSwappedSeat e)
     {
-        if (e.NewSeat == 0)
+        // todo
+        if (e.NewPassengerIndex == 0)
         {
             // new driver
             LastDriver = e.Player.Steam64.m_SteamID;
@@ -376,13 +377,13 @@ public class VehicleComponent : MonoBehaviour
         {
             EvaluateUsage(e.Player.SteamPlayer);
 
-            if (VehicleData.IsCrewSeat(e.NewSeat))
+            if (VehicleData.IsCrewSeat((byte)e.NewPassengerIndex))
                 TransportTable.TryAdd(e.Player, e.Player.Position);
             else
                 TransportTable.Remove(e.Player);
         }
 
-        ShowHUD(e.Player, e.NewSeat);
+        ShowHUD(e.Player, (byte)e.NewPassengerIndex);
     }
     public void EvaluateUsage(SteamPlayer player)
     {

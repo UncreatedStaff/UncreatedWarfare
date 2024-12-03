@@ -17,7 +17,7 @@ public class PlayerSquadHUD : UnturnedUI, IEventListener<SquadMemberJoined>, IEv
     public UnturnedLabel[] SquadMembers { get; } = ElementPatterns.CreateArray<UnturnedLabel>("PlayerSquadMember_{0}", 1, to: 6);
 
     public PlayerSquadHUD(AssetConfiguration assetConfig, ILoggerFactory loggerFactory)
-        : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:PlayerSquadHUD")) { }
+        : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:PlayerSquadHUD"), staticKey: true) { }
     public void HandleEvent(SquadMemberJoined e, IServiceProvider serviceProvider)
     {
         SendToPlayer(e.Player.Connection);

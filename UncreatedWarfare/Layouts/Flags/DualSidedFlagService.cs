@@ -4,19 +4,16 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Text;
+using Uncreated.Warfare.Events.Models;
+using Uncreated.Warfare.Events.Models.Flags;
 using Uncreated.Warfare.Exceptions;
 using Uncreated.Warfare.Layouts.Phases.Flags;
 using Uncreated.Warfare.Layouts.Teams;
-using Uncreated.Warfare.Util;
-using Uncreated.Warfare.Zones.Pathing;
-using Uncreated.Warfare.Zones;
 using Uncreated.Warfare.Services;
-using Uncreated.Warfare.Events.Models.Fobs;
-using Uncreated.Warfare.Events.Models.Flags;
-using Uncreated.Warfare.Events.Models;
+using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Timing;
-using Stripe;
+using Uncreated.Warfare.Zones;
+using Uncreated.Warfare.Zones.Pathing;
 
 namespace Uncreated.Warfare.Layouts.Flags;
 public abstract class DualSidedFlagService : 
@@ -42,19 +39,16 @@ public abstract class DualSidedFlagService :
 
     public bool IsActive { get; private set; }
 
-    /// <inheritdoc />
     public IConfiguration Configuration { get; }
 
     /// <inheritdoc />
     public IReadOnlyList<FlagObjective> ActiveFlags { get; private set; } = Array.Empty<FlagObjective>();
 
-    /// <inheritdoc />
     public FlagObjective StartingTeam { get; private set; }
 
-    /// <inheritdoc />
     public FlagObjective EndingTeam { get; private set; }
 
-    public DualSidedFlagService(IServiceProvider serviceProvider, IConfiguration config)
+    protected DualSidedFlagService(IServiceProvider serviceProvider, IConfiguration config)
     {
         _loopTickerFactory = serviceProvider.GetRequiredService<ILoopTickerFactory>();
         Logger = serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(GetType());
@@ -95,6 +89,7 @@ public abstract class DualSidedFlagService :
 
         return UniTask.CompletedTask;
     }
+
     private async UniTask CreateZonePaths(CancellationToken token)
     {
         if (!ContextualTypeResolver.TryResolveType(FlagSettings.Pathing, out Type? pathingProviderType, typeof(IZonePathingProvider)))
@@ -128,6 +123,7 @@ public abstract class DualSidedFlagService :
 
         Logger.LogInformation("Zone path: {{{0}}}.", string.Join(" -> ", PathingResult.Skip(1).SkipLast(1).Select(zone => zone.Name)));
     }
+
     private void SetupFlags()
     {
         if (PathingResult == null || ZoneStore == null)
@@ -146,7 +142,7 @@ public abstract class DualSidedFlagService :
                 .ToArray();
 
             ZoneRegion region = new ZoneRegion(zones, TeamManager);
-            flagList.Add(new FlagObjective(region, TeamManager, Team.NoTeam));
+            flagList.Add(new FlagObjective(region, Team.NoTeam));
         }
 
         _flags = flagList.ToArrayFast();
@@ -156,16 +152,20 @@ public abstract class DualSidedFlagService :
         }
 
         ActiveFlags = new ReadOnlyCollection<FlagObjective>(new ArraySegment<FlagObjective>(_flags, 1, _flags.Length - 2));
-        StartingTeam = new FlagObjective(_flags[0].Region, TeamManager, TeamManager.AllTeams.First());
-        EndingTeam = new FlagObjective(_flags[^1].Region, TeamManager, TeamManager.AllTeams.Last());
+        StartingTeam = new FlagObjective(_flags[0].Region, TeamManager.AllTeams.First());
+        EndingTeam = new FlagObjective(_flags[^1].Region, TeamManager.AllTeams.Last());
         IsActive = true;
 
         _ = WarfareModule.EventDispatcher.DispatchEventAsync(new FlagsSetUp { ActiveFlags = ActiveFlags, FlagService = this });
     }
+
     protected void TriggerVictory(Team winner)
     {
-        _ = Layout.MoveToNextPhase(token: default, winner);
+        Layout.Data[KnownLayoutDataKeys.WinnerTeam] = winner;
+
+        _ = Layout.MoveToNextPhase(token: default);
     }
+
     private void OnTick(ILoopTicker ticker, TimeSpan timeSinceStart, TimeSpan deltaTime)
     {
         foreach (FlagObjective flag in ActiveFlags)
@@ -180,6 +180,7 @@ public abstract class DualSidedFlagService :
                 flag.MarkContested(true);
         }
     }
+
     void IEventListener<FlagNeutralized>.HandleEvent(FlagNeutralized e, IServiceProvider serviceProvider)
     {
         RecalculateObjectives();

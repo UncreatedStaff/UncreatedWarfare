@@ -33,7 +33,7 @@ public class FlagHUD :
     public readonly IFlagRotationService _flagService;
     public readonly ITicketTracker _ticketTracker;
     public readonly IPlayerService _playerService;
-    public FlagHUD(IServiceProvider serviceProvider, AssetConfiguration assetConfig, ILoggerFactory loggerFactory) : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:FlagHUD"))
+    public FlagHUD(IServiceProvider serviceProvider, AssetConfiguration assetConfig, ILoggerFactory loggerFactory) : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:FlagHUD"), staticKey: true)
     {
         _layout = serviceProvider.GetRequiredService<Layout>();
         _flagService = serviceProvider.GetRequiredService<IFlagRotationService>();

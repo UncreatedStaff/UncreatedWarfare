@@ -1,5 +1,6 @@
 ﻿using DanielWillett.SpeedBytes;
 using Microsoft.Extensions.DependencyInjection;
+using SDG.Framework.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -17,7 +18,7 @@ namespace Uncreated.Warfare.Moderation;
 /// Highly-effecient voice data recorder that stores a bunch of different packets in one block of bytes.
 /// </summary>
 [PlayerComponent]
-public class AudioRecordPlayerComponent : IPlayerComponent
+public class AudioRecordPlayerComponent : IPlayerComponent, IDisposable
 {
     private static readonly ByteWriter MetaWriter = new ByteWriter(capacity: 0);
     private const ushort DataVersion = 1;
@@ -28,6 +29,11 @@ public class AudioRecordPlayerComponent : IPlayerComponent
     private IReadOnlyList<PacketInfo>? _packetsReadOnly;
     private int _startIndex;
     private int _byteCount;
+    private float _lastVoiceChat;
+    private bool _lastVoiceChatState;
+
+    public event Action<WarfarePlayer, bool>? VoiceChatStateUpdated;
+
     public WarfarePlayer Player { get; set; }
     public int PacketCount => _packets?.Count ?? 0;
     public ArraySegment<byte> RingSectionOne
@@ -56,6 +62,20 @@ public class AudioRecordPlayerComponent : IPlayerComponent
     internal int ByteCount => _byteCount;
     internal IReadOnlyList<PacketInfo> Packets => _packetsReadOnly ??= new ReadOnlyCollection<PacketInfo>(_packets ??= []);
 
+    public bool RecentlyUsedVoiceChat => _lastVoiceChatState;
+
+    void IPlayerComponent.Init(IServiceProvider serviceProvider, bool isOnJoin)
+    {
+        _audioListenService = serviceProvider.GetRequiredService<AudioRecordManager>();
+
+        if (isOnJoin)
+            TimeUtility.updated += Update;
+    }
+    void IDisposable.Dispose()
+    {
+        TimeUtility.updated -= Update;
+    }
+
     public void Reset()
     {
         _startIndex = 0;
@@ -64,6 +84,8 @@ public class AudioRecordPlayerComponent : IPlayerComponent
     }
     public void AppendPacket(ArraySegment<byte> packet)
     {
+        _lastVoiceChat = Time.realtimeSinceStartup;
+
         int newSize = _byteCount + packet.Count;
 
         while (_voiceBuffer == null || newSize >= _voiceBuffer.Length || PacketCount >= ushort.MaxValue)
@@ -232,9 +254,21 @@ public class AudioRecordPlayerComponent : IPlayerComponent
         }
     }
 
-    void IPlayerComponent.Init(IServiceProvider serviceProvider, bool isOnJoin)
+    private void Update()
     {
-        _audioListenService = serviceProvider.GetRequiredService<AudioRecordManager>();
+        bool vcState = Player.IsOnline && Time.realtimeSinceStartup - _lastVoiceChat < 1f;
+        if (vcState == _lastVoiceChatState)
+            return;
+
+        _lastVoiceChatState = vcState;
+        try
+        {
+            VoiceChatStateUpdated?.Invoke(Player, vcState);
+        }
+        catch (Exception ex)
+        {
+            WarfareModule.Singleton.GlobalLogger.LogError(ex, "Error invoking VoiceChatStateUpdated in AudioRecordPlayerComponent.");
+        }
     }
 
     [Conditional("DEBUG")]

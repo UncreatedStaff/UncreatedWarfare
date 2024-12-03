@@ -3,6 +3,8 @@ using DanielWillett.ReflectionTools.Formatting;
 using System.Reflection;
 
 namespace Uncreated.Warfare.Patches;
+
+[UsedImplicitly]
 internal class CancelReputationPatch : IHarmonyPatch
 {
     internal static bool IsSettingReputation;

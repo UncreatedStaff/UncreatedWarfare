@@ -21,7 +21,7 @@ public class RevivePlayers : QuestTemplate<RevivePlayers, RevivePlayers.Tracker,
     public RevivePlayers(IConfiguration templateConfig, IServiceProvider serviceProvider) : base(templateConfig, serviceProvider) { }
     public class State : IQuestState<RevivePlayers>
     {
-        [RewardField("r")]
+        [RewardVariable("r")]
         public QuestParameterValue<int> Revives { get; set; }
         public QuestParameterValue<int> FlagValue => Revives;
         public bool RequireSquad { get; set; }

@@ -40,5 +40,5 @@ public class ActionMenuUI : UnturnedUI
     public readonly UnturnedUIElement SquadSection = new UnturnedUIElement("AC_DefaultMenu/AC_SquadLeader");
     public readonly UnturnedUIElement LogiSection  = new UnturnedUIElement("AC_DefaultMenu/AC_Logi");
 
-    public ActionMenuUI(AssetConfiguration assetConfig, ILoggerFactory loggerFactory) : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:ActionMenu")) { }
+    public ActionMenuUI(AssetConfiguration assetConfig, ILoggerFactory loggerFactory) : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:ActionMenu"), staticKey: true) { }
 }

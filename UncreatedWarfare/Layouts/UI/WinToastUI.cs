@@ -14,7 +14,7 @@ public class WinToastUI : UnturnedUI
     public readonly UnturnedImage Team2Flag = new UnturnedImage("Team2Image");
     public readonly UnturnedLabel Team1Tickets = new UnturnedLabel("Team1Tickets");
     public readonly UnturnedLabel Team2Tickets = new UnturnedLabel("Team2Tickets");
-    public WinToastUI(AssetConfiguration assetConfig, ILoggerFactory loggerFactory) : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:Toasts:GameOver")) { }
+    public WinToastUI(AssetConfiguration assetConfig, ILoggerFactory loggerFactory) : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:Toasts:GameOver"), staticKey: true) { }
 
     public static void SendToastCallback(WarfarePlayer player, in ToastMessage message, ToastMessageInfo info, UnturnedUI ui)
     {

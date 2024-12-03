@@ -19,7 +19,7 @@ public class ShovelBuildables : QuestTemplate<ShovelBuildables, ShovelBuildables
     public ShovelBuildables(IConfiguration templateConfig, IServiceProvider serviceProvider) : base(templateConfig, serviceProvider) { }
     public class State : IQuestState<ShovelBuildables>
     {
-        [RewardField("a")]
+        [RewardVariable("a")]
         public QuestParameterValue<int> Amount { get; set; }
         public QuestParameterValue<Guid>? Base { get; set; }
         public QuestParameterValue<ShovelableType>? Type { get; set; }

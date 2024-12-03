@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using SDG.Framework.Utilities;
 using SDG.NetTransport;
 using System;
 using System.Collections.Generic;
@@ -13,7 +14,7 @@ using Uncreated.Warfare.Util;
 namespace Uncreated.Warfare.Players.UI;
 
 [PlayerComponent]
-public sealed class ToastManager : IPlayerComponent
+public sealed class ToastManager : IPlayerComponent, IDisposable
 {
     internal static readonly Regex PluginKeyMatch = new Regex(@"\<plugin_\d\/\>", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
@@ -52,7 +53,14 @@ public sealed class ToastManager : IPlayerComponent
             Channels = new ToastMessageChannel[_channelCount];
             for (int i = 0; i < Channels.Length; ++i)
                 Channels[i] = new ToastMessageChannel(this, i);
+
+            TimeUtility.updated += Update;
         }
+    }
+
+    void IDisposable.Dispose()
+    {
+        TimeUtility.updated -= Update;
     }
 
     private static void InitToastData(IServiceProvider serviceProvider)
@@ -66,7 +74,7 @@ public sealed class ToastManager : IPlayerComponent
         int len = vals.Length == 0 ? 0 : (int)vals.Max() + 1;
 
         ToastMessages = new ToastMessageInfo[len];
-        ToastMessages[(int)ToastMessageStyle.GameOver] = new ToastMessageInfo(ToastMessageStyle.GameOver, 0, serviceProvider.GetRequiredService<WinToastUI>(), WinToastUI.SendToastCallback)
+        ToastMessages[(int)ToastMessageStyle.GameOver] = new ToastMessageInfo(ToastMessageStyle.GameOver, 0, serviceProvider.GetRequiredService<WinToastUI>(), WinToastUI.SendToastCallback, inturrupt: true)
         {
             ResendNames = [ "Canvas/Content/Header", "Canvas/Content/Header/Team1Tickets", "Canvas/Content/Header/Team2Tickets", "Canvas/Content/Header/Team1Image", "Canvas/Content/Header/Team2Image" ],
             ClearableSlots = 3
@@ -220,7 +228,7 @@ public sealed class ToastManager : IPlayerComponent
             throw new ArgumentOutOfRangeException(nameof(channel), channel, "Channel must be a valid and configured channel index (starting at zero).");
     }
 
-    internal void Update()
+    private void Update()
     {
         if (!HasToasts || Hold)
             return;

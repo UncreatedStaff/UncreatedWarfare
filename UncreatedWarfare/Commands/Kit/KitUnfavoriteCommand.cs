@@ -1,4 +1,5 @@
-﻿using Uncreated.Framework.UI;
+﻿using System.Collections.Generic;
+using Uncreated.Framework.UI;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Models.Kits;
@@ -24,6 +25,8 @@ internal class KitUnfavoriteCommand : IExecutableCommand
 
     public async UniTask ExecuteAsync(CancellationToken token)
     {
+        // ReSharper disable InconsistentlySynchronizedField
+
         Context.AssertRanByPlayer();
 
         string? kitId = null;
@@ -60,28 +63,23 @@ internal class KitUnfavoriteCommand : IExecutableCommand
             throw Context.Reply(_translations.KitNotFound, kitId);
         }
 
-        await Context.Player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
-        try
+        await UniTask.SwitchToMainThread(token);
+
+        KitPlayerComponent comp = Context.Player.Component<KitPlayerComponent>();
+        lock (comp)
         {
-            await UniTask.SwitchToMainThread(token);
-            
-            if (!_kitManager.IsFavoritedQuick(kit.PrimaryKey, Context.Player))
+            if (comp.FavoritedKits == null || !comp.FavoritedKits.Contains(kit.PrimaryKey))
             {
                 throw Context.Reply(_translations.KitFavoriteAlreadyUnfavorited, kit);
             }
 
-            KitMenuUIData? data = UnturnedUIDataSource.GetData<KitMenuUIData>(Context.CallerId, _kitManager.MenuUI.Parent);
-            if (data?.FavoriteKits?.Remove(kit.PrimaryKey) ?? false)
-            {
-                data.FavoritesDirty = true;
-                await _kitManager.SaveFavorites(Context.Player, data.FavoriteKits, token).ConfigureAwait(false);
-            }
+            comp.FavoritedKits.Remove(kit.PrimaryKey);
+            comp.FavoritesDirty = true;
+        }
 
-            Context.Reply(_translations.KitUnfavorited, kit);
-        }
-        finally
-        {
-            Context.Player.PurchaseSync.Release();
-        }
+        Context.Reply(_translations.KitUnfavorited, kit);
+
+
+        // ReSharper restore InconsistentlySynchronizedField
     }
 }

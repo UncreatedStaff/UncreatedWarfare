@@ -53,10 +53,16 @@ public class PlayerChatRequested : CancellablePlayerEvent
     public required bool AllowRichText { get; set; }
 
     /// <summary>
+    /// If the chat message should be sent out instead of just ignored.
+    /// </summary>
+    /// <remarks>Note this is not the same as cancelling the event because <see cref="PlayerChatSent"/> will still get dispatched.</remarks>
+    public required bool ShouldReplicate { get; set; }
+
+    /// <summary>
     /// Custom icon to use instead of the player's profile picture.
     /// </summary>
     /// <remarks><see langword="null"/> = the sender's profile picture.</remarks>
-    public string? IconUrlOverride { get; set; }
+    public required string? IconUrlOverride { get; set; }
 
     /// <summary>
     /// The broadcast mode.

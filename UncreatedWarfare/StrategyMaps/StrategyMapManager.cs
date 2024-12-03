@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,8 +17,6 @@ using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.StrategyMaps.MapTacks;
 using Uncreated.Warfare.Util.List;
-using Uncreated.Warfare.Zones;
-using static Humanizer.On;
 
 namespace Uncreated.Warfare.StrategyMaps;
 public class StrategyMapManager : 

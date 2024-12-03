@@ -176,6 +176,8 @@ internal class PlayerClothingReceiveSwapClothingRequest : IHarmonyPatch
             CurrentClothingQuality = equippedQuality
         };
 
+        args.UpdateOriginalPositions();
+
         EventContinuations.Dispatch(args, WarfareModule.EventDispatcher, WarfareModule.Singleton.UnloadToken, out bool shouldAllow, continuation: args =>
         {
             if (!args.Player.IsOnline)

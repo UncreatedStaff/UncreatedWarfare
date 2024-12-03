@@ -191,7 +191,7 @@ public class WorldIconInfo : ITransformObject, IDisposable
             }
             else if (list == null)
             {
-                list = Data.GetPooledTransportConnectionList(8);
+                list = TransportConnectionPoolHelper.Claim(8);
                 list.Add(single);
                 list.Add(connection);
             }
@@ -341,7 +341,7 @@ public class WorldIconInfo : ITransformObject, IDisposable
         }
         else if (TargetTeam is not null)
         {
-            PooledTransportConnectionList list = Data.GetPooledTransportConnectionList(Provider.clients.Count / 2);
+            PooledTransportConnectionList list = TransportConnectionPoolHelper.Claim(Provider.clients.Count / 2);
             
             foreach (WarfarePlayer player in playerService.OnlinePlayers)
             {
@@ -356,7 +356,7 @@ public class WorldIconInfo : ITransformObject, IDisposable
         }
         else
         {
-            PooledTransportConnectionList list = Data.GetPooledTransportConnectionList(Provider.clients.Count / 2);
+            PooledTransportConnectionList list = TransportConnectionPoolHelper.Claim(Provider.clients.Count / 2);
 
             if (PlayerSelector == null)
             {

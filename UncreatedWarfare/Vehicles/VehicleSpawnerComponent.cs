@@ -59,7 +59,7 @@ public class VehicleSpawnerComponent : MonoBehaviour, IManualOnDestroy, IRequest
             if (_state == value)
                 return;
 
-            // todo back to auto-property
+            _logger.LogConditional("Vehicle Spawner '{0}' [{1}] state updated. {2} -> {3}.", SpawnInfo.UniqueName, VehicleInfo.Vehicle.ToDisplayString(), _state, value);
             _state = value;
         }
     }
