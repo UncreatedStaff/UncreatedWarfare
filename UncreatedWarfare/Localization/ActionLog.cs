@@ -52,8 +52,8 @@ public class ActionLog : MonoBehaviour
                 _types = new char[(int)ActionLogType.Max + 1][];
                 for (int i = 0; i < _types.Length; ++i)
                 {
-                    FieldInfo? field = fields.FirstOrDefault(x => (byte)x.GetValue(null) == (byte)i && !x.Name.Equals(nameof(ActionLogType.Max)));
-                    if (field == null || Attribute.GetCustomAttribute(field, typeof(TranslatableAttribute)) is not TranslatableAttribute { Default.Length: > 0 } tr)
+                    FieldInfo? fld = fields.FirstOrDefault(x => (byte)x.GetValue(null) == (byte)i && !x.Name.Equals(nameof(ActionLogType.Max)));
+                    if (fld == null || Attribute.GetCustomAttribute(fld, typeof(TranslatableAttribute)) is not TranslatableAttribute { Default.Length: > 0 } tr)
                         _types[i] = ((ActionLogType)i).ToString().ToCharArray();
                     else
                     {
