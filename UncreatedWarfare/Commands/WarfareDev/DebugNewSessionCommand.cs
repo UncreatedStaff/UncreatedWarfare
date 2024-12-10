@@ -5,10 +5,10 @@ using Uncreated.Warfare.Sessions;
 namespace Uncreated.Warfare.Commands;
 
 [Command("newsession", "ns"), SubCommandOf(typeof(WarfareDevCommand))]
-internal class DebugNewSessionCommand : IExecutableCommand
+internal sealed class DebugNewSessionCommand : IExecutableCommand
 {
     private readonly SessionManager _sessionManager;
-    public CommandContext Context { get; set; }
+    public required CommandContext Context { get; init; }
 
     public DebugNewSessionCommand(SessionManager sessionManager)
     {

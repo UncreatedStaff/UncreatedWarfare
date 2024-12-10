@@ -7,12 +7,12 @@ using Uncreated.Warfare.Util;
 namespace Uncreated.Warfare.Commands;
 
 [Command("buildables", "structures", "barricades", "buildable", "structure", "barricade", "struct", "b", "s"), SubCommandOf(typeof(ClearCommand))]
-public class ClearBuildablesCommand : IExecutableCommand
+internal sealed class ClearBuildablesCommand : IExecutableCommand
 {
     private readonly BuildableSaver _buildableSaver;
     private readonly ClearTranslations _translations;
 
-    public CommandContext Context { get; set; }
+    public required CommandContext Context { get; init; }
     public ClearBuildablesCommand(TranslationInjection<ClearTranslations> translations, BuildableSaver buildableSaver)
     {
         _buildableSaver = buildableSaver;

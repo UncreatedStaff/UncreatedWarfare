@@ -157,7 +157,7 @@ public class AudioRecordPlayerComponent : IPlayerComponent, IDisposable
         byte[] data = _audioListenService.CreateMultipartPacket(this);
         if (data.Length == 0)
             return AudioRecordManager.AudioConvertResult.NoData;
-        File.WriteAllBytes(@"C:\Users\danny\OneDrive\Desktop\multi-part.txt", data);
+        // for debugging File.WriteAllBytes(@"C:\Users\danny\OneDrive\Desktop\multi-part.txt", data);
 
         return await _audioListenService.TryWriteWavAsync(data, writeTo, leaveOpen, token);
     }

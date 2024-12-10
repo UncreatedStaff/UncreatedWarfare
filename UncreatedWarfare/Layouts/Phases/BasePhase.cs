@@ -2,6 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using Uncreated.Warfare.Layouts.Teams;
 
@@ -13,7 +14,8 @@ public abstract class BasePhase<TTeamSettings> : ILayoutPhase where TTeamSetting
     protected readonly ITeamManager<Team> TeamManager;
     protected readonly Layout Layout;
 
-    protected ILogger Logger { get => field ??= _loggerFactory.CreateLogger(GetType()); }
+    [field: MaybeNull, AllowNull]
+    protected ILogger Logger => field ??= _loggerFactory.CreateLogger(GetType());
 
     public bool IsActive { get; private set; }
 

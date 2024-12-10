@@ -179,7 +179,7 @@ public class LayoutFactory : IHostedService
             }
 
             _logger.LogError(ex, "Error creating layout {0}.", newLayout.FilePath);
-            UniTask.Create(async () =>
+            _ = UniTask.Create(async () =>
             {
                 await UniTask.NextFrame();
                 await StartNextLayout(token);

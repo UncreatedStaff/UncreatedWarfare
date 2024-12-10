@@ -7,13 +7,13 @@ using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Commands;
 
-[Command("effectattach", "ea"), SubCommandOf(typeof(WarfareDevCommand))]
-internal class DebugEffectAttach : IExecutableCommand
+[Command("effectattach", "attacheffect", "ea"), SubCommandOf(typeof(WarfareDevCommand))]
+internal sealed class DebugEffectAttachCommand : IExecutableCommand
 {
     private readonly WorldIconManager _iconManager;
-    public CommandContext Context { get; set; }
+    public required CommandContext Context { get; init; }
 
-    public DebugEffectAttach(WorldIconManager iconManager)
+    public DebugEffectAttachCommand(WorldIconManager iconManager)
     {
         _iconManager = iconManager;
     }

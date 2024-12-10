@@ -626,7 +626,7 @@ public class SingleParameterTemplate : QuestParameterTemplate<float>, IEquatable
         }
 
         /// <inheritdoc />
-        public override bool Equals(QuestParameterValue<float> other)
+        public override bool Equals(QuestParameterValue<float>? other)
         {
             return other is SingleParameterValue v && Equals(v);
         }

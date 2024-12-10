@@ -6,6 +6,7 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models.Players;
@@ -42,12 +43,12 @@ public class TwoSidedTeamManager : ITeamManager<Team>
     /// <summary>
     /// Info about all teams, binded from configuration.
     /// </summary>
-    public IReadOnlyList<TwoSidedTeamInfo> Teams { get; set; }
+    public IReadOnlyList<TwoSidedTeamInfo>? Teams { get; set; }
 
     /// <summary>
     /// Team manager extra configuration from config file.
     /// </summary>
-    public IConfiguration Configuration { get; set; }
+    public IConfiguration? Configuration { get; set; }
 
     /// <summary>
     /// If both Blufor and Opfor teams are specified.
@@ -160,6 +161,8 @@ public class TwoSidedTeamManager : ITeamManager<Team>
             factionInfo2 = factionDataStore.FindFaction(f2);
         }
 
+        Configuration ??= ConfigurationHelper.EmptySection;
+
         _teams[0] = new Team
         {
             Faction = factionInfo1 ?? throw new LayoutConfigurationException($"Unknown faction: {Teams[0].Faction}."),
@@ -175,6 +178,8 @@ public class TwoSidedTeamManager : ITeamManager<Team>
             GroupId = new CSteamID(2),
             Configuration = Configuration.GetSection("Teams:1")
         };
+
+        Team.DeclareEnemies(_teams);
 
         DecideTeams(out TwoSidedTeamRole team1Role, out TwoSidedTeamRole team2Role);
 
@@ -205,8 +210,13 @@ public class TwoSidedTeamManager : ITeamManager<Team>
     }
 
     /// <inheritdoc />
-    public Team? FindTeam(string teamSearch)
+    public Team? FindTeam(string? teamSearch)
     {
+        if (string.IsNullOrWhiteSpace(teamSearch))
+        {
+            return null;
+        }
+
         if (teamSearch.Equals("blufor", StringComparison.InvariantCultureIgnoreCase))
         {
             return _blufor == -1 ? null : _teams[_blufor];
@@ -241,8 +251,8 @@ public class TwoSidedTeamManager : ITeamManager<Team>
 
     private void DecideTeams(out TwoSidedTeamRole team1Role, out TwoSidedTeamRole team2Role)
     {
-        TwoSidedTeamRole role1 = Teams[0].Role;
-        TwoSidedTeamRole role2 = Teams[1].Role;
+        TwoSidedTeamRole role1 = Teams![0].Role;
+        TwoSidedTeamRole role2 = Teams![1].Role;
 
         if ((role1 == TwoSidedTeamRole.None) != (role2 == TwoSidedTeamRole.None))
         {

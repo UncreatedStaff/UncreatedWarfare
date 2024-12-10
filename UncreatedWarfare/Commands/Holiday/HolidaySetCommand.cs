@@ -1,55 +1,26 @@
 ﻿using System;
 using System.Reflection;
 using Uncreated.Warfare.Interaction.Commands;
-using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Commands;
 
-[Command("holiday")]
-public class HolidayCommand : IExecutableCommand
+[Command("set"), SubCommandOf(typeof(HolidayCommand))]
+internal sealed class HolidaySetCommand : IExecutableCommand
 {
     private readonly ITranslationValueFormatter _valueFormatter;
-    private static readonly PermissionLeaf PermissionSetHoliday = new PermissionLeaf("commands.holiday.set", unturned: false, warfare: true);
 
     /// <inheritdoc />
-    public CommandContext Context { get; set; }
+    public required CommandContext Context { get; init; }
 
-    public HolidayCommand(ITranslationValueFormatter valueFormatter)
+    public HolidaySetCommand(ITranslationValueFormatter valueFormatter)
     {
         _valueFormatter = valueFormatter;
     }
 
-    /// <summary>
-    /// Get /help metadata about this command.
-    /// </summary>
-    public static CommandStructure GetHelpMetadata()
-    {
-        return new CommandStructure
-        {
-            Description = "View or set the current holiday.",
-            Parameters =
-            [
-                new CommandParameter("holiday", typeof(ENPCHoliday))
-                {
-                    Description = "Set the current holiday manually.",
-                    Permission = PermissionSetHoliday,
-                    IsOptional = true
-                }
-            ]
-        };
-    }
-
     /// <inheritdoc />
-    public async UniTask ExecuteAsync(CancellationToken token)
+    public UniTask ExecuteAsync(CancellationToken token)
     {
-        if (Context.ArgumentCount == 0)
-        {
-            throw Context.ReplyString($"Current holiday: \"{HolidayUtil.getActiveHoliday()}\".");
-        }
-
-        await Context.AssertPermissions(PermissionSetHoliday, token);
-
         if (!Context.TryGet(0, out ENPCHoliday holiday))
         {
             throw Context.ReplyString("Invalid holiday. Must be field in ENPCHoliday.");
@@ -73,5 +44,6 @@ public class HolidayCommand : IExecutableCommand
         }
 
         field?.SetValue(null, holiday);
+        return UniTask.CompletedTask;
     }
 }

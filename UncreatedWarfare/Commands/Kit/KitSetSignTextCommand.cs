@@ -13,12 +13,12 @@ using Uncreated.Warfare.Util;
 namespace Uncreated.Warfare.Commands;
 
 [Command("sign", "text"), SubCommandOf(typeof(KitCommand))]
-internal class KitSetSignTextCommand : IExecutableCommand
+internal sealed class KitSetSignTextCommand : IExecutableCommand
 {
     private readonly KitCommandTranslations _translations;
     private readonly KitManager _kitManager;
     private readonly IKitsDbContext _dbContext;
-    public CommandContext Context { get; set; }
+    public required CommandContext Context { get; init; }
 
     public KitSetSignTextCommand(IServiceProvider serviceProvider)
     {

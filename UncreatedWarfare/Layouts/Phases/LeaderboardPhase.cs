@@ -30,7 +30,7 @@ public class LeaderboardPhase : BasePhase<PhaseTeamSettings>, IDisposable, IEven
     private readonly List<LeaderboardPlayer>[] _players;
 
     [UsedImplicitly]
-    public LeaderboardPhaseStatInfo[] PlayerStats { get; set; }
+    public LeaderboardPhaseStatInfo[] PlayerStats { get; set; } = Array.Empty<LeaderboardPhaseStatInfo>();
 
     private ILoopTicker? _ticker;
 
@@ -54,10 +54,10 @@ public class LeaderboardPhase : BasePhase<PhaseTeamSettings>, IDisposable, IEven
             LeaderboardPhaseStatInfo stat = PlayerStats[i];
             stat.Index = i;
 
-            if (stat.Name != null)
+            if (!string.IsNullOrWhiteSpace(stat.Name))
                 continue;
 
-            Logger.LogWarning("Missing 'StatName' in Stat #{0}", i);
+            Logger.LogWarning("Missing 'Name' in Stat #{0}", i);
             stat.Name = $"<UNKNOWN {i.ToString(CultureInfo.InvariantCulture)}>";
         }
 
@@ -257,11 +257,11 @@ public class LeaderboardPhase : BasePhase<PhaseTeamSettings>, IDisposable, IEven
 public class LeaderboardPhaseStatInfo
 {
     internal int Index;
-    internal RewardExpression CachedExpression;
+    internal RewardExpression? CachedExpression;
 
     public string? NumberFormat { get; set; }
 
-    public string Name { get; set; }
+    public string Name { get; set; } = string.Empty;
     public string? FormulaName { get; set; }
 
     public bool Visible { get; set; } = true;

@@ -94,21 +94,24 @@ public class PlayerInjureComponent : MonoBehaviour,
     private static readonly short GiveUpUiKey = UnturnedUIKeyPool.Claim();
 
     private Coroutine? _markerCoroutine;
+    private bool _isInjured;
+    private bool _isReviving;
+    private WarfarePlayer? _reviver;
+
+    private DamagePlayerParameters _injureParameters;
+    private float _injureStart;
+
+#nullable disable
     private DeathTracker _deathTracker;
     private ChatService _chatService;
     private IPlayerService _playerService;
     private EventDispatcher2 _eventDispatcher;
     private AssetConfiguration _assetConfiguration;
     private PointsTranslations _xpTranslations;
-    private bool _isInjured;
-    private bool _isReviving;
-    private WarfarePlayer? _reviver;
     private CooldownManager _cooldownManager;
-
-    private DamagePlayerParameters _injureParameters;
-    private float _injureStart;
-
     public WarfarePlayer Player { get; private set; }
+#nullable restore
+
     WarfarePlayer IPlayerComponent.Player { get => Player; set => Player = value; }
 
     /// <summary>
@@ -426,12 +429,16 @@ public class PlayerInjureComponent : MonoBehaviour,
         if (!_isInjured)
             return;
 
+#pragma warning disable CS0162
+
         if (!CanReviveEnemies && e.Medic.Team == e.Player.Team)
         {
             _chatService.Send(e.Medic, T.ReviveHealEnemies);
             e.Cancel();
             return;
         }
+
+#pragma warning restore CS0162
 
         if (!CanRevive(e.Medic))
         {

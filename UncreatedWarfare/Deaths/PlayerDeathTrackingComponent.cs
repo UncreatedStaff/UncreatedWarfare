@@ -9,10 +9,12 @@ using Uncreated.Warfare.Util;
 namespace Uncreated.Warfare.Deaths;
 internal class PlayerDeathTrackingComponent : MonoBehaviour
 {
+#nullable disable
     /// <summary>
     /// The player this component is a part of.
     /// </summary>
     public Player Player { get; private set; }
+#nullable restore
 
     /// <summary>
     /// Info about how a player began bleeding out most recently. Cleared when bleeding stops.

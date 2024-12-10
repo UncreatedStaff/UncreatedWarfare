@@ -19,7 +19,7 @@ public class DefaultTeamSelectorBehavior : ITeamSelectorBehavior
     private const double MaximumScore = 0.75;
 
     private readonly IPlayerService _playerService;
-    public TeamInfo[] Teams { get; set; }
+    public TeamInfo[]? Teams { get; set; }
 
     public DefaultTeamSelectorBehavior(IPlayerService playerService)
     {
@@ -28,12 +28,15 @@ public class DefaultTeamSelectorBehavior : ITeamSelectorBehavior
 
     public void UpdateTeams()
     {
+        if (Teams == null)
+            return;
+
         for (int i = 0; i < Teams.Length; ++i)
         {
             List<WarfarePlayer>.Enumerator enumerator = _playerService.OnlinePlayers.GetEnumerator();
 
             ref TeamInfo teamInfo = ref Teams[i];
-            Team team = teamInfo.Team;
+            Team? team = teamInfo.Team;
             int ct = 0;
             while (enumerator.MoveNext())
             {
@@ -42,18 +45,19 @@ public class DefaultTeamSelectorBehavior : ITeamSelectorBehavior
             }
 
             teamInfo.PlayerCount = ct;
+            enumerator.Dispose();
         }
     }
 
     public bool CanJoinTeam(int index, int currentTeam = -1)
     {
-        if (index >= Teams.Length || index < 0)
+        if (Teams == null || index >= Teams.Length || index < 0)
             throw new ArgumentOutOfRangeException(nameof(index));
 
         if (currentTeam >= Teams.Length)
             throw new ArgumentOutOfRangeException(nameof(index));
 
-        CalculateTeamMetrics(currentTeam, out double variance, out int minTeam, out double mean);
+        CalculateTeamMetrics(currentTeam, out double variance, out _, out double mean);
 
         int playerCount = Teams[index].PlayerCount;
 
@@ -76,6 +80,12 @@ public class DefaultTeamSelectorBehavior : ITeamSelectorBehavior
         int maxTeam = -1; minTeam = -1;
         double total = 0;
         int max = int.MinValue, min = int.MaxValue;
+
+        if (Teams == null)
+        {
+            throw new InvalidOperationException("Teams not initialized.");
+        }
+
         for (int i = 0; i < Teams.Length; ++i)
         {
             ref TeamInfo teamInfo = ref Teams[i];

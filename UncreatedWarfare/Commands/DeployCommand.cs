@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System;
-using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Players.Extensions;
@@ -10,14 +9,14 @@ using Uncreated.Warfare.Zones;
 namespace Uncreated.Warfare.Commands;
 
 [Command("deploy", "dep", "warp", "warps", "tpa", "go", "goto", "fob", "deployfob", "df", "dp"), MetadataFile]
-public class DeployCommand : IExecutableCommand
+internal sealed class DeployCommand : IExecutableCommand
 {
     private readonly ZoneStore _globalZoneStore;
     private readonly DeploymentTranslations _translations;
     private readonly DeploymentService _deploymentService;
 
     /// <inheritdoc />
-    public CommandContext Context { get; set; }
+    public required CommandContext Context { get; init; }
 
     public DeployCommand(IServiceProvider serviceProvider)
     {
@@ -55,22 +54,22 @@ public class DeployCommand : IExecutableCommand
 
         DeploySettings deploySettings = default;
 
-        if (false /*!FOBManager.Loaded || !FOBManager.TryFindFOB(input, Context.Player.Team, out destination) */)
-        {
-            if (input.Equals("lobby", StringComparison.InvariantCultureIgnoreCase))
-                throw Context.Reply(_translations.DeployLobbyRemoved);
-
-            if (input.Equals("main", StringComparison.InvariantCultureIgnoreCase) ||
-                input.Equals("base", StringComparison.InvariantCultureIgnoreCase) ||
-                input.Equals("home", StringComparison.InvariantCultureIgnoreCase) ||
-                input.Equals("mainbase", StringComparison.InvariantCultureIgnoreCase) ||
-                input.Equals("main base", StringComparison.InvariantCultureIgnoreCase) ||
-                input.Equals("homebase", StringComparison.InvariantCultureIgnoreCase) ||
-                input.Equals("home base", StringComparison.InvariantCultureIgnoreCase))
-            {
-                destination = _globalZoneStore.SearchZone(ZoneType.MainBase, Context.Player.Team.Faction);
-            }
-        }
+        // todo if (false /*!FOBManager.Loaded || !FOBManager.TryFindFOB(input, Context.Player.Team, out destination) */)
+        // todo {
+        // todo     if (input.Equals("lobby", StringComparison.InvariantCultureIgnoreCase))
+        // todo         throw Context.Reply(_translations.DeployLobbyRemoved);
+        // todo 
+        // todo     if (input.Equals("main", StringComparison.InvariantCultureIgnoreCase) ||
+        // todo         input.Equals("base", StringComparison.InvariantCultureIgnoreCase) ||
+        // todo         input.Equals("home", StringComparison.InvariantCultureIgnoreCase) ||
+        // todo         input.Equals("mainbase", StringComparison.InvariantCultureIgnoreCase) ||
+        // todo         input.Equals("main base", StringComparison.InvariantCultureIgnoreCase) ||
+        // todo         input.Equals("homebase", StringComparison.InvariantCultureIgnoreCase) ||
+        // todo         input.Equals("home base", StringComparison.InvariantCultureIgnoreCase))
+        // todo     {
+        // todo         destination = _globalZoneStore.SearchZone(ZoneType.MainBase, Context.Player.Team.Faction);
+        // todo     }
+        // todo }
 
         if (destination == null)
             throw Context.Reply(_translations.DeployableNotFound, input);

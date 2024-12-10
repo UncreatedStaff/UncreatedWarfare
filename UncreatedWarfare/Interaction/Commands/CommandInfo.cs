@@ -15,6 +15,7 @@ namespace Uncreated.Warfare.Interaction.Commands;
 public class CommandInfo : ICommandDescriptor
 {
     internal List<CommandWaitTask> WaitTasks = new List<CommandWaitTask>(0);
+    internal Action<IExecutableCommand, CommandContext>? ContextSetter;
     private readonly List<CommandInfo> _subCommands;
 
     /// <summary>
@@ -109,6 +110,7 @@ public class CommandInfo : ICommandDescriptor
     /// <summary>
     /// The command that will automatically take over if this command is called. It should usually be a child command.
     /// </summary>
+    [JsonIgnore]
     public CommandInfo? RedirectCommandInfo { get; set; }
 
     /// <summary>
@@ -129,6 +131,7 @@ public class CommandInfo : ICommandDescriptor
         OtherPermissionsAreAnd = true;
         OtherPermissions = Array.Empty<PermissionLeaf>();
         DefaultPermission = new PermissionLeaf("commands." + CommandName, unturned: true, warfare: false);
+        _subCommands = new List<CommandInfo>(0);
         SubCommands = Array.Empty<CommandInfo>();
         IsExecutable = true;
     }
@@ -213,7 +216,7 @@ public class CommandInfo : ICommandDescriptor
             else if (Metadata != null)
                 isFileMetadata = true;
         }
-        else if (parent != null)
+        else if (parent is { HideFromHelp: false })
         {
             for (int i = 0; i < parent.Metadata.Parameters.Length; ++i)
             {
@@ -361,7 +364,7 @@ public class CommandInfo : ICommandDescriptor
     /// <summary>
     /// Reads help metadata as an embedded resource in the assembly the command is defined in.
     /// </summary>
-    private static CommandMetadata? ReadHelpMetadata(Type classType, ILogger logger, bool logNoAttrAsError)
+    private CommandMetadata? ReadHelpMetadata(Type classType, ILogger logger, bool logNoAttrAsError)
     {
         if (!classType.TryGetAttributeSafe(out MetadataFileAttribute fileAttr))
         {
@@ -369,7 +372,7 @@ public class CommandInfo : ICommandDescriptor
             {
                 logger.LogWarning("Command type {0} is missing a MetadataFileAttribute.", classType);
             }
-            else
+            else if (!IsSubCommand)
             {
                 logger.LogDebug("Command type {0} is missing a MetadataFileAttribute.", classType);
             }
@@ -442,7 +445,7 @@ public class CommandInfo : ICommandDescriptor
             CommandMetadata meta = new CommandMetadata();
             config.Bind(meta);
             meta.Clean(classType);
-            logger.LogDebug("Read command metadata for command type {0} from resource \"{1}\" in assembly {2}.", classType, resource, asm.FullName);
+            //logger.LogDebug("Read command metadata for command type {0} from resource \"{1}\" in assembly {2}.", classType, resource, asm.FullName);
             return meta;
         }
         catch (Exception ex)

@@ -1,8 +1,6 @@
 ﻿using Microsoft.Extensions.Configuration;
 using System;
 using System.Text.Json;
-using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Exceptions;
 using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.NewQuests.Parameters;
@@ -11,16 +9,20 @@ using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.NewQuests.Templates;
+
 public class ShovelBuildables : QuestTemplate<ShovelBuildables, ShovelBuildables.Tracker, ShovelBuildables.State>
 {
+#nullable disable
     public Int32ParameterTemplate Amount { get; set; }
     public AssetParameterTemplate<ItemPlaceableAsset> Base { get; set; }
     public EnumParameterTemplate<ShovelableType> Type { get; set; }
+#nullable restore
     public ShovelBuildables(IConfiguration templateConfig, IServiceProvider serviceProvider) : base(templateConfig, serviceProvider) { }
     public class State : IQuestState<ShovelBuildables>
     {
-        [RewardVariable("a")]
+#nullable disable
         public QuestParameterValue<int> Amount { get; set; }
+#nullable restore
         public QuestParameterValue<Guid>? Base { get; set; }
         public QuestParameterValue<ShovelableType>? Type { get; set; }
         public QuestParameterValue<int> FlagValue => Amount;

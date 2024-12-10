@@ -14,14 +14,14 @@ using Uncreated.Warfare.Translations;
 namespace Uncreated.Warfare.Commands;
 
 [Command("skills", "skillset", "skillsets"), SubCommandOf(typeof(KitCommand))]
-internal class KitSkillsetsCommand : IExecutableCommand
+internal sealed class KitSkillsetsCommand : IExecutableCommand
 {
     private readonly KitCommandTranslations _translations;
     private readonly KitManager _kitManager;
     private readonly IKitsDbContext _dbContext;
     private readonly IPlayerService _playerService;
     private readonly ITranslationValueFormatter _valueFormatter;
-    public CommandContext Context { get; set; }
+    public required CommandContext Context { get; init; }
 
     public KitSkillsetsCommand(IServiceProvider serviceProvider)
     {

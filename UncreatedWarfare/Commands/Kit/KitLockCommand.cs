@@ -9,12 +9,13 @@ using Uncreated.Warfare.Translations;
 namespace Uncreated.Warfare.Commands;
 
 [Command("lock"), SubCommandOf(typeof(KitCommand))]
-internal class KitLockCommand : IExecutableCommand
+internal sealed class KitLockCommand : IExecutableCommand
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly KitCommandTranslations _translations;
     private readonly KitManager _kitManager;
-    public CommandContext Context { get; set; }
+
+    public required CommandContext Context { get; init; }
 
     public KitLockCommand(IServiceProvider serviceProvider)
     {

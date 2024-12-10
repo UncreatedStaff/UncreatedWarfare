@@ -1,19 +1,16 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using System;
+﻿using System;
 using System.Linq;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Translations;
-using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Commands;
 
 [Command("register", "reg"), SubCommandOf(typeof(VehicleBayCommand))]
-public class VehicleBayRegisterCommand : IExecutableCommand
+internal sealed class VehicleBayRegisterCommand : IExecutableCommand
 {
     private readonly BuildableSaver _buildableSaver;
     private readonly VehicleSpawnerStore _spawnerStore;
@@ -22,7 +19,7 @@ public class VehicleBayRegisterCommand : IExecutableCommand
     private readonly VehicleBayCommandTranslations _translations;
 
     /// <inheritdoc />
-    public CommandContext Context { get; set; }
+    public required CommandContext Context { get; init; }
 
     public VehicleBayRegisterCommand(
         TranslationInjection<VehicleBayCommandTranslations> translations,

@@ -6,11 +6,12 @@ using Uncreated.Warfare.Translations;
 namespace Uncreated.Warfare.Commands;
 
 [Command("remove", "delete", "cancel"), SubCommandOf(typeof(KitHotkeyCommand))]
-internal class KitHotkeyRemoveCommand : IExecutableCommand
+internal sealed class KitHotkeyRemoveCommand : IExecutableCommand
 {
     private readonly KitCommandTranslations _translations;
     private readonly KitManager _kitManager;
-    public CommandContext Context { get; set; }
+
+    public required CommandContext Context { get; init; }
 
     public KitHotkeyRemoveCommand(TranslationInjection<KitCommandTranslations> translations, KitManager kitManager)
     {

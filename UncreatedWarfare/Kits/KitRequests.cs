@@ -55,6 +55,8 @@ public class KitRequests : IRequestHandler<KitSignInstanceProvider, Kit>, IReque
         _cooldownManager = serviceProvider.GetRequiredService<CooldownManager>();
         _logger = serviceProvider.GetRequiredService<ILogger<KitRequests>>();
         _eventDispatcher = serviceProvider.GetRequiredService<EventDispatcher2>();
+        _assetRedirectService = serviceProvider.GetRequiredService<AssetRedirectService>();
+        _factionDataStore = serviceProvider.GetRequiredService<IFactionDataStore>();
         _squadManager = serviceProvider.GetService<SquadManager>();
         _serviceProvider = serviceProvider;
         Manager = manager;

@@ -28,7 +28,7 @@ public sealed class CommandAttribute : Attribute
 [BaseTypeRequired(typeof(ICommand))]
 public sealed class SubCommandOfAttribute : Attribute
 {
-    public Type ParentType { get; }
+    public Type? ParentType { get; }
     public SubCommandOfAttribute(Type parentType)
     {
         ParentType = parentType;

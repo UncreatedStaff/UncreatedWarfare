@@ -5,24 +5,13 @@ using Uncreated.Warfare.Tweaks;
 
 namespace Uncreated.Warfare.Commands;
 
-[Command("god")]
-public class GodCommand : IExecutableCommand
+[Command("god", PermissionOverride = GodPlayerComponent.GodPermissionName), MetadataFile]
+internal sealed class GodCommand : IExecutableCommand
 {
     private readonly GodCommandTranslations _translations;
 
     /// <inheritdoc />
-    public CommandContext Context { get; set; }
-
-    /// <summary>
-    /// Get /help metadata about this command.
-    /// </summary>
-    public static CommandStructure GetHelpMetadata()
-    {
-        return new CommandStructure
-        {
-            Description = "Toggles your ability to take damage."
-        };
-    }
+    public required CommandContext Context { get; init; }
 
     public GodCommand(TranslationInjection<GodCommandTranslations> translations)
     {
@@ -30,13 +19,9 @@ public class GodCommand : IExecutableCommand
     }
 
     /// <inheritdoc />
-    public async UniTask ExecuteAsync(CancellationToken token)
+    public UniTask ExecuteAsync(CancellationToken token)
     {
         Context.AssertRanByPlayer();
-
-        await Context.AssertPermissions(GodPlayerComponent.GodPermission, token);
-
-        await UniTask.SwitchToMainThread(token);
 
         GodPlayerComponent component = Context.Player.Component<GodPlayerComponent>();
 
@@ -56,6 +41,8 @@ public class GodCommand : IExecutableCommand
         {
             Context.Reply(_translations.GodModeDisabled);
         }
+
+        return UniTask.CompletedTask;
     }
 }
 

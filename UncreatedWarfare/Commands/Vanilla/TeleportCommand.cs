@@ -13,107 +13,16 @@ using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Commands;
 
-[Command("teleport", "tp"), Priority(1)]
-[MetadataFile(nameof(GetHelpMetadata))]
-public class TeleportCommand : IExecutableCommand
+[Command("teleport", "tp"), Priority(1), MetadataFile]
+internal sealed class TeleportCommand : IExecutableCommand
 {
     private readonly ChatService _chatService;
     private readonly TeleportCommandTranslations _translations;
     private const string Syntax = "/tp <x y z|player|location|wp|jump [dstance]> - or - /tp <player> <x y z|player|location|wp>";
 
     /// <inheritdoc />
-    public CommandContext Context { get; set; }
-
-    /// <summary>
-    /// Get /help metadata about this command.
-    /// </summary>
-    public static CommandStructure GetHelpMetadata()
-    {
-        return new CommandStructure
-        {
-            Description = "Teleport you or another player to a location.",
-            Parameters =
-            [
-                new CommandParameter("Player", typeof(IPlayer))
-                {
-                    Description = "Teleport another player to a location.",
-                    Parameters =
-                    [
-                        new CommandParameter("X", typeof(float))
-                        {
-                            Description = "Teleport another player to a set of coordinates.",
-                            ChainDisplayCount = 3,
-                            Parameters =
-                            [
-                                new CommandParameter("Y", typeof(float))
-                                {
-                                    Description = "Teleport another player to a set of coordinates.",
-                                    Parameters =
-                                    [
-                                        new CommandParameter("Z", typeof(float))
-                                        {
-                                            Description = "Teleport another player to a set of coordinates.",
-                                        }
-                                    ]
-                                }
-                            ]
-                        },
-                        new CommandParameter("Location", typeof(string), typeof(GridLocation))
-                        {
-                            Description = "Teleport another player to a location or grid location.",
-                        },
-                        new CommandParameter("WP")
-                        {
-                            Aliases = [ "waypoint", "marker" ],
-                            Description = "Teleport another player to your waypoint.",
-                        }
-                    ]
-                },
-                new CommandParameter("X", typeof(float))
-                {
-                    Description = "Teleport yourself to a set of coordinates.",
-                    ChainDisplayCount = 3,
-                    Parameters =
-                    [
-                        new CommandParameter("Y", typeof(float))
-                        {
-                            Description = "Teleport yourself to a set of coordinates.",
-                            Parameters =
-                            [
-                                new CommandParameter("Z", typeof(float))
-                                {
-                                    Description = "Teleport yourself to a set of coordinates.",
-                                }
-                            ]
-                        }
-                    ]
-                },
-                new CommandParameter("Location", typeof(string), typeof(GridLocation))
-                {
-                    Description = "Teleport yourself to a location or grid location.",
-                },
-                new CommandParameter("WP")
-                {
-                    Aliases = [ "waypoint", "marker" ],
-                    Description = "Teleport yourself to your waypoint.",
-                },
-                new CommandParameter("Jump")
-                {
-                    Description = "Teleport to where you're looking.",
-                    Aliases = [ "j" ],
-                    Parameters =
-                    [
-                        new CommandParameter("Distance", typeof(float))
-                        {
-                            Description = "Teleport yourself a certain distance in the direction you're looking.",
-                            IsOptional = true
-                        }
-                    ]
-                }
-            ]
-        };
-    }
-
+    public required CommandContext Context { get; init; }
+    
     public TeleportCommand(ChatService chatService, TranslationInjection<TeleportCommandTranslations> translations)
     {
         _chatService = chatService;

@@ -12,13 +12,14 @@ using Uncreated.Warfare.Translations;
 namespace Uncreated.Warfare.Commands;
 
 [Command("removeaccess", "removea", "ra"), SubCommandOf(typeof(KitCommand))]
-internal class KitRemoveAccessCommand : IExecutableCommand
+internal sealed class KitRemoveAccessCommand : IExecutableCommand
 {
     private readonly KitCommandTranslations _translations;
     private readonly KitManager _kitManager;
     private readonly ChatService _chatService;
     private readonly IUserDataService _userDataService;
-    public CommandContext Context { get; set; }
+
+    public required CommandContext Context { get; init; }
 
     public KitRemoveAccessCommand(IServiceProvider serviceProvider)
     {

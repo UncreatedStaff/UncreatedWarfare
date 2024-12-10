@@ -8,11 +8,13 @@ namespace Uncreated.Warfare.Components;
 
 internal class LaserGuidedMissileComponent : MonoBehaviour
 {
+#nullable disable
     private Player _firer;
     private GameObject _projectile;
-
+    private Transform _aim;
     private Rigidbody _rigidbody;
     private List<BoxCollider> _colliders;
+#nullable restore
 
     private SpottedComponent? _laserTarget;
     private float _guiderDistance;
@@ -22,7 +24,6 @@ internal class LaserGuidedMissileComponent : MonoBehaviour
     private float _armingDistance;
     private float _fullGuidanceDelay;
     private float _turnMultiplier;
-    private Transform _aim;
 
     private bool _armed;
     private bool _isActive;
@@ -31,7 +32,7 @@ internal class LaserGuidedMissileComponent : MonoBehaviour
     private IAssetLink<EffectAsset> _fxSound = null!;
 
     public float InitializationTime { get; private set; }
-    public bool LockedOn { get => _laserTarget != null; }
+    public bool LockedOn => _laserTarget != null;
 
     public void Initialize(GameObject projectile, Player firer, IServiceProvider serviceProvider, float projectileSpeed, float responsiveness, float aquisitionRange, float armingDistance, float fullGuidanceDelay)
     {

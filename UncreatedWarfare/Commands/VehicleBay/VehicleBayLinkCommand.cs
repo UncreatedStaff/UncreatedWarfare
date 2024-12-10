@@ -10,14 +10,14 @@ using Uncreated.Warfare.Vehicles;
 namespace Uncreated.Warfare.Commands;
 
 [Command("link"), SubCommandOf(typeof(VehicleBayCommand))]
-public class VehicleBayLinkCommand : IExecutableCommand
+internal sealed class VehicleBayLinkCommand : IExecutableCommand
 {
     private readonly BuildableSaver _buildableSaver;
     private readonly VehicleSpawnerStore _spawnerStore;
     private readonly VehicleBayCommandTranslations _translations;
 
     /// <inheritdoc />
-    public CommandContext Context { get; set; }
+    public required CommandContext Context { get; init; }
 
     public VehicleBayLinkCommand(
         TranslationInjection<VehicleBayCommandTranslations> translations,

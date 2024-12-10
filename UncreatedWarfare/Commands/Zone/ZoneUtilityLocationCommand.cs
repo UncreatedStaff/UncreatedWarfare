@@ -4,12 +4,12 @@ using Uncreated.Warfare.Translations;
 namespace Uncreated.Warfare.Commands;
 
 [Command("location", "position", "loc", "pos"), SubCommandOf(typeof(ZoneUtilityCommand))]
-public class ZoneUtilityLocationCommand : IExecutableCommand
+internal sealed class ZoneUtilityLocationCommand : IExecutableCommand
 {
     private readonly ZoneCommandTranslations _translations;
 
     /// <inheritdoc />
-    public CommandContext Context { get; set; }
+    public required CommandContext Context { get; init; }
 
     public ZoneUtilityLocationCommand(TranslationInjection<ZoneCommandTranslations> translations)
     {

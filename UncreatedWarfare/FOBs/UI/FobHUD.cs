@@ -117,6 +117,7 @@ public class FobHUD :
         UpdateForTeam(e.Fob.Team);
     }
 
+#nullable disable
     public class FobElement
     {
         [Pattern("", Root = true, CleanJoin = '_')]
@@ -130,4 +131,5 @@ public class FobHUD :
         [Pattern("Ammo", Mode = FormatMode.Format)]
         public UnturnedLabel AmmoCount { get; set; }
     }
+#nullable restore
 }

@@ -5,12 +5,12 @@ using Uncreated.Warfare.Translations;
 namespace Uncreated.Warfare.Commands;
 
 [HideFromHelp, Command("build")]
-public class BuildCommand : IExecutableCommand
+internal sealed class BuildCommand : IExecutableCommand
 {
     private readonly FobTranslations _translations;
 
     /// <inheritdoc />
-    public CommandContext Context { get; set; }
+    public required CommandContext Context { get; init; }
 
     public BuildCommand(TranslationInjection<FobTranslations> translations)
     {

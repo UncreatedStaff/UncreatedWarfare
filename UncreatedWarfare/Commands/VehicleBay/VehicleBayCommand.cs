@@ -7,7 +7,7 @@ using Uncreated.Warfare.Translations.Util;
 namespace Uncreated.Warfare.Commands;
 
 [Command("vehiclebay", "vb"), MetadataFile]
-public class VehicleBayCommand : ICommand;
+internal sealed class VehicleBayCommand : ICommand;
 public class VehicleBayCommandTranslations : PropertiesTranslationCollection
 {
     protected override string FileName => "Commands/Vehicle Bay";

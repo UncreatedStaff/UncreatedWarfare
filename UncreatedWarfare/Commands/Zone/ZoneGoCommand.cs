@@ -1,6 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.DependencyInjection;
+using System;
 using System.Globalization;
-using Microsoft.Extensions.DependencyInjection;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Layouts.Teams;
@@ -13,7 +13,7 @@ using Uncreated.Warfare.Zones;
 namespace Uncreated.Warfare.Commands;
 
 [Command("go", "goto", "tp", "teleport", "warp"), SubCommandOf(typeof(ZoneCommand))]
-public class ZoneGoCommand : IExecutableCommand
+internal sealed class ZoneGoCommand : IExecutableCommand
 {
     private readonly ZoneStore _zoneStore;
     private readonly DeploymentService _deploymentService;
@@ -22,7 +22,7 @@ public class ZoneGoCommand : IExecutableCommand
     private readonly DeploymentTranslations _deployTranslations;
 
     /// <inheritdoc />
-    public CommandContext Context { get; set; }
+    public required CommandContext Context { get; init; }
 
     public ZoneGoCommand(
         ZoneStore zoneStore,

@@ -10,13 +10,14 @@ using Uncreated.Warfare.Translations;
 namespace Uncreated.Warfare.Commands;
 
 [Command("delete", "d", "remove"), SubCommandOf(typeof(KitCommand))]
-internal class KitDeleteCommand : IExecutableCommand
+internal sealed class KitDeleteCommand : IExecutableCommand
 {
     private readonly KitCommandTranslations _translations;
     private readonly KitManager _kitManager;
     private readonly CommandDispatcher _commandDispatcher;
     private readonly IKitsDbContext _dbContext;
-    public CommandContext Context { get; set; }
+
+    public required CommandContext Context { get; init; }
 
     public KitDeleteCommand(IServiceProvider serviceProvider)
     {

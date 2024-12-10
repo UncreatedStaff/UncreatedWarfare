@@ -6,44 +6,15 @@ using Uncreated.Warfare.Translations.Languages;
 
 namespace Uncreated.Warfare.Commands;
 
-[Command("lang", "language", "foreign")]
-public class LangCommand : IExecutableCommand
+[Command("lang", "language", "foreign", "local"), MetadataFile]
+internal sealed class LangCommand : IExecutableCommand
 {
     private readonly ICachableLanguageDataStore _languageDataStore;
     private readonly LanguageService _languageService;
     private readonly LanguageCommandTranslations _translations;
 
     /// <inheritdoc />
-    public CommandContext Context { get; set; }
-
-    /// <summary>
-    /// Get /help metadata about this command.
-    /// </summary>
-    public static CommandStructure GetHelpMetadata()
-    {
-        return new CommandStructure
-        {
-            Description = "Switch your language to some of our supported languages or see a list.",
-            Parameters =
-            [
-                new CommandParameter("Current")
-                {
-                    IsOptional = true,
-                    Description = "See your current language."
-                },
-                new CommandParameter("Reset")
-                {
-                    IsOptional = true,
-                    Description = "Changes your language back to default."
-                },
-                new CommandParameter("Language", typeof(string))
-                {
-                    IsOptional = true,
-                    Description = "Changes your language to your choice of supported language."
-                }
-            ]
-        };
-    }
+    public required CommandContext Context { get; init; }
 
     public LangCommand(ICachableLanguageDataStore languageDataStore, LanguageService languageService, TranslationInjection<LanguageCommandTranslations> translations)
     {
@@ -81,11 +52,11 @@ public class LangCommand : IExecutableCommand
 
             Context.Reply(_translations.LanguageList, sb.ToString());
         }
-        else if (Context.MatchParameter(0, "refersh", "reload", "update"))
-        {
-            Context.Player.Locale.Preferences = await _languageDataStore.GetLanguagePreferences(Context.CallerId.m_SteamID, token);
-            Context.Reply(_translations.LanguageRefreshed);
-        }
+        //else if (Context.MatchParameter(0, "refersh", "reload", "update"))
+        //{
+        //    Context.Player.Locale.Preferences = await _languageDataStore.GetLanguagePreferences(Context.CallerId.m_SteamID, token);
+        //    Context.Reply(_translations.LanguageRefreshed);
+        //}
         else if (Context.MatchParameter(0, "current"))
         {
             Context.AssertRanByPlayer();

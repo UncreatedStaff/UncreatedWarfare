@@ -29,10 +29,12 @@ public class FlagHUD :
     public readonly UnturnedLabel TicketsFlagIcon = new UnturnedLabel("Tickets/FactionFlagIcon");
     public readonly UnturnedLabel GamemodeTitle = new UnturnedLabel("HeaderFlags");
     public readonly FlagElement[] Rows = ElementPatterns.CreateArray<FlagElement>("Flag_{0}/Flag{1}_{0}", 1, to: 10);
-    public readonly Layout _layout;
-    public readonly IFlagRotationService _flagService;
-    public readonly ITicketTracker _ticketTracker;
-    public readonly IPlayerService _playerService;
+
+    private readonly Layout _layout;
+    private readonly IFlagRotationService _flagService;
+    private readonly ITicketTracker _ticketTracker;
+    private readonly IPlayerService _playerService;
+
     public FlagHUD(IServiceProvider serviceProvider, AssetConfiguration assetConfig, ILoggerFactory loggerFactory) : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:FlagHUD"), staticKey: true)
     {
         _layout = serviceProvider.GetRequiredService<Layout>();
@@ -110,6 +112,9 @@ public class FlagHUD :
         foreach (WarfarePlayer player in _playerService.OnlinePlayers)
             UpdateFlagList(player);
     }
+
+#nullable disable
+
     public class FlagElement
     {
         [Pattern("", Root = true, CleanJoin = '_')]
@@ -121,4 +126,7 @@ public class FlagHUD :
         [Pattern("Icon", Mode = FormatMode.Format)]
         public UnturnedLabel Icon { get; set; }
     }
+
+#nullable restore
+
 }

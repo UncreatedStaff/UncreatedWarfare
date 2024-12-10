@@ -1,25 +1,15 @@
 ﻿using Cysharp.Threading.Tasks;
 using System.Threading;
 using Uncreated.Warfare.Commands.Dispatch;
+using Uncreated.Warfare.Interaction.Commands;
 
 namespace Uncreated.Warfare.Commands;
 
-[Command("blank"), MetadataFile]
-public sealed class BlankCommand : IExecutableCommand
+[Command("blank"), SubCommandOf(null), MetadataFile]
+internal sealed class BlankCommand : IExecutableCommand
 {
     /// <inheritdoc />
-    public CommandContext Context { get; set; }
-
-    /// <summary>
-    /// Get /help metadata about this command.
-    /// </summary>
-    public static CommandStructure GetHelpMetadata()
-    {
-        return new CommandStructure
-        {
-            Description = "Does nothing."
-        };
-    }
+    public required CommandContext Context { get; init; }
 
     /// <inheritdoc />
     public UniTask ExecuteAsync(CancellationToken token)

@@ -9,12 +9,12 @@ using Uncreated.Warfare.Translations;
 namespace Uncreated.Warfare.Commands;
 
 [Command("unlock", "unl", "ul"), SubCommandOf(typeof(KitCommand))]
-internal class KitUnlockCommand : IExecutableCommand
+internal sealed class KitUnlockCommand : IExecutableCommand
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly KitCommandTranslations _translations;
     private readonly KitManager _kitManager;
-    public CommandContext Context { get; set; }
+    public required CommandContext Context { get; init; }
 
     public KitUnlockCommand(IServiceProvider serviceProvider)
     {

@@ -37,7 +37,6 @@ using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Whitelists;
 using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.Layouts.UI;
-using Uncreated.Warfare.Layouts.UI.Leaderboards;
 using Uncreated.Warfare.Lobby;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Maps;
@@ -98,16 +97,18 @@ public sealed class WarfareModule
     /// </summary>
     public static bool IsActive { get; private set; }
 
-#nullable restore
-
-    private bool _unloadedHostedServices = true;
-    private ILifetimeScope? _activeScope;
     private CancellationTokenSource _cancellationTokenSource;
-    private Layout? _activeLayout;
     private GameObject _gameObjectHost;
     private ILogger<WarfareModule> _logger;
     private WarfarePluginLoader _pluginLoader;
 
+#nullable restore
+
+    private bool _unloadedHostedServices = true;
+    private ILifetimeScope? _activeScope;
+    private Layout? _activeLayout;
+
+#nullable disable
     /// <summary>
     /// A global logger that can be used from patches mainly.
     /// </summary>
@@ -156,7 +157,7 @@ public sealed class WarfareModule
             }
         }
     }
-
+#nullable restore
     internal void Initialize()
     {
         IsActive = true;
@@ -1204,7 +1205,7 @@ public sealed class WarfareModule
 
 public class WarfareModuleNexus : IModuleNexus
 {
-    private object _module;
+    private object? _module;
     void IModuleNexus.initialize()
     {
         try

@@ -15,10 +15,15 @@ public class PlayerKeyComponent : IPlayerComponent
     private static bool _initialized;
 
     private bool _first;
+#nullable disable
 
     private bool[] _lastKeys;
     private float[] _keyDownTimes;
+
     public WarfarePlayer Player { get; private set; }
+
+#nullable restore
+
     void IPlayerComponent.Init(IServiceProvider serviceProvider, bool isOnJoin)
     {
         if (!isOnJoin)

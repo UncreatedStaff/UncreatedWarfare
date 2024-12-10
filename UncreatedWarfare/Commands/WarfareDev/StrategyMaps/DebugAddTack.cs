@@ -8,11 +8,11 @@ using Uncreated.Warfare.StrategyMaps.MapTacks;
 namespace Uncreated.Warfare.Commands;
 
 [Command("addtack"), SubCommandOf(typeof(DebugStrategyMaps))]
-internal class DebugSquadUI : IExecutableCommand
+internal sealed class DebugSquadUI : IExecutableCommand
 {
     private readonly StrategyMapManager _strategyMapManager;
 
-    public CommandContext Context { get; set; }
+    public required CommandContext Context { get; init; }
 
     public DebugSquadUI(IServiceProvider serviceProvider)
     {

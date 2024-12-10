@@ -23,10 +23,17 @@ public class DeploymentComponent : MonoBehaviour, IPlayerComponent
     private Coroutine? _deploymentCoroutine;
     private CooldownManager? _cooldownManager;
     private FobManager? _fobManager;
+
+#nullable disable
+
     private ZoneStore _zoneStore;
     private IPlayerService _playerService;
     private ChatService _chatService;
+
     public WarfarePlayer Player { get; private set; }
+
+#nullable restore
+
     public IDeployable? CurrentDeployment { get; private set; }
     public TimeSpan DeploymentTimeLeft => _deploymentTimeStarted == 0 ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(Time.realtimeSinceStartup - _deploymentTimeStarted);
     WarfarePlayer IPlayerComponent.Player { get => Player; set => Player = value; }
@@ -38,7 +45,7 @@ public class DeploymentComponent : MonoBehaviour, IPlayerComponent
         _playerService = serviceProvider.GetRequiredService<IPlayerService>();
         _cooldownManager = serviceProvider.GetService<CooldownManager>();
         _fobManager = serviceProvider.GetService<FobManager>();
-        _chatService = serviceProvider.GetService<ChatService>();
+        _chatService = serviceProvider.GetRequiredService<ChatService>();
     }
 
     public void CancelDeployment(bool chat)

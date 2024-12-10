@@ -546,7 +546,7 @@ public class DeathMessageResolver
         PlayerDied toDispatch = e;
 
         // invoke PlayerDied event
-        UniTask.Create(async () =>
+        _ = UniTask.Create(async () =>
         {
             await _dispatcher.DispatchEventAsync(toDispatch, CancellationToken.None);
             await UniTask.SwitchToMainThread();
@@ -677,7 +677,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
                 {
                     causesFull.Add(current);
                 }
-                else
+                else if (current.Translations != null)
                 {
                     CauseGroup? existing = causesFull[existingIndex];
                     List<DeathTranslation>? existingTranslations = null;
@@ -685,15 +685,19 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
                     {
                         bool found = false;
                         ref DeathTranslation t = ref current.Translations[j];
-                        for (int k = 0; k < existing.Translations.Length; ++k)
+                        if (existing.Translations != null)
                         {
-                            ref DeathTranslation t2 = ref existing.Translations[k];
-                            if (t2.Flags == t.Flags)
+                            for (int k = 0; k < existing.Translations.Length; ++k)
                             {
-                                found = true;
-                                break;
+                                ref DeathTranslation t2 = ref existing.Translations[k];
+                                if (t2.Flags == t.Flags)
+                                {
+                                    found = true;
+                                    break;
+                                }
                             }
                         }
+                        
                         if (!found)
                         {
                             (existingTranslations ??= new List<DeathTranslation>(4)).Add(t);
@@ -702,9 +706,13 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
                     if (existingTranslations != null)
                     {
                         causesFull[existingIndex] = existing = (CauseGroup)existing.Clone();
-                        DeathTranslation[] newArr = new DeathTranslation[existing.Translations.Length + existingTranslations.Count];
-                        Array.Copy(existing.Translations, 0, newArr, 0, existing.Translations.Length);
-                        existingTranslations.CopyTo(newArr, existing.Translations.Length);
+                        int tCt = existing.Translations?.Length ?? 0;
+                        DeathTranslation[] newArr = new DeathTranslation[tCt + existingTranslations.Count];
+                        if (tCt != 0)
+                        {
+                            Array.Copy(existing.Translations!, 0, newArr, 0, tCt);
+                            existingTranslations.CopyTo(newArr, tCt);
+                        }
                         existing.Translations = newArr;
                     }
                 }
@@ -753,7 +761,6 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
             DirectoryInfo directoryInfo = new DirectoryInfo(folder);
             string lang = directoryInfo.Name;
             FileInfo[] langFiles = directoryInfo.GetFiles("*", SearchOption.TopDirectoryOnly);
-            LanguageInfo? language = _languageDataStore.GetInfoCached(lang);
             foreach (FileInfo info in langFiles)
             {
                 if (info.Name.Equals("deaths.json", StringComparison.InvariantCultureIgnoreCase))
@@ -776,7 +783,6 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
                     }
 
                     _translationList.Add(lang, causes.ToArray());
-                    // todo language?.IncrementSection(TranslationSection.Deaths, causes.Count);
                     causes.Clear();
                     break;
                 }
@@ -881,6 +887,12 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
     {
         DeathFlags flags = e.MessageFlags;
     redo:
+        if (cause.Translations == null || cause.Translations.Length == 0)
+        {
+            _logger.LogWarning("Exact match not found for {0}. No translations.", flags);
+            return UniTask.FromResult<string?>(null);
+        }
+
         for (int i = 0; i < cause.Translations.Length; ++i)
         {
             ref DeathTranslation d = ref cause.Translations[i];
@@ -1015,13 +1027,14 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
 /// <summary>
 /// Represents a group of translations linked to a single <see cref="EDeathCause"/>, or a specific item, vehicle, or custom message key.
 /// </summary>
+[CannotApplyEqualityOperator]
 public class CauseGroup : IEquatable<CauseGroup>, ICloneable
 {
     public EDeathCause? Cause;
     public QuestParameterValue<Guid>? ItemCause;
     public QuestParameterValue<Guid>? VehicleCause;
     public string? CustomKey;
-    public DeathTranslation[] Translations;
+    public DeathTranslation[]? Translations;
 
     public CauseGroup() { }
 
@@ -1135,7 +1148,7 @@ public class CauseGroup : IEquatable<CauseGroup>, ICloneable
         writer.WriteStartObject();
         if (Cause.HasValue)
         {
-            writer.WriteString("death-cause", Cause.ToString().ToLower());
+            writer.WriteString("death-cause", Cause.Value.ToString().ToLower());
         }
         else if (ItemCause != null)
         {
@@ -1160,10 +1173,13 @@ public class CauseGroup : IEquatable<CauseGroup>, ICloneable
 
         writer.WritePropertyName("translations");
         writer.WriteStartObject();
-        for (int i = 0; i < Translations.Length; i++)
+        if (Translations != null)
         {
-            ref DeathTranslation translation = ref Translations[i];
-            writer.WriteString(translation.Flags.ToString(), translation.Value);
+            for (int i = 0; i < Translations.Length; i++)
+            {
+                ref DeathTranslation translation = ref Translations[i];
+                writer.WriteString(translation.Flags.ToString(), translation.Value);
+            }
         }
         writer.WriteEndObject();
         writer.WriteEndObject();
@@ -1175,12 +1191,18 @@ public class CauseGroup : IEquatable<CauseGroup>, ICloneable
     public override int GetHashCode() => HashCode.Combine(Cause, ItemCause, VehicleCause, CustomKey, Translations);
     // ReSharper restore NonReadonlyMemberInGetHashCode
 
-    public static bool operator ==(CauseGroup? left, CauseGroup? right) => Equals(left, right);
-    public static bool operator !=(CauseGroup? left, CauseGroup? right) => !(left == right);
     public object Clone()
     {
-        DeathTranslation[] newTranslations = new DeathTranslation[Translations.Length];
-        Array.Copy(Translations, 0, newTranslations, 0, newTranslations.Length);
+        DeathTranslation[] newTranslations;
+        if (Translations == null || Translations.Length == 0)
+        {
+            newTranslations = Array.Empty<DeathTranslation>();
+        }
+        else
+        {
+            newTranslations = new DeathTranslation[Translations.Length];
+            Array.Copy(Translations, 0, newTranslations, 0, newTranslations.Length);
+        }
         return new CauseGroup(Cause, ItemCause, VehicleCause, CustomKey, newTranslations);
     }
 

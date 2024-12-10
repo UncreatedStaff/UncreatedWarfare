@@ -7,8 +7,6 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Reflection;
-using System.Text.RegularExpressions;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Translations.Languages;
 
@@ -18,12 +16,9 @@ public static class Data
 {
     public static class Paths
     {
-        public static readonly char[] BadFileNameCharacters = { '>', ':', '"', '/', '\\', '|', '?', '*' };
-
         public static readonly string BaseDirectory = Path.Combine(Environment.CurrentDirectory, "Uncreated", "Warfare") + Path.DirectorySeparatorChar;
         public static readonly string LangStorage = Path.Combine(BaseDirectory, "Lang") + Path.DirectorySeparatorChar;
         public static readonly string Logs = Path.Combine(BaseDirectory, "Logs") + Path.DirectorySeparatorChar;
-        public static readonly string Sync = Path.Combine(BaseDirectory, "Sync") + Path.DirectorySeparatorChar;
         public static readonly string ActionLog = Path.Combine(Logs, "ActionLog") + Path.DirectorySeparatorChar;
         public static readonly string Heartbeat = Path.Combine(BaseDirectory, "Stats", "heartbeat.dat");
         public static readonly string HeartbeatBackup = Path.Combine(BaseDirectory, "Stats", "heartbeat_last.dat");
@@ -40,19 +35,9 @@ public static class Data
     // internal static ClientInstanceMethod? SendScreenshotDestination;
 
     internal static InstanceGetter<UseableGun, bool>? GetUseableGunReloading;
-    internal static InstanceGetter<PlayerLife, CSteamID>? GetRecentKiller;
     internal static Action<Vector3, Vector3, string, Transform?, List<ITransportConnection>>? ServerSpawnLegacyImpact;
-    internal static Action<PlayerInventory, SteamPlayer> SendInitialInventoryState;
-    internal static Func<PooledTransportConnectionList>? PullFromTransportConnectionListPool;
     internal static SteamPlayer NilSteamPlayer;
 
-
-    internal static readonly List<KeyValuePair<Type, string?>> TranslatableEnumTypes = new List<KeyValuePair<Type, string?>>()
-    {
-        new KeyValuePair<Type, string?>(typeof(EDamageOrigin), "Damage Origin"),
-        new KeyValuePair<Type, string?>(typeof(EDeathCause), "Death Cause"),
-        new KeyValuePair<Type, string?>(typeof(ELimb), "Limb")
-    };
 
     //internal static void OnClientConnected(IConnection connection)
     //{

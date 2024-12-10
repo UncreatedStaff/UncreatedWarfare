@@ -3,4 +3,4 @@
 namespace Uncreated.Warfare.Commands;
 
 [Command("layout", "loadout", "items", "order", "customize"), SubCommandOf(typeof(KitCommand))]
-internal class KitLayoutCommand : ICommand;
+internal sealed class KitLayoutCommand : ICommand;

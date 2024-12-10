@@ -12,13 +12,13 @@ using Uncreated.Warfare.Translations;
 namespace Uncreated.Warfare.Commands;
 
 [Command("set", "s"), SubCommandOf(typeof(KitCommand))]
-internal class KitSetCommand : IExecutableCommand
+internal sealed class KitSetCommand : IExecutableCommand
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly KitCommandTranslations _translations;
     private readonly KitManager _kitManager;
     private readonly IKitsDbContext _dbContext;
-    public CommandContext Context { get; set; }
+    public required CommandContext Context { get; init; }
 
     public KitSetCommand(IServiceProvider serviceProvider)
     {

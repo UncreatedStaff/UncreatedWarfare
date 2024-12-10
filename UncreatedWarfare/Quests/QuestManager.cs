@@ -462,7 +462,7 @@ public static class QuestManager
     private class X(UserPermissionStore permissions, WarfareModule warfare) : IExecutableCommand
     {
         /// <inheritdoc />
-        public CommandContext Context { get; set; }
+        public required CommandContext Context { get; init; }
 
         /// <summary>
         /// Get /help metadata about this command.

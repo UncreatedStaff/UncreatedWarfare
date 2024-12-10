@@ -11,7 +11,7 @@ using Uncreated.Warfare.Translations.Languages;
 namespace Uncreated.Warfare.Commands;
 
 [Command("add", "give", "award"), SubCommandOf(typeof(PointsExperienceCommand))]
-public sealed class PointsAddExperienceCommand : IExecutableCommand
+internal sealed class PointsAddExperienceCommand : IExecutableCommand
 {
     private readonly PointsService _pointsService;
     private readonly LanguageService _languageService;
@@ -19,7 +19,7 @@ public sealed class PointsAddExperienceCommand : IExecutableCommand
     private readonly ITeamManager<Team> _teamManager;
 
     /// <inheritdoc />
-    public CommandContext Context { get; set; }
+    public required CommandContext Context { get; init; }
 
     public PointsAddExperienceCommand(PointsService pointsService, LanguageService languageService, IFactionDataStore factionDataStore, ITeamManager<Team> teamManager)
     {

@@ -7,6 +7,8 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Database.Manual;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.Languages;
 
 namespace Uncreated.Warfare.Moderation.Punishments;
 [ModerationEntry(ModerationEntryType.Mute)]
@@ -86,4 +88,24 @@ public class Mute : DurationPunishment
 
         return hasEvidenceCalls;
     }
+}
+
+
+[Translatable("Mute Severity")]
+[Flags]
+public enum MuteType : byte
+{
+    None = 0,
+
+    [Translatable(Languages.ChineseSimplified, "语音交流")]
+    [Translatable("Voice Chat")]
+    Voice = 1,
+
+    [Translatable(Languages.ChineseSimplified, "文字交流")]
+    [Translatable("Text Chat")]
+    Text = 2,
+
+    [Translatable(Languages.ChineseSimplified, "语音和文字交流")]
+    [Translatable("Voice and Text Chat")]
+    Both = Voice | Text
 }

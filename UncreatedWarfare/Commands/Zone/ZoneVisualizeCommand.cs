@@ -5,13 +5,13 @@ using Uncreated.Warfare.Zones;
 namespace Uncreated.Warfare.Commands;
 
 [Command("visualize", "vis"), SubCommandOf(typeof(ZoneCommand))]
-public class ZoneVisualizeCommand : IExecutableCommand
+internal sealed class ZoneVisualizeCommand : IExecutableCommand
 {
     private readonly ZoneStore _zoneStore;
     private readonly ZoneCommandTranslations _translations;
 
     /// <inheritdoc />
-    public CommandContext Context { get; set; }
+    public required CommandContext Context { get; init; }
 
     public ZoneVisualizeCommand(ZoneStore zoneStore, TranslationInjection<ZoneCommandTranslations> translations)
     {

@@ -26,16 +26,16 @@ public class KitBoosting(KitManager manager, IServiceProvider serviceProvider)
     }
 
     /// <exception cref="TimeoutException"/>
-    public async Task<bool?> IsNitroBoosting(ulong player, CancellationToken token = default)
+    public Task<bool?> IsNitroBoosting(ulong player, CancellationToken token = default)
     {
-        return null;
+        return Task.FromResult<bool?>(null); // todo
         //bool?[]? state = await IsNitroBoosting([ player ], token).ConfigureAwait(false);
         //return state == null || state.Length < 1 ? null : state[0];
     }
     /// <exception cref="TimeoutException"/>
-    public async Task<bool?[]?> IsNitroBoosting(ulong[] players, CancellationToken token = default)
+    public Task<bool?[]?> IsNitroBoosting(ulong[] players, CancellationToken token = default)
     {
-        return new bool?[players.Length];
+        return Task.FromResult<bool?[]?>(null);
         //if (!UCWarfare.CanUseNetCall)
         //    return null;
         //bool?[] rtn = new bool?[players.Length];

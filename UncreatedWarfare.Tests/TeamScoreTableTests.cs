@@ -24,18 +24,7 @@ public class TeamScoreTableTests
             };
         }
 
-        for (int i = 0; i < n; ++i)
-        {
-            arr[i].Opponents.Capacity = n - 1;
-            for (int j = 0; j < n; ++j)
-            {
-                if (j == i)
-                    continue;
-
-                arr[i].Opponents.Add(arr[j]);
-            }
-        }
-
+        Team.DeclareEnemies(arr);
         return arr;
     }
 

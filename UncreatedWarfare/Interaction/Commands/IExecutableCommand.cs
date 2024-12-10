@@ -13,11 +13,12 @@ public interface ICommand;
 /// </summary>
 public interface IExecutableCommand : ICommand
 {
+#nullable disable
     /// <summary>
     /// The context used to execute the command.
     /// </summary>
-    CommandContext Context { get; set; }
-
+    CommandContext Context { get; init; }
+#nullable restore
     /// <summary>
     /// Actually execute the command.
     /// </summary>

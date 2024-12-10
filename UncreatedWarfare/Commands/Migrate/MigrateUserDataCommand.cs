@@ -14,7 +14,7 @@ using Uncreated.Warfare.Util;
 namespace Uncreated.Warfare.Commands;
 
 [Command("userdata"), HideFromHelp, SubCommandOf(typeof(MigrateCommand))]
-public class MigrateUserDataCommand : IExecutableCommand
+internal sealed class MigrateUserDataCommand : IExecutableCommand
 {
     private readonly IManualMySqlProvider _mySqlProvider;
     private readonly WarfareDbContext _dbContext;
@@ -55,7 +55,7 @@ public class MigrateUserDataCommand : IExecutableCommand
         { 76561198289265188, "AstroSlav" }
     };
 
-    public CommandContext Context { get; set; }
+    public required CommandContext Context { get; init; }
 
     public MigrateUserDataCommand(IManualMySqlProvider mySqlProvider, WarfareDbContext dbContext)
     {

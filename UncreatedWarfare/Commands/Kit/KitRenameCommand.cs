@@ -14,14 +14,14 @@ using Uncreated.Warfare.Translations.Languages;
 namespace Uncreated.Warfare.Commands;
 
 [Command("rename", "rname", "name"), SubCommandOf(typeof(KitCommand))]
-internal class KitRenameCommand : IExecutableCommand
+internal sealed class KitRenameCommand : IExecutableCommand
 {
     private readonly SignInstancer _signs;
     private readonly KitCommandTranslations _translations;
     private readonly KitManager _kitManager;
     private readonly LanguageService _languageService;
     private readonly IServiceProvider _serviceProvider;
-    public CommandContext Context { get; set; }
+    public required CommandContext Context { get; init; }
 
     public KitRenameCommand(TranslationInjection<KitCommandTranslations> translations, SignInstancer signs, KitManager kitManager, LanguageService languageService, IServiceProvider serviceProvider)
     {

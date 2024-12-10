@@ -1,5 +1,7 @@
 ﻿using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
+using SDG.NetTransport;
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 using Uncreated.Warfare.Components;
@@ -17,6 +19,9 @@ namespace Uncreated.Warfare.Events.Patches;
 [UsedImplicitly]
 internal class InteractableTrapOnTriggerEnter : IHarmonyPatch
 {
+    private static readonly Action<Vector3, Vector3, string, Transform?, List<ITransportConnection>>? CallServerSpawnLegacyImpact =
+        Accessor.GenerateStaticCaller<DamageTool, Action<Vector3, Vector3, string, Transform?, List<ITransportConnection>>>("ServerSpawnLegacyImpact", allowUnsafeTypeBinding: true);
+
     private static MethodInfo? _target;
 
     void IHarmonyPatch.Patch(ILogger logger, HarmonyLib.Harmony patcher)
@@ -306,7 +311,7 @@ internal class InteractableTrapOnTriggerEnter : IHarmonyPatch
                 }
             }
 
-            Data.ServerSpawnLegacyImpact?.Invoke(args.ServersideData.point + Vector3.up, Vector3.down, "Flesh", null, Provider.GatherRemoteClientConnectionsWithinSphere(args.ServersideData.point, EffectManager.SMALL));
+            CallServerSpawnLegacyImpact?.Invoke(args.ServersideData.point + Vector3.up, Vector3.down, "Flesh", null, Provider.GatherRemoteClientConnectionsWithinSphere(args.ServersideData.point, EffectManager.SMALL));
 
             if (args.WearAndTearDamage > 0)
             {

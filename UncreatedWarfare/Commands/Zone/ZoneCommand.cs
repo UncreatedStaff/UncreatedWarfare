@@ -6,7 +6,7 @@ using Uncreated.Warfare.Zones;
 namespace Uncreated.Warfare.Commands;
 
 [Command("zone", "zones"), MetadataFile]
-public class ZoneCommand : ICommand;
+internal sealed class ZoneCommand : ICommand;
 
 public class ZoneCommandTranslations : PropertiesTranslationCollection
 {

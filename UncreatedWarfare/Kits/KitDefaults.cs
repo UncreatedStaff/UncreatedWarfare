@@ -82,19 +82,19 @@ public class KitDefaults(KitManager manager, IServiceProvider serviceProvider)
         }
         if (faction != null)
         {
-            if (faction.Shirts.TryGetAsset("jacket", out ItemShirtAsset _) && !items.Exists(x => x is IClothingKitItem { Type: ClothingType.Shirt }))
+            if (faction.Shirts.TryGetAsset("jacket", out ItemShirtAsset? _) && !items.Exists(x => x is IClothingKitItem { Type: ClothingType.Shirt }))
                 items.Add(new AssetRedirectClothingKitItem(0, RedirectType.Shirt, ClothingType.Shirt, null));
-            if (faction.Pants.TryGetAsset("pants", out ItemPantsAsset _) && !items.Exists(x => x is IClothingKitItem { Type: ClothingType.Pants }))
+            if (faction.Pants.TryGetAsset("pants", out ItemPantsAsset? _) && !items.Exists(x => x is IClothingKitItem { Type: ClothingType.Pants }))
                 items.Add(new AssetRedirectClothingKitItem(0, RedirectType.Pants, ClothingType.Pants, null));
-            if (faction.Vests.TryGetAsset("tact_rig", out ItemVestAsset _) && !items.Exists(x => x is IClothingKitItem { Type: ClothingType.Vest }))
+            if (faction.Vests.TryGetAsset("tact_rig", out ItemVestAsset? _) && !items.Exists(x => x is IClothingKitItem { Type: ClothingType.Vest }))
                 items.Add(new AssetRedirectClothingKitItem(0, RedirectType.Vest, ClothingType.Vest, null));
-            if (faction.Hats.TryGetAsset("base", out ItemHatAsset _) && !items.Exists(x => x is IClothingKitItem { Type: ClothingType.Hat }))
+            if (faction.Hats.TryGetAsset("base", out ItemHatAsset? _) && !items.Exists(x => x is IClothingKitItem { Type: ClothingType.Hat }))
                 items.Add(new AssetRedirectClothingKitItem(0, RedirectType.Hat, ClothingType.Hat, null));
-            if (faction.Masks.TryGetAsset(null, out ItemMaskAsset _) && !items.Exists(x => x is IClothingKitItem { Type: ClothingType.Mask }))
+            if (faction.Masks.TryGetAsset(null, out ItemMaskAsset? _) && !items.Exists(x => x is IClothingKitItem { Type: ClothingType.Mask }))
                 items.Add(new AssetRedirectClothingKitItem(0, RedirectType.Mask, ClothingType.Mask, null));
-            if (faction.Backpacks.TryGetAsset("ruggedpack", out ItemBackpackAsset _) && !items.Exists(x => x is IClothingKitItem { Type: ClothingType.Backpack }))
+            if (faction.Backpacks.TryGetAsset("ruggedpack", out ItemBackpackAsset? _) && !items.Exists(x => x is IClothingKitItem { Type: ClothingType.Backpack }))
                 items.Add(new AssetRedirectClothingKitItem(0, RedirectType.Backpack, ClothingType.Backpack, null));
-            if (faction.Glasses.TryGetAsset(null, out ItemGlassesAsset _) && !items.Exists(x => x is IClothingKitItem { Type: ClothingType.Glasses }))
+            if (faction.Glasses.TryGetAsset(null, out ItemGlassesAsset? _) && !items.Exists(x => x is IClothingKitItem { Type: ClothingType.Glasses }))
                 items.Add(new AssetRedirectClothingKitItem(0, RedirectType.Glasses, ClothingType.Glasses, null));
             
             existing = new Kit(name, Class.Unarmed, GetDefaultBranch(Class.Unarmed), KitType.Special, SquadLevel.Member, faction)

@@ -1,37 +1,13 @@
 ﻿using Uncreated.Warfare.Interaction.Commands;
-using Uncreated.Warfare.Squads;
 
 namespace Uncreated.Warfare.Commands;
 
-[Command("rally")]
-public class RallyCommand : IExecutableCommand
+[Command("rally"), MetadataFile]
+internal sealed class RallyCommand : IExecutableCommand
 {
-    private const string Syntax = "/rally";
-    private const string Help = "Teleports your squad to your current location after a delay if they don't opt out.";
-
     /// <inheritdoc />
-    public CommandContext Context { get; set; }
-
-    /// <summary>
-    /// Get /help metadata about this command.
-    /// </summary>
-    public static CommandStructure GetHelpMetadata()
-    {
-        return new CommandStructure
-        {
-            Description = Help,
-            Parameters =
-            [
-                new CommandParameter("Cancel")
-                {
-                    Aliases = [ "c", "abort", "deny" ],
-                    Description = "Cancels pending deployment to a rallypoint for your squadmembers.",
-                    IsOptional = true
-                },
-            ]
-        };
-    }
-
+    public required CommandContext Context { get; init; }
+    
     /// <inheritdoc />
     public UniTask ExecuteAsync(CancellationToken token)
     {

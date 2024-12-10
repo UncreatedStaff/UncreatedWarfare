@@ -11,13 +11,14 @@ using Uncreated.Warfare.Translations.Languages;
 namespace Uncreated.Warfare.Commands;
 
 [Command("copyfrom", "copy", "cf"), SubCommandOf(typeof(KitCommand))]
-internal class KitCopyFromCommand : IExecutableCommand
+internal sealed class KitCopyFromCommand : IExecutableCommand
 {
     private readonly KitCommandTranslations _translations;
     private readonly KitManager _kitManager;
     private readonly IKitsDbContext _dbContext;
     private readonly LanguageService _languageService;
-    public CommandContext Context { get; set; }
+
+    public required CommandContext Context { get; init; }
 
     public KitCopyFromCommand(IServiceProvider serviceProvider)
     {

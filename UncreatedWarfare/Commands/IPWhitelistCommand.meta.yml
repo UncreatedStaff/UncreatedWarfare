@@ -1,0 +1,26 @@
+﻿# IPWhitelistCommand
+Description: "Manages the IP whitelist which allows players with overlapping IPs to not count against each other."
+Aliases: [ whitelistip, whip, ipwh, iw ]
+Parameters:
+  - Name: add
+    Aliases: [ whitelist, create ]
+    Type: Verbatim
+    Description: "Add a <param 'player'/> to the IP whitelist, ignoring overlapping IPs for them."
+    Parameters:
+      - Name: player
+        Type: Uncreated.Warfare.Players.IPlayer
+        Parameters:
+          - Name: range
+            Type: Uncreated.Warfare.Networking.IPv4Range
+            IsOptional: true
+  - Name: remove
+    Aliases: [ delete, rem, blacklist ]
+    Type: Verbatim
+    Description: "Remove a <param 'player'/> from the IP whitelist, ignoring overlapping IPs for them."
+    Parameters:
+      - Name: player
+        Type: Uncreated.Warfare.Players.IPlayer
+        Parameters:
+          - Name: range
+            Type: Uncreated.Warfare.Networking.IPv4Range
+            IsOptional: true

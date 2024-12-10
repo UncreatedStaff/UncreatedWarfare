@@ -32,12 +32,135 @@ Parameters:
       - Name: menu
         Type: Verbatim
         Description: "Open the squad UI."
+        
+  # /warfaredev quickwin
+  - Name: quickwin
+    Alias: nextphase
+    Type: Verbatim
+    Description: "Skip to the next phase in the current layout and sets the winner of the game to the <caller />'s team if not otherwise specified."
+    Parameters:
+      - Name: winner
+        Type: Uncreated.Warfare.Layouts.Teams.Team
+        Description: "Skip to the next phase in the current layout and sets the winner of the game to <param 'winner'/>."
+        IsOptional: true
+        IsRemainder: true
+
+  # /warfaredev clearcooldowns
+  - Name: clearcooldowns
+    Alias: cc
+    Type: Verbatim
+    Description: "Clear cooldowns for the <caller />."
+    Parameters:
+      - Name: player
+        Type: Uncreated.Warfare.Players.IPlayer
+        Description: "Clear cooldowns for another <param 'player'/>."
+        IsOptional: true
+        IsRemainder: true
 
   # /warfaredev sign
   - Name: sign
     Type: Verbatim
-    Description: "Print the server-side text on the sign you're looking at."
+    Description: "Prints the server-side text on the sign the <caller /> is looking at."
     Parameters:
       - Name: sign
         Type: "Look/SDG.Unturned.ItemBarricadeAsset"
         Description: "The sign to fetch the text from."
+        
+  # /warfaredev newsession
+  - Name: newsession
+    Alias: ns
+    Type: Verbatim
+    Description: "Starts a new session for the <caller />. When ran from console without a target <param 'player'/> it starts a new session for all players."
+    Parameters:
+      - Name: addevent
+        Alias: ae
+        Type: Verbatim
+        Description: "Increment the event counter for the <caller />'s current session. Does not start a new session."
+        IsOptional: true
+      - Name: player
+        Type: Uncreated.Warfare.Players.IPlayer
+        Description: "Starts a new session for <param 'player'/>."
+        IsOptional: true
+        IsRemainder: true
+        
+  # /warfaredev effectattach
+  - Name: effectattach
+    Aliases: [ attacheffect, ea ]
+    Type: Verbatim
+    Description: "Attach a default effect to whatever the <caller /> is looking at."
+    Flags:
+      - Name: p
+        Description: "Only show the effect to the <caller /> instead of everyone."
+    Parameters:
+      - Name: position
+        Type: "Look/UnityEngine.Vector3"
+        Description: "The world position to attach the effect to."
+        Parameters:
+          - Name: lifetime
+            Type: float
+            Description: "Number of seconds the effect will stay alive."
+            Parameters:
+              - Name: tickspeed
+                Type: float
+                Description: "How often the effect's position is updated."
+      - Name: object
+        Type: "Look/UnityEngine.Transform"
+        Description: "The world object to attach the effect to."
+        Parameters:
+          - Name: lifetime
+            Type: float
+            Description: "Number of seconds the effect will stay alive."
+            Parameters:
+              - Name: tickspeed
+                Type: float
+                Description: "How often the effect's position is updated."
+
+  # /warfaredev instanceid
+  - Name: instanceid
+    Alias: instid
+    Type: Verbatim
+    Description: "Prints the instance ID of an <param 'object'/>, <param 'barricade'/>, <param 'structure'/>, or <param 'vehicle'/> the <caller /> is looking at."
+    Parameters:
+      - Name: object
+        Type: "Look/SDG.Unturned.ObjectAsset"
+        Description: "The object to fetch the instance ID from."
+      - Name: barricade
+        Type: "Look/SDG.Unturned.ItemBarricadeAsset"
+        Description: "The barricade to fetch the instance ID from."
+      - Name: structure
+        Type: "Look/SDG.Unturned.ItemStructureAsset"
+        Description: "The structure to fetch the instance ID from."
+      - Name: vehicle
+        Type: "Look/SDG.Unturned.VehicleAsset"
+        Description: "The vehicle to fetch the instance ID from."
+
+  # /warfaredev effect
+  - Name: effect
+    Type: Verbatim
+    Description: "Send effects or UI effects."
+    Parameters:
+      - Name: clear
+        Type: Verbatim
+        Description: "Clear effects for <caller />."
+        Aliases: [ remove, delete ]
+        Paramters:
+          - Name: all
+            Type: Verbatim
+            Description: "Clear all effects for <caller />."
+            Aliases: [ "*", any ]
+          - Name: effect
+            Type: SDG.Unturned.EffectAsset
+            Description: "Clear all effects for <caller /> of a specific <param 'effect'/>."
+      - Name: effect
+        Type: SDG.Unturned.EffectAsset
+        Description: "Spawn an effect or UI for <caller /> with up to 4 formatting <param 'args'/> and an optional <param 'key'/> for UIs."
+        Parameters:
+          - Name: key
+            Type: short
+            Description: "Spawn a UI for <caller /> with up to 4 formatting <param 'args'/> and an optional <param 'key'/>."
+            IsOptional: true
+            Parameters:
+              - Name: args
+                Type: string
+                IsRemainder: true
+                IsOptional: true

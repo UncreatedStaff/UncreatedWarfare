@@ -1,7 +1,7 @@
-﻿using SDG.NetTransport;
+﻿using DanielWillett.ReflectionTools;
+using SDG.NetTransport;
 using System;
 using System.Diagnostics.CodeAnalysis;
-using DanielWillett.ReflectionTools;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Patterns;
 using Uncreated.Framework.UI.Reflection;
@@ -25,7 +25,7 @@ namespace Uncreated.Warfare.Layouts.UI.Leaderboards;
 public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEventListener<PlayerJoined>, IEventListener<PlayerLeft>, ILayoutPhaseListener<ILayoutPhase>, IDisposable
 {
     [Ignore]
-    private LeaderboardSet[] _sets;
+    private LeaderboardSet[]? _sets;
 
     [Ignore]
     private DateTime _startTimestamp;
@@ -173,6 +173,9 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
             set.Reset();
         }
 
+        if (_sets == null)
+            return;
+
         for (int i = 0; i < _sets.Length; ++i)
         {
             SendLeaderboard(i, set, true);
@@ -194,6 +197,9 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
             sort.ColumnIndex = column;
         }
 
+        if (_sets == null)
+            return;
+
         LanguageSet langSet = new LanguageSet(player);
         for (int i = 0; i < _sets.Length; ++i)
         {
@@ -203,7 +209,7 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
 
     private void SendLeaderboard(int setIndex, LanguageSet langSet, bool team)
     {
-        LeaderboardSet set = _sets[setIndex];
+        LeaderboardSet set = _sets![setIndex];
 
         LeaderboardList uiList = Leaderboards[setIndex];
 
@@ -261,7 +267,7 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
     {
         // gets the sorted row UI position for a row index from the original data table for a player
         ref LeaderboardSortColumn sort = ref data.SortColumns[set];
-        int[] invSortMap = _sets[set].GetSortMap(sort.ColumnIndex, sort.Descending);
+        int[] invSortMap = _sets![set].GetSortMap(sort.ColumnIndex, sort.Descending);
         LeaderboardList list = Leaderboards[set];
 
         int uiIndex = invSortMap[row];
@@ -277,6 +283,9 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
 
     private void CompOnVoiceChatStateUpdated(WarfarePlayer player, bool isUsingVoiceChat)
     {
+        if (_sets == null)
+            return;
+
         for (int i = 0; i < _sets.Length; ++i)
         {
             LeaderboardSet set = _sets[i];
@@ -358,6 +367,8 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
         return new DualSidedLeaderboardPlayerData(steam64, this);
     }
 
+#nullable disable
+
     public class TopSquad
     {
         [Pattern(Root = true)]
@@ -433,4 +444,6 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
         [Pattern("Value")]
         public UnturnedLabel Value { get; set; }
     }
+
+#nullable restore
 }

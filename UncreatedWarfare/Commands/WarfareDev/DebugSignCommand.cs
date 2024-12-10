@@ -6,9 +6,9 @@ using Uncreated.Warfare.Translations.Util;
 namespace Uncreated.Warfare.Commands;
 
 [Command("sign"), SubCommandOf(typeof(WarfareDevCommand))]
-internal class DebugSignCommand : IExecutableCommand
+internal sealed class DebugSignCommand : IExecutableCommand
 {
-    public CommandContext Context { get; set; }
+    public required CommandContext Context { get; init; }
 
     public UniTask ExecuteAsync(CancellationToken token)
     {

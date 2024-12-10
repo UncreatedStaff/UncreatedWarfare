@@ -14,7 +14,7 @@ public class NullTeamManager : ITeamManager<Team>
     public IReadOnlyList<Team> AllTeams { get; } = Array.Empty<Team>();
 
     /// <inheritdoc />
-    public Team? FindTeam(string teamSearch) => null;
+    public Team? FindTeam(string? teamSearch) => null;
 
     /// <inheritdoc />
     public Team GetTeam(CSteamID groupId) => Team.NoTeam;
@@ -32,7 +32,7 @@ public class NullTeamManager : ITeamManager<Team>
     public CSteamID AdminGroupId => CSteamID.Nil;
 
     /// <inheritdoc />
-    public IConfiguration Configuration { get; set; }
+    public IConfiguration? Configuration { get; set; }
 
     /// <inheritdoc />
     public UniTask JoinTeamAsync(WarfarePlayer player, Team team, CancellationToken token = default)

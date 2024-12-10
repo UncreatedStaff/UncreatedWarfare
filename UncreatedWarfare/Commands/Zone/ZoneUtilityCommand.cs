@@ -3,4 +3,4 @@
 namespace Uncreated.Warfare.Commands;
 
 [Command("util", "u", "tools"), SubCommandOf(typeof(ZoneCommand))]
-public class ZoneUtilityCommand : ICommand;
+internal sealed class ZoneUtilityCommand : ICommand;

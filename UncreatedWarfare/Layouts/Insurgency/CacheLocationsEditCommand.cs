@@ -6,8 +6,9 @@ internal static class CacheLocationsEditCommand
 {
     internal const string Syntax = "/dev caches <add|next|start|nearest|remove|disable|enable|move|stop>";
     internal static readonly Dictionary<CacheLocation, BarricadeDrop> Drops = new Dictionary<CacheLocation, BarricadeDrop>(EqualityComparer<CacheLocation>.Default);
-    internal static async UniTask Execute(CommandContext ctx)
+    internal static UniTask Execute(CommandContext ctx)
     {
+        return UniTask.CompletedTask;
 #if false
         await UniTask.SwitchToMainThread();
 

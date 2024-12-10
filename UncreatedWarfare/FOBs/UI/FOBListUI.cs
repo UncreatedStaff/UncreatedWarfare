@@ -8,7 +8,7 @@ public class FobListUI : UnturnedUI
     public readonly FobListElement[] FOBs = ElementPatterns.CreateArray<FobListElement>("Canvas/{0}", 0, to: 9);
 
     public FobListUI(AssetConfiguration assetConfig, ILoggerFactory loggerFactory) : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:FobList"), staticKey: true) { }
-
+#nullable disable
     public class FobListElement
     {
         [Pattern(Root = true)]
@@ -20,4 +20,5 @@ public class FobListUI : UnturnedUI
         [Pattern("R{0}")]
         public UnturnedLabel Resources { get; set; }
     }
+#nullable restore
 }

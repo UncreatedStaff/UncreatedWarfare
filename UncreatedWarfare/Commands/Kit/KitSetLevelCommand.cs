@@ -13,12 +13,12 @@ using Uncreated.Warfare.Util;
 namespace Uncreated.Warfare.Commands;
 
 [Command("level", "lvl"), SubCommandOf(typeof(KitCommand))]
-internal class KitSetLevelCommand : IExecutableCommand
+internal sealed class KitSetLevelCommand : IExecutableCommand
 {
     private readonly KitCommandTranslations _translations;
     private readonly KitManager _kitManager;
     private readonly IKitsDbContext _dbContext;
-    public CommandContext Context { get; set; }
+    public required CommandContext Context { get; init; }
 
     public KitSetLevelCommand(IServiceProvider serviceProvider)
     {

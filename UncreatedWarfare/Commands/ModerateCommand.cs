@@ -3,24 +3,13 @@ using Uncreated.Warfare.Moderation;
 
 namespace Uncreated.Warfare.Commands;
 
-[Command("moderate", "mod", "m")]
-public sealed class ModerateCommand : IExecutableCommand
+[Command("moderate", "mod", "m"), MetadataFile]
+internal sealed class ModerateCommand : IExecutableCommand
 {
     private readonly ModerationUI _ui;
 
     /// <inheritdoc />
-    public CommandContext Context { get; set; }
-
-    /// <summary>
-    /// Get /help metadata about this command.
-    /// </summary>
-    public static CommandStructure GetHelpMetadata()
-    {
-        return new CommandStructure
-        {
-            Description = "Opens the moderation menu."
-        };
-    }
+    public required CommandContext Context { get; init; }
 
     public ModerateCommand(ModerationUI ui)
     {

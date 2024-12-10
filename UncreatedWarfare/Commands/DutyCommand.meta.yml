@@ -1,0 +1,3 @@
+﻿# DutyCommand
+Description: "Swap the <caller />'s duty status between on and off. This toggles most permissions."
+Aliases: [ onduty, offduty, d ]

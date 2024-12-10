@@ -17,6 +17,7 @@ namespace Uncreated.Warfare.Lobby;
 [PlayerComponent]
 public class PlayerLobbyComponent : IPlayerComponent
 {
+#nullable disable
     private LobbyZoneManager _lobbyManager;
     private LobbyHudUI _ui;
     private WarfareModule _module;
@@ -26,18 +27,21 @@ public class PlayerLobbyComponent : IPlayerComponent
     private ZoneStore _zoneStore;
     private ILogger<PlayerLobbyComponent> _logger;
 
+    public WarfarePlayer Player { get; private set; }
+
+#nullable restore
+
     private int _joiningTeam = -1;
     private int _lookingTeam = -1;
     private int _closestTeam = -1;
 
-    public WarfarePlayer Player { get; private set; }
 
     public bool IsJoining => _joiningTeam >= 0;
     public bool IsLooking => _lookingTeam >= 0;
     public bool IsClosest => _closestTeam >= 0;
-    public ref FlagInfo JoiningTeam => ref _lobbyManager.TeamFlags[_joiningTeam];
-    public ref FlagInfo LookingTeam => ref _lobbyManager.TeamFlags[_lookingTeam];
-    public ref FlagInfo ClosestTeam => ref _lobbyManager.TeamFlags[_closestTeam];
+    public ref FlagInfo JoiningTeam => ref _lobbyManager.TeamFlags![_joiningTeam];
+    public ref FlagInfo LookingTeam => ref _lobbyManager.TeamFlags![_lookingTeam];
+    public ref FlagInfo ClosestTeam => ref _lobbyManager.TeamFlags![_closestTeam];
 
     void IPlayerComponent.Init(IServiceProvider serviceProvider, bool isOnJoin)
     {
@@ -77,7 +81,7 @@ public class PlayerLobbyComponent : IPlayerComponent
     
     private async UniTask JoinTeamIntl(int teamIndex)
     {
-        if (_joiningTeam != teamIndex)
+        if (_joiningTeam != teamIndex || _lobbyManager.TeamFlags == null)
             return;
 
         if (_lobbyManager.JoinDelay > TimeSpan.Zero)
@@ -88,7 +92,7 @@ public class PlayerLobbyComponent : IPlayerComponent
         if (_joiningTeam != teamIndex)
             return;
 
-        Team joiningTeam = _joiningTeam < 0 ? Team.NoTeam : _lobbyManager.TeamFlags[_joiningTeam].Team;
+        Team joiningTeam = _joiningTeam < 0 || _joiningTeam >= _lobbyManager.TeamFlags.Length ? Team.NoTeam : (_lobbyManager.TeamFlags[_joiningTeam].Team ?? Team.NoTeam);
 
         // join Unturned group
         UniTask joinTeamTask = _teamManager.JoinTeamAsync(Player, joiningTeam, Player.DisconnectToken);

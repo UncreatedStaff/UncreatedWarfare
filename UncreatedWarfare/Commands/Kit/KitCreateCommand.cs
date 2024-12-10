@@ -13,7 +13,7 @@ using Uncreated.Warfare.Util;
 namespace Uncreated.Warfare.Commands;
 
 [Command("create", "c", "override"), SubCommandOf(typeof(KitCommand))]
-internal class KitCreateCommand : IExecutableCommand
+internal sealed class KitCreateCommand : IExecutableCommand
 {
     private readonly KitCommandTranslations _translations;
     private readonly KitManager _kitManager;
@@ -21,7 +21,8 @@ internal class KitCreateCommand : IExecutableCommand
     private readonly CommandDispatcher _commandDispatcher;
     private readonly IKitsDbContext _dbContext;
     private readonly AssetRedirectService _assetRedirectService;
-    public CommandContext Context { get; set; }
+
+    public required CommandContext Context { get; init; }
 
     public KitCreateCommand(IServiceProvider serviceProvider)
     {

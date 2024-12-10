@@ -629,7 +629,7 @@ public class CommandContext : ControlException
     /// <summary>
     /// Gets a <paramref name="parameter"/> at a given index, parses it as a <see cref="ulong"/>, or returns <see langword="false"/> if out of range or unable to parse.
     /// </summary>
-    /// <remarks>Zero based indexing. Use <see cref="TryGet(int,out ulong,out EditorUser?, bool)"/> instead for Steam64 IDs.</remarks>
+    /// <remarks>Zero based indexing. Use <see cref="TryGet(int,out ulong,out WarfarePlayer?, bool)"/> instead for Steam64 IDs.</remarks>
     public bool TryGet(int parameter, out ulong value)
     {
         parameter += _argumentOffset;
@@ -644,7 +644,7 @@ public class CommandContext : ControlException
     /// <summary>
     /// Gets a <paramref name="parameter"/> at a given index, parses it as a <see cref="ulong"/>, or returns <see langword="false"/> if out of range or unable to parse.
     /// </summary>
-    /// <remarks>Zero based indexing. Use <see cref="TryGet(int,out ulong,out EditorUser?, bool)"/> instead for Steam64 IDs.</remarks>
+    /// <remarks>Zero based indexing. Use <see cref="TryGet(int,out ulong,out WarfarePlayer?, bool)"/> instead for Steam64 IDs.</remarks>
     public bool TryGet(int parameter, out CSteamID value)
     {
         parameter += _argumentOffset;

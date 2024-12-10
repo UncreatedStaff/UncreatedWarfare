@@ -34,7 +34,7 @@ public class UCPlayerData : MonoBehaviour
     internal const int PingBufferSize = 256;
     internal BarricadeDrop? ExplodingLandmine;
     internal BarricadeDrop? TriggeringLandmine;
-    internal ItemMagazineAsset LastProjectedAmmoType;
+    internal ItemMagazineAsset? LastProjectedAmmoType;
     internal float[] PingBuffer = new float[PingBufferSize];
     internal int PingBufferIndex = -1;
     internal float LastAvgPingDifference;
@@ -42,7 +42,7 @@ public class UCPlayerData : MonoBehaviour
     internal InteractableVehicle? LastRocketShotVehicle;
     internal Guid LastGunShot; // used for amc
     internal ulong LastAttacker;
-    public Player Player { get; private set; }
+    public Player? Player { get; private set; }
     public float JoinTime { get; private set; }
     
     public void StartTracking(Player player)
@@ -50,6 +50,7 @@ public class UCPlayerData : MonoBehaviour
         Player = player;
         JoinTime = Time.realtimeSinceStartup;
     }
+
     public void AddPing(float value)
     {
         ++PingBufferIndex;

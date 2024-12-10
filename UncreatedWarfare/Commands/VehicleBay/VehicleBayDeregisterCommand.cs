@@ -4,20 +4,19 @@ using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Translations;
-using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Commands;
 
 [Command("deregister", "dereg", "unregister", "unreg"), SubCommandOf(typeof(VehicleBayCommand))]
-public class VehicleBayDeregisterCommand : IExecutableCommand
+internal sealed class VehicleBayDeregisterCommand : IExecutableCommand
 {
     private readonly BuildableSaver _buildableSaver;
     private readonly VehicleSpawnerStore _spawnerStore;
     private readonly VehicleBayCommandTranslations _translations;
 
     /// <inheritdoc />
-    public CommandContext Context { get; set; }
+    public required CommandContext Context { get; init; }
 
     public VehicleBayDeregisterCommand(
         TranslationInjection<VehicleBayCommandTranslations> translations,

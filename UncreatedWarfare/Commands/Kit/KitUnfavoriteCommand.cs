@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-using Uncreated.Framework.UI;
-using Uncreated.Warfare.Interaction.Commands;
+﻿using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Signs;
@@ -9,12 +7,12 @@ using Uncreated.Warfare.Translations;
 namespace Uncreated.Warfare.Commands;
 
 [Command("unfavorite", "unfavourite", "unfavour", "unfavor", "unfav", "unstar"), SubCommandOf(typeof(KitCommand))]
-internal class KitUnfavoriteCommand : IExecutableCommand
+internal sealed class KitUnfavoriteCommand : IExecutableCommand
 {
     private readonly SignInstancer _signs;
     private readonly KitCommandTranslations _translations;
     private readonly KitManager _kitManager;
-    public CommandContext Context { get; set; }
+    public required CommandContext Context { get; init; }
 
     public KitUnfavoriteCommand(TranslationInjection<KitCommandTranslations> translations, SignInstancer signs, KitManager kitManager)
     {

@@ -1,27 +1,19 @@
 ﻿using Uncreated.Warfare.Interaction.Commands;
+using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Commands;
 
-[Command("range", "r")]
-public class RangeCommand : IExecutableCommand
+[Command("range", "r"), MetadataFile]
+internal sealed class RangeCommand : IExecutableCommand
 {
     private readonly RangeCommandTranslations _translations;
-    private const int Precision = 10;
+
+    private const int Precision = 10; // update meta description if this changes
     
     /// <inheritdoc />
-    public CommandContext Context { get; set; }
-
-    /// <summary>
-    /// Get /help metadata about this command.
-    /// </summary>
-    public static CommandStructure GetHelpMetadata()
-    {
-        return new CommandStructure
-        {
-            Description = $"Shows you how far away you are from your squad leader's marker within {Precision} meters."
-        };
-    }
+    public required CommandContext Context { get; init; }
 
     public RangeCommand(TranslationInjection<RangeCommandTranslations> translations)
     {
@@ -34,26 +26,23 @@ public class RangeCommand : IExecutableCommand
         Context.AssertRanByPlayer();
 
         int distance;
-#if false
-        if (!Data.Is<ISquads>())
+        SquadPlayerComponent? squadComp = Context.Player.ComponentOrNull<SquadPlayerComponent>();
+        if (squadComp == null)
         {
-#endif
             distance = Mathf.RoundToInt((Context.Player.Position - Context.Player.UnturnedPlayer.quests.markerPosition).magnitude / Precision) * Precision;
             throw Context.Reply(_translations.RangeOutput, distance);
-#if false
         }
 
-        if (Context.Player.Squad is null)
+        if (squadComp.Squad is null)
             throw Context.Reply(_translations.RangeNotInSquad);
 
-        UCPlayer squadLeader = Context.Player.Squad.Leader;
+        WarfarePlayer squadLeader = squadComp.Squad.Leader;
 
-        if (!squadLeader.Player.quests.isMarkerPlaced)
+        if (!squadLeader.UnturnedPlayer.quests.isMarkerPlaced)
             throw Context.Reply(_translations.RangeNoMarker);
 
-        distance = Mathf.RoundToInt((Context.Player.Position - squadLeader.Player.quests.markerPosition).magnitude / Precision) * Precision;
+        distance = Mathf.RoundToInt((Context.Player.Position - squadLeader.UnturnedPlayer.quests.markerPosition).magnitude / Precision) * Precision;
         throw Context.Reply(_translations.RangeOutput, distance);
-#endif
     }
 }
 

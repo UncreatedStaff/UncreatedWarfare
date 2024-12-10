@@ -1,98 +1,19 @@
 ﻿using DanielWillett.ReflectionTools;
 using System;
 using Uncreated.Warfare.Interaction.Commands;
-using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Permissions;
 
-namespace Uncreated.Warfare.Commands.VanillaRework;
+namespace Uncreated.Warfare.Commands;
 
-[Command("vehicle", "v", "veh"), Priority(1)]
-[MetadataFile(nameof(GetHelpMetadata))]
-public class VehicleCommand : IExecutableCommand
+[Command("vehicle", "v", "veh"), Priority(1), HideFromHelp]
+internal sealed class VehicleCommand : IExecutableCommand
 {
-    private const string AdminSyntax = "/v <vehicle|kick|give|accept|deny> [player]";
-    private const string Syntax = "/v <kick|give|accept|deny> [player]";
-    private const string AdminHelp = "Spawn a vehicle in front of you or manage your requested vehicle.";
-    private const string Help = "Manage your requested vehicle.";
-
     private static readonly PermissionLeaf PermissionSpawn = new PermissionLeaf("commands.vehicle.spawn", unturned: false, warfare: true);
-    private static readonly PermissionLeaf PermissionKick  = new PermissionLeaf("commands.vehicle.kick", unturned: false, warfare: true);
-    private static readonly PermissionLeaf PermissionGive  = new PermissionLeaf("commands.vehicle.give", unturned: false, warfare: true);
+    //private static readonly PermissionLeaf PermissionKick  = new PermissionLeaf("commands.vehicle.kick", unturned: false, warfare: true); todo
+    //private static readonly PermissionLeaf PermissionGive  = new PermissionLeaf("commands.vehicle.give", unturned: false, warfare: true);
 
     /// <inheritdoc />
-    public CommandContext Context { get; set; }
-
-    /// <summary>
-    /// Get /help metadata about this command.
-    /// </summary>
-    public static CommandStructure GetHelpMetadata()
-    {
-        return new CommandStructure
-        {
-            Description = "Spawns a vehicle in front of you.",
-            Parameters =
-            [
-                new CommandParameter("Enter")
-                {
-                    Permission = PermissionSpawn,
-                    FlagName = "e",
-                    Description = "Enter the vehicle after it spawns."
-                },
-                new CommandParameter("Vehicle", typeof(VehicleAsset))
-                {
-                    Description = "Summon a vehicle in front of you.",
-                    Permission = PermissionSpawn
-                },
-                new CommandParameter("Kick")
-                {
-                    Aliases = [ "Remove", "K" ],
-                    Permission = PermissionKick,
-                    Description = "Remove a player from your vehicle. Can not be done while moving unless they are the driver.",
-                    Parameters =
-                    [
-                        new CommandParameter("Player", typeof(IPlayer), "Driver", "Pilot", "Turret", typeof(byte))
-                        {
-                            Description = "Player or seat to remove from your vehicle, optional if there is only one option."
-                        },
-                        new CommandParameter("Force Remove")
-                        {
-                            FlagName = "k",
-                            Aliases = [ "r" ],
-                            Description = "Force the player out of the vehicle instead of just finding a different seat."
-                        }
-                    ]
-                },
-                new CommandParameter("Accept")
-                {
-                    Aliases = [ "A", "Acc" ],
-                    Permission = PermissionGive,
-                    Description = "Accept a vehicle-related request."
-                },
-                new CommandParameter("Deny")
-                {
-                    Aliases = [ "D", "Dn" ],
-                    Permission = PermissionGive,
-                    Description = "Deny a vehicle-related request."
-                },
-                new CommandParameter("Give")
-                {
-                    Aliases = [ "Transfer", "G" ],
-                    Permission = PermissionGive,
-                    Description = "Transfer ownerhip of your vehicle to someone else, they must also have the vehicle unlocked. Will not give credits when abandoned.",
-                    Parameters =
-                    [
-                        new CommandParameter("Player", typeof(IPlayer)),
-                        new CommandParameter("Force Send Request")
-                        {
-                            FlagName = "r",
-                            Aliases = [ "req" ],
-                            Description = "Sends a request to give instead of just forcing it over (this behavior is forced when the recepient is in main)."
-                        }
-                    ]
-                }
-            ]
-        };
-    }
+    public required CommandContext Context { get; init; }
 
     /// <inheritdoc />
     public async UniTask ExecuteAsync(CancellationToken token)
@@ -297,8 +218,6 @@ public class VehicleCommand : IExecutableCommand
         await Context.AssertPermissions(PermissionSpawn, token);
 
         bool enter = Context.MatchFlag('e', "enter");
-
-        Context.AssertArgs(1, AdminSyntax);
 
         if (!Context.TryGet(0, out VehicleAsset? asset, out _, true, allowMultipleResults: true))
             throw Context.ReplyString("<color=#8f9494>Unable to find a vehicle by the name or id: <color=#dddddd>" + Context.GetRange(0) + "</color>.</color>");

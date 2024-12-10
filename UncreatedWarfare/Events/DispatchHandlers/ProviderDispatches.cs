@@ -105,6 +105,8 @@ partial class EventDispatcher2
             if (scope != null)
                 await scope.DisposeAsync();
         });
+
+        newPlayer.UnturnedPlayer.sendTerminalRelay("michael smells");
     }
 
     /// <summary>

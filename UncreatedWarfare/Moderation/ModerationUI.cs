@@ -10,8 +10,8 @@ using Uncreated.Framework.UI.Data;
 using Uncreated.Framework.UI.Patterns;
 using Uncreated.Framework.UI.Presets;
 using Uncreated.Framework.UI.Reflection;
-using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Moderation.Punishments;
 using Uncreated.Warfare.Moderation.Punishments.Presets;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
@@ -1353,6 +1353,7 @@ public partial class ModerationUI : UnturnedUI
         Tickets,
         Logs
     }
+#nullable disable
     public class PlayerListEntry
     {
         [Pattern(Root = true)]
@@ -1527,6 +1528,7 @@ public partial class ModerationUI : UnturnedUI
         [Pattern("ModerationSelectedEvidenceButtonRemove_{0}")]
         public UnturnedButton RemoveButton { get; set; }
     }
+#nullable restore
     public class ModerationData : IUnturnedUIData
     {
         internal int ActionModeVersion;

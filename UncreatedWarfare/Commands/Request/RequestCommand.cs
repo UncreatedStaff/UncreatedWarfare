@@ -9,7 +9,7 @@ using Uncreated.Warfare.Util.Containers;
 namespace Uncreated.Warfare.Commands;
 
 [Command("request", "req", "r"), SynchronizedCommand, MetadataFile]
-public sealed class RequestCommand : ICompoundingCooldownCommand
+internal sealed class RequestCommand : ICompoundingCooldownCommand
 {
     private readonly SignInstancer _signInstancer;
     private readonly WarfareModule _module;
@@ -18,7 +18,7 @@ public sealed class RequestCommand : ICompoundingCooldownCommand
     public float MaxCooldown => 900f; // 15 mins
 
     /// <inheritdoc />
-    public CommandContext Context { get; set; }
+    public required CommandContext Context { get; init; }
 
     public RequestCommand(
         TranslationInjection<RequestTranslations> translations,

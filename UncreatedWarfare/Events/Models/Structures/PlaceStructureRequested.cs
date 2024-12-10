@@ -9,9 +9,10 @@ namespace Uncreated.Warfare.Events.Models.Structures;
 [EventModel(SynchronizationContext = EventSynchronizationContext.Global, SynchronizedModelTags = [ "modify_inventory", "modify_world" ])]
 public class PlaceStructureRequested : CancellableEvent
 {
-    private Vector3 _position;
+#nullable disable
     private StructureRegion _region;
     private RegionCoord _regionPosition;
+#nullable restore
 
     /// <summary>
     /// The player that initially tried to place the structure.
@@ -48,13 +49,14 @@ public class PlaceStructureRequested : CancellableEvent
     /// <exception cref="ArgumentException">Position is not in a region.</exception>
     public required Vector3 Position
     {
-        get => _position;
+        get;
         set
         {
             if (!Regions.tryGetCoordinate(value, out byte x, out byte y))
-                throw new ArgumentException("This is not a valid position for a structure. It must be in a region.", nameof(value));
-            
-            _position = value;
+                throw new ArgumentException("This is not a valid position for a structure. It must be in a region.",
+                    nameof(value));
+
+            field = value;
             _region = StructureManager.regions[x, y];
             _regionPosition = new RegionCoord(x, y);
         }

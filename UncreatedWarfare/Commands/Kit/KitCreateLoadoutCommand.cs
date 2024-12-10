@@ -11,14 +11,14 @@ using Uncreated.Warfare.Util;
 namespace Uncreated.Warfare.Commands;
 
 [Command("createloadout", "cloadout", "cl"), SubCommandOf(typeof(KitCommand))]
-internal class KitCreateLoadoutCommand : IExecutableCommand
+internal sealed class KitCreateLoadoutCommand : IExecutableCommand
 {
     private readonly KitCommandTranslations _translations;
     private readonly KitManager _kitManager;
     private readonly IKitsDbContext _dbContext;
     private readonly IUserDataService _userDataService;
     private readonly AssetRedirectService _assetRedirectService;
-    public CommandContext Context { get; set; }
+    public required CommandContext Context { get; init; }
 
     public KitCreateLoadoutCommand(IServiceProvider serviceProvider)
     {

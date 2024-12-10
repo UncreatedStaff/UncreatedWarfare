@@ -1,6 +1,4 @@
-﻿#if DEBUG
-#endif
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using System;
 using Uncreated.Warfare.Configuration;
 using Random = UnityEngine.Random;
@@ -9,15 +7,18 @@ namespace Uncreated.Warfare.Components;
 
 public class HeatSeekingMissileComponent : MonoBehaviour
 {
-    //private Player _firer;
+#nullable disable
+
     private GameObject _projectile;
     private HeatSeekingController _controller;
+    private Rigidbody _rigidbody;
+
+#nullable restore
+
     private Transform? _previousTarget;
     private Transform? _lastKnownTarget;
     private Vector3 _randomRelativePosition;
     private int _allowedPathAlterations;
-
-    private Rigidbody _rigidbody;
 
     private float _projectileSpeed;
     private float _maxTurnDegrees;
@@ -26,7 +27,7 @@ public class HeatSeekingMissileComponent : MonoBehaviour
     private float _startTime;
     private bool _lost;
 
-    private const float TIMEOUT = 10;
+    private const float Timeout = 10;
 
     private IAssetLink<EffectAsset> _fxSilent = null!;
     private IAssetLink<EffectAsset> _fxSound = null!;
@@ -59,7 +60,7 @@ public class HeatSeekingMissileComponent : MonoBehaviour
         _guidanceRampTime = guidanceRampTime;
         _allowedPathAlterations = 1;
         _startTime = Time.time;
-        if (_controller.Status == HeatSeekingController.ELockOnMode.LOCKED_ON)
+        if (_controller.Status == HeatSeekingController.ELockOnMode.LockedOn)
             _lost = false;
         else
             _lost = true;
@@ -73,6 +74,7 @@ public class HeatSeekingMissileComponent : MonoBehaviour
         //L.LogDebug($"    AA:     Missile launched - {_controller.Status}");
     }
 
+    [UsedImplicitly]
     private void OnDestroy()
     {
         //L.LogDebug("Missile destroyed. In flight: " + _controller.MissilesInFlight.Count);
@@ -80,6 +82,7 @@ public class HeatSeekingMissileComponent : MonoBehaviour
     }
     
     private float _timeOfLastLoop;
+
     [UsedImplicitly]
     private void FixedUpdate()
     {
@@ -136,7 +139,7 @@ public class HeatSeekingMissileComponent : MonoBehaviour
             idealDirection = (_lastKnownTarget.Find("Center") ?? _lastKnownTarget).position - _projectile.transform.position;
         }
 
-        if ((Time.time - _startTime) > TIMEOUT)
+        if ((Time.time - _startTime) > Timeout)
         {
             if (!_rigidbody.useGravity)
             {

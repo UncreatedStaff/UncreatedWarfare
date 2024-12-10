@@ -9,9 +9,10 @@ namespace Uncreated.Warfare.Events.Models.Barricades;
 [EventModel(SynchronizationContext = EventSynchronizationContext.Global, SynchronizedModelTags = [ "modify_inventory", "modify_world" ])]
 public class PlaceBarricadeRequested : CancellableEvent
 {
-    private Vector3 _position;
+#nullable disable
     private BarricadeRegion _region;
     private RegionCoord _regionPosition;
+#nullable restore
 
     /// <inheritdoc />
     public override bool IsCancelled => base.IsCancelled || TargetVehicle is not null && TargetVehicle == null; // vehicle was destroyed mid-event
@@ -68,19 +69,20 @@ public class PlaceBarricadeRequested : CancellableEvent
     /// <exception cref="ArgumentException">Position is not in a region when not planted.</exception>
     public required Vector3 Position
     {
-        get => _position;
+        get;
         set
         {
             if (IsOnVehicle)
             {
-                _position = value;
+                field = value;
                 return;
             }
 
             if (!Regions.tryGetCoordinate(value, out byte x, out byte y))
-                throw new ArgumentException("This is not a valid position for a non-planted barricade. It must be in a region.", nameof(value));
+                throw new ArgumentException(
+                    "This is not a valid position for a non-planted barricade. It must be in a region.", nameof(value));
 
-            _position = value;
+            field = value;
             _region = BarricadeManager.regions[x, y];
             _regionPosition = new RegionCoord(x, y);
         }
