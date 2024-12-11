@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Injures;
@@ -12,7 +12,7 @@ partial class EventDispatcher2
     /// <summary>
     /// Invoked by <see cref="DamageTool.damagePlayerRequested"/> when a player starts to get damaged. Can be cancelled.
     /// </summary>
-    public void DamageToolOnPlayerDamageRequested(ref DamagePlayerParameters parameters, ref bool shouldallow)
+    private void DamageToolOnPlayerDamageRequested(ref DamagePlayerParameters parameters, ref bool shouldallow)
     {
         if (!shouldallow || parameters.times == 0f)
             return;

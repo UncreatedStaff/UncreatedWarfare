@@ -264,7 +264,7 @@ public class AudioRecordManager
             boundary[index] = (byte)num;
         }
 
-        int size = (2 + 2 + boundary.Length + 2 + 45 + 13 + 47 + 2 + 16 + 2) * segments.Count + /* end */ 4 + 2 + boundary.Length;
+        int size = (boundary.Length + 131) * segments.Count + /* end */ 6 + boundary.Length;
         int section = 0;
         int maxSize = 0;
         for (int i = 0; i < segments.Count; ++i)

@@ -45,7 +45,7 @@ public class Mute : DurationPunishment
         writer.Write((byte)Type);
     }
 
-    public override void ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
+    public override bool ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
     {
         if (propertyName.Equals("mute_type", StringComparison.InvariantCultureIgnoreCase))
         {
@@ -55,7 +55,7 @@ public class Mute : DurationPunishment
                 if (num <= (int)MuteType.Both && num >= 0)
                 {
                     Type = (MuteType)num;
-                    return;
+                    return true;
                 }
 
                 throw new JsonException($"Invalid integer for MuteType: {num}.");
@@ -66,7 +66,9 @@ public class Mute : DurationPunishment
             Type = type;
         }
         else
-            base.ReadProperty(ref reader, propertyName, options);
+            return base.ReadProperty(ref reader, propertyName, options);
+
+        return true;
     }
     public override void Write(Utf8JsonWriter writer, JsonSerializerOptions options)
     {

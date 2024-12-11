@@ -1,4 +1,4 @@
-﻿using Autofac.Builder;
+using Autofac.Builder;
 using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.Configuration;
 using System;

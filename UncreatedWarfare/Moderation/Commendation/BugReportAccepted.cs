@@ -36,14 +36,15 @@ public class BugReportAccepted : ModerationEntry
         writer.WriteNullable(Issue);
     }
 
-    public override void ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
+    public override bool ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
     {
         if (propertyName.Equals("commit", StringComparison.InvariantCultureIgnoreCase))
             Commit = reader.GetString();
         else if (propertyName.Equals("issue", StringComparison.InvariantCultureIgnoreCase))
             Issue = reader.TokenType == JsonTokenType.Null ? null : reader.GetInt32();
         else
-            base.ReadProperty(ref reader, propertyName, options);
+            return base.ReadProperty(ref reader, propertyName, options);
+        return true;
     }
     public override void Write(Utf8JsonWriter writer, JsonSerializerOptions options)
     {

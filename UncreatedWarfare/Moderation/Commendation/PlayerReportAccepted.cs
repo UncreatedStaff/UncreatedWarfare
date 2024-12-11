@@ -31,12 +31,14 @@ public class PlayerReportAccepted : ModerationEntry
 
         writer.Write(ReportKey);
     }
-    public override void ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
+    public override bool ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
     {
         if (propertyName.Equals("report_id", StringComparison.InvariantCultureIgnoreCase))
             ReportKey = reader.GetUInt32();
         else
-            base.ReadProperty(ref reader, propertyName, options);
+            return base.ReadProperty(ref reader, propertyName, options);
+
+        return true;
     }
     public override void Write(Utf8JsonWriter writer, JsonSerializerOptions options)
     {

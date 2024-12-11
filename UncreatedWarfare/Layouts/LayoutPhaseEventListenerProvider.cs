@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Services;
@@ -6,24 +6,21 @@ using Uncreated.Warfare.Services;
 namespace Uncreated.Warfare.Layouts;
 internal class LayoutPhaseEventListenerProvider : IEventListenerProvider
 {
-    private readonly WarfareModule _module;
-    public LayoutPhaseEventListenerProvider(WarfareModule module)
+    private readonly Layout _layout;
+
+    public LayoutPhaseEventListenerProvider(Layout layout)
     {
-        _module = module;
+        _layout = layout;
     }
 
     // allows the current phase to handle events
     IEnumerable<IEventListener<TEventArgs>> IEventListenerProvider.EnumerateNormalListeners<TEventArgs>(TEventArgs args)
     {
-        return _module.IsLayoutActive()
-            ? _module.GetActiveLayout().Phases.OfType<IEventListener<TEventArgs>>()
-            : Enumerable.Empty<IEventListener<TEventArgs>>();
+        return _layout.Phases.OfType<IEventListener<TEventArgs>>();
     }
 
     IEnumerable<IAsyncEventListener<TEventArgs>> IEventListenerProvider.EnumerateAsyncListeners<TEventArgs>(TEventArgs args)
     {
-        return _module.IsLayoutActive()
-            ? _module.GetActiveLayout().Phases.OfType<IAsyncEventListener<TEventArgs>>()
-            : Enumerable.Empty<IAsyncEventListener<TEventArgs>>();
+        return _layout.Phases.OfType<IAsyncEventListener<TEventArgs>>();
     }
 }

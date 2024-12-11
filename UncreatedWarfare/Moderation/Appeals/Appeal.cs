@@ -93,7 +93,7 @@ public class Appeal : ModerationEntry
         }
     }
 
-    public override void ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
+    public override bool ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
     {
         if (propertyName.Equals("ticket_guid", StringComparison.InvariantCultureIgnoreCase))
             TicketId = reader.GetGuid();
@@ -108,7 +108,9 @@ public class Appeal : ModerationEntry
         else if (propertyName.Equals("responses", StringComparison.InvariantCultureIgnoreCase))
             Responses = JsonSerializer.Deserialize<AppealResponse[]>(ref reader, options) ?? Array.Empty<AppealResponse>();
         else
-            base.ReadProperty(ref reader, propertyName, options);
+            return base.ReadProperty(ref reader, propertyName, options);
+
+        return true;
     }
     public override void Write(Utf8JsonWriter writer, JsonSerializerOptions options)
     {

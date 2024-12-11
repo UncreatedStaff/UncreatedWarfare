@@ -1,7 +1,6 @@
 ﻿using DanielWillett.SpeedBytes;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -21,6 +20,10 @@ public class Report : ModerationEntry
     [JsonPropertyName("screenshot_data")]
     [JsonConverter(typeof(ByteArrayJsonConverter))]
     public byte[]? ScreenshotJpgData { get; set; }
+
+    [JsonIgnore]
+    public virtual bool ShouldScreenshot => true;
+
     public override string GetDisplayName() => "Report";
     protected override void ReadIntl(ByteReader reader, ushort version)
     {
@@ -43,7 +46,7 @@ public class Report : ModerationEntry
         else writer.Write(false);
     }
 
-    public override void ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
+    public override bool ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
     {
         if (propertyName.Equals("report_type", StringComparison.InvariantCultureIgnoreCase))
         {
@@ -53,7 +56,7 @@ public class Report : ModerationEntry
                 if (num >= 0)
                 {
                     Type = (ReportType)num;
-                    return;
+                    return true;
                 }
 
                 throw new JsonException($"Invalid integer for ReportType: {num}.");
@@ -73,59 +76,16 @@ public class Report : ModerationEntry
             }
             Type = type;
         }
-        else if (propertyName.Equals("screenshot_data", StringComparison.InvariantCultureIgnoreCase))
-        {
-            if (reader.TokenType == JsonTokenType.String)
-            {
-                string b64 = reader.GetString()!;
-                ScreenshotJpgData = Convert.FromBase64String(b64);
-                return;
-            }
-            if (reader.TokenType == JsonTokenType.StartArray)
-            {
-                List<byte> bytes = new List<byte>(short.MaxValue);
-                while (reader.Read())
-                {
-                    if (reader.TokenType == JsonTokenType.EndArray)
-                        break;
-                    if (reader.TokenType == JsonTokenType.Number)
-                    {
-                        if (reader.TryGetByte(out byte b))
-                        {
-                            bytes.Add(b);
-                            continue;
-                        }
-                    }
-                    else if (reader.TokenType == JsonTokenType.String)
-                    {
-                        string str = reader.GetString()!;
-                        if (byte.TryParse(str, NumberStyles.Any, CultureInfo.InvariantCulture, out byte b))
-                        {
-                            bytes.Add(b);
-                            continue;
-                        }
-                    }
-                    throw new JsonException("Failed to get byte reading ScreenshotJpgData.");
-                }
-                ScreenshotJpgData = bytes.ToArray();
-                return;
-            }
-            if (reader.TokenType == JsonTokenType.Null)
-                ScreenshotJpgData = null;
-            else
-                throw new JsonException("Unexpected token " + reader.TokenType + " while reading ScreenshotJpgData.");
-        }
         else
-            base.ReadProperty(ref reader, propertyName, options);
+            return base.ReadProperty(ref reader, propertyName, options);
+
+        return true;
     }
     public override void Write(Utf8JsonWriter writer, JsonSerializerOptions options)
     {
         base.Write(writer, options);
 
         writer.WriteString("report_type", Type.ToString());
-
-        if (ScreenshotJpgData != null)
-            writer.WriteString("screenshot_data", Convert.ToBase64String(ScreenshotJpgData));
     }
 
     internal override int EstimateParameterCount() => base.EstimateParameterCount() + 2;
@@ -134,14 +94,15 @@ public class Report : ModerationEntry
         bool hasEvidenceCalls = base.AppendWriteCall(builder, args);
 
         builder.Append($" INSERT INTO `{DatabaseInterface.TableReports}` ({MySqlSnippets.ColumnList(
-            DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnReportsType)}) VALUES ");
+            DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnReportsType, DatabaseInterface.ColumnReportsScreenshotData)}) VALUES ");
 
-        MySqlSnippets.AppendPropertyList(builder, args.Count, 1, 0, 1);
+        MySqlSnippets.AppendPropertyList(builder, args.Count, 2, 0, 1);
         builder.Append(" AS `t` " +
-                       $"ON DUPLICATE KEY UPDATE `{DatabaseInterface.ColumnReportsType}` = " +
-                       $"`t`.`{DatabaseInterface.ColumnReportsType}`;");
+                       $"ON DUPLICATE KEY UPDATE `{DatabaseInterface.ColumnReportsType}`=`t`.`{DatabaseInterface.ColumnReportsType}`," +
+                       $"`{DatabaseInterface.ColumnReportsScreenshotData}`=`t`.`{DatabaseInterface.ColumnReportsScreenshotData}`;");
 
         args.Add(Type.ToString());
+        args.Add((object?)ScreenshotJpgData ?? DBNull.Value);
         
         return hasEvidenceCalls;
     }
@@ -151,7 +112,8 @@ public enum ReportType
 {
     Custom,
     Griefing,
-    ChatAbuse
+    ChatAbuse,
+    VoiceChatAbuse
 }
 public sealed class ReportTypeLegacyConverter : JsonConverter<ReportType>
 {
@@ -171,7 +133,8 @@ public sealed class ReportTypeLegacyConverter : JsonConverter<ReportType>
 
             return str.ToUpperInvariant() switch
             {
-                "CHAT_ABUSE" or "VOICE_CHAT_ABUSE" => ReportType.ChatAbuse,
+                "CHAT_ABUSE" => ReportType.ChatAbuse,
+                "VOICE_CHAT_ABUSE" => ReportType.VoiceChatAbuse,
                 "GREIFING_FOBS" or "INTENTIONAL_TEAMKILL" or "SOLOING_VEHICLE" or "WASTING_ASSETS" => ReportType.Griefing,
                 "CUSTOM" or "CHEATING" => ReportType.Custom,
                 _ => throw new JsonException("Invalid string value for ReportType.")

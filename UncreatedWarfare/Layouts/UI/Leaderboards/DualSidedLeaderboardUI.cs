@@ -1,4 +1,4 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using SDG.NetTransport;
 using System;
 using System.Diagnostics.CodeAnalysis;
@@ -64,7 +64,7 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
     public bool IsActive { get; private set; }
 
     public DualSidedLeaderboardUI(AssetConfiguration assetConfig, ILoggerFactory loggerFactory, Layout layout, ChatService chatService, IPlayerService playerService, ITranslationService translationService)
-        : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:DualSidedLeaderboardUI"), staticKey: true, debugLogging: true)
+        : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:DualSidedLeaderboardUI"), staticKey: true, debugLogging: false)
     {
         _createData = CreateData;
         _layout = layout;

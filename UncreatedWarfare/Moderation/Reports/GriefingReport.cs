@@ -70,7 +70,7 @@ public class GriefingReport : Report
         for (int i = 0; i < VehicleTeamkillRecord.Length; ++i)
             VehicleTeamkillRecord[i].Write(writer);
     }
-    public override void ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
+    public override bool ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
     {
         if (propertyName.Equals("structure_damage", StringComparison.InvariantCultureIgnoreCase))
             DamageRecord = JsonSerializer.Deserialize<StructureDamageRecord[]>(ref reader, options) ?? Array.Empty<StructureDamageRecord>();
@@ -81,7 +81,9 @@ public class GriefingReport : Report
         else if (propertyName.Equals("vehicle_teamkills", StringComparison.InvariantCultureIgnoreCase))
             VehicleTeamkillRecord = JsonSerializer.Deserialize<VehicleTeamkillRecord[]>(ref reader, options) ?? Array.Empty<VehicleTeamkillRecord>();
         else
-            base.ReadProperty(ref reader, propertyName, options);
+            return base.ReadProperty(ref reader, propertyName, options);
+
+        return true;
     }
     public override void Write(Utf8JsonWriter writer, JsonSerializerOptions options)
     {

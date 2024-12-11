@@ -1,16 +1,13 @@
-﻿using DanielWillett.ReflectionTools;
-using HarmonyLib;
+using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Linq;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Interaction.Requests;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Translations;
-using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Moderation.Punishments;
@@ -33,7 +30,6 @@ public class VehicleService : ILayoutHostedService,
 {
     private const float VehicleSpawnOffset = 5f;
     public const ushort MaxBatteryCharge = 10000;
-    private readonly IServiceProvider _serviceProvider;
     private readonly RequestVehicleTranslations _reqTranslations;
     private readonly VehicleInfoStore _vehicleInfoStore;
     private readonly VehicleSpawnerStore _spawnerStore;
@@ -46,7 +42,6 @@ public class VehicleService : ILayoutHostedService,
 
     public VehicleService(IServiceProvider serviceProvider, ILogger<VehicleService> logger)
     {
-        _serviceProvider = serviceProvider;
         _logger = logger;
         _vehicleInfoStore = serviceProvider.GetRequiredService<VehicleInfoStore>();
         _spawnerStore = serviceProvider.GetRequiredService<VehicleSpawnerStore>();

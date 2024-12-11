@@ -1,4 +1,4 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -95,7 +95,7 @@ public class DroppedItemTracker : IHostedService, IEventListener<PlayerLeft>
         return foundItems;
     }
 
-    [EventListener(Priority = int.MaxValue)]
+    [EventListener(MustRunInstantly = true)]
     void IEventListener<PlayerLeft>.HandleEvent(PlayerLeft e, IServiceProvider serviceProvider)
     {
         _droppedItems.Remove(e.Player);

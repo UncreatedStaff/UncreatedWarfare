@@ -1,4 +1,4 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using System;
 using System.Globalization;
 using System.Linq;
@@ -315,10 +315,10 @@ public class TeleportCommandTranslations : PropertiesTranslationCollection
     public readonly Translation<string> TeleportSelfLocationSuccess = new Translation<string>("<#bfb9ac>You were teleported to <#ddd>{0}</color>.");
 
     [TranslationData(IsPriorityTranslation = false)]
-    public readonly Translation<string> TeleportStopJump = new Translation<string>("<#bfb9ac>You will no longer jump on right punch.");
+    public readonly Translation TeleportStopJump = new Translation("<#bfb9ac>You will no longer jump on right punch.");
 
     [TranslationData(IsPriorityTranslation = false)]
-    public readonly Translation<string> TeleportStartJump = new Translation<string>("<#bfb9ac>You will jump on right punch. Do <#ddd>/tp jump stop</color> to stop.");
+    public readonly Translation TeleportStartJump = new Translation("<#bfb9ac>You will jump on right punch. Do <#ddd>/tp jump stop</color> to stop.");
 
     [TranslationData(IsPriorityTranslation = false)]
     public readonly Translation<string> TeleportSelfLocationObstructed = new Translation<string>("<#8f9494>Failed to teleport you to <#ddd>{0}</color>, it's position is obstructed.");

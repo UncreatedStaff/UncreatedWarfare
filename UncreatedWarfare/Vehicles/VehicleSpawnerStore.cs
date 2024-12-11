@@ -1,6 +1,4 @@
 using DanielWillett.ReflectionTools;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.FileProviders;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
@@ -8,7 +6,6 @@ using System.IO;
 using System.Linq;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
 
@@ -20,7 +17,7 @@ namespace Uncreated.Warfare.Vehicles;
 /// <remarks>Decided to go with raw binary instead of SQL since this kind of relies on other level savedata and the map, plus it was easier.</remarks>
 
 [Priority(-1 /* load after BuildableSaver */)]
-public class VehicleSpawnerStore : ILayoutHostedService, ILevelHostedService
+public class VehicleSpawnerStore : ILayoutHostedService
 {
     public class VehicleSpawnRecord
     {
@@ -49,16 +46,10 @@ public class VehicleSpawnerStore : ILayoutHostedService, ILevelHostedService
         Spawns = new ReadOnlyCollection<VehicleSpawnInfo>(_spawns);
     }
 
-    UniTask ILevelHostedService.LoadLevelAsync(CancellationToken token)
-    {
-        OnLevelLoaded();
-        return UniTask.CompletedTask;
-    }
-
     UniTask ILayoutHostedService.StartAsync(CancellationToken token)
     {
-        if (Level.isLoaded)
-            OnLevelLoaded();
+        _dataStore.Reload();
+        ReloadVehicleSpawns(_dataStore.Data);
         return UniTask.CompletedTask;
     }
 
@@ -66,12 +57,6 @@ public class VehicleSpawnerStore : ILayoutHostedService, ILevelHostedService
     {
         _dataStore.Dispose();
         return UniTask.CompletedTask;
-    }
-
-    private void OnLevelLoaded()
-    {
-        _dataStore.Reload();
-        ReloadVehicleSpawns(_dataStore.Data);
     }
 
     private static string GetFolderPath()

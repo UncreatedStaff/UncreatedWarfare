@@ -1,4 +1,4 @@
-﻿using DanielWillett.ModularRpcs.DependencyInjection;
+using DanielWillett.ModularRpcs.DependencyInjection;
 using DanielWillett.ModularRpcs.Serialization;
 using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.IoC;
@@ -18,6 +18,7 @@ using System.Linq;
 using System.Reflection;
 using Uncreated.Warfare.Actions;
 using Uncreated.Warfare.Buildables;
+using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database;
@@ -102,8 +103,10 @@ public sealed class WarfareModule
     private ILogger<WarfareModule> _logger;
     private WarfarePluginLoader _pluginLoader;
 
+
 #nullable restore
 
+    public event Action? LayoutStarted;
     private bool _unloadedHostedServices = true;
     private ILifetimeScope? _activeScope;
     private Layout? _activeLayout;
@@ -451,6 +454,16 @@ public sealed class WarfareModule
         bldr.RegisterType<SendChatMutedEventHandler>()
             .AsImplementedInterfaces();
 
+        // todo: remove
+        bldr.RegisterType<TestEventService1>().AsSelf().AsImplementedInterfaces();
+        bldr.RegisterType<TestEventService2>().AsSelf().AsImplementedInterfaces();
+        bldr.RegisterType<TestEventService3>().AsSelf().AsImplementedInterfaces();
+        bldr.RegisterType<TestEventService4>().AsSelf().AsImplementedInterfaces();
+        bldr.RegisterType<TestEventService5>().AsSelf().AsImplementedInterfaces();
+        bldr.RegisterType<TestEventService6>().AsSelf().AsImplementedInterfaces();
+        bldr.RegisterType<TestEventService7>().AsSelf().AsImplementedInterfaces();
+
+
         bldr.RegisterType<WarfareSteamApiService>()
             .As<ISteamApiService>()
             .SingleInstance();
@@ -499,11 +512,11 @@ public sealed class WarfareModule
 
         bldr.RegisterType<VehicleService>()
             .AsImplementedInterfaces().AsSelf()
-            .SingleInstance();
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
         
         bldr.RegisterType<VehicleSpawnerStore>()
             .AsImplementedInterfaces().AsSelf()
-            .SingleInstance();
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
 
         bldr.RegisterType<UnityLoopTickerFactory>()
             .As<ILoopTickerFactory>();
@@ -614,7 +627,7 @@ public sealed class WarfareModule
 
         bldr.RegisterType<LayoutPhaseEventListenerProvider>()
             .As<IEventListenerProvider>()
-            .SingleInstance();
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
 
         // Active ILayoutPhase
         bldr.Register(_ => GetActiveLayout().ActivePhase ?? throw new InvalidOperationException("There is not a phase currently loaded."));
@@ -1108,6 +1121,15 @@ public sealed class WarfareModule
     internal void SetActiveLayout(Layout? layout)
     {
         Layout? oldLayout = Interlocked.Exchange(ref _activeLayout, layout);
+        try
+        {
+            LayoutStarted?.Invoke();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "LayoutStarted listener threw an exception in SetActiveLayout.");
+        }
+
         if (oldLayout == null)
             return;
 
@@ -1133,6 +1155,7 @@ public sealed class WarfareModule
 
     private void UnloadModule()
     {
+        // calls IModuleNexus.shutdown()
         ServiceProvider.Resolve<Module>().isEnabled = false;
     }
 
