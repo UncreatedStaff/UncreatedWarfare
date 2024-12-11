@@ -78,6 +78,7 @@ public partial class EventDispatcher2 : IHostedService
         VehicleManager.OnVehicleExploded += VehicleManagerOnVehicleExploded;
         VehicleManager.onExitVehicleRequested += VehicleManagerOnPassengerExitRequested;
         VehicleManager.onSwapSeatRequested += VehicleManagerOnSwapSeatRequested;
+        VehicleManager.OnPreDestroyVehicle += VehicleManagerOnPreDestroyVehicle;
 
         /* Items */
         ItemManager.onTakeItemRequested += ItemManagerOnTakeItemRequested;
@@ -121,6 +122,7 @@ public partial class EventDispatcher2 : IHostedService
         VehicleManager.OnVehicleExploded -= VehicleManagerOnVehicleExploded;
         VehicleManager.onExitVehicleRequested -= VehicleManagerOnPassengerExitRequested;
         VehicleManager.onSwapSeatRequested -= VehicleManagerOnSwapSeatRequested;
+        VehicleManager.OnPreDestroyVehicle -= VehicleManagerOnPreDestroyVehicle;
 
         /* Items */
         ItemManager.onTakeItemRequested -= ItemManagerOnTakeItemRequested;

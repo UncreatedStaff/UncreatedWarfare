@@ -10,6 +10,9 @@ using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.List;
 using Uncreated.Warfare.Vehicles;
+using Uncreated.Warfare.Vehicles.Info;
+using Uncreated.Warfare.Vehicles.Spawners;
+using Uncreated.Warfare.Vehicles.UI;
 
 namespace Uncreated.Warfare.Components;
 
@@ -63,7 +66,7 @@ public class VehicleComponent : MonoBehaviour
     /// <summary>
     /// The spawn the vehicle was created at, if any.
     /// </summary>
-    public VehicleSpawnerComponent? Spawn { get; private set; }
+    public VehicleSpawner? Spawn { get; private set; }
 
 #if false
     public Zone? SafezoneZone
@@ -156,7 +159,7 @@ public class VehicleComponent : MonoBehaviour
         ReloadCountermeasures();
     }
 
-    internal void UnlinkFromSpawn(VehicleSpawnerComponent spawn)
+    internal void UnlinkFromSpawn(VehicleSpawner spawn)
     {
         GameThread.AssertCurrent();
 
@@ -176,7 +179,7 @@ public class VehicleComponent : MonoBehaviour
         Spawn = null;
     }
 
-    internal void LinkToSpawn(VehicleSpawnerComponent spawn)
+    internal void LinkToSpawn(VehicleSpawner spawn)
     {
         GameThread.AssertCurrent();
 

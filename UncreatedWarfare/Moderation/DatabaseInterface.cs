@@ -21,7 +21,7 @@ using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Steam;
 using Uncreated.Warfare.Steam.Models;
 using Uncreated.Warfare.Util;
-using Uncreated.Warfare.Vehicles;
+using Uncreated.Warfare.Vehicles.Info;
 
 namespace Uncreated.Warfare.Moderation;
 public class DatabaseInterface

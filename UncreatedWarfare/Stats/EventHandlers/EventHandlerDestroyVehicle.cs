@@ -3,7 +3,7 @@ using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Vehicles;
 using Uncreated.Warfare.Translations;
-using Uncreated.Warfare.Vehicles;
+using Uncreated.Warfare.Vehicles.Info;
 
 namespace Uncreated.Warfare.Stats.EventHandlers;
 

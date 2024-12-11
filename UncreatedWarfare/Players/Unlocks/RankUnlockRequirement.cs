@@ -5,7 +5,7 @@ using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Util;
-using Uncreated.Warfare.Vehicles;
+using Uncreated.Warfare.Vehicles.Info;
 
 namespace Uncreated.Warfare.Players.Unlocks;
 

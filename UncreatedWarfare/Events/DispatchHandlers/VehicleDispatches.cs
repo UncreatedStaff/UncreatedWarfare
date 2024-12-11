@@ -8,6 +8,7 @@ using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Vehicles.Vehicle;
 
 namespace Uncreated.Warfare.Events;
 partial class EventDispatcher2
@@ -229,5 +230,14 @@ partial class EventDispatcher2
             return;
 
         toSeatIndex = (byte)args.NewPassengerIndex;
+    }
+    private void VehicleManagerOnPreDestroyVehicle(InteractableVehicle vehicle)
+    {
+        var args = new VehicleDespawned
+        {
+            Vehicle = vehicle
+        };
+
+        _ = DispatchEventAsync(args, CancellationToken.None);
     }
 }

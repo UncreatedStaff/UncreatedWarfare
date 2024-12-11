@@ -85,8 +85,7 @@ internal class KitGiveCommand : IExecutableCommand
         {
             throw Context.Reply(_translations.KitOperationNoTarget);
         }
-
-        kit ??= await _kitManager.FindKit(kitId, token, exactMatchOnly: false);
+        kit ??= await _kitManager.FindKit(kitId, token, exactMatchOnly: false, dbContext => KitManager.RequestableSet(dbContext, false));
         if (kit == null)
         {
             if (kitIdCouldBePlayerName)

@@ -3,13 +3,14 @@ using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Vehicles;
+using Uncreated.Warfare.Vehicles.Spawners;
 
 namespace Uncreated.Warfare.Commands;
 
 [Command("check", "id", "wtf"), SubCommandOf(typeof(VehicleBayCommand))]
 public class VehicleBayCheckCommand : IExecutableCommand
 {
-    private readonly VehicleSpawnerStore _spawnerStore;
+    private readonly VehicleSpawnerService _spawnerStore;
     private readonly VehicleBayCommandTranslations _translations;
 
     /// <inheritdoc />
@@ -17,7 +18,7 @@ public class VehicleBayCheckCommand : IExecutableCommand
 
     public VehicleBayCheckCommand(
         TranslationInjection<VehicleBayCommandTranslations> translations,
-        VehicleSpawnerStore spawnerStore)
+        VehicleSpawnerService spawnerStore)
     {
         _spawnerStore = spawnerStore;
         _translations = translations.Value;
@@ -35,12 +36,11 @@ public class VehicleBayCheckCommand : IExecutableCommand
 
         await UniTask.SwitchToMainThread(token);
 
-        VehicleSpawnInfo? spawn = _spawnerStore.Spawns.FirstOrDefault(x => x.Spawner.Equals(buildable));
-        if (spawn == null)
+        if (!_spawnerStore.TryGetSpawner(buildable, out VehicleSpawner? spawner))
         {
             throw Context.Reply(_translations.SpawnNotRegistered);
         }
 
-        Context.Reply(_translations.VehicleBayCheck, spawn.UniqueName, spawn.Spawner.InstanceId, spawn.Vehicle.GetAsset()!, spawn.Vehicle.Guid);
+        Context.Reply(_translations.VehicleBayCheck, spawner.SpawnInfo.UniqueName, spawner.SpawnInfo.BuildableInstanceId, spawner.SpawnInfo.VehicleAsset.GetAsset()!, spawner.SpawnInfo.VehicleAsset.Guid);
     }
 }

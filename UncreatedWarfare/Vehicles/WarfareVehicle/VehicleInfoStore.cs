@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using DanielWillett.ReflectionTools;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Primitives;
 using System;
@@ -11,7 +12,8 @@ using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
 
-namespace Uncreated.Warfare.Vehicles;
+namespace Uncreated.Warfare.Vehicles.Info;
+[Priority(-1 /* run before VehicleSpawnerStore */)]
 public class VehicleInfoStore : IHostedService, IDisposable, IUnlockRequirementProvider
 {
     private readonly WarfareModule _warfare;
@@ -41,7 +43,7 @@ public class VehicleInfoStore : IHostedService, IDisposable, IUnlockRequirementP
     /// </summary>
     public WarfareVehicleInfo? GetVehicleInfo(Guid guid)
     {
-        return guid == Guid.Empty ? null : _vehicles.Find(x => x.Vehicle.MatchGuid(guid));
+        return guid == Guid.Empty ? null : _vehicles.Find(x => x.VehicleAsset.MatchGuid(guid));
     }
 
     /// <summary>
@@ -49,7 +51,7 @@ public class VehicleInfoStore : IHostedService, IDisposable, IUnlockRequirementP
     /// </summary>
     public WarfareVehicleInfo? GetVehicleInfo(VehicleAsset? asset)
     {
-        return asset == null ? null : _vehicles.Find(x => x.Vehicle.MatchAsset(asset));
+        return asset == null ? null : _vehicles.Find(x => x.VehicleAsset.MatchAsset(asset));
     }
 
     /// <summary>
@@ -57,7 +59,7 @@ public class VehicleInfoStore : IHostedService, IDisposable, IUnlockRequirementP
     /// </summary>
     public WarfareVehicleInfo? GetVehicleInfo(IAssetLink<VehicleAsset>? asset)
     {
-        return asset == null ? null : _vehicles.Find(x => x.Vehicle.MatchAsset(asset));
+        return asset == null ? null : _vehicles.Find(x => x.VehicleAsset.MatchAsset(asset));
     }
 
     /// <inheritdoc />
@@ -75,7 +77,7 @@ public class VehicleInfoStore : IHostedService, IDisposable, IUnlockRequirementP
                 .Build();
 
             WarfareVehicleInfo? vehicle = config.Get<WarfareVehicleInfo>();
-            if (vehicle?.Vehicle == null)
+            if (vehicle?.VehicleAsset == null)
             {
                 _logger.LogWarning("Invalid file {0} missing 'Vehicle' property.", file);
                 continue;
@@ -97,7 +99,7 @@ public class VehicleInfoStore : IHostedService, IDisposable, IUnlockRequirementP
             _logger.LogDebug("Found vehicle info in file: {0}.", file);
         }
 
-        
+
         IDisposable changeTokenRegistration = ChangeToken.OnChange(() => _fileProvider.Watch("./*.yml"), ReloadUnwatchedFiles);
 
         _disposableConfigurationRoots.Add(changeTokenRegistration);
@@ -140,7 +142,7 @@ public class VehicleInfoStore : IHostedService, IDisposable, IUnlockRequirementP
                     .Build();
 
                 WarfareVehicleInfo? vehicle = config.Get<WarfareVehicleInfo>();
-                if (vehicle?.Vehicle == null)
+                if (vehicle?.VehicleAsset == null)
                 {
                     _logger.LogWarning("Invalid file {0} missing 'Vehicle' property.", file);
                     continue;
@@ -210,11 +212,11 @@ public class VehicleInfoStore : IHostedService, IDisposable, IUnlockRequirementP
 
         // not binding for thread safety reasons
         WarfareVehicleInfo? newVehicle = state.Configuration.Get<WarfareVehicleInfo>();
-        
-        if (newVehicle?.Vehicle == null)
+
+        if (newVehicle?.VehicleAsset == null)
             return;
 
-        if (newVehicle.Vehicle.Equals(state.Vehicle))
+        if (newVehicle.VehicleAsset.Equals(state.VehicleAsset))
         {
             newVehicle.Configuration = state.Configuration;
 
@@ -244,7 +246,7 @@ public class VehicleInfoStore : IHostedService, IDisposable, IUnlockRequirementP
     {
         _fileProvider.Dispose();
 
-        List<IDisposable> toDispose = Interlocked.Exchange(ref _disposableConfigurationRoots, [ ]);
+        List<IDisposable> toDispose = Interlocked.Exchange(ref _disposableConfigurationRoots, []);
 
         for (int i = 0; i < toDispose.Count; i++)
             toDispose[i].Dispose();

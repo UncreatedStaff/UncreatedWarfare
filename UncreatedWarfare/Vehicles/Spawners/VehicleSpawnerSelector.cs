@@ -6,6 +6,8 @@ using System.Linq;
 using System.Text;
 using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.Services;
+using Uncreated.Warfare.Vehicles.Spawners;
+using static Uncreated.Warfare.Vehicles.VehicleSpawnerStore;
 
 namespace Uncreated.Warfare.Vehicles;
 public class VehicleSpawnerSelector : ILayoutHostedService

@@ -8,11 +8,11 @@ namespace Uncreated.Warfare.Commands;
 [Command("vehicles", "veh", "v"), SubCommandOf(typeof(ClearCommand))]
 public class ClearVehiclesCommand : IExecutableCommand
 {
-    private readonly VehicleService _vehicleService;
+    private readonly VehicleRequestService _vehicleService;
     private readonly ClearTranslations _translations;
 
     public CommandContext Context { get; set; }
-    public ClearVehiclesCommand(VehicleService vehicleService, TranslationInjection<ClearTranslations> translations)
+    public ClearVehiclesCommand(VehicleRequestService vehicleService, TranslationInjection<ClearTranslations> translations)
     {
         _vehicleService = vehicleService;
         _translations = translations.Value;

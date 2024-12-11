@@ -6,6 +6,7 @@ using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles;
+using Uncreated.Warfare.Vehicles.Spawners;
 
 namespace Uncreated.Warfare.Commands;
 
@@ -13,7 +14,7 @@ namespace Uncreated.Warfare.Commands;
 public class VehicleBayLinkCommand : IExecutableCommand
 {
     private readonly BuildableSaver _buildableSaver;
-    private readonly VehicleSpawnerStore _spawnerStore;
+    private readonly VehicleSpawnerService _spawnerStore;
     private readonly VehicleBayCommandTranslations _translations;
 
     /// <inheritdoc />
@@ -22,7 +23,7 @@ public class VehicleBayLinkCommand : IExecutableCommand
     public VehicleBayLinkCommand(
         TranslationInjection<VehicleBayCommandTranslations> translations,
         BuildableSaver buildableSaver,
-        VehicleSpawnerStore spawnerStore)
+        VehicleSpawnerService spawnerStore)
     {
         _buildableSaver = buildableSaver;
         _spawnerStore = spawnerStore;
@@ -41,45 +42,42 @@ public class VehicleBayLinkCommand : IExecutableCommand
 
         await UniTask.SwitchToMainThread(token);
 
-        VehicleSpawnInfo? spawn = _spawnerStore.Spawns.FirstOrDefault(x => x.Spawner.Equals(buildable));
-        if (spawn == null)
+        // if looking at a sign
+        if (!buildable.IsStructure && buildable.GetDrop<BarricadeDrop>() is { interactable: InteractableSign } signDrop)
         {
-            if (buildable.IsStructure || buildable.GetDrop<BarricadeDrop>() is not { interactable: InteractableSign } drop)
-                throw Context.Reply(_translations.SpawnNotRegistered);
-
-            VehicleSpawnInfo? info = VehicleSpawnerComponent.EndLinkingSign(Context.Player);
+            VehicleSpawner? spawnerFromSign = VehicleSpawner.EndLinkingSign(Context.Player);
                 
-            if (info == null)
+            if (spawnerFromSign == null)
                 throw Context.Reply(_translations.SpawnNotRegistered);
 
-            
             await UniTask.SwitchToMainThread(token);
 
-            if (!info.Signs.Any(s => s.Equals(buildable)))
-                info.Signs.Add(buildable);
+            if (!spawnerFromSign.Signs.Any(s => s.Equals(buildable)))
+                spawnerFromSign.Signs.Add(buildable);
+            spawnerFromSign.SpawnInfo.SignInstanceIds = spawnerFromSign.Signs.Select(s => s.InstanceId).ToList();
 
-            await _spawnerStore.AddOrUpdateSpawnAsync(info, token);
+            await _spawnerStore.SpawnerStore.AddOrUpdateSpawnAsync(spawnerFromSign.SpawnInfo);
 
             await UniTask.SwitchToMainThread(token);
 
-            Context.Reply(_translations.VehicleBayLinkFinished, info.Vehicle.GetAsset()!);
-            Context.LogAction(ActionLogType.LinkedVehicleBaySign,
-                $"{drop.asset.ActionLogDisplay()} ID: {drop.instanceID} - Spawner Instance ID: {info.Spawner.InstanceId} ({(info.Spawner.IsStructure ? "STRUCTURE" : "BARRICADE")}");
+            Context.Reply(_translations.VehicleBayLinkFinished, spawnerFromSign.VehicleInfo.VehicleAsset.GetAsset()!);
+            Context.LogAction(ActionLogType.LinkedVehicleBaySign, spawnerFromSign.ToDisplayString());
 
             // updates sign instance via the SignTextChanged event
-            BarricadeUtility.SetServersideSignText(drop, "vbs_" + info.Vehicle.Guid.ToString("N", CultureInfo.InvariantCulture));
+            BarricadeUtility.SetServersideSignText((BarricadeDrop)buildable.Drop, spawnerFromSign.ServerSignText);
 
             await _buildableSaver.SaveBuildableAsync(buildable, token);
 
         }
-        else if (spawn.Spawner.Model.TryGetComponent(out VehicleSpawnerComponent component))
+        // if looking at a spawner
+        else if (_spawnerStore.TryGetSpawner(buildable, out VehicleSpawner? spawner))
         {
-            VehicleSpawnerComponent.StartLinkingSign(component, Context.Player);
+            VehicleSpawner.StartLinkingSign(spawner, Context.Player);
             Context.Reply(_translations.VehicleBayLinkStarted);
         }
         else
         {
-            Context.Logger.LogConditional("Spawner doesn't have VehicleSpawnerComponent.");
+            Context.Logger.LogConditional("Buildable is not a registered spawner.");
             Context.Reply(_translations.SpawnNotRegistered);
         }
     }

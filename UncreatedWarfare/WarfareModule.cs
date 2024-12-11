@@ -66,6 +66,9 @@ using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Timing;
 using Uncreated.Warfare.Vehicles;
 using Uncreated.Warfare.Vehicles.Events;
+using Uncreated.Warfare.Vehicles.Info;
+using Uncreated.Warfare.Vehicles.Spawners;
+using Uncreated.Warfare.Vehicles.UI;
 using Uncreated.Warfare.Zones;
 using Module = SDG.Framework.Modules.Module;
 
@@ -492,15 +495,27 @@ public sealed class WarfareModule
             .AsImplementedInterfaces().AsSelf()
             .SingleInstance();
 
-        bldr.RegisterType<AbandonService>()
+        //bldr.RegisterType<AbandonService>()
+        //    .AsImplementedInterfaces().AsSelf()
+        //    .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+
+        bldr.RegisterType<DualSidedLeaderboardUI>()
             .AsImplementedInterfaces().AsSelf()
-            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+            .SingleInstance();
 
         bldr.RegisterType<VehicleService>()
             .AsImplementedInterfaces().AsSelf()
             .SingleInstance();
+
+        bldr.RegisterType<VehicleRequestService>()
+            .AsImplementedInterfaces().AsSelf()
+            .SingleInstance();
         
         bldr.RegisterType<VehicleSpawnerStore>()
+            .AsImplementedInterfaces().AsSelf()
+            .SingleInstance();
+
+        bldr.RegisterType<VehicleSpawnerService>()
             .AsImplementedInterfaces().AsSelf()
             .SingleInstance();
 

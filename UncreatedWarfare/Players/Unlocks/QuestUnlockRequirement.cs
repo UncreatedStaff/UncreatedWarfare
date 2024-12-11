@@ -10,7 +10,7 @@ using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
-using Uncreated.Warfare.Vehicles;
+using Uncreated.Warfare.Vehicles.Info;
 
 namespace Uncreated.Warfare.Players.Unlocks;
 

@@ -23,7 +23,7 @@ public class StructureCommand : IExecutableCommand
 {
     // todo split
     private readonly BuildableSaver _saver;
-    private readonly VehicleService _vehicleService;
+    private readonly VehicleRequestService _vehicleService;
     private readonly EventDispatcher2 _eventDispatcher;
     private readonly ITeamManager<Team> _teamManager;
     private readonly IUserDataService _userDataService;
@@ -40,7 +40,7 @@ public class StructureCommand : IExecutableCommand
     /// <inheritdoc />
     public CommandContext Context { get; set; }
 
-    public StructureCommand(BuildableSaver saver, VehicleService vehicleService,
+    public StructureCommand(BuildableSaver saver, VehicleRequestService vehicleService,
         TranslationInjection<StructureTranslations> translations, EventDispatcher2 eventDispatcher,
         ITeamManager<Team> teamManager, IUserDataService userDataService)
     {

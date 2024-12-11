@@ -8,6 +8,8 @@ using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles;
+using Uncreated.Warfare.Vehicles.Info;
+using Uncreated.Warfare.Vehicles.Spawners;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Commands;
@@ -16,7 +18,7 @@ namespace Uncreated.Warfare.Commands;
 public class VehicleBayRegisterCommand : IExecutableCommand
 {
     private readonly BuildableSaver _buildableSaver;
-    private readonly VehicleSpawnerStore _spawnerStore;
+    private readonly VehicleSpawnerService _spawnerStore;
     private readonly VehicleInfoStore _vehicleInfo;
     private readonly WarfareModule _module;
     private readonly VehicleBayCommandTranslations _translations;
@@ -27,12 +29,12 @@ public class VehicleBayRegisterCommand : IExecutableCommand
     public VehicleBayRegisterCommand(
         TranslationInjection<VehicleBayCommandTranslations> translations,
         BuildableSaver buildableSaver,
-        VehicleSpawnerStore spawnerStore,
+        VehicleSpawnerService spawnerService,
         VehicleInfoStore vehicleInfo,
         WarfareModule module)
     {
         _buildableSaver = buildableSaver;
-        _spawnerStore = spawnerStore;
+        _spawnerStore = spawnerService;
         _vehicleInfo = vehicleInfo;
         _module = module;
         _translations = translations.Value;
@@ -62,8 +64,8 @@ public class VehicleBayRegisterCommand : IExecutableCommand
             throw Context.Reply(_translations.NoTarget);
         }
 
-        WarfareVehicleInfo? info = _vehicleInfo.GetVehicleInfo(vehicleType.GUID);
-        if (info == null)
+        WarfareVehicleInfo? vehicleInfo = _vehicleInfo.GetVehicleInfo(vehicleType.GUID);
+        if (vehicleInfo == null)
         {
             throw Context.Reply(_translations.VehicleNotRegistered, vehicleType.ActionLogDisplay());
         }
@@ -72,35 +74,20 @@ public class VehicleBayRegisterCommand : IExecutableCommand
 
         await UniTask.SwitchToMainThread(token);
 
-        VehicleSpawnInfo similarName = _spawnerStore.Spawns.FirstOrDefault(s => s.UniqueName.Equals(uniqueName, StringComparison.OrdinalIgnoreCase));
-        if (similarName != null && !similarName.Spawner.Equals(buildable))
+        if (_spawnerStore.TryGetSpawner(uniqueName, out VehicleSpawner? similarName))
         {
             throw Context.Reply(_translations.NameNotUnique, uniqueName);
         }
 
-        VehicleSpawnInfo? spawn = _spawnerStore.Spawns.FirstOrDefault(x => x.Spawner.Equals(buildable));
-        if (spawn != null)
+        if (_spawnerStore.TryGetSpawner(buildable, out VehicleSpawner? existing))
         {
             throw Context.Reply(_translations.SpawnAlreadyRegistered, vehicleType);
         }
 
-        spawn = new VehicleSpawnInfo
-        {
-            UniqueName = uniqueName,
-            Spawner = buildable,
-            Vehicle = AssetLink.Create(vehicleType)
-        };
+        VehicleSpawner newSpawner = await _spawnerStore.RegisterNewSpawner(buildable, vehicleInfo, uniqueName, token);
 
-        await _spawnerStore.AddOrUpdateSpawnAsync(spawn, token);
-        Context.LogAction(ActionLogType.RegisteredSpawn,
-            $"{spawn.Vehicle.ToDisplayString()} - Spawner '{spawn.UniqueName}' (Instance ID: {spawn.Spawner.InstanceId} {(spawn.Spawner.IsStructure ? "STRUCTURE" : "BARRICADE")}.");
+        Context.LogAction(ActionLogType.RegisteredSpawn, newSpawner.ToDisplayString());
 
-
-        if (_module.IsLayoutActive())
-        {
-            spawn.Spawner.Model.GetOrAddComponent<VehicleSpawnerComponent>().Init(spawn, info, _module.GetActiveLayout().ServiceProvider.Resolve<IServiceProvider>());
-        }
-
-        Context.Reply(_translations.SpawnRegistered, spawn.UniqueName, vehicleType);
+        Context.Reply(_translations.SpawnRegistered, newSpawner.SpawnInfo.UniqueName, vehicleType);
     }
 }

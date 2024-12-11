@@ -9,7 +9,7 @@ using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Translations.ValueFormatters;
 
-namespace Uncreated.Warfare.Vehicles;
+namespace Uncreated.Warfare.Vehicles.Info;
 
 [CannotApplyEqualityOperator]
 public class WarfareVehicleInfo : IEquatable<WarfareVehicleInfo>, ITranslationArgument
@@ -20,7 +20,7 @@ public class WarfareVehicleInfo : IEquatable<WarfareVehicleInfo>, ITranslationAr
     internal WeakReference<WarfareVehicleInfo>? DependantInfo;
     public IConfigurationRoot Configuration { get; internal set; }
 
-    public IAssetLink<VehicleAsset> Vehicle { get; set; }
+    public IAssetLink<VehicleAsset> VehicleAsset { get; set; }
     public VehicleType Type { get; set; }
     public Branch Branch { get; set; }
     public Class Class { get; set; }
@@ -87,7 +87,7 @@ public class WarfareVehicleInfo : IEquatable<WarfareVehicleInfo>, ITranslationAr
 
     internal void UpdateFrom(WarfareVehicleInfo other)
     {
-        if (!other.Vehicle.Equals(Vehicle))
+        if (!other.VehicleAsset.Equals(VehicleAsset))
             throw new ArgumentException("Not same vehicle.", nameof(other));
 
         Type = other.Type;
@@ -105,7 +105,7 @@ public class WarfareVehicleInfo : IEquatable<WarfareVehicleInfo>, ITranslationAr
 
         Rearm.AmmoConsumed = other.Rearm.AmmoConsumed;
         Rearm.Items = other.Rearm.Items;
-        
+
         Abandon.ValueLossSpeed = other.Abandon.ValueLossSpeed;
         Abandon.AllowAbandon = other.Abandon.AllowAbandon;
 
@@ -126,7 +126,7 @@ public class WarfareVehicleInfo : IEquatable<WarfareVehicleInfo>, ITranslationAr
 
     public bool Equals(WarfareVehicleInfo? other)
     {
-        return other is not null && Vehicle.Equals(other.Vehicle);
+        return other is not null && VehicleAsset.Equals(other.VehicleAsset);
     }
 
     public override bool Equals(object? obj)
@@ -137,7 +137,7 @@ public class WarfareVehicleInfo : IEquatable<WarfareVehicleInfo>, ITranslationAr
     public override int GetHashCode()
     {
         // ReSharper disable once NonReadonlyMemberInGetHashCode
-        return Vehicle.GetHashCode();
+        return VehicleAsset.GetHashCode();
     }
 
 

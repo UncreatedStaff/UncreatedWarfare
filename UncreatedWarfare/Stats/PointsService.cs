@@ -12,7 +12,7 @@ using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Addons;
 using Uncreated.Warfare.Translations.Util;
-using Uncreated.Warfare.Vehicles;
+using Uncreated.Warfare.Vehicles.Info;
 
 namespace Uncreated.Warfare.Stats;
 public class PointsService : IEventListener<PlayerTeamChanged> // todo player equipment changed

@@ -9,7 +9,7 @@ using Uncreated.Warfare.Configuration.JsonConverters;
 using Uncreated.Warfare.Database.Manual;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Util;
-using Uncreated.Warfare.Vehicles;
+using Uncreated.Warfare.Vehicles.Info;
 
 namespace Uncreated.Warfare.Moderation.Punishments;
 

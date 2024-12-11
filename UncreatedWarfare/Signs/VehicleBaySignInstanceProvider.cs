@@ -13,27 +13,29 @@ using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Addons;
 using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Vehicles;
+using Uncreated.Warfare.Vehicles.Info;
+using Uncreated.Warfare.Vehicles.Spawners;
 
 namespace Uncreated.Warfare.Signs;
 
 [SignPrefix("vbs_")]
-public class VehicleBaySignInstanceProvider : ISignInstanceProvider, IRequestable<VehicleSpawnInfo>
+public class VehicleBaySignInstanceProvider : ISignInstanceProvider, IRequestable<VehicleSpawner>
 {
     private static readonly StringBuilder LoadoutSignBuffer = new StringBuilder(230);
 
     private static readonly Color32 VbsBranchColor = new Color32(155, 171, 171, 255);
     private static readonly Color32 VbsNameColor = new Color32(255, 255, 255, 255);
 
-    private readonly VehicleSpawnerStore _spawnerStore;
+    private readonly VehicleSpawnerService _spawnerService;
     private readonly VehicleInfoStore _infoStore;
     private readonly ITranslationValueFormatter _valueFormatter;
     private readonly VehicleBaySignTranslations _translations;
     private Guid _fallbackGuid;
     private VehicleAsset? _fallbackAsset;
     private BarricadeDrop _barricade;
-    private VehicleSpawnerComponent? _component;
+    public uint BarricadeInstanceId => _barricade.instanceID;
 
-    public VehicleSpawnInfo? Spawn { get; private set; }
+    public VehicleSpawner? Spawn { get; private set; }
     public WarfareVehicleInfo? Vehicle { get; private set; }
 
     /// <inheritdoc />
@@ -43,12 +45,12 @@ public class VehicleBaySignInstanceProvider : ISignInstanceProvider, IRequestabl
     string ISignInstanceProvider.FallbackText => _fallbackAsset != null ? _fallbackAsset.vehicleName : _fallbackGuid.ToString("N", CultureInfo.InvariantCulture);
 
     public VehicleBaySignInstanceProvider(
-        VehicleSpawnerStore spawnerStore,
+        VehicleSpawnerService spawnerService,
         VehicleInfoStore infoStore,
         ITranslationValueFormatter valueFormatter,
         TranslationInjection<VehicleBaySignTranslations> translations)
     {
-        _spawnerStore = spawnerStore;
+        _spawnerService = spawnerService;
         _infoStore = infoStore;
         _valueFormatter = valueFormatter;
         _translations = translations.Value;
@@ -64,22 +66,18 @@ public class VehicleBaySignInstanceProvider : ISignInstanceProvider, IRequestabl
 
     public string Translate(ITranslationValueFormatter formatter, IServiceProvider serviceProvider, LanguageInfo language, CultureInfo culture, WarfarePlayer? player)
     {
-        Spawn ??= _spawnerStore.Spawns.FirstOrDefault(x => x.Signs.Any(x => x.InstanceId == _barricade.instanceID));
-        Vehicle ??= Spawn == null ? null : _infoStore.Vehicles.FirstOrDefault(x => x.Vehicle.MatchAsset(Spawn.Vehicle));
+        
+        Spawn ??= _spawnerService.GetSpawner(_barricade.instanceID);
+        Vehicle ??= Spawn?.VehicleInfo;
 
-        if (_component == null)
-        {
-            _component = Spawn?.Spawner.Model.GetComponent<VehicleSpawnerComponent>();
-        }
-
-        if (Vehicle == null || Spawn == null || _component == null)
+        if (Vehicle == null || Spawn == null)
         {
             return _fallbackAsset?.vehicleName ?? _fallbackGuid.ToString("N", CultureInfo.InvariantCulture);
         }
 
         try
         {
-            TranslateKitSign(LoadoutSignBuffer, Vehicle, _component, language, culture, player);
+            TranslateKitSign(LoadoutSignBuffer, Vehicle, Spawn, language, culture, player);
             return LoadoutSignBuffer.ToString();
         }
         finally
@@ -88,9 +86,9 @@ public class VehicleBaySignInstanceProvider : ISignInstanceProvider, IRequestabl
         }
     }
 
-    private void TranslateKitSign(StringBuilder bldr, WarfareVehicleInfo info, VehicleSpawnerComponent component, LanguageInfo language, CultureInfo culture, WarfarePlayer? player)
+    private void TranslateKitSign(StringBuilder bldr, WarfareVehicleInfo info, VehicleSpawner spawner, LanguageInfo language, CultureInfo culture, WarfarePlayer? player)
     {
-        string name = info.ShortName ?? info.Vehicle.GetAsset()?.FriendlyName ?? info.Vehicle.ToString();
+        string name = info.ShortName ?? info.VehicleAsset.GetAsset()?.FriendlyName ?? info.VehicleAsset.ToString();
         bldr.AppendColorized(name, VbsNameColor)
             .Append('\n')
             .AppendColorized(_valueFormatter.FormatEnum(info.Branch, language), VbsBranchColor)
@@ -126,21 +124,24 @@ public class VehicleBaySignInstanceProvider : ISignInstanceProvider, IRequestabl
 
         bldr.Append('\n');
 
-        switch (component.State)
+        switch (spawner.State)
         {
             case VehicleSpawnerState.Destroyed:
-                bldr.Append(_translations.VBSStateDead.Translate(component.GetRespawnDueTime(), language, culture));
+                bldr.Append(_translations.VBSStateDead.Translate(spawner.GetRespawnDueTime(), language, culture));
                 break;
 
             case VehicleSpawnerState.Deployed:
-                bldr.Append(_translations.VBSStateActive.Translate(component.GetLocation(), language, culture));
+                bldr.Append(_translations.VBSStateActive.Translate(spawner.GetLocation(), language, culture));
                 break;
 
             case VehicleSpawnerState.Idle:
-                bldr.Append(_translations.VBSStateIdle.Translate(component.GetRespawnDueTime(), language, culture));
+                bldr.Append(_translations.VBSStateIdle.Translate(spawner.GetRespawnDueTime(), language, culture));
                 break;
             case VehicleSpawnerState.LayoutDisabled:
-                bldr.Append(_translations.VBSLayoutDisabled.Translate(language));
+                bldr.Append(_translations.VBSStateLayoutDisabled.Translate(language));
+                break;
+            case VehicleSpawnerState.Disposed:
+                bldr.Append(_translations.VBSStateDisposed.Translate(language));
                 break;
 
             // todo delays
@@ -150,6 +151,7 @@ public class VehicleBaySignInstanceProvider : ISignInstanceProvider, IRequestabl
                 break;
 
         }
+        Console.WriteLine("SIGN UPDATED FINISHED: " + spawner.State);
     }
 }
 
@@ -173,5 +175,8 @@ public class VehicleBaySignTranslations : PropertiesTranslationCollection
     public readonly Translation<TimeSpan> VBSStateIdle = new Translation<TimeSpan>("<#ffcc00>Idle: {0}</color>", arg0Fmt: TimeAddon.Create(TimeFormatType.CountdownMinutesSeconds));
 
     [TranslationData("Displays the state of the sign when the vehicle spawner is disabled in the current layout.")]
-    public readonly Translation VBSLayoutDisabled = new Translation("<#798082>Disabled</color>");
+    public readonly Translation VBSStateLayoutDisabled = new Translation("<#798082>Disabled</color>");
+
+    [TranslationData("Displays the state of the sign when the vehicle spawner is has been disposed and is no longer useable.")]
+    public readonly Translation VBSStateDisposed = new Translation("<#798082>Disposed</color>");
 }

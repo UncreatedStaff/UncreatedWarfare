@@ -4,14 +4,15 @@ using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Vehicles;
+using Uncreated.Warfare.Vehicles.Spawners;
 
 namespace Uncreated.Warfare.Commands;
 
 [Command("respawn", "force"), SubCommandOf(typeof(VehicleBayCommand))]
 public class VehicleBayRespawnCommand : IExecutableCommand
 {
-    private readonly VehicleService _vehicleService;
-    private readonly VehicleSpawnerStore _spawnerStore;
+    private readonly VehicleRequestService _vehicleService;
+    private readonly VehicleSpawnerService _spawnerStore;
     private readonly VehicleBayCommandTranslations _translations;
 
     /// <inheritdoc />
@@ -19,8 +20,8 @@ public class VehicleBayRespawnCommand : IExecutableCommand
 
     public VehicleBayRespawnCommand(
         TranslationInjection<VehicleBayCommandTranslations> translations,
-        VehicleService vehicleService,
-        VehicleSpawnerStore spawnerStore)
+        VehicleRequestService vehicleService,
+        VehicleSpawnerService spawnerStore)
     {
         _vehicleService = vehicleService;
         _spawnerStore = spawnerStore;
@@ -39,20 +40,19 @@ public class VehicleBayRespawnCommand : IExecutableCommand
 
         await UniTask.SwitchToMainThread(token);
 
-        if (!buildable.Model.TryGetComponent(out VehicleSpawnerComponent spawn))
+        if (!_spawnerStore.TryGetSpawner(buildable, out VehicleSpawner? spawner))
         {
             throw Context.Reply(_translations.SpawnNotRegistered);
         }
 
-        if (spawn.LinkedVehicle != null)
+        if (spawner.LinkedVehicle != null)
         {
-            await _vehicleService.DeleteVehicleAsync(spawn.LinkedVehicle, token);
-            spawn.UnlinkVehicle();
+            await _vehicleService.DeleteVehicleAsync(spawner.LinkedVehicle, token);
+            spawner.UnlinkVehicle();
         }
 
-        await _vehicleService.SpawnVehicleAsync(spawn.SpawnInfo, token);
-        Context.LogAction(ActionLogType.VehicleBayForceSpawn,
-            $"{spawn.SpawnInfo.Vehicle.ToDisplayString()} - Spawner Instance ID: {buildable.InstanceId} ({(buildable.IsStructure ? "STRUCTURE" : "BARRICADE")}.");
-        Context.Reply(_translations.VehicleBayForceSuccess!, spawn.SpawnInfo.Vehicle.GetAsset());
+        await _vehicleService.SpawnVehicleAsync(spawner, token);
+        Context.LogAction(ActionLogType.VehicleBayForceSpawn, spawner.ToDisplayString());
+        Context.Reply(_translations.VehicleBayForceSuccess!, spawner.SpawnInfo.VehicleAsset.GetAsset());
     }
 }

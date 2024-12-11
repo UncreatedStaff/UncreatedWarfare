@@ -41,7 +41,7 @@ namespace Uncreated.Warfare.Tests
         [Test]
         public void TestSave()
         {
-            var dataStore = new YamlDataStore<List<ExampleRecord>>(Path.Combine(_testDirectory, "test-save-data.yml"), CreateLogger(), () => new List<ExampleRecord>());
+            var dataStore = new YamlDataStore<List<ExampleRecord>>(Path.Combine(_testDirectory, "test-save-data.yml"), CreateLogger(), true, () => new List<ExampleRecord>());
 
             Assert.AreEqual(0, dataStore.Data.Count);
 
@@ -104,7 +104,7 @@ namespace Uncreated.Warfare.Tests
             string sourceFilePath = Path.Combine(_testDirectory, "test-load-data.yml");
             WriteRecordsToFile(sourceFilePath, records);
 
-            var dataStore = new YamlDataStore<List<ExampleRecord>>(sourceFilePath, CreateLogger(), () => new List<ExampleRecord>());
+            var dataStore = new YamlDataStore<List<ExampleRecord>>(sourceFilePath, CreateLogger(), true, () => new List<ExampleRecord>());
 
             dataStore.Reload();
             Assert.AreEqual(2, dataStore.Data.Count);
@@ -133,7 +133,7 @@ namespace Uncreated.Warfare.Tests
             string sourceFilePath = Path.Combine(_testDirectory, "test-filewatcher-data.yml");
             WriteRecordsToFile(sourceFilePath, records);
 
-            var dataStore = new YamlDataStore<List<ExampleRecord>>(sourceFilePath, CreateLogger(), () => new List<ExampleRecord>());
+            var dataStore = new YamlDataStore<List<ExampleRecord>>(sourceFilePath, CreateLogger(), true, () => new List<ExampleRecord>());
 
             dataStore.Reload();
             Assert.AreEqual(2, dataStore.Data.Count);

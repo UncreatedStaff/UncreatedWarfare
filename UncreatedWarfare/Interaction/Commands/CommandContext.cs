@@ -270,7 +270,7 @@ public class CommandContext : ControlException
     /// <param name="position">Zero-based argument index not including the command name.</param>
     public bool HasArgument(int position)
     {
-        position -= _argumentOffset;
+        position += _argumentOffset;
         return position > -1 && position < _argumentCount;
     }
 
@@ -280,7 +280,7 @@ public class CommandContext : ControlException
     /// <param name="count">One-based argument index not including the command name.</param>
     public bool HasArgs(int count)
     {
-        count -= _argumentOffset;
+        count += _argumentOffset;
         return count > -1 && count <= _argumentCount;
     }
 
@@ -290,7 +290,7 @@ public class CommandContext : ControlException
     /// <param name="count">One-based argument index not including the command name.</param>
     public bool HasArgsExact(int count)
     {
-        count -= _argumentOffset;
+        count += _argumentOffset;
         return count == _argumentCount;
     }
 

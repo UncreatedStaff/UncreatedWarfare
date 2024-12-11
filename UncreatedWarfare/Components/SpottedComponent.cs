@@ -9,7 +9,7 @@ using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
-using Uncreated.Warfare.Vehicles;
+using Uncreated.Warfare.Vehicles.Info;
 
 
 #if ENABLE_SPOTTED_BUFF
@@ -128,98 +128,98 @@ public class SpottedComponent : MonoBehaviour
         IAssetLink<EffectAsset>? effect;
         switch (type)
         {
-            case Vehicles.VehicleType.AA:
+            case Vehicles.Info.VehicleType.AA:
                 effect = assetConfig.GetAssetLink<EffectAsset>("Effects:Spotted:AA");
                 _defaultTimer = 240;
                 _frequency = 1f;
                 Type = Spotted.Emplacement;
                 break;
 
-            case Vehicles.VehicleType.APC:
+            case Vehicles.Info.VehicleType.APC:
                 effect = assetConfig.GetAssetLink<EffectAsset>("Effects:Spotted:APC");
                 _defaultTimer = 30;
                 _frequency = 0.5f;
                 Type = Spotted.Emplacement;
                 break;
 
-            case Vehicles.VehicleType.ATGM:
+            case Vehicles.Info.VehicleType.ATGM:
                 effect = assetConfig.GetAssetLink<EffectAsset>("Effects:Spotted:ATGM");
                 _defaultTimer = 240;
                 _frequency = 1f;
                 Type = Spotted.Emplacement;
                 break;
 
-            case Vehicles.VehicleType.AttackHeli:
+            case Vehicles.Info.VehicleType.AttackHeli:
                 effect = assetConfig.GetAssetLink<EffectAsset>("Effects:Spotted:AttackHeli");
                 _defaultTimer = 15;
                 _frequency = 0.5f;
                 Type = Spotted.Aircraft;
                 break;
 
-            case Vehicles.VehicleType.HMG:
+            case Vehicles.Info.VehicleType.HMG:
                 effect = assetConfig.GetAssetLink<EffectAsset>("Effects:Spotted:HMG");
                 _defaultTimer = 240;
                 _frequency = 1f;
                 Type = Spotted.Emplacement;
                 break;
 
-            case Vehicles.VehicleType.Humvee:
+            case Vehicles.Info.VehicleType.Humvee:
                 effect = assetConfig.GetAssetLink<EffectAsset>("Effects:Spotted:Humvee");
                 _defaultTimer = 30;
                 _frequency = 0.5f;
                 Type = Spotted.LightVehicle;
                 break;
 
-            case Vehicles.VehicleType.IFV:
+            case Vehicles.Info.VehicleType.IFV:
                 effect = assetConfig.GetAssetLink<EffectAsset>("Effects:Spotted:IFV");
                 _defaultTimer = 30;
                 _frequency = 0.5f;
                 Type = Spotted.Armor;
                 break;
 
-            case Vehicles.VehicleType.Jet:
+            case Vehicles.Info.VehicleType.Jet:
                 effect = assetConfig.GetAssetLink<EffectAsset>("Effects:Spotted:Jet");
                 _defaultTimer = 10;
                 _frequency = 0.5f;
                 Type = Spotted.Aircraft;
                 break;
 
-            case Vehicles.VehicleType.MBT:
+            case Vehicles.Info.VehicleType.MBT:
                 effect = assetConfig.GetAssetLink<EffectAsset>("Effects:Spotted:MBT");
                 _defaultTimer = 30;
                 _frequency = 0.5f;
                 Type = Spotted.Armor;
                 break;
 
-            case Vehicles.VehicleType.Mortar:
+            case Vehicles.Info.VehicleType.Mortar:
                 effect = assetConfig.GetAssetLink<EffectAsset>("Effects:Spotted:Mortar");
                 _defaultTimer = 240;
                 _frequency = 1f;
                 Type = Spotted.Emplacement;
                 break;
 
-            case Vehicles.VehicleType.ScoutCar:
+            case Vehicles.Info.VehicleType.ScoutCar:
                 effect = assetConfig.GetAssetLink<EffectAsset>("Effects:Spotted:ScoutCar");
                 _defaultTimer = 30;
                 _frequency = 0.5f;
                 Type = Spotted.LightVehicle;
                 break;
 
-            case Vehicles.VehicleType.TransportAir:
+            case Vehicles.Info.VehicleType.TransportAir:
                 effect = assetConfig.GetAssetLink<EffectAsset>("Effects:Spotted:TransportHeli");
                 _defaultTimer = 15;
                 _frequency = 0.5f;
                 Type = Spotted.Aircraft;
                 break;
 
-            case Vehicles.VehicleType.LogisticsGround:
+            case Vehicles.Info.VehicleType.LogisticsGround:
                 effect = assetConfig.GetAssetLink<EffectAsset>("Effects:Spotted:Truck");
                 _defaultTimer = 30;
                 _frequency = 0.5f;
                 Type = Spotted.LightVehicle;
                 break;
 
-            case Vehicles.VehicleType.TransportGround:
+            case Vehicles.Info.VehicleType.TransportGround:
                 effect = assetConfig.GetAssetLink<EffectAsset>("Effects:Spotted:Truck");
                 _defaultTimer = 30;
                 _frequency = 0.5f;

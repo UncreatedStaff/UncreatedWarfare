@@ -13,5 +13,5 @@ public interface IRequestHandler<in TRequestable, out TRequestObject> where TReq
     /// </summary>
     /// <returns><see langword="true"/> if the request was granted, otherwise <see langword="false"/>.</returns>
     [UsedImplicitly] // RequestCommand
-    Task<bool> RequestAsync(WarfarePlayer player, [NotNullWhen(true)] TRequestable? sign, IRequestResultHandler resultHandler, CancellationToken token = default);
+    Task<bool> RequestAsync(WarfarePlayer player, TRequestable sign, IRequestResultHandler resultHandler, CancellationToken token = default);
 }

@@ -6,6 +6,7 @@ using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles;
+using Uncreated.Warfare.Vehicles.Spawners;
 
 namespace Uncreated.Warfare.Commands;
 
@@ -13,7 +14,7 @@ namespace Uncreated.Warfare.Commands;
 public class VehicleBayDeregisterCommand : IExecutableCommand
 {
     private readonly BuildableSaver _buildableSaver;
-    private readonly VehicleSpawnerStore _spawnerStore;
+    private readonly VehicleSpawnerService _spawnerStore;
     private readonly VehicleBayCommandTranslations _translations;
 
     /// <inheritdoc />
@@ -22,7 +23,7 @@ public class VehicleBayDeregisterCommand : IExecutableCommand
     public VehicleBayDeregisterCommand(
         TranslationInjection<VehicleBayCommandTranslations> translations,
         BuildableSaver buildableSaver,
-        VehicleSpawnerStore spawnerStore)
+        VehicleSpawnerService spawnerStore)
     {
         _buildableSaver = buildableSaver;
         _spawnerStore = spawnerStore;
@@ -41,16 +42,15 @@ public class VehicleBayDeregisterCommand : IExecutableCommand
 
         await UniTask.SwitchToMainThread(token);
 
-        VehicleSpawnInfo? spawn = _spawnerStore.Spawns.FirstOrDefault(x => x.Spawner.Equals(buildable));
-        if (spawn == null)
+        if (!_spawnerStore.TryGetSpawner(buildable, out VehicleSpawner? spawner))
         {
             throw Context.Reply(_translations.SpawnNotRegistered);
         }
 
-        await _spawnerStore.RemoveSpawnAsync(spawn, token);
+        await _spawnerStore.DeregisterSpawner(spawner, token);
         await _buildableSaver.DiscardBuildableAsync(buildable, token);
 
-        List<IBuildable> signs = spawn.Signs.ToList();
+        List<IBuildable> signs = spawner.Signs.ToList();
         foreach (IBuildable sign in signs)
         {
             await _buildableSaver.DiscardBuildableAsync(sign, token);
@@ -65,10 +65,7 @@ public class VehicleBayDeregisterCommand : IExecutableCommand
             }
         }
 
-        GameObject.Destroy(spawn.Spawner.Model.GetComponent<VehicleSpawnerComponent>());
-
-        Context.LogAction(ActionLogType.DeregisteredSpawn,
-            $"{spawn.Vehicle.ToDisplayString()} - Spawner '{spawn.UniqueName}' (Instance ID: {spawn.Spawner.InstanceId} {(spawn.Spawner.IsStructure ? "STRUCTURE" : "BARRICADE")}..");
-        Context.Reply(_translations.SpawnDeregistered!, spawn.UniqueName, spawn.Vehicle.GetAsset());
+        Context.LogAction(ActionLogType.DeregisteredSpawn, spawner.ToDisplayString());
+        Context.Reply(_translations.SpawnDeregistered!, spawner.SpawnInfo.UniqueName, spawner.VehicleInfo.VehicleAsset.GetAsset());
     }
 }

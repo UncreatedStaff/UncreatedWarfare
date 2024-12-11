@@ -1,6 +1,6 @@
 ﻿using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Addons;
-using Uncreated.Warfare.Vehicles;
+using Uncreated.Warfare.Vehicles.Info;
 
 namespace Uncreated.Warfare.Players.UI;
 public class TipTranslations : PropertiesTranslationCollection

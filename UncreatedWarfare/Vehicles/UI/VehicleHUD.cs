@@ -2,7 +2,7 @@
 using Uncreated.Framework.UI.Reflection;
 using Uncreated.Warfare.Configuration;
 
-namespace Uncreated.Warfare.Vehicles;
+namespace Uncreated.Warfare.Vehicles.UI;
 
 [UnturnedUI(BasePath = "Canvas")]
 public class VehicleHUD : UnturnedUI
@@ -13,6 +13,6 @@ public class VehicleHUD : UnturnedUI
 
     public VehicleHUD(AssetConfiguration assetConfig, ILoggerFactory loggerFactory) : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:VehicleHud"), staticKey: true)
     {
-        
+
     }
 }

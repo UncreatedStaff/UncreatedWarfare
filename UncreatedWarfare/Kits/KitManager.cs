@@ -290,7 +290,7 @@ public partial class KitManager :
     }
 
     /// <remarks>Thread Safe</remarks>
-    public async Task<Kit?> FindKit(string id, CancellationToken token = default, bool exactMatchOnly = true, Func<IKitsDbContext, IQueryable<Kit>>? set = null)
+    public async Task<Kit?> FindKit(string id, CancellationToken token = default, bool exactMatchOnly = true, Func<IKitsDbContext, IQueryable<Kit>>? set = null) // todo: make this more intuitive
     {
         await using ILifetimeScope scope = _lifetimeScope.BeginLifetimeScope();
         await using IKitsDbContext dbContext = scope.Resolve<IKitsDbContext>();

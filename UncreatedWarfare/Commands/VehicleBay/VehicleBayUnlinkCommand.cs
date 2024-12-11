@@ -1,7 +1,9 @@
 ﻿using Uncreated.Warfare.Buildables;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Vehicles;
+using Uncreated.Warfare.Vehicles.Spawners;
 
 namespace Uncreated.Warfare.Commands;
 
@@ -9,7 +11,7 @@ namespace Uncreated.Warfare.Commands;
 public class VehicleBayUnlinkCommand : IExecutableCommand
 {
     private readonly BuildableSaver _buildableSaver;
-    private readonly VehicleSpawnerStore _spawnerStore;
+    private readonly VehicleSpawnerService _spawnerStore;
     private readonly VehicleBayCommandTranslations _translations;
 
     /// <inheritdoc />
@@ -18,7 +20,7 @@ public class VehicleBayUnlinkCommand : IExecutableCommand
     public VehicleBayUnlinkCommand(
         TranslationInjection<VehicleBayCommandTranslations> translations,
         BuildableSaver buildableSaver,
-        VehicleSpawnerStore spawnerStore)
+        VehicleSpawnerService spawnerStore)
     {
         _buildableSaver = buildableSaver;
         _spawnerStore = spawnerStore;
@@ -39,29 +41,17 @@ public class VehicleBayUnlinkCommand : IExecutableCommand
 
         IBuildable buildable = new BuildableBarricade(barricade);
 
-        bool anyUpdates = false;
-        VehicleAsset? firstUnlink = null;
-        foreach (VehicleSpawnInfo spawner in _spawnerStore.Spawns)
+        if (!_spawnerStore.TryGetSpawner(buildable.InstanceId, out VehicleSpawner? existing))
         {
-            int index = spawner.Signs.IndexOf(buildable);
-            if (index == -1)
-            {
-                continue;
-            }
-
-            spawner.Signs.RemoveAt(index);
-            anyUpdates = true;
-            firstUnlink ??= spawner.Vehicle.GetAsset();
+            throw Context.Reply(_translations.SignNotLinked);
         }
 
-        if (!anyUpdates)
-        {
-            throw Context.Reply(_translations.SpawnNotRegistered);
-        }
+        existing.Signs.RemoveAll(s => s.Equals(buildable));
+        existing.SpawnInfo.SignInstanceIds.Remove(buildable.InstanceId);
 
         BarricadeManager.ServerSetSignText(sign, string.Empty);
         await _buildableSaver.DiscardBuildableAsync(buildable, token);
-        await _spawnerStore.SaveAsync(token);
-        Context.Reply(_translations.VehicleBayUnlinked, firstUnlink!);
+        await _spawnerStore.SpawnerStore.AddOrUpdateSpawnAsync(existing.SpawnInfo, token);
+        Context.Reply(_translations.VehicleBayUnlinked, existing.VehicleInfo.VehicleAsset.GetAssetOrFail());
     }
 }

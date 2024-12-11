@@ -8,7 +8,7 @@ using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Addons;
-using Uncreated.Warfare.Vehicles;
+using Uncreated.Warfare.Vehicles.Info;
 using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Kits.Translations;
