@@ -215,7 +215,7 @@ public class AssetBan : DurationPunishment
     }
 
     public override string GetDisplayName() => "Asset Ban";
-    public override void ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
+    public override bool ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
     {
         if (propertyName.Equals("vehicle_type_filter", StringComparison.InvariantCultureIgnoreCase))
         {
@@ -266,7 +266,9 @@ public class AssetBan : DurationPunishment
                 throw new JsonException($"Invalid token type: {reader.TokenType} for VehicleType[].");
         }
         else
-            base.ReadProperty(ref reader, propertyName, options);
+            return base.ReadProperty(ref reader, propertyName, options);
+
+        return true;
     }
     public override void Write(Utf8JsonWriter writer, JsonSerializerOptions options)
     {

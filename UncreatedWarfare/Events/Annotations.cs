@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Uncreated.Warfare.Events.Models;
 
 namespace Uncreated.Warfare.Events;
@@ -10,7 +10,6 @@ namespace Uncreated.Warfare.Events;
 public sealed class EventListenerAttribute : Attribute
 {
     internal bool HasRequiredMainThread;
-    private bool _requiresMainThread;
 
     /// <summary>
     /// Highest priority possible, ensures the event listener runs without switching contexts from the original event.
@@ -30,15 +29,20 @@ public sealed class EventListenerAttribute : Attribute
     public bool RequireActiveLayout { get; set; }
 
     /// <summary>
+    /// Requires that this event listener wait until the next frame has completed (<see cref="UniTask.NextFrame(CancellationToken, bool)"/>).
+    /// </summary>
+    public bool RequireNextFrame { get; set; }
+
+    /// <summary>
     /// If this listener must be invoked on the main thread.
     /// </summary>
     /// <remarks>Defaults to <see langword="true"/> for <see cref="IEventListener{TEventArgs}"/>'s and <see langword="false"/> for <see cref="IAsyncEventListener{TEventArgs}"/>'s.</remarks>
     public bool RequiresMainThread
     {
-        get => _requiresMainThread;
+        get;
         set
         {
-            _requiresMainThread = value;
+            field = value;
             HasRequiredMainThread = true;
         }
     }

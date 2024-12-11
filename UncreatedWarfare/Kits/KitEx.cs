@@ -343,7 +343,7 @@ public static class KitEx
         return str?.Replace("\\n", "\n").Replace("/n", "\n").Replace("<br>", "\n").Replace("<br/>", "\n").Replace("<br />", "\n");
     }
 
-    public static async Task<bool> OpenUpgradeTicket(string displayName, Class @class, int id, ulong player, ulong discordId, CancellationToken token = default)
+    public static Task<bool> OpenUpgradeTicket(string displayName, Class @class, int id, ulong player, ulong discordId, CancellationToken token = default)
     {
         token.ThrowIfCancellationRequested();
         // if (UCWarfare.CanUseNetCall)
@@ -352,7 +352,7 @@ public static class KitEx
         //     return response.Responded && response.ErrorCode.HasValue && (StandardErrorCode)response.ErrorCode.Value == StandardErrorCode.Success;
         // }
 
-        return false;
+        return Task.FromResult(false);
     }
     public static bool ValidSlot(byte slot) => slot == 0 || slot > PlayerInventory.SLOTS && slot <= 10;
     public static byte GetHotkeyIndex(byte slot)

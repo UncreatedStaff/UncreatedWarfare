@@ -1,48 +1,15 @@
-﻿#if DEBUG
-#endif
-using Uncreated.Warfare.Interaction.Commands;
+﻿using Uncreated.Warfare.Interaction.Commands;
 
 namespace Uncreated.Warfare.Commands;
 
-[Command("load")]
-public class LoadCommand : IExecutableCommand
+[Command("load"), MetadataFile]
+internal sealed class LoadCommand : IExecutableCommand
 {
     /// <inheritdoc />
-    public CommandContext Context { get; set; }
-
-    /// <summary>
-    /// Get /help metadata about this command.
-    /// </summary>
-    public static CommandStructure GetHelpMetadata()
-    {
-        return new CommandStructure
-        {
-            Description = "Loads supplies into a logistics truck. If no amount is given, it fills the vehicle. If 'half' is supplied, it fills half the empty slots.",
-            Parameters =
-            [
-                new CommandParameter("Type", "Build", "Ammo")
-                {
-                    Parameters =
-                    [
-                        new CommandParameter("Amount", typeof(float))
-                        {
-                            IsOptional = true,
-                            Description = "Loads your vehicle's trunk with a set amount of supplies (or until it's full)."
-                        },
-                        new CommandParameter("Half")
-                        {
-                            Aliases = [ "1/2", ".5", "0.5", ",5", "0,5" ],
-                            IsOptional = true,
-                            Description = "Loads half of the empty space in your vehicle's trunk."
-                        }
-                    ]
-                }
-            ]
-        };
-    }
+    public required CommandContext Context { get; init; }
 
     /// <inheritdoc />
-    public async UniTask ExecuteAsync(CancellationToken token)
+    public UniTask ExecuteAsync(CancellationToken token)
     {
 #if false
         Context.AssertRanByPlayer();
@@ -79,7 +46,7 @@ public class LoadCommand : IExecutableCommand
         int amount = 0;
         bool half = true;
 
-        if (!Context.MatchParameter(1, "half", "1/2"))
+        if (!Context.MatchParameter(1, "half", "1/2", "0.5", ".5", "0,5", ",5"))
         {
             if (!Context.MatchParameter(1, "max", "full") && !(Context.TryGet(1, out amount) && amount > 0) && Context.HasArgs(2))
             {
@@ -163,5 +130,6 @@ public class LoadCommand : IExecutableCommand
         Context.LogAction(ActionLogType.LoadSupplies, type + " x" + amount);
         Context.Defer();
 #endif
+        return UniTask.CompletedTask;
     }
 }

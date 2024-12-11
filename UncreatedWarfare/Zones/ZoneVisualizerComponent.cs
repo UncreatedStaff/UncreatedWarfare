@@ -13,19 +13,23 @@ namespace Uncreated.Warfare.Zones;
 [PlayerComponent]
 public class ZoneVisualizerComponent : IPlayerComponent
 {
+    private readonly List<SpawnRoundInfo> _spawns = new List<SpawnRoundInfo>(0);
+
+#nullable disable
+    public WarfarePlayer Player { get; private set; }
+
     private class SpawnRoundInfo
     {
         public float StartTime;
         public Vector2[] Points, Corners;
         public Vector2 Center;
-        public EffectAsset? CenterEffect, CornerEffect, SideEffect, AirdropEffect;
+        public EffectAsset CenterEffect, CornerEffect, SideEffect, AirdropEffect;
         public float MinHeight;
     }
 
-    private readonly List<SpawnRoundInfo> _spawns = new List<SpawnRoundInfo>(0);
-    public WarfarePlayer Player { get; private set; }
-
-    public void Init(IServiceProvider serviceProvider, bool isOnJoin) { }
+#nullable restore
+    
+    void IPlayerComponent.Init(IServiceProvider serviceProvider, bool isOnJoin) { }
 
     public int SpawnPoints(Zone zone)
     {

@@ -42,7 +42,7 @@ public static class SettableUtil<TItem> where TItem : class
     }
 
     /// <summary>
-    /// Parse <paramref name="value"/> into the type of <paramref name="property"/> (a field or property in <see cref="TItem"/>) and set the property if it has the <see cref="CommandSettableAttribute"/>.
+    /// Parse <paramref name="value"/> into the type of <paramref name="property"/> (a field or property in <typeparamref name="TItem"/>) and set the property if it has the <see cref="CommandSettableAttribute"/>.
     /// </summary>
     /// <param name="instance">Object to set the property for.</param>
     /// <param name="property">Name of a property, field, custom handler, or an alias defined in <see cref="CommandSettableAttribute"/>.</param>
@@ -249,6 +249,7 @@ public static class SettableUtil<TItem> where TItem : class
             Aliases = aliases;
             ValueType = valueType;
             Handler = handler;
+            Callback = null!;
         }
 
         public SetPropertyResult InvokeCallback<TValueType>(TItem instance, object? value, IServiceProvider serviceProvider)

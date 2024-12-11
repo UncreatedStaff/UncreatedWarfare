@@ -1117,7 +1117,7 @@ public class DatabaseInterface
             token,
             reader =>
             {
-                result = ReadEntry(1 | (1 << 9), reader) as AssetBan;
+                result = ReadEntry(1 | (1 << 10), reader) as AssetBan;
                 return true;
             }).ConfigureAwait(false);
 
@@ -1173,11 +1173,16 @@ public class DatabaseInterface
         if (type.IsAssignableFrom(typeof(Report)) || typeof(Report).IsAssignableFrom(type))
         {
             flag |= 1 << 8;
-            sb.Append(",`rep`.`" + ColumnReportsType + "`");
+            sb.Append("," + MySqlSnippets.AliasedColumnList("rep", ColumnReportsType, ColumnReportsScreenshotData));
+            if (type.IsAssignableFrom(typeof(VoiceChatAbuseReport)) || typeof(VoiceChatAbuseReport).IsAssignableFrom(type))
+            {
+                flag |= 1 << 9;
+                sb.Append(",`vrep`.`" + ColumnVoiceChatReportsData + "`");
+            }
         }
         if (type.IsAssignableFrom(typeof(Punishment)) || typeof(Punishment).IsAssignableFrom(type))
         {
-            flag |= 1 << 9;
+            flag |= 1 << 10;
             sb.Append("," + MySqlSnippets.AliasedColumnList("pnsh", ColumnPunishmentsPresetType, ColumnPunishmentsPresetLevel));
         }
 
@@ -1224,6 +1229,10 @@ public class DatabaseInterface
             sb.Append($" LEFT JOIN `{TableReports}` AS `rep` ON `main`.`{ColumnEntriesPrimaryKey}` = `rep`.`{ColumnExternalPrimaryKey}`");
         }
         if ((flag & (1 << 9)) != 0)
+        {
+            sb.Append($" LEFT JOIN `{TableVoiceChatReports}` AS `vrep` ON `main`.`{ColumnEntriesPrimaryKey}` = `rep`.`{ColumnExternalPrimaryKey}`");
+        }
+        if ((flag & (1 << 10)) != 0)
         {
             sb.Append($" LEFT JOIN `{TablePunishments}` AS `pnsh` ON `main`.`{ColumnEntriesPrimaryKey}` = `pnsh`.`{ColumnExternalPrimaryKey}`");
         }
@@ -1339,14 +1348,25 @@ public class DatabaseInterface
         }
         if ((flag & (1 << 8)) != 0)
         {
-            ++offset;
+            offset += 2;
             if (entry is Report rep)
             {
-                ReportType? sec = reader.ReadStringEnum<ReportType>(offset);
+                ReportType? sec = reader.ReadStringEnum<ReportType>(offset - 1);
+                byte[]? imgData = reader.IsDBNull(offset) ? null : reader.ReadByteArray(offset);
                 rep.Type = sec ?? ReportType.Custom;
+                rep.ScreenshotJpgData = imgData;
+                if ((flag & (1 << 9)) != 0)
+                {
+                    ++offset;
+                    if (entry is VoiceChatAbuseReport vrep)
+                    {
+                        byte[] voiceData = reader.ReadByteArray(offset);
+                        vrep.PreviousVoiceData = voiceData;
+                    }
+                }
             }
         }
-        if ((flag & (1 << 9)) != 0)
+        if ((flag & (1 << 10)) != 0)
         {
             offset += 2;
             if (entry is Punishment punishment)
@@ -1721,6 +1741,7 @@ public class DatabaseInterface
     public const string TableAppealResponses = "moderation_appeal_responses";
     public const string TableReports = "moderation_reports";
     public const string TableReportChatRecords = "moderation_report_chat_records";
+    public const string TableVoiceChatReports = "moderation_voice_chat_reports";
     public const string TableReportStructureDamageRecords = "moderation_report_struct_dmg_records";
     public const string TableReportVehicleRequestRecords = "moderation_report_veh_req_records";
     public const string TableReportTeamkillRecords = "moderation_report_tk_records";
@@ -1839,6 +1860,9 @@ public class DatabaseInterface
     public const string ColumnAppealResponsesResponse = "Response";
 
     public const string ColumnReportsType = "Type";
+    public const string ColumnReportsScreenshotData = "ScreenshotData";
+
+    public const string ColumnVoiceChatReportsData = "VoiceData";
 
     public const string ColumnReportsChatRecordsTimestamp = "TimeUTC";
     public const string ColumnReportsChatRecordsMessage = "Message";

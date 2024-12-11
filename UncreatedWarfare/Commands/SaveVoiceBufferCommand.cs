@@ -6,26 +6,12 @@ using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Commands;
 
-[SynchronizedCommand, Command("savevoice")]
-public class SaveVoiceBufferCommand : IExecutableCommand
+[SynchronizedCommand, Command("savevoice"), MetadataFile]
+internal sealed class SaveVoiceBufferCommand : IExecutableCommand
 {
     /// <inheritdoc />
-    public CommandContext Context { get; set; }
+    public required CommandContext Context { get; init; }
 
-    /// <summary>
-    /// Get /help metadata about this command.
-    /// </summary>
-    public static CommandStructure GetHelpMetadata()
-    {
-        return new CommandStructure
-        {
-            Description = "Save a player's voice history.",
-            Parameters =
-            [
-                new CommandParameter("player", typeof(IPlayer))
-            ]
-        };
-    }
     public async UniTask ExecuteAsync(CancellationToken token)
     {
         if (!Context.TryGet(0, out _, out WarfarePlayer? onlinePlayer, true) || onlinePlayer == null)

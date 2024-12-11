@@ -6,40 +6,18 @@ using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Commands;
 
-[Command("teams", "team")]
-public class TeamsCommand : IExecutableCommand
+[Command("teams", "team"), MetadataFile]
+internal sealed class TeamsCommand : IExecutableCommand
 {
     private readonly CooldownManager _cooldownManager;
     private readonly ZoneStore _zoneStore;
     private readonly LobbyZoneManager _lobbyManager;
     private readonly TeamsCommandTranslations _translations;
 
-    private static readonly PermissionLeaf PermissionShuffle = new PermissionLeaf("commands.teams.shuffle", unturned: false, warfare: true);
     private static readonly PermissionLeaf PermissionInstantLobby = new PermissionLeaf("features.instant_lobby", unturned: false, warfare: true);
 
     /// <inheritdoc />
-    public CommandContext Context { get; set; }
-
-    /// <summary>
-    /// Get /help metadata about this command.
-    /// </summary>
-    public static CommandStructure GetHelpMetadata()
-    {
-        return new CommandStructure
-        {
-            Description = "Switch teams without rejoining the server.",
-            Parameters =
-            [
-                new CommandParameter("Shuffle")
-                {
-                    Aliases = [ "sh" ],
-                    Description = "Force the teams to be shuffled next game.",
-                    Permission = PermissionShuffle,
-                    IsOptional = true
-                }
-            ]
-        };
-    }
+    public required CommandContext Context { get; init; }
 
     public TeamsCommand(CooldownManager cooldownManager, ZoneStore zoneStore, LobbyZoneManager lobbyManager, TranslationInjection<TeamsCommandTranslations> translations)
     {
@@ -53,14 +31,6 @@ public class TeamsCommand : IExecutableCommand
     public async UniTask ExecuteAsync(CancellationToken token)
     {
         Context.AssertRanByPlayer();
-
-        //if (Context.MatchParameter(0, "shuffle", "sh"))
-        //{
-        //    await Context.AssertPermissions(PermissionShuffle, token);
-        //    await UniTask.SwitchToMainThread(token);
-
-        //    throw Context.Reply(T.TeamsShuffleQueued);
-        //} todo probably removing this
 
         if (_cooldownManager.HasCooldown(Context.Player, CooldownType.ChangeTeams, out Cooldown cooldown) && !await Context.HasPermission(PermissionInstantLobby, token))
         {

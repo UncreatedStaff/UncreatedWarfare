@@ -13,8 +13,8 @@ using Uncreated.Warfare.Tweaks;
 
 namespace Uncreated.Warfare.Commands;
 
-[SynchronizedCommand, Command("duty", "onduty", "offduty", "d")]
-public class DutyCommand : IExecutableCommand
+[SynchronizedCommand, Command("duty", "onduty", "offduty", "d"), MetadataFile]
+internal sealed class DutyCommand : IExecutableCommand
 {
     private readonly UserPermissionStore _permissions;
     private readonly WarfareModule _warfare;
@@ -23,10 +23,8 @@ public class DutyCommand : IExecutableCommand
     private readonly ITranslationService _translationService;
     private readonly ChatService _chatService;
 
-    private const string Help = "Swap your duty status between on and off. For admins and trial admins.";
-
     /// <inheritdoc />
-    public CommandContext Context { get; set; }
+    public required CommandContext Context { get; init; }
 
     public DutyCommand(
         UserPermissionStore permissions,
@@ -42,17 +40,6 @@ public class DutyCommand : IExecutableCommand
         _signs = signs;
         _translationService = translationService;
         _chatService = chatService;
-    }
-
-    /// <summary>
-    /// Get /help metadata about this command.
-    /// </summary>
-    public static CommandStructure GetHelpMetadata()
-    {
-        return new CommandStructure
-        {
-            Description = Help
-        };
     }
 
     /// <inheritdoc />

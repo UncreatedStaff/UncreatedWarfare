@@ -2,9 +2,12 @@
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Diagnostics.CodeAnalysis;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Layouts.Teams;
 
@@ -13,14 +16,12 @@ namespace Uncreated.Warfare.Layouts.Teams;
 /// </summary>
 public class Team : IEquatable<Team>
 {
+    private List<Team>? _opponents;
+
+    // used for no-alloc Select statements in OnlinePlayersOnTeam
     internal Func<WarfarePlayer, bool> PlayerSelector;
+
     private bool PlayerSelectorIntl(WarfarePlayer player) => player.Team.GroupId.m_SteamID == GroupId.m_SteamID;
-
-    public Team()
-    {
-        PlayerSelector = PlayerSelectorIntl;
-    }
-
 
     public static readonly Team NoTeam = new Team
     {
@@ -49,8 +50,14 @@ public class Team : IEquatable<Team>
             IsDefaultFaction = true
         },
         GroupId = default,
-        Configuration = ConfigurationHelper.EmptySection
+        Configuration = ConfigurationHelper.EmptySection,
+        _opponents = new List<Team>(0)
     };
+
+    public Team()
+    {
+        PlayerSelector = PlayerSelectorIntl;
+    }
 
     /// <summary>
     /// If this team has a valid <see cref="Id"/> and <see cref="GroupId"/>.
@@ -75,10 +82,32 @@ public class Team : IEquatable<Team>
     /// <summary>
     /// Extra configuration about the team from the TeamManager config.
     /// </summary>
-    public IConfigurationSection Configuration { get; internal set; }
+    public IConfigurationSection Configuration
+    {
+        get;
+        internal set => field = value ?? ConfigurationHelper.EmptySection;
+    } = ConfigurationHelper.EmptySection;
 
+    /// <summary>
+    /// List of all opponent teams.
+    /// </summary>
     [System.Text.Json.Serialization.JsonIgnore, JsonIgnore]
-    public List<Team> Opponents { get; } = new List<Team>();
+    [field: MaybeNull, AllowNull]
+    public IReadOnlyCollection<Team> Opponents
+    {
+        get
+        {
+            if (field != null)
+                return field;
+
+            if (_opponents == null)
+            {
+                Interlocked.CompareExchange(ref _opponents, new List<Team>(0), null);
+            }
+
+            return field ??= new ReadOnlyCollection<Team>(_opponents);
+        }
+    }
 
     public override bool Equals(object? obj)
     {
@@ -93,7 +122,7 @@ public class Team : IEquatable<Team>
 
     public bool IsOpponent(Team other)
     {
-        return Opponents.Contains(other);
+        return _opponents != null && _opponents.Contains(other);
     }
 
     public bool IsFriendly(Team other)
@@ -109,22 +138,34 @@ public class Team : IEquatable<Team>
 
     public override int GetHashCode()
     {
-        return GroupId.GetHashCode();
+        return unchecked( (int)GroupId.GetAccountID().m_AccountID );
     }
 
-    public static void DeclareEnemies(params Team[] teams)
+    public static void DeclareEnemies(params IReadOnlyCollection<Team> teams)
     {
+        GameThread.AssertCurrent();
+
         foreach (Team team in teams)
         {
+            if (team._opponents == null)
+            {
+                Interlocked.CompareExchange(ref team._opponents, new List<Team>(teams.Count - 1), null);
+            }
+
+            team._opponents.Capacity = teams.Count - 1;
+        }
+
+        foreach (Team team in teams)
+        {
+            if (team == NoTeam)
+                continue;
+
             foreach (Team other in teams)
             {
-                if (team == other || team == NoTeam || other == NoTeam)
+                if (team == other || other == NoTeam || team._opponents == null || team._opponents.Contains(other))
                     continue;
 
-                if (team.Opponents.Contains(other))
-                    continue;
-
-                team.Opponents.Add(other);
+                team._opponents.Add(other);
             }
         }
     }

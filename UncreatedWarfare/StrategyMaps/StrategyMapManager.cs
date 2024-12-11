@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
@@ -62,8 +62,8 @@ public class StrategyMapManager :
     {
         return UniTask.CompletedTask;
     }
-    public IEnumerable<IAsyncEventListener<TEventArgs>> EnumerateAsyncListeners<TEventArgs>(TEventArgs args) => _strategyMaps.OfType<IAsyncEventListener<TEventArgs>>();
-    public IEnumerable<IEventListener<TEventArgs>> EnumerateNormalListeners<TEventArgs>(TEventArgs args) => _strategyMaps.OfType<IEventListener<TEventArgs>>();
+    public IEnumerable<IAsyncEventListener<TEventArgs>> EnumerateAsyncListeners<TEventArgs>(TEventArgs args) where TEventArgs : class => _strategyMaps.OfType<IAsyncEventListener<TEventArgs>>();
+    public IEnumerable<IEventListener<TEventArgs>> EnumerateNormalListeners<TEventArgs>(TEventArgs args) where TEventArgs : class => _strategyMaps.OfType<IEventListener<TEventArgs>>();
 
     public void RegisterStrategyMap(IBuildable buildable, MapTableInfo tableInfo)
     {

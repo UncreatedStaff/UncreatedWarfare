@@ -52,7 +52,7 @@ public class VehicleTeamkill : ModerationEntry
         writer.WriteNullable(Vehicle);
         writer.WriteNullable(VehicleName);
     }
-    public override void ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
+    public override bool ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
     {
         if (propertyName.Equals("death_cause", StringComparison.InvariantCultureIgnoreCase))
         {
@@ -62,7 +62,7 @@ public class VehicleTeamkill : ModerationEntry
                 if (num >= 0)
                 {
                     Origin = (EDamageOrigin)num;
-                    return;
+                    return true;
                 }
 
                 throw new JsonException($"Invalid integer for EDamageOrigin: {num}.");
@@ -71,7 +71,7 @@ public class VehicleTeamkill : ModerationEntry
             if (reader.TokenType == JsonTokenType.Null)
             {
                 Origin = null;
-                return;
+                return true;
             }
 
             string str = reader.GetString()!;
@@ -84,7 +84,9 @@ public class VehicleTeamkill : ModerationEntry
         else if (propertyName.Equals("vehicle_name", StringComparison.InvariantCultureIgnoreCase))
             VehicleName = reader.GetString();
         else
-            base.ReadProperty(ref reader, propertyName, options);
+            return base.ReadProperty(ref reader, propertyName, options);
+
+        return true;
     }
     public override void Write(Utf8JsonWriter writer, JsonSerializerOptions options)
     {

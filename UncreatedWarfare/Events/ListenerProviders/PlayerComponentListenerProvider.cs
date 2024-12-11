@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Players;
@@ -19,7 +19,7 @@ public class PlayerComponentListenerProvider : IEventListenerProvider
         _playerService = playerService;
     }
 
-    public IEnumerable<IAsyncEventListener<TEventArgs>> EnumerateAsyncListeners<TEventArgs>(TEventArgs args)
+    public IEnumerable<IAsyncEventListener<TEventArgs>> EnumerateAsyncListeners<TEventArgs>(TEventArgs args) where TEventArgs : class
     {
         if (args is IPlayerEvent playerEvent)
         {
@@ -32,7 +32,7 @@ public class PlayerComponentListenerProvider : IEventListenerProvider
             .SelectMany(x => x.Components.OfType<IAsyncEventListener<TEventArgs>>());
     }
 
-    public IEnumerable<IEventListener<TEventArgs>> EnumerateNormalListeners<TEventArgs>(TEventArgs args)
+    public IEnumerable<IEventListener<TEventArgs>> EnumerateNormalListeners<TEventArgs>(TEventArgs args) where TEventArgs : class
     {
         if (args is IPlayerEvent playerEvent)
         {

@@ -13,7 +13,7 @@ using Uncreated.Warfare.Moderation.Reports;
 namespace Uncreated.Warfare.Commands;
 
 [Command("offenses"), HideFromHelp, SubCommandOf(typeof(MigrateCommand))]
-public class MigrateLegacyOffensesCommand : IExecutableCommand
+internal sealed class MigrateLegacyOffensesCommand : IExecutableCommand
 {
     // the UTC time at which we switched from storing data in EST to UTC
     private readonly DateTime _universalTimeCutoff = new DateTime(2022, 6, 12, 3, 14, 0, DateTimeKind.Utc);
@@ -21,7 +21,7 @@ public class MigrateLegacyOffensesCommand : IExecutableCommand
 
     private readonly IManualMySqlProvider _mySqlProvider;
     private readonly DatabaseInterface _moderationSql;
-    public CommandContext Context { get; set; }
+    public required CommandContext Context { get; init; }
 
     public MigrateLegacyOffensesCommand(IManualMySqlProvider mySqlProvider, DatabaseInterface moderationSql, ILogger<MigrateLegacyOffensesCommand> logger)
     {

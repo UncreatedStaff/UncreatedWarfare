@@ -30,13 +30,13 @@ internal class PlayerClothingAskWearClothing : IHarmonyPatch
 
         _patches =
         [
-            Accessor.GetMethod(OnSwappedShirt),
-            Accessor.GetMethod(OnSwappedPants),
-            Accessor.GetMethod(OnSwappedVest),
-            Accessor.GetMethod(OnSwappedHat),
-            Accessor.GetMethod(OnSwappedMask),
-            Accessor.GetMethod(OnSwappedBackpack),
-            Accessor.GetMethod(OnSwappedGlasses)
+            Accessor.GetMethod(OnSwappedShirt)!,
+            Accessor.GetMethod(OnSwappedPants)!,
+            Accessor.GetMethod(OnSwappedVest)!,
+            Accessor.GetMethod(OnSwappedHat)!,
+            Accessor.GetMethod(OnSwappedMask)!,
+            Accessor.GetMethod(OnSwappedBackpack)!,
+            Accessor.GetMethod(OnSwappedGlasses)!
         ];
 
         for (int i = 0; i < _targets.Length; ++i)

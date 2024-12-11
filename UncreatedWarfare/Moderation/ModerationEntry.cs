@@ -191,7 +191,7 @@ public abstract class ModerationEntry : IModerationEntry
         actor = new RelatedActor(role, false, ConsoleActor.Instance);
         return false;
     }
-    public virtual void ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
+    public virtual bool ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
     {
         if (propertyName.Equals("id", StringComparison.InvariantCultureIgnoreCase))
             Id = reader.GetUInt32();
@@ -227,6 +227,9 @@ public abstract class ModerationEntry : IModerationEntry
             RemovedTimestamp = reader.TokenType == JsonTokenType.Null ? null : new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(), DateTimeKind.Utc));
         else if (propertyName.Equals("removed_message", StringComparison.InvariantCultureIgnoreCase))
             RemovedMessage = reader.GetString();
+        else return false;
+
+        return true;
     }
     public virtual void Write(Utf8JsonWriter writer, JsonSerializerOptions options)
     {
@@ -702,47 +705,35 @@ public sealed class ModerationEntryConverter : JsonConverter<ModerationEntry>
 
         Utf8JsonReader reader2 = reader;
         ModerationEntryType? type = null;
-        while (reader2.Read())
+        JsonUtility.ReadTopLevelProperties(ref reader2, ref type, (ref Utf8JsonReader reader, string propertyName, ref ModerationEntryType? type) =>
         {
-            if (reader.TokenType == JsonTokenType.EndObject)
-                break;
-            if (reader.TokenType == JsonTokenType.StartObject)
-                while (reader.Read() && reader.TokenType != JsonTokenType.EndObject);
-            if (reader.TokenType == JsonTokenType.StartArray)
-                while (reader.Read() && reader.TokenType != JsonTokenType.EndArray);
-            if (reader.TokenType == JsonTokenType.PropertyName && reader.GetString()!.Equals("type", StringComparison.InvariantCultureIgnoreCase))
+            if (reader.TokenType == JsonTokenType.String)
             {
-                if (!reader.Read())
-                    break;
-
-                if (reader.TokenType == JsonTokenType.String)
+                string str = reader.GetString()!;
+                if (int.TryParse(str, NumberStyles.Any, CultureInfo.InvariantCulture, out int val) && val <= (int)ModerationEntry.MaxEntry && val >= 0)
                 {
-                    string str = reader.GetString()!;
-                    if (int.TryParse(str, NumberStyles.Any, CultureInfo.InvariantCulture, out int val) && val <= (int)ModerationEntry.MaxEntry && val >= 0)
-                    {
-                        type = (ModerationEntryType)val;
-                        break;
-                    }
-                    if (Enum.TryParse(str, true, out ModerationEntryType type2))
-                    {
-                        type = type2;
-                        break;
-                    }
-
-                    throw new JsonException("Invalid string value for ModerationEntryType");
-                }
-                if (reader.TokenType == JsonTokenType.Number)
-                {
-                    if (!reader.TryGetInt32(out int val) || val > (int)ModerationEntry.MaxEntry && val < 0)
-                        throw new JsonException("Invalid number value for ModerationEntryType");
-
                     type = (ModerationEntryType)val;
-                    break;
+                    return;
+                }
+                if (Enum.TryParse(str, true, out ModerationEntryType type2))
+                {
+                    type = type2;
+                    return;
                 }
 
-                throw new JsonException($"Unexpected token for 'type' of ModerationEntry: {reader.TokenType}.");
+                throw new JsonException("Invalid string value for ModerationEntryType");
             }
-        }
+            if (reader.TokenType == JsonTokenType.Number)
+            {
+                if (!reader.TryGetInt32(out int val) || val > (int)ModerationEntry.MaxEntry && val < 0)
+                    throw new JsonException("Invalid number value for ModerationEntryType");
+
+                type = (ModerationEntryType)val;
+                return;
+            }
+
+            throw new JsonException($"Unexpected token for 'type' of ModerationEntry: {reader.TokenType}.");
+        });
 
         if (!type.HasValue || ModerationReflection.GetType(type.Value) is not { } valueType)
             throw new JsonException("The property, 'type', is not specified for ModerationEntry.");
@@ -810,7 +801,8 @@ public enum ModerationEntryType : ushort
     [Translatable("Accepted Bug Report")]
     BugReportAccepted,
     [Translatable("Accepted Player Report")]
-    PlayerReportAccepted
+    PlayerReportAccepted,
+    VoiceChatAbuseReport
 
     // update ModerationEntry.MaxEntry when adding
 }

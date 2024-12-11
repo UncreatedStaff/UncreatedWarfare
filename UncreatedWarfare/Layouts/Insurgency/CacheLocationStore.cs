@@ -12,13 +12,16 @@ public class CacheLocationStore : ILayoutHostedService
 {
     private readonly ILogger<CacheLocationStore> _logger;
 
-    private List<CacheLocation> _locationsIntl;
-    public string FileName { get; private set; }
+    private readonly List<CacheLocation> _locationsIntl;
+
+    public string? FileName { get; private set; }
     public IReadOnlyList<CacheLocation> Locations { get; private set; }
 
     public CacheLocationStore(ILogger<CacheLocationStore> logger)
     {
         _logger = logger;
+        _locationsIntl = new List<CacheLocation>(0);
+        Locations = _locationsIntl.AsReadOnly();
     }
 
     async UniTask ILayoutHostedService.StartAsync(CancellationToken token)
@@ -33,9 +36,6 @@ public class CacheLocationStore : ILayoutHostedService
             Level.info.name,
             "Insurgency Caches.json"
         );
-
-        _locationsIntl = new List<CacheLocation>(0);
-        Locations = _locationsIntl.AsReadOnly();
     }
 
     UniTask ILayoutHostedService.StopAsync(CancellationToken token)
@@ -80,10 +80,16 @@ public class CacheLocationStore : ILayoutHostedService
     /// <summary>
     /// Re-read the caches list from file, or write an empty file if needed.
     /// </summary>
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+    /// <exception cref="GameThreadException"/>
+    /// <exception cref="InvalidOperationException">Not loaded.</exception>
     public void Reload()
     {
         GameThread.AssertCurrent();
+
+        if (FileName == null)
+        {
+            throw new InvalidOperationException("FileName not set up.");
+        }
 
         if (!File.Exists(FileName))
         {
@@ -124,10 +130,17 @@ public class CacheLocationStore : ILayoutHostedService
             }
         }
     }
-    /// <exception cref="NotSupportedException">Not on main thread.</exception>
+
+    /// <exception cref="GameThreadException"/>
+    /// <exception cref="InvalidOperationException">Not loaded.</exception>
     public void Save()
     {
         GameThread.AssertCurrent();
+
+        if (FileName == null)
+        {
+            throw new InvalidOperationException("FileName not set up.");
+        }
 
         string? dir = Path.GetDirectoryName(FileName);
         if (dir != null)

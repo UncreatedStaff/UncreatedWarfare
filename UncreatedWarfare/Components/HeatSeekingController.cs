@@ -12,12 +12,16 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
 
     private float _horizontalRange = 700;
     private float? _verticalRange = 1500;
+#nullable disable
 
     private InteractableVehicle _vehicle;
-    private EffectAsset? _effect;
-    private Player? _lastKnownGunner;
     public List<Transform> Hardpoints { get; set; }
     public List<HeatSeekingMissileComponent> MissilesInFlight { get; set; }
+
+#nullable restore
+
+    private EffectAsset? _effect;
+    private Player? _lastKnownGunner;
     
     private float _aquisitionTime;
     private float _timeOutTime;
@@ -40,7 +44,7 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
         return Hardpoints[CurrentHardpoint];
     }
 
-
+    [UsedImplicitly]
     private void FixedUpdate()
     {
         if (Time.time - _timeOfLastScan >= AquisitionFrequency)
@@ -206,10 +210,10 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
         if (newTarget is null || (noActiveMissiles && (noAmmo || reloading))) // no target found
         {
             //(reloading && noActiveMissiles) || (noAmmo && noActiveMissiles)
-            if (Status != ELockOnMode.IDLE)
+            if (Status != ELockOnMode.Idle)
             {
 
-                Status = ELockOnMode.IDLE;
+                Status = ELockOnMode.Idle;
 
                 if (gunner != null)
                     CancelLockOnSound(gunner);
@@ -223,7 +227,7 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
         {
             LockOnTarget = newTarget;
             _timeOfAquisition = Time.time;
-            Status = ELockOnMode.ACQUIRING;
+            Status = ELockOnMode.Acquiring;
 
             if (gunner != null)
                 PlayLockOnSound(gunner);
@@ -234,14 +238,14 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
 
             if (timeSinceAquisition >= _aquisitionTime)
             {
-                Status = ELockOnMode.LOCKED_ON;
+                Status = ELockOnMode.LockedOn;
 
                 if (LockOnTarget.TryGetComponent(out VehicleComponent v) && gunner != null)
                     v.ReceiveMissileWarning();
 
                 if (Time.time - _timeOfAquisition >= _timeOutTime)
                 {
-                    Status = ELockOnMode.IDLE;
+                    Status = ELockOnMode.Idle;
                     LockOnTarget = null;
                 }
             }
@@ -276,8 +280,8 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
 
     public enum ELockOnMode
     {
-        IDLE,
-        ACQUIRING,
-        LOCKED_ON
+        Idle,
+        Acquiring,
+        LockedOn
     }
 }

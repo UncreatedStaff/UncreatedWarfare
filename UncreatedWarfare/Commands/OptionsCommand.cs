@@ -2,46 +2,11 @@
 
 namespace Uncreated.Warfare.Commands;
 
-[Command("options", "settings", "option", "config")]
-public sealed class OptionsCommand : IExecutableCommand
+[Command("options", "settings", "option", "config"), MetadataFile]
+internal sealed class OptionsCommand : IExecutableCommand
 {
-    private const string Syntax = "/options <imgui> [value]";
-    private const string Help = "Configure player-specific settings.";
-
     /// <inheritdoc />
-    public CommandContext Context { get; set; }
-
-    /// <summary>
-    /// Get /help metadata about this command.
-    /// </summary>
-    public static CommandStructure GetHelpMetadata()
-    {
-        return new CommandStructure
-        {
-            Description = "Configure player-specific settings.",
-            Parameters =
-            [
-                new CommandParameter("IMGUI")
-                {
-                    Aliases = [ "legacyui", "oldui" ],
-                    Description = "Enables chat support for the <nobr><b>-Glazier IMGUI</b></nobr> launch option. Allows support for some special characters.",
-                    Parameters =
-                    [
-                        new CommandParameter("Enabled", typeof(bool))
-                    ]
-                },
-                new CommandParameter("TrackQuests")
-                {
-                    Aliases = [ "dailyquests", "quests" ],
-                    Description = "Keeps the quest UI from showing up by default.",
-                    Parameters =
-                    [
-                        new CommandParameter("Enabled", typeof(bool))
-                    ]
-                }
-            ]
-        };
-    }
+    public required CommandContext Context { get; init; }
 
     /// <inheritdoc />
     public UniTask ExecuteAsync(CancellationToken token)

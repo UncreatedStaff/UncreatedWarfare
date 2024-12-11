@@ -3,12 +3,15 @@ using DanielWillett.ModularRpcs.Protocol;
 using DanielWillett.ModularRpcs.Routing;
 using DanielWillett.ModularRpcs.Serialization;
 using DanielWillett.ModularRpcs.WebSockets;
+using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.Configuration;
 using System;
 using Uncreated.Warfare.Services;
 using UnityEngine.Networking;
 
 namespace Uncreated.Warfare.Networking;
+
+[Priority(100)]
 public class HomebaseConnector : IHostedService
 {
     private readonly ILogger<HomebaseConnector> _logger;

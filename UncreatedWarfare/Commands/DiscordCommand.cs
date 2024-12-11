@@ -3,33 +3,27 @@ using Uncreated.Warfare.Interaction.Commands;
 
 namespace Uncreated.Warfare.Commands;
 
-[Command("discord", "dicsord")]
-public class DiscordCommand : IExecutableCommand
+[Command("discord", "dicsord"), MetadataFile]
+internal sealed class DiscordCommand : IExecutableCommand
 {
     private readonly string? _discordInviteCode;
 
     /// <inheritdoc />
-    public CommandContext Context { get; set; }
+    public required CommandContext Context { get; init; }
 
     public DiscordCommand(IConfiguration configuration)
     {
         _discordInviteCode = configuration["discord_invite_code"];
     }
 
-    /// <summary>
-    /// Get /help metadata about this command.
-    /// </summary>
-    public static CommandStructure GetHelpMetadata()
-    {
-        return new CommandStructure
-        {
-            Description = "Sends the Discord link to the Uncreated Network server."
-        };
-    }
-
     /// <inheritdoc />
     public UniTask ExecuteAsync(CancellationToken token)
     {
+        if (_discordInviteCode == null)
+        {
+            throw Context.SendNotImplemented();
+        }
+
         if (Context.Player != null)
         {
             Context.ReplyUrl("Join our Discord Server", "https://discord.gg/" + _discordInviteCode);
@@ -39,6 +33,6 @@ public class DiscordCommand : IExecutableCommand
             Context.ReplyString("https://discord.gg/" + _discordInviteCode);
         }
 
-        return default;
+        return UniTask.CompletedTask;
     }
 }

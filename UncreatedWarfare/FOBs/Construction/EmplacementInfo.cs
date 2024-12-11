@@ -10,12 +10,12 @@ public class EmplacementInfo
     /// <summary>
     /// The vehicle to be spawned on build.
     /// </summary>
-    public IAssetLink<VehicleAsset> Vehicle { get; set; }
+    public IAssetLink<VehicleAsset>? Vehicle { get; set; }
 
     /// <summary>
     /// Item used when resupplying with ammo.
     /// </summary>
-    public IAssetLink<ItemAsset> AmmoItem { get; set; }
+    public IAssetLink<ItemAsset>? AmmoItem { get; set; }
 
     /// <summary>
     /// Number of <see cref="AmmoItem"/> items to spawn.

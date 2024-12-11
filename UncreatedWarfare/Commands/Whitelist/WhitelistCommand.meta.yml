@@ -1,0 +1,45 @@
+﻿# WhitelistCommand
+Description: "Add or remove items from the global whitelist."
+Aliases: [ wh ]
+Parameters:
+
+  - Name: add
+    Type: Verbatim
+    Aliases: [ whitelist, create ]
+    Description: "Adds an <param 'item' /> to the global whitelist."
+    Parameters:
+      - Name: item
+        Type: SDG.Unturned.ItemAsset
+        IsRemainder: true
+        Parameters:
+          - Name: amount
+            Type: int
+            Range: "#(-1, 254)"
+            IsOptional: true
+
+  - Name: remove
+    Type: Verbatim
+    Aliases: [ delete, rem ]
+    Description: "Removes an <param 'item' /> from the global whitelist."
+    Parameters:
+      - Name: item
+        Type: SDG.Unturned.ItemAsset
+        IsRemainder: true
+        
+  - Name: set
+    Type: Verbatim
+    Aliases: [ delete, rem ]
+    Description: "Sets a property for <param 'item' />'s global whitelist."
+    Chain: 2
+    Parameters:
+      - Name: maxamount
+        Type: Verbatim
+        Aliases: [ amount, amt ]
+        Parameters:
+          - Name: item
+            Type: SDG.Unturned.ItemAsset
+            IsRemainder: true
+            Parameters:
+              - Name: amount
+                Type: int
+                Range: "#(-1, 254)"

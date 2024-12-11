@@ -208,7 +208,6 @@ public readonly struct RelatedActor : IEquatable<RelatedActor>
     [JsonConverter(typeof(ActorConverter))]
     public IModerationActor Actor { get; }
     
-    public RelatedActor() { }
     public RelatedActor(string role, bool admin, IModerationActor actor)
     {
         Role = role;

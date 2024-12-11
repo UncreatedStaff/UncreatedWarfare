@@ -11,8 +11,8 @@ using Uncreated.Warfare.Translations.Util;
 namespace Uncreated.Warfare.Commands;
 
 [Command("kit", "k", "whale"), MetadataFile]
-public class KitCommand : ICommand;
-public class KitCommandTranslations : PropertiesTranslationCollection
+internal sealed class KitCommand : ICommand;
+public sealed class KitCommandTranslations : PropertiesTranslationCollection
 {
     protected override string FileName => "Commands/Kit";
 

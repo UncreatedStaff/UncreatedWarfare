@@ -12,9 +12,12 @@ namespace Uncreated.Warfare.Components;
 
 public class AmmoBagComponent : MonoBehaviour
 {
+#nullable disable
     private IServiceProvider _serviceProvider;
 
     public BarricadeDrop Drop;
+#nullable restore
+
     //public Dictionary<ulong, int> ResuppliedPlayers;
     public int Ammo;
 

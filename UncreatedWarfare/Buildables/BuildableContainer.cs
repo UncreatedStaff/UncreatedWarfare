@@ -9,8 +9,16 @@ public class BuildableContainer : MonoBehaviour, IComponentContainer<IBuildableC
 {
     private readonly List<IBuildableComponent> _components = new List<IBuildableComponent>();
 
+#nullable disable
     public IBuildable Buildable { get; private set; }
     public DateTime CreateTime { get; private set; }
+#nullable restore
+
+    internal void Init(IBuildable buildable)
+    {
+        Buildable = buildable;
+        CreateTime = DateTime.UtcNow;
+    }
 
     public void AddComponent(IBuildableComponent newComponent)
     {
@@ -68,12 +76,6 @@ public class BuildableContainer : MonoBehaviour, IComponentContainer<IBuildableC
         }
 
         return component;
-    }
-
-    public void Init(IBuildable buildable)
-    {
-        Buildable = buildable;
-        CreateTime = DateTime.Now;
     }
 
     void IManualOnDestroy.ManualOnDestroy()

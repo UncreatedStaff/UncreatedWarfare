@@ -9,12 +9,13 @@ using Uncreated.Warfare.Translations;
 namespace Uncreated.Warfare.Commands;
 
 [Command("give", "g"), SubCommandOf(typeof(KitCommand))]
-internal class KitGiveCommand : IExecutableCommand
+internal sealed class KitGiveCommand : IExecutableCommand
 {
     private readonly SignInstancer _signs;
     private readonly KitCommandTranslations _translations;
     private readonly KitManager _kitManager;
-    public CommandContext Context { get; set; }
+
+    public required CommandContext Context { get; init; }
 
     public KitGiveCommand(TranslationInjection<KitCommandTranslations> translations, SignInstancer signs, KitManager kitManager)
     {

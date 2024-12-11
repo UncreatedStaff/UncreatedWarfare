@@ -1,15 +1,12 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SDG.Framework.Water;
-using Stripe;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Commands;
-using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Events.Models.Fobs;
@@ -17,17 +14,13 @@ using Uncreated.Warfare.Events.Models.Items;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.FOBs.Construction;
-using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Layouts.Teams;
-using Uncreated.Warfare.Services;
-using Uncreated.Warfare.Sessions;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Containers;
-using Uncreated.Warfare.Util.List;
 using Uncreated.Warfare.Util.Timing;
 using Uncreated.Warfare.Zones;
 
@@ -70,11 +63,11 @@ public partial class FobManager :
 
         float minDistanceBetweenFobs = _configuration.GetValue("MinDistanceBetweenFobs", 150f);
 
-        BuildableFob? tooCloseFob = (BuildableFob?) _fobs.FirstOrDefault(f => 
-            f is BuildableFob bf && 
+        BuildableFob? tooCloseFob = _fobs.OfType<BuildableFob>().FirstOrDefault(bf => 
             bf.Team ==  e.OriginalPlacer.Team &&
             MathUtility.WithinRange(e.Position, bf.Position, minDistanceBetweenFobs)
             );
+
         if (tooCloseFob != null)
         {
             chatService.Send(e.OriginalPlacer, _translations.BuildFOBTooClose, tooCloseFob, Vector3.Distance(tooCloseFob.Position, e.Position), minDistanceBetweenFobs);
@@ -84,7 +77,7 @@ public partial class FobManager :
 
         float minFobDistanceFromMain = _configuration.GetValue<float>("MinFobDistanceFromMain", 300);
 
-        var zoneStore = serviceProvider.GetService<ZoneStore>();
+        ZoneStore? zoneStore = serviceProvider.GetService<ZoneStore>();
         if (zoneStore != null)
         {
             Zone? mainBase = zoneStore.FindClosestZone(e.Position, ZoneType.MainBase);
@@ -101,11 +94,11 @@ public partial class FobManager :
         {
             chatService.Send(e.OriginalPlacer, _translations.BuildFOBUnderwater);
             e.Cancel();
-            return;
+            // return;
         }
     }
 
-    async UniTask IAsyncEventListener<BarricadePlaced>.HandleEventAsync(BarricadePlaced e, IServiceProvider serviceProvider, CancellationToken token = default)
+    async UniTask IAsyncEventListener<BarricadePlaced>.HandleEventAsync(BarricadePlaced e, IServiceProvider serviceProvider, CancellationToken token)
     {
         await UniTask.NextFrame();
 
@@ -116,7 +109,7 @@ public partial class FobManager :
         {
             // only register a new Fob with this foundation if it doesn't belong to an existing one.
             // this can happen after a built Fob is destroyed after which the foundation is replaced.
-            BuildableFob unbuiltFob = (BuildableFob)_fobs.FirstOrDefault(f => f is BuildableFob bf && bf.Buildable.InstanceId == e.Buildable.InstanceId);
+            BuildableFob? unbuiltFob = _fobs.OfType<BuildableFob>().FirstOrDefault(bf => bf.Buildable.InstanceId == e.Buildable.InstanceId);
             if (unbuiltFob == null)
             {
                 unbuiltFob = RegisterFob(new BuildableBarricade(e.Barricade));
@@ -130,7 +123,7 @@ public partial class FobManager :
                         return;
 
                     unbuiltFob.MarkBuilt(completedBuildable!);
-                    _ = WarfareModule.EventDispatcher.DispatchEventAsync(new FobBuilt { Fob = unbuiltFob });
+                    _ = WarfareModule.EventDispatcher.DispatchEventAsync(new FobBuilt { Fob = unbuiltFob }, CancellationToken.None);
                 };
             }
             return;
@@ -168,8 +161,7 @@ public partial class FobManager :
 
         container.AddComponent(shovelable);
 
-        BuildableFob? nearestFriendlyFob = (BuildableFob)_fobs.FirstOrDefault(f =>
-            f is BuildableFob bf &&
+        BuildableFob? nearestFriendlyFob = _fobs.OfType<BuildableFob>().FirstOrDefault(bf =>
             bf.Team.GroupId == newShovelable.Buildable.Group &&
             bf.IsWithinRadius(buildable.Position)
         );
@@ -221,8 +213,7 @@ public partial class FobManager :
         ShovelableBuildable? shovelable = e.Transform.GetOrAddComponent<BuildableContainer>().ComponentOrNull<ShovelableBuildable>();
         if (shovelable != null)
         {
-            BuildableFob? nearestFriendlyFob = (BuildableFob)_fobs.FirstOrDefault(f =>
-                f is BuildableFob bf &&
+            BuildableFob? nearestFriendlyFob = _fobs.OfType<BuildableFob>().FirstOrDefault(bf =>
                 bf.Team.GroupId == shovelable.Buildable.Group &&
                 bf.IsWithinRadius(shovelable.Buildable.Position)
             );
@@ -239,7 +230,7 @@ public partial class FobManager :
             }
         }
        
-        SupplyCrate? supplyCrate = (SupplyCrate)_floatingItems.FirstOrDefault(i => i is SupplyCrate && i.Buildable.Equals(e.Buildable.InstanceId));
+        SupplyCrate? supplyCrate = _floatingItems.OfType<SupplyCrate>().FirstOrDefault(i => i.Buildable.Equals(e.Buildable.InstanceId));
         if (supplyCrate != null)
         {
             NearbySupplyCrates.FromSingleCrate(supplyCrate, this).NotifyChanged(supplyCrate.Type, -supplyCrate.SupplyCount, SupplyChangeReason.ConsumeSuppliesDestroyed);
@@ -252,8 +243,8 @@ public partial class FobManager :
         if (e.Item == null || e.DroppedItem == null)
             return;
 
-        SupplyCrateInfo? supplyCrateInfo = _configuration.GetRequiredSection("SupplyCrates").Get<List<SupplyCrateInfo>>()
-            .FirstOrDefault(s => s.SupplyItemAsset.Guid == e.Item.GetAsset().GUID);
+        SupplyCrateInfo? supplyCrateInfo = _configuration.GetRequiredSection("SupplyCrates").Get<List<SupplyCrateInfo>>()?
+            .FirstOrDefault(s => s.SupplyItemAsset.MatchAsset(e.Item.GetAsset()));
 
         if (supplyCrateInfo == null)
             return;
@@ -277,7 +268,7 @@ public partial class FobManager :
         if (e.Equipment?.asset?.GUID == null)
             return;
 
-        IAssetLink<ItemAsset>? entrenchingTool = _assetConfiguration.GetAssetLink<ItemAsset>("Items:EntrenchingTool");
+        IAssetLink<ItemAsset> entrenchingTool = _assetConfiguration.GetAssetLink<ItemAsset>("Items:EntrenchingTool");
         if (entrenchingTool.GetAssetOrFail().GUID != e.Equipment.asset.GUID)
             return;
 
@@ -299,10 +290,10 @@ public partial class FobManager :
 
     public void HandleEvent(ClaimBedRequested e, IServiceProvider serviceProvider)
     {
-        SupplyCrate? ammoCrate = (SupplyCrate)_floatingItems.FirstOrDefault(i => 
-            i is SupplyCrate s && 
-            s.Type == SupplyType.Ammo && 
-            s.Buildable.InstanceId == e.Buildable.InstanceId
+        SupplyCrate? ammoCrate = _floatingItems.OfType<SupplyCrate>().FirstOrDefault(s =>
+            s.Type == SupplyType.Ammo &&
+            !s.Buildable.IsDead &&
+            s.Buildable.Equals(e.Buildable)
         ); // todo: is this an efficient way to do this?
 
         if (ammoCrate == null)

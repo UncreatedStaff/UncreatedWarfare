@@ -80,7 +80,7 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
             .Where(typeof(ICommand).IsAssignableFrom)
             .ToList();
 
-        List<Type> rootCommandTypes = types.Where(x => !x.IsAbstract && !x.IsDefinedSafe<SubCommandOfAttribute>()).ToList();
+        List<Type> rootCommandTypes = types.Where(x => !x.IsAbstract && x.GetAttributeSafe<SubCommandOfAttribute>() is not { ParentType: not null }).ToList();
 
         List<CommandInfo> allCommands = new List<CommandInfo>(types.Count);
         List<CommandInfo> parentCommands = new List<CommandInfo>(types.Count + (Commander.commands?.Count ?? 0));
@@ -546,6 +546,10 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
         }
     }
 
+    private static readonly MethodInfo _setContextInInterfaceMethod = typeof(IExecutableCommand)
+        .GetProperty(nameof(IExecutableCommand.Context), BindingFlags.Public | BindingFlags.Instance)?
+        .GetSetMethod(true) ?? throw new MemberAccessException("Unable to find IExecutableCommand.Context");
+
     /// <summary>
     /// Execute a custom command.
     /// </summary>
@@ -608,7 +612,15 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
 
                 if (cmdInstance.Context != ctx)
                 {
-                    cmdInstance.Context = ctx;
+                    // using reflection allows init-only property for Context
+                    Action<IExecutableCommand, CommandContext> contextSetter = command.ContextSetter ??=
+                            Accessor.GenerateInstanceCaller<Action<IExecutableCommand, CommandContext>>(
+                                Accessor.GetImplementedMethod(command.Type, _setContextInInterfaceMethod) ?? throw new MemberAccessException("Failed to find implemented Context property setter."),
+                                throwOnError: true,
+                                allowUnsafeTypeBinding: true
+                    )!;
+
+                    contextSetter(cmdInstance, ctx);
                 }
 
                 ctx.Command = cmdInstance;

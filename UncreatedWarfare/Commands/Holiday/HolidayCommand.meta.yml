@@ -1,0 +1,10 @@
+﻿# HolidayCommand
+Description: "View or set the current holiday."
+Parameters:
+  - Name: set
+    Type: Verbatim
+    Description: "Sets the current holiday to <param 'holiday'/> manually."
+    IsOptional: true
+    Parameters:
+      - Name: holiday
+        Type: SDG.Unturned.ENPCHoliday

@@ -1,4 +1,4 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Players;
 
@@ -6,33 +6,62 @@ namespace Uncreated.Warfare.Events.Models.Items;
 
 public class ItemMoved : PlayerEvent
 {
-    public Page OldPage { get; }
-    public Page NewPage { get; }
-    public byte OldX { get; }
-    public byte NewX { get; }
-    public byte OldY { get; }
-    public byte NewY { get; }
-    public byte NewRotation { get; }
-    /// <remarks>Only valid when <see cref="IsSwap"/> is <see langword="true"/>.</remarks>
-    public byte OldRotation { get; }
-    public bool IsSwap { get; }
-    public ItemJar? Jar { get; }
-    public ItemJar? SwappedJar { get; }
+    /// <summary>
+    /// The original page of the item that was moved.
+    /// </summary>
+    public required Page OldPage { get; init; }
 
-    [SetsRequiredMembers]
-    public ItemMoved(WarfarePlayer player, Page oldPage, Page newPage, byte oldX, byte newX, byte oldY, byte newY, byte oldRotation, byte newRotation, bool isSwap, ItemJar? jar, ItemJar? swapped)
-    {
-        Player = player;
-        Jar = jar;
-        SwappedJar = swapped;
-        OldPage = oldPage;
-        NewPage = newPage;
-        OldX = oldX;
-        NewX = newX;
-        OldY = oldY;
-        NewY = newY;
-        NewRotation = newRotation;
-        OldRotation = oldRotation;
-        IsSwap = isSwap;
-    }
+    /// <summary>
+    /// The original X position of the item that was moved.
+    /// </summary>
+    public required byte OldX { get; init; }
+
+    /// <summary>
+    /// The original Y position of the item that was moved.
+    /// </summary>
+    public required byte OldY { get; init; }
+
+    /// <summary>
+    /// The original rotation of the item that was moved.
+    /// </summary>
+    public required byte OldRotation { get; init; }
+
+    /// <summary>
+    /// The page the item is at now.
+    /// </summary>
+    /// <remarks>Could be out of date, should be re-fetched from <see cref="Jar"/> when up-to-date info is needed.</remarks>
+    public required Page NewPage { get; init; }
+
+    /// <summary>
+    /// The X position the item is at now.
+    /// </summary>
+    /// <remarks>Could be out of date, should be re-fetched from <see cref="Jar"/> when up-to-date info is needed.</remarks>
+    public required byte NewX { get; init; }
+
+    /// <summary>
+    /// The Y position the item is at now.
+    /// </summary>
+    /// <remarks>Could be out of date, should be re-fetched from <see cref="Jar"/> when up-to-date info is needed.</remarks>
+    public required byte NewY { get; init; }
+
+    /// <summary>
+    /// The rotation the item is at now.
+    /// </summary>
+    /// <remarks>Could be out of date, should be re-fetched from <see cref="Jar"/> when up-to-date info is needed.</remarks>
+    public required byte NewRotation { get; init; }
+
+    /// <summary>
+    /// If the item was swapped with another item (instead of being moved to an empty spot).
+    /// </summary>
+    public required bool IsSwap { get; init; }
+
+    /// <summary>
+    /// The item being moved.
+    /// </summary>
+    public required ItemJar Jar { get; init; }
+
+    /// <summary>
+    /// The item that was swapped with this item, if applicable. This item now lives at the old position.
+    /// </summary>
+    public required ItemJar? SwappedJar { get; init; }
 }

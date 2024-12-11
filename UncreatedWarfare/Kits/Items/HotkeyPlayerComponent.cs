@@ -13,12 +13,17 @@ namespace Uncreated.Warfare.Kits.Items;
 [PlayerComponent]
 public class HotkeyPlayerComponent : IPlayerComponent, IEventListener<ItemDropped>
 {
-    private KitManager _kitManager = null!;
-    private WarfareModule _module = null!;
-    private ILogger<HotkeyPlayerComponent> _logger = null!;
+#nullable disable
+    
+    private KitManager _kitManager;
+    private WarfareModule _module;
+    private ILogger<HotkeyPlayerComponent> _logger;
     private AssetRedirectService _assetRedirectService;
     private IFactionDataStore _factionDataStore;
+    
     public WarfarePlayer Player { get; private set; }
+
+#nullable restore
 
     // used to trace items back to their original position in the kit
     internal List<HotkeyBinding>? HotkeyBindings;

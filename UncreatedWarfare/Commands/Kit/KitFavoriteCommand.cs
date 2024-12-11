@@ -8,12 +8,13 @@ using Uncreated.Warfare.Translations;
 namespace Uncreated.Warfare.Commands;
 
 [Command("favorite", "favourite", "favour", "favor", "fav", "star"), SubCommandOf(typeof(KitCommand))]
-internal class KitFavoriteCommand : IExecutableCommand
+internal sealed class KitFavoriteCommand : IExecutableCommand
 {
     private readonly SignInstancer _signs;
     private readonly KitCommandTranslations _translations;
     private readonly KitManager _kitManager;
-    public CommandContext Context { get; set; }
+
+    public required CommandContext Context { get; init; }
 
     public KitFavoriteCommand(TranslationInjection<KitCommandTranslations> translations, SignInstancer signs, KitManager kitManager)
     {

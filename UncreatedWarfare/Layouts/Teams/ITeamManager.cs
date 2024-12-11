@@ -18,7 +18,7 @@ public interface ITeamManager<out TTeam> where TTeam : Team
     /// Find a team from a string value, such as from config.
     /// </summary>
     /// <param name="teamSearch">Can be (in order of priority) A faction name, a team ID, 'blufor', or 'opfor'.</param>
-    TTeam? FindTeam(string teamSearch);
+    TTeam? FindTeam([System.Diagnostics.CodeAnalysis.NotNullWhen(true)] string? teamSearch);
 
     /// <summary>
     /// Will return the default team if <paramref name="groupId"/> doesn't correspond to a team, otherwise an invalid team.
@@ -48,7 +48,7 @@ public interface ITeamManager<out TTeam> where TTeam : Team
     /// <summary>
     /// Team manager extra configuration from config file.
     /// </summary>
-    IConfiguration Configuration { get; internal set; }
+    IConfiguration? Configuration { get; internal set; }
 
     /// <summary>
     /// Joins a player into a team if they're not already.

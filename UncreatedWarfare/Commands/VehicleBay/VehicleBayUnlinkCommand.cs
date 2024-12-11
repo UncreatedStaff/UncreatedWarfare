@@ -8,14 +8,14 @@ using Uncreated.Warfare.Vehicles.Spawners;
 namespace Uncreated.Warfare.Commands;
 
 [Command("unlink"), SubCommandOf(typeof(VehicleBayCommand))]
-public class VehicleBayUnlinkCommand : IExecutableCommand
+internal sealed class VehicleBayUnlinkCommand : IExecutableCommand
 {
     private readonly BuildableSaver _buildableSaver;
     private readonly VehicleSpawnerService _spawnerStore;
     private readonly VehicleBayCommandTranslations _translations;
 
     /// <inheritdoc />
-    public CommandContext Context { get; set; }
+    public required CommandContext Context { get; init; }
 
     public VehicleBayUnlinkCommand(
         TranslationInjection<VehicleBayCommandTranslations> translations,

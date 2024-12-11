@@ -5,10 +5,10 @@ namespace Uncreated.Warfare.Commands;
 
 [Command("confirm", "c"), HideFromHelp]
 [Priority(-1)]
-public class ConfirmCommand : IExecutableCommand
+public sealed class ConfirmCommand : IExecutableCommand
 {
     /// <inheritdoc />
-    public CommandContext Context { get; set; }
+    public required CommandContext Context { get; init; }
 
     /// <inheritdoc />
     public UniTask ExecuteAsync(CancellationToken token)
@@ -20,10 +20,10 @@ public class ConfirmCommand : IExecutableCommand
 
 [Command("deny"), HideFromHelp]
 [Priority(-1)]
-public class DenyCommand : IExecutableCommand
+public sealed class DenyCommand : IExecutableCommand
 {
     /// <inheritdoc />
-    public CommandContext Context { get; set; }
+    public required CommandContext Context { get; init; }
 
     /// <inheritdoc />
     public UniTask ExecuteAsync(CancellationToken token)

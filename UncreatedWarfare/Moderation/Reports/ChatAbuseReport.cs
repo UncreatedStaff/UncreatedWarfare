@@ -14,6 +14,9 @@ public class ChatAbuseReport : Report
 {
     [JsonPropertyName("messages")]
     public AbusiveChatRecord[] Messages { get; set; } = Array.Empty<AbusiveChatRecord>();
+
+    public override bool ShouldScreenshot => false;
+
     public override string GetDisplayName() => "Chat Abuse Report";
     protected override void ReadIntl(ByteReader reader, ushort version)
     {
@@ -32,12 +35,14 @@ public class ChatAbuseReport : Report
         for (int i = 0; i < Messages.Length; ++i)
             Messages[i].Write(writer);
     }
-    public override void ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
+    public override bool ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
     {
         if (propertyName.Equals("messages", StringComparison.InvariantCultureIgnoreCase))
             Messages = JsonSerializer.Deserialize<AbusiveChatRecord[]>(ref reader, options) ?? Array.Empty<AbusiveChatRecord>();
         else
-            base.ReadProperty(ref reader, propertyName, options);
+            return base.ReadProperty(ref reader, propertyName, options);
+
+        return true;
     }
     public override void Write(Utf8JsonWriter writer, JsonSerializerOptions options)
     {

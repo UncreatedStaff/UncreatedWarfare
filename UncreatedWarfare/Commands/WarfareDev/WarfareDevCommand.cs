@@ -3,4 +3,4 @@
 namespace Uncreated.Warfare.Commands;
 
 [Command("warfaredev", "wdev"), MetadataFile]
-internal class WarfareDevCommand : ICommand;
+internal sealed class WarfareDevCommand : ICommand;

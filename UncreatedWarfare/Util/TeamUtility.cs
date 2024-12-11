@@ -15,8 +15,13 @@ public static class TeamUtility
     /// Get faction information about a faction string from a <see cref="ITeamManager{TTeam}"/> config.
     /// </summary>
     /// <exception cref="LayoutConfigurationException">Failed to find a valid faction.</exception>
-    public static async Task<Faction> ResolveTeamFactionHint(string faction, IGameDataDbContext dbContext, ITeamManager<Team> readFrom, MapScheduler mapScheduler, CancellationToken token = default)
+    public static async Task<Faction> ResolveTeamFactionHint(string? faction, IGameDataDbContext dbContext, ITeamManager<Team> readFrom, MapScheduler mapScheduler, CancellationToken token = default)
     {
+        if (string.IsNullOrWhiteSpace(faction))
+        {
+            throw new LayoutConfigurationException(readFrom, "Missing faction for team.");
+        }
+
         int mapId = -1;
         if (faction.StartsWith("Map", StringComparison.InvariantCultureIgnoreCase))
         {

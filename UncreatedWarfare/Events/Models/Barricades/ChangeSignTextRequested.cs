@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using Uncreated.Warfare.Buildables;
 
 namespace Uncreated.Warfare.Events.Models.Barricades;
@@ -9,9 +10,6 @@ namespace Uncreated.Warfare.Events.Models.Barricades;
 [EventModel(SynchronizationContext = EventSynchronizationContext.Global, SynchronizedModelTags = [ "modify_world" ])]
 public class ChangeSignTextRequested : CancellablePlayerEvent
 {
-    private IBuildable? _cachedBuildable;
-    private string _text;
-
     /// <summary>
     /// The index of the vehicle region in <see cref="BarricadeManager.vehicleRegions"/>. <see cref="ushort.MaxValue"/> if the barricade is not planted.
     /// </summary>
@@ -56,7 +54,8 @@ public class ChangeSignTextRequested : CancellablePlayerEvent
     /// <summary>
     /// Abstracted <see cref="IBuildable"/> of the barricade.
     /// </summary>
-    public IBuildable Buildable => _cachedBuildable ??= new BuildableBarricade(Barricade);
+    [field: AllowNull, MaybeNull]
+    public IBuildable Buildable => field ??= new BuildableBarricade(Barricade);
 
     /// <summary>
     /// New text on the sign.
@@ -65,13 +64,13 @@ public class ChangeSignTextRequested : CancellablePlayerEvent
     /// <exception cref="ArgumentException"/>
     public required string Text
     {
-        get => _text;
+        get;
         set
         {
             value = Sign.trimText(value);
             if (!Sign.isTextValid(value))
                 throw new ArgumentException("Invalid text. Must be less than 230 UTF-8 bytes.");
-            _text = value ?? string.Empty;
+            field = value ?? string.Empty;
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
@@ -36,7 +36,7 @@ public class KitRequests : IRequestHandler<KitSignInstanceProvider, Kit>, IReque
     private readonly RequestKitsTranslations _kitReqTranslations;
     private readonly ITranslationValueFormatter _valueFormatter;
     private readonly LanguageService _languageService;
-    private readonly EventDispatcher2 _eventDispatcher;
+    private readonly EventDispatcher _eventDispatcher;
     private readonly SquadManager? _squadManager;
     private readonly IServiceProvider _serviceProvider;
     private readonly IPlayerService _playerService;
@@ -55,7 +55,9 @@ public class KitRequests : IRequestHandler<KitSignInstanceProvider, Kit>, IReque
         _playerService = serviceProvider.GetRequiredService<IPlayerService>();
         _cooldownManager = serviceProvider.GetRequiredService<CooldownManager>();
         _logger = serviceProvider.GetRequiredService<ILogger<KitRequests>>();
-        _eventDispatcher = serviceProvider.GetRequiredService<EventDispatcher2>();
+        _eventDispatcher = serviceProvider.GetRequiredService<EventDispatcher>();
+        _assetRedirectService = serviceProvider.GetRequiredService<AssetRedirectService>();
+        _factionDataStore = serviceProvider.GetRequiredService<IFactionDataStore>();
         _squadManager = serviceProvider.GetService<SquadManager>();
         _serviceProvider = serviceProvider;
         Manager = manager;

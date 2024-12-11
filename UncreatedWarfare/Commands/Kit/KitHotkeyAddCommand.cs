@@ -9,13 +9,14 @@ using Uncreated.Warfare.Translations;
 namespace Uncreated.Warfare.Commands;
 
 [Command("add", "create", "new"), SubCommandOf(typeof(KitHotkeyCommand))]
-internal class KitHotkeyAddCommand : IExecutableCommand
+internal sealed class KitHotkeyAddCommand : IExecutableCommand
 {
     private readonly KitCommandTranslations _translations;
     private readonly KitManager _kitManager;
     private readonly AssetRedirectService _assetRedirectService;
     private readonly IFactionDataStore _factionDataStore;
-    public CommandContext Context { get; set; }
+
+    public required CommandContext Context { get; init; }
 
     public KitHotkeyAddCommand(TranslationInjection<KitCommandTranslations> translations, KitManager kitManager, AssetRedirectService assetRedirectService, IFactionDataStore factionDataStore)
     {

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Reflection;
 using Uncreated.Warfare.Events;
 
@@ -6,13 +6,17 @@ namespace Uncreated.Warfare.Components;
 
 public class ProjectileComponent : MonoBehaviour
 {
+#nullable disable
     internal ulong Owner;
     internal Guid GunId;
     internal int UnityInstanceID;
     internal Rocket RocketComponent;
+#nullable restore
+
     private bool _isExploded;
     public float LaunchTime;
     private static readonly MethodInfo? ExplodeMethod = typeof(Rocket).GetMethod("OnTriggerEnter", BindingFlags.NonPublic | BindingFlags.Instance);
+
     [UsedImplicitly]
     private void Awake()
     {
@@ -20,6 +24,7 @@ public class ProjectileComponent : MonoBehaviour
         RocketComponent = GetComponent<Rocket>();
         _isExploded = false;
     }
+
     [UsedImplicitly]
     private void Start()
     {
@@ -34,7 +39,7 @@ public class ProjectileComponent : MonoBehaviour
 
         _isExploded = true;
 
-        EventDispatcher.InvokeOnProjectileExploded(this, other);
+        // todo: EventDispatcher.InvokeOnProjectileExploded(this, other);
 
         //L.LogDebug("Collided with " + other.gameObject.name + " at " + gameObject.transform.position.ToString("F1") + " after " + (Time.realtimeSinceStartup - LaunchTime) + " seconds. (Predicted: " + (PredictedImpactTime - LaunchTime) + " seconds)");
     }
@@ -44,7 +49,7 @@ public class ProjectileComponent : MonoBehaviour
     private Vector3 _lastpos;
 
     [UsedImplicitly]
-    void FixedUpdate()
+    private void FixedUpdate()
     {
         if (!_isExploded && Physics.Linecast(_lastpos, transform.position, out RaycastHit hit, /*RayMasks.VEHICLE | */RayMasks.GROUND | RayMasks.GROUND2 | RayMasks.LARGE))
         {

@@ -75,6 +75,7 @@ internal class ItemManagerDespawnItems : IHarmonyPatch
         FieldInfo? despawnX = typeof(ItemManager).GetField("despawnItems_X", BindingFlags.NonPublic | BindingFlags.Static),
                    despawnY = typeof(ItemManager).GetField("despawnItems_Y", BindingFlags.NonPublic | BindingFlags.Static);
 
+        bool patched = false;
         while (ctx.MoveNext())
         {
             if (!ctx.Instruction.Calls(instanceIdProperty))
@@ -83,36 +84,32 @@ internal class ItemManagerDespawnItems : IHarmonyPatch
             if (!ctx.MoveNext() || !ctx.Instruction.opcode.IsStLoc())
                 break;
 
-            LocalBuilder? instanceIdLcl = PatchUtility.GetLocal(ctx.Instruction, out int index, true);
+            LocalBuilder? instanceIdLclBldr = PatchUtility.GetLocal(ctx.Instruction, out int index, true);
+            LocalReference instanceIdLocal = instanceIdLclBldr != null ? new LocalReference(instanceIdLclBldr) : new LocalReference(index);
 
-            if (!ctx.MoveNext())
-                break;
-
-            // load instance id
-            if (instanceIdLcl == null)
+            ctx.EmitBelow(emit =>
             {
-                ctx.Emit(OpCodes.Ldloc_S, (byte)index);
-            }
-            else
-            {
-                ctx.Emit(OpCodes.Ldloc, instanceIdLcl);
-            }
+                emit.LoadLocalValue(instanceIdLocal);
 
-            if (despawnX != null && despawnY != null)
-            {
-                ctx.Emit(OpCodes.Ldsfld, despawnX);
-                ctx.Emit(OpCodes.Ldsfld, despawnY);
-            }
-            else
-            {
-                ctx.Emit(OpCodes.Ldc_I4_0);
-                ctx.Emit(OpCodes.Conv_I1);
+                if (despawnX != null && despawnY != null)
+                {
+                    emit.LoadStaticFieldValue(despawnX)
+                        .LoadStaticFieldValue(despawnY);
+                }
+                else
+                {
+                    emit.LoadConstantUInt8(0)
+                        .LoadConstantUInt8(0);
+                }
 
-                ctx.Emit(OpCodes.Ldc_I4_0);
-                ctx.Emit(OpCodes.Conv_I1);
-            }
+                emit.Invoke(Accessor.GetMethod(RemoveItemInvoker)!);
+            });
+            patched = true;
+        }
 
-            ctx.Emit(OpCodes.Call, Accessor.GetMethod(RemoveItemInvoker)!);
+        if (!patched)
+        {
+            ctx.LogWarning("Unable to patch item despawn.");
         }
 
         return ctx;

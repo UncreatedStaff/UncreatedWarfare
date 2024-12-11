@@ -1,15 +1,19 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace Uncreated.Warfare.Util;
 internal static class ContextualTypeResolver
 {
     private static readonly Assembly ThisAssembly = typeof(ContextualTypeResolver).Assembly;
-    private static List<Type>? _allTypesCache;
+    private static Type[]? _allTypesFullNameCache;
+    private static Type[]? _allTypesNameCache;
+    private static string[]? _allTypesFullNamesCache;
+    private static string[]? _allTypesNamesCache;
 
     /// <summary>
     /// Attempt to resolve a type based on a type name input.
@@ -29,16 +33,6 @@ internal static class ContextualTypeResolver
         type = null;
         if (typeName == null)
             return false;
-
-        // search by assembly-qualified name
-        type = Type.GetType(typeName, false, false);
-        if (type != null && (expectedBaseType == null || expectedBaseType.IsAssignableFrom(type)))
-            return true;
-
-        // search within main assembly
-        type = ThisAssembly.GetType(typeName, false, false);
-        if (type != null && (expectedBaseType == null || expectedBaseType.IsAssignableFrom(type)))
-            return true;
 
         if (type == null)
         {
@@ -119,42 +113,52 @@ internal static class ContextualTypeResolver
                 return true;
         }
 
+        // search by assembly-qualified name
+        type = Type.GetType(typeName, false, false);
+        if (type != null && (expectedBaseType == null || expectedBaseType.IsAssignableFrom(type)))
+            return true;
+
+        // search within main assembly
+        type = ThisAssembly.GetType(typeName, false, false);
+        if (type != null && (expectedBaseType == null || expectedBaseType.IsAssignableFrom(type)))
+            return true;
+
         // search by actual type name
-        if (_allTypesCache == null)
+        if (_allTypesFullNameCache == null)
         {
             LoadAllTypes();
         }
         
         Interlocked.MemoryBarrier();
 
-        int index = -1;
-        for (int i = 0; i < _allTypesCache!.Count; ++i)
+        int index = Array.BinarySearch(_allTypesFullNamesCache!, typeName, StringComparer.Ordinal);
+        if (index >= 0 && (expectedBaseType == null || expectedBaseType.IsAssignableFrom(_allTypesFullNameCache![index])))
         {
-            Type t = _allTypesCache[i];
+            type = _allTypesFullNameCache![index];
+            return true;
+        }
 
-            if (!string.Equals(t.FullName, typeName, StringComparison.Ordinal) && !string.Equals(t.Name, typeName, StringComparison.Ordinal))
-                continue;
-
-            if (expectedBaseType != null && !expectedBaseType.IsAssignableFrom(t))
-                continue;
-
-            if (index != -1)
+        index = Array.BinarySearch(_allTypesNamesCache!, typeName, StringComparer.Ordinal);
+        if (index >= 0 && (expectedBaseType == null || expectedBaseType.IsAssignableFrom(_allTypesNameCache![index])))
+        {
+            // check for duplicates
+            for (int i = 0; i < _allTypesNameCache!.Length; ++i)
             {
+                if (i == index || !_allTypesNamesCache![i].Equals(typeName, StringComparison.Ordinal) || expectedBaseType != null && !expectedBaseType.IsAssignableFrom(type))
+                {
+                    continue;
+                }
+
                 type = null;
                 return false;
             }
 
-            index = i;
+            type = _allTypesNameCache[index];
+            return true;
         }
 
-        if (index == -1)
-        {
-            type = null;
-            return false;
-        }
-
-        type = _allTypesCache[index];
-        return true;
+        type = null;
+        return false;
     }
 
     private static void LoadAllTypes()
@@ -172,6 +176,27 @@ internal static class ContextualTypeResolver
             catch { /* ignored */ }
         }
 
-        _allTypesCache = Accessor.GetTypesSafe(assemblies);
+        List<Type> allTypesCache = Accessor.GetTypesSafe(assemblies);
+
+        allTypesCache.RemoveAll(x => x.IsNested || x.IsDefinedSafe<CompilerGeneratedAttribute>());
+
+        int ct = allTypesCache.Count;
+        _allTypesNameCache = new Type[ct];
+        _allTypesFullNameCache = new Type[ct];
+
+        allTypesCache.CopyTo(_allTypesNameCache);
+        Array.Copy(_allTypesNameCache, _allTypesFullNameCache, ct);
+
+        // yes this is necessary, its very slow without binary search
+        _allTypesNamesCache = new string[ct];
+        _allTypesFullNamesCache = new string[ct];
+        for (int i = 0; i < _allTypesNameCache.Length; ++i)
+        {
+            _allTypesNamesCache[i] = _allTypesNameCache[i].Name;
+            _allTypesFullNamesCache[i] = _allTypesFullNameCache[i].FullName ?? _allTypesFullNameCache[i].Name;
+        }
+
+        Array.Sort(_allTypesNamesCache, _allTypesNameCache, StringComparer.Ordinal);
+        Array.Sort(_allTypesFullNamesCache, _allTypesFullNameCache, StringComparer.Ordinal);
     }
 }

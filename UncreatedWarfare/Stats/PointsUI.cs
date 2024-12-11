@@ -1,4 +1,4 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Globalization;
@@ -53,7 +53,7 @@ public class PointsUI : UnturnedUI,
     private readonly UnturnedLabel _lblStatistic   = new UnturnedLabel("LabelStatistic");
 
     public PointsUI(PointsConfiguration config, AssetConfiguration assetConfig, ILoggerFactory loggerFactory)
-        : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:Points"), staticKey: true, debugLogging: true)
+        : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:Points"), staticKey: true, debugLogging: false)
     {
         _config = config;
 

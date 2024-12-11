@@ -7,18 +7,17 @@ using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Commands;
 
-[Command("ipwhitelist", "whitelistip", "whip", "ipwh", "iw")]
-public class IPWhitelistCommand : IExecutableCommand
+[Command("ipwhitelist", "whitelistip", "whip", "ipwh", "iw"), MetadataFile]
+internal sealed class IPWhitelistCommand : IExecutableCommand
 {
     private readonly IUserDataService _userDataService;
     private readonly DatabaseInterface _moderationSql;
     private readonly IPWhitelistCommandTranslations _translations;
-    private const string Syntax = "/ipwhitelist <add|remove> <steam64> [ip = any]";
-    private const string Help = "Whitelist a player's IP to not be IP banned.";
-    private static readonly string[] RemArgs = { "remove", "delete", "rem", "blacklist" };
+
+    private static readonly string[] RemArgs = [ "remove", "delete", "rem", "blacklist" ];
 
     /// <inheritdoc />
-    public CommandContext Context { get; set; }
+    public required CommandContext Context { get; init; }
 
     public IPWhitelistCommand(TranslationInjection<IPWhitelistCommandTranslations> translations, IUserDataService userDataService, DatabaseInterface moderationSql)
     {
@@ -27,80 +26,29 @@ public class IPWhitelistCommand : IExecutableCommand
         _translations = translations.Value;
     }
 
-    /// <summary>
-    /// Get /help metadata about this command.
-    /// </summary>
-    public static CommandStructure GetHelpMetadata()
-    {
-        return new CommandStructure
-        {
-            Description = Help,
-            Parameters =
-            [
-                new CommandParameter("Add")
-                {
-                    Aliases = [ "whitelist", "create" ],
-                    Description = "Add an IP range to the IP whitelist.",
-                    Parameters =
-                    [
-                        new CommandParameter("Player", typeof(IPlayer))
-                        {
-                            Parameters =
-                            [
-                                new CommandParameter("IP", typeof(IPv4Range))
-                                {
-                                    IsOptional = true
-                                }
-                            ]
-                        }
-                    ]
-                },
-                new CommandParameter("Remove")
-                {
-                    Aliases = [ "delete", "rem", "blacklist" ],
-                    Description = "Remove an ip range from the IP whitelist.",
-                    Parameters =
-                    [
-                        new CommandParameter("Player", typeof(IPlayer))
-                        {
-                            Parameters =
-                            [
-                                new CommandParameter("IP", typeof(IPv4Range))
-                                {
-                                    IsOptional = true
-                                }
-                            ]
-                        }
-                    ]
-                }
-            ]
-        };
-    }
-
     /// <inheritdoc />
     public async UniTask ExecuteAsync(CancellationToken token)
     {
         bool remove = Context.MatchParameter(0, RemArgs);
-        if (remove || Context.MatchParameter(0, "add", "whitelist", "create"))
+        if (!remove && !Context.MatchParameter(0, "add", "whitelist", "create"))
+            throw Context.SendHelp();
+        
+        IPv4Range range = default;
+        if (!Context.TryGet(1, out CSteamID player, out _) || Context.TryGet(2, out string? str) && !IPv4Range.TryParse(str, out range) && !IPv4Range.TryParseIPv4(str, out range))
         {
-            IPv4Range range = default;
-            if (!Context.TryGet(1, out CSteamID player, out _) || Context.TryGet(2, out string? str) && !IPv4Range.TryParse(str, out range) && !IPv4Range.TryParseIPv4(str, out range))
-            {
-                throw Context.SendCorrectUsage(Syntax);
-            }
-
-            PlayerNames names = await _userDataService.GetUsernamesAsync(player.m_SteamID, token).ConfigureAwait(false);
-
-            if (await _moderationSql.WhitelistIP(player, Context.CallerId, range, !remove, DateTimeOffset.UtcNow, token).ConfigureAwait(false))
-            {
-                Context.Reply(remove ? _translations.IPUnwhitelistSuccess : _translations.IPWhitelistSuccess, names, range);
-            }
-            else
-            {
-                Context.Reply(_translations.IPWhitelistNotFound, names, range);
-            }
+            throw Context.SendHelp();
         }
-        else Context.SendCorrectUsage(Syntax);
+
+        PlayerNames names = await _userDataService.GetUsernamesAsync(player.m_SteamID, token).ConfigureAwait(false);
+
+        if (await _moderationSql.WhitelistIP(player, Context.CallerId, range, !remove, DateTimeOffset.UtcNow, token).ConfigureAwait(false))
+        {
+            Context.Reply(remove ? _translations.IPUnwhitelistSuccess : _translations.IPWhitelistSuccess, names, range);
+        }
+        else
+        {
+            Context.Reply(_translations.IPWhitelistNotFound, names, range);
+        }
     }
 }
 

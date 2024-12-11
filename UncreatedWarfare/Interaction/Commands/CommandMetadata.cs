@@ -15,20 +15,44 @@ public class CommandMetadata : ICommandParameterDescriptor
 {
     private CommandMetadata? _parent;
 
+#nullable disable
     /// <summary>
     /// Name of the parameter in proper-case format.
     /// </summary>
-    public string Name { get; set; }
-
-    /// <summary>
-    /// Single value that can be entered instead of <see cref="Name"/>.
-    /// </summary>
-    public string? Alias { get; set; }
+    public string Name { get; set; } = null!;
 
     /// <summary>
     /// Values that can be entered instead of <see cref="Name"/>.
     /// </summary>
     public string[] Aliases { get; set; }
+
+    /// <summary>
+    /// Array of types after <see cref="Clean"/> is ran.
+    /// </summary>
+    /// <remarks>Verbatim parameter types will have the type of <see cref="VerbatimParameterType"/>.</remarks>
+    public Type[] ResolvedTypes { get; internal set; }
+
+    /// <summary>
+    /// List of sub-parameters.
+    /// </summary>
+    public CommandMetadata[] Parameters { get; set; }
+
+    /// <summary>
+    /// List of all valid flags.
+    /// </summary>
+    public FlagMetadata[] Flags { get; set; }
+
+#nullable restore
+
+    /// <summary>
+    /// Translatable description of the command or sub-command.
+    /// </summary>
+    public TranslationList? Description { get; set; }
+
+    /// <summary>
+    /// Single value that can be entered instead of <see cref="Name"/>.
+    /// </summary>
+    public string? Alias { get; set; }
 
     /// <summary>
     /// Value type, or 'Verbatim' if the parameter name itself should be entered.
@@ -41,27 +65,6 @@ public class CommandMetadata : ICommandParameterDescriptor
     /// </summary>
     /// <remarks>Types can be fully qualified type names, namespace names in Uncreated.Warfare or mscorlib, language type keywords, or 'Verbatim'.</remarks>
     public string?[]? Types { get; set; }
-
-    /// <summary>
-    /// Array of types after <see cref="Clean"/> is ran.
-    /// </summary>
-    /// <remarks>Verbatim parameter types will have the type of <see cref="VerbatimParameterType"/>.</remarks>
-    public Type[] ResolvedTypes { get; internal set; }
-
-    /// <summary>
-    /// Translatable description of the command or sub-command.
-    /// </summary>
-    public TranslationList? Description { get; set; }
-
-    /// <summary>
-    /// List of sub-parameters.
-    /// </summary>
-    public CommandMetadata[] Parameters { get; set; }
-
-    /// <summary>
-    /// List of all valid flags.
-    /// </summary>
-    public FlagMetadata[] Flags { get; set; }
 
     /// <summary>
     /// If the parameter is optional. All other parameters on this level must also be marked optional.
@@ -257,11 +260,12 @@ public class CommandMetadata : ICommandParameterDescriptor
 
     public class FlagMetadata : ICommandFlagDescriptor
     {
+#nullable disable
         /// <summary>
         /// Flag name without the dash.
         /// </summary>
         /// <remarks>Example: -e would be "e".</remarks>
-        public string Name { get; set; }
+        public string Name { get; set; } = null!;
 
         /// <summary>
         /// General description of what the flag does.
@@ -272,6 +276,7 @@ public class CommandMetadata : ICommandParameterDescriptor
         /// The permission needed to use the flag.
         /// </summary>
         public PermissionLeaf Permission { get; set; }
+#nullable restore
     }
 }
 

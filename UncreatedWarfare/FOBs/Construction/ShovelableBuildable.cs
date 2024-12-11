@@ -57,9 +57,12 @@ public class ShovelableBuildable : PointsShoveable
         OnComplete?.Invoke(completedBuildable);
         _foundation.Destroy(); // make sure to only destroy the foundation events are invoked
     }
+
     private void DropEmplacement(EmplacementInfo emplacementInfo)
     {
-         _ = _serviceProvider.GetRequiredService<VehicleRequestService>().SpawnVehicleAsync(
+        emplacementInfo.Vehicle.AssertValid();
+
+        _ = _serviceProvider.GetRequiredService<VehicleRequestService>().SpawnVehicleAsync(
             emplacementInfo.Vehicle,
             new Vector3(_foundation.Position.x, _foundation.Position.y + 2, _foundation.Position.z),
             // rotate x + 90 degrees because nelson sucks

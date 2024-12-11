@@ -117,7 +117,7 @@ public abstract class Punishment : ModerationEntry
             writer.Write(ReportKeys[i]);
     }
 
-    public override void ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
+    public override bool ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
     {
         if (propertyName.Equals("appeals", StringComparison.InvariantCultureIgnoreCase))
             AppealKeys = JsonSerializer.Deserialize<uint[]>(ref reader, options) ?? Array.Empty<uint>();
@@ -149,7 +149,9 @@ public abstract class Punishment : ModerationEntry
             }
         }
         else
-            base.ReadProperty(ref reader, propertyName, options);
+            return base.ReadProperty(ref reader, propertyName, options);
+
+        return true;
     }
 
     public override void Write(Utf8JsonWriter writer, JsonSerializerOptions options)
@@ -387,7 +389,7 @@ public abstract class DurationPunishment : Punishment, IForgiveableModerationEnt
 
         return IsPermanent || timestamp.UtcDateTime < ResolvedTimestamp.Value.UtcDateTime.Add(Duration);
     }
-    public override void ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
+    public override bool ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
     {
         if (propertyName.Equals("duration", StringComparison.InvariantCultureIgnoreCase))
         {
@@ -422,7 +424,9 @@ public abstract class DurationPunishment : Punishment, IForgiveableModerationEnt
         else if (propertyName.Equals("forgive_message", StringComparison.InvariantCultureIgnoreCase))
             RemovedMessage = reader.GetString();
         else
-            base.ReadProperty(ref reader, propertyName, options);
+            return base.ReadProperty(ref reader, propertyName, options);
+
+        return true;
     }
     public override void Write(Utf8JsonWriter writer, JsonSerializerOptions options)
     {

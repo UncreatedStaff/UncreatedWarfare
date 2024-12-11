@@ -6,11 +6,11 @@ using Uncreated.Warfare.Squads.UI;
 namespace Uncreated.Warfare.Commands;
 
 [Command("menu"), SubCommandOf(typeof(DebugSquads))]
-internal class DebugSquadMenuUI : IExecutableCommand
+internal sealed class DebugSquadMenuUI : IExecutableCommand
 {
     private readonly SquadMenuUI _squadMenuUI;
 
-    public CommandContext Context { get; set; }
+    public required CommandContext Context { get; init; }
 
     public DebugSquadMenuUI(IServiceProvider serviceProvider)
     {

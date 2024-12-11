@@ -1,4 +1,4 @@
-﻿using DanielWillett.ModularRpcs.DependencyInjection;
+using DanielWillett.ModularRpcs.DependencyInjection;
 using DanielWillett.ModularRpcs.Serialization;
 using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.IoC;
@@ -18,6 +18,7 @@ using System.Linq;
 using System.Reflection;
 using Uncreated.Warfare.Actions;
 using Uncreated.Warfare.Buildables;
+using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database;
@@ -37,7 +38,6 @@ using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Whitelists;
 using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.Layouts.UI;
-using Uncreated.Warfare.Layouts.UI.Leaderboards;
 using Uncreated.Warfare.Lobby;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Maps;
@@ -80,7 +80,7 @@ public sealed class WarfareModule
     /// </summary>
     public static readonly int Season = typeof(WarfareModule).Assembly.GetName().Version.Major;
 
-    private static EventDispatcher2? _dispatcher;
+    private static EventDispatcher? _dispatcher;
 
 #nullable disable
 
@@ -88,7 +88,7 @@ public sealed class WarfareModule
     /// Static instance of the event dispatcher singleton for harmony patches to access it.
     /// </summary>
     /// <remarks>Do not use unless in a patch.</remarks>
-    public static EventDispatcher2 EventDispatcher => _dispatcher ??= Singleton?.ServiceProvider.Resolve<EventDispatcher2>();
+    public static EventDispatcher EventDispatcher => _dispatcher ??= Singleton?.ServiceProvider.Resolve<EventDispatcher>();
 
     /// <summary>
     /// Static instance of this module singleton for harmony patches to access it.
@@ -101,16 +101,20 @@ public sealed class WarfareModule
     /// </summary>
     public static bool IsActive { get; private set; }
 
-#nullable restore
-
-    private bool _unloadedHostedServices = true;
-    private ILifetimeScope? _activeScope;
     private CancellationTokenSource _cancellationTokenSource;
-    private Layout? _activeLayout;
     private GameObject _gameObjectHost;
     private ILogger<WarfareModule> _logger;
     private WarfarePluginLoader _pluginLoader;
 
+
+#nullable restore
+
+    public event Action? LayoutStarted;
+    private bool _unloadedHostedServices = true;
+    private ILifetimeScope? _activeScope;
+    private Layout? _activeLayout;
+
+#nullable disable
     /// <summary>
     /// A global logger that can be used from patches mainly.
     /// </summary>
@@ -159,7 +163,7 @@ public sealed class WarfareModule
             }
         }
     }
-
+#nullable restore
     internal void Initialize()
     {
         IsActive = true;
@@ -453,6 +457,16 @@ public sealed class WarfareModule
         bldr.RegisterType<SendChatMutedEventHandler>()
             .AsImplementedInterfaces();
 
+        // for DebugEventTestCommand
+        // bldr.RegisterType<TestEventService1>().AsSelf().AsImplementedInterfaces();
+        // bldr.RegisterType<TestEventService2>().AsSelf().AsImplementedInterfaces();
+        // bldr.RegisterType<TestEventService3>().AsSelf().AsImplementedInterfaces();
+        // bldr.RegisterType<TestEventService4>().AsSelf().AsImplementedInterfaces();
+        // bldr.RegisterType<TestEventService5>().AsSelf().AsImplementedInterfaces();
+        // bldr.RegisterType<TestEventService6>().AsSelf().AsImplementedInterfaces();
+        // bldr.RegisterType<TestEventService7>().AsSelf().AsImplementedInterfaces();
+
+
         bldr.RegisterType<WarfareSteamApiService>()
             .As<ISteamApiService>()
             .SingleInstance();
@@ -469,7 +483,7 @@ public sealed class WarfareModule
             .AsImplementedInterfaces().AsSelf()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
 
-        bldr.RegisterType<EventDispatcher2>()
+        bldr.RegisterType<EventDispatcher>()
             .AsImplementedInterfaces().AsSelf()
             .SingleInstance();
 
@@ -509,11 +523,11 @@ public sealed class WarfareModule
 
         bldr.RegisterType<VehicleRequestService>()
             .AsImplementedInterfaces().AsSelf()
-            .SingleInstance();
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
         
         bldr.RegisterType<VehicleSpawnerStore>()
             .AsImplementedInterfaces().AsSelf()
-            .SingleInstance();
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
 
         bldr.RegisterType<VehicleSpawnerService>()
             .AsImplementedInterfaces().AsSelf()
@@ -628,7 +642,7 @@ public sealed class WarfareModule
 
         bldr.RegisterType<LayoutPhaseEventListenerProvider>()
             .As<IEventListenerProvider>()
-            .SingleInstance();
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
 
         // Active ILayoutPhase
         bldr.Register(_ => GetActiveLayout().ActivePhase ?? throw new InvalidOperationException("There is not a phase currently loaded."));
@@ -1122,6 +1136,15 @@ public sealed class WarfareModule
     internal void SetActiveLayout(Layout? layout)
     {
         Layout? oldLayout = Interlocked.Exchange(ref _activeLayout, layout);
+        try
+        {
+            LayoutStarted?.Invoke();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "LayoutStarted listener threw an exception in SetActiveLayout.");
+        }
+
         if (oldLayout == null)
             return;
 
@@ -1147,6 +1170,7 @@ public sealed class WarfareModule
 
     private void UnloadModule()
     {
+        // calls IModuleNexus.shutdown()
         ServiceProvider.Resolve<Module>().isEnabled = false;
     }
 
@@ -1219,7 +1243,7 @@ public sealed class WarfareModule
 
 public class WarfareModuleNexus : IModuleNexus
 {
-    private object _module;
+    private object? _module;
     void IModuleNexus.initialize()
     {
         try

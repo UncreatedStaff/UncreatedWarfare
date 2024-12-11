@@ -7,10 +7,10 @@ using Uncreated.Warfare.Players;
 namespace Uncreated.Warfare.Commands;
 
 [Command("quickwin", "nextphase"), SubCommandOf(typeof(WarfareDevCommand))]
-internal class DebugQuickWinCommand : IExecutableCommand
+internal sealed class DebugQuickWinCommand : IExecutableCommand
 {
     private readonly Layout _layout;
-    public CommandContext Context { get; set; }
+    public required CommandContext Context { get; init; }
 
     public DebugQuickWinCommand(Layout layout)
     {

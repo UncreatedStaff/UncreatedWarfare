@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Components;
@@ -8,7 +8,7 @@ using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Events;
-partial class EventDispatcher2
+partial class EventDispatcher
 {
     /// <summary>
     /// Invoked by <see cref="BarricadeManager.onDeployBarricadeRequested"/> when a player tries to place a barricade. Can be cancelled.
@@ -147,7 +147,7 @@ partial class EventDispatcher2
             Region = region
         };
 
-        _ = WarfareModule.EventDispatcher.DispatchEventAsync(args);
+        _ = WarfareModule.EventDispatcher.DispatchEventAsync(args, _unloadToken);
 
     }
 

@@ -8,7 +8,7 @@ using Uncreated.Warfare.Util;
 namespace Uncreated.Warfare.Commands;
 
 [Command("attach"), MetadataFile]
-public class AttachCommand : IExecutableCommand
+internal sealed class AttachCommand : IExecutableCommand
 {
     private readonly AttachTranslations _translations;
 
@@ -16,7 +16,7 @@ public class AttachCommand : IExecutableCommand
     private static EffectAsset? _firemodeEffect;
 
     /// <inheritdoc />
-    public CommandContext Context { get; set; }
+    public required CommandContext Context { get; init; }
 
     public AttachCommand(TranslationInjection<AttachTranslations> translations)
     {

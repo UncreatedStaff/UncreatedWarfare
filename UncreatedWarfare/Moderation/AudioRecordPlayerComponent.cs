@@ -71,6 +71,7 @@ public class AudioRecordPlayerComponent : IPlayerComponent, IDisposable
         if (isOnJoin)
             TimeUtility.updated += Update;
     }
+
     void IDisposable.Dispose()
     {
         TimeUtility.updated -= Update;
@@ -82,6 +83,7 @@ public class AudioRecordPlayerComponent : IPlayerComponent, IDisposable
         _byteCount = 0;
         _packets?.Clear();
     }
+
     public void AppendPacket(ArraySegment<byte> packet)
     {
         _lastVoiceChat = Time.realtimeSinceStartup;
@@ -134,22 +136,7 @@ public class AudioRecordPlayerComponent : IPlayerComponent, IDisposable
 
         Dump();
     }
-    public NativeArray<byte> CreateNativeArray()
-    {
-        GameThread.AssertCurrent();
 
-        NativeArray<byte> array = new NativeArray<byte>(_byteCount, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
-
-        if (_byteCount == 0)
-            return array;
-
-        ArraySegment<byte> ringSectionOne = RingSectionOne;
-        ArraySegment<byte> ringSectionTwo = RingSectionTwo;
-
-        NativeArray<byte>.Copy(ringSectionOne.Array, ringSectionOne.Offset, array, 0, ringSectionOne.Count);
-        NativeArray<byte>.Copy(ringSectionTwo.Array, ringSectionTwo.Offset, array, ringSectionOne.Count, ringSectionTwo.Count);
-        return array;
-    }
     public async UniTask<AudioRecordManager.AudioConvertResult> TryConvert(Stream writeTo, bool leaveOpen = true, CancellationToken token = default)
     {
         await UniTask.SwitchToMainThread(token);
@@ -157,10 +144,11 @@ public class AudioRecordPlayerComponent : IPlayerComponent, IDisposable
         byte[] data = _audioListenService.CreateMultipartPacket(this);
         if (data.Length == 0)
             return AudioRecordManager.AudioConvertResult.NoData;
-        File.WriteAllBytes(@"C:\Users\danny\OneDrive\Desktop\multi-part.txt", data);
+        // for debugging File.WriteAllBytes(@"C:\Users\danny\OneDrive\Desktop\multi-part.txt", data);
 
         return await _audioListenService.TryWriteWavAsync(data, writeTo, leaveOpen, token);
     }
+
     public void WriteMetaFile(Stream writeTo, bool includeData = false, bool leaveOpen = true)
     {
         GameThread.AssertCurrent();
@@ -178,6 +166,7 @@ public class AudioRecordPlayerComponent : IPlayerComponent, IDisposable
             MetaWriter.Stream = null;
         }
     }
+
     public void WriteMetaFile(ByteWriter writer, bool includeData = false)
     {
         GameThread.AssertCurrent();
@@ -186,6 +175,7 @@ public class AudioRecordPlayerComponent : IPlayerComponent, IDisposable
         writer.Write((byte)1); // player count
         WriteMetaFilePlayerSection(writer, includeData);
     }
+
     public static void WriteMetaFileForPlayers(IEnumerable<WarfarePlayer> players, Stream writeTo, bool includeData = false, bool leaveOpen = true)
     {
         GameThread.AssertCurrent();
@@ -203,6 +193,7 @@ public class AudioRecordPlayerComponent : IPlayerComponent, IDisposable
             MetaWriter.Stream = null;
         }
     }
+
     public static void WriteMetaFileForPlayers(ByteWriter writer, IEnumerable<WarfarePlayer> players, bool includeData = false)
     {
         GameThread.AssertCurrent();
@@ -218,6 +209,7 @@ public class AudioRecordPlayerComponent : IPlayerComponent, IDisposable
             playerComps[i].WriteMetaFilePlayerSection(writer, includeData);
         }
     }
+
     public void WriteMetaFilePlayerSection(ByteWriter writer, bool includeData = false)
     {
         writer.Write(Player.Steam64.m_SteamID);

@@ -4,24 +4,13 @@ using Uncreated.Warfare.Tweaks;
 
 namespace Uncreated.Warfare.Commands;
 
-[Command("vanish")]
-public class VanishCommand : IExecutableCommand
+[Command("vanish"), MetadataFile]
+internal sealed class VanishCommand : IExecutableCommand
 {
     private readonly VanishCommandTranslations _translations;
 
     /// <inheritdoc />
-    public CommandContext Context { get; set; }
-
-    /// <summary>
-    /// Get /help metadata about this command.
-    /// </summary>
-    public static CommandStructure GetHelpMetadata()
-    {
-        return new CommandStructure
-        {
-            Description = "Toggle your visibility to other players."
-        };
-    }
+    public required CommandContext Context { get; init; }
 
     public VanishCommand(TranslationInjection<VanishCommandTranslations> translations)
     {

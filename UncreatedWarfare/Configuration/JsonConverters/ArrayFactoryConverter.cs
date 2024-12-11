@@ -5,10 +5,10 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace Uncreated.Warfare.Configuration.JsonConverters;
-public class ArrayFactoryConverter<TElementType, TFactoryType> : JsonConverter<TElementType[]?> where TFactoryType : JsonConverterFactory, new()
+public class ArrayFactoryConverter<TElementType, TFactoryType> : JsonConverter<TElementType?[]?> where TFactoryType : JsonConverterFactory, new()
 {
     private readonly TFactoryType _factory = new TFactoryType();
-    public override TElementType[]? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    public override TElementType?[]? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         switch (reader.TokenType)
         {
@@ -19,7 +19,7 @@ public class ArrayFactoryConverter<TElementType, TFactoryType> : JsonConverter<T
                 if (_factory.CreateConverter(typeof(TElementType), options) is not JsonConverter<TElementType> converter)
                     throw new JsonException($"Unable to create converter from factory of type {Accessor.ExceptionFormatter.Format(typeof(TFactoryType))}.");
 
-                List<TElementType> list = new List<TElementType>();
+                List<TElementType?> list = new List<TElementType?>();
                 while (reader.Read())
                 {
                     if (reader.TokenType == JsonTokenType.EndArray)
@@ -35,7 +35,7 @@ public class ArrayFactoryConverter<TElementType, TFactoryType> : JsonConverter<T
         }
     }
 
-    public override void Write(Utf8JsonWriter writer, TElementType[]? value, JsonSerializerOptions options)
+    public override void Write(Utf8JsonWriter writer, TElementType?[]? value, JsonSerializerOptions options)
     {
         if (value == null)
         {
@@ -50,7 +50,11 @@ public class ArrayFactoryConverter<TElementType, TFactoryType> : JsonConverter<T
 
         for (int i = 0; i < value.Length; ++i)
         {
-            converter.Write(writer, value[i], options);
+            TElementType? element = value[i];
+            if (element == null)
+                writer.WriteNullValue();
+            else
+                converter.Write(writer, element, options);
         }
 
         writer.WriteEndArray();

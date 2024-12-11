@@ -7,6 +7,8 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Database.Manual;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.Languages;
 
 namespace Uncreated.Warfare.Moderation.Punishments;
 [ModerationEntry(ModerationEntryType.Mute)]
@@ -43,7 +45,7 @@ public class Mute : DurationPunishment
         writer.Write((byte)Type);
     }
 
-    public override void ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
+    public override bool ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
     {
         if (propertyName.Equals("mute_type", StringComparison.InvariantCultureIgnoreCase))
         {
@@ -53,7 +55,7 @@ public class Mute : DurationPunishment
                 if (num <= (int)MuteType.Both && num >= 0)
                 {
                     Type = (MuteType)num;
-                    return;
+                    return true;
                 }
 
                 throw new JsonException($"Invalid integer for MuteType: {num}.");
@@ -64,7 +66,9 @@ public class Mute : DurationPunishment
             Type = type;
         }
         else
-            base.ReadProperty(ref reader, propertyName, options);
+            return base.ReadProperty(ref reader, propertyName, options);
+
+        return true;
     }
     public override void Write(Utf8JsonWriter writer, JsonSerializerOptions options)
     {
@@ -86,4 +90,24 @@ public class Mute : DurationPunishment
 
         return hasEvidenceCalls;
     }
+}
+
+
+[Translatable("Mute Severity")]
+[Flags]
+public enum MuteType : byte
+{
+    None = 0,
+
+    [Translatable(Languages.ChineseSimplified, "语音交流")]
+    [Translatable("Voice Chat")]
+    Voice = 1,
+
+    [Translatable(Languages.ChineseSimplified, "文字交流")]
+    [Translatable("Text Chat")]
+    Text = 2,
+
+    [Translatable(Languages.ChineseSimplified, "语音和文字交流")]
+    [Translatable("Voice and Text Chat")]
+    Both = Voice | Text
 }

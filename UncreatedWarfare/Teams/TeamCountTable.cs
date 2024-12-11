@@ -124,22 +124,22 @@ public class TeamCountTable
     /// <summary>
     /// Calculate the mean of all teams' scores. This may include the neutral team if <paramref name="ignoreNeutral"/> is not <see langword="true"/>.
     /// </summary>
-    public double CalculateAverageScore(bool ignoreNetural)
+    public double CalculateAverageScore(bool ignoreNeutral)
     {
         lock (_scores)
         {
-            return CalculateTotalIntl(ignoreNetural) / (_scores.Length + (!ignoreNetural ? 1 : 0));
+            return CalculateTotalIntl(ignoreNeutral) / (_scores.Length + (!ignoreNeutral ? 1 : 0));
         }
     }
 
     /// <summary>
     /// Calculate the sum of all teams' scores. This may include the neutral team if <paramref name="ignoreNeutral"/> is not <see langword="true"/>.
     /// </summary>
-    public double CalculateTotalScore(bool ignoreNetural)
+    public double CalculateTotalScore(bool ignoreNeutral)
     {
         lock (_scores)
         {
-            return CalculateTotalIntl(ignoreNetural);
+            return CalculateTotalIntl(ignoreNeutral);
         }
     }
 
@@ -149,7 +149,7 @@ public class TeamCountTable
     public double CalcualateMaxScore(bool ignoreNeutral) => CalcualateMaxScore(ignoreNeutral, out _);
 
     /// <summary>
-    /// Calculate the team with the highest score. This may be the neutral team if <paramref name="ignoreNeutral"/> is not <see langword="true"/>, in which case <paramref name="minimumTeam"/> will be <see langword="null"/>.
+    /// Calculate the team with the highest score. This may be the neutral team if <paramref name="ignoreNeutral"/> is not <see langword="true"/>, in which case <paramref name="maximumTeam"/> will be <see langword="null"/>.
     /// </summary>
     public double CalcualateMaxScore(bool ignoreNeutral, out Team? maximumTeam)
     {
@@ -218,9 +218,9 @@ public class TeamCountTable
         }
     }
 
-    private double CalculateTotalIntl(bool ignoreNetural)
+    private double CalculateTotalIntl(bool ignoreNeutral)
     {
-        double ttl = ignoreNetural ? 0 : _neutralScore;
+        double ttl = ignoreNeutral ? 0 : _neutralScore;
         for (int i = 0; i < _scores.Length; ++i)
         {
             ttl += _scores[i];

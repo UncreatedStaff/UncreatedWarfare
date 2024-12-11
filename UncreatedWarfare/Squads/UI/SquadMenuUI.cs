@@ -102,7 +102,7 @@ internal class SquadMenuUI :
     {
         PlayerViewingState data = GetOrAddData(p.Steam64, steam64 => new PlayerViewingState
         {
-            Player = p.Steam64,
+            Player = steam64,
             Owner = this
         });
         Console.WriteLine($"Potential viewing player: {p.Names.PlayerName} data: {data} isViewing: {data?.IsViewing} team: {p.Team} required team: {team}");
@@ -112,7 +112,7 @@ internal class SquadMenuUI :
     {
         PlayerViewingState data = GetOrAddData(player.Steam64, steam64 => new PlayerViewingState
         {
-            Player = player.Steam64,
+            Player = steam64,
             Owner = this
         });
         data.IsViewing = true;
@@ -125,7 +125,7 @@ internal class SquadMenuUI :
     {
         PlayerViewingState data = GetOrAddData(player.Steam64, steam64 => new PlayerViewingState
         {
-            Player = player.Steam64,
+            Player = steam64,
             Owner = this
         });
         data.IsViewing = false;
@@ -189,7 +189,7 @@ internal class SquadMenuUI :
                 memberElement.Hide(player);
         }
     }
-
+#nullable disable
     public class SquadMenuElement
     {
         [Pattern("", Root = true, CleanJoin = '_')]
@@ -214,7 +214,7 @@ internal class SquadMenuUI :
 
         public required UnturnedUI Owner { get; init; }
 
-        public UnturnedUIElement Element { get; }
-        public bool IsViewing { get; set; } = false;
+        public UnturnedUIElement Element => null;
+        public bool IsViewing { get; set; }
     }
 }

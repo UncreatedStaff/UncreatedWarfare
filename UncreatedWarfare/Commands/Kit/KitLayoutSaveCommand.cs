@@ -6,11 +6,12 @@ using Uncreated.Warfare.Translations;
 namespace Uncreated.Warfare.Commands;
 
 [Command("save", "confirm", "keep"), SubCommandOf(typeof(KitLayoutCommand))]
-internal class KitLayoutSaveCommand : ICommand
+internal sealed class KitLayoutSaveCommand : ICommand
 {
     private readonly KitCommandTranslations _translations;
     private readonly KitManager _kitManager;
-    public CommandContext Context { get; set; }
+
+    public required CommandContext Context { get; init; }
 
     public KitLayoutSaveCommand(TranslationInjection<KitCommandTranslations> translations, KitManager kitManager)
     {

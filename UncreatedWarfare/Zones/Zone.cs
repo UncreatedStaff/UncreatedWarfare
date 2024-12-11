@@ -10,9 +10,6 @@ using Uncreated.Warfare.Translations.ValueFormatters;
 namespace Uncreated.Warfare.Zones;
 public class Zone : IDeployable
 {
-    private List<uint> _gridObjects = [];
-    private List<UpstreamZone> _upstreamZones = [];
-    
     /// <summary>
     /// Unique name of the zone.
     /// </summary>
@@ -79,16 +76,16 @@ public class Zone : IDeployable
     /// </summary>
     [JsonPropertyName("polygon")]
     public ZonePolygonInfo? PolygonInfo { get; set; }
-    
+
     /// <summary>
     /// Instance IDs of all interactable powered objects that should be enabled when the zone is in rotation.
     /// </summary>
     [JsonPropertyName("grid_objects")]
     public List<uint> GridObjects
     {
-        get => _gridObjects;
-        set => _gridObjects = value ?? [];
-    }
+        get;
+        set => field = value ?? [ ];
+    } = [ ];
 
     /// <summary>
     /// List of zones 'upstream' from the current zone. Used for pathing.
@@ -96,9 +93,9 @@ public class Zone : IDeployable
     [JsonPropertyName("upstream_zones")]
     public List<UpstreamZone> UpstreamZones
     {
-        get => _upstreamZones;
-        set => _upstreamZones = value ?? [];
-    }
+        get;
+        set => field = value ?? [ ];
+    } = [ ];
 
     /// <summary>
     /// Type or use case of the zone.
@@ -181,6 +178,7 @@ public class Zone : IDeployable
     }
 }
 
+#nullable disable
 public class ZoneCircleInfo
 {
     /// <summary>
@@ -246,3 +244,4 @@ public class UpstreamZone
     [JsonPropertyName("weight")]
     public float Weight { get; set; }
 }
+#nullable restore

@@ -29,8 +29,18 @@ public abstract class DualSidedFlagService :
     protected readonly ITeamManager<Team> TeamManager;
     protected readonly Layout Layout;
     protected IList<Zone>? PathingResult { get; private set; }
+
+#nullable disable
+
     protected ZoneStore ZoneStore { get; private set; }
+
     protected FlagPhaseSettings FlagSettings { get; private set; }
+
+    public FlagObjective StartingTeam { get; private set; }
+
+    public FlagObjective EndingTeam { get; private set; }
+
+#nullable restore
 
     /// <summary>
     /// Array of all zones in order *including the main bases* at the beginning and end of the list.
@@ -44,9 +54,6 @@ public abstract class DualSidedFlagService :
     /// <inheritdoc />
     public IReadOnlyList<FlagObjective> ActiveFlags { get; private set; } = Array.Empty<FlagObjective>();
 
-    public FlagObjective StartingTeam { get; private set; }
-
-    public FlagObjective EndingTeam { get; private set; }
 
     protected DualSidedFlagService(IServiceProvider serviceProvider, IConfiguration config)
     {

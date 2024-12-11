@@ -117,38 +117,33 @@ public class CaptureHUD :
         {
             if (team == flag.Owner)
             {
-                Logger.LogInformation($"Sending Secured state for flag: {flag}");
+                GetLogger().LogInformation($"Sending Secured state for flag: {flag}");
 
                 return CaptureUIState.Secured(_translations, flag.Name);
             }
-            else
-            {
-                return CaptureUIState.Lost(_translations, flag.Owner, flag.Name);
-            }
+
+            return CaptureUIState.Lost(_translations, flag.Owner, flag.Name);
         }
-        else if (contest.LeaderPoints == 0)
+        if (contest.LeaderPoints == 0)
         {
             return CaptureUIState.Neutralized(_translations, flag.Name);
         }
-        else
-        {
-            float progress = contest.LeaderPoints / (float) contest.MaxPossiblePoints;
-            
-            if (flag.IsContested)
-            {
-                return CaptureUIState.Contesting(_translations, progress, flag.Name);
-            }
 
-            if (team == contest.Leader)
-            {
-                return CaptureUIState.Capturing(_translations, progress, contest.Leader, flag.Name);
-            }
-            else
-            {
-                return CaptureUIState.Losing(_translations, progress, contest.Leader, flag.Name);
-            }
+        float progress = contest.LeaderPoints / (float) contest.MaxPossiblePoints;
+            
+        if (flag.IsContested)
+        {
+            return CaptureUIState.Contesting(_translations, progress, flag.Name);
         }
 
+        if (team == contest.Leader)
+        {
+            return CaptureUIState.Capturing(_translations, progress, contest.Leader, flag.Name);
+        }
+        else
+        {
+            return CaptureUIState.Losing(_translations, progress, contest.Leader, flag.Name);
+        }
     }
     public void HideCaptureUI(LanguageSet set)
     {

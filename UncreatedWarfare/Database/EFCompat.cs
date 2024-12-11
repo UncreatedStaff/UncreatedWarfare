@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Microsoft.EntityFrameworkCore.ValueGeneration;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using Uncreated.Warfare.Database.Automation;
 
@@ -14,12 +15,11 @@ namespace Uncreated.Warfare.Database;
 /// </summary>
 public static class EFCompat
 {
-    private static IEFCompatProvider _instance;
-
+    [field: AllowNull, MaybeNull]
     public static IEFCompatProvider Instance
     {
-        get => _instance ??= new EF5Compat();
-        set => _instance = value;
+        get => field ??= new EF5Compat();
+        set;
     }
 
     public class EF5Compat : IEFCompatProvider

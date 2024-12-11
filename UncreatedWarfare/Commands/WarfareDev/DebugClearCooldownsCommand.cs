@@ -5,11 +5,11 @@ using Uncreated.Warfare.Players.Management;
 namespace Uncreated.Warfare.Commands;
 
 [Command("clearcooldowns", "cc"), SubCommandOf(typeof(WarfareDevCommand))]
-internal class DebugClearCooldownsCommand : IExecutableCommand
+internal sealed class DebugClearCooldownsCommand : IExecutableCommand
 {
     private readonly CooldownManager _cooldownManager;
     private readonly IPlayerService _playerService;
-    public CommandContext Context { get; set; }
+    public required CommandContext Context { get; init; }
 
     public DebugClearCooldownsCommand(CooldownManager cooldownManager, IPlayerService playerService)
     {

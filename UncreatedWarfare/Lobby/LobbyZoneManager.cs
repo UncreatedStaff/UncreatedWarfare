@@ -34,7 +34,7 @@ public class LobbyZoneManager : IHostedService, ILevelHostedService, IEventListe
     private readonly IFactionDataStore _factionDataStore;
     private readonly ILogger<LobbyZoneManager> _logger;
     private readonly WarfareModule _module;
-    private ITrackingProximity<WarfarePlayer> _zoneCollider;
+    private ITrackingProximity<WarfarePlayer>? _zoneCollider;
     private Zone? _lobbyZone;
     private Guid _settingsFlagGuid;
 
@@ -46,7 +46,7 @@ public class LobbyZoneManager : IHostedService, ILevelHostedService, IEventListe
 
     private readonly ITeamSelectorBehavior _behavior;
 
-    internal FlagInfo[] TeamFlags;
+    internal FlagInfo[]? TeamFlags;
 
     /// <summary>
     /// Number of seconds to wait until joining the team.
@@ -122,7 +122,9 @@ public class LobbyZoneManager : IHostedService, ILevelHostedService, IEventListe
         _behavior.Teams = behaviorTeamInfo;
 
         // find zone
-        string lobbyZoneName = _lobbyConfig["Zone"];
+        string? lobbyZoneName = _lobbyConfig["Zone"];
+        if (lobbyZoneName == null)
+            throw new GameConfigurationException("Lobby zone not specified ('Zone')", _lobbyConfig.FilePath);
 
         _lobbyZone = _zoneStore.Zones.FirstOrDefault(x => x.Name.Equals(lobbyZoneName, StringComparison.Ordinal))
                      ?? throw new GameConfigurationException("Lobby zone not found: \"" + lobbyZoneName + "\"", _lobbyConfig.FilePath);
@@ -151,7 +153,9 @@ public class LobbyZoneManager : IHostedService, ILevelHostedService, IEventListe
     /// <remarks>Out of bounds indices just return 0.</remarks>
     public int GetTeamPlayerCount(int teamIndex)
     {
-        return !Disabled ? teamIndex >= 0 && teamIndex < TeamFlags.Length ? _behavior.Teams[teamIndex].PlayerCount : 0 : 0;
+        if (TeamFlags == null)
+            return 0;
+        return !Disabled ? teamIndex >= 0 && teamIndex < TeamFlags.Length ? _behavior.Teams![teamIndex].PlayerCount : 0 : 0;
     }
 
     /// <summary>
@@ -159,13 +163,13 @@ public class LobbyZoneManager : IHostedService, ILevelHostedService, IEventListe
     /// </summary>
     public int GetActivePlayerCount()
     {
-        if (Disabled)
+        if (Disabled || TeamFlags == null)
             return 0;
 
         int ct = 0;
         for (int i = 0; i < TeamFlags.Length; ++i)
         {
-            ct += _behavior.Teams[i].PlayerCount;
+            ct += _behavior.Teams![i].PlayerCount;
         }
 
         return ct;
@@ -173,7 +177,7 @@ public class LobbyZoneManager : IHostedService, ILevelHostedService, IEventListe
 
     public void StartJoiningTeam(WarfarePlayer player, int teamIndex)
     {
-        if (Disabled)
+        if (Disabled || TeamFlags == null)
             throw new InvalidOperationException("Lobby is disabled.");
 
         PlayerLobbyComponent component = player.Component<PlayerLobbyComponent>();
@@ -221,6 +225,9 @@ public class LobbyZoneManager : IHostedService, ILevelHostedService, IEventListe
 
     private void UpdateAllFlags(WarfarePlayer player)
     {
+        if (TeamFlags == null)
+            return;
+
         PlayerQuests quests = player.UnturnedPlayer.quests;
         PlayerLobbyComponent component = player.Component<PlayerLobbyComponent>();
         if (component.IsJoining)
@@ -248,6 +255,9 @@ public class LobbyZoneManager : IHostedService, ILevelHostedService, IEventListe
 
     private void UpdateAllFlags(int teamIndex)
     {
+        if (TeamFlags == null || _zoneCollider == null)
+            return;
+
         ref FlagInfo flag = ref TeamFlags[teamIndex];
         bool canJoinTeam = _behavior.CanJoinTeam(teamIndex, -1);
 
@@ -273,7 +283,7 @@ public class LobbyZoneManager : IHostedService, ILevelHostedService, IEventListe
 
     internal void UpdateTeamCount(Team team, int change)
     {
-        if (Disabled || team is null || !team.IsValid)
+        if (Disabled || team is null || !team.IsValid || TeamFlags == null)
             return;
 
         for (int i = 0; i < TeamFlags.Length; ++i)
@@ -281,7 +291,7 @@ public class LobbyZoneManager : IHostedService, ILevelHostedService, IEventListe
             if (TeamFlags[i].Team != team)
                 continue;
 
-            _behavior.Teams[i].PlayerCount += change;
+            _behavior.Teams![i].PlayerCount += change;
             UpdateAllFlags(i);
             break;
         }
@@ -289,6 +299,9 @@ public class LobbyZoneManager : IHostedService, ILevelHostedService, IEventListe
 
     private void OnFixedUpdate()
     {
+        if (_zoneCollider == null)
+            return;
+
         foreach (WarfarePlayer player in _zoneCollider.ActiveObjects)
         {
             UpdatePlayerPositionalData(player);
@@ -314,6 +327,12 @@ public class LobbyZoneManager : IHostedService, ILevelHostedService, IEventListe
         Transform pos = player.UnturnedPlayer.look.aim;
         Vector3 playerPos = pos.position;
         Vector3 playerLookVector = pos.forward;
+
+        if (TeamFlags == null)
+        {
+            player.Component<PlayerLobbyComponent>().UpdatePositionalData(closestLookIndex, closestPosIndex);
+            return;
+        }
 
         // find closest sign and closest sign to being looked at
         for (int i = 0; i < TeamFlags.Length; ++i)
@@ -390,6 +409,11 @@ public class LobbyZoneManager : IHostedService, ILevelHostedService, IEventListe
             return;
         }
 
+        if (TeamFlags == null)
+        {
+            return;
+        }
+
         for (int i = 0; i < TeamFlags.Length; ++i)
         {
             ref FlagInfo flag = ref TeamFlags[i];
@@ -405,6 +429,9 @@ public class LobbyZoneManager : IHostedService, ILevelHostedService, IEventListe
     {
         _behavior.UpdateTeams();
 
+        if (_zoneCollider == null)
+            return;
+        
         // add joining players to the player counts
         foreach (WarfarePlayer player in _zoneCollider.ActiveObjects)
         {
@@ -412,7 +439,7 @@ public class LobbyZoneManager : IHostedService, ILevelHostedService, IEventListe
             if (!comp.IsJoining)
                 continue;
 
-            ++_behavior.Teams[comp.JoiningTeam.Index].PlayerCount;
+            ++_behavior.Teams![comp.JoiningTeam.Index].PlayerCount;
         }
 
         foreach (WarfarePlayer player in _zoneCollider.ActiveObjects)
@@ -426,30 +453,36 @@ public class LobbyZoneManager : IHostedService, ILevelHostedService, IEventListe
 
         // update 'Team' objects for the new layout, since they may have changed between layouts
         ITeamManager<Team> teamManager = _module.GetActiveLayout().TeamManager;
-        for (int i = 0; i < TeamFlags.Length; ++i)
+        if (TeamFlags != null)
         {
-            ref FlagInfo flag = ref TeamFlags[i];
-            FactionInfo faction = flag.Faction;
-
-            Team? team = teamManager.AllTeams.FirstOrDefault(x => x.Faction.Equals(faction));
-
-            if (team == null)
+            for (int i = 0; i < TeamFlags.Length; ++i)
             {
-                throw new GameConfigurationException($"No team registered with the faction {faction.Name}", _lobbyConfig.FilePath);
+                ref FlagInfo flag = ref TeamFlags[i];
+                FactionInfo faction = flag.Faction;
+
+                Team? team = teamManager.AllTeams.FirstOrDefault(x => x.Faction.Equals(faction));
+
+                if (team == null)
+                {
+                    throw new GameConfigurationException($"No team registered with the faction {faction.Name}", _lobbyConfig.FilePath);
+                }
+
+                flag.Team = team;
+
+                ref TeamInfo behaviorTeam = ref _behavior.Teams![i];
+                behaviorTeam.Team = team;
             }
-
-            flag.Team = team;
-
-            ref TeamInfo behaviorTeam = ref _behavior.Teams[i];
-            behaviorTeam.Team = team;
         }
 
-        foreach (WarfarePlayer player in _zoneCollider.ActiveObjects)
+        if (_zoneCollider != null)
         {
-            PlayerLobbyComponent comp = player.Component<PlayerLobbyComponent>();
+            foreach (WarfarePlayer player in _zoneCollider.ActiveObjects)
+            {
+                PlayerLobbyComponent comp = player.Component<PlayerLobbyComponent>();
 
-            comp.StartJoiningTeam(-1);
-            UpdateAllFlags(player);
+                comp.StartJoiningTeam(-1);
+                UpdateAllFlags(player);
+            }
         }
 
         UpdateTeamCounts();
@@ -487,7 +520,7 @@ public class LobbyZoneManager : IHostedService, ILevelHostedService, IEventListe
         public readonly Vector3 Position;
         public readonly int Index;
         public readonly FactionInfo Faction;
-        public Team Team;
+        public Team? Team;
         public FlagInfo(int index, ObjectInfo obj, ushort flagId, FactionInfo faction)
         {
             Index = index;

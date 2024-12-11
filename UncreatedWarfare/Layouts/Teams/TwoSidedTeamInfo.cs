@@ -14,7 +14,7 @@ public class TwoSidedTeamInfo
     /// Faction to use for the team.
     /// </summary>
     /// <remarks>If it's 'Map 1' or 'Map 2', the value will be taken from the map's config info. Otherwise it should equal the internal faction id, such as 'usa', etc.</remarks>
-    public string Faction { get; set; }
+    public string? Faction { get; set; }
 }
 
 public enum TwoSidedTeamRole

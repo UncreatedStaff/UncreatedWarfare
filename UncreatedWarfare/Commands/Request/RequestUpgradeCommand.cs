@@ -12,7 +12,7 @@ using Uncreated.Warfare.Translations.Languages;
 namespace Uncreated.Warfare.Commands;
 
 [Command("upgrade"), SubCommandOf(typeof(RequestCommand))]
-public sealed class RequestUpgradeCommand : IExecutableCommand
+internal sealed class RequestUpgradeCommand : IExecutableCommand
 {
     private readonly KitManager _kitManager;
     private readonly SignInstancer _signInstancer;
@@ -23,7 +23,7 @@ public sealed class RequestUpgradeCommand : IExecutableCommand
     private readonly KitCommandTranslations _kitTranslations;
 
     /// <inheritdoc />
-    public CommandContext Context { get; set; }
+    public required CommandContext Context { get; init; }
 
     public RequestUpgradeCommand(
         KitManager kitManager,

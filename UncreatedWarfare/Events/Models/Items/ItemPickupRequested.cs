@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Uncreated.Warfare.Kits.Items;
 
 namespace Uncreated.Warfare.Events.Models.Items;
@@ -11,7 +11,6 @@ public class ItemPickupRequested : CancellablePlayerEvent
 {
     private Page _oldPage;
     private byte _oldX, _oldY;
-    private byte _destinationRotation;
 
     /// <summary>
     /// Info about the item that's being picked up.
@@ -48,12 +47,12 @@ public class ItemPickupRequested : CancellablePlayerEvent
     /// <exception cref="ArgumentOutOfRangeException"></exception>
     public required byte DestinationRotation
     {
-        get => _destinationRotation;
+        get;
         set
         {
             if (value > 3)
                 throw new ArgumentOutOfRangeException(nameof(value), "Rotation must be [0, 3].");
-            _destinationRotation = value;
+            field = value;
         }
     }
 

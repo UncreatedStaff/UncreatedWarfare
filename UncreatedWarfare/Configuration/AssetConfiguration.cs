@@ -37,7 +37,7 @@ public class AssetConfiguration : IConfiguration, IDisposable
         UnderlyingConfiguration = _configuration;
     }
 
-    public string this[string key] { get => _configuration[key]; set => _configuration[key] = value; }
+    public string? this[string key] { get => _configuration[key]; set => _configuration[key] = value; }
     public IConfigurationSection GetSection(string key) => _configuration.GetSection(key);
     public IEnumerable<IConfigurationSection> GetChildren() => _configuration.GetChildren();
     public IChangeToken GetReloadToken() => _configuration.GetReloadToken();

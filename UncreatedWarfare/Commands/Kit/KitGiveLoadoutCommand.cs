@@ -9,12 +9,13 @@ using Uncreated.Warfare.Util;
 namespace Uncreated.Warfare.Commands;
 
 [Command("loadout", "l"), SubCommandOf(typeof(KitGiveCommand))]
-internal class KitGiveLoadoutCommand : IExecutableCommand
+internal sealed class KitGiveLoadoutCommand : IExecutableCommand
 {
     private readonly KitCommandTranslations _translations;
     private readonly AssetRedirectService _assetRedirectService;
     private readonly IFactionDataStore _factionDataStore;
-    public CommandContext Context { get; set; }
+
+    public required CommandContext Context { get; init; }
 
     public KitGiveLoadoutCommand(TranslationInjection<KitCommandTranslations> translations, AssetRedirectService assetRedirectService, IFactionDataStore factionDataStore)
     {

@@ -48,10 +48,19 @@ public class Layout : IDisposable
     /// </summary>
     public bool WasStarted { get; private set; }
 
+#nullable disable
+
     /// <summary>
     /// Reference to a database entry for this layout.
     /// </summary>
     public GameRecord LayoutStats { get; private set; }
+
+    /// <summary>
+    /// Keeps track of all teams.
+    /// </summary>
+    public ITeamManager<Team> TeamManager { get; protected set; }
+
+#nullable restore
 
     /// <summary>
     /// If the layout is currently running.
@@ -72,11 +81,6 @@ public class Layout : IDisposable
     /// Scoped service provider for this layout.
     /// </summary>
     public ILifetimeScope ServiceProvider { get; }
-
-    /// <summary>
-    /// Keeps track of all teams.
-    /// </summary>
-    public ITeamManager<Team> TeamManager { get; protected set; }
 
     /// <summary>
     /// Pre-determined settings for the layout.

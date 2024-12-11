@@ -887,26 +887,26 @@ internal static class T
 
     #region Mute Command
     private const string SectionMute = "Mute";
-    [TranslationData(SectionMute, IsPriorityTranslation = false)]
-    public static readonly Translation<IPlayer, IPlayer, MuteType> MutePermanentSuccessFeedback = new Translation<IPlayer, IPlayer, MuteType>("<#00ffff><#d8addb>{0}</color> <#cedcde>({1})</color> was <b>permanently</b> <#cedcde>{2}</color> muted.", arg0Fmt: WarfarePlayer.FormatCharacterName, arg1Fmt: WarfarePlayer.FormatSteam64, arg2Fmt: LowercaseAddon.Instance);
-    [TranslationData(SectionMute, IsPriorityTranslation = false)]
-    public static readonly Translation<IPlayer, IPlayer, string, MuteType> MuteSuccessFeedback  = new Translation<IPlayer, IPlayer, string, MuteType>("<#00ffff><#d8addb>{0}</color> <#cedcde>({1})</color> was <#cedcde>{3}</color> muted for <#9cffb3>{2}</color>.", arg0Fmt: WarfarePlayer.FormatCharacterName, arg1Fmt: WarfarePlayer.FormatSteam64, arg3Fmt: LowercaseAddon.Instance);
-    [TranslationData(SectionMute)]
-    public static readonly Translation<IPlayer, IPlayer, MuteType> MutePermanentSuccessBroadcastOperator  = new Translation<IPlayer, IPlayer, MuteType>("<#00ffff><#d8addb>{0}</color> <#cedcde>({1})</color> was <b>permanently</b> <#cedcde>{2}</color> muted by an operator.", arg0Fmt: WarfarePlayer.FormatCharacterName, arg1Fmt: WarfarePlayer.FormatSteam64, arg2Fmt: LowercaseAddon.Instance);
-    [TranslationData(SectionMute)]
-    public static readonly Translation<IPlayer, IPlayer, MuteType, IPlayer> MutePermanentSuccessBroadcast = new Translation<IPlayer, IPlayer, MuteType, IPlayer>("<#00ffff><#d8addb>{0}</color> <#cedcde>({1})</color> was <b>permanently</b> <#cedcde>{2}</color> muted by {3}.", arg0Fmt: WarfarePlayer.FormatCharacterName, arg1Fmt: WarfarePlayer.FormatSteam64, arg2Fmt: LowercaseAddon.Instance, arg3Fmt: WarfarePlayer.FormatColoredPlayerName);
-    [TranslationData(SectionMute)]
-    public static readonly Translation<IPlayer, IPlayer, string, MuteType> MuteSuccessBroadcastOperator   = new Translation<IPlayer, IPlayer, string, MuteType>("<#00ffff><#d8addb>{0}</color> <#cedcde>({1})</color> was <#cedcde>{3}</color> muted by an operator for <#9cffb3>{2}</color>.", arg0Fmt: WarfarePlayer.FormatCharacterName, arg1Fmt: WarfarePlayer.FormatSteam64, arg3Fmt: LowercaseAddon.Instance);
-    [TranslationData(SectionMute)]
-    public static readonly Translation<IPlayer, IPlayer, string, MuteType, IPlayer> MuteSuccessBroadcast  = new Translation<IPlayer, IPlayer, string, MuteType, IPlayer>("<#00ffff><#d8addb>{0}</color> <#cedcde>({1})</color> was <#cedcde>{3}</color> muted by {4} for <#9cffb3>{2}</color>.", arg0Fmt: WarfarePlayer.FormatCharacterName, arg1Fmt: WarfarePlayer.FormatSteam64, arg3Fmt: LowercaseAddon.Instance, arg4Fmt: WarfarePlayer.FormatColoredPlayerName);
-    [TranslationData(SectionMute)]
-    public static readonly Translation<IPlayer, string, string, MuteType> MuteSuccessDM  = new Translation<IPlayer, string, string, MuteType>("<#ffff00>{0} <#9cffb3>{3}</color> muted you for <#9cffb3>{2}</color> because: <#9cffb3>{1}</color>.", arg0Fmt: WarfarePlayer.FormatColoredPlayerName, arg3Fmt: LowercaseAddon.Instance);
-    [TranslationData(SectionMute)]
-    public static readonly Translation<IPlayer, string, MuteType> MuteSuccessDMPermanent = new Translation<IPlayer, string, MuteType>("<#ffff00>{0} permanently <#9cffb3>{2}</color> muted you because: <#9cffb3>{1}</color>.", arg0Fmt: WarfarePlayer.FormatColoredPlayerName, arg2Fmt: LowercaseAddon.Instance);
-    [TranslationData(SectionMute)]
-    public static readonly Translation<string, string, MuteType> MuteSuccessDMOperator   = new Translation<string, string, MuteType>("<#ffff00>An operator <#9cffb3>{2}</color> muted you for <#9cffb3>{1}</color> because: <#9cffb3>{0}</color>.", arg2Fmt: LowercaseAddon.Instance);
-    [TranslationData(SectionMute)]
-    public static readonly Translation<string, MuteType> MuteSuccessDMPermanentOperator  = new Translation<string, MuteType>("<#ffff00>>An operator permanently <#9cffb3>{1}</color> muted you because: <#9cffb3>{0}</color>.", arg1Fmt: LowercaseAddon.Instance);
+    //[TranslationData(SectionMute, IsPriorityTranslation = false)]
+    //public static readonly Translation<IPlayer, IPlayer, MuteType> MutePermanentSuccessFeedback = new Translation<IPlayer, IPlayer, MuteType>("<#00ffff><#d8addb>{0}</color> <#cedcde>({1})</color> was <b>permanently</b> <#cedcde>{2}</color> muted.", arg0Fmt: WarfarePlayer.FormatCharacterName, arg1Fmt: WarfarePlayer.FormatSteam64, arg2Fmt: LowercaseAddon.Instance);
+    //[TranslationData(SectionMute, IsPriorityTranslation = false)]
+    //public static readonly Translation<IPlayer, IPlayer, string, MuteType> MuteSuccessFeedback  = new Translation<IPlayer, IPlayer, string, MuteType>("<#00ffff><#d8addb>{0}</color> <#cedcde>({1})</color> was <#cedcde>{3}</color> muted for <#9cffb3>{2}</color>.", arg0Fmt: WarfarePlayer.FormatCharacterName, arg1Fmt: WarfarePlayer.FormatSteam64, arg3Fmt: LowercaseAddon.Instance);
+    //[TranslationData(SectionMute)]
+    //public static readonly Translation<IPlayer, IPlayer, MuteType> MutePermanentSuccessBroadcastOperator  = new Translation<IPlayer, IPlayer, MuteType>("<#00ffff><#d8addb>{0}</color> <#cedcde>({1})</color> was <b>permanently</b> <#cedcde>{2}</color> muted by an operator.", arg0Fmt: WarfarePlayer.FormatCharacterName, arg1Fmt: WarfarePlayer.FormatSteam64, arg2Fmt: LowercaseAddon.Instance);
+    //[TranslationData(SectionMute)]
+    //public static readonly Translation<IPlayer, IPlayer, MuteType, IPlayer> MutePermanentSuccessBroadcast = new Translation<IPlayer, IPlayer, MuteType, IPlayer>("<#00ffff><#d8addb>{0}</color> <#cedcde>({1})</color> was <b>permanently</b> <#cedcde>{2}</color> muted by {3}.", arg0Fmt: WarfarePlayer.FormatCharacterName, arg1Fmt: WarfarePlayer.FormatSteam64, arg2Fmt: LowercaseAddon.Instance, arg3Fmt: WarfarePlayer.FormatColoredPlayerName);
+    //[TranslationData(SectionMute)]
+    //public static readonly Translation<IPlayer, IPlayer, string, MuteType> MuteSuccessBroadcastOperator   = new Translation<IPlayer, IPlayer, string, MuteType>("<#00ffff><#d8addb>{0}</color> <#cedcde>({1})</color> was <#cedcde>{3}</color> muted by an operator for <#9cffb3>{2}</color>.", arg0Fmt: WarfarePlayer.FormatCharacterName, arg1Fmt: WarfarePlayer.FormatSteam64, arg3Fmt: LowercaseAddon.Instance);
+    //[TranslationData(SectionMute)]
+    //public static readonly Translation<IPlayer, IPlayer, string, MuteType, IPlayer> MuteSuccessBroadcast  = new Translation<IPlayer, IPlayer, string, MuteType, IPlayer>("<#00ffff><#d8addb>{0}</color> <#cedcde>({1})</color> was <#cedcde>{3}</color> muted by {4} for <#9cffb3>{2}</color>.", arg0Fmt: WarfarePlayer.FormatCharacterName, arg1Fmt: WarfarePlayer.FormatSteam64, arg3Fmt: LowercaseAddon.Instance, arg4Fmt: WarfarePlayer.FormatColoredPlayerName);
+    //[TranslationData(SectionMute)]
+    //public static readonly Translation<IPlayer, string, string, MuteType> MuteSuccessDM  = new Translation<IPlayer, string, string, MuteType>("<#ffff00>{0} <#9cffb3>{3}</color> muted you for <#9cffb3>{2}</color> because: <#9cffb3>{1}</color>.", arg0Fmt: WarfarePlayer.FormatColoredPlayerName, arg3Fmt: LowercaseAddon.Instance);
+    //[TranslationData(SectionMute)]
+    //public static readonly Translation<IPlayer, string, MuteType> MuteSuccessDMPermanent = new Translation<IPlayer, string, MuteType>("<#ffff00>{0} permanently <#9cffb3>{2}</color> muted you because: <#9cffb3>{1}</color>.", arg0Fmt: WarfarePlayer.FormatColoredPlayerName, arg2Fmt: LowercaseAddon.Instance);
+    //[TranslationData(SectionMute)]
+    //public static readonly Translation<string, string, MuteType> MuteSuccessDMOperator   = new Translation<string, string, MuteType>("<#ffff00>An operator <#9cffb3>{2}</color> muted you for <#9cffb3>{1}</color> because: <#9cffb3>{0}</color>.", arg2Fmt: LowercaseAddon.Instance);
+    //[TranslationData(SectionMute)]
+    //public static readonly Translation<string, MuteType> MuteSuccessDMPermanentOperator  = new Translation<string, MuteType>("<#ffff00>>An operator permanently <#9cffb3>{1}</color> muted you because: <#9cffb3>{0}</color>.", arg1Fmt: LowercaseAddon.Instance);
 
     [TranslationData(SectionMute)]
     public static readonly Translation<string> MuteTextChatFeedbackPermanent  = new Translation<string>("<#ffff00>You're permanently muted in text chat because: <#9cffb3>{0}</color>.");

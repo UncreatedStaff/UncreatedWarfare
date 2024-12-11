@@ -26,12 +26,14 @@ public class Warning : Punishment
     public bool HasBeenDisplayed => IsLegacy || DisplayedTimestamp.HasValue;
 
     public override string GetDisplayName() => "Warning";
-    public override void ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
+    public override bool ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
     {
         if (propertyName.Equals("displayed_utc", StringComparison.InvariantCultureIgnoreCase))
             DisplayedTimestamp = reader.TokenType == JsonTokenType.Null ? null : reader.GetDateTimeOffset();
         else
-            base.ReadProperty(ref reader, propertyName, options);
+            return base.ReadProperty(ref reader, propertyName, options);
+
+        return true;
     }
     public override void Write(Utf8JsonWriter writer, JsonSerializerOptions options)
     {

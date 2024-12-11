@@ -472,7 +472,7 @@ public class RingBuffer<T> : IList<T>, IReadOnlyList<T>
         return arr;
     }
 
-    /// <inheritdoc />
+    /// <inheritdoc cref="IList{T}.this" />
     public T this[int index]
     {
         [DebuggerStepThrough]

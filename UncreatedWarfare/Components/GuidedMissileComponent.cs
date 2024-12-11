@@ -8,15 +8,18 @@ namespace Uncreated.Warfare.Components;
 internal class GuidedMissileComponent : MonoBehaviour
 {
     //private Player _firer; // player who fired the projectile
-    private GameObject _projectile; // the projectile
+#nullable disable
 
+    private GameObject _projectile; // the projectile
     private Rigidbody _rigidbody; // projectile's rigidbody, used for setting its velocity
+    private Transform _aim; // the turrets 'Aim' gameobject
+
+#nullable restore
 
     private float _guiderDistance; // the distance between the point that the projectile should look at and the 'aim' gameobject. this gets updated every fixed udpate
     private float _cutoffDistance;
     private float _projectileSpeed; // meters per second
     private float _maxTurnDegrees; // projectile can turn at most this amount every fixed update (in degrees)
-    private Transform _aim; // the turrets 'Aim' gameobject
     private Vector3 _lookAt; // the point that the projectile should look towards every fixed update
 
     private bool _isActive;

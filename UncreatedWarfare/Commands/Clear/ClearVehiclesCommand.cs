@@ -6,12 +6,13 @@ using Uncreated.Warfare.Vehicles;
 namespace Uncreated.Warfare.Commands;
 
 [Command("vehicles", "veh", "v"), SubCommandOf(typeof(ClearCommand))]
-public class ClearVehiclesCommand : IExecutableCommand
+internal sealed class ClearVehiclesCommand : IExecutableCommand
 {
     private readonly VehicleRequestService _vehicleService;
     private readonly ClearTranslations _translations;
 
-    public CommandContext Context { get; set; }
+    public required CommandContext Context { get; init; }
+
     public ClearVehiclesCommand(VehicleRequestService vehicleService, TranslationInjection<ClearTranslations> translations)
     {
         _vehicleService = vehicleService;

@@ -8,7 +8,7 @@ using Uncreated.Warfare.Translations;
 namespace Uncreated.Warfare.Commands;
 
 [Command("buy"), MetadataFile]
-public class BuyCommand : IExecutableCommand
+internal sealed class BuyCommand : IExecutableCommand
 {
     private readonly KitManager _kitManager;
     private readonly SignInstancer _signs;
@@ -16,7 +16,7 @@ public class BuyCommand : IExecutableCommand
     private readonly KitCommandTranslations _kitTranslations;
 
     /// <inheritdoc />
-    public CommandContext Context { get; set; }
+    public required CommandContext Context { get; init; }
 
     public BuyCommand(TranslationInjection<RequestTranslations> translations, TranslationInjection<KitCommandTranslations> kitTranslations, KitManager kitManager, SignInstancer signs)
     {

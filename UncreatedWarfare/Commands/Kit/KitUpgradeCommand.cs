@@ -9,12 +9,12 @@ using Uncreated.Warfare.Translations;
 namespace Uncreated.Warfare.Commands;
 
 [Command("upgrade", "update", "upg"), SubCommandOf(typeof(KitCommand))]
-internal class KitUpgradeCommand : IExecutableCommand
+internal sealed class KitUpgradeCommand : IExecutableCommand
 {
     private readonly KitCommandTranslations _translations;
     private readonly KitManager _kitManager;
     private readonly IKitsDbContext _dbContext;
-    public CommandContext Context { get; set; }
+    public required CommandContext Context { get; init; }
 
     public KitUpgradeCommand(IServiceProvider serviceProvider)
     {

@@ -6,11 +6,12 @@ using Uncreated.Warfare.Util;
 namespace Uncreated.Warfare.Commands;
 
 [Command("items", "item", "i"), SubCommandOf(typeof(ClearCommand))]
-public class ClearItemsCommand : IExecutableCommand
+internal sealed class ClearItemsCommand : IExecutableCommand
 {
     private readonly ClearTranslations _translations;
 
-    public CommandContext Context { get; set; }
+    public required CommandContext Context { get; init; }
+
     public ClearItemsCommand(TranslationInjection<ClearTranslations> translations)
     {
         _translations = translations.Value;

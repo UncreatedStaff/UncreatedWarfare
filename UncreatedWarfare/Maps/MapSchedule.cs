@@ -1,5 +1,4 @@
-﻿using DanielWillett.ReflectionTools;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -14,8 +13,8 @@ public class MapScheduler
     private readonly int _configuredMap;
     private readonly string? _configuredMapNameOverride;
 
-    private List<ulong> _originalMods;
-    private List<ulong> _originalIgnoreChildren;
+    private List<ulong>? _originalMods;
+    private List<ulong>? _originalIgnoreChildren;
 
     // todo this is bad and needs replaced eventually
     public static int CurrentStatic => WarfareModule.Singleton.ServiceProvider.Resolve<MapScheduler>().Current;
@@ -45,7 +44,7 @@ public class MapScheduler
     {
         _logger = logger;
 
-        string mapName = systemConfiguration["map"];
+        string? mapName = systemConfiguration["map"];
 
         int map = FindMap(mapName);
         if (map < 0)
@@ -73,8 +72,11 @@ public class MapScheduler
     /// <summary>
     /// Find the index of a map from it's name or ID as a string.
     /// </summary>
-    public int FindMap(string mapName)
+    public int FindMap(string? mapName)
     {
+        if (string.IsNullOrWhiteSpace(mapName))
+            return -1;
+
         if (int.TryParse(mapName, NumberStyles.Number, CultureInfo.InvariantCulture, out int mapNumber) && mapNumber >= 0 && mapNumber < MapRotation.Length)
         {
             return mapNumber;
@@ -114,8 +116,8 @@ public class MapScheduler
         Provider.map = _configuredMapNameOverride ?? map.Name;
         WorkshopDownloadConfig config = WorkshopDownloadConfig.getOrLoad();
 
-        config.File_IDs = _originalMods.ToList();
-        config.Ignore_Children_File_IDs = _originalIgnoreChildren.ToList();
+        config.File_IDs = _originalMods?.ToList() ?? new List<ulong>();
+        config.Ignore_Children_File_IDs = _originalIgnoreChildren?.ToList() ?? new List<ulong>();
 
         for (int i = 0; i < map.AddMods.Length; ++i)
         {

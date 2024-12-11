@@ -3,4 +3,4 @@
 namespace Uncreated.Warfare.Commands;
 
 [Command("squads", "sq"), SubCommandOf(typeof(WarfareDevCommand))]
-internal class DebugSquads : ICommand;
+internal sealed class DebugSquads : ICommand;

@@ -11,9 +11,8 @@ using Uncreated.Warfare.Translations.Util;
 
 namespace Uncreated.Warfare.Commands;
 
-[Command("give", "i", "item"), Priority(1)]
-[MetadataFile(nameof(GetHelpMetadata))]
-public class GiveCommand : IExecutableCommand
+[Command("give", "i", "item"), Priority(1), MetadataFile]
+internal sealed class GiveCommand : IExecutableCommand
 {
     private readonly IFactionDataStore _factionDataStore;
     private readonly AssetRedirectService _assetRedirectService;
@@ -21,23 +20,7 @@ public class GiveCommand : IExecutableCommand
     private const int MaxItems = 100;
 
     /// <inheritdoc />
-    public CommandContext Context { get; set; }
-
-    /// <summary>
-    /// Get /help metadata about this command.
-    /// </summary>
-    public static CommandStructure GetHelpMetadata()
-    {
-        return new CommandStructure
-        {
-            Description = "Gives the caller a specificed amount of an item.",
-            Parameters =
-            [
-                new CommandParameter("Item", typeof(ItemAsset), "Ammo"),
-                new CommandParameter("Redirect", typeof(RedirectType))
-            ]
-        };
-    }
+    public required CommandContext Context { get; init; }
 
     public GiveCommand(IFactionDataStore factionDataStore, AssetRedirectService assetRedirectService)
     {

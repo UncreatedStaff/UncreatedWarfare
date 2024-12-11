@@ -12,12 +12,18 @@ namespace Uncreated.Warfare.Kits;
 [PlayerComponent]
 public class KitPlayerComponent : IPlayerComponent
 {
-    private KitManager _kitManager;
     internal List<uint>? AccessibleKits;
     internal List<uint>? FavoritedKits;
     internal bool FavoritesDirty;
 
+#nullable disable
+
+    private KitManager _kitManager;
+
     public WarfarePlayer Player { get; private set; }
+
+#nullable restore
+
 
     /// <summary>
     /// The primary key of the player's current kit.

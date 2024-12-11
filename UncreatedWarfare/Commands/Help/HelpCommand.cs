@@ -14,7 +14,7 @@ public sealed class HelpCommand : IExecutableCommand
     private readonly HelpCommandTranslations _translations;
 
     /// <inheritdoc />
-    public CommandContext Context { get; set; }
+    public required CommandContext Context { get; init; }
 
     public HelpCommand(TranslationInjection<HelpCommandTranslations> translations, CommandDispatcher commandDispatcher)
     {
@@ -111,7 +111,6 @@ public class HelpCommandTranslations : PropertiesTranslationCollection
 
     [TranslationData("Output from help describing how to use /deploy.")]
     public readonly Translation HelpOutputDeploy = new Translation("<#b3ffb3>To deploy to battle, type <#fff>/deploy <location></color>. The locations are on the left side of your screen.");
-
 
     [TranslationData("Output from help describing common things in one message for non-IMGUI users.")]
     public readonly Translation HelpOutputCombined = new Translation("<#b3ffb3>To get gear, look at a sign in the barracks and type <#fff>/request</color> (or <#fff>/req</color>). To deploy to battle, type <#fff>/deploy <location></color> with any of the FOBs listed on the left of your screen. For more info, join our <#7483c4>Discord</color> server: <#fff>/discord</color>.");

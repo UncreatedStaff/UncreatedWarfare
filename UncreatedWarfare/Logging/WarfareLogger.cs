@@ -1,4 +1,4 @@
-﻿using StackCleaner;
+using StackCleaner;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -45,7 +45,7 @@ public class WarfareLogger : ILogger
 
     public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
     {
-        DateTime timeStamp = DateTime.Now;
+        DateTime timeStamp = DateTime.UtcNow;
 
         string formattedText, unformattedText;
         if (state is WarfareFormattedLogValues stateValues)

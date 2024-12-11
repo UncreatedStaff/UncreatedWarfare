@@ -5,8 +5,8 @@ using Uncreated.Warfare.Translations;
 namespace Uncreated.Warfare.Commands;
 
 [Command("clear", "clr"), MetadataFile]
-public class ClearCommand : ICommand;
-public class ClearTranslations : PropertiesTranslationCollection
+internal sealed class ClearCommand : ICommand;
+public sealed class ClearTranslations : PropertiesTranslationCollection
 {
     protected override string FileName => "Commands/Clear";
 

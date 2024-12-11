@@ -1,4 +1,4 @@
-﻿using SDG.NetTransport;
+using SDG.NetTransport;
 using System;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
@@ -11,7 +11,7 @@ using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles.Vehicle;
 
 namespace Uncreated.Warfare.Events;
-partial class EventDispatcher2
+partial class EventDispatcher
 {
     private static readonly ClientStaticMethod<uint, byte, byte>? SendSwapVehicleSeats = ReflectionUtility.FindRpc<VehicleManager, ClientStaticMethod<uint, byte, byte>>("SendSwapVehicleSeats");
 

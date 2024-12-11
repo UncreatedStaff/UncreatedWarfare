@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Models.Structures;
@@ -8,7 +8,7 @@ using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Events;
-partial class EventDispatcher2
+partial class EventDispatcher
 {
     /// <summary>
     /// Invoked by <see cref="StructureManager.onDeployStructureRequested"/> when a player tries to place a structure. Can be cancelled.

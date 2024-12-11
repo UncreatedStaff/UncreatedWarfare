@@ -1,13 +1,6 @@
-﻿using System;
-using Uncreated.Warfare.Components;
-using Uncreated.Warfare.Interaction.Commands;
-using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Logging;
-using Uncreated.Warfare.Models.Kits;
+﻿using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Translations;
-using Uncreated.Warfare.Util;
-using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Commands;
 
@@ -19,7 +12,7 @@ public class AmmoCommand : IExecutableCommand
     private readonly AmmoCommandTranslations _translations;
 
     /// <inheritdoc />
-    public CommandContext Context { get; set; }
+    public required CommandContext Context { get; init; }
 
     public AmmoCommand(DroppedItemTracker itemTracker, TranslationInjection<AmmoCommandTranslations> translations, IPlayerService playerService)
     {
@@ -29,9 +22,9 @@ public class AmmoCommand : IExecutableCommand
     }
 
     /// <inheritdoc />
-    public async UniTask ExecuteAsync(CancellationToken token)
+    public UniTask ExecuteAsync(CancellationToken token)
     {
-        Context.AssertRanByPlayer();
+        throw Context.SendNotImplemented();
 #if false
         VehicleBay? bay = Data.Singletons.GetSingleton<VehicleBay>();
         if (bay == null || !bay.IsLoaded)
@@ -78,7 +71,8 @@ public class AmmoCommand : IExecutableCommand
                     }
                 }
 
-                FOB? fob = Data.Singletons.GetSingleton<FOBManager>()?.FindNearestFOB<FOB>(vehicle.transform.position, vehicle.lockedGroup.m_SteamID.GetTeam());
+                FOB? fob =
+ Data.Singletons.GetSingleton<FOBManager>()?.FindNearestFOB<FOB>(vehicle.transform.position, vehicle.lockedGroup.m_SteamID.GetTeam());
 
                 if (fob == null && !isInMain)
                     throw Context.Reply(_translations.AmmoNotNearFOB);

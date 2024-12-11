@@ -143,6 +143,7 @@
     <PackageReference Include="DanielWillett.ModularRPCs.Unity" Version="[1.0.0-prerelease03, 2)" />
     <PackageReference Include="DanielWillett.ModularRPCs.WebSockets" Version="[1.0.0-prerelease06, 2)" />
     <PackageReference Include="Uncreated.UI" Version="1.2.1" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="Stripe.net" Version="43.4.0" />
     <PackageReference Include="JetBrains.Annotations" Version="2018.2.1" Aliases="JetBrains" />
 
@@ -186,6 +187,34 @@
   <ItemGroup>
 
     <EmbeddedResource Include="$(SolutionDir)Translation README.md" />
+
+    <EmbeddedResource Include="Commands\Whitelist\WhitelistCommand.meta.yml" />
+
+    <EmbeddedResource Include="Commands\TeamsCommand.meta.yml" />
+
+    <EmbeddedResource Include="Commands\SaveVoiceBufferCommand.meta.yml" />
+
+    <EmbeddedResource Include="Commands\RangeCommand.meta.yml" />
+
+    <EmbeddedResource Include="Commands\RallyCommand.meta.yml" />
+
+    <EmbeddedResource Include="Commands\OptionsCommand.meta.yml" />
+
+    <EmbeddedResource Include="Commands\ModerateCommand.meta.yml" />
+
+    <EmbeddedResource Include="Commands\LoadCommand.meta.yml" />
+
+    <EmbeddedResource Include="Commands\LangCommand.meta.yml" />
+
+    <EmbeddedResource Include="Commands\IPWhitelistCommand.meta.yml" />
+
+    <EmbeddedResource Include="Commands\Holiday\HolidayCommand.meta.yml" />
+
+    <EmbeddedResource Include="Commands\Group\GroupCommand.meta.yml" />
+
+    <EmbeddedResource Include="Commands\DutyCommand.meta.yml" />
+
+    <EmbeddedResource Include="Commands\DiscordCommand.meta.yml" />
     <EmbeddedResource Include="Commands\DeployCommand.meta.yml" />
     <EmbeddedResource Include="Commands\BuyCommand.meta.yml" />
     <EmbeddedResource Include="Commands\AttachCommand.meta.yml" />
@@ -195,6 +224,12 @@
     <EmbeddedResource Include="Commands\Kit\KitCommand.meta.yml" />
     <EmbeddedResource Include="Commands\Points\PointsCommand.meta.yml" />
     <EmbeddedResource Include="Commands\Request\RequestCommand.meta.yml" />
+    <EmbeddedResource Include="Commands\Structure\StructureCommand.meta.yml" />
+    <EmbeddedResource Include="Commands\Vanilla\VanishCommand.meta.yml" />
+    <EmbeddedResource Include="Commands\Vanilla\TeleportCommand.meta.yml" />
+    <EmbeddedResource Include="Commands\Vanilla\HealCommand.meta.yml" />
+    <EmbeddedResource Include="Commands\Vanilla\GodCommand.meta.yml" />
+    <EmbeddedResource Include="Commands\Vanilla\GiveCommand.meta.yml" />
     <EmbeddedResource Include="Commands\VehicleBay\VehicleBayCommand.meta.yml" />
     <EmbeddedResource Include="Commands\WarfareDev\WarfareDevCommand.meta.yml" />
     <EmbeddedResource Include="Commands\Zone\ZoneCommand.meta.yml" />
@@ -292,6 +327,10 @@
       <HintPath>$(UnturnedDllPath)/UnityEngine.CoreModule.dll</HintPath>
       <Private>!$(CopyToModule)</Private>
     </Reference>
+    <Reference Include="UnityEngine.UIModule">
+      <HintPath>$(UnturnedDllPath)/UnityEngine.UIModule.dll</HintPath>
+      <Private>!$(CopyToModule)</Private>
+    </Reference>
     <Reference Include="UnityEngine.PhysicsModule">
       <HintPath>$(UnturnedDllPath)/UnityEngine.PhysicsModule.dll</HintPath>
       <Private>!$(CopyToModule)</Private>
@@ -310,7 +349,13 @@
     </Reference>
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Update="Commands\Whitelist\WhitelistAddCommand.cs">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Compile>
+  </ItemGroup>
+
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent" Condition="exists('$(ServerPath)/Unturned_Data/Managed/Assembly-CSharp.dll')">
-    <Exec Command="XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),Assembly-CSharp.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,Assembly-CSharp.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnturnedDat.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnturnedDat.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnityEx.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnityEx.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),SDG.NetTransport.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,SDG.NetTransport.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),SDG.NetPak.Runtime.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,SDG.NetPak.Runtime.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),com.rlabrecque.steamworks.net.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,com.rlabrecque.steamworks.net.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnityEngine.CoreModule.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnityEngine.CoreModule.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnityEngine.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnityEngine.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnityEngine.ImageConversionModule.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnityEngine.ImageConversionModule.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnityEngine.PhysicsModule.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnityEngine.PhysicsModule.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnityEngine.UnityWebRequestModule.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnityEngine.UnityWebRequestModule.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnityEngine.AssetBundleModule.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnityEngine.AssetBundleModule.dll))*&quot;" />
+    <Exec Command="XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),Assembly-CSharp.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,Assembly-CSharp.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnturnedDat.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnturnedDat.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnityEx.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnityEx.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),SDG.NetTransport.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,SDG.NetTransport.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),SDG.NetPak.Runtime.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,SDG.NetPak.Runtime.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),com.rlabrecque.steamworks.net.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,com.rlabrecque.steamworks.net.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnityEngine.CoreModule.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnityEngine.CoreModule.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnityEngine.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnityEngine.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnityEngine.UIModule.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnityEngine.UIModule.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnityEngine.ImageConversionModule.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnityEngine.ImageConversionModule.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnityEngine.PhysicsModule.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnityEngine.PhysicsModule.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnityEngine.UnityWebRequestModule.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnityEngine.UnityWebRequestModule.dll))*&quot;&#xD;&#xA;XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnityEngine.AssetBundleModule.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnityEngine.AssetBundleModule.dll))*&quot;" />
   </Target>
 </Project>

@@ -6,7 +6,7 @@ public interface ITeamSelectorBehavior
     /// <summary>
     /// Array of all available teams to be updated as team counts change.
     /// </summary>
-    TeamInfo[] Teams { get; set; }
+    TeamInfo[]? Teams { get; set; }
 
     /// <summary>
     /// If a player can join a team, optionally specifying the team they're currently on.
@@ -22,5 +22,5 @@ public interface ITeamSelectorBehavior
 public struct TeamInfo
 {
     public int PlayerCount { get; set; }
-    public Team Team { get; internal set; }
+    public Team? Team { get; internal set; }
 }

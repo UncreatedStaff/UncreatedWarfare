@@ -4,5 +4,5 @@ using Uncreated.Warfare.Interaction.Commands;
 namespace Uncreated.Warfare.Commands;
 
 [Command("migrate"), HideFromHelp]
-public class MigrateCommand : ICommand;
+internal sealed class MigrateCommand : ICommand;
 #endif

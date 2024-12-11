@@ -7,8 +7,10 @@ namespace Uncreated.Warfare.Events.Models.Items;
 [EventModel(SynchronizationContext = EventSynchronizationContext.PerPlayer, SynchronizedModelTags = [ "modify_inventory" ])]
 public class CraftRequested : CancellablePlayerEvent
 {
+#nullable disable
     private ItemAsset _item;
-    private Blueprint _blueprint;
+#nullable restore
+
     public ushort ItemId { get; private set; }
     public byte BlueprintIndex { get; private set; }
     public ItemAsset Item
@@ -22,9 +24,10 @@ public class CraftRequested : CancellablePlayerEvent
             _item = value;
         }
     }
+
     public Blueprint Blueprint
     {
-        get => _blueprint;
+        get;
         set
         {
             if (Item is null)
@@ -32,7 +35,7 @@ public class CraftRequested : CancellablePlayerEvent
             int index = _item.blueprints.IndexOf(value);
             if (index < 0 || index > byte.MaxValue)
                 throw new ArgumentException("Blueprint must be owned by 'Item' (" + _item.itemName + ").");
-            _blueprint = value;
+            field = value;
             BlueprintIndex = (byte)index;
         }
     }

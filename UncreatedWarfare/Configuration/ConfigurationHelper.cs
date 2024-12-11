@@ -194,7 +194,7 @@ public static class ConfigurationHelper
         public IConfigurationSection GetSection(string key) => this;
         public IEnumerable<IConfigurationSection> GetChildren() => Array.Empty<IConfigurationSection>();
         public IChangeToken GetReloadToken() => this;
-        public IDisposable RegisterChangeCallback(Action<object> callback, object state) => this;
+        public IDisposable RegisterChangeCallback(Action<object> callback, object? state) => this;
         public void Dispose() { }
     }
 }

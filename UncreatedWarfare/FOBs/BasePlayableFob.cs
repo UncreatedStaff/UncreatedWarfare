@@ -54,7 +54,6 @@ public class BasePlayableFob : IResourceFob, IDisposable
     /// <inheritdoc />
     public Team Team { get; private set; }
 
-    /// <inheritdoc />
     public Vector3 Position => Buildable.Position;
     public float EffectiveRadius => 70f;
     public bool IsProxied { get; private set; }
@@ -88,7 +87,6 @@ public class BasePlayableFob : IResourceFob, IDisposable
         _logger = serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(GetType().Name + " | " + Name);
         _playerService = serviceProvider.GetRequiredService<IPlayerService>();
         _fobManager = serviceProvider.GetRequiredService<FobManager>();
-        WarfareLifetimeComponent warfareLifetime = serviceProvider.GetRequiredService<WarfareLifetimeComponent>();
 
         FriendlyProximity = new SphereProximity(Position, EffectiveRadius);
 
@@ -141,7 +139,7 @@ public class BasePlayableFob : IResourceFob, IDisposable
         );
         _loopTicker.OnTick += (ticker, timeSinceStart, deltaTime) =>
         {
-            bool newProxyState = NearbyEnemies.Collection.Sum(e => GetProxyScore(e)) >= 1;
+            bool newProxyState = NearbyEnemies.Collection.Sum(GetProxyScore) >= 1;
             if (newProxyState != IsProxied)
             {
                 IsProxied = newProxyState;

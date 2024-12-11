@@ -30,13 +30,13 @@ internal class PlayerClothingReceiveSwapClothingRequest : IHarmonyPatch
 
         _patches =
         [
-            Accessor.GetMethod(OnReceiveSwapShirtRequest),
-            Accessor.GetMethod(OnReceiveSwapPantsRequest),
-            Accessor.GetMethod(OnReceiveSwapVestRequest),
-            Accessor.GetMethod(OnReceiveSwapHatRequest),
-            Accessor.GetMethod(OnReceiveSwapMaskRequest),
-            Accessor.GetMethod(OnReceiveSwapBackpackRequest),
-            Accessor.GetMethod(OnReceiveSwapGlassesRequest)
+            Accessor.GetMethod(OnReceiveSwapShirtRequest)!,
+            Accessor.GetMethod(OnReceiveSwapPantsRequest)!,
+            Accessor.GetMethod(OnReceiveSwapVestRequest)!,
+            Accessor.GetMethod(OnReceiveSwapHatRequest)!,
+            Accessor.GetMethod(OnReceiveSwapMaskRequest)!,
+            Accessor.GetMethod(OnReceiveSwapBackpackRequest)!,
+            Accessor.GetMethod(OnReceiveSwapGlassesRequest)!
         ];
 
         for (int i = 0; i < _targets.Length; ++i)

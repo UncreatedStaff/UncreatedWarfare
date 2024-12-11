@@ -6,33 +6,14 @@ using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Commands;
 
-[Command("heal")]
-public class HealCommand : IExecutableCommand
+[Command("heal"), MetadataFile]
+internal sealed class HealCommand : IExecutableCommand
 {
     private readonly ChatService _chatService;
     private readonly HealCommandTranslations _translations;
 
     /// <inheritdoc />
-    public CommandContext Context { get; set; }
-
-    /// <summary>
-    /// Get /help metadata about this command.
-    /// </summary>
-    public static CommandStructure GetHelpMetadata()
-    {
-        return new CommandStructure
-        {
-            Description = "Heal yourself or someone else to max health and revive them if they're injured.",
-            Parameters =
-            [
-                new CommandParameter("Player", typeof(IPlayer))
-                {
-                    IsOptional = true,
-                    IsRemainder = true
-                }
-            ]
-        };
-    }
+    public required CommandContext Context { get; init; }
 
     public HealCommand(ChatService chatService, TranslationInjection<HealCommandTranslations> translations)
     {
@@ -43,7 +24,7 @@ public class HealCommand : IExecutableCommand
     /// <inheritdoc />
     public UniTask ExecuteAsync(CancellationToken token)
     {
-        if (!Context.TryGet(0, out _, out WarfarePlayer? onlinePlayer) || onlinePlayer == null)
+        if (!Context.TryGet(0, out _, out WarfarePlayer? onlinePlayer, remainder: true) || onlinePlayer == null)
         {
             if (Context.HasArgs(1))
                 throw Context.SendPlayerNotFound();
@@ -58,12 +39,15 @@ public class HealCommand : IExecutableCommand
         if (injureComponent != null)
             injureComponent.Revive();
 
-        _chatService.Send(onlinePlayer, _translations.HealSelf);
-
         if (onlinePlayer.Steam64.m_SteamID != Context.CallerId.m_SteamID)
+        {
+            _chatService.Send(onlinePlayer, _translations.HealSelf);
             Context.Reply(_translations.HealPlayer, onlinePlayer);
+        }
         else
-            Context.Defer();
+        {
+            Context.Reply(_translations.HealSelf);
+        }
 
         return UniTask.CompletedTask;
     }

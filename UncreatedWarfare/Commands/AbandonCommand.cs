@@ -2,13 +2,12 @@
 //using Uncreated.Warfare.Interaction.Commands;
 //using Uncreated.Warfare.Translations;
 //using Uncreated.Warfare.Vehicles;
-//using Uncreated.Warfare.Vehicles.Info;
 //using Uncreated.Warfare.Zones;
 
 //namespace Uncreated.Warfare.Commands;
 
 //[Command("abandon", "av"), MetadataFile]
-//public class AbandonCommand : IExecutableCommand
+//internal sealed class AbandonCommand : IExecutableCommand
 //{
 //    private readonly ZoneStore _zoneStore;
 //    private readonly VehicleInfoStore _vehicleInfo;
@@ -16,7 +15,7 @@
 //    private readonly AbandonTranslations _translations;
 
 //    /// <inheritdoc />
-//    public CommandContext Context { get; set; }
+//    public required CommandContext Context { get; init; }
 
 //    public AbandonCommand(TranslationInjection<AbandonTranslations> translations, ZoneStore zoneStore, VehicleInfoStore vehicleInfo, AbandonService abandonService)
 //    {

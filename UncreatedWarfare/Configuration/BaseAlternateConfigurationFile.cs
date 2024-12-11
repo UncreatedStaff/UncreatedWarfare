@@ -75,7 +75,7 @@ public abstract class BaseAlternateConfigurationFile : IConfiguration, IDisposab
     protected virtual void HandleChange() { }
 
     /// <inheritdoc />
-    public string this[string key] { get => _configuration[key]; set => _configuration[key] = value; }
+    public string? this[string key] { get => _configuration[key]; set => _configuration[key] = value; }
 
     /// <inheritdoc />
     public IConfigurationSection GetSection(string key) => _configuration.GetSection(key);

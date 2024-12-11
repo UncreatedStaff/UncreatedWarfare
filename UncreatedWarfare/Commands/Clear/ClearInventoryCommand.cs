@@ -8,11 +8,12 @@ using Uncreated.Warfare.Util;
 namespace Uncreated.Warfare.Commands;
 
 [Command("inventory", "inv"), SubCommandOf(typeof(ClearCommand))]
-public class ClearInventoryCommand : IExecutableCommand
+internal sealed class ClearInventoryCommand : IExecutableCommand
 {
     private readonly ClearTranslations _translations;
 
-    public CommandContext Context { get; set; }
+    public required CommandContext Context { get; init; }
+
     public ClearInventoryCommand(TranslationInjection<ClearTranslations> translations)
     {
         _translations = translations.Value;

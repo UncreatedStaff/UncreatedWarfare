@@ -16,7 +16,7 @@ public class PhaseTeamSettings
     /// <summary>
     /// Can be (in order of priority) A faction name, a team ID, 'attack', or 'defense'.
     /// </summary>
-    public string Team { get; set; }
+    public string? Team { get; set; }
 
     /// <summary>
     /// If the team can't leave their base during the phase.
@@ -31,5 +31,5 @@ public class PhaseTeamSettings
     /// <summary>
     /// Extra configuration about the team, assign at initialization time.
     /// </summary>
-    public IConfiguration Configuration { get; internal set; }
+    public IConfiguration? Configuration { get; internal set; }
 }

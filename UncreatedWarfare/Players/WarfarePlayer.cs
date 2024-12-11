@@ -48,7 +48,7 @@ public class WarfarePlayer : IPlayer, ICommandUser, IComponentContainer<IPlayerC
 
     [Obsolete]
     public SemaphoreSlim PurchaseSync { get; }
-    public PlayerSummary SteamSummary { get; internal set; }
+    public PlayerSummary SteamSummary { get; internal set; } = null!;
     public SessionRecord CurrentSession { get; internal set; }
     public ref PlayerPoints CachedPoints => ref _cachedPoints;
 

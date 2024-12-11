@@ -12,12 +12,12 @@ using Uncreated.Warfare.Stats;
 namespace Uncreated.Warfare.Commands;
 
 [Command("offenses"), HideFromHelp, SubCommandOf(typeof(MigrateCommand))]
-public class MigrateLegacyPointsCommand : IExecutableCommand
+internal sealed class MigrateLegacyPointsCommand : IExecutableCommand
 {
     private readonly IManualMySqlProvider _mySqlProvider;
     private readonly IPointsStore _pointsSql;
     private readonly WarfareDbContext _dbContext;
-    public CommandContext Context { get; set; }
+    public required CommandContext Context { get; init; }
 
     public MigrateLegacyPointsCommand(IManualMySqlProvider mySqlProvider, IPointsStore pointsSql, WarfareDbContext dbContext)
     {
@@ -63,7 +63,6 @@ public class MigrateLegacyPointsCommand : IExecutableCommand
 
         try
         {
-            int rowCt = 0;
             List<LegacyPointsInfo> points = new List<LegacyPointsInfo>(65536);
 
             await _mySqlProvider.QueryAsync($"SELECT `Steam64`,`Team`,`{xpName}`,`{creditsName}` FROM `{tableName}`;", null, token, reader =>

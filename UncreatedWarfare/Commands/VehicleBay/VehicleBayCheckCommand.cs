@@ -8,13 +8,13 @@ using Uncreated.Warfare.Vehicles.Spawners;
 namespace Uncreated.Warfare.Commands;
 
 [Command("check", "id", "wtf"), SubCommandOf(typeof(VehicleBayCommand))]
-public class VehicleBayCheckCommand : IExecutableCommand
+internal sealed class VehicleBayCheckCommand : IExecutableCommand
 {
     private readonly VehicleSpawnerService _spawnerStore;
     private readonly VehicleBayCommandTranslations _translations;
 
     /// <inheritdoc />
-    public CommandContext Context { get; set; }
+    public required CommandContext Context { get; init; }
 
     public VehicleBayCheckCommand(
         TranslationInjection<VehicleBayCommandTranslations> translations,

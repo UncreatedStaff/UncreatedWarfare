@@ -4,7 +4,6 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Data;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
@@ -67,7 +66,7 @@ public static class AssetLink
         if (!typeof(Asset).IsAssignableFrom(assetType))
             throw new ArgumentException("Must derive from type Asset.", nameof(assetType));
 
-        return (IAssetLink<Asset>)Activator.CreateInstance(typeof(AssetLinkImpl<>).MakeGenericType(assetType), [ guid ]);
+        return (IAssetLink<Asset>)Activator.CreateInstance(typeof(AssetLinkImpl<>).MakeGenericType(assetType), guid);
     }
     
     /// <summary>
@@ -87,7 +86,7 @@ public static class AssetLink
         if (!typeof(Asset).IsAssignableFrom(assetType))
             throw new ArgumentException("Must derive from type Asset.", nameof(assetType));
 
-        return (IAssetLink<Asset>)Activator.CreateInstance(typeof(AssetLinkImpl<>).MakeGenericType(assetType), [ guid ]);
+        return (IAssetLink<Asset>)Activator.CreateInstance(typeof(AssetLinkImpl<>).MakeGenericType(assetType), guid);
     }
     
     /// <summary>
@@ -107,7 +106,7 @@ public static class AssetLink
         if (!typeof(Asset).IsAssignableFrom(assetType))
             throw new ArgumentException("Must derive from type Asset.", nameof(assetType));
 
-        return (IAssetLink<Asset>)Activator.CreateInstance(typeof(AssetLinkImpl<>).MakeGenericType(assetType), [ id ]);
+        return (IAssetLink<Asset>)Activator.CreateInstance(typeof(AssetLinkImpl<>).MakeGenericType(assetType), id);
     }
     
     /// <summary>
@@ -130,7 +129,7 @@ public static class AssetLink
         if (!typeof(Asset).IsAssignableFrom(assetType))
             throw new ArgumentException("Must derive from type Asset.", nameof(assetType));
 
-        return (IAssetLink<Asset>)Activator.CreateInstance(typeof(AssetLinkImpl<>).MakeGenericType(assetType), [ asset ]);
+        return (IAssetLink<Asset>)Activator.CreateInstance(typeof(AssetLinkImpl<>).MakeGenericType(assetType), asset);
     }
 
     /// <summary>
@@ -175,7 +174,7 @@ public static class AssetLink
         if (asset != null && !toAssetType.IsInstanceOfType(asset))
             throw new InvalidCastException($"Can not cast an asset of type {Accessor.ExceptionFormatter.Format(fromAssetType)} to {Accessor.ExceptionFormatter.Format(toAssetType)}.");
 
-        return (IAssetLink<Asset>)Activator.CreateInstance(typeof(AssetLinkImpl<>).MakeGenericType(toAssetType), [ assetLink ]);
+        return (IAssetLink<Asset>)Activator.CreateInstance(typeof(AssetLinkImpl<>).MakeGenericType(toAssetType), assetLink);
     }
 
     /// <summary>
@@ -220,17 +219,17 @@ public static class AssetLink
             throw new ArgumentException("Must derive from type Asset.", nameof(assetType));
 
         if (string.IsNullOrEmpty(value))
-            return (IAssetLink<Asset>)Activator.CreateInstance(typeof(AssetLinkImpl<>).MakeGenericType(assetType), [ 0 ]);
+            return (IAssetLink<Asset>)Activator.CreateInstance(typeof(AssetLinkImpl<>).MakeGenericType(assetType), 0);
 
         if (Guid.TryParse(value, out Guid guid))
-            return (IAssetLink<Asset>)Activator.CreateInstance(typeof(AssetLinkImpl<>).MakeGenericType(assetType), [ guid ]);
+            return (IAssetLink<Asset>)Activator.CreateInstance(typeof(AssetLinkImpl<>).MakeGenericType(assetType), guid);
 
         if (ushort.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out ushort id))
-            return (IAssetLink<Asset>)Activator.CreateInstance(typeof(AssetLinkImpl<>).MakeGenericType(assetType), [ id ]);
+            return (IAssetLink<Asset>)Activator.CreateInstance(typeof(AssetLinkImpl<>).MakeGenericType(assetType), id);
 
         Asset? pathAsset = Assets.findByAbsolutePath(value);
         if (pathAsset != null && assetType.IsInstanceOfType(pathAsset))
-            return (IAssetLink<Asset>)Activator.CreateInstance(typeof(AssetLinkImpl<>).MakeGenericType(assetType), [ pathAsset ]);
+            return (IAssetLink<Asset>)Activator.CreateInstance(typeof(AssetLinkImpl<>).MakeGenericType(assetType), pathAsset);
 
         if (pathAsset != null)
             throw new FormatException($"Asset path does not match asset of type {Accessor.ExceptionFormatter.Format(assetType)} while reading {Accessor.ExceptionFormatter.Format(typeof(IAssetLink<>).MakeGenericType(assetType))} in string notation.");
@@ -281,26 +280,26 @@ public static class AssetLink
     {
         if (string.IsNullOrEmpty(value))
         {
-            asset = (IAssetLink<Asset>)Activator.CreateInstance(typeof(AssetLinkImpl<>).MakeGenericType(assetType), [ 0 ]);
+            asset = (IAssetLink<Asset>)Activator.CreateInstance(typeof(AssetLinkImpl<>).MakeGenericType(assetType), 0);
             return true;
         }
 
         if (Guid.TryParse(value, out Guid guid))
         {
-            asset = (IAssetLink<Asset>)Activator.CreateInstance(typeof(AssetLinkImpl<>).MakeGenericType(assetType), [ guid ]);
+            asset = (IAssetLink<Asset>)Activator.CreateInstance(typeof(AssetLinkImpl<>).MakeGenericType(assetType), guid);
             return true;
         }
 
         if (ushort.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out ushort id))
         {
-            asset = (IAssetLink<Asset>)Activator.CreateInstance(typeof(AssetLinkImpl<>).MakeGenericType(assetType), [ id ]);
+            asset = (IAssetLink<Asset>)Activator.CreateInstance(typeof(AssetLinkImpl<>).MakeGenericType(assetType), id);
             return true;
         }
 
         Asset? pathAsset = Assets.findByAbsolutePath(value);
         if (pathAsset != null && assetType.IsInstanceOfType(pathAsset))
         {
-            asset = (IAssetLink<Asset>)Activator.CreateInstance(typeof(AssetLinkImpl<>).MakeGenericType(assetType), [ pathAsset ]);
+            asset = (IAssetLink<Asset>)Activator.CreateInstance(typeof(AssetLinkImpl<>).MakeGenericType(assetType), pathAsset);
             return true;
         }
 
@@ -323,7 +322,7 @@ public static class AssetLink
     /// <exception cref="AssetNotFoundException"/>
     public static void AssertValid<TAsset>([System.Diagnostics.CodeAnalysis.NotNull] this IAssetLink<TAsset>? link) where TAsset : Asset
     {
-        if (link == null)
+        if (link == null || !link.TryGetAsset(out _))
             throw new AssetNotFoundException();
     }
 
@@ -639,7 +638,7 @@ public static class AssetLink
             if (reader.TryGetGuid(out Guid guid))
                 return Create<TAsset>(guid);
 
-            string val = reader.GetString();
+            string? val = reader.GetString();
 
             if (ushort.TryParse(reader.GetString(), NumberStyles.Number, CultureInfo.InvariantCulture, out ushort id))
                 return Create<TAsset>(id);
@@ -706,14 +705,14 @@ public static class AssetLink
         Type genType = type.GetGenericArguments()[0];
 
         if (Guid.TryParse(value, out Guid guid))
-            return Activator.CreateInstance(typeof(AssetLinkImpl<>).MakeGenericType(genType), [ guid ]);
+            return Activator.CreateInstance(typeof(AssetLinkImpl<>).MakeGenericType(genType), guid);
 
         if (ushort.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out ushort id))
-            return Activator.CreateInstance(typeof(AssetLinkImpl<>).MakeGenericType(genType), [ id ]);
+            return Activator.CreateInstance(typeof(AssetLinkImpl<>).MakeGenericType(genType), id);
 
         Asset? pathAsset = Assets.findByAbsolutePath(value);
         if (pathAsset != null && genType.IsInstanceOfType(pathAsset))
-            return Activator.CreateInstance(typeof(AssetLinkImpl<>).MakeGenericType(genType), [ pathAsset ]);
+            return Activator.CreateInstance(typeof(AssetLinkImpl<>).MakeGenericType(genType), pathAsset);
 
         if (pathAsset != null)
             throw new JsonException($"Asset path does not match asset of type {Accessor.ExceptionFormatter.Format(genType)} while reading {Accessor.ExceptionFormatter.Format(type)} in string notation.");

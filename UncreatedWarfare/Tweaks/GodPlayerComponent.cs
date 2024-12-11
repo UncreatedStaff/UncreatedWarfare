@@ -11,7 +11,8 @@ namespace Uncreated.Warfare.Tweaks;
 [PlayerComponent]
 public class GodPlayerComponent : IPlayerComponent
 {
-    public static readonly PermissionLeaf GodPermission = new PermissionLeaf("warfare::features.god");
+    public const string GodPermissionName = "warfare::features.god";
+    public static readonly PermissionLeaf GodPermission = new PermissionLeaf(GodPermissionName);
     public bool IsActive { get; set; }
     public WarfarePlayer Player { get; private set; }
     public void Init(IServiceProvider serviceProvider, bool isOnJoin)
