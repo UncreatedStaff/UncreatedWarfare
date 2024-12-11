@@ -513,10 +513,6 @@ public sealed class WarfareModule
         //    .AsImplementedInterfaces().AsSelf()
         //    .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
 
-        bldr.RegisterType<DualSidedLeaderboardUI>()
-            .AsImplementedInterfaces().AsSelf()
-            .SingleInstance();
-
         bldr.RegisterType<VehicleService>()
             .AsImplementedInterfaces().AsSelf()
             .SingleInstance();

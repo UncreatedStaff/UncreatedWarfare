@@ -62,7 +62,7 @@ public class ShovelableBuildable : PointsShoveable
     {
         emplacementInfo.Vehicle.AssertValid();
 
-        _ = _serviceProvider.GetRequiredService<VehicleRequestService>().SpawnVehicleAsync(
+        _ = _serviceProvider.GetRequiredService<VehicleService>().SpawnVehicleAsync(
             emplacementInfo.Vehicle,
             new Vector3(_foundation.Position.x, _foundation.Position.y + 2, _foundation.Position.z),
             // rotate x + 90 degrees because nelson sucks

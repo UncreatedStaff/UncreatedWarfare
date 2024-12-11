@@ -10,7 +10,7 @@ namespace Uncreated.Warfare.Commands;
 [Command("respawn", "force"), SubCommandOf(typeof(VehicleBayCommand))]
 internal sealed class VehicleBayRespawnCommand : IExecutableCommand
 {
-    private readonly VehicleRequestService _vehicleService;
+    private readonly VehicleService _vehicleService;
     private readonly VehicleSpawnerService _spawnerStore;
     private readonly VehicleBayCommandTranslations _translations;
 
@@ -19,7 +19,7 @@ internal sealed class VehicleBayRespawnCommand : IExecutableCommand
 
     public VehicleBayRespawnCommand(
         TranslationInjection<VehicleBayCommandTranslations> translations,
-        VehicleRequestService vehicleService,
+        VehicleService vehicleService,
         VehicleSpawnerService spawnerStore)
     {
         _vehicleService = vehicleService;

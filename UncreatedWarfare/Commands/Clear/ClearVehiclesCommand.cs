@@ -8,12 +8,12 @@ namespace Uncreated.Warfare.Commands;
 [Command("vehicles", "veh", "v"), SubCommandOf(typeof(ClearCommand))]
 internal sealed class ClearVehiclesCommand : IExecutableCommand
 {
-    private readonly VehicleRequestService _vehicleService;
+    private readonly VehicleService _vehicleService;
     private readonly ClearTranslations _translations;
 
     public required CommandContext Context { get; init; }
 
-    public ClearVehiclesCommand(VehicleRequestService vehicleService, TranslationInjection<ClearTranslations> translations)
+    public ClearVehiclesCommand(VehicleService vehicleService, TranslationInjection<ClearTranslations> translations)
     {
         _vehicleService = vehicleService;
         _translations = translations.Value;

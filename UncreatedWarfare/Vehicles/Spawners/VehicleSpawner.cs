@@ -32,7 +32,7 @@ namespace Uncreated.Warfare.Vehicles.Spawners
         private SignInstancer _signInstancer;
         private IPlayerService _playerService;
         private ITeamManager<Team> _teamManager;
-        private VehicleRequestService _vehicleService;
+        private VehicleService _vehicleService;
         private VehicleSpawnerSelector? _vehicleSpawnerSelector;
 
         private DateTime _timeDestroyed;
@@ -75,7 +75,7 @@ namespace Uncreated.Warfare.Vehicles.Spawners
             _playerService = layoutServiceProvider.GetRequiredService<IPlayerService>();
             _teamManager = layoutServiceProvider.GetRequiredService<ITeamManager<Team>>();
             _zoneStore = layoutServiceProvider.GetRequiredService<ZoneStore>();
-            _vehicleService = layoutServiceProvider.GetRequiredService<VehicleRequestService>();
+            _vehicleService = layoutServiceProvider.GetRequiredService<VehicleService>();
             _vehicleSpawnerSelector = layoutServiceProvider.GetService<VehicleSpawnerSelector>();
             _updateTicker = updateTicker;
             updateTicker.OnTick += Update;
