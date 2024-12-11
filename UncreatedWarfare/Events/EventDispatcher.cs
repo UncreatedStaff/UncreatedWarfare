@@ -563,7 +563,7 @@ public partial class EventDispatcher : IHostedService, IDisposable
                 try
                 {
                     ServiceRegistration reg = new ServiceRegistration(serviceRegistration.ResolvePipeline, serviceRegistration);
-                    implementation = (IEventListenerProvider)childScope.ResolveComponent(new ResolveRequest(service, reg, parameters, serviceRegistration));
+                    implementation = (IEventListenerProvider)scope.ResolveComponent(new ResolveRequest(service, reg, parameters, serviceRegistration));
                 }
                 catch (Exception ex)
                 {
@@ -656,7 +656,7 @@ public partial class EventDispatcher : IHostedService, IDisposable
                         {
                             // resolve component from its registration
                             ServiceRegistration reg = new ServiceRegistration(serviceRegistration.ResolvePipeline, serviceRegistration);
-                            implementation = childScope.ResolveComponent(new ResolveRequest(service, reg, parameters, serviceRegistration));
+                            implementation = scope.ResolveComponent(new ResolveRequest(service, reg, parameters, serviceRegistration));
                         }
                         catch (Exception ex)
                         {
