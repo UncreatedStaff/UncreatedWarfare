@@ -519,11 +519,11 @@ public sealed class WarfareModule
 
         bldr.RegisterType<VehicleRequestService>()
             .AsImplementedInterfaces().AsSelf()
-            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
-        
+            .SingleInstance();
+
         bldr.RegisterType<VehicleSpawnerStore>()
             .AsImplementedInterfaces().AsSelf()
-            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+            .SingleInstance();
 
         bldr.RegisterType<VehicleSpawnerService>()
             .AsImplementedInterfaces().AsSelf()

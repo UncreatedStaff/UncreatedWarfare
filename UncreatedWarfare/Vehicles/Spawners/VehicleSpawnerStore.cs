@@ -28,7 +28,7 @@ namespace Uncreated.Warfare.Vehicles;
 /// <remarks>Decided to go with raw binary instead of SQL since this kind of relies on other level savedata and the map, plus it was easier.</remarks>
 
 [Priority(-1 /* load after BuildableSaver and VehicleInfoStore */)]
-public class VehicleSpawnerStore : ILayoutHostedService
+public class VehicleSpawnerStore : ILayoutHostedService, IDisposable
 {
     private YamlDataStore<List<VehicleSpawnInfo>> _dataStore;
     private readonly WarfareModule _warfare;
@@ -56,31 +56,16 @@ public class VehicleSpawnerStore : ILayoutHostedService
 
     UniTask ILayoutHostedService.StartAsync(CancellationToken token)
     {
-        if (Level.isLoaded)
-        {
-            OnLevelLoaded(Level.BUILD_INDEX_GAME);
-        }
-        else
-        {
-            Level.onLevelLoaded += OnLevelLoaded;
-        }
-
+        ReloadSpawners();
         return UniTask.CompletedTask;
     }
 
     UniTask ILayoutHostedService.StopAsync(CancellationToken token)
     {
-        Level.onLevelLoaded -= OnLevelLoaded;
-        _dataStore?.Dispose();
         return UniTask.CompletedTask;
     }
-    private void OnLevelLoaded(int level)
+    private void ReloadSpawners()
     {
-        if (level != Level.BUILD_INDEX_GAME)
-            return;
-
-        Level.onLevelLoaded -= OnLevelLoaded;
-
         _dataStore.Reload();
         OnSpawnsReloaded?.Invoke();
     }
@@ -143,5 +128,10 @@ public class VehicleSpawnerStore : ILayoutHostedService
         await UniTask.SwitchToMainThread(token);
 
         _dataStore.Save(); // todo: make an async Save() function
+    }
+
+    public void Dispose()
+    {
+        _dataStore.Dispose();
     }
 }
