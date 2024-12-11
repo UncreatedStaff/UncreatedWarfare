@@ -1,4 +1,4 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
 using HarmonyLib;
 using StackCleaner;
@@ -118,7 +118,7 @@ internal class ChatManagerOnChatRequested : IHarmonyPatch
         UniTask.Create(async () =>
         {
             UserPermissionStore permission = serviceProvider.Resolve<UserPermissionStore>();
-            EventDispatcher2 eventDispatcher = serviceProvider.Resolve<EventDispatcher2>();
+            EventDispatcher eventDispatcher = serviceProvider.Resolve<EventDispatcher>();
 
             bool onDuty = await permission.HasPermissionAsync(player, AdminChatPermissions, token);
 

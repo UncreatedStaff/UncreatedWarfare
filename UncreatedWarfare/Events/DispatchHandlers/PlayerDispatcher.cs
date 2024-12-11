@@ -7,7 +7,7 @@ using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 
 namespace Uncreated.Warfare.Events;
-partial class EventDispatcher2
+partial class EventDispatcher
 {
     /// <summary>
     /// Invoked by <see cref="DamageTool.damagePlayerRequested"/> when a player starts to get damaged. Can be cancelled.

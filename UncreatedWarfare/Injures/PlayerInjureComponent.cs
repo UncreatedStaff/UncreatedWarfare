@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using StackCleaner;
 using System;
 using System.Globalization;
@@ -105,7 +105,7 @@ public class PlayerInjureComponent : MonoBehaviour,
     private DeathTracker _deathTracker;
     private ChatService _chatService;
     private IPlayerService _playerService;
-    private EventDispatcher2 _eventDispatcher;
+    private EventDispatcher _eventDispatcher;
     private AssetConfiguration _assetConfiguration;
     private PointsTranslations _xpTranslations;
     private CooldownManager _cooldownManager;
@@ -142,7 +142,7 @@ public class PlayerInjureComponent : MonoBehaviour,
         _chatService = serviceProvider.GetRequiredService<ChatService>();
         _playerService = serviceProvider.GetRequiredService<IPlayerService>();
         _assetConfiguration = serviceProvider.GetRequiredService<AssetConfiguration>();
-        _eventDispatcher = serviceProvider.GetRequiredService<EventDispatcher2>();
+        _eventDispatcher = serviceProvider.GetRequiredService<EventDispatcher>();
         _cooldownManager = serviceProvider.GetRequiredService<CooldownManager>();
         _xpTranslations = serviceProvider.GetRequiredService<TranslationInjection<PointsTranslations>>().Value;
 

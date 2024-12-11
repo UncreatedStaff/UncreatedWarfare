@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace Uncreated.Warfare.Events.Components;
 
@@ -12,7 +12,7 @@ public class ThrowableComponent : MonoBehaviour
     private void Start() => UnityInstanceID = gameObject.GetInstanceID();
     private void OnDestroy()
     {
-        EventDispatcher.InvokeOnThrowableDespawning(this);
+        // todo: EventDispatcher.InvokeOnThrowableDespawning(this);
     }
 }
 

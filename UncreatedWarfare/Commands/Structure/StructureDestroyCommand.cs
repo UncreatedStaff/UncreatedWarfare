@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events;
@@ -18,13 +18,13 @@ internal sealed class StructureDestroyCommand : IExecutableCommand
 {
     private readonly BuildableSaver _saver;
     private readonly VehicleService _vehicleService;
-    private readonly EventDispatcher2 _eventDispatcher;
+    private readonly EventDispatcher _eventDispatcher;
     private readonly StructureTranslations _translations;
 
     /// <inheritdoc />
     public required CommandContext Context { get; init; }
 
-    public StructureDestroyCommand(VehicleService vehicleService, BuildableSaver saver, EventDispatcher2 eventDispatcher, TranslationInjection<StructureTranslations> translations)
+    public StructureDestroyCommand(VehicleService vehicleService, BuildableSaver saver, EventDispatcher eventDispatcher, TranslationInjection<StructureTranslations> translations)
     {
         _saver = saver;
         _vehicleService = vehicleService;

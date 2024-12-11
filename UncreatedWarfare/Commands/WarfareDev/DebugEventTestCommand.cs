@@ -10,11 +10,13 @@ namespace Uncreated.Warfare.Commands;
 [Command("eventtest"), SubCommandOf(typeof(WarfareDevCommand))]
 internal sealed class DebugEventTestCommand : IExecutableCommand
 {
-    private readonly EventDispatcher2 _eventDispatcher;
+    // uncomment service registrations for TestEventService1-7 in WarfareModule for full tests
+
+    private readonly EventDispatcher _eventDispatcher;
 
     public required CommandContext Context { get; init; }
 
-    public DebugEventTestCommand(EventDispatcher2 eventDispatcher)
+    public DebugEventTestCommand(EventDispatcher eventDispatcher)
     {
         _eventDispatcher = eventDispatcher;
     }

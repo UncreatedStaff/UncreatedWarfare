@@ -1,4 +1,4 @@
-﻿using SDG.NetTransport;
+using SDG.NetTransport;
 using System;
 using System.Diagnostics.CodeAnalysis;
 using Uncreated.Warfare.Events;
@@ -95,7 +95,7 @@ public static class VehicleUtility
             IgnoreSwapCooldown = true;
             try
             {
-                EventDispatcher.InvokeVehicleManagerOnSwapSeatRequested(player, vehicle, ref shouldAllow, fromSeat, ref freeSeat2);
+                // todo: EventDispatcher.InvokeVehicleManagerOnSwapSeatRequested(player, vehicle, ref shouldAllow, fromSeat, ref freeSeat2);
             }
             finally
             {

@@ -1,11 +1,11 @@
-﻿using Uncreated.Warfare.Events.Models.Items;
+using Uncreated.Warfare.Events.Models.Items;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Events;
-partial class EventDispatcher2
+partial class EventDispatcher
 {
     /// <summary>
     /// Invoked by <see cref="ItemManager.onTakeItemRequested"/> when a player tries to pick up an item. Can be cancelled.
@@ -15,10 +15,11 @@ partial class EventDispatcher2
         if (!shouldAllow)
             return;
 
+        shouldAllow = false;
+
         ItemAsset? asset = itemData.item.GetAsset();
         if (asset == null)
         {
-            shouldAllow = false;
             return;
         }
 
@@ -27,7 +28,6 @@ partial class EventDispatcher2
         int index = ItemUtility.FindItem(instanceId, x, y).Index;
         if (index is < 0 or > ushort.MaxValue)
         {
-            shouldAllow = false;
             return;
         }
 
@@ -46,6 +46,7 @@ partial class EventDispatcher2
             Item = itemData.item
         };
 
+        // DroppedItemTracker handles the ItemDestroyed invocation.
         EventContinuations.Dispatch(args, this, warfarePlayer.DisconnectToken, out shouldAllow, continuation: args =>
         {
             if (args.AutoFindFreeSpace
@@ -82,7 +83,6 @@ partial class EventDispatcher2
             {
                 args.PlayerObject.sendMessage(EPlayerMessage.SPACE);
             }
-        },
-        needsToContinue: args => args.DestinationX != toX || args.DestinationY != toY || (byte)args.DestinationPage != toPage);
+        }, needsToContinue: _ => true);
     }
 }

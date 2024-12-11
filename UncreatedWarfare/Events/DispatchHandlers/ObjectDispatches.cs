@@ -1,10 +1,10 @@
-﻿using Uncreated.Warfare.Events.Models.Objects;
+using Uncreated.Warfare.Events.Models.Objects;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Events;
 
-partial class EventDispatcher2
+partial class EventDispatcher
 {
     /// <summary>
     /// Invoked by <see cref="ObjectManager.OnQuestObjectUsed"/> when a player interacts with a quest object.

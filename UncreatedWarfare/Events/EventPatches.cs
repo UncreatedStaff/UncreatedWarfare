@@ -1,4 +1,4 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using HarmonyLib;
 using System.Collections.Generic;
 using System.Linq;
@@ -28,29 +28,6 @@ internal static class EventPatches
 
         PatchUtil.PatchMethod(typeof(PlayerLife).GetMethod("doDamage", BindingFlags.NonPublic | BindingFlags.Instance), ref _fail, logger,
             prefix: Accessor.GetMethod(PlayerDamageRequested));
-
-        if (MthdRemoveItem != null)
-        {
-            if (MthdAddItem != null)
-            {
-                PatchUtil.PatchMethod(typeof(PlayerInventory).GetMethod(nameof(PlayerInventory.ReceiveDragItem), BindingFlags.Public | BindingFlags.Instance), ref _fail, logger,
-                    transpiler: Accessor.GetMethod(TranspileReceiveDragItem));
-
-                PatchUtil.PatchMethod(typeof(PlayerInventory).GetMethod(nameof(PlayerInventory.ReceiveSwapItem), BindingFlags.Public | BindingFlags.Instance), ref _fail, logger,
-                    transpiler: Accessor.GetMethod(TranspileReceiveSwapItem));
-            }
-            else
-            {
-                logger.LogError("Unable to find Items.addItem to transpile player inventory events.");
-            }
-        }
-        else
-        {
-            logger.LogError("Unable to find PlayerInventory.removeItem to transpile player inventory events.");
-        }
-
-        PatchUtil.PatchMethod(typeof(ItemManager).GetMethod(nameof(ItemManager.ReceiveTakeItemRequest), BindingFlags.Public | BindingFlags.Static), ref _fail, logger,
-            transpiler: Accessor.GetMethod(TranspileReceiveTakeItemRequest));
 
         if (!PatchUtil.PatchMethod(typeof(InteractablePower).GetMethod("CalculateIsConnectedToPower", BindingFlags.NonPublic | BindingFlags.Instance), logger, prefix: Accessor.GetMethod(OnCalculatingPower)))
             Data.UseElectricalGrid = false;
@@ -265,117 +242,5 @@ internal static class EventPatches
 
         return true;
         //return obj.interactable != null && fg.IsPowerObjectEnabled(obj.interactable);
-    }
-    private static readonly MethodInfo? MthdRemoveItem = typeof(PlayerInventory).GetMethod(nameof(PlayerInventory.removeItem));
-    private static readonly MethodInfo? MthdAddItem = typeof(SDG.Unturned.Items).GetMethod(nameof(SDG.Unturned.Items.addItem));
-    private static IEnumerable<CodeInstruction> TranspileReceiveSwapOrDragItem(IEnumerable<CodeInstruction> instructions, ILGenerator generator, bool swap)
-    {
-        List<CodeInstruction> insts = instructions.ToList();
-        Label lbl = generator.DefineLabel();
-        int c = 0;
-        int c2 = 0;
-        for (int i = 0; i < insts.Count; ++i)
-        {
-            CodeInstruction instruction = insts[i];
-            if (instruction.Calls(MthdAddItem!))
-            {
-                ++c2;
-                if (c2 == (swap ? 2 : 1))
-                {
-                    yield return instruction;
-
-                    yield return new CodeInstruction(OpCodes.Ldarg_0);                        // this
-                    yield return new CodeInstruction(OpCodes.Ldarg_1);                        // page_0
-                    yield return new CodeInstruction(OpCodes.Ldarg_S, (byte)(swap ? 5 : 4));  // page_1
-                    yield return new CodeInstruction(OpCodes.Ldarg_2);                        // x_0
-                    yield return new CodeInstruction(OpCodes.Ldarg_S, (byte)(swap ? 6 : 5));  // x_1
-                    yield return new CodeInstruction(OpCodes.Ldarg_3);                        // y_0
-                    yield return new CodeInstruction(OpCodes.Ldarg_S, (byte)(swap ? 7 : 6));  // y_1
-                    if (swap)
-                        yield return new CodeInstruction(OpCodes.Ldarg_S, (byte)4);           // rot_0
-                    else
-                        yield return new CodeInstruction(OpCodes.Ldc_I4_0);                 
-                    yield return new CodeInstruction(OpCodes.Ldarg_S, (byte)(swap ? 8 : 7));  // rot_1
-                    yield return new CodeInstruction(swap ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
-                    yield return new CodeInstruction(OpCodes.Call, Accessor.GetMethod(EventDispatcher.OnDraggedOrSwappedItem));
-                    WarfareModule.Singleton.GlobalLogger.LogDebug("Patched " + (swap ? "ReceiveSwapItem" : "ReceiveDragItem") + " post event.");
-                    continue;
-                }
-            }
-            else if (instruction.opcode == OpCodes.Ldloc_0 && insts.Count > i + 3 && insts[i + 3].Calls(MthdRemoveItem))
-            {
-                ++c;
-                if (c == (swap ? 2 : 1))
-                {
-                    yield return new CodeInstruction(OpCodes.Ldarg_0);           // this
-                    yield return new CodeInstruction(OpCodes.Ldarg_1);           // page_0
-                    yield return new CodeInstruction(OpCodes.Ldarga_S, (byte)4); // page_1
-                    yield return new CodeInstruction(OpCodes.Ldarg_2);           // x_0
-                    yield return new CodeInstruction(OpCodes.Ldarga_S, (byte)5); // x_1
-                    yield return new CodeInstruction(OpCodes.Ldarg_3);           // y_0
-                    yield return new CodeInstruction(OpCodes.Ldarga_S, (byte)6); // y_1
-                    yield return new CodeInstruction(OpCodes.Ldarga_S, (byte)7); // rot_1
-                    yield return new CodeInstruction(swap ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
-                    yield return new CodeInstruction(OpCodes.Call, Accessor.GetMethod(EventDispatcher.OnDraggingOrSwappingItem));
-                    yield return new CodeInstruction(OpCodes.Brtrue, lbl);       // return if cancelled
-                    yield return new CodeInstruction(OpCodes.Ret);
-                    WarfareModule.Singleton.GlobalLogger.LogDebug("Patched " + (swap ? "ReceiveSwapItem" : "ReceiveDragItem") + " requested event.");
-                    generator.MarkLabel(lbl);
-                }
-            }
-
-            yield return instruction;
-        }
-    }
-    private static IEnumerable<CodeInstruction> TranspileReceiveSwapItem(IEnumerable<CodeInstruction> instructions,
-        ILGenerator generator) => TranspileReceiveSwapOrDragItem(instructions, generator, true);
-    private static IEnumerable<CodeInstruction> TranspileReceiveDragItem(IEnumerable<CodeInstruction> instructions,
-        ILGenerator generator) => TranspileReceiveSwapOrDragItem(instructions, generator, false);
-    private static IEnumerable<CodeInstruction> TranspileReceiveTakeItemRequest(IEnumerable<CodeInstruction> instructions, ILGenerator generator, MethodBase method)
-    {
-        FieldInfo? rpcField = typeof(ItemManager).GetField("SendDestroyItem", BindingFlags.NonPublic | BindingFlags.Static);
-        if (rpcField == null)
-            WarfareModule.Singleton.GlobalLogger.LogWarning("Unable to find 'ItemManager.SendDestroyItem' while transpiling ReceiveTakeItemRequest.");
-
-        int lcl = method.FindLocalOfType<ItemData>();
-        if (lcl < 0)
-            WarfareModule.Singleton.GlobalLogger.LogWarning("Unable to find local for ItemData while transpiling ReceiveTakeItemRequest.");
-
-        int lcl2 = method.FindLocalOfType<Player>();
-        if (lcl2 < 0)
-            WarfareModule.Singleton.GlobalLogger.LogWarning("Unable to find local for Player while transpiling ReceiveTakeItemRequest.");
-
-        List<CodeInstruction> insts = instructions.ToList();
-        bool foundOne = false;
-        bool nextRtnCallEvent = false;
-        for (int i = 0; i < insts.Count; ++i)
-        {
-            CodeInstruction instruction = insts[i];
-            if (!foundOne && rpcField != null && instruction.LoadsField(rpcField))
-            {
-                foundOne = true;
-                nextRtnCallEvent = true;
-            }
-            else if (nextRtnCallEvent && instruction.opcode == OpCodes.Ret)
-            {
-                nextRtnCallEvent = false;
-                yield return new CodeInstruction(OpCodes.Ldloc_S, (byte)lcl2);  // player
-                yield return new CodeInstruction(OpCodes.Ldarg_1);              // x
-                yield return new CodeInstruction(OpCodes.Ldarg_2);              // y
-                yield return new CodeInstruction(OpCodes.Ldarg_3);              // instanceID
-                yield return new CodeInstruction(OpCodes.Ldarg_S, (byte)4);     // to_x
-                yield return new CodeInstruction(OpCodes.Ldarg_S, (byte)5);     // to_y
-                yield return new CodeInstruction(OpCodes.Ldarg_S, (byte)6);     // to_rot
-                yield return new CodeInstruction(OpCodes.Ldarg_S, (byte)7);     // to_page
-                if (lcl > -1)
-                    yield return new CodeInstruction(OpCodes.Ldloc_S, (byte)lcl); // to_page
-                else
-                    yield return new CodeInstruction(OpCodes.Ldnull);
-                yield return new CodeInstruction(OpCodes.Call, Accessor.GetMethod(EventDispatcher.OnPickedUpItem));
-                WarfareModule.Singleton.GlobalLogger.LogDebug("Patched ReceiveTakeItemRequest.");
-            }
-
-            yield return instruction;
-        }
     }
 }

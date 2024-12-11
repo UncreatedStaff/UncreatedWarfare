@@ -1,11 +1,11 @@
-﻿using System;
+using System;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 
 namespace Uncreated.Warfare.Events;
-partial class EventDispatcher2
+partial class EventDispatcher
 {
     /// <summary>
     /// Invoked by <see cref="Provider.onServerConnected"/> when a player successfully joins the server.

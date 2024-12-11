@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -21,7 +21,7 @@ using Uncreated.Warfare.Translations.Languages;
 namespace Uncreated.Warfare.Deaths;
 public class DeathMessageResolver
 {
-    private readonly EventDispatcher2 _dispatcher;
+    private readonly EventDispatcher _dispatcher;
     private readonly ILogger<DeathMessageResolver> _logger;
     private readonly ITranslationValueFormatter _valueFormatter;
     private readonly ITranslationService _translationService;
@@ -35,7 +35,7 @@ public class DeathMessageResolver
     private readonly string _dscIn;
 
     public DeathMessageResolver(
-        EventDispatcher2 dispatcher,
+        EventDispatcher dispatcher,
         ILogger<DeathMessageResolver> logger,
         ITranslationValueFormatter valueFormatter,
         ITranslationService translationService,

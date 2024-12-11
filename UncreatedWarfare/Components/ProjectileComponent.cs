@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Reflection;
 using Uncreated.Warfare.Events;
 
@@ -39,7 +39,7 @@ public class ProjectileComponent : MonoBehaviour
 
         _isExploded = true;
 
-        EventDispatcher.InvokeOnProjectileExploded(this, other);
+        // todo: EventDispatcher.InvokeOnProjectileExploded(this, other);
 
         //L.LogDebug("Collided with " + other.gameObject.name + " at " + gameObject.transform.position.ToString("F1") + " after " + (Time.realtimeSinceStartup - LaunchTime) + " seconds. (Predicted: " + (PredictedImpactTime - LaunchTime) + " seconds)");
     }

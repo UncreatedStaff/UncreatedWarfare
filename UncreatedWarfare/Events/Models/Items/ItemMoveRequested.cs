@@ -1,41 +1,63 @@
-﻿using System.Runtime.CompilerServices;
 using Uncreated.Warfare.Kits.Items;
-using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Events.Models.Items;
 
 [EventModel(SynchronizationContext = EventSynchronizationContext.PerPlayer, SynchronizedModelTags = [ "modify_inventory" ])]
 public class ItemMoveRequested : CancellablePlayerEvent
 {
-    public Page OldPage { get; }
-    public Page NewPage { get; set; }
-    public byte OldX { get; }
-    public byte NewX { get; set; }
-    public byte OldY { get; }
-    public byte NewY { get; set; }
-    public byte OldRotation { get; }
-    public byte NewRotation { get; set; }
-    public bool IsSwap { get; }
-    public ItemJar? Jar { get; }
-    public ItemJar? SwappingJar { get; }
+    /// <summary>
+    /// The original page the item is coming from.
+    /// </summary>
+    public required Page OldPage { get; init; }
 
-    [SetsRequiredMembers]
-    public ItemMoveRequested(WarfarePlayer player, Page oldPage, Page newPage, byte oldX, byte newX, byte oldY, byte newY, byte newRotation, bool isSwap, ItemJar? jar, ItemJar? swapping)
-    {
-        Player = player;
-        if (jar != null)
-        {
-            Jar = jar;
-            OldRotation = jar.rot;
-        }
-        SwappingJar = swapping;
-        OldPage = oldPage;
-        NewPage = newPage;
-        OldX = oldX;
-        NewX = newX;
-        OldY = oldY;
-        NewY = newY;
-        NewRotation = newRotation;
-        IsSwap = isSwap;
-    }
+    /// <summary>
+    /// The original X position of the item being moved.
+    /// </summary>
+    public required byte OldX { get; init; }
+
+    /// <summary>
+    /// The original Y position of the item being moved.
+    /// </summary>
+    public required byte OldY { get; init; }
+
+    /// <summary>
+    /// The original rotation of the item being moved.
+    /// </summary>
+    public required byte OldRotation { get; init; }
+
+    /// <summary>
+    /// The page the item will be moved to.
+    /// </summary>
+    public required Page NewPage { get; set; }
+
+    /// <summary>
+    /// The X position the item will be moved to.
+    /// </summary>
+    public required byte NewX { get; set; }
+
+    /// <summary>
+    /// The Y position the item will be moved to.
+    /// </summary>
+    public required byte NewY { get; set; }
+
+    /// <summary>
+    /// The rotation the item will be at when it is moved.
+    /// </summary>
+    public required byte NewRotation { get; set; }
+
+    /// <summary>
+    /// If the item is being swapped with another item (instead of moving to an empty spot).
+    /// </summary>
+    /// <remarks>This could be changed by changing the destination position and may not be up to date.</remarks>
+    public required bool IsSwap { get; init; }
+
+    /// <summary>
+    /// The item being moved.
+    /// </summary>
+    public required ItemJar Jar { get; init; }
+
+    /// <summary>
+    /// The item being swapped with this item, if applicable.
+    /// </summary>
+    public required ItemJar? SwappingJar { get; init; }
 }

@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
@@ -29,7 +29,7 @@ public class TwoSidedTeamManager : ITeamManager<Team>
     private readonly PointsService _points;
     private readonly IServiceProvider _serviceProvider;
     private readonly Team[] _teams = new Team[2];
-    private readonly EventDispatcher2 _eventDispatcher;
+    private readonly EventDispatcher _eventDispatcher;
     private readonly IPointsStore _pointsSql;
     private int _blufor;
     private int _opfor;
@@ -74,7 +74,7 @@ public class TwoSidedTeamManager : ITeamManager<Team>
         _serviceProvider = serviceProvider;
         AllTeams = new ReadOnlyCollection<Team>(_teams);
 
-        _eventDispatcher = serviceProvider.GetRequiredService<EventDispatcher2>();
+        _eventDispatcher = serviceProvider.GetRequiredService<EventDispatcher>();
         _pointsSql = serviceProvider.GetRequiredService<IPointsStore>();
     }
 

@@ -77,7 +77,7 @@ public sealed class WarfareModule
     /// </summary>
     public static readonly int Season = typeof(WarfareModule).Assembly.GetName().Version.Major;
 
-    private static EventDispatcher2? _dispatcher;
+    private static EventDispatcher? _dispatcher;
 
 #nullable disable
 
@@ -85,7 +85,7 @@ public sealed class WarfareModule
     /// Static instance of the event dispatcher singleton for harmony patches to access it.
     /// </summary>
     /// <remarks>Do not use unless in a patch.</remarks>
-    public static EventDispatcher2 EventDispatcher => _dispatcher ??= Singleton?.ServiceProvider.Resolve<EventDispatcher2>();
+    public static EventDispatcher EventDispatcher => _dispatcher ??= Singleton?.ServiceProvider.Resolve<EventDispatcher>();
 
     /// <summary>
     /// Static instance of this module singleton for harmony patches to access it.
@@ -454,14 +454,14 @@ public sealed class WarfareModule
         bldr.RegisterType<SendChatMutedEventHandler>()
             .AsImplementedInterfaces();
 
-        // todo: remove
-        bldr.RegisterType<TestEventService1>().AsSelf().AsImplementedInterfaces();
-        bldr.RegisterType<TestEventService2>().AsSelf().AsImplementedInterfaces();
-        bldr.RegisterType<TestEventService3>().AsSelf().AsImplementedInterfaces();
-        bldr.RegisterType<TestEventService4>().AsSelf().AsImplementedInterfaces();
-        bldr.RegisterType<TestEventService5>().AsSelf().AsImplementedInterfaces();
-        bldr.RegisterType<TestEventService6>().AsSelf().AsImplementedInterfaces();
-        bldr.RegisterType<TestEventService7>().AsSelf().AsImplementedInterfaces();
+        // for DebugEventTestCommand
+        // bldr.RegisterType<TestEventService1>().AsSelf().AsImplementedInterfaces();
+        // bldr.RegisterType<TestEventService2>().AsSelf().AsImplementedInterfaces();
+        // bldr.RegisterType<TestEventService3>().AsSelf().AsImplementedInterfaces();
+        // bldr.RegisterType<TestEventService4>().AsSelf().AsImplementedInterfaces();
+        // bldr.RegisterType<TestEventService5>().AsSelf().AsImplementedInterfaces();
+        // bldr.RegisterType<TestEventService6>().AsSelf().AsImplementedInterfaces();
+        // bldr.RegisterType<TestEventService7>().AsSelf().AsImplementedInterfaces();
 
 
         bldr.RegisterType<WarfareSteamApiService>()
@@ -480,7 +480,7 @@ public sealed class WarfareModule
             .AsImplementedInterfaces().AsSelf()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
 
-        bldr.RegisterType<EventDispatcher2>()
+        bldr.RegisterType<EventDispatcher>()
             .AsImplementedInterfaces().AsSelf()
             .SingleInstance();
 
