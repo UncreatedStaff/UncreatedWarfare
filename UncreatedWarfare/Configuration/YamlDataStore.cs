@@ -1,16 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
+using System;
 using System.IO;
-using System.Text;
-using YamlDotNet.Serialization.NamingConventions;
 using YamlDotNet.Serialization;
-using SDG.Framework.IO.Serialization;
 using ISerializer = YamlDotNet.Serialization.ISerializer;
-using System.Data;
-using YamlDotNet.Core;
-using Uncreated.Warfare.Configuration;
 
-namespace Uncreated.Warfare.Database;
+namespace Uncreated.Warfare.Configuration;
 public class YamlDataStore<T> : IDisposable
 {
     public delegate T DefaultData();
@@ -18,13 +11,13 @@ public class YamlDataStore<T> : IDisposable
     private T? _data;
     private readonly ILogger _logger;
     private readonly bool _reloadOnFileChanged;
-    private readonly FileInfo SourceFile;
+    private readonly FileInfo _sourceFile;
     private readonly ISerializer _serializer;
     private readonly IDeserializer _deserializer;
     private readonly Func<T>? _loadDefault;
-    private FileSystemWatcher _watcher;
+    private readonly FileSystemWatcher _watcher;
 
-    object _lock = new Object();
+    private readonly object _lock = new object();
 
     public T Data => _data ?? throw new InvalidOperationException("YamlDataStore data has not yet been loaded from its source file, and no LoadDefault value has been defined.");
     public DateTime LastLoaded { get; private set; }
@@ -32,7 +25,7 @@ public class YamlDataStore<T> : IDisposable
 
     public YamlDataStore(string filePath, ILogger logger, bool reloadOnFileChanged, Func<T>? loadDefault = null)
     {
-        SourceFile = new FileInfo(filePath);
+        _sourceFile = new FileInfo(filePath);
 
         _logger = logger;
         _reloadOnFileChanged = reloadOnFileChanged;
@@ -53,7 +46,7 @@ public class YamlDataStore<T> : IDisposable
 
         _watcher = new FileSystemWatcher();
 
-        _watcher.Filter = SourceFile.Name;
+        _watcher.Filter = _sourceFile.Name;
         _watcher.NotifyFilter = NotifyFilters.LastWrite;
         _watcher.Changed += OnChanged;
 
@@ -61,11 +54,11 @@ public class YamlDataStore<T> : IDisposable
     }
     private void CreateFileIfNotExists()
     {
-        if (!File.Exists(SourceFile.FullName))
+        if (!File.Exists(_sourceFile.FullName))
         {
             _logger.LogInformation($"YamlDataStore has not yet been loaded, so default values be loaded and saved to disk.");
 
-            Directory.CreateDirectory(SourceFile.Directory.FullName);
+            Directory.CreateDirectory(_sourceFile.Directory!.FullName);
 
             if (_data == null)
             {
@@ -73,7 +66,7 @@ public class YamlDataStore<T> : IDisposable
             }
 
             string yamlToWrite = _serializer.Serialize(_data);
-            File.WriteAllText(SourceFile.FullName, yamlToWrite);
+            File.WriteAllText(_sourceFile.FullName, yamlToWrite);
         }
     }
     private void LoadDefault()
@@ -81,14 +74,14 @@ public class YamlDataStore<T> : IDisposable
         if (_loadDefault != null)
             _data = _loadDefault();
     }
-    
+
     public void Reload()
     {
-        lock(_lock)
+        lock (_lock)
         {
             CreateFileIfNotExists();
 
-            _watcher.Path = SourceFile.Directory.FullName;
+            _watcher.Path = _sourceFile.Directory!.FullName;
             _watcher.EnableRaisingEvents = _reloadOnFileChanged;
 
             LoadIntl();
@@ -96,7 +89,7 @@ public class YamlDataStore<T> : IDisposable
     }
     private void LoadIntl()
     {
-        string yamlFromFile = File.ReadAllText(SourceFile.FullName);
+        string yamlFromFile = File.ReadAllText(_sourceFile.FullName);
 
         try
         {
@@ -108,13 +101,13 @@ public class YamlDataStore<T> : IDisposable
                 Save();
             }
 
-            LastLoaded = File.GetLastWriteTime(SourceFile.FullName);
+            LastLoaded = File.GetLastWriteTime(_sourceFile.FullName);
 
-            _logger.LogDebug($"Loaded yaml data from file {SourceFile.FullName}.");
+            _logger.LogDebug($"Loaded yaml data from file {_sourceFile.FullName}.");
         }
         catch (Exception ex)
         {
-            _logger.LogError($"Yaml data from file '{SourceFile.FullName}' could not be deserialized into an instance of {typeof(T)}. Data will not change. \nCause: {ex}");
+            _logger.LogError($"Yaml data from file '{_sourceFile.FullName}' could not be deserialized into an instance of {typeof(T)}. Data will not change. \nCause: {ex}");
         }
     }
     public void Save()
@@ -126,16 +119,15 @@ public class YamlDataStore<T> : IDisposable
 
             string yamlToWrite = _serializer.Serialize(_data);
 
-            File.WriteAllText(SourceFile.FullName, yamlToWrite);
+            File.WriteAllText(_sourceFile.FullName, yamlToWrite);
 
-            LastLoaded = File.GetLastWriteTime(SourceFile.FullName);
+            LastLoaded = File.GetLastWriteTime(_sourceFile.FullName);
 
-            _watcher.Path = SourceFile.Directory.FullName;
+            _watcher.Path = _sourceFile.Directory!.FullName;
             _watcher.EnableRaisingEvents = _reloadOnFileChanged;
+
+            _logger.LogDebug($"Saved yaml data to file {_sourceFile.FullName}.");
         }
-
-        _logger.LogDebug($"Saved yaml data to file {SourceFile.FullName}.");
-
     }
     private void OnChanged(object source, FileSystemEventArgs e)
     {
@@ -153,7 +145,7 @@ public class YamlDataStore<T> : IDisposable
                 LoadIntl();
             }
 
-            LastLoaded = File.GetLastWriteTime(SourceFile.FullName);
+            LastLoaded = File.GetLastWriteTime(_sourceFile.FullName);
 
             _logger.LogInformation($"File change detected. Yaml data has been reloaded from file '{e.Name}'");
 

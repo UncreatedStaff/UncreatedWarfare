@@ -1,23 +1,16 @@
-﻿using DanielWillett.ReflectionTools;
-using DanielWillett.SpeedBytes;
-using DanielWillett.SpeedBytes.Unity;
+using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.FileProviders;
-using SDG.Unturned;
-using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database;
-using Uncreated.Warfare.Events.Models.Fobs;
-using Uncreated.Warfare.Events.Models.Vehicles;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
-using UnityEngine;
-using UnityEngine.Profiling;
 
 namespace Uncreated.Warfare.Vehicles;
 
@@ -27,7 +20,7 @@ namespace Uncreated.Warfare.Vehicles;
 /// <remarks>Decided to go with raw binary instead of SQL since this kind of relies on other level savedata and the map, plus it was easier.</remarks>
 
 [Priority(-1 /* load after BuildableSaver */)]
-public class VehicleSpawnerStore : ILayoutHostedService
+public class VehicleSpawnerStore : ILayoutHostedService, ILevelHostedService
 {
     public class VehicleSpawnRecord
     {
@@ -38,12 +31,9 @@ public class VehicleSpawnerStore : ILayoutHostedService
         public bool IsStructure { get; set; } = false;
     }
 
-    private YamlDataStore<List<VehicleSpawnRecord>> _dataStore;
-    private readonly WarfareModule _warfare;
-    private readonly IConfiguration _configuration;
+    private readonly YamlDataStore<List<VehicleSpawnRecord>> _dataStore;
     private readonly ILogger<VehicleSpawnerStore> _logger;
     private readonly List<VehicleSpawnInfo> _spawns;
-    private PhysicalFileProvider _fileProvider;
 
     /// <summary>
     /// List of all spawns.
@@ -51,46 +41,39 @@ public class VehicleSpawnerStore : ILayoutHostedService
     /// <remarks>Use <see cref="SaveAsync"/> or <see cref="AddOrUpdateSpawnAsync"/> when making changes.</remarks>
     public IReadOnlyList<VehicleSpawnInfo> Spawns { get; }
 
-    public VehicleSpawnerStore(WarfareModule warfare, IConfiguration configuration, ILogger<VehicleSpawnerStore> logger)
+    public VehicleSpawnerStore(ILogger<VehicleSpawnerStore> logger)
     {
-        _warfare = warfare;
-        _configuration = configuration;
         _logger = logger;
         _dataStore = new YamlDataStore<List<VehicleSpawnRecord>>(GetFolderPath(), logger, reloadOnFileChanged: false, () => new List<VehicleSpawnRecord>());
         _spawns = new List<VehicleSpawnInfo>(32);
         Spawns = new ReadOnlyCollection<VehicleSpawnInfo>(_spawns);
     }
 
+    UniTask ILevelHostedService.LoadLevelAsync(CancellationToken token)
+    {
+        OnLevelLoaded();
+        return UniTask.CompletedTask;
+    }
+
     UniTask ILayoutHostedService.StartAsync(CancellationToken token)
     {
         if (Level.isLoaded)
-        {
-            OnLevelLoaded(Level.BUILD_INDEX_GAME);
-        }
-        else
-        {
-            Level.onLevelLoaded += OnLevelLoaded;
-        }
-
+            OnLevelLoaded();
         return UniTask.CompletedTask;
     }
 
     UniTask ILayoutHostedService.StopAsync(CancellationToken token)
     {
-        Level.onLevelLoaded -= OnLevelLoaded;
-        _dataStore?.Dispose();
+        _dataStore.Dispose();
         return UniTask.CompletedTask;
     }
-    private void OnLevelLoaded(int level)
+
+    private void OnLevelLoaded()
     {
-        if (level != Level.BUILD_INDEX_GAME)
-            return;
-
-        Level.onLevelLoaded -= OnLevelLoaded;
-
         _dataStore.Reload();
         ReloadVehicleSpawns(_dataStore.Data);
     }
+
     private static string GetFolderPath()
     {
         return Path.Combine(
@@ -133,16 +116,16 @@ public class VehicleSpawnerStore : ILayoutHostedService
             IsStructure = spawnInfo.Spawner.IsStructure
         };
 
-        if (existingSpawnerIndex != -1)
+        if (existingRecordIndex != -1)
         {
-            _dataStore.Data[existingSpawnerIndex] = record;
+            _dataStore.Data[existingRecordIndex] = record;
         }
         else
         {
             _dataStore.Data.Add(record);
         }
 
-        _dataStore.Data.Sort((x, y) => x.UniqueName.CompareTo(y.UniqueName));
+        _dataStore.Data.Sort((x, y) => string.Compare(x.UniqueName, y.UniqueName, CultureInfo.InvariantCulture, 0));
         _dataStore.Save();
 
         PrintSpawns();
@@ -182,7 +165,7 @@ public class VehicleSpawnerStore : ILayoutHostedService
     private void ReloadVehicleSpawns(List<VehicleSpawnRecord> records)
     {
         _spawns.Clear();
-        _logger.LogDebug($"Vehicle Spawner Store loading spawns...");
+        _logger.LogDebug("Vehicle Spawner Store loading spawns...");
         foreach (VehicleSpawnRecord rec in records)
         {
             IBuildable? spawner = null;
