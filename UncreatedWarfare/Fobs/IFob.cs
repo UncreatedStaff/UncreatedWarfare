@@ -1,4 +1,5 @@
 ﻿using System;
+using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;

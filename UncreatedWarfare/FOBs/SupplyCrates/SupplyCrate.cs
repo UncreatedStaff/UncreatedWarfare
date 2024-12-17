@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Text;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.FOBs.SupplyCrates;

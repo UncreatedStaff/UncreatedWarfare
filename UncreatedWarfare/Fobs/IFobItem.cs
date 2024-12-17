@@ -2,7 +2,7 @@
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Util;
 
-namespace Uncreated.Warfare.Fobs;
+namespace Uncreated.Warfare.FOBs;
 
 /// <summary>
 /// An item placed on a FOB.

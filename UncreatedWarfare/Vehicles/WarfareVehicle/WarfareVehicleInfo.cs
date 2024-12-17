@@ -46,9 +46,10 @@ public class WarfareVehicleInfo : IEquatable<WarfareVehicleInfo>, ITranslationAr
 
     public class CrewInfo
     {
-        public IReadOnlyList<byte> Seats { get; set; } = Array.Empty<byte>();
+        public IReadOnlyList<int> Seats { get; set; } = Array.Empty<int>();
         public bool Invincible { get; set; }
         public bool PassengersInvincible { get; set; }
+        public int? MaxAllowedCrew { get; set; }
     }
 
     public class RearmInfo

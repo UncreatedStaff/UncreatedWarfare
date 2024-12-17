@@ -26,78 +26,10 @@ using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Fobs;
 public partial class FobManager :
-    IEventListener<PlaceBarricadeRequested>,
     IAsyncEventListener<BarricadePlaced>,
     IEventListener<BarricadeDestroyed>,
-    IEventListener<ItemDropped>,
-    IEventListener<MeleeHit>,
-    IEventListener<ClaimBedRequested>
+    IEventListener<ItemDropped>
 {
-    public void HandleEvent(PlaceBarricadeRequested e, IServiceProvider serviceProvider)
-    {
-        if (_assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:Fobs:FobUnbuilt").Guid != e.Barricade.asset.GUID)
-            return;
-
-        if (e.OriginalPlacer == null)
-            return;
-
-        ChatService chatService = serviceProvider.GetRequiredService<ChatService>();
-
-        NearbySupplyCrates supplyCrates = NearbySupplyCrates.FindNearbyCrates(e.Position, e.OriginalPlacer.Team.GroupId, this);
-
-        if (supplyCrates.BuildCount == 0)
-        {
-            chatService.Send(e.OriginalPlacer, _translations.BuildFOBNoSupplyCrate);
-            e.Cancel();
-            return;
-        }
-
-        int maxNumberOfFobs = _configuration.GetValue("MaxNumberOfFobs", 10);
-        bool fobLimitReached = _fobs.Count(f => f is BuildableFob bf && bf.Team == e.OriginalPlacer.Team) >= maxNumberOfFobs;
-        if (fobLimitReached)
-        {
-            chatService.Send(e.OriginalPlacer, _translations.BuildMaxFOBsHit);
-            e.Cancel();
-            return;
-        }
-
-        float minDistanceBetweenFobs = _configuration.GetValue("MinDistanceBetweenFobs", 150f);
-
-        BuildableFob? tooCloseFob = _fobs.OfType<BuildableFob>().FirstOrDefault(bf => 
-            bf.Team ==  e.OriginalPlacer.Team &&
-            MathUtility.WithinRange(e.Position, bf.Position, minDistanceBetweenFobs)
-            );
-
-        if (tooCloseFob != null)
-        {
-            chatService.Send(e.OriginalPlacer, _translations.BuildFOBTooClose, tooCloseFob, Vector3.Distance(tooCloseFob.Position, e.Position), minDistanceBetweenFobs);
-            e.Cancel();
-            return;
-        }
-
-        float minFobDistanceFromMain = _configuration.GetValue<float>("MinFobDistanceFromMain", 300);
-
-        ZoneStore? zoneStore = serviceProvider.GetService<ZoneStore>();
-        if (zoneStore != null)
-        {
-            Zone? mainBase = zoneStore.FindClosestZone(e.Position, ZoneType.MainBase);
-
-            if (mainBase != null && MathUtility.WithinRange(mainBase.Center, e.Position, minFobDistanceFromMain))
-            {
-                chatService.Send(e.OriginalPlacer, _translations.BuildFOBTooCloseToMain);
-                e.Cancel();
-                return;
-            }
-        }
-
-        if (WaterUtility.isPointUnderwater(e.Position))
-        {
-            chatService.Send(e.OriginalPlacer, _translations.BuildFOBUnderwater);
-            e.Cancel();
-            // return;
-        }
-    }
-
     async UniTask IAsyncEventListener<BarricadePlaced>.HandleEventAsync(BarricadePlaced e, IServiceProvider serviceProvider, CancellationToken token)
     {
         await UniTask.NextFrame();
@@ -109,7 +41,7 @@ public partial class FobManager :
         {
             // only register a new Fob with this foundation if it doesn't belong to an existing one.
             // this can happen after a built Fob is destroyed after which the foundation is replaced.
-            BuildableFob? unbuiltFob = _fobs.OfType<BuildableFob>().FirstOrDefault(bf => bf.Buildable.InstanceId == e.Buildable.InstanceId);
+            BuildableFob? unbuiltFob = FindFob<BuildableFob>(e.Buildable);
             if (unbuiltFob == null)
             {
                 unbuiltFob = RegisterFob(new BuildableBarricade(e.Barricade));
@@ -150,7 +82,7 @@ public partial class FobManager :
     {
         shovelable = null;
 
-        ShovelableInfo? shovelableInfo = (_configuration.GetRequiredSection("Shovelables").Get<IEnumerable<ShovelableInfo>>() ?? Array.Empty<ShovelableInfo>())
+        ShovelableInfo? shovelableInfo = (Configuration.GetRequiredSection("Shovelables").Get<IEnumerable<ShovelableInfo>>() ?? Array.Empty<ShovelableInfo>())
             .FirstOrDefault(s => s.Foundation != null && s.Foundation.Guid == buildable.Asset.GUID);
 
         if (shovelableInfo == null)
@@ -161,10 +93,7 @@ public partial class FobManager :
 
         container.AddComponent(shovelable);
 
-        BuildableFob? nearestFriendlyFob = _fobs.OfType<BuildableFob>().FirstOrDefault(bf =>
-            bf.Team.GroupId == newShovelable.Buildable.Group &&
-            bf.IsWithinRadius(buildable.Position)
-        );
+        BuildableFob? nearestFriendlyFob = FindNearestBuildableFob(newShovelable.Buildable.Group, buildable.Position);
 
         if (nearestFriendlyFob != null && shouldConsumeSupplies)
         {
@@ -177,7 +106,7 @@ public partial class FobManager :
 
     public void HandleEvent(BarricadeDestroyed e, IServiceProvider serviceProvider)
     {
-        BasePlayableFob? fob = (BasePlayableFob?)_fobs.FirstOrDefault(f => f is BasePlayableFob bpf && e.Buildable.Equals(bpf.Buildable));
+        BasePlayableFob? fob = FindFob<BasePlayableFob>(e.Buildable);
         if (fob is BuildableFob buildableFob)
         {
             if (buildableFob.IsBuilt)
@@ -213,10 +142,7 @@ public partial class FobManager :
         ShovelableBuildable? shovelable = e.Transform.GetOrAddComponent<BuildableContainer>().ComponentOrNull<ShovelableBuildable>();
         if (shovelable != null)
         {
-            BuildableFob? nearestFriendlyFob = _fobs.OfType<BuildableFob>().FirstOrDefault(bf =>
-                bf.Team.GroupId == shovelable.Buildable.Group &&
-                bf.IsWithinRadius(shovelable.Buildable.Position)
-            );
+            BuildableFob? nearestFriendlyFob = FindNearestBuildableFob(shovelable.Buildable.Group, shovelable.Buildable.Position);
 
             if (nearestFriendlyFob != null)
             {
@@ -230,20 +156,19 @@ public partial class FobManager :
             }
         }
        
-        SupplyCrate? supplyCrate = _floatingItems.OfType<SupplyCrate>().FirstOrDefault(i => i.Buildable.Equals(e.Buildable.InstanceId));
+        SupplyCrate? supplyCrate = _floatingItems.OfType<SupplyCrate>().FirstOrDefault(i => i.Buildable.Equals(e.Buildable));
         if (supplyCrate != null)
         {
             NearbySupplyCrates.FromSingleCrate(supplyCrate, this).NotifyChanged(supplyCrate.Type, -supplyCrate.SupplyCount, SupplyChangeReason.ConsumeSuppliesDestroyed);
         }
-        _floatingItems.RemoveAll(i => i.Buildable.InstanceId == e.Buildable.InstanceId);
+        _floatingItems.RemoveAll(i => i.Buildable.Equals(e.Buildable));
     }
-
     public void HandleEvent(ItemDropped e, IServiceProvider serviceProvider)
     {
         if (e.Item == null || e.DroppedItem == null)
             return;
 
-        SupplyCrateInfo? supplyCrateInfo = _configuration.GetRequiredSection("SupplyCrates").Get<List<SupplyCrateInfo>>()?
+        SupplyCrateInfo? supplyCrateInfo = Configuration.GetRequiredSection("SupplyCrates").Get<List<SupplyCrateInfo>>()?
             .FirstOrDefault(s => s.SupplyItemAsset.MatchAsset(e.Item.GetAsset()));
 
         if (supplyCrateInfo == null)
@@ -262,82 +187,5 @@ public partial class FobManager :
                 NearbySupplyCrates.FromSingleCrate(supplyCrate, this).NotifyChanged(supplyCrate.Type, supplyCrate.SupplyCount, SupplyChangeReason.ResupplyFob);
             }
         );
-    }
-    public void HandleEvent(MeleeHit e, IServiceProvider serviceProvider)
-    {
-        if (e.Equipment?.asset?.GUID == null)
-            return;
-
-        IAssetLink<ItemAsset> entrenchingTool = _assetConfiguration.GetAssetLink<ItemAsset>("Items:EntrenchingTool");
-        if (entrenchingTool.GetAssetOrFail().GUID != e.Equipment.asset.GUID)
-            return;
-
-        RaycastInfo raycast = DamageTool.raycast(new Ray(e.Look.aim.position, e.Look.aim.forward), 2, RayMasks.BARRICADE, e.Player.UnturnedPlayer);
-        if (raycast.transform == null)
-            return;
-
-        if (!raycast.transform.TryGetComponent(out BuildableContainer container))
-            return;
-
-        if (container.Buildable.Group != e.Player.Team.GroupId)
-            return;
-
-        if (!container.TryGetFromContainer(out IShovelable? shovelable))
-            return;
-
-        shovelable!.Shovel(e.Player, raycast.point);
-    }
-
-    public void HandleEvent(ClaimBedRequested e, IServiceProvider serviceProvider)
-    {
-        SupplyCrate? ammoCrate = _floatingItems.OfType<SupplyCrate>().FirstOrDefault(s =>
-            s.Type == SupplyType.Ammo &&
-            !s.Buildable.IsDead &&
-            s.Buildable.Equals(e.Buildable)
-        ); // todo: is this an efficient way to do this?
-
-        if (ammoCrate == null)
-            return;
-
-        ChatService chatService = serviceProvider.GetRequiredService<ChatService>();
-        AmmoCommandTranslations translations = serviceProvider.GetRequiredService<TranslationInjection<AmmoCommandTranslations>>().Value;
-
-        if (!e.Player.TryGetFromContainer(out KitPlayerComponent? kit) || kit?.CachedKit == null)
-        {
-            chatService.Send(e.Player, translations.AmmoNoKit);
-            e.Cancel();
-            return;
-        }
-
-        int rearmCost = GetKitRearmCost(kit.ActiveClass);
-
-        NearbySupplyCrates supplyCrate = NearbySupplyCrates.FromSingleCrate(ammoCrate, this);
-        if (rearmCost > supplyCrate.AmmoCount)
-        {
-            chatService.Send(e.Player, translations.AmmoOutOfStock, supplyCrate.AmmoCount, rearmCost);
-            e.Cancel();
-            return;
-        }
-        KitManager kitManager = serviceProvider.GetRequiredService<KitManager>();
-        _ = kitManager.Requests.GiveKit(e.Player, kit.CachedKit, false, true);
-        supplyCrate.SubstractSupplies(1, SupplyType.Ammo, SupplyChangeReason.ConsumeGeneral);
-
-        chatService.Send(e.Player, translations.AmmoResuppliedKit, rearmCost, supplyCrate.AmmoCount);
-        e.Cancel();
-    }
-    private int GetKitRearmCost(Class kitClass)
-    {
-        switch (kitClass)
-        {
-            case Class.HAT:
-            case Class.CombatEngineer:
-                return 3;
-            case Class.LAT:
-            case Class.MachineGunner:
-            case Class.Sniper:
-                return 2;
-            default:
-                return 1;
-        }
     }
 }

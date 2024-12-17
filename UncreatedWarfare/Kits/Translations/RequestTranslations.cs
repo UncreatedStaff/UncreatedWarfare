@@ -309,7 +309,7 @@ public class RequestVehicleTranslations : PropertiesTranslationCollection
     public readonly Translation IncorrectTeam = new Translation("Vehicle not allowed for your team");
 
     [TranslationData("Sent when a player tries to request a vehicle that requires a specific class.")]
-    public readonly Translation<Class> IncorrectKitClass = new Translation<Class>("<#cedcde>{0}</color> required", arg0Fmt: UppercaseAddon.Instance);
+    public readonly Translation<Class> IncorrectKitClass = new Translation<Class>("You need a <#cedcde>{0}</color> kit in order to request this vehicle.", arg0Fmt: UppercaseAddon.Instance);
 
     [TranslationData("Sent when a player tries to request a vehicle but already owns one nearby.")]
     public readonly Translation<VehicleAsset> AnotherVehicleAlreadyOwned = new Translation<VehicleAsset>("<#cedcde>{0}</color> already requested", arg0Fmt: RarityColorAddon.Instance);
@@ -324,5 +324,5 @@ public class RequestVehicleTranslations : PropertiesTranslationCollection
     public readonly Translation<string> AssetBannedPermanent = new Translation<string>("Permanently asset banned from: <#ddd>{0}</color>");
 
     [TranslationData("Sent when a player is asset banned over all vehicles for a set time.")]
-    public readonly Translation<string, TimeSpan> AssetBanned = new Translation<string, TimeSpan>("Asset banned from: <#ddd>{0}</color> fpr another <#fff>{1}</color>", arg1Fmt: TimeAddon.Create(TimeFormatType.Short));
+    public readonly Translation<string, TimeSpan> AssetBanned = new Translation<string, TimeSpan>("Asset banned from: <#ddd>{0}</color> for another <#fff>{1}</color>", arg1Fmt: TimeAddon.Create(TimeFormatType.Short));
 }

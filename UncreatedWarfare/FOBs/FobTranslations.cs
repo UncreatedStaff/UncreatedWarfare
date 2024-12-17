@@ -12,7 +12,7 @@ public class FobTranslations : PropertiesTranslationCollection
     protected override string FileName => "FOBs";
 
     [TranslationData("Indicates that a buildable can only be placed within a FOB's active radius.")]
-    public readonly Translation BuildNotInRadius = new Translation("<#ffab87>This can only be placed inside <#cedcde>FOB RADIUS</color>.");
+    public readonly Translation BuildNotInRadius = new Translation("<#ffab87>This can only be placed inside a <#cedcde>FOB RADIUS</color>.");
 
     [TranslationData("Indicates that a buildable that is being shoveled can is no longer within a FOB's active radius.")]
     public readonly Translation BuildTickNotInRadius = new Translation("<#ffab87>There's no longer a friendly FOB nearby.");

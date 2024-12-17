@@ -4,6 +4,7 @@ using System.Linq;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Models.Fobs;
+using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Interaction;

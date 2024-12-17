@@ -15,7 +15,7 @@ public static class WarfareVehicleExtensions
                && vehicleInfo.Crew.Seats.Count < passengerCt;
     }
 
-    public static bool IsCrewSeat(this WarfareVehicleInfo? vehicleInfo, byte seatIndex)
+    public static bool IsCrewSeat(this WarfareVehicleInfo? vehicleInfo, int seatIndex)
     {
         return vehicleInfo?.Crew?.Seats != null && vehicleInfo.Crew.Seats.Contains(seatIndex);
     }
