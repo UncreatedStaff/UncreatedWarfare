@@ -6,6 +6,7 @@ using SDG.Framework.Utilities;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
@@ -37,30 +38,38 @@ public class ReportService : IDisposable, IHostedService, IEventListener<PlayerL
 
     private readonly IPlayerService _playerService;
     private readonly DatabaseInterface _moderationSql;
-    private readonly ILoopTicker _loopTicker;
+    private readonly ILoopTickerFactory _loopTickerFactory;
     private readonly PlayerDictionary<PlayerData> _playerData = new PlayerDictionary<PlayerData>(128);
 
     // data requestable for the next 24 hours if needed but not saved by default
     private readonly List<RequestableData> _requestableData = new List<RequestableData>();
     private readonly ILogger<ReportService> _logger;
+    private ILoopTicker? _loopTicker;
+
+    public IEnumerable<WarfarePlayer> SelectPlayers => _playerData.Values.Select(x => x.OnlinePlayer);
 
     public ReportService(IPlayerService playerService, ILoopTickerFactory loopTickerFactory, DatabaseInterface moderationSql, ILogger<ReportService> logger)
     {
+        _loopTickerFactory = loopTickerFactory;
         _playerService = playerService;
         _moderationSql = moderationSql;
         _logger = logger;
-        _loopTicker = loopTickerFactory.CreateTicker(TimeSpan.FromMinutes(15d), false, true, CheckExpiredRequestableData);
+    }
 
+    UniTask IHostedService.StartAsync(CancellationToken token)
+    {
+        _loopTicker = _loopTickerFactory.CreateTicker(TimeSpan.FromMinutes(15d), false, true, CheckExpiredRequestableData);
         if (GetBullets != null)
         {
             UseableGun.onProjectileSpawned += OnProjectileSpawned;
             UseableGun.onBulletSpawned += OnBulletSpawned;
             UseableGun.onBulletHit += OnBulletHit;
-            _logger.LogDebug("Subbed.");
         }
+
+        return UniTask.CompletedTask;
     }
 
-    void IDisposable.Dispose()
+    UniTask IHostedService.StopAsync(CancellationToken token)
     {
         if (GetBullets != null)
         {
@@ -69,7 +78,12 @@ public class ReportService : IDisposable, IHostedService, IEventListener<PlayerL
             UseableGun.onBulletHit -= OnBulletHit;
         }
 
-        _loopTicker.Dispose();
+        return UniTask.CompletedTask;
+    }
+
+    void IDisposable.Dispose()
+    {
+        _loopTicker?.Dispose();
     }
 
     private void OnProjectileSpawned(UseableGun gun, GameObject projectile)
@@ -270,9 +284,9 @@ public class ReportService : IDisposable, IHostedService, IEventListener<PlayerL
         }
     }
 
-    public async Task<Report> StartReport(CSteamID target, IModerationActor? reporter, ReportType reportType, CancellationToken token = default)
+    public async Task<(Report Report, bool Sent)> StartReport(CSteamID target, IModerationActor? reporter, string? message, ReportType reportType, CancellationToken token = default)
     {
-        if (reportType is not ReportType.Custom and not ReportType.Griefing and not ReportType.ChatAbuse and not ReportType.VoiceChatAbuse)
+        if (reportType is not ReportType.Custom and not ReportType.Griefing and not ReportType.ChatAbuse and not ReportType.VoiceChatAbuse and not ReportType.Cheating)
             throw new ArgumentOutOfRangeException(nameof(reportType));
 
         WarfarePlayer? onlinePlayer = _playerService.GetOnlinePlayerOrNullThreadSafe(target);
@@ -286,6 +300,7 @@ public class ReportService : IDisposable, IHostedService, IEventListener<PlayerL
             ReportType.Griefing => typeof(GriefingReport),
             ReportType.ChatAbuse => typeof(ChatAbuseReport),
             ReportType.VoiceChatAbuse => typeof(VoiceChatAbuseReport),
+            ReportType.Cheating => typeof(CheatingReport),
             _ => typeof(Report)
         };
 
@@ -293,6 +308,7 @@ public class ReportService : IDisposable, IHostedService, IEventListener<PlayerL
 
         _playerData.TryGetValue(target, out PlayerData? playerData);
 
+        report.Message = message;
         report.Player = target.m_SteamID;
         report.Type = reportType;
         report.StartedTimestamp = startTime;
@@ -311,6 +327,7 @@ public class ReportService : IDisposable, IHostedService, IEventListener<PlayerL
                     AddRequestableScreenshotData(report, spyResult);
             }
         }
+
         if (reporter != null)
             report.Actors = [ new RelatedActor(RelatedActor.RoleReporter, false, reporter) ];
 
@@ -324,9 +341,10 @@ public class ReportService : IDisposable, IHostedService, IEventListener<PlayerL
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error sending report.");
+            return (report, false);
         }
 
-        return report;
+        return (report, true);
     }
 
     [RpcSend]
@@ -396,7 +414,7 @@ public class ReportService : IDisposable, IHostedService, IEventListener<PlayerL
         return null;
     }
 
-    private void CheckExpiredRequestableData(ILoopTicker ticker, TimeSpan timesincestart, TimeSpan deltatime)
+    private void CheckExpiredRequestableData(ILoopTicker ticker, TimeSpan timeSinceStart, TimeSpan deltaTime)
     {
         int maxIndex = -1;
         DateTime now = DateTime.UtcNow;
@@ -604,15 +622,5 @@ public class ReportService : IDisposable, IHostedService, IEventListener<PlayerL
         {
             Shots.Add(shot);
         }
-    }
-
-    UniTask IHostedService.StartAsync(CancellationToken token)
-    {
-        return UniTask.CompletedTask;
-    }
-
-    UniTask IHostedService.StopAsync(CancellationToken token)
-    {
-        return UniTask.CompletedTask;
     }
 }

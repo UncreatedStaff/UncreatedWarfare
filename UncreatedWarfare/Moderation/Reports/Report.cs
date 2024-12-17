@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Configuration.JsonConverters;
 using Uncreated.Warfare.Database.Manual;
+using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Moderation.Reports;
 
@@ -70,7 +71,8 @@ public class Report : ModerationEntry
                 {
                     "CHAT_ABUSE" or "VOICE_CHAT_ABUSE" => ReportType.ChatAbuse,
                     "GREIFING_FOBS" or "INTENTIONAL_TEAMKILL" or "SOLOING_VEHICLE" or "WASTING_ASSETS" => ReportType.Griefing,
-                    "CUSTOM" or "CHEATING" => ReportType.Custom,
+                    "CUSTOM" => ReportType.Custom,
+                    "CHEATING" => ReportType.Cheating,
                     _ => throw new JsonException("Invalid string value for ReportType.")
                 };
             }
@@ -108,12 +110,14 @@ public class Report : ModerationEntry
     }
 }
 
+[Translatable("Player Report Type")]
 public enum ReportType
 {
     Custom,
     Griefing,
     ChatAbuse,
-    VoiceChatAbuse
+    VoiceChatAbuse,
+    Cheating
 }
 public sealed class ReportTypeLegacyConverter : JsonConverter<ReportType>
 {
@@ -136,7 +140,8 @@ public sealed class ReportTypeLegacyConverter : JsonConverter<ReportType>
                 "CHAT_ABUSE" => ReportType.ChatAbuse,
                 "VOICE_CHAT_ABUSE" => ReportType.VoiceChatAbuse,
                 "GREIFING_FOBS" or "INTENTIONAL_TEAMKILL" or "SOLOING_VEHICLE" or "WASTING_ASSETS" => ReportType.Griefing,
-                "CUSTOM" or "CHEATING" => ReportType.Custom,
+                "CUSTOM" => ReportType.Custom,
+                "CHEATING" => ReportType.Cheating,
                 _ => throw new JsonException("Invalid string value for ReportType.")
             };
         }

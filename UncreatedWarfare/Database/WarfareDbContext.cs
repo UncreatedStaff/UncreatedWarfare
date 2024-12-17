@@ -48,6 +48,7 @@ public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContex
     public DbSet<Permission> Permissions => Set<Permission>();
     public DbSet<BuildableSave> Saves => Set<BuildableSave>();
     public DbSet<ItemWhitelist> Whitelists => Set<ItemWhitelist>();
+    public DbSet<SteamDiscordPendingLink> PendingLinks => Set<SteamDiscordPendingLink>();
 
     public WarfareDbContext(ILogger<WarfareDbContext> logger, DbContextOptions<WarfareDbContext> options) : base(options)
     {

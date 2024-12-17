@@ -67,7 +67,9 @@ public class UserDataService : IUserDataService, IDisposable
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            return await Set().FirstOrDefaultAsync(x => x.Steam64 == steam64, token).ConfigureAwait(false);
+            WarfareUserData? data = await Set().FirstOrDefaultAsync(x => x.Steam64 == steam64, token).ConfigureAwait(false);
+            _dbContext.ChangeTracker.Clear();
+            return data;
         }
         finally
         {
@@ -83,7 +85,9 @@ public class UserDataService : IUserDataService, IDisposable
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            return await Set().Where(x => steam64.Contains(x.Steam64)).ToListAsync(token).ConfigureAwait(false);
+            List<WarfareUserData> result = await Set().Where(x => steam64.Contains(x.Steam64)).ToListAsync(token).ConfigureAwait(false);
+            _dbContext.ChangeTracker.Clear();
+            return result;
         }
         finally
         {

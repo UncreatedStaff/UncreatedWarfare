@@ -81,8 +81,8 @@ public class PlayerService : IPlayerService
 
         List<Type> allTypes = Accessor.GetTypesSafe(lifetimeScope.Resolve<WarfarePluginLoader>().AllAssemblies);
 
-        PlayerComponents = allTypes.Where(x => !x.IsAbstract && typeof(IPlayerComponent).IsAssignableFrom(x) && x.IsDefinedSafe<PlayerComponentAttribute>()).ToArray();
-        PlayerTasks = allTypes.Where(x => !x.IsAbstract && typeof(IPlayerPendingTask).IsAssignableFrom(x) && x.IsDefinedSafe<PlayerTaskAttribute>()).ToArray();
+        PlayerComponents = allTypes.Where(x => !x.IsIgnored() && !x.IsDefinedSafe<CompilerGeneratedAttribute>() && !x.IsAbstract && typeof(IPlayerComponent).IsAssignableFrom(x) && x.IsDefinedSafe<PlayerComponentAttribute>()).ToArray();
+        PlayerTasks = allTypes.Where(x => !x.IsIgnored() && !x.IsDefinedSafe<CompilerGeneratedAttribute>() && !x.IsAbstract && typeof(IPlayerPendingTask).IsAssignableFrom(x) && x.IsDefinedSafe<PlayerTaskAttribute>()).ToArray();
     }
 
     /// <inheritdoc />

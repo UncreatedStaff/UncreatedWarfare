@@ -71,7 +71,9 @@ public class HarmonyPatchService
             foreach (Type type in Accessor.GetTypesSafe(patchableAssembly))
             {
                 // not visible or abstract/interface or not IHarmonyPatch
-                if (!(type.IsPublic || type.Assembly == asm && type.GetVisibility() is MemberVisibility.Internal or MemberVisibility.ProtectedInternal)
+                if (type.IsIgnored()
+                    || type.IsDefinedSafe<CompilerGeneratedAttribute>()
+                    || !(type.IsPublic || type.Assembly == asm && type.GetVisibility() is MemberVisibility.Internal or MemberVisibility.ProtectedInternal)
                     || type.IsAbstract
                     || !typeof(IHarmonyPatch).IsAssignableFrom(type))
                 {

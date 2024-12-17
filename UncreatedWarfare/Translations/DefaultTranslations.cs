@@ -1,5 +1,4 @@
 ﻿using System;
-using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Locations;
@@ -11,7 +10,6 @@ using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Addons;
 using Uncreated.Warfare.Translations.Util;
-using Uncreated.Warfare.Vehicles;
 using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare;
@@ -1239,42 +1237,6 @@ internal static class T
     public static readonly Translation<IObjective> HardpointObjectiveStateLostContest = new Translation<IObjective>("{0} is no longer <#c$contested$>contested</color>!", arg0Fmt: Flags.ColorNameFormat);
     [TranslationData(SectionHardpoint)]
     public static readonly Translation<IObjective> HardpointObjectiveStateContested = new Translation<IObjective>("{0} is <#c$contested$>contested</color>!", arg0Fmt: Flags.ColorNameFormat);
-    #endregion
-
-    #region Report Command
-    private const string SectionReport = "Reporting";
-    [TranslationData(SectionReport, Description = "Possible report arguments, do not translate the reasons.")]
-    public static readonly Translation ReportReasons = new Translation("<#9cffb3>Report reasons: -none-, \"chat abuse\", \"voice chat abuse\", \"soloing vehicles\", \"wasteing assets\", \"teamkilling\", \"fob griefing\", \"cheating\".");
-    [TranslationData(SectionReport)]
-    public static readonly Translation ReportPlayerNotFound = new Translation("<#9cffb3>Unable to find a player with that name, you can use their <color=#ffffff>Steam64 ID</color> instead, as names are only stored until they've been offline for 20 minutes.");
-    [TranslationData(SectionReport)]
-    public static readonly Translation ReportUnknownError = new Translation("<#9cffb3>Unable to generate a report for an unknown reason, check your syntax again with <color=#ffffff>/report help</color>.");
-    [TranslationData(SectionReport)]
-    public static readonly Translation<IPlayer, string, string> ReportSuccessMessage = new Translation<IPlayer, string, string>("<#c480d9>Successfully reported {0} for <#fff>{1}</color> as a <#00ffff>{2}</color> report. If possible please post evidence in <#ffffff>#player-reports</color> in our <#7483c4>Discord</color> server.", arg0Fmt: WarfarePlayer.FormatCharacterName);
-    [TranslationData(SectionReport)]
-    public static readonly Translation<IPlayer, string, string> ReportSuccessMessage1 = new Translation<IPlayer, string, string>("<#c480d9>Successfully reported {0} for <#fff>{1}</color> as a <#00ffff>{2}</color> report.", arg0Fmt: WarfarePlayer.FormatCharacterName);
-    [TranslationData(SectionReport)]
-    public static readonly Translation ReportSuccessMessage2 = new Translation("<#c480d9>If possible please post evidence in <#ffffff>#player-reports</color> in our <#7483c4>Discord</color> server.");
-    [TranslationData(SectionReport)]
-    public static readonly Translation<IPlayer, IPlayer, string, string> ReportNotifyAdmin = new Translation<IPlayer, IPlayer, string, string>("<#c480d9>{0} reported {1} for <#fff>{2}</color> as a <#00ffff>{3}</color> report. Check <#c480d9>#player-reports</color> for more information.", arg0Fmt: WarfarePlayer.FormatCharacterName, arg1Fmt: WarfarePlayer.FormatCharacterName);
-    [TranslationData(SectionReport)]
-    public static readonly Translation<string> ReportNotifyViolatorToast = new Translation<string>("<#c480d9>You've been reported for <#00ffff>{0}</color>.\nCheck <#fff>#player-reports</color> in our <#7483c4>Discord</color> (/discord) for more information and to defend yourself.", TranslationOptions.TMProUI);
-    [TranslationData(SectionReport)]
-    public static readonly Translation ReportNotifyViolatorToastTitle = new Translation("You Were Reported", TranslationOptions.TMProUI);
-    [TranslationData(SectionReport)]
-    public static readonly Translation<string, string> ReportNotifyViolatorMessage = new Translation<string, string>("<#c480d9>You've been reported for <#00ffff>{0} - {1}</color>. Check <#fff>#player-reports</color> in our <#7483c4>Discord</color> (/discord) for more information and to defend yourself.");
-    [TranslationData(SectionReport)]
-    public static readonly Translation<string, string> ReportNotifyViolatorMessage1 = new Translation<string, string>("<#c480d9>You've been reported for <#00ffff>{0} - {1}</color>.");
-    [TranslationData(SectionReport)]
-    public static readonly Translation ReportNotifyViolatorMessage2 = new Translation("<#c480d9>Check <#fff>#player-reports</color> in our <#7483c4>Discord</color> (/discord) for more information and to defend yourself.");
-    [TranslationData(SectionReport)]
-    public static readonly Translation<IPlayer> ReportCooldown = new Translation<IPlayer>("<#9cffb3>You've already reported {0} in the past hour.", arg0Fmt: WarfarePlayer.FormatColoredCharacterName);
-    [TranslationData(SectionReport)]
-    public static readonly Translation<ulong, IPlayer> ReportConfirm = new Translation<ulong, IPlayer>("<#c480d9>Did you mean to report {1} <i><#444>{0}</color></i>? Type <#ff8c69>/confirm</color> to continue.", arg1Fmt: WarfarePlayer.FormatColoredCharacterName);
-    [TranslationData(SectionReport)]
-    public static readonly Translation ReportCancelled = new Translation("<#ff8c69>You didn't confirm your report in time.");
-    [TranslationData(SectionReport)]
-    public static readonly Translation ReportNotConnected = new Translation("<#ff8c69>The report system is not available right now, please try again later.");
     #endregion
 
     #region DailyQuests

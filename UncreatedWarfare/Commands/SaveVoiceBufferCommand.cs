@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.IO;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Moderation;
@@ -22,7 +23,7 @@ internal sealed class SaveVoiceBufferCommand : IExecutableCommand
             throw Context.SendUnknownError();
 
         FileStream fs = new FileStream(
-            Path.Combine(Data.Paths.BaseDirectory, "Voice", onlinePlayer.Steam64 + "_" + DateTime.UtcNow.ToString("s").Replace(':', '_') + ".wav"),
+            Path.Combine(Data.Paths.BaseDirectory, "Voice", onlinePlayer.Steam64.m_SteamID.ToString(CultureInfo.InvariantCulture) + "_" + DateTime.UtcNow.ToString("s").Replace(':', '_') + ".wav"),
             FileMode.Create,
             FileAccess.Write, FileShare.Read
         );
