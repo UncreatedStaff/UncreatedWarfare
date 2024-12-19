@@ -32,6 +32,39 @@ public class AccountLinkingService
     }
 
     /// <summary>
+    /// Force-link a Discord ID to a Steam64 ID without any kind of verification.
+    /// </summary>
+    /// <exception cref="ArgumentException">Invalid Discord or Steam64 ID.</exception>
+    public async Task LinkAccountsAsync(CSteamID steamId, ulong discordId, CancellationToken token = default)
+    {
+        if (steamId.GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
+            throw new ArgumentException("Invalid Steam64 ID.", nameof(steamId));
+
+        if (discordId == 0)
+            throw new ArgumentException("Invalid Discord ID.", nameof(discordId));
+
+        await _semaphore.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            ulong s64 = steamId.m_SteamID;
+
+            // remove pending links for either accounts, also expired links while we're at it
+            DateTime now = DateTime.UtcNow.AddSeconds(30d);
+            await _dbContext.PendingLinks
+                .Where(x => x.Steam64 == s64 || x.DiscordId == discordId || x.ExpiryTimestamp < now)
+                .DeleteAsync(token);
+
+            await LinkAccountsIntl(s64, discordId);
+
+            _dbContext.ChangeTracker.Clear();
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
+    }
+
+    /// <summary>
     /// Starts a discord account link for a player from their Steam account. Ex. /link ingame then /link &lt;code&gt; in discord.
     /// </summary>
     /// <returns>The new or already pending link.</returns>
@@ -206,6 +239,17 @@ public class AccountLinkingService
         if (Unsafe.As<ulong, CSteamID>(ref steam64).GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
             return false;
 
+        await LinkAccountsIntl(steam64, discordId);
+
+        _dbContext.Remove(existing);
+        await _dbContext.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
+
+        _dbContext.ChangeTracker.Clear();
+        return true;
+    }
+
+    private async Task LinkAccountsIntl(ulong steam64, ulong discordId)
+    {
         ulong oldDiscordId = 0;
 
         // remove other Discord IDs linked to a Steam64 ID and update the ID to the new one
@@ -222,9 +266,6 @@ public class AccountLinkingService
             .Where(x => x.DiscordId == discordId && x.Steam64 != steam64)
             .UpdateAsync(x => new WarfareUserData { DiscordId = 0 }, CancellationToken.None);
 
-        _dbContext.Remove(existing);
-        await _dbContext.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
-
         if (oldDiscordId != 0)
         {
             _logger.LogInformation("Relinked Discord account {0} with Steam account {1} after unlinking {2} other Steam account(s). Old discord ID was {3}.", discordId, steam64, numUpdated, oldDiscordId);
@@ -233,9 +274,6 @@ public class AccountLinkingService
         {
             _logger.LogInformation("Linked Discord account {0} with Steam account {1} after unlinking {2} other Steam account(s).", discordId, steam64, numUpdated);
         }
-
-        _dbContext.ChangeTracker.Clear();
-        return true;
     }
 
     private async Task RemoveExpiredAsync()

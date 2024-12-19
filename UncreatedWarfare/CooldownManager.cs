@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.DependencyInjection;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -223,7 +224,11 @@ public class Cooldown(CSteamID player, CooldownType cooldownType, float duration
             return formatter.FormatEnum(CooldownType, parameters.Language);
 
         if (FormatTimeLong.Match(in parameters))
-            return TimeAddon.ToLongTimeString((int)Timeleft.TotalSeconds, parameters.Language);
+            return TimeAddon.ToLongTimeString(
+                formatter.ServiceProvider.GetRequiredService<TimeTranslations>(),
+                (int)Timeleft.TotalSeconds,
+                parameters.Language
+            );
 
         return Timeleft.ToString(format);
 

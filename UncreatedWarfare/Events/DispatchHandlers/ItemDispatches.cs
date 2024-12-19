@@ -1,6 +1,8 @@
 using Uncreated.Warfare.Events.Models.Items;
+using Uncreated.Warfare.Events.Patches;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Util;
 
@@ -84,5 +86,59 @@ partial class EventDispatcher
                 args.PlayerObject.sendMessage(EPlayerMessage.SPACE);
             }
         }, needsToContinue: _ => true);
+    }
+
+    private static bool _shouldIgnorePlayerCraftingCraftBlueprintRequested;
+    private void PlayerCraftingCraftBlueprintRequested(PlayerCrafting crafting, ref ushort itemId, ref byte blueprintIndex, ref bool shouldAllow)
+    {
+        if (_shouldIgnorePlayerCraftingCraftBlueprintRequested)
+            return;
+
+        bool forceAll = PlayerCraftingReceiveCraft.LastCraftAll;
+        WarfarePlayer player = _playerService.GetOnlinePlayer(crafting);
+
+        ItemAsset? item = (ItemAsset?)Assets.find(EAssetType.ITEM, itemId);
+        if (item == null)
+        {
+            GetLogger(typeof(PlayerCrafting), nameof(PlayerCrafting.onCraftBlueprintRequested))
+                .LogWarning("Unknown item {0} from player {1}.", itemId, player);
+            shouldAllow = false;
+            return;
+        }
+
+        if (blueprintIndex >= item.blueprints.Count || item.blueprints[blueprintIndex] == null)
+        {
+            GetLogger(typeof(PlayerCrafting), nameof(PlayerCrafting.onCraftBlueprintRequested))
+                .LogWarning("Invalid blueprint index {0} in item {1} from player {2}.", blueprintIndex, item.itemName, player);
+            shouldAllow = false;
+            return;
+        }
+
+        CraftItemRequested args = new CraftItemRequested(item, blueprintIndex)
+        {
+            Player = player,
+            CraftAll = forceAll
+        };
+
+        // DroppedItemTracker handles the ItemDestroyed invocation.
+        EventContinuations.Dispatch(args, this, player.DisconnectToken, out shouldAllow, continuation: args =>
+        {
+            _shouldIgnorePlayerCraftingCraftBlueprintRequested = true;
+            try
+            {
+                args.Player.UnturnedPlayer.crafting.ReceiveCraft(
+                    in args.Player.CreateServerInvocationContext(),
+                    args.ItemId,
+                    args.BlueprintIndex,
+                    args.CraftAll
+                );
+            }
+            finally
+            {
+                _shouldIgnorePlayerCraftingCraftBlueprintRequested = false;
+            }
+
+                            // check if CraftAll was changed
+        }, needsToContinue: forceAll ? args => !args.CraftAll : args => args.CraftAll);
     }
 }

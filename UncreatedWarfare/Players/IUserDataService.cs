@@ -22,6 +22,11 @@ public interface IUserDataService
     Task<IReadOnlyList<WarfareUserData>> ReadAsync([InstantHandle] IEnumerable<ulong> steam64, CancellationToken token = default);
 
     /// <summary>
+    /// Get a single player's user data if they've joined from their Discord ID if it's linked.
+    /// </summary>
+    Task<WarfareUserData?> ReadFromDiscordIdAsync(ulong discordId, CancellationToken token = default);
+
+    /// <summary>
     /// Update a <see cref="WarfareUserData"/> object. Any added HWIDs and IP addresses need to be added using the <see cref="IDbContext"/> argument and any updated need to be updated using it.
     /// </summary>
     Task<WarfareUserData> AddOrUpdateAsync(ulong steam64, [InstantHandle] Action<WarfareUserData, IDbContext> update, CancellationToken token = default);
@@ -88,6 +93,25 @@ public class UserDataService : IUserDataService, IDisposable
             List<WarfareUserData> result = await Set().Where(x => steam64.Contains(x.Steam64)).ToListAsync(token).ConfigureAwait(false);
             _dbContext.ChangeTracker.Clear();
             return result;
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<WarfareUserData?> ReadFromDiscordIdAsync(ulong discordId, CancellationToken token = default)
+    {
+        if (discordId == 0)
+            return null;
+
+        await _semaphore.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            WarfareUserData? data = await Set().FirstOrDefaultAsync(x => x.DiscordId == discordId, token).ConfigureAwait(false);
+            _dbContext.ChangeTracker.Clear();
+            return data;
         }
         finally
         {
@@ -299,6 +323,15 @@ public static class UserDataServiceExtensions
     {
         WarfareUserData? userData = await dataService.ReadAsync(steam64, token).ConfigureAwait(false);
         return userData?.DiscordId ?? 0ul;
+    }
+
+    /// <summary>
+    /// Get a player's Steam64 ID from their Discord ID, or 0 if their Discord is not linked.
+    /// </summary>
+    public static async Task<ulong> GetSteam64Async(this IUserDataService dataService, ulong discordId, CancellationToken token = default)
+    {
+        WarfareUserData? userData = await dataService.ReadFromDiscordIdAsync(discordId, token).ConfigureAwait(false);
+        return userData?.Steam64 ?? 0ul;
     }
 
     /// <summary>

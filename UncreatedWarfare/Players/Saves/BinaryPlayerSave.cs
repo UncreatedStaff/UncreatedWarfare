@@ -6,7 +6,7 @@ namespace Uncreated.Warfare.Players.Saves;
 
 public class BinaryPlayerSave : ISaveableState
 {
-    private const string Directory = "PlayerStates";
+    private const string Directory = "Players";
     private const byte DataVersion = 2;
 
     private readonly ILogger _logger;

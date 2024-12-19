@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.DependencyInjection;
+using System;
 using System.Globalization;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Translations.Util;
@@ -54,7 +55,7 @@ public sealed class TimeAddon : IArgumentAddon
 
         return args.Format.Format switch
         {
-            "lt" => ToLongTimeString((int)ts.TotalSeconds, args.Language),
+            "lt" => ToLongTimeString(formatter.ServiceProvider.GetRequiredService<TimeTranslations>(), (int)ts.TotalSeconds, args.Language),
             "s" => ((int)ts.TotalSeconds).ToString(args.Culture),
             "m" => ((int)ts.TotalMinutes).ToString(args.Culture),
             "h" => ((int)ts.TotalHours).ToString(args.Culture),
@@ -64,7 +65,9 @@ public sealed class TimeAddon : IArgumentAddon
             "y" => ((int)(ts.TotalSeconds / 31536000)).ToString(args.Culture),
             "c1" => FormattingUtility.ToCountdownString((int)ts.TotalSeconds, false),
             "c2" => FormattingUtility.ToCountdownString((int)ts.TotalSeconds, true),
-            _ => ts.Ticks < 0 ? T.TimePermanent.Translate(args.Language) : FormattingUtility.ToTimeString(ts)
+            _ => ts.Ticks < 0
+                ? formatter.ServiceProvider.GetRequiredService<TimeTranslations>().TimePermanent.Translate(args.Language)
+                : FormattingUtility.ToTimeString(ts)
         };
     }
 
@@ -78,21 +81,22 @@ public sealed class TimeAddon : IArgumentAddon
 
     public static implicit operator ArgumentFormat(TimeAddon addon) => ReferenceEquals(addon, Instance) ? new ArgumentFormat(InstanceArray) : new ArgumentFormat(addon);
 
-    internal static string ToLongTimeString(int seconds, LanguageInfo language)
+    internal static string ToLongTimeString(TimeTranslations timeTranslations, int seconds, LanguageInfo language)
     {
         // tested 09/13/2024
         int high, low;
         Translation? highSuffixTranslation, lowSuffixTranslation;
+
         switch (seconds)
         {
             case < 0:
-                return T.TimePermanent.Translate(language);
+                return timeTranslations.TimePermanent.Translate(language);
 
             // < 1 minute
             case < 60:
                 high = Math.Max(seconds, 1);
                 low = 0;
-                highSuffixTranslation = high == 1 ? T.TimeSecondSingle : T.TimeSecondPlural;
+                highSuffixTranslation = high == 1 ? timeTranslations.TimeSecondSingle : timeTranslations.TimeSecondPlural;
                 lowSuffixTranslation = null;
                 break;
 
@@ -100,40 +104,40 @@ public sealed class TimeAddon : IArgumentAddon
             case < 3600:
                 high = seconds / 60;
                 low = seconds % 60;
-                highSuffixTranslation = high == 1 ? T.TimeMinuteSingle : T.TimeMinutePlural;
-                lowSuffixTranslation = low == 1 ? T.TimeSecondSingle : T.TimeSecondPlural;
+                highSuffixTranslation = high == 1 ? timeTranslations.TimeMinuteSingle : timeTranslations.TimeMinutePlural;
+                lowSuffixTranslation = low == 1 ? timeTranslations.TimeSecondSingle : timeTranslations.TimeSecondPlural;
                 break;
 
             // < 1 day
             case < 86400:
                 high = seconds / 3600;
                 low = seconds / 60 % 60;
-                highSuffixTranslation = high == 1 ? T.TimeHourSingle : T.TimeHourPlural;
-                lowSuffixTranslation = low == 1 ? T.TimeMinuteSingle : T.TimeMinutePlural;
+                highSuffixTranslation = high == 1 ? timeTranslations.TimeHourSingle : timeTranslations.TimeHourPlural;
+                lowSuffixTranslation = low == 1 ? timeTranslations.TimeMinuteSingle : timeTranslations.TimeMinutePlural;
                 break;
 
             // < 1 month (29.6875 days) (365.25/12)
             case < 2629800:
                 high = seconds / 86400;
                 low = seconds / 3600 % 24;
-                highSuffixTranslation = high == 1 ? T.TimeDaySingle : T.TimeDayPlural;
-                lowSuffixTranslation = low == 1 ? T.TimeHourSingle : T.TimeHourPlural;
+                highSuffixTranslation = high == 1 ? timeTranslations.TimeDaySingle : timeTranslations.TimeDayPlural;
+                lowSuffixTranslation = low == 1 ? timeTranslations.TimeHourSingle : timeTranslations.TimeHourPlural;
                 break;
 
             // < 1 year
             case < 31536000:
                 high = seconds / 2629800;
                 low = (int)(seconds / 86400d % (365.25d / 12d));
-                highSuffixTranslation = high == 1 ? T.TimeMonthSingle : T.TimeMonthPlural;
-                lowSuffixTranslation = low == 1 ? T.TimeDaySingle : T.TimeDayPlural;
+                highSuffixTranslation = high == 1 ? timeTranslations.TimeMonthSingle : timeTranslations.TimeMonthPlural;
+                lowSuffixTranslation = low == 1 ? timeTranslations.TimeDaySingle : timeTranslations.TimeDayPlural;
                 break;
 
             // < 1 year
             default:
                 high = seconds / 31536000;
                 low = (seconds / 2628000) % 12;
-                highSuffixTranslation = high == 1 ? T.TimeYearSingle : T.TimeYearPlural;
-                lowSuffixTranslation = low == 1 ? T.TimeMonthSingle : T.TimeMonthPlural;
+                highSuffixTranslation = high == 1 ? timeTranslations.TimeYearSingle : timeTranslations.TimeYearPlural;
+                lowSuffixTranslation = low == 1 ? timeTranslations.TimeMonthSingle : timeTranslations.TimeMonthPlural;
                 break;
         }
 
@@ -142,7 +146,7 @@ public sealed class TimeAddon : IArgumentAddon
         int lowDigits = MathUtility.CountDigits(low);
         string highSuffix = highSuffixTranslation.Translate(language);
         string lowSuffix = lowDigits == 0 ? string.Empty : lowSuffixTranslation!.Translate(language);
-        string and = T.TimeAnd.Translate(language);
+        string and = timeTranslations.TimeAnd.Translate(language);
 
         LongTimeState state = default;
         state.High = high;
@@ -249,4 +253,57 @@ public enum TimeFormatType
     /// Formatted HH:MM:SS.
     /// </summary>
     CountdownHoursMinutesSeconds
+}
+
+public sealed class TimeTranslations : PropertiesTranslationCollection
+{
+    protected override string FileName => "Time";
+
+    [TranslationData("Permanent time, lasts forever.")]
+    public readonly Translation TimePermanent = new Translation("permanent", TranslationOptions.UnityUINoReplace);
+
+    [TranslationData("1 second (singular).")]
+    public readonly Translation TimeSecondSingle = new Translation("second", TranslationOptions.UnityUINoReplace);
+
+    [TranslationData("X seconds (plural).")]
+    public readonly Translation TimeSecondPlural = new Translation("seconds", TranslationOptions.UnityUINoReplace);
+
+    [TranslationData("1 minute (singular).")]
+    public readonly Translation TimeMinuteSingle = new Translation("minute", TranslationOptions.UnityUINoReplace);
+
+    [TranslationData("X minutes (plural).")]
+    public readonly Translation TimeMinutePlural = new Translation("minutes", TranslationOptions.UnityUINoReplace);
+
+    [TranslationData("1 hour (singular).")]
+    public readonly Translation TimeHourSingle = new Translation("hour", TranslationOptions.UnityUINoReplace);
+
+    [TranslationData("X hours (plural).")]
+    public readonly Translation TimeHourPlural = new Translation("hours", TranslationOptions.UnityUINoReplace);
+
+    [TranslationData("1 day (singular).")]
+    public readonly Translation TimeDaySingle = new Translation("day", TranslationOptions.UnityUINoReplace);
+
+    [TranslationData("X days (plural).")]
+    public readonly Translation TimeDayPlural = new Translation("days", TranslationOptions.UnityUINoReplace);
+
+    [TranslationData("1 week (singular).")]
+    public readonly Translation TimeWeekSingle = new Translation("week", TranslationOptions.UnityUINoReplace);
+
+    [TranslationData("X weeks (plural).")]
+    public readonly Translation TimeWeekPlural = new Translation("weeks", TranslationOptions.UnityUINoReplace);
+
+    [TranslationData("1 month (singular).")]
+    public readonly Translation TimeMonthSingle = new Translation("month", TranslationOptions.UnityUINoReplace);
+
+    [TranslationData("X months (plural).")]
+    public readonly Translation TimeMonthPlural = new Translation("months", TranslationOptions.UnityUINoReplace);
+
+    [TranslationData("1 year (singular).")]
+    public readonly Translation TimeYearSingle = new Translation("year", TranslationOptions.UnityUINoReplace);
+
+    [TranslationData("X years (plural).")]
+    public readonly Translation TimeYearPlural = new Translation("years", TranslationOptions.UnityUINoReplace);
+
+    [TranslationData("Joining keyword (1 hour \"and\" 30 minutes).")]
+    public readonly Translation TimeAnd = new Translation("and", TranslationOptions.UnityUINoReplace);
 }

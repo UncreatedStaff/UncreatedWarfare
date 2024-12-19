@@ -48,8 +48,22 @@ public class LayoutFactory : IHostedService
     /// <inheritdoc />
     public UniTask StartAsync(CancellationToken token)
     {
-        SceneManager.sceneLoaded += OnSceneLoded;
-        Level.onPostLevelLoaded += OnLevelLoaded;
+        if (Level.isLoaded)
+        {
+            UniTask.Create(async () =>
+            {
+                await UniTask.NextFrame();
+                OnSceneLoded(SceneManager.GetSceneByBuildIndex(Level.BUILD_INDEX_GAME), LoadSceneMode.Single);
+                OnLevelLoaded(Level.BUILD_INDEX_GAME);
+            });
+        }
+        else
+        {
+            SceneManager.sceneLoaded += OnSceneLoded;
+
+            Level.onPostLevelLoaded += OnLevelLoaded;
+        }
+
         return UniTask.CompletedTask;
     }
 

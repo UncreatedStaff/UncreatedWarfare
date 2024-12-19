@@ -7,6 +7,13 @@ public interface ITranslationValueFormatter
 {
     LanguageService LanguageService { get; }
     ITranslationService TranslationService { get; }
+
+
+    /// <summary>
+    /// Provides services for addons.
+    /// </summary>
+    IServiceProvider ServiceProvider { get; }
+
     string Format<T>(T? value, in ValueFormatParameters parameters);
     string Format(object? value, in ValueFormatParameters parameters, Type? formatType = null);
 

@@ -1,7 +1,9 @@
-﻿using Uncreated.Warfare.Interaction.Commands;
+﻿using System.Runtime.CompilerServices;
+using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Models.Users;
 using Uncreated.Warfare.Moderation.Discord;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Commands;
@@ -9,6 +11,8 @@ namespace Uncreated.Warfare.Commands;
 [Command("link"), MetadataFile]
 internal sealed class LinkCommand : IExecutableCommand
 {
+    public static readonly PermissionLeaf PermissionLinkOtherPlayers
+        = new PermissionLeaf("commands.link.force", unturned: false, warfare: true);
     private readonly AccountLinkingService _linkingService;
     private readonly IUserDataService _userDataService;
     private readonly LinkCommandTranslations _translations;
@@ -40,7 +44,40 @@ internal sealed class LinkCommand : IExecutableCommand
 
             if (!success)
             {
-                throw Context.Reply(_translations.TokenNotRecognized, tkn);
+                // force link
+                if (!Context.HasArgs(2)
+                    || !await Context.HasPermission(PermissionLinkOtherPlayers, token).ConfigureAwait(false))
+                {
+                    throw Context.Reply(_translations.TokenNotRecognized, tkn);
+                }
+
+                if (!Context.TryGet(0, out ulong id1) || !Context.TryGet(1, out ulong id2))
+                {
+                    throw Context.SendHelp();
+                }
+
+                // figure out which ID is a Steam64 ID
+                ulong s64, dId;
+                if (Unsafe.As<ulong, CSteamID>(ref id1).GetEAccountType()
+                    == EAccountType.k_EAccountTypeIndividual)
+                {
+                    s64 = id1;
+                    dId = id2;
+                }
+                else if (Unsafe.As<ulong, CSteamID>(ref id2).GetEAccountType()
+                         == EAccountType.k_EAccountTypeIndividual)
+                {
+                    s64 = id2;
+                    dId = id1;
+                }
+                else
+                {
+                    throw Context.SendHelp();
+                }
+
+                await _linkingService
+                    .LinkAccountsAsync(new CSteamID(s64), dId, token)
+                    .ConfigureAwait(false);
             }
 
             ulong discordId = await _userDataService.GetDiscordIdAsync(Context.CallerId.m_SteamID, CancellationToken.None);
@@ -52,12 +89,13 @@ internal sealed class LinkCommand : IExecutableCommand
 
             Context.Reply(_translations.StartedLink, link.Token);
 
-            await UniTask.Delay(1000, cancellationToken: CancellationToken.None);
-
-            if (!Context.Player.IsOnline)
-                return;
-
-            Context.ReplyUrl(_translations.CopyTokenPopup.Translate(Context.Caller), "https://uncreated.network/copy-text?text=" + link.Token);
+            // todo allow copying from website maybe, not that it's that hard to just type out
+            //await UniTask.Delay(1000, cancellationToken: CancellationToken.None);
+            //
+            //if (!Context.Player.IsOnline)
+            //    return;
+            //
+            //Context.ReplyUrl(_translations.CopyTokenPopup.Translate(Context.Caller), "https://uncreated.network/copy-text?text=" + link.Token);
         }
     }
 }

@@ -66,6 +66,7 @@ using Uncreated.Warfare.StrategyMaps;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Languages;
+using Uncreated.Warfare.Tweaks;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Timing;
 using Uncreated.Warfare.Vehicles;
@@ -704,6 +705,9 @@ public sealed class WarfareModule
         bldr.RegisterType<VehicleInteractionTweaks>()
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+        bldr.RegisterType<NoCraftingTweak>()
+            .AsImplementedInterfaces()
+            .SingleInstance();
 
         // Localization
         bldr.RegisterType<LanguageService>()

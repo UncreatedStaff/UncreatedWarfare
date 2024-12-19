@@ -757,42 +757,6 @@ internal static class T
     public static readonly Translation<TimeSpan, string> RallyUITimer = new Translation<TimeSpan, string>("<#c$rally$>RALLY</color> {0} {1}", TranslationOptions.UnityUI, TimeAddon.Create(TimeFormatType.CountdownMinutesSeconds));
     #endregion
 
-    #region Time
-    private const string SectionTime = "Time Strings";
-    [TranslationData(SectionTime, "Permanent time, lasts forever.")]
-    public static readonly Translation TimePermanent    = new Translation("permanent", TranslationOptions.UnityUINoReplace);
-    [TranslationData(SectionTime, "1 second (singular).")]
-    public static readonly Translation TimeSecondSingle = new Translation("second", TranslationOptions.UnityUINoReplace);
-    [TranslationData(SectionTime, "X seconds (plural).")]
-    public static readonly Translation TimeSecondPlural = new Translation("seconds", TranslationOptions.UnityUINoReplace);
-    [TranslationData(SectionTime, "1 minute (singular).")]
-    public static readonly Translation TimeMinuteSingle = new Translation("minute", TranslationOptions.UnityUINoReplace);
-    [TranslationData(SectionTime, "X minutes (plural).")]
-    public static readonly Translation TimeMinutePlural = new Translation("minutes", TranslationOptions.UnityUINoReplace);
-    [TranslationData(SectionTime, "1 hour (singular).")]
-    public static readonly Translation TimeHourSingle   = new Translation("hour", TranslationOptions.UnityUINoReplace);
-    [TranslationData(SectionTime, "X hours (plural).")]
-    public static readonly Translation TimeHourPlural   = new Translation("hours", TranslationOptions.UnityUINoReplace);
-    [TranslationData(SectionTime, "1 day (singular).")]
-    public static readonly Translation TimeDaySingle    = new Translation("day", TranslationOptions.UnityUINoReplace);
-    [TranslationData(SectionTime, "X days (plural).")]
-    public static readonly Translation TimeDayPlural    = new Translation("days", TranslationOptions.UnityUINoReplace);
-    [TranslationData(SectionTime, "1 week (singular).")]
-    public static readonly Translation TimeWeekSingle   = new Translation("week", TranslationOptions.UnityUINoReplace);
-    [TranslationData(SectionTime, "X weeks (plural).")]
-    public static readonly Translation TimeWeekPlural   = new Translation("weeks", TranslationOptions.UnityUINoReplace);
-    [TranslationData(SectionTime, "1 month (singular).")]
-    public static readonly Translation TimeMonthSingle  = new Translation("month", TranslationOptions.UnityUINoReplace);
-    [TranslationData(SectionTime, "X months (plural).")]
-    public static readonly Translation TimeMonthPlural  = new Translation("months", TranslationOptions.UnityUINoReplace);
-    [TranslationData(SectionTime, "1 year (singular).")]
-    public static readonly Translation TimeYearSingle   = new Translation("year", TranslationOptions.UnityUINoReplace);
-    [TranslationData(SectionTime, "X years (plural).")]
-    public static readonly Translation TimeYearPlural   = new Translation("years", TranslationOptions.UnityUINoReplace);
-    [TranslationData(SectionTime, "Joining keyword (1 hour \"and\" 30 minutes).")]
-    public static readonly Translation TimeAnd          = new Translation("and", TranslationOptions.UnityUINoReplace);
-    #endregion
-
     #region Popup
     private const string SectionPopup = "Popup";
     [TranslationData(SectionPopup)]

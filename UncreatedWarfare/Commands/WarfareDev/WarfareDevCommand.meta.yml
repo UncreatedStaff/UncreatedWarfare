@@ -57,6 +57,12 @@ Parameters:
         IsOptional: true
         IsRemainder: true
 
+  # /warfaredev injure
+  - Name: injure
+    Alias: down
+    Type: Verbatim
+    Description: "Put the <caller /> in an injured state."
+
   # /warfaredev sign
   - Name: sign
     Type: Verbatim

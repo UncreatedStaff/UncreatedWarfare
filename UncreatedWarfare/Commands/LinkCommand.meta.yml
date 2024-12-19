@@ -1,8 +1,32 @@
 ﻿# LinkCommand
-Description: "Link the <caller />'s Steam profile with their discord profile."
+Description: "Link the <caller />'s Steam profile with their Discord profile."
 Parameters:
+    # /link
+    # - no parameters
+
+    # /link <token>
   - Name: token
     Type: string
-    Description: "End a pending account link that was started in Discord."
+    Description: "End a pending account link that was started by the <caller /> in Discord."
     IsOptional: true
     IsRemainder: true
+    
+    # /link <steam64 id> <discord id>
+  - Name: steam64-id
+    Type: Steamworks.CSteamID
+    Description: "Create a link between a player's <param 'steam64-id'/> and <param 'discord-id'/>."
+    IsOptional: true
+    Permission: warfare::commands.link.force
+    Parameters:
+      - Name: discord-id
+        Type: ulong
+        
+    # /link <discord id> <steam64 id>
+  - Name: discord-id
+    Type: ulong
+    Description: "Create a link between a player's <param 'steam64-id'/> and <param 'discord-id'/>."
+    IsOptional: true
+    Permission: warfare::commands.link.force
+    Parameters:
+      - Name: steam64-id
+        Type: Steamworks.CSteamID

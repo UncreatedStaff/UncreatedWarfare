@@ -82,7 +82,7 @@ public class PlayerInjureComponent : MonoBehaviour,
                // player alive
                !parameters.player.life.isDead &&
                // player will die from hit
-               actualDamage > parameters.player.life.health &&
+               actualDamage >= parameters.player.life.health &&
                // not killed by landmine
                parameters.cause != EDeathCause.LANDMINE &&
                // not dying from main-camping reverse damage (makes death messages significantly harder)

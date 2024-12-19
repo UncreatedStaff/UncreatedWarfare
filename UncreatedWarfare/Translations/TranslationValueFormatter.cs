@@ -25,6 +25,9 @@ public class TranslationValueFormatter : ITranslationValueFormatter
     public LanguageService LanguageService => field ??= _serviceProvider.GetRequiredService<LanguageService>();
     public ITranslationService TranslationService => field ??= _serviceProvider.GetRequiredService<ITranslationService>();
 
+    public IServiceProvider ServiceProvider => _serviceProvider;
+
+
     private readonly ConcurrentDictionary<Type, object> _valueFormatters = new ConcurrentDictionary<Type, object>();
     public TranslationValueFormatter(IServiceProvider serviceProvider, IConfiguration systemConfig)
     {
