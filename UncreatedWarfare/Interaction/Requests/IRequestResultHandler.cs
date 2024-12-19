@@ -1,4 +1,5 @@
-﻿using Uncreated.Warfare.Players;
+﻿using System;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Costs;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Util;
@@ -59,4 +60,9 @@ public interface IRequestResultHandler
     /// Called when the player doesn't meet an unlock cost.
     /// </summary>
     void MissingUnlockRequirement(WarfarePlayer player, IRequestable<object> value, UnlockRequirement unlockRequirement);
+
+    /// <summary>
+    /// Called when the player tries to request a vehicle that's currently delayed.
+    /// </summary>
+    void VehicleDelayed(WarfarePlayer player, IRequestable<object> value, TimeSpan timeLeft);
 }

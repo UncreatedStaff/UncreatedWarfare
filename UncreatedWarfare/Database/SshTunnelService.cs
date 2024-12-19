@@ -7,43 +7,6 @@ using System.Runtime.CompilerServices;
 
 namespace Uncreated.Warfare.Database;
 
-// only initialize if library exists
-public static class SshTunnelHelper
-{
-    public static void AddIfAvailable(ContainerBuilder serviceCollection)
-    {
-        if (Type.GetType("Renci.SshNet.ISshClient, Renci.SshNet, Version=2024.2.0.1", false) == null)
-            return;
-        
-        serviceCollection.RegisterType(GetServiceType())
-            .SingleInstance();
-    }
-
-    public static UniTask OpenIfAvailableAsync(ILifetimeScope serviceProvider, CancellationToken token)
-    {
-        if (Type.GetType("Renci.SshNet.ISshClient, Renci.SshNet", false) == null)
-            return UniTask.CompletedTask;
-
-        object? service = serviceProvider.ResolveOptional(GetServiceType());
-        if (service != null)
-        {
-            return OpenAsync(service, token);
-        }
-
-        return UniTask.CompletedTask;
-    }
-
-    private static UniTask OpenAsync(object service, CancellationToken token)
-    {
-        SshTunnelService sshTunnel = (SshTunnelService)service;
-
-        return sshTunnel.StartAsync(token);
-    }
-
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    private static Type GetServiceType() => typeof(SshTunnelService);
-}
-
 [Ignore]
 public class SshTunnelService : IDisposable
 {
@@ -56,6 +19,7 @@ public class SshTunnelService : IDisposable
     {
         _systemConfig = systemConfig.GetSection("database");
         _logger = logger;
+
     }
 
     public async UniTask StartAsync(CancellationToken cancellationToken)

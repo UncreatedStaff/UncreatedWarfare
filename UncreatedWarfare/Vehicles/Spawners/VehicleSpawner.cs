@@ -22,6 +22,7 @@ using Autofac.Core;
 using System.Globalization;
 using System.Diagnostics.CodeAnalysis;
 using Uncreated.Warfare.Layouts;
+using Uncreated.Warfare.Vehicles.Spawners.Delays;
 
 namespace Uncreated.Warfare.Vehicles.Spawners
 {
@@ -54,6 +55,7 @@ namespace Uncreated.Warfare.Vehicles.Spawners
         /// A vehicle that has been spawned from this spawn.
         /// </summary>
         public InteractableVehicle? LinkedVehicle { get; private set; }
+        public Team Team { get; private set; }
         public IBuildable? Buildable { get; private set; }
         public List<IBuildable> Signs { get; }
         public string ServerSignText => "vbs_" + SpawnInfo.VehicleAsset.Guid.ToString("N", CultureInfo.InvariantCulture);
@@ -70,6 +72,8 @@ namespace Uncreated.Warfare.Vehicles.Spawners
                 _state = value;
             }
         }
+
+        public LayoutRole TeamLayoutRole { get; private set; }
 
         public VehicleSpawner(VehicleSpawnInfo spawnerInfo, WarfareVehicleInfo vehicleInfo, ILoopTicker updateTicker, IServiceProvider layoutServiceProvider)
         {
@@ -135,6 +139,23 @@ namespace Uncreated.Warfare.Vehicles.Spawners
                 {
                     Buildable = new BuildableBarricade(buildableInfo.Drop);
                 }
+            }
+
+            
+            if (Buildable != null)
+            {
+                Team = _teamManager.GetTeam(Buildable.Group);
+
+                if (_teamManager is TwoSidedTeamManager ts)
+                    TeamLayoutRole = ts.GetLayoutRole(Team);
+                else
+                    TeamLayoutRole = LayoutRole.NotApplicable;
+
+            }
+            else
+            {
+                TeamLayoutRole = LayoutRole.NotApplicable;
+                Team = Team.NoTeam;
             }
         }
         private void ResolveSigns(VehicleSpawnInfo spawnerInfo)
@@ -237,7 +258,10 @@ namespace Uncreated.Warfare.Vehicles.Spawners
 
                 if (LinkedVehicle != null && !LinkedVehicle.isExploded && !LinkedVehicle.isDead && !LinkedVehicle.isDrowned)
                 {
-                    State = VehicleSpawnerState.Ready;
+                    if (IsDelayed(out _))
+                        State = VehicleSpawnerState.LayoutDelayed;
+                    else
+                        State = VehicleSpawnerState.Ready;
                     _lastLocation = null;
                     _timeStartedIdle = DateTime.MaxValue;
                     _timeDestroyed = DateTime.MaxValue;
@@ -457,19 +481,21 @@ namespace Uncreated.Warfare.Vehicles.Spawners
         }
         public bool IsDelayed(out TimeSpan timeLeft)
         {
-            timeLeft = TimeSpan.Zero;
-
+            timeLeft = GetLayoutDelayTimeLeft();
+            return timeLeft > TimeSpan.Zero;
+        }
+        public TimeSpan GetLayoutDelayTimeLeft()
+        {
             if (_vehicleSpawnerSelector == null || _currentLayout == null)
-                return false;
+                return TimeSpan.Zero;
 
             if (!_vehicleSpawnerSelector.TryGetSpawnerConfiguration(SpawnInfo, out VehicleSpawnerLayoutConfiguration? configuration))
-                return false;
+                return TimeSpan.Zero;
 
             if (configuration.Delay == null)
-                return false;
+                return TimeSpan.Zero;
 
-            timeLeft = configuration.Delay.GetTimeLeft(_currentLayout);
-            return timeLeft > TimeSpan.Zero;
+            return configuration.Delay.GetTimeLeft(new LayoutDelayContext(_currentLayout, TeamLayoutRole));
         }
         public bool IsEnabledInLayout() => _vehicleSpawnerSelector?.IsEnabledInLayout(SpawnInfo) ?? true;
 

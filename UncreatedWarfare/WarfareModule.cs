@@ -747,7 +747,7 @@ public sealed class WarfareModule
 
         // Database
 
-        SshTunnelHelper.AddIfAvailable(bldr);
+        SshTunnelHelper.AddSshTunnelService(bldr);
 
         bldr.RegisterType<DatabaseInterface>()
             .AsSelf()
@@ -880,6 +880,8 @@ public sealed class WarfareModule
             }
             else
             {
+                _logger.LogDebug("Migrating database for real...");
+                //_logger.LogDebug($"Migrating database process: {dbContext.}");
                 await dbContext.Database.MigrateAsync(token).ConfigureAwait(false);
                 _logger.LogInformation("Migration completed.");
             }

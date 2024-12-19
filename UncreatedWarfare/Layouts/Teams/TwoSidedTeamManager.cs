@@ -6,6 +6,7 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Events;
@@ -88,6 +89,16 @@ public class TwoSidedTeamManager : ITeamManager<Team>
             return _teams[1];
 
         return Team.NoTeam;
+    }
+    public LayoutRole GetLayoutRole(Team team)
+    {
+        if (_blufor > -1 && team == _teams[_blufor])
+            return LayoutRole.Blufor;
+
+        if (_opfor > -1 && team == _teams[_opfor])
+            return LayoutRole.Opfor;
+
+        return LayoutRole.NotApplicable;
     }
 
     /// <inheritdoc />

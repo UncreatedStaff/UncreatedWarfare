@@ -67,4 +67,8 @@ public class RequestCommandResultHandler : IRequestResultHandler
     {
         throw new NotImplementedException();
     }
+    public void VehicleDelayed(WarfarePlayer player, IRequestable<object> value, TimeSpan timeLeft)
+    {
+        _chatService.Send(player, _translations.RequestVehicleTimeDelay, timeLeft);
+    }
 }

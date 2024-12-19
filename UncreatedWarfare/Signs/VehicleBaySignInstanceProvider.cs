@@ -137,14 +137,15 @@ public class VehicleBaySignInstanceProvider : ISignInstanceProvider, IRequestabl
             case VehicleSpawnerState.Idle:
                 bldr.Append(_translations.VBSStateIdle.Translate(spawner.GetRespawnDueTime(), language, culture));
                 break;
+            case VehicleSpawnerState.LayoutDelayed:
+                bldr.Append(_translations.VBSStateLayoutDelayed.Translate(spawner.GetLayoutDelayTimeLeft(), language, culture));
+                break;
             case VehicleSpawnerState.LayoutDisabled:
                 bldr.Append(_translations.VBSStateLayoutDisabled.Translate(language));
                 break;
             case VehicleSpawnerState.Disposed:
                 bldr.Append(_translations.VBSStateDisposed.Translate(language));
                 break;
-
-            // todo delays
 
             default:
                 bldr.Append(_translations.VBSStateReady.Translate(language));
@@ -173,6 +174,9 @@ public class VehicleBaySignTranslations : PropertiesTranslationCollection
 
     [TranslationData("Displays the state of the sign when the vehicle was left idle on the field.", Parameters = [ "Minutes", "Seconds" ])]
     public readonly Translation<TimeSpan> VBSStateIdle = new Translation<TimeSpan>("<#ffcc00>Idle: {0}</color>", arg0Fmt: TimeAddon.Create(TimeFormatType.CountdownMinutesSeconds));
+
+    [TranslationData("Displays the state of the sign when the vehicle spawner is currently delayed by the current layout.")]
+    public readonly Translation<TimeSpan> VBSStateLayoutDelayed = new Translation<TimeSpan>("<#7094dd>Delayed: {0}</color>", arg0Fmt: TimeAddon.Create(TimeFormatType.CountdownMinutesSeconds));
 
     [TranslationData("Displays the state of the sign when the vehicle spawner is disabled in the current layout.")]
     public readonly Translation VBSStateLayoutDisabled = new Translation("<#798082>Disabled</color>");
