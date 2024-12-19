@@ -1,4 +1,4 @@
-﻿using DanielWillett.ModularRpcs.Annotations;
+using DanielWillett.ModularRpcs.Annotations;
 using DanielWillett.ModularRpcs.Reflection;
 using DanielWillett.ModularRpcs.Routing;
 using Microsoft.EntityFrameworkCore;
@@ -147,30 +147,37 @@ public partial class KitManager :
                          .AsSelf().AsImplementedInterfaces()
                          .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session)
                          .ExternallyOwned();
+
         serviceCollection.Register(serviceProvider => serviceProvider.Resolve<KitManager>().Distribution)
                          .AsSelf().AsImplementedInterfaces()
                          .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session)
                          .ExternallyOwned();
+
         serviceCollection.Register(serviceProvider => serviceProvider.Resolve<KitManager>().Requests)
                          .AsSelf().AsImplementedInterfaces()
                          .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session)
                          .ExternallyOwned();
+
         serviceCollection.Register(serviceProvider => serviceProvider.Resolve<KitManager>().Signs)
                          .AsSelf().AsImplementedInterfaces()
                          .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session)
                          .ExternallyOwned();
+
         serviceCollection.Register(serviceProvider => serviceProvider.Resolve<KitManager>().Layouts)
                          .AsSelf().AsImplementedInterfaces()
                          .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session)
                          .ExternallyOwned();
+
         serviceCollection.Register(serviceProvider => serviceProvider.Resolve<KitManager>().Boosting)
                          .AsSelf().AsImplementedInterfaces()
                          .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session)
                          .ExternallyOwned();
+
         serviceCollection.Register(serviceProvider => serviceProvider.Resolve<KitManager>().Loadouts)
                          .AsSelf().AsImplementedInterfaces()
                          .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session)
                          .ExternallyOwned();
+
         serviceCollection.Register(serviceProvider => serviceProvider.Resolve<KitManager>().Defaults)
                          .AsSelf().AsImplementedInterfaces()
                          .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session)

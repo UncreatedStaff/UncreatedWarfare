@@ -51,7 +51,7 @@ public class AmmoBagComponent : MonoBehaviour
 
         WarfarePlayer? owner = _serviceProvider.GetRequiredService<IPlayerService>().GetOnlinePlayerOrNull(Drop.GetServersideData().owner);
 
-        if (owner != null && owner.Steam64 != player.Steam64)
+        if (owner != null && owner.Steam64.m_SteamID != player.Steam64.m_SteamID)
         {
             // todo Points.AwardXP(owner, XPReward.Resupply);
         }

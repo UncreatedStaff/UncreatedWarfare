@@ -1,4 +1,4 @@
-﻿using DanielWillett.SpeedBytes;
+using DanielWillett.SpeedBytes;
 using DanielWillett.SpeedBytes.Unity;
 using System;
 using System.Collections.Generic;
@@ -17,14 +17,14 @@ public class CheatingReport : Report
 {
     [JsonPropertyName("hits")]
     public ShotRecord[] Shots { get; set; } = Array.Empty<ShotRecord>();
-    public double GetAccuracy(EPlayerKill? type = null)
+    public double GetAccuracy(ERaycastInfoType? type = null)
     {
         int hits = 0;
 
         for (int i = 0; i < Shots.Length; ++i)
         {
             ref ShotRecord shot = ref Shots[i];
-            if (shot.HitType == EPlayerKill.NONE || type.HasValue && shot.HitType != type.Value)
+            if (shot.HitType == ERaycastInfoType.NONE || type.HasValue && shot.HitType != type.Value)
                 continue;
 
             ++hits;
@@ -33,14 +33,14 @@ public class CheatingReport : Report
         return hits / (double)Shots.Length;
     }
 
-    public double GetAccuracy(out AccuracyMap map, EPlayerKill? type = null)
+    public double GetAccuracy(out AccuracyMap map, ERaycastInfoType? type = null)
     {
         int hits = 0, head = 0, spine = 0, lfoot = 0, rfoot = 0, lleg = 0, rleg = 0, lhand = 0, rhand = 0, larm = 0, rarm = 0, lback = 0, rback = 0, lfront = 0, rfront = 0;
 
         for (int i = 0; i < Shots.Length; ++i)
         {
             ref ShotRecord shot = ref Shots[i];
-            if (shot.HitType == EPlayerKill.NONE || type.HasValue && shot.HitType != type.Value)
+            if (shot.HitType == ERaycastInfoType.NONE || type.HasValue && shot.HitType != type.Value)
                 continue;
 
             ++hits;
@@ -140,7 +140,7 @@ public class CheatingReport : Report
     {
         await base.AddExtraInfo(db, workingList, formatter, token);
         
-        GetAccuracy(out AccuracyMap map, EPlayerKill.PLAYER);
+        GetAccuracy(out AccuracyMap map, ERaycastInfoType.PLAYER);
         StringBuilder limbMask = new StringBuilder(16);
 
         if (map.HeadAccuracy > 0)
@@ -334,7 +334,7 @@ public readonly struct ShotRecord
 
     [JsonPropertyName("hit_type")]
     [JsonConverter(typeof(JsonStringEnumConverter))]
-    public EPlayerKill HitType { get; }
+    public ERaycastInfoType HitType { get; }
 
     [JsonPropertyName("hit_actor")]
     [JsonConverter(typeof(ActorConverter))]
@@ -375,7 +375,7 @@ public readonly struct ShotRecord
     public double Distance { get; }
 
     public ShotRecord() { }
-    public ShotRecord(Guid item, Guid ammo, string? itemName, string? ammoName, EPlayerKill hitType, IModerationActor? hitActor, Guid? hitAsset, string? hitAssetName, ELimb? limb, DateTimeOffset timestamp, Vector3 shootFromPoint, Vector3 shootFromRotation, Vector3? hitPoint, bool isProjectile, int damageDone, double distance)
+    public ShotRecord(Guid item, Guid ammo, string? itemName, string? ammoName, ERaycastInfoType hitType, IModerationActor? hitActor, Guid? hitAsset, string? hitAssetName, ELimb? limb, DateTimeOffset timestamp, Vector3 shootFromPoint, Vector3 shootFromRotation, Vector3? hitPoint, bool isProjectile, int damageDone, double distance)
     {
         Item = item;
         Ammo = ammo;
@@ -401,9 +401,9 @@ public readonly struct ShotRecord
         ItemName = reader.ReadNullableString();
         Ammo = reader.ReadGuid();
         AmmoName = reader.ReadNullableString();
-        HitType = (EPlayerKill)reader.ReadUInt8();
+        HitType = (ERaycastInfoType)reader.ReadUInt8();
         byte flag = reader.ReadUInt8();
-        if (HitType != EPlayerKill.NONE)
+        if (HitType != ERaycastInfoType.NONE)
         {
             HitActor = (flag & 1) != 0 ? Actors.GetActor(reader.ReadUInt64()) : null;
             HitAsset = (flag & 2) != 0 ? reader.ReadGuid() : null;
@@ -434,7 +434,7 @@ public readonly struct ShotRecord
         writer.Write((byte)HitType);
         byte flag = (byte)((HitActor != null ? 1 : 0) | (HitAsset.HasValue ? 2 : 0) | (Limb.HasValue ? 4 : 0) | (IsProjectile ? 8 : 0) | (HitPoint.HasValue ? 16 : 0));
         writer.Write(flag);
-        if (HitType != EPlayerKill.NONE)
+        if (HitType != ERaycastInfoType.NONE)
         {
             if (HitActor != null)
                 writer.Write(HitActor.Id);

@@ -7,6 +7,7 @@ using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Models.GameData;
 using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Saves;
 using Uncreated.Warfare.Stats;
@@ -29,7 +30,7 @@ public interface IPlayer : ITranslationArgument
 }
 
 [CannotApplyEqualityOperator]
-public class WarfarePlayer : IPlayer, ICommandUser, IComponentContainer<IPlayerComponent>, IEquatable<IPlayer>, IEquatable<WarfarePlayer>, ITransformObject
+public class WarfarePlayer : IPlayer, ICommandUser, IModerationActor, IComponentContainer<IPlayerComponent>, IEquatable<IPlayer>, IEquatable<WarfarePlayer>, ITransformObject
 {
     private readonly CancellationTokenSource _disconnectTokenSource;
     private readonly ILogger _logger;
@@ -37,8 +38,13 @@ public class WarfarePlayer : IPlayer, ICommandUser, IComponentContainer<IPlayerC
     private PlayerPoints _cachedPoints;
     private readonly uint _acctId;
     private readonly SingleUseTypeDictionary<IPlayerComponent> _components;
+    private readonly CSteamID _steam64;
 
-    public CSteamID Steam64 { get; }
+    public ref readonly CSteamID Steam64 => ref _steam64;
+
+    CSteamID IPlayer.Steam64 => _steam64;
+    CSteamID ICommandUser.Steam64 => _steam64;
+
     public Player UnturnedPlayer { get; }
     public SteamPlayer SteamPlayer { get; }
     public Transform Transform { get; }
@@ -114,8 +120,8 @@ public class WarfarePlayer : IPlayer, ICommandUser, IComponentContainer<IPlayerC
         _playerNameHelper = new PlayerNames(player);
         UnturnedPlayer = player;
         SteamPlayer = player.channel.owner;
-        Steam64 = player.channel.owner.playerID.steamID;
-        _acctId = Steam64.GetAccountID().m_AccountID;
+        _steam64 = player.channel.owner.playerID.steamID;
+        _acctId = _steam64.GetAccountID().m_AccountID;
         Transform = player.transform;
         Save = new BinaryPlayerSave(Steam64, _logger);
         Save.Load();
@@ -264,6 +270,11 @@ public class WarfarePlayer : IPlayer, ICommandUser, IComponentContainer<IPlayerC
         };
     }
 
+    public IModerationActor GetModerationActor()
+    {
+        return this;
+    }
+
     public override int GetHashCode()
     {
         return unchecked ( (int)_acctId );
@@ -304,4 +315,23 @@ public class WarfarePlayer : IPlayer, ICommandUser, IComponentContainer<IPlayerC
     }
 
     bool ITransformObject.Alive => IsOnline;
+
+    bool IModerationActor.Async => false;
+
+    ulong IModerationActor.Id => Steam64.m_SteamID;
+
+    ValueTask<string?> IModerationActor.GetProfilePictureURL(DatabaseInterface database, AvatarSize size, CancellationToken token)
+    {
+        return new ValueTask<string?>(size switch
+        {
+            AvatarSize.Medium => SteamSummary.AvatarUrlMedium,
+            AvatarSize.Small => SteamSummary.AvatarUrlSmall,
+            _ => SteamSummary.AvatarUrlFull
+        });
+    }
+
+    ValueTask<string> IModerationActor.GetDisplayName(DatabaseInterface database, CancellationToken token)
+    {
+        throw new NotImplementedException();
+    }
 }

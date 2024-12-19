@@ -1,0 +1,8 @@
+﻿# LinkCommand
+Description: "Link the <caller />'s Steam profile with their discord profile."
+Parameters:
+  - Name: token
+    Type: string
+    Description: "End a pending account link that was started in Discord."
+    IsOptional: true
+    IsRemainder: true

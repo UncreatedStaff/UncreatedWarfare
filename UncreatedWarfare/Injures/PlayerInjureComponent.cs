@@ -224,7 +224,6 @@ public class PlayerInjureComponent : MonoBehaviour,
 #endif
     }
 
-
     /// <summary>
     /// Injure the current player if they're not injured or dead.
     /// </summary>
@@ -242,7 +241,7 @@ public class PlayerInjureComponent : MonoBehaviour,
 
         AddInjureModifiers();
 
-        ActionLog.Add(ActionLogType.Injured, "by " + (killer == null ? "self" : killer.Steam64.ToString()), parameters.player.channel.owner.playerID.steamID.m_SteamID);
+        ActionLog.Add(ActionLogType.Injured, "by " + (killer == null ? "self" : killer.Steam64.m_SteamID.ToString(CultureInfo.InvariantCulture)), parameters.player.channel.owner.playerID.steamID.m_SteamID);
 
         _deathTracker.OnInjured(in parameters);
 

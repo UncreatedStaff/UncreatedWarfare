@@ -1,4 +1,4 @@
-﻿using MySqlConnector;
+using MySqlConnector;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -807,7 +807,7 @@ public class DatabaseInterface
                     reader.GetGuid(1),
                     reader.IsDBNull(4) ? null : reader.GetString(4),
                     reader.IsDBNull(2) ? null : reader.GetString(2),
-                    reader.ReadStringEnum(18, EPlayerKill.NONE),
+                    reader.ReadStringEnum(18, ERaycastInfoType.NONE),
                     reader.IsDBNull(19) ? null : Actors.GetActor(reader.GetUInt64(19)),
                     reader.IsDBNull(20) ? null : reader.GetGuid(20),
                     reader.IsDBNull(21) ? null : reader.GetString(21),

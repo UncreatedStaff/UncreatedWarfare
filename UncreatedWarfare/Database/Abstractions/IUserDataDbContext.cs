@@ -9,6 +9,7 @@ public interface IUserDataDbContext : IDbContext
     DbSet<PlayerIPAddress> IPAddresses { get; }
     DbSet<PlayerHWID> HWIDs { get; }
     DbSet<Permission> Permissions { get; }
+    DbSet<SteamDiscordPendingLink> PendingLinks { get; }
 
     public static void ConfigureModels(ModelBuilder modelBuilder)
     {

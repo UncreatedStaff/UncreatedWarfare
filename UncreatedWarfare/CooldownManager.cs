@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
@@ -41,55 +42,77 @@ public class CooldownManager : IHostedService, ILayoutHostedService
 
     public static bool ShouldResetOnGameStart(CooldownType type) => type != CooldownType.Report;
 
-    /// <exception cref="SingletonUnloadedException"/>
     public void StartCooldown(WarfarePlayer player, CooldownType type, float seconds, params object[] data)
+    {
+        StartCooldown(player.Steam64, type, seconds, data);
+    }
+
+    public void StartCooldown(CSteamID player, CooldownType type, float seconds, params object[] data)
     {
         GameThread.AssertCurrent();
 
-        if (seconds <= 0f) return;
+        if (seconds <= 0f || player.GetEAccountType() != EAccountType.k_EAccountTypeIndividual) return;
 
-        if (HasCooldown(player, type, out Cooldown existing, data))
+        if (HasCooldown(player, type, out Cooldown? existing, data))
             existing.TimeAdded = Time.realtimeSinceStartup;
         else
             Cooldowns.Add(new Cooldown(player, type, seconds, data));
     }
 
-    /// <exception cref="SingletonUnloadedException"/>
-    public bool HasCooldown(WarfarePlayer player, CooldownType type, out Cooldown cooldown, params object[] data)
+    public bool HasCooldown(WarfarePlayer player, CooldownType type, params object[] data)
+    {
+        return HasCooldown(player.Steam64, type, out _, data);
+    }
+    public bool HasCooldown(WarfarePlayer player, CooldownType type, [MaybeNullWhen(false)] out Cooldown cooldown, params object[] data)
+    {
+        return HasCooldown(player.Steam64, type, out cooldown, data);
+    }
+
+    public bool HasCooldown(CSteamID player, CooldownType type, params object[] data)
+    {
+        return HasCooldown(player, type, out _, data);
+    }
+    public bool HasCooldown(CSteamID player, CooldownType type, [MaybeNullWhen(false)] out Cooldown cooldown, params object[] data)
     {
         GameThread.AssertCurrent();
 
-        Cooldowns.RemoveAll(c => c.Player == null || c.SecondsLeft <= 0f);
-        cooldown = Cooldowns.Find(c => c.CooldownType == type && c.Player.Steam64 == player.Steam64 && data.SequenceEqual(c.Parameters));
+        Cooldowns.RemoveAll(c => c.SecondsLeft <= 0f);
+
+        if (player.GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
+        {
+            cooldown = null;
+            return false;
+        }
+
+        cooldown = Cooldowns.Find(c => c.CooldownType == type && c.Player.m_SteamID == player.m_SteamID && data.SequenceEqual(c.Parameters));
         return cooldown != null;
     }
 
-    /// <exception cref="SingletonUnloadedException"/>
     public bool HasCooldownNoStateCheck(WarfarePlayer player, CooldownType type, out Cooldown cooldown)
     {
         GameThread.AssertCurrent();
 
-        Cooldowns.RemoveAll(c => c.Player == null || c.Timeleft.TotalSeconds <= 0);
-        cooldown = Cooldowns.Find(c => c.CooldownType == type && c.Player.Steam64.m_SteamID == player.Steam64.m_SteamID);
+        Cooldowns.RemoveAll(c => c.Timeleft.Ticks <= 0);
+        cooldown = Cooldowns.Find(c => c.CooldownType == type && c.Player.m_SteamID == player.Steam64.m_SteamID);
         return cooldown != null;
     }
     public void RemoveCooldown(WarfarePlayer player, CooldownType type)
     {
         GameThread.AssertCurrent();
 
-        Cooldowns.RemoveAll(c => c.Player == null || c.Player.Steam64.m_SteamID == player.Steam64.m_SteamID && c.CooldownType == type);
+        Cooldowns.RemoveAll(c => c.Timeleft.Ticks <= 0 || c.Player.m_SteamID == player.Steam64.m_SteamID && c.CooldownType == type);
     }
     public void RemoveCooldown(WarfarePlayer player)
     {
         GameThread.AssertCurrent();
 
-        Cooldowns.RemoveAll(c => c.Player.Steam64.m_SteamID == player.Steam64.m_SteamID);
+        Cooldowns.RemoveAll(c => c.Timeleft.Ticks <= 0 || c.Player.m_SteamID == player.Steam64.m_SteamID);
     }
     public void RemoveCooldown(CooldownType type)
     {
         GameThread.AssertCurrent();
 
-        Cooldowns.RemoveAll(x => x.Player == null || x.CooldownType == type);
+        Cooldowns.RemoveAll(x => x.Timeleft.Ticks <= 0 || x.CooldownType == type);
     }
 
     /// <returns>
@@ -147,9 +170,9 @@ public class CooldownConfig
         GlobalTraitCooldown = 0f;
     }
 }
-public class Cooldown(WarfarePlayer player, CooldownType cooldownType, float duration, params object[] cooldownParameters) : ITranslationArgument
+public class Cooldown(CSteamID player, CooldownType cooldownType, float duration, params object[] cooldownParameters) : ITranslationArgument
 {
-    public WarfarePlayer Player { get; } = player;
+    public CSteamID Player { get; } = player;
     public CooldownType CooldownType { get; } = cooldownType;
     public double TimeAdded { get; set; } = Time.realtimeSinceStartupAsDouble;
     public float Duration { get; set; } = duration;

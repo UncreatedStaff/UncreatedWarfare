@@ -8,7 +8,7 @@ using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Commands.Group;
 
-[Command("group"), SubCommandOf(typeof(GroupCommand))]
+[Command("join"), SubCommandOf(typeof(GroupCommand))]
 internal sealed class GroupJoinCommand : IExecutableCommand
 {
     private readonly GroupCommandTranslations _translations;
@@ -66,7 +66,7 @@ internal sealed class GroupJoinCommand : IExecutableCommand
             throw Context.Reply(_translations.AlreadyInGroup);
         }
 
-        GroupInfo groupInfo = GroupManager.getGroupInfo(new CSteamID(groupId));
+        GroupInfo? groupInfo = GroupManager.getGroupInfo(new CSteamID(groupId));
 
         if (groupInfo == null)
         {

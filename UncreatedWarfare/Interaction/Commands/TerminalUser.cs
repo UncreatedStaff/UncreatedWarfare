@@ -1,4 +1,5 @@
-﻿using Uncreated.Warfare.Util;
+﻿using Uncreated.Warfare.Moderation;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Interaction.Commands;
 
@@ -24,6 +25,11 @@ public class TerminalUser : ICommandUser
     {
         GameThread.AssertCurrent();
         _logger.LogInformation(message);
+    }
+
+    public IModerationActor GetModerationActor()
+    {
+        return Actors.Console;
     }
 
     public override int GetHashCode() => 990;

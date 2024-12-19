@@ -18,7 +18,6 @@ using System.Linq;
 using System.Reflection;
 using Uncreated.Warfare.Actions;
 using Uncreated.Warfare.Buildables;
-using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database;
@@ -45,6 +44,8 @@ using Uncreated.Warfare.Lobby;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Moderation;
+using Uncreated.Warfare.Moderation.Discord;
+using Uncreated.Warfare.Moderation.Reports;
 using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Networking.Purchasing;
 using Uncreated.Warfare.Patches;
@@ -365,6 +366,10 @@ public sealed class WarfareModule
             .SingleInstance();
 
         bldr.RegisterType<ServerHeartbeatTimer>()
+            .SingleInstance();
+
+        bldr.RegisterType<ReportService>()
+            .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
 
         // global zones (not used for layouts)
@@ -738,12 +743,17 @@ public sealed class WarfareModule
 
         // Database
 
+        SshTunnelHelper.AddIfAvailable(bldr);
+
         bldr.RegisterType<DatabaseInterface>()
             .AsSelf()
             .SingleInstance();
 
         bldr.RegisterType<UserDataService>()
             .As<IUserDataService>()
+            .SingleInstance();
+
+        bldr.RegisterRpcType<AccountLinkingService>()
             .SingleInstance();
 
         bldr.Register(sp => WarfareDbContext.GetOptions(sp.Resolve<IServiceProvider>()))
@@ -822,12 +832,25 @@ public sealed class WarfareModule
 
         bool connected = false;
 
+        try
+        {
+            await SshTunnelHelper.OpenIfAvailableAsync(ServiceProvider, token);
+        }
+        catch (Exception ex)
+        {
+            await UniTask.SwitchToMainThread(token);
+            _logger.LogError(ex, "Unable to connect to SSH tunnel for MySQL database. Please reconfigure and restart.");
+            UnloadModule();
+            Provider.shutdown();
+            return;
+        }
+
         // migrate database before loading services
         _logger.LogDebug("Migrating database...");
         await using (ILifetimeScope scope = ServiceProvider.BeginLifetimeScope())
         await using (IDbContext dbContext = scope.Resolve<IDbContext>())
         {
-            const double timeoutSec = 2.5;
+            const double timeoutSec = 5;
 
             // check connection before migrating with a 2.5 second timeout
             await Task.WhenAny(Task.Run(async () =>

@@ -1,4 +1,6 @@
-﻿using Uncreated.Warfare.Util;
+﻿using System;
+using Uncreated.Warfare.Moderation;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Interaction.Commands;
 
@@ -36,4 +38,10 @@ public interface ICommandUser
     /// </summary>
     /// <exception cref="GameThreadException">Not on main thread.</exception>
     void SendMessage(string message);
+
+    /// <summary>
+    /// Create an <see cref="IModerationActor"/> for this command actor.
+    /// </summary>
+    /// <exception cref="NotSupportedException"/>
+    IModerationActor GetModerationActor();
 }
