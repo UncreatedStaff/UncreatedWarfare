@@ -213,6 +213,12 @@ public class VehicleRequestService : ILayoutHostedService,
             return false;
         }
 
+        if (spawn.IsDelayed(out TimeSpan timeLeft))
+        {
+            resultHandler.VehicleDelayed(player, spawn, timeLeft);
+            return false;
+        }
+
         await UniTask.SwitchToMainThread(token);
 
         if (spawn.LinkedVehicle == null || spawn.LinkedVehicle.isDead || spawn.LinkedVehicle.isDrowned || spawn.LinkedVehicle.isExploded)
