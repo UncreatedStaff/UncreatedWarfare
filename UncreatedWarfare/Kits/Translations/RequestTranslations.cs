@@ -166,25 +166,25 @@ public class RequestTranslations : PropertiesTranslationCollection
 
     #region Vehicle Request Delays
     [TranslationData("Sent when a player tries to request a vehicle but it's delayed by a time delay.", "Time left")]
-    public readonly Translation<TimeSpan> RequestVehicleTimeDelay = new Translation<TimeSpan>("<#b3ab9f>This vehicle is delayed for another: <#c$vbs_delay$>{0}</color>.", arg0Fmt: TimeAddon.Create(TimeFormatType.Long));
+    public readonly Translation<TimeSpan> RequestVehicleTimeDelay = new Translation<TimeSpan>("<#b3ab9f>This vehicle is delayed for another: <#7094dd>{0}</color>.", arg0Fmt: TimeAddon.Create(TimeFormatType.Long));
 
     [TranslationData("Sent when a player tries to request a vehicle but it's delayed by an objective delay of 1 in Insurgency on attack.", "The cache that needs to be destroyed")]
-    public readonly Translation<Cache> RequestVehicleCacheDelayAtk1 = new Translation<Cache>("<#b3ab9f>Destroy <color=#c$vbs_delay$>{0}</color> to request this vehicle.", arg0Fmt: Flags.NameFormat);
+    public readonly Translation<Cache> RequestVehicleCacheDelayAtk1 = new Translation<Cache>("<#b3ab9f>Destroy <color=#7094dd>{0}</color> to request this vehicle.", arg0Fmt: Flags.NameFormat);
 
     [TranslationData("Sent when a player tries to request a vehicle but it's delayed by an objective delay of 1 in Insurgency on defense.", "The cache that needs to be lost")]
-    public readonly Translation<Cache> RequestVehicleCacheDelayDef1 = new Translation<Cache>("<#b3ab9f>You can't request this vehicle until you lose <color=#c$vbs_delay$>{0}</color>.", arg0Fmt: Flags.NameFormat);
+    public readonly Translation<Cache> RequestVehicleCacheDelayDef1 = new Translation<Cache>("<#b3ab9f>You can't request this vehicle until you lose <color=#7094dd>{0}</color>.", arg0Fmt: Flags.NameFormat);
 
     [TranslationData("Sent when a player tries to request a vehicle but it's delayed by an objective delay of 1 in Insurgency on attack, but the cache is undiscovered")]
-    public readonly Translation RequestVehicleCacheDelayAtkUndiscovered1 = new Translation("<#b3ab9f><color=#c$vbs_delay$>Discover and Destroy</color> the next cache to request this vehicle.");
+    public readonly Translation RequestVehicleCacheDelayAtkUndiscovered1 = new Translation("<#b3ab9f><color=#7094dd>Discover and Destroy</color> the next cache to request this vehicle.");
 
     [TranslationData("Sent when a player tries to request a vehicle but it's delayed by an objective delay of 1 in Insurgency on defense, but the cache is undiscovered")]
-    public readonly Translation RequestVehicleCacheDelayDefUndiscovered1 = new Translation("<#b3ab9f>You can't request this vehicle until you've <color=#c$vbs_delay$>uncovered and lost</color> your next cache.");
+    public readonly Translation RequestVehicleCacheDelayDefUndiscovered1 = new Translation("<#b3ab9f>You can't request this vehicle until you've <color=#7094dd>uncovered and lost</color> your next cache.");
 
     [TranslationData("Sent when a player tries to request a vehicle but it's delayed by an objective delay of 2+ in Insurgency on attack.", "Number of caches that need to be destroyed")]
-    public readonly Translation<int> RequestVehicleCacheDelayMultipleAtk = new Translation<int>("<#b3ab9f>Destroy <#c$vbs_delay$>{0} more caches</color> to request this vehicle.");
+    public readonly Translation<int> RequestVehicleCacheDelayMultipleAtk = new Translation<int>("<#b3ab9f>Destroy <#7094dd>{0} more caches</color> to request this vehicle.");
 
     [TranslationData("Sent when a player tries to request a vehicle but it's delayed by an objective delay of 2+ in Insurgency on defense.", "Number of caches that need to be lost")]
-    public readonly Translation<int> RequestVehicleCacheDelayMultipleDef = new Translation<int>("<#b3ab9f>You can't request this vehicle until you've lost <#c$vbs_delay$>{0} more caches</color>.");
+    public readonly Translation<int> RequestVehicleCacheDelayMultipleDef = new Translation<int>("<#b3ab9f>You can't request this vehicle until you've lost <#7094dd>{0} more caches</color>.");
 
     [TranslationData("Sent when a player tries to request a vehicle but it's delayed by an objective delay of 1 in a flag gamemode.", "Flag that needs captured")]
     public readonly Translation<IDeployable> RequestVehicleFlagDelay1 = new Translation<IDeployable>("<#b3ab9f>Capture {0} to request this vehicle.", TranslationOptions.PerTeamTranslation, Flags.ColorNameDiscoverFormat);
@@ -193,42 +193,42 @@ public class RequestTranslations : PropertiesTranslationCollection
     public readonly Translation<IDeployable> RequestVehicleLoseFlagDelay1 = new Translation<IDeployable>("<#b3ab9f>You can't request this vehicle until you lose {0}.", TranslationOptions.PerTeamTranslation, Flags.ColorNameDiscoverFormat);
 
     [TranslationData("Sent when a player tries to request a vehicle but it's delayed by an objective delay of 2+ in a flag gamemode.", "Number of flags that need to be captured")]
-    public readonly Translation<int> RequestVehicleFlagDelayMultiple = new Translation<int>("<#b3ab9f>Capture <#c$vbs_delay$>{0} more flags</color> to request this vehicle.");
+    public readonly Translation<int> RequestVehicleFlagDelayMultiple = new Translation<int>("<#b3ab9f>Capture <#7094dd>{0} more flags</color> to request this vehicle.");
 
     [TranslationData("Sent when a player tries to request a vehicle but it's delayed by an objective delay of 2+ in a flag gamemode.", "Number of flags that need to be lost")]
-    public readonly Translation<int> RequestVehicleLoseFlagDelayMultiple = new Translation<int>("<#b3ab9f>You can't request this vehicle until you lose <#c$vbs_delay$>{0} more flags</color>.");
+    public readonly Translation<int> RequestVehicleLoseFlagDelayMultiple = new Translation<int>("<#b3ab9f>You can't request this vehicle until you lose <#7094dd>{0} more flags</color>.");
 
     [TranslationData("Sent when a player tries to request a vehicle but it's delayed by a staging delay.")]
     public readonly Translation RequestVehicleStagingDelay = new Translation("<#a6918a>This vehicle can only be requested after the game starts.");
 
     [TranslationData("Sent when a player tries to request a vehicle but it's delayed by an unknown/misconfigured delay.")]
-    public readonly Translation<string> RequestVehicleUnknownDelay = new Translation<string>("<#b3ab9f>This vehicle is delayed because: <#c$vbs_delay$>{0}</color>.");
+    public readonly Translation<string> RequestVehicleUnknownDelay = new Translation<string>("<#b3ab9f>This vehicle is delayed because: <#7094dd>{0}</color>.");
 
     [TranslationData("Sent when a player tries to request a vehicle but it's delayed by a minimum teammate count delay.")]
-    public readonly Translation<int> RequestVehicleTeammatesDelay = new Translation<int>("<#b3ab9f>This vehicle is delayed until <#c$vbs_delay$>{0}v{0}</color> players online.");
+    public readonly Translation<int> RequestVehicleTeammatesDelay = new Translation<int>("<#b3ab9f>This vehicle is delayed until <#7094dd>{0}v{0}</color> players online.");
     #endregion
 
     #region Trait Request Delays
     [TranslationData("Sent when a player tries to request a trait but it's delayed by a time delay.", "Time left")]
-    public readonly Translation<TimeSpan> RequestTraitTimeDelay = new Translation<TimeSpan>("<#b3ab9f>This trait is delayed for another: <#c$vbs_delay$>{0}</color>.", arg0Fmt: TimeAddon.Create(TimeFormatType.Long));
+    public readonly Translation<TimeSpan> RequestTraitTimeDelay = new Translation<TimeSpan>("<#b3ab9f>This trait is delayed for another: <#7094dd>{0}</color>.", arg0Fmt: TimeAddon.Create(TimeFormatType.Long));
 
     [TranslationData("Sent when a player tries to request a trait but it's delayed by an objective delay of 1 in Insurgency on attack.", "The cache that needs to be destroyed")]
-    public readonly Translation<Cache> RequestTraitCacheDelayAtk1 = new Translation<Cache>("<#b3ab9f>Destroy <color=#c$vbs_delay$>{0}</color> to request this trait.", arg0Fmt: Flags.NameFormat);
+    public readonly Translation<Cache> RequestTraitCacheDelayAtk1 = new Translation<Cache>("<#b3ab9f>Destroy <color=#7094dd>{0}</color> to request this trait.", arg0Fmt: Flags.NameFormat);
 
     [TranslationData("Sent when a player tries to request a trait but it's delayed by an objective delay of 1 in Insurgency on defense.", "The cache that needs to be lost")]
-    public readonly Translation<Cache> RequestTraitCacheDelayDef1 = new Translation<Cache>("<#b3ab9f>You can't request this trait until you lose <color=#c$vbs_delay$>{0}</color>.", arg0Fmt: Flags.NameFormat);
+    public readonly Translation<Cache> RequestTraitCacheDelayDef1 = new Translation<Cache>("<#b3ab9f>You can't request this trait until you lose <color=#7094dd>{0}</color>.", arg0Fmt: Flags.NameFormat);
 
     [TranslationData("Sent when a player tries to request a trait but it's delayed by an objective delay of 1 in Insurgency on attack, but the cache is undiscovered")]
-    public readonly Translation RequestTraitCacheDelayAtkUndiscovered1 = new Translation("<#b3ab9f><color=#c$vbs_delay$>Discover and Destroy</color> the next cache to request this trait.");
+    public readonly Translation RequestTraitCacheDelayAtkUndiscovered1 = new Translation("<#b3ab9f><color=#7094dd>Discover and Destroy</color> the next cache to request this trait.");
 
     [TranslationData("Sent when a player tries to request a trait but it's delayed by an objective delay of 1 in Insurgency on defense, but the cache is undiscovered")]
-    public readonly Translation RequestTraitCacheDelayDefUndiscovered1 = new Translation("<#b3ab9f>You can't request this trait until you've <color=#c$vbs_delay$>uncovered and lost</color> your next cache.");
+    public readonly Translation RequestTraitCacheDelayDefUndiscovered1 = new Translation("<#b3ab9f>You can't request this trait until you've <color=#7094dd>uncovered and lost</color> your next cache.");
 
     [TranslationData("Sent when a player tries to request a trait but it's delayed by an objective delay of 2+ in Insurgency on attack.", "Number of caches that need to be destroyed")]
-    public readonly Translation<int> RequestTraitCacheDelayMultipleAtk = new Translation<int>("<#b3ab9f>Destroy <#c$vbs_delay$>{0} more caches</color> to request this trait.");
+    public readonly Translation<int> RequestTraitCacheDelayMultipleAtk = new Translation<int>("<#b3ab9f>Destroy <#7094dd>{0} more caches</color> to request this trait.");
 
     [TranslationData("Sent when a player tries to request a trait but it's delayed by an objective delay of 2+ in Insurgency on defense.", "Number of caches that need to be lost")]
-    public readonly Translation<int> RequestTraitCacheDelayMultipleDef = new Translation<int>("<#b3ab9f>You can't request this trait until you've lost <#c$vbs_delay$>{0} more caches</color>.");
+    public readonly Translation<int> RequestTraitCacheDelayMultipleDef = new Translation<int>("<#b3ab9f>You can't request this trait until you've lost <#7094dd>{0} more caches</color>.");
 
     [TranslationData("Sent when a player tries to request a trait but it's delayed by an objective delay of 1 in a flag gamemode.", "Flag that needs captured")]
     public readonly Translation<IDeployable> RequestTraitFlagDelay1 = new Translation<IDeployable>("<#b3ab9f>Capture {0} to request this trait.", TranslationOptions.PerTeamTranslation, Flags.ColorNameDiscoverFormat);
@@ -237,19 +237,19 @@ public class RequestTranslations : PropertiesTranslationCollection
     public readonly Translation<IDeployable> RequestTraitLoseFlagDelay1 = new Translation<IDeployable>("<#b3ab9f>You can't request this trait until you lose {0}.", TranslationOptions.PerTeamTranslation, Flags.ColorNameDiscoverFormat);
 
     [TranslationData("Sent when a player tries to request a trait but it's delayed by an objective delay of 2+ in a flag gamemode.", "Number of flags that need to be captured")]
-    public readonly Translation<int> RequestTraitFlagDelayMultiple = new Translation<int>("<#b3ab9f>Capture <#c$vbs_delay$>{0} more flags</color> to request this trait.");
+    public readonly Translation<int> RequestTraitFlagDelayMultiple = new Translation<int>("<#b3ab9f>Capture <#7094dd>{0} more flags</color> to request this trait.");
 
     [TranslationData("Sent when a player tries to request a trait but it's delayed by an objective delay of 2+ in a flag gamemode.", "Number of flags that need to be lost")]
-    public readonly Translation<int> RequestTraitLoseFlagDelayMultiple = new Translation<int>("<#b3ab9f>You can't request this trait until you lose <#c$vbs_delay$>{0} more flags</color>.");
+    public readonly Translation<int> RequestTraitLoseFlagDelayMultiple = new Translation<int>("<#b3ab9f>You can't request this trait until you lose <#7094dd>{0} more flags</color>.");
 
     [TranslationData("Sent when a player tries to request a trait but it's delayed by a staging delay.")]
     public readonly Translation RequestTraitStagingDelay = new Translation("<#a6918a>This trait can only be requested after the game starts.");
 
     [TranslationData("Sent when a player tries to request a trait but it's delayed by an unknown/misconfigured delay.")]
-    public readonly Translation<string> RequestTraitUnknownDelay = new Translation<string>("<#b3ab9f>This trait is delayed because: <#c$vbs_delay$>{0}</color>.");
+    public readonly Translation<string> RequestTraitUnknownDelay = new Translation<string>("<#b3ab9f>This trait is delayed because: <#7094dd>{0}</color>.");
 
     [TranslationData("Sent when a player tries to request a trait but it's delayed by a minimum teammate count delay.")]
-    public readonly Translation<int> RequestTraitTeammatesDelay = new Translation<int>("<#b3ab9f>This trait is delayed until <#c$vbs_delay$>{0}v{0}</color> players online.");
+    public readonly Translation<int> RequestTraitTeammatesDelay = new Translation<int>("<#b3ab9f>This trait is delayed until <#7094dd>{0}v{0}</color> players online.");
     #endregion
 }
 

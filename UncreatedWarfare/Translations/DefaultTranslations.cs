@@ -1072,25 +1072,25 @@ internal static class T
     [TranslationData(SectionTraitSigns, "Shows instead of the unlock requirements when a trait is unlocked.")]
     public static readonly Translation TraitSignUnlocked = new Translation("<#99ff99>Unlocked</color>");
     [TranslationData(SectionTraitSigns, "Shows when you're not in a squad and it's required.")]
-    public static readonly Translation TraitSignRequiresSquad = new Translation("<#c$vbs_delay$>Join a Squad</color>");
+    public static readonly Translation TraitSignRequiresSquad = new Translation("<#7094dd>Join a Squad</color>");
     [TranslationData(SectionTraitSigns, "Shows when you're not in a squad or not a squad leader and it's required.")]
-    public static readonly Translation TraitSignRequiresSquadLeader = new Translation("<#c$vbs_delay$>Squad Leaders Only</color>");
+    public static readonly Translation TraitSignRequiresSquadLeader = new Translation("<#7094dd>Squad Leaders Only</color>");
     [TranslationData(SectionTraitSigns, "Shows when you dont have a kit or have an unarmed kit.")]
-    public static readonly Translation TraitSignNoKit = new Translation("<#c$vbs_delay$>Request a Kit</color>");
+    public static readonly Translation TraitSignNoKit = new Translation("<#7094dd>Request a Kit</color>");
     [TranslationData(SectionTraitSigns, "Shows when the trait is locked in the current gamemode.")]
-    public static readonly Translation TraitGamemodeBlacklisted = new Translation("<#c$vbs_delay$>Locked</color>");
+    public static readonly Translation TraitGamemodeBlacklisted = new Translation("<#7094dd>Locked</color>");
     [TranslationData(SectionTraitSigns, "Shows when the kit class you have isn't compatible with the trait.", "Class name")]
-    public static readonly Translation<Class> TraitSignClassBlacklisted = new Translation<Class>("<#c$vbs_delay$>Locked for {0}</color>", arg0Fmt: FormatPlural);
+    public static readonly Translation<Class> TraitSignClassBlacklisted = new Translation<Class>("<#7094dd>Locked for {0}</color>", arg0Fmt: FormatPlural);
     [TranslationData(SectionTraitSigns, "Shows when the kit class you have isn't compatible with the trait and theres a kit whitelist with 1 class.", "Class name")]
-    public static readonly Translation<Class> TraitSignClassWhitelisted1 = new Translation<Class>("<#c$vbs_delay$>{0} Required</color>");
+    public static readonly Translation<Class> TraitSignClassWhitelisted1 = new Translation<Class>("<#7094dd>{0} Required</color>");
     [TranslationData(SectionTraitSigns, "Shows when the kit class you have isn't compatible with the trait and theres a kit whitelist with 2 classes.", "Class name")]
-    public static readonly Translation<Class, Class> TraitSignClassWhitelisted2 = new Translation<Class, Class>("<#c$vbs_delay$>{0} or {1} Required</color>");
+    public static readonly Translation<Class, Class> TraitSignClassWhitelisted2 = new Translation<Class, Class>("<#7094dd>{0} or {1} Required</color>");
     [TranslationData(SectionTraitSigns, "Shows when you currently have the trait and it expires in time.", "Minutes", "Seconds")]
-    public static readonly Translation<int, int> TraitSignAlreadyActiveTime = new Translation<int, int>("<#c$vbs_delay$>Already Active: {0}:{1}</color>", arg1Fmt: "D2");
+    public static readonly Translation<int, int> TraitSignAlreadyActiveTime = new Translation<int, int>("<#7094dd>Already Active: {0}:{1}</color>", arg1Fmt: "D2");
     [TranslationData(SectionTraitSigns, "Shows when you currently have the trait and it expires on death.")]
-    public static readonly Translation TraitSignAlreadyActiveDeath = new Translation("<#c$vbs_delay$>Already Active</color>");
+    public static readonly Translation TraitSignAlreadyActiveDeath = new Translation("<#7094dd>Already Active</color>");
     [TranslationData(SectionTraitSigns, "Shows when you are on either global or individual cooldown (whichever is longer).", "Minutes", "Seconds")]
-    public static readonly Translation<int, int> TraitSignCooldown = new Translation<int, int>("<#c$vbs_delay$>On Cooldown: {0}:{1}</color>", arg1Fmt: "D2");
+    public static readonly Translation<int, int> TraitSignCooldown = new Translation<int, int>("<#7094dd>On Cooldown: {0}:{1}</color>", arg1Fmt: "D2");
     #endregion
     #region Trait Interactions
     private const string SectionTraitInteractions = "Traits / Interactions";
@@ -1111,31 +1111,31 @@ internal static class T
     #region Vehicle Bay Signs
     private const string SectionVBS = "Vehicle Signs";
     [TranslationData(SectionVBS)]
-    public static readonly Translation VBSDelayStaging = new Translation("<#c$vbs_delay$>Locked Until Start</color>");
+    public static readonly Translation VBSDelayStaging = new Translation("<#7094dd>Locked Until Start</color>");
     [TranslationData(SectionVBS, Parameters = [ "Minutes", "Seconds" ])]
-    public static readonly Translation<int, int> VBSDelayTime = new Translation<int, int>("<#c$vbs_delay$>Locked: {0}:{1}</color>", arg1Fmt: "D2");
+    public static readonly Translation<int, int> VBSDelayTime = new Translation<int, int>("<#7094dd>Locked: {0}:{1}</color>", arg1Fmt: "D2");
     [TranslationData(SectionVBS)]
-    public static readonly Translation<int> VBSDelayTeammates = new Translation<int>("<#c$vbs_delay$>Locked until {0}v{0}</color>");
+    public static readonly Translation<int> VBSDelayTeammates = new Translation<int>("<#7094dd>Locked until {0}v{0}</color>");
     [TranslationData(SectionVBS)]
-    public static readonly Translation<Flag> VBSDelayCaptureFlag = new Translation<Flag>("<#c$vbs_delay$>Capture {0}</color>", TranslationOptions.PerTeamTranslation, Flags.ShortNameDiscoverFormat);
+    public static readonly Translation<Flag> VBSDelayCaptureFlag = new Translation<Flag>("<#7094dd>Capture {0}</color>", TranslationOptions.PerTeamTranslation, Flags.ShortNameDiscoverFormat);
     [TranslationData(SectionVBS)]
-    public static readonly Translation<Flag> VBSDelayLoseFlag = new Translation<Flag>("<#c$vbs_delay$>Lose {0}</color>", TranslationOptions.PerTeamTranslation, Flags.ShortNameDiscoverFormat);
+    public static readonly Translation<Flag> VBSDelayLoseFlag = new Translation<Flag>("<#7094dd>Lose {0}</color>", TranslationOptions.PerTeamTranslation, Flags.ShortNameDiscoverFormat);
     [TranslationData(SectionVBS)]
-    public static readonly Translation<int> VBSDelayLoseFlagMultiple = new Translation<int>("<#c$vbs_delay$>Lose {0} more flags.</color>");
+    public static readonly Translation<int> VBSDelayLoseFlagMultiple = new Translation<int>("<#7094dd>Lose {0} more flags.</color>");
     [TranslationData(SectionVBS)]
-    public static readonly Translation<int> VBSDelayCaptureFlagMultiple = new Translation<int>("<#c$vbs_delay$>Capture {0} more flags.</color>");
+    public static readonly Translation<int> VBSDelayCaptureFlagMultiple = new Translation<int>("<#7094dd>Capture {0} more flags.</color>");
     [TranslationData(SectionVBS)]
-    public static readonly Translation<Cache> VBSDelayAttackCache = new Translation<Cache>("<#c$vbs_delay$>Destroy {0}</color>", arg0Fmt: Flags.LocationNameFormat);
+    public static readonly Translation<Cache> VBSDelayAttackCache = new Translation<Cache>("<#7094dd>Destroy {0}</color>", arg0Fmt: Flags.LocationNameFormat);
     [TranslationData(SectionVBS)]
-    public static readonly Translation VBSDelayAttackCacheUnknown = new Translation("<#c$vbs_delay$>Destroy Next Cache</color>");
+    public static readonly Translation VBSDelayAttackCacheUnknown = new Translation("<#7094dd>Destroy Next Cache</color>");
     [TranslationData(SectionVBS)]
-    public static readonly Translation<int> VBSDelayAttackCacheMultiple = new Translation<int>("<#c$vbs_delay$>Destroy {0} more caches.</color>");
+    public static readonly Translation<int> VBSDelayAttackCacheMultiple = new Translation<int>("<#7094dd>Destroy {0} more caches.</color>");
     [TranslationData(SectionVBS)]
-    public static readonly Translation<Cache> VBSDelayDefendCache = new Translation<Cache>("<#c$vbs_delay$>Lose {0}</color>", arg0Fmt: Flags.LocationNameFormat);
+    public static readonly Translation<Cache> VBSDelayDefendCache = new Translation<Cache>("<#7094dd>Lose {0}</color>", arg0Fmt: Flags.LocationNameFormat);
     [TranslationData(SectionVBS)]
-    public static readonly Translation VBSDelayDefendCacheUnknown = new Translation("<#c$vbs_delay$>Lose Next Cache</color>");
+    public static readonly Translation VBSDelayDefendCacheUnknown = new Translation("<#7094dd>Lose Next Cache</color>");
     [TranslationData(SectionVBS)]
-    public static readonly Translation<int> VBSDelayDefendCacheMultiple = new Translation<int>("<#c$vbs_delay$>Lose {0} more caches.</color>");
+    public static readonly Translation<int> VBSDelayDefendCacheMultiple = new Translation<int>("<#7094dd>Lose {0} more caches.</color>");
     #endregion
 
     #region Revives
