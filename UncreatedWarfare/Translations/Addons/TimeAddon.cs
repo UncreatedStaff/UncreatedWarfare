@@ -55,7 +55,7 @@ public sealed class TimeAddon : IArgumentAddon
 
         return args.Format.Format switch
         {
-            "lt" => ToLongTimeString(formatter.ServiceProvider.GetRequiredService<TimeTranslations>(), (int)ts.TotalSeconds, args.Language),
+            "lt" => ToLongTimeString(formatter.ServiceProvider.GetRequiredService<TranslationInjection<TimeTranslations>>().Value, (int)ts.TotalSeconds, args.Language),
             "s" => ((int)ts.TotalSeconds).ToString(args.Culture),
             "m" => ((int)ts.TotalMinutes).ToString(args.Culture),
             "h" => ((int)ts.TotalHours).ToString(args.Culture),
@@ -66,7 +66,7 @@ public sealed class TimeAddon : IArgumentAddon
             "c1" => FormattingUtility.ToCountdownString((int)ts.TotalSeconds, false),
             "c2" => FormattingUtility.ToCountdownString((int)ts.TotalSeconds, true),
             _ => ts.Ticks < 0
-                ? formatter.ServiceProvider.GetRequiredService<TimeTranslations>().TimePermanent.Translate(args.Language)
+                ? formatter.ServiceProvider.GetRequiredService<TranslationInjection<TimeTranslations>>().Value.TimePermanent.Translate(args.Language)
                 : FormattingUtility.ToTimeString(ts)
         };
     }

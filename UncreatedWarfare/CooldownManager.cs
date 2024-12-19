@@ -225,7 +225,7 @@ public class Cooldown(CSteamID player, CooldownType cooldownType, float duration
 
         if (FormatTimeLong.Match(in parameters))
             return TimeAddon.ToLongTimeString(
-                formatter.ServiceProvider.GetRequiredService<TimeTranslations>(),
+                formatter.ServiceProvider.GetRequiredService<TranslationInjection<TimeTranslations>>().Value,
                 (int)Timeleft.TotalSeconds,
                 parameters.Language
             );
