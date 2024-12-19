@@ -1,9 +1,7 @@
-﻿using System.Runtime.CompilerServices;
+﻿using Microsoft.Extensions.Configuration;
 using System;
+using System.Runtime.CompilerServices;
 using Uncreated.Warfare.Database;
-using DanielWillett.ReflectionTools;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 
 // only initialize if library exists
 public static class SshTunnelHelper
@@ -16,7 +14,7 @@ public static class SshTunnelHelper
 
     public static UniTask OpenIfAvailableAsync(ILifetimeScope serviceProvider, CancellationToken token)
     {
-        string? configuredSshKey = serviceProvider.ResolveOptional<IConfiguration>()?.GetSection("database")?["ssh_key"];
+        string? configuredSshKey = serviceProvider.ResolveOptional<IConfiguration>()?.GetSection("database")["ssh_key"];
 
         if (string.IsNullOrEmpty(configuredSshKey))
             return UniTask.CompletedTask;

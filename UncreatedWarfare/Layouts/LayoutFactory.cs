@@ -30,6 +30,8 @@ public class LayoutFactory : IHostedService
     private readonly byte _region;
     private UniTask _setupTask;
 
+    private bool _hasPlayerLock = true;
+
     public LayoutFactory(
         WarfareModule warfare,
         ILogger<LayoutFactory> logger,
@@ -115,7 +117,7 @@ public class LayoutFactory : IHostedService
 
         UniTask.Create(async () =>
         {
-            bool hasPlayerConnectionLock = true;
+            bool hasPlayerConnectionLock = _hasPlayerLock;
             try
             {
                 if (_setupTask.Status == UniTaskStatus.Pending)
@@ -137,7 +139,10 @@ public class LayoutFactory : IHostedService
             finally
             {
                 if (hasPlayerConnectionLock)
+                {
                     _warfare.ServiceProvider.ResolveOptional<IPlayerService>()?.ReleasePlayerConnectionLock();
+                    _hasPlayerLock = false;
+                }
             }
         });
     }
@@ -156,16 +161,17 @@ public class LayoutFactory : IHostedService
         await UniTask.SwitchToMainThread(token);
 
         // stops players from joining both before the first layout starts and between layouts.
-        bool playerJoinLockTaken = false;
+        bool playerJoinLockTaken = _hasPlayerLock;
 
         try
         {
             if (_warfare.IsLayoutActive())
             {
-                if (playerServiceImpl != null)
+                if (playerServiceImpl != null && !playerJoinLockTaken)
                 {
                     await playerServiceImpl.TakePlayerConnectionLock(token);
                     playerJoinLockTaken = true;
+                    _hasPlayerLock = true;
                 }
 
                 Layout oldLayout = _warfare.GetActiveLayout();
@@ -190,6 +196,7 @@ public class LayoutFactory : IHostedService
             if (playerJoinLockTaken && playerServiceImpl != null)
             {
                 playerServiceImpl.ReleasePlayerConnectionLock();
+                _hasPlayerLock = false; 
             }
 
             _logger.LogError(ex, "Error creating layout {0}.", newLayout.FilePath);
@@ -274,9 +281,10 @@ public class LayoutFactory : IHostedService
 
         await layout.BeginLayoutAsync(CancellationToken.None);
 
-        if (playerJoinLockTaken)
+        if (playerJoinLockTaken && _hasPlayerLock)
         {
             layout.ServiceProvider.ResolveOptional<IPlayerService>()?.ReleasePlayerConnectionLock();
+            _hasPlayerLock = false;
         }
     }
 

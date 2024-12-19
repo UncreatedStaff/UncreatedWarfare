@@ -1,7 +1,9 @@
-﻿using HarmonyLib;
+﻿using DanielWillett.ReflectionTools.Emit;
+using HarmonyLib;
 using System;
 using System.Linq;
 using System.Reflection;
+using System.Reflection.Emit;
 using Uncreated.Warfare.Logging;
 
 namespace Uncreated.Warfare.Harmony;
@@ -52,4 +54,65 @@ internal static class PatchUtil
             fail = true;
         }
     }
+
+    /// <summary>
+    /// Get the local builder or index of the instruction.
+    /// </summary>
+    [Pure]
+    public static LocalReference GetLocal(CodeInstruction code, bool set)
+    {
+        if (code.opcode.OperandType == OperandType.ShortInlineVar &&
+            (set && code.opcode == OpCodes.Stloc_S ||
+             !set && code.opcode == OpCodes.Ldloc_S || !set && code.opcode == OpCodes.Ldloca_S))
+        {
+            return new LocalReference((LocalBuilder)code.operand);
+        }
+        if (code.opcode.OperandType == OperandType.InlineVar &&
+            (set && code.opcode == OpCodes.Stloc ||
+             !set && code.opcode == OpCodes.Ldloc || !set && code.opcode == OpCodes.Ldloca))
+        {
+            return new LocalReference((LocalBuilder)code.operand);
+        }
+        if (set)
+        {
+            if (code.opcode == OpCodes.Stloc_0)
+            {
+                return new LocalReference(0);
+            }
+            if (code.opcode == OpCodes.Stloc_1)
+            {
+                return new LocalReference(1);
+            }
+            if (code.opcode == OpCodes.Stloc_2)
+            {
+                return new LocalReference(2);
+            }
+            if (code.opcode == OpCodes.Stloc_3)
+            {
+                return new LocalReference(3);
+            }
+        }
+        else
+        {
+            if (code.opcode == OpCodes.Ldloc_0)
+            {
+                return new LocalReference(0);
+            }
+            if (code.opcode == OpCodes.Ldloc_1)
+            {
+                return new LocalReference(1);
+            }
+            if (code.opcode == OpCodes.Ldloc_2)
+            {
+                return new LocalReference(2);
+            }
+            if (code.opcode == OpCodes.Ldloc_3)
+            {
+                return new LocalReference(3);
+            }
+        }
+
+        return default;
+    }
+
 }
