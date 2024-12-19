@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using Uncreated.Warfare.Layouts;
-using Uncreated.Warfare.Layouts.Phases.Flags;
+using Uncreated.Warfare.Layouts.Phases;
 
 namespace Uncreated.Warfare.Vehicles.Spawners.Delays;
 public class ActionPhaseStartDelay : ILayoutDelay
