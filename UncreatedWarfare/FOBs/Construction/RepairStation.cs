@@ -4,27 +4,35 @@ using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Fobs;
+using Uncreated.Warfare.FOBs.Entities;
 using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Timing;
 
 namespace Uncreated.Warfare.FOBs.Construction;
-public class RepairStation : IBuildableComponent, IFobItem
+public class RepairStation : IBuildableFobEntity
 {
     private readonly FobManager _fobManager;
     private readonly AssetConfiguration _assetConfiguration;
     private readonly ILoopTicker _ticker;
-
-    public IBuildable Buildable { get; }
     public float GroundRepairRadius { get; } = 15;
     public float AircraftRepairRadius { get; } = 70;
+
+    public IBuildable Buildable { get; }
+
+    public Vector3 Position => Buildable.Position;
+
+    public Quaternion Rotation => Buildable.Rotation;
+
+    public IAssetLink<Asset> IdentifyingAsset { get; }
 
     public RepairStation(IBuildable buildable, Team team, ILoopTickerFactory loopTickerFactory, FobManager fobManager, AssetConfiguration assetConfiguration)
     {
         Buildable = buildable;
         _fobManager = fobManager;
         _assetConfiguration = assetConfiguration;
+        IdentifyingAsset = AssetLink.Create(Buildable.Asset);
         _ticker = loopTickerFactory.CreateTicker(TimeSpan.FromSeconds(4), false, true);
         _ticker.OnTick += (ticker, timeSinceStart, deltaTime) =>
         {

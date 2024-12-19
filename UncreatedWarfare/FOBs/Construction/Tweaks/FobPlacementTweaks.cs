@@ -8,7 +8,6 @@ using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Fobs;
-using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Zones;
@@ -19,8 +18,8 @@ using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Util.Containers;
 
-namespace Uncreated.Warfare.Tweaks.BuildablePlacement;
-internal class FobPlacementTweaks :
+namespace Uncreated.Warfare.FOBs.Construction.Tweaks;
+public class FobPlacementTweaks :
     IEventListener<PlaceBarricadeRequested>
 {
     private readonly IServiceProvider _serviceProvider;

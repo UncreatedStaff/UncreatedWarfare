@@ -65,7 +65,10 @@ public class FlagHUD :
     }
     void IEventListener<TicketsChanged>.HandleEvent(TicketsChanged e, IServiceProvider serviceProvider)
     {
+        Console.WriteLine("HELLO BRO");
+        Console.WriteLine($"{e.TicketTracker.GetBleedSeverity(e.Team)}");
         UpdateTicketCountForPlayersOnTeam(e.Team, e.NewNumber, e.TicketTracker.GetBleedSeverity(e.Team).GetBleedMessage());
+        
     }
     void UpdateTicketCount(WarfarePlayer player, int tickets, string ticketBleedDescription)
     {

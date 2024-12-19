@@ -13,6 +13,8 @@ namespace Uncreated.Warfare.Vehicles.Vehicle
         public WarfareVehicleComponent Component { get; }
         public WarfareVehicleInfo Info { get; }
         public VehicleSpawner? Spawn { get; private set; }
+        public Vector3 Position => Vehicle.transform.position;
+        public Quaternion Rotation => Vehicle.transform.rotation;
         public WarfareVehicle(InteractableVehicle interactableVehicle, WarfareVehicleInfo info)
         {
             Vehicle = interactableVehicle;

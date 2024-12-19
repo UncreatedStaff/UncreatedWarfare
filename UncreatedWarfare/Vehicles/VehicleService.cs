@@ -51,15 +51,19 @@ namespace Uncreated.Warfare.Vehicles
         {
             return UniTask.CompletedTask;
         }
-        public WarfareVehicle? RegisterWarfareVehicle(InteractableVehicle vehicle)
+        public WarfareVehicle RegisterWarfareVehicle(InteractableVehicle vehicle)
         {
             WarfareVehicleInfo? info = _vehicleInfoStore.GetVehicleInfo(vehicle.asset);
 
             if (info == null)
-                info = new WarfareVehicleInfo(); // todo: make a default WarfareVehicleInfo to avoid nullptr exceptions
+                throw new InvalidOperationException($"Cannot register vehicle {vehicle.name} because it does not have a defained WarfareVehicleInfo.");
 
             WarfareVehicle warfareVehicle = new WarfareVehicle(vehicle, info);
-            Vehicles.AddIfNotExists(warfareVehicle);
+            bool alreadyExists = Vehicles.AddIfNotExists(warfareVehicle);
+            if (alreadyExists)
+                _logger.LogDebug($"Vehicle {warfareVehicle.Info.VehicleAsset.ToDisplayString()} is already registered.");
+            else
+                _logger.LogDebug($"Registered vehicle: {warfareVehicle.Info.VehicleAsset.ToDisplayString()}");
             return warfareVehicle;
         }
         public WarfareVehicle? DeregisterWarfareVehicle(InteractableVehicle vehicle)
@@ -77,7 +81,7 @@ namespace Uncreated.Warfare.Vehicles
         /// <exception cref="RecordsNotFoundException">Unable to find any <see cref="WarfareVehicleInfo"/> for the vehicle.</exception>
         /// <exception cref="InvalidOperationException">The spawner buildable doesn't exist. -OR- Failed to unlink or link the vehicle to it's spawn.</exception>
         /// <exception cref="Exception">Game failed to spawn the vehicle.</exception>
-        public async UniTask<InteractableVehicle> SpawnVehicleAsync(VehicleSpawner spawner, CancellationToken token = default)
+        public async UniTask<WarfareVehicle> SpawnVehicleAsync(VehicleSpawner spawner, CancellationToken token = default)
         {
             await UniTask.SwitchToMainThread(token);
 
@@ -97,13 +101,13 @@ namespace Uncreated.Warfare.Vehicles
 
             Vector3 spawnPosition = spawner.Buildable.Position + Vector3.up * VehicleSpawnOffset;
 
-            InteractableVehicle vehicle = await SpawnVehicleAsync(spawner.VehicleInfo.VehicleAsset, spawnPosition, spawnRotation, paintColor: spawner.VehicleInfo.PaintColor, token: token);
+            WarfareVehicle warfareVehicle = await SpawnVehicleAsync(spawner.VehicleInfo.VehicleAsset, spawnPosition, spawnRotation, paintColor: spawner.VehicleInfo.PaintColor, token: token);
             await UniTask.SwitchToMainThread(token);
 
-            spawner.LinkVehicle(vehicle);
+            spawner.LinkVehicle(warfareVehicle.Vehicle);
 
             _logger.LogDebug("Spawned new {0} at {1}.", spawner.VehicleInfo.VehicleAsset.ToDisplayString(), spawnPosition);
-            return vehicle;
+            return warfareVehicle;
         }
 
         /// <summary>
@@ -112,7 +116,7 @@ namespace Uncreated.Warfare.Vehicles
         /// <returns></returns>
         /// <exception cref="AssetNotFoundException">Unable to find the vehicle asset.</exception>
         /// <exception cref="Exception">Game failed to spawn the vehicle.</exception>
-        public async UniTask<InteractableVehicle> SpawnVehicleAsync(
+        public async UniTask<WarfareVehicle> SpawnVehicleAsync(
             IAssetLink<VehicleAsset> vehicle,
             Vector3 position,
             Quaternion rotation,
@@ -143,13 +147,15 @@ namespace Uncreated.Warfare.Vehicles
             if (veh == null)
                 throw new Exception($"Failed to spawn vehicle {vehicle.ToDisplayString()} due to vanilla code, possible a misconfigured vehicle.");
 
-            WarfareVehicleInfo? vehicleInfo = _vehicleInfoStore.GetVehicleInfo(vehicle);
+            await UniTask.NextFrame(); // wait for the vehicle to be registered in the vehicle service
 
-            if (vehicleInfo is not { Trunk.Count: > 0 })
-                return veh;
+            WarfareVehicle warfareVehicle = RegisterWarfareVehicle(veh);
+
+            if (warfareVehicle.Info is not { Trunk.Count: > 0 })
+                return warfareVehicle;
 
             // add items to trunk
-            foreach (WarfareVehicleInfo.TrunkItem item in vehicleInfo.Trunk)
+            foreach (WarfareVehicleInfo.TrunkItem item in warfareVehicle.Info.Trunk)
             {
                 if (!item.Item.TryGetAsset(out ItemAsset? itemAsset))
                 {
@@ -168,7 +174,7 @@ namespace Uncreated.Warfare.Vehicles
                 }
             }
 
-            return veh;
+            return warfareVehicle;
         }
         /// <summary>
         /// Remove one vehicle and clean up spawn information and items.

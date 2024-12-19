@@ -24,20 +24,20 @@ using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.Events.Models.Vehicles;
 using SDG.Unturned;
 
-namespace Uncreated.Warfare.Tweaks.BuildablePlacement;
+namespace Uncreated.Warfare.Vehicles.Events.Vehicles;
 internal class GuidedMissileLaunchTweaks :
     IEventListener<ProjectileSpawned>,
     IEventListener<VehicleSpawned>
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger _logger;
-    private readonly AssetConfiguration? _assetConfiguration;
+    private readonly AssetConfiguration _assetConfiguration;
 
     public GuidedMissileLaunchTweaks(IServiceProvider serviceProvider, ILogger<GuidedMissileLaunchTweaks> logger)
     {
         _serviceProvider = serviceProvider;
         _logger = logger;
-        _assetConfiguration = serviceProvider.GetService<AssetConfiguration>();
+        _assetConfiguration = serviceProvider.GetRequiredService<AssetConfiguration>();
     }
     public void HandleEvent(ProjectileSpawned e, IServiceProvider serviceProvider)
     {
@@ -82,12 +82,12 @@ internal class GuidedMissileLaunchTweaks :
         }
     }
 
-    private IEnumerable<IAssetLink<ItemGunAsset>> _guidedMissiles => _assetConfiguration?.GetRequiredSection("Projectiles:GuidedMissiles:")?
+    private IEnumerable<IAssetLink<ItemGunAsset>> _guidedMissiles => _assetConfiguration.GetRequiredSection("Projectiles:GuidedMissiles")?
             .Get<IEnumerable<IAssetLink<ItemGunAsset>>>() ?? Array.Empty<IAssetLink<ItemGunAsset>>();
-    private IEnumerable<IAssetLink<ItemGunAsset>> _groundAAMissiles => _assetConfiguration?.GetRequiredSection("Projectiles:GroundAAMissiles:")?
+    private IEnumerable<IAssetLink<ItemGunAsset>> _groundAAMissiles => _assetConfiguration.GetRequiredSection("Projectiles:GroundAAMissiles")?
         .Get<IEnumerable<IAssetLink<ItemGunAsset>>>() ?? Array.Empty<IAssetLink<ItemGunAsset>>();
-    private IEnumerable<IAssetLink<ItemGunAsset>> _airAAMissiles => _assetConfiguration?.GetRequiredSection("Projectiles:AirAAMissiles:")?
+    private IEnumerable<IAssetLink<ItemGunAsset>> _airAAMissiles => _assetConfiguration.GetRequiredSection("Projectiles:AirAAMissiles")?
         .Get<IEnumerable<IAssetLink<ItemGunAsset>>>() ?? Array.Empty<IAssetLink<ItemGunAsset>>();
-    private IEnumerable<IAssetLink<ItemGunAsset>> _laserGuidedMissiles => _assetConfiguration?.GetRequiredSection("Projectiles:LaserGuidedMissiles:")?
+    private IEnumerable<IAssetLink<ItemGunAsset>> _laserGuidedMissiles => _assetConfiguration.GetRequiredSection("Projectiles:LaserGuidedMissiles")?
         .Get<IEnumerable<IAssetLink<ItemGunAsset>>>() ?? Array.Empty<IAssetLink<ItemGunAsset>>();
 }

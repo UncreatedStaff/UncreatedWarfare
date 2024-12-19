@@ -3,9 +3,10 @@
 namespace Uncreated.Warfare.FOBs.Construction;
 public class ShovelableInfo
 {
-    public required IAssetLink<ItemPlaceableAsset>? Foundation { get; set; }
+    public required IAssetLink<ItemPlaceableAsset> Foundation { get; set; }
     public required ShovelableType ConstuctionType { get; set; }
     public required int SupplyCost { get; set; }
+    public int? MaxAllowedPerFob { get; set; }
     public IAssetLink<ItemPlaceableAsset>? CompletedStructure { get; set; }
     public IAssetLink<EffectAsset>? CompletedEffect { get; set; }
     public EmplacementInfo? Emplacement { get; set; }

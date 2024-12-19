@@ -1,11 +1,12 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Models.Fobs;
-using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.FOBs.Deployment;
+using Uncreated.Warfare.FOBs.Entities;
 using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Layouts.Teams;
@@ -14,6 +15,7 @@ using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Proximity;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Util.List;
 using Uncreated.Warfare.Util.Timing;
 using Uncreated.Warfare.Util.Timing.Collectors;
 
@@ -62,7 +64,7 @@ public class BasePlayableFob : IResourceFob, IDisposable
     public ISphereProximity EnemyProximity { get; private set; }
     public ProximityCollector<WarfarePlayer> NearbyFriendlies { get; private set; }
     public ProximityCollector<WarfarePlayer> NearbyEnemies { get; private set; }
-    public ProximityCollector<IFobItem> Items { get; private set; }
+    public ReadOnlyTrackingList<IFobEntity> GetEntities() => _fobManager.Entities.Where(e => MathUtility.WithinRange(Position, e.Position, EffectiveRadius)).ToTrackingList().AsReadOnly();
 
     /// <summary>
     /// Invoked when a player enters the radius of the FOB.
@@ -77,8 +79,8 @@ public class BasePlayableFob : IResourceFob, IDisposable
     public event Action<InteractableVehicle>? OnVehicleEntered;
     public event Action<InteractableVehicle>? OnVehicleExited;
 
-    public event Action<IFobItem>? OnItemAdded;
-    public event Action<IFobItem>? OnItemRemoved;
+    public event Action<IFobEntity>? OnItemAdded;
+    public event Action<IFobEntity>? OnItemRemoved;
 
     public BasePlayableFob(IServiceProvider serviceProvider, string name, IBuildable buildable)
     {
@@ -109,33 +111,6 @@ public class BasePlayableFob : IResourceFob, IDisposable
                 Proximity = FriendlyProximity,
                 ObjectsToCollect = () => _playerService.OnlinePlayers.Where(p => p.Team != Team),
                 PositionFunction = p => p.Position
-            }
-        );
-        Items = new ProximityCollector<IFobItem>(
-            new ProximityCollector<IFobItem>.ProximityCollectorOptions
-            {
-                Ticker = _loopTicker,
-                Proximity = FriendlyProximity,
-                ObjectsToCollect = () => _fobManager.FloatingItems,
-                PositionFunction = i => i.Position,
-                OnItemAdded = (i) =>
-                {
-                    if (i is SupplyCrate crate)
-                    {
-                        // update fob UI
-                    }
-
-                    _logger.LogInformation("Added fob item. State: " + this);
-                },
-                OnItemRemoved = (i) =>
-                {
-                    if (i is SupplyCrate crate)
-                    {
-                        // update fob UI
-                    }
-
-                    _logger.LogInformation("Removed fob item. State: " + this);
-                }
             }
         );
         _loopTicker.OnTick += (ticker, timeSinceStart, deltaTime) =>
@@ -176,12 +151,12 @@ public class BasePlayableFob : IResourceFob, IDisposable
         return UniTask.CompletedTask;
     }
 
-    public UniTask AddItemAsync(IFobItem fobItem, CancellationToken token = default)
+    public UniTask AddItemAsync(IFobEntity fobItem, CancellationToken token = default)
     {
         throw new NotImplementedException();
     }
 
-    public UniTask BuildItemAsync(IFobItem fobItem, CancellationToken token = default)
+    public UniTask BuildItemAsync(IFobEntity fobItem, CancellationToken token = default)
     {
         throw new NotImplementedException();
     }
@@ -224,7 +199,7 @@ public class BasePlayableFob : IResourceFob, IDisposable
         return $"Fob: {Name}, Team: {Team}, Position: {Position}, BuildCount: {BuildCount}, AmmoCount: {AmmoCount}, EffectiveRadius: {EffectiveRadius}\n" +
                $"NearbyFriendlies: {NearbyFriendlies.Collection.Count}\n" +
                $"NearbyEnemies: {NearbyEnemies.Collection.Count}\n" +
-               $"Items: {Items.Collection.Count}\n"
+               $"Items: {GetEntities().Count}\n"
                ;
     }
     public string Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)

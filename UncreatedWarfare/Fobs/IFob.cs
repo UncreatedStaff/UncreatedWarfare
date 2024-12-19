@@ -1,6 +1,6 @@
 ﻿using System;
-using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.FOBs.Deployment;
+using Uncreated.Warfare.FOBs.Entities;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Proximity;
@@ -37,13 +37,13 @@ public interface IFob : IDeployable, IComparable<IFob>
     /// Add an item to a FOB.
     /// </summary>
     /// <exception cref="NotSupportedException"/>
-    UniTask AddItemAsync(IFobItem fobItem, CancellationToken token = default);
+    UniTask AddItemAsync(IFobEntity fobItem, CancellationToken token = default);
 
     /// <summary>
     /// Upgrade an item built on a FOB to it's next state or level.
     /// </summary>
     /// <exception cref="NotSupportedException"/>
-    UniTask BuildItemAsync(IFobItem fobItem, CancellationToken token = default);
+    UniTask BuildItemAsync(IFobEntity fobItem, CancellationToken token = default);
 }
 
 /// <summary>

@@ -5,7 +5,7 @@ using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Translations;
 
-namespace Uncreated.Warfare.Tweaks.Vehicles;
+namespace Uncreated.Warfare.Vehicles.Events.Vehicles;
 internal class VehicleTweaksTranslations : PropertiesTranslationCollection
 {
     protected override string FileName => "Tweaks/Vehicles";
@@ -18,7 +18,7 @@ internal class VehicleTweaksTranslations : PropertiesTranslationCollection
 
     [TranslationData("Send when a player tries to swap to a crew seat but does not have the required crew kit.")]
     public readonly Translation SwapSeatCannotAbandonDriver = new Translation("You cannot abandon the driver's seat on the battlefield.");
-    
+
     [TranslationData("Send when a player tries to exit an aircraft but it's too high off the ground.")]
     public readonly Translation ExitVehicleAircraftToHigh = new Translation("You cannot leave this aircraft seat because it is flying too high!.");
 

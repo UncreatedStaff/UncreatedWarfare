@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using Stripe;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,6 +8,7 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models.Fobs;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.FOBs.Deployment;
+using Uncreated.Warfare.FOBs.Entities;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Services;
@@ -22,7 +24,7 @@ public partial class FobManager : ILayoutHostedService
     private readonly AssetConfiguration _assetConfiguration;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<FobManager> _logger;
-    private readonly TrackingList<IFobItem> _floatingItems;
+    private readonly TrackingList<IFobEntity> _entities;
     private readonly TrackingList<IFob> _fobs;
 
     public readonly FobConfiguration Configuration;
@@ -30,7 +32,7 @@ public partial class FobManager : ILayoutHostedService
     /// <summary>
     /// Items placed by players that aren't linked to a specific FOB.
     /// </summary>
-    public IReadOnlyList<IFobItem> FloatingItems { get; }
+    public IReadOnlyList<IFobEntity> Entities { get; }
 
     /// <summary>
     /// List of all FOBs in the world.
@@ -45,10 +47,10 @@ public partial class FobManager : ILayoutHostedService
         _serviceProvider = serviceProvider;
         _logger = logger;
         _fobs = new TrackingList<IFob>(24);
-        _floatingItems = new TrackingList<IFobItem>(32);
+        _entities = new TrackingList<IFobEntity>(32);
 
         Fobs = new ReadOnlyTrackingList<IFob>(_fobs);
-        FloatingItems = new ReadOnlyTrackingList<IFobItem>(_floatingItems);
+        Entities = new ReadOnlyTrackingList<IFobEntity>(_entities);
     }
 
     UniTask ILayoutHostedService.StartAsync(CancellationToken token)
@@ -82,6 +84,20 @@ public partial class FobManager : ILayoutHostedService
         fob.DestroyAsync();
         return true;
     }
+    public void RegisterFobEntity(IFobEntity entity)
+    {
+        _entities.Add(entity);
+        _logger.LogDebug("Registered new FOB Entity: " + entity);
+
+    }
+    public bool DeregisterFobEntity(IFobEntity entity)
+    {
+        IFobEntity? existing = _entities.FindAndRemove(f => f == entity);
+        if (existing == null)
+            return false;
+        _logger.LogDebug("Deregistered FOB Entity: " + entity);
+        return true;
+    }
     public FobType? FindFob<FobType>(IBuildable matchingBuildable) where FobType : BasePlayableFob
     {
         return _fobs.OfType<FobType>().FirstOrDefault(f => f.Buildable.Equals(matchingBuildable));
@@ -107,6 +123,18 @@ public partial class FobManager : ILayoutHostedService
         return _fobs.OfType<BuildableFob>().Where(f =>
             f.Team == team &&
             (includeUnbuilt ? true : f.IsBuilt)
+        );
+    }
+    public TEntity? GetBuildableFobEntity<TEntity>(IBuildable buildable) where TEntity : IBuildableFobEntity
+    {
+        return _entities.OfType<TEntity>().FirstOrDefault(f =>
+            f.Buildable.Equals(buildable)
+        );
+    }
+    public EmplacementEntity? GetEmplacementFobEntity(InteractableVehicle emplacementVehicle)
+    {
+        return _entities.OfType<EmplacementEntity>().FirstOrDefault(f =>
+            f.Vehicle.Vehicle.instanceID == emplacementVehicle.instanceID
         );
     }
 }

@@ -9,15 +9,13 @@ using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Events.Models.Items;
 using Uncreated.Warfare.Fobs;
-using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Translations;
-using Uncreated.Warfare.Tweaks.BuildablePlacement;
 using Uncreated.Warfare.Util.Containers;
 
-namespace Uncreated.Warfare.Tweaks.Bedrolls;
+namespace Uncreated.Warfare.FOBs.Deployment.Tweaks;
 internal class ClaimToDeployTweaks : IEventListener<ClaimBedRequested>
 {
     private readonly IServiceProvider _serviceProvider;
@@ -36,7 +34,7 @@ internal class ClaimToDeployTweaks : IEventListener<ClaimBedRequested>
         if (_fobManager == null)
             return;
 
-        SupplyCrate? ammoCrate = _fobManager.FloatingItems.OfType<SupplyCrate>().FirstOrDefault(s =>
+        SupplyCrate? ammoCrate = _fobManager.Entities.OfType<SupplyCrate>().FirstOrDefault(s =>
             s.Type == SupplyType.Ammo &&
             !s.Buildable.IsDead &&
             s.Buildable.Equals(e.Buildable)

@@ -30,7 +30,10 @@ using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.ListenerProviders;
 using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.Fobs.UI;
+using Uncreated.Warfare.FOBs.Construction;
+using Uncreated.Warfare.FOBs.Construction.Tweaks;
 using Uncreated.Warfare.FOBs.Deployment;
+using Uncreated.Warfare.FOBs.Deployment.Tweaks;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Interaction.Icons;
@@ -66,6 +69,7 @@ using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Timing;
 using Uncreated.Warfare.Vehicles;
 using Uncreated.Warfare.Vehicles.Events;
+using Uncreated.Warfare.Vehicles.Events.Vehicles;
 using Uncreated.Warfare.Vehicles.Info;
 using Uncreated.Warfare.Vehicles.Spawners;
 using Uncreated.Warfare.Vehicles.UI;
@@ -677,6 +681,23 @@ public sealed class WarfareModule
 
         // Active ITeamManager
         bldr.Register(_ => GetActiveLayout().TeamManager)
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+
+        // Tweaks
+        bldr.RegisterType<FobPlacementTweaks>()
+            .AsSelf().AsImplementedInterfaces()
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+        bldr.RegisterType<ShoveableTweaks>()
+            .AsSelf().AsImplementedInterfaces()
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+        bldr.RegisterType<ClaimToDeployTweaks>()
+            .AsSelf().AsImplementedInterfaces()
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+        bldr.RegisterType<GuidedMissileLaunchTweaks>()
+            .AsSelf().AsImplementedInterfaces()
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+        bldr.RegisterType<VehicleInteractionTweaks>()
+            .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
 
         // Localization

@@ -20,6 +20,8 @@ using Uncreated.Warfare.Vehicles.Vehicle;
 using Uncreated.Warfare.Util.Timing;
 using Autofac.Core;
 using System.Globalization;
+using System.Diagnostics.CodeAnalysis;
+using Uncreated.Warfare.Layouts;
 
 namespace Uncreated.Warfare.Vehicles.Spawners
 {
@@ -33,7 +35,8 @@ namespace Uncreated.Warfare.Vehicles.Spawners
         private IPlayerService _playerService;
         private ITeamManager<Team> _teamManager;
         private VehicleService _vehicleService;
-        private VehicleSpawnerSelector? _vehicleSpawnerSelector;
+        private readonly Layout? _currentLayout;
+        private VehicleSpawnerLayoutConfigurer? _vehicleSpawnerSelector;
 
         private DateTime _timeDestroyed;
         private DateTime _timeStartedIdle;
@@ -76,7 +79,8 @@ namespace Uncreated.Warfare.Vehicles.Spawners
             _teamManager = layoutServiceProvider.GetRequiredService<ITeamManager<Team>>();
             _zoneStore = layoutServiceProvider.GetRequiredService<ZoneStore>();
             _vehicleService = layoutServiceProvider.GetRequiredService<VehicleService>();
-            _vehicleSpawnerSelector = layoutServiceProvider.GetService<VehicleSpawnerSelector>();
+            _currentLayout = layoutServiceProvider.GetService<Layout>();
+            _vehicleSpawnerSelector = layoutServiceProvider.GetService<VehicleSpawnerLayoutConfigurer>();
             _updateTicker = updateTicker;
             updateTicker.OnTick += Update;
 
@@ -224,7 +228,7 @@ namespace Uncreated.Warfare.Vehicles.Spawners
             if (_isSpawningVehicle)
                 return;
 
-            else if (State == VehicleSpawnerState.AwaitingRespawn)
+            if (State == VehicleSpawnerState.AwaitingRespawn)
             {
                 if (LinkedVehicle == null)
                 {
@@ -252,6 +256,15 @@ namespace Uncreated.Warfare.Vehicles.Spawners
                 }
 
                 CheckRespawn(timeSinceStart);
+                UpdateLinkedSigns();
+            }
+            // Delayed in Layout configuration
+            else if (IsDelayed(out TimeSpan timeLeft))
+            {
+                if (State != VehicleSpawnerState.LayoutDelayed)
+                {
+                    State = VehicleSpawnerState.LayoutDelayed;
+                }
                 UpdateLinkedSigns();
             }
             // Ready
@@ -395,7 +408,7 @@ namespace Uncreated.Warfare.Vehicles.Spawners
         /// <summary>
         /// Link this spawn to a vehicle.
         /// </summary>
-        internal void LinkVehicle(InteractableVehicle vehicle)
+        internal void LinkVehicle(InteractableVehicle vehicle) // todo: replace with WarfareVehicle
         {
             GameThread.AssertCurrent();
 
@@ -441,6 +454,22 @@ namespace Uncreated.Warfare.Vehicles.Spawners
             {
                 oldVehicleComponent.WarfareVehicle.UnlinkFromSpawn(this);
             }
+        }
+        public bool IsDelayed(out TimeSpan timeLeft)
+        {
+            timeLeft = TimeSpan.Zero;
+
+            if (_vehicleSpawnerSelector == null || _currentLayout == null)
+                return false;
+
+            if (!_vehicleSpawnerSelector.TryGetSpawnerConfiguration(SpawnInfo, out VehicleSpawnerLayoutConfiguration? configuration))
+                return false;
+
+            if (configuration.Delay == null)
+                return false;
+
+            timeLeft = configuration.Delay.GetTimeLeft(_currentLayout);
+            return timeLeft > TimeSpan.Zero;
         }
         public bool IsEnabledInLayout() => _vehicleSpawnerSelector?.IsEnabledInLayout(SpawnInfo) ?? true;
 
@@ -488,6 +517,7 @@ namespace Uncreated.Warfare.Vehicles.Spawners
         Deployed,
         Idle,
         Ready,
+        LayoutDelayed,
         AwaitingRespawn,
         LayoutDisabled,
         Disposed

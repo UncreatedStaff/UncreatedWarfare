@@ -8,7 +8,7 @@ using Uncreated.Warfare.Services;
 
 namespace Uncreated.Warfare.Vehicles.Events;
 
-internal class VehicleSpawnedHandler : IEventListener<VehicleSpawned>, ILayoutStartingListener
+internal class VehicleSpawnedHandler : IEventListener<VehicleSpawned>, ILayoutStartingListener // todo: move this into
 {
     [EventListener(RequireActiveLayout = true)]
     void IEventListener<VehicleSpawned>.HandleEvent(VehicleSpawned e, IServiceProvider serviceProvider)

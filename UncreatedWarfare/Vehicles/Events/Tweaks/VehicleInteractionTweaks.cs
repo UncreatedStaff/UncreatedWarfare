@@ -15,7 +15,7 @@ using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles.Info;
 using Uncreated.Warfare.Zones;
 
-namespace Uncreated.Warfare.Tweaks.Vehicles;
+namespace Uncreated.Warfare.Vehicles.Events.Vehicles;
 internal class VehicleInteractionTweaks :
     IEventListener<EnterVehicleRequested>,
     IEventListener<VehicleSwapSeatRequested>,
@@ -135,7 +135,7 @@ internal class VehicleInteractionTweaks :
             }
             // prevent entering a crew seat (from a non-crew seat) if this vehicle is already being manned by the maximum number of crew.
             else if (
-                !info.IsCrewSeat(e.OldPassengerIndex) && 
+                !info.IsCrewSeat(e.OldPassengerIndex) &&
                 MaxAllowedCrewReached(e.Vehicle, info))
             {
                 _chatService.Send(e.Player, _translations.VehicleMaxAllowedCrewReached, info.Crew.MaxAllowedCrew ?? -1);
@@ -275,9 +275,9 @@ internal class VehicleInteractionTweaks :
         if (info.Class == Class.None)
             return true;
 
-        if (currentSeatIndex == 0 && 
-            info.IsCrewSeat(currentSeatIndex) && 
-            info.IsCrewSeat(newSeatIndex ?? -1) && 
+        if (currentSeatIndex == 0 &&
+            info.IsCrewSeat(currentSeatIndex) &&
+            info.IsCrewSeat(newSeatIndex ?? -1) &&
             !_zoneStore.IsInMainBase(exitingPlayer))
             return false;
 

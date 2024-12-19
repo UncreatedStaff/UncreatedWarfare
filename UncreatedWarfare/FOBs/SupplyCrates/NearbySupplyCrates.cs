@@ -31,7 +31,7 @@ public class NearbySupplyCrates
     }
     public static NearbySupplyCrates FindNearbyCrates(Vector3 supplyPoint, CSteamID team, FobManager fobManager)
     {
-        var supplyCrates = fobManager.FloatingItems
+        var supplyCrates = fobManager.Entities
             .Where(t => t is SupplyCrate c && c.IsWithinRadius(supplyPoint))
             .Cast<SupplyCrate>()
             .ToTrackingList();

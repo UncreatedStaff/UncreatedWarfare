@@ -21,6 +21,9 @@ public abstract class BasePhase<TTeamSettings> : ILayoutPhase where TTeamSetting
 
     [UsedImplicitly]
     public TimeSpan Duration { get; set; } = TimeSpan.MinValue;
+    [UsedImplicitly]
+    public TimeSpan TimeElapsedSinceActive => IsActive ? DateTime.Now - TimeStarted : TimeSpan.Zero;
+    public DateTime TimeStarted { get; private set; }
 
     /// <summary>
     /// Display name of the phase on the popup toast for all teams.
@@ -63,6 +66,7 @@ public abstract class BasePhase<TTeamSettings> : ILayoutPhase where TTeamSetting
 
     public virtual UniTask BeginPhaseAsync(CancellationToken token = default)
     {
+        TimeStarted = DateTime.Now;
         IsActive = true;
         return UniTask.CompletedTask;
     }

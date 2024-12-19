@@ -12,8 +12,10 @@ using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Events.Models.Fobs;
 using Uncreated.Warfare.Events.Models.Items;
 using Uncreated.Warfare.Events.Models.Players;
+using Uncreated.Warfare.Events.Models.Vehicles;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.FOBs.Construction;
+using Uncreated.Warfare.FOBs.Entities;
 using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits;
@@ -28,7 +30,8 @@ namespace Uncreated.Warfare.Fobs;
 public partial class FobManager :
     IAsyncEventListener<BarricadePlaced>,
     IEventListener<BarricadeDestroyed>,
-    IEventListener<ItemDropped>
+    IEventListener<ItemDropped>,
+    IEventListener<VehicleDespawned>
 {
     async UniTask IAsyncEventListener<BarricadePlaced>.HandleEventAsync(BarricadePlaced e, IServiceProvider serviceProvider, CancellationToken token)
     {
@@ -64,12 +67,8 @@ public partial class FobManager :
         if (_assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:Fobs:RepairStation").Guid == e.Barricade.asset.GUID)
         {
             Team team = serviceProvider.GetRequiredService<ITeamManager<Team>>().GetTeam(e.GroupId);
-            container.AddComponent(new RepairStation(e.Buildable, team, serviceProvider.GetRequiredService<ILoopTickerFactory>(), this, _assetConfiguration));
-        }
-        else if (_assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:Fobs:RepairStation").Guid == e.Barricade.asset.GUID)
-        {
-            Team team = serviceProvider.GetRequiredService<ITeamManager<Team>>().GetTeam(e.GroupId);
-            container.AddComponent(new RepairStation(e.Buildable, team, serviceProvider.GetRequiredService<ILoopTickerFactory>(), this, _assetConfiguration));
+            RepairStation repairStation = new RepairStation(e.Buildable, team, serviceProvider.GetRequiredService<ILoopTickerFactory>(), this, _assetConfiguration);
+            _entities.AddIfNotExists(repairStation);
         }
 
         TryCreateShoveable(e.Buildable, container, out _);
@@ -88,10 +87,10 @@ public partial class FobManager :
         if (shovelableInfo == null)
             return false;
 
-        ShovelableBuildable newShovelable = new ShovelableBuildable(shovelableInfo, buildable, _assetConfiguration.GetAssetLink<EffectAsset>("Effects:ShovelHit"), _serviceProvider);
+        ShovelableBuildable newShovelable = new ShovelableBuildable(shovelableInfo, buildable, _serviceProvider, _assetConfiguration.GetAssetLink<EffectAsset>("Effects:ShovelHit"));
         shovelable = newShovelable;
 
-        container.AddComponent(shovelable);
+        _entities.AddIfNotExists(newShovelable);
 
         BuildableFob? nearestFriendlyFob = FindNearestBuildableFob(newShovelable.Buildable.Group, buildable.Position);
 
@@ -139,7 +138,7 @@ public partial class FobManager :
             DeregisterFob(fob);
         }
 
-        ShovelableBuildable? shovelable = e.Transform.GetOrAddComponent<BuildableContainer>().ComponentOrNull<ShovelableBuildable>();
+        ShovelableBuildable? shovelable = GetBuildableFobEntity<ShovelableBuildable>(e.Buildable);
         if (shovelable != null)
         {
             BuildableFob? nearestFriendlyFob = FindNearestBuildableFob(shovelable.Buildable.Group, shovelable.Buildable.Position);
@@ -156,12 +155,13 @@ public partial class FobManager :
             }
         }
        
-        SupplyCrate? supplyCrate = _floatingItems.OfType<SupplyCrate>().FirstOrDefault(i => i.Buildable.Equals(e.Buildable));
+        SupplyCrate? supplyCrate = _entities.OfType<SupplyCrate>().FirstOrDefault(i => i.Buildable.Equals(e.Buildable));
         if (supplyCrate != null)
         {
             NearbySupplyCrates.FromSingleCrate(supplyCrate, this).NotifyChanged(supplyCrate.Type, -supplyCrate.SupplyCount, SupplyChangeReason.ConsumeSuppliesDestroyed);
         }
-        _floatingItems.RemoveAll(i => i.Buildable.Equals(e.Buildable));
+
+        _entities.RemoveAll(en => en is IBuildableFobEntity bfe && bfe.Buildable.Equals(e.Buildable));
     }
     public void HandleEvent(ItemDropped e, IServiceProvider serviceProvider)
     {
@@ -183,9 +183,16 @@ public partial class FobManager :
         (buildable) =>
             {
                 SupplyCrate supplyCrate = new SupplyCrate(supplyCrateInfo, buildable);
-                _floatingItems.Add(supplyCrate);
+                _entities.AddIfNotExists(supplyCrate);
                 NearbySupplyCrates.FromSingleCrate(supplyCrate, this).NotifyChanged(supplyCrate.Type, supplyCrate.SupplyCount, SupplyChangeReason.ResupplyFob);
             }
         );
+    }
+
+    public void HandleEvent(VehicleDespawned e, IServiceProvider serviceProvider)
+    {
+        EmplacementEntity? emplacement = GetEmplacementFobEntity(e.Vehicle);
+        if (emplacement != null)
+            DeregisterFobEntity(emplacement);
     }
 }
