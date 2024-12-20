@@ -5,7 +5,7 @@ using System.Reflection;
 namespace Uncreated.Warfare.Patches;
 
 [UsedImplicitly]
-internal class PreventRemovingBatteryPatch : IHarmonyPatch
+internal sealed class PreventRemovingBatteryPatch : IHarmonyPatch
 {
     private static MethodInfo? _target;
     void IHarmonyPatch.Patch(ILogger logger, HarmonyLib.Harmony patcher)

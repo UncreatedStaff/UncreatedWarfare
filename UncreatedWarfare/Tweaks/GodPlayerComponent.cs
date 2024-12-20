@@ -1,4 +1,7 @@
 ﻿using System;
+using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Models;
+using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Permissions;
@@ -9,7 +12,7 @@ namespace Uncreated.Warfare.Tweaks;
 /// Manages the player's ability to take damage.
 /// </summary>
 [PlayerComponent]
-public class GodPlayerComponent : IPlayerComponent
+public class GodPlayerComponent : IPlayerComponent, IEventListener<DamagePlayerRequested>
 {
     public const string GodPermissionName = "warfare::features.god";
     public static readonly PermissionLeaf GodPermission = new PermissionLeaf(GodPermissionName);
@@ -23,7 +26,12 @@ public class GodPlayerComponent : IPlayerComponent
         IsActive = false;
     }
 
-    WarfarePlayer IPlayerComponent.Player { get => Player; set => Player = value; }
+    [EventListener(Priority = 100)]
+    void IEventListener<DamagePlayerRequested>.HandleEvent(DamagePlayerRequested e, IServiceProvider serviceProvider)
+    {
+        if (IsActive)
+            e.Cancel();
+    }
 
-    // todo implement
+    WarfarePlayer IPlayerComponent.Player { get => Player; set => Player = value; }
 }

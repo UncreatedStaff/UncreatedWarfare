@@ -5,7 +5,7 @@ using System.Reflection;
 namespace Uncreated.Warfare.Patches;
 
 [UsedImplicitly]
-internal class CancelReputationPatch : IHarmonyPatch
+internal sealed class CancelReputationPatch : IHarmonyPatch
 {
     internal static bool IsSettingReputation;
 

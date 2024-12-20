@@ -54,6 +54,8 @@ public abstract class DualSidedFlagService :
     /// <inheritdoc />
     public IReadOnlyList<FlagObjective> ActiveFlags { get; private set; } = Array.Empty<FlagObjective>();
 
+    /// <inheritdoc />
+    public virtual ElectricalGridBehaivor GridBehaivor => ElectricalGridBehaivor.EnabledWhenInRotation;
 
     protected DualSidedFlagService(IServiceProvider serviceProvider, IConfiguration config)
     {
@@ -209,4 +211,14 @@ public abstract class DualSidedFlagService :
     protected abstract void RecalculateObjectives();
     public abstract FlagContestResult GetContestResult(FlagObjective flag, IEnumerable<Team> possibleContestingTeams);
     public abstract FlagObjective? GetObjective(Team team);
+
+    public virtual IEnumerable<FlagObjective> EnumerateObjectives()
+    {
+        foreach (Team team in TeamManager.AllTeams)
+        {
+            FlagObjective? obj = GetObjective(team);
+            if (obj != null)
+                yield return obj;
+        }
+    }
 }

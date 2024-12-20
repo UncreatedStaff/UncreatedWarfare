@@ -7,7 +7,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 
 namespace Uncreated.Warfare.Patches;
-internal class StopPlayerExplodeAirAssetsPatch : IHarmonyPatch
+internal sealed class StopPlayerExplodeAirAssetsPatch : IHarmonyPatch
 {
     private static MethodInfo? _target;
     void IHarmonyPatch.Patch(ILogger logger, HarmonyLib.Harmony patcher)

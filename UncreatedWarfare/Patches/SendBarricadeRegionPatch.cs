@@ -13,7 +13,7 @@ using Uncreated.Warfare.Signs;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Patches;
-internal class SendBarricadeRegionPatch : IHarmonyPatch
+internal sealed class SendBarricadeRegionPatch : IHarmonyPatch
 {
     private static readonly ClientStaticMethod? SendMultipleBarricades = ReflectionUtility.FindRpc<BarricadeManager, ClientStaticMethod>("SendMultipleBarricades");
 

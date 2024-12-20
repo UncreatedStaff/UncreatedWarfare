@@ -12,6 +12,7 @@ using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Addons;
 using Uncreated.Warfare.Translations.Util;
+using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles.Info;
 
 namespace Uncreated.Warfare.Stats;
@@ -118,9 +119,10 @@ public class PointsService : IEventListener<PlayerTeamChanged> // todo player eq
                 return rank;
         }
 
+        string noDot = name.Replace(".", string.Empty).Replace(" ", string.Empty);
         for (WarfareRank? rank = _startingRank; rank != null; rank = rank.Next)
         {
-            if (rank.Name.Replace(".", string.Empty).Equals(name.Replace(".", string.Empty), StringComparison.InvariantCultureIgnoreCase))
+            if (rank.Abbreviation.Replace(".", string.Empty).Equals(noDot, StringComparison.InvariantCultureIgnoreCase))
                 return rank;
         }
 

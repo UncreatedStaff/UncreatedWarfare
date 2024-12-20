@@ -5,7 +5,7 @@ using System.Reflection;
 namespace Uncreated.Warfare.Patches;
 
 [UsedImplicitly]
-internal class PreventCosmeticChangePatch : IHarmonyPatch
+internal sealed class PreventCosmeticChangePatch : IHarmonyPatch
 {
     private static MethodInfo? _target;
     void IHarmonyPatch.Patch(ILogger logger, HarmonyLib.Harmony patcher)

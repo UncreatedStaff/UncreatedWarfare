@@ -78,7 +78,7 @@ public class PlayerInjureComponent : MonoBehaviour,
                // player not in vehicle
                parameters.player.movement.getVehicle() == null &&
                // player not hit by vehicle
-               parameters.cause != EDeathCause.VEHICLE &&
+               parameters.cause is not EDeathCause.VEHICLE and not EDeathCause.KILL &&
                // player alive
                !parameters.player.life.isDead &&
                // player will die from hit
@@ -482,7 +482,7 @@ public class PlayerInjureComponent : MonoBehaviour,
         else
         {
             e.Medic.SendToast(new ToastMessage(ToastMessageStyle.Mini,
-                _xpTranslations.XPToastGainXP.Translate(0, e.Medic, false)
+                _xpTranslations.XPToastGainXP.Translate(0, e.Medic)
                 +"\n"
                 + TranslationFormattingUtility.Colorize(_xpTranslations.XPToastHealedTeammate.Translate(e.Medic), new Color32(173, 173, 173, 255), TranslationOptions.TMProUI, StackColorFormatType.None) ));
         }
@@ -499,10 +499,13 @@ public class PlayerInjureComponent : MonoBehaviour,
                 return;
             }
 
-            // times per second simulate() is ran times bleed damage ticks = how many seconds it will take to lose 1 hp
-            float bleedsPerSecond = Time.timeScale / PlayerInput.RATE / Provider.modeConfigData.Players.Bleed_Damage_Ticks;
-            e.Parameters = _injureParameters;
-            e.Parameters.damage *= /* todo UCWarfare.Config.InjuredDamageMultiplier */ 0.4f / 10 * bleedsPerSecond * /* todo UCWarfare.Config.InjuredLifeTimeSeconds */ 30;
+            if (e.Parameters.cause != EDeathCause.KILL)
+            {
+                // times per second simulate() is ran times bleed damage ticks = how many seconds it will take to lose 1 hp
+                float bleedsPerSecond = Time.timeScale / PlayerInput.RATE / Provider.modeConfigData.Players.Bleed_Damage_Ticks;
+                e.Parameters = _injureParameters;
+                e.Parameters.damage *= /* todo UCWarfare.Config.InjuredDamageMultiplier */ 0.4f / 10 * bleedsPerSecond * /* todo UCWarfare.Config.InjuredLifeTimeSeconds */ 30;
+            }
             return;
         }
 

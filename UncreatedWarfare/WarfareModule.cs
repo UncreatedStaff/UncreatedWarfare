@@ -704,9 +704,9 @@ public sealed class WarfareModule
         bldr.RegisterType<VehicleInteractionTweaks>()
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
-        bldr.RegisterType<NoCraftingTweak>()
-            .AsImplementedInterfaces()
-            .SingleInstance();
+
+        bldr.RegisterType<NoCraftingTweak>().AsImplementedInterfaces();
+        bldr.RegisterType<NoDamageInMainTweak>().AsImplementedInterfaces();
 
         // Localization
         bldr.RegisterType<LanguageService>()
