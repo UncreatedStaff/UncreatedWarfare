@@ -29,7 +29,6 @@ using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.ListenerProviders;
 using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.Fobs.UI;
-using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.FOBs.Construction.Tweaks;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.FOBs.Deployment.Tweaks;
@@ -468,13 +467,13 @@ public sealed class WarfareModule
             .AsImplementedInterfaces();
 
         // for DebugEventTestCommand
-        // bldr.RegisterType<TestEventService1>().AsSelf().AsImplementedInterfaces();
-        // bldr.RegisterType<TestEventService2>().AsSelf().AsImplementedInterfaces();
-        // bldr.RegisterType<TestEventService3>().AsSelf().AsImplementedInterfaces();
-        // bldr.RegisterType<TestEventService4>().AsSelf().AsImplementedInterfaces();
-        // bldr.RegisterType<TestEventService5>().AsSelf().AsImplementedInterfaces();
-        // bldr.RegisterType<TestEventService6>().AsSelf().AsImplementedInterfaces();
-        // bldr.RegisterType<TestEventService7>().AsSelf().AsImplementedInterfaces();
+        // bldr.RegisterType<TestEventService1>().AsSelf().AsImplementedInterfaces().InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+        // bldr.RegisterType<TestEventService2>().AsSelf().AsImplementedInterfaces().SingleInstance();
+        // bldr.RegisterType<TestEventService3>().AsSelf().AsImplementedInterfaces().SingleInstance();
+        // bldr.RegisterType<TestEventService4>().AsSelf().AsImplementedInterfaces().SingleInstance();
+        // bldr.RegisterType<TestEventService5>().AsSelf().AsImplementedInterfaces().SingleInstance();
+        // bldr.RegisterType<TestEventService6>().AsSelf().AsImplementedInterfaces().SingleInstance();
+        // bldr.RegisterType<TestEventService7>().AsSelf().AsImplementedInterfaces().SingleInstance();
 
 
         bldr.RegisterType<WarfareSteamApiService>()
@@ -854,7 +853,7 @@ public sealed class WarfareModule
         await using (ILifetimeScope scope = ServiceProvider.BeginLifetimeScope())
         await using (IDbContext dbContext = scope.Resolve<IDbContext>())
         {
-            const double timeoutSec = 5;
+            const double timeoutSec = 10;
 
             // check connection before migrating with a 2.5 second timeout
             await Task.WhenAny(Task.Run(async () =>

@@ -7,6 +7,7 @@ using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Zones;
@@ -26,6 +27,7 @@ public class PlayerLobbyComponent : IPlayerComponent
     private ITeamManager<Team> _teamManager;
     private ZoneStore _zoneStore;
     private ILogger<PlayerLobbyComponent> _logger;
+    private SquadManager _squadManager;
 
     public WarfarePlayer Player { get; private set; }
 
@@ -52,6 +54,7 @@ public class PlayerLobbyComponent : IPlayerComponent
         _teamManager = serviceProvider.GetRequiredService<ITeamManager<Team>>();
         _zoneStore = serviceProvider.GetRequiredService<ZoneStore>();
         _logger = serviceProvider.GetRequiredService<ILogger<PlayerLobbyComponent>>();
+        _squadManager = serviceProvider.GetRequiredService<SquadManager>();
     }
     
     public void UpdatePositionalData(int lookingTeam, int closestTeam)
@@ -199,11 +202,10 @@ public class PlayerLobbyComponent : IPlayerComponent
 
         // shows a list of all squad leaders
         // todo add squad stuff, order by letter
-        const int squadCount = 6;
-        for (int i = 0; i < squadCount; ++i)
+        foreach (Squad squad in _squadManager.Squads)
         {
-            // temporary - squads[i].Leader.Name.CharacterName
-            string squadLeader = new string[] { $"Username{_lookingTeam}", $"Username{_lookingTeam + 1}", $"Username{_lookingTeam + 2}", $"Username{_lookingTeam + 3}", $"Username{_lookingTeam + 4}", $"Username{_lookingTeam + 5}" }[i];
+            if (squad.Team != LookingTeam.Team)
+                continue;
 
             if (!hasSetSquadTitle)
             {
@@ -216,7 +218,7 @@ public class PlayerLobbyComponent : IPlayerComponent
             }
 
             UnturnedLabel lblName = _ui.FactionInfo[index];
-            lblName.SetText(connection, squadLeader + " |");
+            lblName.SetText(connection, squad.Leader.Names.CharacterName);
             lblName.SetVisibility(connection, true);
             ++index;
         }
@@ -224,9 +226,9 @@ public class PlayerLobbyComponent : IPlayerComponent
         // shows a list of all steam friends that are currently on the team in order of how long they've been friends
         ulong[] friends = Player.SteamFriends;
 
-        for (int i = 0; i < friends.Length; ++i)
+        foreach (ulong steam64Id in friends)
         {
-            WarfarePlayer? onlineFriend = _playerService.GetOnlinePlayerOrNull(friends[i]);
+            WarfarePlayer? onlineFriend = _playerService.GetOnlinePlayerOrNull(steam64Id);
             if (onlineFriend == null || onlineFriend.Team != LookingTeam.Team)
                 continue;
 

@@ -1,6 +1,7 @@
 #if DEBUG
 //#define LOG_SYNCHRONIZATION_STEPS
 //#define LOG_EVENT_LISTENERS
+//#define LOG_RESOLVE_STEPS
 #endif
 
 using Autofac.Core;
@@ -19,6 +20,7 @@ using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.List;
+using Service = Autofac.Core.Service;
 
 namespace Uncreated.Warfare.Events;
 
@@ -237,9 +239,9 @@ public partial class EventDispatcher : IHostedService, IDisposable
             foreach (EventListenerResult result in eventListeners)
             {
                 if (result.Model == null)
-                    _logger.LogDebug("#{0} listener {1} (priority: {2} f:0b{3}) returned from listener provider.", ++index, result.Listener.GetType(), result.Priority, Convert.ToString(result.Flags, 2));
+                    _logger.LogDebug("#{0} listener {1} (priority: {2} f:0b{3}) hash {4} returned from listener provider.", ++index, result.Listener.GetType(), result.Priority, Convert.ToString(result.Flags, 2), result.Listener.GetHashCode());
                 else
-                    _logger.LogDebug("#{0} listener {1} (priority: {2} f:0b{3}) of {4} cached.", ++index, result.Listener.GetType(), result.Priority, Convert.ToString(result.Flags, 2), result.Model);
+                    _logger.LogDebug("#{0} listener {1} (priority: {2} f:0b{3}) hash {4} of {5} cached.", ++index, result.Listener.GetType(), result.Priority, Convert.ToString(result.Flags, 2), result.Listener.GetHashCode(), result.Model);
             }
         }
 #endif
@@ -500,8 +502,9 @@ public partial class EventDispatcher : IHostedService, IDisposable
     }
 
     // checks to see if a service registration can be created from the given service provider scope
-    private static bool InScope(ILifetimeScope scope, IComponentRegistration registration)
+    private static bool InScope(ILifetimeScope scope, IComponentRegistration registration, out ILifetimeScope applicableScope)
     {
+        applicableScope = scope;
         ISharingLifetimeScope? sharingScope = scope as ISharingLifetimeScope;
         switch (registration.Lifetime)
         {
@@ -512,12 +515,15 @@ public partial class EventDispatcher : IHostedService, IDisposable
                 {
                     if (childScope.Tag != null && matchingScopeLifetime.TagsToMatch.Contains(childScope.Tag))
                     {
+                        applicableScope = childScope;
                         return true;
                     }
                 }
                 return false;
 
             case RootScopeLifetime or CurrentScopeLifetime:
+                if (sharingScope != null)
+                    applicableScope = sharingScope.RootLifetimeScope;
                 return true;
 
             default:
@@ -526,8 +532,13 @@ public partial class EventDispatcher : IHostedService, IDisposable
                 
                 try
                 {
-                    ISharingLifetimeScope s = registration.Lifetime.FindScope(sharingScope);
-                    return s != null;
+                    if (registration.Lifetime.FindScope(sharingScope) is { } s)
+                    {
+                        applicableScope = s;
+                        return true;
+                    }
+
+                    return false;
                 }
                 catch
                 {
@@ -542,34 +553,65 @@ public partial class EventDispatcher : IHostedService, IDisposable
         // find all IEventListenerProvider services but ignore unscoped ones
         IEnumerable<Parameter> parameters = Array.Empty<Parameter>();
 
-        Type? noOpType = null; //typeof(ILifetimeScope).Assembly.GetType("Autofac.Core.Registration.ExternalComponentRegistration+NoOpActivator");
+        Type? noOpType = typeof(ILifetimeScope).Assembly.GetType("Autofac.Core.Registration.ExternalComponentRegistration+NoOpActivator");
 
-        IEnumerator<ILifetimeScope> enumerator = EnumerateScopes(scope);
-        while (enumerator.MoveNext())
+        List<ILifetimeScope> scopes = GetScopes(scope);
+        for (int j = 0; j < scopes.Count; ++j)
         {
-            ILifetimeScope childScope = enumerator.Current!;
-            IComponentRegistry compReg = childScope.ComponentRegistry;
+            IComponentRegistry compReg = scopes[j].ComponentRegistry;
             foreach (IComponentRegistration serviceRegistration in compReg.Registrations)
             {
                 if (noOpType is not null && noOpType.IsInstanceOfType(serviceRegistration.Activator))
                     continue;
 
-                if (!InScope(scope, serviceRegistration))
+                if (!InScope(scope, serviceRegistration, out ILifetimeScope applicableScope))
                     continue;
 
                 Service? service = serviceRegistration.Services.FirstOrDefault(x => x is IServiceWithType t && t.ServiceType == typeof(IEventListenerProvider));
                 if (service == null)
                     continue;
+                
+                Type? concreteType = serviceRegistration.Services
+                    .OfType<IServiceWithType>()
+                    .Where(x => !x.ServiceType.IsInterface)
+                    .OrderByDescending(x => x.ServiceType, TypeComparer.Instance)
+                    .FirstOrDefault()?.ServiceType;
 
-                IEventListenerProvider? implementation;
+                IEventListenerProvider? implementation = null;
                 try
                 {
-                    ServiceRegistration reg = new ServiceRegistration(serviceRegistration.ResolvePipeline, serviceRegistration);
-                    implementation = (IEventListenerProvider)scope.ResolveComponent(new ResolveRequest(service, reg, parameters, serviceRegistration));
+                    // resolve component from its registration
+                    if (concreteType != null)
+                    {
+                        for (Type? baseType = concreteType; baseType != null && typeof(IEventListenerProvider).IsAssignableFrom(baseType); baseType = baseType.BaseType)
+                        {
+                            implementation = (IEventListenerProvider?)scope.ResolveOptional(baseType);
+#if LOG_RESOLVE_STEPS
+                            if (implementation != null)
+                            {
+                                _logger.LogConditional("Resolved concrete listener provider {0}: {1} - {2}", baseType, implementation.GetType(), implementation.GetHashCode());
+                                break;
+                            }
+#endif
+                        }
+
+                        if (implementation == null)
+                        {
+                            _logger.LogWarning("Unable to resolve service {0} for listener provider.", serviceRegistration.Activator);
+                            continue;
+                        }
+                    }
+                    else
+                    {
+                        ServiceRegistration reg = new ServiceRegistration(serviceRegistration.ResolvePipeline, serviceRegistration);
+                        implementation = (IEventListenerProvider)applicableScope.ResolveComponent(new ResolveRequest(service, reg, parameters, serviceRegistration));
+                        _logger.LogWarning("Resolved listener provider from service (may cause duplicating service issues): {0} - {1}", implementation.GetType(), implementation.GetHashCode());
+                    }
+
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Error resolving listener provider service {0}.", serviceRegistration.Activator);
+                    _logger.LogWarning(ex, "Error resolving service {0} for listener provider.", serviceRegistration.Activator);
                     continue;
                 }
 
@@ -582,7 +624,7 @@ public partial class EventDispatcher : IHostedService, IDisposable
                     }
 
                     providers.Insert(i, implementation);
-                    return;
+                    break;
                 }
 
                 providers.Add(implementation);
@@ -590,19 +632,23 @@ public partial class EventDispatcher : IHostedService, IDisposable
         }
 
         _logger.LogDebug("Reset event caches. Found new listener providers: {0}.", providers.Select(x => x.GetType()));
+        ListPool<ILifetimeScope>.release(scopes);
     }
 
     // enumerates through the scope and all it's parent scopes because Autofac makes it awful to loop through all services
-    private static IEnumerator<ILifetimeScope> EnumerateScopes(ILifetimeScope scope)
+    private static List<ILifetimeScope> GetScopes(ILifetimeScope scope)
     {
-        yield return scope;
+        List<ILifetimeScope> scopes = ListPool<ILifetimeScope>.claim();
+        scopes.Add(scope);
         if (scope is not ISharingLifetimeScope s)
-            yield break;
+            return scopes;
 
         for (ISharingLifetimeScope? next = s.ParentLifetimeScope; next != null; next = next.ParentLifetimeScope)
         {
-            yield return next;
+            scopes.Add(next);
         }
+
+        return scopes;
     }
 
     // find and instantiate all handler services for this event model. This does not include handlers returned by IEventListenerProvider services
@@ -612,18 +658,18 @@ public partial class EventDispatcher : IHostedService, IDisposable
 
         Type? noOpType = typeof(ILifetimeScope).Assembly.GetType("Autofac.Core.Registration.ExternalComponentRegistration+NoOpActivator");
 
-        IEnumerator<ILifetimeScope> enumerator = EnumerateScopes(scope);
-        while (enumerator.MoveNext())
+        List<ILifetimeScope> scopes = GetScopes(scope);
+        for (int j = 0; j < scopes.Count; ++j)
         {
-            ILifetimeScope childScope = enumerator.Current!;
-            IComponentRegistry compReg = childScope.ComponentRegistry;
+            ILifetimeScope scopeLevel = scopes[j];
+            IComponentRegistry compReg = scopeLevel.ComponentRegistry;
             foreach (IComponentRegistration serviceRegistration in compReg.Registrations)
             {
                 if (noOpType is not null && noOpType.IsInstanceOfType(serviceRegistration.Activator))
                     continue;
 
                 using IDisposable? logScope = _logger.BeginScope(serviceRegistration.Activator);
-                if (!InScope(scope, serviceRegistration))
+                if (!InScope(scope, serviceRegistration, out ILifetimeScope applicableScope))
                     continue;
 
                 object? implementation = null;
@@ -654,11 +700,42 @@ public partial class EventDispatcher : IHostedService, IDisposable
 
                     if (implementation == null)
                     {
+                        Type? concreteType = serviceRegistration.Services
+                            .OfType<IServiceWithType>()
+                            .Where(x => !x.ServiceType.IsInterface)
+                            .OrderByDescending(x => x.ServiceType, TypeComparer.Instance)
+                            .FirstOrDefault()?.ServiceType;
+                        
                         try
                         {
                             // resolve component from its registration
-                            ServiceRegistration reg = new ServiceRegistration(serviceRegistration.ResolvePipeline, serviceRegistration);
-                            implementation = scope.ResolveComponent(new ResolveRequest(service, reg, parameters, serviceRegistration));
+                            if (concreteType != null)
+                            {
+                                for (Type? baseType = concreteType; baseType != null && serviceType.IsAssignableFrom(baseType); baseType = baseType.BaseType)
+                                {
+                                    implementation = scope.ResolveOptional(baseType);
+                                    if (implementation != null)
+                                    {
+#if LOG_RESOLVE_STEPS
+                                        _logger.LogInformation("Resolved concrete {0}: {1} - {2}", baseType, implementation.GetType(), implementation.GetHashCode());
+#endif
+                                        break;
+                                    }
+                                }
+
+                                if (implementation == null)
+                                {
+                                    _logger.LogWarning("Unable to resolve service {0} for event args {1}.", serviceRegistration.Activator, typeof(TEventArgs));
+                                    continue;
+                                }
+                            }
+                            else
+                            {
+                                ServiceRegistration reg = new ServiceRegistration(serviceRegistration.ResolvePipeline, serviceRegistration);
+                                implementation = applicableScope.ResolveComponent(new ResolveRequest(service, reg, parameters, serviceRegistration));
+                                _logger.LogWarning("Resolved from service (may cause duplicating service issues): {0} - {1}", implementation.GetType(), implementation.GetHashCode());
+                            }
+
                         }
                         catch (Exception ex)
                         {
@@ -673,6 +750,8 @@ public partial class EventDispatcher : IHostedService, IDisposable
                 }
             }
         }
+
+        ListPool<ILifetimeScope>.release(scopes);
     }
 
     private static void InsertEventListener(ref EventListenerResult result, List<EventListenerResult> eventListeners)
@@ -1050,6 +1129,21 @@ public partial class EventDispatcher : IHostedService, IDisposable
                    .WithParameter<CancellationToken>("token")
                    .ReturningVoid())}."
                 );
+    }
+
+    private class TypeComparer : IComparer<Type>
+    {
+        public static readonly TypeComparer Instance = new TypeComparer();
+
+        public int Compare(Type x, Type y)
+        {
+            if (x.IsSubclassOf(y))
+                return 1;
+            if (y.IsSubclassOf(x))
+                return -1;
+
+            return 0;
+        }
     }
 
     private static int CompareEventListenerResults(ref EventListenerResult a, ref EventListenerResult b)
