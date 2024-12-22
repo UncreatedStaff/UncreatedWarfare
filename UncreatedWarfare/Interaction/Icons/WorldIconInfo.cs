@@ -147,12 +147,12 @@ public class WorldIconInfo : ITransformObject, IDisposable
     public bool Alive { get; internal set; }
 
     /// <summary>
-    /// Radius in regions this effect should be shown. Takes the minimum of this <see cref="RelevanceDistance"/>.
+    /// Radius in regions this effect should be shown. Takes the minimum of this and <see cref="RelevanceDistance"/>.
     /// </summary>
     public byte RelevanceRegions { get; set; } = byte.MaxValue;
 
     /// <summary>
-    /// Radius in distance this effect should be shown. Takes the minimum of this <see cref="RelevanceRegions"/>.
+    /// Radius in distance this effect should be shown. Takes the minimum of this and <see cref="RelevanceRegions"/>.
     /// </summary>
     public float RelevanceDistance { get; set; } = float.MaxValue;
 
