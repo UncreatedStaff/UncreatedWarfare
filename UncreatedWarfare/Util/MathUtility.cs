@@ -148,7 +148,13 @@ public static class MathUtility
     /// Returns true if <paramref name="pos1"/> and <paramref name="pos2"/> are less than <paramref name="range"/> units away from each other, otherwise false. Compares using square magnitude for speed.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool WithinRange(in Vector3 pos1, in Vector3 pos2, float range) => (pos1 -  pos2).sqrMagnitude <= Math.Pow(range, 2);
+    public static bool WithinRange(in Vector3 pos1, in Vector3 pos2, float range) => SquaredDistance(in pos1, in pos2, false) <= range * range;
+
+    /// <summary>
+    /// Returns true if <paramref name="pos1"/> and <paramref name="pos2"/> are less than <paramref name="range"/> units away from each other, otherwise false. Compares using square magnitude for speed.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool WithinRange2D(in Vector3 pos1, in Vector3 pos2, float range) => SquaredDistance(in pos1, in pos2, true) <= range * range;
 
     /// <summary>
     /// Counts the number of digits in a number, not counting the negative sign.

@@ -10,6 +10,7 @@ using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Saves;
+using Uncreated.Warfare.Squads.Spotted;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Steam.Models;
 using Uncreated.Warfare.Translations;
@@ -30,7 +31,15 @@ public interface IPlayer : ITranslationArgument
 }
 
 [CannotApplyEqualityOperator]
-public class WarfarePlayer : IPlayer, ICommandUser, IModerationActor, IComponentContainer<IPlayerComponent>, IEquatable<IPlayer>, IEquatable<WarfarePlayer>, ITransformObject
+public class WarfarePlayer :
+    IPlayer,
+    ICommandUser,
+    IModerationActor,
+    IComponentContainer<IPlayerComponent>,
+    IEquatable<IPlayer>,
+    IEquatable<WarfarePlayer>,
+    ITransformObject,
+    ISpotter
 {
     private readonly CancellationTokenSource _disconnectTokenSource;
     private readonly ILogger _logger;
@@ -182,6 +191,7 @@ public class WarfarePlayer : IPlayer, ICommandUser, IModerationActor, IComponent
             _disconnectTokenSource.Cancel();
             IsDisconnecting = false;
             IsOnline = false;
+            OnDestroyed?.Invoke(this);
         }
         finally
         {
@@ -333,5 +343,14 @@ public class WarfarePlayer : IPlayer, ICommandUser, IModerationActor, IComponent
     ValueTask<string> IModerationActor.GetDisplayName(DatabaseInterface database, CancellationToken token)
     {
         throw new NotImplementedException();
+    }
+
+    bool ISpotter.IsTrackable => true;
+    private event Action<ISpotter>? OnDestroyed;
+
+    event Action<ISpotter>? ISpotter.OnDestroyed
+    {
+        add => OnDestroyed += value;
+        remove => OnDestroyed -= value;
     }
 }

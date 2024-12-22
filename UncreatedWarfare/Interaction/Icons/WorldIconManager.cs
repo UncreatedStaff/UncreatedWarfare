@@ -156,7 +156,9 @@ public class WorldIconManager : ILayoutHostedService, IEventListener<PlayerLeft>
     /// <summary>
     /// Removes a single icon.
     /// </summary>
+    #nullable disable
     public void RemoveIcon(WorldIconInfo icon)
+    #nullable restore
     {
         if (RemoveIconIntl(icon))
         {
@@ -167,7 +169,7 @@ public class WorldIconManager : ILayoutHostedService, IEventListener<PlayerLeft>
     /// <returns>If tick speed needs to be rechecked.</returns>
     private bool RemoveIconIntl(WorldIconInfo icon)
     {
-        if (!_allIcons.Remove(icon))
+        if (icon == null || !_allIcons.Remove(icon))
             return false;
 
         Guid guid = icon.Effect.Guid;
@@ -183,6 +185,7 @@ public class WorldIconManager : ILayoutHostedService, IEventListener<PlayerLeft>
         bool needsRecheck = _greatestTickSpeed <= icon.TickSpeed || icon.TickSpeed >= _lowestTickSpeed;
         if (!icon.NeedsToBeCleared(rt))
         {
+            icon.Dispose();
             return needsRecheck;
         }
 
@@ -196,6 +199,7 @@ public class WorldIconManager : ILayoutHostedService, IEventListener<PlayerLeft>
         else if (singlePlayer != null)
             EffectManager.ClearEffectByGuid(guid, singlePlayer);
 
+        icon.Dispose();
         return needsRecheck;
     }
 
@@ -248,18 +252,33 @@ public class WorldIconManager : ILayoutHostedService, IEventListener<PlayerLeft>
         }
     }
 
-    private static bool IsInactive(WorldIconInfo info, float rt)
+    private bool IsInactive(WorldIconInfo info, float rt)
     {
         if (!info.Alive)
+        {
+            Log("        | Inactive - not alive: {0}", info);
             return true;
+        }
 
         if (info.TransformableObject is { Alive: false })
+        {
+            Log("        | Inactive - transformable not alive: {0}", info);
             return true;
+        }
 
         if (info.UnityObject is not null && info.UnityObject == null)
+        {
+            Log("        | Inactive - unity object not alive: {0}", info);
             return true;
+        }
 
-        return info.FirstSpawnRealtime > 0 && info.FirstSpawnRealtime + info.LifetimeSeconds < rt;
+        if (info.FirstSpawnRealtime > 0 && info.FirstSpawnRealtime + info.LifetimeSeconds < rt)
+        {
+            Log("        | Inactive - lifetime expired: {0} ({1} + {2})", info, info.FirstSpawnRealtime, info.LifetimeSeconds);
+            return true;
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -437,6 +456,7 @@ public class WorldIconManager : ILayoutHostedService, IEventListener<PlayerLeft>
 
         List<Guid>? toRemove = null;
         List<Guid>? toUpdate = null;
+
         float rt = Time.realtimeSinceStartup;
         foreach (List<WorldIconInfo> list in _iconsByGuid.Values)
         {

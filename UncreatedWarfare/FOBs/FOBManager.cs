@@ -9,6 +9,7 @@ using Uncreated.Warfare.Events.Models.Fobs;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.FOBs.Entities;
+using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Services;
@@ -26,6 +27,7 @@ public partial class FobManager : ILayoutHostedService
     private readonly ILogger<FobManager> _logger;
     private readonly TrackingList<IFobEntity> _entities;
     private readonly TrackingList<IFob> _fobs;
+    private readonly ChatService _chatService;
 
     public readonly FobConfiguration Configuration;
 
@@ -44,6 +46,7 @@ public partial class FobManager : ILayoutHostedService
         Configuration = serviceProvider.GetRequiredService<FobConfiguration>();
         _translations = serviceProvider.GetRequiredService<TranslationInjection<FobTranslations>>().Value;
         _assetConfiguration = serviceProvider.GetRequiredService<AssetConfiguration>();
+        _chatService = serviceProvider.GetRequiredService<ChatService>();
         _serviceProvider = serviceProvider;
         _logger = logger;
         _fobs = new TrackingList<IFob>(24);

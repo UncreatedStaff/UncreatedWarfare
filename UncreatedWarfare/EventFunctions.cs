@@ -142,50 +142,6 @@ public static class EventFunctions
     //         if (firer is null)
     //             return;
     // 
-    //         if (gun.isAiming && Gamemode.Config.ItemLaserDesignator.MatchGuid(gun.equippedGunAsset.GUID))
-    //         {
-    //             float grndDist = float.NaN;
-    //             if (Physics.Raycast(projectile.transform.position, projectile.transform.up, out RaycastHit hit, length,
-    //                     rayMask))
-    //             {
-    //                 if (hit.transform != null)
-    //                 {
-    //                     if ((ELayerMask)hit.transform.gameObject.layer is ELayerMask.GROUND or ELayerMask.GROUND2
-    //                         or ELayerMask.LARGE or ELayerMask.MEDIUM or ELayerMask.SMALL)
-    //                         grndDist = (projectile.transform.position - hit.transform.position).sqrMagnitude;
-    //                     else
-    //                     {
-    //                         SpottedComponent.MarkTarget(hit.transform, firer);
-    //                         return;
-    //                     }
-    //                 }
-    //             }
-    // 
-    //             List<RaycastHit> hits = new List<RaycastHit>(Physics.SphereCastAll(projectile.transform.position, radius,
-    //                 projectile.transform.up, length, rayMaskBackup));
-    //             Vector3 strtPos = projectile.transform.position;
-    //             hits.RemoveAll(
-    //                 x =>
-    //             {
-    //                 if (x.transform == null || !x.transform.gameObject.TryGetComponent<SpottedComponent>(out _))
-    //                     return true;
-    //                 float dist = (x.transform.position - strtPos).sqrMagnitude;
-    //                 return dist < radius * radius + 1 || dist > grndDist;
-    //             });
-    //             if (hits.Count == 0) return;
-    //             if (hits.Count == 1)
-    //             {
-    //                 SpottedComponent.MarkTarget(hits[0].transform, firer);
-    //                 return;
-    //             }
-    //             hits.Sort((a, b) => (strtPos - b.point).sqrMagnitude.CompareTo((strtPos - a.point).sqrMagnitude));
-    //             hits.Sort((a, _) => (ELayerMask)a.transform.gameObject.layer is ELayerMask.PLAYER ? -1 : 1);
-    // 
-    //             SpottedComponent.MarkTarget(hits[0].transform, firer);
-    //             UnityEngine.Object.Destroy(projectile);
-    //             return;
-    //         }
-    // 
     //         Rocket[] rockets = projectile.GetComponentsInChildren<Rocket>(true);
     //         foreach (Rocket rocket in rockets)
     //         {
@@ -205,7 +161,6 @@ public static class EventFunctions
     //                 projectile.AddComponent<LaserGuidedMissileComponent>().Initialize(projectile, firer, 150, 1.15f, 150, 15, 0.6f);
     //         }
     // 
-    //         Patches.DeathsPatches.lastProjected = projectile;
     //         if (!gun.player.TryGetPlayerData(out WarfarePlayerData c))
     //             return;
     // 
@@ -237,34 +192,6 @@ public static class EventFunctions
     //     if (gun.player.TryGetPlayerData(out WarfarePlayerData c))
     //     {
     //         c.LastGunShot = gun.equippedGunAsset.GUID;
-    //     }
-    // }
-    // internal static void ReloadCommand_onTranslationsReloaded()
-    // {
-    //     foreach (WarfarePlayer player in PlayerManager.OnlinePlayers)
-    //         UCWarfare.I.UpdateLangs(player, false);
-    // }
-    // 
-    // internal static void OnLandmineExploding(TriggerTrapRequested e)
-    // {
-    //     if (!e.IsExplosive)
-    //         return;
-    // 
-    //     if (e.TriggeringPlayer is { VanishMode: true })
-    //     {
-    //         e.Cancel();
-    //         return;
-    //     }
-    // 
-    //     if (UCWarfare.Config.BlockLandmineFriendlyFire && e.TriggeringTeam == e.ServersideData.group.GetTeam())
-    //     {
-    //         // allow players to trigger their own landmines with throwables
-    //         if (e.TriggeringPlayer == null || e.TriggeringPlayer.Steam64 != e.ServersideData.owner || e.TriggeringThrowable == null)
-    //             e.Cancel();
-    //     }
-    //     else if (!CheckLandminePosition(e.ServersideData.point))
-    //     {
-    //         e.Cancel();
     //     }
     // }
     // public static void OnPickedUpItemRequested(Player player, byte x, byte y, uint instanceId, byte toX, byte toY, byte toRotation, byte toPage, ItemData itemData, ref bool shouldAllow)

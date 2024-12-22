@@ -1,11 +1,4 @@
 ﻿using HarmonyLib;
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
-using System.Reflection;
-using System.Reflection.Emit;
-using Uncreated.Warfare.Components;
-using Uncreated.Warfare.Fobs;
-using Uncreated.Warfare.Traits.Buffs;
 
 // ReSharper disable InconsistentNaming
 // ReSharper disable UnusedMember.Local
@@ -19,48 +12,8 @@ public static partial class Patches
     public static class DeathsPatches
     {
         internal static GameObject? lastProjected;
-        // SDG.Unturned.UseableGun
 #if false
-        /// <summary>
-        /// Postfix of <see cref="UseableGun.project(Vector3, Vector3, ItemBarrelAsset, ItemMagazineAsset)"/> to predict mortar hits.
-        /// </summary>
-        [SuppressMessage(Data.SuppressCategory, Data.SuppressID)]
-        [HarmonyPatch(typeof(UseableGun), "project")]
-        [HarmonyPostfix]
-        private static void OnPostProjected(Vector3 origin, Vector3 direction, ItemBarrelAsset barrelAsset, ItemMagazineAsset magazineAsset, UseableGun __instance)
-        {
-            if (lastProjected != null && lastProjected.activeInHierarchy && __instance.equippedGunAsset.isTurret && FOBManager.Loaded)
-            {
-                BuildableData? data = FOBManager.Config.Buildables.Find(x =>
-                    x.Emplacement is not null && (x.Emplacement.ShouldWarnFriendlies || x.Emplacement.ShouldWarnEnemies) &&
-                    x.Emplacement.EmplacementVehicle.Exists &&
-                    x.Emplacement.EmplacementVehicle.Asset!.turrets.Any(y =>
-                        y.itemID == __instance.equippedGunAsset.id));
-                if (data != null)
-                {
-                    UCWarfare.I.Solver.GetLandingPoint(lastProjected, origin, direction, __instance, OnMortarLandingPointFound);
-                }
-            }
 
-            lastProjected = null;
-        }
-
-        private static void OnMortarLandingPointFound(Player? owner, Vector3 position, float impactTime, ItemGunAsset gun, ItemMagazineAsset? ammoType)
-        {
-            if (owner == null || ammoType == null)
-                return;
-            BuildableData? data = !FOBManager.Loaded ? null : FOBManager.Config.Buildables.Find(x =>
-                x.Emplacement is not null && (x.Emplacement.ShouldWarnFriendlies || x.Emplacement.ShouldWarnEnemies) &&
-                x.Emplacement.EmplacementVehicle.Exists &&
-                x.Emplacement.EmplacementVehicle.Asset!.turrets.Any(y =>
-                    y.itemID == gun.id));
-
-            if (data == null) return;
-
-            UCPlayer? player = UCPlayer.FromPlayer(owner);
-            if (player != null)
-                BadOmen.TryWarn(player, position, impactTime, gun, ammoType, data.Emplacement!.ShouldWarnFriendlies, data.Emplacement!.ShouldWarnEnemies);
-        }
 
         // SDG.Unturned.Bumper
         /// <summary>Adds the id of the vehicle that hit the player to their pt component.</summary>

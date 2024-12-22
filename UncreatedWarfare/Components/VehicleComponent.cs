@@ -9,7 +9,6 @@ using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.List;
-using Uncreated.Warfare.Vehicles;
 using Uncreated.Warfare.Vehicles.Info;
 using Uncreated.Warfare.Vehicles.Spawners;
 using Uncreated.Warfare.Vehicles.UI;
@@ -139,11 +138,8 @@ public class VehicleComponent : MonoBehaviour
         if (vehicleInfoStore != null)
         {
             VehicleData = vehicleInfoStore.GetVehicleInfo(Vehicle.asset);
-            if (VehicleData != null)
-            {
-                vehicle.transform.gameObject.GetOrAddComponent<SpottedComponent>().Initialize(VehicleData.Type, vehicle, serviceProvider);
-            }
         }
+
         _lastPosInterval = transform.position;
 
 #if false // todo

@@ -54,12 +54,38 @@ public class WorldIconInfo : ITransformObject, IDisposable
     /// <summary>
     /// The source of the effect's position. Interchangable with <see cref="UnityObject"/> or <see cref="Position"/>.
     /// </summary>
-    public ITransformObject? TransformableObject { get; private set; }
+    /// <remarks>This can be changed at any time.</remarks>
+    public ITransformObject? TransformableObject
+    {
+        get;
+        set
+        {
+            field = value;
+            if (value is not null)
+            {
+                UnityObject = null;
+                _position = default;
+            }
+        }
+    }
 
     /// <summary>
     /// The source of the effect's position. Interchangable with <see cref="TransformableObject"/> or <see cref="Position"/>.
     /// </summary>
-    public Transform? UnityObject { get; private set; }
+    /// <remarks>This can be changed at any time.</remarks>
+    public Transform? UnityObject
+    {
+        get;
+        set
+        {
+            field = value;
+            if (value is not null)
+            {
+                TransformableObject = null;
+                _position = default;
+            }
+        }
+    }
 
     /// <summary>
     /// The source of the effect's position. Interchangable with <see cref="TransformableObject"/> or <see cref="UnityObject"/>.
@@ -107,7 +133,7 @@ public class WorldIconInfo : ITransformObject, IDisposable
     /// <summary>
     /// Number of seconds this effect will be alive.
     /// </summary>
-    public float LifetimeSeconds { get; }
+    public float LifetimeSeconds { get; private set; }
 
     /// <summary>
     /// Number of seconds between updates.
@@ -117,19 +143,19 @@ public class WorldIconInfo : ITransformObject, IDisposable
 
     public bool Alive { get; internal set; }
 
-    public WorldIconInfo(Transform transform, IAssetLink<EffectAsset> effect, Team? targetTeam = null, WarfarePlayer? targetPlayer = null, Func<WarfarePlayer, bool>? playerSelector = null, float lifetimeSec = default)
+    public WorldIconInfo(Transform transform, IAssetLink<EffectAsset> effect, Team? targetTeam = null, WarfarePlayer? targetPlayer = null, Func<WarfarePlayer, bool>? playerSelector = null, float lifetimeSec = 0)
         : this(effect, targetTeam, targetPlayer, playerSelector, lifetimeSec)
     {
         UnityObject = transform;
     }
     
-    public WorldIconInfo(ITransformObject transform, IAssetLink<EffectAsset> effect, Team? targetTeam = null, WarfarePlayer? targetPlayer = null, Func<WarfarePlayer, bool>? playerSelector = null, float lifetimeSec = default)
+    public WorldIconInfo(ITransformObject transform, IAssetLink<EffectAsset> effect, Team? targetTeam = null, WarfarePlayer? targetPlayer = null, Func<WarfarePlayer, bool>? playerSelector = null, float lifetimeSec = 0)
         : this(effect, targetTeam, targetPlayer, playerSelector, lifetimeSec)
     {
         TransformableObject = transform;
     }
     
-    public WorldIconInfo(Vector3 startPosition, IAssetLink<EffectAsset> effect, Team? targetTeam = null, WarfarePlayer? targetPlayer = null, Func<WarfarePlayer, bool>? playerSelector = null, float lifetimeSec = default)
+    public WorldIconInfo(Vector3 startPosition, IAssetLink<EffectAsset> effect, Team? targetTeam = null, WarfarePlayer? targetPlayer = null, Func<WarfarePlayer, bool>? playerSelector = null, float lifetimeSec = 0)
         : this(effect, targetTeam, targetPlayer, playerSelector, lifetimeSec)
     {
         _position = startPosition;
@@ -141,7 +167,7 @@ public class WorldIconInfo : ITransformObject, IDisposable
         TargetTeam = targetTeam;
         TargetPlayer = targetPlayer;
         PlayerSelector = playerSelector;
-        LifetimeSeconds = lifetimeSec == 0 ? float.MaxValue : 0;
+        LifetimeSeconds = lifetimeSec == 0 || !float.IsFinite(lifetimeSec) ? float.MaxValue : lifetimeSec;
 
         if (!Effect.TryGetAsset(out EffectAsset? asset) || asset.lifetime <= 0)
             return;
@@ -149,6 +175,14 @@ public class WorldIconInfo : ITransformObject, IDisposable
         _canTrackLifetime = true;
         _maximumLifetime = asset.lifetime + asset.lifetimeSpread;
         _minimumLifetime = asset.lifetime - asset.lifetimeSpread;
+    }
+
+    /// <summary>
+    /// Raise <see cref="LifetimeSeconds"/> such that from now the effect will despawn in a given amount of seconds.
+    /// </summary>
+    public void KeepAliveFor(float seconds)
+    {
+        LifetimeSeconds = FirstSpawnRealtime == 0 ? seconds : Time.realtimeSinceStartup - FirstSpawnRealtime + seconds;
     }
 
     internal void UpdateRelevantPlayers(IPlayerService playerService, ref PooledTransportConnectionList? list, ref ITransportConnection? single, HashSet<ITransportConnection> workingHashSetCache)

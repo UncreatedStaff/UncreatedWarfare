@@ -1,5 +1,5 @@
 ﻿namespace Uncreated.Warfare.Components;
-internal sealed class WarfareTimeComponent : MonoBehaviour
+public sealed class WarfareTimeComponent : MonoBehaviour
 {
     public uint Updates { get; private set; }
     public uint Ticks { get; private set; }

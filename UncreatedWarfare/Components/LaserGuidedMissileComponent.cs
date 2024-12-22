@@ -1,22 +1,28 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Layouts.Teams;
+using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Squads.Spotted;
 
 namespace Uncreated.Warfare.Components;
 
 internal class LaserGuidedMissileComponent : MonoBehaviour
 {
 #nullable disable
-    private Player _firer;
+    private WarfarePlayer _firer;
+    private Team _team;
     private GameObject _projectile;
     private Transform _aim;
     private Rigidbody _rigidbody;
     private List<BoxCollider> _colliders;
 #nullable restore
 
-    private SpottedComponent? _laserTarget;
+    private SpottableObjectComponent? _laserTarget;
+    private SpottedService? _spottedService;
     private float _guiderDistance;
     private float _aquisitionRange;
     private float _projectileSpeed;
@@ -34,10 +40,11 @@ internal class LaserGuidedMissileComponent : MonoBehaviour
     public float InitializationTime { get; private set; }
     public bool LockedOn => _laserTarget != null;
 
-    public void Initialize(GameObject projectile, Player firer, IServiceProvider serviceProvider, float projectileSpeed, float responsiveness, float aquisitionRange, float armingDistance, float fullGuidanceDelay)
+    public void Initialize(GameObject projectile, WarfarePlayer firer, IServiceProvider serviceProvider, float projectileSpeed, float responsiveness, float aquisitionRange, float armingDistance, float fullGuidanceDelay)
     {
         _projectile = projectile;
         _firer = firer;
+        _team = firer.Team;
         _maxTurnDegrees = responsiveness;
         _projectileSpeed = projectileSpeed;
         _aquisitionRange = aquisitionRange;
@@ -45,6 +52,8 @@ internal class LaserGuidedMissileComponent : MonoBehaviour
         _fullGuidanceDelay = fullGuidanceDelay;
         _guiderDistance = 30;
         _turnMultiplier = 0;
+
+        _spottedService = serviceProvider.GetRequiredService<SpottedService>();
 
         AssetConfiguration assetConfig = serviceProvider.GetRequiredService<AssetConfiguration>();
         _fxSilent = assetConfig.GetAssetLink<EffectAsset>("Effects:Projectiles:GuidedMissileSilent");
@@ -65,12 +74,12 @@ internal class LaserGuidedMissileComponent : MonoBehaviour
             return;
         }
 
-        InteractableVehicle? vehicle = firer.movement.getVehicle();
+        InteractableVehicle? vehicle = firer.UnturnedPlayer.movement.getVehicle();
         if (vehicle != null)
         {
             foreach (Passenger turret in vehicle.turrets)
             {
-                if (turret.player == null || turret.player.player != firer)
+                if (turret.player == null || !firer.Equals(turret.player.player))
                     continue;
 
                 _aim = turret.turretAim;
@@ -90,7 +99,7 @@ internal class LaserGuidedMissileComponent : MonoBehaviour
         }
         else
         {
-            _aim = firer.look.aim.transform;
+            _aim = firer.UnturnedPlayer.look.aim.transform;
             _isActive = true;
             projectile.transform.forward = _aim.forward;
             _rigidbody.velocity = projectile.transform.forward * projectileSpeed;
@@ -103,29 +112,34 @@ internal class LaserGuidedMissileComponent : MonoBehaviour
     {
         if (_laserTarget != null)
         {
-            if (_laserTarget.IsActive)
+            if (_laserTarget.IsLaserTarget(_team))
                 return true;
+
             _laserTarget = null;
         }
 
         float minAngle = 45;
 
-        if (_firer is null)
+        if (_firer is null || _spottedService == null)
             return false;
 
-        foreach (SpottedComponent spotted in SpottedComponent.ActiveMarkers)
+        foreach (SpottableObjectComponent spotted in _spottedService.AliveSpottableObjects)
         {
-            if (spotted.SpottingTeam == _firer.quests.groupID.m_SteamID && spotted.IsLaserTarget)
+            if (!spotted.IsLaserTarget(_team))
             {
-                if ((spotted.transform.position - _projectile.transform.position).sqrMagnitude < _aquisitionRange * _aquisitionRange)
-                {
-                    float angleBetween = Vector3.Angle(spotted.transform.position - _projectile.transform.position, _projectile.transform.forward);
-                    if (angleBetween < minAngle)
-                    {
-                        minAngle = angleBetween;
-                        _laserTarget = spotted;
-                    }
-                }
+                continue;
+            }
+
+            if ((spotted.transform.position - _projectile.transform.position).sqrMagnitude >= _aquisitionRange * _aquisitionRange)
+            {
+                continue;
+            }
+
+            float angleBetween = Vector3.Angle(spotted.transform.position - _projectile.transform.position, _projectile.transform.forward);
+            if (angleBetween < minAngle)
+            {
+                minAngle = angleBetween;
+                _laserTarget = spotted;
             }
         }
 
@@ -136,6 +150,7 @@ internal class LaserGuidedMissileComponent : MonoBehaviour
     private float _lastSent;
 
     [UsedImplicitly]
+    [SuppressMessage("CodeQuality", "IDE0051")]
     private void FixedUpdate()
     {
         if (!_isActive)

@@ -58,7 +58,7 @@ internal class GuidedMissileLaunchTweaks :
         }
         else if (_laserGuidedMissiles.Any(a => a.MatchAsset(e.Asset)))
         {
-            e.Object.GetOrAddComponent<LaserGuidedMissileComponent>().Initialize(e.Object, e.Player.UnturnedPlayer, serviceProvider, 150, 1.15f, 150, 15, 0.6f);
+            e.Object.GetOrAddComponent<LaserGuidedMissileComponent>().Initialize(e.Object, e.Player, serviceProvider, 150, 1.15f, 150, 15, 0.6f);
         }
     }
 
