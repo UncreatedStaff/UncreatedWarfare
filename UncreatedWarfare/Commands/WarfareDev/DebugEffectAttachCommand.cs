@@ -32,6 +32,8 @@ internal sealed class DebugEffectAttachCommand : IExecutableCommand
         Context.TryGet(0, out float lifetime);
         if (!Context.TryGet(1, out float tickSpeed))
             tickSpeed = WorldIconManager.DefaultTickSpeed;
+        if (!Context.TryGet(2, out float distance))
+            distance = float.MaxValue;
 
         WorldIconInfo info;
         if (raycast.transform.gameObject.layer == (int)ELayerMask.GROUND)
@@ -44,6 +46,11 @@ internal sealed class DebugEffectAttachCommand : IExecutableCommand
         }
 
         info.TickSpeed = tickSpeed;
+        if (distance < 0)
+            info.RelevanceRegions = (byte)Math.Round(-distance);
+        else
+            info.RelevanceDistance = distance;
+            
 
         _iconManager.CreateIcon(info);
         return UniTask.CompletedTask;

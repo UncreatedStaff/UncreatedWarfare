@@ -139,7 +139,7 @@ public class CommandParser(CommandDispatcher dispatcher)
                 while (firstNonFlag < args.Length && flagPrefixes[flagPrefix] == args[firstNonFlag])
                     ++firstNonFlag;
 
-                if (firstNonFlag is 1 or 2)
+                if (firstNonFlag is 1 or 2 && firstNonFlag < args.Length && !char.IsDigit(args[firstNonFlag]) && args[firstNonFlag] != '.' && args[firstNonFlag] != ',')
                 {
                     args = args[firstNonFlag..];
                     ReadOnlySpan<char> span = GetNextArg(ref args, startArgChars, endArgChars, flagPrefixes, out isEmpty, out flagDashCt);
@@ -334,8 +334,11 @@ public readonly struct ParsedCommandInfo(string? commandName, string[] arguments
             return false;
 
         ReadOnlySpan<char> flagPrefixes = [ '-', '–', '—', '−' ];
-        if (flagPrefixes.IndexOf(str[0]) < 0)
-            return false;
+
+
+
+        if (flagPrefixes.IndexOf(str[0]) < 0 || char.IsDigit(str[1]) || str[1] == '.' || str[1] == ',')
+            return false;                       // prevents negative numbers ^ counting as flags
 
         return str.Length < 2 && flagPrefixes.IndexOf(str[1]) >= 0 || flagPrefixes.IndexOf(str[1]) < 0 || flagPrefixes.IndexOf(str[2]) < 0;
     }

@@ -102,15 +102,16 @@ internal sealed class SendBarricadeRegionPatch : IHarmonyPatch
             }
 
             byte pkt = packet;
+            int ct = count;
             SendMultipleBarricades.Invoke(ENetReliability.Reliable, client.transportConnection, writer =>
             {
                 writer.WriteUInt8(x);
                 writer.WriteUInt8(y);
                 writer.WriteNetId(parentNetId);
                 writer.WriteUInt8(pkt);
-                writer.WriteUInt16((ushort)(count - index));
+                writer.WriteUInt16((ushort)(ct - index));
                 writer.WriteFloat(sortOrder);
-                for (; index < count; ++index)
+                for (; index < ct; ++index)
                 {
                     BarricadeDrop drop = region.drops[index];
                     BarricadeData serversideData = drop.GetServersideData();

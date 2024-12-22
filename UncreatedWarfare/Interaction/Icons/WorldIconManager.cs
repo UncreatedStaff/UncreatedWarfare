@@ -1,5 +1,5 @@
 ﻿#if DEBUG
-//#define ICONS_DEBUG_LOGGING
+#define ICONS_DEBUG_LOGGING
 #endif
 using SDG.Framework.Utilities;
 using SDG.NetTransport;
@@ -160,9 +160,17 @@ public class WorldIconManager : ILayoutHostedService, IEventListener<PlayerLeft>
     public void RemoveIcon(WorldIconInfo icon)
     #nullable restore
     {
-        if (RemoveIconIntl(icon))
-        {
+        if (icon == null)
+            return;
+
+        bool recheck = RemoveIconIntl(icon);
+
+        if (recheck)
             RecheckTickSpeed();
+
+        if (_iconsByGuid.ContainsKey(icon.Effect.Guid))
+        {
+            UpdateIcon(icon.Effect.Guid);
         }
     }
     
@@ -191,7 +199,7 @@ public class WorldIconManager : ILayoutHostedService, IEventListener<PlayerLeft>
 
         ITransportConnection? singlePlayer = null;
         PooledTransportConnectionList? pooledList = null;
-        icon.UpdateRelevantPlayers(_playerService, ref pooledList, ref singlePlayer, WorkingConnectionHashSet);
+        icon.UpdateRelevantPlayers(_playerService, ref pooledList, ref singlePlayer, in icon.LastSpawnPosition, WorkingConnectionHashSet);
         WorkingConnectionHashSet.Clear();
 
         if (pooledList != null)
@@ -344,7 +352,7 @@ public class WorldIconManager : ILayoutHostedService, IEventListener<PlayerLeft>
         PooledTransportConnectionList? pooledList = null;
         foreach (WorldIconInfo info in list)
         {
-            info.UpdateRelevantPlayers(_playerService, ref pooledList, ref singlePlayer, WorkingConnectionHashSet);
+            info.UpdateRelevantPlayers(_playerService, ref pooledList, ref singlePlayer, in info.LastSpawnPosition, WorkingConnectionHashSet);
             if (!anyNeedToBeCleared && info.NeedsToBeCleared(rt))
                 anyNeedToBeCleared = true;
         }
@@ -412,7 +420,10 @@ public class WorldIconManager : ILayoutHostedService, IEventListener<PlayerLeft>
             bool hasCleared = false;
             foreach (WorldIconInfo icon in iconSets)
             {
-                if (!icon.ShouldPlayerSeeIcon(player))
+                Vector3 pos = icon.LastSpawnPosition;
+                if (icon.IsDistanceLimited)
+                    icon.TryGetSpawnPosition(out pos);
+                if (!icon.ShouldPlayerSeeIcon(player, in pos))
                     continue;
 
                 if (!hasCleared)
@@ -457,6 +468,7 @@ public class WorldIconManager : ILayoutHostedService, IEventListener<PlayerLeft>
         List<Guid>? toRemove = null;
         List<Guid>? toUpdate = null;
 
+        // ReSharper disable once RedundantAssignment
         float rt = Time.realtimeSinceStartup;
         foreach (List<WorldIconInfo> list in _iconsByGuid.Values)
         {

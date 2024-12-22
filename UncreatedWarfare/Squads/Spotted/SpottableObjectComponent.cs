@@ -63,8 +63,8 @@ public class SpottableObjectComponent : MonoBehaviour, IManualOnDestroy
 
         // other
         new SpotterTypeStats(SpottedType.Infantry,     VehicleType.None,            12f,  0.5f, "Effects:Spotted:Infantry",      new Vector3(0f, 1.5f, 0f)),
-        new SpotterTypeStats(SpottedType.FOB,          VehicleType.None,            10f,  1.0f, "Effects:Spotted:FOB",           Vector3.zero)
-];                                                                         // todo: ^ change back to 240
+        new SpotterTypeStats(SpottedType.FOB,          VehicleType.None,            240f, 1.0f, "Effects:Spotted:FOB",           Vector3.zero)
+];
 
     // null if never spotted
     private List<SpotterInfo>? _spotters;
