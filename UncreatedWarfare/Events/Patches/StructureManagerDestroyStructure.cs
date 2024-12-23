@@ -15,12 +15,12 @@ using Uncreated.Warfare.Util;
 namespace Uncreated.Warfare.Events.Patches;
 
 [UsedImplicitly]
-internal class StructureManagerDestroyStructure : IHarmonyPatch
+internal sealed class StructureManagerDestroyStructure : IHarmonyPatch
 {
     private static MethodInfo? _target;
     private static readonly List<IManualOnDestroy> DestroyEventComponents = new List<IManualOnDestroy>(4);
 
-    void IHarmonyPatch.Patch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Patch(ILogger logger, Harmony patcher)
     {
         _target = Accessor.GetMethod(new Action<StructureDrop, byte, byte, Vector3, bool>(StructureManager.destroyStructure));
 
@@ -43,7 +43,7 @@ internal class StructureManagerDestroyStructure : IHarmonyPatch
         );
     }
 
-    void IHarmonyPatch.Unpatch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Unpatch(ILogger logger, Harmony patcher)
     {
         if (_target == null)
             return;

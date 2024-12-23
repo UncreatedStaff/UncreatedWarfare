@@ -2,6 +2,7 @@ using DanielWillett.ModularRpcs.DependencyInjection;
 using DanielWillett.ModularRpcs.Serialization;
 using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.IoC;
+using HarmonyLib;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Configuration;
@@ -278,6 +279,14 @@ public sealed class WarfareModule
 
         ServiceProvider = bldr.Build();
 
+        Accessor.Logger = new ReflectionToolsLoggerProxy(ServiceProvider.Resolve<ILoggerFactory>());
+        #if DEBUG
+        Accessor.LogDebugMessages = true;
+        #endif
+        Accessor.LogInfoMessages = true;
+        Accessor.LogWarningMessages = true;
+        Accessor.LogErrorMessages = true;
+
         _logger = ServiceProvider.Resolve<ILogger<WarfareModule>>();
 
         GlobalLogger = ServiceProvider.Resolve<ILoggerFactory>().CreateLogger("Global");
@@ -411,7 +420,7 @@ public sealed class WarfareModule
         bldr.RegisterType<HarmonyPatchService>()
             .SingleInstance();
 
-        bldr.Register<HarmonyPatchService, HarmonyLib.Harmony>((_, p) => p.Patcher)
+        bldr.Register<HarmonyPatchService, Harmony>((_, p) => p.Patcher)
             .SingleInstance();
 
         bldr.RegisterInstance(_gameObjectHost.GetOrAddComponent<WarfareTimeComponent>())

@@ -1,5 +1,6 @@
 ﻿using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
+using HarmonyLib;
 using Microsoft.Extensions.Configuration;
 using SDG.Framework.Utilities;
 using System;
@@ -23,7 +24,7 @@ namespace Uncreated.Warfare.Patches;
 internal sealed class FobEmplacementWarningPatch : IHarmonyPatch
 {
     private static MethodInfo? _target;
-    void IHarmonyPatch.Patch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Patch(ILogger logger, Harmony patcher)
     {
         _target = typeof(UseableGun).GetMethod("project", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
 
@@ -43,7 +44,7 @@ internal sealed class FobEmplacementWarningPatch : IHarmonyPatch
         );
     }
 
-    void IHarmonyPatch.Unpatch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Unpatch(ILogger logger, Harmony patcher)
     {
         if (_target == null)
             return;

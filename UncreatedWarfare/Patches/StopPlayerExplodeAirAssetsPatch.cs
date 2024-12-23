@@ -5,12 +5,14 @@ using HarmonyLib;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
+using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Deaths;
 
 namespace Uncreated.Warfare.Patches;
 internal sealed class StopPlayerExplodeAirAssetsPatch : IHarmonyPatch
 {
     private static MethodInfo? _target;
-    void IHarmonyPatch.Patch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Patch(ILogger logger, Harmony patcher)
     {
         _target = typeof(Bumper).GetMethod("OnTriggerEnter", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
 
@@ -29,7 +31,7 @@ internal sealed class StopPlayerExplodeAirAssetsPatch : IHarmonyPatch
         );
     }
 
-    void IHarmonyPatch.Unpatch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Unpatch(ILogger logger, Harmony patcher)
     {
         if (_target == null)
             return;
@@ -69,12 +71,15 @@ internal sealed class StopPlayerExplodeAirAssetsPatch : IHarmonyPatch
                 continue;
             }
 
+            LocalReference hitPlayerLocal = PatchUtil.GetLocal(ctx.Instruction, true);
+
             ctx.EmitBelow(emit =>
             {
                 emit.LoadArgument(0)
                     .LoadInstanceFieldValue(vehicleField)
-                    .AddLabel(out Label validLabel)
+                    .LoadLocalValue(hitPlayerLocal)
                     .Invoke(Accessor.GetMethod(OnHitPlayer)!)
+                    .AddLabel(out Label validLabel)
                     .BranchIfTrue(validLabel)
                     .Return()
                     .MarkLabel(validLabel);
@@ -86,8 +91,15 @@ internal sealed class StopPlayerExplodeAirAssetsPatch : IHarmonyPatch
         return ctx;
     }
 
-    private static bool OnHitPlayer(InteractableVehicle vehicle)
+    private static bool OnHitPlayer(InteractableVehicle vehicle, Player hitPlayer)
     {
-        return vehicle.asset.engine is not (EEngine.BLIMP or EEngine.HELICOPTER or EEngine.PLANE);
+        if (hitPlayer == null)
+            return false;
+
+        PlayerDeathTrackingComponent comp = PlayerDeathTrackingComponent.GetOrAdd(hitPlayer);
+        comp.LastRoadkillVehicle = AssetLink.Create(vehicle.asset);
+
+        return vehicle.asset.engine is not (EEngine.BLIMP or EEngine.HELICOPTER or EEngine.PLANE)
+               || vehicle.ReplicatedSpeed > 10f;
     }
 }

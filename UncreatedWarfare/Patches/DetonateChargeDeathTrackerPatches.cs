@@ -1,5 +1,6 @@
 ﻿using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
+using HarmonyLib;
 using System.Reflection;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Deaths;
@@ -10,7 +11,7 @@ namespace Uncreated.Warfare.Patches;
 internal sealed class DetonateChargeDeathTrackerPatches : IHarmonyPatch
 {
     private static MethodInfo? _target;
-    void IHarmonyPatch.Patch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Patch(ILogger logger, Harmony patcher)
     {
         _target = typeof(InteractableCharge).GetMethod("detonate", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
 
@@ -29,7 +30,7 @@ internal sealed class DetonateChargeDeathTrackerPatches : IHarmonyPatch
         );
     }
 
-    void IHarmonyPatch.Unpatch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Unpatch(ILogger logger, Harmony patcher)
     {
         if (_target == null)
             return;

@@ -1,5 +1,6 @@
 ﻿using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
+using HarmonyLib;
 using SDG.NetPak;
 using SDG.NetTransport;
 using System;
@@ -18,7 +19,7 @@ internal sealed class SendBarricadeRegionPatch : IHarmonyPatch
     private static readonly ClientStaticMethod? SendMultipleBarricades = ReflectionUtility.FindRpc<BarricadeManager, ClientStaticMethod>("SendMultipleBarricades");
 
     private static MethodInfo? _target;
-    void IHarmonyPatch.Patch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Patch(ILogger logger, Harmony patcher)
     {
         _target = typeof(BarricadeManager).GetMethod("SendRegion", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static);
 
@@ -49,7 +50,7 @@ internal sealed class SendBarricadeRegionPatch : IHarmonyPatch
         );
     }
 
-    void IHarmonyPatch.Unpatch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Unpatch(ILogger logger, Harmony patcher)
     {
         if (_target == null)
             return;

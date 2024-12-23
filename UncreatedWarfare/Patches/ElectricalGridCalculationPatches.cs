@@ -1,5 +1,6 @@
 ﻿using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
+using HarmonyLib;
 using System.Collections.Generic;
 using System.Reflection;
 using Uncreated.Warfare.Layouts;
@@ -14,7 +15,7 @@ internal sealed class ElectricalGridCalculationPatches : IHarmonyPatch
     public static bool Failed = true;
     private static MethodInfo? _target1;
     private static MethodInfo? _target2;
-    void IHarmonyPatch.Patch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Patch(ILogger logger, Harmony patcher)
     {
         Failed = false;
 
@@ -65,7 +66,7 @@ internal sealed class ElectricalGridCalculationPatches : IHarmonyPatch
         }
     }
 
-    void IHarmonyPatch.Unpatch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Unpatch(ILogger logger, Harmony patcher)
     {
         if (_target1 == null)
             return;

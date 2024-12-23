@@ -1,18 +1,19 @@
 ﻿using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
+using HarmonyLib;
 using System.Reflection;
 using Uncreated.Warfare.Patches;
 
 namespace Uncreated.Warfare.Events.Patches;
 
 [UsedImplicitly]
-internal class InteractableVehicleRequestExit : IHarmonyPatch
+internal sealed class InteractableVehicleRequestExit : IHarmonyPatch
 {
     private static MethodInfo? _target;
 
     internal static Vector3 LastVelocity;
 
-    void IHarmonyPatch.Patch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Patch(ILogger logger, Harmony patcher)
     {
         _target = typeof(VehicleManager).GetMethod(nameof(VehicleManager.ReceiveExitVehicleRequest), BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
 
@@ -32,7 +33,7 @@ internal class InteractableVehicleRequestExit : IHarmonyPatch
         );
     }
 
-    void IHarmonyPatch.Unpatch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Unpatch(ILogger logger, Harmony patcher)
     {
         if (_target == null)
             return;

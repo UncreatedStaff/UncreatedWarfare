@@ -1,5 +1,6 @@
 ﻿using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
+using HarmonyLib;
 using System.Reflection;
 using Uncreated.Warfare.Events.Models.Items;
 using Uncreated.Warfare.Kits.Items;
@@ -10,12 +11,12 @@ using Uncreated.Warfare.Players.Management;
 namespace Uncreated.Warfare.Events.Patches;
 
 [UsedImplicitly]
-internal class PlayerClothingReceiveSwapClothingRequest : IHarmonyPatch
+internal sealed class PlayerClothingReceiveSwapClothingRequest : IHarmonyPatch
 {
     private static MethodInfo?[]? _targets;
     private static MethodInfo[]? _patches;
 
-    void IHarmonyPatch.Patch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Patch(ILogger logger, Harmony patcher)
     {
         _targets =
         [
@@ -60,7 +61,7 @@ internal class PlayerClothingReceiveSwapClothingRequest : IHarmonyPatch
         }
     }
 
-    void IHarmonyPatch.Unpatch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Unpatch(ILogger logger, Harmony patcher)
     {
         if (_targets == null)
             return;

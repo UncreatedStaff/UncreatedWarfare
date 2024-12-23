@@ -1,5 +1,6 @@
 ﻿using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
+using HarmonyLib;
 using SDG.NetTransport;
 using System;
 using System.Collections.Generic;
@@ -17,14 +18,14 @@ using Uncreated.Warfare.Players.Management;
 namespace Uncreated.Warfare.Events.Patches;
 
 [UsedImplicitly]
-internal class InteractableTrapOnTriggerEnter : IHarmonyPatch
+internal sealed class InteractableTrapOnTriggerEnter : IHarmonyPatch
 {
     private static readonly Action<Vector3, Vector3, string, Transform?, List<ITransportConnection>>? CallServerSpawnLegacyImpact =
         Accessor.GenerateStaticCaller<DamageTool, Action<Vector3, Vector3, string, Transform?, List<ITransportConnection>>>("ServerSpawnLegacyImpact", allowUnsafeTypeBinding: true);
 
     private static MethodInfo? _target;
 
-    void IHarmonyPatch.Patch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Patch(ILogger logger, Harmony patcher)
     {
         _target = typeof(InteractableTrap).GetMethod("OnTriggerEnter", BindingFlags.Instance | BindingFlags.NonPublic);
 
@@ -43,7 +44,7 @@ internal class InteractableTrapOnTriggerEnter : IHarmonyPatch
         );
     }
 
-    void IHarmonyPatch.Unpatch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Unpatch(ILogger logger, Harmony patcher)
     {
         if (_target == null)
             return;

@@ -16,7 +16,7 @@ using Uncreated.Warfare.Players.Management;
 namespace Uncreated.Warfare.Events.Patches;
 
 [UsedImplicitly]
-internal class PlayerInventoryReceiveDragOrSwapItem : IHarmonyPatch
+internal sealed class PlayerInventoryReceiveDragOrSwapItem : IHarmonyPatch
 {
     private static bool _ignoreCall;
 
@@ -27,7 +27,7 @@ internal class PlayerInventoryReceiveDragOrSwapItem : IHarmonyPatch
     private static MethodInfo? _targetDrag;
     private static MethodInfo? _targetSwap;
 
-    void IHarmonyPatch.Patch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Patch(ILogger logger, Harmony patcher)
     {
         _removeItemMtd = typeof(PlayerInventory).GetMethod(nameof(PlayerInventory.removeItem), BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
         _addItemMtd = typeof(Items).GetMethod(nameof(Items.addItem), BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
@@ -115,7 +115,7 @@ internal class PlayerInventoryReceiveDragOrSwapItem : IHarmonyPatch
         }
     }
 
-    void IHarmonyPatch.Unpatch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Unpatch(ILogger logger, Harmony patcher)
     {
         if (_targetDrag != null)
         {

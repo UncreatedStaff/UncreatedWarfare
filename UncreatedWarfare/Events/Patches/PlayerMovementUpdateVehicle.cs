@@ -1,5 +1,6 @@
 ﻿using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
+using HarmonyLib;
 using System;
 using System.Reflection;
 using Uncreated.Warfare.Components;
@@ -11,11 +12,11 @@ using Uncreated.Warfare.Players.Management;
 namespace Uncreated.Warfare.Events.Patches;
 
 [UsedImplicitly]
-internal class PlayerMovementUpdateVehicle : IHarmonyPatch
+internal sealed class PlayerMovementUpdateVehicle : IHarmonyPatch
 {
     private static MethodInfo? _target;
 
-    void IHarmonyPatch.Patch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Patch(ILogger logger, Harmony patcher)
     {
         _target = typeof(PlayerMovement).GetMethod("updateVehicle", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
 
@@ -35,7 +36,7 @@ internal class PlayerMovementUpdateVehicle : IHarmonyPatch
         );
     }
 
-    void IHarmonyPatch.Unpatch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Unpatch(ILogger logger, Harmony patcher)
     {
         if (_target == null)
             return;

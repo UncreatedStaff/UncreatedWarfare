@@ -1,5 +1,6 @@
 ﻿using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
+using HarmonyLib;
 using System;
 using System.Reflection;
 using Uncreated.Warfare.Events.Models.Vehicles;
@@ -8,11 +9,11 @@ using Uncreated.Warfare.Patches;
 namespace Uncreated.Warfare.Events.Patches;
 
 [UsedImplicitly]
-internal class VehicleManagerAddVehicle : IHarmonyPatch
+internal sealed class VehicleManagerAddVehicle : IHarmonyPatch
 {
     private static MethodInfo? _target;
 
-    void IHarmonyPatch.Patch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Patch(ILogger logger, Harmony patcher)
     {
         _target = typeof(VehicleManager).GetMethod("addVehicle", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance, null, CallingConventions.Any,
             [ 
@@ -61,7 +62,7 @@ internal class VehicleManagerAddVehicle : IHarmonyPatch
         );
     }
 
-    void IHarmonyPatch.Unpatch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Unpatch(ILogger logger, Harmony patcher)
     {
         if (_target == null)
             return;

@@ -2,6 +2,7 @@
 #define REFLECTION_TOOLS_ENABLE_HARMONY_LOG
 #endif
 using DanielWillett.ReflectionTools;
+using HarmonyLib;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
@@ -24,7 +25,7 @@ public class HarmonyPatchService
     private readonly ILogger<HarmonyPatchService> _logger;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILoggerFactory _loggerFactory;
-    public HarmonyLib.Harmony Patcher { get; set; }
+    public Harmony Patcher { get; set; }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     public HarmonyPatchService(Module module, WarfarePluginLoader pluginLoader, ILoggerFactory loggerFactory, IServiceProvider serviceProvider)
@@ -32,7 +33,7 @@ public class HarmonyPatchService
         _logger = loggerFactory.CreateLogger<HarmonyPatchService>();
         _loggerFactory = loggerFactory;
         _serviceProvider = serviceProvider;
-        Patcher = new HarmonyLib.Harmony("network.uncreated.warfare");
+        Patcher = new Harmony("network.uncreated.warfare");
 
         // add all module dependencies, all plugin dlls, and the module itself.
         _patchableAssemblies = new List<Assembly>(module.assemblies);

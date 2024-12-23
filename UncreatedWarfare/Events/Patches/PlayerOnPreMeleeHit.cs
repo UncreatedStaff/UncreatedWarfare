@@ -1,5 +1,6 @@
 ﻿using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
+using HarmonyLib;
 using System.Reflection;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Patches;
@@ -10,11 +11,11 @@ namespace Uncreated.Warfare.Events.Patches;
 
 // OnPreMeleeHit(UseableMelee __instance)
 [UsedImplicitly]
-internal class PlayerOnPreMeleeHit : IHarmonyPatch
+internal sealed class PlayerOnPreMeleeHit : IHarmonyPatch
 {
     private static MethodInfo? _target;
 
-    void IHarmonyPatch.Patch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Patch(ILogger logger, Harmony patcher)
     {
         _target = typeof(UseableMelee).GetMethod("fire", BindingFlags.Instance | BindingFlags.NonPublic);
         if (_target != null)
@@ -32,7 +33,7 @@ internal class PlayerOnPreMeleeHit : IHarmonyPatch
         );
     }
 
-    void IHarmonyPatch.Unpatch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Unpatch(ILogger logger, Harmony patcher)
     {
         if (_target == null)
             return;

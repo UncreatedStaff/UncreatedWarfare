@@ -24,7 +24,7 @@ using Uncreated.Warfare.Util;
 namespace Uncreated.Warfare.Events.Patches;
 
 [UsedImplicitly]
-internal class ChatManagerOnChatRequested : IHarmonyPatch
+internal sealed class ChatManagerOnChatRequested : IHarmonyPatch
 {
     private static MethodInfo? _target;
     private static readonly string[] ChatLevelsRaw = [ "GLO", "A/S", "GRP" ];
@@ -33,7 +33,7 @@ internal class ChatManagerOnChatRequested : IHarmonyPatch
 
     public static readonly PermissionLeaf AdminChatPermissions = new PermissionLeaf("features.admin_chat", false, true);
 
-    void IHarmonyPatch.Patch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Patch(ILogger logger, Harmony patcher)
     {
         _target = Accessor.GetMethod(ChatManager.ReceiveChatRequest);
 
@@ -54,7 +54,7 @@ internal class ChatManagerOnChatRequested : IHarmonyPatch
         );
     }
 
-    void IHarmonyPatch.Unpatch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Unpatch(ILogger logger, Harmony patcher)
     {
         if (_target == null)
             return;

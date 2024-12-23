@@ -24,7 +24,7 @@ namespace Uncreated.Warfare.Moderation.Reports;
 [Priority(-100)]
 public class ReportService : IDisposable, IHostedService, IEventListener<PlayerLeft>, IEventListener<PlayerChatSent>, IEventListener<PlayerUseableEquipped>
 {
-    private delegate float GetBulletDamageMultiplierHandler(ref BulletInfo bullet);
+    private delegate float GetBulletDamageMultiplierHandler(UseableGun gun, ref BulletInfo bullet);
 
     private static readonly InstanceGetter<UseableGun, List<BulletInfo>>? GetBullets =
         Accessor.GenerateInstanceGetter<UseableGun, List<BulletInfo>>("bullets");
@@ -149,7 +149,7 @@ public class ReportService : IDisposable, IHostedService, IEventListener<PlayerL
             // ballistics(), calculates true damage
 
             // attachment dmg multiplier and falloff
-            float dmgMult = (GetBulletDamageMultiplier?.Invoke(ref bullet) ?? 1f)
+            float dmgMult = (GetBulletDamageMultiplier?.Invoke(gun, ref bullet) ?? 1f)
                             * Mathf.Lerp(1f,
                                 gunAsset.damageFalloffMultiplier,
                                 Mathf.InverseLerp(gunAsset.range * gunAsset.damageFalloffRange, gunAsset.range * gunAsset.damageFalloffMaxRange,

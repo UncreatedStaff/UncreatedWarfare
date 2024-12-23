@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
 using Uncreated.Warfare.Events.Models.Items;
-using Uncreated.Warfare.Harmony;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Patches;
 using Uncreated.Warfare.Players;
@@ -16,7 +15,7 @@ using Uncreated.Warfare.Util.Region;
 namespace Uncreated.Warfare.Events.Patches;
 
 [UsedImplicitly]
-internal class PlayerInventoryReceiveDropItem : IHarmonyPatch
+internal sealed class PlayerInventoryReceiveDropItem : IHarmonyPatch
 {
     internal static bool LastPlayEffect;
     internal static bool LastIsDropped;
@@ -28,7 +27,7 @@ internal class PlayerInventoryReceiveDropItem : IHarmonyPatch
     private static readonly FieldInfo LastPlayEffectField = typeof(PlayerInventoryReceiveDropItem).GetField(nameof(LastPlayEffect), BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static)!;
     private static readonly FieldInfo LastIsDroppedField = typeof(PlayerInventoryReceiveDropItem).GetField(nameof(LastIsDropped), BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static)!;
     private static readonly FieldInfo LastWideSpreadField = typeof(PlayerInventoryReceiveDropItem).GetField(nameof(LastWideSpread), BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static)!;
-    void IHarmonyPatch.Patch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Patch(ILogger logger, Harmony patcher)
     {
         _removeItemMtd = typeof(PlayerInventory).GetMethod(nameof(PlayerInventory.removeItem));
         if (_removeItemMtd == null)
@@ -62,7 +61,7 @@ internal class PlayerInventoryReceiveDropItem : IHarmonyPatch
         );
     }
 
-    void IHarmonyPatch.Unpatch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Unpatch(ILogger logger, Harmony patcher)
     {
         if (_target == null)
             return;

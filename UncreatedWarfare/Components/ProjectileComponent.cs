@@ -1,6 +1,5 @@
 using System;
 using System.Reflection;
-using Uncreated.Warfare.Events;
 
 namespace Uncreated.Warfare.Components;
 

@@ -50,7 +50,7 @@ internal sealed class DebugEffectAttachCommand : IExecutableCommand
             info.RelevanceRegions = (byte)Math.Round(-distance);
         else
             info.RelevanceDistance = distance;
-            
+        
 
         _iconManager.CreateIcon(info);
         return UniTask.CompletedTask;
