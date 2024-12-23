@@ -148,6 +148,8 @@ partial class EventDispatcher
 
         _ = DispatchEventAsync(args, CancellationToken.None);
 
+        args.Player.Save.Save(); // remember to save the player before they leave. This should happen once and only once (here and not in any other PlayerLeft listeners)
+
         disconnectToken.Dispose();
 
         try

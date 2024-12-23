@@ -17,15 +17,16 @@ using System.Linq;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Util.Containers;
+using DanielWillett.ReflectionTools;
 
 namespace Uncreated.Warfare.FOBs.Construction.Tweaks;
+
 public class FobPlacementTweaks :
     IEventListener<PlaceBarricadeRequested>
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger _logger;
     private readonly AssetConfiguration? _assetConfiguration;
-    private readonly FobManager? _fobManager;
     private readonly FobTranslations? _translations;
 
     public FobPlacementTweaks(IServiceProvider serviceProvider, ILogger<FobPlacementTweaks> logger)
@@ -33,12 +34,14 @@ public class FobPlacementTweaks :
         _serviceProvider = serviceProvider;
         _logger = logger;
         _assetConfiguration = serviceProvider.GetService<AssetConfiguration>();
-        _fobManager = serviceProvider.GetService<FobManager>();
         _translations = serviceProvider.GetService<TranslationInjection<FobTranslations>>()?.Value;
     }
     public void HandleEvent(PlaceBarricadeRequested e, IServiceProvider serviceProvider)
     {
-        if (_assetConfiguration == null || _fobManager == null || _translations == null)
+
+        FobManager? fobManager = serviceProvider.GetService<FobManager>();
+
+        if (_assetConfiguration == null || fobManager == null || _translations == null)
             return;
 
         if (_assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:Fobs:FobUnbuilt").Guid != e.Barricade.asset.GUID)
@@ -48,7 +51,7 @@ public class FobPlacementTweaks :
 
         ChatService chatService = serviceProvider.GetRequiredService<ChatService>();
 
-        NearbySupplyCrates supplyCrates = NearbySupplyCrates.FindNearbyCrates(e.Position, e.OriginalPlacer.Team.GroupId, _fobManager);
+        NearbySupplyCrates supplyCrates = NearbySupplyCrates.FindNearbyCrates(e.Position, e.OriginalPlacer.Team.GroupId, fobManager);
 
         if (supplyCrates.BuildCount == 0)
         {
@@ -57,8 +60,17 @@ public class FobPlacementTweaks :
             return;
         }
 
-        int maxNumberOfFobs = _fobManager.Configuration.GetValue("MaxNumberOfFobs", 10);
-        bool fobLimitReached = _fobManager.FriendlyBuildableFobs(e.OriginalPlacer.Team).Count() >= maxNumberOfFobs;
+        ShovelableInfo? shovelableInfo = (fobManager.Configuration.GetRequiredSection("Shovelables").Get<IEnumerable<ShovelableInfo>>() ?? Array.Empty<ShovelableInfo>())
+            .FirstOrDefault(s => s.Foundation != null && s.Foundation.Guid == e.Asset.GUID);
+        if (shovelableInfo != null && supplyCrates.BuildCount < shovelableInfo.SupplyCost)
+        {
+            chatService.Send(e.OriginalPlacer, _translations.BuildMissingSupplies, supplyCrates.BuildCount, shovelableInfo.SupplyCost);
+            e.Cancel();
+            return;
+        }
+
+        int maxNumberOfFobs = fobManager.Configuration.GetValue("MaxNumberOfFobs", 10);
+        bool fobLimitReached = fobManager.FriendlyBuildableFobs(e.OriginalPlacer.Team).Count() >= maxNumberOfFobs;
         if (fobLimitReached)
         {
             chatService.Send(e.OriginalPlacer, _translations.BuildMaxFOBsHit);
@@ -66,8 +78,8 @@ public class FobPlacementTweaks :
             return;
         }
 
-        float minDistanceBetweenFobs = _fobManager.Configuration.GetValue("MinDistanceBetweenFobs", 150f);
-        BuildableFob? tooCloseFob = _fobManager.FriendlyBuildableFobs(e.OriginalPlacer.Team).FirstOrDefault(f =>
+        float minDistanceBetweenFobs = fobManager.Configuration.GetValue("MinDistanceBetweenFobs", 150f);
+        BunkerFob? tooCloseFob = fobManager.FriendlyBuildableFobs(e.OriginalPlacer.Team).FirstOrDefault(f =>
             MathUtility.WithinRange(e.Position, f.Position, minDistanceBetweenFobs)
             );
 
@@ -78,7 +90,7 @@ public class FobPlacementTweaks :
             return;
         }
 
-        float minFobDistanceFromMain = _fobManager.Configuration.GetValue<float>("MinFobDistanceFromMain", 300);
+        float minFobDistanceFromMain = fobManager.Configuration.GetValue<float>("MinFobDistanceFromMain", 300);
 
         ZoneStore? zoneStore = serviceProvider.GetService<ZoneStore>();
         if (zoneStore != null)

@@ -6,7 +6,7 @@ using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Vehicles;
-using Uncreated.Warfare.Vehicles.Info;
+using Uncreated.Warfare.Vehicles.WarfareVehicles;
 using Uncreated.Warfare.Vehicles.Spawners;
 using UnityEngine;
 

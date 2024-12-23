@@ -13,7 +13,7 @@ using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Addons;
 using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Vehicles;
-using Uncreated.Warfare.Vehicles.Info;
+using Uncreated.Warfare.Vehicles.WarfareVehicles;
 using Uncreated.Warfare.Vehicles.Spawners;
 
 namespace Uncreated.Warfare.Signs;

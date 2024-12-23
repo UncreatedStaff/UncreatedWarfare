@@ -786,9 +786,9 @@ internal static class T
     [TranslationData(SectionLoad)]
     public static readonly Translation LoadAlreadyLoading = new Translation("<#b3a6a2>You can only load one type of supply at once.");
     [TranslationData(SectionLoad)]
-    public static readonly Translation<int> LoadCompleteBuild = new Translation<int>("<#d1bda7>Loading complete. <#c$build$>{0} BUILD</color> loaded.");
+    public static readonly Translation<int> LoadCompleteBuild = new Translation<int>("<#d1bda7>Loading complete. <#f3ce82>{0} BUILD</color> loaded.");
     [TranslationData(SectionLoad)]
-    public static readonly Translation<int> LoadCompleteAmmo = new Translation<int>("<#d1bda7>Loading complete. <#c$ammo$>{0} AMMO</color> loaded.");
+    public static readonly Translation<int> LoadCompleteAmmo = new Translation<int>("<#d1bda7>Loading complete. <#e25d5d>{0} AMMO</color> loaded.");
     #endregion
 
     #region Kick Command

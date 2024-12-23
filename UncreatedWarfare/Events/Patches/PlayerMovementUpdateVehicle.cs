@@ -7,6 +7,7 @@ using Uncreated.Warfare.Events.Models.Vehicles;
 using Uncreated.Warfare.Patches;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.Events.Patches;
 
@@ -68,41 +69,33 @@ internal class PlayerMovementUpdateVehicle : IHarmonyPatch
             if (player == null || oldVehicle == null)
                 return;
 
-            if (!oldVehicle.TryGetComponent(out VehicleComponent vehComp))
-            {
-                vehComp = oldVehicle.gameObject.AddComponent<VehicleComponent>();
-                vehComp.Initialize(oldVehicle, (WarfareModule.Singleton.IsLayoutActive() ? WarfareModule.Singleton.ScopedProvider : WarfareModule.Singleton.ServiceProvider).Resolve<IServiceProvider>());
-            }
+            WarfareVehicle warfareVehicle = oldVehicle.transform.GetComponent<WarfareVehicleComponent>().WarfareVehicle;
 
             ExitVehicle args = new ExitVehicle
             {
                 Player = player,
-                Component = vehComp,
                 PassengerIndex = state.Seat,
-                Vehicle = oldVehicle
+                Vehicle = warfareVehicle
             };
 
             _ = WarfareModule.EventDispatcher.DispatchEventAsync(args, WarfareModule.Singleton.UnloadToken);
         }
         else
         {
-            if (!vehicle.TryGetComponent(out VehicleComponent vehComp))
-            {
-                vehComp = vehicle.gameObject.AddComponent<VehicleComponent>();
-                vehComp.Initialize(vehicle, (WarfareModule.Singleton.IsLayoutActive() ? WarfareModule.Singleton.ScopedProvider : WarfareModule.Singleton.ServiceProvider).Resolve<IServiceProvider>());
-            }
+            WarfareVehicle warfareVehicle = vehicle.transform.GetComponent<WarfareVehicleComponent>().WarfareVehicle;
 
             byte seat = player.UnturnedPlayer.movement.getSeat();
+
+            warfareVehicle.TranportTracker.RecordPlayerEntry(player.Steam64.m_SteamID, warfareVehicle.Vehicle.transform.position, seat);
 
             if (vehicle == state.Vehicle)
             {
                 VehicleSwappedSeat args = new VehicleSwappedSeat
                 {
                     Player = player,
-                    Component = vehComp,
                     NewPassengerIndex = seat,
                     OldPassengerIndex = state.Seat,
-                    Vehicle = vehicle
+                    Vehicle = warfareVehicle
                 };
 
                 _ = WarfareModule.EventDispatcher.DispatchEventAsync(args, WarfareModule.Singleton.UnloadToken);
@@ -112,9 +105,8 @@ internal class PlayerMovementUpdateVehicle : IHarmonyPatch
                 EnterVehicle args = new EnterVehicle
                 {
                     Player = player,
-                    Component = vehComp,
                     PassengerIndex = seat,
-                    Vehicle = vehicle
+                    Vehicle = warfareVehicle
                 };
 
                 _ = WarfareModule.EventDispatcher.DispatchEventAsync(args, WarfareModule.Singleton.UnloadToken);

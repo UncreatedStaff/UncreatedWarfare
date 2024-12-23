@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using Stripe;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,6 +9,7 @@ using Uncreated.Framework.UI.Reflection;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Fobs;
+using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
@@ -35,86 +37,77 @@ public class FobHUD :
         _fobManager = serviceProvider.GetRequiredService<FobManager>();
         _playerService = serviceProvider.GetRequiredService<IPlayerService>();
     }
-    private void UpdateForTeam(Team team)
+    private void UpdateRelevantPlayers(IFob fob)
     {
-        List<IFob> friendlyFobs = _fobManager.Fobs.Where(f => f.Team == team).ToList();
+        foreach (WarfarePlayer player in _playerService.OnlinePlayers.Where(p => fob.IsVibileToPlayer(p)))
+        {
+            UpdateForPlayer(player);
+        }
+    }
+    private void UpdateForPlayer(WarfarePlayer player)
+    {
+        List<IFob> visibleFobs = _fobManager.Fobs.Where(f => f.IsVibileToPlayer(player)).ToList();
         for (int i = 0; i < Fobs.Length; i++)
         {
             FobElement element = Fobs[i];
-            if (i < friendlyFobs.Count)
-            {
-                IFob fob = friendlyFobs[i];
-
-                UpdateForPlayers(element, team, fob);
-            }
-            else
-                UpdateForPlayers(element, team, null);
-        }
-    }
-    private void UpdateForPlayers(FobElement element, Team team, IFob? fob)
-    {
-        if (fob != null)
-        {
-            foreach (WarfarePlayer player in _playerService.OnlinePlayersOnTeam(team))
-            {
-                SendToPlayer(player.Connection); // todo: maybe only send the UI when a player joins a team?
-                string fobName = TranslationFormattingUtility.Colorize(fob.Name.ToUpper(), fob.Color);
-                
-                element.Root.Show(player);
-                element.FobName.SetText(player, fobName);
-
-                if (fob is IResourceFob resourceFob)
-                {
-                    element.BuildCount.Show(player);
-                    element.AmmoCount.Show(player);
-                    element.BuildCount.SetText(player, resourceFob.BuildCount.ToString());
-                    
-                    element.AmmoCount.SetText(player, resourceFob.AmmoCount.ToString());
-                }
-                else
-                {
-                    element.BuildCount.Hide(player);
-                    element.AmmoCount.Hide(player);
-                }
-            }
-        }
-        else
-        {
-            foreach (WarfarePlayer player in _playerService.OnlinePlayersOnTeam(team))
+            if (i >= visibleFobs.Count)
             {
                 element.Root.Hide(player);
+                continue;
+            }
+
+            IFob fob = visibleFobs[i];
+
+            SendToPlayer(player.Connection); // todo: maybe only send the UI when a player joins a team?
+            string fobName = TranslationFormattingUtility.Colorize(fob.Name.ToUpper(), fob.Color);
+
+            element.Root.Show(player);
+            element.FobName.SetText(player, fobName);
+
+            if (fob is IResourceFob resourceFob)
+            {
+                element.BuildCount.Show(player);
+                element.AmmoCount.Show(player);
+                element.BuildCount.SetText(player, Mathf.CeilToInt(resourceFob.BuildCount).ToString());
+
+                element.AmmoCount.SetText(player, Mathf.CeilToInt(resourceFob.AmmoCount).ToString());
+            }
+            else
+            {
+                element.BuildCount.Hide(player);
+                element.AmmoCount.Hide(player);
             }
         }
     }
 
     public void HandleEvent(FobRegistered e, IServiceProvider serviceProvider)
     {
-        UpdateForTeam(e.Fob.Team);
+        UpdateRelevantPlayers(e.Fob);
     }
 
     public void HandleEvent(FobDeregistered e, IServiceProvider serviceProvider)
     {
-        UpdateForTeam(e.Fob.Team);
+        UpdateRelevantPlayers(e.Fob);
     }
 
     public void HandleEvent(FobBuilt e, IServiceProvider serviceProvider)
     {
-        UpdateForTeam(e.Fob.Team);
+        UpdateRelevantPlayers(e.Fob);
     }
 
     public void HandleEvent(FobDestroyed e, IServiceProvider serviceProvider)
     {
-        UpdateForTeam(e.Fob.Team);
+        UpdateRelevantPlayers(e.Fob);
     }
 
     public void HandleEvent(FobProxyChanged e, IServiceProvider serviceProvider)
     {
-        UpdateForTeam(e.Fob.Team);
+        UpdateRelevantPlayers(e.Fob);
     }
 
     public void HandleEvent(FobSuppliesChanged e, IServiceProvider serviceProvider)
     {
-        UpdateForTeam(e.Fob.Team);
+        UpdateRelevantPlayers(e.Fob);
     }
 
 #nullable disable

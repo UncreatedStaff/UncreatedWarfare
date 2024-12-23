@@ -12,7 +12,7 @@ using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
 
-namespace Uncreated.Warfare.Vehicles.Info;
+namespace Uncreated.Warfare.Vehicles.WarfareVehicles;
 [Priority(-1 /* run before VehicleSpawnerStore */)]
 public class VehicleInfoStore : IHostedService, IDisposable, IUnlockRequirementProvider
 {

@@ -1082,7 +1082,7 @@ public class CommandContext : ControlException
     /// <param name="mask">Raycast mask, could also use <see cref="ERayMask"/>. Defaults to <see cref="RayMasks.PLAYER_INTERACT"/>.</param>
     /// <param name="distance">Default distance is 4m.</param>
     /// <exception cref="GameThreadException">Not on main thread.</exception>
-    public bool TryGetTargetTransform([MaybeNullWhen(false)] out Transform transform, int mask = 0, float distance = 4)
+    public bool TryGetTargetRootTransform([MaybeNullWhen(false)] out Transform transform, int mask = 0, float distance = 4)
     {
         GameThread.AssertCurrent();
 
@@ -1094,7 +1094,7 @@ public class CommandContext : ControlException
 
         Transform aim = Player.UnturnedPlayer.look.aim;
         RaycastInfo info = DamageTool.raycast(new Ray(aim.position, aim.forward), distance, mask == 0 ? (RayMasks.PLAYER_INTERACT & ~RayMasks.ENEMY) : mask, Player.UnturnedPlayer);
-        transform = info.transform;
+        transform = info.transform.root;
         return transform != null;
     }
 

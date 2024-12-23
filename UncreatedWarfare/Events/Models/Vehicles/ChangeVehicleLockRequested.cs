@@ -1,4 +1,6 @@
-﻿namespace Uncreated.Warfare.Events.Models.Vehicles;
+﻿using Uncreated.Warfare.Vehicles.WarfareVehicles;
+
+namespace Uncreated.Warfare.Events.Models.Vehicles;
 
 /// <summary>
 /// Event listener args which handles <see cref="VehicleManager.OnToggleVehicleLockRequested"/>.
@@ -8,6 +10,6 @@ public class ChangeVehicleLockRequested : CancellablePlayerEvent
     /// <summary>
     /// The vehicle on which the lock state is being changed.
     /// </summary>
-    public required InteractableVehicle Vehicle { get; init; }
-    public bool IsLocking => Vehicle.asset.canBeLocked && !Vehicle.isLocked;
+    public required WarfareVehicle Vehicle { get; init; }
+    public bool IsLocking => Vehicle.Vehicle.asset.canBeLocked && !Vehicle.Vehicle.isLocked;
 }

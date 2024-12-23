@@ -10,7 +10,7 @@ using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.List;
 using Uncreated.Warfare.Vehicles;
-using Uncreated.Warfare.Vehicles.Info;
+using Uncreated.Warfare.Vehicles.WarfareVehicles;
 using Uncreated.Warfare.Vehicles.Spawners;
 using Uncreated.Warfare.Vehicles.UI;
 
@@ -335,8 +335,8 @@ public class VehicleComponent : MonoBehaviour
             // todo _tipService.TryGiveTip(e.Player, 300, T.TipPlaceRadio);
         }
 
-        if (e.Vehicle.passengers.Length > 0 && e.Vehicle.passengers[0] == null || e.Vehicle.passengers[0].player == null ||
-            e.Vehicle.passengers[0].player.player.channel.owner.playerID.steamID.m_SteamID == e.Player.Steam64.m_SteamID)
+        if (e.Vehicle.Vehicle.passengers.Length > 0 && e.Vehicle.Vehicle.passengers[0] == null || e.Vehicle.Vehicle.passengers[0].player == null ||
+            e.Vehicle.Vehicle.passengers[0].player.player.channel.owner.playerID.steamID.m_SteamID == e.Player.Steam64.m_SteamID)
         {
             if (LastDriver == e.Player.Steam64.m_SteamID)
                 LastDriverDistance = _totalDistance;
@@ -351,7 +351,7 @@ public class VehicleComponent : MonoBehaviour
                 {
                     int amount = (int)(Math.Floor(distance / 100) * 2) + 5;
 
-                    Player player = e.Vehicle.passengers[0].player.player;
+                    Player player = e.Vehicle.Vehicle.passengers[0].player.player;
                     //WarfarePlayer? warfarePlayer = _playerService.GetOnlinePlayerOrNull(player);
                     //if (warfarePlayer != null)
                     //    Points.AwardXP(warfarePlayer, XPReward.TransportingPlayer, T.XPToastTransportingPlayers, amount);

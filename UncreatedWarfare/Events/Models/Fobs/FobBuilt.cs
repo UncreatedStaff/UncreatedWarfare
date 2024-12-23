@@ -3,12 +3,12 @@
 namespace Uncreated.Warfare.Events.Models.Fobs;
 
 /// <summary>
-/// Event listener args which fires after a <see cref="BuildableFob"/> is built up.
+/// Event listener args which fires after a <see cref="BunkerFob"/> is built up.
 /// </summary>
 public class FobBuilt
 {
     /// <summary>
-    /// The <see cref="BuildableFob"/> that was built up.
+    /// The <see cref="BunkerFob"/> that was built up.
     /// </summary>
-    public required BuildableFob Fob { get; init; }
+    public required BunkerFob Fob { get; init; }
 }

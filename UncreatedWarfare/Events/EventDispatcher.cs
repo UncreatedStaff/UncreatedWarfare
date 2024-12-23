@@ -88,6 +88,7 @@ public partial class EventDispatcher : IHostedService, IDisposable
         Provider.onServerConnected += ProviderOnServerConnected;
         Provider.onServerDisconnected += ProviderOnServerDisconnected;
         Provider.onBattlEyeKick += ProviderOnBattlEyeKick;
+        Provider.onLoginSpawning = OnPlayerChooseSpawnAfterLogin;
 
         /* Barricades */
         BarricadeManager.onDeployBarricadeRequested += BarricadeManagerOnDeployBarricadeRequested;
@@ -119,6 +120,10 @@ public partial class EventDispatcher : IHostedService, IDisposable
         PlayerEquipment.OnPunch_Global += PlayerEquipmentOnPlayerPunch;
         PlayerQuests.onGroupChanged += PlayerQuestsOnGroupChanged;
         PlayerEquipment.OnUseableChanged_Global += PlayerEquipmentUseableChanged;
+        PlayerLife.OnSelectingRespawnPoint += OnPlayerChooseSpawnAfterDeath;
+
+        /* Projectiles */
+        UseableGun.onProjectileSpawned += OnProjectileSpawned;
 
         /* Objects */
         ObjectManager.OnQuestObjectUsed += ObjectManagerOnQuestObjectUsed;
@@ -132,6 +137,7 @@ public partial class EventDispatcher : IHostedService, IDisposable
         Provider.onServerConnected -= ProviderOnServerConnected;
         Provider.onServerDisconnected -= ProviderOnServerDisconnected;
         Provider.onBattlEyeKick -= ProviderOnBattlEyeKick;
+        Provider.onLoginSpawning = null;
 
         /* Barricades */
         BarricadeManager.onDeployBarricadeRequested -= BarricadeManagerOnDeployBarricadeRequested;
@@ -163,6 +169,10 @@ public partial class EventDispatcher : IHostedService, IDisposable
         PlayerEquipment.OnPunch_Global -= PlayerEquipmentOnPlayerPunch;
         PlayerQuests.onGroupChanged -= PlayerQuestsOnGroupChanged;
         PlayerEquipment.OnUseableChanged_Global -= PlayerEquipmentUseableChanged;
+        PlayerLife.OnSelectingRespawnPoint -= OnPlayerChooseSpawnAfterDeath;
+
+        /* Projectiles */
+        UseableGun.onProjectileSpawned -= OnProjectileSpawned;
 
         _timeComponent = null!;
         return UniTask.CompletedTask;

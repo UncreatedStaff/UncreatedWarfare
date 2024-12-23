@@ -72,4 +72,7 @@ public class DeploymentTranslations : PropertiesTranslationCollection
 
     [TranslationData("Sent to a player after they request deployment to the lobby (this feature was moved to /teams).")]
     public readonly Translation DeployLobbyRemoved = new Translation("<#fae69c>The lobby has been removed, use <#e3c27f>/teams</color> to switch teams instead.");
+
+    [TranslationData("Sent to a player after they were busy deploying to a rally point which then got burned.")]
+    public readonly Translation RallyPointBurned = new Translation("<#ffaa42>Rallypoint is no longer available - there are are enemies nearby.");
 }

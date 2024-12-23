@@ -1,4 +1,5 @@
-﻿using Stripe;
+﻿using Microsoft.Extensions.Configuration;
+using Stripe;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -8,12 +9,15 @@ using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Util.DamageTracking;
 
 namespace Uncreated.Warfare.FOBs;
-public class BuildableFob : BasePlayableFob
+public class BunkerFob : ResourceFob
 {
     public bool IsBuilt { get; private set; }
     public bool HasBeenRebuilt { get; private set; }
+    public DamageTracker DamageTracker { get; }
+    public CSteamID Creator => Buildable.Owner;
     public override Color32 Color
     {
         get
@@ -24,10 +28,11 @@ public class BuildableFob : BasePlayableFob
             return base.Color;
         }
     }
-    public BuildableFob(IServiceProvider serviceProvider, string name, IBuildable buildable) : base(serviceProvider, name, buildable)
+    public BunkerFob(IServiceProvider serviceProvider, string name, IBuildable buildable) : base(serviceProvider, name, buildable)
     {
         IsBuilt = false;
         HasBeenRebuilt = false;
+        DamageTracker = new DamageTracker();
     }
     public void MarkBuilt(IBuildable newBuildable)
     {
@@ -52,5 +57,9 @@ public class BuildableFob : BasePlayableFob
         }
 
         return true;
+    }
+    public override TimeSpan GetDelay(WarfarePlayer player)
+    {
+        return TimeSpan.FromSeconds(_fobManager.Configuration.GetValue("FobDeployDelay", 10));
     }
 }

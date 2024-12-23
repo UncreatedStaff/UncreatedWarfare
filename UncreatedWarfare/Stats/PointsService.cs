@@ -12,7 +12,7 @@ using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Addons;
 using Uncreated.Warfare.Translations.Util;
-using Uncreated.Warfare.Vehicles.Info;
+using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.Stats;
 public class PointsService : IEventListener<PlayerTeamChanged> // todo player equipment changed
@@ -276,6 +276,8 @@ public class ResolvedEventInfo
     public string? Message { get; set; }
     public string? EventName { get; set; }
     public ResolvedEventInfo(EventInfo @event) : this(@event, null, null, null) { }
+    public ResolvedEventInfo(EventInfo @event, double scaleFactor)
+    : this(@event, @event.XP * scaleFactor, @event.Credits * scaleFactor, @event.Reputation * scaleFactor) { }
     public ResolvedEventInfo(EventInfo @event, double? overrideXp, double? overrideCredits, double? overrideReputation)
     {
         XP = overrideXp ?? @event.XP;
@@ -415,6 +417,9 @@ public class PointsTranslations : PropertiesTranslationCollection
     [TranslationData("Sent to a player on the points popup after they heal their teammate.")]
     public Translation XPToastHealedTeammate = new Translation("HEALED TEAMMATE", TranslationOptions.TMProUI);
 
+    [TranslationData("Sent to a player on the points popup after they revive their injured teammate.")]
+    public Translation XPToastRevivedTeammate = new Translation("REVIVED TEAMMATE", TranslationOptions.TMProUI);
+
     [TranslationData("Sent to a player on the points popup after they injure an enemy.")]
     public Translation XPToastEnemyInjured = new Translation("<color=#e3e3e3>DOWNED</color>", TranslationOptions.TMProUI);
 
@@ -442,6 +447,18 @@ public class PointsTranslations : PropertiesTranslationCollection
     [TranslationData("Sent to a player on the points popup after they kill themselves.")]
     public Translation XPToastSuicide = new Translation("SUICIDE", TranslationOptions.TMProUI);
 
+    [TranslationData("Sent to a player on the points popup after they help shovel up a FOB.")]
+    public Translation XPToastFOBBuilt = new Translation("FOB BUILT", TranslationOptions.TMProUI);
+
+    [TranslationData("Sent to a player on the points popup after they help shovel up a Repair Station.")]
+    public Translation XPToastRepairStationBuilt = new Translation("REPAIR STATION BUILT", TranslationOptions.TMProUI);
+
+    [TranslationData("Sent to a player on the points popup after they help shovel up a fortfication.")]
+    public Translation XPToastFortificationBuilt = new Translation("FORTIFICATION BUILT", TranslationOptions.TMProUI);
+
+    [TranslationData("Sent to a player on the points popup after they help shovel up an Emplacement.")]
+    public Translation XPToastEmplacementBuilt = new Translation("EMPLACEMENT BUILT", TranslationOptions.TMProUI);
+
     [TranslationData("Sent to a player on the points popup after they destroy a FOB.")]
     public Translation XPToastFOBDestroyed = new Translation("FOB DESTROYED", TranslationOptions.TMProUI);
 
@@ -455,10 +472,10 @@ public class PointsTranslations : PropertiesTranslationCollection
     public Translation XPToastFriendlyBunkerDestroyed = new Translation("FRIENDLY BUNKER DESTROYED", TranslationOptions.TMProUI);
 
     [TranslationData("Sent to a player on the points popup after someone spawns in a FOB or bunker they placed.")]
-    public Translation XPToastFOBUsed = new Translation("FOB IN USE", TranslationOptions.TMProUI);
+    public Translation XPToastPlayerDeployToFob = new Translation("FOB IN USE", TranslationOptions.TMProUI);
 
     [TranslationData("Sent to a player on the points popup after they help resupply a FOB with building or ammo supplies.")]
-    public Translation XPToastSuppliesUnloaded = new Translation("RESUPPLIED FOB", TranslationOptions.TMProUI);
+    public Translation XPToastResuppliedFob = new Translation("RESUPPLIED FOB", TranslationOptions.TMProUI);
 
     [TranslationData("Sent to a player on the points popup after a teammate retreives ammo from an ammo crate or ammo bag they placed.")]
     public Translation XPToastResuppliedTeammate = new Translation("RESUPPLIED TEAMMATE", TranslationOptions.TMProUI);
@@ -482,7 +499,7 @@ public class PointsTranslations : PropertiesTranslationCollection
     public Translation<VehicleType> XPToastFriendlyAircraftDestroyed = new Translation<VehicleType>("FRIENDLY {0} SHOT DOWN", TranslationOptions.TMProUI, UppercaseAddon.Instance);
 
     [TranslationData("Sent to a player on the points popup after they help drive other players.")]
-    public Translation XPToastTransportingPlayers = new Translation("TRANSPORTING PLAYERS", TranslationOptions.TMProUI);
+    public Translation XPToastTransportedPlayer = new Translation("TRANSPORTING PLAYERS", TranslationOptions.TMProUI);
 
     // todo description
     [TranslationData]
@@ -496,10 +513,10 @@ public class PointsTranslations : PropertiesTranslationCollection
     public Translation XPToastFlagNeutralized = new Translation("FLAG NEUTRALIZED", TranslationOptions.TMProUI);
 
     [TranslationData("Sent to a player on the points popup while they're capturing or neutralizing a flag owned by the other team.")]
-    public Translation XPToastFlagAttackTick = new Translation("ATTACK", TranslationOptions.TMProUI);
+    public Translation XPToastFlagTickAttack = new Translation("ATTACK", TranslationOptions.TMProUI);
 
     [TranslationData("Sent to a player on the points popup while they're defending a flag they own.")]
-    public Translation XPToastFlagDefenseTick = new Translation("DEFENSE", TranslationOptions.TMProUI);
+    public Translation XPToastFlagTickDefend = new Translation("DEFENSE", TranslationOptions.TMProUI);
 
     [TranslationData("Sent to a player on the points popup after they destroy an enemy cache in Insurgency.")]
     public Translation XPToastCacheDestroyed = new Translation("CACHE DESTROYED", TranslationOptions.TMProUI);
@@ -516,16 +533,16 @@ public class PointsTranslations : PropertiesTranslationCollection
 
 
     [TranslationData(IsPriorityTranslation = false)]
-    public Translation<int> FOBToastGainBuild = new Translation<int>("<color=#c$build$>+{0} BUILD</color>", TranslationOptions.TMProUI);
+    public Translation<int> FOBToastGainBuild = new Translation<int>("<color=#f3ce82>+{0} BUILD</color>", TranslationOptions.TMProUI);
 
     [TranslationData(IsPriorityTranslation = false)]
-    public Translation<int> FOBToastLoseBuild = new Translation<int>("<color=#c$build$>-{0} BUILD</color>", TranslationOptions.TMProUI);
+    public Translation<int> FOBToastLoseBuild = new Translation<int>("<color=#f3ce82>-{0} BUILD</color>", TranslationOptions.TMProUI);
 
     [TranslationData(IsPriorityTranslation = false)]
-    public Translation<int> FOBToastGainAmmo = new Translation<int>("<color=#c$ammo$>+{0} AMMO</color>", TranslationOptions.TMProUI);
+    public Translation<int> FOBToastGainAmmo = new Translation<int>("<color=#e25d5d>+{0} AMMO</color>", TranslationOptions.TMProUI);
 
     [TranslationData(IsPriorityTranslation = false)]
-    public Translation<int> FOBToastLoseAmmo = new Translation<int>("<color=#c$ammo$>-{0} AMMO</color>", TranslationOptions.TMProUI);
+    public Translation<int> FOBToastLoseAmmo = new Translation<int>("<color=#e25d5d>-{0} AMMO</color>", TranslationOptions.TMProUI);
 
 
     [TranslationData("Hint to tell a player to load supplies into the vehicle.")]

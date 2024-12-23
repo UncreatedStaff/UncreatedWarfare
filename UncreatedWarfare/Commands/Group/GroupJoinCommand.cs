@@ -30,7 +30,7 @@ internal sealed class GroupJoinCommand : IExecutableCommand
     {
         Context.AssertRanByPlayer();
 
-        Context.AssertArgs(2);
+        Context.AssertArgs(1); // todo: fix argument offsets, they're still broken
         
         Team? newTeam;
         if (!Context.TryGet(1, out ulong groupId))

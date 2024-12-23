@@ -112,4 +112,14 @@ public class RepairStation : IBuildableFobEntity
     {
         _ticker.Dispose();
     }
+
+    public override bool Equals(object? obj)
+    {
+        return obj is RepairStation repairStation && Buildable.Equals(repairStation.Buildable);
+    }
+
+    public override int GetHashCode()
+    {
+        return Buildable.GetHashCode();
+    }
 }

@@ -37,7 +37,7 @@ public class PlayerSquadHUD : UnturnedUI, IEventListener<SquadMemberJoined>, IEv
     }
     private void UpdateForPlayer(WarfarePlayer player, Squad squad)
     {
-        SquadName.SetText(player, $"{squad.Name}  {squad.Members.Count}/{Squad.MaxMembers}");
+        SquadName.SetText(player, $"{squad.Name.ToUpper()}  {squad.Members.Count}/{Squad.MaxMembers}");
         for (int i = 0; i < SquadMembers.Length; i++)
         {
             UnturnedLabel element = SquadMembers[i];

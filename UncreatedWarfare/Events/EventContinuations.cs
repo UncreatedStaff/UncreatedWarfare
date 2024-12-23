@@ -56,8 +56,9 @@ public static class EventContinuations
                 return;
 
             await UniTask.SwitchToMainThread(WarfareModule.Singleton.UnloadToken);
-
+            
             continuation(eventArgs);
+
         });
 
         shouldAllow = false;

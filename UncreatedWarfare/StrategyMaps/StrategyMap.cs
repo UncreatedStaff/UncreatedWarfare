@@ -7,6 +7,7 @@ using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Fobs;
+using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.StrategyMaps.MapTacks;
@@ -121,18 +122,15 @@ public class StrategyMap : IDisposable, IEventListener<ClaimBedRequested>
 
         if (e.Player.Component<DeploymentComponent>().CurrentDeployment != null)
         {
+            // todo: send chat message
             e.Cancel();
             return;
         }
 
-        int delay = fobConfig.GetValue("FobDeployDelay", 5);
-
         deploymentService.TryStartDeployment(e.Player, d.Deployable,
             new DeploySettings
             {
-                Delay = TimeSpan.FromSeconds(delay),
                 AllowNearbyEnemies = false,
-                
             }
         );
 

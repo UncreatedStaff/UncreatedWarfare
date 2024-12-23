@@ -6,6 +6,7 @@ using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models.Fobs;
 using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.Layouts.Teams;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.List;
 
@@ -17,8 +18,9 @@ public class NearbySupplyCrates
     private readonly Vector3 _requiredSupplyPoint;
     private readonly CSteamID _team;
 
-    public int AmmoCount { get; private set; }
-    public int BuildCount { get; private set; }
+    public float AmmoCount { get; private set; }
+    public float BuildCount { get; private set; }
+    public float NumberOfSupplyCrates => _supplyCrates.Count;
     private NearbySupplyCrates(TrackingList<SupplyCrate> supplyCrates, Vector3 requiredSupplyPoint, CSteamID team, FobManager fobManager)
     {
         _supplyCrates = supplyCrates.ToTrackingList();
@@ -32,9 +34,9 @@ public class NearbySupplyCrates
     public static NearbySupplyCrates FindNearbyCrates(Vector3 supplyPoint, CSteamID team, FobManager fobManager)
     {
         var supplyCrates = fobManager.Entities
-            .Where(t => t is SupplyCrate c && c.IsWithinRadius(supplyPoint))
-            .Cast<SupplyCrate>()
-            .ToTrackingList();
+            .OfType<SupplyCrate>()
+            .Where(e => e.Buildable.Group == team && e.IsWithinRadius(supplyPoint))
+            .ToTrackingList();  
 
         return new NearbySupplyCrates(supplyCrates, supplyPoint, team, fobManager);
     }
@@ -42,7 +44,7 @@ public class NearbySupplyCrates
     {
         return new NearbySupplyCrates(new TrackingList<SupplyCrate>() { existing }, existing.Buildable.Position, existing.Buildable.Group, fobManager);
     }
-    private void ChangeSupplies(int amount, SupplyType type, SupplyChangeReason changeReason)
+    private void ChangeSupplies(float amount, SupplyType type, SupplyChangeReason changeReason)
     {
         if (type == SupplyType.Ammo)
             AmmoCount = Mathf.Max(AmmoCount + amount, 0);
@@ -51,9 +53,9 @@ public class NearbySupplyCrates
 
         NotifyChanged(type, amount, changeReason);
     }
-    public void SubstractSupplies(int amount, SupplyType type, SupplyChangeReason changeReason)
+    public void SubstractSupplies(float amount, SupplyType type, SupplyChangeReason changeReason)
     {
-        int originalAmount = amount;
+        float originalAmount = amount;
 
         // subtract from crates
         foreach (SupplyCrate crate in _supplyCrates)
@@ -61,8 +63,8 @@ public class NearbySupplyCrates
             if (crate.Type != type) // do not subtract supplies from the wrong crate type
                 continue;
 
-            int remainder = crate.SupplyCount - amount;
-            int toSubstract = Mathf.Clamp(crate.SupplyCount - amount, 0, crate.SupplyCount);
+            float remainder = crate.SupplyCount - amount;
+            float toSubstract = Mathf.Clamp(crate.SupplyCount - amount, 0, crate.SupplyCount);
             crate.SupplyCount = toSubstract;
 
             if (remainder <= 0)
@@ -77,35 +79,41 @@ public class NearbySupplyCrates
         }
         ChangeSupplies(-originalAmount, type, changeReason);
     }
-    public void RefundSupplies(int amount, SupplyType type)
+    public void RefundSupplies(float amount, SupplyType type)
     {
-        int totalAmountToAdd = amount;
+        float totalAmountToAdd = amount;
         // subtract from crates
         foreach (SupplyCrate crate in _supplyCrates)
         {
             if (crate.Type != type) // do not subtract supplies from the wrong crate type
                 continue;
 
-            int amountBeforeAdd = crate.SupplyCount;
-            int newAmount = Mathf.Clamp(crate.SupplyCount + totalAmountToAdd, 0, crate.MaxSupplyCount);
+            float amountBeforeAdd = crate.SupplyCount;
+            float newAmount = Mathf.Clamp(crate.SupplyCount + totalAmountToAdd, 0, crate.MaxSupplyCount);
             crate.SupplyCount = newAmount;
 
-            int amountAddedToCrate = newAmount - amountBeforeAdd;
+            float amountAddedToCrate = newAmount - amountBeforeAdd;
             totalAmountToAdd -= amountAddedToCrate;
         }
         ChangeSupplies(amount, type, SupplyChangeReason.ResupplyShoveableSalvaged);
     }
-    public void NotifyChanged(SupplyType type, int amountDelta, SupplyChangeReason reason)
+    public void NotifyChanged(SupplyType type, float amountDelta, SupplyChangeReason reason, WarfarePlayer? resupplier = null)
     {
         foreach (var fob in _fobManager.Fobs)
         {
-            if (fob is not BasePlayableFob bpf || bpf.Team.GroupId != _team || !bpf.IsWithinRadius(_requiredSupplyPoint))
+            if (fob is not ResourceFob bpf || bpf.Team.GroupId != _team || !bpf.IsWithinRadius(_requiredSupplyPoint))
                 continue;
 
-            Console.WriteLine($"Fob supplies changed by " + amountDelta);
-
             bpf.ChangeSupplies(type, amountDelta);
-            _ = WarfareModule.EventDispatcher.DispatchEventAsync(new FobSuppliesChanged { Fob = bpf, AmountDelta = amountDelta, SupplyType = type, ChangeReason = reason });
+            FobSuppliesChanged args = new FobSuppliesChanged {
+                Fob = bpf,
+                AmountDelta = amountDelta,
+                SupplyType = type,
+                ChangeReason = reason,
+                Resupplier = resupplier
+            };
+
+            _ = WarfareModule.EventDispatcher.DispatchEventAsync(args);
         }
     }
 }

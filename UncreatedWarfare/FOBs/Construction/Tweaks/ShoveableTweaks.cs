@@ -24,15 +24,16 @@ using Uncreated.Warfare.FOBs.Entities;
 using UnityEngine.Assertions.Must;
 using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Events.Models.Players;
+using Uncreated.Warfare.Players.UI;
 
 namespace Uncreated.Warfare.FOBs.Construction.Tweaks;
 internal class ShoveableTweaks :
-    IEventListener<PlaceBarricadeRequested>
+    IEventListener<PlaceBarricadeRequested>,
+    IEventListener<MeleeHit>
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger _logger;
     private readonly AssetConfiguration? _assetConfiguration;
-    private readonly FobManager? _fobManager;
     private readonly FobTranslations _translations;
     private readonly ChatService _chatService;
 
@@ -41,7 +42,6 @@ internal class ShoveableTweaks :
         _serviceProvider = serviceProvider;
         _logger = logger;
         _assetConfiguration = serviceProvider.GetService<AssetConfiguration>();
-        _fobManager = serviceProvider.GetService<FobManager>();
         _translations = serviceProvider.GetRequiredService<TranslationInjection<FobTranslations>>().Value;
         _chatService = serviceProvider.GetRequiredService<ChatService>();
     }
@@ -50,7 +50,12 @@ internal class ShoveableTweaks :
         if (e.OriginalPlacer == null)
             return;
 
-        ShovelableInfo? shovelableInfo = (_fobManager?.Configuration.GetRequiredSection("Shovelables").Get<IEnumerable<ShovelableInfo>>() ?? Array.Empty<ShovelableInfo>())
+        FobManager? fobManager = serviceProvider.GetService<FobManager>();
+
+        if (_assetConfiguration?.GetAssetLink<ItemBarricadeAsset>("Buildables:Fobs:FobUnbuilt").Guid == e.Barricade.asset.GUID)
+            return;
+
+        ShovelableInfo? shovelableInfo = (fobManager?.Configuration.GetRequiredSection("Shovelables").Get<IEnumerable<ShovelableInfo>>() ?? Array.Empty<ShovelableInfo>())
             .FirstOrDefault(s => s.Foundation != null && s.Foundation.Guid == e.Asset.GUID);
 
         if (shovelableInfo == null)
@@ -58,7 +63,7 @@ internal class ShoveableTweaks :
 
         KitPlayerComponent kitComponent = e.OriginalPlacer.Component<KitPlayerComponent>();
 
-        bool enforcePerFobMax = shovelableInfo.MaxAllowedPerFob == null;
+        bool enforcePerFobMax = shovelableInfo.MaxAllowedPerFob != null;
         bool barricadeInKit = kitComponent.CachedKit?.ItemModels.Any(i => i.Item.GetValueOrDefault().GetAssetLink<Asset>().MatchAsset(e.Barricade.asset)) ?? false;
         //bool placerIsCombatEngineer = kitComponent.ActiveClass == Class.CombatEngineer;
         //int maxAllowedInKit = kitComponent.CachedKit?.ItemModels.Count(i => i.Item.GetValueOrDefault().GetAssetLink<Asset>().MatchAsset(e.Barricade.asset)) ?? 0;
@@ -74,11 +79,12 @@ internal class ShoveableTweaks :
         //}
         if (enforcePerFobMax && !barricadeInKit)
         {
-            BuildableFob? nearestFob = _fobManager?.FindNearestBuildableFob(e.OriginalPlacer.Team, e.Position);
+            BunkerFob? nearestFob = fobManager?.FindNearestBuildableFob(e.OriginalPlacer.Team, e.Position);
 
             if (nearestFob == null)
             {
                 _chatService.Send(e.OriginalPlacer, _translations.BuildNotInRadius);
+                e.Cancel();
                 return;
             }
 
@@ -123,7 +129,7 @@ internal class ShoveableTweaks :
         if (buildable.Group != e.Player.Team.GroupId)
             return;
 
-        FobManager? fobManager = serviceProvider.GetRequiredService<FobManager>();
+        FobManager? fobManager = serviceProvider.GetService<FobManager>();
         if (fobManager == null)
             return;
 
@@ -131,6 +137,6 @@ internal class ShoveableTweaks :
         if (shovelable == null)
             return;
 
-        shovelable!.Shovel(e.Player, raycast.point);
+        shovelable.Shovel(e.Player, raycast.point);
     }
 }

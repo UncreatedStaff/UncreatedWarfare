@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Vehicles.Vehicle;
+using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.FOBs.Entities;
 public class EmplacementEntity : IFobEntity
@@ -15,10 +15,20 @@ public class EmplacementEntity : IFobEntity
 
     public IAssetLink<Asset> IdentifyingAsset { get; }
 
-    public EmplacementEntity(WarfareVehicle emplacementVehicle, IBuildable? foundation = null)
+    public EmplacementEntity(WarfareVehicle emplacementVehicle, IAssetLink<ItemPlaceableAsset> foundationAsset, IBuildable? foundation = null)
     {
         Vehicle = emplacementVehicle;
         AuxilliaryBuildable = foundation;
-        IdentifyingAsset = AssetLink.Create(Vehicle.Vehicle.asset);
+        IdentifyingAsset = foundationAsset;
+    }
+
+    public override bool Equals(object? obj)
+    {
+        return obj is EmplacementEntity entity && Vehicle.Equals(entity.Vehicle);
+    }
+
+    public override int GetHashCode()
+    {
+        return HashCode.Combine(IdentifyingAsset.Guid, Vehicle);
     }
 }

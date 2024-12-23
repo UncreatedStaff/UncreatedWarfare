@@ -1,4 +1,5 @@
 ﻿using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.Events.Models.Vehicles;
 
@@ -7,7 +8,7 @@ public class VehicleSwappedSeat : PlayerEvent
     /// <summary>
     /// The player's current vehicle.
     /// </summary>
-    public required InteractableVehicle Vehicle { get; init; }
+    public required WarfareVehicle Vehicle { get; init; }
 
     /// <summary>
     /// Passenger index in the vehicle's seat info for the player's new seat.
@@ -20,12 +21,7 @@ public class VehicleSwappedSeat : PlayerEvent
     public required int OldPassengerIndex { get; init; }
 
     /// <summary>
-    /// The <see cref="VehicleComponent"/> data of the vehicle that was exited.
-    /// </summary>
-    public required VehicleComponent Component { get; init; }
-
-    /// <summary>
     /// The seat object for the player's old seat.
     /// </summary>
-    public Passenger PassengerData => Vehicle.passengers.Length >= NewPassengerIndex ? null! : Vehicle.passengers[NewPassengerIndex];
+    public Passenger PassengerData => Vehicle.Vehicle.passengers.Length >= NewPassengerIndex ? null! : Vehicle.Vehicle.passengers[NewPassengerIndex];
 }

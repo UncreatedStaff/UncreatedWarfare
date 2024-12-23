@@ -44,12 +44,14 @@ internal class GuidedMissileLaunchTweaks :
         if (e.Player == null)
             return;
 
+        _logger.LogDebug($"Projectile asset: {e.Asset} ground AA missiles: {string.Join(", ", _groundAAMissiles)}");
         if (_guidedMissiles.Any(a => a.MatchAsset(e.Asset)))
         {
             e.Object.GetOrAddComponent<GuidedMissileComponent>().Initialize(e.Object, e.Player.UnturnedPlayer, serviceProvider, 90, 0.33f, 800);
         }
         else if (_groundAAMissiles.Any(a => a.MatchAsset(e.Asset)))
         {
+            _logger.LogDebug($"init ground AA missile");
             e.Object.GetOrAddComponent<HeatSeekingMissileComponent>().Initialize(e.Object, e.Player.UnturnedPlayer, serviceProvider, 190, 8f, 2);
         }
         else if (_airAAMissiles.Any(a => a.MatchAsset(e.Asset)))
@@ -67,7 +69,7 @@ internal class GuidedMissileLaunchTweaks :
         if (_assetConfiguration == null)
             return;
 
-        foreach (var passenger in e.Vehicle.turrets)
+        foreach (var passenger in e.Vehicle.Vehicle.turrets)
         {
             if (_groundAAMissiles.Any(a => a.Id == passenger.turret.itemID))
             {

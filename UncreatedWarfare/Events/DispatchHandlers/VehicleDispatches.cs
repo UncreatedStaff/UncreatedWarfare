@@ -8,7 +8,7 @@ using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Util;
-using Uncreated.Warfare.Vehicles.Vehicle;
+using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.Events;
 partial class EventDispatcher
@@ -29,25 +29,27 @@ partial class EventDispatcher
         if (player is null)
             return;
 
+        WarfareVehicle warfareVehicle = vehicle.transform.GetComponent<WarfareVehicleComponent>().WarfareVehicle;
+
         ChangeVehicleLockRequested args = new ChangeVehicleLockRequested
         {
             Player = player,
-            Vehicle = vehicle
+            Vehicle = warfareVehicle
         };
 
         EventContinuations.Dispatch(args, this, _unloadToken, out shouldallow, continuation: args =>
         {
             bool isLocking = args.IsLocking;
 
-            if (args.Vehicle == null || args.Vehicle.isDead || args.Vehicle.isLocked == isLocking)
+            if (args.Vehicle == null || args.Vehicle.Vehicle.isDead || args.Vehicle.Vehicle.isLocked == isLocking)
                 return;
 
-            if (args.Vehicle.TryGetComponent(out VehicleComponent vehicleComponent))
+            if (args.Vehicle.Vehicle.TryGetComponent(out VehicleComponent vehicleComponent)) // todo: remove old VehicleComponent
             {
                 vehicleComponent.LastLocker = args.Player.Steam64;
             }
 
-            VehicleManager.ServerSetVehicleLock(args.Vehicle, args.Player.Steam64, args.Player.GroupId, args.IsLocking);
+            VehicleManager.ServerSetVehicleLock(args.Vehicle.Vehicle, args.Player.Steam64, args.Player.GroupId, args.IsLocking);
 
             _firemodeEffect ??= AssetLink.Create<EffectAsset>(new Guid("bc41e0feaebe4e788a3612811b8722d3"));
 
@@ -55,7 +57,7 @@ partial class EventDispatcher
             {
                 EffectManager.triggerEffect(new TriggerEffectParameters(firemodeAsset)
                 {
-                    position = args.Vehicle.transform.position,
+                    position = args.Vehicle.Vehicle.transform.position,
                     relevantDistance = EffectManager.SMALL
                 });
             }
@@ -84,10 +86,7 @@ partial class EventDispatcher
     private void VehicleManagerOnToggledVehicleLock(InteractableVehicle vehicle)
     {
         WarfarePlayer? player = null;
-        if (vehicle.TryGetComponent(out VehicleComponent vehicleComponent))
-        {
-            player = _playerService.GetOnlinePlayerOrNull(vehicleComponent.LastLocker);
-        }
+        WarfareVehicle warfareVehicle = vehicle.transform.GetComponent<WarfareVehicleComponent>().WarfareVehicle;
 
         if (vehicle.lockedOwner.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
         {
@@ -97,7 +96,7 @@ partial class EventDispatcher
         VehicleLockChanged args = new VehicleLockChanged
         {
             Player = player,
-            Vehicle = vehicle
+            Vehicle = warfareVehicle
         };
 
         _ = DispatchEventAsync(args, CancellationToken.None);
@@ -108,7 +107,7 @@ partial class EventDispatcher
     /// </summary>
     private void VehicleManagerOnVehicleExploded(InteractableVehicle vehicle)
     {
-        VehicleComponent component = vehicle.gameObject.GetOrAddComponent<VehicleComponent>();
+        WarfareVehicle warfareVehicle = vehicle.transform.GetComponent<WarfareVehicleComponent>().WarfareVehicle;
 
         ITeamManager<Team>? teamManager = _warfare.IsLayoutActive() ? _warfare.ScopedProvider.Resolve<ITeamManager<Team>>() : null;
 
@@ -119,29 +118,27 @@ partial class EventDispatcher
 
         WarfarePlayer? owner = _playerService.GetOnlinePlayerOrNull(vehicle.lockedOwner);
 
-        if (component.LastInstigator != 0)
+        if (warfareVehicle.DamageTracker.LatestDamageInstigator != null)
         {
-            instigatorId = new CSteamID(component.LastInstigator);
+            instigatorId = warfareVehicle.DamageTracker.LatestDamageInstigator.Value;
             instigator = _playerService.GetOnlinePlayerOrNull(instigatorId);
 
             instigatorTeam = instigator == null ? null : teamManager?.GetTeam(instigator.UnturnedPlayer.quests.groupID);
         }
 
-        if (component.LastDriver != 0)
+        if (warfareVehicle.TranportTracker.LastKnownDriver != null)
         {
-            lastDriverId = new CSteamID(component.LastDriver);
+            lastDriverId = warfareVehicle.TranportTracker.LastKnownDriver.Value;
             lastDriver = _playerService.GetOnlinePlayerOrNull(instigatorId);
         }
 
-        EDamageOrigin origin = component.LastDamageOrigin;
-        InteractableVehicle? activeVehicle = component.LastDamagedFromVehicle;
+        EDamageOrigin origin = warfareVehicle.DamageTracker.LastKnownDamageCause ?? EDamageOrigin.Unknown;
 
         VehicleExploded args = new VehicleExploded
         {
-            Vehicle = vehicle,
-            Component = component,
+            Vehicle = warfareVehicle,
             DamageOrigin = origin,
-            InstigatorVehicle = activeVehicle,
+            InstigatorVehicle = warfareVehicle.DamageTracker.LatestDamageInstigatorVehicle,
             Team = teamManager?.GetTeam(vehicle.lockedGroup) ?? Team.NoTeam,
             Instigator = instigator,
             InstigatorId = instigatorId,
@@ -162,30 +159,25 @@ partial class EventDispatcher
     {
         WarfarePlayer player = _playerService.GetOnlinePlayer(unturnedPlayer);
 
-        if (!vehicle.TryGetComponent(out VehicleComponent vehComp))
-        {
-            vehComp = vehicle.gameObject.AddComponent<VehicleComponent>();
-            vehComp.Initialize(vehicle, (_warfare.IsLayoutActive() ? _warfare.ScopedProvider : _warfare.ServiceProvider).Resolve<IServiceProvider>());
-        }
+        WarfareVehicle warfareVehicle = vehicle.transform.GetComponent<WarfareVehicleComponent>().WarfareVehicle;
 
         byte seat = player.UnturnedPlayer.movement.getSeat();
 
         ExitVehicleRequested args = new ExitVehicleRequested
         {
             Player = player,
-            Component = vehComp,
             ExitLocation = pendingLocation,
             ExitLocationYaw = pendingYaw,
             PassengerIndex = seat,
-            Vehicle = vehicle,
+            Vehicle = warfareVehicle,
             JumpVelocity = InteractableVehicleRequestExit.LastVelocity
         };
 
         EventContinuations.Dispatch(args, this, player.DisconnectToken, out shouldAllow, args =>
         {
-            VehicleManager.sendExitVehicle(args.Vehicle, args.PassengerIndex, args.ExitLocation, MeasurementTool.angleToByte(args.ExitLocationYaw), false);
+            VehicleManager.sendExitVehicle(args.Vehicle.Vehicle, args.PassengerIndex, args.ExitLocation, MeasurementTool.angleToByte(args.ExitLocationYaw), false);
             if (args.PassengerIndex == 0)
-                args.Vehicle.GetComponent<Rigidbody>().velocity = args.JumpVelocity;
+                args.Vehicle.Vehicle.GetComponent<Rigidbody>().velocity = args.JumpVelocity;
         });
 
         if (!shouldAllow)
@@ -205,25 +197,20 @@ partial class EventDispatcher
 
         WarfarePlayer player = _playerService.GetOnlinePlayer(unturnedPlayer);
 
-        if (!vehicle.TryGetComponent(out VehicleComponent vehComp))
-        {
-            vehComp = vehicle.gameObject.AddComponent<VehicleComponent>();
-            vehComp.Initialize(vehicle, (_warfare.IsLayoutActive() ? _warfare.ScopedProvider : _warfare.ServiceProvider).Resolve<IServiceProvider>());
-        }
+        WarfareVehicle warfareVehicle = vehicle.transform.GetComponent<WarfareVehicleComponent>().WarfareVehicle;
 
         VehicleSwapSeatRequested args = new VehicleSwapSeatRequested
         {
-            Vehicle = vehicle,
+            Vehicle = warfareVehicle,
             Player = player,
-            Component = vehComp,
             NewPassengerIndex = toSeatIndex,
             OldPassengerIndex = fromSeatIndex
         };
 
         EventContinuations.Dispatch(args, this, player.DisconnectToken, out shouldAllow, args =>
         {
-            args.Vehicle.lastSeat = Time.realtimeSinceStartup;
-            SendSwapVehicleSeats.InvokeAndLoopback(ENetReliability.Reliable, Provider.GatherRemoteClientConnections(), args.Vehicle.instanceID, (byte)args.OldPassengerIndex, (byte)args.NewPassengerIndex);
+            args.Vehicle.Vehicle.lastSeat = Time.realtimeSinceStartup;
+            SendSwapVehicleSeats.InvokeAndLoopback(ENetReliability.Reliable, Provider.GatherRemoteClientConnections(), args.Vehicle.Vehicle.instanceID, (byte)args.OldPassengerIndex, (byte)args.NewPassengerIndex);
         });
 
         if (!shouldAllow)
@@ -233,9 +220,10 @@ partial class EventDispatcher
     }
     private void VehicleManagerOnPreDestroyVehicle(InteractableVehicle vehicle)
     {
+        WarfareVehicle warfareVehicle = vehicle.transform.GetComponent<WarfareVehicleComponent>().WarfareVehicle;
         var args = new VehicleDespawned
         {
-            Vehicle = vehicle
+            Vehicle = warfareVehicle
         };
 
         _ = DispatchEventAsync(args, CancellationToken.None);

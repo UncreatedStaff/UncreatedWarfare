@@ -5,6 +5,7 @@ using System.Linq;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Models.Fobs;
+using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.FOBs.Entities;
 using Uncreated.Warfare.FOBs.SupplyCrates;
@@ -15,6 +16,7 @@ using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Proximity;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Util.DamageTracking;
 using Uncreated.Warfare.Util.List;
 using Uncreated.Warfare.Util.Timing;
 using Uncreated.Warfare.Util.Timing.Collectors;
@@ -24,20 +26,19 @@ namespace Uncreated.Warfare.Fobs;
 /// <summary>
 /// Base class for standard FOBs, caches, and any other FOBs that support items.
 /// </summary>
-public class BasePlayableFob : IResourceFob, IDisposable
+public class ResourceFob : IBuildableFob, IResourceFob, IDisposable
 {
-    
     private readonly IPlayerService _playerService;
-    private readonly FobManager _fobManager;
+    protected readonly FobManager _fobManager;
     private readonly ILogger _logger;
     private readonly ILoopTicker _loopTicker;
 
     public IBuildable Buildable { get; protected set; }
 
     /// <inheritdoc />
-    public int BuildCount { get; private set; }
+    public float BuildCount { get; private set; }
     /// <inheritdoc />
-    public int AmmoCount { get; private set; }
+    public float AmmoCount { get; private set; }
 
     /// <inheritdoc />
     public string Name { get; private set; }
@@ -61,11 +62,9 @@ public class BasePlayableFob : IResourceFob, IDisposable
     public float EffectiveRadius => 70f;
     public bool IsProxied { get; private set; }
     public ISphereProximity FriendlyProximity { get; private set; }
-    public ISphereProximity EnemyProximity { get; private set; }
     public ProximityCollector<WarfarePlayer> NearbyFriendlies { get; private set; }
     public ProximityCollector<WarfarePlayer> NearbyEnemies { get; private set; }
     public ReadOnlyTrackingList<IFobEntity> GetEntities() => _fobManager.Entities.Where(e => MathUtility.WithinRange(Position, e.Position, EffectiveRadius)).ToTrackingList().AsReadOnly();
-
     /// <summary>
     /// Invoked when a player enters the radius of the FOB.
     /// </summary>
@@ -82,7 +81,7 @@ public class BasePlayableFob : IResourceFob, IDisposable
     public event Action<IFobEntity>? OnItemAdded;
     public event Action<IFobEntity>? OnItemRemoved;
 
-    public BasePlayableFob(IServiceProvider serviceProvider, string name, IBuildable buildable)
+    public ResourceFob(IServiceProvider serviceProvider, string name, IBuildable buildable)
     {
         Name = name;
         Buildable = buildable;
@@ -126,6 +125,9 @@ public class BasePlayableFob : IResourceFob, IDisposable
         ChangeSupplies(SupplyType.Build, supplyCrates.BuildCount);
         ChangeSupplies(SupplyType.Ammo, supplyCrates.AmmoCount);
     }
+
+
+    public bool IsVibileToPlayer(WarfarePlayer player) => player.Team == Team;
     private float GetProxyScore(WarfarePlayer enemy)
     {
         if (enemy.UnturnedPlayer.life.isDead || enemy.UnturnedPlayer.movement.getVehicle() != null)
@@ -139,32 +141,18 @@ public class BasePlayableFob : IResourceFob, IDisposable
         return 0.15f * EffectiveRadius / distanceFromFob;
     }
     public bool IsWithinRadius(Vector3 point) => MathUtility.WithinRange(Position, point, EffectiveRadius);
-    public void ChangeSupplies(SupplyType supplyType, int amount)
+    public void ChangeSupplies(SupplyType supplyType, float amount)
     {
         if (supplyType == SupplyType.Build)
             BuildCount += amount;
         else if (supplyType == SupplyType.Ammo)
             AmmoCount += amount;
     }
-    public UniTask DestroyAsync(CancellationToken token = default)
-    {
-        return UniTask.CompletedTask;
-    }
-
-    public UniTask AddItemAsync(IFobEntity fobItem, CancellationToken token = default)
-    {
-        throw new NotImplementedException();
-    }
-
-    public UniTask BuildItemAsync(IFobEntity fobItem, CancellationToken token = default)
-    {
-        throw new NotImplementedException();
-    }
 
     public Vector3 SpawnPosition => Position; // todo
     public float Yaw => 0f;
 
-    public TimeSpan GetDelay(WarfarePlayer player)
+    public virtual TimeSpan GetDelay(WarfarePlayer player)
     {
         return TimeSpan.Zero;
     }

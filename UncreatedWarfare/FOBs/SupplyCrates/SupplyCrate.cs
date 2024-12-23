@@ -11,9 +11,9 @@ namespace Uncreated.Warfare.FOBs.SupplyCrates;
 public class SupplyCrate : IBuildableFobEntity
 {
     public SupplyType Type { get; }
-    public int SupplyCount { get; set; }
-    public int MaxSupplyCount { get; }
-    public int SupplyRadius { get; set; }
+    public float SupplyCount { get; set; }
+    public float MaxSupplyCount { get; }
+    public float SupplyRadius { get; set; }
 
     public IBuildable Buildable {  get; }
 
@@ -33,4 +33,14 @@ public class SupplyCrate : IBuildableFobEntity
         IdentifyingAsset = info.SupplyItemAsset;
     }
     public bool IsWithinRadius(Vector3 point) => MathUtility.WithinRange(Buildable.Position, point, SupplyRadius);
+
+    public override bool Equals(object? obj)
+    {
+        return obj is SupplyCrate crate && Buildable.Equals(crate.Buildable);
+    }
+
+    public override int GetHashCode()
+    {
+        return Buildable.GetHashCode();
+    }
 }

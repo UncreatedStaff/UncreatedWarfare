@@ -12,6 +12,7 @@ using Uncreated.Warfare.Events.Models.Fobs;
 using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.FOBs.Deployment;
+using Uncreated.Warfare.FOBs.Rallypoints;
 using Uncreated.Warfare.Layouts.Flags;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Services;
@@ -78,7 +79,7 @@ public class StrategyMapManager :
         if (flagService != null)
             RepopulateFlagTacks(map, flagService);
         if (fobManager != null)
-            RepopulateBuildableFobTacks(map, fobManager);
+            RepopulateDeployableFobTacks(map, fobManager);
 
         _logger.LogDebug($"Registered new StrategyMap: {map}");
     }
@@ -115,8 +116,10 @@ public class StrategyMapManager :
     public void HandleEvent(FobRegistered e, IServiceProvider serviceProvider)
     {
         MapTack newTack;
-        if (e.Fob is BuildableFob)
+        if (e.Fob is BunkerFob)
             newTack = new DeployableMapTack(_assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:MapTacks:FobUnbuilt"), e.Fob);
+        else if (e.Fob is RallyPoint)
+            newTack = new DeployableMapTack(_assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:MapTacks:Rallypoint"), e.Fob);
         else
             return;
 
@@ -137,7 +140,7 @@ public class StrategyMapManager :
     public void HandleEvent(FobBuilt e, IServiceProvider serviceProvider)
     {
         MapTack newTack;
-        if (e.Fob is BuildableFob)
+        if (e.Fob is BunkerFob)
             newTack = new DeployableMapTack(_assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:MapTacks:Fob"), e.Fob);
         else
             return;
@@ -152,7 +155,7 @@ public class StrategyMapManager :
     public void HandleEvent(FobDestroyed e, IServiceProvider serviceProvider)
     {
         MapTack newTack;
-        if (e.Fob is BuildableFob)
+        if (e.Fob is BunkerFob)
             newTack = new DeployableMapTack(_assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:MapTacks:FobUnbuilt"), e.Fob);
         else
             return;
@@ -167,7 +170,7 @@ public class StrategyMapManager :
     public void HandleEvent(FobProxyChanged e, IServiceProvider serviceProvider)
     {
         MapTack newTack;
-        if (e.Fob is BuildableFob bf && bf.IsBuilt)
+        if (e.Fob is BunkerFob bf && bf.IsBuilt)
             newTack = new DeployableMapTack(_assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:MapTacks:" + (e.IsProxied ? "FobProxied" : "Fob")), e.Fob);
         else
             return;
@@ -214,23 +217,27 @@ public class StrategyMapManager :
         if (map.MapTable.Group == flagService.EndingTeam.Owner.GroupId)
             map.AddMapTack(CreateMainBaseTack(flagService.EndingTeam.Region.Primary.Zone));
     }
-    private void RepopulateBuildableFobTacks(StrategyMap map, FobManager fobManager)
+    private void RepopulateDeployableFobTacks(StrategyMap map, FobManager fobManager)
     {
-        map.RemoveMapTacks(m => m is DeployableMapTack fm && fm.Deployable is BuildableFob);
+        map.RemoveMapTacks(m => m is DeployableMapTack fm && fm.Deployable is BunkerFob);
 
         foreach (var fob in fobManager.Fobs)
         {
             if (fob.Team.GroupId != map.MapTable.Group)
                 continue;
 
-            if (fob is BuildableFob bf)
+            if (fob is BunkerFob bf)
             {
-                map.AddMapTack(CreateBuildableFobTack(bf));
+                map.AddMapTack(CreateBunkerFobTack(bf));
+            }
+            else if (fob is RallyPoint)
+            {
+                map.AddMapTack(new DeployableMapTack(_assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:MapTacks:Rallypoint"), fob));
             }
         }
     }
 
-    private DeployableMapTack CreateBuildableFobTack(BuildableFob fob)
+    private DeployableMapTack CreateBunkerFobTack(BunkerFob fob)
     {
         if (fob.IsBuilt)
             return new DeployableMapTack(_assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:MapTacks:" + (fob.IsProxied ? "FobProxied" : "Fob")), fob);

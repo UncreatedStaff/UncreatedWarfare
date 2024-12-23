@@ -56,13 +56,12 @@ internal sealed class RequestCommand : ICompoundingCooldownCommand
 
     private IRequestable<object>? GetRequestable()
     {
-        if (!Context.TryGetTargetTransform(out Transform? transform))
+        if (!Context.TryGetTargetRootTransform(out Transform? transform))
         {
             return null;
         }
-
         IRequestable<object>? requestable = ContainerHelper.FindComponent<IRequestable<object>>(transform);
-        if (requestable != null || !transform.CompareTag("Barricade"))
+        if (requestable != null || !(transform.CompareTag("Barricade") || transform.CompareTag("Vehicle")))
         {
             return requestable;
         }

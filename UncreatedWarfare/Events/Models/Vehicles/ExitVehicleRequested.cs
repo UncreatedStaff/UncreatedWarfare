@@ -1,4 +1,5 @@
 ﻿using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.Events.Models.Vehicles;
 
@@ -8,12 +9,7 @@ public class ExitVehicleRequested : CancellablePlayerEvent
     /// <summary>
     /// Vehicle being exited from.
     /// </summary>
-    public required InteractableVehicle Vehicle { get; init; }
-
-    /// <summary>
-    /// The <see cref="VehicleComponent"/> data of the vehicle being exited.
-    /// </summary>
-    public required VehicleComponent Component { get; init; }
+    public required WarfareVehicle Vehicle { get; init; }
 
     /// <summary>
     /// Location where the player will exit at.
@@ -38,5 +34,5 @@ public class ExitVehicleRequested : CancellablePlayerEvent
     /// <summary>
     /// The seat object for the player's current seat.
     /// </summary>
-    public Passenger PassengerData => Vehicle.passengers.Length >= PassengerIndex ? null! : Vehicle.passengers[PassengerIndex];
+    public Passenger PassengerData => Vehicle.Vehicle.passengers.Length >= PassengerIndex ? null! : Vehicle.Vehicle.passengers[PassengerIndex];
 }

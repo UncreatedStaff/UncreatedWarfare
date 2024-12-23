@@ -1,14 +1,19 @@
 ﻿using HarmonyLib;
 using Microsoft.Extensions.DependencyInjection;
+using SDG.Unturned;
 using System;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Events.Models.Flags;
+using Uncreated.Warfare.Events.Models.Fobs.Shovelables;
 using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.FOBs.Entities;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Util.Containers;
 using Uncreated.Warfare.Vehicles;
-using Uncreated.Warfare.Vehicles.Vehicle;
+using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.FOBs.Construction;
 
@@ -22,7 +27,7 @@ public class ShovelableBuildable : IBuildableFobEntity
     public int HitsRemaining { get; private set; }
     public bool IsCompleted => HitsRemaining <= 0;
     public bool IsEmplacement => Info.Emplacement != null;
-    public TickResponsibilityCollection Builders { get; }
+    public PlayerContributionTracker Builders { get; }
     public Action<IBuildable?>? OnComplete { get; set; }
 
     public Vector3 Position => Buildable.Position;
@@ -37,16 +42,11 @@ public class ShovelableBuildable : IBuildableFobEntity
         Buildable = foundation;
         _shovelEffect = shovelEffect?.GetAssetOrFail();
         HitsRemaining = info.SupplyCost;
-        Builders = new TickResponsibilityCollection();
+        Builders = new PlayerContributionTracker();
         _serviceProvider = serviceProvider;
         _sessionId = Guid.NewGuid();
-        
-        if (Info.Emplacement?.Vehicle != null)
-            IdentifyingAsset = Info.Emplacement.Vehicle;
-        else if (Info.CompletedStructure != null)
-            IdentifyingAsset = Info.CompletedStructure;
-        else
-            throw new AssetNotFoundException("ShoveableInfo has neither a CompletedStructure nor an Emplacement.Vehicle asset.");
+
+        IdentifyingAsset = Info.Foundation;
     }
 
     public virtual void Complete(WarfarePlayer shoveler)
@@ -82,6 +82,9 @@ public class ShovelableBuildable : IBuildableFobEntity
         }
 
         OnComplete?.Invoke(completedBuildable);
+
+        _ = WarfareModule.EventDispatcher.DispatchEventAsync(new ShovelableBuilt { Shovelable = this });
+
         Buildable.Destroy(); // make sure to only destroy the foundation events are invoked
     }
 
@@ -96,8 +99,6 @@ public class ShovelableBuildable : IBuildableFobEntity
             Quaternion.Euler(Buildable.Rotation.eulerAngles.x + 90, Buildable.Rotation.eulerAngles.y, Buildable.Rotation.eulerAngles.z),
             Buildable.Owner,
             Buildable.Group);
-
-        _serviceProvider.GetService<FobManager>()?.RegisterFobEntity(new EmplacementEntity(vehicle, auxilliaryStructure));
     }
 
     public bool Shovel(WarfarePlayer shoveler, Vector3 point)
@@ -107,7 +108,7 @@ public class ShovelableBuildable : IBuildableFobEntity
 
         HitsRemaining--;
         if (shoveler.CurrentSession != null)
-            Builders.AddItem(new TickResponsibility(shoveler.Steam64.m_SteamID, shoveler.CurrentSession.SessionId, 1));
+            Builders.RecordWork(shoveler.Steam64, 1);
 
         if (IsCompleted)
         {
@@ -119,6 +120,28 @@ public class ShovelableBuildable : IBuildableFobEntity
             relevantDistance = 70,
             reliable = true
         });
+
+        SendProgressToast(shoveler);
+
         return true;
+    }
+    private void SendProgressToast(WarfarePlayer shoveler)
+    {
+        if (!shoveler.TryGetFromContainer(out ToastManager? toastManager))
+            return;
+
+        float progressPercent = 1 - (float)(HitsRemaining) / Info.SupplyCost;
+        int barCharactersToWrite = Mathf.RoundToInt(progressPercent * 25); // the toast UI has 25 characters
+        toastManager.Queue(new ToastMessage(ToastMessageStyle.ProgressBar, new string('█', barCharactersToWrite)));
+    }
+
+    public override bool Equals(object? obj)
+    {
+        return obj is ShovelableBuildable shoveableBuildable && Buildable.Equals(shoveableBuildable.Buildable);
+    }
+
+    public override int GetHashCode()
+    {
+        return Buildable.GetHashCode();
     }
 }

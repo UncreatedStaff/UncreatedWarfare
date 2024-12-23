@@ -274,7 +274,7 @@ public class PlayerInjureComponent : MonoBehaviour,
     /// Revives the current player if they're injured. Dead players will not be respawned.
     /// </summary>
     /// <exception cref="GameThreadException"/>
-    public void Revive()
+    public void Revive(WarfarePlayer? medic = null)
     {
         GameThread.AssertCurrent();
 
@@ -283,6 +283,15 @@ public class PlayerInjureComponent : MonoBehaviour,
 
         RemoveInjureModifiers();
         PendingDeathInfo = null;
+
+
+        PlayerRevived args = new PlayerRevived
+        {
+            Player = Player,
+            Medic = medic
+        };
+
+        _ = WarfareModule.EventDispatcher.DispatchEventAsync(args);
     }
 
     /// <summary>
@@ -466,7 +475,7 @@ public class PlayerInjureComponent : MonoBehaviour,
             e.Medic.Steam64
         );
 
-        Revive();
+        Revive(e.Medic);
 
         if (e.Player.Team != e.Medic.Team)
             return;

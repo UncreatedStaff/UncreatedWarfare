@@ -419,6 +419,8 @@ public class KitDistribution(KitManager manager, IServiceProvider serviceProvide
             player.UnturnedPlayer.equipment.ServerEquip((byte)Page.Primary, 0, 0);
         else if (inventory.getItemCount((byte)Page.Secondary) > 0)
             player.UnturnedPlayer.equipment.ServerEquip((byte)Page.Secondary, 0, 0);
+
+        logger.LogInformation($"FINISHED GIVING KIT - primary count: {inventory.getItemCount((byte)Page.Primary)}");
     }
 
     private static void ReportItemError(Kit kit, IKitItem item, ILogger logger, ItemAsset? asset)

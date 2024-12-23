@@ -21,9 +21,8 @@ using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Signs;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
-using Uncreated.Warfare.Vehicles.Info;
+using Uncreated.Warfare.Vehicles.WarfareVehicles;
 using Uncreated.Warfare.Vehicles.Spawners;
-using Uncreated.Warfare.Vehicles.Vehicle;
 using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Vehicles;

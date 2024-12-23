@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System;
+using Uncreated.Warfare.Events.Models.Deployment;
 using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Layouts.Teams;
@@ -165,8 +166,17 @@ public class DeploymentComponent : MonoBehaviour, IPlayerComponent
     private void InstantDeploy(IDeployable deployable, DeploySettings settings, IDeployable? deployFrom)
     {
         Player.UnturnedPlayer.teleportToLocationUnsafe(deployable.SpawnPosition, deployable.Yaw);
+
         deployFrom?.OnDeployFrom(Player, in settings);
         deployable.OnDeployTo(Player, in settings);
+
+        PlayerDeployed args = new PlayerDeployed
+        {
+            Player = Player,
+            Deployable = deployable
+        };
+        _ = WarfareModule.EventDispatcher.DispatchEventAsync(args);
+
         if (!settings.DisableInitialChatUpdates)
             _chatService.Send(Player, _translations.DeploySuccess, deployable);
         if (!settings.DisableStartingCooldown && _cooldownManager != null)

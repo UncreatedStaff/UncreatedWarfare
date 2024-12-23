@@ -13,6 +13,7 @@ using Uncreated.Warfare.Patches;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.Events.Patches;
 
@@ -109,17 +110,12 @@ internal class InteractableVehicleDecideSeat : IHarmonyPatch
 
         WarfarePlayer player = playerService.GetOnlinePlayer(unturnedPlayer);
 
-        if (!vehicle.TryGetComponent(out VehicleComponent vehComp))
-        {
-            vehComp = vehicle.gameObject.AddComponent<VehicleComponent>();
-            vehComp.Initialize(vehicle, serviceProvider.Resolve<IServiceProvider>());
-        }
+        WarfareVehicle warfareVehicle = vehicle.transform.GetComponent<WarfareVehicleComponent>().WarfareVehicle;
 
         EnterVehicleRequested args = new EnterVehicleRequested
         {
             Player = player,
-            Component = vehComp,
-            Vehicle = vehicle,
+            Vehicle = warfareVehicle,
             Seat = seat
         };
 
@@ -129,19 +125,20 @@ internal class InteractableVehicleDecideSeat : IHarmonyPatch
                 || args.Player.UnturnedPlayer.life.isDead
                 || args.Player.UnturnedPlayer.equipment.isBusy
                 || args.Player.UnturnedPlayer.equipment.HasValidUseable && !args.Player.UnturnedPlayer.equipment.IsEquipAnimationFinished
-                || args.Vehicle.isDead
-                || args.Vehicle.isExploded
+                || args.Vehicle.Vehicle.isDead
+                || args.Vehicle.Vehicle.isExploded
                 || args.Player.UnturnedPlayer.movement.getVehicle() != null
-                || args.Vehicle.passengers[args.Seat].player != null
-                || (args.Vehicle.transform.position - args.Player.Position).sqrMagnitude > 15 * 15
-                || !args.Vehicle.checkEnter(args.Player.UnturnedPlayer))
+                || args.Vehicle.Vehicle.passengers[args.Seat].player != null
+                || (args.Vehicle.Vehicle.transform.position - args.Player.Position).sqrMagnitude > 15 * 15
+                || !args.Vehicle.Vehicle.checkEnter(args.Player.UnturnedPlayer))
             {
                 return;
             }
-
-            EnterVehicle(args.Vehicle, (byte)args.Seat, args.Player.UnturnedPlayer);
+            
+            EnterVehicle(args.Vehicle.Vehicle, (byte)args.Seat, args.Player.UnturnedPlayer);
         });
 
+        seat = (byte)args.Seat;
         return shouldAllow;
     }
 

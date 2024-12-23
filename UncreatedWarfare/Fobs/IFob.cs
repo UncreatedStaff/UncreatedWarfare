@@ -29,31 +29,7 @@ public interface IFob : IDeployable, IComparable<IFob>
     Team Team { get; }
 
     /// <summary>
-    /// Destroy the FOB and save any data relating to it.
+    /// Whether the specified player should be able to see this fob on their FOB HUD.
     /// </summary>
-    UniTask DestroyAsync(CancellationToken token = default);
-
-    /// <summary>
-    /// Add an item to a FOB.
-    /// </summary>
-    /// <exception cref="NotSupportedException"/>
-    UniTask AddItemAsync(IFobEntity fobItem, CancellationToken token = default);
-
-    /// <summary>
-    /// Upgrade an item built on a FOB to it's next state or level.
-    /// </summary>
-    /// <exception cref="NotSupportedException"/>
-    UniTask BuildItemAsync(IFobEntity fobItem, CancellationToken token = default);
-}
-
-/// <summary>
-/// A FOB that can store resources.
-/// </summary>
-public interface IResourceFob : IFob
-{
-    /// <summary>
-    /// Number of Supplies on the FOB.
-    /// </summary>
-    int BuildCount { get; }
-    int AmmoCount { get; }
+    bool IsVibileToPlayer(WarfarePlayer player);
 }

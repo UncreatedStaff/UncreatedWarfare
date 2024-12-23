@@ -71,7 +71,7 @@ using Uncreated.Warfare.Util.Timing;
 using Uncreated.Warfare.Vehicles;
 using Uncreated.Warfare.Vehicles.Events;
 using Uncreated.Warfare.Vehicles.Events.Vehicles;
-using Uncreated.Warfare.Vehicles.Info;
+using Uncreated.Warfare.Vehicles.WarfareVehicles;
 using Uncreated.Warfare.Vehicles.Spawners;
 using Uncreated.Warfare.Vehicles.UI;
 using Uncreated.Warfare.Zones;
@@ -458,10 +458,6 @@ public sealed class WarfareModule
         bldr.RegisterType<TipService>()
             .AsImplementedInterfaces().AsSelf()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
-
-        // event handlers
-        bldr.RegisterType<VehicleSpawnedHandler>()
-            .AsImplementedInterfaces();
         
         bldr.RegisterType<SendChatMutedEventHandler>()
             .AsImplementedInterfaces();
@@ -576,7 +572,7 @@ public sealed class WarfareModule
             .SingleInstance();
 
         // Stats
-        bldr.RegisterType<EventHandlerDestroyVehicle>()
+        bldr.RegisterType<PointsRewardsEvents>()
             .AsImplementedInterfaces();
 
         bldr.RegisterType<MySqlPointsStore>()
@@ -695,7 +691,7 @@ public sealed class WarfareModule
         bldr.RegisterType<ShoveableTweaks>()
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
-        bldr.RegisterType<ClaimToDeployTweaks>()
+        bldr.RegisterType<ClaimToRearmTweaks>()
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
         bldr.RegisterType<GuidedMissileLaunchTweaks>()

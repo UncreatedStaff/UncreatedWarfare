@@ -1,7 +1,7 @@
 ﻿using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Languages;
 
-namespace Uncreated.Warfare.Vehicles.Info;
+namespace Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 [Translatable("Vehicle Type", Description = "Variant of vehicle, influences death messages, XP toasts, and spotting icons.")]
 public enum VehicleType

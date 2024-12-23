@@ -2,10 +2,12 @@
 using System.Collections.Generic;
 using System.Text;
 using Uncreated.Warfare.Util;
-using Uncreated.Warfare.Vehicles.Info;
+using Uncreated.Warfare.Util.DamageTracking;
 using Uncreated.Warfare.Vehicles.Spawners;
+using Uncreated.Warfare.Vehicles.WarfareVehicles.Damage;
+using Uncreated.Warfare.Vehicles.WarfareVehicles.Transport;
 
-namespace Uncreated.Warfare.Vehicles.Vehicle
+namespace Uncreated.Warfare.Vehicles.WarfareVehicles
 {
     public class WarfareVehicle : IDisposable
     {
@@ -13,6 +15,8 @@ namespace Uncreated.Warfare.Vehicles.Vehicle
         public WarfareVehicleComponent Component { get; }
         public WarfareVehicleInfo Info { get; }
         public VehicleSpawner? Spawn { get; private set; }
+        public VehicleDamageTracker DamageTracker { get; }
+        public TranportTracker TranportTracker { get; }
         public Vector3 Position => Vehicle.transform.position;
         public Quaternion Rotation => Vehicle.transform.rotation;
         public WarfareVehicle(InteractableVehicle interactableVehicle, WarfareVehicleInfo info)
@@ -21,6 +25,8 @@ namespace Uncreated.Warfare.Vehicles.Vehicle
             Info = info;
             Component = interactableVehicle.transform.GetOrAddComponent<WarfareVehicleComponent>();
             Component.Init(this);
+            DamageTracker = new VehicleDamageTracker();
+            TranportTracker = new TranportTracker();
         }
 
         public void Dispose()
@@ -61,6 +67,16 @@ namespace Uncreated.Warfare.Vehicles.Vehicle
             }
 
             Spawn = spawn;
+        }
+
+        public override bool Equals(object? obj)
+        {
+            return obj is WarfareVehicle vehicle && Vehicle.GetNetId().Equals(vehicle.Vehicle.GetNetId());
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(Vehicle.GetNetId());
         }
     }
 }

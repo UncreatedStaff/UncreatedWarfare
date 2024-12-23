@@ -21,7 +21,7 @@ public interface ITeamManager<out TTeam> where TTeam : Team
     TTeam? FindTeam([System.Diagnostics.CodeAnalysis.NotNullWhen(true)] string? teamSearch);
 
     /// <summary>
-    /// Will return the default team if <paramref name="groupId"/> doesn't correspond to a team, otherwise an invalid team.
+    /// Will return the default team if <paramref name="groupId"/> doesn't correspond to a team, otherwise the "no team" default.
     /// </summary>
     TTeam GetTeam(CSteamID groupId);
 

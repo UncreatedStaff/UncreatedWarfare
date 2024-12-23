@@ -9,6 +9,7 @@ using Uncreated.Warfare.Events.Models.Fobs;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.FOBs.Entities;
+using Uncreated.Warfare.FOBs.Rallypoints;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Services;
@@ -32,7 +33,7 @@ public partial class FobManager : ILayoutHostedService
     /// <summary>
     /// Items placed by players that aren't linked to a specific FOB.
     /// </summary>
-    public IReadOnlyList<IFobEntity> Entities { get; }
+    public IReadOnlyList<IFobEntity> Entities => _entities.AsReadOnly();
 
     /// <summary>
     /// List of all FOBs in the world.
@@ -50,7 +51,6 @@ public partial class FobManager : ILayoutHostedService
         _entities = new TrackingList<IFobEntity>(32);
 
         Fobs = new ReadOnlyTrackingList<IFob>(_fobs);
-        Entities = new ReadOnlyTrackingList<IFobEntity>(_entities);
     }
 
     UniTask ILayoutHostedService.StartAsync(CancellationToken token)
@@ -63,15 +63,13 @@ public partial class FobManager : ILayoutHostedService
         return UniTask.CompletedTask;
     }
 
-    public BuildableFob RegisterFob(IBuildable fobBuildable)
+    public BunkerFob RegisterBunkerFob(IBuildable fobBuildable)
     {
         GridLocation griddy = new GridLocation(fobBuildable.Position);
         string fobName = $"{NATOPhoneticAlphabetHelper.GetProperCase(griddy.LetterX)}-{griddy.Y + 1}";
 
-        BuildableFob fob = new BuildableFob(_serviceProvider, fobName, fobBuildable);
-        _fobs.Add(fob);
-        _logger.LogDebug("Registered new FOB: " + fob);
-        _ = WarfareModule.EventDispatcher.DispatchEventAsync(new FobRegistered { Fob = fob });
+        BunkerFob fob = new BunkerFob(_serviceProvider, fobName, fobBuildable);
+        RegisterFob(fob);
         return fob;
     }
     public bool DeregisterFob(IFob fob)
@@ -81,8 +79,14 @@ public partial class FobManager : ILayoutHostedService
             return false;
         _logger.LogDebug("Deregistered FOB: " + fob);
         _ = WarfareModule.EventDispatcher.DispatchEventAsync(new FobDeregistered { Fob = fob });
-        fob.DestroyAsync();
         return true;
+    }
+    public IFob RegisterFob(IFob fob)
+    {
+        _fobs.Add(fob);
+        _logger.LogDebug("Registered new FOB: " + fob);
+        _ = WarfareModule.EventDispatcher.DispatchEventAsync(new FobRegistered { Fob = fob });
+        return fob;
     }
     public void RegisterFobEntity(IFobEntity entity)
     {
@@ -98,29 +102,29 @@ public partial class FobManager : ILayoutHostedService
         _logger.LogDebug("Deregistered FOB Entity: " + entity);
         return true;
     }
-    public FobType? FindFob<FobType>(IBuildable matchingBuildable) where FobType : BasePlayableFob
+    public BuildableFobType? FindBuildableFob<BuildableFobType>(IBuildable matchingBuildable) where BuildableFobType : IBuildableFob
     {
-        return _fobs.OfType<FobType>().FirstOrDefault(f => f.Buildable.Equals(matchingBuildable));
+        return _fobs.OfType<BuildableFobType>().FirstOrDefault(f => f.Buildable.Equals(matchingBuildable));
     }
-    public BuildableFob? FindNearestBuildableFob(Team team, Vector3 position, bool includeUnbuilt = true)
+    public BunkerFob? FindNearestBuildableFob(Team team, Vector3 position, bool includeUnbuilt = true)
     {
-        return _fobs.OfType<BuildableFob>().FirstOrDefault(f =>
+        return _fobs.OfType<BunkerFob>().FirstOrDefault(f =>
             f.Team == team &&
             MathUtility.WithinRange(position, f.Position, f.EffectiveRadius) &&
             (includeUnbuilt ? true : f.IsBuilt)
         );
     }
-    public BuildableFob? FindNearestBuildableFob(CSteamID teamGroup, Vector3 position, bool includeUnbuilt = true)
+    public BunkerFob? FindNearestBuildableFob(CSteamID teamGroup, Vector3 position, bool includeUnbuilt = true)
     {
-        return _fobs.OfType<BuildableFob>().FirstOrDefault(f =>
+        return _fobs.OfType<BunkerFob>().FirstOrDefault(f =>
             f.Team.GroupId == teamGroup &&
             MathUtility.WithinRange(position, f.Position, f.EffectiveRadius) &&
             (includeUnbuilt ? true : f.IsBuilt)
         );
     }
-    public IEnumerable<BuildableFob> FriendlyBuildableFobs(Team team, bool includeUnbuilt = true)
+    public IEnumerable<BunkerFob> FriendlyBuildableFobs(Team team, bool includeUnbuilt = true)
     {
-        return _fobs.OfType<BuildableFob>().Where(f =>
+        return _fobs.OfType<BunkerFob>().Where(f =>
             f.Team == team &&
             (includeUnbuilt ? true : f.IsBuilt)
         );

@@ -1,14 +1,15 @@
 ﻿using Uncreated.Warfare.Fobs;
+using Uncreated.Warfare.FOBs;
 
 namespace Uncreated.Warfare.Events.Models.Fobs;
 
 /// <summary>
-/// Event listener args which fires after the main structure of any <see cref="BasePlayableFob"/> subclass is destroyed.
+/// Event listener args which fires after the main structure of any <see cref="IBuildableFob"/> subclass is destroyed.
 /// </summary>
 public class FobDestroyed
 {
     /// <summary>
-    /// The <see cref="BasePlayableFob"/> that was destroyed.
+    /// The <see cref="IBuildableFob"/> that was destroyed.
     /// </summary>
-    public required BasePlayableFob Fob { get; init; }
+    public required IBuildableFob Fob { get; init; }
 }

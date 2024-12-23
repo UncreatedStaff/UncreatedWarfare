@@ -1,6 +1,6 @@
 ﻿using System.Linq;
 
-namespace Uncreated.Warfare.Vehicles.Info;
+namespace Uncreated.Warfare.Vehicles.WarfareVehicles;
 public static class WarfareVehicleExtensions
 {
     public static bool CanTransport(this WarfareVehicleInfo vehicleInfo, InteractableVehicle vehicle)

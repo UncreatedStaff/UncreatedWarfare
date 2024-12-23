@@ -1,5 +1,7 @@
 ﻿using Uncreated.Warfare.Fobs;
+using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.FOBs.SupplyCrates;
+using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Events.Models.Fobs;
 
@@ -15,7 +17,7 @@ public class FobSuppliesChanged
     /// <summary>
     /// The number of supplies that were added (positive) or removed (negative).
     /// </summary>
-    public required int AmountDelta { get; init; }
+    public required float AmountDelta { get; init; }
     /// <summary>
     /// The type of supplies that were added or removed.
     /// </summary>
@@ -24,4 +26,8 @@ public class FobSuppliesChanged
     /// The reason the supplies were added or removed.
     /// </summary>
     public required SupplyChangeReason ChangeReason { get; init; }
+    /// <summary>
+    /// The player who resupplied this fob, if this event was invoked due to resupplying a fob.
+    /// </summary>
+    public required WarfarePlayer? Resupplier { get; init; }
 }

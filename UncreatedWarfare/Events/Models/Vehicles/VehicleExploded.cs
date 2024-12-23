@@ -1,6 +1,7 @@
 ﻿using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.Events.Models.Vehicles;
 public class VehicleExploded
@@ -8,13 +9,8 @@ public class VehicleExploded
     /// <summary>
     /// The actual vehicle that was destroyed.
     /// </summary>
-    public required InteractableVehicle Vehicle { get; init; }
+    public required WarfareVehicle Vehicle { get; init; }
     
-    /// <summary>
-    /// The <see cref="VehicleComponent"/> data of the vehicle that was destroyed.
-    /// </summary>
-    public required VehicleComponent Component { get; init; }
-
     /// <summary>
     /// The owner (requester usually) of this vehicle.
     /// </summary>
@@ -43,7 +39,7 @@ public class VehicleExploded
     /// <summary>
     /// The vehicle the instigator was in when this vehicle was destroyed.
     /// </summary>
-    public required InteractableVehicle? InstigatorVehicle { get; init; }
+    public required WarfareVehicle? InstigatorVehicle { get; init; }
 
     /// <summary>
     /// The last player to drive this vehicle if they're online.

@@ -1,15 +1,18 @@
 ﻿using System;
 using System.Linq;
+using Uncreated.Warfare.Events.Models;
+using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Events.Models.Squads;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.List;
 
 namespace Uncreated.Warfare.Squads;
 
-public class SquadManager
+public class SquadManager : IEventListener<PlayerTeamChanged>
 {
     public const int MaxSquadCount = 8;
 
@@ -73,13 +76,25 @@ public class SquadManager
 
     public Squad CreateSquad(WarfarePlayer squadLeader, string squadName)
     {
-        Squad squad = new Squad(squadLeader.Team, squadName, this);
-        // moved this so SquadCreated runs before SquadMemberJoined
-        _ = WarfareModule.EventDispatcher.DispatchEventAsync(new SquadCreated { Squad = squad, Player = squadLeader });
-        squad.AddMember(squadLeader);
+        Squad squad = new Squad(squadLeader.Team, squadName, GetSquadIdentificationNumber(squadLeader.Team), this);
         _squads.Add(squad);
+        _ = WarfareModule.EventDispatcher.DispatchEventAsync(new SquadCreated { Squad = squad, Player = squadLeader });
+        // note: SquadCreated event must run before SquadMemberJoined
+        squad.AddMember(squadLeader);
         _logger.LogDebug("Created new Squad: " + squad);
         return squad;
+    }
+    private int GetSquadIdentificationNumber(Team team)
+    {
+        int identificationNumber = 1;
+        foreach (var squad in Squads.Where(s => s.Team == team).OrderBy(s => s.TeamIdentificationNumber))
+        {
+            if (squad.TeamIdentificationNumber != identificationNumber)
+                return identificationNumber;
+
+            identificationNumber++;
+        }
+        return identificationNumber;
     }
 
     public bool DisbandSquad(Squad squad)
@@ -93,5 +108,11 @@ public class SquadManager
         _ = WarfareModule.EventDispatcher.DispatchEventAsync(new SquadDisbanded { Squad = squad });
         _logger.LogDebug("Disbanded squad: " + squad);
         return true;
+    }
+
+    public void HandleEvent(PlayerTeamChanged e, IServiceProvider serviceProvider)
+    {
+        if (e.Player.IsInSquad())
+            e.Player.GetSquad()!.RemoveMember(e.Player);
     }
 }

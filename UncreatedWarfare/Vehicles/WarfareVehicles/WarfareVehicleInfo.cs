@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.FileProviders;
 using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Configuration;
@@ -9,7 +10,7 @@ using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Translations.ValueFormatters;
 
-namespace Uncreated.Warfare.Vehicles.Info;
+namespace Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 [CannotApplyEqualityOperator]
 public class WarfareVehicleInfo : IEquatable<WarfareVehicleInfo>, ITranslationArgument
@@ -22,11 +23,11 @@ public class WarfareVehicleInfo : IEquatable<WarfareVehicleInfo>, ITranslationAr
 
     public IAssetLink<VehicleAsset> VehicleAsset { get; set; }
     public VehicleType Type { get; set; }
-    public Branch Branch { get; set; }
-    public Class Class { get; set; }
-    public int TicketCost { get; set; }
-    public TimeSpan RespawnTime { get; set; }
-    public TimeSpan Cooldown { get; set; }
+    public Branch Branch { get; set; } = Branch.Default;
+    public Class Class { get; set; } = Class.None;
+    public int TicketCost { get; set; } = 0;
+    public TimeSpan RespawnTime { get; set; } = TimeSpan.Zero;
+    public TimeSpan Cooldown { get; set; } = TimeSpan.Zero;
     public Color32 PaintColor { get; set; }
 
     /// <remarks>
@@ -42,19 +43,18 @@ public class WarfareVehicleInfo : IEquatable<WarfareVehicleInfo>, ITranslationAr
     public IReadOnlyList<UnlockCost> UnlockCosts { get; set; } = Array.Empty<UnlockCost>();
     public IReadOnlyList<TrunkItem> Trunk { get; set; } = Array.Empty<TrunkItem>();
     public IReadOnlyList<RequestItem> RequestItems { get; set; } = Array.Empty<RequestItem>();
-    //public IReadOnlyList<Delay> Delays { get; set; } = Array.Empty<Delay>();
 
     public class CrewInfo
     {
         public IReadOnlyList<int> Seats { get; set; } = Array.Empty<int>();
-        public bool Invincible { get; set; }
-        public bool PassengersInvincible { get; set; }
+        public bool Invincible { get; set; } = false;
+        public bool PassengersInvincible { get; set; } = false;
         public int? MaxAllowedCrew { get; set; }
     }
 
     public class RearmInfo
     {
-        public int AmmoConsumed { get; set; }
+        public int AmmoConsumed { get; set; } = 1;
         public IReadOnlyList<IAssetLink<ItemAsset>> Items { get; set; } = Array.Empty<IAssetLink<ItemAsset>>();
     }
 
@@ -150,5 +150,26 @@ public class WarfareVehicleInfo : IEquatable<WarfareVehicleInfo>, ITranslationAr
     {
         // todo
         return ToString();
+    }
+
+    public static WarfareVehicleInfo CreateDefault(VehicleAsset vehicleAsset)
+    {
+        return new WarfareVehicleInfo
+        {
+            DependantInfo = null,
+            Configuration = new ConfigurationBuilder().Build(),
+            VehicleAsset = AssetLink.Create(vehicleAsset),
+            Type = VehicleType.None,
+            Branch = Branch.Default,
+            Class = Class.None,
+            TicketCost = 0,
+            RespawnTime = TimeSpan.Zero,
+            Cooldown = TimeSpan.Zero,
+            PaintColor = Color.clear,
+            ShortName = vehicleAsset.FriendlyName,
+            Crew = new CrewInfo(),
+            Rearm = new RearmInfo(),
+            Abandon = new AbandonInfo()
+        };
     }
 }

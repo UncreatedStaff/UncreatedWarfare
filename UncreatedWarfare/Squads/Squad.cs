@@ -15,17 +15,22 @@ public class Squad : ITranslationArgument
     private readonly List<WarfarePlayer> _members;
     private readonly SquadManager _squadManager;
     public string Name { get; }
+    /// <summary>
+    /// A number starting at 1 that uniquely identifies the squad among the squads of a specific team.
+    /// </summary>
+    public int TeamIdentificationNumber { get; }
     public Team Team { get; }
     public IReadOnlyList<WarfarePlayer> Members { get; }
     public WarfarePlayer Leader => _members[0];
     public bool IsFull => _members.Count >= MaxMembers;
     public bool IsLocked { get; private set; }
 
-    internal Squad(Team team, string squadName, SquadManager squadManager)
+    internal Squad(Team team, string squadName, int squadNumber, SquadManager squadManager)
     {
         _members = new List<WarfarePlayer>();
         Members = _members.AsReadOnly();
         Name = squadName;
+        TeamIdentificationNumber = squadNumber;
         Team = team;
         IsLocked = false;
         _squadManager = squadManager;
@@ -133,6 +138,6 @@ public class Squad : ITranslationArgument
 
     public override string ToString()
     {
-        return $"{Name}@{Team.Faction.Name}";
+        return $"{TeamIdentificationNumber}-{Name}@{Team.Faction.Name}({Members.Count}/{MaxMembers})";
     }
 }

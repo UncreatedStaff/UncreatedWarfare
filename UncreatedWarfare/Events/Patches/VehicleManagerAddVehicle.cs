@@ -4,6 +4,8 @@ using System;
 using System.Reflection;
 using Uncreated.Warfare.Events.Models.Vehicles;
 using Uncreated.Warfare.Patches;
+using Uncreated.Warfare.Vehicles;
+using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.Events.Patches;
 
@@ -82,9 +84,14 @@ internal class VehicleManagerAddVehicle : IHarmonyPatch
         if (__result == null)
             return;
 
+        VehicleService? vehicleService = WarfareModule.Singleton.ServiceProvider.Resolve<VehicleService>();
+        if (vehicleService == null)
+            return;
+
+        WarfareVehicle warfareVehicle = vehicleService.RegisterWarfareVehicle(__result);
         VehicleSpawned args = new VehicleSpawned
         {
-            Vehicle = __result
+            Vehicle = warfareVehicle
         };
 
         _ = WarfareModule.EventDispatcher.DispatchEventAsync(args);

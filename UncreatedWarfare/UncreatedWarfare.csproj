@@ -129,6 +129,7 @@
 
   <ItemGroup>
     <None Include="..\.editorconfig" Link=".editorconfig" />
+    <None Include="Stats\EventHandlers\PointsRewardsEvents.cs" />
   </ItemGroup>
 
   <!-- ReSharper disable VulnerablePackage (using older versions of EF and STJ) -->

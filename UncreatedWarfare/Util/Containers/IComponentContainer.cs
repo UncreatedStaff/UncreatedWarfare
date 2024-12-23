@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using Uncreated.Warfare.Util.List;
 
 namespace Uncreated.Warfare.Util.Containers;
@@ -52,7 +53,7 @@ public static class ComponentContainerExtensions
     /// Get the given component type from a list of components.
     /// </summary>
     /// <returns><see langword="false"/> if not found, otherwise <see langword="true"/>.</returns>
-    public static bool TryGetFromContainer<T>(this IComponentContainer<T> container, out T? result) where T : class
+    public static bool TryGetFromContainer<T>(this IComponentContainer<T> container, [NotNullWhen(true)] out T? result) where T : class
     {
         result = container.ComponentOrNull<T>();
         return result != null;

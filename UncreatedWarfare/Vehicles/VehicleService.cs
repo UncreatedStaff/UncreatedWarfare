@@ -11,9 +11,8 @@ using Uncreated.Warfare.Events.Models.Vehicles;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.List;
-using Uncreated.Warfare.Vehicles.Info;
+using Uncreated.Warfare.Vehicles.WarfareVehicles;
 using Uncreated.Warfare.Vehicles.Spawners;
-using Uncreated.Warfare.Vehicles.Vehicle;
 
 namespace Uncreated.Warfare.Vehicles
 {
@@ -56,7 +55,7 @@ namespace Uncreated.Warfare.Vehicles
             WarfareVehicleInfo? info = _vehicleInfoStore.GetVehicleInfo(vehicle.asset);
 
             if (info == null)
-                throw new InvalidOperationException($"Cannot register vehicle {vehicle.name} because it does not have a defained WarfareVehicleInfo.");
+                info = WarfareVehicleInfo.CreateDefault(vehicle.asset);
 
             WarfareVehicle warfareVehicle = new WarfareVehicle(vehicle, info);
             bool alreadyExists = Vehicles.AddIfNotExists(warfareVehicle);
@@ -65,6 +64,10 @@ namespace Uncreated.Warfare.Vehicles
             else
                 _logger.LogDebug($"Registered vehicle: {warfareVehicle.Info.VehicleAsset.ToDisplayString()}");
             return warfareVehicle;
+        }
+        public WarfareVehicle? GetVehicle(InteractableVehicle vehicle)
+        {
+            return Vehicles.FirstOrDefault(f => f.Vehicle.GetNetId() == vehicle.GetNetId());
         }
         public WarfareVehicle? DeregisterWarfareVehicle(InteractableVehicle vehicle)
         {
@@ -147,9 +150,9 @@ namespace Uncreated.Warfare.Vehicles
             if (veh == null)
                 throw new Exception($"Failed to spawn vehicle {vehicle.ToDisplayString()} due to vanilla code, possible a misconfigured vehicle.");
 
-            await UniTask.NextFrame(); // wait for the vehicle to be registered in the vehicle service
-
-            WarfareVehicle warfareVehicle = RegisterWarfareVehicle(veh);
+            WarfareVehicle? warfareVehicle = GetVehicle(veh);
+            if (warfareVehicle == null)
+                throw new Exception($"Vehicle {vehicle.ToDisplayString()} was spawned successfully, but is not registered in the VehicleService.");
 
             if (warfareVehicle.Info is not { Trunk.Count: > 0 })
                 return warfareVehicle;
@@ -263,11 +266,11 @@ namespace Uncreated.Warfare.Vehicles
         }
         public void HandleEvent(VehicleSpawned e, IServiceProvider serviceProvider)
         {
-            RegisterWarfareVehicle(e.Vehicle);
+            RegisterWarfareVehicle(e.Vehicle.Vehicle);
         }
         public void HandleEvent(VehicleDespawned e, IServiceProvider serviceProvider)
         {
-            DeregisterWarfareVehicle(e.Vehicle);
+            DeregisterWarfareVehicle(e.Vehicle.Vehicle);
         }
     }
 }

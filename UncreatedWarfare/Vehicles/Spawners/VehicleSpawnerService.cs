@@ -13,7 +13,7 @@ using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util.List;
 using Uncreated.Warfare.Util.Timing;
-using Uncreated.Warfare.Vehicles.Info;
+using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.Vehicles.Spawners
 {

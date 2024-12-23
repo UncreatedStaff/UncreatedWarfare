@@ -36,7 +36,7 @@ public class FobTranslations : PropertiesTranslationCollection
     public readonly Translation BuildEnemy = new Translation("<#ffab87>You may not build on an enemy FOB.");
 
     [TranslationData("Indicates that a buildable needs more building supplies to be built.", "Progress shovel hits", "Required shovel hits")]
-    public readonly Translation<int, int> BuildMissingSupplies = new Translation<int, int>("<#ffab87>You're missing nearby building supplies! <#c$build$>Build required: <#e0d8b8>{0}/{1}</color></color>.");
+    public readonly Translation<float, float> BuildMissingSupplies = new Translation<float, float>("<#ffab87>You're missing nearby building supplies! <#f3ce82>Build required: <#e0d8b8>{0}/{1}</color></color>.");
 
     [TranslationData("Indicates that a buildable can only be placed nearby a supply crate.")]
     public readonly Translation BuildFOBNoSupplyCrate = new Translation("<#ffab87>You must be near a friendly <#cedcde>SUPPLY CRATE</color> in order to build a FOB.");

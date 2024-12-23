@@ -1,11 +1,13 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Stripe;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Flags;
+using Uncreated.Warfare.Events.Models.Fobs;
 using Uncreated.Warfare.Exceptions;
 using Uncreated.Warfare.Layouts.Phases.Flags;
 using Uncreated.Warfare.Layouts.Teams;
@@ -22,8 +24,9 @@ public abstract class DualSidedFlagService :
     IEventListener<FlagCaptured>,
     IEventListener<FlagNeutralized>
 {
+    private const double TickInternalSeconds = 4;
     private readonly ILoopTickerFactory _loopTickerFactory;
-    private ILoopTicker? _loopTicker;
+    private ILoopTicker? _evaluationTicker;
     protected readonly ILogger Logger;
     protected readonly IServiceProvider ServiceProvider;
     protected readonly ITeamManager<Team> TeamManager;
@@ -74,11 +77,12 @@ public abstract class DualSidedFlagService :
         await UniTask.SwitchToMainThread(token);
         SetupFlags();
 
-        TimeSpan tickSpeed = Configuration.GetValue("TickSpeed", TimeSpan.FromSeconds(4d));
+        TimeSpan tickSpeed = Configuration.GetValue("TickSpeed", TimeSpan.FromSeconds(TickInternalSeconds));
 
         RecalculateObjectives();
+        // invoke objectivesChanged
 
-        _loopTicker = _loopTickerFactory.CreateTicker(tickSpeed, tickSpeed, true, OnTick);
+        _evaluationTicker = _loopTickerFactory.CreateTicker(tickSpeed, tickSpeed, true, OnTick);
     }
 
     public virtual UniTask StopAsync(CancellationToken token)
@@ -92,7 +96,7 @@ public abstract class DualSidedFlagService :
         ActiveFlags = Array.Empty<FlagObjective>();
         IsActive = false;
 
-        Interlocked.Exchange(ref _loopTicker, null)?.Dispose();
+        Interlocked.Exchange(ref _evaluationTicker, null)?.Dispose();
 
         return UniTask.CompletedTask;
     }
@@ -185,9 +189,24 @@ public abstract class DualSidedFlagService :
             }
             else if (contestResult.State == FlagContestResult.ContestState.Contested)
                 flag.MarkContested(true);
+
+            if (timeSinceStart.Seconds % (TickInternalSeconds * 4) == 0 && 
+                !(contestResult.State == FlagContestResult.ContestState.NotObjective || contestResult.State == FlagContestResult.ContestState.NoPlayers))
+            {
+                SlowTickObjective(flag, contestResult);
+            }
         }
     }
+    private void SlowTickObjective(FlagObjective flag, FlagContestResult contestResult)
+    {
+        ObjectiveSlowTick args = new ObjectiveSlowTick
+        {
+            Flag = flag,
+            ContestResult = contestResult
+        };
 
+        _ = WarfareModule.EventDispatcher.DispatchEventAsync(args);
+    }
     void IEventListener<FlagNeutralized>.HandleEvent(FlagNeutralized e, IServiceProvider serviceProvider)
     {
         RecalculateObjectives();

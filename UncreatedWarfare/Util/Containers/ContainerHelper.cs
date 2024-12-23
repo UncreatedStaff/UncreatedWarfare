@@ -1,5 +1,8 @@
-﻿using System;
+﻿using Org.BouncyCastle.Asn1.Ocsp;
+using System;
 using System.Collections.Generic;
+using System.Linq;
+using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.Util.Containers;
 
@@ -14,8 +17,11 @@ public static class ContainerHelper
     {
         GameThread.AssertCurrent();
 
-        if (transform.TryGetComponent(out T? comp))
-            return comp;
+        foreach (var child in transform.GetComponents<MonoBehaviour>()) // tryGetComponent doesn't work with interfaces
+        {
+            if (child is T t)
+                return t;
+        }
 
         try
         {
@@ -23,10 +29,13 @@ public static class ContainerHelper
 
             for (int i = 0; i < TempContainers.Count; ++i)
             {
+                if (TempContainers[i] is T c)
+                    return c;
+
                 if (TempContainers[i] is not IComponentContainer<T> container)
                     continue;
                 
-                comp = container.ComponentOrNull<T>();
+                T? comp = container.ComponentOrNull<T>();
                 if (comp != null)
                     return comp;
             }
@@ -34,7 +43,7 @@ public static class ContainerHelper
             Type type = typeof(T);
             for (int i = 0; i < TempContainers.Count; ++i)
             {
-                comp = (T?)TempContainers[i].ComponentOrNull(type);
+                T? comp = (T?)TempContainers[i].ComponentOrNull(type);
                 if (comp != null)
                     return comp;
             }

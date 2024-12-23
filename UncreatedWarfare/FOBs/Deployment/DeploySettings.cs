@@ -12,7 +12,7 @@ public struct DeploySettings
     /// Amount of time to wait until deploying.
     /// </summary>
     /// <remarks>Defaults to using <see cref="IDeployable.GetDelay"/>.</remarks>
-    public TimeSpan? Delay { get; set; } = TimeSpan.FromSeconds(5);
+    public TimeSpan? Delay { get; set; }
 
     /// <summary>
     /// If the player can move while waiting.

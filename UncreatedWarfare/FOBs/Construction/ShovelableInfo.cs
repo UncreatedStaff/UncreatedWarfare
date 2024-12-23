@@ -1,7 +1,9 @@
 ﻿using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.ValueFormatters;
 
 namespace Uncreated.Warfare.FOBs.Construction;
-public class ShovelableInfo
+public class ShovelableInfo : ITranslationArgument
 {
     public required IAssetLink<ItemPlaceableAsset> Foundation { get; set; }
     public required ShovelableType ConstuctionType { get; set; }
@@ -19,5 +21,13 @@ public class ShovelableInfo
                $"  CompletedStructure: {(CompletedStructure?.ToString() ?? "None")}\n" +
                $"  CompletedEffect: {(CompletedEffect?.ToString() ?? "None")}\n" +
                $"  Emplacement: {(Emplacement?.ToString() ?? "None")}";
+    }
+
+    public string Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
+    {
+        if (Emplacement != null)
+            return Emplacement.Vehicle.GetAssetOrFail().FriendlyName;
+        
+        return CompletedStructure.GetAssetOrFail().FriendlyName;
     }
 }
