@@ -12,7 +12,7 @@ using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Util;
-using Uncreated.Warfare.Vehicles.Vehicle;
+using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.Squads.Spotted;
 

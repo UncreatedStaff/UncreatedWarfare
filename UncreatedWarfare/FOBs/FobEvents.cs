@@ -16,6 +16,7 @@ using Uncreated.Warfare.FOBs.Entities;
 using Uncreated.Warfare.FOBs.Rallypoints;
 using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Layouts.Teams;
+using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Timing;
 
@@ -25,14 +26,16 @@ public partial class FobManager :
     IEventListener<PlaceBarricadeRequested>,
     IEventListener<BarricadeDestroyed>,
     IEventListener<ItemDropped>,
+    IEventListener<VehicleSpawned>,
     IEventListener<VehicleDespawned>,
-    IEventListener<TriggerTrapRequested>
+    IEventListener<TriggerTrapRequested>,
+    IEventListener<BarricadePreDamaged>
 {
     private bool IsTrapTooNearFobSpawn(in Vector3 pos)
     {
         const float maxDistance = 10;
 
-        foreach (BuildableFob fob in Fobs.OfType<BuildableFob>())
+        foreach (BunkerFob fob in Fobs.OfType<BunkerFob>())
         {
             if (MathUtility.WithinRange2D(in pos, fob.SpawnPosition, maxDistance))
             {
@@ -61,11 +64,6 @@ public partial class FobManager :
         if (IsTrapTooNearFobSpawn(in pos))
             e.Cancel();
     }
-
-    IEventListener<VehicleSpawned>,
-    IEventListener<VehicleDespawned>,
-    IEventListener<BarricadePreDamaged>
-{
     async UniTask IAsyncEventListener<BarricadePlaced>.HandleEventAsync(BarricadePlaced e, IServiceProvider serviceProvider, CancellationToken token)
     {
         await UniTask.NextFrame();

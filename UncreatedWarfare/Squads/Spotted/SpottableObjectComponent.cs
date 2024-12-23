@@ -13,8 +13,7 @@ using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Util;
-using Uncreated.Warfare.Vehicles.Info;
-using Uncreated.Warfare.Vehicles.Vehicle;
+using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.Squads.Spotted;
 
