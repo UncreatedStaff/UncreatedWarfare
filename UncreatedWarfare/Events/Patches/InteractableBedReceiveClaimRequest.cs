@@ -1,5 +1,6 @@
 ﻿using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
+using HarmonyLib;
 using System.Reflection;
 using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Patches;
@@ -9,11 +10,11 @@ using Uncreated.Warfare.Players.Management;
 namespace Uncreated.Warfare.Events.Patches;
 
 [UsedImplicitly]
-internal class InteractableBedReceiveClaimRequest : IHarmonyPatch
+internal sealed class InteractableBedReceiveClaimRequest : IHarmonyPatch
 {
     private static MethodInfo? _target;
 
-    void IHarmonyPatch.Patch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Patch(ILogger logger, Harmony patcher)
     {
         _target = typeof(InteractableBed).GetMethod(nameof(InteractableBed.ReceiveClaimRequest), BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
 
@@ -32,7 +33,7 @@ internal class InteractableBedReceiveClaimRequest : IHarmonyPatch
         );
     }
 
-    void IHarmonyPatch.Unpatch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Unpatch(ILogger logger, Harmony patcher)
     {
         if (_target == null)
             return;

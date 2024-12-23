@@ -31,7 +31,7 @@ namespace Uncreated.Warfare.Vehicles.WarfareVehicles
 
         public void Dispose()
         {
-            GameObject.Destroy(Component);
+            Object.Destroy(Component);
         }
 
         internal void UnlinkFromSpawn(VehicleSpawner spawn)

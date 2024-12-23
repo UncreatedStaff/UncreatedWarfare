@@ -5,5 +5,6 @@ public enum ZoneType
     MainBase,
     AntiMainCampArea,
     Lobby,
-    Other
+    Other,
+    WarRoom
 }

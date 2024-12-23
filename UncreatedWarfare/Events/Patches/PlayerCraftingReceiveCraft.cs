@@ -1,15 +1,16 @@
 ﻿using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
+using HarmonyLib;
 using System.Reflection;
 using Uncreated.Warfare.Patches;
 
 namespace Uncreated.Warfare.Events.Patches;
 
 [UsedImplicitly]
-internal class PlayerCraftingReceiveCraft : IHarmonyPatch
+internal sealed class PlayerCraftingReceiveCraft : IHarmonyPatch
 {
     private static MethodInfo? _target;
-    void IHarmonyPatch.Patch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Patch(ILogger logger, Harmony patcher)
     {
         _target = typeof(PlayerCrafting).GetMethod(nameof(PlayerCrafting.ReceiveCraft),
             BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
@@ -32,7 +33,7 @@ internal class PlayerCraftingReceiveCraft : IHarmonyPatch
         );
     }
 
-    void IHarmonyPatch.Unpatch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Unpatch(ILogger logger, Harmony patcher)
     {
         if (_target == null)
             return;

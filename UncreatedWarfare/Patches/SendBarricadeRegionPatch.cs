@@ -1,5 +1,6 @@
 ﻿using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
+using HarmonyLib;
 using SDG.NetPak;
 using SDG.NetTransport;
 using System;
@@ -13,12 +14,12 @@ using Uncreated.Warfare.Signs;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Patches;
-internal class SendBarricadeRegionPatch : IHarmonyPatch
+internal sealed class SendBarricadeRegionPatch : IHarmonyPatch
 {
     private static readonly ClientStaticMethod? SendMultipleBarricades = ReflectionUtility.FindRpc<BarricadeManager, ClientStaticMethod>("SendMultipleBarricades");
 
     private static MethodInfo? _target;
-    void IHarmonyPatch.Patch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Patch(ILogger logger, Harmony patcher)
     {
         _target = typeof(BarricadeManager).GetMethod("SendRegion", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static);
 
@@ -49,7 +50,7 @@ internal class SendBarricadeRegionPatch : IHarmonyPatch
         );
     }
 
-    void IHarmonyPatch.Unpatch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Unpatch(ILogger logger, Harmony patcher)
     {
         if (_target == null)
             return;
@@ -102,15 +103,16 @@ internal class SendBarricadeRegionPatch : IHarmonyPatch
             }
 
             byte pkt = packet;
+            int ct = count;
             SendMultipleBarricades.Invoke(ENetReliability.Reliable, client.transportConnection, writer =>
             {
                 writer.WriteUInt8(x);
                 writer.WriteUInt8(y);
                 writer.WriteNetId(parentNetId);
                 writer.WriteUInt8(pkt);
-                writer.WriteUInt16((ushort)(count - index));
+                writer.WriteUInt16((ushort)(ct - index));
                 writer.WriteFloat(sortOrder);
-                for (; index < count; ++index)
+                for (; index < ct; ++index)
                 {
                     BarricadeDrop drop = region.drops[index];
                     BarricadeData serversideData = drop.GetServersideData();

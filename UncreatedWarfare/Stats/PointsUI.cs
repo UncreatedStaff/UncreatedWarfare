@@ -183,7 +183,7 @@ public class PointsUI : UnturnedUI,
         }
 
         int expectedPosition = GetPositionLogicIndex(player);
-        GetLogger().LogInformation("POSITION: {0}", expectedPosition);
+        
         if (data.Position != expectedPosition)
         {
             data.Position = expectedPosition;

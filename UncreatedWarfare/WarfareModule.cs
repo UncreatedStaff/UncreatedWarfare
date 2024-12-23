@@ -2,6 +2,7 @@ using DanielWillett.ModularRpcs.DependencyInjection;
 using DanielWillett.ModularRpcs.Serialization;
 using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.IoC;
+using HarmonyLib;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Configuration;
@@ -57,6 +58,7 @@ using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Sessions;
 using Uncreated.Warfare.Signs;
 using Uncreated.Warfare.Squads;
+using Uncreated.Warfare.Squads.Spotted;
 using Uncreated.Warfare.Squads.UI;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Stats.EventHandlers;
@@ -277,6 +279,14 @@ public sealed class WarfareModule
 
         ServiceProvider = bldr.Build();
 
+        Accessor.Logger = new ReflectionToolsLoggerProxy(ServiceProvider.Resolve<ILoggerFactory>());
+        #if DEBUG
+        Accessor.LogDebugMessages = true;
+        #endif
+        Accessor.LogInfoMessages = true;
+        Accessor.LogWarningMessages = true;
+        Accessor.LogErrorMessages = true;
+
         _logger = ServiceProvider.Resolve<ILogger<WarfareModule>>();
 
         GlobalLogger = ServiceProvider.Resolve<ILoggerFactory>().CreateLogger("Global");
@@ -410,7 +420,7 @@ public sealed class WarfareModule
         bldr.RegisterType<HarmonyPatchService>()
             .SingleInstance();
 
-        bldr.Register<HarmonyPatchService, HarmonyLib.Harmony>((_, p) => p.Patcher)
+        bldr.Register<HarmonyPatchService, Harmony>((_, p) => p.Patcher)
             .SingleInstance();
 
         bldr.RegisterInstance(_gameObjectHost.GetOrAddComponent<WarfareTimeComponent>())
@@ -680,6 +690,10 @@ public sealed class WarfareModule
         bldr.RegisterType<SquadConfiguration>()
             .SingleInstance();
 
+        bldr.RegisterType<SpottedService>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
+
         // Active ITeamManager
         bldr.Register(_ => GetActiveLayout().TeamManager)
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
@@ -700,9 +714,13 @@ public sealed class WarfareModule
         bldr.RegisterType<VehicleInteractionTweaks>()
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
-        bldr.RegisterType<NoCraftingTweak>()
-            .AsImplementedInterfaces()
+
+        bldr.RegisterType<NoCraftingTweak>().AsImplementedInterfaces()
             .SingleInstance();
+        bldr.RegisterType<NoDamageInMainTweak>().AsImplementedInterfaces()
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+        bldr.RegisterType<LandmineExplosionRestrictions>().AsImplementedInterfaces()
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
 
         // Localization
         bldr.RegisterType<LanguageService>()

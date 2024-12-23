@@ -1,6 +1,6 @@
-using System.Diagnostics;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models.Players;
+using Uncreated.Warfare.Events.Patches;
 using Uncreated.Warfare.Injures;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
@@ -29,10 +29,16 @@ partial class EventDispatcher
         //  ex. hitmarkers are handled by checking which players were damaged immediately after shooting
         shouldallow = DispatchEventAsync(args, _unloadToken, allowAsync: false).GetAwaiter().GetResult();
 
-        if (shouldallow)
-            parameters = args.Parameters;
+        if (!shouldallow)
+            return;
+        
+        PlayerLifeDoDamageRequested.Damaging = parameters.player.channel.owner.playerID.steamID.m_SteamID;
+        parameters = args.Parameters;
     }
 
+    /// <summary>
+    /// Invoked by <see cref="UseableConsumeable.onPerformingAid"/> when a player starts to heal another player. Can be cancelled.
+    /// </summary>
     private void UseableConsumeableOnPlayerPerformingAid(Player instigator, Player target, ItemConsumeableAsset asset, ref bool shouldAllow)
     {
         WarfarePlayer medic = _playerService.GetOnlinePlayer(instigator);

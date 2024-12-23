@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Globalization;
 using System.IO;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Players.Saves;
 
@@ -46,6 +47,8 @@ public class BinaryPlayerSave : ISaveableState
 
     public void Save()
     {
+        GameThread.AssertCurrent();
+
         Block block = new Block { longBinaryData = true };
         block.writeByte(DataVersion);
         block.writeInt32(TeamId);
@@ -78,6 +81,8 @@ public class BinaryPlayerSave : ISaveableState
 
     public void Load()
     {
+        GameThread.AssertCurrent();
+
         WasReadFromFile = false;
         if (!ServerSavedata.fileExists(GetPath(Steam64)))
             return;

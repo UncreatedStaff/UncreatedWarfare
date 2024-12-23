@@ -18,7 +18,7 @@ using Uncreated.Warfare.Vehicles.WarfareVehicles;
 namespace Uncreated.Warfare.Events.Patches;
 
 [UsedImplicitly]
-internal class InteractableVehicleDecideSeat : IHarmonyPatch
+internal sealed class InteractableVehicleDecideSeat : IHarmonyPatch
 {
     private static readonly ClientStaticMethod<uint, byte, CSteamID>? SendEnterVehicle =
         ReflectionUtility.FindRpc<VehicleManager, ClientStaticMethod<uint, byte, CSteamID>>("SendEnterVehicle");
@@ -27,7 +27,7 @@ internal class InteractableVehicleDecideSeat : IHarmonyPatch
 
     private static MethodInfo? _tryAddPlayer;
 
-    void IHarmonyPatch.Patch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Patch(ILogger logger, Harmony patcher)
     {
         _target = typeof(VehicleManager).GetMethod(nameof(VehicleManager.ReceiveEnterVehicleRequest), BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
         _tryAddPlayer = typeof(InteractableVehicle).GetMethod(nameof(InteractableVehicle.tryAddPlayer),
@@ -69,7 +69,7 @@ internal class InteractableVehicleDecideSeat : IHarmonyPatch
         );
     }
 
-    void IHarmonyPatch.Unpatch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Unpatch(ILogger logger, Harmony patcher)
     {
         if (_target == null)
             return;

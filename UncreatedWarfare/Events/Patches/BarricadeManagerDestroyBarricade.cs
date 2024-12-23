@@ -15,11 +15,11 @@ using Uncreated.Warfare.Util;
 namespace Uncreated.Warfare.Events.Patches;
 
 [UsedImplicitly]
-internal class BarricadeManagerDestroyBarricade : IHarmonyPatch
+internal sealed class BarricadeManagerDestroyBarricade : IHarmonyPatch
 {
     private static MethodInfo? _target;
 
-    void IHarmonyPatch.Patch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Patch(ILogger logger, Harmony patcher)
     {
         _target = Accessor.GetMethod(new Action<BarricadeDrop, byte, byte, ushort>(BarricadeManager.destroyBarricade));
 
@@ -41,7 +41,7 @@ internal class BarricadeManagerDestroyBarricade : IHarmonyPatch
         );
     }
 
-    void IHarmonyPatch.Unpatch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Unpatch(ILogger logger, Harmony patcher)
     {
         if (_target == null)
             return;

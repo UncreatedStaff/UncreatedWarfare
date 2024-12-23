@@ -293,8 +293,8 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService
     public Zone? SearchZone(ZoneType type, FactionInfo? faction = null)
     {
         return faction == null
-            ? Zones.FirstOrDefault(zone => zone.Type == type)
-            : Zones.FirstOrDefault(zone => zone.Type == type && string.Equals(zone.Faction, faction.FactionId, StringComparison.Ordinal));
+            ? Zones.FirstOrDefault(zone => zone.IsPrimary && zone.Type == type)
+            : Zones.FirstOrDefault(zone => zone.IsPrimary && zone.Type == type && string.Equals(zone.Faction, faction.FactionId, StringComparison.Ordinal));
     }
 
     /// <summary>

@@ -1,16 +1,17 @@
 ﻿using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
+using HarmonyLib;
 using System.Reflection;
 
 namespace Uncreated.Warfare.Patches;
 
 [UsedImplicitly]
-internal class CancelReputationPatch : IHarmonyPatch
+internal sealed class CancelReputationPatch : IHarmonyPatch
 {
     internal static bool IsSettingReputation;
 
     private static MethodInfo? _target;
-    void IHarmonyPatch.Patch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Patch(ILogger logger, Harmony patcher)
     {
         _target = typeof(PlayerSkills).GetMethod(nameof(PlayerSkills.askRep), BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
 
@@ -29,7 +30,7 @@ internal class CancelReputationPatch : IHarmonyPatch
         );
     }
 
-    void IHarmonyPatch.Unpatch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Unpatch(ILogger logger, Harmony patcher)
     {
         if (_target == null)
             return;

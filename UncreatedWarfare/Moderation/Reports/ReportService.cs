@@ -21,9 +21,10 @@ using Uncreated.Warfare.Util.Timing;
 namespace Uncreated.Warfare.Moderation.Reports;
 
 [RpcClass(DefaultTypeName = "Uncreated.Web.Bot.Services.DiscordReportService, uncreated-web")]
+[Priority(-100)]
 public class ReportService : IDisposable, IHostedService, IEventListener<PlayerLeft>, IEventListener<PlayerChatSent>, IEventListener<PlayerUseableEquipped>
 {
-    private delegate float GetBulletDamageMultiplierHandler(ref BulletInfo bullet);
+    private delegate float GetBulletDamageMultiplierHandler(UseableGun gun, ref BulletInfo bullet);
 
     private static readonly InstanceGetter<UseableGun, List<BulletInfo>>? GetBullets =
         Accessor.GenerateInstanceGetter<UseableGun, List<BulletInfo>>("bullets");
@@ -90,7 +91,6 @@ public class ReportService : IDisposable, IHostedService, IEventListener<PlayerL
     {
         PlayerData playerData = GetOrAddPlayerData(_playerService.GetOnlinePlayer(gun));
         CheckExpiredBullets(playerData, gun);
-
     }
 
     private void OnBulletSpawned(UseableGun gun, BulletInfo bullet)
@@ -118,13 +118,19 @@ public class ReportService : IDisposable, IHostedService, IEventListener<PlayerL
             if (pendingBullet.Bullet != bullet)
                 continue;
 
+            playerData.PendingBullets.RemoveAt(i);
+            if (!shouldallow)
+            {
+                _logger.LogInformation("Bullet cancelled: {0} {1}", bullet.magazineAsset, bullet.pellet);
+                return;
+            }
+
             ItemGunAsset gunAsset = gun.equippedGunAsset;
             IModerationActor? actor = hit.player != null ? Actors.GetActor(hit.player.channel.owner.playerID.steamID) : null;
 
             ResourceSpawnpoint? resxSpawnpoint = null;
 
             InteractableObjectRubble? rubbleObject = hit.type == ERaycastInfoType.OBJECT ? hit.transform.GetComponentInParent<InteractableObjectRubble>() : null;
-
 
             Asset? hitAsset = hit.type switch
             {
@@ -143,7 +149,7 @@ public class ReportService : IDisposable, IHostedService, IEventListener<PlayerL
             // ballistics(), calculates true damage
 
             // attachment dmg multiplier and falloff
-            float dmgMult = (GetBulletDamageMultiplier?.Invoke(ref bullet) ?? 1f)
+            float dmgMult = (GetBulletDamageMultiplier?.Invoke(gun, ref bullet) ?? 1f)
                             * Mathf.Lerp(1f,
                                 gunAsset.damageFalloffMultiplier,
                                 Mathf.InverseLerp(gunAsset.range * gunAsset.damageFalloffRange, gunAsset.range * gunAsset.damageFalloffMaxRange,
@@ -230,7 +236,6 @@ public class ReportService : IDisposable, IHostedService, IEventListener<PlayerL
 
             _logger.LogInformation("Bullet hit: {0} {1} dmg: {2} asset: {3}", bullet.magazineAsset, bullet.pellet, damage, hitAsset);
 
-            playerData.PendingBullets.RemoveAt(i);
             playerData.AddShot(new ShotRecord(gunAsset.GUID, bullet.magazineAsset.GUID,
                 gunAsset.itemName,
                 bullet.magazineAsset.itemName,

@@ -1,15 +1,16 @@
 ﻿using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
+using HarmonyLib;
 using System.Reflection;
 using Uncreated.Warfare.Patches;
 
 namespace Uncreated.Warfare.Events.Patches;
 
 [UsedImplicitly]
-internal class StructureManagerSaveDirecction : IHarmonyPatch
+internal sealed class StructureManagerSaveDirecction : IHarmonyPatch
 {
     private static MethodInfo? _target;
-    void IHarmonyPatch.Patch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Patch(ILogger logger, Harmony patcher)
     {
         _target = Accessor.GetMethod(StructureManager.damage);
 
@@ -34,7 +35,7 @@ internal class StructureManagerSaveDirecction : IHarmonyPatch
         );
     }
 
-    void IHarmonyPatch.Unpatch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Unpatch(ILogger logger, Harmony patcher)
     {
         if (_target == null)
             return;

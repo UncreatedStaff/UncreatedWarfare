@@ -1,5 +1,6 @@
 ﻿using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
+using HarmonyLib;
 using System.Reflection;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Models.Barricades;
@@ -10,11 +11,11 @@ using Uncreated.Warfare.Players.Management;
 namespace Uncreated.Warfare.Events.Patches;
 
 [UsedImplicitly]
-internal class InteractableSignUpdateText : IHarmonyPatch
+internal sealed class InteractableSignUpdateText : IHarmonyPatch
 {
     private static MethodInfo? _target;
 
-    void IHarmonyPatch.Patch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Patch(ILogger logger, Harmony patcher)
     {
         _target = typeof(InteractableSign).GetMethod(nameof(InteractableSign.updateText), BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
 
@@ -33,7 +34,7 @@ internal class InteractableSignUpdateText : IHarmonyPatch
         );
     }
 
-    void IHarmonyPatch.Unpatch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Unpatch(ILogger logger, Harmony patcher)
     {
         if (_target == null)
             return;

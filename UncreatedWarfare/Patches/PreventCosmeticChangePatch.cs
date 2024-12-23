@@ -1,14 +1,15 @@
 ﻿using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
+using HarmonyLib;
 using System.Reflection;
 
 namespace Uncreated.Warfare.Patches;
 
 [UsedImplicitly]
-internal class PreventCosmeticChangePatch : IHarmonyPatch
+internal sealed class PreventCosmeticChangePatch : IHarmonyPatch
 {
     private static MethodInfo? _target;
-    void IHarmonyPatch.Patch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Patch(ILogger logger, Harmony patcher)
     {
         _target = typeof(PlayerClothing).GetMethod(nameof(PlayerClothing.ReceiveVisualToggleRequest), BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
 
@@ -27,7 +28,7 @@ internal class PreventCosmeticChangePatch : IHarmonyPatch
         );
     }
 
-    void IHarmonyPatch.Unpatch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Unpatch(ILogger logger, Harmony patcher)
     {
         if (_target == null)
             return;

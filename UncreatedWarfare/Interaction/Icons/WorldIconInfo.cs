@@ -14,11 +14,14 @@ namespace Uncreated.Warfare.Interaction.Icons;
 /// </summary>
 public class WorldIconInfo : ITransformObject, IDisposable
 {
-    private Vector3 _prevSpawnPosition;
     private bool _needsRespawn = true;
+    internal Vector3 LastSpawnPosition;
     internal float LastSpawnRealtime;
     internal float LastPositionUpdateRealtime;
     internal float FirstSpawnRealtime;
+
+    // used when distance is specified to clear from players who have left the area
+    private List<WarfarePlayer>? _previousPlayers;
 
     private Vector3 _position;
 
@@ -54,12 +57,38 @@ public class WorldIconInfo : ITransformObject, IDisposable
     /// <summary>
     /// The source of the effect's position. Interchangable with <see cref="UnityObject"/> or <see cref="Position"/>.
     /// </summary>
-    public ITransformObject? TransformableObject { get; private set; }
+    /// <remarks>This can be changed at any time.</remarks>
+    public ITransformObject? TransformableObject
+    {
+        get;
+        set
+        {
+            field = value;
+            if (value is not null)
+            {
+                UnityObject = null;
+                _position = default;
+            }
+        }
+    }
 
     /// <summary>
     /// The source of the effect's position. Interchangable with <see cref="TransformableObject"/> or <see cref="Position"/>.
     /// </summary>
-    public Transform? UnityObject { get; private set; }
+    /// <remarks>This can be changed at any time.</remarks>
+    public Transform? UnityObject
+    {
+        get;
+        set
+        {
+            field = value;
+            if (value is not null)
+            {
+                TransformableObject = null;
+                _position = default;
+            }
+        }
+    }
 
     /// <summary>
     /// The source of the effect's position. Interchangable with <see cref="TransformableObject"/> or <see cref="UnityObject"/>.
@@ -107,7 +136,7 @@ public class WorldIconInfo : ITransformObject, IDisposable
     /// <summary>
     /// Number of seconds this effect will be alive.
     /// </summary>
-    public float LifetimeSeconds { get; }
+    public float LifetimeSeconds { get; private set; }
 
     /// <summary>
     /// Number of seconds between updates.
@@ -117,19 +146,31 @@ public class WorldIconInfo : ITransformObject, IDisposable
 
     public bool Alive { get; internal set; }
 
-    public WorldIconInfo(Transform transform, IAssetLink<EffectAsset> effect, Team? targetTeam = null, WarfarePlayer? targetPlayer = null, Func<WarfarePlayer, bool>? playerSelector = null, float lifetimeSec = default)
+    /// <summary>
+    /// Radius in regions this effect should be shown. Takes the minimum of this and <see cref="RelevanceDistance"/>.
+    /// </summary>
+    public byte RelevanceRegions { get; set; } = byte.MaxValue;
+
+    /// <summary>
+    /// Radius in distance this effect should be shown. Takes the minimum of this and <see cref="RelevanceRegions"/>.
+    /// </summary>
+    public float RelevanceDistance { get; set; } = float.MaxValue;
+
+    public bool IsDistanceLimited => RelevanceDistance <= 32768f || RelevanceRegions != byte.MaxValue;
+
+    public WorldIconInfo(Transform transform, IAssetLink<EffectAsset> effect, Team? targetTeam = null, WarfarePlayer? targetPlayer = null, Func<WarfarePlayer, bool>? playerSelector = null, float lifetimeSec = 0)
         : this(effect, targetTeam, targetPlayer, playerSelector, lifetimeSec)
     {
         UnityObject = transform;
     }
     
-    public WorldIconInfo(ITransformObject transform, IAssetLink<EffectAsset> effect, Team? targetTeam = null, WarfarePlayer? targetPlayer = null, Func<WarfarePlayer, bool>? playerSelector = null, float lifetimeSec = default)
+    public WorldIconInfo(ITransformObject transform, IAssetLink<EffectAsset> effect, Team? targetTeam = null, WarfarePlayer? targetPlayer = null, Func<WarfarePlayer, bool>? playerSelector = null, float lifetimeSec = 0)
         : this(effect, targetTeam, targetPlayer, playerSelector, lifetimeSec)
     {
         TransformableObject = transform;
     }
     
-    public WorldIconInfo(Vector3 startPosition, IAssetLink<EffectAsset> effect, Team? targetTeam = null, WarfarePlayer? targetPlayer = null, Func<WarfarePlayer, bool>? playerSelector = null, float lifetimeSec = default)
+    public WorldIconInfo(Vector3 startPosition, IAssetLink<EffectAsset> effect, Team? targetTeam = null, WarfarePlayer? targetPlayer = null, Func<WarfarePlayer, bool>? playerSelector = null, float lifetimeSec = 0)
         : this(effect, targetTeam, targetPlayer, playerSelector, lifetimeSec)
     {
         _position = startPosition;
@@ -141,7 +182,7 @@ public class WorldIconInfo : ITransformObject, IDisposable
         TargetTeam = targetTeam;
         TargetPlayer = targetPlayer;
         PlayerSelector = playerSelector;
-        LifetimeSeconds = lifetimeSec == 0 ? float.MaxValue : 0;
+        LifetimeSeconds = lifetimeSec == 0 || !float.IsFinite(lifetimeSec) ? float.MaxValue : lifetimeSec;
 
         if (!Effect.TryGetAsset(out EffectAsset? asset) || asset.lifetime <= 0)
             return;
@@ -151,24 +192,42 @@ public class WorldIconInfo : ITransformObject, IDisposable
         _minimumLifetime = asset.lifetime - asset.lifetimeSpread;
     }
 
-    internal void UpdateRelevantPlayers(IPlayerService playerService, ref PooledTransportConnectionList? list, ref ITransportConnection? single, HashSet<ITransportConnection> workingHashSetCache)
+    /// <summary>
+    /// Raise <see cref="LifetimeSeconds"/> such that from now the effect will despawn in a given amount of seconds.
+    /// </summary>
+    public void KeepAliveFor(float seconds)
     {
+        LifetimeSeconds = FirstSpawnRealtime == 0 ? seconds : Time.realtimeSinceStartup - FirstSpawnRealtime + seconds;
+    }
+
+    internal void UpdateRelevantPlayers(IPlayerService playerService, ref PooledTransportConnectionList? list, ref ITransportConnection? single, in Vector3 spawnPosition, HashSet<ITransportConnection> workingHashSetCache)
+    {
+        bool distanceLimited = IsDistanceLimited;
+        Vector3 pos = default;
         if (TargetPlayer != null)
         {
-            Add(TargetPlayer.Connection, ref list, ref single, workingHashSetCache);
+            if (distanceLimited)
+                pos = TargetPlayer.Position;
+            if (!distanceLimited || CheckPositionRelevant(in pos, in spawnPosition))
+                Add(TargetPlayer.Connection, ref list, ref single, workingHashSetCache);
         }
         else if (TargetTeam is not null)
         {
             foreach (WarfarePlayer player in playerService.OnlinePlayersOnTeam(TargetTeam))
             {
-                Add(player.Connection, ref list, ref single, workingHashSetCache);
+                if (distanceLimited)
+                    pos = player.Position;
+                if (!distanceLimited || CheckPositionRelevant(in pos, in spawnPosition))
+                    Add(player.Connection, ref list, ref single, workingHashSetCache);
             }
         }
         else if (PlayerSelector != null)
         {
             foreach (WarfarePlayer player in playerService.OnlinePlayers)
             {
-                if (PlayerSelector(player))
+                if (distanceLimited)
+                    pos = player.Position;
+                if ((!distanceLimited || CheckPositionRelevant(in pos, in spawnPosition)) && PlayerSelector(player))
                     Add(player.Connection, ref list, ref single, workingHashSetCache);
             }
         }
@@ -176,7 +235,19 @@ public class WorldIconInfo : ITransformObject, IDisposable
         {
             foreach (WarfarePlayer player in playerService.OnlinePlayers)
             {
-                Add(player.Connection, ref list, ref single, workingHashSetCache);
+                if (distanceLimited)
+                    pos = player.Position;
+                if (!distanceLimited || CheckPositionRelevant(in pos, in spawnPosition))
+                    Add(player.Connection, ref list, ref single, workingHashSetCache);
+            }
+        }
+
+        if ((distanceLimited || PlayerSelector != null) && _previousPlayers != null)
+        {
+            foreach (WarfarePlayer player in _previousPlayers)
+            {
+                if (player.IsOnline)
+                    Add(player.Connection, ref list, ref single, workingHashSetCache);
             }
         }
 
@@ -202,7 +273,7 @@ public class WorldIconInfo : ITransformObject, IDisposable
         }
     }
     
-    internal bool ShouldPlayerSeeIcon(WarfarePlayer player)
+    internal bool ShouldPlayerSeeIcon(WarfarePlayer player, in Vector3 spawnPosition)
     {
         if (TargetPlayer != null && !TargetPlayer.Equals(player))
             return false;
@@ -213,7 +284,31 @@ public class WorldIconInfo : ITransformObject, IDisposable
         if (PlayerSelector != null && !PlayerSelector(player))
             return false;
 
-        return true;
+        return CheckPositionRelevant(player.Position, in spawnPosition);
+    }
+
+    private bool CheckPositionRelevant(in Vector3 sendPos, in Vector3 spawnPos)
+    {
+        float dist = RelevanceDistance;
+        int area = RelevanceRegions;
+        if (dist > 32768f && area == byte.MaxValue)
+            return true;
+
+        byte regionSize = Regions.REGION_SIZE;
+        if ((area + 0.5f) * regionSize > dist)
+        {
+            return MathUtility.SquaredDistance(in sendPos, in spawnPos, true) <= dist * dist;
+        }
+
+        if (area == byte.MaxValue)
+            return true;
+
+        int sendX = (int)Math.Floor((sendPos.x + 4096f) / regionSize);
+        int sendY = (int)Math.Floor((sendPos.z + 4096f) / regionSize);
+        int spawnX = (int)Math.Floor((spawnPos.x + 4096f) / regionSize);
+        int spawnY = (int)Math.Floor((spawnPos.z + 4096f) / regionSize);
+        return sendX >= spawnX - area && sendY >= spawnY - area &&
+               sendX <= spawnX + area && sendY <= spawnY + area;
     }
 
     private static void GetColoredEffectForward(Color32 c, out Vector3 forward, out float scale)
@@ -236,7 +331,7 @@ public class WorldIconInfo : ITransformObject, IDisposable
         Vector3 v3;
         if (TransformableObject != null)
         {
-            v3 = TransformableObject.Position + Offset;
+            v3 = TransformableObject.Position;
         }
         else if (UnityObject is null)
         {
@@ -244,7 +339,7 @@ public class WorldIconInfo : ITransformObject, IDisposable
         }
         else if (UnityObject != null)
         {
-            v3 = UnityObject.position + Offset;
+            v3 = UnityObject.position;
         }
         else
         {
@@ -287,6 +382,9 @@ public class WorldIconInfo : ITransformObject, IDisposable
             return;
         }
 
+        bool distanceLimited = IsDistanceLimited;
+        bool hasMutablePlayerSelector = distanceLimited || PlayerSelector != null;
+
         Vector3 pos;
         if (updatePosition)
         {
@@ -295,7 +393,7 @@ public class WorldIconInfo : ITransformObject, IDisposable
                 return;
             }
 
-            if (_prevSpawnPosition.IsNearlyEqual(pos) && !_needsRespawn && (!_canTrackLifetime || rt - LastSpawnRealtime < _minimumLifetime))
+            if (LastSpawnPosition.IsNearlyEqual(pos) && !(_needsRespawn || hasMutablePlayerSelector) && (!_canTrackLifetime || rt - LastSpawnRealtime < _minimumLifetime))
             {
                 return;
             }
@@ -304,7 +402,7 @@ public class WorldIconInfo : ITransformObject, IDisposable
         }
         else
         {
-            pos = _prevSpawnPosition;
+            pos = LastSpawnPosition;
         }
 
         TriggerEffectParameters parameters = new TriggerEffectParameters(effect);
@@ -321,18 +419,49 @@ public class WorldIconInfo : ITransformObject, IDisposable
             parameters.SetUniformScale(_colorScale);
         }
 
-        _prevSpawnPosition = pos;
+        LastSpawnPosition = pos;
         _needsRespawn = false;
-        
+
+        if (hasMutablePlayerSelector)
+        {
+            if (_previousPlayers == null)
+                _previousPlayers = new List<WarfarePlayer>(4);
+            else
+                _previousPlayers.Clear();
+        }
+
+        Vector3 sendPos = default;
         if (forPlayer != null)
         {
-            parameters.SetRelevantPlayer(forPlayer.Connection);
+            if (distanceLimited)
+                sendPos = forPlayer.Position;
+            if (!distanceLimited || CheckPositionRelevant(in sendPos, in pos))
+            {
+                parameters.SetRelevantPlayer(forPlayer.Connection);
+                if (hasMutablePlayerSelector)
+                    _previousPlayers!.Add(forPlayer);
+            }
+            else
+            {
+                return;
+            }
         }
         else if (TargetPlayer != null)
         {
-            if (TargetPlayer.IsOnline && (TargetTeam is null || TargetPlayer.Team == TargetTeam) && (PlayerSelector == null || PlayerSelector(TargetPlayer)))
+            if (TargetPlayer.IsOnline)
             {
-                parameters.SetRelevantPlayer(TargetPlayer.Connection);
+                if (distanceLimited)
+                    sendPos = TargetPlayer.Position;
+                if ((TargetTeam is null || TargetPlayer.Team == TargetTeam) && (!distanceLimited || CheckPositionRelevant(in sendPos, in pos)) && (PlayerSelector == null || PlayerSelector(TargetPlayer)))
+                {
+                    parameters.SetRelevantPlayer(TargetPlayer.Connection);
+                    if (hasMutablePlayerSelector)
+                        _previousPlayers!.Add(TargetPlayer);
+                }
+                else
+                {
+                    return;
+                }
             }
             else
             {
@@ -345,8 +474,17 @@ public class WorldIconInfo : ITransformObject, IDisposable
             
             foreach (WarfarePlayer player in playerService.OnlinePlayers)
             {
-                if (player.Team == TargetTeam && (PlayerSelector == null || PlayerSelector(player)))
+                if (distanceLimited)
+                    sendPos = player.Position;
+
+                if (player.Team == TargetTeam
+                    && (!distanceLimited || CheckPositionRelevant(in sendPos, in pos))
+                    && (PlayerSelector == null || PlayerSelector(player)))
+                {
                     list.Add(player.Connection);
+                    if (hasMutablePlayerSelector)
+                        _previousPlayers!.Add(player);
+                }
             }
 
             if (list.Count == 0)
@@ -363,14 +501,29 @@ public class WorldIconInfo : ITransformObject, IDisposable
                 if (list.Capacity < playerService.OnlinePlayers.Count)
                     list.Capacity = playerService.OnlinePlayers.Count;
                 foreach (WarfarePlayer player in playerService.OnlinePlayers)
-                    list.Add(player.Connection);
+                {
+                    if (distanceLimited)
+                        sendPos = player.Position;
+                    if (!distanceLimited || CheckPositionRelevant(in sendPos, in pos))
+                    {
+                        list.Add(player.Connection);
+                        if (hasMutablePlayerSelector)
+                            _previousPlayers!.Add(player);
+                    }
+                }
             }
             else
             {
                 foreach (WarfarePlayer player in playerService.OnlinePlayers)
                 {
-                    if (PlayerSelector(player))
+                    if (distanceLimited)
+                        sendPos = player.Position;
+                    if ((!distanceLimited || CheckPositionRelevant(in sendPos, in pos)) && PlayerSelector(player))
+                    {
                         list.Add(player.Connection);
+                        if (hasMutablePlayerSelector)
+                            _previousPlayers!.Add(player);
+                    }
                 }
             }
 
@@ -396,10 +549,7 @@ public class WorldIconInfo : ITransformObject, IDisposable
             TryGetSpawnPosition(out Vector3 position);
             return position;
         }
-        set
-        {
-            EffectPosition = value - Offset;
-        }
+        set => EffectPosition = value - Offset;
     }
 
     Quaternion ITransformObject.Rotation

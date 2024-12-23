@@ -139,11 +139,8 @@ public class VehicleComponent : MonoBehaviour
         if (vehicleInfoStore != null)
         {
             VehicleData = vehicleInfoStore.GetVehicleInfo(Vehicle.asset);
-            if (VehicleData != null)
-            {
-                vehicle.transform.gameObject.GetOrAddComponent<SpottedComponent>().Initialize(VehicleData.Type, vehicle, serviceProvider);
-            }
         }
+
         _lastPosInterval = transform.position;
 
 #if false // todo

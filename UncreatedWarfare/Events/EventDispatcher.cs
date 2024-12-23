@@ -615,7 +615,9 @@ public partial class EventDispatcher : IHostedService, IDisposable
                     {
                         ServiceRegistration reg = new ServiceRegistration(serviceRegistration.ResolvePipeline, serviceRegistration);
                         implementation = (IEventListenerProvider)applicableScope.ResolveComponent(new ResolveRequest(service, reg, parameters, serviceRegistration));
-                        _logger.LogWarning("Resolved listener provider from service (may cause duplicating service issues): {0} - {1}", implementation.GetType(), implementation.GetHashCode());
+                        
+                        if (serviceRegistration.Sharing != InstanceSharing.None)
+                            _logger.LogWarning("Resolved listener provider from service (may cause duplicating service issues): {0} - {1}", implementation.GetType(), implementation.GetHashCode());
                     }
 
                 }
@@ -743,7 +745,9 @@ public partial class EventDispatcher : IHostedService, IDisposable
                             {
                                 ServiceRegistration reg = new ServiceRegistration(serviceRegistration.ResolvePipeline, serviceRegistration);
                                 implementation = applicableScope.ResolveComponent(new ResolveRequest(service, reg, parameters, serviceRegistration));
-                                _logger.LogWarning("Resolved from service (may cause duplicating service issues): {0} - {1}", implementation.GetType(), implementation.GetHashCode());
+
+                                if (serviceRegistration.Sharing != InstanceSharing.None)
+                                    _logger.LogWarning("Resolved from service (may cause duplicating service issues): {0} - {1}", implementation.GetType(), implementation.GetHashCode());
                             }
 
                         }

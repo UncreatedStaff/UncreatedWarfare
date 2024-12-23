@@ -1,5 +1,6 @@
 ﻿using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
+using HarmonyLib;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -13,11 +14,11 @@ using Uncreated.Warfare.Players.Saves;
 namespace Uncreated.Warfare.Events.Patches;
 
 [UsedImplicitly]
-internal class ProviderPlayerJoiningEvents : IHarmonyPatch
+internal sealed class ProviderPlayerJoiningEvents : IHarmonyPatch
 {
     private static MethodInfo? _target;
 
-    void IHarmonyPatch.Patch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Patch(ILogger logger, Harmony patcher)
     {
         _target = typeof(SteamPending).GetMethod("sendVerifyPacket",
             BindingFlags.Instance | BindingFlags.Public, null, CallingConventions.Any, Type.EmptyTypes, null);
@@ -37,7 +38,7 @@ internal class ProviderPlayerJoiningEvents : IHarmonyPatch
         );
     }
 
-    void IHarmonyPatch.Unpatch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Unpatch(ILogger logger, Harmony patcher)
     {
         if (_target == null)
             return;

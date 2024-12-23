@@ -1,40 +1,67 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using SDG.Framework.Water;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Buildables;
-using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Events.Models.Fobs;
 using Uncreated.Warfare.Events.Models.Items;
-using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Events.Models.Vehicles;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.FOBs.Entities;
 using Uncreated.Warfare.FOBs.Rallypoints;
 using Uncreated.Warfare.FOBs.SupplyCrates;
-using Uncreated.Warfare.Interaction;
-using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Layouts.Teams;
-using Uncreated.Warfare.Players.Extensions;
-using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
-using Uncreated.Warfare.Util.Containers;
 using Uncreated.Warfare.Util.Timing;
-using Uncreated.Warfare.Vehicles.WarfareVehicles;
-using Uncreated.Warfare.Zones;
-using static SDG.Unturned.ItemCurrencyAsset;
 
 namespace Uncreated.Warfare.Fobs;
 public partial class FobManager :
     IAsyncEventListener<BarricadePlaced>,
+    IEventListener<PlaceBarricadeRequested>,
     IEventListener<BarricadeDestroyed>,
     IEventListener<ItemDropped>,
+    IEventListener<VehicleDespawned>,
+    IEventListener<TriggerTrapRequested>
+{
+    private bool IsTrapTooNearFobSpawn(in Vector3 pos)
+    {
+        const float maxDistance = 10;
+
+        foreach (BuildableFob fob in Fobs.OfType<BuildableFob>())
+        {
+            if (MathUtility.WithinRange2D(in pos, fob.SpawnPosition, maxDistance))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    void IEventListener<PlaceBarricadeRequested>.HandleEvent(PlaceBarricadeRequested e, IServiceProvider serviceProvider)
+    {
+        // dont allow placing traps near spawner
+        if (e.Asset is not ItemTrapAsset || !IsTrapTooNearFobSpawn(e.Position))
+            return;
+
+        if (e.OriginalPlacer != null)
+            _chatService.Send(e.OriginalPlacer, _translations.BuildableNotAllowed);
+
+        e.Cancel();
+    }
+
+    void IEventListener<TriggerTrapRequested>.HandleEvent(TriggerTrapRequested e, IServiceProvider serviceProvider)
+    {
+        Vector3 pos = e.Barricade.GetServersideData().point;
+        if (IsTrapTooNearFobSpawn(in pos))
+            e.Cancel();
+    }
+
     IEventListener<VehicleSpawned>,
     IEventListener<VehicleDespawned>,
     IEventListener<BarricadePreDamaged>

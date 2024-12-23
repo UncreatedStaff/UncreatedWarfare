@@ -1,14 +1,15 @@
 ﻿using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
+using HarmonyLib;
 using System.Reflection;
 
 namespace Uncreated.Warfare.Patches;
 
 [UsedImplicitly]
-internal class PreventRemovingBatteryPatch : IHarmonyPatch
+internal sealed class PreventRemovingBatteryPatch : IHarmonyPatch
 {
     private static MethodInfo? _target;
-    void IHarmonyPatch.Patch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Patch(ILogger logger, Harmony patcher)
     {
         _target = typeof(VehicleManager).GetMethod(nameof(VehicleManager.ReceiveStealVehicleBattery), BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
 
@@ -27,7 +28,7 @@ internal class PreventRemovingBatteryPatch : IHarmonyPatch
         );
     }
 
-    void IHarmonyPatch.Unpatch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Unpatch(ILogger logger, Harmony patcher)
     {
         if (_target == null)
             return;
