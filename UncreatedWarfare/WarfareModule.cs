@@ -78,6 +78,7 @@ using Uncreated.Warfare.Vehicles.Spawners;
 using Uncreated.Warfare.Vehicles.UI;
 using Uncreated.Warfare.Zones;
 using Module = SDG.Framework.Modules.Module;
+using Uncreated.Warfare.FOBs.StateStorage;
 
 namespace Uncreated.Warfare;
 public sealed class WarfareModule
@@ -672,6 +673,9 @@ public sealed class WarfareModule
             .SingleInstance();
 
         bldr.RegisterType<FobConfiguration>()
+            .SingleInstance();
+
+        bldr.RegisterType<BarricadeStateStore>()
             .SingleInstance();
 
         // Strategy Tables

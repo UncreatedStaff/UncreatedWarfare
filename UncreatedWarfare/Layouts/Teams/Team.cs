@@ -26,29 +26,7 @@ public class Team : IEquatable<Team>
     public static readonly Team NoTeam = new Team
     {
         Id = 0,
-        Faction = new FactionInfo
-        {
-            Name = "Unaffilated",
-            ShortName = "Unaffilated",
-            Abbreviation = "UA",
-            FactionId = "noteam",
-            NameTranslations =
-            {
-                { string.Empty, "Unaffilated" }
-            },
-            ShortNameTranslations =
-            {
-                { string.Empty, "Unaffilated" }
-            },
-            AbbreviationTranslations =
-            {
-                { string.Empty, "UA" }
-            },
-            Color = new Color(0.7058823529f, 0.7058823529f, 0.7058823529f, 1f), // 0xb4b4b4
-            KitPrefix = "ua",
-            FlagImageURL = "https://i.imgur.com/z0HE5P3.png",
-            IsDefaultFaction = true
-        },
+        Faction = FactionInfo.NoFaction,
         GroupId = default,
         Configuration = ConfigurationHelper.EmptySection,
         _opponents = new List<Team>(0)

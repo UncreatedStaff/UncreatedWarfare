@@ -655,6 +655,29 @@ public class FactionInfo : ICloneable, ITranslationArgument
     {
         return IsDefaultFaction ? null : this;
     }
+    public static readonly FactionInfo NoFaction = new FactionInfo
+    {
+        Name = "Unaffilated",
+        ShortName = "Unaffilated",
+        Abbreviation = "UA",
+        FactionId = "noteam",
+        NameTranslations =
+            {
+                { string.Empty, "Unaffilated" }
+            },
+        ShortNameTranslations =
+            {
+                { string.Empty, "Unaffilated" }
+            },
+        AbbreviationTranslations =
+            {
+                { string.Empty, "UA" }
+            },
+        Color = new Color(0.7058823529f, 0.7058823529f, 0.7058823529f, 1f), // 0xb4b4b4
+        KitPrefix = "ua",
+        FlagImageURL = "https://i.imgur.com/z0HE5P3.png",
+        IsDefaultFaction = true
+    };
 
     public override string ToString()
     {
