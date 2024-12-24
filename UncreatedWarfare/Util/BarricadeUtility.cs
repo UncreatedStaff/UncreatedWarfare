@@ -296,6 +296,40 @@ public static class BarricadeUtility
     }
 
     /// <summary>
+    /// Set the state of any barricade and properly update it for the client.
+    /// </summary>
+    /// <exception cref="GameThreadException"/>
+    /// <exception cref="InvalidBarricadeStateException"/>
+    public static void SetState(BarricadeDrop barricade, byte[] state)
+    {
+        GameThread.AssertCurrent();
+
+        VerifyState(state, barricade.asset.build);
+
+        switch (barricade.interactable)
+        {
+            case InteractableStorage:
+                // storages have different states on clientside
+                // also update the interactable (updateReplicatedState does this automatically)
+                BarricadeManager.updateState(barricade.model, state, state.Length);
+                barricade.interactable.updateState(barricade.asset, barricade.GetServersideData().barricade.state);
+                break;
+
+            case InteractableSign:
+                // invokes the sign updated event
+                byte count = state[16];
+                string text = count == 0 ? string.Empty : Encoding.UTF8.GetString(state, 17, count);
+                SetServersideSignText(barricade, text);
+                return;
+
+            default:
+                // update other barricades normally
+                BarricadeManager.updateReplicatedState(barricade.model, state, state.Length);
+                break;
+        }
+    }
+
+    /// <summary>
     /// Sets the sign text without replicating to clients.
     /// </summary>
     /// <exception cref="GameThreadException">Not on main thread.</exception>
@@ -1564,6 +1598,77 @@ public static class BarricadeUtility
                 break;
         }
     }
+
+    /// <summary>
+    /// Throw an exception if the state isn't valid for this build type.
+    /// </summary>
+    /// <exception cref="InvalidBarricadeStateException"/>
+    public static void VerifyState(ReadOnlySpan<byte> state, EBuild build)
+    {
+        switch (build)
+        {
+            case EBuild.DOOR:
+            case EBuild.GATE:
+            case EBuild.SHUTTER:
+            case EBuild.HATCH:
+                if (state.Length < 17)
+                    throw new InvalidBarricadeStateException(build, "Expected at least 17 bytes.");
+                break;
+
+            case EBuild.BED:
+                if (state.Length < 8)
+                    throw new InvalidBarricadeStateException(build, "Expected at least 8 bytes.");
+                break;
+
+            case EBuild.STORAGE:
+            case EBuild.STORAGE_WALL:
+                // todo
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Write the group and owner to a span of bytes to prepare it for a new barricade.
+    /// </summary>
+    /// <exception cref="InvalidBarricadeStateException"/>
+    public static void WriteOwnerAndGroup(Span<byte> state, BarricadeDrop drop, ulong owner, ulong group)
+    {
+        EBuild build = drop.asset.build;
+
+        // write owner and group to interactables where needed
+        switch (build)
+        {
+            case EBuild.BED:
+                if (state.Length < 8)
+                    throw new InvalidBarricadeStateException(build, "Expected at least 8 bytes.");
+
+                Unsafe.WriteUnaligned(ref state[0], owner);
+                break;
+
+            case EBuild.DOOR:
+            case EBuild.GATE:
+            case EBuild.SHUTTER:
+            case EBuild.HATCH:
+            case EBuild.LIBRARY:
+            case EBuild.SIGN:
+            case EBuild.SIGN_WALL:
+            case EBuild.NOTE:
+            case EBuild.STORAGE:
+            case EBuild.STORAGE_WALL:
+                if (state.Length < 16)
+                    throw new InvalidBarricadeStateException(build, "Expected at least 8 bytes.");
+
+                Unsafe.WriteUnaligned(ref state[0], owner);
+                Unsafe.WriteUnaligned(ref state[8], group);
+                break;
+        }
+    }
+}
+
+public class InvalidBarricadeStateException : FormatException
+{
+    public InvalidBarricadeStateException(EBuild type, string message) 
+        : base($"Invalid state on {type} barricade. {message}") { }
 }
 
 /// <summary>

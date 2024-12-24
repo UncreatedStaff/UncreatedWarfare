@@ -1,7 +1,11 @@
 using System;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using System.Text;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.FOBs.StateStorage.Tweaks;
 
@@ -30,7 +34,10 @@ public class BarricadeApplySavedStateTweaks : IEventListener<BarricadePlaced>
         {
             byte[] state = Convert.FromBase64String(save.Base64State);
 
-            BarricadeManager.updateState(e.Barricade.model, state, state.Length);
+            // todo: finish VerifyState
+            BarricadeData data = e.Barricade.GetServersideData();
+            BarricadeUtility.WriteOwnerAndGroup(state, e.Barricade, data.owner, data.group);
+            BarricadeUtility.SetState(e.Barricade, state);
         }
         catch (FormatException ex)
         {
