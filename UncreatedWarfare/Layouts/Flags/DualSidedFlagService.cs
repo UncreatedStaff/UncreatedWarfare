@@ -1,9 +1,11 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using DanielWillett.ReflectionTools;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Flags;
 using Uncreated.Warfare.Exceptions;
@@ -20,7 +22,9 @@ public abstract class DualSidedFlagService :
     ILayoutHostedService,
     IFlagRotationService,
     IEventListener<FlagCaptured>,
-    IEventListener<FlagNeutralized>
+    IEventListener<FlagNeutralized>,
+    IEventListener<PlayerEnteredFlagRegion>,
+    IEventListener<PlayerExitedFlagRegion>
 {
     private const double TickInternalSeconds = 4;
     private readonly ILoopTickerFactory _loopTickerFactory;
@@ -147,7 +151,7 @@ public abstract class DualSidedFlagService :
         }
 
         // create zones as objects with colliders
-
+        
         List<FlagObjective> flagList = new List<FlagObjective>(PathingResult.Count);
         for (int i = 1; i < PathingResult.Count - 1; i++)
         {
@@ -200,38 +204,52 @@ public abstract class DualSidedFlagService :
     {
         foreach (FlagObjective flag in ActiveFlags)
         {
-            FlagContestResult contestResult = GetContestResult(flag, Layout.TeamManager.AllTeams);
-            if (contestResult.State == FlagContestResult.ContestState.OneTeamIsLeading)
+            FlagContestState contestState = GetContestResult(flag, Layout.TeamManager.AllTeams);
+            flag.CurrentContestState = contestState;
+            if (contestState.State == FlagContestState.ContestState.OneTeamIsLeading)
             {
                 flag.MarkContested(false);
-                flag.Contest.AwardPoints(contestResult.Leader!, 12);
+                flag.Contest.AwardPoints(contestState.Leader!, 12);
             }
-            else if (contestResult.State == FlagContestResult.ContestState.Contested)
+            else if (contestState.State == FlagContestState.ContestState.Contested)
                 flag.MarkContested(true);
 
             if (timeSinceStart.Seconds % (TickInternalSeconds * 4) == 0 && 
-                !(contestResult.State == FlagContestResult.ContestState.NotObjective || contestResult.State == FlagContestResult.ContestState.NoPlayers))
+                !(contestState.State == FlagContestState.ContestState.NotObjective || contestState.State == FlagContestState.ContestState.NoPlayers))
             {
-                SlowTickObjective(flag, contestResult);
+                SlowTickObjective(flag, contestState);
             }
         }
     }
-
-    private void SlowTickObjective(FlagObjective flag, FlagContestResult contestResult)
+    
+    private void SlowTickObjective(FlagObjective flag, FlagContestState contestState)
     {
         ObjectiveSlowTick args = new ObjectiveSlowTick
         {
             Flag = flag,
-            ContestResult = contestResult
+            ContestState = contestState
         };
 
         _ = WarfareModule.EventDispatcher.DispatchEventAsync(args);
     }
+    
+    [EventListener(Priority = int.MaxValue)]
+    public void HandleEvent(PlayerEnteredFlagRegion e, IServiceProvider serviceProvider)
+    {
+        e.Flag.CurrentContestState = GetContestResult(e.Flag, TeamManager.AllTeams);
+    }
+    
+    [EventListener(Priority = int.MaxValue)]
+    public void HandleEvent(PlayerExitedFlagRegion e, IServiceProvider serviceProvider)
+    {
+        e.Flag.CurrentContestState = GetContestResult(e.Flag, TeamManager.AllTeams);
+    }
+    
     void IEventListener<FlagNeutralized>.HandleEvent(FlagNeutralized e, IServiceProvider serviceProvider)
     {
         RecalculateObjectives();
     }
-
+    
     void IEventListener<FlagCaptured>.HandleEvent(FlagCaptured e, IServiceProvider serviceProvider)
     {
         RecalculateObjectives();
@@ -246,7 +264,21 @@ public abstract class DualSidedFlagService :
         }
     }
     protected abstract void RecalculateObjectives();
-    public abstract FlagContestResult GetContestResult(FlagObjective flag, IEnumerable<Team> possibleContestingTeams);
+    /// <summary>
+    /// Must return a <see cref="FlagContestState"/> describing the resultant state of the contest caused by players trying to capture it, if any.
+    /// <remarks>
+    /// <para>
+    /// The logic of this method should account for all the result cases featured in <see cref="FlagContestState.ContestState"/>.
+    /// </para>
+    /// <para>
+    /// This method is called every flag tick (usually a few seconds), as well as on some other occasions, on every active flag in the rotation.
+    /// </para>
+    /// </remarks>
+    /// 
+    /// </summary>
+    /// <param name="flag"></param> The flag that is being evaluated.
+    /// <param name="possibleContestingTeams"></param> A selection of possible teams who may be contesting the flag.
+    public abstract FlagContestState GetContestResult(FlagObjective flag, IEnumerable<Team> possibleContestingTeams);
     public abstract FlagObjective? GetObjective(Team team);
 
     public virtual IEnumerable<FlagObjective> EnumerateObjectives()

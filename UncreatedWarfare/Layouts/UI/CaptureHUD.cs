@@ -18,6 +18,7 @@ namespace Uncreated.Warfare.Layouts.UI;
 public class CaptureHUD : 
     UnturnedUI,
     IEventListener<FlagContestPointsChanged>,
+    IEventListener<FlagContestStateChanged>,
     IEventListener<PlayerEnteredFlagRegion>,
     IEventListener<PlayerExitedFlagRegion>
 {
@@ -112,38 +113,39 @@ public class CaptureHUD :
         Team team = languageSet.Team;
 
         SingleLeaderContest contest = flag.Contest;
-
-        if (contest.LeaderPoints == contest.MaxPossiblePoints)
-        {
-            if (team == flag.Owner)
-            {
-                GetLogger().LogInformation($"Sending Secured state for flag: {flag}");
-
-                return CaptureUIState.Secured(_translations, flag.Name);
-            }
-
-            return CaptureUIState.Lost(_translations, flag.Owner, flag.Name);
-        }
-        if (contest.LeaderPoints == 0)
-        {
-            return CaptureUIState.Neutralized(_translations, flag.Name);
-        }
-
+        
         float progress = contest.LeaderPoints / (float) contest.MaxPossiblePoints;
-            
-        if (flag.IsContested)
+
+        FlagContestState flagContestState = flag.CurrentContestState;
+        
+        if (flagContestState.State == FlagContestState.ContestState.Contested)
         {
             return CaptureUIState.Contesting(_translations, progress, flag.Name);
         }
 
-        if (team == contest.Leader)
+        if (flagContestState.State == FlagContestState.ContestState.OneTeamIsLeading)
         {
-            return CaptureUIState.Capturing(_translations, progress, contest.Leader, flag.Name);
+            if (team == flagContestState.Leader)
+            {
+                if (contest.LeaderPoints == contest.MaxPossiblePoints)
+                {
+                    return CaptureUIState.Secured(_translations, flag.Name);
+                }
+
+                return CaptureUIState.Capturing(_translations, progress, contest.Leader, flag.Name);
+            }
+            else
+            {
+                if (contest.LeaderPoints == contest.MaxPossiblePoints)
+                {
+                    return CaptureUIState.Lost(_translations, flag.Owner, flag.Name);
+                }
+
+                return CaptureUIState.Losing(_translations, progress, contest.Leader, flag.Name);
+            }
         }
-        else
-        {
-            return CaptureUIState.Losing(_translations, progress, contest.Leader, flag.Name);
-        }
+
+        return CaptureUIState.Ineffective(_translations, flag.Name);
     }
     public void HideCaptureUI(LanguageSet set)
     {
@@ -169,6 +171,10 @@ public class CaptureHUD :
     }
 
     void IEventListener<FlagContestPointsChanged>.HandleEvent(FlagContestPointsChanged e, IServiceProvider serviceProvider)
+    {
+        UpdateUIForPlayers(e.Flag);
+    }
+    void IEventListener<FlagContestStateChanged>.HandleEvent(FlagContestStateChanged e, IServiceProvider serviceProvider)
     {
         UpdateUIForPlayers(e.Flag);
     }

@@ -17,6 +17,25 @@ public class FlagObjective : IDisposable
     public Team Owner => Contest.IsWon ? Contest.Leader : Team.NoTeam;
     public SingleLeaderContest Contest { get; }
     public bool IsContested { get; private set; }
+
+    public FlagContestState CurrentContestState
+    {
+        get;
+        internal set
+        {
+            FlagContestState oldState = field;
+            field = value;
+            if (oldState.State != value.State)
+            {
+                _ = WarfareModule.EventDispatcher?.DispatchEventAsync(new FlagContestStateChanged()
+                {
+                    Flag = this,
+                    OldState = oldState,
+                    NewState = value
+                });
+            }
+        }
+    }
     public FlagObjective(ZoneRegion region) : this(region, Team.NoTeam) { }
     public FlagObjective(ZoneRegion region, Team startingOwner)
     {
@@ -71,7 +90,7 @@ public class FlagObjective : IDisposable
     {
         IsContested = isContested;
     }
-
+    
     public override string ToString()
     {
         return $"FlagObjective: {Name} [" +
