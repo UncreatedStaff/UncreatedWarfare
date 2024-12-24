@@ -1,23 +1,12 @@
-﻿using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Uncreated.Warfare.Buildables;
-using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Fobs;
-using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.FOBs.StateStorage;
-using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Interaction.Commands;
-using Uncreated.Warfare.Kits.Whitelists;
-using Uncreated.Warfare.Layouts.Teams;
-using Uncreated.Warfare.Squads.UI;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
 
-namespace Uncreated.Warfare.Commands.WarfareDev.Shovelables;
+namespace Uncreated.Warfare.Commands;
+
 [Command("savestate", "save"), SubCommandOf(typeof(DevBuildables))]
 internal sealed class DevBarricadeSaveState : IExecutableCommand
 {

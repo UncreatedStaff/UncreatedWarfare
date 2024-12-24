@@ -28,14 +28,10 @@ public static class Data
     public const string SuppressCategory = "Microsoft.Performance";
     public const string SuppressID = "IDE0051";
     public static CultureInfo LocalLocale = Languages.CultureEnglishUS; // todo set from config
-    public static Dictionary<ulong, UCPlayerData> PlaytimeComponents;
-    public static bool UseElectricalGrid;
-    internal static ClientInstanceMethod<byte[]>? SendUpdateBarricadeState;
     internal static ClientStaticMethod<uint, byte, byte>? SendSwapVehicleSeats;
     // internal static ClientInstanceMethod? SendScreenshotDestination;
 
     internal static InstanceGetter<UseableGun, bool>? GetUseableGunReloading;
-    internal static Action<Vector3, Vector3, string, Transform?, List<ITransportConnection>>? ServerSpawnLegacyImpact;
     internal static SteamPlayer NilSteamPlayer;
 
 

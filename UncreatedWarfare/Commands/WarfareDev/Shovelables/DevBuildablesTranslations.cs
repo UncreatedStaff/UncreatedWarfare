@@ -1,12 +1,10 @@
 ﻿using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
-using Uncreated.Warfare.Translations.Addons;
-using Uncreated.Warfare.Translations.Util;
 
-namespace Uncreated.Warfare.Kits.Whitelists;
-public class DevBuildablesTranslations : PropertiesTranslationCollection
+namespace Uncreated.Warfare.Commands;
+public sealed class DevBuildablesTranslations : PropertiesTranslationCollection
 {
-    protected override string FileName => "WarfareDev Buildables";
+    protected override string FileName => "Commands/WarfareDev/Buildables";
     
     [TranslationData("Sent to an admin/developer when they try to use a command but barricade state storage is not supported.", IsPriorityTranslation = false)]
     public readonly Translation StateStorageNotSupported = new Translation("<#ff8c69>Barricade state storage must be supported in order to use this command.");

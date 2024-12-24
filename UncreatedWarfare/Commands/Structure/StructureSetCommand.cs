@@ -33,13 +33,13 @@ internal sealed class StructureSetCommand : IExecutableCommand
     {
         Context.AssertRanByPlayer();
 
-        if (!Context.HasArgs(3))
+        if (!Context.HasArgs(2))
         {
             throw Context.SendCorrectUsage("/structure <set|s> <group|owner> <value>");
         }
 
-        bool isSettingGroup = Context.MatchParameter(1, "group");
-        if (!isSettingGroup && !Context.MatchParameter(1, "owner"))
+        bool isSettingGroup = Context.MatchParameter(0, "group");
+        if (!isSettingGroup && !Context.MatchParameter(0, "owner"))
             throw Context.SendCorrectUsage("/structure <set|s> <group|owner> <value>");
 
         BarricadeDrop? barricade = null;
@@ -55,9 +55,9 @@ internal sealed class StructureSetCommand : IExecutableCommand
         else throw Context.Reply(_translations.StructureNoTarget);
 
         await UniTask.SwitchToMainThread(token);
-        if (!Context.TryGet(2, out CSteamID ownerOrGroupId) || ownerOrGroupId != CSteamID.Nil && !isSettingGroup && ownerOrGroupId.GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
+        if (!Context.TryGet(1, out CSteamID ownerOrGroupId) || ownerOrGroupId != CSteamID.Nil && !isSettingGroup && ownerOrGroupId.GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
         {
-            if (!Context.MatchParameter(2, "me"))
+            if (!Context.MatchParameter(1, "me"))
                 throw Context.SendHelp();
 
             // self
