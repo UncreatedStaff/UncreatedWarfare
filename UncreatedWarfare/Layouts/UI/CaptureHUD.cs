@@ -115,7 +115,7 @@ public class CaptureHUD :
         
         float progress = contest.LeaderPoints / (float) contest.MaxPossiblePoints;
 
-        FlagContestResult flagContestResult = flag.CurrentContestResult;
+        FlagContestResult flagContestResult = flag.CurrentContestState;
         
         if (flagContestResult.State == FlagContestResult.ContestState.Contested)
         {

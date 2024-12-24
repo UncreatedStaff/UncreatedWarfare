@@ -204,7 +204,7 @@ public abstract class DualSidedFlagService :
         foreach (FlagObjective flag in ActiveFlags)
         {
             FlagContestResult contestResult = GetContestResult(flag, Layout.TeamManager.AllTeams);
-            flag.CurrentContestResult = contestResult;
+            flag.CurrentContestState = contestResult;
             if (contestResult.State == FlagContestResult.ContestState.OneTeamIsLeading)
             {
                 flag.MarkContested(false);
@@ -235,7 +235,7 @@ public abstract class DualSidedFlagService :
     [EventListener(Priority = int.MaxValue)]
     public void HandleEvent(PlayerEnteredFlagRegion e, IServiceProvider serviceProvider)
     {
-        e.Flag.CurrentContestResult = GetContestResult(e.Flag, TeamManager.AllTeams);
+        e.Flag.CurrentContestState = GetContestResult(e.Flag, TeamManager.AllTeams);
     }
     
     void IEventListener<FlagNeutralized>.HandleEvent(FlagNeutralized e, IServiceProvider serviceProvider)
