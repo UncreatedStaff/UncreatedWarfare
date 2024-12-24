@@ -10,6 +10,7 @@ using System.Runtime.ExceptionServices;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Exceptions;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Models.GameData;
 using Uncreated.Warfare.Players.Management;
@@ -85,6 +86,8 @@ public class LayoutFactory : IHostedService
         }
 
         layout.Dispose();
+
+        await UniTask.SwitchToMainThread(CancellationToken.None);
         _warfare.SetActiveLayout(null);
     }
 
@@ -181,6 +184,7 @@ public class LayoutFactory : IHostedService
                 }
 
                 oldLayout.Dispose();
+                await UniTask.SwitchToMainThread(CancellationToken.None);
                 _warfare.SetActiveLayout(null);
             }
             else
@@ -604,6 +608,10 @@ public class LayoutFactory : IHostedService
         if (layout.WasStarted)
         {
             layout.LayoutStats.EndTimestamp ??= DateTimeOffset.UtcNow;
+            if (layout.Data.TryGetValue(KnownLayoutDataKeys.WinnerTeam, out object winner) && winner is Team team)
+            {
+                layout.LayoutStats.WinnerFactionId = team.Faction.PrimaryKey;
+            }
             _dbContext.Update(layout.LayoutStats);
         }
         else

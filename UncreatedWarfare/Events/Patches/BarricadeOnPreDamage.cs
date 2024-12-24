@@ -1,24 +1,22 @@
-﻿using DanielWillett.ReflectionTools.Formatting;
-using DanielWillett.ReflectionTools;
+﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools.Emit;
+using DanielWillett.ReflectionTools.Formatting;
 using HarmonyLib;
-using System;
 using System.Collections.Generic;
-using System.Reflection.Emit;
 using System.Reflection;
-using System.Text;
+using System.Reflection.Emit;
+using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Events.Models.Vehicles;
 using Uncreated.Warfare.Patches;
-using Uncreated.Warfare.Vehicles.WarfareVehicles;
-using Uncreated.Warfare.Vehicles;
-using Uncreated.Warfare.Buildables;
 
 namespace Uncreated.Warfare.Events.Patches;
+
 [UsedImplicitly]
-public class BarricadeOnPreDamage : IHarmonyPatch
+internal sealed class BarricadeOnPreDamage : IHarmonyPatch
 {
     private static MethodInfo? _target;
 
-    void IHarmonyPatch.Patch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Patch(ILogger logger, Harmony patcher)
     {
         _target = typeof(BarricadeManager).GetMethod(nameof(BarricadeManager.damage), BindingFlags.Static | BindingFlags.Public);
         if (_target != null)
@@ -41,7 +39,7 @@ public class BarricadeOnPreDamage : IHarmonyPatch
         );
     }
 
-    void IHarmonyPatch.Unpatch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Unpatch(ILogger logger, Harmony patcher)
     {
         if (_target == null)
             return;
@@ -51,37 +49,69 @@ public class BarricadeOnPreDamage : IHarmonyPatch
         _target = null;
     }
 
-    private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+    private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions, MethodBase method, ILGenerator generator)
     {
-        MethodInfo askDamageMethod = typeof(Barricade).GetMethod("askDamage", BindingFlags.Public | BindingFlags.Instance);
+        TranspileContext ctx = new TranspileContext(method, generator, instructions);
+
+        MethodInfo? askDamageMethod = typeof(Barricade)
+            .GetMethod("askDamage", BindingFlags.Public | BindingFlags.Instance);
         if (askDamageMethod == null)
         {
-            WarfareModule.Singleton.GlobalLogger.LogWarning("Unable to find method: Barricade.askDamage");
+            return ctx.Fail(new MethodDefinition("askDamage")
+                .DeclaredIn<Barricade>(isStatic: false)
+                .WithParameter<ushort>("amount")
+                .ReturningVoid()
+            );
         }
 
         bool patchDone = false;
-        foreach (CodeInstruction instruction in instructions)
+        while (ctx.MoveNext())
         {
-            // strategy: insert the invoker call just before the call to barricade.askDamage
-
-            if (!patchDone && askDamageMethod != null && instruction.Calls(askDamageMethod))
+            if (!ctx.Instruction.Calls(askDamageMethod))
             {
-                yield return new CodeInstruction(OpCodes.Ldarg_S, (byte)4); // local variable 4: barricadeByRootTransform
-                yield return new CodeInstruction(OpCodes.Ldarg_S, (byte)6); // local variable 6: pendingDamage
-                yield return new CodeInstruction(OpCodes.Ldarg_S, (byte)4); // method arg 4: instigatorSteamID
-                yield return new CodeInstruction(OpCodes.Ldarg_S, (byte)5); // method arg 5: damageOrigin
-                yield return new CodeInstruction(OpCodes.Call, Accessor.GetMethod(PreBarricadeDamageInvoker));
-                WarfareModule.Singleton.GlobalLogger.LogInformation("Inserted PreBarricadeDamageInvoker call into method VehicleManager.damage.");
-
-                CodeInstruction old = new CodeInstruction(instruction); // make sure the original askDamage instruction is still called
-                yield return old;
-
-                patchDone = true;
                 continue;
             }
 
-            yield return instruction;
+            // strategy: insert the invoker call just before the call to barricade.askDamage
+
+            // local loaded just before askDamage
+            LocalReference lclPendingDamage = PatchUtil.GetLocal(ctx[ctx.CaretIndex - 1], false);
+
+            // find barricade index, move backwards from pendingDamage to last used local before that.
+            LocalReference lclBarricade = default;
+            for (int j = ctx.CaretIndex - 2; j >= 0; --j)
+            {
+                if (!ctx[j].IsLdloc())
+                    continue;
+
+                lclBarricade = PatchUtil.GetLocal(ctx[j], false);
+                break;
+            }
+
+            if (lclPendingDamage.Index < 0)
+                return ctx.Fail("Failed to find pending damage local.");
+
+            if (lclBarricade.Index < 0)
+                return ctx.Fail("Failed to find barricade local.");
+
+            ctx.EmitAbove(emit =>
+            {
+                emit.LoadLocalValue(lclBarricade)
+                    .LoadLocalValue(lclPendingDamage)
+                    .LoadArgument(4)
+                    .LoadArgument(5)
+                    .Invoke(Accessor.GetMethod(PreBarricadeDamageInvoker)!);
+            });
+            patchDone = true;
+            break;
         }
+
+        if (!patchDone)
+        {
+            return ctx.Fail("Failed to find askDamage call.");
+        }
+
+        return ctx;
     }
     private static void PreBarricadeDamageInvoker(BarricadeDrop barricadeDrop, ushort pendingDamage, CSteamID instigatorId, EDamageOrigin damageOrigin)
     {
@@ -94,6 +124,6 @@ public class BarricadeOnPreDamage : IHarmonyPatch
             DamageOrigin = damageOrigin
         };
 
-        _ = WarfareModule.EventDispatcher.DispatchEventAsync(args);
+        _ = WarfareModule.EventDispatcher.DispatchEventAsync(args, allowAsync: false);
     }
 }

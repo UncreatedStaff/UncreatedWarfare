@@ -245,16 +245,18 @@ internal class PointsRewardsEvents :
             if (player.Team == e.Flag.Owner)
             {
                 task = _points.ApplyEvent(
-                player.Steam64,
-                player.Team.Faction.PrimaryKey,
-                defendFlagEvent.Resolve().WithTranslation(defendFlagTranslation, player), token);
+                    player.Steam64,
+                    player.Team.Faction.PrimaryKey,
+                    defendFlagEvent.Resolve().WithTranslation(defendFlagTranslation, player), token
+                );
             }
             else
             {
                 task = _points.ApplyEvent(
-                player.Steam64,
-                player.Team.Faction.PrimaryKey,
-                attackFlagEvent.Resolve().WithTranslation(attackFlagTranslation, player), token);
+                    player.Steam64,
+                    player.Team.Faction.PrimaryKey,
+                    attackFlagEvent.Resolve().WithTranslation(attackFlagTranslation, player), token
+                );
             }
             tasks.Add(task);
         }

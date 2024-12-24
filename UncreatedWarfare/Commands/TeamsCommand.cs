@@ -1,4 +1,5 @@
 ﻿using Uncreated.Warfare.Interaction.Commands;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Lobby;
 using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Translations;
@@ -12,6 +13,7 @@ internal sealed class TeamsCommand : IExecutableCommand
     private readonly CooldownManager _cooldownManager;
     private readonly ZoneStore _zoneStore;
     private readonly LobbyZoneManager _lobbyManager;
+    private readonly ITeamManager<Team> _teamManager;
     private readonly TeamsCommandTranslations _translations;
 
     private static readonly PermissionLeaf PermissionInstantLobby = new PermissionLeaf("features.instant_lobby", unturned: false, warfare: true);
@@ -19,11 +21,18 @@ internal sealed class TeamsCommand : IExecutableCommand
     /// <inheritdoc />
     public required CommandContext Context { get; init; }
 
-    public TeamsCommand(CooldownManager cooldownManager, ZoneStore zoneStore, LobbyZoneManager lobbyManager, TranslationInjection<TeamsCommandTranslations> translations)
+    public TeamsCommand(
+        CooldownManager cooldownManager,
+        ZoneStore zoneStore,
+        LobbyZoneManager lobbyManager,
+        TranslationInjection<TeamsCommandTranslations> translations,
+        ITeamManager<Team> teamManager
+        )
     {
         _cooldownManager = cooldownManager;
         _zoneStore = zoneStore;
         _lobbyManager = lobbyManager;
+        _teamManager = teamManager;
         _translations = translations.Value;
     }
 
@@ -32,7 +41,7 @@ internal sealed class TeamsCommand : IExecutableCommand
     {
         Context.AssertRanByPlayer();
 
-        if (_cooldownManager.HasCooldown(Context.Player, CooldownType.ChangeTeams, out Cooldown cooldown) && !await Context.HasPermission(PermissionInstantLobby, token))
+        if (_cooldownManager.HasCooldown(Context.Player, CooldownType.ChangeTeams, out Cooldown? cooldown) && !await Context.HasPermission(PermissionInstantLobby, token))
         {
             throw Context.Reply(_translations.TeamsCooldown, cooldown);
         }
@@ -48,7 +57,7 @@ internal sealed class TeamsCommand : IExecutableCommand
             throw Context.SendUnknownError();
 
         _cooldownManager.StartCooldown(Context.Player, CooldownType.ChangeTeams, /* todo config */ 2000f);
-        Context.Player.UnturnedPlayer.teleportToLocationUnsafe(lobbyZone.Spawn, lobbyZone.SpawnYaw);
+        await _lobbyManager.JoinLobbyAsync(Context.Player, token);
         throw Context.Defer();
     }
 }

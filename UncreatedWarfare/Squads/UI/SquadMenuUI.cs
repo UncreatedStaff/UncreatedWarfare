@@ -105,7 +105,6 @@ internal class SquadMenuUI :
             Player = steam64,
             Owner = this
         });
-        Console.WriteLine($"Potential viewing player: {p.Names.PlayerName} data: {data} isViewing: {data?.IsViewing} team: {p.Team} required team: {team}");
         return data != null && data.IsViewing && p.Team == team;
     });
     public void OpenUI(WarfarePlayer player)

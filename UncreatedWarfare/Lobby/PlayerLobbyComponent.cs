@@ -87,20 +87,40 @@ public class PlayerLobbyComponent : IPlayerComponent
         if (_joiningTeam != teamIndex || _lobbyManager.TeamFlags == null)
             return;
 
+        bool needsUpdate = false;
         if (_lobbyManager.JoinDelay > TimeSpan.Zero)
         {
-            await UniTask.Delay(_lobbyManager.JoinDelay, DelayType.Realtime, cancellationToken: Player.DisconnectToken);
+            _lobbyManager.UpdateTeamCount(teamIndex, +1);
+            needsUpdate = true;
+            try
+            {
+                await UniTask.Delay(_lobbyManager.JoinDelay, DelayType.Realtime, cancellationToken: Player.DisconnectToken);
+            }
+            catch
+            {
+                _lobbyManager.UpdateTeamCount(teamIndex, -1);
+                throw;
+            }
         }
 
-        if (_joiningTeam != teamIndex)
-            return;
+        Team joiningTeam;
+        try
+        {
+            if (_joiningTeam != teamIndex)
+                return;
 
-        Team joiningTeam = _joiningTeam < 0 || _joiningTeam >= _lobbyManager.TeamFlags.Length ? Team.NoTeam : (_lobbyManager.TeamFlags[_joiningTeam].Team ?? Team.NoTeam);
+            joiningTeam = _joiningTeam < 0 || _joiningTeam >= _lobbyManager.TeamFlags.Length ? Team.NoTeam : (_lobbyManager.TeamFlags[_joiningTeam].Team ?? Team.NoTeam);
 
-        // join Unturned group
-        UniTask joinTeamTask = _teamManager.JoinTeamAsync(Player, joiningTeam, Player.DisconnectToken);
-        _joiningTeam = -1;
-        await joinTeamTask;
+            // join Unturned group
+            UniTask joinTeamTask = _teamManager.JoinTeamAsync(Player, joiningTeam, Player.DisconnectToken);
+            _joiningTeam = -1;
+            await joinTeamTask;
+        }
+        finally
+        {
+            if (needsUpdate)
+                _lobbyManager.UpdateTeamCount(teamIndex, -1);
+        }
 
         if (!joiningTeam.IsValid)
             return;

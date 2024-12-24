@@ -1,13 +1,11 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Stripe;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Flags;
-using Uncreated.Warfare.Events.Models.Fobs;
 using Uncreated.Warfare.Exceptions;
 using Uncreated.Warfare.Layouts.Phases.Flags;
 using Uncreated.Warfare.Layouts.Teams;
@@ -39,9 +37,13 @@ public abstract class DualSidedFlagService :
 
     protected FlagPhaseSettings FlagSettings { get; private set; }
 
-    public FlagObjective StartingTeam { get; private set; }
+    public ZoneRegion StartingTeamRegion { get; private set; }
 
-    public FlagObjective EndingTeam { get; private set; }
+    public Team StartingTeam { get; private set; }
+
+    public ZoneRegion EndingTeamRegion { get; private set; }
+
+    public Team EndingTeam { get; private set; }
 
 #nullable restore
 
@@ -147,8 +149,9 @@ public abstract class DualSidedFlagService :
         // create zones as objects with colliders
 
         List<FlagObjective> flagList = new List<FlagObjective>(PathingResult.Count);
-        foreach (Zone zone in PathingResult)
+        for (int i = 1; i < PathingResult.Count - 1; i++)
         {
+            Zone zone = PathingResult[i];
             ZoneProximity[] zones = ZoneStore.Zones
                 .Where(z => z.Name.Equals(zone.Name, StringComparison.Ordinal))
                 .Select(z => new ZoneProximity(ZoneStore.CreateColliderForZone(z), z))
@@ -159,14 +162,28 @@ public abstract class DualSidedFlagService :
         }
 
         _flags = flagList.ToArrayFast();
-        if (_flags.Length < 3)
+        if (_flags.Length < 1)
         {
             throw new LayoutConfigurationException("Unable to create zone path longer than one zone (not including main bases).");
         }
 
-        ActiveFlags = new ReadOnlyCollection<FlagObjective>(new ArraySegment<FlagObjective>(_flags, 1, _flags.Length - 2));
-        StartingTeam = new FlagObjective(_flags[0].Region, TeamManager.AllTeams.First());
-        EndingTeam = new FlagObjective(_flags[^1].Region, TeamManager.AllTeams.Last());
+        ZoneProximity[] t1Zones = ZoneStore.Zones
+            .Where(z => z.Name.Equals(PathingResult[0].Name, StringComparison.Ordinal))
+            .Select(z => new ZoneProximity(ZoneStore.CreateColliderForZone(z), z))
+            .ToArray();
+        ZoneProximity[] t2Zones = ZoneStore.Zones
+            .Where(z => z.Name.Equals(PathingResult[^1].Name, StringComparison.Ordinal))
+            .Select(z => new ZoneProximity(ZoneStore.CreateColliderForZone(z), z))
+            .ToArray();
+
+        ActiveFlags = new ReadOnlyCollection<FlagObjective>(_flags);
+        
+        StartingTeamRegion = new ZoneRegion(t1Zones, TeamManager);
+        StartingTeam = TeamManager.AllTeams.First(x => x.Faction.FactionId.Equals(StartingTeamRegion.Primary.Zone.Faction, StringComparison.Ordinal));
+        
+        EndingTeamRegion = new ZoneRegion(t2Zones, TeamManager);
+        EndingTeam = TeamManager.AllTeams.First(x => x.Faction.FactionId.Equals(EndingTeamRegion.Primary.Zone.Faction, StringComparison.Ordinal));
+        
         IsActive = true;
 
         _ = WarfareModule.EventDispatcher.DispatchEventAsync(new FlagsSetUp { ActiveFlags = ActiveFlags, FlagService = this });
@@ -176,7 +193,7 @@ public abstract class DualSidedFlagService :
     {
         Layout.Data[KnownLayoutDataKeys.WinnerTeam] = winner;
 
-        _ = Layout.MoveToNextPhase(token: default);
+        _ = Layout.MoveToNextPhase(token: CancellationToken.None);
     }
 
     private void OnTick(ILoopTicker ticker, TimeSpan timeSinceStart, TimeSpan deltaTime)
@@ -199,6 +216,7 @@ public abstract class DualSidedFlagService :
             }
         }
     }
+
     private void SlowTickObjective(FlagObjective flag, FlagContestResult contestResult)
     {
         ObjectiveSlowTick args = new ObjectiveSlowTick
