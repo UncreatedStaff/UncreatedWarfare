@@ -11,9 +11,14 @@ using Uncreated.Warfare.Teams;
 using System.Linq;
 
 namespace Uncreated.Warfare.FOBs.StateStorage;
+
+/// <summary>
+/// A service for storing and fetching <see cref="BarricadeData"/> states (byte arrays that contain
+/// information about its stored items) in yaml, so that a particular state can be loaded later.
+/// </summary>
 public class BarricadeStateStore : ILayoutHostedService, IDisposable
 {
-    private YamlDataStore<List<BuildableStateSave>> _dataStore;
+    private readonly YamlDataStore<List<BarricadeStateSave>> _dataStore;
     private readonly WarfareModule _warfareModule;
     private readonly IConfiguration _configuration;
     private readonly ILogger _logger;
@@ -21,20 +26,14 @@ public class BarricadeStateStore : ILayoutHostedService, IDisposable
     /// <summary>
     /// List of all buildable save.
     /// </summary>
-    /// <remarks>Use <see cref="SaveAsync"/> or <see cref="AddOrUpdateAsync"/> when making changes.</remarks>
-    public IReadOnlyList<BuildableStateSave> Spawns => _dataStore.Data;
-    public Action OnSpawnsReloaded { get; set; }
-
+    /// <remarks>Use <see cref="SaveAsync(System.Threading.CancellationToken)"/> or <see cref="SaveAsync(SDG.Unturned.ItemBarricadeAsset,byte[],Uncreated.Warfare.Teams.FactionInfo?,System.Threading.CancellationToken)"/> when making changes.</remarks>
+    public IReadOnlyList<BarricadeStateSave> Spawns => _dataStore.Data;
     public BarricadeStateStore(WarfareModule warfareModule, IConfiguration configuration, ILogger<BarricadeStateStore> logger)
     {
         _warfareModule = warfareModule;
         _configuration = configuration;
         _logger = logger;
-        _dataStore = new YamlDataStore<List<BuildableStateSave>>(GetFolderPath(), logger, reloadOnFileChanged: true, () => new List<BuildableStateSave>());
-        _dataStore.OnFileReload = (dataStore) =>
-        {
-            OnSpawnsReloaded?.Invoke();
-        };
+        _dataStore = new YamlDataStore<List<BarricadeStateSave>>(GetFolderPath(), logger, reloadOnFileChanged: true, () => []);
     }
 
     UniTask ILayoutHostedService.StartAsync(CancellationToken token)
@@ -50,7 +49,6 @@ public class BarricadeStateStore : ILayoutHostedService, IDisposable
     private void ReloadSpawners()
     {
         _dataStore.Reload();
-        OnSpawnsReloaded?.Invoke();
     }
     private string GetFolderPath()
     {
@@ -59,23 +57,23 @@ public class BarricadeStateStore : ILayoutHostedService, IDisposable
             ServerSavedata.directoryName,
             Provider.serverID,
             _warfareModule.HomeDirectory,
-            "Buildables",
-            "BuildableStateSaves.yml"
+            "Barricades",
+            "BarricadeStateSaves.yml"
         );
     }
 
     /// <summary>
-    /// Add a new buildable save or just save the list if it's already in the list.
+    /// Add a new barricade save or just save the list if it's already in the list.
     /// </summary>
-    public async UniTask AddOrUpdateAsync(ItemPlaceableAsset asset, byte[] state, FactionInfo? faction = null, CancellationToken token = default)
+    public async UniTask SaveAsync(ItemBarricadeAsset asset, byte[] state, FactionInfo? faction = null, CancellationToken token = default)
     {
         await UniTask.SwitchToMainThread(token);
 
-        int existingRecordIndex = _dataStore.Data.FindIndex(s => s.BuildableAsset.MatchAsset(asset));
+        int existingRecordIndex = _dataStore.Data.FindIndex(s => s.BarricadeAsset.MatchAsset(asset));
 
-        BuildableStateSave newSave = new BuildableStateSave
+        BarricadeStateSave newSave = new BarricadeStateSave
         {
-            BuildableAsset = AssetLink.Create(asset),
+            BarricadeAsset = AssetLink.Create(asset),
             InertFriendlyName = asset.FriendlyName,
             FactionId = faction?.FactionId ?? null,
             Base64State = Convert.ToBase64String(state),
@@ -95,13 +93,13 @@ public class BarricadeStateStore : ILayoutHostedService, IDisposable
     }
 
     /// <summary>
-    /// Remove the given buildable save if it's in the list.
+    /// Delete the given barricade save if it exists.
     /// </summary>
-    public async UniTask<bool> RemoveAsync(BuildableStateSave spawnInfo, CancellationToken token = default)
+    public async UniTask<bool> RemoveAsync(BarricadeStateSave save, CancellationToken token = default)
     {
         await UniTask.SwitchToMainThread(token);
 
-        int removed = _dataStore.Data.RemoveAll(s => s.BuildableAsset == spawnInfo.BuildableAsset);
+        int removed = _dataStore.Data.RemoveAll(s => s.BarricadeAsset.Guid == save.BarricadeAsset.Guid);
 
         _dataStore.Save();
 
@@ -110,22 +108,28 @@ public class BarricadeStateStore : ILayoutHostedService, IDisposable
 
         return true;
     }
-    public BuildableStateSave FindBuildableSave(IAssetLink<ItemPlaceableAsset> matchingAsset, FactionInfo? factionInfo = null)
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="matchingAsset"></param> The <see cref="ItemBarricadeAsset"/> to filter on.
+    /// <param name="matchingfactionInfo"></param> An associated <see cref="FactionInfo"/> to filter on. If <see langword="null"/>, the filter will not be applied.
+    /// <returns></returns>
+    public BarricadeStateSave? FindBarricadeSave(ItemPlaceableAsset matchingAsset, FactionInfo? matchingfactionInfo = null)
     {
-        if (factionInfo != null)
-            return _dataStore.Data.FirstOrDefault(s => s.BuildableAsset.MatchAsset(matchingAsset) && s.FactionId != null && s.FactionId == factionInfo.FactionId);
+        if (matchingfactionInfo != null)
+            return _dataStore.Data.FirstOrDefault(s => s.BarricadeAsset.MatchAsset(matchingAsset) && s.FactionId != null && s.FactionId == matchingfactionInfo.FactionId);
 
-        return _dataStore.Data.FirstOrDefault(s => s.BuildableAsset.MatchAsset(matchingAsset));
+        return _dataStore.Data.FirstOrDefault(s => s.BarricadeAsset.MatchAsset(matchingAsset));
     }
 
     /// <summary>
-    /// Save all buildable saves to disk.
+    /// Save all barricade saves to disk.
     /// </summary>
     public async UniTask SaveAsync(CancellationToken token = default)
     {
         await UniTask.SwitchToMainThread(token);
 
-        _dataStore.Save(); // todo: make an async Save() function
+        _dataStore.Save();
     }
 
     public void Dispose()
