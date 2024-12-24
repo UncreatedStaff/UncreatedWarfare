@@ -23,7 +23,8 @@ public abstract class DualSidedFlagService :
     IFlagRotationService,
     IEventListener<FlagCaptured>,
     IEventListener<FlagNeutralized>,
-    IEventListener<PlayerEnteredFlagRegion>
+    IEventListener<PlayerEnteredFlagRegion>,
+    IEventListener<PlayerExitedFlagRegion>
 {
     private const double TickInternalSeconds = 4;
     private readonly ILoopTickerFactory _loopTickerFactory;
@@ -203,30 +204,30 @@ public abstract class DualSidedFlagService :
     {
         foreach (FlagObjective flag in ActiveFlags)
         {
-            FlagContestResult contestResult = GetContestResult(flag, Layout.TeamManager.AllTeams);
-            flag.CurrentContestState = contestResult;
-            if (contestResult.State == FlagContestResult.ContestState.OneTeamIsLeading)
+            FlagContestState contestState = GetContestResult(flag, Layout.TeamManager.AllTeams);
+            flag.CurrentContestState = contestState;
+            if (contestState.State == FlagContestState.ContestState.OneTeamIsLeading)
             {
                 flag.MarkContested(false);
-                flag.Contest.AwardPoints(contestResult.Leader!, 12);
+                flag.Contest.AwardPoints(contestState.Leader!, 12);
             }
-            else if (contestResult.State == FlagContestResult.ContestState.Contested)
+            else if (contestState.State == FlagContestState.ContestState.Contested)
                 flag.MarkContested(true);
 
             if (timeSinceStart.Seconds % (TickInternalSeconds * 4) == 0 && 
-                !(contestResult.State == FlagContestResult.ContestState.NotObjective || contestResult.State == FlagContestResult.ContestState.NoPlayers))
+                !(contestState.State == FlagContestState.ContestState.NotObjective || contestState.State == FlagContestState.ContestState.NoPlayers))
             {
-                SlowTickObjective(flag, contestResult);
+                SlowTickObjective(flag, contestState);
             }
         }
     }
     
-    private void SlowTickObjective(FlagObjective flag, FlagContestResult contestResult)
+    private void SlowTickObjective(FlagObjective flag, FlagContestState contestState)
     {
         ObjectiveSlowTick args = new ObjectiveSlowTick
         {
             Flag = flag,
-            ContestResult = contestResult
+            ContestState = contestState
         };
 
         _ = WarfareModule.EventDispatcher.DispatchEventAsync(args);
@@ -234,6 +235,12 @@ public abstract class DualSidedFlagService :
     
     [EventListener(Priority = int.MaxValue)]
     public void HandleEvent(PlayerEnteredFlagRegion e, IServiceProvider serviceProvider)
+    {
+        e.Flag.CurrentContestState = GetContestResult(e.Flag, TeamManager.AllTeams);
+    }
+    
+    [EventListener(Priority = int.MaxValue)]
+    public void HandleEvent(PlayerExitedFlagRegion e, IServiceProvider serviceProvider)
     {
         e.Flag.CurrentContestState = GetContestResult(e.Flag, TeamManager.AllTeams);
     }
@@ -258,10 +265,10 @@ public abstract class DualSidedFlagService :
     }
     protected abstract void RecalculateObjectives();
     /// <summary>
-    /// Must return a <see cref="FlagContestResult"/> describing the result of the contest caused by players trying to capture it, if any.
+    /// Must return a <see cref="FlagContestState"/> describing the resultant state of the contest caused by players trying to capture it, if any.
     /// <remarks>
     /// <para>
-    /// The logic of this method should account for all the result cases featured in <see cref="FlagContestResult.ContestState"/>.
+    /// The logic of this method should account for all the result cases featured in <see cref="FlagContestState.ContestState"/>.
     /// </para>
     /// <para>
     /// This method is called every flag tick (usually a few seconds), as well as on some other occasions, on every active flag in the rotation.
@@ -271,7 +278,7 @@ public abstract class DualSidedFlagService :
     /// </summary>
     /// <param name="flag"></param> The flag that is being evaluated.
     /// <param name="possibleContestingTeams"></param> A selection of possible teams who may be contesting the flag.
-    public abstract FlagContestResult GetContestResult(FlagObjective flag, IEnumerable<Team> possibleContestingTeams);
+    public abstract FlagContestState GetContestResult(FlagObjective flag, IEnumerable<Team> possibleContestingTeams);
     public abstract FlagObjective? GetObjective(Team team);
 
     public virtual IEnumerable<FlagObjective> EnumerateObjectives()

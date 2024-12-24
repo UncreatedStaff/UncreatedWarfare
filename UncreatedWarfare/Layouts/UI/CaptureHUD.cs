@@ -18,6 +18,7 @@ namespace Uncreated.Warfare.Layouts.UI;
 public class CaptureHUD : 
     UnturnedUI,
     IEventListener<FlagContestPointsChanged>,
+    IEventListener<FlagContestStateChanged>,
     IEventListener<PlayerEnteredFlagRegion>,
     IEventListener<PlayerExitedFlagRegion>
 {
@@ -115,16 +116,16 @@ public class CaptureHUD :
         
         float progress = contest.LeaderPoints / (float) contest.MaxPossiblePoints;
 
-        FlagContestResult flagContestResult = flag.CurrentContestState;
+        FlagContestState flagContestState = flag.CurrentContestState;
         
-        if (flagContestResult.State == FlagContestResult.ContestState.Contested)
+        if (flagContestState.State == FlagContestState.ContestState.Contested)
         {
             return CaptureUIState.Contesting(_translations, progress, flag.Name);
         }
 
-        if (flagContestResult.State == FlagContestResult.ContestState.OneTeamIsLeading)
+        if (flagContestState.State == FlagContestState.ContestState.OneTeamIsLeading)
         {
-            if (team == flagContestResult.Leader)
+            if (team == flagContestState.Leader)
             {
                 if (contest.LeaderPoints == contest.MaxPossiblePoints)
                 {
@@ -170,6 +171,10 @@ public class CaptureHUD :
     }
 
     void IEventListener<FlagContestPointsChanged>.HandleEvent(FlagContestPointsChanged e, IServiceProvider serviceProvider)
+    {
+        UpdateUIForPlayers(e.Flag);
+    }
+    void IEventListener<FlagContestStateChanged>.HandleEvent(FlagContestStateChanged e, IServiceProvider serviceProvider)
     {
         UpdateUIForPlayers(e.Flag);
     }

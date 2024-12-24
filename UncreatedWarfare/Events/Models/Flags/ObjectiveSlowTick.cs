@@ -16,7 +16,7 @@ public class ObjectiveSlowTick
     public required FlagObjective Flag { get; init; }
 
     /// <summary>
-    /// The current <see cref="FlagContestResult"/> of the flag. Its state will never be <see cref="FlagContestResult.ContestState.NotObjective"/> or <see cref="FlagContestResult.ContestState.NoPlayers"/>
+    /// The current <see cref="FlagContestState"/> of the flag. Its state will never be <see cref="FlagContestState.ContestState.NotObjective"/> or <see cref="FlagContestState.ContestState.NoPlayers"/>
     /// </summary>
-    public required FlagContestResult ContestResult { get; init; }
+    public required FlagContestState ContestState { get; init; }
 }
