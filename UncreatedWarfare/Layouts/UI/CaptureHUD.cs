@@ -112,38 +112,39 @@ public class CaptureHUD :
         Team team = languageSet.Team;
 
         SingleLeaderContest contest = flag.Contest;
-
-        if (contest.LeaderPoints == contest.MaxPossiblePoints)
-        {
-            if (team == flag.Owner)
-            {
-                GetLogger().LogInformation($"Sending Secured state for flag: {flag}");
-
-                return CaptureUIState.Secured(_translations, flag.Name);
-            }
-
-            return CaptureUIState.Lost(_translations, flag.Owner, flag.Name);
-        }
-        if (contest.LeaderPoints == 0)
-        {
-            return CaptureUIState.Neutralized(_translations, flag.Name);
-        }
-
+        
         float progress = contest.LeaderPoints / (float) contest.MaxPossiblePoints;
-            
-        if (flag.IsContested)
+
+        FlagContestResult flagContestResult = flag.CurrentContestResult;
+        
+        if (flagContestResult.State == FlagContestResult.ContestState.Contested)
         {
             return CaptureUIState.Contesting(_translations, progress, flag.Name);
         }
 
-        if (team == contest.Leader)
+        if (flagContestResult.State == FlagContestResult.ContestState.OneTeamIsLeading)
         {
-            return CaptureUIState.Capturing(_translations, progress, contest.Leader, flag.Name);
+            if (team == flagContestResult.Leader)
+            {
+                if (contest.LeaderPoints == contest.MaxPossiblePoints)
+                {
+                    return CaptureUIState.Secured(_translations, flag.Name);
+                }
+
+                return CaptureUIState.Capturing(_translations, progress, contest.Leader, flag.Name);
+            }
+            else
+            {
+                if (contest.LeaderPoints == contest.MaxPossiblePoints)
+                {
+                    return CaptureUIState.Lost(_translations, flag.Owner, flag.Name);
+                }
+
+                return CaptureUIState.Losing(_translations, progress, contest.Leader, flag.Name);
+            }
         }
-        else
-        {
-            return CaptureUIState.Losing(_translations, progress, contest.Leader, flag.Name);
-        }
+
+        return CaptureUIState.Ineffective(_translations, flag.Name);
     }
     public void HideCaptureUI(LanguageSet set)
     {

@@ -17,6 +17,7 @@ public class FlagObjective : IDisposable
     public Team Owner => Contest.IsWon ? Contest.Leader : Team.NoTeam;
     public SingleLeaderContest Contest { get; }
     public bool IsContested { get; private set; }
+    public FlagContestResult CurrentContestResult { get; internal set; }
     public FlagObjective(ZoneRegion region) : this(region, Team.NoTeam) { }
     public FlagObjective(ZoneRegion region, Team startingOwner)
     {
@@ -71,7 +72,7 @@ public class FlagObjective : IDisposable
     {
         IsContested = isContested;
     }
-
+    
     public override string ToString()
     {
         return $"FlagObjective: {Name} [" +
