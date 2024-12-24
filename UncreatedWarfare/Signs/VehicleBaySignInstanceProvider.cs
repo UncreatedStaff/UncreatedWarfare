@@ -152,7 +152,6 @@ public class VehicleBaySignInstanceProvider : ISignInstanceProvider, IRequestabl
                 break;
 
         }
-        Console.WriteLine("SIGN UPDATED FINISHED: " + spawner.State);
     }
 }
 

@@ -207,7 +207,7 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService
         Zone? minZone = null;
         foreach (ZoneProximity proximity in ProximityZones)
         {
-            if (type != null && type != proximity.Zone.Type)
+            if (type.HasValue && type != proximity.Zone.Type)
                 continue;
 
             Vector3 closestPoint = proximity.Proximity.GetNearestPointOnBorder(in point);
@@ -243,6 +243,8 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService
         foreach (ZoneProximity proximity in ProximityZones)
         {
             Vector3 closestPoint = proximity.Proximity.GetNearestPointOnBorder(in p);
+            if (type.HasValue && proximity.Zone.Type != type.Value)
+                continue;
 
             float d = MathUtility.SquaredDistance(in p, in closestPoint, true) * (proximity.Proximity.TestPoint(in point) ? -1 : 1);
 
@@ -267,6 +269,8 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService
 
         foreach (ZoneProximity proximity in ProximityZones)
         {
+            if (type.HasValue && proximity.Zone.Type != type.Value)
+                continue;
             if (proximity.Proximity.TestPoint(point))
                 yield return proximity.Zone;
         }
@@ -282,6 +286,8 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService
 
         foreach (ZoneProximity proximity in ProximityZones)
         {
+            if (type.HasValue && proximity.Zone.Type != type.Value)
+                continue;
             if (proximity.Proximity.TestPoint(point))
                 yield return proximity.Zone;
         }
@@ -322,10 +328,10 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService
     /// </summary>
     public Zone? SearchZone(string term, FactionInfo? relevantFaction = null)
     {
-        int index = CollectionUtility.StringIndexOf(Zones, x => x.Name, term, false);
+        int index = CollectionUtility.StringIndexOf(Zones, x => x.Name, term);
         if (index < 0)
         {
-            index = CollectionUtility.StringIndexOf(Zones, x => x.ShortName, term, false);
+            index = CollectionUtility.StringIndexOf(Zones, x => x.ShortName, term);
         }
 
         if (index >= 0)

@@ -117,9 +117,10 @@ public class ColliderProximity : MonoBehaviour, ITrackingProximity<WarfarePlayer
         for (int i = _players.Count - 1; i >= 0; --i)
         {
             WarfarePlayer player = _players[i];
-            if (player.IsOnline && TestPoint(player.Position))
+            if (player.IsOnline && _proximity.TestPoint(player.Position) && (_validationCheck == null || _validationCheck(player)))
                 continue;
-            
+
+            Console.WriteLine("{0} FixedUpdate remove: {1}", transform.position, player);
             RemoveObject(i);
         }
     }
@@ -132,23 +133,20 @@ public class ColliderProximity : MonoBehaviour, ITrackingProximity<WarfarePlayer
             return;
 
         Vector3 position = player.Position;
-        bool foundCollider = false;
         for (int i = 0; i < _players.Count; ++i)
         {
             if (!player.Equals(_players[i]))
                 continue;
 
-            if (!TestPoint(position))
+            if (!_proximity.TestPoint(position) || _validationCheck != null && !_validationCheck(player))
             {
                 RemoveObject(i);
-                return;
             }
 
-            foundCollider = true;
-            break;
+            return;
         }
 
-        if (foundCollider || !TestPoint(position) || _validationCheck != null && !_validationCheck(player))
+        if (!_proximity.TestPoint(position) || _validationCheck != null && !_validationCheck(player))
             return;
 
         AddObject(player);

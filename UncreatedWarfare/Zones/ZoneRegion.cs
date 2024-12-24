@@ -213,7 +213,6 @@ public class ZoneRegion : IDisposable
 
     private void OnObjectEnteredAnyZone(WarfarePlayer player)
     {
-        Console.WriteLine($"Player {player} entered zone {this}");
 
         if (!_players.AddIfNotExists(player))
             return;

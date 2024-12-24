@@ -12,6 +12,7 @@ using Uncreated.Warfare.Exceptions;
 using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Proximity;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Teams;
@@ -47,13 +48,14 @@ public class LobbyZoneManager : IHostedService, ILevelHostedService, IEventListe
     private readonly ITeamSelectorBehavior _behavior;
 
     internal FlagInfo[]? TeamFlags;
+    private readonly IPlayerService _playerService;
 
     /// <summary>
     /// Number of seconds to wait until joining the team.
     /// </summary>
     public TimeSpan JoinDelay { get; private set; }
 
-    public LobbyZoneManager(ZoneStore zoneStore, LobbyConfiguration lobbyConfig, IFactionDataStore factionDataStore, ILogger<LobbyZoneManager> logger, WarfareModule module, ITeamSelectorBehavior behavior)
+    public LobbyZoneManager(ZoneStore zoneStore, LobbyConfiguration lobbyConfig, IFactionDataStore factionDataStore, ILogger<LobbyZoneManager> logger, WarfareModule module, ITeamSelectorBehavior behavior, IPlayerService playerService)
     {
         _zoneStore = zoneStore;
         _lobbyConfig = lobbyConfig;
@@ -61,6 +63,7 @@ public class LobbyZoneManager : IHostedService, ILevelHostedService, IEventListe
         _logger = logger;
         _module = module;
         _behavior = behavior;
+        _playerService = playerService;
     }
 
     UniTask ILevelHostedService.LoadLevelAsync(CancellationToken token)
@@ -145,6 +148,20 @@ public class LobbyZoneManager : IHostedService, ILevelHostedService, IEventListe
     public Zone? GetLobbyZone()
     {
         return _lobbyZone;
+    }
+    
+    /// <summary>
+    /// Teleport a player to the lobby and leave their group.
+    /// </summary>
+    public async UniTask JoinLobbyAsync(WarfarePlayer player, CancellationToken token = default)
+    {
+        await _module.GetActiveLayout().TeamManager.JoinTeamAsync(player, Team.NoTeam, token);
+
+        if (_lobbyZone == null)
+            return;
+
+        await UniTask.SwitchToMainThread(CancellationToken.None);
+        player.UnturnedPlayer.teleportToLocationUnsafe(_lobbyZone.Spawn, _lobbyZone.SpawnYaw);
     }
 
     /// <summary>
@@ -281,6 +298,15 @@ public class LobbyZoneManager : IHostedService, ILevelHostedService, IEventListe
         }
     }
 
+    internal void UpdateTeamCount(int teamIndex, int change)
+    {
+        if (Disabled || teamIndex < 0 || TeamFlags == null)
+            return;
+
+        _behavior.Teams![teamIndex].PlayerCount += change;
+        UpdateAllFlags(teamIndex);
+    }
+
     internal void UpdateTeamCount(Team team, int change)
     {
         if (Disabled || team is null || !team.IsValid || TeamFlags == null)
@@ -291,8 +317,7 @@ public class LobbyZoneManager : IHostedService, ILevelHostedService, IEventListe
             if (TeamFlags[i].Team != team)
                 continue;
 
-            _behavior.Teams![i].PlayerCount += change;
-            UpdateAllFlags(i);
+            UpdateTeamCount(i, change);
             break;
         }
     }
@@ -446,10 +471,10 @@ public class LobbyZoneManager : IHostedService, ILevelHostedService, IEventListe
             UpdateAllFlags(player);
     }
 
-    UniTask ILayoutStartingListener.HandleLayoutStartingAsync(Layout layout, CancellationToken token)
+    async UniTask ILayoutStartingListener.HandleLayoutStartingAsync(Layout layout, CancellationToken token)
     {
         if (Disabled)
-            return UniTask.CompletedTask;
+            return;
 
         // update 'Team' objects for the new layout, since they may have changed between layouts
         ITeamManager<Team> teamManager = _module.GetActiveLayout().TeamManager;
@@ -487,7 +512,19 @@ public class LobbyZoneManager : IHostedService, ILevelHostedService, IEventListe
 
         UpdateTeamCounts();
 
-        return UniTask.CompletedTask;
+        UniTask[] tasks = new UniTask[_playerService.OnlinePlayers.Count];
+        int index = -1;
+
+        // teleport all players on a team to lobby
+        foreach (WarfarePlayer player in _playerService.OnlinePlayers)
+        {
+            if (!player.Team.IsValid)
+                continue;
+
+            tasks[++index] = JoinLobbyAsync(player, CancellationToken.None);
+        }
+
+        await UniTask.WhenAll(tasks);
     }
 
     UniTask IHostedService.StartAsync(CancellationToken token)

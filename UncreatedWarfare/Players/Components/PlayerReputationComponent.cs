@@ -54,7 +54,7 @@ public class PlayerReputationComponent : IPlayerComponent, IDisposable
     /// <remarks>Thread-safe</remarks>
     public void SetReputation(int reputation)
     {
-        reputation = Player.UnturnedPlayer.skills.reputation - reputation;
+        reputation -= Player.UnturnedPlayer.skills.reputation;
         if (GameThread.IsCurrent)
         {
             _pendingReputation = 0;

@@ -212,10 +212,10 @@ public class StrategyMapManager :
         {
             map.AddMapTack(CreateFlagTack(flag));
         }
-        if (map.MapTable.Group == flagService.StartingTeam.Owner.GroupId)
-            map.AddMapTack(CreateMainBaseTack(flagService.StartingTeam.Region.Primary.Zone));
-        if (map.MapTable.Group == flagService.EndingTeam.Owner.GroupId)
-            map.AddMapTack(CreateMainBaseTack(flagService.EndingTeam.Region.Primary.Zone));
+        if (map.MapTable.Group.m_SteamID == flagService.StartingTeam.GroupId.m_SteamID)
+            map.AddMapTack(CreateMainBaseTack(flagService.StartingTeamRegion.Primary.Zone));
+        if (map.MapTable.Group.m_SteamID == flagService.EndingTeam.GroupId.m_SteamID)
+            map.AddMapTack(CreateMainBaseTack(flagService.EndingTeamRegion.Primary.Zone));
     }
     private void RepopulateDeployableFobTacks(StrategyMap map, FobManager fobManager)
     {
