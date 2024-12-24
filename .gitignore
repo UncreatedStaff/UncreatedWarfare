@@ -365,3 +365,7 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 /UncreatedWarfare/Properties/launchSettings.json
+/global.json
+/.idea/.idea.UncreatedWarfare/.idea/vcs.xml
+/.idea/.idea.UncreatedWarfare/.idea/indexLayout.xml
+/.idea/.idea.UncreatedWarfare/.idea/dataSources.xml

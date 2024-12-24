@@ -63,7 +63,7 @@ internal sealed class DevBarricadeSaveState : IExecutableCommand
 
         byte[] state = buildable.GetServersideData().barricade.state;
 
-        await _buildableStateStore.AddOrUpdateAsync(buildable.asset, state, factionInfo, token);
+        await _buildableStateStore.SaveAsync(buildable.asset, state, factionInfo, token);
 
         throw Context.Reply(_translations.BarricadeSaveStateSuccess, buildable.asset, factionInfo ?? FactionInfo.NoFaction);
     }
