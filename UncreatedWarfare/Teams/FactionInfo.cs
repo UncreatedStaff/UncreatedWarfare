@@ -16,6 +16,8 @@ using Uncreated.Warfare.Util;
 namespace Uncreated.Warfare.Teams;
 public class FactionInfo : ICloneable, ITranslationArgument
 {
+    private string? _spriteText;
+
     public const string UnknownTeamImgURL = "https://i.imgur.com/z0HE5P3.png";
     public const int FactionIDMaxCharLimit = 16;
     public const int FactionNameMaxCharLimit = 32;
@@ -123,7 +125,7 @@ public class FactionInfo : ICloneable, ITranslationArgument
     public uint PrimaryKey { get; set; }
 
     [JsonIgnore]
-    public string Sprite => "<sprite index=" + (TMProSpriteIndex.HasValue ? TMProSpriteIndex.Value.ToString(CultureInfo.InvariantCulture) : "0") + ">";
+    public string Sprite => _spriteText ??= ("<sprite index=" + (TMProSpriteIndex.HasValue ? TMProSpriteIndex.Value.ToString(CultureInfo.InvariantCulture) : "0") + ">");
 
     [JsonPropertyName("factionId")]
     public string FactionId

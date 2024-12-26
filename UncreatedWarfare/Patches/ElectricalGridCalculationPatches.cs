@@ -91,12 +91,12 @@ internal sealed class ElectricalGridCalculationPatches : IHarmonyPatch
 
         LevelObject obj = levelObjects[index];
         
-        WarfareModule.Singleton.GlobalLogger.LogConditional("Received request from {0} for obj {1} @ {2} to state: {3}.", player, obj.asset.FriendlyName, obj.transform.position, isUsed);
-
-        if (!WarfareModule.Singleton.IsLayoutActive())
+        if (!WarfareModule.Singleton.IsLayoutActive() || obj.asset.interactabilityPower == EObjectInteractabilityPower.NONE)
         {
             return true;
         }
+
+        WarfareModule.Singleton.GlobalLogger.LogConditional("Received request from {0} for obj {1} @ {2} to state: {3}.", player, obj.asset.FriendlyName, obj.transform.position, isUsed);
 
         Layout layout = WarfareModule.Singleton.GetActiveLayout();
 

@@ -234,6 +234,9 @@ public static class TranslationFormattingUtility
             break;
         }
 
+        if (text.Length == 0)
+            return null;
+
         int depth = 0;
         Color32 color = default;
         Color32? firstColor = null;

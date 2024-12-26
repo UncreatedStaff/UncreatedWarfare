@@ -120,7 +120,6 @@ public class ColliderProximity : MonoBehaviour, ITrackingProximity<WarfarePlayer
             if (player.IsOnline && _proximity.TestPoint(player.Position) && (_validationCheck == null || _validationCheck(player)))
                 continue;
 
-            Console.WriteLine("{0} FixedUpdate remove: {1}", transform.position, player);
             RemoveObject(i);
         }
     }

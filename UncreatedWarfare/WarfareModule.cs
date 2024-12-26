@@ -466,6 +466,8 @@ public sealed class WarfareModule
         bldr.RegisterType<PointsUI>().AsSelf().AsImplementedInterfaces().SingleInstance();
         bldr.RegisterType<TeamSelectorUI>().SingleInstance();
         bldr.RegisterType<VehicleHUD>().SingleInstance();
+        bldr.RegisterType<FlagListUI>().SingleInstance();
+        bldr.RegisterType<CaptureUI>().SingleInstance();
 
         bldr.RegisterType<TipService>()
             .AsImplementedInterfaces().AsSelf()

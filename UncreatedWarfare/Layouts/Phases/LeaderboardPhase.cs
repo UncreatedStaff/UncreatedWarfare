@@ -245,7 +245,7 @@ public class LeaderboardPhase : BasePhase<PhaseTeamSettings>, IDisposable, IEven
         List<LeaderboardPlayer> players = _players[teamIndex];
         foreach (LeaderboardPlayer pl in players)
         {
-            if (pl.Equals(player))
+            if (pl.Player.Equals(player))
                 return;
         }
 

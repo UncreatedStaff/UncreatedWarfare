@@ -18,24 +18,7 @@ public class FlagObjective : IDisposable
     public SingleLeaderContest Contest { get; }
     public bool IsContested { get; private set; }
 
-    public FlagContestState CurrentContestState
-    {
-        get;
-        internal set
-        {
-            FlagContestState oldState = field;
-            field = value;
-            if (oldState.State != value.State)
-            {
-                _ = WarfareModule.EventDispatcher?.DispatchEventAsync(new FlagContestStateChanged()
-                {
-                    Flag = this,
-                    OldState = oldState,
-                    NewState = value
-                });
-            }
-        }
-    }
+    public FlagContestState CurrentContestState { get; private set; }
     public FlagObjective(ZoneRegion region) : this(region, Team.NoTeam) { }
     public FlagObjective(ZoneRegion region, Team startingOwner)
     {
@@ -47,6 +30,36 @@ public class FlagObjective : IDisposable
         Contest.OnRestarted += OnNeutralizedIntl;
         Region.OnPlayerEntered += OnPlayerEnteredIntl;
         Region.OnPlayerExited += OnPlayerExitedIntl;
+    }
+
+    // we have an issue where AwardPoints needs to run before this event
+    // but also needs the value to be set before that event.
+    //  we have to separate the setting and event in some cases
+    internal void SetCurrentContestState(in FlagContestState state, bool invokeEvent = true)
+    {
+        FlagContestState oldState = CurrentContestState;
+        CurrentContestState = state;
+        if (oldState.Equals(in state) || !invokeEvent)
+        {
+            return;
+        }
+
+        InvokeContestStateChangedEvent(in oldState, in state);
+    }
+
+    internal void InvokeContestStateChangedEvent(in FlagContestState oldState, in FlagContestState newState)
+    {
+        if (oldState.Equals(in newState))
+        {
+            return;
+        }
+
+        _ = WarfareModule.EventDispatcher?.DispatchEventAsync(new FlagContestStateChanged
+        {
+            Flag = this,
+            OldState = oldState,
+            NewState = newState
+        });
     }
 
     /// <returns><see langword="true"/> if the specified <see cref="Team"/> has captured this flag at least once, otherwise <see langword="false"/>.</returns>

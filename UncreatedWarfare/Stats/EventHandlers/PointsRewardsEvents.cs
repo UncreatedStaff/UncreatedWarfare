@@ -212,7 +212,7 @@ internal class PointsRewardsEvents :
     public async UniTask HandleEventAsync(FlagNeutralized e, IServiceProvider serviceProvider, CancellationToken token = default)
     {
         EventInfo @event = _points.GetEvent("FlagNeutralized");
-        Translation translation = _translations.XPToastFlagCaptured;
+        Translation translation = _translations.XPToastFlagNeutralized;
 
         List<Task> tasks = new List<Task>();
         foreach (WarfarePlayer player in e.Flag.Players)

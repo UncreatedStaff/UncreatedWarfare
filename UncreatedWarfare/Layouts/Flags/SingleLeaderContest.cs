@@ -78,9 +78,33 @@ public class SingleLeaderContest
         else
             IncrementPointsClamp(-points);
 
+        //int change = Mathf.Abs(LeaderPoints - oldPoints);
+        //if (change >= 0)
+        //{
+        //    // if Points become zero
+        //    if (LeaderPoints == 0)
+        //    {
+        //        Leader = Team.NoTeam;
+        //        IsWon = false;
+        //        OnRestarted?.Invoke(team);
+        //    }
+        //    else if (Leader == Team.NoTeam)
+        //        Leader = team;
+        //
+        //    if (LeaderPoints == MaxPossiblePoints)
+        //        IsWon = true;
+        //
+        //    OnPointsChanged?.Invoke(LeaderPoints - oldPoints);
+        //
+        //    if (IsWon)
+        //        OnWon?.Invoke(Leader);
+        //}
+
         int change = LeaderPoints - oldPoints;
         if (change > 0)
         {
+            if (oldPoints == 0)
+                Leader = team;
             if (LeaderPoints == MaxPossiblePoints)
                 IsWon = true;
 
@@ -101,7 +125,7 @@ public class SingleLeaderContest
             // otherwise, if there is no leader yet, set the new leader
             else if (Leader == Team.NoTeam)
                 Leader = team;
-            
+
             OnPointsChanged?.Invoke(change);
         }
     }
