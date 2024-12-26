@@ -78,26 +78,31 @@ public class SingleLeaderContest
         else
             IncrementPointsClamp(-points);
 
-        int change = Mathf.Abs(LeaderPoints - oldPoints);
-        if (change >= 0)
+        int change = LeaderPoints - oldPoints;
+        if (change > 0)
         {
-            // if Points become zero
+            if (LeaderPoints == MaxPossiblePoints)
+                IsWon = true;
+
+            OnPointsChanged?.Invoke(change);
+
+            if (IsWon)
+                OnWon?.Invoke(Leader);
+        }
+        else if (change < 0)
+        {
+            // if Points become zero, contest is neutral again
             if (LeaderPoints == 0)
             {
                 Leader = Team.NoTeam;
                 IsWon = false;
                 OnRestarted?.Invoke(team);
             }
+            // otherwise, if there is no leader yet, set the new leader
             else if (Leader == Team.NoTeam)
                 Leader = team;
-
-            if (LeaderPoints == MaxPossiblePoints)
-                IsWon = true;
-
-            OnPointsChanged?.Invoke(LeaderPoints - oldPoints);
-
-            if (IsWon)
-                OnWon?.Invoke(Leader);
+            
+            OnPointsChanged?.Invoke(change);
         }
     }
     public override string ToString()
