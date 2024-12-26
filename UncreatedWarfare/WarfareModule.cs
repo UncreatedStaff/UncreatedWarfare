@@ -677,8 +677,10 @@ public sealed class WarfareModule
             .SingleInstance();
 
         bldr.RegisterType<BarricadeStateStore>()
+            .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
         bldr.RegisterType<BarricadeApplySavedStateTweaks>()
+            .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
 
         // Strategy Tables

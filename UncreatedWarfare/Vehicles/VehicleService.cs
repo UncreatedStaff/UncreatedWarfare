@@ -215,10 +215,7 @@ namespace Uncreated.Warfare.Vehicles
             {
                 for (int b = 0; b < region.drops.Count; b++)
                 {
-                    if (region.drops[b].interactable is InteractableStorage storage)
-                    {
-                        storage.despawnWhenDestroyed = true;
-                    }
+                    BarricadeUtility.PreventItemDrops(region.drops[b]);
                 }
             }
 

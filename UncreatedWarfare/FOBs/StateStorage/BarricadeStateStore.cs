@@ -1,14 +1,10 @@
-﻿using Microsoft.Extensions.Configuration;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
+using System.Linq;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Services;
-using Uncreated.Warfare.Vehicles.Spawners;
-using Uncreated.Warfare.Vehicles;
 using Uncreated.Warfare.Teams;
-using System.Linq;
 
 namespace Uncreated.Warfare.FOBs.StateStorage;
 
@@ -20,19 +16,15 @@ public class BarricadeStateStore : ILayoutHostedService, IDisposable
 {
     private readonly YamlDataStore<List<BarricadeStateSave>> _dataStore;
     private readonly WarfareModule _warfareModule;
-    private readonly IConfiguration _configuration;
-    private readonly ILogger _logger;
 
     /// <summary>
     /// List of all buildable save.
     /// </summary>
-    /// <remarks>Use <see cref="SaveAsync(System.Threading.CancellationToken)"/> or <see cref="SaveAsync(SDG.Unturned.ItemBarricadeAsset,byte[],Uncreated.Warfare.Teams.FactionInfo?,System.Threading.CancellationToken)"/> when making changes.</remarks>
+    /// <remarks>Use <see cref="SaveAsync(CancellationToken)"/> or <see cref="SaveAsync(ItemBarricadeAsset,byte[],FactionInfo?,CancellationToken)"/> when making changes.</remarks>
     public IReadOnlyList<BarricadeStateSave> Spawns => _dataStore.Data;
-    public BarricadeStateStore(WarfareModule warfareModule, IConfiguration configuration, ILogger<BarricadeStateStore> logger)
+    public BarricadeStateStore(WarfareModule warfareModule, ILogger<BarricadeStateStore> logger)
     {
         _warfareModule = warfareModule;
-        _configuration = configuration;
-        _logger = logger;
         _dataStore = new YamlDataStore<List<BarricadeStateSave>>(GetFolderPath(), logger, reloadOnFileChanged: true, () => []);
     }
 
@@ -108,8 +100,9 @@ public class BarricadeStateStore : ILayoutHostedService, IDisposable
 
         return true;
     }
+
     /// <summary>
-    /// 
+    /// Find a barricade save from an asset an an optional faction. A faction match is prioritized over an unfiltered match.
     /// </summary>
     /// <param name="matchingAsset"></param> The <see cref="ItemBarricadeAsset"/> to filter on.
     /// <param name="matchingfactionInfo"></param> An associated <see cref="FactionInfo"/> to filter on. If <see langword="null"/>, the filter will not be applied.
@@ -117,9 +110,14 @@ public class BarricadeStateStore : ILayoutHostedService, IDisposable
     public BarricadeStateSave? FindBarricadeSave(ItemPlaceableAsset matchingAsset, FactionInfo? matchingfactionInfo = null)
     {
         if (matchingfactionInfo != null)
-            return _dataStore.Data.FirstOrDefault(s => s.BarricadeAsset.MatchAsset(matchingAsset) && s.FactionId != null && s.FactionId == matchingfactionInfo.FactionId);
+        {
+            BarricadeStateSave? save = _dataStore.Data.FirstOrDefault(s => s.BarricadeAsset.MatchAsset(matchingAsset)
+                                                                           && string.Equals(s.FactionId, matchingfactionInfo.FactionId, StringComparison.Ordinal));
+            if (save != null)
+                return save;
+        }
 
-        return _dataStore.Data.FirstOrDefault(s => s.BarricadeAsset.MatchAsset(matchingAsset));
+        return _dataStore.Data.FirstOrDefault(s => s.BarricadeAsset.MatchAsset(matchingAsset) && string.IsNullOrEmpty(s.FactionId));
     }
 
     /// <summary>

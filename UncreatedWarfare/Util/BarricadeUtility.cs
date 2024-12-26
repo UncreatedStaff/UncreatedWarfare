@@ -6,7 +6,6 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Signs;
@@ -19,6 +18,9 @@ namespace Uncreated.Warfare.Util;
 /// </summary>
 public static class BarricadeUtility
 {
+    private static readonly ClientInstanceMethod<byte[]>? SendUpdateState
+        = ReflectionUtility.FindRpc<BarricadeDrop, ClientInstanceMethod<byte[]>>("SendUpdateState");
+
     /// <summary>
     /// All transformations using a buildable as reference should rotate the barricade by this first.
     /// </summary>
@@ -304,15 +306,32 @@ public static class BarricadeUtility
     {
         GameThread.AssertCurrent();
 
-        VerifyState(state, barricade.asset.build);
+        VerifyState(state, barricade.asset);
 
         switch (barricade.interactable)
         {
-            case InteractableStorage:
+            case InteractableStorage storage:
                 // storages have different states on clientside
-                // also update the interactable (updateReplicatedState does this automatically)
+
+                // close storage user
+                if (storage.opener != null)
+                {
+                    if (storage.opener.inventory.isStoring)
+                        storage.opener.inventory.closeStorageAndNotifyClient();
+                    storage.opener = null;
+                    storage.isOpen = false;
+                }
+
                 BarricadeManager.updateState(barricade.model, state, state.Length);
-                barricade.interactable.updateState(barricade.asset, barricade.GetServersideData().barricade.state);
+                state = barricade.GetServersideData().barricade.state;
+                storage.updateState(barricade.asset, state);
+
+                if (SendUpdateState == null || !BarricadeManager.tryGetRegion(barricade.model, out byte x, out byte y, out ushort plant, out _))
+                    break;
+
+                byte[] clientState = new byte[GetClientsideStorageStateLength(storage)];
+                WriteClientsideStorageState(clientState, storage, MemoryMarshal.Read<CSteamID>(state), MemoryMarshal.Read<CSteamID>(state[8..]));
+                SendUpdateState.Invoke(barricade.GetNetId(), ENetReliability.Reliable, BarricadeManager.GatherRemoteClientConnections(x, y, plant), clientState);
                 break;
 
             case InteractableSign:
@@ -328,6 +347,8 @@ public static class BarricadeUtility
                 break;
         }
     }
+
+    private static Encoder? _utf8Encoder;
 
     /// <summary>
     /// Sets the sign text without replicating to clients.
@@ -345,24 +366,195 @@ public static class BarricadeUtility
         if (byteCt + 17 > byte.MaxValue)
         {
             WarfareModule.Singleton.GlobalLogger.LogWarning(text.Concat(" is too long to go on a sign! (SetServersideSignText)"));
-            text = text[..(byte.MaxValue - 17)];
+            byteCt = byte.MaxValue - 17;
         }
-        
+
         byte[] newState = new byte[byteCt + 17];
 
         Unsafe.WriteUnaligned(ref newState[0], sign.owner.m_SteamID);
         Unsafe.WriteUnaligned(ref newState[8], sign.group.m_SteamID);
-        newState[16] = (byte)byteCt;
 
+        int length = 17;
         if (byteCt != 0)
         {
-            Encoding.UTF8.GetBytes(text, newState.AsSpan(17));
+            _utf8Encoder ??= Encoding.UTF8.GetEncoder();
+            _utf8Encoder.Convert(text, newState.AsSpan(17), true, out _, out int bytesUsed, out _);
+            newState[16] = (byte)bytesUsed;
+            length = 17 + bytesUsed;
         }
 
-        BarricadeManager.updateState(barricade.model, newState, newState.Length);
+        if (length != newState.Length)
+        {
+            byte[] old = newState;
+            newState = new byte[length];
+            Buffer.BlockCopy(old, 0, newState, 0, length);
+        }
+
+        BarricadeManager.updateState(barricade.model, newState, length);
         sign.updateState(barricade.asset, newState);
     }
-    
+
+    /// <summary>
+    /// Throw an exception if the state isn't valid for this barricade type.
+    /// </summary>
+    /// <remarks>Note that states that are too long will not throw exceptions, only states that are too short or are structually invalid somehow.</remarks>
+    /// <exception cref="InvalidBarricadeStateException"/>
+    public static void VerifyState(ReadOnlySpan<byte> state, ItemBarricadeAsset barricade)
+    {
+        switch (barricade.build)
+        {
+            case EBuild.DOOR:
+            case EBuild.GATE:
+            case EBuild.SHUTTER:
+            case EBuild.HATCH:
+            case EBuild.STEREO:
+                if (state.Length < 17)
+                    throw new InvalidBarricadeStateException(barricade.build, 17);
+                break;
+
+            case EBuild.BED:
+                if (state.Length < 8)
+                    throw new InvalidBarricadeStateException(barricade.build, 8);
+                break;
+
+            case EBuild.STORAGE:
+            case EBuild.STORAGE_WALL:
+            case EBuild.SENTRY:
+            case EBuild.SENTRY_FREEFORM:
+                if (state.Length < 17)
+                    throw new InvalidBarricadeStateException(barricade.build, 17);
+                int itemCt = state[16];
+                int startIndex = 17;
+                for (int i = 0; i < itemCt; ++i)
+                {
+                    int minimumRemainingLength = startIndex + (i - itemCt) * 8;
+                    if (state.Length < minimumRemainingLength)
+                        throw new InvalidBarricadeStateException(barricade.build, minimumRemainingLength);
+
+                    byte stateLen = state[startIndex + 7];
+                    startIndex += 8 + stateLen;
+                }
+
+                if (state.Length < startIndex)
+                    throw new InvalidBarricadeStateException(barricade.build, startIndex);
+
+                if (barricade is not ItemStorageAsset { isDisplay: true })
+                    break;
+
+                startIndex += 4;
+                if (state.Length < startIndex + 3)
+                    throw new InvalidBarricadeStateException(barricade.build, startIndex);
+
+                byte tagsStrLen = state[startIndex];
+                if (tagsStrLen != 0)
+                {
+                    startIndex += 1 + tagsStrLen;
+                }
+                if (state.Length < startIndex + 2)
+                    throw new InvalidBarricadeStateException(barricade.build, startIndex);
+
+                byte propsStrLen = state[startIndex];
+                if (propsStrLen != 0)
+                {
+                    startIndex += 1 + propsStrLen;
+                }
+
+                if (state.Length < startIndex + 1)
+                    throw new InvalidBarricadeStateException(barricade.build, startIndex);
+
+                if (27 + tagsStrLen + propsStrLen > byte.MaxValue)
+                    throw new InvalidBarricadeStateException(barricade.build, $"Display tags and dynamic properties are too long: {tagsStrLen} and {propsStrLen} UTF-8 bytes respectively. Together they must be below {byte.MaxValue - 27} bytes.");
+                break;
+
+            case EBuild.TORCH:
+            case EBuild.CAMPFIRE:
+            case EBuild.OVEN:
+            case EBuild.SPOT:
+            case EBuild.CAGE:
+            case EBuild.SAFEZONE:
+            case EBuild.OXYGENATOR:
+            case EBuild.BARREL_RAIN:
+                if (state.Length < 1)
+                    throw new InvalidBarricadeStateException(barricade.build, 1);
+                break;
+
+            case EBuild.GENERATOR:
+                if (state.Length < 3)
+                    throw new InvalidBarricadeStateException(barricade.build, 3);
+                break;
+
+            case EBuild.SIGN:
+            case EBuild.SIGN_WALL:
+            case EBuild.NOTE:
+                if (state.Length < 17)
+                    throw new InvalidBarricadeStateException(barricade.build, 17);
+
+                int strLen = state[16];
+                if (state.Length < 17 + strLen)
+                    throw new InvalidBarricadeStateException(barricade.build, 17 + strLen);
+                if (strLen > byte.MaxValue - 17)
+                    throw new InvalidBarricadeStateException(barricade.build, $"Sign text too long: {strLen} UTF-8 bytes. Must be below {byte.MaxValue - 17} bytes.");
+                break;
+
+            case EBuild.OIL:
+            case EBuild.TANK:
+                if (state.Length < 2)
+                    throw new InvalidBarricadeStateException(barricade.build, 2);
+                break;
+
+            case EBuild.LIBRARY:
+                if (state.Length < 20)
+                    throw new InvalidBarricadeStateException(barricade.build, 20);
+                break;
+
+            case EBuild.MANNEQUIN:
+                if (state.Length < 73)
+                    throw new InvalidBarricadeStateException(barricade.build, 17);
+
+                int index = 65;
+                for (int i = 0; i < 7; ++i)
+                {
+                    int stateLen = state[index];
+                    index += stateLen + 1;
+                    if (state.Length < index)
+                        throw new InvalidBarricadeStateException(barricade.build, index);
+                }
+                if (state.Length < index + 1)
+                    throw new InvalidBarricadeStateException(barricade.build, index + 1);
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Write the group and owner to a span of bytes to prepare it for a new barricade.
+    /// </summary>
+    /// <exception cref="InvalidBarricadeStateException"/>
+    public static void WriteOwnerAndGroup(Span<byte> state, BarricadeDrop drop, ulong owner, ulong group)
+    {
+        EBuild build = drop.asset.build;
+
+        // write owner and group to interactables where needed
+        switch (build)
+        {
+            case EBuild.DOOR:
+            case EBuild.GATE:
+            case EBuild.SHUTTER:
+            case EBuild.HATCH:
+            case EBuild.LIBRARY:
+            case EBuild.SIGN:
+            case EBuild.SIGN_WALL:
+            case EBuild.NOTE:
+            case EBuild.STORAGE:
+            case EBuild.STORAGE_WALL:
+                if (state.Length < 16)
+                    throw new InvalidBarricadeStateException(build, 8);
+
+                MemoryMarshal.Write(state, ref owner);
+                MemoryMarshal.Write(state[8..], ref group);
+                break;
+        }
+    }
+
     /// <summary>
     /// Get the exact length in bytes of the client-side state for a storage.
     /// </summary>
@@ -370,20 +562,19 @@ public static class BarricadeUtility
     {
         if (!storage.isDisplay)
         {
-            return sizeof(ulong) * 2;
+            return 16;
         }
 
-        int length = 4;
+        int length = 11;
         if (storage.displayItem != null)
             length += storage.displayItem.state.Length;
+        Encoding encoding = Encoding.UTF8;
+        if (!string.IsNullOrEmpty(storage.displayTags))
+            length += encoding.GetByteCount(storage.displayTags);
+        if (!string.IsNullOrEmpty(storage.displayDynamicProps))
+            length += encoding.GetByteCount(storage.displayDynamicProps);
 
-        length += 7;
-        if (storage.displayTags != null)
-            length += Encoding.UTF8.GetByteCount(storage.displayTags);
-        if (storage.displayDynamicProps != null)
-            length += Encoding.UTF8.GetByteCount(storage.displayDynamicProps);
-
-        return length;
+        return 16 + length;
     }
 
     /// <summary>
@@ -394,16 +585,16 @@ public static class BarricadeUtility
     /// <exception cref="OverflowException">Displayed item's state or display metadata is longer than 255 elements.</exception>
     public static int WriteClientsideStorageState(Span<byte> output, InteractableStorage storage, CSteamID owner, CSteamID group)
     {
-        if (output.Length < 27)
+        if (output.Length < (!storage.isDisplay ? 16 : 27))
             throw new ArgumentException("Output not long enough for state.", nameof(output));
 
-        MemoryMarshal.Write(output, ref Unsafe.As<CSteamID, ulong>(ref owner));
-        MemoryMarshal.Write(output[8..], ref Unsafe.As<CSteamID, ulong>(ref group));
-
-        int index = 16;
+        MemoryMarshal.Write(output, ref owner);
+        MemoryMarshal.Write(output[8..], ref group);
 
         if (!storage.isDisplay)
-            return index;
+            return 16;
+
+        int index = 16;
 
         ushort tempRef2;
         if (storage.displayItem != null)
@@ -481,7 +672,7 @@ public static class BarricadeUtility
     /// <returns><see langword="true"/> if the barricade state was replicated, otherwise <see langword="false"/> (due to reflection failure or out of bounds barricade).</returns>
     public static bool ReplicateBarricadeState(BarricadeDrop drop, IPlayerService playerService, SignInstancer? signs, byte[]? stateToReplicate = null)
     {
-        if (Data.SendUpdateBarricadeState == null || !BarricadeManager.tryGetRegion(drop.model, out byte x, out byte y, out ushort plant, out _))
+        if (SendUpdateState == null || !BarricadeManager.tryGetRegion(drop.model, out byte x, out byte y, out ushort plant, out _))
             return false;
 
         BarricadeData bData = drop.GetServersideData();
@@ -500,7 +691,7 @@ public static class BarricadeUtility
                     new CSteamID(stateToReplicate.Length >= sizeof(ulong) * 2 ? BitConverter.ToUInt64(stateToReplicate, 0) : bData.owner),
                     new CSteamID(stateToReplicate.Length >= sizeof(ulong) * 2 ? BitConverter.ToUInt64(stateToReplicate, sizeof(ulong)) : bData.group)
                 );
-                Data.SendUpdateBarricadeState.Invoke(id, ENetReliability.Reliable, BarricadeManager.GatherRemoteClientConnections(x, y, plant), state);
+                SendUpdateState.Invoke(id, ENetReliability.Reliable, BarricadeManager.GatherRemoteClientConnections(x, y, plant), state);
                 break;
 
             // special case to handle sign translations being replicated to the right players
@@ -508,7 +699,7 @@ public static class BarricadeUtility
                 if (signs == null || !signs.IsInstanced(drop))
                 {
                     // don't translate the sign
-                    Data.SendUpdateBarricadeState.Invoke(id, ENetReliability.Reliable, BarricadeManager.GatherRemoteClientConnections(x, y, plant), stateToReplicate);
+                    SendUpdateState.Invoke(id, ENetReliability.Reliable, BarricadeManager.GatherRemoteClientConnections(x, y, plant), stateToReplicate);
                     break;
                 }
 
@@ -540,13 +731,13 @@ public static class BarricadeUtility
                     }
 
                     Buffer.BlockCopy(utf8Buffer, 0, state, sizeof(ulong) * 2, byteCt);
-                    Data.SendUpdateBarricadeState.Invoke(id, ENetReliability.Reliable, player.Connection, state);
+                    SendUpdateState.Invoke(id, ENetReliability.Reliable, player.Connection, state);
                 }
 
                 break;
 
             default:
-                Data.SendUpdateBarricadeState.Invoke(id, ENetReliability.Reliable, BarricadeManager.GatherRemoteClientConnections(x, y, plant), stateToReplicate);
+                SendUpdateState.Invoke(id, ENetReliability.Reliable, BarricadeManager.GatherRemoteClientConnections(x, y, plant), stateToReplicate);
                 break;
         }
 
@@ -588,12 +779,12 @@ public static class BarricadeUtility
                 BarricadeManager.updateState(drop.model, oldSt, oldSt.Length);
                 drop.ReceiveUpdateState(oldSt);
 
-                if (Data.SendUpdateBarricadeState == null || !BarricadeManager.tryGetRegion(drop.model, out byte x, out byte y, out ushort plant, out _))
+                if (SendUpdateState == null || !BarricadeManager.tryGetRegion(drop.model, out byte x, out byte y, out ushort plant, out _))
                     return false;
 
                 state = new byte[GetClientsideStorageStateLength(storage)];
                 WriteClientsideStorageState(state, storage, Unsafe.As<ulong, CSteamID>(ref o), Unsafe.As<ulong, CSteamID>(ref g));
-                Data.SendUpdateBarricadeState.Invoke(drop.GetNetId(), ENetReliability.Reliable, BarricadeManager.GatherRemoteClientConnections(x, y, plant), state);
+                SendUpdateState.Invoke(drop.GetNetId(), ENetReliability.Reliable, BarricadeManager.GatherRemoteClientConnections(x, y, plant), state);
                 return true;
 
             // special case to handle sign translations being replicated to the right players
@@ -604,7 +795,7 @@ public static class BarricadeUtility
                 BitConverter.TryWriteBytes(oldSt.AsSpan(sizeof(ulong)), o);
                 if (signs == null
                     || !signs.IsInstanced(drop)
-                    || Data.SendUpdateBarricadeState == null
+                    || SendUpdateState == null
                     || !BarricadeManager.tryGetRegion(drop.model, out x, out y, out plant, out _)
                 )
                 {
@@ -642,7 +833,7 @@ public static class BarricadeUtility
                     }
 
                     Buffer.BlockCopy(utf8Buffer, 0, state, 17, byteCt);
-                    Data.SendUpdateBarricadeState.Invoke(id, ENetReliability.Reliable, player.Connection, state);
+                    SendUpdateState.Invoke(id, ENetReliability.Reliable, player.Connection, state);
                 }
 
                 return true;
@@ -1598,77 +1789,16 @@ public static class BarricadeUtility
                 break;
         }
     }
-
-    /// <summary>
-    /// Throw an exception if the state isn't valid for this build type.
-    /// </summary>
-    /// <exception cref="InvalidBarricadeStateException"/>
-    public static void VerifyState(ReadOnlySpan<byte> state, EBuild build)
-    {
-        switch (build)
-        {
-            case EBuild.DOOR:
-            case EBuild.GATE:
-            case EBuild.SHUTTER:
-            case EBuild.HATCH:
-                if (state.Length < 17)
-                    throw new InvalidBarricadeStateException(build, "Expected at least 17 bytes.");
-                break;
-
-            case EBuild.BED:
-                if (state.Length < 8)
-                    throw new InvalidBarricadeStateException(build, "Expected at least 8 bytes.");
-                break;
-
-            case EBuild.STORAGE:
-            case EBuild.STORAGE_WALL:
-                // todo
-                break;
-        }
-    }
-
-    /// <summary>
-    /// Write the group and owner to a span of bytes to prepare it for a new barricade.
-    /// </summary>
-    /// <exception cref="InvalidBarricadeStateException"/>
-    public static void WriteOwnerAndGroup(Span<byte> state, BarricadeDrop drop, ulong owner, ulong group)
-    {
-        EBuild build = drop.asset.build;
-
-        // write owner and group to interactables where needed
-        switch (build)
-        {
-            case EBuild.BED:
-                if (state.Length < 8)
-                    throw new InvalidBarricadeStateException(build, "Expected at least 8 bytes.");
-
-                Unsafe.WriteUnaligned(ref state[0], owner);
-                break;
-
-            case EBuild.DOOR:
-            case EBuild.GATE:
-            case EBuild.SHUTTER:
-            case EBuild.HATCH:
-            case EBuild.LIBRARY:
-            case EBuild.SIGN:
-            case EBuild.SIGN_WALL:
-            case EBuild.NOTE:
-            case EBuild.STORAGE:
-            case EBuild.STORAGE_WALL:
-                if (state.Length < 16)
-                    throw new InvalidBarricadeStateException(build, "Expected at least 8 bytes.");
-
-                Unsafe.WriteUnaligned(ref state[0], owner);
-                Unsafe.WriteUnaligned(ref state[8], group);
-                break;
-        }
-    }
 }
 
 public class InvalidBarricadeStateException : FormatException
 {
     public InvalidBarricadeStateException(EBuild type, string message) 
         : base($"Invalid state on {type} barricade. {message}") { }
+    public InvalidBarricadeStateException(EBuild type, int expectedBytes) 
+        : this(type, expectedBytes == 1
+            ? "Expected at least 1 byte."
+            : $"Expected at least {expectedBytes} bytes.") { }
 }
 
 /// <summary>

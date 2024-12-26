@@ -45,69 +45,6 @@ public static class F
         }
         return sb.ToString();
     }
-    public static bool TryGetPlayerData(this Player player, out UCPlayerData component)
-    {
-        component = GetPlayerData(player, out bool success)!;
-        return success;
-    }
-    public static bool TryGetPlayerData(this CSteamID player, out UCPlayerData component)
-    {
-        component = GetPlayerData(player, out bool success)!;
-        return success;
-    }
-
-    public static UCPlayerData? GetPlayerData(this Player player, out bool success)
-    {
-        if (Data.PlaytimeComponents.TryGetValue(player.channel.owner.playerID.steamID.m_SteamID, out UCPlayerData pt))
-        {
-            success = pt != null;
-            return pt;
-        }
-        if (player == null || player.transform == null)
-        {
-            success = false;
-            return null;
-        }
-        if (player.transform.TryGetComponent(out UCPlayerData playtimeObj))
-        {
-            success = true;
-            return playtimeObj;
-        }
-        success = false;
-        return null;
-    }
-    public static UCPlayerData? GetPlayerData(this CSteamID player, out bool success)
-    {
-        if (Data.PlaytimeComponents.TryGetValue(player.m_SteamID, out UCPlayerData pt))
-        {
-            success = pt != null;
-            return pt;
-        }
-        else if (player == default || player == CSteamID.Nil)
-        {
-            success = false;
-            return null;
-        }
-        else
-        {
-            Player p = PlayerTool.getPlayer(player);
-            if (p == null)
-            {
-                success = false;
-                return null;
-            }
-            if (p.transform.TryGetComponent(out UCPlayerData playtimeObj))
-            {
-                success = true;
-                return playtimeObj;
-            }
-            else
-            {
-                success = false;
-                return null;
-            }
-        }
-    }
 
     /// <remarks>Write-locks <see cref="ZoneList"/> if <paramref name="zones"/> is <see langword="true"/>.</remarks>
     public static string GetClosestLocationName(Vector3 point, bool zones = false, bool shortNames = false)

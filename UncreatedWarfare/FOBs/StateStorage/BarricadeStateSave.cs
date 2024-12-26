@@ -3,7 +3,7 @@
 namespace Uncreated.Warfare.FOBs.StateStorage;
 
 /// <summary>
-/// Represents
+/// Represents a default state for a newly placed barricade.
 /// </summary>
 public class BarricadeStateSave
 {
