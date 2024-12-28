@@ -1,4 +1,7 @@
+using Microsoft.Extensions.Configuration;
 using System;
+using System.Collections.Generic;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Projectiles;
 using Uncreated.Warfare.Events.Models.Vehicles;
@@ -13,6 +16,13 @@ public class AdvancedVehicleDamageTweaks :
     IEventListener<ProjectileSpawned>,
     IEventListener<DamageVehicleRequested>
 {
+    private readonly AssetConfiguration _assetConfiguration;
+
+    public AdvancedVehicleDamageTweaks(AssetConfiguration assetConfiguration)
+    {
+        _assetConfiguration = assetConfiguration;
+    }
+
     public UniTask StartAsync(CancellationToken token)
     {
         UseableGun.onBulletHit += UseableGunOnBulletHit;
@@ -40,6 +50,12 @@ public class AdvancedVehicleDamageTweaks :
 
     public void HandleEvent(ProjectileSpawned e, IServiceProvider serviceProvider)
     {
+        if (_ignoreAdvancedDamage.ContainsAsset(e.Asset))
+            return;
+        
         e.Object.AddComponent<AdvancedVehicleDamageProjectile>();
     }
+    
+    private IEnumerable<IAssetLink<ItemGunAsset>> _ignoreAdvancedDamage => _assetConfiguration.GetRequiredSection("Projectiles:GunsThatIgnoreAdvancedDamage")?
+        .Get<IEnumerable<IAssetLink<ItemGunAsset>>>() ?? Array.Empty<IAssetLink<ItemGunAsset>>();
 }
