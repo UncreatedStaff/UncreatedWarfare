@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Uncreated.Framework.UI;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.Components;
 internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'Aim' gameobject to allow it to control projectiles
@@ -166,12 +167,12 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
         bestTarget = AquisitionAngle;
 
         bool lockedOntoCountermeassure = LockOnTarget != null &&
-            LockOnTarget.TryGetComponent(out Countermeasure countermeasure) &&
+            LockOnTarget.TryGetComponent(out FlareCountermeasure countermeasure) &&
             countermeasure.Burning;
 
         if (!lockedOntoCountermeassure)
         {
-            foreach (Countermeasure c in Countermeasure.ActiveCountermeasures)
+            foreach (FlareCountermeasure c in FlareCountermeasure.ActiveCountermeasures)
             {
                 if (!c.Burning)
                     continue;
@@ -240,8 +241,8 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
             {
                 Status = ELockOnMode.LockedOn;
 
-                if (LockOnTarget.TryGetComponent(out VehicleComponent v) && gunner != null)
-                    v.ReceiveMissileWarning();
+                if (LockOnTarget.TryGetComponent(out WarfareVehicleComponent v) && gunner != null)
+                    v.WarfareVehicle.FlareEmitter?.ReceiveMissileWarning();
 
                 if (Time.time - _timeOfAquisition >= _timeOutTime)
                 {

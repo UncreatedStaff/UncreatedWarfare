@@ -1,11 +1,11 @@
 ﻿using System.Collections.Generic;
 
 namespace Uncreated.Warfare.Components;
-internal class Countermeasure : MonoBehaviour
+internal class FlareCountermeasure : MonoBehaviour
 {
     public bool Burning { get; private set; }
     private float _startTime;
-    public static List<Countermeasure> ActiveCountermeasures = new List<Countermeasure>();
+    public static readonly List<FlareCountermeasure> ActiveCountermeasures = [];
 
     [UsedImplicitly]
     private void Start()

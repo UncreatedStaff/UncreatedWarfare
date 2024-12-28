@@ -10,9 +10,10 @@ namespace Uncreated.Warfare.Vehicles.WarfareVehicles
     public class WarfareVehicleComponent : MonoBehaviour, IRequestable<VehicleSpawner>
     {
         public WarfareVehicle WarfareVehicle { get; private set; }
-        public void Init(WarfareVehicle warfareVehicle)
+        public WarfareVehicleComponent Init(WarfareVehicle warfareVehicle)
         {
             WarfareVehicle = warfareVehicle;
+            return this;
         }
     }
 }

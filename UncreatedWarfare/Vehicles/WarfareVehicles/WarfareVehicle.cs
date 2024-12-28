@@ -1,10 +1,14 @@
-﻿using System;
+﻿using Microsoft.Extensions.DependencyInjection;
+using System;
 using System.Collections.Generic;
 using System.Text;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.DamageTracking;
 using Uncreated.Warfare.Vehicles.Spawners;
+using Uncreated.Warfare.Vehicles.UI;
 using Uncreated.Warfare.Vehicles.WarfareVehicles.Damage;
+using Uncreated.Warfare.Vehicles.WarfareVehicles.Flares;
 using Uncreated.Warfare.Vehicles.WarfareVehicles.Transport;
 
 namespace Uncreated.Warfare.Vehicles.WarfareVehicles
@@ -18,14 +22,21 @@ namespace Uncreated.Warfare.Vehicles.WarfareVehicles
         public VehicleDamageTracker DamageTracker { get; }
         public AdvancedVehicleDamageApplier AdvancedDamageApplier { get; }
         public TranportTracker TranportTracker { get; }
+        public VehicleHUD? VehicleHUD { get; }
+        public FlareEmitter? FlareEmitter { get; }
         public Vector3 Position => Vehicle.transform.position;
         public Quaternion Rotation => Vehicle.transform.rotation;
-        public WarfareVehicle(InteractableVehicle interactableVehicle, WarfareVehicleInfo info)
+        public WarfareVehicle(InteractableVehicle interactableVehicle, WarfareVehicleInfo info, IServiceProvider serviceProvider)
         {
             Vehicle = interactableVehicle;
             Info = info;
-            Component = interactableVehicle.transform.GetOrAddComponent<WarfareVehicleComponent>();
-            Component.Init(this);
+            Component = interactableVehicle.transform.GetOrAddComponent<WarfareVehicleComponent>().Init(this);
+            VehicleHUD = serviceProvider.GetService<VehicleHUD>();
+            if (info.Type.IsAircraft())
+            {
+                FlareEmitter = interactableVehicle.transform.GetOrAddComponent<FlareEmitter>();
+                FlareEmitter.Init(this, serviceProvider.GetRequiredService<AssetConfiguration>());
+            }
             DamageTracker = new VehicleDamageTracker();
             TranportTracker = new TranportTracker();
             AdvancedDamageApplier = new AdvancedVehicleDamageApplier();

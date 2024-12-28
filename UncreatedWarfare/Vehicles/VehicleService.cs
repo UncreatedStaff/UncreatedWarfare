@@ -19,7 +19,6 @@ namespace Uncreated.Warfare.Vehicles
     [Priority(-3 /* run after vehicle storage services (specifically VehicleSpawnerStore and VehicleInfoStore) */)]
     public class VehicleService : 
         ILayoutHostedService,
-        IEventListener<VehicleSpawned>,
         IEventListener<VehicleDespawned>
     {
         private readonly IServiceProvider _serviceProvider;
@@ -52,17 +51,12 @@ namespace Uncreated.Warfare.Vehicles
         }
         public WarfareVehicle RegisterWarfareVehicle(InteractableVehicle vehicle)
         {
-            WarfareVehicleInfo? info = _vehicleInfoStore.GetVehicleInfo(vehicle.asset);
+            WarfareVehicleInfo info = _vehicleInfoStore.GetVehicleInfo(vehicle.asset) ?? WarfareVehicleInfo.CreateDefault(vehicle.asset);
 
-            if (info == null)
-                info = WarfareVehicleInfo.CreateDefault(vehicle.asset);
-
-            WarfareVehicle warfareVehicle = new WarfareVehicle(vehicle, info);
-            bool alreadyExists = Vehicles.AddIfNotExists(warfareVehicle);
-            if (alreadyExists)
-                _logger.LogDebug($"Vehicle {warfareVehicle.Info.VehicleAsset.ToDisplayString()} is already registered.");
-            else
-                _logger.LogDebug($"Registered vehicle: {warfareVehicle.Info.VehicleAsset.ToDisplayString()}");
+            WarfareVehicle warfareVehicle = new(vehicle, info, _serviceProvider);
+            Vehicles.Add(warfareVehicle);
+            
+            _logger.LogDebug($"Registered vehicle: {warfareVehicle.Info.VehicleAsset.ToDisplayString()}");
             return warfareVehicle;
         }
         public WarfareVehicle? GetVehicle(InteractableVehicle vehicle)
@@ -260,10 +254,6 @@ namespace Uncreated.Warfare.Vehicles
             {
                 _logger.LogError(ex, "Failed to unlink vehicle spawn for vehicle {0} ({1}).", vehicle.asset.FriendlyName, vehicle.asset.GUID);
             }
-        }
-        public void HandleEvent(VehicleSpawned e, IServiceProvider serviceProvider)
-        {
-            RegisterWarfareVehicle(e.Vehicle.Vehicle);
         }
         public void HandleEvent(VehicleDespawned e, IServiceProvider serviceProvider)
         {
