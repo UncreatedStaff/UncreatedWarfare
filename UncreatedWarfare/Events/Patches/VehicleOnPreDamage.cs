@@ -101,12 +101,17 @@ public class VehicleOnPreDamage : IHarmonyPatch
         if (onlineInstigator != null && onlineInstigator.UnturnedPlayer.movement.getVehicle() != null)
             instigatorVehicle = onlineInstigator.UnturnedPlayer.movement.getVehicle().transform.GetComponent<WarfareVehicleComponent>().WarfareVehicle;
 
-        if (instigatorVehicle != null)
-            warfareVehicle.DamageTracker.RecordDamage(instigatorId, pendingDamage, damageOrigin, instigatorVehicle);
+        if (onlineInstigator != null)
+        {
+            if (instigatorVehicle != null)
+                warfareVehicle.DamageTracker.RecordDamage(onlineInstigator, instigatorVehicle, pendingDamage, damageOrigin);
+            else
+                warfareVehicle.DamageTracker.RecordDamage(onlineInstigator, pendingDamage, damageOrigin);
+        }
         else if (instigatorId != default)
             warfareVehicle.DamageTracker.RecordDamage(instigatorId, pendingDamage, damageOrigin);
         else
-            warfareVehicle.DamageTracker.RecordDamage(pendingDamage, damageOrigin);
+            warfareVehicle.DamageTracker.RecordDamage(damageOrigin);
 
         VehiclePreDamaged args = new VehiclePreDamaged
         {

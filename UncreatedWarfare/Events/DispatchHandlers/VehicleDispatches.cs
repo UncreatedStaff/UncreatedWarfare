@@ -132,7 +132,7 @@ partial class EventDispatcher
             lastDriver = _playerService.GetOnlinePlayerOrNull(instigatorId);
         }
 
-        EDamageOrigin origin = warfareVehicle.DamageTracker.LastKnownDamageCause ?? EDamageOrigin.Unknown;
+        EDamageOrigin origin = warfareVehicle.DamageTracker.LatestDamageCause ?? EDamageOrigin.Unknown;
 
         VehicleExploded args = new VehicleExploded
         {

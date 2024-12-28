@@ -16,17 +16,17 @@ public class AdvancedVehicleDamageApplier
         _damageQueue = new Queue<AdvancedDamagePending>();
     }
 
-    public void RegisterPendingDamageForNextEvent(float damageMultiplier)
+    public void RegisterDirectHitDamageMultiplier(float damageMultiplier)
     {
         _damageQueue.Enqueue(new AdvancedDamagePending
         {
             Multiplier = damageMultiplier,
             Timestamp = DateTime.Now
         });
-        _logger.LogDebug($"Registered pending advanced vehicle damage multiplier of {damageMultiplier} for vehicle. Multipliers queued for this vehicle: {_damageQueue.Count}");
+        _logger.LogDebug($"Registered direct hit damage multiplier of {damageMultiplier} for vehicle. Multipliers queued for this vehicle: {_damageQueue.Count}");
     }
 
-    public float ApplyLatestRelevantDamageMultiplier()
+    public AdvancedDamagePending? ApplyLatestPendingDirectHit()
     {
         while (_damageQueue.Count > 0)
         {
@@ -36,10 +36,10 @@ public class AdvancedVehicleDamageApplier
                 continue;
             
             _logger.LogDebug($"Applying advanced vehicle damage multiplier of {pendingDamage.Multiplier}.");
-            return pendingDamage.Multiplier;
+            return pendingDamage;
         }
         
-        return 1;
+        return null;
     }
     public static float GetComponentDamageMultiplier(InputInfo hitInfo)
     {

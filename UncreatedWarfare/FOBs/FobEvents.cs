@@ -269,6 +269,6 @@ public partial class FobManager :
         if (e.Instigator != null)
             correspondingFob.DamageTracker.RecordDamage(e.Instigator.Value, e.PendingDamage, e.DamageOrigin);
         else
-            correspondingFob.DamageTracker.RecordDamage(e.PendingDamage, e.DamageOrigin);
+            correspondingFob.DamageTracker.RecordDamage(e.DamageOrigin);
     }
 }

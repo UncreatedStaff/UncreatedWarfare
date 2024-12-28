@@ -7,22 +7,25 @@ public class AdvancedVehicleDamageProjectile : MonoBehaviour
 {
     private bool _hitOccured;
     
-    public required Rocket RocketComponent { get; set; }
-
-    private void Awake()
+    public Rocket RocketComponent { get; private set; }
+    public ItemGunAsset FiringGunAsset {get; private set;}
+    public AdvancedVehicleDamageProjectile Init(Rocket rocketComponent, ItemGunAsset firingGunAsset)
     {
-        RocketComponent = GetComponent<Rocket>() ?? throw new MissingComponentException("AdvancedVehicleDamageProjectile must used on a game object with a Rocket component.");
-        
+        RocketComponent = rocketComponent;
+        FiringGunAsset = firingGunAsset;
         _hitOccured = false;
+        return this;
     }
 
     private void OnCollisionEnter(Collision collision)
     {
         Collider other = collision.collider;
-        if (_hitOccured || other.isTrigger)
+        if (_hitOccured)
             return;
         
-        if (RocketComponent.ignoreTransform != null && (other.transform == RocketComponent.ignoreTransform || other.transform.IsChildOf(RocketComponent.ignoreTransform)))
+        bool directHit = !other.isTrigger && other.transform != RocketComponent.ignoreTransform &&
+                         !other.transform.IsChildOf(RocketComponent.ignoreTransform);
+        if (!directHit)
             return;
 
         _hitOccured = true;
@@ -30,6 +33,6 @@ public class AdvancedVehicleDamageProjectile : MonoBehaviour
         WarfareVehicleComponent comp = other.GetComponentInParent<WarfareVehicleComponent>();
 
         if (comp != null)
-            comp.WarfareVehicle.AdvancedDamageApplier.RegisterPendingDamageForNextEvent(AdvancedVehicleDamageApplier.GetComponentDamageMultiplier(other.transform));
+            comp.WarfareVehicle.AdvancedDamageApplier.RegisterDirectHitDamageMultiplier(AdvancedVehicleDamageApplier.GetComponentDamageMultiplier(other.transform));
     }
 }

@@ -17,10 +17,12 @@ public class AdvancedVehicleDamageTweaks :
     IEventListener<DamageVehicleRequested>
 {
     private readonly AssetConfiguration _assetConfiguration;
+    private readonly ILogger _logger;
 
-    public AdvancedVehicleDamageTweaks(AssetConfiguration assetConfiguration)
+    public AdvancedVehicleDamageTweaks(AssetConfiguration assetConfiguration, ILogger<AdvancedVehicleDamageTweaks> logger)
     {
         _assetConfiguration = assetConfiguration;
+        _logger = logger;
     }
 
     public UniTask StartAsync(CancellationToken token)
@@ -38,24 +40,43 @@ public class AdvancedVehicleDamageTweaks :
     private void UseableGunOnBulletHit(UseableGun gun, BulletInfo bullet, InputInfo hit, ref bool shouldAllow)
     {
         if (hit.vehicle != null && hit.vehicle.TryGetComponent(out WarfareVehicleComponent comp))
-            comp.WarfareVehicle.AdvancedDamageApplier.RegisterPendingDamageForNextEvent(AdvancedVehicleDamageApplier.GetComponentDamageMultiplier(hit));
+            comp.WarfareVehicle.AdvancedDamageApplier.RegisterDirectHitDamageMultiplier(AdvancedVehicleDamageApplier.GetComponentDamageMultiplier(hit));
     }
-
-    public void HandleEvent(DamageVehicleRequested e, IServiceProvider serviceProvider)
-    {
-        float multiplier = e.Vehicle.AdvancedDamageApplier.ApplyLatestRelevantDamageMultiplier();
-        ushort newDamage = (ushort) Mathf.RoundToInt(e.PendingDamage * multiplier);
-        e.PendingDamage = newDamage;
-    }
-
     public void HandleEvent(ProjectileSpawned e, IServiceProvider serviceProvider)
     {
-        if (_ignoreAdvancedDamage.ContainsAsset(e.Asset))
-            return;
+        e.Object.AddComponent<AdvancedVehicleDamageProjectile>().Init(e.RocketComponent, e.Asset);
+    }
+    public void HandleEvent(DamageVehicleRequested e, IServiceProvider serviceProvider)
+    {
+        float finalMultiplier = 1;
         
-        e.Object.AddComponent<AdvancedVehicleDamageProjectile>();
+        ItemAsset? latestInstigatorWeapon = e.Vehicle.DamageTracker.LatestInstigatorWeapon;
+        
+        AdvancedVehicleDamageApplier.AdvancedDamagePending? directHit = e.Vehicle.AdvancedDamageApplier.ApplyLatestPendingDirectHit();
+        
+        if (directHit.HasValue) // direct hit
+            finalMultiplier = directHit.Value.Multiplier;
+        else if (!FullDamageOnIndirectHitWeapons.ContainsAsset(latestInstigatorWeapon))
+            // weapons that do not participate in advanced damage do full damage on an indirect hit
+            finalMultiplier = 0.1f;
+
+        bool isAircraft = e.Vehicle.Info.Type.IsAircraft();
+        if (isAircraft && GroundAttackOnlyWeapons.ContainsAsset(latestInstigatorWeapon))
+            finalMultiplier *= 0.1f;
+        else if (!isAircraft && AntiAirOnlyWeapons.ContainsAsset(latestInstigatorWeapon))
+            finalMultiplier *= 0.1f;
+        
+        ushort newDamage = (ushort) Mathf.RoundToInt(e.PendingDamage * finalMultiplier);
+        _logger.LogDebug($"Final damage multiplier of {finalMultiplier} (caused by weapon: {latestInstigatorWeapon?.FriendlyName ?? "unknown"}) will be applied to vehicle {e.Vehicle.Vehicle.asset.FriendlyName}. Original damage: {e.PendingDamage} - New damage: {newDamage}");
+        e.PendingDamage = newDamage;
     }
     
-    private IEnumerable<IAssetLink<ItemGunAsset>> _ignoreAdvancedDamage => _assetConfiguration.GetRequiredSection("Projectiles:GunsThatIgnoreAdvancedDamage")?
+    private IEnumerable<IAssetLink<ItemGunAsset>> FullDamageOnIndirectHitWeapons => _assetConfiguration.GetRequiredSection("Projectiles:AdvancedDamage:FullDamageOnIndirectHitWeapons")?
+        .Get<IEnumerable<IAssetLink<ItemGunAsset>>>() ?? Array.Empty<IAssetLink<ItemGunAsset>>();
+    
+    private IEnumerable<IAssetLink<ItemGunAsset>> GroundAttackOnlyWeapons => _assetConfiguration.GetRequiredSection("Projectiles:AdvancedDamage:GroundAttackOnlyWeapons")?
+        .Get<IEnumerable<IAssetLink<ItemGunAsset>>>() ?? Array.Empty<IAssetLink<ItemGunAsset>>();
+    
+    private IEnumerable<IAssetLink<ItemGunAsset>> AntiAirOnlyWeapons => _assetConfiguration.GetRequiredSection("Projectiles:AdvancedDamage:AntiAirOnlyWeapons")?
         .Get<IEnumerable<IAssetLink<ItemGunAsset>>>() ?? Array.Empty<IAssetLink<ItemGunAsset>>();
 }
