@@ -399,6 +399,7 @@ public class LobbyZoneManager : IHostedService, ILevelHostedService, IEventListe
     private void OnObjectExitedLobby(WarfarePlayer player)
     {
         player.Component<PlayerLobbyComponent>().ExitLobby();
+        _logger.LogInformation("Player exited lobby: {0}.", player);
     }
 
     [EventListener(MustRunInstantly = true)]

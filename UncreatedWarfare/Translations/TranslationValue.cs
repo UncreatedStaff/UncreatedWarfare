@@ -1,6 +1,4 @@
 ﻿using System;
-using Microsoft.Extensions.Configuration;
-using StackCleaner;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Util;
@@ -12,6 +10,8 @@ namespace Uncreated.Warfare.Translations;
 /// </summary>
 public class TranslationValue
 {
+    private string _rawValue;
+
     private int _colorStrippedValueStart;
     private int _colorStrippedValueLength;
 
@@ -29,6 +29,8 @@ public class TranslationValue
     private ArgumentSpan[] _pluralizations;
     private ArgumentSpan[] _imguiPluralizations;
     private ArgumentSpan[] _terminalPluralizations;
+    private string _terminalValue;
+    private string _imguiValue;
 
     /// <summary>
     /// Translation this value belongs to.
@@ -48,12 +50,30 @@ public class TranslationValue
     /// <summary>
     /// Value converted to IMGUI compatability. IMGUI uses full color tags instead of the TMPro shortcut.
     /// </summary>
-    public string IMGUIValue { get; private set; }
+    public string IMGUIValue
+    {
+        get
+        {
+            if (_imguiPluralizations == null)
+                InitIMGUI();
+
+            return _imguiValue;
+        }
+    }
 
     /// <summary>
     /// Value converted to virtual terminal sequences.
     /// </summary>
-    public string TerminalValue { get; private set; }
+    public string TerminalValue
+    {
+        get
+        {
+            if (_terminalPluralizations == null)
+                InitTerminal();
+
+            return _terminalValue;
+        }
+    }
 
     /// <summary>
     /// The value of the translation, with pluralizations replaced with their singular values and the outer color span removed.
@@ -65,13 +85,31 @@ public class TranslationValue
     /// Value converted to IMGUI compatability with the outer color span removed. IMGUI uses full color tags instead of the TMPro shortcut.
     /// </summary>
     /// <remarks>Use <see cref="ColorStrippedIMGUIValueSpan"/> if possible.</remarks>
-    public string ColorStrippedIMGUIValue => _colorStrippedIMGUIValueCache ??= new string(ColorStrippedIMGUIValueSpan);
+    public string ColorStrippedIMGUIValue
+    {
+        get
+        {
+            if (_imguiPluralizations == null)
+                InitIMGUI();
+            
+            return _colorStrippedIMGUIValueCache ??= new string(ColorStrippedIMGUIValueSpan);
+        }
+    }
 
     /// <summary>
     /// Value converted to virtual terminal sequences with the outer color span removed.
     /// </summary>
     /// <remarks>Use <see cref="ColorStrippedTerminalValueSpan"/> if possible.</remarks>
-    public string ColorStrippedTerminalValue => _colorStrippedTerminalValueCache ??= new string(ColorStrippedTerminalValueSpan);
+    public string ColorStrippedTerminalValue
+    {
+        get
+        {
+            if (_terminalPluralizations == null)
+                InitTerminal();
+
+            return _colorStrippedTerminalValueCache ??= new string(ColorStrippedTerminalValueSpan);
+        }
+    }
 #nullable restore
 
     /// <summary>
@@ -87,12 +125,30 @@ public class TranslationValue
     /// <summary>
     /// Span of text excluding the background color (IMGUI).
     /// </summary>
-    public ReadOnlySpan<char> ColorStrippedIMGUIValueSpan => IMGUIValue.AsSpan(_imguiColorStrippedValueStart, _imguiColorStrippedValueLength);
+    public ReadOnlySpan<char> ColorStrippedIMGUIValueSpan
+    {
+        get
+        {
+            if (_imguiPluralizations == null)
+                InitTerminal();
+
+            return IMGUIValue.AsSpan(_imguiColorStrippedValueStart, _imguiColorStrippedValueLength);
+        }
+    }
 
     /// <summary>
     /// Span of text excluding the background color (Virtual terminal sequences).
     /// </summary>
-    public ReadOnlySpan<char> ColorStrippedTerminalValueSpan => IMGUIValue.AsSpan(_terminalColorStrippedValueStart, _terminalColorStrippedValueLength);
+    public ReadOnlySpan<char> ColorStrippedTerminalValueSpan
+    {
+        get
+        {
+            if (_terminalPluralizations == null)
+                InitTerminal();
+
+            return TerminalValue.AsSpan(_terminalColorStrippedValueStart, _terminalColorStrippedValueLength);
+        }
+    }
 
     /// <summary>
     /// Offset into the <see cref="Value"/> string the color-stripped value starts.
@@ -103,10 +159,12 @@ public class TranslationValue
     /// Offset into the <see cref="IMGUIValue"/> string the color-stripped IMGUI value starts.
     /// </summary>
     public int ColorStrippedIMGUIValueOffset => _imguiColorStrippedValueStart;
+
     public TranslationValue(LanguageInfo language, string value, Translation translation)
     {
         Language = language;
         Translation = translation;
+        _rawValue = value;
         SetValue(value);
     }
 
@@ -120,14 +178,20 @@ public class TranslationValue
 
         if ((args.Options & TranslationOptions.ForTerminal) != 0)
         {
+            if (_terminalPluralizations == null)
+                InitTerminal();
+
             argumentOffset = args.UseUncoloredTranslation ? _terminalColorStrippedValueStart : 0;
-            return _terminalPluralizations;
+            return _terminalPluralizations!;
         }
 
         if (args.UseIMGUI)
         {
+            if (_imguiPluralizations == null)
+                InitIMGUI();
+
             argumentOffset = args.UseUncoloredTranslation ? _imguiColorStrippedValueStart : 0;
-            return _imguiPluralizations;
+            return _imguiPluralizations!;
         }
 
         argumentOffset = args.UseUncoloredTranslation ? _colorStrippedValueStart : 0;
@@ -164,32 +228,48 @@ public class TranslationValue
 
     public void SetValue(string value)
     {
+        _rawValue = value;
         _pluralizations = TranslationArgumentModifiers.ExtractModifiers(out string? newValue, value, 'p');
 
         Value = newValue ?? value;
 
+        Color? cNormal = TranslationFormattingUtility.ExtractColor(Value, out _colorStrippedValueStart, out _colorStrippedValueLength);
+        Color = cNormal.HasValue ? cNormal.Value with { a = 1f } : Color.white;
+        _imguiPluralizations = null;
+        _terminalPluralizations = null;
+    }
+
+    private void InitIMGUI()
+    {
         if (_pluralizations.Length > 0)
         {
-            string imguiUnformatted = TranslationFormattingUtility.CreateIMGUIString(value);
+            string imguiUnformatted = TranslationFormattingUtility.CreateIMGUIString(_rawValue);
             _imguiPluralizations = TranslationArgumentModifiers.ExtractModifiers(out string? newIMGUIString, imguiUnformatted, 'p');
-            IMGUIValue = newIMGUIString ?? imguiUnformatted;
-
-            string terminalUnformatted = TerminalColorHelper.ConvertRichTextToVirtualTerminalSequences(value, Translation.TranslationService.TerminalColoring);
-            _terminalPluralizations = TranslationArgumentModifiers.ExtractModifiers(out string? newTerminalString, terminalUnformatted, 'p');
-            TerminalValue = newTerminalString ?? terminalUnformatted;
+            _imguiValue = newIMGUIString ?? imguiUnformatted;
         }
         else
         {
             _imguiPluralizations = _pluralizations;
-            _terminalPluralizations = _pluralizations;
-            IMGUIValue = TranslationFormattingUtility.CreateIMGUIString(Value);
-            TerminalValue = TerminalColorHelper.ConvertRichTextToVirtualTerminalSequences(Value, Translation.TranslationService.TerminalColoring);
+            _imguiValue = TranslationFormattingUtility.CreateIMGUIString(Value);
+
+            TranslationFormattingUtility.ExtractColor(_imguiValue, out _imguiColorStrippedValueStart, out _imguiColorStrippedValueLength);
         }
+    }
 
-        Color? cNormal = TranslationFormattingUtility.ExtractColor(Value, out _colorStrippedValueStart, out _colorStrippedValueLength);
-        Color = cNormal.HasValue ? cNormal.Value with { a = 1f } : Color.white;
+    private void InitTerminal()
+    {
+        if (_pluralizations.Length > 0)
+        {
+            string terminalUnformatted = TerminalColorHelper.ConvertRichTextToVirtualTerminalSequences(_rawValue, Translation.TranslationService.TerminalColoring);
+            _terminalPluralizations = TranslationArgumentModifiers.ExtractModifiers(out string? newTerminalString, terminalUnformatted, 'p');
+            _terminalValue = newTerminalString ?? terminalUnformatted;
+        }
+        else
+        {
+            _terminalPluralizations = _pluralizations;
+            _terminalValue = TerminalColorHelper.ConvertRichTextToVirtualTerminalSequences(Value, Translation.TranslationService.TerminalColoring);
 
-        TranslationFormattingUtility.ExtractColor(IMGUIValue, out _imguiColorStrippedValueStart, out _imguiColorStrippedValueLength);
-        TranslationFormattingUtility.ExtractColor(TerminalValue, out _terminalColorStrippedValueStart, out _terminalColorStrippedValueLength);
+            TranslationFormattingUtility.ExtractColor(_terminalValue, out _terminalColorStrippedValueStart, out _terminalColorStrippedValueLength);
+        }
     }
 }

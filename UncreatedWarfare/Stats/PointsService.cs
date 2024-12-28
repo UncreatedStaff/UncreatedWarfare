@@ -190,14 +190,24 @@ public class PointsService : IEventListener<PlayerTeamChanged> // todo player eq
 
         PlayerPoints newPoints = await _pointsSql.AddToPointsAsync(playerId, factionId, season, xp, credits, token).ConfigureAwait(false);
 
-        double newRep = await _pointsSql.AddToReputationAsync(playerId, rep, token).ConfigureAwait(false);
+        double oldRep = player?.UnturnedPlayer.skills.reputation ?? 0;
+        double newRep;
+        if (rep != 0)
+        {
+            newRep = await _pointsSql.AddToReputationAsync(playerId, rep, token).ConfigureAwait(false);
+        }
+        else
+        {
+            newRep = oldRep;
+        }
 
-        _logger.LogConditional("Applied event {0}. XP: {1} -> {2}, Credits: {3} -> {4}. Reputation: {5}. Faction: {6}, Season: {7}.",
+        _logger.LogConditional("Applied event {0}. XP: {1} -> {2}, Credits: {3} -> {4}. Reputation: {5} -> {6}. Faction: {7}, Season: {8}.",
             @event.EventName,
             oldPoints.XP,
             newPoints.XP,
             oldPoints.Credits,
             newPoints.Credits,
+            oldRep,
             newRep,
             factionId,
             season
@@ -238,7 +248,8 @@ public class PointsService : IEventListener<PlayerTeamChanged> // todo player eq
         if (player is { IsOnline: true })
         {
             player.CachedPoints = newPoints;
-            player.AddReputation((int)Math.Round(rep));
+            if (rep != 0)
+                player.SetReputation((int)Math.Round(newRep));
             _ui.UpdatePointsUI(player, this);
 
             if (!@event.ExcludeFromLeaderboard)

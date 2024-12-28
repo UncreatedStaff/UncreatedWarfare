@@ -3,10 +3,7 @@ using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Data;
 using Uncreated.Framework.UI.Reflection;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Events.Models;
-using Uncreated.Warfare.Events.Models.Flags;
 using Uncreated.Warfare.Interaction.UI;
-using Uncreated.Warfare.Layouts.Flags;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Translations;
@@ -15,22 +12,17 @@ using Uncreated.Warfare.Util;
 namespace Uncreated.Warfare.Layouts.UI;
 
 [UnturnedUI(BasePath = "Box")]
-public class CaptureHUD : 
-    UnturnedUI,
-    IEventListener<FlagContestPointsChanged>,
-    IEventListener<FlagContestStateChanged>,
-    IEventListener<PlayerEnteredFlagRegion>,
-    IEventListener<PlayerExitedFlagRegion>
+public class CaptureUI : UnturnedUI
 {
-    private readonly CaptureUITranslations _translations;
+    private readonly Func<CSteamID, CaptureUIData> _getCaptureUIData;
 
     public UnturnedLabel Title { get; } = new UnturnedLabel("TitleLabel");
     public ImageProgressBar CaptureProgress { get; } = new ImageProgressBar("CaptureProgress");
-    public CaptureHUD(TranslationInjection<CaptureUITranslations> translations, AssetConfiguration assetConfig, ILoggerFactory loggerFactory)
-        : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:CaptureHUD"), reliable: false, staticKey: true)
+    public CaptureUI(AssetConfiguration assetConfig, ILoggerFactory loggerFactory)
+        : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:CaptureHUD"), reliable: false)
     {
-        _translations = translations.Value;
         IsSendReliable = true;
+        _getCaptureUIData = GetCaptureUIData;
     }
 
     public void UpdateCaptureUI(WarfarePlayer player, in CaptureUIState state)
@@ -90,63 +82,7 @@ public class CaptureHUD :
             }
         }
     }
-    private void UpdateUIForPlayers(FlagObjective flag)
-    {
-        // todo SetOf.PlayersIn(cluster.Players)
-        foreach (WarfarePlayer player in flag.Players)
-        {
-            if (!player.Team.IsValid)
-            {
-                HideCaptureUI(player);
-                continue;
-            }
-
-            LanguageSet languageSet = new LanguageSet(player);
-            CaptureUIState state = EvaluateCaptureUI(flag, languageSet);
-
-            UpdateCaptureUI(languageSet, in state);
-        }
-    }
-
-    private CaptureUIState EvaluateCaptureUI(FlagObjective flag, LanguageSet languageSet)
-    {
-        Team team = languageSet.Team;
-
-        SingleLeaderContest contest = flag.Contest;
-        
-        float progress = contest.LeaderPoints / (float) contest.MaxPossiblePoints;
-
-        FlagContestState flagContestState = flag.CurrentContestState;
-        
-        if (flagContestState.State == FlagContestState.ContestState.Contested)
-        {
-            return CaptureUIState.Contesting(_translations, progress, flag.Name);
-        }
-
-        if (flagContestState.State == FlagContestState.ContestState.OneTeamIsLeading)
-        {
-            if (team == flagContestState.Leader)
-            {
-                if (contest.LeaderPoints == contest.MaxPossiblePoints)
-                {
-                    return CaptureUIState.Secured(_translations, flag.Name);
-                }
-
-                return CaptureUIState.Capturing(_translations, progress, contest.Leader, flag.Name);
-            }
-            else
-            {
-                if (contest.LeaderPoints == contest.MaxPossiblePoints)
-                {
-                    return CaptureUIState.Lost(_translations, flag.Owner, flag.Name);
-                }
-
-                return CaptureUIState.Losing(_translations, progress, contest.Leader, flag.Name);
-            }
-        }
-
-        return CaptureUIState.Ineffective(_translations, flag.Name);
-    }
+    
     public void HideCaptureUI(LanguageSet set)
     {
         while (set.MoveNext())
@@ -167,27 +103,12 @@ public class CaptureHUD :
 
     private CaptureUIData GetOrAddData(WarfarePlayer player)
     {
-        return GetOrAddData(player.Steam64, steam64 => new CaptureUIData(steam64, this));
+        return GetOrAddData(player.Steam64, _getCaptureUIData);
     }
 
-    void IEventListener<FlagContestPointsChanged>.HandleEvent(FlagContestPointsChanged e, IServiceProvider serviceProvider)
+    private CaptureUIData GetCaptureUIData(CSteamID steam64)
     {
-        UpdateUIForPlayers(e.Flag);
-    }
-    void IEventListener<FlagContestStateChanged>.HandleEvent(FlagContestStateChanged e, IServiceProvider serviceProvider)
-    {
-        UpdateUIForPlayers(e.Flag);
-    }
-
-    void IEventListener<PlayerEnteredFlagRegion>.HandleEvent(PlayerEnteredFlagRegion e, IServiceProvider serviceProvider)
-    {
-        CaptureUIState state = EvaluateCaptureUI(e.Flag, new LanguageSet(e.Player));
-        UpdateCaptureUI(e.Player, state);
-    }
-
-    void IEventListener<PlayerExitedFlagRegion>.HandleEvent(PlayerExitedFlagRegion e, IServiceProvider serviceProvider)
-    {
-        HideCaptureUI(e.Player);
+        return new CaptureUIData(steam64, this);
     }
 
     private class CaptureUIData : IUnturnedUIData
@@ -237,52 +158,52 @@ public readonly struct CaptureUIState
         UseEnemyColor = useEnemyColor;
     }
 
-    public static CaptureUIState Capturing(CaptureUITranslations translations, float progress, Team capturingTeam, string location)
+    public static CaptureUIState Capturing(FlagUITranslations translations, float progress, Team capturingTeam, string location)
     {
         return new CaptureUIState(progress, translations.Capturing, capturingTeam, null, location);
     }
     
-    public static CaptureUIState Losing(CaptureUITranslations translations, float progress, Team otherTeam, string location)
+    public static CaptureUIState Losing(FlagUITranslations translations, float progress, Team otherTeam, string location)
     {
         return new CaptureUIState(progress, translations.Losing, null, otherTeam, location, useEnemyColor: true);
     }
     
-    public static CaptureUIState Secured(CaptureUITranslations translations, string location)
+    public static CaptureUIState Secured(FlagUITranslations translations, string location)
     {
         return new CaptureUIState(float.NaN, translations.Secured, null, null, location, new Color32(125, 232, 125, 255));
     }
     
-    public static CaptureUIState Neutralized(CaptureUITranslations translations, string location)
+    public static CaptureUIState Neutralized(FlagUITranslations translations, string location)
     {
         return new CaptureUIState(float.NaN, translations.Neutralized, null, null, location, new Color32(255, 255, 255, 255));
     }
     
-    public static CaptureUIState Lost(CaptureUITranslations translations, Team otherTeam, string location)
+    public static CaptureUIState Lost(FlagUITranslations translations, Team otherTeam, string location)
     {
         return new CaptureUIState(float.NaN, translations.Lost, null, otherTeam, location, useEnemyColor: true);
     }
     
-    public static CaptureUIState Contesting(CaptureUITranslations translations, float progress, string location)
+    public static CaptureUIState Contesting(FlagUITranslations translations, float progress, string location)
     {
         return new CaptureUIState(progress, translations.Contesting, null, null, location, new Color32(236, 236, 121, 255));
     }
     
-    public static CaptureUIState Ineffective(CaptureUITranslations translations, string location)
+    public static CaptureUIState Ineffective(FlagUITranslations translations, string location)
     {
         return new CaptureUIState(float.NaN, translations.Ineffective, null, null, location, new Color32(255, 255, 255, 255));
     }
 
-    public static CaptureUIState Clearing(CaptureUITranslations translations, float progress, Team capturingTeam, string location)
+    public static CaptureUIState Clearing(FlagUITranslations translations, float progress, Team owningTeam, string location)
     {
-        return new CaptureUIState(progress, translations.Clearing, capturingTeam, null, location);
+        return new CaptureUIState(progress, translations.Clearing, owningTeam, null, location);
     }
     
-    public static CaptureUIState InVehicle(CaptureUITranslations translations, float progress, string location)
+    public static CaptureUIState InVehicle(FlagUITranslations translations, float progress, string location)
     {
         return new CaptureUIState(progress, translations.InVehicle, null, null, location, new Color32(255, 153, 153, 255));
     }
     
-    public static CaptureUIState Locked(CaptureUITranslations translations, float progress, string location)
+    public static CaptureUIState Locked(FlagUITranslations translations, float progress, string location)
     {
         return new CaptureUIState(float.NaN, translations.Locked, null, null, location, new Color32(255, 153, 153, 255));
     }
@@ -318,39 +239,4 @@ public readonly struct CaptureUIState
                $"Location = {(string.IsNullOrEmpty(Location) ? "null" : Location)}, " +
                $"Progress = {(float.IsNaN(Progress) ? "NaN" : Progress.ToString("0.##"))}";
     }
-}
-
-public class CaptureUITranslations : PropertiesTranslationCollection
-{
-    protected override string FileName => "Capture UI";
-
-    [TranslationData("Shown when your team is capturing the flag.")]
-    public readonly Translation<string> Capturing = new Translation<string>("Capturing {0}");
-
-    [TranslationData("Shown when your team is losing the flag because the other team has more players.")]
-    public readonly Translation<string> Losing = new Translation<string>("Losing {0}");
-
-    [TranslationData("Shown when your team is holding the flag after it has been captured.")]
-    public readonly Translation<string> Secured = new Translation<string>("{0} Secured");
-
-    [TranslationData("Shown when the flag has not been captured by either team.")]
-    public readonly Translation<string> Neutralized = new Translation<string>("{0} Neutralized");
-
-    [TranslationData("Shown when your team lost the flag and you dont have enough people on the flag to clear.")]
-    public readonly Translation<string> Lost = new Translation<string>("{0} Lost");
-
-    [TranslationData("Shown when your team and the other team have the same amount of people on the flag.")]
-    public readonly Translation<string> Contesting = new Translation<string>("Contesting {0}");
-
-    [TranslationData("Shown when you're on a flag but it's not the objective.")]
-    public readonly Translation<string> Ineffective = new Translation<string>("{0} Lost - Ineffective force");
-
-    [TranslationData("Shown when your team is capturing a flag still owned by the other team.")]
-    public readonly Translation<string> Clearing = new Translation<string>("Clearing {0}");
-
-    [TranslationData("Shown when you're trying to capture a flag while in a vehicle.")]
-    public readonly Translation InVehicle = new Translation("In Vehicle");
-
-    [TranslationData("Shown in Invasion when a flag has already been captured by attackers and can't be recaptured.")]
-    public readonly Translation<string> Locked = new Translation<string>("{0} Locked");
 }

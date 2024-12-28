@@ -455,7 +455,12 @@ public static class TerminalColorHelper
     {
         FormattingUtility.CheckTags();
         if (index >= str.Length || index < 0)
+        {
+            if (index == 0 && length <= 0)
+                return string.Empty;
+
             throw new ArgumentOutOfRangeException(nameof(index));
+        }
         if (length < 0)
             length = str.Length - index;
         else if (index + length > str.Length)

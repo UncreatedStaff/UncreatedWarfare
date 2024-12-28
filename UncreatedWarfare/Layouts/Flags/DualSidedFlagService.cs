@@ -1,5 +1,4 @@
-﻿using DanielWillett.ReflectionTools;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
@@ -12,6 +11,8 @@ using Uncreated.Warfare.Exceptions;
 using Uncreated.Warfare.Layouts.Phases.Flags;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Services;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Timing;
 using Uncreated.Warfare.Zones;
@@ -205,14 +206,17 @@ public abstract class DualSidedFlagService :
         foreach (FlagObjective flag in ActiveFlags)
         {
             FlagContestState contestState = GetContestResult(flag, Layout.TeamManager.AllTeams);
-            flag.CurrentContestState = contestState;
+            FlagContestState oldState = flag.CurrentContestState;
+            flag.SetCurrentContestState(in contestState, invokeEvent: false);
             if (contestState.State == FlagContestState.ContestState.OneTeamIsLeading)
             {
                 flag.MarkContested(false);
-                flag.Contest.AwardPoints(contestState.Leader!, 12);
+                flag.Contest.AwardPoints(contestState.Winner!, 12);
             }
             else if (contestState.State == FlagContestState.ContestState.Contested)
                 flag.MarkContested(true);
+
+            flag.InvokeContestStateChangedEvent(in oldState, in contestState);
 
             if (timeSinceStart.Seconds % (TickInternalSeconds * 4) == 0 && 
                 !(contestState.State == FlagContestState.ContestState.NotObjective || contestState.State == FlagContestState.ContestState.NoPlayers))
@@ -236,13 +240,13 @@ public abstract class DualSidedFlagService :
     [EventListener(Priority = int.MaxValue)]
     public void HandleEvent(PlayerEnteredFlagRegion e, IServiceProvider serviceProvider)
     {
-        e.Flag.CurrentContestState = GetContestResult(e.Flag, TeamManager.AllTeams);
+        e.Flag.SetCurrentContestState(GetContestResult(e.Flag, TeamManager.AllTeams));
     }
     
     [EventListener(Priority = int.MaxValue)]
     public void HandleEvent(PlayerExitedFlagRegion e, IServiceProvider serviceProvider)
     {
-        e.Flag.CurrentContestState = GetContestResult(e.Flag, TeamManager.AllTeams);
+        e.Flag.SetCurrentContestState(GetContestResult(e.Flag, TeamManager.AllTeams));
     }
     
     void IEventListener<FlagNeutralized>.HandleEvent(FlagNeutralized e, IServiceProvider serviceProvider)
@@ -264,6 +268,7 @@ public abstract class DualSidedFlagService :
         }
     }
     protected abstract void RecalculateObjectives();
+
     /// <summary>
     /// Must return a <see cref="FlagContestState"/> describing the resultant state of the contest caused by players trying to capture it, if any.
     /// <remarks>
@@ -276,8 +281,8 @@ public abstract class DualSidedFlagService :
     /// </remarks>
     /// 
     /// </summary>
-    /// <param name="flag"></param> The flag that is being evaluated.
-    /// <param name="possibleContestingTeams"></param> A selection of possible teams who may be contesting the flag.
+    /// <param name="flag">The flag that is being evaluated.</param>
+    /// <param name="possibleContestingTeams">A selection of possible teams who may be contesting the flag.</param>
     public abstract FlagContestState GetContestResult(FlagObjective flag, IEnumerable<Team> possibleContestingTeams);
     public abstract FlagObjective? GetObjective(Team team);
 
@@ -288,6 +293,36 @@ public abstract class DualSidedFlagService :
             FlagObjective? obj = GetObjective(team);
             if (obj != null)
                 yield return obj;
+        }
+    }
+
+    public IEnumerable<FlagListUIEntry> EnumerateFlagListEntries(LanguageSet set)
+    {
+        FlagObjective? objective = GetObjective(set.Team);
+
+        // reverse list for ending team
+        if (set.Team == EndingTeam)
+        {
+            for (int i = ActiveFlags.Count - 1; i >= 0; --i)
+            {
+                FlagObjective flag = ActiveFlags[i];
+                yield return GetEntry(flag, ReferenceEquals(flag, objective));
+            }
+        }
+        else
+        {
+            foreach (FlagObjective flag in ActiveFlags)
+            {
+                yield return GetEntry(flag, ReferenceEquals(flag, objective));
+            }
+        }
+
+        yield break;
+
+        static FlagListUIEntry GetEntry(FlagObjective flag, bool isObjective)
+        {
+            const string objectiveIcon = "<#ff8963>µ</color>";
+            return new FlagListUIEntry(TranslationFormattingUtility.Colorize(flag.Name, flag.Owner.Faction.Color), isObjective ? objectiveIcon : string.Empty);
         }
     }
 }

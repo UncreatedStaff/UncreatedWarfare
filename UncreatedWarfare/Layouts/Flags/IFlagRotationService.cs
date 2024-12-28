@@ -1,13 +1,30 @@
 ﻿using System.Collections.Generic;
 using Uncreated.Warfare.Layouts.Teams;
+using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Layouts.Flags;
-public interface IFlagRotationService
+public interface IFlagRotationService : IFlagListUIProvider
 {
     IReadOnlyList<FlagObjective> ActiveFlags { get; }
     IEnumerable<FlagObjective> EnumerateObjectives();
     FlagObjective? GetObjective(Team team);
     ElectricalGridBehaivor GridBehaivor { get; }
+}
+
+public interface IFlagListUIProvider
+{
+    IEnumerable<FlagListUIEntry> EnumerateFlagListEntries(LanguageSet set);
+}
+
+public readonly struct FlagListUIEntry
+{
+    public readonly string Text;
+    public readonly string Icon;
+    public FlagListUIEntry(string text, string icon)
+    {
+        Text = text;
+        Icon = icon;
+    }
 }
 
 public enum ElectricalGridBehaivor : byte
