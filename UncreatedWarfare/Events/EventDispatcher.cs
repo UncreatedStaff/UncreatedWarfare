@@ -106,6 +106,7 @@ public partial class EventDispatcher : IHostedService, IDisposable
         /* Vehicles */
         VehicleManager.OnToggleVehicleLockRequested += VehicleManagerOnToggleVehicleLockRequested;
         VehicleManager.OnToggledVehicleLock += VehicleManagerOnToggledVehicleLock;
+        VehicleManager.onDamageVehicleRequested += OnDamageVehicleRequested;
         VehicleManager.OnVehicleExploded += VehicleManagerOnVehicleExploded;
         VehicleManager.onExitVehicleRequested += VehicleManagerOnPassengerExitRequested;
         VehicleManager.onSwapSeatRequested += VehicleManagerOnSwapSeatRequested;
@@ -155,6 +156,7 @@ public partial class EventDispatcher : IHostedService, IDisposable
         /* Vehicles */
         VehicleManager.OnToggleVehicleLockRequested -= VehicleManagerOnToggleVehicleLockRequested;
         VehicleManager.OnToggledVehicleLock -= VehicleManagerOnToggledVehicleLock;
+        VehicleManager.onDamageVehicleRequested -= OnDamageVehicleRequested;
         VehicleManager.OnVehicleExploded -= VehicleManagerOnVehicleExploded;
         VehicleManager.onExitVehicleRequested -= VehicleManagerOnPassengerExitRequested;
         VehicleManager.onSwapSeatRequested -= VehicleManagerOnSwapSeatRequested;

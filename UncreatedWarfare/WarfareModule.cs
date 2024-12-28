@@ -80,6 +80,7 @@ using Uncreated.Warfare.Zones;
 using Module = SDG.Framework.Modules.Module;
 using Uncreated.Warfare.FOBs.StateStorage;
 using Uncreated.Warfare.FOBs.StateStorage.Tweaks;
+using Uncreated.Warfare.Vehicles.Events.Tweaks.AdvancedDamage;
 
 namespace Uncreated.Warfare;
 public sealed class WarfareModule
@@ -437,6 +438,9 @@ public sealed class WarfareModule
 
         bldr.RegisterType<AssetConfiguration>().SingleInstance();
         bldr.RegisterInstance(Configuration).ExternallyOwned();
+        
+        bldr.RegisterType<UnityLoopTickerFactory>() 
+            .As<ILoopTickerFactory>();
 
         // homebase
         bldr.RegisterType<HomebaseConnector>()
@@ -545,9 +549,10 @@ public sealed class WarfareModule
         bldr.RegisterType<VehicleSpawnerService>()
             .AsImplementedInterfaces().AsSelf()
             .SingleInstance();
-
-        bldr.RegisterType<UnityLoopTickerFactory>()
-            .As<ILoopTickerFactory>();
+        
+        bldr.RegisterType<AdvancedVehicleDamageTweaks>()
+            .AsImplementedInterfaces().AsSelf()
+            .SingleInstance();
 
         // Players
         bldr.RegisterType<PlayerService>()

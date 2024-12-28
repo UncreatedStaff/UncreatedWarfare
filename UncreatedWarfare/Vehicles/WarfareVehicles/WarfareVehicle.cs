@@ -16,6 +16,7 @@ namespace Uncreated.Warfare.Vehicles.WarfareVehicles
         public WarfareVehicleInfo Info { get; }
         public VehicleSpawner? Spawn { get; private set; }
         public VehicleDamageTracker DamageTracker { get; }
+        public AdvancedVehicleDamageApplier AdvancedDamageApplier { get; }
         public TranportTracker TranportTracker { get; }
         public Vector3 Position => Vehicle.transform.position;
         public Quaternion Rotation => Vehicle.transform.rotation;
@@ -27,6 +28,7 @@ namespace Uncreated.Warfare.Vehicles.WarfareVehicles
             Component.Init(this);
             DamageTracker = new VehicleDamageTracker();
             TranportTracker = new TranportTracker();
+            AdvancedDamageApplier = new AdvancedVehicleDamageApplier();
         }
 
         public void Dispose()
