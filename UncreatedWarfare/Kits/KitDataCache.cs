@@ -237,7 +237,7 @@ public class KitDataCache(KitManager manager, IServiceProvider serviceProvider) 
 
                 if (activeKit is { RequiresNitro: true })
                 {
-                    await Manager.TryGiveRiflemanKit(player, true, true, player.DisconnectToken);
+                    await Manager.TryGiveRiflemanKit(player, true, player.DisconnectToken);
                 }
             }, player.DisconnectToken);
         }

@@ -31,6 +31,9 @@ public class TipTranslations : PropertiesTranslationCollection
     [TranslationData("Sent to tell a squad leader how to open the action menu.")]
     public readonly Translation ActionMenuSquadLeader = new Translation("Press <#a5c3d9><plugin_1/></color> for <#85c996>squad actions</color>", TranslationOptions.TMProUI);
 
+    [TranslationData("Sent to tell a player that the kit they just requested has low ammo.")]
+    public readonly Translation KitGiveLowAmmo = new Translation("Low ammo. Resupply your kit at an <#e25d5d>AMMO CRATE</color>.", TranslationOptions.TMProUI);
+    
     [TranslationData("Sent to tell a player how to call for a medic.")]
     public readonly Translation CallMedic = new Translation("You are hurt. Press <#d9a5bb><plugin_1/></color> to call for a medic.", TranslationOptions.TMProUI);
 }

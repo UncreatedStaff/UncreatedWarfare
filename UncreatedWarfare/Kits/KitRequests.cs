@@ -287,7 +287,7 @@ public class KitRequests : IRequestHandler<KitSignInstanceProvider, Kit>, IReque
         return true;
     }
 
-    internal async Task GiveKit(WarfarePlayer player, Kit? kit, bool manual, bool tip, CancellationToken token = default) // todo: remove manual and tip
+    internal async Task GiveKit(WarfarePlayer player, Kit? kit, bool manual, bool lowAmmo, CancellationToken token = default) // todo: remove manual and tip
     {
         if (!player.IsOnline)
             return;
@@ -311,7 +311,7 @@ public class KitRequests : IRequestHandler<KitSignInstanceProvider, Kit>, IReque
         _logger.LogDebug($"Giving kit: {kit.InternalName} item count: {string.Join("\n", kit.Items.AsEnumerable())}");
 
         uint? oldKitId = player.Component<KitPlayerComponent>().ActiveKitKey;
-        GrantKit(player, kit, tip);
+        GrantKit(player, kit, lowAmmo);
         Manager.Signs.UpdateSigns(kit);
 
         Kit? oldKit = oldKitId.HasValue ? await Manager.GetKit(oldKitId.Value, CancellationToken.None).ConfigureAwait(false) : null;
@@ -328,7 +328,9 @@ public class KitRequests : IRequestHandler<KitSignInstanceProvider, Kit>, IReque
     private async Task GrantKitRequest(WarfarePlayer player, Kit kit, IRequestResultHandler resultHandler, CancellationToken token = default)
     {
         await _droppedItemTracker.DestroyItemsDroppedByPlayerAsync(player.Steam64, false, token);
-        await GiveKit(player, kit, true, true, token).ConfigureAwait(false);
+        // granted kit spawns with low ammo if the player is changing from an existing kit 
+        bool spawnWithLowAmmo = player.Component<KitPlayerComponent>().ActiveClass is not (Class.None or Class.Unarmed);
+        await GiveKit(player, kit, true, spawnWithLowAmmo, token).ConfigureAwait(false);
 
         await UniTask.SwitchToMainThread(token);
 
@@ -353,7 +355,7 @@ public class KitRequests : IRequestHandler<KitSignInstanceProvider, Kit>, IReque
         _cooldownManager.StartCooldown(player, CooldownType.RequestKit, _cooldownManager.Config.RequestKitCooldown);
     }
 
-    private void GrantKit(WarfarePlayer player, Kit? kit, bool tip = true)
+    private void GrantKit(WarfarePlayer player, Kit? kit, bool lowAmmo = false)
     {
         GameThread.AssertCurrent();
 
@@ -383,7 +385,7 @@ public class KitRequests : IRequestHandler<KitSignInstanceProvider, Kit>, IReque
             Player = player
         };
 
-        Manager.Distribution.DistributeKitItems(player, kit, _logger, true, tip, false);
+        Manager.Distribution.DistributeKitItems(player, kit, _logger, true, lowAmmo, false);
 
         // bind hotkeys
         ItemTrackingPlayerComponent itemTracking = player.Component<ItemTrackingPlayerComponent>();
@@ -427,7 +429,7 @@ public class KitRequests : IRequestHandler<KitSignInstanceProvider, Kit>, IReque
         await UniTask.SwitchToMainThread(token);
 
         uint? oldKitId = player.Component<KitPlayerComponent>().ActiveKitKey;
-        GrantKit(player, null, false);
+        GrantKit(player, null);
 
         Kit? oldKit = oldKitId.HasValue ? await Manager.GetKit(oldKitId.Value, CancellationToken.None).ConfigureAwait(false) : null;
 
@@ -578,7 +580,7 @@ public class KitRequests : IRequestHandler<KitSignInstanceProvider, Kit>, IReque
             }
         }
 
-        Manager.Distribution.DistributeKitItems(player, kit, _logger, true, ignoreAmmoBags);
+        Manager.Distribution.DistributeKitItems(player, kit, _logger, true, false, ignoreAmmoBags);
         bool playEffectEquip = true;
         bool playEffectDrop = true;
         foreach (KeyValuePair<ItemJar, Page> jar in nonKitItems)

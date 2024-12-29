@@ -105,7 +105,7 @@ internal sealed class KitGiveCommand : IExecutableCommand
             Context.AssertRanByPlayer();
         }
 
-        await _kitManager.Requests.GiveKit(player ?? Context.Player, kit, manual: true, tip: true, token).ConfigureAwait(false);
+        await _kitManager.Requests.GiveKit(player ?? Context.Player, kit, manual: true, lowAmmo: false, token).ConfigureAwait(false);
         await UniTask.SwitchToMainThread(token);
         Context.LogAction(ActionLogType.GiveKit, kit.InternalName);
 

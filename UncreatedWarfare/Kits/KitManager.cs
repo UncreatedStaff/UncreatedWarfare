@@ -727,11 +727,11 @@ public partial class KitManager :
         if (kit == null || !player.IsOnline)
             return null;
 
-        await Requests.GiveKit(player, kit, manual, true, token).ConfigureAwait(false);
+        await Requests.GiveKit(player, kit, manual, false, token).ConfigureAwait(false);
         return kit;
     }
 
-    public async Task<Kit?> TryGiveRiflemanKit(WarfarePlayer player, bool manual, bool tip, CancellationToken token = default)
+    public async Task<Kit?> TryGiveRiflemanKit(WarfarePlayer player, bool manual, CancellationToken token = default)
     {
         await using ILifetimeScope scope = _lifetimeScope.BeginLifetimeScope();
         await using IKitsDbContext dbContext = scope.Resolve<IKitsDbContext>();
@@ -773,7 +773,7 @@ public partial class KitManager :
                 .FirstOrDefaultAsync(x => x.PrimaryKey == id, token).ConfigureAwait(false);
         }
 
-        await Requests.GiveKit(player, rifleman, manual, tip, token).ConfigureAwait(false);
+        await Requests.GiveKit(player, rifleman, manual, false, token).ConfigureAwait(false);
         return rifleman;
     }
 
@@ -971,7 +971,7 @@ public partial class KitManager :
         Kit? kit = await player.Component<KitPlayerComponent>().GetActiveKitAsync(token).ConfigureAwait(false);
         if (kit == null || !kit.Requestable || (kit.Type != KitType.Loadout && kit.IsLimited(_playerService, out _, out _, player.Team)) || (kit.Type == KitType.Loadout && kit.IsClassLimited(_playerService, out _, out _, player.Team)))
         {
-            await TryGiveRiflemanKit(player, false, false, token).ConfigureAwait(false);
+            await TryGiveRiflemanKit(player, false, token).ConfigureAwait(false);
         }
         else
         {

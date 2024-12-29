@@ -94,7 +94,7 @@ public class KitDistribution(KitManager manager, IServiceProvider serviceProvide
     /// <summary>
     /// Add the items to a player's inventory.
     /// </summary>
-    public void DistributeKitItems(WarfarePlayer player, Kit? kit, ILogger logger, bool clearInventory = true, bool sendActionTip = true, bool ignoreAmmobags = false)
+    public void DistributeKitItems(WarfarePlayer player, Kit? kit, ILogger logger, bool clearInventory = true, bool lowAmmo = false, bool ignoreAmmobags = false)
     {
         GameThread.AssertCurrent();
         if (clearInventory)
@@ -172,7 +172,7 @@ public class KitDistribution(KitManager manager, IServiceProvider serviceProvide
                         continue;
 
                     ItemAsset? asset = item.GetItem(kit, team, out byte amt, out byte[] state, _assetRedirectService, _factionDataStore);
-
+                    
                     // todo // Dootpressor
                     // if (item is not IAssetRedirectKitItem
                     //     && asset is ItemGunAsset
@@ -213,15 +213,21 @@ public class KitDistribution(KitManager manager, IServiceProvider serviceProvide
                         break;
                     }
 
+                    Dictionary<Guid, int> kitItemCountsGivenSoFar = new(); // used for only giving 1 of a particular item when low-ammo
+                    
                     // checks for overlapping items and retries overlapping layout-affected items
                     retry:
                     if ((int)givePage < PlayerInventory.PAGES - 2 && asset != null)
                     {
                         SDG.Unturned.Items page = p[(int)givePage];
-                        Item itm = new Item(asset.id, amt, 100, state);
+                        
                         // ensures multiple items are not put in the slots (causing the ghost gun issue)
+
+                        Item itm;
                         if (givePage is Page.Primary or Page.Secondary)
                         {
+                            itm = new Item(asset.id, amt, 100, state);
+                            
                             if (page.getItemCount() > 0)
                             {
                                 logger.LogWarning("[GIVE KIT] Duplicate {0} defined for {1}, {2}.", givePage.ToString().ToLowerInvariant(), kit.InternalName, item);
@@ -234,22 +240,37 @@ public class KitDistribution(KitManager manager, IServiceProvider serviceProvide
                             giveY = 0;
                             giveRot = 0;
                         }
-                        else if (ItemUtility.IsOutOfBounds(page, giveX, giveY, asset.size_x, asset.size_y, giveRot))
+                        else // if giving to a non-primary or secondary page (important for low-ammo functionality)
                         {
-                            // if an item is out of range of it's container with a layout override, remove it and try again
-                            if (layoutAffected)
+                            if (lowAmmo)
                             {
-                                logger.LogDebug("[GIVE KIT] Out of bounds layout item in {0} defined for {1}, {2}.", givePage, kit.InternalName, item);
-                                logger.LogDebug("[GIVE KIT] Retrying at original position.");
-                                layoutAffected = false;
-                                giveX = jar.X;
-                                giveY = jar.Y;
-                                giveRot = jar.Rotation;
-                                givePage = jar.Page;
-                                goto retry;
+                                bool shouldContinueToSpawnItem = true;
+                                ApplyLowAmmoChanges(asset, ref shouldContinueToSpawnItem, ref amt, ref state,
+                                    kitItemCountsGivenSoFar);
+                                
+                                if (!shouldContinueToSpawnItem)
+                                    continue;
                             }
-                            logger.LogWarning("[GIVE KIT] Out of bounds item in {0} defined for {1}, {2}.", givePage, kit.InternalName, item);
-                            (toAddLater ??= new List<(Item, IPageKitItem)>(2)).Add((itm, jar));
+
+                            itm = new Item(asset.id, amt, 100, state);
+                            
+                            if (ItemUtility.IsOutOfBounds(page, giveX, giveY, asset.size_x, asset.size_y, giveRot))
+                            {
+                                // if an item is out of range of it's container with a layout override, remove it and try again
+                                if (layoutAffected)
+                                {
+                                    logger.LogDebug("[GIVE KIT] Out of bounds layout item in {0} defined for {1}, {2}.", givePage, kit.InternalName, item);
+                                    logger.LogDebug("[GIVE KIT] Retrying at original position.");
+                                    layoutAffected = false;
+                                    giveX = jar.X;
+                                    giveY = jar.Y;
+                                    giveRot = jar.Rotation;
+                                    givePage = jar.Page;
+                                    goto retry;
+                                }
+                                logger.LogWarning("[GIVE KIT] Out of bounds item in {0} defined for {1}, {2}.", givePage, kit.InternalName, item);
+                                (toAddLater ??= new List<(Item, IPageKitItem)>(2)).Add((itm, jar));
+                            }
                         }
 
                         int ic2 = page.getItemCount();
@@ -282,6 +303,9 @@ public class KitDistribution(KitManager manager, IServiceProvider serviceProvide
                             itemTracker.ItemTransformations.Add(new ItemTransformation(jar.Page, givePage, jar.X, jar.Y, giveX, giveY, itm));
                         }
                         page.addItem(giveX, giveY, giveRot, itm);
+                        // update the total given count for this particular asset
+                        kitItemCountsGivenSoFar.TryGetValue(asset.GUID, out int givenCount);
+                        kitItemCountsGivenSoFar[asset.GUID] = givenCount + 1;
                     }
                     // if a clothing item asset redirect is missing it's likely a kit being requested on a faction without those clothes.
                     else if (item is not (IAssetRedirectKitItem and IClothingKitItem))
@@ -383,6 +407,9 @@ public class KitDistribution(KitManager manager, IServiceProvider serviceProvide
                 }
             }
 
+            
+            Dictionary<Guid, int> kitItemCountsGivenSoFar = new(); // used for only giving 1 of a particular item when low-ammo
+
             foreach (IKitItem item in items)
             {
                 if (item is IClothingKitItem)
@@ -395,24 +422,35 @@ public class KitDistribution(KitManager manager, IServiceProvider serviceProvide
                     return;
                 }
 
+                if (lowAmmo)
+                {
+                    bool isPrimaryOrSecondary = item is IPageKitItem { Page: Page.Primary or Page.Secondary };
+                    if (!isPrimaryOrSecondary)
+                    {
+                        bool shouldContinueToSpawn = true;
+                        ApplyLowAmmoChanges(asset, ref shouldContinueToSpawn, ref amt, ref state, kitItemCountsGivenSoFar);
+                        if (!shouldContinueToSpawn)
+                            continue;
+                    }
+                }
+
                 Item uitem = new Item(asset, EItemOrigin.WORLD) { amount = amt, state = state, quality = 100 };
                 if ((item is not IPageKitItem jar || !inventory.tryAddItem(uitem, jar.X, jar.Y, (byte)jar.Page, jar.Rotation)) && !inventory.tryAddItem(uitem, true))
                 {
                     ItemManager.dropItem(uitem, player.Position, false, true, true);
                 }
+                
+                // update the total given count for this particular asset
+                kitItemCountsGivenSoFar.TryGetValue(asset.GUID, out int givenCount);
+                kitItemCountsGivenSoFar[asset.GUID] = givenCount + 1;
             }
         }
 
         ItemUtility.UpdateSlots(player);
 
         // send action menu tip
-        if (kit.Class != Class.Unarmed && sendActionTip)
-        {
-            if (player.IsSquadLeader())
-                _tipService.TryGiveTip(player, 1200, _tipTranslations.ActionMenuSquadLeader);
-            else
-                _tipService.TryGiveTip(player, 3600, _tipTranslations.ActionMenu);
-        }
+        if (lowAmmo)
+            _tipService.TryGiveTip(player, 300, _tipTranslations.KitGiveLowAmmo);
 
         // equip primary or secondary
         if (inventory.getItemCount((byte)Page.Primary) > 0)
@@ -440,6 +478,37 @@ public class KitDistribution(KitManager manager, IServiceProvider serviceProvide
         else
         {
             logger.LogWarning("[GIVE KIT] Invalid item" + " in kit \"{0}\" for item {1} {{{2}}}.", kit.InternalName, asset.itemName, asset.GUID.ToString("N"));
+        }
+    }
+
+    private static void ApplyLowAmmoChanges(ItemAsset asset, ref bool shouldSpawn, ref byte itemAmount, ref byte[] state,
+        Dictionary<Guid, int> kitItemCountsGivenSoFar)
+    {
+        switch (asset)
+        {
+            case ItemMagazineAsset { deleteEmpty: true }:
+                // low ammo does not spawn any 'deleteEmpty' magazines
+                shouldSpawn = false;
+                break;
+            case ItemMagazineAsset:
+                // low ammo causes all regular magazines to be empty
+                itemAmount = 0;
+                break;
+            case ItemGunAsset:
+                // low ammo causes extra guns to spawn empty
+                state[10] = 0;
+                break;
+            case ItemChargeAsset or ItemTrapAsset or ItemThrowableAsset:
+                // low ammo does not spawn any sort of charges, mines, or grenades
+                shouldSpawn = false;
+                break;
+            default:
+                {
+                    if (kitItemCountsGivenSoFar.TryGetValue(asset.GUID, out int givenSoFar) && givenSoFar > 0)
+                        // for all other items, low ammo only allows 1 of that particular item to be given
+                        shouldSpawn = false;
+                    break;
+                }
         }
     }
 }
