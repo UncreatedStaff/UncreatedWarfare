@@ -543,20 +543,6 @@ public class PointsTranslations : PropertiesTranslationCollection
     [TranslationData(IsPriorityTranslation = false)]
     public Translation XPToastOnDuty = new Translation("ON DUTY", TranslationOptions.TMProUI);
 
-
-    [TranslationData(IsPriorityTranslation = false)]
-    public Translation<int> FOBToastGainBuild = new Translation<int>("<color=#f3ce82>+{0} BUILD</color>", TranslationOptions.TMProUI);
-
-    [TranslationData(IsPriorityTranslation = false)]
-    public Translation<int> FOBToastLoseBuild = new Translation<int>("<color=#f3ce82>-{0} BUILD</color>", TranslationOptions.TMProUI);
-
-    [TranslationData(IsPriorityTranslation = false)]
-    public Translation<int> FOBToastGainAmmo = new Translation<int>("<color=#e25d5d>+{0} AMMO</color>", TranslationOptions.TMProUI);
-
-    [TranslationData(IsPriorityTranslation = false)]
-    public Translation<int> FOBToastLoseAmmo = new Translation<int>("<color=#e25d5d>-{0} AMMO</color>", TranslationOptions.TMProUI);
-
-
     [TranslationData("Hint to tell a player to load supplies into the vehicle.")]
     public Translation FOBResourceToastLoadSupplies = new Translation("LOAD SUPPLIES");
 

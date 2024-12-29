@@ -151,27 +151,32 @@ namespace Uncreated.Warfare.Vehicles
             if (warfareVehicle.Info is not { Trunk.Count: > 0 })
                 return warfareVehicle;
 
-            // add items to trunk
-            foreach (WarfareVehicleInfo.TrunkItem item in warfareVehicle.Info.Trunk)
+            RefillTrunkItems(warfareVehicle, warfareVehicle.Info.Trunk);
+
+            return warfareVehicle;
+        }
+
+        public void RefillTrunkItems(WarfareVehicle warfareVehicle, IEnumerable<WarfareVehicleInfo.TrunkItem> trunkItems, bool dropItemsOnGroundIfNoSpace = true)
+        {
+            warfareVehicle.Vehicle.trunkItems.clear();
+            foreach (WarfareVehicleInfo.TrunkItem item in trunkItems)
             {
                 if (!item.Item.TryGetAsset(out ItemAsset? itemAsset))
                 {
-                    _logger.LogWarning("Failed to find item asset for the trunk of {0}: {1}.", vehicle.ToDisplayString(), item.Item.ToDisplayString());
+                    _logger.LogWarning("Failed to find item asset for the trunk of {0}: {1}.", warfareVehicle.Vehicle.asset.FriendlyName, item.Item.ToDisplayString());
                     continue;
                 }
 
                 Item info = new Item(itemAsset.id, itemAsset.amount, 100, item.State ?? itemAsset.getState(EItemOrigin.ADMIN));
-                if (veh.trunkItems.checkSpaceEmpty(item.X, item.Y, itemAsset.size_x, itemAsset.size_y, item.Rotation))
+                if (warfareVehicle.Vehicle.trunkItems.checkSpaceEmpty(item.X, item.Y, itemAsset.size_x, itemAsset.size_y, item.Rotation))
                 {
-                    veh.trunkItems.addItem(item.X, item.Y, item.Rotation, info);
+                    warfareVehicle.Vehicle.trunkItems.addItem(item.X, item.Y, item.Rotation, info);
                 }
-                else if (!veh.trunkItems.tryAddItem(info))
+                else if (!warfareVehicle.Vehicle.trunkItems.tryAddItem(info) && dropItemsOnGroundIfNoSpace)
                 {
-                    ItemManager.dropItem(info, position, false, true, true);
+                    ItemManager.dropItem(info, warfareVehicle.Position, false, true, true);
                 }
             }
-
-            return warfareVehicle;
         }
         /// <summary>
         /// Remove one vehicle and clean up spawn information and items.

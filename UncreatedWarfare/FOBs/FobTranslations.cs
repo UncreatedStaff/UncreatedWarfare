@@ -85,4 +85,11 @@ public class FobTranslations : PropertiesTranslationCollection
 
     [TranslationData("Shows on the HUD when a new cache spawns and the player is on defense.")]
     public readonly Translation CacheSpawnedDefense = new Translation("<#a8e0a4>NEW WEAPONS CACHE IS NOW ACTIVE", TranslationOptions.TMProUI);
+    
+    [TranslationData(IsPriorityTranslation = false)]
+    public Translation<float> ToastGainBuild = new Translation<float>("<color=#f3ce82>+{0} BUILD</color>", TranslationOptions.TMProUI);
+
+    [TranslationData(IsPriorityTranslation = false)]
+    public Translation<float> ToastLoseBuild = new Translation<float>("<color=#f3ce82>-{0} BUILD</color>", TranslationOptions.TMProUI);
+
 }

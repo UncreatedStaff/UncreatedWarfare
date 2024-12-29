@@ -16,6 +16,7 @@ using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util.Containers;
 using static SDG.Provider.SteamGetInventoryResponse;
@@ -85,6 +86,7 @@ public class ClaimToRearmTweaks : IAsyncEventListener<ClaimBedRequested>
         _ = kitManager.Requests.GiveKit(e.Player, kit, false, true);
         supplyCrate.SubstractSupplies(rearmCost, SupplyType.Ammo, SupplyChangeReason.ConsumeGeneral);
 
+        e.Player.SendToast(new ToastMessage(ToastMessageStyle.Tip, translations.ToastLoseAmmo.Translate(rearmCost, e.Player)));
         chatService.Send(e.Player, translations.AmmoResuppliedKit, rearmCost, supplyCrate.AmmoCount);
         e.Cancel();
     }

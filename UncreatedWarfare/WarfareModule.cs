@@ -80,6 +80,7 @@ using Uncreated.Warfare.Zones;
 using Module = SDG.Framework.Modules.Module;
 using Uncreated.Warfare.FOBs.StateStorage;
 using Uncreated.Warfare.FOBs.StateStorage.Tweaks;
+using Uncreated.Warfare.FOBs.SupplyCrates.AutoResupply;
 using Uncreated.Warfare.Vehicles.Events.Tweaks.AdvancedDamage;
 
 namespace Uncreated.Warfare;
@@ -553,6 +554,10 @@ public sealed class WarfareModule
             .SingleInstance();
         
         bldr.RegisterType<AdvancedVehicleDamageTweaks>()
+            .AsImplementedInterfaces().AsSelf()
+            .SingleInstance();
+        
+        bldr.RegisterType<AutoResupplyLoop>()
             .AsImplementedInterfaces().AsSelf()
             .SingleInstance();
 

@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Buildables;
+using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Barricades;
@@ -18,7 +19,10 @@ using Uncreated.Warfare.FOBs.StateStorage;
 using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.FOBs.SupplyCrates.VehicleResupply;
 using Uncreated.Warfare.Layouts.Teams;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Extensions;
+using Uncreated.Warfare.Players.UI;
+using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Timing;
 
@@ -84,7 +88,7 @@ public partial class FobManager :
             }
 
             // fobs need their own special shoveable with a completed event
-            if (TryCreateShoveable(e.Buildable, container, out ShovelableBuildable? shovelable, shouldConsumeSupplies: !unbuiltFob.HasBeenRebuilt))
+            if (TryCreateShoveable(e.Buildable, e.Owner, out ShovelableBuildable? shovelable, shouldConsumeSupplies: !unbuiltFob.HasBeenRebuilt))
             {
                 shovelable!.OnComplete = completedBuildable =>
                 {
@@ -98,7 +102,7 @@ public partial class FobManager :
             return;
         }
         // if it's the player's faction's rally point, register a new rally point
-        else if (e.Owner != null && e.Owner.IsInSquad() && e.Owner.Team.Faction.RallyPoint.MatchAsset(e.Barricade.asset))
+        if (e.Owner != null && e.Owner.IsInSquad() && e.Owner.Team.Faction.RallyPoint.MatchAsset(e.Barricade.asset))
         {
             RegisterFob(new RallyPoint(e.Buildable, e.Owner.GetSquad()!, serviceProvider));
             return;
@@ -106,7 +110,7 @@ public partial class FobManager :
 
         // other entities and shovelables get registered here
         TryRegisterEntity(e.Buildable, serviceProvider);
-        TryCreateShoveable(e.Buildable, container, out _);
+        TryCreateShoveable(e.Buildable, e.Owner, out _);
     }
     private BuildableContainer CreateBuildableContainer(BarricadePlaced e)
     {
@@ -128,7 +132,7 @@ public partial class FobManager :
             RegisterFobEntity(new FortificationEntity(buildable));
         }
     }
-    private bool TryCreateShoveable(IBuildable buildable, BuildableContainer container, out ShovelableBuildable? shovelable, bool shouldConsumeSupplies = true)
+    private bool TryCreateShoveable(IBuildable buildable, WarfarePlayer? placer, out ShovelableBuildable? shovelable, bool shouldConsumeSupplies = true)
     {
         shovelable = null;
 
@@ -149,6 +153,8 @@ public partial class FobManager :
         {
             NearbySupplyCrates supplyCrates = NearbySupplyCrates.FindNearbyCrates(nearestFriendlyFob.Position, nearestFriendlyFob.Team.GroupId, this);
             supplyCrates.SubstractSupplies(shovelableInfo.SupplyCost, SupplyType.Build, SupplyChangeReason.ConsumeShovelablePlaced);
+            
+            placer?.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastLoseBuild.Translate(shovelableInfo.SupplyCost, placer)));
         }
 
         return true;
@@ -204,6 +210,7 @@ public partial class FobManager :
                 NearbySupplyCrates supplyCrates = NearbySupplyCrates.FindNearbyCrates(shovelable.Buildable.Position, shovelable.Buildable.Group, this);
                 supplyCrates.RefundSupplies(shovelable.Info.SupplyCost, SupplyType.Build);
             }
+            e.Instigator?.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastGainBuild.Translate(shovelable.Info.SupplyCost, e.Instigator)));
         }
        
         SupplyCrate? supplyCrate = _entities.OfType<SupplyCrate>().FirstOrDefault(i => i.Buildable.Equals(e.Buildable));
@@ -235,6 +242,11 @@ public partial class FobManager :
                     SupplyCrate supplyCrate = new(supplyCrateInfo, buildable, serviceProvider.GetRequiredService<ILoopTickerFactory>());
                     RegisterFobEntity(supplyCrate);
                     NearbySupplyCrates.FromSingleCrate(supplyCrate, this).NotifyChanged(supplyCrate.Type, supplyCrate.SupplyCount, SupplyChangeReason.ResupplyFob, e.Player);
+                    
+                    if (supplyCrate.Type == SupplyType.Build)
+                        e.Player.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastGainBuild.Translate(supplyCrate.SupplyCount, e.Player)));
+                    else if (supplyCrate.Type == SupplyType.Ammo)
+                        e.Player.SendToast(new ToastMessage(ToastMessageStyle.Tip, serviceProvider.GetRequiredService<TranslationInjection<AmmoTranslations>>().Value.ToastGainAmmo.Translate(supplyCrate.SupplyCount, e.Player)));
                 }
             );
             return;

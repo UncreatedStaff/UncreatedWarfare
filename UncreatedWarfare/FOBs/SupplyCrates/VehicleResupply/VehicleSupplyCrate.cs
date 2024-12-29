@@ -8,6 +8,7 @@ using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles;
@@ -20,7 +21,6 @@ public class VehicleSupplyCrate : FallingItem
     private readonly WarfarePlayer _resupplier;
     private readonly EffectAsset _resupplyEffect;
     private readonly FobManager _fobManager;
-    private readonly ChatService _chatService;
     private readonly AmmoTranslations _translations;
 
     public VehicleSupplyCrate(ItemData itemData, Vector3 originalDropPosition, WarfarePlayer resupplier, EffectAsset resupplyEffect, IServiceProvider serviceProvider)
@@ -29,7 +29,6 @@ public class VehicleSupplyCrate : FallingItem
         _resupplier = resupplier;
         _resupplyEffect = resupplyEffect;
         _fobManager = serviceProvider.GetRequiredService<FobManager>();
-        _chatService = serviceProvider.GetRequiredService<ChatService>();
         _translations = serviceProvider.GetRequiredService<TranslationInjection<AmmoTranslations>>().Value;
     }
 
@@ -38,8 +37,7 @@ public class VehicleSupplyCrate : FallingItem
         
         Collider[] hitColliders = new Collider[4];
         Physics.OverlapSphereNonAlloc(FinalRestPosition, 5, hitColliders, LayerMasks.VEHICLE);
-
-
+        
         foreach (Collider collider in hitColliders.OrderBy(c => (c.transform.position - FinalRestPosition).sqrMagnitude))
         {
             WarfareVehicleComponent? warfareVehicleComponent = collider.GetComponentInParent<WarfareVehicleComponent>();
@@ -49,12 +47,14 @@ public class VehicleSupplyCrate : FallingItem
             ResourceFob? nearestFob = _fobManager.FindNearestResourceFob(_resupplier.Team, FinalRestPosition);
             if (nearestFob == null)
             {
-                _chatService.Send(_resupplier, _translations.AmmoNotNearFOB);
+                _resupplier.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastAmmoNotNearFob.Translate(_resupplier)));
                 return;
             }
+
+            int requiredAmmoCount = warfareVehicleComponent.WarfareVehicle.Info.Rearm.AmmoConsumed;
             if (nearestFob.AmmoCount < warfareVehicleComponent.WarfareVehicle.Info.Rearm.AmmoConsumed)
             {
-                _chatService.Send(_resupplier, _translations.AmmoInsufficient);
+                _resupplier.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastInsufficientAmmo.Translate(nearestFob.AmmoCount, requiredAmmoCount, _resupplier)));
                 return;
             }
             
@@ -65,6 +65,7 @@ public class VehicleSupplyCrate : FallingItem
 
     private void ResupplyVehicle(WarfareVehicle warfareVehicle, ResourceFob fob)
     {
+        int ammoToConsume = warfareVehicle.Info.Rearm.AmmoConsumed;
         foreach (IAssetLink<ItemAsset> itemAsset in warfareVehicle.Info.Rearm.Items)
         {
             ItemAsset? asset = itemAsset.GetAsset();
@@ -73,7 +74,7 @@ public class VehicleSupplyCrate : FallingItem
             
             ItemManager.dropItem(new Item(asset, EItemOrigin.CRAFT), FinalRestPosition, false, true, true);
         }
-        fob.ChangeSupplies(SupplyType.Ammo, warfareVehicle.Info.Rearm.AmmoConsumed);
+        fob.ChangeSupplies(SupplyType.Ammo, ammoToConsume);
         
         // destroy the dropped item
         ItemUtility.DestroyDroppedItem(ItemData, true);
@@ -84,5 +85,7 @@ public class VehicleSupplyCrate : FallingItem
             relevantDistance = 70,
             reliable = true
         });
+        
+        _resupplier.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastLoseAmmo.Translate(ammoToConsume, _resupplier)));
     }
 }

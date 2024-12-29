@@ -14,11 +14,11 @@ public class AmmoTranslations : PropertiesTranslationCollection
     
     public readonly Translation<int> AmmoResuppliedKitMain = new Translation<int>("<#d1bda7>Resupplied kit. Consumed: <#e25d5d>{0} AMMO</color>.");
     
-    public readonly Translation AmmoAutoSupply = new Translation("<#b3a6a2>This vehicle will <#cedcde>AUTO RESUPPLY</color> when in main. You can also use '<color=#c9bfad>/load <color=#f3ce82>build</color>|<color=#e25d5d>ammo</color> <amount></color>'.");
+    public readonly Translation VehicleAutoSupply = new Translation("<#b3a6a2>Vehicle has been <#ebbda9>AUTO RESUPPLIED</color>.");
     
     public readonly Translation AmmoNotNearFOB = new Translation("<#b3a6a2>This ammo crate is not built on a friendly FOB.");
     
-    public readonly Translation<float, float> AmmoInsufficient = new Translation<float, float>("<#b3a6a2>Insufficient ammo. Required: <#e25d5d>{0}/{1} AMMO</color>.");
+    public readonly Translation<float, float> AmmoInsufficient = new Translation<float, float>("<#b3a6a2>Insufficient ammo. <#e25d5d>{0}/{1} AMMO</color> needed.");
     public readonly Translation AmmoAlreadyFull = new Translation("<#b3a6a2>Your kit is already full on ammo.</color>");
     
     public readonly Translation AmmoNoKit = new Translation("<#b3a6a2>You don't have a kit yet. Go request one from the armory in your team's headquarters.");
@@ -30,6 +30,21 @@ public class AmmoTranslations : PropertiesTranslationCollection
     public readonly Translation AmmoNotRifleman = new Translation("<#b7bab1>You must be a <#cedcde>RIFLEMAN</color> in order to place this <#cedcde>AMMO BAG</color>.");
     
     public readonly Translation AmmoNotNearRepairStation = new Translation("<#b3a6a2>Your vehicle must be next to a <#cedcde>REPAIR STATION</color> in order to rearm.");
+    
+    
+    // toasts
+    [TranslationData(IsPriorityTranslation = false)]
+    public Translation<float> ToastGainAmmo = new Translation<float>("<color=#e25d5d>+{0} AMMO</color>", TranslationOptions.TMProUI);
+
+    [TranslationData(IsPriorityTranslation = false)]
+    public Translation<float> ToastLoseAmmo = new Translation<float>("<color=#e25d5d>-{0} AMMO</color>", TranslationOptions.TMProUI);
+    
+    [TranslationData(IsPriorityTranslation = false)]
+    public Translation ToastAmmoNotNearFob = new Translation("<color=#b3a6a2>No fob nearby</color>", TranslationOptions.TMProUI);
+    public Translation ToastAmmoNotNearVehicle = new Translation("<color=#b3a6a2>No vehicle or emplacement nearby</color>", TranslationOptions.TMProUI);
+    public Translation<float, float> ToastInsufficientAmmo = new Translation<float, float>("<#b3a6a2>Insufficient ammo: <#e25d5d>{0}/{1} AMMO</color> needed.", TranslationOptions.TMProUI);
+
+    
 #if false
 
     public readonly Translation<VehicleData, int, int> AmmoResuppliedVehicle = new Translation<VehicleData, int, int>("<#d1bda7>Resupplied {0}. Consumed: <#e25d5d>{1} AMMO</color> <#948f8a>({2} left)</color>.", arg0Fmt: VehicleData.FormatColoredName);

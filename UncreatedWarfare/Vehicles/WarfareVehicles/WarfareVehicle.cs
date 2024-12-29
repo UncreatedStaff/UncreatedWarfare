@@ -26,6 +26,7 @@ namespace Uncreated.Warfare.Vehicles.WarfareVehicles
         public FlareEmitter? FlareEmitter { get; }
         public Vector3 Position => Vehicle.transform.position;
         public Quaternion Rotation => Vehicle.transform.rotation;
+        public bool NeedsAutoResupply { get; internal set; }
         public WarfareVehicle(InteractableVehicle interactableVehicle, WarfareVehicleInfo info, IServiceProvider serviceProvider)
         {
             Vehicle = interactableVehicle;
@@ -40,6 +41,7 @@ namespace Uncreated.Warfare.Vehicles.WarfareVehicles
             DamageTracker = new VehicleDamageTracker();
             TranportTracker = new TranportTracker();
             AdvancedDamageApplier = new AdvancedVehicleDamageApplier();
+            NeedsAutoResupply = false;
         }
 
         public void Dispose()
