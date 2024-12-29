@@ -14,7 +14,9 @@ using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.FOBs.Entities;
 using Uncreated.Warfare.FOBs.Rallypoints;
+using Uncreated.Warfare.FOBs.StateStorage;
 using Uncreated.Warfare.FOBs.SupplyCrates;
+using Uncreated.Warfare.FOBs.SupplyCrates.VehicleResupply;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Util;
@@ -141,7 +143,7 @@ public partial class FobManager :
 
         RegisterFobEntity(newShovelable);
 
-        BunkerFob? nearestFriendlyFob = FindNearestBuildableFob(newShovelable.Buildable.Group, buildable.Position);
+        BunkerFob? nearestFriendlyFob = FindNearestBunkerFob(newShovelable.Buildable.Group, buildable.Position);
 
         if (nearestFriendlyFob != null && shouldConsumeSupplies)
         {
@@ -190,7 +192,7 @@ public partial class FobManager :
         ShovelableBuildable? shovelable = GetBuildableFobEntity<ShovelableBuildable>(e.Buildable);
         if (shovelable != null)
         {
-            BunkerFob? nearestFriendlyFob = FindNearestBuildableFob(shovelable.Buildable.Group, shovelable.Buildable.Position);
+            BunkerFob? nearestFriendlyFob = FindNearestBunkerFob(shovelable.Buildable.Group, shovelable.Buildable.Position);
 
             if (nearestFriendlyFob != null)
             {
@@ -220,22 +222,37 @@ public partial class FobManager :
         SupplyCrateInfo? supplyCrateInfo = Configuration.GetRequiredSection("SupplyCrates").Get<List<SupplyCrateInfo>>()?
             .FirstOrDefault(s => s.SupplyItemAsset.MatchAsset(e.Item.GetAsset()));
 
-        if (supplyCrateInfo == null)
+        if (supplyCrateInfo != null)
+        {
+            new FallingBuildable(
+                e.DroppedItem,
+                supplyCrateInfo.SupplyItemAsset.GetAssetOrFail(),
+                supplyCrateInfo.PlacementEffect.GetAssetOrFail(),
+                e.Player.Position,
+                e.Player.Yaw,
+                (buildable) =>
+                {
+                    SupplyCrate supplyCrate = new(supplyCrateInfo, buildable, serviceProvider.GetRequiredService<ILoopTickerFactory>());
+                    RegisterFobEntity(supplyCrate);
+                    NearbySupplyCrates.FromSingleCrate(supplyCrate, this).NotifyChanged(supplyCrate.Type, supplyCrate.SupplyCount, SupplyChangeReason.ResupplyFob, e.Player);
+                }
+            );
             return;
+        }
+        
+        VehicleSupplyCrateInfo? vehicleSupplyCrate = Configuration.GetRequiredSection("VehicleOrdinanceCrates").Get<IEnumerable<VehicleSupplyCrateInfo>>()?
+            .FirstOrDefault(s => s.SupplyItemAsset.MatchAsset(e.Item.GetAsset()));
 
-        new FallingBuildable(
-            e.DroppedItem,
-            supplyCrateInfo.SupplyItemAsset.GetAssetOrFail(),
-            supplyCrateInfo.PlacementEffect.GetAssetOrFail(),
-            e.Player.Position,
-            e.Player.Yaw,
-        (buildable) =>
-            {
-                SupplyCrate supplyCrate = new SupplyCrate(supplyCrateInfo, buildable);
-                RegisterFobEntity(supplyCrate);
-                NearbySupplyCrates.FromSingleCrate(supplyCrate, this).NotifyChanged(supplyCrate.Type, supplyCrate.SupplyCount, SupplyChangeReason.ResupplyFob, e.Player);
-            }
-        );
+        if (vehicleSupplyCrate != null)
+        {
+            new VehicleSupplyCrate(
+                e.DroppedItem,
+                e.Player.Position,
+                e.Player,
+                vehicleSupplyCrate.ResupplyEffect.GetAssetOrFail(),
+                serviceProvider
+            );
+        }
     }
     public void HandleEvent(VehicleSpawned e, IServiceProvider serviceProvider)
     {

@@ -15,7 +15,6 @@ public class BarricadeApplySavedStateTweaks : IEventListener<BarricadePlaced>
     {
         _logger = logger;
         _barricadeStateStore = barricadeStateStore;
-
     }
 
     void IEventListener<BarricadePlaced>.HandleEvent(BarricadePlaced e, IServiceProvider serviceProvider)

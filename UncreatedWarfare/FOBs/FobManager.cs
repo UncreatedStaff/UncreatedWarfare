@@ -102,6 +102,7 @@ public partial class FobManager : ILayoutHostedService
         IFobEntity? existing = _entities.FindAndRemove(f => f == entity);
         if (existing == null)
             return false;
+        existing.Dispose();
         _logger.LogDebug("Deregistered FOB Entity: " + entity);
         return true;
     }
@@ -109,7 +110,14 @@ public partial class FobManager : ILayoutHostedService
     {
         return _fobs.OfType<BuildableFobType>().FirstOrDefault(f => f.Buildable.Equals(matchingBuildable));
     }
-    public BunkerFob? FindNearestBuildableFob(Team team, Vector3 position, bool includeUnbuilt = true)
+    public ResourceFob? FindNearestResourceFob(Team team, Vector3 position)
+    {
+        return _fobs.OfType<ResourceFob>().FirstOrDefault(f =>
+            f.Team == team &&
+            MathUtility.WithinRange(position, f.Position, f.EffectiveRadius)
+        );
+    }
+    public BunkerFob? FindNearestBunkerFob(Team team, Vector3 position, bool includeUnbuilt = true)
     {
         return _fobs.OfType<BunkerFob>().FirstOrDefault(f =>
             f.Team == team &&
@@ -117,7 +125,7 @@ public partial class FobManager : ILayoutHostedService
             (includeUnbuilt ? true : f.IsBuilt)
         );
     }
-    public BunkerFob? FindNearestBuildableFob(CSteamID teamGroup, Vector3 position, bool includeUnbuilt = true)
+    public BunkerFob? FindNearestBunkerFob(CSteamID teamGroup, Vector3 position, bool includeUnbuilt = true)
     {
         return _fobs.OfType<BunkerFob>().FirstOrDefault(f =>
             f.Team.GroupId == teamGroup &&
@@ -125,7 +133,7 @@ public partial class FobManager : ILayoutHostedService
             (includeUnbuilt ? true : f.IsBuilt)
         );
     }
-    public IEnumerable<BunkerFob> FriendlyBuildableFobs(Team team, bool includeUnbuilt = true)
+    public IEnumerable<BunkerFob> FriendlyBunkerFobs(Team team, bool includeUnbuilt = true)
     {
         return _fobs.OfType<BunkerFob>().Where(f =>
             f.Team == team &&

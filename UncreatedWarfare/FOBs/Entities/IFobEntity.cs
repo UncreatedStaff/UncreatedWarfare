@@ -9,7 +9,7 @@ namespace Uncreated.Warfare.FOBs.Entities;
 /// <summary>
 /// An item placed on a FOB.
 /// </summary>
-public interface IFobEntity
+public interface IFobEntity : IDisposable
 {
     Vector3 Position { get; }
     Quaternion Rotation { get; }

@@ -23,7 +23,7 @@ using static Uncreated.Warfare.FOBs.Deployment.Tweaks.ClaimToRearmTweaks;
 using Item = SDG.Unturned.Item;
 
 namespace Uncreated.Warfare.FOBs.Deployment.Tweaks;
-internal class ClaimToRearmTweaks : IAsyncEventListener<ClaimBedRequested>
+public class ClaimToRearmTweaks : IAsyncEventListener<ClaimBedRequested>
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger _logger;
@@ -52,7 +52,7 @@ internal class ClaimToRearmTweaks : IAsyncEventListener<ClaimBedRequested>
             return;
 
         ChatService chatService = serviceProvider.GetRequiredService<ChatService>();
-        AmmoCommandTranslations translations = serviceProvider.GetRequiredService<TranslationInjection<AmmoCommandTranslations>>().Value;
+        AmmoTranslations translations = serviceProvider.GetRequiredService<TranslationInjection<AmmoTranslations>>().Value;
 
         Kit? kit = null;
         if (e.Player.TryGetFromContainer(out KitPlayerComponent? kitComponenmt) && kitComponenmt.ActiveKitKey.HasValue)
@@ -77,7 +77,7 @@ internal class ClaimToRearmTweaks : IAsyncEventListener<ClaimBedRequested>
         NearbySupplyCrates supplyCrate = NearbySupplyCrates.FromSingleCrate(ammoCrate, fobManager);
         if (rearmCost > supplyCrate.AmmoCount)
         {
-            chatService.Send(e.Player, translations.AmmoOutOfStock, supplyCrate.AmmoCount, rearmCost);
+            chatService.Send(e.Player, translations.AmmoInsufficient, supplyCrate.AmmoCount, rearmCost);
             e.Cancel();
             return;
         }

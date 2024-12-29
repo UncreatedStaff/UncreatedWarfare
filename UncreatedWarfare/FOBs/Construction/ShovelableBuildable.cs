@@ -144,4 +144,9 @@ public class ShovelableBuildable : IBuildableFobEntity
     {
         return Buildable.GetHashCode();
     }
+
+    public void Dispose()
+    {
+        // don't need to dispose anything
+    }
 }

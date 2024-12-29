@@ -1,0 +1,88 @@
+using Microsoft.Extensions.DependencyInjection;
+using System;
+using System.Linq;
+using Uncreated.Warfare.Buildables;
+using Uncreated.Warfare.Commands;
+using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Fobs;
+using Uncreated.Warfare.Interaction;
+using Uncreated.Warfare.Layouts.Teams;
+using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Vehicles;
+using Uncreated.Warfare.Vehicles.WarfareVehicles;
+
+namespace Uncreated.Warfare.FOBs.SupplyCrates;
+
+public class VehicleSupplyCrate : FallingItem
+{
+    private readonly WarfarePlayer _resupplier;
+    private readonly EffectAsset _resupplyEffect;
+    private readonly FobManager _fobManager;
+    private readonly ChatService _chatService;
+    private readonly AmmoTranslations _translations;
+
+    public VehicleSupplyCrate(ItemData itemData, Vector3 originalDropPosition, WarfarePlayer resupplier, EffectAsset resupplyEffect, IServiceProvider serviceProvider)
+        : base(itemData, originalDropPosition)
+    {
+        _resupplier = resupplier;
+        _resupplyEffect = resupplyEffect;
+        _fobManager = serviceProvider.GetRequiredService<FobManager>();
+        _chatService = serviceProvider.GetRequiredService<ChatService>();
+        _translations = serviceProvider.GetRequiredService<TranslationInjection<AmmoTranslations>>().Value;
+    }
+
+    protected override void OnHitGround()
+    {
+        
+        Collider[] hitColliders = new Collider[4];
+        Physics.OverlapSphereNonAlloc(FinalRestPosition, 5, hitColliders, LayerMasks.VEHICLE);
+
+
+        foreach (Collider collider in hitColliders.OrderBy(c => (c.transform.position - FinalRestPosition).sqrMagnitude))
+        {
+            WarfareVehicleComponent? warfareVehicleComponent = collider.GetComponentInParent<WarfareVehicleComponent>();
+            if (warfareVehicleComponent == null)
+                continue;
+
+            ResourceFob? nearestFob = _fobManager.FindNearestResourceFob(_resupplier.Team, FinalRestPosition);
+            if (nearestFob == null)
+            {
+                _chatService.Send(_resupplier, _translations.AmmoNotNearFOB);
+                return;
+            }
+            if (nearestFob.AmmoCount < warfareVehicleComponent.WarfareVehicle.Info.Rearm.AmmoConsumed)
+            {
+                _chatService.Send(_resupplier, _translations.AmmoInsufficient);
+                return;
+            }
+            
+            ResupplyVehicle(warfareVehicleComponent.WarfareVehicle, nearestFob);
+            return;
+        }
+    }
+
+    private void ResupplyVehicle(WarfareVehicle warfareVehicle, ResourceFob fob)
+    {
+        foreach (IAssetLink<ItemAsset> itemAsset in warfareVehicle.Info.Rearm.Items)
+        {
+            ItemAsset? asset = itemAsset.GetAsset();
+            if (asset == null)
+                continue;
+            
+            ItemManager.dropItem(new Item(asset, EItemOrigin.CRAFT), FinalRestPosition, false, true, true);
+        }
+        fob.ChangeSupplies(SupplyType.Ammo, warfareVehicle.Info.Rearm.AmmoConsumed);
+        
+        // destroy the dropped item
+        ItemUtility.DestroyDroppedItem(ItemData, true);
+        // spawn a nice effect
+        EffectManager.triggerEffect(new TriggerEffectParameters(_resupplyEffect)
+        {
+            position = FinalRestPosition,
+            relevantDistance = 70,
+            reliable = true
+        });
+    }
+}

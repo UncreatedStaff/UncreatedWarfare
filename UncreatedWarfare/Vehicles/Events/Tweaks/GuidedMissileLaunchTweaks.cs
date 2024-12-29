@@ -66,9 +66,6 @@ internal class GuidedMissileLaunchTweaks :
 
     public void HandleEvent(VehicleSpawned e, IServiceProvider serviceProvider)
     {
-        if (_assetConfiguration == null)
-            return;
-
         foreach (var passenger in e.Vehicle.Vehicle.turrets)
         {
             if (_groundAAMissiles.Any(a => a.Id == passenger.turret.itemID))

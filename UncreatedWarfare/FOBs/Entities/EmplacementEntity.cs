@@ -31,4 +31,9 @@ public class EmplacementEntity : IFobEntity
     {
         return HashCode.Combine(IdentifyingAsset.Guid, Vehicle);
     }
+
+    public void Dispose()
+    {
+        // don't need to dispose anything
+    }
 }

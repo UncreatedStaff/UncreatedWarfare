@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using Uncreated.Warfare.Fobs;
+using Uncreated.Warfare.FOBs.SupplyCrates;
 
 namespace Uncreated.Warfare.FOBs;
 
@@ -10,9 +11,7 @@ namespace Uncreated.Warfare.FOBs;
 /// </summary>
 public interface IResourceFob : IFob
 {
-    /// <summary>
-    /// Number of Supplies on the FOB.
-    /// </summary>
     float BuildCount { get; }
     float AmmoCount { get; }
+    void ChangeSupplies(SupplyType supplyType, float amount);
 }

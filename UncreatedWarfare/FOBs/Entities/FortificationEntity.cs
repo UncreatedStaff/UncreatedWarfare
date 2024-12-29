@@ -5,6 +5,7 @@ using System.Text;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.FOBs.Construction;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.FOBs.Entities;
 public class FortificationEntity : IBuildableFobEntity
@@ -20,5 +21,10 @@ public class FortificationEntity : IBuildableFobEntity
     {
         Buildable = buildable;
         IdentifyingAsset = AssetLink.Create(buildable.Asset);
+    }
+
+    public void Dispose()
+    {
+        // don't need to dispose anything
     }
 }

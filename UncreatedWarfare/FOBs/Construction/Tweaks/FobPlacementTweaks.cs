@@ -70,7 +70,7 @@ public class FobPlacementTweaks :
         }
 
         int maxNumberOfFobs = fobManager.Configuration.GetValue("MaxNumberOfFobs", 10);
-        bool fobLimitReached = fobManager.FriendlyBuildableFobs(e.OriginalPlacer.Team).Count() >= maxNumberOfFobs;
+        bool fobLimitReached = fobManager.FriendlyBunkerFobs(e.OriginalPlacer.Team).Count() >= maxNumberOfFobs;
         if (fobLimitReached)
         {
             chatService.Send(e.OriginalPlacer, _translations.BuildMaxFOBsHit);
@@ -79,7 +79,7 @@ public class FobPlacementTweaks :
         }
 
         float minDistanceBetweenFobs = fobManager.Configuration.GetValue("MinDistanceBetweenFobs", 150f);
-        BunkerFob? tooCloseFob = fobManager.FriendlyBuildableFobs(e.OriginalPlacer.Team).FirstOrDefault(f =>
+        BunkerFob? tooCloseFob = fobManager.FriendlyBunkerFobs(e.OriginalPlacer.Team).FirstOrDefault(f =>
             MathUtility.WithinRange(e.Position, f.Position, minDistanceBetweenFobs)
             );
 

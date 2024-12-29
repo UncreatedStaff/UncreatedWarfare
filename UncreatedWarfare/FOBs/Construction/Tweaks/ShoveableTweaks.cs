@@ -79,7 +79,7 @@ internal class ShoveableTweaks :
         //}
         if (enforcePerFobMax && !barricadeInKit)
         {
-            BunkerFob? nearestFob = fobManager?.FindNearestBuildableFob(e.OriginalPlacer.Team, e.Position);
+            ResourceFob? nearestFob = fobManager?.FindNearestResourceFob(e.OriginalPlacer.Team, e.Position);
 
             if (nearestFob == null)
             {
@@ -97,7 +97,7 @@ internal class ShoveableTweaks :
 
             IEnumerable<IFobEntity> fobEntities = nearestFob.GetEntities();
 
-            int similarEntitiesCount = fobEntities.Where(en => en.IdentifyingAsset.MatchAsset(e.Barricade.asset)).Count();
+            int similarEntitiesCount = fobEntities.Count(en => en.IdentifyingAsset.MatchAsset(e.Barricade.asset));
             if (similarEntitiesCount >= shovelableInfo.MaxAllowedPerFob)
             {
                 _chatService.Send(e.OriginalPlacer, _translations.BuildLimitReached, shovelableInfo.MaxAllowedPerFob.Value, shovelableInfo);

@@ -11,7 +11,7 @@ namespace Uncreated.Warfare.Fobs;
 /// <summary>
 /// A FOB that can show up on the FOB list.
 /// </summary>
-public interface IFob : IDeployable, IComparable<IFob>
+public interface IFob : IDeployable
 {
     /// <summary>
     /// The display name of the FOB on the FOB list.
