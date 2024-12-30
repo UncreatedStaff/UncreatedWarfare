@@ -16,12 +16,12 @@ internal sealed class InteractableBedReceiveClaimRequest : IHarmonyPatch
 
     void IHarmonyPatch.Patch(ILogger logger, Harmony patcher)
     {
-        _target = typeof(InteractableBed).GetMethod(nameof(InteractableBed.ReceiveClaimRequest), BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        _target = typeof(InteractableBed).GetMethod(nameof(InteractableBed.ReceiveClaimRequest), BindingFlags.Instance | BindingFlags.Public);
 
         if (_target != null)
         {
             patcher.Patch(_target, prefix: Accessor.GetMethod(Prefix));
-            logger.LogDebug("Patched {0} for bedroll claim requested.", _target);
+            logger.LogDebug("Patched {0} for bedroll claim requested event.", _target);
             return;
         }
 
@@ -39,13 +39,13 @@ internal sealed class InteractableBedReceiveClaimRequest : IHarmonyPatch
             return;
 
         patcher.Unpatch(_target, Accessor.GetMethod(Prefix));
-        logger.LogDebug("Unpatched {0} for sign text updated event.", _target);
+        logger.LogDebug("Unpatched {0} for bedroll claim requested event.", _target);
         _target = null;
     }
 
     // SDG.Unturned.InteractableSign
     /// <summary>
-    /// Postfix of <see cref="InteractableBed.ReceiveClaimRequest"/> to invoke <see cref="SignTextChanged"/>.
+    /// Postfix of <see cref="InteractableBed.ReceiveClaimRequest"/> to invoke <see cref="ClaimBedRequested"/>.
     /// </summary>
     private static bool Prefix(InteractableBed __instance, in ServerInvocationContext context)
     {

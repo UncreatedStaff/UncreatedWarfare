@@ -742,6 +742,8 @@ public sealed class WarfareModule
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
         bldr.RegisterType<LandmineExplosionRestrictions>().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+        bldr.RegisterType<PreventLeaveGroupTweak>().AsImplementedInterfaces()
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
 
         // Localization
         bldr.RegisterType<LanguageService>()
