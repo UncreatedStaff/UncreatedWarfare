@@ -1,4 +1,4 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
@@ -698,21 +698,24 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
                 // special argument transformation handling for /help
                 if (switchInfo.Type == typeof(HelpCommand))
                 {
-                    args = ctx.Parameters.ToArray();
+                    // get root command
+                    CommandInfo parent = ctx.CommandInfo;
+                    for (; parent.ParentCommand != null; parent = parent.ParentCommand) ;
+
                     if (args.Length > 0 && (args[^1].Equals("help", StringComparison.InvariantCultureIgnoreCase)
                                             || args[^1].Equals("hlep", StringComparison.InvariantCultureIgnoreCase)
                                             || args[^1].Equals("?", StringComparison.InvariantCultureIgnoreCase)))
                     {
                         // remove ending help in cases such as '/clear inventory help' and insert old command name as first argument
                         Array.Copy(args, 0, args, 1, args.Length - 1);
-                        args[0] = command.CommandName;
+                        args[0] = parent.CommandName;
                     }
                     else
                     {
                         // insert old command name as first argument
                         string[] newArgs = new string[args.Length + 1];
                         Array.Copy(args, 0, newArgs, 1, args.Length);
-                        newArgs[0] = command.CommandName;
+                        newArgs[0] = parent.CommandName;
                         args = newArgs;
                     }
                     

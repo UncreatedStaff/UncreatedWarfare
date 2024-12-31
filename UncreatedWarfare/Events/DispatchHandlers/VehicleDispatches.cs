@@ -218,6 +218,7 @@ partial class EventDispatcher
 
         toSeatIndex = (byte)args.NewPassengerIndex;
     }
+
     private void OnDamageVehicleRequested(CSteamID instigatorsSteamID, InteractableVehicle vehicle, ref ushort pendingTotalDamage, ref bool canRepair, ref bool shouldAllow, EDamageOrigin damageOrigin)
     {
         WarfareVehicle warfareVehicle = vehicle.transform.GetComponent<WarfareVehicleComponent>().WarfareVehicle;
@@ -234,12 +235,13 @@ partial class EventDispatcher
         _ = DispatchEventAsync(args, _unloadToken, allowAsync: false);
         
         shouldAllow = !args.IsCancelled;
-        
     }
-    private void VehicleManagerOnPreDestroyVehicle(InteractableVehicle vehicle) // todo: this method is not being called. this doesn't look right....
+
+    private void VehicleManagerOnPreDestroyVehicle(InteractableVehicle vehicle)
     {
         WarfareVehicle warfareVehicle = vehicle.transform.GetComponent<WarfareVehicleComponent>().WarfareVehicle;
-        var args = new VehicleDespawned
+        
+        VehicleDespawned args = new VehicleDespawned
         {
             Vehicle = warfareVehicle
         };

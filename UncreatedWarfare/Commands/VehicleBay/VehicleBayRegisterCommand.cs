@@ -1,14 +1,9 @@
-﻿using System;
-using System.Linq;
 using Uncreated.Warfare.Buildables;
-using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Translations;
-using Uncreated.Warfare.Vehicles;
-using Uncreated.Warfare.Vehicles.WarfareVehicles;
 using Uncreated.Warfare.Vehicles.Spawners;
-using UnityEngine;
+using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.Commands;
 
@@ -18,7 +13,6 @@ internal sealed class VehicleBayRegisterCommand : IExecutableCommand
     private readonly BuildableSaver _buildableSaver;
     private readonly VehicleSpawnerService _spawnerStore;
     private readonly VehicleInfoStore _vehicleInfo;
-    private readonly WarfareModule _module;
     private readonly VehicleBayCommandTranslations _translations;
 
     /// <inheritdoc />
@@ -28,13 +22,11 @@ internal sealed class VehicleBayRegisterCommand : IExecutableCommand
         TranslationInjection<VehicleBayCommandTranslations> translations,
         BuildableSaver buildableSaver,
         VehicleSpawnerService spawnerService,
-        VehicleInfoStore vehicleInfo,
-        WarfareModule module)
+        VehicleInfoStore vehicleInfo)
     {
         _buildableSaver = buildableSaver;
         _spawnerStore = spawnerService;
         _vehicleInfo = vehicleInfo;
-        _module = module;
         _translations = translations.Value;
     }
 
@@ -72,12 +64,12 @@ internal sealed class VehicleBayRegisterCommand : IExecutableCommand
 
         await UniTask.SwitchToMainThread(token);
 
-        if (_spawnerStore.TryGetSpawner(uniqueName, out VehicleSpawner? similarName))
+        if (_spawnerStore.TryGetSpawner(uniqueName, out _))
         {
             throw Context.Reply(_translations.NameNotUnique, uniqueName);
         }
 
-        if (_spawnerStore.TryGetSpawner(buildable, out VehicleSpawner? existing))
+        if (_spawnerStore.TryGetSpawner(buildable, out _))
         {
             throw Context.Reply(_translations.SpawnAlreadyRegistered, vehicleType);
         }

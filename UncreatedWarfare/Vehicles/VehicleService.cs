@@ -61,11 +61,11 @@ namespace Uncreated.Warfare.Vehicles
         }
         public WarfareVehicle? GetVehicle(InteractableVehicle vehicle)
         {
-            return Vehicles.FirstOrDefault(f => f.Vehicle.GetNetId() == vehicle.GetNetId());
+            return Vehicles.FirstOrDefault(f => f.Vehicle.instanceID == vehicle.instanceID);
         }
         public WarfareVehicle? DeregisterWarfareVehicle(InteractableVehicle vehicle)
         {
-            WarfareVehicle? existing = Vehicles.FindAndRemove(f => f.Vehicle == vehicle);
+            WarfareVehicle? existing = Vehicles.FindAndRemove(f => f.Vehicle.instanceID == vehicle.instanceID);
             existing?.Dispose();
             return existing;
         }

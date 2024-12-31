@@ -196,7 +196,7 @@ public partial class KitManager :
 
     public static IQueryable<Kit> ItemsSet(IKitsDbContext dbContext)
         => dbContext.Kits
-            .Include(x => x.ItemModels);
+            .Include(x => x.ItemModels.OrderBy(x => x.X).ThenBy(x => x.Y));
 
     public static IQueryable<Kit> FullSet(IKitsDbContext dbContext)
         => dbContext.Kits
@@ -204,13 +204,13 @@ public partial class KitManager :
             .Include(x => x.FactionFilter)
             .Include(x => x.UnlockRequirementsModels)
             .Include(x => x.MapFilter)
-            .Include(x => x.ItemModels)
+            .Include(x => x.ItemModels.OrderBy(x => x.X).ThenBy(x => x.Y))
             .Include(x => x.Skillsets);
     public static IQueryable<Kit> RequestableSet(IKitsDbContext dbContext, bool isVerified)
     {
         IQueryable<Kit> set = dbContext.Kits
             .Include(x => x.Translations)
-            .Include(x => x.ItemModels)
+            .Include(x => x.ItemModels.OrderBy(x => x.X).ThenBy(x => x.Y))
             .Include(x => x.Skillsets);
 
         if (isVerified)

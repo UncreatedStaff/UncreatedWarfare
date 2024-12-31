@@ -1,8 +1,8 @@
-﻿# VehicleBayCommand
+# VehicleBayCommand
 Description: "Manage vehicle spawners."
 Aliases: [ vb ]
 Parameters:
-  # /vb reg <vehicle>
+  # /vb reg <unique-name> <vehicle>
   - Name: register
     Type: Verbatim
     Alias: reg
@@ -12,12 +12,13 @@ Parameters:
         Type: Look/SDG.Unturned.ItemPlaceableAsset
         Description: "The <param 'spawner'/> to link."
         Parameters:
-          - Name: uniqueName
+          - Name: unique-name
             Type: string
-            Description: "A unique name to identify this <param 'spawner'/>."
-          - Name: vehicle
-            Type: SDG.Unturned.VehicleAsset
-            Description: "The <param 'vehicle'/> to be linked to the <param 'spawner'/>."
+            Description: "A <param 'unique-name'/> to identify this <param 'spawner'/>."
+            Parameters:
+              - Name: vehicle
+                Type: SDG.Unturned.VehicleAsset
+                Description: "The <param 'vehicle'/> to be linked to the <param 'spawner'/> with a <param 'unique-name'/>."
 
   # /vb dereg
   - Name: deregister

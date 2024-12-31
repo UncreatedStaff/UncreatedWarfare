@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,7 +6,6 @@ using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players;
-using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Players.ItemTracking;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.UI;
@@ -163,6 +162,9 @@ public class KitDistribution(KitManager manager, IServiceProvider serviceProvide
             ItemUtility.IsolateInventory(player.UnturnedPlayer, out bool oldValue);
             try
             {
+                // used for only giving 1 of a particular item when low-ammo
+                Dictionary<Guid, int> kitItemCountsGivenSoFar = new Dictionary<Guid, int>(16);
+
                 List<(Item, IPageKitItem)>? toAddLater = null;
                 for (int i = 0; i < items.Length; ++i)
                 {
@@ -212,8 +214,6 @@ public class KitDistribution(KitManager manager, IServiceProvider serviceProvide
                         logger.LogDebug("[GIVE KIT] Found layout for item {0} (to: {1}, ({2}, {3}) rot: {4}.)", item, givePage, giveX, giveY, giveRot);
                         break;
                     }
-
-                    Dictionary<Guid, int> kitItemCountsGivenSoFar = new(); // used for only giving 1 of a particular item when low-ammo
                     
                     // checks for overlapping items and retries overlapping layout-affected items
                     retry:
@@ -245,9 +245,8 @@ public class KitDistribution(KitManager manager, IServiceProvider serviceProvide
                             if (lowAmmo)
                             {
                                 bool shouldContinueToSpawnItem = true;
-                                ApplyLowAmmoChanges(asset, ref shouldContinueToSpawnItem, ref amt, ref state,
-                                    kitItemCountsGivenSoFar);
-                                
+                                ApplyLowAmmoChanges(asset, ref shouldContinueToSpawnItem, ref amt, ref state, kitItemCountsGivenSoFar);
+
                                 if (!shouldContinueToSpawnItem)
                                     continue;
                             }
@@ -422,16 +421,12 @@ public class KitDistribution(KitManager manager, IServiceProvider serviceProvide
                     return;
                 }
 
-                if (lowAmmo)
+                if (lowAmmo && item is IPageKitItem { Page: not Page.Primary and not Page.Secondary })
                 {
-                    bool isPrimaryOrSecondary = item is IPageKitItem { Page: Page.Primary or Page.Secondary };
-                    if (!isPrimaryOrSecondary)
-                    {
-                        bool shouldContinueToSpawn = true;
-                        ApplyLowAmmoChanges(asset, ref shouldContinueToSpawn, ref amt, ref state, kitItemCountsGivenSoFar);
-                        if (!shouldContinueToSpawn)
-                            continue;
-                    }
+                    bool shouldContinueToSpawn = true;
+                    ApplyLowAmmoChanges(asset, ref shouldContinueToSpawn, ref amt, ref state, kitItemCountsGivenSoFar);
+                    if (!shouldContinueToSpawn)
+                        continue;
                 }
 
                 Item uitem = new Item(asset, EItemOrigin.WORLD) { amount = amt, state = state, quality = 100 };
@@ -481,8 +476,7 @@ public class KitDistribution(KitManager manager, IServiceProvider serviceProvide
         }
     }
 
-    private static void ApplyLowAmmoChanges(ItemAsset asset, ref bool shouldSpawn, ref byte itemAmount, ref byte[] state,
-        Dictionary<Guid, int> kitItemCountsGivenSoFar)
+    private static void ApplyLowAmmoChanges(ItemAsset asset, ref bool shouldSpawn, ref byte itemAmount, ref byte[] state, IDictionary<Guid, int> kitItemsGivenSoFar)
     {
         switch (asset)
         {
@@ -490,25 +484,27 @@ public class KitDistribution(KitManager manager, IServiceProvider serviceProvide
                 // low ammo does not spawn any 'deleteEmpty' magazines
                 shouldSpawn = false;
                 break;
+            
             case ItemMagazineAsset:
                 // low ammo causes all regular magazines to be empty
                 itemAmount = 0;
                 break;
+            
             case ItemGunAsset:
                 // low ammo causes extra guns to spawn empty
                 state[10] = 0;
                 break;
+            
             case ItemChargeAsset or ItemTrapAsset or ItemThrowableAsset:
                 // low ammo does not spawn any sort of charges, mines, or grenades
                 shouldSpawn = false;
                 break;
+
             default:
-                {
-                    if (kitItemCountsGivenSoFar.TryGetValue(asset.GUID, out int givenSoFar) && givenSoFar > 0)
-                        // for all other items, low ammo only allows 1 of that particular item to be given
-                        shouldSpawn = false;
-                    break;
-                }
+                if (kitItemsGivenSoFar.TryGetValue(asset.GUID, out int givenSoFar) && givenSoFar > 0)
+                    // for all other items, low ammo only allows 1 of that particular item to be given
+                    shouldSpawn = false;
+                break;
         }
     }
 }

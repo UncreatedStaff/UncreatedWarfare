@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using SDG.NetTransport;
 using System;
 using System.Collections.Generic;
@@ -595,12 +595,11 @@ public static class BarricadeUtility
             return 16;
 
         int index = 16;
-
-        ushort tempRef2;
+        
         if (storage.displayItem != null)
         {
-            tempRef2 = storage.displayItem.id;
-            MemoryMarshal.Write(output[index..], ref tempRef2);
+            ushort tempRef = storage.displayItem.id;
+            MemoryMarshal.Write(output[index..], ref tempRef);
             index += sizeof(ushort);
 
             output[index++] = storage.displayItem.quality;
@@ -621,12 +620,10 @@ public static class BarricadeUtility
             index += sizeof(int);
         }
 
-        tempRef2 = storage.displaySkin;
-        MemoryMarshal.Write(output[index..], ref tempRef2);
+        MemoryMarshal.Write(output[index..], ref storage.displaySkin);
         index += sizeof(ushort);
 
-        tempRef2 = storage.displayMythic;
-        MemoryMarshal.Write(output[index..], ref tempRef2);
+        MemoryMarshal.Write(output[index..], ref storage.displayMythic);
         index += sizeof(ushort);
 
         if (!string.IsNullOrEmpty(storage.displayTags))

@@ -1,13 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Text;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Saves;
-using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Events;
 partial class EventDispatcher

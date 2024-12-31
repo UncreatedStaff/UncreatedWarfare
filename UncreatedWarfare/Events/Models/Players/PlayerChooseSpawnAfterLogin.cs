@@ -1,18 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Saves;
 
 namespace Uncreated.Warfare.Events.Models.Players;
+
 public class PlayerChooseSpawnAfterLogin
 {
-    required public SteamPlayerID PlayerID { get; init; }
-    required public BinaryPlayerSave PlayerSave { get; init; }
-    required public bool FirstTimeJoiningServer { get; init; }
-    required public bool JoiningIntoNewRound { get; init; }
-    required public bool NeedsNewSpawnPoint { get; set; }
-    required public Vector3 SpawnPoint { get; set; }
-    required public float Yaw { get; set; }
-    required public EPlayerStance InitialStance { get; set; }
+    public required SteamPlayerID PlayerID { get; init; }
+    public required BinaryPlayerSave PlayerSave { get; init; }
+    public required bool FirstTimeJoiningServer { get; init; }
+    public required bool JoiningIntoNewRound { get; init; }
+    public required bool NeedsNewSpawnPoint { get; set; }
+    public required Vector3 SpawnPoint { get; set; }
+    public required float Yaw { get; set; }
+    public required EPlayerStance InitialStance { get; set; }
 }

@@ -1,4 +1,4 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
@@ -32,11 +32,12 @@ public class CommandContext : ControlException
     private readonly IPlayerService _playerService;
     private readonly CooldownManager? _cooldownManager;
     private readonly ChatService _chatService;
-    private readonly string[] _parameters;
     private readonly int _argumentCount;
     private ILogger? _logger;
 
     private int _argumentOffset;
+
+    internal readonly string[] OriginalParameters;
 
     internal Type? SwitchCommand;
 
@@ -53,15 +54,15 @@ public class CommandContext : ControlException
                 return;
 
             _argumentOffset = value;
-            if (_parameters.Length - _argumentOffset <= 0)
+            if (OriginalParameters.Length - _argumentOffset <= 0)
             {
                 ArgumentCount = 0;
-                Parameters = new ArraySegment<string>(_parameters, 0, 0);
+                Parameters = new ArraySegment<string>(OriginalParameters, 0, 0);
             }
             else
             {
                 ArgumentCount = _argumentCount - _argumentOffset;
-                Parameters = new ArraySegment<string>(_parameters, _argumentOffset, ArgumentCount);
+                Parameters = new ArraySegment<string>(OriginalParameters, _argumentOffset, ArgumentCount);
             }
         }
     }
@@ -213,12 +214,12 @@ public class CommandContext : ControlException
             IMGUI = Player is { Save.IMGUI: true };
         }
 
-        _parameters = Array.Empty<string>();
+        OriginalParameters = Array.Empty<string>();
         Flags = Array.Empty<CommandFlagInfo>();
         OriginalMessage = string.Empty;
         Command = null!;
         CommandInfo = null!;
-        Parameters = new ArraySegment<string>(_parameters, 0, 0);
+        Parameters = new ArraySegment<string>(OriginalParameters, 0, 0);
 
         CallerId = user.Steam64;
     }
@@ -239,11 +240,11 @@ public class CommandContext : ControlException
 
         // flag parsing
 
-        _parameters = args;
+        OriginalParameters = args;
         _argumentCount = args.Length;
         Flags = flags;
         ArgumentCount = _argumentCount;
-        Parameters = new ArraySegment<string>(_parameters, 0, _parameters.Length);
+        Parameters = new ArraySegment<string>(OriginalParameters, 0, OriginalParameters.Length);
     }
 
     /// <summary>
@@ -305,7 +306,7 @@ public class CommandContext : ControlException
         if (parameter < 0 || parameter >= _argumentCount)
             return false;
 
-        return _parameters[parameter].Equals(value, StringComparison.InvariantCultureIgnoreCase);
+        return OriginalParameters[parameter].Equals(value, StringComparison.InvariantCultureIgnoreCase);
     }
 
     /// <summary>
@@ -319,7 +320,7 @@ public class CommandContext : ControlException
         if (parameter < 0 || parameter >= _argumentCount)
             return false;
 
-        string v = _parameters[parameter];
+        string v = OriginalParameters[parameter];
         return v.Equals(value, StringComparison.InvariantCultureIgnoreCase) || v.Equals(alternate, StringComparison.InvariantCultureIgnoreCase);
     }
 
@@ -334,7 +335,7 @@ public class CommandContext : ControlException
         if (parameter < 0 || parameter >= _argumentCount)
             return false;
 
-        string v = _parameters[parameter];
+        string v = OriginalParameters[parameter];
         return v.Equals(value, StringComparison.InvariantCultureIgnoreCase) || v.Equals(alternate1, StringComparison.InvariantCultureIgnoreCase) || v.Equals(alternate2, StringComparison.InvariantCultureIgnoreCase);
     }
 
@@ -349,7 +350,7 @@ public class CommandContext : ControlException
         if (parameter < 0 || parameter >= _argumentCount)
             return false;
 
-        string v = _parameters[parameter];
+        string v = OriginalParameters[parameter];
         for (int i = 0; i < alternates.Length; ++i)
         {
             if (v.Equals(alternates[i], StringComparison.InvariantCultureIgnoreCase))
@@ -424,7 +425,7 @@ public class CommandContext : ControlException
         parameter += _argumentOffset;
         if (parameter < 0 || parameter >= _argumentCount)
             return null;
-        return _parameters[parameter];
+        return OriginalParameters[parameter];
     }
 
     /// <summary>
@@ -438,13 +439,13 @@ public class CommandContext : ControlException
         if (start < 0 || start >= _argumentCount)
             return null;
         if (start == _argumentCount - 1)
-            return _parameters[start];
+            return OriginalParameters[start];
         if (length == -1)
-            return string.Join(" ", _parameters, start, _argumentCount - start);
+            return string.Join(" ", OriginalParameters, start, _argumentCount - start);
         if (length < 1) return null;
         if (start + length >= _argumentCount)
             length = _argumentCount - start;
-        return string.Join(" ", _parameters, start, length);
+        return string.Join(" ", OriginalParameters, start, length);
     }
 
     /// <summary>
@@ -469,7 +470,7 @@ public class CommandContext : ControlException
             value = null;
             return false;
         }
-        value = _parameters[parameter];
+        value = OriginalParameters[parameter];
         return true;
     }
 
@@ -486,7 +487,7 @@ public class CommandContext : ControlException
             return false;
         }
 
-        return Enum.TryParse(_parameters[parameter], true, out value);
+        return Enum.TryParse(OriginalParameters[parameter], true, out value);
     }
 
     /// <summary>
@@ -502,7 +503,7 @@ public class CommandContext : ControlException
             return false;
         }
 
-        return HexStringHelper.TryParseColor(_parameters[parameter], CultureInfo.InvariantCulture, out value);
+        return HexStringHelper.TryParseColor(OriginalParameters[parameter], CultureInfo.InvariantCulture, out value);
     }
 
     /// <summary>
@@ -518,7 +519,7 @@ public class CommandContext : ControlException
             return false;
         }
 
-        return HexStringHelper.TryParseColor32(_parameters[parameter], CultureInfo.InvariantCulture, out value);
+        return HexStringHelper.TryParseColor32(OriginalParameters[parameter], CultureInfo.InvariantCulture, out value);
     }
 
     /// <summary>
@@ -533,7 +534,7 @@ public class CommandContext : ControlException
             value = 0;
             return false;
         }
-        return int.TryParse(_parameters[parameter], NumberStyles.Number, ParseFormat, out value);
+        return int.TryParse(OriginalParameters[parameter], NumberStyles.Number, ParseFormat, out value);
     }
 
     /// <summary>
@@ -548,7 +549,7 @@ public class CommandContext : ControlException
             value = 0;
             return false;
         }
-        return byte.TryParse(_parameters[parameter], NumberStyles.Number, ParseFormat, out value);
+        return byte.TryParse(OriginalParameters[parameter], NumberStyles.Number, ParseFormat, out value);
     }
 
     /// <summary>
@@ -563,7 +564,7 @@ public class CommandContext : ControlException
             value = 0;
             return false;
         }
-        return short.TryParse(_parameters[parameter], NumberStyles.Number, ParseFormat, out value);
+        return short.TryParse(OriginalParameters[parameter], NumberStyles.Number, ParseFormat, out value);
     }
 
     /// <summary>
@@ -578,7 +579,7 @@ public class CommandContext : ControlException
             value = 0;
             return false;
         }
-        return sbyte.TryParse(_parameters[parameter], NumberStyles.Number, ParseFormat, out value);
+        return sbyte.TryParse(OriginalParameters[parameter], NumberStyles.Number, ParseFormat, out value);
     }
 
     /// <summary>
@@ -593,7 +594,7 @@ public class CommandContext : ControlException
             value = default;
             return false;
         }
-        return Guid.TryParse(_parameters[parameter], out value);
+        return Guid.TryParse(OriginalParameters[parameter], out value);
     }
 
     /// <summary>
@@ -608,7 +609,7 @@ public class CommandContext : ControlException
             value = 0;
             return false;
         }
-        return uint.TryParse(_parameters[parameter], NumberStyles.Number, ParseFormat, out value);
+        return uint.TryParse(OriginalParameters[parameter], NumberStyles.Number, ParseFormat, out value);
     }
 
     /// <summary>
@@ -623,7 +624,7 @@ public class CommandContext : ControlException
             value = 0;
             return false;
         }
-        return ushort.TryParse(_parameters[parameter], NumberStyles.Number, ParseFormat, out value);
+        return ushort.TryParse(OriginalParameters[parameter], NumberStyles.Number, ParseFormat, out value);
     }
 
     /// <summary>
@@ -638,7 +639,7 @@ public class CommandContext : ControlException
             value = 0;
             return false;
         }
-        return ulong.TryParse(_parameters[parameter], NumberStyles.Number, ParseFormat, out value);
+        return ulong.TryParse(OriginalParameters[parameter], NumberStyles.Number, ParseFormat, out value);
     }
 
     /// <summary>
@@ -653,7 +654,7 @@ public class CommandContext : ControlException
             value = CSteamID.Nil;
             return false;
         }
-        return FormattingUtility.TryParseSteamId(_parameters[parameter], out value);
+        return FormattingUtility.TryParseSteamId(OriginalParameters[parameter], out value);
     }
 
     /// <summary>
@@ -669,7 +670,7 @@ public class CommandContext : ControlException
             return false;
         }
 
-        string p = _parameters[parameter];
+        string p = OriginalParameters[parameter];
         if (p.Equals("true", StringComparison.InvariantCultureIgnoreCase) ||
             p.Equals("yes", StringComparison.InvariantCultureIgnoreCase) ||
             p.Equals("1", StringComparison.InvariantCultureIgnoreCase) ||
@@ -706,7 +707,7 @@ public class CommandContext : ControlException
             value = 0;
             return false;
         }
-        return float.TryParse(_parameters[parameter], NumberStyles.Number, ParseFormat, out value) && !float.IsNaN(value) && !float.IsInfinity(value);
+        return float.TryParse(OriginalParameters[parameter], NumberStyles.Number, ParseFormat, out value) && !float.IsNaN(value) && !float.IsInfinity(value);
     }
 
     /// <summary>
@@ -721,7 +722,7 @@ public class CommandContext : ControlException
             value = 0;
             return false;
         }
-        return double.TryParse(_parameters[parameter], NumberStyles.Number, ParseFormat, out value);
+        return double.TryParse(OriginalParameters[parameter], NumberStyles.Number, ParseFormat, out value);
     }
 
     /// <summary>
@@ -736,7 +737,7 @@ public class CommandContext : ControlException
             value = 0;
             return false;
         }
-        return decimal.TryParse(_parameters[parameter], NumberStyles.Number, ParseFormat, out value);
+        return decimal.TryParse(OriginalParameters[parameter], NumberStyles.Number, ParseFormat, out value);
     }
 
     /// <summary>
@@ -751,7 +752,7 @@ public class CommandContext : ControlException
             value = default;
             return false;
         }
-        if (Enum.TryParse(_parameters[parameter], true, out TEnum value2))
+        if (Enum.TryParse(OriginalParameters[parameter], true, out TEnum value2))
         {
             value = value2;
             return true;
@@ -771,7 +772,7 @@ public class CommandContext : ControlException
             value = 0;
             return false;
         }
-        if (int.TryParse(_parameters[parameter], NumberStyles.Number, ParseFormat, out int value2))
+        if (int.TryParse(OriginalParameters[parameter], NumberStyles.Number, ParseFormat, out int value2))
         {
             value = value2;
             return true;
@@ -791,7 +792,7 @@ public class CommandContext : ControlException
             value = 0;
             return false;
         }
-        if (byte.TryParse(_parameters[parameter], NumberStyles.Number, ParseFormat, out byte value2))
+        if (byte.TryParse(OriginalParameters[parameter], NumberStyles.Number, ParseFormat, out byte value2))
         {
             value = value2;
             return true;
@@ -811,7 +812,7 @@ public class CommandContext : ControlException
             value = 0;
             return false;
         }
-        if (sbyte.TryParse(_parameters[parameter], NumberStyles.Number, ParseFormat, out sbyte value2))
+        if (sbyte.TryParse(OriginalParameters[parameter], NumberStyles.Number, ParseFormat, out sbyte value2))
         {
             value = value2;
             return true;
@@ -831,7 +832,7 @@ public class CommandContext : ControlException
             value = default;
             return false;
         }
-        if (Guid.TryParse(_parameters[parameter], out Guid value2))
+        if (Guid.TryParse(OriginalParameters[parameter], out Guid value2))
         {
             value = value2;
             return true;
@@ -851,7 +852,7 @@ public class CommandContext : ControlException
             value = 0;
             return false;
         }
-        if (uint.TryParse(_parameters[parameter], NumberStyles.Number, ParseFormat, out uint value2))
+        if (uint.TryParse(OriginalParameters[parameter], NumberStyles.Number, ParseFormat, out uint value2))
         {
             value = value2;
             return true;
@@ -871,7 +872,7 @@ public class CommandContext : ControlException
             value = 0;
             return false;
         }
-        if (ushort.TryParse(_parameters[parameter], NumberStyles.Number, ParseFormat, out ushort value2))
+        if (ushort.TryParse(OriginalParameters[parameter], NumberStyles.Number, ParseFormat, out ushort value2))
         {
             value = value2;
             return true;
@@ -891,7 +892,7 @@ public class CommandContext : ControlException
             value = 0;
             return false;
         }
-        if (ulong.TryParse(_parameters[parameter], NumberStyles.Number, ParseFormat, out ulong value2))
+        if (ulong.TryParse(OriginalParameters[parameter], NumberStyles.Number, ParseFormat, out ulong value2))
         {
             value = value2;
             return true;
@@ -911,7 +912,7 @@ public class CommandContext : ControlException
             value = 0;
             return false;
         }
-        if (float.TryParse(_parameters[parameter], NumberStyles.Number, ParseFormat, out float value2) && !float.IsNaN(value2) && !float.IsInfinity(value2))
+        if (float.TryParse(OriginalParameters[parameter], NumberStyles.Number, ParseFormat, out float value2) && !float.IsNaN(value2) && !float.IsInfinity(value2))
         {
             value = value2;
             return true;
@@ -931,7 +932,7 @@ public class CommandContext : ControlException
             value = 0;
             return false;
         }
-        if (double.TryParse(_parameters[parameter], NumberStyles.Number, ParseFormat, out double value2) && !double.IsNaN(value2) && !double.IsInfinity(value2))
+        if (double.TryParse(OriginalParameters[parameter], NumberStyles.Number, ParseFormat, out double value2) && !double.IsNaN(value2) && !double.IsInfinity(value2))
         {
             value = value2;
             return true;
@@ -951,7 +952,7 @@ public class CommandContext : ControlException
             value = 0;
             return false;
         }
-        if (decimal.TryParse(_parameters[parameter], NumberStyles.Number, ParseFormat, out decimal value2))
+        if (decimal.TryParse(OriginalParameters[parameter], NumberStyles.Number, ParseFormat, out decimal value2))
         {
             value = value2;
             return true;
@@ -983,7 +984,7 @@ public class CommandContext : ControlException
             return false;
         }
 
-        string? s = remainder ? GetRange(parameter - _argumentOffset) : _parameters[parameter];
+        string? s = remainder ? GetRange(parameter - _argumentOffset) : OriginalParameters[parameter];
         if (s != null)
         {
             onlinePlayer = _playerService.GetOnlinePlayerOrNullThreadSafe(s, searchType);
@@ -1023,7 +1024,7 @@ public class CommandContext : ControlException
             return false;
         }
 
-        string? s = remainder ? GetRange(parameter - _argumentOffset) : _parameters[parameter];
+        string? s = remainder ? GetRange(parameter - _argumentOffset) : OriginalParameters[parameter];
         if (s == null)
         {
             steam64 = default;

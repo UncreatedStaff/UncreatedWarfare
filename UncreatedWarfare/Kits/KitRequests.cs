@@ -307,9 +307,7 @@ public class KitRequests : IRequestHandler<KitSignInstanceProvider, Kit>, IReque
 
         if (!player.IsOnline)
             return;
-
-        _logger.LogDebug($"Giving kit: {kit.InternalName} item count: {string.Join("\n", kit.Items.AsEnumerable())}");
-
+        
         uint? oldKitId = player.Component<KitPlayerComponent>().ActiveKitKey;
         GrantKit(player, kit, lowAmmo);
         Manager.Signs.UpdateSigns(kit);

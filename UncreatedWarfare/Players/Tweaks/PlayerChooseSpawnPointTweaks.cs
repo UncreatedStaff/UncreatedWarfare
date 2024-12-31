@@ -1,7 +1,6 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections.Generic;
-using System.Text;
+using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Layouts.Teams;
@@ -12,6 +11,7 @@ public class PlayerChooseSpawnPointTweaks :
     IEventListener<PlayerChooseSpawnAfterLogin>,
     IEventListener<PlayerChooseSpawnAfterDeath>
 {
+    [EventListener(RequireActiveLayout = true)]
     public void HandleEvent(PlayerChooseSpawnAfterLogin e, IServiceProvider serviceProvider)
     {
         ZoneStore? zones = serviceProvider.GetService<ZoneStore>();
@@ -57,6 +57,7 @@ public class PlayerChooseSpawnPointTweaks :
         }
     }
 
+    [EventListener(RequireActiveLayout = true)]
     public void HandleEvent(PlayerChooseSpawnAfterDeath e, IServiceProvider serviceProvider)
     {
         ZoneStore? zones = serviceProvider.GetService<ZoneStore>();

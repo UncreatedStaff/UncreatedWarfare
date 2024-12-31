@@ -81,6 +81,7 @@ using Module = SDG.Framework.Modules.Module;
 using Uncreated.Warfare.FOBs.StateStorage;
 using Uncreated.Warfare.FOBs.StateStorage.Tweaks;
 using Uncreated.Warfare.FOBs.SupplyCrates.AutoResupply;
+using Uncreated.Warfare.Players.Tweaks;
 using Uncreated.Warfare.Vehicles.Events.Tweaks.AdvancedDamage;
 
 namespace Uncreated.Warfare;
@@ -735,6 +736,8 @@ public sealed class WarfareModule
         bldr.RegisterType<VehicleInteractionTweaks>()
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+        bldr.RegisterType<PlayerChooseSpawnPointTweaks>()
+            .SingleInstance();
 
         bldr.RegisterType<NoCraftingTweak>().AsImplementedInterfaces()
             .SingleInstance();
