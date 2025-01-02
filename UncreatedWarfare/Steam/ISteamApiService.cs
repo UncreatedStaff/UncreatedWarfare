@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Globalization;
 using Uncreated.Warfare.Util;
 
@@ -11,6 +11,12 @@ public interface ISteamApiService
 
 public class SteamApiRequestException : Exception
 {
+    /// <summary>
+    /// Is this an error from the API, as oppose to an error caused by failing to access the API.
+    /// </summary>
+    /// <remarks>This includes errors like unauthorized access to a player's private profile.</remarks>
+    public bool IsApiResponseError { get; internal set; }
+
     public SteamApiRequestException(string message) : base(message) { }
     public SteamApiRequestException(string message, Exception innerException) : base(message, innerException) { }
 }

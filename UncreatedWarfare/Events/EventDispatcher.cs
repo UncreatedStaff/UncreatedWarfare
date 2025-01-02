@@ -684,7 +684,9 @@ public partial class EventDispatcher : IHostedService, IDisposable
                 if (noOpType is not null && noOpType.IsInstanceOfType(serviceRegistration.Activator))
                     continue;
 
+#if DEBUG
                 using IDisposable? logScope = _logger.BeginScope(serviceRegistration.Activator);
+#endif
                 if (!InScope(scope, serviceRegistration, out ILifetimeScope applicableScope))
                     continue;
 

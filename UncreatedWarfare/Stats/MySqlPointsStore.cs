@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Uncreated.Warfare.Database.Manual;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Extensions;
@@ -546,9 +546,9 @@ public class MySqlPointsStore : IPointsStore
         if (season < 0)
             throw new ArgumentOutOfRangeException(nameof(season));
 
-        object[] paramters = [ player.m_SteamID, factionId, season, xp, credits ];
+        object[] parameters = [ player.m_SteamID, factionId, season, xp, credits ];
 
-        return _sql.NonQueryAsync(SetPointsQuery, paramters, token);
+        return _sql.NonQueryAsync(SetPointsQuery, parameters, token);
     }
 
     /// <inheritdoc />
@@ -559,9 +559,9 @@ public class MySqlPointsStore : IPointsStore
         if (season < 0)
             throw new ArgumentOutOfRangeException(nameof(season));
 
-        object[] paramters = [ player.m_SteamID, factionId, season, xp ];
+        object[] parameters = [ player.m_SteamID, factionId, season, xp ];
 
-        await _sql.NonQueryAsync(SetXPQuery, paramters, token).ConfigureAwait(false);
+        await _sql.NonQueryAsync(SetXPQuery, parameters, token).ConfigureAwait(false);
 
         if (season == WarfareModule.Season)
             OnPointsCacheable(player, factionId, xp, null, null);
@@ -575,9 +575,9 @@ public class MySqlPointsStore : IPointsStore
         if (season < 0)
             throw new ArgumentOutOfRangeException(nameof(season));
 
-        object[] paramters = [ player.m_SteamID, factionId, season, credits ];
+        object[] parameters = [ player.m_SteamID, factionId, season, credits ];
 
-        await _sql.NonQueryAsync(SetCreditsQuery, paramters, token).ConfigureAwait(false);
+        await _sql.NonQueryAsync(SetCreditsQuery, parameters, token).ConfigureAwait(false);
 
         if (season == WarfareModule.Season)
             OnPointsCacheable(player, factionId, null, credits, null);
@@ -588,9 +588,9 @@ public class MySqlPointsStore : IPointsStore
     {
         token.ThrowIfCancellationRequested();
 
-        object[] paramters = [ player.m_SteamID, reputation ];
+        object[] parameters = [ player.m_SteamID, reputation ];
 
-        await _sql.NonQueryAsync(SetReputationQuery, paramters, token).ConfigureAwait(false);
+        await _sql.NonQueryAsync(SetReputationQuery, parameters, token).ConfigureAwait(false);
 
         OnPointsCacheable(player, 0, null, null, reputation);
     }
@@ -603,9 +603,9 @@ public class MySqlPointsStore : IPointsStore
         if (season < 0)
             throw new ArgumentOutOfRangeException(nameof(season));
 
-        object[] paramters = [ player.m_SteamID, factionId, season, xpToRemove, creditsToRemove ];
+        object[] parameters = [ player.m_SteamID, factionId, season, xpToRemove, creditsToRemove ];
 
-        bool success = await _sql.NonQueryAsync(TryRemovePointsQuery, paramters, token).ConfigureAwait(false) > 0;
+        bool success = await _sql.NonQueryAsync(TryRemovePointsQuery, parameters, token).ConfigureAwait(false) > 0;
         if (!success)
             return false;
 
@@ -622,9 +622,9 @@ public class MySqlPointsStore : IPointsStore
         if (season < 0)
             throw new ArgumentOutOfRangeException(nameof(season));
         
-        object[] paramters = [ player.m_SteamID, factionId, season, xpToRemove ];
+        object[] parameters = [ player.m_SteamID, factionId, season, xpToRemove ];
 
-        bool success = await _sql.NonQueryAsync(TryRemoveXPQuery, paramters, token).ConfigureAwait(false) > 0;
+        bool success = await _sql.NonQueryAsync(TryRemoveXPQuery, parameters, token).ConfigureAwait(false) > 0;
         if (!success)
             return false;
 
@@ -641,9 +641,9 @@ public class MySqlPointsStore : IPointsStore
         if (season < 0)
             throw new ArgumentOutOfRangeException(nameof(season));
 
-        object[] paramters = [ player.m_SteamID, factionId, season, creditsToRemove ];
+        object[] parameters = [ player.m_SteamID, factionId, season, creditsToRemove ];
 
-        bool success = await _sql.NonQueryAsync(TryRemoveCreditsQuery, paramters, token).ConfigureAwait(false) > 0;
+        bool success = await _sql.NonQueryAsync(TryRemoveCreditsQuery, parameters, token).ConfigureAwait(false) > 0;
         if (!success)
             return false;
 

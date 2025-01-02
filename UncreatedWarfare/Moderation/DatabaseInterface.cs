@@ -1283,8 +1283,9 @@ public class DatabaseInterface
         entry.RemovedBy = reader.IsDBNull(13) ? null : Actors.GetActor(reader.GetUInt64(13));
         entry.RemovedTimestamp = reader.IsDBNull(14) ? null : DateTime.SpecifyKind(reader.GetDateTime(14), DateTimeKind.Utc);
         entry.RemovedMessage = reader.IsDBNull(15) ? null : reader.GetString(15);
+        entry.DiscordMessageId = reader.IsDBNull(16) ? 0 : reader.GetUInt64(16);
 
-        int offset = 15;
+        int offset = 16;
         if ((flag & 1) != 0)
         {
             offset += 5;

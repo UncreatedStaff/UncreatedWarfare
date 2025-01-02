@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -11,6 +11,16 @@ using Uncreated.Warfare.Util;
 namespace Uncreated.Warfare.Players;
 public interface IUserDataService
 {
+    /// <summary>
+    /// Get a player's Discord ID, or 0 if their Discord is not linked.
+    /// </summary>
+    Task<ulong> GetDiscordIdAsync(ulong steam64, CancellationToken token = default);
+
+    /// <summary>
+    /// Get a player's Steam64 ID from their Discord ID, or 0 if their Discord is not linked.
+    /// </summary>
+    Task<ulong> GetSteam64Async(ulong discordId, CancellationToken token = default);
+
     /// <summary>
     /// Get a single player's user data if they've joined.
     /// </summary>
@@ -64,6 +74,40 @@ public class UserDataService : IUserDataService, IDisposable
     private IQueryable<WarfareUserData> Set()
     {
         return _dbContext.UserData.Include(x => x.HWIDs).Include(x => x.IPAddresses);
+    }
+
+    /// <inheritdoc />
+    public async Task<ulong> GetDiscordIdAsync(ulong steam64, CancellationToken token = default)
+    {
+        if (steam64 == 0)
+            return 0;
+
+        await _semaphore.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            return await _dbContext.UserData.Where(x => x.Steam64 == steam64).Select(x => x.DiscordId).FirstOrDefaultAsync(token).ConfigureAwait(false);
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<ulong> GetSteam64Async(ulong discordId, CancellationToken token = default)
+    {
+        if (discordId == 0)
+            return 0;
+
+        await _semaphore.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            return await _dbContext.UserData.Where(x => x.DiscordId == discordId).Select(x => x.Steam64).FirstOrDefaultAsync(token).ConfigureAwait(false);
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
     }
 
     /// <inheritdoc />
@@ -316,24 +360,6 @@ public class UserDataService : IUserDataService, IDisposable
 
 public static class UserDataServiceExtensions
 {
-    /// <summary>
-    /// Get a player's Discord ID, or 0 if their Discord is not linked.
-    /// </summary>
-    public static async Task<ulong> GetDiscordIdAsync(this IUserDataService dataService, ulong steam64, CancellationToken token = default)
-    {
-        WarfareUserData? userData = await dataService.ReadAsync(steam64, token).ConfigureAwait(false);
-        return userData?.DiscordId ?? 0ul;
-    }
-
-    /// <summary>
-    /// Get a player's Steam64 ID from their Discord ID, or 0 if their Discord is not linked.
-    /// </summary>
-    public static async Task<ulong> GetSteam64Async(this IUserDataService dataService, ulong discordId, CancellationToken token = default)
-    {
-        WarfareUserData? userData = await dataService.ReadFromDiscordIdAsync(discordId, token).ConfigureAwait(false);
-        return userData?.Steam64 ?? 0ul;
-    }
-
     /// <summary>
     /// Search all players that have ever joined by their usernames, and add them to a collection as they're found.
     /// </summary>

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -31,7 +31,15 @@ public static class SteamApiServiceExtensions
 
         SteamApiQuery query = new SteamApiQuery("ISteamUser", "GetFriendList", 1, queryString);
 
-        PlayerFriendsListResponse response = await service.ExecuteQueryAsync<PlayerFriendsListResponse>(query, token).ConfigureAwait(false);
+        PlayerFriendsListResponse response;
+        try
+        {
+            response = await service.ExecuteQueryAsync<PlayerFriendsListResponse>(query, token).ConfigureAwait(false);
+        }
+        catch (SteamApiRequestException ex) when (ex.IsApiResponseError)
+        {
+            return new PlayerFriendsList { Friends = new List<PlayerFriend>(0) };
+        }
 
         return response?.FriendsList?.Friends == null ? new PlayerFriendsList { Friends = new List<PlayerFriend>(0) } : response.FriendsList;
     }

@@ -158,7 +158,7 @@ Parameters:
         Type: Verbatim
         Description: "Clear effects for <caller />."
         Aliases: [ remove, delete ]
-        Paramters:
+        Parameters:
           - Name: all
             Type: Verbatim
             Description: "Clear all effects for <caller />."

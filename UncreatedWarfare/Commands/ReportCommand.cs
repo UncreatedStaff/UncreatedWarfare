@@ -2,6 +2,7 @@ using DanielWillett.ModularRpcs.Routing;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Interaction.Commands;
@@ -69,6 +70,14 @@ internal sealed class ReportCommand : IExecutableCommand
             throw Context.Reply(_translations.ReportPlayerNotFound);
         }
 
+        // it helps with testing to be able to report yourself in development
+#if RELEASE
+        if (steam64 == Context.CallerId)
+        {
+            throw Context.Reply(_translations.CannotReportSelf);
+        }
+#endif
+
         if (_cooldownManager.HasCooldown(Context.CallerId, CooldownType.Report, steam64.m_SteamID))
         {
             throw Context.Reply(_translations.ReportCooldown, onlinePlayer);
@@ -120,6 +129,7 @@ internal sealed class ReportCommand : IExecutableCommand
             throw Context.Reply(_translations.ReportNotConnected);
         }
 
+        Context.Reply(_translations.ReportStarted);
         (Report report, bool sent) = await _reportService.StartReport(
             steam64,
             Context.Caller.GetModerationActor(),
@@ -127,7 +137,7 @@ internal sealed class ReportCommand : IExecutableCommand
             reportType,
             token
         );
-        
+
         await UniTask.SwitchToMainThread(CancellationToken.None);
 
         if (!sent)
@@ -238,11 +248,17 @@ public class ReportTranslations : PropertiesTranslationCollection
     [TranslationData("Sent when someone tries to report a player that wasn't recently online.")]
     public readonly Translation ReportPlayerNotFound = new Translation("<#9cffb3>Unable to find a player with that name, you can only report online players or players that have disconnected within the last two hours.");
 
+    [TranslationData("Sent when someone tries to report themselves.")]
+    public readonly Translation CannotReportSelf = new Translation("<#9cffb3>You can not report yourself.");
+
     [TranslationData("Sent when the server can't communicate with the discord bot.")]
     public readonly Translation ReportNotConnected = new Translation("<#ff8c69>The report system is not available right now, please try again later.");
 
     [TranslationData("Sent when the reporting player is not a member of the discord server.")]
     public readonly Translation ReportNotInDiscordServer = new Translation("<#ff8c69>You must join the <#7483c4>Discord</color> server (/discord) and link your account with /link to use this feature.");
+
+    [TranslationData("Sent when a report is confirmed to provide some feedback since the reporting process can take a few seconds.")]
+    public readonly Translation ReportStarted = new Translation("<#521e62>Sending report... this may take a few seconds.");
 
     [TranslationData]
     public readonly Translation<IPlayer, ReportType, string> ReportSuccessMessage = new Translation<IPlayer, ReportType, string>("<#c480d9>Successfully reported {0} for <#fff>{1}</color> as a <#00ffff>{2}</color> report. If possible please post evidence in <#ffffff>#player-reports</color> in our <#7483c4>Discord</color> server.", arg0Fmt: WarfarePlayer.FormatCharacterName);

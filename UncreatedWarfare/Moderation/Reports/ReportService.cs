@@ -5,6 +5,7 @@ using DanielWillett.SpeedBytes;
 using SDG.Framework.Utilities;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using Uncreated.Warfare.Events;
@@ -420,6 +421,44 @@ public class ReportService : IDisposable, IHostedService, IEventListener<PlayerL
         return null;
     }
 
+    [RpcReceive]
+    public async Task<string[]?> RequestChatRecords(uint reportId, CancellationToken token = default)
+    {
+        await UniTask.SwitchToMainThread(token);
+
+        for (int i = _requestableData.Count - 1; i >= 0; --i)
+        {
+            RequestableData requestableData = _requestableData[i];
+            if (requestableData is not ChatData chatData || requestableData.Report.Id != reportId)
+            {
+                continue;
+            }
+
+            return chatData.Chats;
+        }
+
+        return null;
+    }
+
+    [RpcReceive]
+    public async Task<byte[]?> RequestVoiceChatRecords(uint reportId, CancellationToken token = default)
+    {
+        await UniTask.SwitchToMainThread(token);
+
+        for (int i = _requestableData.Count - 1; i >= 0; --i)
+        {
+            RequestableData requestableData = _requestableData[i];
+            if (requestableData is not VoiceChatData vcData || requestableData.Report.Id != reportId)
+            {
+                continue;
+            }
+
+            return vcData.RawWav;
+        }
+
+        return null;
+    }
+
     private void CheckExpiredRequestableData(ILoopTicker ticker, TimeSpan timeSinceStart, TimeSpan deltaTime)
     {
         int maxIndex = -1;
@@ -444,56 +483,66 @@ public class ReportService : IDisposable, IHostedService, IEventListener<PlayerL
     {
         _requestableData.Add(new ShotData { Shots = player.Shots.ToArray(), Report = report, Saved = DateTime.UtcNow });
     }
+    private void AddRequestableChatData(Report report, string[] records)
+    {
+        _requestableData.Add(new ChatData { Chats = records, Report = report, Saved = DateTime.UtcNow });
+    }
+    private void AddRequestableVoiceChatData(Report report, byte[] raw)
+    {
+        _requestableData.Add(new VoiceChatData { RawWav = raw, Report = report, Saved = DateTime.UtcNow });
+    }
 
     private async UniTask FillReportDetails(Report report, PlayerData? playerData, CancellationToken token)
     {
-        switch (report)
+        // chat records
+        if (playerData is { ChatMessages.Count: > 0 })
         {
-            case ChatAbuseReport chatAbuseReport:
-                // chat records
-                if (playerData is { ChatMessages.Count: > 0 })
+            if (report is ChatAbuseReport chatAbuseReport)
+            {
+                AbusiveChatRecord[] records = new AbusiveChatRecord[playerData.ChatMessages.Count];
+                int ind = -1;
+                foreach (ChatRecord cr in playerData.ChatMessages)
                 {
-                    AbusiveChatRecord[] records = new AbusiveChatRecord[playerData.ChatMessages.Count];
-                    int ind = -1;
-                    foreach (ChatRecord cr in playerData.ChatMessages)
-                    {
-                        records[++ind] = new AbusiveChatRecord(cr.Count == 1 ? cr.Message : $"[x{cr.Count}] {cr.Message}", cr.Timestamp);
-                    }
-
-                    chatAbuseReport.Messages = records;
+                    records[++ind] = new AbusiveChatRecord(cr.Count == 1 ? cr.Message : $"[x{cr.Count}] {cr.Message}", cr.Timestamp);
                 }
-
-                break;
-
-            case VoiceChatAbuseReport vcReport:
-                // voice chat record
-
-                AudioRecordPlayerComponent? recordComp = playerData?.OnlinePlayer?.ComponentOrNull<AudioRecordPlayerComponent>();
-                if (recordComp != null)
+                chatAbuseReport.Messages = records;
+            }
+            else
+            {
+                string[] records = new string[playerData.ChatMessages.Count];
+                int ind = -1;
+                foreach (ChatRecord cr in playerData.ChatMessages)
                 {
-                    using MemoryStream stream = new MemoryStream(262144);
-                    AudioRecordManager.AudioConvertResult status = await recordComp.TryConvert(stream, true, token);
-                    if (status == AudioRecordManager.AudioConvertResult.Success)
-                    {
-                        vcReport.PreviousVoiceData = stream.ToArray();
-                    }
+                    records[++ind] = cr.Count == 1
+                        ? $"[{cr.Timestamp.ToString("u", CultureInfo.InvariantCulture)}] {cr.Message}"
+                        : $"[{cr.Timestamp.ToString("u", CultureInfo.InvariantCulture)}] [x{cr.Count.ToString(CultureInfo.InvariantCulture)}] {cr.Message}";
                 }
+                AddRequestableChatData(report, records);
+            }
+        }
 
-                break;
+        // voice chat record
+        AudioRecordPlayerComponent? recordComp = playerData?.OnlinePlayer?.ComponentOrNull<AudioRecordPlayerComponent>();
+        if (recordComp != null)
+        {
+            using MemoryStream stream = new MemoryStream(262144);
+            AudioRecordManager.AudioConvertResult status = await recordComp.TryConvert(stream, true, token);
+            if (status == AudioRecordManager.AudioConvertResult.Success)
+            {
+                if (report is VoiceChatAbuseReport voiceChatAbuseReport)
+                    voiceChatAbuseReport.PreviousVoiceData = stream.ToArray();
+                else
+                    AddRequestableVoiceChatData(report, stream.ToArray());
+            }
+        }
 
-            case CheatingReport cheating:
-                
-                // shots
-                if (playerData is { Shots.Count: > 0 })
-                {
-                    cheating.Shots = playerData.Shots.ToArray();
-                }
-                else if (playerData != null)
-                {
-                    AddRequestableShotData(cheating, playerData);
-                }
-
-                break;
+        // shots
+        if (playerData is { Shots.Count: > 0 })
+        {
+            if (report is CheatingReport cheatingReport)
+                cheatingReport.Shots = playerData.Shots.ToArray();
+            else
+                AddRequestableShotData(report, playerData);
         }
     }
 
@@ -568,6 +617,16 @@ public class ReportService : IDisposable, IHostedService, IEventListener<PlayerL
     private class ScreenshotData : RequestableData
     {
         public required byte[] Jpg;
+    }
+
+    private class ChatData : RequestableData
+    {
+        public required string[] Chats;
+    }
+
+    private class VoiceChatData : RequestableData
+    {
+        public required byte[] RawWav;
     }
 
     private class ShotData : RequestableData

@@ -1,11 +1,11 @@
-﻿# GiveCommand
+# GiveCommand
 Description: "Gives the <caller /> a specificed amount of an item."
 Aliases: [ i, item ]
-Paramters:
+Parameters:
   - Name: ammo
     Type: Verbatim
     Description: "Gives the <caller /> a specified amount of a magazine accepted by their equipped firearm or turret."
-    Paramters:
+    Parameters:
       - Name: amount
         Type: byte
         Range: "#(1:250)"
@@ -15,7 +15,7 @@ Paramters:
     Type: SDG.Unturned.ItemAsset
     Description: "Gives the <caller /> a specificed amount of an <param 'item'/>."
     IsRemainder: true
-    Paramters:
+    Parameters:
       - Name: amount
         Type: byte
         Range: "#(1:250)"
@@ -24,7 +24,7 @@ Paramters:
   - Name: redirect
     Type: Uncreated.Warfare.Teams.RedirectType
     Description: "Gives the <caller /> a specificed amount of a specialized item depending on their team."
-    Paramters:
+    Parameters:
       - Name: amount
         Type: byte
         Range: "#(1:250)"

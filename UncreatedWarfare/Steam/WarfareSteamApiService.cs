@@ -1,5 +1,6 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using System;
+using System.Net;
 using System.Text.Json;
 using UnityEngine.Networking;
 
@@ -27,7 +28,11 @@ internal class WarfareSteamApiService : ISteamApiService
             throw new InvalidOperationException("Steam API key not present.");
 
         string url = query.CreateUrl(_steamApiKey);
-        
+        string toShowUrl = url;
+#if RELEASE
+        toShowUrl = toShowUrl.Replace(_steamApiKey, "API_KEY_REDACTED");
+#endif
+
         for (int tryNum = 0; tryNum < TryCount; ++tryNum)
         {
             using UnityWebRequest request = new UnityWebRequest(url, "GET", downloadHandler: new DownloadHandlerBuffer(), uploadHandler: null);
@@ -42,8 +47,19 @@ internal class WarfareSteamApiService : ISteamApiService
             }
             catch (Exception ex)
             {
+                if (ex is UnityWebRequestException { ResponseCode: (long)HttpStatusCode.Unauthorized })
+                {
+                    _logger.LogDebug("Unauthorized to access certain information from the Steam API when executing query: {0}.", query);
+                    throw new SteamApiRequestException($"Unauthorized to access information from Steam API query: {query}, url: \"{toShowUrl}\".", ex)
+                    {
+                        IsApiResponseError = true
+                    };
+                }
+
                 if (tryNum == TryCount - 1)
-                    throw new SteamApiRequestException($"Error executing Steam API query: {query}.", ex);
+                {
+                    throw new SteamApiRequestException($"Error executing Steam API query: {query}, url: \"{toShowUrl}\".", ex);
+                }
 
                 _logger.LogError("Error executing Steam API query: {0}. Retrying {1} / {2}.", query, tryNum + 1, TryCount);
                 await Task.Delay(TimeSpan.FromSeconds(RetryDelay), token);
@@ -61,10 +77,10 @@ internal class WarfareSteamApiService : ISteamApiService
             }
             catch (Exception ex)
             {
-                throw new SteamApiRequestException($"Error parsing result from Steam API query: {query}.", ex);
+                throw new SteamApiRequestException($"Error parsing result from Steam API query: {query}, url: \"{toShowUrl}\".", ex);
             }
         }
 
-        throw new SteamApiRequestException($"Error executing Steam API query: {query}.");
+        throw new SteamApiRequestException($"Error executing Steam API query: {query}, url: \"{toShowUrl}\".");
     }
 }
