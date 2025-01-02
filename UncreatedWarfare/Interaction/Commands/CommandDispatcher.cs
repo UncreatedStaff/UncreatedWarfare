@@ -22,6 +22,7 @@ using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Timing;
 
 namespace Uncreated.Warfare.Interaction.Commands;
+
 public class CommandDispatcher : IDisposable, IHostedService, IEventListener<PlayerLeft>
 {
     private readonly WarfareModule _module;
@@ -33,6 +34,7 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
     private readonly CooldownManager? _cooldownManager;
     public CommandParser Parser { get; }
     public IReadOnlyList<CommandInfo> Commands { get; }
+
     public CommandDispatcher(IServiceProvider serviceProvider)
     {
         _module = serviceProvider.GetRequiredService<WarfareModule>();
@@ -47,7 +49,8 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
         Parser = new CommandParser(this);
 
         // discover commands
-        List<CommandInfo> parentCommands = DiscoverAssemblyCommands(_logger, serviceProvider.GetRequiredService<WarfarePluginLoader>());
+        List<CommandInfo> parentCommands =
+            DiscoverAssemblyCommands(_logger, serviceProvider.GetRequiredService<WarfarePluginLoader>());
 
         Commands = new ReadOnlyCollection<CommandInfo>(parentCommands);
 
@@ -59,7 +62,7 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
     {
         Assembly warfareAssembly = Assembly.GetExecutingAssembly();
 
-        List<Assembly> assemblies = [ warfareAssembly ];
+        List<Assembly> assemblies = [warfareAssembly];
 
         if (pluginLoader != null)
             assemblies.AddRange(pluginLoader.Plugins.Select(x => x.LoadedAssembly));
@@ -80,7 +83,8 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
             .Where(typeof(ICommand).IsAssignableFrom)
             .ToList();
 
-        List<Type> rootCommandTypes = types.Where(x => !x.IsAbstract && x.GetAttributeSafe<SubCommandOfAttribute>() is not { ParentType: not null }).ToList();
+        List<Type> rootCommandTypes = types.Where(x =>
+            !x.IsAbstract && x.GetAttributeSafe<SubCommandOfAttribute>() is not { ParentType: not null }).ToList();
 
         List<CommandInfo> allCommands = new List<CommandInfo>(types.Count);
         List<CommandInfo> parentCommands = new List<CommandInfo>(types.Count + (Commander.commands?.Count ?? 0));
@@ -98,11 +102,13 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
             {
                 foreach (Type commandType in types)
                 {
-                    if (!commandType.TryGetAttributeSafe(out SubCommandOfAttribute attribute) || attribute.ParentType != parentType)
+                    if (!commandType.TryGetAttributeSafe(out SubCommandOfAttribute attribute) ||
+                        attribute.ParentType != parentType)
                         continue;
 
                     if (allCommands.Exists(x => x.Type == commandType))
-                        throw new InvalidOperationException($"Circular reference detected in parent commands. {Accessor.ExceptionFormatter.Format(parentType)} <- ... -> {Accessor.ExceptionFormatter.Format(commandType)}.");
+                        throw new InvalidOperationException(
+                            $"Circular reference detected in parent commands. {Accessor.ExceptionFormatter.Format(parentType)} <- ... -> {Accessor.ExceptionFormatter.Format(commandType)}.");
 
                     CommandInfo info = new CommandInfo(commandType, logger, parentInfo);
                     allCommands.Add(info);
@@ -133,7 +139,9 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
         // register redirects
         foreach (CommandInfo command in allCommands)
         {
-            if (command.VanillaCommand != null || !command.Type.TryGetAttributeSafe(out RedirectCommandToAttribute redirAttribute) || redirAttribute.CommandType == null)
+            if (command.VanillaCommand != null ||
+                !command.Type.TryGetAttributeSafe(out RedirectCommandToAttribute redirAttribute) ||
+                redirAttribute.CommandType == null)
             {
                 continue;
             }
@@ -144,10 +152,14 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
                 logger.LogWarning("Redirect command {0} not registered.", redirAttribute.CommandType);
             }
 
-            command.IsExecutable = command.VanillaCommand != null || (command.RedirectCommandInfo == null && typeof(IExecutableCommand).IsAssignableFrom(command.Type));
+            command.IsExecutable = command.VanillaCommand != null || (command.RedirectCommandInfo == null &&
+                                                                      typeof(IExecutableCommand).IsAssignableFrom(
+                                                                          command.Type));
             if (command is { IsExecutable: false, SubCommands.Count: 0, RedirectCommandInfo: null })
             {
-                logger.LogWarning("Command type {0} isn't executable and has no sub-commands, which is practically useless.", command.Type);
+                logger.LogWarning(
+                    "Command type {0} isn't executable and has no sub-commands, which is practically useless.",
+                    command.Type);
                 command.HideFromHelp = true;
             }
 
@@ -201,11 +213,14 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
     /// <summary>
     /// Wait for a <paramref name="commandType"/> command to be executed by <paramref name="user"/>.
     /// </summary>
-    public CommandWaitTask WaitForCommand(Type commandType, ICommandUser user, TimeSpan timeout = default, CommandWaitOptions options = CommandWaitOptions.Default, CancellationToken token = default)
+    public CommandWaitTask WaitForCommand(Type commandType, ICommandUser user, TimeSpan timeout = default,
+        CommandWaitOptions options = CommandWaitOptions.Default, CancellationToken token = default)
     {
         CommandInfo? command = FindCommand(commandType ?? throw new ArgumentNullException(nameof(commandType)));
         return WaitForCommand(
-            command ?? throw new ArgumentException($"No registered command with type {Accessor.ExceptionFormatter.Format(commandType)}.", nameof(commandType)),
+            command ?? throw new ArgumentException(
+                $"No registered command with type {Accessor.ExceptionFormatter.Format(commandType)}.",
+                nameof(commandType)),
             user, timeout, options, token
         );
     }
@@ -213,11 +228,14 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
     /// <summary>
     /// Wait for a <paramref name="commandType"/> command to be executed by any user.
     /// </summary>
-    public CommandWaitTask WaitForCommand(Type commandType, TimeSpan timeout = default, CommandWaitOptions options = CommandWaitOptions.Default, CancellationToken token = default)
+    public CommandWaitTask WaitForCommand(Type commandType, TimeSpan timeout = default,
+        CommandWaitOptions options = CommandWaitOptions.Default, CancellationToken token = default)
     {
         CommandInfo? command = FindCommand(commandType ?? throw new ArgumentNullException(nameof(commandType)));
         return WaitForCommand(
-            command ?? throw new ArgumentException($"No registered command with type {Accessor.ExceptionFormatter.Format(commandType)}.", nameof(commandType)),
+            command ?? throw new ArgumentException(
+                $"No registered command with type {Accessor.ExceptionFormatter.Format(commandType)}.",
+                nameof(commandType)),
             timeout, options, token
         );
     }
@@ -225,11 +243,13 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
     /// <summary>
     /// Wait for a <paramref name="commandType"/> command to be executed by <paramref name="user"/>.
     /// </summary>
-    public CommandWaitTask WaitForCommand(CommandInfo commandType, ICommandUser user, TimeSpan timeout = default, CommandWaitOptions options = CommandWaitOptions.Default, CancellationToken token = default)
+    public CommandWaitTask WaitForCommand(CommandInfo commandType, ICommandUser user, TimeSpan timeout = default,
+        CommandWaitOptions options = CommandWaitOptions.Default, CancellationToken token = default)
     {
         if (timeout == TimeSpan.Zero)
             timeout = TimeSpan.FromSeconds(15d);
-        return new CommandWaitTask(commandType ?? throw new ArgumentNullException(nameof(commandType)), user, timeout, token, options, this, _tickerFactory);
+        return new CommandWaitTask(commandType ?? throw new ArgumentNullException(nameof(commandType)), user, timeout,
+            token, options, this, _tickerFactory);
     }
 
     /// <summary>
@@ -239,7 +259,8 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
     {
         if (timeout == TimeSpan.Zero)
             timeout = TimeSpan.FromSeconds(15d);
-        return new CommandWaitTask(commandType ?? throw new ArgumentNullException(nameof(commandType)), null, timeout, token, options, this, _tickerFactory);
+        return new CommandWaitTask(commandType ?? throw new ArgumentNullException(nameof(commandType)), null, timeout,
+            token, options, this, _tickerFactory);
     }
 
     internal void RegisterCommandWaitTask(CommandWaitTask commandWaitTask)

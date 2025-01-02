@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SDG.Framework.Utilities;
 using SDG.NetTransport;
@@ -20,6 +20,7 @@ public sealed class ToastManager : IPlayerComponent, IDisposable
 
     private static int _channelCount;
     private static bool _initialized;
+    private static IServiceProvider _serviceProvider;
 
     /// <summary>
     /// List of data for each <see cref="ToastMessageStyle"/> in use.
@@ -43,6 +44,7 @@ public sealed class ToastManager : IPlayerComponent, IDisposable
 
     void IPlayerComponent.Init(IServiceProvider serviceProvider, bool isOnJoin)
     {
+        _serviceProvider = serviceProvider;
         if (!_initialized)
         {
             InitToastData(serviceProvider);
@@ -292,7 +294,7 @@ public sealed class ToastManager : IPlayerComponent, IDisposable
         if (info.UI != null)
         {
             info.UI.SendToPlayer(Player.Connection);
-            info.SendCallback?.Invoke(Player, in message, info, info.UI);
+            info.SendCallback?.Invoke(Player, in message, info, info.UI, _serviceProvider);
         }
         else if (id != 0)
         {

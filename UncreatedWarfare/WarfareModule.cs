@@ -34,6 +34,8 @@ using Uncreated.Warfare.FOBs.Construction.Tweaks;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.FOBs.Deployment.Tweaks;
 using Uncreated.Warfare.FOBs.StateStorage;
+using Uncreated.Warfare.FOBs.StateStorage.Tweaks;
+using Uncreated.Warfare.FOBs.SupplyCrates.AutoResupply;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Interaction.Icons;
@@ -53,6 +55,7 @@ using Uncreated.Warfare.Patches;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Permissions;
+using Uncreated.Warfare.Players.Tweaks;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Plugins;
 using Uncreated.Warfare.Services;
@@ -72,17 +75,13 @@ using Uncreated.Warfare.Tweaks;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Timing;
 using Uncreated.Warfare.Vehicles;
+using Uncreated.Warfare.Vehicles.Events.Tweaks.AdvancedDamage;
 using Uncreated.Warfare.Vehicles.Events.Vehicles;
 using Uncreated.Warfare.Vehicles.Spawners;
 using Uncreated.Warfare.Vehicles.UI;
 using Uncreated.Warfare.Vehicles.WarfareVehicles;
 using Uncreated.Warfare.Zones;
 using Module = SDG.Framework.Modules.Module;
-using Uncreated.Warfare.FOBs.StateStorage;
-using Uncreated.Warfare.FOBs.StateStorage.Tweaks;
-using Uncreated.Warfare.FOBs.SupplyCrates.AutoResupply;
-using Uncreated.Warfare.Players.Tweaks;
-using Uncreated.Warfare.Vehicles.Events.Tweaks.AdvancedDamage;
 
 namespace Uncreated.Warfare;
 public sealed class WarfareModule
@@ -383,7 +382,7 @@ public sealed class WarfareModule
         bldr.RegisterType<ServerHeartbeatTimer>()
             .SingleInstance();
 
-        bldr.RegisterType<ReportService>()
+        bldr.RegisterRpcType<ReportService>()
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
 
@@ -740,6 +739,8 @@ public sealed class WarfareModule
             .SingleInstance();
 
         bldr.RegisterType<NoCraftingTweak>().AsImplementedInterfaces()
+            .SingleInstance();
+        bldr.RegisterType<InvinciblePassengersTweak>().AsImplementedInterfaces()
             .SingleInstance();
         bldr.RegisterType<NoDamageInMainTweak>().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);

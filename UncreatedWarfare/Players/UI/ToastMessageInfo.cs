@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Uncreated.Framework.UI;
 using Uncreated.Warfare.Configuration;
 
@@ -15,7 +15,7 @@ public enum ToastMessageStyle
     FlashingWarning
 }
 
-public delegate void SendToastWithCustomUI(WarfarePlayer player, in ToastMessage message, ToastMessageInfo info, UnturnedUI ui);
+public delegate void SendToastWithCustomUI(WarfarePlayer player, in ToastMessage message, ToastMessageInfo info, UnturnedUI ui, IServiceProvider serviceProvider);
 public sealed class ToastMessageInfo
 {
     private bool _durationOverridden;

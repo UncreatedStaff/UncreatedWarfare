@@ -1,4 +1,4 @@
-﻿using DanielWillett.SpeedBytes;
+using DanielWillett.SpeedBytes;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -101,6 +101,10 @@ public abstract class ModerationEntry : IModerationEntry
     /// <inheritdoc/>
     [JsonIgnore]
     public ModerationEntry?[]? RelatedEntries { get; set; }
+
+    /// <inheritdoc/>
+    [JsonPropertyName("discord_message_id")]
+    public ulong DiscordMessageId { get; set; }
 
     /// <summary>
     /// Fills any cached properties.
@@ -227,6 +231,8 @@ public abstract class ModerationEntry : IModerationEntry
             RemovedTimestamp = reader.TokenType == JsonTokenType.Null ? null : new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(), DateTimeKind.Utc));
         else if (propertyName.Equals("removed_message", StringComparison.InvariantCultureIgnoreCase))
             RemovedMessage = reader.GetString();
+        else if (propertyName.Equals("discord_message_id", StringComparison.InvariantCultureIgnoreCase))
+            DiscordMessageId = reader.GetUInt64();
         else return false;
 
         return true;
@@ -251,6 +257,8 @@ public abstract class ModerationEntry : IModerationEntry
             writer.WriteString("relevant_logs_begin_utc", RelevantLogsBegin.Value.UtcDateTime);
         if (RelevantLogsEnd.HasValue)
             writer.WriteString("relevant_logs_end_utc", RelevantLogsEnd.Value.UtcDateTime);
+        if (DiscordMessageId != 0)
+            writer.WriteNumber("discord_message_id", DiscordMessageId);
 
         writer.WritePropertyName("actors");
         JsonSerializer.Serialize(writer, Actors, options);
@@ -321,6 +329,8 @@ public abstract class ModerationEntry : IModerationEntry
             RemovedMessage = reader.ReadNullableString();
         }
 
+        DiscordMessageId = (flag & 4) != 0 ? reader.ReadUInt64() : 0;
+
         ReadIntl(reader, version);
     }
     internal void WriteContent(ByteWriter writer)
@@ -330,7 +340,9 @@ public abstract class ModerationEntry : IModerationEntry
         writer.Write(Id);
         writer.Write(Player);
         writer.WriteNullable(Message);
-        byte flag = (byte)((IsLegacy ? 1 : 0) | (Removed ? 2 : 0));
+        bool removed = Removed;
+        ulong discordMessageId = DiscordMessageId;
+        byte flag = (byte)((IsLegacy ? 1 : 0) | (removed ? 2 : 0) | (discordMessageId != 0 ? 4 : 0));
         writer.Write(flag);
         writer.Write(StartedTimestamp);
         writer.WriteNullable(ResolvedTimestamp);
@@ -348,12 +360,15 @@ public abstract class ModerationEntry : IModerationEntry
         for (int i = 0; i < Evidence.Length; ++i)
             Evidence[i].Write(writer);
 
-        if (Removed)
+        if (removed)
         {
             writer.Write(RemovedBy == null ? 0ul : RemovedBy.Id);
             writer.WriteNullable(RemovedTimestamp);
             writer.WriteNullable(RemovedMessage);
         }
+
+        if (discordMessageId != 0)
+            writer.Write(discordMessageId);
 
         WriteIntl(writer);
     }
@@ -467,6 +482,7 @@ public abstract class ModerationEntry : IModerationEntry
         return anyNew;
     }
 }
+
 public interface IModerationEntry
 {
     /// <summary>
@@ -583,7 +599,14 @@ public interface IModerationEntry
     /// </summary>
     [JsonIgnore]
     ModerationEntry?[]? RelatedEntries { get; set; }
+
+    /// <summary>
+    /// Message ID of the offense or report message, if applicable, otherwise 0.
+    /// </summary>
+    [JsonPropertyName("discord_message_id")]
+    ulong DiscordMessageId { get; set; }
 }
+
 public interface IForgiveableModerationEntry : IDurationModerationEntry
 {
     /// <summary>

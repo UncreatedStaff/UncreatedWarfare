@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 using System;
 using Uncreated.Warfare.Moderation;
@@ -789,6 +789,7 @@ namespace Uncreated.Warfare.Migrations
                     Item = table.Column<string>(name: DatabaseInterface.ColumnReportsShotRecordItem, type: "char(32)", nullable: false),
                     ItemName = table.Column<string>(name: DatabaseInterface.ColumnReportsShotRecordItemName, maxLength: 48, nullable: false),
                     DamageDone = table.Column<int>(name: DatabaseInterface.ColumnReportsShotRecordDamageDone, nullable: false),
+                                                                        // TODO: THIS IS WRONG but can't be changed since its still in a migration, it should be ColumnReportsShotRecordLimb
                     Limb = table.Column<string>(name: DatabaseInterface.ColumnReportsVehicleRequestRecordDamageOrigin, type: "enum('LEFT_FOOT','LEFT_LEG','RIGHT_FOOT','RIGHT_LEG','LEFT_HAND','LEFT_ARM','RIGHT_HAND','RIGHT_ARM','LEFT_BACK','RIGHT_BACK','LEFT_FRONT','RIGHT_FRONT','SPINE','SKULL')", nullable: true, defaultValueSql: "NULL"),
                     IsProjectile = table.Column<bool>(name: DatabaseInterface.ColumnReportsShotRecordIsProjectile, nullable: false),
                     Distance = table.Column<double>(name: DatabaseInterface.ColumnReportsShotRecordDistance, nullable: true, defaultValueSql: "NULL"),

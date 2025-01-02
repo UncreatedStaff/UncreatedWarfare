@@ -1,4 +1,4 @@
-﻿using DanielWillett.ModularRpcs;
+using DanielWillett.ModularRpcs;
 using DanielWillett.ModularRpcs.Protocol;
 using DanielWillett.ModularRpcs.Routing;
 using DanielWillett.ModularRpcs.Serialization;
@@ -48,9 +48,25 @@ public class HomebaseConnector : IHostedService
         await ConnectAsync(token).ConfigureAwait(false);
     }
 
-    public UniTask StopAsync(CancellationToken token)
+    public async UniTask StopAsync(CancellationToken token)
     {
-        return UniTask.CompletedTask;
+        ValueTask disconnect = default;
+        int ct = _lifetime.ForEachRemoteConnection(c =>
+        {
+            disconnect = c.CloseAsync(token).Preserve();
+            return false;
+        }, workOnCopy: true);
+
+        if (ct == 0)
+        {
+            _logger.LogInformation("Did not close any connections.");
+        }
+        else
+        {
+            _logger.LogInformation("Closing connection...");
+            await disconnect.ConfigureAwait(false);
+            _logger.LogInformation("  Done.");
+        }
     }
 
     public async Task<bool> ConnectAsync(CancellationToken token = default)

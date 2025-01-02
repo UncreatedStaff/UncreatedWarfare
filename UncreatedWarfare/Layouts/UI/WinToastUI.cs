@@ -1,4 +1,5 @@
-﻿using Uncreated.Framework.UI;
+using System;
+using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Reflection;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Players;
@@ -16,7 +17,7 @@ public class WinToastUI : UnturnedUI
     public readonly UnturnedLabel Team2Tickets = new UnturnedLabel("Team2Tickets");
     public WinToastUI(AssetConfiguration assetConfig, ILoggerFactory loggerFactory) : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:Toasts:GameOver"), staticKey: true) { }
 
-    public static void SendToastCallback(WarfarePlayer player, in ToastMessage message, ToastMessageInfo info, UnturnedUI ui)
+    public static void SendToastCallback(WarfarePlayer player, in ToastMessage message, ToastMessageInfo info, UnturnedUI ui, IServiceProvider serviceProvider)
     {
         WinToastUI winUi = (WinToastUI)ui;
         winUi.SendToPlayer(player.Connection);

@@ -1,4 +1,4 @@
-﻿using SDG.NetTransport;
+using SDG.NetTransport;
 using System;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Data;
@@ -32,6 +32,7 @@ public class FlagListUI : UnturnedUI
 
         _getFlagListUIData = GetFlagListUIData;
     }
+
     private FlagListUIData GetOrAddData(WarfarePlayer player)
     {
         return GetOrAddData(player.Steam64, _getFlagListUIData);

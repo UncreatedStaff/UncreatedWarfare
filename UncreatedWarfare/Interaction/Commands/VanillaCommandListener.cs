@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 
 namespace Uncreated.Warfare.Interaction.Commands;
@@ -11,6 +11,8 @@ internal class VanillaCommandListener : ICommandInputOutput
     private readonly CommandContext _context;
     private readonly ILogger? _logger;
     private readonly ChatService? _chatService;
+
+    internal static bool IsLogging = false;
 
     public VanillaCommandListener(CommandContext context)
     {
@@ -27,6 +29,9 @@ internal class VanillaCommandListener : ICommandInputOutput
 
     public void outputInformation(string information)
     {
+        if (IsLogging)
+            return;
+
         if (!_context.Caller.IsTerminal)
         {
             _context.ReplyString(information, new Color32(191, 185, 172, 255));
@@ -39,6 +44,9 @@ internal class VanillaCommandListener : ICommandInputOutput
 
     public void outputWarning(string warning)
     {
+        if (IsLogging)
+            return;
+
         if (!_context.Caller.IsTerminal)
         {
             _context.ReplyString(warning, new Color32(168, 145, 138, 255));
@@ -51,6 +59,9 @@ internal class VanillaCommandListener : ICommandInputOutput
 
     public void outputError(string error)
     {
+        if (IsLogging)
+            return;
+
         if (!_context.Caller.IsTerminal)
         {
             _chatService!.Send(_context.Caller, error, new Color32(255, 140, 105, 255));

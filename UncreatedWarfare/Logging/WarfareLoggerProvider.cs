@@ -1,4 +1,4 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using SDG.Framework.Utilities;
 using StackCleaner;
 using System;
@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 using Debug = System.Diagnostics.Debug;
@@ -110,20 +111,28 @@ public class WarfareLoggerProvider : ILoggerProvider
             return;
         }
 
-        switch (logLevel)
+        VanillaCommandListener.IsLogging = true;
+        try
         {
-            default:
-                CallLogInfoIntl.Invoke(text);
-                break;
+            switch (logLevel)
+            {
+                default:
+                    CallLogInfoIntl.Invoke(text);
+                    break;
 
-            case LogLevel.Warning:
-                CallLogWarningIntl.Invoke(text);
-                break;
+                case LogLevel.Warning:
+                    CallLogWarningIntl.Invoke(text);
+                    break;
 
-            case LogLevel.Critical:
-            case LogLevel.Error:
-                CallLogErrorIntl.Invoke(text);
-                break;
+                case LogLevel.Critical:
+                case LogLevel.Error:
+                    CallLogErrorIntl.Invoke(text);
+                    break;
+            }
+        }
+        finally
+        {
+            VanillaCommandListener.IsLogging = false;
         }
 
         if (unformattedLog == null)

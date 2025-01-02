@@ -1,4 +1,4 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Primitives;
@@ -99,6 +99,7 @@ public class VehicleInfoStore : IHostedService, IDisposable, IUnlockRequirementP
             _logger.LogDebug("Found vehicle info in file: {0}.", file);
         }
 
+        _vehicles.ForEach(WarfareVehicleInfo.EnsureInitialized);
 
         IDisposable changeTokenRegistration = ChangeToken.OnChange(() => _fileProvider.Watch("./*.yml"), ReloadUnwatchedFiles);
 
@@ -130,47 +131,46 @@ public class VehicleInfoStore : IHostedService, IDisposable, IUnlockRequirementP
             {
                 if (_watchedFiles.Contains(file))
                     continue;
-            }
 
-            try
-            {
-                if (!YamlUtility.CheckMatchesMapFilter(file))
-                    continue;
-
-                IConfigurationRoot config = new ConfigurationBuilder()
-                    .AddYamlFile(_fileProvider, file, false, true)
-                    .Build();
-
-                WarfareVehicleInfo? vehicle = config.Get<WarfareVehicleInfo>();
-                if (vehicle?.VehicleAsset == null)
+                try
                 {
-                    _logger.LogWarning("Invalid file {0} missing 'Vehicle' property.", file);
-                    continue;
-                }
+                    if (!YamlUtility.CheckMatchesMapFilter(file))
+                        continue;
 
-                lock (_watchedFiles)
-                {
+                    IConfigurationRoot config = new ConfigurationBuilder()
+                        .AddYamlFile(_fileProvider, file, false, true)
+                        .Build();
+
+                    WarfareVehicleInfo? vehicle = config.Get<WarfareVehicleInfo>();
+                    if (vehicle?.VehicleAsset == null)
+                    {
+                        _logger.LogWarning("Invalid file {0} missing 'Vehicle' property.", file);
+                        continue;
+                    }
+
+                    WarfareVehicleInfo.EnsureInitialized(vehicle);
+
                     if (!_watchedFiles.Add(file))
                     {
                         if (config is IDisposable disposableConfig)
                             disposableConfig.Dispose();
                         continue;
                     }
+
+                    vehicle.Configuration = config;
+
+                    config.GetReloadToken().RegisterChangeCallback(ReloadVehicleInfoConfiguration, vehicle);
+
+                    if (config is IDisposable disposableConfig2)
+                        newDisposables.Add(disposableConfig2);
+
+                    newVehicles.Add(vehicle);
+                    _logger.LogInformation("Found vehicle info in new file: {0}.", file);
                 }
-
-                vehicle.Configuration = config;
-
-                config.GetReloadToken().RegisterChangeCallback(ReloadVehicleInfoConfiguration, vehicle);
-
-                if (config is IDisposable disposableConfig2)
-                    newDisposables.Add(disposableConfig2);
-
-                newVehicles.Add(vehicle);
-                _logger.LogInformation("Found vehicle info in new file: {0}.", file);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Skipping file {0}, exception encountered.", file);
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Skipping file {0}, exception encountered.", file);
+                }
             }
         }
 
@@ -215,6 +215,8 @@ public class VehicleInfoStore : IHostedService, IDisposable, IUnlockRequirementP
 
         if (newVehicle?.VehicleAsset == null)
             return;
+
+        WarfareVehicleInfo.EnsureInitialized(newVehicle);
 
         if (newVehicle.VehicleAsset.Equals(state.VehicleAsset))
         {

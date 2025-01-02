@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Locations;
@@ -679,18 +679,6 @@ internal static class T
     public static readonly Translation<string> RallyUI = new Translation<string>("<#c$rally$>RALLY</color> {0}", TranslationOptions.UnityUI);
     [TranslationData(SectionRallies, IsPriorityTranslation = false)]
     public static readonly Translation<TimeSpan, string> RallyUITimer = new Translation<TimeSpan, string>("<#c$rally$>RALLY</color> {0} {1}", TranslationOptions.UnityUI, TimeAddon.Create(TimeFormatType.CountdownMinutesSeconds));
-    #endregion
-
-    #region Popup
-    private const string SectionPopup = "Popup";
-    [TranslationData(SectionPopup)]
-    public static readonly Translation ButtonOK = new Translation("OK", TranslationOptions.TMProUI);
-    [TranslationData(SectionPopup)]
-    public static readonly Translation ButtonCancel = new Translation("Cancel", TranslationOptions.TMProUI);
-    [TranslationData(SectionPopup)]
-    public static readonly Translation ButtonYes = new Translation("Yes", TranslationOptions.TMProUI);
-    [TranslationData(SectionPopup)]
-    public static readonly Translation ButtonNo = new Translation("No", TranslationOptions.TMProUI);
     #endregion
 
     #region Load Command

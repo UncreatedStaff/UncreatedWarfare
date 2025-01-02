@@ -39,7 +39,6 @@ namespace Uncreated.Warfare.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4")
                 .OldAnnotation("MySql:CharSet", "utf8mb4");
 
-
             migrationBuilder.AddColumn<byte[]>(
                 name: DatabaseInterface.ColumnReportsScreenshotData,
                 table: DatabaseInterface.TableReports,
@@ -53,11 +52,9 @@ namespace Uncreated.Warfare.Migrations
                     type: "enum('NONE','SKIP','OBJECT','PLAYER','ZOMBIE','ANIMAL','VEHICLE','BARRICADE','STRUCTURE','RESOURCE')",
                     nullable: false,
                     oldClrType: typeof(string),
-                    oldType: "enum('NONE','PLAYER','ZOMBIE','MEGA','ANIMAL','RESOURCE','OBJECT')")
+                    oldType: "enum('NONE','ENTITIY','CRITICAL','BUILD','GHOST')")
                 .Annotation("MySql:CharSet", "utf8mb4")
                 .OldAnnotation("MySql:CharSet", "utf8mb4");
-
-            // todo shot report type changed
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)
@@ -101,7 +98,7 @@ namespace Uncreated.Warfare.Migrations
             migrationBuilder.AlterColumn<string>(
                     name: DatabaseInterface.ColumnReportsShotRecordHitType,
                     table: DatabaseInterface.TableReportShotRecords,
-                    type: "enum('NONE','PLAYER','ZOMBIE','MEGA','ANIMAL','RESOURCE','OBJECT')",
+                    type: "enum('NONE','ENTITIY','CRITICAL','BUILD','GHOST')",
                     nullable: false,
                     oldClrType: typeof(string),
                     oldType: "enum('NONE','SKIP','OBJECT','PLAYER','ZOMBIE','ANIMAL','VEHICLE','BARRICADE','STRUCTURE','RESOURCE')")

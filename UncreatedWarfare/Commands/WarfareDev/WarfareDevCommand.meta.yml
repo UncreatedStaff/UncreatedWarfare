@@ -1,4 +1,4 @@
-﻿# WarfareDevCommand
+# WarfareDevCommand
 Description: "Test and debug Uncreated Warfare plugin features."
 Alias: wdev
 Parameters:
@@ -32,6 +32,15 @@ Parameters:
       - Name: menu
         Type: Verbatim
         Description: "Open the squad UI."
+        
+  # /warfaredev homebase reload
+  - Name: homebase
+    Type: Verbatim
+    Description: "Debug homebase server functionality."
+    Parameters:
+      - Name: reload
+        Type: Verbatim
+        Description: "Disconnect from the homebase server if already connected, then attempt to reconnect."
         
   # /warfaredev quickwin
   - Name: quickwin

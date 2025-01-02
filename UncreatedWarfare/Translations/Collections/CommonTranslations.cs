@@ -1,4 +1,4 @@
-﻿using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Translations.Addons;
 
@@ -61,4 +61,16 @@ public class CommonTranslations : PropertiesTranslationCollection
 
     [TranslationData("Sent when a player tries to use a command that requires them to be in main.")]
     public readonly Translation NotInMain = new Translation("<#b3a6a2>You must be in <#cedcde>MAIN</color> to use this command.");
+
+    [TranslationData("Okay button in the popup UI.")]
+    public readonly Translation PopupOkay = new Translation("OK", TranslationOptions.TMProUI);
+
+    [TranslationData("Yes button in the popup UI.")]
+    public readonly Translation PopupYes = new Translation("Yes", TranslationOptions.TMProUI);
+
+    [TranslationData("No button in the popup UI.")]
+    public readonly Translation PopupNo = new Translation("No", TranslationOptions.TMProUI);
+
+    [TranslationData("Cancel button in the popup UI.")]
+    public readonly Translation PopupCancel = new Translation("Cancel", TranslationOptions.TMProUI);
 }

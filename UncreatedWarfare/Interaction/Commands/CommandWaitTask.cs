@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Runtime.CompilerServices;
 using Uncreated.Warfare.Util.Timing;
@@ -97,7 +97,8 @@ public class CommandWaitTask : CustomYieldInstruction, IDisposable
         Command = command;
         User = user;
         _startTime = DateTime.UtcNow;
-        _awaiter = new CommandWaitAwaiter(this, commandDispatcher, tickerFactory, token);
+        _awaiter = new CommandWaitAwaiter(this, token);
+        _awaiter.Register(commandDispatcher, tickerFactory);
     }
 
     public CommandWaitAwaiter GetAwaiter()
@@ -147,10 +148,11 @@ public class CommandWaitTask : CustomYieldInstruction, IDisposable
         // 10000 = cancelled (by CancellationToken)
         private int _state;
         private readonly CommandWaitTask _task;
-        private readonly bool _registered;
+        private bool _registered;
         private Action? _continuation;
         private ILoopTicker? _ticker;
-        private readonly CancellationTokenRegistration _registration;
+        private readonly CancellationToken _token;
+        private CancellationTokenRegistration _registration;
         private ICommandUser? _user;
 
         /// <summary>
@@ -184,43 +186,49 @@ public class CommandWaitTask : CustomYieldInstruction, IDisposable
         /// If the task was cancelled using a <see cref="CancellationToken"/> before the timeout.
         /// </summary>
         public bool IsCancelled => (_state & 0b10000) != 0;
-        internal CommandWaitAwaiter(CommandWaitTask task, CommandDispatcher dispatcher, ILoopTickerFactory tickerFactory, CancellationToken token)
+        internal CommandWaitAwaiter(CommandWaitTask task, CancellationToken token)
         {
             _task = task;
+            _token = token;
 
             if (task.User is { IsDisconnected: true })
             {
                 _state = 0b00101;
-                _task._contextFactory = null;
+                task._contextFactory = null;
                 return;
             }
 
             if (task.Timeout == TimeSpan.Zero)
             {
                 _state = 0b00011;
-                _task._contextFactory = null;
+                task._contextFactory = null;
                 return;
             }
 
             if (token.IsCancellationRequested)
             {
                 _state = 0b11001;
-                _task._contextFactory = null;
-                return;
+                task._contextFactory = null;
             }
+        }
+
+        internal void Register(CommandDispatcher dispatcher, ILoopTickerFactory tickerFactory)
+        {
+            if (_state != 0)
+                return;
 
             dispatcher.RegisterCommandWaitTask(_task);
             _registered = true;
 
-            if (token.CanBeCanceled)
+            if (_token.CanBeCanceled)
             {
-                _registration = token.Register(HandleCancellationToken);
+                _registration = _token.Register(HandleCancellationToken);
             }
 
-            if (task.Timeout == System.Threading.Timeout.InfiniteTimeSpan)
+            if (_task.Timeout == System.Threading.Timeout.InfiniteTimeSpan)
                 return;
 
-            _ticker = tickerFactory.CreateTicker(task.Timeout, System.Threading.Timeout.InfiniteTimeSpan, task, false, HandleTimeout);
+            _ticker = tickerFactory.CreateTicker(_task.Timeout, System.Threading.Timeout.InfiniteTimeSpan, _task, false, HandleTimeout);
         }
 
         /// <inheritdoc />

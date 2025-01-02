@@ -241,7 +241,7 @@ public class ReportService : IDisposable, IHostedService, IEventListener<PlayerL
                 bullet.magazineAsset.itemName,
                 hit.type,
                 actor, hitAsset?.GUID, hitAsset?.FriendlyName, hit.type is ERaycastInfoType.ANIMAL or ERaycastInfoType.PLAYER or ERaycastInfoType.ZOMBIE ? hit.limb : null,
-                pendingBullet.SpawnedTime, bullet.origin, bullet.ApproximatePlayerAimDirection, hit.point, false, damage <= 0 ? 0 : (int)damage, distance));
+                pendingBullet.SpawnedTime, bullet.origin, Quaternion.LookRotation(bullet.ApproximatePlayerAimDirection).eulerAngles, hit.point, false, damage <= 0 ? 0 : (int)damage, distance));
             break;
         }
 
@@ -272,7 +272,7 @@ public class ReportService : IDisposable, IHostedService, IEventListener<PlayerL
         _logger.LogInformation("Bullet expired: {0} {1}", bullet.magazineAsset, bullet.pellet);
         playerData.AddShot(new ShotRecord(gun.equippedGunAsset.GUID, bullet.magazineAsset.GUID,
             gun.equippedGunAsset.itemName, bullet.magazineAsset.itemName, 0, null, null, null, null,
-            pendingBullet.SpawnedTime, bullet.origin, bullet.ApproximatePlayerAimDirection, null, false, 0, 0d));
+            pendingBullet.SpawnedTime, bullet.origin, Quaternion.LookRotation(bullet.ApproximatePlayerAimDirection).eulerAngles, null, false, 0, 0d));
     }
 
     private void CheckExpiredBullets(PlayerData playerData, UseableGun gun)
@@ -339,9 +339,10 @@ public class ReportService : IDisposable, IHostedService, IEventListener<PlayerL
         await FillReportDetails(report, playerData, token);
 
         await _moderationSql.AddOrUpdate(report, token).ConfigureAwait(false);
+        string? messageUrl;
         try
         {
-            await SendReport(report.Id);
+            messageUrl = await SendReport(report.Id);
         }
         catch (Exception ex)
         {
@@ -349,11 +350,11 @@ public class ReportService : IDisposable, IHostedService, IEventListener<PlayerL
             return (report, false);
         }
 
-        return (report, true);
+        return (report, messageUrl != null);
     }
 
     [RpcSend]
-    public virtual RpcTask SendReport(uint reportId) => RpcTask.NotImplemented;
+    public virtual RpcTask<string?> SendReport(uint reportId) => RpcTask<string?>.NotImplemented;
 
     [RpcReceive]
     public async Task<ArraySegment<byte>> RequestShots(uint reportId, CancellationToken token = default)
@@ -510,6 +511,7 @@ public class ReportService : IDisposable, IHostedService, IEventListener<PlayerL
     void IEventListener<PlayerUseableEquipped>.HandleEvent(PlayerUseableEquipped e, IServiceProvider serviceProvider)
     {
         PlayerData playerData = GetOrAddPlayerData(e.Player);
+
         if (playerData.LastGunAsset != null)
         {
             for (int i = 0; i < playerData.PendingBullets.Count; ++i)
@@ -518,7 +520,7 @@ public class ReportService : IDisposable, IHostedService, IEventListener<PlayerL
                 BulletInfo bullet = pendingBullet.Bullet;
                 playerData.AddShot(new ShotRecord(playerData.LastGunAsset.GUID, bullet.magazineAsset?.GUID ?? Guid.Empty,
                     playerData.LastGunAsset.itemName, bullet.magazineAsset?.itemName, 0, null, null, null, null,
-                    pendingBullet.SpawnedTime, bullet.origin, bullet.ApproximatePlayerAimDirection, null, false, 0, 0d));
+                    pendingBullet.SpawnedTime, bullet.origin, Quaternion.LookRotation(bullet.ApproximatePlayerAimDirection).eulerAngles, null, false, 0, 0d));
             }
         }
 

@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.FileProviders;
 using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Configuration;
@@ -35,20 +34,37 @@ public class WarfareVehicleInfo : IEquatable<WarfareVehicleInfo>, ITranslationAr
     /// </remarks>
     public string? ShortName { get; set; }
 
-    public CrewInfo Crew { get; set; }
-    public RearmInfo Rearm { get; set; }
-    public AbandonInfo Abandon { get; set; }
+    public required CrewInfo Crew { get; set; }
+    public required RearmInfo Rearm { get; set; }
+    public required AbandonInfo Abandon { get; set; }
 
     public IReadOnlyList<UnlockRequirement> UnlockRequirements { get; set; } = Array.Empty<UnlockRequirement>();
     public IReadOnlyList<UnlockCost> UnlockCosts { get; set; } = Array.Empty<UnlockCost>();
     public IReadOnlyList<TrunkItem> Trunk { get; set; } = Array.Empty<TrunkItem>();
     public IReadOnlyList<RequestItem> RequestItems { get; set; } = Array.Empty<RequestItem>();
+    public static void EnsureInitialized(WarfareVehicleInfo v)
+    {
+        v.VehicleAsset ??= AssetLink.Create<VehicleAsset>(0);
+        v.Configuration ??= new ConfigurationBuilder().Build();
+
+        v.Crew ??= new CrewInfo();
+        v.Abandon ??= new AbandonInfo();
+        v.Rearm ??= new RearmInfo();
+
+        v.UnlockRequirements ??= Array.Empty<UnlockRequirement>();
+        v.UnlockCosts ??= Array.Empty<UnlockCost>();
+        v.Trunk ??= Array.Empty<TrunkItem>();
+        v.RequestItems ??= Array.Empty<RequestItem>();
+
+        v.Crew.Seats ??= Array.Empty<int>();
+        v.Rearm.Items ??= Array.Empty<IAssetLink<ItemAsset>>();
+    }
 
     public class CrewInfo
     {
         public IReadOnlyList<int> Seats { get; set; } = Array.Empty<int>();
-        public bool Invincible { get; set; } = false;
-        public bool PassengersInvincible { get; set; } = false;
+        public bool Invincible { get; set; }
+        public bool PassengersInvincible { get; set; }
         public int? MaxAllowedCrew { get; set; }
     }
 
@@ -70,17 +86,17 @@ public class WarfareVehicleInfo : IEquatable<WarfareVehicleInfo>, ITranslationAr
 
     public class RequestItem
     {
-        public IAssetLink<ItemAsset> Item { get; set; }
+        public required IAssetLink<ItemAsset> Item { get; set; }
         public byte[]? State { get; set; }
         public int Amount { get; set; } = 1;
     }
 
     public class TrunkItem
     {
-        public byte X { get; set; }
-        public byte Y { get; set; }
-        public byte Rotation { get; set; }
-        public IAssetLink<ItemAsset> Item { get; set; }
+        public required IAssetLink<ItemAsset> Item { get; set; }
+        public required byte X { get; set; }
+        public required byte Y { get; set; }
+        public required byte Rotation { get; set; }
         public byte[]? State { get; set; }
     }
 

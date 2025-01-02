@@ -1,4 +1,4 @@
-﻿using DanielWillett.ModularRpcs.Routing;
+using DanielWillett.ModularRpcs.Routing;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
@@ -175,7 +175,7 @@ internal sealed class ReportCommand : IExecutableCommand
             onlinePlayer.SendToast(ToastMessage.Popup(
                 _translations.ReportNotifyViolatorToastTitle.Translate(onlinePlayer),
                 _translations.ReportNotifyViolatorToast.Translate(reason, onlinePlayer),
-                reason));
+                PopupUI.Okay));
 
             if (onlinePlayer.Save.IMGUI)
             {
@@ -187,8 +187,6 @@ internal sealed class ReportCommand : IExecutableCommand
                 _chatService.Send(onlinePlayer, _translations.ReportNotifyViolatorMessage, reason);
             }
         }
-
-
     }
 
     private static readonly string[][] ReportKeywords =
@@ -221,6 +219,9 @@ internal sealed class ReportCommand : IExecutableCommand
 
         if (Context.MatchParameter(1, ReportKeywords[3]))
             return ReportType.Cheating;
+
+        if (Context.MatchParameter(1, "custom", "other"))
+            return ReportType.Custom;
 
         endIndex = 1;
         return ReportType.Custom;

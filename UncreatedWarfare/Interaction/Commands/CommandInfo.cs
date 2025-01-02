@@ -1,4 +1,4 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
@@ -14,7 +14,7 @@ using Uncreated.Warfare.Util;
 namespace Uncreated.Warfare.Interaction.Commands;
 public class CommandInfo : ICommandDescriptor
 {
-    internal List<CommandWaitTask> WaitTasks = new List<CommandWaitTask>(0);
+    internal readonly List<CommandWaitTask> WaitTasks = new List<CommandWaitTask>(0);
     internal Action<IExecutableCommand, CommandContext>? ContextSetter;
     private readonly List<CommandInfo> _subCommands;
 

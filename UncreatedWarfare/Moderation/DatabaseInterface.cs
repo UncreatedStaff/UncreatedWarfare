@@ -5,9 +5,7 @@ using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Text;
-using Microsoft.EntityFrameworkCore;
 using Uncreated.Framework.UI;
-using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Database.Manual;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Moderation.Appeals;
@@ -40,8 +38,8 @@ public class DatabaseInterface
     private IIPAddressFilter[]? _ipAddressFilters;
     private IPv4AddressRangeFilter[]? _remotePlayAddressFilters;
 
-    private readonly string[] _columns =
-    {
+    private static readonly string[] Columns =
+    [
         ColumnEntriesPrimaryKey,
         ColumnEntriesType, ColumnEntriesSteam64,
         ColumnEntriesMessage,
@@ -51,8 +49,32 @@ public class DatabaseInterface
         ColumnEntriesRelavantLogsStartTimestamp,
         ColumnEntriesRelavantLogsEndTimestamp,
         ColumnEntriesRemoved, ColumnEntriesRemovedBy,
-        ColumnEntriesRemovedTimestamp, ColumnEntriesRemovedReason
-    };
+        ColumnEntriesRemovedTimestamp, ColumnEntriesRemovedReason, ColumnEntriesDiscordMessageId
+    ];
+
+    private static readonly string[] ColumnsNoPk =
+    [
+        ColumnEntriesType, ColumnEntriesSteam64, ColumnEntriesMessage,
+        ColumnEntriesIsLegacy, ColumnEntriesStartTimestamp, ColumnEntriesResolvedTimestamp,
+        ColumnEntriesReputation, ColumnEntriesPendingReputation, ColumnEntriesLegacyId,
+        ColumnEntriesRelavantLogsStartTimestamp, ColumnEntriesRelavantLogsEndTimestamp,
+        ColumnEntriesRemoved, ColumnEntriesRemovedBy, ColumnEntriesRemovedTimestamp,
+        ColumnEntriesRemovedReason, ColumnEntriesDiscordMessageId
+    ];
+
+    private static readonly string[] ShotRecordColumns =
+    [
+        ColumnExternalPrimaryKey, ColumnReportsShotRecordAmmo, ColumnReportsShotRecordAmmoName,
+        ColumnReportsShotRecordItem, ColumnReportsShotRecordItemName,
+        ColumnReportsShotRecordDamageDone, ColumnReportsShotRecordLimb,
+        ColumnReportsShotRecordIsProjectile, ColumnReportsShotRecordDistance,
+        ColumnReportsShotRecordHitPointX, ColumnReportsShotRecordHitPointY, ColumnReportsShotRecordHitPointZ,
+        ColumnReportsShotRecordShootFromPointX, ColumnReportsShotRecordShootFromPointY, ColumnReportsShotRecordShootFromPointZ,
+        ColumnReportsShotRecordShootFromRotationX, ColumnReportsShotRecordShootFromRotationY, ColumnReportsShotRecordShootFromRotationZ,
+        ColumnReportsShotRecordHitType, ColumnReportsShotRecordHitActor,
+        ColumnReportsShotRecordHitAsset, ColumnReportsShotRecordHitAssetName,
+        ColumnReportsShotRecordTimestamp
+    ];
 
     public IIPAddressFilter[] IPAddressFilters => _ipAddressFilters ??=
     [
@@ -354,14 +376,15 @@ public class DatabaseInterface
         
         if (start.HasValue && end.HasValue)
         {
-            sb.Append($" AND `main`.`{ColumnEntriesStartTimestamp}` >= @{args.Count.ToString(CultureInfo.InvariantCulture)} AND `main`.`{ColumnEntriesStartTimestamp}` <= @{(args.Count + 1).ToString(CultureInfo.InvariantCulture)}");
+            sb.Append($" AND `main`.`{ColumnEntriesStartTimestamp}` >= @").Append(args.Count.ToString(CultureInfo.InvariantCulture))
+                .Append($" AND `main`.`{ColumnEntriesStartTimestamp}` <= @").Append((args.Count + 1).ToString(CultureInfo.InvariantCulture));
 
             args.Add(start.Value.UtcDateTime);
             args.Add(end.Value.UtcDateTime);
         }
         else if (start.HasValue)
         {
-            sb.Append($" AND `main`.`{ColumnEntriesStartTimestamp}` >= @{args.Count.ToString(CultureInfo.InvariantCulture)}");
+            sb.Append($" AND `main`.`{ColumnEntriesStartTimestamp}` >= @").Append(args.Count.ToString(CultureInfo.InvariantCulture));
             args.Add(start.Value.UtcDateTime);
         }
         else if (end.HasValue)
@@ -385,8 +408,8 @@ public class DatabaseInterface
             sb.Append(")");
         }
 
-        if (orderBy != null)
-            sb.Append(" ORDER BY " + orderBy);
+        if (!string.IsNullOrWhiteSpace(orderBy))
+            sb.Append(" ORDER BY ").Append(orderBy);
 
         sb.Append(';');
 
@@ -442,7 +465,8 @@ public class DatabaseInterface
             }
             if (!and)
                 sb.Append(" AND ");
-            sb.Append($"`main`.`{ColumnEntriesStartTimestamp}` >= @{args.Count.ToString(CultureInfo.InvariantCulture)} AND `main`.`{ColumnEntriesStartTimestamp}` <= @{(args.Count + 1).ToString(CultureInfo.InvariantCulture)}");
+            sb.Append($"`main`.`{ColumnEntriesStartTimestamp}` >= @").Append(args.Count.ToString(CultureInfo.InvariantCulture))
+                .Append($" AND `main`.`{ColumnEntriesStartTimestamp}` <= @").Append((args.Count + 1).ToString(CultureInfo.InvariantCulture));
 
             args.Add(start.Value.UtcDateTime);
             args.Add(end.Value.UtcDateTime);
@@ -456,7 +480,7 @@ public class DatabaseInterface
             }
             if (!and)
                 sb.Append(" AND ");
-            sb.Append($"`main`.`{ColumnEntriesStartTimestamp}` >= @{args.Count.ToString(CultureInfo.InvariantCulture)}");
+            sb.Append($"`main`.`{ColumnEntriesStartTimestamp}` >= @").Append(args.Count.ToString(CultureInfo.InvariantCulture));
             args.Add(start.Value.UtcDateTime);
         }
         else if (end.HasValue)
@@ -789,16 +813,7 @@ public class DatabaseInterface
             List<PrimaryKeyPair<ShotRecord>> shots = new List<PrimaryKeyPair<ShotRecord>>();
 
             // CheatingReport.Shots
-            query = $"SELECT {MySqlSnippets.ColumnList(ColumnExternalPrimaryKey, ColumnReportsShotRecordAmmo, ColumnReportsShotRecordAmmoName,
-                ColumnReportsShotRecordItem, ColumnReportsShotRecordItemName,
-                ColumnReportsShotRecordDamageDone, ColumnReportsShotRecordLimb,
-                ColumnReportsShotRecordIsProjectile, ColumnReportsShotRecordDistance,
-                ColumnReportsShotRecordHitPointX, ColumnReportsShotRecordHitPointY, ColumnReportsShotRecordHitPointZ,
-                ColumnReportsShotRecordShootFromPointX, ColumnReportsShotRecordShootFromPointY, ColumnReportsShotRecordShootFromPointZ,
-                ColumnReportsShotRecordShootFromRotationX, ColumnReportsShotRecordShootFromRotationY, ColumnReportsShotRecordShootFromRotationZ,
-                ColumnReportsShotRecordHitType, ColumnReportsShotRecordHitActor,
-                ColumnReportsShotRecordHitAsset, ColumnReportsShotRecordHitAssetName,
-                ColumnReportsShotRecordTimestamp)} " +
+            query = $"SELECT {MySqlSnippets.ColumnList(ShotRecordColumns)} " +
                     $"FROM `{TableReportShotRecords}` WHERE `{ColumnExternalPrimaryKey}` {inArg} ORDER BY `{ColumnExternalPrimaryKey}`;";
             await Sql.QueryAsync(query, null, token, reader =>
             {
@@ -1096,23 +1111,28 @@ public class DatabaseInterface
 
         return rtn;
     }
+
+    private static readonly string GetActiveAssetBanQuery = $"SELECT {MySqlSnippets.AliasedColumnList("e", Columns)}, " +
+                                                            $"{MySqlSnippets.AliasedColumnList("d", ColumnDurationsDurationSeconds, ColumnDurationsForgiven, ColumnDurationsForgivenBy, ColumnDurationsForgivenTimestamp, ColumnDurationsForgivenReason)}, " +
+                                                            $"{MySqlSnippets.AliasedColumnList("pnsh", ColumnPunishmentsPresetType, ColumnPunishmentsPresetLevel)}" +
+                                                            $"FROM `{TableEntries}` AS `e` " +
+                                                            $"LEFT JOIN `{TableDurationPunishments}` AS `d` ON `e`.`{ColumnEntriesPrimaryKey}`=`d`.`{ColumnExternalPrimaryKey}` " +
+                                                            $"LEFT JOIN `{TablePunishments}` AS `pnsh` ON `e`.`{ColumnEntriesPrimaryKey}`=`pnsh`.`{ColumnExternalPrimaryKey}` " +
+                                                            $"WHERE `e`.`{ColumnEntriesSteam64}` = @0 " +
+                                                            $"AND `e`.`{ColumnEntriesType}` = '{nameof(ModerationEntryType.AssetBan)}' " +
+                                                            $"AND `d`.`{ColumnDurationsForgiven}` = 0 " +
+                                                            $"AND `e`.`{ColumnEntriesRemoved}` = 0 " +
+                                                            $"AND {MySqlSnippets.BuildCheckDurationClause("d", "e", ColumnDurationsDurationSeconds, ColumnEntriesResolvedTimestamp, ColumnEntriesStartTimestamp)} " +
+                                                            $"AND (NOT EXISTS (SELECT NULL FROM `{TableAssetBanTypeFilters}` AS `a` WHERE `a`.`{ColumnExternalPrimaryKey}`=`e`.`{ColumnEntriesPrimaryKey}`) " +
+                                                            $"OR (@1 IN (SELECT `a`.`{ColumnAssetBanFiltersType}` FROM `{TableAssetBanTypeFilters}` AS `a` WHERE `a`.`{ColumnExternalPrimaryKey}`=`e`.`{ColumnEntriesPrimaryKey}`))) " +
+                                                            $"ORDER BY (IF(`d`.`{ColumnDurationsDurationSeconds}` < 0, 2147483647, `d`.`{ColumnDurationsDurationSeconds}`)) DESC;";
+
+
     public async Task<AssetBan?> GetActiveAssetBan(CSteamID steam64, VehicleType type, bool detail = true, CancellationToken token = default)
     {
         AssetBan? result = null;
         
-        await Sql.QueryAsync(
-            $"SELECT {MySqlSnippets.AliasedColumnList("e", _columns)}, " +
-            $"{MySqlSnippets.AliasedColumnList("d", ColumnDurationsDurationSeconds, ColumnDurationsForgiven, ColumnDurationsForgivenBy, ColumnDurationsForgivenTimestamp, ColumnDurationsForgivenReason)}, " +
-            $"{MySqlSnippets.AliasedColumnList("pnsh", ColumnPunishmentsPresetType, ColumnPunishmentsPresetLevel)}" +
-            $"FROM `{TableEntries}` AS `e` LEFT JOIN `{TableDurationPunishments}` AS `d` ON `e`.`{ColumnEntriesPrimaryKey}`=`d`.`{ColumnExternalPrimaryKey}` LEFT JOIN `{TablePunishments}` AS `pnsh` ON `e`.`{ColumnEntriesPrimaryKey}`=`pnsh`.`{ColumnExternalPrimaryKey}` " +
-            $"WHERE `e`.`{ColumnEntriesSteam64}` = @0 " +
-            $"AND `e`.`{ColumnEntriesType}` = '" + nameof(ModerationEntryType.AssetBan) + "' " +
-            $"AND `d`.`{ColumnDurationsForgiven}` = 0 " +
-            $"AND `e`.`{ColumnEntriesRemoved}` = 0 " +
-            $"AND {MySqlSnippets.BuildCheckDurationClause("d", "e", ColumnDurationsDurationSeconds, ColumnEntriesResolvedTimestamp, ColumnEntriesStartTimestamp)} " +
-            $"AND (NOT EXISTS (SELECT NULL FROM `{TableAssetBanTypeFilters}` AS `a` WHERE `a`.`{ColumnExternalPrimaryKey}`=`e`.`{ColumnEntriesPrimaryKey}`) " +
-            $"OR (@1 IN (SELECT `a`.`{ColumnAssetBanFiltersType}` FROM `{TableAssetBanTypeFilters}` AS `a` WHERE `a`.`{ColumnExternalPrimaryKey}`=`e`.`{ColumnEntriesPrimaryKey}`))) " +
-            $"ORDER BY (IF(`d`.`{ColumnDurationsDurationSeconds}` < 0, 2147483647, `d`.`{ColumnDurationsDurationSeconds}`)) DESC;",
+        await Sql.QueryAsync(GetActiveAssetBanQuery,
             [ steam64.m_SteamID, type.ToString() ],
             token,
             reader =>
@@ -1128,7 +1148,7 @@ public class DatabaseInterface
     }
     private int AppendReadColumns(StringBuilder sb, Type type, bool baseOnly)
     {
-        sb.Append(MySqlSnippets.AliasedColumnList("main", _columns));
+        sb.Append(MySqlSnippets.AliasedColumnList("main", Columns));
         int flag = 0;
         if (type.IsAssignableFrom(typeof(IDurationModerationEntry)) || typeof(IDurationModerationEntry).IsAssignableFrom(type) || type.IsAssignableFrom(typeof(DurationPunishment)) || typeof(DurationPunishment).IsAssignableFrom(type))
         {
@@ -1401,7 +1421,7 @@ public class DatabaseInterface
         token.ThrowIfCancellationRequested();
         uint pk = entry.Id;
         bool isNew = pk == 0u;
-        object[] objs = new object[!isNew ? 16 : 15];
+        object[] objs = new object[!isNew ? 17 : 16];
         objs[0] = (ModerationReflection.GetType(entry.GetType()) ?? ModerationEntryType.None).ToString();
         objs[1] = entry.Player;
         objs[2] = (object?)entry.Message.Truncate(1024) ?? DBNull.Value;
@@ -1417,16 +1437,12 @@ public class DatabaseInterface
         objs[12] = entry.RemovedBy == null ? DBNull.Value : entry.RemovedBy.Id;
         objs[13] = entry.RemovedTimestamp.HasValue ? entry.RemovedTimestamp.Value.UtcDateTime : DBNull.Value;
         objs[14] = (object?)entry.RemovedMessage ?? DBNull.Value;
+        objs[15] = entry.DiscordMessageId;
 
         if (!isNew)
-            objs[15] = pk;
+            objs[16] = pk;
 
-        string query = MySqlSnippets.BuildInitialInsertQuery(TableEntries, ColumnEntriesPrimaryKey, !isNew, null, null,
-            ColumnEntriesType, ColumnEntriesSteam64, ColumnEntriesMessage,
-            ColumnEntriesIsLegacy, ColumnEntriesStartTimestamp, ColumnEntriesResolvedTimestamp, ColumnEntriesReputation,
-            ColumnEntriesPendingReputation, ColumnEntriesLegacyId,
-            ColumnEntriesRelavantLogsStartTimestamp, ColumnEntriesRelavantLogsEndTimestamp,
-            ColumnEntriesRemoved, ColumnEntriesRemovedBy, ColumnEntriesRemovedTimestamp, ColumnEntriesRemovedReason);
+        string query = MySqlSnippets.BuildInitialInsertQuery(TableEntries, ColumnEntriesPrimaryKey, !isNew, null, null, ColumnsNoPk);
 
         await Sql.QueryAsync(query, objs, token, reader =>
         {
@@ -1801,6 +1817,7 @@ public class DatabaseInterface
     public const string ColumnEntriesRemovedBy = "RemovedBy";
     public const string ColumnEntriesRemovedTimestamp = "RemovedTimeUTC";
     public const string ColumnEntriesRemovedReason = "RemovedReason";
+    public const string ColumnEntriesDiscordMessageId = "DiscordMessageId";
 
     public const string ColumnActorsId = "ActorId";
     public const string ColumnActorsRole = "ActorRole";

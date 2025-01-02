@@ -238,7 +238,7 @@ public class CheatingReport : Report
                 args.Add(record.ShootFromRotation.z);
                 args.Add(record.HitType.ToString());
                 args.Add(record.HitActor == null ? DBNull.Value : record.HitActor.Id);
-                args.Add(record.HitAsset.HasValue ? record.HitAsset.Value : DBNull.Value);
+                args.Add(record.HitAsset.HasValue ? record.HitAsset.Value.ToString("N") : DBNull.Value);
                 args.Add(record is { HitAsset: not null, HitAssetName: not null } ? record.HitAssetName : DBNull.Value);
                 args.Add(record.Timestamp.UtcDateTime);
             }
