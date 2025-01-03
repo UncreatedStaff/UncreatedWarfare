@@ -1,10 +1,6 @@
-﻿using System;
 using Uncreated.Warfare.FOBs.Deployment;
-using Uncreated.Warfare.FOBs.Entities;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
-using Uncreated.Warfare.Proximity;
-using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Fobs;
 

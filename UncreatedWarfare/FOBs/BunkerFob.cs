@@ -1,10 +1,6 @@
-﻿using Microsoft.Extensions.Configuration;
-using Stripe;
+using Microsoft.Extensions.Configuration;
 using System;
-using System.Collections.Generic;
-using System.Text;
 using Uncreated.Warfare.Buildables;
-using Uncreated.Warfare.Events.Models.Fobs;
 using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Interaction;

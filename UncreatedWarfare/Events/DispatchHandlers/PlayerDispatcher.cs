@@ -34,6 +34,57 @@ partial class EventDispatcher
         
         PlayerLifeDoDamageRequested.Damaging = parameters.player.channel.owner.playerID.steamID.m_SteamID;
         parameters = args.Parameters;
+        player.Data["LastDamagePlayerRequested"] = args;
+    }
+
+    /// <summary>
+    /// Invoked by <see cref="PlayerLife.OnPreDeath"/> when a player is just about to die.
+    /// </summary>
+    private void PlayerLifeOnOnPreDeath(PlayerLife playerLife)
+    {
+        WarfarePlayer player = _playerService.GetOnlinePlayer(playerLife.player);
+        if (!player.Data.TryGetValue("LastDamagePlayerRequested", out object? v) || v is not DamagePlayerRequested reqArgs)
+            return;
+
+        player.Data.Remove("LastDamagePlayerRequested");
+        PlayerDamaged args = new PlayerDamaged(in reqArgs.Parameters)
+        {
+            Player = player,
+            Instigator = _playerService.GetOnlinePlayerOrNull(reqArgs.Parameters.killer)
+        };
+
+        PlayerDying dyingArgs = new PlayerDying(in reqArgs.Parameters)
+        {
+            Player = player,
+            Instigator = args.Instigator
+        };
+
+        player.Data["LastPlayerDying"] = args;
+
+        _ = DispatchEventAsync(args, CancellationToken.None);
+        _ = DispatchEventAsync(dyingArgs, CancellationToken.None, allowAsync: false);
+    }
+
+    /// <summary>
+    /// Invoked by <see cref="PlayerLife.onHurt"/> when a player gets damaged.
+    /// </summary>
+    private void OnPlayerHurt(Player unturnedPlayer, byte damage, Vector3 force, EDeathCause cause, ELimb limb, CSteamID killer)
+    {
+        if (unturnedPlayer.life.isDead)
+            return;
+
+        WarfarePlayer player = _playerService.GetOnlinePlayer(unturnedPlayer);
+        if (!player.Data.TryGetValue("LastDamagePlayerRequested", out object? v) || v is not DamagePlayerRequested reqArgs)
+            return;
+
+        player.Data.Remove("LastDamagePlayerRequested");
+        PlayerDamaged args = new PlayerDamaged(in reqArgs.Parameters)
+        {
+            Player = player,
+            Instigator = _playerService.GetOnlinePlayerOrNull(reqArgs.Parameters.killer)
+        };
+
+        _ = DispatchEventAsync(args, CancellationToken.None);
     }
 
     /// <summary>
@@ -44,20 +95,69 @@ partial class EventDispatcher
         WarfarePlayer medic = _playerService.GetOnlinePlayer(instigator);
         WarfarePlayer player = _playerService.GetOnlinePlayer(target);
 
+        PlayerLife targetLife = player.UnturnedPlayer.life;
         AidPlayerRequested args = new AidPlayerRequested
         {
             Item = AssetLink.Create(asset),
             Player = player,
             Medic = medic,
-            IsRevive = false
+            IsRevive = false,
+            StartingHealth = targetLife.health,
+            StartingBleedState = targetLife.isBleeding,
+            StartingBrokenBonesState = targetLife.isBroken,
+            StartingFood = targetLife.food,
+            StartingWater = targetLife.water,
+            StartingInfection = targetLife.virus,
+            StartingStamina = targetLife.stamina,
+            StartingWarmth = targetLife.warmth,
+            StartingExperience = player.UnturnedPlayer.skills.experience
         };
 
         shouldAllow = DispatchEventAsync(args, _unloadToken, allowAsync: false).GetAwaiter().GetResult();
 
-        if (shouldAllow && args.IsRevive)
+        if (!shouldAllow)
+            return;
+
+        if (args.IsRevive)
         {
             player.ComponentOrNull<PlayerInjureComponent>()?.PrepAidRevive(args);
         }
+
+        player.Data["LastAidRequested"] = args;
+    }
+
+    /// <summary>
+    /// Invoked by <see cref="UseableConsumeable.onPerformedAid"/> when a player heals another player.
+    /// </summary>
+    private void UseableConsumeableOnPlayerPerformedAid(Player instigator, Player target)
+    {
+        WarfarePlayer medic = _playerService.GetOnlinePlayer(instigator);
+        WarfarePlayer player = _playerService.GetOnlinePlayer(target);
+
+        if (!player.Data.TryGetValue("LastAidRequested", out object? v) || v is not AidPlayerRequested reqArgs)
+            return;
+
+        player.Data.Remove("LastAidRequested");
+
+        PlayerLife targetLife = player.UnturnedPlayer.life;
+        PlayerAided args = new PlayerAided
+        {
+            Player = player,
+            Medic = medic,
+            IsRevive = reqArgs.IsRevive,
+            Item = reqArgs.Item,
+            HealthChange = reqArgs.StartingHealth - targetLife.health,
+            BleedStateChanged = reqArgs.StartingBleedState != targetLife.isBleeding,
+            BrokenBonesStateChanged = reqArgs.StartingBrokenBonesState != targetLife.isBroken,
+            FoodChange = reqArgs.StartingFood - targetLife.food,
+            WaterChange = reqArgs.StartingWater - targetLife.water,
+            InfectionChange = reqArgs.StartingInfection - targetLife.virus,
+            StaminaChange = reqArgs.StartingStamina - targetLife.stamina,
+            WarmthChange = (int)((long)reqArgs.StartingWarmth - targetLife.warmth),
+            ExperienceChange = (int)((long)reqArgs.StartingExperience - player.UnturnedPlayer.skills.experience)
+        };
+
+        _ = DispatchEventAsync(args, CancellationToken.None);
     }
 
     /// <summary>

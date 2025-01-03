@@ -1,4 +1,4 @@
-﻿using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 
 namespace Uncreated.Warfare.Events.Models.Players;
@@ -17,6 +17,11 @@ public class DamagePlayerRequested : CancellablePlayerEvent
     /// Mutable properties for how players are damaged.
     /// </summary>
     public ref DamagePlayerParameters Parameters => ref _parameters;
+
+    /// <summary>
+    /// If this request injured the player.
+    /// </summary>
+    public bool IsInjure { get; set; }
 
     /// <summary>
     /// The player that instigated the damage.

@@ -1,16 +1,12 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.FOBs.Deployment;
-using Uncreated.Warfare.FOBs.Entities;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
-using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Translations;
@@ -93,7 +89,7 @@ public class RallyPoint : IBuildableFob
 
     public int CompareTo(IFob other)
     {
-        throw new NotImplementedException();
+        return ReferenceEquals(other, this) ? 0 : 1;
     }
 
     public TimeSpan GetDelay(WarfarePlayer player)
@@ -113,4 +109,6 @@ public class RallyPoint : IBuildableFob
     {
         return formatter.Colorize(Name, Color, parameters.Options);
     }
+
+    bool IDeployable.IsSafeZone => false;
 }

@@ -1,4 +1,4 @@
-﻿using Uncreated.Warfare.Injures;
+using Uncreated.Warfare.Injures;
 using Uncreated.Warfare.Interaction.Commands;
 
 namespace Uncreated.Warfare.Commands;
@@ -21,7 +21,7 @@ internal sealed class DebugInjureCommand : IExecutableCommand
         int damage = player.life.health + 1;
         DamageTool.damagePlayer(new DamagePlayerParameters(player)
         {
-            cause = EDeathCause.KILL,
+            cause = EDeathCause.SUICIDE,
             limb = ELimb.SPINE,
             killer = Context.CallerId,
             direction = player.look.aim.forward,

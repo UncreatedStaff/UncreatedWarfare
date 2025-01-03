@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Events.Models.Tickets;
 using Uncreated.Warfare.Layouts.Teams;
@@ -41,6 +41,9 @@ public abstract class BaseTicketTracker : ILayoutHostedService, ITicketTracker
     public void IncrementTickets(Team team, int tickets)
     {
         GameThread.AssertCurrent();
+
+        if (!team.IsValid)
+            return;
 
         if (!_ticketMap.ContainsKey(team))
         {

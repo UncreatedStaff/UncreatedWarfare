@@ -16,6 +16,7 @@ using System.Linq;
 using System.Reflection;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Models;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
@@ -82,6 +83,11 @@ public partial class EventDispatcher : IHostedService, IDisposable
         _warfare.LayoutStarted -= OnLayoutStarted;
     }
 
+    private void SubscribePlayerEvents(WarfarePlayer player)
+    {
+        player.UnturnedPlayer.life.onHurt += OnPlayerHurt;
+    }
+
     UniTask IHostedService.StartAsync(CancellationToken token)
     {
         /* Provider */
@@ -119,10 +125,12 @@ public partial class EventDispatcher : IHostedService, IDisposable
         /* Players */
         DamageTool.damagePlayerRequested += DamageToolOnPlayerDamageRequested;
         UseableConsumeable.onPerformingAid += UseableConsumeableOnPlayerPerformingAid;
+        UseableConsumeable.onPerformedAid += UseableConsumeableOnPlayerPerformedAid;
         PlayerEquipment.OnPunch_Global += PlayerEquipmentOnPlayerPunch;
         PlayerQuests.onGroupChanged += PlayerQuestsOnGroupChanged;
         PlayerEquipment.OnUseableChanged_Global += PlayerEquipmentUseableChanged;
         PlayerLife.OnSelectingRespawnPoint += OnPlayerChooseSpawnAfterDeath;
+        PlayerLife.OnPreDeath += PlayerLifeOnOnPreDeath;
 
         /* Projectiles */
         UseableGun.onProjectileSpawned += OnProjectileSpawned;
@@ -170,10 +178,12 @@ public partial class EventDispatcher : IHostedService, IDisposable
         /* Players */
         DamageTool.damagePlayerRequested -= DamageToolOnPlayerDamageRequested;
         UseableConsumeable.onPerformingAid -= UseableConsumeableOnPlayerPerformingAid;
+        UseableConsumeable.onPerformedAid -= UseableConsumeableOnPlayerPerformedAid;
         PlayerEquipment.OnPunch_Global -= PlayerEquipmentOnPlayerPunch;
         PlayerQuests.onGroupChanged -= PlayerQuestsOnGroupChanged;
         PlayerEquipment.OnUseableChanged_Global -= PlayerEquipmentUseableChanged;
         PlayerLife.OnSelectingRespawnPoint -= OnPlayerChooseSpawnAfterDeath;
+        PlayerLife.OnPreDeath -= PlayerLifeOnOnPreDeath;
 
         /* Projectiles */
         UseableGun.onProjectileSpawned -= OnProjectileSpawned;

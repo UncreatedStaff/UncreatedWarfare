@@ -1,4 +1,4 @@
-﻿using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Layouts.Teams;
@@ -8,11 +8,35 @@ using Uncreated.Warfare.Players;
 namespace Uncreated.Warfare.Events.Models.Players;
 public class PlayerDied : PlayerEvent
 {
-    public EDeathCause Cause { get; internal set; }
+    private DamagePlayerParameters _parameters;
+
+    /// <summary>
+    /// Properties for how players are damaged.
+    /// </summary>
+    public ref readonly DamagePlayerParameters Parameters => ref _parameters;
+
+    public EDeathCause Cause
+    {
+        get => _parameters.cause;
+        internal set => _parameters.cause = value;
+    }
+
     public EDeathCause MessageCause { get; internal set; }
-    public ELimb Limb { get; internal set; }
+
+    public ELimb Limb
+    {
+        get => _parameters.limb;
+        internal set => _parameters.limb = value;
+    }
+
     public WarfarePlayer? Killer { get; internal set; }
-    public CSteamID Instigator { get; internal set; }
+
+    public CSteamID Instigator
+    {
+        get => _parameters.killer;
+        internal set => _parameters.killer = value;
+    }
+
     public bool WasTeamkill { get; internal set; }
     public bool ThirdPartyAtFault { get; internal set; }
     public bool WasSuicide { get; internal set; }
@@ -42,5 +66,10 @@ public class PlayerDied : PlayerEvent
     public SessionRecord? Session { get; internal set; }
     public SessionRecord? KillerSession { get; internal set; }
     public SessionRecord? ThirdPartySession { get; internal set; }
-    public float TimeDeployed { get; internal set; } // todo
+    public float TimeDeployed { get; internal set; }
+
+    public PlayerDied(in DamagePlayerParameters parameters)
+    {
+        _parameters = parameters;
+    }
 }

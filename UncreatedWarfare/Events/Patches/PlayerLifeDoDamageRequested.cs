@@ -1,4 +1,4 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
 using HarmonyLib;
 using System.Reflection;
@@ -97,6 +97,10 @@ internal sealed class PlayerLifeDoDamageRequested : IHarmonyPatch
         // may expect the player to take damage or die instantly
         //  ex. hitmarkers are handled by checking which players were damaged immediately after shooting
         bool shouldallow = serviceProvider.Resolve<EventDispatcher>().DispatchEventAsync(args, CancellationToken.None, allowAsync: false).GetAwaiter().GetResult();
-        return shouldallow;
+        if (!shouldallow)
+            return false;
+
+        player.Data["LastDamagePlayerRequested"] = args;
+        return true;
     }
 }

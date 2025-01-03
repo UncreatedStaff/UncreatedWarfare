@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.FOBs.Deployment;
@@ -116,6 +116,9 @@ public class Zone : IDeployable
 
     [JsonIgnore]
     float IDeployable.Yaw => SpawnYaw;
+
+    /// <inheritdoc />
+    bool IDeployable.IsSafeZone => true;
 
     TimeSpan IDeployable.GetDelay(WarfarePlayer player)
     {

@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -202,6 +202,7 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable
 
     public int CompareTo(IFob other)
     {
-        throw new NotImplementedException();
+        return ReferenceEquals(other, this) ? 0 : -1;
     }
+    bool IDeployable.IsSafeZone => false;
 }

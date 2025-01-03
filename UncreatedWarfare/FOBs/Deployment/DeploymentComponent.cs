@@ -1,6 +1,9 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using System;
+using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Deployment;
+using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Layouts.Teams;
@@ -14,7 +17,7 @@ using Uncreated.Warfare.Zones;
 namespace Uncreated.Warfare.FOBs.Deployment;
 
 [PlayerComponent]
-public class DeploymentComponent : MonoBehaviour, IPlayerComponent
+public class DeploymentComponent : MonoBehaviour, IPlayerComponent, IEventListener<PlayerDied>
 {
     private const float TickSpeedSeconds = 0.25f;
 
@@ -35,6 +38,9 @@ public class DeploymentComponent : MonoBehaviour, IPlayerComponent
 
 #nullable restore
 
+    // TODO: this value should also be set on exiting main base
+    private DateTime _lastDeployedFromSafeZone;
+
     public IDeployable? CurrentDeployment { get; private set; }
     public TimeSpan DeploymentTimeLeft => _deploymentTimeStarted == 0 ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(Time.realtimeSinceStartup - _deploymentTimeStarted);
     WarfarePlayer IPlayerComponent.Player { get => Player; set => Player = value; }
@@ -47,6 +53,18 @@ public class DeploymentComponent : MonoBehaviour, IPlayerComponent
         _cooldownManager = serviceProvider.GetService<CooldownManager>();
         _fobManager = serviceProvider.GetService<FobManager>();
         _chatService = serviceProvider.GetRequiredService<ChatService>();
+        _lastDeployedFromSafeZone = DateTime.UtcNow;
+    }
+
+    [EventListener(Priority = -100)]
+    void IEventListener<PlayerDied>.HandleEvent(PlayerDied e, IServiceProvider serviceProvider)
+    {
+        _lastDeployedFromSafeZone = DateTime.UtcNow;
+    }
+
+    public TimeSpan GetTimeDeployed()
+    {
+        return DateTime.UtcNow - _lastDeployedFromSafeZone;
     }
 
     public void CancelDeployment(bool chat)
@@ -166,6 +184,10 @@ public class DeploymentComponent : MonoBehaviour, IPlayerComponent
     private void InstantDeploy(IDeployable deployable, DeploySettings settings, IDeployable? deployFrom)
     {
         Player.UnturnedPlayer.teleportToLocationUnsafe(deployable.SpawnPosition, deployable.Yaw);
+        if (deployFrom is { IsSafeZone: true })
+        {
+            _lastDeployedFromSafeZone = DateTime.UtcNow;
+        }
 
         deployFrom?.OnDeployFrom(Player, in settings);
         deployable.OnDeployTo(Player, in settings);

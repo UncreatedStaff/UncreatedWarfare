@@ -277,6 +277,36 @@ public sealed class WarfareModule
             });
         });
 
+        // service configurers from config
+        foreach (IConfigurationSection typeName in Configuration.GetSection("services").GetChildren())
+        {
+            Type? type = ContextualTypeResolver.ResolveType(typeName.Value, typeof(IServiceConfigurer));
+            if (type == null)
+            {
+                CommandWindow.LogError($"Service configurer not found in system config: {typeName.Value}.");
+                UnloadModule();
+                Provider.shutdown();
+                return;
+            }
+
+            try
+            {
+                IServiceConfigurer c = (IServiceConfigurer)Activator.CreateInstance(type);
+                c.ConfigureServices(bldr);
+                if (c is IDisposable disp)
+                    disp.Dispose();
+                CommandWindow.Log($"Loaded service configurer {Accessor.Formatter.Format(type)} from system config.");
+            }
+            catch (Exception ex)
+            {
+                CommandWindow.LogError($"Service configurer {Accessor.Formatter.Format(type)} from system config threw an exception:");
+                CommandWindow.LogError(ex);
+                UnloadModule();
+                Provider.shutdown();
+                return;
+            }
+        }
+
         ConfigureServices(bldr);
 
         _pluginLoader.ConfigureServices(bldr);
@@ -598,6 +628,13 @@ public sealed class WarfareModule
         // Stats
         bldr.RegisterType<PointsRewardsEvents>()
             .AsImplementedInterfaces();
+
+        bldr.RegisterType<DatabaseStatsBuffer>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
+        bldr.RegisterType<PlayerDatabaseStatsEventHandlers>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
 
         bldr.RegisterType<MySqlPointsStore>()
             .As<IPointsStore>()

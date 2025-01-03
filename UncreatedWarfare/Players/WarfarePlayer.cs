@@ -1,4 +1,4 @@
-﻿using SDG.NetTransport;
+using SDG.NetTransport;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -53,6 +53,11 @@ public class WarfarePlayer :
 
     CSteamID IPlayer.Steam64 => _steam64;
     CSteamID ICommandUser.Steam64 => _steam64;
+
+    /// <summary>
+    /// Generic data persisting over the player's lifetime.
+    /// </summary>
+    public IDictionary<string, object?> Data { get; } = new Dictionary<string, object?>(8);
 
     public Player UnturnedPlayer { get; }
     public SteamPlayer SteamPlayer { get; }

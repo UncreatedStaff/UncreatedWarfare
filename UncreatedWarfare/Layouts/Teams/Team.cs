@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -100,13 +100,33 @@ public class Team : IEquatable<Team>
 
     public bool IsOpponent(Team other)
     {
-        return _opponents != null && _opponents.Contains(other);
+        return !ReferenceEquals(this, other) && _opponents != null && _opponents.Contains(other);
+    }
+
+    public bool IsOpponent(CSteamID otherGroupId)
+    {
+        if (otherGroupId.m_SteamID == GroupId.m_SteamID || _opponents == null)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < _opponents.Count; ++i)
+        {
+            if (_opponents[i].GroupId.m_SteamID == otherGroupId.m_SteamID)
+                return true;
+        }
+
+        return false;
     }
 
     public bool IsFriendly(Team other)
     {
-        // todo maybe this should change?
         return other.Equals(this);
+    }
+
+    public bool IsFriendly(CSteamID otherGroupId)
+    {
+        return otherGroupId.m_SteamID == GroupId.m_SteamID;
     }
 
     public bool Equals(Team? other)

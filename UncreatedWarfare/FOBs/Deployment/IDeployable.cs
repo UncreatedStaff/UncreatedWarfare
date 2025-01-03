@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Translations.ValueFormatters;
@@ -15,6 +15,11 @@ public interface IDeployable : ITranslationArgument
     /// The angle the player will spawn along the Y-axis.
     /// </summary>
     float Yaw { get; }
+
+    /// <summary>
+    /// If the zone is a safezone like the lobby or main base. This is used to caculate 'time deployed' stat.
+    /// </summary>
+    bool IsSafeZone { get; }
 
     /// <summary>
     /// Get the deployment delay in seconds.

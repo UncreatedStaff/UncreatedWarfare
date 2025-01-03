@@ -1,4 +1,4 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
 using HarmonyLib;
 using SDG.NetTransport;
@@ -142,15 +142,15 @@ internal sealed class InteractableTrapOnTriggerEnter : IHarmonyPatch
         }
         else if (other.TryGetComponent(out throwable!))
         {
-            playerTriggerer = playerService.GetOnlinePlayerOrNull(PlayerTool.getSteamPlayer(throwable.Owner));
-            throwableAsset = Assets.find<ItemThrowableAsset>(throwable.Throwable);
+            playerTriggerer = throwable.Owner;
+            throwableAsset = throwable.Throwable;
 
             if (playerTriggerer == null)
             {
                 return false;
             }
             
-            triggerTeam = playerTriggerer.Team;
+            triggerTeam = throwable.Team ?? Team.NoTeam;
         }
 
         BarricadeData serversideData = barricade.GetServersideData();

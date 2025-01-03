@@ -998,7 +998,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
         [
             useSteamNames ? e.Player.Names.PlayerName : e.Player.Names.CharacterName, // {0}
             killerName ?? string.Empty,                                               // {1}
-            _valueFormatter.FormatEnum(e.Limb, language),                                  // {2}
+            _valueFormatter.FormatEnum(e.Limb, language),                             // {2}
             itemName ?? string.Empty,                                                 // {3}
             e.KillDistance.ToString("F0", formatProvider),                            // {4}
             thirdPartyName ?? string.Empty,                                           // {5}

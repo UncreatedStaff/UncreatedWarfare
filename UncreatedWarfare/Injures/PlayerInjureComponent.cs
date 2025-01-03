@@ -8,6 +8,7 @@ using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
+using Uncreated.Warfare.Events.Models.Vehicles;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Layouts.Teams;
@@ -33,7 +34,8 @@ public class PlayerInjureComponent : MonoBehaviour,
     IEventListener<PlayerDied>,
     IEventListener<DamagePlayerRequested>,
     IEventListener<AidPlayerRequested>,
-    IEventListener<PlayerAided>
+    IEventListener<PlayerAided>,
+    IEventListener<EnterVehicleRequested>
 {
 
     /// <summary>
@@ -109,6 +111,7 @@ public class PlayerInjureComponent : MonoBehaviour,
     private AssetConfiguration _assetConfiguration;
     private PointsTranslations _xpTranslations;
     private CooldownManager _cooldownManager;
+    private PlayersTranslations _playerTranslations;
     public WarfarePlayer Player { get; private set; }
 #nullable restore
 
@@ -145,6 +148,7 @@ public class PlayerInjureComponent : MonoBehaviour,
         _eventDispatcher = serviceProvider.GetRequiredService<EventDispatcher>();
         _cooldownManager = serviceProvider.GetRequiredService<CooldownManager>();
         _xpTranslations = serviceProvider.GetRequiredService<TranslationInjection<PointsTranslations>>().Value;
+        _playerTranslations = serviceProvider.GetRequiredService<TranslationInjection<PlayersTranslations>>().Value;
 
         if (!isOnJoin)
             return;
@@ -315,7 +319,7 @@ public class PlayerInjureComponent : MonoBehaviour,
         player.movement.sendPluginSpeedMultiplier(0.35f);
         player.movement.sendPluginJumpMultiplier(0);
 
-        _chatService.Send(Player, T.InjuredUIGiveUpChat);
+        _chatService.Send(Player, _playerTranslations.InjuredUIGiveUpChat);
 
         SendGiveUpUI();
 
@@ -353,12 +357,12 @@ public class PlayerInjureComponent : MonoBehaviour,
 
     private void SendGiveUpUI()
     {
-        if (!_assetConfiguration.GetAssetLink<EffectAsset>("GiveUp").TryGetId(out ushort uiInjuredId))
+        if (!_assetConfiguration.GetAssetLink<EffectAsset>("UI:GiveUp").TryGetId(out ushort uiInjuredId))
             return;
 
         // GiveUpText has to be resent because initial values don't get their hotkeys filled but resent values do
-        EffectManager.sendUIEffect(uiInjuredId, GiveUpUiKey, Player.Connection, true, T.InjuredUIHeader.Translate(Player), string.Empty);
-        EffectManager.sendUIEffectText(GiveUpUiKey, Player.Connection, true, "Canvas/GameObject/GiveUpText", T.InjuredUIGiveUp.Translate(Player));
+        EffectManager.sendUIEffect(uiInjuredId, GiveUpUiKey, Player.Connection, true, _playerTranslations.InjuredUIHeader.Translate(Player), string.Empty);
+        EffectManager.sendUIEffectText(GiveUpUiKey, Player.Connection, true, "Canvas/GameObject/GiveUpText", _playerTranslations.InjuredUIGiveUp.Translate(Player));
     }
 
     private void ClearGiveUpUI()
@@ -431,7 +435,7 @@ public class PlayerInjureComponent : MonoBehaviour,
         shouldallow = false;
     }
 
-    [EventListener(Priority = 100)]
+    [EventListener(Priority = 100, MustRunInstantly = true)]
     void IEventListener<AidPlayerRequested>.HandleEvent(AidPlayerRequested e, IServiceProvider serviceProvider)
     {
         if (!_isInjured)
@@ -458,7 +462,7 @@ public class PlayerInjureComponent : MonoBehaviour,
         e.IsRevive = true;
     }
 
-    [EventListener(Priority = 100)]
+    [EventListener(Priority = 100, MustRunInstantly = true)]
     void IEventListener<PlayerAided>.HandleEvent(PlayerAided e, IServiceProvider serviceProvider)
     {
         bool canRevive = _isReviving && _isInjured && _reviver != null;
@@ -502,18 +506,38 @@ public class PlayerInjureComponent : MonoBehaviour,
     {
         if (_isInjured)
         {
-            if (Time.realtimeSinceStartup - _injureStart >= InjureCooldownBeforeDamageAllowed)
+            if (Time.realtimeSinceStartup - _injureStart < InjureCooldownBeforeDamageAllowed)
             {
                 e.Cancel();
                 return;
             }
 
-            if (e.Parameters.cause != EDeathCause.KILL)
+            if (e.Parameters.cause == EDeathCause.KILL)
+                return;
+
+            if (e.Parameters.cause != EDeathCause.BLEEDING)
             {
                 // times per second simulate() is ran times bleed damage ticks = how many seconds it will take to lose 1 hp
                 float bleedsPerSecond = Time.timeScale / PlayerInput.RATE / Provider.modeConfigData.Players.Bleed_Damage_Ticks;
                 e.Parameters = _injureParameters;
                 e.Parameters.damage *= /* todo UCWarfare.Config.InjuredDamageMultiplier */ 0.4f / 10 * bleedsPerSecond * /* todo UCWarfare.Config.InjuredLifeTimeSeconds */ 30;
+            }
+            else
+            {
+                e.Parameters.cause = _injureParameters.cause;
+                e.Parameters.limb = _injureParameters.limb;
+                e.Parameters.killer = _injureParameters.killer;
+                e.Parameters.bleedingModifier = DamagePlayerParameters.Bleeding.Never;
+                e.Parameters.bonesModifier = DamagePlayerParameters.Bones.None;
+                e.Parameters.damage = 1f;
+                e.Parameters.times = 1f;
+                e.Parameters.applyGlobalArmorMultiplier = false;
+                e.Parameters.respectArmor = false;
+                e.Parameters.direction = e.Instigator != null ? (Player.Position - e.Instigator.Position).normalized : _injureParameters.direction;
+                e.Parameters.waterModifier = 0;
+                e.Parameters.foodModifier = 0;
+                e.Parameters.hallucinationModifier = 0;
+                e.Parameters.trackKill = _injureParameters.trackKill;
             }
             return;
         }
@@ -542,6 +566,7 @@ public class PlayerInjureComponent : MonoBehaviour,
             return;
         }
 
+        e.IsInjure = true;
         Injure(in e.Parameters);
         e.Cancel();
     }
@@ -553,5 +578,15 @@ public class PlayerInjureComponent : MonoBehaviour,
 
         Player.TrySetStance(EPlayerStance.STAND);
         RemoveInjureModifiers();
+    }
+
+    [EventListener(Priority = 100)]
+    void IEventListener<EnterVehicleRequested>.HandleEvent(EnterVehicleRequested e, IServiceProvider serviceProvider)
+    {
+        if (!_isInjured)
+            return;
+
+        e.Cancel();
+        _chatService.Send(Player, _playerTranslations.InjuredUIGiveUpChat);
     }
 }

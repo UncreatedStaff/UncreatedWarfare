@@ -1,4 +1,4 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -55,7 +55,8 @@ public static class F
         float smallest = 0f;
         foreach (LocationDevkitNode existingNode in LocationDevkitNodeSystem.Get().GetAllNodes())
         {
-            float dist = (point - existingNode.transform.position).GetHorizontalSqrMagnitude();
+            Vector3 nodePos = existingNode.transform.position;
+            float dist = MathUtility.SquaredDistance(in point, in nodePos, true);
             if (dist < smallest && node is not null)
                 continue;
 

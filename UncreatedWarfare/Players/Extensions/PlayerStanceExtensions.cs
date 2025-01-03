@@ -1,4 +1,5 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
+using SDG.Framework.Utilities;
 using SDG.NetTransport;
 using System;
 using Uncreated.Warfare.Util;
@@ -7,11 +8,9 @@ namespace Uncreated.Warfare.Players.Extensions;
 public static class PlayerStanceExtensions
 {
     private static readonly InstanceSetter<PlayerStance, EPlayerStance>? SetStance = Accessor.GenerateInstanceSetter<PlayerStance, EPlayerStance>("_stance", throwOnError: false);
+    private static readonly InstanceGetter<PlayerStance, float>? GetLastStanceTime = Accessor.GenerateInstanceGetter<PlayerStance, float>("lastStance", throwOnError: false);
 
-    private static readonly ClientInstanceMethod<uint, EPlayerStance, Vector3, Vector3, byte, int, int>? SendSimulateMispredictedInputs = ReflectionUtility.FindRpc<PlayerInput, ClientInstanceMethod<uint, EPlayerStance, Vector3, Vector3, byte, int, int>>("SendSimulateMispredictedInputs");
     private static readonly Action<PlayerStance, bool>? CallReplicateStance = Accessor.GenerateInstanceCaller<PlayerStance, Action<PlayerStance, bool>>("replicateStance", throwOnError: false);
-    private static readonly Action<PlayerStance, EPlayerStance>? CallInternalSetStance = Accessor.GenerateInstanceCaller<PlayerStance, Action<PlayerStance, EPlayerStance>>("internalSetStance", throwOnError: false);
-    private static readonly InstanceGetter<PlayerMovement, Vector3>? GetVelocity = Accessor.GenerateInstanceGetter<PlayerMovement, Vector3>("velocity");
 
     /// <summary>
     /// Sets the stance of the player and replicates it to everyone.
@@ -35,20 +34,23 @@ public static class PlayerStanceExtensions
 
         if (playerStance.stance == stance)
             return true;
-
+        
         playerStance.checkStance(stance, all /* notifyOwner */: true);
         if (playerStance.stance == stance)
             return true;
 
-        if (SendSimulateMispredictedInputs == null || CallInternalSetStance == null || GetVelocity == null || CallReplicateStance == null)
-            return false;
+        // ping will take care of any precision issues
+        float timeLeft = GetLastStanceTime == null
+            ? PlayerStance.COOLDOWN
+            : PlayerStance.COOLDOWN - (Time.realtimeSinceStartup - GetLastStanceTime(playerStance));
 
-        PlayerInput playerInput = player.UnturnedPlayer.input;
-        SendSimulateMispredictedInputs.Invoke(playerInput.GetNetId(), ENetReliability.Unreliable, player.Connection,
-            playerInput.simulation, stance, player.Position, GetVelocity(player.UnturnedPlayer.movement),
-            player.UnturnedPlayer.life.stamina, (int)playerInput.simulation, (int)playerInput.simulation);
-        CallInternalSetStance(playerStance, stance);
-        CallReplicateStance(playerStance, false);
+        TimeUtility.InvokeAfterDelay(() =>
+        {
+            if (!player.IsOnline)
+                return;
+
+            player.UnturnedPlayer.stance.checkStance(stance, all /* notifyOwner */: true);
+        }, timeLeft);
         return true;
     }
 }

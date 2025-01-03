@@ -1,4 +1,4 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,6 +6,7 @@ using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Models.Players;
+using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Injures;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Layouts.Teams;
@@ -57,7 +58,25 @@ public class DeathTracker : IHostedService
             }
         }
 
+        UseableThrowable.onThrowableSpawned += OnThrowableSpawned;
+
         return UniTask.CompletedTask;
+    }
+
+    private void OnThrowableSpawned(UseableThrowable useable, GameObject throwable)
+    {
+        ThrowableComponent comp = throwable.AddComponent<ThrowableComponent>();
+        PlayerDeathTrackingComponent deathTrackingComponent = PlayerDeathTrackingComponent.GetOrAdd(useable.player);
+
+        WarfarePlayer? player = _playerService.GetOnlinePlayerOrNull(useable.player);
+
+        ItemThrowableAsset asset = useable.equippedThrowableAsset;
+
+        deathTrackingComponent.ActiveThrownItems.Add(comp);
+        comp.Throwable = asset;
+        comp.Owner = player;
+        comp.ToRemoveFrom = deathTrackingComponent.ActiveThrownItems;
+        comp.Team = player?.Team ?? Team.NoTeam;
     }
 
     UniTask IHostedService.StopAsync(CancellationToken token)
@@ -86,7 +105,23 @@ public class DeathTracker : IHostedService
                 }
                 else
                 {
-                    PlayerDied e = new PlayerDied { Player = dead };
+                    PlayerDied e;
+                    
+                    if (dead.Data.TryGetValue("LastPlayerDying", out object? dyingArgs) && dyingArgs is PlayerDying dying)
+                    {
+                        dead.Data.Remove("LastPlayerDying");
+                        e = new PlayerDied(in dying.Parameters) { Player = dead };
+                    }
+                    else
+                    {
+                        DamagePlayerParameters parameters = new DamagePlayerParameters(dead.UnturnedPlayer)
+                        {
+                            limb = limb,
+                            cause = cause,
+                            killer = instigator
+                        };
+                        e = new PlayerDied(in parameters) { Player = dead };
+                    }
                     FillArgs(dead, cause, limb, instigator, e);
                     await _deathMessageResolver.BroadcastDeath(e);
                 }
@@ -121,7 +156,7 @@ public class DeathTracker : IHostedService
             return bleedOutInfo;
         }
 
-        PlayerDied e = new PlayerDied { Player = pl };
+        PlayerDied e = new PlayerDied(in parameters) { Player = pl };
         FillArgs(pl, parameters.cause, parameters.limb, parameters.killer, e);
         pl.Component<PlayerInjureComponent>().PendingDeathInfo = e;
         return e;
@@ -140,6 +175,8 @@ public class DeathTracker : IHostedService
         e.MessageCause = cause;
         e.Point = dead.Position;
         e.Session = dead.CurrentSession;
+        Interlocked.Increment(ref e.Session.EventCount);
+        e.TimeDeployed = (float)dead.Component<DeploymentComponent>().GetTimeDeployed().TotalSeconds;
         switch (cause)
         {
             // death causes only possible through PvE:
@@ -181,6 +218,7 @@ public class DeathTracker : IHostedService
         if (killer != null)
         {
             e.KillerSession = killer.CurrentSession;
+            Interlocked.Increment(ref e.KillerSession.EventCount);
             e.KillerPoint = killer.Position;
             KitPlayerComponent killerKitComp = killer.Component<KitPlayerComponent>();
             e.KillerKitName = killerKitComp.ActiveKitId;
@@ -263,7 +301,7 @@ public class DeathTracker : IHostedService
                 // checks if the dead player triggered the trap and it's on their own team.
                 if (isTriggerer && drop != null)
                 {
-                    if (drop.GetServersideData().group == deadTeam)
+                    if (deadTeam.IsFriendly(new CSteamID(drop.GetServersideData().group)))
                         e.MessageFlags |= DeathFlags.Suicide;
                     else
                         e.MessageFlags &= ~DeathFlags.Killer; // removes the killer as it's them but from the other team
@@ -275,25 +313,26 @@ public class DeathTracker : IHostedService
                     e.ThirdPartyId = triggerer.Steam64;
                     e.ThirdPartyPoint = triggerer.Position;
                     e.ThirdPartySession = triggerer.CurrentSession;
+                    Interlocked.Increment(ref e.ThirdPartySession.EventCount);
                     e.ThirdPartyTeam = triggerer.Team;
 
                     // if all 3 parties are on the same team count it as a teamkill on the triggerer, as it's likely intentional
-                    if (triggerer.Team == deadTeam && killer != null && killer.Team == deadTeam)
+                    if (triggerer.Team.IsFriendly(deadTeam) && killer != null && killer.Team.IsFriendly(deadTeam))
                     {
                         e.WasTeamkill = true;
                         e.ThirdPartyAtFault = true;
                     }
                 }
                 // if triggerer == placer, count it as a teamkill on the placer
-                else if (killer.Team == deadTeam)
+                else if (killer.Team.IsFriendly(deadTeam))
                 {
                     e.WasTeamkill = true;
                 }
             }
-            if (throwable != null && Assets.find(throwable.Throwable) is ItemThrowableAsset asset)
+            if (throwable != null && throwable.Throwable != null)
             {
                 e.MessageFlags |= DeathFlags.Item2;
-                e.SecondaryAsset = AssetLink.Create(asset);
+                e.SecondaryAsset = AssetLink.Create(throwable.Throwable);
             }
         }
         else if (killer is not null && killer.Steam64 == dead.Steam64)
@@ -308,7 +347,7 @@ public class DeathTracker : IHostedService
                 e.KillerTeam = killer.Team;
                 e.MessageFlags |= DeathFlags.Killer;
                 e.KillDistance = (killer.Position - dead.Position).magnitude;
-                if (deadTeam == e.KillerTeam)
+                if (deadTeam.IsFriendly(e.KillerTeam))
                 {
                     e.WasTeamkill = true;
                 }
@@ -361,6 +400,7 @@ public class DeathTracker : IHostedService
                             e.ThirdPartyId = e.DriverAssist.Steam64;
                             e.ThirdPartyPoint = e.DriverAssist.Position;
                             e.ThirdPartySession = e.DriverAssist.CurrentSession;
+                            Interlocked.Increment(ref e.ThirdPartySession.EventCount);
                             e.MessageFlags |= DeathFlags.Player3;
                         }
                     }
@@ -429,16 +469,13 @@ public class DeathTracker : IHostedService
                 if (killerData == null)
                     break;
 
-                ThrowableComponent? comp = killerData.ActiveThrownItems.FirstOrDefault(x => x.isActiveAndEnabled && x.IsExplosive);
+                ThrowableComponent? comp = killerData.ActiveThrownItems.FirstOrDefault(x => x.isActiveAndEnabled && x.Throwable is { isExplosive: true });
                 if (comp == null)
                     break;
 
-                ItemThrowableAsset throwable = Assets.find<ItemThrowableAsset>(comp.Throwable);
-                if (throwable != null)
-                {
-                    e.MessageFlags |= DeathFlags.Item;
-                    e.PrimaryAsset = AssetLink.Create(throwable);
-                }
+                ItemThrowableAsset throwable = comp.Throwable!; // null checked in linq ^
+                e.MessageFlags |= DeathFlags.Item;
+                e.PrimaryAsset = AssetLink.Create(throwable);
                 break;
 
             case EDeathCause.SHRED:
@@ -482,6 +519,7 @@ public class DeathTracker : IHostedService
                         e.ThirdPartyId = e.DriverAssist.Steam64;
                         e.ThirdPartyPoint = e.DriverAssist.Position;
                         e.ThirdPartySession = e.DriverAssist.CurrentSession;
+                        Interlocked.Increment(ref e.ThirdPartySession.EventCount);
                         e.MessageFlags |= DeathFlags.Player3;
                     }
                 }
@@ -513,6 +551,7 @@ public class DeathTracker : IHostedService
                                 e.ThirdPartyId = e.DriverAssist.Steam64;
                                 e.ThirdPartyPoint = e.DriverAssist.Position;
                                 e.ThirdPartySession = e.DriverAssist.CurrentSession;
+                                Interlocked.Increment(ref e.ThirdPartySession.EventCount);
                                 e.MessageFlags |= DeathFlags.Player3;
                             }
                         }
@@ -676,8 +715,8 @@ public class DeathTracker : IHostedService
             case EDeathCause.GRENADE:
                 if (killerData != null)
                 {
-                    ThrowableComponent? comp = killerData.ActiveThrownItems.FirstOrDefault(x => x.IsExplosive);
-                    item1 = comp == null ? null : AssetLink.Create<ItemThrowableAsset>(comp.Throwable);
+                    ThrowableComponent? comp = killerData.ActiveThrownItems.FirstOrDefault(x => x.Throwable is { isExplosive: true });
+                    item1 = comp == null ? null : AssetLink.Create(comp.Throwable);
                 }
                 else item1 = null;
                 break;
@@ -723,7 +762,7 @@ public class DeathTracker : IHostedService
                 }
 
                 item1 = drop != null ? AssetLink.Create(drop.asset) : null;
-                item2 = throwable != null ? AssetLink.Create<ItemThrowableAsset>(throwable.Throwable) : null;
+                item2 = throwable != null ? AssetLink.Create(throwable.Throwable) : null;
                 break;
 
             case EDeathCause.MISSILE:
@@ -791,7 +830,7 @@ public class DeathTracker : IHostedService
 
         WarfarePlayer dead = _playerService.GetOnlinePlayer(parameters.player);
 
-        PlayerDied e = new PlayerDied { Player = dead };
+        PlayerDied e = new PlayerDied(in parameters) { Player = dead };
         FillArgs(dead, parameters.cause, parameters.limb, parameters.killer, e);
         e.WasBleedout = true;
 

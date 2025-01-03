@@ -90,6 +90,9 @@ partial class EventDispatcher
         ILifetimeScope? scope = data.Scope;
 
         WarfarePlayer newPlayer = implPlayerService.CreateWarfarePlayer(steamPlayer.player, in data);
+
+        SubscribePlayerEvents(newPlayer);
+
         newPlayer.UpdateTeam(team);
 
         PlayerJoined args = new PlayerJoined

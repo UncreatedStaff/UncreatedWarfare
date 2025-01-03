@@ -1,4 +1,4 @@
-﻿using DanielWillett.SpeedBytes;
+using DanielWillett.SpeedBytes;
 using System;
 using System.Buffers.Binary;
 using System.Data;
@@ -240,7 +240,7 @@ public readonly struct HWID : IEquatable<HWID>
             return false;
 
         byte* data = stackalloc byte[Size];
-        int offset = str[0] == '0' && str[1] == 'x' ? 2 : 0;
+        int offset = str[0] == '0' && str[1] is 'x' or 'X' ? 2 : 0;
         if (offset == 2 && str.Length != 42)
             return false;
         

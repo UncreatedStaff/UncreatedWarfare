@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Globalization;
 using Uncreated.Framework.UI;
 using Uncreated.Warfare.Configuration;
@@ -23,6 +23,16 @@ public readonly struct UnturnedAssetReference
     {
         Guid = assetContainer.Guid;
         Id = Guid == Guid.Empty ? assetContainer.Id : (ushort)0;
+    }
+    public UnturnedAssetReference(Asset? asset)
+    {
+        if (asset == null)
+        {
+            return;
+        }
+
+        Guid = asset.GUID;
+        Id = Guid == Guid.Empty ? asset.id : (ushort)0;
     }
     public UnturnedAssetReference(Guid guid)
     {

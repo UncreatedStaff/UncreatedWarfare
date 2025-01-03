@@ -1070,15 +1070,6 @@ internal static class T
     public static readonly Translation<Flag> PhaseBreifingInvasionDefense = new Translation<Flag>("PREPARATION PHASE\nFORTIFY {0}", TranslationOptions.TMProUI, Flags.ColorShortNameFormat);
     #endregion
 
-    #region Injured UI
-    [TranslationData(SectionRevives)]
-    public static readonly Translation InjuredUIHeader = new Translation("You are injured", TranslationOptions.TMProUI);
-    [TranslationData(SectionRevives)]
-    public static readonly Translation InjuredUIGiveUp = new Translation("Press <color=#cecece><b><plugin_2/></b></color> to give up.", TranslationOptions.TMProUI);
-    [TranslationData(SectionRevives)]
-    public static readonly Translation InjuredUIGiveUpChat = new Translation("<#ff8c69>You were injured, press <color=#cedcde><plugin_2/></color> to give up.");
-    #endregion
-
     #region Insurgency
     private const string SectionInsurgency = "Gamemode Insurgency";
     [TranslationData(SectionInsurgency)]

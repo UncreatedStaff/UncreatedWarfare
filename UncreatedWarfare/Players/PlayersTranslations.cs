@@ -1,4 +1,4 @@
-﻿using Uncreated.Warfare.FOBs.Deployment;
+using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Addons;
@@ -83,4 +83,13 @@ public sealed class PlayersTranslations : PropertiesTranslationCollection
 
     [TranslationData("Goes on the warning UI.")]
     public readonly Translation MortarWarning = new Translation("FRIENDLY MORTAR\nINCOMING", TranslationOptions.TMProUI);
+
+    [TranslationData("Sent on the injure UI.")]
+    public readonly Translation InjuredUIHeader = new Translation("You are injured", TranslationOptions.TMProUI);
+
+    [TranslationData("Sent on the injure UI telling the player how to give up")]
+    public readonly Translation InjuredUIGiveUp = new Translation("Press <color=#cecece><b><plugin_2/></b></color> to give up.", TranslationOptions.TMProUI);
+
+    [TranslationData("Sent in chat to tell the player how to give up.")]
+    public readonly Translation InjuredUIGiveUpChat = new Translation("<#ff8c69>You were injured, press <color=#cedcde><plugin_2/></color> to give up.");
 }
