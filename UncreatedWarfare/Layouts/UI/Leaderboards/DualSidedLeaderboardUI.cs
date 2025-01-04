@@ -202,12 +202,15 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
             LeaderboardSet leaderboardSet = _sets[i];
             Squad topSquad = _squadManager.Squads.Aggregate((s1, s2) =>
             {
-                double s1AverageScore = s1.Members.Sum(m => m.CachedPoints.XP) / s1.Members.Count;
-                double s2AverageScore = s2.Members.Sum(m => m.CachedPoints.XP) / s2.Members.Count;
+                double s1AverageScore = s1.Members.Sum(m => leaderboardSet.GetStatisticValue(KnownStatNames.XP, m.Steam64)) / s1.Members.Count;
+                double s2AverageScore = s2.Members.Sum(m => leaderboardSet.GetStatisticValue(KnownStatNames.XP, m.Steam64)) / s2.Members.Count;
                 return s1AverageScore > s2AverageScore ? s1 : s2;
             });
 
             TopSquad squadElement = TopSquads[i];
+            
+            double totalSquadXP = topSquad.Members.Sum(m => leaderboardSet.GetStatisticValue(KnownStatNames.XP, m.Steam64));
+            string totalSquadXPWithHeader = $"Squad XP: <#ccffd4>{totalSquadXP.ToString("F0", set.Culture)}</color>";
             
             while (set.MoveNext())
             {
@@ -229,8 +232,6 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
                     memberElement.SetText(set.Next.Connection, $"<mspace=2em>{classIcon}</mspace> {memberName}");
                 }
                 
-                double totalSquadXP = topSquad.Members.Sum(m => m.CachedPoints.XP);
-                string totalSquadXPWithHeader = $"Squad XP: <#ccffd4>{totalSquadXP.ToString("F0", set.Culture)}</color>";
                 squadElement.ImportantStatistic.SetText(set.Next.Connection, totalSquadXPWithHeader);
             }
             set.Reset();

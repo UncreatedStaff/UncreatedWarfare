@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -78,7 +78,7 @@ public class LeaderboardSet
         _inverseSortMaps = new int[visibleStats.Length * 2][];
     }
 
-    public double GetStatisticValue(string statName, CSteamID player, double value)
+    public double GetStatisticValue(string statName, CSteamID player)
     {
         int statIndex = -1;
         for (int i = 0; i < Stats.Length; ++i)
