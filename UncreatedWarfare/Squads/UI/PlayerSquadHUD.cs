@@ -14,6 +14,7 @@ namespace Uncreated.Warfare.Squads.UI;
 public class PlayerSquadHUD : UnturnedUI, IEventListener<SquadMemberJoined>, IEventListener<SquadMemberLeft>
 {
     public UnturnedLabel SquadName { get; } = new UnturnedLabel("PlayerSquadName");
+    public UnturnedLabel SquadNumber { get; } = new UnturnedLabel("PlayerSquadName/PlayerSquadNumber");
     public UnturnedLabel[] SquadMembers { get; } = ElementPatterns.CreateArray<UnturnedLabel>("PlayerSquadMember_{0}", 1, to: 6);
 
     public PlayerSquadHUD(AssetConfiguration assetConfig, ILoggerFactory loggerFactory)
@@ -37,7 +38,8 @@ public class PlayerSquadHUD : UnturnedUI, IEventListener<SquadMemberJoined>, IEv
     }
     private void UpdateForPlayer(WarfarePlayer player, Squad squad)
     {
-        SquadName.SetText(player, $"{squad.Name.ToUpper()}  {squad.Members.Count}/{Squad.MaxMembers}");
+        SquadName.SetText(player, $"{squad.Name}  {squad.Members.Count}/{Squad.MaxMembers}");
+        SquadNumber.SetText(player, squad.TeamIdentificationNumber.ToString());
         for (int i = 0; i < SquadMembers.Length; i++)
         {
             UnturnedLabel element = SquadMembers[i];
