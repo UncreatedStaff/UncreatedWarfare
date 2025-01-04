@@ -3,6 +3,7 @@ using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Models.Structures;
 using Uncreated.Warfare.Events.Patches;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Util;
@@ -87,7 +88,7 @@ partial class EventDispatcher
         if (!shouldAllow)
             return;
 
-        DestroyerComponent.AddOrUpdate(structure.model.gameObject, instigatorClient.playerID.steamID.m_SteamID, EDamageOrigin.Unknown);
+        DestroyerComponent.AddOrUpdate(structure.model.gameObject, instigatorClient.playerID.steamID.m_SteamID, true, EDamageOrigin.Unknown);
 
         WarfarePlayer player = _playerService.GetOnlinePlayer(instigatorClient);
 
@@ -104,7 +105,8 @@ partial class EventDispatcher
             InstanceId = structure.instanceID,
             Structure = structure,
             ServersideData = structure.GetServersideData(),
-            RegionPosition = new RegionCoord(x, y)
+            RegionPosition = new RegionCoord(x, y),
+            InstigatorTeam = player.Team
         };
 
         BuildableExtensions.SetDestroyInfo(structure.model, args, null);
@@ -112,7 +114,7 @@ partial class EventDispatcher
         try
         {
             bool shouldAllowTemp = shouldAllow;
-            BuildableExtensions.SetSalvageInfo(structure.model, instigatorClient.playerID.steamID, true, salvageInfo =>
+            BuildableExtensions.SetSalvageInfo(structure.model, EDamageOrigin.Unknown, instigatorClient.playerID.steamID, true, salvageInfo =>
             {
                 if (salvageInfo is not ISalvageListener listener)
                     return true;
@@ -138,7 +140,7 @@ partial class EventDispatcher
                     return;
 
                 // re-apply ISalvageInfo components
-                BuildableExtensions.SetSalvageInfo(args.Transform, args.Steam64, true, null);
+                BuildableExtensions.SetSalvageInfo(args.Transform, EDamageOrigin.Unknown, args.Steam64, true, null);
 
                 if (asset != null)
                 {
@@ -171,7 +173,7 @@ partial class EventDispatcher
             // undo setting this if the task needs continuing, it'll be re-set later
             if (!shouldAllow)
             {
-                BuildableExtensions.SetSalvageInfo(structure.model, null, false, null);
+                BuildableExtensions.SetSalvageInfo(structure.model, EDamageOrigin.Unknown, null, false, null);
             }
         }
     }
@@ -199,10 +201,12 @@ partial class EventDispatcher
             return;
         }
 
+        WarfarePlayer? player = _playerService.GetOnlinePlayerOrNull(instigatorSteamId);
+
         DamageStructureRequested args = new DamageStructureRequested(region)
         {
             InstigatorId = instigatorSteamId,
-            Instigator = _playerService.GetOnlinePlayerOrNull(instigatorSteamId),
+            Instigator = player,
             InstanceId = drop.instanceID,
             Structure = drop,
             DamageOrigin = damageOrigin,
@@ -215,7 +219,8 @@ partial class EventDispatcher
             ServersideData = drop.GetServersideData(),
             RegionIndex = (ushort)index,
             Damage = pendingTotalDamage,
-            Direction = StructureManagerSaveDirecction.LastDirection
+            Direction = StructureManagerSaveDirecction.LastDirection,
+            InstigatorTeam = player?.Team ?? Team.NoTeam
         };
 
         EventContinuations.Dispatch(args, this, _unloadToken, out shouldAllow, continuation: args =>

@@ -1,15 +1,13 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Interaction.Commands;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Signs;
 using Uncreated.Warfare.Translations;
-using Uncreated.Warfare.Tweaks;
 
 namespace Uncreated.Warfare.Commands;
 
@@ -18,10 +16,7 @@ internal sealed class DutyCommand : IExecutableCommand
 {
     private readonly UserPermissionStore _permissions;
     private readonly WarfareModule _warfare;
-    private readonly SignInstancer _signs;
-    private readonly DutyCommandTranslations _translations;
-    private readonly ITranslationService _translationService;
-    private readonly ChatService _chatService;
+    private readonly DutyService _dutyService;
 
     /// <inheritdoc />
     public required CommandContext Context { get; init; }
@@ -29,17 +24,11 @@ internal sealed class DutyCommand : IExecutableCommand
     public DutyCommand(
         UserPermissionStore permissions,
         WarfareModule warfare,
-        SignInstancer signs,
-        TranslationInjection<DutyCommandTranslations> translations,
-        ITranslationService translationService,
-        ChatService chatService)
+        DutyService dutyService)
     {
-        _translations = translations.Value;
         _permissions = permissions;
         _warfare = warfare;
-        _signs = signs;
-        _translationService = translationService;
-        _chatService = chatService;
+        _dutyService = dutyService;
     }
 
     /// <inheritdoc />
@@ -59,45 +48,46 @@ internal sealed class DutyCommand : IExecutableCommand
         string adminOnDuty  = permSection["admin_on_duty" ] ?? throw Context.SendUnknownError();
         string owner        = permSection["owner"         ] ?? throw Context.SendUnknownError();
 
-        bool wasOnDuty = false, isAdmin = false, isTrial = false, isStaff = false, isOwner = false;
+        bool wasOnDuty = false;
+        DutyLevel level = DutyLevel.Member;
         if (permGroups.Any(x => x.Id.Equals(owner, StringComparison.Ordinal)))
         {
             wasOnDuty = true;
-            isOwner = true;
+            level = DutyLevel.Owner;
         }
         else if (Context.CallerId.m_SteamID is 76561198267927009ul or 76561198857595123ul)
         {
-            isOwner = true;
+            level = DutyLevel.Owner;
         }
         else if (permGroups.Any(x => x.Id.Equals(adminOnDuty, StringComparison.Ordinal)))
         {
             wasOnDuty = true;
-            isAdmin = true;
+            level = DutyLevel.Admin;
         }
         else if (permGroups.Any(x => x.Id.Equals(adminOffDuty, StringComparison.Ordinal)))
         {
-            isAdmin = true;
+            level = DutyLevel.Admin;
         }
         else if (permGroups.Any(x => x.Id.Equals(trialOnDuty, StringComparison.Ordinal)))
         {
             wasOnDuty = true;
-            isTrial = true;
+            level = DutyLevel.TrialAdmin;
         }
         else if (permGroups.Any(x => x.Id.Equals(trialOffDuty, StringComparison.Ordinal)))
         {
-            isTrial = true;
+            level = DutyLevel.TrialAdmin;
         }
         else if (permGroups.Any(x => x.Id.Equals(staffOnDuty, StringComparison.Ordinal)))
         {
             wasOnDuty = true;
-            isStaff = true;
+            level = DutyLevel.Staff;
         }
         else if (permGroups.Any(x => x.Id.Equals(staffOffDuty, StringComparison.Ordinal)))
         {
-            isStaff = true;
+            level = DutyLevel.Staff;
         }
-        
-        if (!isStaff && !isTrial && !isAdmin && !isOwner)
+
+        if (level == DutyLevel.Member)
         {
             throw Context.SendNoPermission();
         }
@@ -106,11 +96,11 @@ internal sealed class DutyCommand : IExecutableCommand
         {
             await _permissions.RemovePermissionGroupsAsync(Context.CallerId, [ adminOnDuty, trialOnDuty, staffOnDuty, owner ], CancellationToken.None).ConfigureAwait(false);
 
-            if (isAdmin || isOwner)
+            if (level is DutyLevel.Admin or DutyLevel.Owner)
             {
                 await _permissions.AddPermissionGroupsAsync(Context.CallerId, [ adminOffDuty, trialOffDuty, staffOffDuty ], CancellationToken.None).ConfigureAwait(false);
             }
-            else if (isTrial)
+            else if (level == DutyLevel.TrialAdmin)
             {
                 await _permissions.AddPermissionGroupsAsync(Context.CallerId, [ trialOffDuty, staffOffDuty ], CancellationToken.None).ConfigureAwait(false);
             }
@@ -123,15 +113,15 @@ internal sealed class DutyCommand : IExecutableCommand
         {
             await _permissions.RemovePermissionGroupsAsync(Context.CallerId, [ adminOffDuty, trialOffDuty, staffOffDuty ], CancellationToken.None).ConfigureAwait(false);
 
-            if (isOwner)
+            if (level == DutyLevel.Owner)
             {
                 await _permissions.AddPermissionGroupsAsync(Context.CallerId, [ adminOnDuty, trialOnDuty, staffOnDuty, owner ], CancellationToken.None).ConfigureAwait(false);
             }
-            else if (isAdmin)
+            else if (level == DutyLevel.Admin)
             {
                 await _permissions.AddPermissionGroupsAsync(Context.CallerId, [ adminOnDuty, trialOnDuty, staffOnDuty ], CancellationToken.None).ConfigureAwait(false);
             }
-            else if (isTrial)
+            else if (level == DutyLevel.TrialAdmin)
             {
                 await _permissions.AddPermissionGroupsAsync(Context.CallerId, [ trialOnDuty, staffOnDuty ], CancellationToken.None).ConfigureAwait(false);
             }
@@ -145,65 +135,14 @@ internal sealed class DutyCommand : IExecutableCommand
 
         if (wasOnDuty)
         {
-            ClearAdminPermissions(Context.Player);
-
-            Context.Reply(_translations.DutyOffFeedback);
-            _chatService.Broadcast(_translationService.SetOf.AllPlayersExcept(Context.CallerId.m_SteamID), _translations.DutyOffBroadcast, Context.Player);
-
-            Context.Logger.LogInformation("{0} ({1}) went off duty (owner: {2}, admin: {3}, trial admin: {4}, staff: {5}).", Context.Player.Names.GetDisplayNameOrPlayerName(), Context.CallerId, isOwner, isAdmin, isTrial, isStaff);
-            ActionLog.Add(ActionLogType.DutyChanged, "OFF DUTY", Context.CallerId.m_SteamID);
-
-            // PlayerManager.NetCalls.SendDutyChanged.NetInvoke(Context.CallerId.m_SteamID, false);
+            await _dutyService.ApplyOffDuty(Context.Player, level, CancellationToken.None);
         }
         else
         {
-            Context.Reply(_translations.DutyOnFeedback);
-            _chatService.Broadcast(_translationService.SetOf.AllPlayersExcept(Context.CallerId.m_SteamID), _translations.DutyOnBroadcast, Context.Player);
-
-            Context.Logger.LogInformation("{0} ({1}) went on duty (owner: {2}, admin: {3}, trial admin: {4}, staff: {5}).", Context.Player.Names.GetDisplayNameOrPlayerName(), Context.CallerId, isOwner, isAdmin, isTrial, isStaff);
-            ActionLog.Add(ActionLogType.DutyChanged, "ON DUTY", Context.CallerId.m_SteamID);
-
-            // PlayerManager.NetCalls.SendDutyChanged.NetInvoke(Context.CallerId.m_SteamID, true);
-
-            GiveAdminPermissions(Context.Player, isAdmin);
-        }
-    }
-
-    private void ClearAdminPermissions(WarfarePlayer player)
-    {
-        if (player.UnturnedPlayer != null)
-        {
-            if (player.UnturnedPlayer.look != null)
-            {
-                player.UnturnedPlayer.look.sendFreecamAllowed(false);
-                player.UnturnedPlayer.look.sendWorkzoneAllowed(false);
-            }
-
-            if (player.UnturnedPlayer.movement != null)
-            {
-                if (player.UnturnedPlayer.movement.pluginSpeedMultiplier != 1f)
-                    player.UnturnedPlayer.movement.sendPluginSpeedMultiplier(1f);
-                if (player.UnturnedPlayer.movement.pluginJumpMultiplier != 1f)
-                    player.UnturnedPlayer.movement.sendPluginJumpMultiplier(1f);
-            }
+            await _dutyService.ApplyOnDuty(Context.Player, level, CancellationToken.None);
         }
 
-        player.Component<PlayerJumpComponent>().IsActive = false;
-        player.Component<VanishPlayerComponent>().IsActive = false;
-        player.Component<GodPlayerComponent>().IsActive = false;
-
-        _signs.UpdateSigns<KitSignInstanceProvider>(player);
-    }
-
-    private void GiveAdminPermissions(WarfarePlayer player, bool isAdmin)
-    {
-        if (player.UnturnedPlayer.look != null)
-        {
-            player.UnturnedPlayer.look.sendFreecamAllowed(isAdmin);
-            player.UnturnedPlayer.look.sendWorkzoneAllowed(isAdmin);
-        }
-
-        _signs.UpdateSigns<KitSignInstanceProvider>(player);
+        Context.Defer();
     }
 }
 

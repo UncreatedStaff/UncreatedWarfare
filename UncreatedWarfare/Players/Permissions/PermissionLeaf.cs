@@ -1,4 +1,4 @@
-﻿using DanielWillett.SpeedBytes;
+using DanielWillett.SpeedBytes;
 using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -124,7 +124,9 @@ public readonly struct PermissionLeaf : IEquatable<PermissionLeaf>, IEquatable<P
 
         string prefix = GetPrefix();
         Color32 prefixColor = Unturned ? new Color32(99, 123, 99, 255) : Warfare ? new Color32(156, 182, 164, 255) : new Color32(221, 221, 221, 255);
-        return formatter.Colorize(prefix, prefixColor, parameters.Options) + "<color=#737373>::</color>" + formatter.Colorize(Path, new Color32(211, 222, 214, 255), parameters.Options);
+        return formatter.Colorize(prefix, prefixColor, parameters.Options)
+               + formatter.Colorize("::", new Color32(115, 115, 115, 255), parameters.Options)
+               + formatter.Colorize(Path, new Color32(211, 222, 214, 255), parameters.Options);
     }
 
     public bool Equals(PermissionBranch branch) => branch.Equals((PermissionBranch)this);

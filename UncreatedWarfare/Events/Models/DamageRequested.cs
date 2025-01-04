@@ -1,7 +1,8 @@
-﻿using Uncreated.Warfare.Buildables;
+using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Events.Models.Structures;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Models.Buildables;
 using Uncreated.Warfare.Players;
 
@@ -57,6 +58,12 @@ public abstract class DamageRequested(object region) : CancellableEvent, IBuilda
     /// <remarks>Can be changed.</remarks>
     public required float Damage { get; set; }
 
+    /// <summary>
+    /// The team that was responsible for the buildable being destroyed.
+    /// </summary>
+    public required Team InstigatorTeam { get; init; }
+
+    bool IBuildableDestroyedEvent.WasSalvaged => false;
     EDamageOrigin IBuildableDestroyedEvent.DamageOrigin => EDamageOrigin.Unknown;
     IAssetLink<ItemAsset>? IBuildableDestroyedEvent.PrimaryAsset => null;
     IAssetLink<ItemAsset>? IBuildableDestroyedEvent.SecondaryAsset => null;

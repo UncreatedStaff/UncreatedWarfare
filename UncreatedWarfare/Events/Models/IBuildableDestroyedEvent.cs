@@ -1,5 +1,6 @@
-﻿using Uncreated.Warfare.Buildables;
+using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Events.Models;
@@ -58,4 +59,14 @@ public interface IBuildableDestroyedEvent
     /// Secondary item used to destroy the buildable.
     /// </summary>
     IAssetLink<ItemAsset>? SecondaryAsset { get; }
+
+    /// <summary>
+    /// If the buildable was salvaged.
+    /// </summary>
+    bool WasSalvaged { get; }
+
+    /// <summary>
+    /// The team that was responsible for the buildable being destroyed.
+    /// </summary>
+    Team InstigatorTeam { get; }
 }

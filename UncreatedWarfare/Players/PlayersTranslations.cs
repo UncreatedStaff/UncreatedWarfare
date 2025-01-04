@@ -92,4 +92,10 @@ public sealed class PlayersTranslations : PropertiesTranslationCollection
 
     [TranslationData("Sent in chat to tell the player how to give up.")]
     public readonly Translation InjuredUIGiveUpChat = new Translation("<#ff8c69>You were injured, press <color=#cedcde><plugin_2/></color> to give up.");
+
+    [TranslationData("Sent when a player tries to heal an injured player when they're not a medic.")]
+    public readonly Translation ReviveNotMedic = new Translation("<#bdae9d>Only a <color=#ff758f>MEDIC</color> can heal or revive teammates.");
+
+    [TranslationData("Sent when a player tries to revive an enemy.")]
+    public readonly Translation ReviveHealEnemies = new Translation("<#bdae9d>You cannot aid enemy soldiers.");
 }

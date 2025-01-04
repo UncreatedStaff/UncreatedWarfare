@@ -1,10 +1,9 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
 using StackCleaner;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
 using System.Reflection;
 using System.Text;
 using Uncreated.Warfare.Translations;
@@ -23,12 +22,20 @@ internal struct WarfareFormattedLogValues
     [ThreadStatic]
     private static char[] _formatBuffer;
 
-    internal static readonly ColorSetting NumberDefault = (TerminalColorHelper.ToArgb(new Color32(181, 206, 168, 255)), ConsoleColor.DarkYellow);
-    internal static readonly ColorSetting StructDefault = (TerminalColorHelper.ToArgb(new Color32(134, 198, 145, 255)), ConsoleColor.DarkGreen);
-    internal static readonly ColorSetting EnumDefault = (TerminalColorHelper.ToArgb(new Color32(184, 215, 163, 255)), ConsoleColor.DarkYellow);
-    internal static readonly ColorSetting InterfaceDefault = (TerminalColorHelper.ToArgb(new Color32(184, 215, 163, 255)), ConsoleColor.DarkYellow);
-    internal static readonly ColorSetting ObjectDefault = (TerminalColorHelper.ToArgb(new Color32(78, 201, 176, 255)), ConsoleColor.DarkCyan);
-    internal static readonly ColorSetting SymbolsDefault = (TerminalColorHelper.ToArgb(new Color32(220, 220, 220, 255)), ConsoleColor.Gray);
+    internal static readonly Color32 NumberColor = new Color32(181, 206, 168, 255);
+    internal static readonly Color32 StructColor = new Color32(134, 198, 145, 255);
+    internal static readonly Color32 EnumColor = new Color32(184, 215, 163, 255);
+    internal static readonly Color32 InterfaceColor = new Color32(184, 215, 163, 255);
+    internal static readonly Color32 ObjectColor = new Color32(78, 201, 176, 255);
+    internal static readonly Color32 SymbolsColor = new Color32(220, 220, 220, 255);
+
+
+    internal static readonly ColorSetting NumberDefault = (TerminalColorHelper.ToArgb(NumberColor), ConsoleColor.DarkYellow);
+    internal static readonly ColorSetting StructDefault = (TerminalColorHelper.ToArgb(StructColor), ConsoleColor.DarkGreen);
+    internal static readonly ColorSetting EnumDefault = (TerminalColorHelper.ToArgb(EnumColor), ConsoleColor.DarkYellow);
+    internal static readonly ColorSetting InterfaceDefault = (TerminalColorHelper.ToArgb(InterfaceColor), ConsoleColor.DarkYellow);
+    internal static readonly ColorSetting ObjectDefault = (TerminalColorHelper.ToArgb(ObjectColor), ConsoleColor.DarkCyan);
+    internal static readonly ColorSetting SymbolsDefault = (TerminalColorHelper.ToArgb(SymbolsColor), ConsoleColor.Gray);
 
     internal static readonly Dictionary<Type, ColorSetting> Colors = new Dictionary<Type, (int, ConsoleColor)>(36)
     {

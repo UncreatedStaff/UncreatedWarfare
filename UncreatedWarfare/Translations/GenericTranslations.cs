@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Uncreated.Warfare.Translations.Addons;
 using Uncreated.Warfare.Translations.Util;
 

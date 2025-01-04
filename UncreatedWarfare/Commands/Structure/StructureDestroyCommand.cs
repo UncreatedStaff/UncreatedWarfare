@@ -103,7 +103,8 @@ internal sealed class StructureDestroyCommand : IExecutableCommand
             Barricade = bDrop,
             ServersideData = bDrop.GetServersideData(),
             RegionPosition = new RegionCoord(x, y),
-            VehicleRegionIndex = plant
+            VehicleRegionIndex = plant,
+            InstigatorTeam = player.Team
         };
 
         BuildableExtensions.SetDestroyInfo(bDrop.model, args, null);
@@ -111,7 +112,7 @@ internal sealed class StructureDestroyCommand : IExecutableCommand
         try
         {
             bool shouldAllowTemp = shouldAllow;
-            BuildableExtensions.SetSalvageInfo(bDrop.model, Context.CallerId, true, salvageInfo =>
+            BuildableExtensions.SetSalvageInfo(bDrop.model, EDamageOrigin.Unknown, Context.CallerId, true, salvageInfo =>
             {
                 if (salvageInfo is not ISalvageListener listener)
                     return true;
@@ -137,7 +138,7 @@ internal sealed class StructureDestroyCommand : IExecutableCommand
                     return;
 
                 // re-apply ISalvageInfo components
-                BuildableExtensions.SetSalvageInfo(args.Transform, args.Steam64, true, null);
+                BuildableExtensions.SetSalvageInfo(args.Transform, EDamageOrigin.Unknown, args.Steam64, true, null);
 
                 if (!BarricadeManager.tryGetRegion(args.Barricade.model, out byte x, out byte y, out ushort plant, out _))
                 {
@@ -154,7 +155,7 @@ internal sealed class StructureDestroyCommand : IExecutableCommand
             // undo setting this if the task needs continuing, it'll be re-set later
             if (!shouldAllow)
             {
-                BuildableExtensions.SetSalvageInfo(bDrop.model, null, false, null);
+                BuildableExtensions.SetSalvageInfo(bDrop.model, EDamageOrigin.Unknown, null, false, null);
             }
         }
 
@@ -179,7 +180,8 @@ internal sealed class StructureDestroyCommand : IExecutableCommand
             InstanceId = sDrop.instanceID,
             Structure = sDrop,
             ServersideData = sDrop.GetServersideData(),
-            RegionPosition = new RegionCoord(x, y)
+            RegionPosition = new RegionCoord(x, y),
+            InstigatorTeam = player.Team
         };
 
         BuildableExtensions.SetDestroyInfo(sDrop.model, args, null);
@@ -187,7 +189,7 @@ internal sealed class StructureDestroyCommand : IExecutableCommand
         bool shouldAllow = true;
         try
         {
-            BuildableExtensions.SetSalvageInfo(sDrop.model, Context.CallerId, true, salvageInfo =>
+            BuildableExtensions.SetSalvageInfo(sDrop.model, EDamageOrigin.Unknown, Context.CallerId, true, salvageInfo =>
             {
                 if (salvageInfo is not ISalvageListener listener)
                     return true;
@@ -211,7 +213,7 @@ internal sealed class StructureDestroyCommand : IExecutableCommand
                     return;
 
                 // re-apply ISalvageInfo components
-                BuildableExtensions.SetSalvageInfo(args.Transform, args.Steam64, true, null);
+                BuildableExtensions.SetSalvageInfo(args.Transform, EDamageOrigin.Unknown, args.Steam64, true, null);
 
                 if (!StructureManager.tryGetRegion(args.Structure.model, out byte x, out byte y, out _))
                 {
@@ -227,7 +229,7 @@ internal sealed class StructureDestroyCommand : IExecutableCommand
         {
             if (!shouldAllow)
             {
-                BuildableExtensions.SetSalvageInfo(sDrop.model, null, false, null);
+                BuildableExtensions.SetSalvageInfo(sDrop.model, EDamageOrigin.Unknown, null, false, null);
             }
         }
 

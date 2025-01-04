@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
@@ -6,7 +6,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 using Uncreated.Warfare.Models.GameData;
 using Uncreated.Warfare.Models.Users;
 
-namespace Uncreated.Warfare.Models.Stats.Base;
+namespace Uncreated.Warfare.Models.Stats;
 
 [NotMapped, Index(nameof(Team))]
 public abstract class BasePlayerRecord

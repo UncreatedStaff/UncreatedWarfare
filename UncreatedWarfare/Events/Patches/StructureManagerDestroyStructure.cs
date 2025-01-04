@@ -1,4 +1,4 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
 using HarmonyLib;
 using System;
@@ -7,6 +7,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Models.Structures;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Patches;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
@@ -102,13 +103,18 @@ internal sealed class StructureManagerDestroyStructure : IHarmonyPatch
 
         ulong destroyer;
         EDamageOrigin origin = EDamageOrigin.Unknown;
+        bool wasSalvaged = false;
         if (structure.model.TryGetComponent(out DestroyerComponent comp))
         {
             destroyer = comp.Destroyer;
             float time = comp.RelevantTime;
             if (destroyer != 0 && Time.realtimeSinceStartup - time > 1f)
                 destroyer = 0ul;
-            else origin = comp.DamageOrigin;
+            else
+            {
+                origin = comp.DamageOrigin;
+                wasSalvaged = comp.Salvaged;
+            }
             Object.Destroy(comp);
         }
         else
@@ -129,8 +135,10 @@ internal sealed class StructureManagerDestroyStructure : IHarmonyPatch
             InstanceId = structure.instanceID,
             RegionPosition = new RegionCoord(x, y),
             DamageOrigin = origin,
-            InstigatorId = new CSteamID(destroyer)
+            InstigatorId = new CSteamID(destroyer),
+            WasSalvaged = wasSalvaged,
             // todo Primary and Secondary assets need filling
+            InstigatorTeam = player?.Team ?? Team.NoTeam
         };
 
         BuildableExtensions.SetDestroyInfo(structure.model, args, null);

@@ -1,4 +1,4 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Concurrent;
@@ -10,7 +10,10 @@ using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Framework.UI;
+using Uncreated.Warfare.Logging.Formatting;
 using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.Addons;
+using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Translations.ValueFormatters;
 using YamlDotNet.Core;
 using YamlDotNet.Core.Events;
@@ -49,6 +52,11 @@ public interface IAssetLink<out TAsset> : IAssetContainer, IEquatable<IAssetLink
 
 public static class AssetLink
 {
+    public static readonly SpecialFormat AssetLinkDescriptive = new SpecialFormat("Descriptive", "d", useForToString: false);
+    public static readonly SpecialFormat AssetLinkFriendly = new SpecialFormat("Friendly", "f", useForToString: false);
+    public static readonly SpecialFormat AssetLinkDescriptiveNoColor = new SpecialFormat("Descriptive (no color)", "nd", useForToString: false);
+    public static readonly SpecialFormat AssetLinkFriendlyNoColor = new SpecialFormat("Friendly (no color)", "nf", useForToString: false);
+
     /// <summary>
     /// Create an asset link from a GUID in string form.
     /// </summary>
@@ -892,22 +900,99 @@ public static class AssetLink
             if (Id != 0)
                 return "\"" + asset.name + "\" (" +
                        UCAssetManager.GetAssetCategory<TAsset>() + "/" +
-                       Id.ToString("D", CultureInfo.InvariantCulture) + ")";
+                       Id.ToString("F0", CultureInfo.InvariantCulture) + ")";
 
             return "\"" + asset.name + "\"";
         }
 
-        public string Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
+        public string ToDisplayString(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
         {
-            if (GetAsset() is { } asset)
+            if ((parameters.Options & TranslationOptions.NoRichText) != 0)
             {
-                return formatter.Format(asset, in parameters);
+                return ToDisplayString();
             }
 
-            if (Guid != Guid.Empty)
-                return Guid.ToString("N", parameters.Culture);
+            bool rarity = AssetLinkFriendly.Match(in parameters) || AssetLinkDescriptive.Match(in parameters);
 
-            return Id.ToString("D0", parameters.Culture);
+            TAsset? asset = GetAsset();
+            if (asset != null)
+                return AssetValueFormatter.Format(asset, formatter, in parameters);
+
+            Guid guid = Guid;
+            ushort id = Id;
+            string? idStr;
+            if (id != 0 || guid == Guid.Empty)
+            {
+                string enumStr = formatter.FormatEnum(UCAssetManager.GetAssetCategory<TAsset>(), parameters.Language);
+                if (rarity)
+                    enumStr = formatter.Colorize(enumStr, WarfareFormattedLogValues.EnumColor, parameters.Options);
+
+                Span<char> numSpan = stackalloc char[5];
+                id.TryFormat(numSpan, out int len, "F0", parameters.Culture);
+                idStr = formatter.Colorize(numSpan[..len], WarfareFormattedLogValues.NumberColor, parameters.Options);
+
+                idStr = enumStr + "/" + idStr;
+            }
+            else idStr = null;
+
+            if (guid == Guid.Empty)
+                return $"({idStr!})";
+
+            string guidStr;
+            if (rarity)
+            {
+                Span<char> span = stackalloc char[32];
+                guid.TryFormat(span, out _, "N");
+                guidStr = formatter.Colorize(span, WarfareFormattedLogValues.StructColor, parameters.Options);
+            }
+            else
+            {
+                guidStr = guid.ToString("N");
+            }
+                
+            return id != 0 ? $"{{{guidStr}}} ({idStr})" : $"{{{guidStr}}}";
+        }
+
+        public string Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
+        {
+            TAsset? asset = GetAsset();
+            if (asset != null)
+            {
+                if (AssetLinkFriendlyNoColor.Match(in parameters))
+                {
+                    return asset.FriendlyName;
+                }
+                if (AssetLinkFriendly.Match(in parameters))
+                {
+                    return RarityColorAddon.Apply(asset.FriendlyName, asset, formatter, in parameters);
+                }
+                if (AssetLinkDescriptiveNoColor.Match(in parameters))
+                {
+                    return ToDisplayString();
+                }
+            }
+
+            if (AssetLinkFriendly.Match(in parameters))
+            {
+                Guid guid = Guid;
+                if (Guid != Guid.Empty)
+                {
+                    Span<char> span = stackalloc char[32];
+                    guid.TryFormat(span, out _, "N");
+                    return formatter.Colorize(span, WarfareFormattedLogValues.StructColor, parameters.Options);
+                }
+
+                if (Id != 0)
+                {
+                    Span<char> numSpan = stackalloc char[5];
+                    Id.TryFormat(numSpan, out int len, "F0", parameters.Culture);
+                    return formatter.Colorize(numSpan[..len], WarfareFormattedLogValues.NumberColor, parameters.Options);
+                }
+
+                return formatter.Format(null, in parameters, typeof(object));
+            }
+
+            return ToDisplayString(formatter, in parameters);
         }
 
         public override bool Equals(object? obj)

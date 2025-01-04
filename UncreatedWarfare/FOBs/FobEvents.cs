@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
@@ -15,7 +15,6 @@ using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.FOBs.Entities;
 using Uncreated.Warfare.FOBs.Rallypoints;
-using Uncreated.Warfare.FOBs.StateStorage;
 using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.FOBs.SupplyCrates.VehicleResupply;
 using Uncreated.Warfare.Layouts.Teams;
@@ -180,7 +179,7 @@ public partial class FobManager :
 
                 _logger.LogInformation("FOB foundation successfully replaced with unbuilt version.");
 
-                _ = WarfareModule.EventDispatcher.DispatchEventAsync(new FobDestroyed { Fob = buildableFob });
+                _ = WarfareModule.EventDispatcher.DispatchEventAsync(new FobDestroyed { Fob = buildableFob, Event = e });
             }
             else
             {
@@ -191,7 +190,7 @@ public partial class FobManager :
         else if (fob != null)
         {
             _logger.LogInformation("Attempting to destroy other buildable fob.");
-            _ = WarfareModule.EventDispatcher.DispatchEventAsync(new FobDestroyed { Fob = fob });
+            _ = WarfareModule.EventDispatcher.DispatchEventAsync(new FobDestroyed { Fob = fob, Event = e });
             DeregisterFob(fob);
         }
 

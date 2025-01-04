@@ -445,7 +445,7 @@ public class PlayerInjureComponent : MonoBehaviour,
 
         if (!CanReviveEnemies && e.Medic.Team == e.Player.Team)
         {
-            _chatService.Send(e.Medic, T.ReviveHealEnemies);
+            _chatService.Send(e.Medic, _playerTranslations.ReviveHealEnemies);
             e.Cancel();
             return;
         }
@@ -454,7 +454,7 @@ public class PlayerInjureComponent : MonoBehaviour,
 
         if (!CanRevive(e.Medic))
         {
-            _chatService.Send(e.Medic, T.ReviveNotMedic);
+            _chatService.Send(e.Medic, _playerTranslations.ReviveNotMedic);
             e.Cancel();
             return;
         }

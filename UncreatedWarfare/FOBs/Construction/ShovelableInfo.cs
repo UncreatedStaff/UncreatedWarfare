@@ -1,4 +1,4 @@
-﻿using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.ValueFormatters;
 
@@ -26,8 +26,8 @@ public class ShovelableInfo : ITranslationArgument
     public string Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
     {
         if (Emplacement != null)
-            return Emplacement.Vehicle.GetAssetOrFail().FriendlyName;
-        
-        return CompletedStructure.GetAssetOrFail().FriendlyName;
+            return formatter.Format(Emplacement.Vehicle.GetAssetOrFail(), in parameters);
+
+        return formatter.Format(CompletedStructure.GetAssetOrFail(), in parameters);
     }
 }

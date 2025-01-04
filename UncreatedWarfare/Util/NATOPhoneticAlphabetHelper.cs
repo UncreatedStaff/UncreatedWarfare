@@ -1,5 +1,4 @@
-﻿using System;
-
+using System;
 using AlphabetRow = (string Proper, string Lower, string Upper);
 
 namespace Uncreated.Warfare.Util;
@@ -82,7 +81,7 @@ public static class NATOPhoneticAlphabetHelper
     /// <exception cref="ArgumentOutOfRangeException"/>
     public static string GetUpperCase(char character)
     {
-        return GetRow(character).Lower;
+        return GetRow(character).Upper;
     }
 
     /// <summary>
@@ -158,7 +157,7 @@ public static class NATOPhoneticAlphabetHelper
         };
     }
 
-    private static ref AlphabetRow GetRow(char character)
+    private static ref readonly AlphabetRow GetRow(char character)
     {
         // ReSharper disable once ConvertSwitchStatementToSwitchExpression (doesnt work for some reason)
         switch (character)

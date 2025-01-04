@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
@@ -367,7 +367,7 @@ public class WhitelistService :
             }
 
             --amountNeededToDestroy;
-            DestroyerComponent.AddOrUpdate(info.Drop.model.gameObject, 0ul, EDamageOrigin.VehicleDecay);
+            DestroyerComponent.AddOrUpdate(info.Drop.model.gameObject, 0ul, false, EDamageOrigin.VehicleDecay);
             BarricadeManager.destroyBarricade(info.Drop, info.Coord.x, info.Coord.y, info.Plant);
 
             if (amountNeededToDestroy == 0)
@@ -452,7 +452,7 @@ public class WhitelistService :
             }
 
             --amountNeededToDestroy;
-            DestroyerComponent.AddOrUpdate(info.Drop.model.gameObject, 0ul, EDamageOrigin.VehicleDecay);
+            DestroyerComponent.AddOrUpdate(info.Drop.model.gameObject, 0ul, false, EDamageOrigin.VehicleDecay);
             StructureManager.destroyStructure(info.Drop, info.Coord.x, info.Coord.y, Vector3.zero);
 
             if (amountNeededToDestroy == 0)

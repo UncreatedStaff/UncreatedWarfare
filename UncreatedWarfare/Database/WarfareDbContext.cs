@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Pomelo.EntityFrameworkCore.MySql.Infrastructure;
@@ -14,7 +14,7 @@ using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Kits.Bundles;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Models.Seasons;
-using Uncreated.Warfare.Models.Stats.Records;
+using Uncreated.Warfare.Models.Stats;
 using Uncreated.Warfare.Models.Users;
 using Uncreated.Warfare.Moderation;
 

@@ -1,5 +1,6 @@
-﻿using Uncreated.Warfare.Buildables;
+using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Events.Models.Structures;
@@ -50,6 +51,16 @@ public class StructureDestroyed : IBuildableDestroyedEvent
     /// Instance Id of the structure that was destroyed.
     /// </summary>
     public required uint InstanceId { get; init; }
+
+    /// <summary>
+    /// If the structure was salvaged.
+    /// </summary>
+    public required bool WasSalvaged { get; init; }
+
+    /// <summary>
+    /// The team that was responsible for the structure being destroyed.
+    /// </summary>
+    public required Team InstigatorTeam { get; init; }
 
     /// <summary>
     /// Primary item used to destroy the structure.

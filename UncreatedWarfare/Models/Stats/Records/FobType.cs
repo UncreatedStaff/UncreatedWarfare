@@ -1,8 +1,7 @@
-﻿namespace Uncreated.Warfare.Models.Stats.Records;
+namespace Uncreated.Warfare.Models.Stats;
 public enum FobType
 {
     Other,
-    RadioFob,
-    SpecialFob,
+    BunkerFob,
     Cache
 }

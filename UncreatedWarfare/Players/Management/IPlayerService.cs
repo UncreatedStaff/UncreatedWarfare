@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.List;
 
@@ -14,6 +14,11 @@ public interface IPlayerService
     /// </summary>
     /// <exception cref="GameThreadException"/>
     ReadOnlyTrackingList<WarfarePlayer> OnlinePlayers { get; }
+
+    /// <summary>
+    /// Create an <see cref="IPlayer"/> instance from a possibly offline player and fetch their usernames for display.
+    /// </summary>
+    ValueTask<IPlayer> CreateOfflinePlayerAsync(CSteamID steam64, CancellationToken token = default);
 
     /// <summary>
     /// Gets a copy of the player list for working on non-game threads.

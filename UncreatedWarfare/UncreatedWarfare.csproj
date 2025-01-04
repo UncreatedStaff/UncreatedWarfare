@@ -196,6 +196,8 @@
 
     <EmbeddedResource Include="Commands\LinkCommand.meta.yml" />
 
+    <EmbeddedResource Include="Commands\Permission\PermissionCommand.meta.yml" />
+
     <EmbeddedResource Include="Commands\ReportCommand.meta.yml" />
 
     <EmbeddedResource Include="Commands\Whitelist\WhitelistCommand.meta.yml" />

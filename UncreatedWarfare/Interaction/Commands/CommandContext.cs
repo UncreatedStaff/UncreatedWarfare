@@ -987,6 +987,12 @@ public class CommandContext : ControlException
         string? s = remainder ? GetRange(parameter - _argumentOffset) : OriginalParameters[parameter];
         if (s != null)
         {
+            if (FormattingUtility.TryParseSteamId(s, out steam64))
+            {
+                onlinePlayer = _playerService.GetOnlinePlayerOrNullThreadSafe(steam64);
+                return true;
+            }
+
             onlinePlayer = _playerService.GetOnlinePlayerOrNullThreadSafe(s, searchType);
             if (onlinePlayer is { IsOnline: true })
             {

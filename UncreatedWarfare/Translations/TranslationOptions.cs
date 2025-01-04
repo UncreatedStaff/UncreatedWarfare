@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace Uncreated.Warfare.Translations;
 
@@ -80,5 +80,5 @@ public enum TranslationOptions
     /// <summary>
     /// Configures the translator to output text that can be easily viewed from the termnial.
     /// </summary>
-    ForTerminal = NoRichText | TranslateWithTerminalRichText | ReplaceRichTextWithTerminalRichText
+    ForTerminal = TranslateWithTerminalRichText | ReplaceRichTextWithTerminalRichText
 }
