@@ -1,10 +1,12 @@
 using DanielWillett.ReflectionTools;
 using SDG.NetTransport;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Patterns;
+using Uncreated.Framework.UI.Presets;
 using Uncreated.Framework.UI.Reflection;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models;
@@ -31,6 +33,8 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
 {
     [Ignore]
     private LeaderboardSet[]? _sets;
+    [Ignore]
+    private List<PlayerGlobalStat> _globalStats;
 
     [Ignore]
     private DateTime _startTimestamp;
@@ -126,6 +130,8 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
         }
 
         _sets = sets;
+        _globalStats = ComputeGlobalStats();
+        
         SendToAllPlayers();
         foreach (LanguageSet set in _translationService.SetOf.AllPlayers())
         {
@@ -163,7 +169,7 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
         set.Reset();
 
         SendTopSquads(set);
-        
+        SendGlobalStats(set);
 
         if (winningTeam != null)
         {
@@ -201,16 +207,18 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
         for (int i = 0; i < _sets.Length; i++)
         {
             LeaderboardSet leaderboardSet = _sets[i];
+            
+            int xpStatIndex = leaderboardSet.GetStatisticIndex(KnownStatNames.XP);
             Squad topSquad = _squadManager.Squads.Aggregate((s1, s2) =>
             {
-                double s1AverageScore = s1.Members.Sum(m => leaderboardSet.GetStatisticValue(KnownStatNames.XP, m.Steam64)) / s1.Members.Count;
-                double s2AverageScore = s2.Members.Sum(m => leaderboardSet.GetStatisticValue(KnownStatNames.XP, m.Steam64)) / s2.Members.Count;
+                double s1AverageScore = s1.Members.Sum(m => leaderboardSet.GetStatisticValue(xpStatIndex, m.Steam64)) / s1.Members.Count;
+                double s2AverageScore = s2.Members.Sum(m => leaderboardSet.GetStatisticValue(xpStatIndex, m.Steam64)) / s2.Members.Count;
                 return s1AverageScore > s2AverageScore ? s1 : s2;
             });
 
             TopSquad squadElement = TopSquads[i];
             
-            double totalSquadXP = topSquad.Members.Sum(m => leaderboardSet.GetStatisticValue(KnownStatNames.XP, m.Steam64));
+            double totalSquadXP = topSquad.Members.Sum(m => leaderboardSet.GetStatisticValue(xpStatIndex, m.Steam64));
             string totalSquadXPWithHeader = $"Squad XP: <#ccffd4>{totalSquadXP.ToString("F0", set.Culture)}</color>";
             
             while (set.MoveNext())
@@ -238,38 +246,97 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
             set.Reset();
         }
     }
-    
-    private void SendMVPs(LanguageSet set)
+    private void SendGlobalStats(LanguageSet set)
     {
-        LeaderboardSet leaderboardSet = _sets[0];
-        WarfarePlayer? mvp = GetPlayerWithHighestStat(leaderboardSet, KnownStatNames.XP, out double mvpXP);
-        WarfarePlayer? bestTeammate = GetPlayerWithHighestStat(leaderboardSet, KnownStatNames.Reputation, out double bestTeammateRep);
-        WarfarePlayer? mostKills = GetPlayerWithHighestStat(leaderboardSet, KnownStatNames.Kills, out double mostKillsCount);
-        WarfarePlayer? mostDeaths = GetPlayerWithHighestStat(leaderboardSet, KnownStatNames.Deaths, out double mostKillsDeaths);
+        for (int index = 0; index < ValuablePlayers.Length; index++)
+        {
+            ValuablePlayer element = ValuablePlayers[index];
+            if (index >= _globalStats.Count)
+            {
+                while (set.MoveNext())
+                {
+                    element.Root.Hide(set.Next.Connection);
+                }
+                set.Reset();
+                
+                continue;
+            }
+            
+            PlayerGlobalStat stat = _globalStats[index];
+            string formattedStatValue = string.Format(set.Culture, stat.ValueFormatString, stat.StatValue);
+            
+            while (set.MoveNext())
+            {
+                element.Root.Show(set.Next.Connection);
+                element.Name.SetText(set.Next.Connection, stat.Player.Names.CharacterName);
+                element.Avatar.SetImage(set.Next.Connection, stat.Player.SteamSummary.AvatarUrlSmall);
+                element.Role.SetText(set.Next.Connection, stat.StatHeader);
+                element.Value.SetText(set.Next.Connection, formattedStatValue);
+            }
+            set.Reset();
+        }
+    }
+    
+    // make sure to only call this after _sets is initialized!
+    private List<PlayerGlobalStat> ComputeGlobalStats()
+    {
+        PlayerGlobalStat mvp = GetPlayerWithHighestStat(KnownStatNames.XP, "MVP", "{0} XP");
+        PlayerGlobalStat bestTeammate = GetPlayerWithHighestStat(KnownStatNames.Reputation, "Medal of Honor", "{0} Rep");
+        PlayerGlobalStat mostKills = GetPlayerWithHighestStat(KnownStatNames.Kills, "Most Deadly", "{0} Kills");
+        PlayerGlobalStat mostDeaths = GetPlayerWithHighestStat(KnownStatNames.Deaths, "Unluckiest", "{0} Deaths");
         // todo: longest shot
         
+        List<PlayerGlobalStat> stats = [ mvp, bestTeammate, mostKills, mostDeaths ]; 
+        
         WarfarePlayer? smelliest = _playerService.GetOnlinePlayerOrNull(76561198839009178);
-        if (smelliest != null && RandomUtility.GetFloat(0, 1) <= 0.1f)
+        if (smelliest != null && RandomUtility.GetFloat(0, 1) < 0.1f) // 10% chance of displaying if online
+            stats.Add(new PlayerGlobalStat(smelliest, RandomUtility.GetInteger(3, 24), "Smelliest Soldier", "{0} days without shower"));
+        
+        return stats;
+    }
+
+    public struct PlayerGlobalStat
+    {
+        public WarfarePlayer Player { get; }
+        public double StatValue { get; }
+        public string StatHeader { get; }
+        public string ValueFormatString { get; }
+        public PlayerGlobalStat(WarfarePlayer player, double statValue, string statHeader, string valueFormatString)
         {
-            // show UI
+            Player = player;
+            StatHeader = statHeader;
+            StatValue = statValue;
+            ValueFormatString = valueFormatString;
         }
     }
 
-    private WarfarePlayer? GetPlayerWithHighestStat(LeaderboardSet leaderboardSet, string statName, out double statValue)
+    private PlayerGlobalStat GetPlayerWithHighestStat(string statName, string statLabelText, string valueFormatString)
     {
-        statValue = 0;
-        WarfarePlayer? player = _playerService.OnlinePlayers.Aggregate((p1, p2) =>
-        {
-            double p1Value = leaderboardSet.GetStatisticValue(statName, p1.Steam64);
-            double p2Value = leaderboardSet.GetStatisticValue(statName, p2.Steam64);
-            
-            return p1Value > p2Value ? p1 : p2;
-        });
-        if (player == null)
-            return null;
+        double globalStatValue = double.MinValue;
+        WarfarePlayer globalHighest = null!;
         
-        statValue = leaderboardSet.GetStatisticValue(statName, player.Steam64);
-        return player;
+        foreach (LeaderboardSet leaderboardSet in _sets)
+        {
+            int statIndex = leaderboardSet.GetStatisticIndex(statName);
+            
+            WarfarePlayer localHighest = _playerService.OnlinePlayers.Aggregate((p1, p2) =>
+            {
+                double p1Value = leaderboardSet.GetStatisticValue(statIndex, p1.Steam64);
+                double p2Value = leaderboardSet.GetStatisticValue(statIndex, p2.Steam64);
+            
+                return p1Value > p2Value ? p1 : p2;
+            });
+            
+            double localStatValue = leaderboardSet.GetStatisticValue(statIndex, localHighest.Steam64);
+            
+            if (localStatValue <= globalStatValue)
+                continue;
+
+            globalStatValue = localStatValue;
+            globalHighest = localHighest;
+        }
+        
+        return new PlayerGlobalStat(globalHighest, globalStatValue, statLabelText, valueFormatString);
     }
 
     public void UpdateSort(WarfarePlayer player, int setIndex, int column)
