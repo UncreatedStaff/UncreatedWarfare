@@ -12,7 +12,7 @@ namespace Uncreated.Warfare.Stats;
 /// Usages of this class should set <see cref="IsDirty"/> and use <see cref="WaitAsync"/> and <see cref="Release"/> to synchronize on <see cref="DbContext"/>.
 /// No <see cref="UniTask.SwitchToMainThread"/> function should be used inside the synchronized block.
 /// </remarks>
-public class DatabaseStatsBuffer : IDisposable, IHostedService
+public class DatabaseStatsBuffer : IDisposable, IHostedService, ILayoutHostedService
 {
     private readonly IStatsDbContext _dbContext;
     private readonly ILogger<DatabaseStatsBuffer> _logger;
@@ -25,26 +25,22 @@ public class DatabaseStatsBuffer : IDisposable, IHostedService
     public DatabaseStatsBuffer(IStatsDbContext dbContext, ILogger<DatabaseStatsBuffer> logger, ILoopTickerFactory loopTickerFactory)
     {
         _dbContext = dbContext;
+        _dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
         _logger = logger;
         _loopTickerFactory = loopTickerFactory;
-        _dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
     }
 
     public async Task FlushAsync(CancellationToken token = default)
     {
-        _logger.LogConditional("Flushing...");
         if (!IsDirty)
         {
-            _logger.LogConditional("dirty");
             return;
         }
 
         await _semaphore.WaitAsync(10000, token).ConfigureAwait(false);
         try
         {
-            _logger.LogConditional("in...");
-            await FlushIntl(token).ConfigureAwait(false);
-            _logger.LogConditional("done");
+            await FlushAsyncNoLock(token).ConfigureAwait(false);
         }
         finally
         {
@@ -52,10 +48,9 @@ public class DatabaseStatsBuffer : IDisposable, IHostedService
         }
     }
 
-    private async Task FlushIntl(CancellationToken token)
+    public async Task FlushAsyncNoLock(CancellationToken token)
     {
         await _dbContext.SaveChangesAsync(token).ConfigureAwait(false);
-        _dbContext.ChangeTracker.Clear();
         IsDirty = false;
         _logger.LogConditional("Flushed stats data.");
     }
@@ -70,19 +65,29 @@ public class DatabaseStatsBuffer : IDisposable, IHostedService
         _semaphore.Release();
     }
 
-    void IDisposable.Dispose()
+    UniTask ILayoutHostedService.StartAsync(CancellationToken token) => UniTask.CompletedTask;
+
+    async UniTask ILayoutHostedService.StopAsync(CancellationToken token)
     {
-        _semaphore.Dispose();
-        Interlocked.Exchange(ref _loopTicker, null)?.Dispose();
+        await _semaphore.WaitAsync(10000, token).ConfigureAwait(false);
+        try
+        {
+            await FlushAsyncNoLock(token).ConfigureAwait(false);
+
+            // prevent memory leak from old stats
+            _dbContext.ChangeTracker.Clear();
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
     }
 
-    /// <inheritdoc />
-    public UniTask StartAsync(CancellationToken token)
+    UniTask IHostedService.StartAsync(CancellationToken token)
     {
         _loopTicker?.Dispose();
         _loopTicker = _loopTickerFactory.CreateTicker(TimeSpan.FromSeconds(30), invokeImmediately: false, queueOnGameThread: false, onTick: (_, _, _) =>
         {
-            _logger.LogConditional("Flushing...");
             Task.Run(async () =>
             {
                 try
@@ -100,13 +105,23 @@ public class DatabaseStatsBuffer : IDisposable, IHostedService
         return UniTask.CompletedTask;
     }
 
-    /// <inheritdoc />
-    public async UniTask StopAsync(CancellationToken token)
+    async UniTask IHostedService.StopAsync(CancellationToken token)
     {
         await _semaphore.WaitAsync(1000, token).ConfigureAwait(false);
-        await FlushAsync(token).ConfigureAwait(false);
+        try
+        {
+            await FlushAsyncNoLock(token).ConfigureAwait(false);
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _loopTicker, null)?.Dispose();
+            _semaphore.Release();
+        }
+    }
 
-        Interlocked.Exchange(ref _loopTicker, null)?.Dispose();
+    void IDisposable.Dispose()
+    {
         _semaphore.Dispose();
+        Interlocked.Exchange(ref _loopTicker, null)?.Dispose();
     }
 }

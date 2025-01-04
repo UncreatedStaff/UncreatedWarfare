@@ -1,4 +1,4 @@
-﻿using DanielWillett.SpeedBytes;
+using DanielWillett.SpeedBytes;
 using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -143,24 +143,32 @@ public readonly struct PermissionBranch : IEquatable<PermissionBranch>, IEquatab
 
         return str;
     }
+
     public string Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
     {
         if ((parameters.Options & TranslationOptions.NoRichText) != 0)
             return ToString();
 
         if (IsSuperuser)
-            return "<color=#fa3219>*</color>";
+        {
+            string star = formatter.Colorize("*", new Color32(250, 50, 25, 255), parameters.Options);
+            if (Mode == PermissionMode.Subtractive)
+                star = formatter.Colorize("-", new Color32(255, 112, 77, 255), parameters.Options) + star;
+            return star;
+        }
 
         string prefix = GetPrefix();
         Color32 prefixColor = Unturned ? new Color32(99, 123, 99, 255) : Warfare ? new Color32(156, 182, 164, 255) : new Color32(221, 221, 221, 255);
 
         bool hasStar = Path.EndsWith('*');
-        string pathEnd = hasStar ? Path[..^1] : Path;
-        string pathStar = hasStar ? "<color=#737373>*</color>" : string.Empty;
-        string subPrefix = Mode == PermissionMode.Subtractive ? "<color=#ff704d>-</color>" : string.Empty;
 
-        return subPrefix + formatter.Colorize(prefix, prefixColor, parameters.Options) + "<color=#737373>::</color>" + formatter.Colorize(pathEnd, new Color32(211, 222, 214, 255), parameters.Options) + pathStar;
+        return (Mode == PermissionMode.Subtractive ? formatter.Colorize("-", new Color32(255, 112, 77, 255), parameters.Options) : string.Empty)
+               + formatter.Colorize(prefix, prefixColor, parameters.Options)
+               + formatter.Colorize("::", new Color32(115, 115, 115, 255), parameters.Options)
+               + formatter.Colorize(hasStar ? Path[..^1] : Path, new Color32(211, 222, 214, 255), parameters.Options)
+               + (hasStar ? formatter.Colorize("*", new Color32(115, 115, 115, 255), parameters.Options) : string.Empty);
     }
+
     public bool Equals(PermissionLeaf leaf)
     {
         if (WildcardLevel > 0 || IsSuperuser)

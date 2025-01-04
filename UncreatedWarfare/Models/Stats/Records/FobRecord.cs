@@ -1,20 +1,18 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Uncreated.Warfare.Database.Automation;
 using Uncreated.Warfare.Models.Assets;
-using Uncreated.Warfare.Models.Stats.Base;
 
-namespace Uncreated.Warfare.Models.Stats.Records;
+namespace Uncreated.Warfare.Models.Stats;
 
 [Table("stats_fobs")]
 public class FobRecord : InstigatedPlayerRecord
 {
-    private Vector3 _fobPosition;
     private Vector3 _fobAngle;
-    public int FobNumber { get; set; }
+
     public FobType FobType { get; set; }
 
     [DefaultValue(null)]
@@ -98,29 +96,6 @@ public class FobRecord : InstigatedPlayerRecord
     [DefaultValue(null)]
     [Column("DestroyedAtUTC")]
     public DateTimeOffset? DestroyedAt { get; set; }
-
-    [NotMapped]
-    public Vector3 FobPosition
-    {
-        get => _fobPosition;
-        set => _fobPosition = value;
-    }
-
-    public float FobPositionX
-    {
-        get => _fobPosition.x;
-        set => _fobPosition.x = value;
-    }
-    public float FobPositionY
-    {
-        get => _fobPosition.y;
-        set => _fobPosition.y = value;
-    }
-    public float FobPositionZ
-    {
-        get => _fobPosition.z;
-        set => _fobPosition.z = value;
-    }
 
     [NotMapped]
     public Vector3 FobAngle

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using DanielWillett.ReflectionTools;
 using Uncreated.Warfare.Util;
@@ -18,6 +18,17 @@ public class BuildableContainer : MonoBehaviour, IComponentContainer<IBuildableC
     {
         Buildable = buildable;
         CreateTime = DateTime.UtcNow;
+    }
+
+    public static BuildableContainer Get(IBuildable buildable)
+    {
+        if (buildable.IsDead)
+            throw new InvalidOperationException("Buildable is dead.");
+
+        if (!buildable.Model.TryGetComponent(out BuildableContainer container))
+            container = buildable.Model.gameObject.AddComponent<BuildableContainer>();
+
+        return container;
     }
 
     public void AddComponent(IBuildableComponent newComponent)

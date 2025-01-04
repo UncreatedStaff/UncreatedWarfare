@@ -1,6 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Uncreated.Warfare.Models.Stats.Base;
-using Uncreated.Warfare.Models.Stats.Records;
+using Microsoft.EntityFrameworkCore;
+using Uncreated.Warfare.Models.Stats;
 
 namespace Uncreated.Warfare.Database.Abstractions;
 public interface IStatsDbContext : IDbContext

@@ -552,6 +552,9 @@ public sealed class WarfareModule
         bldr.RegisterRpcType<UserPermissionStore>()
             .AsImplementedInterfaces().AsSelf()
             .SingleInstance();
+        bldr.RegisterRpcType<DutyService>()
+            .AsImplementedInterfaces().AsSelf()
+            .SingleInstance();
         
         bldr.RegisterInstance(_gameObjectHost).ExternallyOwned();
 

@@ -1,13 +1,12 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations.Schema;
 using Uncreated.Warfare.Database.Automation;
 using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.Models.Assets;
-using Uncreated.Warfare.Models.Stats.Base;
 
-namespace Uncreated.Warfare.Models.Stats.Records;
+namespace Uncreated.Warfare.Models.Stats;
 
 [Table("stats_fob_items")]
 public class FobItemRecord : InstigatedPlayerRecord

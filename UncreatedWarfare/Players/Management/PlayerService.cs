@@ -1,5 +1,4 @@
-﻿using DanielWillett.ReflectionTools;
-using Microsoft.Extensions.DependencyInjection;
+using DanielWillett.ReflectionTools;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -65,6 +64,7 @@ public class PlayerService : IPlayerService
     private readonly ILoggerFactory _loggerFactory; 
     private readonly IServiceProvider _serviceProvider;
     private readonly ILifetimeScope _container;
+    private IUserDataService? _userDataService;
     private readonly ReadOnlyTrackingList<WarfarePlayer> _readOnlyOnlinePlayers;
 
     public PlayerService(ILoggerFactory loggerFactory, ILifetimeScope lifetimeScope)
@@ -83,6 +83,19 @@ public class PlayerService : IPlayerService
 
         PlayerComponents = allTypes.Where(x => !x.IsIgnored() && !x.IsDefinedSafe<CompilerGeneratedAttribute>() && !x.IsAbstract && typeof(IPlayerComponent).IsAssignableFrom(x) && x.IsDefinedSafe<PlayerComponentAttribute>()).ToArray();
         PlayerTasks = allTypes.Where(x => !x.IsIgnored() && !x.IsDefinedSafe<CompilerGeneratedAttribute>() && !x.IsAbstract && typeof(IPlayerPendingTask).IsAssignableFrom(x) && x.IsDefinedSafe<PlayerTaskAttribute>()).ToArray();
+    }
+
+    /// <inheritdoc />
+    public async ValueTask<IPlayer> CreateOfflinePlayerAsync(CSteamID steam64, CancellationToken token = default)
+    {
+        if (GetOnlinePlayerOrNullThreadSafe(steam64.m_SteamID) is { } pl)
+            return pl;
+
+        PlayerNames names = await (_userDataService ??= _container.Resolve<IUserDataService>())
+            .GetUsernamesAsync(steam64.m_SteamID, token)
+            .ConfigureAwait(false);
+
+        return names.WasFound ? new OfflinePlayer(in names) : new OfflinePlayer(steam64);
     }
 
     /// <inheritdoc />
@@ -319,9 +332,18 @@ public class PlayerService : IPlayerService
     /// <inheritdoc />
     public WarfarePlayer GetOnlinePlayerThreadSafe(ulong steam64)
     {
+        CSteamID steamId = Unsafe.As<ulong, CSteamID>(ref steam64);
+        if (GameThread.IsCurrent)
+        {
+            if (!_onlinePlayersDictionary.TryGetValue(steamId, out WarfarePlayer? player))
+                throw new PlayerOfflineException(steam64);
+
+            return player;
+        }
+
         lock (_onlinePlayersDictionary)
         {
-            if (!_onlinePlayersDictionary.TryGetValue(Unsafe.As<ulong, CSteamID>(ref steam64), out WarfarePlayer? player))
+            if (!_onlinePlayersDictionary.TryGetValue(steamId, out WarfarePlayer? player))
                 throw new PlayerOfflineException(steam64);
 
             return player;
@@ -331,9 +353,16 @@ public class PlayerService : IPlayerService
     /// <inheritdoc />
     public WarfarePlayer? GetOnlinePlayerOrNullThreadSafe(ulong steam64)
     {
+        CSteamID steamId = Unsafe.As<ulong, CSteamID>(ref steam64);
+        if (GameThread.IsCurrent)
+        {
+            _onlinePlayersDictionary.TryGetValue(steamId, out WarfarePlayer? player);
+            return player;
+        }
+
         lock (_onlinePlayersDictionary)
         {
-            _onlinePlayersDictionary.TryGetValue(Unsafe.As<ulong, CSteamID>(ref steam64), out WarfarePlayer? player);
+            _onlinePlayersDictionary.TryGetValue(steamId, out WarfarePlayer? player);
             return player;
         }
     }

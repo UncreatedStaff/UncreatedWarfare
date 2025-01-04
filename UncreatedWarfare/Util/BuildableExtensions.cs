@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Models.Buildables;
 
@@ -19,6 +20,8 @@ public static class BuildableExtensions
 
         await UniTask.SwitchToMainThread(token);
 
+        bool isSalvaged = instigator.GetEAccountType() == EAccountType.k_EAccountTypeIndividual;
+
         int ct = 0;
         foreach (BarricadeInfo barricade in BarricadeUtility.EnumerateBarricades()
                      .Where(structure => !saves.Exists(x => !x.IsStructure && x.InstanceId == structure.Drop.instanceID))
@@ -26,7 +29,7 @@ public static class BuildableExtensions
                 )
         {
             BarricadeUtility.PreventItemDrops(barricade.Drop);
-            SetSalvageInfo(barricade.Drop.model, instigator, true, null);
+            SetSalvageInfo(barricade.Drop.model, EDamageOrigin.Unknown, instigator, isSalvaged, null);
             BarricadeManager.destroyBarricade(barricade.Drop, barricade.Coord.x, barricade.Coord.y, barricade.Plant);
             ++ct;
         }
@@ -36,7 +39,7 @@ public static class BuildableExtensions
                      .ToList()
                 )
         {
-            SetSalvageInfo(structure.Drop.model, instigator, true, null);
+            SetSalvageInfo(structure.Drop.model, EDamageOrigin.Unknown, instigator, isSalvaged, null);
             StructureManager.destroyStructure(structure.Drop, structure.Coord.x, structure.Coord.y, Vector3.zero);
             ++ct;
         }
@@ -105,7 +108,7 @@ public static class BuildableExtensions
     private static readonly List<IDestroyInfo> WorkingDestroyInfo = new List<IDestroyInfo>(2);
     private static readonly List<ISalvageInfo> WorkingSalvageInfo = new List<ISalvageInfo>(2);
 
-    internal static void SetDestroyInfo(Transform buildableTransform, IBuildableDestroyedEvent args, Func<ISalvageInfo, bool>? whileAction)
+    internal static void SetDestroyInfo(Transform buildableTransform, IBuildableDestroyedEvent args, Func<IDestroyInfo, bool>? whileAction)
     {
         GameThread.AssertCurrent();
         buildableTransform.GetComponents(WorkingDestroyInfo);
@@ -114,6 +117,8 @@ public static class BuildableExtensions
             foreach (IDestroyInfo destroyInfo in WorkingDestroyInfo)
             {
                 destroyInfo.DestroyInfo = args;
+                if (whileAction != null && !whileAction(destroyInfo))
+                    break;
             }
         }
         finally
@@ -122,7 +127,7 @@ public static class BuildableExtensions
         }
     }
 
-    internal static void SetSalvageInfo(Transform buildableTransform, CSteamID? salvager, bool? isSalvaged, Func<ISalvageInfo, bool>? whileAction)
+    internal static void SetSalvageInfo(Transform buildableTransform, EDamageOrigin damageOrigin, CSteamID? salvager, bool? isSalvaged, Func<ISalvageInfo, bool>? whileAction)
     {
         GameThread.AssertCurrent();
         buildableTransform.GetComponents(WorkingSalvageInfo);
@@ -130,7 +135,7 @@ public static class BuildableExtensions
         {
             foreach (ISalvageInfo salvageInfo in WorkingSalvageInfo)
             {
-                if (salvager.HasValue)
+                if (salvager.HasValue && (!isSalvaged.HasValue || isSalvaged.Value))
                     salvageInfo.Salvager = salvager.Value;
                 if (isSalvaged.HasValue)
                     salvageInfo.IsSalvaged = isSalvaged.Value;
@@ -143,6 +148,8 @@ public static class BuildableExtensions
         {
             WorkingSalvageInfo.Clear();
         }
+
+        DestroyerComponent.AddOrUpdate(buildableTransform.gameObject, isSalvaged.GetValueOrDefault() ? salvager?.m_SteamID ?? 0ul : 0ul, isSalvaged.GetValueOrDefault(), damageOrigin);
     }
 
     /// <summary>

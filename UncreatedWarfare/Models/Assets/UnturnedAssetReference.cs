@@ -19,8 +19,13 @@ public readonly struct UnturnedAssetReference
     }
 
 
-    public UnturnedAssetReference(IAssetContainer assetContainer)
+    public UnturnedAssetReference(IAssetContainer? assetContainer)
     {
+        if (assetContainer == null)
+        {
+            return;
+        }
+
         Guid = assetContainer.Guid;
         Id = Guid == Guid.Empty ? assetContainer.Id : (ushort)0;
     }

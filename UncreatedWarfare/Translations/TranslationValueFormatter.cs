@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using StackCleaner;
 using System;
@@ -42,6 +42,7 @@ public class TranslationValueFormatter : ITranslationValueFormatter
     private readonly object[] _valueFormatterTypes =
     {
         new ColorValueFormatter(),
+        new AssetValueFormatter(),
         new ReflectionMemberFormatter(),
         typeof(FormattableValueFormatter<>),
         new ToStringValueFormatter()
@@ -193,6 +194,10 @@ public class TranslationValueFormatter : ITranslationValueFormatter
     }
 
     public string Colorize(ReadOnlySpan<char> text, Color32 color, TranslationOptions options)
+    {
+        return TranslationFormattingUtility.Colorize(text, color, options, TranslationService.TerminalColoring);
+    }
+    public string Colorize(string text, Color32 color, TranslationOptions options)
     {
         return TranslationFormattingUtility.Colorize(text, color, options, TranslationService.TerminalColoring);
     }

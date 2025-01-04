@@ -1,4 +1,4 @@
-﻿using DanielWillett.SpeedBytes;
+using DanielWillett.SpeedBytes;
 using System;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.ValueFormatters;
@@ -48,7 +48,7 @@ public struct PlayerNames : IPlayer
             DisplayName = reader.ReadNullableShortString()
         };
 
-    public readonly override string ToString() => ToString(true);
+    public override readonly string ToString() => ToString(true);
     public readonly string ToString(bool steamId)
     {
         string s64 = Steam64.m_SteamID.ToString("D17");
@@ -104,9 +104,9 @@ public struct PlayerNames : IPlayer
     }
     public static bool operator ==(PlayerNames left, PlayerNames right) => left.Steam64.m_SteamID == right.Steam64.m_SteamID;
     public static bool operator !=(PlayerNames left, PlayerNames right) => left.Steam64.m_SteamID != right.Steam64.m_SteamID;
-    public override bool Equals(object? obj) => obj is PlayerNames pn && Steam64.m_SteamID == pn.Steam64.m_SteamID;
-    public override int GetHashCode() => Steam64.GetHashCode();
-    string ITranslationArgument.Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters) => new OfflinePlayer(in this).Translate(formatter, in parameters);
+    public override readonly bool Equals(object? obj) => obj is PlayerNames pn && Steam64.m_SteamID == pn.Steam64.m_SteamID;
+    public override readonly int GetHashCode() => Steam64.GetHashCode();
+    readonly string ITranslationArgument.Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters) => new OfflinePlayer(in this).Translate(formatter, in parameters);
 
     public static string SelectPlayerName(PlayerNames names) => names.PlayerName;
     public static string SelectCharacterName(PlayerNames names) => names.CharacterName;

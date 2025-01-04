@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Translations.Languages;
 
@@ -23,4 +23,5 @@ public interface ITranslationValueFormatter
     string FormatEnumName(Type enumType, LanguageInfo? language);
 
     string Colorize(ReadOnlySpan<char> text, Color32 color, TranslationOptions options);
+    string Colorize(string text, Color32 color, TranslationOptions options);
 }

@@ -1,5 +1,6 @@
-﻿using Uncreated.Warfare.Buildables;
+using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Events.Models.Barricades;
@@ -56,6 +57,16 @@ public class BarricadeDestroyed : IBuildableDestroyedEvent
     /// Instance Id of the barricade that was destroyed.
     /// </summary>
     public required uint InstanceId { get; init; }
+
+    /// <summary>
+    /// If the barricade was salvaged.
+    /// </summary>
+    public required bool WasSalvaged { get; init; }
+
+    /// <summary>
+    /// The team that was responsible for the barricade being destroyed.
+    /// </summary>
+    public required Team InstigatorTeam { get; init; }
 
     /// <summary>
     /// Primary item used to destroy the barricade.

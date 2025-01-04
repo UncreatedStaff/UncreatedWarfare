@@ -1,10 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations.Schema;
 using Uncreated.Warfare.Database.Automation;
 using Uncreated.Warfare.Models.Assets;
-using Uncreated.Warfare.Models.Stats.Base;
 
-namespace Uncreated.Warfare.Models.Stats.Records;
+namespace Uncreated.Warfare.Models.Stats;
 
 [Table("stats_damage")]
 public class DamageRecord : RelatedPlayerRecord

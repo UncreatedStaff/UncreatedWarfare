@@ -1,10 +1,10 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations.Schema;
 using Uncreated.Warfare.Models.GameData;
 using Uncreated.Warfare.Models.Users;
 
-namespace Uncreated.Warfare.Models.Stats.Base;
+namespace Uncreated.Warfare.Models.Stats;
 public abstract class InstigatedPlayerRecord : BasePlayerRecord
 {
     private Vector3 _instigatorPosition;

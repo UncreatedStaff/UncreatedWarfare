@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+using System;
+using System.Collections.Generic;
 using Uncreated.Warfare.Util.List;
 
 namespace Uncreated.Warfare.Players.Management;
@@ -8,8 +9,25 @@ namespace Uncreated.Warfare.Players.Management;
 /// </summary>
 public class NullPlayerService : IPlayerService
 {
+    private readonly IUserDataService? _userDataService;
+
     /// <inheritdoc />
     public ReadOnlyTrackingList<WarfarePlayer> OnlinePlayers { get; } = new ReadOnlyTrackingList<WarfarePlayer>(new TrackingList<WarfarePlayer>(0));
+
+    public NullPlayerService(IServiceProvider serviceProvider)
+    {
+        _userDataService = (IUserDataService?)serviceProvider.GetService(typeof(IUserDataService));
+    }
+
+    /// <inheritdoc />
+    public async ValueTask<IPlayer> CreateOfflinePlayerAsync(CSteamID steam64, CancellationToken token = default)
+    {
+        OfflinePlayer player = new OfflinePlayer(steam64);
+
+        if (_userDataService != null)
+            await player.CacheUsernames(_userDataService, token).ConfigureAwait(false);
+        return player;
+    }
 
     /// <inheritdoc />
     public IReadOnlyList<WarfarePlayer> GetThreadsafePlayerList()

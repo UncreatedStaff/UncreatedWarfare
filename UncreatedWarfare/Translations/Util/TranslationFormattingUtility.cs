@@ -1,4 +1,4 @@
-﻿using StackCleaner;
+using StackCleaner;
 using System;
 using System.Globalization;
 using System.Text;

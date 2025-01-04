@@ -1,9 +1,11 @@
-﻿using DanielWillett.SpeedBytes;
+using DanielWillett.SpeedBytes;
 using DanielWillett.SpeedBytes.Unity;
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.ValueFormatters;
 
 namespace Uncreated.Warfare.Players.Permissions;
 
@@ -11,7 +13,7 @@ namespace Uncreated.Warfare.Players.Permissions;
 /// Group of permission branches that can be assigned to multiple players.
 /// </summary>
 [JsonConverter(typeof(PermissionGroupJsonConverter))]
-public sealed class PermissionGroup : IReadOnlyList<PermissionBranch>
+public sealed class PermissionGroup : IReadOnlyList<PermissionBranch>, ITranslationArgument
 {
 #nullable disable
     private readonly List<PermissionBranch> _permissions;
@@ -192,6 +194,13 @@ public sealed class PermissionGroup : IReadOnlyList<PermissionBranch>
     }
 
     public override string ToString() => $"{{Permission Group | \"{Id}\" ({DisplayName}) | {Permissions.Count} permission(s)}}";
+
+    /// <inheritdoc />
+    public string Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
+    {
+        return formatter.Colorize($"{DisplayName} ({Id})", Color, parameters.Options);
+    }
+
     public override bool Equals(object? obj) => obj is PermissionGroup g && g.Id.Equals(Id, StringComparison.Ordinal);
     // ReSharper disable NonReadonlyMemberInGetHashCode
     public override int GetHashCode() => Id != null ? Id.GetHashCode() : 0;

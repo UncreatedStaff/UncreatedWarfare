@@ -1,4 +1,4 @@
-﻿using Uncreated.Warfare.Fobs;
+using Uncreated.Warfare.Fobs;
 
 namespace Uncreated.Warfare.Events.Models.Fobs;
 

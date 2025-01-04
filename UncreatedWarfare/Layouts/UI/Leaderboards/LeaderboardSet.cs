@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -29,6 +29,8 @@ public class LeaderboardSet
 
     public LeaderboardRow[] Rows { get; }
 
+    public LeaderboardPhaseStatInfo[] Stats { get; }
+
     public LeaderboardSet(CreateRow callback, LeaderboardPhaseStatInfo[] stats, IEnumerable<LeaderboardPlayer> players, Team team)
     {
         _formattedData = new Dictionary<int, string[,]>();
@@ -53,6 +55,8 @@ public class LeaderboardSet
                 visibleStats[++visibleColumns] = stat;
         }
 
+        Stats = visibleStats;
+
         _data = new double[rows.Length, visibleStats.Length];
         ColumnCount = visibleStats.Length;
         _stats = stats;
@@ -72,6 +76,29 @@ public class LeaderboardSet
 
         _sortMapBuffer = new int[rows.Length];
         _inverseSortMaps = new int[visibleStats.Length * 2][];
+    }
+
+    public double GetStatisticValue(string statName, CSteamID player, double value)
+    {
+        int statIndex = -1;
+        for (int i = 0; i < Stats.Length; ++i)
+        {
+            if (!Stats[i].Name.Equals(statName, StringComparison.Ordinal))
+                continue;
+
+            statIndex = i;
+            break;
+        }
+
+        if (statIndex == -1)
+            return 0;
+
+        int rowIndex = GetRowIndex(player);
+        if (rowIndex == -1)
+            return 0;
+
+        ref LeaderboardRow row = ref Rows[rowIndex];
+        return row.Data[statIndex];
     }
 
     public int GetRowIndex(CSteamID player)

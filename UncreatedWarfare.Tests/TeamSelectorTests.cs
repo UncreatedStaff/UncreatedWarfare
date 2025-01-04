@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using System.ComponentModel.Design;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Lobby;
 using Uncreated.Warfare.Players.Management;
@@ -15,7 +16,7 @@ public class Tests
     [SetUp]
     public void Setup()
     {
-        _playerService = new NullPlayerService();
+        _playerService = new NullPlayerService(new ServiceContainer());
         _behavior = new DefaultTeamSelectorBehavior(_playerService);
 
         Team t1 = new Team

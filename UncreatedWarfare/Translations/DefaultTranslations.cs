@@ -1050,14 +1050,6 @@ internal static class T
     public static readonly Translation<int> VBSDelayDefendCacheMultiple = new Translation<int>("<#7094dd>Lose {0} more caches.</color>");
     #endregion
 
-    #region Revives
-    private const string SectionRevives = "Revives";
-    [TranslationData(SectionRevives)]
-    public static readonly Translation ReviveNotMedic = new Translation("<#bdae9d>Only a <color=#ff758f>MEDIC</color> can heal or revive teammates.");
-    [TranslationData(SectionRevives)]
-    public static readonly Translation ReviveHealEnemies = new Translation("<#bdae9d>You cannot aid enemy soldiers.");
-    #endregion
-
     #region Phases
     private const string SectionPhases = "Phases";
     [TranslationData(SectionPhases)]

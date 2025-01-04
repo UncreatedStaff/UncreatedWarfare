@@ -3,6 +3,7 @@ using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Models.Barricades;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Util;
@@ -159,7 +160,7 @@ partial class EventDispatcher
         if (!shouldAllow)
             return;
 
-        DestroyerComponent.AddOrUpdate(barricade.model.gameObject, instigatorClient.playerID.steamID.m_SteamID, EDamageOrigin.Unknown);
+        DestroyerComponent.AddOrUpdate(barricade.model.gameObject, instigatorClient.playerID.steamID.m_SteamID, true, EDamageOrigin.Unknown);
 
         WarfarePlayer player = _playerService.GetOnlinePlayer(instigatorClient);
 
@@ -177,7 +178,8 @@ partial class EventDispatcher
             Barricade = barricade,
             ServersideData = barricade.GetServersideData(),
             RegionPosition = new RegionCoord(x, y),
-            VehicleRegionIndex = plant
+            VehicleRegionIndex = plant,
+            InstigatorTeam = player.Team
         };
 
         BuildableExtensions.SetDestroyInfo(barricade.model, args, null);
@@ -185,7 +187,7 @@ partial class EventDispatcher
         try
         {
             bool shouldAllowTemp = shouldAllow;
-            BuildableExtensions.SetSalvageInfo(barricade.model, instigatorClient.playerID.steamID, true, salvageInfo =>
+            BuildableExtensions.SetSalvageInfo(barricade.model, EDamageOrigin.Unknown, instigatorClient.playerID.steamID, true, salvageInfo =>
             {
                 if (salvageInfo is not ISalvageListener listener)
                     return true;
@@ -211,7 +213,7 @@ partial class EventDispatcher
                     return;
 
                 // re-apply ISalvageInfo components
-                BuildableExtensions.SetSalvageInfo(args.Transform, args.Steam64, true, null);
+                BuildableExtensions.SetSalvageInfo(args.Transform, EDamageOrigin.Unknown, args.Steam64, true, null);
 
                 // add salvaged item
                 if (args.ServersideData.barricade.health >= asset.health)
@@ -242,7 +244,7 @@ partial class EventDispatcher
             // undo setting this if the task needs continuing, it'll be re-set later
             if (!shouldAllow)
             {
-                BuildableExtensions.SetSalvageInfo(barricade.model, null, false, null);
+                BuildableExtensions.SetSalvageInfo(barricade.model, EDamageOrigin.Unknown, null, false, null);
             }
         }
     }
@@ -343,10 +345,12 @@ partial class EventDispatcher
             return;
         }
 
+        WarfarePlayer? player = _playerService.GetOnlinePlayerOrNull(instigatorSteamId);
+
         DamageBarricadeRequested args = new DamageBarricadeRequested(region)
         {
             InstigatorId = instigatorSteamId,
-            Instigator = _playerService.GetOnlinePlayerOrNull(instigatorSteamId),
+            Instigator = player,
             InstanceId = drop.instanceID,
             Barricade = drop,
             DamageOrigin = damageOrigin,
@@ -359,7 +363,8 @@ partial class EventDispatcher
             ServersideData = drop.GetServersideData(),
             VehicleRegionIndex = plant,
             RegionIndex = (ushort)index,
-            Damage = pendingTotalDamage
+            Damage = pendingTotalDamage,
+            InstigatorTeam = player?.Team ?? Team.NoTeam
         };
 
         EventContinuations.Dispatch(args, this, _unloadToken, out shouldAllow, continuation: args =>
