@@ -45,7 +45,7 @@ public class LeaderboardSet
         int visibleColumns = 0;
         for (int i = 0; i < stats.Length; ++i)
         {
-            if (stats[i].Visible)
+            if (stats[i].IsLeaderboardColumn)
                 ++visibleColumns;
         }
 
@@ -54,7 +54,7 @@ public class LeaderboardSet
         for (int i = 0; i < stats.Length; ++i)
         {
             LeaderboardPhaseStatInfo stat = stats[i];
-            if (stat.Visible)
+            if (stat.IsLeaderboardColumn)
                 visibleStats[++visibleColumns] = stat;
         }
 
@@ -81,7 +81,7 @@ public class LeaderboardSet
         _inverseSortMaps = new int[visibleStats.Length * 2][];
     }
 
-    public double GetStatisticValue(string statName, CSteamID player)
+    public int GetStatisticIndex(string statName)
     {
         int statIndex = -1;
         for (int i = 0; i < Stats.Length; ++i)
@@ -93,6 +93,12 @@ public class LeaderboardSet
             break;
         }
 
+        return statIndex;
+    }
+
+    public double GetStatisticValue(string statName, CSteamID player)
+    {
+        int statIndex = GetStatisticIndex(statName);
         if (statIndex == -1)
             return 0;
 
