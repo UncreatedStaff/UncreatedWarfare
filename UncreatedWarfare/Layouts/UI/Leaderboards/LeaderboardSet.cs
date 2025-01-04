@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using Uncreated.Warfare.Layouts.Phases;
 using Uncreated.Warfare.Layouts.Teams;
+using Uncreated.Warfare.Stats;
 
 namespace Uncreated.Warfare.Layouts.UI.Leaderboards;
 
@@ -29,12 +30,14 @@ public class LeaderboardSet
 
     public LeaderboardRow[] Rows { get; }
 
+    public LeaderboardPhaseStatInfo[] VisibleStats { get; }
     public LeaderboardPhaseStatInfo[] Stats { get; }
 
     public LeaderboardSet(CreateRow callback, LeaderboardPhaseStatInfo[] stats, IEnumerable<LeaderboardPlayer> players, Team team)
     {
         _formattedData = new Dictionary<int, string[,]>();
 
+        Stats = stats;
 
         _players = players.ToArray();
         LeaderboardRow[] rows = new LeaderboardRow[_players.Length];
@@ -42,7 +45,7 @@ public class LeaderboardSet
         int visibleColumns = 0;
         for (int i = 0; i < stats.Length; ++i)
         {
-            if (stats[i].Visible)
+            if (stats[i].IsLeaderboardColumn)
                 ++visibleColumns;
         }
 
@@ -51,11 +54,11 @@ public class LeaderboardSet
         for (int i = 0; i < stats.Length; ++i)
         {
             LeaderboardPhaseStatInfo stat = stats[i];
-            if (stat.Visible)
+            if (stat.IsLeaderboardColumn)
                 visibleStats[++visibleColumns] = stat;
         }
 
-        Stats = visibleStats;
+        VisibleStats = visibleStats;
 
         _data = new double[rows.Length, visibleStats.Length];
         ColumnCount = visibleStats.Length;
@@ -78,7 +81,7 @@ public class LeaderboardSet
         _inverseSortMaps = new int[visibleStats.Length * 2][];
     }
 
-    public double GetStatisticValue(string statName, CSteamID player)
+    public int GetStatisticIndex(string statName)
     {
         int statIndex = -1;
         for (int i = 0; i < Stats.Length; ++i)
@@ -90,6 +93,16 @@ public class LeaderboardSet
             break;
         }
 
+        return statIndex;
+    }
+
+    public double GetStatisticValue(string statName, CSteamID player)
+    {
+        return GetStatisticValue(GetStatisticIndex(statName), player);
+    }
+
+    public double GetStatisticValue(int statIndex, CSteamID player)
+    {
         if (statIndex == -1)
             return 0;
 
@@ -97,8 +110,7 @@ public class LeaderboardSet
         if (rowIndex == -1)
             return 0;
 
-        ref LeaderboardRow row = ref Rows[rowIndex];
-        return row.Data[statIndex];
+        return _players[rowIndex].Player.Component<PlayerGameStatsComponent>().Stats[statIndex];
     }
 
     public int GetRowIndex(CSteamID player)

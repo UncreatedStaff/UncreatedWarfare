@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Linq;
 using Uncreated.Warfare.Layouts;
@@ -40,7 +40,27 @@ public class PlayerGameStatsComponent : IPlayerComponent
 
         Stats[index] += value;
     }
-    
+
+    public double GetStat(string statName)
+    {
+        if (_phase == null)
+            return 0;
+
+        int index = _phase.GetStatIndex(statName);
+        if (index < 0 || index >= Stats.Length)
+            return 0;
+
+        return Stats[index];
+    }
+
+    public double GetStat(int statIndex)
+    {
+        if (statIndex < 0 || statIndex >= Stats.Length)
+            return 0;
+
+        return Stats[statIndex];
+    }
+
     public void TryAddToStat(int index, int value)
     {
         TryAddToStat(index, (double)value);
@@ -53,6 +73,6 @@ public class PlayerGameStatsComponent : IPlayerComponent
 
         Stats[index] += value;
     }
-    
+
     WarfarePlayer IPlayerComponent.Player { get => Player; set => Player = value; }
 }

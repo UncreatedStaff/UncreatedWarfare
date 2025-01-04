@@ -1,9 +1,10 @@
-﻿using DanielWillett.ReflectionTools.Emit;
+using DanielWillett.ReflectionTools.Emit;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using Uncreated.Warfare.Events.Models;
@@ -137,6 +138,24 @@ public class LeaderboardPhase : BasePhase<PhaseTeamSettings>, IDisposable, IEven
 
     public virtual LeaderboardSet[] CreateLeaderboardSets()
     {
+        for (int i = 0; i < _players.Length; ++i)
+        {
+            List<LeaderboardPlayer> players = _players[i];
+            foreach (LeaderboardPlayer player in players)
+            {
+                for (int j = 0; j < _players.Length; ++j)
+                {
+                    if (j == i)
+                        continue;
+
+                    List<LeaderboardPlayer> otherPlayers = _players[j];
+                    int olderPlayer = otherPlayers.FindIndex(x => x.Player.Equals(player) && x.LastJoinedTeam <= player.LastJoinedTeam);
+                    if (olderPlayer >= 0)
+                        otherPlayers.RemoveAt(olderPlayer);
+                }
+            }
+        }
+
         LeaderboardSet[] set = new LeaderboardSet[TeamManager.AllTeams.Count];
 
         for (int i = 0; i < TeamManager.AllTeams.Count; ++i)
@@ -245,8 +264,11 @@ public class LeaderboardPhase : BasePhase<PhaseTeamSettings>, IDisposable, IEven
         List<LeaderboardPlayer> players = _players[teamIndex];
         foreach (LeaderboardPlayer pl in players)
         {
-            if (pl.Player.Equals(player))
-                return;
+            if (!pl.Player.Equals(player))
+                continue;
+
+            pl.LastJoinedTeam = Time.realtimeSinceStartup;
+            return;
         }
 
         players.Add(new LeaderboardPlayer(player, team));
@@ -264,7 +286,7 @@ public class LeaderboardPhaseStatInfo
     public string Name { get; set; } = string.Empty;
     public string? FormulaName { get; set; }
 
-    public bool Visible { get; set; } = true;
+    public bool IsLeaderboardColumn { get; set; } = true;
 
     public string? Expression { get; set; }
 }
