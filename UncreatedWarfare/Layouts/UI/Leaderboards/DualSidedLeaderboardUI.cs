@@ -2,6 +2,7 @@ using DanielWillett.ReflectionTools;
 using SDG.NetTransport;
 using System;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Patterns;
 using Uncreated.Framework.UI.Reflection;
@@ -10,12 +11,16 @@ using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Interaction.UI;
+using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Layouts.Phases;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Services;
+using Uncreated.Warfare.Squads;
+using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 
@@ -35,6 +40,8 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
 
     private readonly ChatService _chatService;
     private readonly IPlayerService _playerService;
+    private readonly SquadManager _squadManager;
+    private readonly PointsService _pointsService;
     private readonly ITranslationService _translationService;
     private readonly Func<CSteamID, DualSidedLeaderboardPlayerData> _createData;
 
@@ -60,16 +67,19 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
     public readonly UnturnedUIElement PointsDowngradeArrow = new UnturnedUIElement("GameInfo/Stats/Player/RankDowngrade");
     public readonly UnturnedLabel PointsCurrentRank = new UnturnedLabel("GameInfo/Stats/Player/RankCurrent");
     public readonly UnturnedLabel PointsNextRank = new UnturnedLabel("GameInfo/Stats/Player/RankNext");
-    
+
+
     public bool IsActive { get; private set; }
 
-    public DualSidedLeaderboardUI(AssetConfiguration assetConfig, ILoggerFactory loggerFactory, Layout layout, ChatService chatService, IPlayerService playerService, ITranslationService translationService)
+    public DualSidedLeaderboardUI(AssetConfiguration assetConfig, ILoggerFactory loggerFactory, Layout layout, ChatService chatService, IPlayerService playerService, SquadManager squadManager, PointsService pointsService, ITranslationService translationService)
         : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:DualSidedLeaderboardUI"), staticKey: true, debugLogging: false)
     {
         _createData = CreateData;
         _layout = layout;
         _chatService = chatService;
         _playerService = playerService;
+        _squadManager = squadManager;
+        _pointsService = pointsService;
         _translationService = translationService;
 
         ElementPatterns.SubscribeAll(Leaderboards[0].StatHeaders, Team1ButtonPressed);
@@ -150,8 +160,9 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
         {
             LayoutName.SetText(set.Next.Connection, _layout.LayoutInfo.DisplayName);
         }
-
         set.Reset();
+
+        SendTopSquads(set);
 
         if (winningTeam != null)
         {
@@ -168,6 +179,8 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
                 GameDuration.SetText(c, countdown);
 
                 // todo team stats
+                
+                
             }
 
             set.Reset();
@@ -179,6 +192,48 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
         for (int i = 0; i < _sets.Length; ++i)
         {
             SendLeaderboard(i, set, true);
+        }
+    }
+
+    private void SendTopSquads(LanguageSet set)
+    {
+        for (int i = 0; i < _sets.Length; i++)
+        {
+            LeaderboardSet leaderboardSet = _sets[i];
+            Squad topSquad = _squadManager.Squads.Aggregate((s1, s2) =>
+            {
+                double s1AverageScore = s1.Members.Sum(m => m.CachedPoints.XP) / s1.Members.Count;
+                double s2AverageScore = s2.Members.Sum(m => m.CachedPoints.XP) / s2.Members.Count;
+                return s1AverageScore > s2AverageScore ? s1 : s2;
+            });
+
+            TopSquad squadElement = TopSquads[i];
+            
+            while (set.MoveNext())
+            {
+                squadElement.Name.SetText(set.Next.Connection, topSquad.Name);
+                squadElement.Flag.SetText(set.Next.Connection, topSquad.Team.Faction.Sprite);
+                
+                for (int m = 0; m < topSquad.Members.Count; m++)
+                {
+                    if (m >= squadElement.Members.Length)
+                        break;
+                    
+                    WarfarePlayer member = topSquad.Members[m];
+                    UnturnedLabel memberElement = squadElement.Members[m];
+                    char classIcon = member.Component<KitPlayerComponent>().ActiveClass.GetIcon();
+                    string rank = _pointsService.GetRankFromExperience(member.CachedPoints.XP).Abbreviation;
+                    string memberName = $"{rank} {member.Names.CharacterName}";
+                    if (member.IsSquadLeader())
+                        memberName = $"<#ccffd4>{memberName}</color>";
+                    memberElement.SetText(set.Next.Connection, $"<mspace=2em>{classIcon}</mspace> {memberName}");
+                }
+                
+                double totalSquadXP = topSquad.Members.Sum(m => m.CachedPoints.XP);
+                string totalSquadXPWithHeader = $"Squad XP: <#ccffd4>{totalSquadXP.ToString("F0", set.Culture)}</color>";
+                squadElement.ImportantStatistic.SetText(set.Next.Connection, totalSquadXPWithHeader);
+            }
+            set.Reset();
         }
     }
 
