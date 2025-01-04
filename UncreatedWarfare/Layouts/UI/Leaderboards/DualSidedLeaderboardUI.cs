@@ -163,6 +163,7 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
         set.Reset();
 
         SendTopSquads(set);
+        
 
         if (winningTeam != null)
         {
@@ -236,6 +237,39 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
             }
             set.Reset();
         }
+    }
+    
+    private void SendMVPs(LanguageSet set)
+    {
+        LeaderboardSet leaderboardSet = _sets[0];
+        WarfarePlayer? mvp = GetPlayerWithHighestStat(leaderboardSet, KnownStatNames.XP, out double mvpXP);
+        WarfarePlayer? bestTeammate = GetPlayerWithHighestStat(leaderboardSet, KnownStatNames.Reputation, out double bestTeammateRep);
+        WarfarePlayer? mostKills = GetPlayerWithHighestStat(leaderboardSet, KnownStatNames.Kills, out double mostKillsCount);
+        WarfarePlayer? mostDeaths = GetPlayerWithHighestStat(leaderboardSet, KnownStatNames.Deaths, out double mostKillsDeaths);
+        // todo: longest shot
+        
+        WarfarePlayer? smelliest = _playerService.GetOnlinePlayerOrNull(76561198839009178);
+        if (smelliest != null && RandomUtility.GetFloat(0, 1) <= 0.1f)
+        {
+            // show UI
+        }
+    }
+
+    private WarfarePlayer? GetPlayerWithHighestStat(LeaderboardSet leaderboardSet, string statName, out double statValue)
+    {
+        statValue = 0;
+        WarfarePlayer? player = _playerService.OnlinePlayers.Aggregate((p1, p2) =>
+        {
+            double p1Value = leaderboardSet.GetStatisticValue(statName, p1.Steam64);
+            double p2Value = leaderboardSet.GetStatisticValue(statName, p2.Steam64);
+            
+            return p1Value > p2Value ? p1 : p2;
+        });
+        if (player == null)
+            return null;
+        
+        statValue = leaderboardSet.GetStatisticValue(statName, player.Steam64);
+        return player;
     }
 
     public void UpdateSort(WarfarePlayer player, int setIndex, int column)
