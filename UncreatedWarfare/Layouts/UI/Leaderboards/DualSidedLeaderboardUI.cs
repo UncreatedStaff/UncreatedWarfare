@@ -2,6 +2,7 @@ using DanielWillett.ReflectionTools;
 using SDG.NetTransport;
 using System;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Patterns;
 using Uncreated.Framework.UI.Reflection;
@@ -16,7 +17,9 @@ using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Services;
+using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Layouts.UI.Leaderboards;
@@ -149,6 +152,7 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
         while (set.MoveNext())
         {
             LayoutName.SetText(set.Next.Connection, _layout.LayoutInfo.DisplayName);
+            SendPointsSection(set.Next);
         }
 
         set.Reset();
@@ -180,6 +184,44 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
         {
             SendLeaderboard(i, set, true);
         }
+    }
+
+    private void SendPointsSection(WarfarePlayer player)
+    {
+        Team team = player.Team;
+        LeaderboardSet? set = _sets!.FirstOrDefault(x => x.Team == team);
+        WarfareRank rank = _pointsService.GetRankFromExperience(player.CachedPoints.XP);
+        if (set == null)
+        {
+            PointsCreditsGained.SetText(player, string.Empty);
+            PointsExperienceGained.SetText(player, string.Empty);
+            PointsDowngradeArrow.SetVisibility(player, false);
+            PointsUpgradeArrow.SetVisibility(player, false);
+            PointsCurrentRank.SetText(player, string.Empty);
+            PointsNextRank.SetText(player, string.Empty);
+            PointsProgressBar.SetVisibility(player, false);
+            return;
+        }
+
+        PointsProgressBar.SetVisibility(player, true);
+        PointsProgressBar.SetProgress(player.Connection, (float)rank.GetProgress(player.CachedPoints.XP));
+
+        double deltaCredits = set.GetStatisticValue(KnownStatNames.Credits, player.Steam64);
+        double deltaXP = set.GetStatisticValue(KnownStatNames.XP, player.Steam64);
+
+        PointsCreditsGained.SetText(player, deltaCredits > 0
+            ? $"+{deltaCredits.ToString("F0", player.Locale.CultureInfo)} {TranslationFormattingUtility.Colorize("C", _pointsService.CreditsColor)}"
+            : $"{deltaCredits.ToString("F0", player.Locale.CultureInfo)} {TranslationFormattingUtility.Colorize("C", _pointsService.CreditsColor)}");
+        PointsExperienceGained.SetText(player, deltaXP > 0
+            ? $"+{deltaXP.ToString("F0", player.Locale.CultureInfo)} {TranslationFormattingUtility.Colorize("XP", _pointsService.ExperienceColor)}"
+            : $"{deltaXP.ToString("F0", player.Locale.CultureInfo)} {TranslationFormattingUtility.Colorize("XP", _pointsService.ExperienceColor)}");
+
+        PointsCurrentRank.SetText(player, rank.Name);
+        PointsNextRank.SetText(player, rank.Next?.Name ?? string.Empty);
+
+        WarfareRank startingRank = _pointsService.GetRankFromExperience(player.CachedPoints.XP - deltaXP);
+        PointsDowngradeArrow.SetVisibility(player, startingRank.RankIndex > rank.RankIndex);
+        PointsUpgradeArrow.SetVisibility(player, startingRank.RankIndex < rank.RankIndex);
     }
 
     public void UpdateSort(WarfarePlayer player, int setIndex, int column)
