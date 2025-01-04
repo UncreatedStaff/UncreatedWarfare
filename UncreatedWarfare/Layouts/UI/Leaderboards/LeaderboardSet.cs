@@ -98,7 +98,11 @@ public class LeaderboardSet
 
     public double GetStatisticValue(string statName, CSteamID player)
     {
-        int statIndex = GetStatisticIndex(statName);
+        return GetStatisticValue(GetStatisticIndex(statName), player);
+    }
+
+    public double GetStatisticValue(int statIndex, CSteamID player)
+    {
         if (statIndex == -1)
             return 0;
 
