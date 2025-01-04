@@ -117,4 +117,11 @@ public readonly struct LongestShot
         SquaredDistance = squaredDistance;
         Gun = gun;
     }
+
+    public override string ToString()
+    {
+        return Gun.TryGetAsset(out ItemGunAsset? asset)
+            ? $"{{0}}m - {asset.itemName}"
+            : "{0}m";
+    }
 }
