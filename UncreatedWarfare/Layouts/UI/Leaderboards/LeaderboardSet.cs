@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -15,7 +15,7 @@ public class LeaderboardSet
     public readonly int ColumnCount;
     private readonly LeaderboardPhaseStatInfo[] _stats;
 
-    private readonly LeaderboardPlayer[] _players;
+    public readonly LeaderboardPlayer[] Players;
     private readonly double[,] _data;
     private readonly Dictionary<int, string[,]> _formattedData;
     private readonly int[] _sortMapBuffer;
@@ -39,8 +39,8 @@ public class LeaderboardSet
 
         Stats = stats;
 
-        _players = players.ToArray();
-        LeaderboardRow[] rows = new LeaderboardRow[_players.Length];
+        Players = players.ToArray();
+        LeaderboardRow[] rows = new LeaderboardRow[Players.Length];
 
         int visibleColumns = 0;
         for (int i = 0; i < stats.Length; ++i)
@@ -70,7 +70,7 @@ public class LeaderboardSet
         {
             LeaderboardRow row = new LeaderboardRow(i, this);
             rows[i] = row;
-            LeaderboardPlayer player = _players[i];
+            LeaderboardPlayer player = Players[i];
             callback(in row, visibleStats, row.Data);
             _indexCache[player.Player.Steam64.m_SteamID] = i;
         }
@@ -110,7 +110,7 @@ public class LeaderboardSet
         if (rowIndex == -1)
             return 0;
 
-        return _players[rowIndex].Player.Component<PlayerGameStatsComponent>().Stats[statIndex];
+        return Players[rowIndex].Player.Component<PlayerGameStatsComponent>().Stats[statIndex];
     }
 
     public int GetRowIndex(CSteamID player)
@@ -183,7 +183,7 @@ public class LeaderboardSet
         private readonly LeaderboardSet _set = set;
         private readonly int _index = index;
 
-        public LeaderboardPlayer Player { get => _set._players[_index]; }
+        public LeaderboardPlayer Player { get => _set.Players[_index]; }
         public Span<double> Data { get => MemoryMarshal.CreateSpan(ref _set._data[_index, 0], _set.ColumnCount); }
         public Span<string> FormatData(CultureInfo culture)
         {
@@ -193,7 +193,7 @@ public class LeaderboardSet
                 return MemoryMarshal.CreateSpan(ref formats[_index, 0], _set.ColumnCount);
             }
 
-            formats = new string[_set._players.Length, _set.ColumnCount];
+            formats = new string[_set.Players.Length, _set.ColumnCount];
 
             Span<string> allStrings = MemoryMarshal.CreateSpan(ref formats[0, 0], formats.Length);
             Span<double> allData = MemoryMarshal.CreateSpan(ref _set._data[0, 0], _set._data.Length);

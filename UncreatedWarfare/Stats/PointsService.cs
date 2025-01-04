@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -12,6 +12,7 @@ using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Addons;
 using Uncreated.Warfare.Translations.Util;
+using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.Stats;
@@ -31,6 +32,14 @@ public class PointsService : IEventListener<PlayerTeamChanged> // todo player eq
 
     public double DefaultCredits => _configuration.GetValue<double>("DefaultCredits");
     public double GlobalMultiplier => _configuration.GetValue("GlobalPointMultiplier", 1d);
+
+    public Color32 CreditsColor => HexStringHelper.TryParseColor32(_configuration["CreditsColor"], CultureInfo.InvariantCulture, out Color32 color)
+                                       ? color with { a = 255 }
+                                       : new Color32(184, 255, 193, 255);
+
+    public Color32 ExperienceColor => HexStringHelper.TryParseColor32(_configuration["ExperienceColor"], CultureInfo.InvariantCulture, out Color32 color)
+                                          ? color with { a = 255 }
+                                          : new Color32(244, 205, 87, 255);
 
 
     /// <summary>
