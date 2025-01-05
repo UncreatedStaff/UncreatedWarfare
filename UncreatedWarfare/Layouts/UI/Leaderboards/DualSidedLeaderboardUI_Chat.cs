@@ -1,4 +1,4 @@
-﻿using SDG.NetTransport;
+using SDG.NetTransport;
 using System;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Patterns;
@@ -143,7 +143,8 @@ partial class DualSidedLeaderboardUI :
             DualSidedLeaderboardPlayerData data = GetOrAddData(onlinePlayer.Steam64, _createData);
             data.VisibleChats.Add(new ChatMessageInfo(onlinePlayer, e));
 
-            UpdateChat(onlinePlayer);
+            if (IsActive)
+                UpdateChat(onlinePlayer);
         }
     }
 

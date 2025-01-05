@@ -118,6 +118,10 @@ public readonly struct LongestShot
         Gun = gun;
     }
 
+    /// <summary>
+    /// {0}m - Gun
+    /// </summary>
+    /// <returns></returns>
     public override string ToString()
     {
         return Gun.TryGetAsset(out ItemGunAsset? asset)

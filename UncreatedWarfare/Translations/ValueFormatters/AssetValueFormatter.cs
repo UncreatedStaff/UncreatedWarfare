@@ -31,11 +31,11 @@ public class AssetValueFormatter : IValueFormatter<Asset>
             string guidStr = formatter.Colorize(span, WarfareFormattedLogValues.StructColor, parameters.Options);
 
             return id == 0
-                ? $"{name}{{{guidStr}}}"
-                : $"{name}{{{guidStr}}} ({formatter.FormatEnum(asset.assetCategory, parameters.Language)}/{idStr!})";
+                ? $"{name} {{{guidStr}}}"
+                : $"{name} {{{guidStr}}} ({formatter.FormatEnum(asset.assetCategory, parameters.Language)}/{idStr!})";
         }
 
-        return id == 0 ? name : $"{name}({formatter.FormatEnum(asset.assetCategory, parameters.Language)}/{idStr})";
+        return id == 0 ? name : $"{name} ({formatter.FormatEnum(asset.assetCategory, parameters.Language)}/{idStr})";
     }
 
     public string Format(ITranslationValueFormatter formatter, Asset value, in ValueFormatParameters parameters)

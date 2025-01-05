@@ -167,6 +167,9 @@ public class PointsService : IEventListener<PlayerTeamChanged> // todo player eq
     /// </summary>
     public async Task ApplyEvent(CSteamID playerId, uint factionId, int season, ResolvedEventInfo @event, CancellationToken token = default)
     {
+        if (factionId == 0ul)
+            return;
+
         await UniTask.SwitchToMainThread(token);
 
         bool hideToast = @event.HideToast || @event.Message == null;

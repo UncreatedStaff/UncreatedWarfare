@@ -4,16 +4,18 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
+using System.IO;
 using System.Reflection;
 using System.Reflection.Emit;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Layouts.UI.Leaderboards;
+using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Stats;
+using Uncreated.Warfare.Stats.Leaderboard;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Timing;
 
@@ -29,9 +31,16 @@ public class LeaderboardPhase : BasePhase<PhaseTeamSettings>, IDisposable, IEven
     private readonly IPlayerService _playerService;
     private readonly ILeaderboardUI _leaderboardUi;
     private readonly List<LeaderboardPlayer>[] _players;
+    private IDisposable? _statsFile;
 
     [UsedImplicitly]
     public LeaderboardPhaseStatInfo[] PlayerStats { get; set; } = Array.Empty<LeaderboardPhaseStatInfo>();
+
+    [UsedImplicitly]
+    public ValuablePlayerInfo[] ValuablePlayers { get; set; } = Array.Empty<ValuablePlayerInfo>();
+
+    [UsedImplicitly]
+    public string? PlayerStatsPath { get; set; }
 
     private ILoopTicker? _ticker;
 
@@ -49,17 +58,54 @@ public class LeaderboardPhase : BasePhase<PhaseTeamSettings>, IDisposable, IEven
     /// <inheritdoc />
     public override UniTask InitializePhaseAsync(CancellationToken token = default)
     {
+        IConfiguration valuablePlayersConfig = Configuration;
+        // read from file if specified
+        if (PlayerStatsPath is { Length: > 0 } path)
+        {
+            if (!Path.IsPathRooted(path))
+                path = Path.GetFullPath(path, Path.GetDirectoryName(_session.LayoutInfo.FilePath));
+
+            IConfigurationRoot statsConfig = new ConfigurationBuilder()
+                .AddYamlFile(path, optional: false, reloadOnChange: false)
+                .Build();
+
+            if (statsConfig is IDisposable disp)
+                _statsFile = disp;
+
+            PlayerStats = statsConfig.GetSection("Stats").Get<LeaderboardPhaseStatInfo[]>()!;
+            ValuablePlayers = statsConfig.GetSection("ValuablePlayers").Get<ValuablePlayerInfo[]>()!;
+            valuablePlayersConfig = statsConfig;
+        }
+
         PlayerStats ??= Array.Empty<LeaderboardPhaseStatInfo>();
+        ValuablePlayers ??= Array.Empty<ValuablePlayerInfo>();
+        for (int i = 0; i < ValuablePlayers.Length; ++i)
+        {
+            ValuablePlayerInfo valuablePlayer = ValuablePlayers[i];
+            valuablePlayer.Configuration = valuablePlayersConfig.GetSection($"ValuablePlayers:{i}");
+
+            if (!string.IsNullOrWhiteSpace(valuablePlayer.Name))
+                continue;
+
+            Logger.LogWarning("Missing 'Name' in Valuable Player #{0}", i);
+            valuablePlayer.Name = $"vp-{i}";
+        }
+
         for (int i = 0; i < PlayerStats.Length; ++i)
         {
             LeaderboardPhaseStatInfo stat = PlayerStats[i];
             stat.Index = i;
 
             if (!string.IsNullOrWhiteSpace(stat.Name))
+            {
+                if (stat.DisplayName is not { Count: > 0 })
+                    (stat.DisplayName ??= new TranslationList()).Add((LanguageInfo?)null, stat.Name);
+
                 continue;
+            }
 
             Logger.LogWarning("Missing 'Name' in Stat #{0}", i);
-            stat.Name = $"<UNKNOWN {i.ToString(CultureInfo.InvariantCulture)}>";
+            stat.Name = $"stat-{i.ToString(CultureInfo.InvariantCulture)}";
         }
 
         // initialize calculated stat expressions
@@ -100,7 +146,7 @@ public class LeaderboardPhase : BasePhase<PhaseTeamSettings>, IDisposable, IEven
         if (Duration.Ticks <= 0)
             Duration = TimeSpan.FromSeconds(30d);
 
-        _leaderboardUi.Open(CreateLeaderboardSets());
+        _leaderboardUi.Open(CreateLeaderboardSets(), this);
 
         _ticker = _tickerFactory.CreateTicker(TimeSpan.FromSeconds(1d), invokeImmediately: true, queueOnGameThread: true, (_, timeSinceStart, _) =>
         {
@@ -134,6 +180,7 @@ public class LeaderboardPhase : BasePhase<PhaseTeamSettings>, IDisposable, IEven
     public void Dispose()
     {
         Interlocked.Exchange(ref _ticker, null)?.Dispose();
+        Interlocked.Exchange(ref _statsFile, null)?.Dispose();
     }
 
     public virtual LeaderboardSet[] CreateLeaderboardSets()
@@ -281,12 +328,43 @@ public class LeaderboardPhaseStatInfo
     internal int Index;
     internal RewardExpression? CachedExpression;
 
+    /// <summary>
+    /// Standard or custom .NET number format to convert the <see cref="double"/> value to a <see cref="string"/>.
+    /// </summary>
     public string? NumberFormat { get; set; }
 
+    /// <summary>
+    /// Internal name of the stat. Also defaults to the display name.
+    /// </summary>
     public string Name { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Display name of the stat.
+    /// </summary>
+    public TranslationList? DisplayName { get; set; }
+
+    /// <summary>
+    /// Name to use as the variable name for expressions using this stat.
+    /// </summary>
     public string? FormulaName { get; set; }
 
-    public bool IsLeaderboardColumn { get; set; } = true;
+    /// <summary>
+    /// If the stat is showed in the leaderboard per-player.
+    /// </summary>
+    public bool IsLeaderboardColumn { get; set; }
 
+    /// <summary>
+    /// Header for the leaderboard per-player column.
+    /// </summary>
+    public string? ColumnHeader { get; set; }
+
+    /// <summary>
+    /// If the stat is shown as a sum of all players stats under the game stats section.
+    /// </summary>
+    public bool IsGlobalStat { get; set; }
+
+    /// <summary>
+    /// Evaluatable expression to calculate the stat from other stats.
+    /// </summary>
     public string? Expression { get; set; }
 }

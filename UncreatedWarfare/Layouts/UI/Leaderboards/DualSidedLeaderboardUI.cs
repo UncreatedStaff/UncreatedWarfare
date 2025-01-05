@@ -23,6 +23,7 @@ using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Stats;
+using Uncreated.Warfare.Stats.Leaderboard;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Util;
@@ -33,7 +34,10 @@ namespace Uncreated.Warfare.Layouts.UI.Leaderboards;
 public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEventListener<PlayerJoined>, IEventListener<PlayerLeft>, ILayoutPhaseListener<ILayoutPhase>, IDisposable
 {
     [Ignore] private LeaderboardSet[]? _sets;
-    [Ignore] private List<PlayerGlobalStat>? _globalStats;
+    [Ignore] private LeaderboardPhase? _phase;
+    [Ignore] private List<ValuablePlayerMatch>? _valuablePlayers;
+    [Ignore] private double[]? _globalStatSums;
+    [Ignore] private TopSquadInfo[]? _topSquads;
 
     [Ignore] private DateTime _startTimestamp;
 
@@ -83,7 +87,7 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
         PointsService pointsService,
         ITranslationService translationService)
 
-        : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:DualSidedLeaderboardUI"), staticKey: true, debugLogging: false)
+        : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:DualSidedLeaderboardUI"), staticKey: true, debugLogging: true)
     {
         _createData = CreateData;
         _layout = layout;
@@ -115,7 +119,7 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
         UpdateSort(_playerService.GetOnlinePlayer(player), 1, ind);
     }
 
-    public void Open(LeaderboardSet[] sets)
+    public void Open(LeaderboardSet[] sets, LeaderboardPhase phase)
     {
         GameThread.AssertCurrent();
 
@@ -137,8 +141,13 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
         }
 
         _sets = sets;
-        _globalStats = ComputeGlobalStats();
-        
+        _phase = phase;
+
+        // must go after _sets and _phase is initialized
+        _valuablePlayers = ComputeValuablePlayers();
+        _globalStatSums = ComputeGlobalStats();
+        _topSquads = ComputeTopSquads();
+
         SendToAllPlayers();
         foreach (LanguageSet set in _translationService.SetOf.AllPlayers())
         {
@@ -177,6 +186,7 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
         set.Reset();
 
         SendTopSquads(set);
+        SendValuablePlayers(set);
         SendGlobalStats(set);
 
         if (winningTeam != null)
@@ -192,8 +202,6 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
                 WinnerFlag.SetText(c, teamSprite);
                 WinnerTeamName.SetText(c, teamName);
                 GameDuration.SetText(c, countdown);
-
-                // todo: game stats
             }
 
             set.Reset();
@@ -208,10 +216,97 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
         }
     }
 
-    private void SendTopSquads(LanguageSet set)
+    private double[] ComputeGlobalStats()
     {
+        int globalStatCount = 0;
+        foreach (LeaderboardPhaseStatInfo info in _phase!.PlayerStats)
+        {
+            if (info.IsGlobalStat)
+                ++globalStatCount;
+        }
+
+        double[] statSums = new double[globalStatCount];
+
+        globalStatCount = 0;
+        foreach (LeaderboardPhaseStatInfo info in _phase!.PlayerStats)
+        {
+            if (!info.IsGlobalStat)
+                continue;
+
+            double sum = 0;
+            foreach (LeaderboardSet leaderboardSet in _sets!)
+            {
+                sum += leaderboardSet.Players.Sum(x => leaderboardSet.GetStatisticValue(info.Index, x.Player.Steam64));
+            }
+
+            statSums[globalStatCount] = sum;
+            ++globalStatCount;
+        }
+
+        return statSums;
+    }
+
+    private List<ValuablePlayerMatch> ComputeValuablePlayers()
+    {
+        List<ValuablePlayerMatch> valuablePlayers = new List<ValuablePlayerMatch>(_phase!.ValuablePlayers.Length);
+
+        ILogger logger = GetLogger();
+        foreach (ValuablePlayerInfo vp in _phase!.ValuablePlayers)
+        {
+            ValuablePlayerMatch match = vp.AggregateMostValuablePlayer(_sets!, logger);
+
+            if (match.Player != null)
+                valuablePlayers.Add(match);
+            else
+                GetLogger().LogConditional("Match for valuable player {0} not found.", vp.Name);
+        }
+
+        return valuablePlayers;
+    }
+
+    private TopSquadInfo[] ComputeTopSquads()
+    {
+        TopSquadInfo[] squads = new TopSquadInfo[_sets!.Length];
+
         // no squads or at least one team has no squads
         if (_squadManager.Squads.Count == 0 || _layout.TeamManager.AllTeams.Any(x => _squadManager.Squads.All(y => y.Team != x)))
+        {
+            return squads;
+        }
+
+        for (int i = 0; i < _sets.Length; ++i)
+        {
+            LeaderboardSet leaderboardSet = _sets[i];
+
+            int xpStatIndex = leaderboardSet.GetStatisticIndex(KnownStatNames.XP);
+            Squad topSquad = _squadManager.Squads.Where(x => x.Team == leaderboardSet.Team).Aggregate((s1, s2) =>
+            {
+                double s1AverageScore = s1.Members.Sum(m => leaderboardSet.GetStatisticValue(xpStatIndex, m.Steam64)) / s1.Members.Count;
+                double s2AverageScore = s2.Members.Sum(m => leaderboardSet.GetStatisticValue(xpStatIndex, m.Steam64)) / s2.Members.Count;
+                return s1AverageScore > s2AverageScore ? s1 : s2;
+            });
+
+            double totalSquadXP = topSquad.Members.Sum(m => leaderboardSet.GetStatisticValue(xpStatIndex, m.Steam64));
+            squads[i] = new TopSquadInfo(topSquad, totalSquadXP);
+        }
+
+        return squads;
+    }
+
+    private readonly struct TopSquadInfo
+    {
+        public readonly Squad? Squad;
+        public readonly double TotalXP;
+        public TopSquadInfo(Squad? squad, double totalXP)
+        {
+            Squad = squad;
+            TotalXP = totalXP;
+        }
+    }
+
+    private void SendTopSquads(LanguageSet set)
+    {
+        if (Array.Exists(_topSquads!, x => x.Squad == null))
         {
             while (set.MoveNext())
                 TopSquadsParent.SetVisibility(set.Next.Connection, false);
@@ -223,20 +318,12 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
 
         for (int i = 0; i < _sets!.Length; i++)
         {
-            LeaderboardSet leaderboardSet = _sets[i];
-            
-            int xpStatIndex = leaderboardSet.GetStatisticIndex(KnownStatNames.XP);
-            Squad topSquad = _squadManager.Squads.Aggregate((s1, s2) =>
-            {
-                double s1AverageScore = s1.Members.Sum(m => leaderboardSet.GetStatisticValue(xpStatIndex, m.Steam64)) / s1.Members.Count;
-                double s2AverageScore = s2.Members.Sum(m => leaderboardSet.GetStatisticValue(xpStatIndex, m.Steam64)) / s2.Members.Count;
-                return s1AverageScore > s2AverageScore ? s1 : s2;
-            });
+            TopSquadInfo topSquadInfo = _topSquads![i];
+            Squad topSquad = topSquadInfo.Squad!;
+
+            string totalSquadXPWithHeader = $"Squad XP: <#ccffd4>{topSquadInfo.TotalXP.ToString("F0", set.Culture)}</color>";
 
             TopSquad squadElement = TopSquads[i];
-            
-            double totalSquadXP = topSquad.Members.Sum(m => leaderboardSet.GetStatisticValue(xpStatIndex, m.Steam64));
-            string totalSquadXPWithHeader = $"Squad XP: <#ccffd4>{totalSquadXP.ToString("F0", set.Culture)}</color>";
 
             set.Reset();
             while (set.MoveNext())
@@ -264,130 +351,80 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
         }
     }
 
-    private void SendGlobalStats(LanguageSet set)
+    private void SendValuablePlayers(LanguageSet set)
     {
-        for (int index = 0; index < ValuablePlayers.Length; index++)
+        int uiIndex = 0;
+        foreach (ValuablePlayerMatch stat in _valuablePlayers!)
         {
-            ValuablePlayer element = ValuablePlayers[index];
-            if (index >= _globalStats!.Count)
-            {
-                while (set.MoveNext())
-                {
-                    element.Root.Hide(set.Next.Connection);
-                }
-                set.Reset();
-                
-                continue;
-            }
-            
-            PlayerGlobalStat stat = _globalStats[index];
-            string formattedStatValue = string.Format(set.Culture, stat.ValueFormatString, stat.StatValue);
-            
+            GetLogger().LogInformation("{0} - {1} - {2}", stat.GetTitle(in set), stat.Player, stat.StatValue);
+            string formattedStatValue = stat.FormatValue(in set);
+            string title = stat.GetTitle(in set);
+
+            ValuablePlayer element = ValuablePlayers[uiIndex];
+
             while (set.MoveNext())
             {
                 ITransportConnection c = set.Next.Connection;
-                element.Name.SetText(c, set.Next.Equals(stat.Player)
+                element.Name.SetText(c, set.Next.Equals(stat.Player) // colorize player when sent to self
                     ? TranslationFormattingUtility.Colorize(stat.Player.Names.CharacterName, new Color32(204, 255, 212, 255))
-                    : stat.Player.Names.CharacterName);
+                    : stat.Player!.Names.CharacterName);
                 element.Avatar.SetImage(c, stat.Player.SteamSummary.AvatarUrlSmall);
-                element.Role.SetText(c, stat.StatHeader);
+                element.Role.SetText(c, title);
                 element.Value.SetText(c, formattedStatValue);
                 element.Root.Show(c);
             }
+
+            set.Reset();
+
+            ++uiIndex;
+
+            if (uiIndex >= ValuablePlayers.Length)
+                break;
+        }
+
+        // hide unused UI
+        for (; uiIndex < ValuablePlayers.Length; ++uiIndex)
+        {
+            ValuablePlayer element = ValuablePlayers[uiIndex];
+            while (set.MoveNext())
+            {
+                element.Root.Hide(set.Next.Connection);
+            }
+
             set.Reset();
         }
     }
-    
-    // make sure to only call this after _sets is initialized!
-    private List<PlayerGlobalStat> ComputeGlobalStats()
+
+    private void SendGlobalStats(LanguageSet set)
     {
-        PlayerGlobalStat mvp = GetPlayerWithHighestStat(KnownStatNames.XP, "MVP", "{0:F0} XP");
-        PlayerGlobalStat bestTeammate = GetPlayerWithHighestStat(KnownStatNames.Reputation, "Medal of Honor", "{0:F0} Rep");
-        PlayerGlobalStat mostKills = GetPlayerWithHighestStat(KnownStatNames.Kills, "Most Deadly", "{0:F0} Kills");
-        PlayerGlobalStat mostDeaths = GetPlayerWithHighestStat(KnownStatNames.Deaths, "Unluckiest", "{0:F0} Deaths");
-        PlayerGlobalStat longestShot = GetPlayerWithHighestStat(
-            player => player.Player.Component<PlayerGameStatsComponent>().LongestShot.SquaredDistance,
-            "Sharpshooter", string.Empty /* special override later */);
-
-        List<PlayerGlobalStat> stats = [ mvp, bestTeammate, mostKills, mostDeaths ];
-
-        if (longestShot.StatValue > 100)
+        int globalStatIndex = 0;
+        foreach (LeaderboardPhaseStatInfo info in _phase!.PlayerStats)
         {
-            LongestShot shot = longestShot.Player.Component<PlayerGameStatsComponent>().LongestShot;
-            longestShot.ValueFormatString = shot.ToString();
-            stats.Add(longestShot);
-        }
+            if (!info.IsGlobalStat)
+                continue;
 
-        WarfarePlayer? smelliest = _playerService.GetOnlinePlayerOrNull(76561198839009178);
-        if (smelliest != null && RandomUtility.GetFloat(0, 1) < 0.1f) // 10% chance of displaying if online
-            stats.Insert(2, new PlayerGlobalStat(smelliest, RandomUtility.GetInteger(3, 24), "Smelliest Soldier", "{0} days without shower"));
-        
-        return stats;
-    }
+            UnturnedLabel lbl = GlobalStats[globalStatIndex];
+            double value = _globalStatSums[globalStatIndex];
 
-    private struct PlayerGlobalStat
-    {
-        public readonly WarfarePlayer Player;
-        public readonly double StatValue;
-        public readonly string StatHeader;
-        public string ValueFormatString;
-        public PlayerGlobalStat(WarfarePlayer player, double statValue, string statHeader, string valueFormatString)
-        {
-            Player = player;
-            StatHeader = statHeader;
-            StatValue = statValue;
-            ValueFormatString = valueFormatString;
-        }
-    }
+            string valueStr = $"{info.DisplayName?.Translate(set.Language) ?? info.Name}<pos=75%>{value.ToString(info.NumberFormat, set.Culture)}";
 
-    private PlayerGlobalStat GetPlayerWithHighestStat(string statName, string statLabelText, string valueFormatString)
-    {
-        double globalStatValue = double.MinValue;
-        LeaderboardPlayer globalHighest = null!;
-        
-        foreach (LeaderboardSet leaderboardSet in _sets!)
-        {
-            int statIndex = leaderboardSet.GetStatisticIndex(statName);
-            
-            LeaderboardPlayer localHighest = leaderboardSet.Players.Aggregate((p1, p2) =>
+            while (set.MoveNext())
             {
-                double p1Value = leaderboardSet.GetStatisticValue(statIndex, p1.Player.Steam64);
-                double p2Value = leaderboardSet.GetStatisticValue(statIndex, p2.Player.Steam64);
-            
-                return p1Value > p2Value ? p1 : p2;
-            });
-            
-            double localStatValue = leaderboardSet.GetStatisticValue(statIndex, localHighest.Player.Steam64);
-            
-            if (localStatValue <= globalStatValue)
-                continue;
+                lbl.SetText(set.Next.Connection, valueStr);
+                lbl.SetVisibility(set.Next.Connection, true);
+            }
+            set.Reset();
 
-            globalStatValue = localStatValue;
-            globalHighest = localHighest;
+            ++globalStatIndex;
+            if (globalStatIndex >= GlobalStats.Length)
+                break;
         }
-        
-        return new PlayerGlobalStat(globalHighest.Player, globalStatValue, statLabelText, valueFormatString);
-    }
 
-    private PlayerGlobalStat GetPlayerWithHighestStat(Func<LeaderboardPlayer, double> selector, string statLabelText, string valueFormatString)
-    {
-        double globalStatValue = double.MinValue;
-        WarfarePlayer globalHighest = null!;
-        
-        foreach (LeaderboardSet leaderboardSet in _sets!)
+        while (set.MoveNext())
         {
-            LeaderboardPlayer localHighest = leaderboardSet.Players.Aggregate((p1, p2) => selector(p1) > selector(p2) ? p1 : p2);
-            
-            double localStatValue = selector(localHighest);
-            
-            if (localStatValue <= globalStatValue)
-                continue;
-
-            globalStatValue = localStatValue;
-            globalHighest = localHighest.Player;
+            for (int i = globalStatIndex; i < GlobalStats.Length; ++i)
+                GlobalStats[i].SetVisibility(set.Next.Connection, false);
         }
-        
-        return new PlayerGlobalStat(globalHighest, globalStatValue, statLabelText, valueFormatString);
     }
 
     private void SendPointsSection(WarfarePlayer player)
@@ -469,6 +506,32 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
                 ITransportConnection c = langSet.Next.Connection;
                 uiList.TeamFlag.SetText(c, sprite);
                 uiList.TeamName.SetText(c, name);
+            }
+
+            int ct = Math.Min(set.VisibleStats.Length, uiList.StatHeaders.Length);
+            int i = 0; 
+            for (; i < ct; ++i)
+            {
+                LabeledButton button = uiList.StatHeaders[i];
+                LeaderboardPhaseStatInfo stat = set.VisibleStats[i];
+
+                langSet.Reset();
+
+                while (langSet.MoveNext())
+                {
+                    button.SetText(langSet.Next.Connection, stat.ColumnHeader ?? stat.Name);
+                }
+            }
+            for (; i < uiList.StatHeaders.Length; ++i)
+            {
+                LabeledButton button = uiList.StatHeaders[i];
+
+                langSet.Reset();
+
+                while (langSet.MoveNext())
+                {
+                    button.SetText(langSet.Next.Connection, string.Empty);
+                }
             }
         }
 
@@ -646,8 +709,8 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
         public UnturnedLabel TeamFlag { get; set; }
 
         [ArrayPattern(1, To = 6)]
-        [Pattern("Header/Lb_T{1}_Hdr_{0}")]
-        public UnturnedButton[] StatHeaders { get; set; }
+        [Pattern("Header/Lb_T{1}_Hdr_{0}", PresetPaths = [ "./Value" ])]
+        public LabeledButton[] StatHeaders { get; set; }
 
         [ArrayPattern(1, To = 50)]
         [Pattern("ScrollBox/Viewport/Content/Player_{0}")]

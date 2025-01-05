@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace Uncreated.Warfare.Logging.Formatting;
 
@@ -20,6 +20,13 @@ internal readonly struct StringParameterList
         _isArray = true;
         Parameter1 = args;
         Count = args.Length;
+    }
+
+    public StringParameterList(object?[] args, int ct)
+    {
+        _isArray = true;
+        Parameter1 = args;
+        Count = ct;
     }
 
     public StringParameterList(object? arg1)
@@ -71,7 +78,7 @@ internal readonly struct StringParameterList
             if (_isArray)
             {
                 object?[] arr = (object?[]?)Parameter1!;
-                if (index >= arr.Length)
+                if (index >= Count)
                     return OutOfRange.Value;
 
                 return arr[index] ?? DBNull.Value;

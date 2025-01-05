@@ -1,4 +1,4 @@
-﻿using SDG.NetTransport;
+using SDG.NetTransport;
 using System;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Reflection;
@@ -92,11 +92,21 @@ public class StagingUI : UnturnedUI
     {
         if (timeLeft < TimeSpan.Zero)
             timeLeft = default;
+
+        string msg = FormattingUtility.ToCountdownString(timeLeft, withHours: false);
+
         foreach (LanguageSet set in playerSets)
         {
-            string msg = FormattingUtility.ToCountdownString(timeLeft, withHours: false);
-            while (set.MoveNext())
-                Bottom.SetText(set.Next, msg);
+            if (!set.Team.IsValid)
+            {
+                while (set.MoveNext())
+                    ClearFromPlayer(set.Next.Connection);
+            }
+            else
+            {
+                while (set.MoveNext())
+                    Bottom.SetText(set.Next, msg);
+            }
         }
     }
 }

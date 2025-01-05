@@ -69,6 +69,7 @@ internal struct WarfareFormattedLogValues
     public readonly StringParameterList Parameters;
     public readonly string Message;
     public ITranslationValueFormatter? ValueFormatter;
+
     public WarfareFormattedLogValues(string message, object?[] args)
     {
         Parameters = new StringParameterList(args);
@@ -134,6 +135,7 @@ internal struct WarfareFormattedLogValues
             object? value = Parameters[i];
             int prefixSize, suffixSize, argb;
             scoped ReadOnlySpan<char> formatted;
+            string fmtStr;
 
             // lists
             if (value is IEnumerable enumerable and not string)
@@ -162,14 +164,18 @@ internal struct WarfareFormattedLogValues
                         sb.Append(", ");
                     }
 
-                    formatted = ValueFormatter?.Format(subValue, in parameters, null) ?? subValue?.ToString() ?? default;
+                    string fmtStrValue = ValueFormatter?.Format(subValue, in parameters, null) ?? subValue?.ToString() ?? string.Empty;
                     if (useColor && ValueFormatter != null)
                     {
                         TryDecideColor(subValue, out argb, out _, out _, color);
                         sb.Append(TerminalColorHelper.GetTerminalColorSequence(argb, false));
+                        if (fmtStrValue.Contains(TerminalColorHelper.ForegroundResetSequence))
+                        {
+                            fmtStrValue = fmtStrValue.Replace(TerminalColorHelper.ForegroundResetSequence, TerminalColorHelper.GetTerminalColorSequence(argb));
+                        }
                     }
-                    
-                    sb.Append(formatted);
+
+                    sb.Append(fmtStrValue);
                 }
                 if (useColor)
                     sb.Append(punctuationColor);
@@ -177,14 +183,14 @@ internal struct WarfareFormattedLogValues
                 if (useColor)
                     sb.Append(TerminalColorHelper.ForegroundResetSequence);
 
-                formatted = sb.ToString();
+                fmtStr = sb.ToString();
                 prefixSize = 0;
                 suffixSize = 0;
                 argb = 0;
             }
             else
             {
-                formatted = ValueFormatter?.Format(value, in parameters, null) ?? value?.ToString() ?? default;
+                fmtStr = ValueFormatter?.Format(value, in parameters, null) ?? value?.ToString() ?? string.Empty;
 
                 if (useColor && ValueFormatter != null)
                     TryDecideColor(value, out argb, out prefixSize, out suffixSize, color);
@@ -196,6 +202,12 @@ internal struct WarfareFormattedLogValues
                 }
             }
 
+            if (useColor && fmtStr.Contains(TerminalColorHelper.ForegroundResetSequence, StringComparison.Ordinal))
+            {
+                fmtStr = fmtStr.Replace(TerminalColorHelper.ForegroundResetSequence, TerminalColorHelper.GetTerminalColorSequence(argb));
+            }
+
+            formatted = fmtStr;
             int ttlSize = formatted.Length + prefixSize + suffixSize;
 
             if (_formatBuffer.Length <= index + ttlSize)

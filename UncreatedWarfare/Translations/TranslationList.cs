@@ -1,4 +1,4 @@
-﻿using DanielWillett.SpeedBytes;
+using DanielWillett.SpeedBytes;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -20,6 +20,7 @@ namespace Uncreated.Warfare;
 public sealed class TranslationList : Dictionary<string, string>, ICloneable
 {
     public const int DefaultCharLength = 255;
+
     public TranslationList() : this(0) { }
     public TranslationList(int capacity) : base(capacity, StringComparer.Ordinal) { }
     public TranslationList(IDictionary<string, string> dictionary) : base(dictionary, StringComparer.Ordinal) { }
@@ -57,7 +58,11 @@ public sealed class TranslationList : Dictionary<string, string>, ICloneable
     }
 
     [return: NotNullIfNotNull(nameof(@default))]
-    public string? Translate(LanguageInfo? language, string? @default) => Translate(language) ?? @default;
+    public string? Translate(LanguageInfo? language, string? @default)
+    {
+        return Translate(language) ?? @default;
+    }
+
     public string? Translate(LanguageInfo? language)
     {
         string code = language == null || language.IsDefault ? string.Empty : language.Code;
@@ -81,25 +86,6 @@ public sealed class TranslationList : Dictionary<string, string>, ICloneable
 
     public TranslationList Clone() => new TranslationList(this);
     object ICloneable.Clone() => Clone();
-    public void Read(ByteReader reader)
-    {
-        Clear();
-        int len = reader.ReadUInt16();
-        for (int i = 0; i < len; ++i)
-        {
-            Add(reader.ReadShortString(), reader.ReadNullableString()!);
-        }
-    }
-
-    public void Write(ByteWriter writer)
-    {
-        writer.Write((ushort)Count);
-        foreach (KeyValuePair<string, string> vals in this)
-        {
-            writer.WriteShort(vals.Key);
-            writer.WriteNullable(vals.Value);
-        }
-    }
 }
 
 public sealed class TranslationListConverter : JsonConverter<TranslationList>

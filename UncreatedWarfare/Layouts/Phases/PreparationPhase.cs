@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using Uncreated.Warfare.Layouts.UI;
@@ -51,9 +51,9 @@ public class PreparationPhase : BasePhase<PhaseTeamSettings>, IDisposable
         if (Name is { Count: > 0 })
         {
             if (Duration.Ticks > 0)
-                _stagingUi.SendToAll(_translationService.SetOf.AllPlayers(), Name, Duration);
+                _stagingUi.SendToAll(_translationService.SetOf.PlayersOnTeam(), Name, Duration);
             else
-                _stagingUi.SendToAll(_translationService.SetOf.AllPlayers(), Name);
+                _stagingUi.SendToAll(_translationService.SetOf.PlayersOnTeam(), Name);
         }
         else if (Teams != null)
         {
