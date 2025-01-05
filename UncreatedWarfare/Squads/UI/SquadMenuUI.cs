@@ -159,6 +159,7 @@ internal class SquadMenuUI :
     {
         element.Root.Show(player);
         element.SquadName.SetText(player, squad.Name);
+        element.SquadNumber.SetText(player, squad.TeamIdentificationNumber.ToString());
         element.MemberCount.SetText(player, $"{squad.Members.Count}/{Squad.MaxMembers}");
 
         element.SquadJoinLeaveButton.Enable(player);
@@ -194,6 +195,9 @@ internal class SquadMenuUI :
         [Pattern("", Root = true, CleanJoin = '_')]
         public UnturnedUIElement Root { get; set; }
 
+        [Pattern("Number", Mode = FormatMode.Format)]
+        public UnturnedLabel SquadNumber { get; set; }
+        
         [Pattern("Name", Mode = FormatMode.Format)]
         public UnturnedLabel SquadName { get; set; }
 
