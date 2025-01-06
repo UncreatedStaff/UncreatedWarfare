@@ -1,4 +1,4 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Emit;
 using System;
 using System.Collections.Generic;
@@ -679,8 +679,6 @@ public class RewardExpression
     {
         string[] Names { get; }
 
-        Type OutputType { get; }
-
         void Preload(LocalReference local, IOpCodeEmitter emitter, ILogger logger);
     }
 
@@ -690,13 +688,10 @@ public class RewardExpression
 
         public string[] Names { get; }
 
-        public Type OutputType { get; }
-
         public EmittableVariable(IVariable variable)
         {
             _variable = variable;
-            Names = [_variable.Member.Name];
-            OutputType = _variable.MemberType;
+            Names = [ _variable.Member.Name ];
         }
 
         /// <inheritdoc />

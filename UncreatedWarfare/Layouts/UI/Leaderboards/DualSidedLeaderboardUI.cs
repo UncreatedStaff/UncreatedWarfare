@@ -87,7 +87,7 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
         PointsService pointsService,
         ITranslationService translationService)
 
-        : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:DualSidedLeaderboardUI"), staticKey: true, debugLogging: true)
+        : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:DualSidedLeaderboardUI"), staticKey: true, debugLogging: false)
     {
         _createData = CreateData;
         _layout = layout;
@@ -137,6 +137,11 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
             if (player.ComponentOrNull<AudioRecordPlayerComponent>() is { } comp)
             {
                 comp.VoiceChatStateUpdated += CompOnVoiceChatStateUpdated;
+            }
+
+            if (player.UnturnedPlayer.life.isDead)
+            {
+                player.UnturnedPlayer.life.ServerRespawn(false);
             }
         }
 
@@ -404,7 +409,7 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
                 continue;
 
             UnturnedLabel lbl = GlobalStats[globalStatIndex];
-            double value = _globalStatSums[globalStatIndex];
+            double value = _globalStatSums![globalStatIndex];
 
             string valueStr = $"{info.DisplayName?.Translate(set.Language) ?? info.Name}<pos=75%>{value.ToString(info.NumberFormat, set.Culture)}";
 
@@ -480,6 +485,8 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
             sort.ColumnIndex = column;
         }
 
+        GetLogger().LogConditional("Updated sort for {0}: team {1}, column {2}, desc: {3}.", player, setIndex + 1, column, sort.Descending);
+
         if (_sets == null)
             return;
 
@@ -537,8 +544,6 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
 
         LeaderboardSet.LeaderboardRow[] rows = set.Rows;
 
-        GetLogger().LogInformation("{0} Rows: {1}", setIndex, rows.Length);
-
         int statCount = set.ColumnCount;
         for (int i = 0; i < rows.Length; ++i)
         {
@@ -548,13 +553,11 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
             Span<string> formats = row.FormatData(langSet.Culture);
 
             langSet.Reset();
-            GetLogger().LogInformation("{0} row: {1}. pl: {2}", setIndex, i, player.Player);
 
             while (langSet.MoveNext())
             {
                 if (!TryMapRowToUIRow(setIndex, i, GetOrAddData(langSet.Next.Steam64, _createData), out LeaderboardPlayerRow? uiRow))
                 {
-                    GetLogger().LogInformation("{0} row: {1} no map", setIndex, i);
                     continue;
                 }
 

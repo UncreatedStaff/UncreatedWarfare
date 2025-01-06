@@ -107,9 +107,8 @@ public class DeathTracker : IHostedService
                 {
                     PlayerDied e;
                     
-                    if (dead.Data.TryGetValue("LastPlayerDying", out object? dyingArgs) && dyingArgs is PlayerDying dying)
+                    if (dead.Data.TryRemove("LastPlayerDying", out object? dyingArgs) && dyingArgs is PlayerDying dying)
                     {
-                        dead.Data.Remove("LastPlayerDying");
                         e = new PlayerDied(in dying.Parameters) { Player = dead };
                     }
                     else

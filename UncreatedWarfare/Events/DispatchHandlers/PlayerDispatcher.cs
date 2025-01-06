@@ -43,14 +43,15 @@ partial class EventDispatcher
     private void PlayerLifeOnOnPreDeath(PlayerLife playerLife)
     {
         WarfarePlayer player = _playerService.GetOnlinePlayer(playerLife.player);
-        if (!player.Data.TryGetValue("LastDamagePlayerRequested", out object? v) || v is not DamagePlayerRequested reqArgs)
+        if (!player.Data.TryRemove("LastDamagePlayerRequested", out object? v) || v is not DamagePlayerRequested reqArgs)
             return;
 
-        player.Data.Remove("LastDamagePlayerRequested");
         PlayerDamaged args = new PlayerDamaged(in reqArgs.Parameters)
         {
             Player = player,
-            Instigator = _playerService.GetOnlinePlayerOrNull(reqArgs.Parameters.killer)
+            Instigator = _playerService.GetOnlinePlayerOrNull(reqArgs.Parameters.killer),
+            IsDeath = true,
+            IsInjure = false
         };
 
         PlayerDying dyingArgs = new PlayerDying(in reqArgs.Parameters)
@@ -59,7 +60,7 @@ partial class EventDispatcher
             Instigator = args.Instigator
         };
 
-        player.Data["LastPlayerDying"] = args;
+        player.Data["LastPlayerDying"] = dyingArgs;
 
         _ = DispatchEventAsync(args, CancellationToken.None);
         _ = DispatchEventAsync(dyingArgs, CancellationToken.None, allowAsync: false);
@@ -74,14 +75,15 @@ partial class EventDispatcher
             return;
 
         WarfarePlayer player = _playerService.GetOnlinePlayer(unturnedPlayer);
-        if (!player.Data.TryGetValue("LastDamagePlayerRequested", out object? v) || v is not DamagePlayerRequested reqArgs)
+        if (!player.Data.TryRemove("LastDamagePlayerRequested", out object? v) || v is not DamagePlayerRequested reqArgs)
             return;
 
-        player.Data.Remove("LastDamagePlayerRequested");
         PlayerDamaged args = new PlayerDamaged(in reqArgs.Parameters)
         {
             Player = player,
-            Instigator = _playerService.GetOnlinePlayerOrNull(reqArgs.Parameters.killer)
+            Instigator = _playerService.GetOnlinePlayerOrNull(reqArgs.Parameters.killer),
+            IsDeath = false,
+            IsInjure = reqArgs.IsInjure
         };
 
         _ = DispatchEventAsync(args, CancellationToken.None);
@@ -134,10 +136,9 @@ partial class EventDispatcher
         WarfarePlayer medic = _playerService.GetOnlinePlayer(instigator);
         WarfarePlayer player = _playerService.GetOnlinePlayer(target);
 
-        if (!player.Data.TryGetValue("LastAidRequested", out object? v) || v is not AidPlayerRequested reqArgs)
+        if (!player.Data.TryRemove("LastAidRequested", out object? v) || v is not AidPlayerRequested reqArgs)
             return;
 
-        player.Data.Remove("LastAidRequested");
 
         PlayerLife targetLife = player.UnturnedPlayer.life;
         PlayerAided args = new PlayerAided

@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Buildables;
@@ -64,7 +65,6 @@ internal sealed class PlayerDatabaseStatsEventHandlers :
             try
             {
                 _buffer.DbContext.AidRecords.Add(record);
-                _buffer.IsDirty = true;
             }
             finally
             {
@@ -85,7 +85,10 @@ internal sealed class PlayerDatabaseStatsEventHandlers :
         
         // dont count injure ticks
         if (injured && e.Parameters.cause == EDeathCause.BLEEDING)
+        {
+            Console.WriteLine("injure tick ignored.");
             return;
+        }
 
         PlayerDied args = _tempPlayerDiedArgs;
 
@@ -108,7 +111,7 @@ internal sealed class PlayerDatabaseStatsEventHandlers :
             InstigatorSessionId = hasKiller ? args.KillerSession?.SessionId : null,
             SessionId = args.Session?.SessionId,
             Distance = args.KillDistance,
-            IsInjure = injured && e.IsInjure,
+            IsInjure = e.IsInjure,
             IsSuicide = isSuicide,
             IsTeamkill = isTeamkill,
             Limb = args.Limb,
@@ -125,7 +128,8 @@ internal sealed class PlayerDatabaseStatsEventHandlers :
             Vehicle = new UnturnedAssetReference(args.ActiveVehicle?.asset)
         };
 
-        e.Player.Data["KillShot"] = record;
+        if (e.IsDeath)
+            e.Player.Data["KillShot"] = record;
 
         Task.Run(async () =>
         {
@@ -133,7 +137,6 @@ internal sealed class PlayerDatabaseStatsEventHandlers :
             try
             {
                 _buffer.DbContext.DamageRecords.Add(record);
-                _buffer.IsDirty = true;
             }
             finally
             {
@@ -176,28 +179,20 @@ internal sealed class PlayerDatabaseStatsEventHandlers :
             Vehicle = new UnturnedAssetReference(args.ActiveVehicle?.asset)
         };
 
-        DamageRecord? killShot = null;
-        if (e.Player.Data.TryGetValue("KillShot", out object? obj))
-        {
-            killShot = obj as DamageRecord;
-            e.Player.Data.Remove("KillShot");
-        }
-
         Task.Run(async () =>
         {
             await _buffer.WaitAsync(CancellationToken.None).ConfigureAwait(false);
             try
             {
-                if (killShot != null)
+                if (e.Player.Data.TryRemove("KillShot", out object? obj) && obj is DamageRecord killShot)
                 {
-                    if (killShot.Id is 0 or ulong.MaxValue)
+                    if (_buffer.DbContext.Entry(killShot).State != EntityState.Detached)
                         record.KillShot = killShot;
-                    else
+                    else if (killShot.Id != 0)
                         record.KillShotId = killShot.Id;
                 }
 
                 _buffer.DbContext.DeathRecords.Add(record);
-                _buffer.IsDirty = true;
             }
             finally
             {
@@ -239,7 +234,6 @@ internal sealed class PlayerDatabaseStatsEventHandlers :
             {
                 _buffer.DbContext.FobRecords.Add(record);
                 await _buffer.FlushAsyncNoLock(CancellationToken.None);
-                _buffer.IsDirty = true;
             }
             finally
             {
@@ -254,7 +248,6 @@ internal sealed class PlayerDatabaseStatsEventHandlers :
         if (e.Fob is not BunkerFob normalFob)
             return;
 
-        Layout layout = _module.GetActiveLayout();
         FobRecordBuildableComponent? fobRecordContainer = BuildableContainer.Get(normalFob.Buildable).ComponentOrNull<FobRecordBuildableComponent>();
         if (fobRecordContainer == null)
             return;
@@ -283,7 +276,6 @@ internal sealed class PlayerDatabaseStatsEventHandlers :
             try
             {
                 _buffer.DbContext.FobRecords.Update(record);
-                _buffer.IsDirty = true;
             }
             finally
             {

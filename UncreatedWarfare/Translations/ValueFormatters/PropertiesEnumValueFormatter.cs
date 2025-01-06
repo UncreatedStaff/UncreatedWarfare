@@ -1,4 +1,4 @@
-﻿using DanielWillett.JavaPropertiesParser;
+using DanielWillett.JavaPropertiesParser;
 using DanielWillett.ReflectionTools;
 using System;
 using System.Collections.Generic;
@@ -193,7 +193,8 @@ public class PropertiesEnumValueFormatter<TEnum> : IEnumFormatter<TEnum> where T
         foreach (TEnum val in values)
         {
             string? value = null;
-            if (!writeAll && (translationTable == null || !translationTable.TryGetValue(val, out value)))
+            translationTable?.TryGetValue(val, out value);
+            if (!writeAll && value == null)
                 continue;
             
             writer.WriteKey(val.ToString());

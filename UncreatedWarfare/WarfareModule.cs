@@ -638,6 +638,9 @@ public sealed class WarfareModule
         bldr.RegisterType<PlayerDatabaseStatsEventHandlers>()
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
+        bldr.RegisterType<PlayerGameStatsEventHandlers>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
 
         bldr.RegisterType<MySqlPointsStore>()
             .As<IPointsStore>()

@@ -106,7 +106,7 @@ public class ReportService : IDisposable, IHostedService, IEventListener<PlayerL
         };
 
         playerData.PendingBullets.Add(newBullet);
-        _logger.LogInformation("Bullet spawned: {0} {1} pellets: {2}", bullet.magazineAsset, bullet.pellet, bullet.magazineAsset.pellets);
+        //_logger.LogInformation("Bullet spawned: {0} {1} pellets: {2}", bullet.magazineAsset, bullet.pellet, bullet.magazineAsset.pellets);
     }
 
     private void OnBulletHit(UseableGun gun, BulletInfo bullet, InputInfo hit, ref bool shouldallow)
@@ -122,7 +122,7 @@ public class ReportService : IDisposable, IHostedService, IEventListener<PlayerL
             playerData.PendingBullets.RemoveAt(i);
             if (!shouldallow)
             {
-                _logger.LogInformation("Bullet cancelled: {0} {1}", bullet.magazineAsset, bullet.pellet);
+                //_logger.LogInformation("Bullet cancelled: {0} {1}", bullet.magazineAsset, bullet.pellet);
                 return;
             }
 
@@ -162,6 +162,8 @@ public class ReportService : IDisposable, IHostedService, IEventListener<PlayerL
             {
                 case ERaycastInfoType.PLAYER:
                     damage = gunAsset.playerDamageMultiplier.multiply(hit.limb) * dmgMult;
+                    if (hit.player != null && hit.player.quests.isMemberOfSameGroupAs(gun.player))
+                        damage = 0;
                     break;
 
                 case ERaycastInfoType.ZOMBIE:
@@ -235,7 +237,7 @@ public class ReportService : IDisposable, IHostedService, IEventListener<PlayerL
                     break;
             }
 
-            _logger.LogInformation("Bullet hit: {0} {1} dmg: {2} asset: {3}", bullet.magazineAsset, bullet.pellet, damage, hitAsset);
+            //_logger.LogInformation("Bullet hit: {0} {1} dmg: {2} asset: {3}", bullet.magazineAsset, bullet.pellet, damage, hitAsset);
 
             playerData.AddShot(new ShotRecord(gunAsset.GUID, bullet.magazineAsset.GUID,
                 gunAsset.itemName,
@@ -270,7 +272,7 @@ public class ReportService : IDisposable, IHostedService, IEventListener<PlayerL
     private void OnBulletExpired(UseableGun gun, PlayerData playerData, in PendingBullet pendingBullet)
     {
         BulletInfo bullet = pendingBullet.Bullet;
-        _logger.LogInformation("Bullet expired: {0} {1}", bullet.magazineAsset, bullet.pellet);
+        //_logger.LogInformation("Bullet expired: {0} {1}", bullet.magazineAsset, bullet.pellet);
         playerData.AddShot(new ShotRecord(gun.equippedGunAsset.GUID, bullet.magazineAsset.GUID,
             gun.equippedGunAsset.itemName, bullet.magazineAsset.itemName, 0, null, null, null, null,
             pendingBullet.SpawnedTime, bullet.origin, Quaternion.LookRotation(bullet.ApproximatePlayerAimDirection).eulerAngles, null, false, 0, 0d));

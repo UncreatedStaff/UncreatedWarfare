@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Permissions;
@@ -15,8 +15,8 @@ public class VanishPlayerComponent : IPlayerComponent
 
     public bool IsActive
     {
-        get => Player.UnturnedPlayer.movement.canAddSimulationResultsToUpdates;
-        set => Player.UnturnedPlayer.movement.canAddSimulationResultsToUpdates = value;
+        get => !Player.UnturnedPlayer.movement.canAddSimulationResultsToUpdates;
+        set => Player.UnturnedPlayer.movement.canAddSimulationResultsToUpdates = !value;
     }
 
     public WarfarePlayer Player { get; private set; }

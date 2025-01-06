@@ -8,6 +8,7 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Interaction;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Moderation;
@@ -16,7 +17,9 @@ using Uncreated.Warfare.Moderation.Punishments.Presets;
 using Uncreated.Warfare.NewQuests.Parameters;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.Addons;
 using Uncreated.Warfare.Translations.Languages;
+using Uncreated.Warfare.Translations.Util;
 
 namespace Uncreated.Warfare.Deaths;
 public class DeathMessageResolver
@@ -527,14 +530,14 @@ public class DeathMessageResolver
 
         foreach (LanguageSet set in _translationService.SetOf.AllPlayers().ToCache().Sets!)
         {
-            string msg = await TranslateMessage(set.Language, set.Culture, e, false, token);
+            string msg = await TranslateMessage(set.Language, set.Culture, e, false, set.IMGUI ? TranslationOptions.UseUnityRichText : TranslationOptions.TMProUI, token);
             while (set.MoveNext())
             {
                 _chatService.Send(set.Next, msg, color, EChatMode.SAY, null, true);
             }
         }
 
-        str = await TranslateMessage(_languageService.GetDefaultLanguage(), CultureInfo.InvariantCulture, e, true, token);
+        str = await TranslateMessage(_languageService.GetDefaultLanguage(), CultureInfo.InvariantCulture, e, true, TranslationOptions.ForTerminal, token);
         Log(tk, str, e);
 
         e.DefaultMessage = str!;
@@ -790,7 +793,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
         }
     }
 
-    public async UniTask<string> TranslateMessage(LanguageInfo language, CultureInfo culture, PlayerDied args, bool useSteamNames, CancellationToken token = default)
+    public async UniTask<string> TranslateMessage(LanguageInfo language, CultureInfo culture, PlayerDied args, bool useSteamNames, TranslationOptions options, CancellationToken token = default)
     {
         bool isDefault = false;
         LanguageInfo defaultLanguage = _languageService.GetDefaultLanguage();
@@ -807,7 +810,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
         int i = FindDeathCause(language, causes, args);
 
         CauseGroup cause = causes[i];
-        string? val = await TranslateDeath(args, language, culture, cause, useSteamNames, token);
+        string? val = await TranslateDeath(args, language, culture, cause, useSteamNames, options, token);
 
         await UniTask.SwitchToMainThread(token);
 
@@ -883,7 +886,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
     /// <summary>
     /// Choose a template based on the <see cref="EDeathCause"/> and format it.
     /// </summary>
-    public UniTask<string?> TranslateDeath(PlayerDied e, LanguageInfo language, IFormatProvider formatProvider, CauseGroup cause, bool useSteamNames, CancellationToken token = default)
+    public UniTask<string?> TranslateDeath(PlayerDied e, LanguageInfo language, CultureInfo culture, CauseGroup cause, bool useSteamNames, TranslationOptions options, CancellationToken token = default)
     {
         DeathFlags flags = e.MessageFlags;
     redo:
@@ -897,7 +900,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
         {
             ref DeathTranslation d = ref cause.Translations[i];
             if (d.Flags == flags)
-                return TranslateDeath(d.Value, e, language, formatProvider, useSteamNames, token)!;
+                return TranslateDeath(d.Value, e, language, culture, useSteamNames, options, token)!;
         }
 
         _logger.LogWarning("Exact match not found for {0}.", flags);
@@ -922,7 +925,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
             {
                 ref DeathTranslation d = ref cause.Translations[i];
                 if (d.Flags == DeathFlags.Killer)
-                    return TranslateDeath(d.Value, e, language, formatProvider, useSteamNames, token)!;
+                    return TranslateDeath(d.Value, e, language, culture, useSteamNames, options, token)!;
             }
         }
         else if ((flags & DeathFlags.Suicide) == DeathFlags.Suicide)
@@ -931,7 +934,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
             {
                 ref DeathTranslation d = ref cause.Translations[i];
                 if (d.Flags == DeathFlags.Suicide)
-                    return TranslateDeath(d.Value, e, language, formatProvider, useSteamNames, token)!;
+                    return TranslateDeath(d.Value, e, language, culture, useSteamNames, options, token)!;
             }
         }
         else if ((flags & DeathFlags.Player3) == DeathFlags.Player3)
@@ -940,14 +943,14 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
             {
                 ref DeathTranslation d = ref cause.Translations[i];
                 if (d.Flags == DeathFlags.Player3)
-                    return TranslateDeath(d.Value, e, language, formatProvider, useSteamNames, token)!;
+                    return TranslateDeath(d.Value, e, language, culture, useSteamNames, options, token)!;
             }
         }
         for (int i = 0; i < cause.Translations.Length; ++i)
         {
             ref DeathTranslation d = ref cause.Translations[i];
             if (d.Flags == DeathFlags.None)
-                return TranslateDeath(d.Value, e, language, formatProvider, useSteamNames, token)!;
+                return TranslateDeath(d.Value, e, language, culture, useSteamNames, options, token)!;
         }
 
         return UniTask.FromResult<string?>(null);
@@ -956,7 +959,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
     /// <summary>
     /// Format a specific template using the given death args.
     /// </summary>
-    private async UniTask<string> TranslateDeath(string template, PlayerDied e, LanguageInfo? language, IFormatProvider formatProvider, bool useSteamNames, CancellationToken token = default)
+    private async UniTask<string> TranslateDeath(string template, PlayerDied e, LanguageInfo? language, CultureInfo culture, bool useSteamNames, TranslationOptions options, CancellationToken token = default)
     {
         language ??= _languageService.GetDefaultLanguage();
 
@@ -972,6 +975,8 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
             {
                 killerName = useSteamNames ? e.Killer.Names.PlayerName : e.Killer.Names.CharacterName;
             }
+
+            killerName = TranslationFormattingUtility.Colorize(killerName, e.KillerTeam?.Faction.Color ?? new Color32(230, 230, 230, 255), options, _translationService.TerminalColoring);
         }
 
         string? thirdPartyName = null;
@@ -986,29 +991,52 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
             {
                 thirdPartyName = useSteamNames ? e.ThirdParty.Names.PlayerName : e.ThirdParty.Names.CharacterName;
             }
+
+            thirdPartyName = TranslationFormattingUtility.Colorize(thirdPartyName, e.ThirdPartyTeam?.Faction.Color ?? new Color32(230, 230, 230, 255), options, _translationService.TerminalColoring);
         }
 
-        string? itemName = e.PrimaryAsset?.GetAsset()?.FriendlyName;
-        if (itemName != null && itemName.EndsWith(" Built", StringComparison.Ordinal))
+        Asset? primaryAsset = e.PrimaryAsset?.GetAsset();
+
+        string? primaryName = primaryAsset?.FriendlyName;
+        if (primaryName != null && primaryName.EndsWith(" Built", StringComparison.Ordinal))
         {
-            itemName = itemName[..^6];
+            primaryName = primaryName[..^6];
         }
+
+        if (primaryName != null)
+        {
+            ValueFormatParameters parameters = new ValueFormatParameters(culture, language, options, AssetLink.AssetLinkFriendly);
+            primaryName = RarityColorAddon.Apply(primaryName, primaryAsset, _translationService.ValueFormatter, in parameters);
+        }
+
+        Asset? secondaryAsset = e.SecondaryAsset?.GetAsset();
+
+        string? secondaryName = secondaryAsset?.FriendlyName;
+        if (secondaryName != null)
+        {
+            ValueFormatParameters parameters = new ValueFormatParameters(culture, language, options, AssetLink.AssetLinkFriendly);
+            secondaryName = RarityColorAddon.Apply(secondaryName, secondaryAsset, _translationService.ValueFormatter, in parameters);
+        }
+
+        string playerName = useSteamNames ? e.Player.Names.PlayerName : e.Player.Names.CharacterName;
+
+        playerName = TranslationFormattingUtility.Colorize(playerName, e.Player.Team.Faction.Color, options, _translationService.TerminalColoring);
 
         string[] format =
         [
-            useSteamNames ? e.Player.Names.PlayerName : e.Player.Names.CharacterName, // {0}
-            killerName ?? string.Empty,                                               // {1}
-            _valueFormatter.FormatEnum(e.Limb, language),                             // {2}
-            itemName ?? string.Empty,                                                 // {3}
-            e.KillDistance.ToString("F0", formatProvider),                            // {4}
-            thirdPartyName ?? string.Empty,                                           // {5}
-            e.SecondaryAsset?.GetAsset()?.FriendlyName ?? string.Empty,               // {6}
+            playerName,                                   // {0}
+            killerName ?? string.Empty,                   // {1}
+            _valueFormatter.FormatEnum(e.Limb, language), // {2}
+            primaryName ?? string.Empty,                  // {3}
+            e.KillDistance.ToString("F0", culture),       // {4}
+            thirdPartyName ?? string.Empty,               // {5}
+            secondaryName ?? string.Empty,                // {6}
         ];
 
         try
         {
             // ReSharper disable once CoVariantArrayConversion
-            return string.Format(template, format);
+            return string.Format(culture, template, format);
         }
         catch (FormatException)
         {

@@ -1,5 +1,6 @@
 using SDG.NetTransport;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
@@ -57,7 +58,7 @@ public class WarfarePlayer :
     /// <summary>
     /// Generic data persisting over the player's lifetime.
     /// </summary>
-    public IDictionary<string, object?> Data { get; } = new Dictionary<string, object?>(8);
+    public ConcurrentDictionary<string, object?> Data { get; } = new ConcurrentDictionary<string, object?>();
 
     public Player UnturnedPlayer { get; }
     public SteamPlayer SteamPlayer { get; }

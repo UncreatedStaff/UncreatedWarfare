@@ -5,7 +5,6 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using Uncreated.Warfare.Layouts.Phases;
 using Uncreated.Warfare.Layouts.Teams;
-using Uncreated.Warfare.Stats;
 
 namespace Uncreated.Warfare.Layouts.UI.Leaderboards;
 
@@ -83,17 +82,16 @@ public class LeaderboardSet
 
     public int GetStatisticIndex(string statName)
     {
-        int statIndex = -1;
-        for (int i = 0; i < Stats.Length; ++i)
+        LeaderboardPhaseStatInfo[] stats = Stats;
+        for (int i = 0; i < stats.Length; ++i)
         {
-            if (!Stats[i].Name.Equals(statName, StringComparison.Ordinal))
+            if (!stats[i].Name.Equals(statName, StringComparison.Ordinal))
                 continue;
 
-            statIndex = i;
-            break;
+            return i;
         }
 
-        return statIndex;
+        return -1;
     }
 
     public double GetStatisticValue(string statName, CSteamID player)
@@ -110,7 +108,9 @@ public class LeaderboardSet
         if (rowIndex == -1)
             return 0;
 
-        return Players[rowIndex].Player.Component<PlayerGameStatsComponent>().Stats[statIndex];
+        double[] stats = Players[rowIndex].Stats;
+
+        return statIndex < stats.Length ? stats[statIndex] : 0;
     }
 
     public int GetRowIndex(CSteamID player)
@@ -183,8 +183,8 @@ public class LeaderboardSet
         private readonly LeaderboardSet _set = set;
         private readonly int _index = index;
 
-        public LeaderboardPlayer Player { get => _set.Players[_index]; }
-        public Span<double> Data { get => MemoryMarshal.CreateSpan(ref _set._data[_index, 0], _set.ColumnCount); }
+        public LeaderboardPlayer Player => _set.Players[_index];
+        public Span<double> Data => MemoryMarshal.CreateSpan(ref _set._data[_index, 0], _set.ColumnCount);
         public Span<string> FormatData(CultureInfo culture)
         {
             int lcid = culture.LCID;

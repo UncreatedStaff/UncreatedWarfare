@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Globalization;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Models.Localization;
@@ -37,5 +37,29 @@ public readonly ref struct ValueFormatParameters
         ArgumentCount = argumentCount;
         Team = team;
         Player = player;
+    }
+    public ValueFormatParameters(CultureInfo culture, LanguageInfo language, TranslationOptions options, ArgumentFormat format)
+    {
+        Culture = culture;
+        Language = language;
+        Options = options;
+        Format = format;
+    }
+    public ValueFormatParameters(CultureInfo culture, LanguageInfo language, TranslationOptions options, ArgumentFormat format, Team team)
+    {
+        Culture = culture;
+        Language = language;
+        Options = options;
+        Format = format;
+        Team = team;
+    }
+    public ValueFormatParameters(CultureInfo culture, LanguageInfo language, TranslationOptions options, ArgumentFormat format, WarfarePlayer player)
+    {
+        Culture = culture;
+        Language = language;
+        Options = options;
+        Format = format;
+        Player = player;
+        Team = player.Team;
     }
 }

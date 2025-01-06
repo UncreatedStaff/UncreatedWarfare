@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Configuration;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -41,6 +42,6 @@ internal class LongestShotValuablePlayerProvider : IValuablePlayerProvider
         if (extremeValue.SquaredDistance < minValue || extremePlayer == null || !extremeValue.Gun.TryGetAsset(out ItemGunAsset? asset))
             return default;
 
-        return new ValuablePlayerMatch(extremePlayer.Player, statConfiguration, [ asset.itemName, extremeValue.SquaredDistance ]);
+        return new ValuablePlayerMatch(extremePlayer.Player, statConfiguration, [ asset.itemName, MathF.Sqrt(extremeValue.SquaredDistance) ]);
     }
 }

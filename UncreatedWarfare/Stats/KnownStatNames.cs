@@ -12,4 +12,5 @@ public static class KnownStatNames
     public const string XP = "xp";
     public const string Credits = "Total Credits";
     public const string Reputation = "rep";
+    public const string AmmoConsumed = "ammo";
 }

@@ -98,6 +98,13 @@ public class LeaderboardPhase : BasePhase<PhaseTeamSettings>, IDisposable, IEven
 
             if (!string.IsNullOrWhiteSpace(stat.Name))
             {
+                // interning the string allows us to use reference comparison before value comparison
+                //   - interning a string is basically replacing the reference with the stored assembly reference
+                //     (from the constant in KnownStatNames).
+                string? internedString = string.IsInterned(stat.Name);
+                if (internedString != null)
+                    stat.Name = internedString;
+                
                 if (stat.DisplayName is not { Count: > 0 })
                     (stat.DisplayName ??= new TranslationList()).Add((LanguageInfo?)null, stat.Name);
 
@@ -183,26 +190,41 @@ public class LeaderboardPhase : BasePhase<PhaseTeamSettings>, IDisposable, IEven
         Interlocked.Exchange(ref _statsFile, null)?.Dispose();
     }
 
-    public virtual LeaderboardSet[] CreateLeaderboardSets()
+    public void AddToOfflineStat(int index, double amount, CSteamID steam64, Team team)
     {
-        for (int i = 0; i < _players.Length; ++i)
-        {
-            List<LeaderboardPlayer> players = _players[i];
-            foreach (LeaderboardPlayer player in players)
-            {
-                for (int j = 0; j < _players.Length; ++j)
-                {
-                    if (j == i)
-                        continue;
+        if (index < 0 || index >= PlayerStats.Length)
+            return;
 
-                    List<LeaderboardPlayer> otherPlayers = _players[j];
-                    int olderPlayer = otherPlayers.FindIndex(x => x.Player.Equals(player) && x.LastJoinedTeam <= player.LastJoinedTeam);
-                    if (olderPlayer >= 0)
-                        otherPlayers.RemoveAt(olderPlayer);
-                }
-            }
+        int teamIndex = -1;
+        IReadOnlyList<Team> allTeams = Layout.TeamManager.AllTeams;
+        for (int i = 0; i < allTeams.Count; ++i)
+        {
+            if (allTeams[i] != team)
+                continue;
+
+            teamIndex = i;
+            break;
         }
 
+        if (teamIndex < 0)
+            return;
+
+        List<LeaderboardPlayer> players = _players[teamIndex];
+        for (int i = 0; i < players.Count; ++i)
+        {
+            if (!players[i].Player.Equals(steam64))
+                continue;
+
+            players[i].Stats[index] += amount;
+#if DEBUG
+            //Logger.LogDebug("Leaderboard stat updated {0}: {1} -> {2} (+{3}) for player {4} on team {5}.", PlayerStats[index].Name, players[i].Stats[index] - amount, players[i].Stats[index], amount, players[i].Player, teamIndex);
+#endif
+            return;
+        }
+    }
+
+    public virtual LeaderboardSet[] CreateLeaderboardSets()
+    {
         LeaderboardSet[] set = new LeaderboardSet[TeamManager.AllTeams.Count];
 
         for (int i = 0; i < TeamManager.AllTeams.Count; ++i)
@@ -215,7 +237,7 @@ public class LeaderboardPhase : BasePhase<PhaseTeamSettings>, IDisposable, IEven
 
     private static void CreateLeaderboardRow(in LeaderboardSet.LeaderboardRow row, LeaderboardPhaseStatInfo[] visibleStats, Span<double> data)
     {
-        double[] stats = row.Player.Player.Component<PlayerGameStatsComponent>().Stats;
+        double[] stats = row.Player.Stats;
         for (int i = 0; i < visibleStats.Length; ++i)
         {
             LeaderboardPhaseStatInfo st = visibleStats[i];
@@ -223,11 +245,21 @@ public class LeaderboardPhase : BasePhase<PhaseTeamSettings>, IDisposable, IEven
         }
     }
 
-    public int GetStatIndex(string statName)
+    public int GetStatIndex(string? statName)
     {
-        for (int i = 0; i < PlayerStats.Length; ++i)
+        if (statName is null)
+            return -1;
+
+        LeaderboardPhaseStatInfo[] stats = PlayerStats;
+        for (int i = 0; i < stats.Length; ++i)
         {
-            if (PlayerStats[i].Name.Equals(statName, StringComparison.Ordinal))
+            if ((object)stats[i].Name == statName)
+                return i;
+        }
+
+        for (int i = 0; i < stats.Length; ++i)
+        {
+            if (stats[i].Name.Equals(statName, StringComparison.Ordinal))
                 return i;
         }
 
@@ -243,37 +275,6 @@ public class LeaderboardPhase : BasePhase<PhaseTeamSettings>, IDisposable, IEven
         }
 
         return emittables;
-    }
-
-    private class ExpressionStatVariable : RewardExpression.IEmittableVariable
-    {
-        private readonly int _index;
-        public string[] Names { get; }
-        public Type OutputType => typeof(double);
-
-        public ExpressionStatVariable(LeaderboardPhaseStatInfo stat, int statIndex)
-        {
-            Names = stat.FormulaName != null ? [ stat.FormulaName, stat.Name ] : [ stat.Name ];
-            _index = statIndex;
-        }
-
-        public void Preload(LocalReference local, IOpCodeEmitter emit, ILogger logger)
-        {
-            MethodInfo prop = typeof(LeaderboardSet.LeaderboardRow).GetProperty(nameof(LeaderboardSet.LeaderboardRow.Data), BindingFlags.Public | BindingFlags.Instance)
-                                  ?.GetMethod ?? throw new InvalidOperationException("Failed to find LeaderboardSet.LeaderboardRow.Data.");
-
-            MethodInfo getIndex = typeof(Span<double>).GetProperty("Item", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
-                                  ?.GetMethod ?? throw new InvalidOperationException("Failed to find Span<double>.Item[int].");
-
-            emit.LoadArgumentAddress(0)
-                .LoadUnboxedAddress<LeaderboardSet.LeaderboardRow>()
-                .Invoke(prop)
-                .PopToLocal(typeof(Span<double>), out LocalBuilder lcl)
-                .LoadLocalAddress(lcl)
-                .LoadConstantInt32(_index)
-                .Invoke(getIndex)
-                .SetLocalValue(local);
-        }
     }
 
     void IEventListener<PlayerJoined>.HandleEvent(PlayerJoined e, IServiceProvider serviceProvider)
@@ -292,7 +293,10 @@ public class LeaderboardPhase : BasePhase<PhaseTeamSettings>, IDisposable, IEven
 
         Team team = player.Team;
         if (!team.IsValid)
+        {
+            player.Component<PlayerGameStatsComponent>().Stats = Array.Empty<double>();
             return;
+        }
 
         int teamIndex = -1;
         IReadOnlyList<Team> allTeams = Layout.TeamManager.AllTeams;
@@ -306,7 +310,10 @@ public class LeaderboardPhase : BasePhase<PhaseTeamSettings>, IDisposable, IEven
         }
 
         if (teamIndex == -1)
+        {
+            player.Component<PlayerGameStatsComponent>().Stats = Array.Empty<double>();
             return;
+        }
 
         List<LeaderboardPlayer> players = _players[teamIndex];
         foreach (LeaderboardPlayer pl in players)
@@ -315,11 +322,46 @@ public class LeaderboardPhase : BasePhase<PhaseTeamSettings>, IDisposable, IEven
                 continue;
 
             pl.LastJoinedTeam = Time.realtimeSinceStartup;
+            player.Component<PlayerGameStatsComponent>().Stats = pl.Stats;
             return;
         }
 
+        player.Component<PlayerGameStatsComponent>().Stats = new double[PlayerStats.Length];
         players.Add(new LeaderboardPlayer(player, team));
         Logger.LogDebug("Created leaderboard player for {0} on team {1}.", player, team);
+    }
+
+    /// <summary>
+    /// Allows using stats in expressions as variables (like k/d).
+    /// </summary>
+    private class ExpressionStatVariable : RewardExpression.IEmittableVariable
+    {
+        private readonly int _index;
+        public string[] Names { get; }
+        public ExpressionStatVariable(LeaderboardPhaseStatInfo stat, int statIndex)
+        {
+            Names = !string.IsNullOrWhiteSpace(stat.FormulaName) ? [ stat.FormulaName, stat.Name ] : [ stat.Name ];
+            _index = statIndex;
+        }
+
+        public void Preload(LocalReference local, IOpCodeEmitter emit, ILogger logger)
+        {
+            MethodInfo prop = typeof(LeaderboardSet.LeaderboardRow).GetProperty(nameof(LeaderboardSet.LeaderboardRow.Data), BindingFlags.Public | BindingFlags.Instance)
+                ?.GetMethod ?? throw new InvalidOperationException("Failed to find LeaderboardSet.LeaderboardRow.Data.");
+
+            MethodInfo getIndex = typeof(Span<double>).GetProperty("Item", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
+                ?.GetMethod ?? throw new InvalidOperationException("Failed to find Span<double>.Item[int].");
+
+            emit.LoadArgumentAddress(0)
+                .LoadUnboxedAddress<LeaderboardSet.LeaderboardRow>()
+                .Invoke(prop)
+                .PopToLocal(typeof(Span<double>), out LocalBuilder lcl)
+                .LoadLocalAddress(lcl)
+                .LoadConstantInt32(_index)
+                .Invoke(getIndex)
+                .LoadAddressValue<double>()
+                .SetLocalValue(local);
+        }
     }
 }
 

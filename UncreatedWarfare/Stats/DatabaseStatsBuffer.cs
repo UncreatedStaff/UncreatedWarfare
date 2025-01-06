@@ -20,7 +20,6 @@ public class DatabaseStatsBuffer : IDisposable, IHostedService, ILayoutHostedSer
     private readonly ILoopTickerFactory _loopTickerFactory;
     private ILoopTicker? _loopTicker;
 
-    public bool IsDirty { get; set; }
     public IStatsDbContext DbContext => _dbContext;
     public DatabaseStatsBuffer(IStatsDbContext dbContext, ILogger<DatabaseStatsBuffer> logger, ILoopTickerFactory loopTickerFactory)
     {
@@ -32,7 +31,7 @@ public class DatabaseStatsBuffer : IDisposable, IHostedService, ILayoutHostedSer
 
     public async Task FlushAsync(CancellationToken token = default)
     {
-        if (!IsDirty)
+        if (!_dbContext.ChangeTracker.HasChanges())
         {
             return;
         }
@@ -51,7 +50,6 @@ public class DatabaseStatsBuffer : IDisposable, IHostedService, ILayoutHostedSer
     public async Task FlushAsyncNoLock(CancellationToken token)
     {
         await _dbContext.SaveChangesAsync(token).ConfigureAwait(false);
-        IsDirty = false;
         _logger.LogConditional("Flushed stats data.");
     }
 
@@ -86,7 +84,14 @@ public class DatabaseStatsBuffer : IDisposable, IHostedService, ILayoutHostedSer
     UniTask IHostedService.StartAsync(CancellationToken token)
     {
         _loopTicker?.Dispose();
-        _loopTicker = _loopTickerFactory.CreateTicker(TimeSpan.FromSeconds(30), invokeImmediately: false, queueOnGameThread: false, onTick: (_, _, _) =>
+
+#if DEBUG
+        TimeSpan delay = TimeSpan.FromSeconds(5);
+#else
+        TimeSpan delay = TimeSpan.FromSeconds(30);
+#endif
+
+        _loopTicker = _loopTickerFactory.CreateTicker(delay, invokeImmediately: false, queueOnGameThread: false, onTick: (_, _, _) =>
         {
             Task.Run(async () =>
             {

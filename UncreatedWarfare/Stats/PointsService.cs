@@ -264,7 +264,7 @@ public class PointsService : IEventListener<PlayerTeamChanged> // todo player eq
                 player.SetReputation((int)Math.Round(newRep));
             _ui.UpdatePointsUI(player, this);
 
-            if (!@event.ExcludeFromLeaderboard)
+            if (!@event.ExcludeFromLeaderboard && factionId == player.Team.Faction.PrimaryKey)
             {
                 PlayerGameStatsComponent? comp = player.ComponentOrNull<PlayerGameStatsComponent>();
                 if (comp != null)

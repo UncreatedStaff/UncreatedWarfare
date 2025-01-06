@@ -57,7 +57,7 @@ public static class F
         {
             Vector3 nodePos = existingNode.transform.position;
             float dist = MathUtility.SquaredDistance(in point, in nodePos, true);
-            if (dist < smallest && node is not null)
+            if (dist >= smallest && node is not null)
                 continue;
 
             node = existingNode;

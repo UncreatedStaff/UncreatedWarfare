@@ -1,10 +1,9 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Emit;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Reflection.Emit;
 using Uncreated.Warfare.NewQuests.Parameters;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Util;
@@ -128,13 +127,10 @@ public class QuestRewardExpression : RewardExpression
 
         public string[] Names { get; }
 
-        public Type OutputType { get; }
-
         public QuestStateVariable(IVariable variable, RewardVariableAttribute? attribute)
         {
             _variable = variable;
             Names = attribute?.Name != null ? [ attribute.Name, variable.Member.Name ] : [ variable.Member.Name ];
-            OutputType = variable.MemberType;
         }
 
         public void Preload(LocalReference local, IOpCodeEmitter il, ILogger logger)
