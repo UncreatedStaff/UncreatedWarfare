@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SDG.NetTransport;
 using System;
@@ -15,6 +15,7 @@ using Uncreated.Warfare.Moderation.Punishments;
 using Uncreated.Warfare.Moderation.Punishments.Presets;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 
@@ -27,6 +28,7 @@ public partial class ModerationUI : UnturnedUI
     private readonly IPlayerService _playerService;
     private readonly IUserDataService _userDataService;
     private readonly DatabaseInterface _moderationSql;
+    private readonly IPointsStore _pointsStore;
     private readonly ItemIconProvider _itemIconProvider;
 
     private readonly string? _discordInviteCode;
@@ -188,6 +190,7 @@ public partial class ModerationUI : UnturnedUI
     public ModerationUI(IServiceProvider serviceProvider)
         : base(serviceProvider.GetRequiredService<ILoggerFactory>(), serviceProvider.GetRequiredService<AssetConfiguration>().GetAssetLink<EffectAsset>("UI:ModerationMenu"), staticKey: true)
     {
+        _pointsStore = serviceProvider.GetRequiredService<IPointsStore>();
         _valueFormatter = serviceProvider.GetRequiredService<ITranslationValueFormatter>();
         _playerService = serviceProvider.GetRequiredService<IPlayerService>();
         _userDataService = serviceProvider.GetRequiredService<IUserDataService>();
@@ -400,7 +403,7 @@ public partial class ModerationUI : UnturnedUI
         index += data.HistoryPage * ModerationHistory.Length;
         if (data.HistoryView == null || index >= data.HistoryView.Length)
         {
-            Logger!.LogWarning("Invalid history index: {0} (p. {1} / {2}).", index, data.HistoryPage, data.PageCount);
+            GetLogger().LogWarning("Invalid history index: {0} (p. {1} / {2}).", index, data.HistoryPage, data.PageCount);
             return;
         }
         
@@ -759,18 +762,7 @@ public partial class ModerationUI : UnturnedUI
                     PlayerListEntry entry = ModerationPlayerList[i];
                     entry.SteamId.SetText(connection, listPlayer.Steam64.m_SteamID.ToString(CultureInfo.InvariantCulture));
                     entry.Name.SetText(connection, listPlayer.Names.GetDisplayNameOrPlayerName());
-                    if (_moderationSql.TryGetAvatar(listPlayer.Steam64.m_SteamID, AvatarSize.Small, out string avatarUrl))
-                        entry.ProfilePicture.SetImage(connection, avatarUrl);
-                    else
-                    {
-                        entry.ProfilePicture.SetImage(connection, string.Empty);
-                        UniTask.Create(async () =>
-                        {
-                            string? icon = null;// await listPlayer.GetProfilePictureURL(AvatarSize.Small, player.DisconnectToken);
-                            await UniTask.SwitchToMainThread(player.DisconnectToken);
-                            entry.ProfilePicture.SetImage(player, icon ?? string.Empty);
-                        });
-                    }
+                    entry.ProfilePicture.SetImage(connection, listPlayer.SteamSummary.AvatarUrlSmall);
 
                     if (i >= data.InfoActorCount)
                         entry.Root.SetVisibility(player, true);

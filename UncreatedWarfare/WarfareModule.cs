@@ -879,7 +879,7 @@ public sealed class WarfareModule
             if (string.IsNullOrWhiteSpace(connectionString))
                 throw new InvalidOperationException($"Missing connection string: \"{connectionStringType}\".");
 
-            return new ManualMySqlProvider(connectionString);
+            return new ManualMySqlProvider(connectionString, serviceProvider.Resolve<ILogger<ManualMySqlProvider>>());
         });
     }
 

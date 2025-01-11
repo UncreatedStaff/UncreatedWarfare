@@ -16,6 +16,7 @@ using Uncreated.Warfare.Moderation.Records;
 using Uncreated.Warfare.Moderation.Reports;
 using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Steam;
 using Uncreated.Warfare.Steam.Models;
 using Uncreated.Warfare.Util;
@@ -28,6 +29,7 @@ public class DatabaseInterface
     public readonly TimeSpan DefaultInvalidateDuration = TimeSpan.FromSeconds(3);
     private readonly ILogger<DatabaseInterface> _logger;
     private readonly IUserDataService _userDataService;
+    private readonly IPlayerService _playerService;
     private readonly Dictionary<ulong, string> _iconUrlCacheSmall = new Dictionary<ulong, string>(128);
     private readonly Dictionary<ulong, string> _iconUrlCacheMedium = new Dictionary<ulong, string>(128);
     private readonly Dictionary<ulong, string> _iconUrlCacheFull = new Dictionary<ulong, string>(128);
@@ -98,12 +100,13 @@ public class DatabaseInterface
     public event Action<ModerationEntry>? OnModerationEntryUpdated;
     public ModerationCache Cache { get; } = new ModerationCache();
     internal ISteamApiService SteamAPI { get; }
-    public DatabaseInterface(IManualMySqlProvider mySqlProvider, ILogger<DatabaseInterface> logger, ISteamApiService steamApi, IUserDataService userDataService)
+    public DatabaseInterface(IManualMySqlProvider mySqlProvider, ILogger<DatabaseInterface> logger, ISteamApiService steamApi, IUserDataService userDataService, IPlayerService playerService)
     {
         SteamAPI = steamApi;
         Sql = mySqlProvider;
         _logger = logger;
         _userDataService = userDataService;
+        _playerService = playerService;
     }
 
     public bool TryGetAvatar(IModerationActor actor, AvatarSize size, out string avatar)
@@ -118,12 +121,30 @@ public class DatabaseInterface
 
     public bool TryGetAvatar(ulong steam64, AvatarSize size, out string avatar)
     {
+        WarfarePlayer? online = _playerService.GetOnlinePlayerOrNullThreadSafe(steam64);
+        if (online != null)
+        {
+            avatar = size switch
+            {
+                AvatarSize.Full => online.SteamSummary.AvatarUrlFull,
+                AvatarSize.Medium => online.SteamSummary.AvatarUrlMedium,
+                _ => online.SteamSummary.AvatarUrlSmall
+            };
+        }
+        else avatar = null!;
+
         Dictionary<ulong, string> dict = size switch
         {
             AvatarSize.Full => _iconUrlCacheFull,
             AvatarSize.Medium => _iconUrlCacheMedium,
             _ => _iconUrlCacheSmall
         };
+
+        if (!string.IsNullOrEmpty(avatar))
+        {
+            dict[steam64] = avatar;
+            return true;
+        }
 
         lock (_cacheSync)
             return dict.TryGetValue(steam64, out avatar);
@@ -256,7 +277,7 @@ public class DatabaseInterface
         await Sql.QueryAsync(sb.ToString(), pkArgs, token, reader =>
         {
             entry = ReadEntry(flag, reader);
-            return true;
+            return false;
         }).ConfigureAwait(false);
 
         if (entry == null)
@@ -1138,7 +1159,7 @@ public class DatabaseInterface
             reader =>
             {
                 result = ReadEntry(1 | (1 << 10), reader) as AssetBan;
-                return true;
+                return false;
             }).ConfigureAwait(false);
 
         if (detail && result != null)
@@ -1376,15 +1397,15 @@ public class DatabaseInterface
                 byte[]? imgData = reader.IsDBNull(offset) ? null : reader.ReadByteArray(offset);
                 rep.Type = sec ?? ReportType.Custom;
                 rep.ScreenshotJpgData = imgData;
-                if ((flag & (1 << 9)) != 0)
-                {
-                    ++offset;
-                    if (entry is VoiceChatAbuseReport vrep)
-                    {
-                        byte[] voiceData = reader.ReadByteArray(offset);
-                        vrep.PreviousVoiceData = voiceData;
-                    }
-                }
+            }
+        }
+        if ((flag & (1 << 9)) != 0)
+        {
+            ++offset;
+            if (entry is VoiceChatAbuseReport vrep)
+            {
+                byte[] voiceData = reader.ReadByteArray(offset);
+                vrep.PreviousVoiceData = voiceData;
             }
         }
         if ((flag & (1 << 10)) != 0)
@@ -1528,7 +1549,7 @@ public class DatabaseInterface
                 if (!reader.IsDBNull(0))
                     max = reader.GetInt32(0);
 
-                return true;
+                return false;
 
             }).ConfigureAwait(false);
 
