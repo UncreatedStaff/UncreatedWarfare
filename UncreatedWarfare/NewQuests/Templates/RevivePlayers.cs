@@ -1,17 +1,18 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
-using Uncreated.Warfare.Exceptions;
-using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.NewQuests.Parameters;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Extensions;
-using Uncreated.Warfare.Quests;
+using Uncreated.Warfare.Quests.Parameters;
+using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 
-namespace Uncreated.Warfare.NewQuests.Templates;
+namespace Uncreated.Warfare.Quests.Templates;
 public class RevivePlayers : QuestTemplate<RevivePlayers, RevivePlayers.Tracker, RevivePlayers.State>
 {
     public Int32ParameterTemplate Revives { get; set; }
@@ -21,33 +22,53 @@ public class RevivePlayers : QuestTemplate<RevivePlayers, RevivePlayers.Tracker,
     public RevivePlayers(IConfiguration templateConfig, IServiceProvider serviceProvider) : base(templateConfig, serviceProvider) { }
     public class State : IQuestState<RevivePlayers>
     {
+        [JsonIgnore]
+        public string Text { get; set; }
+
         [RewardVariable("r")]
         public QuestParameterValue<int> Revives { get; set; }
+
+        [JsonIgnore]
         public QuestParameterValue<int> FlagValue => Revives;
         public bool RequireSquad { get; set; }
         public bool RequireFullSquad { get; set; }
         public bool RequireTargetInSameSquad { get; set; }
-        public UniTask CreateFromConfigurationAsync(IConfiguration configuration, IServiceProvider serviceProvider, CancellationToken token)
+        public UniTask CreateFromConfigurationAsync(IQuestStateConfiguration configuration, RevivePlayers template, IServiceProvider serviceProvider, CancellationToken token)
         {
-            string? revivesStr = configuration["Revives"];
+            RequireSquad = configuration.ParseBooleanValue("RequireSquad");
+            RequireFullSquad = configuration.ParseBooleanValue("RequireFullSquad");
+            RequireTargetInSameSquad = configuration.ParseBooleanValue("RequireTargetInSameSquad");
+            Revives = configuration.ParseInt32Value("Revives", Int32ParameterTemplate.WildcardInclusive);
 
-            RequireSquad = configuration.GetValue("RequireSquad", defaultValue: false);
-            RequireFullSquad = configuration.GetValue("RequireFullSquad", defaultValue: false);
-            RequireTargetInSameSquad = configuration.GetValue("RequireTargetInSameSquad", defaultValue: false);
+            FormatText(template);
 
-            if (string.IsNullOrEmpty(revivesStr) || !Int32ParameterTemplate.TryParseValue(revivesStr, out QuestParameterValue<int>? revives))
-                throw new QuestConfigurationException(typeof(RevivePlayers), "Failed to parse integer parameter for \"Revives\".");
-
-            Revives = revives;
             return UniTask.CompletedTask;
         }
-        public async UniTask CreateFromTemplateAsync(RevivePlayers data, CancellationToken token)
+        public async UniTask CreateFromTemplateAsync(RevivePlayers template, CancellationToken token)
         {
-            Revives = await data.Revives.CreateValue(data.ServiceProvider);
+            Revives = await template.Revives.CreateValue(template.ServiceProvider);
 
-            RequireSquad = data.RequireSquad;
-            RequireFullSquad = data.RequireFullSquad;
-            RequireTargetInSameSquad = data.RequireTargetInSameSquad;
+            RequireSquad = template.RequireSquad;
+            RequireFullSquad = template.RequireFullSquad;
+            RequireTargetInSameSquad = template.RequireTargetInSameSquad;
+
+            FormatText(template);
+        }
+
+        private void FormatText(RevivePlayers template)
+        {
+            ITranslationValueFormatter formatter = template.ServiceProvider.GetRequiredService<ITranslationValueFormatter>();
+
+            Text = string.Format(template.Text.Translate(null, template.Type.Name),
+                "{0}",
+                Revives.GetDisplayString(formatter)
+            );
+        }
+
+        /// <inheritdoc />
+        public string CreateQuestDescriptiveString()
+        {
+            return Text;
         }
     }
     public class Tracker : QuestTracker, IEventListener<PlayerAided>
@@ -95,16 +116,16 @@ public class RevivePlayers : QuestTemplate<RevivePlayers, RevivePlayers.Tracker,
             InvokeUpdate();
         }
 
-        protected override void WriteProgress(Utf8JsonWriter writer)
+        public override void WriteProgress(Utf8JsonWriter writer)
         {
-            writer.WriteNumber("revives", _revives);
+            writer.WriteNumber("Revives", _revives);
         }
 
-        protected override void ReadProgress(ref Utf8JsonReader reader)
+        public override void ReadProgress(ref Utf8JsonReader reader)
         {
             JsonUtility.ReadTopLevelProperties(ref reader, (ref Utf8JsonReader reader, string property, ref object? _) =>
             {
-                if (property.Equals("revives", StringComparison.Ordinal))
+                if (property.Equals("Revives", StringComparison.Ordinal))
                 {
                     _revives = reader.GetInt32();
                 }

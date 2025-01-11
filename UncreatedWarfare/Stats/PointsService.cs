@@ -435,6 +435,9 @@ public class PointsTranslations : PropertiesTranslationCollection
     [TranslationData("Sent to a player on the points popup when XP or credits given from the console.")]
     public Translation XPToastFromOperator = new Translation("FROM OPERATOR", TranslationOptions.TMProUI);
 
+    [TranslationData("Sent to a player after they're given a quest reward.", "Quest name")]
+    public Translation<string> XPToastQuestReward = new Translation<string>("{0} REWARD", TranslationOptions.TMProUI, UppercaseAddon.Instance);
+
     [TranslationData("Sent to a player on the points popup when XP or credits are given to them by an admin.")]
     public Translation XPToastFromPlayer = new Translation("FROM ADMIN", TranslationOptions.TMProUI);
 

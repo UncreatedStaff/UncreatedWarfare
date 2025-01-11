@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Globalization;
 using Uncreated.Warfare.Models.Localization;
@@ -145,7 +145,7 @@ public sealed class TimeAddon : IArgumentAddon
         int highDigits = MathUtility.CountDigits(high);
         int lowDigits = MathUtility.CountDigits(low);
         string highSuffix = highSuffixTranslation.Translate(language);
-        string lowSuffix = lowDigits == 0 ? string.Empty : lowSuffixTranslation!.Translate(language);
+        string lowSuffix = lowSuffixTranslation == null || low == 0 ? string.Empty : lowSuffixTranslation.Translate(language);
         string and = timeTranslations.TimeAnd.Translate(language);
 
         LongTimeState state = default;

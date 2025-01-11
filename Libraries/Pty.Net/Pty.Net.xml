@@ -1,0 +1,582 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Pty.Net</name>
+    </assembly>
+    <members>
+        <member name="T:Pty.Net.IPtyConnection">
+            <summary>
+            Connection to a running pseudoterminal process.
+            </summary>
+        </member>
+        <member name="E:Pty.Net.IPtyConnection.ProcessExited">
+            <summary>
+            Event fired when the pty process exits.
+            </summary>
+        </member>
+        <member name="P:Pty.Net.IPtyConnection.ReaderStream">
+            <summary>
+            Gets the stream for reading data from the pty.
+            </summary>
+        </member>
+        <member name="P:Pty.Net.IPtyConnection.WriterStream">
+            <summary>
+            Gets the stream for writing data to the pty.
+            </summary>
+        </member>
+        <member name="P:Pty.Net.IPtyConnection.Pid">
+            <summary>
+            Gets the pty process ID.
+            </summary>
+        </member>
+        <member name="P:Pty.Net.IPtyConnection.ExitCode">
+            <summary>
+            Gets the pty process exit code.
+            </summary>
+        </member>
+        <member name="M:Pty.Net.IPtyConnection.WaitForExit(System.Int32)">
+            <summary>
+            Wait for the pty process to exit up to a given timeout.
+            </summary>
+            <param name="milliseconds">Timeout to wait for the process to exit.</param>
+            <returns>True if the process exists within the timeout, false otherwise.</returns>
+        </member>
+        <member name="M:Pty.Net.IPtyConnection.Kill">
+            <summary>
+            Immediately terminates the pty process.
+            </summary>
+        </member>
+        <member name="M:Pty.Net.IPtyConnection.Resize(System.Int32,System.Int32)">
+            <summary>
+            Change the size of the pty.
+            </summary>
+            <param name="cols">The number of columns.</param>
+            <param name="rows">The number of rows.</param>
+        </member>
+        <member name="T:Pty.Net.IPtyProvider">
+            <summary>
+            A provider of pseudoterminal connections.
+            </summary>
+        </member>
+        <member name="M:Pty.Net.IPtyProvider.StartTerminalAsync(Pty.Net.PtyOptions,System.Diagnostics.TraceSource,System.Threading.CancellationToken)">
+            <summary>
+            Spawns a process as a pseudoterminal.
+            </summary>
+            <param name="options">The options for spawning the pty.</param>
+            <param name="trace">The tracer to trace execution with.</param>
+            <param name="cancellationToken">A token to cancel the task early.</param>
+            <returns>A <see cref="T:System.Threading.Tasks.Task"/> that completes once the process has spawned.</returns>
+        </member>
+        <member name="T:Pty.Net.Linux.PtyConnection">
+            <summary>
+            A connection to a pseudoterminal on linux machines.
+            </summary>
+        </member>
+        <member name="M:Pty.Net.Linux.PtyConnection.#ctor(System.Int32,System.Int32)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Pty.Net.Linux.PtyConnection"/> class.
+            </summary>
+            <param name="controller">The fd of the pty controller.</param>
+            <param name="pid">The id of the spawned process.</param>
+        </member>
+        <member name="M:Pty.Net.Linux.PtyConnection.Kill(System.Int32)">
+            <inheritdoc/>
+        </member>
+        <member name="M:Pty.Net.Linux.PtyConnection.Resize(System.Int32,System.Int32,System.Int32)">
+            <inheritdoc/>
+        </member>
+        <member name="M:Pty.Net.Linux.PtyConnection.WaitPid(System.Int32,System.Int32@)">
+            <inheritdoc/>
+        </member>
+        <member name="T:Pty.Net.Linux.PtyProvider">
+            <summary>
+            Provides a pty connection for linux machines.
+            </summary>
+        </member>
+        <member name="M:Pty.Net.Linux.PtyProvider.StartTerminalAsync(Pty.Net.PtyOptions,System.Diagnostics.TraceSource,System.Threading.CancellationToken)">
+            <inheritdoc/>
+        </member>
+        <member name="T:Pty.Net.Mac.NativeMethods">
+            <summary>
+            Defines native types and methods for interop with Mac OS system APIs.
+            </summary>
+        </member>
+        <member name="F:Pty.Net.Mac.NativeMethods.TermInputFlag.BRKINT">
+            <summary>
+            Map BREAK to SIGINTR
+            </summary>
+        </member>
+        <member name="F:Pty.Net.Mac.NativeMethods.TermInputFlag.ICRNL">
+            <summary>
+            Map CR to NL (ala CRMOD)
+            </summary>
+        </member>
+        <member name="F:Pty.Net.Mac.NativeMethods.TermInputFlag.IXON">
+            <summary>
+            Enable output flow control
+            </summary>
+        </member>
+        <member name="F:Pty.Net.Mac.NativeMethods.TermInputFlag.IXANY">
+            <summary>
+            Any char will restart after stop
+            </summary>
+        </member>
+        <member name="F:Pty.Net.Mac.NativeMethods.TermInputFlag.IMAXBEL">
+            <summary>
+            Ring bell on input queue full
+            </summary>
+        </member>
+        <member name="F:Pty.Net.Mac.NativeMethods.TermInputFlag.IUTF8">
+            <summary>
+            Maintain state for UTF-8 VERASE
+            </summary>
+        </member>
+        <member name="F:Pty.Net.Mac.NativeMethods.TermOuptutFlag.NONE">
+            <summary>
+            No output processing
+            </summary>
+        </member>
+        <member name="F:Pty.Net.Mac.NativeMethods.TermOuptutFlag.OPOST">
+            <summary>
+            Enable following output processing
+            </summary>
+        </member>
+        <member name="F:Pty.Net.Mac.NativeMethods.TermOuptutFlag.ONLCR">
+            <summary>
+            Map NL to CR-NL (ala CRMOD)
+            </summary>
+        </member>
+        <member name="F:Pty.Net.Mac.NativeMethods.TermOuptutFlag.OCRNL">
+            <summary>
+            Map CR to NL
+            </summary>
+        </member>
+        <member name="F:Pty.Net.Mac.NativeMethods.TermOuptutFlag.ONLRET">
+            <summary>
+            Don't output CR
+            </summary>
+        </member>
+        <member name="F:Pty.Net.Mac.NativeMethods.TermConrolFlag.CS8">
+            <summary>
+            8 bits
+            </summary>
+        </member>
+        <member name="F:Pty.Net.Mac.NativeMethods.TermConrolFlag.CREAD">
+            <summary>
+            Enable receiver
+            </summary>
+        </member>
+        <member name="F:Pty.Net.Mac.NativeMethods.TermConrolFlag.HUPCL">
+            <summary>
+            Hang up on last close
+            </summary>
+        </member>
+        <member name="F:Pty.Net.Mac.NativeMethods.TermLocalFlag.ECHOKE">
+            <summary>
+            Visual erase for line kill
+            </summary>
+        </member>
+        <member name="F:Pty.Net.Mac.NativeMethods.TermLocalFlag.ECHOE">
+            <summary>
+            Visually erase chars
+            </summary>
+        </member>
+        <member name="F:Pty.Net.Mac.NativeMethods.TermLocalFlag.ECHOK">
+            <summary>
+            Echo NL after line kill
+            </summary>
+        </member>
+        <member name="F:Pty.Net.Mac.NativeMethods.TermLocalFlag.ECHO">
+            <summary>
+            Enable echoing
+            </summary>
+        </member>
+        <member name="F:Pty.Net.Mac.NativeMethods.TermLocalFlag.ECHOCTL">
+            <summary>
+            Echo control chars as ^(Char)
+            </summary>
+        </member>
+        <member name="F:Pty.Net.Mac.NativeMethods.TermLocalFlag.ISIG">
+            <summary>
+            Enable signals INTR, QUIT, [D]SUSP
+            </summary>
+        </member>
+        <member name="F:Pty.Net.Mac.NativeMethods.TermLocalFlag.ICANON">
+            <summary>
+            Canonicalize input lines
+            </summary>
+        </member>
+        <member name="F:Pty.Net.Mac.NativeMethods.TermLocalFlag.IEXTEN">
+            <summary>
+            Enable DISCARD and LNEXT
+            </summary>
+        </member>
+        <member name="T:Pty.Net.Mac.PtyConnection">
+            <summary>
+            A connection to a pseudoterminal on MacOS machines.
+            </summary>
+        </member>
+        <member name="M:Pty.Net.Mac.PtyConnection.#ctor(System.Int32,System.Int32)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Pty.Net.Mac.PtyConnection"/> class.
+            </summary>
+            <param name="controller">The fd of the pty controller.</param>
+            <param name="pid">The id of the spawned process.</param>
+        </member>
+        <member name="M:Pty.Net.Mac.PtyConnection.Kill(System.Int32)">
+            <inheritdoc/>
+        </member>
+        <member name="M:Pty.Net.Mac.PtyConnection.Resize(System.Int32,System.Int32,System.Int32)">
+            <inheritdoc/>
+        </member>
+        <member name="M:Pty.Net.Mac.PtyConnection.WaitPid(System.Int32,System.Int32@)">
+            <inheritdoc/>
+        </member>
+        <member name="T:Pty.Net.Mac.PtyProvider">
+            <summary>
+            Provides a pty connection for MacOS machines.
+            </summary>
+        </member>
+        <member name="M:Pty.Net.Mac.PtyProvider.StartTerminalAsync(Pty.Net.PtyOptions,System.Diagnostics.TraceSource,System.Threading.CancellationToken)">
+            <inheritdoc/>
+        </member>
+        <member name="T:Pty.Net.PlatformServices">
+            <summary>
+            Provides platform specific functionality.
+            </summary>
+        </member>
+        <member name="P:Pty.Net.PlatformServices.PtyProvider">
+            <summary>
+            Gets the <see cref="T:Pty.Net.IPtyProvider"/> for the current platform.
+            </summary>
+        </member>
+        <member name="P:Pty.Net.PlatformServices.EnvironmentVariableComparer">
+            <summary>
+            Gets the comparer to determine if two environment variable keys are equivalent on the current platform.
+            </summary>
+        </member>
+        <member name="P:Pty.Net.PlatformServices.PtyEnvironment">
+            <summary>
+            Gets specific environment variables that are needed when spawning the PTY.
+            </summary>
+        </member>
+        <member name="T:Pty.Net.PtyExitedEventArgs">
+            <summary>
+            Event arguments that encapsulate data about the pty process exit.
+            </summary>
+        </member>
+        <member name="M:Pty.Net.PtyExitedEventArgs.#ctor(System.Int32)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Pty.Net.PtyExitedEventArgs"/> class.
+            </summary>
+            <param name="exitCode">Exit code of the pty process.</param>
+        </member>
+        <member name="P:Pty.Net.PtyExitedEventArgs.ExitCode">
+            <summary>
+            Gets or sets the exit code of the pty process.
+            </summary>
+        </member>
+        <member name="T:Pty.Net.PtyOptions">
+            <summary>
+            Options for spawning a new pty process.
+            </summary>
+        </member>
+        <member name="P:Pty.Net.PtyOptions.Name">
+            <summary>
+            Gets or sets the terminal name.
+            </summary>
+        </member>
+        <member name="P:Pty.Net.PtyOptions.Rows">
+            <summary>
+            Gets or sets the number of initial rows.
+            </summary>
+        </member>
+        <member name="P:Pty.Net.PtyOptions.Cols">
+            <summary>
+            Gets or sets the number of initial columns.
+            </summary>
+        </member>
+        <member name="P:Pty.Net.PtyOptions.Cwd">
+            <summary>
+            Gets or sets the working directory for the spawned process.
+            </summary>
+        </member>
+        <member name="P:Pty.Net.PtyOptions.App">
+            <summary>
+            Gets or sets the path to the process to be spawned.
+            </summary>
+        </member>
+        <member name="P:Pty.Net.PtyOptions.CommandLine">
+            <summary>
+            Gets or sets the command line arguments to the process.
+            </summary>
+        </member>
+        <member name="P:Pty.Net.PtyOptions.VerbatimCommandLine">
+            <summary>
+            Gets or sets a value indicating whether command line arguments must be quoted.
+            <c>false</c>, the default, means that the arguments must be quoted and quotes inside escaped then concatenated with spaces.
+            <c>true</c> means that the arguments must not be quoted and just concatenated with spaces.
+            </summary>
+        </member>
+        <member name="P:Pty.Net.PtyOptions.Environment">
+            <summary>
+            Gets or sets the process' environment variables.
+            </summary>
+        </member>
+        <member name="T:Pty.Net.PtyProvider">
+            <summary>
+            Provides the ability to spawn new processes under a pseudoterminal.
+            </summary>
+        </member>
+        <member name="M:Pty.Net.PtyProvider.SpawnAsync(Pty.Net.PtyOptions,System.Threading.CancellationToken)">
+            <summary>
+            Spawn a new process connected to a pseudoterminal.
+            </summary>
+            <param name="options">The set of options for creating the pseudoterminal.</param>
+            <param name="cancellationToken">The token to cancel process creation early.</param>
+            <returns>A <see cref="T:System.Threading.Tasks.Task`1"/> that completes once the process has spawned.</returns>
+        </member>
+        <member name="T:Pty.Net.Unix.PtyConnection">
+            <summary>
+            A connection to a Unix-style pseudoterminal.
+            </summary>
+        </member>
+        <member name="M:Pty.Net.Unix.PtyConnection.#ctor(System.Int32,System.Int32)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Pty.Net.Unix.PtyConnection"/> class.
+            </summary>
+            <param name="controller">The fd of the pty controller.</param>
+            <param name="pid">The id of the spawned process.</param>
+        </member>
+        <member name="E:Pty.Net.Unix.PtyConnection.ProcessExited">
+            <inheritdoc/>
+        </member>
+        <member name="P:Pty.Net.Unix.PtyConnection.ReaderStream">
+            <inheritdoc/>
+        </member>
+        <member name="P:Pty.Net.Unix.PtyConnection.WriterStream">
+            <inheritdoc/>
+        </member>
+        <member name="P:Pty.Net.Unix.PtyConnection.Pid">
+            <inheritdoc/>
+        </member>
+        <member name="P:Pty.Net.Unix.PtyConnection.ExitCode">
+            <inheritdoc/>
+        </member>
+        <member name="M:Pty.Net.Unix.PtyConnection.Dispose">
+            <inheritdoc/>
+        </member>
+        <member name="M:Pty.Net.Unix.PtyConnection.Kill">
+            <inheritdoc/>
+        </member>
+        <member name="M:Pty.Net.Unix.PtyConnection.Resize(System.Int32,System.Int32)">
+            <inheritdoc/>
+        </member>
+        <member name="M:Pty.Net.Unix.PtyConnection.WaitForExit(System.Int32)">
+            <inheritdoc/>
+        </member>
+        <member name="M:Pty.Net.Unix.PtyConnection.Resize(System.Int32,System.Int32,System.Int32)">
+            <summary>
+            OS-specific implementation of the pty-resize function.
+            </summary>
+            <param name="controller">The fd of the pty controller.</param>
+            <param name="cols">The number of columns to resize to.</param>
+            <param name="rows">The number of rows to resize to.</param>
+            <returns>True if the function suceeded to resize the pty, false otherwise.</returns>
+        </member>
+        <member name="M:Pty.Net.Unix.PtyConnection.Kill(System.Int32)">
+            <summary>
+            Kills the terminal process.
+            </summary>
+            <param name="controller">The fd of the pty controller.</param>
+            <returns>True if the function succeeded in killing the process, false otherwise.</returns>
+        </member>
+        <member name="M:Pty.Net.Unix.PtyConnection.WaitPid(System.Int32,System.Int32@)">
+            <summary>
+            OS-specific implementation of waiting on the given process id.
+            </summary>
+            <param name="pid">The process id to wait on.</param>
+            <param name="status">The status of the process.</param>
+            <returns>True if the function succeeded to get the status of the process, false otherwise.</returns>
+        </member>
+        <member name="T:Pty.Net.Unix.PtyProvider">
+            <summary>
+            Abstract class that provides a pty connection for unix-like machines.
+            </summary>
+        </member>
+        <member name="M:Pty.Net.Unix.PtyProvider.StartTerminalAsync(Pty.Net.PtyOptions,System.Diagnostics.TraceSource,System.Threading.CancellationToken)">
+            <inheritdoc/>
+        </member>
+        <member name="M:Pty.Net.Unix.PtyProvider.GetExecvpArgs(Pty.Net.PtyOptions)">
+            <summary>
+            Gets the arguments to pass to execvp.
+            </summary>
+            <param name="options">The options for spawning the pty.</param>
+            <returns>An array of arguments to pass to execvp.</returns>
+        </member>
+        <member name="T:Pty.Net.Unix.PtyStream">
+            <summary>
+            A stream connected to a pty.
+            </summary>
+        </member>
+        <member name="M:Pty.Net.Unix.PtyStream.#ctor(System.Int32,System.IO.FileAccess)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Pty.Net.Unix.PtyStream"/> class.
+            </summary>
+            <param name="fd">The fd to connect the stream to.</param>
+            <param name="fileAccess">The access permissions to set on the fd.</param>
+        </member>
+        <member name="P:Pty.Net.Unix.PtyStream.CanSeek">
+            <inheritdoc/>
+        </member>
+        <member name="M:Pty.Net.Windows.NativeMethods.STARTUPINFOEX.InitAttributeListAttachedToConPTY(Pty.Net.Windows.NativeMethods.SafePseudoConsoleHandle)">
+            <summary>
+            Initializes the specified startup info struct with the required properties and
+            updates its thread attribute list with the specified ConPTY handle.
+            </summary>
+            <param name="handle">Pseudo console handle.</param>
+        </member>
+        <member name="M:Pty.Net.Windows.NativeMethods.SafeKernelHandle.InitialSetHandle(System.IntPtr)">
+            <summary>
+            Use this method with the default constructor to allow the memory allocation
+            for the handle to happen before the CER call to get it.
+            </summary>
+            <param name="handle">The native handle.</param>
+        </member>
+        <member name="T:Pty.Net.Windows.PseudoConsoleConnection">
+            <summary>
+            A connection to a pseudoterminal spawned by native windows APIs.
+            </summary>
+        </member>
+        <member name="M:Pty.Net.Windows.PseudoConsoleConnection.#ctor(Pty.Net.Windows.PseudoConsoleConnection.PseudoConsoleConnectionHandles)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Pty.Net.Windows.PseudoConsoleConnection"/> class.
+            </summary>
+            <param name="handles">The set of handles associated with the pseudoconsole.</param>
+        </member>
+        <member name="E:Pty.Net.Windows.PseudoConsoleConnection.ProcessExited">
+            <inheritdoc/>
+        </member>
+        <member name="P:Pty.Net.Windows.PseudoConsoleConnection.ReaderStream">
+            <inheritdoc/>
+        </member>
+        <member name="P:Pty.Net.Windows.PseudoConsoleConnection.WriterStream">
+            <inheritdoc/>
+        </member>
+        <member name="P:Pty.Net.Windows.PseudoConsoleConnection.Pid">
+            <inheritdoc/>
+        </member>
+        <member name="P:Pty.Net.Windows.PseudoConsoleConnection.ExitCode">
+            <inheritdoc/>
+        </member>
+        <member name="M:Pty.Net.Windows.PseudoConsoleConnection.Dispose">
+            <inheritdoc/>
+        </member>
+        <member name="M:Pty.Net.Windows.PseudoConsoleConnection.Kill">
+            <inheritdoc/>
+        </member>
+        <member name="M:Pty.Net.Windows.PseudoConsoleConnection.Resize(System.Int32,System.Int32)">
+            <inheritdoc/>
+        </member>
+        <member name="M:Pty.Net.Windows.PseudoConsoleConnection.WaitForExit(System.Int32)">
+            <inheritdoc/>
+        </member>
+        <member name="T:Pty.Net.Windows.PseudoConsoleConnection.PseudoConsoleConnectionHandles">
+            <summary>
+            handles to resources creates when a pseudoconsole is spawned.
+            </summary>
+        </member>
+        <member name="M:Pty.Net.Windows.PseudoConsoleConnection.PseudoConsoleConnectionHandles.#ctor(Pty.Net.Windows.NativeMethods.SafePipeHandle,Pty.Net.Windows.NativeMethods.SafePipeHandle,Pty.Net.Windows.NativeMethods.SafePipeHandle,Pty.Net.Windows.NativeMethods.SafePipeHandle,Pty.Net.Windows.NativeMethods.SafePseudoConsoleHandle,Pty.Net.Windows.NativeMethods.SafeProcessHandle,System.Int32,Pty.Net.Windows.NativeMethods.SafeThreadHandle)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Pty.Net.Windows.PseudoConsoleConnection.PseudoConsoleConnectionHandles"/> class.
+            </summary>
+            <param name="inPipePseudoConsoleSide">the input pipe on the pseudoconsole side.</param>
+            <param name="outPipePseudoConsoleSide">the output pipe on the pseudoconsole side.</param>
+            <param name="inPipeOurSide"> the input pipe on the local side.</param>
+            <param name="outPipeOurSide"> the output pipe on the local side.</param>
+            <param name="pseudoConsoleHandle">the handle to the pseudoconsole.</param>
+            <param name="processHandle">the handle to the spawned process.</param>
+            <param name="pid">the process ID.</param>
+            <param name="mainThreadHandle">the handle to the main thread.</param>
+        </member>
+        <member name="P:Pty.Net.Windows.PseudoConsoleConnection.PseudoConsoleConnectionHandles.InPipePseudoConsoleSide">
+            <summary>
+            Gets the input pipe on the pseudoconsole side.
+            </summary>
+            <remarks>
+            This pipe is connected to <see cref="P:Pty.Net.Windows.PseudoConsoleConnection.PseudoConsoleConnectionHandles.OutPipeOurSide"/>.
+            </remarks>
+        </member>
+        <member name="P:Pty.Net.Windows.PseudoConsoleConnection.PseudoConsoleConnectionHandles.OutPipePseudoConsoleSide">
+            <summary>
+            Gets the output pipe on the pseudoconsole side.
+            </summary>
+            <remarks>
+            This pipe is connected to <see cref="P:Pty.Net.Windows.PseudoConsoleConnection.PseudoConsoleConnectionHandles.InPipeOurSide"/>.
+            </remarks>
+        </member>
+        <member name="P:Pty.Net.Windows.PseudoConsoleConnection.PseudoConsoleConnectionHandles.InPipeOurSide">
+            <summary>
+            Gets the input pipe on the local side.
+            </summary>
+            <remarks>
+            This pipe is connected to <see cref="P:Pty.Net.Windows.PseudoConsoleConnection.PseudoConsoleConnectionHandles.OutPipePseudoConsoleSide"/>.
+            </remarks>
+        </member>
+        <member name="P:Pty.Net.Windows.PseudoConsoleConnection.PseudoConsoleConnectionHandles.OutPipeOurSide">
+            <summary>
+            Gets the output pipe on the local side.
+            </summary>
+            <remarks>
+            This pipe is connected to <see cref="P:Pty.Net.Windows.PseudoConsoleConnection.PseudoConsoleConnectionHandles.InPipePseudoConsoleSide"/>.
+            </remarks>
+        </member>
+        <member name="P:Pty.Net.Windows.PseudoConsoleConnection.PseudoConsoleConnectionHandles.PseudoConsoleHandle">
+            <summary>
+            Gets the handle to the pseudoconsole.
+            </summary>
+        </member>
+        <member name="P:Pty.Net.Windows.PseudoConsoleConnection.PseudoConsoleConnectionHandles.ProcessHandle">
+            <summary>
+            Gets the handle to the spawned process.
+            </summary>
+        </member>
+        <member name="P:Pty.Net.Windows.PseudoConsoleConnection.PseudoConsoleConnectionHandles.Pid">
+            <summary>
+            Gets the process ID.
+            </summary>
+        </member>
+        <member name="P:Pty.Net.Windows.PseudoConsoleConnection.PseudoConsoleConnectionHandles.MainThreadHandle">
+            <summary>
+            Gets the handle to the main thread.
+            </summary>
+        </member>
+        <member name="T:Pty.Net.Windows.PtyProvider">
+            <summary>
+            Provides a pty connection for windows machines.
+            </summary>
+        </member>
+        <member name="M:Pty.Net.Windows.PtyProvider.StartTerminalAsync(Pty.Net.PtyOptions,System.Diagnostics.TraceSource,System.Threading.CancellationToken)">
+            <inheritdoc/>
+        </member>
+        <member name="T:Pty.Net.Windows.WindowsArguments">
+            <summary>
+            Helper class for formatting windows arguments when passing them to winpty and conpty.
+            </summary>
+        </member>
+        <member name="M:Pty.Net.Windows.WindowsArguments.Format(System.String[])">
+            <summary>
+            Quotes each argument before joining together.
+            </summary>
+            <param name="args">The command line arguments to format.</param>
+            <returns>a space-delimited list of command line arguments, each entry surrounded by quotes.</returns>
+        </member>
+        <member name="M:Pty.Net.Windows.WindowsArguments.FormatVerbatim(System.String[])">
+            <summary>
+            Joins the arguments together witout modification.
+            </summary>
+            <param name="args">The command line arguments to format.</param>
+            <returns>A space-delimited list of command line arguments.</returns>
+        </member>
+    </members>
+</doc>

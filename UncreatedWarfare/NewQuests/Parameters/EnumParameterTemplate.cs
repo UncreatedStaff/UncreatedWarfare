@@ -1,12 +1,14 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using System;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 
-namespace Uncreated.Warfare.NewQuests.Parameters;
+namespace Uncreated.Warfare.Quests.Parameters;
 
 /// <summary>
 /// Quest paramater template representing a set of possible values for randomly generated quests, or a set of allowed values for conditions.
@@ -162,7 +164,7 @@ public class EnumParameterTemplate<TEnum> : QuestParameterTemplate<TEnum>, IEqua
             {
                 selType = ParameterSelectionType.Selective;
                 valType = ParameterValueType.Wildcard;
-                return false;
+                return true;
             }
 
             if (str[0] == '#' && str[1] == '*')
@@ -197,7 +199,7 @@ public class EnumParameterTemplate<TEnum> : QuestParameterTemplate<TEnum>, IEqua
             if (separatorIndex < 2 || endIndex < separatorIndex + 1)
                 return false;
 
-            ReadOnlySpan<char> lowerBoundStr = str.Slice(2, separatorIndex - 3).Trim();
+            ReadOnlySpan<char> lowerBoundStr = str.Slice(2, separatorIndex - 2).Trim();
             ReadOnlySpan<char> upperBoundStr = str.Slice(separatorIndex + 1, endIndex - separatorIndex - 1).Trim();
             TEnum lowerBound = default, upperBound = default;
 
@@ -210,7 +212,7 @@ public class EnumParameterTemplate<TEnum> : QuestParameterTemplate<TEnum>, IEqua
             minValue = lowerBound;
             maxValue = upperBound;
 
-            if (minValue.CompareTo(maxValue) > 0)
+            if (minValue.CompareTo(maxValue) > 0 && upperBoundStr.Length != 0 && upperBoundStr.Length != 0)
             {
                 (minValue, maxValue) = (maxValue, minValue);
                 minValInf = upperBoundStr.Length == 0;
@@ -307,22 +309,24 @@ public class EnumParameterTemplate<TEnum> : QuestParameterTemplate<TEnum>, IEqua
                     return SelectionType == ParameterSelectionType.Inclusive ? "#[]" : "$[]";
                 }
 
-                StringBuilder sb = new StringBuilder(SelectionType == ParameterSelectionType.Inclusive ? "#[" : "$[", 0, 2, 3 + 14 * (list.Values.Length - 1));
+                StringBuilder sb = new StringBuilder(SelectionType == ParameterSelectionType.Inclusive ? "#[" : "$[", 0, 2, 3 + 13 * (list.Values.Length - 1));
 
                 for (int i = 0; i < list.Values.Length; ++i)
                 {
                     TEnum v = list.Values[i];
 
                     if (i != 0)
-                        sb.Append(", ");
+                        sb.Append(',');
 
                     sb.Append(v.ToString());
                 }
 
+                sb.Append(']');
                 return sb.ToString();
         }
     }
 
+    [JsonConverter(typeof(QuestParameterConverter))]
     protected class EnumParameterValue : QuestParameterValue<TEnum>, IEquatable<EnumParameterValue>
     {
         private static TEnum[]? _valueList;
@@ -367,7 +371,7 @@ public class EnumParameterTemplate<TEnum> : QuestParameterTemplate<TEnum>, IEqua
                     {
                         for (; startIndex <= endIndex; ++startIndex)
                         {
-                            if (range.Minimum.CompareTo(values[startIndex]) >= 0)
+                            if (range.Minimum.CompareTo(values[startIndex]) <= 0)
                                 break;
                         }
                     }
@@ -375,7 +379,7 @@ public class EnumParameterTemplate<TEnum> : QuestParameterTemplate<TEnum>, IEqua
                     {
                         for (; endIndex >= startIndex; --endIndex)
                         {
-                            if (range.Maximum.CompareTo(values[endIndex]) <= 0)
+                            if (range.Maximum.CompareTo(values[endIndex]) >= 0)
                                 break;
                         }
                     }
@@ -550,6 +554,17 @@ public class EnumParameterTemplate<TEnum> : QuestParameterTemplate<TEnum>, IEqua
         }
 
         /// <inheritdoc />
+        public override object GetDisplayString(ITranslationValueFormatter formatter)
+        {
+            if (ValueType == ParameterValueType.Constant || SelectionType == ParameterSelectionType.Selective)
+            {
+                return formatter.FormatEnum(_value, null);
+            }
+
+            return ToString();
+        }
+
+        /// <inheritdoc />
         public override bool Equals(QuestParameterValue<TEnum>? other)
         {
             return other is EnumParameterValue v && Equals(v);
@@ -617,18 +632,19 @@ public class EnumParameterTemplate<TEnum> : QuestParameterTemplate<TEnum>, IEqua
                         return "#[]";
                     }
 
-                    StringBuilder sb = new StringBuilder("#[", 0, 2, 3 + 14 * (_values.Length - 1));
+                    StringBuilder sb = new StringBuilder("#[", 0, 2, 3 + 13 * (_values.Length - 1));
 
                     for (int i = 0; i < _values.Length; ++i)
                     {
                         TEnum v = _values[i];
 
                         if (i != 0)
-                            sb.Append(", ");
+                            sb.Append(',');
 
                         sb.Append(v.ToString());
                     }
 
+                    sb.Append(']');
                     return sb.ToString();
             }
         }

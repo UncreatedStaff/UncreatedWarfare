@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Events.Models;
@@ -69,7 +69,7 @@ public class PlayerJumpComponent : IPlayerComponent, IAsyncEventListener<PlayerP
         {
             distance = 10f;
             raycast = Physics.Raycast(new Ray(aim.position, aim.forward), out RaycastHit hit,
-                1024, RayMasks.BLOCK_COLLISION);
+                1024, RayMasks.BLOCK_COLLISION, QueryTriggerInteraction.Ignore);
             if (raycast)
                 castPt = hit.point;
         }

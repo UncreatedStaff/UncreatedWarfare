@@ -1,11 +1,14 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Globalization;
+using System.Text.Json;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Translations;
 
-namespace Uncreated.Warfare.NewQuests;
+namespace Uncreated.Warfare.Quests;
 
 public interface IQuestReward
 {
@@ -14,6 +17,24 @@ public interface IQuestReward
     /// </summary>
     /// <param name="serviceProvider">The scoped service provider for the current layout.</param>
     UniTask GrantRewardAsync(WarfarePlayer player, QuestTracker tracker, IServiceProvider serviceProvider, CancellationToken token = default);
+
+    void WriteToJson(Utf8JsonWriter writer);
+    string CreateQuestRewardString();
+}
+
+public class NullReward : IQuestReward
+{
+    void IQuestReward.WriteToJson(Utf8JsonWriter writer) { }
+
+    UniTask IQuestReward.GrantRewardAsync(WarfarePlayer player, QuestTracker tracker, IServiceProvider serviceProvider, CancellationToken token = default)
+    {
+        return UniTask.CompletedTask;
+    }
+
+    string IQuestReward.CreateQuestRewardString()
+    {
+        return "Nothing";
+    }
 }
 
 public class XPReward : IQuestReward
@@ -33,14 +54,35 @@ public class XPReward : IQuestReward
         XP = configuration.GetValue<int>("XP");
     }
 
+    public XPReward(JsonElement configuration)
+    {
+        XP = configuration.GetProperty("XP").GetInt32();
+    }
+
     /// <inheritdoc />
     public async UniTask GrantRewardAsync(WarfarePlayer player, QuestTracker tracker, IServiceProvider serviceProvider, CancellationToken token = default)
     {
-        ITranslationValueFormatter formatter = serviceProvider.GetRequiredService<ITranslationValueFormatter>();
+        PointsService pointsService = serviceProvider.GetRequiredService<PointsService>();
+        PointsTranslations translations = serviceProvider.GetRequiredService<TranslationInjection<PointsTranslations>>().Value;
 
-        // todo XPParameters parameters = new XPParameters(player, player.Team, XP, tracker.Quest.Name.ToUpper() + " REWARD", false);
+        ResolvedEventInfo info = new ResolvedEventInfo(default, XP, null, null)
+        {
+            Message = translations.XPToastQuestReward.Translate(tracker.Quest.Name)
+        };
 
-        // await Points.AwardXPAsync(parameters, token).ConfigureAwait(false);
+        await pointsService.ApplyEvent(player.Steam64, player.Team.Faction.PrimaryKey, info, token).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public void WriteToJson(Utf8JsonWriter writer)
+    {
+        writer.WriteNumber("XP", XP);
+    }
+
+    /// <inheritdoc />
+    public string CreateQuestRewardString()
+    {
+        return $"<color=#ffffff>{XP.ToString(CultureInfo.InvariantCulture)}</color> <color=#e3b552>XP</color>";
     }
 
     /// <inheritdoc />
@@ -64,51 +106,91 @@ public class CreditsReward : IQuestReward
         Credits = configuration.GetValue<int>("Credits");
     }
 
+    public CreditsReward(JsonElement configuration)
+    {
+        Credits = configuration.GetProperty("Credits").GetInt32();
+    }
+
     /// <inheritdoc />
     public async UniTask GrantRewardAsync(WarfarePlayer player, QuestTracker tracker, IServiceProvider serviceProvider, CancellationToken token = default)
     {
-        ITranslationValueFormatter formatter = serviceProvider.GetRequiredService<ITranslationValueFormatter>();
+        PointsService pointsService = serviceProvider.GetRequiredService<PointsService>();
+        PointsTranslations translations = serviceProvider.GetRequiredService<TranslationInjection<PointsTranslations>>().Value;
 
-        // todo CreditsParameters parameters = new CreditsParameters(player, player.Team, Credits, tracker.Quest.Name.ToUpper() + " REWARD");
+        ResolvedEventInfo info = new ResolvedEventInfo(default, null, Credits, null)
+        {
+            Message = translations.XPToastQuestReward.Translate(tracker.Quest.Name)
+        };
 
-        // await Points.AwardCreditsAsync(parameters, token).ConfigureAwait(false);
+        await pointsService.ApplyEvent(player.Steam64, player.Team.Faction.PrimaryKey, info, token).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public void WriteToJson(Utf8JsonWriter writer)
+    {
+        writer.WriteNumber("Credits", Credits);
+    }
+
+    /// <inheritdoc />
+    public string CreateQuestRewardString()
+    {
+        return $"<color=#ffffff>{Credits.ToString(CultureInfo.InvariantCulture)}</color> <color=#b8ffc1>C</color>";
     }
 
     /// <inheritdoc />
     public override string ToString() => "Reward: C " + Credits;
 }
 
-public class RankReward : IQuestReward
+public class ReputationReward : IQuestReward
 {
     /// <summary>
-    /// Level number of the rank to give to the recipient.
+    /// Amount of reputation to give the recipient.
     /// </summary>
-    public int RankOrder { get; }
+    public int Reputation { get; }
 
-    public RankReward(int rankOrder)
+    public ReputationReward(int credits)
     {
-        RankOrder = rankOrder;
+        Reputation = credits;
     }
 
-    public RankReward(IConfiguration configuration)
+    public ReputationReward(IConfiguration configuration)
     {
-        RankOrder = configuration.GetValue<int>("RankOrder");
+        Reputation = configuration.GetValue<int>("Reputation");
+    }
+
+    public ReputationReward(JsonElement configuration)
+    {
+        Reputation = configuration.GetProperty("Reputation").GetInt32();
     }
 
     /// <inheritdoc />
-    public UniTask GrantRewardAsync(WarfarePlayer player, QuestTracker tracker, IServiceProvider serviceProvider, CancellationToken token = default)
+    public async UniTask GrantRewardAsync(WarfarePlayer player, QuestTracker tracker, IServiceProvider serviceProvider, CancellationToken token = default)
     {
-        // Ranks.RankManager.SkipToRank(player, RankOrder);
-        return UniTask.CompletedTask;
+        PointsService pointsService = serviceProvider.GetRequiredService<PointsService>();
+        PointsTranslations translations = serviceProvider.GetRequiredService<TranslationInjection<PointsTranslations>>().Value;
+
+        ResolvedEventInfo info = new ResolvedEventInfo(default, null, null, Reputation)
+        {
+            Message = translations.XPToastQuestReward.Translate(tracker.Quest.Name)
+        };
+
+        await pointsService.ApplyEvent(player.Steam64, player.Team.Faction.PrimaryKey, info, token).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
-    public override string ToString()
+    public void WriteToJson(Utf8JsonWriter writer)
     {
-        // ref Ranks.RankData d = ref Ranks.RankManager.GetRank(RankOrder, out bool success);
-        // return "Reward: Unlock " + (success ? d.GetName(null, Data.LocalLocale) : "UNKNOWN RANK") + " (Order #" + RankOrder + ")";
-        return "rank reward " + RankOrder;
+        writer.WriteNumber("Reputation", Reputation);
     }
+
+    /// <inheritdoc />
+    public string CreateQuestRewardString()
+    {
+        return $"<color=#ffffff>{Reputation.ToString(CultureInfo.InvariantCulture)}</color> <color=#66ff66>Reputation</color>";
+    }
+
+    /// <inheritdoc />
+    public override string ToString() => "Reward: " + Reputation + " Rep";
 }
 
 public class KitAccessReward : IQuestReward
@@ -128,6 +210,11 @@ public class KitAccessReward : IQuestReward
         KitId = configuration["KitId"];
     }
 
+    public KitAccessReward(JsonElement configuration)
+    {
+        KitId = configuration.GetProperty("KitId").GetString();
+    }
+
     /// <inheritdoc />
     public async UniTask GrantRewardAsync(WarfarePlayer player, QuestTracker tracker, IServiceProvider serviceProvider, CancellationToken token = default)
     {
@@ -140,10 +227,19 @@ public class KitAccessReward : IQuestReward
         if (!await kitManager.GiveAccess(KitId, player, KitAccessType.QuestReward, token).ConfigureAwait(false))
         {
             serviceProvider.GetRequiredService<ILogger<KitAccessReward>>().LogWarning($"Unknown kit {KitId} when giving access reward to player {player}.");
-            return;
         }
+    }
 
-        // KitSync.OnAccessChanged(player.Steam64.m_SteamID);
+    /// <inheritdoc />
+    public void WriteToJson(Utf8JsonWriter writer)
+    {
+        writer.WriteString("KitId", KitId);
+    }
+
+    /// <inheritdoc />
+    public string CreateQuestRewardString()
+    {
+        return $"<color=#66ffff>Unlock</color> <color=#ffffff>{KitId}</color>";
     }
 
     /// <inheritdoc />

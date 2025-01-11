@@ -1,12 +1,14 @@
-﻿using System;
+using System;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 
-namespace Uncreated.Warfare.NewQuests.Parameters;
+namespace Uncreated.Warfare.Quests.Parameters;
 
 /// <summary>
 /// Quest paramater template representing a set of possible values for randomly generated quests, or a set of allowed values for conditions.
@@ -226,7 +228,7 @@ public class SingleParameterTemplate : QuestParameterTemplate<float>, IEquatable
             if (separatorIndex < 2 || endIndex < separatorIndex + 1)
                 return false;
 
-            ReadOnlySpan<char> lowerBoundStr = str.Slice(2, separatorIndex - 3).Trim();
+            ReadOnlySpan<char> lowerBoundStr = str.Slice(2, separatorIndex - 2).Trim();
             ReadOnlySpan<char> upperBoundStr = str.Slice(separatorIndex + 1, endIndex - separatorIndex - 1).Trim();
             float lowerBound = 0, upperBound = 0;
 
@@ -237,19 +239,19 @@ public class SingleParameterTemplate : QuestParameterTemplate<float>, IEquatable
                 return false;
 
             int startRoundRange = endIndex + 1 >= str.Length ? -1 : str.Slice(endIndex + 1).IndexOf('{');
-            int endRoundRange = startRoundRange + 1 >= str.Length ? -1 : str.Slice(startRoundRange + 1).IndexOf('}');
+            int endRoundRange = startRoundRange + 1 >= str.Length ? -1 : str.Slice(endIndex + startRoundRange + 2).IndexOf('}');
 
             if (startRoundRange != -1 && endRoundRange != -1)
             {
                 ReadOnlySpan<char> roundStr = str.Slice(startRoundRange + endIndex + 2, endRoundRange).Trim();
-                if (!int.TryParse(roundStr, NumberStyles.Number, CultureInfo.InvariantCulture, out round))
+                if (!int.TryParse(roundStr, NumberStyles.Number, CultureInfo.InvariantCulture, out round) || round < 0)
                     return false;
             }
 
             minValue = lowerBound;
             maxValue = upperBound;
 
-            if (minValue > maxValue)
+            if (minValue > maxValue && upperBoundStr.Length != 0 && lowerBoundStr.Length == 0)
             {
                 (minValue, maxValue) = (maxValue, minValue);
                 minValInf = upperBoundStr.Length == 0;
@@ -350,7 +352,7 @@ public class SingleParameterTemplate : QuestParameterTemplate<float>, IEquatable
                     return SelectionType == ParameterSelectionType.Inclusive ? "#[]" : "$[]";
                 }
 
-                StringBuilder sb = new StringBuilder(SelectionType == ParameterSelectionType.Inclusive ? "#[" : "$[", 0, 2, 3 + 8 * (list.Values.Length - 1));
+                StringBuilder sb = new StringBuilder(SelectionType == ParameterSelectionType.Inclusive ? "#[" : "$[", 0, 2, 3 + 7 * (list.Values.Length - 1));
 
                 Span<char> formatBuffer = stackalloc char[12];
 
@@ -359,7 +361,7 @@ public class SingleParameterTemplate : QuestParameterTemplate<float>, IEquatable
                     float v = list.Values[i];
 
                     if (i != 0)
-                        sb.Append(", ");
+                        sb.Append(',');
 
                     if (!v.TryFormat(formatBuffer, out int charsWritten, provider: CultureInfo.InvariantCulture))
                     {
@@ -371,10 +373,12 @@ public class SingleParameterTemplate : QuestParameterTemplate<float>, IEquatable
                     }
                 }
 
+                sb.Append(']');
                 return sb.ToString();
         }
     }
 
+    [JsonConverter(typeof(QuestParameterConverter))]
     protected class SingleParameterValue : QuestParameterValue<float>, IEquatable<SingleParameterValue>
     {
         private float _value;
@@ -626,6 +630,17 @@ public class SingleParameterTemplate : QuestParameterTemplate<float>, IEquatable
         }
 
         /// <inheritdoc />
+        public override object GetDisplayString(ITranslationValueFormatter formatter)
+        {
+            if (ValueType == ParameterValueType.Constant || SelectionType == ParameterSelectionType.Selective)
+            {
+                return _value;
+            }
+
+            return ToString();
+        }
+
+        /// <inheritdoc />
         public override bool Equals(QuestParameterValue<float>? other)
         {
             return other is SingleParameterValue v && Equals(v);
@@ -692,7 +707,7 @@ public class SingleParameterTemplate : QuestParameterTemplate<float>, IEquatable
                         return "#[]";
                     }
 
-                    StringBuilder sb = new StringBuilder("#[", 0, 2, 3 + 8 * (_values.Length - 1));
+                    StringBuilder sb = new StringBuilder("#[", 0, 2, 3 + 7 * (_values.Length - 1));
 
                     Span<char> formatBuffer = stackalloc char[12];
 
@@ -701,7 +716,7 @@ public class SingleParameterTemplate : QuestParameterTemplate<float>, IEquatable
                         float v = _values[i];
 
                         if (i != 0)
-                            sb.Append(", ");
+                            sb.Append(',');
 
                         if (!v.TryFormat(formatBuffer, out int charsWritten, provider: CultureInfo.InvariantCulture))
                         {
@@ -713,6 +728,7 @@ public class SingleParameterTemplate : QuestParameterTemplate<float>, IEquatable
                         }
                     }
 
+                    sb.Append(']');
                     return sb.ToString();
             }
         }

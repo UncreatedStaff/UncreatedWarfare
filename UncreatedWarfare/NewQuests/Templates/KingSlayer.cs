@@ -1,41 +1,62 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
-using Uncreated.Warfare.Exceptions;
-using Uncreated.Warfare.NewQuests.Parameters;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
-using Uncreated.Warfare.Quests;
+using Uncreated.Warfare.Quests.Parameters;
+using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
-using Uncreated.Warfare.Util.List;
 
-namespace Uncreated.Warfare.NewQuests.Templates;
+namespace Uncreated.Warfare.Quests.Templates;
 public class KingSlayer : QuestTemplate<KingSlayer, KingSlayer.Tracker, KingSlayer.State>
 {
     public Int32ParameterTemplate Kills { get; set; }
     public KingSlayer(IConfiguration templateConfig, IServiceProvider serviceProvider) : base(templateConfig, serviceProvider) { }
     public class State : IQuestState<KingSlayer>
     {
+        [JsonIgnore]
+        public string Text { get; set; }
+
         [RewardVariable("k")]
         public QuestParameterValue<int> Kills { get; set; }
+
+        [JsonIgnore]
         public QuestParameterValue<int> FlagValue => Kills;
-        public UniTask CreateFromConfigurationAsync(IConfiguration configuration, IServiceProvider serviceProvider, CancellationToken token)
+        public UniTask CreateFromConfigurationAsync(IQuestStateConfiguration configuration, KingSlayer template, IServiceProvider serviceProvider, CancellationToken token)
         {
-            string? killsStr = configuration["Kills"];
+            Kills = configuration.ParseInt32Value("Kills", Int32ParameterTemplate.WildcardInclusive);
 
-            if (string.IsNullOrEmpty(killsStr) || !Int32ParameterTemplate.TryParseValue(killsStr, out QuestParameterValue<int>? kills))
-                throw new QuestConfigurationException(typeof(KingSlayer), "Failed to parse integer parameter for \"Kills\".");
+            FormatText(template);
 
-            Kills = kills;
             return UniTask.CompletedTask;
         }
-        public async UniTask CreateFromTemplateAsync(KingSlayer data, CancellationToken token)
+        public async UniTask CreateFromTemplateAsync(KingSlayer template, CancellationToken token)
         {
-            Kills = await data.Kills.CreateValue(data.ServiceProvider);
+            Kills = await template.Kills.CreateValue(template.ServiceProvider);
+
+            FormatText(template);
+        }
+
+        private void FormatText(KingSlayer template)
+        {
+            ITranslationValueFormatter formatter = template.ServiceProvider.GetRequiredService<ITranslationValueFormatter>();
+
+            Text = string.Format(template.Text.Translate(null, template.Type.Name),
+                "{0}",
+                Kills.GetDisplayString(formatter)
+            );
+        }
+
+        /// <inheritdoc />
+        public string CreateQuestDescriptiveString()
+        {
+            return Text;
         }
     }
     public class Tracker : QuestTracker, IEventListener<PlayerDied>
@@ -72,20 +93,20 @@ public class KingSlayer : QuestTemplate<KingSlayer, KingSlayer.Tracker, KingSlay
             if (Equals(_kingSlayer, kingSlayer))
                 return;
 
-            HandleUpdated(true);
             _kingSlayer = kingSlayer;
+            InvokeUpdate();
         }
 
-        protected override void WriteProgress(Utf8JsonWriter writer)
+        public override void WriteProgress(Utf8JsonWriter writer)
         {
-            writer.WriteNumber("kills", _kills);
+            writer.WriteNumber("Kills", _kills);
         }
 
-        protected override void ReadProgress(ref Utf8JsonReader reader)
+        public override void ReadProgress(ref Utf8JsonReader reader)
         {
             JsonUtility.ReadTopLevelProperties(ref reader, (ref Utf8JsonReader reader, string property, ref object? _) =>
             {
-                if (property.Equals("kills", StringComparison.Ordinal))
+                if (property.Equals("Kills", StringComparison.Ordinal))
                 {
                     _kills = reader.GetInt32();
                 }

@@ -1,16 +1,18 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using Uncreated.Warfare.Quests;
+using System.Text.Json.Serialization;
+using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Translations.ValueFormatters;
 using Uncreated.Warfare.Util;
 
-namespace Uncreated.Warfare.NewQuests;
+namespace Uncreated.Warfare.Quests;
 
 /// <summary>
 /// Defines the tracker used to keep track of quest progress and the state used to store a variation of this template.
@@ -23,39 +25,51 @@ public abstract class QuestTemplate<TSelf, TTracker, TState> : QuestTemplate
     protected QuestTemplate(IConfiguration templateConfig, IServiceProvider serviceProvider) : base(templateConfig, serviceProvider) { }
 
     /// <inheritdoc />
-    protected override async UniTask<IQuestPreset?> ReadPreset(IConfiguration configuration, CancellationToken token)
+    public override async UniTask<IQuestPreset?> ReadPreset<TPreset>(IConfiguration configuration, CancellationToken token)
     {
-        TemplatePreset? preset = configuration.Get<TemplatePreset>();
-        TState? state = await ReadState(configuration.GetSection("State"), token);
+        TPreset? preset = configuration.Get<TPreset>();
+        TState? state = await ReadState(new QuestIConfigurationStateConfiguration(configuration.GetSection("State"), Type), token);
 
         if (preset == null || state == null)
             return null;
 
-        preset.StateIntl = state;
+        preset.UpdateState(state);
         return preset;
+    }
+
+    /// <inheritdoc />
+    public override async UniTask ReadStateToPreset(IQuestPreset preset, IQuestStateConfiguration configuration, CancellationToken token)
+    {
+        preset.UpdateState(await ReadState(configuration, token) ?? new TState());
     }
 
     /// <summary>
     /// Read a state from configuration.
     /// </summary>
-    protected virtual async UniTask<TState?> ReadState(IConfiguration configuration, CancellationToken token)
+    public virtual async UniTask<TState?> ReadState(IQuestStateConfiguration configuration, CancellationToken token)
     {
         TState state = new TState();
-        await state.CreateFromConfigurationAsync(configuration, ServiceProvider, token);
+        await state.CreateFromConfigurationAsync(configuration, (TSelf)this, ServiceProvider, token);
         return state;
     }
 
-    protected internal class TemplatePreset : IQuestPreset
+    /// <inheritdoc />
+    public override async UniTask<IQuestState> CreateState(CancellationToken token = default)
     {
-        // this is a field to keep it from being binded to
-        public TState StateIntl;
+        TState state = new TState();
+        await state.CreateFromTemplateAsync((TSelf)this, token);
+        return state;
+    }
 
-        public Guid Key { get; set; }
-        public ulong TeamFilter { get; set; }
-        public ushort Flag { get; set; }
-        public TState State => StateIntl;
-        public IQuestReward[]? RewardOverrides { get; set; }
-        IQuestState IQuestPreset.State => StateIntl;
+    /// <inheritdoc />
+    public override QuestTracker CreateTracker(IQuestPreset preset, WarfarePlayer player)
+    {
+        object[] args = [ player, ServiceProvider, this, preset.State, preset ];
+
+        QuestTracker tracker = (QuestTracker)Activator.CreateInstance(typeof(TTracker), args);
+
+        QuestService.AddTracker(tracker);
+        return tracker;
     }
 }
 
@@ -65,7 +79,11 @@ public abstract class QuestTemplate<TSelf, TTracker, TState> : QuestTemplate
 public abstract class QuestTemplate : ITranslationArgument
 {
     private readonly ILogger<QuestTemplate> _logger;
-    private readonly IConfiguration _config;
+    private IConfiguration _config;
+
+    protected QuestService QuestService;
+
+#nullable disable
 
     /// <summary>
     /// The display name of this quest.
@@ -80,7 +98,8 @@ public abstract class QuestTemplate : ITranslationArgument
     /// <summary>
     /// Rewards for completing the quest.
     /// </summary>
-    public IReadOnlyList<RewardExpression> Rewards { get; private set; }
+    [JsonIgnore]
+    public IReadOnlyList<QuestRewardExpression> Rewards { get; private set; }
 
     /// <summary>
     /// Pre-defined presets for quest states.
@@ -97,14 +116,34 @@ public abstract class QuestTemplate : ITranslationArgument
     /// </summary>
     public bool ResetOnGameEnd { get; set; }
 
+    /// <summary>
+    /// If this quest should send updates in chat.
+    /// </summary>
+    public bool SendChatUpdates { get; set; } = true;
+
+#nullable restore
+
+    [JsonIgnore]
     public IServiceProvider ServiceProvider { get; }
 
+    [JsonIgnore]
+    public Type Type { get; }
     protected QuestTemplate(IConfiguration templateConfig, IServiceProvider serviceProvider)
     {
         ServiceProvider = serviceProvider;
-        
+        QuestService = serviceProvider.GetRequiredService<QuestService>();
+        Type = GetType();
         _logger = (ILogger<QuestTemplate>)serviceProvider.GetRequiredService(typeof(ILogger<>).MakeGenericType(GetType()));
         _config = templateConfig;
+    }
+
+    /// <summary>
+    /// Read this quest template from the configuration after it was created originally.
+    /// </summary>
+    public UniTask UpdateAsync(IConfiguration newConfiguration, CancellationToken token = default)
+    {
+        _config = newConfiguration;
+        return InitializeAsync(token);
     }
 
     /// <summary>
@@ -112,10 +151,10 @@ public abstract class QuestTemplate : ITranslationArgument
     /// </summary>
     public async UniTask InitializeAsync(CancellationToken token = default)
     {
-        Name = _config["Name"] ?? GetType().Name;
+        Name = _config["Name"] ?? Type.Name;
 
         IConfiguration desc = _config.GetSection("Text");
-        Text = desc.GetChildren().Any() ? (desc.Get<TranslationList>() ?? new TranslationList()) : new TranslationList(_config["Text"] ?? GetType().Name);
+        Text = desc.GetChildren().Any() ? (desc.Get<TranslationList>() ?? new TranslationList()) : new TranslationList(_config["Text"] ?? Type.Name);
 
         _config.GetSection("Properties").Bind(this);
         _config.Bind(this);
@@ -123,40 +162,39 @@ public abstract class QuestTemplate : ITranslationArgument
         IConfigurationSection singleReward = _config.GetSection("Reward");
         if (singleReward.GetChildren().Any())
         {
-            RewardExpression? reward = await ReadReward(singleReward, token);
+            QuestRewardExpression? reward = await ReadReward(singleReward, token);
             if (reward != null)
             {
-                RewardExpression[] rewards = [ reward ];
-                Rewards = new ReadOnlyCollection<RewardExpression>(rewards);
+                QuestRewardExpression[] rewards = [ reward ];
+                Rewards = new ReadOnlyCollection<QuestRewardExpression>(rewards);
             }
             else
             {
-                Rewards = new ReadOnlyCollection<RewardExpression>(Array.Empty<RewardExpression>());
+                Rewards = new ReadOnlyCollection<QuestRewardExpression>(Array.Empty<QuestRewardExpression>());
             }
         }
         else
         {
             IConfigurationSection rewards = _config.GetSection("Rewards");
-            List<RewardExpression> rewardList = new List<RewardExpression>(0);
+            List<QuestRewardExpression> rewardList = new List<QuestRewardExpression>(0);
 
             foreach (IConfigurationSection section in rewards.GetChildren())
             {
-                RewardExpression? reward = await ReadReward(section, token);
+                QuestRewardExpression? reward = await ReadReward(section, token);
                 if (reward != null)
                     rewardList.Add(reward);
             }
 
-            Rewards = new ReadOnlyCollection<RewardExpression>(rewardList.ToArray());
+            Rewards = new ReadOnlyCollection<QuestRewardExpression>(rewardList.ToArray());
         }
 
-        // ReSharper disable VirtualMemberCallInConstructor
         IConfigurationSection singlePreset = _config.GetSection("Preset");
         if (singlePreset.GetChildren().Any())
         {
-            IQuestPreset? preset = await ReadPreset(singlePreset, token);
+            IQuestPreset? preset = await ReadPreset<TemplatePreset>(singlePreset, token);
             if (preset != null)
             {
-                IQuestPreset[] presets = [preset];
+                IQuestPreset[] presets = [ preset ];
                 Presets = new ReadOnlyCollection<IQuestPreset>(presets);
             }
             else
@@ -171,7 +209,7 @@ public abstract class QuestTemplate : ITranslationArgument
 
             foreach (IConfigurationSection section in presets.GetChildren())
             {
-                IQuestPreset? preset = await ReadPreset(section, token);
+                IQuestPreset? preset = await ReadPreset<TemplatePreset>(section, token);
                 if (preset != null)
                     presetList.Add(preset);
             }
@@ -183,42 +221,57 @@ public abstract class QuestTemplate : ITranslationArgument
     /// <summary>
     /// Read a preset from configuration.
     /// </summary>
-    protected abstract UniTask<IQuestPreset?> ReadPreset(IConfiguration configuration, CancellationToken token);
+    public abstract UniTask<IQuestPreset?> ReadPreset<TPreset>(IConfiguration configuration, CancellationToken token) where TPreset : IQuestPreset;
+
+    /// <summary>
+    /// Read a state to an existing preset.
+    /// </summary>
+    public abstract UniTask ReadStateToPreset(IQuestPreset preset, IQuestStateConfiguration configuration, CancellationToken token);
+
+    /// <summary>
+    /// Create a random state.
+    /// </summary>
+    public abstract UniTask<IQuestState> CreateState(CancellationToken token = default);
+
+    /// <summary>
+    /// Create a quest tracker for this template from a pre-existing preset.
+    /// </summary>
+    public abstract QuestTracker CreateTracker(IQuestPreset preset, WarfarePlayer player);
 
     /// <summary>
     /// Read a reward and it's expression from configuration.
     /// </summary>
-    protected virtual UniTask<RewardExpression?> ReadReward(IConfiguration configuration, CancellationToken token)
+    protected virtual UniTask<QuestRewardExpression?> ReadReward(IConfiguration configuration, CancellationToken token)
     {
         string? typeStr = configuration["Type"];
         Type? type = null;
         if (!string.IsNullOrEmpty(typeStr))
         {
-            type = Type.GetType(typeStr) ?? typeof(WarfareModule).Assembly.GetType(typeStr);
+            type = ContextualTypeResolver.ResolveType(typeStr, typeof(IQuestReward));
         }
 
         if (type == null)
         {
-            _logger.LogError("Unknown reward type \"{0}\" in configuration for quest {1}.", typeStr, GetType());
-            return UniTask.FromResult<RewardExpression?>(null);
+            _logger.LogError("Unknown reward type \"{0}\" in configuration for quest {1}.", typeStr, Type);
+            return UniTask.FromResult<QuestRewardExpression?>(null);
         }
 
         if (configuration["Expression"] is not { Length: > 0 } expression)
         {
-            _logger.LogError("Missing or empty expression in configuration for reward {0} in quest {1}.", type, GetType());
-            return UniTask.FromResult<RewardExpression?>(null);
+            _logger.LogError("Missing or empty expression in configuration for reward {0} in quest {1}.", type, Type);
+            return UniTask.FromResult<QuestRewardExpression?>(null);
         }
 
         try
         {
-            RewardExpression rewardExpression = new QuestRewardExpression(type, GetType(), expression, _logger);
+            QuestRewardExpression rewardExpression = new QuestRewardExpression(type, Type, expression, _logger);
 
-            return UniTask.FromResult<RewardExpression?>(rewardExpression);
+            return UniTask.FromResult<QuestRewardExpression?>(rewardExpression);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unable to create quest reward {0} in quest {1}.", type, GetType());
-            return UniTask.FromResult<RewardExpression?>(null);
+            _logger.LogError(ex, "Unable to create quest reward {0} in quest {1}.", type, Type);
+            return UniTask.FromResult<QuestRewardExpression?>(null);
         }
     }
 
@@ -227,9 +280,19 @@ public abstract class QuestTemplate : ITranslationArgument
     /// <summary>For <see cref="QuestAsset"/> formatting.</summary>
     public static readonly SpecialFormat FormatColorQuestAsset = new SpecialFormat("Quest Name", "c");
 
-    public string Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
+    public virtual string Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
     {
         // todo
         return ToString();
+    }
+
+    protected internal class TemplatePreset : IQuestPreset
+    {
+        public Guid Key { get; set; }
+        public ushort Flag { get; set; }
+        public IQuestState State { get; private set; }
+        public IQuestReward[]? RewardOverrides { get; set; }
+
+        public void UpdateState(IQuestState state) => State = state;
     }
 }

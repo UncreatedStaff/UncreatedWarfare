@@ -1,4 +1,4 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
 using HarmonyLib;
 using System;
@@ -179,7 +179,7 @@ internal sealed class ProviderPlayerJoiningEvents : IHarmonyPatch
                 if (index >= 0)
                     impl.PendingTasks.RemoveAtFast(index);
 
-                logger.LogDebug("Rejecting player {0}. Rejecting {1} because \"{2}\".", args.Steam64, args.Rejection, args.RejectReason);
+                logger.LogDebug("Rejecting player {0}. Rejecting {1} because \"{2}\".", args.Steam64, args.Rejection.ToString(), args.RejectReason);
                 Provider.reject(args.PendingPlayer.transportConnection, args.Rejection, args.RejectReason);
             }
             else

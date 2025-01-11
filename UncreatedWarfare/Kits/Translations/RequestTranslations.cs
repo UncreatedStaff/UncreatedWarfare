@@ -1,9 +1,9 @@
-﻿using System;
+using System;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Interaction.Requests;
 using Uncreated.Warfare.Models.Kits;
-using Uncreated.Warfare.NewQuests;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;

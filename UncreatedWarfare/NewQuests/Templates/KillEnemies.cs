@@ -1,30 +1,37 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using Uncreated.Framework.UI;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
-using Uncreated.Warfare.Exceptions;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Layouts;
-using Uncreated.Warfare.NewQuests.Parameters;
+using Uncreated.Warfare.Layouts.Phases;
+using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Extensions;
-using Uncreated.Warfare.Quests;
+using Uncreated.Warfare.Quests.Parameters;
 using Uncreated.Warfare.Squads;
+using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
-namespace Uncreated.Warfare.NewQuests.Templates;
+namespace Uncreated.Warfare.Quests.Templates;
 public class KillEnemies : QuestTemplate<KillEnemies, KillEnemies.Tracker, KillEnemies.State>
 {
     public Int32ParameterTemplate Kills { get; set; }
     public SingleParameterTemplate? Range { get; set; }
     public AssetParameterTemplate<ItemWeaponAsset>? Weapons { get; set; }
     public AssetParameterTemplate<ItemWeaponAsset>? Turrets { get; set; }
-    public AssetParameterTemplate<ItemWeaponAsset>? Emplacements { get; set; }
+    public AssetParameterTemplate<VehicleAsset>? Emplacements { get; set; }
     public KitNameParameterTemplate? Kit { get; set; }
     public EnumParameterTemplate<Class>? KitClass { get; set; }
     public EnumParameterTemplate<Branch>? KitBranch { get; set; }
+    public EnumParameterTemplate<FirearmClass>? WeaponType { get; set; }
     public bool RequireSquad { get; set; }
     public bool RequireFullSquad { get; set; }
     public bool RequireDefense { get; set; }
@@ -33,6 +40,9 @@ public class KillEnemies : QuestTemplate<KillEnemies, KillEnemies.Tracker, KillE
     public KillEnemies(IConfiguration templateConfig, IServiceProvider serviceProvider) : base(templateConfig, serviceProvider) { }
     public class State : IQuestState<KillEnemies>
     {
+        [JsonIgnore]
+        public string Text { get; set; }
+
         [RewardVariable("k")]
         public QuestParameterValue<int> Kills { get; set; }
 
@@ -43,102 +53,106 @@ public class KillEnemies : QuestTemplate<KillEnemies, KillEnemies.Tracker, KillE
         public QuestParameterValue<Guid>? Emplacements { get; set; }
         public QuestParameterValue<Class>? KitClass { get; set; }
         public QuestParameterValue<Branch>? KitBranch { get; set; }
+        public QuestParameterValue<FirearmClass>? WeaponType { get; set; }
         public QuestParameterValue<string>? Kit { get; set; }
         public bool RequireSquad { get; set; }
         public bool RequireFullSquad { get; set; }
         public bool RequireDefense { get; set; }
         public bool RequireAttack { get; set; }
         public bool RequireObjective { get; set; }
+
+        [JsonIgnore]
         public QuestParameterValue<int> FlagValue => Kills;
-        public async UniTask CreateFromConfigurationAsync(IConfiguration configuration, IServiceProvider serviceProvider, CancellationToken token)
+        public async UniTask CreateFromConfigurationAsync(IQuestStateConfiguration configuration, KillEnemies template, IServiceProvider serviceProvider, CancellationToken token)
         {
-            string? killsStr = configuration["Kills"],
-                    rangeStr = configuration["Range"],
-                    classStr = configuration["KitClass"],
-                    branchStr = configuration["KitBranch"],
-                    kitNameStr = configuration["Kit"],
-                    weaponsStr = configuration["Weapons"],
-                    turretsStr = configuration["Turrets"],
-                    emplacementsStr = configuration["Emplacements"];
+            Kills            = configuration.ParseInt32Value("Kills", Int32ParameterTemplate.WildcardInclusive);
+            Range            = configuration.ParseSingleValue("Range");
+            KitClass         = configuration.ParseEnumValue<Class>("KitClass");
+            KitBranch        = configuration.ParseEnumValue<Branch>("KitBranch");
+            Weapons          = configuration.ParseAssetValue<ItemWeaponAsset>("Weapons");
+            Turrets          = configuration.ParseAssetValue<ItemWeaponAsset>("Turrets");
+            Emplacements     = configuration.ParseAssetValue<VehicleAsset>("Emplacements");
+            WeaponType       = configuration.ParseEnumValue<FirearmClass>("WeaponType");
+            RequireSquad     = configuration.ParseBooleanValue("RequireSquad");
+            RequireFullSquad = configuration.ParseBooleanValue("RequireFullSquad");
+            RequireDefense   = configuration.ParseBooleanValue("RequireDefense");
+            RequireAttack    = configuration.ParseBooleanValue("RequireAttack");
+            RequireObjective = configuration.ParseBooleanValue("RequireObjective");
+            Kit              = await configuration.ParseKitNameValue("Kit", serviceProvider);
 
-            RequireSquad     = configuration.GetValue("RequireSquad", defaultValue: false);
-            RequireFullSquad = configuration.GetValue("RequireFullSquad", defaultValue: false);
-            RequireDefense   = configuration.GetValue("RequireDefense", defaultValue: false);
-            RequireAttack    = configuration.GetValue("RequireAttack", defaultValue: false);
-            RequireObjective = configuration.GetValue("RequireObjective", defaultValue: false);
+            FormatText(template);
+        }
 
-            QuestParameterValue<float>? range = null;
-            QuestParameterValue<Class>? kitClass = null;
-            QuestParameterValue<Branch>? kitBranch = null;
+        public async UniTask CreateFromTemplateAsync(KillEnemies template, CancellationToken token)
+        {
+            Kills = await template.Kills.CreateValue(template.ServiceProvider);
 
-            QuestParameterValue<Guid>? weapons = null,
-                                       turrets = null,
-                                       emplacements = null;
+            Range        = template.Range        == null ? null : await template.Range.CreateValue(template.ServiceProvider);
+            Weapons      = template.Weapons      == null ? null : await template.Weapons.CreateValue(template.ServiceProvider);
+            Turrets      = template.Turrets      == null ? null : await template.Turrets.CreateValue(template.ServiceProvider);
+            Emplacements = template.Emplacements == null ? null : await template.Emplacements.CreateValue(template.ServiceProvider);
+            KitClass     = template.KitClass     == null ? null : await template.KitClass.CreateValue(template.ServiceProvider);
+            KitBranch    = template.KitBranch    == null ? null : await template.KitBranch.CreateValue(template.ServiceProvider);
+            Kit          = template.Kit          == null ? null : await template.Kit.CreateValue(template.ServiceProvider);
+            WeaponType   = template.WeaponType   == null ? null : await template.WeaponType.CreateValue(template.ServiceProvider);
 
-            if (string.IsNullOrEmpty(killsStr) || !Int32ParameterTemplate.TryParseValue(killsStr, out QuestParameterValue<int>? kills))
-                throw new QuestConfigurationException(typeof(KillEnemies), "Failed to parse integer parameter for \"Kills\".");
-            
-            if (!string.IsNullOrEmpty(rangeStr) && !SingleParameterTemplate.TryParseValue(rangeStr, out range))
-                throw new QuestConfigurationException(typeof(KillEnemies), "Failed to parse float parameter for \"Range\".");
-            
-            if (!string.IsNullOrEmpty(weaponsStr) && !AssetParameterTemplate<ItemWeaponAsset>.TryParseValue(weaponsStr, out weapons))
-                throw new QuestConfigurationException(typeof(KillEnemies), "Failed to parse ItemWeaponAsset parameter for \"Weapons\".");
-            
-            if (!string.IsNullOrEmpty(turretsStr) && !AssetParameterTemplate<ItemWeaponAsset>.TryParseValue(turretsStr, out turrets))
-                throw new QuestConfigurationException(typeof(KillEnemies), "Failed to parse ItemWeaponAsset parameter for \"Turrets\".");
-            
-            if (!string.IsNullOrEmpty(emplacementsStr) && !AssetParameterTemplate<ItemWeaponAsset>.TryParseValue(emplacementsStr, out emplacements))
-                throw new QuestConfigurationException(typeof(KillEnemies), "Failed to parse ItemWeaponAsset parameter for \"Emplacements\".");
-            
-            if (!string.IsNullOrEmpty(classStr) && !EnumParameterTemplate<Class>.TryParseValue(classStr, out kitClass))
-                throw new QuestConfigurationException(typeof(KillEnemies), "Failed to parse Class parameter for \"KitClass\".");
-            
-            if (!string.IsNullOrEmpty(branchStr) && !EnumParameterTemplate<Branch>.TryParseValue(branchStr, out kitBranch))
-                throw new QuestConfigurationException(typeof(KillEnemies), "Failed to parse Branch parameter for \"KitBranch\".");
+            RequireSquad     = template.RequireSquad;
+            RequireFullSquad = template.RequireFullSquad;
+            RequireDefense   = template.RequireDefense;
+            RequireAttack    = template.RequireAttack;
+            RequireObjective = template.RequireObjective;
 
-            if (!string.IsNullOrEmpty(kitNameStr))
+            FormatText(template);
+        }
+
+        private void FormatText(KillEnemies template)
+        {
+            ITranslationValueFormatter formatter = template.ServiceProvider.GetRequiredService<ITranslationValueFormatter>();
+
+            FactionInfo? kitFaction = null;
+            if (Kit != null && (Kit.ValueType == ParameterValueType.Constant || Kit.SelectionType == ParameterSelectionType.Selective))
             {
-                Kit = await KitNameParameterTemplate.TryParseValue(kitNameStr, serviceProvider)
-                      ?? throw new QuestConfigurationException(typeof(KillEnemies), "Failed to parse kit name parameter for \"Kit\".");
+                KitManager kitManager = template.ServiceProvider.GetRequiredService<KitManager>();
+                IFactionDataStore factinDataStore = template.ServiceProvider.GetRequiredService<IFactionDataStore>();
+
+                string s = Kit.GetSingleValue();
+                if (kitManager.Cache.TryGetKit(s, out Kit k) && k.FactionId.HasValue)
+                {
+                    kitFaction = factinDataStore.FindFaction(k.FactionId);
+                }
             }
 
-            Kills = kills;
-            Range = range;
-            Weapons = weapons;
-            Turrets = turrets;
-            Emplacements = emplacements;
-            KitClass = kitClass;
-            KitBranch = kitBranch;
+            Text = string.Format(template.Text.Translate(null, template.Type.Name),
+                "{0}",
+                Kills.GetDisplayString(formatter),
+                Range?.GetDisplayString(formatter),
+                Weapons?.GetDisplayString(formatter),
+                Kit?.GetDisplayString(formatter),
+                kitFaction == null ? "dddddd" : HexStringHelper.FormatHexColor(kitFaction.Color),
+                KitClass?.GetDisplayString(formatter),
+                KitBranch?.GetDisplayString(formatter)
+            );
         }
-        public async UniTask CreateFromTemplateAsync(KillEnemies data, CancellationToken token)
+
+        /// <inheritdoc />
+        public string CreateQuestDescriptiveString()
         {
-            Kills = await data.Kills.CreateValue(data.ServiceProvider);
-
-            Range        = data.Range        == null ? null : await data.Range.CreateValue(data.ServiceProvider);
-            Weapons      = data.Weapons      == null ? null : await data.Weapons.CreateValue(data.ServiceProvider);
-            Turrets      = data.Turrets      == null ? null : await data.Turrets.CreateValue(data.ServiceProvider);
-            Emplacements = data.Emplacements == null ? null : await data.Emplacements.CreateValue(data.ServiceProvider);
-            KitClass     = data.KitClass     == null ? null : await data.KitClass.CreateValue(data.ServiceProvider);
-            KitBranch    = data.KitBranch    == null ? null : await data.KitBranch.CreateValue(data.ServiceProvider);
-            Kit          = data.Kit          == null ? null : await data.Kit.CreateValue(data.ServiceProvider);
-
-            RequireSquad     = data.RequireSquad;
-            RequireFullSquad = data.RequireFullSquad;
-            RequireDefense   = data.RequireDefense;
-            RequireAttack    = data.RequireAttack;
-            RequireObjective = data.RequireObjective;
+            return Text;
         }
     }
     public class Tracker : QuestTracker, IEventListener<PlayerDied>
     {
+        private readonly string _text;
+
         private readonly int _targetKills;
         private readonly QuestParameterValue<float> _range;
         private readonly QuestParameterValue<Guid> _weapons;
-        private readonly QuestParameterValue<Guid> _turrets;
-        private readonly QuestParameterValue<Guid> _emplacements;
+        private readonly QuestParameterValue<Guid>? _turrets;
+        private readonly QuestParameterValue<Guid>? _emplacements;
         private readonly QuestParameterValue<string> _kits;
         private readonly QuestParameterValue<Class> _class;
         private readonly QuestParameterValue<Branch> _branch;
+        private readonly QuestParameterValue<FirearmClass> _weaponType;
         private readonly bool _needsSquad;
         private readonly bool _squadMustBeFull;
         private readonly bool _needsDefense;
@@ -155,28 +169,36 @@ public class KillEnemies : QuestTemplate<KillEnemies, KillEnemies.Tracker, KillE
 
             _range = state.Range               ?? SingleParameterTemplate.WildcardInclusive;
             _weapons = state.Weapons           ?? AssetParameterTemplate<ItemWeaponAsset>.WildcardInclusive;
-            _turrets = state.Turrets           ?? AssetParameterTemplate<ItemWeaponAsset>.WildcardInclusive;
-            _emplacements = state.Emplacements ?? AssetParameterTemplate<ItemWeaponAsset>.WildcardInclusive;
             _kits = state.Kit                  ?? StringParameterTemplate.WildcardInclusive;
             _class = state.KitClass            ?? EnumParameterTemplate<Class>.WildcardInclusive;
             _branch = state.KitBranch          ?? EnumParameterTemplate<Branch>.WildcardInclusive;
+            _weaponType = state.WeaponType     ?? EnumParameterTemplate<FirearmClass>.WildcardInclusive;
+
+            _turrets = state.Turrets;
+            _emplacements = state.Emplacements;
 
             _needsSquad = state.RequireSquad || state.RequireFullSquad;
             _squadMustBeFull = state.RequireFullSquad;
             _needsDefense = state.RequireDefense;
             _needsAttack = state.RequireAttack;
             _needsObjective = state.RequireObjective && (_needsDefense || _needsAttack);
+
+            _text = state.CreateQuestDescriptiveString();
         }
 
         void IEventListener<PlayerDied>.HandleEvent(PlayerDied e, IServiceProvider serviceProvider)
         {
-            if (e.Instigator.m_SteamID != Player.Steam64.m_SteamID || !e.WasEffectiveKill || e.Cause == EDeathCause.SHRED)
+            if (e.Instigator.m_SteamID != Player.Steam64.m_SteamID || !e.WasEffectiveKill ||
+                e.Cause == EDeathCause.SHRED)
+            {
                 return;
+            }
 
+            //Console.WriteLine($"{Player.Steam64} - {Quest.Name} - Applies kill on ({e.Player.Steam64}). range: {_range}, weapons: {_weapons}, turrets: {_turrets}, empl: {_emplacements}, kits: {_kits}, class: {_class}, branch: {_branch}, weapont: {_weaponType}, nSquad: {_needsSquad}, nFullSquad: {_squadMustBeFull}, def: {_needsDefense}, atk: {_needsAttack}, obj: {_needsObjective}.");
             // distance
             if (!_range.IsWildcardInclusive() && (
                     e.Cause is not EDeathCause.GUN and not EDeathCause.MISSILE and not EDeathCause.GRENADE and not EDeathCause.MELEE and not EDeathCause.SPLASH
-                    || !_range.IsMatch(e.KillDistance))
+                    || (_range.ValueType == ParameterValueType.Constant ? e.KillDistance < _range.GetSingleValue() : !_range.IsMatch(e.KillDistance)))
                 )
             {
                 return;
@@ -184,10 +206,23 @@ public class KillEnemies : QuestTemplate<KillEnemies, KillEnemies.Tracker, KillE
 
             // weapon
             if (!_weapons.IsWildcardInclusive()
-                && (e.PrimaryAsset == null || !_weapons.IsMatch<ItemWeaponAsset>(e.PrimaryAsset))
-                && (e.SecondaryAsset == null || !_weapons.IsMatch<ItemWeaponAsset>(e.SecondaryAsset)))
+                && !_weapons.IsMatch<ItemWeaponAsset>(e.PrimaryAsset)
+                && !_weapons.IsMatch<ItemWeaponAsset>(e.SecondaryAsset))
             {
                 return;
+            }
+
+            // firearm class
+            if (!_weaponType.IsWildcardInclusive())
+            {
+                if (!e.PrimaryAsset.TryGetAsset(out Asset? asset) || asset is not ItemGunAsset gun)
+                    return;
+
+                FirearmClass firearmClass = ItemUtility.GetFirearmClass(gun);
+                if (firearmClass == FirearmClass.TooDifficultToClassify || !_weaponType.IsMatch(firearmClass))
+                {
+                    return;
+                }
             }
 
             // kit name
@@ -209,22 +244,15 @@ public class KillEnemies : QuestTemplate<KillEnemies, KillEnemies.Tracker, KillE
             }
 
             // turret/emplacement
-            QuestParameterValue<Guid>? emplOrTurrets = null;
-            if (_turrets.IsWildcardInclusive())
-            {
-                if (!_emplacements.IsWildcardInclusive())
-                    emplOrTurrets = _emplacements;
-            }
-            else if (_emplacements.IsWildcardInclusive())
-            {
-                emplOrTurrets = _turrets;
-            }
-
-            if (emplOrTurrets != null)
+            if (_turrets != null || _emplacements != null)
             {
                 InteractableVehicle? veh = Player.UnturnedPlayer.movement.getVehicle();
                 if (veh == null)
+                {
                     return;
+                }
+
+                WarfareVehicleComponent? comp = veh.GetComponent<WarfareVehicleComponent>();
 
                 bool found = false;
                 for (int i = 0; i < veh.turrets.Length; i++)
@@ -237,17 +265,24 @@ public class KillEnemies : QuestTemplate<KillEnemies, KillEnemies.Tracker, KillE
                         continue;
                     }
 
-                    if (!_turrets.IsMatch<ItemWeaponAsset>(Assets.find(EAssetType.ITEM, passenger.turret.itemID)))
-                        return;
+                    if (_turrets == null)
+                    {
+                        if (comp?.WarfareVehicle?.Info != null && comp.WarfareVehicle.Info.Type.IsEmplacement() && _emplacements!.IsMatch<VehicleAsset>(veh.asset))
+                        {
+                            found = true;
+                            break;
+                        }
+                    }
+                    else if (_turrets.IsMatch<ItemWeaponAsset>(Assets.find(EAssetType.ITEM, passenger.turret.itemID)))
+                    {
+                        if (_emplacements != null && (comp?.WarfareVehicle?.Info == null || !comp.WarfareVehicle.Info.Type.IsEmplacement() || !_emplacements!.IsMatch<VehicleAsset>(veh.asset)))
+                            return;
+                        
+                        found = true;
+                        break;
+                    }
 
-                    // todo if (VehicleBay.GetSingletonQuick() is { } manager)
-                    // todo {
-                    // todo     if (manager.GetDataSync(veh.asset.GUID) is { } data && VehicleData.IsEmplacement(data.Type) != ReferenceEquals(emplOrTurrets, _emplacements))
-                    // todo         return;
-                    // todo }
-
-                    found = true;
-                    break;
+                    return;
                 }
 
                 if (!found)
@@ -266,59 +301,54 @@ public class KillEnemies : QuestTemplate<KillEnemies, KillEnemies.Tracker, KillE
             }
 
             // objectives
-            bool obj = false;
-            if (_needsDefense && !WasDefending(e, serviceProvider, out obj))
+            if (_needsDefense || _needsAttack || _needsObjective)
             {
-                return;
+                if (serviceProvider.GetService<Layout>() is { ActivePhase: ActionPhase } && serviceProvider.GetService<IAttackDefenceDecider>() is { } decider)
+                {
+                    bool atk = decider.IsAttacking(Player) || decider.IsDefending(e.Player);
+                    bool def = decider.IsDefending(Player) || decider.IsAttacking(e.Player);
+
+                    if (!atk && _needsAttack)
+                    {
+                        return;
+                    }
+
+                    if (!def && _needsDefense)
+                    {
+                        return;
+                    }
+
+                    if (!atk && !def && _needsObjective)
+                    {
+                        return;
+                    }
+                }
             }
-            if (_needsAttack && !WasAttacking(e, serviceProvider, out obj))
-            {
-                return;
-            }
-            if (_needsObjective && !obj)
-            {
-                return;
-            }
-            
+
             Interlocked.Increment(ref _kills);
             InvokeUpdate();
         }
 
-        private bool WasDefending(PlayerDied e, IServiceProvider serviceProvider, out bool objective)
+        public override void WriteProgress(Utf8JsonWriter writer)
         {
-            objective = false;
-            Layout? layout = serviceProvider.GetService<Layout>();
-            if (layout == null)
-                return false;
-
-            // todo
-            return false;
-        }
-        private bool WasAttacking(PlayerDied e, IServiceProvider serviceProvider, out bool objective)
-        {
-            objective = false;
-            Layout? layout = serviceProvider.GetService<Layout>();
-            if (layout == null)
-                return false;
-
-            // todo
-            return false;
+            writer.WriteNumber("Kills", _kills);
         }
 
-        protected override void WriteProgress(Utf8JsonWriter writer)
-        {
-            writer.WriteNumber("kills", _kills);
-        }
-
-        protected override void ReadProgress(ref Utf8JsonReader reader)
+        public override void ReadProgress(ref Utf8JsonReader reader)
         {
             JsonUtility.ReadTopLevelProperties(ref reader, (ref Utf8JsonReader reader, string property, ref object? _) =>
             {
-                if (property.Equals("kills", StringComparison.Ordinal))
+                if (property.Equals("Kills", StringComparison.Ordinal))
                 {
                     _kills = reader.GetInt32();
                 }
             });
+        }
+
+        /// <inheritdoc />
+        public override string ToString()
+        {
+            return UnturnedUIUtility.QuickFormat(_text, _kills, 0);
         }
     }
 }

@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
+using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Models.GameData;
@@ -94,6 +95,11 @@ public class WarfarePlayer :
     /// If the player this object represents is currently online. Set to <see langword="false"/> *after* the leave event is fired.
     /// </summary>
     public bool IsOnline { get; private set; } = true;
+
+    /// <summary>
+    /// If the player's <see cref="PlayerJoined"/> event is still invoking.
+    /// </summary>
+    public bool IsConnecting { get; private set; } = true;
 
     /// <summary>
     /// If the player this object represents is currently offline. Set to <see langword="true"/> *after* the leave event is fired.
@@ -196,6 +202,7 @@ public class WarfarePlayer :
         {
             _disconnectTokenSource.Cancel();
             IsDisconnecting = false;
+            IsConnecting = false;
             IsOnline = false;
             OnDestroyed?.Invoke(this);
         }
@@ -208,6 +215,11 @@ public class WarfarePlayer :
     public void StartDisconnecting()
     {
         IsDisconnecting = true;
+        IsConnecting = false;
+    }
+    public void EndConnecting()
+    {
+        IsConnecting = false;
     }
 
     public override string ToString()

@@ -1,13 +1,15 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 
-namespace Uncreated.Warfare.NewQuests.Parameters;
+namespace Uncreated.Warfare.Quests.Parameters;
 
 /// <summary>
 /// Quest paramater template representing a set of possible values for randomly generated quests, or a set of allowed values for conditions.
@@ -72,7 +74,7 @@ public class AssetParameterTemplate<TAsset> : QuestParameterTemplate<Guid>, IEqu
     }
 
     /// <summary>
-    /// Read a saved value of this <see cref="AssetParameterTemplate"/> from a string.
+    /// Read a saved value of this <see cref="AssetParameterTemplate{TAsset}"/> from a string.
     /// </summary>
     public static bool TryParseValue(ReadOnlySpan<char> str, [MaybeNullWhen(false)] out QuestParameterValue<Guid> value)
     {
@@ -80,7 +82,7 @@ public class AssetParameterTemplate<TAsset> : QuestParameterTemplate<Guid>, IEqu
     }
 
     /// <summary>
-    /// Read a <see cref="AssetParameterTemplate"/> from a string.
+    /// Read a <see cref="AssetParameterTemplate{TAsset}"/> from a string.
     /// </summary>
     public static bool TryParse(ReadOnlySpan<char> str, [MaybeNullWhen(false)] out AssetParameterTemplate<TAsset> template)
     {
@@ -119,7 +121,7 @@ public class AssetParameterTemplate<TAsset> : QuestParameterTemplate<Guid>, IEqu
     /// <summary>
     /// Read from a JSON reader.
     /// </summary>
-    public static SingleParameterTemplate? ReadJson(ref Utf8JsonReader reader)
+    public static AssetParameterTemplate<TAsset>? ReadJson(ref Utf8JsonReader reader)
     {
         switch (reader.TokenType)
         {
@@ -128,7 +130,7 @@ public class AssetParameterTemplate<TAsset> : QuestParameterTemplate<Guid>, IEqu
 
             case JsonTokenType.String:
                 string str = reader.GetString()!;
-                return new SingleParameterTemplate(str.AsSpan());
+                return new AssetParameterTemplate<TAsset>(str.AsSpan());
 
             default:
                 throw new JsonException($"Unexpected token while reading {Accessor.ExceptionFormatter.Format(typeof(TAsset))} GUID value for a quest parameter.");
@@ -170,7 +172,7 @@ public class AssetParameterTemplate<TAsset> : QuestParameterTemplate<Guid>, IEqu
             {
                 selType = ParameterSelectionType.Selective;
                 valType = ParameterValueType.Wildcard;
-                return false;
+                return true;
             }
 
             if (str[0] == '#' && str[1] == '*')
@@ -276,7 +278,7 @@ public class AssetParameterTemplate<TAsset> : QuestParameterTemplate<Guid>, IEqu
                     return SelectionType == ParameterSelectionType.Inclusive ? "#[]" : "$[]";
                 }
 
-                int ttlLength = 1 + 34 * list.Values.Length;
+                int ttlLength = 2 + 33 * list.Values.Length;
 
                 return string.Create(ttlLength, this, (span, state) =>
                 {
@@ -293,11 +295,10 @@ public class AssetParameterTemplate<TAsset> : QuestParameterTemplate<Guid>, IEqu
                         if (i != 0)
                         {
                             span[index] = ',';
-                            span[index + 2] = ' ';
-                            index += 2;
+                            ++index;
                         }
 
-                        v.TryFormat(span, out _, "N");
+                        v.TryFormat(span[index..], out _, "N");
                         index += 32;
                     }
 
@@ -306,6 +307,7 @@ public class AssetParameterTemplate<TAsset> : QuestParameterTemplate<Guid>, IEqu
         }
     }
 
+    [JsonConverter(typeof(QuestParameterConverter))]
     internal class AssetParameterValue : QuestParameterValue<Guid>, IEquatable<AssetParameterValue>
     {
         private Guid _value;
@@ -502,6 +504,28 @@ public class AssetParameterTemplate<TAsset> : QuestParameterTemplate<Guid>, IEqu
         }
 
         /// <inheritdoc />
+        public override object GetDisplayString(ITranslationValueFormatter formatter)
+        {
+            if (ValueType == ParameterValueType.Constant || SelectionType == ParameterSelectionType.Selective)
+            {
+                Asset? asset = Assets.find(_value);
+
+                EItemRarity rarity = asset switch
+                {
+                    ItemAsset item => item.rarity,
+                    VehicleAsset veh => veh.rarity,
+                    _ => EItemRarity.COMMON
+                };
+
+                return formatter.Colorize(asset?.FriendlyName ?? _value.ToString("N"), ItemTool.getRarityColorUI(rarity), TranslationOptions.UnityUI);
+            }
+            else
+            {
+                return ToString();
+            }
+        }
+
+        /// <inheritdoc />
         public override bool Equals(QuestParameterValue<Guid>? other)
         {
             return other is AssetParameterValue v && Equals(v);
@@ -564,7 +588,7 @@ public class AssetParameterTemplate<TAsset> : QuestParameterTemplate<Guid>, IEqu
                         return "#[]";
                     }
 
-                    int ttlLength = 1 + 34 * _values.Length;
+                    int ttlLength = 2 + 33 * _values.Length;
 
                     return string.Create(ttlLength, this, (span, state) =>
                     {
@@ -579,11 +603,10 @@ public class AssetParameterTemplate<TAsset> : QuestParameterTemplate<Guid>, IEqu
                             if (i != 0)
                             {
                                 span[index] = ',';
-                                span[index + 2] = ' ';
-                                index += 2;
+                                ++index;
                             }
 
-                            v.TryFormat(span, out _, "N");
+                            v.TryFormat(span[index..], out _, "N");
                             index += 32;
                         }
 

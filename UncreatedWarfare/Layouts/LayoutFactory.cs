@@ -627,7 +627,7 @@ public class LayoutFactory : IHostedService
         // stop any services implementing ILayoutHostedService
         List<ILayoutHostedService> hostedServices = layout.ServiceProvider
             .Resolve<IEnumerable<ILayoutHostedService>>()
-            .OrderByDescending(x => x.GetType().GetPriority())
+            .OrderBy(x => x.GetType().GetPriority())
             .ToList();
 
         UniTask[] tasks = new UniTask[hostedServices.Count];

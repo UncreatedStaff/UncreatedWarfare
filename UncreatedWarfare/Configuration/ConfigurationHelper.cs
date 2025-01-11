@@ -1,10 +1,12 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Primitives;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.IO;
+using System.Text.Json;
 
 namespace Uncreated.Warfare.Configuration;
 public static class ConfigurationHelper
@@ -137,6 +139,84 @@ public static class ConfigurationHelper
             return mapName;
 
         return index == 0 ? "_" : new string(newName[..index]);
+    }
+
+    private static readonly string PlayerSeasonFolder = "Uncreated_S" + WarfareModule.Season.ToString(CultureInfo.InvariantCulture);
+
+    private struct GetPlayerFilePathState
+    {
+        public ulong Steam64;
+        public byte Character;
+    }
+
+    /// <summary>
+    /// Returns the full path to a player's config folder combined with a <paramref name="fileName"/>.
+    /// </summary>
+    [Pure]
+    public static string GetPlayerFilePath(CSteamID steam64, string fileName, bool useMap = false, byte character = 0)
+    {
+        if (character > 9)
+            throw new ArgumentOutOfRangeException(nameof(character));
+
+        GetPlayerFilePathState state = default;
+        state.Character = character;
+        state.Steam64 = steam64.m_SteamID;
+
+        string playerFile = string.Create(19, state, static (span, state) =>
+        {
+            state.Steam64.TryFormat(span, out _, "D17", CultureInfo.InvariantCulture);
+            span[17] = '_';
+            span[18] = (char)(state.Character + '0');
+        });
+
+        string unturnedDir = UnturnedPaths.RootDirectory.FullName;
+
+        if (PlayerSavedata.hasSync)
+        {
+            if (useMap)
+            {
+                return Path.Combine(
+                    unturnedDir,
+                    "Sync",
+                    playerFile,
+                    Level.info.name,
+                    PlayerSeasonFolder,
+                    fileName
+                );
+            }
+
+            return Path.Combine(
+                unturnedDir,
+                "Sync",
+                playerFile,
+                PlayerSeasonFolder,
+                fileName
+            );
+        }
+
+        if (useMap)
+        {
+            return Path.Combine(
+                unturnedDir,
+                ServerSavedata.directoryName,
+                Provider.serverID,
+                "Players",
+                Level.info.name,
+                playerFile,
+                PlayerSeasonFolder,
+                fileName
+            );
+        }
+
+        return Path.Combine(
+            unturnedDir,
+            ServerSavedata.directoryName,
+            Provider.serverID,
+            "Players",
+            playerFile,
+            PlayerSeasonFolder,
+            fileName
+        );
     }
 
     /// <summary>

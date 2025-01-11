@@ -1,13 +1,12 @@
-﻿using System;
-using System.Globalization;
+using System;
 using System.IO;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Players.Saves;
 
 public class BinaryPlayerSave : ISaveableState
 {
-    private const string Directory = "Players";
     private const byte DataVersion = 2;
 
     private readonly ILogger _logger;
@@ -21,7 +20,11 @@ public class BinaryPlayerSave : ISaveableState
     public bool ShouldRespawnOnJoin { get; set; }
     public bool IMGUI { get; set; }
     public bool WasNitroBoosting { get; set; }
-    public bool TrackQuests { get; set; }
+
+    /// <summary>
+    /// If quests (mainly daily quests) are auto-tracked.
+    /// </summary>
+    public bool TrackQuests { get; set; } = true;
     public bool IsNerd { get; set; }
 
     /// <summary>
@@ -34,15 +37,9 @@ public class BinaryPlayerSave : ISaveableState
         _logger = logger;
     }
 
-    private static string GetPath(CSteamID steam64)
+    public static string GetPlayerSaveFilePath(CSteamID steam64)
     {
-        return Path.DirectorySeparatorChar +
-               Path.Combine(
-                   Directory,
-                   steam64.m_SteamID.ToString(CultureInfo.InvariantCulture) + "_0",
-                   "Uncreated_S" + WarfareModule.Season.ToString(CultureInfo.InvariantCulture),
-                   "PlayerSave.dat"
-               );
+        return ConfigurationHelper.GetPlayerFilePath(steam64, "Player Save.dat");
     }
 
     public void Save()
@@ -65,7 +62,9 @@ public class BinaryPlayerSave : ISaveableState
         Thread.BeginCriticalRegion();
         try
         {
-            ServerSavedata.writeBlock(GetPath(Steam64), block);
+            string path = GetPlayerSaveFilePath(Steam64);
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            ReadWrite.writeBlock(path, false, false, block);
         }
         catch (Exception ex)
         {
@@ -84,15 +83,15 @@ public class BinaryPlayerSave : ISaveableState
         GameThread.AssertCurrent();
 
         WasReadFromFile = false;
-        if (!ServerSavedata.fileExists(GetPath(Steam64)))
+        if (!ServerSavedata.fileExists(GetPlayerSaveFilePath(Steam64)))
             return;
 
-        string path = GetPath(Steam64);
+        string path = GetPlayerSaveFilePath(Steam64);
 
         Block block;
         try
         {
-            block = ServerSavedata.readBlock(path, 0);
+            block = ReadWrite.readBlock(path, false, false, 0);
         }
         catch (Exception ex)
         {

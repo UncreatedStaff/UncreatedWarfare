@@ -1,15 +1,17 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
-using Uncreated.Warfare.Exceptions;
-using Uncreated.Warfare.NewQuests.Parameters;
 using Uncreated.Warfare.Players;
-using Uncreated.Warfare.Quests;
+using Uncreated.Warfare.Quests.Parameters;
+using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 
-namespace Uncreated.Warfare.NewQuests.Templates;
+namespace Uncreated.Warfare.Quests.Templates;
 public class KillStreak : QuestTemplate<KillStreak, KillStreak.Tracker, KillStreak.State>
 {
     public Int32ParameterTemplate StreakCount { get; set; }
@@ -17,32 +19,49 @@ public class KillStreak : QuestTemplate<KillStreak, KillStreak.Tracker, KillStre
     public KillStreak(IConfiguration templateConfig, IServiceProvider serviceProvider) : base(templateConfig, serviceProvider) { }
     public class State : IQuestState<KillStreak>
     {
+        [JsonIgnore]
+        public string Text { get; set; }
+
         [RewardVariable("strNum")]
         public QuestParameterValue<int> StreakCount { get; set; }
 
         [RewardVariable("strLen")]
         public QuestParameterValue<int> StreakLength { get; set; }
+
+        [JsonIgnore]
         public QuestParameterValue<int> FlagValue => StreakCount;
-        public UniTask CreateFromConfigurationAsync(IConfiguration configuration, IServiceProvider serviceProvider, CancellationToken token)
+        public UniTask CreateFromConfigurationAsync(IQuestStateConfiguration configuration, KillStreak template, IServiceProvider serviceProvider, CancellationToken token)
         {
-            string? streakCountStr = configuration["StreakCount"],
-                    streakLenStr = configuration["StreakLength"];
+            StreakCount = configuration.ParseInt32Value("StreakCount", Int32ParameterTemplate.WildcardInclusive);
+            StreakLength = configuration.ParseInt32Value("StreakLength", Int32ParameterTemplate.WildcardInclusive);
 
-            if (string.IsNullOrEmpty(streakCountStr) || !Int32ParameterTemplate.TryParseValue(streakCountStr, out QuestParameterValue<int>? streakCount))
-                throw new QuestConfigurationException(typeof(KillStreak), "Failed to parse integer parameter for \"StreakCount\".");
-            
-            if (string.IsNullOrEmpty(streakLenStr) || !Int32ParameterTemplate.TryParseValue(streakLenStr, out QuestParameterValue<int>? streakLength))
-                throw new QuestConfigurationException(typeof(KillStreak), "Failed to parse integer parameter for \"StreakLength\".");
-
-            StreakCount = streakCount;
-            StreakLength = streakLength;
+            FormatText(template);
             return UniTask.CompletedTask;
         }
-        public async UniTask CreateFromTemplateAsync(KillStreak data, CancellationToken token)
+        public async UniTask CreateFromTemplateAsync(KillStreak template, CancellationToken token)
         {
-            StreakCount = await data.StreakCount.CreateValue(data.ServiceProvider);
+            StreakCount = await template.StreakCount.CreateValue(template.ServiceProvider);
 
-            StreakLength = await data.StreakLength.CreateValue(data.ServiceProvider);
+            StreakLength = await template.StreakLength.CreateValue(template.ServiceProvider);
+
+            FormatText(template);
+        }
+
+        private void FormatText(KillStreak template)
+        {
+            ITranslationValueFormatter formatter = template.ServiceProvider.GetRequiredService<ITranslationValueFormatter>();
+
+            Text = string.Format(template.Text.Translate(null, template.Type.Name),
+                "{0}",
+                StreakCount.GetDisplayString(formatter),
+                StreakLength.GetDisplayString(formatter)
+            );
+        }
+
+        /// <inheritdoc />
+        public string CreateQuestDescriptiveString()
+        {
+            return Text;
         }
     }
     public class Tracker : QuestTracker, IEventListener<PlayerDied>
@@ -82,21 +101,21 @@ public class KillStreak : QuestTemplate<KillStreak, KillStreak.Tracker, KillStre
             InvokeUpdate();
         }
 
-        protected override void WriteProgress(Utf8JsonWriter writer)
+        public override void WriteProgress(Utf8JsonWriter writer)
         {
-            writer.WriteNumber("current_streak_progress", _streakProgress);
-            writer.WriteNumber("streaks_completed", _streaksCompleted);
+            writer.WriteNumber("CurrentStreakProgress", _streakProgress);
+            writer.WriteNumber("StreaksCompleted", _streaksCompleted);
         }
 
-        protected override void ReadProgress(ref Utf8JsonReader reader)
+        public override void ReadProgress(ref Utf8JsonReader reader)
         {
             JsonUtility.ReadTopLevelProperties(ref reader, (ref Utf8JsonReader reader, string property, ref object? _) =>
             {
-                if (property.Equals("current_streak_progress", StringComparison.Ordinal))
+                if (property.Equals("CurrentStreakProgress", StringComparison.Ordinal))
                 {
                     _streakProgress = reader.GetInt32();
                 }
-                else if (property.Equals("streaks_completed", StringComparison.Ordinal))
+                else if (property.Equals("StreaksCompleted", StringComparison.Ordinal))
                 {
                     _streaksCompleted = reader.GetInt32();
                 }

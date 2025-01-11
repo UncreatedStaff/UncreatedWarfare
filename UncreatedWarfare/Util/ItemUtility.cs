@@ -1,4 +1,4 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using SDG.NetPak;
 using SDG.NetTransport;
 using System;
@@ -1683,6 +1683,79 @@ public static class ItemUtility
         }
 
         return totalItemsFound;
+    }
+
+    /// <summary>
+    /// Guesses the type of weapon <paramref name="gun"/> is based off it's ammo and size.
+    /// </summary>
+    [Pure]
+    public static FirearmClass GetFirearmClass(ItemGunAsset gun)
+    {
+        Asset? magazineAsset = Assets.find(EAssetType.ITEM, gun.getMagazineID());
+        ItemMagazineAsset? magazine = magazineAsset as ItemMagazineAsset;
+
+        if (magazine?.pellets > 1)
+        {
+            if (gun.size_x <= 3)
+                return FirearmClass.SmallShotgun;
+            else
+                return FirearmClass.Shotgun;
+        }
+        else if (gun.size_x == 2)
+        {
+            if (gun.hasAuto)
+                return FirearmClass.MachinePistol;
+            else
+                return FirearmClass.Pistol;
+        }
+        else if (gun.size_x == 3)
+        {
+            if (gun.hasAuto)
+                return FirearmClass.LargeMachinePistol;
+            else
+                return FirearmClass.MediumSidearm;
+        }
+        else if (gun.size_x == 4)
+        {
+            if (gun.projectile != null && gun.vehicleDamage < 100)
+                return FirearmClass.GrenadeLauncher;
+
+            if (gun.playerDamageMultiplier.damage < 40)
+                return FirearmClass.SubmachineGun;
+            else if (gun.playerDamageMultiplier.damage < 60)
+                return FirearmClass.Rifle;
+            else
+                return FirearmClass.BattleRifle;
+        }
+        else if (gun.size_x == 5)
+        {
+            if (gun.hasAuto)
+            {
+                if (gun.ammoMax < 45)
+                    return FirearmClass.BattleRifle;
+                else if (gun.playerDamageMultiplier.damage < 60)
+                    return FirearmClass.LightMachineGun;
+                else
+                    return FirearmClass.GeneralPurposeMachineGun;
+            }
+            else
+            {
+                if (gun.projectile != null)
+                {
+                    if (gun.vehicleDamage < 500)
+                        return FirearmClass.LightAntiTank;
+                    else
+                        return FirearmClass.HeavyAntiTank;
+                }
+
+                if (gun.playerDamageMultiplier.damage < 100)
+                    return FirearmClass.DMR;
+                else
+                    return FirearmClass.Sniper;
+            }
+        }
+
+        return FirearmClass.TooDifficultToClassify;
     }
 }
 

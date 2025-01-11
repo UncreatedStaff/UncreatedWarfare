@@ -328,6 +328,10 @@
       <HintPath>../Libraries/UniTask.dll</HintPath>
       <Private>!$(CopyToModule)</Private>
     </Reference>
+    <Reference Include="Pty.Net">
+      <HintPath>../Libraries/Pty.Net/Pty.Net.dll</HintPath>
+      <Private>!$(CopyToModule)</Private>
+    </Reference>
 
     <!-- Unity -->
     <Reference Include="UnityEngine">
@@ -367,6 +371,10 @@
     <Compile Update="Commands\Whitelist\WhitelistAddCommand.cs">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Quests\" />
   </ItemGroup>
 
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent" Condition="exists('$(ServerPath)/Unturned_Data/Managed/Assembly-CSharp.dll')">

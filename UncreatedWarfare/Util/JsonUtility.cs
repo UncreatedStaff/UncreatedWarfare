@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using System.IO;
 using System.Text.Json;
 using Uncreated.Warfare.Configuration;
 
@@ -16,25 +17,32 @@ public static class JsonUtility
     {
         int objectLevel = 0;
         int arrayLevel = 0;
-        bool hasHitOneProperty = false;
+
+        if (reader.TokenType == JsonTokenType.StartObject)
+        {
+            objectLevel = 0;
+            if (!reader.Read())
+                return false;
+        }
+        else if (reader.Read() && reader.TokenType == JsonTokenType.StartObject)
+        {
+            objectLevel = -1;
+            if (!reader.Read())
+                return false;
+        }
 
         // read all tokens in json file, looping for each token
         // token is section of json, like '{', '"property"', '"value"', '[', etc
-        while (reader.Read())
+        do
         {
             if (reader.TokenType == JsonTokenType.PropertyName && objectLevel <= 0 && arrayLevel <= 0)
             {
-                hasHitOneProperty = true;
-
                 string property = reader.GetString()!;
                 if (propertyName.Equals(property, ignoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
                 {
                     return reader.Read();
                 }
             }
-
-            if (!hasHitOneProperty)
-                continue;
 
             switch (reader.TokenType)
             {
@@ -54,7 +62,7 @@ public static class JsonUtility
                     --arrayLevel;
                     break;
             }
-        }
+        } while (reader.Read() && arrayLevel >= 0 && objectLevel >= 0);
 
         return false;
     }
@@ -62,7 +70,7 @@ public static class JsonUtility
     /// <summary>
     /// Find all top-level properties on the current object.
     /// </summary>
-    public static int ReadTopLevelProperties(ref Utf8JsonReader reader, ReadTopLevelPropertiesHandler<object?> action)
+    public static int ReadTopLevelProperties(ref Utf8JsonReader reader, ReadTopLevelPropertiesHandler<object?>? action)
     {
         object? state = null;
         return ReadTopLevelProperties(ref reader, ref state, action);
@@ -71,7 +79,7 @@ public static class JsonUtility
     /// <summary>
     /// Find all top-level properties on the current object.
     /// </summary>
-    public static int ReadTopLevelProperties<TState>(ref Utf8JsonReader reader, ref TState state, ReadTopLevelPropertiesHandler<TState> action)
+    public static int ReadTopLevelProperties<TState>(ref Utf8JsonReader reader, ref TState state, ReadTopLevelPropertiesHandler<TState>? action)
     {
         int objectLevel = 0;
         int arrayLevel = 0;
@@ -89,7 +97,7 @@ public static class JsonUtility
                     return propCount;
 
                 ++propCount;
-                action(ref reader, property, ref state);
+                action?.Invoke(ref reader, property, ref state);
             }
 
             if (propCount == 0)
@@ -137,4 +145,27 @@ public static class JsonUtility
     {
         return JsonIndent.SetOptions == null || writer.Options.Indented ? default : new JsonIndent(writer, true);
     }
+
+    /// <summary>
+    /// Reads all bytes from a file and creates a <see cref="Utf8JsonReader"/> from the file contents, skipping the UTF-8 BOM if it is present.
+    /// </summary>
+    /// <exception cref="FileNotFoundException"/>
+    /// <exception cref="PathTooLongException"/>
+    /// <exception cref="DirectoryNotFoundException"/>
+    /// <exception cref="IOException"/>
+    /// <exception cref="UnauthorizedAccessException"/>
+    /// <exception cref="NotSupportedException"/>
+    /// <exception cref="System.Security.SecurityException"/>
+    public static void ReadFileSkipBOM(string fileName, out Utf8JsonReader reader, JsonReaderOptions options)
+    {
+        byte[] bytes = File.ReadAllBytes(fileName);
+        ReadOnlySpan<byte> data = bytes;
+        if (data.Length >= 3 && data[0] == 0xEF && data[1] == 0xBB && data[2] == 0xBF)
+        {
+            data = data[3..];
+        }
+
+        reader = new Utf8JsonReader(data, options);
+    }
+
 }

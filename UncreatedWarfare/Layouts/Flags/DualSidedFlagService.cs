@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
@@ -8,8 +8,10 @@ using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Flags;
 using Uncreated.Warfare.Exceptions;
+using Uncreated.Warfare.Layouts.Phases;
 using Uncreated.Warfare.Layouts.Phases.Flags;
 using Uncreated.Warfare.Layouts.Teams;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Util;
@@ -19,7 +21,8 @@ using Uncreated.Warfare.Zones;
 using Uncreated.Warfare.Zones.Pathing;
 
 namespace Uncreated.Warfare.Layouts.Flags;
-public abstract class DualSidedFlagService : 
+public abstract class DualSidedFlagService :
+    IAttackDefenceDecider,
     ILayoutHostedService,
     IFlagRotationService,
     IEventListener<FlagCaptured>,
@@ -225,7 +228,45 @@ public abstract class DualSidedFlagService :
             }
         }
     }
+
+    public bool IsAttacking(WarfarePlayer player)
+    {
+        if (!player.Team.IsValid)
+            return false;
+
+        foreach (FlagObjective flag in ActiveFlags)
+        {
+            if (!flag.Players.Contains(player))
+            {
+                continue;
+            }
+
+            if (flag.Owner == null || !flag.Owner.IsValid || flag.Owner.IsOpponent(player.Team))
+                return true;
+        }
+
+        return false;
+    }
     
+    public bool IsDefending(WarfarePlayer player)
+    {
+        if (!player.Team.IsValid)
+            return false;
+
+        foreach (FlagObjective flag in ActiveFlags)
+        {
+            if (!flag.Players.Contains(player))
+            {
+                continue;
+            }
+
+            if (flag.Owner != null && flag.Owner.IsFriendly(player.Team))
+                return true;
+        }
+
+        return false;
+    }
+
     private void SlowTickObjective(FlagObjective flag, FlagContestState contestState)
     {
         ObjectiveSlowTick args = new ObjectiveSlowTick

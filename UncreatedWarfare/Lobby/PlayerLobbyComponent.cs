@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using SDG.NetTransport;
 using StackCleaner;
 using System;
@@ -7,6 +7,7 @@ using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Util;
@@ -18,6 +19,8 @@ namespace Uncreated.Warfare.Lobby;
 [PlayerComponent]
 public class PlayerLobbyComponent : IPlayerComponent
 {
+    private QuestAsset? _previouslyTrackedQuest;
+
 #nullable disable
     private LobbyZoneManager _lobbyManager;
     private LobbyHudUI _ui;
@@ -44,6 +47,8 @@ public class PlayerLobbyComponent : IPlayerComponent
     public ref FlagInfo JoiningTeam => ref _lobbyManager.TeamFlags![_joiningTeam];
     public ref FlagInfo LookingTeam => ref _lobbyManager.TeamFlags![_lookingTeam];
     public ref FlagInfo ClosestTeam => ref _lobbyManager.TeamFlags![_closestTeam];
+
+    public bool IsInLobby { get; private set; }
 
     void IPlayerComponent.Init(IServiceProvider serviceProvider, bool isOnJoin)
     {
@@ -141,7 +146,28 @@ public class PlayerLobbyComponent : IPlayerComponent
 
     public void EnterLobby()
     {
+        _previouslyTrackedQuest = Player.UnturnedPlayer.quests.GetTrackedQuest();
+        if (_previouslyTrackedQuest != null)
+        {
+            QuestService.ServerUntrackQuest(Player, _previouslyTrackedQuest);
+        }
+
+        IsInLobby = true;
         UpdateUI(send: true);
+    }
+
+    public void ExitLobby()
+    {
+        _ui.ClearFromPlayer(Player.Connection);
+        _hasUi = false;
+        _lookingTeam = -1;
+        _closestTeam = -1;
+        IsInLobby = false;
+
+        if (_previouslyTrackedQuest != null)
+        {
+            QuestService.ServerTrackQuest(Player, _previouslyTrackedQuest);
+        }
     }
 
     /// <summary>
@@ -269,13 +295,16 @@ public class PlayerLobbyComponent : IPlayerComponent
         }
     }
 
-    public void ExitLobby()
-    {
-        _ui.ClearFromPlayer(Player.Connection);
-        _hasUi = false;
-        _lookingTeam = -1;
-        _closestTeam = -1;
-    }
-
     WarfarePlayer IPlayerComponent.Player { get => Player; set => Player = value; }
+
+    public bool TryTrackQuest(QuestAsset quest)
+    {
+        if (IsInLobby)
+        {
+            _previouslyTrackedQuest = quest;
+            return false;
+        }
+
+        return true;
+    }
 }

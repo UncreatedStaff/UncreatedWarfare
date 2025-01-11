@@ -25,6 +25,12 @@
     <PackageReference Include="DanielWillett.StackCleaner" Version="1.4.2" />
     <PackageReference Include="NetEscapades.Configuration.Yaml" Version="3.1.0" />
 
+    <PackageReference Include="JetBrains.Annotations" Version="2018.2.1" Aliases="JetBrains" />
+
+    <Reference Include="UniTask">
+	    <HintPath>$(SolutionDir)Libraries/UniTask.dll</HintPath>
+    </Reference>
+
     <PackageReference Include="Uncreated.UI" Version="[1.3.3,)" />
   </ItemGroup>
 

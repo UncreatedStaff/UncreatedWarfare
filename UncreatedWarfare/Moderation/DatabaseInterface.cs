@@ -1250,7 +1250,7 @@ public class DatabaseInterface
         }
         if ((flag & (1 << 9)) != 0)
         {
-            sb.Append($" LEFT JOIN `{TableVoiceChatReports}` AS `vrep` ON `main`.`{ColumnEntriesPrimaryKey}` = `rep`.`{ColumnExternalPrimaryKey}`");
+            sb.Append($" LEFT JOIN `{TableVoiceChatReports}` AS `vrep` ON `main`.`{ColumnEntriesPrimaryKey}` = `vrep`.`{ColumnExternalPrimaryKey}`");
         }
         if ((flag & (1 << 10)) != 0)
         {

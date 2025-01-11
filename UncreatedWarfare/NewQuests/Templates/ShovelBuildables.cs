@@ -1,67 +1,94 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Text.Json;
-using Uncreated.Warfare.Exceptions;
+using System.Text.Json.Serialization;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.FOBs.Construction;
-using Uncreated.Warfare.NewQuests.Parameters;
 using Uncreated.Warfare.Players;
-using Uncreated.Warfare.Quests;
+using Uncreated.Warfare.Quests.Parameters;
+using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 
-namespace Uncreated.Warfare.NewQuests.Templates;
+namespace Uncreated.Warfare.Quests.Templates;
 
 public class ShovelBuildables : QuestTemplate<ShovelBuildables, ShovelBuildables.Tracker, ShovelBuildables.State>
 {
 #nullable disable
     public Int32ParameterTemplate Amount { get; set; }
     public AssetParameterTemplate<ItemPlaceableAsset> Base { get; set; }
-    public EnumParameterTemplate<ShovelableType> Type { get; set; }
+    public EnumParameterTemplate<ShovelableType> Buildable { get; set; }
 #nullable restore
     public ShovelBuildables(IConfiguration templateConfig, IServiceProvider serviceProvider) : base(templateConfig, serviceProvider) { }
     public class State : IQuestState<ShovelBuildables>
     {
+        [JsonIgnore]
+        public string Text { get; set; }
 #nullable disable
+        [RewardVariable("a")]
         public QuestParameterValue<int> Amount { get; set; }
 #nullable restore
         public QuestParameterValue<Guid>? Base { get; set; }
-        public QuestParameterValue<ShovelableType>? Type { get; set; }
+        public QuestParameterValue<ShovelableType>? Buildable { get; set; }
+
+        [JsonIgnore]
         public QuestParameterValue<int> FlagValue => Amount;
-        public UniTask CreateFromConfigurationAsync(IConfiguration configuration, IServiceProvider serviceProvider, CancellationToken token)
+        public UniTask CreateFromConfigurationAsync(IQuestStateConfiguration configuration, ShovelBuildables template, IServiceProvider serviceProvider, CancellationToken token)
         {
-            string? amountStr = configuration["Amount"],
-                    baseStr = configuration["Base"],
-                    typeStr = configuration["Type"];
-
-            QuestParameterValue<Guid>? baseAsset = null;
-            QuestParameterValue<ShovelableType>? type = null;
-
-            if (string.IsNullOrEmpty(amountStr) || !Int32ParameterTemplate.TryParseValue(amountStr, out QuestParameterValue<int>? amount))
-                throw new QuestConfigurationException(typeof(ShovelBuildables), "Failed to parse integer parameter for \"Amount\".");
-            
-            if (!string.IsNullOrEmpty(baseStr) && !AssetParameterTemplate<ItemPlaceableAsset>.TryParseValue(baseStr, out baseAsset))
-                throw new QuestConfigurationException(typeof(ShovelBuildables), "Failed to parse ItemPlaceableAsset parameter for \"Base\".");
-            
-            if (!string.IsNullOrEmpty(typeStr) && !EnumParameterTemplate<ShovelableType>.TryParseValue(typeStr, out type))
-                throw new QuestConfigurationException(typeof(ShovelBuildables), "Failed to parse BuildableType parameter for \"Type\".");
-
-            Amount = amount;
-            Base = baseAsset;
-            Type = type;
+            Amount = configuration.ParseInt32Value("Amount", Int32ParameterTemplate.WildcardInclusive);
+            Base = configuration.ParseAssetValue<ItemPlaceableAsset>("Base");
+            Buildable = configuration.ParseEnumValue<ShovelableType>("Buildable");
+            FormatText(template);
             return UniTask.CompletedTask;
         }
-        public async UniTask CreateFromTemplateAsync(ShovelBuildables data, CancellationToken token)
+        public async UniTask CreateFromTemplateAsync(ShovelBuildables template, CancellationToken token)
         {
-            Amount = await data.Amount.CreateValue(data.ServiceProvider);
+            Amount = await template.Amount.CreateValue(template.ServiceProvider);
 
-            Base = data.Base == null ? null : await data.Base.CreateValue(data.ServiceProvider);
-            Type = data.Type == null ? null : await data.Type.CreateValue(data.ServiceProvider);
+            Base = template.Base == null ? null : await template.Base.CreateValue(template.ServiceProvider);
+            Buildable = template.Buildable == null ? null : await template.Buildable.CreateValue(template.ServiceProvider);
+            FormatText(template);
+        }
+
+        private void FormatText(ShovelBuildables template)
+        {
+            ITranslationValueFormatter formatter = template.ServiceProvider.GetRequiredService<ITranslationValueFormatter>();
+
+            object buildable;
+            if (Base == null || Base.IsWildcardInclusive())
+            {
+                if (Buildable == null || Buildable.IsWildcardInclusive())
+                {
+                    buildable = string.Empty;
+                }
+                else
+                {
+                    buildable = Buildable.GetDisplayString(formatter);
+                }
+            }
+            else
+            {
+                buildable = Base.GetDisplayString(formatter);
+            }
+
+            Text = string.Format(template.Text.Translate(null, template.Type.Name),
+                "{0}",
+                Amount.GetDisplayString(formatter),
+                buildable
+            );
+        }
+
+        /// <inheritdoc />
+        public string CreateQuestDescriptiveString()
+        {
+            return Text;
         }
     }
     public class Tracker : QuestTracker //, todo INotifyBuildableBuilt //IEventListener<BuildableBuilt>
     {
         private readonly int _targetAmount;
         private readonly QuestParameterValue<Guid> _base;
-        private readonly QuestParameterValue<ShovelableType> _type;
+        private readonly QuestParameterValue<ShovelableType> _buildable;
 
         private int _amount;
         public override bool IsComplete => _amount >= _targetAmount;
@@ -72,7 +99,7 @@ public class ShovelBuildables : QuestTemplate<ShovelBuildables, ShovelBuildables
             _targetAmount = state.Amount.GetSingleValueOrMinimum();
 
             _base = state.Base ?? AssetParameterTemplate<ItemPlaceableAsset>.WildcardInclusive;
-            _type = state.Type ?? EnumParameterTemplate<ShovelableType>.WildcardInclusive;
+            _buildable = state.Buildable ?? EnumParameterTemplate<ShovelableType>.WildcardInclusive;
         }
 
         // todo [EventListener(RequiresMainThread = false)] // todo use actual event listener
@@ -90,16 +117,16 @@ public class ShovelBuildables : QuestTemplate<ShovelBuildables, ShovelBuildables
         // todo     InvokeUpdate();
         // todo }
 
-        protected override void WriteProgress(Utf8JsonWriter writer)
+        public override void WriteProgress(Utf8JsonWriter writer)
         {
-            writer.WriteNumber("buildables_built", _amount);
+            writer.WriteNumber("BuildablesBuilt", _amount);
         }
 
-        protected override void ReadProgress(ref Utf8JsonReader reader)
+        public override void ReadProgress(ref Utf8JsonReader reader)
         {
             JsonUtility.ReadTopLevelProperties(ref reader, (ref Utf8JsonReader reader, string property, ref object? _) =>
             {
-                if (property.Equals("buildables_built", StringComparison.Ordinal))
+                if (property.Equals("BuildablesBuilt", StringComparison.Ordinal))
                 {
                     _amount = reader.GetInt32();
                 }

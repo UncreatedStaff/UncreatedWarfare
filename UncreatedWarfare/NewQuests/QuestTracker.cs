@@ -1,14 +1,17 @@
-﻿using System;
+using Microsoft.Extensions.DependencyInjection;
+using System;
 using System.Collections.Generic;
 using System.Text.Json;
+using Uncreated.Framework.UI;
 using Uncreated.Warfare.Players;
-using Uncreated.Warfare.Quests;
+using Uncreated.Warfare.Quests.Daily;
 using Uncreated.Warfare.Util;
 
-namespace Uncreated.Warfare.NewQuests;
+namespace Uncreated.Warfare.Quests;
 public abstract class QuestTracker
 {
     protected readonly IServiceProvider ServiceProvider;
+    protected readonly QuestService QuestService;
     public WarfarePlayer Player { get; }
 
     /// <summary>
@@ -24,22 +27,56 @@ public abstract class QuestTracker
     public QuestTemplate Quest { get; }
     public IQuestState State { get; }
     public IQuestPreset? Preset { get; }
+    public bool IsDailyQuestTracker { get; }
+
+    public event Action<QuestTracker>? Updated;
+    public event Action<QuestTracker>? Completed;
+
     protected QuestTracker(WarfarePlayer player, IServiceProvider serviceProvider, QuestTemplate quest, IQuestState state, IQuestPreset? preset)
     {
         Player = player;
         ServiceProvider = serviceProvider;
+        QuestService = serviceProvider.GetRequiredService<QuestService>();
         State = state;
         Preset = preset;
         Quest = quest;
-        // todo rewards
+
+        IQuestReward[] rewards;
+        IQuestReward[]? rewardOverrides = preset?.RewardOverrides;
+        if (rewardOverrides == null)
+        {
+            rewards = new IQuestReward[quest.Rewards.Count];
+            int index = 0;
+            foreach (QuestRewardExpression expression in quest.Rewards)
+            {
+                rewards[index] = expression.GetReward(state) ?? new NullReward();
+                ++index;
+            }
+        }
+        else
+        {
+            rewards = new IQuestReward[rewardOverrides.Length];
+            Array.Copy(rewardOverrides, rewards, rewards.Length);
+        }
+
+        Rewards = rewards;
+        IsDailyQuestTracker = Preset is DailyQuestPreset;
     }
-    protected virtual void WriteProgress(Utf8JsonWriter writer) { }
-    protected virtual void ReadProgress(ref Utf8JsonReader reader) { }
-    protected void InvokeUpdate()
+
+    public virtual string CreateDescriptiveStringForPlayer()
+    {
+        string format = State.CreateQuestDescriptiveString();
+
+        return UnturnedUIUtility.QuickFormat(format, FlagValue, 0);
+    }
+
+    public virtual void WriteProgress(Utf8JsonWriter writer) { }
+    public virtual void ReadProgress(ref Utf8JsonReader reader) { }
+    public void InvokeUpdate()
     {
         if (GameThread.IsCurrent)
         {
-            HandleUpdated(false);
+            HandleUpdated();
 
             if (IsComplete)
                 HandleComplete();
@@ -49,7 +86,7 @@ public abstract class QuestTracker
             UniTask.Create(async () =>
             {
                 await UniTask.SwitchToMainThread();
-                HandleUpdated(false);
+                HandleUpdated();
 
                 if (IsComplete)
                     HandleComplete();
@@ -57,12 +94,15 @@ public abstract class QuestTracker
         }
     }
 
-    protected virtual void HandleUpdated(bool skipFlagUpdate)
+    protected virtual void HandleUpdated()
     {
-        // todo
+        QuestService.HandleTrackerUpdated(this);
+        Updated?.Invoke(this);
     }
+
     protected virtual void HandleComplete()
     {
-        // todo
+        QuestService.HandleTrackerCompleted(this);
+        Completed?.Invoke(this);
     }
 }

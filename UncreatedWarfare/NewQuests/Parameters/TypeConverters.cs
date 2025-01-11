@@ -1,11 +1,18 @@
-﻿using System;
+using System;
 using System.ComponentModel;
 using System.Globalization;
 
-namespace Uncreated.Warfare.NewQuests.Parameters;
+namespace Uncreated.Warfare.Quests.Parameters;
 
 public class StringParameterTemplateTypeConverter : TypeConverter
 {
+    private readonly Type _type;
+
+    public StringParameterTemplateTypeConverter(Type type)
+    {
+        _type = type;
+    }
+
     /// <inheritdoc />
     public override object? ConvertTo(ITypeDescriptorContext context, CultureInfo culture, object value, Type destinationType)
     {
@@ -19,10 +26,15 @@ public class StringParameterTemplateTypeConverter : TypeConverter
     {
         if (value is not string str)
         {
-            throw GetConvertFromException(value);
+            if (value is not IConvertible c)
+            {
+                throw GetConvertFromException(value);
+            }
+
+            str = c.ToString(culture);
         }
 
-        return context?.PropertyDescriptor?.PropertyType == typeof(KitNameParameterTemplate)
+        return _type == typeof(KitNameParameterTemplate)
             ? new KitNameParameterTemplate(str.AsSpan())
             : new StringParameterTemplate(str.AsSpan());
     }
@@ -36,7 +48,7 @@ public class StringParameterTemplateTypeConverter : TypeConverter
     /// <inheritdoc />
     public override bool CanConvertFrom(ITypeDescriptorContext context, Type sourceType)
     {
-        return sourceType == typeof(string);
+        return sourceType == typeof(string) || typeof(IConvertible).IsAssignableFrom(sourceType);
     }
 }
 
@@ -55,6 +67,12 @@ public class SingleParameterTemplateTypeConverter : TypeConverter
     {
         if (value is not string str)
         {
+            if (value is IConvertible c)
+            {
+                float single = c.ToSingle(culture);
+                return new SingleParameterTemplate(single);
+            }
+
             throw GetConvertFromException(value);
         }
 
@@ -70,7 +88,7 @@ public class SingleParameterTemplateTypeConverter : TypeConverter
     /// <inheritdoc />
     public override bool CanConvertFrom(ITypeDescriptorContext context, Type sourceType)
     {
-        return sourceType == typeof(string);
+        return sourceType == typeof(string) || typeof(IConvertible).IsAssignableFrom(sourceType);
     }
 }
 
@@ -89,6 +107,9 @@ public class Int32ParameterTemplateTypeConverter : TypeConverter
     {
         if (value is not string str)
         {
+            if (value is IConvertible convertible)
+                return new Int32ParameterTemplate(convertible.ToInt32(culture));
+
             throw GetConvertFromException(value);
         }
 
@@ -104,12 +125,19 @@ public class Int32ParameterTemplateTypeConverter : TypeConverter
     /// <inheritdoc />
     public override bool CanConvertFrom(ITypeDescriptorContext context, Type sourceType)
     {
-        return sourceType == typeof(string);
+        return sourceType == typeof(string) || typeof(IConvertible).IsAssignableFrom(sourceType);
     }
 }
 
 public class EnumParameterTemplateTypeConverter : TypeConverter
 {
+    private readonly Type _type;
+
+    public EnumParameterTemplateTypeConverter(Type type)
+    {
+        _type = type;
+    }
+
     /// <inheritdoc />
     public override object? ConvertTo(ITypeDescriptorContext context, CultureInfo culture, object value, Type destinationType)
     {
@@ -127,7 +155,7 @@ public class EnumParameterTemplateTypeConverter : TypeConverter
             throw GetConvertFromException(value);
         }
 
-        Type enumType = context?.PropertyDescriptor?.PropertyType ?? throw GetConvertFromException(value);
+        Type enumType = _type.GetGenericArguments()[0];
 
         return Activator.CreateInstance(typeof(EnumParameterTemplate<>).MakeGenericType(enumType), [ str ]);
     }
@@ -147,6 +175,13 @@ public class EnumParameterTemplateTypeConverter : TypeConverter
 
 public class AssetParameterTemplateTypeConverter : TypeConverter
 {
+    private readonly Type _type;
+
+    public AssetParameterTemplateTypeConverter(Type type)
+    {
+        _type = type;
+    }
+
     /// <inheritdoc />
     public override object? ConvertTo(ITypeDescriptorContext context, CultureInfo culture, object value, Type destinationType)
     {
@@ -163,11 +198,9 @@ public class AssetParameterTemplateTypeConverter : TypeConverter
             throw GetConvertFromException(value);
         }
 
-        Type assetType = context?.PropertyDescriptor?.PropertyType ?? typeof(Asset);
-
-        return assetType == typeof(Asset)
-            ? new AssetParameterTemplate<Asset>(str)
-            : Activator.CreateInstance(typeof(AssetParameterTemplate<>).MakeGenericType(assetType), [ str ]);
+        Type assetType = _type.GetGenericArguments()[0];
+        
+        return Activator.CreateInstance(typeof(AssetParameterTemplate<>).MakeGenericType(assetType), [ str ]);
     }
 
     /// <inheritdoc />

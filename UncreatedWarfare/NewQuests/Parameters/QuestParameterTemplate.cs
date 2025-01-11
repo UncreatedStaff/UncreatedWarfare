@@ -1,7 +1,7 @@
-﻿using System;
+using System;
 using System.Text.Json;
 
-namespace Uncreated.Warfare.NewQuests.Parameters;
+namespace Uncreated.Warfare.Quests.Parameters;
 public abstract class QuestParameterTemplate<TValue> : IFormattable, IEquatable<QuestParameterTemplate<TValue>>
 {
     protected IValueSet? Set;

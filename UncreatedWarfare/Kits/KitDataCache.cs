@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.Extensions.DependencyInjection;
 using System;
@@ -10,10 +10,10 @@ using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Models.Kits;
-using Uncreated.Warfare.NewQuests;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Unlocks;
+using Uncreated.Warfare.Quests;
 
 namespace Uncreated.Warfare.Kits;
 

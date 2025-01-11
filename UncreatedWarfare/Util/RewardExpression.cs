@@ -165,7 +165,7 @@ public class RewardExpression
         _tokens = tokens;
     }
 
-    protected virtual void TransformResult(IOpCodeEmitter emitter, ref int stackSize)
+    protected virtual void TransformResult(IOpCodeEmitter emit, ref int stackSize)
     {
     }
 
@@ -600,6 +600,7 @@ public class RewardExpression
                 }
 
                 il.AddLocal<double>(out LocalBuilder local);
+                variable.Preload(local, il, _logger);
                 if (DebugLogging)
                 {
                     il.Comment($"Variable #{local.LocalIndex} {variable.Names[0]}");

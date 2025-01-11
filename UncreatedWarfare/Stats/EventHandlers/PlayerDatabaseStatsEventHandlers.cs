@@ -86,7 +86,6 @@ internal sealed class PlayerDatabaseStatsEventHandlers :
         // dont count injure ticks
         if (injured && e.Parameters.cause == EDeathCause.BLEEDING)
         {
-            Console.WriteLine("injure tick ignored.");
             return;
         }
 

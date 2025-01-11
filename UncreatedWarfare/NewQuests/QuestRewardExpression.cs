@@ -4,11 +4,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using Uncreated.Warfare.NewQuests.Parameters;
-using Uncreated.Warfare.Quests;
+using System.Reflection.Emit;
+using Uncreated.Warfare.Quests.Parameters;
 using Uncreated.Warfare.Util;
 
-namespace Uncreated.Warfare.NewQuests;
+namespace Uncreated.Warfare.Quests;
 
 public class QuestRewardExpression : RewardExpression
 {
@@ -22,7 +22,7 @@ public class QuestRewardExpression : RewardExpression
     public QuestRewardExpression(Type rewardType, Type questType, string expression, ILogger logger)
         : base($"EvaluateReward_{questType.Name}_{rewardType.Name}", typeof(IQuestReward),
             GetReturnType(rewardType, questType, out ConstructorInfo createCtor, out Type? stateType, out IEmittableVariable[] variables),
-            rewardType, typeof(IQuestState), variables, expression, logger)
+            rewardType, questType, variables, expression, logger)
     {
         _createCtor = createCtor;
 
@@ -113,12 +113,52 @@ public class QuestRewardExpression : RewardExpression
     }
 
     /// <inheritdoc />
-    protected override void TransformResult(IOpCodeEmitter emitter, ref int stackSize)
+    protected override void TransformResult(IOpCodeEmitter emit, ref int stackSize)
     {
-        emitter.CreateObject(_createCtor);
+        Type rtnType = _createCtor.GetParameters()[0].ParameterType;
+
+        if (rtnType != typeof(double))
+        {
+            if (rtnType == typeof(int))
+                emit.ConvertToInt32Checked();
+            else if (rtnType == typeof(uint))
+                emit.ConvertToUInt32Checked();
+            else if (rtnType == typeof(short))
+                emit.ConvertToInt16Checked();
+            else if (rtnType == typeof(ushort))
+                emit.ConvertToUInt16Checked();
+            else if (rtnType == typeof(sbyte))
+                emit.ConvertToInt8Checked();
+            else if (rtnType == typeof(byte))
+                emit.ConvertToUInt8Checked();
+            else if (rtnType == typeof(ulong))
+                emit.ConvertToUInt64Checked();
+            else if (rtnType == typeof(long))
+                emit.ConvertToInt64Checked();
+            else if (rtnType == typeof(nuint))
+                emit.ConvertToNativeUIntChecked();
+            else if (rtnType == typeof(nint))
+                emit.ConvertToNativeIntChecked();
+            else if (rtnType == typeof(float))
+                emit.ConvertToSingle();
+            else if (rtnType == typeof(string))
+            {
+                emit.PopToLocal<double>(out LocalBuilder lcl)
+                    .LoadLocalAddress(lcl)
+                    .Invoke(typeof(double).GetMethod("ToString", BindingFlags.Public | BindingFlags.Instance, null, Type.EmptyTypes, null)!);
+            }
+        }
+
+        emit.CreateObject(_createCtor);
 
         if (_createCtor.DeclaringType!.IsValueType)
-            emitter.Box(_createCtor.DeclaringType);
+            emit.Box(_createCtor.DeclaringType);
+    }
+
+    public IQuestReward? GetReward(IQuestState state)
+    {
+        object? result = TryEvaluate(state);
+        return (IQuestReward?)result;
     }
 
     private class QuestStateVariable : IEmittableVariable
@@ -154,7 +194,7 @@ public class QuestRewardExpression : RewardExpression
             }
             else
             {
-                il.Invoke(((PropertyInfo)_variable).GetMethod);
+                il.Invoke(((PropertyInfo)_variable.Member).GetMethod);
             }
 
             MethodInfo? getSingleValueMethod = _variable.MemberType.GetMethod(nameof(QuestParameterValue<object>.GetSingleValue),

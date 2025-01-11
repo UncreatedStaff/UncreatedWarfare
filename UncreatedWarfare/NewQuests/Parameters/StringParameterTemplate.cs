@@ -1,11 +1,13 @@
-﻿using System;
+using System;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 
-namespace Uncreated.Warfare.NewQuests.Parameters;
+namespace Uncreated.Warfare.Quests.Parameters;
 
 /// <summary>
 /// Quest paramater template representing a set of possible values for randomly generated quests, or a set of allowed values for conditions.
@@ -82,7 +84,7 @@ public class StringParameterTemplate : QuestParameterTemplate<string>
     /// <inheritdoc />
     public override bool TryParseFrom(ReadOnlySpan<char> str)
     {
-        if (!TryParseIntl(str, out ParameterSelectionType selType, out ParameterValueType valType, out string? constant, out string[]? list))
+        if (!TryParseIntl(str, out ParameterSelectionType selType, out ParameterValueType valType, out string? constant, out string[]? list, GetType() == typeof(StringParameterTemplate)))
             return false;
 
         if (valType == ParameterValueType.Range || selType == ParameterSelectionType.Selective && valType is not ParameterValueType.Constant and not ParameterValueType.List)
@@ -141,7 +143,7 @@ public class StringParameterTemplate : QuestParameterTemplate<string>
         }
     }
 
-    protected static bool TryParseIntl(ReadOnlySpan<char> str, out ParameterSelectionType selType, out ParameterValueType valType, out string? constant, out string[]? list)
+    protected static bool TryParseIntl(ReadOnlySpan<char> str, out ParameterSelectionType selType, out ParameterValueType valType, out string? constant, out string[]? list, bool isBasicStringParameter)
     {
         constant = null;
         list = null;
@@ -154,7 +156,7 @@ public class StringParameterTemplate : QuestParameterTemplate<string>
             {
                 selType = ParameterSelectionType.Selective;
                 valType = ParameterValueType.Wildcard;
-                return false;
+                return !isBasicStringParameter;
             }
 
             if (str[0] == '#' && str[1] == '*')
@@ -213,7 +215,10 @@ public class StringParameterTemplate : QuestParameterTemplate<string>
             if (nextComma > 0 && str[nextComma - 1] == '\\')
             {
                 if (nextComma == 1 || str[nextComma - 2] != '\\')
+                {
+                    lastIndex = nextComma;
                     continue;
+                }
             }
 
             lastIndex = nextComma;
@@ -223,24 +228,34 @@ public class StringParameterTemplate : QuestParameterTemplate<string>
         list = new string[termCount];
         termCount = 0;
         lastIndex = 1;
+        int lastCommaIndex = 1;
+        bool hasCommaEscape = false;
         while (true)
         {
-            int nextComma = str.Slice(lastIndex + 1).IndexOf(',');
+            int nextComma = str.Slice(lastCommaIndex + 1).IndexOf(',');
             if (nextComma == -1)
                 break;
 
-            nextComma += lastIndex + 1;
+            nextComma += lastCommaIndex + 1;
             if (nextComma > 0 && str[nextComma - 1] == '\\')
             {
                 if (nextComma == 1 || str[nextComma - 2] != '\\')
+                {
+                    hasCommaEscape = true;
+                    lastCommaIndex = nextComma;
                     continue;
+                }
             }
 
             int len = nextComma - lastIndex - 1;
             list[termCount] = len == 0 ? string.Empty : new string(str.Slice(lastIndex + 1, len).Trim());
+            if (hasCommaEscape)
+                list[termCount] = list[termCount].Replace(@"\,", ",");
 
             ++termCount;
             lastIndex = nextComma;
+            lastCommaIndex = nextComma;
+            hasCommaEscape = false;
         }
 
         list[termCount] = str.Length - lastIndex - 2 == 0 ? string.Empty : new string(str.Slice(lastIndex + 1, str.Length - lastIndex - 2).Trim());
@@ -268,7 +283,7 @@ public class StringParameterTemplate : QuestParameterTemplate<string>
                     return SelectionType == ParameterSelectionType.Inclusive ? "#[]" : "$[]";
                 }
 
-                int ttlLength = 3 + 2 * (list.Values.Length - 1);
+                int ttlLength = 3 + (list.Values.Length - 1);
                 for (int i = 0; i < list.Values.Length; ++i)
                 {
                     string v = list.Values[i];
@@ -296,8 +311,7 @@ public class StringParameterTemplate : QuestParameterTemplate<string>
                         if (i != 0)
                         {
                             span[index] = ',';
-                            span[index + 2] = ' ';
-                            index += 2;
+                            ++index;
                         }
 
                         if (string.IsNullOrEmpty(v))
@@ -315,9 +329,14 @@ public class StringParameterTemplate : QuestParameterTemplate<string>
         }
     }
 
+    [JsonConverter(typeof(QuestParameterConverter))]
     protected class StringParameterValue : QuestParameterValue<string>, IEquatable<StringParameterValue>
     {
+        private readonly string? _displayValue;
+
         private string? _value;
+
+
         private string[]? _values;
         private bool _isEmptySet;
 
@@ -359,12 +378,13 @@ public class StringParameterTemplate : QuestParameterTemplate<string>
             }
         }
 
-        public StringParameterValue(string? value, ParameterValueType valType)
+        public StringParameterValue(string? value, ParameterValueType valType, string? display)
         {
             ValueType = valType;
             SelectionType = ParameterSelectionType.Selective;
 
             _value = value;
+            _displayValue = display;
         }
 
         public StringParameterValue(string? value, string[]? list, ParameterValueType valType)
@@ -377,7 +397,7 @@ public class StringParameterTemplate : QuestParameterTemplate<string>
             _isEmptySet = valType == ParameterValueType.List && list is not { Length: > 0 };
         }
 
-        public StringParameterValue(string? value, StringParameterTemplate template)
+        public StringParameterValue(string? value, StringParameterTemplate template, string? display)
         {
             ParameterValueType valType = template.ValueType;
             ParameterSelectionType selType = template.SelectionType;
@@ -386,6 +406,7 @@ public class StringParameterTemplate : QuestParameterTemplate<string>
             SelectionType = selType;
 
             _value = value;
+            _displayValue = display;
 
             switch (valType)
             {
@@ -411,7 +432,7 @@ public class StringParameterTemplate : QuestParameterTemplate<string>
         public static bool TryParse(ReadOnlySpan<char> str, [MaybeNullWhen(false)] out QuestParameterValue<string> value)
         {
             if (!TryParseIntl(str, out ParameterSelectionType selType, out ParameterValueType valType, out string? constant,
-                    out string[]? list))
+                    out string[]? list, true))
             {
                 value = null;
                 return false;
@@ -497,6 +518,17 @@ public class StringParameterTemplate : QuestParameterTemplate<string>
         }
 
         /// <inheritdoc />
+        public override object GetDisplayString(ITranslationValueFormatter formatter)
+        {
+            if (ValueType == ParameterValueType.Constant || SelectionType == ParameterSelectionType.Selective)
+            {
+                return _displayValue ?? _value!;
+            }
+
+            return ToString();
+        }
+
+        /// <inheritdoc />
         public override bool Equals(QuestParameterValue<string>? other)
         {
             return other is StringParameterValue v && Equals(v);
@@ -555,7 +587,7 @@ public class StringParameterTemplate : QuestParameterTemplate<string>
                         return "#[]";
                     }
 
-                    int ttlLength = 3 + 2 * (_values!.Length - 1);
+                    int ttlLength = 3 + (_values!.Length - 1);
                     for (int i = 0; i < _values.Length; ++i)
                     {
                         string v = _values[i];
@@ -581,8 +613,7 @@ public class StringParameterTemplate : QuestParameterTemplate<string>
                             if (i != 0)
                             {
                                 span[index] = ',';
-                                span[index + 2] = ' ';
-                                index += 2;
+                                ++index;
                             }
 
                             if (string.IsNullOrEmpty(v))

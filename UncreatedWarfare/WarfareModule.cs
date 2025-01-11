@@ -58,6 +58,8 @@ using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Players.Tweaks;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Plugins;
+using Uncreated.Warfare.Quests;
+using Uncreated.Warfare.Quests.Daily;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Sessions;
 using Uncreated.Warfare.Signs;
@@ -528,6 +530,18 @@ public sealed class WarfareModule
         bldr.RegisterType<AudioRecordManager>()
             .AsImplementedInterfaces().AsSelf()
             .SingleInstance();
+
+        bldr.RegisterRpcType<WorkshopUploader>()
+            .AsImplementedInterfaces().AsSelf()
+            .SingleInstance();
+
+        bldr.RegisterType<QuestService>()
+            .AsImplementedInterfaces().AsSelf()
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+
+        bldr.RegisterType<DailyQuestService>()
+            .AsImplementedInterfaces().AsSelf()
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
 
         bldr.RegisterType<LayoutFactory>()
             .AsImplementedInterfaces().AsSelf()
@@ -1139,7 +1153,7 @@ public sealed class WarfareModule
 
         List<IHostedService> hostedServices = ServiceProvider
             .Resolve<IEnumerable<IHostedService>>()
-            .OrderByDescending(x => x.GetType().GetPriority())
+            .OrderBy(x => x.GetType().GetPriority())
             .ToList();
 
         _logger.LogDebug("Unhosting {0} services.", hostedServices.Count);

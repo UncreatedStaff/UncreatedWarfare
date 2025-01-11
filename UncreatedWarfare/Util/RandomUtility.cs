@@ -1,5 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
+using System.Security;
 using Random = System.Random;
 
 namespace Uncreated.Warfare.Util;
@@ -12,15 +14,38 @@ public static class RandomUtility
     [ThreadStatic]
     private static Random? _random;
 
+    private static bool _unityLoaded;
+    private static bool _unityLoadedSet;
+
     private static int _randomSeed;
     private static Random GetNonGameThreadRandom() => _random ??= new Random(Interlocked.Increment(ref _randomSeed));
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static void SetUnityLoaded()
+    {
+        try
+        {
+            _ = UnityEngine.Random.value;
+            _unityLoaded = true;
+        }
+        catch (SecurityException)
+        {
+            _unityLoaded = false;
+        }
+
+        Interlocked.MemoryBarrier();
+        _unityLoadedSet = true;
+    }
 
     /// <summary>
     /// Thread-safe function to get a random integer within the range [0, <see cref="int.MaxValue"/>).
     /// </summary>
     public static int GetInteger()
     {
-        return GameThread.IsCurrent
+        if (!_unityLoadedSet)
+            SetUnityLoaded();
+
+        return _unityLoaded && GameThread.IsCurrent
             ? UnityEngine.Random.Range(0, int.MaxValue)
             : GetNonGameThreadRandom().Next();
     }
@@ -30,10 +55,13 @@ public static class RandomUtility
     /// </summary>
     public static int GetInteger(int upperExclusive)
     {
+        if (!_unityLoadedSet)
+            SetUnityLoaded();
+
         if (upperExclusive == 1)
             return 0;
 
-        return GameThread.IsCurrent
+        return _unityLoaded && GameThread.IsCurrent
             ? UnityEngine.Random.Range(0, upperExclusive)
             : GetNonGameThreadRandom().Next(upperExclusive);
     }
@@ -43,10 +71,13 @@ public static class RandomUtility
     /// </summary>
     public static int GetInteger(int lowerInclusive, int upperExclusive)
     {
+        if (!_unityLoadedSet)
+            SetUnityLoaded();
+
         if (lowerInclusive == upperExclusive - 1)
             return lowerInclusive;
 
-        return GameThread.IsCurrent
+        return _unityLoaded && GameThread.IsCurrent
             ? UnityEngine.Random.Range(lowerInclusive, upperExclusive)
             : GetNonGameThreadRandom().Next(lowerInclusive, upperExclusive);
     }
@@ -56,7 +87,10 @@ public static class RandomUtility
     /// </summary>
     public static float GetFloat()
     {
-        return GameThread.IsCurrent
+        if (!_unityLoadedSet)
+            SetUnityLoaded();
+
+        return _unityLoaded && GameThread.IsCurrent
             ? UnityEngine.Random.value
             : (float)GetNonGameThreadRandom().NextDouble();
     }
@@ -76,7 +110,10 @@ public static class RandomUtility
     /// </summary>
     public static float GetFloat(float lowerInclusive, float upperInclusive)
     {
-        return GameThread.IsCurrent
+        if (!_unityLoadedSet)
+            SetUnityLoaded();
+
+        return _unityLoaded && GameThread.IsCurrent
             ? UnityEngine.Random.Range(lowerInclusive, upperInclusive)
             : (float)GetNonGameThreadRandom().NextDouble() * (upperInclusive - lowerInclusive) + lowerInclusive;
     }
@@ -86,7 +123,10 @@ public static class RandomUtility
     /// </summary>
     public static double GetDouble()
     {
-        return GameThread.IsCurrent
+        if (!_unityLoadedSet)
+            SetUnityLoaded();
+
+        return _unityLoaded && GameThread.IsCurrent
             ? UnityEngine.Random.value
             : (float)GetNonGameThreadRandom().NextDouble();
     }

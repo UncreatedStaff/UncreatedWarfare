@@ -74,6 +74,16 @@ internal sealed class TeleportCommand : IExecutableCommand
                         throw Context.Reply(_translations.TeleportSelfWaypointSuccess, loc);
                     throw Context.Reply(_translations.TeleportSelfWaypointObstructed, loc);
                 }
+                string input = Context.GetRange(0)!;
+                LocationDevkitNode? n = CollectionUtility.StringFind(LocationDevkitNodeSystem.Get().GetAllNodes().OrderBy(loc => loc.locationName.Length), loc => loc.locationName, input);
+                if (n != null)
+                {
+                    pos = n.transform.position;
+                    if (Context.Player.UnturnedPlayer.teleportToLocation(new Vector3(pos.x, TerrainUtility.GetHighestPoint(in pos, float.NaN) + heightOffset, pos.z), Context.Player.Yaw))
+                        throw Context.Reply(_translations.TeleportSelfLocationSuccess, n.locationName);
+                    throw Context.Reply(_translations.TeleportSelfLocationObstructed, n.locationName);
+                }
+
                 if (Context.TryGet(0, out _, out WarfarePlayer? onlinePlayer) && onlinePlayer is not null)
                 {
                     if (onlinePlayer.UnturnedPlayer.life.isDead)
@@ -91,6 +101,7 @@ internal sealed class TeleportCommand : IExecutableCommand
                         throw Context.Reply(_translations.TeleportSelfSuccessPlayer, onlinePlayer);
                     throw Context.Reply(_translations.TeleportSelfPlayerObstructed, onlinePlayer);
                 }
+
                 if (GridLocation.TryParse(Context.Get(0)!, out GridLocation location))
                 {
                     Vector2 center = location.Center;
@@ -99,15 +110,8 @@ internal sealed class TeleportCommand : IExecutableCommand
                         throw Context.Reply(_translations.TeleportSelfWaypointSuccess, location);
                     throw Context.Reply(_translations.TeleportSelfWaypointObstructed, location);
                 }
-                
-                string input = Context.GetRange(0)!;
-                LocationDevkitNode? n = CollectionUtility.StringFind(LocationDevkitNodeSystem.Get().GetAllNodes().OrderBy(loc => loc.locationName.Length), loc => loc.locationName, input);
-                if (n is null)
-                    throw Context.Reply(_translations.TeleportLocationNotFound, input);
-                pos = n.transform.position;
-                if (Context.Player.UnturnedPlayer.teleportToLocation(new Vector3(pos.x, TerrainUtility.GetHighestPoint(in pos, float.NaN) + heightOffset, pos.z), Context.Player.Yaw))
-                    throw Context.Reply(_translations.TeleportSelfLocationSuccess, n.locationName);
-                throw Context.Reply(_translations.TeleportSelfLocationObstructed, n.locationName);
+
+                throw Context.Reply(_translations.TeleportLocationNotFound, input);
 
             case 2:
                 if (!Context.TryGet(0, out _, out WarfarePlayer? target) || target is null)
@@ -130,6 +134,22 @@ internal sealed class TeleportCommand : IExecutableCommand
                     }
                     throw Context.Reply(_translations.TeleportOtherWaypointObstructed, target, loc);
                 }
+
+                input = Context.GetRange(1)!;
+                n = CollectionUtility.StringFind(LocationDevkitNodeSystem.Get().GetAllNodes().OrderBy(loc => loc.locationName.Length), loc => loc.locationName, input);
+                if (n != null)
+                {
+                    pos = n.transform.position;
+
+                    if (!target.UnturnedPlayer.teleportToLocation(new Vector3(pos.x, TerrainUtility.GetHighestPoint(in pos, float.NaN) + heightOffset, pos.z), target.Yaw))
+                    {
+                        throw Context.Reply(_translations.TeleportOtherObstructedLocation, target, n.locationName);
+                    }
+
+                    _chatService.Send(target, _translations.TeleportSelfLocationSuccess, n.locationName);
+                    throw Context.Reply(_translations.TeleportOtherSuccessLocation, target, n.locationName);
+                }
+
                 if (Context.TryGet(1, out _, out onlinePlayer) && onlinePlayer is not null)
                 {
                     if (onlinePlayer.UnturnedPlayer.life.isDead)
@@ -165,21 +185,7 @@ internal sealed class TeleportCommand : IExecutableCommand
                     throw Context.Reply(_translations.TeleportOtherWaypointSuccess, target, location);
                 }
 
-                input = Context.GetRange(1)!;
-                n = CollectionUtility.StringFind(LocationDevkitNodeSystem.Get().GetAllNodes().OrderBy(loc => loc.locationName.Length), loc => loc.locationName, input);
-
-                if (n is null)
-                    throw Context.Reply(_translations.TeleportLocationNotFound, input);
-
-                pos = n.transform.position;
-
-                if (!target.UnturnedPlayer.teleportToLocation(new Vector3(pos.x, TerrainUtility.GetHighestPoint(in pos, float.NaN) + heightOffset, pos.z), target.Yaw))
-                {
-                    throw Context.Reply(_translations.TeleportOtherObstructedLocation, target, n.locationName);
-                }
-
-                _chatService.Send(target, _translations.TeleportSelfLocationSuccess, n.locationName);
-                throw Context.Reply(_translations.TeleportOtherSuccessLocation, target, n.locationName);
+                throw Context.Reply(_translations.TeleportLocationNotFound, input);
 
             case 3:
                 Context.AssertRanByPlayer();

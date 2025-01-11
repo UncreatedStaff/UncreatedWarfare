@@ -1,13 +1,4 @@
-﻿using System.Text.Json;
-
-namespace Uncreated.Warfare.NewQuests.Parameters;
-public static class QuestParameters
-{
-    public static void Write<T>(this QuestParameterValue<T> value, Utf8JsonWriter writer)
-    {
-        
-    }
-}
+namespace Uncreated.Warfare.Quests.Parameters;
 
 public enum ParameterValueType
 {

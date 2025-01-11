@@ -1,11 +1,13 @@
-﻿using System;
+using System;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 
-namespace Uncreated.Warfare.NewQuests.Parameters;
+namespace Uncreated.Warfare.Quests.Parameters;
 
 /// <summary>
 /// Quest paramater template representing a set of possible values for randomly generated quests, or a set of allowed values for conditions.
@@ -226,7 +228,7 @@ public class Int32ParameterTemplate : QuestParameterTemplate<int>, IEquatable<In
             if (separatorIndex < 2 || endIndex < separatorIndex + 1)
                 return false;
 
-            ReadOnlySpan<char> lowerBoundStr = str.Slice(2, separatorIndex - 3).Trim();
+            ReadOnlySpan<char> lowerBoundStr = str.Slice(2, separatorIndex - 2).Trim();
             ReadOnlySpan<char> upperBoundStr = str.Slice(separatorIndex + 1, endIndex - separatorIndex - 1).Trim();
             int lowerBound = 0, upperBound = 0;
 
@@ -237,7 +239,7 @@ public class Int32ParameterTemplate : QuestParameterTemplate<int>, IEquatable<In
                 return false;
 
             int startRoundRange = endIndex + 1 >= str.Length ? -1 : str.Slice(endIndex + 1).IndexOf('{');
-            int endRoundRange = startRoundRange + 1 >= str.Length ? -1 : str.Slice(startRoundRange + 1).IndexOf('}');
+            int endRoundRange = startRoundRange + 1 >= str.Length ? -1 : str.Slice(endIndex + startRoundRange + 2).IndexOf('}');
 
             if (startRoundRange != -1 && endRoundRange != -1)
             {
@@ -249,7 +251,7 @@ public class Int32ParameterTemplate : QuestParameterTemplate<int>, IEquatable<In
             minValue = lowerBound;
             maxValue = upperBound;
 
-            if (minValue > maxValue)
+            if (minValue > maxValue && upperBoundStr.Length != 0 && lowerBoundStr.Length == 0)
             {
                 (minValue, maxValue) = (maxValue, minValue);
                 minValInf = upperBoundStr.Length == 0;
@@ -397,7 +399,7 @@ public class Int32ParameterTemplate : QuestParameterTemplate<int>, IEquatable<In
                     return SelectionType == ParameterSelectionType.Inclusive ? "#[]" : "$[]";
                 }
 
-                size = 3 + 2 * (list.Values.Length - 1);
+                size = 3 + (list.Values.Length - 1);
                 for (int i = 0; i < list.Values.Length; ++i)
                 {
                     int v = list.Values[i];
@@ -421,8 +423,7 @@ public class Int32ParameterTemplate : QuestParameterTemplate<int>, IEquatable<In
                         if (i != 0)
                         {
                             span[index] = ',';
-                            span[index + 2] = ' ';
-                            index += 2;
+                            ++index;
                         }
 
                         v.TryFormat(span[index..], out int charsWritten, "F0", CultureInfo.InvariantCulture);
@@ -435,6 +436,7 @@ public class Int32ParameterTemplate : QuestParameterTemplate<int>, IEquatable<In
         }
     }
 
+    [JsonConverter(typeof(QuestParameterConverter))]
     protected class Int32ParameterValue : QuestParameterValue<int>, IEquatable<Int32ParameterValue>
     {
         private int _value;
@@ -676,6 +678,17 @@ public class Int32ParameterTemplate : QuestParameterTemplate<int>, IEquatable<In
         }
 
         /// <inheritdoc />
+        public override object GetDisplayString(ITranslationValueFormatter formatter)
+        {
+            if (ValueType == ParameterValueType.Constant || SelectionType == ParameterSelectionType.Selective)
+            {
+                return _value;
+            }
+
+            return ToString();
+        }
+
+        /// <inheritdoc />
         public override bool Equals(QuestParameterValue<int>? other)
         {
             return other is Int32ParameterValue v && Equals(v);
@@ -792,7 +805,7 @@ public class Int32ParameterTemplate : QuestParameterTemplate<int>, IEquatable<In
                         return "#[]";
                     }
 
-                    size = 3 + 2 * (_values.Length - 1);
+                    size = 3 + (_values.Length - 1);
                     for (int i = 0; i < _values.Length; ++i)
                     {
                         int v = _values[i];
@@ -814,8 +827,7 @@ public class Int32ParameterTemplate : QuestParameterTemplate<int>, IEquatable<In
                             if (i != 0)
                             {
                                 span[index] = ',';
-                                span[index + 2] = ' ';
-                                index += 2;
+                                ++index;
                             }
 
                             v.TryFormat(span[index..], out int charsWritten, "F0", CultureInfo.InvariantCulture);

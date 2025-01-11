@@ -1,13 +1,14 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Models.Kits;
+using Uncreated.Warfare.Translations.Languages;
 using Uncreated.Warfare.Util;
 
-namespace Uncreated.Warfare.NewQuests.Parameters;
+namespace Uncreated.Warfare.Quests.Parameters;
 
 /// <summary>
 /// Quest paramater template representing a set of possible values for randomly generated quests, or a set of allowed values for conditions.
@@ -46,28 +47,39 @@ public class KitNameParameterTemplate : StringParameterTemplate
         ParameterSelectionType selType = SelectionType;
 
         string? value = null;
+        string? display = null;
+        KitManager kitManager = serviceProvider.GetRequiredService<KitManager>();
         if (selType != ParameterSelectionType.Inclusive)
         {
             switch (valType)
             {
                 case ParameterValueType.Constant:
                     value = ((ConstantSet?)Set!).Value;
+                    if (value != null && kitManager.Cache.KitDataById.TryGetValue(value, out Kit? kit))
+                    {
+                        display = kit?.GetDisplayName(serviceProvider.GetRequiredService<LanguageService>(), null, true);
+                    }
                     break;
 
                 case ParameterValueType.List:
                     ListSet list = (ListSet?)Set!;
                     value = list.Values.Length == 0 ? null : list.Values[RandomUtility.GetIndex((ICollection)list.Values)];
+
+                    if (value != null && kitManager.Cache.KitDataById.TryGetValue(value, out kit))
+                    {
+                        display = kit?.GetDisplayName(serviceProvider.GetRequiredService<LanguageService>(), null, true);
+                    }
                     break;
 
                 default:
-                    KitManager kitManager = serviceProvider.GetRequiredService<KitManager>();
-                    Kit? kit = kitManager.GetRandomPublicKit();
+                    kit = kitManager.GetRandomPublicKit();
                     value = kit?.InternalName ?? "default";
+                    display = kit?.GetDisplayName(serviceProvider.GetRequiredService<LanguageService>(), null, true);
                     break;
             }
         }
 
-        return UniTask.FromResult<QuestParameterValue<string>>(new StringParameterValue(value, this));
+        return UniTask.FromResult<QuestParameterValue<string>>(new StringParameterValue(value, this, display));
     }
 
     /// <summary>
@@ -92,7 +104,7 @@ public class KitNameParameterTemplate : StringParameterTemplate
     /// <returns>The parsed value, or <see langword="null"/> if it failed.</returns>
     public static UniTask<QuestParameterValue<string>?> TryParseValue(string str, IServiceProvider serviceProvider)
     {
-        if (!TryParseIntl(str, out ParameterSelectionType selType, out ParameterValueType valType, out string? constant, out string[]? list))
+        if (!TryParseIntl(str, out ParameterSelectionType selType, out ParameterValueType valType, out string? constant, out string[]? list, true))
         {
             return UniTask.FromResult<QuestParameterValue<string>?>(null);
         }
@@ -108,30 +120,40 @@ public class KitNameParameterTemplate : StringParameterTemplate
             return new UniTask<QuestParameterValue<string>?>(new StringParameterValue(constant, list, valType));
         }
 
+        KitManager kitManager = serviceProvider.GetRequiredService<KitManager>();
+        string? display = null;
         switch (valType)
         {
             case ParameterValueType.Constant:
                 value = constant;
+                if (value != null && kitManager.Cache.KitDataById.TryGetValue(value, out Kit? kit))
+                {
+                    display = kit?.GetDisplayName(serviceProvider.GetRequiredService<LanguageService>(), null, true);
+                }
                 break;
 
             case ParameterValueType.List:
                 value = list!.Length == 0 ? null : list[RandomUtility.GetIndex((ICollection)list)];
+                if (value != null && kitManager.Cache.KitDataById.TryGetValue(value, out kit))
+                {
+                    display = kit?.GetDisplayName(serviceProvider.GetRequiredService<LanguageService>(), null, true);
+                }
                 break;
 
             default:
-                KitManager kitManager = serviceProvider.GetRequiredService<KitManager>();
-                Kit? kit = kitManager.GetRandomPublicKit();
+                kit = kitManager.GetRandomPublicKit();
                 value = kit?.InternalName ?? "default";
+                display = kit?.GetDisplayName(serviceProvider.GetRequiredService<LanguageService>(), null, true);
                 break;
         }
 
-        return new UniTask<QuestParameterValue<string>?>(new StringParameterValue(value, valType));
+        return new UniTask<QuestParameterValue<string>?>(new StringParameterValue(value, valType, display));
     }
 
     /// <inheritdoc />
     public override bool TryParseFrom(ReadOnlySpan<char> str)
     {
-        if (!TryParseIntl(str, out ParameterSelectionType selType, out ParameterValueType valType, out string? constant, out string[]? list))
+        if (!TryParseIntl(str, out ParameterSelectionType selType, out ParameterValueType valType, out string? constant, out string[]? list, GetType() == typeof(StringParameterTemplate)))
             return false;
 
         if (valType == ParameterValueType.Range)
@@ -152,7 +174,7 @@ public class KitNameParameterTemplate : StringParameterTemplate
     /// <summary>
     /// Read from a JSON reader.
     /// </summary>
-    public new static KitNameParameterTemplate? ReadJson(ref Utf8JsonReader reader)
+    public static new KitNameParameterTemplate? ReadJson(ref Utf8JsonReader reader)
     {
         switch (reader.TokenType)
         {
