@@ -48,6 +48,7 @@ using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Moderation.Discord;
+using Uncreated.Warfare.Moderation.GlobalBans;
 using Uncreated.Warfare.Moderation.Reports;
 using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Networking.Purchasing;
@@ -849,6 +850,13 @@ public sealed class WarfareModule
         bldr.RegisterType<DatabaseInterface>()
             .AsSelf()
             .SingleInstance();
+
+        bldr.RegisterType<ModerationEventHandlers>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
+
+        bldr.RegisterType<GlobalBanWhitelistService>()
+            .As<IGlobalBanWhitelistService>();
 
         bldr.RegisterType<UserDataService>()
             .As<IUserDataService>()

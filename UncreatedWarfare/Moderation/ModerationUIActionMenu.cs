@@ -12,7 +12,6 @@ using Uncreated.Warfare.Moderation.Punishments;
 using Uncreated.Warfare.Moderation.Punishments.Presets;
 using Uncreated.Warfare.Moderation.Records;
 using Uncreated.Warfare.Players;
-using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Util;
 using UnityEngine.Networking;
@@ -618,6 +617,7 @@ partial class ModerationUI
         }
         else
         {
+            ModerationActionAddEvidenceButton.SetState(c, true);
             for (int i = lenEvidence - 1; i >= 0; --i)
             {
                 ModerationActionEvidence[i + startIndEvidence].Root.SetVisibility(c, false);
@@ -626,6 +626,7 @@ partial class ModerationUI
 
         if (lenActor > 0)
         {
+            ModerationActionAddActorButton.SetState(c, false);
             UniTask.Create(async () =>
             {
                 if (data.ActionVersion != v)
@@ -709,6 +710,7 @@ partial class ModerationUI
         }
         else
         {
+            ModerationActionAddActorButton.SetState(c, true);
             for (int i = lenActor - 1; i >= 0; --i)
             {
                 ModerationActionEvidence[i + startIndActor].Root.SetVisibility(c, false);
@@ -1674,7 +1676,7 @@ partial class ModerationUI
 
         RelatedActor actor = data.Actors[index];
         data.Actors[index] = new RelatedActor(actor.Role, !actor.Admin, actor.Actor);
-        ModerationActionActors[index].AsAdminToggleState.SetVisibility(player, !actor.Admin);
+        ModerationActionActors[index].AsAdminToggleState.SetVisibility(player, actor.Admin);
     }
     private void OnClickedActorYouButton(UnturnedButton button, Player player)
     {
@@ -1752,7 +1754,17 @@ partial class ModerationUI
                 GetLogger().LogConditional("  Done");
                 if (!data.Evidence[index].URL.Equals(evidence.URL, StringComparison.Ordinal))
                     return;
+
                 string name;
+                if (Uri.TryCreate(evidence.URL, UriKind.Absolute, out Uri uri) && uri.Segments.Length > 0)
+                {
+                    name = uri.Segments[^1];
+                }
+                else
+                {
+                    name = evidence.URL;
+                }
+
                 if (evidence.URL.Length > 1)
                 {
                     int lastSlash = evidence.URL.LastIndexOf('/');
@@ -1761,7 +1773,6 @@ partial class ModerationUI
 
                     name = lastSlash < 0 ? evidence.URL : evidence.URL.Substring(lastSlash + 1);
                 }
-                else name = evidence.URL;
 
                 ui.LinkInput.SetText(player, req.uri.ToString());
                 GetLogger().LogConditional("  Responded: {0}", req.redirectLimit);

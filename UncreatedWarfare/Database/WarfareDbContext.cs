@@ -27,6 +27,7 @@ public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContex
     public DbSet<LanguageInfo> Languages => Set<LanguageInfo>();
     public DbSet<LanguagePreferences> LanguagePreferences => Set<LanguagePreferences>();
     public DbSet<WarfareUserData> UserData => Set<WarfareUserData>();
+    public DbSet<GlobalBanWhitelist> GlobalBanWhitelists => Set<GlobalBanWhitelist>();
     public DbSet<PlayerIPAddress> IPAddresses => Set<PlayerIPAddress>();
     public DbSet<PlayerHWID> HWIDs => Set<PlayerHWID>();
     public DbSet<Faction> Factions => Set<Faction>();

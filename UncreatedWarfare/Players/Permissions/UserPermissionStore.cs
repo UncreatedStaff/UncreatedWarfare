@@ -1,4 +1,4 @@
-﻿using DanielWillett.ModularRpcs.Annotations;
+using DanielWillett.ModularRpcs.Annotations;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Concurrent;
@@ -362,6 +362,8 @@ public class UserPermissionStore : IAsyncDisposable, IHostedService, IEventListe
     /// </summary>
     public async ValueTask<bool> HasPermissionAsync(ICommandUser user, PermissionLeaf permission, CancellationToken token = default)
     {
+        token.ThrowIfCancellationRequested();
+
         if (user.IsSuperUser)
             return true;
 

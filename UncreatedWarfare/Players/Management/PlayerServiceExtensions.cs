@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -18,6 +18,30 @@ public static class PlayerServiceExtensions
     /// </summary>
     /// <exception cref="GameThreadException"/>
     public static TrackingWhereEnumerable<WarfarePlayer> OnlinePlayersOnTeam(this IPlayerService playerService, Team team) => TrackingListExtensions.Where(playerService.OnlinePlayers, team.PlayerSelector);
+
+    /// <summary>
+    /// Get the <see cref="IPlayer"/> object of a player that may or may not be offline.
+    /// </summary>
+    public static ValueTask<IPlayer> GetOfflinePlayer(this IPlayerService playerService, CSteamID steam64, IUserDataService userDataService, CancellationToken token = default)
+    {
+        return GetOfflinePlayer(playerService, steam64.m_SteamID, userDataService, token);
+    }
+
+    /// <summary>
+    /// Get the <see cref="IPlayer"/> object of a player that may or may not be offline.
+    /// </summary>
+    public static async ValueTask<IPlayer> GetOfflinePlayer(this IPlayerService playerService, ulong steam64, IUserDataService userDataService, CancellationToken token = default)
+    {
+        token.ThrowIfCancellationRequested();
+
+        WarfarePlayer? onlinePlayer = playerService.GetOnlinePlayerOrNullThreadSafe(steam64);
+
+        if (onlinePlayer != null)
+            return onlinePlayer;
+
+        PlayerNames names = await userDataService.GetUsernamesAsync(steam64, token);
+        return new OfflinePlayer(in names);
+    }
 
     /// <summary>
     /// Gets an array of the Steam64 IDs of all online players as an array for database queries.

@@ -368,7 +368,7 @@ public class WorkshopUploader : IHostedService
         Match match = regex.Match(text);
         if (match.Success)
         {
-            Group? grp = match.Groups.LastOrDefault();
+            Group? grp = match.Groups.LastOrDefault<Group>();
             if (grp is { Value: { Length: > 0 } modIdStr } && ulong.TryParse(modIdStr, NumberStyles.Number, CultureInfo.InvariantCulture, out ulong modId))
                 return modId;
         }

@@ -49,7 +49,6 @@ public class PlayerModerationCacheComponent : IPlayerComponent
             await _moderationSql.GetHWIDs(Player.Steam64, token), detail: false, token: token,
             condition: $"`{DatabaseInterface.ColumnEntriesResolvedTimestamp}` IS NOT NULL");
 
-
         if (mutes.Length == 0)
         {
             TextMuteReason = null;

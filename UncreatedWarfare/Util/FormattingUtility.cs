@@ -1,4 +1,4 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -248,9 +248,8 @@ public static class FormattingUtility
     /// <summary>
     /// Converts a timespan to a string in the form '3d 4hr 21min etc'. Will be 'perm[anent]' if <paramref name="timeSpan"/> is <see cref="Timeout.InfiniteTimeSpan"/> (or any negative <see cref="TimeSpan"/>).
     /// </summary>
-    public static string ToTimeString(TimeSpan timeSpan, int figures = -1)
-    {
-        if (timeSpan.Ticks < 0L)
+    public static string ToTimeString(TimeSpan timeSpan, int figures = -1, bool space = false)
+    { if (timeSpan.Ticks < 0L)
             return "permanent";
         
         if (timeSpan.Ticks == 0)
@@ -268,24 +267,32 @@ public static class FormattingUtility
         m %= 60;
         h %= 24;
         mo %= 12;
+        bool needsSpace = false;
         if (y != 0)
         {
             sb.Append(y).Append('y');
             if (figures != -1 && --figures <= 0)
                 return sb.ToString();
+
+            needsSpace = space;
         }
         if (mo > 0)
         {
+            if (needsSpace)
+                sb.Append(' ');
             sb.Append(mo).Append("mo");
             if (figures != -1 && --figures <= 0)
                 return sb.ToString();
             d %= 30;
             if (d != 0)
             {
+                if (space)
+                    sb.Append(' ');
                 sb.Append(d).Append('d');
                 if (figures != -1 && --figures <= 0)
                     return sb.ToString();
             }
+            needsSpace = space;
         }
         else
         {
@@ -293,35 +300,55 @@ public static class FormattingUtility
             d %= 7;
             if (w != 0)
             {
+                if (needsSpace)
+                    sb.Append(' ');
                 sb.Append(w).Append('w');
                 if (figures != -1 && --figures <= 0)
                     return sb.ToString();
+
+                needsSpace = space;
             }
             if (d != 0)
             {
+                if (needsSpace)
+                    sb.Append(' ');
                 sb.Append(d).Append('d');
                 if (figures != -1 && --figures <= 0)
                     return sb.ToString();
+
+                needsSpace = space;
             }
         }
         if (h != 0)
         {
+            if (needsSpace)
+                sb.Append(' ');
+
             sb.Append(h).Append('h');
             if (figures != -1 && --figures <= 0)
                 return sb.ToString();
+
+            needsSpace = space;
         }
         if (m != 0)
         {
+            if (needsSpace)
+                sb.Append(' ');
+
             sb.Append(m).Append('m');
             if (figures != -1 && --figures <= 0)
                 return sb.ToString();
+
+            needsSpace = space;
         }
         if (seconds != 0)
         {
+            if (needsSpace)
+                sb.Append(' ');
+
             sb.Append(seconds).Append('s');
-            if (figures != -1 && --figures <= 0)
-                return sb.ToString();
         }
+
         return sb.ToString();
     }
 

@@ -37,6 +37,8 @@ public class DeathTracker : IHostedService
 
     UniTask IHostedService.StartAsync(CancellationToken token)
     {
+        CommandWindow.shouldLogDeaths = false;
+
         // not using event dispatcher for this because this class is responsible for dispatching the player died event.
         PlayerLife.onPlayerDied += OnPlayerDied;
 

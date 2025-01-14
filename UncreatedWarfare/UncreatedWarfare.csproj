@@ -61,7 +61,7 @@
 
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <GeneratePackageOnBuild>$(CopyToModule)</GeneratePackageOnBuild>
 
     <Title>Uncreated Warfare</Title>
     <IsPublishable>False</IsPublishable>

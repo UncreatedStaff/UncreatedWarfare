@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
@@ -9,34 +9,41 @@ using Uncreated.Warfare.Models.Users;
 
 namespace Uncreated.Warfare.Moderation;
 
-[Table("hwids"), Index(nameof(HWID))]
+[Table(DatabaseInterface.TableHWIDs), Index(nameof(HWID))]
 public class PlayerHWID
 {
     [Key]
     [JsonPropertyName("id")]
+    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+    [Column(DatabaseInterface.ColumnHWIDsPrimaryKey)]
     public uint Id { get; set; }
 
     [JsonPropertyName("index")]
+    [Column(DatabaseInterface.ColumnHWIDsIndex)]
     public int Index { get; set; }
 
     [Required]
-    [Column("Steam64")]
     [JsonPropertyName("steam64")]
     [ForeignKey(nameof(PlayerData))]
+    [Column(DatabaseInterface.ColumnHWIDsSteam64)]
     public ulong Steam64 { get; set; }
     public WarfareUserData PlayerData { get; set; }
 
     [JsonPropertyName("hwid")]
+    [Column(DatabaseInterface.ColumnHWIDsHWID)]
     public HWID HWID { get; set; }
 
     [JsonPropertyName("login_count")]
+    [Column(DatabaseInterface.ColumnHWIDsLoginCount)]
     public int LoginCount { get; set; }
 
     [JsonPropertyName("last_login")]
+    [Column(DatabaseInterface.ColumnHWIDsLastLogin)]
     public DateTimeOffset LastLogin { get; set; }
 
     [JsonPropertyName("first_login")]
     [DefaultValue(null)]
+    [Column(DatabaseInterface.ColumnHWIDsFirstLogin)]
     public DateTimeOffset? FirstLogin { get; set; }
     
     public PlayerHWID() { }

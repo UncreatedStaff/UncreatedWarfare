@@ -1,4 +1,6 @@
-﻿using System.Reflection;
+using System.Globalization;
+using System.Reflection;
+using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players.Saves;
 
 namespace Uncreated.Warfare.Events.Models.Players;
@@ -8,7 +10,9 @@ namespace Uncreated.Warfare.Events.Models.Players;
 /// </summary>
 public sealed class PlayerPending : CancellableEvent
 {
-    private string _rejectReason;
+    internal readonly LanguagePreferences LanguagePreferences;
+
+    private string _rejectReason = string.Empty;
     private static FieldInfo? _faceInfo;
     private static FieldInfo? _hairInfo;
     private static FieldInfo? _beardInfo;
@@ -389,6 +393,21 @@ public sealed class PlayerPending : CancellableEvent
     {
         get => PendingPlayer.packageSkins;
         set => PendingPlayer.packageSkins = value;
+    }
+
+    /// <summary>
+    /// The language to use for translating rejection messages.
+    /// </summary>
+    public required LanguageInfo LanguageInfo { get; init; }
+
+    /// <summary>
+    /// The culture to use for translating rejection messages.
+    /// </summary>
+    public required CultureInfo CultureInfo { get; init; }
+
+    internal PlayerPending(LanguagePreferences prefs)
+    {
+        LanguagePreferences = prefs;
     }
 
     /// <summary>

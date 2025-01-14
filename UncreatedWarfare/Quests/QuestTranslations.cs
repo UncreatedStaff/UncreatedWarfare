@@ -9,7 +9,7 @@ public sealed class QuestTranslations : PropertiesTranslationCollection
     protected override string FileName => "Quests";
 
     [TranslationData("Sent as a warning before daily quests regenerate. Usually one is sent 1 hour before and 10 minutes before they regenerate.")]
-    public readonly Translation<TimeSpan> DailyQuestNextDayWarning = new Translation<TimeSpan>("<#99bacc>Daily Missions will expire in <#eef4f6>{0}</color>.", arg0Fmt: TimeAddon.Create(TimeFormatType.Long));
+    public readonly Translation<TimeSpan> DailyQuestNextDayWarning = new Translation<TimeSpan>("<#99bacc>Daily Missions will expire in <#eef4f6>{0}</color>.", arg0Fmt: TimeAddon.Create(TimeSpanFormatType.Long));
 
     [TranslationData("Sent when new daily quests are generated.")]
     public readonly Translation DailyQuestNextDay = new Translation("<#99bacc>Daily Missions have been regenerated.");

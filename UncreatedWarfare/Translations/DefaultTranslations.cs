@@ -165,7 +165,7 @@ internal static class T
     public static readonly Translation<string> NextGameShutdown       = new Translation<string>("<#94cbff>Shutting Down Because: \"{0}\"</color>", TranslationOptions.UnityUI);
 
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation<TimeSpan> NextGameShutdownTime = new Translation<TimeSpan>("{0}", TranslationOptions.UnityUI, TimeAddon.Create(TimeFormatType.CountdownMinutesSeconds));
+    public static readonly Translation<TimeSpan> NextGameShutdownTime = new Translation<TimeSpan>("{0}", TranslationOptions.UnityUI, TimeAddon.Create(TimeSpanFormatType.CountdownMinutesSeconds));
 
     [TranslationData(SectionLeaderboard)]
     public static readonly Translation<FactionInfo, FactionInfo> WarstatsHeader = new Translation<FactionInfo, FactionInfo>("{0} vs {1}", TranslationOptions.UnityUI, FactionInfo.FormatColorShortName, FactionInfo.FormatColorShortName);
@@ -678,7 +678,7 @@ internal static class T
     [TranslationData(SectionRallies, IsPriorityTranslation = false)]
     public static readonly Translation<string> RallyUI = new Translation<string>("<#c$rally$>RALLY</color> {0}", TranslationOptions.UnityUI);
     [TranslationData(SectionRallies, IsPriorityTranslation = false)]
-    public static readonly Translation<TimeSpan, string> RallyUITimer = new Translation<TimeSpan, string>("<#c$rally$>RALLY</color> {0} {1}", TranslationOptions.UnityUI, TimeAddon.Create(TimeFormatType.CountdownMinutesSeconds));
+    public static readonly Translation<TimeSpan, string> RallyUITimer = new Translation<TimeSpan, string>("<#c$rally$>RALLY</color> {0} {1}", TranslationOptions.UnityUI, TimeAddon.Create(TimeSpanFormatType.CountdownMinutesSeconds));
     #endregion
 
     #region Load Command
@@ -701,107 +701,6 @@ internal static class T
     public static readonly Translation<int> LoadCompleteBuild = new Translation<int>("<#d1bda7>Loading complete. <#f3ce82>{0} BUILD</color> loaded.");
     [TranslationData(SectionLoad)]
     public static readonly Translation<int> LoadCompleteAmmo = new Translation<int>("<#d1bda7>Loading complete. <#e25d5d>{0} AMMO</color> loaded.");
-    #endregion
-
-    #region Kick Command
-    private const string SectionKick = "Kick";
-    [TranslationData(SectionKick, IsPriorityTranslation = false)]
-    public static readonly Translation NoReasonProvided                       = new Translation("<#9cffb3>You must provide a reason.");
-    [TranslationData(SectionKick, IsPriorityTranslation = false)]
-    public static readonly Translation<IPlayer> KickSuccessFeedback           = new Translation<IPlayer>("<#00ffff>You kicked <#d8addb>{0}</color>.", arg0Fmt: WarfarePlayer.FormatCharacterName);
-    [TranslationData(SectionKick)]
-    public static readonly Translation<IPlayer, IPlayer> KickSuccessBroadcast = new Translation<IPlayer, IPlayer>("<#00ffff><#d8addb>{0}</color> was kicked by {1}.", arg0Fmt: WarfarePlayer.FormatCharacterName, arg1Fmt: WarfarePlayer.FormatColoredPlayerName);
-    [TranslationData(SectionKick)]
-    public static readonly Translation<IPlayer> KickSuccessBroadcastOperator  = new Translation<IPlayer>("<#00ffff><#d8addb>{0}</color> was kicked by an operator.", arg0Fmt: WarfarePlayer.FormatCharacterName);
-    #endregion
-
-    #region Ban Command
-    private const string SectionBan = "Ban";
-    [TranslationData(SectionBan, IsPriorityTranslation = false)]
-    public static readonly Translation<IPlayer> BanPermanentSuccessFeedback           = new Translation<IPlayer>("<#00ffff><#d8addb>{0}</color> was <b>permanently</b> banned.", arg0Fmt: WarfarePlayer.FormatCharacterName);
-    [TranslationData(SectionBan)]
-    public static readonly Translation<IPlayer, IPlayer> BanPermanentSuccessBroadcast = new Translation<IPlayer, IPlayer>("<#00ffff><#d8addb>{0}</color> was <b>permanently</b> banned by {1}.", arg0Fmt: WarfarePlayer.FormatCharacterName, arg1Fmt: WarfarePlayer.FormatColoredPlayerName);
-    [TranslationData(SectionBan)]
-    public static readonly Translation<IPlayer> BanPermanentSuccessBroadcastOperator  = new Translation<IPlayer>("<#00ffff><#d8addb>{0}</color> was <b>permanently</b> banned by an operator.", arg0Fmt: WarfarePlayer.FormatCharacterName);
-    [TranslationData(SectionBan, IsPriorityTranslation = false)]
-    public static readonly Translation<IPlayer, string> BanSuccessFeedback            = new Translation<IPlayer, string>("<#00ffff><#d8addb>{0}</color> was banned for <#9cffb3>{1}</color>.", arg0Fmt: WarfarePlayer.FormatCharacterName);
-    [TranslationData(SectionBan)]
-    public static readonly Translation<IPlayer, IPlayer, string> BanSuccessBroadcast  = new Translation<IPlayer, IPlayer, string>("<#00ffff><#d8addb>{0}</color> was banned for <#9cffb3>{2}</color> by {1}.", arg0Fmt: WarfarePlayer.FormatCharacterName, arg1Fmt: WarfarePlayer.FormatColoredPlayerName);
-    [TranslationData(SectionBan)]
-    public static readonly Translation<IPlayer, string> BanSuccessBroadcastOperator   = new Translation<IPlayer, string>("<#00ffff><#d8addb>{0}</color> was banned for <#9cffb3>{1}</color> by an operator.", arg0Fmt: WarfarePlayer.FormatCharacterName);
-    #endregion
-
-    #region Unban Command
-    private const string SectionUnban = "Unban";
-    [TranslationData(SectionUnban, IsPriorityTranslation = false)]
-    public static readonly Translation<IPlayer> UnbanNotBanned = new Translation<IPlayer>("<#9cffb3><#d8addb>{0}</color> is not currently banned.", arg0Fmt: WarfarePlayer.FormatCharacterName);
-    [TranslationData(SectionUnban, IsPriorityTranslation = false)]
-    public static readonly Translation<IPlayer> UnbanSuccessFeedback = new Translation<IPlayer>("<#00ffff><#d8addb>{0}</color> was unbanned.", arg0Fmt: WarfarePlayer.FormatCharacterName);
-    [TranslationData(SectionUnban)]
-    public static readonly Translation<IPlayer, IPlayer> UnbanSuccessBroadcast = new Translation<IPlayer, IPlayer>("<#00ffff><#d8addb>{0}</color> was unbanned by {1}.", arg0Fmt: WarfarePlayer.FormatCharacterName, arg1Fmt: WarfarePlayer.FormatColoredPlayerName);
-    [TranslationData(SectionUnban)]
-    public static readonly Translation<IPlayer> UnbanSuccessBroadcastOperator = new Translation<IPlayer>("<#ffff00><#d8addb>{0}</color> was unbanned by an operator.", arg0Fmt: WarfarePlayer.FormatCharacterName);
-    #endregion
-
-    #region Warn Command
-    private const string SectionWarn = "Warn";
-    [TranslationData(SectionWarn, IsPriorityTranslation = false)]
-    public static readonly Translation<IPlayer> WarnSuccessFeedback           = new Translation<IPlayer>("<#ffff00>You warned <#d8addb>{0}</color>.", arg0Fmt: WarfarePlayer.FormatCharacterName);
-    [TranslationData(SectionWarn)]
-    public static readonly Translation<IPlayer, IPlayer> WarnSuccessBroadcast = new Translation<IPlayer, IPlayer>("<#ffff00><#d8addb>{0}</color> was warned by {1}.", arg0Fmt: WarfarePlayer.FormatCharacterName, arg1Fmt: WarfarePlayer.FormatColoredPlayerName);
-    [TranslationData(SectionWarn)]
-    public static readonly Translation<IPlayer> WarnSuccessBroadcastOperator  = new Translation<IPlayer>("<#ffff00><#d8addb>{0}</color> was warned by an operator.", arg0Fmt: WarfarePlayer.FormatCharacterName);
-    [TranslationData(SectionWarn)]
-    public static readonly Translation<IPlayer, string> WarnSuccessDM         = new Translation<IPlayer, string>("<color=#ffff00>{0} warned you for <color=#ffffff>{1}</color>.</color>", TranslationOptions.TMProUI, WarfarePlayer.FormatColoredPlayerName);
-    [TranslationData(SectionWarn)]
-    public static readonly Translation<string> WarnSuccessDMOperator          = new Translation<string>("<color=#ffff00>An operator warned you for <color=#ffffff>{0}</color>.</color>", TranslationOptions.TMProUI);
-    [TranslationData(SectionWarn)]
-    public static readonly Translation WarnSuccessTitle = new Translation("<color=#ffff00>Warning", TranslationOptions.TMProUI);
-    #endregion
-
-    #region Mute Command
-    private const string SectionMute = "Mute";
-    //[TranslationData(SectionMute, IsPriorityTranslation = false)]
-    //public static readonly Translation<IPlayer, IPlayer, MuteType> MutePermanentSuccessFeedback = new Translation<IPlayer, IPlayer, MuteType>("<#00ffff><#d8addb>{0}</color> <#cedcde>({1})</color> was <b>permanently</b> <#cedcde>{2}</color> muted.", arg0Fmt: WarfarePlayer.FormatCharacterName, arg1Fmt: WarfarePlayer.FormatSteam64, arg2Fmt: LowercaseAddon.Instance);
-    //[TranslationData(SectionMute, IsPriorityTranslation = false)]
-    //public static readonly Translation<IPlayer, IPlayer, string, MuteType> MuteSuccessFeedback  = new Translation<IPlayer, IPlayer, string, MuteType>("<#00ffff><#d8addb>{0}</color> <#cedcde>({1})</color> was <#cedcde>{3}</color> muted for <#9cffb3>{2}</color>.", arg0Fmt: WarfarePlayer.FormatCharacterName, arg1Fmt: WarfarePlayer.FormatSteam64, arg3Fmt: LowercaseAddon.Instance);
-    //[TranslationData(SectionMute)]
-    //public static readonly Translation<IPlayer, IPlayer, MuteType> MutePermanentSuccessBroadcastOperator  = new Translation<IPlayer, IPlayer, MuteType>("<#00ffff><#d8addb>{0}</color> <#cedcde>({1})</color> was <b>permanently</b> <#cedcde>{2}</color> muted by an operator.", arg0Fmt: WarfarePlayer.FormatCharacterName, arg1Fmt: WarfarePlayer.FormatSteam64, arg2Fmt: LowercaseAddon.Instance);
-    //[TranslationData(SectionMute)]
-    //public static readonly Translation<IPlayer, IPlayer, MuteType, IPlayer> MutePermanentSuccessBroadcast = new Translation<IPlayer, IPlayer, MuteType, IPlayer>("<#00ffff><#d8addb>{0}</color> <#cedcde>({1})</color> was <b>permanently</b> <#cedcde>{2}</color> muted by {3}.", arg0Fmt: WarfarePlayer.FormatCharacterName, arg1Fmt: WarfarePlayer.FormatSteam64, arg2Fmt: LowercaseAddon.Instance, arg3Fmt: WarfarePlayer.FormatColoredPlayerName);
-    //[TranslationData(SectionMute)]
-    //public static readonly Translation<IPlayer, IPlayer, string, MuteType> MuteSuccessBroadcastOperator   = new Translation<IPlayer, IPlayer, string, MuteType>("<#00ffff><#d8addb>{0}</color> <#cedcde>({1})</color> was <#cedcde>{3}</color> muted by an operator for <#9cffb3>{2}</color>.", arg0Fmt: WarfarePlayer.FormatCharacterName, arg1Fmt: WarfarePlayer.FormatSteam64, arg3Fmt: LowercaseAddon.Instance);
-    //[TranslationData(SectionMute)]
-    //public static readonly Translation<IPlayer, IPlayer, string, MuteType, IPlayer> MuteSuccessBroadcast  = new Translation<IPlayer, IPlayer, string, MuteType, IPlayer>("<#00ffff><#d8addb>{0}</color> <#cedcde>({1})</color> was <#cedcde>{3}</color> muted by {4} for <#9cffb3>{2}</color>.", arg0Fmt: WarfarePlayer.FormatCharacterName, arg1Fmt: WarfarePlayer.FormatSteam64, arg3Fmt: LowercaseAddon.Instance, arg4Fmt: WarfarePlayer.FormatColoredPlayerName);
-    //[TranslationData(SectionMute)]
-    //public static readonly Translation<IPlayer, string, string, MuteType> MuteSuccessDM  = new Translation<IPlayer, string, string, MuteType>("<#ffff00>{0} <#9cffb3>{3}</color> muted you for <#9cffb3>{2}</color> because: <#9cffb3>{1}</color>.", arg0Fmt: WarfarePlayer.FormatColoredPlayerName, arg3Fmt: LowercaseAddon.Instance);
-    //[TranslationData(SectionMute)]
-    //public static readonly Translation<IPlayer, string, MuteType> MuteSuccessDMPermanent = new Translation<IPlayer, string, MuteType>("<#ffff00>{0} permanently <#9cffb3>{2}</color> muted you because: <#9cffb3>{1}</color>.", arg0Fmt: WarfarePlayer.FormatColoredPlayerName, arg2Fmt: LowercaseAddon.Instance);
-    //[TranslationData(SectionMute)]
-    //public static readonly Translation<string, string, MuteType> MuteSuccessDMOperator   = new Translation<string, string, MuteType>("<#ffff00>An operator <#9cffb3>{2}</color> muted you for <#9cffb3>{1}</color> because: <#9cffb3>{0}</color>.", arg2Fmt: LowercaseAddon.Instance);
-    //[TranslationData(SectionMute)]
-    //public static readonly Translation<string, MuteType> MuteSuccessDMPermanentOperator  = new Translation<string, MuteType>("<#ffff00>>An operator permanently <#9cffb3>{1}</color> muted you because: <#9cffb3>{0}</color>.", arg1Fmt: LowercaseAddon.Instance);
-
-    [TranslationData(SectionMute)]
-    public static readonly Translation<string> MuteTextChatFeedbackPermanent  = new Translation<string>("<#ffff00>You're permanently muted in text chat because: <#9cffb3>{0}</color>.");
-    [TranslationData(SectionMute)]
-    public static readonly Translation<DateTime, string> MuteTextChatFeedback = new Translation<DateTime, string>("<#ffff00>You're muted in text chat until <#cedcde>{0}</color> because <#9cffb3>{1}</color>.", arg0Fmt: "r");
-    #endregion
-
-    #region Unmute Command
-    private const string SectionUnmute = "Unmute";
-    [TranslationData(SectionUnmute, IsPriorityTranslation = false)]
-    public static readonly Translation<IPlayer> UnmuteNotMuted                  = new Translation<IPlayer>("<#9cffb3><#d8addb>{0}</color> is not currently muted.", arg0Fmt: WarfarePlayer.FormatCharacterName);
-    [TranslationData(SectionUnmute, IsPriorityTranslation = false)]
-    public static readonly Translation<IPlayer> UnmuteSuccessFeedback           = new Translation<IPlayer>("<#ffff00><#d8addb>{0}</color> was unmuted.", arg0Fmt: WarfarePlayer.FormatCharacterName);
-    [TranslationData(SectionUnmute)]
-    public static readonly Translation<IPlayer, IPlayer> UnmuteSuccessBroadcast = new Translation<IPlayer, IPlayer>("<#ffff00><#d8addb>{0}</color> was unmuted by {1}.", arg0Fmt: WarfarePlayer.FormatCharacterName, arg1Fmt: WarfarePlayer.FormatColoredPlayerName);
-    [TranslationData(SectionUnmute)]
-    public static readonly Translation<IPlayer> UnmuteSuccessBroadcastOperator  = new Translation<IPlayer>("<#ffff00><#d8addb>{0}</color> was unmuted by an operator.", arg0Fmt: WarfarePlayer.FormatCharacterName);
-    [TranslationData(SectionUnmute)]
-    public static readonly Translation<IPlayer> UnmuteSuccessDM                 = new Translation<IPlayer>("<#ffff00>{0} unmuted you.", arg0Fmt: WarfarePlayer.FormatColoredPlayerName);
-    [TranslationData(SectionUnmute)]
-    public static readonly Translation UnmuteSuccessDMOperator                  = new Translation("<#ffff00>An operator unmuted you.");
     #endregion
 
     #region Vehicles
@@ -1085,9 +984,9 @@ internal static class T
     #region Hardpoint
     private const string SectionHardpoint = "Gamemode Hardpoint";
     [TranslationData(SectionHardpoint)]
-    public static readonly Translation<IObjective, float> HardpointFirstObjective = new Translation<IObjective, float>("Hold {0} to win! A new objective will be chosen in <#cedcde>{1}</color>.", arg0Fmt: Flags.ColorNameFormat, arg1Fmt: TimeAddon.Create(TimeFormatType.Long));
+    public static readonly Translation<IObjective, float> HardpointFirstObjective = new Translation<IObjective, float>("Hold {0} to win! A new objective will be chosen in <#cedcde>{1}</color>.", arg0Fmt: Flags.ColorNameFormat, arg1Fmt: TimeAddon.Create(TimeSpanFormatType.Long));
     [TranslationData(SectionHardpoint)]
-    public static readonly Translation<IObjective, float> HardpointObjectiveChanged = new Translation<IObjective, float>("New objective: {0}! The next objective will be chosen in <#cedcde>{1}</color>.", arg0Fmt: Flags.ColorNameFormat, arg1Fmt: TimeAddon.Create(TimeFormatType.Long));
+    public static readonly Translation<IObjective, float> HardpointObjectiveChanged = new Translation<IObjective, float>("New objective: {0}! The next objective will be chosen in <#cedcde>{1}</color>.", arg0Fmt: Flags.ColorNameFormat, arg1Fmt: TimeAddon.Create(TimeSpanFormatType.Long));
     [TranslationData(SectionHardpoint)]
     public static readonly Translation<IObjective, FactionInfo> HardpointObjectiveStateCaptured = new Translation<IObjective, FactionInfo>("{0} is being held by {1}!", arg0Fmt: Flags.ColorNameFormat, arg1Fmt: FactionInfo.FormatColorShortName);
     [TranslationData(SectionHardpoint)]

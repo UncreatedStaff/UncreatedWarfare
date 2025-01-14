@@ -40,7 +40,6 @@ public class WarfarePlayer :
     IComponentContainer<IPlayerComponent>,
     IEquatable<IPlayer>,
     IEquatable<WarfarePlayer>,
-    ITransformObject,
     ISpotter
 {
     private readonly CancellationTokenSource _disconnectTokenSource;
@@ -134,7 +133,7 @@ public class WarfarePlayer :
     /// A <see cref="CancellationToken"/> that cancels after the player leaves.
     /// </summary>
     public CancellationToken DisconnectToken => _disconnectTokenSource.Token;
-    internal WarfarePlayer(PlayerService playerService, Player player, in PlayerService.PlayerTaskData taskData, ILogger logger, IPlayerComponent[] components, IServiceProvider serviceProvider)
+    internal WarfarePlayer(PlayerService playerService, Player player, in PlayerService.PlayerTaskData taskData, LanguagePreferences langPrefs, ILogger logger, IPlayerComponent[] components, IServiceProvider serviceProvider)
     {
         _disconnectTokenSource = taskData.TokenSource;
         _logger = logger;
@@ -147,7 +146,8 @@ public class WarfarePlayer :
         Save = new BinaryPlayerSave(Steam64, _logger);
         Save.Load();
 
-        Locale = new WarfarePlayerLocale(this, new LanguagePreferences { Steam64 = Steam64.m_SteamID }, serviceProvider);
+        langPrefs.Steam64 = _steam64.m_SteamID;
+        Locale = new WarfarePlayerLocale(this, langPrefs, serviceProvider);
 
         _components = new SingleUseTypeDictionary<IPlayerComponent>(playerService.PlayerComponents, components);
         Components = new ReadOnlyCollection<IPlayerComponent>(_components.Values);
@@ -233,6 +233,12 @@ public class WarfarePlayer :
     public static readonly SpecialFormat FormatNickName = new SpecialFormat("Nick Name", "nn");
     
     public static readonly SpecialFormat FormatPlayerName = new SpecialFormat("Player Name", "pn");
+
+    public static readonly SpecialFormat FormatDisplayOrCharacterName = new SpecialFormat("Display or Character Name", "dcn");
+
+    public static readonly SpecialFormat FormatDisplayOrNickName = new SpecialFormat("Display or Nick Name", "dnn");
+
+    public static readonly SpecialFormat FormatDisplayOrPlayerName = new SpecialFormat("Display or Player Name", "dpn");
     
     public static readonly SpecialFormat FormatSteam64 = new SpecialFormat("Steam64 ID", "64");
     
@@ -243,10 +249,16 @@ public class WarfarePlayer :
     public static readonly SpecialFormat FormatColoredPlayerName = new SpecialFormat("Colored Player Name", "cpn");
     
     public static readonly SpecialFormat FormatColoredSteam64 = new SpecialFormat("Colored Steam64 ID", "c64");
+
+    public static readonly SpecialFormat FormatColoredDisplayOrCharacterName = new SpecialFormat("ColoredDisplay or Character Name", "ccn");
+
+    public static readonly SpecialFormat FormatColoredDisplayOrNickName = new SpecialFormat("ColoredDisplay or Nick Name", "cnn");
+
+    public static readonly SpecialFormat FormatColoredDisplayOrPlayerName = new SpecialFormat("ColoredDisplay or Player Name", "cpn");
+
     string ITranslationArgument.Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
     {
-        // todo make this a proper implementation later.
-        return new OfflinePlayer(in _playerNameHelper).Translate(formatter, in parameters);
+        return new OfflinePlayer(in _playerNameHelper, Team).Translate(formatter, in parameters);
     }
 
     public bool Equals([NotNullWhen(true)] IPlayer? other)

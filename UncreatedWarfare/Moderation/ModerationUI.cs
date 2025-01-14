@@ -307,7 +307,25 @@ public partial class ModerationUI : UnturnedUI
         ModerationActionMiniInputBox1.OnTextUpdated += OnDurationUpdated;
         ModerationActionMiniInputBox2.OnTextUpdated += OnDurationUpdated;
 
+        ElementPatterns.SubscribeAll(ModerationInfoEvidenceEntries.Select(x => x.PreviewImageButton), OnOpenPreviewImageInBrowserClicked);
+        ElementPatterns.SubscribeAll(ModerationInfoEvidenceEntries.Select(x => x.OpenButton), OnOpenPreviewImageInBrowserClicked);
+
         ElementPatterns.SubscribeAll(ModerationActionControls, OnActionControlClicked);
+    }
+
+    private void OnOpenPreviewImageInBrowserClicked(UnturnedButton button, Player player)
+    {
+        int index = Array.FindIndex(ModerationInfoEvidenceEntries, x => x.OpenButton == button || x.PreviewImageButton == button);
+
+        if (index < 0)
+            return;
+
+        ModerationData data = GetOrAddModerationData(player.channel.owner.playerID.steamID.m_SteamID);
+        if (data.SelectedEntry == null || index >= data.Evidence.Count)
+            return;
+
+        Evidence evidence = data.Evidence[index];
+        player.sendBrowserRequest(evidence.Message ?? $"Open evidence {index} in browser.", evidence.URL);
     }
 
     private void OnEvidenceClicked(UnturnedButton button, Player player)
@@ -1246,10 +1264,10 @@ public partial class ModerationUI : UnturnedUI
                     condition += $"(SELECT COUNT(*) FROM `{DatabaseInterface.TableActors}` AS `a` " +
                                  $"WHERE `a`.`{DatabaseInterface.ColumnExternalPrimaryKey}` = `main`.`{DatabaseInterface.ColumnEntriesPrimaryKey}` " +
                                  $"AND " +
-                                 $"EXISTS (SELECT COUNT(*) FROM `{DatabaseInterface.TableUsernames}` AS `u` " +
-                                  $"WHERE `a`.`{DatabaseInterface.ColumnActorsId}`=`u`.`{DatabaseInterface.ColumnUsernamesSteam64}` " +
+                                 $"EXISTS (SELECT COUNT(*) FROM `{DatabaseInterface.TableUserData}` AS `u` " +
+                                  $"WHERE `a`.`{DatabaseInterface.ColumnActorsId}`=`u`.`{DatabaseInterface.ColumnUserDataSteam64}` " +
                                  $"AND " +
-                                  $"(`u`.`{DatabaseInterface.ColumnUsernamesPlayerName}` LIKE {{0}} OR `u`.`{DatabaseInterface.ColumnUsernamesCharacterName}` LIKE {{0}} OR `u`.`{DatabaseInterface.ColumnUsernamesNickName}` LIKE {{0}}))" +
+                                  $"(`u`.`{DatabaseInterface.ColumnUserDataPlayerName}` LIKE {{0}} OR `u`.`{DatabaseInterface.ColumnUserDataCharacterName}` LIKE {{0}} OR `u`.`{DatabaseInterface.ColumnUserDataNickName}` LIKE {{0}} OR `u`.`{DatabaseInterface.ColumnUserDataDisplayName}` LIKE {{0}}))" +
                                  $" > 0)" +
                                 $" > 0";
                     conditionArgs = [ "%" + text + "%" ];

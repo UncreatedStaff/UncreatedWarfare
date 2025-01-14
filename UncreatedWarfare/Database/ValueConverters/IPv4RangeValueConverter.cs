@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Uncreated.Warfare.Database.Automation;
@@ -36,7 +36,7 @@ public class IPv4Converter : ValueConverter<IPv4Range, string>
     public static readonly NullableReferenceTypeConverter<IPv4Range, string> NullableInstance = new NullableReferenceTypeConverter<IPv4Range, string>(Instance);
 
     public IPv4Converter() : base(
-        x => x.IPToString(),
+        x => x.ToIPv4String(),
         x => IPv4Range.ParseIPv4(x))
     { }
 

@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
@@ -136,7 +136,8 @@ public class MySqlLanguageDataStore : ICachableLanguageDataStore
             if (info.Key == 0)
                 await dbContext.Languages.AddAsync(info, token);
             else
-                dbContext.Update(info);
+                dbContext.Entry(info).State = EntityState.Modified;
+
             await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
 
             lock (this)
@@ -165,10 +166,29 @@ public class MySqlLanguageDataStore : ICachableLanguageDataStore
         try
         {
             await using ILanguageDbContext dbContext = _serviceProvider.GetRequiredService<ILanguageDbContext>();
-            if (!await dbContext.LanguagePreferences.AnyAsync(x => x.Steam64 == preferences.Steam64, token).ConfigureAwait(false))
-                await dbContext.LanguagePreferences.AddAsync(preferences, token);
+            dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
+
+            LanguagePreferences? dbExisting = await dbContext.LanguagePreferences.FirstOrDefaultAsync(x => x.Steam64 == preferences.Steam64, token).ConfigureAwait(false);
+            if (dbExisting == null)
+            {
+                dbContext.LanguagePreferences.Add(new LanguagePreferences
+                {
+                    Steam64 = preferences.Steam64,
+                    Culture = preferences.Culture,
+                    LanguageId = preferences.LanguageId,
+                    LastUpdated = preferences.LastUpdated,
+                    UseCultureForCommandInput = preferences.UseCultureForCommandInput
+                });
+            }
             else
-                dbContext.Update(preferences);
+            {
+                dbExisting.Culture = preferences.Culture;
+                dbExisting.LanguageId = preferences.LanguageId;
+                dbExisting.LastUpdated = preferences.LastUpdated;
+                dbExisting.UseCultureForCommandInput = preferences.UseCultureForCommandInput;
+                dbContext.Update(dbExisting);
+            }
+
             await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
         }
         finally
@@ -192,7 +212,7 @@ public class MySqlLanguageDataStore : ICachableLanguageDataStore
         try
         {
             await using ILanguageDbContext dbContext = _serviceProvider.GetRequiredService<ILanguageDbContext>();
-            LanguagePreferences? pref = await dbContext.LanguagePreferences.FirstOrDefaultAsync(x => x.Steam64 == steam64, token).ConfigureAwait(false);
+            LanguagePreferences? pref = await dbContext.LanguagePreferences.AsNoTracking().FirstOrDefaultAsync(x => x.Steam64 == steam64, token).ConfigureAwait(false);
             return pref ?? new LanguagePreferences
             {
                 Steam64 = steam64
@@ -229,7 +249,7 @@ public class MySqlLanguageDataStore : ICachableLanguageDataStore
     public async Task GetLanguages(IList<LanguageInfo> outputList, CancellationToken token = default)
     {
         await using ILanguageDbContext dbContext = _serviceProvider.GetRequiredService<ILanguageDbContext>();
-        List<LanguageInfo> info = await Include(dbContext.Languages).ToListAsync(token).ConfigureAwait(false);
+        List<LanguageInfo> info = await Include(dbContext.Languages).AsNoTracking().ToListAsync(token).ConfigureAwait(false);
         
         LanguageService languageService = LanguageService;
         foreach (LanguageInfo infos in info)

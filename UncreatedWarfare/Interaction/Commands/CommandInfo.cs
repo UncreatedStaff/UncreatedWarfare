@@ -224,9 +224,7 @@ public class CommandInfo : ICommandDescriptor
                 if (!paramMeta.Name.Equals(CommandName, StringComparison.InvariantCultureIgnoreCase))
                     continue;
 
-                CommandMetadata[] m = parent.Metadata.Parameters;
-                CollectionUtility.RemoveFromArray(ref m, i);
-                parent.Metadata.Parameters = m;
+                parent.Metadata.Parameters = CollectionUtility.RemoveFromArray(parent.Metadata.Parameters, i);
                 logger.LogWarning("Removed metadata for subcommand {0} in parent command {1} because it's hidden from help.", classType, parent.Type);
                 break;
             }

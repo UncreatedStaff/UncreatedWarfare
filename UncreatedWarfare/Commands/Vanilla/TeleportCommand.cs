@@ -137,7 +137,7 @@ internal sealed class TeleportCommand : IExecutableCommand
 
                 input = Context.GetRange(1)!;
                 n = CollectionUtility.StringFind(LocationDevkitNodeSystem.Get().GetAllNodes().OrderBy(loc => loc.locationName.Length), loc => loc.locationName, input);
-                if (n != null)
+                if (n != null && !Context.MatchParameter(1, "me"))
                 {
                     pos = n.transform.position;
 

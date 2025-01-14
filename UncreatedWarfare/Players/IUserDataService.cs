@@ -22,6 +22,18 @@ public interface IUserDataService
     Task<ulong> GetSteam64Async(ulong discordId, CancellationToken token = default);
 
     /// <summary>
+    /// Get a set of players' Discord IDs, or 0 if their Discord is not linked.
+    /// </summary>
+    /// <returns>An array in the same order as the input, with 0s in the place of unlinked IDs.</returns>
+    Task<ulong[]> GetDiscordIdsAsync(IReadOnlyList<ulong> steam64s, CancellationToken token = default);
+
+    /// <summary>
+    /// Get a player's Steam64 ID from their Discord ID, or 0 if their Discord is not linked.
+    /// </summary>
+    /// <returns>An array in the same order as the input, with 0s in the place of unlinked IDs.</returns>
+    Task<ulong[]> GetSteam64sAsync(IReadOnlyList<ulong> discordIds, CancellationToken token = default);
+
+    /// <summary>
     /// Get a player's usernames from their Steam64 ID.
     /// </summary>
     Task<PlayerNames> GetUsernamesAsync(ulong steam64, CancellationToken token = default);
@@ -108,6 +120,80 @@ public class UserDataService : IUserDataService, IDisposable
         try
         {
             return await _dbContext.UserData.Where(x => x.DiscordId == discordId).Select(x => x.Steam64).FirstOrDefaultAsync(token).ConfigureAwait(false);
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<ulong[]> GetDiscordIdsAsync(IReadOnlyList<ulong> steam64s, CancellationToken token = default)
+    {
+        ulong[]? steamIdArray = steam64s as ulong[];
+        if (steamIdArray == null)
+        {
+            steamIdArray = new ulong[steam64s.Count];
+            int index = -1;
+            foreach (ulong id in steam64s)
+            {
+                steamIdArray[++index] = id;
+            }
+        }
+
+        await _semaphore.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            ulong[] output = new ulong[steamIdArray.Length];
+            await foreach (var idPair in _dbContext.UserData
+                               .Where(x => steamIdArray.Contains(x.DiscordId))
+                               .Select(x => new { x.Steam64, x.DiscordId })
+                               .AsAsyncEnumerable()
+                               .WithCancellation(token))
+            {
+                int index = Array.IndexOf(steamIdArray, idPair.DiscordId);
+                if (index >= 0)
+                    output[index] = idPair.Steam64;
+            }
+
+            return output;
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<ulong[]> GetSteam64sAsync(IReadOnlyList<ulong> discordIds, CancellationToken token = default)
+    {
+        ulong[]? discordIdArray = discordIds as ulong[];
+        if (discordIdArray == null)
+        {
+            discordIdArray = new ulong[discordIds.Count];
+            int index = -1;
+            foreach (ulong id in discordIds)
+            {
+                discordIdArray[++index] = id;
+            }
+        }
+        
+        await _semaphore.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            ulong[] output = new ulong[discordIdArray.Length];
+            await foreach (var idPair in _dbContext.UserData
+                               .Where(x => discordIdArray.Contains(x.DiscordId))
+                               .Select(x => new { x.Steam64, x.DiscordId })
+                               .AsAsyncEnumerable()
+                               .WithCancellation(token))
+            {
+                int index = Array.IndexOf(discordIdArray, idPair.DiscordId);
+                if (index >= 0)
+                    output[index] = idPair.Steam64;
+            }
+
+            return output;
         }
         finally
         {

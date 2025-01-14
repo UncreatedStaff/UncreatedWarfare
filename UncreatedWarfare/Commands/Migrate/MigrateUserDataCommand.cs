@@ -14,6 +14,7 @@ using Uncreated.Warfare.Util;
 namespace Uncreated.Warfare.Commands;
 
 [Command("userdata"), HideFromHelp, SubCommandOf(typeof(MigrateCommand))]
+[Obsolete]
 internal sealed class MigrateUserDataCommand : IExecutableCommand
 {
     private readonly IManualMySqlProvider _mySqlProvider;

@@ -1,3 +1,4 @@
+using System;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Translations;
@@ -98,4 +99,10 @@ public sealed class PlayersTranslations : PropertiesTranslationCollection
 
     [TranslationData("Sent when a player tries to revive an enemy.")]
     public readonly Translation ReviveHealEnemies = new Translation("<#bdae9d>You cannot aid enemy soldiers.");
+
+    [TranslationData("Kick message used when a player hasn't moved for a long time (AFK).")]
+    public readonly Translation AfkKickMessage = new Translation("You stood still for too long and were kicked for being AFK.", TranslationOptions.NoRichText);
+
+    [TranslationData("Chat message sent a minute before a player will be kicked for standing still for too long (being AFK).")]
+    public readonly Translation<TimeSpan> AfkKickWarning = new Translation<TimeSpan>("<#fa9e9e>You will be kicked in <#fccfcf>{0}</color> for being AFK if you don't move.", arg0Fmt: TimeAddon.Create(TimeSpanFormatType.Long));
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Net;
 
@@ -6,18 +6,18 @@ namespace Uncreated.Warfare.Networking;
 // ReSharper disable once InconsistentNaming
 public sealed class IPv4AddressRangeFilter : IIPAddressFilter
 {
-    public IPv4Range[] Ranges { get; }
+    public IPv4Range[] Ranges { get; set; }
     public IPv4AddressRangeFilter(IPv4Range[] ranges)
     {
         Ranges = ranges;
     }
-    public bool IsFiltered(IPAddress ip) => IsFiltered(OffenseManager.Pack(ip));
-    public bool IsFiltered(uint ip)
+    public bool IsFiltered(IPAddress ip) => IsFiltered(IPv4Range.Pack(ip));
+    public bool IsFiltered(uint packedIp)
     {
         IPv4Range[] ranges = Ranges;
         for (int i = 0; i < ranges.Length; ++i)
         {
-            if (ranges[i].InRange(ip))
+            if (ranges[i].InRange(packedIp))
                 return true;
         }
 
@@ -38,7 +38,7 @@ public sealed class IPv4AddressRangeFilter : IIPAddressFilter
             }
         }
     }
-    public ValueTask<bool> IsFiltered(IPAddress ip, CSteamID player, CancellationToken token) => new ValueTask<bool>(IsFiltered(ip));
+    public ValueTask<bool> IsFiltered(uint packedIp, CSteamID player, CancellationToken token) => new ValueTask<bool>(IsFiltered(packedIp));
     public ValueTask RemoveFilteredIPs<T>(IList<T> ips, Func<T, uint> selector, CSteamID player, CancellationToken token)
     {
         RemoveFilteredIPs(ips, selector);
@@ -176,5 +176,25 @@ public sealed class IPv4AddressRangeFilter : IIPAddressFilter
         new IPv4Range(185, 16, 8, 0, 24),
         new IPv4Range(185, 16, 9, 0, 24),
         new IPv4Range(91, 237, 76, 0, 24),
+        new IPv4Range(195, 211, 22, 0, 24),
+        new IPv4Range(89, 221, 233, 0, 24),
+        new IPv4Range(89, 221, 234, 0, 24),
+
+        // AS47764 (RU)
+        new IPv4Range(212, 111, 84, 0, 22),
+        new IPv4Range(212, 233, 120, 0, 22),
+        new IPv4Range(212, 233, 72, 0, 21),
+        new IPv4Range(212, 233, 88, 0, 21),
+        new IPv4Range(212, 233, 96, 0, 22),
+        new IPv4Range(217, 16, 16, 0, 20),
+        new IPv4Range(89, 208, 216, 0, 23),
+        new IPv4Range(89, 208, 218, 0, 23),
+        new IPv4Range(89, 208, 220, 0, 22),
+        new IPv4Range(90, 156, 151, 0, 24),
+        new IPv4Range(90, 156, 212, 0, 22),
+        new IPv4Range(90, 156, 216, 0, 22),
+        new IPv4Range(91, 219, 224, 0, 22),
+        new IPv4Range(94, 139, 244, 0, 24),
+        new IPv4Range(95, 163, 208, 0, 21),
     });
 }
