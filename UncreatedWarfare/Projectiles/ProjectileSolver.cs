@@ -1,4 +1,4 @@
-﻿#if DEBUG
+#if DEBUG
 
 #define PROJECTILE_TRACERS
 
@@ -267,7 +267,7 @@ public class ProjectileSolver : ILevelHostedService, IDisposable, IEventListener
     }
 
     [UsedImplicitly]
-    [SuppressMessage(Data.SuppressCategory, Data.SuppressID)]
+    [SuppressMessage("Microsoft.Performance", "IDE0051")]
     private void OnDestroy()
     {
         SceneManager.UnloadSceneAsync(_simScene);
@@ -297,7 +297,7 @@ public class ProjectileSolver : ILevelHostedService, IDisposable, IEventListener
         public Transform? IgnoreTransform;
 
         [UsedImplicitly]
-        [SuppressMessage(Data.SuppressCategory, Data.SuppressID)]
+        [SuppressMessage("Microsoft.Performance", "IDE0051")]
         private void Start()
         {
 #if PROJECTILE_TRACERS
@@ -306,7 +306,7 @@ public class ProjectileSolver : ILevelHostedService, IDisposable, IEventListener
         }
 
         [UsedImplicitly]
-        [SuppressMessage(Data.SuppressCategory, Data.SuppressID)]
+        [SuppressMessage("Microsoft.Performance", "IDE0051")]
         private void OnTriggerEnter(Collider other)
         {
 #if PROJECTILE_TRACERS
@@ -328,7 +328,7 @@ public class ProjectileSolver : ILevelHostedService, IDisposable, IEventListener
         }
 
         [UsedImplicitly]
-        [SuppressMessage(Data.SuppressCategory, Data.SuppressID)]
+        [SuppressMessage("Microsoft.Performance", "IDE0051")]
         private void OnDestroy()
         {
             IsExploded = true;

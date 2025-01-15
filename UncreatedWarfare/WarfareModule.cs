@@ -413,6 +413,7 @@ public sealed class WarfareModule
             .SingleInstance();
 
         bldr.RegisterType<ServerHeartbeatTimer>()
+            .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
 
         bldr.RegisterRpcType<ReportService>()

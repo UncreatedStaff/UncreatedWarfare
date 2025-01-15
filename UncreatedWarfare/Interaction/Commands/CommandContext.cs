@@ -135,6 +135,11 @@ public class CommandContext : ControlException
     public NumberFormatInfo ParseFormat { get; }
 
     /// <summary>
+    /// Culture used to parse information for this command.
+    /// </summary>
+    public CultureInfo ParseCulture { get; }
+
+    /// <summary>
     /// If the player has the <see cref="PlayerSave.IMGUI"/> setting ticked.
     /// </summary>
     public bool IMGUI { get; }
@@ -199,12 +204,14 @@ public class CommandContext : ControlException
         _playerService = serviceProvider.GetRequiredService<IPlayerService>();
         _cooldownManager = serviceProvider.GetService<CooldownManager>();
         CommonTranslations = serviceProvider.GetRequiredService<TranslationInjection<CommonTranslations>>().Value;
+        LanguageService languageService = serviceProvider.GetRequiredService<LanguageService>();
 
         if (Player == null)
         {
-            Language = serviceProvider.GetRequiredService<LanguageService>().GetDefaultLanguage();
-            Culture = CultureInfo.InvariantCulture;
+            Language = languageService.GetDefaultLanguage();
+            Culture = languageService.GetDefaultCulture();
             ParseFormat = Culture.NumberFormat;
+            ParseCulture = Culture;
         }
         else
         {
@@ -212,6 +219,7 @@ public class CommandContext : ControlException
             Culture = Player.Locale.CultureInfo;
             ParseFormat = Player.Locale.ParseFormat;
             IMGUI = Player is { Save.IMGUI: true };
+            ParseCulture = Player.Locale.Preferences.UseCultureForCommandInput ? Culture : languageService.GetDefaultCulture();
         }
 
         OriginalParameters = Array.Empty<string>();
@@ -993,7 +1001,7 @@ public class CommandContext : ControlException
                 return true;
             }
 
-            onlinePlayer = _playerService.GetOnlinePlayerOrNullThreadSafe(s, searchType);
+            onlinePlayer = _playerService.GetOnlinePlayerOrNullThreadSafe(s, ParseCulture, searchType);
             if (onlinePlayer is { IsOnline: true })
             {
                 steam64 = onlinePlayer.Steam64;
@@ -1050,7 +1058,7 @@ public class CommandContext : ControlException
             }
         }
 
-        onlinePlayer = _playerService.GetOnlinePlayerOrNullThreadSafe(s, selection, searchType)!;
+        onlinePlayer = _playerService.GetOnlinePlayerOrNullThreadSafe(s, selection, ParseCulture, searchType)!;
         if (onlinePlayer is { IsOnline: true })
         {
             steam64 = onlinePlayer.Steam64;
@@ -1080,7 +1088,7 @@ public class CommandContext : ControlException
             asset = null;
             return false;
         }
-        return UCAssetManager.TryGetAsset(p, out asset, out multipleResultsFound, allowMultipleResults, selector);
+        return AssetUtility.TryGetAsset(p, out asset, out multipleResultsFound, allowMultipleResults, selector);
     }
 
     /// <summary>
@@ -1132,7 +1140,7 @@ public class CommandContext : ControlException
     /// <param name="mask">Raycast mask, could also use <see cref="ERayMask"/>. Defaults to <see cref="RayMasks.PLAYER_INTERACT"/>.</param>
     /// <param name="distance">Default distance is 4m.</param>
     /// <exception cref="GameThreadException">Not on main thread.</exception>
-    public bool TryGetInteractableTarget<T>([MaybeNullWhen(false)] out T interactable, int mask = 0, float distance = 4f) where T : Interactable
+    public bool TryGetInteractableTarget<TInteractable>([MaybeNullWhen(false)] out TInteractable interactable, int mask = 0, float distance = 4f) where TInteractable : Interactable
     {
         GameThread.AssertCurrent();
 
@@ -1150,17 +1158,17 @@ public class CommandContext : ControlException
             return false;
         }
 
-        if (typeof(InteractableVehicle).IsAssignableFrom(typeof(T)))
+        if (typeof(InteractableVehicle).IsAssignableFrom(typeof(TInteractable)))
         {
-            interactable = (T)(object)info.vehicle;
+            interactable = (TInteractable)(object)info.vehicle;
             return interactable != null;
         }
 
-        if (typeof(InteractableForage).IsAssignableFrom(typeof(T)))
+        if (typeof(InteractableForage).IsAssignableFrom(typeof(TInteractable)))
         {
             if (info.transform.TryGetComponent(out InteractableForage forage))
             {
-                interactable = (T)(object)forage;
+                interactable = (TInteractable)(object)forage;
                 return interactable != null;
             }
         }
@@ -1168,12 +1176,12 @@ public class CommandContext : ControlException
         if (ObjectManager.tryGetRegion(info.transform, out byte objX, out byte objY, out ushort index))
         {
             LevelObject obj = LevelObjects.objects[objX, objY][index];
-            interactable = obj.interactable as T;
+            interactable = obj.interactable as TInteractable;
             return interactable != null;
         }
 
         BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(info.transform);
-        interactable = drop?.interactable as T;
+        interactable = drop?.interactable as TInteractable;
         return interactable != null;
     }
 
@@ -1968,7 +1976,7 @@ public class CommandContext : ControlException
             // && todo !Player.OnDuty()
             && _cooldownManager != null
             && CommandInfo != null
-            && _cooldownManager.HasCooldown(Player, CooldownType.IsolatedCommand, out Cooldown cooldown, CommandInfo))
+            && _cooldownManager.HasCooldown(Player, CooldownType.IsolatedCommand, out Cooldown? cooldown, CommandInfo))
         {
             OnIsolatedCooldown = true;
             IsolatedCooldown = cooldown;

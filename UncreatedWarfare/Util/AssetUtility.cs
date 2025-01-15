@@ -1,4 +1,4 @@
-﻿using DanielWillett.SpeedBytes;
+using DanielWillett.SpeedBytes;
 using SDG.Framework.Utilities;
 using System;
 using System.Collections.Generic;
@@ -8,31 +8,44 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
-using Uncreated.Warfare.Util;
-using YamlDotNet.Core.Tokens;
+using Uncreated.Warfare.Kits.Items;
 
-namespace Uncreated.Warfare;
+namespace Uncreated.Warfare.Util;
 
-public static class UCAssetManager
+public static class AssetUtility
 {
-    private static readonly char[] Ignore = { '.', ',', '&', '-', '_' };
-    private static readonly char[] Splits = { ' ' };
-    public static ItemAsset? FindItemAsset(string itemName, out int numberOfSimilarNames, bool additionalCheckWithoutNonAlphanumericCharacters = true)
+    private static readonly char[] Ignore = [ '.', ',', '&', '-', '_' ];
+    private static readonly char[] Splits = [ ' ' ];
+    
+    /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="type"/> is not a valid value.</exception>
+    public static EItemType GetItemType(this ClothingType type) => type switch
     {
-        itemName = itemName.ToLower();
-        string[] insplits = itemName.Split(Splits);
+        ClothingType.Shirt => EItemType.SHIRT,
+        ClothingType.Pants => EItemType.PANTS,
+        ClothingType.Vest => EItemType.VEST,
+        ClothingType.Hat => EItemType.HAT,
+        ClothingType.Mask => EItemType.MASK,
+        ClothingType.Backpack => EItemType.BACKPACK,
+        ClothingType.Glasses => EItemType.GLASSES,
+        _ => throw new ArgumentOutOfRangeException(nameof(type))
+    };
+
+    public static TAsset? FindAsset<TAsset>(string name, out int numberOfSimilarNames, bool additionalCheckWithoutNonAlphanumericCharacters = true) where TAsset : Asset
+    {
+        name = name.ToLower();
+        string[] words = name.Split(Splits);
 
         numberOfSimilarNames = 0;
-        ItemAsset? asset;
-        List<ItemAsset> list = ListPool<ItemAsset>.claim();
+        TAsset? asset;
+        List<TAsset> list = ListPool<TAsset>.claim();
         try
         {
             Assets.find(list);
-            list.RemoveAll(k => !(k is { name: { }, itemName: { } } && (
-                itemName.Equals(k.id.ToString(CultureInfo.InvariantCulture), StringComparison.OrdinalIgnoreCase) ||
-                insplits.All(l => k.itemName.IndexOf(l, StringComparison.OrdinalIgnoreCase) != -1))));
+            list.RemoveAll(k => !(k is { name: not null, FriendlyName: not null } && (
+                name.Equals(k.id.ToString(CultureInfo.InvariantCulture), StringComparison.OrdinalIgnoreCase) ||
+                words.All(l => k.FriendlyName.IndexOf(l, StringComparison.OrdinalIgnoreCase) != -1))));
 
-            list.Sort((a, b) => a.itemName.Length.CompareTo(b.itemName.Length));
+            list.Sort((a, b) => a.FriendlyName.Length.CompareTo(b.FriendlyName.Length));
 
             numberOfSimilarNames = list.Count;
 
@@ -40,30 +53,30 @@ public static class UCAssetManager
         }
         finally
         {
-            ListPool<ItemAsset>.release(list);
+            ListPool<TAsset>.release(list);
         }
 
         if (asset == null && additionalCheckWithoutNonAlphanumericCharacters)
         {
-            itemName = itemName.RemoveMany(false, Ignore);
+            name = StringUtility.RemoveMany(name, false, Ignore);
 
-            list = ListPool<ItemAsset>.claim();
+            list = ListPool<TAsset>.claim();
             try
             {
                 Assets.find(list);
-                    
-                list.RemoveAll(k => !(k is { name: { }, itemName: { } } && (
-                    itemName.Equals(k.id.ToString(CultureInfo.InvariantCulture), StringComparison.OrdinalIgnoreCase) ||
-                    insplits.All(l => k.itemName.RemoveMany(false, Ignore).IndexOf(l, StringComparison.OrdinalIgnoreCase) != -1))));
 
-                list.Sort((a, b) => a.itemName.Length.CompareTo(b.itemName.Length));
+                list.RemoveAll(k => !(k is { name: not null, FriendlyName: not null } && (
+                    name.Equals(k.id.ToString(CultureInfo.InvariantCulture), StringComparison.OrdinalIgnoreCase) ||
+                    words.All(l => StringUtility.RemoveMany(k.FriendlyName, false, Ignore).IndexOf(l, StringComparison.OrdinalIgnoreCase) != -1))));
+
+                list.Sort((a, b) => a.FriendlyName.Length.CompareTo(b.FriendlyName.Length));
 
                 numberOfSimilarNames = list.Count;
                 asset = numberOfSimilarNames < 1 ? null : list[0];
             }
             finally
             {
-                ListPool<ItemAsset>.release(list);
+                ListPool<TAsset>.release(list);
             }
         }
 
@@ -73,10 +86,28 @@ public static class UCAssetManager
     }
 
     /// <summary>
+    /// Returns the asset category (<see cref="EAssetType"/>) of <typeparamref name="TAsset"/>. Efficiently cached usually.
+    /// </summary>
+    [Pure]
+    public static EAssetType GetAssetCategory<TAsset>(TAsset asset) where TAsset : Asset
+    {
+        EAssetType category = GetAssetCategoryCache<TAsset>.Category;
+        if (category == EAssetType.NONE)
+        {
+            return GetAssetCategory(asset.GetType());
+        }
+
+        return category;
+    }
+
+    /// <summary>
     /// Returns the asset category (<see cref="EAssetType"/>) of <typeparamref name="TAsset"/>. Efficiently cached.
     /// </summary>
     [Pure]
-    public static EAssetType GetAssetCategory<TAsset>() where TAsset : Asset => GetAssetCategoryCache<TAsset>.Category;
+    public static EAssetType GetAssetCategory<TAsset>() where TAsset : Asset
+    {
+        return GetAssetCategoryCache<TAsset>.Category;
+    }
 
     /// <summary>
     /// Returns the asset category (<see cref="EAssetType"/>) of <paramref name="assetType"/>.
@@ -132,7 +163,7 @@ public static class UCAssetManager
         if (Guid.TryParse(assetName, out Guid guid))
         {
             asset = Assets.find<TAsset>(guid);
-            
+
             multipleResultsFound = false;
             return asset is not null && (selector is null || selector(asset));
         }
@@ -309,13 +340,13 @@ public static class UCAssetManager
                 }
             }
 
-            string assetName2 = assetName.RemoveMany(false, Ignore);
+            string assetName2 = StringUtility.RemoveMany(assetName, false, Ignore);
             string[] inSplits = assetName2.Split(Splits);
             for (int i = 0; i < list.Count; ++i)
             {
                 TAsset item = list[i];
                 if (item is { FriendlyName: { } fn } &&
-                    inSplits.All(l => fn.RemoveMany(false, Ignore).IndexOf(l, StringComparison.OrdinalIgnoreCase) != -1))
+                    inSplits.All(l => StringUtility.RemoveMany(fn, false, Ignore).IndexOf(l, StringComparison.OrdinalIgnoreCase) != -1))
                 {
                     assets.Add(item);
                 }
@@ -470,7 +501,7 @@ public static class UCAssetManager
 
     private static readonly Action<string, AssetOrigin> LoadFile;
     private static readonly Action<AssetOrigin> SyncAssetsFromOriginMethod;
-    static UCAssetManager()
+    static AssetUtility()
     {
         SyncAssetsFromOriginMethod = (Action<AssetOrigin>)typeof(Assets)
             .GetMethod("AddAssetsFromOriginToCurrentMapping", BindingFlags.Static | BindingFlags.NonPublic)?
@@ -481,7 +512,7 @@ public static class UCAssetManager
             return;
         }
 
-        MethodInfo method = typeof(UCAssetManager).GetMethod(nameof(GetData), BindingFlags.Static | BindingFlags.NonPublic)!;
+        MethodInfo method = typeof(AssetUtility).GetMethod(nameof(GetData), BindingFlags.Static | BindingFlags.NonPublic)!;
         Type? assetInfo = typeof(Assets).Assembly.GetType("SDG.Unturned.AssetsWorker+AssetDefinition", false, false);
         if (assetInfo == null)
         {
@@ -509,7 +540,7 @@ public static class UCAssetManager
             return;
         }
 
-        DynamicMethod dm = new DynamicMethod("LoadAsset", typeof(void), new Type[] { typeof(string), typeof(AssetOrigin) }, typeof(UCAssetManager).Module, true);
+        DynamicMethod dm = new DynamicMethod("LoadAsset", typeof(void), new Type[] { typeof(string), typeof(AssetOrigin) }, typeof(AssetUtility).Module, true);
         ILGenerator generator = dm.GetILGenerator();
         dm.DefineParameter(0, ParameterAttributes.None, "path");
         dm.DefineParameter(1, ParameterAttributes.None, "assetOrigin");
@@ -528,7 +559,7 @@ public static class UCAssetManager
         generator.Emit(OpCodes.Ldloca_S, 3);
         generator.Emit(OpCodes.Ldloca_S, 4);
         generator.Emit(OpCodes.Call, method);
-        
+
         generator.Emit(OpCodes.Ldloca_S, 5);
         generator.Emit(OpCodes.Ldarg_0);
         generator.Emit(OpCodes.Stfld, pathField);

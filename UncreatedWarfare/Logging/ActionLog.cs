@@ -1,4 +1,4 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using DanielWillett.SpeedBytes;
 using System;
 using System.Collections.Concurrent;
@@ -104,10 +104,18 @@ public class ActionLog : MonoBehaviour
         _instance!._items.Enqueue(new ActionLogItem(player, type, data, DateTimeOffset.UtcNow));
         // todo _instance.Update();
     }
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static string GetMetaPath(ActionLogMeta meta) => Path.Combine(Data.Paths.ActionLog, meta.FirstTimestamp.ToString(DateHeaderFormat, CultureInfo.InvariantCulture) + ".meta");
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static string GetLogPath(ActionLogMeta meta) => Path.Combine(Data.Paths.ActionLog, meta.FirstTimestamp.ToString(DateHeaderFormat, CultureInfo.InvariantCulture) + ".txt");
+
+    private static string GetMetaPath(ActionLogMeta meta)
+    {
+        return Path.Combine(UnturnedPaths.RootDirectory.FullName, "Servers", Provider.serverID, "Warfare", "Action Logs", meta.FirstTimestamp.ToString(DateHeaderFormat, CultureInfo.InvariantCulture) + ".meta");
+    }
+
+
+    private static string GetLogPath(ActionLogMeta meta)
+    {
+        return Path.Combine(UnturnedPaths.RootDirectory.FullName, "Servers", Provider.serverID, "Warfare", "Action Logs", meta.FirstTimestamp.ToString(DateHeaderFormat, CultureInfo.InvariantCulture) + ".txt");
+    }
+
     private void SaveMeta(ActionLogMeta meta)
     {
         using FileStream str = new FileStream(GetMetaPath(meta), FileMode.Create, FileAccess.Write, FileShare.Read);

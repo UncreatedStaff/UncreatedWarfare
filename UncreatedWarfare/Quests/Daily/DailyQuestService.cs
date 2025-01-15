@@ -534,10 +534,10 @@ public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoin
             {
                 string name = "DailyQuest" + i.ToString("D2", CultureInfo.InvariantCulture);
                 string path = Path.Combine(parent, name, name + ".dat");
-                UCAssetManager.LoadAsset(path, origin);
+                AssetUtility.LoadAsset(path, origin);
             }
 
-            UCAssetManager.SyncAssetsFromOrigin(origin);
+            AssetUtility.SyncAssetsFromOrigin(origin);
             _logger.LogInformation("Daily Quest assets loaded.");
 
             #if DEBUG

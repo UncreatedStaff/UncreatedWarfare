@@ -52,7 +52,7 @@ internal sealed class TeleportCommand : IExecutableCommand
             bool raycast = !Context.TryGet(1, out float distance);
             Context.Player.Component<PlayerJumpComponent>().Jump(raycast, distance);
             Vector3 castPt = Context.Player.Position;
-            throw Context.Reply(_translations.TeleportSelfLocationSuccess, $"({castPt.x.ToString("0.##", Data.LocalLocale)}, {castPt.y.ToString("0.##", Data.LocalLocale)}, {castPt.z.ToString("0.##", Data.LocalLocale)})");
+            throw Context.Reply(_translations.TeleportSelfLocationSuccess, $"({castPt.x.ToString("0.##", Context.Culture)}, {castPt.y.ToString("0.##", Context.Culture)}, {castPt.z.ToString("0.##", Context.Culture)})");
         }
 
         const float heightOffset = 0.75f;
@@ -226,7 +226,7 @@ internal sealed class TeleportCommand : IExecutableCommand
                 throw Context.Reply(Context.Player.UnturnedPlayer.teleportToLocation(pos, Context.Player.Yaw)
                         ? _translations.TeleportSelfLocationSuccess
                         : _translations.TeleportSelfLocationObstructed,
-                    $"({pos.x.ToString("0.##", Data.LocalLocale)}, {pos.y.ToString("0.##", Data.LocalLocale)}, {pos.z.ToString("0.##", Data.LocalLocale)})");
+                    $"({pos.x.ToString("0.##", Context.Culture)}, {pos.y.ToString("0.##", Context.Culture)}, {pos.z.ToString("0.##", Context.Culture)})");
 
             case 4:
                 if (!Context.TryGet(0, out _, out target) || target is null)
@@ -267,7 +267,7 @@ internal sealed class TeleportCommand : IExecutableCommand
                 if (float.IsNaN(y))
                     pos.y = TerrainUtility.GetHighestPoint(in pos, float.NaN) + heightOffset;
 
-                string locName = $"({pos.x.ToString("0.##", Data.LocalLocale)}, {pos.y.ToString("0.##", Data.LocalLocale)}, {pos.z.ToString("0.##", Data.LocalLocale)})";
+                string locName = $"({pos.x.ToString("0.##", Context.Culture)}, {pos.y.ToString("0.##", Context.Culture)}, {pos.z.ToString("0.##", Context.Culture)})";
 
                 if (!target.UnturnedPlayer.teleportToLocation(pos, target.Yaw))
                     throw Context.Reply(_translations.TeleportOtherObstructedLocation, target, locName);

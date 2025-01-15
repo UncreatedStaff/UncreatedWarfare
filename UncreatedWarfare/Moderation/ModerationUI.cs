@@ -11,6 +11,7 @@ using Uncreated.Framework.UI.Patterns;
 using Uncreated.Framework.UI.Presets;
 using Uncreated.Framework.UI.Reflection;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Moderation.Punishments;
 using Uncreated.Warfare.Moderation.Punishments.Presets;
 using Uncreated.Warfare.Players;
@@ -760,7 +761,7 @@ public partial class ModerationUI : UnturnedUI
             if (!string.IsNullOrWhiteSpace(searchText))
             {
                 _tempPlayerSearchBuffer.Clear();
-                _playerService.GetOnlinePlayers(searchText, _tempPlayerSearchBuffer, PlayerNameType.PlayerName);
+                _playerService.GetOnlinePlayers(searchText, _tempPlayerSearchBuffer, player.Locale.CultureInfo, PlayerNameType.PlayerName);
                 buffer = _tempPlayerSearchBuffer;
                 clr = true;
             }
@@ -1138,13 +1139,22 @@ public partial class ModerationUI : UnturnedUI
                 LogicModerationInfoUpdateScrollVisual.SetVisibility(c, true);
         });
     }
+
+    private string ModerationEntryTypeToString(ModerationEntryType entryType, LanguageInfo language)
+    {
+        if (entryType is ModerationEntryType.ChatAbuseReport or ModerationEntryType.CheatingReport or ModerationEntryType.GriefingReport or ModerationEntryType.VoiceChatAbuseReport)
+            entryType = ModerationEntryType.Report;
+
+        return _valueFormatter.FormatEnum(entryType, language);
+    }
+
     private void UpdateModerationEntry(WarfarePlayer player, int index, ModerationEntry entry)
     {
         ITransportConnection connection = player.Connection;
 
         ModerationHistoryEntry ui = ModerationHistory[index];
         ModerationEntryType? type = ModerationReflection.GetType(entry.GetType());
-        ui.Type.SetText(connection, type.HasValue ? type.Value.ToString() : entry.GetType().Name);
+        string typeStr = type.HasValue ? ModerationEntryTypeToString(type.Value, player.Locale.LanguageInfo) : entry.GetType().Name;
         string? msg = entry.GetDisplayMessage();
         ui.Message.SetText(connection, string.IsNullOrWhiteSpace(msg) ? "== No Message ==" : msg);
         ui.Reputation.SetText(connection, FormatReputation(entry.Reputation, player.Locale.CultureInfo, false));
@@ -1190,6 +1200,17 @@ public partial class ModerationUI : UnturnedUI
             ui.Admin.SetText(connection, "No Admin");
             ui.AdminProfilePicture.SetImage(connection, Provider.configData.Browser.Icon);
         }
+
+        if (entry.Removed)
+        {
+            typeStr += " <#ccff66>(RM)</color>";
+        }
+        else if (entry is IForgiveableModerationEntry { Forgiven: true })
+        {
+            typeStr += " <#99ff99>(FG)</color>";
+        }
+
+        ui.Type.SetText(connection, typeStr);
 
         if (entry is IDurationModerationEntry duration)
         {

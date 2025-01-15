@@ -725,7 +725,7 @@ public class DatabaseInterface : IHostedService
             actors.Add(new PrimaryKeyPair<RelatedActor>(reader.GetUInt32(0), ReadActor(reader, 1)));
         }).ConfigureAwait(false);
 
-        F.ApplyQueriedList(actors, (key, arr) =>
+        MySqlSnippets.ApplyQueriedList(actors, (key, arr) =>
         {
             IModerationEntry? info = entries.FindIndexed((x, i) => x != null && (mask is null || mask[i]) && x.Id == key);
             if (info != null)
@@ -744,7 +744,7 @@ public class DatabaseInterface : IHostedService
             evidence.Add(new PrimaryKeyPair<Evidence>(reader.GetUInt32(0), ReadEvidence(reader, 1)));
         }).ConfigureAwait(false);
 
-        F.ApplyQueriedList(evidence, (key, arr) =>
+        MySqlSnippets.ApplyQueriedList(evidence, (key, arr) =>
         {
             IModerationEntry? info = entries.FindIndexed((x, i) => x != null && (mask is null || mask[i]) && x.Id == key);
             if (info != null)
@@ -762,7 +762,7 @@ public class DatabaseInterface : IHostedService
                 links.Add(new PrimaryKeyPair<uint>(reader.GetUInt32(0), reader.GetUInt32(1)));
             }).ConfigureAwait(false);
 
-            F.ApplyQueriedList(links, (key, arr) =>
+            MySqlSnippets.ApplyQueriedList(links, (key, arr) =>
             {
                 IModerationEntry? info = entries.FindIndexed((x, i) => x != null && (mask is null || mask[i]) && x.Id == key);
                 if (info != null)
@@ -783,7 +783,7 @@ public class DatabaseInterface : IHostedService
                     links.Add(new PrimaryKeyPair<uint>(reader.GetUInt32(0), reader.GetUInt32(1)));
                 }).ConfigureAwait(false);
 
-                F.ApplyQueriedList(links, (key, arr) =>
+                MySqlSnippets.ApplyQueriedList(links, (key, arr) =>
                 {
                     Punishment? info = (Punishment?)entries.FindIndexed((x, i) => x is Punishment && (mask is null || mask[i]) && x.Id == key);
                     if (info != null)
@@ -799,7 +799,7 @@ public class DatabaseInterface : IHostedService
                     links.Add(new PrimaryKeyPair<uint>(reader.GetUInt32(0), reader.GetUInt32(1)));
                 }).ConfigureAwait(false);
 
-                F.ApplyQueriedList(links, (key, arr) =>
+                MySqlSnippets.ApplyQueriedList(links, (key, arr) =>
                 {
                     Punishment? info = (Punishment?)entries.FindIndexed((x, i) => x is Punishment && (mask is null || mask[i]) && x.Id == key);
                     if (info != null)
@@ -818,7 +818,7 @@ public class DatabaseInterface : IHostedService
                     types.Add(new PrimaryKeyPair<VehicleType>(reader.GetUInt32(0), reader.ReadStringEnum(1, VehicleType.None)));
                 }).ConfigureAwait(false);
 
-                F.ApplyQueriedList(types, (key, arr) =>
+                MySqlSnippets.ApplyQueriedList(types, (key, arr) =>
                 {
                     AssetBan? info = (AssetBan?)entries.FindIndexed((x, i) => x is AssetBan && (mask is null || mask[i]) && x.Id == key);
                     if (info != null)
@@ -838,7 +838,7 @@ public class DatabaseInterface : IHostedService
                 links.Add(new PrimaryKeyPair<uint>(reader.GetUInt32(0), reader.GetUInt32(1)));
             }).ConfigureAwait(false);
 
-            F.ApplyQueriedList(links, (key, arr) =>
+            MySqlSnippets.ApplyQueriedList(links, (key, arr) =>
             {
                 Appeal? info = (Appeal?)entries.FindIndexed((x, i) => x is Appeal && (mask is null || mask[i]) && x.Id == key);
                 if (info != null)
@@ -855,7 +855,7 @@ public class DatabaseInterface : IHostedService
                 responses.Add(new PrimaryKeyPair<AppealResponse>(reader.GetUInt32(0), new AppealResponse(reader.GetString(1), reader.GetString(2))));
             }).ConfigureAwait(false);
 
-            F.ApplyQueriedList(responses, (key, arr) =>
+            MySqlSnippets.ApplyQueriedList(responses, (key, arr) =>
             {
                 Appeal? info = (Appeal?)entries.FindIndexed((x, i) => x is Appeal && (mask is null || mask[i]) && x.Id == key);
                 if (info != null)
@@ -875,7 +875,7 @@ public class DatabaseInterface : IHostedService
                 chats.Add(new PrimaryKeyPair<AbusiveChatRecord>(reader.GetUInt32(0), new AbusiveChatRecord(reader.GetString(1), new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(2), DateTimeKind.Utc)))));
             }).ConfigureAwait(false);
 
-            F.ApplyQueriedList(chats, (key, arr) =>
+            MySqlSnippets.ApplyQueriedList(chats, (key, arr) =>
             {
                 ChatAbuseReport? info = (ChatAbuseReport?)entries.FindIndexed((x, i) => x is ChatAbuseReport && (mask is null || mask[i]) && x.Id == key);
                 if (info != null)
@@ -912,7 +912,7 @@ public class DatabaseInterface : IHostedService
                 )));
             }).ConfigureAwait(false);
 
-            F.ApplyQueriedList(shots, (key, arr) =>
+            MySqlSnippets.ApplyQueriedList(shots, (key, arr) =>
             {
                 CheatingReport? info = (CheatingReport?)entries.FindIndexed((x, i) => x is CheatingReport && (mask is null || mask[i]) && x.Id == key);
                 if (info != null)
@@ -938,7 +938,7 @@ public class DatabaseInterface : IHostedService
                         reader.GetInt32(1), reader.GetBoolean(8), new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(9), DateTimeKind.Utc)))));
             }).ConfigureAwait(false);
 
-            F.ApplyQueriedList(damages, (key, arr) =>
+            MySqlSnippets.ApplyQueriedList(damages, (key, arr) =>
             {
                 GriefingReport? info = (GriefingReport?)entries.FindIndexed((x, i) => x is GriefingReport && (mask is null || mask[i]) && x.Id == key);
                 if (info != null)
@@ -958,7 +958,7 @@ public class DatabaseInterface : IHostedService
                         reader.GetString(5), reader.IsDBNull(3) ? null : reader.GetBoolean(3), new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(6), DateTimeKind.Utc)))));
             }).ConfigureAwait(false);
 
-            F.ApplyQueriedList(tks, (key, arr) =>
+            MySqlSnippets.ApplyQueriedList(tks, (key, arr) =>
             {
                 GriefingReport? info = (GriefingReport?)entries.FindIndexed((x, i) => x is GriefingReport && (mask is null || mask[i]) && x.Id == key);
                 if (info != null)
@@ -978,7 +978,7 @@ public class DatabaseInterface : IHostedService
                         reader.GetString(4), new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(5), DateTimeKind.Utc)))));
             }).ConfigureAwait(false);
 
-            F.ApplyQueriedList(vtks, (key, arr) =>
+            MySqlSnippets.ApplyQueriedList(vtks, (key, arr) =>
             {
                 GriefingReport? info = (GriefingReport?)entries.FindIndexed((x, i) => x is GriefingReport && (mask is null || mask[i]) && x.Id == key);
                 if (info != null)
@@ -1000,7 +1000,7 @@ public class DatabaseInterface : IHostedService
                     reader.IsDBNull(7) ? null : new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(7), DateTimeKind.Utc)), reader.ReadStringEnum(5, EDamageOrigin.Unknown), reader.GetUInt64(4))));
             }).ConfigureAwait(false);
 
-            F.ApplyQueriedList(reqs, (key, arr) =>
+            MySqlSnippets.ApplyQueriedList(reqs, (key, arr) =>
             {
                 GriefingReport? info = (GriefingReport?)entries.FindIndexed((x, i) => x is GriefingReport && (mask is null || mask[i]) && x.Id == key);
                 if (info != null)
@@ -1023,7 +1023,7 @@ public class DatabaseInterface : IHostedService
                 tasks.Add(e.FillDetail(this, token));
             }
 
-            await Task.WhenAll(tasks.AsArrayFast()).ConfigureAwait(false);
+            await Task.WhenAll(tasks.ToArrayFast()).ConfigureAwait(false);
         }
     }
     public async Task<T[]> GetActiveEntries<T>(CSteamID steam64, bool detail = true, bool baseOnly = false, string? condition = null, string? orderBy = null, object[]? conditionArgs = null, DateTimeOffset? start = null, DateTimeOffset? end = null, CancellationToken token = default) where T : IDurationModerationEntry

@@ -1,4 +1,4 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Globalization;
@@ -115,7 +115,7 @@ public class LanguageService : IHostedService
                 return culture;
         }
 
-        return Data.LocalLocale;
+        return GetDefaultCulture();
     }
 
     /// <summary>

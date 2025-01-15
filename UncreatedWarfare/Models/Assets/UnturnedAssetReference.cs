@@ -2,6 +2,7 @@ using System;
 using System.Globalization;
 using Uncreated.Framework.UI;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Models.Assets;
 public readonly struct UnturnedAssetReference
@@ -68,7 +69,7 @@ public readonly struct UnturnedAssetReference
     {
         if (Id != 0)
         {
-            EAssetType type = UCAssetManager.GetAssetCategory<TAsset>();
+            EAssetType type = AssetUtility.GetAssetCategory<TAsset>();
             if (type == EAssetType.NONE)
                 return null;
 

@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Translations;
@@ -71,7 +71,7 @@ internal sealed class LangCommand : IExecutableCommand
 
             LanguageInfo defaultInfo = _languageService.GetDefaultLanguage();
 
-            await Context.Player.Locale.Update(defaultInfo.Code, Data.LocalLocale, token: token).ConfigureAwait(false);
+            await Context.Player.Locale.Update(defaultInfo.Code, _languageService.GetDefaultCulture(), token: token).ConfigureAwait(false);
             Context.Reply(_translations.ResetLanguage, defaultInfo);
             CheckIMGUIRequirements(defaultInfo);
         }

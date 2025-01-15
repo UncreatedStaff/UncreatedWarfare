@@ -1,3 +1,4 @@
+using DanielWillett.ReflectionTools;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -444,5 +445,38 @@ public static class CollectionUtility
                 result[i] = source[i];
         }
         return result;
+    }
+
+    /// <summary>
+    /// Find a value from an array with the index of each element in the predicate.
+    /// </summary>
+    public static TElement? FindIndexed<TElement>(this TElement[] array, Func<TElement, int, bool> predicate)
+    {
+        for (int i = 0; i < array.Length; ++i)
+        {
+            if (predicate(array[i], i))
+                return array[i];
+        }
+
+        return default;
+    }
+
+    /// <summary>
+    /// Convert to an array if it isn't already.
+    /// </summary>
+    public static TElement[] ToArrayFast<TElement>(this IEnumerable<TElement> enumerable, bool copy = false)
+    {
+        if (!copy && enumerable is TElement[] array)
+            return array;
+
+        if (enumerable is List<TElement> list)
+        {
+            if (!copy && list.Count == list.Capacity && Accessor.TryGetUnderlyingArray(list, out TElement[] underlying))
+                return underlying;
+
+            return list.ToArray();
+        }
+
+        return enumerable.ToArray();
     }
 }

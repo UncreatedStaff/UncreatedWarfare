@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Locations;
@@ -71,5 +71,5 @@ public class CacheLocation : IEquatable<CacheLocation>
     // ReSharper restore NonReadonlyMemberInGetHashCode
 
     /// <inheritdoc />
-    public override string ToString() => Name ?? ("[" + new GridLocation(Position) + "] " + F.GetClosestLocationName(Position, true, true));
+    public override string ToString() => Name ?? ("[" + new GridLocation(Position) + "] " + LocationHelper.GetClosestLocationName(Position));
 }

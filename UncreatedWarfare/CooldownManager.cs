@@ -1,7 +1,8 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Linq;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
@@ -190,19 +191,19 @@ public class Cooldown(CSteamID player, CooldownType cooldownType, float duration
 
         int i1 = (int)sec / 3600;
         if (i1 > 0)
-            line += i1.ToString(Data.LocalLocale) + "h ";
+            line += i1.ToString(CultureInfo.InvariantCulture) + "h ";
         sec -= i1 * 3600;
 
         i1 = (int)sec / 60;
         if (i1 > 0)
-            line += i1.ToString(Data.LocalLocale) + "m ";
+            line += i1.ToString(CultureInfo.InvariantCulture) + "m ";
         sec -= i1 * 60;
 
         i1 = (int)sec;
         if (i1 > 0)
-            return line + i1.ToString(Data.LocalLocale) + "s";
+            return line + i1.ToString(CultureInfo.InvariantCulture) + "s";
         if (line.Length == 0)
-            return sec.ToString("F0", Data.LocalLocale) + "s";
+            return sec.ToString("F0", CultureInfo.InvariantCulture) + "s";
         return line;
     }
 

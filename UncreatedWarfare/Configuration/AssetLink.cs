@@ -15,6 +15,7 @@ using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Addons;
 using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Translations.ValueFormatters;
+using Uncreated.Warfare.Util;
 using YamlDotNet.Core;
 using YamlDotNet.Core.Events;
 using YamlDotNet.Serialization;
@@ -789,7 +790,7 @@ public static class AssetLink
             }
             else if (_id != default)
             {
-                _cachedAsset = Assets.find(UCAssetManager.GetAssetCategory<TAsset>(), _id) as TAsset;
+                _cachedAsset = Assets.find(AssetUtility.GetAssetCategory<TAsset>(), _id) as TAsset;
             }
 
             if (_cachedAsset == null)
@@ -891,7 +892,7 @@ public static class AssetLink
             {
                 if (Id != 0)
                     return "\"" + asset.name + "\" {" + Guid.ToString("N", CultureInfo.InvariantCulture) + "} (" +
-                           UCAssetManager.GetAssetCategory<TAsset>() + "/" +
+                           AssetUtility.GetAssetCategory(asset) + "/" +
                            Id.ToString("D", CultureInfo.InvariantCulture) + ")";
 
                 return "\"" + asset.name + "\" {" + Guid.ToString("N", CultureInfo.InvariantCulture) + "}";
@@ -899,7 +900,7 @@ public static class AssetLink
 
             if (Id != 0)
                 return "\"" + asset.name + "\" (" +
-                       UCAssetManager.GetAssetCategory<TAsset>() + "/" +
+                       AssetUtility.GetAssetCategory(asset) + "/" +
                        Id.ToString("F0", CultureInfo.InvariantCulture) + ")";
 
             return "\"" + asset.name + "\"";
@@ -923,7 +924,7 @@ public static class AssetLink
             string? idStr;
             if (id != 0 || guid == Guid.Empty)
             {
-                string enumStr = formatter.FormatEnum(UCAssetManager.GetAssetCategory<TAsset>(), parameters.Language);
+                string enumStr = formatter.FormatEnum(AssetUtility.GetAssetCategory<TAsset>(), parameters.Language);
                 if (rarity)
                     enumStr = formatter.Colorize(enumStr, WarfareFormattedLogValues.EnumColor, parameters.Options);
 

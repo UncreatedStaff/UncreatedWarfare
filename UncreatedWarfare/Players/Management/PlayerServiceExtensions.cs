@@ -1,6 +1,9 @@
+using DanielWillett.ReflectionTools;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Linq;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Util;
@@ -244,7 +247,7 @@ public static class PlayerServiceExtensions
     /// <summary>
     /// Search for a player by their name.
     /// </summary>
-    public static WarfarePlayer? GetOnlinePlayerOrNull(this IPlayerService playerService, string searchTerm, [InstantHandle] IEnumerable<WarfarePlayer> selection, PlayerNameType preferredName = PlayerNameType.CharacterName)
+    public static WarfarePlayer? GetOnlinePlayerOrNull(this IPlayerService playerService, string searchTerm, [InstantHandle] IEnumerable<WarfarePlayer> selection, CultureInfo? culture, PlayerNameType preferredName = PlayerNameType.CharacterName)
     {
         GameThread.AssertCurrent();
 
@@ -254,13 +257,13 @@ public static class PlayerServiceExtensions
             return players.Find(x => x.Steam64.m_SteamID == steamId.m_SteamID);
         }
 
-        return SearchPlayers(players, searchTerm, preferredName);
+        return SearchPlayers(players, searchTerm, culture ?? CultureInfo.InvariantCulture, preferredName);
     }
 
     /// <summary>
     /// Search for a player by their name.
     /// </summary>
-    public static WarfarePlayer? GetOnlinePlayerOrNull(this IPlayerService playerService, string searchTerm, PlayerNameType preferredName = PlayerNameType.CharacterName)
+    public static WarfarePlayer? GetOnlinePlayerOrNull(this IPlayerService playerService, string searchTerm, CultureInfo? culture, PlayerNameType preferredName = PlayerNameType.CharacterName)
     {
         GameThread.AssertCurrent();
 
@@ -270,17 +273,17 @@ public static class PlayerServiceExtensions
         }
 
         ReadOnlyTrackingList<WarfarePlayer> players = playerService.OnlinePlayers;
-        return SearchPlayers(players, searchTerm, preferredName);
+        return SearchPlayers(players, searchTerm, culture ?? CultureInfo.InvariantCulture, preferredName);
     }
 
     /// <summary>
     /// Search for a player by their name.
     /// </summary>
-    public static WarfarePlayer? GetOnlinePlayerOrNullThreadSafe(this IPlayerService playerService, string searchTerm, [InstantHandle] IEnumerable<WarfarePlayer> selection, PlayerNameType preferredName = PlayerNameType.CharacterName)
+    public static WarfarePlayer? GetOnlinePlayerOrNullThreadSafe(this IPlayerService playerService, string searchTerm, [InstantHandle] IEnumerable<WarfarePlayer> selection, CultureInfo? culture, PlayerNameType preferredName = PlayerNameType.CharacterName)
     {
         if (GameThread.IsCurrent)
         {
-            return playerService.GetOnlinePlayerOrNull(searchTerm, preferredName);
+            return playerService.GetOnlinePlayerOrNull(searchTerm, culture, preferredName);
         }
 
         List<WarfarePlayer> players = selection.ToList();
@@ -289,17 +292,17 @@ public static class PlayerServiceExtensions
             return players.Find(x => x.Steam64.m_SteamID == steamId.m_SteamID);
         }
 
-        return SearchPlayers(players, searchTerm, preferredName);
+        return SearchPlayers(players, searchTerm, culture ?? CultureInfo.InvariantCulture, preferredName);
     }
 
     /// <summary>
     /// Search for a player by their name.
     /// </summary>
-    public static WarfarePlayer? GetOnlinePlayerOrNullThreadSafe(this IPlayerService playerService, string searchTerm, PlayerNameType preferredName = PlayerNameType.CharacterName)
+    public static WarfarePlayer? GetOnlinePlayerOrNullThreadSafe(this IPlayerService playerService, string searchTerm, CultureInfo? culture, PlayerNameType preferredName = PlayerNameType.CharacterName)
     {
         if (GameThread.IsCurrent)
         {
-            return playerService.GetOnlinePlayerOrNull(searchTerm, preferredName);
+            return playerService.GetOnlinePlayerOrNull(searchTerm, culture, preferredName);
         }
 
         if (FormattingUtility.TryParseSteamId(searchTerm, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
@@ -308,13 +311,13 @@ public static class PlayerServiceExtensions
         }
 
         IReadOnlyList<WarfarePlayer> players = playerService.GetThreadsafePlayerList();
-        return SearchPlayers(players, searchTerm, preferredName);
+        return SearchPlayers(players, searchTerm, culture ?? CultureInfo.InvariantCulture, preferredName);
     }
 
     /// <summary>
     /// Search for a player by their name.
     /// </summary>
-    public static int GetOnlinePlayers(this IPlayerService playerService, string searchTerm, ICollection<WarfarePlayer> output, [InstantHandle] IEnumerable<WarfarePlayer> selection, PlayerNameType preferredName = PlayerNameType.CharacterName)
+    public static int GetOnlinePlayers(this IPlayerService playerService, string searchTerm, [InstantHandle] IList<WarfarePlayer> output, [InstantHandle] IEnumerable<WarfarePlayer> selection, CultureInfo? culture, PlayerNameType preferredName = PlayerNameType.CharacterName)
     {
         GameThread.AssertCurrent();
 
@@ -329,14 +332,14 @@ public static class PlayerServiceExtensions
         }
 
         int stCt = output.Count;
-        SearchPlayers(players, searchTerm, preferredName, output);
+        SearchPlayers(players, searchTerm, culture ?? CultureInfo.InvariantCulture, preferredName, output);
         return output.Count - stCt;
     }
 
     /// <summary>
     /// Search for a player by their name.
     /// </summary>
-    public static int GetOnlinePlayers(this IPlayerService playerService, string searchTerm, ICollection<WarfarePlayer> output, PlayerNameType preferredName = PlayerNameType.CharacterName)
+    public static int GetOnlinePlayers(this IPlayerService playerService, string searchTerm, [InstantHandle] IList<WarfarePlayer> output, CultureInfo? culture, PlayerNameType preferredName = PlayerNameType.CharacterName)
     {
         GameThread.AssertCurrent();
 
@@ -351,18 +354,18 @@ public static class PlayerServiceExtensions
 
         ReadOnlyTrackingList<WarfarePlayer> players = playerService.OnlinePlayers;
         int stCt = output.Count;
-        SearchPlayers(players, searchTerm, preferredName, output);
+        SearchPlayers(players, searchTerm, culture ?? CultureInfo.InvariantCulture, preferredName, output);
         return output.Count - stCt;
     }
 
     /// <summary>
     /// Search for a player by their name.
     /// </summary>
-    public static int GetOnlinePlayersThreadSafe(this IPlayerService playerService, string searchTerm, ICollection<WarfarePlayer> output, [InstantHandle] IEnumerable<WarfarePlayer> selection, PlayerNameType preferredName = PlayerNameType.CharacterName)
+    public static int GetOnlinePlayersThreadSafe(this IPlayerService playerService, string searchTerm, [InstantHandle] IList<WarfarePlayer> output, [InstantHandle] IEnumerable<WarfarePlayer> selection, CultureInfo? culture, PlayerNameType preferredName = PlayerNameType.CharacterName)
     {
         if (GameThread.IsCurrent)
         {
-            return playerService.GetOnlinePlayers(searchTerm, output, preferredName);
+            return playerService.GetOnlinePlayers(searchTerm, output, culture, preferredName);
         }
 
         List<WarfarePlayer> players = selection.ToList();
@@ -376,18 +379,18 @@ public static class PlayerServiceExtensions
         }
 
         int stCt = output.Count;
-        SearchPlayers(players, searchTerm, preferredName, output);
+        SearchPlayers(players, searchTerm, culture ?? CultureInfo.InvariantCulture, preferredName, output);
         return output.Count - stCt;
     }
 
     /// <summary>
     /// Search for a player by their name.
     /// </summary>
-    public static int GetOnlinePlayersThreadSafe(this IPlayerService playerService, string searchTerm, ICollection<WarfarePlayer> output, PlayerNameType preferredName = PlayerNameType.CharacterName)
+    public static int GetOnlinePlayersThreadSafe(this IPlayerService playerService, string searchTerm, [InstantHandle] IList<WarfarePlayer> output, CultureInfo? culture, PlayerNameType preferredName = PlayerNameType.CharacterName)
     {
         if (GameThread.IsCurrent)
         {
-            return playerService.GetOnlinePlayers(searchTerm, output, preferredName);
+            return playerService.GetOnlinePlayers(searchTerm, output, culture, preferredName);
         }
 
         if (FormattingUtility.TryParseSteamId(searchTerm, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
@@ -401,11 +404,11 @@ public static class PlayerServiceExtensions
 
         IReadOnlyList<WarfarePlayer> players = playerService.GetThreadsafePlayerList();
         int stCt = output.Count;
-        SearchPlayers(players, searchTerm, preferredName, output);
+        SearchPlayers(players, searchTerm, culture ?? CultureInfo.InvariantCulture, preferredName, output);
         return output.Count - stCt;
     }
 
-    private static WarfarePlayer? SearchPlayers([InstantHandle] IEnumerable<WarfarePlayer> players, ReadOnlySpan<char> searchTerm, PlayerNameType preferredName)
+    private static WarfarePlayer? SearchPlayers([InstantHandle] IEnumerable<WarfarePlayer> players, string searchTerm, CultureInfo culture, PlayerNameType preferredName)
     {
         using IEnumerator<WarfarePlayer> enumerator = players.GetEnumerator();
 
@@ -423,9 +426,9 @@ public static class PlayerServiceExtensions
             PlayerNameType name = nameOrder[n];
             for (int i = 0; i < levels; i += 2)
             {
-                WarfarePlayer? pl = SearchPlayersByNameType(enumerator, searchTerm, i, name);
+                WarfarePlayer? pl = SearchPlayersByNameType(enumerator, searchTerm, culture, i, name);
                 if (pl != null) return pl;
-                pl = SearchPlayersByNameType(enumerator, searchTerm, i + 1, name);
+                pl = SearchPlayersByNameType(enumerator, searchTerm, culture, i + 1, name);
                 if (pl != null) return pl;
             }
         }
@@ -433,7 +436,7 @@ public static class PlayerServiceExtensions
         return null;
     }
 
-    private static void SearchPlayers([InstantHandle] IEnumerable<WarfarePlayer> players, ReadOnlySpan<char> searchTerm, PlayerNameType preferredName, ICollection<WarfarePlayer> output)
+    private static void SearchPlayers([InstantHandle] IEnumerable<WarfarePlayer> players, string searchTerm, CultureInfo culture, PlayerNameType preferredName, IList<WarfarePlayer> output)
     {
         using IEnumerator<WarfarePlayer> enumerator = players.GetEnumerator();
 
@@ -451,14 +454,15 @@ public static class PlayerServiceExtensions
             PlayerNameType name = nameOrder[n];
             for (int i = 0; i < levels; i += 2)
             {
-                SearchPlayersByNameType(enumerator, searchTerm, i, name, output);
-                SearchPlayersByNameType(enumerator, searchTerm, i + 1, name, output);
+                SearchPlayersByNameType(enumerator, searchTerm, i, culture, name, output);
+                SearchPlayersByNameType(enumerator, searchTerm, i + 1, culture, name, output);
             }
         }
     }
 
-    private static WarfarePlayer? SearchPlayersByNameType([InstantHandle] IEnumerator<WarfarePlayer> enumerator, ReadOnlySpan<char> searchTerm, int level, PlayerNameType nameType)
+    private static WarfarePlayer? SearchPlayersByNameType([InstantHandle] IEnumerator<WarfarePlayer> enumerator, string searchTerm, CultureInfo culture, int level, PlayerNameType nameType)
     {
+        CompareInfo cultureInfo = culture.CompareInfo;
         switch (level)
         {
             case 0: // exact
@@ -472,7 +476,7 @@ public static class PlayerServiceExtensions
                         PlayerNameType.PlayerName => player.Names.PlayerName,
                         _ => null!
                     };
-                    if (name.AsSpan().Equals(searchTerm, StringComparison.Ordinal))
+                    if (cultureInfo.Compare(name, searchTerm) == 0)
                     {
                         return player;
                     }
@@ -491,7 +495,7 @@ public static class PlayerServiceExtensions
                         PlayerNameType.PlayerName => player.Names.PlayerName,
                         _ => null!
                     };
-                    if (name.AsSpan().Equals(searchTerm, StringComparison.InvariantCultureIgnoreCase))
+                    if (cultureInfo.Compare(name, searchTerm, CompareOptions.IgnoreCase | CompareOptions.IgnoreKanaType) == 0)
                     {
                         return player;
                     }
@@ -510,7 +514,7 @@ public static class PlayerServiceExtensions
                         PlayerNameType.PlayerName => player.Names.PlayerName,
                         _ => null!
                     };
-                    if (name.AsSpan().Contains(searchTerm, StringComparison.Ordinal))
+                    if (cultureInfo.IndexOf(name, searchTerm) >= 0)
                     {
                         return player;
                     }
@@ -529,7 +533,7 @@ public static class PlayerServiceExtensions
                         PlayerNameType.PlayerName => player.Names.PlayerName,
                         _ => null!
                     };
-                    if (name.AsSpan().Contains(searchTerm, StringComparison.InvariantCultureIgnoreCase))
+                    if (cultureInfo.IndexOf(name, searchTerm, CompareOptions.IgnoreCase | CompareOptions.IgnoreKanaType) >= 0)
                     {
                         return player;
                     }
@@ -538,7 +542,7 @@ public static class PlayerServiceExtensions
                 break;
 
             case 4: // fuzzy
-                int maxScore = 2; // require 3 letter match at least
+                int minScore = (int)Math.Ceiling(searchTerm.Length * 0.6d); // match must be at least 60% of the original search term
                 WarfarePlayer? match = null;
                 while (enumerator.MoveNext())
                 {
@@ -550,13 +554,13 @@ public static class PlayerServiceExtensions
                         PlayerNameType.PlayerName => player.Names.PlayerName,
                         _ => null!
                     };
-                    int score = FormattingUtility.CompareStringsFuzzy(searchTerm, name, true);
+                    int score = StringUtility.LevenshteinDistance(searchTerm, name, culture, LevenshteinOptions.IgnorePunctuation | LevenshteinOptions.IgnoreWhitespace | LevenshteinOptions.AutoComplete);
                     
-                    if (maxScore >= score)
+                    if (minScore <= score)
                         continue;
-                    
                     match = player;
-                    maxScore = score;
+                    
+                    minScore = score;
                 }
 
                 if (match != null)
@@ -565,7 +569,7 @@ public static class PlayerServiceExtensions
                 break;
 
             case 5: // fuzzy case insensitive
-                maxScore = 2; // require 3 letter match at least
+                minScore = (int)Math.Ceiling(searchTerm.Length * 0.6d); // match must be at least 60% of the original search term
                 match = null;
                 while (enumerator.MoveNext())
                 {
@@ -577,13 +581,13 @@ public static class PlayerServiceExtensions
                         PlayerNameType.PlayerName => player.Names.PlayerName,
                         _ => null!
                     };
-                    int score = FormattingUtility.CompareStringsFuzzy(searchTerm, name, false);
-                    
-                    if (maxScore >= score)
-                        continue;
+                    int score = StringUtility.LevenshteinDistance(name, searchTerm, culture, LevenshteinOptions.IgnoreCase | LevenshteinOptions.IgnorePunctuation | LevenshteinOptions.IgnoreWhitespace | LevenshteinOptions.AutoComplete);
 
+                    if (minScore <= score)
+                        continue;
                     match = player;
-                    maxScore = score;
+
+                    minScore = score;
                 }
 
                 if (match != null)
@@ -596,8 +600,9 @@ public static class PlayerServiceExtensions
         return null;
     }
 
-    private static void SearchPlayersByNameType([InstantHandle] IEnumerator<WarfarePlayer> enumerator, ReadOnlySpan<char> searchTerm, int level, PlayerNameType nameType, ICollection<WarfarePlayer> output)
+    private static void SearchPlayersByNameType([InstantHandle] IEnumerator<WarfarePlayer> enumerator, string searchTerm, int level, CultureInfo culture, PlayerNameType nameType, IList<WarfarePlayer> output)
     {
+        CompareInfo cultureInfo = culture.CompareInfo;
         switch (level)
         {
             case 0: // exact
@@ -611,7 +616,7 @@ public static class PlayerServiceExtensions
                         PlayerNameType.PlayerName => player.Names.PlayerName,
                         _ => null!
                     };
-                    if (name.AsSpan().Equals(searchTerm, StringComparison.Ordinal) && !output.Contains(player))
+                    if (cultureInfo.Compare(name, searchTerm) == 0 && !output.Contains(player))
                     {
                         output.Add(player);
                     }
@@ -630,7 +635,7 @@ public static class PlayerServiceExtensions
                         PlayerNameType.PlayerName => player.Names.PlayerName,
                         _ => null!
                     };
-                    if (name.AsSpan().Equals(searchTerm, StringComparison.InvariantCultureIgnoreCase) && !output.Contains(player))
+                    if (cultureInfo.Compare(name, searchTerm, CompareOptions.IgnoreCase | CompareOptions.IgnoreKanaType) == 0 && !output.Contains(player))
                     {
                         output.Add(player);
                     }
@@ -649,7 +654,7 @@ public static class PlayerServiceExtensions
                         PlayerNameType.PlayerName => player.Names.PlayerName,
                         _ => null!
                     };
-                    if (name.AsSpan().Contains(searchTerm, StringComparison.Ordinal) && !output.Contains(player))
+                    if (cultureInfo.IndexOf(name, searchTerm) >= 0 && !output.Contains(player))
                     {
                         output.Add(player);
                     }
@@ -668,7 +673,7 @@ public static class PlayerServiceExtensions
                         PlayerNameType.PlayerName => player.Names.PlayerName,
                         _ => null!
                     };
-                    if (name.AsSpan().Contains(searchTerm, StringComparison.InvariantCultureIgnoreCase) && !output.Contains(player))
+                    if (cultureInfo.IndexOf(name, searchTerm, CompareOptions.IgnoreCase | CompareOptions.IgnoreKanaType) >= 0 && !output.Contains(player))
                     {
                         output.Add(player);
                     }
@@ -677,8 +682,9 @@ public static class PlayerServiceExtensions
                 break;
 
             case 4: // fuzzy
-                int maxScore = 2; // require 3 letter match at least
-                WarfarePlayer? match = null;
+                int stepStart = output.Count;
+                int minScore = (int)Math.Ceiling(searchTerm.Length * 0.6d); // match must be at least 60% of the original search term
+                List<int> scores = new List<int>(16);
                 while (enumerator.MoveNext())
                 {
                     WarfarePlayer player = enumerator.Current!;
@@ -689,23 +695,42 @@ public static class PlayerServiceExtensions
                         PlayerNameType.PlayerName => player.Names.PlayerName,
                         _ => null!
                     };
-                    int score = FormattingUtility.CompareStringsFuzzy(searchTerm, name, true);
-                    
-                    if (maxScore >= score || output.Contains(player))
-                        continue;
-                    
-                    match = player;
-                    maxScore = score;
-                }
 
-                if (match != null)
-                    output.Add(match);
+                    if (output.Contains(player))
+                        continue;
+
+                    int score = StringUtility.LevenshteinDistance(name, searchTerm, culture, LevenshteinOptions.IgnorePunctuation | LevenshteinOptions.IgnoreWhitespace | LevenshteinOptions.AutoComplete);
+
+
+                    if (minScore < score)
+                        continue;
+
+                    bool added = false;
+                    for (int i = stepStart; i < output.Count; ++i)
+                    {
+                        int otherScore = scores[i - stepStart];
+                        if (otherScore <= score)
+                            continue;
+
+                        output.Insert(i, player);
+                        scores.Insert(i - stepStart, score);
+                        added = true;
+                        break;
+                    }
+
+                    if (added)
+                        continue;
+
+                    output.Add(player);
+                    scores.Add(score);
+                }
 
                 break;
 
             case 5: // fuzzy case insensitive
-                maxScore = 2; // require 3 letter match at least
-                match = null;
+                stepStart = output.Count;
+                minScore = (int)Math.Ceiling(searchTerm.Length * 0.6d); // match must be at least 60% of the original search term
+                scores = new List<int>(16);
                 while (enumerator.MoveNext())
                 {
                     WarfarePlayer player = enumerator.Current!;
@@ -716,18 +741,34 @@ public static class PlayerServiceExtensions
                         PlayerNameType.PlayerName => player.Names.PlayerName,
                         _ => null!
                     };
-                    int score = FormattingUtility.CompareStringsFuzzy(searchTerm, name, false);
-                    
-                    if (maxScore >= score || output.Contains(player))
+
+                    if (output.Contains(player))
                         continue;
 
-                    match = player;
-                    maxScore = score;
+                    int score = StringUtility.LevenshteinDistance(name, searchTerm, culture, LevenshteinOptions.IgnoreCase | LevenshteinOptions.IgnorePunctuation | LevenshteinOptions.IgnoreWhitespace | LevenshteinOptions.AutoComplete);
+
+                    if (minScore < score)
+                        continue;
+
+                    bool added = false;
+                    for (int i = stepStart; i < output.Count; ++i)
+                    {
+                        int otherScore = scores[i - stepStart];
+                        if (otherScore <= score)
+                            continue;
+
+                        output.Insert(i, player);
+                        scores.Insert(i - stepStart, score);
+                        added = true;
+                        break;
+                    }
+
+                    if (added)
+                        continue;
+
+                    output.Add(player);
+                    scores.Add(score);
                 }
-
-                if (match != null)
-                    output.Add(match);
-
                 break;
         }
 

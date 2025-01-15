@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Globalization;
 using System.IO;
 using Uncreated.Warfare.Interaction.Commands;
@@ -10,8 +10,15 @@ namespace Uncreated.Warfare.Commands;
 [SynchronizedCommand, Command("savevoice"), MetadataFile]
 internal sealed class SaveVoiceBufferCommand : IExecutableCommand
 {
+    private readonly WarfareModule _warfare;
+
     /// <inheritdoc />
     public required CommandContext Context { get; init; }
+
+    public SaveVoiceBufferCommand(WarfareModule warfare)
+    {
+        _warfare = warfare;
+    }
 
     public async UniTask ExecuteAsync(CancellationToken token)
     {
@@ -23,7 +30,7 @@ internal sealed class SaveVoiceBufferCommand : IExecutableCommand
             throw Context.SendUnknownError();
 
         FileStream fs = new FileStream(
-            Path.Combine(Data.Paths.BaseDirectory, "Voice", onlinePlayer.Steam64.m_SteamID.ToString(CultureInfo.InvariantCulture) + "_" + DateTime.UtcNow.ToString("s").Replace(':', '_') + ".wav"),
+            Path.Combine(_warfare.HomeDirectory, "Voice", onlinePlayer.Steam64.m_SteamID.ToString(CultureInfo.InvariantCulture) + "_" + DateTime.UtcNow.ToString("s").Replace(':', '_') + ".wav"),
             FileMode.Create,
             FileAccess.Write, FileShare.Read
         );

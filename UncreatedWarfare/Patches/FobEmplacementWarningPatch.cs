@@ -1,4 +1,4 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
 using HarmonyLib;
 using Microsoft.Extensions.Configuration;
@@ -66,7 +66,7 @@ internal sealed class FobEmplacementWarningPatch : IHarmonyPatch
     /// <summary>
     /// Postfix of <see cref="UseableGun.project(Vector3, Vector3, ItemBarrelAsset, ItemMagazineAsset)"/> to predict mortar hits.
     /// </summary>
-    [SuppressMessage(Data.SuppressCategory, Data.SuppressID)]
+    [SuppressMessage("Microsoft.Performance", "IDE0051")]
     private static void Postfix(Vector3 origin, Vector3 direction, ItemBarrelAsset barrelAsset, ItemMagazineAsset magazineAsset, UseableGun __instance)
     {
         if (!WarfareModule.Singleton.IsLayoutActive())

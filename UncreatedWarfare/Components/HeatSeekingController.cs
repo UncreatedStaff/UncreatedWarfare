@@ -1,4 +1,5 @@
-﻿using System;
+using DanielWillett.ReflectionTools;
+using System;
 using System.Collections.Generic;
 using Uncreated.Framework.UI;
 using Uncreated.Warfare.Configuration;
@@ -7,6 +8,9 @@ using Uncreated.Warfare.Vehicles.WarfareVehicles;
 namespace Uncreated.Warfare.Components;
 internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'Aim' gameobject to allow it to control projectiles
 {
+    private static readonly InstanceGetter<UseableGun, bool>? GetUseableGunReloading
+        = Accessor.GenerateInstanceGetter<UseableGun, bool>("isReloading", throwOnError: false);
+
     private const float AquisitionAngle = 65f;
     private const float AquisitionFrequency = 0.25f;
 
@@ -205,7 +209,7 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
         bool noAmmo = gunner != null && gunner.equipment.state[10] == 0;
 
         UseableGun? gun = gunner?.equipment.useable as UseableGun;
-        bool reloading = gun != null && Data.GetUseableGunReloading != null && Data.GetUseableGunReloading(gun);
+        bool reloading = gun != null && GetUseableGunReloading != null && GetUseableGunReloading(gun);
         bool noActiveMissiles = MissilesInFlight.Count == 0;
 
         if (newTarget is null || (noActiveMissiles && (noAmmo || reloading))) // no target found

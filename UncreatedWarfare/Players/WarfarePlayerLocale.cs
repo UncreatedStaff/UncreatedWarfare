@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Globalization;
 using Uncreated.Warfare.Logging;
@@ -36,7 +36,7 @@ public class WarfarePlayerLocale
             if (!(value.Culture != null && langService.TryGetCultureInfo(value.Culture, out CultureInfo culture)) &&
                 !(info is { DefaultCultureCode: { } defaultCultureName } && langService.TryGetCultureInfo(defaultCultureName, out culture)))
             {
-                culture = Data.LocalLocale;
+                culture = langService.GetDefaultCulture();
             }
 
             if (_init && (CultureInfo == null || !CultureInfo.Name.Equals(culture.Name, StringComparison.Ordinal)))
@@ -46,7 +46,7 @@ public class WarfarePlayerLocale
             }
 
             CultureInfo = culture;
-            ParseFormat = value.UseCultureForCommandInput ? culture.NumberFormat : Data.LocalLocale.NumberFormat;
+            ParseFormat = value.UseCultureForCommandInput ? culture.NumberFormat : langService.GetDefaultCulture().NumberFormat;
 
             if (_init && LanguageInfo != info)
             {
@@ -56,7 +56,7 @@ public class WarfarePlayerLocale
 
             LanguageInfo = info;
 
-            IsDefaultCulture = CultureInfo.Name.Equals(Data.LocalLocale.Name, StringComparison.Ordinal);
+            IsDefaultCulture = CultureInfo.Name.Equals(langService.GetDefaultCulture().Name, StringComparison.Ordinal);
 
             _preferences = value;
 
@@ -85,6 +85,7 @@ public class WarfarePlayerLocale
     internal Task Update(string? language, CultureInfo? culture, bool holdSave = false, CancellationToken token = default)
     {
         ILogger<WarfarePlayerLocale> logger = _serviceProvider.GetRequiredService<ILogger<WarfarePlayerLocale>>();
+        LanguageService languageService = _serviceProvider.GetRequiredService<LanguageService>();
         bool save = false;
         if (culture != null && !culture.Name.Equals(CultureInfo.Name, StringComparison.Ordinal))
         {
@@ -92,8 +93,8 @@ public class WarfarePlayerLocale
             ActionLog.Add(ActionLogType.ChangeCulture, CultureInfo.Name + " >> " + culture.Name, Player.Steam64.m_SteamID);
             CultureInfo = culture;
             Preferences.Culture = culture.Name;
-            IsDefaultCulture = culture.Name.Equals(Data.LocalLocale.Name, StringComparison.Ordinal);
-            ParseFormat = Preferences.UseCultureForCommandInput ? culture.NumberFormat : Data.LocalLocale.NumberFormat;
+            IsDefaultCulture = culture.Name.Equals(languageService.GetDefaultCulture().Name, StringComparison.Ordinal);
+            ParseFormat = Preferences.UseCultureForCommandInput ? culture.NumberFormat : languageService.GetDefaultCulture().NumberFormat;
             save = true;
         }
 
@@ -104,7 +105,7 @@ public class WarfarePlayerLocale
             ActionLog.Add(ActionLogType.ChangeLanguage, LanguageInfo.Code + " >> " + languageInfo.Code, Player.Steam64.m_SteamID);
             Preferences.Language = languageInfo;
             Preferences.LanguageId = languageInfo.Key;
-            IsDefaultLanguage = languageInfo.Equals(_serviceProvider.GetRequiredService<LanguageService>().GetDefaultLanguage());
+            IsDefaultLanguage = languageInfo.Equals(languageService.GetDefaultLanguage());
             LanguageInfo = languageInfo;
             save = true;
         }

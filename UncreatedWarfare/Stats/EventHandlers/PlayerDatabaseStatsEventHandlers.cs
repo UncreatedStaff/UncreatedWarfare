@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Buildables;
@@ -8,12 +9,12 @@ using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Fobs;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.FOBs;
-using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Models.Stats;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Stats.EventHandlers;
 internal sealed class PlayerDatabaseStatsEventHandlers :
@@ -26,14 +27,12 @@ internal sealed class PlayerDatabaseStatsEventHandlers :
     private readonly DatabaseStatsBuffer _buffer;
     private readonly DeathTracker _deathTracker;
     private readonly IPlayerService _playerService;
-    private readonly WarfareModule _module;
 
-    public PlayerDatabaseStatsEventHandlers(DatabaseStatsBuffer buffer, DeathTracker deathTracker, IPlayerService playerService, WarfareModule module)
+    public PlayerDatabaseStatsEventHandlers(DatabaseStatsBuffer buffer, DeathTracker deathTracker, IPlayerService playerService)
     {
         _buffer = buffer;
         _deathTracker = deathTracker;
         _playerService = playerService;
-        _module = module;
     }
 
     [EventListener(MustRunInstantly = true, RequireActiveLayout = true)]
@@ -53,7 +52,7 @@ internal sealed class PlayerDatabaseStatsEventHandlers :
             Position = e.Player.Position,
             InstigatorSessionId = e.Medic.CurrentSession.SessionId,
             SessionId = e.Player.CurrentSession.SessionId,
-            NearestLocation = F.GetClosestLocationName(e.Player.Position),
+            NearestLocation = serviceProvider.GetRequiredService<ZoneStore>().GetClosestLocationName(e.Player.Position),
             Timestamp = DateTimeOffset.UtcNow
         };
 
@@ -114,7 +113,7 @@ internal sealed class PlayerDatabaseStatsEventHandlers :
             IsSuicide = isSuicide,
             IsTeamkill = isTeamkill,
             Limb = args.Limb,
-            NearestLocation = F.GetClosestLocationName(args.Point),
+            NearestLocation = serviceProvider.GetRequiredService<ZoneStore>().GetClosestLocationName(args.Point),
             IsInjured = injured && !e.IsInjure,
             Team = (byte)args.DeadTeam.Id,
             Timestamp = DateTimeOffset.UtcNow,
@@ -166,7 +165,7 @@ internal sealed class PlayerDatabaseStatsEventHandlers :
             IsSuicide = args.WasSuicide,
             IsTeamkill = args.WasTeamkill,
             IsBleedout = e.WasBleedout,
-            NearestLocation = F.GetClosestLocationName(args.Point),
+            NearestLocation = serviceProvider.GetRequiredService<ZoneStore>().GetClosestLocationName(args.Point),
             Team = (byte)args.DeadTeam.Id,
             Timestamp = DateTimeOffset.UtcNow,
             TimeDeployedSeconds = args.TimeDeployed,
@@ -219,7 +218,7 @@ internal sealed class PlayerDatabaseStatsEventHandlers :
             FobAngle = normalFob.Buildable.Rotation.eulerAngles,
             Timestamp = DateTimeOffset.UtcNow,
             Team = (byte)normalFob.Team.Id,
-            NearestLocation = F.GetClosestLocationName(normalFob.Position),
+            NearestLocation = serviceProvider.GetRequiredService<ZoneStore>().GetClosestLocationName(normalFob.Position),
 
             Items = new List<FobItemRecord>()
         };

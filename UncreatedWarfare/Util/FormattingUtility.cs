@@ -1,12 +1,10 @@
 using DanielWillett.ReflectionTools;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
-using Uncreated.Warfare.Logging;
 
 namespace Uncreated.Warfare.Util;
 public static class FormattingUtility
@@ -14,86 +12,6 @@ public static class FormattingUtility
     internal static char[][]? AllRichTextTags;
     internal static RemoveRichTextOptions[]? AllRichTextTagFlags;
     public static Regex TimeRegex { get; } = new Regex(@"([\d\.]+)\s{0,1}([a-z]+)", RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-
-    /// <summary>
-    /// Truncates a string if it's over a certain <paramref name="length"/>.
-    /// </summary>
-    [return: NotNullIfNotNull(nameof(str))]
-    public static string? Truncate(this string? str, int length)
-    {
-        if (str is null)
-            return null;
-
-        return str.Length <= length ? str : str[..length];
-    }
-
-    /// <summary>
-    /// Truncates a string if it's over a certain <paramref name="length"/>.
-    /// </summary>
-    [return: NotNullIfNotNull(nameof(str))]
-    public static string? TruncateWithEllipses(this string? str, int length)
-    {
-        if (str is null || str.Length <= length)
-            return str;
-
-        return string.Create(length + 3, str, (span, state) =>
-        {
-            state.AsSpan(0, span.Length - 3).CopyTo(span);
-            span.Slice(span.Length - 3, 3).Fill('.');
-        });
-    }
-
-    /// <summary>
-    /// Compare two strings without worrying non-alphanumeric characters.
-    /// </summary>
-    /// <returns>The number of matching characters in <paramref name="searching"/> found in <paramref name="actual"/>.</returns>
-    public static int CompareStringsFuzzy(ReadOnlySpan<char> searching, ReadOnlySpan<char> actual, bool caseSensitive)
-    {
-        int searchIndex = 0, actualIndex = 0;
-        CultureInfo invariant = CultureInfo.InvariantCulture;
-        int charsMatched = 0;
-        while (searchIndex < searching.Length && actualIndex < actual.Length)
-        {
-            char actualChar = actual[actualIndex];
-            if (ExcludeChar(actualChar))
-            {
-                ++actualIndex;
-                continue;
-            }
-
-            char searchingChar = searching[searchIndex];
-            if (ExcludeChar(searchingChar))
-            {
-                ++searchIndex;
-                continue;
-            }
-
-            int cmp = caseSensitive
-                ? actualChar.CompareTo(searchingChar)
-                : char.ToUpper(actualChar, invariant).CompareTo(char.ToUpper(searchingChar, invariant));
-
-            if (cmp != 0)
-            {
-                ++actualIndex;
-                continue;
-            }
-
-            ++charsMatched;
-            ++searchIndex;
-            ++actualIndex;
-        }
-
-        return charsMatched;
-    }
-
-    private static bool ExcludeChar(char c)
-    {
-        unchecked
-        {
-            // is a-z or A-Z or 0-9
-            return !(c - (uint)'a' <= 'z' - (uint)'a' || c - (uint)'A' <= 'Z' - (uint)'A' || c - (uint)'0' <= '9' - (uint)'0');
-        }
-    }
 
     /// <summary>
     /// Format a minute/second timer.
@@ -170,38 +88,6 @@ public static class FormattingUtility
         public int Minutes;
         public int Hours;
     }
-
-    /// <summary>
-    /// Truncates <paramref name="text"/> so that it's UTF-8 byte count is less than or equal to <paramref name="maximumBytes"/>.
-    /// </summary>
-    /// <param name="byteLength">The length in UTF-8 bytes of the truncated text.</param>
-    public static ReadOnlySpan<char> TruncateUtf8Bytes(ReadOnlySpan<char> text, int maximumBytes, out int byteLength)
-    {
-        if (maximumBytes < 0)
-        {
-            byteLength = Encoding.UTF8.GetByteCount(text);
-            return text;
-        }
-
-        if (maximumBytes == 0)
-        {
-            byteLength = 0;
-            return default;
-        }
-
-        int byteCt = Encoding.UTF8.GetByteCount(text);
-        if (byteCt <= maximumBytes)
-        {
-            byteLength = byteCt;
-            return text;
-        }
-
-        Encoder encoder = Encoding.UTF8.GetEncoder();
-        byte[] buffer = new byte[maximumBytes];
-        encoder.Convert(text, buffer, false, out int charsUsed, out byteLength, out _);
-        return text.Slice(0, charsUsed);
-    }
-
 
     /// <summary>
     /// Parses a timespan string in the form '3d 4hr 21min etc'. Can also be 'perm[anent]'.
@@ -379,7 +265,7 @@ public static class FormattingUtility
 
                 if (ushort.TryParse(input, NumberStyles.Any, provider, out ushort id))
                 {
-                    value = Assets.find(UCAssetManager.GetAssetCategory(type), id);
+                    value = Assets.find(AssetUtility.GetAssetCategory(type), id);
                     if (!type.IsInstanceOfType(value))
                         value = null!;
                     return value is not null;
