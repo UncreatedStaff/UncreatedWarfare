@@ -30,7 +30,7 @@ public class PlayerModerationCacheComponent : IPlayerComponent
             {
                 await RefreshActiveMute();
             }
-            catch (OperationCanceledException) { throw; }
+            catch (OperationCanceledException)  { throw; }
             catch (Exception ex)
             {
                 serviceProvider.GetRequiredService<ILogger<PlayerModerationCacheComponent>>().LogError(ex, "Error fetching mute info.");

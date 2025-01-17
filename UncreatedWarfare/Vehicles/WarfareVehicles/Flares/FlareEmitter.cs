@@ -32,7 +32,7 @@ public class FlareEmitter : MonoBehaviour
 
     public FlareEmitter Init(WarfareVehicle vehicle, AssetConfiguration assetConfiguration)
     {
-        Vehicle = vehicle;
+        Vehicle = vehicle;                                           // todo
         _flareAsset = assetConfiguration.GetAssetLink<VehicleAsset>("llalllalalalala").GetAssetOrFail();
         _dropFlaresSound = assetConfiguration.GetAssetLink<EffectAsset>("llalllalalalala").GetAssetOrFail();
         ReloadCountermeasures();

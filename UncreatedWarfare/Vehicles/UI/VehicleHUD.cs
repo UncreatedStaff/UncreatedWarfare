@@ -1,4 +1,3 @@
-﻿using System.Collections.Generic;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Reflection;
 using Uncreated.Warfare.Configuration;
@@ -31,6 +30,7 @@ public class VehicleHUD : UnturnedUI
         if (displayFlareCount)
             FlareCount.SetText(player.Connection, "FLARES: " + vehicle.FlareEmitter?.TotalFlaresLeft);
     }
+
     public void UpdateFlaresForRelevantPassengers(WarfareVehicle vehicle)
     {
         for (int i = 0; i < vehicle.Vehicle.passengers.Length; i++)
@@ -45,6 +45,7 @@ public class VehicleHUD : UnturnedUI
             FlareCount.SetText(passenger.player.transportConnection, "FLARES: " + vehicle.FlareEmitter?.TotalFlaresLeft);
         }
     }
+
     public void HideForPlayer(WarfarePlayer player)
     {
         ClearFromPlayer(player.Connection);

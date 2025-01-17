@@ -170,12 +170,12 @@ public static class StringUtility
 
     private static bool IsIgnored(char c, LevenshteinOptions options)
     {
-        if ((options & LevenshteinOptions.IgnoreWhitespace) != 0)
+        if ((options & LevenshteinOptions.IgnoreWhitespace) == LevenshteinOptions.IgnoreWhitespace)
         {
             if (char.IsWhiteSpace(c))
                 return true;
         }
-        if ((options & LevenshteinOptions.IgnorePunctuation) != 0)
+        if ((options & LevenshteinOptions.IgnorePunctuation) == LevenshteinOptions.IgnorePunctuation)
         {
             if (char.IsPunctuation(c))
                 return true;

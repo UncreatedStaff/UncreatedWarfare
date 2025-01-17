@@ -14,6 +14,7 @@ using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.PendingTasks;
 using Uncreated.Warfare.Players.Saves;
 using Uncreated.Warfare.Translations.Languages;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Events.Patches;
 
@@ -190,6 +191,13 @@ internal sealed class ProviderPlayerJoiningEvents : IHarmonyPatch
                 logger.LogInformation("Player {0} rejected by task {1}.", args.Steam64, taskData.PendingTasks[i].GetType());
                 isCancelled = true;
             }
+        }
+        catch (OperationCanceledException ex)
+        {
+            if (string.IsNullOrEmpty(args.RejectReason))
+                args.RejectReason = "Connection cancelled by player task.";
+            isCancelled = true;
+            logger.LogWarning(ex, "Cancellation executing player tasks for player {0}.", args.Steam64);
         }
         catch (Exception ex)
         {

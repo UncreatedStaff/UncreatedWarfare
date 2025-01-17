@@ -1,10 +1,12 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
 using HarmonyLib;
+using System;
 using System.Reflection;
-using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Vehicles;
+using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.Patches;
 
@@ -47,10 +49,9 @@ internal sealed class VehicleExplodeAddInstigatorPatch : IHarmonyPatch
     /// </summary>
     private static bool Prefix(InteractableVehicle __instance)
     {
-        if (!__instance.TryGetComponent(out VehicleComponent vehicleData))
-            return true;
-        
-        EDamageOrigin lastDamageType = vehicleData.LastDamageOrigin;
+        WarfareVehicle vehicle = WarfareModule.Singleton.ServiceProvider.Resolve<VehicleService>().GetVehicle(__instance);
+
+        EDamageOrigin lastDamageType = vehicle.DamageTracker.LatestDamageCause.GetValueOrDefault(EDamageOrigin.Unknown);
         if (lastDamageType == EDamageOrigin.Unknown)
             return true;
 
@@ -60,7 +61,7 @@ internal sealed class VehicleExplodeAddInstigatorPatch : IHarmonyPatch
             // no one at fault
             default:
             case EDamageOrigin.VehicleDecay:
-                instigator2 = CSteamID.Nil;
+                instigator2 = default;
                 break;
 
             // blame driver
@@ -79,13 +80,13 @@ internal sealed class VehicleExplodeAddInstigatorPatch : IHarmonyPatch
                     if (__instance.passengers[0].player != null)
                     {
                         instigator2 = __instance.passengers[0].player.playerID.steamID;
-                        vehicleData.LastInstigator = instigator2.m_SteamID;
+                        vehicle.DamageTracker.RecordDamage(instigator2, vehicle.Vehicle.health, lastDamageType);
                     }
                     // no current driver, check if the last driver exited the vehicle within the last 30 seconds
-                    else if (vehicleData.LastDriver != 0 && Time.realtimeSinceStartup - vehicleData.LastDriverTime <= 30f)
+                    else if (vehicle.TranportTracker.LastKnownDriver.HasValue && (DateTime.UtcNow - vehicle.TranportTracker.LastKnownDriverExitTime.GetValueOrDefault()).TotalSeconds <= 30f)
                     {
-                        instigator2 = new CSteamID(vehicleData.LastDriver);
-                        vehicleData.LastInstigator = instigator2.m_SteamID;
+                        instigator2 = vehicle.TranportTracker.LastKnownDriver.Value;
+                        vehicle.DamageTracker.RecordDamage(vehicle.TranportTracker.LastKnownDriver.Value, vehicle.Vehicle.health, lastDamageType);
                     }
                     else instigator2 = CSteamID.Nil;
                 }
@@ -104,7 +105,7 @@ internal sealed class VehicleExplodeAddInstigatorPatch : IHarmonyPatch
             case EDamageOrigin.Bullet_Explosion:
             case EDamageOrigin.Food_Explosion:
             case EDamageOrigin.Trap_Explosion:
-                instigator2 = new CSteamID(vehicleData.LastInstigator);
+                instigator2 = vehicle.DamageTracker.LastKnownDamageInstigator.GetValueOrDefault();
                 break;
         }
 
@@ -115,7 +116,7 @@ internal sealed class VehicleExplodeAddInstigatorPatch : IHarmonyPatch
             if (player != null)
             {
                 data = PlayerDeathTrackingComponent.GetOrAdd(player);
-                data.LastVehicleExploded = vehicleData;
+                data.LastVehicleExploded = vehicle;
             }
         }
 

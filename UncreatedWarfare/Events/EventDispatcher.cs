@@ -21,6 +21,7 @@ using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.List;
+using Uncreated.Warfare.Vehicles;
 using Service = Autofac.Core.Service;
 
 namespace Uncreated.Warfare.Events;
@@ -42,6 +43,7 @@ public partial class EventDispatcher : IHostedService, IDisposable
     private readonly IPlayerService _playerService;
     private readonly CancellationToken _unloadToken;
     private readonly ILogger<EventDispatcher> _logger;
+    private readonly VehicleService _vehicleService;
     private IServiceProvider? _scopedServiceProvider;
     private readonly ILoggerFactory _loggerFactory;
     private WarfareTimeComponent _timeComponent;
@@ -68,6 +70,8 @@ public partial class EventDispatcher : IHostedService, IDisposable
         _loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
 
         _playerService = serviceProvider.GetRequiredService<IPlayerService>();
+
+        _vehicleService = serviceProvider.GetRequiredService<VehicleService>();
 
         _timeComponent = serviceProvider.GetRequiredService<WarfareTimeComponent>();
 

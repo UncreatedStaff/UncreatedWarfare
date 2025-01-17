@@ -1,4 +1,5 @@
-﻿using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Addons;
 using Uncreated.Warfare.Zones;
 

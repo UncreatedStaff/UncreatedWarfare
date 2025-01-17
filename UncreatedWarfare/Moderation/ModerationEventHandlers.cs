@@ -247,8 +247,10 @@ internal sealed class ModerationEventHandlers : IHostedService, IAsyncEventListe
 
         if (!e.PendingPlayer.transportConnection.TryGetIPv4Address(out uint ip))
         {
+#if RELEASE
             if (!Provider.configData.Server.Use_FakeIP)
                 e.Reject("Unable to get IPv4 address. This may be caused by connecting in an unusual way like a connection code.");
+#endif
         }
 
         StringBuilder? queryBuilder = new StringBuilder();

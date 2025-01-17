@@ -1,4 +1,4 @@
-﻿using Uncreated.Warfare.Interaction.Commands;
+using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 

@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Events.Models;
@@ -7,6 +7,7 @@ using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Kits.Items;
 

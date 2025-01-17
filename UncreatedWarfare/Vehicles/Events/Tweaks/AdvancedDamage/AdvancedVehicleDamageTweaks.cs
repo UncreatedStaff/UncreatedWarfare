@@ -50,7 +50,7 @@ public class AdvancedVehicleDamageTweaks :
     {
         float finalMultiplier = 1;
         
-        ItemAsset? latestInstigatorWeapon = e.Vehicle.DamageTracker.LatestInstigatorWeapon;
+        Asset? latestInstigatorWeapon = e.Vehicle.DamageTracker.LatestInstigatorWeapon;
         
         AdvancedVehicleDamageApplier.AdvancedDamagePending? directHit = e.Vehicle.AdvancedDamageApplier.ApplyLatestPendingDirectHit();
         

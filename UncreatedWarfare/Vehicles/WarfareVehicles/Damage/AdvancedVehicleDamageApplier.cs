@@ -54,7 +54,7 @@ public class AdvancedVehicleDamageApplier
         if (!colliderTransform.name.StartsWith("damage_"))
             return 1;
 
-        if (!float.TryParse(colliderTransform.name[7..], NumberStyles.Any,
+        if (!float.TryParse(colliderTransform.name.AsSpan(7), NumberStyles.Any,
                 CultureInfo.InvariantCulture, out float multiplier))
             return 1;
 

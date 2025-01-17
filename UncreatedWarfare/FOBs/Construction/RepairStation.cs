@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Components;
@@ -9,6 +9,7 @@ using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Timing;
+using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.FOBs.Construction;
 public class RepairStation : IBuildableFobEntity
@@ -90,9 +91,9 @@ public class RepairStation : IBuildableFobEntity
         if (vehicle.health + amount >= vehicle.asset.health)
         {
             newHealth = vehicle.asset.health;
-            if (vehicle.transform.TryGetComponent(out VehicleComponent c))
+            if (vehicle.transform.TryGetComponent(out WarfareVehicleComponent c))
             {
-                c.DamageTable.Clear();
+                c.WarfareVehicle.DamageTracker.ClearDamage();
             }
         }
 

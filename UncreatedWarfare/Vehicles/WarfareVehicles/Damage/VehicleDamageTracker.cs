@@ -1,12 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Util.DamageTracking;
 
 namespace Uncreated.Warfare.Vehicles.WarfareVehicles.Damage;
 public class VehicleDamageTracker : DamageTracker
 {
+    /// <summary>
+    /// Used to track who most recently locked the player for the <see cref="VehicleManager.OnToggledVehicleLock"/> event.
+    /// </summary>
+    public WarfarePlayer? LastLockingPlayer { get; set; }
+
     public WarfareVehicle? LatestDamageInstigatorVehicle { get; private set; }
     public void RecordDamage(WarfarePlayer onlineEnemyGunner, WarfareVehicle instigatorVehicle, ushort damage, EDamageOrigin cause)
     {

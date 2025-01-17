@@ -1,15 +1,10 @@
 using System;
-using System.Globalization;
 
-namespace Uncreated.Warfare;
+namespace Uncreated.Warfare.Util;
 
-public static class F
+public static class CancellationTokenExtensions
 {
-
-    public static bool RoughlyEquals(string? a, string? b) => string.Compare(a, b, CultureInfo.InvariantCulture,
-        CompareOptions.IgnoreCase | CompareOptions.IgnoreKanaType | CompareOptions.IgnoreNonSpace | CompareOptions.IgnoreSymbols) == 0;
-
-    
+    [MustUseReturnValue("CombinedTokenSources must be disposed.")]
     public static CombinedTokenSources CombineTokensIfNeeded(this ref CancellationToken token, CancellationToken other)
     {
         if (token.CanBeCanceled)
@@ -27,12 +22,20 @@ public static class F
 
         if (!other.CanBeCanceled)
             return default;
-        
+
         token = other;
         return new CombinedTokenSources(other, null);
-    } 
+    }
+
+    [MustUseReturnValue("CombinedTokenSources must be disposed.")]
     public static CombinedTokenSources CombineTokensIfNeeded(this ref CancellationToken token, CancellationToken other1, CancellationToken other2)
     {
+        if (other1 == other2 || token == other2)
+            return token.CombineTokensIfNeeded(other1);
+
+        if (other1 == token)
+            return token.CombineTokensIfNeeded(other2);
+
         CancellationTokenSource src;
         if (token.CanBeCanceled)
         {
@@ -52,12 +55,12 @@ public static class F
 
             if (!other2.CanBeCanceled)
                 return new CombinedTokenSources(token, null);
-            
+
             src = CancellationTokenSource.CreateLinkedTokenSource(token, other2);
             token = src.Token;
             return new CombinedTokenSources(token, src);
         }
-        
+
         if (other1.CanBeCanceled)
         {
             if (other2.CanBeCanceled)

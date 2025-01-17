@@ -1,4 +1,4 @@
-﻿using DanielWillett.ReflectionTools.Formatting;
+using DanielWillett.ReflectionTools.Formatting;
 using DanielWillett.ReflectionTools;
 using System;
 using System.Collections.Generic;
@@ -101,28 +101,32 @@ public class VehicleOnPreDamage : IHarmonyPatch
         if (onlineInstigator != null && onlineInstigator.UnturnedPlayer.movement.getVehicle() != null)
             instigatorVehicle = onlineInstigator.UnturnedPlayer.movement.getVehicle().transform.GetComponent<WarfareVehicleComponent>().WarfareVehicle;
 
-        if (onlineInstigator != null)
+        // landmines get special treatment in VehicleDamageTrackerItemTweak
+        if (damageOrigin != EDamageOrigin.Trap_Explosion)
         {
-            if (instigatorVehicle != null)
-                warfareVehicle.DamageTracker.RecordDamage(onlineInstigator, instigatorVehicle, pendingDamage, damageOrigin);
+            if (onlineInstigator != null)
+            {
+                if (instigatorVehicle != null)
+                    warfareVehicle.DamageTracker.RecordDamage(onlineInstigator, instigatorVehicle, pendingDamage, damageOrigin);
+                else
+                    warfareVehicle.DamageTracker.RecordDamage(onlineInstigator, pendingDamage, damageOrigin);
+            }
+            else if (instigatorId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
+                warfareVehicle.DamageTracker.RecordDamage(instigatorId, pendingDamage, damageOrigin);
             else
-                warfareVehicle.DamageTracker.RecordDamage(onlineInstigator, pendingDamage, damageOrigin);
+                warfareVehicle.DamageTracker.RecordDamage(damageOrigin);
         }
-        else if (instigatorId != default)
-            warfareVehicle.DamageTracker.RecordDamage(instigatorId, pendingDamage, damageOrigin);
-        else
-            warfareVehicle.DamageTracker.RecordDamage(damageOrigin);
 
         VehiclePreDamaged args = new VehiclePreDamaged
         {
             Vehicle = warfareVehicle,
             PendingDamage = pendingDamage,
             CanRepair = canRepair,
-            InstantaneousInstigator = instigatorId != default ? instigatorId : null,
+            InstantaneousInstigator = instigatorId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual ? instigatorId : null,
             LastKnownInstigator = warfareVehicle.DamageTracker.LastKnownDamageInstigator,
             InstantaneousDamageOrigin = damageOrigin
         };
 
-        _ = WarfareModule.EventDispatcher.DispatchEventAsync(args);
+        _ = WarfareModule.EventDispatcher.DispatchEventAsync(args, allowAsync: false);
     }
 }

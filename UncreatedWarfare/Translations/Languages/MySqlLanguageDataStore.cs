@@ -64,16 +64,16 @@ public class MySqlLanguageDataStore : ICachableLanguageDataStore
             if (_langs == null)
                 return null;
 
-            LanguageInfo lang = _langs.Find(x => F.RoughlyEquals(x.Code, name));
+            LanguageInfo lang = _langs.Find(x => x.Code.Equals(name, StringComparison.InvariantCultureIgnoreCase));
             if (lang != null || exactOnly)
                 return lang;
 
-            lang = _langs.Find(x => F.RoughlyEquals(x.DisplayName, name));
+            lang = _langs.Find(x => x.DisplayName.Equals(name, StringComparison.InvariantCultureIgnoreCase));
             if (lang != null)
                 return lang;
 
             string[] words = name.Split(SpaceSplit);
-            lang = _langs.Find(x => words.All(l => x.Aliases.Any(x => F.RoughlyEquals(l, x.Alias))));
+            lang = _langs.Find(x => words.All(l => x.Aliases.Any(x => x.Alias.Equals(l, StringComparison.InvariantCultureIgnoreCase))));
             if (lang != null)
                 return lang;
 

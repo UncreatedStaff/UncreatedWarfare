@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
-using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Translations;
@@ -13,7 +12,7 @@ using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Translations.ValueFormatters;
 using Uncreated.Warfare.Util;
 
-namespace Uncreated.Warfare;
+namespace Uncreated.Warfare.Players;
 
 public class CooldownManager : IHostedService, ILayoutHostedService
 {
@@ -208,7 +207,7 @@ public class Cooldown(CSteamID player, CooldownType cooldownType, float duration
     }
 
     /// <summary>Translated <see cref="ECooldownType"/>.</summary>
-    public static readonly SpecialFormat FormatName = new SpecialFormat("Type (" + nameof(Warfare.CooldownType) + ")", "n");
+    public static readonly SpecialFormat FormatName = new SpecialFormat("Type (" + nameof(Players.CooldownType) + ")", "n");
 
     /// <summary>3 hours and 4 minutes</summary>
     public static readonly SpecialFormat FormatTimeLong = new SpecialFormat("Long Time", "tl1");

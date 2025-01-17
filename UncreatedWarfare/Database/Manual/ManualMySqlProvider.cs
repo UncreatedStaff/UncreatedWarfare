@@ -136,6 +136,7 @@ public class ManualMySqlProvider : IManualMySqlProvider
         {
             await connection.OpenAsync(token);
         }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
         catch (Exception ex)
         {
             if (ex is DbException)
@@ -166,6 +167,7 @@ public class ManualMySqlProvider : IManualMySqlProvider
                 callback?.Invoke(dataReader);
             }
         }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
         catch (Exception ex)
         {
             _logger.LogWarning("Query failed to execute: {0}.", QueryToString(query, parameters, index, length));
@@ -203,6 +205,7 @@ public class ManualMySqlProvider : IManualMySqlProvider
         {
             await connection.OpenAsync(token);
         }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
         catch (Exception ex)
         {
             if (ex is DbException)
@@ -234,6 +237,7 @@ public class ManualMySqlProvider : IManualMySqlProvider
                     break;
             }
         }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
         catch (Exception ex)
         {
             _logger.LogWarning("Query failed to execute: {0}.", QueryToString(query, parameters, index, length));
@@ -263,6 +267,7 @@ public class ManualMySqlProvider : IManualMySqlProvider
         {
             await connection.OpenAsync(token);
         }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
         catch (Exception ex)
         {
             if (ex is DbException)
@@ -284,6 +289,7 @@ public class ManualMySqlProvider : IManualMySqlProvider
         {
             return await command.ExecuteNonQueryAsync(token).ConfigureAwait(false);
         }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
         catch (Exception ex)
         {
             _logger.LogWarning("Command failed to execute: {0}.", QueryToString(query, parameters, index, length));

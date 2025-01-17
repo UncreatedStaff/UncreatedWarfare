@@ -1,6 +1,7 @@
-﻿using Uncreated.Warfare.Interaction.Commands;
+using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Lobby;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Zones;

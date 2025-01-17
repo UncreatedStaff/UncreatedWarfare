@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.FOBs.Deployment;
 public struct DeploySettings
@@ -57,7 +58,7 @@ public struct DeploySettings
     /// <summary>
     /// Optionally change the cooldown type from <see cref="CooldownType.Deploy"/>.
     /// </summary>
-    public CooldownType? CooldownType { get; set; } = Warfare.CooldownType.Deploy;
+    public CooldownType? CooldownType { get; set; } = Players.CooldownType.Deploy;
 
     /// <summary>
     /// If chat interaction with the player should be used for the initial check.
