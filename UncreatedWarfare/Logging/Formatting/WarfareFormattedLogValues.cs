@@ -76,6 +76,12 @@ internal struct WarfareFormattedLogValues
         Message = message;
     }
 
+    public WarfareFormattedLogValues(string message, StringParameterList parameterList)
+    {
+        Parameters = parameterList;
+        Message = message;
+    }
+
     public WarfareFormattedLogValues(string message, object? arg1)
     {
         Parameters = new StringParameterList(arg1);

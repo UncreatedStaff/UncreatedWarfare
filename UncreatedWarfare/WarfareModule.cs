@@ -227,6 +227,16 @@ public sealed class WarfareModule
             ?.GetSetMethod(true)
             ?.Invoke(pluginAdvService, [ "uw" ]);
 
+        // Disables the socket that hosts the Connection Code functionality. It's nice to keep it in DEBUG for testing purposes without port forwarding.
+#if RELEASE
+        if (Type.GetType("SDG.NetTransport.SteamNetworkingSockets.ServerTransport_SteamNetworkingSockets, Assembly-CSharp")
+            ?.GetField("clUseP2pSocket", BindingFlags.NonPublic | BindingFlags.Static)
+            ?.GetValue(null) is CommandLineFlag clUseP2PSocket)
+        {
+            clUseP2PSocket.value = false;
+        }
+#endif
+
         Provider.modeConfigData.Players.Lose_Items_PvP = 0;
         Provider.modeConfigData.Players.Lose_Items_PvE = 0;
         Provider.modeConfigData.Players.Lose_Clothes_PvP = false;
@@ -328,7 +338,7 @@ public sealed class WarfareModule
 
         GlobalLogger = ServiceProvider.Resolve<ILoggerFactory>().CreateLogger("Global");
 
-        _logger.LogInformation("Using {0} services from core and {1} plugin(s).", ServiceProvider.ComponentRegistry.Registrations.Count(), _pluginLoader.Plugins.Count);
+        _logger.LogInformation($"Using {ServiceProvider.ComponentRegistry.Registrations.Count()} services from core and {_pluginLoader.Plugins.Count} plugin(s).");
 
         UniTask.Create(async () =>
         {

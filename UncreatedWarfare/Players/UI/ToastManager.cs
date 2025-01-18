@@ -302,7 +302,8 @@ public sealed class ToastManager : IPlayerComponent, IDisposable
             {
                 switch (info.ClearableSlots)
                 {
-                    case <= 1:
+                    case 0:
+                    case 1:
                         EffectManager.sendUIEffect(id, info.Key, Player.Connection, info.Reliable, message.Argument);
                         break;
 
@@ -352,7 +353,8 @@ public sealed class ToastManager : IPlayerComponent, IDisposable
                     case 1:
                         switch (info.ClearableSlots)
                         {
-                            case <= 1:
+                            case 0:
+                            case 1:
                                 EffectManager.sendUIEffect(id, info.Key, Player.Connection, info.Reliable, message.Arguments[0]);
                                 break;
                             case 2:

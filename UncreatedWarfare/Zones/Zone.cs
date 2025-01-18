@@ -8,7 +8,9 @@ using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.ValueFormatters;
 
 namespace Uncreated.Warfare.Zones;
-public class Zone : IDeployable
+
+[CannotApplyEqualityOperator]
+public class Zone : IDeployable, IEquatable<Zone>
 {
     /// <summary>
     /// Unique name of the zone.
@@ -119,6 +121,26 @@ public class Zone : IDeployable
 
     /// <inheritdoc />
     bool IDeployable.IsSafeZone => true;
+
+    /// <inheritdoc />
+    public bool Equals(Zone other)
+    {
+        return other.Name.Equals(Name, StringComparison.Ordinal);
+    }
+
+    /// <inheritdoc />
+    public override bool Equals(object? obj)
+    {
+        return obj is Zone other && other.Name.Equals(Name, StringComparison.Ordinal);
+    }
+
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        // ReSharper disable NonReadonlyMemberInGetHashCode
+        return Name == null ? 0 : Name.GetHashCode(StringComparison.Ordinal);
+        // ReSharper restore NonReadonlyMemberInGetHashCode
+    }
 
     TimeSpan IDeployable.GetDelay(WarfarePlayer player)
     {

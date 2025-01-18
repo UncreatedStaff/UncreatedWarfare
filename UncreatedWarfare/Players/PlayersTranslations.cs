@@ -105,4 +105,7 @@ public sealed class PlayersTranslations : PropertiesTranslationCollection
 
     [TranslationData("Chat message sent a minute before a player will be kicked for standing still for too long (being AFK).")]
     public readonly Translation<TimeSpan> AfkKickWarning = new Translation<TimeSpan>("<#fa9e9e>You will be kicked in <#fccfcf>{0}</color> for being AFK if you don't move.", arg0Fmt: TimeAddon.Create(TimeSpanFormatType.Long));
+
+    [TranslationData("Sent when a player tries to interact with a powered object or barricade that isn't in the zone rotation.")]
+    public readonly Translation ElectricalGridNotConnected = new Translation("<#fa9e9e>This object is not connected to the electrical grid right now.");
 }
