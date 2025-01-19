@@ -1,4 +1,5 @@
 using DanielWillett.ModularRpcs;
+using DanielWillett.ModularRpcs.Abstractions;
 using DanielWillett.ModularRpcs.Protocol;
 using DanielWillett.ModularRpcs.Routing;
 using DanielWillett.ModularRpcs.Serialization;
@@ -6,6 +7,7 @@ using DanielWillett.ModularRpcs.WebSockets;
 using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.Configuration;
 using System;
+using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Services;
 using UnityEngine.Networking;
 
@@ -18,17 +20,19 @@ public class HomebaseConnector : IHostedService
     private readonly IRpcConnectionLifetime _lifetime;
     private readonly IRpcRouter _router;
     private readonly IRpcSerializer _serializer;
+    private readonly EventDispatcher _eventDispatcher;
     private readonly string? _authKey;
     private readonly Uri? _authEndpoint;
     private readonly Uri? _connectEndpoint;
 
     public bool Enabled { get; }
-    public HomebaseConnector(IConfiguration systemConfig, ILogger<HomebaseConnector> logger, IRpcConnectionLifetime lifetime, IRpcRouter router, IRpcSerializer serializer)
+    public HomebaseConnector(IConfiguration systemConfig, ILogger<HomebaseConnector> logger, IRpcConnectionLifetime lifetime, IRpcRouter router, IRpcSerializer serializer, EventDispatcher eventDispatcher)
     {
         _logger = logger;
         _lifetime = lifetime;
         _router = router;
         _serializer = serializer;
+        _eventDispatcher = eventDispatcher;
 
         IConfigurationSection homebaseSection = systemConfig.GetSection("homebase");
 
@@ -83,9 +87,10 @@ public class HomebaseConnector : IHostedService
         // lower the reconnect delay
         endpoint.DelaySettings = new PlateauingDelay(amplifier: 3.6d, climb: 1.8d, maximum: 60d, start: 10d);
 #endif
+        WebSocketClientsideRemoteRpcConnection connection;
         try
         {
-            WebSocketClientsideRemoteRpcConnection connection = await endpoint.RequestConnectionAsync(_router, _lifetime, _serializer, token).ConfigureAwait(false);
+            connection = await endpoint.RequestConnectionAsync(_router, _lifetime, _serializer, token).ConfigureAwait(false);
             connection.Local.SetLogger(_logger);
             connection.OnReconnect += GetConnectUri;
         }
@@ -95,6 +100,12 @@ public class HomebaseConnector : IHostedService
             return false;
         }
 
+        await _eventDispatcher.DispatchEventAsync(new HomebaseConnected
+        {
+            Connection = connection,
+            ConnectionLifetime = _lifetime
+        }, CancellationToken.None);
+        
         return true;
     }
 
@@ -154,4 +165,10 @@ public class HomebaseConnector : IHostedService
 
         return connectUri;
     }
+}
+
+public class HomebaseConnected
+{
+    public required IRpcConnectionLifetime ConnectionLifetime { get; init; }
+    public required IModularRpcRemoteConnection Connection { get; init; }
 }

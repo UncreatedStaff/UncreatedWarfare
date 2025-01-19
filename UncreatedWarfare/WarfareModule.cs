@@ -430,6 +430,10 @@ public sealed class WarfareModule
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
 
+        bldr.RegisterRpcType<RemotePlayerListService>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
+
         // global zones (not used for layouts)
         bldr.RegisterType<MapZoneProvider>()
             .As<IZoneProvider>();
@@ -910,6 +914,12 @@ public sealed class WarfareModule
         // prevent players from joining after shutdown start
         IPlayerService? playerService = ServiceProvider.ResolveOptional<IPlayerService>();
         playerService?.TakePlayerConnectionLock(token);
+
+        RemotePlayerListService? remoteStateManager = ServiceProvider.ResolveOptional<RemotePlayerListService>();
+        if (remoteStateManager != null)
+        {
+            await remoteStateManager.UpdateReplicatedServerState(ServerStateType.Shutdown, reason);
+        }
 
         // kick all players
         for (int i = Provider.clients.Count - 1; i >= 0; --i)
