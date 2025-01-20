@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using SDG.Framework.Utilities;
 using System;
 using System.Collections.Generic;
@@ -399,7 +399,6 @@ public class LobbyZoneManager : IHostedService, ILevelHostedService, IEventListe
     private void OnObjectExitedLobby(WarfarePlayer player)
     {
         player.Component<PlayerLobbyComponent>().ExitLobby();
-        _logger.LogInformation("Player exited lobby: {0}.", player);
     }
 
     [EventListener(MustRunInstantly = true)]

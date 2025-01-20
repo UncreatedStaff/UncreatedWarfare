@@ -69,7 +69,7 @@ public class WarfarePlayer :
 
     [Obsolete]
     public SemaphoreSlim PurchaseSync { get; }
-    public PlayerSummary SteamSummary { get; internal set; } = null!;
+    public PlayerSummary SteamSummary { get; }
     public SessionRecord CurrentSession { get; internal set; }
     public ref PlayerPoints CachedPoints => ref _cachedPoints;
 
@@ -133,8 +133,9 @@ public class WarfarePlayer :
     /// A <see cref="CancellationToken"/> that cancels after the player leaves.
     /// </summary>
     public CancellationToken DisconnectToken => _disconnectTokenSource.Token;
-    internal WarfarePlayer(PlayerService playerService, Player player, in PlayerService.PlayerTaskData taskData, LanguagePreferences langPrefs, ILogger logger, IPlayerComponent[] components, IServiceProvider serviceProvider)
+    internal WarfarePlayer(PlayerService playerService, Player player, in PlayerService.PlayerTaskData taskData, PlayerPending pendingEvent, ILogger logger, IPlayerComponent[] components, IServiceProvider serviceProvider)
     {
+        SteamSummary = pendingEvent.Summary;
         _disconnectTokenSource = taskData.TokenSource;
         _logger = logger;
         _playerNameHelper = new PlayerNames(player);
@@ -146,8 +147,8 @@ public class WarfarePlayer :
         Save = new BinaryPlayerSave(Steam64, _logger);
         Save.Load();
 
-        langPrefs.Steam64 = _steam64.m_SteamID;
-        Locale = new WarfarePlayerLocale(this, langPrefs, serviceProvider);
+        pendingEvent.LanguagePreferences.Steam64 = _steam64.m_SteamID;
+        Locale = new WarfarePlayerLocale(this, pendingEvent.LanguagePreferences, serviceProvider);
 
         _components = new SingleUseTypeDictionary<IPlayerComponent>(playerService.PlayerComponents, components);
         Components = new ReadOnlyCollection<IPlayerComponent>(_components.Values);

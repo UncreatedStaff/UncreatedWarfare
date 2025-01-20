@@ -551,6 +551,10 @@ public sealed class WarfareModule
             .AsImplementedInterfaces().AsSelf()
             .SingleInstance();
 
+        bldr.RegisterRpcType<TimeZoneRegionalDatabase>()
+            .AsImplementedInterfaces().AsSelf()
+            .SingleInstance();
+
         bldr.RegisterType<QuestService>()
             .AsImplementedInterfaces().AsSelf()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);

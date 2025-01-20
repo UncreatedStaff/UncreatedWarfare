@@ -1,6 +1,6 @@
+using DanielWillett.ReflectionTools;
 using System;
 using System.Collections.Generic;
-using DanielWillett.ReflectionTools;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Containers;
 
@@ -39,7 +39,7 @@ public class BuildableContainer : MonoBehaviour, IComponentContainer<IBuildableC
         {
             if (_components.Exists(c => c.GetType() == newComponent.GetType()))
             {
-                throw new InvalidOperationException($"Container already has a component of type {typeof(T)}. Multiple instances of the same component type are not supported.");
+                throw new InvalidOperationException($"Container already has a component of type {Accessor.ExceptionFormatter.Format(newComponent.GetType())}. Multiple instances of the same component type are not supported.");
             }
 
             _components.Add(newComponent);
@@ -47,7 +47,7 @@ public class BuildableContainer : MonoBehaviour, IComponentContainer<IBuildableC
     }
     public T Component<T>() where T : class, IBuildableComponent
     {
-        return ComponentOrNull<T>() ?? throw new ArgumentException($"Component of type {typeof(T)} not found.");
+        return ComponentOrNull<T>() ?? throw new ArgumentException($"Component of type {Accessor.ExceptionFormatter.Format(typeof(T))} not found.");
     }
 
     public T? ComponentOrNull<T>() where T : class, IBuildableComponent

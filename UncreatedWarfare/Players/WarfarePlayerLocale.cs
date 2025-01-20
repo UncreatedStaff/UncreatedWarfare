@@ -21,42 +21,49 @@ public class WarfarePlayerLocale
     public CultureInfo CultureInfo { get; private set; }
     internal bool PreferencesIsDirty { get; set; }
     public NumberFormatInfo ParseFormat { get; set; }
+    public TimeZoneInfo TimeZone { get; set; }
     public LanguagePreferences Preferences
     {
         get => _preferences;
         set
         {
             LanguageService langService = _serviceProvider.GetRequiredService<LanguageService>();
-            LanguageInfo info = value.Language ?? langService.GetDefaultLanguage();
             ILogger<WarfarePlayerLocale> logger = _serviceProvider.GetRequiredService<ILogger<WarfarePlayerLocale>>();
             bool updated = false;
 
-            IsDefaultLanguage = info.Equals(langService.GetDefaultLanguage());
+            langService.GetDefaultLocaleSettings(Player.SteamPlayer.language, value, Player.SteamSummary,
+                out LanguageInfo language,
+                out CultureInfo culture,
+                out TimeZoneInfo timeZone);
 
-            if (!(value.Culture != null && langService.TryGetCultureInfo(value.Culture, out CultureInfo culture)) &&
-                !(info is { DefaultCultureCode: { } defaultCultureName } && langService.TryGetCultureInfo(defaultCultureName, out culture)))
+            if (_init)
             {
-                culture = langService.GetDefaultCulture();
+                if (LanguageInfo == null || language != LanguageInfo)
+                {
+                    logger.LogInformation("Updated language for {0}: {1} -> {2}.", Player, LanguageInfo?.DisplayName ?? "null", language.DisplayName);
+                    updated = true;
+                }
+
+                if (CultureInfo == null || !culture.Name.Equals(CultureInfo.Name))
+                {
+                    logger.LogInformation("Updated culture for {0}: {1} -> {2}.", Player, CultureInfo?.DisplayName ?? "null", culture.DisplayName);
+                    updated = true;
+                }
+
+                if (TimeZone == null || !timeZone.Equals(TimeZone))
+                {
+                    logger.LogInformation("Updated time zone for {0}: {1} -> {2}.", Player, TimeZone?.Id ?? "null", timeZone.Id);
+                    updated = true;
+                }
             }
 
-            if (_init && (CultureInfo == null || !CultureInfo.Name.Equals(culture.Name, StringComparison.Ordinal)))
-            {
-                logger.LogInformation("Updated culture for {0}: {1} -> {2}.", Player, CultureInfo?.DisplayName ?? "null", culture.DisplayName);
-                updated = true;
-            }
-
+            IsDefaultLanguage = language.Equals(langService.GetDefaultLanguage());
+            IsDefaultCulture = culture.Name.Equals(langService.GetDefaultCulture().Name, StringComparison.Ordinal);
+            IsUtcTime = timeZone.Equals(TimeZoneInfo.Utc);
+            LanguageInfo = language;
+            TimeZone = timeZone;
             CultureInfo = culture;
             ParseFormat = value.UseCultureForCommandInput ? culture.NumberFormat : langService.GetDefaultCulture().NumberFormat;
-
-            if (_init && LanguageInfo != info)
-            {
-                logger.LogInformation("Updated language for {0}: {1} -> {2}.", Player, LanguageInfo?.DisplayName ?? "null", info.DisplayName);
-                updated = true;
-            }
-
-            LanguageInfo = info;
-
-            IsDefaultCulture = CultureInfo.Name.Equals(langService.GetDefaultCulture().Name, StringComparison.Ordinal);
 
             _preferences = value;
 
@@ -68,6 +75,7 @@ public class WarfarePlayerLocale
     public LanguageInfo LanguageInfo { get; private set; }
     public bool IsDefaultLanguage { get; private set; }
     public bool IsDefaultCulture { get; private set; }
+    public bool IsUtcTime { get; private set; }
     public WarfarePlayerLocale(WarfarePlayer player, LanguagePreferences preferences, IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;

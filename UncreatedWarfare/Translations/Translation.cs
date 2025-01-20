@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using Uncreated.Warfare.Models.Localization;
@@ -201,7 +201,7 @@ public class Translation : IDisposable
     /// Translate using an object[] instead of type-safe generics.
     /// </summary>
     /// <exception cref="ArgumentException">One of the values wasn't the right type.</exception>
-    public string TranslateUnsafe(in TranslationArguments arguments, object?[] formatting)
+    public string UnsafeTranslate(in TranslationArguments arguments, object?[] formatting)
     {
         Type[] genericArguments = GetType().GetGenericArguments();
         if (genericArguments.Length == 0)

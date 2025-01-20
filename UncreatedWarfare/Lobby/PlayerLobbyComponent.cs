@@ -185,7 +185,10 @@ public class PlayerLobbyComponent : IPlayerComponent
         if (_lookingTeam == -1)
         {
             if (send)
+            {
                 _ui.SendToPlayer(connection, string.Empty, layoutName, string.Empty);
+                _hasUi = true;
+            }
             else
             {
                 _ui.FactionName.SetText(connection, string.Empty);

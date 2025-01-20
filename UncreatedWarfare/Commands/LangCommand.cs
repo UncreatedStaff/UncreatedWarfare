@@ -52,11 +52,6 @@ internal sealed class LangCommand : IExecutableCommand
 
             Context.Reply(_translations.LanguageList, sb.ToString());
         }
-        //else if (Context.MatchParameter(0, "refersh", "reload", "update"))
-        //{
-        //    Context.Player.Locale.Preferences = await _languageDataStore.GetLanguagePreferences(Context.CallerId.m_SteamID, token);
-        //    Context.Reply(_translations.LanguageRefreshed);
-        //}
         else if (Context.MatchParameter(0, "current"))
         {
             Context.AssertRanByPlayer();
@@ -126,7 +121,7 @@ public class LanguageCommandTranslations : PropertiesTranslationCollection
     public readonly Translation<LanguageInfo> LanguageCurrent = new Translation<LanguageInfo>("<#f53b3b>Current language: <#e6e3d5>{0}</color>.", arg0Fmt: LanguageInfo.FormatDisplayName);
 
     [TranslationData("Output from /lang <language>, tells the player their new language.", "New Language")]
-    public readonly Translation<LanguageInfo> ChangedLanguage = new Translation<LanguageInfo>("<#f53b3b>Changed your language to <#e6e3d5>{0}</color>.", arg0Fmt: LanguageInfo.FormatDisplayName);
+    public readonly Translation<LanguageInfo> ChangedLanguage = new Translation<LanguageInfo>("<#f53b3b>Changed your language to <#e6e3d5>{0}</color>. Consider using /options for more internationalization options.", arg0Fmt: LanguageInfo.FormatDisplayName);
 
     [TranslationData("Output from /lang <language> when the player is using already that language.", "Current Language")]
     public readonly Translation<LanguageInfo> LangAlreadySet = new Translation<LanguageInfo>("<#ff8c69>You are already set to <#e6e3d5>{0}</color>.", arg0Fmt: LanguageInfo.FormatDisplayName);

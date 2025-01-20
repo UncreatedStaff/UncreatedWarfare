@@ -1,4 +1,4 @@
-﻿using Uncreated.Warfare.Events.Models.Players;
+using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Steam;
 using Uncreated.Warfare.Steam.Models;
@@ -9,22 +9,19 @@ namespace Uncreated.Warfare.Players.PendingTasks;
 /// Queries the Steam API to get a player's summary.
 /// </summary>
 [PlayerTask]
-public class SteamApiSummaryTask : IPlayerPendingTask
+public class SteamApiFriendsListTask : IPlayerPendingTask
 {
     private readonly ISteamApiService _apiService;
 
-    private PlayerSummary? _summary;
     private ulong[]? _friends;
-    public SteamApiSummaryTask(ISteamApiService apiService)
+    public SteamApiFriendsListTask(ISteamApiService apiService)
     {
         _apiService = apiService;
     }
 
     async Task<bool> IPlayerPendingTask.RunAsync(PlayerPending e, CancellationToken token)
     {
-        Task<PlayerSummary> summaryTask = _apiService.GetPlayerSummaryAsync(e.Steam64.m_SteamID, token);
         PlayerFriendsList friendsList = await _apiService.GetPlayerFriendsAsync(e.Steam64.m_SteamID, token);
-        _summary = await summaryTask;
 
         friendsList.Friends.Sort((a, b) => a.FriendsSince.CompareTo(b.FriendsSince));
 
@@ -34,12 +31,11 @@ public class SteamApiSummaryTask : IPlayerPendingTask
             _friends[i] = friendsList.Friends[i].Steam64;
         }
 
-        return _summary != null;
+        return true;
     }
 
     void IPlayerPendingTask.Apply(WarfarePlayer player)
     {
-        player.SteamSummary = _summary!;
         player.SteamFriends = _friends!;
     }
 

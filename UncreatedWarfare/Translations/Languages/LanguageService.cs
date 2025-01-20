@@ -1,10 +1,14 @@
 using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.Configuration;
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
 using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Services;
+using Uncreated.Warfare.Steam;
+using Uncreated.Warfare.Steam.Models;
 
 namespace Uncreated.Warfare.Translations.Languages;
 
@@ -16,6 +20,7 @@ public class LanguageService : IHostedService
 {
     private readonly ILanguageDataStore _languageDataStore;
     private readonly ILogger<LanguageService> _logger;
+    private readonly TimeZoneRegionalDatabase _tzDatabase;
     private readonly ICachableLanguageDataStore? _languageDataStoreCache;
 
     private LanguageInfo? _fallback;
@@ -31,10 +36,11 @@ public class LanguageService : IHostedService
     /// </summary>
     public string DefaultCultureCode { get; }
 
-    public LanguageService(ILanguageDataStore languageDataStore, IConfiguration systemConfig, ILogger<LanguageService> logger)
+    public LanguageService(ILanguageDataStore languageDataStore, IConfiguration systemConfig, ILogger<LanguageService> logger, TimeZoneRegionalDatabase tzDatabase)
     {
         _languageDataStore = languageDataStore;
         _logger = logger;
+        _tzDatabase = tzDatabase;
         _languageDataStoreCache = languageDataStore as ICachableLanguageDataStore;
         DefaultLanguageCode = systemConfig["default_language"] ?? "en-us";
         DefaultCultureCode = systemConfig["default_culture"] ?? CultureInfo.CurrentCulture.Name;
@@ -101,18 +107,19 @@ public class LanguageService : IHostedService
 
         if (language.DefaultCultureCode != null)
         {
-            if (TryGetCultureInfo(language.DefaultCultureCode, out CultureInfo culture))
+            if (TryGetCultureInfo(language.DefaultCultureCode, out CultureInfo? culture))
                 return culture;
         }
         else if (language.SupportedCultures is { Count: > 0 })
         {
-            string code = (language.SupportedCultures.FirstOrDefault(x =>
-                               x.CultureCode.Length == 5 && char.ToUpperInvariant(x.CultureCode[0]) == x.CultureCode[3] &&
-                               char.ToUpperInvariant(x.CultureCode[1]) == x.CultureCode[4]) ??
-                           language.SupportedCultures[0]).CultureCode;
-
-            if (TryGetCultureInfo(code, out CultureInfo culture))
-                return culture;
+            // prefer codes following the convention mx-MX
+            foreach (LanguageCulture code in language.SupportedCultures.OrderByDescending(x => x.CultureCode.Length == 5
+                         && char.ToUpperInvariant(x.CultureCode[0]) == x.CultureCode[3]
+                         && char.ToUpperInvariant(x.CultureCode[1]) == x.CultureCode[4]))
+            {
+                if (TryGetCultureInfo(code.CultureCode, out CultureInfo? culture))
+                    return culture;
+            }
         }
 
         return GetDefaultCulture();
@@ -121,8 +128,14 @@ public class LanguageService : IHostedService
     /// <summary>
     /// Attempts to find an existing culture from the given culture code.
     /// </summary>
-    public bool TryGetCultureInfo(string code, out CultureInfo cultureInfo)
+    public bool TryGetCultureInfo(string? code, [MaybeNullWhen(false)] out CultureInfo cultureInfo)
     {
+        if (code == null)
+        {
+            cultureInfo = null;
+            return false;
+        }
+
         if (code.Equals("invariant", StringComparison.InvariantCultureIgnoreCase))
         {
             cultureInfo = CultureInfo.InvariantCulture;
@@ -146,6 +159,60 @@ public class LanguageService : IHostedService
             cultureInfo = null!;
             return false;
         }
+    }
+
+    /// <summary>
+    /// Figures out the best default settings for a player with the given language, preferences, and steam profile.
+    /// </summary>
+    public void GetDefaultLocaleSettings(string steamLanguage, LanguagePreferences preferences, PlayerSummary summary, out LanguageInfo language, out CultureInfo culture, out TimeZoneInfo timeZone)
+    {
+        if (_languageDataStoreCache == null)
+            throw new NotSupportedException();
+
+        LanguageInfo? lang = _languageDataStoreCache.GetInfoCached(preferences.LanguageId);
+
+        if (lang is null)
+        {
+            lang = _languageDataStoreCache.Languages
+                .FirstOrDefault(x => string.Equals(x.SteamLanguageName, steamLanguage, StringComparison.OrdinalIgnoreCase));
+            lang ??= GetDefaultLanguage();
+        }
+
+        language = lang;
+
+        if (!TryGetCultureInfo(preferences.Culture, out CultureInfo? c))
+        {
+            if (summary.CountryCode != null && lang.Code.Length > 2 && lang.Code[2] == '-')
+            {
+                // try composite language id with country code (ex. en-US)
+                string cultureName = lang.Code[..3] + summary.CountryCode;
+                TryGetCultureInfo(cultureName, out c);
+            }
+
+            c ??= GetDefaultCulture(lang);
+        }
+
+        culture = c;
+
+        TimeZoneInfo? tz = null;
+        if (preferences.TimeZone != null)
+        {
+            try
+            {
+                tz = TimeZoneInfo.FindSystemTimeZoneById(preferences.TimeZone);
+            }
+            catch (TimeZoneNotFoundException)
+            {
+                _logger.LogWarning($"Saved time zone {preferences.TimeZone} does not exist on this system.");
+            }
+        }
+
+        if (tz == null && !string.IsNullOrWhiteSpace(summary.CountryCode))
+        {
+            _tzDatabase.DefaultTimeZones.TryGetValue(summary.CountryCode, out tz);
+        }
+
+        timeZone = tz ?? TimeZoneInfo.Utc;
     }
 
     /// <summary>

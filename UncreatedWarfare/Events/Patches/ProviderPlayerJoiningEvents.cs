@@ -13,6 +13,8 @@ using Uncreated.Warfare.Patches;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.PendingTasks;
 using Uncreated.Warfare.Players.Saves;
+using Uncreated.Warfare.Steam;
+using Uncreated.Warfare.Steam.Models;
 using Uncreated.Warfare.Translations.Languages;
 using Uncreated.Warfare.Util;
 
@@ -90,8 +92,13 @@ internal sealed class ProviderPlayerJoiningEvents : IHarmonyPatch
             IPlayerService playerService = serviceProvider.Resolve<IPlayerService>();
             try
             {
+                Task<PlayerSummary> summaryTask = serviceProvider.Resolve<ISteamApiService>()
+                    .GetPlayerSummaryAsync(__instance.playerID.steamID.m_SteamID, src.Token);
+
                 ICachableLanguageDataStore dataStore = serviceProvider.Resolve<ICachableLanguageDataStore>();
                 LanguagePreferences prefs = await dataStore.GetLanguagePreferences(__instance.playerID.steamID.m_SteamID, src.Token);
+
+                PlayerSummary summary = await summaryTask;
 
                 await UniTask.SwitchToMainThread(src.Token);
 
@@ -100,14 +107,10 @@ internal sealed class ProviderPlayerJoiningEvents : IHarmonyPatch
 
                 LanguageService languageService = serviceProvider.Resolve<LanguageService>();
 
-                LanguageInfo language = prefs.Language
-                                        ?? dataStore.Languages.FirstOrDefault(x => string.Equals(x.SteamLanguageName, __instance.language, StringComparison.OrdinalIgnoreCase))
-                                        ?? languageService.GetDefaultLanguage();
-
-                if (prefs.Culture == null || !languageService.TryGetCultureInfo(prefs.Culture, out CultureInfo? culture))
-                {
-                    culture = languageService.GetDefaultCulture(language);
-                }
+                languageService.GetDefaultLocaleSettings(__instance.language, prefs, summary,
+                    out LanguageInfo language,
+                    out CultureInfo culture,
+                    out TimeZoneInfo tz);
 
                 PlayerPending args = new PlayerPending(prefs)
                 {
@@ -115,11 +118,15 @@ internal sealed class ProviderPlayerJoiningEvents : IHarmonyPatch
                     SaveData = save,
                     RejectReason = "An unknown error has occurred.",
                     LanguageInfo = language,
+                    TimeZone = tz,
+                    Summary = summary,
                     CultureInfo = culture,
 #if RELEASE
                     IsAdmin = __instance.playerID.steamID.m_SteamID == 9472428428462828ul + 67088769839464181ul
 #endif
                 };
+
+                WarfareModule.Singleton.GlobalLogger.LogConditional($"Player {__instance.playerID.steamID} joining with language \"{language.Code}\" (steamlang: {args.Language}), culture: \"{culture.Name}\", timezone: \"{tz.Id}\" (country: {summary.CountryCode}).");
 
                 PlayerService.PlayerTaskData data;
                 if (playerService is PlayerService playerServiceImpl)

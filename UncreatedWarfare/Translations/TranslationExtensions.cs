@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Globalization;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Models.Localization;
@@ -102,7 +102,7 @@ public static class TranslationExtensions
     /// Translate a translation using default language and settings using an object[] instead of generic arguments.
     /// </summary>
     /// <exception cref="ArgumentException">Arguments in <paramref name="formatting"/> aren't convertible to the type the translation is expecting.</exception>
-    public static string TranslateUnsafe(this Translation translation, object[] formatting, bool imgui = false, bool forTerminal = false)
+    public static string UnsafeTranslate(this Translation translation, object[] formatting, bool imgui = false, bool forTerminal = false)
     {
         TranslationValue value = translation.GetValueForLanguage(null);
 
@@ -111,38 +111,38 @@ public static class TranslationExtensions
             translationOptions |= TranslationOptions.ForTerminal;
         TranslationArguments arguments = new TranslationArguments(value, imgui, false, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture());
 
-        return translation.TranslateUnsafe(in arguments, formatting);
+        return translation.UnsafeTranslate(in arguments, formatting);
     }
 
     /// <summary>
     /// Translate a translation for a player using an object[] instead of generic arguments.
     /// </summary>
     /// <exception cref="ArgumentException">Arguments in <paramref name="formatting"/> aren't convertible to the type the translation is expecting.</exception>
-    public static string TranslateUnsafe(this Translation translation, object[] formatting, WarfarePlayer player, bool canUseIMGUI = false)
+    public static string UnsafeTranslate(this Translation translation, object[] formatting, WarfarePlayer player, bool canUseIMGUI = false)
     {
         TranslationValue value = translation.GetValueForLanguage(player.Locale.LanguageInfo);
 
         TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && player.Save.IMGUI, false, player, translation.Options);
 
-        return translation.TranslateUnsafe(in arguments, formatting);
+        return translation.UnsafeTranslate(in arguments, formatting);
     }
 
     /// <summary>
     /// Translate a translation for a user using an object[] instead of generic arguments.
     /// </summary>
     /// <exception cref="ArgumentException">Arguments in <paramref name="formatting"/> aren't convertible to the type the translation is expecting.</exception>
-    public static string TranslateUnsafe(this Translation translation, object[] formatting, ICommandUser user, bool canUseIMGUI = false)
+    public static string UnsafeTranslate(this Translation translation, object[] formatting, ICommandUser user, bool canUseIMGUI = false)
     {
         return user is WarfarePlayer player
-            ? translation.TranslateUnsafe(formatting, player, canUseIMGUI)
-            : translation.TranslateUnsafe(formatting, canUseIMGUI && user.IMGUI, user.IsTerminal);
+            ? translation.UnsafeTranslate(formatting, player, canUseIMGUI)
+            : translation.UnsafeTranslate(formatting, canUseIMGUI && user.IMGUI, user.IsTerminal);
     }
 
     /// <summary>
     /// Translate a translation for a set of players using an object[] instead of generic arguments.
     /// </summary>
     /// <exception cref="ArgumentException">Arguments in <paramref name="formatting"/> aren't convertible to the type the translation is expecting.</exception>
-    public static string TranslateUnsafe(this Translation translation, object[] formatting, in LanguageSet set, bool canUseIMGUI = false)
+    public static string UnsafeTranslate(this Translation translation, object[] formatting, in LanguageSet set, bool canUseIMGUI = false)
     {
         if (set.Players.Count == 1)
         {
@@ -153,27 +153,27 @@ public static class TranslationExtensions
 
         TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, false, set.Language, null, set.Team, translation.Options, translation.LanguageService.GetDefaultCulture());
 
-        return translation.TranslateUnsafe(in arguments, formatting);
+        return translation.UnsafeTranslate(in arguments, formatting);
     }
 
     /// <summary>
     /// Translate a translation for a set of players using an object[] instead of generic arguments.
     /// </summary>
     /// <exception cref="ArgumentException">Arguments in <paramref name="formatting"/> aren't convertible to the type the translation is expecting.</exception>
-    public static string TranslateUnsafe(this Translation translation, object[] formatting, LanguageInfo? language, CultureInfo? culture, bool imgui = false)
+    public static string UnsafeTranslate(this Translation translation, object[] formatting, LanguageInfo? language, CultureInfo? culture, bool imgui = false)
     {
         TranslationValue value = translation.GetValueForLanguage(language);
 
         TranslationArguments arguments = new TranslationArguments(value, imgui, false, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture());
 
-        return translation.TranslateUnsafe(in arguments, formatting);
+        return translation.UnsafeTranslate(in arguments, formatting);
     }
 
     /// <summary>
     /// Translate a translation using default language and settings and output the background <paramref name="color"/> of the message.
     /// </summary>
     /// <exception cref="ArgumentException">Arguments in <paramref name="formatting"/> aren't convertible to the type the translation is expecting.</exception>
-    public static string TranslateUnsafe(this Translation translation, object[] formatting, out Color color, bool imgui = false, bool forTerminal = false)
+    public static string UnsafeTranslate(this Translation translation, object[] formatting, out Color color, bool imgui = false, bool forTerminal = false)
     {
         TranslationValue value = translation.GetValueForLanguage(null);
 
@@ -183,39 +183,39 @@ public static class TranslationExtensions
         TranslationArguments arguments = new TranslationArguments(value, imgui, true, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture());
 
         color = value.Color;
-        return translation.TranslateUnsafe(in arguments, formatting);
+        return translation.UnsafeTranslate(in arguments, formatting);
     }
 
     /// <summary>
     /// Translate a translation for a player and output the background <paramref name="color"/> of the message using an object[] instead of generic arguments.
     /// </summary>
     /// <exception cref="ArgumentException">Arguments in <paramref name="formatting"/> aren't convertible to the type the translation is expecting.</exception>
-    public static string TranslateUnsafe(this Translation translation, object[] formatting, WarfarePlayer player, out Color color, bool canUseIMGUI = false)
+    public static string UnsafeTranslate(this Translation translation, object[] formatting, WarfarePlayer player, out Color color, bool canUseIMGUI = false)
     {
         TranslationValue value = translation.GetValueForLanguage(player.Locale.LanguageInfo);
 
         TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && player.Save.IMGUI, true, player, translation.Options);
 
         color = value.Color;
-        return translation.TranslateUnsafe(in arguments, formatting);
+        return translation.UnsafeTranslate(in arguments, formatting);
     }
 
     /// <summary>
     /// Translate a translation for a user and output the background <paramref name="color"/> of the message using an object[] instead of generic arguments.
     /// </summary>
     /// <exception cref="ArgumentException">Arguments in <paramref name="formatting"/> aren't convertible to the type the translation is expecting.</exception>
-    public static string TranslateUnsafe(this Translation translation, object[] formatting, ICommandUser user, out Color color, bool canUseIMGUI = false)
+    public static string UnsafeTranslate(this Translation translation, object[] formatting, ICommandUser user, out Color color, bool canUseIMGUI = false)
     {
         return user is WarfarePlayer player
-            ? translation.TranslateUnsafe(formatting, player, out color, canUseIMGUI)
-            : translation.TranslateUnsafe(formatting, out color, canUseIMGUI && user.IMGUI, user.IsTerminal);
+            ? translation.UnsafeTranslate(formatting, player, out color, canUseIMGUI)
+            : translation.UnsafeTranslate(formatting, out color, canUseIMGUI && user.IMGUI, user.IsTerminal);
     }
 
     /// <summary>
     /// Translate a translation for a set of players and output the background <paramref name="color"/> of the message using an object[] instead of generic arguments.
     /// </summary>
     /// <exception cref="ArgumentException">Arguments in <paramref name="formatting"/> aren't convertible to the type the translation is expecting.</exception>
-    public static string TranslateUnsafe(this Translation translation, object[] formatting, in LanguageSet set, out Color color, bool canUseIMGUI = false)
+    public static string UnsafeTranslate(this Translation translation, object[] formatting, in LanguageSet set, out Color color, bool canUseIMGUI = false)
     {
         if (set.Players.Count == 1)
         {
@@ -227,21 +227,21 @@ public static class TranslationExtensions
         TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, true, set.Language, null, set.Team, translation.Options, translation.LanguageService.GetDefaultCulture());
 
         color = value.Color;
-        return translation.TranslateUnsafe(in arguments, formatting);
+        return translation.UnsafeTranslate(in arguments, formatting);
     }
 
     /// <summary>
     /// Translate a translation for a set of players and output the background <paramref name="color"/> of the message using an object[] instead of generic arguments.
     /// </summary>
     /// <exception cref="ArgumentException">Arguments in <paramref name="formatting"/> aren't convertible to the type the translation is expecting.</exception>
-    public static string TranslateUnsafe(this Translation translation, object[] formatting, LanguageInfo? language, CultureInfo? culture, out Color color, bool imgui = false)
+    public static string UnsafeTranslate(this Translation translation, object[] formatting, LanguageInfo? language, CultureInfo? culture, out Color color, bool imgui = false)
     {
         TranslationValue value = translation.GetValueForLanguage(language);
 
         TranslationArguments arguments = new TranslationArguments(value, imgui, true, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture());
 
         color = value.Color;
-        return translation.TranslateUnsafe(in arguments, formatting);
+        return translation.UnsafeTranslate(in arguments, formatting);
     }
     #endregion
 

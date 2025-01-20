@@ -72,7 +72,7 @@ internal struct StringParameterList
     {
         return capacity < 5
             ? default
-            : new StringParameterList(new object?[capacity]);
+            : new StringParameterList(new object?[capacity], 0);
     }
 
     public void Add(object? value)
