@@ -10,7 +10,6 @@ using SDG.Framework.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
 using UnityEngine.SceneManagement;
@@ -24,7 +23,7 @@ namespace Uncreated.Warfare.Projectiles;
 internal class ProjectileSolver : ILevelHostedService, IDisposable
 {
     private readonly ILogger<ProjectileSolver> _logger;
-    private readonly WarfareTimeComponent _warfareTimeComponent;
+    private readonly WarfareLifetimeComponent _warfareLifetimeComponent;
 
     private static readonly InstanceGetter<Rocket, bool>? GetIsExploded
         = Accessor.GenerateInstanceGetter<Rocket, bool>("isExploded", throwOnError: false);
@@ -42,10 +41,10 @@ internal class ProjectileSolver : ILevelHostedService, IDisposable
     private int _isSetUp;
     private bool _isInitialized;
 
-    public ProjectileSolver(ILogger<ProjectileSolver> logger, WarfareTimeComponent warfareTimeComponent)
+    public ProjectileSolver(ILogger<ProjectileSolver> logger, WarfareLifetimeComponent lifetimeComponent)
     {
         _logger = logger;
-        _warfareTimeComponent = warfareTimeComponent;
+        _warfareLifetimeComponent = lifetimeComponent;
     }
 
     public void BeginSolvingProjectile(WarfareProjectile component)
@@ -58,7 +57,7 @@ internal class ProjectileSolver : ILevelHostedService, IDisposable
         if (_isInitialized && _current == null)
         {
             _current = component;
-            _warfareTimeComponent.StartCoroutine(Simulate());
+            _warfareLifetimeComponent.StartCoroutine(Simulate());
         }
         else
             _queue.Enqueue(component);
@@ -132,7 +131,7 @@ internal class ProjectileSolver : ILevelHostedService, IDisposable
         _isInitialized = true;
         if (_queue.TryDequeue(out _current))
         {
-            _warfareTimeComponent.StartCoroutine(Simulate());
+            _warfareLifetimeComponent.StartCoroutine(Simulate());
         }
         return UniTask.CompletedTask;
     }
@@ -226,7 +225,7 @@ internal class ProjectileSolver : ILevelHostedService, IDisposable
 
         if (_queue.TryDequeue(out _current))
         {
-            _warfareTimeComponent.StartCoroutine(Simulate());
+            _warfareLifetimeComponent.StartCoroutine(Simulate());
         }
     }
 

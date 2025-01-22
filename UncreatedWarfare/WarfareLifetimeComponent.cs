@@ -1,4 +1,4 @@
-﻿namespace Uncreated.Warfare.Components;
+namespace Uncreated.Warfare;
 
 /// <summary>
 /// A component that is alive as long as the plugin is active.
