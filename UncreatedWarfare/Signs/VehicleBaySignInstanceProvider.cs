@@ -93,7 +93,7 @@ public class VehicleBaySignInstanceProvider : ISignInstanceProvider, IRequestabl
 
         if (info.TicketCost > 0)
         {
-            bldr.Append(_translations.VBSTickets.Translate(info.TicketCost, language, culture));
+            bldr.Append(_translations.VBSTickets.Translate(info.TicketCost, language, culture, TimeZoneInfo.Utc));
         }
 
         bldr.Append('\n');
@@ -124,18 +124,18 @@ public class VehicleBaySignInstanceProvider : ISignInstanceProvider, IRequestabl
         switch (spawner.State)
         {
             case VehicleSpawnerState.Destroyed:
-                bldr.Append(_translations.VBSStateDead.Translate(spawner.GetRespawnDueTime(), language, culture));
+                bldr.Append(_translations.VBSStateDead.Translate(spawner.GetRespawnDueTime(), language, culture, TimeZoneInfo.Utc));
                 break;
 
             case VehicleSpawnerState.Deployed:
-                bldr.Append(_translations.VBSStateActive.Translate(spawner.GetLocation(), language, culture));
+                bldr.Append(_translations.VBSStateActive.Translate(spawner.GetLocation(), language, culture, TimeZoneInfo.Utc));
                 break;
 
             case VehicleSpawnerState.Idle:
-                bldr.Append(_translations.VBSStateIdle.Translate(spawner.GetRespawnDueTime(), language, culture));
+                bldr.Append(_translations.VBSStateIdle.Translate(spawner.GetRespawnDueTime(), language, culture, TimeZoneInfo.Utc));
                 break;
             case VehicleSpawnerState.LayoutDelayed:
-                bldr.Append(_translations.VBSStateLayoutDelayed.Translate(spawner.GetLayoutDelayTimeLeft(), language, culture));
+                bldr.Append(_translations.VBSStateLayoutDelayed.Translate(spawner.GetLayoutDelayTimeLeft(), language, culture, TimeZoneInfo.Utc));
                 break;
             case VehicleSpawnerState.LayoutDisabled:
                 bldr.Append(_translations.VBSStateLayoutDisabled.Translate(language));

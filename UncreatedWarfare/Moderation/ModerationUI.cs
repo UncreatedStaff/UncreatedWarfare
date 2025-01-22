@@ -539,11 +539,11 @@ public partial class ModerationUI : UnturnedUI
         using CombinedTokenSources tokens = token.CombineTokensIfNeeded(player.DisconnectToken);
         await UniTask.SwitchToMainThread(token);
 
-        // todo player.ModalNeeded = true;
-        player.UnturnedPlayer.enablePluginWidgetFlag(EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur);
+        ModerationData data = GetOrAddModerationData(player);
+        ModalHandle.TryGetModalHandle(player, ref data.Modal);
+
         player.UnturnedPlayer.disablePluginWidgetFlag(EPluginWidgetFlags.Default);
 
-        ModerationData data = GetOrAddModerationData(player);
 
         if (!data.HasModerationUI)
         {
@@ -560,11 +560,13 @@ public partial class ModerationUI : UnturnedUI
     {
         GameThread.AssertCurrent();
 
-        // todo player.ModalNeeded = false;
-        player.UnturnedPlayer.disablePluginWidgetFlag(EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur);
+        ModerationData data = GetOrAddModerationData(player);
+
+        data.Modal.Dispose();
+
         player.UnturnedPlayer.enablePluginWidgetFlag(EPluginWidgetFlags.Default);
         ClearFromPlayer(player.Connection);
-        GetOrAddModerationData(player).HasModerationUI = false;
+        data.HasModerationUI = false;
     }
     public async UniTask SetPage(WarfarePlayer player, Page page, bool isAlreadyInView, CancellationToken token = default)
     {
@@ -1569,6 +1571,7 @@ public partial class ModerationUI : UnturnedUI
         internal int HistorySearchUpdateVersion;
         internal int EvidenceVersion;
         internal bool HasModerationUI;
+        internal ModalHandle Modal;
         public CSteamID Player { get; }
         public ModerationUI Owner { get; }
         UnturnedUI IUnturnedUIData.Owner => Owner;

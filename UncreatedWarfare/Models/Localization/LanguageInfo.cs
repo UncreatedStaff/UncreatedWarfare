@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -54,6 +54,10 @@ public class LanguageInfo : ITranslationArgument, IEquatable<LanguageInfo>
 
     [JsonIgnore, NotMapped]
     public bool IsDefault { get; internal set; }
+
+    [NotMapped]
+    // todo: better support calculation
+    public float Support { get => IsDefault ? 1 : 0; }
 
     public LanguageInfo() { }
 

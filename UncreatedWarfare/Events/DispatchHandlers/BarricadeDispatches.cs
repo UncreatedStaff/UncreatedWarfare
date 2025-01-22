@@ -301,10 +301,10 @@ partial class EventDispatcher
             if (args.Sign == null || args.Barricade.GetServersideData().barricade.isDead)
                 return;
 
-            if (args.Player is not null && _timeComponent is not null && args.Sign.transform.TryGetComponent(out BarricadeComponent bcomp))
+            if (args.Player is not null)
             {
-                bcomp.LastEditor = args.Player.Steam64;
-                bcomp.EditTick = _timeComponent.Updates;
+                BuildableContainer bcomp = BuildableContainer.Get(args.Barricade);
+                bcomp.SignEditor = args.Player.Steam64;
             }
 
             BarricadeManager.ServerSetSignText(args.Sign, args.Text);
@@ -313,10 +313,10 @@ partial class EventDispatcher
         if (!shouldallow)
             return;
 
-        if (instigator.GetEAccountType() == EAccountType.k_EAccountTypeIndividual && _timeComponent is not null && sign.transform.TryGetComponent(out BarricadeComponent bcomp))
+        if (instigator.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
         {
-            bcomp.LastEditor = instigator;
-            bcomp.EditTick = _timeComponent.Updates;
+            BuildableContainer bcomp = BuildableContainer.Get(args.Barricade);
+            bcomp.SignEditor = instigator;
         }
 
         text = args.Text;

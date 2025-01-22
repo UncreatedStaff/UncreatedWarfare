@@ -17,7 +17,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using Uncreated.Warfare.Actions;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
@@ -59,6 +58,7 @@ using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Players.Tweaks;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Plugins;
+using Uncreated.Warfare.Projectiles;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Quests.Daily;
 using Uncreated.Warfare.Services;
@@ -78,6 +78,7 @@ using Uncreated.Warfare.Tweaks;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Timing;
 using Uncreated.Warfare.Vehicles;
+using Uncreated.Warfare.Vehicles.Events.Tweaks;
 using Uncreated.Warfare.Vehicles.Events.Tweaks.AdvancedDamage;
 using Uncreated.Warfare.Vehicles.Events.Vehicles;
 using Uncreated.Warfare.Vehicles.Spawners;
@@ -498,7 +499,6 @@ public sealed class WarfareModule
 
         // UI
         bldr.RegisterType<ModerationUI>().SingleInstance();
-        bldr.RegisterType<ActionMenuUI>().SingleInstance();
         bldr.RegisterType<SquadMenuUI>()
             .AsSelf()
             .AsImplementedInterfaces()
@@ -521,6 +521,7 @@ public sealed class WarfareModule
         bldr.RegisterType<VehicleHUD>().SingleInstance();
         bldr.RegisterType<FlagListUI>().SingleInstance();
         bldr.RegisterType<CaptureUI>().SingleInstance();
+        bldr.RegisterType<OptionsUI>().SingleInstance();
 
         bldr.RegisterType<TipService>()
             .AsImplementedInterfaces().AsSelf()
@@ -566,10 +567,6 @@ public sealed class WarfareModule
         bldr.RegisterType<LayoutFactory>()
             .AsImplementedInterfaces().AsSelf()
             .SingleInstance();
-
-        bldr.RegisterType<ActionManager>()
-            .AsImplementedInterfaces().AsSelf()
-            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
 
         bldr.RegisterType<EventDispatcher>()
             .AsImplementedInterfaces().AsSelf()
@@ -792,6 +789,10 @@ public sealed class WarfareModule
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
 
+        bldr.RegisterType<ProjectileSolver>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
+
         // Active ITeamManager
         bldr.Register(_ => GetActiveLayout().TeamManager)
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
@@ -813,17 +814,26 @@ public sealed class WarfareModule
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
         bldr.RegisterType<PlayerChooseSpawnPointTweaks>()
+            .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
+        bldr.RegisterType<ShovelableWarningTweak>()
+            .AsSelf().AsImplementedInterfaces()
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
 
-        bldr.RegisterType<NoCraftingTweak>().AsImplementedInterfaces()
+        bldr.RegisterType<NoCraftingTweak>()
+            .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
-        bldr.RegisterType<InvinciblePassengersTweak>().AsImplementedInterfaces()
+        bldr.RegisterType<InvinciblePassengersTweak>()
+            .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
-        bldr.RegisterType<NoDamageInMainTweak>().AsImplementedInterfaces()
+        bldr.RegisterType<NoDamageInMainTweak>()
+            .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
-        bldr.RegisterType<LandmineExplosionRestrictions>().AsImplementedInterfaces()
+        bldr.RegisterType<LandmineExplosionRestrictions>()
+            .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
-        bldr.RegisterType<PreventLeaveGroupTweak>().AsImplementedInterfaces()
+        bldr.RegisterType<PreventLeaveGroupTweak>()
+            .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
 
         // Localization

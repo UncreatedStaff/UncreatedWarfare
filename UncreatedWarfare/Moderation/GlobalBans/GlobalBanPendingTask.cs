@@ -91,7 +91,8 @@ internal class GlobalBanPendingTask : IPlayerPendingTask
                 _discordInvite ?? string.Empty,
                 newestBanInfo.BanID, 
                 e.LanguageInfo,
-                e.CultureInfo
+                e.CultureInfo,
+                e.TimeZone
             );
         }
         else
@@ -104,7 +105,8 @@ internal class GlobalBanPendingTask : IPlayerPendingTask
                 newestBanInfo.BannedPlayerName ?? newestBanInfo.BannedPlayer.ToString("D17", CultureInfo.InvariantCulture),
                 newestBanInfo.BanID,
                 e.LanguageInfo,
-                e.CultureInfo
+                e.CultureInfo,
+                e.TimeZone
             );
         }
 

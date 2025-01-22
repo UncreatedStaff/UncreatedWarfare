@@ -1,5 +1,6 @@
-﻿using Uncreated.Framework.UI;
+using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Data;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Util.List;
 
 namespace Uncreated.Warfare.Layouts.UI.Leaderboards;
@@ -8,6 +9,7 @@ internal class DualSidedLeaderboardPlayerData : IUnturnedUIData
 {
     public RingBuffer<DualSidedLeaderboardUI.ChatMessageInfo> VisibleChats;
     public LeaderboardSortColumn[] SortColumns;
+    public ModalHandle Modal;
 
     public CSteamID Player { get; }
 

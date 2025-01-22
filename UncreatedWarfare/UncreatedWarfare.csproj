@@ -216,8 +216,6 @@
 
     <EmbeddedResource Include="Commands\LoadCommand.meta.yml" />
 
-    <EmbeddedResource Include="Commands\LangCommand.meta.yml" />
-
     <EmbeddedResource Include="Commands\IPWhitelistCommand.meta.yml" />
 
     <EmbeddedResource Include="Commands\Holiday\HolidayCommand.meta.yml" />

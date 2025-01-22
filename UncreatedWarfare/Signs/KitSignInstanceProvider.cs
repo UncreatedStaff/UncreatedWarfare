@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Globalization;
 using System.Text;
@@ -152,11 +152,11 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>
                      : kit.IsLimited(_playerService, out currentPlayers, out allowedPlayers, player.Team)
                 )
         {
-            bldr.Append(_translations.KitPlayerCountUnavailable.Translate(currentPlayers, allowedPlayers, language, culture));
+            bldr.Append(_translations.KitPlayerCountUnavailable.Translate(currentPlayers, allowedPlayers, language, culture, TimeZoneInfo.Utc));
         }
         else
         {
-            bldr.Append(_translations.KitPlayerCountAvailable.Translate(currentPlayers, allowedPlayers, language, culture));
+            bldr.Append(_translations.KitPlayerCountAvailable.Translate(currentPlayers, allowedPlayers, language, culture, TimeZoneInfo.Utc));
         }
     }
 
@@ -188,7 +188,7 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>
             }
             else
             {
-                bldr.Append(_translations.KitPremiumCost.Translate(decimal.Round(kit.PremiumCost, 2), language, culture));
+                bldr.Append(_translations.KitPremiumCost.Translate(decimal.Round(kit.PremiumCost, 2), language, culture, TimeZoneInfo.Utc));
                 return;
             }
         }
@@ -204,7 +204,7 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>
             }
             else
             {
-                bldr.Append(_translations.KitCreditCost.Translate(kit.CreditCost, language, culture));
+                bldr.Append(_translations.KitCreditCost.Translate(kit.CreditCost, language, culture, TimeZoneInfo.Utc));
                 return;
             }
         }
@@ -230,7 +230,7 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>
 
         if (kit == null)
         {
-            bldr.Append(_translations.LoadoutNumber.Translate(loadoutIndex, language, culture));
+            bldr.Append(_translations.LoadoutNumber.Translate(loadoutIndex, language, culture, TimeZoneInfo.Utc));
             bldr.Append('\n', 4);
             bldr.Append(_translations.KitPremiumCost.Translate(_systemConfig.GetValue<decimal>("kits:loadout_cost_usd")));
             return;
@@ -257,7 +257,7 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>
             bldr.Append('\n');
 
         string loadoutLetter = LoadoutIdHelper.GetLoadoutLetter(LoadoutIdHelper.ParseNumber(kit.InternalName));
-        bldr.Append(_translations.LoadoutLetter.Translate(loadoutLetter, language, culture))
+        bldr.Append(_translations.LoadoutLetter.Translate(loadoutLetter, language, culture, TimeZoneInfo.Utc))
             .Append('\n');
 
         if (hasWeaponText)

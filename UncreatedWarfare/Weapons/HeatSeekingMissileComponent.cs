@@ -1,9 +1,9 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using Uncreated.Warfare.Configuration;
 using Random = UnityEngine.Random;
 
-namespace Uncreated.Warfare.Components;
+namespace Uncreated.Warfare.Weapons;
 
 public class HeatSeekingMissileComponent : MonoBehaviour
 {
@@ -80,7 +80,7 @@ public class HeatSeekingMissileComponent : MonoBehaviour
         //L.LogDebug("Missile destroyed. In flight: " + _controller.MissilesInFlight.Count);
         _controller.MissilesInFlight.Remove(this);
     }
-    
+
     private float _timeOfLastLoop;
 
     [UsedImplicitly]
@@ -98,7 +98,7 @@ public class HeatSeekingMissileComponent : MonoBehaviour
                 //L.LogDebug($"Missile {gameObject.GetInstanceID()} initial target set");
                 _previousTarget = _controller.LockOnTarget;
             }
-                
+
             if (_lastKnownTarget != null && _lastKnownTarget != _previousTarget)
             {
                 _allowedPathAlterations--;
@@ -139,7 +139,7 @@ public class HeatSeekingMissileComponent : MonoBehaviour
             idealDirection = (_lastKnownTarget.Find("Center") ?? _lastKnownTarget).position - _projectile.transform.position;
         }
 
-        if ((Time.time - _startTime) > Timeout)
+        if (Time.time - _startTime > Timeout)
         {
             if (!_rigidbody.useGravity)
             {
@@ -148,7 +148,7 @@ public class HeatSeekingMissileComponent : MonoBehaviour
                 //L.LogDebug("In flight: " + _controller.MissilesInFlight.Count);
                 _controller.MissilesInFlight.Remove(this);
                 //L.LogDebug("In flight: " + _controller.MissilesInFlight.Count);
-                
+
             }
         }
         else
@@ -163,7 +163,7 @@ public class HeatSeekingMissileComponent : MonoBehaviour
 
         if (timeDifference <= 0.05f)
             return;
-        
+
 
         IAssetLink<EffectAsset> id = _fxSilent;
         if (timeDifference > 0.4f)

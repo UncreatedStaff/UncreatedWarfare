@@ -2,10 +2,11 @@ using DanielWillett.ReflectionTools;
 using System;
 using System.Collections.Generic;
 using Uncreated.Framework.UI;
+using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
-namespace Uncreated.Warfare.Components;
+namespace Uncreated.Warfare.Weapons;
 internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'Aim' gameobject to allow it to control projectiles
 {
     private static readonly InstanceGetter<UseableGun, bool>? GetUseableGunReloading
@@ -27,7 +28,7 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
 
     private EffectAsset? _effect;
     private Player? _lastKnownGunner;
-    
+
     private float _aquisitionTime;
     private float _timeOutTime;
 
@@ -212,7 +213,7 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
         bool reloading = gun != null && GetUseableGunReloading != null && GetUseableGunReloading(gun);
         bool noActiveMissiles = MissilesInFlight.Count == 0;
 
-        if (newTarget is null || (noActiveMissiles && (noAmmo || reloading))) // no target found
+        if (newTarget is null || noActiveMissiles && (noAmmo || reloading)) // no target found
         {
             //(reloading && noActiveMissiles) || (noAmmo && noActiveMissiles)
             if (Status != ELockOnMode.Idle)

@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Projectiles;
 using Uncreated.Warfare.Events.Models.Vehicles;
@@ -14,6 +15,7 @@ namespace Uncreated.Warfare.Vehicles.Events.Tweaks.AdvancedDamage;
 public class AdvancedVehicleDamageTweaks : 
     ILayoutHostedService,
     IEventListener<ProjectileSpawned>,
+    IEventListener<ProjectileExploding>,
     IEventListener<DamageVehicleRequested>
 {
     private readonly AssetConfiguration _assetConfiguration;
@@ -25,27 +27,39 @@ public class AdvancedVehicleDamageTweaks :
         _logger = logger;
     }
 
-    public UniTask StartAsync(CancellationToken token)
+    UniTask ILayoutHostedService.StartAsync(CancellationToken token)
     {
         UseableGun.onBulletHit += UseableGunOnBulletHit;
         return UniTask.CompletedTask;
     }
 
-    public UniTask StopAsync(CancellationToken token)
+    UniTask ILayoutHostedService.StopAsync(CancellationToken token)
     {
         UseableGun.onBulletHit -= UseableGunOnBulletHit;
         return UniTask.CompletedTask;
     }
-    
+
+    [EventListener(MustRunInstantly = true)]
+    public void HandleEvent(ProjectileExploding e, IServiceProvider serviceProvider)
+    {
+        if (e.Vehicle == null || !e.Vehicle.TryGetComponent(out WarfareVehicleComponent comp))
+            return;
+
+        float dmgMult = AdvancedVehicleDamageApplier.GetComponentDamageMultiplier(e.HitCollider.transform);
+        comp.WarfareVehicle.AdvancedDamageApplier.RegisterDirectHitDamageMultiplier(dmgMult);
+    }
+
     private void UseableGunOnBulletHit(UseableGun gun, BulletInfo bullet, InputInfo hit, ref bool shouldAllow)
     {
         if (hit.vehicle != null && hit.vehicle.TryGetComponent(out WarfareVehicleComponent comp))
             comp.WarfareVehicle.AdvancedDamageApplier.RegisterDirectHitDamageMultiplier(AdvancedVehicleDamageApplier.GetComponentDamageMultiplier(hit));
     }
+
     public void HandleEvent(ProjectileSpawned e, IServiceProvider serviceProvider)
     {
-        e.Object.AddComponent<AdvancedVehicleDamageProjectile>().Init(e.RocketComponent, e.Asset);
+        e.Object.gameObject.AddComponent<AdvancedVehicleDamageProjectile>().Init(e.RocketComponent, e.Asset);
     }
+
     public void HandleEvent(DamageVehicleRequested e, IServiceProvider serviceProvider)
     {
         float finalMultiplier = 1;

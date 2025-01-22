@@ -428,8 +428,8 @@ internal sealed class ModerationEventHandlers : IHostedService, IAsyncEventListe
         if (worstBan.Player == e.Steam64.m_SteamID)
         {
             e.Reject(worstBan.IsPermanent
-                ? _translations.RejectPermanentBanned.Translate(message, e.LanguageInfo, e.CultureInfo)
-                : _translations.RejectBanned.Translate(message, worstBan.GetTimeUntilExpiry(false), e.LanguageInfo, e.CultureInfo)
+                ? _translations.RejectPermanentBanned.Translate(message, e.LanguageInfo, e.CultureInfo, e.TimeZone)
+                : _translations.RejectBanned.Translate(message, worstBan.GetTimeUntilExpiry(false), e.LanguageInfo, e.CultureInfo, e.TimeZone)
             );
         }
         else
@@ -437,8 +437,8 @@ internal sealed class ModerationEventHandlers : IHostedService, IAsyncEventListe
             IPlayer player = await _playerService.GetOfflinePlayer(worstBan.Player, _userDataService, token);
 
             e.Reject(worstBan.IsPermanent
-                ? _translations.RejectPermanentLinkedBanned.Translate(message, player, player, e.LanguageInfo, e.CultureInfo)
-                : _translations.RejectLinkedBanned.Translate(message, worstBan.GetTimeUntilExpiry(false), player, player, e.LanguageInfo, e.CultureInfo)
+                ? _translations.RejectPermanentLinkedBanned.Translate(message, player, player, e.LanguageInfo, e.CultureInfo, e.TimeZone)
+                : _translations.RejectLinkedBanned.Translate(message, worstBan.GetTimeUntilExpiry(false), player, player, e.LanguageInfo, e.CultureInfo, e.TimeZone)
             );
         }
     }

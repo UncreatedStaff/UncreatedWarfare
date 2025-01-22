@@ -177,6 +177,7 @@ public class MySqlLanguageDataStore : ICachableLanguageDataStore
                     Culture = preferences.Culture,
                     LanguageId = preferences.LanguageId,
                     LastUpdated = preferences.LastUpdated,
+                    TimeZone = preferences.TimeZone,
                     UseCultureForCommandInput = preferences.UseCultureForCommandInput
                 });
             }
@@ -185,6 +186,7 @@ public class MySqlLanguageDataStore : ICachableLanguageDataStore
                 dbExisting.Culture = preferences.Culture;
                 dbExisting.LanguageId = preferences.LanguageId;
                 dbExisting.LastUpdated = preferences.LastUpdated;
+                dbExisting.TimeZone = preferences.TimeZone;
                 dbExisting.UseCultureForCommandInput = preferences.UseCultureForCommandInput;
                 dbContext.Update(dbExisting);
             }
@@ -200,7 +202,7 @@ public class MySqlLanguageDataStore : ICachableLanguageDataStore
     {
         return set
             .Include(x => x.Aliases)
-            .Include(x => x.Contributors)
+            .Include(x => x.Contributors).ThenInclude(x => x.ContributorData)
             .Include(x => x.SupportedCultures);
     }
     public async Task<LanguagePreferences> GetLanguagePreferences(ulong steam64, CancellationToken token = default)

@@ -1,8 +1,10 @@
 using DanielWillett.ReflectionTools;
 using System;
 using System.Collections.Generic;
+using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Containers;
+using Uncreated.Warfare.Util.Timing;
 
 namespace Uncreated.Warfare.Buildables;
 public class BuildableContainer : MonoBehaviour, IComponentContainer<IBuildableComponent>, IManualOnDestroy
@@ -12,6 +14,16 @@ public class BuildableContainer : MonoBehaviour, IComponentContainer<IBuildableC
 #nullable disable
     public IBuildable Buildable { get; private set; }
     public DateTime CreateTime { get; private set; }
+    public FrameHandle SignEditFrame { get; private set; }
+    public CSteamID SignEditor
+    {
+        get;
+        set
+        {
+            SignEditFrame = value.GetEAccountType() == EAccountType.k_EAccountTypeIndividual ? FrameHandle.Claim() : default;
+            field = value;
+        }
+    }
 #nullable restore
 
     internal void Init(IBuildable buildable)
@@ -22,11 +34,39 @@ public class BuildableContainer : MonoBehaviour, IComponentContainer<IBuildableC
 
     public static BuildableContainer Get(IBuildable buildable)
     {
+        GameThread.AssertCurrent();
+
         if (buildable.IsDead)
             throw new InvalidOperationException("Buildable is dead.");
 
         if (!buildable.Model.TryGetComponent(out BuildableContainer container))
             container = buildable.Model.gameObject.AddComponent<BuildableContainer>();
+
+        return container;
+    }
+
+    public static BuildableContainer Get(BarricadeDrop barricade)
+    {
+        GameThread.AssertCurrent();
+
+        if (barricade.GetServersideData().barricade.isDead)
+            throw new InvalidOperationException("Barricade is dead.");
+
+        if (!barricade.model.TryGetComponent(out BuildableContainer container))
+            container = barricade.model.gameObject.AddComponent<BuildableContainer>();
+
+        return container;
+    }
+
+    public static BuildableContainer Get(StructureDrop structure)
+    {
+        GameThread.AssertCurrent();
+
+        if (structure.GetServersideData().structure.isDead)
+            throw new InvalidOperationException("Structure is dead.");
+
+        if (!structure.model.TryGetComponent(out BuildableContainer container))
+            container = structure.model.gameObject.AddComponent<BuildableContainer>();
 
         return container;
     }
@@ -99,4 +139,29 @@ public class BuildableContainer : MonoBehaviour, IComponentContainer<IBuildableC
 
         Destroy(this);
     }
+}
+
+/// <summary>
+/// Components implementing this will receive information about the most recent salvager.
+/// </summary>
+public interface ISalvageInfo
+{
+    bool IsSalvaged { set; get; }
+    CSteamID Salvager { set; get; }
+}
+
+/// <summary>
+/// Components implementing this will receive a callback allowing it to handle a salvage request.
+/// </summary>
+public interface ISalvageListener : ISalvageInfo
+{
+    void OnSalvageRequested(SalvageRequested e);
+}
+
+/// <summary>
+/// Components implementing this will receive information about the most recent destroy event.
+/// </summary>
+public interface IDestroyInfo
+{
+    IBuildableDestroyedEvent? DestroyInfo { get; set; }
 }

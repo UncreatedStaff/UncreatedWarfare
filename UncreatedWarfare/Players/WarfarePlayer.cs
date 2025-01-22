@@ -8,7 +8,6 @@ using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Models.GameData;
-using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Saves;
@@ -42,6 +41,7 @@ public class WarfarePlayer :
     IEquatable<WarfarePlayer>,
     ISpotter
 {
+    private int _modalHandles;
     private readonly CancellationTokenSource _disconnectTokenSource;
     private readonly ILogger _logger;
     private PlayerNames _playerNameHelper;
@@ -49,6 +49,39 @@ public class WarfarePlayer :
     private readonly uint _acctId;
     private readonly SingleUseTypeDictionary<IPlayerComponent> _components;
     private readonly CSteamID _steam64;
+
+    public ModalHandle GetModalHandle()
+    {
+        GameThread.AssertCurrent();
+        ++_modalHandles;
+        if ((UnturnedPlayer.pluginWidgetFlags & (EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur)) == 0)
+        {
+            UnturnedPlayer.enablePluginWidgetFlag(EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur);
+        }
+
+        return new ModalHandle(this);
+    }
+
+    internal void DisposeModalHandle()
+    {
+        if (GameThread.IsCurrent)
+        {
+            --_modalHandles;
+            if (_modalHandles == 0 && (UnturnedPlayer.pluginWidgetFlags & (EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur)) == (EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur))
+                UnturnedPlayer.disablePluginWidgetFlag(EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur);
+        }
+        else
+        {
+            UniTask.Create(async () =>
+            {
+                await UniTask.SwitchToMainThread();
+                if (!IsOnline)
+                    return;
+
+                DisposeModalHandle();
+            });
+        }
+    }
 
     public ref readonly CSteamID Steam64 => ref _steam64;
 
@@ -383,5 +416,34 @@ public class WarfarePlayer :
     {
         add => OnDestroyed += value;
         remove => OnDestroyed -= value;
+    }
+}
+
+/// <summary>
+/// Allows for multiple UI's to be open at once that require the modal active without clearing each other.
+/// </summary>
+public struct ModalHandle(WarfarePlayer player) : IDisposable
+{
+    private readonly WarfarePlayer? _player = player;
+
+    private int _disposed;
+
+    public void Dispose()
+    {
+        if (_player == null)
+            return;
+
+        if (Interlocked.Exchange(ref _disposed, 1) != 0 || !_player.IsOnline)
+            return;
+
+        _player.DisposeModalHandle();
+    }
+
+    public static void TryGetModalHandle(WarfarePlayer player, ref ModalHandle modal)
+    {
+        if (modal is { _player: not null, _disposed: 0 })
+            return;
+
+        modal = player.GetModalHandle();
     }
 }

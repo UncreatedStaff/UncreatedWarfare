@@ -1,5 +1,5 @@
 using System;
-using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Models.Structures;
 using Uncreated.Warfare.Events.Patches;

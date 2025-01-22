@@ -22,6 +22,8 @@ public sealed class ToastManager : IPlayerComponent, IDisposable
     private static bool _initialized;
     private static IServiceProvider _serviceProvider;
 
+    private ModalHandle _modal;
+
     /// <summary>
     /// List of data for each <see cref="ToastMessageStyle"/> in use.
     /// </summary>
@@ -441,9 +443,9 @@ public sealed class ToastManager : IPlayerComponent, IDisposable
         if (info.DisableFlags != EPluginWidgetFlags.None || info.EnableFlags != EPluginWidgetFlags.None)
         {
             Player.UnturnedPlayer.setAllPluginWidgetFlags((Player.UnturnedPlayer.pluginWidgetFlags | info.EnableFlags) & ~info.DisableFlags);
-            if ((info.EnableFlags & EPluginWidgetFlags.Modal) != 0)
+            if ((info.EnableFlags & (EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur)) == (EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur))
             {
-                // todo Player.ModalNeeded = true;
+                _modal = Player.GetModalHandle();
             }
         }
     }
@@ -453,9 +455,9 @@ public sealed class ToastManager : IPlayerComponent, IDisposable
         if (info.DisableFlags != EPluginWidgetFlags.None || info.EnableFlags != EPluginWidgetFlags.None)
         {
             Player.UnturnedPlayer.setAllPluginWidgetFlags((Player.UnturnedPlayer.pluginWidgetFlags | info.DisableFlags) & ~info.EnableFlags);
-            if ((info.EnableFlags & EPluginWidgetFlags.Modal) != 0)
+            if ((info.EnableFlags & (EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur)) == (EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur))
             {
-                // todo Player.ModalNeeded = Player.TeamSelectorData is { IsSelecting: true };
+                _modal.Dispose();
             }
         }
     }

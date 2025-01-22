@@ -73,12 +73,13 @@ public class WarfareVehicle : IDisposable, ITransformObject, IEquatable<WarfareV
         VehicleHUD = serviceProvider.GetService<VehicleHUD>();
         DamageTracker = new VehicleDamageTracker();
         TranportTracker = new TranportTracker();
-        AdvancedDamageApplier = new AdvancedVehicleDamageApplier();
+        AdvancedDamageApplier = new AdvancedVehicleDamageApplier(serviceProvider.GetRequiredService<ILogger<AdvancedVehicleDamageApplier>>());
         NeedsAutoResupply = false;
 
         // allow thread-safe initialization so GetVehicle can add the component if it doesn't already exist
         if (GameThread.IsCurrent)
         {
+            _isSettingUpComponent = true;
             SetupComponents(serviceProvider);
         }
         else

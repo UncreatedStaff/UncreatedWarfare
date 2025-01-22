@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Xml;
@@ -345,6 +346,14 @@ public class TimeZoneRegionalDatabase : IHostedService
 
         foreach (KeyValuePair<string, List<TimeZoneInfo>> regions in regionTimeZonesTemp)
         {
+            regions.Value.Sort((a, b) =>
+            {
+                int cmp = a.BaseUtcOffset.CompareTo(b.BaseUtcOffset);
+                return cmp != 0
+                    ? cmp
+                    : string.Compare(a.Id, b.Id, CultureInfo.InvariantCulture, CompareOptions.IgnoreCase | CompareOptions.IgnoreSymbols | CompareOptions.IgnoreWidth | CompareOptions.IgnoreKanaType);
+            });
+
             _regionTimeZones.Add(regions.Key, regions.Value.ToArray());
         }
 

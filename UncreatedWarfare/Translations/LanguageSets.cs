@@ -79,7 +79,7 @@ public class LanguageSets
             if (found)
                 continue;
 
-            LanguageSet newSet = new LanguageSet(player.Locale.LanguageInfo, player.Locale.CultureInfo, player.Save.IMGUI, player.Team);
+            LanguageSet newSet = new LanguageSet(player.Locale.LanguageInfo, player.Locale.CultureInfo, player.Locale.TimeZone, player.Save.IMGUI, player.Team);
             newSet.StartIndex = players.Count;
             newSet.Count = 1;
             players.Add(player);
@@ -135,7 +135,7 @@ public class LanguageSets
             if (found)
                 continue;
 
-            LanguageSet newSet = new LanguageSet(player.Locale.LanguageInfo, player.Locale.CultureInfo, player.Save.IMGUI, player.Team);
+            LanguageSet newSet = new LanguageSet(player.Locale.LanguageInfo, player.Locale.CultureInfo, player.Locale.TimeZone, player.Save.IMGUI, player.Team);
             newSet.StartIndex = players.Count;
             newSet.Count = 1;
             players.Add(player);

@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -8,7 +8,7 @@ using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Squads.Spotted;
 
-namespace Uncreated.Warfare.Components;
+namespace Uncreated.Warfare.Weapons;
 
 internal class LaserGuidedMissileComponent : MonoBehaviour
 {
@@ -155,7 +155,7 @@ internal class LaserGuidedMissileComponent : MonoBehaviour
     {
         if (!_isActive)
             return;
-        
+
         if (_aim == null)
         {
             _isActive = false;
@@ -208,7 +208,7 @@ internal class LaserGuidedMissileComponent : MonoBehaviour
                 parameters.SetDirection(_projectile.transform.forward);
                 EffectManager.triggerEffect(parameters);
             }
-            
+
             _lastSent = Time.time;
         }
 

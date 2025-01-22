@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Globalization;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Models.Localization;
@@ -56,13 +56,18 @@ public readonly ref struct TranslationArguments
     /// </summary>
     public readonly CultureInfo Culture;
 
+    /// <summary>
+    /// The time zone to use for formatting dates.
+    /// </summary>
+    public readonly TimeZoneInfo TimeZone;
+
     public TranslationArguments(TranslationValue valueSet, bool useIMGUI, bool useUncoloredTranslation, WarfarePlayer player, TranslationOptions options)
-        : this(valueSet, useIMGUI, useUncoloredTranslation, player.Locale.LanguageInfo, player, player.Team, options, player.Locale.CultureInfo)
+        : this(valueSet, useIMGUI, useUncoloredTranslation, player.Locale.LanguageInfo, player, player.Team, options, player.Locale.CultureInfo, player.Locale.TimeZone)
     {
 
     }
 
-    public TranslationArguments(TranslationValue valueSet, bool useIMGUI, bool useUncoloredTranslation, LanguageInfo language, WarfarePlayer? player, Team? team, TranslationOptions options, CultureInfo culture)
+    public TranslationArguments(TranslationValue valueSet, bool useIMGUI, bool useUncoloredTranslation, LanguageInfo language, WarfarePlayer? player, Team? team, TranslationOptions options, CultureInfo culture, TimeZoneInfo timeZone)
     {
         ValueSet = valueSet;
         UseIMGUI = useIMGUI;
@@ -73,5 +78,6 @@ public readonly ref struct TranslationArguments
         Team = team is { IsValid: true } ? team : null;
         Options = options;
         Culture = culture;
+        TimeZone = timeZone;
     }
 }

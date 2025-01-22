@@ -18,6 +18,7 @@ using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Projectiles;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.List;
@@ -41,12 +42,12 @@ public partial class EventDispatcher : IHostedService, IDisposable
 
     private readonly WarfareModule _warfare;
     private readonly IPlayerService _playerService;
+    private readonly ProjectileSolver _projectileSolver;
     private readonly CancellationToken _unloadToken;
     private readonly ILogger<EventDispatcher> _logger;
     private readonly VehicleService _vehicleService;
     private IServiceProvider? _scopedServiceProvider;
     private readonly ILoggerFactory _loggerFactory;
-    private WarfareTimeComponent _timeComponent;
     private readonly Dictionary<EventListenerCacheKey, EventListenerInfo> _listeners = new Dictionary<EventListenerCacheKey, EventListenerInfo>(128);
     private readonly Dictionary<Type, EventInvocationListenerCache> _listenerCaches = new Dictionary<Type, EventInvocationListenerCache>(128);
     private readonly Dictionary<Type, MethodInfo> _syncInvokeMethods = new Dictionary<Type, MethodInfo>(64);
@@ -68,12 +69,11 @@ public partial class EventDispatcher : IHostedService, IDisposable
         _logger = serviceProvider.GetRequiredService<ILogger<EventDispatcher>>();
         _unloadToken = serviceProvider.GetRequiredService<WarfareModule>().UnloadToken;
         _loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
+        _projectileSolver = serviceProvider.GetRequiredService<ProjectileSolver>();
 
         _playerService = serviceProvider.GetRequiredService<IPlayerService>();
 
         _vehicleService = serviceProvider.GetRequiredService<VehicleService>();
-
-        _timeComponent = serviceProvider.GetRequiredService<WarfareTimeComponent>();
 
         _warfare = serviceProvider.GetRequiredService<WarfareModule>();
 
@@ -192,7 +192,6 @@ public partial class EventDispatcher : IHostedService, IDisposable
         /* Projectiles */
         UseableGun.onProjectileSpawned -= OnProjectileSpawned;
 
-        _timeComponent = null!;
         return UniTask.CompletedTask;
     }
 

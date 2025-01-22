@@ -61,7 +61,7 @@ public sealed class TimeAddon : IArgumentAddon
             {
                 "rels" => FormatDateTimeRelative(false, dt, formatter.ServiceProvider.GetRequiredService<TranslationInjection<TimeTranslations>>().Value, args.Language, args.Culture),
                 "rell" => FormatDateTimeRelative(true, dt, formatter.ServiceProvider.GetRequiredService<TranslationInjection<TimeTranslations>>().Value, args.Language, args.Culture),
-                _ => TryFormatDateTime(dt, args.Format.Format, args.Culture)
+                _ => TryFormatDateTime(dt, args.Format.Format, args.Culture, args.TimeZone)
             };
         }
         else if (__reftype(value) == typeof(DateTimeOffset))
@@ -71,7 +71,7 @@ public sealed class TimeAddon : IArgumentAddon
             {
                 "rels" => FormatDateTimeRelative(false, dt, formatter.ServiceProvider.GetRequiredService<TranslationInjection<TimeTranslations>>().Value, args.Language, args.Culture),
                 "rell" => FormatDateTimeRelative(true, dt, formatter.ServiceProvider.GetRequiredService<TranslationInjection<TimeTranslations>>().Value, args.Language, args.Culture),
-                _ => TryFormatDateTime(dt, args.Format.Format, args.Culture)
+                _ => TryFormatDateTime(dt, args.Format.Format, args.Culture, args.TimeZone)
             };
         }
         else if (TypedReference.ToObject(value) is IConvertible c)
@@ -105,8 +105,10 @@ public sealed class TimeAddon : IArgumentAddon
         };
     }
 
-    private static string TryFormatDateTime(DateTime dateTime, string? format, CultureInfo culture)
+    private static string TryFormatDateTime(DateTime dateTime, string? format, CultureInfo culture, TimeZoneInfo timeZone)
     {
+        dateTime = TimeZoneInfo.ConvertTime(dateTime, dateTime.Kind == DateTimeKind.Local ? TimeZoneInfo.Local : TimeZoneInfo.Utc, timeZone);
+
         try
         {
             return dateTime.ToString(format, culture);

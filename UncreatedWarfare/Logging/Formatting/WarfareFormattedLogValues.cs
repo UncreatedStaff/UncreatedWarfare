@@ -121,6 +121,7 @@ internal struct WarfareFormattedLogValues
             -1,
             CultureInfo.InvariantCulture,
             ValueFormatter?.LanguageService.GetDefaultLanguage()!,
+            TimeZoneInfo.Utc,
             useColor ? TranslationOptions.ForTerminal : TranslationOptions.NoRichText,
             in fmt,
             null,

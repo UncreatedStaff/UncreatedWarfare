@@ -1,22 +1,3 @@
-﻿# OptionsCommand
-Description: "Configure player-specific settings. If no parameters are given, the options UI will be opened."
-Aliases: [ settings, option, config ]
-Parameters:
-
-  - Name: imgui
-    Type: Verbatim
-    Aliases: [ legacyui, oldui ]
-    Description: Enables chat support for the <nobr><b>-Glazier IMGUI</b></nobr> launch option. Fixes issues with rich text tags showing in chat.
-    IsOptional: true
-    Parameters:
-      - Name: enabled
-        Type: bool
-
-  - Name: trackquests
-    Type: Verbatim
-    Aliases: [ dailyquests, quests ]
-    Description: Keeps the quest UI from showing up by default.
-    IsOptional: true
-    Parameters:
-      - Name: enabled
-        Type: bool
+# OptionsCommand
+Description: "Open the configuration UI."
+Aliases: [ settings, option, config, lang, language, culture, time, timezone, tz ]

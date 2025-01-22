@@ -133,7 +133,9 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
 
         foreach (WarfarePlayer player in _playerService.OnlinePlayers)
         {
-            player.UnturnedPlayer.enablePluginWidgetFlag(EPluginWidgetFlags.Modal);
+            DualSidedLeaderboardPlayerData data = GetOrCreateData(player.Steam64);
+            ModalHandle.TryGetModalHandle(player, ref data.Modal);
+
             if (player.ComponentOrNull<AudioRecordPlayerComponent>() is { } comp)
             {
                 comp.VoiceChatStateUpdated += CompOnVoiceChatStateUpdated;
@@ -174,7 +176,9 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
         ClearFromAllPlayers();
         foreach (WarfarePlayer player in _playerService.OnlinePlayers)
         {
-            player.UnturnedPlayer.disablePluginWidgetFlag(EPluginWidgetFlags.Modal);
+            DualSidedLeaderboardPlayerData data = GetOrCreateData(player.Steam64);
+            data.Modal.Dispose();
+
             if (player.IsOnline && player.ComponentOrNull<AudioRecordPlayerComponent>() is { } comp)
                 comp.VoiceChatStateUpdated -= CompOnVoiceChatStateUpdated;
         }
@@ -677,6 +681,10 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
     private DualSidedLeaderboardPlayerData CreateData(CSteamID steam64)
     {
         return new DualSidedLeaderboardPlayerData(steam64, this);
+    }
+    private DualSidedLeaderboardPlayerData GetOrCreateData(CSteamID steam64)
+    {
+        return GetOrAddData(steam64, _createData);
     }
 
 #nullable disable

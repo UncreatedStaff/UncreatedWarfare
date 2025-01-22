@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Layouts.Teams;
@@ -61,7 +61,7 @@ internal sealed class PointsAddExperienceCommand : IExecutableCommand
 
         LanguageSet set = onlinePlayer != null
             ? new LanguageSet(onlinePlayer)
-            : new LanguageSet(_languageService.GetDefaultLanguage(), _languageService.GetDefaultCulture(), false, team);
+            : new LanguageSet(_languageService.GetDefaultLanguage(), _languageService.GetDefaultCulture(), TimeZoneInfo.Utc, false, team);
 
         await _pointsService.ApplyEvent(playerId, faction.PrimaryKey, _pointsService.GetAdminEvent(in set, value, null, null), token);
 

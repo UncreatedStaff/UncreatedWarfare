@@ -345,6 +345,7 @@ public class WarfareLogger : ILogger
                 -1,
                 CultureInfo.InvariantCulture,
                 formatter.LanguageService.GetDefaultLanguage(),
+                TimeZoneInfo.Utc,
                 color is StackColorFormatType.ExtendedANSIColor or StackColorFormatType.ANSIColor
                     ? TranslationOptions.ForTerminal
                     : TranslationOptions.NoRichText,

@@ -1009,7 +1009,7 @@ public class DeathMessageResolver
 
         if (primaryName != null)
         {
-            ValueFormatParameters parameters = new ValueFormatParameters(culture, language, options, AssetLink.AssetLinkFriendly);
+            ValueFormatParameters parameters = new ValueFormatParameters(culture, language, TimeZoneInfo.Utc, options, AssetLink.AssetLinkFriendly);
             primaryName = RarityColorAddon.Apply(primaryName, primaryAsset, _translationService.ValueFormatter, in parameters);
         }
 
@@ -1018,7 +1018,7 @@ public class DeathMessageResolver
         string? secondaryName = secondaryAsset?.FriendlyName;
         if (secondaryName != null)
         {
-            ValueFormatParameters parameters = new ValueFormatParameters(culture, language, options, AssetLink.AssetLinkFriendly);
+            ValueFormatParameters parameters = new ValueFormatParameters(culture, language, TimeZoneInfo.Utc, options, AssetLink.AssetLinkFriendly);
             secondaryName = RarityColorAddon.Apply(secondaryName, secondaryAsset, _translationService.ValueFormatter, in parameters);
         }
 
