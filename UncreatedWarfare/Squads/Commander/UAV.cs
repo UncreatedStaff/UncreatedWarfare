@@ -1,18 +1,5 @@
-﻿#if DEBUG
-using System;
+#if DEBUG
 #endif
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
-using Uncreated.Warfare.Commands;
-using Uncreated.Warfare.Components;
-using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Locations;
-using Uncreated.Warfare.Models.Kits;
-using Uncreated.Warfare.Traits;
-using Uncreated.Warfare.Players.UI;
-using Uncreated.Warfare.Logging;
-
 namespace Uncreated.Warfare.Squads.Commander;
 public class UAV : MonoBehaviour//, IBuff
 {
