@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Primitives;
 using System;
 using System.Collections.Generic;
@@ -13,6 +13,7 @@ namespace Uncreated.Warfare.Configuration;
 public class AssetConfiguration : IConfiguration, IDisposable
 {
     private readonly IConfiguration _configuration;
+    private readonly IDisposable _reloadToken;
     public string FilePath { get; }
     public IConfiguration UnderlyingConfiguration { get; }
 
@@ -25,7 +26,9 @@ public class AssetConfiguration : IConfiguration, IDisposable
         ConfigurationHelper.AddSourceWithMapOverride(builder, module.FileProvider, FilePath);
         _configuration = builder.Build();
 
-        _configuration.GetReloadToken().RegisterChangeCallback(_ =>
+        UnderlyingConfiguration = _configuration;
+
+        _reloadToken = _configuration.GetReloadToken().RegisterChangeCallback(_ =>
         {
             UniTask.Create(async () =>
             {
@@ -33,8 +36,6 @@ public class AssetConfiguration : IConfiguration, IDisposable
                 OnChange?.Invoke(this);
             });
         }, null);
-
-        UnderlyingConfiguration = _configuration;
     }
 
     public string? this[string key] { get => _configuration[key]; set => _configuration[key] = value; }
@@ -43,6 +44,7 @@ public class AssetConfiguration : IConfiguration, IDisposable
     public IChangeToken GetReloadToken() => _configuration.GetReloadToken();
     public void Dispose()
     {
+        _reloadToken.Dispose();
         if (_configuration is IDisposable disp)
             disp.Dispose();
     }

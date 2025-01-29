@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Configuration;
 using System;
-using System.Collections.Generic;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
@@ -16,15 +15,48 @@ public class AdvancedVehicleDamageTweaks :
     ILayoutHostedService,
     IEventListener<ProjectileSpawned>,
     IEventListener<ProjectileExploding>,
-    IEventListener<DamageVehicleRequested>
+    IEventListener<DamageVehicleRequested>,
+    IDisposable
 {
     private readonly AssetConfiguration _assetConfiguration;
     private readonly ILogger _logger;
+
+#nullable disable
+    private IAssetLink<ItemGunAsset>[] _fullDamageOnIndirectHitWeapons;
+    private IAssetLink<ItemGunAsset>[] _groundAttackOnlyWeapons;
+    private IAssetLink<ItemGunAsset>[] _antiAirOnlyWeapons;
+#nullable restore
 
     public AdvancedVehicleDamageTweaks(AssetConfiguration assetConfiguration, ILogger<AdvancedVehicleDamageTweaks> logger)
     {
         _assetConfiguration = assetConfiguration;
         _logger = logger;
+        ReinitConfig(assetConfiguration.UnderlyingConfiguration);
+        assetConfiguration.OnChange += ReinitConfig;
+    }
+    
+    private void ReinitConfig(IConfiguration assetConfiguration)
+    {
+        IConfigurationSection fullDmg = assetConfiguration.GetSection("Projectiles:AdvancedDamage:FullDamageOnIndirectHitWeapons");
+        IConfigurationSection gndOnly = assetConfiguration.GetSection("Projectiles:AdvancedDamage:GroundAttackOnlyWeapons");
+        IConfigurationSection airOnly = assetConfiguration.GetSection("Projectiles:AdvancedDamage:AntiAirOnlyWeapons");
+
+        if (!fullDmg.Exists())
+        {
+            _logger.LogWarning("Projectiles:AdvancedDamage:FullDamageOnIndirectHitWeapons not configured.");
+        }
+        if (!gndOnly.Exists())
+        {
+            _logger.LogWarning("Projectiles:AdvancedDamage:GroundAttackOnlyWeapons not configured.");
+        }
+        if (!airOnly.Exists())
+        {
+            _logger.LogWarning("Projectiles:AdvancedDamage:AntiAirOnlyWeapons not configured.");
+        }
+
+        _fullDamageOnIndirectHitWeapons = fullDmg.Get<IAssetLink<ItemGunAsset>[]>() ?? Array.Empty<IAssetLink<ItemGunAsset>>();
+        _groundAttackOnlyWeapons = gndOnly.Get<IAssetLink<ItemGunAsset>[]>() ?? Array.Empty<IAssetLink<ItemGunAsset>>();
+        _antiAirOnlyWeapons = airOnly.Get<IAssetLink<ItemGunAsset>[]>() ?? Array.Empty<IAssetLink<ItemGunAsset>>();
     }
 
     UniTask ILayoutHostedService.StartAsync(CancellationToken token)
@@ -70,27 +102,23 @@ public class AdvancedVehicleDamageTweaks :
         
         if (directHit.HasValue) // direct hit
             finalMultiplier = directHit.Value.Multiplier;
-        else if (!FullDamageOnIndirectHitWeapons.ContainsAsset(latestInstigatorWeapon))
+        else if (!_fullDamageOnIndirectHitWeapons.ContainsAsset(latestInstigatorWeapon))
             // weapons that do not participate in advanced damage do full damage on an indirect hit
             finalMultiplier = 0.1f;
 
         bool isAircraft = e.Vehicle.Info.Type.IsAircraft();
-        if (isAircraft && GroundAttackOnlyWeapons.ContainsAsset(latestInstigatorWeapon))
+        if (isAircraft && _groundAttackOnlyWeapons.ContainsAsset(latestInstigatorWeapon))
             finalMultiplier *= 0.1f;
-        else if (!isAircraft && AntiAirOnlyWeapons.ContainsAsset(latestInstigatorWeapon))
+        else if (!isAircraft && _antiAirOnlyWeapons.ContainsAsset(latestInstigatorWeapon))
             finalMultiplier *= 0.1f;
         
         ushort newDamage = (ushort) Mathf.RoundToInt(e.PendingDamage * finalMultiplier);
         _logger.LogDebug($"Final damage multiplier of {finalMultiplier} (caused by weapon: {latestInstigatorWeapon?.FriendlyName ?? "unknown"}) will be applied to vehicle {e.Vehicle.Vehicle.asset.FriendlyName}. Original damage: {e.PendingDamage} - New damage: {newDamage}");
         e.PendingDamage = newDamage;
     }
-    
-    private IEnumerable<IAssetLink<ItemGunAsset>> FullDamageOnIndirectHitWeapons => _assetConfiguration.GetRequiredSection("Projectiles:AdvancedDamage:FullDamageOnIndirectHitWeapons")?
-        .Get<IEnumerable<IAssetLink<ItemGunAsset>>>() ?? Array.Empty<IAssetLink<ItemGunAsset>>();
-    
-    private IEnumerable<IAssetLink<ItemGunAsset>> GroundAttackOnlyWeapons => _assetConfiguration.GetRequiredSection("Projectiles:AdvancedDamage:GroundAttackOnlyWeapons")?
-        .Get<IEnumerable<IAssetLink<ItemGunAsset>>>() ?? Array.Empty<IAssetLink<ItemGunAsset>>();
-    
-    private IEnumerable<IAssetLink<ItemGunAsset>> AntiAirOnlyWeapons => _assetConfiguration.GetRequiredSection("Projectiles:AdvancedDamage:AntiAirOnlyWeapons")?
-        .Get<IEnumerable<IAssetLink<ItemGunAsset>>>() ?? Array.Empty<IAssetLink<ItemGunAsset>>();
+
+    public void Dispose()
+    {
+        _assetConfiguration.OnChange -= ReinitConfig;
+    }
 }
