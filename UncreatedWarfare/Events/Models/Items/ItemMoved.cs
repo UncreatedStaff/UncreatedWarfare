@@ -1,6 +1,4 @@
-using System.Runtime.CompilerServices;
 using Uncreated.Warfare.Kits.Items;
-using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Events.Models.Items;
 
@@ -54,6 +52,16 @@ public class ItemMoved : PlayerEvent
     /// If the item was swapped with another item (instead of being moved to an empty spot).
     /// </summary>
     public required bool IsSwap { get; init; }
+
+    /// <summary>
+    /// If this event is invoked as the second dispatch in an item swap.
+    /// </summary>
+    public required bool IsSecondaryExecution { get; init; }
+
+    /// <summary>
+    /// The item being moved.
+    /// </summary>
+    public Item Item => Jar.item;
 
     /// <summary>
     /// The item being moved.

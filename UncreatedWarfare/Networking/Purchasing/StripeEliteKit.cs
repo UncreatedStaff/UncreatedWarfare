@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using Stripe;
 using System;
 using System.Collections.Generic;
@@ -13,7 +13,7 @@ using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Languages;
 
 namespace Uncreated.Warfare.Networking.Purchasing;
-
+#if false
 [NotMapped]
 public class StripeEliteKit
 {
@@ -200,3 +200,4 @@ public class StripeEliteKit
         return eliteKit;
     }
 }
+#endif

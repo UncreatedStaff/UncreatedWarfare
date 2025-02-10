@@ -1,10 +1,8 @@
-using DanielWillett.SpeedBytes;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Models.Localization;
@@ -16,22 +14,22 @@ namespace Uncreated.Warfare;
 /// </summary>
 [JsonConverter(typeof(TranslationListConverter))]
 [TypeConverter(typeof(TranslationListTypeConverter))]
-public sealed class TranslationList : Dictionary<string, string>, ICloneable
+public sealed class TranslationList : List<KeyValuePair<string, string>>, ICloneable
 {
     public const int DefaultCharLength = 255;
 
     public TranslationList() : this(0) { }
-    public TranslationList(int capacity) : base(capacity, StringComparer.Ordinal) { }
-    public TranslationList(IDictionary<string, string> dictionary) : base(dictionary, StringComparer.Ordinal) { }
-    public TranslationList(string @default) : base(StringComparer.Ordinal)
+    public TranslationList(int capacity) : base(capacity) { }
+    public TranslationList(IDictionary<string, string> dictionary) : base(dictionary) { }
+    public TranslationList(string @default) : base(2)
     {
         Add(string.Empty, @default);
     }
-    public TranslationList(int capacity, string @default) : base(capacity, StringComparer.Ordinal)
+    public TranslationList(int capacity, string @default) : base(capacity)
     {
         Add(string.Empty, @default);
     }
-    public TranslationList(TranslationList copy) : base(copy.Count, StringComparer.Ordinal)
+    public TranslationList(TranslationList copy) : base(copy.Count)
     {
         foreach (KeyValuePair<string, string> pair in copy)
         {
@@ -42,18 +40,23 @@ public sealed class TranslationList : Dictionary<string, string>, ICloneable
     /// <summary>
     /// Use language overload if possible.
     /// </summary>
-    public new void Add(string? code, string value)
+    public void Add(string? code, string value)
     {
         code ??= string.Empty;
-        base.Add(code, value);
+
+        int index = FindIndex(code);
+        if (index == -1)
+            Add(new KeyValuePair<string, string>(code, value));
+        else
+            this[index] = new KeyValuePair<string, string>(code, value);
     }
 
     public void Add(LanguageInfo? language, string value)
     {
         if (language == null || language.IsDefault)
-            base.Add(string.Empty, value);
+            Add(string.Empty, value);
         else
-            base.Add(language.Code, value);
+            Add(language.Code, value);
     }
 
     [return: NotNullIfNotNull(nameof(@default))]
@@ -65,7 +68,7 @@ public sealed class TranslationList : Dictionary<string, string>, ICloneable
     public string? Translate(LanguageInfo? language)
     {
         string code = language == null || language.IsDefault ? string.Empty : language.Code;
-        if (TryGetValue(code, out string value))
+        if (TryGetValue(code, out string? value))
             return value;
         
         if (code.Length == 0 && language != null && TryGetValue(language.Code, out value))
@@ -80,11 +83,40 @@ public sealed class TranslationList : Dictionary<string, string>, ICloneable
                 return value;
         }
 
-        return Count > 0 ? Values.ElementAt(0) : null;
+        return Count > 0 ? this[0].Value : null;
     }
 
     public TranslationList Clone() => new TranslationList(this);
     object ICloneable.Clone() => Clone();
+
+    internal bool TryGetValue(string code, [MaybeNullWhen(false)] out string value)
+    {
+        for (int i = 0; i < Count; ++i)
+        {
+            KeyValuePair<string, string> kvp = this[i];
+            if (!string.Equals(kvp.Key, code, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            value = kvp.Value;
+            return true;
+        }
+
+        value = null;
+        return false;
+    }
+    internal int FindIndex(string code)
+    {
+        for (int i = 0; i < Count; ++i)
+        {
+            KeyValuePair<string, string> kvp = this[i];
+            if (!string.Equals(kvp.Key, code, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            return i;
+        }
+
+        return -1;
+    }
 }
 
 public sealed class TranslationListConverter : JsonConverter<TranslationList>

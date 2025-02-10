@@ -14,7 +14,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;

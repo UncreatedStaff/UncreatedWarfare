@@ -73,6 +73,24 @@ public struct WarfareDebugLoggerInterpolatedStringHandler
         WarfareLoggerInterpolatedStringHandlerHelper.AppendArgument(_buffer, ref _bufferIndex, ref _parameterList, value);
     }
 
+    public void AppendFormatted<TValue>(TValue? value, string? format) where TValue : IFormattable
+    {
+        WarfareLoggerInterpolatedStringHandlerHelper.AppendArgument(_buffer, ref _bufferIndex, ref _parameterList,
+            new FormattedValue { Value = value?.ToString(format, CultureInfo.InvariantCulture), Type = typeof(TValue), Alignment = int.MinValue });
+    }
+
+    public void AppendFormatted<TValue>(TValue? value, string? format, int alignment) where TValue : IFormattable
+    {
+        WarfareLoggerInterpolatedStringHandlerHelper.AppendArgument(_buffer, ref _bufferIndex, ref _parameterList,
+            new FormattedValue { Value = value?.ToString(format, CultureInfo.InvariantCulture), Type = typeof(TValue), Alignment = alignment });
+    }
+
+    public void AppendFormatted<TValue>(TValue? value, int alignment) where TValue : IFormattable
+    {
+        WarfareLoggerInterpolatedStringHandlerHelper.AppendArgument(_buffer, ref _bufferIndex, ref _parameterList,
+            new FormattedValue { Value = value, Type = typeof(TValue), Alignment = alignment });
+    }
+
     public void AppendFormatted(scoped ReadOnlySpan<char> value)
     {
         WarfareLoggerInterpolatedStringHandlerHelper.AppendArgument(_buffer, ref _bufferIndex, ref _parameterList, new string(value));
@@ -108,6 +126,24 @@ public struct WarfareInformationLoggerInterpolatedStringHandler
     public void AppendLiteral(string s)
     {
         WarfareLoggerInterpolatedStringHandlerHelper.AppendLiteral(_buffer, ref _bufferIndex, s);
+    }
+
+    public void AppendFormatted<TValue>(TValue? value, string? format) where TValue : IFormattable
+    {
+        WarfareLoggerInterpolatedStringHandlerHelper.AppendArgument(_buffer, ref _bufferIndex, ref _parameterList,
+            new FormattedValue { Value = value?.ToString(format, CultureInfo.InvariantCulture), Type = typeof(TValue), Alignment = int.MinValue });
+    }
+
+    public void AppendFormatted<TValue>(TValue? value, string? format, int alignment) where TValue : IFormattable
+    {
+        WarfareLoggerInterpolatedStringHandlerHelper.AppendArgument(_buffer, ref _bufferIndex, ref _parameterList,
+            new FormattedValue { Value = value?.ToString(format, CultureInfo.InvariantCulture), Type = typeof(TValue), Alignment = alignment });
+    }
+
+    public void AppendFormatted<TValue>(TValue? value, int alignment) where TValue : IFormattable
+    {
+        WarfareLoggerInterpolatedStringHandlerHelper.AppendArgument(_buffer, ref _bufferIndex, ref _parameterList,
+            new FormattedValue { Value = value, Type = typeof(TValue), Alignment = alignment });
     }
 
     public void AppendFormatted(object? value)
@@ -152,6 +188,24 @@ public struct WarfareWarningLoggerInterpolatedStringHandler
         WarfareLoggerInterpolatedStringHandlerHelper.AppendLiteral(_buffer, ref _bufferIndex, s);
     }
 
+    public void AppendFormatted<TValue>(TValue? value, string? format) where TValue : IFormattable
+    {
+        WarfareLoggerInterpolatedStringHandlerHelper.AppendArgument(_buffer, ref _bufferIndex, ref _parameterList,
+            new FormattedValue { Value = value?.ToString(format, CultureInfo.InvariantCulture), Type = typeof(TValue), Alignment = int.MinValue });
+    }
+
+    public void AppendFormatted<TValue>(TValue? value, string? format, int alignment) where TValue : IFormattable
+    {
+        WarfareLoggerInterpolatedStringHandlerHelper.AppendArgument(_buffer, ref _bufferIndex, ref _parameterList,
+            new FormattedValue { Value = value?.ToString(format, CultureInfo.InvariantCulture), Type = typeof(TValue), Alignment = alignment });
+    }
+
+    public void AppendFormatted<TValue>(TValue? value, int alignment) where TValue : IFormattable
+    {
+        WarfareLoggerInterpolatedStringHandlerHelper.AppendArgument(_buffer, ref _bufferIndex, ref _parameterList,
+            new FormattedValue { Value = value, Type = typeof(TValue), Alignment = alignment });
+    }
+
     public void AppendFormatted(object? value)
     {
         WarfareLoggerInterpolatedStringHandlerHelper.AppendArgument(_buffer, ref _bufferIndex, ref _parameterList, value);
@@ -194,6 +248,24 @@ public struct WarfareErrorLoggerInterpolatedStringHandler
         WarfareLoggerInterpolatedStringHandlerHelper.AppendLiteral(_buffer, ref _bufferIndex, s);
     }
 
+    public void AppendFormatted<TValue>(TValue? value, string? format) where TValue : IFormattable
+    {
+        WarfareLoggerInterpolatedStringHandlerHelper.AppendArgument(_buffer, ref _bufferIndex, ref _parameterList,
+            new FormattedValue { Value = value?.ToString(format, CultureInfo.InvariantCulture), Type = typeof(TValue), Alignment = int.MinValue });
+    }
+
+    public void AppendFormatted<TValue>(TValue? value, string? format, int alignment) where TValue : IFormattable
+    {
+        WarfareLoggerInterpolatedStringHandlerHelper.AppendArgument(_buffer, ref _bufferIndex, ref _parameterList,
+            new FormattedValue { Value = value?.ToString(format, CultureInfo.InvariantCulture), Type = typeof(TValue), Alignment = alignment });
+    }
+
+    public void AppendFormatted<TValue>(TValue? value, int alignment) where TValue : IFormattable
+    {
+        WarfareLoggerInterpolatedStringHandlerHelper.AppendArgument(_buffer, ref _bufferIndex, ref _parameterList,
+            new FormattedValue { Value = value, Type = typeof(TValue), Alignment = alignment });
+    }
+
     public void AppendFormatted(object? value)
     {
         WarfareLoggerInterpolatedStringHandlerHelper.AppendArgument(_buffer, ref _bufferIndex, ref _parameterList, value);
@@ -234,6 +306,24 @@ public struct WarfareCriticalLoggerInterpolatedStringHandler
     public void AppendLiteral(string s)
     {
         WarfareLoggerInterpolatedStringHandlerHelper.AppendLiteral(_buffer, ref _bufferIndex, s);
+    }
+
+    public void AppendFormatted<TValue>(TValue? value, string? format) where TValue : IFormattable
+    {
+        WarfareLoggerInterpolatedStringHandlerHelper.AppendArgument(_buffer, ref _bufferIndex, ref _parameterList,
+            new FormattedValue { Value = value?.ToString(format, CultureInfo.InvariantCulture), Type = typeof(TValue), Alignment = int.MinValue });
+    }
+
+    public void AppendFormatted<TValue>(TValue? value, string? format, int alignment) where TValue : IFormattable
+    {
+        WarfareLoggerInterpolatedStringHandlerHelper.AppendArgument(_buffer, ref _bufferIndex, ref _parameterList,
+            new FormattedValue { Value = value?.ToString(format, CultureInfo.InvariantCulture), Type = typeof(TValue), Alignment = alignment });
+    }
+
+    public void AppendFormatted<TValue>(TValue? value, int alignment) where TValue : IFormattable
+    {
+        WarfareLoggerInterpolatedStringHandlerHelper.AppendArgument(_buffer, ref _bufferIndex, ref _parameterList,
+            new FormattedValue { Value = value, Type = typeof(TValue), Alignment = alignment });
     }
 
     public void AppendFormatted(object? value)
@@ -281,6 +371,24 @@ public struct WarfareLoggerInterpolatedStringHandler
     public void AppendLiteral(string s)
     {
         WarfareLoggerInterpolatedStringHandlerHelper.AppendLiteral(_buffer, ref _bufferIndex, s);
+    }
+
+    public void AppendFormatted<TValue>(TValue? value, string? format) where TValue : IFormattable
+    {
+        WarfareLoggerInterpolatedStringHandlerHelper.AppendArgument(_buffer, ref _bufferIndex, ref _parameterList,
+            new FormattedValue { Value = value?.ToString(format, CultureInfo.InvariantCulture), Type = typeof(TValue), Alignment = int.MinValue });
+    }
+
+    public void AppendFormatted<TValue>(TValue? value, string? format, int alignment) where TValue : IFormattable
+    {
+        WarfareLoggerInterpolatedStringHandlerHelper.AppendArgument(_buffer, ref _bufferIndex, ref _parameterList,
+            new FormattedValue { Value = value?.ToString(format, CultureInfo.InvariantCulture), Type = typeof(TValue), Alignment = alignment });
+    }
+
+    public void AppendFormatted<TValue>(TValue? value, int alignment) where TValue : IFormattable
+    {
+        WarfareLoggerInterpolatedStringHandlerHelper.AppendArgument(_buffer, ref _bufferIndex, ref _parameterList,
+            new FormattedValue { Value = value, Type = typeof(TValue), Alignment = alignment });
     }
 
     public void AppendFormatted(object? value)
@@ -343,4 +451,11 @@ internal static class WarfareLoggerInterpolatedStringHandlerHelper
 
         return fmtLength;
     }
+}
+
+public struct FormattedValue
+{
+    public object? Value;
+    public Type Type;
+    public int Alignment;
 }

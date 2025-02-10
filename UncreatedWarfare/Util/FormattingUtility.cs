@@ -1,6 +1,7 @@
 using DanielWillett.ReflectionTools;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
 using System.Text;
@@ -236,6 +237,15 @@ public static class FormattingUtility
         }
 
         return sb.ToString();
+    }
+
+    /// <summary>
+    /// Replaces newline constants like '/n', '\n', '&lt;br&gt;', etc with the actual newline character.
+    /// </summary>
+    [return: NotNullIfNotNull("str")]
+    public static string? ReplaceNewLineSubstrings(string? str)
+    {
+        return str?.Replace("\\n", "\n").Replace("/n", "\n").Replace("<br>", "\n").Replace("<br/>", "\n").Replace("<br />", "\n");
     }
 
     /// <summary>

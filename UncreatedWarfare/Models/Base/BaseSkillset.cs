@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Uncreated.Warfare.Players.Skillsets;
@@ -49,5 +49,6 @@ public abstract class BaseSkillset : ICloneable
         Skillset = other.Skillset;
     }
 
+    /// <inheritdoc />
     public abstract object Clone();
 }

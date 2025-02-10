@@ -1,6 +1,5 @@
-﻿using Uncreated.Warfare.Interaction.Commands;
+using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Commands;
@@ -8,14 +7,15 @@ namespace Uncreated.Warfare.Commands;
 [Command("save", "confirm", "keep"), SubCommandOf(typeof(KitLayoutCommand))]
 internal sealed class KitLayoutSaveCommand : ICommand
 {
+    private readonly KitLayoutService _layoutService;
     private readonly KitCommandTranslations _translations;
-    private readonly KitManager _kitManager;
 
     public required CommandContext Context { get; init; }
 
-    public KitLayoutSaveCommand(TranslationInjection<KitCommandTranslations> translations, KitManager kitManager)
+    public KitLayoutSaveCommand(TranslationInjection<KitCommandTranslations> translations, KitLayoutService layoutService)
     {
-        _kitManager = kitManager;
+        _layoutService = layoutService;
+
         _translations = translations.Value;
     }
 
@@ -23,25 +23,16 @@ internal sealed class KitLayoutSaveCommand : ICommand
     {
         Context.AssertRanByPlayer();
 
-        await Context.Player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
-        try
+        if (!await _layoutService.SaveLayoutAsync(Context.Player, token).ConfigureAwait(false))
         {
-            Kit? kit = await Context.Player.Component<KitPlayerComponent>().GetActiveKitAsync(token).ConfigureAwait(false);
-
-            if (kit == null)
-            {
-                throw Context.Reply(_translations.KitLayoutNoKit);
-            }
-
-            await UniTask.SwitchToMainThread(token);
-
-            await _kitManager.SaveLayout(Context.Player, kit, false, token).ConfigureAwait(false);
-            await UniTask.SwitchToMainThread(token);
-            Context.Reply(_translations.KitLayoutSaved, kit);
+            throw Context.Reply(_translations.KitLayoutNoKit);
         }
-        finally
-        {
-            Context.Player.PurchaseSync.Release();
-        }
+
+        Kit? kit = await Context.Player
+            .Component<KitPlayerComponent>()
+            .GetActiveKitAsync(KitInclude.Translations, token)
+            .ConfigureAwait(false);
+
+        Context.Reply(_translations.KitLayoutSaved, kit!);
     }
 }

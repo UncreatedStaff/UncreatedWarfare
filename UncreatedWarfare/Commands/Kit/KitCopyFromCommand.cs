@@ -1,12 +1,21 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using System;
-using Uncreated.Warfare.Database.Abstractions;
+using System.Collections.Generic;
+using System.Text.Json;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Kits.Items;
+using Uncreated.Warfare.Kits.Loadouts;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Kits;
+using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Players.Skillsets;
+using Uncreated.Warfare.Players.Unlocks;
+using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Languages;
+using Uncreated.Warfare.Vehicles.Spawners.Delays;
 
 namespace Uncreated.Warfare.Commands;
 
@@ -14,20 +23,20 @@ namespace Uncreated.Warfare.Commands;
 internal sealed class KitCopyFromCommand : IExecutableCommand
 {
     private readonly KitCommandTranslations _translations;
-    private readonly KitManager _kitManager;
-    private readonly IKitsDbContext _dbContext;
+    private readonly IKitDataStore _kitDataStore;
+    private readonly LoadoutService _loadoutService;
     private readonly LanguageService _languageService;
+    private readonly ICachableLanguageDataStore _languageSql;
 
     public required CommandContext Context { get; init; }
 
     public KitCopyFromCommand(IServiceProvider serviceProvider)
     {
-        _kitManager = serviceProvider.GetRequiredService<KitManager>();
-        _translations = serviceProvider.GetRequiredService<TranslationInjection<KitCommandTranslations>>().Value;
         _languageService = serviceProvider.GetRequiredService<LanguageService>();
-        _dbContext = serviceProvider.GetRequiredService<IKitsDbContext>();
-
-        _dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
+        _languageSql = serviceProvider.GetRequiredService<ICachableLanguageDataStore>();
+        _kitDataStore = serviceProvider.GetRequiredService<IKitDataStore>();
+        _translations = serviceProvider.GetRequiredService<TranslationInjection<KitCommandTranslations>>().Value;
+        _loadoutService = serviceProvider.GetRequiredService<LoadoutService>();
     }
 
     public async UniTask ExecuteAsync(CancellationToken token)
@@ -37,14 +46,14 @@ internal sealed class KitCopyFromCommand : IExecutableCommand
             throw Context.SendHelp();
         }
         
-        Kit? sourceKit = await _kitManager.FindKit(existingKitId, token, true);
+        Kit? sourceKit = await _kitDataStore.QueryKitAsync(existingKitId, KitInclude.All, token);
         if (sourceKit == null)
         {
             throw Context.Reply(_translations.KitNotFound, existingKitId);
         }
 
         
-        Kit? existingKit = await _kitManager.FindKit(newKitId, token, true);
+        Kit? existingKit = await _kitDataStore.QueryKitAsync(newKitId, KitInclude.Translations, token);
         if (existingKit != null)
         {
             throw Context.Reply(_translations.KitNameTaken, newKitId);
@@ -52,7 +61,6 @@ internal sealed class KitCopyFromCommand : IExecutableCommand
 
         Kit kit;
 
-        bool isAdded = false;
         if (LoadoutIdHelper.Parse(newKitId, out CSteamID player) > 0)
         {
             if (sourceKit.Type != KitType.Loadout)
@@ -60,70 +68,121 @@ internal sealed class KitCopyFromCommand : IExecutableCommand
                 throw Context.Reply(_translations.KitCopyNonLoadoutToLoadout, sourceKit, newKitId);
             }
 
-            kit = await _kitManager.Loadouts.CreateLoadout(_dbContext, Context.CallerId, player, sourceKit.Class, sourceKit.GetDisplayName(_languageService), token);
-            newKitId = kit.InternalName;
-            isAdded = true;
+            kit = await _loadoutService.CreateLoadoutAsync(player, Context.CallerId, sourceKit.Class, null, kit =>
+            {
+                CopyKit(kit, sourceKit);
+                return Task.CompletedTask;
+            }, token).ConfigureAwait(false);
+
+            newKitId = kit.Id;
         }
         else
         {
-            kit = new Kit(newKitId.ToLowerInvariant().Replace(' ', '_'), sourceKit)
+            kit = await _kitDataStore.AddKitAsync(newKitId, sourceKit.Class, null, Context.CallerId, kit =>
             {
-                Season = WarfareModule.Season,
-                Disabled = true, // temporarily lock the kit until all the properties can be copied over
-                Creator = Context.CallerId.m_SteamID
-            };
+                CopyKit(kit, sourceKit);
+            }, token);
         }
 
-        if (!isAdded)
-        {
-            await _dbContext.AddAsync(kit, token).ConfigureAwait(false);
-            await _dbContext.SaveChangesAsync(token).ConfigureAwait(false);
-
-            kit.Disabled = false;
-        }
-        else
-        {
-            kit.CopyFrom(sourceKit, true, true);
-            kit.Disabled = true;
-        }
-
-        kit.ReapplyPrimaryKey();
-
-        foreach (KitSkillset skillset in kit.Skillsets)
-            _dbContext.Add(skillset);
-
-        foreach (KitFilteredFaction faction in kit.FactionFilter)
-            _dbContext.Add(faction);
-
-        foreach (KitFilteredMap map in kit.MapFilter)
-            _dbContext.Add(map);
-
-        foreach (KitItemModel item in kit.ItemModels)
-            _dbContext.Add(item);
-
-        foreach (KitTranslation translation in kit.Translations)
-            _dbContext.Add(translation);
-
-        foreach (KitUnlockRequirement unlockRequirement in kit.UnlockRequirementsModels)
-            _dbContext.Add(unlockRequirement);
-
-        _dbContext.Update(kit);
-        await _dbContext.SaveChangesAsync(token).ConfigureAwait(false);
-
-        if (isAdded)
-        {
-            try
-            {
-                await _kitManager.Loadouts.UnlockLoadout(Context.CallerId, newKitId, token).ConfigureAwait(false);
-            }
-            catch (InvalidOperationException) { }
-            catch (KitNotFoundException) { }
-        }
-
-        Context.LogAction(ActionLogType.CreateKit, newKitId + " COPIED FROM " + sourceKit.InternalName);
-
-        await UniTask.SwitchToMainThread(token);
-        _kitManager.Signs.UpdateSigns(sourceKit);
+        Context.LogAction(ActionLogType.CreateKit, newKitId + " COPIED FROM " + sourceKit.Id);
         Context.Reply(_translations.KitCopied, sourceKit, kit);
+    }
+
+    private void CopyKit(KitModel kit, Kit source)
+    {
+        kit.Class = source.Class;
+        kit.Branch = source.Branch;
+        kit.Type = source.Type;
+        kit.TeamLimit = KitDefaults.GetDefaultTeamLimit(source.Class) == source.TeamLimit ? null : source.TeamLimit;
+        kit.CreditCost = source.CreditCost;
+        kit.PremiumCost = source.PremiumCost;
+        kit.SquadLevel = source.SquadLevel;
+        kit.FactionId = source.Faction.PrimaryKey;
+        kit.Disabled = source.IsLocked;
+        kit.FactionFilterIsWhitelist = source.FactionFilterIsWhitelist;
+        kit.MapFilterIsWhitelist = source.MapFilterIsWhitelist;
+        kit.RequestCooldown = (float)source.RequestCooldown.TotalSeconds;
+        kit.RequiresNitro = source.RequiresServerBoost;
+        kit.LastEditedAt = source.LastEditedTimestamp;
+        kit.LastEditor = source.LastEditingPlayer.m_SteamID;
+        kit.Weapons = source.WeaponText;
+
+        foreach (IKitItem item in source.Items)
+        {
+            KitItemModel model = new KitItemModel { KitId = kit.PrimaryKey };
+            KitItemUtility.CreateKitItemModel(item, model);
+            kit.Items.Add(model);
+        }
+
+        foreach (Skillset skillset in source.Skillsets)
+        {
+            KitSkillset model = new KitSkillset
+            {
+                KitId = kit.PrimaryKey,
+                Skillset = skillset
+            };
+            kit.Skillsets.Add(model);
+        }
+
+        foreach (FactionInfo faction in source.FactionFilter)
+        {
+            KitFilteredFaction model = new KitFilteredFaction
+            {
+                KitId = kit.PrimaryKey,
+                FactionId = faction.PrimaryKey
+            };
+            kit.FactionFilter.Add(model);
+        }
+
+        foreach (uint map in source.MapFilter)
+        {
+            KitFilteredMap model = new KitFilteredMap
+            {
+                KitId = kit.PrimaryKey,
+                Map = map
+            };
+            kit.MapFilter.Add(model);
+        }
+
+        foreach (ILayoutDelay<LayoutDelayContext> delay in source.Delays)
+        {
+            KitDelay model = new KitDelay
+            {
+                KitId = kit.PrimaryKey,
+                Type = delay.GetType().AssemblyQualifiedName!,
+                Data = JsonSerializer.Serialize(delay, ConfigurationSettings.JsonCondensedSerializerSettings)
+            };
+            kit.Delays.Add(model);
+        }
+
+        foreach (UnlockRequirement delay in source.Delays)
+        {
+            KitUnlockRequirement model = new KitUnlockRequirement
+            {
+                KitId = kit.PrimaryKey,
+                Type = delay.GetType().AssemblyQualifiedName!,
+                Data = JsonSerializer.Serialize(delay, ConfigurationSettings.JsonCondensedSerializerSettings)
+            };
+            kit.UnlockRequirements.Add(model);
+        }
+
+        foreach (KeyValuePair<string, string> translation in source.Translations)
+        {
+            LanguageInfo? lang = string.IsNullOrEmpty(translation.Key)
+                ? _languageService.GetDefaultLanguage()
+                : _languageSql.GetInfoCached(translation.Key);
+
+            if (lang == null)
+                continue;
+
+            KitTranslation model = new KitTranslation
+            {
+                KitId = kit.PrimaryKey,
+                LanguageId = lang.Key,
+                Value = translation.Value
+            };
+
+            kit.Translations.Add(model);
+        }
     }
 }

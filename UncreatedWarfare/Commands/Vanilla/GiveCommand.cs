@@ -109,8 +109,8 @@ internal sealed class GiveCommand : IExecutableCommand
         {
             if (Context.TryGet(0, out RedirectType type))
             {
-                FactionInfo? kitFaction = _factionDataStore.FindFaction((await Context.Player.Component<KitPlayerComponent>().GetActiveKitAsync(token))?.Faction);
-                
+                FactionInfo? kitFaction = (await Context.Player.Component<KitPlayerComponent>().GetActiveKitAsync(KitInclude.Base, token))?.Faction;
+
                 await UniTask.SwitchToMainThread(token);
                 
                 asset = _assetRedirectService.ResolveRedirect(type, string.Empty, kitFaction, Context.Player.Team, out byte[] state, out byte amt);
@@ -151,7 +151,7 @@ internal sealed class GiveCommand : IExecutableCommand
                 }
                 if (Context.TryGet(0, out RedirectType type))
                 {
-                    FactionInfo? kitFaction = _factionDataStore.FindFaction((await Context.Player.Component<KitPlayerComponent>().GetActiveKitAsync(token))?.Faction);
+                    FactionInfo? kitFaction = (await Context.Player.Component<KitPlayerComponent>().GetActiveKitAsync(KitInclude.Base, token))?.Faction;
 
                     await UniTask.SwitchToMainThread(token);
 
@@ -182,7 +182,7 @@ internal sealed class GiveCommand : IExecutableCommand
                 itemName = Context.GetRange(0, Context.ArgumentCount - 1)!;
                 if (Enum.TryParse(itemName, true, out RedirectType type))
                 {
-                    FactionInfo? kitFaction = _factionDataStore.FindFaction((await Context.Player.Component<KitPlayerComponent>().GetActiveKitAsync(token))?.Faction);
+                    FactionInfo? kitFaction = (await Context.Player.Component<KitPlayerComponent>().GetActiveKitAsync(KitInclude.Base, token))?.Faction;
 
                     await UniTask.SwitchToMainThread(token);
 
@@ -204,7 +204,7 @@ internal sealed class GiveCommand : IExecutableCommand
                 itemName = Context.GetRange(0)!;
                 if (Enum.TryParse(itemName, true, out RedirectType type))
                 {
-                    FactionInfo? kitFaction = _factionDataStore.FindFaction((await Context.Player.Component<KitPlayerComponent>().GetActiveKitAsync(token))?.Faction);
+                    FactionInfo? kitFaction = (await Context.Player.Component<KitPlayerComponent>().GetActiveKitAsync(KitInclude.Base, token))?.Faction;
 
                     await UniTask.SwitchToMainThread(token);
 

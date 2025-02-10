@@ -1,12 +1,17 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using System;
-using Uncreated.Warfare.Database.Abstractions;
+using System.Collections.Generic;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Kits.Items;
+using Uncreated.Warfare.Kits.Loadouts;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Util.Inventory;
 
 namespace Uncreated.Warfare.Commands;
 
@@ -14,28 +19,28 @@ namespace Uncreated.Warfare.Commands;
 internal sealed class KitCreateLoadoutCommand : IExecutableCommand
 {
     private readonly KitCommandTranslations _translations;
-    private readonly KitManager _kitManager;
-    private readonly IKitsDbContext _dbContext;
+    private readonly LoadoutService _loadoutService;
+    private readonly KitWeaponTextService _kitWeaponTextService;
+    private readonly IPlayerService _playerService;
     private readonly IUserDataService _userDataService;
     private readonly AssetRedirectService _assetRedirectService;
     public required CommandContext Context { get; init; }
 
     public KitCreateLoadoutCommand(IServiceProvider serviceProvider)
     {
-        _kitManager = serviceProvider.GetRequiredService<KitManager>();
+        _loadoutService = serviceProvider.GetRequiredService<LoadoutService>();
+        _kitWeaponTextService = serviceProvider.GetRequiredService<KitWeaponTextService>();
         _translations = serviceProvider.GetRequiredService<TranslationInjection<KitCommandTranslations>>().Value;
-        _dbContext = serviceProvider.GetRequiredService<IKitsDbContext>();
         _userDataService = serviceProvider.GetRequiredService<IUserDataService>();
+        _playerService = serviceProvider.GetRequiredService<IPlayerService>();
         _assetRedirectService = serviceProvider.GetRequiredService<AssetRedirectService>();
-
-        _dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
     }
 
     public async UniTask ExecuteAsync(CancellationToken token)
     {
         Context.AssertRanByPlayer();
 
-        if (!Context.TryGet(0, out CSteamID steam64, out WarfarePlayer? onlinePlayer) || !Context.TryGet(1, out Class @class))
+        if (!Context.TryGet(0, out CSteamID steam64, out _) || !Context.TryGet(1, out Class @class))
         {
             throw Context.SendHelp();
         }
@@ -45,25 +50,29 @@ internal sealed class KitCreateLoadoutCommand : IExecutableCommand
             signText = null;
         }
 
-        Kit loadout = await _kitManager.Loadouts.CreateLoadout(_dbContext, Context.CallerId, steam64, @class, signText, token).ConfigureAwait(false);
-        
-        loadout.SetItemArray(ItemUtility.ItemsFromInventory(Context.Player, assetRedirectService: _assetRedirectService), _dbContext);
-
-        await _dbContext.SaveChangesAsync(CancellationToken.None);
-
-        try
+        Kit loadout = await _loadoutService.CreateLoadoutAsync(steam64, Context.CallerId, @class, signText, async kit =>
         {
+            await UniTask.SwitchToMainThread(token);
+
+            List<IItem> items = ItemUtility.ItemsFromInventory(Context.Player, assetRedirectService: _assetRedirectService);
+
+            kit.Items ??= new List<KitItemModel>(items.Count);
+            foreach (IItem item in items)
+            {
+                KitItemModel model = new KitItemModel { KitId = kit.PrimaryKey };
+                KitItemUtility.CreateKitItemModel(item, model);
+                kit.Items.Add(model);
+            }
+
+            kit.Weapons = _kitWeaponTextService.GetWeaponText(items);
+
             // items have already been added so might as well unlock it
-            await _kitManager.Loadouts.UnlockLoadout(Context.CallerId, loadout.InternalName, CancellationToken.None);
-        }
-        catch (InvalidOperationException) { }
+            kit.Disabled = false;
 
-        if (token.IsCancellationRequested)
-        {
-            return;
-        }
+        }, token).ConfigureAwait(false);
+        
+        IPlayer player = await _playerService.GetOfflinePlayer(steam64, _userDataService, CancellationToken.None).ConfigureAwait(false);
 
-        IPlayer player = (IPlayer?)onlinePlayer ?? await _userDataService.GetUsernamesAsync(steam64.m_SteamID, CancellationToken.None).ConfigureAwait(false);
         Context.Reply(_translations.LoadoutCreated, @class, player, player, loadout);
     }
 }

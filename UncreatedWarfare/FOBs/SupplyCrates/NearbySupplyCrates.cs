@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models.Fobs;
 using Uncreated.Warfare.Fobs;
-using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.List;
@@ -13,7 +8,7 @@ using Uncreated.Warfare.Util.List;
 namespace Uncreated.Warfare.FOBs.SupplyCrates;
 public class NearbySupplyCrates
 {
-    private TrackingList<SupplyCrate> _supplyCrates;
+    private readonly TrackingList<SupplyCrate> _supplyCrates;
     private readonly FobManager _fobManager;
     private readonly Vector3 _requiredSupplyPoint;
     private readonly CSteamID _team;

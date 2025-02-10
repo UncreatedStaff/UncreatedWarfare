@@ -1,7 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using System;
-using Uncreated.Warfare.Database.Abstractions;
+using System.Text.Json;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Logging;
@@ -12,79 +11,75 @@ using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Commands;
 
-[Command("level", "lvl"), SubCommandOf(typeof(KitCommand))]
+[Command("level", "lvl"), SubCommandOf(typeof(KitSetCommand))]
 internal sealed class KitSetLevelCommand : IExecutableCommand
 {
     private readonly KitCommandTranslations _translations;
-    private readonly KitManager _kitManager;
-    private readonly IKitsDbContext _dbContext;
+    private readonly IKitDataStore _kitDataStore;
     public required CommandContext Context { get; init; }
 
-    public KitSetLevelCommand(IServiceProvider serviceProvider)
+    public KitSetLevelCommand(IKitDataStore kitDataStore, TranslationInjection<KitCommandTranslations> translations)
     {
-        _kitManager = serviceProvider.GetRequiredService<KitManager>();
-        _dbContext = serviceProvider.GetRequiredService<IKitsDbContext>();
-        _translations = serviceProvider.GetRequiredService<TranslationInjection<KitCommandTranslations>>().Value;
-
-        _dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
+        _kitDataStore = kitDataStore;
+        _translations = translations.Value;
     }
 
     public async UniTask ExecuteAsync(CancellationToken token)
     {
-        if (!Context.TryGet(1, out string? kitId) || !Context.TryGet(2, out int level))
+        if (!Context.TryGet(0, out string? kitId) || !Context.TryGet(1, out int level))
         {
             throw Context.SendHelp();
         }
 
-        Kit? kit = await _kitManager.FindKit(kitId, token, true, x => x.Kits
-            .Include(y => y.UnlockRequirementsModels)
-            .Include(y => y.Translations)
-        );
+        Kit? kit = await _kitDataStore.QueryKitAsync(kitId, KitInclude.Translations, token);
 
         if (kit == null)
         {
-            throw Context.Reply(_translations.KitNotFound);
+            throw Context.Reply(_translations.KitNotFound, kitId);
         }
 
-        kitId = kit.InternalName;
+        kitId = kit.Id;
 
-        if (level == 0)
+        await _kitDataStore.UpdateKitAsync(kit.Key, KitInclude.Translations | KitInclude.UnlockRequirements, kit =>
         {
-            UnlockRequirement[] ulr = kit.UnlockRequirements;
-            while (true)
+            if (level <= 0)
             {
-                int index = Array.FindIndex(ulr, x => x is LevelUnlockRequirement);
-                if (index == -1)
-                    break;
-
-                CollectionUtility.RemoveFromArray(ref ulr, index);
-            }
-            kit.SetUnlockRequirementArray(ulr, _dbContext);
-        }
-        else
-        {
-            UnlockRequirement[] ulr = kit.UnlockRequirements;
-            int index = Array.FindIndex(ulr, x => x is LevelUnlockRequirement);
-            UnlockRequirement req = new LevelUnlockRequirement { UnlockLevel = level };
-            if (index == -1)
-            {
-                CollectionUtility.AddToArray(ref ulr, req);
-                kit.SetUnlockRequirementArray(ulr, _dbContext);
+                kit.UnlockRequirements.RemoveAll(x =>
+                        x.Type.Contains(nameof(LevelUnlockRequirement), StringComparison.Ordinal)
+                        && ContextualTypeResolver.TryResolveType(x.Type, out Type? type, typeof(UnlockRequirement))
+                        && type == typeof(LevelUnlockRequirement)
+                    );
             }
             else
             {
-                ((LevelUnlockRequirement)ulr[index]).UnlockLevel = level;
-                kit.MarkLocalUnlockRequirementsDirty(_dbContext);
-            }
-        }
+                int index = kit.UnlockRequirements.FindIndex(x =>
+                    x.Type.Contains(nameof(LevelUnlockRequirement), StringComparison.Ordinal)
+                    && ContextualTypeResolver.TryResolveType(x.Type, out Type? type, typeof(UnlockRequirement))
+                    && type == typeof(LevelUnlockRequirement)
+                );
 
-        kit.UpdateLastEdited(Context.CallerId);
-        _dbContext.Update(kit);
-        await _dbContext.SaveChangesAsync(token).ConfigureAwait(false);
+                string data = JsonSerializer.Serialize(new LevelUnlockRequirement
+                {
+                    UnlockLevel = level
+                }, ConfigurationSettings.JsonCondensedSerializerSettings);
+
+                if (index == -1)
+                {
+                    kit.UnlockRequirements.Add(new KitUnlockRequirement
+                    {
+                        Data = data,
+                        Type = typeof(LevelUnlockRequirement).AssemblyQualifiedName!
+                    });
+                }
+                else
+                {
+                    kit.UnlockRequirements[index].Data = data;
+                }
+            }
+        }, Context.CallerId, token).ConfigureAwait(false);
 
         await UniTask.SwitchToMainThread(token);
 
-        _kitManager.Signs.UpdateSigns(kit);
         Context.Reply(_translations.KitPropertySet, "Level", kit, level.ToString(Context.Culture));
         Context.LogAction(ActionLogType.SetKitProperty, kitId + ": LEVEL >> " + level);
     }

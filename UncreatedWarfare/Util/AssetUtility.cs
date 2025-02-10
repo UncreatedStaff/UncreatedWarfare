@@ -8,7 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
-using Uncreated.Warfare.Kits.Items;
+using Uncreated.Warfare.Util.Inventory;
 
 namespace Uncreated.Warfare.Util;
 

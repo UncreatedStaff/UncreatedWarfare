@@ -364,6 +364,7 @@ internal sealed class PlayerInventoryReceiveDragOrSwapItem : IHarmonyPatch
             NewY = yTo,
             NewRotation = existingJar.rot,
             IsSwap = swap,
+            IsSecondaryExecution = false,
             SwappedJar = swapJar,
             Jar = existingJar,
             OldPage = (Page)pageFrom,
@@ -373,5 +374,28 @@ internal sealed class PlayerInventoryReceiveDragOrSwapItem : IHarmonyPatch
         };
 
         _ = eventDispatcher.DispatchEventAsync(args, CancellationToken.None);
+
+        if (!swap)
+            return;
+
+        // invoke twice if there was a swap
+        ItemMoved swapArgs = new ItemMoved
+        {
+            Player = player,
+            NewPage = (Page)pageFrom,
+            NewX = xFrom,
+            NewY = yFrom,
+            NewRotation = swapJar!.rot,
+            IsSwap = true,
+            IsSecondaryExecution = true,
+            SwappedJar = existingJar,
+            Jar = swapJar,
+            OldPage = (Page)pageTo,
+            OldRotation = existingJar.rot,
+            OldX = xTo,
+            OldY = yTo
+        };
+
+        _ = eventDispatcher.DispatchEventAsync(swapArgs, CancellationToken.None);
     }
 }

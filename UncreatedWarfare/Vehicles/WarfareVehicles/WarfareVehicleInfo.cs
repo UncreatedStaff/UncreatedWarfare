@@ -44,7 +44,7 @@ public class WarfareVehicleInfo : IEquatable<WarfareVehicleInfo>, ITranslationAr
     public IReadOnlyList<RequestItem> RequestItems { get; set; } = Array.Empty<RequestItem>();
     public static void EnsureInitialized(WarfareVehicleInfo v)
     {
-        v.VehicleAsset ??= AssetLink.Create<VehicleAsset>(0);
+        v.VehicleAsset ??= AssetLink.Empty<VehicleAsset>();
         v.Configuration ??= new ConfigurationBuilder().Build();
 
         v.Crew ??= new CrewInfo();

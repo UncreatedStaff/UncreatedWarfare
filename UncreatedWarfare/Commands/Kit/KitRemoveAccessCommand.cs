@@ -1,12 +1,12 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Globalization;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Logging;
-using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Commands;
@@ -15,15 +15,19 @@ namespace Uncreated.Warfare.Commands;
 internal sealed class KitRemoveAccessCommand : IExecutableCommand
 {
     private readonly KitCommandTranslations _translations;
-    private readonly KitManager _kitManager;
+    private readonly IKitAccessService _kitAccessService;
+    private readonly IKitDataStore _kitDataStore;
     private readonly ChatService _chatService;
     private readonly IUserDataService _userDataService;
+    private readonly IPlayerService _playerService;
 
     public required CommandContext Context { get; init; }
 
     public KitRemoveAccessCommand(IServiceProvider serviceProvider)
     {
-        _kitManager = serviceProvider.GetRequiredService<KitManager>();
+        _kitAccessService = serviceProvider.GetRequiredService<IKitAccessService>();
+        _kitDataStore = serviceProvider.GetRequiredService<IKitDataStore>();
+        _playerService = serviceProvider.GetRequiredService<IPlayerService>();
         _translations = serviceProvider.GetRequiredService<TranslationInjection<KitCommandTranslations>>().Value;
         _chatService = serviceProvider.GetRequiredService<ChatService>();
         _userDataService = serviceProvider.GetRequiredService<IUserDataService>();
@@ -39,23 +43,22 @@ internal sealed class KitRemoveAccessCommand : IExecutableCommand
             throw Context.SendHelp();
         }
 
-        Kit? kit = await _kitManager.FindKit(kitName, token, true);
+        Kit? kit = await _kitDataStore.QueryKitAsync(kitName, KitInclude.Default, token);
         if (kit == null)
         {
             throw Context.Reply(_translations.KitNotFound, kitName);
         }
 
-        bool hasAccess = await _kitManager.HasAccess(kit, steam64, token).ConfigureAwait(false);
+        bool hasAccess = await _kitAccessService.HasAccessAsync(steam64, kit.Key, token).ConfigureAwait(false);
 
-        PlayerNames playerName = onlinePlayer?.Names ?? await _userDataService.GetUsernamesAsync(steam64.m_SteamID, token).ConfigureAwait(false);
-        IPlayer player = (IPlayer?)onlinePlayer ?? playerName;
+        IPlayer player = await _playerService.GetOfflinePlayer(steam64, _userDataService, token).ConfigureAwait(false);
 
         if (!hasAccess)
         {
             throw Context.Reply(_translations.KitAlreadyMissingAccess, player, kit);
         }
 
-        if (!await _kitManager.RemoveAccess(kit, steam64, token).ConfigureAwait(false))
+        if (!await _kitAccessService.UpdateAccessAsync(steam64, kit.Key, null, token).ConfigureAwait(false))
         {
             throw Context.Reply(_translations.KitAlreadyMissingAccess, player, kit);
         }
@@ -69,7 +72,6 @@ internal sealed class KitRemoveAccessCommand : IExecutableCommand
         if (onlinePlayer != null)
         {
             _chatService.Send(onlinePlayer, _translations.KitAccessRevokedDm, kit);
-            _kitManager.Signs.UpdateSigns(kit, onlinePlayer);
         }
     }
 }

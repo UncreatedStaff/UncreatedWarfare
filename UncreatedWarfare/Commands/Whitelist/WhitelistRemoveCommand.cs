@@ -1,4 +1,4 @@
-﻿using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits.Whitelists;
 using Uncreated.Warfare.Logging;

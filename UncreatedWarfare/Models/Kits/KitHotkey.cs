@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Models.Assets;
@@ -19,7 +19,7 @@ public class KitHotkey
     public WarfareUserData PlayerData { get; set; }
 
     [Required]
-    public Kit Kit { get; set; }
+    public KitModel Kit { get; set; }
 
     [Required]
     [ForeignKey(nameof(Kit))]

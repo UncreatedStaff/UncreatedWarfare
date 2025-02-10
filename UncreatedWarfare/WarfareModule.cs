@@ -38,6 +38,10 @@ using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Interaction.Icons;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Kits.Items;
+using Uncreated.Warfare.Kits.Loadouts;
+using Uncreated.Warfare.Kits.Requests;
+using Uncreated.Warfare.Kits.Tweaks;
 using Uncreated.Warfare.Kits.Whitelists;
 using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.Layouts.UI;
@@ -75,6 +79,7 @@ using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Languages;
 using Uncreated.Warfare.Tweaks;
 using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Util.Inventory;
 using Uncreated.Warfare.Util.Timing;
 using Uncreated.Warfare.Vehicles;
 using Uncreated.Warfare.Vehicles.Events.Tweaks;
@@ -686,7 +691,60 @@ public sealed class WarfareModule
             .SingleInstance();
 
         // Kits
-        KitManager.ConfigureServices(bldr);
+        bldr.RegisterType<DefaultLoadoutItemsConfiguration>()
+            .SingleInstance();
+
+        bldr.RegisterType<KitCreateMissingDefaultKitsTweak>().As<IHostedService>();
+        bldr.RegisterType<KitNoSwapStorageClothingTweak>().AsSelf().AsImplementedInterfaces();
+
+        bldr.RegisterRpcType<MySqlKitsDataStore>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
+
+        bldr.RegisterRpcType<MySqlKitFavoriteService>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
+
+        bldr.RegisterRpcType<MySqlKitAccessService>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
+
+        bldr.RegisterRpcType<KitLayoutService>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
+
+        bldr.RegisterRpcType<KitCommandLookResolver>()
+            .SingleInstance();
+
+        bldr.RegisterRpcType<PlayerNitroBoostService>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
+
+        bldr.RegisterRpcType<LoadoutService>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
+
+        bldr.RegisterType<KitSignService>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
+
+        bldr.RegisterRpcType<KitWeaponTextService>()
+            .AsSelf().SingleInstance();
+
+        bldr.RegisterRpcType<KitRequestService>()
+            .AsSelf().AsImplementedInterfaces()
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+
+        if (ItemUtility.SupportsFastKits)
+        {
+            bldr.RegisterType<FastItemDistributionService>()
+                .As<IItemDistributionService>();
+        }
+        else
+        {
+            bldr.RegisterType<FallbackItemDistributionService>()
+                .As<IItemDistributionService>();
+        }
 
         bldr.RegisterType<AssetRedirectService>()
             .AsSelf().AsImplementedInterfaces()
@@ -728,8 +786,9 @@ public sealed class WarfareModule
         bldr.RegisterRpcType<DiscordUserService>()
             .SingleInstance();
 
-        bldr.RegisterType<PurchaseRecordsInterface>()
-            .As<IPurchaseRecordsInterface>();
+        bldr.RegisterType<MySqlKitAccessService>()
+            .As<IKitAccessService>()
+            .SingleInstance();
 
         // Layouts
         bldr.Register(_ => GetActiveLayout())

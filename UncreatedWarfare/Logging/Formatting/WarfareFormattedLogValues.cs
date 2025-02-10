@@ -141,7 +141,6 @@ internal struct WarfareFormattedLogValues
         {
             object? value = Parameters[i];
             int prefixSize, suffixSize, argb;
-            scoped ReadOnlySpan<char> formatted;
             string fmtStr;
 
             // lists
@@ -171,7 +170,7 @@ internal struct WarfareFormattedLogValues
                         sb.Append(", ");
                     }
 
-                    string fmtStrValue = ValueFormatter?.Format(subValue, in parameters, null) ?? subValue?.ToString() ?? string.Empty;
+                    string fmtStrValue = FormatValue(subValue, in parameters);
                     if (useColor && ValueFormatter != null)
                     {
                         TryDecideColor(subValue, out argb, out _, out _, color);
@@ -197,7 +196,7 @@ internal struct WarfareFormattedLogValues
             }
             else
             {
-                fmtStr = ValueFormatter?.Format(value, in parameters, null) ?? value?.ToString() ?? string.Empty;
+                fmtStr = FormatValue(value, in parameters);
 
                 if (useColor && ValueFormatter != null)
                     TryDecideColor(value, out argb, out prefixSize, out suffixSize, color);
@@ -214,7 +213,7 @@ internal struct WarfareFormattedLogValues
                 fmtStr = fmtStr.Replace(TerminalColorHelper.ForegroundResetSequence, TerminalColorHelper.GetTerminalColorSequence(argb));
             }
 
-            formatted = fmtStr;
+            ReadOnlySpan<char> formatted = fmtStr;
             int ttlSize = formatted.Length + prefixSize + suffixSize;
 
             if (_formatBuffer.Length <= index + ttlSize)
@@ -246,6 +245,55 @@ internal struct WarfareFormattedLogValues
         return TranslationFormattingUtility.FormatString(Message, _formatBuffer.AsSpan(0, index), indexBuffer);
     }
 
+    private readonly string FormatValue(object subValue, in ValueFormatParameters parameters)
+    {
+        if (subValue is not FormattedValue f)
+        {
+            return ValueFormatter?.Format(subValue, in parameters, null) ?? subValue?.ToString() ?? string.Empty;
+        }
+
+        if (f.Value == null)
+            return Align(ValueFormatter?.Format(null, in parameters, f.Type) ?? "null", f.Alignment);
+
+        if (f.Value is string str)
+            return Align(str, f.Alignment);
+
+        return Align(ValueFormatter?.Format(subValue, in parameters, null) ?? subValue.ToString(), f.Alignment);
+
+    }
+
+    private static string Align(string str, int alignment)
+    {
+        // .NET source | DefaultInterpolatedStringHandler.AppendOrInsertAlignmentIfNeeded
+        if (alignment == int.MinValue)
+            return str;
+
+        bool leftAlign = alignment < 0;
+        if (leftAlign)
+            alignment = -alignment;
+
+        int padding = alignment - str.Length;
+        if (padding <= 0)
+            return str;
+
+        if (leftAlign)
+        {
+            return string.Create(alignment, str, static (span, state) =>
+            {
+                state.AsSpan().CopyTo(span);
+                span.Slice(state.Length).Fill(' ');
+            });
+        }
+
+        return string.Create(alignment, str, static (span, state) =>
+        {
+            int space = span.Length - state.Length;
+
+            state.AsSpan().CopyTo(span.Slice(space));
+            span.Slice(0, space).Fill(' ');
+        });
+    }
+
     internal static void TryDecideColor(object? parameter, out int argb, out int prefixSize, out int suffixSize, StackColorFormatType coloring)
     {
         bool extended = coloring == StackColorFormatType.ExtendedANSIColor;
@@ -268,6 +316,10 @@ internal struct WarfareFormattedLogValues
         if (parameter is Type type2)
         {
             type = type2;
+        }
+        else if (parameter is FormattedValue f)
+        {
+            type = f.Type;
         }
 
         Type? nullableType = Nullable.GetUnderlyingType(type);

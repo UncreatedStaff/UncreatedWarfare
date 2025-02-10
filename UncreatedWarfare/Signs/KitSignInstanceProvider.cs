@@ -4,10 +4,10 @@ using System.Globalization;
 using System.Text;
 using Uncreated.Warfare.Interaction.Requests;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Models.Kits;
+using Uncreated.Warfare.Kits.Loadouts;
+using Uncreated.Warfare.Kits.Requests;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
-using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Translations;
@@ -20,8 +20,10 @@ namespace Uncreated.Warfare.Signs;
 [SignPrefix("loadout_")]
 public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>
 {
-    private readonly KitManager _kitManager;
-    private readonly IPlayerService _playerService;
+    private readonly KitRequestService _kitRequestService;
+    private readonly LoadoutService _loadoutService;
+    private readonly IKitDataStore _kitDataStore;
+    private readonly PlayerNitroBoostService _nitroBoostService;
     private readonly IConfiguration _systemConfig;
     private readonly KitSignTranslations _translations;
     private static readonly StringBuilder KitSignBuffer = new StringBuilder(230);
@@ -36,11 +38,19 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>
     string ISignInstanceProvider.FallbackText => KitId ?? ("Loadout " + LoadoutNumber.ToString(CultureInfo.InvariantCulture));
     public string KitId { get; private set; }
     public int LoadoutNumber { get; private set; }
-    public KitSignInstanceProvider(KitManager kitManager, TranslationInjection<KitSignTranslations> translations, IPlayerService playerService, IConfiguration systemConfig)
+    public KitSignInstanceProvider(
+        KitRequestService kitRequestService,
+        IKitDataStore kitDataStore,
+        TranslationInjection<KitSignTranslations> translations,
+        PlayerNitroBoostService nitroBoostService,
+        IConfiguration systemConfig,
+        LoadoutService loadoutService)
     {
-        _kitManager = kitManager;
-        _playerService = playerService;
+        _kitRequestService = kitRequestService;
+        _kitDataStore = kitDataStore;
+        _nitroBoostService = nitroBoostService;
         _systemConfig = systemConfig;
+        _loadoutService = loadoutService;
         _translations = translations.Value;
         LoadoutNumber = -1;
         KitId = null!;
@@ -86,7 +96,7 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>
             }
         }
 
-        if (!_kitManager.Cache.KitDataById.TryGetValue(KitId, out Kit kit))
+        if (!_kitDataStore.CachedKitsById.TryGetValue(KitId, out Kit kit))
         {
             return KitId;
         }
@@ -113,12 +123,12 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>
 
     private void TranslateKitSign(StringBuilder bldr, Kit kit, LanguageInfo language, CultureInfo culture, WarfarePlayer? player)
     {
-        string kitName = kit.GetDisplayName(null!, language, false);
+        string kitName = kit.GetDisplayName(language, true);
 
         // if the name has a newline we want to skip the empty line so all the text is roughly the same size
         bool nameHasNewLine = kitName.IndexOf('\n', StringComparison.Ordinal) >= 0;
 
-        bool isFavorited = player != null && _kitManager.IsFavoritedQuick(kit.PrimaryKey, player);
+        bool isFavorited = player != null && player.Component<KitPlayerComponent>().IsKitFavorited(kit.Key);
 
         bldr.Append("<b>")
             .AppendColorized(kitName.ToUpper(culture), isFavorited ? ColorKitFavoritedName : ColorKitUnfavoritedName)
@@ -143,13 +153,13 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>
 
     private void AppendPlayerCount(StringBuilder bldr, WarfarePlayer? player, Kit kit, LanguageInfo language, CultureInfo culture, bool useClassLimit)
     {
-        if (player == null || !kit.TeamLimit.HasValue || kit.TeamLimit.Value is >= 1f or <= 0f)
+        if (player == null || kit.TeamLimit is >= 1f or <= 0f)
         {
             bldr.Append(_translations.KitUnlimited.Translate(language));
         }
         else if (useClassLimit
-                     ? kit.IsClassLimited(_playerService, out int currentPlayers, out int allowedPlayers, player.Team)
-                     : kit.IsLimited(_playerService, out currentPlayers, out allowedPlayers, player.Team)
+                     ? _kitRequestService.IsClassLimited(kit, out int currentPlayers, out int allowedPlayers, player.Team)
+                     : _kitRequestService.IsLimited(kit, out currentPlayers, out allowedPlayers, player.Team)
                 )
         {
             bldr.Append(_translations.KitPlayerCountUnavailable.Translate(currentPlayers, allowedPlayers, language, culture, TimeZoneInfo.Utc));
@@ -163,9 +173,9 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>
     private void AppendCost(StringBuilder bldr, Kit kit, LanguageInfo language, CultureInfo culture, WarfarePlayer? player)
     {
         string cost;
-        if (kit.RequiresNitro)
+        if (kit.RequiresServerBoost)
         {
-            if (player != null && _kitManager.Boosting.IsNitroBoostingQuick(player.Steam64.m_SteamID))
+            if (player != null && _nitroBoostService.IsBoostingQuick(player.Steam64) is true)
             {
                 cost = _translations.KitNitroBoostOwned.Translate(language);
             }
@@ -177,7 +187,7 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>
         }
         else if (kit.Type != KitType.Public)
         {
-            if (player != null && _kitManager.HasAccessQuick(kit, player))
+            if (player != null && player.Component<KitPlayerComponent>().IsKitAccessible(kit.Key))
             {
                 cost = _translations.KitPremiumOwned.Translate(language);
             }
@@ -198,7 +208,7 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>
             {
                 cost = _translations.KitFree.Translate(language);
             }
-            else if (player != null && _kitManager.HasAccessQuick(kit, player))
+            else if (player != null && player.Component<KitPlayerComponent>().IsKitAccessible(kit.Key))
             {
                 cost = _translations.KitPublicOwned.Translate(language);
             }
@@ -226,7 +236,7 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>
 
     private void TranslateLoadoutSign(StringBuilder bldr, int loadoutIndex, LanguageInfo language, CultureInfo culture, WarfarePlayer? player)
     {
-        Kit? kit = player == null ? null : _kitManager.Loadouts.GetLoadoutQuick(player.Steam64, loadoutIndex);
+        Kit? kit = player == null ? null : _loadoutService.GetLoadoutQuick(player.Steam64, loadoutIndex);
 
         if (kit == null)
         {
@@ -236,12 +246,12 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>
             return;
         }
 
-        string kitName = kit.GetDisplayName(null!, language, false);
+        string kitName = kit.GetDisplayName(language, true);
 
         // if the name has a newline we want to skip the empty line so all the text is roughly the same size
         bool nameHasNewLine = kitName.IndexOf('\n', StringComparison.Ordinal) >= 0;
 
-        bool isFavorited = player != null && _kitManager.IsFavoritedQuick(kit.PrimaryKey, player);
+        bool isFavorited = player != null && player.Component<KitPlayerComponent>().IsKitFavorited(kit.Key);
 
         bldr.Append("<b>")
             .AppendColorized(kitName.ToUpper(culture), isFavorited ? ColorKitFavoritedName : ColorKitUnfavoritedName)
@@ -256,7 +266,7 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>
         if (!nameHasNewLine)
             bldr.Append('\n');
 
-        string loadoutLetter = LoadoutIdHelper.GetLoadoutLetter(LoadoutIdHelper.ParseNumber(kit.InternalName));
+        string loadoutLetter = LoadoutIdHelper.GetLoadoutLetter(LoadoutIdHelper.ParseNumber(kit.Id));
         bldr.Append(_translations.LoadoutLetter.Translate(loadoutLetter, language, culture, TimeZoneInfo.Utc))
             .Append('\n');
 

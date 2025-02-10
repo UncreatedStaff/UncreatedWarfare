@@ -92,6 +92,22 @@ public readonly struct UnturnedAssetReference
         return left.Guid == right.Guid && left.Id == right.Id;
     }
 
+    public bool Equals(Asset asset)
+    {
+        if (asset == null)
+        {
+            return Id == 0 && Guid == Guid.Empty;
+        }
+
+        if (Guid != Guid.Empty && asset.GUID == Guid)
+            return true;
+
+        if (Id != 0 && asset.id == Id)
+            return true;
+
+        return false;
+    }
+
     public bool Equals(UnturnedAssetReference other) => other.Guid == Guid && other.Id == Id;
     public bool Equals(Guid guid) => Guid != Guid.Empty && guid == Guid;
     public bool Equals(ushort id) => Id != 0 && id == Id;

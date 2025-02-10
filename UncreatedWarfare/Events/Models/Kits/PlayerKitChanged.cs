@@ -1,5 +1,4 @@
-﻿using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Models.Kits;
+using Uncreated.Warfare.Kits;
 
 namespace Uncreated.Warfare.Events.Models.Kits;
 
@@ -27,4 +26,9 @@ public class PlayerKitChanged : PlayerEvent
     /// The class of the kit that was changed to.
     /// </summary>
     public required Class Class { get; init; }
+
+    /// <summary>
+    /// If the kit was requested instead of being given using /kit give or similar unofficial methods.
+    /// </summary>
+    public required bool WasRequested { get; init; }
 }

@@ -10,7 +10,6 @@ using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.Layouts.Phases;
-using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Quests.Parameters;
@@ -112,13 +111,12 @@ public class KillEnemies : QuestTemplate<KillEnemies, KillEnemies.Tracker, KillE
             FactionInfo? kitFaction = null;
             if (Kit != null && (Kit.ValueType == ParameterValueType.Constant || Kit.SelectionType == ParameterSelectionType.Selective))
             {
-                KitManager kitManager = template.ServiceProvider.GetRequiredService<KitManager>();
-                IFactionDataStore factinDataStore = template.ServiceProvider.GetRequiredService<IFactionDataStore>();
+                IKitDataStore kitDataStore = template.ServiceProvider.GetRequiredService<IKitDataStore>();
 
                 string s = Kit.GetSingleValue();
-                if (kitManager.Cache.TryGetKit(s, out Kit k) && k.FactionId.HasValue)
+                if (kitDataStore.CachedKitsById.TryGetValue(s, out Kit k) && k.Faction != null)
                 {
-                    kitFaction = factinDataStore.FindFaction(k.FactionId);
+                    kitFaction = k.Faction;
                 }
             }
 

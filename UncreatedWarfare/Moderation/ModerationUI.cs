@@ -19,6 +19,7 @@ using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Util.Inventory;
 
 namespace Uncreated.Warfare.Moderation;
 

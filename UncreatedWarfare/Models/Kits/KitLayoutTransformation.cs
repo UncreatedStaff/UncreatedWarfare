@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Models.Users;
@@ -21,10 +21,6 @@ public class KitLayoutTransformation
     [Required]
     public WarfareUserData PlayerData { get; set; }
 
-    [Required]
-    public Kit Kit { get; set; }
-
-    [ForeignKey(nameof(Kit))]
     [Required]
     [Column("Kit")]
     public uint KitId { get; set; }

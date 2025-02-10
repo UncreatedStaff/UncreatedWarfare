@@ -1,4 +1,4 @@
-﻿using Uncreated.Warfare.Kits.Items;
+using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Events.Models.Items;

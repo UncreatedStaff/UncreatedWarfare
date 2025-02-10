@@ -1,12 +1,15 @@
-﻿using System;
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text;
 using System.Text.Json;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Players.Unlocks;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Models.Base;
-public abstract class BaseUnlockRequirement
+
+public abstract class BaseUnlockRequirement : ICloneable
 {
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -14,15 +17,38 @@ public abstract class BaseUnlockRequirement
     public uint Id { get; set; }
 
     [Required]
-    [StringLength(255)]
-    public string Json { get; set; } = null!;
-    public UnlockRequirement? CreateRuntimeRequirement(ILogger logger, IServiceProvider serviceProvider)
+    [StringLength(128)]
+    public required string Type { get; set; }
+
+    [Required]
+    [StringLength(512)]
+    public required string Data { get; set; }
+
+    protected BaseUnlockRequirement() { }
+
+    /// <summary>
+    /// Read this requirement and deserialize the data for it.
+    /// </summary>
+    /// <exception cref="JsonException">Failed to read JSON data.</exception>
+    /// <exception cref="FormatException">Unknown or invalid type.</exception>
+    public UnlockRequirement? CreateUninitializedRequirement()
     {
-        byte[] bytes = System.Text.Encoding.UTF8.GetBytes(Json);
+        byte[] bytes = Encoding.UTF8.GetBytes(Data);
         Utf8JsonReader reader = new Utf8JsonReader(bytes, ConfigurationSettings.JsonReaderOptions);
-        UnlockRequirement? requirement = UnlockRequirement.Read(logger, serviceProvider, ref reader);
-        if (requirement != null)
-            requirement.PrimaryKey = Id;
+
+        Type? unlockRequirement = ContextualTypeResolver.ResolveType(Type, typeof(UnlockRequirement));
+
+        UnlockRequirement? requirement = unlockRequirement != null
+            ? (UnlockRequirement?)JsonSerializer.Deserialize(ref reader, unlockRequirement, ConfigurationSettings.JsonCondensedSerializerSettings)
+            : null;
+
+        if (requirement == null)
+            return null;
+
+        requirement.PrimaryKey = Id;
         return requirement;
     }
+
+    /// <inheritdoc />
+    public abstract object Clone();
 }

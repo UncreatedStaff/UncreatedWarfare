@@ -147,9 +147,12 @@ public static class CollectionUtility
     /// <summary>
     /// Compares two byte arrays.
     /// </summary>
-    public static bool CompareBytes(byte[] arr1, byte[] arr2)
+    public static bool CompareBytes(byte[]? arr1, byte[]? arr2)
     {
-        return ReferenceEquals(arr1, arr2) || arr1.Length == arr2.Length && arr1.AsSpan().SequenceEqual(arr2);
+        if (ReferenceEquals(arr1, arr2))
+            return true;
+
+        return arr1 != null && arr2 != null && arr1.Length == arr2.Length && arr1.AsSpan().SequenceEqual(arr2);
     }
 
     /// <summary>

@@ -1,9 +1,9 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using System;
-using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Models.Kits;
+using Uncreated.Warfare.Kits.Loadouts;
+using Uncreated.Warfare.Kits.Requests;
 using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Commands;
@@ -12,17 +12,18 @@ namespace Uncreated.Warfare.Commands;
 internal sealed class KitUpgradeCommand : IExecutableCommand
 {
     private readonly KitCommandTranslations _translations;
-    private readonly KitManager _kitManager;
-    private readonly IKitsDbContext _dbContext;
+    private readonly IKitDataStore _kitDataStore;
+    private readonly LoadoutService _loadoutService;
+    private readonly KitRequestService _kitRequestService;
+
     public required CommandContext Context { get; init; }
 
     public KitUpgradeCommand(IServiceProvider serviceProvider)
     {
-        _kitManager = serviceProvider.GetRequiredService<KitManager>();
+        _kitDataStore = serviceProvider.GetRequiredService<IKitDataStore>();
         _translations = serviceProvider.GetRequiredService<TranslationInjection<KitCommandTranslations>>().Value;
-        _dbContext = serviceProvider.GetRequiredService<IKitsDbContext>();
-
-        _dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
+        _loadoutService = serviceProvider.GetRequiredService<LoadoutService>();
+        _kitRequestService = serviceProvider.GetRequiredService<KitRequestService>();
     }
 
     public async UniTask ExecuteAsync(CancellationToken token)
@@ -32,23 +33,14 @@ internal sealed class KitUpgradeCommand : IExecutableCommand
             throw Context.SendHelp();
         }
 
-        Kit? kit = await _kitManager.FindKit(kitName, token, true);
+        Kit? kit = await _kitDataStore.QueryKitAsync(kitName, KitInclude.Translations, token).ConfigureAwait(false);
         if (kit == null)
         {
             throw Context.Reply(_translations.KitNotFound, kitName);
         }
 
-        if (!kit.NeedsUpgrade)
+        if (kit.Season >= WarfareModule.Season)
         {
-            if (kit.Season != WarfareModule.Season)
-            {
-                kit.Season = WarfareModule.Season;
-                _dbContext.Update(kit);
-                await _dbContext.SaveChangesAsync(token).ConfigureAwait(false);
-                throw Context.Reply(_translations.KitUpgraded, kit);
-            }
-
-            await UniTask.SwitchToMainThread(token);
             throw Context.Reply(_translations.DoesNotNeedUpgrade, kit);
         }
 
@@ -57,14 +49,17 @@ internal sealed class KitUpgradeCommand : IExecutableCommand
             throw Context.SendHelp();
         }
 
-        if (LoadoutIdHelper.Parse(kit.InternalName, out CSteamID playerId) < 1)
+        if (LoadoutIdHelper.Parse(kit.Id, out CSteamID playerId) < 1)
             throw Context.Reply(_translations.KitLoadoutIdBadFormat);
 
-        kit = await _kitManager.Loadouts.UpgradeLoadout(Context.CallerId, playerId, @class, kit.InternalName, token).ConfigureAwait(false);
+        kit = await _loadoutService.UpgradeLoadoutAsync(playerId, Context.CallerId, @class, kit.Key, token: token).ConfigureAwait(false);
 
-        await UniTask.SwitchToMainThread(token);
+        if (kit == null)
+        {
+            throw Context.Reply(_translations.KitNotFound, kitName);
+        }
 
         Context.Reply(_translations.LoadoutUpgraded, kit, @class);
-        await _kitManager.Requests.GiveKit(Context.Player, kit, true, false, token).ConfigureAwait(false);
+        await _kitRequestService.GiveKitAsync(Context.Player, new KitBestowData(kit), token).ConfigureAwait(false);
     }
 }

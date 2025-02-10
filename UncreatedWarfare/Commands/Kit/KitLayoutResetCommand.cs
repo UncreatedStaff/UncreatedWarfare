@@ -1,6 +1,5 @@
-﻿using Uncreated.Warfare.Interaction.Commands;
+using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Commands;
@@ -8,14 +7,14 @@ namespace Uncreated.Warfare.Commands;
 [Command("reset", "delete", "cancel", "remove"), SubCommandOf(typeof(KitLayoutCommand))]
 internal sealed class KitLayoutResetCommand : ICommand
 {
+    private readonly KitLayoutService _layoutService;
     private readonly KitCommandTranslations _translations;
-    private readonly KitManager _kitManager;
 
     public required CommandContext Context { get; init; }
 
-    public KitLayoutResetCommand(TranslationInjection<KitCommandTranslations> translations, KitManager kitManager)
+    public KitLayoutResetCommand(TranslationInjection<KitCommandTranslations> translations, KitLayoutService layoutService)
     {
-        _kitManager = kitManager;
+        _layoutService = layoutService;
         _translations = translations.Value;
     }
 
@@ -23,29 +22,20 @@ internal sealed class KitLayoutResetCommand : ICommand
     {
         Context.AssertRanByPlayer();
 
-        await Context.Player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
-        try
+        Kit? kit = await Context.Player.Component<KitPlayerComponent>().GetActiveKitAsync(KitInclude.Items | KitInclude.Translations, token).ConfigureAwait(false);
+        await UniTask.SwitchToMainThread(token);
+
+        if (kit == null)
         {
-            Kit? kit = await Context.Player.Component<KitPlayerComponent>().GetActiveKitAsync(token).ConfigureAwait(false);
-
-            if (kit == null)
-            {
-                throw Context.Reply(_translations.KitLayoutNoKit);
-            }
-
-            if (kit.Items != null)
-            {
-                await UniTask.SwitchToMainThread(token);
-                _kitManager.Layouts.TryReverseLayoutTransformations(Context.Player, kit.Items, kit.PrimaryKey);
-            }
-
-            await _kitManager.ResetLayout(Context.Player, kit.PrimaryKey, false, token);
-            await UniTask.SwitchToMainThread(token);
-            throw Context.Reply(_translations.KitLayoutReset, kit);
+            throw Context.Reply(_translations.KitLayoutNoKit);
         }
-        finally
+
+        if (kit.Items != null)
         {
-            Context.Player.PurchaseSync.Release();
+            _layoutService.TryReverseLayoutTransformations(Context.Player, kit);
         }
+
+        await _layoutService.ResetLayoutAsync(Context.Player.Steam64, kit.Key, token).ConfigureAwait(false);
+        Context.Reply(_translations.KitLayoutReset, kit);
     }
 }

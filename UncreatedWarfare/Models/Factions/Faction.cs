@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Uncreated.Warfare.Models.Kits;
@@ -37,7 +37,7 @@ public class Faction
     [Required]
     public string HexColor { get; set; }
 
-    public Kit? UnarmedKit { get; set; }
+    public KitModel? UnarmedKit { get; set; }
 
     [ForeignKey(nameof(UnarmedKit))]
     [Column("UnarmedKitId")]

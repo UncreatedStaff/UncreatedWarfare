@@ -1,11 +1,10 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Globalization;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Logging;
-using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Translations;
 
@@ -15,7 +14,8 @@ namespace Uncreated.Warfare.Commands;
 internal sealed class KitGiveAccessCommand : IExecutableCommand
 {
     private readonly KitCommandTranslations _translations;
-    private readonly KitManager _kitManager;
+    private readonly IKitAccessService _kitAccessService;
+    private readonly IKitDataStore _kitDataStore;
     private readonly ChatService _chatService;
     private readonly IUserDataService _userDataService;
 
@@ -23,7 +23,8 @@ internal sealed class KitGiveAccessCommand : IExecutableCommand
 
     public KitGiveAccessCommand(IServiceProvider serviceProvider)
     {
-        _kitManager = serviceProvider.GetRequiredService<KitManager>();
+        _kitAccessService = serviceProvider.GetRequiredService<IKitAccessService>();
+        _kitDataStore = serviceProvider.GetRequiredService<IKitDataStore>();
         _translations = serviceProvider.GetRequiredService<TranslationInjection<KitCommandTranslations>>().Value;
         _chatService = serviceProvider.GetRequiredService<ChatService>();
         _userDataService = serviceProvider.GetRequiredService<IUserDataService>();
@@ -44,13 +45,13 @@ internal sealed class KitGiveAccessCommand : IExecutableCommand
             accessType = KitAccessType.Purchase;
         }
 
-        Kit? kit = await _kitManager.FindKit(kitName, token, true);
+        Kit? kit = await _kitDataStore.QueryKitAsync(kitName, KitInclude.Base, token).ConfigureAwait(false);
         if (kit == null)
         {
             throw Context.Reply(_translations.KitNotFound, kitName);
         }
 
-        bool hasAccess = await _kitManager.HasAccess(kit, steam64, token).ConfigureAwait(false);
+        bool hasAccess = await _kitAccessService.HasAccessAsync(steam64, kit.Key, token).ConfigureAwait(false);
 
         PlayerNames playerName = onlinePlayer?.Names ?? await _userDataService.GetUsernamesAsync(steam64.m_SteamID, token).ConfigureAwait(false);
         IPlayer player = (IPlayer?)onlinePlayer ?? playerName;
@@ -60,7 +61,7 @@ internal sealed class KitGiveAccessCommand : IExecutableCommand
             throw Context.Reply(_translations.KitAlreadyHasAccess, player, kit);
         }
 
-        if (!await _kitManager.GiveAccess(kit, steam64, accessType, token).ConfigureAwait(false))
+        if (!await _kitAccessService.UpdateAccessAsync(steam64, kit.Key, accessType, token).ConfigureAwait(false))
         {
             throw Context.Reply(_translations.KitAlreadyHasAccess, player, kit);
         }
@@ -74,7 +75,6 @@ internal sealed class KitGiveAccessCommand : IExecutableCommand
         if (onlinePlayer != null)
         {
             _chatService.Send(onlinePlayer, _translations.KitAccessGivenDm, kit);
-            _kitManager.Signs.UpdateSigns(kit, onlinePlayer);
         }
     }
 }

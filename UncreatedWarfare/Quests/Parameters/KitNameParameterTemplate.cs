@@ -1,7 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Text.Json;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Models.Kits;
@@ -48,16 +50,16 @@ public class KitNameParameterTemplate : StringParameterTemplate
 
         string? value = null;
         string? display = null;
-        KitManager kitManager = serviceProvider.GetRequiredService<KitManager>();
+        IKitDataStore kitDataStore = serviceProvider.GetRequiredService<IKitDataStore>();
         if (selType != ParameterSelectionType.Inclusive)
         {
             switch (valType)
             {
                 case ParameterValueType.Constant:
                     value = ((ConstantSet?)Set!).Value;
-                    if (value != null && kitManager.Cache.KitDataById.TryGetValue(value, out Kit? kit))
+                    if (value != null && kitDataStore.CachedKitsById.TryGetValue(value, out Kit? kit))
                     {
-                        display = kit?.GetDisplayName(serviceProvider.GetRequiredService<LanguageService>(), null, true);
+                        display = kit?.GetDisplayName(null, true, removeNewLine: true);
                     }
                     break;
 
@@ -65,16 +67,16 @@ public class KitNameParameterTemplate : StringParameterTemplate
                     ListSet list = (ListSet?)Set!;
                     value = list.Values.Length == 0 ? null : list.Values[RandomUtility.GetIndex((ICollection)list.Values)];
 
-                    if (value != null && kitManager.Cache.KitDataById.TryGetValue(value, out kit))
+                    if (value != null && kitDataStore.CachedKitsById.TryGetValue(value, out kit))
                     {
-                        display = kit?.GetDisplayName(serviceProvider.GetRequiredService<LanguageService>(), null, true);
+                        display = kit?.GetDisplayName(null, true, removeNewLine: true);
                     }
                     break;
 
                 default:
-                    kit = kitManager.GetRandomPublicKit();
-                    value = kit?.InternalName ?? "default";
-                    display = kit?.GetDisplayName(serviceProvider.GetRequiredService<LanguageService>(), null, true);
+                    kit = GetRandomPublicKit(kitDataStore);
+                    value = kit?.Id ?? "default";
+                    display = kit?.GetDisplayName(null, true, removeNewLine: true);
                     break;
             }
         }
@@ -120,30 +122,30 @@ public class KitNameParameterTemplate : StringParameterTemplate
             return new UniTask<QuestParameterValue<string>?>(new StringParameterValue(constant, list, valType));
         }
 
-        KitManager kitManager = serviceProvider.GetRequiredService<KitManager>();
+        IKitDataStore kitDataStore = serviceProvider.GetRequiredService<IKitDataStore>();
         string? display = null;
         switch (valType)
         {
             case ParameterValueType.Constant:
                 value = constant;
-                if (value != null && kitManager.Cache.KitDataById.TryGetValue(value, out Kit? kit))
+                if (value != null && kitDataStore.CachedKitsById.TryGetValue(value, out Kit? kit))
                 {
-                    display = kit?.GetDisplayName(serviceProvider.GetRequiredService<LanguageService>(), null, true);
+                    display = kit?.GetDisplayName(null, true, removeNewLine: true);
                 }
                 break;
 
             case ParameterValueType.List:
                 value = list!.Length == 0 ? null : list[RandomUtility.GetIndex((ICollection)list)];
-                if (value != null && kitManager.Cache.KitDataById.TryGetValue(value, out kit))
+                if (value != null && kitDataStore.CachedKitsById.TryGetValue(value, out kit))
                 {
-                    display = kit?.GetDisplayName(serviceProvider.GetRequiredService<LanguageService>(), null, true);
+                    display = kit?.GetDisplayName(null, true, removeNewLine: true);
                 }
                 break;
 
             default:
-                kit = kitManager.GetRandomPublicKit();
-                value = kit?.InternalName ?? "default";
-                display = kit?.GetDisplayName(serviceProvider.GetRequiredService<LanguageService>(), null, true);
+                kit = GetRandomPublicKit(kitDataStore);
+                value = kit?.Id ?? "default";
+                display = kit?.GetDisplayName(null, true, removeNewLine: true);
                 break;
         }
 
@@ -216,5 +218,14 @@ public class KitNameParameterTemplate : StringParameterTemplate
 
             return result;
         }
+    }
+
+    private static Kit? GetRandomPublicKit(IKitDataStore kitDataStore)
+    {
+        List<Kit> kits = kitDataStore.CachedKitsByKey.Values.Where(x => x is { Type: KitType.Public, IsLocked: false }).ToList();
+
+        kits.RemoveAll(x => x.Season != WarfareModule.Season || x.CreditCost > 0 || x.PremiumCost > 0 || x.RequiresServerBoost || x.SquadLevel != SquadLevel.Member);
+
+        return kits.Count == 0 ? null : kits[RandomUtility.GetIndex((ICollection)kits)];
     }
 }

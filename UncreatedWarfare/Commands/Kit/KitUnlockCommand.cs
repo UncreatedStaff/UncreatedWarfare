@@ -1,60 +1,58 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using System;
-using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Models.Kits;
+using Uncreated.Warfare.Kits.Loadouts;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Commands;
 
-[Command("unlock", "unl", "ul"), SubCommandOf(typeof(KitCommand))]
+[Command("unlock"), SubCommandOf(typeof(KitCommand))]
 internal sealed class KitUnlockCommand : IExecutableCommand
 {
-    private readonly IServiceProvider _serviceProvider;
     private readonly KitCommandTranslations _translations;
-    private readonly KitManager _kitManager;
+    private readonly KitCommandLookResolver _lookResolver;
+    private readonly IKitDataStore _kitDataStore;
+    private readonly LoadoutService _loadoutService;
+
     public required CommandContext Context { get; init; }
 
     public KitUnlockCommand(IServiceProvider serviceProvider)
     {
-        _serviceProvider = serviceProvider;
-        _kitManager = serviceProvider.GetRequiredService<KitManager>();
+        _loadoutService = serviceProvider.GetRequiredService<LoadoutService>();
+        _kitDataStore = serviceProvider.GetRequiredService<IKitDataStore>();
+        _lookResolver = serviceProvider.GetRequiredService<KitCommandLookResolver>();
         _translations = serviceProvider.GetRequiredService<TranslationInjection<KitCommandTranslations>>().Value;
     }
 
     public async UniTask ExecuteAsync(CancellationToken token)
     {
-        if (!Context.TryGetRange(0, out string? kitName))
-        {
-            throw Context.SendHelp();
-        }
+        KitCommandLookResult lookResult = await _lookResolver.ResolveFromArgumentsOrLook(Context, 0, 0, KitInclude.Default, token).ConfigureAwait(false);
 
-        Kit? kit = await _kitManager.FindKit(kitName, token, true);
-        if (kit == null)
-        {
-            throw Context.Reply(_translations.KitNotFound, kitName);
-        }
+        Kit? kit = lookResult.Kit;
 
-        if (kit.NeedsSetup)
-        {
-            kit = await _kitManager.Loadouts.UnlockLoadout(Context.CallerId, kitName, token).ConfigureAwait(false);
-            throw Context.Reply(_translations.KitUnlocked, kit);
-        }
-
-        if (!kit.Disabled)
+        if (!kit.IsLocked)
         {
             throw Context.Reply(_translations.DoesNotNeedUnlock, kit);
         }
 
-        // scoped
-        await using IKitsDbContext dbContext = _serviceProvider.GetRequiredService<IKitsDbContext>();
-        dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
+        if (kit.Type == KitType.Loadout)
+        {
+            kit = await _loadoutService.UnlockLoadoutAsync(Context.CallerId, kit.Key, token: token).ConfigureAwait(false);
+            if (kit == null)
+                throw Context.SendUnknownError();
 
-        kit.Disabled = false;
-        kit.UpdateLastEdited(Context.CallerId);
-        dbContext.Update(kit);
-        await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
+            throw Context.Reply(_translations.KitUnlocked, kit);
+        }
+
+        await _kitDataStore.UpdateKitAsync(kit.Key, KitInclude.Base, kit =>
+        {
+            kit.Disabled = false;
+        }, Context.CallerId, token).ConfigureAwait(false);
+
+        Context.LogAction(ActionLogType.SetKitProperty, kit.Id + ": DISABLED >> FALSE");
+
         throw Context.Reply(_translations.KitUnlocked, kit);
     }
 }

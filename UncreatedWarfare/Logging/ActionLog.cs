@@ -921,10 +921,12 @@ public enum ActionLogType : byte
     CreateModerationEntry,
     [Translatable("REMOVE_MOD_ENTRY")]
     RemoveModerationEntry,
+    [Translatable("LOCK_LOADOUT")]
+    LockLoadout,
 
     [Translatable(IsPrioritizedTranslation = false)]
     [Obsolete("Don't use this.")]
     [Ignore]
-    Max = RemoveModerationEntry
+    Max = LockLoadout
 }
 // ReSharper restore InconsistentNaming

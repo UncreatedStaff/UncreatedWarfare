@@ -1,22 +1,20 @@
-﻿using DanielWillett.ModularRpcs.Exceptions;
+using DanielWillett.ModularRpcs.Exceptions;
 using Uncreated.Warfare.Discord;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Kits.Translations;
-using Uncreated.Warfare.Models.Kits;
+using Uncreated.Warfare.Kits.Loadouts;
+using Uncreated.Warfare.Kits.Requests;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Signs;
 using Uncreated.Warfare.Translations;
-using Uncreated.Warfare.Translations.Languages;
 
 namespace Uncreated.Warfare.Commands;
 
 [Command("upgrade"), SubCommandOf(typeof(RequestCommand))]
 internal sealed class RequestUpgradeCommand : IExecutableCommand
 {
-    private readonly KitManager _kitManager;
+    private readonly LoadoutService _loadoutService;
     private readonly SignInstancer _signInstancer;
-    private readonly LanguageService _languageService;
     private readonly IUserDataService _userData;
     private readonly DiscordUserService _discordUserService;
     private readonly RequestTranslations _requestTranslations;
@@ -26,19 +24,17 @@ internal sealed class RequestUpgradeCommand : IExecutableCommand
     public required CommandContext Context { get; init; }
 
     public RequestUpgradeCommand(
-        KitManager kitManager,
         TranslationInjection<RequestTranslations> requestTranslations,
         TranslationInjection<KitCommandTranslations> kitTranslations,
         SignInstancer signInstancer,
-        LanguageService languageService,
         IUserDataService userData,
-        DiscordUserService discordUserService)
+        DiscordUserService discordUserService,
+        LoadoutService loadoutService)
     {
-        _kitManager = kitManager;
         _signInstancer = signInstancer;
-        _languageService = languageService;
         _userData = userData;
         _discordUserService = discordUserService;
+        _loadoutService = loadoutService;
         _requestTranslations = requestTranslations.Value;
         _kitTranslations = kitTranslations.Value;
     }
@@ -87,7 +83,8 @@ internal sealed class RequestUpgradeCommand : IExecutableCommand
         if (!inDiscordServer)
             throw Context.Reply(_requestTranslations.RequestUpgradeNotInDiscordServer);
 
-        Kit? kit = await _kitManager.Loadouts.GetLoadout(Context.CallerId, loadoutIndex, token).ConfigureAwait(false);
+        Kit? kit = await _loadoutService.GetLoadoutFromNumber(Context.CallerId, loadoutIndex, KitInclude.Base, token)
+            .ConfigureAwait(false);
         
         if (kit == null)
         {
@@ -96,23 +93,23 @@ internal sealed class RequestUpgradeCommand : IExecutableCommand
 
         await UniTask.SwitchToMainThread(token);
 
-        int loadoutLetter = LoadoutIdHelper.ParseNumber(kit.InternalName);
+        int loadoutLetter = LoadoutIdHelper.ParseNumber(kit.Id);
 
-        if (!kit.NeedsUpgrade || loadoutLetter <= 0)
+        if (kit.Season >= WarfareModule.Season || loadoutLetter <= 0)
         {
             throw Context.Reply(_kitTranslations.DoesNotNeedUpgrade, kit);
         }
 
-        KitLoadouts.OpenUpgradeTicketResult result;
+        LoadoutService.OpenUpgradeTicketResult result;
 
         try
         {
-            result = await _kitManager.Loadouts.TryOpenUpgradeTicket(
+            result = await _loadoutService.TryOpenUpgradeTicket(
                 discordId,
-                Context.CallerId.m_SteamID,
+                Context.CallerId,
                 loadoutLetter,
                 kit.Class,
-                kit.GetDisplayName(_languageService)
+                kit.GetDisplayName(null, true)
             );
         }
         catch (RpcInvocationException ex)
@@ -127,10 +124,10 @@ internal sealed class RequestUpgradeCommand : IExecutableCommand
 
         switch (result)
         {
-            case KitLoadouts.OpenUpgradeTicketResult.AlreadyOpen:
+            case LoadoutService.OpenUpgradeTicketResult.AlreadyOpen:
                 throw Context.Reply(_requestTranslations.RequestUpgradeAlreadyOpen, kit);
 
-            case KitLoadouts.OpenUpgradeTicketResult.TooManyTickets:
+            case LoadoutService.OpenUpgradeTicketResult.TooManyTickets:
                 throw Context.Reply(_requestTranslations.RequestUpgradeTooManyTicketsOpen);
         }
 

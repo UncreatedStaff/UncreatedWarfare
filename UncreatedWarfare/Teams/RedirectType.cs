@@ -1,11 +1,9 @@
-﻿using Uncreated.Warfare.Database.Automation;
-using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Database.Automation;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Languages;
 
 namespace Uncreated.Warfare.Teams;
 
-/// <summary>Max field character limit: <see cref="KitEx.RedirectTypeCharLimit"/>.</summary>
 [ExcludedEnum(None)]
 [ExcludedEnum(StandardAmmoIcon)]
 [ExcludedEnum(StandardGrenadeIcon)]

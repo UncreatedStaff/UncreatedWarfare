@@ -1,9 +1,10 @@
-﻿using System;
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Util.Inventory;
 
 namespace Uncreated.Warfare.Models.Kits;
 
@@ -15,10 +16,6 @@ public class KitItemModel : ICloneable, IEquatable<KitItemModel>
     [Column("pk")]
     public uint Id { get; set; }
 
-    [Required]
-    public Kit Kit { get; set; }
-
-    [ForeignKey(nameof(Kit))]
     [Column("Kit")]
     [Required]
     public uint KitId { get; set; }
@@ -41,7 +38,6 @@ public class KitItemModel : ICloneable, IEquatable<KitItemModel>
     public KitItemModel() { }
     public KitItemModel(KitItemModel model)
     {
-        Kit = model.Kit;
         KitId = model.KitId;
         Item = model.Item;
         X = model.X;
@@ -87,14 +83,14 @@ public class KitItemModel : ICloneable, IEquatable<KitItemModel>
                 if (page > Warfare.Kits.Items.Page.Area)
                     throw new FormatException($"Page out of range: {page}.");
 
-                return new SpecificPageKitItem(Id, reference, x, y, rot, page, amt, Metadata ?? Array.Empty<byte>());
+                return new ConcretePageKitItem(Id, KitId, x, y, page, rot, reference.GetAssetLink<ItemAsset>(), Metadata ?? Array.Empty<byte>(), amt);
             }
 
             type = ClothingSlot!.Value;
             if (type > ClothingType.Glasses)
                 throw new FormatException($"Clothing type out of range: {type}.");
             
-            return new SpecificClothingKitItem(Id, reference, type, Metadata ?? Array.Empty<byte>());
+            return new ConcreteClothingKitItem(Id, KitId, type, reference.GetAssetLink<ItemClothingAsset>(), Metadata ?? Array.Empty<byte>());
         }
 
         RedirectType redirectType = Redirect!.Value;
@@ -110,14 +106,14 @@ public class KitItemModel : ICloneable, IEquatable<KitItemModel>
             if (page > Warfare.Kits.Items.Page.Area)
                 throw new FormatException($"Page out of range: {page}.");
 
-            return new AssetRedirectPageKitItem(Id, x, y, rot, page, redirectType, redirectVariant);
+            return new RedirectedPageKitItem(Id, KitId, x, y, page, rot, redirectType, redirectVariant);
         }
 
         type = ClothingSlot!.Value;
         if (type > ClothingType.Glasses)
             throw new FormatException($"Clothing type out of range: {type}.");
 
-        return new AssetRedirectClothingKitItem(Id, redirectType, type, redirectVariant);
+        return new RedirectedClothingKitItem(Id, KitId, type, redirectType, redirectVariant);
     }
     public bool TryGetItemSize(out byte sizeX, out byte sizeY)
     {
@@ -184,23 +180,8 @@ public class KitItemModel : ICloneable, IEquatable<KitItemModel>
     public override bool Equals(object? obj) => Equals(obj as KitItemModel);
     public override int GetHashCode()
     {
-        // ReSharper disable NonReadonlyMemberInGetHashCode
-        HashCode hashCode = new HashCode();
-        hashCode.Add(Id);
-        hashCode.Add(Kit);
-        hashCode.Add(KitId);
-        hashCode.Add(Item);
-        hashCode.Add(X);
-        hashCode.Add(Y);
-        hashCode.Add(Rotation);
-        hashCode.Add(Page);
-        hashCode.Add(ClothingSlot);
-        hashCode.Add(Redirect);
-        hashCode.Add(RedirectVariant);
-        hashCode.Add(Amount);
-        hashCode.Add(Metadata);
-        return hashCode.ToHashCode();
-        // ReSharper restore NonReadonlyMemberInGetHashCode
+        // ReSharper disable once NonReadonlyMemberInGetHashCode
+        return unchecked ( (int)Id );
     }
 
     public static bool operator ==(KitItemModel? left, KitItemModel? right) => Equals(left, right);

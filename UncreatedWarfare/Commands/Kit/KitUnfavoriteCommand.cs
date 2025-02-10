@@ -1,6 +1,6 @@
-﻿using Uncreated.Warfare.Interaction.Commands;
+using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Models.Kits;
+using Uncreated.Warfare.Kits.Loadouts;
 using Uncreated.Warfare.Signs;
 using Uncreated.Warfare.Translations;
 
@@ -10,28 +10,36 @@ namespace Uncreated.Warfare.Commands;
 internal sealed class KitUnfavoriteCommand : IExecutableCommand
 {
     private readonly SignInstancer _signs;
+    private readonly LoadoutService _loadoutService;
+    private readonly IKitFavoriteService _kitFavoriteService;
+    private readonly IKitDataStore _kitDataStore;
     private readonly KitCommandTranslations _translations;
-    private readonly KitManager _kitManager;
+
     public required CommandContext Context { get; init; }
 
-    public KitUnfavoriteCommand(TranslationInjection<KitCommandTranslations> translations, SignInstancer signs, KitManager kitManager)
+    public KitUnfavoriteCommand(
+        TranslationInjection<KitCommandTranslations> translations,
+        SignInstancer signs,
+        LoadoutService loadoutService,
+        IKitFavoriteService kitFavoriteService,
+        IKitDataStore kitDataStore)
     {
         _signs = signs;
-        _kitManager = kitManager;
+        _loadoutService = loadoutService;
+        _kitFavoriteService = kitFavoriteService;
+        _kitDataStore = kitDataStore;
         _translations = translations.Value;
     }
 
     public async UniTask ExecuteAsync(CancellationToken token)
     {
-        // ReSharper disable InconsistentlySynchronizedField
-
         Context.AssertRanByPlayer();
 
         string? kitId = null;
         Kit? kit = null;
         bool signLoadout = false;
 
-        // kit favorite [kit id or sign]
+        // kit unfavorite [kit id or sign]
         if (Context.HasArgs(1))
         {
             kitId = Context.Get(0);
@@ -43,7 +51,7 @@ internal sealed class KitUnfavoriteCommand : IExecutableCommand
             if (signData.LoadoutNumber > 0)
             {
                 kitId = LoadoutIdHelper.GetLoadoutSignDisplayText(signData.LoadoutNumber);
-                kit = await _kitManager.Loadouts.GetLoadout(Context.CallerId, signData.LoadoutNumber, token);
+                kit = await _loadoutService.GetLoadoutFromNumber(Context.CallerId, signData.LoadoutNumber, KitInclude.Translations, token).ConfigureAwait(false);
                 signLoadout = true;
             }
             else
@@ -55,29 +63,13 @@ internal sealed class KitUnfavoriteCommand : IExecutableCommand
             throw Context.Reply(_translations.KitOperationNoTarget);
         }
 
-        kit ??= await _kitManager.FindKit(kitId, token, exactMatchOnly: false);
+        kit ??= await _kitDataStore.QueryKitAsync(kitId, KitInclude.Translations, token).ConfigureAwait(false);
         if (kit == null)
         {
             throw Context.Reply(_translations.KitNotFound, kitId);
         }
 
-        await UniTask.SwitchToMainThread(token);
-
-        KitPlayerComponent comp = Context.Player.Component<KitPlayerComponent>();
-        lock (comp)
-        {
-            if (comp.FavoritedKits == null || !comp.FavoritedKits.Contains(kit.PrimaryKey))
-            {
-                throw Context.Reply(_translations.KitFavoriteAlreadyUnfavorited, kit);
-            }
-
-            comp.FavoritedKits.Remove(kit.PrimaryKey);
-            comp.FavoritesDirty = true;
-        }
-
+        await _kitFavoriteService.RemoveFavorite(Context.CallerId, kit.Key, token).ConfigureAwait(false);
         Context.Reply(_translations.KitUnfavorited, kit);
-
-
-        // ReSharper restore InconsistentlySynchronizedField
     }
 }

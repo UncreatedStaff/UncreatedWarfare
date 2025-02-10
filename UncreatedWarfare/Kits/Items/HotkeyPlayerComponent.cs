@@ -6,8 +6,7 @@ using Uncreated.Warfare.Events.Models.Items;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
-using Uncreated.Warfare.Teams;
-using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Util.Inventory;
 
 namespace Uncreated.Warfare.Kits.Items;
 
@@ -16,291 +15,137 @@ public class HotkeyPlayerComponent : IPlayerComponent, IEventListener<ItemDroppe
 {
 #nullable disable
     
-    private KitManager _kitManager;
-    private WarfareModule _module;
     private ILogger<HotkeyPlayerComponent> _logger;
-    private AssetRedirectService _assetRedirectService;
-    private IFactionDataStore _factionDataStore;
     
     public WarfarePlayer Player { get; private set; }
 
 #nullable restore
 
-    // used to trace items back to their original position in the kit
-    internal List<HotkeyBinding>? HotkeyBindings;
+    // updated when the player's kit is changed, only contains bindings for current kit
+    internal List<KitHotkey>? HotkeyBindings;
 
     void IPlayerComponent.Init(IServiceProvider serviceProvider, bool isOnJoin)
     {
-        _kitManager = serviceProvider.GetRequiredService<KitManager>();
-        _module = serviceProvider.GetRequiredService<WarfareModule>();
+#if DEBUG
         _logger = serviceProvider.GetRequiredService<ILogger<HotkeyPlayerComponent>>();
-        _assetRedirectService = serviceProvider.GetRequiredService<AssetRedirectService>();
-        _factionDataStore = serviceProvider.GetRequiredService<IFactionDataStore>();
+#endif
     }
 
     void IEventListener<ItemDropped>.HandleEvent(ItemDropped e, IServiceProvider serviceProvider)
     {
-        if (HotkeyBindings is not { Count: > 0 })
+        if (HotkeyBindings is not { Count: > 0 } || e.Item == null)
             return;
-
-        if (e.Item == null)
-            return;
-
-        CancellationToken tkn = _module.UnloadToken;
-        CombinedTokenSources tokens = tkn.CombineTokensIfNeeded(Player.DisconnectToken);
 
         // move hotkey to a different item of the same type
-        Task.Run(async () =>
+        ItemTrackingPlayerComponent trackingComponent = Player.Component<ItemTrackingPlayerComponent>();
+
+        trackingComponent.GetOriginalItemPosition(e.OldPage, e.OldX, e.OldY, out Page page, out byte x, out byte y);
+
+        HandleItemDropped(e.Item, x, y, page);
+    }
+    
+    internal void HandleItemDropped(Item item, byte x, byte y, Page page)
+    {
+        if (HotkeyBindings == null)
+            return;
+
+        ItemAsset itemAsset = item.GetAsset();
+        if (itemAsset == null)
+            return;
+
+        foreach (KitHotkey binding in HotkeyBindings)
         {
-            try
+            if (binding.X != x || binding.Y != y || binding.Page != page)
+                continue;
+
+            int hotkeyIndex = KitItemUtility.GetHotkeyIndex(binding.Slot);
+            if (hotkeyIndex == byte.MaxValue)
+                continue;
+
+            // find another item to bind to
+            for (int p = PlayerInventory.SLOTS; p < PlayerInventory.STORAGE; ++p)
             {
-                tokens.Token.ThrowIfCancellationRequested();
-                await ApplyHotkeyAfterDroppingItemAsync(e, tokens.Token);
+                if (!KitItemUtility.CanBindHotkeyTo(itemAsset, (Page)p))
+                    continue;
+
+                SDG.Unturned.Items items = Player.UnturnedPlayer.inventory.items[p];
+                foreach (ItemJar itemJar in new ItemPageIterator(items, true))
+                {
+                    if (itemJar.item.id != itemAsset.id)
+                        continue;
+
+                    Player.UnturnedPlayer.equipment.ServerBindItemHotkey((byte)hotkeyIndex, itemAsset, (byte)p, itemJar.x, itemJar.y);
+                    _logger.LogConditional($"Updating dropped hotkey: {itemAsset.itemName} at {(byte)p}, ({itemJar.x}, {itemJar.y}).");
+                    return;
+                }
             }
-            catch (OperationCanceledException) when (tokens.Token.IsCancellationRequested) { }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error applying hotkey change after dropping item.");
-            }
-            finally
-            {
-                tokens.Dispose();
-            }
-        }, CancellationToken.None);
+        }
     }
 
     internal void HandleItemPickedUpAfterTransformed(ItemDestroyed e, byte origX, byte origY, Page origPage)
     {
         // resend hotkeys from picked up item
-        if (!Provider.isInitialized || HotkeyBindings == null || origX >= byte.MaxValue)
+        if (!Player.Equals(e.PickUpPlayer) || !Provider.isInitialized || HotkeyBindings == null || origX >= byte.MaxValue)
             return;
 
-        CancellationToken tkn = _module.UnloadToken;
-        CombinedTokenSources tokens = tkn.CombineTokensIfNeeded(Player.DisconnectToken);
-
-        // move hotkey to a different item of the same type
-        Task.Run(async () =>
+        ItemAsset asset = e.Item.GetAsset();
+        foreach (KitHotkey binding in HotkeyBindings)
         {
-            try
-            {
-                tokens.Token.ThrowIfCancellationRequested();
-                await ApplyHotkeyAfterPickingUpItemAsync(e, origX, origY, origPage, tokens.Token);
-            }
-            catch (OperationCanceledException) when (tokens.Token.IsCancellationRequested) { }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error applying hotkey change after dropping item.");
-            }
-            finally
-            {
-                tokens.Dispose();
-            }
-        }, CancellationToken.None);
-    }
+            if (binding.X != origX || binding.Y != origY || binding.Page != origPage)
+                continue;
 
-    private async Task ApplyHotkeyAfterPickingUpItemAsync(ItemDestroyed e, byte origX, byte origY, Page origPage, CancellationToken token = default)
-    {
-        if (e.PickUpPlayer == null)
-            return;
+            byte index = KitItemUtility.GetHotkeyIndex(binding.Slot);
+            if (index == byte.MaxValue || !KitItemUtility.CanBindHotkeyTo(asset, e.PickUpPage))
+                continue;
 
-        await e.PickUpPlayer.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
-        try
-        {
-            if (HotkeyBindings == null)
-                return;
-
-            Kit? activeKit = await e.PickUpPlayer.Component<KitPlayerComponent>().GetActiveKitAsync(token).ConfigureAwait(false);
-            if (activeKit == null)
-                return;
-
-            await UniTask.SwitchToMainThread(token);
-
-            foreach (HotkeyBinding binding in HotkeyBindings)
-            {
-                if (binding.Kit != activeKit.PrimaryKey || binding.Item.X != origX || binding.Item.Y != origY || binding.Item.Page != origPage)
-                    continue;
-
-                ItemAsset? asset = binding.GetAsset(activeKit, e.PickUpPlayer.Team, _assetRedirectService, _factionDataStore);
-                if (asset == null)
-                    continue;
-
-                byte index = KitEx.GetHotkeyIndex(binding.Slot);
-                if (index == byte.MaxValue || !KitEx.CanBindHotkeyTo(asset, e.PickUpPage))
-                    continue;
-
-                e.PickUpPlayer.UnturnedPlayer.equipment.ServerBindItemHotkey(index, asset, (byte)e.PickUpPage, e.PickUpX, e.PickUpY);
-#if DEBUG
-                _logger.LogTrace("Updating old hotkey (picked up): {0} at {1}, ({2}, {3}).", asset.itemName, e.PickUpPage, e.PickUpX, e.PickUpY);
-#endif
-                break;
-            }
-        }
-        finally
-        {
-            e.PickUpPlayer.PurchaseSync.Release();
+            e.PickUpPlayer.UnturnedPlayer.equipment.ServerBindItemHotkey(index, asset, (byte)e.PickUpPage, e.PickUpX, e.PickUpY);
+            _logger.LogConditional($"Updating old hotkey (picked up): {asset.itemName} at {e.PickUpPage}, ({e.PickUpX}, {e.PickUpY}).");
+            break;
         }
     }
 
     internal void HandleItemMovedAfterTransformed(ItemMoved e, byte origX, byte origY, Page origPage, byte swapOrigX, byte swapOrigY, Page swapOrigPage)
     {
-        // resend hotkeys from moved item(s)
-        if (!Provider.isInitialized || HotkeyBindings == null || (origX >= byte.MaxValue && swapOrigX >= byte.MaxValue))
+        // move hotkey to the moved item
+        if (HotkeyBindings == null)
             return;
 
-        CancellationToken tkn = _module.UnloadToken;
-        CombinedTokenSources tokens = tkn.CombineTokensIfNeeded(Player.DisconnectToken);
-
-        Task.Run(async () =>
-        {
-            try
-            {
-                tokens.Token.ThrowIfCancellationRequested();
-                await ApplyHotkeyAfterMovingItemAsync(e, origX, origY, origPage, swapOrigX, swapOrigY, swapOrigPage, tokens.Token);
-            }
-            catch (OperationCanceledException) when (tokens.Token.IsCancellationRequested) { }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error applying hotkey change after moving item.");
-            }
-            finally
-            {
-                tokens.Dispose();
-            }
-        }, CancellationToken.None);
-    }
-
-    private async Task ApplyHotkeyAfterDroppingItemAsync(ItemDropped e, CancellationToken token)
-    {
-        IPageKitItem? jar2 = await _kitManager.GetItemFromKit(Player, e.OldX, e.OldY, e.Item!, e.OldPage, token).ConfigureAwait(false);
-        if (jar2 == null || !Player.IsOnline)
+        ItemAsset itemAsset = e.Item.GetAsset();
+        if (itemAsset == null)
             return;
 
-        await Player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
-        try
+        int ct = 0;
+        foreach (KitHotkey binding in HotkeyBindings)
         {
-            if (!Player.IsOnline || HotkeyBindings is not { Count: > 0 })
-                return;
+            Page page;
+            byte x, y;
 
-            Kit? activeKit = await Player.Component<KitPlayerComponent>().GetActiveKitAsync(token).ConfigureAwait(false);
-
-            await UniTask.SwitchToMainThread(token);
-
-            if (!Player.IsOnline || HotkeyBindings is not { Count: > 0 })
-                return;
-
-            for (int i = 0; i < HotkeyBindings.Count; ++i)
+            if (binding.X == origX && binding.Y == origY && binding.Page == origPage)
             {
-                HotkeyBinding b = HotkeyBindings[i];
+                // primary item
+                page = e.NewPage;
+                x = e.NewX;
+                y = e.NewY;
+                ct |= 1;
+            }
+            else if (binding.X == swapOrigX && binding.Y == swapOrigY && binding.Page == swapOrigPage)
+            {
+                // swapped item
+                page = e.OldPage;
+                x = e.OldX;
+                y = e.OldY;
+                ct |= 2;
+            }
+            else continue;
 
-                if ((b.Item is not ISpecificKitItem item || jar2 is not ISpecificKitItem item2 || item.Item != item2.Item) &&
-                    (b.Item is not IAssetRedirectKitItem redir || jar2 is not IAssetRedirectKitItem redir2 || redir.RedirectType != redir2.RedirectType))
-                {
-                    continue;
-                }
+            byte hotkeyIndex = KitItemUtility.GetHotkeyIndex(binding.Slot);
+            if (hotkeyIndex == byte.MaxValue)
+                continue;
 
-                // found a binding for that item
-                if (b.Item.X != jar2.X || b.Item.Y != jar2.Y || b.Item.Page != jar2.Page)
-                    continue;
-
-                ItemAsset? asset = b.Item switch
-                {
-                    ISpecificKitItem item3 => item3.Item.GetAsset<ItemAsset>(),
-                    IKitItem ki => ki.GetItem(activeKit, Player.Team, out _, out _, _assetRedirectService, _factionDataStore),
-                    _ => null
-                };
-
-                if (asset == null)
-                    return;
-
-                int hotkeyIndex = KitEx.GetHotkeyIndex(b.Slot);
-                if (hotkeyIndex == byte.MaxValue)
-                    return;
-
-                PlayerInventory inv = Player.UnturnedPlayer.inventory;
-
-                // find new item to bind the item to
-                for (int p = PlayerInventory.SLOTS; p < PlayerInventory.STORAGE; ++p)
-                {
-                    SDG.Unturned.Items page = inv.items[p];
-                    int c = page.getItemCount();
-                    for (int index = 0; index < c; ++index)
-                    {
-                        ItemJar jar = page.getItem((byte)index);
-                        if (jar.x == jar2.X && jar.y == jar2.Y && p == (int)jar2.Page)
-                            continue;
-
-                        if (jar.GetAsset() is not { } asset2 || asset2.GUID != asset.GUID || !KitEx.CanBindHotkeyTo(asset2, (Page)p))
-                            continue;
-
-                        Player.UnturnedPlayer.equipment.ServerBindItemHotkey((byte)hotkeyIndex, asset, (byte)p, jar.x, jar.y);
-#if DEBUG
-                        _logger.LogTrace("Updating dropped hotkey: {0} at {1}, ({2}, {3}).", asset.itemName, (byte)p, jar.x, jar.y);
-#endif
-                        return;
-                    }
-                }
-
+            Player.UnturnedPlayer.equipment.ServerBindItemHotkey(hotkeyIndex, itemAsset, (byte)page, x, y);
+            _logger.LogConditional($"Updating old hotkey: {itemAsset.itemName} at {page}, ({x}, {y}).");
+            if (ct == 3)
                 break;
-            }
-        }
-        finally
-        {
-            Player.PurchaseSync.Release();
-        }
-    }
-
-    private async Task ApplyHotkeyAfterMovingItemAsync(ItemMoved e, byte origX, byte origY, Page origPage, byte swapOrigX, byte swapOrigY, Page swapOrigPage, CancellationToken token)
-    {
-        await Player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
-        try
-        {
-            if (HotkeyBindings == null)
-                return;
-
-            Kit? kit = await Player.Component<KitPlayerComponent>().GetActiveKitAsync(token).ConfigureAwait(false);
-            if (kit is null)
-                return;
-
-            await UniTask.SwitchToMainThread(token);
-
-            foreach (HotkeyBinding binding in HotkeyBindings)
-            {
-                if (binding.Kit != kit.PrimaryKey)
-                    continue;
-
-                byte index = KitEx.GetHotkeyIndex(binding.Slot);
-                if (index == byte.MaxValue)
-                    continue;
-
-                if (binding.Item.X == origX && binding.Item.Y == origY && binding.Item.Page == origPage)
-                {
-                    ItemAsset? asset = binding.GetAsset(kit, Player.Team, _assetRedirectService, _factionDataStore);
-                    if (asset != null && KitEx.CanBindHotkeyTo(asset, e.NewPage))
-                    {
-                        Player.UnturnedPlayer.equipment.ServerBindItemHotkey(index, asset, (byte)e.NewPage, e.NewX, e.NewY);
-#if DEBUG
-                        _logger.LogTrace("Updating old hotkey: {0} at {1}, ({2}, {3}).", asset.itemName, e.NewPage, e.NewX, e.NewY);
-#endif
-                    }
-                    if (!e.IsSwap)
-                        break;
-                }
-                else if (binding.Item.X == swapOrigX && binding.Item.Y == swapOrigY && binding.Item.Page == swapOrigPage)
-                {
-                    ItemAsset? asset = binding.GetAsset(kit, Player.Team, _assetRedirectService, _factionDataStore);
-                    if (asset != null && !KitEx.CanBindHotkeyTo(asset, e.OldPage))
-                    {
-                        Player.UnturnedPlayer.equipment.ServerBindItemHotkey(index, asset, (byte)e.OldPage, e.OldX, e.OldY);
-#if DEBUG
-                        _logger.LogTrace("Updating old swap hotkey: {0} at {1}, ({2}, {3}).", asset.itemName, e.OldPage, e.OldX, e.OldY);
-#endif
-                    }
-                }
-            }
-        }
-        finally
-        {
-            Player.PurchaseSync.Release();
         }
     }
 

@@ -1,4 +1,4 @@
-﻿using Uncreated.Framework.UI;
+using Uncreated.Framework.UI;
 
 namespace Uncreated.Warfare.Kits.Whitelists;
 public interface IWhitelistExceptionProvider

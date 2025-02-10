@@ -1,46 +1,35 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using SDG.Framework.Water;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
-using System.Text;
+using System.Linq;
+using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Barricades;
-using Uncreated.Warfare.FOBs.SupplyCrates;
-using Uncreated.Warfare.Fobs;
-using Uncreated.Warfare.FOBs;
-using Uncreated.Warfare.Interaction;
-using Uncreated.Warfare.Translations;
-using Uncreated.Warfare.Zones;
-using Microsoft.Extensions.Configuration;
-using Uncreated.Warfare.Util;
-using System.Linq;
-using Uncreated.Warfare.Commands;
-using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Util.Containers;
-using Uncreated.Warfare.Buildables;
-using Uncreated.Warfare.FOBs.Construction;
-using Uncreated.Warfare.FOBs.Entities;
-using UnityEngine.Assertions.Must;
-using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Events.Models.Players;
-using Uncreated.Warfare.Players.UI;
+using Uncreated.Warfare.Fobs;
+using Uncreated.Warfare.FOBs.Entities;
+using Uncreated.Warfare.Interaction;
+using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Kits.Items;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.FOBs.Construction.Tweaks;
+
 internal class ShoveableTweaks :
     IEventListener<PlaceBarricadeRequested>,
     IEventListener<MeleeHit>
 {
-    private readonly IServiceProvider _serviceProvider;
-    private readonly ILogger _logger;
     private readonly AssetConfiguration? _assetConfiguration;
     private readonly FobTranslations _translations;
     private readonly ChatService _chatService;
+    private readonly IKitItemResolver _kitItemResolver;
 
-    public ShoveableTweaks(IServiceProvider serviceProvider, ILogger<ShoveableTweaks> logger)
+    public ShoveableTweaks(IServiceProvider serviceProvider)
     {
-        _serviceProvider = serviceProvider;
-        _logger = logger;
+        _kitItemResolver = serviceProvider.GetRequiredService<IKitItemResolver>();
         _assetConfiguration = serviceProvider.GetService<AssetConfiguration>();
         _translations = serviceProvider.GetRequiredService<TranslationInjection<FobTranslations>>().Value;
         _chatService = serviceProvider.GetRequiredService<ChatService>();
@@ -64,7 +53,16 @@ internal class ShoveableTweaks :
         KitPlayerComponent kitComponent = e.OriginalPlacer.Component<KitPlayerComponent>();
 
         bool enforcePerFobMax = shovelableInfo.MaxAllowedPerFob != null;
-        bool barricadeInKit = kitComponent.CachedKit?.ItemModels.Any(i => i.Item.GetValueOrDefault().GetAssetLink<Asset>().MatchAsset(e.Barricade.asset)) ?? false;
+
+        IAssetLink<ItemBarricadeAsset> barricade = AssetLink.Create(e.Barricade.asset);
+
+        bool barricadeInKit = false;
+        Kit? cachedKit = kitComponent.CachedKit;
+        if (cachedKit != null)
+        {
+            barricadeInKit = _kitItemResolver.ContainsItem(cachedKit, barricade, e.OriginalPlacer.Team);
+        }
+
         //bool placerIsCombatEngineer = kitComponent.ActiveClass == Class.CombatEngineer;
         //int maxAllowedInKit = kitComponent.CachedKit?.ItemModels.Count(i => i.Item.GetValueOrDefault().GetAssetLink<Asset>().MatchAsset(e.Barricade.asset)) ?? 0;
         //IEnumerable<IBuildableFobEntity> similarPlacedByPlayer = _fobManager.Entities.OfType<IBuildableFobEntity>().Where(en =>

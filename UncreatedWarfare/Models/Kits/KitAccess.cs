@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
@@ -12,7 +12,7 @@ public class KitAccess
 {
     [Required]
     [JsonIgnore]
-    public Kit Kit { get; set; }
+    public KitModel Kit { get; set; }
 
     [Required]
     [ForeignKey(nameof(Kit))]

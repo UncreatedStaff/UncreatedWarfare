@@ -1,5 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Items;
 using Uncreated.Warfare.Players;
@@ -12,13 +14,16 @@ namespace Uncreated.Warfare.Kits.Items;
 /// Helps keep up with where items have been moved to track held item's back to their original kit item.
 /// </summary>
 [PlayerComponent]
-public class ItemTrackingPlayerComponent : IPlayerComponent, IEventListener<ItemDropped>, IEventListener<ItemMoved>, IEventListener<ItemDestroyed>
+public class ItemTrackingPlayerComponent : IPlayerComponent, IEventListener<ItemDropped>, IEventListener<ItemMoved>, IEventListener<ItemDestroyed>, IEventListener<ItemPickupRequested>
 {
     internal List<ItemTransformation> ItemTransformations = new List<ItemTransformation>(16);
     internal List<ItemDropTransformation> ItemDropTransformations = new List<ItemDropTransformation>(16);
-    internal List<ItemLayoutTransformationData>? LayoutTransformations;
+
+#nullable disable
+
     public WarfarePlayer Player { get; private set; }
-    WarfarePlayer IPlayerComponent.Player { get => Player; set => Player = value; }
+
+#nullable restore
 
     void IPlayerComponent.Init(IServiceProvider serviceProvider, bool isOnJoin) { }
 
@@ -31,7 +36,7 @@ public class ItemTrackingPlayerComponent : IPlayerComponent, IEventListener<Item
         ItemDropTransformations.Clear();
     }
 
-    public bool TryGetCurrentItemPosition(Page origPage, byte origX, byte origY, out Page page, out byte x, out byte y, out bool isDropped)
+    public bool TryGetCurrentItemPosition(Page origPage, byte origX, byte origY, out Page page, out byte x, out byte y, out bool isDropped, [MaybeNullWhen(false)] out Item item)
     {
         for (int i = 0; i < ItemDropTransformations.Count; ++i)
         {
@@ -43,6 +48,7 @@ public class ItemTrackingPlayerComponent : IPlayerComponent, IEventListener<Item
             x = byte.MaxValue;
             y = byte.MaxValue;
             isDropped = true;
+            item = t.Item;
             return true;
         }
 
@@ -56,13 +62,27 @@ public class ItemTrackingPlayerComponent : IPlayerComponent, IEventListener<Item
             x = t.NewX;
             y = t.NewY;
             isDropped = false;
-            return Player.UnturnedPlayer.inventory.getIndex((byte)page, x, y) != byte.MaxValue;
+            item = t.Item;
+            byte index = Player.UnturnedPlayer.inventory.getIndex((byte)page, x, y);
+            return ReferenceEquals(item, Player.UnturnedPlayer.inventory.getItem((byte)page, index)?.item);
+        }
+
+        isDropped = false;
+
+        byte oldIndex = Player.UnturnedPlayer.inventory.getIndex((byte)origPage, origX, origY);
+        if (oldIndex != byte.MaxValue)
+        {
+            page = origPage;
+            x = origX;
+            y = origY;
+            item = Player.UnturnedPlayer.inventory.getItem((byte)origPage, oldIndex)?.item;
+            return item != null;
         }
 
         page = (Page)byte.MaxValue;
         x = byte.MaxValue;
         y = byte.MaxValue;
-        isDropped = false;
+        item = null;
         return false;
     }
 
@@ -81,18 +101,6 @@ public class ItemTrackingPlayerComponent : IPlayerComponent, IEventListener<Item
         for (int i = 0; i < ItemTransformations.Count; ++i)
         {
             ItemTransformation t = ItemTransformations[i];
-            if (t.Item != item)
-                continue;
-
-            origX = t.OldX;
-            origY = t.OldY;
-            origPage = t.OldPage;
-            return;
-        }
-
-        for (int i = 0; i < ItemDropTransformations.Count; ++i)
-        {
-            ItemDropTransformation t = ItemDropTransformations[i];
             if (t.Item != item)
                 continue;
 
@@ -137,15 +145,46 @@ public class ItemTrackingPlayerComponent : IPlayerComponent, IEventListener<Item
 
     void IEventListener<ItemDropped>.HandleEvent(ItemDropped e, IServiceProvider serviceProvider)
     {
-        if (e.Item != null)
+        if (e.Item == null)
+            return;
+        
+        if (!TryGetOriginalItemPosition(e.Item, out Page origPage, out byte origX, out byte origY))
         {
-            ItemDropTransformations.Add(new ItemDropTransformation(e.OldPage, e.OldX, e.OldY, e.Item));
+            origPage = e.OldPage;
+            origX = e.OldX;
+            origY = e.OldY;
+        }
+
+        ItemDropTransformations.Add(new ItemDropTransformation(origPage, origX, origY, e.Item, e.OldPage, e.OldX, e.OldY, e.OldRotation));
+    }
+
+    [EventListener(Priority = int.MinValue)]
+    void IEventListener<ItemPickupRequested>.HandleEvent(ItemPickupRequested e, IServiceProvider serviceProvider)
+    {
+        if (!e.AutoFindFreeSpace)
+            return;
+
+        // replace item from where it was dropped if possible
+        foreach (ItemDropTransformation drop in ItemDropTransformations)
+        {
+            if (drop.Item != e.Item)
+                continue;
+
+            ItemAsset asset = e.Item.GetAsset();
+            if (Player.UnturnedPlayer.inventory.items[(int)drop.DroppedFromPage]
+                .checkSpaceEmpty(drop.DroppedFromX, drop.DroppedFromY, asset.size_x, asset.size_y, drop.DroppedFromRotation))
+            {
+                e.DestinationX = drop.DroppedFromX;
+                e.DestinationY = drop.DroppedFromY;
+                e.DestinationPage = drop.DroppedFromPage;
+                e.DestinationRotation = (byte)(drop.DroppedFromRotation % 4);
+            }
         }
     }
 
     void IEventListener<ItemMoved>.HandleEvent(ItemMoved e, IServiceProvider serviceProvider)
     {
-        if (e.NewX == e.OldX && e.NewY == e.OldY && e.NewPage == e.OldPage)
+        if (e.IsSecondaryExecution || e.NewX == e.OldX && e.NewY == e.OldY && e.NewPage == e.OldPage)
             return;
 
         byte origX = byte.MaxValue, origY = byte.MaxValue;
@@ -204,7 +243,8 @@ public class ItemTrackingPlayerComponent : IPlayerComponent, IEventListener<Item
             }
         }
 
-        Player.Component<HotkeyPlayerComponent>().HandleItemMovedAfterTransformed(e, origX, origY, origPage, swapOrigX, swapOrigY, swapOrigPage);
+        if (origX != byte.MaxValue || swapOrigX != byte.MaxValue)
+            Player.Component<HotkeyPlayerComponent>().HandleItemMovedAfterTransformed(e, origX, origY, origPage, swapOrigX, swapOrigY, swapOrigPage);
     }
 
     void IEventListener<ItemDestroyed>.HandleEvent(ItemDestroyed e, IServiceProvider serviceProvider)
@@ -250,4 +290,6 @@ public class ItemTrackingPlayerComponent : IPlayerComponent, IEventListener<Item
 
         Player.Component<HotkeyPlayerComponent>().HandleItemPickedUpAfterTransformed(e, origX, origY, origPage);
     }
+
+    WarfarePlayer IPlayerComponent.Player { get => Player; set => Player = value; }
 }

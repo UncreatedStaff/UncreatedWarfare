@@ -8,6 +8,7 @@ using Uncreated.Warfare.Patches;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Util.Inventory;
 
 namespace Uncreated.Warfare.Events.Patches;
 
@@ -190,7 +191,7 @@ internal sealed class PlayerClothingReceiveSwapClothingRequest : IHarmonyPatch
             if (!args.IsRemoving)
             {
                 // track if the item was moved in-between when the event started and finished
-                if (!args.Player.Component<ItemTrackingPlayerComponent>().TryGetCurrentItemPosition(args.EquippingOriginalPage, args.EquippingOriginalX, args.EquippingOriginalY, out Page newPage, out byte newX, out byte newY, out bool isDropped))
+                if (!args.Player.Component<ItemTrackingPlayerComponent>().TryGetCurrentItemPosition(args.EquippingOriginalPage, args.EquippingOriginalX, args.EquippingOriginalY, out Page newPage, out byte newX, out byte newY, out bool isDropped, out _))
                 {
                     // check if item has somehow moved but didn't get tracked (kit changed and transformations were cleared, etc.)
                     byte existingIndex = args.Player.UnturnedPlayer.inventory.getIndex((byte)args.EquippingPage, args.EquippingX, args.EquippingY);

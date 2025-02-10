@@ -3,11 +3,10 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text.Json;
 using Uncreated.Warfare.Interaction.Commands;
-using Uncreated.Warfare.Kits.Translations;
-using Uncreated.Warfare.Models.Kits;
+using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Kits.Requests;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Translations;
-using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.Players.Unlocks;
@@ -74,52 +73,6 @@ public class QuestUnlockRequirement : UnlockRequirement, IEquatable<QuestUnlockR
                 QuestId = questID;
             }
         }
-    }
-
-    /// <inheritdoc />
-    protected override bool ReadFromJson(ILogger? logger, ref Utf8JsonReader reader)
-    {
-        bool read = false;
-        JsonUtility.ReadTopLevelProperties(ref reader, ref read, (ref Utf8JsonReader reader, string property, ref bool read) =>
-        {
-            if (property.Equals("unlock_presets", StringComparison.OrdinalIgnoreCase))
-            {
-                if (reader.TokenType != JsonTokenType.StartArray)
-                    return;
-
-                List<Guid> ids = new List<Guid>(4);
-                while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
-                {
-                    if (reader.TryGetGuid(out Guid guid) && !ids.Contains(guid))
-                        ids.Add(guid);
-                }
-
-                UnlockPresets = ids.ToArray();
-            }
-            else if (property.Equals("quest_id", StringComparison.OrdinalIgnoreCase))
-            {
-                if (reader.TryGetGuid(out Guid questID))
-                    QuestId = questID;
-            }
-
-            read = true;
-        });
-
-        return read;
-    }
-
-    /// <inheritdoc />
-    protected override void WriteToJson(Utf8JsonWriter writer)
-    {
-        writer.WritePropertyName("unlock_presets");
-        writer.WriteStartArray();
-        for (int i = 0; i < UnlockPresets.Length; i++)
-        {
-            writer.WriteStringValue(UnlockPresets[i]);
-        }
-        writer.WriteEndArray();
-
-        writer.WriteString("quest_id", QuestId);
     }
 
     /// <inheritdoc />

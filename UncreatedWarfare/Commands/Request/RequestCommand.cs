@@ -1,7 +1,7 @@
-﻿using System;
+using System;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Interaction.Requests;
-using Uncreated.Warfare.Kits.Translations;
+using Uncreated.Warfare.Kits.Requests;
 using Uncreated.Warfare.Signs;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util.Containers;

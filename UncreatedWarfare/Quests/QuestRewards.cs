@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Globalization;
+using System.Linq;
 using System.Text.Json;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Players;
@@ -26,7 +27,7 @@ public class NullReward : IQuestReward
 {
     void IQuestReward.WriteToJson(Utf8JsonWriter writer) { }
 
-    UniTask IQuestReward.GrantRewardAsync(WarfarePlayer player, QuestTracker tracker, IServiceProvider serviceProvider, CancellationToken token = default)
+    UniTask IQuestReward.GrantRewardAsync(WarfarePlayer player, QuestTracker tracker, IServiceProvider serviceProvider, CancellationToken token)
     {
         return UniTask.CompletedTask;
     }
@@ -218,13 +219,19 @@ public class KitAccessReward : IQuestReward
     /// <inheritdoc />
     public async UniTask GrantRewardAsync(WarfarePlayer player, QuestTracker tracker, IServiceProvider serviceProvider, CancellationToken token = default)
     {
-        KitManager kitManager = serviceProvider.GetRequiredService<KitManager>();
+        IKitAccessService kitAccessService = serviceProvider.GetRequiredService<IKitAccessService>();
+        IKitDataStore kitDataStore = serviceProvider.GetRequiredService<IKitDataStore>();
 
+        uint pk = await kitDataStore
+            .QueryFirstAsync(kits => kits
+                .Where(x => x.Id == KitId)
+                .Select(x => x.PrimaryKey), KitInclude.Base, token)
+            .ConfigureAwait(false);
 
         if (string.IsNullOrEmpty(KitId))
             return;
 
-        if (!await kitManager.GiveAccess(KitId, player, KitAccessType.QuestReward, token).ConfigureAwait(false))
+        if (!await kitAccessService.UpdateAccessAsync(player.Steam64, pk, KitAccessType.QuestReward, token).ConfigureAwait(false))
         {
             serviceProvider.GetRequiredService<ILogger<KitAccessReward>>().LogWarning($"Unknown kit {KitId} when giving access reward to player {player}.");
         }
