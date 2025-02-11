@@ -146,6 +146,7 @@ partial class EventDispatcher
             Player = player,
             Medic = medic,
             IsRevive = reqArgs.IsRevive,
+            IsEffectiveRevive = reqArgs.IsEffectiveRevive,
             Item = reqArgs.Item,
             HealthChange = reqArgs.StartingHealth - targetLife.health,
             BleedStateChanged = reqArgs.StartingBleedState != targetLife.isBleeding,

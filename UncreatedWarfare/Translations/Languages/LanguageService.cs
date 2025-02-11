@@ -5,7 +5,6 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
 using Uncreated.Warfare.Models.Localization;
-using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Steam;
 using Uncreated.Warfare.Steam.Models;

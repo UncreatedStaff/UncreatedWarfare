@@ -157,6 +157,17 @@ public class PointsService : IEventListener<PlayerTeamChanged> // todo player eq
     /// <summary>
     /// Apply an event and trigger updates for the necessary UI for the current season.
     /// </summary>
+    public Task ApplyEvent(WarfarePlayer player, ResolvedEventInfo @event, CancellationToken token = default)
+    {
+        if (!player.Team.IsValid)
+            return Task.CompletedTask;
+
+        return ApplyEvent(player.Steam64, player.Team.Faction.PrimaryKey, WarfareModule.Season, @event, token);
+    }
+
+    /// <summary>
+    /// Apply an event and trigger updates for the necessary UI for the current season.
+    /// </summary>
     public Task ApplyEvent(CSteamID playerId, uint factionId, ResolvedEventInfo @event, CancellationToken token = default)
     {
         return ApplyEvent(playerId, factionId, WarfareModule.Season, @event, token);

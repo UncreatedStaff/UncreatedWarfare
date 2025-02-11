@@ -78,7 +78,7 @@ public class RedirectedPageItem : IRedirectedItem, IPageItem
     public string Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
     {
         string b = $"Redirected Page     | {
-            formatter.Colorize(formatter.FormatEnum(Page, parameters.Language), WarfareFormattedLogValues.EnumColor, parameters.Options)} ({
+            formatter.Colorize(formatter.FormatEnum(Page, parameters.Language), WarfareFormattedLogValues.EnumColor, parameters.Options),9} ({
                 formatter.Colorize(formatter.Format(X, in parameters), WarfareFormattedLogValues.NumberColor, parameters.Options)}, {
                     formatter.Colorize(formatter.Format(Y, in parameters), WarfareFormattedLogValues.NumberColor, parameters.Options)}) @ {
                         formatter.Colorize(formatter.Format(ItemUtility.RotationToDegrees(Rotation), in parameters), WarfareFormattedLogValues.NumberColor, parameters.Options)}° | {
@@ -90,6 +90,6 @@ public class RedirectedPageItem : IRedirectedItem, IPageItem
     /// <inheritdoc />
     public override string ToString()
     {
-        return $"Redirected Page     | {Page} ({X.ToString(CultureInfo.InvariantCulture)}, {Y.ToString(CultureInfo.InvariantCulture)}) @ {ItemUtility.RotationToDegrees(Rotation)}° | {Item}";
+        return $"Redirected Page     | {Page,9} ({X.ToString(CultureInfo.InvariantCulture)}, {Y.ToString(CultureInfo.InvariantCulture)}) @ {ItemUtility.RotationToDegrees(Rotation)}° | {Item}";
     }
 }

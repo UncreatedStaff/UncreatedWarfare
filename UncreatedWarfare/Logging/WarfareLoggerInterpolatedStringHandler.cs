@@ -458,4 +458,10 @@ public struct FormattedValue
     public object? Value;
     public Type Type;
     public int Alignment;
+
+    /// <inheritdoc />
+    public override string ToString()
+    {
+        return Alignment == int.MinValue ? Value?.ToString()! : string.Format($"{{0,{Alignment}}}", Value);
+    }
 }

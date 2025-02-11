@@ -9,7 +9,6 @@ using Uncreated.Warfare.Players.ItemTracking;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Inventory;
-using Z.EntityFramework.Plus;
 
 namespace Uncreated.Warfare.Kits;
 
@@ -18,15 +17,13 @@ public class KitLayoutService
     private readonly ILogger<KitLayoutService> _logger;
     private readonly DroppedItemTracker _droppedItemTracker;
     private readonly IKitsDbContext _dbContext;
-    private readonly IPlayerService? _playerService;
     private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
 
-    public KitLayoutService(ILogger<KitLayoutService> logger, DroppedItemTracker droppedItemTracker, IKitsDbContext dbContext, IPlayerService? playerService = null)
+    public KitLayoutService(ILogger<KitLayoutService> logger, DroppedItemTracker droppedItemTracker, IKitsDbContext dbContext)
     {
         _logger = logger;
         _droppedItemTracker = droppedItemTracker;
         _dbContext = dbContext;
-        _playerService = playerService;
         _dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
     }
 
@@ -40,10 +37,9 @@ public class KitLayoutService
         try
         {
             ulong s64 = player.m_SteamID;
+
             return await _dbContext.KitLayoutTransformations
-                .Where(x => x.Steam64 == s64 && x.KitId == kitPrimaryKey)
-                .AsNoTracking()
-                .DeleteAsync(token)
+                .DeleteRangeAsync((DbContext)_dbContext, x => x.Steam64 == s64 && x.KitId == kitPrimaryKey, cancellationToken: token)
                 .ConfigureAwait(false) > 0;
         }
         finally
@@ -165,6 +161,8 @@ public class KitLayoutService
         int ct = 0;
         do
         {
+            removedItems.Clear();
+
             for (int i = 0; i < pageItems.Count; ++i)
             {
                 IPageItem item = pageItems[i];
@@ -203,6 +201,8 @@ public class KitLayoutService
 
                     destinationPage.addItem(item.X, item.Y, item.Rotation, location.Item);
                     sourcePage.addItem(x, y, rot, swappable.item);
+
+                    _logger.LogConditional($"{kitWithItems.Id}::{((IKitItem)item).PrimaryKey,-8} Swapped {page} ({x}, {y}) {location.Item.GetAsset().itemName} <-> {item.Page} ({swappable.x}, {swappable.y}) {swappable.item.GetAsset().itemName}.");
 
                     location.Page = item.Page;
                     location.Index = (byte)(destinationPage.getItemCount() - 1);
@@ -243,6 +243,8 @@ public class KitLayoutService
                         continue;
                     }
 
+                    _logger.LogConditional($"{kitWithItems.Id}::{((IKitItem)item).PrimaryKey,-8} Removed {item.Page} ({itemJar.x}, {itemJar.y}) {itemJar.item.GetAsset().itemName}.");
+
                     removedItems.Add(itemJar.item);
                     destinationPage.removeItem((byte)k);
                     if (!locatedItems.Exists(x => x.Jar == itemJar))
@@ -260,6 +262,8 @@ public class KitLayoutService
 
                 destinationPage.addItem(item.X, item.Y, item.Rotation, location.Item);
 
+                _logger.LogConditional($"{kitWithItems.Id}::{((IKitItem)item).PrimaryKey,-8} Moved {page} ({x}, {y}) -> {item.Page} ({item.X}, {item.Y}) {location.Item.GetAsset().itemName}.");
+
                 location.Page = item.Page;
                 location.Index = (byte)(destinationPage.getItemCount() - 1);
                 location.Jar = destinationPage.getItem(location.Index)!;
@@ -274,7 +278,10 @@ public class KitLayoutService
                 int locationIndex = locatedItems.FindLastIndex(l => l.Item == removedItem);
                 if (locationIndex == -1)
                 {
-                    AddOrDropItem(inventory, removedItem, out _, out _, out _, ref hasPlayedEffect);
+                    AddOrDropItem(inventory, removedItem, out Page newPage, out byte newIndex, out bool newIsDropped, ref hasPlayedEffect);
+                    ItemJar? item = newIsDropped ? null : inventory.getItem((byte)newPage, newIndex);
+
+                    _logger.LogConditional($"{kitWithItems.Id}           Added {newPage} ({item?.x}, {item?.y}), dropped: {newIsDropped} | {removedItem.GetAsset().itemName} (non-located item).");
                     continue;
                 }
 
@@ -282,11 +289,13 @@ public class KitLayoutService
                 AddOrDropItem(inventory, removedItem, out Page page, out byte index, out bool isDropped, ref hasPlayedEffect);
                 if (isDropped)
                 {
+                    _logger.LogConditional($"{kitWithItems.Id}           Added {removedItem.GetAsset().itemName} (dropped located item).");
                     AddDropTransformation(itemTracking, location.Page, location.Jar.x, location.Jar.y, removedItem);
                 }
                 else
                 {
                     ItemJar? item = inventory.getItem((byte)page, index);
+                    _logger.LogConditional($"{kitWithItems.Id}           Added {page} ({item?.x}, {item?.y}) | {removedItem.GetAsset().itemName} (located item).");
                     if (item != null)
                         AddTransformation(itemTracking, location.Page, page, location.Jar.x, location.Jar.y, item.x, item.y, removedItem);
                 }
@@ -298,8 +307,6 @@ public class KitLayoutService
                 _logger.LogWarning($"{kitWithItems.Id}           Hit maximum reset iteration: {ct}.");
                 break;
             }
-
-            removedItems.Clear();
         }
         while (removedItems.Count > 0);
     }

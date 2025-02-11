@@ -1,10 +1,10 @@
+using Microsoft.EntityFrameworkCore;
 using System.Linq;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Translations;
-using Z.EntityFramework.Plus;
 
 namespace Uncreated.Warfare.Commands;
 
@@ -45,8 +45,7 @@ internal sealed class KitHotkeyRemoveCommand : IExecutableCommand
 
         uint kitId = activeKit.Key;
         int removed = await _dbContext.KitHotkeys
-            .Where(x => x.KitId == kitId && x.Slot == slot)
-            .DeleteAsync(token)
+            .DeleteRangeAsync((DbContext)_dbContext, x => x.KitId == kitId && x.Slot == slot, cancellationToken: token)
             .ConfigureAwait(false);
 
         await UniTask.SwitchToMainThread(token);

@@ -7,7 +7,6 @@ using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Database.Manual;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players.Management;
-using Z.EntityFramework.Plus;
 
 namespace Uncreated.Warfare.Kits;
 
@@ -125,12 +124,9 @@ public class MySqlKitAccessService : IKitAccessService, IDisposable
             else
             {
                 int updated = await _dbContext.KitAccess
-                    .AsNoTracking()
-                    .Where(x => x.Steam64 == s64 && x.KitId == primaryKey)
-                    .Take(1)
-                    .DeleteAsync(token)
+                    .DeleteRangeAsync((DbContext)_dbContext, x => x.Steam64 == s64 && x.KitId == primaryKey, cancellationToken: token)
                     .ConfigureAwait(false);
-                
+
                 if (_playerService?.GetOnlinePlayerThreadSafe(steam64) is { } player)
                 {
                     player.ComponentOrNull<KitPlayerComponent>()?.RemoveAccessibleKit(primaryKey);

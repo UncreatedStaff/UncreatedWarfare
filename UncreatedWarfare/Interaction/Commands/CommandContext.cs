@@ -12,6 +12,7 @@ using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Cooldowns;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Translations;
@@ -162,7 +163,7 @@ public class CommandContext : ControlException
     /// <summary>
     /// The isolated cooldown this command is already on.
     /// </summary>
-    public Cooldown? IsolatedCooldown { get; private set; }
+    public Cooldown IsolatedCooldown { get; internal set; }
 
     /// <summary>
     /// Command instance being executed.
@@ -1679,14 +1680,17 @@ public class CommandContext : ControlException
     /// </summary>
     public void AssertCommandNotOnIsolatedCooldown()
     {
-        if (!OnIsolatedCooldown)
+        if (!OnIsolatedCooldown || _cooldownManager == null)
             return;
 
         if (Command is ICompoundingCooldownCommand compounding)
         {
-            IsolatedCooldown!.Duration *= compounding.CompoundMultiplier;
-            if (compounding.MaxCooldown > 0 && IsolatedCooldown.Duration > compounding.MaxCooldown)
-                IsolatedCooldown.Duration = compounding.MaxCooldown;
+            TimeSpan duration = IsolatedCooldown.Duration * compounding.CompoundMultiplier;
+            if (compounding.MaxCooldown > 0 && duration.TotalSeconds > compounding.MaxCooldown)
+                duration = TimeSpan.FromSeconds(compounding.MaxCooldown);
+
+            IsolatedCooldown = new Cooldown(IsolatedCooldown.StartTime, duration, IsolatedCooldown.Config, IsolatedCooldown.Data);
+            _cooldownManager.StartCooldown(Player, IsolatedCooldown);
         }
 
         throw Reply(CommonTranslations.CommandCooldown, IsolatedCooldown!, CommandInfo.CommandName);
@@ -1973,10 +1977,9 @@ public class CommandContext : ControlException
     internal void CheckIsolatedCooldown()
     {
         if (Player != null
-            // && todo !Player.OnDuty()
             && _cooldownManager != null
             && CommandInfo != null
-            && _cooldownManager.HasCooldown(Player, CooldownType.IsolatedCommand, out Cooldown? cooldown, CommandInfo))
+            && _cooldownManager.HasCooldown(Player, KnownCooldowns.IsolatedCommand, out Cooldown cooldown, CommandInfo))
         {
             OnIsolatedCooldown = true;
             IsolatedCooldown = cooldown;
@@ -1984,7 +1987,7 @@ public class CommandContext : ControlException
         else
         {
             OnIsolatedCooldown = false;
-            IsolatedCooldown = null;
+            IsolatedCooldown = default;
         }
     }
 }

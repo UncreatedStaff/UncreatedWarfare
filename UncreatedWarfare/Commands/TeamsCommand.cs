@@ -1,7 +1,7 @@
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Lobby;
-using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Cooldowns;
 using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Zones;
@@ -42,7 +42,7 @@ internal sealed class TeamsCommand : IExecutableCommand
     {
         Context.AssertRanByPlayer();
 
-        if (_cooldownManager.HasCooldown(Context.Player, CooldownType.ChangeTeams, out Cooldown? cooldown) && !await Context.HasPermission(PermissionInstantLobby, token))
+        if (_cooldownManager.HasCooldown(Context.Player, KnownCooldowns.ChangeTeams, out Cooldown cooldown) && !await Context.HasPermission(PermissionInstantLobby, token))
         {
             throw Context.Reply(_translations.TeamsCooldown, cooldown);
         }
@@ -57,7 +57,7 @@ internal sealed class TeamsCommand : IExecutableCommand
         if (lobbyZone == null)
             throw Context.SendUnknownError();
 
-        _cooldownManager.StartCooldown(Context.Player, CooldownType.ChangeTeams, /* todo config */ 2000f);
+        _cooldownManager.StartCooldown(Context.Player, KnownCooldowns.ChangeTeams);
         await _lobbyManager.JoinLobbyAsync(Context.Player, token);
         throw Context.Defer();
     }

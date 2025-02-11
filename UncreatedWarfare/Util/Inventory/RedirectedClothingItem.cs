@@ -53,7 +53,7 @@ public class RedirectedClothingItem : IRedirectedItem, IClothingItem
     public string Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
     {
         string b = $"Redirected Clothing | {
-            formatter.Colorize(formatter.FormatEnum(ClothingType, parameters.Language), WarfareFormattedLogValues.EnumColor, parameters.Options)} | {
+            formatter.Colorize(formatter.FormatEnum(ClothingType, parameters.Language), WarfareFormattedLogValues.EnumColor, parameters.Options),9} | {
                 formatter.Colorize(formatter.FormatEnum(Item, parameters.Language), WarfareFormattedLogValues.EnumColor, parameters.Options)}";
 
         return b;
@@ -62,6 +62,6 @@ public class RedirectedClothingItem : IRedirectedItem, IClothingItem
     /// <inheritdoc />
     public override string ToString()
     {
-        return $"Redirected Clothing | {ClothingType} | {Item}";
+        return $"Redirected Clothing | {ClothingType,9} | {Item}";
     }
 }

@@ -25,6 +25,11 @@ public enum KitInclude
     Default = Base | Translations,
 
     /// <summary>
+    /// Minimum information to cache a kit.
+    /// </summary>
+    Cached = Default | UnlockRequirements,
+
+    /// <summary>
     /// Able to be given to a player.
     /// </summary>
     Giveable = Default | Items | Skillsets,

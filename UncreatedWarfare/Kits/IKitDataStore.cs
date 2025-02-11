@@ -640,8 +640,8 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
 
     private Kit GetOrCreateKit(KitModel model, KitInclude include)
     {
-        // all cached kits must have Default at least
-        if ((include & KitInclude.Default) != KitInclude.Default)
+        // all cached kits must have Cached at least
+        if ((include & KitInclude.Cached) != KitInclude.Cached)
         {
             return new Kit(model, _factionDataStore, _languageDataStore);
         }
@@ -857,7 +857,7 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            await foreach (KitModel model in ApplyIncludes(KitInclude.Default, _dbContext.Kits, false)
+            await foreach (KitModel model in ApplyIncludes(KitInclude.Cached, _dbContext.Kits, false)
                                .Where(x => x.Type != KitType.Loadout)
                                .AsAsyncEnumerable()
                                .WithCancellation(token))

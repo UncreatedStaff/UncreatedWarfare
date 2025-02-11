@@ -1,7 +1,5 @@
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Commands;
@@ -73,10 +71,8 @@ public partial class FobManager :
     {
         await UniTask.NextFrame();
 
-        BuildableContainer container = CreateBuildableContainer(e);
-
         // if barricade is Fob foundation, register a new Fob, or find the existing fob at this poisition
-        if (_assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:Fobs:FobUnbuilt").MatchAsset(e.Barricade.asset))
+        if (_assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:Gameplay:FobUnbuilt").MatchAsset(e.Barricade.asset))
         {
             // only register a new Fob with this foundation if it doesn't belong to an existing one.
             // this can happen after a built Fob is destroyed after which the foundation is replaced.
@@ -111,16 +107,13 @@ public partial class FobManager :
         TryRegisterEntity(e.Buildable, serviceProvider);
         TryCreateShoveable(e.Buildable, e.Owner, out _);
     }
-    private BuildableContainer CreateBuildableContainer(BarricadePlaced e)
-    {
-        return e.Buildable.Model.GetOrAddComponent<BuildableContainer>();
-    }
+
     private void TryRegisterEntity(IBuildable buildable, IServiceProvider serviceProvider)
     {
-        ShovelableInfo? completedFortification = (Configuration.GetRequiredSection("Shovelables").Get<IEnumerable<ShovelableInfo>>() ?? Array.Empty<ShovelableInfo>())
-            .FirstOrDefault(s => s.CompletedStructure != null && s.Emplacement == null && s.CompletedStructure.MatchAsset(buildable.Asset));
+        ShovelableInfo? completedFortification = Configuration.Shovelables
+            .FirstOrDefault(s => s.Emplacement == null && s.CompletedStructure.MatchAsset(buildable.Asset));
 
-        if (_assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:Fobs:RepairStation").MatchAsset(buildable.Asset))
+        if (_assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:Gameplay:RepairStation").MatchAsset(buildable.Asset))
         {
             Team team = serviceProvider.GetRequiredService<ITeamManager<Team>>().GetTeam(buildable.Group);
             RepairStation repairStation = new RepairStation(buildable, team, serviceProvider.GetRequiredService<ILoopTickerFactory>(), this, _assetConfiguration);
@@ -135,8 +128,7 @@ public partial class FobManager :
     {
         shovelable = null;
 
-        ShovelableInfo? shovelableInfo = (Configuration.GetRequiredSection("Shovelables").Get<IEnumerable<ShovelableInfo>>() ?? Array.Empty<ShovelableInfo>())
-            .FirstOrDefault(s => s.Foundation != null && s.Foundation.MatchAsset(buildable.Asset));
+        ShovelableInfo? shovelableInfo = Configuration.Shovelables.FirstOrDefault(s => s.Foundation != null && s.Foundation.MatchAsset(buildable.Asset));
 
         if (shovelableInfo == null)
             return false;
@@ -169,7 +161,7 @@ public partial class FobManager :
                 _logger.LogInformation("Replacing FOB foundation with unbuilt...");
 
                 Transform transform = BarricadeManager.dropNonPlantedBarricade(
-                    new Barricade(_assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:Fobs:FobUnbuilt").GetAssetOrFail()),
+                    new Barricade(_assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:Gameplay:FobUnbuilt").GetAssetOrFail()),
                     e.Buildable.Position,
                     e.Buildable.Rotation,
                     e.Buildable.Owner.m_SteamID,
@@ -225,8 +217,7 @@ public partial class FobManager :
         if (e.Item == null || e.DroppedItem == null)
             return;
 
-        SupplyCrateInfo? supplyCrateInfo = Configuration.GetRequiredSection("SupplyCrates").Get<List<SupplyCrateInfo>>()?
-            .FirstOrDefault(s => s.SupplyItemAsset.MatchAsset(e.Item.GetAsset()));
+        SupplyCrateInfo? supplyCrateInfo = Configuration.SupplyCrates.FirstOrDefault(s => s.SupplyItemAsset.MatchAsset(e.Item.GetAsset()));
 
         if (supplyCrateInfo != null)
         {
@@ -251,8 +242,7 @@ public partial class FobManager :
             return;
         }
         
-        VehicleSupplyCrateInfo? vehicleSupplyCrate = Configuration.GetRequiredSection("VehicleOrdinanceCrates").Get<IEnumerable<VehicleSupplyCrateInfo>>()?
-            .FirstOrDefault(s => s.SupplyItemAsset.MatchAsset(e.Item.GetAsset()));
+        VehicleSupplyCrateInfo? vehicleSupplyCrate = Configuration.VehicleOrdinanceCrates.FirstOrDefault(s => s.SupplyItemAsset.MatchAsset(e.Item.GetAsset()));
 
         if (vehicleSupplyCrate != null)
         {
@@ -267,8 +257,7 @@ public partial class FobManager :
     }
     public void HandleEvent(VehicleSpawned e, IServiceProvider serviceProvider)
     {
-        ShovelableInfo? emplacementShoveable = (Configuration.GetRequiredSection("Shovelables").Get<IEnumerable<ShovelableInfo>>() ?? Array.Empty<ShovelableInfo>())
-            .FirstOrDefault(s => s.Emplacement != null && s.Emplacement.Vehicle.MatchAsset(e.Vehicle.Vehicle.asset));
+        ShovelableInfo? emplacementShoveable = Configuration.Shovelables.FirstOrDefault(s => s.Emplacement != null && s.Emplacement.Vehicle.MatchAsset(e.Vehicle.Vehicle.asset));
 
         if (emplacementShoveable == null)
             return;

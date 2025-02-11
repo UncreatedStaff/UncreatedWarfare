@@ -68,7 +68,7 @@ public class ConcreteClothingItem : IConcreteItem, IClothingItem
     public string Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
     {
         string b = $"Concrete Clothing   | {
-            formatter.Colorize(formatter.FormatEnum(ClothingType, parameters.Language), WarfareFormattedLogValues.EnumColor, parameters.Options)}";
+            formatter.Colorize(formatter.FormatEnum(ClothingType, parameters.Language), WarfareFormattedLogValues.EnumColor, parameters.Options),9}";
 
         if (Amount != byte.MaxValue)
             b += " amt=" + formatter.Colorize(formatter.Format(Amount, in parameters), WarfareFormattedLogValues.NumberColor, parameters.Options);
@@ -82,7 +82,7 @@ public class ConcreteClothingItem : IConcreteItem, IClothingItem
     /// <inheritdoc />
     public override string ToString()
     {
-        string b = $"Concrete Clothing   | {ClothingType}";
+        string b = $"Concrete Clothing   | {ClothingType,9}";
 
         if (Amount != byte.MaxValue)
             b += " amt=" + Amount.ToString(CultureInfo.InvariantCulture);

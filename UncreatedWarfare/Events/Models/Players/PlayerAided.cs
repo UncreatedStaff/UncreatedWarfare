@@ -35,4 +35,10 @@ public sealed class PlayerAided : CancellablePlayerEvent
     /// If this aid revived <see cref="PlayerEvent.Player"/>.
     /// </summary>
     public required bool IsRevive { get; init; }
+
+    /// <summary>
+    /// If this aid revived <see cref="PlayerEvent.Player"/> and if the medic was awarded points.
+    /// This will be <see langword="false"/> if the player recently revived the medic already.
+    /// </summary>
+    public required bool IsEffectiveRevive { get; init; }
 }

@@ -86,9 +86,13 @@ internal sealed class KitCreateMissingDefaultKitsTweak : ILayoutHostedService
                     team.Faction.UnarmedKit = kit.PrimaryKey;
                     if (NeedsUpdate(kit, team.Faction))
                     {
+                        _logger.LogWarning($"Team {team.Faction.Name}'s unarmed kit needs an update.");
                         await UpdateKit(kit, team.Faction).ConfigureAwait(false);
                     }
-                    _logger.LogWarning($"Team {team.Faction.Name}'s unarmed kit wasn't configured or needed an update but a possible match was found with ID: {kit.Id}, using that one instead.");
+                    else
+                    {
+                        _logger.LogWarning($"Team {team.Faction.Name}'s unarmed kit wasn't configured or needed an update but a possible match was found with ID: {kit.Id}, using that one instead.");
+                    }
                     continue;
                 }
 
@@ -113,9 +117,13 @@ internal sealed class KitCreateMissingDefaultKitsTweak : ILayoutHostedService
                     team.Faction.UnarmedKit = existing.PrimaryKey;
                     if (NeedsUpdate(existing, team.Faction))
                     {
+                        _logger.LogWarning($"Team {team.Faction.Name}'s unarmed kit needs an update.");
                         await UpdateKit(existing, team.Faction).ConfigureAwait(false);
                     }
-                    _logger.LogWarning($"Team {team.Faction.Name}'s unarmed kit wasn't configured but a possible match was found with ID: {existing.Id}, using that one instead.");
+                    else
+                    {
+                        _logger.LogWarning($"Team {team.Faction.Name}'s unarmed kit wasn't configured but a possible match was found with ID: {existing.Id}, using that one instead.");
+                    }
                     continue;
                 }
 
@@ -158,6 +166,7 @@ internal sealed class KitCreateMissingDefaultKitsTweak : ILayoutHostedService
         return _kitSql.UpdateKitAsync(kit.PrimaryKey, KitInclude.Items | KitInclude.FactionFilter, model =>
         {
             model.Type = KitType.Special;
+            model.Season = WarfareModule.Season;
             
             UpdateFactionFilter(model, faction);
             UpdateItems(model, faction);

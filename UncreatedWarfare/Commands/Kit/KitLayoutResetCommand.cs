@@ -1,3 +1,4 @@
+using System;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Translations;
@@ -5,7 +6,7 @@ using Uncreated.Warfare.Translations;
 namespace Uncreated.Warfare.Commands;
 
 [Command("reset", "delete", "cancel", "remove"), SubCommandOf(typeof(KitLayoutCommand))]
-internal sealed class KitLayoutResetCommand : ICommand
+internal sealed class KitLayoutResetCommand : IExecutableCommand
 {
     private readonly KitLayoutService _layoutService;
     private readonly KitCommandTranslations _translations;
@@ -29,6 +30,9 @@ internal sealed class KitLayoutResetCommand : ICommand
         {
             throw Context.Reply(_translations.KitLayoutNoKit);
         }
+
+        await UniTask.Delay(TimeSpan.FromSeconds(0.5f), cancellationToken: token);
+        await UniTask.SwitchToMainThread(token);
 
         if (kit.Items != null)
         {

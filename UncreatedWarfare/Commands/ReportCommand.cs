@@ -2,7 +2,6 @@ using DanielWillett.ModularRpcs.Routing;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Interaction.Commands;
@@ -10,6 +9,7 @@ using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Moderation.Discord;
 using Uncreated.Warfare.Moderation.Reports;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Cooldowns;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Players.UI;
@@ -78,7 +78,7 @@ internal sealed class ReportCommand : IExecutableCommand
         }
 #endif
 
-        if (_cooldownManager.HasCooldown(Context.CallerId, CooldownType.Report, steam64.m_SteamID))
+        if (_cooldownManager.HasCooldown(Context.CallerId, KnownCooldowns.Report, steam64.m_SteamID))
         {
             throw Context.Reply(_translations.ReportCooldown, onlinePlayer);
         }
@@ -150,7 +150,7 @@ internal sealed class ReportCommand : IExecutableCommand
             throw Context.Reply(_translations.ReportNotConnected);
         }
 
-        _cooldownManager.StartCooldown(Context.CallerId, CooldownType.Report, 3600f /* 1 hr */, steam64.m_SteamID);
+        _cooldownManager.StartCooldown(Context.CallerId, KnownCooldowns.Report, steam64.m_SteamID);
 
         string reason = message ?? _translations.TranslationService.ValueFormatter.FormatEnum(report.Type, Context.Language);
 

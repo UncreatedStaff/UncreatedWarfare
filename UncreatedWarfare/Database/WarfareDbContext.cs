@@ -1,12 +1,8 @@
-using DanielWillett.ReflectionTools;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
-using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Pomelo.EntityFrameworkCore.MySql.Infrastructure;
 using System;
-using System.Data;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Database.Automation;
 using Uncreated.Warfare.Models;
@@ -101,6 +97,8 @@ public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContex
             o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
         );
 
+        optionsBuilder.UseBatchEF_MySQLPomelo();
+
         if (sensitiveDataLogging)
         {
             optionsBuilder.EnableSensitiveDataLogging();
@@ -125,15 +123,15 @@ public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContex
         modelBuilder.Entity<HomebaseAuthenticationKey>();
 
         // add the RAND() function in EFCore 5
-        if (WarfareModule.IsActive)
-        {
-            modelBuilder.HasDbFunction(Accessor.GetMethod(EFFunctionExtensions.Random)!, bldr =>
-            {
-                // ReSharper disable once UseArrayEmptyMethod
-                bldr.HasTranslation(_ => new SqlFunctionExpression("RAND", new SqlExpression[0], nullable: false,
-                    Array.Empty<bool>(), typeof(double), new DoubleTypeMapping("double", DbType.Double)));
-            });
-        }
+        //if (WarfareModule.IsActive)
+        //{
+        //    modelBuilder.HasDbFunction(Accessor.GetMethod(WarfareEFFunctions.Random)!, bldr =>
+        //    {
+        //        // ReSharper disable once UseArrayEmptyMethod
+        //        bldr.HasTranslation(_ => new SqlFunctionExpression("RAND", new SqlExpression[0], nullable: false,
+        //            Array.Empty<bool>(), typeof(double), new DoubleTypeMapping("double", DbType.Double)));
+        //    });
+        //}
 
         /* Adds preset value converters */
         WarfareDatabaseReflection.ApplyValueConverterConfig(modelBuilder, _logger);

@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
@@ -13,7 +12,6 @@ using Uncreated.Warfare.FOBs.Entities;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Items;
-using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.FOBs.Construction.Tweaks;
@@ -22,29 +20,35 @@ internal class ShoveableTweaks :
     IEventListener<PlaceBarricadeRequested>,
     IEventListener<MeleeHit>
 {
-    private readonly AssetConfiguration? _assetConfiguration;
+    private readonly AssetConfiguration _assetConfiguration;
     private readonly FobTranslations _translations;
     private readonly ChatService _chatService;
     private readonly IKitItemResolver _kitItemResolver;
+    private readonly FobManager _fobManager;
 
-    public ShoveableTweaks(IServiceProvider serviceProvider)
+    public ShoveableTweaks(
+        AssetConfiguration assetConfiguration,
+        FobTranslations translations,
+        ChatService chatService,
+        IKitItemResolver kitItemResolver,
+        FobManager fobManager)
     {
-        _kitItemResolver = serviceProvider.GetRequiredService<IKitItemResolver>();
-        _assetConfiguration = serviceProvider.GetService<AssetConfiguration>();
-        _translations = serviceProvider.GetRequiredService<TranslationInjection<FobTranslations>>().Value;
-        _chatService = serviceProvider.GetRequiredService<ChatService>();
+        _assetConfiguration = assetConfiguration;
+        _translations = translations;
+        _chatService = chatService;
+        _kitItemResolver = kitItemResolver;
+        _fobManager = fobManager;
     }
+
     public void HandleEvent(PlaceBarricadeRequested e, IServiceProvider serviceProvider)
     {
         if (e.OriginalPlacer == null)
             return;
 
-        FobManager? fobManager = serviceProvider.GetService<FobManager>();
-
-        if (_assetConfiguration?.GetAssetLink<ItemBarricadeAsset>("Buildables:Fobs:FobUnbuilt").Guid == e.Barricade.asset.GUID)
+        if (_assetConfiguration?.GetAssetLink<ItemBarricadeAsset>("Buildables:Gameplay:FobUnbuilt").Guid == e.Barricade.asset.GUID)
             return;
 
-        ShovelableInfo? shovelableInfo = (fobManager?.Configuration.GetRequiredSection("Shovelables").Get<IEnumerable<ShovelableInfo>>() ?? Array.Empty<ShovelableInfo>())
+        ShovelableInfo? shovelableInfo = _fobManager.Configuration.Shovelables
             .FirstOrDefault(s => s.Foundation != null && s.Foundation.Guid == e.Asset.GUID);
 
         if (shovelableInfo == null)
@@ -77,7 +81,7 @@ internal class ShoveableTweaks :
         //}
         if (enforcePerFobMax && !barricadeInKit)
         {
-            ResourceFob? nearestFob = fobManager?.FindNearestResourceFob(e.OriginalPlacer.Team, e.Position);
+            ResourceFob? nearestFob = _fobManager?.FindNearestResourceFob(e.OriginalPlacer.Team, e.Position);
 
             if (nearestFob == null)
             {

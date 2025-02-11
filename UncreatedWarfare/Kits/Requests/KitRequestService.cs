@@ -14,6 +14,7 @@ using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Cooldowns;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Signs;
@@ -181,13 +182,13 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
             }
 
             // cooldowns
-            if (_cooldownManager.HasCooldown(player, CooldownType.RequestKit, out Cooldown? requestCooldown) && kit.Class is not Class.Crewman and not Class.Pilot)
+            if (_cooldownManager.HasCooldown(player, KnownCooldowns.RequestKit, out Cooldown requestCooldown) && kit.Class is not Class.Crewman and not Class.Pilot)
             {
                 resultHandler.MissingRequirement(player, kit, _kitReqTranslations.OnGlobalCooldown.Translate(requestCooldown, player));
                 return false;
             }
 
-            if (kit is { IsPaid: true, RequestCooldown.Ticks: > 0 } && _cooldownManager.HasCooldown(player, CooldownType.PremiumKit, out Cooldown? premiumCooldown, kit.Id))
+            if (kit is { IsPaid: true, RequestCooldown.Ticks: > 0 } && _cooldownManager.HasCooldown(player, KnownCooldowns.RequestPremiumKit, out Cooldown premiumCooldown, kit.Id))
             {
                 resultHandler.MissingRequirement(player, kit, _kitReqTranslations.OnCooldown.Translate(premiumCooldown, player));
                 return false;
@@ -234,7 +235,7 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
 
                         if (!nitroBoosting)
                         {
-                            resultHandler.MissingRequirement(player, kit, _kitReqTranslations.RequiresNitroBoost.Translate(requestCooldown!, player));
+                            resultHandler.MissingRequirement(player, kit, _kitReqTranslations.RequiresNitroBoost.Translate(requestCooldown, player));
                             return false;
                         }
                     }
@@ -352,10 +353,10 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
 
         if (kit is { IsPaid: true, RequestCooldown.Ticks: > 0 })
         {
-            _cooldownManager.StartCooldown(player, CooldownType.PremiumKit, (float)kit.RequestCooldown.TotalSeconds);
+            _cooldownManager.StartCooldown(player, KnownCooldowns.RequestPremiumKit, kit.RequestCooldown, kit.Id);
         }
 
-        _cooldownManager.StartCooldown(player, CooldownType.RequestKit, _cooldownManager.Config.RequestKitCooldown);
+        _cooldownManager.StartCooldown(player, KnownCooldowns.RequestKit);
     }
 
     private async Task GiveKitIntlAsync(WarfarePlayer player, KitBestowData kitBestowData, bool isRequest, CancellationToken token = default)

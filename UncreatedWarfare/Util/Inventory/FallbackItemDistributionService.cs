@@ -69,53 +69,60 @@ public class FallbackItemDistributionService : IItemDistributionService
         {
             // items skipped that are still in this page will be added to a list and removed then re-added or dropped later
             StoreSkippedItemsFromPage(nativePlayer, Page.Backpack, WorkingItemList);
+            ItemAsset old = clothing.backpackAsset;
             clothing.askWearBackpack(0, 0, blank, !hasPlayedEffect);
-            RemoveAutoItem(nativePlayer, ref ct, clothing.backpackAsset);
+            RemoveAutoItem(nativePlayer, ref ct, old);
             hasPlayedEffect = true;
         }
 
         if (clothing.glassesAsset != null && state.ShouldClearItem(ClothingType.Glasses, clothing.glassesAsset, clothing.glassesState, clothing.glassesQuality))
         {
+            ItemAsset old = clothing.glassesAsset;
             clothing.askWearGlasses(0, 0, blank, !hasPlayedEffect);
-            RemoveAutoItem(nativePlayer, ref ct, clothing.glassesAsset);
+            RemoveAutoItem(nativePlayer, ref ct, old);
             hasPlayedEffect = true;
         }
 
         if (clothing.hatAsset != null && state.ShouldClearItem(ClothingType.Hat, clothing.hatAsset, clothing.hatState, clothing.hatQuality))
         {
+            ItemAsset old = clothing.hatAsset;
             clothing.askWearHat(0, 0, blank, !hasPlayedEffect);
-            RemoveAutoItem(nativePlayer, ref ct, clothing.hatAsset);
+            RemoveAutoItem(nativePlayer, ref ct, old);
             hasPlayedEffect = true;
         }
 
         if (clothing.pantsAsset != null && state.ShouldClearItem(ClothingType.Pants, clothing.pantsAsset, clothing.pantsState, clothing.pantsQuality))
         {
             StoreSkippedItemsFromPage(nativePlayer, Page.Pants, WorkingItemList);
+            ItemAsset old = clothing.pantsAsset;
             clothing.askWearPants(0, 0, blank, !hasPlayedEffect);
-            RemoveAutoItem(nativePlayer, ref ct, clothing.pantsAsset);
+            RemoveAutoItem(nativePlayer, ref ct, old);
             hasPlayedEffect = true;
         }
 
         if (clothing.maskAsset != null && state.ShouldClearItem(ClothingType.Mask, clothing.maskAsset, clothing.maskState, clothing.maskQuality))
         {
+            ItemAsset old = clothing.maskAsset;
             clothing.askWearMask(0, 0, blank, !hasPlayedEffect);
-            RemoveAutoItem(nativePlayer, ref ct, clothing.maskAsset);
+            RemoveAutoItem(nativePlayer, ref ct, old);
             hasPlayedEffect = true;
         }
 
         if (clothing.shirtAsset != null && state.ShouldClearItem(ClothingType.Shirt, clothing.shirtAsset, clothing.shirtState, clothing.shirtQuality))
         {
             StoreSkippedItemsFromPage(nativePlayer, Page.Shirt, WorkingItemList);
+            ItemAsset old = clothing.shirtAsset;
             clothing.askWearShirt(0, 0, blank, !hasPlayedEffect);
-            RemoveAutoItem(nativePlayer, ref ct, clothing.shirtAsset);
+            RemoveAutoItem(nativePlayer, ref ct, old);
             hasPlayedEffect = true;
         }
 
         if (clothing.vestAsset != null && state.ShouldClearItem(ClothingType.Vest, clothing.vestAsset, clothing.vestState, clothing.vestQuality))
         {
             StoreSkippedItemsFromPage(nativePlayer, Page.Vest, WorkingItemList);
+            ItemAsset old = clothing.vestAsset;
             clothing.askWearVest(0, 0, blank, !hasPlayedEffect);
-            RemoveAutoItem(nativePlayer, ref ct, clothing.vestAsset);
+            RemoveAutoItem(nativePlayer, ref ct, old);
         }
 
         // sanity check clear all items to make sure clothes didn't somehow get added to another page
@@ -166,13 +173,22 @@ public class FallbackItemDistributionService : IItemDistributionService
 
         static void RemoveAutoItem(Player nativePlayer, ref int ct, ItemAsset expectedAsset)
         {
-            Items page = nativePlayer.inventory.items[PlayerInventory.SLOTS];
-            int itemCt = page.getItemCount();
-            if (itemCt == 0 || page.getItem((byte)(itemCt - 1)).item.id != expectedAsset.id)
-                return;
+            for (int pg = PlayerInventory.SLOTS; pg < PlayerInventory.STORAGE; ++pg)
+            {
+                Items page = nativePlayer.inventory.items[pg];
 
-            page.removeItem((byte)(itemCt - 1));
-            ++ct;
+                int itemCt = page.getItemCount();
+                if (itemCt == 0)
+                    continue;
+
+                ItemJar jar = page.getItem((byte)(itemCt - 1));
+                if (jar?.item == null || jar.item.id != expectedAsset.id)
+                    continue;
+
+                page.removeItem((byte)(itemCt - 1));
+                ++ct;
+                break;
+            }
         }
     }
 

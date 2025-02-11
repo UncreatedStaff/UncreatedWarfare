@@ -1,7 +1,6 @@
 using System;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Skillsets;
 using Uncreated.Warfare.Translations;

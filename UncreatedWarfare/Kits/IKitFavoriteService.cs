@@ -5,7 +5,6 @@ using System.Linq;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players.Management;
-using Z.EntityFramework.Plus;
 
 namespace Uncreated.Warfare.Kits;
 
@@ -128,9 +127,7 @@ public class MySqlKitFavoriteService : IKitFavoriteService, IDisposable
         {
             ulong s64 = player.m_SteamID;
             int change = await _dbContext.KitFavorites
-                .AsNoTracking()
-                .Where(x => x.Steam64 == s64 && x.KitId == kitPrimaryKey)
-                .DeleteAsync(token)
+                .DeleteRangeAsync((DbContext)_dbContext, x => x.Steam64 == s64 && x.KitId == kitPrimaryKey, cancellationToken: token)
                 .ConfigureAwait(false);
 
             await _dbContext.SaveChangesAsync(token).ConfigureAwait(false);

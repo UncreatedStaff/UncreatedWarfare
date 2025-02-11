@@ -24,9 +24,8 @@ internal class DownloadKitDataPlayerTask : IPlayerPendingTask
 
     public async Task<bool> RunAsync(PlayerPending e, CancellationToken token)
     {
-        Task favTask = DownloadFavorites(e, token);
         await DownloadAccess(e, token).ConfigureAwait(false);
-        await favTask.ConfigureAwait(false);
+        await DownloadFavorites(e, token).ConfigureAwait(false);
 
         return true;
     }

@@ -1,6 +1,8 @@
 using System;
 using System.Linq;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Fobs;
+using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.Layouts.Teams;
 
 namespace Uncreated.Warfare.Teams;
@@ -13,12 +15,14 @@ public class AssetRedirectService
     private readonly ITeamManager<Team> _teamManager;
     private readonly IFactionDataStore _factions;
     private readonly AssetConfiguration _assetConfig;
+    private readonly FobConfiguration _fobConfiguration;
 
-    public AssetRedirectService(ITeamManager<Team> teamManager, IFactionDataStore factions, AssetConfiguration assetConfig)
+    public AssetRedirectService(ITeamManager<Team> teamManager, IFactionDataStore factions, AssetConfiguration assetConfig, FobConfiguration fobConfiguration)
     {
         _teamManager = teamManager;
         _factions = factions;
         _assetConfig = assetConfig;
+        _fobConfiguration = fobConfiguration;
     }
 
     public bool TryFindRedirectType(ItemAsset item, out RedirectType type, out FactionInfo? faction, out string? variant, bool clothingOnly = false)
@@ -39,7 +43,7 @@ public class AssetRedirectService
 
         foreach (FactionInfo existingFaction in _factions.Factions)
         {
-            if (_teamManager.AllTeams.Any(x => x.Faction == existingFaction))
+            if (_teamManager.AllTeams.Any(x => x.Faction.Equals(existingFaction)))
                 continue;
 
             RedirectType t = CheckFactionSpecificRedirects(existingFaction, itemGuid, out variant, clothingOnly);
@@ -61,19 +65,36 @@ public class AssetRedirectService
         if (item is ItemPlaceableAsset && _assetConfig.GetAssetLink<ItemPlaceableAsset>("Buildables:Gameplay:AmmoBag").MatchGuid(itemGuid))
             type = RedirectType.AmmoBag;
 
-        if (item is ItemPlaceableAsset && _assetConfig.GetAssetLink<ItemPlaceableAsset>("Buildables:Gameplay:InsurgencyCache").MatchGuid(itemGuid))
+        else if (item is ItemPlaceableAsset && _assetConfig.GetAssetLink<ItemPlaceableAsset>("Buildables:Gameplay:InsurgencyCache").MatchGuid(itemGuid))
             type = RedirectType.Cache;
 
-        if (item is ItemPlaceableAsset && _assetConfig.GetAssetLink<ItemPlaceableAsset>("Buildables:Gameplay:VehicleSpawner").MatchGuid(itemGuid))
+        else if (item is ItemPlaceableAsset && _assetConfig.GetAssetLink<ItemPlaceableAsset>("Buildables:Gameplay:VehicleSpawner").MatchGuid(itemGuid))
             type = RedirectType.VehicleBay;
 
-        if (item is ItemMeleeAsset && _assetConfig.GetAssetLink<ItemMeleeAsset>("Items:EntrenchingTool").MatchGuid(itemGuid))
+        else if (item is ItemMeleeAsset && _assetConfig.GetAssetLink<ItemMeleeAsset>("Items:EntrenchingTool").MatchGuid(itemGuid))
             type = RedirectType.EntrenchingTool;
 
-        if (item is ItemOpticAsset && _assetConfig.GetAssetLink<ItemOpticAsset>("Items:LaserDesignator").MatchGuid(itemGuid))
+        else if (item is ItemGunAsset && _assetConfig.GetAssetLink<ItemGunAsset>("Items:LaserDesignator").MatchGuid(itemGuid))
             type = RedirectType.LaserDesignator;
 
-        return type != RedirectType.None;
+        else if (item is ItemPlaceableAsset && _fobConfiguration.Shovelables.Any(x => x.ConstuctionType == ShovelableType.AmmoCrate && x.Foundation.MatchAsset(item)))
+            type = RedirectType.AmmoCrate;
+
+        else if (item is ItemPlaceableAsset && _fobConfiguration.Shovelables.Any(x => x.ConstuctionType == ShovelableType.AmmoCrate && x.CompletedStructure.MatchAsset(item)))
+            type = RedirectType.AmmoCrateBuilt;
+
+        else if (item is ItemPlaceableAsset && _fobConfiguration.Shovelables.Any(x => x.ConstuctionType == ShovelableType.RepairStation && x.Foundation.MatchAsset(item)))
+            type = RedirectType.RepairStation;
+
+        else if (item is ItemPlaceableAsset && _fobConfiguration.Shovelables.Any(x => x.ConstuctionType == ShovelableType.RepairStation && x.CompletedStructure.MatchAsset(item)))
+            type = RedirectType.RepairStationBuilt;
+
+        else
+        {
+            return false;
+        }
+
+        return true;
 
         RedirectType CheckFactionSpecificRedirects(FactionInfo existingFaction, Guid item, out string? variant, bool clothingOnly)
         {
@@ -109,6 +130,9 @@ public class AssetRedirectService
                 if (existingFaction.RallyPoint.MatchGuid(item))
                     return RedirectType.RallyPoint;
 
+                if (existingFaction.MapTackFlag.MatchGuid(item))
+                    return RedirectType.MapTackFlag;
+
                 if (existingFaction.FOBRadio.MatchGuid(item))
                     return RedirectType.Radio;
             }
@@ -122,52 +146,51 @@ public class AssetRedirectService
     public ItemAsset? ResolveRedirect(RedirectType type, string variant, FactionInfo? kitFaction, Team requesterTeam, out byte[] state, out byte amount)
     {
         // expectation is that 'state' returns a copy of a new array (unless it's empty).
-        kitFaction ??= requesterTeam.Faction;
 
         state = Array.Empty<byte>();
         amount = 0;
         ItemAsset? toReturn = null;
         switch (type)
         {
-            case RedirectType.Shirt when kitFaction != null:
-                toReturn = kitFaction.Shirts.Resolve(variant)?.GetAsset();
-                if (requesterTeam.Faction != kitFaction)
+            case RedirectType.Shirt:
+                toReturn = kitFaction?.Shirts.Resolve(variant)?.GetAsset();
+                if (!Equals(requesterTeam.Faction, kitFaction))
                     toReturn ??= requesterTeam.Faction.Shirts.Resolve(variant)?.GetAsset();
                 break;
 
-            case RedirectType.Pants when kitFaction != null:
-                toReturn = kitFaction.Pants.Resolve(variant)?.GetAsset();
-                if (requesterTeam.Faction != kitFaction)
+            case RedirectType.Pants:
+                toReturn = kitFaction?.Pants.Resolve(variant)?.GetAsset();
+                if (!Equals(requesterTeam.Faction, kitFaction))
                     toReturn ??= requesterTeam.Faction.Pants.Resolve(variant)?.GetAsset();
                 break;
 
-            case RedirectType.Vest when kitFaction != null:
-                toReturn = kitFaction.Vests.Resolve(variant)?.GetAsset();
-                if (requesterTeam.Faction != kitFaction)
+            case RedirectType.Vest:
+                toReturn = kitFaction?.Vests.Resolve(variant)?.GetAsset();
+                if (!Equals(requesterTeam.Faction, kitFaction))
                     toReturn ??= requesterTeam.Faction.Vests.Resolve(variant)?.GetAsset();
                 break;
 
-            case RedirectType.Backpack when kitFaction != null:
-                toReturn = kitFaction.Backpacks.Resolve(variant)?.GetAsset();
-                if (requesterTeam.Faction != kitFaction)
+            case RedirectType.Backpack:
+                toReturn = kitFaction?.Backpacks.Resolve(variant)?.GetAsset();
+                if (!Equals(requesterTeam.Faction, kitFaction))
                     toReturn ??= requesterTeam.Faction.Backpacks.Resolve(variant)?.GetAsset();
                 break;
 
-            case RedirectType.Glasses when kitFaction != null:
-                toReturn = kitFaction.Glasses.Resolve(variant)?.GetAsset();
-                if (requesterTeam.Faction != kitFaction)
+            case RedirectType.Glasses:
+                toReturn = kitFaction?.Glasses.Resolve(variant)?.GetAsset();
+                if (!Equals(requesterTeam.Faction, kitFaction))
                     toReturn ??= requesterTeam.Faction.Glasses.Resolve(variant)?.GetAsset();
                 break;
 
-            case RedirectType.Mask when kitFaction != null:
-                toReturn = kitFaction.Masks.Resolve(variant)?.GetAsset();
-                if (requesterTeam.Faction != kitFaction)
+            case RedirectType.Mask:
+                toReturn = kitFaction?.Masks.Resolve(variant)?.GetAsset();
+                if (!Equals(requesterTeam.Faction, kitFaction))
                     toReturn ??= requesterTeam.Faction.Masks.Resolve(variant)?.GetAsset();
                 break;
 
-            case RedirectType.Hat when kitFaction != null:
-                toReturn = kitFaction.Hats.Resolve(variant)?.GetAsset();
-                if (requesterTeam.Faction != kitFaction)
+            case RedirectType.Hat:
+                toReturn = kitFaction?.Hats.Resolve(variant)?.GetAsset();
+                if (!Equals(requesterTeam.Faction, kitFaction))
                     toReturn ??= requesterTeam.Faction.Hats.Resolve(variant)?.GetAsset();
                 break;
 
@@ -187,6 +210,10 @@ public class AssetRedirectService
                 toReturn = requesterTeam.Faction.FOBRadio?.GetAsset();
                 break;
 
+            case RedirectType.MapTackFlag:
+                toReturn = requesterTeam.Faction.MapTackFlag?.GetAsset();
+                break;
+
             case RedirectType.AmmoBag:
                 toReturn = _assetConfig.GetAssetLink<ItemPlaceableAsset>("Buildables:Gameplay:AmmoBag").GetAsset();
                 break;
@@ -204,9 +231,26 @@ public class AssetRedirectService
                 break;
                 
             case RedirectType.LaserDesignator:
-                toReturn = _assetConfig.GetAssetLink<ItemOpticAsset>("Items:LaserDesignator").GetAsset();
+                toReturn = _assetConfig.GetAssetLink<ItemGunAsset>("Items:LaserDesignator").GetAsset();
                 break;
 
+            case RedirectType.AmmoCrate:
+                _fobConfiguration.Shovelables.FirstOrDefault(x => x.ConstuctionType == ShovelableType.AmmoCrate)?.Foundation.TryGetAsset(out toReturn);
+                break;
+
+            case RedirectType.AmmoCrateBuilt:
+                _fobConfiguration.Shovelables.FirstOrDefault(x => x.ConstuctionType == ShovelableType.AmmoCrate)?.CompletedStructure.TryGetAsset(out toReturn);
+                break;
+
+            case RedirectType.RepairStation:
+                _fobConfiguration.Shovelables.FirstOrDefault(x => x.ConstuctionType == ShovelableType.RepairStation)?.Foundation.TryGetAsset(out toReturn);
+                break;
+
+            case RedirectType.RepairStationBuilt:
+                _fobConfiguration.Shovelables.FirstOrDefault(x => x.ConstuctionType == ShovelableType.RepairStation)?.CompletedStructure.TryGetAsset(out toReturn);
+                break;
+
+            
             // todo finish adding items
         }
 

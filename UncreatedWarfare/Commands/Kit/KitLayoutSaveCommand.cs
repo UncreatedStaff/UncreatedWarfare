@@ -5,7 +5,7 @@ using Uncreated.Warfare.Translations;
 namespace Uncreated.Warfare.Commands;
 
 [Command("save", "confirm", "keep"), SubCommandOf(typeof(KitLayoutCommand))]
-internal sealed class KitLayoutSaveCommand : ICommand
+internal sealed class KitLayoutSaveCommand : IExecutableCommand
 {
     private readonly KitLayoutService _layoutService;
     private readonly KitCommandTranslations _translations;

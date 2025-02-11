@@ -1,4 +1,5 @@
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Cooldowns;
 using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Translations.Addons;
 

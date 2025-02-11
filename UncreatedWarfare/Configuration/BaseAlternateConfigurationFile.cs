@@ -1,6 +1,5 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Primitives;
 using System;
 using System.Collections.Generic;
@@ -34,10 +33,9 @@ public abstract class BaseAlternateConfigurationFile : IConfiguration, IDisposab
     /// Create a new configuration file reference.
     /// </summary>
     /// <param name="mapSpecific">Will go in a "Maps/[map name]/" folder.</param>
-    protected BaseAlternateConfigurationFile(IServiceProvider serviceProvider, string fileName, bool mapSpecific = false)
+    protected BaseAlternateConfigurationFile(string fileName, bool mapSpecific = false)
     {
-        WarfareModule module = serviceProvider.GetRequiredService<WarfareModule>();
-        string homeDir = module.HomeDirectory;
+        string homeDir = WarfareModule.Singleton.HomeDirectory;
 
         if (mapSpecific)
         {
@@ -53,7 +51,7 @@ public abstract class BaseAlternateConfigurationFile : IConfiguration, IDisposab
         }
 
         ConfigurationBuilder builder = new ConfigurationBuilder();
-        ConfigurationHelper.AddSourceWithMapOverride(builder, module.FileProvider, FilePath);
+        ConfigurationHelper.AddSourceWithMapOverride(builder, WarfareModule.Singleton.FileProvider, FilePath);
         _configuration = builder.Build();
 
         _configuration.GetReloadToken().RegisterChangeCallback(_ =>

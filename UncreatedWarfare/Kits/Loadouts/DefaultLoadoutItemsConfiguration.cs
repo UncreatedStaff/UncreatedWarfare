@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -21,10 +20,10 @@ public sealed class DefaultLoadoutItemsConfiguration : BaseAlternateConfiguratio
     private readonly ILogger<DefaultLoadoutItemsConfiguration> _logger;
     private readonly IReadOnlyList<IItem>[] _configuration;
 
-    public DefaultLoadoutItemsConfiguration(IServiceProvider serviceProvider)
-        : base(serviceProvider, Path.Combine("Kits", "Default Items.yml"))
+    public DefaultLoadoutItemsConfiguration(ILogger<DefaultLoadoutItemsConfiguration> logger)
+        : base(Path.Combine("Kits", "Default Items.yml"))
     {
-        _logger = serviceProvider.GetRequiredService<ILogger<DefaultLoadoutItemsConfiguration>>();
+        _logger = logger;
         _configuration = new IReadOnlyList<IItem>[EnumUtility.GetMaximumValue<Class>() - MinimumClass + 1];
         HandleChange();
     }

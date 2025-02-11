@@ -1,4 +1,4 @@
-﻿using DanielWillett.ModularRpcs.Annotations;
+using DanielWillett.ModularRpcs.Annotations;
 using DanielWillett.ModularRpcs.Async;
 using Microsoft.EntityFrameworkCore;
 using MySqlConnector;
@@ -8,7 +8,6 @@ using System.Runtime.CompilerServices;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Models.Users;
 using Uncreated.Warfare.Players;
-using Z.EntityFramework.Plus;
 
 namespace Uncreated.Warfare.Moderation.Discord;
 
@@ -51,10 +50,10 @@ public class AccountLinkingService
             // remove pending links for either accounts, also expired links while we're at it
             DateTime now = DateTime.UtcNow.AddSeconds(30d);
             await _dbContext.PendingLinks
-                .Where(x => x.Steam64 == s64 || x.DiscordId == discordId || x.ExpiryTimestamp < now)
-                .DeleteAsync(token);
+                .DeleteRangeAsync((DbContext)_dbContext, x => x.Steam64 == s64 || x.DiscordId == discordId || x.ExpiryTimestamp < now, cancellationToken: token)
+                .ConfigureAwait(false);
 
-            await LinkAccountsIntl(s64, discordId);
+            await LinkAccountsIntl(s64, discordId, token).ConfigureAwait(false);
 
             _dbContext.ChangeTracker.Clear();
         }
@@ -143,7 +142,7 @@ public class AccountLinkingService
         DateTimeOffset startingTimestamp = DateTimeOffset.UtcNow;
         DateTimeOffset expireTimestamp = startingTimestamp + expiry;
 
-        await RemoveExpiredAsync();
+        await RemoveExpiredAsync(token).ConfigureAwait(false);
 
         ulong s64 = user.m_SteamID;
         SteamDiscordPendingLink? existing = await (s64 != 0
@@ -219,7 +218,7 @@ public class AccountLinkingService
         DateTimeOffset now = DateTimeOffset.UtcNow;
         ulong s64 = steamId.m_SteamID;
 
-        await RemoveExpiredAsync();
+        await RemoveExpiredAsync(token).ConfigureAwait(false);
 
         SteamDiscordPendingLink? existing = await (s64 != 0
             ? _dbContext.PendingLinks.FirstOrDefaultAsync(x => x.ExpiryTimestamp >= now && !x.DiscordId.HasValue && x.Token == validToken, token)
@@ -239,7 +238,7 @@ public class AccountLinkingService
         if (Unsafe.As<ulong, CSteamID>(ref steam64).GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
             return false;
 
-        await LinkAccountsIntl(steam64, discordId);
+        await LinkAccountsIntl(steam64, discordId, token).ConfigureAwait(false);
 
         _dbContext.Remove(existing);
         await _dbContext.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
@@ -248,7 +247,7 @@ public class AccountLinkingService
         return true;
     }
 
-    private async Task LinkAccountsIntl(ulong steam64, ulong discordId)
+    private async Task LinkAccountsIntl(ulong steam64, ulong discordId, CancellationToken token)
     {
         ulong oldDiscordId = 0;
 
@@ -262,9 +261,11 @@ public class AccountLinkingService
             .ConfigureAwait(false);
 
         // remove other Steam IDs linked to a discord ID
-        int numUpdated = await _dbContext.UserData
+        int numUpdated = await _dbContext.UserData.BatchUpdate((DbContext)_dbContext)
+            .Set(x => x.DiscordId, _ => 0ul)
             .Where(x => x.DiscordId == discordId && x.Steam64 != steam64)
-            .UpdateAsync(x => new WarfareUserData { DiscordId = 0 }, CancellationToken.None);
+            .ExecuteAsync(cancellationToken: token)
+            .ConfigureAwait(false);
 
         if (oldDiscordId != 0)
         {
@@ -276,12 +277,12 @@ public class AccountLinkingService
         }
     }
 
-    private async Task RemoveExpiredAsync()
+    private async Task RemoveExpiredAsync(CancellationToken token)
     {
         DateTime now = DateTime.UtcNow.AddSeconds(30d);
         int removed = await _dbContext.PendingLinks
-            .Where(x => x.ExpiryTimestamp < now)
-            .DeleteAsync(CancellationToken.None);
+            .DeleteRangeAsync((DbContext)_dbContext, x => x.ExpiryTimestamp < now, cancellationToken: token)
+            .ConfigureAwait(false);
 
         if (removed != 0)
             _logger.LogDebug("Removed {0} expired pending link(s).", removed);

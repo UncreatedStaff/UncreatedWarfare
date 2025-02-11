@@ -145,7 +145,7 @@ public static class KitItemUtility
 
         RedirectType redirect = section.GetValue("Redirect", RedirectType.None);
         string? redirectVariant = null;
-        bool isConcrete = redirect != RedirectType.None;
+        bool isConcrete = redirect == RedirectType.None;
         IAssetLink<ItemAsset>? item = null;
         byte quality = 0, amount = 0;
         byte[]? state = null;

@@ -1,4 +1,3 @@
-﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
@@ -6,12 +5,8 @@ using System.Linq;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Barricades;
-using Uncreated.Warfare.Fobs;
-using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.FOBs.Deployment;
-using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.StrategyMaps.MapTacks;
-using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.List;
 
@@ -105,7 +100,7 @@ public class StrategyMap : IDisposable, IEventListener<ClaimBedRequested>
 
     public void HandleEvent(ClaimBedRequested e, IServiceProvider serviceProvider)
     {
-        MapTack mapTack = _activeMapTacks.FirstOrDefault(t => t.Marker.InstanceId == e.Barricade.instanceID);
+        MapTack? mapTack = _activeMapTacks.FirstOrDefault(t => t.Marker.InstanceId == e.Barricade.instanceID);
 
         if (mapTack is not DeployableMapTack d)
         {
@@ -113,10 +108,7 @@ public class StrategyMap : IDisposable, IEventListener<ClaimBedRequested>
             return;
         }
 
-        FobConfiguration fobConfig = serviceProvider.GetRequiredService<FobConfiguration>();
         DeploymentService deploymentService = serviceProvider.GetRequiredService<DeploymentService>();
-        ChatService chatService = serviceProvider.GetRequiredService<ChatService>();
-        TranslationInjection<DeploymentTranslations> translations = serviceProvider.GetRequiredService<TranslationInjection<DeploymentTranslations>>();
 
         //Context.LogAction(ActionLogType.Teleport, deployable.Translate(_translationService));
 

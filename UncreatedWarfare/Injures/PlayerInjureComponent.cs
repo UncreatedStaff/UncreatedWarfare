@@ -14,6 +14,7 @@ using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Cooldowns;
 using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.UI;
@@ -120,7 +121,9 @@ public class PlayerInjureComponent : MonoBehaviour,
     private EventDispatcher _eventDispatcher;
     private AssetConfiguration _assetConfiguration;
     private PointsTranslations _xpTranslations;
+    private PointsService _pointsService;
     private CooldownManager _cooldownManager;
+    private ILogger<PlayerInjureComponent> _logger;
     private PlayersTranslations _playerTranslations;
     public WarfarePlayer Player { get; private set; }
 #nullable restore
@@ -157,6 +160,8 @@ public class PlayerInjureComponent : MonoBehaviour,
         _assetConfiguration = serviceProvider.GetRequiredService<AssetConfiguration>();
         _eventDispatcher = serviceProvider.GetRequiredService<EventDispatcher>();
         _cooldownManager = serviceProvider.GetRequiredService<CooldownManager>();
+        _pointsService = serviceProvider.GetRequiredService<PointsService>();
+        _logger = serviceProvider.GetRequiredService<ILogger<PlayerInjureComponent>>();
         _xpTranslations = serviceProvider.GetRequiredService<TranslationInjection<PointsTranslations>>().Value;
         _playerTranslations = serviceProvider.GetRequiredService<TranslationInjection<PlayersTranslations>>().Value;
 
@@ -487,6 +492,12 @@ public class PlayerInjureComponent : MonoBehaviour,
         }
 
         e.IsRevive = true;
+        e.IsEffectiveRevive = !_cooldownManager.HasCooldown(e.Medic, KnownCooldowns.Revive, out _, e.Steam64.m_SteamID);
+
+        if (e.IsEffectiveRevive)
+        {
+            _cooldownManager.StartCooldown(e.Medic, KnownCooldowns.Revive, e.Steam64.m_SteamID);
+        }
     }
 
     [EventListener(Priority = 100, MustRunInstantly = true)]
@@ -512,12 +523,20 @@ public class PlayerInjureComponent : MonoBehaviour,
             return;
 
         // prevent injure/revive spamming to farm XP
-        if (_cooldownManager.Config.ReviveXPCooldown <= 0
-            || !_cooldownManager.HasCooldown(e.Medic, CooldownType.Revive, out _, e.Steam64.m_SteamID))
+        if (e.IsEffectiveRevive)
         {
-            // todo Points.AwardXP(e.Medic, XPReward.Revive);
-            // QuestManager.OnRevive(e.Medic, e.Player);
-            _cooldownManager.StartCooldown(e.Medic, CooldownType.Revive, _cooldownManager.Config.ReviveXPCooldown, e.Steam64.m_SteamID);
+            Task.Run(async () =>
+            {
+                try
+                {
+                    EventInfo xpEvent = _pointsService.GetEvent("RevivedTeammate");
+                    await _pointsService.ApplyEvent(e.Medic, xpEvent.Resolve());
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error adding points to the medic.");
+                }
+            });
         }
         else
         {

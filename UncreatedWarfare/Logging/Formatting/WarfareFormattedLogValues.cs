@@ -258,7 +258,7 @@ internal struct WarfareFormattedLogValues
         if (f.Value is string str)
             return Align(str, f.Alignment);
 
-        return Align(ValueFormatter?.Format(subValue, in parameters, null) ?? subValue.ToString(), f.Alignment);
+        return Align(ValueFormatter?.Format(f.Value, in parameters, null) ?? f.Value.ToString(), f.Alignment);
 
     }
 

@@ -36,8 +36,7 @@ internal class ShovelableWarningTweak : IEventListener<ProjectileSpawned>
         }
 
         // find emplacement from vehicle ID if it needs to warn enemies or friendlies
-        ShovelableInfo? shovelableInfo =
-            (_fobManager.Configuration.GetRequiredSection("Shovelables").Get<IEnumerable<ShovelableInfo>>() ?? Array.Empty<ShovelableInfo>())
+        ShovelableInfo? shovelableInfo = _fobManager.Configuration.Shovelables
             .FirstOrDefault(s => s.Emplacement != null
                                  && (s.Emplacement.ShouldWarnEnemies || s.Emplacement.ShouldWarnFriendlies)
                                  && s.Emplacement.Vehicle.MatchAsset(e.Vehicle.asset)

@@ -56,6 +56,7 @@ using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Networking.Purchasing;
 using Uncreated.Warfare.Patches;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Cooldowns;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Players.Tweaks;
@@ -419,9 +420,7 @@ public sealed class WarfareModule
         Module thisModule = ModuleHook.modules.First(x => x.config.Name.Equals("Uncreated.Warfare", StringComparison.Ordinal) && x.assemblies.Contains(thisAsm));
 
         // all module assemblies and plugins
-        Assembly[] relevantAssemblies = thisModule.assemblies
-                                            .Concat(_pluginLoader.Plugins.Select(x => x.LoadedAssembly))
-                                            .ToArray();
+        Assembly[] relevantAssemblies = [ thisAsm ];
 
         bldr.RegisterType<MapScheduler>()
             .AsSelf().AsImplementedInterfaces()
@@ -575,7 +574,7 @@ public sealed class WarfareModule
             .SingleInstance();
 
         bldr.RegisterType<CooldownManager>()
-            .AsSelf().AsImplementedInterfaces()
+            .AsSelf().As<ILayoutHostedService>()
             .SingleInstance();
 
         bldr.RegisterType<CommandDispatcher>()
@@ -694,26 +693,26 @@ public sealed class WarfareModule
         bldr.RegisterType<DefaultLoadoutItemsConfiguration>()
             .SingleInstance();
 
-        bldr.RegisterType<KitCreateMissingDefaultKitsTweak>().As<IHostedService>();
+        bldr.RegisterType<KitCreateMissingDefaultKitsTweak>().As<ILayoutHostedService>();
         bldr.RegisterType<KitNoSwapStorageClothingTweak>().AsSelf().AsImplementedInterfaces();
 
-        bldr.RegisterRpcType<MySqlKitsDataStore>()
+        bldr.RegisterType<MySqlKitsDataStore>()
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
 
-        bldr.RegisterRpcType<MySqlKitFavoriteService>()
+        bldr.RegisterType<MySqlKitFavoriteService>()
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
 
-        bldr.RegisterRpcType<MySqlKitAccessService>()
+        bldr.RegisterType<MySqlKitAccessService>()
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
 
-        bldr.RegisterRpcType<KitLayoutService>()
+        bldr.RegisterType<KitLayoutService>()
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
 
-        bldr.RegisterRpcType<KitCommandLookResolver>()
+        bldr.RegisterType<KitCommandLookResolver>()
             .SingleInstance();
 
         bldr.RegisterRpcType<PlayerNitroBoostService>()
@@ -728,14 +727,18 @@ public sealed class WarfareModule
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
 
-        bldr.RegisterRpcType<KitWeaponTextService>()
-            .AsSelf().SingleInstance();
-
-        bldr.RegisterRpcType<KitRequestService>()
+        bldr.RegisterType<KitBestowService>()
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
 
-        if (ItemUtility.SupportsFastKits)
+        bldr.RegisterType<KitWeaponTextService>()
+            .AsSelf().SingleInstance();
+
+        bldr.RegisterType<KitRequestService>()
+            .AsSelf().AsImplementedInterfaces()
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+
+        if (false && ItemUtility.SupportsFastKits)
         {
             bldr.RegisterType<FastItemDistributionService>()
                 .As<IItemDistributionService>();
@@ -745,6 +748,12 @@ public sealed class WarfareModule
             bldr.RegisterType<FallbackItemDistributionService>()
                 .As<IItemDistributionService>();
         }
+
+        bldr.Register<IServiceProvider, IKitItemResolver>((_, serviceProvider) =>
+            HolidayUtil.isHolidayActive(ENPCHoliday.APRIL_FOOLS)
+                ? ActivatorUtilities.CreateInstance<DootpressorKitItemResolver>(serviceProvider)
+                : ActivatorUtilities.CreateInstance<BaseKitItemResolver>(serviceProvider)
+        ).InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
 
         bldr.RegisterType<AssetRedirectService>()
             .AsSelf().AsImplementedInterfaces()
@@ -880,6 +889,9 @@ public sealed class WarfareModule
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
         bldr.RegisterType<InvinciblePassengersTweak>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
+        bldr.RegisterType<CombatCooldownTweak>()
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
         bldr.RegisterType<NoDamageInMainTweak>()
@@ -1076,8 +1088,7 @@ public sealed class WarfareModule
             }
             else
             {
-                _logger.LogDebug("Migrating database for real...");
-                //_logger.LogDebug($"Migrating database process: {dbContext.}");
+                _logger.LogDebug($"Migrating database process: {dbContext.GetType()}");
                 await dbContext.Database.MigrateAsync(token).ConfigureAwait(false);
                 _logger.LogInformation("Migration completed.");
             }

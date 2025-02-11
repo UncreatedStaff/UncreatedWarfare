@@ -10,37 +10,12 @@ namespace Uncreated.Warfare.Kits;
 public class KitSignService
 {
     private readonly SignInstancer _signs;
-    private readonly LoadoutService _loadoutService;
     private readonly IPlayerService _playerService;
-    private readonly IKitDataStore _kitSql;
 
-    public KitSignService(SignInstancer signs, LoadoutService loadoutService, IPlayerService playerService, IKitDataStore kitSql)
+    public KitSignService(SignInstancer signs, IPlayerService playerService)
     {
         _signs = signs;
-        _loadoutService = loadoutService;
         _playerService = playerService;
-        _kitSql = kitSql;
-    }
-
-
-    /// <summary>
-    /// Get the kit a sign refers to from a given player's perspective.
-    /// </summary>
-    public async Task<Kit?> GetKitFromSign(BarricadeDrop drop, CSteamID looker, KitInclude include, CancellationToken token = default)
-    {
-        await UniTask.SwitchToMainThread(token);
-
-        KitSignInstanceProvider? signProvider = _signs.GetSignProvider(drop) as KitSignInstanceProvider;
-
-        if (signProvider == null)
-            return null;
-
-        if (signProvider.LoadoutNumber <= 0)
-        {
-            return signProvider.KitId == null ? null : await _kitSql.QueryKitAsync(signProvider.KitId, include, token);
-        }
-
-        return await _loadoutService.GetLoadoutFromNumber(looker, signProvider.LoadoutNumber, include, token).ConfigureAwait(false);
     }
 
     /// <summary>

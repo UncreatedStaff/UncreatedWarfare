@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using StackCleaner;
 using System;
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Translations.Addons;
 using Uncreated.Warfare.Translations.Languages;
@@ -22,7 +23,10 @@ public class TranslationValueFormatter : ITranslationValueFormatter
     private const string NullANSI = "\e[94mnull\e[39m";
     private const string NullExtendedANSI = "\e[38;2;86;156;214mnull\e[39m";
 
+    [field: MaybeNull]
     public LanguageService LanguageService => field ??= _serviceProvider.GetRequiredService<LanguageService>();
+
+    [field: MaybeNull]
     public ITranslationService TranslationService => field ??= _serviceProvider.GetRequiredService<ITranslationService>();
 
     public IServiceProvider ServiceProvider => _serviceProvider;

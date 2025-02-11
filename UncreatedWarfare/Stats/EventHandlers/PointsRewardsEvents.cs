@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Stripe;
 using System;
@@ -333,12 +333,12 @@ internal class PointsRewardsEvents :
 
         EventInfo @event;
         Translation translation;
-        if (assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:Fobs:Fob").MatchAsset(e.Shovelable.Info.CompletedStructure))
+        if (assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:Gameplay:Fob").MatchAsset(e.Shovelable.Info.CompletedStructure))
         {
             @event = _points.GetEvent("FobBuilt");
             translation = _translations.XPToastFOBBuilt;
         }
-        else if (assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:RepairStation").MatchAsset(e.Shovelable.Info.CompletedStructure))
+        else if (assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:Gameplay:RepairStation").MatchAsset(e.Shovelable.Info.CompletedStructure))
         {
             @event = _points.GetEvent("RepairStationBuilt");
             translation = _translations.XPToastRepairStationBuilt;

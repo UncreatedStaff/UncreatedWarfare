@@ -1,5 +1,5 @@
 using Uncreated.Warfare.Interaction.Commands;
-using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Cooldowns;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Translations;
 
