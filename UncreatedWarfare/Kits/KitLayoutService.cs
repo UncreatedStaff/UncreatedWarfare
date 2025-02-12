@@ -91,9 +91,18 @@ public class KitLayoutService
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            _dbContext.AddRange(transformations);
-            
-            await _dbContext.SaveChangesAsync(token).ConfigureAwait(false);
+            ulong s64 = player.Steam64.m_SteamID;
+            uint kitPrimaryKey = kit.Value;
+
+            await _dbContext.KitLayoutTransformations
+                .DeleteRangeAsync((DbContext)_dbContext, x => x.Steam64 == s64 && x.KitId == kitPrimaryKey, cancellationToken: token)
+                .ConfigureAwait(false);
+
+            _dbContext.KitLayoutTransformations.AddRange(transformations);
+
+            await _dbContext
+                .SaveChangesAsync(token)
+                .ConfigureAwait(false);
         }
         finally
         {

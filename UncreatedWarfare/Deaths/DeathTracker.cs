@@ -642,6 +642,7 @@ public class DeathTracker : IHostedService
                 // find target sentry
                 List<BarricadeInfo> drops = BarricadeUtility.EnumerateBarricades()
                     .Where(x =>
+                        x.Drop != null &&
                         x.Drop.GetServersideData().owner == e.Instigator.m_SteamID &&
                         x.Drop.interactable is InteractableSentry sentry &&
                         SentryTargetPlayerField?.Invoke(sentry) is { } target &&
@@ -837,6 +838,7 @@ public class DeathTracker : IHostedService
                 // find target sentry
                 List<BarricadeInfo> drops = BarricadeUtility.EnumerateBarricades()
                     .Where(x =>
+                        x.Drop != null &&
                         x.Drop.GetServersideData().owner == killerId &&
                         x.Drop.interactable is InteractableSentry sentry &&
                         SentryTargetPlayerField?.Invoke(sentry) is { } target &&

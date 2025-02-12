@@ -12,6 +12,7 @@ using Uncreated.Warfare.FOBs.Entities;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Items;
+using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.FOBs.Construction.Tweaks;
@@ -28,13 +29,13 @@ internal class ShoveableTweaks :
 
     public ShoveableTweaks(
         AssetConfiguration assetConfiguration,
-        FobTranslations translations,
+        TranslationInjection<FobTranslations> translations,
         ChatService chatService,
         IKitItemResolver kitItemResolver,
         FobManager fobManager)
     {
         _assetConfiguration = assetConfiguration;
-        _translations = translations;
+        _translations = translations.Value;
         _chatService = chatService;
         _kitItemResolver = kitItemResolver;
         _fobManager = fobManager;

@@ -157,8 +157,8 @@ public class DutyCommandTranslations : PropertiesTranslationCollection
     public readonly Translation DutyOffFeedback = new Translation("<#c6d4b8>You are now <#ff8c4a>off duty</color>.");
 
     [TranslationData("Sent to all players when a player goes on duty (gains permissions).")]
-    public readonly Translation<IPlayer> DutyOnBroadcast = new Translation<IPlayer>("<#c6d4b8><#d9e882>{0}</color> is now <#95ff4a>on duty</color>.");
+    public readonly Translation<IPlayer> DutyOnBroadcast = new Translation<IPlayer>("<#c6d4b8><#d9e882>{0}</color> is now <#95ff4a>on duty</color>.", arg0Fmt: WarfarePlayer.FormatDisplayOrPlayerName);
 
     [TranslationData("Sent to all players when a player goes off duty (loses permissions).")]
-    public readonly Translation<IPlayer> DutyOffBroadcast = new Translation<IPlayer>("<#c6d4b8><#d9e882>{0}</color> is now <#ff8c4a>off duty</color>.");
+    public readonly Translation<IPlayer> DutyOffBroadcast = new Translation<IPlayer>("<#c6d4b8><#d9e882>{0}</color> is now <#ff8c4a>off duty</color>.", arg0Fmt: WarfarePlayer.FormatDisplayOrPlayerName);
 }

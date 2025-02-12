@@ -90,6 +90,8 @@ public class KitBestowService
 
     private struct BestowKitGiveItemsState : IItemDistributionState, IDisposable
     {
+        private static readonly ItemTransformation NullItemTransformation = new ItemTransformation(0, 0, byte.MaxValue, byte.MaxValue, byte.MaxValue, byte.MaxValue, null!);
+
         private IEnumerator<KitLayoutTransformation> _enumerator;
 
         private readonly BestowKitOptions _options;
@@ -127,7 +129,7 @@ public class KitBestowService
         public bool ShouldGrantItem(IPageItem item, ref KitItemResolutionResult resolvedItem, ref byte x, ref byte y, ref Page page, ref byte rotation)
         {
             if (_pendingTransformation.NewX != byte.MaxValue)
-                _pendingTransformation = new ItemTransformation(0, 0, byte.MaxValue, byte.MaxValue, byte.MaxValue, byte.MaxValue, null!);
+                _pendingTransformation = NullItemTransformation;
 
             // check for layout transformation
             while (_enumerator.MoveNext())
@@ -143,6 +145,7 @@ public class KitBestowService
                 y = t.NewY;
                 page = t.NewPage;
                 rotation = t.NewRotation;
+                break;
             }
 
             try
@@ -198,8 +201,11 @@ public class KitBestowService
                 if (row.Key == guid)
                 {
                     _itemCountsTable[i] = new KeyValuePair<Guid, int>(row.Key, row.Value + 1);
+                    return;
                 }
             }
+
+            _itemCountsTable.Add(new KeyValuePair<Guid, int>(guid, 1));
         }
 
         private readonly void ApplyLowAmmoChanges(ref KitItemResolutionResult result)

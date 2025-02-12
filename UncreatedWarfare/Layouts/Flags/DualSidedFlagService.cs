@@ -68,7 +68,7 @@ public abstract class DualSidedFlagService :
     public IReadOnlyList<FlagObjective> ActiveFlags { get; private set; } = Array.Empty<FlagObjective>();
 
     /// <inheritdoc />
-    public virtual ElectricalGridBehaivor GridBehaivor => ElectricalGridBehaivor.EnabledWhenObjective;
+    public virtual ElectricalGridBehaivor GridBehaivor => ElectricalGridBehaivor.EnabledWhenInRotation;
 
     protected DualSidedFlagService(IServiceProvider serviceProvider, IConfiguration config)
     {

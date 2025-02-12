@@ -62,6 +62,10 @@ internal sealed class InteractableSignUpdateText : IHarmonyPatch
         }
 
         BarricadeData data = drop.GetServersideData();
+        if (data.barricade.isDead)
+        {
+            return;
+        }
 
         IContainer serviceProvider = WarfareModule.Singleton.ServiceProvider;
 

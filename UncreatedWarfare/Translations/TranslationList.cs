@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Models.Localization;
@@ -14,7 +15,7 @@ namespace Uncreated.Warfare;
 /// </summary>
 [JsonConverter(typeof(TranslationListConverter))]
 [TypeConverter(typeof(TranslationListTypeConverter))]
-public sealed class TranslationList : List<KeyValuePair<string, string>>, ICloneable
+public sealed class TranslationList : List<KeyValuePair<string, string>>, ICloneable, IDictionary<string, string>
 {
     public const int DefaultCharLength = 255;
 
@@ -68,18 +69,18 @@ public sealed class TranslationList : List<KeyValuePair<string, string>>, IClone
     public string? Translate(LanguageInfo? language)
     {
         string code = language == null || language.IsDefault ? string.Empty : language.Code;
-        if (TryGetValue(code, out string? value))
+        if (TryGetValue(code, out string? value) && value != null)
             return value;
         
-        if (code.Length == 0 && language != null && TryGetValue(language.Code, out value))
+        if (code.Length == 0 && language != null && TryGetValue(language.Code, out value) && value != null)
             return value;
 
         if (language != null)
         {
-            if (language.FallbackTranslationLanguageCode != null && TryGetValue(language.FallbackTranslationLanguageCode, out value))
+            if (language.FallbackTranslationLanguageCode != null && TryGetValue(language.FallbackTranslationLanguageCode, out value) && value != null)
                 return value;
 
-            if (!language.IsDefault && TryGetValue(string.Empty, out value))
+            if (!language.IsDefault && TryGetValue(string.Empty, out value) && value != null)
                 return value;
         }
 
@@ -104,6 +105,7 @@ public sealed class TranslationList : List<KeyValuePair<string, string>>, IClone
         value = null;
         return false;
     }
+
     internal int FindIndex(string code)
     {
         for (int i = 0; i < Count; ++i)
@@ -117,6 +119,57 @@ public sealed class TranslationList : List<KeyValuePair<string, string>>, IClone
 
         return -1;
     }
+    
+    bool IDictionary<string, string>.ContainsKey(string key)
+    {
+        return FindIndex(key) != -1;
+    }
+
+    bool IDictionary<string, string>.Remove(string key)
+    {
+        int index = FindIndex(key);
+        if (index == -1)
+            return false;
+
+        RemoveAt(index);
+        return true;
+    }
+
+    bool IDictionary<string, string>.TryGetValue(string key, out string value)
+    {
+        if (TryGetValue(key, out string? v))
+        {
+            value = v;
+            return true;
+        }
+
+        value = null!;
+        return false;
+    }
+
+    string IDictionary<string, string>.this[string key]
+    {
+        get
+        {
+            int index = FindIndex(key);
+            if (index == -1)
+                throw new KeyNotFoundException();
+            
+            return this[index].Value;
+        }
+        set
+        {
+            int index = FindIndex(key);
+            if (index == -1)
+                Add(key, value);
+
+            this[index] = new KeyValuePair<string, string>(this[index].Key, value);
+        }
+    }
+
+    ICollection<string> IDictionary<string, string>.Keys => this.Select(x => x.Key).ToList();
+
+    ICollection<string> IDictionary<string, string>.Values => this.Select(x => x.Value).ToList();
 }
 
 public sealed class TranslationListConverter : JsonConverter<TranslationList>

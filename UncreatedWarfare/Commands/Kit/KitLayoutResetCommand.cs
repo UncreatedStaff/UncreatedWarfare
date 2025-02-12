@@ -1,4 +1,3 @@
-using System;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Translations;
@@ -30,9 +29,6 @@ internal sealed class KitLayoutResetCommand : IExecutableCommand
         {
             throw Context.Reply(_translations.KitLayoutNoKit);
         }
-
-        await UniTask.Delay(TimeSpan.FromSeconds(0.5f), cancellationToken: token);
-        await UniTask.SwitchToMainThread(token);
 
         if (kit.Items != null)
         {

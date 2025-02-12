@@ -427,7 +427,7 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
         await ExecuteCommandAsync(command, user, args, flags, originalMessage, offset, waitTasks, token);
 #if DEBUG
         sw.Stop();
-        _logger.LogDebug("Command {0} exited in {1} ms: /{2} with args: {3}.", command.Type, sw.GetElapsedMilliseconds(), command.CommandName, new ArraySegment<string>(args, offset, args.Length - offset));
+        _logger.LogDebug("Command {0} exited in {1} ms: /{2} with args: {3}.", command.Type, sw.GetElapsedMilliseconds(), command.CompositeName, new ArraySegment<string>(args, offset, args.Length - offset));
 #endif
     }
 

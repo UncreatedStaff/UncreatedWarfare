@@ -1,3 +1,4 @@
+using System;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits.Loadouts;
@@ -24,6 +25,7 @@ public class KitCommandLookResolver
     public async Task<KitCommandLookResult> ResolveFromArgumentsOrLook(CommandContext ctx, int startArgument, int requiredExtraArguments, KitInclude include, CancellationToken token = default)
     {
         int totalArgs = ctx.Parameters.Count - requiredExtraArguments - startArgument;
+        Console.WriteLine(totalArgs);
         if (totalArgs < 0)
         {
             throw ctx.SendHelp();
@@ -57,6 +59,8 @@ public class KitCommandLookResolver
 
         if (kit == null && ctx.TryGet(startArgument, out string? kitId))
         {
+            Console.WriteLine(kitId);
+
             //  kit give kit-id [other... ]
             ++argIndex;
             kit = await _kitDataStore.QueryKitAsync(kitId, include, token).ConfigureAwait(false);
@@ -69,7 +73,7 @@ public class KitCommandLookResolver
         if (kit == null)
             throw ctx.Reply(_translations.KitOperationNoTarget);
 
-        if (argIndex + requiredExtraArguments >= ctx.Parameters.Count)
+        if (argIndex + requiredExtraArguments > ctx.Parameters.Count)
             throw ctx.SendHelp();
 
         // kit give [usrif1] <test> [player]

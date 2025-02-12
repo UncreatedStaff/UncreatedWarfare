@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using Uncreated.Warfare.Layouts.UI.Leaderboards;
 using Uncreated.Warfare.Players;
@@ -52,13 +53,19 @@ public readonly struct ValuablePlayerMatch
                 : string.Join(", ", StatValues.Select(x => x is IFormattable f ? f.ToString(null, s.Culture) : x.ToString()));
         }
 
-        string fmtString = ValueFormatString.Translate(set.Language)!;
+        string? fmtString = ValueFormatString.Translate(set.Language);
 
+        CultureInfo culture = set.Culture;
         if (StatValues == null)
         {
-            return string.Format(set.Culture, fmtString, StatValue);
+            return fmtString == null ? StatValue.ToString(culture) : string.Format(culture, fmtString, StatValue);
         }
 
-        return StatValues.Length == 0 ? fmtString : string.Format(set.Culture, fmtString, StatValues);
+        if (fmtString == null)
+        {
+            return string.Join(" ", StatValues.Select(x => x is IFormattable f ? f.ToString(null, culture) : x.ToString()));
+        }
+
+        return StatValues.Length == 0 ? fmtString : string.Format(culture, fmtString, StatValues);
     }
 }
