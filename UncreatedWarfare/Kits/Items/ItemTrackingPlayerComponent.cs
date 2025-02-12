@@ -52,7 +52,7 @@ public class ItemTrackingPlayerComponent : IPlayerComponent, IEventListener<Item
             return true;
         }
 
-        for (int i = 0; i < ItemTransformations.Count; ++i)
+        for (int i = ItemTransformations.Count - 1; i >= 0; --i)
         {
             ItemTransformation t = ItemTransformations[i];
             if (t.OldPage != origPage || t.OldX != origX || t.OldY != origY)
@@ -64,7 +64,10 @@ public class ItemTrackingPlayerComponent : IPlayerComponent, IEventListener<Item
             isDropped = false;
             item = t.Item;
             byte index = Player.UnturnedPlayer.inventory.getIndex((byte)page, x, y);
-            return ReferenceEquals(item, Player.UnturnedPlayer.inventory.getItem((byte)page, index)?.item);
+            if (ReferenceEquals(item, Player.UnturnedPlayer.inventory.getItem((byte)page, index)?.item))
+                return true;
+
+            ItemTransformations.RemoveAt(i);
         }
 
         isDropped = false;
@@ -148,14 +151,18 @@ public class ItemTrackingPlayerComponent : IPlayerComponent, IEventListener<Item
         if (e.Item == null)
             return;
         
-        if (!TryGetOriginalItemPosition(e.Item, out Page origPage, out byte origX, out byte origY))
+        for (int i = 0; i < ItemTransformations.Count; ++i)
         {
-            origPage = e.OldPage;
-            origX = e.OldX;
-            origY = e.OldY;
+            ItemTransformation t = ItemTransformations[i];
+            if (t.Item != e.Item)
+                continue;
+            
+            ItemDropTransformations.Add(new ItemDropTransformation(t.OldPage, t.OldX, t.OldY, e.Item, e.OldPage, e.OldX, e.OldY, e.OldRotation));
+            ItemTransformations.RemoveAtFast(i);
+            return;
         }
 
-        ItemDropTransformations.Add(new ItemDropTransformation(origPage, origX, origY, e.Item, e.OldPage, e.OldX, e.OldY, e.OldRotation));
+        ItemDropTransformations.Add(new ItemDropTransformation(e.OldPage, e.OldX, e.OldY, e.Item, e.OldPage, e.OldX, e.OldY, e.OldRotation));
     }
 
     [EventListener(Priority = int.MinValue)]
@@ -165,14 +172,16 @@ public class ItemTrackingPlayerComponent : IPlayerComponent, IEventListener<Item
             return;
 
         // replace item from where it was dropped if possible
-        foreach (ItemDropTransformation drop in ItemDropTransformations)
+        for (int i = 0; i < ItemDropTransformations.Count; i++)
         {
+            ItemDropTransformation drop = ItemDropTransformations[i];
             if (drop.Item != e.Item)
                 continue;
 
             ItemAsset asset = e.Item.GetAsset();
             if (Player.UnturnedPlayer.inventory.items[(int)drop.DroppedFromPage]
-                .checkSpaceEmpty(drop.DroppedFromX, drop.DroppedFromY, asset.size_x, asset.size_y, drop.DroppedFromRotation))
+                .checkSpaceEmpty(drop.DroppedFromX, drop.DroppedFromY, asset.size_x, asset.size_y,
+                    drop.DroppedFromRotation))
             {
                 e.DestinationX = drop.DroppedFromX;
                 e.DestinationY = drop.DroppedFromY;
@@ -249,7 +258,7 @@ public class ItemTrackingPlayerComponent : IPlayerComponent, IEventListener<Item
 
     void IEventListener<ItemDestroyed>.HandleEvent(ItemDestroyed e, IServiceProvider serviceProvider)
     {
-        if (e.Item == null || !e.PickedUp || e.PickUpPage == (Page)byte.MaxValue)
+        if (e.Item == null || !e.PickedUp || e.PickUpPage == (Page)byte.MaxValue || (byte)e.PickUpPage >= PlayerInventory.STORAGE)
             return;
 
         byte origX = byte.MaxValue, origY = byte.MaxValue;

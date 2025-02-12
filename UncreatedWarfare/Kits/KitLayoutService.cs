@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Database.Abstractions;
@@ -148,6 +149,7 @@ public class KitLayoutService
             location.Page = page;
             location.Jar = current;
             location.Index = index;
+            location.PageItem = item;
 
             locatedItems.Add(location);
         }
@@ -161,26 +163,41 @@ public class KitLayoutService
         int ct = 0;
         do
         {
-            removedItems.Clear();
+#if DEBUG
+            using IDisposable? scope = _logger.BeginScope("I-" + ct);
+#endif
+            if (ct > 0)
+            {
+                removedItems.Clear();
+                locatedItems.RemoveRange(pageItems.Count, locatedItems.Count - pageItems.Count);
+            }
 
             for (int i = 0; i < pageItems.Count; ++i)
             {
                 IPageItem item = pageItems[i];
                 LocatedItem location = locatedItems[i];
-
+                
                 Page page = location.Page;
                 byte x = location.Jar.x, y = location.Jar.y, rot = location.Jar.rot;
 
-                if (page == item.Page && x == item.X && y == item.Y)
+                if (!location.IsRemoved && page == item.Page && x == item.X && y == item.Y)
                 {
                     if (item.Rotation != rot)
                     {
-                        // rotation is only wrong
-                        inventory.ReceiveDragItem((byte)page, x, y, (byte)page, x, y, item.Rotation);
-                    }
+                        if (location.Jar.size_x == location.Jar.size_y || ItemUtility.CanPerformMove(inventory, location.Jar, page, x, y, item.Rotation))
+                        {
+                            _logger.LogConditional($"{kitWithItems.Id}::{((IKitItem)item).PrimaryKey,-8} R {page} ({x}, {y}) {location.Item.GetAsset().itemName} rotation.");
 
-                    // already at the right position
-                    continue;
+                            // rotation is only wrong
+                            inventory.ReceiveDragItem((byte)page, x, y, (byte)page, x, y, item.Rotation);
+                            continue;
+                        }
+                    }
+                    else
+                    {
+                        // already at the right position
+                        continue;
+                    }
                 }
 
                 SDG.Unturned.Items sourcePage = inventory.items[(int)location.Page];
@@ -194,28 +211,60 @@ public class KitLayoutService
 
                 // try swapping the two items
                 ItemJar? swappable = inventory.GetItemAt(item.Page, item.X, item.Y, out byte swappableIndex);
-                if (swappable != null && ItemUtility.CanPerformSwap(inventory, swappable, item.Page, location.Jar, page))
+                if (swappable != null && swappable.item != location.Item
+                                      && (location.IsRemoved
+                                          ? ItemUtility.CanPerformMove(inventory, swappable, item.Page, x, y, rot)
+                                          : ItemUtility.CanPerformSwap(inventory, swappable, item.Page, location.Jar, page))
+                                      )
                 {
-                    sourcePage.removeItem(location.Index);
-                    destinationPage.removeItem(swappableIndex);
+                    if (!location.IsRemoved)
+                    {
+                        sourcePage.removeItem(location.Index);
+                        ApplyRemoveItem(locatedItems, page, location.Index, false, out _);
+                    }
+
+                    if (!location.IsRemoved && sourcePage == destinationPage && swappableIndex > location.Index)
+                    {
+                        // removing the other item may shift the swappable item's index down if on same page
+                        byte k = (byte)(swappableIndex - 1);
+                        destinationPage.removeItem(k);
+                        ApplyRemoveItem(locatedItems, item.Page, k, false, out _);
+                    }
+                    else
+                    {
+                        destinationPage.removeItem(swappableIndex);
+                        ApplyRemoveItem(locatedItems, item.Page, swappableIndex, false, out _);
+                    }
 
                     destinationPage.addItem(item.X, item.Y, item.Rotation, location.Item);
                     sourcePage.addItem(x, y, rot, swappable.item);
 
-                    _logger.LogConditional($"{kitWithItems.Id}::{((IKitItem)item).PrimaryKey,-8} Swapped {page} ({x}, {y}) {location.Item.GetAsset().itemName} <-> {item.Page} ({swappable.x}, {swappable.y}) {swappable.item.GetAsset().itemName}.");
+                    _logger.LogConditional($"{kitWithItems.Id}::{((IKitItem)item).PrimaryKey,-8} S {page} ({x}, {y}) {location.Item.GetAsset().itemName} <-> {item.Page} ({swappable.x}, {swappable.y}) {swappable.item.GetAsset().itemName}.");
 
                     location.Page = item.Page;
                     location.Index = (byte)(destinationPage.getItemCount() - 1);
                     location.Jar = destinationPage.getItem(location.Index)!;
+                    if (location.IsRemoved)
+                    {
+                        location.IsRemoved = false;
+                        removedItems.Remove(location.Item);
+                        _logger.LogConditional($"{kitWithItems.Id}::{((IKitItem)item).PrimaryKey,-8} C {item.Page} ({item.X}, {item.Y}) {location.Item.GetAsset().itemName} (1).");
+                    }
                     locatedItems[i] = location;
 
                     // update moved items
                     for (int j = i + 1; j < locatedItems.Count; ++j)
                     {
                         LocatedItem otherLocation = locatedItems[j];
-                        if (otherLocation.Jar != swappable)
+                        if (otherLocation.Item != swappable.item)
                             continue;
 
+                        if (otherLocation.IsRemoved)
+                        {
+                            otherLocation.IsRemoved = false;
+                            removedItems.Remove(otherLocation.Item);
+                            _logger.LogConditional($"{kitWithItems.Id}::{((IKitItem)item).PrimaryKey,-8} C {item.Page} ({item.X}, {item.Y}) {location.Item.GetAsset().itemName} (2).");
+                        }
                         otherLocation.Page = page;
                         otherLocation.Index = (byte)(sourcePage.getItemCount() - 1);
                         otherLocation.Jar = sourcePage.getItem(otherLocation.Index)!;
@@ -230,43 +279,61 @@ public class KitLayoutService
                     continue;
                 }
 
-                // remove blocking items
+                // remove overlapping items
                 int itemCt = destinationPage.getItemCount();
                 for (int k = itemCt - 1; k >= 0; --k)
                 {
                     ItemJar? itemJar = destinationPage.getItem((byte)k);
 
-                    if (itemJar == location.Jar
-                        || !ItemUtility.IsOverlapping(itemJar.x, itemJar.y, itemJar.size_x, itemJar.size_y, item.X, item.Y,
-                            location.Jar.size_x, location.Jar.size_y, itemJar.rot, location.Jar.rot))
+                    if (itemJar == null)
+                        continue;
+
+                    if (itemJar.item == location.Item
+                        || !ItemUtility.IsOverlapping(itemJar.x, itemJar.y, itemJar.size_x, itemJar.size_y, item.X, item.Y, location.Jar.size_x, location.Jar.size_y, itemJar.rot, item.Rotation))
                     {
                         continue;
                     }
 
-                    _logger.LogConditional($"{kitWithItems.Id}::{((IKitItem)item).PrimaryKey,-8} Removed {item.Page} ({itemJar.x}, {itemJar.y}) {itemJar.item.GetAsset().itemName}.");
+                    _logger.LogConditional($"{kitWithItems.Id}::{((IKitItem)item).PrimaryKey,-8} D {item.Page} ({itemJar.x}, {itemJar.y}) {itemJar.item.GetAsset().itemName}.");
 
                     removedItems.Add(itemJar.item);
                     destinationPage.removeItem((byte)k);
-                    if (!locatedItems.Exists(x => x.Jar == itemJar))
+                    ApplyRemoveItem(locatedItems, item.Page, (byte)k, true, out bool found);
+                    if (!found)
                     {
                         locatedItems.Add(new LocatedItem
                         {
                             Jar = itemJar,
                             Item = itemJar.item,
-                            Page = item.Page
+                            Page = item.Page,
+                            IsRemoved = true
                         });
+                    }
+                    if (sourcePage == destinationPage && location.Index > k && !location.IsRemoved)
+                    {
+                        --location.Index;
                     }
                 }
 
-                sourcePage.removeItem(location.Index);
+                if (!location.IsRemoved)
+                {
+                    sourcePage.removeItem(location.Index);
+                    ApplyRemoveItem(locatedItems, page, location.Index, false, out _);
+                }
 
                 destinationPage.addItem(item.X, item.Y, item.Rotation, location.Item);
 
-                _logger.LogConditional($"{kitWithItems.Id}::{((IKitItem)item).PrimaryKey,-8} Moved {page} ({x}, {y}) -> {item.Page} ({item.X}, {item.Y}) {location.Item.GetAsset().itemName}.");
+                _logger.LogConditional($"{kitWithItems.Id}::{((IKitItem)item).PrimaryKey,-8} M {page} ({x}, {y}) -> {item.Page} ({item.X}, {item.Y}) {location.Item.GetAsset().itemName}.");
 
                 location.Page = item.Page;
                 location.Index = (byte)(destinationPage.getItemCount() - 1);
                 location.Jar = destinationPage.getItem(location.Index)!;
+                if (location.IsRemoved)
+                {
+                    location.IsRemoved = false;
+                    removedItems.Remove(location.Item);
+                    _logger.LogConditional($"{kitWithItems.Id}::{((IKitItem)item).PrimaryKey,-8} C {item.Page} ({item.X}, {item.Y}) {location.Item.GetAsset().itemName} (3).");
+                }
                 locatedItems[i] = location;
             }
 
@@ -276,29 +343,36 @@ public class KitLayoutService
             foreach (Item removedItem in removedItems)
             {
                 int locationIndex = locatedItems.FindLastIndex(l => l.Item == removedItem);
+                ItemJar? item;
                 if (locationIndex == -1)
                 {
-                    AddOrDropItem(inventory, removedItem, out Page newPage, out byte newIndex, out bool newIsDropped, ref hasPlayedEffect);
-                    ItemJar? item = newIsDropped ? null : inventory.getItem((byte)newPage, newIndex);
+                    AddOrDropItem(inventory, itemTracking, removedItem, null, out Page newPage, out byte newIndex, out bool newIsDropped, ref hasPlayedEffect);
+                    item = newIsDropped ? null : inventory.getItem((byte)newPage, newIndex);
 
-                    _logger.LogConditional($"{kitWithItems.Id}           Added {newPage} ({item?.x}, {item?.y}), dropped: {newIsDropped} | {removedItem.GetAsset().itemName} (non-located item).");
+                    _logger.LogConditional($"{kitWithItems.Id}           A {newPage} ({item?.x}, {item?.y}), dropped: {newIsDropped} | {removedItem.GetAsset().itemName} (non-located item).");
                     continue;
                 }
 
                 LocatedItem location = locatedItems[locationIndex];
-                AddOrDropItem(inventory, removedItem, out Page page, out byte index, out bool isDropped, ref hasPlayedEffect);
+                AddOrDropItem(inventory, itemTracking, removedItem, location.PageItem, out Page page, out byte index, out bool isDropped, ref hasPlayedEffect);
                 if (isDropped)
                 {
-                    _logger.LogConditional($"{kitWithItems.Id}           Added {removedItem.GetAsset().itemName} (dropped located item).");
-                    AddDropTransformation(itemTracking, location.Page, location.Jar.x, location.Jar.y, removedItem);
+                    _logger.LogConditional($"{kitWithItems.Id}::{(((IKitItem?)location.PageItem)?.PrimaryKey).GetValueOrDefault(),-8} A {removedItem.GetAsset().itemName} (dropped located item).");
+                    if (locationIndex < pageItems.Count)
+                        pageItems.RemoveAt(locationIndex);
+                    locatedItems.RemoveAt(locationIndex);
+                    continue;
                 }
-                else
-                {
-                    ItemJar? item = inventory.getItem((byte)page, index);
-                    _logger.LogConditional($"{kitWithItems.Id}           Added {page} ({item?.x}, {item?.y}) | {removedItem.GetAsset().itemName} (located item).");
-                    if (item != null)
-                        AddTransformation(itemTracking, location.Page, page, location.Jar.x, location.Jar.y, item.x, item.y, removedItem);
-                }
+
+                item = inventory.getItem((byte)page, index);
+                if (item == null)
+                    continue;
+
+                _logger.LogConditional($"{kitWithItems.Id}::{(((IKitItem?)location.PageItem)?.PrimaryKey).GetValueOrDefault(),-8} A {page} ({item.x}, {item.y}) | {removedItem.GetAsset().itemName} (located item).");
+                location.Index = index;
+                location.Jar = item;
+                location.Page = page;
+                location.IsRemoved = false;
             }
 
             ++ct;
@@ -308,11 +382,51 @@ public class KitLayoutService
                 break;
             }
         }
-        while (removedItems.Count > 0);
+        // keep going while a kit item was re-added
+        while (locatedItems.Exists(x => x is { IsRemoved: true, PageItem: not null }));
     }
 
-    private void AddOrDropItem(PlayerInventory inventory, Item item, out Page page, out byte index, out bool isDropped, ref bool hasPlayedEffect)
+    private static void ApplyRemoveItem(List<LocatedItem> locatedItems, Page page, int index, bool remove, out bool removed)
     {
+        removed = false;
+
+        for (int i = 0; i < locatedItems.Count; ++i)
+        {
+            LocatedItem item = locatedItems[i];
+            if (item.IsRemoved || item.Page != page || item.Index < index)
+                continue;
+
+            if (item.Index == index)
+            {
+                if (!remove)
+                    continue;
+
+                item.IsRemoved = true;
+                removed = true;
+            }
+            else
+            {
+                --item.Index;
+            }
+
+            locatedItems[i] = item;
+        }
+    }
+
+    private void AddOrDropItem(PlayerInventory inventory, ItemTrackingPlayerComponent itemTracking, Item item, IPageItem? pageItem, out Page page, out byte index, out bool isDropped, ref bool hasPlayedEffect)
+    {
+        if (pageItem != null && inventory.tryAddItem(item, pageItem.X, pageItem.Y, (byte)pageItem.Page, pageItem.Rotation))
+        {
+            page = pageItem.Page;
+            index = inventory.items[(int)page].getIndex(pageItem.X, pageItem.Y);
+            if (inventory.getItem((byte)page, index).item == item)
+            {
+                RemoveItemFromTracking(item, itemTracking);
+                isDropped = false;
+                return;
+            }
+        }
+
         isDropped = false;
         for (int pg = PlayerInventory.SLOTS; pg < PlayerInventory.STORAGE; ++pg)
         {
@@ -322,16 +436,28 @@ public class KitLayoutService
 
             page = (Page)pg;
             index = (byte)(invPage.getItemCount() - 1);
+            if (pageItem != null)
+            {
+                ItemJar newItem = invPage.getItem(index);
+                AddTransformation(itemTracking, pageItem.Page, page, pageItem.X, pageItem.Y, newItem.x, newItem.y, item);
+            }
+
             return;
         }
 
         for (int pg = 0; pg < PlayerInventory.SLOTS; ++pg)
         {
-            if (!inventory.items[pg].tryAddItem(item, true))
+            SDG.Unturned.Items invPage = inventory.items[pg];
+            if (!invPage.tryAddItem(item, true))
                 continue;
 
             page = (Page)pg;
             index = 0;
+            if (pageItem != null)
+            {
+                ItemJar newItem = invPage.getItem(0);
+                AddTransformation(itemTracking, pageItem.Page, page, pageItem.X, pageItem.Y, newItem.x, newItem.y, item);
+            }
             return;
         }
 
@@ -341,6 +467,10 @@ public class KitLayoutService
         isDropped = true;
         page = (Page)byte.MaxValue;
         index = byte.MaxValue;
+        if (pageItem != null)
+        {
+            AddDropTransformation(itemTracking, pageItem.Page, pageItem.X, pageItem.Y, item);
+        }
     }
 
     private static void AddTransformation(ItemTrackingPlayerComponent itemTracking, Page oldPage, Page newPage, byte oldX, byte oldY, byte newX, byte newY, Item item)
@@ -355,7 +485,7 @@ public class KitLayoutService
             if (transformation.OldPage != newPage || transformation.OldX != newX || transformation.OldY != newY)
                 itemTracking.ItemTransformations[t] = new ItemTransformation(transformation.OldPage, newPage, transformation.OldX, transformation.OldY, newX, newY, item);
             else
-                itemTracking.ItemTransformations.RemoveAt(t);
+                itemTracking.ItemTransformations.RemoveAtFast(t);
             foundTransformation = true;
             break;
         }
@@ -369,7 +499,7 @@ public class KitLayoutService
             if (transformation.Item != item)
                 continue;
 
-            itemTracking.ItemDropTransformations.RemoveAt(t);
+            itemTracking.ItemDropTransformations.RemoveAtFast(t);
             if (transformation.OldPage != newPage || transformation.OldX != newX || transformation.OldY != newY)
                 itemTracking.ItemTransformations.Add(new ItemTransformation(transformation.OldPage, newPage, transformation.OldX, transformation.OldY, newX, newY, item));
             foundTransformation = true;
@@ -389,7 +519,7 @@ public class KitLayoutService
             if (transformation.Item != item)
                 continue;
 
-            itemTracking.ItemTransformations.RemoveAt(t);
+            itemTracking.ItemTransformations.RemoveAtFast(t);
             itemTracking.ItemDropTransformations.Add(new ItemDropTransformation(transformation.OldPage, transformation.OldX, transformation.OldY, item));
             foundTransformation = true;
             break;
@@ -419,7 +549,9 @@ public class KitLayoutService
     {
         public Item Item;
         public ItemJar Jar;
+        public IPageItem? PageItem;
         public byte Index;
         public Page Page;
+        public bool IsRemoved;
     }
 }
