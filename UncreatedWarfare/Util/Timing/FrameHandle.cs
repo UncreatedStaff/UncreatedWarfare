@@ -1,18 +1,21 @@
 using System;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace Uncreated.Warfare.Util.Timing;
 
 /// <summary>
 /// Allows capturing the current frame and later checking if something happened in the same frame.
 /// </summary>
+[StructLayout(LayoutKind.Explicit, Size = sizeof(int))]
 public readonly struct FrameHandle
 {
- #pragma warning disable CS0649
+#pragma warning disable CS0649
 
+    [FieldOffset(0)]
     private readonly int _ticks;
 
- #pragma warning restore CS0649
+#pragma warning restore CS0649
 
     /// <summary>
     /// If the handle was ever initialized. Use <see cref="IsActive"/> to check if it is from the current frame.

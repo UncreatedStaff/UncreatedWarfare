@@ -38,6 +38,7 @@ public partial class EventDispatcher : IHostedService, IDisposable
     private const int BitEnsureMainThread = 4;
     private const int BitRequireActiveLayout = 8;
     private const int BitRequireNextFrame = 16;
+    private const int BitMustRunLast = 32;
 
     private readonly WarfareModule _warfare;
     private readonly IPlayerService _playerService;
@@ -340,7 +341,12 @@ public partial class EventDispatcher : IHostedService, IDisposable
                 try
                 {
                     if (eventArgs is ICancellable { IsCancelled: true })
+                    {
+                        // check if a MustRunLast cancelled (they shouldn't be allowed to)
+                        if (i > 0 && (underlying[i - 1].Flags & BitMustRunLast) != 0)
+                            throw new InvalidOperationException($"Event cancelled by a listener using 'MustRunLast': {underlying[i - 1].Model} in {underlying[i - 1].Listener.GetType()}.");
                         break;
+                    }
 
                     // RequireNextFrame
                     if (!hasSkippedToNextFrame && (underlying[i].Flags & BitRequireNextFrame) != 0)
@@ -1095,7 +1101,9 @@ public partial class EventDispatcher : IHostedService, IDisposable
                               | ((info.MustRunInstantly & !isAsync ? 1 : 0) * BitMustRunInstantly)
                               | ((info.EnsureMainThread ? 1 : 0) * BitEnsureMainThread)
                               | ((info.RequireActiveLayout ? 1 : 0) * BitRequireActiveLayout)
-                              | ((info.RequireNextFrame ? 1 : 0) * BitRequireNextFrame));
+                              | ((info.RequireNextFrame ? 1 : 0) * BitRequireNextFrame)
+                              | ((info.MustRunLast ? 1 : 0) * BitMustRunLast)
+                              );
     }
 
     private void GetInfo(Type modelType, bool isAsync, Type listenerType, out EventListenerInfo info)
@@ -1127,7 +1135,18 @@ public partial class EventDispatcher : IHostedService, IDisposable
             info.Priority = attribute.Priority;
             info.MustRunInstantly = attribute.MustRunInstantly;
             info.RequireActiveLayout = attribute.RequireActiveLayout;
-            info.RequireNextFrame = !info.MustRunInstantly && attribute.RequireNextFrame;
+            info.RequireNextFrame = attribute.RequireNextFrame;
+            info.MustRunLast = attribute.MustRunLast;
+        }
+
+        if (info is { MustRunLast: true, MustRunInstantly: true })
+        {
+            throw new NotSupportedException("Event listeners can not use the 'MustRunLast' and 'MustRunInstantly' properties together.");
+        }
+
+        if (info is { RequireNextFrame: true, MustRunInstantly: true })
+        {
+            throw new NotSupportedException("Event listeners can not use the 'RequireNextFrame' and 'MustRunInstantly' properties together.");
         }
 
         if (isAsync && info.MustRunInstantly)
@@ -1180,15 +1199,33 @@ public partial class EventDispatcher : IHostedService, IDisposable
 
     private static int CompareEventListenerResults(ref EventListenerResult a, ref EventListenerResult b)
     {
-        // handle MustRunInstantly then compare priority
-        int cmp = (a.Flags & BitMustRunInstantly) != (b.Flags & BitMustRunInstantly) ? (b.Flags & BitMustRunInstantly) - 1 : b.Priority.CompareTo(a.Priority);
-        if (cmp != 0)
-            return cmp;
+        // handle MustRunLast
+        if ((a.Flags & BitMustRunLast) != 0)
+        {
+            if ((b.Flags & BitMustRunLast) == 0)
+                return -1;
+
+            int cmp = b.Priority.CompareTo(a.Priority);
+            if (cmp != 0)
+                return cmp;
+        }
+        else if ((b.Flags & BitMustRunLast) != 0)
+        {
+            return 1;
+        }
+        else
+        {
+            // handle MustRunInstantly then compare priority
+            int cmp = (a.Flags & BitMustRunInstantly) != (b.Flags & BitMustRunInstantly) ? (b.Flags & BitMustRunInstantly) - 1 : b.Priority.CompareTo(a.Priority);
+            if (cmp != 0)
+                return cmp;
+        }
+
 
         if (a.Model is not null && b.Model is not null && a.Model != b.Model)
         {
             // IEventListener<IPlayerEvent> comes before IEventListener<PlayerXxxArgs : PlayerEvent>
-            cmp = !b.Model.IsAssignableFrom(a.Model) ? -(a.Model.IsAssignableFrom(b.Model) ? 1 : 0) : 1;
+            int cmp = !b.Model.IsAssignableFrom(a.Model) ? -(a.Model.IsAssignableFrom(b.Model) ? 1 : 0) : 1;
             if (cmp != 0)
                 return cmp;
         }
@@ -1213,6 +1250,7 @@ public partial class EventDispatcher : IHostedService, IDisposable
         public bool EnsureMainThread;
         public bool MustRunInstantly;
         public bool RequireNextFrame;
+        public bool MustRunLast;
         public MethodInfo Method;
     }
 
@@ -1227,6 +1265,7 @@ public partial class EventDispatcher : IHostedService, IDisposable
         //       2 (4 ): EnsureMainThread
         //       3 (8 ): RequireActiveLayout
         //       4 (16): RequireNextFrame
+        //       5 (32): MustRunLast
         public byte Flags;
         public int Priority;
     }

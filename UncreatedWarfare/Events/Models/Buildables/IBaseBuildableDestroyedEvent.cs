@@ -2,13 +2,36 @@ using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Events.Models.Barricades;
+using Uncreated.Warfare.Events.Models.Structures;
 
-namespace Uncreated.Warfare.Events.Models;
+namespace Uncreated.Warfare.Events.Models.Buildables;
 
 /// <summary>
-/// Represents all event args in which a barricade or structure was destroyed.
+/// Invoked when a barricade or structure is destroyed (<see cref="BarricadeDestroyed"/> and <see cref="StructureDestroyed"/>)
 /// </summary>
-public interface IBuildableDestroyedEvent
+public interface IBuildableDestroyedEvent : IBaseBuildableDestroyedEvent;
+
+/// <summary>
+/// Invoked when a barricade or structure is about to be damaged (<see cref="DamageBarricadeRequested"/> and <see cref="DamageStructureRequested"/>).
+/// </summary>
+public interface IDamageBuildableRequestedEvent : ICancellable, IBaseBuildableDestroyedEvent
+{
+    /// <summary>
+    /// The amount of damage to be done to the buildable.
+    /// </summary>
+    ushort PendingDamage { get; }
+}
+
+/// <summary>
+/// Invoked when a player is about to salvage a buildable (<see cref="SalvageBarricadeRequested"/> and <see cref="SalvageStructureRequested"/>).
+/// </summary>
+public interface ISalvageBuildableRequestedEvent : IBaseBuildableDestroyedEvent;
+
+/// <summary>
+/// Represents all event args in which a barricade or structure was destroyed or a destruction is/was requested.
+/// </summary>
+public interface IBaseBuildableDestroyedEvent
 {
     /// <summary>
     /// Player that destroyed the buildable.
@@ -41,11 +64,6 @@ public interface IBuildableDestroyedEvent
     RegionCoord RegionPosition { get; }
 
     /// <summary>
-    /// Region in which the buildable was.
-    /// </summary>
-    object Region { get; }
-
-    /// <summary>
     /// Origin of the damage that caused the buildable to be destroyed.
     /// </summary>
     EDamageOrigin DamageOrigin { get; }
@@ -69,4 +87,15 @@ public interface IBuildableDestroyedEvent
     /// The team that was responsible for the buildable being destroyed.
     /// </summary>
     Team InstigatorTeam { get; }
+
+    /// <summary>
+    /// The index of the vehicle region in <see cref="BarricadeManager.vehicleRegions"/>. <see cref="ushort.MaxValue"/> if the buildable is not planted.
+    /// </summary>
+    /// <remarks>Also known as 'plant'.</remarks>
+    ushort VehicleRegionIndex { get; }
+
+    /// <summary>
+    /// If this buildable was placed on a vehicle.
+    /// </summary>
+    bool IsOnVehicle { get; }
 }

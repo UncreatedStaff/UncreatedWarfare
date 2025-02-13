@@ -1,6 +1,7 @@
 using System;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Events.Components;
+using Uncreated.Warfare.Events.Models.Buildables;
 using Uncreated.Warfare.Events.Models.Structures;
 using Uncreated.Warfare.Events.Patches;
 using Uncreated.Warfare.Layouts.Teams;
@@ -99,10 +100,11 @@ partial class EventDispatcher
             return;
         }
 
-        SalvageStructureRequested args = new SalvageStructureRequested(region)
+        SalvageStructureRequested args = new SalvageStructureRequested
         {
             Player = player,
             InstanceId = structure.instanceID,
+            Region = region,
             Structure = structure,
             ServersideData = structure.GetServersideData(),
             RegionPosition = new RegionCoord(x, y),
@@ -203,7 +205,7 @@ partial class EventDispatcher
 
         WarfarePlayer? player = _playerService.GetOnlinePlayerOrNull(instigatorSteamId);
 
-        DamageStructureRequested args = new DamageStructureRequested(region)
+        DamageStructureRequested args = new DamageStructureRequested
         {
             InstigatorId = instigatorSteamId,
             Instigator = player,
@@ -216,9 +218,10 @@ partial class EventDispatcher
             SecondaryAsset = null,
 
             RegionPosition = new RegionCoord(x, y),
+            Region = region,
             ServersideData = drop.GetServersideData(),
             RegionIndex = (ushort)index,
-            Damage = pendingTotalDamage,
+            PendingDamage = pendingTotalDamage,
             Direction = StructureManagerSaveDirecction.LastDirection,
             InstigatorTeam = player?.Team ?? Team.NoTeam
         };
@@ -231,7 +234,7 @@ partial class EventDispatcher
             _ignoreStructureManagerOnDamageStructureRequested = true;
             try
             {
-                StructureManager.damage(args.Transform, args.Direction, (ushort)Math.Clamp(args.Damage, 0f, ushort.MaxValue), 1, false, args.InstigatorId, args.DamageOrigin);
+                StructureManager.damage(args.Transform, args.Direction, (ushort)Math.Clamp(((DamageRequested)args).PendingDamage, 0f, ushort.MaxValue), 1, false, args.InstigatorId, args.DamageOrigin);
             }
             finally
             {
@@ -240,6 +243,6 @@ partial class EventDispatcher
         });
 
         if (shouldAllow)
-            pendingTotalDamage = (ushort)Math.Clamp(args.Damage, 0f, ushort.MaxValue);
+            pendingTotalDamage = (ushort)Math.Clamp(((DamageRequested)args).PendingDamage, 0f, ushort.MaxValue);
     }
 }

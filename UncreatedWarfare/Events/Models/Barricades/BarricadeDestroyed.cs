@@ -1,5 +1,6 @@
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Events.Models.Buildables;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 
@@ -10,7 +11,7 @@ namespace Uncreated.Warfare.Events.Models.Barricades;
 /// </summary>
 public class BarricadeDestroyed : IBuildableDestroyedEvent
 {
-    private IBuildable? _buildableCache;
+    protected IBuildable? BuildableCache;
 
     /// <summary>
     /// Player that destroyed the barricade, if any.
@@ -84,13 +85,12 @@ public class BarricadeDestroyed : IBuildableDestroyedEvent
     public Transform Transform => Barricade.model;
 
     /// <summary>
-    /// If this barricade is being placed on a vehicle.
+    /// If this barricade was placed on a vehicle.
     /// </summary>
     public bool IsOnVehicle => VehicleRegionIndex != ushort.MaxValue;
 
     /// <summary>
     /// Abstracted <see cref="IBuildable"/> of the barricade.
     /// </summary>
-    public IBuildable Buildable => _buildableCache ??= new BuildableBarricade(Barricade);
-    object IBuildableDestroyedEvent.Region => Region;
+    public IBuildable Buildable => BuildableCache ??= new BuildableBarricade(Barricade);
 }

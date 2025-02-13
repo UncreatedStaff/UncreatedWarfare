@@ -1,19 +1,17 @@
 using Uncreated.Warfare.Buildables;
-using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Events.Models.Structures;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Models.Buildables;
 using Uncreated.Warfare.Players;
 
-namespace Uncreated.Warfare.Events.Models;
+namespace Uncreated.Warfare.Events.Models.Buildables;
 
 /// <summary>
 /// Base class for <see cref="DamageBarricadeRequested"/> and <see cref="DamageStructureRequested"/>.
 /// </summary>
-public abstract class DamageRequested(object region) : CancellableEvent, IBuildableDestroyedEvent
+public abstract class DamageRequested : CancellableEvent
 {
-    protected readonly object RegionObj = region;
     protected IBuildable? BuildableCache;
     protected BuildableSave? SaveCache;
 
@@ -56,16 +54,10 @@ public abstract class DamageRequested(object region) : CancellableEvent, IBuilda
     /// Total damage to do to the buildable.
     /// </summary>
     /// <remarks>Can be changed.</remarks>
-    public required float Damage { get; set; }
+    public required ushort PendingDamage { get; set; }
 
     /// <summary>
     /// The team that was responsible for the buildable being destroyed.
     /// </summary>
     public required Team InstigatorTeam { get; init; }
-
-    bool IBuildableDestroyedEvent.WasSalvaged => false;
-    EDamageOrigin IBuildableDestroyedEvent.DamageOrigin => EDamageOrigin.Unknown;
-    IAssetLink<ItemAsset>? IBuildableDestroyedEvent.PrimaryAsset => null;
-    IAssetLink<ItemAsset>? IBuildableDestroyedEvent.SecondaryAsset => null;
-    object IBuildableDestroyedEvent.Region => RegionObj;
 }

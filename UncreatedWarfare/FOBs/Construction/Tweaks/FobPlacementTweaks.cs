@@ -6,6 +6,7 @@ using System.Linq;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Barricades;
+using Uncreated.Warfare.Events.Models.Buildables;
 using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Interaction;
@@ -16,7 +17,7 @@ using Uncreated.Warfare.Zones;
 namespace Uncreated.Warfare.FOBs.Construction.Tweaks;
 
 public class FobPlacementTweaks :
-    IEventListener<PlaceBarricadeRequested>
+    IEventListener<IPlaceBuildableRequestedEvent>
 {
     private readonly AssetConfiguration _assetConfiguration;
     private readonly FobManager _fobManager;
@@ -29,9 +30,9 @@ public class FobPlacementTweaks :
         _translations = translations.Value;
     }
 
-    public void HandleEvent(PlaceBarricadeRequested e, IServiceProvider serviceProvider)
+    public void HandleEvent(IPlaceBuildableRequestedEvent e, IServiceProvider serviceProvider)
     {
-        if (_assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:Gameplay:FobUnbuilt").Guid != e.Barricade.asset.GUID)
+        if (_assetConfiguration.GetAssetLink<ItemPlaceableAsset>("Buildables:Gameplay:FobUnbuilt").MatchAsset(e.Asset))
             return;
 
         if (e.OriginalPlacer == null)

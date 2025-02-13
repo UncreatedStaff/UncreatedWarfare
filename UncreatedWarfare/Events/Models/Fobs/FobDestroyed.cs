@@ -1,3 +1,4 @@
+using Uncreated.Warfare.Events.Models.Buildables;
 using Uncreated.Warfare.FOBs;
 
 namespace Uncreated.Warfare.Events.Models.Fobs;
@@ -15,5 +16,5 @@ public class FobDestroyed
     /// <summary>
     /// The event that caused the FOB to be destroyed.
     /// </summary>
-    public required IBuildableDestroyedEvent Event { get; init; }
+    public required IBaseBuildableDestroyedEvent Event { get; init; }
 }

@@ -483,3 +483,32 @@ public static class CollectionUtility
         return enumerable.ToArray();
     }
 }
+
+public class DistanceComparer<TValue> : IComparer<TValue>
+{
+    private readonly Vector3 _position;
+    private readonly Func<TValue, Vector3> _getPosition;
+    private readonly bool _horizontalDistanceOnly;
+    private readonly bool _reverse;
+
+    public DistanceComparer(Vector3 position, Func<TValue, Vector3> getPosition, bool horizontalDistanceOnly, bool reverse)
+    {
+        _position = position;
+        _getPosition = getPosition;
+        _horizontalDistanceOnly = horizontalDistanceOnly;
+        _reverse = reverse;
+    }
+
+    /// <inheritdoc />
+    public int Compare(TValue a, TValue b)
+    {
+        if (ReferenceEquals(a, b))
+            return 0;
+
+        Vector3 pA = _getPosition(a);
+        Vector3 pB = _getPosition(b);
+        float aDist = MathUtility.SquaredDistance(in pA, in _position, _horizontalDistanceOnly);
+        float bDist = MathUtility.SquaredDistance(in pB, in _position, _horizontalDistanceOnly);
+        return _reverse ? bDist.CompareTo(aDist) : aDist.CompareTo(bDist);
+    }
+}

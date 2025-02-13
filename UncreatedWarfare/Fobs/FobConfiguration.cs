@@ -34,7 +34,7 @@ public sealed class FobConfiguration : BaseAlternateConfigurationFile
         List<SupplyCrateInfo>? supplyCrates = UnderlyingConfiguration.GetSection("SupplyCrates").Get<List<SupplyCrateInfo>>();
         supplyCrates?.ForEach(crate =>
         {
-            crate.SupplyItemAsset ??= AssetLink.Empty<ItemBarricadeAsset>();
+            crate.SupplyItemAsset ??= AssetLink.Empty<ItemPlaceableAsset>();
             crate.PlacementEffect ??= AssetLink.Empty<EffectAsset>();
         });
         SupplyCrates = new ReadOnlyCollection<SupplyCrateInfo>((IList<SupplyCrateInfo>?)supplyCrates ?? Array.Empty<SupplyCrateInfo>());
@@ -42,7 +42,7 @@ public sealed class FobConfiguration : BaseAlternateConfigurationFile
         List<VehicleSupplyCrateInfo>? vehicleCrates = UnderlyingConfiguration.GetSection("VehicleOrdinanceCrates").Get<List<VehicleSupplyCrateInfo>>();
         vehicleCrates?.ForEach(crate =>
         {
-            crate.SupplyItemAsset ??= AssetLink.Empty<ItemBarricadeAsset>();
+            crate.SupplyItemAsset ??= AssetLink.Empty<ItemAsset>();
             crate.ResupplyEffect ??= AssetLink.Empty<EffectAsset>();
         });
         VehicleOrdinanceCrates = new ReadOnlyCollection<VehicleSupplyCrateInfo>((IList<VehicleSupplyCrateInfo>?)vehicleCrates ?? Array.Empty<VehicleSupplyCrateInfo>());

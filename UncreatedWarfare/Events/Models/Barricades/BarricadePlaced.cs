@@ -1,4 +1,5 @@
-﻿using Uncreated.Warfare.Buildables;
+using Uncreated.Warfare.Buildables;
+using Uncreated.Warfare.Events.Models.Buildables;
 using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Events.Models.Barricades;
@@ -6,7 +7,7 @@ namespace Uncreated.Warfare.Events.Models.Barricades;
 /// <summary>
 /// Event listener args which handles <see cref="BarricadeManager.onBarricadeSpawned"/>.
 /// </summary>
-public class BarricadePlaced
+public class BarricadePlaced : IBuildablePlacedEvent
 {
     protected IBuildable? BuildableCache;
 

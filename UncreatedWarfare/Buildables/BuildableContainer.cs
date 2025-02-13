@@ -2,6 +2,7 @@ using DanielWillett.ReflectionTools;
 using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Events.Models;
+using Uncreated.Warfare.Events.Models.Buildables;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Containers;
 using Uncreated.Warfare.Util.Timing;
@@ -133,7 +134,7 @@ public class BuildableContainer : MonoBehaviour, IComponentContainer<IBuildableC
     {
         lock (_components)
         {
-            foreach (var component in _components)
+            foreach (IBuildableComponent? component in _components)
                 component.Dispose();
         }
 
@@ -163,5 +164,5 @@ public interface ISalvageListener : ISalvageInfo
 /// </summary>
 public interface IDestroyInfo
 {
-    IBuildableDestroyedEvent? DestroyInfo { get; set; }
+    IBaseBuildableDestroyedEvent? DestroyInfo { get; set; }
 }

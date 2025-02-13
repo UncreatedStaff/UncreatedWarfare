@@ -1,6 +1,7 @@
 using SDG.NetTransport;
 using System;
 using Uncreated.Framework.UI;
+using Uncreated.Framework.UI.Data;
 using Uncreated.Framework.UI.Reflection;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Players;
@@ -12,13 +13,30 @@ namespace Uncreated.Warfare.Layouts.UI;
 [UnturnedUI(BasePath = "Canvas")]
 public class StagingUI : UnturnedUI
 {
+    private readonly Func<CSteamID, StagingUIData> _getStagingUIData;
+
     public readonly UnturnedLabel Top = new UnturnedLabel("Top");
     public readonly UnturnedLabel Bottom = new UnturnedLabel("Bottom");
-    public StagingUI(AssetConfiguration assetConfig, ILoggerFactory loggerFactory) : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:Header"), staticKey: true) { }
+
+    public StagingUI(AssetConfiguration assetConfig, ILoggerFactory loggerFactory) : base(loggerFactory,
+        assetConfig.GetAssetLink<EffectAsset>("UI:Header"), staticKey: true)
+    {
+        _getStagingUIData = GetUIData;
+    }
     public void SetText(ITransportConnection connection, string top, string bottom)
     {
         Top.SetText(connection, top);
         Bottom.SetText(connection, bottom);
+    }
+
+    private StagingUIData GetOrAddUIData(CSteamID steam64)
+    {
+        return GetOrAddData(steam64, _getStagingUIData);
+    }
+
+    private StagingUIData GetUIData(CSteamID steam64)
+    {
+        return new StagingUIData(steam64, this);
     }
 
     /// <summary>
@@ -32,6 +50,7 @@ public class StagingUI : UnturnedUI
         string msg = FormattingUtility.ToCountdownString(timeLeft, withHours: false);
         string translatedName = name.Translate(player.Locale.LanguageInfo, string.Empty);
         SendToPlayer(player.Connection, translatedName, msg);
+        GetOrAddUIData(player.Steam64).HasUI = true;
     }
 
     /// <summary>
@@ -41,18 +60,28 @@ public class StagingUI : UnturnedUI
     {
         string translatedName = name.Translate(player.Locale.LanguageInfo, string.Empty);
         SendToPlayer(player.Connection, translatedName, string.Empty);
+        GetOrAddUIData(player.Steam64).HasUI = true;
     }
 
     /// <summary>
     /// Update the timer for <paramref name="player"/>.
     /// </summary>
-    public void UpdateForPlayer(WarfarePlayer player, TimeSpan timeLeft)
+    public void UpdateForPlayer(WarfarePlayer player, TranslationList name, TimeSpan timeLeft)
     {
         if (timeLeft < TimeSpan.Zero)
             timeLeft = default;
 
+        StagingUIData data = GetOrAddUIData(player.Steam64);
         string msg = FormattingUtility.ToCountdownString(timeLeft, withHours: false);
-        Bottom.SetText(player.Connection, msg);
+        if (data.HasUI)
+        {
+            Bottom.SetText(player.Connection, msg);
+        }
+        else
+        {
+            SendToPlayer(player.Connection, name.Translate(player.Locale.LanguageInfo, string.Empty), msg);
+            data.HasUI = true;
+        }
     }
 
     /// <summary>
@@ -68,7 +97,10 @@ public class StagingUI : UnturnedUI
             string msg = FormattingUtility.ToCountdownString(timeLeft, withHours: false);
             string translatedName = name.Translate(set.Language, string.Empty);
             while (set.MoveNext())
+            {
+                GetOrAddUIData(set.Next.Steam64).HasUI = true;
                 SendToPlayer(set.Next.Connection, translatedName, msg);
+            }
         }
     }
 
@@ -81,14 +113,17 @@ public class StagingUI : UnturnedUI
         {
             string translatedName = name.Translate(set.Language, string.Empty);
             while (set.MoveNext())
+            {
+                GetOrAddUIData(set.Next.Steam64).HasUI = true;
                 SendToPlayer(set.Next.Connection, translatedName, string.Empty);
+            }
         }
     }
 
     /// <summary>
     /// Update the timer for all players in <paramref name="playerSets"/>.
     /// </summary>
-    public void UpdateForAll(LanguageSetEnumerator playerSets, TimeSpan timeLeft)
+    public void UpdateForAll(LanguageSetEnumerator playerSets, TranslationList name, TimeSpan timeLeft)
     {
         if (timeLeft < TimeSpan.Zero)
             timeLeft = default;
@@ -100,13 +135,45 @@ public class StagingUI : UnturnedUI
             if (!set.Team.IsValid)
             {
                 while (set.MoveNext())
+                {
+                    StagingUIData data = GetOrAddUIData(set.Next.Steam64);
+                    if (!data.HasUI)
+                        continue;
+
+                    data.HasUI = false;
                     ClearFromPlayer(set.Next.Connection);
+                }
             }
             else
             {
                 while (set.MoveNext())
-                    Bottom.SetText(set.Next, msg);
+                {
+                    StagingUIData data = GetOrAddUIData(set.Next.Steam64);
+                    if (data.HasUI)
+                    {
+                        Bottom.SetText(set.Next, msg);
+                    }
+                    else
+                    {
+                        SendToPlayer(set.Next.Connection, name.Translate(set.Language, string.Empty), msg);
+                        data.HasUI = true;
+                    }
+                }
             }
+        }
+    }
+
+    private class StagingUIData : IUnturnedUIData
+    {
+        public CSteamID Player { get; }
+        public UnturnedUI Owner { get; }
+        public bool HasUI { get; set; }
+        UnturnedUIElement? IUnturnedUIData.Element => null;
+
+        public StagingUIData(CSteamID player, UnturnedUI owner)
+        {
+            Player = player;
+            Owner = owner;
         }
     }
 }

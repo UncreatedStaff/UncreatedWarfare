@@ -153,14 +153,32 @@ public class LeaderboardPhase : BasePhase<PhaseTeamSettings>, IDisposable, IEven
         if (Duration.Ticks <= 0)
             Duration = TimeSpan.FromSeconds(30d);
 
-        _leaderboardUi.Open(CreateLeaderboardSets(), this);
+        // try statement prevents the game loop from getting stuck after the leaderboard
+        try
+        {
+            _leaderboardUi.Open(CreateLeaderboardSets(), this);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error opening leaderboard.");
+
+            // skip leaderboard
+            Duration = TimeSpan.Zero;
+        }
 
         _ticker = _tickerFactory.CreateTicker(TimeSpan.FromSeconds(1d), invokeImmediately: true, queueOnGameThread: true, (_, timeSinceStart, _) =>
         {
             TimeSpan timeLeft = Duration - timeSinceStart;
             if (timeLeft.Ticks <= 0)
             {
-                _leaderboardUi.Close();
+                try
+                {
+                    _leaderboardUi.Close();
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, "Error closing leaderboard.");
+                }
                 Dispose();
                 UniTask.Create(() => _session.MoveToNextPhase(CancellationToken.None));
             }
@@ -217,7 +235,7 @@ public class LeaderboardPhase : BasePhase<PhaseTeamSettings>, IDisposable, IEven
 
             players[i].Stats[index] += amount;
 #if DEBUG
-            //Logger.LogDebug("Leaderboard stat updated {0}: {1} -> {2} (+{3}) for player {4} on team {5}.", PlayerStats[index].Name, players[i].Stats[index] - amount, players[i].Stats[index], amount, players[i].Player, teamIndex);
+            //Logger.LogConditional("Leaderboard stat updated {0}: {1} -> {2} (+{3}) for player {4} on team {5}.", PlayerStats[index].Name, players[i].Stats[index] - amount, players[i].Stats[index], amount, players[i].Player, teamIndex);
 #endif
             return;
         }

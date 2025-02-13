@@ -7,6 +7,7 @@ using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Layouts.Teams;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Cooldowns;
 using Uncreated.Warfare.Players.Extensions;
@@ -192,6 +193,7 @@ public class DeploymentComponent : MonoBehaviour, IPlayerComponent, IEventListen
 
         deployFrom?.OnDeployFrom(Player, in settings);
         deployable.OnDeployTo(Player, in settings);
+        ActionLog.Add(ActionLogType.DeployToLocation, deployable.ToString(), Player);
 
         PlayerDeployed args = new PlayerDeployed
         {

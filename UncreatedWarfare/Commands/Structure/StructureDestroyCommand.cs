@@ -96,9 +96,10 @@ internal sealed class StructureDestroyCommand : IExecutableCommand
         }
 
         // simulate salvaging the barricade
-        SalvageBarricadeRequested args = new SalvageBarricadeRequested(region)
+        SalvageBarricadeRequested args = new SalvageBarricadeRequested
         {
             Player = player,
+            Region = region,
             InstanceId = bDrop.instanceID,
             Barricade = bDrop,
             ServersideData = bDrop.GetServersideData(),
@@ -174,9 +175,10 @@ internal sealed class StructureDestroyCommand : IExecutableCommand
         }
 
         // simulate salvaging the structure
-        SalvageStructureRequested args = new SalvageStructureRequested(region)
+        SalvageStructureRequested args = new SalvageStructureRequested
         {
             Player = player,
+            Region = region,
             InstanceId = sDrop.instanceID,
             Structure = sDrop,
             ServersideData = sDrop.GetServersideData(),

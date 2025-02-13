@@ -18,6 +18,11 @@ public sealed class EventListenerAttribute : Attribute
     public bool MustRunInstantly { get; set; }
 
     /// <summary>
+    /// Lowest priority possible, ensures the event listener runs after any events could have cancelled the event. If an event with this flag cancels the event an exception will be thrown.
+    /// </summary>
+    public bool MustRunLast { get; set; }
+
+    /// <summary>
     /// Positive values run before negative values. 0 is neutral.
     /// </summary>
     /// <remarks>Defaults to 0.</remarks>

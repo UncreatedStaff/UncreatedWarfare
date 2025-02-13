@@ -4,8 +4,10 @@ using System.Linq;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Barricades;
+using Uncreated.Warfare.Events.Models.Buildables;
 using Uncreated.Warfare.Events.Models.Fobs;
 using Uncreated.Warfare.Events.Models.Items;
 using Uncreated.Warfare.Events.Models.Vehicles;
@@ -13,6 +15,7 @@ using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.FOBs.Entities;
 using Uncreated.Warfare.FOBs.Rallypoints;
+using Uncreated.Warfare.Fobs.SupplyCrates;
 using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.FOBs.SupplyCrates.VehicleResupply;
 using Uncreated.Warfare.Layouts.Teams;
@@ -25,14 +28,14 @@ using Uncreated.Warfare.Util.Timing;
 
 namespace Uncreated.Warfare.Fobs;
 public partial class FobManager :
-    IAsyncEventListener<BarricadePlaced>,
+    IEventListener<IBuildablePlacedEvent>,
     IEventListener<PlaceBarricadeRequested>,
-    IEventListener<BarricadeDestroyed>,
+    IEventListener<IBuildableDestroyedEvent>,
     IEventListener<ItemDropped>,
     IEventListener<VehicleSpawned>,
     IEventListener<VehicleDespawned>,
     IEventListener<TriggerTrapRequested>,
-    IEventListener<BarricadePreDamaged>
+    IEventListener<IDamageBuildableRequestedEvent>
 {
     private bool IsTrapTooNearFobSpawn(in Vector3 pos)
     {
@@ -67,25 +70,25 @@ public partial class FobManager :
         if (IsTrapTooNearFobSpawn(in pos))
             e.Cancel();
     }
-    async UniTask IAsyncEventListener<BarricadePlaced>.HandleEventAsync(BarricadePlaced e, IServiceProvider serviceProvider, CancellationToken token)
-    {
-        await UniTask.NextFrame();
 
+    [EventListener(RequireNextFrame = true)]
+    void IEventListener<IBuildablePlacedEvent>.HandleEvent(IBuildablePlacedEvent e, IServiceProvider serviceProvider)
+    {
         // if barricade is Fob foundation, register a new Fob, or find the existing fob at this poisition
-        if (_assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:Gameplay:FobUnbuilt").MatchAsset(e.Barricade.asset))
+        if (_assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:Gameplay:FobUnbuilt").MatchAsset(e.Buildable.Asset))
         {
             // only register a new Fob with this foundation if it doesn't belong to an existing one.
             // this can happen after a built Fob is destroyed after which the foundation is replaced.
             BunkerFob? unbuiltFob = FindBuildableFob<BunkerFob>(e.Buildable);
             if (unbuiltFob == null)
             {
-                unbuiltFob = RegisterBunkerFob(new BuildableBarricade(e.Barricade));
+                unbuiltFob = RegisterBunkerFob(e.Buildable);
             }
 
             // fobs need their own special shoveable with a completed event
             if (TryCreateShoveable(e.Buildable, e.Owner, out ShovelableBuildable? shovelable, shouldConsumeSupplies: !unbuiltFob.HasBeenRebuilt))
             {
-                shovelable!.OnComplete = completedBuildable =>
+                shovelable!.OnComplete += completedBuildable =>
                 {
                     if (unbuiltFob == null)
                         return;
@@ -97,7 +100,7 @@ public partial class FobManager :
             return;
         }
         // if it's the player's faction's rally point, register a new rally point
-        if (e.Owner != null && e.Owner.IsInSquad() && e.Owner.Team.Faction.RallyPoint.MatchAsset(e.Barricade.asset))
+        if (e.Owner != null && e.Owner.IsInSquad() && e.Owner.Team.Faction.RallyPoint.MatchAsset(e.Buildable.Asset))
         {
             RegisterFob(new RallyPoint(e.Buildable, e.Owner.GetSquad()!, serviceProvider));
             return;
@@ -124,6 +127,7 @@ public partial class FobManager :
             RegisterFobEntity(new FortificationEntity(buildable));
         }
     }
+
     private bool TryCreateShoveable(IBuildable buildable, WarfarePlayer? placer, out ShovelableBuildable? shovelable, bool shouldConsumeSupplies = true)
     {
         shovelable = null;
@@ -151,7 +155,7 @@ public partial class FobManager :
         return true;
     }
 
-    public void HandleEvent(BarricadeDestroyed e, IServiceProvider serviceProvider)
+    void IEventListener<IBuildableDestroyedEvent>.HandleEvent(IBuildableDestroyedEvent e, IServiceProvider serviceProvider)
     {
         IBuildableFob? fob = FindBuildableFob<IBuildableFob>(e.Buildable);
         if (fob is BunkerFob buildableFob)
@@ -160,14 +164,10 @@ public partial class FobManager :
             {
                 _logger.LogInformation("Replacing FOB foundation with unbuilt...");
 
-                Transform transform = BarricadeManager.dropNonPlantedBarricade(
-                    new Barricade(_assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:Gameplay:FobUnbuilt").GetAssetOrFail()),
-                    e.Buildable.Position,
-                    e.Buildable.Rotation,
-                    e.Buildable.Owner.m_SteamID,
-                    e.Buildable.Group.m_SteamID
-                );
-                buildableFob.MarkUnbuilt(new BuildableBarricade(BarricadeManager.FindBarricadeByRootTransform(transform)));
+                ItemPlaceableAsset unbuiltFob = _assetConfiguration.GetAssetLink<ItemPlaceableAsset>("Buildables:Gameplay:FobUnbuilt").GetAssetOrFail();
+
+                IBuildable buildable = e.Buildable.ReplaceBuildable(unbuiltFob, destroyOld: false);
+                buildableFob.MarkUnbuilt(buildable);
 
                 _logger.LogInformation("FOB foundation successfully replaced with unbuilt version.");
 
@@ -212,37 +212,43 @@ public partial class FobManager :
 
         _entities.RemoveAll(en => en is IBuildableFobEntity bfe && bfe.Buildable.Equals(e.Buildable));
     }
-    public void HandleEvent(ItemDropped e, IServiceProvider serviceProvider)
+
+    void IEventListener<ItemDropped>.HandleEvent(ItemDropped e, IServiceProvider serviceProvider)
     {
         if (e.Item == null || e.DroppedItem == null)
             return;
 
-        SupplyCrateInfo? supplyCrateInfo = Configuration.SupplyCrates.FirstOrDefault(s => s.SupplyItemAsset.MatchAsset(e.Item.GetAsset()));
+        ItemAsset asset = e.Item.GetAsset();
+        SupplyCrateInfo? supplyCrateInfo = Configuration.SupplyCrates.FirstOrDefault(s => s.SupplyItemAsset.MatchAsset(asset));
 
         if (supplyCrateInfo != null)
         {
-            new FallingBuildable(
+            _ = new FallingBuildable(
                 e.DroppedItem,
                 supplyCrateInfo.SupplyItemAsset.GetAssetOrFail(),
-                supplyCrateInfo.PlacementEffect.GetAssetOrFail(),
+                supplyCrateInfo.PlacementEffect?.GetAsset(),
                 e.Player.Position,
                 e.Player.Yaw,
-                (buildable) =>
+                buildable =>
                 {
-                    SupplyCrate supplyCrate = new(supplyCrateInfo, buildable, serviceProvider.GetRequiredService<ILoopTickerFactory>());
+                    SupplyCrate supplyCrate = new SupplyCrate(supplyCrateInfo, buildable, serviceProvider.GetRequiredService<ILoopTickerFactory>());
                     RegisterFobEntity(supplyCrate);
-                    NearbySupplyCrates.FromSingleCrate(supplyCrate, this).NotifyChanged(supplyCrate.Type, supplyCrate.SupplyCount, SupplyChangeReason.ResupplyFob, e.Player);
+
+                    NearbySupplyCrates
+                        .FromSingleCrate(supplyCrate, this)
+                        .NotifyChanged(supplyCrate.Type, supplyCrate.SupplyCount, SupplyChangeReason.ResupplyFob, e.Player);
                     
-                    if (supplyCrate.Type == SupplyType.Build)
-                        e.Player.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastGainBuild.Translate(supplyCrate.SupplyCount, e.Player)));
-                    else if (supplyCrate.Type == SupplyType.Ammo)
-                        e.Player.SendToast(new ToastMessage(ToastMessageStyle.Tip, serviceProvider.GetRequiredService<TranslationInjection<AmmoTranslations>>().Value.ToastGainAmmo.Translate(supplyCrate.SupplyCount, e.Player)));
+                    string tipMsg = supplyCrate.Type == SupplyType.Ammo
+                        ? serviceProvider.GetRequiredService<TranslationInjection<AmmoTranslations>>().Value.ToastGainAmmo.Translate(supplyCrate.SupplyCount, e.Player)
+                        : _translations.ToastGainBuild.Translate(supplyCrate.SupplyCount, e.Player);
+
+                    e.Player.SendToast(new ToastMessage(ToastMessageStyle.Tip, tipMsg));
                 }
             );
             return;
         }
         
-        VehicleSupplyCrateInfo? vehicleSupplyCrate = Configuration.VehicleOrdinanceCrates.FirstOrDefault(s => s.SupplyItemAsset.MatchAsset(e.Item.GetAsset()));
+        VehicleSupplyCrateInfo? vehicleSupplyCrate = Configuration.VehicleOrdinanceCrates.FirstOrDefault(s => s.SupplyItemAsset.MatchAsset(asset));
 
         if (vehicleSupplyCrate != null)
         {
@@ -255,7 +261,8 @@ public partial class FobManager :
             );
         }
     }
-    public void HandleEvent(VehicleSpawned e, IServiceProvider serviceProvider)
+
+    void IEventListener<VehicleSpawned>.HandleEvent(VehicleSpawned e, IServiceProvider serviceProvider)
     {
         ShovelableInfo? emplacementShoveable = Configuration.Shovelables.FirstOrDefault(s => s.Emplacement != null && s.Emplacement.Vehicle.MatchAsset(e.Vehicle.Vehicle.asset));
 
@@ -265,7 +272,8 @@ public partial class FobManager :
         RegisterFobEntity(new EmplacementEntity(e.Vehicle, emplacementShoveable.Foundation));
 
     }
-    public void HandleEvent(VehicleDespawned e, IServiceProvider serviceProvider)
+
+    void IEventListener<VehicleDespawned>.HandleEvent(VehicleDespawned e, IServiceProvider serviceProvider)
     {
         EmplacementEntity? emplacement = GetEmplacementFobEntity(e.Vehicle.Vehicle);
         if (emplacement == null)
@@ -274,7 +282,8 @@ public partial class FobManager :
         DeregisterFobEntity(emplacement);
     }
 
-    public void HandleEvent(BarricadePreDamaged e, IServiceProvider serviceProvider)
+    [EventListener(MustRunLast = true)]
+    void IEventListener<IDamageBuildableRequestedEvent>.HandleEvent(IDamageBuildableRequestedEvent e, IServiceProvider serviceProvider)
     {
         BunkerFob? correspondingFob = FindBuildableFob<BunkerFob>(e.Buildable);
         if (correspondingFob == null)
@@ -283,8 +292,8 @@ public partial class FobManager :
         if (!correspondingFob.IsBuilt) // only record damage on built fobs
             return;
 
-        if (e.Instigator != null)
-            correspondingFob.DamageTracker.RecordDamage(e.Instigator.Value, e.PendingDamage, e.DamageOrigin);
+        if (e.InstigatorId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
+            correspondingFob.DamageTracker.RecordDamage(e.InstigatorId, e.PendingDamage, e.DamageOrigin);
         else
             correspondingFob.DamageTracker.RecordDamage(e.DamageOrigin);
     }

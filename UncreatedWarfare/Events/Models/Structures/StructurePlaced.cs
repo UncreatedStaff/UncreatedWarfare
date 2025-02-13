@@ -1,12 +1,16 @@
-﻿using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Buildables;
+using Uncreated.Warfare.Events.Models.Buildables;
+using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Events.Models.Structures;
 
 /// <summary>
 /// Event listener args which handles <see cref="StructureManager.onStructureSpawned"/>.
 /// </summary>
-public class StructurePlaced
+public class StructurePlaced : IBuildablePlacedEvent
 {
+    protected IBuildable? BuildableCache;
+
     /// <summary>
     /// The owner of the structure, if they're online.
     /// </summary>
@@ -46,4 +50,13 @@ public class StructurePlaced
     /// The Unity model of the structure.
     /// </summary>
     public Transform Transform => Structure.model;
+
+    /// <summary>
+    /// Abstracted <see cref="IBuildable"/> of the barricade.
+    /// </summary>
+    public IBuildable Buildable => BuildableCache ??= new BuildableStructure(Structure);
+
+    ushort IBuildablePlacedEvent.VehicleRegionIndex => ushort.MaxValue;
+
+    bool IBuildablePlacedEvent.IsOnVehicle => false;
 }

@@ -1,20 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+using System;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.FOBs.Entities;
+
 public class EmplacementEntity : IFobEntity
 {
     public IBuildable? AuxilliaryBuildable { get; }
     public WarfareVehicle Vehicle { get; }
-    public Vector3 Position => Vehicle.Position;
-    public Quaternion Rotation => Vehicle.Rotation;
-
+    public Vector3 Position { get => Vehicle.Position; set => SetPosition(value); }
+    public Quaternion Rotation { get => Vehicle.Rotation; set => SetRotation(value); }
     public IAssetLink<Asset> IdentifyingAsset { get; }
-
     public EmplacementEntity(WarfareVehicle emplacementVehicle, IAssetLink<ItemPlaceableAsset> foundationAsset, IBuildable? foundation = null)
     {
         Vehicle = emplacementVehicle;
@@ -29,11 +27,34 @@ public class EmplacementEntity : IFobEntity
 
     public override int GetHashCode()
     {
-        return HashCode.Combine(IdentifyingAsset.Guid, Vehicle);
+        return HashCode.Combine(IdentifyingAsset, Vehicle);
     }
 
-    public void Dispose()
+    private void SetPosition(Vector3 position)
     {
-        // don't need to dispose anything
+        if (AuxilliaryBuildable == null)
+        {
+            Vehicle.Position = position;
+            return;
+        }
+
+        Vector3 offset = Vehicle.Position - AuxilliaryBuildable.Position;
+        Vehicle.Position = position;
+        AuxilliaryBuildable.Position = position - offset;
     }
+
+    private void SetRotation(Quaternion rotation)
+    {
+        Vehicle.Rotation = rotation;
+        if (AuxilliaryBuildable != null)
+            AuxilliaryBuildable.Rotation = rotation * BarricadeUtility.DefaultBarricadeRotation;
+    }
+
+    public void SetPositionAndRotation(Vector3 position, Quaternion rotation)
+    {
+        Vehicle.SetPositionAndRotation(position, rotation);
+        AuxilliaryBuildable?.SetPositionAndRotation(position, rotation);
+    }
+
+    bool ITransformObject.Alive => Vehicle.Alive;
 }

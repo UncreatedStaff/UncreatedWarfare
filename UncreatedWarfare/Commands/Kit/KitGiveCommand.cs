@@ -29,7 +29,11 @@ internal sealed class KitGiveCommand : IExecutableCommand
     {
         KitCommandLookResult kitArg = await _lookResolver.ResolveFromArgumentsOrLook(Context, 0, 0, KitInclude.Giveable, token).ConfigureAwait(false);
 
-        Context.TryGet(kitArg.OptionalArgumentStart, out _, out WarfarePlayer? player);
+        WarfarePlayer? player = null;
+        if (Context.HasArgs(kitArg.OptionalArgumentStart) && !Context.TryGet(kitArg.OptionalArgumentStart, out _, out player))
+        {
+            throw Context.SendPlayerNotFound();
+        }
 
         if (Equals(Context.Player, player))
         {

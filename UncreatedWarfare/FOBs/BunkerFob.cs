@@ -56,6 +56,6 @@ public class BunkerFob : ResourceFob
     }
     public override TimeSpan GetDelay(WarfarePlayer player)
     {
-        return TimeSpan.FromSeconds(_fobManager.Configuration.GetValue("FobDeployDelay", 10));
+        return TimeSpan.FromSeconds(FobManager.Configuration.GetValue("FobDeployDelay", 10));
     }
 }

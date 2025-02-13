@@ -1,11 +1,10 @@
-using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models;
-using Uncreated.Warfare.Events.Models.Barricades;
+using Uncreated.Warfare.Events.Models.Buildables;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.FOBs.Entities;
@@ -18,8 +17,8 @@ using Uncreated.Warfare.Util;
 namespace Uncreated.Warfare.FOBs.Construction.Tweaks;
 
 internal class ShoveableTweaks :
-    IEventListener<PlaceBarricadeRequested>,
-    IEventListener<MeleeHit>
+    IEventListener<IPlaceBuildableRequestedEvent>,
+    IEventListener<PlayerMeleeRequested>
 {
     private readonly AssetConfiguration _assetConfiguration;
     private readonly FobTranslations _translations;
@@ -41,105 +40,97 @@ internal class ShoveableTweaks :
         _fobManager = fobManager;
     }
 
-    public void HandleEvent(PlaceBarricadeRequested e, IServiceProvider serviceProvider)
+    void IEventListener<IPlaceBuildableRequestedEvent>.HandleEvent(IPlaceBuildableRequestedEvent e, IServiceProvider serviceProvider)
     {
         if (e.OriginalPlacer == null)
             return;
 
-        if (_assetConfiguration?.GetAssetLink<ItemBarricadeAsset>("Buildables:Gameplay:FobUnbuilt").Guid == e.Barricade.asset.GUID)
+        if (_assetConfiguration.GetAssetLink<ItemPlaceableAsset>("Buildables:Gameplay:FobUnbuilt").MatchAsset(e.Asset))
             return;
 
         ShovelableInfo? shovelableInfo = _fobManager.Configuration.Shovelables
-            .FirstOrDefault(s => s.Foundation != null && s.Foundation.Guid == e.Asset.GUID);
+            .FirstOrDefault(s => s.Foundation.MatchAsset(e.Asset));
 
         if (shovelableInfo == null)
             return;
 
         KitPlayerComponent kitComponent = e.OriginalPlacer.Component<KitPlayerComponent>();
 
-        bool enforcePerFobMax = shovelableInfo.MaxAllowedPerFob != null;
+        IAssetLink<ItemPlaceableAsset> buildableAsset = AssetLink.Create(e.Asset);
 
-        IAssetLink<ItemBarricadeAsset> barricade = AssetLink.Create(e.Barricade.asset);
-
-        bool barricadeInKit = false;
+        bool buildableInKit = false;
         Kit? cachedKit = kitComponent.CachedKit;
+        int maxAllowedInKit = 0;
         if (cachedKit != null)
         {
-            barricadeInKit = _kitItemResolver.ContainsItem(cachedKit, barricade, e.OriginalPlacer.Team);
+            maxAllowedInKit = _kitItemResolver.CountItems(cachedKit, buildableAsset, e.OriginalPlacer.Team);
+            buildableInKit = maxAllowedInKit > 0;
         }
 
-        //bool placerIsCombatEngineer = kitComponent.ActiveClass == Class.CombatEngineer;
-        //int maxAllowedInKit = kitComponent.CachedKit?.ItemModels.Count(i => i.Item.GetValueOrDefault().GetAssetLink<Asset>().MatchAsset(e.Barricade.asset)) ?? 0;
-        //IEnumerable<IBuildableFobEntity> similarPlacedByPlayer = _fobManager.Entities.OfType<IBuildableFobEntity>().Where(en =>
-        //        en.Buildable.Owner == e.OriginalPlacer.Steam64 &&
-        //        en.IdentifyingAsset.MatchAsset(e.Barricade.asset));
+        bool placerIsCombatEngineer = kitComponent.ActiveClass == Class.CombatEngineer;
 
-        //if (similarPlacedByPlayer.Count() >= maxAllowedInKit)
-        //{
-        //    // todo: remove the oldest barricade
-        //    IBuildableFobEntity oldest = similarPlacedByPlayer.OrderBy(f => f.Buildable.Model.GetOrAddComponent<BuildableContainer>().CreateTime).First();
-        //    oldest.Buildable.Destroy();
-        //}
-        if (enforcePerFobMax && !barricadeInKit)
+        List<IBuildableFobEntity> similarPlacedByPlayer = _fobManager.Entities
+            .OfType<IBuildableFobEntity>()
+            .Where(en => en.Buildable.Owner == e.OriginalPlacer.Steam64 && en.IdentifyingAsset.MatchAsset(buildableAsset))
+            .ToList();
+
+        if (similarPlacedByPlayer.Count >= maxAllowedInKit && similarPlacedByPlayer.Count > 0)
         {
-            ResourceFob? nearestFob = _fobManager?.FindNearestResourceFob(e.OriginalPlacer.Team, e.Position);
+            IBuildableFobEntity oldest = similarPlacedByPlayer
+                .Aggregate((oldest, next) => BuildableContainer.Get(oldest.Buildable).CreateTime < BuildableContainer.Get(next.Buildable).CreateTime ? oldest : next);
 
-            if (nearestFob == null)
-            {
-                _chatService.Send(e.OriginalPlacer, _translations.BuildNotInRadius);
-                e.Cancel();
-                return;
-            }
+            oldest.Buildable.Destroy();
+        }
 
-            if (nearestFob.BuildCount < shovelableInfo.SupplyCost)
-            {
-                _chatService.Send(e.OriginalPlacer, _translations.BuildMissingSupplies, nearestFob.BuildCount, shovelableInfo.SupplyCost);
-                e.Cancel();
-                return;
-            }
+        if (!shovelableInfo.MaxAllowedPerFob.HasValue || buildableInKit)
+            return;
 
-            IEnumerable<IFobEntity> fobEntities = nearestFob.GetEntities();
+        ResourceFob? nearestFob = _fobManager?.FindNearestResourceFob(e.OriginalPlacer.Team, e.Position);
 
-            int similarEntitiesCount = fobEntities.Count(en => en.IdentifyingAsset.MatchAsset(e.Barricade.asset));
-            if (similarEntitiesCount >= shovelableInfo.MaxAllowedPerFob)
-            {
-                _chatService.Send(e.OriginalPlacer, _translations.BuildLimitReached, shovelableInfo.MaxAllowedPerFob.Value, shovelableInfo);
-                e.Cancel();
-                return;
-            }
+        if (nearestFob == null && !(placerIsCombatEngineer && shovelableInfo.CombatEngineerCanPlaceAnywhere))
+        {
+            _chatService.Send(e.OriginalPlacer, _translations.BuildNotInRadius);
+            e.Cancel();
+            return;
+        }
+
+        if (nearestFob == null)
+        {
+            // combat engineer off FOB
+            return;
+        }
+
+        if (nearestFob.BuildCount < shovelableInfo.SupplyCost)
+        {
+            _chatService.Send(e.OriginalPlacer, _translations.BuildMissingSupplies, nearestFob.BuildCount, shovelableInfo.SupplyCost);
+            e.Cancel();
+            return;
+        }
+
+        IEnumerable<IFobEntity> fobEntities = nearestFob.EnumerateEntities();
+
+        int similarEntitiesCount = fobEntities.Count(en => en.IdentifyingAsset.MatchAsset(buildableAsset));
+        if (similarEntitiesCount >= shovelableInfo.MaxAllowedPerFob.Value)
+        {
+            _chatService.Send(e.OriginalPlacer, _translations.BuildLimitReached, shovelableInfo.MaxAllowedPerFob.Value, shovelableInfo);
+            e.Cancel();
         }
     }
-    public void HandleEvent(MeleeHit e, IServiceProvider serviceProvider)
+
+    // check melee ShovelableBuildable with entrenching tool
+    void IEventListener<PlayerMeleeRequested>.HandleEvent(PlayerMeleeRequested e, IServiceProvider serviceProvider)
     {
-        if (_assetConfiguration == null)
+        if (!_assetConfiguration.GetAssetLink<ItemAsset>("Items:EntrenchingTool").MatchAsset(e.Asset))
             return;
 
-        if (e.Equipment?.asset?.GUID == null)
-            return;
-
-        IAssetLink<ItemAsset> entrenchingTool = _assetConfiguration.GetAssetLink<ItemAsset>("Items:EntrenchingTool");
-        if (entrenchingTool.GetAssetOrFail().GUID != e.Equipment.asset.GUID)
-            return;
-
-        RaycastInfo raycast = DamageTool.raycast(new Ray(e.Look.aim.position, e.Look.aim.forward), 2, RayMasks.BARRICADE, e.Player.UnturnedPlayer);
-        if (raycast.transform == null)
-            return;
-
-        IBuildable? buildable = BuildableExtensions.GetBuildableFromRootTransform(raycast.transform);
+        IBuildable? buildable = BuildableExtensions.GetBuildableFromRootTransform(e.InputInfo.transform);
         if (buildable == null)
             return;
 
         if (buildable.Group != e.Player.Team.GroupId)
             return;
 
-        FobManager? fobManager = serviceProvider.GetService<FobManager>();
-        if (fobManager == null)
-            return;
-
-        ShovelableBuildable? shovelable = fobManager.GetBuildableFobEntity<ShovelableBuildable>(buildable);
-        if (shovelable == null)
-            return;
-
-        shovelable.Shovel(e.Player, raycast.point);
+        ShovelableBuildable? shovelable = _fobManager.GetBuildableFobEntity<ShovelableBuildable>(buildable);
+        shovelable?.Shovel(e.Player, e.InputInfo.point);
     }
 }

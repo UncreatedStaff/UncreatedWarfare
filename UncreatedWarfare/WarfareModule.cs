@@ -881,6 +881,8 @@ public sealed class WarfareModule
         bldr.RegisterType<PlayerChooseSpawnPointTweaks>()
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
+        bldr.RegisterType<KeepItemsAndStatsOnDeathTweak>()
+            .AsImplementedInterfaces();
         bldr.RegisterType<ShovelableWarningTweak>()
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);

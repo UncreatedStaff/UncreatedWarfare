@@ -1,5 +1,6 @@
-﻿using Uncreated.Warfare.Buildables;
+using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Events.Models.Buildables;
 
 
 namespace Uncreated.Warfare.Events.Models.Structures;
@@ -8,10 +9,10 @@ namespace Uncreated.Warfare.Events.Models.Structures;
 /// Event listener args which handles <see cref="StructureManager.onDamageStructureRequested"/>.
 /// </summary>
 [EventModel(SynchronizationContext = EventSynchronizationContext.Global, SynchronizedModelTags = [ "modify_inventory", "modify_world" ])]
-public sealed class DamageStructureRequested(StructureRegion region) : DamageRequested(region)
+public sealed class DamageStructureRequested : DamageRequested, IDamageBuildableRequestedEvent
 {
     /// <inheritdoc />
-    public override bool IsCancelled => base.IsCancelled || ServersideData.structure.isDead;
+    public override bool IsCancelled => base.IsCancelled || ServersideData.structure.isDead || PendingDamage < 1;
 
     /// <summary>
     /// The structure's object and model data.
@@ -37,7 +38,7 @@ public sealed class DamageStructureRequested(StructureRegion region) : DamageReq
     /// The item or vehicle that cause the damage to the structure. This may be an alternate item like the grenade thrown at a landmine, etc.
     /// </summary>
     public required IAssetLink<Asset>? SecondaryAsset { get; init; }
-    
+
     /// <summary>
     /// The direction the ragdoll is sent.
     /// </summary>
@@ -46,7 +47,7 @@ public sealed class DamageStructureRequested(StructureRegion region) : DamageReq
     /// <summary>
     /// The region the structure was placed in.
     /// </summary>
-    public StructureRegion Region => (StructureRegion)RegionObj;
+    public required StructureRegion Region { get; init; }
 
     /// <summary>
     /// Abstracted <see cref="IBuildable"/> of the structure.
@@ -57,4 +58,11 @@ public sealed class DamageStructureRequested(StructureRegion region) : DamageReq
     /// The Unity model of the structure.
     /// </summary>
     public override Transform Transform => Structure.model;
+
+    ushort IBaseBuildableDestroyedEvent.VehicleRegionIndex => ushort.MaxValue;
+    bool IBaseBuildableDestroyedEvent.IsOnVehicle => false;
+    bool IBaseBuildableDestroyedEvent.WasSalvaged => false;
+    EDamageOrigin IBaseBuildableDestroyedEvent.DamageOrigin => EDamageOrigin.Unknown;
+    IAssetLink<ItemAsset>? IBaseBuildableDestroyedEvent.PrimaryAsset => null;
+    IAssetLink<ItemAsset>? IBaseBuildableDestroyedEvent.SecondaryAsset => null;
 }

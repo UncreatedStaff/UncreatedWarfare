@@ -1,7 +1,4 @@
 using SDG.Framework.Utilities;
-using System;
-using Uncreated.Warfare.Buildables;
-using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.FOBs.SupplyCrates;
 
@@ -9,7 +6,8 @@ public abstract class FallingItem
 {
     protected ItemData ItemData;
     protected Vector3 FinalRestPosition => ItemData.point;
-    public FallingItem(ItemData itemData, Vector3 originalDropPosition)
+
+    protected FallingItem(ItemData itemData, Vector3 originalDropPosition)
     {
         ItemData = itemData;
         float distanceFallen = (originalDropPosition - FinalRestPosition).magnitude;
@@ -18,5 +16,6 @@ public abstract class FallingItem
 
         TimeUtility.InvokeAfterDelay(OnHitGround, secondsUntilConversion);
     }
+
     protected abstract void OnHitGround();
 }

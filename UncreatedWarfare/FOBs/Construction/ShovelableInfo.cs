@@ -9,6 +9,7 @@ public class ShovelableInfo : ITranslationArgument
     public required ShovelableType ConstuctionType { get; set; }
     public required int SupplyCost { get; set; }
     public int? MaxAllowedPerFob { get; set; }
+    public bool CombatEngineerCanPlaceAnywhere { get; set; }
     public IAssetLink<ItemPlaceableAsset>? CompletedStructure { get; set; }
     public IAssetLink<EffectAsset>? CompletedEffect { get; set; }
     public EmplacementInfo? Emplacement { get; set; }

@@ -24,7 +24,7 @@ namespace Uncreated.Warfare.Vehicles
         private readonly VehicleInfoStore _vehicleInfoStore;
         private readonly VehicleSpawnerStore _vehicleSpawnerStore;
 
-        private const float VehicleSpawnOffset = 5f;
+        public const float VehicleSpawnOffset = 5f;
         public const ushort MaxBatteryCharge = 10000;
 
         public IReadOnlyList<WarfareVehicle> Vehicles { get; }

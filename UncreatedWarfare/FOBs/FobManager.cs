@@ -19,6 +19,8 @@ namespace Uncreated.Warfare.Fobs;
 
 public partial class FobManager : ILayoutHostedService
 {
+    internal const float EmplacementSpawnOffset = 2f;
+
     private readonly FobTranslations _translations;
     private readonly AssetConfiguration _assetConfiguration;
     private readonly IServiceProvider _serviceProvider;
@@ -77,6 +79,19 @@ public partial class FobManager : ILayoutHostedService
         IFob? existing = _fobs.FindAndRemove(f => f == fob);
         if (existing == null)
             return false;
+
+        if (existing is IDisposable disposable)
+        {
+            try
+            {
+                disposable.Dispose();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, $"Error disposing FOB: {fob}.");
+            }
+        }
+
         _logger.LogDebug("Deregistered FOB: " + fob);
         _ = WarfareModule.EventDispatcher.DispatchEventAsync(new FobDeregistered { Fob = fob });
         return true;
@@ -99,7 +114,19 @@ public partial class FobManager : ILayoutHostedService
         IFobEntity? existing = _entities.FindAndRemove(f => f == entity);
         if (existing == null)
             return false;
-        existing.Dispose();
+
+        if (existing is IDisposable disposable)
+        {
+            try
+            {
+                disposable.Dispose();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, $"Error disposing FOB Entity: {entity}.");
+            }
+        }
+
         _logger.LogDebug("Deregistered FOB Entity: " + entity);
         return true;
     }

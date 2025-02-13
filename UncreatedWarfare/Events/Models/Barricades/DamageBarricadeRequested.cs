@@ -1,5 +1,6 @@
-﻿using Uncreated.Warfare.Buildables;
+using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Events.Models.Buildables;
 
 namespace Uncreated.Warfare.Events.Models.Barricades;
 
@@ -7,10 +8,10 @@ namespace Uncreated.Warfare.Events.Models.Barricades;
 /// Event listener args which handles <see cref="BarricadeManager.onDamageBarricadeRequested"/>.
 /// </summary>
 [EventModel(SynchronizationContext = EventSynchronizationContext.Global, SynchronizedModelTags = [ "modify_inventory", "modify_world" ])]
-public sealed class DamageBarricadeRequested(BarricadeRegion region) : DamageRequested(region)
+public sealed class DamageBarricadeRequested : DamageRequested, IDamageBuildableRequestedEvent
 {
     /// <inheritdoc />
-    public override bool IsCancelled => base.IsCancelled || ServersideData.barricade.isDead;
+    public override bool IsCancelled => base.IsCancelled || ServersideData.barricade.isDead || PendingDamage < 1;
 
     /// <summary>
     /// The barricade's object and model data.
@@ -40,7 +41,7 @@ public sealed class DamageBarricadeRequested(BarricadeRegion region) : DamageReq
     /// <summary>
     /// The region the barricade was placed in.
     /// </summary>
-    public BarricadeRegion Region => (BarricadeRegion)RegionObj;
+    public required BarricadeRegion Region { get; init; }
 
     /// <summary>
     /// Abstracted <see cref="IBuildable"/> of the barricade.
@@ -62,4 +63,9 @@ public sealed class DamageBarricadeRequested(BarricadeRegion region) : DamageReq
     /// If this barricade is placed on a vehicle.
     /// </summary>
     public bool IsOnVehicle => VehicleRegionIndex != ushort.MaxValue;
+
+    bool IBaseBuildableDestroyedEvent.WasSalvaged => false;
+    EDamageOrigin IBaseBuildableDestroyedEvent.DamageOrigin => EDamageOrigin.Unknown;
+    IAssetLink<ItemAsset>? IBaseBuildableDestroyedEvent.PrimaryAsset => null;
+    IAssetLink<ItemAsset>? IBaseBuildableDestroyedEvent.SecondaryAsset => null;
 }

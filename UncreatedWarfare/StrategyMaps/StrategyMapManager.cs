@@ -83,10 +83,14 @@ public class StrategyMapManager :
 
         _logger.LogDebug($"Registered new StrategyMap: {map}");
     }
+
     public void DeregisterStrategyMap(IBuildable buildable)
     {
         StrategyMap? map = _strategyMaps.FindAndRemove(m => m.MapTable.Equals(buildable));
-        map?.Dispose();
+        if (map == null)
+            return;
+
+        map.Dispose();
         _logger.LogDebug($"Deregistered StrategyMap: {map}");
     }
     public IEnumerable<StrategyMap> StrategyMapsOfTeam(Team team) => _strategyMaps.Where(s => s.MapTable.Group == team.GroupId);
