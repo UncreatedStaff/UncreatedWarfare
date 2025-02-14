@@ -75,7 +75,7 @@ internal sealed class ReportCommand : IExecutableCommand
 
         // it helps with testing to be able to report yourself in development
 #if RELEASE
-        if (steam64 == Context.CallerId)
+        if (onlinePlayer.Steam64 == Context.CallerId)
         {
             throw Context.Reply(_translations.CannotReportSelf);
         }
