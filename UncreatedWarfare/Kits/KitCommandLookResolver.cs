@@ -1,7 +1,8 @@
 using System;
+using System.Linq;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Interaction.Commands;
-using Uncreated.Warfare.Kits.Loadouts;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Signs;
 using Uncreated.Warfare.Translations;
 
@@ -11,13 +12,11 @@ public class KitCommandLookResolver
 {
     private readonly SignInstancer _signInstancer;
     private readonly KitCommandTranslations _translations;
-    private readonly LoadoutService _loadoutService;
     private readonly IKitDataStore _kitDataStore;
 
-    public KitCommandLookResolver(TranslationInjection<KitCommandTranslations> translations, SignInstancer signInstancer, LoadoutService loadoutService, IKitDataStore kitDataStore)
+    public KitCommandLookResolver(TranslationInjection<KitCommandTranslations> translations, SignInstancer signInstancer, IKitDataStore kitDataStore)
     {
         _signInstancer = signInstancer;
-        _loadoutService = loadoutService;
         _kitDataStore = kitDataStore;
         _translations = translations.Value;
     }
@@ -42,7 +41,7 @@ public class KitCommandLookResolver
             if (!ctx.TryGetBarricadeTarget(out barricade) || barricade.interactable is not InteractableSign)
                 throw ctx.Reply(_translations.KitOperationNoTarget);
             
-            kit = await GetSignTarget(ctx.CallerId, barricade, include, token).ConfigureAwait(false);
+            kit = await GetSignTarget(ctx.Player, barricade, include, token).ConfigureAwait(false);
             if (kit == null)
                 throw ctx.Reply(_translations.KitOperationNoTarget);
 
@@ -54,7 +53,7 @@ public class KitCommandLookResolver
         if (ctx.TryGetBarricadeTarget(out barricade) && barricade.interactable is InteractableSign)
         {
             //  kit give [other... ]
-            kit = await GetSignTarget(ctx.CallerId, barricade, include, token).ConfigureAwait(false);
+            kit = await GetSignTarget(ctx.Player, barricade, include, token).ConfigureAwait(false);
         }
 
         if (kit == null && ctx.TryGet(startArgument, out string? kitId))
@@ -80,7 +79,7 @@ public class KitCommandLookResolver
         return new KitCommandLookResult(kit, argIndex + requiredExtraArguments, argIndex, isSign);
     }
 
-    private async Task<Kit?> GetSignTarget(CSteamID player, BarricadeDrop sign, KitInclude include, CancellationToken token)
+    private async Task<Kit?> GetSignTarget(WarfarePlayer player, BarricadeDrop sign, KitInclude include, CancellationToken token)
     {
         await UniTask.SwitchToMainThread();
 
@@ -89,8 +88,15 @@ public class KitCommandLookResolver
 
         if (kitSign.LoadoutNumber >= 0)
         {
-            return await _loadoutService.GetLoadoutFromNumber(player, kitSign.LoadoutNumber, include, token)
-                                        .ConfigureAwait(false);
+            Kit? kit = player.Component<KitPlayerComponent>().Loadouts.ElementAtOrDefault(kitSign.LoadoutNumber - 1);
+
+            // include is at most Cached
+            if (kit == null || (include | KitInclude.Cached) == KitInclude.Cached)
+            {
+                return kit;
+            }
+
+            return await _kitDataStore.QueryKitAsync(kit.Key, include, token).ConfigureAwait(false);
         }
 
         return await _kitDataStore.QueryKitAsync(kitSign.KitId, include, token).ConfigureAwait(false);

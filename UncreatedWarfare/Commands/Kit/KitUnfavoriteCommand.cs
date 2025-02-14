@@ -1,7 +1,5 @@
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Kits.Loadouts;
-using Uncreated.Warfare.Signs;
 using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Commands;
@@ -31,7 +29,11 @@ internal sealed class KitUnfavoriteCommand : IExecutableCommand
 
         KitCommandLookResult lookResult = await _lookResolver.ResolveFromArgumentsOrLook(Context, 0, 0, KitInclude.Default, token).ConfigureAwait(false);
 
-        await _kitFavoriteService.RemoveFavorite(Context.CallerId, lookResult.Kit.Key, token).ConfigureAwait(false);
+        if (!await _kitFavoriteService.RemoveFavorite(Context.CallerId, lookResult.Kit.Key, token).ConfigureAwait(false))
+        {
+            throw Context.Reply(_translations.KitFavoriteAlreadyUnfavorited, lookResult.Kit);
+        }
+
         Context.Reply(_translations.KitUnfavorited, lookResult.Kit);
     }
 }

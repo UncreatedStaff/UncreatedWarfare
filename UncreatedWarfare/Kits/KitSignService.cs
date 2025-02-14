@@ -172,6 +172,9 @@ public class KitSignService
 
     private void UpdateSignsIntl(WarfarePlayer? player)
     {
+        if (player is { IsOnline: false })
+            return;
+
         // expects game thread
         if (player == null)
         {
@@ -185,6 +188,9 @@ public class KitSignService
 
     private void UpdateLoadoutSignsIntl(WarfarePlayer? player)
     {
+        if (player is { IsOnline: false })
+            return;
+
         // expects game thread
         if (player == null)
         {
@@ -198,6 +204,9 @@ public class KitSignService
 
     private void UpdateSignsIntl(Kit kit, WarfarePlayer? player)
     {
+        if (player is { IsOnline: false })
+            return;
+
         // expects game thread
         if (kit.Type == KitType.Loadout)
         {
@@ -232,6 +241,9 @@ public class KitSignService
 
     private void UpdateSignsIntl(string kitId, WarfarePlayer? player)
     {
+        if (player is { IsOnline: false })
+            return;
+
         // expects game thread
         int loadoutId = LoadoutIdHelper.Parse(kitId, out CSteamID s64);
         if (loadoutId != -1)

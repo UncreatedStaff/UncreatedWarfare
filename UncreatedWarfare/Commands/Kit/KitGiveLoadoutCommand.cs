@@ -27,7 +27,7 @@ internal sealed class KitGiveLoadoutCommand : IExecutableCommand
         _translations = translations.Value;
     }
 
-    public UniTask ExecuteAsync(CancellationToken token)
+    public async UniTask ExecuteAsync(CancellationToken token)
     {
         Context.AssertRanByPlayer();
 
@@ -39,8 +39,11 @@ internal sealed class KitGiveLoadoutCommand : IExecutableCommand
             throw Context.Reply(_translations.ClassNotFound);
         }
 
-        if (!Context.TryGet(1, out _, out WarfarePlayer? player, true) || player == null)
-            player = Context.Player;
+        (_, WarfarePlayer? player) = await Context.TryGetPlayer(1).ConfigureAwait(false);
+
+        await UniTask.SwitchToMainThread(token);
+
+        player ??= Context.HasArgument(1) ? throw Context.SendPlayerNotFound() : Context.Player;
 
         IReadOnlyList<IItem> items = _defaultLoadoutItemsConfiguration.GetDefaultsForClass(@class);
 
@@ -49,6 +52,5 @@ internal sealed class KitGiveLoadoutCommand : IExecutableCommand
         _itemDistributionService.GiveItems(items, player);
 
         Context.Reply(_translations.RequestDefaultLoadoutGiven, @class);
-        return UniTask.CompletedTask;
     }
 }

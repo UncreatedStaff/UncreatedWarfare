@@ -252,7 +252,7 @@ public static class PlayerServiceExtensions
         GameThread.AssertCurrent();
 
         List<WarfarePlayer> players = selection.ToList();
-        if (FormattingUtility.TryParseSteamId(searchTerm, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
+        if (SteamIdHelper.TryParseSteamId(searchTerm, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
         {
             return players.Find(x => x.Steam64.m_SteamID == steamId.m_SteamID);
         }
@@ -267,7 +267,7 @@ public static class PlayerServiceExtensions
     {
         GameThread.AssertCurrent();
 
-        if (FormattingUtility.TryParseSteamId(searchTerm, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
+        if (SteamIdHelper.TryParseSteamId(searchTerm, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
         {
             return playerService.GetOnlinePlayerOrNull(steamId.m_SteamID);
         }
@@ -287,7 +287,7 @@ public static class PlayerServiceExtensions
         }
 
         List<WarfarePlayer> players = selection.ToList();
-        if (FormattingUtility.TryParseSteamId(searchTerm, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
+        if (SteamIdHelper.TryParseSteamId(searchTerm, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
         {
             return players.Find(x => x.Steam64.m_SteamID == steamId.m_SteamID);
         }
@@ -305,7 +305,7 @@ public static class PlayerServiceExtensions
             return playerService.GetOnlinePlayerOrNull(searchTerm, culture, preferredName);
         }
 
-        if (FormattingUtility.TryParseSteamId(searchTerm, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
+        if (SteamIdHelper.TryParseSteamId(searchTerm, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
         {
             return playerService.GetOnlinePlayerOrNullThreadSafe(steamId.m_SteamID);
         }
@@ -322,7 +322,7 @@ public static class PlayerServiceExtensions
         GameThread.AssertCurrent();
 
         List<WarfarePlayer> players = selection.ToList();
-        if (FormattingUtility.TryParseSteamId(searchTerm, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
+        if (SteamIdHelper.TryParseSteamId(searchTerm, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
         {
             WarfarePlayer? pl = players.Find(x => x.Steam64.m_SteamID == steamId.m_SteamID);
             if (pl != null)
@@ -343,7 +343,7 @@ public static class PlayerServiceExtensions
     {
         GameThread.AssertCurrent();
 
-        if (FormattingUtility.TryParseSteamId(searchTerm, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
+        if (SteamIdHelper.TryParseSteamId(searchTerm, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
         {
             WarfarePlayer? pl = playerService.GetOnlinePlayerOrNull(steamId.m_SteamID);
             if (pl != null)
@@ -369,7 +369,7 @@ public static class PlayerServiceExtensions
         }
 
         List<WarfarePlayer> players = selection.ToList();
-        if (FormattingUtility.TryParseSteamId(searchTerm, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
+        if (SteamIdHelper.TryParseSteamId(searchTerm, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
         {
             WarfarePlayer? pl = players.Find(x => x.Steam64.m_SteamID == steamId.m_SteamID);
             if (pl != null)
@@ -393,7 +393,7 @@ public static class PlayerServiceExtensions
             return playerService.GetOnlinePlayers(searchTerm, output, culture, preferredName);
         }
 
-        if (FormattingUtility.TryParseSteamId(searchTerm, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
+        if (SteamIdHelper.TryParseSteamId(searchTerm, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
         {
             WarfarePlayer? pl = playerService.GetOnlinePlayerOrNullThreadSafe(steamId.m_SteamID);
             if (pl != null)

@@ -35,7 +35,9 @@ internal sealed class KitRemoveAccessCommand : IExecutableCommand
 
     public async UniTask ExecuteAsync(CancellationToken token)
     {
-        if (!Context.TryGet(0, out CSteamID steam64, out WarfarePlayer? onlinePlayer) || !Context.TryGet(1, out string? kitName))
+        (CSteamID? steam64, WarfarePlayer? onlinePlayer) = await Context.TryGetPlayer(1).ConfigureAwait(false);
+
+        if (!steam64.HasValue || !Context.TryGet(1, out string? kitName))
         {
             if (Context.HasArgs(2))
                 throw Context.SendPlayerNotFound();
@@ -49,23 +51,23 @@ internal sealed class KitRemoveAccessCommand : IExecutableCommand
             throw Context.Reply(_translations.KitNotFound, kitName);
         }
 
-        bool hasAccess = await _kitAccessService.HasAccessAsync(steam64, kit.Key, token).ConfigureAwait(false);
+        bool hasAccess = await _kitAccessService.HasAccessAsync(steam64.Value, kit.Key, token).ConfigureAwait(false);
 
-        IPlayer player = await _playerService.GetOfflinePlayer(steam64, _userDataService, token).ConfigureAwait(false);
+        IPlayer player = await _playerService.GetOfflinePlayer(steam64.Value, _userDataService, token).ConfigureAwait(false);
 
         if (!hasAccess)
         {
             throw Context.Reply(_translations.KitAlreadyMissingAccess, player, kit);
         }
 
-        if (!await _kitAccessService.UpdateAccessAsync(steam64, kit.Key, null, token).ConfigureAwait(false))
+        if (!await _kitAccessService.UpdateAccessAsync(steam64.Value, kit.Key, null, token).ConfigureAwait(false))
         {
             throw Context.Reply(_translations.KitAlreadyMissingAccess, player, kit);
         }
 
         await UniTask.SwitchToMainThread(token);
 
-        Context.LogAction(ActionLogType.ChangeKitAccess, steam64.m_SteamID.ToString(CultureInfo.InvariantCulture) + " DENIED ACCESS TO " + kitName);
+        Context.LogAction(ActionLogType.ChangeKitAccess, steam64.Value.m_SteamID.ToString(CultureInfo.InvariantCulture) + " DENIED ACCESS TO " + kitName);
 
         Context.Reply(_translations.KitAccessRevoked, player, player, kit);
 

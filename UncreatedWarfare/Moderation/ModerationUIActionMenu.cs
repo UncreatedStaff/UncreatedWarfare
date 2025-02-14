@@ -1703,7 +1703,7 @@ partial class ModerationUI
             return;
 
         RelatedActor actor = data.Actors[index];
-        if (!FormattingUtility.TryParseSteamId(text, out CSteamID steamId))
+        if (!SteamIdHelper.TryParseSteamId(text, out CSteamID steamId))
         {
             textbox.SetText(player, actor.Actor is { Id: not 0 } ? actor.Actor.Id.ToString("D17", CultureInfo.InvariantCulture) : string.Empty);
             return;
@@ -1836,7 +1836,7 @@ partial class ModerationUI
             return;
 
         Evidence evidence = data.Evidence[index];
-        if (!FormattingUtility.TryParseSteamId(text, out CSteamID steamId))
+        if (!SteamIdHelper.TryParseSteamId(text, out CSteamID steamId))
         {
             textbox.SetText(player, evidence.Actor is { Id: not 0 } ? evidence.Actor.Id.ToString("D17", CultureInfo.InvariantCulture) : string.Empty);
             return;

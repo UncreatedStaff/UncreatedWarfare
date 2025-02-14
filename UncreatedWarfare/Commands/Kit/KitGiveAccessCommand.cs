@@ -32,7 +32,9 @@ internal sealed class KitGiveAccessCommand : IExecutableCommand
 
     public async UniTask ExecuteAsync(CancellationToken token)
     {
-        if (!Context.TryGet(0, out CSteamID steam64, out WarfarePlayer? onlinePlayer) || !Context.TryGet(1, out string? kitName))
+        (CSteamID? steam64, WarfarePlayer? onlinePlayer) = await Context.TryGetPlayer(0).ConfigureAwait(false);
+
+        if (!steam64.HasValue || !Context.TryGet(1, out string? kitName))
         {
             if (Context.HasArgs(2))
                 throw Context.SendPlayerNotFound();
@@ -51,9 +53,9 @@ internal sealed class KitGiveAccessCommand : IExecutableCommand
             throw Context.Reply(_translations.KitNotFound, kitName);
         }
 
-        bool hasAccess = await _kitAccessService.HasAccessAsync(steam64, kit.Key, token).ConfigureAwait(false);
+        bool hasAccess = await _kitAccessService.HasAccessAsync(steam64.Value, kit.Key, token).ConfigureAwait(false);
 
-        PlayerNames playerName = onlinePlayer?.Names ?? await _userDataService.GetUsernamesAsync(steam64.m_SteamID, token).ConfigureAwait(false);
+        PlayerNames playerName = onlinePlayer?.Names ?? await _userDataService.GetUsernamesAsync(steam64.Value.m_SteamID, token).ConfigureAwait(false);
         IPlayer player = (IPlayer?)onlinePlayer ?? playerName;
 
         if (hasAccess)
@@ -61,14 +63,14 @@ internal sealed class KitGiveAccessCommand : IExecutableCommand
             throw Context.Reply(_translations.KitAlreadyHasAccess, player, kit);
         }
 
-        if (!await _kitAccessService.UpdateAccessAsync(steam64, kit.Key, accessType, token).ConfigureAwait(false))
+        if (!await _kitAccessService.UpdateAccessAsync(steam64.Value, kit.Key, accessType, token).ConfigureAwait(false))
         {
             throw Context.Reply(_translations.KitAlreadyHasAccess, player, kit);
         }
 
         await UniTask.SwitchToMainThread(token);
 
-        Context.LogAction(ActionLogType.ChangeKitAccess, steam64.m_SteamID.ToString(CultureInfo.InvariantCulture) + " GIVEN ACCESS TO " + kitName + ", REASON: " + accessType);
+        Context.LogAction(ActionLogType.ChangeKitAccess, steam64.Value.m_SteamID.ToString(CultureInfo.InvariantCulture) + " GIVEN ACCESS TO " + kitName + ", REASON: " + accessType);
 
         Context.Reply(_translations.KitAccessGiven, player, player, kit);
 

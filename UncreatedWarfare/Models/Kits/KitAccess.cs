@@ -1,7 +1,6 @@
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Text.Json.Serialization;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Models.Users;
 
@@ -11,7 +10,6 @@ namespace Uncreated.Warfare.Models.Kits;
 public class KitAccess
 {
     [Required]
-    [JsonIgnore]
     public KitModel Kit { get; set; }
 
     [Required]

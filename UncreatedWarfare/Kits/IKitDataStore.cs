@@ -17,6 +17,7 @@ using Uncreated.Warfare.Kits.Loadouts;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Teams;
@@ -204,6 +205,7 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
     private readonly LanguageService? _languageService;
     private readonly ILogger<MySqlKitsDataStore> _logger;
     private readonly IPlayerService? _playerService;
+    private readonly object? _kitSigns;
     private bool _isInUpdate;
     private bool _isInAdd;
 
@@ -229,6 +231,11 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
         _playerService = serviceProvider.GetService<IPlayerService>();
 
         _languageService = serviceProvider.GetService<LanguageService>();
+
+        if (WarfareModule.IsActive)
+        {
+            _kitSigns = serviceProvider.GetService(typeof(KitSignService));
+        }
 
         _logger = logger;
         _dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
@@ -298,6 +305,7 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
             throw new InvalidOperationException("Nested invocation to AddKitAsync.");
 
         KitModel model = await CreateNewKitModel(kitId, @class, displayName, creator, token).ConfigureAwait(false);
+        Kit kit;
 
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
@@ -325,10 +333,12 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
             {
                 throw new ArgumentException($"Duplicate kit id: \"{kitId}\".", nameof(kitId), ex);
             }
-            
+
+            kit = GetOrCreateKit(model, KitInclude.All);
+
             if (WarfareModule.IsActive)
             {
-                LogCreateKit(model.Id, model.Creator);
+                ApplyCreateKitModuleActive(kit, model.Creator);
             }
         }
         finally
@@ -338,7 +348,7 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
             _semaphore.Release();
         }
 
-        return GetOrCreateKit(model, KitInclude.All);
+        return kit;
     }
 
     /// <inheritdoc />
@@ -348,6 +358,7 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
             throw new InvalidOperationException("Nested invocation to AddKitAsync.");
 
         KitModel model = await CreateNewKitModel(kitId, @class, displayName, creator, token).ConfigureAwait(false);
+        Kit kit;
 
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
@@ -375,9 +386,10 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
                 throw new ArgumentException($"Duplicate kit id: \"{kitId}\".");
             }
 
+            kit = GetOrCreateKit(model, KitInclude.All);
             if (WarfareModule.IsActive)
             {
-                LogCreateKit(model.Id, model.Creator);
+                ApplyCreateKitModuleActive(kit, model.Creator);
             }
         }
         finally
@@ -387,7 +399,7 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
             _semaphore.Release();
         }
 
-        return GetOrCreateKit(model, KitInclude.All);
+        return kit;
     }
 
     private ValueTask<KitModel> CreateNewKitModel(string kitId, Class @class, string? displayName, CSteamID creator, CancellationToken token)
@@ -447,9 +459,41 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    private static void LogCreateKit(string id, ulong creatingPlayer)
+    private void ApplyCreateKitModuleActive(Kit kit, ulong creatingPlayer)
     {
-        ActionLog.Add(ActionLogType.CreateKit, id, creatingPlayer);
+        ActionLog.Add(ActionLogType.CreateKit, kit.Id, creatingPlayer);
+
+        if (kit.Type == KitType.Loadout && LoadoutIdHelper.Parse(kit.Id, out CSteamID player) >= 0)
+        {
+            WarfarePlayer? onlinePlayer = _playerService?.GetOnlinePlayerOrNullThreadSafe(player);
+            if (onlinePlayer != null)
+            {
+                KitPlayerComponent comp = onlinePlayer.Component<KitPlayerComponent>();
+                comp.UpdateLoadout(kit);
+            }
+        }
+
+        UpdateSigns(kit.Id, null);
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private void UpdateSigns(string kitId, WarfarePlayer? player)
+    {
+        KitSignService? service = (KitSignService?)_kitSigns;
+        if (player != null)
+            service?.UpdateSigns(kitId, player);
+        else
+            service?.UpdateSigns(kitId);
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private void UpdateLoadouts(WarfarePlayer? player)
+    {
+        KitSignService? service = (KitSignService?)_kitSigns;
+        if (player != null)
+            service?.UpdateLoadoutSigns(player);
+        else
+            service?.UpdateLoadoutSigns();
     }
 
     public async Task<KitModel?> DeleteKitAsync(uint primaryKey, KitInclude include = KitInclude.Base, CancellationToken token = default)
@@ -463,9 +507,29 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
             if (kit == null)
                 return null;
 
+            uint pk = kit.PrimaryKey;
+
             _dbContext.Kits.Remove(kit);
 
             await _dbContext.SaveChangesAsync(token).ConfigureAwait(false);
+
+            _keyCache.TryRemove(pk, out _);
+            _idCache.TryRemove(kit.Id, out _);
+
+            if (WarfareModule.IsActive)
+            {
+                if (kit.Type == KitType.Loadout && LoadoutIdHelper.Parse(kit.Id, out CSteamID player) >= 0)
+                {
+                    WarfarePlayer? onlinePlayer = _playerService?.GetOnlinePlayerOrNullThreadSafe(player);
+                    if (onlinePlayer != null)
+                    {
+                        KitPlayerComponent comp = onlinePlayer.Component<KitPlayerComponent>();
+                        comp.RemoveLoadout(pk);
+                    }
+                }
+
+                UpdateSigns(kit.Id, null);
+            }
         }
         finally
         {
@@ -495,6 +559,8 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
 
             string oldId = kit.Id;
 
+            KitType oldType = kit.Type;
+
             kit.LastEditor = updater.GetEAccountType() == EAccountType.k_EAccountTypeIndividual ? updater.m_SteamID : 0;
             kit.LastEditedAt = DateTimeOffset.UtcNow;
 
@@ -508,17 +574,7 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
                 return null;
             }
 
-            if (kit.Id == null)
-            {
-                kit.Id = oldId;
-            }
-            else if (!kit.Id.Equals(oldId, StringComparison.Ordinal))
-            {
-                if (_idCache.TryRemove(kit.Id, out Kit kitMdl))
-                {
-                    kitMdl.UpdateFromModel(kit, _factionDataStore, _languageDataStore);
-                }
-            }
+            OnKitUpdatePreSave(kit, oldId);
 
             _dbContext.ChangeTracker.DetectChanges();
 
@@ -532,6 +588,8 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
             }
 
             createdKit = GetOrCreateKit(kit, include);
+
+            OnKitUpdatePostSave(createdKit, kit, include, oldType, oldId);
         }
         finally
         {
@@ -561,6 +619,7 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
                 return null;
 
             string oldId = kit.Id;
+            KitType oldType = kit.Type;
 
             kit.LastEditor = updater.GetEAccountType() == EAccountType.k_EAccountTypeIndividual ? updater.m_SteamID : 0;
             kit.LastEditedAt = DateTimeOffset.UtcNow;
@@ -575,17 +634,7 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
                 return null;
             }
 
-            if (kit.Id == null)
-            {
-                kit.Id = oldId;
-            }
-            else if (!kit.Id.Equals(oldId, StringComparison.Ordinal))
-            {
-                if (_idCache.TryRemove(oldId, out Kit kitMdl))
-                {
-                    kitMdl.UpdateFromModel(kit, _factionDataStore, _languageDataStore);
-                }
-            }
+            OnKitUpdatePreSave(kit, oldId);
 
             _dbContext.ChangeTracker.DetectChanges();
 
@@ -599,6 +648,8 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
             }
 
             createdKit = GetOrCreateKit(kit, include);
+
+            OnKitUpdatePostSave(createdKit, kit, include, oldType, oldId);
         }
         finally
         {
@@ -608,6 +659,86 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
         }
 
         return createdKit;
+    }
+
+    private void OnKitUpdatePreSave(KitModel kit, string oldId)
+    {
+        if (kit.Id == null)
+        {
+            kit.Id = oldId;
+        }
+        else if (!kit.Id.Equals(oldId, StringComparison.Ordinal))
+        {
+            if (!_idCache.TryRemove(kit.Id, out Kit kitMdl))
+                return;
+
+            if (kitMdl.Key != kit.PrimaryKey)
+                _idCache.TryAdd(kitMdl.Id, kitMdl);
+            else
+                kitMdl.UpdateFromModel(kit, _factionDataStore, _languageDataStore);
+        }
+    }
+
+    private void OnKitUpdatePostSave(Kit createdKit, KitModel kit, KitInclude include, KitType oldType, string oldId)
+    {
+        if (_keyCache.TryGetValue(kit.PrimaryKey, out Kit byKey))
+        {
+            byKey.UpdateFromModel(kit, _factionDataStore, _languageDataStore);
+        }
+
+        if (_idCache.TryGetValue(kit.Id, out Kit byId) && !ReferenceEquals(byKey, byId))
+        {
+            byId.UpdateFromModel(kit, _factionDataStore, _languageDataStore);
+        }
+
+        if (!WarfareModule.IsActive)
+            return;
+
+        if (kit.Type == KitType.Loadout && LoadoutIdHelper.Parse(kit.Id, out CSteamID player) >= 0 && (include & KitInclude.Cached) == KitInclude.Cached)
+        {
+            WarfarePlayer? onlinePlayer = _playerService?.GetOnlinePlayerOrNullThreadSafe(player);
+            if (onlinePlayer != null)
+            {
+                KitPlayerComponent comp = onlinePlayer.Component<KitPlayerComponent>();
+                comp.UpdateLoadout(createdKit);
+            }
+        }
+
+        if (oldType != KitType.Loadout && kit.Type != KitType.Loadout)
+        {
+            if (!oldId.Equals(kit.Id, StringComparison.Ordinal))
+            {
+                UpdateSigns(oldId, null);
+            }
+
+            UpdateSigns(kit.Id, null);
+            return;
+        }
+
+        if (_playerService != null)
+        {
+            CSteamID sId1 = default, sId2 = default;
+            bool parsed1 = oldType == KitType.Loadout && LoadoutIdHelper.Parse(oldId, out sId1) >= 0;
+            bool parsed2 = kit.Type == KitType.Loadout && LoadoutIdHelper.Parse(kit.Id, out sId2) >= 0;
+            if (parsed1 & parsed2)
+            {
+                WarfarePlayer? pl1 = _playerService.GetOnlinePlayerOrNullThreadSafe(sId1.m_SteamID);
+                if (pl1 != null || sId1.m_SteamID == sId2.m_SteamID)
+                {
+                    UpdateLoadouts(pl1);
+                    if (pl1 == null)
+                        return;
+                }
+
+                WarfarePlayer? pl2 = _playerService.GetOnlinePlayerOrNullThreadSafe(sId2.m_SteamID);
+                if (pl2 != null || pl1 == null)
+                    UpdateLoadouts(pl2);
+
+                return;
+            }
+        }
+
+        UpdateLoadouts(null);
     }
 
     /// <inheritdoc />

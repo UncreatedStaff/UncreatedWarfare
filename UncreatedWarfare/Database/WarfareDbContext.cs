@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Pomelo.EntityFrameworkCore.MySql.Infrastructure;
@@ -23,7 +25,7 @@ namespace Uncreated.Warfare.Database;
 public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContext, IKitsDbContext, IStatsDbContext, IGameDataDbContext, IBuildablesDbContext, IWhitelistDbContext
 {
     private readonly ILogger<WarfareDbContext> _logger;
-    
+
     public DbSet<LanguageInfo> Languages => Set<LanguageInfo>();
     public DbSet<LanguagePreferences> LanguagePreferences => Set<LanguagePreferences>();
     public DbSet<WarfareUserData> UserData => Set<WarfareUserData>();
@@ -51,9 +53,17 @@ public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContex
     public DbSet<ItemWhitelist> Whitelists => Set<ItemWhitelist>();
     public DbSet<SteamDiscordPendingLink> PendingLinks => Set<SteamDiscordPendingLink>();
 
+    private static readonly EventDefinitionBase NoExceptionDuringSaveChanges =
+        new EventDefinition<Type, string, Exception>(new LoggingOptions(), default, LogLevel.None, "NONE", _ => (_, _, _, _, _) => { });
+
     public WarfareDbContext(ILogger<WarfareDbContext> logger, DbContextOptions<WarfareDbContext> options) : base(options)
     {
+        // supress exceptions from being logged separately
+        // this allows us to catch Unique Key and Primary Key
+        // constraint violation exceptions for threadsafe add operations (MySQL 1062: DuplicateKeyEntry)
+
         _logger = logger;
+        ((IDbContext)this).UpdateLogger.Definitions.LogExceptionDuringSaveChanges = NoExceptionDuringSaveChanges;
     }
 
     /// <summary>

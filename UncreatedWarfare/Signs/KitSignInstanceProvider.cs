@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Globalization;
+using System.Linq;
 using System.Text;
 using Uncreated.Warfare.Interaction.Requests;
 using Uncreated.Warfare.Kits;
@@ -21,7 +22,6 @@ namespace Uncreated.Warfare.Signs;
 public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>
 {
     private readonly KitRequestService _kitRequestService;
-    private readonly LoadoutService _loadoutService;
     private readonly IKitDataStore _kitDataStore;
     private readonly PlayerNitroBoostService _nitroBoostService;
     private readonly IConfiguration _systemConfig;
@@ -43,14 +43,12 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>
         IKitDataStore kitDataStore,
         TranslationInjection<KitSignTranslations> translations,
         PlayerNitroBoostService nitroBoostService,
-        IConfiguration systemConfig,
-        LoadoutService loadoutService)
+        IConfiguration systemConfig)
     {
         _kitRequestService = kitRequestService;
         _kitDataStore = kitDataStore;
         _nitroBoostService = nitroBoostService;
         _systemConfig = systemConfig;
-        _loadoutService = loadoutService;
         _translations = translations.Value;
         LoadoutNumber = -1;
         KitId = null!;
@@ -60,7 +58,7 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>
     {
         if (((InteractableSign)barricade.interactable).text.StartsWith("loadout_"))
         {
-            if (int.TryParse(extraInfo, NumberStyles.Number, CultureInfo.InvariantCulture, out int id))
+            if (int.TryParse(extraInfo, NumberStyles.Number, CultureInfo.InvariantCulture, out int id) && id >= 0)
             {
                 LoadoutNumber = id;
             }
@@ -83,7 +81,7 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>
         if (LoadoutNumber >= 0)
         {
             if (LoadoutNumber == 0)
-                return "Invalid Loadout";
+                return "<color=#ff9933>Invalid Loadout ID</color>\n<color=#66ccff>0</color>";
 
             try
             {
@@ -98,7 +96,7 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>
 
         if (!_kitDataStore.CachedKitsById.TryGetValue(KitId, out Kit kit))
         {
-            return KitId;
+            return $"<color=#ff9933>Invalid Kit</color>\n<color=#66ccff>{KitId}</color>";
         }
 
         try
@@ -236,7 +234,9 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>
 
     private void TranslateLoadoutSign(StringBuilder bldr, int loadoutIndex, LanguageInfo language, CultureInfo culture, WarfarePlayer? player)
     {
-        Kit? kit = player == null ? null : _loadoutService.GetLoadoutQuick(player.Steam64, loadoutIndex);
+        KitPlayerComponent? kitPlayerComponent = player?.Component<KitPlayerComponent>();
+
+        Kit? kit = kitPlayerComponent?.Loadouts.ElementAtOrDefault(loadoutIndex - 1);
 
         if (kit == null)
         {
@@ -246,21 +246,24 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>
             return;
         }
 
-        string kitName = kit.GetDisplayName(language, true);
+        string kitName = kit.GetDisplayName(language, true, removeNewLine: false);
 
         // if the name has a newline we want to skip the empty line so all the text is roughly the same size
         bool nameHasNewLine = kitName.IndexOf('\n', StringComparison.Ordinal) >= 0;
 
-        bool isFavorited = player != null && player.Component<KitPlayerComponent>().IsKitFavorited(kit.Key);
+        bool isFavorited = player != null && kitPlayerComponent!.IsKitFavorited(kit.Key);
 
         bldr.Append("<b>")
             .AppendColorized(kitName.ToUpper(culture), isFavorited ? ColorKitFavoritedName : ColorKitUnfavoritedName)
             .Append("</b>")
             .Append('\n');
 
-        bool hasWeaponText = string.IsNullOrWhiteSpace(kit.WeaponText);
+        bool needsUpgrade = kit.Season < WarfareModule.Season;
 
-        if (!hasWeaponText)
+        // subtitle: /req upgrade, PENDING SETUP, or WEAPON TEXT
+        bool hasSubtitle = needsUpgrade || kit.IsLocked || !string.IsNullOrWhiteSpace(kit.WeaponText);
+
+        if (!hasSubtitle)
             bldr.Append('\n');
 
         if (!nameHasNewLine)
@@ -270,10 +273,21 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>
         bldr.Append(_translations.LoadoutLetter.Translate(loadoutLetter, language, culture, TimeZoneInfo.Utc))
             .Append('\n');
 
-        if (hasWeaponText)
-            bldr.Append(kit.WeaponText!.ToUpper(culture)).Append('\n');
+        if (kit.IsLocked || needsUpgrade)
+            bldr.Append('\n');
 
-        AppendPlayerCount(bldr, player, kit, language, culture, useClassLimit: true);
+        if (hasSubtitle)
+        {
+            if (kit.IsLocked)
+                bldr.Append(_translations.KitLoadoutSetup.Translate(language)).Append('\n');
+            else if (needsUpgrade)
+                bldr.Append(_translations.KitLoadoutUpgrade.Translate(language)).Append('\n');
+            else
+                bldr.Append(kit.WeaponText!.ToUpper(culture)).Append('\n');
+        }
+
+        if (!kit.IsLocked && !needsUpgrade)
+            AppendPlayerCount(bldr, player, kit, language, culture, useClassLimit: true);
     }
 }
 

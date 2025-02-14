@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
 using Uncreated.Warfare.Events;
@@ -14,6 +15,7 @@ using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Factions;
 using Uncreated.Warfare.Models.Kits;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Inventory;
@@ -54,40 +56,6 @@ public class LoadoutService
         _logger = logger;
     }
 
-    [Pure]
-    internal Kit? GetLoadoutQuick(CSteamID steam64, int loadoutId, CancellationToken token = default)
-    {
-        GameThread.AssertCurrent();
-
-        if (loadoutId <= 0)
-            throw new ArgumentOutOfRangeException(nameof(loadoutId));
-
-        IEnumerable<Kit> kits = _kitSql.CachedKitsByKey.Values
-            .Where(x => x.Type == KitType.Loadout
-                        && LoadoutIdHelper.Parse(x.Id, out CSteamID player) > 0
-                        && player.m_SteamID == steam64.m_SteamID
-            );
-
-        if (_playerService?.GetOnlinePlayerOrNull(steam64) is { } player)
-        {
-            kits = kits
-                .OrderByDescending(x => player.Component<KitPlayerComponent>().IsKitFavorited(x.Key))
-                .ThenBy(x => x.Id);
-        }
-        else
-        {
-            kits = kits.OrderBy(x => x.Id);
-        }
-
-        foreach (Kit kit in kits)
-        {
-            if (--loadoutId <= 0)
-                return kit;
-        }
-
-        return null;
-    }
-
     /// <summary>
     /// Attempts to open a ticket in the discord for the desired player to upgrade their loadout.
     /// </summary>
@@ -100,32 +68,77 @@ public class LoadoutService
     /// <summary>
     /// Get the loadout represented by a specific number (usually this is a sign index, starting from 1).
     /// </summary>
-    public Task<Kit?> GetLoadoutFromNumber(CSteamID player, int number, KitInclude include, CancellationToken token = default)
+    public async Task<Kit?> GetLoadoutFromNumber(CSteamID player, int number, KitInclude include, CancellationToken token = default)
     {
+        if (number == 0)
+            return null;
+
         ulong s64 = player.m_SteamID;
 
-        return _kitSql.QueryKitAsync(include, kits => 
+        Kit? kit = await _kitSql.QueryKitAsync(include, kits => 
             kits.Where(x => x.Type == KitType.Loadout && x.Access.Any(a => a.Steam64 == s64))
                 .OrderByDescending(x => x.Favorites.Any(f => f.Steam64 == s64))
                 .ThenBy(x => x.Id)
-                .Skip(number)
+                .Skip(number - 1)
             , token
         );
+
+        if ((include & KitInclude.Cached) != KitInclude.Cached || kit == null)
+            return kit;
+
+        WarfarePlayer? onlinePlayer = _playerService?.GetOnlinePlayerOrNullThreadSafe(player);
+        if (onlinePlayer != null)
+        {
+            KitPlayerComponent comp = onlinePlayer.Component<KitPlayerComponent>();
+            comp.UpdateLoadout(kit);
+        }
+
+        return kit;
     }
 
     /// <summary>
     /// Get all loadouts a player owns in the order they would be displayed on signs.
     /// </summary>
-    public Task<Kit[]> GetLoadouts(CSteamID player, KitInclude include, CancellationToken token = default)
+    public async Task<IReadOnlyList<Kit>> GetLoadouts(CSteamID player, KitInclude include, CancellationToken token = default)
     {
         ulong s64 = player.m_SteamID;
 
-        return _kitSql.QueryKitsAsync(include, kits => 
+        Kit[] loadouts = await _kitSql.QueryKitsAsync(include, kits => 
             kits.Where(x => x.Type == KitType.Loadout && x.Access.Any(a => a.Steam64 == s64))
                 .OrderByDescending(x => x.Favorites.Any(f => f.Steam64 == s64))
                 .ThenBy(x => x.Id)
             , token
-        );
+        ).ConfigureAwait(false);
+
+        if ((include & KitInclude.Cached) != KitInclude.Cached)
+            return loadouts;
+
+        WarfarePlayer? onlinePlayer = _playerService?.GetOnlinePlayerOrNullThreadSafe(player);
+        onlinePlayer?.Component<KitPlayerComponent>().UpdateLoadouts(loadouts);
+
+        return new ReadOnlyCollection<Kit>(loadouts);
+    }
+
+    /// <summary>
+    /// Get all loadouts a player owns in the order they would be displayed on signs.
+    /// </summary>
+    public async Task GetLoadouts(IList<Kit> output, CSteamID player, KitInclude include, CancellationToken token = default)
+    {
+        ulong s64 = player.m_SteamID;
+
+        await _kitSql.QueryKitsAsync(include, output, kits => 
+            kits.Where(x => x.Type == KitType.Loadout && x.Access.Any(a => a.Steam64 == s64))
+                .OrderByDescending(x => x.Favorites.Any(f => f.Steam64 == s64))
+                .ThenBy(x => x.Id)
+            , token
+        ).ConfigureAwait(false);
+
+        if ((include & KitInclude.Cached) != KitInclude.Cached)
+            return;
+
+        WarfarePlayer? onlinePlayer = _playerService?.GetOnlinePlayerOrNullThreadSafe(player);
+        onlinePlayer?.Component<KitPlayerComponent>().UpdateLoadouts(output.ToList());
+        
     }
 
     [RpcReceive]

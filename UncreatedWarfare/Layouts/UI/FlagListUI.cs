@@ -112,7 +112,6 @@ public class FlagListUI : UnturnedUI
             int index = 0;
             foreach (FlagListUIEntry entry in flagProvider.EnumerateFlagListEntries(set))
             {
-                GetLogger().LogConditional($"Entry: {TerminalColorHelper.ConvertRichTextToVirtualTerminalSequences(entry.Text,StackColorFormatType.ExtendedANSIColor)} ({entry.Icon}).");
                 if (index >= Rows.Length)
                     break;
 
@@ -124,12 +123,10 @@ public class FlagListUI : UnturnedUI
 
                 element.Name.SetText(connection, entry.Text);
                 element.Icon.SetText(connection, entry.Icon);
-                GetLogger().LogConditional($"Element: {index}. pl vis: {data.Rows}.");
             }
 
             for (int j = index; j < data.Rows; ++j)
             {
-                GetLogger().LogConditional($"Clear: {j}. pl vis: {data.Rows}.");
                 Rows[j].Root.SetVisibility(connection, false);
             }
             data.Rows = index;

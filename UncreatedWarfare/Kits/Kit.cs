@@ -254,53 +254,33 @@ public class Kit : IRequestable<Kit>, ITranslationArgument
 
         if (model.Items != null)
             UpdateItemsFromModel(model.Items);
-        else
-            _items = null;
 
         if (model.UnlockRequirements != null)
             UpdateUnlockRequirementsFromModel(model.UnlockRequirements);
-        else
-            _unlockRequirements = null;
 
         if (model.Skillsets != null)
             UpdateSkillsetsFromModel(model.Skillsets);
-        else
-            _skillsets = null;
 
         if (model.FactionFilter != null)
             UpdateFactionFilterFromModel(model.FactionFilter, factionDataStore);
-        else
-            _factionFilter = null;
 
         if (model.MapFilter != null)
             UpdateMapFilterFromModel(model.MapFilter);
-        else
-            _mapFilter = null;
 
         if (model.Translations != null)
             UpdateTranslationsFromModel(model.Translations, languageDataStore);
-        else
-            _translations = null;
 
         if (Type == KitType.Elite && model.Bundles != null)
             UpdateBundlesFromModel(model.Bundles);
-        else
-            _bundles = null;
 
         if (model.Delays != null)
             UpdateDelaysFromModel(model.Delays);
-        else
-            _delays = null;
 
         if (model.Access != null)
             UpdateAccessFromModel(model.Access);
-        else
-            _access = null;
 
         if (model.Favorites != null)
             UpdateFavoritesFromModel(model.Favorites);
-        else
-            _favorites = null;
     }
 
     private void UpdateUnlockRequirementsFromModel(List<KitUnlockRequirement> unlockRequirements)

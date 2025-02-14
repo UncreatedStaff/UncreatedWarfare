@@ -652,21 +652,6 @@ public class CommandContext : ControlException
     }
 
     /// <summary>
-    /// Gets a <paramref name="parameter"/> at a given index, parses it as a <see cref="ulong"/>, or returns <see langword="false"/> if out of range or unable to parse.
-    /// </summary>
-    /// <remarks>Zero based indexing. Use <see cref="TryGet(int,out ulong,out WarfarePlayer?, bool)"/> instead for Steam64 IDs.</remarks>
-    public bool TryGet(int parameter, out CSteamID value)
-    {
-        parameter += _argumentOffset;
-        if (parameter < 0 || parameter >= _argumentCount)
-        {
-            value = CSteamID.Nil;
-            return false;
-        }
-        return FormattingUtility.TryParseSteamId(OriginalParameters[parameter], out value);
-    }
-
-    /// <summary>
     /// Gets a <paramref name="parameter"/> at a given index, parses it as a <see cref="bool"/>, or returns <see langword="false"/> if out of range or unable to parse.
     /// </summary>
     /// <remarks>Zero based indexing.</remarks>
@@ -970,104 +955,101 @@ public class CommandContext : ControlException
     }
 
     /// <summary>
-    /// Find a user or Steam64 ID from an argument. Will take either Steam64 or name. Will only find offline users by Steam64 ID.
+    /// Gets a <paramref name="parameter"/> at a given index, parses it as a <see cref="CSteamID"/> or steam profile URL, or returns <see langword="null"/> if out of range or unable to parse.
     /// </summary>
-    /// <param name="steam64">Parsed steam ID.</param>
-    /// <param name="onlinePlayer">Will be set to the <see cref="EditorUser"/> instance if they're online.</param>
-    /// <param name="remainder">Select the rest of the arguments instead of just one.</param>
-    /// <remarks>Zero based indexing.</remarks>
-    /// <returns><see langword="true"/> if a valid Steam64 id is parsed (even when the user is offline).</returns>
-    public bool TryGet(int parameter, out CSteamID steam64, out WarfarePlayer? onlinePlayer, bool remainder = false, PlayerNameType searchType = PlayerNameType.CharacterName)
+    public ValueTask<CSteamID?> TryGetSteamId(int parameter)
     {
-        parameter += _argumentOffset;
-        if (CallerId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual && MatchParameter(parameter, "me"))
+        if (CallerId.IsIndividual() && MatchParameter(parameter, "me"))
         {
-            onlinePlayer = Player;
-            steam64 = CallerId;
-            return true;
+            return new ValueTask<CSteamID?>(CallerId);
         }
+
+        parameter += _argumentOffset;
         if (parameter < 0 || parameter >= _argumentCount)
         {
-            steam64 = CSteamID.Nil;
-            onlinePlayer = null;
-            return false;
+            return new ValueTask<CSteamID?>(CSteamID.Nil);
+        }
+
+        string param = OriginalParameters[parameter];
+        return SteamIdHelper.TryParseSteamId(param, out CSteamID id) ? new ValueTask<CSteamID?>(id) : SteamIdHelper.TryParseSteamIdOrUrl(param, Token);
+    }
+
+    /// <summary>
+    /// Find a user or Steam64 ID from an argument. Will take either Steam64, name, or profile URL. Offline players will only be returned when the input is a Steam ID or profile URL.
+    /// </summary>
+    /// <param name="remainder">Select the rest of the arguments instead of just one.</param>
+    /// <remarks>Zero based indexing.</remarks>
+    /// <returns>The Steam64 ID if it is found, otehrwise <see langword="null"/>. If the player represented by the Steam64 ID is online, it will also be returned.</returns>
+    public async ValueTask<(CSteamID? Steam64, WarfarePlayer? OnlinePlayer)> TryGetPlayer(int parameter, bool remainder = false, PlayerNameType searchType = PlayerNameType.CharacterName)
+    {
+        parameter += _argumentOffset;
+        if (CallerId.IsIndividual() && MatchParameter(parameter, "me"))
+        {
+            return (CallerId, Player);
+        }
+
+        if (parameter < 0 || parameter >= _argumentCount)
+        {
+            return default;
         }
 
         string? s = remainder ? GetRange(parameter - _argumentOffset) : OriginalParameters[parameter];
         if (s != null)
         {
-            if (FormattingUtility.TryParseSteamId(s, out steam64))
+            CSteamID? steamId = await SteamIdHelper.TryParseSteamIdOrUrl(s, Token).ConfigureAwait(false);
+            if (steamId.HasValue)
             {
-                onlinePlayer = _playerService.GetOnlinePlayerOrNullThreadSafe(steam64);
-                return true;
+                return (steamId, _playerService.GetOnlinePlayerOrNullThreadSafe(steamId.Value));
             }
 
-            onlinePlayer = _playerService.GetOnlinePlayerOrNullThreadSafe(s, ParseCulture, searchType);
+            WarfarePlayer? onlinePlayer = _playerService.GetOnlinePlayerOrNullThreadSafe(s, ParseCulture, searchType);
             if (onlinePlayer is { IsOnline: true })
             {
-                steam64 = onlinePlayer.Steam64;
-                return true;
+                return (onlinePlayer.Steam64, onlinePlayer);
             }
         }
 
-        steam64 = default;
-        onlinePlayer = null;
-        return false;
+        return default;
     }
 
     /// <summary>
-    /// Find a user or Steam64 ID from an argument. Will take either Steam64 or name. Searches online players in <paramref name="selection"/>.
+    /// Find a user or Steam64 ID from an argument. Will take either Steam64, name, or profile URL. Searches all players in <paramref name="selection"/>.
     /// </summary>
-    /// <param name="steam64">Parsed steam ID.</param>
-    /// <param name="onlinePlayer">Will be set to the <see cref="EditorUser"/> instance when <see langword="true"/> is returned.</param>
     /// <param name="remainder">Select the rest of the arguments instead of just one.</param>
     /// <remarks>Zero based indexing.</remarks>
-    /// <returns><see langword="true"/> if a valid Steam64 id is parsed and that player is in <paramref name="selection"/>.</returns>
-    public bool TryGet(int parameter, out CSteamID steam64, [MaybeNullWhen(false)] out WarfarePlayer onlinePlayer, IEnumerable<WarfarePlayer> selection, bool remainder = false, PlayerNameType searchType = PlayerNameType.CharacterName)
+    /// <returns>The player that is found (who may be offline).</returns>
+    public async ValueTask<WarfarePlayer?> TryGetPlayer(int parameter, IEnumerable<WarfarePlayer> selection, bool remainder = false, PlayerNameType searchType = PlayerNameType.CharacterName)
     {
         parameter += _argumentOffset;
         if (CallerId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual && MatchParameter(parameter, "me"))
         {
-            onlinePlayer = Player;
-            steam64 = CallerId;
-            return selection.Contains(Caller);
+            return selection.Contains(Player) ? Player : null;
         }
+
         if (parameter < 0 || parameter >= _argumentCount)
         {
-            steam64 = CSteamID.Nil;
-            onlinePlayer = null;
-            return false;
+            return null;
         }
 
         string? s = remainder ? GetRange(parameter - _argumentOffset) : OriginalParameters[parameter];
         if (s == null)
         {
-            steam64 = default;
-            onlinePlayer = default;
-            return false;
+            return null;
         }
-        if (FormattingUtility.TryParseSteamId(s, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
+
+        CSteamID? steam64 = await SteamIdHelper.TryParseSteamIdOrUrl(s, Token).ConfigureAwait(false);
+        if (steam64.HasValue && steam64.Value.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
         {
-            steam64 = steamId;
+            ulong steamId = steam64.Value.m_SteamID;
             foreach (WarfarePlayer player in selection)
             {
-                if (player.Steam64.m_SteamID == steam64.m_SteamID)
-                {
-                    onlinePlayer = player;
-                    return true;
-                }
+                if (player.Steam64.m_SteamID == steamId)
+                    return player;
             }
         }
 
-        onlinePlayer = _playerService.GetOnlinePlayerOrNullThreadSafe(s, selection, ParseCulture, searchType)!;
-        if (onlinePlayer is { IsOnline: true })
-        {
-            steam64 = onlinePlayer.Steam64;
-            return true;
-        }
-
-        steam64 = default;
-        return false;
+        WarfarePlayer? onlinePlayer = _playerService.GetOnlinePlayerOrNullThreadSafe(s, selection, ParseCulture, searchType)!;
+        return onlinePlayer ?? null;
     }
 
 

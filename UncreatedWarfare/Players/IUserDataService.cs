@@ -9,6 +9,7 @@ using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Players;
+
 public interface IUserDataService
 {
     /// <summary>
@@ -342,9 +343,10 @@ public class UserDataService : IUserDataService, IDisposable
     /// <inheritdoc />
     public async Task<PlayerNames> SearchFirstPlayerAsync(string input, PlayerNameType prioritizedName, bool byLastJoined, CancellationToken token = default)
     {
-        if (FormattingUtility.TryParseSteamId(input, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
+        CSteamID? steamId = await SteamIdHelper.TryParseSteamIdOrUrl(input, token).ConfigureAwait(false);
+        if (steamId.HasValue && steamId.Value.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
         {
-            return await this.GetUsernamesAsync(steamId.m_SteamID, token).ConfigureAwait(false);
+            return await GetUsernamesAsync(steamId.Value.m_SteamID, token).ConfigureAwait(false);
         }
 
         IQueryable<WarfareUserData> data = GetSearchQuery(input, prioritizedName, byLastJoined, -1);
@@ -381,9 +383,10 @@ public class UserDataService : IUserDataService, IDisposable
             return 0;
         }
 
-        if (FormattingUtility.TryParseSteamId(input, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
+        CSteamID? steamId = await SteamIdHelper.TryParseSteamIdOrUrl(input, token).ConfigureAwait(false);
+        if (steamId.HasValue && steamId.Value.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
         {
-            PlayerNames names = await this.GetUsernamesAsync(steamId.m_SteamID, token).ConfigureAwait(false);
+            PlayerNames names = await GetUsernamesAsync(steamId.Value.m_SteamID, token).ConfigureAwait(false);
             
             if (names.WasFound)
                 output.Add(names);

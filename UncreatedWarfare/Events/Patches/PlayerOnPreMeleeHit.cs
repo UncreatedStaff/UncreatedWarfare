@@ -2,7 +2,6 @@ using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Emit;
 using DanielWillett.ReflectionTools.Formatting;
 using HarmonyLib;
-using Humanizer;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -77,7 +76,7 @@ internal sealed class PlayerOnPreMeleeHit : IHarmonyPatch
 
         while (ctx.MoveNext())
         {
-            if (ctx.Instruction.Calls(getUseableRagdollEffect))
+            if (getUseableRagdollEffect != null && ctx.Instruction.Calls(getUseableRagdollEffect))
             {
                 ctx.EmitBelow(emit =>
                 {
@@ -159,10 +158,12 @@ internal sealed class PlayerOnPreMeleeHit : IHarmonyPatch
             Asset = useable.equippedMeleeAsset
         };
 
-        hitter.Data["LastMeleeInput"] = info;
+        hitter.Data["LastMeleeInput"] = args;
 
-        bool cancelled = WarfareModule.EventDispatcher.DispatchEventAsync(args, allowAsync: false).GetAwaiter().GetResult();
+        bool canContinue = WarfareModule.EventDispatcher.DispatchEventAsync(args, allowAsync: false).GetAwaiter().GetResult();
+        if (!canContinue)
+            hitter.Data.TryRemove("LastMeleeInput", out _);
 
-        return cancelled;
+        return canContinue;
     }
 }

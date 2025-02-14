@@ -1,6 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Diagnostics.CodeAnalysis;
+using System.Linq;
+using Uncreated.Warfare.Kits.Loadouts;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 
@@ -12,7 +16,9 @@ public class KitPlayerComponent : IPlayerComponent
     private readonly HashSet<uint> _accessibleKits = new HashSet<uint>(16);
     private readonly HashSet<uint> _favoritedKits = new HashSet<uint>(16);
 
+
     private IKitDataStore _kitDataStore = null!;
+    private KitSignService _kitSignService = null!;
 
 #nullable disable
 
@@ -20,6 +26,11 @@ public class KitPlayerComponent : IPlayerComponent
 
 #nullable restore
 
+    /// <summary>
+    /// Comparer used to sort cached loadouts.
+    /// </summary>
+    [field: MaybeNull]
+    public IComparer<Kit?> LoadoutComparer => field ??= new LoadoutComparerImpl(this);
 
     /// <summary>
     /// The primary key of the player's current kit.
@@ -52,9 +63,15 @@ public class KitPlayerComponent : IPlayerComponent
     /// <remarks>Guaranteed to have <see cref="KitInclude.Giveable"/> data.</remarks>
     public Kit? CachedKit { get; private set; }
 
+    /// <summary>
+    /// Ordered list of all loadouts including the <see cref="KitInclude.Cached"/> include level.
+    /// </summary>
+    public IReadOnlyList<Kit> Loadouts { get; private set; } = Array.Empty<Kit>();
+
     void IPlayerComponent.Init(IServiceProvider serviceProvider, bool isOnJoin)
     {
         _kitDataStore = serviceProvider.GetRequiredService<IKitDataStore>();
+        _kitSignService = serviceProvider.GetRequiredService<KitSignService>();
     }
 
     /// <summary>
@@ -68,6 +85,67 @@ public class KitPlayerComponent : IPlayerComponent
 
         return _kitDataStore.QueryKitAsync(kit.Value, include, token);
     }
+
+    internal void RemoveLoadout(uint pk)
+    {
+        lock (_accessibleKits)
+        {
+            int index = -1;
+            for (int i = 0; i < Loadouts.Count; ++i)
+            {
+                if (Loadouts[i].Key != pk)
+                    continue;
+                index = i;
+                break;
+            }
+
+            if (index == -1)
+                return;
+
+            List<Kit> newList = Loadouts.ToList();
+
+            newList.RemoveAt(index);
+            newList.Sort(LoadoutComparer);
+
+            Loadouts = new ReadOnlyCollection<Kit>(newList);
+        }
+    }
+
+    internal void UpdateLoadouts(IReadOnlyList<Kit> loadouts)
+    {
+        lock (_accessibleKits)
+        {
+            Loadouts = loadouts is IList<Kit> list
+                ? new ReadOnlyCollection<Kit>(list)
+                : loadouts;
+        }
+
+        // can be null in kit download pending player task
+        _kitSignService?.UpdateLoadoutSigns(Player);
+    }
+
+    internal void UpdateLoadout(Kit loadout)
+    {
+        if (loadout.Type != KitType.Loadout || LoadoutIdHelper.Parse(loadout.Id, out CSteamID steam64) < 0 || !Player.Equals(steam64))
+            return;
+
+        lock (_accessibleKits)
+        {
+            List<Kit> newList = Loadouts.ToList();
+
+            IComparer<Kit?> comparer = LoadoutComparer;
+
+            newList.Sort(comparer);
+            int index = newList.BinarySearch(loadout, comparer);
+            if (index >= 0)
+                newList[index] = loadout;
+            else
+                newList.Insert(~index, loadout);
+
+            Loadouts = new ReadOnlyCollection<Kit>(newList);
+        }
+    }
+
 
     /// <summary>
     /// Set the current kit, or <see langword="null"/> for no kit.
@@ -142,4 +220,51 @@ public class KitPlayerComponent : IPlayerComponent
     }
 
     WarfarePlayer IPlayerComponent.Player { get => Player; set => Player = value; }
+
+    private class LoadoutComparerImpl : IComparer<Kit?>
+    {
+        private readonly KitPlayerComponent _component;
+        public LoadoutComparerImpl(KitPlayerComponent component)
+        {
+            _component = component;
+        }
+
+        public int Compare(Kit? a, Kit? b)
+        {
+            if (ReferenceEquals(a, b))
+                return 0;
+
+            if (a == null)
+                return 1;
+
+            if (b == null)
+                return -1;
+
+            if (a.Key == b.Key)
+                return 0;
+
+            if (_component.IsKitFavorited(a.Key))
+            {
+                if (!_component.IsKitFavorited(b.Key))
+                    return -1;
+            }
+            else if (_component.IsKitFavorited(b.Key))
+            {
+                return 1;
+            }
+
+            int aParse = LoadoutIdHelper.Parse(a.Id, out _);
+            int bParse = LoadoutIdHelper.Parse(b.Id, out _);
+
+            if (aParse < 0)
+            {
+                if (bParse >= 0)
+                    return 1;
+            }
+            else if (bParse < 0)
+                return -1;
+
+            return aParse.CompareTo(bParse);
+        }
+    }
 }

@@ -1,10 +1,15 @@
+using DanielWillett.ModularRpcs.Annotations;
+using DanielWillett.ModularRpcs.Async;
+using DanielWillett.ModularRpcs.Exceptions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Linq;
 using System.Reflection;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Database.Manual;
+using Uncreated.Warfare.Kits.Loadouts;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players.Management;
 
@@ -38,19 +43,61 @@ public interface IKitAccessService
     Task<bool> UpdateAccessAsync(CSteamID steam64, uint primaryKey, KitAccessType? access, CancellationToken token = default);
 }
 
+public delegate void KitAccessUpdatedHandler(CSteamID steam64, uint kitPrimaryKey, KitAccessType? access);
+
 public class MySqlKitAccessService : IKitAccessService, IDisposable
 {
     private string? _updateQuery;
 
+    private readonly ILogger<MySqlKitAccessService> _logger;
     private readonly IKitsDbContext _dbContext;
+    private readonly IKitDataStore? _kitDataStore;
     private readonly IPlayerService? _playerService;
+    private readonly KitSignService? _kitSignService;
+    private readonly LoadoutService? _loadoutService;
     private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
 
-    public MySqlKitAccessService(IKitsDbContext dbContext, IPlayerService? playerService = null)
+    /// <summary>
+    /// Invoked when a player's kit access is updated remotely or locally.
+    /// </summary>
+    public event KitAccessUpdatedHandler? PlayerAccessUpdated;
+
+    public MySqlKitAccessService(IServiceProvider serviceProvider, ILogger<MySqlKitAccessService> logger)
     {
-        _dbContext = dbContext;
-        _playerService = playerService;
+        _logger = logger;
+        _dbContext = serviceProvider.GetRequiredService<IKitsDbContext>();
+
+        if (WarfareModule.IsActive)
+        {
+            _playerService = serviceProvider.GetRequiredService<IPlayerService>();
+            _kitSignService = serviceProvider.GetRequiredService<KitSignService>();
+            _kitDataStore = serviceProvider.GetRequiredService<IKitDataStore>();
+            _loadoutService = serviceProvider.GetRequiredService<LoadoutService>();
+        }
+
         _dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
+    }
+
+    [RpcReceive]
+    public void ReceiveAccessUpdated(ulong player, uint primaryKey, KitAccessType? newAccess)
+    {
+        _logger.LogDebug($"Kit access updated for {player} on kit {primaryKey}: \"{newAccess?.ToString() ?? "no access"}\".");
+
+        CSteamID steamId = new CSteamID(player);
+        try
+        {
+            PlayerAccessUpdated?.Invoke(steamId, primaryKey, newAccess);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error thrown while invoking PlayerAccessUpdated.");
+        }
+    }
+
+    [RpcSend(nameof(ReceiveAccessUpdated)), RpcTimeout(3 * Timeouts.Seconds)]
+    protected virtual RpcTask SendAccessUpdated(ulong player, uint primaryKey, KitAccessType? newAccess)
+    {
+        return RpcTask.CompletedTask;
     }
 
     /// <inheritdoc />
@@ -74,7 +121,7 @@ public class MySqlKitAccessService : IKitAccessService, IDisposable
                 type = row;
             }
 
-            if (_playerService?.GetOnlinePlayerThreadSafe(steam64) is { } player)
+            if (WarfareModule.IsActive && _playerService?.GetOnlinePlayerThreadSafe(steam64) is { } player)
             {
                 KitPlayerComponent? comp = player.ComponentOrNull<KitPlayerComponent>();
                 if (type.HasValue)
@@ -111,12 +158,31 @@ public class MySqlKitAccessService : IKitAccessService, IDisposable
                     GenerateUpdateQuery();
 
                 int updated = await _dbContext.Database
-                    .ExecuteSqlRawAsync(_updateQuery!, primaryKey, steam64, access.Value, now, token)
+                    .ExecuteSqlRawAsync(_updateQuery!, [ primaryKey, steam64.m_SteamID, access.Value, now ], token)
                     .ConfigureAwait(false);
 
-                if (_playerService?.GetOnlinePlayerThreadSafe(steam64) is { } player)
+                if (WarfareModule.IsActive && _playerService?.GetOnlinePlayerThreadSafe(steam64) is { } player)
                 {
-                    player.ComponentOrNull<KitPlayerComponent>()?.AddAccessibleKit(primaryKey);
+                    KitPlayerComponent kitPlayerComponent = player.Component<KitPlayerComponent>();
+                    kitPlayerComponent.AddAccessibleKit(primaryKey);
+
+                    if (_kitSignService != null && _kitDataStore != null && _kitDataStore.CachedKitsByKey.TryGetValue(primaryKey, out Kit? kit))
+                    {
+                        if (_loadoutService != null && kit.Type == KitType.Loadout)
+                            _ = await _loadoutService.GetLoadouts(steam64, KitInclude.Cached, CancellationToken.None).ConfigureAwait(false);
+                        _kitSignService.UpdateSigns(kit, player);
+                    }
+                }
+
+                ReceiveAccessUpdated(steam64.m_SteamID, primaryKey, access);
+                try
+                {
+                    await SendAccessUpdated(steam64.m_SteamID, primaryKey, access);
+                }
+                catch (RpcNoConnectionsException) { }
+                catch (RpcException ex)
+                {
+                    _logger.LogError(ex, "Error sending access updated.");
                 }
 
                 return updated != 0;
@@ -127,9 +193,29 @@ public class MySqlKitAccessService : IKitAccessService, IDisposable
                     .DeleteRangeAsync((DbContext)_dbContext, x => x.Steam64 == s64 && x.KitId == primaryKey, cancellationToken: token)
                     .ConfigureAwait(false);
 
-                if (_playerService?.GetOnlinePlayerThreadSafe(steam64) is { } player)
+                if (WarfareModule.IsActive && _playerService?.GetOnlinePlayerThreadSafe(steam64) is { } player)
                 {
-                    player.ComponentOrNull<KitPlayerComponent>()?.RemoveAccessibleKit(primaryKey);
+                    KitPlayerComponent component = player.Component<KitPlayerComponent>();
+                    component.RemoveAccessibleKit(primaryKey);
+                
+                    if (_kitSignService != null && _kitDataStore != null && _kitDataStore.CachedKitsByKey.TryGetValue(primaryKey, out Kit? kit))
+                    {
+                        if (_loadoutService != null && kit.Type == KitType.Loadout)
+                            component.RemoveLoadout(kit.Key);
+
+                        _kitSignService.UpdateSigns(kit, player);
+                    }
+                }
+
+                ReceiveAccessUpdated(steam64.m_SteamID, primaryKey, null);
+                try
+                {
+                    await SendAccessUpdated(steam64.m_SteamID, primaryKey, null);
+                }
+                catch (RpcNoConnectionsException) { }
+                catch (RpcException ex)
+                {
+                    _logger.LogError(ex, "Error sending access removed.");
                 }
 
                 return updated != 0;
@@ -154,7 +240,7 @@ public class MySqlKitAccessService : IKitAccessService, IDisposable
                 .AnyAsync(token)
                 .ConfigureAwait(false);
 
-            if (_playerService?.GetOnlinePlayerThreadSafe(steam64) is { } player)
+            if (WarfareModule.IsActive && _playerService?.GetOnlinePlayerThreadSafe(steam64) is { } player)
             {
                 KitPlayerComponent? comp = player.ComponentOrNull<KitPlayerComponent>();
                 if (access)

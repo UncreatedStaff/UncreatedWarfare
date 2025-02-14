@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using MySqlConnector;
 using System;
 using System.Linq;
@@ -29,13 +30,22 @@ public interface IKitFavoriteService
 public class MySqlKitFavoriteService : IKitFavoriteService, IDisposable
 {
     private readonly IKitsDbContext _dbContext;
+    private readonly IKitDataStore? _kitDataStore;
     private readonly IPlayerService? _playerService;
     private readonly SemaphoreSlim _semaphore;
+    private readonly KitSignService? _kitSignService;
 
-    public MySqlKitFavoriteService(IKitsDbContext dbContext, IPlayerService? playerService = null)
+    public MySqlKitFavoriteService(IServiceProvider serviceProvider)
     {
-        _dbContext = dbContext;
-        _playerService = playerService;
+        _dbContext = serviceProvider.GetRequiredService<IKitsDbContext>();
+
+        if (WarfareModule.IsActive)
+        {
+            _playerService = serviceProvider.GetService<IPlayerService>();
+            _kitSignService = serviceProvider.GetService<KitSignService>();
+            _kitDataStore = serviceProvider.GetService<IKitDataStore>();
+        }
+
         _dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
 
         _semaphore = new SemaphoreSlim(1, 1);
@@ -91,7 +101,6 @@ public class MySqlKitFavoriteService : IKitFavoriteService, IDisposable
                 };
                 
                 _dbContext.KitFavorites.Add(favorite);
-
                 await _dbContext.SaveChangesAsync(token).ConfigureAwait(false);
 
                 success = true;
@@ -106,9 +115,21 @@ public class MySqlKitFavoriteService : IKitFavoriteService, IDisposable
                 _dbContext.ChangeTracker.Clear();
             }
 
-            if (_playerService?.GetOnlinePlayerThreadSafe(player) is { } onlinePlayer)
+            if (WarfareModule.IsActive && _playerService?.GetOnlinePlayerThreadSafe(player) is { } onlinePlayer)
             {
-                onlinePlayer.ComponentOrNull<KitPlayerComponent>()?.AddFavoriteKit(kitPrimaryKey);
+                KitPlayerComponent component = onlinePlayer.Component<KitPlayerComponent>();
+                component.AddFavoriteKit(kitPrimaryKey);
+                if (_kitSignService != null && _kitDataStore != null && _kitDataStore.CachedKitsByKey.TryGetValue(kitPrimaryKey, out Kit? value))
+                {
+                    if (value.Type == KitType.Loadout)
+                    {
+                        component.UpdateLoadout(value);
+                        Console.WriteLine($"Updated loadouts for {onlinePlayer}: {string.Join(", ", component.Loadouts.Select(x => x.Id))}.");
+                    }
+                    
+                    Console.WriteLine($"Updating signs for {value.Id} - {onlinePlayer}.");
+                    _kitSignService.UpdateSigns(value, onlinePlayer);
+                }
             }
 
             return success;
@@ -132,9 +153,17 @@ public class MySqlKitFavoriteService : IKitFavoriteService, IDisposable
 
             await _dbContext.SaveChangesAsync(token).ConfigureAwait(false);
 
-            if (_playerService?.GetOnlinePlayerThreadSafe(player) is { } onlinePlayer)
+            if (WarfareModule.IsActive && _playerService?.GetOnlinePlayerThreadSafe(player) is { } onlinePlayer)
             {
-                onlinePlayer.ComponentOrNull<KitPlayerComponent>()?.RemoveFavoriteKit(kitPrimaryKey);
+                KitPlayerComponent component = onlinePlayer.Component<KitPlayerComponent>();
+                component.RemoveFavoriteKit(kitPrimaryKey);
+                if (_kitSignService != null && _kitDataStore != null && _kitDataStore.CachedKitsByKey.TryGetValue(kitPrimaryKey, out Kit? value))
+                {
+                    if (value.Type == KitType.Loadout)
+                        component.UpdateLoadout(value);
+
+                    _kitSignService.UpdateSigns(value, onlinePlayer);
+                }
             }
 
             return change > 0;

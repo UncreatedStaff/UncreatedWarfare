@@ -15,7 +15,7 @@ namespace Uncreated.Warfare.Steam;
 /// </summary>
 public class TimeZoneRegionalDatabase : IHostedService
 {
-    private const string Url = "https://raw.githubusercontent.com/unicode-org/cldr/refs/heads/main/common/supplemental/windowsZones.xml";
+    public const string SourceUrl = "https://raw.githubusercontent.com/unicode-org/cldr/refs/heads/main/common/supplemental/windowsZones.xml";
 
     private readonly ILogger<TimeZoneRegionalDatabase> _logger;
     private readonly string? _fallbackSaveFile;
@@ -102,7 +102,7 @@ public class TimeZoneRegionalDatabase : IHostedService
 
         try
         {
-            using UnityWebRequest req = new UnityWebRequest(Url, "GET", new DownloadHandlerBuffer(), null);
+            using UnityWebRequest req = new UnityWebRequest(SourceUrl, "GET", new DownloadHandlerBuffer(), null);
 
             await req.SendWebRequest();
 

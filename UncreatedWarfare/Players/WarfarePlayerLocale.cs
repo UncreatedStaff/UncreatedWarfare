@@ -1,6 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Globalization;
+using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Translations.Languages;
 using Uncreated.Warfare.Util;
@@ -10,6 +12,7 @@ namespace Uncreated.Warfare.Players;
 public class WarfarePlayerLocale
 {
     private readonly IServiceProvider _serviceProvider;
+    private readonly EventDispatcher _eventDispatcher;
     public static event Action<WarfarePlayer>? OnLocaleUpdated;
 
     private readonly bool _init;
@@ -35,7 +38,8 @@ public class WarfarePlayerLocale
             langService.GetDefaultLocaleSettings(Player.SteamPlayer.language, value, Player.SteamSummary,
                 out LanguageInfo language,
                 out CultureInfo culture,
-                out TimeZoneInfo timeZone);
+                out TimeZoneInfo timeZone
+            );
 
             if (_init)
             {
@@ -76,7 +80,7 @@ public class WarfarePlayerLocale
             if (updated)
             {
                 value.LastUpdated = DateTimeOffset.UtcNow;
-                InvokeOnLocaleUpdated(Player);
+                InvokeOnLocaleUpdated();
             }
         }
     }
@@ -93,6 +97,8 @@ public class WarfarePlayerLocale
         Player = player;
         Preferences = preferences;
         _init = true;
+
+        _eventDispatcher = serviceProvider.GetRequiredService<EventDispatcher>();
     }
 #pragma warning restore CS8618
 
@@ -104,9 +110,9 @@ public class WarfarePlayerLocale
         return dataStore.UpdateLanguagePreferences(Preferences, token);
     }
 
-    private void InvokeOnLocaleUpdated(WarfarePlayer player)
+    private void InvokeOnLocaleUpdated()
     {
-        if (OnLocaleUpdated == null || !player.IsOnline)
+        if (OnLocaleUpdated == null || !Player.IsOnline)
             return;
 
         // ReSharper disable once ConstantConditionalAccessQualifier
@@ -114,31 +120,39 @@ public class WarfarePlayerLocale
         {
             try
             {
-                OnLocaleUpdated.Invoke(player);
+                OnLocaleUpdated.Invoke(Player);
             }
             catch (Exception ex)
             {
                 ILogger<WarfarePlayerLocale> logger = _serviceProvider.GetRequiredService<ILogger<WarfarePlayerLocale>>();
-                logger.LogError(ex, "Error updating locale for {0}.", player);
+                logger.LogError(ex, "Error updating locale for {0}.", Player);
             }
+
+            PlayerLocaleUpdated args = new PlayerLocaleUpdated { Player = Player };
+
+            _ = _eventDispatcher.DispatchEventAsync(args);
         }
         else
         {
             UniTask.Create(async () =>
             {
                 await UniTask.SwitchToMainThread(CancellationToken.None);
-                if (!player.IsOnline)
+                if (!Player.IsOnline)
                     return;
 
                 try
                 {
-                    OnLocaleUpdated?.Invoke(player);
+                    OnLocaleUpdated?.Invoke(Player);
                 }
                 catch (Exception ex)
                 {
                     ILogger<WarfarePlayerLocale> logger = _serviceProvider.GetRequiredService<ILogger<WarfarePlayerLocale>>();
-                    logger.LogError(ex, "Error updating locale for {0}.", player);
+                    logger.LogError(ex, "Error updating locale for {0}.", Player);
                 }
+
+                PlayerLocaleUpdated args = new PlayerLocaleUpdated { Player = Player };
+
+                _ = _eventDispatcher.DispatchEventAsync(args);
             });
         }
     }

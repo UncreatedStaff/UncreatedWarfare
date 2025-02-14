@@ -30,7 +30,7 @@ internal sealed class TeleportCommand : IExecutableCommand
     }
 
     /// <inheritdoc />
-    public UniTask ExecuteAsync(CancellationToken token)
+    public async UniTask ExecuteAsync(CancellationToken token)
     {
         Context.AssertArgs(1, Syntax);
 
@@ -84,7 +84,10 @@ internal sealed class TeleportCommand : IExecutableCommand
                     throw Context.Reply(_translations.TeleportSelfLocationObstructed, n.locationName);
                 }
 
-                if (Context.TryGet(0, out _, out WarfarePlayer? onlinePlayer) && onlinePlayer is not null)
+                (_, WarfarePlayer? onlinePlayer) = await Context.TryGetPlayer(0).ConfigureAwait(false);
+                await UniTask.SwitchToMainThread(token);
+
+                if (onlinePlayer is not null)
                 {
                     if (onlinePlayer.UnturnedPlayer.life.isDead)
                         throw Context.Reply(_translations.TeleportTargetDead, onlinePlayer);
@@ -114,7 +117,10 @@ internal sealed class TeleportCommand : IExecutableCommand
                 throw Context.Reply(_translations.TeleportLocationNotFound, input);
 
             case 2:
-                if (!Context.TryGet(0, out _, out WarfarePlayer? target) || target is null)
+                (_, WarfarePlayer? target) = await Context.TryGetPlayer(0).ConfigureAwait(false);
+                await UniTask.SwitchToMainThread(token);
+
+                if (target is null)
                     throw Context.Reply(_translations.TeleportTargetNotFound, Context.Get(0)!);
 
                 if (target.UnturnedPlayer.life.isDead)
@@ -150,7 +156,10 @@ internal sealed class TeleportCommand : IExecutableCommand
                     throw Context.Reply(_translations.TeleportOtherSuccessLocation, target, n.locationName);
                 }
 
-                if (Context.TryGet(1, out _, out onlinePlayer) && onlinePlayer is not null)
+                (_, onlinePlayer) = await Context.TryGetPlayer(1).ConfigureAwait(false);
+                await UniTask.SwitchToMainThread(token);
+
+                if (onlinePlayer is not null)
                 {
                     if (onlinePlayer.UnturnedPlayer.life.isDead)
                         throw Context.Reply(_translations.TeleportTargetDead, onlinePlayer);
@@ -229,7 +238,10 @@ internal sealed class TeleportCommand : IExecutableCommand
                     $"({pos.x.ToString("0.##", Context.Culture)}, {pos.y.ToString("0.##", Context.Culture)}, {pos.z.ToString("0.##", Context.Culture)})");
 
             case 4:
-                if (!Context.TryGet(0, out _, out target) || target is null)
+                (_, target) = await Context.TryGetPlayer(0).ConfigureAwait(false);
+                await UniTask.SwitchToMainThread(token);
+
+                if (target is null)
                     throw Context.Reply(_translations.TeleportTargetNotFound, Context.Get(0)!);
 
                 if (target.UnturnedPlayer.life.isDead)

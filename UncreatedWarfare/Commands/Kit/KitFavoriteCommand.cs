@@ -29,7 +29,11 @@ internal sealed class KitFavoriteCommand : IExecutableCommand
 
         KitCommandLookResult lookResult = await _lookResolver.ResolveFromArgumentsOrLook(Context, 0, 0, KitInclude.Default, token).ConfigureAwait(false);
 
-        await _kitFavoriteService.AddFavorite(Context.CallerId, lookResult.Kit.Key, token).ConfigureAwait(false);
+        if (!await _kitFavoriteService.AddFavorite(Context.CallerId, lookResult.Kit.Key, token).ConfigureAwait(false))
+        {
+            throw Context.Reply(_translations.KitFavoriteAlreadyFavorited, lookResult.Kit);
+        }
+
         Context.Reply(_translations.KitFavorited, lookResult.Kit);
     }
 }

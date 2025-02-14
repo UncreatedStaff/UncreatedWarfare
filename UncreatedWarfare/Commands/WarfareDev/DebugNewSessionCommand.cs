@@ -1,4 +1,4 @@
-﻿using Uncreated.Warfare.Interaction.Commands;
+using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Sessions;
 
@@ -26,21 +26,25 @@ internal sealed class DebugNewSessionCommand : IExecutableCommand
         if (Context.Caller.IsTerminal && Context.ArgumentCount == 0)
         {
             await _sessionManager.StartNewSessionForAllPlayers(false, token);
+            throw Context.ReplyString("Started new session for all players.");
         }
-        else if (Context.TryGet(0, out _, out WarfarePlayer? onlinePlayer, remainder: true))
+
+        (CSteamID? steam64, WarfarePlayer? onlinePlayer) = await Context.TryGetPlayer(0, remainder: true).ConfigureAwait(false);
+
+        if (steam64.HasValue || Context.HasArgs(1))
         {
             if (onlinePlayer == null)
                 throw Context.SendPlayerNotFound();
 
             await _sessionManager.StartNewSession(onlinePlayer, false, token);
+            Context.ReplyString($"Started new session for {onlinePlayer.Names.GetDisplayNameOrCharacterName()}.");
         }
         else
         {
             Context.AssertRanByPlayer();
 
             await _sessionManager.StartNewSession(Context.Player, false, token);
+            Context.ReplyString("Started new session for you.");
         }
-
-        Context.ReplyString("Started new session.");
     }
 }

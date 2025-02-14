@@ -40,7 +40,9 @@ internal sealed class KitCreateLoadoutCommand : IExecutableCommand
     {
         Context.AssertRanByPlayer();
 
-        if (!Context.TryGet(0, out CSteamID steam64, out _) || !Context.TryGet(1, out Class @class))
+        (CSteamID? steam64, _) = await Context.TryGetPlayer(0).ConfigureAwait(false);
+
+        if (!steam64.HasValue || !Context.TryGet(1, out Class @class))
         {
             throw Context.SendHelp();
         }
@@ -50,7 +52,7 @@ internal sealed class KitCreateLoadoutCommand : IExecutableCommand
             signText = null;
         }
 
-        Kit loadout = await _loadoutService.CreateLoadoutAsync(steam64, Context.CallerId, @class, signText, async kit =>
+        Kit loadout = await _loadoutService.CreateLoadoutAsync(steam64.Value, Context.CallerId, @class, signText, async kit =>
         {
             await UniTask.SwitchToMainThread(token);
 
@@ -71,7 +73,7 @@ internal sealed class KitCreateLoadoutCommand : IExecutableCommand
 
         }, token).ConfigureAwait(false);
         
-        IPlayer player = await _playerService.GetOfflinePlayer(steam64, _userDataService, CancellationToken.None).ConfigureAwait(false);
+        IPlayer player = await _playerService.GetOfflinePlayer(steam64.Value, _userDataService, CancellationToken.None).ConfigureAwait(false);
 
         Context.Reply(_translations.LoadoutCreated, @class, player, player, loadout);
     }

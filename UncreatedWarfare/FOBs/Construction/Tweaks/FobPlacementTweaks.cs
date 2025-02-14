@@ -4,12 +4,15 @@ using SDG.Framework.Water;
 using System;
 using System.Linq;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Events.Models.Buildables;
 using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Interaction;
+using Uncreated.Warfare.Kits.Whitelists;
+using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Zones;
@@ -17,20 +20,23 @@ using Uncreated.Warfare.Zones;
 namespace Uncreated.Warfare.FOBs.Construction.Tweaks;
 
 public class FobPlacementTweaks :
-    IEventListener<IPlaceBuildableRequestedEvent>
+    IAsyncEventListener<IPlaceBuildableRequestedEvent>
 {
     private readonly AssetConfiguration _assetConfiguration;
     private readonly FobManager _fobManager;
+    private readonly UserPermissionStore _userPermissionStore;
     private readonly FobTranslations _translations;
 
-    public FobPlacementTweaks(AssetConfiguration assetConfiguration, TranslationInjection<FobTranslations> translations, FobManager fobManager)
+    public FobPlacementTweaks(AssetConfiguration assetConfiguration, TranslationInjection<FobTranslations> translations, FobManager fobManager, UserPermissionStore userPermissionStore)
     {
         _assetConfiguration = assetConfiguration;
         _fobManager = fobManager;
+        _userPermissionStore = userPermissionStore;
         _translations = translations.Value;
     }
 
-    public void HandleEvent(IPlaceBuildableRequestedEvent e, IServiceProvider serviceProvider)
+    [EventListener(RequiresMainThread = true)]
+    public async UniTask HandleEventAsync(IPlaceBuildableRequestedEvent e, IServiceProvider serviceProvider, CancellationToken token = default)
     {
         if (_assetConfiguration.GetAssetLink<ItemPlaceableAsset>("Buildables:Gameplay:FobUnbuilt").MatchAsset(e.Asset))
             return;
@@ -44,8 +50,11 @@ public class FobPlacementTweaks :
 
         if (supplyCrates.BuildCount == 0)
         {
-            chatService.Send(e.OriginalPlacer, _translations.BuildFOBNoSupplyCrate);
-            e.Cancel();
+            if (!await _userPermissionStore.HasPermissionAsync(e.OriginalPlacer, WhitelistService.PermissionPlaceBuildable, token))
+            {
+                chatService.Send(e.OriginalPlacer, _translations.BuildFOBNoSupplyCrate);
+                e.Cancel();
+            }
             return;
         }
 

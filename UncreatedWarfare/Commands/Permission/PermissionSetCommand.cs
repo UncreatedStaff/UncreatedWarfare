@@ -51,13 +51,13 @@ internal sealed class PermissionSetCommand : IExecutableCommand
         string? displayName;
         try
         {
-            if (!Context.TryGet(0, out CSteamID steam64, out WarfarePlayer? onlinePlayer, searchType: PlayerNameType.PlayerName))
+            (CSteamID? steam64, WarfarePlayer? onlinePlayer) = await Context.TryGetPlayer(0, searchType: PlayerNameType.PlayerName);
+            if (!steam64.HasValue)
             {
-                Context.Logger.LogDebug("0: {0}.", Context.Get(0));
                 throw Context.SendPlayerNotFound();
             }
 
-            player = onlinePlayer ?? await _playerService.CreateOfflinePlayerAsync(steam64, token);
+            player = onlinePlayer ?? await _playerService.CreateOfflinePlayerAsync(steam64.Value, token);
 
             IConfigurationSection permSection = _systemConfig.GetSection("permissions");
 
@@ -118,7 +118,7 @@ internal sealed class PermissionSetCommand : IExecutableCommand
             }
             else if (Context.MatchParameter(1, "owner"))
             {
-                if (Context.CallerId.m_SteamID is not 76561198267927009ul and not 76561198857595123ul || steam64.m_SteamID is not 76561198267927009ul and not 76561198857595123ul)
+                if (Context.CallerId.m_SteamID is not 76561198267927009ul and not 76561198857595123ul || steam64.Value.m_SteamID is not 76561198267927009ul and not 76561198857595123ul)
                     throw Context.SendNoPermission();
                 permissionLevel = DutyLevel.Owner;
                 groupsToAdd = [ grpStaffOffDuty.Id, grpTrialOffDuty.Id, grpAdminOffDuty.Id, grpOwner.Id ];
@@ -136,14 +136,14 @@ internal sealed class PermissionSetCommand : IExecutableCommand
 
                     if (remove)
                     {
-                        if (!await _permissionStore.RemovePermissionAsync(steam64, branch, token))
+                        if (!await _permissionStore.RemovePermissionAsync(steam64.Value, branch, token))
                             throw Context.Reply(_translations.DoesntHavePermission, player, branch);
 
                         Context.Reply(_translations.RemovedPermission, player, branch);
                     }
                     else
                     {
-                        if (!await _permissionStore.AddPermissionAsync(steam64, branch, token))
+                        if (!await _permissionStore.AddPermissionAsync(steam64.Value, branch, token))
                             throw Context.Reply(_translations.AlreadyHavePermission, player, branch);
 
                         Context.Reply(_translations.AddedPermission, player, branch);
@@ -164,14 +164,14 @@ internal sealed class PermissionSetCommand : IExecutableCommand
 
                 if (remove)
                 {
-                    if (!await _permissionStore.RemovePermissionGroupAsync(steam64, matchingGroup.Id, token))
+                    if (!await _permissionStore.RemovePermissionGroupAsync(steam64.Value, matchingGroup.Id, token))
                         throw Context.Reply(_translations.DoesntHavePermissionGroup, player, matchingGroup);
 
                     Context.Reply(_translations.RemovedPermissionGroup, player, matchingGroup);
                 }
                 else
                 {
-                    if (!await _permissionStore.AddPermissionGroupAsync(steam64, matchingGroup.Id, token))
+                    if (!await _permissionStore.AddPermissionGroupAsync(steam64.Value, matchingGroup.Id, token))
                         throw Context.Reply(_translations.AlreadyHavePermissionGroup, player, matchingGroup);
 
                     Context.Reply(_translations.AddedPermissionGroup, player, matchingGroup);
@@ -179,14 +179,14 @@ internal sealed class PermissionSetCommand : IExecutableCommand
                 return;
             }
 
-            IReadOnlyList<PermissionGroup> groups = await _permissionStore.GetPermissionGroupsAsync(steam64, forceRedownload: true, token).ConfigureAwait(false);
+            IReadOnlyList<PermissionGroup> groups = await _permissionStore.GetPermissionGroupsAsync(steam64.Value, forceRedownload: true, token).ConfigureAwait(false);
             
             DutyLevel oldPermissionLevel = DutyLevel.Member;
             bool wasOnDuty = false;
             if (groups.Count != 0)
             {
                 wasOnDuty = groups.Any(x => x == grpStaffOnDuty || x == grpTrialOnDuty || x == grpAdminOnDuty || x == grpOwner);
-                if (steam64.m_SteamID is 76561198267927009ul or 76561198857595123ul)
+                if (steam64.Value.m_SteamID is 76561198267927009ul or 76561198857595123ul)
                 {
                     oldPermissionLevel = DutyLevel.Owner;
                 }
@@ -209,8 +209,8 @@ internal sealed class PermissionSetCommand : IExecutableCommand
                 await _dutyService.ApplyOffDuty(onlinePlayer, oldPermissionLevel, token);
             }
 
-            int changed = await _permissionStore.RemovePermissionGroupsAsync(steam64, groupsToRemove, token);
-            changed +=  await _permissionStore.AddPermissionGroupsAsync(steam64, groupsToAdd, CancellationToken.None);
+            int changed = await _permissionStore.RemovePermissionGroupsAsync(steam64.Value, groupsToRemove, token);
+            changed +=  await _permissionStore.AddPermissionGroupsAsync(steam64.Value, groupsToAdd, CancellationToken.None);
 
             if (changed == 0)
                 Context.Reply(_translations.AlreadyHavePermissionGroupSpecial, player, permissionLevel);

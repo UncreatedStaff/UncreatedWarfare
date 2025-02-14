@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Globalization;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Interaction.Commands;
@@ -54,8 +54,11 @@ internal sealed class StructureSetCommand : IExecutableCommand
         }
         else throw Context.Reply(_translations.StructureNoTarget);
 
+        CSteamID? ownerOrGroupId = await Context.TryGetSteamId(1).ConfigureAwait(false);
+
         await UniTask.SwitchToMainThread(token);
-        if (!Context.TryGet(1, out CSteamID ownerOrGroupId) || ownerOrGroupId != CSteamID.Nil && !isSettingGroup && ownerOrGroupId.GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
+
+        if (!ownerOrGroupId.HasValue || ownerOrGroupId != CSteamID.Nil && !isSettingGroup && ownerOrGroupId.Value.IsIndividual())
         {
             if (!Context.MatchParameter(1, "me"))
                 throw Context.SendHelp();
@@ -64,7 +67,7 @@ internal sealed class StructureSetCommand : IExecutableCommand
             ownerOrGroupId = isSettingGroup ? Context.Player.UnturnedPlayer.quests.groupID : Context.CallerId;
         }
 
-        string ownerOrGroupDisplay = ownerOrGroupId.m_SteamID.ToString(CultureInfo.InvariantCulture);
+        string ownerOrGroupDisplay = ownerOrGroupId.Value.m_SteamID.ToString(CultureInfo.InvariantCulture);
 
         CSteamID? group = isSettingGroup ? ownerOrGroupId : null;
         CSteamID? owner = isSettingGroup ? null : ownerOrGroupId;
@@ -97,7 +100,7 @@ internal sealed class StructureSetCommand : IExecutableCommand
 
         if (isSettingGroup)
         {
-            FactionInfo? info = _teamManager.GetTeam(ownerOrGroupId).Faction;
+            FactionInfo? info = _teamManager.GetTeam(ownerOrGroupId.Value).Faction;
             if (info != null)
             {
                 ownerOrGroupDisplay = TranslationFormattingUtility.Colorize(info.GetName(Context.Language), info.Color, Context.IMGUI);

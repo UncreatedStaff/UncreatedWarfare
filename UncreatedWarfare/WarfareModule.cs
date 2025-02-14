@@ -704,7 +704,7 @@ public sealed class WarfareModule
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
 
-        bldr.RegisterType<MySqlKitAccessService>()
+        bldr.RegisterRpcType<MySqlKitAccessService>()
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
 
