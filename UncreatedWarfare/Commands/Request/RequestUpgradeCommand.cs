@@ -72,11 +72,12 @@ internal sealed class RequestUpgradeCommand : IExecutableCommand
         }
         catch (RpcInvocationException ex)
         {
-            Context.Logger.LogError(ex.InnerException, "Error checking for member of guild.");
+            Context.Logger.LogError(ex, "Error checking for member of guild.");
             throw Context.SendUnknownError();
         }
-        catch (RpcException)
+        catch (RpcException ex)
         {
+            Context.Logger.LogWarning(ex.InnerException, "Error checking for member of guild.");
             throw Context.Reply(_requestTranslations.RequestUpgradeNotConnected);
         }
 

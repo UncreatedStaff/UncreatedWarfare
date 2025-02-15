@@ -39,4 +39,6 @@ public enum KitInclude
     Buyable = Default | FactionFilter | MapFilter | UnlockRequirements | Delays,
 
     All = Base | Items | UnlockRequirements | FactionFilter | MapFilter | Translations | Skillsets | Bundles | Access | Delays | Favorites,
+
+    None = 1 << 11
 }

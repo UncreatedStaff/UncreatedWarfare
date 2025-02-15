@@ -130,6 +130,10 @@ public interface IKitsDbContext : IDbContext
             .WithOne(x => x.Bundle)
             .OnDelete(DeleteBehavior.Cascade);
 
+        modelBuilder.Entity<EliteBundle>()
+            .HasIndex(x => x.Id)
+            .IsUnique(true);
+
         modelBuilder.Entity<KitEliteBundle>()
             .HasKey(x => new { x.KitId, x.BundleId });
         modelBuilder.Entity<KitAccess>()

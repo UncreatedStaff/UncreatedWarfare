@@ -1,10 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Globalization;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Translations;
@@ -60,15 +58,13 @@ internal sealed class KitRemoveAccessCommand : IExecutableCommand
             throw Context.Reply(_translations.KitAlreadyMissingAccess, player, kit);
         }
 
-        if (!await _kitAccessService.UpdateAccessAsync(steam64.Value, kit.Key, null, token).ConfigureAwait(false))
+        if (!await _kitAccessService.UpdateAccessAsync(steam64.Value, kit.Key, null, Context.CallerId, token).ConfigureAwait(false))
         {
             throw Context.Reply(_translations.KitAlreadyMissingAccess, player, kit);
         }
 
         await UniTask.SwitchToMainThread(token);
-
-        Context.LogAction(ActionLogType.ChangeKitAccess, steam64.Value.m_SteamID.ToString(CultureInfo.InvariantCulture) + " DENIED ACCESS TO " + kitName);
-
+        
         Context.Reply(_translations.KitAccessRevoked, player, player, kit);
 
         if (onlinePlayer != null)

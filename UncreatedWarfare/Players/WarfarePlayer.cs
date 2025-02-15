@@ -10,6 +10,7 @@ using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Models.GameData;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Players.Saves;
 using Uncreated.Warfare.Squads.Spotted;
 using Uncreated.Warfare.Stats;
@@ -99,9 +100,6 @@ public class WarfarePlayer :
     public Team Team { get; private set; }
     public BinaryPlayerSave Save { get; }
     public WarfarePlayerLocale Locale { get; }
-
-    [Obsolete]
-    public SemaphoreSlim PurchaseSync { get; }
     public PlayerSummary SteamSummary { get; }
     public SessionRecord CurrentSession { get; internal set; }
     public ref PlayerPoints CachedPoints => ref _cachedPoints;
@@ -122,6 +120,18 @@ public class WarfarePlayer :
             UnturnedPlayer.teleportToLocationUnsafe(value, Transform.eulerAngles.y);
         }
     }
+
+    /// <summary>
+    /// If the player is currently on duty.
+    /// </summary>
+    /// <remarks>This should not be used for permission checks, instead proper permissions should be created for instances like that.</remarks>
+    public bool IsOnDuty { get; private set; }
+
+    /// <summary>
+    /// The player's current staff level. This will be correct even when off duty.
+    /// </summary>
+    /// <remarks>This should not be used for permission checks, instead proper permissions should be created for instances like that.</remarks>
+    public DutyLevel DutyLevel { get; private set; }
 
     /// <summary>
     /// If the player this object represents is currently online. Set to <see langword="false"/> *after* the leave event is fired.
@@ -189,7 +199,10 @@ public class WarfarePlayer :
         Team = Team.NoTeam;
         _logger.LogInformation("Player {0} joined the server", this);
 
-        PurchaseSync = new SemaphoreSlim(1, 1);
+        for (int i = 0; i < components.Length; ++i)
+        {
+            components[i].Player = this;
+        }
 
         for (int i = 0; i < taskData.PendingTasks.Length; ++i)
         {
@@ -223,6 +236,12 @@ public class WarfarePlayer :
     public object? ComponentOrNull(Type t)
     {
         return _components.TryGet(t, out object? comp) ? comp : null;
+    }
+
+    internal void UpdateDutyState(bool isOnDuty, DutyLevel level)
+    {
+        IsOnDuty = isOnDuty && level != DutyLevel.Member;
+        DutyLevel = level;
     }
 
     public void UpdateTeam(Team team)

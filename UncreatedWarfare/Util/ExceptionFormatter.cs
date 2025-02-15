@@ -1,4 +1,4 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ModularRpcs.Exceptions;
 using StackCleaner;
 using System;
 using System.Collections.Generic;
@@ -27,6 +27,11 @@ public static class ExceptionFormatter
             builder.AppendLine(stackCleaner.GetString(ex));
         else
             builder.AppendLine("[ no stack trace ]");
+
+        if (ex is RpcInvocationException { RemoteStackTrace: not null } rpcEx)
+        {
+            builder.AppendLine("Remote Stack Trace:").AppendLine(rpcEx.RemoteStackTrace);
+        }
 
         int ct = GetInnerExceptionCount(ex);
         if (ct == 0)

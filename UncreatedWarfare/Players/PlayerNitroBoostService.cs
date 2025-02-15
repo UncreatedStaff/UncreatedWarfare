@@ -5,8 +5,12 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
+using Uncreated.Warfare.Interaction;
+using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Kits.Requests;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Saves;
+using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Players;
@@ -14,12 +18,15 @@ namespace Uncreated.Warfare.Players;
 /// <summary>
 /// Allows checking if players are Server Boosting in Discord.
 /// </summary>
-// todo: remove kits when nitro is unapplied
 public class PlayerNitroBoostService : IEventListener<PlayerJoined>
 {
     private readonly ILogger<PlayerNitroBoostService> _logger;
     private readonly IPlayerService? _playerService;
     private readonly IUserDataService? _userDataService;
+    private readonly KitSignService? _kitSigns;
+    private readonly WarfareModule? _module;
+    private readonly ChatService? _chatService;
+    private readonly PlayersTranslations? _translations;
 
     public PlayerNitroBoostService(IServiceProvider serviceProvider, ILogger<PlayerNitroBoostService> logger)
     {
@@ -29,6 +36,10 @@ public class PlayerNitroBoostService : IEventListener<PlayerJoined>
         
         _playerService = serviceProvider.GetRequiredService<IPlayerService>();
         _userDataService = serviceProvider.GetRequiredService<IUserDataService>();
+        _kitSigns = serviceProvider.GetRequiredService<KitSignService>();
+        _module = serviceProvider.GetRequiredService<WarfareModule>();
+        _chatService = serviceProvider.GetRequiredService<ChatService>();
+        _translations = serviceProvider.GetRequiredService<TranslationInjection<PlayersTranslations>>()?.Value;
     }
 
     /// <summary>
@@ -122,11 +133,27 @@ public class PlayerNitroBoostService : IEventListener<PlayerJoined>
         {
             await UniTask.SwitchToMainThread();
 
-            _logger.LogDebug($"Nitro boost status updated for {steam64}: {(isNitroBoosting ? "Boosting" : "Not Boosting")}.");
             if (_playerService!.GetOnlinePlayerOrNull(steam64) is { } pl)
             {
+                bool isUpdate = pl.Save.WasNitroBoosting != isNitroBoosting;
+                _logger.LogDebug($"Nitro boost status updated for {steam64}: {(pl.Save.WasNitroBoosting ? "Boosting" : "Not Boosting")} -> {(isNitroBoosting ? "Boosting" : "Not Boosting")}.");
                 pl.Save.WasNitroBoosting = isNitroBoosting;
+
                 pl.Save.Save();
+
+                if (!isUpdate)
+                    return;
+
+                if (_translations != null)
+                {
+                    _chatService?.Send(pl, isNitroBoosting ? _translations.StartedNitroBoosting : _translations.StoppedNitroBoosting);
+                }
+
+                _kitSigns?.UpdateSigns(pl);
+                if (!isNitroBoosting && _module != null && _module.IsLayoutActive() && pl.Component<KitPlayerComponent>().CachedKit is { RequiresServerBoost: true })
+                {
+                    await _module.ScopedProvider.Resolve<KitRequestService>().GiveAvailableFreeKitAsync(pl).ConfigureAwait(false);
+                }
                 return;
             }
             
@@ -134,6 +161,7 @@ public class PlayerNitroBoostService : IEventListener<PlayerJoined>
             
             save.Load();
             save.WasNitroBoosting = isNitroBoosting;
+            _logger.LogDebug($"Nitro boost status updated for {steam64}: {(save.WasNitroBoosting ? "Boosting" : "Not Boosting")} -> {(isNitroBoosting ? "Boosting" : "Not Boosting")}.");
             save.Save();
         });
     }
@@ -151,11 +179,11 @@ public class PlayerNitroBoostService : IEventListener<PlayerJoined>
                     return;
                 }
 
-                bool? isNitroBoosting = await SendCheckNitroBoostStatus(discordId);
+                bool? isNitroBoosting = await SendCheckNitroBoostStatus(discordId).IgnoreNoConnections();
+                _logger.LogDebug($"Received nitro boost status: {isNitroBoosting}.");
                 if (isNitroBoosting.HasValue)
                     ReceiveNitroBoostStatusUpdate(e.Steam64, isNitroBoosting.Value);
             }
-            catch (RpcNoConnectionsException) { }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error checking for nitro boost on join.");

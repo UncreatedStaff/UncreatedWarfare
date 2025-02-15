@@ -63,14 +63,12 @@ internal sealed class KitGiveAccessCommand : IExecutableCommand
             throw Context.Reply(_translations.KitAlreadyHasAccess, player, kit);
         }
 
-        if (!await _kitAccessService.UpdateAccessAsync(steam64.Value, kit.Key, accessType, token).ConfigureAwait(false))
+        if (!await _kitAccessService.UpdateAccessAsync(steam64.Value, kit.Key, accessType, Context.CallerId, token).ConfigureAwait(false))
         {
             throw Context.Reply(_translations.KitAlreadyHasAccess, player, kit);
         }
 
         await UniTask.SwitchToMainThread(token);
-
-        Context.LogAction(ActionLogType.ChangeKitAccess, steam64.Value.m_SteamID.ToString(CultureInfo.InvariantCulture) + " GIVEN ACCESS TO " + kitName + ", REASON: " + accessType);
 
         Context.Reply(_translations.KitAccessGiven, player, player, kit);
 

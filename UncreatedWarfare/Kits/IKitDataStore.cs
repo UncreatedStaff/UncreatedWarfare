@@ -15,7 +15,9 @@ using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Kits.Loadouts;
 using Uncreated.Warfare.Logging;
+using Uncreated.Warfare.Models.Factions;
 using Uncreated.Warfare.Models.Kits;
+using Uncreated.Warfare.Models.Kits.Bundles;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
@@ -36,6 +38,11 @@ public interface IKitDataStore
     /// Dictionary of cached kits by their primary key.
     /// </summary>
     IReadOnlyDictionary<uint, Kit> CachedKitsByKey { get; }
+
+    /// <summary>
+    /// If the cache is being kept up to date.
+    /// </summary>
+    bool CacheEnabled { get; }
 
     /// <summary>
     /// Create a new kit with the given ID and basic information.
@@ -113,6 +120,46 @@ public interface IKitDataStore
     {
         return UpdateKitAsync(primaryKey, include, updateAction, CSteamID.Nil, token);
     }
+
+    /// <summary>
+    /// Query an elite bundle by it's primary key.
+    /// </summary>
+    /// <param name="primaryKey">The unique primary key of an elite bundle.</param>
+    /// <param name="includeKits">If the list of kits should be included.</param>
+    /// <param name="kitListInclude">Data to be included in the list of kits, if <paramref name="includeKits"/> is <see langword="true"/>.</param>
+    /// <param name="includeFaction">If the <see cref="Faction"/> should also be included.</param>
+    /// <returns>The found bundle, or <see langword="null"/> if no bundles are found.</returns>
+    Task<EliteBundle?> QueryEliteBundleAsync(uint primaryKey, bool includeKits = false, bool includeFaction = false, KitInclude kitListInclude = KitInclude.Default, CancellationToken token = default);
+
+    /// <summary>
+    /// Query an elite bundle by it's ID.
+    /// </summary>
+    /// <param name="bundleId">The unique ID of an elite bundle.</param>
+    /// <param name="includeKits">If the list of kits should be included.</param>
+    /// <param name="kitListInclude">Data to be included in the list of kits, if <paramref name="includeKits"/> is <see langword="true"/>.</param>
+    /// <param name="includeFaction">If the <see cref="Faction"/> should also be included.</param>
+    /// <returns>The found bundle, or <see langword="null"/> if no bundles are found.</returns>
+    Task<EliteBundle?> QueryEliteBundleAsync(string bundleId, bool includeKits = false, bool includeFaction = false, KitInclude kitListInclude = KitInclude.Default, CancellationToken token = default);
+
+    /// <summary>
+    /// Query an elite bundle by it's ID.
+    /// </summary>
+    /// <param name="query">Action against the <see cref="EliteBundle"/> <see cref="DbSet{TEntity}"/>.</param>
+    /// <param name="includeKits">If the list of kits should be included.</param>
+    /// <param name="kitListInclude">Data to be included in the list of kits, if <paramref name="includeKits"/> is <see langword="true"/>.</param>
+    /// <param name="includeFaction">If the <see cref="Faction"/> should also be included.</param>
+    /// <returns>The found bundle, or <see langword="null"/> if no bundles are found.</returns>
+    Task<EliteBundle?> QueryEliteBundleAsync(Func<IQueryable<EliteBundle>, IQueryable<EliteBundle>> query, bool includeKits = false, bool includeFaction = false, KitInclude kitListInclude = KitInclude.Default, CancellationToken token = default);
+
+    /// <summary>
+    /// Query an elite bundle by it's ID.
+    /// </summary>
+    /// <param name="query">Action against the <see cref="EliteBundle"/> <see cref="DbSet{TEntity}"/>.</param>
+    /// <param name="includeKits">If the list of kits should be included.</param>
+    /// <param name="kitListInclude">Data to be included in the list of kits, if <paramref name="includeKits"/> is <see langword="true"/>.</param>
+    /// <param name="includeFaction">If the <see cref="Faction"/> should also be included.</param>
+    /// <returns>The found bundle, or <see langword="null"/> if no bundles are found.</returns>
+    Task<IList<EliteBundle>> QueryEliteBundlesAsync(Func<IQueryable<EliteBundle>, IQueryable<EliteBundle>> query, bool includeKits = false, bool includeFaction = false, KitInclude kitListInclude = KitInclude.Default, CancellationToken token = default);
 
     /// <summary>
     /// Query data from a kit other than the kit itself (ex. querying an ID using .Select(x => x.Id)).
@@ -205,12 +252,12 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
     private readonly LanguageService? _languageService;
     private readonly ILogger<MySqlKitsDataStore> _logger;
     private readonly IPlayerService? _playerService;
-    private readonly object? _kitSigns;
+    private readonly KitSignService? _kitSigns;
     private bool _isInUpdate;
     private bool _isInAdd;
 
-    private readonly ConcurrentDictionary<string, Kit> _idCache = new ConcurrentDictionary<string, Kit>();
-    private readonly ConcurrentDictionary<uint, Kit> _keyCache = new ConcurrentDictionary<uint, Kit>();
+    private readonly ConcurrentDictionary<string, Kit>? _idCache;
+    private readonly ConcurrentDictionary<uint, Kit>? _keyCache;
 
     private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
 
@@ -221,6 +268,8 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
     public IReadOnlyDictionary<string, Kit> CachedKitsById { get; }
 
     public IReadOnlyDictionary<uint, Kit> CachedKitsByKey { get; }
+
+    public bool CacheEnabled { get; }
 
     public MySqlKitsDataStore(IServiceProvider serviceProvider, ILogger<MySqlKitsDataStore> logger)
     {
@@ -234,14 +283,25 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
 
         if (WarfareModule.IsActive)
         {
-            _kitSigns = serviceProvider.GetService(typeof(KitSignService));
+            _kitSigns = serviceProvider.GetService<KitSignService>();
+            CacheEnabled = true;
         }
 
         _logger = logger;
         _dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
 
-        CachedKitsById = new ReadOnlyDictionary<string, Kit>(_idCache);
-        CachedKitsByKey = new ReadOnlyDictionary<uint, Kit>(_keyCache);
+        if (CacheEnabled)
+        {
+            _keyCache = new ConcurrentDictionary<uint, Kit>();
+            _idCache = new ConcurrentDictionary<string, Kit>();
+            CachedKitsById = new ReadOnlyDictionary<string, Kit>(_idCache);
+            CachedKitsByKey = new ReadOnlyDictionary<uint, Kit>(_keyCache);
+        }
+        else
+        {
+            CachedKitsById = new Dictionary<string, Kit>(0);
+            CachedKitsByKey = new Dictionary<uint, Kit>(0);
+        }
 
         _getOrCreateUpdateFuncId = (_, model) => new Kit(model, _factionDataStore, _languageDataStore);
         _getOrCreateAddFuncId = (_, value, model) =>
@@ -254,7 +314,10 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
     [EventListener(Priority = int.MinValue, RequiresMainThread = false)]
     void IEventListener<PlayerLeft>.HandleEvent(PlayerLeft e, IServiceProvider serviceProvider)
     {
-        foreach (Kit kit in _keyCache.Values)
+        if (!CacheEnabled)
+            return;
+
+        foreach (Kit kit in _keyCache!.Values)
         {
             if (kit.Type != KitType.Loadout || LoadoutIdHelper.Parse(kit.Id, out CSteamID player) < 0)
                 continue;
@@ -267,14 +330,17 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
                 continue;
 
             // player is leaving or (offline and not pending)
-            _keyCache.TryRemove(kit.Key, out _);
-            _idCache.TryRemove(kit.Id, out _);
+            _keyCache!.TryRemove(kit.Key, out _);
+            _idCache!.TryRemove(kit.Id, out _);
         }
     }
 
     [EventListener(RequiresMainThread = false)]
     async UniTask IAsyncEventListener<PlayerPending>.HandleEventAsync(PlayerPending e, IServiceProvider serviceProvider, CancellationToken token)
     {
+        if (!CacheEnabled)
+            return;
+
         // cache loadouts for joining player
         await _semaphore.WaitAsync(token);
         try
@@ -286,8 +352,8 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
                                .WithCancellation(token))
             {
                 Kit kit = new Kit(model, _factionDataStore, _languageDataStore);
-                _keyCache[kit.Key] = kit;
-                _idCache[kit.Id] = kit;
+                _keyCache![kit.Key] = kit;
+                _idCache![kit.Id] = kit;
             }
         }
         finally
@@ -479,7 +545,7 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
     [MethodImpl(MethodImplOptions.NoInlining)]
     private void UpdateSigns(string kitId, WarfarePlayer? player)
     {
-        KitSignService? service = (KitSignService?)_kitSigns;
+        KitSignService? service = _kitSigns;
         if (player != null)
             service?.UpdateSigns(kitId, player);
         else
@@ -489,7 +555,7 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
     [MethodImpl(MethodImplOptions.NoInlining)]
     private void UpdateLoadouts(WarfarePlayer? player)
     {
-        KitSignService? service = (KitSignService?)_kitSigns;
+        KitSignService? service = _kitSigns;
         if (player != null)
             service?.UpdateLoadoutSigns(player);
         else
@@ -513,8 +579,11 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
 
             await _dbContext.SaveChangesAsync(token).ConfigureAwait(false);
 
-            _keyCache.TryRemove(pk, out _);
-            _idCache.TryRemove(kit.Id, out _);
+            if (CacheEnabled)
+            {
+                _keyCache!.TryRemove(pk, out _);
+                _idCache!.TryRemove(kit.Id, out _);
+            }
 
             if (WarfareModule.IsActive)
             {
@@ -667,9 +736,9 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
         {
             kit.Id = oldId;
         }
-        else if (!kit.Id.Equals(oldId, StringComparison.Ordinal))
+        else if (CacheEnabled && !kit.Id.Equals(oldId, StringComparison.Ordinal))
         {
-            if (!_idCache.TryRemove(kit.Id, out Kit kitMdl))
+            if (!_idCache!.TryRemove(kit.Id, out Kit kitMdl))
                 return;
 
             if (kitMdl.Key != kit.PrimaryKey)
@@ -681,14 +750,17 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
 
     private void OnKitUpdatePostSave(Kit createdKit, KitModel kit, KitInclude include, KitType oldType, string oldId)
     {
-        if (_keyCache.TryGetValue(kit.PrimaryKey, out Kit byKey))
+        if (CacheEnabled)
         {
-            byKey.UpdateFromModel(kit, _factionDataStore, _languageDataStore);
-        }
+            if (_keyCache!.TryGetValue(kit.PrimaryKey, out Kit byKey))
+            {
+                byKey.UpdateFromModel(kit, _factionDataStore, _languageDataStore);
+            }
 
-        if (_idCache.TryGetValue(kit.Id, out Kit byId) && !ReferenceEquals(byKey, byId))
-        {
-            byId.UpdateFromModel(kit, _factionDataStore, _languageDataStore);
+            if (_idCache!.TryGetValue(kit.Id, out Kit byId) && !ReferenceEquals(byKey, byId))
+            {
+                byId.UpdateFromModel(kit, _factionDataStore, _languageDataStore);
+            }
         }
 
         if (!WarfareModule.IsActive)
@@ -769,10 +841,66 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
         }
     }
 
+    /// <inheritdoc />
+    public async Task<EliteBundle?> QueryEliteBundleAsync(uint primaryKey, bool includeKits = false, bool includeFaction = false, KitInclude kitListInclude = KitInclude.Translations, CancellationToken token = default)
+    {
+        await _semaphore.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            return await ApplyIncludes(_dbContext.EliteBundles, includeKits, includeFaction, kitListInclude, false).FirstOrDefaultAsync(x => x.PrimaryKey == primaryKey, token).ConfigureAwait(false);
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<EliteBundle?> QueryEliteBundleAsync(string bundleId, bool includeKits = false, bool includeFaction = false, KitInclude kitListInclude = KitInclude.Translations, CancellationToken token = default)
+    {
+        await _semaphore.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            return await ApplyIncludes(_dbContext.EliteBundles, includeKits, includeFaction, kitListInclude, false).FirstOrDefaultAsync(x => x.Id == bundleId, token).ConfigureAwait(false);
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<EliteBundle?> QueryEliteBundleAsync(Func<IQueryable<EliteBundle>, IQueryable<EliteBundle>> query, bool includeKits = false, bool includeFaction = false, KitInclude kitListInclude = KitInclude.Translations, CancellationToken token = default)
+    {
+        await _semaphore.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            return await query(ApplyIncludes(_dbContext.EliteBundles, includeKits, includeFaction, kitListInclude, false)).FirstOrDefaultAsync(token).ConfigureAwait(false);
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<IList<EliteBundle>> QueryEliteBundlesAsync(Func<IQueryable<EliteBundle>, IQueryable<EliteBundle>> query, bool includeKits = false, bool includeFaction = false, KitInclude kitListInclude = KitInclude.Translations, CancellationToken token = default)
+    {
+        await _semaphore.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            return await query(ApplyIncludes(_dbContext.EliteBundles, includeKits, includeFaction, kitListInclude, false)).ToListAsync(token).ConfigureAwait(false);
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
+    }
+
     private Kit GetOrCreateKit(KitModel model, KitInclude include)
     {
         // all cached kits must have Cached at least
-        if ((include & KitInclude.Cached) != KitInclude.Cached)
+        if (!CacheEnabled || (include & KitInclude.Cached) != KitInclude.Cached)
         {
             return new Kit(model, _factionDataStore, _languageDataStore);
         }
@@ -780,17 +908,17 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
         // loadout of offline player, shouldn't be cached
         if (model.Type == KitType.Loadout && LoadoutIdHelper.Parse(model.Id, out CSteamID steam64) >= 0 && (_playerService == null || !_playerService.IsPlayerOnlineThreadSafe(steam64)))
         {
-            _idCache.TryRemove(model.Id, out _);
-            _keyCache.TryRemove(model.PrimaryKey, out _);
+            _idCache!.TryRemove(model.Id, out _);
+            _keyCache!.TryRemove(model.PrimaryKey, out _);
             return new Kit(model, _factionDataStore, _languageDataStore);
         }
 
-        Kit kitByPk = _keyCache.AddOrUpdate(model.PrimaryKey, _getOrCreateUpdateFuncId, _getOrCreateAddFuncId, model);
+        Kit kitByPk = _keyCache!.AddOrUpdate(model.PrimaryKey, _getOrCreateUpdateFuncId, _getOrCreateAddFuncId, model);
 
         Kit? prev = null;
 
         // threadsafe exchange
-        _idCache.AddOrUpdate(
+        _idCache!.AddOrUpdate(
             model.Id,
             _ => { prev = null; return kitByPk; },
             (_, old) => { prev = old; return kitByPk; }
@@ -933,9 +1061,80 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
         }
     }
 
+    internal static IQueryable<EliteBundle> ApplyIncludes(IQueryable<EliteBundle> model, bool includeKits, bool includeFaction, KitInclude kitListInclude, bool track)
+    {
+        IQueryable<EliteBundle> mdl = model;
+        if (!track)
+            mdl = mdl.AsNoTrackingWithIdentityResolution();
+        if (includeKits)
+        {
+            if ((kitListInclude & KitInclude.None) == 0)
+            {
+                mdl = mdl.Include(x => x.Kits).ThenInclude(x => x.Kit);
+                if ((kitListInclude & KitInclude.Items) != 0)
+                {
+                    mdl = mdl.Include(x => x.Kits).ThenInclude(x => x.Kit).ThenInclude(x => x.Items);
+                }
+                if ((kitListInclude & KitInclude.UnlockRequirements) != 0)
+                {
+                    mdl = mdl.Include(x => x.Kits).ThenInclude(x => x.Kit).ThenInclude(x => x.UnlockRequirements);
+                }
+                if ((kitListInclude & KitInclude.FactionFilter) != 0)
+                {
+                    mdl = mdl.Include(x => x.Kits).ThenInclude(x => x.Kit).ThenInclude(x => x.FactionFilter);
+                }
+                if ((kitListInclude & KitInclude.MapFilter) != 0)
+                {
+                    mdl = mdl.Include(x => x.Kits).ThenInclude(x => x.Kit).ThenInclude(x => x.MapFilter);
+                }
+                if ((kitListInclude & KitInclude.Translations) != 0)
+                {
+                    mdl = mdl.Include(x => x.Kits).ThenInclude(x => x.Kit).ThenInclude(x => x.Translations);
+                }
+                if ((kitListInclude & KitInclude.Skillsets) != 0)
+                {
+                    mdl = mdl.Include(x => x.Kits).ThenInclude(x => x.Kit).ThenInclude(x => x.Skillsets);
+                }
+                if ((kitListInclude & KitInclude.Bundles) != 0)
+                {
+                    mdl = mdl.Include(x => x.Kits).ThenInclude(x => x.Kit).ThenInclude(x => x.Bundles).ThenInclude(x => x.Bundle);
+                }
+                if ((kitListInclude & KitInclude.Access) != 0)
+                {
+                    mdl = mdl.Include(x => x.Kits).ThenInclude(x => x.Kit).ThenInclude(x => x.Access);
+                }
+                if ((kitListInclude & KitInclude.Delays) != 0)
+                {
+                    mdl = mdl.Include(x => x.Kits).ThenInclude(x => x.Kit).ThenInclude(x => x.Delays);
+                }
+                if ((kitListInclude & (KitInclude)(1 << 10)) != 0)
+                {
+                    mdl = mdl.Include(x => x.Kits).ThenInclude(x => x.Kit).ThenInclude(x => x.Faction);
+                }
+            }
+            else
+            {
+                mdl = mdl.Include(x => x.Kits);
+            }
+        }
+
+        if (includeFaction)
+        {
+            mdl = mdl.Include(x => x.Faction).ThenInclude(x => x!.Translations).Include(x => x.Faction);
+        }
+
+        return mdl;
+    }
+
     internal static IQueryable<KitModel> ApplyIncludes(KitInclude include, IQueryable<KitModel> model, bool track)
     {
         IQueryable<KitModel> mdl = model;
+        if (!track)
+            mdl = mdl.AsNoTrackingWithIdentityResolution();
+
+        if ((include & KitInclude.None) != 0)
+            return mdl;
+
         if ((include & KitInclude.Items) != 0)
         {
             mdl = mdl.Include(x => x.Items);
@@ -977,14 +1176,14 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
             mdl = mdl.Include(x => x.Faction);
         }
 
-        if (!track)
-            mdl = mdl.AsNoTrackingWithIdentityResolution();
-
         return mdl;
     }
 
     async UniTask IHostedService.StartAsync(CancellationToken token)
     {
+        if (!CacheEnabled)
+            return;
+
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
@@ -995,8 +1194,8 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
             {
                 Kit kit = new Kit(model, _factionDataStore, _languageDataStore);
 
-                _keyCache[kit.Key] = kit;
-                _idCache[kit.Id] = kit;
+                _keyCache![kit.Key] = kit;
+                _idCache![kit.Id] = kit;
             }
         }
         finally

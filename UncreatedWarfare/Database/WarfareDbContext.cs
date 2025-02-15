@@ -18,6 +18,7 @@ using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Models.Seasons;
 using Uncreated.Warfare.Models.Stats;
 using Uncreated.Warfare.Models.Users;
+using Uncreated.Warfare.Models.Web;
 using Uncreated.Warfare.Moderation;
 
 namespace Uncreated.Warfare.Database;
@@ -52,9 +53,11 @@ public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContex
     public DbSet<BuildableSave> Saves => Set<BuildableSave>();
     public DbSet<ItemWhitelist> Whitelists => Set<ItemWhitelist>();
     public DbSet<SteamDiscordPendingLink> PendingLinks => Set<SteamDiscordPendingLink>();
+    
+    public DbSet<LoadoutPurchase> Loadouts => Set<LoadoutPurchase>();
+    public DbSet<HomebaseAuthenticationKey> HomebaseAuthenticationKeys => Set<HomebaseAuthenticationKey>();
 
-    private static readonly EventDefinitionBase NoExceptionDuringSaveChanges =
-        new EventDefinition<Type, string, Exception>(new LoggingOptions(), default, LogLevel.None, "NONE", _ => (_, _, _, _, _) => { });
+
 
     public WarfareDbContext(ILogger<WarfareDbContext> logger, DbContextOptions<WarfareDbContext> options) : base(options)
     {
@@ -63,7 +66,7 @@ public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContex
         // constraint violation exceptions for threadsafe add operations (MySQL 1062: DuplicateKeyEntry)
 
         _logger = logger;
-        ((IDbContext)this).UpdateLogger.Definitions.LogExceptionDuringSaveChanges = NoExceptionDuringSaveChanges;
+        EFCompat.Instance.DontLogExceptionDuringSaveChanges(this);
     }
 
     /// <summary>
@@ -129,8 +132,6 @@ public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContex
         ISeasonsDbContext.ConfigureModels(modelBuilder);
         IGameDataDbContext.ConfigureModels(modelBuilder);
         IWhitelistDbContext.ConfigureModels(modelBuilder);
-
-        modelBuilder.Entity<HomebaseAuthenticationKey>();
 
         // add the RAND() function in EFCore 5
         //if (WarfareModule.IsActive)

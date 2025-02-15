@@ -235,7 +235,6 @@ public partial class EventDispatcher : IHostedService, IDisposable
 
         await UniTask.SwitchToMainThread(token);
 
-
         Type type = typeof(TEventArgs);
         EventInvocationListenerCache cache = GetEventListenersCache<TEventArgs>(out IServiceProvider serviceProvider);
 

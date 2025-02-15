@@ -26,6 +26,8 @@ namespace Uncreated.Warfare.Kits.Requests;
 
 public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, IRequestHandler<Kit, Kit>, IDisposable
 {
+    public const string DefaultKitId = "default";
+
     private readonly IKitDataStore _kitDataStore;
     private readonly ITranslationValueFormatter _valueFormatter;
     private readonly LoadoutService _loadoutService;
@@ -297,6 +299,67 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
             _semaphore.Release();
         }
     }
+
+    public async Task<bool> GiveAvailableFreeKitAsync(WarfarePlayer player, CancellationToken token = default)
+    {
+        await _semaphore.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            uint factionId = player.Team.Faction.PrimaryKey;
+            if (factionId == 0)
+            {
+                Kit? defaultKit = await _kitDataStore.QueryKitAsync(DefaultKitId, KitInclude.Giveable, token);
+                if (defaultKit != null)
+                {
+                    await GiveKitIntlAsync(player, new KitBestowData(defaultKit), false, token).ConfigureAwait(false);
+                    return true;
+                }
+            }
+
+            ulong steam64 = player.Steam64.m_SteamID;
+            List<uint> kits = await _kitDataStore.QueryListAsync(kits => kits
+                .Where(x => x.Type == KitType.Public
+                            && x.Season == WarfareModule.Season
+                            && x.PremiumCost == 0
+                            && !x.RequiresNitro
+                            && x.Delays.Count == 0
+                            && x.SquadLevel == SquadLevel.Member
+                            && !x.Disabled
+                            && x.FactionId == factionId
+                            && (x.CreditCost == 0 || x.Access.Any(a => a.Steam64 == steam64))).Select(x => x.PrimaryKey),
+                token: token
+            ).ConfigureAwait(false);
+
+            Kit? kit = null;
+            if (kits.Count != 0)
+            {
+                kit = await _kitDataStore.QueryKitAsync(kits[kits.GetRandomIndex()], KitInclude.Giveable, token).ConfigureAwait(false);
+            }
+
+            if (kit == null)
+            {
+                uint unarmedKit = player.Team.Faction.UnarmedKit.GetValueOrDefault();
+                if (unarmedKit != 0)
+                    kit = await _kitDataStore.QueryKitAsync(unarmedKit, KitInclude.Giveable, token).ConfigureAwait(false);
+            }
+
+            kit ??= await _kitDataStore.QueryKitAsync(DefaultKitId, KitInclude.Giveable, token).ConfigureAwait(false);
+
+            if (kit != null)
+            {
+                await GiveKitIntlAsync(player, new KitBestowData(kit), false, token).ConfigureAwait(false);
+                return true;
+            }
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
+
+        await RemoveKitAsync(player, token);
+        return false;
+    }
+
 
     public async Task GiveKitAsync(WarfarePlayer player, KitBestowData kitBestowData, CancellationToken token = default)
     {

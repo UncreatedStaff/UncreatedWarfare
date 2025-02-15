@@ -23,7 +23,7 @@ namespace Uncreated.Warfare.Discord;
 /// </summary>
 /// <remarks>This class is meant to be used on both the server and the discord bot.</remarks>
 [RpcClass]
-public class RemotePlayerListService : ILayoutHostedService, IAsyncEventListener<PlayerJoined>, IAsyncEventListener<PlayerLeft>, IAsyncEventListener<HomebaseConnected>
+public class RemotePlayerListService : ILayoutHostedService, IAsyncEventListener<PlayerJoined>, IAsyncEventListener<PlayerLeft>, IEventListener<HomebaseConnected>
 {
     private readonly IPlayerService? _playerService;
     private readonly IUserDataService? _userDataService;
@@ -279,9 +279,19 @@ public class RemotePlayerListService : ILayoutHostedService, IAsyncEventListener
         SendPlayerDisconnected(player.Steam64.m_SteamID, player.Names.PlayerName, player.Names.CharacterName, player.Names.NickName, discordId);
     }
 
-    async UniTask IAsyncEventListener<HomebaseConnected>.HandleEventAsync(HomebaseConnected e, IServiceProvider serviceProvider, CancellationToken token)
+    void IEventListener<HomebaseConnected>.HandleEvent(HomebaseConnected e, IServiceProvider serviceProvider)
     {
-        await SendCurrentPlayerList(token);
+        Task.Run(async () =>
+        {
+            try
+            {
+                await SendCurrentPlayerList(CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error sending player list.");
+            }
+        });
     }
 }
 

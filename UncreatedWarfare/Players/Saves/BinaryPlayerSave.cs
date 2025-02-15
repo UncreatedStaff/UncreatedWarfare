@@ -31,6 +31,7 @@ public class BinaryPlayerSave : ISaveableState
     /// If this save has been read from or written to a file.
     /// </summary>
     public bool WasReadFromFile { get; private set; }
+
     internal BinaryPlayerSave(CSteamID steam64, ILogger logger)
     {
         Steam64 = steam64;

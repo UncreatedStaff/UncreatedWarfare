@@ -465,6 +465,9 @@ public sealed class WarfareModule
             );
         });
 
+        bldr.RegisterType<NullRpcConnectionService>()
+            .As<IRpcConnectionService>();
+
         bldr.RegisterInstance(this)
             .As<WarfareModule>()
             .ExternallyOwned();
@@ -553,7 +556,7 @@ public sealed class WarfareModule
             .AsImplementedInterfaces().AsSelf()
             .SingleInstance();
 
-        bldr.RegisterRpcType<TimeZoneRegionalDatabase>()
+        bldr.RegisterType<TimeZoneRegionalDatabase>()
             .AsImplementedInterfaces().AsSelf()
             .SingleInstance();
 
@@ -585,8 +588,7 @@ public sealed class WarfareModule
             .AsImplementedInterfaces().AsSelf()
             .SingleInstance();
         bldr.RegisterRpcType<DutyService>()
-            .AsImplementedInterfaces().AsSelf()
-            .SingleInstance();
+            .AsImplementedInterfaces().AsSelf();
         
         bldr.RegisterInstance(_gameObjectHost).ExternallyOwned();
 
@@ -740,6 +742,7 @@ public sealed class WarfareModule
 
         if (false && ItemUtility.SupportsFastKits)
         {
+            // todo: this needs fixed
             bldr.RegisterType<FastItemDistributionService>()
                 .As<IItemDistributionService>();
         }
@@ -793,10 +796,6 @@ public sealed class WarfareModule
             .As<IStripeService>();
 
         bldr.RegisterRpcType<DiscordUserService>()
-            .SingleInstance();
-
-        bldr.RegisterType<MySqlKitAccessService>()
-            .As<IKitAccessService>()
             .SingleInstance();
 
         // Layouts

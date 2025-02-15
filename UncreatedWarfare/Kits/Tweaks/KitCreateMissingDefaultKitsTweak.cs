@@ -7,6 +7,7 @@ using System.Linq;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Kits.Loadouts;
+using Uncreated.Warfare.Kits.Requests;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Models.Factions;
 using Uncreated.Warfare.Models.Kits;
@@ -22,8 +23,6 @@ namespace Uncreated.Warfare.Kits.Tweaks;
 [Priority(10)]
 internal sealed class KitCreateMissingDefaultKitsTweak : ILayoutHostedService
 {
-    private const string DefaultKitId = "default";
-
     private readonly ITeamManager<Team> _teamManager;
     private readonly IFactionDbContext _factionDbContext;
     private readonly IKitDataStore _kitSql;
@@ -152,12 +151,12 @@ internal sealed class KitCreateMissingDefaultKitsTweak : ILayoutHostedService
             _logger.LogError(ex, "Error updating faction table with new unarmed kit(s).");
         }
 
-        Kit? defaultKit = await _kitSql.QueryKitAsync(DefaultKitId, KitInclude.Base, token).ConfigureAwait(false);
+        Kit? defaultKit = await _kitSql.QueryKitAsync(KitRequestService.DefaultKitId, KitInclude.Base, token).ConfigureAwait(false);
         if (defaultKit != null)
             return;
         
-        _logger.LogWarning($"The overall default kit \"{DefaultKitId}\" was not found, an attempt will be made to auto-generate one.");
-        defaultKit = await CreateDefaultKit(null, DefaultKitId, token);
+        _logger.LogWarning($"The overall default kit \"{KitRequestService.DefaultKitId}\" was not found, an attempt will be made to auto-generate one.");
+        defaultKit = await CreateDefaultKit(null, KitRequestService.DefaultKitId, token);
         _logger.LogInformation($"Created default kit: \"{defaultKit.Id}\" ({defaultKit.Key}).");
     }
 

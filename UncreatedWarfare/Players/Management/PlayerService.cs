@@ -163,7 +163,6 @@ public class PlayerService : IPlayerService
             {
                 IPlayerComponent component = components[i];
 
-                component.Player = joined;
                 component.Init(serviceProvider, true);
             }
 

@@ -91,15 +91,24 @@ public class ActionLog : MonoBehaviour
     public static void Add(ActionLogType type, string? data, WarfarePlayer? player) => Add(type, data, player == null ? 0ul : player.Steam64.m_SteamID);
     public static void Add(ActionLogType type, string? data = null, ulong player = 0)
     {
+        if (player != 0 && Unsafe.As<ulong, CSteamID>(ref player).GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
+            player = 0;
+
         _instance!._items.Enqueue(new ActionLogItem(player, type, data, DateTimeOffset.UtcNow));
     }
     public static void Add(ActionLogType type, string? data, CSteamID player)
     {
+        if (player.m_SteamID != 0 && player.GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
+            player.m_SteamID = 0;
+
         _instance!._items.Enqueue(new ActionLogItem(player.m_SteamID, type, data, DateTimeOffset.UtcNow));
     }
     /// <exception cref="NotSupportedException"/>
     public static void AddPriority(ActionLogType type, string? data = null, ulong player = 0)
     {
+        if (player != 0 && Unsafe.As<ulong, CSteamID>(ref player).GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
+            player = 0;
+
         GameThread.AssertCurrent();
         _instance!._items.Enqueue(new ActionLogItem(player, type, data, DateTimeOffset.UtcNow));
         // todo _instance.Update();

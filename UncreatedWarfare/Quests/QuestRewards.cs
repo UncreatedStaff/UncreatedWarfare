@@ -231,7 +231,7 @@ public class KitAccessReward : IQuestReward
         if (string.IsNullOrEmpty(KitId))
             return;
 
-        if (!await kitAccessService.UpdateAccessAsync(player.Steam64, pk, KitAccessType.QuestReward, token).ConfigureAwait(false))
+        if (!await kitAccessService.UpdateAccessAsync(player.Steam64, pk, KitAccessType.QuestReward, CSteamID.Nil, token).ConfigureAwait(false))
         {
             serviceProvider.GetRequiredService<ILogger<KitAccessReward>>().LogWarning($"Unknown kit {KitId} when giving access reward to player {player}.");
         }

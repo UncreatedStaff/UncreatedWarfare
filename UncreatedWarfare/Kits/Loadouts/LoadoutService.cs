@@ -1,3 +1,4 @@
+using DanielWillett.ModularRpcs.Abstractions;
 using DanielWillett.ModularRpcs.Annotations;
 using DanielWillett.ModularRpcs.Async;
 using DanielWillett.ModularRpcs.Exceptions;
@@ -15,6 +16,7 @@ using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Factions;
 using Uncreated.Warfare.Models.Kits;
+using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Util;
@@ -28,6 +30,7 @@ public class LoadoutService
     private readonly IConfiguration _systemConfig;
     private readonly EventDispatcher? _eventDispatcher;
     private readonly IPlayerService? _playerService;
+    private readonly IRpcConnectionService? _rpcConnectionService;
     private readonly DefaultLoadoutItemsConfiguration? _loadoutItemsConfiguration;
 
     private readonly ILogger<LoadoutService> _logger;
@@ -49,8 +52,12 @@ public class LoadoutService
 
         if (WarfareModule.IsActive)
         {
-            _playerService = serivceProvider.GetService<IPlayerService>();
+            _playerService = serivceProvider.GetRequiredService<IPlayerService>();
             _eventDispatcher = serivceProvider.GetRequiredService<EventDispatcher>();
+        }
+        else
+        {
+            _rpcConnectionService = serivceProvider.GetRequiredService<IRpcConnectionService>();
         }
 
         _logger = logger;
@@ -83,7 +90,7 @@ public class LoadoutService
             , token
         );
 
-        if ((include & KitInclude.Cached) != KitInclude.Cached || kit == null)
+        if (!WarfareModule.IsActive || (include & KitInclude.Cached) != KitInclude.Cached || kit == null)
             return kit;
 
         WarfarePlayer? onlinePlayer = _playerService?.GetOnlinePlayerOrNullThreadSafe(player);
@@ -110,7 +117,7 @@ public class LoadoutService
             , token
         ).ConfigureAwait(false);
 
-        if ((include & KitInclude.Cached) != KitInclude.Cached)
+        if (!WarfareModule.IsActive || (include & KitInclude.Cached) != KitInclude.Cached)
             return loadouts;
 
         WarfarePlayer? onlinePlayer = _playerService?.GetOnlinePlayerOrNullThreadSafe(player);
@@ -133,12 +140,378 @@ public class LoadoutService
             , token
         ).ConfigureAwait(false);
 
-        if ((include & KitInclude.Cached) != KitInclude.Cached)
+        if (!WarfareModule.IsActive || (include & KitInclude.Cached) != KitInclude.Cached)
             return;
 
         WarfarePlayer? onlinePlayer = _playerService?.GetOnlinePlayerOrNullThreadSafe(player);
         onlinePlayer?.Component<KitPlayerComponent>().UpdateLoadouts(output.ToList());
         
+    }
+
+    /// <summary>
+    /// Enables a loadout, usually after creating or upgrading a kit.
+    /// </summary>
+    /// <param name="instigator">The admin handling the ticket.</param>
+    /// <param name="primaryKey">The primary key of the existing loadout.</param>
+    /// <returns>The kit, or <see langword="null"/> if its not found.</returns>
+    public async Task<Kit?> UnlockLoadoutAsync(CSteamID instigator, uint primaryKey, KitInclude include = KitInclude.Default, CancellationToken token = default)
+    {
+        if (!WarfareModule.IsActive && _rpcConnectionService?.TryGetWarfareConnection(out IModularRpcRemoteConnection? connection) is true)
+        {
+            try
+            {
+                if (!await SendUnlockLoadout(connection, instigator, primaryKey, token))
+                {
+                    return null;
+                }
+
+                Kit? remoteKit = await _kitSql.QueryKitAsync(primaryKey, include, token).ConfigureAwait(false);
+                return remoteKit;
+            }
+            catch (RpcNoConnectionsException) { }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Unable to unlock loadout remotely (higher chance of concurrency issues).");
+            }
+        }
+
+        if (instigator.GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
+            instigator = default;
+
+        bool wasDisabled = true;
+        Kit? kit = await _kitSql.UpdateKitAsync(primaryKey, include, kit =>
+        {
+            wasDisabled = kit.Disabled;
+            if (wasDisabled)
+                ActionLog.Add(ActionLogType.UnlockLoadout, kit.Id, kit.LastEditor);
+            kit.Disabled = false;
+        }, instigator, token).ConfigureAwait(false);
+
+        if (kit == null)
+            return null;
+
+        try
+        {
+            SendInvokeLoadoutLockStateUpdated(kit.Key, false);
+        }
+        catch (RpcNoConnectionsException) { }
+
+        if (wasDisabled)
+        {
+            LoadoutIdHelper.Parse(kit.Id, out CSteamID id);
+            await InvokeLoadoutLockChanged(kit, id).ConfigureAwait(false);
+        }
+
+        return kit;
+    }
+
+    /// <summary>
+    /// Disables a loadout, usually to allow an admin to make changes to it.
+    /// </summary>
+    /// <param name="instigator">The admin handling the ticket.</param>
+    /// <param name="primaryKey">The primary key of the existing loadout.</param>
+    /// <returns>The kit, or <see langword="null"/> if its not found.</returns>
+    public async Task<Kit?> LockLoadoutAsync(CSteamID instigator, uint primaryKey, KitInclude include = KitInclude.Default, CancellationToken token = default)
+    {
+        if (!WarfareModule.IsActive && _rpcConnectionService?.TryGetWarfareConnection(out IModularRpcRemoteConnection? connection) is true)
+        {
+            try
+            {
+                if (!await SendLockLoadout(connection, instigator, primaryKey, token))
+                {
+                    return null;
+                }
+
+                Kit? remoteKit = await _kitSql.QueryKitAsync(primaryKey, include, token).ConfigureAwait(false);
+                return remoteKit;
+            }
+            catch (RpcNoConnectionsException) { }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Unable to lock loadout remotely (higher chance of concurrency issues).");
+            }
+        }
+
+        if (instigator.GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
+            instigator = default;
+
+        bool wasDisabled = false;
+        Kit? kit = await _kitSql.UpdateKitAsync(primaryKey, include, kit =>
+        {
+            wasDisabled = kit.Disabled;
+            if (!wasDisabled)
+                ActionLog.Add(ActionLogType.LockLoadout, kit.Id, kit.LastEditor);
+            kit.Disabled = true;
+        }, instigator, token).ConfigureAwait(false);
+
+        if (kit == null)
+            return null;
+
+        try
+        {
+            SendInvokeLoadoutLockStateUpdated(kit.Key, true);
+        }
+        catch (RpcNoConnectionsException) { }
+
+        if (!wasDisabled)
+        {
+            LoadoutIdHelper.Parse(kit.Id, out CSteamID id);
+            await InvokeLoadoutLockChanged(kit, id).ConfigureAwait(false);
+        }
+
+        return kit;
+    }
+
+    /// <summary>
+    /// Create a new loadout for this season which will start locked.
+    /// </summary>
+    /// <param name="forPlayer">The player who will own the loadout.</param>
+    /// <param name="creator">The admin who is handling the ticket, or default.</param>
+    /// <param name="displayName">Optional sign text to use for the default language.</param>
+    /// <returns>The created kit.</returns>
+    public async Task<Kit> CreateLoadoutAsync(CSteamID forPlayer, CSteamID creator, Class @class, string? displayName, Func<KitModel, Task>? updateTask, CancellationToken token = default)
+    {
+        if (!WarfareModule.IsActive && _rpcConnectionService?.TryGetWarfareConnection(out IModularRpcRemoteConnection? connection) is true)
+        {
+            try
+            {
+                uint pk = await SendCreateLoadout(connection, forPlayer, creator, @class, displayName, token);
+
+                Kit? remoteKit = await _kitSql.QueryKitAsync(pk, KitInclude.All, token).ConfigureAwait(false);
+                if (remoteKit != null)
+                    return remoteKit;
+                
+                _logger.LogWarning($"Kit {pk} deleted before able to be used by local.");
+            }
+            catch (RpcNoConnectionsException) { }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Unable to create loadout remotely (higher chance of concurrency issues).");
+            }
+        }
+
+        if (forPlayer.GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
+            throw new ArgumentException("Expected valid Steam64 ID.", nameof(forPlayer));
+
+        EnumUtility.AssertValidField(@class, nameof(@class), Class.None, Class.Unarmed);
+
+        if (creator.GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
+            creator = default;
+
+        Kit kit;
+        while (true)
+        {
+            int freeId = await GetFreeLoadoutIdAsync(forPlayer, token).ConfigureAwait(false);
+
+            try
+            {
+                string thisDisplayName = displayName ?? LoadoutIdHelper.GetLoadoutDefaultKitDisplayText(freeId);
+                kit = await _kitSql.AddKitAsync(LoadoutIdHelper.GetLoadoutName(forPlayer, freeId), @class, thisDisplayName, creator, async kit =>
+                {
+                    kit.Type = KitType.Loadout;
+                    kit.PremiumCost = LoadoutCost;
+                    kit.Disabled = true;
+                    kit.Access.Add(new KitAccess
+                    {
+                        Steam64 = forPlayer.m_SteamID,
+                        AccessType = KitAccessType.Purchase,
+                        Kit = kit,
+                        Timestamp = kit.CreatedAt
+                    });
+
+                    if (updateTask != null)
+                    {
+                        await updateTask(kit).ConfigureAwait(false);
+                    }
+
+                    if (kit.Items == null || kit.Items.Count == 0)
+                    {
+                        SetDefaultItems(kit);
+                    }
+                }, token).ConfigureAwait(false);
+                
+                _logger.LogInformation($"Loadout created: {kit.Id} ({kit.Key}): \"{thisDisplayName}\" by {kit.CreatingPlayer}.");
+
+                try
+                {
+                    SendInvokeLoadoutCreated(forPlayer, freeId, kit.Key);
+                }
+                catch (RpcNoConnectionsException) { }
+                await InvokeLoadoutCreated(kit, forPlayer, freeId).ConfigureAwait(false);
+                break;
+            }
+            catch (ArgumentException ex) when (string.Equals(ex.ParamName, "kitId", StringComparison.Ordinal))
+            {
+                _logger.LogWarning("Duplicate loadout ID, likely caused by concurrency issue. Trying again.");
+            }
+        }
+
+        return kit;
+    }
+
+    /// <summary>
+    /// Start upgrading a loadout to the current season.
+    /// </summary>
+    /// <param name="admin">The admin that handled the ticket.</param>
+    /// <param name="forPlayer">The owner of the loadout.</param>
+    /// <param name="class">The new class to set for the loadout.</param>
+    /// <returns>The upgraded kit.</returns>
+    /// <exception cref="InvalidOperationException">Kit is already up to date.</exception>
+    public async Task<Kit?> UpgradeLoadoutAsync(CSteamID forPlayer, CSteamID admin, Class @class, uint kitPk, KitInclude include = KitInclude.Default, CancellationToken token = default)
+    {
+        if (!WarfareModule.IsActive && _rpcConnectionService?.TryGetWarfareConnection(out IModularRpcRemoteConnection? connection) is true)
+        {
+            try
+            {
+                if (!await SendUpgradeLoadout(connection, forPlayer, admin, @class, kitPk, token))
+                    return null;
+
+                Kit? remoteKit = await _kitSql.QueryKitAsync(kitPk, include, token).ConfigureAwait(false);
+                return remoteKit;
+            }
+            catch (RpcNoConnectionsException) { }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Unable to upgrade loadout remotely (higher chance of concurrency issues).");
+            }
+        }
+
+        if (forPlayer.GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
+            throw new ArgumentException("Expected valid Steam64 ID.", nameof(forPlayer));
+
+        Class oldClass = 0;
+        Faction? oldFaction = null;
+        bool accessAdded = false;
+        Kit? kit = await _kitSql.UpdateKitAsync(
+            kitPk,
+            include | KitInclude.FactionFilter | (KitInclude)(1 << 10) | KitInclude.Items | KitInclude.UnlockRequirements | KitInclude.MapFilter | KitInclude.Delays | KitInclude.Skillsets | KitInclude.Access,
+            kit =>
+            {
+                if (kit.Season >= WarfareModule.Season)
+                    throw new InvalidOperationException("Kit is already up to date.");
+
+                oldClass = kit.Class;
+                oldFaction = kit.Faction;
+
+                kit.FactionFilterIsWhitelist = false;
+                kit.MapFilterIsWhitelist = false;
+                kit.FactionFilter.Clear();
+                kit.MapFilter.Clear();
+                kit.UnlockRequirements.Clear();
+                kit.Delays.Clear();
+                kit.Skillsets.Clear();
+                kit.Faction = null;
+                kit.FactionId = null;
+                kit.CreditCost = 0;
+                kit.PremiumCost = LoadoutCost;
+                kit.Type = KitType.Loadout;
+                kit.Disabled = true;
+
+                kit.Items.Clear();
+                kit.Weapons = string.Empty;
+                SetDefaultItems(kit);
+
+                kit.Season = WarfareModule.Season;
+                kit.Class = @class;
+                kit.Branch = KitDefaults.GetDefaultBranch(@class);
+                kit.TeamLimit = KitDefaults.GetDefaultTeamLimit(@class);
+                kit.SquadLevel = KitDefaults.GetDefaultSquadLevel(@class);
+                kit.RequestCooldown = KitDefaults.GetDefaultRequestCooldown(@class);
+
+                // ensure access
+                if (kit.Access.Exists(x => x.Steam64 == forPlayer.m_SteamID))
+                    return;
+
+                kit.Access.Add(new KitAccess
+                {
+                    AccessType = KitAccessType.Purchase,
+                    Kit = kit,
+                    KitId = kit.PrimaryKey,
+                    Steam64 = forPlayer.m_SteamID,
+                    Timestamp = DateTimeOffset.UtcNow
+                });
+
+                accessAdded = true;
+            }
+        , admin, token);
+
+        if (kit == null)
+            return null;
+
+        try
+        {
+            SendInvokeLoadoutUpgradeStarted(forPlayer, oldClass, oldFaction?.InternalName, accessAdded, kit.Key);
+        }
+        catch (RpcNoConnectionsException) { }
+        await InvokeLoadoutUpgradeStarted(kit, forPlayer, oldClass, oldFaction?.InternalName, accessAdded).ConfigureAwait(false);
+
+        return kit;
+    }
+
+    private void SetDefaultItems(KitModel kit)
+    {
+        if (_loadoutItemsConfiguration == null || kit.Class == Class.Unarmed)
+            return;
+
+        IReadOnlyList<IItem> items = _loadoutItemsConfiguration.GetDefaultsForClass(kit.Class);
+        
+        if (kit.Items == null)
+            kit.Items = new List<KitItemModel>(items.Count);
+        else if (kit.Items.Capacity < items.Count)
+            kit.Items.Capacity = items.Count;
+
+        foreach (IItem item in items)
+        {
+            KitItemModel model = new KitItemModel { KitId = kit.PrimaryKey };
+            KitItemUtility.CreateKitItemModel(item, model);
+
+            kit.Items.Add(model);
+        }
+    }
+
+    /// <summary>
+    /// Gets the next free loadout ID for a player. Use with <see cref="LoadoutIdHelper"/> methods.
+    /// </summary>
+    public async Task<int> GetFreeLoadoutIdAsync(CSteamID forPlayer, CancellationToken token = default)
+    {
+        ulong s64 = forPlayer.m_SteamID;
+        string likeExpr = s64.ToString(CultureInfo.InvariantCulture) + "\\_%"; // s64_%
+
+        List<string> loadouts = await _kitSql.QueryListAsync(
+            x => x.Where(x => EF.Functions.Like(x.Id, likeExpr))
+                  .Select(x => x.Id),
+            token: token
+        ).ConfigureAwait(false);
+
+        List<int> taken = new List<int>(loadouts.Count);
+        foreach (string kit in loadouts)
+        {
+            int id = LoadoutIdHelper.Parse(kit);
+            if (id > 0)
+                taken.Add(id);
+        }
+
+        // find first open number
+        int maxId = 0;
+        int lowestGap = int.MaxValue;
+        int last = -1;
+        taken.Sort();
+        for (int i = 0; i < taken.Count; ++i)
+        {
+            int c = taken[i];
+            if (i != 0)
+            {
+                if (last + 1 != c && lowestGap > last + 1)
+                    lowestGap = last + 1;
+            }
+
+            last = c;
+
+            if (maxId < c)
+                maxId = c;
+        }
+
+        return lowestGap == int.MaxValue ? maxId + 1 : lowestGap;
     }
 
     [RpcReceive]
@@ -292,16 +665,16 @@ public class LoadoutService
     }
 
     [RpcSend(nameof(CreateLoadoutRpc))]
-    protected virtual RpcTask<uint> SendCreateLoadout(CSteamID forPlayer, CSteamID creator, Class @class, string? displayName, CancellationToken token = default) => RpcTask<uint>.NotImplemented;
+    protected virtual RpcTask<uint> SendCreateLoadout(IModularRpcRemoteConnection connection, CSteamID forPlayer, CSteamID creator, Class @class, string? displayName, CancellationToken token = default) => RpcTask<uint>.NotImplemented;
 
     [RpcSend(nameof(UpgradeLoadoutRpc))]
-    protected virtual RpcTask<bool> SendUpgradeLoadout(CSteamID forPlayer, CSteamID admin, Class @class, uint kitPk, CancellationToken token = default) => RpcTask<bool>.NotImplemented;
+    protected virtual RpcTask<bool> SendUpgradeLoadout(IModularRpcRemoteConnection connection, CSteamID forPlayer, CSteamID admin, Class @class, uint kitPk, CancellationToken token = default) => RpcTask<bool>.NotImplemented;
 
     [RpcSend(nameof(UnlockLoadoutRpc))]
-    protected virtual RpcTask<bool> SendUnlockLoadout(CSteamID instigator, uint primaryKey, CancellationToken token = default) => RpcTask<bool>.NotImplemented;
+    protected virtual RpcTask<bool> SendUnlockLoadout(IModularRpcRemoteConnection connection, CSteamID instigator, uint primaryKey, CancellationToken token = default) => RpcTask<bool>.NotImplemented;
 
     [RpcSend(nameof(LockLoadoutRpc))]
-    protected virtual RpcTask<bool> SendLockLoadout(CSteamID instigator, uint primaryKey, CancellationToken token = default) => RpcTask<bool>.NotImplemented;
+    protected virtual RpcTask<bool> SendLockLoadout(IModularRpcRemoteConnection connection, CSteamID instigator, uint primaryKey, CancellationToken token = default) => RpcTask<bool>.NotImplemented;
 
     [RpcSend(nameof(ReceiveInvokeLoadoutCreated)), RpcFireAndForget]
     protected virtual void SendInvokeLoadoutCreated(CSteamID forPlayer, int loadoutId, uint kitPrimaryKey) => _ = RpcTask.NotImplemented;
@@ -311,372 +684,6 @@ public class LoadoutService
 
     [RpcSend(nameof(ReceiveInvokeLockStateUpdated)), RpcFireAndForget]
     protected virtual void SendInvokeLoadoutLockStateUpdated(uint kitPrimaryKey, bool expectedLockState) => _ = RpcTask.NotImplemented;
-
-    /// <summary>
-    /// Enables a loadout, usually after creating or upgrading a kit.
-    /// </summary>
-    /// <param name="instigator">The admin handling the ticket.</param>
-    /// <param name="primaryKey">The primary key of the existing loadout.</param>
-    /// <returns>The kit, or <see langword="null"/> if its not found.</returns>
-    public async Task<Kit?> UnlockLoadoutAsync(CSteamID instigator, uint primaryKey, KitInclude include = KitInclude.Default, CancellationToken token = default)
-    {
-        if (!WarfareModule.IsActive)
-        {
-            try
-            {
-                if (!await SendUnlockLoadout(instigator, primaryKey, token))
-                {
-                    return null;
-                }
-
-                Kit? remoteKit = await _kitSql.QueryKitAsync(primaryKey, include, token).ConfigureAwait(false);
-                return remoteKit;
-            }
-            catch (RpcNoConnectionsException) { }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Unable to unlock loadout remotely (higher chance of concurrency issues).");
-            }
-        }
-
-        if (instigator.GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
-            instigator = default;
-
-        bool wasDisabled = true;
-        Kit? kit = await _kitSql.UpdateKitAsync(primaryKey, include, kit =>
-        {
-            wasDisabled = kit.Disabled;
-            if (wasDisabled)
-                ActionLog.Add(ActionLogType.UnlockLoadout, kit.Id, kit.LastEditor);
-            kit.Disabled = false;
-        }, instigator, token).ConfigureAwait(false);
-
-        if (kit == null)
-            return null;
-
-        try
-        {
-            SendInvokeLoadoutLockStateUpdated(kit.Key, false);
-        }
-        catch (RpcNoConnectionsException) { }
-
-        if (wasDisabled)
-        {
-            LoadoutIdHelper.Parse(kit.Id, out CSteamID id);
-            await InvokeLoadoutLockChanged(kit, id).ConfigureAwait(false);
-        }
-
-        return kit;
-    }
-
-    /// <summary>
-    /// Disables a loadout, usually to allow an admin to make changes to it.
-    /// </summary>
-    /// <param name="instigator">The admin handling the ticket.</param>
-    /// <param name="primaryKey">The primary key of the existing loadout.</param>
-    /// <returns>The kit, or <see langword="null"/> if its not found.</returns>
-    public async Task<Kit?> LockLoadoutAsync(CSteamID instigator, uint primaryKey, KitInclude include = KitInclude.Default, CancellationToken token = default)
-    {
-        if (!WarfareModule.IsActive)
-        {
-            try
-            {
-                if (!await SendLockLoadout(instigator, primaryKey, token))
-                {
-                    return null;
-                }
-
-                Kit? remoteKit = await _kitSql.QueryKitAsync(primaryKey, include, token).ConfigureAwait(false);
-                return remoteKit;
-            }
-            catch (RpcNoConnectionsException) { }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Unable to lock loadout remotely (higher chance of concurrency issues).");
-            }
-        }
-
-        if (instigator.GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
-            instigator = default;
-
-        bool wasDisabled = false;
-        Kit? kit = await _kitSql.UpdateKitAsync(primaryKey, include, kit =>
-        {
-            wasDisabled = kit.Disabled;
-            if (!wasDisabled)
-                ActionLog.Add(ActionLogType.LockLoadout, kit.Id, kit.LastEditor);
-            kit.Disabled = true;
-        }, instigator, token).ConfigureAwait(false);
-
-        if (kit == null)
-            return null;
-
-        try
-        {
-            SendInvokeLoadoutLockStateUpdated(kit.Key, true);
-        }
-        catch (RpcNoConnectionsException) { }
-
-        if (!wasDisabled)
-        {
-            LoadoutIdHelper.Parse(kit.Id, out CSteamID id);
-            await InvokeLoadoutLockChanged(kit, id).ConfigureAwait(false);
-        }
-
-        return kit;
-    }
-
-    /// <summary>
-    /// Create a new loadout for this season which will start locked.
-    /// </summary>
-    /// <param name="forPlayer">The player who will own the loadout.</param>
-    /// <param name="creator">The admin who is handling the ticket, or default.</param>
-    /// <param name="displayName">Optional sign text to use for the default language.</param>
-    /// <returns>The created kit.</returns>
-    public async Task<Kit> CreateLoadoutAsync(CSteamID forPlayer, CSteamID creator, Class @class, string? displayName, Func<KitModel, Task>? updateTask, CancellationToken token = default)
-    {
-        if (!WarfareModule.IsActive)
-        {
-            try
-            {
-                uint pk = await SendCreateLoadout(forPlayer, creator, @class, displayName, token);
-
-                Kit? remoteKit = await _kitSql.QueryKitAsync(pk, KitInclude.All, token).ConfigureAwait(false);
-                if (remoteKit != null)
-                    return remoteKit;
-                
-                _logger.LogWarning($"Kit {pk} deleted before able to be used by local.");
-            }
-            catch (RpcNoConnectionsException) { }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Unable to create loadout remotely (higher chance of concurrency issues).");
-            }
-        }
-
-        if (forPlayer.GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
-            throw new ArgumentException("Expected valid Steam64 ID.", nameof(forPlayer));
-
-        EnumUtility.AssertValidField(@class, nameof(@class), Class.None, Class.Unarmed);
-
-        if (creator.GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
-            creator = default;
-
-        Kit kit;
-        while (true)
-        {
-            int freeId = await GetFreeLoadoutIdAsync(forPlayer, token).ConfigureAwait(false);
-
-            try
-            {
-                string thisDisplayName = displayName ?? LoadoutIdHelper.GetLoadoutDefaultKitDisplayText(freeId);
-                kit = await _kitSql.AddKitAsync(LoadoutIdHelper.GetLoadoutName(forPlayer, freeId), @class, thisDisplayName, creator, async kit =>
-                {
-                    kit.Type = KitType.Loadout;
-                    kit.PremiumCost = LoadoutCost;
-                    kit.Disabled = true;
-                    kit.Access.Add(new KitAccess
-                    {
-                        Steam64 = forPlayer.m_SteamID,
-                        AccessType = KitAccessType.Purchase,
-                        Kit = kit,
-                        Timestamp = kit.CreatedAt
-                    });
-
-                    if (updateTask != null)
-                    {
-                        await updateTask(kit).ConfigureAwait(false);
-                    }
-
-                    if (kit.Items == null || kit.Items.Count == 0)
-                    {
-                        SetDefaultItems(kit);
-                    }
-                }, token).ConfigureAwait(false);
-                
-                _logger.LogInformation($"Loadout created: {kit.Id} ({kit.Key}): \"{thisDisplayName}\" by {kit.CreatingPlayer}.");
-
-                try
-                {
-                    SendInvokeLoadoutCreated(forPlayer, freeId, kit.Key);
-                }
-                catch (RpcNoConnectionsException) { }
-                await InvokeLoadoutCreated(kit, forPlayer, freeId).ConfigureAwait(false);
-                break;
-            }
-            catch (ArgumentException ex) when (string.Equals(ex.ParamName, "kitId", StringComparison.Ordinal))
-            {
-                _logger.LogWarning("Duplicate loadout ID, likely caused by concurrency issue. Trying again.");
-            }
-        }
-
-        return kit;
-    }
-
-    /// <summary>
-    /// Start upgrading a loadout to the current season.
-    /// </summary>
-    /// <param name="admin">The admin that handled the ticket.</param>
-    /// <param name="forPlayer">The owner of the loadout.</param>
-    /// <param name="class">The new class to set for the loadout.</param>
-    /// <returns>The upgraded kit.</returns>
-    /// <exception cref="InvalidOperationException">Kit is already up to date.</exception>
-    public async Task<Kit?> UpgradeLoadoutAsync(CSteamID forPlayer, CSteamID admin, Class @class, uint kitPk, KitInclude include = KitInclude.Default, CancellationToken token = default)
-    {
-        if (!WarfareModule.IsActive)
-        {
-            try
-            {
-                if (!await SendUpgradeLoadout(forPlayer, admin, @class, kitPk, token))
-                    return null;
-
-                Kit? remoteKit = await _kitSql.QueryKitAsync(kitPk, include, token).ConfigureAwait(false);
-                return remoteKit;
-            }
-            catch (RpcNoConnectionsException) { }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Unable to upgrade loadout remotely (higher chance of concurrency issues).");
-            }
-        }
-
-        if (forPlayer.GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
-            throw new ArgumentException("Expected valid Steam64 ID.", nameof(forPlayer));
-
-        Class oldClass = 0;
-        Faction? oldFaction = null;
-        bool accessAdded = false;
-        Kit? kit = await _kitSql.UpdateKitAsync(
-            kitPk,
-            include | KitInclude.FactionFilter | (KitInclude)(1 << 10) | KitInclude.Items | KitInclude.UnlockRequirements | KitInclude.MapFilter | KitInclude.Delays | KitInclude.Skillsets | KitInclude.Access,
-            kit =>
-            {
-                if (kit.Season >= WarfareModule.Season)
-                    throw new InvalidOperationException("Kit is already up to date.");
-
-                oldClass = kit.Class;
-                oldFaction = kit.Faction;
-
-                kit.FactionFilterIsWhitelist = false;
-                kit.MapFilterIsWhitelist = false;
-                kit.FactionFilter.Clear();
-                kit.MapFilter.Clear();
-                kit.UnlockRequirements.Clear();
-                kit.Delays.Clear();
-                kit.Skillsets.Clear();
-                kit.Faction = null;
-                kit.FactionId = null;
-                kit.CreditCost = 0;
-                kit.PremiumCost = LoadoutCost;
-                kit.Type = KitType.Loadout;
-                kit.Disabled = true;
-
-                kit.Items.Clear();
-                kit.Weapons = string.Empty;
-                SetDefaultItems(kit);
-
-                kit.Season = WarfareModule.Season;
-                kit.Class = @class;
-                kit.Branch = KitDefaults.GetDefaultBranch(@class);
-                kit.TeamLimit = KitDefaults.GetDefaultTeamLimit(@class);
-                kit.SquadLevel = KitDefaults.GetDefaultSquadLevel(@class);
-                kit.RequestCooldown = KitDefaults.GetDefaultRequestCooldown(@class);
-
-                // ensure access
-                if (kit.Access.Exists(x => x.Steam64 == forPlayer.m_SteamID))
-                    return;
-
-                kit.Access.Add(new KitAccess
-                {
-                    AccessType = KitAccessType.Purchase,
-                    Kit = kit,
-                    KitId = kit.PrimaryKey,
-                    Steam64 = forPlayer.m_SteamID,
-                    Timestamp = DateTimeOffset.UtcNow
-                });
-
-                accessAdded = true;
-            }
-        , admin, token);
-
-        if (kit == null)
-            return null;
-
-        try
-        {
-            SendInvokeLoadoutUpgradeStarted(forPlayer, oldClass, oldFaction?.InternalName, accessAdded, kit.Key);
-        }
-        catch (RpcNoConnectionsException) { }
-        await InvokeLoadoutUpgradeStarted(kit, forPlayer, oldClass, oldFaction?.InternalName, accessAdded).ConfigureAwait(false);
-
-        return kit;
-    }
-
-    private void SetDefaultItems(KitModel kit)
-    {
-        if (_loadoutItemsConfiguration == null || kit.Class == Class.Unarmed)
-            return;
-
-        IReadOnlyList<IItem> items = _loadoutItemsConfiguration.GetDefaultsForClass(kit.Class);
-        
-        if (kit.Items == null)
-            kit.Items = new List<KitItemModel>(items.Count);
-        else if (kit.Items.Capacity < items.Count)
-            kit.Items.Capacity = items.Count;
-
-        foreach (IItem item in items)
-        {
-            KitItemModel model = new KitItemModel { KitId = kit.PrimaryKey };
-            KitItemUtility.CreateKitItemModel(item, model);
-
-            kit.Items.Add(model);
-        }
-    }
-
-    /// <summary>
-    /// Gets the next free loadout ID for a player. Use with <see cref="LoadoutIdHelper"/> methods.
-    /// </summary>
-    public async Task<int> GetFreeLoadoutIdAsync(CSteamID forPlayer, CancellationToken token = default)
-    {
-        ulong s64 = forPlayer.m_SteamID;
-        string likeExpr = s64.ToString(CultureInfo.InvariantCulture) + "\\_%"; // s64_%
-
-        List<string> loadouts = await _kitSql.QueryListAsync(
-            x => x.Where(x => EF.Functions.Like(x.Id, likeExpr))
-                  .Select(x => x.Id),
-            token: token
-        ).ConfigureAwait(false);
-
-        List<int> taken = new List<int>(loadouts.Count);
-        foreach (string kit in loadouts)
-        {
-            int id = LoadoutIdHelper.Parse(kit);
-            if (id > 0)
-                taken.Add(id);
-        }
-
-        // find first open number
-        int maxId = 0;
-        int lowestGap = int.MaxValue;
-        int last = -1;
-        taken.Sort();
-        for (int i = 0; i < taken.Count; ++i)
-        {
-            int c = taken[i];
-            if (i != 0)
-            {
-                if (last + 1 != c && lowestGap > last + 1)
-                    lowestGap = last + 1;
-            }
-
-            last = c;
-
-            if (maxId < c)
-                maxId = c;
-        }
-
-        return lowestGap == int.MaxValue ? maxId + 1 : lowestGap;
-    }
     public enum OpenUpgradeTicketResult : byte
     {
         Success,
