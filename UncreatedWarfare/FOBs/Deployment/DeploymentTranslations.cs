@@ -12,7 +12,7 @@ public class DeploymentTranslations : PropertiesTranslationCollection
     public readonly Translation<IDeployable> DeploySuccess = new Translation<IDeployable>("<#fae69c>You have arrived at {0}.", arg0Fmt: Flags.ColorNameFormat);
 
     [TranslationData("Sent to a player after they request deployment to a location and pass initial checks.", "The location name", "Seconds left")]
-    public readonly Translation<IDeployable, int> DeployStandby = new Translation<IDeployable, int>("<#fae69c>Now deploying to {0}. You will arrive in <#eee>{1} ${p:1:second}</color>", arg0Fmt: Flags.ColorNameFormat);
+    public readonly Translation<IDeployable, int> DeployStandby = new Translation<IDeployable, int>("<#fae69c>Now deploying to {0}. You will arrive in <#eee>{1} ${p:1:second}</color>.", arg0Fmt: Flags.ColorNameFormat);
 
     [TranslationData("Sent to a player after they request deployment to a location and the location isn't valid, gets destroyed, etc.", "The location name")]
     public readonly Translation<IDeployable> DeployNotSpawnable = new Translation<IDeployable>("<#ffa238>{0} is not active.", arg0Fmt: Flags.ColorNameFormat);

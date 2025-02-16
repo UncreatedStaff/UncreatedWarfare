@@ -12,8 +12,10 @@ using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Barricades;
+using Uncreated.Warfare.Events.Models.Buildables;
 using Uncreated.Warfare.Events.Models.Items;
-using Uncreated.Warfare.Events.Models.Structures;
+using Uncreated.Warfare.Fobs;
+using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Models;
@@ -26,10 +28,8 @@ using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Kits.Whitelists;
 public class WhitelistService :
-    IAsyncEventListener<SalvageBarricadeRequested>,
-    IAsyncEventListener<SalvageStructureRequested>,
-    IAsyncEventListener<PlaceBarricadeRequested>,
-    IAsyncEventListener<PlaceStructureRequested>,
+    IAsyncEventListener<ISalvageBuildableRequestedEvent>,
+    IAsyncEventListener<IPlaceBuildableRequestedEvent>,
     IAsyncEventListener<ChangeSignTextRequested>,
     IAsyncEventListener<ItemPickupRequested>,
     IDisposable
@@ -286,19 +286,33 @@ public class WhitelistService :
     }
 
     [EventListener(RequiresMainThread = true)]
-    UniTask IAsyncEventListener<SalvageBarricadeRequested>.HandleEventAsync(SalvageBarricadeRequested e, IServiceProvider serviceProvider, CancellationToken token)
+    async UniTask IAsyncEventListener<ISalvageBuildableRequestedEvent>.HandleEventAsync(ISalvageBuildableRequestedEvent e, IServiceProvider serviceProvider, CancellationToken token)
     {
-        return HandleSalvageRequest(e, serviceProvider, token).AsUniTask();
+        UserPermissionStore permissions = serviceProvider.GetRequiredService<UserPermissionStore>();
+        if (await permissions.HasPermissionAsync(e.Player, PermissionDestroyBuildable, token))
+        {
+            return;
+        }
+
+        await UniTask.SwitchToMainThread(token);
+
+        Kit? kit = e.Player.Component<KitPlayerComponent>().CachedKit;
+
+        IAssetLink<ItemAsset> asset = AssetLink.Create(e.Buildable.Asset);
+        if (kit != null && _kitItemResolver.ContainsItem(kit, asset, e.Player.Team))
+            return;
+
+        ItemWhitelist? whitelist = await GetWhitelistAsync(asset, token).ConfigureAwait(false);
+
+        if (whitelist is not { Amount: not 0 })
+        {
+            _chatService.Send(e.Player, _translations.WhitelistProhibitedSalvage, e.Buildable.Asset);
+            e.Cancel();
+        }
     }
 
     [EventListener(RequiresMainThread = true)]
-    UniTask IAsyncEventListener<SalvageStructureRequested>.HandleEventAsync(SalvageStructureRequested e, IServiceProvider serviceProvider, CancellationToken token)
-    {
-        return HandleSalvageRequest(e, serviceProvider, token).AsUniTask();
-    }
-
-    [EventListener(RequiresMainThread = true)]
-    async UniTask IAsyncEventListener<PlaceBarricadeRequested>.HandleEventAsync(PlaceBarricadeRequested e, IServiceProvider serviceProvider, CancellationToken token)
+    async UniTask IAsyncEventListener<IPlaceBuildableRequestedEvent>.HandleEventAsync(IPlaceBuildableRequestedEvent e, IServiceProvider serviceProvider, CancellationToken token)
     {
         if (e.OriginalPlacer == null)
             return;
@@ -335,7 +349,9 @@ public class WhitelistService :
             return;
         }
 
-        int maximumPlacedBarricades = equippedKit == null ? whitelistAmount : Math.Max(_kitItemResolver.CountItems(equippedKit, assetContainer, e.OriginalPlacer.Team), whitelistAmount);
+        int maximumPlacedBarricades = equippedKit == null
+            ? whitelistAmount
+            : Math.Max(_kitItemResolver.CountItems(equippedKit, assetContainer, e.OriginalPlacer.Team), whitelistAmount);
 
         if (maximumPlacedBarricades == 0)
         {
@@ -344,120 +360,79 @@ public class WhitelistService :
             return;
         }
 
-        // count barricades of same type placed by placing player
-        int placedBarricades = BarricadeUtility.CountBarricadesWhere(barricade => barricade.asset.GUID == e.Asset.GUID && barricade.GetServersideData().owner == e.OriginalPlacer.Steam64.m_SteamID);
+        FobManager? fobManager = serviceProvider.GetService<FobManager>();
+        if (fobManager != null
+            && fobManager.Configuration.Shovelables
+                .Any(x => x.Foundation.MatchAsset(assetContainer) || x.CompletedStructure.MatchAsset(assetContainer)))
+        {
+            return;
+        }
 
-        // technically this is a vulnerability since multiple 'place barricade requested' events could run at once,
-        // but it's impossible in vanilla to place barricades that quickly anyway so not really worth fixing
+        bool isBarricade = e.Asset is ItemBarricadeAsset;
+
+        // count barricades of same type placed by placing player
+        int placedBarricades;
+        if (isBarricade)
+        {
+            placedBarricades = BarricadeUtility.CountBarricadesWhere(barricade => assetContainer.MatchAsset(barricade.asset) &&
+                barricade.GetServersideData().owner == e.OriginalPlacer.Steam64.m_SteamID);
+        }
+        else
+        {
+            placedBarricades = StructureUtility.CountStructuresWhere(structure => assetContainer.MatchAsset(structure.asset) &&
+                structure.GetServersideData().owner == e.OriginalPlacer.Steam64.m_SteamID);
+        }
+
         if (placedBarricades < maximumPlacedBarricades)
         {
             return;
         }
 
         int amountNeededToDestroy = placedBarricades - maximumPlacedBarricades + 1;
-        foreach (BarricadeInfo info in BarricadeUtility.EnumerateBarricades()
-                     .Where(barricade => barricade.Drop.asset.GUID == e.Asset.GUID && barricade.Drop.GetServersideData().owner == e.OriginalPlacer.Steam64.m_SteamID)
-                     .OrderBy(barricade => barricade.Drop.model.TryGetComponent(out BuildableContainer comp) ? comp.CreateTime.Ticks : 0)
-                     .ToList())
+        if (isBarricade)
         {
-
-            if (await _buildableSaver.IsBarricadeSavedAsync(info.Drop.instanceID, token))
+            foreach (BarricadeInfo info in BarricadeUtility.EnumerateBarricades()
+                         .Where(barricade => barricade.Drop.asset.GUID == e.Asset.GUID && barricade.Drop.GetServersideData().owner == e.OriginalPlacer.Steam64.m_SteamID)
+                         .OrderBy(barricade => barricade.Drop.model.TryGetComponent(out BuildableContainer comp) ? comp.CreateTime.Ticks : 0)
+                         .ToList())
             {
-                continue;
+
+                if (await _buildableSaver.IsBarricadeSavedAsync(info.Drop.instanceID, token))
+                {
+                    continue;
+                }
+
+                --amountNeededToDestroy;
+                DestroyerComponent.AddOrUpdate(info.Drop.model.gameObject, 0ul, false, EDamageOrigin.VehicleDecay);
+                BarricadeManager.destroyBarricade(info.Drop, info.Coord.x, info.Coord.y, info.Plant);
+
+                if (amountNeededToDestroy == 0)
+                {
+                    break;
+                }
             }
-
-            --amountNeededToDestroy;
-            DestroyerComponent.AddOrUpdate(info.Drop.model.gameObject, 0ul, false, EDamageOrigin.VehicleDecay);
-            BarricadeManager.destroyBarricade(info.Drop, info.Coord.x, info.Coord.y, info.Plant);
-
-            if (amountNeededToDestroy == 0)
+        }
+        else
+        {
+            foreach (StructureInfo info in StructureUtility.EnumerateStructures()
+                         .Where(structure => structure.Drop.asset.GUID == e.Asset.GUID && structure.Drop.GetServersideData().owner == e.OriginalPlacer.Steam64.m_SteamID)
+                         .OrderBy(structure => structure.Drop.model.TryGetComponent(out BuildableContainer comp) ? comp.CreateTime.Ticks : 0)
+                         .ToList())
             {
-                break;
-            }
-        }
 
-        if (amountNeededToDestroy > 0)
-        {
-            _chatService.Send(e.OriginalPlacer, _translations.WhitelistProhibitedPlaceAmt, amountNeededToDestroy, e.Asset);
-            e.Cancel();
-        }
-    }
+                if (await _buildableSaver.IsStructureSavedAsync(info.Drop.instanceID, token))
+                {
+                    continue;
+                }
 
-    [EventListener(RequiresMainThread = true)]
-    async UniTask IAsyncEventListener<PlaceStructureRequested>.HandleEventAsync(PlaceStructureRequested e, IServiceProvider serviceProvider, CancellationToken token)
-    {
-        if (e.OriginalPlacer == null)
-            return;
+                --amountNeededToDestroy;
+                DestroyerComponent.AddOrUpdate(info.Drop.model.gameObject, 0ul, false, EDamageOrigin.VehicleDecay);
+                StructureManager.destroyStructure(info.Drop, info.Coord.x, info.Coord.y, Vector3.zero);
 
-        UserPermissionStore permissions = serviceProvider.GetRequiredService<UserPermissionStore>();
-        if (await permissions.HasPermissionAsync(e.OriginalPlacer, PermissionPlaceBuildable, token))
-        {
-            return;
-        }
-
-        await UniTask.SwitchToMainThread(token);
-
-        if (_zoneStore.IsInMainBase(e.OriginalPlacer))
-        {
-            _chatService.Send(e.OriginalPlacer, _translations.WhitelistProhibitedPlace, e.Asset);
-            e.Cancel();
-            return;
-        }
-
-        IAssetLink<ItemAsset> assetContainer = AssetLink.Create(e.Asset);
-
-        int whitelistAmount = await GetWhitelistedAmount(assetContainer, token);
-        await UniTask.SwitchToMainThread(token);
-
-        if (whitelistAmount == -1)
-            return;
-
-        Kit? equippedKit = e.OriginalPlacer.Component<KitPlayerComponent>().CachedKit;
-
-        if (equippedKit == null && whitelistAmount == 0)
-        {
-            e.Cancel();
-            return;
-        }
-
-        int maximumPlacedStructures = equippedKit == null ? whitelistAmount : Math.Max(_kitItemResolver.CountItems(equippedKit, assetContainer, e.OriginalPlacer.Team), whitelistAmount);
-
-        if (maximumPlacedStructures == 0)
-        {
-            _chatService.Send(e.OriginalPlacer, _translations.WhitelistProhibitedPlace, e.Asset);
-            e.Cancel();
-            return;
-        }
-
-        // count structures of same type placed by placing player
-        int placedStructures = StructureUtility.CountStructuresWhere(structure => structure.asset.GUID == e.Asset.GUID && structure.GetServersideData().owner == e.OriginalPlacer.Steam64.m_SteamID);
-
-        // technically this is a vulnerability since multiple 'place structure requested' events could run at once,
-        // but it's impossible in vanilla to place structures that quickly anyway so not really worth fixing
-        if (placedStructures < maximumPlacedStructures)
-        {
-            return;
-        }
-
-        int amountNeededToDestroy = placedStructures - maximumPlacedStructures + 1;
-        foreach (StructureInfo info in StructureUtility.EnumerateStructures()
-                     .Where(structure => structure.Drop.asset.GUID == e.Asset.GUID && structure.Drop.GetServersideData().owner == e.OriginalPlacer.Steam64.m_SteamID)
-                     .OrderBy(structure => structure.Drop.model.TryGetComponent(out BuildableContainer comp) ? comp.CreateTime.Ticks : 0)
-                     .ToList())
-        {
-
-            if (await _buildableSaver.IsStructureSavedAsync(info.Drop.instanceID, token))
-            {
-                continue;
-            }
-
-            --amountNeededToDestroy;
-            DestroyerComponent.AddOrUpdate(info.Drop.model.gameObject, 0ul, false, EDamageOrigin.VehicleDecay);
-            StructureManager.destroyStructure(info.Drop, info.Coord.x, info.Coord.y, Vector3.zero);
-
-            if (amountNeededToDestroy == 0)
-            {
-                break;
+                if (amountNeededToDestroy == 0)
+                {
+                    break;
+                }
             }
         }
 
@@ -519,31 +494,6 @@ public class WhitelistService :
                 e.Cancel();
                 _chatService.Send(e.Player, _translations.WhitelistProhibitedPlaceAmt, maximumItems, e.Asset);
             }
-        }
-    }
-
-    private async Task HandleSalvageRequest(SalvageRequested e, IServiceProvider serviceProvider, CancellationToken token)
-    {
-        UserPermissionStore permissions = serviceProvider.GetRequiredService<UserPermissionStore>();
-        if (await permissions.HasPermissionAsync(e.Player, PermissionDestroyBuildable, token))
-        {
-            return;
-        }
-
-        await UniTask.SwitchToMainThread(token);
-
-        Kit? kit = e.Player.Component<KitPlayerComponent>().CachedKit;
-
-        IAssetLink<ItemAsset> asset = AssetLink.Create(e.Buildable.Asset);
-        if (kit != null && _kitItemResolver.ContainsItem(kit, asset, e.Player.Team))
-            return;
-
-        ItemWhitelist? whitelist = await GetWhitelistAsync(asset, token).ConfigureAwait(false);
-
-        if (whitelist is not { Amount: not 0 })
-        {
-            _chatService.Send(e.Player, _translations.WhitelistProhibitedSalvage, e.Buildable.Asset);
-            e.Cancel();
         }
     }
 

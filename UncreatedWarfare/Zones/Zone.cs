@@ -144,7 +144,7 @@ public class Zone : IDeployable, IEquatable<Zone>
 
     TimeSpan IDeployable.GetDelay(WarfarePlayer player)
     {
-        return TimeSpan.FromSeconds(30); // todo TimeSpan.FromSeconds(FOBManager.Config.DeployMainDelay);
+        return TimeSpan.FromSeconds(1);
     }
 
     string ITranslationArgument.Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)

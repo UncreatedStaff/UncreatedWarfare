@@ -19,7 +19,7 @@ public sealed class RarityColorAddon : IArgumentAddon
             _ => EItemRarity.COMMON
         };
 
-        return formatter.Colorize(text, ItemTool.getRarityColorUI(rarity), args.Options);
+        return formatter.Colorize(asset?.FriendlyName ?? text, ItemTool.getRarityColorUI(rarity), args.Options);
     }
 
     public string ApplyAddon(ITranslationValueFormatter formatter, string text, TypedReference value, in ValueFormatParameters args)

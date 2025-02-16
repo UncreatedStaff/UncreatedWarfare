@@ -16,18 +16,14 @@ internal sealed class PointsAddReputationCommand : IExecutableCommand
 {
     private readonly PointsService _pointsService;
     private readonly LanguageService _languageService;
-    private readonly IFactionDataStore _factionDataStore;
-    private readonly ITeamManager<Team> _teamManager;
 
     /// <inheritdoc />
     public required CommandContext Context { get; init; }
 
-    public PointsAddReputationCommand(PointsService pointsService, LanguageService languageService, IFactionDataStore factionDataStore, ITeamManager<Team> teamManager)
+    public PointsAddReputationCommand(PointsService pointsService, LanguageService languageService)
     {
         _pointsService = pointsService;
         _languageService = languageService;
-        _factionDataStore = factionDataStore;
-        _teamManager = teamManager;
     }
 
     /// <inheritdoc />
@@ -62,6 +58,6 @@ internal sealed class PointsAddReputationCommand : IExecutableCommand
 
         await _pointsService.ApplyEvent(playerId.Value, 0, _pointsService.GetAdminEvent(in set, null, null, value), token);
 
-        Context.ReplyString($"Awarded {value.ToString(Context.Culture)} C to {playerId.Value.m_SteamID.ToString("D17", Context.Culture)}.");
+        Context.ReplyString($"Awarded {value.ToString(Context.Culture)} reputation to {playerId.Value.m_SteamID.ToString("D17", Context.Culture)}.");
     }
 }

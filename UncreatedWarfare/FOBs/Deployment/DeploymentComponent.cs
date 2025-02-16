@@ -2,7 +2,6 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
-using Uncreated.Warfare.Events.Models.Deployment;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.Interaction;
@@ -93,6 +92,17 @@ public class DeploymentComponent : MonoBehaviour, IPlayerComponent, IEventListen
     public bool TryStartDeployment(IDeployable location, DeploySettings settings = default)
     {
         GameThread.AssertCurrent();
+
+        PlayerDeployed args = new PlayerDeployed
+        {
+            Player = Player,
+            DeployStartTime = DateTime.UtcNow,
+            Destination = location,
+            FromLocation = Player.Position,
+            FromRotation = Player.UnturnedPlayer.look.aim.rotation,
+            Settings = settings
+        };
+
         if (CurrentDeployment != null)
         {
             CancelDeployment(true);
@@ -172,18 +182,18 @@ public class DeploymentComponent : MonoBehaviour, IPlayerComponent, IEventListen
         if (delay == TimeSpan.Zero)
         {
             CurrentDeployment = location;
-            InstantDeploy(location, settings, deployFrom);
+            InstantDeploy(location, settings, deployFrom, args);
         }
         else
         {
             _chatService.Send(Player, _translations.DeployStandby, location, delay.Seconds);
-            _deploymentCoroutine = StartCoroutine(DeployCoroutine(location, settings, deployFrom));
+            _deploymentCoroutine = StartCoroutine(DeployCoroutine(location, settings, deployFrom, args));
         }
 
         return true;
     }
 
-    private void InstantDeploy(IDeployable deployable, DeploySettings settings, IDeployable? deployFrom)
+    private void InstantDeploy(IDeployable deployable, DeploySettings settings, IDeployable? deployFrom, PlayerDeployed args)
     {
         Player.UnturnedPlayer.teleportToLocationUnsafe(deployable.SpawnPosition, deployable.Yaw);
         if (deployFrom is { IsSafeZone: true })
@@ -195,11 +205,6 @@ public class DeploymentComponent : MonoBehaviour, IPlayerComponent, IEventListen
         deployable.OnDeployTo(Player, in settings);
         ActionLog.Add(ActionLogType.DeployToLocation, deployable.ToString(), Player);
 
-        PlayerDeployed args = new PlayerDeployed
-        {
-            Player = Player,
-            Deployable = deployable
-        };
         _ = WarfareModule.EventDispatcher.DispatchEventAsync(args);
 
         if (!settings.DisableInitialChatUpdates)
@@ -212,7 +217,7 @@ public class DeploymentComponent : MonoBehaviour, IPlayerComponent, IEventListen
         CurrentDeployment = null;
     }
 
-    private IEnumerator DeployCoroutine(IDeployable deployable, DeploySettings settings, IDeployable? deployFrom)
+    private IEnumerator DeployCoroutine(IDeployable deployable, DeploySettings settings, IDeployable? deployFrom, PlayerDeployed args)
     {
         CurrentDeployment = deployable;
 
@@ -238,7 +243,7 @@ public class DeploymentComponent : MonoBehaviour, IPlayerComponent, IEventListen
         }
         while (delay > 0);
 
-        InstantDeploy(deployable, settings, deployFrom);
+        InstantDeploy(deployable, settings, deployFrom, args);
         _deploymentCoroutine = null;
     }
 

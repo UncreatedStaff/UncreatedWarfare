@@ -1,6 +1,5 @@
 using System.Globalization;
 using Uncreated.Warfare.Buildables;
-using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Events.Models.Structures;
@@ -20,15 +19,17 @@ internal sealed class StructureDestroyCommand : IExecutableCommand
     private readonly VehicleService _vehicleService;
     private readonly EventDispatcher _eventDispatcher;
     private readonly StructureTranslations _translations;
+    private readonly BuildableSaver _buildableSaver;
 
     /// <inheritdoc />
     public required CommandContext Context { get; init; }
 
-    public StructureDestroyCommand(VehicleService vehicleService, BuildableSaver saver, EventDispatcher eventDispatcher, TranslationInjection<StructureTranslations> translations)
+    public StructureDestroyCommand(VehicleService vehicleService, BuildableSaver saver, EventDispatcher eventDispatcher, TranslationInjection<StructureTranslations> translations, BuildableSaver buildableSaver)
     {
         _saver = saver;
         _vehicleService = vehicleService;
         _eventDispatcher = eventDispatcher;
+        _buildableSaver = buildableSaver;
         _translations = translations.Value;
     }
 
@@ -57,7 +58,8 @@ internal sealed class StructureDestroyCommand : IExecutableCommand
                 Context.Reply(_translations.StructureUnsaved, structure.asset);
             }
 
-            await DestroyStructure(structure, Context.Player, token);
+            await UnsaveBuildable(new BuildableStructure(structure), token);
+            await DestroyStructure(structure, Context.Player, CancellationToken.None);
             Context.LogAction(ActionLogType.PopStructure,
                 $"STRUCTURE: {structure.asset.itemName} / {structure.asset.id} /" +
                 $" {structure.asset.GUID:N} at {structure.model.transform.position.ToString("N2", CultureInfo.InvariantCulture)} ({structure.instanceID})");
@@ -73,7 +75,8 @@ internal sealed class StructureDestroyCommand : IExecutableCommand
                 Context.Reply(_translations.StructureUnsaved, barricade.asset);
             }
 
-            await DestroyBarricade(barricade, Context.Player, token);
+            await UnsaveBuildable(new BuildableBarricade(barricade), token);
+            await DestroyBarricade(barricade, Context.Player, CancellationToken.None);
             Context.LogAction(ActionLogType.PopStructure,
                 $"BARRICADE: {barricade.asset.itemName} / {barricade.asset.id} /" +
                 $" {barricade.asset.GUID:N} at {barricade.model.transform.position.ToString("N2", CultureInfo.InvariantCulture)} ({barricade.instanceID})");
@@ -82,6 +85,14 @@ internal sealed class StructureDestroyCommand : IExecutableCommand
         else
         {
             Context.Reply(_translations.StructureNoTarget);
+        }
+    }
+
+    private async UniTask UnsaveBuildable(IBuildable buildable, CancellationToken token = default)
+    {
+        if (await _buildableSaver.DiscardBuildableAsync(buildable, token))
+        {
+            Context.Reply(_translations.StructureUnsaved, buildable.Asset);
         }
     }
 

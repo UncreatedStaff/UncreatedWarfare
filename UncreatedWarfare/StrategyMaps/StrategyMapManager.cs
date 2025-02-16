@@ -1,3 +1,4 @@
+using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
@@ -17,9 +18,12 @@ using Uncreated.Warfare.Layouts.Flags;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.StrategyMaps.MapTacks;
+using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.List;
 
 namespace Uncreated.Warfare.StrategyMaps;
+
+[Priority(-1) /* after FlagService */]
 public class StrategyMapManager : 
     ILayoutHostedService,
     IEventListenerProvider,
@@ -49,13 +53,12 @@ public class StrategyMapManager :
         _configuration = serviceProvider.GetRequiredService<StrategyMapsConfiguration>();
         _assetConfiguration = serviceProvider.GetRequiredService<AssetConfiguration>();
 
-        var mapTables = _configuration.GetSection("MapTables").Get<List<MapTableInfo>>();
-
-        _logger.LogInformation("Configured Strategy MapTables: " + mapTables?.Count ?? "config not found");
+        _logger.LogInformation("Configured Strategy MapTables: " + (_configuration.MapTables?.Count.ToString() ?? "config not found"));
     }
 
     public UniTask StartAsync(CancellationToken token)
     {
+        RegisterExistingStrategyMaps();
         return UniTask.CompletedTask;
     }
 
@@ -66,9 +69,27 @@ public class StrategyMapManager :
     public IEnumerable<IAsyncEventListener<TEventArgs>> EnumerateAsyncListeners<TEventArgs>(TEventArgs args) where TEventArgs : class => _strategyMaps.OfType<IAsyncEventListener<TEventArgs>>();
     public IEnumerable<IEventListener<TEventArgs>> EnumerateNormalListeners<TEventArgs>(TEventArgs args) where TEventArgs : class => _strategyMaps.OfType<IEventListener<TEventArgs>>();
 
+    private void RegisterExistingStrategyMaps()
+    {
+        foreach (BarricadeInfo barricade in BarricadeUtility.EnumerateNonPlantedBarricades())
+        {
+            MapTableInfo? info = _configuration.MapTables.FirstOrDefault(m => m.BuildableAsset.MatchAsset(barricade.Drop.asset));
+
+            if (info == null)
+                continue;
+
+            RegisterStrategyMap(new BuildableBarricade(barricade.Drop), info);
+        }
+    }
+
     public void RegisterStrategyMap(IBuildable buildable, MapTableInfo tableInfo)
     {
         tableInfo.BuildableAsset.AssertValid();
+
+        if (_strategyMaps.Any(m => m.MapTable.Equals(buildable)))
+        {
+            return;
+        }
 
         StrategyMap map = new StrategyMap(buildable, tableInfo);
         _strategyMaps.AddIfNotExists(map);
@@ -98,7 +119,7 @@ public class StrategyMapManager :
 
     public void HandleEvent(BarricadePlaced e, IServiceProvider serviceProvider)
     {
-        MapTableInfo? mapTableInfo = _configuration.GetRequiredSection("MapTables").Get<List<MapTableInfo>>()
+        MapTableInfo? mapTableInfo = _configuration.MapTables
             .FirstOrDefault(m => m.BuildableAsset.Guid == e.Buildable.Asset.GUID);
 
         if (mapTableInfo == null)
@@ -108,7 +129,7 @@ public class StrategyMapManager :
     }
     public void HandleEvent(BarricadeDestroyed e, IServiceProvider serviceProvider)
     {
-        bool isMapTableBuildable = _configuration.GetRequiredSection("MapTables").Get<List<MapTableInfo>>()
+        bool isMapTableBuildable = _configuration.MapTables
             .Any(m => m.BuildableAsset.Guid == e.Buildable.Asset.GUID);
 
         if (!isMapTableBuildable)
@@ -144,7 +165,7 @@ public class StrategyMapManager :
     public void HandleEvent(FobBuilt e, IServiceProvider serviceProvider)
     {
         MapTack newTack;
-        if (e.Fob is BunkerFob)
+        if (e.Fob != null)
             newTack = new DeployableMapTack(_assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:MapTacks:Fob"), e.Fob);
         else
             return;

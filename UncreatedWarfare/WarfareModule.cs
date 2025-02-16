@@ -890,6 +890,18 @@ public sealed class WarfareModule
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
 
+        bldr.RegisterType<WarTableDoorTweak>()
+            .AsSelf().AsImplementedInterfaces()
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+
+        bldr.RegisterType<WipeStructuresOnGameStartTweak>()
+            .AsSelf().AsImplementedInterfaces()
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+
+        bldr.RegisterType<AutoSaveMainStructuresTweak>()
+            .AsSelf().AsImplementedInterfaces()
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+
         bldr.RegisterType<NoCraftingTweak>()
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();

@@ -6,7 +6,6 @@ using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.FOBs.Deployment;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.StrategyMaps.MapTacks;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.List;

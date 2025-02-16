@@ -26,7 +26,10 @@ public interface IDamageBuildableRequestedEvent : ICancellable, IBaseBuildableDe
 /// <summary>
 /// Invoked when a player is about to salvage a buildable (<see cref="SalvageBarricadeRequested"/> and <see cref="SalvageStructureRequested"/>).
 /// </summary>
-public interface ISalvageBuildableRequestedEvent : IBaseBuildableDestroyedEvent;
+public interface ISalvageBuildableRequestedEvent : ICancellable, IBaseBuildableDestroyedEvent
+{
+    WarfarePlayer Player { get; }
+}
 
 /// <summary>
 /// Represents all event args in which a barricade or structure was destroyed or a destruction is/was requested.

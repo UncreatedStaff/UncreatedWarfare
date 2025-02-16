@@ -40,6 +40,7 @@ public partial class EventDispatcher : IHostedService, IDisposable
     private const int BitRequireNextFrame = 16;
     private const int BitMustRunLast = 32;
 
+    private int _activeEvents;
     private readonly WarfareModule _warfare;
     private readonly IPlayerService _playerService;
     private readonly ProjectileSolver _projectileSolver;
@@ -58,6 +59,8 @@ public partial class EventDispatcher : IHostedService, IDisposable
         = new Dictionary<Type, Func<object, object, IServiceProvider, CancellationToken, UniTask>>(16);
     private readonly List<IEventListenerProvider> _eventProviders;
 
+    private readonly CancellationTokenSource _cancellationTokenSource;
+
     private readonly Dictionary<string, PlayerDictionary<SynchronizationBucket>> _tagPlayerSynchronizations = new Dictionary<string, PlayerDictionary<SynchronizationBucket>>();
     private readonly Dictionary<string, SynchronizationBucket> _tagSynchronizations = new Dictionary<string, SynchronizationBucket>();
 
@@ -67,7 +70,9 @@ public partial class EventDispatcher : IHostedService, IDisposable
     public EventDispatcher(IServiceProvider serviceProvider)
     {
         _logger = serviceProvider.GetRequiredService<ILogger<EventDispatcher>>();
-        _unloadToken = serviceProvider.GetRequiredService<WarfareModule>().UnloadToken;
+        _cancellationTokenSource = new CancellationTokenSource();
+        _unloadToken = _cancellationTokenSource.Token;
+
         _loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
         _projectileSolver = serviceProvider.GetRequiredService<ProjectileSolver>();
 
@@ -145,7 +150,7 @@ public partial class EventDispatcher : IHostedService, IDisposable
         return UniTask.CompletedTask;
     }
 
-    UniTask IHostedService.StopAsync(CancellationToken token)
+    async UniTask IHostedService.StopAsync(CancellationToken token)
     {
         /* Provider */
         Provider.onServerConnected -= ProviderOnServerConnected;
@@ -192,7 +197,22 @@ public partial class EventDispatcher : IHostedService, IDisposable
         /* Projectiles */
         UseableGun.onProjectileSpawned -= OnProjectileSpawned;
 
-        return UniTask.CompletedTask;
+        if (_activeEvents > 0)
+        {
+            DateTime spinStart = DateTime.UtcNow;
+            while (_activeEvents == 0)
+            {
+                await Task.Delay(25, token);
+                if ((DateTime.UtcNow - spinStart).TotalSeconds < 10)
+                    continue;
+
+                _logger.LogWarning("Timed out waiting for events to finish.");
+                break;
+            }
+        }
+
+        _cancellationTokenSource.Cancel();
+        _cancellationTokenSource.Dispose();
     }
 
     /// <summary>
@@ -301,6 +321,8 @@ public partial class EventDispatcher : IHostedService, IDisposable
                 }
             }
         }
+
+        Interlocked.Increment(ref _activeEvents);
 
         try
         {
@@ -415,6 +437,8 @@ public partial class EventDispatcher : IHostedService, IDisposable
         finally
         {
             await UniTask.SwitchToMainThread();
+
+            Interlocked.Decrement(ref _activeEvents);
 
             if (buckets != null)
             {

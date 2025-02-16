@@ -132,15 +132,15 @@ public class PlayerLobbyComponent : IPlayerComponent
 
         // teleport to main base
         await UniTask.SwitchToMainThread(Player.DisconnectToken);
-        Zone? mainBase = _zoneStore.SearchZone(ZoneType.MainBase, joiningTeam.Faction);
+        Zone? warRoom = _zoneStore.SearchZone(ZoneType.WarRoom, joiningTeam.Faction);
 
-        if (mainBase == null)
+        if (warRoom == null)
         {
             _logger.LogWarning("Unable to find main base to teleport player {0} to for team {1}.", Player, joiningTeam.Faction.Name);
         }
         else
         {
-            Player.UnturnedPlayer.teleportToLocationUnsafe(mainBase.Spawn, mainBase.SpawnYaw);
+            Player.UnturnedPlayer.teleportToLocationUnsafe(warRoom.Spawn, warRoom.SpawnYaw);
         }
     }
 

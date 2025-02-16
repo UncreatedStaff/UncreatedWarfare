@@ -11,7 +11,10 @@ using Uncreated.Warfare.Events.Models.Buildables;
 using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Interaction;
+using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Kits.Whitelists;
+using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
@@ -26,24 +29,28 @@ public class FobPlacementTweaks :
     private readonly FobManager _fobManager;
     private readonly UserPermissionStore _userPermissionStore;
     private readonly FobTranslations _translations;
+    private readonly IKitItemResolver _kitItemResolver;
 
-    public FobPlacementTweaks(AssetConfiguration assetConfiguration, TranslationInjection<FobTranslations> translations, FobManager fobManager, UserPermissionStore userPermissionStore)
+    public FobPlacementTweaks(AssetConfiguration assetConfiguration, TranslationInjection<FobTranslations> translations, FobManager fobManager, UserPermissionStore userPermissionStore, IKitItemResolver kitItemResolver)
     {
         _assetConfiguration = assetConfiguration;
         _fobManager = fobManager;
         _userPermissionStore = userPermissionStore;
+        _kitItemResolver = kitItemResolver;
         _translations = translations.Value;
     }
 
-    [EventListener(RequiresMainThread = true)]
+    [EventListener(RequiresMainThread = true, Priority = 1 /* before WhitelistService */)]
     public async UniTask HandleEventAsync(IPlaceBuildableRequestedEvent e, IServiceProvider serviceProvider, CancellationToken token = default)
     {
-        if (_assetConfiguration.GetAssetLink<ItemPlaceableAsset>("Buildables:Gameplay:FobUnbuilt").MatchAsset(e.Asset))
+        if (!_assetConfiguration.GetAssetLink<ItemPlaceableAsset>("Buildables:Gameplay:FobUnbuilt").MatchAsset(e.Asset))
+        {
             return;
+        }
 
         if (e.OriginalPlacer == null)
             return;
-
+        
         ChatService chatService = serviceProvider.GetRequiredService<ChatService>();
 
         NearbySupplyCrates supplyCrates = NearbySupplyCrates.FindNearbyCrates(e.Position, e.OriginalPlacer.Team.GroupId, _fobManager);

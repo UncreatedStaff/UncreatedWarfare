@@ -6,7 +6,6 @@ using System.Diagnostics.CodeAnalysis;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
-using Uncreated.Warfare.Events.Models.Deployment;
 using Uncreated.Warfare.Events.Models.Flags;
 using Uncreated.Warfare.Events.Models.Fobs;
 using Uncreated.Warfare.Events.Models.Fobs.Shovelables;
@@ -397,7 +396,7 @@ internal class PointsRewardsEvents :
 
     public async UniTask HandleEventAsync(PlayerDeployed e, IServiceProvider serviceProvider, CancellationToken token = default)
     {
-        if (e.Deployable is not BunkerFob buildableFob)
+        if (e.Destination is not BunkerFob buildableFob)
             return;
 
         IPlayerService? playerService = serviceProvider.GetService<IPlayerService>();

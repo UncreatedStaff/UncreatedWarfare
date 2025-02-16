@@ -1,10 +1,15 @@
-﻿using Microsoft.EntityFrameworkCore;
+using DanielWillett.ReflectionTools;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database.Abstractions;
+using Uncreated.Warfare.Events.Models;
+using Uncreated.Warfare.Events.Models.Barricades;
+using Uncreated.Warfare.Events.Models.Buildables;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Models.Buildables;
@@ -18,7 +23,8 @@ namespace Uncreated.Warfare.Buildables;
 /// <summary>
 /// Responsible for saving structures or barricades that are restored if they're destroyed.
 /// </summary>
-public class BuildableSaver : ILayoutHostedService, IDisposable
+[Priority(1)]
+public class BuildableSaver : ILayoutHostedService, IDisposable, IEventListener<IBuildableTransformedEvent>, IEventListener<SignTextChanged>
 {
     private readonly IBuildablesDbContext _dbContext;
     private readonly ILogger<BuildableSaver> _logger;
@@ -129,7 +135,6 @@ public class BuildableSaver : ILayoutHostedService, IDisposable
             uint instId = barricade.instanceID;
 
             List<BuildableSave> saves = await _dbContext.Saves
-                .Include(save => save.InstanceIds)
                 .Where(save => !save.IsStructure
                                && save.MapId.HasValue
                                && save.MapId.Value == mapId
@@ -272,7 +277,6 @@ public class BuildableSaver : ILayoutHostedService, IDisposable
             uint instId = structure.instanceID;
 
             List<BuildableSave> saves = await _dbContext.Saves
-                .Include(save => save.InstanceIds)
                 .Where(save => save.IsStructure
                                && save.MapId.HasValue
                                && save.MapId.Value == mapId
@@ -920,5 +924,45 @@ public class BuildableSaver : ILayoutHostedService, IDisposable
             BarricadeUtility.ReplicateBarricadeState(bDrop, _playerService, _signs);
 
         return dirty;
+    }
+
+    /// <inheritdoc />
+    void IEventListener<IBuildableTransformedEvent>.HandleEvent(IBuildableTransformedEvent e, IServiceProvider serviceProvider)
+    {
+        Task.Run(async () =>
+        {
+            try
+            {
+                BuildableSave? save = await GetBuildableSaveAsync(e.Buildable);
+                if (save == null) return;
+
+                await SaveBuildableAsync(e.Buildable);
+                _logger.LogDebug("Updated save for {0}.", AssetLink.Create(e.Buildable.Asset));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating save after transform.");
+            }
+        });
+    }
+
+    /// <inheritdoc />
+    void IEventListener<SignTextChanged>.HandleEvent(SignTextChanged e, IServiceProvider serviceProvider)
+    {
+        Task.Run(async () =>
+        {
+            try
+            {
+                BuildableSave? save = await GetBarricadeSaveAsync(e.Barricade.instanceID);
+                if (save == null) return;
+
+                await SaveBarricadeAsync(e.Barricade);
+                _logger.LogDebug("Updated save for {0}.", AssetLink.Create(e.Barricade.asset));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating save after transform.");
+            }
+        });
     }
 }
