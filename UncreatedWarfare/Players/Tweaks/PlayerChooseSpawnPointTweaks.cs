@@ -29,21 +29,21 @@ public class PlayerChooseSpawnPointTweaks :
             return;
         }
 
-        // spawn at main if the player has a team and is rejoining the game after being killed
-        // this is a relatively niche case - players usually won't need to respawn at main after logging in
+        // spawn at War Room if the player has a team and is rejoining the game after being killed
+        // this is a relatively niche case - players usually be dead after logging in
         bool shouldSpawnAtMain = lastPlayedTeam != Team.NoTeam && !e.JoiningIntoNewRound && e.NeedsNewSpawnPoint;
         if (shouldSpawnAtMain)
         {
-            Zone? main = zones.SearchZone(ZoneType.MainBase, lastPlayedTeam.Faction);
-            if (main == null) // ignore if we don't know what the player's main base is
+            Zone? warRoom = zones.SearchZone(ZoneType.WarRoom, lastPlayedTeam.Faction);
+            if (warRoom == null) // ignore if we don't know what the player's war room is
                 return;
 
-            e.SpawnPoint = main.Spawn;
-            e.Yaw = main.SpawnYaw;
+            e.SpawnPoint = warRoom.Spawn;
+            e.Yaw = warRoom.SpawnYaw;
             return;
         }
 
-        // spawn at main if it's the player's first time joining the server or they're joining into a new round
+        // spawn at main if it's the player's first time joining the server or if they're joining into a new round
         bool shouldSpawnInLobby = e.FirstTimeJoiningServer || e.JoiningIntoNewRound;
         if (shouldSpawnInLobby)
         {
@@ -53,7 +53,6 @@ public class PlayerChooseSpawnPointTweaks :
 
             e.SpawnPoint = lobby.Spawn;
             e.Yaw = lobby.SpawnYaw;
-            return;
         }
     }
 
