@@ -504,23 +504,27 @@ public sealed class WarfareModule
         // UI
         bldr.RegisterType<ModerationUI>().SingleInstance();
         bldr.RegisterType<SquadMenuUI>()
-            .AsSelf()
-            .AsImplementedInterfaces()
+            .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+
         bldr.RegisterType<PlayerSquadHUD>()
-            .AsSelf()
-            .AsImplementedInterfaces()
+            .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+
         bldr.RegisterType<SquadList>().SingleInstance();
         bldr.RegisterType<FobHUD>()
-            .AsSelf()
-            .AsImplementedInterfaces()
+            .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+
         bldr.RegisterType<PopupUI>().SingleInstance();
         bldr.RegisterType<ConventionalLeaderboardUI>().SingleInstance();
         bldr.RegisterType<StagingUI>().SingleInstance();
         bldr.RegisterType<WinToastUI>().SingleInstance();
-        bldr.RegisterType<PointsUI>().AsSelf().AsImplementedInterfaces().SingleInstance();
+
+        bldr.RegisterType<PointsUI>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
+
         bldr.RegisterType<TeamSelectorUI>().SingleInstance();
         bldr.RegisterType<VehicleHUD>().SingleInstance();
         bldr.RegisterType<FlagListUI>().SingleInstance();

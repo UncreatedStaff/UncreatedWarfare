@@ -68,7 +68,7 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
 
     public readonly UnturnedLabel PointsExperienceGained = new UnturnedLabel("GameInfo/Stats/Player/XP");
     public readonly UnturnedLabel PointsCreditsGained = new UnturnedLabel("GameInfo/Stats/Player/Credits");
-    public readonly ImageProgressBar PointsProgressBar = new ImageProgressBar("GameInfo/Stats/Player/LevelProgress");
+    public readonly ImageProgressBar PointsProgressBar = new ImageProgressBar("GameInfo/Stats/Player/LevelProgress") { NeedsToSetLabel = false };
     public readonly UnturnedUIElement PointsUpgradeArrow = new UnturnedUIElement("GameInfo/Stats/Player/RankUpgrade");
     public readonly UnturnedUIElement PointsDowngradeArrow = new UnturnedUIElement("GameInfo/Stats/Player/RankDowngrade");
     public readonly UnturnedLabel PointsCurrentRank = new UnturnedLabel("GameInfo/Stats/Player/RankCurrent");
@@ -455,6 +455,11 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
 
         PointsProgressBar.SetVisibility(player, true);
         PointsProgressBar.SetProgress(player.Connection, (float)rank.GetProgress(player.CachedPoints.XP));
+        PointsProgressBar.SetText(player.Connection,
+            (player.CachedPoints.XP - rank.CumulativeExperience).ToString("F0", player.Locale.CultureInfo)
+            + "/"
+            + rank.Experience.ToString("F0", player.Locale.CultureInfo)
+        );
 
         double deltaCredits = set.GetStatisticValue(KnownStatNames.Credits, player.Steam64);
         double deltaXP = set.GetStatisticValue(KnownStatNames.XP, player.Steam64);
@@ -519,12 +524,15 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
                 uiList.TeamName.SetText(c, name);
             }
 
-            int ct = Math.Min(set.VisibleStats.Length, uiList.StatHeaders.Length);
-            int i = 0; 
-            for (; i < ct; ++i)
+            int index = 0;
+            for (int i = 0; i < set.Stats.Length && index < uiList.StatHeaders.Length; ++i)
             {
-                LabeledButton button = uiList.StatHeaders[i];
-                LeaderboardPhaseStatInfo stat = set.VisibleStats[i];
+                LeaderboardPhaseStatInfo stat = set.Stats[i];
+                if (!stat.IsLeaderboardColumn)
+                    continue;
+
+                LabeledButton button = uiList.StatHeaders[index];
+                ++index;
 
                 langSet.Reset();
 
@@ -533,9 +541,9 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
                     button.SetText(langSet.Next.Connection, stat.ColumnHeader ?? stat.Name);
                 }
             }
-            for (; i < uiList.StatHeaders.Length; ++i)
+            for (; index < uiList.StatHeaders.Length; ++index)
             {
-                LabeledButton button = uiList.StatHeaders[i];
+                LabeledButton button = uiList.StatHeaders[index];
 
                 langSet.Reset();
 
@@ -548,13 +556,13 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
 
         LeaderboardSet.LeaderboardRow[] rows = set.Rows;
 
-        int statCount = set.ColumnCount;
+        int statCount = set.Stats.Length;
         for (int i = 0; i < rows.Length; ++i)
         {
             ref LeaderboardSet.LeaderboardRow row = ref rows[i];
             LeaderboardPlayer player = row.Player;
 
-            Span<string> formats = row.FormatData(langSet.Culture);
+            Span<string?> formats = row.FormatData(langSet.Culture);
 
             langSet.Reset();
 
@@ -569,8 +577,15 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
                 uiRow.Avatar.SetImage(c, player.Player.SteamSummary.AvatarUrlSmall ?? string.Empty);
                 uiRow.PlayerName.SetText(c, player.Player.Names.CharacterName);
 
-                for (int s = 0; s < statCount; ++s)
-                    uiRow.Stats[s].SetText(c, formats[s]);
+                int columnIndex = 0;
+                for (int s = 0; s < statCount && columnIndex < uiRow.Stats.Length; ++s)
+                {
+                    if (!set.Stats[s].IsLeaderboardColumn)
+                        continue;
+
+                    uiRow.Stats[columnIndex].SetText(c, formats[s]!);
+                    ++columnIndex;
+                }
 
                 // voice chat icon
                 uiRow.VoiceChatState.SetVisibility(c, player.Player.IsOnline && player.Player.ComponentOrNull<AudioRecordPlayerComponent>() is { RecentlyUsedVoiceChat: false });

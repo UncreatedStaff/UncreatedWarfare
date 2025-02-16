@@ -11,9 +11,10 @@ using Uncreated.Warfare.Util;
 namespace Uncreated.Warfare.Stats;
 
 [PlayerComponent]
-public class PlayerGameStatsComponent : IPlayerComponent, IDisposable
+public class PlayerGameStatsComponent : IPlayerComponent, IDisposable, ILeaderboardRow
 {
     private LeaderboardPhase? _phase;
+    private PointsUI? _pointsUi;
 
 #nullable disable
 
@@ -30,6 +31,8 @@ public class PlayerGameStatsComponent : IPlayerComponent, IDisposable
     public double[] Stats { get; internal set; } = Array.Empty<double>();
     public LongestShot LongestShot { get; set; }
 
+    Span<double> ILeaderboardRow.Stats => Stats;
+
     void IPlayerComponent.Init(IServiceProvider serviceProvider, bool isOnJoin)
     {
         Layout layout = serviceProvider.GetRequiredService<Layout>();
@@ -38,6 +41,9 @@ public class PlayerGameStatsComponent : IPlayerComponent, IDisposable
 #endif
 
         _phase = layout.Phases.OfType<LeaderboardPhase>().FirstOrDefault();
+        _pointsUi = serviceProvider.GetService<PointsUI>();
+
+        Stats = Array.Empty<double>();
 
         if (!isOnJoin)
             return;
@@ -79,6 +85,20 @@ public class PlayerGameStatsComponent : IPlayerComponent, IDisposable
             LongestShot = new LongestShot(sqrDistance, AssetLink.Create(gun.equippedGunAsset));
     }
 
+    public double GetStatValue(LeaderboardPhaseStatInfo stat)
+    {
+        if (stat.CachedExpression == null)
+        {
+            if (stat.Index >= Stats.Length || stat.Index < 0 || _phase == null)
+                return 0;
+
+            return Stats[stat.Index];
+        }
+
+        double calculatedValue = (double)stat.CachedExpression.TryEvaluate(this)!;
+        return double.IsFinite(calculatedValue) ? calculatedValue : 0;
+    }
+
     public void AddToStat(string? statName, int value)
     {
         AddToStat(statName, (double)value);
@@ -106,6 +126,10 @@ public class PlayerGameStatsComponent : IPlayerComponent, IDisposable
 #if DEBUG
         //_logger.LogDebug("Leaderboard stat updated {0}: {1} -> {2} (+{3}) for player {4} on team {5}.", _phase.PlayerStats[index].Name, Stats[index] - value, Stats[index], value, Player, Player.Team);
 #endif
+        if (_pointsUi != null && _pointsUi.IsStatRelevant(_phase.PlayerStats[index]))
+        {
+            _pointsUi.UpdatePointsUI(Player);
+        }
     }
 
     WarfarePlayer IPlayerComponent.Player { get => Player; set => Player = value; }

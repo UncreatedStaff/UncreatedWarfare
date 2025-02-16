@@ -50,6 +50,24 @@ Parameters:
         Type: Verbatim
         Description: "Disconnect from the homebase server if already connected, then attempt to reconnect."
         
+  # /warfaredev addstat <name> [amount = 1] [player]
+  - Name: addstat
+    Alias: stat
+    Type: Verbatim
+    Description: "Add points to a leaderboard stat."
+    Parameters:
+      - Name: name
+        Type: string
+        Parameters:
+          - Name: amount
+            Type: double
+            IsOptional: true
+            Parameters:
+              - Name: player
+                Type: Uncreated.Warfare.Players.IPlayer
+                IsOptional: true
+                IsRemainder: true
+        
   # /warfaredev quickwin
   - Name: quickwin
     Alias: nextphase

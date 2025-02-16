@@ -1,4 +1,4 @@
-﻿using Uncreated.Warfare.Interaction.Commands;
+using Uncreated.Warfare.Interaction.Commands;
 
 namespace Uncreated.Warfare.Commands;
 
@@ -10,3 +10,6 @@ internal sealed class PointsExperienceCommand : ICommand;
 
 [Command("credits", "creds"), SubCommandOf(typeof(PointsCommand))]
 internal sealed class PointsCreditsCommand : ICommand;
+
+[Command("reputation", "rep"), SubCommandOf(typeof(PointsCommand))]
+internal sealed class PointsReputationCommand : ICommand;

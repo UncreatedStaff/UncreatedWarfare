@@ -5,6 +5,7 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Players.Management;
@@ -109,8 +110,8 @@ public class PointsService : IEventListener<PlayerTeamChanged> // todo player eq
 
         for (WarfareRank? rank = _startingRank; rank != null; rank = rank.Next)
         {
-            if (rank.CumulativeExperience <= experience)
-                return rank;
+            if (rank.CumulativeExperience > experience)
+                return rank.Previous ?? rank;
         }
 
         return _ranks[^1];
@@ -159,9 +160,6 @@ public class PointsService : IEventListener<PlayerTeamChanged> // todo player eq
     /// </summary>
     public Task ApplyEvent(WarfarePlayer player, ResolvedEventInfo @event, CancellationToken token = default)
     {
-        if (!player.Team.IsValid)
-            return Task.CompletedTask;
-
         return ApplyEvent(player.Steam64, player.Team.Faction.PrimaryKey, WarfareModule.Season, @event, token);
     }
 
@@ -178,9 +176,6 @@ public class PointsService : IEventListener<PlayerTeamChanged> // todo player eq
     /// </summary>
     public async Task ApplyEvent(CSteamID playerId, uint factionId, int season, ResolvedEventInfo @event, CancellationToken token = default)
     {
-        if (factionId == 0ul)
-            return;
-
         await UniTask.SwitchToMainThread(token);
 
         bool hideToast = @event.HideToast || @event.Message == null;
@@ -196,45 +191,81 @@ public class PointsService : IEventListener<PlayerTeamChanged> // todo player eq
             credits *= mod;
         }
 
+        if (factionId == 0)
+        {
+            xp = 0;
+            credits = 0;
+            if (rep == 0)
+                return;
+        }
+
         // todo XP boosts
 
         // only for display it's fine to use cached points
-        PlayerPoints oldPoints;
+        PlayerPoints oldPoints = default, newPoints = default;
+
         WarfarePlayer? player = _playerService.GetOnlinePlayerOrNull(playerId);
-        if (player is { CachedPoints.WasFound: true })
-        {
-            oldPoints = player.CachedPoints;
-        }
-        else
-        {
-            oldPoints = await _pointsSql.GetPointsAsync(playerId, factionId, season, token).ConfigureAwait(false);
-        }
-
-
-        PlayerPoints newPoints = await _pointsSql.AddToPointsAsync(playerId, factionId, season, xp, credits, token).ConfigureAwait(false);
-
         double oldRep = player?.UnturnedPlayer.skills.reputation ?? 0;
+
+        if (xp != 0 || credits != 0)
+        {
+            if (player is { CachedPoints.WasFound: true })
+            {
+                oldPoints = player.CachedPoints;
+            }
+            else
+            {
+                oldPoints = await _pointsSql.GetPointsAsync(playerId, factionId, season, token).ConfigureAwait(false);
+            }
+
+            newPoints = await _pointsSql.AddToPointsAsync(playerId, factionId, season, xp, credits, token).ConfigureAwait(false);
+
+            xp = newPoints.XP - oldPoints.XP;
+            credits = newPoints.Credits - oldPoints.Credits;
+        }
+
         double newRep;
         if (rep != 0)
         {
             newRep = await _pointsSql.AddToReputationAsync(playerId, rep, token).ConfigureAwait(false);
+            oldRep = newRep - rep;
         }
         else
         {
             newRep = oldRep;
         }
 
-        _logger.LogConditional("Applied event {0}. XP: {1} -> {2}, Credits: {3} -> {4}. Reputation: {5} -> {6}. Faction: {7}, Season: {8}.",
-            @event.EventName,
-            oldPoints.XP,
-            newPoints.XP,
-            oldPoints.Credits,
-            newPoints.Credits,
-            oldRep,
-            newRep,
-            factionId,
-            season
-        );
+        if (newPoints.WasFound)
+        {
+            _logger.LogInformation("Applied event {0}. XP: {1} -> {2}, Credits: {3} -> {4}. Reputation: {5} -> {6}. Faction: {7}, Season: {8}.",
+                @event.EventName,
+                oldPoints.XP,
+                newPoints.XP,
+                oldPoints.Credits,
+                newPoints.Credits,
+                oldRep,
+                newRep,
+                factionId,
+                season
+            );
+
+            if (newPoints.XP != oldPoints.XP)
+                ActionLog.Add(ActionLogType.XPChanged, $"{oldPoints.XP} -> {newPoints.XP} | Event: '{@event.EventName}'", playerId);
+            if (newPoints.Credits != oldPoints.Credits)
+                ActionLog.Add(ActionLogType.CreditsChanged, $"{oldPoints.Credits} -> {newPoints.Credits} | Event: '{@event.EventName}'", playerId);
+        }
+        else
+        {
+            _logger.LogInformation("Applied event {0}. Reputation: {1} -> {2}. Season: {3}.",
+                @event.EventName,
+                oldRep,
+                newRep,
+                season
+            );
+        }
+
+        if (oldRep != rep)
+            ActionLog.Add(ActionLogType.ReputationChanged, $"{oldRep} -> {rep} | Event: '{@event.EventName}'", playerId);
 
         await UniTask.SwitchToMainThread(token);
 
@@ -270,10 +301,13 @@ public class PointsService : IEventListener<PlayerTeamChanged> // todo player eq
         // update UI
         if (player is { IsOnline: true })
         {
-            player.CachedPoints = newPoints;
+            if (newPoints.WasFound)
+                player.CachedPoints = newPoints;
             if (rep != 0)
                 player.SetReputation((int)Math.Round(newRep));
-            _ui.UpdatePointsUI(player, this);
+
+            if (xp != 0 || credits != 0)
+                _ui.UpdatePointsUI(player);
 
             if (!@event.ExcludeFromLeaderboard && factionId == player.Team.Faction.PrimaryKey)
             {
@@ -288,14 +322,23 @@ public class PointsService : IEventListener<PlayerTeamChanged> // todo player eq
                         comp.AddToStat(KnownStatNames.XP, xp);
                 }
             }
-        }
 
-        // todo 'promoted'/'demoted' message
+            if (newPoints.WasFound)
+            {
+                WarfareRank oldRank = GetRankFromExperience(oldPoints.XP);
+                WarfareRank newRank = GetRankFromExperience(newPoints.XP);
+                if (oldRank != newRank)
+                {
+                    string msg = (newRank.Level < oldRank.Level ? _translations.ToastDemoted : _translations.ToastPromoted).Translate(newRank, player);
+                    player.SendToast(new ToastMessage(ToastMessageStyle.Medium, msg));
+                }
+            }
+        }
     }
 
     public void HandleEvent(PlayerTeamChanged e, IServiceProvider serviceProvider)
     {
-        _ui.UpdatePointsUI(e.Player, this);
+        _ui.UpdatePointsUI(e.Player);
     }
 }
 
@@ -438,10 +481,10 @@ public class PointsTranslations : PropertiesTranslationCollection
     public readonly Translation<double> XPToastLoseCredits = new Translation<double>("-{0} <color=#d69898>C</color>", TranslationOptions.TMProUI, "F0");
 
     [TranslationData("Sent to a player when they move up to the next level.")]
-    public readonly Translation ToastPromoted = new Translation("YOU HAVE BEEN <color=#ffbd8a>PROMOTED</color> TO", TranslationOptions.TMProUI);
+    public readonly Translation<WarfareRank> ToastPromoted = new Translation<WarfareRank>("YOU HAVE BEEN <color=#ffbd8a>PROMOTED</color> TO {0}", TranslationOptions.TMProUI, WarfareRank.FormatName);
 
     [TranslationData("Sent to a player when they move down to the previous level.")]
-    public readonly Translation ToastDemoted = new Translation("YOU HAVE BEEN <color=#e86868>DEMOTED</color> TO", TranslationOptions.TMProUI);
+    public readonly Translation<WarfareRank> ToastDemoted = new Translation<WarfareRank>("YOU HAVE BEEN <color=#e86868>DEMOTED</color> TO {0}", TranslationOptions.TMProUI, WarfareRank.FormatName);
 
     [TranslationData("Sent to a player on the points popup when XP or credits given from the console.")]
     public Translation XPToastFromOperator = new Translation("FROM OPERATOR", TranslationOptions.TMProUI);

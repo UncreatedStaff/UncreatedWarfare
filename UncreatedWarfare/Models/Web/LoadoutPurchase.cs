@@ -66,7 +66,7 @@ public class LoadoutPurchase
     public WarfareUserData? AdminChangeRequester { get; set; }
     public DateTimeOffset? AdminChangeRequestDate { get; set; }
 
-    [StringLength(100)]
+    [StringLength(256)]
     public string? PlayerChangeRequest { get; set; }
     public DateTimeOffset? PlayerChangeRequestDate { get; set; }
 
@@ -87,7 +87,7 @@ public class LoadoutPurchase
         Steam64 = steam64;
         KitId = kit;
         Paid = false;
-        Status = RequestStatus.AwaitingPayment;
+        Status = RequestStatus.AwaitingApproval;
         Edit = EditStatus.None;
         Created = DateTime.UtcNow;
         FormModified = DateTime.UtcNow;
@@ -98,7 +98,6 @@ public class LoadoutPurchase
 
     public enum RequestStatus
     {
-        AwaitingPayment,
         AwaitingApproval,
         ChangesRequested,
         InProgress,

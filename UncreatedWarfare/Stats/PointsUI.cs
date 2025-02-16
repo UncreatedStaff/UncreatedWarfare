@@ -1,8 +1,7 @@
 using DanielWillett.ReflectionTools;
-using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections.Specialized;
 using System.Globalization;
+using System.Linq;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Data;
 using Uncreated.Framework.UI.Reflection;
@@ -12,9 +11,14 @@ using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Events.Models.Vehicles;
 using Uncreated.Warfare.Interaction.UI;
+using Uncreated.Warfare.Layouts;
+using Uncreated.Warfare.Layouts.Phases;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Util.Timing;
 
 namespace Uncreated.Warfare.Stats;
 
@@ -23,11 +27,20 @@ public class PointsUI : UnturnedUI,
     IEventListener<PlayerUseableEquipped>,
     IEventListener<VehicleSwappedSeat>,
     IEventListener<EnterVehicle>,
-    IEventListener<ExitVehicle>
+    IEventListener<ExitVehicle>,
+    ILayoutHostedService
 {
     private static readonly InstanceGetter<VehicleAsset, bool>? GetUsesEngineRpmAndGears = Accessor.GenerateInstancePropertyGetter<VehicleAsset, bool>("UsesEngineRpmAndGears", allowUnsafeTypeBinding: true);
 
     private readonly Func<CSteamID, PointsUIData> _createData;
+
+    private readonly IPlayerService _playerService;
+    private readonly WarfareModule _module;
+    private PointsService? _pointsService;
+
+    private ILoopTicker? _loopTicker;
+    private int _currentStatIndex;
+    private LeaderboardPhaseStatInfo? _currentStat;
 
     private readonly UnturnedUIElement[] _positionElements =
     [ 
@@ -53,12 +66,82 @@ public class PointsUI : UnturnedUI,
     private readonly UnturnedLabel _lblUsername    = new UnturnedLabel("LabelUsername");
     private readonly UnturnedLabel _lblStatistic   = new UnturnedLabel("LabelStatistic");
 
-    public PointsUI(PointsConfiguration config, AssetConfiguration assetConfig, ILoggerFactory loggerFactory)
+    private static readonly Color32 StatColor = new Color32(255, 153, 102, 255);
+
+    public PointsUI(PointsConfiguration config, AssetConfiguration assetConfig, ILoggerFactory loggerFactory, ILoopTickerFactory loopTickerFactory, IPlayerService playerService, WarfareModule module)
         : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:Points"), staticKey: true, debugLogging: false)
     {
         _config = config;
 
+        _playerService = playerService;
+        _module = module;
+        _loopTicker = loopTickerFactory.CreateTicker(TimeSpan.FromMinutes(1d), false, true, (_, _, _) => ChooseNewCycledStat());
+
         _createData = steam64 => new PointsUIData(steam64, this);
+    }
+
+    public void ChooseNewCycledStat()
+    {
+        if (!_module.IsLayoutActive())
+        {
+            _currentStatIndex = -1;
+            _currentStat = null;
+        }
+        else
+        {
+            Layout layout = _module.GetActiveLayout();
+            LeaderboardPhase? lbPhase = layout.Phases.OfType<LeaderboardPhase>().LastOrDefault();
+            if (lbPhase is not { PlayerStats.Length: > 0 })
+            {
+                _currentStatIndex = -1;
+                _currentStat = null;
+            }
+            else
+            {
+                int randomOffset = RandomUtility.GetInteger(1, lbPhase.PlayerStats.Length);
+                int newStatIndex = (_currentStatIndex + randomOffset) % lbPhase.PlayerStats.Length;
+                int startIndex = newStatIndex != 0 ? newStatIndex - 1 : lbPhase.PlayerStats.Length;
+
+                // keep offsetting while disabled
+                while (lbPhase.PlayerStats[newStatIndex].DisablePointsUIDisplay && newStatIndex != startIndex)
+                {
+                    newStatIndex = (newStatIndex + 1) % lbPhase.PlayerStats.Length;
+                }
+
+                _currentStatIndex = newStatIndex;
+                _currentStat = lbPhase.PlayerStats[newStatIndex];
+
+                if (_currentStat.DisablePointsUIDisplay)
+                {
+                    _currentStatIndex = -1;
+                    _currentStat = null;
+                }
+            }
+        }
+
+        foreach (WarfarePlayer player in _playerService.OnlinePlayers)
+        {
+            UpdatePointsUI(player);
+        }
+    }
+    
+    public bool IsStatRelevant(LeaderboardPhaseStatInfo stat)
+    {
+        if (_currentStat == null)
+            return false;
+
+        return _currentStat == stat || _currentStat.CachedExpression != null;
+    }
+
+    UniTask ILayoutHostedService.StartAsync(CancellationToken token)
+    {
+        ChooseNewCycledStat();
+        return UniTask.CompletedTask;
+    }
+
+    UniTask ILayoutHostedService.StopAsync(CancellationToken token)
+    {
+        return UniTask.CompletedTask;
     }
 
     private PointsUIData GetUIData(CSteamID steam64)
@@ -69,25 +152,25 @@ public class PointsUI : UnturnedUI,
     [EventListener(MustRunInstantly = true)]
     void IEventListener<PlayerUseableEquipped>.HandleEvent(PlayerUseableEquipped e, IServiceProvider serviceProvider)
     {
-        UpdatePointsUI(e.Player, serviceProvider.GetRequiredService<PointsService>());
+        UpdatePointsUI(e.Player);
     }
 
     [EventListener(MustRunInstantly = true)]
     void IEventListener<VehicleSwappedSeat>.HandleEvent(VehicleSwappedSeat e, IServiceProvider serviceProvider)
     {
-        UpdatePointsUI(e.Player, serviceProvider.GetRequiredService<PointsService>());
+        UpdatePointsUI(e.Player);
     }
     
     [EventListener(MustRunInstantly = true)]
     void IEventListener<EnterVehicle>.HandleEvent(EnterVehicle e, IServiceProvider serviceProvider)
     {
-        UpdatePointsUI(e.Player, serviceProvider.GetRequiredService<PointsService>());
+        UpdatePointsUI(e.Player);
     }
     
     [EventListener(MustRunInstantly = true)]
     void IEventListener<ExitVehicle>.HandleEvent(ExitVehicle e, IServiceProvider serviceProvider)
     {
-        UpdatePointsUI(e.Player, serviceProvider.GetRequiredService<PointsService>());
+        UpdatePointsUI(e.Player);
     }
 
     private static int GetPositionLogicIndex(WarfarePlayer player)
@@ -125,9 +208,12 @@ public class PointsUI : UnturnedUI,
     /// Updates all elements on the points UI if they need to be updated.
     /// </summary>
     /// <remarks>The UI will be cleared if the player is not on a team.</remarks>
-    public void UpdatePointsUI(WarfarePlayer player, PointsService pointsService)
+    public void UpdatePointsUI(WarfarePlayer player)
     {
         GameThread.AssertCurrent();
+
+        // circular reference
+        _pointsService ??= _module.ServiceProvider.Resolve<PointsService>();
 
         PointsUIData data = GetUIData(player.Steam64);
 
@@ -151,24 +237,25 @@ public class PointsUI : UnturnedUI,
             data.LastCreditsValue = -1;
             data.LastRank = -1;
             data.Position = 0;
+            _lblUsername.SetText(player.Connection, TranslationFormattingUtility.Colorize(player.Names.GetDisplayNameOrCharacterName(), player.Team.Faction.Color));
         }
 
-        WarfareRank rank = pointsService.GetRankFromExperience(player.CachedPoints.XP);
+        WarfareRank rank = _pointsService.GetRankFromExperience(player.CachedPoints.XP);
 
         int displayedXp = (int)Math.Round(player.CachedPoints.XP);
         int displayedPartialXp = (int)Math.Round(player.CachedPoints.XP - rank.CumulativeExperience);
 
         if (data.LastExperienceValue != displayedXp)
         {
-            data.LastExperienceValue = displayedPartialXp;
-            _xpBar.SetProgress(player.Connection, displayedXp);
+            data.LastExperienceValue = displayedXp;
+            _xpBar.SetProgress(player.Connection, (float)rank.GetProgress(player.CachedPoints.XP));
             _xpBar.Label.SetText(player.Connection, displayedPartialXp.ToString(player.Locale.CultureInfo) + "/" + rank.Experience.ToString(player.Locale.CultureInfo));
         }
 
         if (data.LastRank != rank.RankIndex)
         {
             data.LastRank = rank.RankIndex;
-            _lblCurrentRank.SetText(player.Connection, rank.Name); // todo icons
+            _lblCurrentRank.SetText(player.Connection, rank.Name);
             _lblNextRank.SetText(player.Connection, rank.Next?.Name ?? string.Empty);
         }
 
@@ -191,11 +278,41 @@ public class PointsUI : UnturnedUI,
             _positionElements[expectedPosition].Show(player);
         }
 
-        if (!wasJustSent)
-            return;
+        LeaderboardPhaseStatInfo? stat = _currentStat;
+        if (stat != null)
+        {
+            PlayerGameStatsComponent statComponent = player.Component<PlayerGameStatsComponent>();
+            double[] stats = statComponent.Stats;
+            double value = 0d;
+            if (stat.Index >= 0 && stat.Index < stats.Length)
+            {
+                value = statComponent.GetStatValue(stat);
+            }
 
-        _lblUsername.SetText(player.Connection, TranslationFormattingUtility.Colorize(player.Names.GetDisplayNameOrCharacterName(), player.Team.Faction.Color));
-        _lblStatistic.SetText(player.Connection, "Score: 0"); // todo
+            if (wasJustSent || data.Stat != stat || Math.Abs(data.StatValue - value) > 0.01)
+            {
+                string statName = stat.DisplayName?.Translate(player.Locale.LanguageInfo, stat.Name) ?? stat.Name;
+                string statValue = value.ToString(stat.NumberFormat ?? "0.##", player.Locale.CultureInfo);
+
+                _lblStatistic.SetText(player.Connection, statName + ": " + TranslationFormattingUtility.Colorize(statValue, StatColor, false));
+
+                data.Stat = stat;
+                data.StatValue = value;
+            }
+        }
+        else if (data.Stat != null || wasJustSent)
+        {
+            _lblStatistic.SetText(player.Connection, string.Empty);
+            data.Stat = null;
+            data.StatValue = 0;
+        }
+    }
+
+    /// <inheritdoc />
+    protected override void OnDisposing()
+    {
+        _loopTicker?.Dispose();
+        _loopTicker = null;
     }
 
     private class PointsUIData(CSteamID steam64, PointsUI ui) : IUnturnedUIData
@@ -208,6 +325,8 @@ public class PointsUI : UnturnedUI,
         public int LastCreditsValue { get; set; }
         public int LastRank { get; set; }
         public int Position { get; set; }
+        public LeaderboardPhaseStatInfo? Stat { get; set; }
+        public double StatValue { get; set; }
 
         UnturnedUIElement? IUnturnedUIData.Element => null;
     }

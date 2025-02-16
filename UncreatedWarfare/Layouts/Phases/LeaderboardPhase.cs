@@ -124,22 +124,19 @@ public class LeaderboardPhase : BasePhase<PhaseTeamSettings>, IDisposable, IEven
                 continue;
 
             stat.CachedExpression = new RewardExpression($"Stat_{stat.Name}_{Layout.LayoutInfo.DisplayName}",
-                typeof(double), typeof(double), typeof(LeaderboardSet.LeaderboardRow), typeof(LeaderboardPhase),
+                typeof(double), typeof(double), typeof(ILeaderboardRow), typeof(LeaderboardPhase),
                 tempVars ??= GetVariables(), stat.Expression, Logger);
         }
 
         // initialize LeaderboardPlayer objects for existing players
         for (int i = 0; i < _players.Length; ++i)
         {
-            Team team = TeamManager.AllTeams[i];
-            List<LeaderboardPlayer> list = new List<LeaderboardPlayer>(Provider.maxPlayers);
-            foreach (WarfarePlayer player in _playerService.OnlinePlayersOnTeam(team))
-            {
-                list.Add(new LeaderboardPlayer(player, team));
-                Logger.LogDebug("Created leaderboard player for {0} on team {1} during startup.", player, team);
-            }
+            _players[i] = new List<LeaderboardPlayer>(Provider.maxPlayers / Layout.TeamManager.AllTeams.Count + 6);
+        }
 
-            _players[i] = list;
+        foreach (WarfarePlayer player in _playerService.OnlinePlayers)
+        {
+            CheckPlayer(player);
         }
 
         return UniTask.CompletedTask;
@@ -255,11 +252,18 @@ public class LeaderboardPhase : BasePhase<PhaseTeamSettings>, IDisposable, IEven
 
     private static void CreateLeaderboardRow(in LeaderboardSet.LeaderboardRow row, LeaderboardPhaseStatInfo[] visibleStats, Span<double> data)
     {
+        ILeaderboardRow? rowBox = null;
         double[] stats = row.Player.Stats;
         for (int i = 0; i < visibleStats.Length; ++i)
         {
             LeaderboardPhaseStatInfo st = visibleStats[i];
-            data[i] = st.CachedExpression != null ? (double)st.CachedExpression.TryEvaluate(row)! : stats[st.Index];
+            if (st.CachedExpression == null)
+                data[st.Index] = stats[st.Index];
+            else
+            {
+                double value = (double)st.CachedExpression.TryEvaluate(rowBox ??= row)!;
+                data[st.Index] = double.IsFinite(value) ? value : 0;
+            }
         }
     }
 
@@ -309,10 +313,12 @@ public class LeaderboardPhase : BasePhase<PhaseTeamSettings>, IDisposable, IEven
     {
         GameThread.AssertCurrent();
 
+        PlayerGameStatsComponent gameStats = player.Component<PlayerGameStatsComponent>();
+
         Team team = player.Team;
         if (!team.IsValid)
         {
-            player.Component<PlayerGameStatsComponent>().Stats = Array.Empty<double>();
+            gameStats.Stats = Array.Empty<double>();
             return;
         }
 
@@ -329,7 +335,7 @@ public class LeaderboardPhase : BasePhase<PhaseTeamSettings>, IDisposable, IEven
 
         if (teamIndex == -1)
         {
-            player.Component<PlayerGameStatsComponent>().Stats = Array.Empty<double>();
+            gameStats.Stats = Array.Empty<double>();
             return;
         }
 
@@ -340,11 +346,11 @@ public class LeaderboardPhase : BasePhase<PhaseTeamSettings>, IDisposable, IEven
                 continue;
 
             pl.LastJoinedTeam = Time.realtimeSinceStartup;
-            player.Component<PlayerGameStatsComponent>().Stats = pl.Stats;
+            gameStats.Stats = pl.Stats;
             return;
         }
 
-        player.Component<PlayerGameStatsComponent>().Stats = new double[PlayerStats.Length];
+        gameStats.Stats = new double[PlayerStats.Length];
         players.Add(new LeaderboardPlayer(player, team));
         Logger.LogDebug("Created leaderboard player for {0} on team {1}.", player, team);
     }
@@ -364,14 +370,13 @@ public class LeaderboardPhase : BasePhase<PhaseTeamSettings>, IDisposable, IEven
 
         public void Preload(LocalReference local, IOpCodeEmitter emit, ILogger logger)
         {
-            MethodInfo prop = typeof(LeaderboardSet.LeaderboardRow).GetProperty(nameof(LeaderboardSet.LeaderboardRow.Data), BindingFlags.Public | BindingFlags.Instance)
+            MethodInfo prop = typeof(ILeaderboardRow).GetProperty(nameof(ILeaderboardRow.Stats), BindingFlags.Public | BindingFlags.Instance)
                 ?.GetMethod ?? throw new InvalidOperationException("Failed to find LeaderboardSet.LeaderboardRow.Data.");
 
             MethodInfo getIndex = typeof(Span<double>).GetProperty("Item", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
                 ?.GetMethod ?? throw new InvalidOperationException("Failed to find Span<double>.Item[int].");
 
-            emit.LoadArgumentAddress(0)
-                .LoadUnboxedAddress<LeaderboardSet.LeaderboardRow>()
+            emit.LoadArgument(0)
                 .Invoke(prop)
                 .PopToLocal(typeof(Span<double>), out LocalBuilder lcl)
                 .LoadLocalAddress(lcl)
@@ -381,6 +386,11 @@ public class LeaderboardPhase : BasePhase<PhaseTeamSettings>, IDisposable, IEven
                 .SetLocalValue(local);
         }
     }
+}
+
+public interface ILeaderboardRow
+{
+    Span<double> Stats { get; }
 }
 
 public class LeaderboardPhaseStatInfo
@@ -412,6 +422,11 @@ public class LeaderboardPhaseStatInfo
     /// If the stat is showed in the leaderboard per-player.
     /// </summary>
     public bool IsLeaderboardColumn { get; set; }
+
+    /// <summary>
+    /// If the stat should be skipped on the statistic section of the points UI.
+    /// </summary>
+    public bool DisablePointsUIDisplay { get; set; }
 
     /// <summary>
     /// Header for the leaderboard per-player column.

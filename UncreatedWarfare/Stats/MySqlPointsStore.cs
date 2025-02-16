@@ -248,18 +248,18 @@ public class MySqlPointsStore : IPointsStore
                                               $"`{ColumnReputationSteam64}`=@0 LIMIT 1;";
 
     private const string SetPointsQuery = $"INSERT INTO `{TablePoints}` (`{ColumnPointsSteam64}`,`{ColumnPointsFaction}`,`{ColumnPointsSeason}`,`{ColumnPointsXP}`,`{ColumnPointsCredits}`) " +
-                                          $"VALUES (@0,@1,@2,@3,@4) AS `new` " +
+                                          $"VALUES (@0,@1,@2,GREATEST(0,@3),GREATEST(0,@4)) AS `new` " +
                                           $"ON DUPLICATE KEY UPDATE " +
                                           $"`{TablePoints}`.`{ColumnPointsXP}`=`new`.`{ColumnPointsXP}`," +
                                           $"`{TablePoints}`.`{ColumnPointsCredits}`=`new`.`{ColumnPointsCredits}`;";
 
     private const string SetXPQuery = $"INSERT INTO `{TablePoints}` (`{ColumnPointsSteam64}`,`{ColumnPointsFaction}`,`{ColumnPointsSeason}`,`{ColumnPointsXP}`,`{ColumnPointsCredits}`) " +
-                                      $"VALUES (@0,@1,@2,@3,0) AS `new` " +
+                                      $"VALUES (@0,@1,@2,GREATEST(0,@3),0) AS `new` " +
                                       $"ON DUPLICATE KEY UPDATE " +
                                       $"`{TablePoints}`.`{ColumnPointsXP}`=`new`.`{ColumnPointsXP}`;";
 
     private const string SetCreditsQuery = $"INSERT INTO `{TablePoints}` (`{ColumnPointsSteam64}`,`{ColumnPointsFaction}`,`{ColumnPointsSeason}`,`{ColumnPointsXP}`,`{ColumnPointsCredits}`) " +
-                                           $"VALUES (@0,@1,@2,0,@3) AS `new` " +
+                                           $"VALUES (@0,@1,@2,0,GREATEST(0,@3)) AS `new` " +
                                            $"ON DUPLICATE KEY UPDATE " +
                                            $"`{TablePoints}`.`{ColumnPointsCredits}`=`new`.`{ColumnPointsCredits}`;";
     
@@ -272,20 +272,20 @@ public class MySqlPointsStore : IPointsStore
     private const string AddOrUpdatePointsQuery = $"INSERT INTO `{TablePoints}` (`{ColumnPointsSteam64}`,`{ColumnPointsFaction}`,`{ColumnPointsSeason}`,`{ColumnPointsXP}`,`{ColumnPointsCredits}`) " +
                                                   $"VALUES (@0,@1,@2,GREATEST(0,@3),GREATEST(0,@4)) AS `new` " +
                                                   $"ON DUPLICATE KEY UPDATE " +
-                                                  $"`{TablePoints}`.`{ColumnPointsXP}`=GREATEST(0,`{TablePoints}`.`{ColumnPointsXP}`+`new`.`{ColumnPointsXP}`)," +
-                                                  $"`{TablePoints}`.`{ColumnPointsCredits}`=GREATEST(0,`{TablePoints}`.`{ColumnPointsCredits}`+`new`.`{ColumnPointsCredits}`);{GetPointsQuery}";
+                                                  $"`{TablePoints}`.`{ColumnPointsXP}`=GREATEST(0,`{TablePoints}`.`{ColumnPointsXP}`+@3)," +
+                                                  $"`{TablePoints}`.`{ColumnPointsCredits}`=GREATEST(0,`{TablePoints}`.`{ColumnPointsCredits}`+@4);{GetPointsQuery}";
 
     // adds XP to the current value, clamping at 0. can be negative
     private const string AddOrUpdateXPQuery = $"INSERT INTO `{TablePoints}` (`{ColumnPointsSteam64}`,`{ColumnPointsFaction}`,`{ColumnPointsSeason}`,`{ColumnPointsXP}`,`{ColumnPointsCredits}`) " +
                                               $"VALUES (@0,@1,@2,GREATEST(0,@3),0) AS `new` " +
                                               $"ON DUPLICATE KEY UPDATE " +
-                                              $"`{TablePoints}`.`{ColumnPointsXP}`=GREATEST(0,`{TablePoints}`.`{ColumnPointsXP}`+`new`.`{ColumnPointsXP}`);{GetPointsQuery}";
+                                              $"`{TablePoints}`.`{ColumnPointsXP}`=GREATEST(0,`{TablePoints}`.`{ColumnPointsXP}`+@3);{GetPointsQuery}";
 
     // adds credits to the current value, clamping at 0. can be negative
     private const string AddOrUpdateCreditsQuery = $"INSERT INTO `{TablePoints}` (`{ColumnPointsSteam64}`,`{ColumnPointsFaction}`,`{ColumnPointsSeason}`,`{ColumnPointsXP}`,`{ColumnPointsCredits}`) " +
                                                    $"VALUES (@0,@1,@2,0,GREATEST(0,@3)) AS `new` " +
                                                    $"ON DUPLICATE KEY UPDATE " +
-                                                   $"`{TablePoints}`.`{ColumnPointsCredits}`=GREATEST(0,`{TablePoints}`.`{ColumnPointsCredits}`+`new`.`{ColumnPointsCredits}`);{GetPointsQuery}";
+                                                   $"`{TablePoints}`.`{ColumnPointsCredits}`=GREATEST(0,`{TablePoints}`.`{ColumnPointsCredits}`+@3);{GetPointsQuery}";
 
     // adds reputation to the current value. can be negative
     private const string AddOrUpdateReputationQuery = $"INSERT INTO `{TableReputation}` (`{ColumnReputationSteam64}`,`{ColumnReputationValue}`) " +

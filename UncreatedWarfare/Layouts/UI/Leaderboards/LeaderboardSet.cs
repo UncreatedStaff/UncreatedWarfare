@@ -16,7 +16,7 @@ public class LeaderboardSet
 
     public readonly LeaderboardPlayer[] Players;
     private readonly double[,] _data;
-    private readonly Dictionary<int, string[,]> _formattedData;
+    private readonly Dictionary<int, string?[,]> _formattedData;
     private readonly int[] _sortMapBuffer;
 
     // reverse look-up player to row index
@@ -34,7 +34,7 @@ public class LeaderboardSet
 
     public LeaderboardSet(CreateRow callback, LeaderboardPhaseStatInfo[] stats, IEnumerable<LeaderboardPlayer> players, Team team)
     {
-        _formattedData = new Dictionary<int, string[,]>();
+        _formattedData = new Dictionary<int, string?[,]>();
 
         Stats = stats;
 
@@ -59,7 +59,7 @@ public class LeaderboardSet
 
         VisibleStats = visibleStats;
 
-        _data = new double[rows.Length, visibleStats.Length];
+        _data = new double[rows.Length, stats.Length];
         ColumnCount = visibleStats.Length;
         _stats = stats;
         Team = team;
@@ -70,7 +70,7 @@ public class LeaderboardSet
             LeaderboardRow row = new LeaderboardRow(i, this);
             rows[i] = row;
             LeaderboardPlayer player = Players[i];
-            callback(in row, visibleStats, row.Data);
+            callback(in row, visibleStats, row.Stats);
             _indexCache[player.Player.Steam64.m_SteamID] = i;
         }
 
@@ -178,34 +178,43 @@ public class LeaderboardSet
         }
     }
 
-    public readonly struct LeaderboardRow(int index, LeaderboardSet set)
+    public readonly struct LeaderboardRow(int index, LeaderboardSet set) : ILeaderboardRow
     {
         private readonly LeaderboardSet _set = set;
         private readonly int _index = index;
 
         public LeaderboardPlayer Player => _set.Players[_index];
-        public Span<double> Data => MemoryMarshal.CreateSpan(ref _set._data[_index, 0], _set.ColumnCount);
-        public Span<string> FormatData(CultureInfo culture)
+        public Span<double> Stats => MemoryMarshal.CreateSpan(ref _set._data[_index, 0], _set.Stats.Length);
+        public Span<string?> FormatData(CultureInfo culture)
         {
             int lcid = culture.LCID;
-            if (_set._formattedData.TryGetValue(lcid, out string[,] formats))
+            int statCount = _set.Stats.Length;
+            if (_set._formattedData.TryGetValue(lcid, out string?[,] formats))
             {
-                return MemoryMarshal.CreateSpan(ref formats[_index, 0], _set.ColumnCount);
+                return MemoryMarshal.CreateSpan(ref formats[_index, 0], statCount);
             }
 
-            formats = new string[_set.Players.Length, _set.ColumnCount];
+            int playerCount = _set.Players.Length;
+            formats = new string?[playerCount, statCount];
 
-            Span<string> allStrings = MemoryMarshal.CreateSpan(ref formats[0, 0], formats.Length);
+            Span<string?> allStrings = MemoryMarshal.CreateSpan(ref formats[0, 0], formats.Length);
             Span<double> allData = MemoryMarshal.CreateSpan(ref _set._data[0, 0], _set._data.Length);
 
-            for (int i = 0; i < allStrings.Length; ++i)
+            for (int i = 0; i < _set.Stats.Length; ++i)
             {
-                LeaderboardPhaseStatInfo stat = _set._stats[i % _set.ColumnCount];
-                allStrings[i] = allData[i].ToString(stat.NumberFormat ?? "0.##", culture);
+                LeaderboardPhaseStatInfo stat = _set.Stats[i];
+                if (!stat.IsLeaderboardColumn)
+                    continue;
+                    
+                for (int j = 0; j < playerCount; ++j)
+                {
+                    int index = i * playerCount + j;
+                    allStrings[index] = allData[index].ToString(stat.NumberFormat ?? "0.##", culture);
+                }
             }
 
             _set._formattedData.Add(lcid, formats);
-            return allStrings.Slice(_index * _set.ColumnCount, _set.ColumnCount);
+            return allStrings.Slice(_index * statCount, statCount);
         }
     }
 }
