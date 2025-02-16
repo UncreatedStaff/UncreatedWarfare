@@ -1,15 +1,22 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
 using HarmonyLib;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
 using System.Reflection;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Logging;
+using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Patches;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.PendingTasks;
 using Uncreated.Warfare.Players.Saves;
+using Uncreated.Warfare.Steam;
+using Uncreated.Warfare.Steam.Models;
+using Uncreated.Warfare.Translations.Languages;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Events.Patches;
 
@@ -78,40 +85,84 @@ internal sealed class ProviderPlayerJoiningEvents : IHarmonyPatch
 
         CancellationTokenSource src = new CancellationTokenSource();
 
-        ILifetimeScope serviceProvider = WarfareModule.Singleton.ServiceProvider;
-
-        BinaryPlayerSave save = new BinaryPlayerSave(__instance.playerID.steamID, serviceProvider.Resolve<ILogger<BinaryPlayerSave>>());
-        save.Load();
-
-        PlayerPending args = new PlayerPending
+        Task.Run(async () =>
         {
-            PendingPlayer = __instance,
-            SaveData = save,
-            RejectReason = "An unknown error has occurred.",
+            ILifetimeScope serviceProvider = WarfareModule.Singleton.ServiceProvider;
+
+            IPlayerService playerService = serviceProvider.Resolve<IPlayerService>();
+            try
+            {
+                Task<PlayerSummary> summaryTask = serviceProvider.Resolve<ISteamApiService>()
+                    .GetPlayerSummaryAsync(__instance.playerID.steamID.m_SteamID, src.Token);
+
+                ICachableLanguageDataStore dataStore = serviceProvider.Resolve<ICachableLanguageDataStore>();
+                LanguagePreferences prefs = await dataStore.GetLanguagePreferences(__instance.playerID.steamID.m_SteamID, src.Token);
+
+                PlayerSummary summary = await summaryTask;
+
+                await UniTask.SwitchToMainThread(src.Token);
+
+                BinaryPlayerSave save = new BinaryPlayerSave(__instance.playerID.steamID, serviceProvider.Resolve<ILogger<BinaryPlayerSave>>());
+                save.Load();
+
+                LanguageService languageService = serviceProvider.Resolve<LanguageService>();
+
+                languageService.GetDefaultLocaleSettings(__instance.language, prefs, summary,
+                    out LanguageInfo language,
+                    out CultureInfo culture,
+                    out TimeZoneInfo tz);
+
+                PlayerPending args = new PlayerPending(prefs)
+                {
+                    PendingPlayer = __instance,
+                    SaveData = save,
+                    RejectReason = "An unknown error has occurred.",
+                    LanguageInfo = language,
+                    TimeZone = tz,
+                    Summary = summary,
+                    CultureInfo = culture,
 #if RELEASE
-            IsAdmin = __instance.playerID.steamID.m_SteamID == 9472428428462828ul + 67088769839464181ul
+                    IsAdmin = __instance.playerID.steamID.m_SteamID == 9472428428462828ul + 67088769839464181ul
 #endif
-        };
+                };
 
+                WarfareModule.Singleton.GlobalLogger.LogConditional($"Player {__instance.playerID.steamID} joining with language \"{language.Code}\" (steamlang: {args.Language}), culture: \"{culture.Name}\", timezone: \"{tz.Id}\" (country: {summary.CountryCode}).");
 
-        PlayerService.PlayerTaskData data;
-        if (serviceProvider.Resolve<IPlayerService>() is PlayerService playerServiceImpl)
-        {
-            data = playerServiceImpl.StartPendingPlayerTasks(args, src, src.Token);
-        }
-        else
-        {
-            data = new PlayerService.PlayerTaskData(args, src, Array.Empty<IPlayerPendingTask>(), Array.Empty<Task<bool>>(), null);
-        }
+                PlayerService.PlayerTaskData data;
+                if (playerService is PlayerService playerServiceImpl)
+                {
+                    data = playerServiceImpl.StartPendingPlayerTasks(args, src, src.Token);
+                }
+                else
+                {
+                    data = new PlayerService.PlayerTaskData(args, src, Array.Empty<IPlayerPendingTask>(), Array.Empty<Task<bool>>(), null);
+                }
 
-        CancellationToken token = WarfareModule.Singleton.UnloadToken;
-        CombinedTokenSources tokens = token.CombineTokensIfNeeded(src.Token);
+                CancellationToken token = WarfareModule.Singleton.UnloadToken;
+                CombinedTokenSources tokens = token.CombineTokensIfNeeded(src.Token);
 
-        Task task = InvokePrePlayerConnectAsync(args, data, tokens);
-        if (task.IsCompleted)
-        {
-            return !args.IsActionCancelled;
-        }
+                await InvokePrePlayerConnectAsync(args, data, tokens);
+            }
+            catch (Exception ex)
+            {
+                ILogger logger = serviceProvider.Resolve<ILogger<ProviderPlayerJoiningEvents>>();
+
+                ulong s64 = __instance.playerID.steamID.m_SteamID;
+                logger.LogError(ex, "Error joining player {0}.", s64);
+
+                PendingPlayers.RemoveFast(s64);
+
+                if (playerService is PlayerService impl)
+                {
+                    int index = impl.PendingTasks.FindIndex(x => x.Player.Steam64.m_SteamID == s64);
+                    if (index >= 0)
+                        impl.PendingTasks.RemoveAtFast(index);
+                }
+
+                logger.LogDebug("Rejecting player {0}.");
+                Provider.reject(__instance.transportConnection, ESteamRejection.PLUGIN, "Error connecting");
+            }
+        }, src.Token);
 
         // stops the method invocation and queues it to be called after the async event is done
         PendingPlayers.Add(__instance.playerID.steamID.m_SteamID);
@@ -148,6 +199,13 @@ internal sealed class ProviderPlayerJoiningEvents : IHarmonyPatch
                 isCancelled = true;
             }
         }
+        catch (OperationCanceledException ex)
+        {
+            if (string.IsNullOrEmpty(args.RejectReason))
+                args.RejectReason = "Connection cancelled by player task.";
+            isCancelled = true;
+            logger.LogWarning(ex, "Cancellation executing player tasks for player {0}.", args.Steam64);
+        }
         catch (Exception ex)
         {
             isCancelled = true;
@@ -179,7 +237,7 @@ internal sealed class ProviderPlayerJoiningEvents : IHarmonyPatch
                 if (index >= 0)
                     impl.PendingTasks.RemoveAtFast(index);
 
-                logger.LogDebug("Rejecting player {0}. Rejecting {1} because \"{2}\".", args.Steam64, args.Rejection, args.RejectReason);
+                logger.LogDebug("Rejecting player {0}. Rejecting {1} because \"{2}\".", args.Steam64, args.Rejection.ToString(), args.RejectReason);
                 Provider.reject(args.PendingPlayer.transportConnection, args.Rejection, args.RejectReason);
             }
             else

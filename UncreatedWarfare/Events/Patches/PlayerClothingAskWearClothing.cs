@@ -1,12 +1,12 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
 using HarmonyLib;
 using System.Reflection;
 using Uncreated.Warfare.Events.Models.Items;
-using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Patches;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Util.Inventory;
 
 namespace Uncreated.Warfare.Events.Patches;
 

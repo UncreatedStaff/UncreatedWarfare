@@ -1,66 +1,64 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using SDG.Framework.Water;
 using System;
-using System.Collections.Generic;
-using System.Text;
+using System.Linq;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Barricades;
-using Uncreated.Warfare.FOBs.SupplyCrates;
+using Uncreated.Warfare.Events.Models.Buildables;
 using Uncreated.Warfare.Fobs;
+using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Interaction;
+using Uncreated.Warfare.Kits.Whitelists;
+using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Translations;
-using Uncreated.Warfare.Zones;
-using Microsoft.Extensions.Configuration;
 using Uncreated.Warfare.Util;
-using System.Linq;
-using Uncreated.Warfare.Commands;
-using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Util.Containers;
-using DanielWillett.ReflectionTools;
+using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.FOBs.Construction.Tweaks;
 
 public class FobPlacementTweaks :
-    IEventListener<PlaceBarricadeRequested>
+    IAsyncEventListener<IPlaceBuildableRequestedEvent>
 {
-    private readonly IServiceProvider _serviceProvider;
-    private readonly ILogger _logger;
-    private readonly AssetConfiguration? _assetConfiguration;
-    private readonly FobTranslations? _translations;
+    private readonly AssetConfiguration _assetConfiguration;
+    private readonly FobManager _fobManager;
+    private readonly UserPermissionStore _userPermissionStore;
+    private readonly FobTranslations _translations;
 
-    public FobPlacementTweaks(IServiceProvider serviceProvider, ILogger<FobPlacementTweaks> logger)
+    public FobPlacementTweaks(AssetConfiguration assetConfiguration, TranslationInjection<FobTranslations> translations, FobManager fobManager, UserPermissionStore userPermissionStore)
     {
-        _serviceProvider = serviceProvider;
-        _logger = logger;
-        _assetConfiguration = serviceProvider.GetService<AssetConfiguration>();
-        _translations = serviceProvider.GetService<TranslationInjection<FobTranslations>>()?.Value;
+        _assetConfiguration = assetConfiguration;
+        _fobManager = fobManager;
+        _userPermissionStore = userPermissionStore;
+        _translations = translations.Value;
     }
-    public void HandleEvent(PlaceBarricadeRequested e, IServiceProvider serviceProvider)
+
+    [EventListener(RequiresMainThread = true)]
+    public async UniTask HandleEventAsync(IPlaceBuildableRequestedEvent e, IServiceProvider serviceProvider, CancellationToken token = default)
     {
-
-        FobManager? fobManager = serviceProvider.GetService<FobManager>();
-
-        if (_assetConfiguration == null || fobManager == null || _translations == null)
+        if (_assetConfiguration.GetAssetLink<ItemPlaceableAsset>("Buildables:Gameplay:FobUnbuilt").MatchAsset(e.Asset))
             return;
 
-        if (_assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:Fobs:FobUnbuilt").Guid != e.Barricade.asset.GUID)
-            return;
         if (e.OriginalPlacer == null)
             return;
 
         ChatService chatService = serviceProvider.GetRequiredService<ChatService>();
 
-        NearbySupplyCrates supplyCrates = NearbySupplyCrates.FindNearbyCrates(e.Position, e.OriginalPlacer.Team.GroupId, fobManager);
+        NearbySupplyCrates supplyCrates = NearbySupplyCrates.FindNearbyCrates(e.Position, e.OriginalPlacer.Team.GroupId, _fobManager);
 
         if (supplyCrates.BuildCount == 0)
         {
-            chatService.Send(e.OriginalPlacer, _translations.BuildFOBNoSupplyCrate);
-            e.Cancel();
+            if (!await _userPermissionStore.HasPermissionAsync(e.OriginalPlacer, WhitelistService.PermissionPlaceBuildable, token))
+            {
+                chatService.Send(e.OriginalPlacer, _translations.BuildFOBNoSupplyCrate);
+                e.Cancel();
+            }
             return;
         }
 
-        ShovelableInfo? shovelableInfo = (fobManager.Configuration.GetRequiredSection("Shovelables").Get<IEnumerable<ShovelableInfo>>() ?? Array.Empty<ShovelableInfo>())
+        ShovelableInfo? shovelableInfo = _fobManager.Configuration.Shovelables
             .FirstOrDefault(s => s.Foundation != null && s.Foundation.Guid == e.Asset.GUID);
         if (shovelableInfo != null && supplyCrates.BuildCount < shovelableInfo.SupplyCost)
         {
@@ -69,8 +67,8 @@ public class FobPlacementTweaks :
             return;
         }
 
-        int maxNumberOfFobs = fobManager.Configuration.GetValue("MaxNumberOfFobs", 10);
-        bool fobLimitReached = fobManager.FriendlyBunkerFobs(e.OriginalPlacer.Team).Count() >= maxNumberOfFobs;
+        int maxNumberOfFobs = _fobManager.Configuration.GetValue("MaxNumberOfFobs", 10);
+        bool fobLimitReached = _fobManager.FriendlyBunkerFobs(e.OriginalPlacer.Team).Count() >= maxNumberOfFobs;
         if (fobLimitReached)
         {
             chatService.Send(e.OriginalPlacer, _translations.BuildMaxFOBsHit);
@@ -78,10 +76,10 @@ public class FobPlacementTweaks :
             return;
         }
 
-        float minDistanceBetweenFobs = fobManager.Configuration.GetValue("MinDistanceBetweenFobs", 150f);
-        BunkerFob? tooCloseFob = fobManager.FriendlyBunkerFobs(e.OriginalPlacer.Team).FirstOrDefault(f =>
+        float minDistanceBetweenFobs = _fobManager.Configuration.GetValue("MinDistanceBetweenFobs", 150f);
+        BunkerFob? tooCloseFob = _fobManager.FriendlyBunkerFobs(e.OriginalPlacer.Team).FirstOrDefault(f =>
             MathUtility.WithinRange(e.Position, f.Position, minDistanceBetweenFobs)
-            );
+        );
 
         if (tooCloseFob != null)
         {
@@ -90,7 +88,7 @@ public class FobPlacementTweaks :
             return;
         }
 
-        float minFobDistanceFromMain = fobManager.Configuration.GetValue<float>("MinFobDistanceFromMain", 300);
+        float minFobDistanceFromMain = _fobManager.Configuration.GetValue<float>("MinFobDistanceFromMain", 300);
 
         ZoneStore? zoneStore = serviceProvider.GetService<ZoneStore>();
         if (zoneStore != null)

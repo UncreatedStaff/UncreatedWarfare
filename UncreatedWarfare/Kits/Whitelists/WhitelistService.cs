@@ -18,9 +18,7 @@ using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Models;
 using Uncreated.Warfare.Models.Assets;
-using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players.Permissions;
-using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Collections;
 using Uncreated.Warfare.Util;
@@ -48,12 +46,15 @@ public class WhitelistService :
     private readonly BuildableSaver _buildableSaver;
     private readonly SemaphoreSlim _semaphore;
     private readonly WhitelistTranslations _translations;
-    private readonly AssetRedirectService _assetRedirectService;
-    private readonly IFactionDataStore _factionDataStore;
+    private readonly IKitItemResolver _kitItemResolver;
 
-    public WhitelistService(IWhitelistDbContext dbContext, ZoneStore zoneStore, ChatService chatService,
-        WarfareModule module, BuildableSaver buildableSaver, TranslationInjection<WhitelistTranslations> translations,
-        AssetRedirectService assetRedirectService, IFactionDataStore factionDataStore)
+    public WhitelistService(IWhitelistDbContext dbContext,
+        ZoneStore zoneStore,
+        ChatService chatService,
+        WarfareModule module,
+        BuildableSaver buildableSaver,
+        TranslationInjection<WhitelistTranslations> translations,
+        IKitItemResolver kitItemResolver)
     {
         _dbContext = dbContext;
         _dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
@@ -62,8 +63,7 @@ public class WhitelistService :
         _chatService = chatService;
         _module = module;
         _buildableSaver = buildableSaver;
-        _assetRedirectService = assetRedirectService;
-        _factionDataStore = factionDataStore;
+        _kitItemResolver = kitItemResolver;
         _translations = translations.Value;
 
         _semaphore = new SemaphoreSlim(1, 1);
@@ -231,7 +231,7 @@ public class WhitelistService :
             _semaphore.Release();
         }
     }
-    
+
     /// <summary>
     /// Retreive the whitelist model for the given item <see cref="Guid"/>.
     /// </summary>
@@ -239,7 +239,7 @@ public class WhitelistService :
     {
         await UniTask.SwitchToMainThread(token);
         Asset? asset = Assets.find(guid);
-        
+
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
@@ -269,8 +269,8 @@ public class WhitelistService :
         await UniTask.SwitchToMainThread(token);
         Kit? kit = e.Player.Component<KitPlayerComponent>().CachedKit;
 
-        ItemAsset asset = e.Buildable.Asset;
-        if (kit != null && kit.ContainsItem(asset.GUID, e.Player.Team, _assetRedirectService, _factionDataStore))
+        IAssetLink<ItemAsset> asset = AssetLink.Create(e.Buildable.Asset);
+        if (kit != null && _kitItemResolver.ContainsItem(kit, asset, e.Player.Team))
             return;
 
         ItemWhitelist? whitelist = await GetWhitelistAsync(asset, token).ConfigureAwait(false);
@@ -335,7 +335,7 @@ public class WhitelistService :
             return;
         }
 
-        int maximumPlacedBarricades = equippedKit == null ? whitelistAmount : Math.Max(equippedKit.CountItems(assetContainer), whitelistAmount);
+        int maximumPlacedBarricades = equippedKit == null ? whitelistAmount : Math.Max(_kitItemResolver.CountItems(equippedKit, assetContainer, e.OriginalPlacer.Team), whitelistAmount);
 
         if (maximumPlacedBarricades == 0)
         {
@@ -420,7 +420,7 @@ public class WhitelistService :
             return;
         }
 
-        int maximumPlacedStructures = equippedKit == null ? whitelistAmount : Math.Max(equippedKit.CountItems(assetContainer), whitelistAmount);
+        int maximumPlacedStructures = equippedKit == null ? whitelistAmount : Math.Max(_kitItemResolver.CountItems(equippedKit, assetContainer, e.OriginalPlacer.Team), whitelistAmount);
 
         if (maximumPlacedStructures == 0)
         {
@@ -503,7 +503,7 @@ public class WhitelistService :
             return;
         }
 
-        int maximumItems = equippedKit == null ? whitelistAmount : Math.Max(equippedKit.CountItems(assetContainer), whitelistAmount);
+        int maximumItems = equippedKit == null ? whitelistAmount : Math.Max(_kitItemResolver.CountItems(equippedKit, assetContainer, e.Player.Team), whitelistAmount);
 
         int itemCount = ItemUtility.CountItems(e.PlayerObject, assetContainer, maximumItems);
 
@@ -534,8 +534,8 @@ public class WhitelistService :
 
         Kit? kit = e.Player.Component<KitPlayerComponent>().CachedKit;
 
-        ItemAsset asset = e.Buildable.Asset;
-        if (kit != null && kit.ContainsItem(asset.GUID, e.Player.Team, _assetRedirectService, _factionDataStore))
+        IAssetLink<ItemAsset> asset = AssetLink.Create(e.Buildable.Asset);
+        if (kit != null && _kitItemResolver.ContainsItem(kit, asset, e.Player.Team))
             return;
 
         ItemWhitelist? whitelist = await GetWhitelistAsync(asset, token).ConfigureAwait(false);

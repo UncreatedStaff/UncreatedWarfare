@@ -1,15 +1,14 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using SDG.NetPak;
 using SDG.NetTransport;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Items;
-using Uncreated.Warfare.Layouts.Teams;
-using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Util.Inventory;
 using Uncreated.Warfare.Util.Region;
 
 namespace Uncreated.Warfare.Util;
@@ -19,33 +18,45 @@ namespace Uncreated.Warfare.Util;
 /// </summary>
 public static class ItemUtility
 {
-    private static readonly ClientInstanceMethod<Guid, byte, byte[], bool>? SendWearShirt
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    internal static readonly ClientInstanceMethod<Guid, byte, byte[], bool>? SendWearShirt
         = ReflectionUtility.FindRpc<PlayerClothing, ClientInstanceMethod<Guid, byte, byte[], bool>>("SendWearShirt");
-    private static readonly ClientInstanceMethod<Guid, byte, byte[], bool>? SendWearPants
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    internal static readonly ClientInstanceMethod<Guid, byte, byte[], bool>? SendWearPants
         = ReflectionUtility.FindRpc<PlayerClothing, ClientInstanceMethod<Guid, byte, byte[], bool>>("SendWearPants");
-    private static readonly ClientInstanceMethod<Guid, byte, byte[], bool>? SendWearHat
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    internal static readonly ClientInstanceMethod<Guid, byte, byte[], bool>? SendWearHat
         = ReflectionUtility.FindRpc<PlayerClothing, ClientInstanceMethod<Guid, byte, byte[], bool>>("SendWearHat");
-    private static readonly ClientInstanceMethod<Guid, byte, byte[], bool>? SendWearBackpack
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    internal static readonly ClientInstanceMethod<Guid, byte, byte[], bool>? SendWearBackpack
         = ReflectionUtility.FindRpc<PlayerClothing, ClientInstanceMethod<Guid, byte, byte[], bool>>("SendWearBackpack");
-    private static readonly ClientInstanceMethod<Guid, byte, byte[], bool>? SendWearVest
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    internal static readonly ClientInstanceMethod<Guid, byte, byte[], bool>? SendWearVest
         = ReflectionUtility.FindRpc<PlayerClothing, ClientInstanceMethod<Guid, byte, byte[], bool>>("SendWearVest");
-    private static readonly ClientInstanceMethod<Guid, byte, byte[], bool>? SendWearMask
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    internal static readonly ClientInstanceMethod<Guid, byte, byte[], bool>? SendWearMask
         = ReflectionUtility.FindRpc<PlayerClothing, ClientInstanceMethod<Guid, byte, byte[], bool>>("SendWearMask");
-    private static readonly ClientInstanceMethod<Guid, byte, byte[], bool>? SendWearGlasses
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    internal static readonly ClientInstanceMethod<Guid, byte, byte[], bool>? SendWearGlasses
         = ReflectionUtility.FindRpc<PlayerClothing, ClientInstanceMethod<Guid, byte, byte[], bool>>("SendWearGlasses");
 
-    private static readonly ClientInstanceMethod? SendInventory
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    internal static readonly ClientInstanceMethod? SendInventory
         = ReflectionUtility.FindRpc<PlayerInventory, ClientInstanceMethod>("SendInventory");
 
-    private static readonly InstanceGetter<Items, bool[,]>? GetItemsSlots
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    internal static readonly InstanceGetter<Items, bool[,]>? GetItemsSlots
         = Accessor.GenerateInstanceGetter<Items, bool[,]>("slots", throwOnError: false);
 
-    private static readonly InstanceSetter<PlayerInventory, bool>? SetOwnerHasInventory
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    internal static readonly InstanceSetter<PlayerInventory, bool>? SetOwnerHasInventory
         = Accessor.GenerateInstanceSetter<PlayerInventory, bool>("ownerHasInventory", throwOnError: false);
-    private static readonly InstanceGetter<PlayerInventory, bool>? GetOwnerHasInventory
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    internal static readonly InstanceGetter<PlayerInventory, bool>? GetOwnerHasInventory
         = Accessor.GenerateInstanceGetter<PlayerInventory, bool>("ownerHasInventory", throwOnError: false);
 
-    private static readonly Action<PlayerInventory, byte, ItemJar>? SendItemRemove
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    internal static readonly Action<PlayerInventory, byte, ItemJar>? SendItemRemove
         = Accessor.GenerateInstanceCaller<PlayerInventory, Action<PlayerInventory, byte, ItemJar>>("sendItemRemove", throwOnError: false, allowUnsafeTypeBinding: true);
 
     internal static event ItemDestroyed? OnItemDestroyed;
@@ -179,6 +190,16 @@ public static class ItemUtility
         GameThread.AssertCurrent();
 
         return new DroppedItemIterator(x, y, maxRegionDistance);
+    }
+
+    /// <summary>
+    /// Convert an item rotation to an angle in degrees clockwise.
+    /// </summary>
+    /// <param name="rotation">Rotation value zero to three.</param>
+    /// <returns>An angle in degrees, either 0, 90, 180, or 270.</returns>
+    public static int RotationToDegrees(byte rotation)
+    {
+        return rotation % 4 * 90;
     }
 
     /// <summary>
@@ -539,12 +560,13 @@ public static class ItemUtility
     /// <summary>
     /// Get an array of kit item abstractions from a player's inventory and clothing.
     /// </summary>
-    public static IKitItem[] ItemsFromInventory(WarfarePlayer player, bool addClothes = true, bool addItems = true, AssetRedirectService? assetRedirectService = null)
+    public static List<IItem> ItemsFromInventory(WarfarePlayer player, bool addClothes = true, bool addItems = true, AssetRedirectService? assetRedirectService = null)
     {
         GameThread.AssertCurrent();
         if (!addItems && !addClothes)
-            return Array.Empty<IKitItem>();
-        List<IKitItem> items = new List<IKitItem>(32);
+            return new List<IItem>(0);
+        
+        List<IItem> items = new List<IItem>(32);
         RedirectType type;
         if (addItems)
         {
@@ -565,8 +587,8 @@ public static class ItemUtility
                     if (asset == null)
                         continue;
                     if (assetRedirectService != null && assetRedirectService.TryFindRedirectType(asset, out type, out _, out string? variant))
-                        items.Add(new AssetRedirectPageKitItem(0u, jar.x, jar.y, jar.rot, (Page)page, type, variant));
-                    else items.Add(new SpecificPageKitItem(0u, new UnturnedAssetReference(asset.GUID), jar.x, jar.y, jar.rot, (Page)page, jar.item.amount, jar.item.state));
+                        items.Add(new RedirectedPageItem(jar.x, jar.y, (Page)page, jar.rot, type, variant));
+                    else items.Add(new ConcretePageItem(jar.x, jar.y, (Page)page, jar.rot, AssetLink.Create(asset), jar.item.state, jar.item.amount));
                 }
             }
         }
@@ -576,56 +598,56 @@ public static class ItemUtility
             PlayerClothing playerClothes = player.UnturnedPlayer.clothing;
             if (playerClothes.shirtAsset != null)
             {
-                if (playerFaction != null && assetRedirectService != null && assetRedirectService.TryFindRedirectType(playerClothes.shirtAsset, out type, out FactionInfo? faction, out string? variant, clothingOnly: true) && (faction == null || faction == playerFaction))
-                    items.Add(new AssetRedirectClothingKitItem(0u, type, ClothingType.Shirt, variant));
+                if (playerFaction != null && assetRedirectService != null && assetRedirectService.TryFindRedirectType(playerClothes.shirtAsset, out type, out FactionInfo? faction, out string? variant, clothingOnly: true) && (faction == null || Equals(faction, playerFaction)))
+                    items.Add(new RedirectedClothingItem(ClothingType.Shirt, type, variant));
                 else
-                    items.Add(new SpecificClothingKitItem(0u, new UnturnedAssetReference(playerClothes.shirtAsset.GUID), ClothingType.Shirt, playerClothes.shirtState));
+                    items.Add(new ConcreteClothingItem(ClothingType.Shirt, AssetLink.Create(playerClothes.shirtAsset), playerClothes.shirtState));
             }
             if (playerClothes.pantsAsset != null)
             {
-                if (playerFaction != null && assetRedirectService != null && assetRedirectService.TryFindRedirectType(playerClothes.pantsAsset, out type, out FactionInfo? faction, out string? variant, clothingOnly: true) && (faction == null || faction == playerFaction))
-                    items.Add(new AssetRedirectClothingKitItem(0u, type, ClothingType.Pants, variant));
+                if (playerFaction != null && assetRedirectService != null && assetRedirectService.TryFindRedirectType(playerClothes.pantsAsset, out type, out FactionInfo? faction, out string? variant, clothingOnly: true) && (faction == null || Equals(faction, playerFaction)))
+                    items.Add(new RedirectedClothingItem(ClothingType.Pants, type, variant));
                 else
-                    items.Add(new SpecificClothingKitItem(0u, new UnturnedAssetReference(playerClothes.pantsAsset.GUID), ClothingType.Pants, playerClothes.pantsState));
+                    items.Add(new ConcreteClothingItem(ClothingType.Pants, AssetLink.Create(playerClothes.pantsAsset), playerClothes.pantsState));
             }
             if (playerClothes.vestAsset != null)
             {
-                if (playerFaction != null && assetRedirectService != null && assetRedirectService.TryFindRedirectType(playerClothes.vestAsset, out type, out FactionInfo? faction, out string? variant, clothingOnly: true) && (faction == null || faction == playerFaction))
-                    items.Add(new AssetRedirectClothingKitItem(0u, type, ClothingType.Vest, variant));
+                if (playerFaction != null && assetRedirectService != null && assetRedirectService.TryFindRedirectType(playerClothes.vestAsset, out type, out FactionInfo? faction, out string? variant, clothingOnly: true) && (faction == null || Equals(faction, playerFaction)))
+                    items.Add(new RedirectedClothingItem(ClothingType.Vest, type, variant));
                 else
-                    items.Add(new SpecificClothingKitItem(0u, new UnturnedAssetReference(playerClothes.vestAsset.GUID), ClothingType.Vest, playerClothes.vestState));
+                    items.Add(new ConcreteClothingItem(ClothingType.Vest, AssetLink.Create(playerClothes.vestAsset), playerClothes.vestState));
             }
             if (playerClothes.hatAsset != null)
             {
-                if (playerFaction != null && assetRedirectService != null && assetRedirectService.TryFindRedirectType(playerClothes.hatAsset, out type, out FactionInfo? faction, out string? variant, clothingOnly: true) && (faction == null || faction == playerFaction))
-                    items.Add(new AssetRedirectClothingKitItem(0u, type, ClothingType.Hat, variant));
+                if (playerFaction != null && assetRedirectService != null && assetRedirectService.TryFindRedirectType(playerClothes.hatAsset, out type, out FactionInfo? faction, out string? variant, clothingOnly: true) && (faction == null || Equals(faction, playerFaction)))
+                    items.Add(new RedirectedClothingItem(ClothingType.Hat, type, variant));
                 else
-                    items.Add(new SpecificClothingKitItem(0u, new UnturnedAssetReference(playerClothes.hatAsset.GUID), ClothingType.Hat, playerClothes.hatState));
+                    items.Add(new ConcreteClothingItem(ClothingType.Hat, AssetLink.Create(playerClothes.hatAsset), playerClothes.hatState));
             }
             if (playerClothes.maskAsset != null)
             {
-                if (playerFaction != null && assetRedirectService != null && assetRedirectService.TryFindRedirectType(playerClothes.maskAsset, out type, out FactionInfo? faction, out string? variant, clothingOnly: true) && (faction == null || faction == playerFaction))
-                    items.Add(new AssetRedirectClothingKitItem(0u, type, ClothingType.Mask, variant));
+                if (playerFaction != null && assetRedirectService != null && assetRedirectService.TryFindRedirectType(playerClothes.maskAsset, out type, out FactionInfo? faction, out string? variant, clothingOnly: true) && (faction == null || Equals(faction, playerFaction)))
+                    items.Add(new RedirectedClothingItem(ClothingType.Mask, type, variant));
                 else
-                    items.Add(new SpecificClothingKitItem(0u, new UnturnedAssetReference(playerClothes.maskAsset.GUID), ClothingType.Mask, playerClothes.maskState));
+                    items.Add(new ConcreteClothingItem(ClothingType.Mask, AssetLink.Create(playerClothes.maskAsset), playerClothes.maskState));
             }
             if (playerClothes.backpackAsset != null)
             {
-                if (playerFaction != null && assetRedirectService != null && assetRedirectService.TryFindRedirectType(playerClothes.backpackAsset, out type, out FactionInfo? faction, out string? variant, clothingOnly: true) && (faction == null || faction == playerFaction))
-                    items.Add(new AssetRedirectClothingKitItem(0u, type, ClothingType.Backpack, variant));
+                if (playerFaction != null && assetRedirectService != null && assetRedirectService.TryFindRedirectType(playerClothes.backpackAsset, out type, out FactionInfo? faction, out string? variant, clothingOnly: true) && (faction == null || Equals(faction, playerFaction)))
+                    items.Add(new RedirectedClothingItem(ClothingType.Backpack, type, variant));
                 else
-                    items.Add(new SpecificClothingKitItem(0u, new UnturnedAssetReference(playerClothes.backpackAsset.GUID), ClothingType.Backpack, playerClothes.backpackState));
+                    items.Add(new ConcreteClothingItem(ClothingType.Backpack, AssetLink.Create(playerClothes.backpackAsset), playerClothes.backpackState));
             }
             if (playerClothes.glassesAsset != null)
             {
-                if (playerFaction != null && assetRedirectService != null && assetRedirectService.TryFindRedirectType(playerClothes.glassesAsset, out type, out FactionInfo? faction, out string? variant, clothingOnly: true) && (faction == null || faction == playerFaction))
-                    items.Add(new AssetRedirectClothingKitItem(0u, type, ClothingType.Glasses, variant));
+                if (playerFaction != null && assetRedirectService != null && assetRedirectService.TryFindRedirectType(playerClothes.glassesAsset, out type, out FactionInfo? faction, out string? variant, clothingOnly: true) && (faction == null || Equals(faction, playerFaction)))
+                    items.Add(new RedirectedClothingItem(ClothingType.Glasses, type, variant));
                 else
-                    items.Add(new SpecificClothingKitItem(0u, new UnturnedAssetReference(playerClothes.glassesAsset.GUID), ClothingType.Glasses, playerClothes.glassesState));
+                    items.Add(new ConcreteClothingItem(ClothingType.Glasses, AssetLink.Create(playerClothes.glassesAsset), playerClothes.glassesState));
             }
         }
 
-        return items.ToArray();
+        return items;
     }
 
     /// <summary>
@@ -673,6 +695,79 @@ public static class ItemUtility
     }
 
     /// <summary>
+    /// Handles logic that needs ran with a player's inventory is cleared.
+    /// </summary>
+    public static void OnClearingInventory(WarfarePlayer player)
+    {
+        GameThread.AssertCurrent();
+
+        player.ComponentOrNull<ItemTrackingPlayerComponent>()?.Reset();
+    }
+
+    /// <summary>
+    /// Find an item in an inventory by it's <see cref="Item"/> reference.
+    /// </summary>
+    public static bool TryFindItem(PlayerInventory inventory, Item item, out byte x, out byte y, out Page page, out byte rot)
+    {
+        int maxPage = PlayerInventory.PAGES - 2;
+        for (byte pg = 0; pg < maxPage; ++pg)
+        {
+            Items pageGrp = inventory.items[pg];
+            int itemCt = pageGrp.getItemCount();
+            for (int i = 0; i < itemCt; ++i)
+            {
+                ItemJar jar = pageGrp.getItem((byte)i);
+                if (ReferenceEquals(jar.item, item))
+                {
+                    x = jar.x;
+                    y = jar.y;
+                    page = (Page)pg;
+                    rot = jar.rot;
+                    return true;
+                }
+            }
+        }
+
+        x = byte.MaxValue;
+        y = byte.MaxValue;
+        page = (Page)byte.MaxValue;
+        rot = 0;
+        return false;
+    }
+
+    /// <summary>
+    /// Check if a player has any items or clothes equipped (if <paramref name="clothes"/> is <see langword="true"/>).
+    /// </summary>
+    public static bool HasAnyItems(WarfarePlayer player, bool clothes = true)
+    {
+        if (clothes)
+        {
+            PlayerClothing clothing = player.UnturnedPlayer.clothing;
+            if (clothing.backpackAsset != null
+                || clothing.glassesAsset != null
+                || clothing.hatAsset != null
+                || clothing.pantsAsset != null
+                || clothing.maskAsset != null
+                || clothing.shirtAsset != null
+                || clothing.vestAsset != null)
+            {
+                return true;
+            }
+        }
+
+        PlayerInventory inventory = player.UnturnedPlayer.inventory;
+
+        for (byte page = 0; page < PlayerInventory.STORAGE; page++)
+        {
+            byte count = inventory.getItemCount(page);
+            if (count > 0)
+                return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
     /// Effeciently remove all items and clothes from a player's inventory.
     /// </summary>
     public static void ClearInventory(WarfarePlayer player, bool clothes = true)
@@ -681,12 +776,7 @@ public static class ItemUtility
         if (!player.IsOnline)
             return;
 
-        ItemTrackingPlayerComponent? comp = player.ComponentOrNull<ItemTrackingPlayerComponent>();
-        if (comp != null)
-        {
-            comp.ItemTransformations.Clear();
-            comp.ItemDropTransformations.Clear();
-        }
+        OnClearingInventory(player);
 
         Player nativePlayer = player.UnturnedPlayer;
         if (SupportsFastKits)
@@ -795,220 +885,6 @@ public static class ItemUtility
             }
         }
     }
-    
-    /// <summary>
-    /// Replace a player's inventory with the given kit item abstractions.
-    /// </summary>
-    public static void GiveItems(WarfarePlayer player, IKitItem[] items, ILogger logger, AssetRedirectService assetRedirectService, IFactionDataStore factionDataStore, bool clear)
-    {
-        GameThread.AssertCurrent();
-        if (!player.IsOnline)
-            return;
-
-        if (clear)
-            ClearInventory(player, true);
-
-        Team team = player.Team;
-        Player nativePlayer = player.UnturnedPlayer;
-
-        if (SupportsFastKits)
-        {
-            int flag = 0;
-            bool hasPlayedEffect = false;
-            for (int i = 0; i < items.Length; ++i)
-            {
-                IKitItem item = items[i];
-                if (item is not IClothingKitItem clothingJar)
-                    continue;
-                ItemAsset? asset = item.GetItem(null, team, out _, out byte[] state, assetRedirectService, factionDataStore);
-                if (asset == null || asset.type != clothingJar.Type.GetItemType())
-                    continue;
-
-                if ((flag & (1 << (int)clothingJar.Type)) != 0)
-                    continue;
-                
-                flag |= 1 << (int)clothingJar.Type;
-                SendWearClothing(nativePlayer, asset, clothingJar.Type, 100, state, !hasPlayedEffect);
-                hasPlayedEffect = true;
-            }
-
-            byte[] blank = Array.Empty<byte>();
-            for (int i = 0; i < 7; ++i)
-            {
-                if (((flag >> i) & 1) != 0)
-                    continue;
-
-                SendWearClothing(nativePlayer, null, (ClothingType)i, 100, blank, false);
-            }
-
-            Items[] p = nativePlayer.inventory.items;
-
-            IsolateInventory(nativePlayer, out bool oldValue);
-
-            List<Item>? toAddLater = null;
-            for (int i = 0; i < items.Length; ++i)
-            {
-                IKitItem item = items[i];
-                if (item is not IPageKitItem jar)
-                    continue;
-
-                ItemAsset? asset = item.GetItem(null, team, out byte amt, out byte[] state, assetRedirectService, factionDataStore);
-                if ((int)jar.Page < PlayerInventory.PAGES - 2 && asset != null)
-                {
-                    Items page = p[(int)jar.Page];
-                    Item itm = new Item(asset.id, amt, 100, state);
-                    // ensures multiple items are not put in the slots (causing the ghost gun issue)
-                    if (jar.Page is Page.Primary or Page.Secondary)
-                    {
-                        if (page.getItemCount() > 0)
-                        {
-                            logger.LogWarning("[GIVE ITEMS] Duplicate {0} defined: {1}.", jar.Page.ToString().ToLowerInvariant(), item);
-                            logger.LogInformation("[GIVE ITEMS] Removing {0} in place of duplicate.", page.items[0].GetAsset().itemName);
-                            (toAddLater ??= new List<Item>(4)).Add(page.items[0].item);
-                            page.removeItem(0);
-                        }
-                    }
-                    else if (IsOutOfBounds(page, jar.X, jar.Y, asset.size_x, asset.size_y, jar.Rotation))
-                    {
-                        logger.LogWarning("Out of bounds item in {0} defined: {1}.", jar.Page, item);
-                        (toAddLater ??= new List<Item>(4)).Add(itm);
-                        continue;
-                    }
-
-                    int ic2 = page.getItemCount();
-                    for (int j = 0; j < ic2; ++j)
-                    {
-                        ItemJar? jar2 = page.getItem((byte)j);
-                        if (jar2 == null || !IsOverlapping(jar.X, jar.Y, asset.size_x, asset.size_y, jar2.x, jar2.y, jar2.size_x, jar2.size_y, jar.Rotation, jar2.rot))
-                            continue;
-
-                        logger.LogWarning("[GIVE ITEMS] Overlapping item in {0} defined: {1}.", jar.Page, item);
-                        logger.LogInformation("[GIVE ITEMS] Removing {0} ({1}, {2} @ {3}), in place of duplicate.", jar2.GetAsset().itemName, jar2.x, jar2.y, jar2.rot);
-                        page.removeItem((byte)j--);
-                        (toAddLater ??= new List<Item>(4)).Add(jar2.item);
-                    }
-
-                    page.addItem(jar.X, jar.Y, jar.Rotation, itm);
-                }
-                else
-                {
-                    logger.LogWarning("[GIVE ITEMS] Unknown asset: {0}", (jar is ISpecificKitItem i2 ? i2.Item.ToString() : (jar is IAssetRedirectKitItem a2 ? a2.RedirectType.ToString() : jar.ToString()) + "."));
-                }
-            }
-
-            // try to add removed items later
-            if (toAddLater is { Count: > 0 })
-            {
-                for (int i = 0; i < toAddLater.Count; ++i)
-                {
-                    Item item = toAddLater[i];
-                    logger.LogWarning("[GIVE ITEMS] Had to re-add item: {0}.", item.GetAsset()?.itemName);
-                    if (!nativePlayer.inventory.tryAddItemAuto(item, false, false, false, !hasPlayedEffect))
-                    {
-                        ItemManager.dropItem(item, player.Position, !hasPlayedEffect, true, false);
-                    }
-
-                    if (!hasPlayedEffect)
-                        hasPlayedEffect = true;
-                }
-            }
-
-            UndoIsolateInventory(nativePlayer, oldValue);
-            SendPages(player);
-        }
-        else
-        {
-            foreach (IKitItem item in items)
-            {
-                if (item is not IClothingKitItem clothing)
-                    continue;
-
-                ItemAsset? asset = item.GetItem(null, team, out byte amt, out byte[] state, assetRedirectService, factionDataStore);
-                if (asset is null)
-                {
-                    logger.LogWarning("[GIVE ITEMS] Unknown asset: {0}.", clothing);
-                    return;
-                }
-                if (clothing.Type == ClothingType.Shirt)
-                {
-                    if (asset is ItemShirtAsset shirt)
-                        nativePlayer.clothing.askWearShirt(shirt, 100, state, true);
-                    else goto error;
-                }
-                else if (clothing.Type == ClothingType.Pants)
-                {
-                    if (asset is ItemPantsAsset pants)
-                        nativePlayer.clothing.askWearPants(pants, 100, state, true);
-                    else goto error;
-                }
-                else if (clothing.Type == ClothingType.Vest)
-                {
-                    if (asset is ItemVestAsset vest)
-                        nativePlayer.clothing.askWearVest(vest, 100, state, true);
-                    else goto error;
-                }
-                else if (clothing.Type == ClothingType.Hat)
-                {
-                    if (asset is ItemHatAsset hat)
-                        nativePlayer.clothing.askWearHat(hat, 100, state, true);
-                    else goto error;
-                }
-                else if (clothing.Type == ClothingType.Mask)
-                {
-                    if (asset is ItemMaskAsset mask)
-                        nativePlayer.clothing.askWearMask(mask, 100, state, true);
-                    else goto error;
-                }
-                else if (clothing.Type == ClothingType.Backpack)
-                {
-                    if (asset is ItemBackpackAsset backpack)
-                        nativePlayer.clothing.askWearBackpack(backpack, 100, state, true);
-                    else goto error;
-                }
-                else if (clothing.Type == ClothingType.Glasses)
-                {
-                    if (asset is ItemGlassesAsset glasses)
-                        nativePlayer.clothing.askWearGlasses(glasses, 100, state, true);
-                    else goto error;
-                }
-                else
-                    goto error;
-
-                continue;
-
-                error:
-                logger.LogWarning("[GIVE ITEMS] Invalid or mismatched clothing type: {0}.", clothing);
-                Item uitem = new Item(asset.id, amt, 100, state);
-                if (!nativePlayer.inventory.tryAddItem(uitem, true))
-                {
-                    ItemManager.dropItem(uitem, player.Position, false, true, true);
-                }
-            }
-            foreach (IKitItem item in items)
-            {
-                if (item is IClothingKitItem)
-                    continue;
-
-                ItemAsset? asset = item.GetItem(null, team, out byte amt, out byte[] state, assetRedirectService, factionDataStore);
-                if (asset is null)
-                {
-                    logger.LogWarning("[GIVE ITEMS] Unknown asset: {0}.", item);
-                    return;
-                }
-                Item uitem = new Item(asset.id, amt, 100, state);
-
-                if (item is IPageKitItem jar && nativePlayer.inventory.tryAddItem(uitem, jar.X, jar.Y, (byte)jar.Page, jar.Rotation))
-                {
-                    continue;
-                }
-
-                if (!nativePlayer.inventory.tryAddItem(uitem, true))
-                {
-                    ItemManager.dropItem(uitem, player.Position, false, true, true);
-                }
-            }
-        }
-    }
 
     /// <summary>
     /// Manually send the entire page via RPC to save on bandwidth.
@@ -1023,7 +899,8 @@ public static class ItemUtility
         SendInventory!.Invoke(player.UnturnedPlayer.inventory.GetNetId(), ENetReliability.Reliable, player.Connection,
             writer =>
             {
-                for (int i = 0; i < PlayerInventory.PAGES - 2; ++i)
+                int maxPage = PlayerInventory.STORAGE;
+                for (int i = 0; i < maxPage; ++i)
                 {
                     Items i2 = il[i];
                     int ct = i2.getItemCount();
@@ -1049,7 +926,7 @@ public static class ItemUtility
     /// <summary>
     /// Get the <see cref="ItemJar"/> that's actively held by the player.
     /// </summary>
-    public static ItemJar? GetHeldItem(WarfarePlayer player, out Page page)
+    public static ItemJar? GetHeldItem(this WarfarePlayer player, out Page page)
     {
         GameThread.AssertCurrent();
         if (player.IsOnline)
@@ -1057,9 +934,10 @@ public static class ItemUtility
             PlayerEquipment eq = player.UnturnedPlayer.equipment;
             if (eq.asset != null)
             {
+                PlayerInventory inventory = player.UnturnedPlayer.inventory;
                 byte pg = eq.equippedPage;
                 page = (Page)pg;
-                return eq.player.inventory.getItem(pg, eq.player.inventory.getIndex(pg, eq.equipped_x, eq.equipped_y));
+                return inventory.getItem(pg, inventory.getIndex(pg, eq.equipped_x, eq.equipped_y));
             }
         }
 
@@ -1068,24 +946,58 @@ public static class ItemUtility
     }
 
     /// <summary>
-    /// Check if two items are overlapping.
+    /// Get the <see cref="ItemJar"/> that's at a specific position in the inventory.
     /// </summary>
-    public static bool IsOverlapping(IPageKitItem jar1, IPageKitItem jar2, ItemAsset asset1, ItemAsset asset2)
+    public static ItemJar? GetItemAt(this WarfarePlayer player, Page page, byte x, byte y)
     {
-        return jar1.Page == jar2.Page &&
-               (jar1.Page is Page.Primary or Page.Secondary
-                || IsOverlapping(jar1.X, jar1.Y, asset1.size_x, asset1.size_y, jar2.X, jar2.Y, asset2.size_x, asset2.size_y, jar1.Rotation, jar2.Rotation)
-               );
+        return GetItemAt(player, page, x, y, out _);
     }
 
     /// <summary>
-    /// Check if two items are overlapping.
+    /// Get the <see cref="ItemJar"/> that's at a specific position in the inventory.
     /// </summary>
-    public static bool IsOverlapping(IPageKitItem jar1, ItemAsset asset1, byte x, byte y, byte sizeX, byte sizeY, byte rotation) =>
-        IsOverlapping(jar1.X, jar1.Y, asset1.size_x, asset1.size_y, x, y, sizeX, sizeY, jar1.Rotation, rotation);
+    public static ItemJar? GetItemAt(this WarfarePlayer player, Page page, byte x, byte y, out byte index)
+    {
+        GameThread.AssertCurrent();
+        if (player.IsOnline)
+        {
+            PlayerInventory inventory = player.UnturnedPlayer.inventory;
+            index = inventory.getIndex((byte)page, x, y);
+            if (index != byte.MaxValue)
+                return inventory.getItem((byte)page, index);
+        }
+        else
+        {
+            index = byte.MaxValue;
+        }
+
+        return null;
+    }
 
     /// <summary>
-    /// Check if two items are overlapping.
+    /// Get the <see cref="ItemJar"/> that's at a specific position in the inventory.
+    /// </summary>
+    public static ItemJar? GetItemAt(this PlayerInventory inventory, Page page, byte x, byte y)
+    {
+        return GetItemAt(inventory, page, x, y, out _);
+    }
+
+    /// <summary>
+    /// Get the <see cref="ItemJar"/> that's at a specific position in the inventory.
+    /// </summary>
+    public static ItemJar? GetItemAt(this PlayerInventory inventory, Page page, byte x, byte y, out byte index)
+    {
+        GameThread.AssertCurrent();
+
+        index = inventory.getIndex((byte)page, x, y);
+        if (index != byte.MaxValue)
+            return inventory.getItem((byte)page, index);
+
+        return null;
+    }
+
+    /// <summary>
+    /// Check if two items are overlapping that are in the same page.
     /// </summary>
     public static bool IsOverlapping(byte posX1, byte posY1, byte sizeX1, byte sizeY1, byte posX2, byte posY2, byte sizeX2, byte sizeY2, byte rotation1, byte rotation2)
     {
@@ -1106,6 +1018,81 @@ public static class ItemUtility
     }
 
     /// <summary>
+    /// Check if an item can be moved from one location to another.
+    /// </summary>
+    public static bool CanPerformMove(PlayerInventory inventory, ItemJar item, Page page, byte x, byte y, byte rot)
+    {
+        Items destinationPage = inventory.items[(int)page];
+
+        byte sx = item.size_x, sy = item.size_y;
+
+        int itemCt = destinationPage.getItemCount();
+        for (int i = 0; i < itemCt; ++i)
+        {
+            ItemJar cmpItem = destinationPage.getItem((byte)i);
+            if (cmpItem == item)
+                continue;
+
+            if (IsOverlapping(cmpItem.x, cmpItem.y, cmpItem.size_x, cmpItem.size_y, x, y, sx, sy, cmpItem.rot, rot))
+                return false;
+        }
+
+        return !IsOutOfBounds(destinationPage, x, y, sx, sy, rot);
+    }
+
+    /// <summary>
+    /// Check if an item can be swapped with another item.
+    /// </summary>
+    public static bool CanPerformSwap(PlayerInventory inventory, ItemJar item1, Page item1Page, ItemJar item2, Page item2Page)
+    {
+        if (item1 == item2)
+        {
+            return item1Page == item2Page;
+        }
+
+        Items destinationPage1 = inventory.items[(int)item2Page];
+        Items destinationPage2 = inventory.items[(int)item1Page];
+
+        byte sx1 = item1.size_x, sy1 = item1.size_y,
+             sx2 = item2.size_x, sy2 = item2.size_y;
+
+        byte x1 = item1.x, y1 = item1.y,
+             x2 = item2.x, y2 = item2.y;
+
+        byte rot1 = item1.rot, rot2 = item2.rot;
+
+        int itemCt = destinationPage1.getItemCount();
+        for (int i = 0; i < itemCt; ++i)
+        {
+            ItemJar cmpItem = destinationPage1.getItem((byte)i);
+            if (cmpItem == item1 || cmpItem == item2)
+                continue;
+
+            if (IsOverlapping(cmpItem.x, cmpItem.y, cmpItem.size_x, cmpItem.size_y, x1, y1, sx1, sy1, cmpItem.rot, rot1))
+                return false;
+        }
+
+        itemCt = destinationPage2.getItemCount();
+        for (int i = 0; i < itemCt; ++i)
+        {
+            ItemJar cmpItem = destinationPage2.getItem((byte)i);
+            if (cmpItem == item1 || cmpItem == item2)
+                continue;
+
+            if (IsOverlapping(cmpItem.x, cmpItem.y, cmpItem.size_x, cmpItem.size_y, x2, y2, sx2, sy2, cmpItem.rot, rot2))
+                return false;
+        }
+
+        // items swapping in same page overlapping themselves
+        if (item1Page == item2Page && IsOverlapping(x1, y1, sx1, sy1, x2, y2, sx2, sy2, rot1, rot2))
+        {
+            return false;
+        }
+
+        return !IsOutOfBounds(destinationPage1, x1, y1, sx1, sy1, rot1) && !IsOutOfBounds(destinationPage2, x2, y2, sx2, sy2, rot2);
+    }
+
+    /// <summary>
     /// Check if an item is out of bounds of the page.
     /// </summary>
     public static bool IsOutOfBounds(Items page, ItemJar jar) => IsOutOfBounds(page.width, page.height, jar.x, jar.y, jar.size_x, jar.size_y, jar.rot);
@@ -1121,7 +1108,7 @@ public static class ItemUtility
     /// </summary>
     public static bool IsOutOfBounds(byte pageSizeX, byte pageSizeY, byte posX, byte posY, byte sizeX, byte sizeY, byte rotation)
     {
-        if ((rotation % 2) == 1)
+        if (rotation % 2 == 1)
             (sizeX, sizeY) = (sizeY, sizeX);
 
         return posX + sizeX > pageSizeX || posY + sizeY > pageSizeY;
@@ -1683,6 +1670,79 @@ public static class ItemUtility
         }
 
         return totalItemsFound;
+    }
+
+    /// <summary>
+    /// Guesses the type of weapon <paramref name="gun"/> is based off it's ammo and size.
+    /// </summary>
+    [Pure]
+    public static FirearmClass GetFirearmClass(ItemGunAsset gun)
+    {
+        Asset? magazineAsset = Assets.find(EAssetType.ITEM, gun.getMagazineID());
+        ItemMagazineAsset? magazine = magazineAsset as ItemMagazineAsset;
+
+        if (magazine?.pellets > 1)
+        {
+            if (gun.size_x <= 3)
+                return FirearmClass.SmallShotgun;
+            else
+                return FirearmClass.Shotgun;
+        }
+        else if (gun.size_x == 2)
+        {
+            if (gun.hasAuto)
+                return FirearmClass.MachinePistol;
+            else
+                return FirearmClass.Pistol;
+        }
+        else if (gun.size_x == 3)
+        {
+            if (gun.hasAuto)
+                return FirearmClass.LargeMachinePistol;
+            else
+                return FirearmClass.MediumSidearm;
+        }
+        else if (gun.size_x == 4)
+        {
+            if (gun.projectile != null && gun.vehicleDamage < 100)
+                return FirearmClass.GrenadeLauncher;
+
+            if (gun.playerDamageMultiplier.damage < 40)
+                return FirearmClass.SubmachineGun;
+            else if (gun.playerDamageMultiplier.damage < 60)
+                return FirearmClass.Rifle;
+            else
+                return FirearmClass.BattleRifle;
+        }
+        else if (gun.size_x == 5)
+        {
+            if (gun.hasAuto)
+            {
+                if (gun.ammoMax < 45)
+                    return FirearmClass.BattleRifle;
+                else if (gun.playerDamageMultiplier.damage < 60)
+                    return FirearmClass.LightMachineGun;
+                else
+                    return FirearmClass.GeneralPurposeMachineGun;
+            }
+            else
+            {
+                if (gun.projectile != null)
+                {
+                    if (gun.vehicleDamage < 500)
+                        return FirearmClass.LightAntiTank;
+                    else
+                        return FirearmClass.HeavyAntiTank;
+                }
+
+                if (gun.playerDamageMultiplier.damage < 100)
+                    return FirearmClass.DMR;
+                else
+                    return FirearmClass.Sniper;
+            }
+        }
+
+        return FirearmClass.TooDifficultToClassify;
     }
 }
 

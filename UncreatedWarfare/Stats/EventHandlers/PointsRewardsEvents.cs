@@ -1,10 +1,8 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Stripe;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
@@ -16,15 +14,9 @@ using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Events.Models.Vehicles;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.FOBs.SupplyCrates;
-using Uncreated.Warfare.Layouts.Flags;
-using Uncreated.Warfare.Layouts.Teams;
-using Uncreated.Warfare.Models.Factions;
 using Uncreated.Warfare.Players;
-using Uncreated.Warfare.Players.Components;
-using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Translations;
-using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.Stats.EventHandlers;
@@ -45,13 +37,11 @@ internal class PointsRewardsEvents :
 {
     private const double DriverAssistScaleFactor = 0.5; // 0.5 means both the gunner and driver share the total reward equally
     private readonly PointsService _points;
-    private readonly VehicleInfoStore _vehicleInfo;
     private readonly PointsTranslations _translations;
 
-    public PointsRewardsEvents(PointsService points, VehicleInfoStore vehicleInfo, TranslationInjection<PointsTranslations> translations)
+    public PointsRewardsEvents(PointsService points, TranslationInjection<PointsTranslations> translations)
     {
         _points = points;
-        _vehicleInfo = vehicleInfo;
         _translations = translations.Value;
     }
 
@@ -62,7 +52,7 @@ internal class PointsRewardsEvents :
 
         ResolvedEventInfo resolveEvent;
         Translation translation;
-        if (e.Killer == e.Player)
+        if (e.Killer.Equals(e.Player))
         {
             resolveEvent = _points.GetEvent("Suicide").Resolve();
             translation = _translations.XPToastSuicide;
@@ -105,7 +95,7 @@ internal class PointsRewardsEvents :
         if (currentVehicle != null)
         {
             driver = serviceProvider.GetService<IPlayerService>()?.GetOnlinePlayerOrNull(currentVehicle.passengers[0].player);
-            if (driver != null && driver != killer)
+            if (driver != null && !driver.Equals(killer))
             {
                 return true;
             }
@@ -135,12 +125,11 @@ internal class PointsRewardsEvents :
         {
             EventInfo @event = _points.GetEvent("DestroyFriendlyVehicle:" + e.Vehicle.Info.Type);
 
-            Translation translation = e.Vehicle.Info.Type.IsAircraft()
+            Translation<VehicleType> translation = e.Vehicle.Info.Type.IsAircraft()
                 ? _translations.XPToastAircraftDestroyed
                 : _translations.XPToastVehicleDestroyed;
 
-            await _points.ApplyEvent(instigator, faction, @event.Resolve().WithTranslation(translation, e.Instigator), token).ConfigureAwait(false);
-            return;
+            await _points.ApplyEvent(instigator, faction, @event.Resolve().WithTranslation(translation, e.Vehicle.Info.Type, e.Instigator), token).ConfigureAwait(false);
         }
         else
         {
@@ -161,7 +150,7 @@ internal class PointsRewardsEvents :
 
                 ResolvedEventInfo resolvedEvent;
 
-                if (contributor == e.Instigator)
+                if (contributor.Equals(e.Instigator))
                 {
                     if (ShouldAwardDriverAssist(e.Instigator, serviceProvider, out WarfarePlayer? driver))
                     {
@@ -333,12 +322,12 @@ internal class PointsRewardsEvents :
 
         EventInfo @event;
         Translation translation;
-        if (assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:Fobs:Fob").MatchAsset(e.Shovelable.Info.CompletedStructure))
+        if (assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:Gameplay:Fob").MatchAsset(e.Shovelable.Info.CompletedStructure))
         {
             @event = _points.GetEvent("FobBuilt");
             translation = _translations.XPToastFOBBuilt;
         }
-        else if (assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:RepairStation").MatchAsset(e.Shovelable.Info.CompletedStructure))
+        else if (assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:Gameplay:RepairStation").MatchAsset(e.Shovelable.Info.CompletedStructure))
         {
             @event = _points.GetEvent("RepairStationBuilt");
             translation = _translations.XPToastRepairStationBuilt;

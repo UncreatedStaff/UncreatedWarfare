@@ -23,12 +23,14 @@ public struct LanguageSet : IEnumerable<WarfarePlayer>, IEnumerator<WarfarePlaye
     readonly object IEnumerator.Current => Next;
     public LanguageInfo Language { get; }
     public CultureInfo Culture { get; }
+    public TimeZoneInfo TimeZone { get; }
     public bool IMGUI { get; }
     public Team Team { get; }
-    public LanguageSet(LanguageInfo language, CultureInfo culture, bool imgui, Team team)
+    public LanguageSet(LanguageInfo language, CultureInfo culture, TimeZoneInfo timeZone, bool imgui, Team team)
     {
         Language = language;
         Culture = culture;
+        TimeZone = timeZone;
         Team = team;
         IMGUI = imgui;
         _index = -1;
@@ -39,6 +41,7 @@ public struct LanguageSet : IEnumerable<WarfarePlayer>, IEnumerator<WarfarePlaye
         _players = set._players;
         Language = set.Language;
         Culture = set.Culture;
+        TimeZone = set.TimeZone;
         Team = set.Team;
         IMGUI = set.IMGUI;
         _index = -1;
@@ -52,12 +55,13 @@ public struct LanguageSet : IEnumerable<WarfarePlayer>, IEnumerator<WarfarePlaye
         IMGUI = player.Save.IMGUI;
         Language = player.Locale.LanguageInfo;
         Culture = player.Locale.CultureInfo;
+        TimeZone = player.Locale.TimeZone;
         Team = player.Team;
     }
 
     public readonly LanguageSet Preserve()
     {
-        LanguageSet set = new LanguageSet(Language, Culture, IMGUI, Team);
+        LanguageSet set = new LanguageSet(Language, Culture, TimeZone, IMGUI, Team);
         set.SetPlayers(_isSinglePlayer
             ? _players
             : new ArraySegment<WarfarePlayer>(_players.ToArray())
@@ -91,7 +95,8 @@ public struct LanguageSet : IEnumerable<WarfarePlayer>, IEnumerator<WarfarePlaye
 
         return player.Save.IMGUI == IMGUI
                && player.Locale.LanguageInfo.Equals(Language)
-               && player.Locale.CultureInfo.Equals(Culture)
+               && player.Locale.CultureInfo.Name.Equals(Culture.Name, StringComparison.Ordinal)
+               && player.Locale.TimeZone.Id.Equals(TimeZone.Id, StringComparison.Ordinal)
                && player.Team == Team;
     }
 

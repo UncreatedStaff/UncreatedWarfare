@@ -1,6 +1,7 @@
-﻿using SDG.NetTransport;
+using SDG.NetTransport;
 using Uncreated.Framework.UI;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.FOBs.UI;
 public class NearbyResourceUI : UnturnedUI
@@ -9,9 +10,17 @@ public class NearbyResourceUI : UnturnedUI
     public readonly UnturnedLabel AmmoLabel = new UnturnedLabel("Canvas/Image/Icon_Ammo/Ammo");
 
     public NearbyResourceUI(AssetConfiguration assetConfig, ILoggerFactory loggerFactory) : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:FobResources"), staticKey: true) { }
-    public void SetValues(ITransportConnection c, int build, int ammo)
+    
+    public void SetValues(LanguageSet players, int build, int ammo)
     {
-        BuildLabel.SetText(c, build.ToString(Data.LocalLocale));
-        AmmoLabel.SetText(c, ammo.ToString(Data.LocalLocale));
+        string buildStr = build.ToString(players.Culture);
+        string ammoStr = build.ToString(players.Culture);
+
+        while (players.MoveNext())
+        {
+            ITransportConnection c = players.Next.Connection;
+            BuildLabel.SetText(c, buildStr);
+            AmmoLabel.SetText(c, ammoStr);
+        }
     }
 }

@@ -1,7 +1,6 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Linq;
-using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Moderation.Punishments;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
@@ -31,6 +30,7 @@ public class PlayerModerationCacheComponent : IPlayerComponent
             {
                 await RefreshActiveMute();
             }
+            catch (OperationCanceledException)  { throw; }
             catch (Exception ex)
             {
                 serviceProvider.GetRequiredService<ILogger<PlayerModerationCacheComponent>>().LogError(ex, "Error fetching mute info.");
@@ -48,7 +48,6 @@ public class PlayerModerationCacheComponent : IPlayerComponent
             await _moderationSql.GetIPAddresses(Player.Steam64, true, token),
             await _moderationSql.GetHWIDs(Player.Steam64, token), detail: false, token: token,
             condition: $"`{DatabaseInterface.ColumnEntriesResolvedTimestamp}` IS NOT NULL");
-
 
         if (mutes.Length == 0)
         {

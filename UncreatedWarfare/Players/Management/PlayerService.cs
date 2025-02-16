@@ -148,7 +148,7 @@ public class PlayerService : IPlayerService
 
             IPlayerComponent[] components = AddComponents(player);
 
-            WarfarePlayer joined = new WarfarePlayer(this, player, in taskData, logger, components, _serviceProvider);
+            WarfarePlayer joined = new WarfarePlayer(this, player, in taskData, taskData.Player, logger, components, _serviceProvider);
             _onlinePlayers.Add(joined);
             _onlinePlayersDictionary.Add(joined, joined);
 
@@ -163,7 +163,6 @@ public class PlayerService : IPlayerService
             {
                 IPlayerComponent component = components[i];
 
-                component.Player = joined;
                 component.Init(serviceProvider, true);
             }
 

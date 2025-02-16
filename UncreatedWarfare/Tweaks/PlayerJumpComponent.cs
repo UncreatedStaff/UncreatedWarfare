@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Events.Models;
@@ -48,7 +48,7 @@ public class PlayerJumpComponent : IPlayerComponent, IAsyncEventListener<PlayerP
 
         Vector3 castPt = Player.Position;
         TeleportCommandTranslations translations = serviceProvider.GetRequiredService<TranslationInjection<TeleportCommandTranslations>>().Value;
-        _chatService.Send(Player, translations.TeleportSelfLocationSuccess, $"({castPt.x.ToString("0.##", Data.LocalLocale)}, {castPt.y.ToString("0.##", Data.LocalLocale)}, {castPt.z.ToString("0.##", Data.LocalLocale)})");
+        _chatService.Send(Player, translations.TeleportSelfLocationSuccess, $"({castPt.x.ToString("0.##", Player.Locale.CultureInfo)}, {castPt.y.ToString("0.##", Player.Locale.CultureInfo)}, {castPt.z.ToString("0.##", Player.Locale.CultureInfo)})");
     }
 
     public void Jump()
@@ -69,7 +69,7 @@ public class PlayerJumpComponent : IPlayerComponent, IAsyncEventListener<PlayerP
         {
             distance = 10f;
             raycast = Physics.Raycast(new Ray(aim.position, aim.forward), out RaycastHit hit,
-                1024, RayMasks.BLOCK_COLLISION);
+                1024, RayMasks.BLOCK_COLLISION, QueryTriggerInteraction.Ignore);
             if (raycast)
                 castPt = hit.point;
         }

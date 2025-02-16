@@ -1,6 +1,3 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using Uncreated.Warfare.Layouts.Flags;
 
 namespace Uncreated.Warfare.Events.Models.Flags;

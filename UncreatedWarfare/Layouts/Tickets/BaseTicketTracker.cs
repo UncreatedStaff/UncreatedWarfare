@@ -9,30 +9,31 @@ namespace Uncreated.Warfare.Layouts.Tickets;
 public abstract class BaseTicketTracker : ILayoutHostedService, ITicketTracker
 {
     private readonly Dictionary<Team, int> _ticketMap;
-    protected readonly Layout layout;
-    public BaseTicketTracker(Layout layout)
+
+    protected Layout Layout { get; }
+
+    protected BaseTicketTracker(Layout layout)
     {
         _ticketMap = new Dictionary<Team, int>();
-        this.layout = layout;
+        Layout = layout;
     }
+
     public int GetTickets(Team team)
     {
-        if (_ticketMap.TryGetValue(team, out int tickets))
-            return tickets;
-
-        return 0;
+        _ticketMap.TryGetValue(team, out int tickets);
+        return tickets;
     }
     public void SetTickets(Team team, int tickets)
     {
         GameThread.AssertCurrent();
 
         if (tickets < 0)
-            throw new ArgumentException("Cannot set tickets to a negative number.");
+            throw new ArgumentException("Cannot set tickets to a negative number.", nameof(tickets));
 
         _ticketMap[team] = tickets;
         _ = WarfareModule.EventDispatcher.DispatchEventAsync(new TicketsChanged
         { 
-            NewNumber = _ticketMap[team],
+            NewNumber = tickets,
             Change = tickets,
             Team = team,
             TicketTracker = this
@@ -45,15 +46,21 @@ public abstract class BaseTicketTracker : ILayoutHostedService, ITicketTracker
         if (!team.IsValid)
             return;
 
-        if (!_ticketMap.ContainsKey(team))
+        int newTicketCount;
+        if (!_ticketMap.TryGetValue(team, out int oldTickets))
         {
-            _ticketMap[team] = 0;
+            newTicketCount = Math.Max(0, tickets);
+            _ticketMap.Add(team, newTicketCount);
         }
-        int newNumber = Mathf.Clamp(_ticketMap[team] + tickets, 0, int.MaxValue);
-        _ticketMap[team] = newNumber;
+        else
+        {
+            newTicketCount = Math.Max(0, oldTickets + tickets);
+            _ticketMap[team] = newTicketCount;
+        }
+
         _ = WarfareModule.EventDispatcher.DispatchEventAsync(new TicketsChanged
         {
-            NewNumber = _ticketMap[team],
+            NewNumber = newTicketCount,
             Change = tickets,
             Team = team,
             TicketTracker = this

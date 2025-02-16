@@ -1,4 +1,4 @@
-﻿using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Languages;
 
 namespace Uncreated.Warfare.FOBs.Construction;

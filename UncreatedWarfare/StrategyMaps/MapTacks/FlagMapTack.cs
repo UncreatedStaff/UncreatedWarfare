@@ -1,5 +1,4 @@
-﻿using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.FOBs.Deployment;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Layouts.Flags;
 
 namespace Uncreated.Warfare.StrategyMaps.MapTacks;

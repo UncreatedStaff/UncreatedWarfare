@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Uncreated.Warfare.Models.Users;
@@ -27,6 +27,12 @@ public class LanguagePreferences
 
     [MaxLength(16)]
     public string? Culture { get; set; }
+
+    /// <summary>
+    /// Corresponds to <see cref="TimeZoneInfo.Id"/>.
+    /// </summary>
+    [MaxLength(32)]
+    public string? TimeZone { get; set; }
 
     [Column("UseCultureForCmdInput")]
     public bool UseCultureForCommandInput { get; set; }

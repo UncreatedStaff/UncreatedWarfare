@@ -1,4 +1,5 @@
-﻿using Uncreated.Warfare.Interaction.Commands;
+using Uncreated.Warfare.Interaction.Commands;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Commands;
 
@@ -42,10 +43,10 @@ internal sealed class DebugInstanceIdCommand : IExecutableCommand
             return UniTask.CompletedTask;
         }
 
-        if (ObjectManager.tryGetRegion(raycast.transform, out byte x, out byte y, out ushort index))
+        if (LevelObjectUtility.FindObject(raycast.transform) is { HasValue: true } obj)
         {
-            LevelObject obj = LevelObjects.objects[x, y][index];
-            Context.ReplyString($"Level object {obj.asset.objectName} ({obj.asset.name}, {obj.asset.GUID:N}): #{obj.instanceID.ToString(Context.Culture)}");
+            Context.ReplyString($"Level object {obj.Object.asset.objectName} ({obj.Object.asset.name}, {obj.Object.asset.GUID:N}): #{obj.Object.instanceID.ToString(Context.Culture)}");
+            return UniTask.CompletedTask;
         }
 
         Context.ReplyString("You must be looking at a barricade, structure, vehicle, or object.");

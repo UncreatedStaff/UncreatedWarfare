@@ -1,4 +1,4 @@
-﻿using Autofac;
+using Autofac;
 using Autofac.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.Memory;
@@ -7,8 +7,11 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
+using System.Net.Http;
+using System.Threading.Tasks;
 using Uncreated.Warfare.Logging.Formatting;
 using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Steam;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Languages;
 using Uncreated.Warfare.Util;
@@ -20,8 +23,14 @@ public class LoggingFormattingTests
     public IContainer Container;
 
     [SetUp]
-    public void Setup()
+    public async Task Setup()
     {
+        using HttpClient client = new HttpClient();
+
+        // download TimeZone data needed for logging provider
+        using HttpResponseMessage msg = await client.GetAsync(TimeZoneRegionalDatabase.SourceUrl);
+        byte[] xmlDoc = await msg.Content.ReadAsByteArrayAsync();
+
         ContainerBuilder bldr = new ContainerBuilder();
         bldr.RegisterType<TranslationValueFormatter>()
             .As<ITranslationValueFormatter>()
@@ -43,6 +52,11 @@ public class LoggingFormattingTests
         bldr.RegisterType(Type.GetType("Microsoft.Extensions.Logging.Logger, Microsoft.Extensions.Logging")!).As<ILogger>();
 
         bldr.RegisterType<LanguageService>()
+            .SingleInstance();
+
+        bldr.RegisterType<TimeZoneRegionalDatabase>()
+            .WithParameter("saveFile", null!)
+            .WithParameter("xmlDoc", xmlDoc)
             .SingleInstance();
 
         bldr.RegisterInstance(new ConfigurationBuilder().Add(new MemoryConfigurationSource

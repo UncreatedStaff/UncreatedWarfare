@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using Uncreated.Warfare.Events.Models.Buildables;
 using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Events.Models.Structures;
@@ -7,7 +8,7 @@ namespace Uncreated.Warfare.Events.Models.Structures;
 /// Event listener args which handles <see cref="StructureManager.onDamageStructureRequested"/>.
 /// </summary>
 [EventModel(SynchronizationContext = EventSynchronizationContext.Global, SynchronizedModelTags = [ "modify_inventory", "modify_world" ])]
-public class PlaceStructureRequested : CancellableEvent
+public class PlaceStructureRequested : CancellableEvent, IPlaceBuildableRequestedEvent
 {
 #nullable disable
     private StructureRegion _region;
@@ -18,6 +19,11 @@ public class PlaceStructureRequested : CancellableEvent
     /// The player that initially tried to place the structure.
     /// </summary>
     public required WarfarePlayer? OriginalPlacer { get; init; }
+
+    /// <summary>
+    /// Asset of the structure being placed.
+    /// </summary>
+    public ItemStructureAsset Asset => Structure.asset;
 
     /// <summary>
     /// Structure instantiation data.
@@ -80,8 +86,10 @@ public class PlaceStructureRequested : CancellableEvent
     /// <remarks>This can be changed.</remarks>
     public required CSteamID GroupOwner { get; set; }
 
-    /// <summary>
-    /// Asset of the structure being placed.
-    /// </summary>
-    public ItemStructureAsset Asset => Structure.asset;
+    Transform? IPlaceBuildableRequestedEvent.HitTarget => null;
+    ItemPlaceableAsset IPlaceBuildableRequestedEvent.Asset => Structure.asset;
+    bool IPlaceBuildableRequestedEvent.IsStructure => true;
+    InteractableVehicle? IPlaceBuildableRequestedEvent.TargetVehicle => null;
+    bool IPlaceBuildableRequestedEvent.IsOnVehicle => false;
+    object IPlaceBuildableRequestedEvent.Item => Structure;
 }

@@ -1,24 +1,11 @@
-﻿using DanielWillett.ReflectionTools;
-using DanielWillett.SpeedBytes;
-using DanielWillett.SpeedBytes.Unity;
+using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.FileProviders;
-using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.IO;
-using System.Linq;
-using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Database;
-using Uncreated.Warfare.Events.Models.Fobs;
-using Uncreated.Warfare.Events.Models.Vehicles;
 using Uncreated.Warfare.Services;
-using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles.Spawners;
-using UnityEngine;
-using UnityEngine.Profiling;
 
 namespace Uncreated.Warfare.Vehicles;
 
@@ -76,7 +63,7 @@ public class VehicleSpawnerStore : ILayoutHostedService, IDisposable
             ServerSavedata.directoryName,
             Provider.serverID,
             "Level",
-            Level.info.name,
+            Provider.map,
             "VehicleSpawners.yml"
         );
     }

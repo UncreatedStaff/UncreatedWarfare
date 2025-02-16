@@ -1,4 +1,5 @@
 using SDG.NetTransport;
+using StackCleaner;
 using System;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Data;
@@ -10,6 +11,7 @@ using Uncreated.Warfare.Layouts.Tickets;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Layouts.UI;
 
@@ -86,6 +88,7 @@ public class FlagListUI : UnturnedUI
                 data.Tickets = int.MinValue;
                 data.Bleed = TicketBleedSeverity.None;
                 data.TicketsFlag = null;
+                data.Rows = 1;
                 GamemodeTitle.SetText(player, layoutName);
                 ticketsOnlyForThisPlayer = false;
             }
@@ -97,7 +100,7 @@ public class FlagListUI : UnturnedUI
                 data.Bleed = bleed;
             }
 
-            if (data.TicketsFlag != faction)
+            if (!Equals(data.TicketsFlag, faction))
             {
                 TicketsFlagIcon.SetText(connection, faction.Sprite);
                 data.TicketsFlag = faction;
@@ -122,11 +125,11 @@ public class FlagListUI : UnturnedUI
                 element.Icon.SetText(connection, entry.Icon);
             }
 
-            data.Rows = index;
-            for (int j = data.Rows - 1; j >= index; ++j)
+            for (int j = index; j < data.Rows; ++j)
             {
                 Rows[j].Root.SetVisibility(connection, false);
             }
+            data.Rows = index;
         }
     }
 

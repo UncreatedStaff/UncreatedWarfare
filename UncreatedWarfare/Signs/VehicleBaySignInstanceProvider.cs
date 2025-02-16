@@ -1,8 +1,6 @@
-﻿using System;
+using System;
 using System.Globalization;
-using System.Linq;
 using System.Text;
-using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Interaction.Requests;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Models.Localization;
@@ -12,9 +10,8 @@ using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Addons;
 using Uncreated.Warfare.Translations.Util;
-using Uncreated.Warfare.Vehicles;
-using Uncreated.Warfare.Vehicles.WarfareVehicles;
 using Uncreated.Warfare.Vehicles.Spawners;
+using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.Signs;
 
@@ -96,7 +93,7 @@ public class VehicleBaySignInstanceProvider : ISignInstanceProvider, IRequestabl
 
         if (info.TicketCost > 0)
         {
-            bldr.Append(_translations.VBSTickets.Translate(info.TicketCost, language, culture));
+            bldr.Append(_translations.VBSTickets.Translate(info.TicketCost, language, culture, TimeZoneInfo.Utc));
         }
 
         bldr.Append('\n');
@@ -127,18 +124,18 @@ public class VehicleBaySignInstanceProvider : ISignInstanceProvider, IRequestabl
         switch (spawner.State)
         {
             case VehicleSpawnerState.Destroyed:
-                bldr.Append(_translations.VBSStateDead.Translate(spawner.GetRespawnDueTime(), language, culture));
+                bldr.Append(_translations.VBSStateDead.Translate(spawner.GetRespawnDueTime(), language, culture, TimeZoneInfo.Utc));
                 break;
 
             case VehicleSpawnerState.Deployed:
-                bldr.Append(_translations.VBSStateActive.Translate(spawner.GetLocation(), language, culture));
+                bldr.Append(_translations.VBSStateActive.Translate(spawner.GetLocation(), language, culture, TimeZoneInfo.Utc));
                 break;
 
             case VehicleSpawnerState.Idle:
-                bldr.Append(_translations.VBSStateIdle.Translate(spawner.GetRespawnDueTime(), language, culture));
+                bldr.Append(_translations.VBSStateIdle.Translate(spawner.GetRespawnDueTime(), language, culture, TimeZoneInfo.Utc));
                 break;
             case VehicleSpawnerState.LayoutDelayed:
-                bldr.Append(_translations.VBSStateLayoutDelayed.Translate(spawner.GetLayoutDelayTimeLeft(), language, culture));
+                bldr.Append(_translations.VBSStateLayoutDelayed.Translate(spawner.GetLayoutDelayTimeLeft(), language, culture, TimeZoneInfo.Utc));
                 break;
             case VehicleSpawnerState.LayoutDisabled:
                 bldr.Append(_translations.VBSStateLayoutDisabled.Translate(language));
@@ -166,16 +163,16 @@ public class VehicleBaySignTranslations : PropertiesTranslationCollection
     public readonly Translation VBSStateReady = new Translation("<#33cc33>Ready!</color> <#aaa><b>/request</b></color>");
 
     [TranslationData("Displays the state of the sign when the vehicle is destroyed.", Parameters = [ "Minutes", "Seconds" ], IsPriorityTranslation = false)]
-    public readonly Translation<TimeSpan> VBSStateDead = new Translation<TimeSpan>("<#ff0000>{0}</color>", arg0Fmt: TimeAddon.Create(TimeFormatType.CountdownMinutesSeconds));
+    public readonly Translation<TimeSpan> VBSStateDead = new Translation<TimeSpan>("<#ff0000>{0}</color>", arg0Fmt: TimeAddon.Create(TimeSpanFormatType.CountdownMinutesSeconds));
 
     [TranslationData("Displays the state of the sign when the vehicle is in use.", Parameters = [ "Nearest location." ], IsPriorityTranslation = false)]
     public readonly Translation<string> VBSStateActive = new Translation<string>("<#ff9933>{0}</color>");
 
     [TranslationData("Displays the state of the sign when the vehicle was left idle on the field.", Parameters = [ "Minutes", "Seconds" ])]
-    public readonly Translation<TimeSpan> VBSStateIdle = new Translation<TimeSpan>("<#ffcc00>Idle: {0}</color>", arg0Fmt: TimeAddon.Create(TimeFormatType.CountdownMinutesSeconds));
+    public readonly Translation<TimeSpan> VBSStateIdle = new Translation<TimeSpan>("<#ffcc00>Idle: {0}</color>", arg0Fmt: TimeAddon.Create(TimeSpanFormatType.CountdownMinutesSeconds));
 
     [TranslationData("Displays the state of the sign when the vehicle spawner is currently delayed by the current layout.")]
-    public readonly Translation<TimeSpan> VBSStateLayoutDelayed = new Translation<TimeSpan>("<#7094dd>Delayed: {0}</color>", arg0Fmt: TimeAddon.Create(TimeFormatType.CountdownMinutesSeconds));
+    public readonly Translation<TimeSpan> VBSStateLayoutDelayed = new Translation<TimeSpan>("<#7094dd>Delayed: {0}</color>", arg0Fmt: TimeAddon.Create(TimeSpanFormatType.CountdownMinutesSeconds));
 
     [TranslationData("Displays the state of the sign when the vehicle spawner is disabled in the current layout.")]
     public readonly Translation VBSStateLayoutDisabled = new Translation("<#798082>Disabled</color>");

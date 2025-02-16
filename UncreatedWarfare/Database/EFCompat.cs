@@ -1,4 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Microsoft.EntityFrameworkCore.ValueGeneration;
@@ -6,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
+using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Database.Automation;
 
 namespace Uncreated.Warfare.Database;
@@ -133,6 +136,14 @@ public static class EFCompat
         {
             return prop.GetColumnType();
         }
+
+        private static readonly EventDefinitionBase NoExceptionDuringSaveChanges =
+            new EventDefinition<Type, string, Exception>(new LoggingOptions(), default, LogLevel.None, "NONE", _ => (_, _, _, _, _) => { });
+
+        public void DontLogExceptionDuringSaveChanges(DbContext dbContext)
+        {
+            ((IDbContext)dbContext).UpdateLogger.Definitions.LogExceptionDuringSaveChanges = NoExceptionDuringSaveChanges;
+        }
     }
 }
 
@@ -160,4 +171,5 @@ public interface IEFCompatProvider
     void SetColumnType(IMutableProperty prop, string columnType);
     IMutableEntityType GetDeclaringEntityType(IMutableProperty prop);
     string GetColumnType(IMutableProperty prop);
+    void DontLogExceptionDuringSaveChanges(DbContext dbContext);
 }

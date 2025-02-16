@@ -1,4 +1,4 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using Uncreated.Warfare.Interaction.Commands;
 
 namespace Uncreated.Warfare.Commands;

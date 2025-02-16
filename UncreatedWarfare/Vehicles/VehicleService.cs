@@ -2,17 +2,13 @@ using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Vehicles;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
-using Uncreated.Warfare.Util.List;
-using Uncreated.Warfare.Vehicles.WarfareVehicles;
 using Uncreated.Warfare.Vehicles.Spawners;
+using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.Vehicles
 {
@@ -21,19 +17,23 @@ namespace Uncreated.Warfare.Vehicles
         ILayoutHostedService,
         IEventListener<VehicleDespawned>
     {
+        private readonly List<WarfareVehicle> _vehicles;
+
         private readonly IServiceProvider _serviceProvider;
         private readonly ILogger<VehicleService> _logger;
         private readonly VehicleInfoStore _vehicleInfoStore;
         private readonly VehicleSpawnerStore _vehicleSpawnerStore;
 
-        private const float VehicleSpawnOffset = 5f;
+        public const float VehicleSpawnOffset = 5f;
         public const ushort MaxBatteryCharge = 10000;
 
-        public TrackingList<WarfareVehicle> Vehicles { get; }
+        public IReadOnlyList<WarfareVehicle> Vehicles { get; }
 
         public VehicleService(IServiceProvider serviceProvider, ILogger<VehicleService> logger)
         {
-            Vehicles = new TrackingList<WarfareVehicle>();
+            _vehicles = new List<WarfareVehicle>(64);
+            Vehicles = _vehicles.AsReadOnly();
+
             _logger = logger;
             _serviceProvider = serviceProvider;
             _vehicleInfoStore = serviceProvider.GetRequiredService<VehicleInfoStore>();
@@ -49,26 +49,75 @@ namespace Uncreated.Warfare.Vehicles
         {
             return UniTask.CompletedTask;
         }
+
         public WarfareVehicle RegisterWarfareVehicle(InteractableVehicle vehicle)
         {
-            WarfareVehicleInfo info = _vehicleInfoStore.GetVehicleInfo(vehicle.asset) ?? WarfareVehicleInfo.CreateDefault(vehicle.asset);
+            WarfareVehicle warfareVehicle;
+            lock (_vehicles)
+            {
+                uint instId = vehicle.instanceID;
+                for (int i = 0; i < _vehicles.Count; ++i)
+                {
+                    if (_vehicles[i].InstanceId == instId)
+                        return _vehicles[i];
+                }
 
-            WarfareVehicle warfareVehicle = new(vehicle, info, _serviceProvider);
-            Vehicles.Add(warfareVehicle);
-            
+                WarfareVehicleInfo info = _vehicleInfoStore.GetVehicleInfo(vehicle.asset) ?? WarfareVehicleInfo.CreateDefault(vehicle.asset);
+
+                warfareVehicle = new WarfareVehicle(vehicle, info, _serviceProvider);
+                _vehicles.Add(warfareVehicle);
+            }
+
             _logger.LogDebug($"Registered vehicle: {warfareVehicle.Info.VehicleAsset.ToDisplayString()}");
             return warfareVehicle;
         }
-        public WarfareVehicle? GetVehicle(InteractableVehicle vehicle)
-        {
-            return Vehicles.FirstOrDefault(f => f.Vehicle.instanceID == vehicle.instanceID);
-        }
+
         public WarfareVehicle? DeregisterWarfareVehicle(InteractableVehicle vehicle)
         {
-            WarfareVehicle? existing = Vehicles.FindAndRemove(f => f.Vehicle.instanceID == vehicle.instanceID);
-            existing?.Dispose();
-            return existing;
+            lock (_vehicles)
+            {
+                uint instId = vehicle.instanceID;
+                for (int i = 0; i < _vehicles.Count; ++i)
+                {
+                    WarfareVehicle info = _vehicles[i];
+                    if (info.InstanceId != instId)
+                        continue;
+
+                    _vehicles.RemoveAt(i);
+                    info.Dispose();
+                    return info;
+                }
+            }
+
+            return null;
         }
+
+        public WarfareVehicle GetVehicle(InteractableVehicle vehicle)
+        {
+            if (GameThread.IsCurrent)
+                return GetVehicleLocked(vehicle);
+
+            lock (_vehicles)
+            {
+                // auto register if it wasn't for some reason
+                return GetVehicleLocked(vehicle);
+            }
+        }
+
+        private WarfareVehicle GetVehicleLocked(InteractableVehicle vehicle)
+        {
+            uint instId = vehicle.instanceID;
+            // ReSharper disable InconsistentlySynchronizedField
+            for (int i = 0; i < _vehicles.Count; ++i)
+            {
+                if (_vehicles[i].InstanceId == instId)
+                    return _vehicles[i];
+            }
+
+            // ReSharper restore InconsistentlySynchronizedField
+            return RegisterWarfareVehicle(vehicle);
+        }
+
         /// <summary>
         /// Spawn a vehicle at a given vehicle spawner.
         /// </summary>
@@ -247,13 +296,10 @@ namespace Uncreated.Warfare.Vehicles
                 }
             }
 
-            if (!vehicle.TryGetComponent(out VehicleComponent component) || component.Spawn == null)
-                return;
-
             // unlink vehicle from it's spawner if it had one
             try
             {
-                component.Spawn.UnlinkVehicle();
+                GetVehicle(vehicle).Spawn?.UnlinkVehicle();
             }
             catch (InvalidOperationException ex)
             {

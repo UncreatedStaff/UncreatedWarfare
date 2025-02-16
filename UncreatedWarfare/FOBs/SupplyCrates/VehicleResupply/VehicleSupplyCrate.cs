@@ -1,23 +1,21 @@
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Linq;
-using Uncreated.Warfare.Buildables;
+using System.Collections.Generic;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Fobs;
-using Uncreated.Warfare.Interaction;
-using Uncreated.Warfare.Layouts.Teams;
+using Uncreated.Warfare.Fobs.SupplyCrates;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
-using Uncreated.Warfare.Vehicles;
 using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
-namespace Uncreated.Warfare.FOBs.SupplyCrates;
+namespace Uncreated.Warfare.FOBs.SupplyCrates.VehicleResupply;
 
 public class VehicleSupplyCrate : FallingItem
 {
+    private static readonly Collider[] TempHitColliders = new Collider[4];
     private readonly WarfarePlayer _resupplier;
     private readonly EffectAsset _resupplyEffect;
     private readonly FobManager _fobManager;
@@ -34,16 +32,20 @@ public class VehicleSupplyCrate : FallingItem
 
     protected override void OnHitGround()
     {
-        
-        Collider[] hitColliders = new Collider[4];
-        Physics.OverlapSphereNonAlloc(FinalRestPosition, 5, hitColliders, LayerMasks.VEHICLE);
-        
-        foreach (Collider collider in hitColliders.OrderBy(c => (c.transform.position - FinalRestPosition).sqrMagnitude))
+        // descending distance comparer
+        IComparer<Component> comparer = new DistanceComparer<Component>(FinalRestPosition, x => x.transform.position, false, reverse: false);
+
+        int results = Physics.OverlapSphereNonAlloc(FinalRestPosition, 5, TempHitColliders, LayerMasks.VEHICLE);
+        Array.Sort<Collider>(TempHitColliders, 0, results, comparer);
+
+        for (int i = 0; i < results; i++)
         {
+            Collider collider = TempHitColliders[i];
             WarfareVehicleComponent? warfareVehicleComponent = collider.GetComponentInParent<WarfareVehicleComponent>();
             if (warfareVehicleComponent == null)
                 continue;
 
+            // todo: do we need to give back the item if it fails?
             ResourceFob? nearestFob = _fobManager.FindNearestResourceFob(_resupplier.Team, FinalRestPosition);
             if (nearestFob == null)
             {
@@ -57,7 +59,7 @@ public class VehicleSupplyCrate : FallingItem
                 _resupplier.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastInsufficientAmmo.Translate(nearestFob.AmmoCount, requiredAmmoCount, _resupplier)));
                 return;
             }
-            
+
             ResupplyVehicle(warfareVehicleComponent.WarfareVehicle, nearestFob);
             return;
         }

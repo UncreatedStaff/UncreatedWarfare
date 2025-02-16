@@ -1,8 +1,11 @@
+using DanielWillett.ReflectionTools;
 using System;
 using System.Collections.Generic;
-using DanielWillett.ReflectionTools;
+using Uncreated.Warfare.Events.Models;
+using Uncreated.Warfare.Events.Models.Buildables;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Containers;
+using Uncreated.Warfare.Util.Timing;
 
 namespace Uncreated.Warfare.Buildables;
 public class BuildableContainer : MonoBehaviour, IComponentContainer<IBuildableComponent>, IManualOnDestroy
@@ -12,6 +15,16 @@ public class BuildableContainer : MonoBehaviour, IComponentContainer<IBuildableC
 #nullable disable
     public IBuildable Buildable { get; private set; }
     public DateTime CreateTime { get; private set; }
+    public FrameHandle SignEditFrame { get; private set; }
+    public CSteamID SignEditor
+    {
+        get;
+        set
+        {
+            SignEditFrame = value.GetEAccountType() == EAccountType.k_EAccountTypeIndividual ? FrameHandle.Claim() : default;
+            field = value;
+        }
+    }
 #nullable restore
 
     internal void Init(IBuildable buildable)
@@ -22,11 +35,39 @@ public class BuildableContainer : MonoBehaviour, IComponentContainer<IBuildableC
 
     public static BuildableContainer Get(IBuildable buildable)
     {
+        GameThread.AssertCurrent();
+
         if (buildable.IsDead)
             throw new InvalidOperationException("Buildable is dead.");
 
         if (!buildable.Model.TryGetComponent(out BuildableContainer container))
             container = buildable.Model.gameObject.AddComponent<BuildableContainer>();
+
+        return container;
+    }
+
+    public static BuildableContainer Get(BarricadeDrop barricade)
+    {
+        GameThread.AssertCurrent();
+
+        if (barricade.GetServersideData().barricade.isDead)
+            throw new InvalidOperationException("Barricade is dead.");
+
+        if (!barricade.model.TryGetComponent(out BuildableContainer container))
+            container = barricade.model.gameObject.AddComponent<BuildableContainer>();
+
+        return container;
+    }
+
+    public static BuildableContainer Get(StructureDrop structure)
+    {
+        GameThread.AssertCurrent();
+
+        if (structure.GetServersideData().structure.isDead)
+            throw new InvalidOperationException("Structure is dead.");
+
+        if (!structure.model.TryGetComponent(out BuildableContainer container))
+            container = structure.model.gameObject.AddComponent<BuildableContainer>();
 
         return container;
     }
@@ -39,7 +80,7 @@ public class BuildableContainer : MonoBehaviour, IComponentContainer<IBuildableC
         {
             if (_components.Exists(c => c.GetType() == newComponent.GetType()))
             {
-                throw new InvalidOperationException($"Container already has a component of type {typeof(T)}. Multiple instances of the same component type are not supported.");
+                throw new InvalidOperationException($"Container already has a component of type {Accessor.ExceptionFormatter.Format(newComponent.GetType())}. Multiple instances of the same component type are not supported.");
             }
 
             _components.Add(newComponent);
@@ -47,7 +88,7 @@ public class BuildableContainer : MonoBehaviour, IComponentContainer<IBuildableC
     }
     public T Component<T>() where T : class, IBuildableComponent
     {
-        return ComponentOrNull<T>() ?? throw new ArgumentException($"Component of type {typeof(T)} not found.");
+        return ComponentOrNull<T>() ?? throw new ArgumentException($"Component of type {Accessor.ExceptionFormatter.Format(typeof(T))} not found.");
     }
 
     public T? ComponentOrNull<T>() where T : class, IBuildableComponent
@@ -93,10 +134,35 @@ public class BuildableContainer : MonoBehaviour, IComponentContainer<IBuildableC
     {
         lock (_components)
         {
-            foreach (var component in _components)
+            foreach (IBuildableComponent? component in _components)
                 component.Dispose();
         }
 
         Destroy(this);
     }
+}
+
+/// <summary>
+/// Components implementing this will receive information about the most recent salvager.
+/// </summary>
+public interface ISalvageInfo
+{
+    bool IsSalvaged { set; get; }
+    CSteamID Salvager { set; get; }
+}
+
+/// <summary>
+/// Components implementing this will receive a callback allowing it to handle a salvage request.
+/// </summary>
+public interface ISalvageListener : ISalvageInfo
+{
+    void OnSalvageRequested(SalvageRequested e);
+}
+
+/// <summary>
+/// Components implementing this will receive information about the most recent destroy event.
+/// </summary>
+public interface IDestroyInfo
+{
+    IBaseBuildableDestroyedEvent? DestroyInfo { get; set; }
 }

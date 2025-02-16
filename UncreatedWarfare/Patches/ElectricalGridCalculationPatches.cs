@@ -1,10 +1,14 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
 using HarmonyLib;
 using System.Collections.Generic;
 using System.Reflection;
+using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.Layouts.Flags;
+using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Patches;
@@ -96,11 +100,12 @@ internal sealed class ElectricalGridCalculationPatches : IHarmonyPatch
             return true;
         }
 
-        WarfareModule.Singleton.GlobalLogger.LogConditional("Received request from {0} for obj {1} @ {2} to state: {3}.", player, obj.asset.FriendlyName, obj.transform.position, isUsed);
-
         Layout layout = WarfareModule.Singleton.GetActiveLayout();
 
         ILifetimeScope serviceProvider = layout.ServiceProvider;
+
+        serviceProvider.Resolve<ILogger<ElectricalGridService>>()
+            .LogConditional("Received request from {0} for obj {1} @ {2} to state: {3}.", player, obj.asset.FriendlyName, obj.transform.position, isUsed);
 
         ElectricalGridService gridService = serviceProvider.Resolve<ElectricalGridService>();
         if (!gridService.Enabled)
@@ -115,7 +120,15 @@ internal sealed class ElectricalGridCalculationPatches : IHarmonyPatch
             return true;
         }
 
-        return obj.interactable != null && gridService.IsInteractableEnabled(flagRotation, obj.interactable);
+        if (obj.interactable != null && gridService.IsInteractableEnabled(flagRotation, obj.interactable))
+        {
+            return true;
+        }
+
+        WarfarePlayer wPlayer = serviceProvider.Resolve<IPlayerService>().GetOnlinePlayer(player);
+        PlayersTranslations translations = serviceProvider.Resolve<TranslationInjection<PlayersTranslations>>().Value;
+        serviceProvider.Resolve<ChatService>().Send(wPlayer, translations.ElectricalGridNotConnected);
+        return false;
     }
 
     private static bool CalculateIsConnectedToPowerPrefix(InteractablePower __instance, ref bool __result)

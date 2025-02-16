@@ -1,4 +1,4 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Emit;
 using System;
 using System.Collections.Generic;
@@ -165,7 +165,7 @@ public class RewardExpression
         _tokens = tokens;
     }
 
-    protected virtual void TransformResult(IOpCodeEmitter emitter, ref int stackSize)
+    protected virtual void TransformResult(IOpCodeEmitter emit, ref int stackSize)
     {
     }
 
@@ -600,6 +600,7 @@ public class RewardExpression
                 }
 
                 il.AddLocal<double>(out LocalBuilder local);
+                variable.Preload(local, il, _logger);
                 if (DebugLogging)
                 {
                     il.Comment($"Variable #{local.LocalIndex} {variable.Names[0]}");
@@ -679,8 +680,6 @@ public class RewardExpression
     {
         string[] Names { get; }
 
-        Type OutputType { get; }
-
         void Preload(LocalReference local, IOpCodeEmitter emitter, ILogger logger);
     }
 
@@ -690,13 +689,10 @@ public class RewardExpression
 
         public string[] Names { get; }
 
-        public Type OutputType { get; }
-
         public EmittableVariable(IVariable variable)
         {
             _variable = variable;
-            Names = [_variable.Member.Name];
-            OutputType = _variable.MemberType;
+            Names = [ _variable.Member.Name ];
         }
 
         /// <inheritdoc />

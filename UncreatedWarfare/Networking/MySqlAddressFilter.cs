@@ -1,6 +1,5 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
-using System.Net;
 using Uncreated.Warfare.Database.Manual;
 using Uncreated.Warfare.Moderation;
 
@@ -12,7 +11,7 @@ public sealed class MySqlAddressFilter : IIPAddressFilter
     {
         _database = database;
     }
-    public async ValueTask<bool> IsFiltered(IPAddress ip, CSteamID player, CancellationToken token)
+    public async ValueTask<bool> IsFiltered(uint packedIp, CSteamID player, CancellationToken token)
     {
         bool matched = false;
         await _database().QueryAsync($"SELECT `{DatabaseInterface.ColumnIPWhitelistsIPRange}` FROM `{DatabaseInterface.TableIPWhitelists}` WHERE `{DatabaseInterface.ColumnIPWhitelistsSteam64}` = @0;",
@@ -29,7 +28,7 @@ public sealed class MySqlAddressFilter : IIPAddressFilter
                 }
                 else if (IPv4Range.TryParse(str, out IPv4Range range) || IPv4Range.TryParseIPv4(str, out range))
                 {
-                    matched = range.InRange(ip);
+                    matched = range.InRange(packedIp);
                 }
 
                 return !matched;

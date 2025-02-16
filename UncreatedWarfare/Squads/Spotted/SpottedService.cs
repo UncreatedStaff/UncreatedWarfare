@@ -1,4 +1,4 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
@@ -69,7 +69,6 @@ internal sealed class SpottedService : ILayoutHostedService
 
     private void UseableGunOnBulletHit(UseableGun gun, BulletInfo bullet, InputInfo hit, ref bool shouldAllow)
     {
-        _logger.LogDebug("received shot from {0}.", hit.type);
         if (!_laserDesignator.MatchAsset(gun.equippedGunAsset) || !shouldAllow || hit.transform == null)
         {
             return;

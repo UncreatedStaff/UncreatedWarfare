@@ -14,12 +14,12 @@ using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Timing;
 
 namespace Uncreated.Warfare.FOBs.Rallypoints;
-public class RallyPoint : IBuildableFob
+public class RallyPoint : IBuildableFob, IDisposable
 {
     private const int BurnRadius = 80;
     private const int DeployTimer = 20;
     private readonly IPlayerService _playerService;
-    private ILoopTicker _loopTicker;
+    private readonly ILoopTicker _loopTicker;
     private DateTime _deploymentStarted;
 
     public IBuildable Buildable { get; protected set; }
@@ -44,8 +44,7 @@ public class RallyPoint : IBuildableFob
 
         Color = ColorUtility.TryParseHtmlString("#67ff85", out Color color) ? color : UnityEngine.Color.white;
 
-        _loopTicker = serviceProvider.GetRequiredService<ILoopTickerFactory>().CreateTicker(TimeSpan.FromSeconds(1f), true, true);
-        _loopTicker.OnTick += OnTick;
+        _loopTicker = serviceProvider.GetRequiredService<ILoopTickerFactory>().CreateTicker(TimeSpan.FromSeconds(1f), true, true, OnTick);
     }
 
     private void OnTick(ILoopTicker ticker, TimeSpan timeSinceStart, TimeSpan deltaTime)
@@ -53,6 +52,7 @@ public class RallyPoint : IBuildableFob
         if (IsBurned)
             return;
 
+        // todo: should the rallypoint be destroyed here?
         IsBurned = CheckBurned();
     }
     private bool CheckBurned()
@@ -111,4 +111,10 @@ public class RallyPoint : IBuildableFob
     }
 
     bool IDeployable.IsSafeZone => false;
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        _loopTicker.Dispose();
+    }
 }

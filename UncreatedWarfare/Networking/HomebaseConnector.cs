@@ -1,11 +1,11 @@
-using DanielWillett.ModularRpcs;
+using DanielWillett.ModularRpcs.Abstractions;
 using DanielWillett.ModularRpcs.Protocol;
 using DanielWillett.ModularRpcs.Routing;
-using DanielWillett.ModularRpcs.Serialization;
 using DanielWillett.ModularRpcs.WebSockets;
 using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.Configuration;
 using System;
+using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Services;
 using UnityEngine.Networking;
 
@@ -14,21 +14,22 @@ namespace Uncreated.Warfare.Networking;
 [Priority(100)]
 public class HomebaseConnector : IHostedService
 {
+    private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<HomebaseConnector> _logger;
     private readonly IRpcConnectionLifetime _lifetime;
-    private readonly IRpcRouter _router;
-    private readonly IRpcSerializer _serializer;
+    private readonly EventDispatcher _eventDispatcher;
     private readonly string? _authKey;
     private readonly Uri? _authEndpoint;
     private readonly Uri? _connectEndpoint;
+    private CancellationTokenSource _reconnectCts;
 
     public bool Enabled { get; }
-    public HomebaseConnector(IConfiguration systemConfig, ILogger<HomebaseConnector> logger, IRpcConnectionLifetime lifetime, IRpcRouter router, IRpcSerializer serializer)
+    public HomebaseConnector(IServiceProvider serviceProvider, IConfiguration systemConfig, ILogger<HomebaseConnector> logger, IRpcConnectionLifetime lifetime, EventDispatcher eventDispatcher)
     {
+        _serviceProvider = serviceProvider;
         _logger = logger;
         _lifetime = lifetime;
-        _router = router;
-        _serializer = serializer;
+        _eventDispatcher = eventDispatcher;
 
         IConfigurationSection homebaseSection = systemConfig.GetSection("homebase");
 
@@ -41,6 +42,8 @@ public class HomebaseConnector : IHostedService
 
         _authEndpoint = string.IsNullOrWhiteSpace(authEndpoint) ? null : new Uri(authEndpoint);
         _connectEndpoint = string.IsNullOrWhiteSpace(connectEndpoint) ? null : new Uri(connectEndpoint);
+
+        _reconnectCts = new CancellationTokenSource();
     }
 
     public async UniTask StartAsync(CancellationToken token)
@@ -77,24 +80,27 @@ public class HomebaseConnector : IHostedService
 
         _logger.LogDebug("Connecting to homebase at: {0}.", connectUri);
 
-        WebSocketEndpoint endpoint = WebSocketEndpoint.AsClient(connectUri);
+        WebSocketEndpoint endpoint = WebSocketEndpoint.AsClient(_serviceProvider, connectUri);
         endpoint.ShouldAutoReconnect = true;
 #if DEBUG
         // lower the reconnect delay
         endpoint.DelaySettings = new PlateauingDelay(amplifier: 3.6d, climb: 1.8d, maximum: 60d, start: 10d);
 #endif
+        WebSocketClientsideRemoteRpcConnection connection;
         try
         {
-            WebSocketClientsideRemoteRpcConnection connection = await endpoint.RequestConnectionAsync(_router, _lifetime, _serializer, token).ConfigureAwait(false);
-            connection.Local.SetLogger(_logger);
-            connection.OnReconnect += GetConnectUri;
+            connection = await endpoint.RequestConnectionAsync(token).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to open WebSocket client.");
+            _logger.LogInformation(ex, "Failed to open WebSocket client.");
             return false;
         }
 
+        connection.OnRequestingReconnect += GetConnectUri;
+        connection.OnReconnected += HandleReconnected;
+        HandleReconnected(connection);
+        
         return true;
     }
 
@@ -154,4 +160,32 @@ public class HomebaseConnector : IHostedService
 
         return connectUri;
     }
+
+    private void HandleReconnected(WebSocketClientsideRemoteRpcConnection connection)
+    {
+        CancellationTokenSource newSrc = new CancellationTokenSource();
+        CancellationTokenSource oldSrc = Interlocked.Exchange(ref _reconnectCts, newSrc);
+
+        try
+        {
+            oldSrc.Cancel();
+            oldSrc.Dispose();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to cancel previous event dispatch.");
+        }
+
+        _ = _eventDispatcher.DispatchEventAsync(new HomebaseConnected
+        {
+            Connection = connection,
+            ConnectionLifetime = _lifetime
+        }, newSrc.Token);
+    }
+}
+
+public class HomebaseConnected
+{
+    public required IRpcConnectionLifetime ConnectionLifetime { get; init; }
+    public required IModularRpcRemoteConnection Connection { get; init; }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -14,7 +14,9 @@ using Uncreated.Warfare.Translations.ValueFormatters;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Teams;
-public class FactionInfo : ICloneable, ITranslationArgument
+
+[CannotApplyEqualityOperator]
+public class FactionInfo : ICloneable, ITranslationArgument, IEquatable<FactionInfo>
 {
     private string? _spriteText;
 
@@ -496,13 +498,13 @@ public class FactionInfo : ICloneable, ITranslationArgument
         foreach (FactionLocalization language in model.Translations)
         {
             if (!string.IsNullOrEmpty(language.Name))
-                NameTranslations[language.Language.Code] = language.Name;
+                NameTranslations.Add(language.Language, language.Name);
 
             if (!string.IsNullOrEmpty(language.ShortName))
-                ShortNameTranslations[language.Language.Code] = language.ShortName;
+                ShortNameTranslations.Add(language.Language, language.ShortName);
 
             if (!string.IsNullOrEmpty(language.Abbreviation))
-                AbbreviationTranslations[language.Language.Code] = language.Abbreviation;
+                AbbreviationTranslations.Add(language.Language, language.Abbreviation);
         }
     }
 
@@ -573,7 +575,26 @@ public class FactionInfo : ICloneable, ITranslationArgument
         return factionInfo.Assets?.FirstOrDefault(x => x.Redirect == redirect);
     }
 
-    
+    /// <inheritdoc />
+    public override bool Equals(object? obj)
+    {
+        return obj is FactionInfo faction && (faction.PrimaryKey == PrimaryKey || string.Equals(faction.FactionId, FactionId, StringComparison.Ordinal));
+    }
+
+    /// <inheritdoc />
+    public bool Equals(FactionInfo? faction)
+    {
+        return faction != null && faction.PrimaryKey == PrimaryKey || string.Equals(faction.FactionId, FactionId, StringComparison.Ordinal);
+    }
+
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        // ReSharper disable once NonReadonlyMemberInGetHashCode
+        return unchecked ( (int) PrimaryKey );
+    }
+
+
     public static readonly SpecialFormat FormatShortName = new SpecialFormat("Short Name", "s");
     
     public static readonly SpecialFormat FormatDisplayName = new SpecialFormat("Display Name", "d");

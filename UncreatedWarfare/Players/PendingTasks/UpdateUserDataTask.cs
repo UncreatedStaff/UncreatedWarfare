@@ -1,12 +1,11 @@
-﻿using SDG.NetTransport;
+using SDG.NetTransport;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Models.Users;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Players.PendingTasks;
 
@@ -54,21 +53,25 @@ public class UpdateUserDataTask : IPlayerPendingTask
             return false;
         }
 
-        if (!connection.TryGetIPv4Address(out uint ipv4))
+        bool hasIpv4 = false;
+        uint ipv4 = 0;
+        if (!Provider.configData.Server.Use_FakeIP && !(hasIpv4 = connection.TryGetIPv4Address(out ipv4)))
         {
+#if !DEBUG // allow server codes for testing
             e.RejectReason = "No valid IPv4 address.";
             return false;
+#else
+            WarfareModule.Singleton.ServiceProvider.Resolve<ILogger<UpdateUserDataTask>>().LogWarning("Player {0} connecting without an IP address (probably via Server Code).", e.Steam64);
+#endif
         }
 
-        _isRemotePlay = _moderationSql.IsRemotePlay(ipv4);
+        _isRemotePlay = hasIpv4 && _moderationSql.IsRemotePlay(ipv4);
 
-        IEnumerable<byte[]> hwidsEnum = e.PendingPlayer.playerID.GetHwids();
-        if (hwidsEnum is not byte[][] hwids)
-            hwids = hwidsEnum.ToArray();
+        byte[][] hwids = e.PendingPlayer.playerID.GetHwids().ToArrayFast();
 
         if (hwids.Length is not 2 and not 3 || Array.Exists(hwids, x => x.Length != HWID.Size))
         {
-            e.RejectReason = "Suspected HWID spoofer.";
+            e.RejectReason = "Su" + "spe" + "cte" + "d H" + "WI" + "D " + "sp" + "o" + "of" + "er.";
             return false;
         }
 
@@ -101,6 +104,9 @@ public class UpdateUserDataTask : IPlayerPendingTask
             data.HWIDs.Add(newHwid);
         }
 
+        if (!hasIpv4)
+            return true;
+
         found = false;
         foreach (PlayerIPAddress existingIp in data.IPAddresses)
         {
@@ -125,8 +131,8 @@ public class UpdateUserDataTask : IPlayerPendingTask
             RemotePlay = _isRemotePlay
         };
 
-        dbContext.Add(newIp);
         data.IPAddresses.Add(newIp);
+
         return true;
     }
 

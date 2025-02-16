@@ -13,10 +13,12 @@ using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Moderation.Punishments;
 using Uncreated.Warfare.Moderation.Punishments.Presets;
-using Uncreated.Warfare.NewQuests.Parameters;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Quests.Parameters;
 using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.Addons;
 using Uncreated.Warfare.Translations.Languages;
+using Uncreated.Warfare.Translations.Util;
 
 namespace Uncreated.Warfare.Deaths;
 public class DeathMessageResolver
@@ -29,6 +31,7 @@ public class DeathMessageResolver
     private readonly LanguageService _languageService;
     private readonly ICachableLanguageDataStore _languageDataStore;
     private readonly IUserDataService _userDataService;
+    private readonly WarfareModule _warfare;
     private readonly DatabaseInterface _moderationDb;
 
     // intentional dont change
@@ -44,7 +47,8 @@ public class DeathMessageResolver
         IConfiguration systemConfig,
         DatabaseInterface moderationDb,
         ICachableLanguageDataStore languageDataStore,
-        IUserDataService userDataService)
+        IUserDataService userDataService,
+        WarfareModule warfare)
     {
         _dispatcher = dispatcher;
         _logger = logger;
@@ -55,6 +59,7 @@ public class DeathMessageResolver
         _moderationDb = moderationDb;
         _languageDataStore = languageDataStore;
         _userDataService = userDataService;
+        _warfare = warfare;
         // intentional dont change
         _dscIn = systemConfig["d" + "is" + "co" + "rd" + "_i" + "nv" + "ite" + "_co" + "de"] ?? string.Empty;
     }
@@ -527,14 +532,14 @@ public class DeathMessageResolver
 
         foreach (LanguageSet set in _translationService.SetOf.AllPlayers().ToCache().Sets!)
         {
-            string msg = await TranslateMessage(set.Language, set.Culture, e, false, token);
+            string msg = await TranslateMessage(set.Language, set.Culture, e, false, set.IMGUI ? TranslationOptions.UseUnityRichText : TranslationOptions.TMProUI, token);
             while (set.MoveNext())
             {
                 _chatService.Send(set.Next, msg, color, EChatMode.SAY, null, true);
             }
         }
 
-        str = await TranslateMessage(_languageService.GetDefaultLanguage(), CultureInfo.InvariantCulture, e, true, token);
+        str = await TranslateMessage(_languageService.GetDefaultLanguage(), CultureInfo.InvariantCulture, e, true, TranslationOptions.ForTerminal, token);
         Log(tk, str, e);
 
         e.DefaultMessage = str!;
@@ -594,7 +599,7 @@ public class DeathMessageResolver
     {
         // todo string log = Util.RemoveRichText(msg);
         _logger.LogInformation(msg);
-        if (OffenseManager.IsValidSteam64Id(e.Instigator))
+        if (e.Instigator.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
         {
             ActionLog.Add(ActionLogType.Death, msg + " | Killer: " + e.Instigator.m_SteamID, e.Player.Steam64);
             ActionLog.Add(ActionLogType.Kill, msg + " | Dead: " + e.Player.Steam64, e.Instigator.m_SteamID);
@@ -605,63 +610,68 @@ public class DeathMessageResolver
             ActionLog.Add(ActionLogType.Death, msg, e.Player.Steam64);
     }
 
-    private const string JsonComment = @"/*
-This file details all the different combinations of attributes that form a death message.
-These attributes are represented by 6 formatting arguments:
+    private const string JsonComment = """
+                                       /*
+                                       This file details all the different combinations of attributes that form a death message.
+                                       These attributes are represented by 6 formatting arguments:
+                                       
+                                        • None = death with little to no extra info.
+                                        • Item = the primary item that killed the player is known.
+                                        • Item2 = a secondary item that killed the player is known.
+                                        • NoDistance = don't show the distance in the killfeed. This is used mainly when a player crashes a vehicle so the distance doesn't show up as 0
+                                        • Killer = a player at fault is known, this isn't filled in for suicides
+                                        • Player3 = a third player involved is known
+                                        • Suicide = the dead player is at fault
+                                        • Bleeding = the death happened after bleeding out
+                                       
+                                        • Always present
+                                       {0} = Dead player's name
+                                       
+                                        • Present when 'Killer' is in argument list, if the killer is the dead player 'Suicide' will be in the argument list instead
+                                       {1} = Killer's name
+                                       
+                                        • Present in gun and melee deaths
+                                       {2} = Limb name
+                                       
+                                        • Present when 'Item' is in argument list
+                                       {3} = Item Name
+                                       
+                                        • Present unless 'NoDistance' is in the argument list
+                                       {4} = Kill Distance
+                                       
+                                        • Present when 'Player3' is in the argument list. This player is used for some special cases:
+                                         ○ Landmines (Killer = placer of landmine, Player3 = person that triggered it)
+                                         ○ Vehicle (Killer = person that blew up the vehicle (sometimes the driver), Player3 = driver)
+                                         ○ Gun (Killer = original shooter, Player3 = driver of vehicle if on a turret)
+                                         ○ Splash damage (Killer = original shooter, Player3 = driver of vehicle if on a turret)
+                                       {5} = Player 3
+                                       
+                                        • present when 'Item2' is in the argument list
+                                         ○ Gun (Item = original gun, Item2 = vehicle if shot from a turret)
+                                         ○ Splash damage (Item = original gun, Item2 = vehicle if shot from a turret)
+                                         ○ Landmines (Item = original landmine, Item2 = throwable item used to trigger landmine)
+                                         ○ Sentry (Item = original sentry, Item2 = gun held by sentry)
+                                         ○ Vehicle (Item = original vehicle, Item2 = item used to destroy the vehicle (gun, explosive, etc))
+                                       {6} = Item 2
 
- • None = death with little to no extra info.
- • Item = the primary item that killed the player is known.
- • Item2 = a secondary item that killed the player is known.
- • NoDistance = don't show the distance in the killfeed. This is used mainly when a player crashes a vehicle so the distance doesn't show up as 0
- • Killer = a player at fault is known, this isn't filled in for suicides
- • Player3 = a third player involved is known
- • Suicide = the dead player is at fault
- • Bleeding = the death happened after bleeding out
+                                       The bottom item, "d6424d03-4309-417d-bc5f-17814af905a8", is an override for the mortar
+                                       */
 
- • Always present
-{0} = Dead player's name
 
- • Present when 'Killer' is in argument list, if the killer is the dead player 'Suicide' will be in the argument list instead
-{1} = Killer's name
-
- • Present in gun and melee deaths
-{2} = Limb name
-
- • Present when 'Item' is in argument list
-{3} = Item Name
-
- • Present unless 'NoDistance' is in the argument list
-{4} = Kill Distance
-
- • Present when 'Player3' is in the argument list. This player is used for some special cases:
-  ○ Landmines (Killer = placer of landmine, Player3 = person that triggered it)
-  ○ Vehicle (Killer = person that blew up the vehicle (sometimes the driver), Player3 = driver)
-  ○ Gun (Killer = original shooter, Player3 = driver of vehicle if on a turret)
-  ○ Splash damage (Killer = original shooter, Player3 = driver of vehicle if on a turret)
-{5} = Player 3
-
- • present when 'Item2' is in the argument list
-  ○ Gun (Item = original gun, Item2 = vehicle if shot from a turret)
-  ○ Splash damage (Item = original gun, Item2 = vehicle if shot from a turret)
-  ○ Landmines (Item = original landmine, Item2 = throwable item used to trigger landmine)
-  ○ Sentry (Item = original sentry, Item2 = gun held by sentry)
-  ○ Vehicle (Item = original vehicle, Item2 = item used to destroy the vehicle (gun, explosive, etc))
-{6} = Item 2
-
-The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for the mortar
-*/
-
-";
+                                       """;
     public void Write(string? path, LanguageInfo language, bool writeMissing)
     {
         string defaultLang = _languageService.GetDefaultLanguage().Code;
         if (path == null)
         {
-            path = Path.Combine(Data.Paths.LangStorage, defaultLang);
-            // todo F.CheckDir(path, out bool folderIsThere);
-            // if (!folderIsThere)
-            //     return;
+            path = Path.Combine(_warfare.HomeDirectory, TranslationService.TranslationsFolder, defaultLang);
+            Directory.CreateDirectory(path);
             path = Path.Combine(path, "deaths.json");
+        }
+        else
+        {
+            if (Path.GetDirectoryName(path) is { } dir)
+                Directory.CreateDirectory(dir);
         }
 
         if (!_translationList.TryGetValue(language.Code, out CauseGroup[] causes) && (language.IsDefault || !_translationList.TryGetValue(defaultLang, out causes)))
@@ -732,18 +742,14 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
     }
     internal void Reload()
     {
-        // Localization.ClearSection(TranslationSection.Deaths);
-        // Localization.IncrementSection(TranslationSection.Deaths, Mathf.CeilToInt(_defaultTranslations.SelectMany(x => x.Translations).Count()));
-        string[] langDirs = Directory.GetDirectories(Data.Paths.LangStorage, "*", SearchOption.TopDirectoryOnly);
+        string path = Path.Combine(_warfare.HomeDirectory, TranslationService.TranslationsFolder);
+        string[] langDirs = Directory.Exists(path) ? Directory.GetDirectories(path, "*", SearchOption.TopDirectoryOnly) : Array.Empty<string>();
 
-        // F.CheckDir(Data.Paths.LangStorage + L.Default, out bool folderIsThere);
-        // if (!folderIsThere)
-        //     return;
-
-        string directory = Path.Combine(Data.Paths.LangStorage, _languageService.GetDefaultLanguage().Code, "deaths.json");
-        if (!File.Exists(directory))
+        string defaultFile = Path.Combine(path, _languageService.GetDefaultLanguage().Code, "deaths.json");
+        if (!File.Exists(defaultFile))
         {
-            using FileStream stream = File.Create(directory);
+            Directory.CreateDirectory(Path.GetDirectoryName(defaultFile)!);
+            using FileStream stream = new FileStream(defaultFile, FileMode.Create, FileAccess.Write, FileShare.Write);
             byte[] comment = System.Text.Encoding.UTF8.GetBytes(JsonComment);
             stream.Write(comment, 0, comment.Length);
             Utf8JsonWriter writer = new Utf8JsonWriter(stream, ConfigurationSettings.JsonWriterOptions);
@@ -755,6 +761,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
             writer.WriteEndArray();
             writer.Dispose();
         }
+
         List<CauseGroup> causes = new List<CauseGroup>(_defaultTranslations.Length);
         foreach (string folder in langDirs)
         {
@@ -790,7 +797,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
         }
     }
 
-    public async UniTask<string> TranslateMessage(LanguageInfo language, CultureInfo culture, PlayerDied args, bool useSteamNames, CancellationToken token = default)
+    public async UniTask<string> TranslateMessage(LanguageInfo language, CultureInfo culture, PlayerDied args, bool useSteamNames, TranslationOptions options, CancellationToken token = default)
     {
         bool isDefault = false;
         LanguageInfo defaultLanguage = _languageService.GetDefaultLanguage();
@@ -807,7 +814,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
         int i = FindDeathCause(language, causes, args);
 
         CauseGroup cause = causes[i];
-        string? val = await TranslateDeath(args, language, culture, cause, useSteamNames, token);
+        string? val = await TranslateDeath(args, language, culture, cause, useSteamNames, options, token);
 
         await UniTask.SwitchToMainThread(token);
 
@@ -883,7 +890,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
     /// <summary>
     /// Choose a template based on the <see cref="EDeathCause"/> and format it.
     /// </summary>
-    public UniTask<string?> TranslateDeath(PlayerDied e, LanguageInfo language, IFormatProvider formatProvider, CauseGroup cause, bool useSteamNames, CancellationToken token = default)
+    public UniTask<string?> TranslateDeath(PlayerDied e, LanguageInfo language, CultureInfo culture, CauseGroup cause, bool useSteamNames, TranslationOptions options, CancellationToken token = default)
     {
         DeathFlags flags = e.MessageFlags;
     redo:
@@ -897,7 +904,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
         {
             ref DeathTranslation d = ref cause.Translations[i];
             if (d.Flags == flags)
-                return TranslateDeath(d.Value, e, language, formatProvider, useSteamNames, token)!;
+                return TranslateDeath(d.Value, e, language, culture, useSteamNames, options, token)!;
         }
 
         _logger.LogWarning("Exact match not found for {0}.", flags);
@@ -922,7 +929,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
             {
                 ref DeathTranslation d = ref cause.Translations[i];
                 if (d.Flags == DeathFlags.Killer)
-                    return TranslateDeath(d.Value, e, language, formatProvider, useSteamNames, token)!;
+                    return TranslateDeath(d.Value, e, language, culture, useSteamNames, options, token)!;
             }
         }
         else if ((flags & DeathFlags.Suicide) == DeathFlags.Suicide)
@@ -931,7 +938,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
             {
                 ref DeathTranslation d = ref cause.Translations[i];
                 if (d.Flags == DeathFlags.Suicide)
-                    return TranslateDeath(d.Value, e, language, formatProvider, useSteamNames, token)!;
+                    return TranslateDeath(d.Value, e, language, culture, useSteamNames, options, token)!;
             }
         }
         else if ((flags & DeathFlags.Player3) == DeathFlags.Player3)
@@ -940,14 +947,14 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
             {
                 ref DeathTranslation d = ref cause.Translations[i];
                 if (d.Flags == DeathFlags.Player3)
-                    return TranslateDeath(d.Value, e, language, formatProvider, useSteamNames, token)!;
+                    return TranslateDeath(d.Value, e, language, culture, useSteamNames, options, token)!;
             }
         }
         for (int i = 0; i < cause.Translations.Length; ++i)
         {
             ref DeathTranslation d = ref cause.Translations[i];
             if (d.Flags == DeathFlags.None)
-                return TranslateDeath(d.Value, e, language, formatProvider, useSteamNames, token)!;
+                return TranslateDeath(d.Value, e, language, culture, useSteamNames, options, token)!;
         }
 
         return UniTask.FromResult<string?>(null);
@@ -956,7 +963,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
     /// <summary>
     /// Format a specific template using the given death args.
     /// </summary>
-    private async UniTask<string> TranslateDeath(string template, PlayerDied e, LanguageInfo? language, IFormatProvider formatProvider, bool useSteamNames, CancellationToken token = default)
+    private async UniTask<string> TranslateDeath(string template, PlayerDied e, LanguageInfo? language, CultureInfo culture, bool useSteamNames, TranslationOptions options, CancellationToken token = default)
     {
         language ??= _languageService.GetDefaultLanguage();
 
@@ -972,6 +979,8 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
             {
                 killerName = useSteamNames ? e.Killer.Names.PlayerName : e.Killer.Names.CharacterName;
             }
+
+            killerName = TranslationFormattingUtility.Colorize(killerName, e.KillerTeam?.Faction.Color ?? new Color32(230, 230, 230, 255), options, _translationService.TerminalColoring);
         }
 
         string? thirdPartyName = null;
@@ -986,29 +995,52 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
             {
                 thirdPartyName = useSteamNames ? e.ThirdParty.Names.PlayerName : e.ThirdParty.Names.CharacterName;
             }
+
+            thirdPartyName = TranslationFormattingUtility.Colorize(thirdPartyName, e.ThirdPartyTeam?.Faction.Color ?? new Color32(230, 230, 230, 255), options, _translationService.TerminalColoring);
         }
 
-        string? itemName = e.PrimaryAsset?.GetAsset()?.FriendlyName;
-        if (itemName != null && itemName.EndsWith(" Built", StringComparison.Ordinal))
+        Asset? primaryAsset = e.PrimaryAsset?.GetAsset();
+
+        string? primaryName = primaryAsset?.FriendlyName;
+        if (primaryName != null && primaryName.EndsWith(" Built", StringComparison.Ordinal))
         {
-            itemName = itemName[..^6];
+            primaryName = primaryName[..^6];
         }
+
+        if (primaryName != null)
+        {
+            ValueFormatParameters parameters = new ValueFormatParameters(culture, language, TimeZoneInfo.Utc, options, AssetLink.AssetLinkFriendly);
+            primaryName = RarityColorAddon.Apply(primaryName, primaryAsset, _translationService.ValueFormatter, in parameters);
+        }
+
+        Asset? secondaryAsset = e.SecondaryAsset?.GetAsset();
+
+        string? secondaryName = secondaryAsset?.FriendlyName;
+        if (secondaryName != null)
+        {
+            ValueFormatParameters parameters = new ValueFormatParameters(culture, language, TimeZoneInfo.Utc, options, AssetLink.AssetLinkFriendly);
+            secondaryName = RarityColorAddon.Apply(secondaryName, secondaryAsset, _translationService.ValueFormatter, in parameters);
+        }
+
+        string playerName = useSteamNames ? e.Player.Names.PlayerName : e.Player.Names.CharacterName;
+
+        playerName = TranslationFormattingUtility.Colorize(playerName, e.Player.Team.Faction.Color, options, _translationService.TerminalColoring);
 
         string[] format =
         [
-            useSteamNames ? e.Player.Names.PlayerName : e.Player.Names.CharacterName, // {0}
-            killerName ?? string.Empty,                                               // {1}
-            _valueFormatter.FormatEnum(e.Limb, language),                             // {2}
-            itemName ?? string.Empty,                                                 // {3}
-            e.KillDistance.ToString("F0", formatProvider),                            // {4}
-            thirdPartyName ?? string.Empty,                                           // {5}
-            e.SecondaryAsset?.GetAsset()?.FriendlyName ?? string.Empty,               // {6}
+            playerName,                                   // {0}
+            killerName ?? string.Empty,                   // {1}
+            _valueFormatter.FormatEnum(e.Limb, language), // {2}
+            primaryName ?? string.Empty,                  // {3}
+            e.KillDistance.ToString("F0", culture),       // {4}
+            thirdPartyName ?? string.Empty,               // {5}
+            secondaryName ?? string.Empty,                // {6}
         ];
 
         try
         {
             // ReSharper disable once CoVariantArrayConversion
-            return string.Format(template, format);
+            return string.Format(culture, template, format);
         }
         catch (FormatException)
         {

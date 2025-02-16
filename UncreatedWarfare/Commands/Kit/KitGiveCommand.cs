@@ -1,9 +1,8 @@
-﻿using Uncreated.Warfare.Interaction.Commands;
+using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Kits.Requests;
 using Uncreated.Warfare.Logging;
-using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players;
-using Uncreated.Warfare.Signs;
 using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Commands;
@@ -11,88 +10,32 @@ namespace Uncreated.Warfare.Commands;
 [Command("give", "g"), SubCommandOf(typeof(KitCommand))]
 internal sealed class KitGiveCommand : IExecutableCommand
 {
-    private readonly SignInstancer _signs;
     private readonly KitCommandTranslations _translations;
-    private readonly KitManager _kitManager;
+    private readonly KitRequestService _kitRequestService;
+    private readonly KitCommandLookResolver _lookResolver;
 
     public required CommandContext Context { get; init; }
 
-    public KitGiveCommand(TranslationInjection<KitCommandTranslations> translations, SignInstancer signs, KitManager kitManager)
+    public KitGiveCommand(TranslationInjection<KitCommandTranslations> translations,
+        KitRequestService kitRequestService,
+        KitCommandLookResolver lookResolver)
     {
-        _signs = signs;
-        _kitManager = kitManager;
+        _kitRequestService = kitRequestService;
+        _lookResolver = lookResolver;
         _translations = translations.Value;
     }
 
     public async UniTask ExecuteAsync(CancellationToken token)
     {
-        string? kitId = null;
+        KitCommandLookResult kitArg = await _lookResolver.ResolveFromArgumentsOrLook(Context, 0, 0, KitInclude.Giveable, token).ConfigureAwait(false);
+
         WarfarePlayer? player = null;
-        BarricadeDrop? barricade = null;
-        Kit? kit = null;
-        bool kitIdCouldBePlayerName = false;
-        bool signLoadout = false;
 
-        // kit give [kit (or target sign)] [player]
-        if (Context.HasArgs(2))
+        if (Context.HasArgument(kitArg.OptionalArgumentStart))
         {
-            if (!Context.TryGet(1, out _, out player, remainder: true) || player == null)
-            {
+            (_, player) = await Context.TryGetPlayer(kitArg.OptionalArgumentStart).ConfigureAwait(false);
+            if (player == null)
                 throw Context.SendPlayerNotFound();
-            }
-
-            kitId = Context.Get(0);
-        }
-        else if (Context.HasArgs(1))
-        {
-            if (Context.TryGetBarricadeTarget(out barricade) && barricade.interactable is InteractableSign)
-            {
-                if (!Context.TryGet(1, out _, out player, remainder: true) || player == null)
-                {
-                    kitId = Context.Get(1);
-                    barricade = null;
-                    kitIdCouldBePlayerName = true;
-                }
-            }
-            else
-            {
-                kitId = Context.Get(0);
-            }
-        }
-        else
-        {
-            if (!Context.TryGetBarricadeTarget(out barricade) || barricade.interactable is not InteractableSign)
-            {
-                throw Context.Reply(_translations.KitOperationNoTarget);
-            }
-        }
-
-        if (barricade != null && _signs.GetSignProvider(barricade) is KitSignInstanceProvider signData)
-        {
-            if (signData.LoadoutNumber > 0)
-            {
-                Context.AssertRanByPlayer();
-                kitId = LoadoutIdHelper.GetLoadoutSignDisplayText(signData.LoadoutNumber);
-                kit = await _kitManager.Loadouts.GetLoadout(Context.CallerId, signData.LoadoutNumber, token);
-                signLoadout = true;
-            }
-            else
-            {
-                kitId = signData.KitId;
-            }
-        }
-
-        if (kitId == null || signLoadout && kit == null)
-        {
-            throw Context.Reply(_translations.KitOperationNoTarget);
-        }
-        kit ??= await _kitManager.FindKit(kitId, token, exactMatchOnly: false, dbContext => KitManager.RequestableSet(dbContext, false));
-        if (kit == null)
-        {
-            if (kitIdCouldBePlayerName)
-                throw Context.SendPlayerNotFound();
-
-            throw Context.Reply(_translations.KitNotFound, kitId);
         }
 
         if (Equals(Context.Player, player))
@@ -105,9 +48,10 @@ internal sealed class KitGiveCommand : IExecutableCommand
             Context.AssertRanByPlayer();
         }
 
-        await _kitManager.Requests.GiveKit(player ?? Context.Player, kit, manual: true, lowAmmo: false, token).ConfigureAwait(false);
-        await UniTask.SwitchToMainThread(token);
-        Context.LogAction(ActionLogType.GiveKit, kit.InternalName);
+        Kit kit = kitArg.Kit;
+        await _kitRequestService.GiveKitAsync(player ?? Context.Player, new KitBestowData(kit), token).ConfigureAwait(false);
+
+        Context.LogAction(ActionLogType.GiveKit, kit.Id);
 
         if (player == null)
         {

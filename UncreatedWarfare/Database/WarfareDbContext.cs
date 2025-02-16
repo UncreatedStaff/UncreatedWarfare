@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Pomelo.EntityFrameworkCore.MySql.Infrastructure;
@@ -16,6 +18,7 @@ using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Models.Seasons;
 using Uncreated.Warfare.Models.Stats;
 using Uncreated.Warfare.Models.Users;
+using Uncreated.Warfare.Models.Web;
 using Uncreated.Warfare.Moderation;
 
 namespace Uncreated.Warfare.Database;
@@ -23,14 +26,15 @@ namespace Uncreated.Warfare.Database;
 public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContext, IKitsDbContext, IStatsDbContext, IGameDataDbContext, IBuildablesDbContext, IWhitelistDbContext
 {
     private readonly ILogger<WarfareDbContext> _logger;
-    
+
     public DbSet<LanguageInfo> Languages => Set<LanguageInfo>();
     public DbSet<LanguagePreferences> LanguagePreferences => Set<LanguagePreferences>();
     public DbSet<WarfareUserData> UserData => Set<WarfareUserData>();
+    public DbSet<GlobalBanWhitelist> GlobalBanWhitelists => Set<GlobalBanWhitelist>();
     public DbSet<PlayerIPAddress> IPAddresses => Set<PlayerIPAddress>();
     public DbSet<PlayerHWID> HWIDs => Set<PlayerHWID>();
     public DbSet<Faction> Factions => Set<Faction>();
-    public DbSet<Kit> Kits => Set<Kit>();
+    public DbSet<KitModel> Kits => Set<KitModel>();
     public DbSet<KitAccess> KitAccess => Set<KitAccess>();
     public DbSet<KitHotkey> KitHotkeys => Set<KitHotkey>();
     public DbSet<KitLayoutTransformation> KitLayoutTransformations => Set<KitLayoutTransformation>();
@@ -49,10 +53,20 @@ public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContex
     public DbSet<BuildableSave> Saves => Set<BuildableSave>();
     public DbSet<ItemWhitelist> Whitelists => Set<ItemWhitelist>();
     public DbSet<SteamDiscordPendingLink> PendingLinks => Set<SteamDiscordPendingLink>();
+    
+    public DbSet<LoadoutPurchase> Loadouts => Set<LoadoutPurchase>();
+    public DbSet<HomebaseAuthenticationKey> HomebaseAuthenticationKeys => Set<HomebaseAuthenticationKey>();
+
+
 
     public WarfareDbContext(ILogger<WarfareDbContext> logger, DbContextOptions<WarfareDbContext> options) : base(options)
     {
+        // supress exceptions from being logged separately
+        // this allows us to catch Unique Key and Primary Key
+        // constraint violation exceptions for threadsafe add operations (MySQL 1062: DuplicateKeyEntry)
+
         _logger = logger;
+        EFCompat.Instance.DontLogExceptionDuringSaveChanges(this);
     }
 
     /// <summary>
@@ -96,6 +110,8 @@ public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContex
             o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
         );
 
+        optionsBuilder.UseBatchEF_MySQLPomelo();
+
         if (sensitiveDataLogging)
         {
             optionsBuilder.EnableSensitiveDataLogging();
@@ -117,7 +133,16 @@ public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContex
         IGameDataDbContext.ConfigureModels(modelBuilder);
         IWhitelistDbContext.ConfigureModels(modelBuilder);
 
-        modelBuilder.Entity<HomebaseAuthenticationKey>();
+        // add the RAND() function in EFCore 5
+        //if (WarfareModule.IsActive)
+        //{
+        //    modelBuilder.HasDbFunction(Accessor.GetMethod(WarfareEFFunctions.Random)!, bldr =>
+        //    {
+        //        // ReSharper disable once UseArrayEmptyMethod
+        //        bldr.HasTranslation(_ => new SqlFunctionExpression("RAND", new SqlExpression[0], nullable: false,
+        //            Array.Empty<bool>(), typeof(double), new DoubleTypeMapping("double", DbType.Double)));
+        //    });
+        //}
 
         /* Adds preset value converters */
         WarfareDatabaseReflection.ApplyValueConverterConfig(modelBuilder, _logger);

@@ -1,4 +1,4 @@
-﻿using Uncreated.Warfare.Injures;
+using Uncreated.Warfare.Injures;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Players;
@@ -22,9 +22,11 @@ internal sealed class HealCommand : IExecutableCommand
     }
 
     /// <inheritdoc />
-    public UniTask ExecuteAsync(CancellationToken token)
+    public async UniTask ExecuteAsync(CancellationToken token)
     {
-        if (!Context.TryGet(0, out _, out WarfarePlayer? onlinePlayer, remainder: true) || onlinePlayer == null)
+        (_, WarfarePlayer? onlinePlayer) = await Context.TryGetPlayer(0, remainder: true).ConfigureAwait(false);
+
+        if (onlinePlayer == null)
         {
             if (Context.HasArgs(1))
                 throw Context.SendPlayerNotFound();
@@ -32,6 +34,8 @@ internal sealed class HealCommand : IExecutableCommand
             Context.AssertRanByPlayer();
             onlinePlayer = Context.Player;
         }
+        
+        await UniTask.SwitchToMainThread(token);
 
         onlinePlayer.UnturnedPlayer.life.sendRevive();
 
@@ -48,8 +52,6 @@ internal sealed class HealCommand : IExecutableCommand
         {
             Context.Reply(_translations.HealSelf);
         }
-
-        return UniTask.CompletedTask;
     }
 }
 

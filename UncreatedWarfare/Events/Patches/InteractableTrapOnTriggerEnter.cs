@@ -5,7 +5,6 @@ using SDG.NetTransport;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Events.Components;
@@ -14,6 +13,8 @@ using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Patches;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Vehicles;
+using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.Events.Patches;
 
@@ -121,12 +122,10 @@ internal sealed class InteractableTrapOnTriggerEnter : IHarmonyPatch
 
             if (playerTriggerer == null)
             {
-                if (vehicle.TryGetComponent(out VehicleComponent comp2))
-                    playerTriggerer = playerService.GetOnlinePlayerOrNull(comp2.LastDriver);
+                WarfareVehicle wVehicle = WarfareModule.Singleton.ServiceProvider.Resolve<VehicleService>().GetVehicle(vehicle);
+                playerTriggerer = wVehicle.TranportTracker.LastKnownDriver.HasValue ? playerService.GetOnlinePlayerOrNull(wVehicle.TranportTracker.LastKnownDriver.Value) : null;
                 if (playerTriggerer == null)
-                {
                     return false;
-                }
             }
 
             triggerTeam = playerTriggerer.Team;
@@ -229,6 +228,8 @@ internal sealed class InteractableTrapOnTriggerEnter : IHarmonyPatch
             PlayerDeathTrackingComponent? ownerData = null,
                                           triggererData = null;
 
+            CSteamID instigator = new CSteamID(args.ServersideData.owner);
+
             if (args.BarricadeOwner is { IsOnline: true })
             {
                 ownerData = PlayerDeathTrackingComponent.GetOrAdd(args.BarricadeOwner.UnturnedPlayer);
@@ -245,7 +246,7 @@ internal sealed class InteractableTrapOnTriggerEnter : IHarmonyPatch
             }
 
             Vector3 position = args.ServersideData.point;
-            DamageTool.explode(new ExplosionParameters(position, args.ExplosiveRange, EDeathCause.LANDMINE, new CSteamID(args.ServersideData.owner))
+            DamageTool.explode(new ExplosionParameters(position, args.ExplosiveRange, EDeathCause.LANDMINE, instigator)
             {
                 playerDamage = args.PlayerDamage,
                 zombieDamage = args.ZombieDamage,

@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
@@ -63,19 +63,22 @@ public static class FactionDataStoreExtensions
         IReadOnlyList<FactionInfo> factions = dataStore.Factions;
         foreach (FactionInfo faction in factions)
         {
-            if (F.RoughlyEquals(search, faction.FactionId))
+            if (search.Equals(faction.FactionId, StringComparison.OrdinalIgnoreCase))
                 return faction;
         }
         foreach (FactionInfo faction in factions)
         {
-            if (F.RoughlyEquals(search, faction.Name))
+            if (search.Equals(faction.Name, StringComparison.OrdinalIgnoreCase))
                 return faction;
         }
         foreach (FactionInfo faction in factions)
         {
-            if (faction.ShortName != null && F.RoughlyEquals(search, faction.ShortName))
+            if (search.Equals(faction.ShortName, StringComparison.OrdinalIgnoreCase))
                 return faction;
         }
+
+        if (exact)
+            return null;
 
         FactionInfo? match = null;
         foreach (FactionInfo faction in factions)

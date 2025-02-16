@@ -1,8 +1,8 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
 using HarmonyLib;
 using System.Reflection;
-using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Patches;
 using Uncreated.Warfare.Players;
@@ -62,13 +62,18 @@ internal sealed class InteractableSignUpdateText : IHarmonyPatch
         }
 
         BarricadeData data = drop.GetServersideData();
+        if (data.barricade.isDead)
+        {
+            return;
+        }
 
         IContainer serviceProvider = WarfareModule.Singleton.ServiceProvider;
 
         WarfarePlayer? instigator = null;
-        if (drop.model.TryGetComponent(out BarricadeComponent comp) && comp.EditTick >= serviceProvider.Resolve<WarfareTimeComponent>().Updates)
+        BuildableContainer container = BuildableContainer.Get(drop);
+        if (container.SignEditFrame.IsValid)
         {
-            instigator = serviceProvider.Resolve<IPlayerService>().GetOnlinePlayerOrNull(comp.LastEditor);
+            instigator = serviceProvider.Resolve<IPlayerService>().GetOnlinePlayerOrNull(container.SignEditor);
         }
 
         SignTextChanged args = new SignTextChanged

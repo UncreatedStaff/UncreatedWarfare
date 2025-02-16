@@ -1,14 +1,16 @@
 using SDG.NetTransport;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
+using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Models.GameData;
-using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Players.Saves;
 using Uncreated.Warfare.Squads.Spotted;
 using Uncreated.Warfare.Stats;
@@ -38,9 +40,9 @@ public class WarfarePlayer :
     IComponentContainer<IPlayerComponent>,
     IEquatable<IPlayer>,
     IEquatable<WarfarePlayer>,
-    ITransformObject,
     ISpotter
 {
+    private int _modalHandles;
     private readonly CancellationTokenSource _disconnectTokenSource;
     private readonly ILogger _logger;
     private PlayerNames _playerNameHelper;
@@ -48,6 +50,39 @@ public class WarfarePlayer :
     private readonly uint _acctId;
     private readonly SingleUseTypeDictionary<IPlayerComponent> _components;
     private readonly CSteamID _steam64;
+
+    public ModalHandle GetModalHandle()
+    {
+        GameThread.AssertCurrent();
+        ++_modalHandles;
+        if ((UnturnedPlayer.pluginWidgetFlags & (EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur)) == 0)
+        {
+            UnturnedPlayer.enablePluginWidgetFlag(EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur);
+        }
+
+        return new ModalHandle(this);
+    }
+
+    internal void DisposeModalHandle()
+    {
+        if (GameThread.IsCurrent)
+        {
+            --_modalHandles;
+            if (_modalHandles == 0 && (UnturnedPlayer.pluginWidgetFlags & (EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur)) == (EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur))
+                UnturnedPlayer.disablePluginWidgetFlag(EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur);
+        }
+        else
+        {
+            UniTask.Create(async () =>
+            {
+                await UniTask.SwitchToMainThread();
+                if (!IsOnline)
+                    return;
+
+                DisposeModalHandle();
+            });
+        }
+    }
 
     public ref readonly CSteamID Steam64 => ref _steam64;
 
@@ -57,7 +92,7 @@ public class WarfarePlayer :
     /// <summary>
     /// Generic data persisting over the player's lifetime.
     /// </summary>
-    public IDictionary<string, object?> Data { get; } = new Dictionary<string, object?>(8);
+    public ConcurrentDictionary<string, object?> Data { get; } = new ConcurrentDictionary<string, object?>();
 
     public Player UnturnedPlayer { get; }
     public SteamPlayer SteamPlayer { get; }
@@ -65,10 +100,7 @@ public class WarfarePlayer :
     public Team Team { get; private set; }
     public BinaryPlayerSave Save { get; }
     public WarfarePlayerLocale Locale { get; }
-
-    [Obsolete]
-    public SemaphoreSlim PurchaseSync { get; }
-    public PlayerSummary SteamSummary { get; internal set; } = null!;
+    public PlayerSummary SteamSummary { get; }
     public SessionRecord CurrentSession { get; internal set; }
     public ref PlayerPoints CachedPoints => ref _cachedPoints;
 
@@ -90,9 +122,26 @@ public class WarfarePlayer :
     }
 
     /// <summary>
+    /// If the player is currently on duty.
+    /// </summary>
+    /// <remarks>This should not be used for permission checks, instead proper permissions should be created for instances like that.</remarks>
+    public bool IsOnDuty { get; private set; }
+
+    /// <summary>
+    /// The player's current staff level. This will be correct even when off duty.
+    /// </summary>
+    /// <remarks>This should not be used for permission checks, instead proper permissions should be created for instances like that.</remarks>
+    public DutyLevel DutyLevel { get; private set; }
+
+    /// <summary>
     /// If the player this object represents is currently online. Set to <see langword="false"/> *after* the leave event is fired.
     /// </summary>
     public bool IsOnline { get; private set; } = true;
+
+    /// <summary>
+    /// If the player's <see cref="PlayerJoined"/> event is still invoking.
+    /// </summary>
+    public bool IsConnecting { get; private set; } = true;
 
     /// <summary>
     /// If the player this object represents is currently offline. Set to <see langword="true"/> *after* the leave event is fired.
@@ -127,8 +176,9 @@ public class WarfarePlayer :
     /// A <see cref="CancellationToken"/> that cancels after the player leaves.
     /// </summary>
     public CancellationToken DisconnectToken => _disconnectTokenSource.Token;
-    internal WarfarePlayer(PlayerService playerService, Player player, in PlayerService.PlayerTaskData taskData, ILogger logger, IPlayerComponent[] components, IServiceProvider serviceProvider)
+    internal WarfarePlayer(PlayerService playerService, Player player, in PlayerService.PlayerTaskData taskData, PlayerPending pendingEvent, ILogger logger, IPlayerComponent[] components, IServiceProvider serviceProvider)
     {
+        SteamSummary = pendingEvent.Summary;
         _disconnectTokenSource = taskData.TokenSource;
         _logger = logger;
         _playerNameHelper = new PlayerNames(player);
@@ -140,7 +190,8 @@ public class WarfarePlayer :
         Save = new BinaryPlayerSave(Steam64, _logger);
         Save.Load();
 
-        Locale = new WarfarePlayerLocale(this, new LanguagePreferences { Steam64 = Steam64.m_SteamID }, serviceProvider);
+        pendingEvent.LanguagePreferences.Steam64 = _steam64.m_SteamID;
+        Locale = new WarfarePlayerLocale(this, pendingEvent.LanguagePreferences, serviceProvider);
 
         _components = new SingleUseTypeDictionary<IPlayerComponent>(playerService.PlayerComponents, components);
         Components = new ReadOnlyCollection<IPlayerComponent>(_components.Values);
@@ -148,7 +199,10 @@ public class WarfarePlayer :
         Team = Team.NoTeam;
         _logger.LogInformation("Player {0} joined the server", this);
 
-        PurchaseSync = new SemaphoreSlim(1, 1);
+        for (int i = 0; i < components.Length; ++i)
+        {
+            components[i].Player = this;
+        }
 
         for (int i = 0; i < taskData.PendingTasks.Length; ++i)
         {
@@ -184,6 +238,12 @@ public class WarfarePlayer :
         return _components.TryGet(t, out object? comp) ? comp : null;
     }
 
+    internal void UpdateDutyState(bool isOnDuty, DutyLevel level)
+    {
+        IsOnDuty = isOnDuty && level != DutyLevel.Member;
+        DutyLevel = level;
+    }
+
     public void UpdateTeam(Team team)
     {
         Team = team;
@@ -195,6 +255,7 @@ public class WarfarePlayer :
         {
             _disconnectTokenSource.Cancel();
             IsDisconnecting = false;
+            IsConnecting = false;
             IsOnline = false;
             OnDestroyed?.Invoke(this);
         }
@@ -207,6 +268,11 @@ public class WarfarePlayer :
     public void StartDisconnecting()
     {
         IsDisconnecting = true;
+        IsConnecting = false;
+    }
+    public void EndConnecting()
+    {
+        IsConnecting = false;
     }
 
     public override string ToString()
@@ -220,6 +286,12 @@ public class WarfarePlayer :
     public static readonly SpecialFormat FormatNickName = new SpecialFormat("Nick Name", "nn");
     
     public static readonly SpecialFormat FormatPlayerName = new SpecialFormat("Player Name", "pn");
+
+    public static readonly SpecialFormat FormatDisplayOrCharacterName = new SpecialFormat("Display or Character Name", "dcn");
+
+    public static readonly SpecialFormat FormatDisplayOrNickName = new SpecialFormat("Display or Nick Name", "dnn");
+
+    public static readonly SpecialFormat FormatDisplayOrPlayerName = new SpecialFormat("Display or Player Name", "dpn");
     
     public static readonly SpecialFormat FormatSteam64 = new SpecialFormat("Steam64 ID", "64");
     
@@ -230,10 +302,16 @@ public class WarfarePlayer :
     public static readonly SpecialFormat FormatColoredPlayerName = new SpecialFormat("Colored Player Name", "cpn");
     
     public static readonly SpecialFormat FormatColoredSteam64 = new SpecialFormat("Colored Steam64 ID", "c64");
+
+    public static readonly SpecialFormat FormatColoredDisplayOrCharacterName = new SpecialFormat("ColoredDisplay or Character Name", "ccn");
+
+    public static readonly SpecialFormat FormatColoredDisplayOrNickName = new SpecialFormat("ColoredDisplay or Nick Name", "cnn");
+
+    public static readonly SpecialFormat FormatColoredDisplayOrPlayerName = new SpecialFormat("ColoredDisplay or Player Name", "cpn");
+
     string ITranslationArgument.Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
     {
-        // todo make this a proper implementation later.
-        return new OfflinePlayer(in _playerNameHelper).Translate(formatter, in parameters);
+        return new OfflinePlayer(in _playerNameHelper, Team).Translate(formatter, in parameters);
     }
 
     public bool Equals([NotNullWhen(true)] IPlayer? other)
@@ -357,5 +435,34 @@ public class WarfarePlayer :
     {
         add => OnDestroyed += value;
         remove => OnDestroyed -= value;
+    }
+}
+
+/// <summary>
+/// Allows for multiple UI's to be open at once that require the modal active without clearing each other.
+/// </summary>
+public struct ModalHandle(WarfarePlayer player) : IDisposable
+{
+    private readonly WarfarePlayer? _player = player;
+
+    private int _disposed;
+
+    public void Dispose()
+    {
+        if (_player == null)
+            return;
+
+        if (Interlocked.Exchange(ref _disposed, 1) != 0 || !_player.IsOnline)
+            return;
+
+        _player.DisposeModalHandle();
+    }
+
+    public static void TryGetModalHandle(WarfarePlayer player, ref ModalHandle modal)
+    {
+        if (modal is { _player: not null, _disposed: 0 })
+            return;
+
+        modal = player.GetModalHandle();
     }
 }

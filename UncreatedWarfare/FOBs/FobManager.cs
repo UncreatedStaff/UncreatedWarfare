@@ -19,6 +19,8 @@ namespace Uncreated.Warfare.Fobs;
 
 public partial class FobManager : ILayoutHostedService
 {
+    internal const float EmplacementSpawnOffset = 2f;
+
     private readonly FobTranslations _translations;
     private readonly AssetConfiguration _assetConfiguration;
     private readonly IServiceProvider _serviceProvider;
@@ -27,7 +29,7 @@ public partial class FobManager : ILayoutHostedService
     private readonly TrackingList<IFob> _fobs;
     private readonly ChatService _chatService;
 
-    public readonly FobConfiguration Configuration;
+    public FobConfiguration Configuration { get; }
 
     /// <summary>
     /// Items placed by players that aren't linked to a specific FOB.
@@ -77,6 +79,19 @@ public partial class FobManager : ILayoutHostedService
         IFob? existing = _fobs.FindAndRemove(f => f == fob);
         if (existing == null)
             return false;
+
+        if (existing is IDisposable disposable)
+        {
+            try
+            {
+                disposable.Dispose();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, $"Error disposing FOB: {fob}.");
+            }
+        }
+
         _logger.LogDebug("Deregistered FOB: " + fob);
         _ = WarfareModule.EventDispatcher.DispatchEventAsync(new FobDeregistered { Fob = fob });
         return true;
@@ -99,13 +114,25 @@ public partial class FobManager : ILayoutHostedService
         IFobEntity? existing = _entities.FindAndRemove(f => f == entity);
         if (existing == null)
             return false;
-        existing.Dispose();
+
+        if (existing is IDisposable disposable)
+        {
+            try
+            {
+                disposable.Dispose();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, $"Error disposing FOB Entity: {entity}.");
+            }
+        }
+
         _logger.LogDebug("Deregistered FOB Entity: " + entity);
         return true;
     }
-    public BuildableFobType? FindBuildableFob<BuildableFobType>(IBuildable matchingBuildable) where BuildableFobType : IBuildableFob
+    public TBuildableFobType? FindBuildableFob<TBuildableFobType>(IBuildable matchingBuildable) where TBuildableFobType : IBuildableFob
     {
-        return _fobs.OfType<BuildableFobType>().FirstOrDefault(f => f.Buildable.Equals(matchingBuildable));
+        return _fobs.OfType<TBuildableFobType>().FirstOrDefault(f => f.Buildable.Equals(matchingBuildable));
     }
     public ResourceFob? FindNearestResourceFob(Team team, Vector3 position)
     {
@@ -119,22 +146,21 @@ public partial class FobManager : ILayoutHostedService
         return _fobs.OfType<BunkerFob>().FirstOrDefault(f =>
             f.Team == team &&
             MathUtility.WithinRange(position, f.Position, f.EffectiveRadius) &&
-            (includeUnbuilt ? true : f.IsBuilt)
+            (includeUnbuilt || f.IsBuilt)
         );
     }
     public BunkerFob? FindNearestBunkerFob(CSteamID teamGroup, Vector3 position, bool includeUnbuilt = true)
     {
         return _fobs.OfType<BunkerFob>().FirstOrDefault(f =>
-            f.Team.GroupId == teamGroup &&
-            MathUtility.WithinRange(position, f.Position, f.EffectiveRadius) &&
-            (includeUnbuilt ? true : f.IsBuilt)
+            f.Team.GroupId == teamGroup
+            && MathUtility.WithinRange(position, f.Position, f.EffectiveRadius)
+            && (includeUnbuilt || f.IsBuilt)
         );
     }
     public IEnumerable<BunkerFob> FriendlyBunkerFobs(Team team, bool includeUnbuilt = true)
     {
         return _fobs.OfType<BunkerFob>().Where(f =>
-            f.Team == team &&
-            (includeUnbuilt ? true : f.IsBuilt)
+            f.Team == team && (includeUnbuilt || f.IsBuilt)
         );
     }
     public TEntity? GetBuildableFobEntity<TEntity>(IBuildable buildable) where TEntity : IBuildableFobEntity

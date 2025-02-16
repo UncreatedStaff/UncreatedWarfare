@@ -57,6 +57,7 @@ public abstract class ModerationEntry : IModerationEntry
     [JsonPropertyName("reputation")]
     public double Reputation { get; set; }
 
+    // todo: remove this
     /// <inheritdoc/>
     [JsonPropertyName("pending_reputation")]
     public double PendingReputation { get; set; }

@@ -17,9 +17,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using Uncreated.Warfare.Actions;
 using Uncreated.Warfare.Buildables;
-using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
@@ -40,6 +38,10 @@ using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Interaction.Icons;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Kits.Items;
+using Uncreated.Warfare.Kits.Loadouts;
+using Uncreated.Warfare.Kits.Requests;
+using Uncreated.Warfare.Kits.Tweaks;
 using Uncreated.Warfare.Kits.Whitelists;
 using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.Layouts.UI;
@@ -48,16 +50,21 @@ using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Moderation.Discord;
+using Uncreated.Warfare.Moderation.GlobalBans;
 using Uncreated.Warfare.Moderation.Reports;
 using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Networking.Purchasing;
 using Uncreated.Warfare.Patches;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Cooldowns;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Players.Tweaks;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Plugins;
+using Uncreated.Warfare.Projectiles;
+using Uncreated.Warfare.Quests;
+using Uncreated.Warfare.Quests.Daily;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Sessions;
 using Uncreated.Warfare.Signs;
@@ -73,8 +80,10 @@ using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Languages;
 using Uncreated.Warfare.Tweaks;
 using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Util.Inventory;
 using Uncreated.Warfare.Util.Timing;
 using Uncreated.Warfare.Vehicles;
+using Uncreated.Warfare.Vehicles.Events.Tweaks;
 using Uncreated.Warfare.Vehicles.Events.Tweaks.AdvancedDamage;
 using Uncreated.Warfare.Vehicles.Events.Vehicles;
 using Uncreated.Warfare.Vehicles.Spawners;
@@ -224,6 +233,16 @@ public sealed class WarfareModule
             ?.GetSetMethod(true)
             ?.Invoke(pluginAdvService, [ "uw" ]);
 
+        // Disables the socket that hosts the Connection Code functionality. It's nice to keep it in DEBUG for testing purposes without port forwarding.
+#if RELEASE
+        if (Type.GetType("SDG.NetTransport.SteamNetworkingSockets.ServerTransport_SteamNetworkingSockets, Assembly-CSharp")
+            ?.GetField("clUseP2pSocket", BindingFlags.NonPublic | BindingFlags.Static)
+            ?.GetValue(null) is CommandLineFlag clUseP2PSocket)
+        {
+            clUseP2PSocket.value = false;
+        }
+#endif
+
         Provider.modeConfigData.Players.Lose_Items_PvP = 0;
         Provider.modeConfigData.Players.Lose_Items_PvE = 0;
         Provider.modeConfigData.Players.Lose_Clothes_PvP = false;
@@ -325,7 +344,7 @@ public sealed class WarfareModule
 
         GlobalLogger = ServiceProvider.Resolve<ILoggerFactory>().CreateLogger("Global");
 
-        _logger.LogInformation("Using {0} services from core and {1} plugin(s).", ServiceProvider.ComponentRegistry.Registrations.Count(), _pluginLoader.Plugins.Count);
+        _logger.LogInformation($"Using {ServiceProvider.ComponentRegistry.Registrations.Count()} services from core and {_pluginLoader.Plugins.Count} plugin(s).");
 
         UniTask.Create(async () =>
         {
@@ -401,18 +420,21 @@ public sealed class WarfareModule
         Module thisModule = ModuleHook.modules.First(x => x.config.Name.Equals("Uncreated.Warfare", StringComparison.Ordinal) && x.assemblies.Contains(thisAsm));
 
         // all module assemblies and plugins
-        Assembly[] relevantAssemblies = thisModule.assemblies
-                                            .Concat(_pluginLoader.Plugins.Select(x => x.LoadedAssembly))
-                                            .ToArray();
+        Assembly[] relevantAssemblies = [ thisAsm ];
 
         bldr.RegisterType<MapScheduler>()
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
 
         bldr.RegisterType<ServerHeartbeatTimer>()
+            .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
 
         bldr.RegisterRpcType<ReportService>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
+
+        bldr.RegisterRpcType<RemotePlayerListService>()
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
 
@@ -443,6 +465,9 @@ public sealed class WarfareModule
             );
         });
 
+        bldr.RegisterType<NullRpcConnectionService>()
+            .As<IRpcConnectionService>();
+
         bldr.RegisterInstance(this)
             .As<WarfareModule>()
             .ExternallyOwned();
@@ -457,8 +482,6 @@ public sealed class WarfareModule
         bldr.Register<HarmonyPatchService, Harmony>((_, p) => p.Patcher)
             .SingleInstance();
 
-        bldr.RegisterInstance(_gameObjectHost.GetOrAddComponent<WarfareTimeComponent>())
-            .SingleInstance();
         bldr.RegisterInstance(_gameObjectHost.GetOrAddComponent<WarfareLifetimeComponent>())
             .SingleInstance();
 
@@ -480,7 +503,6 @@ public sealed class WarfareModule
 
         // UI
         bldr.RegisterType<ModerationUI>().SingleInstance();
-        bldr.RegisterType<ActionMenuUI>().SingleInstance();
         bldr.RegisterType<SquadMenuUI>()
             .AsSelf()
             .AsImplementedInterfaces()
@@ -503,6 +525,7 @@ public sealed class WarfareModule
         bldr.RegisterType<VehicleHUD>().SingleInstance();
         bldr.RegisterType<FlagListUI>().SingleInstance();
         bldr.RegisterType<CaptureUI>().SingleInstance();
+        bldr.RegisterType<OptionsUI>().SingleInstance();
 
         bldr.RegisterType<TipService>()
             .AsImplementedInterfaces().AsSelf()
@@ -529,20 +552,32 @@ public sealed class WarfareModule
             .AsImplementedInterfaces().AsSelf()
             .SingleInstance();
 
-        bldr.RegisterType<LayoutFactory>()
+        bldr.RegisterRpcType<WorkshopUploader>()
             .AsImplementedInterfaces().AsSelf()
             .SingleInstance();
 
-        bldr.RegisterType<ActionManager>()
+        bldr.RegisterType<TimeZoneRegionalDatabase>()
+            .AsImplementedInterfaces().AsSelf()
+            .SingleInstance();
+
+        bldr.RegisterType<QuestService>()
             .AsImplementedInterfaces().AsSelf()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+
+        bldr.RegisterType<DailyQuestService>()
+            .AsImplementedInterfaces().AsSelf()
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+
+        bldr.RegisterType<LayoutFactory>()
+            .AsImplementedInterfaces().AsSelf()
+            .SingleInstance();
 
         bldr.RegisterType<EventDispatcher>()
             .AsImplementedInterfaces().AsSelf()
             .SingleInstance();
 
         bldr.RegisterType<CooldownManager>()
-            .AsSelf().AsImplementedInterfaces()
+            .AsSelf().As<ILayoutHostedService>()
             .SingleInstance();
 
         bldr.RegisterType<CommandDispatcher>()
@@ -553,8 +588,7 @@ public sealed class WarfareModule
             .AsImplementedInterfaces().AsSelf()
             .SingleInstance();
         bldr.RegisterRpcType<DutyService>()
-            .AsImplementedInterfaces().AsSelf()
-            .SingleInstance();
+            .AsImplementedInterfaces().AsSelf();
         
         bldr.RegisterInstance(_gameObjectHost).ExternallyOwned();
 
@@ -638,6 +672,9 @@ public sealed class WarfareModule
         bldr.RegisterType<PlayerDatabaseStatsEventHandlers>()
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
+        bldr.RegisterType<PlayerGameStatsEventHandlers>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
 
         bldr.RegisterType<MySqlPointsStore>()
             .As<IPointsStore>()
@@ -655,7 +692,71 @@ public sealed class WarfareModule
             .SingleInstance();
 
         // Kits
-        KitManager.ConfigureServices(bldr);
+        bldr.RegisterType<DefaultLoadoutItemsConfiguration>()
+            .SingleInstance();
+
+        bldr.RegisterType<KitCreateMissingDefaultKitsTweak>().As<ILayoutHostedService>();
+        bldr.RegisterType<KitNoSwapStorageClothingTweak>().AsSelf().AsImplementedInterfaces();
+
+        bldr.RegisterType<MySqlKitsDataStore>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
+
+        bldr.RegisterType<MySqlKitFavoriteService>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
+
+        bldr.RegisterRpcType<MySqlKitAccessService>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
+
+        bldr.RegisterType<KitLayoutService>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
+
+        bldr.RegisterType<KitCommandLookResolver>()
+            .SingleInstance();
+
+        bldr.RegisterRpcType<PlayerNitroBoostService>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
+
+        bldr.RegisterRpcType<LoadoutService>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
+
+        bldr.RegisterType<KitSignService>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
+
+        bldr.RegisterType<KitBestowService>()
+            .AsSelf().AsImplementedInterfaces()
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+
+        bldr.RegisterType<KitWeaponTextService>()
+            .AsSelf().SingleInstance();
+
+        bldr.RegisterType<KitRequestService>()
+            .AsSelf().AsImplementedInterfaces()
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+
+        if (false && ItemUtility.SupportsFastKits)
+        {
+            // todo: this needs fixed
+            bldr.RegisterType<FastItemDistributionService>()
+                .As<IItemDistributionService>();
+        }
+        else
+        {
+            bldr.RegisterType<FallbackItemDistributionService>()
+                .As<IItemDistributionService>();
+        }
+
+        bldr.Register<IServiceProvider, IKitItemResolver>((_, serviceProvider) =>
+            HolidayUtil.isHolidayActive(ENPCHoliday.APRIL_FOOLS)
+                ? ActivatorUtilities.CreateInstance<DootpressorKitItemResolver>(serviceProvider)
+                : ActivatorUtilities.CreateInstance<BaseKitItemResolver>(serviceProvider)
+        ).InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
 
         bldr.RegisterType<AssetRedirectService>()
             .AsSelf().AsImplementedInterfaces()
@@ -696,9 +797,6 @@ public sealed class WarfareModule
 
         bldr.RegisterRpcType<DiscordUserService>()
             .SingleInstance();
-
-        bldr.RegisterType<PurchaseRecordsInterface>()
-            .As<IPurchaseRecordsInterface>();
 
         // Layouts
         bldr.Register(_ => GetActiveLayout())
@@ -755,6 +853,10 @@ public sealed class WarfareModule
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
 
+        bldr.RegisterType<ProjectileSolver>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
+
         // Active ITeamManager
         bldr.Register(_ => GetActiveLayout().TeamManager)
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
@@ -776,17 +878,31 @@ public sealed class WarfareModule
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
         bldr.RegisterType<PlayerChooseSpawnPointTweaks>()
+            .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
+        bldr.RegisterType<KeepItemsAndStatsOnDeathTweak>()
+            .AsImplementedInterfaces();
+        bldr.RegisterType<ShovelableWarningTweak>()
+            .AsSelf().AsImplementedInterfaces()
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
 
-        bldr.RegisterType<NoCraftingTweak>().AsImplementedInterfaces()
+        bldr.RegisterType<NoCraftingTweak>()
+            .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
-        bldr.RegisterType<InvinciblePassengersTweak>().AsImplementedInterfaces()
+        bldr.RegisterType<InvinciblePassengersTweak>()
+            .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
-        bldr.RegisterType<NoDamageInMainTweak>().AsImplementedInterfaces()
+        bldr.RegisterType<CombatCooldownTweak>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
+        bldr.RegisterType<NoDamageInMainTweak>()
+            .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
-        bldr.RegisterType<LandmineExplosionRestrictions>().AsImplementedInterfaces()
+        bldr.RegisterType<LandmineExplosionRestrictions>()
+            .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
-        bldr.RegisterType<PreventLeaveGroupTweak>().AsImplementedInterfaces()
+        bldr.RegisterType<PreventLeaveGroupTweak>()
+            .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
 
         // Localization
@@ -833,6 +949,13 @@ public sealed class WarfareModule
             .AsSelf()
             .SingleInstance();
 
+        bldr.RegisterType<ModerationEventHandlers>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
+
+        bldr.RegisterType<GlobalBanWhitelistService>()
+            .As<IGlobalBanWhitelistService>();
+
         bldr.RegisterType<UserDataService>()
             .As<IUserDataService>()
             .SingleInstance();
@@ -862,7 +985,7 @@ public sealed class WarfareModule
             if (string.IsNullOrWhiteSpace(connectionString))
                 throw new InvalidOperationException($"Missing connection string: \"{connectionStringType}\".");
 
-            return new ManualMySqlProvider(connectionString);
+            return new ManualMySqlProvider(connectionString, serviceProvider.Resolve<ILogger<ManualMySqlProvider>>());
         });
     }
 
@@ -874,6 +997,12 @@ public sealed class WarfareModule
         // prevent players from joining after shutdown start
         IPlayerService? playerService = ServiceProvider.ResolveOptional<IPlayerService>();
         playerService?.TakePlayerConnectionLock(token);
+
+        RemotePlayerListService? remoteStateManager = ServiceProvider.ResolveOptional<RemotePlayerListService>();
+        if (remoteStateManager != null)
+        {
+            await remoteStateManager.UpdateReplicatedServerState(ServerStateType.Shutdown, reason);
+        }
 
         // kick all players
         for (int i = Provider.clients.Count - 1; i >= 0; --i)
@@ -960,8 +1089,7 @@ public sealed class WarfareModule
             }
             else
             {
-                _logger.LogDebug("Migrating database for real...");
-                //_logger.LogDebug($"Migrating database process: {dbContext.}");
+                _logger.LogDebug($"Migrating database process: {dbContext.GetType()}");
                 await dbContext.Database.MigrateAsync(token).ConfigureAwait(false);
                 _logger.LogInformation("Migration completed.");
             }
@@ -1136,7 +1264,7 @@ public sealed class WarfareModule
 
         List<IHostedService> hostedServices = ServiceProvider
             .Resolve<IEnumerable<IHostedService>>()
-            .OrderByDescending(x => x.GetType().GetPriority())
+            .OrderBy(x => x.GetType().GetPriority())
             .ToList();
 
         _logger.LogDebug("Unhosting {0} services.", hostedServices.Count);

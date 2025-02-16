@@ -1,4 +1,4 @@
-﻿using DanielWillett.ModularRpcs.Annotations;
+using DanielWillett.ModularRpcs.Annotations;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Concurrent;
@@ -13,6 +13,7 @@ using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Models.Users;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
 
@@ -30,6 +31,8 @@ public class UserPermissionStore : IAsyncDisposable, IHostedService, IEventListe
     private readonly ILogger<UserPermissionStore> _logger;
 
     private readonly IUserDataDbContext _dbContext;
+    private readonly IPlayerService _playerService;
+    private readonly Func<DutyService> _dutyService;
 
     /// <summary>
     /// List of all permission groups from config.
@@ -41,12 +44,14 @@ public class UserPermissionStore : IAsyncDisposable, IHostedService, IEventListe
     /// </summary>
     public PermissionGroup? DefaultPermissionGroup { get; private set; }
 
-    public UserPermissionStore(IUserDataDbContext dbContext, WarfareModule module, ILogger<UserPermissionStore> logger)
+    public UserPermissionStore(IUserDataDbContext dbContext, WarfareModule module, ILogger<UserPermissionStore> logger, IPlayerService playerService, Func<DutyService> dutyService /* circular ref */)
     {
         _dbContext = dbContext;
         _dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
 
         _logger = logger;
+        _playerService = playerService;
+        _dutyService = dutyService;
         PermissionGroups = null!;
         _permissionGroupFilePath = Path.Combine(module.HomeDirectory, "Permission Groups.json");
         ReadPermissionGroups(true);
@@ -57,10 +62,32 @@ public class UserPermissionStore : IAsyncDisposable, IHostedService, IEventListe
 
     UniTask IHostedService.StopAsync(CancellationToken token) => UniTask.CompletedTask;
 
+    [RpcReceive]
+    internal void ReceiveClearCachedPermissions(ulong steam64)
+    {
+        ClearCachedPermissions(steam64);
+
+        if (_playerService.GetOnlinePlayerOrNullThreadSafe(steam64) is not { } player)
+        {
+            return;
+        }
+
+        Task.Run(async () =>
+        {
+            try
+            {
+                await _dutyService().CheckDutyStateAsync(player.Steam64, validatePermissions: true, player.DisconnectToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking duty state after remote permission update.");
+            }
+        });
+    }
+
     /// <summary>
     /// Clear all cached permissions for a player. If <paramref name="steam64"/> is 0, all cached permissions will be cleared.
     /// </summary>
-    [RpcReceive]
     public void ClearCachedPermissions(ulong steam64)
     {
         if (steam64 == 0)
@@ -362,6 +389,8 @@ public class UserPermissionStore : IAsyncDisposable, IHostedService, IEventListe
     /// </summary>
     public async ValueTask<bool> HasPermissionAsync(ICommandUser user, PermissionLeaf permission, CancellationToken token = default)
     {
+        token.ThrowIfCancellationRequested();
+
         if (user.IsSuperUser)
             return true;
 

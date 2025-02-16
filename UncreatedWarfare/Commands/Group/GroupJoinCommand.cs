@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Linq;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Layouts.Teams;
@@ -6,7 +6,7 @@ using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
 
-namespace Uncreated.Warfare.Commands.Group;
+namespace Uncreated.Warfare.Commands;
 
 [Command("join"), SubCommandOf(typeof(GroupCommand))]
 internal sealed class GroupJoinCommand : IExecutableCommand
@@ -73,7 +73,7 @@ internal sealed class GroupJoinCommand : IExecutableCommand
             if (newTeam != null && newTeam.IsValid)
                 Context.Logger.LogError("Group info not found for group ID: {0}, team: {1}.", groupId, newTeam.Faction.Name);
 
-            throw Context.Reply(_translations.GroupNotFound, groupId.ToString(Data.LocalLocale));
+            throw Context.Reply(_translations.GroupNotFound, groupId.ToString(Context.Culture));
         }
 
         if (newTeam.IsValid)
@@ -83,14 +83,14 @@ internal sealed class GroupJoinCommand : IExecutableCommand
 
             if (Context.Player.Team != newTeam)
             {
-                throw Context.Reply(_translations.GroupNotFound, groupId.ToString(Data.LocalLocale));
+                throw Context.Reply(_translations.GroupNotFound, groupId.ToString(Context.Culture));
             }
         }
         else
         {
             if (!Context.Player.UnturnedPlayer.quests.ServerAssignToGroup(groupInfo.groupID, EPlayerGroupRank.MEMBER, true))
             {
-                throw Context.Reply(_translations.GroupNotFound, groupId.ToString(Data.LocalLocale));
+                throw Context.Reply(_translations.GroupNotFound, groupId.ToString(Context.Culture));
             }
         }
 

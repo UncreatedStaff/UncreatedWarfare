@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Buildables;
-using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Models.Fobs;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.FOBs.Deployment;
@@ -16,8 +15,6 @@ using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Proximity;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
-using Uncreated.Warfare.Util.DamageTracking;
-using Uncreated.Warfare.Util.List;
 using Uncreated.Warfare.Util.Timing;
 using Uncreated.Warfare.Util.Timing.Collectors;
 
@@ -29,8 +26,7 @@ namespace Uncreated.Warfare.Fobs;
 public class ResourceFob : IBuildableFob, IResourceFob, IDisposable
 {
     private readonly IPlayerService _playerService;
-    protected readonly FobManager _fobManager;
-    private readonly ILogger _logger;
+    protected readonly FobManager FobManager;
     private readonly ILoopTicker _loopTicker;
 
     public IBuildable Buildable { get; protected set; }
@@ -64,7 +60,7 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable
     public ISphereProximity FriendlyProximity { get; private set; }
     public ProximityCollector<WarfarePlayer> NearbyFriendlies { get; private set; }
     public ProximityCollector<WarfarePlayer> NearbyEnemies { get; private set; }
-    public ReadOnlyTrackingList<IFobEntity> GetEntities() => _fobManager.Entities.Where(e => MathUtility.WithinRange(Position, e.Position, EffectiveRadius)).ToTrackingList().AsReadOnly();
+    public IEnumerable<IFobEntity> EnumerateEntities() => FobManager.Entities.Where(e => MathUtility.WithinRange(Position, e.Position, EffectiveRadius));
     /// <summary>
     /// Invoked when a player enters the radius of the FOB.
     /// </summary>
@@ -86,9 +82,8 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable
         Name = name;
         Buildable = buildable;
         Team = serviceProvider.GetRequiredService<ITeamManager<Team>>().GetTeam(buildable.Group);
-        _logger = serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(GetType().Name + " | " + Name);
         _playerService = serviceProvider.GetRequiredService<IPlayerService>();
-        _fobManager = serviceProvider.GetRequiredService<FobManager>();
+        FobManager = serviceProvider.GetRequiredService<FobManager>();
 
         FriendlyProximity = new SphereProximity(Position, EffectiveRadius);
 
@@ -121,7 +116,7 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable
                 _ = WarfareModule.EventDispatcher.DispatchEventAsync(new FobProxyChanged { Fob = this, IsProxied = newProxyState });
             }
         };
-        NearbySupplyCrates supplyCrates = NearbySupplyCrates.FindNearbyCrates(Position, Team.GroupId, _fobManager);
+        NearbySupplyCrates supplyCrates = NearbySupplyCrates.FindNearbyCrates(Position, Team.GroupId, FobManager);
         ChangeSupplies(SupplyType.Build, supplyCrates.BuildCount);
         ChangeSupplies(SupplyType.Ammo, supplyCrates.AmmoCount);
     }
@@ -184,12 +179,10 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable
 
     public override string ToString()
     {
-        return $"Fob: {Name}, Team: {Team}, Position: {Position}, BuildCount: {BuildCount}, AmmoCount: {AmmoCount}, EffectiveRadius: {EffectiveRadius}\n" +
-               $"NearbyFriendlies: {NearbyFriendlies.Collection.Count}\n" +
-               $"NearbyEnemies: {NearbyEnemies.Collection.Count}\n" +
-               $"Items: {GetEntities().Count}\n"
-               ;
+        // Deploy log uses this
+        return $"\"{Name}\" | Team: {Team}";
     }
+
     public string Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
     {
         return formatter.Colorize(Name, Color, parameters.Options);

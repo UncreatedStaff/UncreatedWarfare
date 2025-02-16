@@ -1,7 +1,4 @@
-﻿using SDG.Unturned;
 using System;
-using System.Collections.Generic;
-using System.Text;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.FOBs.Entities;
@@ -9,9 +6,10 @@ using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Timing;
 
 namespace Uncreated.Warfare.FOBs.SupplyCrates;
-public class SupplyCrate : IBuildableFobEntity
+
+public class SupplyCrate : IBuildableFobEntity, IDisposable
 {
-    private byte[]? _originalBarricadeState;
+    private readonly byte[]? _originalBarricadeState;
     private readonly ILoopTicker _refillLoop;
     public SupplyType Type { get; }
     public float SupplyCount { get; set; }
@@ -35,7 +33,7 @@ public class SupplyCrate : IBuildableFobEntity
         SupplyRadius = info.SupplyRadius;
         IdentifyingAsset = info.SupplyItemAsset;
         if (!buildable.IsStructure)
-            _originalBarricadeState = buildable.GetData<BarricadeData>().barricade.state;
+            _originalBarricadeState = buildable.GetItem<Barricade>().state;
         _refillLoop = loopTickerFactory.CreateTicker(TimeSpan.FromSeconds(60), false, true, OnRefillTick);
     }
 

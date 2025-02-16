@@ -1,6 +1,4 @@
-﻿using SDG.Framework.Utilities;
 using System;
-using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Database.Automation;
@@ -10,7 +8,6 @@ using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Kits;
 
-/// <summary>Max field character limit: <see cref="KitEx.ClassMaxCharLimit"/>.</summary>
 [JsonConverter(typeof(ClassConverter))]
 [Translatable("Kit Class")]
 [ExcludedEnum(None)]
@@ -129,12 +126,67 @@ public enum Class : byte
     [Translatable(Languages.PortugueseBrazil, "Op. Esp.")]
     [Translatable(Languages.Polish, "Specjalista")]
     [Translatable(Languages.ChineseSimplified, "特种部队")]
-    SpecOps = 17,
-    // increment ClassConverter.MaxClass if adding another field!
+    SpecOps = 17
 }
+
+public static class ClassExtensions
+{
+    private static readonly char[] Icons = new char[(int)EnumUtility.GetMaximumValue<Class>() + 1];
+    static ClassExtensions()
+    {
+        Array.Fill(Icons, '±');
+
+        Icons[(int)Class.Squadleader] = '¦';
+        Icons[(int)Class.Rifleman] = '¡';
+        Icons[(int)Class.Medic] = '¢';
+        Icons[(int)Class.Breacher] = '¤';
+        Icons[(int)Class.AutomaticRifleman] = '¥';
+        Icons[(int)Class.Grenadier] = '¬';
+        Icons[(int)Class.MachineGunner] = '«';
+        Icons[(int)Class.LAT] = '®';
+        Icons[(int)Class.HAT] = '¯';
+        Icons[(int)Class.Marksman] = '¨';
+        Icons[(int)Class.Sniper] = '£';
+        Icons[(int)Class.APRifleman] = '©';
+        Icons[(int)Class.CombatEngineer] = 'ª';
+        Icons[(int)Class.Crewman] = '§';
+        Icons[(int)Class.Pilot] = '°';
+        Icons[(int)Class.SpecOps] = '×';
+    }
+
+    public static char GetIcon(this Class @class)
+    {
+        return (int)@class < Icons.Length ? Icons[(int)@class] : Icons[0];
+    }
+
+    public static bool TryParseClass(string val, out Class @class)
+    {
+        if (Enum.TryParse(val, true, out @class))
+            return EnumUtility.ValidateValidField(@class);
+        // checks old values for the enum before renaming.
+        if (val.Equals("AUTOMATIC_RIFLEMAN", StringComparison.OrdinalIgnoreCase))
+            @class = Class.AutomaticRifleman;
+        else if (val.Equals("MACHINE_GUNNER", StringComparison.OrdinalIgnoreCase))
+            @class = Class.MachineGunner;
+        else if (val.Equals("AP_RIFLEMAN", StringComparison.OrdinalIgnoreCase))
+            @class = Class.APRifleman;
+        else if (val.Equals("COMBAT_ENGINEER", StringComparison.OrdinalIgnoreCase))
+            @class = Class.CombatEngineer;
+        else if (val.Equals("SPEC_OPS", StringComparison.OrdinalIgnoreCase))
+            @class = Class.SpecOps;
+        else
+        {
+            @class = default;
+            return false;
+        }
+
+        return true;
+    }
+}
+
 public sealed class ClassConverter : JsonConverter<Class>
 {
-    internal const Class MaxClass = Class.SpecOps;
+    internal static readonly Class MaxClass = EnumUtility.GetMaximumValue<Class>();
     public override Class Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         switch (reader.TokenType)
@@ -147,7 +199,7 @@ public sealed class ClassConverter : JsonConverter<Class>
                 throw new JsonException("Invalid Class value.");
             case JsonTokenType.String:
                 string val = reader.GetString()!;
-                if (KitEx.TryParseClass(val, out Class @class))
+                if (ClassExtensions.TryParseClass(val, out Class @class))
                     return @class;
                 throw new JsonException("Invalid Class value.");
             default:
@@ -157,143 +209,8 @@ public sealed class ClassConverter : JsonConverter<Class>
     public override void Write(Utf8JsonWriter writer, Class value, JsonSerializerOptions options)
     {
         if (value <= MaxClass)
-            writer.WriteStringValue(value.ToString());
+            writer.WriteStringValue(EnumUtility.GetName(value));
         else
             writer.WriteNumberValue((byte)value);
-    }
-}
-public sealed class ClassArrayConverter : JsonConverter<Class[]>
-{
-    private readonly ClassConverter _conv = new ClassConverter();
-    public override Class[] Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-    {
-        if (reader.TokenType != JsonTokenType.StartArray)
-        {
-            return reader.TokenType == JsonTokenType.Null ? null! : [ _conv.Read(ref reader, typeToConvert, options) ];
-        }
-
-        bool pool = GameThread.IsCurrent;
-        List<Class> classes = pool ? ListPool<Class>.claim() : new List<Class>(4);
-        try
-        {
-            while (reader.Read())
-            {
-                if (reader.TokenType == JsonTokenType.EndArray)
-                    break;
-                classes.Add(_conv.Read(ref reader, typeToConvert, options));
-            }
-        }
-        finally
-        {
-            if (pool)
-                ListPool<Class>.release(classes);
-        }
-
-        return classes.ToArray();
-    }
-    public override void Write(Utf8JsonWriter writer, Class[] value, JsonSerializerOptions options)
-    {
-        if (value == null)
-        {
-            writer.WriteNullValue();
-            return;
-        }
-
-        writer.WriteStartArray();
-        for (int i = 0; i < value.Length; ++i)
-        {
-            _conv.Write(writer, value[i], options);
-        }
-        writer.WriteEndArray();
-    }
-}
-public sealed class ClassCollectionConverter : JsonConverter<ICollection<Class>>
-{
-    private readonly ClassConverter _conv = new ClassConverter();
-    public override ICollection<Class> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-    {
-        if (reader.TokenType != JsonTokenType.StartArray)
-        {
-            return reader.TokenType == JsonTokenType.Null ? null! : [ _conv.Read(ref reader, typeToConvert, options) ];
-        }
-
-        bool pool = GameThread.IsCurrent;
-        List<Class> classes = pool ? ListPool<Class>.claim() : new List<Class>(4);
-        try
-        {
-            while (reader.Read())
-            {
-                if (reader.TokenType == JsonTokenType.EndArray)
-                    break;
-                classes.Add(_conv.Read(ref reader, typeToConvert, options));
-            }
-        }
-        finally
-        {
-            if (pool)
-                ListPool<Class>.release(classes);
-        }
-
-        return classes.ToArray();
-    }
-    public override void Write(Utf8JsonWriter writer, ICollection<Class> value, JsonSerializerOptions options)
-    {
-        if (value == null)
-        {
-            writer.WriteNullValue();
-            return;
-        }
-
-        writer.WriteStartArray();
-        foreach (Class @class in value)
-        {
-            _conv.Write(writer, @class, options);
-        }
-        writer.WriteEndArray();
-    }
-}
-public sealed class ClassCollectionReadonlyConverter : JsonConverter<IReadOnlyCollection<Class>>
-{
-    private readonly ClassConverter _conv = new ClassConverter();
-    public override IReadOnlyCollection<Class> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-    {
-        if (reader.TokenType != JsonTokenType.StartArray)
-        {
-            return reader.TokenType == JsonTokenType.Null ? null! : [ _conv.Read(ref reader, typeToConvert, options) ];
-        }
-
-        bool pool = GameThread.IsCurrent;
-        List<Class> classes = pool ? ListPool<Class>.claim() : new List<Class>(4);
-        try
-        {
-            while (reader.Read())
-            {
-                if (reader.TokenType == JsonTokenType.EndArray)
-                    break;
-                classes.Add(_conv.Read(ref reader, typeToConvert, options));
-            }
-        }
-        finally
-        {
-            if (pool)
-                ListPool<Class>.release(classes);
-        }
-
-        return classes.ToArray();
-    }
-    public override void Write(Utf8JsonWriter writer, IReadOnlyCollection<Class> value, JsonSerializerOptions options)
-    {
-        if (value == null)
-        {
-            writer.WriteNullValue();
-            return;
-        }
-
-        writer.WriteStartArray();
-        foreach (Class @class in value)
-        {
-            _conv.Write(writer, @class, options);
-        }
-        writer.WriteEndArray();
     }
 }

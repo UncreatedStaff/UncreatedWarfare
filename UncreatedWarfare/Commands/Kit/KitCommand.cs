@@ -1,7 +1,6 @@
-﻿using System;
+using System;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Skillsets;
 using Uncreated.Warfare.Translations;
@@ -81,6 +80,9 @@ public sealed class KitCommandTranslations : PropertiesTranslationCollection
 
     [TranslationData("Sent to a player when they unbind a hotkey to an item in their kit.")]
     public readonly Translation<byte, Kit> KitHotkeyUnbound = new Translation<byte, Kit>("<#a0ad8e>Unbound slot <#e8e2d1>{0}</color> for <#fff>{1}</color>.", arg1Fmt: Kit.FormatDisplayName);
+
+    [TranslationData("Sent to a player when they try to unbind a hotkey that isn't bound.")]
+    public readonly Translation<byte, Kit> KitHotkeyAlreadyBound = new Translation<byte, Kit>("<#ff8c69>Slot <#e8e2d1>{0}</color> for <#fff>{1}</color> was already bound.", arg1Fmt: Kit.FormatDisplayName);
 
     [TranslationData("Sent to a player when they try to unbind a hotkey that isn't bound.")]
     public readonly Translation<byte, Kit> KitHotkeyNotFound = new Translation<byte, Kit>("<#ff8c69>Slot <#e8e2d1>{0}</color> for <#fff>{1}</color> was not bound.", arg1Fmt: Kit.FormatDisplayName);

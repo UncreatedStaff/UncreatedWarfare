@@ -1,18 +1,17 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using Uncreated.Warfare.Components;
 
 namespace Uncreated.Warfare.Vehicles.WarfareVehicles.Damage;
 
 public class AdvancedVehicleDamageApplier
 {
+    private readonly Queue<AdvancedDamagePending> _damageQueue;
     private readonly ILogger _logger;
-    private Queue<AdvancedDamagePending> _damageQueue;
 
-    public AdvancedVehicleDamageApplier()
+    public AdvancedVehicleDamageApplier(ILogger<AdvancedVehicleDamageApplier> logger)
     {
-        _logger = WarfareModule.Singleton.GlobalLogger;
+        _logger = logger;
         _damageQueue = new Queue<AdvancedDamagePending>();
     }
 
@@ -54,7 +53,7 @@ public class AdvancedVehicleDamageApplier
         if (!colliderTransform.name.StartsWith("damage_"))
             return 1;
 
-        if (!float.TryParse(colliderTransform.name[7..], NumberStyles.Any,
+        if (!float.TryParse(colliderTransform.name.AsSpan(7), NumberStyles.Any,
                 CultureInfo.InvariantCulture, out float multiplier))
             return 1;
 

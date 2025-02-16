@@ -1,4 +1,4 @@
-﻿using DanielWillett.SpeedBytes;
+using DanielWillett.SpeedBytes;
 using SDG.Framework.Utilities;
 using System;
 using System.Collections.Generic;
@@ -180,7 +180,7 @@ public class AssetBan : DurationPunishment
     }
     public bool IsAssetBanned(VehicleType type, bool considerForgiven, bool checkStillActive = true)
     {
-        if (checkStillActive && !IsApplied(considerForgiven))
+        if (checkStillActive && (!ResolvedTimestamp.HasValue || !IsApplied(considerForgiven)))
             return false;
 
         if (!checkStillActive && considerForgiven && (Forgiven || Removed))

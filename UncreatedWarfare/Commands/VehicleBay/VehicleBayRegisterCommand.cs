@@ -1,4 +1,5 @@
 using Uncreated.Warfare.Buildables;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Translations;
@@ -57,7 +58,7 @@ internal sealed class VehicleBayRegisterCommand : IExecutableCommand
         WarfareVehicleInfo? vehicleInfo = _vehicleInfo.GetVehicleInfo(vehicleType.GUID);
         if (vehicleInfo == null)
         {
-            throw Context.Reply(_translations.VehicleNotRegistered, vehicleType.ActionLogDisplay());
+            throw Context.Reply(_translations.VehicleNotRegistered, AssetLink.Create(vehicleType).ToDisplayString());
         }
 
         await _buildableSaver.SaveBuildableAsync(buildable, token);

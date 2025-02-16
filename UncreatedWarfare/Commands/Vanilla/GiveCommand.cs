@@ -1,13 +1,15 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using SDG.Framework.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations.Util;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Commands;
 
@@ -107,8 +109,8 @@ internal sealed class GiveCommand : IExecutableCommand
         {
             if (Context.TryGet(0, out RedirectType type))
             {
-                FactionInfo? kitFaction = _factionDataStore.FindFaction((await Context.Player.Component<KitPlayerComponent>().GetActiveKitAsync(token))?.Faction);
-                
+                FactionInfo? kitFaction = (await Context.Player.Component<KitPlayerComponent>().GetActiveKitAsync(KitInclude.Base, token))?.Faction;
+
                 await UniTask.SwitchToMainThread(token);
                 
                 asset = _assetRedirectService.ResolveRedirect(type, string.Empty, kitFaction, Context.Player.Team, out byte[] state, out byte amt);
@@ -133,7 +135,7 @@ internal sealed class GiveCommand : IExecutableCommand
                 goto foundItem;
             }
             itemName = Context.Get(0)!;
-            asset = UCAssetManager.FindItemAsset(itemName, out similarNamesCount, true);
+            asset = AssetUtility.FindAsset<ItemAsset>(itemName, out similarNamesCount, true);
             if (asset == null)
                 throw Context.ReplyString($"No item found by the name or ID of '<color=#cca69d>{itemName}</color>'", "8f9494");
         }
@@ -149,7 +151,7 @@ internal sealed class GiveCommand : IExecutableCommand
                 }
                 if (Context.TryGet(0, out RedirectType type))
                 {
-                    FactionInfo? kitFaction = _factionDataStore.FindFaction((await Context.Player.Component<KitPlayerComponent>().GetActiveKitAsync(token))?.Faction);
+                    FactionInfo? kitFaction = (await Context.Player.Component<KitPlayerComponent>().GetActiveKitAsync(KitInclude.Base, token))?.Faction;
 
                     await UniTask.SwitchToMainThread(token);
 
@@ -180,7 +182,7 @@ internal sealed class GiveCommand : IExecutableCommand
                 itemName = Context.GetRange(0, Context.ArgumentCount - 1)!;
                 if (Enum.TryParse(itemName, true, out RedirectType type))
                 {
-                    FactionInfo? kitFaction = _factionDataStore.FindFaction((await Context.Player.Component<KitPlayerComponent>().GetActiveKitAsync(token))?.Faction);
+                    FactionInfo? kitFaction = (await Context.Player.Component<KitPlayerComponent>().GetActiveKitAsync(KitInclude.Base, token))?.Faction;
 
                     await UniTask.SwitchToMainThread(token);
 
@@ -192,7 +194,7 @@ internal sealed class GiveCommand : IExecutableCommand
                         goto foundItem;
                     }
                 }
-                asset = UCAssetManager.FindItemAsset(itemName, out similarNamesCount, true);
+                asset = AssetUtility.FindAsset<ItemAsset>(itemName, out similarNamesCount, true);
                 if (asset == null)
                     throw Context.ReplyString($"No item found by the name or ID of '<color=#cca69d>{itemName}</color>'", "8f9494");
             }
@@ -202,7 +204,7 @@ internal sealed class GiveCommand : IExecutableCommand
                 itemName = Context.GetRange(0)!;
                 if (Enum.TryParse(itemName, true, out RedirectType type))
                 {
-                    FactionInfo? kitFaction = _factionDataStore.FindFaction((await Context.Player.Component<KitPlayerComponent>().GetActiveKitAsync(token))?.Faction);
+                    FactionInfo? kitFaction = (await Context.Player.Component<KitPlayerComponent>().GetActiveKitAsync(KitInclude.Base, token))?.Faction;
 
                     await UniTask.SwitchToMainThread(token);
 
@@ -214,7 +216,7 @@ internal sealed class GiveCommand : IExecutableCommand
                         goto foundItem;
                     }
                 }
-                asset = UCAssetManager.FindItemAsset(itemName.Trim(), out similarNamesCount, true);
+                asset = AssetUtility.FindAsset<ItemAsset>(itemName.Trim(), out similarNamesCount, true);
                 if (asset == null)
                     throw Context.ReplyString($"No item found by the name or ID of '<color=#cca69d>{itemName}</color>'", "8f9494");
             }
@@ -233,7 +235,7 @@ internal sealed class GiveCommand : IExecutableCommand
                 ItemManager.dropItem(itemFromID, Context.Player.Position, true, true, true);
         }
 
-        string message = TranslationFormattingUtility.Colorize($"Giving you {(amount == 1 ? "a" : TranslationFormattingUtility.Colorize(amount.ToString(Data.LocalLocale) + "x", "9dc9f5"))} <color=#ffdf91>{asset.itemName}</color> - <color=#a7b6c4>{asset.id}</color>", "bfb9ac");
+        string message = TranslationFormattingUtility.Colorize($"Giving you {(amount == 1 ? "a" : TranslationFormattingUtility.Colorize(amount.ToString(Context.Culture) + "x", "9dc9f5"))} <color=#ffdf91>{asset.itemName}</color> - <color=#a7b6c4>{asset.id}</color>", "bfb9ac");
 
         if (!amountWasValid)
             message += TranslationFormattingUtility.Colorize(" (the amount your tried to put was invalid)", "7f8182");
@@ -241,6 +243,6 @@ internal sealed class GiveCommand : IExecutableCommand
             message += TranslationFormattingUtility.Colorize($" ({similarNamesCount} similarly named items exist)", "7f8182");
 
         Context.ReplyString(message);
-        Context.LogAction(ActionLogType.GiveItem, $"GAVE {amount}x {asset.ActionLogDisplay()}");
+        Context.LogAction(ActionLogType.GiveItem, $"GAVE {amount}x {AssetLink.Create(asset).ToDisplayString()}");
     }
 }

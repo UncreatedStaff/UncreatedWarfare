@@ -1,4 +1,4 @@
-﻿using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Addons;
 using Uncreated.Warfare.Translations.Util;
 

@@ -1,10 +1,10 @@
-﻿using Uncreated.Warfare.Interaction.Commands;
+using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
 
-namespace Uncreated.Warfare.Commands.Group;
+namespace Uncreated.Warfare.Commands;
 
 [Command("group"), MetadataFile]
 internal sealed class GroupCommand : IExecutableCommand

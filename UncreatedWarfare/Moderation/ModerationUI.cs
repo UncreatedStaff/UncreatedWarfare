@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SDG.NetTransport;
 using System;
@@ -11,12 +11,15 @@ using Uncreated.Framework.UI.Patterns;
 using Uncreated.Framework.UI.Presets;
 using Uncreated.Framework.UI.Reflection;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Moderation.Punishments;
 using Uncreated.Warfare.Moderation.Punishments.Presets;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Util.Inventory;
 
 namespace Uncreated.Warfare.Moderation;
 
@@ -27,6 +30,7 @@ public partial class ModerationUI : UnturnedUI
     private readonly IPlayerService _playerService;
     private readonly IUserDataService _userDataService;
     private readonly DatabaseInterface _moderationSql;
+    private readonly IPointsStore _pointsStore;
     private readonly ItemIconProvider _itemIconProvider;
 
     private readonly string? _discordInviteCode;
@@ -188,6 +192,7 @@ public partial class ModerationUI : UnturnedUI
     public ModerationUI(IServiceProvider serviceProvider)
         : base(serviceProvider.GetRequiredService<ILoggerFactory>(), serviceProvider.GetRequiredService<AssetConfiguration>().GetAssetLink<EffectAsset>("UI:ModerationMenu"), staticKey: true)
     {
+        _pointsStore = serviceProvider.GetRequiredService<IPointsStore>();
         _valueFormatter = serviceProvider.GetRequiredService<ITranslationValueFormatter>();
         _playerService = serviceProvider.GetRequiredService<IPlayerService>();
         _userDataService = serviceProvider.GetRequiredService<IUserDataService>();
@@ -304,7 +309,25 @@ public partial class ModerationUI : UnturnedUI
         ModerationActionMiniInputBox1.OnTextUpdated += OnDurationUpdated;
         ModerationActionMiniInputBox2.OnTextUpdated += OnDurationUpdated;
 
+        ElementPatterns.SubscribeAll(ModerationInfoEvidenceEntries.Select(x => x.PreviewImageButton), OnOpenPreviewImageInBrowserClicked);
+        ElementPatterns.SubscribeAll(ModerationInfoEvidenceEntries.Select(x => x.OpenButton), OnOpenPreviewImageInBrowserClicked);
+
         ElementPatterns.SubscribeAll(ModerationActionControls, OnActionControlClicked);
+    }
+
+    private void OnOpenPreviewImageInBrowserClicked(UnturnedButton button, Player player)
+    {
+        int index = Array.FindIndex(ModerationInfoEvidenceEntries, x => x.OpenButton == button || x.PreviewImageButton == button);
+
+        if (index < 0)
+            return;
+
+        ModerationData data = GetOrAddModerationData(player.channel.owner.playerID.steamID.m_SteamID);
+        if (data.SelectedEntry == null || index >= data.Evidence.Count)
+            return;
+
+        Evidence evidence = data.Evidence[index];
+        player.sendBrowserRequest(evidence.Message ?? $"Open evidence {index} in browser.", evidence.URL);
     }
 
     private void OnEvidenceClicked(UnturnedButton button, Player player)
@@ -400,7 +423,7 @@ public partial class ModerationUI : UnturnedUI
         index += data.HistoryPage * ModerationHistory.Length;
         if (data.HistoryView == null || index >= data.HistoryView.Length)
         {
-            Logger!.LogWarning("Invalid history index: {0} (p. {1} / {2}).", index, data.HistoryPage, data.PageCount);
+            GetLogger().LogWarning("Invalid history index: {0} (p. {1} / {2}).", index, data.HistoryPage, data.PageCount);
             return;
         }
         
@@ -517,11 +540,11 @@ public partial class ModerationUI : UnturnedUI
         using CombinedTokenSources tokens = token.CombineTokensIfNeeded(player.DisconnectToken);
         await UniTask.SwitchToMainThread(token);
 
-        // todo player.ModalNeeded = true;
-        player.UnturnedPlayer.enablePluginWidgetFlag(EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur);
+        ModerationData data = GetOrAddModerationData(player);
+        ModalHandle.TryGetModalHandle(player, ref data.Modal);
+
         player.UnturnedPlayer.disablePluginWidgetFlag(EPluginWidgetFlags.Default);
 
-        ModerationData data = GetOrAddModerationData(player);
 
         if (!data.HasModerationUI)
         {
@@ -538,11 +561,13 @@ public partial class ModerationUI : UnturnedUI
     {
         GameThread.AssertCurrent();
 
-        // todo player.ModalNeeded = false;
-        player.UnturnedPlayer.disablePluginWidgetFlag(EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur);
+        ModerationData data = GetOrAddModerationData(player);
+
+        data.Modal.Dispose();
+
         player.UnturnedPlayer.enablePluginWidgetFlag(EPluginWidgetFlags.Default);
         ClearFromPlayer(player.Connection);
-        GetOrAddModerationData(player).HasModerationUI = false;
+        data.HasModerationUI = false;
     }
     public async UniTask SetPage(WarfarePlayer player, Page page, bool isAlreadyInView, CancellationToken token = default)
     {
@@ -739,7 +764,7 @@ public partial class ModerationUI : UnturnedUI
             if (!string.IsNullOrWhiteSpace(searchText))
             {
                 _tempPlayerSearchBuffer.Clear();
-                _playerService.GetOnlinePlayers(searchText, _tempPlayerSearchBuffer, PlayerNameType.PlayerName);
+                _playerService.GetOnlinePlayers(searchText, _tempPlayerSearchBuffer, player.Locale.CultureInfo, PlayerNameType.PlayerName);
                 buffer = _tempPlayerSearchBuffer;
                 clr = true;
             }
@@ -759,18 +784,7 @@ public partial class ModerationUI : UnturnedUI
                     PlayerListEntry entry = ModerationPlayerList[i];
                     entry.SteamId.SetText(connection, listPlayer.Steam64.m_SteamID.ToString(CultureInfo.InvariantCulture));
                     entry.Name.SetText(connection, listPlayer.Names.GetDisplayNameOrPlayerName());
-                    if (_moderationSql.TryGetAvatar(listPlayer.Steam64.m_SteamID, AvatarSize.Small, out string avatarUrl))
-                        entry.ProfilePicture.SetImage(connection, avatarUrl);
-                    else
-                    {
-                        entry.ProfilePicture.SetImage(connection, string.Empty);
-                        UniTask.Create(async () =>
-                        {
-                            string? icon = null;// await listPlayer.GetProfilePictureURL(AvatarSize.Small, player.DisconnectToken);
-                            await UniTask.SwitchToMainThread(player.DisconnectToken);
-                            entry.ProfilePicture.SetImage(player, icon ?? string.Empty);
-                        });
-                    }
+                    entry.ProfilePicture.SetImage(connection, listPlayer.SteamSummary.AvatarUrlSmall);
 
                     if (i >= data.InfoActorCount)
                         entry.Root.SetVisibility(player, true);
@@ -1128,13 +1142,22 @@ public partial class ModerationUI : UnturnedUI
                 LogicModerationInfoUpdateScrollVisual.SetVisibility(c, true);
         });
     }
+
+    private string ModerationEntryTypeToString(ModerationEntryType entryType, LanguageInfo language)
+    {
+        if (entryType is ModerationEntryType.ChatAbuseReport or ModerationEntryType.CheatingReport or ModerationEntryType.GriefingReport or ModerationEntryType.VoiceChatAbuseReport)
+            entryType = ModerationEntryType.Report;
+
+        return _valueFormatter.FormatEnum(entryType, language);
+    }
+
     private void UpdateModerationEntry(WarfarePlayer player, int index, ModerationEntry entry)
     {
         ITransportConnection connection = player.Connection;
 
         ModerationHistoryEntry ui = ModerationHistory[index];
         ModerationEntryType? type = ModerationReflection.GetType(entry.GetType());
-        ui.Type.SetText(connection, type.HasValue ? type.Value.ToString() : entry.GetType().Name);
+        string typeStr = type.HasValue ? ModerationEntryTypeToString(type.Value, player.Locale.LanguageInfo) : entry.GetType().Name;
         string? msg = entry.GetDisplayMessage();
         ui.Message.SetText(connection, string.IsNullOrWhiteSpace(msg) ? "== No Message ==" : msg);
         ui.Reputation.SetText(connection, FormatReputation(entry.Reputation, player.Locale.CultureInfo, false));
@@ -1180,6 +1203,17 @@ public partial class ModerationUI : UnturnedUI
             ui.Admin.SetText(connection, "No Admin");
             ui.AdminProfilePicture.SetImage(connection, Provider.configData.Browser.Icon);
         }
+
+        if (entry.Removed)
+        {
+            typeStr += " <#ccff66>(RM)</color>";
+        }
+        else if (entry is IForgiveableModerationEntry { Forgiven: true })
+        {
+            typeStr += " <#99ff99>(FG)</color>";
+        }
+
+        ui.Type.SetText(connection, typeStr);
 
         if (entry is IDurationModerationEntry duration)
         {
@@ -1254,10 +1288,10 @@ public partial class ModerationUI : UnturnedUI
                     condition += $"(SELECT COUNT(*) FROM `{DatabaseInterface.TableActors}` AS `a` " +
                                  $"WHERE `a`.`{DatabaseInterface.ColumnExternalPrimaryKey}` = `main`.`{DatabaseInterface.ColumnEntriesPrimaryKey}` " +
                                  $"AND " +
-                                 $"EXISTS (SELECT COUNT(*) FROM `{DatabaseInterface.TableUsernames}` AS `u` " +
-                                  $"WHERE `a`.`{DatabaseInterface.ColumnActorsId}`=`u`.`{DatabaseInterface.ColumnUsernamesSteam64}` " +
+                                 $"EXISTS (SELECT COUNT(*) FROM `{DatabaseInterface.TableUserData}` AS `u` " +
+                                  $"WHERE `a`.`{DatabaseInterface.ColumnActorsId}`=`u`.`{DatabaseInterface.ColumnUserDataSteam64}` " +
                                  $"AND " +
-                                  $"(`u`.`{DatabaseInterface.ColumnUsernamesPlayerName}` LIKE {{0}} OR `u`.`{DatabaseInterface.ColumnUsernamesCharacterName}` LIKE {{0}} OR `u`.`{DatabaseInterface.ColumnUsernamesNickName}` LIKE {{0}}))" +
+                                  $"(`u`.`{DatabaseInterface.ColumnUserDataPlayerName}` LIKE {{0}} OR `u`.`{DatabaseInterface.ColumnUserDataCharacterName}` LIKE {{0}} OR `u`.`{DatabaseInterface.ColumnUserDataNickName}` LIKE {{0}} OR `u`.`{DatabaseInterface.ColumnUserDataDisplayName}` LIKE {{0}}))" +
                                  $" > 0)" +
                                 $" > 0";
                     conditionArgs = [ "%" + text + "%" ];
@@ -1538,6 +1572,7 @@ public partial class ModerationUI : UnturnedUI
         internal int HistorySearchUpdateVersion;
         internal int EvidenceVersion;
         internal bool HasModerationUI;
+        internal ModalHandle Modal;
         public CSteamID Player { get; }
         public ModerationUI Owner { get; }
         UnturnedUI IUnturnedUIData.Owner => Owner;

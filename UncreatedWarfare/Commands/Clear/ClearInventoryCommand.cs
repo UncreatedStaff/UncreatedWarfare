@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players;
@@ -19,9 +19,13 @@ internal sealed class ClearInventoryCommand : IExecutableCommand
         _translations = translations.Value;
     }
 
-    public UniTask ExecuteAsync(CancellationToken token)
+    public async UniTask ExecuteAsync(CancellationToken token)
     {
-        if (Context.TryGet(1, out _, out WarfarePlayer? pl) || Context.HasArgs(2))
+        (CSteamID? steamId, WarfarePlayer? pl) = await Context.TryGetPlayer(1).ConfigureAwait(false);
+        
+        await UniTask.SwitchToMainThread(token);
+
+        if (steamId.HasValue || Context.HasArgs(2))
         {
             // clear inv <player>
             if (pl == null)
@@ -43,7 +47,5 @@ internal sealed class ClearInventoryCommand : IExecutableCommand
         {
             throw Context.Reply(_translations.ClearNoPlayerConsole);
         }
-
-        return UniTask.CompletedTask;
     }
 }

@@ -1,4 +1,4 @@
-﻿using Uncreated.Warfare.Kits.Items;
+using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Models.Kits;
 
 namespace Uncreated.Warfare.Players.ItemTracking;

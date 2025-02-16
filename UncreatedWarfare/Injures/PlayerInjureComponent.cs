@@ -14,6 +14,7 @@ using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Cooldowns;
 using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.UI;
@@ -57,6 +58,16 @@ public class PlayerInjureComponent : MonoBehaviour,
     /// Maximum distance from which a medic or injured marker will render.
     /// </summary>
     private const float MarkerRenderDistance = 150;
+
+    /// <summary>
+    /// The amount of time it takes to bleed out with no intervention.
+    /// </summary>
+    private const float InjureStandardBleedoutDuration = 30;
+
+    /// <summary>
+    /// A damage multiplier of incoming damage while injured.
+    /// </summary>
+    private const float InjuredDamageMultiplier = 0.25f;
 
     /// <summary>
     /// Defines which players can revive other players.
@@ -110,7 +121,9 @@ public class PlayerInjureComponent : MonoBehaviour,
     private EventDispatcher _eventDispatcher;
     private AssetConfiguration _assetConfiguration;
     private PointsTranslations _xpTranslations;
+    private PointsService _pointsService;
     private CooldownManager _cooldownManager;
+    private ILogger<PlayerInjureComponent> _logger;
     private PlayersTranslations _playerTranslations;
     public WarfarePlayer Player { get; private set; }
 #nullable restore
@@ -147,6 +160,8 @@ public class PlayerInjureComponent : MonoBehaviour,
         _assetConfiguration = serviceProvider.GetRequiredService<AssetConfiguration>();
         _eventDispatcher = serviceProvider.GetRequiredService<EventDispatcher>();
         _cooldownManager = serviceProvider.GetRequiredService<CooldownManager>();
+        _pointsService = serviceProvider.GetRequiredService<PointsService>();
+        _logger = serviceProvider.GetRequiredService<ILogger<PlayerInjureComponent>>();
         _xpTranslations = serviceProvider.GetRequiredService<TranslationInjection<PointsTranslations>>().Value;
         _playerTranslations = serviceProvider.GetRequiredService<TranslationInjection<PlayersTranslations>>().Value;
 
@@ -232,7 +247,7 @@ public class PlayerInjureComponent : MonoBehaviour,
     /// Injure the current player if they're not injured or dead.
     /// </summary>
     /// <exception cref="GameThreadException"/>
-    public void Injure(in DamagePlayerParameters parameters)
+    public void Injure(ref DamagePlayerParameters parameters)
     {
         GameThread.AssertCurrent();
         WarfarePlayer player = _playerService.GetOnlinePlayer(parameters.player);
@@ -243,7 +258,8 @@ public class PlayerInjureComponent : MonoBehaviour,
         if (State is PlayerHealthState.Injured or PlayerHealthState.Dead)
             return;
 
-        AddInjureModifiers();
+        AddInjureModifiers(ref parameters);
+        _injureParameters = parameters;
 
         ActionLog.Add(ActionLogType.Injured, "by " + (killer == null ? "self" : killer.Steam64.m_SteamID.ToString(CultureInfo.InvariantCulture)), parameters.player.channel.owner.playerID.steamID.m_SteamID);
 
@@ -265,7 +281,7 @@ public class PlayerInjureComponent : MonoBehaviour,
                 .Translate(killer)));
         }
 
-        PlayerInjured args = new PlayerInjured(in _injureParameters)
+        PlayerInjured args = new PlayerInjured(in parameters)
         {
             Player = Player,
             Instigator = killer
@@ -307,14 +323,30 @@ public class PlayerInjureComponent : MonoBehaviour,
         Player.UnturnedPlayer.life.askDamage(byte.MaxValue, Vector3.down, p.cause, p.limb, p.killer, out _, p.trackKill, p.ragdollEffect, false, true);
     }
 
-    private void AddInjureModifiers()
+    private void AddInjureModifiers(ref DamagePlayerParameters parameters)
     {
         Player player = Player.UnturnedPlayer;
         player.equipment.dequip();
 
         // times per second simulate() is ran times bleed damage ticks = how many seconds it will take to lose 1 hp
         float bleedsPerSecond = Time.timeScale / PlayerInput.RATE / Provider.modeConfigData.Players.Bleed_Damage_Ticks;
-        player.life.serverModifyHealth(/* todo UCWarfare.Config.InjuredLifeTimeSeconds */ 30 * bleedsPerSecond - player.life.health);
+
+        float startingHp = InjureStandardBleedoutDuration * bleedsPerSecond - player.life.health;
+
+        parameters.respectArmor = false;
+        parameters.applyGlobalArmorMultiplier = false;
+        if (startingHp > 0.0)
+        {
+            parameters.damage = 0;
+            parameters.times = 1;
+            player.life.askHeal(MathfEx.RoundAndClampToByte(startingHp), false, false);
+        }
+        else
+        {
+            parameters.damage = MathfEx.RoundAndClampToByte(-startingHp);
+            parameters.times = 1;
+        }
+        
         player.life.serverSetBleeding(true);
         player.movement.sendPluginSpeedMultiplier(0.35f);
         player.movement.sendPluginJumpMultiplier(0);
@@ -460,6 +492,12 @@ public class PlayerInjureComponent : MonoBehaviour,
         }
 
         e.IsRevive = true;
+        e.IsEffectiveRevive = !_cooldownManager.HasCooldown(e.Medic, KnownCooldowns.Revive, out _, e.Steam64.m_SteamID);
+
+        if (e.IsEffectiveRevive)
+        {
+            _cooldownManager.StartCooldown(e.Medic, KnownCooldowns.Revive, e.Steam64.m_SteamID);
+        }
     }
 
     [EventListener(Priority = 100, MustRunInstantly = true)]
@@ -485,12 +523,20 @@ public class PlayerInjureComponent : MonoBehaviour,
             return;
 
         // prevent injure/revive spamming to farm XP
-        if (_cooldownManager.Config.ReviveXPCooldown <= 0
-            || !_cooldownManager.HasCooldown(e.Medic, CooldownType.Revive, out _, e.Steam64.m_SteamID))
+        if (e.IsEffectiveRevive)
         {
-            // todo Points.AwardXP(e.Medic, XPReward.Revive);
-            // QuestManager.OnRevive(e.Medic, e.Player);
-            _cooldownManager.StartCooldown(e.Medic, CooldownType.Revive, _cooldownManager.Config.ReviveXPCooldown, e.Steam64.m_SteamID);
+            Task.Run(async () =>
+            {
+                try
+                {
+                    EventInfo xpEvent = _pointsService.GetEvent("RevivedTeammate");
+                    await _pointsService.ApplyEvent(e.Medic, xpEvent.Resolve());
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error adding points to the medic.");
+                }
+            });
         }
         else
         {
@@ -504,6 +550,7 @@ public class PlayerInjureComponent : MonoBehaviour,
     [EventListener(Priority = -100)]
     void IEventListener<DamagePlayerRequested>.HandleEvent(DamagePlayerRequested e, IServiceProvider serviceProvider)
     {
+        ref DamagePlayerParameters parameters = ref e.Parameters;
         if (_isInjured)
         {
             if (Time.realtimeSinceStartup - _injureStart < InjureCooldownBeforeDamageAllowed)
@@ -512,32 +559,36 @@ public class PlayerInjureComponent : MonoBehaviour,
                 return;
             }
 
-            if (e.Parameters.cause == EDeathCause.KILL)
-                return;
-
-            if (e.Parameters.cause != EDeathCause.BLEEDING)
+            if (parameters.cause == EDeathCause.KILL)
             {
+                return;
+            }
+
+            parameters.limb = _injureParameters.limb;
+            parameters.killer = _injureParameters.killer;
+            parameters.bleedingModifier = DamagePlayerParameters.Bleeding.Never;
+            parameters.bonesModifier = DamagePlayerParameters.Bones.None;
+            parameters.times = 1f;
+            parameters.applyGlobalArmorMultiplier = false;
+            parameters.respectArmor = false;
+            parameters.direction = e.Instigator != null ? (Player.Position - e.Instigator.Position).normalized : _injureParameters.direction;
+            parameters.waterModifier = 0;
+            parameters.foodModifier = 0;
+            parameters.hallucinationModifier = 0;
+            parameters.trackKill = _injureParameters.trackKill;
+
+            if (parameters.cause != EDeathCause.BLEEDING)
+            {
+                parameters.cause = _injureParameters.cause;
                 // times per second simulate() is ran times bleed damage ticks = how many seconds it will take to lose 1 hp
                 float bleedsPerSecond = Time.timeScale / PlayerInput.RATE / Provider.modeConfigData.Players.Bleed_Damage_Ticks;
-                e.Parameters = _injureParameters;
-                e.Parameters.damage *= /* todo UCWarfare.Config.InjuredDamageMultiplier */ 0.4f / 10 * bleedsPerSecond * /* todo UCWarfare.Config.InjuredLifeTimeSeconds */ 30;
+                parameters.damage *= /* todo UCWarfare.Config.InjuredDamageMultiplier */ 0.4f / 10 * bleedsPerSecond * /* todo UCWarfare.Config.InjuredLifeTimeSeconds */ 30;
             }
             else
             {
-                e.Parameters.cause = _injureParameters.cause;
-                e.Parameters.limb = _injureParameters.limb;
-                e.Parameters.killer = _injureParameters.killer;
-                e.Parameters.bleedingModifier = DamagePlayerParameters.Bleeding.Never;
-                e.Parameters.bonesModifier = DamagePlayerParameters.Bones.None;
-                e.Parameters.damage = 1f;
-                e.Parameters.times = 1f;
-                e.Parameters.applyGlobalArmorMultiplier = false;
-                e.Parameters.respectArmor = false;
-                e.Parameters.direction = e.Instigator != null ? (Player.Position - e.Instigator.Position).normalized : _injureParameters.direction;
-                e.Parameters.waterModifier = 0;
-                e.Parameters.foodModifier = 0;
-                e.Parameters.hallucinationModifier = 0;
-                e.Parameters.trackKill = _injureParameters.trackKill;
+                parameters.damage = 1f;
+                if (Player.UnturnedPlayer.life.health <= 1)
+                    parameters.cause = _injureParameters.cause;
             }
             return;
         }
@@ -549,12 +600,12 @@ public class PlayerInjureComponent : MonoBehaviour,
             return;
         }
 
-        if (!ShouldDamageInjurePlayer(in e.Parameters))
+        if (!ShouldDamageInjurePlayer(in parameters))
         {
             return;
         }
 
-        InjurePlayerRequested args = new InjurePlayerRequested(in e.Parameters, _playerService)
+        InjurePlayerRequested args = new InjurePlayerRequested(in parameters, _playerService)
         {
             Player = e.Player
         };
@@ -567,8 +618,7 @@ public class PlayerInjureComponent : MonoBehaviour,
         }
 
         e.IsInjure = true;
-        Injure(in e.Parameters);
-        e.Cancel();
+        Injure(ref parameters);
     }
 
     void IEventListener<PlayerDied>.HandleEvent(PlayerDied e, IServiceProvider serviceProvider)

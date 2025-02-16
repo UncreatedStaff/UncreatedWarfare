@@ -1,4 +1,7 @@
-﻿using Uncreated.Warfare.Buildables;
+using Uncreated.Warfare.Buildables;
+using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Events.Models.Buildables;
+using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Events.Models.Structures;
 
@@ -6,7 +9,7 @@ namespace Uncreated.Warfare.Events.Models.Structures;
 /// Event listener args which handles <see cref="StructureDrop.OnSalvageRequested_Global"/>.
 /// </summary>
 [EventModel(SynchronizationContext = EventSynchronizationContext.Global, SynchronizedModelTags = [ "modify_inventory", "modify_world" ])]
-public sealed class SalvageStructureRequested(StructureRegion region) : SalvageRequested(region)
+public sealed class SalvageStructureRequested : SalvageRequested, ISalvageBuildableRequestedEvent
 {
     /// <inheritdoc />
     public override bool IsCancelled => base.IsCancelled || ServersideData.structure.isDead;
@@ -24,7 +27,7 @@ public sealed class SalvageStructureRequested(StructureRegion region) : SalvageR
     /// <summary>
     /// The region the structure was placed in.
     /// </summary>
-    public StructureRegion Region => (StructureRegion)RegionObj;
+    public required StructureRegion Region { get; init; }
 
     /// <summary>
     /// Abstracted <see cref="IBuildable"/> of the structure.
@@ -35,4 +38,12 @@ public sealed class SalvageStructureRequested(StructureRegion region) : SalvageR
     /// The Unity model of the structure.
     /// </summary>
     public override Transform Transform => Structure.model;
+    bool IBaseBuildableDestroyedEvent.WasSalvaged => true;
+    ushort IBaseBuildableDestroyedEvent.VehicleRegionIndex => ushort.MaxValue;
+    bool IBaseBuildableDestroyedEvent.IsOnVehicle => false;
+    EDamageOrigin IBaseBuildableDestroyedEvent.DamageOrigin => EDamageOrigin.Unknown;
+    IAssetLink<ItemAsset>? IBaseBuildableDestroyedEvent.PrimaryAsset => null;
+    IAssetLink<ItemAsset>? IBaseBuildableDestroyedEvent.SecondaryAsset => null;
+    WarfarePlayer IBaseBuildableDestroyedEvent.Instigator => Player;
+    CSteamID IBaseBuildableDestroyedEvent.InstigatorId => Player.Steam64;
 }

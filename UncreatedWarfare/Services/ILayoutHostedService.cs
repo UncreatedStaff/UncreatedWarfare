@@ -1,4 +1,4 @@
-﻿namespace Uncreated.Warfare.Services;
+namespace Uncreated.Warfare.Services;
 
 /// <summary>
 /// Runs at layout session startup and shutdown.

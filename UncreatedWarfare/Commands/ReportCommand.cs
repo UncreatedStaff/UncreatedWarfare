@@ -2,7 +2,6 @@ using DanielWillett.ModularRpcs.Routing;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Interaction.Commands;
@@ -10,6 +9,7 @@ using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Moderation.Discord;
 using Uncreated.Warfare.Moderation.Reports;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Cooldowns;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Players.UI;
@@ -65,20 +65,23 @@ internal sealed class ReportCommand : IExecutableCommand
     public async UniTask ExecuteAsync(CancellationToken token)
     {
         Context.AssertArgs(1);
-        if (!Context.TryGet(0, out CSteamID steam64, out WarfarePlayer? onlinePlayer, _reportService.SelectPlayers))
+        
+        WarfarePlayer? onlinePlayer = await Context.TryGetPlayer(0, _reportService.SelectPlayers).ConfigureAwait(false);
+
+        if (onlinePlayer == null)
         {
             throw Context.Reply(_translations.ReportPlayerNotFound);
         }
 
         // it helps with testing to be able to report yourself in development
 #if RELEASE
-        if (steam64 == Context.CallerId)
+        if (onlinePlayer.Steam64 == Context.CallerId)
         {
             throw Context.Reply(_translations.CannotReportSelf);
         }
 #endif
 
-        if (_cooldownManager.HasCooldown(Context.CallerId, CooldownType.Report, steam64.m_SteamID))
+        if (_cooldownManager.HasCooldown(Context.CallerId, KnownCooldowns.Report, onlinePlayer.Steam64.m_SteamID))
         {
             throw Context.Reply(_translations.ReportCooldown, onlinePlayer);
         }
@@ -102,7 +105,7 @@ internal sealed class ReportCommand : IExecutableCommand
             throw Context.Reply(_translations.ReportNotInDiscordServer);
         }
 
-        Context.Reply(_translations.ReportConfirm, steam64, onlinePlayer);
+        Context.Reply(_translations.ReportConfirm, onlinePlayer.Steam64, onlinePlayer);
 
         CommandWaitResult result = await _commandDispatcher.WaitForCommand(
             typeof(ConfirmCommand),
@@ -131,7 +134,7 @@ internal sealed class ReportCommand : IExecutableCommand
 
         Context.Reply(_translations.ReportStarted);
         (Report report, bool sent) = await _reportService.StartReport(
-            steam64,
+            onlinePlayer.Steam64,
             Context.Caller.GetModerationActor(),
             message,
             reportType,
@@ -150,7 +153,7 @@ internal sealed class ReportCommand : IExecutableCommand
             throw Context.Reply(_translations.ReportNotConnected);
         }
 
-        _cooldownManager.StartCooldown(Context.CallerId, CooldownType.Report, 3600f /* 1 hr */, steam64.m_SteamID);
+        _cooldownManager.StartCooldown(Context.CallerId, KnownCooldowns.Report, onlinePlayer.Steam64.m_SteamID);
 
         string reason = message ?? _translations.TranslationService.ValueFormatter.FormatEnum(report.Type, Context.Language);
 

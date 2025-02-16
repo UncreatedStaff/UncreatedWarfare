@@ -1,7 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Logging;
@@ -17,21 +15,17 @@ namespace Uncreated.Warfare.Commands;
 internal sealed class KitSkillsetsCommand : IExecutableCommand
 {
     private readonly KitCommandTranslations _translations;
-    private readonly KitManager _kitManager;
-    private readonly IKitsDbContext _dbContext;
+    private readonly IKitDataStore _kitDataStore;
     private readonly IPlayerService _playerService;
     private readonly ITranslationValueFormatter _valueFormatter;
     public required CommandContext Context { get; init; }
 
     public KitSkillsetsCommand(IServiceProvider serviceProvider)
     {
-        _kitManager = serviceProvider.GetRequiredService<KitManager>();
+        _kitDataStore = serviceProvider.GetRequiredService<IKitDataStore>();
         _translations = serviceProvider.GetRequiredService<TranslationInjection<KitCommandTranslations>>().Value;
         _valueFormatter = serviceProvider.GetRequiredService<ITranslationValueFormatter>();
         _playerService = serviceProvider.GetRequiredService<IPlayerService>();
-        _dbContext = serviceProvider.GetRequiredService<IKitsDbContext>();
-
-        _dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
     }
 
     public async UniTask ExecuteAsync(CancellationToken token)
@@ -47,7 +41,7 @@ internal sealed class KitSkillsetsCommand : IExecutableCommand
             throw Context.SendHelp();
         }
 
-        Kit? kit = await _kitManager.FindKit(kitId, token, true, set => set.Kits.Include(x => x.Skillsets));
+        Kit? kit = await _kitDataStore.QueryKitAsync(kitId, KitInclude.Translations | KitInclude.Skillsets, token);
         if (kit == null)
         {
             throw Context.Reply(_translations.KitNotFound, kitId);
@@ -80,55 +74,60 @@ internal sealed class KitSkillsetsCommand : IExecutableCommand
         Skillset set = new Skillset(specialty, (byte)skillset, level);
 
         bool anyFound = false;
-        for (int i = 0; i < kit.Skillsets.Count; ++i)
+
+        kit = await _kitDataStore.UpdateKitAsync(kit.Key, KitInclude.Skillsets | KitInclude.Translations, kit =>
         {
-            if (kit.Skillsets[i].Skillset.SkillIndex != set.SkillIndex || kit.Skillsets[i].Skillset.SpecialityIndex != set.SpecialityIndex)
-                continue;
-
-            if (add)
+            KitSkillset skillsetModel;
+            for (int i = 0; i < kit.Skillsets.Count; ++i)
             {
-                kit.Skillsets[i].Skillset = set;
-                _dbContext.Update(kit.Skillsets[i]);
-            }
-            else
-            {
-                _dbContext.Remove(kit.Skillsets[i]);
-            }
+                skillsetModel = kit.Skillsets[i];
+                if (skillsetModel.Skillset.SkillIndex != set.SkillIndex || skillsetModel.Skillset.SpecialityIndex != set.SpecialityIndex)
+                    continue;
 
-            anyFound = true;
-            break;
-        }
+                if (add)
+                {
+                    skillsetModel.Skillset = set;
+                }
+                else
+                {
+                    kit.Skillsets.RemoveAt(i);
+                }
 
-        if (!anyFound)
-        {
-            if (!add)
-            {
-                throw Context.Reply(_translations.KitSkillsetNotFound, set, kit);
+                anyFound = true;
+                break;
             }
 
-            KitSkillset skillsetModel = new KitSkillset
+            if (anyFound || !add)
+                return;
+
+            skillsetModel = new KitSkillset
             {
                 Skillset = set,
-                Kit = kit,
                 KitId = kit.PrimaryKey
             };
 
             kit.Skillsets.Add(skillsetModel);
-            _dbContext.Add(skillsetModel);
+
+        }, Context.CallerId, token).ConfigureAwait(false);
+
+        if (kit == null)
+        {
+            throw Context.Reply(_translations.KitNotFound, kitId);
         }
 
-        _dbContext.Update(kit);
-        await _dbContext.SaveChangesAsync(token).ConfigureAwait(false);
-        await UniTask.SwitchToMainThread(CancellationToken.None);
+        if (!anyFound && !add)
+        {
+            throw Context.Reply(_translations.KitSkillsetNotFound, set, kit);
+        }
 
-        Context.LogAction(add ? ActionLogType.AddSkillset : ActionLogType.RemoveSkillset, set + " ON " + kit.InternalName);
+        Context.LogAction(add ? ActionLogType.AddSkillset : ActionLogType.RemoveSkillset, set + " ON " + kit.Id);
         Context.Reply(add ? _translations.KitSkillsetAdded : _translations.KitSkillsetRemoved, set, kit);
 
         // update skills for all players
         foreach (WarfarePlayer player in _playerService.OnlinePlayers)
         {
             uint? activeKit = player.Component<KitPlayerComponent>().ActiveKitKey;
-            if (!activeKit.HasValue || activeKit.Value != kit.PrimaryKey)
+            if (!activeKit.HasValue || activeKit.Value != kit.Key)
                 continue;
 
             if (add)

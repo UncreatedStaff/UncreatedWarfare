@@ -1,4 +1,4 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using Uncreated.Warfare.Exceptions;
@@ -9,19 +9,26 @@ public static class ReflectionUtility
     /// <summary>
     /// Get an RPC from a game class.
     /// </summary>
+    /// <remarks>Always returns null on non-Unturned environments.</remarks>
     /// <exception cref="ArgumentException"/>
     /// <exception cref="UnturnedRpcNotFoundException">The RPC couldn't be found or isn't the right type.</exception>
     public static TRpcType FindRequiredRpc<TDeclaringType, TRpcType>(string name) where TRpcType : ClientMethodHandle
     {
+        if (!WarfareModule.IsActive)
+            return null!;
         return FindRpc<TDeclaringType, TRpcType>(name) ?? throw new UnturnedRpcNotFoundException(typeof(TDeclaringType), typeof(TRpcType), name);
     }
 
     /// <summary>
     /// Get an RPC from a game class, or <see langword="null"/> if it's not found or isn't the right type.
     /// </summary>
+    /// <remarks>Always returns null on non-Unturned environments.</remarks>
     /// <exception cref="ArgumentException"/>
     public static TRpcType? FindRpc<TDeclaringType, TRpcType>(string name) where TRpcType : ClientMethodHandle
     {
+        if (!WarfareModule.IsActive)
+            return null!;
+
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Name is empty.", nameof(name));
 

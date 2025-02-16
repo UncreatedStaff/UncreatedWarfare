@@ -1,4 +1,4 @@
-﻿using SDG.NetTransport;
+using SDG.NetTransport;
 using StackCleaner;
 using System;
 using Uncreated.Warfare.Interaction.Commands;
@@ -273,7 +273,7 @@ public class ChatService
                 text = TranslationFormattingUtility.CreateIMGUIString(text);
             textColor = TranslationFormattingUtility.ExtractColor(text, out int startIndex, out int length);
             ReadOnlySpan<char> textSpan = text.AsSpan(startIndex, length);
-            ReadOnlySpan<char> truncated = FormattingUtility.TruncateUtf8Bytes(textSpan, MaxMessageSize, out _);
+            ReadOnlySpan<char> truncated = StringUtility.TruncateUtf8Bytes(textSpan, MaxMessageSize, out _);
             if (truncated.Length != textSpan.Length)
             {
                 _logger.LogWarning("Raw text too long for chat message: \"{0}\".", text);
@@ -362,7 +362,7 @@ public class ChatService
         {
             if (player.Save.IMGUI)
                 text = TranslationFormattingUtility.CreateIMGUIString(text);
-            ReadOnlySpan<char> truncated = FormattingUtility.TruncateUtf8Bytes(text, MaxMessageSize, out _);
+            ReadOnlySpan<char> truncated = StringUtility.TruncateUtf8Bytes(text, MaxMessageSize, out _);
             if (truncated.Length != text.Length)
             {
                 _logger.LogWarning("Raw text too long for chat message: \"{0}\".", text);
@@ -1769,7 +1769,7 @@ public class ChatService
     /// </summary>
     private void CheckTranslationLength(LanguageInfo lang, ref string value, Translation translation, ref Color textColor, bool imgui)
     {
-        ReadOnlySpan<char> truncated = FormattingUtility.TruncateUtf8Bytes(value, MaxMessageSize, out _);
+        ReadOnlySpan<char> truncated = StringUtility.TruncateUtf8Bytes(value, MaxMessageSize, out _);
         if (truncated.Length == value.Length)
         {
             return;
@@ -1782,7 +1782,7 @@ public class ChatService
         {
             value = translation.Translate(out textColor, imgui);
 
-            truncated = FormattingUtility.TruncateUtf8Bytes(value, MaxMessageSize, out _);
+            truncated = StringUtility.TruncateUtf8Bytes(value, MaxMessageSize, out _);
             if (truncated.Length == value.Length)
             {
                 return;

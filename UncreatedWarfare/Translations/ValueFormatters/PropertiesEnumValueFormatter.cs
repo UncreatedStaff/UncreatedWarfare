@@ -1,11 +1,11 @@
-﻿using DanielWillett.JavaPropertiesParser;
-using DanielWillett.ReflectionTools;
+using DanielWillett.JavaPropertiesParser;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Translations.Languages;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Translations.ValueFormatters;
 
@@ -145,7 +145,7 @@ public class PropertiesEnumValueFormatter<TEnum> : IEnumFormatter<TEnum> where T
                 {
                     if (!(translationTable ??= new Dictionary<TEnum, string>(16)).TryAdd(enumKeyValue, value))
                     {
-                        _logger.LogWarning("Duplicate enum key for type {0}: \"{1}\".", typeof(TEnum), enumKeyValue.ToString());
+                        _logger.LogWarning("Duplicate enum key for type {0}: \"{1}\".", typeof(TEnum), EnumUtility.GetName(enumKeyValue) ?? enumKeyValue.ToString());
                     }
                 }
                 else
@@ -188,16 +188,18 @@ public class PropertiesEnumValueFormatter<TEnum> : IEnumFormatter<TEnum> where T
 
         if (!writeAll && translationTable == null)
             return;
-        
-        TEnum[] values = (TEnum[])Enum.GetValues(enumType);
+
+        TEnum[] values = EnumUtility.GetEnumValuesArray<TEnum>();;
         foreach (TEnum val in values)
         {
             string? value = null;
-            if (!writeAll && (translationTable == null || !translationTable.TryGetValue(val, out value)))
+            translationTable?.TryGetValue(val, out value);
+            if (!writeAll && value == null)
                 continue;
-            
-            writer.WriteKey(val.ToString());
-            writer.WriteValue(value ?? val.ToString());
+
+            string name = EnumUtility.GetName(val) ?? val.ToString();
+            writer.WriteKey(name);
+            writer.WriteValue(value ?? name);
         }
     }
 }

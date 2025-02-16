@@ -1,6 +1,8 @@
 using System;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using Uncreated.Warfare;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Logging.Formatting;
 
 // ReSharper disable once CheckNamespace
@@ -19,9 +21,56 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="exception">The exception to log.</param>
+    /// <param name="builder">Format string of the log message in message template format. Example: <code>$"User {userName} logged in from {ipAddress}"</code></param>
+    public static void LogDebug(this ILogger logger, EventId eventId, Exception? exception, [InterpolatedStringHandlerArgument("logger")] WarfareDebugLoggerInterpolatedStringHandler builder)
+    {
+        builder.GetResult(out StringParameterList parameterList, out string literal);
+        logger.Log(LogLevel.Debug, eventId, exception, literal, parameterList);
+    }
+
+    /// <summary>
+    /// Formats and writes a debug log message.
+    /// </summary>
+    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
+    /// <param name="eventId">The event id associated with the log.</param>
+    /// <param name="builder">Format string of the log message in message template format. Example: <code>$"User {userName} logged in from {ipAddress}"</code></param>
+    public static void LogDebug(this ILogger logger, EventId eventId, [InterpolatedStringHandlerArgument("logger")] WarfareDebugLoggerInterpolatedStringHandler builder)
+    {
+        builder.GetResult(out StringParameterList parameterList, out string literal);
+        logger.Log(LogLevel.Debug, eventId, null, literal, parameterList);
+    }
+
+    /// <summary>
+    /// Formats and writes a debug log message.
+    /// </summary>
+    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
+    /// <param name="exception">The exception to log.</param>
+    /// <param name="builder">Format string of the log message in message template format. Example: <code>$"User {userName} logged in from {ipAddress}"</code></param>
+    public static void LogDebug(this ILogger logger, Exception? exception, [InterpolatedStringHandlerArgument("logger")] WarfareDebugLoggerInterpolatedStringHandler builder)
+    {
+        builder.GetResult(out StringParameterList parameterList, out string literal);
+        logger.Log(LogLevel.Debug, 0, exception, literal, parameterList);
+    }
+
+    /// <summary>
+    /// Formats and writes a debug log message.
+    /// </summary>
+    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
+    /// <param name="builder">Format string of the log message in message template format. Example: <code>$"User {userName} logged in from {ipAddress}"</code></param>
+    public static void LogDebug(this ILogger logger, [InterpolatedStringHandlerArgument("logger")] WarfareDebugLoggerInterpolatedStringHandler builder)
+    {
+        builder.GetResult(out StringParameterList parameterList, out string literal);
+        logger.Log(LogLevel.Debug, 0, null, literal, parameterList);
+    }
+
+    /// <summary>
+    /// Formats and writes a debug log message.
+    /// </summary>
+    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
+    /// <param name="eventId">The event id associated with the log.</param>
+    /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
     /// <param name="args">An object array that contains zero or more objects to format.</param>
-    /// <example>logger.LogDebug(0, exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogDebug(this ILogger logger, EventId eventId, Exception? exception, string message, params object?[]? args)
     {
@@ -35,7 +84,6 @@ public static class WarfareLoggingExtensions
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
     /// <param name="args">An object array that contains zero or more objects to format.</param>
-    /// <example>logger.LogDebug(0, "Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogDebug(this ILogger logger, EventId eventId, string message, params object?[]? args)
     {
@@ -49,7 +97,6 @@ public static class WarfareLoggingExtensions
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
     /// <param name="args">An object array that contains zero or more objects to format.</param>
-    /// <example>logger.LogDebug(exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogDebug(this ILogger logger, Exception? exception, string message, params object?[]? args)
     {
@@ -62,7 +109,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
     /// <param name="args">An object array that contains zero or more objects to format.</param>
-    /// <example>logger.LogDebug("Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogDebug(this ILogger logger, string message, params object?[]? args)
     {
@@ -76,7 +122,6 @@ public static class WarfareLoggingExtensions
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogDebug(0, exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogDebug(this ILogger logger, EventId eventId, Exception? exception, string message)
     {
@@ -89,7 +134,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogDebug(0, "Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogDebug(this ILogger logger, EventId eventId, string message)
     {
@@ -102,7 +146,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogDebug(exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogDebug(this ILogger logger, Exception? exception, string message)
     {
@@ -114,7 +157,6 @@ public static class WarfareLoggingExtensions
     /// </summary>
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogDebug("Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogDebug(this ILogger logger, string message)
     {
@@ -128,7 +170,6 @@ public static class WarfareLoggingExtensions
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogDebug(0, exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogDebug(this ILogger logger, EventId eventId, Exception? exception, string message, object? arg1)
     {
@@ -141,7 +182,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogDebug(0, "Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogDebug(this ILogger logger, EventId eventId, string message, object? arg1)
     {
@@ -154,7 +194,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogDebug(exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogDebug(this ILogger logger, Exception? exception, string message, object? arg1)
     {
@@ -166,7 +205,6 @@ public static class WarfareLoggingExtensions
     /// </summary>
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogDebug("Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogDebug(this ILogger logger, string message, object? arg1)
     {
@@ -180,7 +218,6 @@ public static class WarfareLoggingExtensions
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogDebug(0, exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogDebug(this ILogger logger, EventId eventId, Exception? exception, string message, object? arg1, object? arg2)
     {
@@ -193,7 +230,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogDebug(0, "Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogDebug(this ILogger logger, EventId eventId, string message, object? arg1, object? arg2)
     {
@@ -206,7 +242,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogDebug(exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogDebug(this ILogger logger, Exception? exception, string message, object? arg1, object? arg2)
     {
@@ -218,7 +253,6 @@ public static class WarfareLoggingExtensions
     /// </summary>
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogDebug("Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogDebug(this ILogger logger, string message, object? arg1, object? arg2)
     {
@@ -232,7 +266,6 @@ public static class WarfareLoggingExtensions
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogDebug(0, exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogDebug(this ILogger logger, EventId eventId, Exception? exception, string message, object? arg1, object? arg2, object? arg3)
     {
@@ -245,7 +278,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogDebug(0, "Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogDebug(this ILogger logger, EventId eventId, string message, object? arg1, object? arg2, object? arg3)
     {
@@ -258,7 +290,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogDebug(exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogDebug(this ILogger logger, Exception? exception, string message, object? arg1, object? arg2, object? arg3)
     {
@@ -270,7 +301,6 @@ public static class WarfareLoggingExtensions
     /// </summary>
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogDebug("Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogDebug(this ILogger logger, string message, object? arg1, object? arg2, object? arg3)
     {
@@ -284,7 +314,6 @@ public static class WarfareLoggingExtensions
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogDebug(0, exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogDebug(this ILogger logger, EventId eventId, Exception? exception, string message, object? arg1, object? arg2, object? arg3, object? arg4)
     {
@@ -297,7 +326,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogDebug(0, "Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogDebug(this ILogger logger, EventId eventId, string message, object? arg1, object? arg2, object? arg3, object? arg4)
     {
@@ -310,7 +338,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogDebug(exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogDebug(this ILogger logger, Exception? exception, string message, object? arg1, object? arg2, object? arg3, object? arg4)
     {
@@ -322,7 +349,6 @@ public static class WarfareLoggingExtensions
     /// </summary>
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogDebug("Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogDebug(this ILogger logger, string message, object? arg1, object? arg2, object? arg3, object? arg4)
     {
@@ -338,9 +364,60 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="exception">The exception to log.</param>
+    /// <param name="builder">Format string of the log message in message template format. Example: <code>$"User {userName} logged in from {ipAddress}"</code></param>
+    [Conditional("DEBUG")]
+    public static void LogConditional(this ILogger logger, EventId eventId, Exception? exception, [InterpolatedStringHandlerArgument("logger")] WarfareDebugLoggerInterpolatedStringHandler builder)
+    {
+        builder.GetResult(out StringParameterList parameterList, out string literal);
+        logger.Log(LogLevel.Debug, eventId, exception, literal, parameterList);
+    }
+
+    /// <summary>
+    /// Formats and writes a debug log message.
+    /// </summary>
+    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
+    /// <param name="eventId">The event id associated with the log.</param>
+    /// <param name="builder">Format string of the log message in message template format. Example: <code>$"User {userName} logged in from {ipAddress}"</code></param>
+    [Conditional("DEBUG")]
+    public static void LogConditional(this ILogger logger, EventId eventId, [InterpolatedStringHandlerArgument("logger")] WarfareDebugLoggerInterpolatedStringHandler builder)
+    {
+        builder.GetResult(out StringParameterList parameterList, out string literal);
+        logger.Log(LogLevel.Debug, eventId, null, literal, parameterList);
+    }
+
+    /// <summary>
+    /// Formats and writes a debug log message.
+    /// </summary>
+    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
+    /// <param name="exception">The exception to log.</param>
+    /// <param name="builder">Format string of the log message in message template format. Example: <code>$"User {userName} logged in from {ipAddress}"</code></param>
+    [Conditional("DEBUG")]
+    public static void LogConditional(this ILogger logger, Exception? exception, [InterpolatedStringHandlerArgument("logger")] WarfareDebugLoggerInterpolatedStringHandler builder)
+    {
+        builder.GetResult(out StringParameterList parameterList, out string literal);
+        logger.Log(LogLevel.Debug, 0, exception, literal, parameterList);
+    }
+
+    /// <summary>
+    /// Formats and writes a debug log message.
+    /// </summary>
+    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
+    /// <param name="builder">Format string of the log message in message template format. Example: <code>$"User {userName} logged in from {ipAddress}"</code></param>
+    [Conditional("DEBUG")]
+    public static void LogConditional(this ILogger logger, [InterpolatedStringHandlerArgument("logger")] WarfareDebugLoggerInterpolatedStringHandler builder)
+    {
+        builder.GetResult(out StringParameterList parameterList, out string literal);
+        logger.Log(LogLevel.Debug, 0, null, literal, parameterList);
+    }
+
+    /// <summary>
+    /// Formats and writes a debug log message.
+    /// </summary>
+    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
+    /// <param name="eventId">The event id associated with the log.</param>
+    /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
     /// <param name="args">An object array that contains zero or more objects to format.</param>
-    /// <example>logger.LogDebug(0, exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     [Conditional("DEBUG")]
     public static void LogConditional(this ILogger logger, EventId eventId, Exception? exception, string message, params object?[]? args)
@@ -355,7 +432,6 @@ public static class WarfareLoggingExtensions
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
     /// <param name="args">An object array that contains zero or more objects to format.</param>
-    /// <example>logger.LogConditional(0, "Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     [Conditional("DEBUG")]
     public static void LogConditional(this ILogger logger, EventId eventId, string message, params object?[]? args)
@@ -370,7 +446,6 @@ public static class WarfareLoggingExtensions
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
     /// <param name="args">An object array that contains zero or more objects to format.</param>
-    /// <example>logger.LogConditional(exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     [Conditional("DEBUG")]
     public static void LogConditional(this ILogger logger, Exception? exception, string message, params object?[]? args)
@@ -384,7 +459,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
     /// <param name="args">An object array that contains zero or more objects to format.</param>
-    /// <example>logger.LogConditional("Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     [Conditional("DEBUG")]
     public static void LogConditional(this ILogger logger, string message, params object?[]? args)
@@ -399,7 +473,6 @@ public static class WarfareLoggingExtensions
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogConditional(0, exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     [Conditional("DEBUG")]
     public static void LogConditional(this ILogger logger, EventId eventId, Exception? exception, string message)
@@ -413,7 +486,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogConditional(0, "Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     [Conditional("DEBUG")]
     public static void LogConditional(this ILogger logger, EventId eventId, string message)
@@ -427,7 +499,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogConditional(exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     [Conditional("DEBUG")]
     public static void LogConditional(this ILogger logger, Exception? exception, string message)
@@ -440,7 +511,6 @@ public static class WarfareLoggingExtensions
     /// </summary>
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogConditional("Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     [Conditional("DEBUG")]
     public static void LogConditional(this ILogger logger, string message)
@@ -455,7 +525,6 @@ public static class WarfareLoggingExtensions
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogConditional(0, exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     [Conditional("DEBUG")]
     public static void LogConditional(this ILogger logger, EventId eventId, Exception? exception, string message, object? arg1)
@@ -469,7 +538,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogConditional(0, "Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     [Conditional("DEBUG")]
     public static void LogConditional(this ILogger logger, EventId eventId, string message, object? arg1)
@@ -483,7 +551,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogConditional(exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     [Conditional("DEBUG")]
     public static void LogConditional(this ILogger logger, Exception? exception, string message, object? arg1)
@@ -496,7 +563,6 @@ public static class WarfareLoggingExtensions
     /// </summary>
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogConditional("Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     [Conditional("DEBUG")]
     public static void LogConditional(this ILogger logger, string message, object? arg1)
@@ -511,7 +577,6 @@ public static class WarfareLoggingExtensions
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogConditional(0, exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     [Conditional("DEBUG")]
     public static void LogConditional(this ILogger logger, EventId eventId, Exception? exception, string message, object? arg1, object? arg2)
@@ -525,7 +590,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogConditional(0, "Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     [Conditional("DEBUG")]
     public static void LogConditional(this ILogger logger, EventId eventId, string message, object? arg1, object? arg2)
@@ -539,7 +603,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogConditional(exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     [Conditional("DEBUG")]
     public static void LogConditional(this ILogger logger, Exception? exception, string message, object? arg1, object? arg2)
@@ -552,7 +615,6 @@ public static class WarfareLoggingExtensions
     /// </summary>
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogConditional("Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     [Conditional("DEBUG")]
     public static void LogConditional(this ILogger logger, string message, object? arg1, object? arg2)
@@ -567,7 +629,6 @@ public static class WarfareLoggingExtensions
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogConditional(0, exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     [Conditional("DEBUG")]
     public static void LogConditional(this ILogger logger, EventId eventId, Exception? exception, string message, object? arg1, object? arg2, object? arg3)
@@ -581,7 +642,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogConditional(0, "Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     [Conditional("DEBUG")]
     public static void LogConditional(this ILogger logger, EventId eventId, string message, object? arg1, object? arg2, object? arg3)
@@ -595,7 +655,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogConditional(exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     [Conditional("DEBUG")]
     public static void LogConditional(this ILogger logger, Exception? exception, string message, object? arg1, object? arg2, object? arg3)
@@ -608,7 +667,6 @@ public static class WarfareLoggingExtensions
     /// </summary>
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogConditional("Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     [Conditional("DEBUG")]
     public static void LogConditional(this ILogger logger, string message, object? arg1, object? arg2, object? arg3)
@@ -623,7 +681,6 @@ public static class WarfareLoggingExtensions
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogConditional(0, exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     [Conditional("DEBUG")]
     public static void LogConditional(this ILogger logger, EventId eventId, Exception? exception, string message, object? arg1, object? arg2, object? arg3, object? arg4)
@@ -637,7 +694,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogConditional(0, "Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     [Conditional("DEBUG")]
     public static void LogConditional(this ILogger logger, EventId eventId, string message, object? arg1, object? arg2, object? arg3, object? arg4)
@@ -651,7 +707,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogConditional(exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     [Conditional("DEBUG")]
     public static void LogConditional(this ILogger logger, Exception? exception, string message, object? arg1, object? arg2, object? arg3, object? arg4)
@@ -664,7 +719,6 @@ public static class WarfareLoggingExtensions
     /// </summary>
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogConditional("Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     [Conditional("DEBUG")]
     public static void LogConditional(this ILogger logger, string message, object? arg1, object? arg2, object? arg3, object? arg4)
@@ -680,9 +734,56 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="exception">The exception to log.</param>
+    /// <param name="builder">Format string of the log message in message template format. Example: <code>$"User {userName} logged in from {ipAddress}"</code></param>
+    public static void LogTrace(this ILogger logger, EventId eventId, Exception? exception, [InterpolatedStringHandlerArgument("logger")] WarfareTraceLoggerInterpolatedStringHandler builder)
+    {
+        builder.GetResult(out StringParameterList parameterList, out string literal);
+        logger.Log(LogLevel.Trace, eventId, exception, literal, parameterList);
+    }
+
+    /// <summary>
+    /// Formats and writes a trace log message.
+    /// </summary>
+    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
+    /// <param name="eventId">The event id associated with the log.</param>
+    /// <param name="builder">Format string of the log message in message template format. Example: <code>$"User {userName} logged in from {ipAddress}"</code></param>
+    public static void LogTrace(this ILogger logger, EventId eventId, [InterpolatedStringHandlerArgument("logger")] WarfareTraceLoggerInterpolatedStringHandler builder)
+    {
+        builder.GetResult(out StringParameterList parameterList, out string literal);
+        logger.Log(LogLevel.Trace, eventId, null, literal, parameterList);
+    }
+
+    /// <summary>
+    /// Formats and writes a trace log message.
+    /// </summary>
+    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
+    /// <param name="exception">The exception to log.</param>
+    /// <param name="builder">Format string of the log message in message template format. Example: <code>$"User {userName} logged in from {ipAddress}"</code></param>
+    public static void LogTrace(this ILogger logger, Exception? exception, [InterpolatedStringHandlerArgument("logger")] WarfareTraceLoggerInterpolatedStringHandler builder)
+    {
+        builder.GetResult(out StringParameterList parameterList, out string literal);
+        logger.Log(LogLevel.Trace, 0, exception, literal, parameterList);
+    }
+
+    /// <summary>
+    /// Formats and writes a trace log message.
+    /// </summary>
+    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
+    /// <param name="builder">Format string of the log message in message template format. Example: <code>$"User {userName} logged in from {ipAddress}"</code></param>
+    public static void LogTrace(this ILogger logger, [InterpolatedStringHandlerArgument("logger")] WarfareTraceLoggerInterpolatedStringHandler builder)
+    {
+        builder.GetResult(out StringParameterList parameterList, out string literal);
+        logger.Log(LogLevel.Trace, 0, null, literal, parameterList);
+    }
+
+    /// <summary>
+    /// Formats and writes a trace log message.
+    /// </summary>
+    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
+    /// <param name="eventId">The event id associated with the log.</param>
+    /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
     /// <param name="args">An object array that contains zero or more objects to format.</param>
-    /// <example>logger.LogTrace(0, exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogTrace(this ILogger logger, EventId eventId, Exception? exception, string message, params object?[]? args)
     {
@@ -696,7 +797,6 @@ public static class WarfareLoggingExtensions
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
     /// <param name="args">An object array that contains zero or more objects to format.</param>
-    /// <example>logger.LogTrace(0, "Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogTrace(this ILogger logger, EventId eventId, string message, params object?[]? args)
     {
@@ -710,7 +810,6 @@ public static class WarfareLoggingExtensions
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
     /// <param name="args">An object array that contains zero or more objects to format.</param>
-    /// <example>logger.LogTrace(exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogTrace(this ILogger logger, Exception? exception, string message, params object?[]? args)
     {
@@ -723,7 +822,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
     /// <param name="args">An object array that contains zero or more objects to format.</param>
-    /// <example>logger.LogTrace("Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogTrace(this ILogger logger, string message, params object?[]? args)
     {
@@ -737,7 +835,6 @@ public static class WarfareLoggingExtensions
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogTrace(0, exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogTrace(this ILogger logger, EventId eventId, Exception? exception, string message)
     {
@@ -750,7 +847,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogTrace(0, "Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogTrace(this ILogger logger, EventId eventId, string message)
     {
@@ -763,7 +859,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogTrace(exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogTrace(this ILogger logger, Exception? exception, string message)
     {
@@ -775,7 +870,6 @@ public static class WarfareLoggingExtensions
     /// </summary>
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogTrace("Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogTrace(this ILogger logger, string message)
     {
@@ -789,7 +883,6 @@ public static class WarfareLoggingExtensions
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogTrace(0, exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogTrace(this ILogger logger, EventId eventId, Exception? exception, string message, object? arg1)
     {
@@ -802,7 +895,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogTrace(0, "Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogTrace(this ILogger logger, EventId eventId, string message, object? arg1)
     {
@@ -815,7 +907,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogTrace(exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogTrace(this ILogger logger, Exception? exception, string message, object? arg1)
     {
@@ -827,7 +918,6 @@ public static class WarfareLoggingExtensions
     /// </summary>
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogTrace("Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogTrace(this ILogger logger, string message, object? arg1)
     {
@@ -841,7 +931,6 @@ public static class WarfareLoggingExtensions
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogTrace(0, exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogTrace(this ILogger logger, EventId eventId, Exception? exception, string message, object? arg1, object? arg2)
     {
@@ -854,7 +943,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogTrace(0, "Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogTrace(this ILogger logger, EventId eventId, string message, object? arg1, object? arg2)
     {
@@ -867,7 +955,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogTrace(exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogTrace(this ILogger logger, Exception? exception, string message, object? arg1, object? arg2)
     {
@@ -879,7 +966,6 @@ public static class WarfareLoggingExtensions
     /// </summary>
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogTrace("Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogTrace(this ILogger logger, string message, object? arg1, object? arg2)
     {
@@ -893,7 +979,6 @@ public static class WarfareLoggingExtensions
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogTrace(0, exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogTrace(this ILogger logger, EventId eventId, Exception? exception, string message, object? arg1, object? arg2, object? arg3)
     {
@@ -906,7 +991,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogTrace(0, "Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogTrace(this ILogger logger, EventId eventId, string message, object? arg1, object? arg2, object? arg3)
     {
@@ -919,7 +1003,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogTrace(exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogTrace(this ILogger logger, Exception? exception, string message, object? arg1, object? arg2, object? arg3)
     {
@@ -931,7 +1014,6 @@ public static class WarfareLoggingExtensions
     /// </summary>
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogTrace("Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogTrace(this ILogger logger, string message, object? arg1, object? arg2, object? arg3)
     {
@@ -945,7 +1027,6 @@ public static class WarfareLoggingExtensions
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogTrace(0, exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogTrace(this ILogger logger, EventId eventId, Exception? exception, string message, object? arg1, object? arg2, object? arg3, object? arg4)
     {
@@ -958,7 +1039,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogTrace(0, "Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogTrace(this ILogger logger, EventId eventId, string message, object? arg1, object? arg2, object? arg3, object? arg4)
     {
@@ -971,7 +1051,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogTrace(exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogTrace(this ILogger logger, Exception? exception, string message, object? arg1, object? arg2, object? arg3, object? arg4)
     {
@@ -983,7 +1062,6 @@ public static class WarfareLoggingExtensions
     /// </summary>
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogTrace("Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogTrace(this ILogger logger, string message, object? arg1, object? arg2, object? arg3, object? arg4)
     {
@@ -993,6 +1071,54 @@ public static class WarfareLoggingExtensions
     //------------------------------------------INFORMATION------------------------------------------//
 
     /// <summary>
+    /// Formats and writes a informational log message.
+    /// </summary>
+    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
+    /// <param name="eventId">The event id associated with the log.</param>
+    /// <param name="exception">The exception to log.</param>
+    /// <param name="builder">Format string of the log message in message template format. Example: <code>$"User {userName} logged in from {ipAddress}"</code></param>
+    public static void LogInformation(this ILogger logger, EventId eventId, Exception? exception, [InterpolatedStringHandlerArgument("logger")] WarfareInformationLoggerInterpolatedStringHandler builder)
+    {
+        builder.GetResult(out StringParameterList parameterList, out string literal);
+        logger.Log(LogLevel.Information, eventId, exception, literal, parameterList);
+    }
+
+    /// <summary>
+    /// Formats and writes a informational log message.
+    /// </summary>
+    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
+    /// <param name="eventId">The event id associated with the log.</param>
+    /// <param name="builder">Format string of the log message in message template format. Example: <code>$"User {userName} logged in from {ipAddress}"</code></param>
+    public static void LogInformation(this ILogger logger, EventId eventId, [InterpolatedStringHandlerArgument("logger")] WarfareInformationLoggerInterpolatedStringHandler builder)
+    {
+        builder.GetResult(out StringParameterList parameterList, out string literal);
+        logger.Log(LogLevel.Information, eventId, null, literal, parameterList);
+    }
+
+    /// <summary>
+    /// Formats and writes a informational log message.
+    /// </summary>
+    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
+    /// <param name="exception">The exception to log.</param>
+    /// <param name="builder">Format string of the log message in message template format. Example: <code>$"User {userName} logged in from {ipAddress}"</code></param>
+    public static void LogInformation(this ILogger logger, Exception? exception, [InterpolatedStringHandlerArgument("logger")] WarfareInformationLoggerInterpolatedStringHandler builder)
+    {
+        builder.GetResult(out StringParameterList parameterList, out string literal);
+        logger.Log(LogLevel.Information, 0, exception, literal, parameterList);
+    }
+
+    /// <summary>
+    /// Formats and writes a informational log message.
+    /// </summary>
+    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
+    /// <param name="builder">Format string of the log message in message template format. Example: <code>$"User {userName} logged in from {ipAddress}"</code></param>
+    public static void LogInformation(this ILogger logger, [InterpolatedStringHandlerArgument("logger")] WarfareInformationLoggerInterpolatedStringHandler builder)
+    {
+        builder.GetResult(out StringParameterList parameterList, out string literal);
+        logger.Log(LogLevel.Information, 0, null, literal, parameterList);
+    }
+
+    /// <summary>
     /// Formats and writes an informational log message.
     /// </summary>
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
@@ -1000,7 +1126,6 @@ public static class WarfareLoggingExtensions
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
     /// <param name="args">An object array that contains zero or more objects to format.</param>
-    /// <example>logger.LogInformation(0, exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogInformation(this ILogger logger, EventId eventId, Exception? exception, string message, params object?[]? args)
     {
@@ -1014,7 +1139,6 @@ public static class WarfareLoggingExtensions
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
     /// <param name="args">An object array that contains zero or more objects to format.</param>
-    /// <example>logger.LogInformation(0, "Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogInformation(this ILogger logger, EventId eventId, string message, params object?[]? args)
     {
@@ -1028,7 +1152,6 @@ public static class WarfareLoggingExtensions
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
     /// <param name="args">An object array that contains zero or more objects to format.</param>
-    /// <example>logger.LogInformation(exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogInformation(this ILogger logger, Exception? exception, string message, params object?[]? args)
     {
@@ -1041,7 +1164,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
     /// <param name="args">An object array that contains zero or more objects to format.</param>
-    /// <example>logger.LogInformation("Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogInformation(this ILogger logger, string message, params object?[]? args)
     {
@@ -1055,7 +1177,6 @@ public static class WarfareLoggingExtensions
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogInformation(0, exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogInformation(this ILogger logger, EventId eventId, Exception? exception, string message)
     {
@@ -1068,7 +1189,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogInformation(0, "Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogInformation(this ILogger logger, EventId eventId, string message)
     {
@@ -1081,7 +1201,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogInformation(exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogInformation(this ILogger logger, Exception? exception, string message)
     {
@@ -1093,7 +1212,6 @@ public static class WarfareLoggingExtensions
     /// </summary>
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogInformation("Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogInformation(this ILogger logger, string message)
     {
@@ -1107,7 +1225,6 @@ public static class WarfareLoggingExtensions
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogInformation(0, exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogInformation(this ILogger logger, EventId eventId, Exception? exception, string message, object? arg1)
     {
@@ -1120,7 +1237,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogInformation(0, "Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogInformation(this ILogger logger, EventId eventId, string message, object? arg1)
     {
@@ -1133,7 +1249,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogInformation(exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogInformation(this ILogger logger, Exception? exception, string message, object? arg1)
     {
@@ -1145,7 +1260,6 @@ public static class WarfareLoggingExtensions
     /// </summary>
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogInformation("Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogInformation(this ILogger logger, string message, object? arg1)
     {
@@ -1159,7 +1273,6 @@ public static class WarfareLoggingExtensions
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogInformation(0, exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogInformation(this ILogger logger, EventId eventId, Exception? exception, string message, object? arg1, object? arg2)
     {
@@ -1172,7 +1285,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogInformation(0, "Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogInformation(this ILogger logger, EventId eventId, string message, object? arg1, object? arg2)
     {
@@ -1185,7 +1297,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogInformation(exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogInformation(this ILogger logger, Exception? exception, string message, object? arg1, object? arg2)
     {
@@ -1197,7 +1308,6 @@ public static class WarfareLoggingExtensions
     /// </summary>
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogInformation("Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogInformation(this ILogger logger, string message, object? arg1, object? arg2)
     {
@@ -1211,7 +1321,6 @@ public static class WarfareLoggingExtensions
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogInformation(0, exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogInformation(this ILogger logger, EventId eventId, Exception? exception, string message, object? arg1, object? arg2, object? arg3)
     {
@@ -1224,7 +1333,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogInformation(0, "Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogInformation(this ILogger logger, EventId eventId, string message, object? arg1, object? arg2, object? arg3)
     {
@@ -1237,7 +1345,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogInformation(exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogInformation(this ILogger logger, Exception? exception, string message, object? arg1, object? arg2, object? arg3)
     {
@@ -1249,7 +1356,6 @@ public static class WarfareLoggingExtensions
     /// </summary>
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogInformation("Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogInformation(this ILogger logger, string message, object? arg1, object? arg2, object? arg3)
     {
@@ -1263,7 +1369,6 @@ public static class WarfareLoggingExtensions
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogInformation(0, exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogInformation(this ILogger logger, EventId eventId, Exception? exception, string message, object? arg1, object? arg2, object? arg3, object? arg4)
     {
@@ -1276,7 +1381,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogInformation(0, "Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogInformation(this ILogger logger, EventId eventId, string message, object? arg1, object? arg2, object? arg3, object? arg4)
     {
@@ -1289,7 +1393,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogInformation(exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogInformation(this ILogger logger, Exception? exception, string message, object? arg1, object? arg2, object? arg3, object? arg4)
     {
@@ -1301,7 +1404,6 @@ public static class WarfareLoggingExtensions
     /// </summary>
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogInformation("Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogInformation(this ILogger logger, string message, object? arg1, object? arg2, object? arg3, object? arg4)
     {
@@ -1316,9 +1418,56 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="exception">The exception to log.</param>
+    /// <param name="builder">Format string of the log message in message template format. Example: <code>$"User {userName} logged in from {ipAddress}"</code></param>
+    public static void LogWarning(this ILogger logger, EventId eventId, Exception? exception, [InterpolatedStringHandlerArgument("logger")] WarfareWarningLoggerInterpolatedStringHandler builder)
+    {
+        builder.GetResult(out StringParameterList parameterList, out string literal);
+        logger.Log(LogLevel.Warning, eventId, exception, literal, parameterList);
+    }
+
+    /// <summary>
+    /// Formats and writes a warning log message.
+    /// </summary>
+    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
+    /// <param name="eventId">The event id associated with the log.</param>
+    /// <param name="builder">Format string of the log message in message template format. Example: <code>$"User {userName} logged in from {ipAddress}"</code></param>
+    public static void LogWarning(this ILogger logger, EventId eventId, [InterpolatedStringHandlerArgument("logger")] WarfareWarningLoggerInterpolatedStringHandler builder)
+    {
+        builder.GetResult(out StringParameterList parameterList, out string literal);
+        logger.Log(LogLevel.Warning, eventId, null, literal, parameterList);
+    }
+
+    /// <summary>
+    /// Formats and writes a warning log message.
+    /// </summary>
+    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
+    /// <param name="exception">The exception to log.</param>
+    /// <param name="builder">Format string of the log message in message template format. Example: <code>$"User {userName} logged in from {ipAddress}"</code></param>
+    public static void LogWarning(this ILogger logger, Exception? exception, [InterpolatedStringHandlerArgument("logger")] WarfareWarningLoggerInterpolatedStringHandler builder)
+    {
+        builder.GetResult(out StringParameterList parameterList, out string literal);
+        logger.Log(LogLevel.Warning, 0, exception, literal, parameterList);
+    }
+
+    /// <summary>
+    /// Formats and writes a warning log message.
+    /// </summary>
+    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
+    /// <param name="builder">Format string of the log message in message template format. Example: <code>$"User {userName} logged in from {ipAddress}"</code></param>
+    public static void LogWarning(this ILogger logger, [InterpolatedStringHandlerArgument("logger")] WarfareWarningLoggerInterpolatedStringHandler builder)
+    {
+        builder.GetResult(out StringParameterList parameterList, out string literal);
+        logger.Log(LogLevel.Warning, 0, null, literal, parameterList);
+    }
+
+    /// <summary>
+    /// Formats and writes a warning log message.
+    /// </summary>
+    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
+    /// <param name="eventId">The event id associated with the log.</param>
+    /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
     /// <param name="args">An object array that contains zero or more objects to format.</param>
-    /// <example>logger.LogWarning(0, exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogWarning(this ILogger logger, EventId eventId, Exception? exception, string message, params object?[]? args)
     {
@@ -1332,7 +1481,6 @@ public static class WarfareLoggingExtensions
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
     /// <param name="args">An object array that contains zero or more objects to format.</param>
-    /// <example>logger.LogWarning(0, "Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogWarning(this ILogger logger, EventId eventId, string message, params object?[]? args)
     {
@@ -1346,7 +1494,6 @@ public static class WarfareLoggingExtensions
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
     /// <param name="args">An object array that contains zero or more objects to format.</param>
-    /// <example>logger.LogWarning(exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogWarning(this ILogger logger, Exception? exception, string message, params object?[]? args)
     {
@@ -1359,7 +1506,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
     /// <param name="args">An object array that contains zero or more objects to format.</param>
-    /// <example>logger.LogWarning("Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogWarning(this ILogger logger, string message, params object?[]? args)
     {
@@ -1373,7 +1519,6 @@ public static class WarfareLoggingExtensions
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogWarning(0, exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogWarning(this ILogger logger, EventId eventId, Exception? exception, string message)
     {
@@ -1386,7 +1531,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogWarning(0, "Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogWarning(this ILogger logger, EventId eventId, string message)
     {
@@ -1399,7 +1543,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogWarning(exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogWarning(this ILogger logger, Exception? exception, string message)
     {
@@ -1411,7 +1554,6 @@ public static class WarfareLoggingExtensions
     /// </summary>
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogWarning("Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogWarning(this ILogger logger, string message)
     {
@@ -1425,7 +1567,6 @@ public static class WarfareLoggingExtensions
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogWarning(0, exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogWarning(this ILogger logger, EventId eventId, Exception? exception, string message, object? arg1)
     {
@@ -1438,7 +1579,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogWarning(0, "Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogWarning(this ILogger logger, EventId eventId, string message, object? arg1)
     {
@@ -1451,7 +1591,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogWarning(exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogWarning(this ILogger logger, Exception? exception, string message, object? arg1)
     {
@@ -1463,7 +1602,6 @@ public static class WarfareLoggingExtensions
     /// </summary>
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogWarning("Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogWarning(this ILogger logger, string message, object? arg1)
     {
@@ -1477,7 +1615,6 @@ public static class WarfareLoggingExtensions
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogWarning(0, exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogWarning(this ILogger logger, EventId eventId, Exception? exception, string message, object? arg1, object? arg2)
     {
@@ -1490,7 +1627,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogWarning(0, "Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogWarning(this ILogger logger, EventId eventId, string message, object? arg1, object? arg2)
     {
@@ -1503,7 +1639,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogWarning(exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogWarning(this ILogger logger, Exception? exception, string message, object? arg1, object? arg2)
     {
@@ -1515,7 +1650,6 @@ public static class WarfareLoggingExtensions
     /// </summary>
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogWarning("Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogWarning(this ILogger logger, string message, object? arg1, object? arg2)
     {
@@ -1529,7 +1663,6 @@ public static class WarfareLoggingExtensions
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogWarning(0, exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogWarning(this ILogger logger, EventId eventId, Exception? exception, string message, object? arg1, object? arg2, object? arg3)
     {
@@ -1542,7 +1675,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogWarning(0, "Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogWarning(this ILogger logger, EventId eventId, string message, object? arg1, object? arg2, object? arg3)
     {
@@ -1555,7 +1687,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogWarning(exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogWarning(this ILogger logger, Exception? exception, string message, object? arg1, object? arg2, object? arg3)
     {
@@ -1567,7 +1698,6 @@ public static class WarfareLoggingExtensions
     /// </summary>
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogWarning("Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogWarning(this ILogger logger, string message, object? arg1, object? arg2, object? arg3)
     {
@@ -1581,7 +1711,6 @@ public static class WarfareLoggingExtensions
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogWarning(0, exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogWarning(this ILogger logger, EventId eventId, Exception? exception, string message, object? arg1, object? arg2, object? arg3, object? arg4)
     {
@@ -1594,7 +1723,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogWarning(0, "Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogWarning(this ILogger logger, EventId eventId, string message, object? arg1, object? arg2, object? arg3, object? arg4)
     {
@@ -1607,7 +1735,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogWarning(exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogWarning(this ILogger logger, Exception? exception, string message, object? arg1, object? arg2, object? arg3, object? arg4)
     {
@@ -1619,7 +1746,6 @@ public static class WarfareLoggingExtensions
     /// </summary>
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogWarning("Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogWarning(this ILogger logger, string message, object? arg1, object? arg2, object? arg3, object? arg4)
     {
@@ -1629,6 +1755,54 @@ public static class WarfareLoggingExtensions
     //------------------------------------------ERROR------------------------------------------//
 
     /// <summary>
+    /// Formats and writes a error log message.
+    /// </summary>
+    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
+    /// <param name="eventId">The event id associated with the log.</param>
+    /// <param name="exception">The exception to log.</param>
+    /// <param name="builder">Format string of the log message in message template format. Example: <code>$"User {userName} logged in from {ipAddress}"</code></param>
+    public static void LogError(this ILogger logger, EventId eventId, Exception? exception, [InterpolatedStringHandlerArgument("logger")] WarfareErrorLoggerInterpolatedStringHandler builder)
+    {
+        builder.GetResult(out StringParameterList parameterList, out string literal);
+        logger.Log(LogLevel.Error, eventId, exception, literal, parameterList);
+    }
+
+    /// <summary>
+    /// Formats and writes a error log message.
+    /// </summary>
+    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
+    /// <param name="eventId">The event id associated with the log.</param>
+    /// <param name="builder">Format string of the log message in message template format. Example: <code>$"User {userName} logged in from {ipAddress}"</code></param>
+    public static void LogError(this ILogger logger, EventId eventId, [InterpolatedStringHandlerArgument("logger")] WarfareErrorLoggerInterpolatedStringHandler builder)
+    {
+        builder.GetResult(out StringParameterList parameterList, out string literal);
+        logger.Log(LogLevel.Error, eventId, null, literal, parameterList);
+    }
+
+    /// <summary>
+    /// Formats and writes a error log message.
+    /// </summary>
+    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
+    /// <param name="exception">The exception to log.</param>
+    /// <param name="builder">Format string of the log message in message template format. Example: <code>$"User {userName} logged in from {ipAddress}"</code></param>
+    public static void LogError(this ILogger logger, Exception? exception, [InterpolatedStringHandlerArgument("logger")] WarfareErrorLoggerInterpolatedStringHandler builder)
+    {
+        builder.GetResult(out StringParameterList parameterList, out string literal);
+        logger.Log(LogLevel.Error, 0, exception, literal, parameterList);
+    }
+
+    /// <summary>
+    /// Formats and writes a error log message.
+    /// </summary>
+    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
+    /// <param name="builder">Format string of the log message in message template format. Example: <code>$"User {userName} logged in from {ipAddress}"</code></param>
+    public static void LogError(this ILogger logger, [InterpolatedStringHandlerArgument("logger")] WarfareErrorLoggerInterpolatedStringHandler builder)
+    {
+        builder.GetResult(out StringParameterList parameterList, out string literal);
+        logger.Log(LogLevel.Error, 0, null, literal, parameterList);
+    }
+
+    /// <summary>
     /// Formats and writes an error log message.
     /// </summary>
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
@@ -1636,7 +1810,6 @@ public static class WarfareLoggingExtensions
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
     /// <param name="args">An object array that contains zero or more objects to format.</param>
-    /// <example>logger.LogError(0, exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogError(this ILogger logger, EventId eventId, Exception? exception, string message, params object?[]? args)
     {
@@ -1650,7 +1823,6 @@ public static class WarfareLoggingExtensions
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
     /// <param name="args">An object array that contains zero or more objects to format.</param>
-    /// <example>logger.LogError(0, "Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogError(this ILogger logger, EventId eventId, string message, params object?[]? args)
     {
@@ -1664,7 +1836,6 @@ public static class WarfareLoggingExtensions
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
     /// <param name="args">An object array that contains zero or more objects to format.</param>
-    /// <example>logger.LogError(exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogError(this ILogger logger, Exception? exception, string message, params object?[]? args)
     {
@@ -1677,7 +1848,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
     /// <param name="args">An object array that contains zero or more objects to format.</param>
-    /// <example>logger.LogError("Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogError(this ILogger logger, string message, params object?[]? args)
     {
@@ -1691,7 +1861,6 @@ public static class WarfareLoggingExtensions
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogError(0, exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogError(this ILogger logger, EventId eventId, Exception? exception, string message)
     {
@@ -1704,7 +1873,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogError(0, "Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogError(this ILogger logger, EventId eventId, string message)
     {
@@ -1717,7 +1885,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogError(exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogError(this ILogger logger, Exception? exception, string message)
     {
@@ -1729,7 +1896,6 @@ public static class WarfareLoggingExtensions
     /// </summary>
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogError("Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogError(this ILogger logger, string message)
     {
@@ -1743,7 +1909,6 @@ public static class WarfareLoggingExtensions
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogError(0, exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogError(this ILogger logger, EventId eventId, Exception? exception, string message, object? arg1)
     {
@@ -1756,7 +1921,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogError(0, "Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogError(this ILogger logger, EventId eventId, string message, object? arg1)
     {
@@ -1769,7 +1933,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogError(exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogError(this ILogger logger, Exception? exception, string message, object? arg1)
     {
@@ -1781,7 +1944,6 @@ public static class WarfareLoggingExtensions
     /// </summary>
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogError("Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogError(this ILogger logger, string message, object? arg1)
     {
@@ -1795,7 +1957,6 @@ public static class WarfareLoggingExtensions
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogError(0, exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogError(this ILogger logger, EventId eventId, Exception? exception, string message, object? arg1, object? arg2)
     {
@@ -1808,7 +1969,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogError(0, "Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogError(this ILogger logger, EventId eventId, string message, object? arg1, object? arg2)
     {
@@ -1821,7 +1981,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogError(exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogError(this ILogger logger, Exception? exception, string message, object? arg1, object? arg2)
     {
@@ -1833,7 +1992,6 @@ public static class WarfareLoggingExtensions
     /// </summary>
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogError("Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogError(this ILogger logger, string message, object? arg1, object? arg2)
     {
@@ -1847,7 +2005,6 @@ public static class WarfareLoggingExtensions
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogError(0, exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogError(this ILogger logger, EventId eventId, Exception? exception, string message, object? arg1, object? arg2, object? arg3)
     {
@@ -1860,7 +2017,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogError(0, "Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogError(this ILogger logger, EventId eventId, string message, object? arg1, object? arg2, object? arg3)
     {
@@ -1873,7 +2029,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogError(exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogError(this ILogger logger, Exception? exception, string message, object? arg1, object? arg2, object? arg3)
     {
@@ -1885,7 +2040,6 @@ public static class WarfareLoggingExtensions
     /// </summary>
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogError("Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogError(this ILogger logger, string message, object? arg1, object? arg2, object? arg3)
     {
@@ -1899,7 +2053,6 @@ public static class WarfareLoggingExtensions
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogError(0, exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogError(this ILogger logger, EventId eventId, Exception? exception, string message, object? arg1, object? arg2, object? arg3, object? arg4)
     {
@@ -1912,7 +2065,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogError(0, "Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogError(this ILogger logger, EventId eventId, string message, object? arg1, object? arg2, object? arg3, object? arg4)
     {
@@ -1925,7 +2077,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogError(exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogError(this ILogger logger, Exception? exception, string message, object? arg1, object? arg2, object? arg3, object? arg4)
     {
@@ -1937,7 +2088,6 @@ public static class WarfareLoggingExtensions
     /// </summary>
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogError("Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogError(this ILogger logger, string message, object? arg1, object? arg2, object? arg3, object? arg4)
     {
@@ -1952,9 +2102,56 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="exception">The exception to log.</param>
+    /// <param name="builder">Format string of the log message in message template format. Example: <code>$"User {userName} logged in from {ipAddress}"</code></param>
+    public static void LogCritical(this ILogger logger, EventId eventId, Exception? exception, [InterpolatedStringHandlerArgument("logger")] WarfareCriticalLoggerInterpolatedStringHandler builder)
+    {
+        builder.GetResult(out StringParameterList parameterList, out string literal);
+        logger.Log(LogLevel.Critical, eventId, exception, literal, parameterList);
+    }
+
+    /// <summary>
+    /// Formats and writes a critical log message.
+    /// </summary>
+    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
+    /// <param name="eventId">The event id associated with the log.</param>
+    /// <param name="builder">Format string of the log message in message template format. Example: <code>$"User {userName} logged in from {ipAddress}"</code></param>
+    public static void LogCritical(this ILogger logger, EventId eventId, [InterpolatedStringHandlerArgument("logger")] WarfareCriticalLoggerInterpolatedStringHandler builder)
+    {
+        builder.GetResult(out StringParameterList parameterList, out string literal);
+        logger.Log(LogLevel.Critical, eventId, null, literal, parameterList);
+    }
+
+    /// <summary>
+    /// Formats and writes a critical log message.
+    /// </summary>
+    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
+    /// <param name="exception">The exception to log.</param>
+    /// <param name="builder">Format string of the log message in message template format. Example: <code>$"User {userName} logged in from {ipAddress}"</code></param>
+    public static void LogCritical(this ILogger logger, Exception? exception, [InterpolatedStringHandlerArgument("logger")] WarfareCriticalLoggerInterpolatedStringHandler builder)
+    {
+        builder.GetResult(out StringParameterList parameterList, out string literal);
+        logger.Log(LogLevel.Critical, 0, exception, literal, parameterList);
+    }
+
+    /// <summary>
+    /// Formats and writes a critical log message.
+    /// </summary>
+    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
+    /// <param name="builder">Format string of the log message in message template format. Example: <code>$"User {userName} logged in from {ipAddress}"</code></param>
+    public static void LogCritical(this ILogger logger, [InterpolatedStringHandlerArgument("logger")] WarfareCriticalLoggerInterpolatedStringHandler builder)
+    {
+        builder.GetResult(out StringParameterList parameterList, out string literal);
+        logger.Log(LogLevel.Critical, 0, null, literal, parameterList);
+    }
+
+    /// <summary>
+    /// Formats and writes a critical log message.
+    /// </summary>
+    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
+    /// <param name="eventId">The event id associated with the log.</param>
+    /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
     /// <param name="args">An object array that contains zero or more objects to format.</param>
-    /// <example>logger.LogCritical(0, exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogCritical(this ILogger logger, EventId eventId, Exception? exception, string message, params object?[]? args)
     {
@@ -1968,7 +2165,6 @@ public static class WarfareLoggingExtensions
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
     /// <param name="args">An object array that contains zero or more objects to format.</param>
-    /// <example>logger.LogCritical(0, "Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogCritical(this ILogger logger, EventId eventId, string message, params object?[]? args)
     {
@@ -1982,7 +2178,6 @@ public static class WarfareLoggingExtensions
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
     /// <param name="args">An object array that contains zero or more objects to format.</param>
-    /// <example>logger.LogCritical(exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogCritical(this ILogger logger, Exception? exception, string message, params object?[]? args)
     {
@@ -1995,7 +2190,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
     /// <param name="args">An object array that contains zero or more objects to format.</param>
-    /// <example>logger.LogCritical("Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogCritical(this ILogger logger, string message, params object?[]? args)
     {
@@ -2009,7 +2203,6 @@ public static class WarfareLoggingExtensions
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogCritical(0, exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogCritical(this ILogger logger, EventId eventId, Exception? exception, string message)
     {
@@ -2022,7 +2215,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogCritical(0, "Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogCritical(this ILogger logger, EventId eventId, string message)
     {
@@ -2035,7 +2227,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogCritical(exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogCritical(this ILogger logger, Exception? exception, string message)
     {
@@ -2047,7 +2238,6 @@ public static class WarfareLoggingExtensions
     /// </summary>
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogCritical("Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogCritical(this ILogger logger, string message)
     {
@@ -2061,7 +2251,6 @@ public static class WarfareLoggingExtensions
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogCritical(0, exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogCritical(this ILogger logger, EventId eventId, Exception? exception, string message, object? arg1)
     {
@@ -2074,7 +2263,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogCritical(0, "Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogCritical(this ILogger logger, EventId eventId, string message, object? arg1)
     {
@@ -2087,7 +2275,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogCritical(exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogCritical(this ILogger logger, Exception? exception, string message, object? arg1)
     {
@@ -2099,7 +2286,6 @@ public static class WarfareLoggingExtensions
     /// </summary>
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogCritical("Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogCritical(this ILogger logger, string message, object? arg1)
     {
@@ -2113,7 +2299,6 @@ public static class WarfareLoggingExtensions
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogCritical(0, exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogCritical(this ILogger logger, EventId eventId, Exception? exception, string message, object? arg1, object? arg2)
     {
@@ -2126,7 +2311,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogCritical(0, "Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogCritical(this ILogger logger, EventId eventId, string message, object? arg1, object? arg2)
     {
@@ -2139,7 +2323,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogCritical(exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogCritical(this ILogger logger, Exception? exception, string message, object? arg1, object? arg2)
     {
@@ -2151,7 +2334,6 @@ public static class WarfareLoggingExtensions
     /// </summary>
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogCritical("Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogCritical(this ILogger logger, string message, object? arg1, object? arg2)
     {
@@ -2165,7 +2347,6 @@ public static class WarfareLoggingExtensions
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogCritical(0, exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogCritical(this ILogger logger, EventId eventId, Exception? exception, string message, object? arg1, object? arg2, object? arg3)
     {
@@ -2178,7 +2359,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogCritical(0, "Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogCritical(this ILogger logger, EventId eventId, string message, object? arg1, object? arg2, object? arg3)
     {
@@ -2191,7 +2371,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogCritical(exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogCritical(this ILogger logger, Exception? exception, string message, object? arg1, object? arg2, object? arg3)
     {
@@ -2203,7 +2382,6 @@ public static class WarfareLoggingExtensions
     /// </summary>
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogCritical("Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogCritical(this ILogger logger, string message, object? arg1, object? arg2, object? arg3)
     {
@@ -2217,7 +2395,6 @@ public static class WarfareLoggingExtensions
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogCritical(0, exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogCritical(this ILogger logger, EventId eventId, Exception? exception, string message, object? arg1, object? arg2, object? arg3, object? arg4)
     {
@@ -2230,7 +2407,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="eventId">The event id associated with the log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogCritical(0, "Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogCritical(this ILogger logger, EventId eventId, string message, object? arg1, object? arg2, object? arg3, object? arg4)
     {
@@ -2243,7 +2419,6 @@ public static class WarfareLoggingExtensions
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="exception">The exception to log.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogCritical(exception, "Error while processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogCritical(this ILogger logger, Exception? exception, string message, object? arg1, object? arg2, object? arg3, object? arg4)
     {
@@ -2255,11 +2430,58 @@ public static class WarfareLoggingExtensions
     /// </summary>
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="message">Format string of the log message in message template format. Example: <code>"User {0} logged in from {1}"</code></param>
-    /// <example>logger.LogCritical("Processing request from {Address}", address)</example>
     [StringFormatMethod(nameof(message))]
     public static void LogCritical(this ILogger logger, string message, object? arg1, object? arg2, object? arg3, object? arg4)
     {
         logger.Log(LogLevel.Critical, message, arg1, arg2, arg3, arg4);
+    }
+
+    /// <summary>
+    /// Formats and writes a log message at the specified log level.
+    /// </summary>
+    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
+    /// <param name="eventId">The event id associated with the log.</param>
+    /// <param name="exception">The exception to log.</param>
+    /// <param name="builder">Format string of the log message in message template format. Example: <code>$"User {userName} logged in from {ipAddress}"</code></param>
+    public static void Log(this ILogger logger, LogLevel logLevel, EventId eventId, Exception? exception, [InterpolatedStringHandlerArgument("logger", "logLevel")] WarfareLoggerInterpolatedStringHandler builder)
+    {
+        builder.GetResult(out StringParameterList parameterList, out string literal);
+        logger.Log(logLevel, eventId, exception, literal, parameterList);
+    }
+
+    /// <summary>
+    /// Formats and writes a log message at the specified log level.
+    /// </summary>
+    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
+    /// <param name="eventId">The event id associated with the log.</param>
+    /// <param name="builder">Format string of the log message in message template format. Example: <code>$"User {userName} logged in from {ipAddress}"</code></param>
+    public static void Log(this ILogger logger, LogLevel logLevel, EventId eventId, [InterpolatedStringHandlerArgument("logger", "logLevel")] WarfareLoggerInterpolatedStringHandler builder)
+    {
+        builder.GetResult(out StringParameterList parameterList, out string literal);
+        logger.Log(logLevel, eventId, null, literal, parameterList);
+    }
+
+    /// <summary>
+    /// Formats and writes a log message at the specified log level.
+    /// </summary>
+    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
+    /// <param name="exception">The exception to log.</param>
+    /// <param name="builder">Format string of the log message in message template format. Example: <code>$"User {userName} logged in from {ipAddress}"</code></param>
+    public static void Log(this ILogger logger, LogLevel logLevel, Exception? exception, [InterpolatedStringHandlerArgument("logger", "logLevel")] WarfareLoggerInterpolatedStringHandler builder)
+    {
+        builder.GetResult(out StringParameterList parameterList, out string literal);
+        logger.Log(logLevel, 0, exception, literal, parameterList);
+    }
+
+    /// <summary>
+    /// Formats and writes a log message at the specified log level.
+    /// </summary>
+    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
+    /// <param name="builder">Format string of the log message in message template format. Example: <code>$"User {userName} logged in from {ipAddress}"</code></param>
+    public static void Log(this ILogger logger, LogLevel logLevel, [InterpolatedStringHandlerArgument("logger", "logLevel")] WarfareLoggerInterpolatedStringHandler builder)
+    {
+        builder.GetResult(out StringParameterList parameterList, out string literal);
+        logger.Log(logLevel, 0, null, literal, parameterList);
     }
 
     /// <summary>
@@ -2456,6 +2678,31 @@ public static class WarfareLoggingExtensions
         else
         {
             LoggerExtensions.Log(logger, logLevel, eventId, exception, message, [ arg1 ]);
+        }
+    }
+
+    /// <summary>
+    /// Formats and writes a log message at the specified log level.
+    /// </summary>
+    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
+    /// <param name="logLevel">Entry will be written on this level.</param>
+    /// <param name="eventId">The event id associated with the log.</param>
+    /// <param name="exception">The exception to log.</param>
+    /// <param name="message">Format string of the log message.</param>
+    private static void Log(this ILogger logger, LogLevel logLevel, EventId eventId, Exception? exception, string message, StringParameterList parameterList)
+    {
+        if (logger == null)
+        {
+            throw new ArgumentNullException(nameof(logger));
+        }
+
+        if (WarfareModule.IsActive)
+        {
+            logger.Log(logLevel, eventId, new WarfareFormattedLogValues(message, parameterList), exception, MessageFormatter);
+        }
+        else
+        {
+            LoggerExtensions.Log(logger, logLevel, eventId, exception, message, parameterList.ToArray());
         }
     }
 

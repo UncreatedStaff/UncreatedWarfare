@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Globalization;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Models.Localization;
@@ -28,6 +28,7 @@ public static class TranslationExtensions
         ValueFormatParameters parameters = new ValueFormatParameters(-1,
             translationService.LanguageService.GetDefaultCulture(),
             translationService.LanguageService.GetDefaultLanguage(),
+            TimeZoneInfo.Utc,
             options, in format, null, null, null, 0
         );
 
@@ -38,15 +39,16 @@ public static class TranslationExtensions
     /// Shortcut for translating a <see cref="ITranslationArgument"/> manually using the given language and culture settings.
     /// </summary>
     /// <param name="format">Format information for the translation. This can just be a <see cref="string"/>.</param>
-    public static string Translate(this ITranslationArgument argument, ITranslationService translationService, LanguageInfo? language, CultureInfo? culture, ArgumentFormat format = default, bool imgui = false, TranslationOptions options = TranslationOptions.None)
+    public static string Translate(this ITranslationArgument argument, ITranslationService translationService, LanguageInfo? language, CultureInfo? culture, TimeZoneInfo? timeZone, ArgumentFormat format = default, bool imgui = false, TranslationOptions options = TranslationOptions.None)
     {
         if (imgui && (options & TranslationOptions.NoRichText) == 0)
             options |= TranslationOptions.TranslateWithUnityRichText;
 
         language ??= translationService.LanguageService.GetDefaultLanguage();
         culture ??= translationService.LanguageService.GetDefaultCulture();
+        timeZone ??= TimeZoneInfo.Utc;
 
-        ValueFormatParameters parameters = new ValueFormatParameters(-1, culture, language, options, in format, null, null, null, 0);
+        ValueFormatParameters parameters = new ValueFormatParameters(-1, culture, language, timeZone, options, in format, null, null, null, 0);
 
         return translationService.ValueFormatter.Format(argument, in parameters);
     }
@@ -60,7 +62,7 @@ public static class TranslationExtensions
         if (canUseIMGUI && (options & TranslationOptions.NoRichText) == 0 && player.Save.IMGUI)
             options |= TranslationOptions.TranslateWithUnityRichText;
 
-        ValueFormatParameters parameters = new ValueFormatParameters(-1, player.Locale.CultureInfo, player.Locale.LanguageInfo, options, in format, player.Team, player, null, 0);
+        ValueFormatParameters parameters = new ValueFormatParameters(-1, player.Locale.CultureInfo, player.Locale.LanguageInfo, player.Locale.TimeZone, options, in format, player.Team, player, null, 0);
 
         return translationService.ValueFormatter.Format(argument, in parameters);
     }
@@ -90,7 +92,7 @@ public static class TranslationExtensions
         if (canUseIMGUI && (options & TranslationOptions.NoRichText) == 0 && set.IMGUI)
             options |= TranslationOptions.TranslateWithUnityRichText;
 
-        ValueFormatParameters parameters = new ValueFormatParameters(-1, set.Culture, set.Language, options, in format, set.Team, null, null, 0);
+        ValueFormatParameters parameters = new ValueFormatParameters(-1, set.Culture, set.Language, set.TimeZone, options, in format, set.Team, null, null, 0);
 
         return translationService.ValueFormatter.Format(argument, in parameters);
     }
@@ -102,47 +104,47 @@ public static class TranslationExtensions
     /// Translate a translation using default language and settings using an object[] instead of generic arguments.
     /// </summary>
     /// <exception cref="ArgumentException">Arguments in <paramref name="formatting"/> aren't convertible to the type the translation is expecting.</exception>
-    public static string TranslateUnsafe(this Translation translation, object[] formatting, bool imgui = false, bool forTerminal = false)
+    public static string UnsafeTranslate(this Translation translation, object[] formatting, bool imgui = false, bool forTerminal = false)
     {
         TranslationValue value = translation.GetValueForLanguage(null);
 
         TranslationOptions translationOptions = translation.Options;
         if (forTerminal)
             translationOptions |= TranslationOptions.ForTerminal;
-        TranslationArguments arguments = new TranslationArguments(value, imgui, false, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, imgui, false, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture(), TimeZoneInfo.Utc);
 
-        return translation.TranslateUnsafe(in arguments, formatting);
+        return translation.UnsafeTranslate(in arguments, formatting);
     }
 
     /// <summary>
     /// Translate a translation for a player using an object[] instead of generic arguments.
     /// </summary>
     /// <exception cref="ArgumentException">Arguments in <paramref name="formatting"/> aren't convertible to the type the translation is expecting.</exception>
-    public static string TranslateUnsafe(this Translation translation, object[] formatting, WarfarePlayer player, bool canUseIMGUI = false)
+    public static string UnsafeTranslate(this Translation translation, object[] formatting, WarfarePlayer player, bool canUseIMGUI = false)
     {
         TranslationValue value = translation.GetValueForLanguage(player.Locale.LanguageInfo);
 
         TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && player.Save.IMGUI, false, player, translation.Options);
 
-        return translation.TranslateUnsafe(in arguments, formatting);
+        return translation.UnsafeTranslate(in arguments, formatting);
     }
 
     /// <summary>
     /// Translate a translation for a user using an object[] instead of generic arguments.
     /// </summary>
     /// <exception cref="ArgumentException">Arguments in <paramref name="formatting"/> aren't convertible to the type the translation is expecting.</exception>
-    public static string TranslateUnsafe(this Translation translation, object[] formatting, ICommandUser user, bool canUseIMGUI = false)
+    public static string UnsafeTranslate(this Translation translation, object[] formatting, ICommandUser user, bool canUseIMGUI = false)
     {
         return user is WarfarePlayer player
-            ? translation.TranslateUnsafe(formatting, player, canUseIMGUI)
-            : translation.TranslateUnsafe(formatting, canUseIMGUI && user.IMGUI, user.IsTerminal);
+            ? translation.UnsafeTranslate(formatting, player, canUseIMGUI)
+            : translation.UnsafeTranslate(formatting, canUseIMGUI && user.IMGUI, user.IsTerminal);
     }
 
     /// <summary>
     /// Translate a translation for a set of players using an object[] instead of generic arguments.
     /// </summary>
     /// <exception cref="ArgumentException">Arguments in <paramref name="formatting"/> aren't convertible to the type the translation is expecting.</exception>
-    public static string TranslateUnsafe(this Translation translation, object[] formatting, in LanguageSet set, bool canUseIMGUI = false)
+    public static string UnsafeTranslate(this Translation translation, object[] formatting, in LanguageSet set, bool canUseIMGUI = false)
     {
         if (set.Players.Count == 1)
         {
@@ -151,71 +153,71 @@ public static class TranslationExtensions
 
         TranslationValue value = translation.GetValueForLanguage(set.Language);
 
-        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, false, set.Language, null, set.Team, translation.Options, translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, false, set.Language, null, set.Team, translation.Options, set.Culture, set.TimeZone);
 
-        return translation.TranslateUnsafe(in arguments, formatting);
+        return translation.UnsafeTranslate(in arguments, formatting);
     }
 
     /// <summary>
     /// Translate a translation for a set of players using an object[] instead of generic arguments.
     /// </summary>
     /// <exception cref="ArgumentException">Arguments in <paramref name="formatting"/> aren't convertible to the type the translation is expecting.</exception>
-    public static string TranslateUnsafe(this Translation translation, object[] formatting, LanguageInfo? language, CultureInfo? culture, bool imgui = false)
+    public static string UnsafeTranslate(this Translation translation, object[] formatting, LanguageInfo? language, CultureInfo? culture, TimeZoneInfo? timeZone, bool imgui = false)
     {
         TranslationValue value = translation.GetValueForLanguage(language);
 
-        TranslationArguments arguments = new TranslationArguments(value, imgui, false, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, imgui, false, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture(), timeZone ?? TimeZoneInfo.Utc);
 
-        return translation.TranslateUnsafe(in arguments, formatting);
+        return translation.UnsafeTranslate(in arguments, formatting);
     }
 
     /// <summary>
     /// Translate a translation using default language and settings and output the background <paramref name="color"/> of the message.
     /// </summary>
     /// <exception cref="ArgumentException">Arguments in <paramref name="formatting"/> aren't convertible to the type the translation is expecting.</exception>
-    public static string TranslateUnsafe(this Translation translation, object[] formatting, out Color color, bool imgui = false, bool forTerminal = false)
+    public static string UnsafeTranslate(this Translation translation, object[] formatting, out Color color, bool imgui = false, bool forTerminal = false)
     {
         TranslationValue value = translation.GetValueForLanguage(null);
 
         TranslationOptions translationOptions = translation.Options;
         if (forTerminal)
             translationOptions |= TranslationOptions.ForTerminal;
-        TranslationArguments arguments = new TranslationArguments(value, imgui, true, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, imgui, true, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture(), TimeZoneInfo.Utc);
 
         color = value.Color;
-        return translation.TranslateUnsafe(in arguments, formatting);
+        return translation.UnsafeTranslate(in arguments, formatting);
     }
 
     /// <summary>
     /// Translate a translation for a player and output the background <paramref name="color"/> of the message using an object[] instead of generic arguments.
     /// </summary>
     /// <exception cref="ArgumentException">Arguments in <paramref name="formatting"/> aren't convertible to the type the translation is expecting.</exception>
-    public static string TranslateUnsafe(this Translation translation, object[] formatting, WarfarePlayer player, out Color color, bool canUseIMGUI = false)
+    public static string UnsafeTranslate(this Translation translation, object[] formatting, WarfarePlayer player, out Color color, bool canUseIMGUI = false)
     {
         TranslationValue value = translation.GetValueForLanguage(player.Locale.LanguageInfo);
 
         TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && player.Save.IMGUI, true, player, translation.Options);
 
         color = value.Color;
-        return translation.TranslateUnsafe(in arguments, formatting);
+        return translation.UnsafeTranslate(in arguments, formatting);
     }
 
     /// <summary>
     /// Translate a translation for a user and output the background <paramref name="color"/> of the message using an object[] instead of generic arguments.
     /// </summary>
     /// <exception cref="ArgumentException">Arguments in <paramref name="formatting"/> aren't convertible to the type the translation is expecting.</exception>
-    public static string TranslateUnsafe(this Translation translation, object[] formatting, ICommandUser user, out Color color, bool canUseIMGUI = false)
+    public static string UnsafeTranslate(this Translation translation, object[] formatting, ICommandUser user, out Color color, bool canUseIMGUI = false)
     {
         return user is WarfarePlayer player
-            ? translation.TranslateUnsafe(formatting, player, out color, canUseIMGUI)
-            : translation.TranslateUnsafe(formatting, out color, canUseIMGUI && user.IMGUI, user.IsTerminal);
+            ? translation.UnsafeTranslate(formatting, player, out color, canUseIMGUI)
+            : translation.UnsafeTranslate(formatting, out color, canUseIMGUI && user.IMGUI, user.IsTerminal);
     }
 
     /// <summary>
     /// Translate a translation for a set of players and output the background <paramref name="color"/> of the message using an object[] instead of generic arguments.
     /// </summary>
     /// <exception cref="ArgumentException">Arguments in <paramref name="formatting"/> aren't convertible to the type the translation is expecting.</exception>
-    public static string TranslateUnsafe(this Translation translation, object[] formatting, in LanguageSet set, out Color color, bool canUseIMGUI = false)
+    public static string UnsafeTranslate(this Translation translation, object[] formatting, in LanguageSet set, out Color color, bool canUseIMGUI = false)
     {
         if (set.Players.Count == 1)
         {
@@ -224,24 +226,24 @@ public static class TranslationExtensions
 
         TranslationValue value = translation.GetValueForLanguage(set.Language);
 
-        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, true, set.Language, null, set.Team, translation.Options, translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, true, set.Language, null, set.Team, translation.Options, set.Culture, set.TimeZone);
 
         color = value.Color;
-        return translation.TranslateUnsafe(in arguments, formatting);
+        return translation.UnsafeTranslate(in arguments, formatting);
     }
 
     /// <summary>
     /// Translate a translation for a set of players and output the background <paramref name="color"/> of the message using an object[] instead of generic arguments.
     /// </summary>
     /// <exception cref="ArgumentException">Arguments in <paramref name="formatting"/> aren't convertible to the type the translation is expecting.</exception>
-    public static string TranslateUnsafe(this Translation translation, object[] formatting, LanguageInfo? language, CultureInfo? culture, out Color color, bool imgui = false)
+    public static string UnsafeTranslate(this Translation translation, object[] formatting, LanguageInfo? language, CultureInfo? culture, TimeZoneInfo? timeZone, out Color color, bool imgui = false)
     {
         TranslationValue value = translation.GetValueForLanguage(language);
 
-        TranslationArguments arguments = new TranslationArguments(value, imgui, true, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, imgui, true, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture(), timeZone ?? TimeZoneInfo.Utc);
 
         color = value.Color;
-        return translation.TranslateUnsafe(in arguments, formatting);
+        return translation.UnsafeTranslate(in arguments, formatting);
     }
     #endregion
 
@@ -396,7 +398,7 @@ public static class TranslationExtensions
         TranslationOptions translationOptions = translation.Options;
         if (forTerminal)
             translationOptions |= TranslationOptions.ForTerminal;
-        TranslationArguments arguments = new TranslationArguments(value, imgui, false, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, imgui, false, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture(), TimeZoneInfo.Utc);
 
         return translation.Translate(in arguments, arg0);
     }
@@ -435,7 +437,7 @@ public static class TranslationExtensions
 
         TranslationValue value = translation.GetValueForLanguage(set.Language);
 
-        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, false, set.Language, null, set.Team, translation.Options, translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, false, set.Language, null, set.Team, translation.Options, set.Culture, set.TimeZone);
 
         return translation.Translate(in arguments, arg0);
     }
@@ -443,11 +445,11 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 1-arg translation for a set of players.
     /// </summary>
-    public static string Translate<T0>(this Translation<T0> translation, T0 arg0, LanguageInfo? language, CultureInfo? culture, bool imgui = false)
+    public static string Translate<T0>(this Translation<T0> translation, T0 arg0, LanguageInfo? language, CultureInfo? culture, TimeZoneInfo? timeZone, bool imgui = false)
     {
         TranslationValue value = translation.GetValueForLanguage(language);
 
-        TranslationArguments arguments = new TranslationArguments(value, imgui, false, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, imgui, false, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture(), timeZone ?? TimeZoneInfo.Utc);
 
         return translation.Translate(in arguments, arg0);
     }
@@ -462,7 +464,7 @@ public static class TranslationExtensions
         TranslationOptions translationOptions = translation.Options;
         if (forTerminal)
             translationOptions |= TranslationOptions.ForTerminal;
-        TranslationArguments arguments = new TranslationArguments(value, imgui, true, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, imgui, true, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture(), TimeZoneInfo.Utc);
 
         color = value.Color;
         return translation.Translate(in arguments, arg0);
@@ -503,7 +505,7 @@ public static class TranslationExtensions
 
         TranslationValue value = translation.GetValueForLanguage(set.Language);
 
-        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, true, set.Language, null, set.Team, translation.Options, translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, true, set.Language, null, set.Team, translation.Options, set.Culture, set.TimeZone);
 
         color = value.Color;
         return translation.Translate(in arguments, arg0);
@@ -512,11 +514,11 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 1-arg translation for a set of players and output the background <paramref name="color"/> of the message.
     /// </summary>
-    public static string Translate<T0>(this Translation<T0> translation, T0 arg0, LanguageInfo? language, CultureInfo? culture, out Color color, bool imgui = false)
+    public static string Translate<T0>(this Translation<T0> translation, T0 arg0, LanguageInfo? language, CultureInfo? culture, TimeZoneInfo? timeZone, out Color color, bool imgui = false)
     {
         TranslationValue value = translation.GetValueForLanguage(language);
 
-        TranslationArguments arguments = new TranslationArguments(value, imgui, true, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, imgui, true, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture(), timeZone ?? TimeZoneInfo.Utc);
 
         color = value.Color;
         return translation.Translate(in arguments, arg0);
@@ -534,7 +536,7 @@ public static class TranslationExtensions
         TranslationOptions translationOptions = translation.Options;
         if (forTerminal)
             translationOptions |= TranslationOptions.ForTerminal;
-        TranslationArguments arguments = new TranslationArguments(value, imgui, false, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, imgui, false, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture(), TimeZoneInfo.Utc);
 
         return translation.Translate(in arguments, arg0, arg1);
     }
@@ -573,7 +575,7 @@ public static class TranslationExtensions
 
         TranslationValue value = translation.GetValueForLanguage(set.Language);
 
-        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, false, set.Language, null, set.Team, translation.Options, translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, false, set.Language, null, set.Team, translation.Options, set.Culture, set.TimeZone);
 
         return translation.Translate(in arguments, arg0, arg1);
     }
@@ -581,11 +583,11 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 2-arg translation for a set of players.
     /// </summary>
-    public static string Translate<T0, T1>(this Translation<T0, T1> translation, T0 arg0, T1 arg1, LanguageInfo? language, CultureInfo? culture, bool imgui = false)
+    public static string Translate<T0, T1>(this Translation<T0, T1> translation, T0 arg0, T1 arg1, LanguageInfo? language, CultureInfo? culture, TimeZoneInfo? timeZone, bool imgui = false)
     {
         TranslationValue value = translation.GetValueForLanguage(language);
 
-        TranslationArguments arguments = new TranslationArguments(value, imgui, false, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, imgui, false, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture(), timeZone ?? TimeZoneInfo.Utc);
 
         return translation.Translate(in arguments, arg0, arg1);
     }
@@ -600,7 +602,7 @@ public static class TranslationExtensions
         TranslationOptions translationOptions = translation.Options;
         if (forTerminal)
             translationOptions |= TranslationOptions.ForTerminal;
-        TranslationArguments arguments = new TranslationArguments(value, imgui, true, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, imgui, true, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture(), TimeZoneInfo.Utc);
 
         color = value.Color;
         return translation.Translate(in arguments, arg0, arg1);
@@ -641,7 +643,7 @@ public static class TranslationExtensions
 
         TranslationValue value = translation.GetValueForLanguage(set.Language);
 
-        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, true, set.Language, null, set.Team, translation.Options, translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, true, set.Language, null, set.Team, translation.Options, set.Culture, set.TimeZone);
 
         color = value.Color;
         return translation.Translate(in arguments, arg0, arg1);
@@ -650,11 +652,11 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 2-arg translation for a set of players and output the background <paramref name="color"/> of the message.
     /// </summary>
-    public static string Translate<T0, T1>(this Translation<T0, T1> translation, T0 arg0, T1 arg1, LanguageInfo? language, CultureInfo? culture, out Color color, bool imgui = false)
+    public static string Translate<T0, T1>(this Translation<T0, T1> translation, T0 arg0, T1 arg1, LanguageInfo? language, CultureInfo? culture, TimeZoneInfo? timeZone, out Color color, bool imgui = false)
     {
         TranslationValue value = translation.GetValueForLanguage(language);
 
-        TranslationArguments arguments = new TranslationArguments(value, imgui, true, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, imgui, true, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture(), timeZone ?? TimeZoneInfo.Utc);
 
         color = value.Color;
         return translation.Translate(in arguments, arg0, arg1);
@@ -672,7 +674,7 @@ public static class TranslationExtensions
         TranslationOptions translationOptions = translation.Options;
         if (forTerminal)
             translationOptions |= TranslationOptions.ForTerminal;
-        TranslationArguments arguments = new TranslationArguments(value, imgui, false, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, imgui, false, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture(), TimeZoneInfo.Utc);
 
         return translation.Translate(in arguments, arg0, arg1, arg2);
     }
@@ -711,7 +713,7 @@ public static class TranslationExtensions
 
         TranslationValue value = translation.GetValueForLanguage(set.Language);
 
-        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, false, set.Language, null, set.Team, translation.Options, translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, false, set.Language, null, set.Team, translation.Options, set.Culture, set.TimeZone);
 
         return translation.Translate(in arguments, arg0, arg1, arg2);
     }
@@ -719,11 +721,11 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 3-arg translation for a set of players.
     /// </summary>
-    public static string Translate<T0, T1, T2>(this Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2, LanguageInfo? language, CultureInfo? culture, bool imgui = false)
+    public static string Translate<T0, T1, T2>(this Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2, LanguageInfo? language, CultureInfo? culture, TimeZoneInfo? timeZone, bool imgui = false)
     {
         TranslationValue value = translation.GetValueForLanguage(language);
 
-        TranslationArguments arguments = new TranslationArguments(value, imgui, false, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, imgui, false, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture(), timeZone ?? TimeZoneInfo.Utc);
 
         return translation.Translate(in arguments, arg0, arg1, arg2);
     }
@@ -738,7 +740,7 @@ public static class TranslationExtensions
         TranslationOptions translationOptions = translation.Options;
         if (forTerminal)
             translationOptions |= TranslationOptions.ForTerminal;
-        TranslationArguments arguments = new TranslationArguments(value, imgui, true, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, imgui, true, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture(), TimeZoneInfo.Utc);
 
         color = value.Color;
         return translation.Translate(in arguments, arg0, arg1, arg2);
@@ -779,7 +781,7 @@ public static class TranslationExtensions
 
         TranslationValue value = translation.GetValueForLanguage(set.Language);
 
-        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, true, set.Language, null, set.Team, translation.Options, translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, true, set.Language, null, set.Team, translation.Options, set.Culture, set.TimeZone);
 
         color = value.Color;
         return translation.Translate(in arguments, arg0, arg1, arg2);
@@ -788,11 +790,11 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 3-arg translation for a set of players and output the background <paramref name="color"/> of the message.
     /// </summary>
-    public static string Translate<T0, T1, T2>(this Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2, LanguageInfo? language, CultureInfo? culture, out Color color, bool imgui = false)
+    public static string Translate<T0, T1, T2>(this Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2, LanguageInfo? language, CultureInfo? culture, TimeZoneInfo? timeZone, out Color color, bool imgui = false)
     {
         TranslationValue value = translation.GetValueForLanguage(language);
 
-        TranslationArguments arguments = new TranslationArguments(value, imgui, true, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, imgui, true, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture(), timeZone ?? TimeZoneInfo.Utc);
 
         color = value.Color;
         return translation.Translate(in arguments, arg0, arg1, arg2);
@@ -810,7 +812,7 @@ public static class TranslationExtensions
         TranslationOptions translationOptions = translation.Options;
         if (forTerminal)
             translationOptions |= TranslationOptions.ForTerminal;
-        TranslationArguments arguments = new TranslationArguments(value, imgui, false, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, imgui, false, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture(), TimeZoneInfo.Utc);
 
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3);
     }
@@ -849,7 +851,7 @@ public static class TranslationExtensions
 
         TranslationValue value = translation.GetValueForLanguage(set.Language);
 
-        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, false, set.Language, null, set.Team, translation.Options, translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, false, set.Language, null, set.Team, translation.Options, set.Culture, set.TimeZone);
 
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3);
     }
@@ -857,11 +859,11 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 4-arg translation for a set of players.
     /// </summary>
-    public static string Translate<T0, T1, T2, T3>(this Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, LanguageInfo? language, CultureInfo? culture, bool imgui = false)
+    public static string Translate<T0, T1, T2, T3>(this Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, LanguageInfo? language, CultureInfo? culture, TimeZoneInfo? timeZone, bool imgui = false)
     {
         TranslationValue value = translation.GetValueForLanguage(language);
 
-        TranslationArguments arguments = new TranslationArguments(value, imgui, false, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, imgui, false, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture(), timeZone ?? TimeZoneInfo.Utc);
 
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3);
     }
@@ -876,7 +878,7 @@ public static class TranslationExtensions
         TranslationOptions translationOptions = translation.Options;
         if (forTerminal)
             translationOptions |= TranslationOptions.ForTerminal;
-        TranslationArguments arguments = new TranslationArguments(value, imgui, true, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, imgui, true, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture(), TimeZoneInfo.Utc);
 
         color = value.Color;
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3);
@@ -917,7 +919,7 @@ public static class TranslationExtensions
 
         TranslationValue value = translation.GetValueForLanguage(set.Language);
 
-        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, true, set.Language, null, set.Team, translation.Options, translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, true, set.Language, null, set.Team, translation.Options, set.Culture, set.TimeZone);
 
         color = value.Color;
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3);
@@ -926,11 +928,11 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 4-arg translation for a set of players and output the background <paramref name="color"/> of the message.
     /// </summary>
-    public static string Translate<T0, T1, T2, T3>(this Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, LanguageInfo? language, CultureInfo? culture, out Color color, bool imgui = false)
+    public static string Translate<T0, T1, T2, T3>(this Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, LanguageInfo? language, CultureInfo? culture, TimeZoneInfo? timeZone, out Color color, bool imgui = false)
     {
         TranslationValue value = translation.GetValueForLanguage(language);
 
-        TranslationArguments arguments = new TranslationArguments(value, imgui, true, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, imgui, true, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture(), timeZone ?? TimeZoneInfo.Utc);
 
         color = value.Color;
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3);
@@ -948,7 +950,7 @@ public static class TranslationExtensions
         TranslationOptions translationOptions = translation.Options;
         if (forTerminal)
             translationOptions |= TranslationOptions.ForTerminal;
-        TranslationArguments arguments = new TranslationArguments(value, imgui, false, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, imgui, false, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture(), TimeZoneInfo.Utc);
 
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4);
     }
@@ -987,7 +989,7 @@ public static class TranslationExtensions
 
         TranslationValue value = translation.GetValueForLanguage(set.Language);
 
-        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, false, set.Language, null, set.Team, translation.Options, translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, false, set.Language, null, set.Team, translation.Options, set.Culture, set.TimeZone);
 
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4);
     }
@@ -995,11 +997,11 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 5-arg translation for a set of players.
     /// </summary>
-    public static string Translate<T0, T1, T2, T3, T4>(this Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, LanguageInfo? language, CultureInfo? culture, bool imgui = false)
+    public static string Translate<T0, T1, T2, T3, T4>(this Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, LanguageInfo? language, CultureInfo? culture, TimeZoneInfo? timeZone, bool imgui = false)
     {
         TranslationValue value = translation.GetValueForLanguage(language);
 
-        TranslationArguments arguments = new TranslationArguments(value, imgui, false, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, imgui, false, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture(), timeZone ?? TimeZoneInfo.Utc);
 
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4);
     }
@@ -1014,7 +1016,7 @@ public static class TranslationExtensions
         TranslationOptions translationOptions = translation.Options;
         if (forTerminal)
             translationOptions |= TranslationOptions.ForTerminal;
-        TranslationArguments arguments = new TranslationArguments(value, imgui, true, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, imgui, true, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture(), TimeZoneInfo.Utc);
 
         color = value.Color;
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4);
@@ -1055,7 +1057,7 @@ public static class TranslationExtensions
 
         TranslationValue value = translation.GetValueForLanguage(set.Language);
 
-        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, true, set.Language, null, set.Team, translation.Options, translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, true, set.Language, null, set.Team, translation.Options, set.Culture, set.TimeZone);
 
         color = value.Color;
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4);
@@ -1064,11 +1066,11 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 5-arg translation for a set of players and output the background <paramref name="color"/> of the message.
     /// </summary>
-    public static string Translate<T0, T1, T2, T3, T4>(this Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, LanguageInfo? language, CultureInfo? culture, out Color color, bool imgui = false)
+    public static string Translate<T0, T1, T2, T3, T4>(this Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, LanguageInfo? language, CultureInfo? culture, TimeZoneInfo? timeZone, out Color color, bool imgui = false)
     {
         TranslationValue value = translation.GetValueForLanguage(language);
 
-        TranslationArguments arguments = new TranslationArguments(value, imgui, true, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, imgui, true, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture(), timeZone ?? TimeZoneInfo.Utc);
 
         color = value.Color;
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4);
@@ -1086,7 +1088,7 @@ public static class TranslationExtensions
         TranslationOptions translationOptions = translation.Options;
         if (forTerminal)
             translationOptions |= TranslationOptions.ForTerminal;
-        TranslationArguments arguments = new TranslationArguments(value, imgui, false, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, imgui, false, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture(), TimeZoneInfo.Utc);
         
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5);
     }
@@ -1125,7 +1127,7 @@ public static class TranslationExtensions
 
         TranslationValue value = translation.GetValueForLanguage(set.Language);
 
-        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, false, set.Language, null, set.Team, translation.Options, translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, false, set.Language, null, set.Team, translation.Options, set.Culture, set.TimeZone);
 
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5);
     }
@@ -1133,11 +1135,11 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 6-arg translation for a set of players.
     /// </summary>
-    public static string Translate<T0, T1, T2, T3, T4, T5>(this Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, LanguageInfo? language, CultureInfo? culture, bool imgui = false)
+    public static string Translate<T0, T1, T2, T3, T4, T5>(this Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, LanguageInfo? language, CultureInfo? culture, TimeZoneInfo? timeZone, bool imgui = false)
     {
         TranslationValue value = translation.GetValueForLanguage(language);
 
-        TranslationArguments arguments = new TranslationArguments(value, imgui, false, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, imgui, false, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture(), timeZone ?? TimeZoneInfo.Utc);
 
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5);
     }
@@ -1152,7 +1154,7 @@ public static class TranslationExtensions
         TranslationOptions translationOptions = translation.Options;
         if (forTerminal)
             translationOptions |= TranslationOptions.ForTerminal;
-        TranslationArguments arguments = new TranslationArguments(value, imgui, true, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, imgui, true, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture(), TimeZoneInfo.Utc);
 
         color = value.Color;
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5);
@@ -1193,7 +1195,7 @@ public static class TranslationExtensions
 
         TranslationValue value = translation.GetValueForLanguage(set.Language);
 
-        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, true, set.Language, null, set.Team, translation.Options, translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, true, set.Language, null, set.Team, translation.Options, set.Culture, set.TimeZone);
 
         color = value.Color;
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5);
@@ -1202,11 +1204,11 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 6-arg translation for a set of players and output the background <paramref name="color"/> of the message.
     /// </summary>
-    public static string Translate<T0, T1, T2, T3, T4, T5>(this Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, LanguageInfo? language, CultureInfo? culture, out Color color, bool imgui = false)
+    public static string Translate<T0, T1, T2, T3, T4, T5>(this Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, LanguageInfo? language, CultureInfo? culture, TimeZoneInfo? timeZone, out Color color, bool imgui = false)
     {
         TranslationValue value = translation.GetValueForLanguage(language);
 
-        TranslationArguments arguments = new TranslationArguments(value, imgui, true, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, imgui, true, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture(), timeZone ?? TimeZoneInfo.Utc);
 
         color = value.Color;
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5);
@@ -1224,7 +1226,7 @@ public static class TranslationExtensions
         TranslationOptions translationOptions = translation.Options;
         if (forTerminal)
             translationOptions |= TranslationOptions.ForTerminal;
-        TranslationArguments arguments = new TranslationArguments(value, imgui, false, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, imgui, false, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture(), TimeZoneInfo.Utc);
 
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
     }
@@ -1263,7 +1265,7 @@ public static class TranslationExtensions
 
         TranslationValue value = translation.GetValueForLanguage(set.Language);
 
-        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, false, set.Language, null, set.Team, translation.Options, translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, false, set.Language, null, set.Team, translation.Options, set.Culture, set.TimeZone);
 
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
     }
@@ -1271,11 +1273,11 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 7-arg translation for a set of players.
     /// </summary>
-    public static string Translate<T0, T1, T2, T3, T4, T5, T6>(this Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, LanguageInfo? language, CultureInfo? culture, bool imgui = false)
+    public static string Translate<T0, T1, T2, T3, T4, T5, T6>(this Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, LanguageInfo? language, CultureInfo? culture, TimeZoneInfo? timeZone, bool imgui = false)
     {
         TranslationValue value = translation.GetValueForLanguage(language);
 
-        TranslationArguments arguments = new TranslationArguments(value, imgui, false, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, imgui, false, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture(), timeZone ?? TimeZoneInfo.Utc);
 
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
     }
@@ -1290,7 +1292,7 @@ public static class TranslationExtensions
         TranslationOptions translationOptions = translation.Options;
         if (forTerminal)
             translationOptions |= TranslationOptions.ForTerminal;
-        TranslationArguments arguments = new TranslationArguments(value, imgui, true, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, imgui, true, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture(), TimeZoneInfo.Utc);
 
         color = value.Color;
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
@@ -1331,7 +1333,7 @@ public static class TranslationExtensions
 
         TranslationValue value = translation.GetValueForLanguage(set.Language);
 
-        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, true, set.Language, null, set.Team, translation.Options, translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, true, set.Language, null, set.Team, translation.Options, set.Culture, set.TimeZone);
 
         color = value.Color;
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
@@ -1340,11 +1342,11 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 7-arg translation for a set of players and output the background <paramref name="color"/> of the message.
     /// </summary>
-    public static string Translate<T0, T1, T2, T3, T4, T5, T6>(this Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, LanguageInfo? language, CultureInfo? culture, out Color color, bool imgui = false)
+    public static string Translate<T0, T1, T2, T3, T4, T5, T6>(this Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, LanguageInfo? language, CultureInfo? culture, TimeZoneInfo? timeZone, out Color color, bool imgui = false)
     {
         TranslationValue value = translation.GetValueForLanguage(language);
 
-        TranslationArguments arguments = new TranslationArguments(value, imgui, true, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, imgui, true, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture(), timeZone ?? TimeZoneInfo.Utc);
 
         color = value.Color;
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
@@ -1362,7 +1364,7 @@ public static class TranslationExtensions
         TranslationOptions translationOptions = translation.Options;
         if (forTerminal)
             translationOptions |= TranslationOptions.ForTerminal;
-        TranslationArguments arguments = new TranslationArguments(value, imgui, false, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, imgui, false, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture(), TimeZoneInfo.Utc);
 
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
     }
@@ -1401,7 +1403,7 @@ public static class TranslationExtensions
 
         TranslationValue value = translation.GetValueForLanguage(set.Language);
 
-        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, false, set.Language, null, set.Team, translation.Options, translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, false, set.Language, null, set.Team, translation.Options, set.Culture, set.TimeZone);
 
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
     }
@@ -1409,11 +1411,11 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 8-arg translation for a set of players.
     /// </summary>
-    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, LanguageInfo? language, CultureInfo? culture, bool imgui = false)
+    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, LanguageInfo? language, CultureInfo? culture, TimeZoneInfo? timeZone, bool imgui = false)
     {
         TranslationValue value = translation.GetValueForLanguage(language);
 
-        TranslationArguments arguments = new TranslationArguments(value, imgui, false, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, imgui, false, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture(), timeZone ?? TimeZoneInfo.Utc);
 
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
     }
@@ -1428,7 +1430,7 @@ public static class TranslationExtensions
         TranslationOptions translationOptions = translation.Options;
         if (forTerminal)
             translationOptions |= TranslationOptions.ForTerminal;
-        TranslationArguments arguments = new TranslationArguments(value, imgui, true, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, imgui, true, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture(), TimeZoneInfo.Utc);
 
         color = value.Color;
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
@@ -1469,7 +1471,7 @@ public static class TranslationExtensions
 
         TranslationValue value = translation.GetValueForLanguage(set.Language);
 
-        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, true, set.Language, null, set.Team, translation.Options, translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, true, set.Language, null, set.Team, translation.Options, set.Culture, set.TimeZone);
 
         color = value.Color;
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
@@ -1478,11 +1480,11 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 8-arg translation for a set of players and output the background <paramref name="color"/> of the message.
     /// </summary>
-    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, LanguageInfo? language, CultureInfo? culture, out Color color, bool imgui = false)
+    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, LanguageInfo? language, CultureInfo? culture, TimeZoneInfo? timeZone, out Color color, bool imgui = false)
     {
         TranslationValue value = translation.GetValueForLanguage(language);
 
-        TranslationArguments arguments = new TranslationArguments(value, imgui, true, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, imgui, true, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture(), timeZone ?? TimeZoneInfo.Utc);
 
         color = value.Color;
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
@@ -1500,7 +1502,7 @@ public static class TranslationExtensions
         TranslationOptions translationOptions = translation.Options;
         if (forTerminal)
             translationOptions |= TranslationOptions.ForTerminal;
-        TranslationArguments arguments = new TranslationArguments(value, imgui, false, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, imgui, false, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture(), TimeZoneInfo.Utc);
 
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
     }
@@ -1539,7 +1541,7 @@ public static class TranslationExtensions
 
         TranslationValue value = translation.GetValueForLanguage(set.Language);
 
-        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, false, set.Language, null, set.Team, translation.Options, translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, false, set.Language, null, set.Team, translation.Options, set.Culture, set.TimeZone);
 
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
     }
@@ -1547,11 +1549,11 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 9-arg translation for a set of players.
     /// </summary>
-    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7, T8>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, LanguageInfo? language, CultureInfo? culture, bool imgui = false)
+    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7, T8>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, LanguageInfo? language, CultureInfo? culture, TimeZoneInfo? timeZone, bool imgui = false)
     {
         TranslationValue value = translation.GetValueForLanguage(language);
 
-        TranslationArguments arguments = new TranslationArguments(value, imgui, false, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, imgui, false, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture(), timeZone ?? TimeZoneInfo.Utc);
 
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
     }
@@ -1566,7 +1568,7 @@ public static class TranslationExtensions
         TranslationOptions translationOptions = translation.Options;
         if (forTerminal)
             translationOptions |= TranslationOptions.ForTerminal;
-        TranslationArguments arguments = new TranslationArguments(value, imgui, true, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, imgui, true, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture(), TimeZoneInfo.Utc);
 
         color = value.Color;
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
@@ -1607,7 +1609,7 @@ public static class TranslationExtensions
 
         TranslationValue value = translation.GetValueForLanguage(set.Language);
 
-        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, true, set.Language, null, set.Team, translation.Options, translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, true, set.Language, null, set.Team, translation.Options, set.Culture, set.TimeZone);
 
         color = value.Color;
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
@@ -1616,11 +1618,11 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 9-arg translation for a set of players and output the background <paramref name="color"/> of the message.
     /// </summary>
-    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7, T8>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, LanguageInfo? language, CultureInfo? culture, out Color color, bool imgui = false)
+    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7, T8>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, LanguageInfo? language, CultureInfo? culture, TimeZoneInfo? timeZone, out Color color, bool imgui = false)
     {
         TranslationValue value = translation.GetValueForLanguage(language);
 
-        TranslationArguments arguments = new TranslationArguments(value, imgui, true, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, imgui, true, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture(), timeZone ?? TimeZoneInfo.Utc);
 
         color = value.Color;
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
@@ -1638,7 +1640,7 @@ public static class TranslationExtensions
         TranslationOptions translationOptions = translation.Options;
         if (forTerminal)
             translationOptions |= TranslationOptions.ForTerminal;
-        TranslationArguments arguments = new TranslationArguments(value, imgui, false, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, imgui, false, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture(), TimeZoneInfo.Utc);
 
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
     }
@@ -1677,7 +1679,7 @@ public static class TranslationExtensions
 
         TranslationValue value = translation.GetValueForLanguage(set.Language);
 
-        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, false, set.Language, null, set.Team, translation.Options, translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, false, set.Language, null, set.Team, translation.Options, set.Culture, set.TimeZone);
 
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
     }
@@ -1685,11 +1687,11 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 10-arg translation for a set of players.
     /// </summary>
-    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, LanguageInfo? language, CultureInfo? culture, bool imgui = false)
+    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, LanguageInfo? language, CultureInfo? culture, TimeZoneInfo? timeZone, bool imgui = false)
     {
         TranslationValue value = translation.GetValueForLanguage(language);
 
-        TranslationArguments arguments = new TranslationArguments(value, imgui, false, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, imgui, false, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture(), timeZone ?? TimeZoneInfo.Utc);
 
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
     }
@@ -1704,7 +1706,7 @@ public static class TranslationExtensions
         TranslationOptions translationOptions = translation.Options;
         if (forTerminal)
             translationOptions |= TranslationOptions.ForTerminal;
-        TranslationArguments arguments = new TranslationArguments(value, imgui, true, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, imgui, true, value.Language, null, null, translationOptions, translation.LanguageService.GetDefaultCulture(), TimeZoneInfo.Utc);
 
         color = value.Color;
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
@@ -1745,7 +1747,7 @@ public static class TranslationExtensions
 
         TranslationValue value = translation.GetValueForLanguage(set.Language);
 
-        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, true, set.Language, null, set.Team, translation.Options, translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, canUseIMGUI && set.IMGUI, true, set.Language, null, set.Team, translation.Options, set.Culture, set.TimeZone);
 
         color = value.Color;
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
@@ -1754,11 +1756,11 @@ public static class TranslationExtensions
     /// <summary>
     /// Translate a 10-arg translation for a set of players and output the background <paramref name="color"/> of the message.
     /// </summary>
-    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, LanguageInfo? language, CultureInfo? culture, out Color color, bool imgui = false)
+    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(this Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, LanguageInfo? language, CultureInfo? culture, TimeZoneInfo? timeZone, out Color color, bool imgui = false)
     {
         TranslationValue value = translation.GetValueForLanguage(language);
 
-        TranslationArguments arguments = new TranslationArguments(value, imgui, true, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture());
+        TranslationArguments arguments = new TranslationArguments(value, imgui, true, language ?? value.Language, null, null, translation.Options, culture ?? translation.LanguageService.GetDefaultCulture(), timeZone ?? TimeZoneInfo.Utc);
 
         color = value.Color;
         return translation.Translate(in arguments, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);

@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using Uncreated.Framework.UI;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Configuration;
 
@@ -14,7 +15,7 @@ public class AssetNotFoundException : Exception
 
     public AssetNotFoundException(IAssetLink<Asset> asset) : base(asset.Guid != Guid.Empty
         ? $"Asset not found: {{{asset.Guid:N}}}."
-        : $"Asset not found: ({UCAssetManager.GetAssetCategory(AssetLink.GetAssetType(asset))}/{asset.Id:D}).") { }
+        : $"Asset not found: ({AssetUtility.GetAssetCategory(AssetLink.GetAssetType(asset))}/{asset.Id:D}).") { }
 
     public AssetNotFoundException(IAssetContainer asset) : base(asset.Guid != Guid.Empty
         ? $"Asset not found: {{{asset.Guid:N}}}."
@@ -22,7 +23,7 @@ public class AssetNotFoundException : Exception
 
     public AssetNotFoundException(IAssetLink<Asset> asset, string propertyName) : base(asset.Guid != Guid.Empty
         ? $"Asset not found for property \"{propertyName}\": {{{asset.Guid:N}}}."
-        : $"Asset not found for property \"{propertyName}\": ({UCAssetManager.GetAssetCategory(AssetLink.GetAssetType(asset))}/{asset.Id:D}).") { }
+        : $"Asset not found for property \"{propertyName}\": ({AssetUtility.GetAssetCategory(AssetLink.GetAssetType(asset))}/{asset.Id:D}).") { }
 
     public AssetNotFoundException(IAssetContainer asset, string propertyName) : base(asset.Guid != Guid.Empty
         ? $"Asset not found for property \"{propertyName}\": {{{asset.Guid:N}}}."

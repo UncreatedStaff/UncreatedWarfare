@@ -260,6 +260,14 @@ public class DroppedItemTracker : IHostedService, IEventListener<PlayerLeft>
         _itemDroppers[instanceId] = steam64.m_SteamID;
     }
 
+    /// <summary>
+    /// Adds an instigator to an item that's about to be dropped.
+    /// </summary>
+    internal void SetNextDroppedItemInstigator(Item item, ulong steam64)
+    {
+        _itemsPendingDrop[item] = steam64;
+    }
+
     // invoked by PlayerEventDispatcher
     internal void InvokeDropItemRequested(PlayerInventory inv, Item item, ref bool shouldAllow)
     {

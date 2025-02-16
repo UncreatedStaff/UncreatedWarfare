@@ -1,12 +1,15 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
-using Uncreated.Warfare.Logging;
+using System.Xml;
+using Uncreated.Warfare.Steam;
+using UnityEngine.Networking;
 
 namespace Uncreated.Warfare.Util;
 public static class FormattingUtility
@@ -14,86 +17,6 @@ public static class FormattingUtility
     internal static char[][]? AllRichTextTags;
     internal static RemoveRichTextOptions[]? AllRichTextTagFlags;
     public static Regex TimeRegex { get; } = new Regex(@"([\d\.]+)\s{0,1}([a-z]+)", RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-
-    /// <summary>
-    /// Truncates a string if it's over a certain <paramref name="length"/>.
-    /// </summary>
-    [return: NotNullIfNotNull(nameof(str))]
-    public static string? Truncate(this string? str, int length)
-    {
-        if (str is null)
-            return null;
-
-        return str.Length <= length ? str : str[..length];
-    }
-
-    /// <summary>
-    /// Truncates a string if it's over a certain <paramref name="length"/>.
-    /// </summary>
-    [return: NotNullIfNotNull(nameof(str))]
-    public static string? TruncateWithEllipses(this string? str, int length)
-    {
-        if (str is null || str.Length <= length)
-            return str;
-
-        return string.Create(length + 3, str, (span, state) =>
-        {
-            state.AsSpan(0, span.Length - 3).CopyTo(span);
-            span.Slice(span.Length - 3, 3).Fill('.');
-        });
-    }
-
-    /// <summary>
-    /// Compare two strings without worrying non-alphanumeric characters.
-    /// </summary>
-    /// <returns>The number of matching characters in <paramref name="searching"/> found in <paramref name="actual"/>.</returns>
-    public static int CompareStringsFuzzy(ReadOnlySpan<char> searching, ReadOnlySpan<char> actual, bool caseSensitive)
-    {
-        int searchIndex = 0, actualIndex = 0;
-        CultureInfo invariant = CultureInfo.InvariantCulture;
-        int charsMatched = 0;
-        while (searchIndex < searching.Length && actualIndex < actual.Length)
-        {
-            char actualChar = actual[actualIndex];
-            if (ExcludeChar(actualChar))
-            {
-                ++actualIndex;
-                continue;
-            }
-
-            char searchingChar = searching[searchIndex];
-            if (ExcludeChar(searchingChar))
-            {
-                ++searchIndex;
-                continue;
-            }
-
-            int cmp = caseSensitive
-                ? actualChar.CompareTo(searchingChar)
-                : char.ToUpper(actualChar, invariant).CompareTo(char.ToUpper(searchingChar, invariant));
-
-            if (cmp != 0)
-            {
-                ++actualIndex;
-                continue;
-            }
-
-            ++charsMatched;
-            ++searchIndex;
-            ++actualIndex;
-        }
-
-        return charsMatched;
-    }
-
-    private static bool ExcludeChar(char c)
-    {
-        unchecked
-        {
-            // is a-z or A-Z or 0-9
-            return !(c - (uint)'a' <= 'z' - (uint)'a' || c - (uint)'A' <= 'Z' - (uint)'A' || c - (uint)'0' <= '9' - (uint)'0');
-        }
-    }
 
     /// <summary>
     /// Format a minute/second timer.
@@ -172,38 +95,6 @@ public static class FormattingUtility
     }
 
     /// <summary>
-    /// Truncates <paramref name="text"/> so that it's UTF-8 byte count is less than or equal to <paramref name="maximumBytes"/>.
-    /// </summary>
-    /// <param name="byteLength">The length in UTF-8 bytes of the truncated text.</param>
-    public static ReadOnlySpan<char> TruncateUtf8Bytes(ReadOnlySpan<char> text, int maximumBytes, out int byteLength)
-    {
-        if (maximumBytes < 0)
-        {
-            byteLength = Encoding.UTF8.GetByteCount(text);
-            return text;
-        }
-
-        if (maximumBytes == 0)
-        {
-            byteLength = 0;
-            return default;
-        }
-
-        int byteCt = Encoding.UTF8.GetByteCount(text);
-        if (byteCt <= maximumBytes)
-        {
-            byteLength = byteCt;
-            return text;
-        }
-
-        Encoder encoder = Encoding.UTF8.GetEncoder();
-        byte[] buffer = new byte[maximumBytes];
-        encoder.Convert(text, buffer, false, out int charsUsed, out byteLength, out _);
-        return text.Slice(0, charsUsed);
-    }
-
-
-    /// <summary>
     /// Parses a timespan string in the form '3d 4hr 21min etc'. Can also be 'perm[anent]'.
     /// </summary>
     /// <returns>Total amount of time. <see cref="Timeout.InfiniteTimeSpan"/> is returned if <paramref name="input"/> is permanent.</returns>
@@ -248,9 +139,8 @@ public static class FormattingUtility
     /// <summary>
     /// Converts a timespan to a string in the form '3d 4hr 21min etc'. Will be 'perm[anent]' if <paramref name="timeSpan"/> is <see cref="Timeout.InfiniteTimeSpan"/> (or any negative <see cref="TimeSpan"/>).
     /// </summary>
-    public static string ToTimeString(TimeSpan timeSpan, int figures = -1)
-    {
-        if (timeSpan.Ticks < 0L)
+    public static string ToTimeString(TimeSpan timeSpan, int figures = -1, bool space = false)
+    { if (timeSpan.Ticks < 0L)
             return "permanent";
         
         if (timeSpan.Ticks == 0)
@@ -268,24 +158,32 @@ public static class FormattingUtility
         m %= 60;
         h %= 24;
         mo %= 12;
+        bool needsSpace = false;
         if (y != 0)
         {
             sb.Append(y).Append('y');
             if (figures != -1 && --figures <= 0)
                 return sb.ToString();
+
+            needsSpace = space;
         }
         if (mo > 0)
         {
+            if (needsSpace)
+                sb.Append(' ');
             sb.Append(mo).Append("mo");
             if (figures != -1 && --figures <= 0)
                 return sb.ToString();
             d %= 30;
             if (d != 0)
             {
+                if (space)
+                    sb.Append(' ');
                 sb.Append(d).Append('d');
                 if (figures != -1 && --figures <= 0)
                     return sb.ToString();
             }
+            needsSpace = space;
         }
         else
         {
@@ -293,36 +191,65 @@ public static class FormattingUtility
             d %= 7;
             if (w != 0)
             {
+                if (needsSpace)
+                    sb.Append(' ');
                 sb.Append(w).Append('w');
                 if (figures != -1 && --figures <= 0)
                     return sb.ToString();
+
+                needsSpace = space;
             }
             if (d != 0)
             {
+                if (needsSpace)
+                    sb.Append(' ');
                 sb.Append(d).Append('d');
                 if (figures != -1 && --figures <= 0)
                     return sb.ToString();
+
+                needsSpace = space;
             }
         }
         if (h != 0)
         {
+            if (needsSpace)
+                sb.Append(' ');
+
             sb.Append(h).Append('h');
             if (figures != -1 && --figures <= 0)
                 return sb.ToString();
+
+            needsSpace = space;
         }
         if (m != 0)
         {
+            if (needsSpace)
+                sb.Append(' ');
+
             sb.Append(m).Append('m');
             if (figures != -1 && --figures <= 0)
                 return sb.ToString();
+
+            needsSpace = space;
         }
         if (seconds != 0)
         {
+            if (needsSpace)
+                sb.Append(' ');
+
             sb.Append(seconds).Append('s');
-            if (figures != -1 && --figures <= 0)
-                return sb.ToString();
         }
+
         return sb.ToString();
+    }
+
+    /// <summary>
+    /// Replaces newline constants like '/n', '\n', '&lt;br&gt;', etc with the actual newline character.
+    /// </summary>
+    [return: NotNullIfNotNull("str")]
+    public static string? ReplaceNewLineSubstrings(string? str)
+    {
+        return str?.Replace("\\n", "\n").Replace("/n", "\n").Replace("<br>", "\n").Replace("<br/>", "\n").Replace("<br />", "\n");
     }
 
     /// <summary>
@@ -352,7 +279,7 @@ public static class FormattingUtility
 
                 if (ushort.TryParse(input, NumberStyles.Any, provider, out ushort id))
                 {
-                    value = Assets.find(UCAssetManager.GetAssetCategory(type), id);
+                    value = Assets.find(AssetUtility.GetAssetCategory(type), id);
                     if (!type.IsInstanceOfType(value))
                         value = null!;
                     return value is not null;
@@ -639,174 +566,13 @@ public static class FormattingUtility
         
         if (type == typeof(CSteamID))
         {
-            if (!TryParseSteamId(input, out CSteamID steam64))
+            if (!SteamIdHelper.TryParseSteamId(input, out CSteamID steam64))
                 return false;
             
             value = steam64;
             return true;
         }
 
-        return false;
-    }
-
-    /// <summary>
-    /// Parse a Steam ID in any form.
-    /// </summary>
-    public static bool TryParseSteamId(string str, out CSteamID steamId)
-    {
-        if (str.Length > 2 && str[0] is 'N' or 'n' or 'O' or 'o' or 'L' or 'l' or 'z' or 'Z')
-        {
-            if (str.Equals("Nil", StringComparison.InvariantCultureIgnoreCase) ||
-                str.Equals("zero", StringComparison.InvariantCultureIgnoreCase) ||
-                str.Equals("null", StringComparison.InvariantCultureIgnoreCase))
-            {
-                steamId = CSteamID.Nil;
-                return true;
-            }
-            if (str.Equals("OutofDateGS", StringComparison.InvariantCultureIgnoreCase) ||
-                str.Equals("out-of-date-gs", StringComparison.InvariantCultureIgnoreCase) ||
-                str.Equals("out of date gs", StringComparison.InvariantCultureIgnoreCase) ||
-                str.Equals("out_of_date_gs", StringComparison.InvariantCultureIgnoreCase))
-            {
-                steamId = CSteamID.OutofDateGS;
-                return true;
-            }
-            if (str.Equals("LanModeGS", StringComparison.InvariantCultureIgnoreCase) ||
-                str.Equals("lan-mode-gs", StringComparison.InvariantCultureIgnoreCase) ||
-                str.Equals("lan mode gs", StringComparison.InvariantCultureIgnoreCase) ||
-                str.Equals("lan_mode_gs", StringComparison.InvariantCultureIgnoreCase))
-            {
-                steamId = CSteamID.LanModeGS;
-                return true;
-            }
-            if (str.Equals("NotInitYetGS", StringComparison.InvariantCultureIgnoreCase) ||
-                str.Equals("not-init-yet-gs", StringComparison.InvariantCultureIgnoreCase) ||
-                str.Equals("not init yet gs", StringComparison.InvariantCultureIgnoreCase) ||
-                str.Equals("not_init_yet_gs", StringComparison.InvariantCultureIgnoreCase))
-            {
-                steamId = CSteamID.NotInitYetGS;
-                return true;
-            }
-            if (str.Equals("NonSteamGS", StringComparison.InvariantCultureIgnoreCase) ||
-                str.Equals("non-steam-gs", StringComparison.InvariantCultureIgnoreCase) ||
-                str.Equals("non steam gs", StringComparison.InvariantCultureIgnoreCase) ||
-                str.Equals("non_steam_gs", StringComparison.InvariantCultureIgnoreCase))
-            {
-                steamId = CSteamID.NonSteamGS;
-                return true;
-            }
-        }
-
-        if (str.Length >= 8 && uint.TryParse(str, NumberStyles.Number, CultureInfo.InvariantCulture, out uint acctId1))
-        {
-            steamId = new CSteamID(new AccountID_t(acctId1), EUniverse.k_EUniversePublic, EAccountType.k_EAccountTypeIndividual);
-            return true;
-        }
-
-        if (str.Length >= 17 && ulong.TryParse(str, NumberStyles.Number, CultureInfo.InvariantCulture, out ulong id))
-        {
-            steamId = new CSteamID(id);
-
-            // try parse as hex instead
-            if (steamId.GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
-            {
-                if (!ulong.TryParse(str, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out id))
-                    return true;
-                CSteamID steamid2 = new CSteamID(id);
-                if (steamid2.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
-                    steamId = steamid2;
-            }
-            return true;
-        }
-
-        if (str.Length >= 15 && ulong.TryParse(str, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out ulong acctId2))
-        {
-            steamId = new CSteamID(acctId2);
-            return true;
-        }
-
-        if (str.StartsWith("STEAM_", StringComparison.InvariantCultureIgnoreCase) && str.Length > 10)
-        {
-            if (str[7] != ':' || str[9] != ':')
-                goto fail;
-            char uv = str[6];
-            if (!char.IsDigit(uv))
-                goto fail;
-            EUniverse universe = (EUniverse)(uv - 48);
-            if (universe == EUniverse.k_EUniverseInvalid)
-                universe = EUniverse.k_EUniversePublic;
-
-            bool y;
-            if (str[8] == '1')
-                y = true;
-            else if (str[8] == '0')
-                y = false;
-            else goto fail;
-            if (!uint.TryParse(str.Substring(10), NumberStyles.Number, CultureInfo.InvariantCulture, out uint acctId))
-                goto fail;
-
-            steamId = new CSteamID(new AccountID_t((uint)(acctId * 2 + (y ? 1 : 0))), universe, EAccountType.k_EAccountTypeIndividual);
-            return true;
-        }
-
-        if (str.Length > 8 && str[0] == '[')
-        {
-            if (str[2] != ':' || str[4] != ':' || str[^1] != ']')
-                goto fail;
-            EAccountType type;
-            char c = str[1];
-            if (c is 'I' or 'i')
-                type = EAccountType.k_EAccountTypeInvalid;
-            else if (c == 'U')
-                type = EAccountType.k_EAccountTypeIndividual;
-            else if (c == 'M')
-                type = EAccountType.k_EAccountTypeMultiseat;
-            else if (c == 'G')
-                type = EAccountType.k_EAccountTypeGameServer;
-            else if (c == 'A')
-                type = EAccountType.k_EAccountTypeAnonGameServer;
-            else if (c == 'P')
-                type = EAccountType.k_EAccountTypePending;
-            else if (c == 'C')
-                type = EAccountType.k_EAccountTypeContentServer;
-            else if (c == 'g')
-                type = EAccountType.k_EAccountTypeClan;
-            else if (c is 'T' or 'L' or 'c')
-                type = EAccountType.k_EAccountTypeChat;
-            else if (c == 'a')
-                type = EAccountType.k_EAccountTypeAnonUser;
-            else goto fail;
-            char uv = str[3];
-            if (!char.IsDigit(uv))
-                goto fail;
-            uint acctId;
-            if (str[^3] != ':')
-            {
-                if (!uint.TryParse(str.Substring(5, str.Length - 6), NumberStyles.Number, CultureInfo.InvariantCulture, out acctId))
-                    goto fail;
-            }
-            else
-            {
-                if (!uint.TryParse(str.Substring(5, str.Length - 8), NumberStyles.Number, CultureInfo.InvariantCulture, out acctId))
-                    goto fail;
-                acctId *= 2;
-                uv = str[^2];
-                if (uv == '1')
-                    ++acctId;
-                else if (uv != '0')
-                    goto fail;
-            }
-
-            EUniverse universe = (EUniverse)(uv - 48);
-            if (universe == EUniverse.k_EUniverseInvalid)
-                universe = EUniverse.k_EUniversePublic;
-
-            steamId = new CSteamID(new AccountID_t(acctId), universe, type);
-            return true;
-        }
-
-        fail:
-        steamId = CSteamID.Nil;
         return false;
     }
 

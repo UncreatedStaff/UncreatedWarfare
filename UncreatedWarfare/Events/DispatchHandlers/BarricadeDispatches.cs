@@ -67,7 +67,7 @@ partial class EventDispatcher
             Region = region,
             VehicleRegionIndex = plant,
             RegionPosition = coords,
-            Rotation = new Vector3(angleX, angleY, angleZ),
+            Rotation = Quaternion.Euler(angleX, angleY, angleZ),
             Owner = new CSteamID(owner),
             OriginalPlacer = _playerService.GetOnlinePlayerOrNull(owner),
             GroupOwner = new CSteamID(group)
@@ -82,7 +82,7 @@ partial class EventDispatcher
                 return;
             }
 
-            Vector3 rot = args.Rotation;
+            Vector3 rot = args.Rotation.eulerAngles;
             Quaternion rotation = BarricadeManager.getRotation(args.Barricade.asset, rot.x, rot.y, rot.z);
 
             if (plantTargetAlive)
@@ -98,7 +98,7 @@ partial class EventDispatcher
         if (!shouldAllow)
             return;
         
-        Vector3 rot = args.Rotation;
+        Vector3 rot = args.Rotation.eulerAngles;
 
         point = args.Position;
         angleX = rot.x;
@@ -171,9 +171,10 @@ partial class EventDispatcher
             return;
         }
 
-        SalvageBarricadeRequested args = new SalvageBarricadeRequested(region)
+        SalvageBarricadeRequested args = new SalvageBarricadeRequested
         {
             Player = player,
+            Region = region,
             InstanceId = barricade.instanceID,
             Barricade = barricade,
             ServersideData = barricade.GetServersideData(),
@@ -301,10 +302,10 @@ partial class EventDispatcher
             if (args.Sign == null || args.Barricade.GetServersideData().barricade.isDead)
                 return;
 
-            if (args.Player is not null && _timeComponent is not null && args.Sign.transform.TryGetComponent(out BarricadeComponent bcomp))
+            if (args.Player is not null)
             {
-                bcomp.LastEditor = args.Player.Steam64;
-                bcomp.EditTick = _timeComponent.Updates;
+                BuildableContainer bcomp = BuildableContainer.Get(args.Barricade);
+                bcomp.SignEditor = args.Player.Steam64;
             }
 
             BarricadeManager.ServerSetSignText(args.Sign, args.Text);
@@ -313,10 +314,10 @@ partial class EventDispatcher
         if (!shouldallow)
             return;
 
-        if (instigator.GetEAccountType() == EAccountType.k_EAccountTypeIndividual && _timeComponent is not null && sign.transform.TryGetComponent(out BarricadeComponent bcomp))
+        if (instigator.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
         {
-            bcomp.LastEditor = instigator;
-            bcomp.EditTick = _timeComponent.Updates;
+            BuildableContainer bcomp = BuildableContainer.Get(args.Barricade);
+            bcomp.SignEditor = instigator;
         }
 
         text = args.Text;
@@ -347,12 +348,13 @@ partial class EventDispatcher
 
         WarfarePlayer? player = _playerService.GetOnlinePlayerOrNull(instigatorSteamId);
 
-        DamageBarricadeRequested args = new DamageBarricadeRequested(region)
+        DamageBarricadeRequested args = new DamageBarricadeRequested
         {
             InstigatorId = instigatorSteamId,
             Instigator = player,
             InstanceId = drop.instanceID,
             Barricade = drop,
+            Region = region,
             DamageOrigin = damageOrigin,
 
             // todo
@@ -363,7 +365,7 @@ partial class EventDispatcher
             ServersideData = drop.GetServersideData(),
             VehicleRegionIndex = plant,
             RegionIndex = (ushort)index,
-            Damage = pendingTotalDamage,
+            PendingDamage = pendingTotalDamage,
             InstigatorTeam = player?.Team ?? Team.NoTeam
         };
 
@@ -375,7 +377,7 @@ partial class EventDispatcher
             _ignoreBarricadeManagerOnDamageBarricadeRequested = true;
             try
             {
-                BarricadeManager.damage(args.Transform, (ushort)Math.Clamp(args.Damage, 0f, ushort.MaxValue), 1, false, args.InstigatorId, args.DamageOrigin);
+                BarricadeManager.damage(args.Transform, (ushort)Math.Clamp(args.PendingDamage, 0f, ushort.MaxValue), 1, false, args.InstigatorId, args.DamageOrigin);
             }
             finally
             {
@@ -384,6 +386,6 @@ partial class EventDispatcher
         });
 
         if (shouldAllow)
-            pendingTotalDamage = (ushort)Math.Clamp(args.Damage, 0f, ushort.MaxValue);
+            pendingTotalDamage = (ushort)Math.Clamp(args.PendingDamage, 0f, ushort.MaxValue);
     }
 }

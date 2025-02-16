@@ -2,7 +2,6 @@ using DanielWillett.ReflectionTools;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Models.Players;
@@ -14,6 +13,7 @@ using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.Deaths;
 public class DeathTracker : IHostedService
@@ -37,8 +37,13 @@ public class DeathTracker : IHostedService
 
     UniTask IHostedService.StartAsync(CancellationToken token)
     {
+        CommandWindow.shouldLogDeaths = false;
+
         // not using event dispatcher for this because this class is responsible for dispatching the player died event.
         PlayerLife.onPlayerDied += OnPlayerDied;
+        UseableGun.onProjectileSpawned += UseableGunOnProjectileSpawned;
+        UseableThrowable.onThrowableSpawned += OnThrowableSpawned;
+        UseableConsumeable.onConsumePerformed += UseableConsumeableOnConsumePerformed;
 
         EDeathCause[] causes = Enum.GetValues(typeof(EDeathCause)).Cast<EDeathCause>().ToArray();
         if (causes.Contains(InEnemyMainDeathCause))
@@ -58,9 +63,64 @@ public class DeathTracker : IHostedService
             }
         }
 
-        UseableThrowable.onThrowableSpawned += OnThrowableSpawned;
 
         return UniTask.CompletedTask;
+    }
+
+    UniTask IHostedService.StopAsync(CancellationToken token)
+    {
+        PlayerLife.onPlayerDied -= OnPlayerDied;
+        UseableGun.onProjectileSpawned -= UseableGunOnProjectileSpawned;
+        UseableThrowable.onThrowableSpawned -= OnThrowableSpawned;
+        UseableConsumeable.onConsumePerformed -= UseableConsumeableOnConsumePerformed;
+
+        return UniTask.CompletedTask;
+    }
+
+    private static void UseableConsumeableOnConsumePerformed(Player instigatingPlayer, ItemConsumeableAsset consumeableAsset)
+    {
+        PlayerDeathTrackingComponent deathTrackingComponent = PlayerDeathTrackingComponent.GetOrAdd(instigatingPlayer);
+
+        deathTrackingComponent.LastExplosiveConsumed = null;
+
+        if (consumeableAsset.IsExplosive)
+        {
+            deathTrackingComponent.LastExplosiveConsumed = AssetLink.Create(consumeableAsset);
+        }
+        else if (consumeableAsset.virus != 0)
+        {
+            deathTrackingComponent.LastInfectionItemConsumed = AssetLink.Create(consumeableAsset);
+        }
+    }
+
+    private static void UseableGunOnProjectileSpawned(UseableGun sender, GameObject projectile)
+    {
+        PlayerDeathTrackingComponent deathTrackingComponent = PlayerDeathTrackingComponent.GetOrAdd(sender.player);
+
+        ItemGunAsset gun = sender.equippedGunAsset;
+
+        deathTrackingComponent.LastRocketShot = AssetLink.Create(gun);
+
+        InteractableVehicle? vehicle = sender.player.movement.getVehicle();
+        if (vehicle is null)
+        {
+            deathTrackingComponent.LastRocketShotFromVehicle = null;
+            return;
+        }
+
+        byte seat = sender.player.movement.getSeat();
+        if (seat >= vehicle.passengers.Length || vehicle.passengers[seat].turret == null || !deathTrackingComponent.LastRocketShot.MatchId(vehicle.passengers[seat].turret.itemID))
+        {
+            deathTrackingComponent.LastRocketShotFromVehicle = null;
+            return;
+        }
+
+        deathTrackingComponent.LastRocketShotFromVehicle = vehicle;
+
+        if (seat != 0 && vehicle.isDriven)
+        {
+            deathTrackingComponent.LastRocketShotFromVehicleDriverAssist = vehicle.passengers[0].player.playerID.steamID;
+        }
     }
 
     private void OnThrowableSpawned(UseableThrowable useable, GameObject throwable)
@@ -77,13 +137,6 @@ public class DeathTracker : IHostedService
         comp.Owner = player;
         comp.ToRemoveFrom = deathTrackingComponent.ActiveThrownItems;
         comp.Team = player?.Team ?? Team.NoTeam;
-    }
-
-    UniTask IHostedService.StopAsync(CancellationToken token)
-    {
-        PlayerLife.onPlayerDied -= OnPlayerDied;
-
-        return UniTask.CompletedTask;
     }
 
     private void OnPlayerDied(PlayerLife sender, EDeathCause cause, ELimb limb, CSteamID instigator)
@@ -107,9 +160,8 @@ public class DeathTracker : IHostedService
                 {
                     PlayerDied e;
                     
-                    if (dead.Data.TryGetValue("LastPlayerDying", out object? dyingArgs) && dyingArgs is PlayerDying dying)
+                    if (dead.Data.TryRemove("LastPlayerDying", out object? dyingArgs) && dyingArgs is PlayerDying dying)
                     {
-                        dead.Data.Remove("LastPlayerDying");
                         e = new PlayerDied(in dying.Parameters) { Player = dead };
                     }
                     else
@@ -441,13 +493,13 @@ public class DeathTracker : IHostedService
                     break;
                 }
 
-                VehicleComponent vComp = killerData.LastVehicleExploded;
+                WarfareVehicle vComp = killerData.LastVehicleExploded;
                 e.MessageFlags |= DeathFlags.Item;
                 e.PrimaryAsset = AssetLink.Create(vComp.Vehicle.asset);
 
-                if (vComp.LastItem != Guid.Empty && Assets.find(vComp.LastItem) is ItemAsset lastVehicleHitItem)
+                if (vComp.DamageTracker.LatestInstigatorWeapon != null)
                 {
-                    e.SecondaryAsset = AssetLink.Create(lastVehicleHitItem);
+                    e.SecondaryAsset = AssetLink.Create(vComp.DamageTracker.LatestInstigatorWeapon);
                     e.MessageFlags |= DeathFlags.Item2;
                 }
 
@@ -500,11 +552,12 @@ public class DeathTracker : IHostedService
                 {
                     e.PrimaryAsset = AssetLink.Create(lastRocketShot);
                     e.MessageFlags |= DeathFlags.Item;
-                    e.TurretVehicleOwner = killerData.LastRocketShotFromVehicle;
+                    InteractableVehicle? turretOwner = killerData.LastRocketShotFromVehicle;
 
-                    if (e.TurretVehicleOwner == null)
+                    if (turretOwner is null)
                         break;
 
+                    e.TurretVehicleOwner = AssetLink.Create(turretOwner.asset);
                     e.SecondaryAsset = e.TurretVehicleOwner;
                     e.MessageFlags |= DeathFlags.Item2;
 
@@ -589,6 +642,7 @@ public class DeathTracker : IHostedService
                 // find target sentry
                 List<BarricadeInfo> drops = BarricadeUtility.EnumerateBarricades()
                     .Where(x =>
+                        x.Drop != null &&
                         x.Drop.GetServersideData().owner == e.Instigator.m_SteamID &&
                         x.Drop.interactable is InteractableSentry sentry &&
                         SentryTargetPlayerField?.Invoke(sentry) is { } target &&
@@ -707,7 +761,8 @@ public class DeathTracker : IHostedService
                 if (killerData != null && killerData.LastVehicleExploded != null)
                 {
                     item1 = AssetLink.Create(killerData.LastVehicleExploded.Vehicle.asset);
-                    item2 = AssetLink.Create<ItemAsset>(killerData.LastVehicleExploded.LastItem);
+                    if (killerData.LastVehicleExploded.DamageTracker.LatestInstigatorWeapon != null)
+                        item2 = AssetLink.Create(killerData.LastVehicleExploded.DamageTracker.LatestInstigatorWeapon);
                 }
                 else item1 = null;
                 break;
@@ -783,6 +838,7 @@ public class DeathTracker : IHostedService
                 // find target sentry
                 List<BarricadeInfo> drops = BarricadeUtility.EnumerateBarricades()
                     .Where(x =>
+                        x.Drop != null &&
                         x.Drop.GetServersideData().owner == killerId &&
                         x.Drop.interactable is InteractableSentry sentry &&
                         SentryTargetPlayerField?.Invoke(sentry) is { } target &&

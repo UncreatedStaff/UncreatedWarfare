@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -93,7 +93,7 @@ public class SessionRecord
     [ForeignKey(nameof(Kit))]
     [Column("Kit")]
     public uint? KitId { get; set; }
-    public Kit? Kit { get; set; }
+    public KitModel? Kit { get; set; }
 
     [StringLength(25)]
     public string? KitName { get; set; }

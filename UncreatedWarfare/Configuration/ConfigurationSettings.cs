@@ -1,4 +1,4 @@
-﻿using System.Text.Encodings.Web;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Configuration.JsonConverters;
@@ -15,12 +15,23 @@ public static class ConfigurationSettings
 
     public static readonly JsonReaderOptions JsonReaderOptions = new JsonReaderOptions { AllowTrailingCommas = true, CommentHandling = JsonCommentHandling.Skip };
     
+    public static readonly JsonDocumentOptions JsonDocumentOptions = new JsonDocumentOptions { AllowTrailingCommas = true, CommentHandling = JsonCommentHandling.Skip };
+    
     public static readonly JsonSerializerOptions JsonSerializerSettings = new JsonSerializerOptions
     {
         WriteIndented = true,
         AllowTrailingCommas = true,
         Encoder = TextEncoder,
         ReadCommentHandling = JsonCommentHandling.Skip
+    };
+
+    public static readonly JsonSerializerOptions JsonSerializerSettingsQuests = new JsonSerializerOptions
+    {
+        WriteIndented = true,
+        AllowTrailingCommas = true,
+        Encoder = TextEncoder,
+        ReadCommentHandling = JsonCommentHandling.Skip,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault
     };
 
     public static readonly JsonSerializerOptions JsonCondensedSerializerSettings = new JsonSerializerOptions

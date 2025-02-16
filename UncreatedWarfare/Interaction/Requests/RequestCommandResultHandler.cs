@@ -1,5 +1,5 @@
-﻿using System;
-using Uncreated.Warfare.Kits.Translations;
+using System;
+using Uncreated.Warfare.Kits.Requests;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Costs;
 using Uncreated.Warfare.Players.Unlocks;

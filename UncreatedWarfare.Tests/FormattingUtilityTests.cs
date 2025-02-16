@@ -1,5 +1,4 @@
-﻿using NUnit.Framework;
-using Steamworks;
+using NUnit.Framework;
 using System.Globalization;
 using Uncreated.Warfare.Util;
 using UnityEngine;
@@ -10,19 +9,6 @@ namespace Uncreated.Warfare.Tests;
 public class FormattingUtilityTests
 {
     private const float Tolerance = 0.001f;
-    [Test]
-    [TestCase("STEAM_0:1:153830640")]
-    [TestCase("[U:1:307661281]")]
-    [TestCase("76561198267927009")]
-    [TestCase("1100001125689e1")]
-    [TestCase("307661281")]
-    public void TestParseCSteamID(string steamIdInput)
-    {
-        if (!FormattingUtility.TryParseSteamId(steamIdInput, out CSteamID steamId))
-            Assert.Fail();
-
-        Assert.AreEqual(steamId.m_SteamID, 76561198267927009ul);
-    }
 
     [Test]
     [TestCase("#0066ff99")]

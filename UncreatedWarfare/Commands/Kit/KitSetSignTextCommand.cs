@@ -1,91 +1,83 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using System;
-using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Kits;
-using Uncreated.Warfare.Players.Unlocks;
+using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.Languages;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Commands;
 
-[Command("sign", "text"), SubCommandOf(typeof(KitCommand))]
+[Command("sign", "text"), SubCommandOf(typeof(KitSetCommand))]
 internal sealed class KitSetSignTextCommand : IExecutableCommand
 {
     private readonly KitCommandTranslations _translations;
-    private readonly KitManager _kitManager;
-    private readonly IKitsDbContext _dbContext;
+    private readonly IKitDataStore _kitDataStore;
+    private readonly ILanguageDataStore _languageDataStore;
     public required CommandContext Context { get; init; }
 
-    public KitSetSignTextCommand(IServiceProvider serviceProvider)
+    public KitSetSignTextCommand(IKitDataStore kitDataStore, TranslationInjection<KitCommandTranslations> translations, ILanguageDataStore languageDataStore)
     {
-        _kitManager = serviceProvider.GetRequiredService<KitManager>();
-        _dbContext = serviceProvider.GetRequiredService<IKitsDbContext>();
-        _translations = serviceProvider.GetRequiredService<TranslationInjection<KitCommandTranslations>>().Value;
-
-        _dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
+        _kitDataStore = kitDataStore;
+        _languageDataStore = languageDataStore;
+        _translations = translations.Value;
     }
 
     public async UniTask ExecuteAsync(CancellationToken token)
     {
-        if (!Context.TryGet(1, out string? kitId) || !Context.TryGet(2, out int level))
+        if (!Context.TryGet(0, out string? kitId) || !Context.TryGet(1, out string? languageCode) || !Context.TryGetRange(2, out string? value))
         {
             throw Context.SendHelp();
         }
 
-        Kit? kit = await _kitManager.FindKit(kitId, token, true, x => x.Kits
-            .Include(y => y.UnlockRequirementsModels)
-            .Include(y => y.Translations)
-        );
+        Kit? kit = await _kitDataStore.QueryKitAsync(kitId, KitInclude.Translations, token);
 
         if (kit == null)
         {
-            throw Context.Reply(_translations.KitNotFound);
+            throw Context.Reply(_translations.KitNotFound, kitId);
         }
 
-        kitId = kit.InternalName;
+        kitId = kit.Id;
 
-        if (level == 0)
+        LanguageInfo? language = await _languageDataStore.GetInfo(languageCode, true, true, token).ConfigureAwait(false);
+        if (language == null)
         {
-            UnlockRequirement[] ulr = kit.UnlockRequirements;
-            while (true)
-            {
-                int index = Array.FindIndex(ulr, x => x is LevelUnlockRequirement);
-                if (index == -1)
-                    break;
-
-                CollectionUtility.RemoveFromArray(ref ulr, index);
-            }
-            kit.SetUnlockRequirementArray(ulr, _dbContext);
+            throw Context.Reply(_translations.KitLanguageNotFound, languageCode);
         }
-        else
+
+        string newName = FormattingUtility.ReplaceNewLineSubstrings(value);
+
+        await _kitDataStore.UpdateKitAsync(kit.Key, KitInclude.Translations | KitInclude.UnlockRequirements, kit =>
         {
-            UnlockRequirement[] ulr = kit.UnlockRequirements;
-            int index = Array.FindIndex(ulr, x => x is LevelUnlockRequirement);
-            UnlockRequirement req = new LevelUnlockRequirement { UnlockLevel = level };
-            if (index == -1)
+            bool found = false;
+            for (int i = kit.Translations.Count - 1; i >= 0; --i)
             {
-                CollectionUtility.AddToArray(ref ulr, req);
-                kit.SetUnlockRequirementArray(ulr, _dbContext);
-            }
-            else
-            {
-                ((LevelUnlockRequirement)ulr[index]).UnlockLevel = level;
-                kit.MarkLocalUnlockRequirementsDirty(_dbContext);
-            }
-        }
+                KitTranslation t = kit.Translations[i];
+                if (t.LanguageId != language.Key)
+                    continue;
 
-        kit.UpdateLastEdited(Context.CallerId);
-        _dbContext.Update(kit);
-        await _dbContext.SaveChangesAsync(token).ConfigureAwait(false);
+                found = true;
+                t.Value = newName;
+                break;
+            }
+
+            if (!found)
+            {
+                kit.Translations.Add(new KitTranslation
+                {
+                    KitId = kit.PrimaryKey,
+                    LanguageId = language.Key,
+                    Value = newName
+                });
+            }
+        }, Context.CallerId, token).ConfigureAwait(false);
 
         await UniTask.SwitchToMainThread(token);
 
-        _kitManager.Signs.UpdateSigns(kit);
-        Context.Reply(_translations.KitPropertySet, "Level", kit, level.ToString(Context.Culture));
-        Context.LogAction(ActionLogType.SetKitProperty, kitId + ": LEVEL >> " + level);
+        newName = newName.Replace("\n", "<br>");
+
+        Context.Reply(_translations.KitPropertySet, $"Name ({language.Code})", kit, newName);
+        Context.LogAction(ActionLogType.SetKitProperty, $"{kitId}: SIGN TEXT | \"{language.Code}\" >> \"{newName}\"");
     }
 }

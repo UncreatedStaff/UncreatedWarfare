@@ -187,10 +187,6 @@ public readonly struct HWID : IEquatable<HWID>
         {
             return Convert.ToBase64String(MemoryMarshal.Cast<HWID, byte>(MemoryMarshal.CreateReadOnlySpan(ref Unsafe.AsRef(in this), 1)));
         }
-        else
-        {
-
-        }
 
         return Convert.ToBase64String(ToByteArray());
     }

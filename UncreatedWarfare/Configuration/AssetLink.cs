@@ -15,6 +15,7 @@ using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Addons;
 using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Translations.ValueFormatters;
+using Uncreated.Warfare.Util;
 using YamlDotNet.Core;
 using YamlDotNet.Core.Events;
 using YamlDotNet.Serialization;
@@ -32,12 +33,12 @@ public interface IAssetLink<out TAsset> : IAssetContainer, IEquatable<IAssetLink
     /// <summary>
     /// Guid of the asset, if known.
     /// </summary>
-    new Guid Guid { get; set; }
+    new Guid Guid { get; }
 
     /// <summary>
     /// Short ID of the asset, if known.
     /// </summary>
-    new ushort Id { get; set; }
+    new ushort Id { get; }
 
     /// <summary>
     /// Get the actual asset from the stored info.
@@ -56,6 +57,14 @@ public static class AssetLink
     public static readonly SpecialFormat AssetLinkFriendly = new SpecialFormat("Friendly", "f", useForToString: false);
     public static readonly SpecialFormat AssetLinkDescriptiveNoColor = new SpecialFormat("Descriptive (no color)", "nd", useForToString: false);
     public static readonly SpecialFormat AssetLinkFriendlyNoColor = new SpecialFormat("Friendly (no color)", "nf", useForToString: false);
+
+    /// <summary>
+    /// Returns an empty asset link.
+    /// </summary>
+    public static IAssetLink<TAsset> Empty<TAsset>() where TAsset : Asset
+    {
+        return AssetLinkImpl<TAsset>.Empty;
+    }
 
     /// <summary>
     /// Create an asset link from a GUID in string form.
@@ -82,7 +91,7 @@ public static class AssetLink
     /// </summary>
     public static IAssetLink<TAsset> Create<TAsset>(Guid guid) where TAsset : Asset
     {
-        return new AssetLinkImpl<TAsset>(guid);
+        return guid == Guid.Empty ? AssetLinkImpl<TAsset>.Empty : new AssetLinkImpl<TAsset>(guid);
     }
 
     /// <summary>
@@ -102,7 +111,7 @@ public static class AssetLink
     /// </summary>
     public static IAssetLink<TAsset> Create<TAsset>(ushort id) where TAsset : Asset
     {
-        return new AssetLinkImpl<TAsset>(id);
+        return id == 0 ? AssetLinkImpl<TAsset>.Empty : new AssetLinkImpl<TAsset>(id);
     }
 
     /// <summary>
@@ -734,6 +743,8 @@ public static class AssetLink
     /// <typeparam name="TAsset">The type of asset to reference.</typeparam>
     private class AssetLinkImpl<TAsset> : IAssetLink<TAsset> where TAsset : Asset
     {
+        internal static readonly IAssetLink<TAsset> Empty = new AssetLinkImpl<TAsset>(0);
+
         private Guid _guid;
         private ushort _id;
         private TAsset? _cachedAsset;
@@ -747,15 +758,6 @@ public static class AssetLink
 
                 return _guid;
             }
-            set
-            {
-                if (_guid == value)
-                    return;
-
-                _guid = value;
-                _id = default;
-                _cachedAsset = null;
-            }
         }
 
         public ushort Id
@@ -766,15 +768,6 @@ public static class AssetLink
                     GetAsset();
 
                 return _id;
-            }
-            set
-            {
-                if (_id == value)
-                    return;
-
-                _id = value;
-                _guid = default;
-                _cachedAsset = null;
             }
         }
 
@@ -789,7 +782,7 @@ public static class AssetLink
             }
             else if (_id != default)
             {
-                _cachedAsset = Assets.find(UCAssetManager.GetAssetCategory<TAsset>(), _id) as TAsset;
+                _cachedAsset = Assets.find(AssetUtility.GetAssetCategory<TAsset>(), _id) as TAsset;
             }
 
             if (_cachedAsset == null)
@@ -891,7 +884,7 @@ public static class AssetLink
             {
                 if (Id != 0)
                     return "\"" + asset.name + "\" {" + Guid.ToString("N", CultureInfo.InvariantCulture) + "} (" +
-                           UCAssetManager.GetAssetCategory<TAsset>() + "/" +
+                           AssetUtility.GetAssetCategory(asset) + "/" +
                            Id.ToString("D", CultureInfo.InvariantCulture) + ")";
 
                 return "\"" + asset.name + "\" {" + Guid.ToString("N", CultureInfo.InvariantCulture) + "}";
@@ -899,7 +892,7 @@ public static class AssetLink
 
             if (Id != 0)
                 return "\"" + asset.name + "\" (" +
-                       UCAssetManager.GetAssetCategory<TAsset>() + "/" +
+                       AssetUtility.GetAssetCategory(asset) + "/" +
                        Id.ToString("F0", CultureInfo.InvariantCulture) + ")";
 
             return "\"" + asset.name + "\"";
@@ -923,7 +916,7 @@ public static class AssetLink
             string? idStr;
             if (id != 0 || guid == Guid.Empty)
             {
-                string enumStr = formatter.FormatEnum(UCAssetManager.GetAssetCategory<TAsset>(), parameters.Language);
+                string enumStr = formatter.FormatEnum(AssetUtility.GetAssetCategory<TAsset>(), parameters.Language);
                 if (rarity)
                     enumStr = formatter.Colorize(enumStr, WarfareFormattedLogValues.EnumColor, parameters.Options);
 
@@ -1010,7 +1003,7 @@ public static class AssetLink
             return new AssetLinkImpl<TAsset>(this);
         }
 
-        Guid IAssetReference.GUID { get => Guid; set => Guid = value; }
+        Guid IAssetReference.GUID { get => Guid; set => throw new NotSupportedException(); }
         bool IAssetReference.isValid => _guid != Guid.Empty || _id != 0 || _cachedAsset != null;
     }
 }

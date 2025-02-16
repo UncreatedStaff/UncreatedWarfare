@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 using Uncreated.Warfare.Util;
@@ -1193,4 +1194,54 @@ public static class MySqlSnippets
         }
         builder.Append(')');
     }
+
+    /// <summary>
+    /// Takes a list of primary key pairs and calls <paramref name="action"/> for each array of values per id.
+    /// </summary>
+    /// <remarks>The values should be sorted by ID, if not set <paramref name="sort"/> to <see langword="true"/>.</remarks>
+    public static void ApplyQueriedList<TModel>(List<PrimaryKeyPair<TModel>> list, Action<uint, TModel[]> action, bool sort = true)
+    {
+        if (list.Count == 0) return;
+
+        if (sort && list.Count != 1)
+            list.Sort((a, b) => a.Key.CompareTo(b.Key));
+
+        TModel[] arr;
+        uint key;
+        int last = -1;
+        for (int i = 0; i < list.Count; i++)
+        {
+            PrimaryKeyPair<TModel> val = list[i];
+            if (i <= 0 || list[i - 1].Key == val.Key)
+                continue;
+
+            arr = new TModel[i - 1 - last];
+            for (int j = 0; j < arr.Length; ++j)
+                arr[j] = list[last + j + 1].Value;
+            last = i - 1;
+
+            key = list[i - 1].Key;
+            action(key, arr);
+        }
+
+        arr = new TModel[list.Count - 1 - last];
+        for (int j = 0; j < arr.Length; ++j)
+            arr[j] = list[last + j + 1].Value;
+
+        key = list[^1].Key;
+        action(key, arr);
+    }
+}
+
+public readonly struct PrimaryKeyPair<TModel>
+{
+    public uint Key { get; }
+    public TModel Value { get; }
+    public PrimaryKeyPair(uint key, TModel value)
+    {
+        Key = key;
+        Value = value;
+    }
+
+    public override string ToString() => $"({{{Key}}}, {(Value is null ? "NULL" : Value.ToString())})";
 }

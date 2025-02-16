@@ -1,5 +1,5 @@
-﻿using System;
-using Uncreated.Warfare.NewQuests;
+using System;
+using Uncreated.Warfare.Quests;
 
 namespace Uncreated.Warfare.Events.Models.Players;
 

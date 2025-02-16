@@ -1,71 +1,47 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using System;
-using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Kits.Loadouts;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Localization;
-using Uncreated.Warfare.Signs;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Languages;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Commands;
 
 [Command("rename", "rname", "name"), SubCommandOf(typeof(KitCommand))]
 internal sealed class KitRenameCommand : IExecutableCommand
 {
-    private readonly SignInstancer _signs;
+    private readonly KitCommandLookResolver _lookResolver;
     private readonly KitCommandTranslations _translations;
-    private readonly KitManager _kitManager;
     private readonly LanguageService _languageService;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly IKitDataStore _kitDataStore;
+    private readonly IKitAccessService _kitAccessService;
+
     public required CommandContext Context { get; init; }
 
-    public KitRenameCommand(TranslationInjection<KitCommandTranslations> translations, SignInstancer signs, KitManager kitManager, LanguageService languageService, IServiceProvider serviceProvider)
+    public KitRenameCommand(TranslationInjection<KitCommandTranslations> translations,
+        KitCommandLookResolver lookResolver,
+        IKitAccessService kitAccessService,
+        LanguageService languageService,
+        IKitDataStore kitDataStore)
     {
-        _signs = signs;
-        _kitManager = kitManager;
-        _languageService = languageService;
         _translations = translations.Value;
-        _serviceProvider = serviceProvider;
+        _lookResolver = lookResolver;
+        _kitAccessService = kitAccessService;
+        _languageService = languageService;
+        _kitDataStore = kitDataStore;
     }
 
     public async UniTask ExecuteAsync(CancellationToken token)
     {
         Context.AssertRanByPlayer();
+        
+        KitCommandLookResult result = await _lookResolver.ResolveFromArgumentsOrLook(Context, 0, 1, KitInclude.Translations, token).ConfigureAwait(false);
 
-        string? kitId = null;
-        Kit? kit = null;
-        bool signLoadout = false;
-
-        // kit rename
-        if (Context.TryGetBarricadeTarget(out BarricadeDrop? barricade)
-                 && barricade.interactable is not InteractableSign
-                 && _signs.GetSignProvider(barricade) is KitSignInstanceProvider signData)
-        {
-            if (signData.LoadoutNumber > 0)
-            {
-                kitId = LoadoutIdHelper.GetLoadoutSignDisplayText(signData.LoadoutNumber);
-                kit = await _kitManager.Loadouts.GetLoadout(Context.CallerId, signData.LoadoutNumber, token);
-                signLoadout = true;
-            }
-            else
-                kitId = signData.KitId;
-        }
-
-        if (kitId == null || signLoadout && kit == null)
-        {
-            throw Context.Reply(_translations.KitOperationNoTarget);
-        }
-
-        kit ??= await _kitManager.FindKit(kitId, token, exactMatchOnly: false);
-        if (kit == null)
-        {
-            throw Context.Reply(_translations.KitNotFound, kitId);
-        }
-
+        Kit kit = result.Kit;
         if (kit.Type != KitType.Loadout)
         {
             throw Context.Reply(_translations.KitRenameNotLoadout);
@@ -82,56 +58,50 @@ internal sealed class KitRenameCommand : IExecutableCommand
             throw Context.Reply(_translations.KitRenameFilterVoilation, filterViolation);
         }
 
-        await Context.Player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
-        try
+        if (kit.IsLocked || kit.Season < WarfareModule.Season || !await _kitAccessService.HasAccessAsync(Context.CallerId, kit.Key, token).ConfigureAwait(false))
         {
-            // scoped
-            await using IKitsDbContext dbContext = _serviceProvider.GetRequiredService<IKitsDbContext>();
-            dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
+            throw Context.Reply(_translations.KitRenameNoAccess, kit);
+        }
 
-            kit = await _kitManager.GetKit(dbContext, kit.PrimaryKey, token);
-            if (kit == null)
+        LanguageInfo defaultLanguage = _languageService.GetDefaultLanguage();
+
+        string oldName = kit.GetDisplayName(defaultLanguage, true, removeNewLine: false);
+        string newName = FormattingUtility.ReplaceNewLineSubstrings(name);
+
+        await _kitDataStore.UpdateKitAsync(kit.Key, KitInclude.Translations, kit =>
+        {
+            bool found = false;
+            for (int i = kit.Translations.Count - 1; i >= 0; --i)
             {
-                throw Context.Reply(_translations.KitNotFound, kitId);
-            }
-
-            if (kit.Disabled || kit.Season < WarfareModule.Season || !await _kitManager.HasAccess(dbContext, kit, Context.Player, token))
-            {
-                throw Context.Reply(_translations.KitRenameNoAccess, kit);
-            }
-
-            LanguageInfo defaultLanguage = _languageService.GetDefaultLanguage();
-
-            string oldName = kit.GetDisplayName(_languageService, defaultLanguage, removeNewLine: false);
-            string newName = KitEx.ReplaceNewLineSubstrings(name);
-
-            kit.SetSignText(dbContext, Context.CallerId, newName, defaultLanguage);
-            if (kit.Translations.Count > 1)
-            {
-                for (int i = kit.Translations.Count - 1; i >= 0; i--)
+                KitTranslation t = kit.Translations[i];
+                if (found || t.LanguageId != defaultLanguage.Key)
                 {
-                    KitTranslation t = kit.Translations[i];
-                    if (t.LanguageId == defaultLanguage.Key)
-                        continue;
-
-                    dbContext.Remove(t);
                     kit.Translations.RemoveAt(i);
+                    continue;
                 }
+
+                found = true;
+                t.Value = newName;
             }
 
-            oldName = oldName.Replace("\n", "<br>");
-            newName = newName.Replace("\n", "<br>");
+            if (!found)
+            {
+                kit.Translations.Add(new KitTranslation
+                {
+                    KitId = kit.PrimaryKey,
+                    LanguageId = defaultLanguage.Key,
+                    Value = newName
+                });
+            }
 
-            await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
-            int ldId = LoadoutIdHelper.Parse(kit.InternalName);
-            string ldIdStr = ldId == -1 ? "???" : LoadoutIdHelper.GetLoadoutLetter(ldId).ToUpperInvariant();
-            Context.LogAction(ActionLogType.SetKitProperty, kit.FactionId + ": SIGN TEXT >> \"" + newName + "\" (using /kit rename)");
-            _kitManager.Signs.UpdateSigns(kit);
-            Context.Reply(_translations.KitRenamed, ldIdStr, oldName, newName);
-        }
-        finally
-        {
-            Context.Player.PurchaseSync.Release();
-        }
+        }, Context.CallerId, token).ConfigureAwait(false);
+
+        oldName = oldName.Replace("\n", "<br>");
+        newName = newName.Replace("\n", "<br>");
+
+        int ldId = LoadoutIdHelper.Parse(kit.Id);
+        string ldIdStr = ldId == -1 ? "???" : LoadoutIdHelper.GetLoadoutLetter(ldId).ToUpperInvariant();
+        Context.LogAction(ActionLogType.SetKitProperty, $"{kit.Id}: SIGN TEXT | \"{defaultLanguage.Code}\" >> \"{newName}\" (using /kit rename)");
+        Context.Reply(_translations.KitRenamed, ldIdStr, oldName, newName);
     }
 }

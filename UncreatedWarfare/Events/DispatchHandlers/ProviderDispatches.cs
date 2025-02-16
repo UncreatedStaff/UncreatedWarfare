@@ -104,9 +104,10 @@ partial class EventDispatcher
 
         UniTask.Create(async () =>
         {
-            await DispatchEventAsync(args, newPlayer.DisconnectToken);
+            await DispatchEventAsync(args, args.Player.DisconnectToken);
             if (scope != null)
                 await scope.DisposeAsync();
+            args.Player.EndConnecting();
         });
 
         newPlayer.UnturnedPlayer.sendTerminalRelay("michael smells");

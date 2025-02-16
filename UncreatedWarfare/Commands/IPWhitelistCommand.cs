@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Networking;
@@ -34,14 +34,17 @@ internal sealed class IPWhitelistCommand : IExecutableCommand
             throw Context.SendHelp();
         
         IPv4Range range = default;
-        if (!Context.TryGet(1, out CSteamID player, out _) || Context.TryGet(2, out string? str) && !IPv4Range.TryParse(str, out range) && !IPv4Range.TryParseIPv4(str, out range))
+
+        (CSteamID? player, _) = await Context.TryGetPlayer(1).ConfigureAwait(false);
+
+        if (!player.HasValue || Context.TryGet(2, out string? str) && !IPv4Range.TryParse(str, out range) && !IPv4Range.TryParseIPv4(str, out range))
         {
             throw Context.SendHelp();
         }
 
-        PlayerNames names = await _userDataService.GetUsernamesAsync(player.m_SteamID, token).ConfigureAwait(false);
+        PlayerNames names = await _userDataService.GetUsernamesAsync(player.Value.m_SteamID, token).ConfigureAwait(false);
 
-        if (await _moderationSql.WhitelistIP(player, Context.CallerId, range, !remove, DateTimeOffset.UtcNow, token).ConfigureAwait(false))
+        if (await _moderationSql.WhitelistIP(player.Value, Context.CallerId, range, !remove, DateTimeOffset.UtcNow, token).ConfigureAwait(false))
         {
             Context.Reply(remove ? _translations.IPUnwhitelistSuccess : _translations.IPWhitelistSuccess, names, range);
         }

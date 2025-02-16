@@ -1,4 +1,4 @@
-﻿#if DEBUG
+#if DEBUG
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -14,6 +14,7 @@ using Uncreated.Warfare.Util;
 namespace Uncreated.Warfare.Commands;
 
 [Command("userdata"), HideFromHelp, SubCommandOf(typeof(MigrateCommand))]
+[Obsolete]
 internal sealed class MigrateUserDataCommand : IExecutableCommand
 {
     private readonly IManualMySqlProvider _mySqlProvider;
@@ -117,7 +118,7 @@ internal sealed class MigrateUserDataCommand : IExecutableCommand
                     username.NickName      = reader.IsDBNull(1) ? null! : reader.GetString(1);
                     username.PlayerName    = reader.IsDBNull(2) ? null! : reader.GetString(2);
                     username.WasFound = true;
-                    return true;
+                    return false;
                 });
 
             username.CharacterName ??= steam64.ToString("D17", CultureInfo.InvariantCulture);
@@ -131,7 +132,7 @@ internal sealed class MigrateUserDataCommand : IExecutableCommand
                 {
                     firstJoined = reader.IsDBNull(0) ? null : new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(0), DateTimeKind.Utc));
                     lastJoined = reader.IsDBNull(1) ? null : new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(1), DateTimeKind.Utc));
-                    return true;
+                    return false;
                 });
 
             ulong discordId = 0;
@@ -142,7 +143,7 @@ internal sealed class MigrateUserDataCommand : IExecutableCommand
                 reader =>
                 {
                     discordId = reader.GetUInt64(0);
-                    return true;
+                    return false;
                 });
 
             WarfareUserData data = new WarfareUserData

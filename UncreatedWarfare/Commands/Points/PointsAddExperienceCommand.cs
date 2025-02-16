@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Layouts.Teams;
@@ -7,6 +7,7 @@ using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Languages;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Commands;
 
@@ -33,7 +34,9 @@ internal sealed class PointsAddExperienceCommand : IExecutableCommand
     public async UniTask ExecuteAsync(CancellationToken token)
     {
         int argSt = 1;
-        if (!Context.TryGet(0, out CSteamID playerId, out WarfarePlayer? onlinePlayer))
+        (CSteamID? playerId, WarfarePlayer? onlinePlayer) = await Context.TryGetPlayer(0).ConfigureAwait(false);
+
+        if (!playerId.HasValue)
         {
             playerId = Context.CallerId;
             onlinePlayer = Context.Player;
@@ -44,7 +47,7 @@ internal sealed class PointsAddExperienceCommand : IExecutableCommand
             argSt = 0;
         }
 
-        if (playerId.GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
+        if (!playerId.Value.IsIndividual())
             throw Context.SendPlayerNotFound();
 
         if (!Context.TryGet(argSt, out double value) || value <= 0)
@@ -61,10 +64,10 @@ internal sealed class PointsAddExperienceCommand : IExecutableCommand
 
         LanguageSet set = onlinePlayer != null
             ? new LanguageSet(onlinePlayer)
-            : new LanguageSet(_languageService.GetDefaultLanguage(), _languageService.GetDefaultCulture(), false, team);
+            : new LanguageSet(_languageService.GetDefaultLanguage(), _languageService.GetDefaultCulture(), TimeZoneInfo.Utc, false, team);
 
-        await _pointsService.ApplyEvent(playerId, faction.PrimaryKey, _pointsService.GetAdminEvent(in set, value, null, null), token);
+        await _pointsService.ApplyEvent(playerId.Value, faction.PrimaryKey, _pointsService.GetAdminEvent(in set, value, null, null), token);
 
-        Context.ReplyString($"Awarded {value.ToString(Context.Culture)} XP to {playerId.m_SteamID.ToString("D17", Context.Culture)} on {faction.Name}.");
+        Context.ReplyString($"Awarded {value.ToString(Context.Culture)} XP to {playerId.Value.m_SteamID.ToString("D17", Context.Culture)} on {faction.Name}.");
     }
 }

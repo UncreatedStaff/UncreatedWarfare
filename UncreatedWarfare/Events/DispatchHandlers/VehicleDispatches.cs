@@ -1,6 +1,5 @@
 using SDG.NetTransport;
 using System;
-using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models.Vehicles;
 using Uncreated.Warfare.Events.Patches;
@@ -29,7 +28,7 @@ partial class EventDispatcher
         if (player is null)
             return;
 
-        WarfareVehicle warfareVehicle = vehicle.transform.GetComponent<WarfareVehicleComponent>().WarfareVehicle;
+        WarfareVehicle warfareVehicle = _vehicleService.GetVehicle(vehicle);
 
         ChangeVehicleLockRequested args = new ChangeVehicleLockRequested
         {
@@ -44,11 +43,7 @@ partial class EventDispatcher
             if (args.Vehicle == null || args.Vehicle.Vehicle.isDead || args.Vehicle.Vehicle.isLocked == isLocking)
                 return;
 
-            if (args.Vehicle.Vehicle.TryGetComponent(out VehicleComponent vehicleComponent)) // todo: remove old VehicleComponent
-            {
-                vehicleComponent.LastLocker = args.Player.Steam64;
-            }
-
+            args.Vehicle.DamageTracker.LastLockingPlayer = null;
             VehicleManager.ServerSetVehicleLock(args.Vehicle.Vehicle, args.Player.Steam64, args.Player.GroupId, args.IsLocking);
 
             _firemodeEffect ??= AssetLink.Create<EffectAsset>(new Guid("bc41e0feaebe4e788a3612811b8722d3"));
@@ -73,11 +68,8 @@ partial class EventDispatcher
 
         if (!shouldallow)
             return;
-        
-        if (vehicle.TryGetComponent(out VehicleComponent vehicleComponent))
-        {
-            vehicleComponent.LastLocker = player.Steam64;
-        }
+
+        args.Vehicle.DamageTracker.LastLockingPlayer = player;
     }
 
     /// <summary>
@@ -85,8 +77,10 @@ partial class EventDispatcher
     /// </summary>
     private void VehicleManagerOnToggledVehicleLock(InteractableVehicle vehicle)
     {
-        WarfarePlayer? player = null;
-        WarfareVehicle warfareVehicle = vehicle.transform.GetComponent<WarfareVehicleComponent>().WarfareVehicle;
+        WarfareVehicle warfareVehicle = _vehicleService.GetVehicle(vehicle);
+
+        WarfarePlayer? player = warfareVehicle.DamageTracker.LastLockingPlayer;
+        warfareVehicle.DamageTracker.LastLockingPlayer = null;
 
         if (vehicle.lockedOwner.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
         {
@@ -107,7 +101,7 @@ partial class EventDispatcher
     /// </summary>
     private void VehicleManagerOnVehicleExploded(InteractableVehicle vehicle)
     {
-        WarfareVehicle warfareVehicle = vehicle.transform.GetComponent<WarfareVehicleComponent>().WarfareVehicle;
+        WarfareVehicle warfareVehicle = _vehicleService.GetVehicle(vehicle);
 
         ITeamManager<Team>? teamManager = _warfare.IsLayoutActive() ? _warfare.ScopedProvider.Resolve<ITeamManager<Team>>() : null;
 
@@ -159,7 +153,7 @@ partial class EventDispatcher
     {
         WarfarePlayer player = _playerService.GetOnlinePlayer(unturnedPlayer);
 
-        WarfareVehicle warfareVehicle = vehicle.transform.GetComponent<WarfareVehicleComponent>().WarfareVehicle;
+        WarfareVehicle warfareVehicle = _vehicleService.GetVehicle(vehicle);
 
         byte seat = player.UnturnedPlayer.movement.getSeat();
 
@@ -197,7 +191,7 @@ partial class EventDispatcher
 
         WarfarePlayer player = _playerService.GetOnlinePlayer(unturnedPlayer);
 
-        WarfareVehicle warfareVehicle = vehicle.transform.GetComponent<WarfareVehicleComponent>().WarfareVehicle;
+        WarfareVehicle warfareVehicle = _vehicleService.GetVehicle(vehicle);
 
         VehicleSwapSeatRequested args = new VehicleSwapSeatRequested
         {
@@ -221,7 +215,7 @@ partial class EventDispatcher
 
     private void OnDamageVehicleRequested(CSteamID instigatorsSteamID, InteractableVehicle vehicle, ref ushort pendingTotalDamage, ref bool canRepair, ref bool shouldAllow, EDamageOrigin damageOrigin)
     {
-        WarfareVehicle warfareVehicle = vehicle.transform.GetComponent<WarfareVehicleComponent>().WarfareVehicle;
+        WarfareVehicle warfareVehicle = _vehicleService.GetVehicle(vehicle);
         
         DamageVehicleRequested args = new DamageVehicleRequested
         {
@@ -239,7 +233,7 @@ partial class EventDispatcher
 
     private void VehicleManagerOnPreDestroyVehicle(InteractableVehicle vehicle)
     {
-        WarfareVehicle warfareVehicle = vehicle.transform.GetComponent<WarfareVehicleComponent>().WarfareVehicle;
+        WarfareVehicle warfareVehicle = _vehicleService.GetVehicle(vehicle);
         
         VehicleDespawned args = new VehicleDespawned
         {

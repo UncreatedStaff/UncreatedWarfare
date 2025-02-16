@@ -7,11 +7,11 @@ using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using Uncreated.Warfare.Commands;
-using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Cooldowns;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Plugins;
@@ -427,7 +427,7 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
         await ExecuteCommandAsync(command, user, args, flags, originalMessage, offset, waitTasks, token);
 #if DEBUG
         sw.Stop();
-        _logger.LogDebug("Command {0} exited in {1} ms: /{2} with args: {3}.", command.Type, sw.GetElapsedMilliseconds(), command.CommandName, new ArraySegment<string>(args, offset, args.Length - offset));
+        _logger.LogDebug("Command {0} exited in {1} ms: /{2} with args: {3}.", command.Type, sw.GetElapsedMilliseconds(), command.CompositeName, new ArraySegment<string>(args, offset, args.Length - offset));
 #endif
     }
 
@@ -814,7 +814,6 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
         WarfarePlayer? pl = _playerService.GetOnlinePlayer(player);
         if (pl is null || string.IsNullOrWhiteSpace(text)) return;
         shouldExecuteCommand = false;
-        ReadOnlySpan<char> textSpan = text;
 
         try
         {
@@ -904,16 +903,19 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
             // todo || context.Player.OnDuty()
             || _cooldownManager == null
             || context.CommandInfo == null
-            || !_cooldownManager.HasCooldown(context.Player, CooldownType.Command, out Cooldown cooldown, context.CommandInfo))
+            || !_cooldownManager.HasCooldown(context.Player, KnownCooldowns.Command, out Cooldown cooldown, context.CommandInfo))
         {
             return true;
         }
 
         if (context.Command is ICompoundingCooldownCommand compounding)
         {
-            cooldown.Duration *= compounding.CompoundMultiplier;
-            if (compounding.MaxCooldown > 0 && cooldown.Duration > compounding.MaxCooldown)
-                cooldown.Duration = compounding.MaxCooldown;
+            TimeSpan duration = cooldown.Duration * compounding.CompoundMultiplier;
+            if (compounding.MaxCooldown > 0 && duration.TotalSeconds > compounding.MaxCooldown)
+                duration = TimeSpan.FromSeconds(compounding.MaxCooldown);
+
+            cooldown = new Cooldown(cooldown.StartTime, duration, cooldown.Config, cooldown.Data);
+            _cooldownManager.StartCooldown(context.Player, cooldown);
         }
 
         _chatService.Send(context.Player, context.CommonTranslations.CommandCooldown, cooldown, context.CommandInfo.CommandName);
@@ -923,25 +925,33 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
 
     internal void CheckCommandShouldStartCooldown(CommandContext context)
     {
-        if (context.CommandCooldownTime is > 0f && context.Player != null && /* todo !context.Player.OnDuty() && */ _cooldownManager != null && context.CommandInfo != null)
+        if (context.Player == null || _cooldownManager == null)
+            return;
+
+        if (context.CommandCooldownTime is > 0f )
         {
-            _cooldownManager.StartCooldown(context.Player, CooldownType.Command, context.CommandCooldownTime.Value, context.CommandInfo);
+            _cooldownManager.StartCooldown(context.Player, KnownCooldowns.Command, TimeSpan.FromSeconds(context.CommandCooldownTime.Value), context.CommandInfo);
         }
 
         if (!context.OnIsolatedCooldown)
         {
-            if (context.IsolatedCommandCooldownTime is > 0f && context.Player != null && /* todo !context.Player.OnDuty() && */ _cooldownManager != null && context.CommandInfo != null)
-                _cooldownManager.StartCooldown(context.Player, CooldownType.IsolatedCommand, context.IsolatedCommandCooldownTime.Value, context.CommandInfo);
+            if (context.IsolatedCommandCooldownTime is > 0f)
+                _cooldownManager.StartCooldown(context.Player, KnownCooldowns.IsolatedCommand, TimeSpan.FromSeconds(context.IsolatedCommandCooldownTime.Value), context.CommandInfo);
         }
         else if (context.IsolatedCommandCooldownTime is > 0f)
         {
+            TimeSpan duration;
             if (context.Command is ICompoundingCooldownCommand compounding)
             {
-                context.IsolatedCooldown!.Duration *= compounding.CompoundMultiplier;
-                if (compounding.MaxCooldown > 0 && context.IsolatedCooldown.Duration > compounding.MaxCooldown)
-                    context.IsolatedCooldown.Duration = compounding.MaxCooldown;
+                duration = context.IsolatedCooldown.Duration * compounding.CompoundMultiplier;
+                if (compounding.MaxCooldown > 0 && duration.TotalSeconds > compounding.MaxCooldown)
+                    duration = TimeSpan.FromSeconds(compounding.MaxCooldown);
             }
-            else context.IsolatedCooldown!.Duration = context.IsolatedCommandCooldownTime.Value;
+            else
+            {
+                duration = TimeSpan.FromSeconds(context.IsolatedCommandCooldownTime.Value);
+            }
+            _cooldownManager.StartCooldown(context.Player, new Cooldown(context.IsolatedCooldown.StartTime, duration, context.IsolatedCooldown.Config, context.IsolatedCooldown.Data));
         }
     }
 

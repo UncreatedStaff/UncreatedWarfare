@@ -1,17 +1,18 @@
-﻿using System;
+using System;
 using System.Globalization;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Uncreated.Warfare.Interaction.Commands;
-using Uncreated.Warfare.Models.Kits;
+using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Models.Localization;
-using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.Players.Unlocks;
 
 public class LevelUnlockRequirement : UnlockRequirement
 {
-    public int UnlockLevel = -1;
+    [JsonPropertyName("unlock_level")]
+    public int UnlockLevel { get; set; } = -1;
 
     /// <inheritdoc />
     public override bool CanAccessFast(WarfarePlayer player)
@@ -37,28 +38,6 @@ public class LevelUnlockRequirement : UnlockRequirement
 
         if (reader.TryGetInt32(out int unlockRank))
             UnlockLevel = unlockRank;
-    }
-
-    /// <inheritdoc />
-    protected override bool ReadFromJson(ILogger? logger, ref Utf8JsonReader reader)
-    {
-        bool read = false;
-        JsonUtility.ReadTopLevelProperties(ref reader, ref read, (ref Utf8JsonReader reader, string property, ref bool read) =>
-        {
-            if (!property.Equals("unlock_level", StringComparison.OrdinalIgnoreCase) || !reader.TryGetInt32(out int unlockRank))
-                return;
-
-            UnlockLevel = unlockRank;
-            read = true;
-        });
-
-        return read;
-    }
-
-    /// <inheritdoc />
-    protected override void WriteToJson(Utf8JsonWriter writer)
-    {
-        writer.WriteNumber("unlock_level", UnlockLevel);
     }
 
     /// <inheritdoc />

@@ -1,4 +1,4 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using DanielWillett.SpeedBytes;
 using System;
 using System.Collections.Concurrent;
@@ -91,23 +91,40 @@ public class ActionLog : MonoBehaviour
     public static void Add(ActionLogType type, string? data, WarfarePlayer? player) => Add(type, data, player == null ? 0ul : player.Steam64.m_SteamID);
     public static void Add(ActionLogType type, string? data = null, ulong player = 0)
     {
+        if (player != 0 && Unsafe.As<ulong, CSteamID>(ref player).GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
+            player = 0;
+
         _instance!._items.Enqueue(new ActionLogItem(player, type, data, DateTimeOffset.UtcNow));
     }
     public static void Add(ActionLogType type, string? data, CSteamID player)
     {
+        if (player.m_SteamID != 0 && player.GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
+            player.m_SteamID = 0;
+
         _instance!._items.Enqueue(new ActionLogItem(player.m_SteamID, type, data, DateTimeOffset.UtcNow));
     }
     /// <exception cref="NotSupportedException"/>
     public static void AddPriority(ActionLogType type, string? data = null, ulong player = 0)
     {
+        if (player != 0 && Unsafe.As<ulong, CSteamID>(ref player).GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
+            player = 0;
+
         GameThread.AssertCurrent();
         _instance!._items.Enqueue(new ActionLogItem(player, type, data, DateTimeOffset.UtcNow));
         // todo _instance.Update();
     }
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static string GetMetaPath(ActionLogMeta meta) => Path.Combine(Data.Paths.ActionLog, meta.FirstTimestamp.ToString(DateHeaderFormat, CultureInfo.InvariantCulture) + ".meta");
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static string GetLogPath(ActionLogMeta meta) => Path.Combine(Data.Paths.ActionLog, meta.FirstTimestamp.ToString(DateHeaderFormat, CultureInfo.InvariantCulture) + ".txt");
+
+    private static string GetMetaPath(ActionLogMeta meta)
+    {
+        return Path.Combine(UnturnedPaths.RootDirectory.FullName, "Servers", Provider.serverID, "Warfare", "Action Logs", meta.FirstTimestamp.ToString(DateHeaderFormat, CultureInfo.InvariantCulture) + ".meta");
+    }
+
+
+    private static string GetLogPath(ActionLogMeta meta)
+    {
+        return Path.Combine(UnturnedPaths.RootDirectory.FullName, "Servers", Provider.serverID, "Warfare", "Action Logs", meta.FirstTimestamp.ToString(DateHeaderFormat, CultureInfo.InvariantCulture) + ".txt");
+    }
+
     private void SaveMeta(ActionLogMeta meta)
     {
         using FileStream str = new FileStream(GetMetaPath(meta), FileMode.Create, FileAccess.Write, FileShare.Read);
@@ -913,10 +930,12 @@ public enum ActionLogType : byte
     CreateModerationEntry,
     [Translatable("REMOVE_MOD_ENTRY")]
     RemoveModerationEntry,
+    [Translatable("LOCK_LOADOUT")]
+    LockLoadout,
 
     [Translatable(IsPrioritizedTranslation = false)]
     [Obsolete("Don't use this.")]
     [Ignore]
-    Max = RemoveModerationEntry
+    Max = LockLoadout
 }
 // ReSharper restore InconsistentNaming

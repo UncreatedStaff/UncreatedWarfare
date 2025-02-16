@@ -1,4 +1,4 @@
-﻿using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
@@ -56,27 +56,19 @@ internal sealed class StructureExamineCommand : IExecutableCommand
         else
         {
             Team team = _teamManager.GetTeam(vehicle.lockedGroup);
-            ulong prevOwner = vehicle.transform.TryGetComponent(out VehicleComponent vcomp) ? vcomp.PreviousOwner : 0ul;
             IPlayer names = await _userDataService.GetUsernamesAsync(vehicle.lockedOwner.m_SteamID, token).ConfigureAwait(false);
-            string prevOwnerName;
-            if (prevOwner != 0ul)
-            {
-                PlayerNames pl = await _userDataService.GetUsernamesAsync(prevOwner, token).ConfigureAwait(false);
-                prevOwnerName = pl.GetDisplayNameOrPlayerName();
-            }
-            else prevOwnerName = "None";
             await UniTask.SwitchToMainThread(token);
             if (sendurl)
             {
                 Context.ReplySteamProfileUrl(_translations.VehicleExamineLastOwnerPrompt
-                        .Translate(vehicle.asset, names, team.Faction, prevOwnerName, prevOwner, player, canUseIMGUI: true), vehicle.lockedOwner);
+                        .Translate(vehicle.asset, names, team.Faction, player, canUseIMGUI: true), vehicle.lockedOwner);
             }
             else
             {
                 OfflinePlayer pl = new OfflinePlayer(vehicle.lockedOwner);
                 await pl.CacheUsernames(_userDataService, token).ConfigureAwait(false);
                 await UniTask.SwitchToMainThread(token);
-                Context.Reply(_translations.VehicleExamineLastOwnerChat, vehicle.asset, names, pl, team.Faction, prevOwnerName, prevOwner);
+                Context.Reply(_translations.VehicleExamineLastOwnerChat, vehicle.asset, names, pl, team.Faction);
             }
         }
     }

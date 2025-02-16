@@ -1,4 +1,4 @@
-﻿using Uncreated.Warfare.Interaction.Commands;
+using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
@@ -47,10 +47,10 @@ public sealed class StructureTranslations : PropertiesTranslationCollection
     public readonly Translation<Asset, IPlayer, IPlayer, FactionInfo> StructureExamineLastOwnerChat = new Translation<Asset, IPlayer, IPlayer, FactionInfo>("<#c6d4b8>Last owner of <#e6e3d5>{0}</color>: {1} <i>({2})</i>, Team: {3}.", TranslationOptions.TMProUI | TranslationOptions.NoRichText, arg0Fmt: RarityColorAddon.Instance, arg1Fmt: WarfarePlayer.FormatColoredPlayerName, arg2Fmt: WarfarePlayer.FormatSteam64, arg3Fmt: FactionInfo.FormatColorDisplayName);
 
     [TranslationData]
-    public readonly Translation<Asset, IPlayer, FactionInfo, string, ulong> VehicleExamineLastOwnerPrompt = new Translation<Asset, IPlayer, FactionInfo, string, ulong>("Owner of {0}: {1}, Team: {2}. Previous Owner: {3} ({4}).", TranslationOptions.TMProUI | TranslationOptions.NoRichText, arg1Fmt: WarfarePlayer.FormatPlayerName, arg2Fmt: FactionInfo.FormatDisplayName);
+    public readonly Translation<Asset, IPlayer, FactionInfo> VehicleExamineLastOwnerPrompt = new Translation<Asset, IPlayer, FactionInfo>("Owner of {0}: {1}, Team: {2}.", TranslationOptions.TMProUI | TranslationOptions.NoRichText, arg1Fmt: WarfarePlayer.FormatPlayerName, arg2Fmt: FactionInfo.FormatDisplayName);
 
     [TranslationData]
-    public readonly Translation<Asset, IPlayer, IPlayer, FactionInfo, string, ulong> VehicleExamineLastOwnerChat = new Translation<Asset, IPlayer, IPlayer, FactionInfo, string, ulong>("<#c6d4b8>Owner of <#e6e3d5>{0}</color>: {1} <i>({2})</i>, Team: {3}. Previous Owner: {4} <i>({5})</i>.", TranslationOptions.TMProUI | TranslationOptions.NoRichText, arg0Fmt: RarityColorAddon.Instance, arg1Fmt: WarfarePlayer.FormatColoredPlayerName, arg2Fmt: WarfarePlayer.FormatSteam64, arg3Fmt: FactionInfo.FormatColorDisplayName);
+    public readonly Translation<Asset, IPlayer, IPlayer, FactionInfo> VehicleExamineLastOwnerChat = new Translation<Asset, IPlayer, IPlayer, FactionInfo>("<#c6d4b8>Owner of <#e6e3d5>{0}</color>: {1} <i>({2})</i>, Team: {3}.", TranslationOptions.TMProUI | TranslationOptions.NoRichText, arg0Fmt: RarityColorAddon.Instance, arg1Fmt: WarfarePlayer.FormatColoredPlayerName, arg2Fmt: WarfarePlayer.FormatSteam64, arg3Fmt: FactionInfo.FormatColorDisplayName);
 
     [TranslationData(IsPriorityTranslation = false)]
     public readonly Translation<string> StructureSaveInvalidProperty = new Translation<string>("<#ff8c69>{0} isn't a valid a structure property. Try putting 'owner' or 'group'.");

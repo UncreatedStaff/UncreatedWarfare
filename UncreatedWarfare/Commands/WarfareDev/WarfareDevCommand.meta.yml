@@ -33,6 +33,14 @@ Parameters:
         Type: Verbatim
         Description: "Open the squad UI."
         
+  # /warfaredev steamguard
+  - Name: steamguard
+    Type: Verbatim
+    Description: "Supply the steam guard <param 'code'/> for a pending workshop upload."
+    Parameters:
+      - Name: code
+        Type: string
+        
   # /warfaredev homebase reload
   - Name: homebase
     Type: Verbatim

@@ -41,6 +41,12 @@ public class CommandInfo : ICommandDescriptor
     public string CommandName { get; }
 
     /// <summary>
+    /// Name of the command and all it's parent commands, if applicable. Names with white space will be wrapped in quotation marks.
+    /// </summary>
+    /// <remarks>Example: 'kit layout reset' for /kit layout reset.</remarks>
+    public string CompositeName { get; }
+
+    /// <summary>
     /// Higher numbers will be executed over lower numbers.
     /// </summary>
     public int Priority { get; }
@@ -126,6 +132,7 @@ public class CommandInfo : ICommandDescriptor
         Type = vanillaCommand.GetType();
         VanillaCommand = vanillaCommand;
         CommandName = vanillaCommand.command;
+        CompositeName = ContainsWhiteSpace(CommandName) ? "\"" + CommandName + "\"" : CommandName;
         Aliases = Array.Empty<string>();
         Metadata = DefaultMetadata(vanillaCommand.command, vanillaCommand.info, true);
         OtherPermissionsAreAnd = true;
@@ -171,6 +178,10 @@ public class CommandInfo : ICommandDescriptor
         if (parent != null)
         {
             ParentCommand = parent;
+            if (ContainsWhiteSpace(CommandName))
+                CompositeName = parent.CompositeName + " \"" + CommandName + "\"";
+            else
+                CompositeName = parent.CompositeName + " " + CommandName;
 
             parent._subCommands.Add(this);
 
@@ -179,6 +190,7 @@ public class CommandInfo : ICommandDescriptor
         else
         {
             permission ??= "commands." + CommandName;
+            CompositeName = ContainsWhiteSpace(CommandName) ? "\"" + CommandName + "\"" : CommandName;
         }
 
         for (CommandInfo? p = ParentCommand; p != null; p = p.ParentCommand)
@@ -224,9 +236,7 @@ public class CommandInfo : ICommandDescriptor
                 if (!paramMeta.Name.Equals(CommandName, StringComparison.InvariantCultureIgnoreCase))
                     continue;
 
-                CommandMetadata[] m = parent.Metadata.Parameters;
-                CollectionUtility.RemoveFromArray(ref m, i);
-                parent.Metadata.Parameters = m;
+                parent.Metadata.Parameters = CollectionUtility.RemoveFromArray(parent.Metadata.Parameters, i);
                 logger.LogWarning("Removed metadata for subcommand {0} in parent command {1} because it's hidden from help.", classType, parent.Type);
                 break;
             }
@@ -336,6 +346,17 @@ public class CommandInfo : ICommandDescriptor
             OtherPermissionsAreAnd = true;
             OtherPermissions = Array.Empty<PermissionLeaf>();
         }
+    }
+
+    private static bool ContainsWhiteSpace(string str)
+    {
+        for (int i = 0; i < str.Length; i++)
+        {
+            if (char.IsWhiteSpace(str, i))
+                return true;
+        }
+
+        return false;
     }
 
     private static CommandMetadata DefaultMetadata(string name, string? desc, bool vanilla)

@@ -1,5 +1,6 @@
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Events.Models.Buildables;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 
@@ -10,7 +11,7 @@ namespace Uncreated.Warfare.Events.Models.Structures;
 /// </summary>
 public class StructureDestroyed : IBuildableDestroyedEvent
 {
-    private IBuildable? _buildableCache;
+    protected IBuildable? BuildableCache;
 
     /// <summary>
     /// Player that destroyed the structure, if any.
@@ -80,6 +81,11 @@ public class StructureDestroyed : IBuildableDestroyedEvent
     /// <summary>
     /// Abstracted <see cref="IBuildable"/> of the structure.
     /// </summary>
-    public IBuildable Buildable => _buildableCache ??= new BuildableStructure(Structure);
-    object IBuildableDestroyedEvent.Region => Region;
+    public IBuildable Buildable => BuildableCache ??= new BuildableStructure(Structure);
+
+    /// <inheritdoc />
+    ushort IBaseBuildableDestroyedEvent.VehicleRegionIndex => ushort.MaxValue;
+
+    /// <inheritdoc />
+    bool IBaseBuildableDestroyedEvent.IsOnVehicle => false;
 }

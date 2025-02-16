@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Uncreated.Warfare.Models.Factions;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Kits.Bundles;
@@ -8,7 +8,7 @@ using Uncreated.Warfare.Players.Skillsets;
 namespace Uncreated.Warfare.Database.Abstractions;
 public interface IKitsDbContext : IDbContext
 {
-    DbSet<Kit> Kits { get; }
+    DbSet<KitModel> Kits { get; }
     DbSet<KitAccess> KitAccess { get; }
     DbSet<KitHotkey> KitHotkeys { get; }
     DbSet<KitLayoutTransformation> KitLayoutTransformations { get; }
@@ -16,52 +16,63 @@ public interface IKitsDbContext : IDbContext
     DbSet<EliteBundle> EliteBundles { get; }
     public static void ConfigureModels(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<Kit>()
+        modelBuilder.Entity<KitModel>()
             .HasKey(x => x.PrimaryKey);
 
-        modelBuilder.Entity<Kit>()
+        modelBuilder.Entity<KitModel>()
+            .HasIndex(x => x.Id)
+            .IsUnique(true);
+
+        modelBuilder.Entity<KitModel>()
             .HasMany(x => x.FactionFilter)
-            .WithOne(x => x.Kit)
+            .WithOne()
+            .HasForeignKey(x => x.KitId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        modelBuilder.Entity<Kit>()
+        modelBuilder.Entity<KitModel>()
             .HasMany(x => x.MapFilter)
-            .WithOne(x => x.Kit)
+            .WithOne()
+            .HasForeignKey(x => x.KitId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        modelBuilder.Entity<Kit>()
+        modelBuilder.Entity<KitModel>()
             .HasMany(x => x.Skillsets)
-            .WithOne(x => x.Kit)
+            .WithOne()
+            .HasForeignKey(x => x.KitId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        modelBuilder.Entity<Kit>()
+        modelBuilder.Entity<KitModel>()
             .HasMany(x => x.Translations)
-            .WithOne(x => x.Kit)
+            .WithOne()
+            .HasForeignKey(x => x.KitId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        modelBuilder.Entity<Kit>()
-            .HasMany(x => x.ItemModels)
-            .WithOne(x => x.Kit)
+        modelBuilder.Entity<KitModel>()
+            .HasMany(x => x.Items)
+            .WithOne()
+            .HasForeignKey(x => x.KitId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        modelBuilder.Entity<Kit>()
-            .HasMany(x => x.UnlockRequirementsModels)
-            .WithOne(x => x.Kit)
+        modelBuilder.Entity<KitModel>()
+            .HasMany(x => x.UnlockRequirements)
+            .WithOne()
+            .HasForeignKey(x => x.KitId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        modelBuilder.Entity<Kit>()
+        modelBuilder.Entity<KitModel>()
             .HasMany(x => x.Access)
             .WithOne(x => x.Kit)
             .OnDelete(DeleteBehavior.Cascade);
 
-        modelBuilder.Entity<Kit>()
+        modelBuilder.Entity<KitModel>()
             .HasMany<KitHotkey>()
             .WithOne(x => x.Kit)
             .OnDelete(DeleteBehavior.Cascade);
 
-        modelBuilder.Entity<Kit>()
+        modelBuilder.Entity<KitModel>()
             .HasMany<KitLayoutTransformation>()
-            .WithOne(x => x.Kit)
+            .WithOne()
+            .HasForeignKey(x => x.KitId)
             .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<WarfareUserData>()
@@ -69,8 +80,8 @@ public interface IKitsDbContext : IDbContext
             .WithOne(x => x.PlayerData)
             .OnDelete(DeleteBehavior.Cascade);
 
-        modelBuilder.Entity<Kit>()
-            .HasMany<KitFavorite>()
+        modelBuilder.Entity<KitModel>()
+            .HasMany(x => x.Favorites)
             .WithOne(x => x.Kit)
             .OnDelete(DeleteBehavior.Cascade);
 
@@ -91,7 +102,7 @@ public interface IKitsDbContext : IDbContext
 
         modelBuilder.Entity<Faction>()
             .HasMany<KitFilteredFaction>()
-            .WithOne(x => x.Faction)
+            .WithOne()
             .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<EliteBundle>()
@@ -103,13 +114,13 @@ public interface IKitsDbContext : IDbContext
             .Property(x => x.Skill)
             .HasColumnType(Skillset.SkillSqlEnumType);
 
-        modelBuilder.Entity<Kit>()
+        modelBuilder.Entity<KitModel>()
             .HasMany(x => x.Bundles)
             .WithOne(x => x.Kit)
             .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<Faction>()
-            .HasMany<Kit>()
+            .HasMany<KitModel>()
             .WithOne(x => x.Faction!)
             .IsRequired(false)
             .OnDelete(DeleteBehavior.SetNull);
@@ -118,6 +129,10 @@ public interface IKitsDbContext : IDbContext
             .HasMany(x => x.Kits)
             .WithOne(x => x.Bundle)
             .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<EliteBundle>()
+            .HasIndex(x => x.Id)
+            .IsUnique(true);
 
         modelBuilder.Entity<KitEliteBundle>()
             .HasKey(x => new { x.KitId, x.BundleId });

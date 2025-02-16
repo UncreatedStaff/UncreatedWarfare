@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Stripe;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,7 +9,6 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Fobs;
 using Uncreated.Warfare.FOBs;
-using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Translations.Util;
@@ -39,7 +37,7 @@ public class FobHUD :
     }
     private void UpdateRelevantPlayers(IFob fob)
     {
-        foreach (WarfarePlayer player in _playerService.OnlinePlayers.Where(p => fob.IsVibileToPlayer(p)))
+        foreach (WarfarePlayer player in _playerService.OnlinePlayers.Where(fob.IsVibileToPlayer))
         {
             UpdateForPlayer(player);
         }

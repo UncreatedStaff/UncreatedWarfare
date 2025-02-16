@@ -1,4 +1,3 @@
-﻿using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Vehicles.WarfareVehicles;

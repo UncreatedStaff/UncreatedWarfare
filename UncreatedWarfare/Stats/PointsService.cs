@@ -157,6 +157,17 @@ public class PointsService : IEventListener<PlayerTeamChanged> // todo player eq
     /// <summary>
     /// Apply an event and trigger updates for the necessary UI for the current season.
     /// </summary>
+    public Task ApplyEvent(WarfarePlayer player, ResolvedEventInfo @event, CancellationToken token = default)
+    {
+        if (!player.Team.IsValid)
+            return Task.CompletedTask;
+
+        return ApplyEvent(player.Steam64, player.Team.Faction.PrimaryKey, WarfareModule.Season, @event, token);
+    }
+
+    /// <summary>
+    /// Apply an event and trigger updates for the necessary UI for the current season.
+    /// </summary>
     public Task ApplyEvent(CSteamID playerId, uint factionId, ResolvedEventInfo @event, CancellationToken token = default)
     {
         return ApplyEvent(playerId, factionId, WarfareModule.Season, @event, token);
@@ -167,6 +178,9 @@ public class PointsService : IEventListener<PlayerTeamChanged> // todo player eq
     /// </summary>
     public async Task ApplyEvent(CSteamID playerId, uint factionId, int season, ResolvedEventInfo @event, CancellationToken token = default)
     {
+        if (factionId == 0ul)
+            return;
+
         await UniTask.SwitchToMainThread(token);
 
         bool hideToast = @event.HideToast || @event.Message == null;
@@ -261,7 +275,7 @@ public class PointsService : IEventListener<PlayerTeamChanged> // todo player eq
                 player.SetReputation((int)Math.Round(newRep));
             _ui.UpdatePointsUI(player, this);
 
-            if (!@event.ExcludeFromLeaderboard)
+            if (!@event.ExcludeFromLeaderboard && factionId == player.Team.Faction.PrimaryKey)
             {
                 PlayerGameStatsComponent? comp = player.ComponentOrNull<PlayerGameStatsComponent>();
                 if (comp != null)
@@ -431,6 +445,9 @@ public class PointsTranslations : PropertiesTranslationCollection
 
     [TranslationData("Sent to a player on the points popup when XP or credits given from the console.")]
     public Translation XPToastFromOperator = new Translation("FROM OPERATOR", TranslationOptions.TMProUI);
+
+    [TranslationData("Sent to a player after they're given a quest reward.", "Quest name")]
+    public Translation<string> XPToastQuestReward = new Translation<string>("{0} REWARD", TranslationOptions.TMProUI, UppercaseAddon.Instance);
 
     [TranslationData("Sent to a player on the points popup when XP or credits are given to them by an admin.")]
     public Translation XPToastFromPlayer = new Translation("FROM ADMIN", TranslationOptions.TMProUI);

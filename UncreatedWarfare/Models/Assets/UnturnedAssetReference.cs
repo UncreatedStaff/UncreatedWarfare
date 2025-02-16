@@ -2,6 +2,7 @@ using System;
 using System.Globalization;
 using Uncreated.Framework.UI;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Models.Assets;
 public readonly struct UnturnedAssetReference
@@ -68,7 +69,7 @@ public readonly struct UnturnedAssetReference
     {
         if (Id != 0)
         {
-            EAssetType type = UCAssetManager.GetAssetCategory<TAsset>();
+            EAssetType type = AssetUtility.GetAssetCategory<TAsset>();
             if (type == EAssetType.NONE)
                 return null;
 
@@ -89,6 +90,22 @@ public readonly struct UnturnedAssetReference
     public static bool operator ==(UnturnedAssetReference left, UnturnedAssetReference right)
     {
         return left.Guid == right.Guid && left.Id == right.Id;
+    }
+
+    public bool Equals(Asset asset)
+    {
+        if (asset == null)
+        {
+            return Id == 0 && Guid == Guid.Empty;
+        }
+
+        if (Guid != Guid.Empty && asset.GUID == Guid)
+            return true;
+
+        if (Id != 0 && asset.id == Id)
+            return true;
+
+        return false;
     }
 
     public bool Equals(UnturnedAssetReference other) => other.Guid == Guid && other.Id == Id;

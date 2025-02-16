@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using SDG.Framework.Utilities;
 using System;
 using System.Collections.Generic;
@@ -13,6 +13,7 @@ using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Proximity;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Teams;
@@ -31,6 +32,7 @@ public class LobbyZoneManager : IHostedService, ILevelHostedService, IEventListe
     private const short FlagOpen = 1;
 
     private readonly ZoneStore _zoneStore;
+    private readonly OptionsUI _optionsUi;
     private readonly LobbyConfiguration _lobbyConfig;
     private readonly IFactionDataStore _factionDataStore;
     private readonly ILogger<LobbyZoneManager> _logger;
@@ -55,8 +57,17 @@ public class LobbyZoneManager : IHostedService, ILevelHostedService, IEventListe
     /// </summary>
     public TimeSpan JoinDelay { get; private set; }
 
-    public LobbyZoneManager(ZoneStore zoneStore, LobbyConfiguration lobbyConfig, IFactionDataStore factionDataStore, ILogger<LobbyZoneManager> logger, WarfareModule module, ITeamSelectorBehavior behavior, IPlayerService playerService)
+    public LobbyZoneManager(
+        ZoneStore zoneStore,
+        LobbyConfiguration lobbyConfig,
+        IFactionDataStore factionDataStore,
+        ILogger<LobbyZoneManager> logger,
+        WarfareModule module,
+        ITeamSelectorBehavior behavior,
+        IPlayerService playerService,
+        OptionsUI optionsUi)
     {
+        _optionsUi = optionsUi;
         _zoneStore = zoneStore;
         _lobbyConfig = lobbyConfig;
         _factionDataStore = factionDataStore;
@@ -399,7 +410,6 @@ public class LobbyZoneManager : IHostedService, ILevelHostedService, IEventListe
     private void OnObjectExitedLobby(WarfarePlayer player)
     {
         player.Component<PlayerLobbyComponent>().ExitLobby();
-        _logger.LogInformation("Player exited lobby: {0}.", player);
     }
 
     [EventListener(MustRunInstantly = true)]
@@ -430,8 +440,7 @@ public class LobbyZoneManager : IHostedService, ILevelHostedService, IEventListe
 
         if (e.Object.GUID == _settingsFlagGuid)
         {
-            // todo actually send settings
-            _logger.LogInformation("Sending settings to {0}.", e.Player);
+            _optionsUi.Open(e.Player);
             return;
         }
 

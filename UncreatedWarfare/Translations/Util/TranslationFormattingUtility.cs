@@ -272,7 +272,7 @@ public static class TranslationFormattingUtility
                 {
                     innerStartIndex = 0;
                     innerLength = text.Length;
-                    return Color.white;
+                    return null;
                 }
 
                 innerLength = i - innerStartIndex;
@@ -360,6 +360,9 @@ public static class TranslationFormattingUtility
         int textSt = original.IndexOf('#', stInd + 1);
         if (textSt == -1)
             return false;
+        int endBracket = original.IndexOf('>', stInd + 1);
+        if (endBracket == -1 || endBracket < textSt)
+            return false;
 
         for (int i = textSt + 1; i < original.Length; ++i)
         {
@@ -370,21 +373,18 @@ public static class TranslationFormattingUtility
             break;
         }
 
-        int end = original.IndexOf('>', textSt + 1);
-        int origEnd = end;
-        if (end == -1)
-            return false;
+        int origEnd = endBracket;
 
-        for (int i = end - 1; i >= textSt; --i)
+        for (int i = endBracket - 1; i >= textSt; --i)
         {
             if (char.IsWhiteSpace(original[i]))
                 continue;
 
-            end = i;
+            endBracket = i;
             break;
         }
 
-        clrSize = end - textSt + 1;
+        clrSize = endBracket - textSt + 1;
         if (!HexStringHelper.TryParseHexColor32(original.Slice(textSt, clrSize), out color))
             return false;
 

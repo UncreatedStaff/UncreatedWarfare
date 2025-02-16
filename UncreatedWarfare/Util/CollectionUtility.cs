@@ -1,17 +1,158 @@
-﻿using System;
+using DanielWillett.ReflectionTools;
+using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Runtime.CompilerServices;
 
 namespace Uncreated.Warfare.Util;
 public static class CollectionUtility
 {
     /// <summary>
+    /// Adds an element to an <paramref name="array"/> and returns the new array.
+    /// </summary>
+    [MustUseReturnValue]
+    public static TElement[] AddToArray<TElement>(TElement[]? array, TElement value)
+    {
+        AddToArray(ref array, value);
+        return array!;
+    }
+
+    /// <summary>
+    /// Inserts an element into an <paramref name="array"/> and returns the new array.
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException"/>
+    [MustUseReturnValue]
+    public static TElement[] AddToArray<TElement>(TElement[]? array, TElement value, int index)
+    {
+        AddToArray(ref array, value, index);
+        return array!;
+    }
+
+    /// <summary>
+    /// Removes an element from an index in the array.
+    /// </summary>
+    /// <exception cref="ArgumentNullException"/>
+    /// <exception cref="ArgumentOutOfRangeException"/>
+    [MustUseReturnValue]
+    public static TElement[] RemoveFromArray<TElement>(TElement[] array, int index)
+    {
+        RemoveFromArray(ref array, index);
+        return array;
+    }
+
+    /// <summary>
+    /// Adds an element to an <paramref name="array"/>.
+    /// </summary>
+#nullable disable
+    public static void AddToArray<TElement>(ref TElement[] array, TElement value)
+#nullable restore
+    {
+        if (array == null || array.Length == 0)
+        {
+            array = [ value ];
+            return;
+        }
+
+        int oldLength = array.Length;
+
+        TElement[] newArray = new TElement[oldLength + 1];
+
+        if (typeof(TElement).IsPrimitive)
+        {
+            Buffer.BlockCopy(array, 0, newArray, 0, Unsafe.SizeOf<TElement>() * oldLength);
+        }
+        else
+        {
+            Array.Copy(array, newArray, oldLength);
+        }
+
+        newArray[oldLength] = value;
+        array = newArray;
+    }
+
+    /// <summary>
+    /// Inserts an element into an <paramref name="array"/>.
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException"/>
+#nullable disable
+    public static void AddToArray<TElement>(ref TElement[] array, TElement value, int index)
+#nullable restore
+    {
+        if (array == null || array.Length == 0)
+        {
+            if (index != 0)
+                throw new ArgumentOutOfRangeException(nameof(index));
+            array = [ value ];
+            return;
+        }
+
+        int oldLength = array.Length;
+
+        if (index < 0 || index > oldLength)
+            throw new ArgumentOutOfRangeException(nameof(index));
+
+        TElement[] newArray = new TElement[oldLength + 1];
+
+        if (typeof(TElement).IsPrimitive)
+        {
+            if (index != 0)
+                Buffer.BlockCopy(array, 0, newArray, 0, Unsafe.SizeOf<TElement>() * index);
+            if (index != oldLength)
+                Buffer.BlockCopy(array, Unsafe.SizeOf<TElement>() * index, newArray, Unsafe.SizeOf<TElement>() * (index + 1), Unsafe.SizeOf<TElement>() * (oldLength - index));
+        }
+        else
+        {
+            if (index != 0)
+                Array.Copy(array, 0, newArray, 0, index);
+            if (index != oldLength)
+                Array.Copy(array, index, newArray, index + 1, oldLength - index);
+        }
+
+        newArray[index] = value;
+        array = newArray;
+    }
+
+    /// <summary>
+    /// Removes an element from an index in the array.
+    /// </summary>
+    /// <exception cref="ArgumentNullException"/>
+    /// <exception cref="ArgumentOutOfRangeException"/>
+    public static void RemoveFromArray<TElement>(ref TElement[] array, int index)
+    {
+        if (array == null)
+            throw new ArgumentNullException(nameof(array));
+
+        if (index < 0 || index >= array.Length)
+            throw new ArgumentOutOfRangeException(nameof(index), "Index out of bounds of the array.");
+
+        int oldLength = array.Length;
+        TElement[] newArray = new TElement[oldLength - 1];
+
+        if (typeof(TElement).IsPrimitive)
+        {
+            if (index != 0)
+                Buffer.BlockCopy(array, 0, newArray, 0, Unsafe.SizeOf<TElement>() * index);
+            if (index != oldLength - 1)
+                Buffer.BlockCopy(array, Unsafe.SizeOf<TElement>() * (index + 1), newArray, Unsafe.SizeOf<TElement>() * index, Unsafe.SizeOf<TElement>() * (oldLength - index - 1));
+        }
+        else
+        {
+            if (index != 0)
+                Array.Copy(array, 0, newArray, 0, index);
+            if (index != oldLength - 1)
+                Array.Copy(array, index + 1, newArray, index, oldLength - index - 1);
+        }
+    }
+
+    /// <summary>
     /// Compares two byte arrays.
     /// </summary>
-    public static bool CompareBytes(byte[] arr1, byte[] arr2)
+    public static bool CompareBytes(byte[]? arr1, byte[]? arr2)
     {
-        return ReferenceEquals(arr1, arr2) || arr1.Length == arr2.Length && arr1.AsSpan().SequenceEqual(arr2);
+        if (ReferenceEquals(arr1, arr2))
+            return true;
+
+        return arr1 != null && arr2 != null && arr1.Length == arr2.Length && arr1.AsSpan().SequenceEqual(arr2);
     }
 
     /// <summary>
@@ -310,64 +451,64 @@ public static class CollectionUtility
     }
 
     /// <summary>
-    /// Adds an element to a position in the array.
+    /// Find a value from an array with the index of each element in the predicate.
     /// </summary>
-    public static T[] AddToArray<T>([NotNullIfNotNull(nameof(array))] T[]? array, T value, int index = -1)
+    public static TElement? FindIndexed<TElement>(this TElement[] array, Func<TElement, int, bool> predicate)
     {
-        AddToArray(ref array, value, index);
-        return array!;
-    }
-
-    /// <summary>
-    /// Adds an element to a position in the array.
-    /// </summary>
-    public static void AddToArray<T>([NotNullIfNotNull(nameof(array))] ref T[]? array, T value, int index = -1)
-    {
-        if (array == null || array.Length == 0)
+        for (int i = 0; i < array.Length; ++i)
         {
-            array = [ value ];
-            return;
+            if (predicate(array[i], i))
+                return array[i];
         }
-        if (index < 0)
-            index = array.Length;
-        T[] old = array;
-        array = new T[old.Length + 1];
-        if (index != 0)
-            Array.Copy(old, array, index);
-        if (index != old.Length)
-            Array.Copy(old, index, array, index + 1, old.Length - index);
-        array[index] = value;
+
+        return default;
     }
 
     /// <summary>
-    /// Removes an element from an index in the array.
+    /// Convert to an array if it isn't already.
     /// </summary>
-    /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="ArgumentOutOfRangeException"/>
-    public static T[] RemoveFromArray<T>(T[] array, int index)
+    public static TElement[] ToArrayFast<TElement>(this IEnumerable<TElement> enumerable, bool copy = false)
     {
-        RemoveFromArray(ref array, index);
-        return array;
+        if (!copy && enumerable is TElement[] array)
+            return array;
+
+        if (enumerable is List<TElement> list)
+        {
+            if (!copy && list.Count == list.Capacity && Accessor.TryGetUnderlyingArray(list, out TElement[] underlying))
+                return underlying;
+
+            return list.ToArray();
+        }
+
+        return enumerable.ToArray();
+    }
+}
+
+public class DistanceComparer<TValue> : IComparer<TValue>
+{
+    private readonly Vector3 _position;
+    private readonly Func<TValue, Vector3> _getPosition;
+    private readonly bool _horizontalDistanceOnly;
+    private readonly bool _reverse;
+
+    public DistanceComparer(Vector3 position, Func<TValue, Vector3> getPosition, bool horizontalDistanceOnly, bool reverse)
+    {
+        _position = position;
+        _getPosition = getPosition;
+        _horizontalDistanceOnly = horizontalDistanceOnly;
+        _reverse = reverse;
     }
 
-    /// <summary>
-    /// Removes an element from an index in the array.
-    /// </summary>
-    /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="ArgumentOutOfRangeException"/>
-    public static void RemoveFromArray<T>(ref T[] array, int index)
+    /// <inheritdoc />
+    public int Compare(TValue a, TValue b)
     {
-        if (array == null)
-            throw new ArgumentNullException(nameof(array));
-        
-        if (index < 0 || index >= array.Length)
-            throw new ArgumentOutOfRangeException(nameof(index), "Index out of bounds of the array.");
+        if (ReferenceEquals(a, b))
+            return 0;
 
-        T[] old = array;
-        array = new T[old.Length - 1];
-        if (index != 0)
-            Array.Copy(old, 0, array, 0, index);
-        if (index != array.Length)
-            Array.Copy(old, index + 1, array, index, array.Length - index);
+        Vector3 pA = _getPosition(a);
+        Vector3 pB = _getPosition(b);
+        float aDist = MathUtility.SquaredDistance(in pA, in _position, _horizontalDistanceOnly);
+        float bDist = MathUtility.SquaredDistance(in pB, in _position, _horizontalDistanceOnly);
+        return _reverse ? bDist.CompareTo(aDist) : aDist.CompareTo(bDist);
     }
 }

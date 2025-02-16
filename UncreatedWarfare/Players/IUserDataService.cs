@@ -9,6 +9,7 @@ using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Players;
+
 public interface IUserDataService
 {
     /// <summary>
@@ -20,6 +21,23 @@ public interface IUserDataService
     /// Get a player's Steam64 ID from their Discord ID, or 0 if their Discord is not linked.
     /// </summary>
     Task<ulong> GetSteam64Async(ulong discordId, CancellationToken token = default);
+
+    /// <summary>
+    /// Get a set of players' Discord IDs, or 0 if their Discord is not linked.
+    /// </summary>
+    /// <returns>An array in the same order as the input, with 0s in the place of unlinked IDs.</returns>
+    Task<ulong[]> GetDiscordIdsAsync(IReadOnlyList<ulong> steam64s, CancellationToken token = default);
+
+    /// <summary>
+    /// Get a player's Steam64 ID from their Discord ID, or 0 if their Discord is not linked.
+    /// </summary>
+    /// <returns>An array in the same order as the input, with 0s in the place of unlinked IDs.</returns>
+    Task<ulong[]> GetSteam64sAsync(IReadOnlyList<ulong> discordIds, CancellationToken token = default);
+
+    /// <summary>
+    /// Get a player's usernames from their Steam64 ID.
+    /// </summary>
+    Task<PlayerNames> GetUsernamesAsync(ulong steam64, CancellationToken token = default);
 
     /// <summary>
     /// Get a single player's user data if they've joined.
@@ -103,6 +121,119 @@ public class UserDataService : IUserDataService, IDisposable
         try
         {
             return await _dbContext.UserData.Where(x => x.DiscordId == discordId).Select(x => x.Steam64).FirstOrDefaultAsync(token).ConfigureAwait(false);
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<ulong[]> GetDiscordIdsAsync(IReadOnlyList<ulong> steam64s, CancellationToken token = default)
+    {
+        ulong[]? steamIdArray = steam64s as ulong[];
+        if (steamIdArray == null)
+        {
+            steamIdArray = new ulong[steam64s.Count];
+            int index = -1;
+            foreach (ulong id in steam64s)
+            {
+                steamIdArray[++index] = id;
+            }
+        }
+
+        await _semaphore.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            ulong[] output = new ulong[steamIdArray.Length];
+            await foreach (var idPair in _dbContext.UserData
+                               .Where(x => steamIdArray.Contains(x.DiscordId))
+                               .Select(x => new { x.Steam64, x.DiscordId })
+                               .AsAsyncEnumerable()
+                               .WithCancellation(token))
+            {
+                int index = Array.IndexOf(steamIdArray, idPair.DiscordId);
+                if (index >= 0)
+                    output[index] = idPair.Steam64;
+            }
+
+            return output;
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<ulong[]> GetSteam64sAsync(IReadOnlyList<ulong> discordIds, CancellationToken token = default)
+    {
+        ulong[]? discordIdArray = discordIds as ulong[];
+        if (discordIdArray == null)
+        {
+            discordIdArray = new ulong[discordIds.Count];
+            int index = -1;
+            foreach (ulong id in discordIds)
+            {
+                discordIdArray[++index] = id;
+            }
+        }
+        
+        await _semaphore.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            ulong[] output = new ulong[discordIdArray.Length];
+            await foreach (var idPair in _dbContext.UserData
+                               .Where(x => discordIdArray.Contains(x.DiscordId))
+                               .Select(x => new { x.Steam64, x.DiscordId })
+                               .AsAsyncEnumerable()
+                               .WithCancellation(token))
+            {
+                int index = Array.IndexOf(discordIdArray, idPair.DiscordId);
+                if (index >= 0)
+                    output[index] = idPair.Steam64;
+            }
+
+            return output;
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<PlayerNames> GetUsernamesAsync(ulong steam64, CancellationToken token = default)
+    {
+        await _semaphore.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            var result = await _dbContext.UserData
+                .Where(x => x.Steam64 == steam64)
+                .Select(x => new { x.CharacterName, x.NickName, x.PlayerName, x.DisplayName })
+                .FirstOrDefaultAsync(token)
+                .ConfigureAwait(false);
+
+            PlayerNames names = default;
+            names.Steam64 = new CSteamID(steam64);
+            if (result == null)
+            {
+                string s64String = steam64.ToString("D17", CultureInfo.InvariantCulture);
+                names.CharacterName = s64String;
+                names.NickName = s64String;
+                names.PlayerName = s64String;
+                names.WasFound = false;
+            }
+            else
+            {
+                names.CharacterName = result.CharacterName;
+                names.NickName = result.NickName;
+                names.PlayerName = result.PlayerName;
+                names.DisplayName = result.DisplayName;
+                names.WasFound = true;
+            }
+
+            return names;
         }
         finally
         {
@@ -212,9 +343,10 @@ public class UserDataService : IUserDataService, IDisposable
     /// <inheritdoc />
     public async Task<PlayerNames> SearchFirstPlayerAsync(string input, PlayerNameType prioritizedName, bool byLastJoined, CancellationToken token = default)
     {
-        if (FormattingUtility.TryParseSteamId(input, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
+        CSteamID? steamId = await SteamIdHelper.TryParseSteamIdOrUrl(input, token).ConfigureAwait(false);
+        if (steamId.HasValue && steamId.Value.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
         {
-            return await this.GetUsernamesAsync(steamId.m_SteamID, token).ConfigureAwait(false);
+            return await GetUsernamesAsync(steamId.Value.m_SteamID, token).ConfigureAwait(false);
         }
 
         IQueryable<WarfareUserData> data = GetSearchQuery(input, prioritizedName, byLastJoined, -1);
@@ -251,9 +383,10 @@ public class UserDataService : IUserDataService, IDisposable
             return 0;
         }
 
-        if (FormattingUtility.TryParseSteamId(input, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
+        CSteamID? steamId = await SteamIdHelper.TryParseSteamIdOrUrl(input, token).ConfigureAwait(false);
+        if (steamId.HasValue && steamId.Value.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
         {
-            PlayerNames names = await this.GetUsernamesAsync(steamId.m_SteamID, token).ConfigureAwait(false);
+            PlayerNames names = await GetUsernamesAsync(steamId.Value.m_SteamID, token).ConfigureAwait(false);
             
             if (names.WasFound)
                 output.Add(names);
@@ -371,36 +504,6 @@ public static class UserDataServiceExtensions
         List<PlayerNames> list = new List<PlayerNames>();
         await dataService.SearchPlayersAsync(input, prioritizedName, byLastJoined, list, limit, token);
         return list;
-    }
-
-    /// <summary>
-    /// Get a given player's stored username data.
-    /// </summary>
-    public static async Task<PlayerNames> GetUsernamesAsync(this IUserDataService dataService, ulong steam64, CancellationToken token = default)
-    {
-        WarfareUserData? userData = await dataService.ReadAsync(steam64, token).ConfigureAwait(false);
-
-        PlayerNames names = default;
-        if (userData != null)
-        {
-            names.Steam64 = new CSteamID(userData.Steam64);
-            names.CharacterName = userData.CharacterName;
-            names.NickName = userData.NickName;
-            names.PlayerName = userData.PlayerName;
-            names.DisplayName = userData.DisplayName;
-            names.WasFound = true;
-        }
-        else
-        {
-            string s64String = steam64.ToString("D17", CultureInfo.InvariantCulture);
-            names.Steam64 = new CSteamID(steam64);
-            names.CharacterName = s64String;
-            names.NickName = s64String;
-            names.PlayerName = s64String;
-            names.WasFound = false;
-        }
-
-        return names;
     }
 
     /// <summary>

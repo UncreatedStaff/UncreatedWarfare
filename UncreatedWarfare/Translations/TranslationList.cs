@@ -1,4 +1,3 @@
-﻿using DanielWillett.SpeedBytes;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -14,24 +13,24 @@ namespace Uncreated.Warfare;
 /// <summary>
 /// Wrapper for a <see cref="Dictionary{TKey, TValue}"/>, has custom JSON reading to take a string or dictionary of translations.<br/><see langword="null"/> = empty list.
 /// </summary>
-/// <remarks>Extension methods located in <see cref="T"/>.</remarks>
 [JsonConverter(typeof(TranslationListConverter))]
 [TypeConverter(typeof(TranslationListTypeConverter))]
-public sealed class TranslationList : Dictionary<string, string>, ICloneable
+public sealed class TranslationList : List<KeyValuePair<string, string>>, ICloneable, IDictionary<string, string>
 {
     public const int DefaultCharLength = 255;
+
     public TranslationList() : this(0) { }
-    public TranslationList(int capacity) : base(capacity, StringComparer.Ordinal) { }
-    public TranslationList(IDictionary<string, string> dictionary) : base(dictionary, StringComparer.Ordinal) { }
-    public TranslationList(string @default) : base(StringComparer.Ordinal)
+    public TranslationList(int capacity) : base(capacity) { }
+    public TranslationList(IDictionary<string, string> dictionary) : base(dictionary) { }
+    public TranslationList(string @default) : base(2)
     {
         Add(string.Empty, @default);
     }
-    public TranslationList(int capacity, string @default) : base(capacity, StringComparer.Ordinal)
+    public TranslationList(int capacity, string @default) : base(capacity)
     {
         Add(string.Empty, @default);
     }
-    public TranslationList(TranslationList copy) : base(copy.Count, StringComparer.Ordinal)
+    public TranslationList(TranslationList copy) : base(copy.Count)
     {
         foreach (KeyValuePair<string, string> pair in copy)
         {
@@ -42,64 +41,135 @@ public sealed class TranslationList : Dictionary<string, string>, ICloneable
     /// <summary>
     /// Use language overload if possible.
     /// </summary>
-    public new void Add(string? code, string value)
+    public void Add(string? code, string value)
     {
         code ??= string.Empty;
-        base.Add(code, value);
+
+        int index = FindIndex(code);
+        if (index == -1)
+            Add(new KeyValuePair<string, string>(code, value));
+        else
+            this[index] = new KeyValuePair<string, string>(code, value);
     }
 
     public void Add(LanguageInfo? language, string value)
     {
         if (language == null || language.IsDefault)
-            base.Add(string.Empty, value);
+            Add(string.Empty, value);
         else
-            base.Add(language.Code, value);
+            Add(language.Code, value);
     }
 
     [return: NotNullIfNotNull(nameof(@default))]
-    public string? Translate(LanguageInfo? language, string? @default) => Translate(language) ?? @default;
+    public string? Translate(LanguageInfo? language, string? @default)
+    {
+        return Translate(language) ?? @default;
+    }
+
     public string? Translate(LanguageInfo? language)
     {
         string code = language == null || language.IsDefault ? string.Empty : language.Code;
-        if (TryGetValue(code, out string value))
+        if (TryGetValue(code, out string? value) && value != null)
             return value;
         
-        if (code.Length == 0 && language != null && TryGetValue(language.Code, out value))
+        if (code.Length == 0 && language != null && TryGetValue(language.Code, out value) && value != null)
             return value;
 
         if (language != null)
         {
-            if (language.FallbackTranslationLanguageCode != null && TryGetValue(language.FallbackTranslationLanguageCode, out value))
+            if (language.FallbackTranslationLanguageCode != null && TryGetValue(language.FallbackTranslationLanguageCode, out value) && value != null)
                 return value;
 
-            if (!language.IsDefault && TryGetValue(string.Empty, out value))
+            if (!language.IsDefault && TryGetValue(string.Empty, out value) && value != null)
                 return value;
         }
 
-        return Count > 0 ? Values.ElementAt(0) : null;
+        return Count > 0 ? this[0].Value : null;
     }
 
     public TranslationList Clone() => new TranslationList(this);
     object ICloneable.Clone() => Clone();
-    public void Read(ByteReader reader)
+
+    internal bool TryGetValue(string code, [MaybeNullWhen(false)] out string value)
     {
-        Clear();
-        int len = reader.ReadUInt16();
-        for (int i = 0; i < len; ++i)
+        for (int i = 0; i < Count; ++i)
         {
-            Add(reader.ReadShortString(), reader.ReadNullableString()!);
+            KeyValuePair<string, string> kvp = this[i];
+            if (!string.Equals(kvp.Key, code, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            value = kvp.Value;
+            return true;
+        }
+
+        value = null;
+        return false;
+    }
+
+    internal int FindIndex(string code)
+    {
+        for (int i = 0; i < Count; ++i)
+        {
+            KeyValuePair<string, string> kvp = this[i];
+            if (!string.Equals(kvp.Key, code, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            return i;
+        }
+
+        return -1;
+    }
+    
+    bool IDictionary<string, string>.ContainsKey(string key)
+    {
+        return FindIndex(key) != -1;
+    }
+
+    bool IDictionary<string, string>.Remove(string key)
+    {
+        int index = FindIndex(key);
+        if (index == -1)
+            return false;
+
+        RemoveAt(index);
+        return true;
+    }
+
+    bool IDictionary<string, string>.TryGetValue(string key, out string value)
+    {
+        if (TryGetValue(key, out string? v))
+        {
+            value = v;
+            return true;
+        }
+
+        value = null!;
+        return false;
+    }
+
+    string IDictionary<string, string>.this[string key]
+    {
+        get
+        {
+            int index = FindIndex(key);
+            if (index == -1)
+                throw new KeyNotFoundException();
+            
+            return this[index].Value;
+        }
+        set
+        {
+            int index = FindIndex(key);
+            if (index == -1)
+                Add(key, value);
+
+            this[index] = new KeyValuePair<string, string>(this[index].Key, value);
         }
     }
 
-    public void Write(ByteWriter writer)
-    {
-        writer.Write((ushort)Count);
-        foreach (KeyValuePair<string, string> vals in this)
-        {
-            writer.WriteShort(vals.Key);
-            writer.WriteNullable(vals.Value);
-        }
-    }
+    ICollection<string> IDictionary<string, string>.Keys => this.Select(x => x.Key).ToList();
+
+    ICollection<string> IDictionary<string, string>.Values => this.Select(x => x.Value).ToList();
 }
 
 public sealed class TranslationListConverter : JsonConverter<TranslationList>

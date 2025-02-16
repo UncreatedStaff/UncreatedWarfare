@@ -68,6 +68,9 @@ public class PlayerDied : PlayerEvent
     public SessionRecord? ThirdPartySession { get; internal set; }
     public float TimeDeployed { get; internal set; }
 
+    public bool IsGuaranteedCheaterKill { get; set; }
+    public bool WillBan { get; set; }
+
     public PlayerDied(in DamagePlayerParameters parameters)
     {
         _parameters = parameters;

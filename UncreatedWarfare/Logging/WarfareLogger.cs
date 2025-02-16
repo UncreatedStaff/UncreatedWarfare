@@ -2,6 +2,7 @@ using StackCleaner;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using Uncreated.Warfare.Logging.Formatting;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Util;
@@ -48,8 +49,9 @@ public class WarfareLogger : ILogger
         DateTime timeStamp = DateTime.UtcNow;
 
         string formattedText, unformattedText;
-        if (state is WarfareFormattedLogValues stateValues)
+        if (typeof(TState) == typeof(WarfareFormattedLogValues))
         {
+            ref WarfareFormattedLogValues stateValues = ref Unsafe.As<TState, WarfareFormattedLogValues>(ref state);
             stateValues.ValueFormatter = _formatter;
             formattedText = stateValues.Format(true);
             unformattedText = stateValues.Format(false);
@@ -343,6 +345,7 @@ public class WarfareLogger : ILogger
                 -1,
                 CultureInfo.InvariantCulture,
                 formatter.LanguageService.GetDefaultLanguage(),
+                TimeZoneInfo.Utc,
                 color is StackColorFormatType.ExtendedANSIColor or StackColorFormatType.ANSIColor
                     ? TranslationOptions.ForTerminal
                     : TranslationOptions.NoRichText,

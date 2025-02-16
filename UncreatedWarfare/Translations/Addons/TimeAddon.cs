@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Globalization;
 using Uncreated.Warfare.Models.Localization;
@@ -18,6 +18,7 @@ public sealed class TimeAddon : IArgumentAddon
 
     private static readonly SpecialFormat[] Formats =
     [
+        // TimeSpan
         new SpecialFormat("Short Time", "st", useForToString: false),
         new SpecialFormat("Long Time",  "lt", useForToString: false),
         new SpecialFormat("Seconds",    "s",  useForToString: false),
@@ -28,8 +29,19 @@ public sealed class TimeAddon : IArgumentAddon
         new SpecialFormat("Months",     "mo", useForToString: false),
         new SpecialFormat("Years",      "y",  useForToString: false),
         new SpecialFormat("MM:SS",      "c1", useForToString: false),
-        new SpecialFormat("HH:MM:SS",   "c2", useForToString: false)
+        new SpecialFormat("HH:MM:SS",   "c2", useForToString: false),
+
+        // DateTime[Offset]
+        new SpecialFormat("Long Date/Time",        "F"),
+        new SpecialFormat("Short Date/Time",       "g"),
+        new SpecialFormat("Long Date",             "D"),
+        new SpecialFormat("Short Date",            "d"),
+        new SpecialFormat("Long Time",             "T"),
+        new SpecialFormat("Short Time",            "t"),
+        new SpecialFormat("Relative (Short Time)", "rels", useForToString: false),
+        new SpecialFormat("Relative (Long Time)",  "rell", useForToString: false),
     ];
+
     public string DisplayName => "Asset Rarity Color";
     private TimeAddon() { }
     public string ApplyAddon(ITranslationValueFormatter formatter, string text, TypedReference value, in ValueFormatParameters args)
@@ -39,6 +51,28 @@ public sealed class TimeAddon : IArgumentAddon
         if (__reftype(value) == typeof(TimeSpan))
         {
             ts = __refvalue(value, TimeSpan);
+        }
+        else if (__reftype(value) == typeof(DateTime))
+        {
+            DateTime dt = __refvalue(value, DateTime);
+            if (dt.Kind == DateTimeKind.Local)
+                dt = dt.ToUniversalTime();
+            return args.Format.Format switch
+            {
+                "rels" => FormatDateTimeRelative(false, dt, formatter.ServiceProvider.GetRequiredService<TranslationInjection<TimeTranslations>>().Value, args.Language, args.Culture),
+                "rell" => FormatDateTimeRelative(true, dt, formatter.ServiceProvider.GetRequiredService<TranslationInjection<TimeTranslations>>().Value, args.Language, args.Culture),
+                _ => TryFormatDateTime(dt, args.Format.Format, args.Culture, args.TimeZone)
+            };
+        }
+        else if (__reftype(value) == typeof(DateTimeOffset))
+        {
+            DateTime dt = __refvalue(value, DateTimeOffset).UtcDateTime;
+            return args.Format.Format switch
+            {
+                "rels" => FormatDateTimeRelative(false, dt, formatter.ServiceProvider.GetRequiredService<TranslationInjection<TimeTranslations>>().Value, args.Language, args.Culture),
+                "rell" => FormatDateTimeRelative(true, dt, formatter.ServiceProvider.GetRequiredService<TranslationInjection<TimeTranslations>>().Value, args.Language, args.Culture),
+                _ => TryFormatDateTime(dt, args.Format.Format, args.Culture, args.TimeZone)
+            };
         }
         else if (TypedReference.ToObject(value) is IConvertible c)
         {
@@ -67,17 +101,107 @@ public sealed class TimeAddon : IArgumentAddon
             "c2" => FormattingUtility.ToCountdownString((int)ts.TotalSeconds, true),
             _ => ts.Ticks < 0
                 ? formatter.ServiceProvider.GetRequiredService<TranslationInjection<TimeTranslations>>().Value.TimePermanent.Translate(args.Language)
-                : FormattingUtility.ToTimeString(ts)
+                : FormattingUtility.ToTimeString(ts, space: true)
         };
     }
 
+    private static string TryFormatDateTime(DateTime dateTime, string? format, CultureInfo culture, TimeZoneInfo timeZone)
+    {
+        dateTime = TimeZoneInfo.ConvertTime(dateTime, dateTime.Kind == DateTimeKind.Local ? TimeZoneInfo.Local : TimeZoneInfo.Utc, timeZone);
+
+        try
+        {
+            return dateTime.ToString(format, culture);
+        }
+        catch (FormatException)
+        {
+            return dateTime.ToString("G", culture);
+        }
+    }
+
+    internal static string FormatDateTimeRelative(bool isLong, DateTime dateTime, TimeTranslations translations, LanguageInfo language, CultureInfo culture)
+    {
+        DateTime now = DateTime.UtcNow;
+
+        if (dateTime <= now.AddSeconds(1d) && dateTime >= now.AddSeconds(-1d))
+        {
+            return translations.RelativeTimeNow.Translate(language);
+        }
+
+        string prefix, suffix;
+        TimeSpan difference;
+        if (dateTime < now)
+        {
+            prefix = translations.RelativeTimePastPrefix.Translate(language);
+            suffix = translations.RelativeTimePastSuffix.Translate(language);
+            difference = now - dateTime;
+        }
+        else
+        {
+            prefix = translations.RelativeTimeFuturePrefix.Translate(language);
+            suffix = translations.RelativeTimeFutureSuffix.Translate(language);
+            difference = dateTime - now;
+        }
+
+        string timeSpan = isLong
+            ? ToLongTimeString(translations, (int)Math.Round(difference.TotalSeconds, MidpointRounding.AwayFromZero), language)
+            : FormattingUtility.ToTimeString(difference, 2, space: true);
+
+        int length = timeSpan.Length;
+        if (prefix.Length > 0)
+            length += prefix.Length + 1;
+        if (suffix.Length > 0)
+            length += suffix.Length + 1;
+
+        CreateRelativeTimeStringState state = default;
+        state.Prefix = prefix;
+        state.Suffix = suffix;
+        state.TimeSpan = timeSpan;
+
+        return string.Create(length, state, (span, state) =>
+        {
+            int index = 0;
+            if (state.Prefix.Length > 0)
+            {
+                state.Prefix.AsSpan().CopyTo(span);
+                index += state.Prefix.Length;
+                span[index] = ' ';
+                ++index;
+            }
+
+            state.TimeSpan.AsSpan().CopyTo(span[index..]);
+
+            if (state.Suffix.Length == 0)
+                return;
+
+            index += state.TimeSpan.Length;
+            span[index] = ' ';
+            ++index;
+
+            state.Suffix.AsSpan().CopyTo(span[index..]);
+        });
+    }
+
+    private struct CreateRelativeTimeStringState
+    {
+        public string Prefix, Suffix, TimeSpan;
+    }
+
     /// <summary>
-    /// Create a time format using the given format style.
+    /// Create a <see cref="TimeSpan"/> format using the given format style.
     /// </summary>
-    public static ArgumentFormat Create(TimeFormatType formatType) =>
-        (int)formatType < Formats.Length && formatType >= 0
-            ? new ArgumentFormat(Formats[(int)formatType], InstanceArray)
+    public static ArgumentFormat Create(TimeSpanFormatType spanFormatType) =>
+        (int)spanFormatType < 11 && spanFormatType >= 0
+            ? new ArgumentFormat(Formats[(int)spanFormatType], InstanceArray)
             : new ArgumentFormat(Formats[0], InstanceArray);
+
+    /// <summary>
+    /// Create a <see cref="DateTime"/> format using the given format style.
+    /// </summary>
+    public static ArgumentFormat Create(DateTimeFormatType spanFormatType) =>
+        (int)spanFormatType < Formats.Length && spanFormatType >= 0
+            ? new ArgumentFormat(Formats[(int)spanFormatType + 11], InstanceArray)
+            : new ArgumentFormat(Formats[12], InstanceArray);
 
     public static implicit operator ArgumentFormat(TimeAddon addon) => ReferenceEquals(addon, Instance) ? new ArgumentFormat(InstanceArray) : new ArgumentFormat(addon);
 
@@ -145,7 +269,7 @@ public sealed class TimeAddon : IArgumentAddon
         int highDigits = MathUtility.CountDigits(high);
         int lowDigits = MathUtility.CountDigits(low);
         string highSuffix = highSuffixTranslation.Translate(language);
-        string lowSuffix = lowDigits == 0 ? string.Empty : lowSuffixTranslation!.Translate(language);
+        string lowSuffix = lowSuffixTranslation == null || low == 0 ? string.Empty : lowSuffixTranslation.Translate(language);
         string and = timeTranslations.TimeAnd.Translate(language);
 
         LongTimeState state = default;
@@ -195,9 +319,61 @@ public sealed class TimeAddon : IArgumentAddon
 }
 
 /// <summary>
+/// Describes how <see cref="DateTime"/> and <see cref="DateTimeOffset"/>'s are formatted.
+/// </summary>
+public enum DateTimeFormatType
+{
+    /// <summary>
+    /// Monday, June 15, 2009 1:45 PM
+    /// </summary>
+    /// <remarks><c>"F"</c></remarks>
+    LongDateTime,
+
+    /// <summary>
+    /// 6/15/2009 1:45 PM
+    /// </summary>
+    /// <remarks><c>"g"</c></remarks>
+    ShortDateTime,
+
+    /// <summary>
+    /// Monday, June 15, 2009
+    /// </summary>
+    /// <remarks><c>"D"</c></remarks>
+    LongDate,
+
+    /// <summary>
+    /// 6/15/2009
+    /// </summary>
+    /// <remarks><c>"d"</c></remarks>
+    ShortDate,
+
+    /// <summary>
+    /// 1:45:30 PM
+    /// </summary>
+    /// <remarks><c>"T"</c></remarks>
+    LongTime,
+
+    /// <summary>
+    /// 1:45 PM
+    /// </summary>
+    /// <remarks><c>"t"</c></remarks>
+    ShortTime,
+
+    /// <summary>
+    /// <c>in {time span}</c> or <c>{time span} ago</c> or <c>now</c>. Where <c>time span</c> is 3d2h.
+    /// </summary>
+    RelativeShort,
+
+    /// <summary>
+    /// <c>in {time span}</c> or <c>{time span} ago</c> or <c>now</c>. Where <c>time span</c> is 3 days and 2 hours.
+    /// </summary>
+    RelativeLong
+}
+
+/// <summary>
 /// Describes how time spans are formatted.
 /// </summary>
-public enum TimeFormatType
+public enum TimeSpanFormatType
 {
     /// <summary>
     /// 5d20h10m50s, permanent, etc.
@@ -306,4 +482,19 @@ public sealed class TimeTranslations : PropertiesTranslationCollection
 
     [TranslationData("Joining keyword (1 hour \"and\" 30 minutes).")]
     public readonly Translation TimeAnd = new Translation("and", TranslationOptions.UnityUINoReplace);
+
+    [TranslationData("Relative time in future prefix (\"in\" 1 hour).")]
+    public readonly Translation RelativeTimeFuturePrefix = new Translation("in", TranslationOptions.UnityUINoReplace);
+
+    [TranslationData("Relative time in future suffix (in 1 hour \"\"). Unused in English.")]
+    public readonly Translation RelativeTimeFutureSuffix = new Translation(string.Empty, TranslationOptions.UnityUINoReplace);
+
+    [TranslationData("Relative time in past prefix (\"\" 1 hour ago). Unused in English.")]
+    public readonly Translation RelativeTimePastPrefix = new Translation(string.Empty, TranslationOptions.UnityUINoReplace);
+
+    [TranslationData("Relative time in past suffix (1 hour \"ago\").")]
+    public readonly Translation RelativeTimePastSuffix = new Translation("ago", TranslationOptions.UnityUINoReplace);
+
+    [TranslationData("Relative time when time is almost equal to now.")]
+    public readonly Translation RelativeTimeNow = new Translation("now", TranslationOptions.UnityUINoReplace);
 }

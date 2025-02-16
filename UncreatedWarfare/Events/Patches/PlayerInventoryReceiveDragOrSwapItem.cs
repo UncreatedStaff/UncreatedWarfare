@@ -12,6 +12,7 @@ using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Patches;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Events.Patches;
 
@@ -338,7 +339,7 @@ internal sealed class PlayerInventoryReceiveDragOrSwapItem : IHarmonyPatch
 
         Lazy<ILogger> logger = swap ? SwapLoggerGetter : DragLoggerGetter;
 
-        ItemJar? existingJar = playerInv.getItem(pageFrom, playerInv.getIndex(pageFrom, xFrom, yFrom));
+        ItemJar? existingJar = playerInv.GetItemAt((Page)pageTo, xTo, yTo);
         if (existingJar == null)
         {
             logger.Value.LogWarning("Item not found.");
@@ -348,7 +349,7 @@ internal sealed class PlayerInventoryReceiveDragOrSwapItem : IHarmonyPatch
         ItemJar? swapJar = null;
         if (swap)
         {
-            swapJar = playerInv.getItem(pageTo, playerInv.getIndex(pageTo, xTo, yTo));
+            swapJar = playerInv.GetItemAt((Page)pageFrom, xFrom, yFrom);
             if (swapJar == null)
             {
                 logger.Value.LogWarning("Swap item not found.");
@@ -364,6 +365,7 @@ internal sealed class PlayerInventoryReceiveDragOrSwapItem : IHarmonyPatch
             NewY = yTo,
             NewRotation = existingJar.rot,
             IsSwap = swap,
+            IsSecondaryExecution = false,
             SwappedJar = swapJar,
             Jar = existingJar,
             OldPage = (Page)pageFrom,
@@ -373,5 +375,28 @@ internal sealed class PlayerInventoryReceiveDragOrSwapItem : IHarmonyPatch
         };
 
         _ = eventDispatcher.DispatchEventAsync(args, CancellationToken.None);
+
+        if (!swap)
+            return;
+
+        // invoke twice if there was a swap
+        ItemMoved swapArgs = new ItemMoved
+        {
+            Player = player,
+            NewPage = (Page)pageFrom,
+            NewX = xFrom,
+            NewY = yFrom,
+            NewRotation = swapJar!.rot,
+            IsSwap = true,
+            IsSecondaryExecution = true,
+            SwappedJar = existingJar,
+            Jar = swapJar,
+            OldPage = (Page)pageTo,
+            OldRotation = existingJar.rot,
+            OldX = xTo,
+            OldY = yTo
+        };
+
+        _ = eventDispatcher.DispatchEventAsync(swapArgs, CancellationToken.None);
     }
 }

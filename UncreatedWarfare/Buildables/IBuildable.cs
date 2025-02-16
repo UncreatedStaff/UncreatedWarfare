@@ -1,4 +1,4 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using System;
 using System.Runtime.CompilerServices;
 using Uncreated.Warfare.Util;
@@ -28,6 +28,16 @@ public interface IBuildable :
     /// If the buildable is a structure instead of a barricade.
     /// </summary>
     bool IsStructure { get; }
+
+    /// <summary>
+    /// If the buildable is planted on a vehicle.
+    /// </summary>
+    bool IsOnVehicle { get; }
+
+    /// <summary>
+    /// The vehicle this barricade is attached to, if any.
+    /// </summary>
+    InteractableVehicle? VehicleParent { get; }
 
     /// <summary>
     /// If the buildable has been destroyed.
@@ -107,6 +117,8 @@ public class BuildableBarricade : IBuildable
 {
     public uint InstanceId => Drop.instanceID;
     public bool IsStructure => false;
+    public bool IsOnVehicle { get; }
+    public InteractableVehicle? VehicleParent { get; }
     public bool IsDead => Data.barricade.isDead;
     public ItemPlaceableAsset Asset => Drop.asset;
     public Transform Model => Drop.model == null || Data.barricade.isDead ? null! : Drop.model; // so you can use ? on it
@@ -142,6 +154,14 @@ public class BuildableBarricade : IBuildable
     {
         Drop = drop;
         Data = drop.GetServersideData();
+        Transform parent = drop.model.parent;
+        if (!BarricadeManager.tryGetPlant(parent, out _, out _, out ushort plant, out BarricadeRegion region))
+        {
+            return;
+        }
+
+        IsOnVehicle = true;
+        VehicleParent = (region as VehicleBarricadeRegion)?.vehicle;
     }
 
     public void SetPositionAndRotation(Vector3 position, Quaternion rotation)
@@ -225,6 +245,8 @@ public class BuildableStructure : IBuildable
     object IBuildable.Drop => Drop;
     object IBuildable.Data => Data;
     object IBuildable.Item => Data.structure;
+    bool IBuildable.IsOnVehicle => false;
+    InteractableVehicle? IBuildable.VehicleParent => null;
     Vector3 ITransformObject.Scale
     {
         get => Vector3.one;

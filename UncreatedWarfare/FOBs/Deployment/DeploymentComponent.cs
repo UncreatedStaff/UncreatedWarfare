@@ -7,7 +7,9 @@ using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Layouts.Teams;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Cooldowns;
 using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Translations;
@@ -104,7 +106,7 @@ public class DeploymentComponent : MonoBehaviour, IPlayerComponent, IEventListen
             return false;
         }
 
-        if (!settings.DisableCheckingForCooldown && _cooldownManager != null && _cooldownManager.HasCooldown(Player, settings.CooldownType ?? CooldownType.Deploy, out Cooldown cooldown))
+        if (!settings.DisableCheckingForCooldown && _cooldownManager != null && _cooldownManager.HasCooldown(Player, settings.CooldownType ?? KnownCooldowns.Deploy, out Cooldown cooldown))
         {
             if (!settings.DisableInitialChatUpdates)
                 _chatService.Send(Player, _translations.DeployCooldown, cooldown);
@@ -112,7 +114,7 @@ public class DeploymentComponent : MonoBehaviour, IPlayerComponent, IEventListen
             return false;
         }
 
-        if (!settings.AllowCombat && _cooldownManager != null && _cooldownManager.HasCooldown(Player, CooldownType.Combat, out cooldown))
+        if (!settings.AllowCombat && _cooldownManager != null && _cooldownManager.HasCooldown(Player, KnownCooldowns.Combat, out cooldown))
         {
             if (!settings.DisableInitialChatUpdates)
                 _chatService.Send(Player, _translations.DeployInCombat, cooldown);
@@ -191,6 +193,7 @@ public class DeploymentComponent : MonoBehaviour, IPlayerComponent, IEventListen
 
         deployFrom?.OnDeployFrom(Player, in settings);
         deployable.OnDeployTo(Player, in settings);
+        ActionLog.Add(ActionLogType.DeployToLocation, deployable.ToString(), Player);
 
         PlayerDeployed args = new PlayerDeployed
         {
@@ -203,7 +206,7 @@ public class DeploymentComponent : MonoBehaviour, IPlayerComponent, IEventListen
             _chatService.Send(Player, _translations.DeploySuccess, deployable);
         if (!settings.DisableStartingCooldown && _cooldownManager != null)
         {
-            _cooldownManager.StartCooldown(Player, settings.CooldownType ?? CooldownType.Deploy, 30f /* todo RapidDeployment.GetDeployTime(Player) */);
+            _cooldownManager.StartCooldown(Player, settings.CooldownType ?? KnownCooldowns.Deploy, 30f /* todo RapidDeployment.GetDeployTime(Player) */);
         }
 
         CurrentDeployment = null;
@@ -276,7 +279,7 @@ public class DeploymentComponent : MonoBehaviour, IPlayerComponent, IEventListen
             return false;
         }
 
-        if (!settings.DisableCheckingForCooldown && _cooldownManager != null && _cooldownManager.HasCooldown(Player, settings.CooldownType ?? CooldownType.Deploy, out Cooldown cooldown))
+        if (!settings.DisableCheckingForCooldown && _cooldownManager != null && _cooldownManager.HasCooldown(Player, settings.CooldownType ?? KnownCooldowns.Deploy, out Cooldown cooldown))
         {
             if (!settings.DisableTickingChatUpdates)
                 _chatService.Send(Player, _translations.DeployCooldown, cooldown);
@@ -284,7 +287,7 @@ public class DeploymentComponent : MonoBehaviour, IPlayerComponent, IEventListen
             return false;
         }
 
-        if (!settings.AllowCombat && _cooldownManager != null && _cooldownManager.HasCooldown(Player, CooldownType.Combat, out cooldown))
+        if (!settings.AllowCombat && _cooldownManager != null && _cooldownManager.HasCooldown(Player, KnownCooldowns.Combat, out cooldown))
         {
             if (!settings.DisableTickingChatUpdates)
                 _chatService.Send(Player, _translations.DeployInCombat, cooldown);

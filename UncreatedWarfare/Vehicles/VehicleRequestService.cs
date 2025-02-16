@@ -1,4 +1,4 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using HarmonyLib;
 using Microsoft.Extensions.DependencyInjection;
 using System;
@@ -8,8 +8,6 @@ using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Interaction.Requests;
-using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Kits.Translations;
 using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Moderation;
@@ -24,6 +22,8 @@ using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles.WarfareVehicles;
 using Uncreated.Warfare.Vehicles.Spawners;
 using Uncreated.Warfare.Zones;
+using Uncreated.Warfare.Kits.Requests;
+using Uncreated.Warfare.Kits;
 
 namespace Uncreated.Warfare.Vehicles;
 

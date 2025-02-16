@@ -1,10 +1,10 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
-using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.Deaths;
 internal class PlayerDeathTrackingComponent : MonoBehaviour
@@ -64,7 +64,7 @@ internal class PlayerDeathTrackingComponent : MonoBehaviour
     /// <summary>
     /// The vehicle from which <see cref="LastRocketShot"/> was shot (only if it's a turret).
     /// </summary>
-    internal IAssetLink<VehicleAsset>? LastRocketShotFromVehicle { get; set; }
+    internal InteractableVehicle? LastRocketShotFromVehicle { get; set; }
 
     /// <summary>
     /// The driver of the vehicle from which <see cref="LastRocketShot"/> was shot (only if it's a turret).
@@ -92,9 +92,9 @@ internal class PlayerDeathTrackingComponent : MonoBehaviour
     internal ThrowableComponent? ThrowableTrapTrigger { get; set; }
 
     /// <summary>
-    /// The component of the last vehicle this player caused the explosion for.
+    /// The <see cref="WarfareVehicle"/> component of the last vehicle this player caused the explosion for.
     /// </summary>
-    internal VehicleComponent? LastVehicleExploded { get; set; }
+    internal WarfareVehicle? LastVehicleExploded { get; set; }
 
     /// <summary>
     /// List of all throwables that this player has thrown which are pending being cleaned up by the game.

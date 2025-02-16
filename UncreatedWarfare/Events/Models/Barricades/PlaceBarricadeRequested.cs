@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using Uncreated.Warfare.Events.Models.Buildables;
 using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Events.Models.Barricades;
@@ -7,7 +8,7 @@ namespace Uncreated.Warfare.Events.Models.Barricades;
 /// Event listener args which handles <see cref="BarricadeManager.onDeployBarricadeRequested"/>.
 /// </summary>
 [EventModel(SynchronizationContext = EventSynchronizationContext.Global, SynchronizedModelTags = [ "modify_inventory", "modify_world" ])]
-public class PlaceBarricadeRequested : CancellableEvent
+public class PlaceBarricadeRequested : CancellableEvent, IPlaceBuildableRequestedEvent
 {
 #nullable disable
     private BarricadeRegion _region;
@@ -28,10 +29,21 @@ public class PlaceBarricadeRequested : CancellableEvent
     public required Barricade Barricade { get; init; }
 
     /// <summary>
+    /// Asset of the barricade being placed.
+    /// </summary>
+    public ItemBarricadeAsset Asset => Barricade.asset;
+
+    /// <summary>
     /// Barricade place target (where the player was looking). This could be a vehicle in which case the barricade will be planted.
     /// </summary>
     /// <remarks>If this is a vehicle, it will be stored in <see cref="TargetVehicle"/>.</remarks>
     public required Transform? HitTarget { get; init; }
+
+    /// <inheritdoc />
+    ItemPlaceableAsset IPlaceBuildableRequestedEvent.Asset => Barricade.asset;
+
+    /// <inheritdoc />
+    bool IPlaceBuildableRequestedEvent.IsStructure => false;
 
     /// <summary>
     /// The vehicle the player was placing the barricade on.
@@ -89,10 +101,10 @@ public class PlaceBarricadeRequested : CancellableEvent
     }
 
     /// <summary>
-    /// The exact euler rotation of the barricade.
+    /// The exact rotation of the barricade.
     /// </summary>
     /// <remarks>This can be changed.</remarks>
-    public required Vector3 Rotation { get; set; }
+    public required Quaternion Rotation { get; set; }
 
     /// <summary>
     /// The player that owns the barricade's Steam ID, or <see cref="CSteamID.Nil"/>.
@@ -107,12 +119,10 @@ public class PlaceBarricadeRequested : CancellableEvent
     public required CSteamID GroupOwner { get; set; }
 
     /// <summary>
-    /// Asset of the barricade being placed.
-    /// </summary>
-    public ItemBarricadeAsset Asset => Barricade.asset;
-
-    /// <summary>
     /// If this barricade is being placed on a vehicle.
     /// </summary>
     public bool IsOnVehicle => TargetVehicle is not null;
+
+    /// <inheritdoc />
+    object IPlaceBuildableRequestedEvent.Item => Barricade;
 }

@@ -1,6 +1,6 @@
 using System;
 using Uncreated.Warfare.Commands;
-using Uncreated.Warfare.Fobs;
+using Uncreated.Warfare.Fobs.SupplyCrates;
 using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;

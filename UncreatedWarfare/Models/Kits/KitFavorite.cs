@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Uncreated.Warfare.Models.Users;
 
@@ -9,7 +9,7 @@ public class KitFavorite
 {
 
     [Required]
-    public Kit Kit { get; set; }
+    public KitModel Kit { get; set; }
 
     [Required]
     [ForeignKey(nameof(Kit))]

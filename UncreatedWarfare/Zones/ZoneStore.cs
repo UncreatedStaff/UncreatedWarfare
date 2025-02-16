@@ -1,10 +1,11 @@
-﻿using SDG.Framework.Landscapes;
+using SDG.Framework.Landscapes;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
 using Uncreated.Warfare.Layouts.Teams;
+using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Proximity;
@@ -291,6 +292,72 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService
             if (proximity.Proximity.TestPoint(point))
                 yield return proximity.Zone;
         }
+    }
+
+    /// <summary>
+    /// Find the zone which is closest to a point, falling back to the closest <see cref="LocationDevkitNode"/> if none are found.
+    /// </summary>
+    public string GetClosestLocationName(Vector3 position, bool shortName = false)
+    {
+        Zone? zone = GetClosestZone(position, ZoneType.Flag);
+        if (zone != null)
+        {
+            return shortName && !string.IsNullOrWhiteSpace(zone.ShortName) ? zone.ShortName : zone.Name;
+        }
+
+        return LocationHelper.GetClosestLocationName(position);
+    }
+
+    /// <summary>
+    /// Find the zone which is closest to a point.
+    /// </summary>
+    public Zone? GetClosestZone(Vector3 position, ZoneType? type = null, FactionInfo? faction = null)
+    {
+        Zone? closest = null;
+        float closestSqrDist = 0;
+        if (ProximityZones != null)
+        {
+            // based on closest border point
+            foreach (ZoneProximity prox in ProximityZones)
+            {
+                Zone zone = prox.Zone;
+                if (type.HasValue && zone.Type != type.Value || faction != null && !string.Equals(zone.Faction, faction.FactionId, StringComparison.Ordinal))
+                    continue;
+
+                Vector3 nearestPoint = prox.Proximity.GetNearestPointOnBorder(in position);
+                float dist = MathUtility.SquaredDistance(in position, in nearestPoint, true);
+                if (closest != null && dist >= closestSqrDist)
+                    continue;
+
+                closest = zone;
+                closestSqrDist = dist;
+            }
+        }
+        else
+        {
+            // based on center point
+            foreach (Zone zone in Zones)
+            {
+                if (type.HasValue && zone.Type != type.Value || faction != null && !string.Equals(zone.Faction, faction.FactionId, StringComparison.Ordinal))
+                    continue;
+
+                Vector3 c = zone.Center;
+                float dist = MathUtility.SquaredDistance(in position, in c, true);
+                if (closest != null && dist >= closestSqrDist)
+                    continue;
+
+                closest = zone;
+                closestSqrDist = dist;
+            }
+        }
+
+        if (closest is { IsPrimary: false })
+        {
+            Zone? primary = Zones.FirstOrDefault(x => x.IsPrimary && string.Equals(x.Name, closest.Name, StringComparison.Ordinal));
+            closest = primary;
+        }
+
+        return closest;
     }
 
     /// <summary>

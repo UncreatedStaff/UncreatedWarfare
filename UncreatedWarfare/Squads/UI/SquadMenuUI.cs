@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -117,7 +117,7 @@ internal class SquadMenuUI :
         data.IsViewing = true;
         SendToPlayer(player.Connection);
         CreateSquadInput.UpdateFromData(player.UnturnedPlayer);
-        player.UnturnedPlayer.setPluginWidgetFlag(EPluginWidgetFlags.Modal, true);
+        ModalHandle.TryGetModalHandle(player, ref data.Modal);
         UpdateForPlayer(player);
     }
     public void CloseUI(WarfarePlayer player)
@@ -129,7 +129,7 @@ internal class SquadMenuUI :
         });
         data.IsViewing = false;
         ClearFromPlayer(player.Connection);
-        player.UnturnedPlayer.setPluginWidgetFlag(EPluginWidgetFlags.Modal, false);
+        data.Modal.Dispose();
     }
     private void UpdateForViewingPlayers(Team team)
     {
@@ -213,6 +213,7 @@ internal class SquadMenuUI :
     }
     public class PlayerViewingState : IUnturnedUIData
     {
+        internal ModalHandle Modal;
         public required CSteamID Player { get; init; }
 
         public required UnturnedUI Owner { get; init; }

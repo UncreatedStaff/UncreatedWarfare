@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -35,6 +35,7 @@ public class MapZoneProvider : IZoneProvider
         return zones is not { Count: > 0 } ? Enumerable.Empty<Zone>() : zones;
     }
 
+    [UsedImplicitly]
     private class ZoneConfig
     {
         [JsonPropertyName("zones")]

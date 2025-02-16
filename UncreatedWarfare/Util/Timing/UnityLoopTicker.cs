@@ -1,6 +1,5 @@
-﻿using SDG.Framework.Utilities;
+using SDG.Framework.Utilities;
 using System;
-using Uncreated.Warfare.Components;
 
 namespace Uncreated.Warfare.Util.Timing;
 

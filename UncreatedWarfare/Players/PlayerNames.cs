@@ -112,6 +112,58 @@ public struct PlayerNames : IPlayer
     public static string SelectCharacterName(PlayerNames names) => names.CharacterName;
     public static string SelectNickName(PlayerNames names) => names.NickName;
 
+    /// <summary>
+    /// Creates an array of names that removed empty or duplcated names. Returned array is always in the order: player name, character name, nick name.
+    /// </summary>
+    public readonly string[] GetUniqueNames()
+    {
+        string? pn = PlayerName;
+        string? cn = CharacterName;
+        string? nn = NickName;
+        bool pws = string.IsNullOrWhiteSpace(pn);
+        bool cws = string.IsNullOrWhiteSpace(cn);
+        bool nws = string.IsNullOrWhiteSpace(nn);
+        if (pws && cws && nws)
+            return Array.Empty<string>();
+
+        if (pws)
+        {
+            if (cws)
+                return [ nn ];
+            if (nws || nn.Equals(cn, StringComparison.Ordinal))
+                return [ cn ];
+            return [ cn, nn ];
+        }
+        if (cws)
+        {
+            if (pws)
+                return [ nn ];
+            if (nws || nn.Equals(pn, StringComparison.Ordinal))
+                return [ pn ];
+            return [ pn, nn ];
+        }
+        if (nws)
+        {
+            if (pws)
+                return [ cn ];
+            if (cws || cn.Equals(pn, StringComparison.Ordinal))
+                return [ pn ];
+            return [ pn, cn ];
+        }
+
+        bool nep = nn.Equals(pn, StringComparison.Ordinal);
+        bool nec = nn.Equals(cn, StringComparison.Ordinal);
+        bool pec = nec && nep || pn.Equals(cn, StringComparison.Ordinal);
+        if (nep && nec)
+            return [ nn ];
+        if (pec || nec)
+            return [ pn, nn ];
+        if (nep)
+            return [ pn, cn ];
+
+        return [ pn, cn, nn ];
+    }
+
     public readonly string GetDisplayNameOrPlayerName()
     {
         return DisplayName ?? PlayerName;

@@ -1,10 +1,16 @@
+using DanielWillett.ModularRpcs.Annotations;
+using DanielWillett.ModularRpcs.Async;
+using DanielWillett.ModularRpcs.Exceptions;
 using MySqlConnector;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Net;
+using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Uncreated.Framework.UI;
 using Uncreated.Warfare.Database.Manual;
 using Uncreated.Warfare.Logging;
@@ -16,18 +22,22 @@ using Uncreated.Warfare.Moderation.Records;
 using Uncreated.Warfare.Moderation.Reports;
 using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Steam;
 using Uncreated.Warfare.Steam.Models;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles.WarfareVehicles;
+using UnityEngine.Networking;
 
 namespace Uncreated.Warfare.Moderation;
-public class DatabaseInterface
+public class DatabaseInterface : IHostedService
 {
     private readonly object _cacheSync = new object();
     public readonly TimeSpan DefaultInvalidateDuration = TimeSpan.FromSeconds(3);
     private readonly ILogger<DatabaseInterface> _logger;
     private readonly IUserDataService _userDataService;
+    private readonly IPlayerService _playerService;
     private readonly Dictionary<ulong, string> _iconUrlCacheSmall = new Dictionary<ulong, string>(128);
     private readonly Dictionary<ulong, string> _iconUrlCacheMedium = new Dictionary<ulong, string>(128);
     private readonly Dictionary<ulong, string> _iconUrlCacheFull = new Dictionary<ulong, string>(128);
@@ -98,12 +108,59 @@ public class DatabaseInterface
     public event Action<ModerationEntry>? OnModerationEntryUpdated;
     public ModerationCache Cache { get; } = new ModerationCache();
     internal ISteamApiService SteamAPI { get; }
-    public DatabaseInterface(IManualMySqlProvider mySqlProvider, ILogger<DatabaseInterface> logger, ISteamApiService steamApi, IUserDataService userDataService)
+    public DatabaseInterface(IManualMySqlProvider mySqlProvider, ILogger<DatabaseInterface> logger, ISteamApiService steamApi, IUserDataService userDataService, IPlayerService playerService)
     {
         SteamAPI = steamApi;
         Sql = mySqlProvider;
         _logger = logger;
         _userDataService = userDataService;
+        _playerService = playerService;
+    }
+    /// <inheritdoc />
+    async UniTask IHostedService.StartAsync(CancellationToken token)
+    {
+        // downloads a live list of IPv4 ranges from Geforce Now remote play service.
+        using UnityWebRequest downloadGfnIpsRequest = UnityWebRequest.Get("https://ipranges.nvidiangn.net/v1/ips");
+        downloadGfnIpsRequest.timeout = 2;
+
+        try
+        {
+            await downloadGfnIpsRequest.SendWebRequest();
+            List<string>? ips = JsonSerializer.Deserialize<GeforceIpList>(downloadGfnIpsRequest.downloadHandler.text)?.IPs;
+            if (ips != null)
+            {
+                List<IPv4Range> ranges = new List<IPv4Range>(ips.Count);
+                ranges.AddRange(IPv4AddressRangeFilter.GeforceNow.Ranges);
+                int oldCount = ranges.Count;
+
+                foreach (string ip in ips)
+                {
+                    if (!IPv4Range.TryParse(ip, out IPv4Range range))
+                        continue;
+
+                    if (!ranges.Contains(range))
+                        ranges.Add(range);
+                }
+
+                IPv4AddressRangeFilter.GeforceNow.Ranges = ranges.ToArrayFast();
+                _logger.LogDebug("Downloaded {0} GeforceNow IPs (from {1} pre-defined).", ranges.Count, oldCount);
+            }
+        }
+        catch (UnityWebRequestException ex)
+        {
+            _logger.LogError(ex, "Error querying GeForceNow IPs.");
+        }
+    }
+    private class GeforceIpList
+    {
+        [JsonPropertyName("ipList")]
+        public List<string>? IPs { get; set; }
+    }
+
+    /// <inheritdoc />
+    UniTask IHostedService.StopAsync(CancellationToken token)
+    {
+        return UniTask.CompletedTask;
     }
 
     public bool TryGetAvatar(IModerationActor actor, AvatarSize size, out string avatar)
@@ -118,12 +175,30 @@ public class DatabaseInterface
 
     public bool TryGetAvatar(ulong steam64, AvatarSize size, out string avatar)
     {
+        WarfarePlayer? online = _playerService.GetOnlinePlayerOrNullThreadSafe(steam64);
+        if (online != null)
+        {
+            avatar = size switch
+            {
+                AvatarSize.Full => online.SteamSummary.AvatarUrlFull,
+                AvatarSize.Medium => online.SteamSummary.AvatarUrlMedium,
+                _ => online.SteamSummary.AvatarUrlSmall
+            };
+        }
+        else avatar = null!;
+
         Dictionary<ulong, string> dict = size switch
         {
             AvatarSize.Full => _iconUrlCacheFull,
             AvatarSize.Medium => _iconUrlCacheMedium,
             _ => _iconUrlCacheSmall
         };
+
+        if (!string.IsNullOrEmpty(avatar))
+        {
+            dict[steam64] = avatar;
+            return true;
+        }
 
         lock (_cacheSync)
             return dict.TryGetValue(steam64, out avatar);
@@ -256,7 +331,7 @@ public class DatabaseInterface
         await Sql.QueryAsync(sb.ToString(), pkArgs, token, reader =>
         {
             entry = ReadEntry(flag, reader);
-            return true;
+            return false;
         }).ConfigureAwait(false);
 
         if (entry == null)
@@ -650,7 +725,7 @@ public class DatabaseInterface
             actors.Add(new PrimaryKeyPair<RelatedActor>(reader.GetUInt32(0), ReadActor(reader, 1)));
         }).ConfigureAwait(false);
 
-        F.ApplyQueriedList(actors, (key, arr) =>
+        MySqlSnippets.ApplyQueriedList(actors, (key, arr) =>
         {
             IModerationEntry? info = entries.FindIndexed((x, i) => x != null && (mask is null || mask[i]) && x.Id == key);
             if (info != null)
@@ -669,7 +744,7 @@ public class DatabaseInterface
             evidence.Add(new PrimaryKeyPair<Evidence>(reader.GetUInt32(0), ReadEvidence(reader, 1)));
         }).ConfigureAwait(false);
 
-        F.ApplyQueriedList(evidence, (key, arr) =>
+        MySqlSnippets.ApplyQueriedList(evidence, (key, arr) =>
         {
             IModerationEntry? info = entries.FindIndexed((x, i) => x != null && (mask is null || mask[i]) && x.Id == key);
             if (info != null)
@@ -687,7 +762,7 @@ public class DatabaseInterface
                 links.Add(new PrimaryKeyPair<uint>(reader.GetUInt32(0), reader.GetUInt32(1)));
             }).ConfigureAwait(false);
 
-            F.ApplyQueriedList(links, (key, arr) =>
+            MySqlSnippets.ApplyQueriedList(links, (key, arr) =>
             {
                 IModerationEntry? info = entries.FindIndexed((x, i) => x != null && (mask is null || mask[i]) && x.Id == key);
                 if (info != null)
@@ -708,7 +783,7 @@ public class DatabaseInterface
                     links.Add(new PrimaryKeyPair<uint>(reader.GetUInt32(0), reader.GetUInt32(1)));
                 }).ConfigureAwait(false);
 
-                F.ApplyQueriedList(links, (key, arr) =>
+                MySqlSnippets.ApplyQueriedList(links, (key, arr) =>
                 {
                     Punishment? info = (Punishment?)entries.FindIndexed((x, i) => x is Punishment && (mask is null || mask[i]) && x.Id == key);
                     if (info != null)
@@ -724,7 +799,7 @@ public class DatabaseInterface
                     links.Add(new PrimaryKeyPair<uint>(reader.GetUInt32(0), reader.GetUInt32(1)));
                 }).ConfigureAwait(false);
 
-                F.ApplyQueriedList(links, (key, arr) =>
+                MySqlSnippets.ApplyQueriedList(links, (key, arr) =>
                 {
                     Punishment? info = (Punishment?)entries.FindIndexed((x, i) => x is Punishment && (mask is null || mask[i]) && x.Id == key);
                     if (info != null)
@@ -743,7 +818,7 @@ public class DatabaseInterface
                     types.Add(new PrimaryKeyPair<VehicleType>(reader.GetUInt32(0), reader.ReadStringEnum(1, VehicleType.None)));
                 }).ConfigureAwait(false);
 
-                F.ApplyQueriedList(types, (key, arr) =>
+                MySqlSnippets.ApplyQueriedList(types, (key, arr) =>
                 {
                     AssetBan? info = (AssetBan?)entries.FindIndexed((x, i) => x is AssetBan && (mask is null || mask[i]) && x.Id == key);
                     if (info != null)
@@ -763,7 +838,7 @@ public class DatabaseInterface
                 links.Add(new PrimaryKeyPair<uint>(reader.GetUInt32(0), reader.GetUInt32(1)));
             }).ConfigureAwait(false);
 
-            F.ApplyQueriedList(links, (key, arr) =>
+            MySqlSnippets.ApplyQueriedList(links, (key, arr) =>
             {
                 Appeal? info = (Appeal?)entries.FindIndexed((x, i) => x is Appeal && (mask is null || mask[i]) && x.Id == key);
                 if (info != null)
@@ -780,7 +855,7 @@ public class DatabaseInterface
                 responses.Add(new PrimaryKeyPair<AppealResponse>(reader.GetUInt32(0), new AppealResponse(reader.GetString(1), reader.GetString(2))));
             }).ConfigureAwait(false);
 
-            F.ApplyQueriedList(responses, (key, arr) =>
+            MySqlSnippets.ApplyQueriedList(responses, (key, arr) =>
             {
                 Appeal? info = (Appeal?)entries.FindIndexed((x, i) => x is Appeal && (mask is null || mask[i]) && x.Id == key);
                 if (info != null)
@@ -800,7 +875,7 @@ public class DatabaseInterface
                 chats.Add(new PrimaryKeyPair<AbusiveChatRecord>(reader.GetUInt32(0), new AbusiveChatRecord(reader.GetString(1), new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(2), DateTimeKind.Utc)))));
             }).ConfigureAwait(false);
 
-            F.ApplyQueriedList(chats, (key, arr) =>
+            MySqlSnippets.ApplyQueriedList(chats, (key, arr) =>
             {
                 ChatAbuseReport? info = (ChatAbuseReport?)entries.FindIndexed((x, i) => x is ChatAbuseReport && (mask is null || mask[i]) && x.Id == key);
                 if (info != null)
@@ -837,7 +912,7 @@ public class DatabaseInterface
                 )));
             }).ConfigureAwait(false);
 
-            F.ApplyQueriedList(shots, (key, arr) =>
+            MySqlSnippets.ApplyQueriedList(shots, (key, arr) =>
             {
                 CheatingReport? info = (CheatingReport?)entries.FindIndexed((x, i) => x is CheatingReport && (mask is null || mask[i]) && x.Id == key);
                 if (info != null)
@@ -863,7 +938,7 @@ public class DatabaseInterface
                         reader.GetInt32(1), reader.GetBoolean(8), new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(9), DateTimeKind.Utc)))));
             }).ConfigureAwait(false);
 
-            F.ApplyQueriedList(damages, (key, arr) =>
+            MySqlSnippets.ApplyQueriedList(damages, (key, arr) =>
             {
                 GriefingReport? info = (GriefingReport?)entries.FindIndexed((x, i) => x is GriefingReport && (mask is null || mask[i]) && x.Id == key);
                 if (info != null)
@@ -883,7 +958,7 @@ public class DatabaseInterface
                         reader.GetString(5), reader.IsDBNull(3) ? null : reader.GetBoolean(3), new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(6), DateTimeKind.Utc)))));
             }).ConfigureAwait(false);
 
-            F.ApplyQueriedList(tks, (key, arr) =>
+            MySqlSnippets.ApplyQueriedList(tks, (key, arr) =>
             {
                 GriefingReport? info = (GriefingReport?)entries.FindIndexed((x, i) => x is GriefingReport && (mask is null || mask[i]) && x.Id == key);
                 if (info != null)
@@ -903,7 +978,7 @@ public class DatabaseInterface
                         reader.GetString(4), new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(5), DateTimeKind.Utc)))));
             }).ConfigureAwait(false);
 
-            F.ApplyQueriedList(vtks, (key, arr) =>
+            MySqlSnippets.ApplyQueriedList(vtks, (key, arr) =>
             {
                 GriefingReport? info = (GriefingReport?)entries.FindIndexed((x, i) => x is GriefingReport && (mask is null || mask[i]) && x.Id == key);
                 if (info != null)
@@ -925,7 +1000,7 @@ public class DatabaseInterface
                     reader.IsDBNull(7) ? null : new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(7), DateTimeKind.Utc)), reader.ReadStringEnum(5, EDamageOrigin.Unknown), reader.GetUInt64(4))));
             }).ConfigureAwait(false);
 
-            F.ApplyQueriedList(reqs, (key, arr) =>
+            MySqlSnippets.ApplyQueriedList(reqs, (key, arr) =>
             {
                 GriefingReport? info = (GriefingReport?)entries.FindIndexed((x, i) => x is GriefingReport && (mask is null || mask[i]) && x.Id == key);
                 if (info != null)
@@ -948,7 +1023,7 @@ public class DatabaseInterface
                 tasks.Add(e.FillDetail(this, token));
             }
 
-            await Task.WhenAll(tasks.AsArrayFast()).ConfigureAwait(false);
+            await Task.WhenAll(tasks.ToArrayFast()).ConfigureAwait(false);
         }
     }
     public async Task<T[]> GetActiveEntries<T>(CSteamID steam64, bool detail = true, bool baseOnly = false, string? condition = null, string? orderBy = null, object[]? conditionArgs = null, DateTimeOffset? start = null, DateTimeOffset? end = null, CancellationToken token = default) where T : IDurationModerationEntry
@@ -1138,7 +1213,7 @@ public class DatabaseInterface
             reader =>
             {
                 result = ReadEntry(1 | (1 << 10), reader) as AssetBan;
-                return true;
+                return false;
             }).ConfigureAwait(false);
 
         if (detail && result != null)
@@ -1250,7 +1325,7 @@ public class DatabaseInterface
         }
         if ((flag & (1 << 9)) != 0)
         {
-            sb.Append($" LEFT JOIN `{TableVoiceChatReports}` AS `vrep` ON `main`.`{ColumnEntriesPrimaryKey}` = `rep`.`{ColumnExternalPrimaryKey}`");
+            sb.Append($" LEFT JOIN `{TableVoiceChatReports}` AS `vrep` ON `main`.`{ColumnEntriesPrimaryKey}` = `vrep`.`{ColumnExternalPrimaryKey}`");
         }
         if ((flag & (1 << 10)) != 0)
         {
@@ -1376,15 +1451,15 @@ public class DatabaseInterface
                 byte[]? imgData = reader.IsDBNull(offset) ? null : reader.ReadByteArray(offset);
                 rep.Type = sec ?? ReportType.Custom;
                 rep.ScreenshotJpgData = imgData;
-                if ((flag & (1 << 9)) != 0)
-                {
-                    ++offset;
-                    if (entry is VoiceChatAbuseReport vrep)
-                    {
-                        byte[] voiceData = reader.ReadByteArray(offset);
-                        vrep.PreviousVoiceData = voiceData;
-                    }
-                }
+            }
+        }
+        if ((flag & (1 << 9)) != 0)
+        {
+            ++offset;
+            if (entry is VoiceChatAbuseReport vrep)
+            {
+                byte[] voiceData = reader.ReadByteArray(offset);
+                vrep.PreviousVoiceData = voiceData;
             }
         }
         if ((flag & (1 << 10)) != 0)
@@ -1454,7 +1529,10 @@ public class DatabaseInterface
             entry.Id = pk;
 
         if (entry is not ModerationEntry mod)
+        {
+            InvokeSendModerationEntryUpdated(entry.Id, isNew);
             return;
+        }
 
         List<object> args = new List<object>(mod.EstimateParameterCount()) { pk };
 
@@ -1464,11 +1542,11 @@ public class DatabaseInterface
 
         if (!hasNewEvidence)
         {
-            await Sql.NonQueryAsync(builder.ToString(), args, token).ConfigureAwait(false);
+            await Sql.NonQueryAsync(builder.ToString(), args, CancellationToken.None).ConfigureAwait(false);
         }
         else
         {
-            await Sql.QueryAsync(builder.ToString(), args, token, reader =>
+            await Sql.QueryAsync(builder.ToString(), args, CancellationToken.None, reader =>
             {
                 Evidence read = ReadEvidence(reader, 0);
                 for (int i = 0; i < mod.Evidence.Length; ++i)
@@ -1496,7 +1574,7 @@ public class DatabaseInterface
         {
             UniTask.Create(async () =>
             {
-                await UniTask.SwitchToMainThread(token);
+                await UniTask.SwitchToMainThread(CancellationToken.None);
 
                 if (isNew)
                     OnNewModerationEntryAdded?.Invoke(mod);
@@ -1511,7 +1589,10 @@ public class DatabaseInterface
             else
                 OnModerationEntryUpdated?.Invoke(mod);
         }
+
+        InvokeSendModerationEntryUpdated(mod.Id, isNew);
     }
+
     public async Task<int> GetNextPresetLevel(ulong player, PresetType type, CancellationToken token = default)
     {
         if (type == PresetType.None)
@@ -1528,7 +1609,7 @@ public class DatabaseInterface
                 if (!reader.IsDBNull(0))
                     max = reader.GetInt32(0);
 
-                return true;
+                return false;
 
             }).ConfigureAwait(false);
 
@@ -1537,51 +1618,45 @@ public class DatabaseInterface
         
         return max + 1;
     }
+
     public async Task<ulong[]> GetActorSteam64IDs(IList<IModerationActor> actors, CancellationToken token = default)
     {
         ulong[] steamIds = new ulong[actors.Count];
-        bool anyDiscord = false;
-        StringBuilder? sb = null;
-        for (int i = 0; i < steamIds.Length; ++i)
+        int discordCt = 0;
+        int index = -1;
+        foreach (IModerationActor actor in actors)
         {
-            IModerationActor actor = actors[i];
             if (actor is DiscordActor)
-            {
-                sb ??= new StringBuilder("IN (");
-                if (anyDiscord)
-                    sb.Append(',');
-                else anyDiscord = true;
-                sb.Append(actor.Id.ToString(CultureInfo.InvariantCulture));
-            }
+                ++discordCt;
 
-            steamIds[i] = actor.Id;
+            steamIds[++index] = actor.Id;
         }
 
-        if (!anyDiscord)
+        if (discordCt > 0)
         {
-            for (int k = 0; k < steamIds.Length; ++k)
+            ulong[] discordIds = new ulong[discordCt];
+            discordCt = 0;
+            foreach (IModerationActor actor in actors)
             {
-                if (new CSteamID(steamIds[k]).GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
-                    steamIds[k] = 0ul;
+                if (actor is not DiscordActor)
+                    continue;
+                discordIds[discordCt] = actor.Id;
+                ++discordCt;
             }
 
-            return steamIds;
-        }
-
-        await Sql.QueryAsync(
-            $"SELECT `{ColumnDiscordIdsSteam64}`,`{ColumnDiscordIdsDiscordId}` FROM `{TableDiscordIds}` WHERE `{ColumnDiscordIdsDiscordId}` {sb});",
-            null, token, reader =>
+            ulong[] steam64Ids = await _userDataService.GetSteam64sAsync(discordIds, token).ConfigureAwait(false);
+            index = -1;
+            discordCt = 0;
+            foreach (IModerationActor actor in actors)
             {
-                ulong d = reader.GetUInt64(1);
-                for (int j = 0; j < steamIds.Length; ++j)
-                {
-                    if (d == steamIds[j])
-                    {
-                        steamIds[j] = reader.GetUInt64(0);
-                        break;
-                    }
-                }
-            });
+                ++index;
+                if (actor is not DiscordActor)
+                    continue;
+
+                steamIds[index] = steam64Ids[discordCt];
+                ++discordCt;
+            }
+        }
 
         for (int k = 0; k < steamIds.Length; ++k)
         {
@@ -1591,6 +1666,15 @@ public class DatabaseInterface
 
         return steamIds;
     }
+
+    public Task<ulong> GetActorSteam64ID(IModerationActor actor, CancellationToken token = default)
+    {
+        ulong id = actor.Id;
+        return actor is DiscordActor
+            ? _userDataService.GetSteam64Async(id, token)
+            : Task.FromResult(Unsafe.As<ulong, CSteamID>(ref id).GetEAccountType() == EAccountType.k_EAccountTypeIndividual ? id : 0ul);
+    }
+
     public async Task CacheUsernames(ulong[] players, CancellationToken token = default)
     {
         PlayerNames[] names = await _userDataService.GetUsernamesAsync(players, token);
@@ -1600,13 +1684,16 @@ public class DatabaseInterface
             UpdateUsernames(name.Steam64, name);
         }
     }
+
+    private static readonly string GetIPAddressesQuery = $"SELECT {MySqlSnippets.ColumnList(ColumnIPAddressesPrimaryKey,
+        ColumnIPAddressesSteam64, ColumnIPAddressesPackedIP, ColumnIPAddressesLoginCount,
+        ColumnIPAddressesLastLogin, ColumnIPAddressesFirstLogin)} FROM `{TableIPAddresses}` WHERE `{ColumnIPAddressesSteam64}`=@0;";
+
     public async Task<PlayerIPAddress[]> GetIPAddresses(CSteamID player, bool removeFiltered, CancellationToken token = default)
     {
         List<PlayerIPAddress> addresses = new List<PlayerIPAddress>(4);
 
-        await Sql.QueryAsync($"SELECT {MySqlSnippets.ColumnList(ColumnIPAddressesPrimaryKey,
-            ColumnIPAddressesSteam64, ColumnIPAddressesPackedIP, ColumnIPAddressesLoginCount,
-            ColumnIPAddressesLastLogin, ColumnIPAddressesFirstLogin)} FROM `{TableIPAddresses}` WHERE `{ColumnIPAddressesSteam64}`=@0;",
+        await Sql.QueryAsync(GetIPAddressesQuery,
             [ player.m_SteamID ], token, reader =>
             {
                 addresses.Add(new PlayerIPAddress(reader.GetUInt32(0), reader.GetUInt64(1), reader.GetUInt32(2), reader.GetInt32(3),
@@ -1646,13 +1733,16 @@ public class DatabaseInterface
 
         return addressArray;
     }
+
+    private static readonly string GetHWIDsQuery = $"SELECT {MySqlSnippets.ColumnList(ColumnHWIDsPrimaryKey, ColumnHWIDsIndex,
+        ColumnHWIDsSteam64, ColumnHWIDsHWID, ColumnHWIDsLoginCount,
+        ColumnHWIDsLastLogin, ColumnHWIDsFirstLogin)} FROM `{TableHWIDs}` WHERE `{ColumnHWIDsSteam64}`=@0";
+
     public async Task<PlayerHWID[]> GetHWIDs(CSteamID player, CancellationToken token = default)
     {
         List<PlayerHWID> hwids = new List<PlayerHWID>(9);
 
-        await Sql.QueryAsync($"SELECT {MySqlSnippets.ColumnList(ColumnHWIDsPrimaryKey, ColumnHWIDsIndex,
-            ColumnHWIDsSteam64, ColumnHWIDsHWID, ColumnHWIDsLoginCount,
-            ColumnHWIDsLastLogin, ColumnHWIDsFirstLogin)} FROM `{TableHWIDs}` WHERE `{ColumnHWIDsSteam64}`=@0",
+        await Sql.QueryAsync(GetHWIDsQuery,
             [ player.m_SteamID ], token, reader =>
             {
                 hwids.Add(new PlayerHWID(reader.GetUInt32(0), reader.GetInt32(1),
@@ -1663,7 +1753,7 @@ public class DatabaseInterface
 
         return hwids.ToArray();
     }
-    public bool IsRemotePlay(IPAddress address) => IsRemotePlay(OffenseManager.Pack(address));
+    public bool IsRemotePlay(IPAddress address) => IsRemotePlay(IPv4Range.Pack(address));
     public bool IsRemotePlay(uint address)
     {
         IPv4AddressRangeFilter[] filters = RemotePlayAddressFilters;
@@ -1676,7 +1766,7 @@ public class DatabaseInterface
 
         return false;
     }
-    public bool IsAnyRemotePlay(IEnumerable<IPAddress> addresses) => IsAnyRemotePlay(addresses.Select(OffenseManager.Pack));
+    public bool IsAnyRemotePlay(IEnumerable<IPAddress> addresses) => IsAnyRemotePlay(addresses.Select(IPv4Range.Pack));
     public bool IsAnyRemotePlay(IEnumerable<uint> addresses)
     {
         IPv4AddressRangeFilter[] filters = RemotePlayAddressFilters;
@@ -1692,13 +1782,13 @@ public class DatabaseInterface
 
         return false;
     }
-    public async Task<bool> IsIPFiltered(IPAddress address, CSteamID steam64, CancellationToken token = default)
+    public async Task<bool> IsIPFiltered(uint packedIp, CSteamID steam64, CancellationToken token = default)
     {
         IIPAddressFilter[] filters = IPAddressFilters;
 
         for (int i = 0; i < filters.Length; ++i)
         {
-            if (await filters[i].IsFiltered(address, steam64, token).ConfigureAwait(false))
+            if (await filters[i].IsFiltered(packedIp, steam64, token).ConfigureAwait(false))
                 return true;
         }
 
@@ -1738,6 +1828,53 @@ public class DatabaseInterface
         return true;
     }
 
+    private void InvokeSendModerationEntryUpdated(uint entryId, bool isNew)
+    {
+        try
+        {
+            SendModerationEntryUpdated(entryId, isNew);
+        }
+        catch (NotImplementedException)
+        {
+            _logger.LogWarning("Moderation.DatabaseInterface was not created as an RPC service.");
+        }
+        catch (RpcNoConnectionsException) { }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Error sending moderation entry update via RPC.");
+        }
+    }
+
+    [RpcSend("ReceiveModerationEntryUpdated")]
+    protected virtual void SendModerationEntryUpdated(uint entryId, bool isNew) { _ = RpcTask.NotImplemented; }
+
+    [RpcReceive("SendModerationEntryUpdated")]
+    private void ReceiveModerationEntryUpdated(uint entryId, bool isNew)
+    {
+        Task.Run(async () =>
+        {
+            try
+            {
+                ModerationEntry? entry = await ReadOne<ModerationEntry>(entryId, tryGetFromCache: false, detail: false, baseOnly: true, CancellationToken.None);
+
+                if (entry == null)
+                    return;
+
+                await UniTask.SwitchToMainThread();
+
+                if (isNew)
+                    OnNewModerationEntryAdded?.Invoke(entry);
+                else
+                    OnModerationEntryUpdated?.Invoke(entry);
+                // ReadOne auto-caches
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating moderation entry from cache after requested by homebase.");
+            }
+        });
+    }
+
     public const string TableEntries = "moderation_entries";
     public const string TableActors = "moderation_actors";
     public const string TableEvidence = "moderation_evidence";
@@ -1766,18 +1903,29 @@ public class DatabaseInterface
     public const string TableReportShotRecords = "moderation_report_shot_record";
     public const string TableIPAddresses = "ip_addresses";
     public const string TableHWIDs = "hwids";
-    public const string TableDiscordIds = "discordnames";
     public const string TableIPWhitelists = "ip_whitelists";
     public const string TableBanListWhitelists = "ban_list_whitelists";
-    public const string TableUsernames = "usernames";
 
-    public const string ColumnUsernamesSteam64 = "Steam64";
-    public const string ColumnUsernamesPlayerName = "PlayerName";
-    public const string ColumnUsernamesCharacterName = "CharacterName";
-    public const string ColumnUsernamesNickName = "NickName";
+    public const string TableUserData = "users";
+    public const string ColumnUserDataSteam64 = "Steam64";
+    public const string ColumnUserDataPlayerName = "PlayerName";
+    public const string ColumnUserDataCharacterName = "CharacterName";
+    public const string ColumnUserDataNickName = "NickName";
+    public const string ColumnUserDataDisplayName = "DisplayName";
+    public const string ColumnUserDataFirstJoined = "FirstJoined";
+    public const string ColumnUserDataLastJoined = "LastJoined";
+    public const string ColumnUserDataDiscordId = "DiscordId";
+    
+    [Obsolete] public const string TableUsernames = "usernames";
+    [Obsolete] public const string TableDiscordIds = "discordnames";
 
-    public const string ColumnDiscordIdsSteam64 = "Steam64";
-    public const string ColumnDiscordIdsDiscordId = "DiscordID";
+    [Obsolete] public const string ColumnUsernamesSteam64 = "Steam64";
+    [Obsolete] public const string ColumnUsernamesPlayerName = "PlayerName";
+    [Obsolete] public const string ColumnUsernamesCharacterName = "CharacterName";
+    [Obsolete] public const string ColumnUsernamesNickName = "NickName";
+
+    [Obsolete] public const string ColumnDiscordIdsSteam64 = "Steam64";
+    [Obsolete] public const string ColumnDiscordIdsDiscordId = "DiscordID";
 
     public const string ColumnIPWhitelistsSteam64 = "Steam64";
     public const string ColumnIPWhitelistsIPRange = "IPRange";

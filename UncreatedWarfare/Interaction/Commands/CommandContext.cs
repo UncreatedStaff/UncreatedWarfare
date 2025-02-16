@@ -12,6 +12,7 @@ using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Cooldowns;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Translations;
@@ -135,6 +136,11 @@ public class CommandContext : ControlException
     public NumberFormatInfo ParseFormat { get; }
 
     /// <summary>
+    /// Culture used to parse information for this command.
+    /// </summary>
+    public CultureInfo ParseCulture { get; }
+
+    /// <summary>
     /// If the player has the <see cref="PlayerSave.IMGUI"/> setting ticked.
     /// </summary>
     public bool IMGUI { get; }
@@ -157,7 +163,7 @@ public class CommandContext : ControlException
     /// <summary>
     /// The isolated cooldown this command is already on.
     /// </summary>
-    public Cooldown? IsolatedCooldown { get; private set; }
+    public Cooldown IsolatedCooldown { get; internal set; }
 
     /// <summary>
     /// Command instance being executed.
@@ -199,12 +205,14 @@ public class CommandContext : ControlException
         _playerService = serviceProvider.GetRequiredService<IPlayerService>();
         _cooldownManager = serviceProvider.GetService<CooldownManager>();
         CommonTranslations = serviceProvider.GetRequiredService<TranslationInjection<CommonTranslations>>().Value;
+        LanguageService languageService = serviceProvider.GetRequiredService<LanguageService>();
 
         if (Player == null)
         {
-            Language = serviceProvider.GetRequiredService<LanguageService>().GetDefaultLanguage();
-            Culture = CultureInfo.InvariantCulture;
+            Language = languageService.GetDefaultLanguage();
+            Culture = languageService.GetDefaultCulture();
             ParseFormat = Culture.NumberFormat;
+            ParseCulture = Culture;
         }
         else
         {
@@ -212,6 +220,7 @@ public class CommandContext : ControlException
             Culture = Player.Locale.CultureInfo;
             ParseFormat = Player.Locale.ParseFormat;
             IMGUI = Player is { Save.IMGUI: true };
+            ParseCulture = Player.Locale.Preferences.UseCultureForCommandInput ? Culture : languageService.GetDefaultCulture();
         }
 
         OriginalParameters = Array.Empty<string>();
@@ -643,21 +652,6 @@ public class CommandContext : ControlException
     }
 
     /// <summary>
-    /// Gets a <paramref name="parameter"/> at a given index, parses it as a <see cref="ulong"/>, or returns <see langword="false"/> if out of range or unable to parse.
-    /// </summary>
-    /// <remarks>Zero based indexing. Use <see cref="TryGet(int,out ulong,out WarfarePlayer?, bool)"/> instead for Steam64 IDs.</remarks>
-    public bool TryGet(int parameter, out CSteamID value)
-    {
-        parameter += _argumentOffset;
-        if (parameter < 0 || parameter >= _argumentCount)
-        {
-            value = CSteamID.Nil;
-            return false;
-        }
-        return FormattingUtility.TryParseSteamId(OriginalParameters[parameter], out value);
-    }
-
-    /// <summary>
     /// Gets a <paramref name="parameter"/> at a given index, parses it as a <see cref="bool"/>, or returns <see langword="false"/> if out of range or unable to parse.
     /// </summary>
     /// <remarks>Zero based indexing.</remarks>
@@ -961,104 +955,101 @@ public class CommandContext : ControlException
     }
 
     /// <summary>
-    /// Find a user or Steam64 ID from an argument. Will take either Steam64 or name. Will only find offline users by Steam64 ID.
+    /// Gets a <paramref name="parameter"/> at a given index, parses it as a <see cref="CSteamID"/> or steam profile URL, or returns <see langword="null"/> if out of range or unable to parse.
     /// </summary>
-    /// <param name="steam64">Parsed steam ID.</param>
-    /// <param name="onlinePlayer">Will be set to the <see cref="EditorUser"/> instance if they're online.</param>
-    /// <param name="remainder">Select the rest of the arguments instead of just one.</param>
-    /// <remarks>Zero based indexing.</remarks>
-    /// <returns><see langword="true"/> if a valid Steam64 id is parsed (even when the user is offline).</returns>
-    public bool TryGet(int parameter, out CSteamID steam64, out WarfarePlayer? onlinePlayer, bool remainder = false, PlayerNameType searchType = PlayerNameType.CharacterName)
+    public ValueTask<CSteamID?> TryGetSteamId(int parameter)
     {
-        parameter += _argumentOffset;
-        if (CallerId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual && MatchParameter(parameter, "me"))
+        if (CallerId.IsIndividual() && MatchParameter(parameter, "me"))
         {
-            onlinePlayer = Player;
-            steam64 = CallerId;
-            return true;
+            return new ValueTask<CSteamID?>(CallerId);
         }
+
+        parameter += _argumentOffset;
         if (parameter < 0 || parameter >= _argumentCount)
         {
-            steam64 = CSteamID.Nil;
-            onlinePlayer = null;
-            return false;
+            return new ValueTask<CSteamID?>(CSteamID.Nil);
+        }
+
+        string param = OriginalParameters[parameter];
+        return SteamIdHelper.TryParseSteamId(param, out CSteamID id) ? new ValueTask<CSteamID?>(id) : SteamIdHelper.TryParseSteamIdOrUrl(param, Token);
+    }
+
+    /// <summary>
+    /// Find a user or Steam64 ID from an argument. Will take either Steam64, name, or profile URL. Offline players will only be returned when the input is a Steam ID or profile URL.
+    /// </summary>
+    /// <param name="remainder">Select the rest of the arguments instead of just one.</param>
+    /// <remarks>Zero based indexing.</remarks>
+    /// <returns>The Steam64 ID if it is found, otehrwise <see langword="null"/>. If the player represented by the Steam64 ID is online, it will also be returned.</returns>
+    public async ValueTask<(CSteamID? Steam64, WarfarePlayer? OnlinePlayer)> TryGetPlayer(int parameter, bool remainder = false, PlayerNameType searchType = PlayerNameType.CharacterName)
+    {
+        parameter += _argumentOffset;
+        if (CallerId.IsIndividual() && MatchParameter(parameter, "me"))
+        {
+            return (CallerId, Player);
+        }
+
+        if (parameter < 0 || parameter >= _argumentCount)
+        {
+            return default;
         }
 
         string? s = remainder ? GetRange(parameter - _argumentOffset) : OriginalParameters[parameter];
         if (s != null)
         {
-            if (FormattingUtility.TryParseSteamId(s, out steam64))
+            CSteamID? steamId = await SteamIdHelper.TryParseSteamIdOrUrl(s, Token).ConfigureAwait(false);
+            if (steamId.HasValue)
             {
-                onlinePlayer = _playerService.GetOnlinePlayerOrNullThreadSafe(steam64);
-                return true;
+                return (steamId, _playerService.GetOnlinePlayerOrNullThreadSafe(steamId.Value));
             }
 
-            onlinePlayer = _playerService.GetOnlinePlayerOrNullThreadSafe(s, searchType);
+            WarfarePlayer? onlinePlayer = _playerService.GetOnlinePlayerOrNullThreadSafe(s, ParseCulture, searchType);
             if (onlinePlayer is { IsOnline: true })
             {
-                steam64 = onlinePlayer.Steam64;
-                return true;
+                return (onlinePlayer.Steam64, onlinePlayer);
             }
         }
 
-        steam64 = default;
-        onlinePlayer = null;
-        return false;
+        return default;
     }
 
     /// <summary>
-    /// Find a user or Steam64 ID from an argument. Will take either Steam64 or name. Searches online players in <paramref name="selection"/>.
+    /// Find a user or Steam64 ID from an argument. Will take either Steam64, name, or profile URL. Searches all players in <paramref name="selection"/>.
     /// </summary>
-    /// <param name="steam64">Parsed steam ID.</param>
-    /// <param name="onlinePlayer">Will be set to the <see cref="EditorUser"/> instance when <see langword="true"/> is returned.</param>
     /// <param name="remainder">Select the rest of the arguments instead of just one.</param>
     /// <remarks>Zero based indexing.</remarks>
-    /// <returns><see langword="true"/> if a valid Steam64 id is parsed and that player is in <paramref name="selection"/>.</returns>
-    public bool TryGet(int parameter, out CSteamID steam64, [MaybeNullWhen(false)] out WarfarePlayer onlinePlayer, IEnumerable<WarfarePlayer> selection, bool remainder = false, PlayerNameType searchType = PlayerNameType.CharacterName)
+    /// <returns>The player that is found (who may be offline).</returns>
+    public async ValueTask<WarfarePlayer?> TryGetPlayer(int parameter, IEnumerable<WarfarePlayer> selection, bool remainder = false, PlayerNameType searchType = PlayerNameType.CharacterName)
     {
         parameter += _argumentOffset;
         if (CallerId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual && MatchParameter(parameter, "me"))
         {
-            onlinePlayer = Player;
-            steam64 = CallerId;
-            return selection.Contains(Caller);
+            return selection.Contains(Player) ? Player : null;
         }
+
         if (parameter < 0 || parameter >= _argumentCount)
         {
-            steam64 = CSteamID.Nil;
-            onlinePlayer = null;
-            return false;
+            return null;
         }
 
         string? s = remainder ? GetRange(parameter - _argumentOffset) : OriginalParameters[parameter];
         if (s == null)
         {
-            steam64 = default;
-            onlinePlayer = default;
-            return false;
+            return null;
         }
-        if (FormattingUtility.TryParseSteamId(s, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
+
+        CSteamID? steam64 = await SteamIdHelper.TryParseSteamIdOrUrl(s, Token).ConfigureAwait(false);
+        if (steam64.HasValue && steam64.Value.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
         {
-            steam64 = steamId;
+            ulong steamId = steam64.Value.m_SteamID;
             foreach (WarfarePlayer player in selection)
             {
-                if (player.Steam64.m_SteamID == steam64.m_SteamID)
-                {
-                    onlinePlayer = player;
-                    return true;
-                }
+                if (player.Steam64.m_SteamID == steamId)
+                    return player;
             }
         }
 
-        onlinePlayer = _playerService.GetOnlinePlayerOrNullThreadSafe(s, selection, searchType)!;
-        if (onlinePlayer is { IsOnline: true })
-        {
-            steam64 = onlinePlayer.Steam64;
-            return true;
-        }
-
-        steam64 = default;
-        return false;
+        WarfarePlayer? onlinePlayer = _playerService.GetOnlinePlayerOrNullThreadSafe(s, selection, ParseCulture, searchType)!;
+        return onlinePlayer ?? null;
     }
 
 
@@ -1080,7 +1071,7 @@ public class CommandContext : ControlException
             asset = null;
             return false;
         }
-        return UCAssetManager.TryGetAsset(p, out asset, out multipleResultsFound, allowMultipleResults, selector);
+        return AssetUtility.TryGetAsset(p, out asset, out multipleResultsFound, allowMultipleResults, selector);
     }
 
     /// <summary>
@@ -1132,7 +1123,7 @@ public class CommandContext : ControlException
     /// <param name="mask">Raycast mask, could also use <see cref="ERayMask"/>. Defaults to <see cref="RayMasks.PLAYER_INTERACT"/>.</param>
     /// <param name="distance">Default distance is 4m.</param>
     /// <exception cref="GameThreadException">Not on main thread.</exception>
-    public bool TryGetInteractableTarget<T>([MaybeNullWhen(false)] out T interactable, int mask = 0, float distance = 4f) where T : Interactable
+    public bool TryGetInteractableTarget<TInteractable>([MaybeNullWhen(false)] out TInteractable interactable, int mask = 0, float distance = 4f) where TInteractable : Interactable
     {
         GameThread.AssertCurrent();
 
@@ -1150,17 +1141,17 @@ public class CommandContext : ControlException
             return false;
         }
 
-        if (typeof(InteractableVehicle).IsAssignableFrom(typeof(T)))
+        if (typeof(InteractableVehicle).IsAssignableFrom(typeof(TInteractable)))
         {
-            interactable = (T)(object)info.vehicle;
+            interactable = (TInteractable)(object)info.vehicle;
             return interactable != null;
         }
 
-        if (typeof(InteractableForage).IsAssignableFrom(typeof(T)))
+        if (typeof(InteractableForage).IsAssignableFrom(typeof(TInteractable)))
         {
             if (info.transform.TryGetComponent(out InteractableForage forage))
             {
-                interactable = (T)(object)forage;
+                interactable = (TInteractable)(object)forage;
                 return interactable != null;
             }
         }
@@ -1168,12 +1159,12 @@ public class CommandContext : ControlException
         if (ObjectManager.tryGetRegion(info.transform, out byte objX, out byte objY, out ushort index))
         {
             LevelObject obj = LevelObjects.objects[objX, objY][index];
-            interactable = obj.interactable as T;
+            interactable = obj.interactable as TInteractable;
             return interactable != null;
         }
 
         BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(info.transform);
-        interactable = drop?.interactable as T;
+        interactable = drop?.interactable as TInteractable;
         return interactable != null;
     }
 
@@ -1671,14 +1662,17 @@ public class CommandContext : ControlException
     /// </summary>
     public void AssertCommandNotOnIsolatedCooldown()
     {
-        if (!OnIsolatedCooldown)
+        if (!OnIsolatedCooldown || _cooldownManager == null)
             return;
 
         if (Command is ICompoundingCooldownCommand compounding)
         {
-            IsolatedCooldown!.Duration *= compounding.CompoundMultiplier;
-            if (compounding.MaxCooldown > 0 && IsolatedCooldown.Duration > compounding.MaxCooldown)
-                IsolatedCooldown.Duration = compounding.MaxCooldown;
+            TimeSpan duration = IsolatedCooldown.Duration * compounding.CompoundMultiplier;
+            if (compounding.MaxCooldown > 0 && duration.TotalSeconds > compounding.MaxCooldown)
+                duration = TimeSpan.FromSeconds(compounding.MaxCooldown);
+
+            IsolatedCooldown = new Cooldown(IsolatedCooldown.StartTime, duration, IsolatedCooldown.Config, IsolatedCooldown.Data);
+            _cooldownManager.StartCooldown(Player, IsolatedCooldown);
         }
 
         throw Reply(CommonTranslations.CommandCooldown, IsolatedCooldown!, CommandInfo.CommandName);
@@ -1965,10 +1959,9 @@ public class CommandContext : ControlException
     internal void CheckIsolatedCooldown()
     {
         if (Player != null
-            // && todo !Player.OnDuty()
             && _cooldownManager != null
             && CommandInfo != null
-            && _cooldownManager.HasCooldown(Player, CooldownType.IsolatedCommand, out Cooldown cooldown, CommandInfo))
+            && _cooldownManager.HasCooldown(Player, KnownCooldowns.IsolatedCommand, out Cooldown cooldown, CommandInfo))
         {
             OnIsolatedCooldown = true;
             IsolatedCooldown = cooldown;
@@ -1976,7 +1969,7 @@ public class CommandContext : ControlException
         else
         {
             OnIsolatedCooldown = false;
-            IsolatedCooldown = null;
+            IsolatedCooldown = default;
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Patterns;
 using Uncreated.Framework.UI.Reflection;
