@@ -108,4 +108,10 @@ public sealed class PlayersTranslations : PropertiesTranslationCollection
 
     [TranslationData("Sent when a player tries to interact with a powered object or barricade that isn't in the zone rotation.")]
     public readonly Translation ElectricalGridNotConnected = new Translation("<#fa9e9e>This object is not connected to the electrical grid right now.");
+
+    [TranslationData("Sent when a player tries to exit an air vehicle from a significant height.")]
+    public readonly Translation VehicleTooHigh = new Translation("<#fa9e9e>You can not exit air vehicles this high off the ground.");
+
+    [TranslationData("Sent when a player tries to equip a rocket launcher in a vehicle.")]
+    public readonly Translation ProhibitedEquipLauncherInVehicle = new Translation("<#fa9e9e>You can not equip heavy arms in air vehicles.");
 }

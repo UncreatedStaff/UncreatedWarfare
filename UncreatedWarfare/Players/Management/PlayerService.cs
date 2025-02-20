@@ -19,6 +19,8 @@ namespace Uncreated.Warfare.Players.Management;
 /// <remarks>Inject <see cref="IPlayerService"/>.</remarks>
 public class PlayerService : IPlayerService
 {
+    private readonly List<PlayerEventSubscription> _eventSubscriptions = new List<PlayerEventSubscription>(16);
+
     /// <summary>
     /// All types will be added to a player on join and removed on leave.
     /// They dont necessarily have to be <see cref="MonoBehaviour"/>'s but must implement <see cref="IPlayerComponent"/>.
@@ -151,6 +153,11 @@ public class PlayerService : IPlayerService
             WarfarePlayer joined = new WarfarePlayer(this, player, in taskData, taskData.Player, logger, components, _serviceProvider);
             _onlinePlayers.Add(joined);
             _onlinePlayersDictionary.Add(joined, joined);
+
+            foreach (PlayerEventSubscription sub in _eventSubscriptions)
+            {
+                sub.Apply(joined);
+            }
 
             WarfarePlayer[] newList = new WarfarePlayer[_threadsafeList.Length + 1];
             Array.Copy(_threadsafeList, 0, newList, 0, _threadsafeList.Length);
@@ -373,6 +380,104 @@ public class PlayerService : IPlayerService
         Task<bool>[] Tasks,
         ILifetimeScope? Scope
     );
+
+    /// <inheritdoc />
+    public void SubscribeToPlayerEvent<TDelegate>(Action<Player, TDelegate> subscribe, TDelegate value) where TDelegate : MulticastDelegate
+    {
+        if (subscribe == null)
+            throw new ArgumentNullException(nameof(subscribe));
+
+        if (value == null)
+            return;
+
+        if (GameThread.IsCurrent)
+        {
+            if (_eventSubscriptions.Exists(x => x.Equals(value)))
+                return;
+
+            _eventSubscriptions.Add(new PlayerEventSubscription<TDelegate>(subscribe, value));
+            foreach (WarfarePlayer player in _onlinePlayers)
+            {
+                subscribe(player.UnturnedPlayer, value);
+            }
+        }
+        else
+        {
+            Action<Player, TDelegate> a1 = subscribe;
+            TDelegate v1 = value;
+            UniTask.Create(async () =>
+            {
+                await UniTask.SwitchToMainThread();
+
+                SubscribeToPlayerEvent(a1, v1);
+            });
+        }
+    }
+
+    /// <inheritdoc />
+    public void UnsubscribeFromPlayerEvent<TDelegate>(Action<Player, TDelegate> unsubscribe, TDelegate value) where TDelegate : MulticastDelegate
+    {
+        if (unsubscribe == null)
+            throw new ArgumentNullException(nameof(unsubscribe));
+
+        if (value == null)
+            return;
+
+        if (GameThread.IsCurrent)
+        {
+            int index = _eventSubscriptions.FindIndex(x => x.Equals(value));
+            if (index < 0)
+                return;
+
+            _eventSubscriptions.RemoveAt(index);
+            foreach (WarfarePlayer player in _onlinePlayers)
+            {
+                unsubscribe(player.UnturnedPlayer, value);
+            }
+        }
+        else
+        {
+            Action<Player, TDelegate> a1 = unsubscribe;
+            TDelegate v1 = value;
+            UniTask.Create(async () =>
+            {
+                await UniTask.SwitchToMainThread();
+
+                UnsubscribeFromPlayerEvent(a1, v1);
+            });
+        }
+    }
+
+    private abstract class PlayerEventSubscription
+    {
+        public abstract void Apply(WarfarePlayer player);
+        public abstract bool Equals(Delegate dele);
+    }
+
+    private class PlayerEventSubscription<TDelegate> : PlayerEventSubscription where TDelegate : MulticastDelegate
+    {
+        private readonly Action<Player, TDelegate> _subscribeCallback;
+        private readonly TDelegate _handler;
+
+        /// <inheritdoc />
+        public PlayerEventSubscription(Action<Player, TDelegate> subscribeCallback, TDelegate handler)
+        {
+            _subscribeCallback = subscribeCallback;
+            _handler = handler;
+        }
+
+        /// <inheritdoc />
+        public override void Apply(WarfarePlayer player)
+        {
+            _subscribeCallback(player.UnturnedPlayer, _handler);
+        }
+
+        /// <inheritdoc />
+        public override bool Equals(Delegate dele)
+        {
+            return dele == _handler;
+        }
+    }
 }
 
 /// <summary>

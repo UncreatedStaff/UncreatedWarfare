@@ -260,15 +260,15 @@ public sealed class CooldownManager : BaseAlternateConfigurationFile, ILayoutHos
     /// <summary>
     /// Remove all cooldowns of a type for the given player.
     /// </summary>
-    public void RemoveCooldown(WarfarePlayer player, [ValueProvider(KnownTypes)] string type)
+    public void RemoveCooldown(WarfarePlayer player, [ValueProvider(KnownTypes)] string type, object? data = null)
     {
-        RemoveCooldown(player.Steam64, type);
+        RemoveCooldown(player.Steam64, type, data);
     }
 
     /// <summary>
     /// Remove all cooldowns of a type for the given player.
     /// </summary>
-    public void RemoveCooldown(CSteamID player, [ValueProvider(KnownTypes)] string type)
+    public void RemoveCooldown(CSteamID player, [ValueProvider(KnownTypes)] string type, object? data = null)
     {
         CooldownTypeConfiguration? config = FindConfiguration(type);
         if (config == null)
@@ -280,7 +280,7 @@ public sealed class CooldownManager : BaseAlternateConfigurationFile, ILayoutHos
                 return;
 
             list.ClearExpiredCooldowns();
-            list.RemoveCooldown(type);
+            list.RemoveCooldown(type, data);
             if (list.Count == 0 && !_playerService.IsPlayerOnlineThreadSafe(player))
                 _activeCooldowns.Remove(player);
         }
@@ -308,7 +308,7 @@ public sealed class CooldownManager : BaseAlternateConfigurationFile, ILayoutHos
     /// <summary>
     /// Remove all cooldowns of the given type.
     /// </summary>
-    public void RemoveCooldown([ValueProvider(KnownTypes)] string type)
+    public void RemoveCooldown([ValueProvider(KnownTypes)] string type, object? data = null)
     {
         CooldownTypeConfiguration? config = FindConfiguration(type);
         if (config == null)
@@ -320,9 +320,9 @@ public sealed class CooldownManager : BaseAlternateConfigurationFile, ILayoutHos
             foreach (PlayerCooldownList list in _activeCooldowns.Values)
             {
                 list.ClearExpiredCooldowns();
-                list.RemoveCooldown(type);
+                list.RemoveCooldown(type, data);
                 if (list.Count == 0 && !_playerService.IsPlayerOnlineThreadSafe(list.Player))
-                    _activeCooldowns.Remove(list.Player);
+                    (toRemove ??= new List<CSteamID>(4)).Add(list.Player);
             }
 
             if (toRemove == null)

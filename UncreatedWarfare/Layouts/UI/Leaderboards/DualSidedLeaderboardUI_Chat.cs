@@ -117,18 +117,19 @@ partial class DualSidedLeaderboardUI :
         }
     }
 
-    private void ChatServiceOnOnSendingChatMessage(WarfarePlayer recipient, string text, Color color, EChatMode mode, string? iconUrl, bool richText, ref bool shouldReplicate)
+    private void ChatServiceOnOnSendingChatMessage(WarfarePlayer recipient, string text, Color color, EChatMode mode, string? iconUrl, bool richText, WarfarePlayer? fromPlayer, ref bool shouldReplicate)
     {
         if (!IsActive && !_trackChat || text.Length == 0)
             return;
 
         DualSidedLeaderboardPlayerData data = GetOrAddData(recipient.Steam64, _createData);
-        data.VisibleChats.Add(new ChatMessageInfo(string.IsNullOrWhiteSpace(iconUrl) ? null : iconUrl, color == Color.white ? text : TranslationFormattingUtility.Colorize(text, color, imgui: false)));
+        data.VisibleChats.Add(new ChatMessageInfo(string.IsNullOrWhiteSpace(iconUrl) ? fromPlayer?.SteamSummary.AvatarUrlSmall : iconUrl, color == Color.white ? text : TranslationFormattingUtility.Colorize(text, color, imgui: false)));
+
+        shouldReplicate = false;
 
         if (!IsActive)
             return;
 
-        shouldReplicate = false;
         UpdateChat(recipient);
     }
     
@@ -160,13 +161,13 @@ partial class DualSidedLeaderboardUI :
     public class ChatEntry
     {
         [Pattern(Root = true)]
-        public UnturnedUIElement Root { get; set; }
+        public required UnturnedUIElement Root { get; set; }
 
         [Pattern("Content", AdditionalPath = "ScaleWrapper")]
-        public UnturnedLabel Message { get; set; }
+        public required UnturnedLabel Message { get; set; }
         
         [Pattern("Avatar")]
-        public UnturnedImage Avatar { get; set; }
+        public required UnturnedImage Avatar { get; set; }
     }
 
     public struct ChatMessageInfo

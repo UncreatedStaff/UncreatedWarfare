@@ -124,7 +124,7 @@ public readonly struct Cooldown : ITranslationArgument, IEquatable<Cooldown>, IC
                 return Comparer.DefaultInvariant.Compare(c1, c2);
             }
 
-            int cmp = string.Compare(Data.ToString(), other.Data.ToString(), StringComparison.Ordinal);
+            int cmp = Data.GetHashCode().CompareTo(other.Data.GetHashCode());
             if (cmp != 0)
                 return cmp;
         }

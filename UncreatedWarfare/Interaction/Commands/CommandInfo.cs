@@ -445,7 +445,7 @@ public class CommandInfo : ICommandDescriptor
 
             string relativePath = path.Substring(index + sectionLength + 1);
 
-            resource = typeof(WarfareModule).Namespace + "." + relativePath.Replace(Path.DirectorySeparatorChar, '.').Replace(".cs", ".meta.yml");
+            resource = typeof(WarfareModule).Namespace + "." + relativePath.Replace('\\', '.').Replace('/', '.').Replace(".cs", ".meta.yml");
 
             stream = asm.GetManifestResourceStream(resource);
 

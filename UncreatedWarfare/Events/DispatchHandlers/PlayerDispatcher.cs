@@ -2,9 +2,11 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Events.Patches;
 using Uncreated.Warfare.Injures;
+using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Events;
 partial class EventDispatcher
@@ -35,6 +37,70 @@ partial class EventDispatcher
         PlayerLifeDoDamageRequested.Damaging = parameters.player.channel.owner.playerID.steamID.m_SteamID;
         parameters = args.Parameters;
         player.Data["LastDamagePlayerRequested"] = args;
+    }
+
+    /// <summary>
+    /// Invoked by <see cref="PlayerEquipment.onEquipRequested"/>.
+    /// </summary>
+    private void OnPlayerEquipRequested(PlayerEquipment equipment, ItemJar jar, ItemAsset asset, ref bool shouldAllow)
+    {
+        if (!ItemUtility.TryFindJarPage(equipment.player.inventory, jar, out Page page) || asset == null)
+        {
+            shouldAllow = false;
+            return;
+        }
+
+        WarfarePlayer player = _playerService.GetOnlinePlayer(equipment);
+
+        EquipUseableRequested args = new EquipUseableRequested
+        {
+            Player = player,
+            Asset = asset,
+            Page = page,
+            Item = jar
+        };
+
+        EventContinuations.Dispatch(args, this, _unloadToken, out shouldAllow, static args =>
+        {
+            if (!args.Player.IsOnline)
+                return;
+
+            if (!args.Player.UnturnedPlayer.inventory.items[(int)args.Page].items.Contains(args.Item))
+                return;
+
+            args.Player.UnturnedPlayer.equipment.ServerEquip((byte)args.Page, args.Item.x, args.Item.y);
+        });
+    }
+
+    /// <summary>
+    /// Invoked by <see cref="PlayerEquipment.onDequipRequested"/>.
+    /// </summary>
+    private void OnPlayerDequipRequested(PlayerEquipment equipment, ref bool shouldAllow)
+    {
+        WarfarePlayer player = _playerService.GetOnlinePlayer(equipment);
+
+        ItemJar? equipped = player.GetHeldItem(out Page page);
+
+        if (equipped == null || equipment.asset == null)
+        {
+            return;
+        }
+
+        DequipUseableRequested args = new DequipUseableRequested
+        {
+            Player = player,
+            EquippedAsset = equipment.asset,
+            EquippedPage = page,
+            EquppedItem = equipped
+        };
+
+        EventContinuations.Dispatch(args, this, _unloadToken, out shouldAllow, static args =>
+        {
+            if (!args.Player.IsOnline)
+                return;
+
+            args.Player.UnturnedPlayer.equipment.ServerEquip(byte.MaxValue, 0, 0);
+        });
     }
 
     /// <summary>

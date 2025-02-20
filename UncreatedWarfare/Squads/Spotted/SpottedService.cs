@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
@@ -29,6 +30,7 @@ internal sealed class SpottedService : ILayoutHostedService
     private readonly IAssetLink<ItemGunAsset> _laserDesignator;
     private readonly ITranslationValueFormatter _formatter;
     private readonly SpottedTranslations _translations;
+    private readonly ChatService _chatService;
     private ITeamManager<Team>? _teamManager;
 
     public IReadOnlyList<SpottableObjectComponent> AliveSpottableObjects { get; }
@@ -37,6 +39,7 @@ internal sealed class SpottedService : ILayoutHostedService
     {
         _logger = logger;
 
+        _chatService = serviceProvider.GetRequiredService<ChatService>();
         _module = serviceProvider.GetRequiredService<WarfareModule>();
         _formatter = serviceProvider.GetRequiredService<ITranslationValueFormatter>();
         _translations = serviceProvider.GetRequiredService<TranslationInjection<SpottedTranslations>>().Value;
@@ -185,12 +188,7 @@ internal sealed class SpottedService : ILayoutHostedService
 
         targetName = TranslationFormattingUtility.Colorize(targetName, targetTeam.Faction.Color);
 
-        foreach (LanguageSet set in _formatter.TranslationService.SetOf.PlayersOnTeam(t))
-        {
-            string t2 = _translations.SpottedMessage.Translate(t1, targetName, in set);
-            while (set.MoveNext())
-                ChatManager.serverSendMessage(t2, Palette.AMBIENT, spotter.SteamPlayer, set.Next.SteamPlayer, EChatMode.SAY, null, true);
-        }
+        _chatService.Broadcast(_formatter.TranslationService.SetOf.PlayersOnTeam(t), _translations.SpottedMessage, t1, targetName, spotter);
     }
 
     internal void AddSpottableObject(SpottableObjectComponent comp)
