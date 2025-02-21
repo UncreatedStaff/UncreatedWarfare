@@ -2,11 +2,14 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Text;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Vehicles;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Layouts;
+using Uncreated.Warfare.Layouts.Phases;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Players.Management;
@@ -40,6 +43,14 @@ internal class VehicleInteractionTweaks :
     public void HandleEvent(EnterVehicleRequested e, IServiceProvider serviceProvider)
     {
         Class playerKitClass = e.Player.Component<KitPlayerComponent>().ActiveClass;
+        
+        if (serviceProvider.GetService<Layout>()?.ActivePhase is PreparationPhase pp &&
+            pp.Teams?.Where(t => t.Grounded).Any(t => t.TeamInfo == e.Player.Team) is true)
+        {
+            _chatService.Send(e.Player, _translations.EnterVehicleGrounded, pp.Name?.Translate(e.Player.Locale.LanguageInfo) ?? "Preparation Phase");
+            e.Cancel();
+            return;
+        }
 
         // ensure that if the player is entering an emplacement, they always enter the next available seat after the driver's seat
         if (e.Vehicle.Info.Type.IsEmplacement() && e.Seat == 0)
