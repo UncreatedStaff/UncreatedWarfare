@@ -235,7 +235,7 @@ public class DutyService : IAsyncEventListener<PlayerLeft>
         if (!player.IsOnDuty)
         {
             _chatService.Send(player, _translations.DutyOnFeedback);
-            _chatService.Broadcast(_translations.TranslationService.SetOf.AllPlayersExcept(player), _translations.DutyOnBroadcast, player);
+            _chatService.Broadcast<IPlayer>(_translations.TranslationService.SetOf.AllPlayersExcept(player), _translations.DutyOnBroadcast, player);
 
             _logger.LogInformation("{0} ({1}) went on duty (owner: {2}, admin: {3}, trial admin: {4}, staff: {5}).",
                 player.Names.GetDisplayNameOrPlayerName(),
@@ -298,7 +298,7 @@ public class DutyService : IAsyncEventListener<PlayerLeft>
         if (player.IsOnDuty)
         {
             _chatService.Send(player, _translations.DutyOffFeedback);
-            _chatService.Broadcast(_translations.TranslationService.SetOf.AllPlayersExcept(player), _translations.DutyOffBroadcast, player);
+            _chatService.Broadcast<IPlayer>(_translations.TranslationService.SetOf.AllPlayersExcept(player), _translations.DutyOffBroadcast, player);
 
             _logger.LogInformation("{0} ({1}) went off duty (owner: {2}, admin: {3}, trial admin: {4}, staff: {5}).",
                 player.Names.GetDisplayNameOrPlayerName(),

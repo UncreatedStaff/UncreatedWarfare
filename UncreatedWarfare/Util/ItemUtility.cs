@@ -705,6 +705,25 @@ public static class ItemUtility
     }
 
     /// <summary>
+    /// Get the page of an <see cref="ItemJar"/>.
+    /// </summary>
+    public static bool TryFindJarPage(PlayerInventory inventory, ItemJar jar, out Page page)
+    {
+        int maxPage = PlayerInventory.STORAGE;
+        for (byte pg = 0; pg < maxPage; ++pg)
+        {
+            if (inventory.items[pg].items.Contains(jar))
+            {
+                page = (Page)pg;
+                return true;
+            }
+        }
+
+        page = (Page)byte.MaxValue;
+        return false;
+    }
+
+    /// <summary>
     /// Find an item in an inventory by it's <see cref="Item"/> reference.
     /// </summary>
     public static bool TryFindItem(PlayerInventory inventory, Item item, out byte x, out byte y, out Page page, out byte rot)

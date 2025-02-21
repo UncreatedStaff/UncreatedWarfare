@@ -13,7 +13,7 @@ namespace Uncreated.Warfare.Interaction;
 
 public class ChatService
 {
-    public delegate void SendingChatMessage(WarfarePlayer recipient, string text, Color color, EChatMode mode, string? iconURL, bool richText, ref bool shouldReplicate);
+    public delegate void SendingChatMessage(WarfarePlayer recipient, string text, Color color, EChatMode mode, string? iconURL, bool richText, WarfarePlayer? fromPlayer, ref bool shouldReplicate);
 
     private readonly ITranslationService _translationService;
     private readonly ILogger<ChatService> _logger;
@@ -36,7 +36,7 @@ public class ChatService
     /// <summary>
     /// Send a raw message directly to a player, and replace TMPro rich text with Unity tags if needed.
     /// </summary>
-    public void Send(WarfarePlayer player, string text, Color color, EChatMode mode, string? iconUrl, bool richText)
+    public void Send(WarfarePlayer player, string text, Color color, EChatMode mode, string? iconUrl, bool richText, WarfarePlayer? fromPlayer = null)
     {
         if (richText)
         {
@@ -49,7 +49,7 @@ public class ChatService
 
         if (GameThread.IsCurrent)
         {
-            SendRawMessage(text, color, mode, iconUrl, richText, player);
+            SendRawMessage(text, color, mode, iconUrl, richText, player, fromPlayer);
         }
         else
         {
@@ -59,12 +59,13 @@ public class ChatService
             EChatMode mode2 = mode;
             string? icon2 = iconUrl;
             bool rt = richText;
+            WarfarePlayer? fromPlayer2 = fromPlayer;
             UniTask.Create(async () =>
             {
                 await UniTask.SwitchToMainThread();
 
                 if (wp.IsOnline)
-                    SendRawMessage(text2, c2, mode2, icon2, rt, wp);
+                    SendRawMessage(text2, c2, mode2, icon2, rt, wp, fromPlayer2);
             });
         }
     }
@@ -72,17 +73,17 @@ public class ChatService
     /// <summary>
     /// Send a raw message directly to all players, and replace TMPro rich text with Unity tags if needed.
     /// </summary>
-    public void Broadcast(string text, Color color, EChatMode mode, string? iconUrl, bool richText)
+    public void Broadcast(string text, Color color, EChatMode mode, string? iconUrl, bool richText, WarfarePlayer? fromPlayer = null)
     {
         if (!richText)
         {
-            BroadcastNonRichText(text, color, mode, iconUrl);
+            BroadcastNonRichText(text, color, mode, iconUrl, fromPlayer);
             return;
         }
 
         if (GameThread.IsCurrent)
         {
-            BroadcastRichTextGameThread(text, color, mode, iconUrl);
+            BroadcastRichTextGameThread(text, color, mode, iconUrl, fromPlayer);
         }
         else
         {
@@ -90,10 +91,11 @@ public class ChatService
             Color c2 = color;
             EChatMode mode2 = mode;
             string? icon2 = iconUrl;
+            WarfarePlayer? fromPlayer2 = fromPlayer;
             UniTask.Create(async () =>
             {
                 await UniTask.SwitchToMainThread();
-                BroadcastRichTextGameThread(text2, c2, mode2, icon2);
+                BroadcastRichTextGameThread(text2, c2, mode2, icon2, fromPlayer2);
             });
         }
     }
@@ -101,13 +103,13 @@ public class ChatService
     /// <summary>
     /// Send a raw message directly to a set of players, and replace TMPro rich text with Unity tags if needed.
     /// </summary>
-    public void Broadcast(in LanguageSet players, string text, Color color, EChatMode mode, string? iconUrl, bool richText)
+    public void Broadcast(in LanguageSet players, string text, Color color, EChatMode mode, string? iconUrl, bool richText, WarfarePlayer? fromPlayer = null)
     {
         if (!richText)
         {
             if (GameThread.IsCurrent)
             {
-                BroadcastNonRichTextGameThread(text, color, mode, iconUrl, players);
+                BroadcastNonRichTextGameThread(text, color, mode, iconUrl, players, fromPlayer);
             }
             else
             {
@@ -116,10 +118,11 @@ public class ChatService
                 EChatMode mode2 = mode;
                 string? icon2 = iconUrl;
                 LanguageSet set = players.Preserve();
+                WarfarePlayer? fromPlayer2 = fromPlayer;
                 UniTask.Create(async () =>
                 {
                     await UniTask.SwitchToMainThread();
-                    BroadcastNonRichTextGameThread(text2, c2, mode2, icon2, set);
+                    BroadcastNonRichTextGameThread(text2, c2, mode2, icon2, set, fromPlayer2);
                 });
             }
             return;
@@ -127,7 +130,7 @@ public class ChatService
 
         if (GameThread.IsCurrent)
         {
-            BroadcastRichTextGameThread(text, color, mode, iconUrl, players);
+            BroadcastRichTextGameThread(text, color, mode, iconUrl, players, fromPlayer);
         }
         else
         {
@@ -136,19 +139,20 @@ public class ChatService
             EChatMode mode2 = mode;
             string? icon2 = iconUrl;
             LanguageSet set = players.Preserve();
+            WarfarePlayer? fromPlayer2 = fromPlayer;
             UniTask.Create(async () =>
             {
                 await UniTask.SwitchToMainThread();
-                BroadcastRichTextGameThread(text2, c2, mode2, icon2, set);
+                BroadcastRichTextGameThread(text2, c2, mode2, icon2, set, fromPlayer2);
             });
         }
     }
 
-    private void BroadcastNonRichText(string text, Color color, EChatMode mode, string? iconUrl)
+    private void BroadcastNonRichText(string text, Color color, EChatMode mode, string? iconUrl, WarfarePlayer? fromPlayer)
     {
         if (GameThread.IsCurrent)
         {
-            BroadcastNonRichTextGameThread(text, color, mode, iconUrl);
+            BroadcastNonRichTextGameThread(text, color, mode, iconUrl, fromPlayer);
         }
         else
         {
@@ -156,23 +160,24 @@ public class ChatService
             Color c2 = color;
             EChatMode mode2 = mode;
             string? icon2 = iconUrl;
+            WarfarePlayer? fromPlayer2 = null;
             UniTask.Create(async () =>
             {
                 await UniTask.SwitchToMainThread();
-                BroadcastNonRichTextGameThread(text2, c2, mode2, icon2);
+                BroadcastNonRichTextGameThread(text2, c2, mode2, icon2, fromPlayer2);
             });
         }
     }
 
-    private void BroadcastRichTextGameThread(string text, Color color, EChatMode mode, string? iconUrl)
+    private void BroadcastRichTextGameThread(string text, Color color, EChatMode mode, string? iconUrl, WarfarePlayer? fromPlayer)
     {
         foreach (LanguageSet set in _translationService.SetOf.AllPlayers())
         {
-            BroadcastRichTextGameThread(text, color, mode, iconUrl, set);
+            BroadcastRichTextGameThread(text, color, mode, iconUrl, set, fromPlayer);
         }
     }
 
-    private void BroadcastRichTextGameThread(string text, Color color, EChatMode mode, string? iconUrl, LanguageSet set)
+    private void BroadcastRichTextGameThread(string text, Color color, EChatMode mode, string? iconUrl, LanguageSet set, WarfarePlayer? fromPlayer)
     {
         Color? c = TranslationFormattingUtility.ExtractColor(text, out int index, out int length);
         color = c ?? color;
@@ -183,15 +188,15 @@ public class ChatService
         PooledTransportConnectionList list = set.GatherTransportConnections();
         if (OnSendingChatMessage != null)
         {
-            RemoveDisallowedFromTcList(ref set, text, color, mode, iconUrl, list);
+            RemoveDisallowedFromTcList(ref set, text, color, mode, iconUrl, list, fromPlayer);
             if (list.Count == 0)
                 return;
         }
 
-        SendRawMessageBatch(text, color, mode, iconUrl, true, list);
+        SendRawMessageBatch(text, color, mode, iconUrl, true, list, fromPlayer);
     }
 
-    private void BroadcastNonRichTextGameThread(string text, Color color, EChatMode mode, string? iconUrl)
+    private void BroadcastNonRichTextGameThread(string text, Color color, EChatMode mode, string? iconUrl, WarfarePlayer? fromPlayer)
     {
         PooledTransportConnectionList list;
         if (OnSendingChatMessage != null)
@@ -200,7 +205,7 @@ public class ChatService
             foreach (WarfarePlayer player in _playerService.OnlinePlayers)
             {
                 bool shouldAllow = true;
-                OnSendingChatMessage?.Invoke(player, text, color, mode, iconUrl, true, ref shouldAllow);
+                OnSendingChatMessage?.Invoke(player, text, color, mode, iconUrl, true, fromPlayer, ref shouldAllow);
                 if (shouldAllow)
                 {
                     (list ??= TransportConnectionPoolHelper.Claim(Provider.clients.Count)).Add(player.Connection);
@@ -215,29 +220,29 @@ public class ChatService
             list = Provider.GatherClientConnections();
         }
 
-        SendRawMessageBatch(text, color, mode, iconUrl, false, list);
+        SendRawMessageBatch(text, color, mode, iconUrl, false, list, fromPlayer);
     }
 
-    private void BroadcastNonRichTextGameThread(string text, Color color, EChatMode mode, string? iconUrl, LanguageSet set)
+    private void BroadcastNonRichTextGameThread(string text, Color color, EChatMode mode, string? iconUrl, LanguageSet set, WarfarePlayer? fromPlayer)
     {
         PooledTransportConnectionList list = set.GatherTransportConnections();
         if (OnSendingChatMessage != null)
         {
-            RemoveDisallowedFromTcList(ref set, text, color, mode, iconUrl, list);
+            RemoveDisallowedFromTcList(ref set, text, color, mode, iconUrl, list, fromPlayer);
             if (list.Count == 0)
                 return;
         }
 
-        SendRawMessageBatch(text, color, mode, iconUrl, false, list);
+        SendRawMessageBatch(text, color, mode, iconUrl, false, list, fromPlayer);
     }
 
-    private void RemoveDisallowedFromTcList(ref LanguageSet set, string text, Color color, EChatMode mode, string? iconUrl, PooledTransportConnectionList list)
+    private void RemoveDisallowedFromTcList(ref LanguageSet set, string text, Color color, EChatMode mode, string? iconUrl, PooledTransportConnectionList list, WarfarePlayer? fromPlayer)
     {
         int ind = 0;
         while (set.MoveNext())
         {
             bool shouldAllow = true;
-            OnSendingChatMessage?.Invoke(set.Next, text, color, mode, iconUrl, true, ref shouldAllow);
+            OnSendingChatMessage?.Invoke(set.Next, text, color, mode, iconUrl, true, fromPlayer, ref shouldAllow);
             if (!shouldAllow)
             {
                 list.RemoveAt(ind);
@@ -254,7 +259,7 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    public void Send(WarfarePlayer player, string text)
+    public void Send(WarfarePlayer player, string text, WarfarePlayer? fromPlayer = null)
     {
         if (!(player ?? throw new ArgumentNullException(nameof(player))).IsOnline)
             return;
@@ -285,7 +290,7 @@ public class ChatService
 
         if (GameThread.IsCurrent)
         {
-            SendRawMessage(text, textColor ?? Color.white, EChatMode.SAY, null, rt, player);
+            SendRawMessage(text, textColor ?? Color.white, EChatMode.SAY, null, rt, player, fromPlayer);
         }
         else
         {
@@ -293,12 +298,13 @@ public class ChatService
             WarfarePlayer wp = player;
             Color cl2 = textColor ?? Color.white;
             bool rt2 = rt;
+            WarfarePlayer? fromPlayer2 = fromPlayer;
             UniTask.Create(async () =>
             {
                 await UniTask.SwitchToMainThread();
 
                 if (wp.IsOnline)
-                    SendRawMessage(vl2, cl2, EChatMode.SAY, null, rt2, wp);
+                    SendRawMessage(vl2, cl2, EChatMode.SAY, null, rt2, wp, fromPlayer2);
             });
         }
     }
@@ -308,11 +314,11 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline users are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    public void Send(ICommandUser user, string text)
+    public void Send(ICommandUser user, string text, WarfarePlayer? fromPlayer = null)
     {
         if (user is WarfarePlayer player)
         {
-            Send(player, text);
+            Send(player, text, fromPlayer);
             return;
         }
 
@@ -335,9 +341,9 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    public void Send(WarfarePlayer player, string text, ConsoleColor textColor)
+    public void Send(WarfarePlayer player, string text, ConsoleColor textColor, WarfarePlayer? fromPlayer = null)
     {
-        Send(player, text, TerminalColorHelper.FromConsoleColor(textColor));
+        Send(player, text, TerminalColorHelper.FromConsoleColor(textColor), fromPlayer);
     }
 
     /// <summary>
@@ -345,7 +351,7 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    public void Send(WarfarePlayer player, string text, Color textColor)
+    public void Send(WarfarePlayer player, string text, Color textColor, WarfarePlayer? fromPlayer = null)
     {
         if (!(player ?? throw new ArgumentNullException(nameof(player))).IsOnline)
             return;
@@ -374,7 +380,7 @@ public class ChatService
 
         if (GameThread.IsCurrent)
         {
-            SendRawMessage(text, textColor, EChatMode.SAY, null, rt, player);
+            SendRawMessage(text, textColor, EChatMode.SAY, null, rt, player, fromPlayer);
         }
         else
         {
@@ -382,12 +388,13 @@ public class ChatService
             WarfarePlayer wp = player;
             Color cl2 = textColor;
             bool rt2 = rt;
+            WarfarePlayer? fromPlayer2 = fromPlayer;
             UniTask.Create(async () =>
             {
                 await UniTask.SwitchToMainThread();
 
                 if (wp.IsOnline)
-                    SendRawMessage(vl2, cl2, EChatMode.SAY, null, rt2, wp);
+                    SendRawMessage(vl2, cl2, EChatMode.SAY, null, rt2, wp, fromPlayer2);
             });
         }
     }
@@ -397,15 +404,15 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline users are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    public void Send(ICommandUser user, string text, Color textColor)
+    public void Send(ICommandUser user, string text, Color textColor, WarfarePlayer? fromPlayer = null)
     {
         if (user is WarfarePlayer player)
         {
-            Send(player, text, textColor);
+            Send(player, text, textColor, fromPlayer);
             return;
         }
 
-        Send(user, text, (Color32)textColor);
+        Send(user, text, (Color32)textColor, fromPlayer);
     }
 
     /// <summary>
@@ -413,11 +420,11 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline users are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    public void Send(ICommandUser user, string text, ConsoleColor textColor)
+    public void Send(ICommandUser user, string text, ConsoleColor textColor, WarfarePlayer? fromPlayer = null)
     {
         if (user is WarfarePlayer player)
         {
-            Send(player, text, TerminalColorHelper.FromConsoleColor(textColor));
+            Send(player, text, TerminalColorHelper.FromConsoleColor(textColor), fromPlayer);
             return;
         }
 
@@ -448,11 +455,11 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline users are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    public void Send(ICommandUser user, string text, Color32 textColor)
+    public void Send(ICommandUser user, string text, Color32 textColor, WarfarePlayer? fromPlayer = null)
     {
         if (user is WarfarePlayer player)
         {
-            Send(player, text, (Color)textColor);
+            Send(player, text, (Color)textColor, fromPlayer);
             return;
         }
 
@@ -488,7 +495,7 @@ public class ChatService
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
     /// <exception cref="ArgumentException">The translation has arguments.</exception>
-    public void Send(WarfarePlayer player, Translation translation)
+    public void Send(WarfarePlayer player, Translation translation, WarfarePlayer? fromPlayer = null)
     {
         if (!(player ?? throw new ArgumentNullException(nameof(player))).IsOnline)
             return;
@@ -497,7 +504,7 @@ public class ChatService
             throw new ArgumentNullException(nameof(translation));
 
         string value = translation.Translate(player, out Color textColor, canUseIMGUI: true);
-        SendTranslationMessage(value, textColor, translation, player);
+        SendTranslationMessage(value, textColor, translation, player, fromPlayer);
     }
 
     /// <summary>
@@ -505,7 +512,7 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    public void Send<T0>(WarfarePlayer player, Translation<T0> translation, T0 arg0)
+    public void Send<T0>(WarfarePlayer player, Translation<T0> translation, T0 arg0, WarfarePlayer? fromPlayer = null)
     {
         if (!(player ?? throw new ArgumentNullException(nameof(player))).IsOnline)
             return;
@@ -514,7 +521,7 @@ public class ChatService
             throw new ArgumentNullException(nameof(translation));
 
         string value = translation.Translate(arg0, player, out Color textColor, canUseIMGUI: true);
-        SendTranslationMessage(value, textColor, translation, player);
+        SendTranslationMessage(value, textColor, translation, player, fromPlayer);
     }
 
     /// <summary>
@@ -522,7 +529,7 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    public void Send<T0, T1>(WarfarePlayer player, Translation<T0, T1> translation, T0 arg0, T1 arg1)
+    public void Send<T0, T1>(WarfarePlayer player, Translation<T0, T1> translation, T0 arg0, T1 arg1, WarfarePlayer? fromPlayer = null)
     {
         if (!(player ?? throw new ArgumentNullException(nameof(player))).IsOnline)
             return;
@@ -531,7 +538,7 @@ public class ChatService
             throw new ArgumentNullException(nameof(translation));
 
         string value = translation.Translate(arg0, arg1, player, out Color textColor, canUseIMGUI: true);
-        SendTranslationMessage(value, textColor, translation, player);
+        SendTranslationMessage(value, textColor, translation, player, fromPlayer);
     }
 
     /// <summary>
@@ -539,7 +546,7 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    public void Send<T0, T1, T2>(WarfarePlayer player, Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2)
+    public void Send<T0, T1, T2>(WarfarePlayer player, Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2, WarfarePlayer? fromPlayer = null)
     {
         if (!(player ?? throw new ArgumentNullException(nameof(player))).IsOnline)
             return;
@@ -548,7 +555,7 @@ public class ChatService
             throw new ArgumentNullException(nameof(translation));
 
         string value = translation.Translate(arg0, arg1, arg2, player, out Color textColor, canUseIMGUI: true);
-        SendTranslationMessage(value, textColor, translation, player);
+        SendTranslationMessage(value, textColor, translation, player, fromPlayer);
     }
 
     /// <summary>
@@ -556,7 +563,7 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    public void Send<T0, T1, T2, T3>(WarfarePlayer player, Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3)
+    public void Send<T0, T1, T2, T3>(WarfarePlayer player, Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, WarfarePlayer? fromPlayer = null)
     {
         if (!(player ?? throw new ArgumentNullException(nameof(player))).IsOnline)
             return;
@@ -565,7 +572,7 @@ public class ChatService
             throw new ArgumentNullException(nameof(translation));
 
         string value = translation.Translate(arg0, arg1, arg2, arg3, player, out Color textColor, canUseIMGUI: true);
-        SendTranslationMessage(value, textColor, translation, player);
+        SendTranslationMessage(value, textColor, translation, player, fromPlayer);
     }
 
     /// <summary>
@@ -573,7 +580,7 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    public void Send<T0, T1, T2, T3, T4>(WarfarePlayer player, Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
+    public void Send<T0, T1, T2, T3, T4>(WarfarePlayer player, Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, WarfarePlayer? fromPlayer = null)
     {
         if (!(player ?? throw new ArgumentNullException(nameof(player))).IsOnline)
             return;
@@ -582,7 +589,7 @@ public class ChatService
             throw new ArgumentNullException(nameof(translation));
 
         string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, player, out Color textColor, canUseIMGUI: true);
-        SendTranslationMessage(value, textColor, translation, player);
+        SendTranslationMessage(value, textColor, translation, player, fromPlayer);
     }
 
     /// <summary>
@@ -590,7 +597,7 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    public void Send<T0, T1, T2, T3, T4, T5>(WarfarePlayer player, Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
+    public void Send<T0, T1, T2, T3, T4, T5>(WarfarePlayer player, Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, WarfarePlayer? fromPlayer = null)
     {
         if (!(player ?? throw new ArgumentNullException(nameof(player))).IsOnline)
             return;
@@ -599,7 +606,7 @@ public class ChatService
             throw new ArgumentNullException(nameof(translation));
 
         string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, player, out Color textColor, canUseIMGUI: true);
-        SendTranslationMessage(value, textColor, translation, player);
+        SendTranslationMessage(value, textColor, translation, player, fromPlayer);
     }
 
     /// <summary>
@@ -607,7 +614,7 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    public void Send<T0, T1, T2, T3, T4, T5, T6>(WarfarePlayer player, Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
+    public void Send<T0, T1, T2, T3, T4, T5, T6>(WarfarePlayer player, Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, WarfarePlayer? fromPlayer = null)
     {
         if (!(player ?? throw new ArgumentNullException(nameof(player))).IsOnline)
             return;
@@ -616,7 +623,7 @@ public class ChatService
             throw new ArgumentNullException(nameof(translation));
 
         string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, arg6, player, out Color textColor, canUseIMGUI: true);
-        SendTranslationMessage(value, textColor, translation, player);
+        SendTranslationMessage(value, textColor, translation, player, fromPlayer);
     }
 
     /// <summary>
@@ -624,7 +631,7 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    public void Send<T0, T1, T2, T3, T4, T5, T6, T7>(WarfarePlayer player, Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
+    public void Send<T0, T1, T2, T3, T4, T5, T6, T7>(WarfarePlayer player, Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, WarfarePlayer? fromPlayer = null)
     {
         if (!(player ?? throw new ArgumentNullException(nameof(player))).IsOnline)
             return;
@@ -633,7 +640,7 @@ public class ChatService
             throw new ArgumentNullException(nameof(translation));
 
         string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, player, out Color textColor, canUseIMGUI: true);
-        SendTranslationMessage(value, textColor, translation, player);
+        SendTranslationMessage(value, textColor, translation, player, fromPlayer);
     }
 
     /// <summary>
@@ -641,7 +648,7 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    public void Send<T0, T1, T2, T3, T4, T5, T6, T7, T8>(WarfarePlayer player, Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
+    public void Send<T0, T1, T2, T3, T4, T5, T6, T7, T8>(WarfarePlayer player, Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, WarfarePlayer? fromPlayer = null)
     {
         if (!(player ?? throw new ArgumentNullException(nameof(player))).IsOnline)
             return;
@@ -650,7 +657,7 @@ public class ChatService
             throw new ArgumentNullException(nameof(translation));
 
         string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, player, out Color textColor, canUseIMGUI: true);
-        SendTranslationMessage(value, textColor, translation, player);
+        SendTranslationMessage(value, textColor, translation, player, fromPlayer);
     }
 
     /// <summary>
@@ -658,7 +665,7 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    public void Send<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(WarfarePlayer player, Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
+    public void Send<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(WarfarePlayer player, Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, WarfarePlayer? fromPlayer = null)
     {
         if (!(player ?? throw new ArgumentNullException(nameof(player))).IsOnline)
             return;
@@ -667,7 +674,7 @@ public class ChatService
             throw new ArgumentNullException(nameof(translation));
 
         string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, player, out Color textColor, canUseIMGUI: true);
-        SendTranslationMessage(value, textColor, translation, player);
+        SendTranslationMessage(value, textColor, translation, player, fromPlayer);
     }
 
     /// <summary>
@@ -676,11 +683,11 @@ public class ChatService
     /// <remarks>Thread-safe. Messages to offline users are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
     /// <exception cref="ArgumentException">The translation has arguments.</exception>
-    public void Send(ICommandUser user, Translation translation)
+    public void Send(ICommandUser user, Translation translation, WarfarePlayer? fromPlayer = null)
     {
         if (user is WarfarePlayer player)
         {
-            Send(player, translation);
+            Send(player, translation, fromPlayer);
             return;
         }
 
@@ -698,11 +705,11 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline users are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    public void Send<T0>(ICommandUser user, Translation<T0> translation, T0 arg0)
+    public void Send<T0>(ICommandUser user, Translation<T0> translation, T0 arg0, WarfarePlayer? fromPlayer = null)
     {
         if (user is WarfarePlayer player)
         {
-            Send(player, translation, arg0);
+            Send(player, translation, arg0, fromPlayer);
             return;
         }
 
@@ -720,11 +727,11 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline users are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    public void Send<T0, T1>(ICommandUser user, Translation<T0, T1> translation, T0 arg0, T1 arg1)
+    public void Send<T0, T1>(ICommandUser user, Translation<T0, T1> translation, T0 arg0, T1 arg1, WarfarePlayer? fromPlayer = null)
     {
         if (user is WarfarePlayer player)
         {
-            Send(player, translation, arg0, arg1);
+            Send(player, translation, arg0, arg1, fromPlayer);
             return;
         }
 
@@ -742,11 +749,11 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline users are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    public void Send<T0, T1, T2>(ICommandUser user, Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2)
+    public void Send<T0, T1, T2>(ICommandUser user, Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2, WarfarePlayer? fromPlayer = null)
     {
         if (user is WarfarePlayer player)
         {
-            Send(player, translation, arg0, arg1, arg2);
+            Send(player, translation, arg0, arg1, arg2, fromPlayer);
             return;
         }
 
@@ -764,11 +771,11 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline users are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    public void Send<T0, T1, T2, T3>(ICommandUser user, Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3)
+    public void Send<T0, T1, T2, T3>(ICommandUser user, Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, WarfarePlayer? fromPlayer = null)
     {
         if (user is WarfarePlayer player)
         {
-            Send(player, translation, arg0, arg1, arg2, arg3);
+            Send(player, translation, arg0, arg1, arg2, arg3, fromPlayer);
             return;
         }
 
@@ -786,11 +793,11 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline users are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    public void Send<T0, T1, T2, T3, T4>(ICommandUser user, Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
+    public void Send<T0, T1, T2, T3, T4>(ICommandUser user, Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, WarfarePlayer? fromPlayer = null)
     {
         if (user is WarfarePlayer player)
         {
-            Send(player, translation, arg0, arg1, arg2, arg3, arg4);
+            Send(player, translation, arg0, arg1, arg2, arg3, arg4, fromPlayer);
             return;
         }
 
@@ -808,11 +815,11 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline users are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    public void Send<T0, T1, T2, T3, T4, T5>(ICommandUser user, Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
+    public void Send<T0, T1, T2, T3, T4, T5>(ICommandUser user, Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, WarfarePlayer? fromPlayer = null)
     {
         if (user is WarfarePlayer player)
         {
-            Send(player, translation, arg0, arg1, arg2, arg3, arg4, arg5);
+            Send(player, translation, arg0, arg1, arg2, arg3, arg4, arg5, fromPlayer);
             return;
         }
 
@@ -830,11 +837,11 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline users are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    public void Send<T0, T1, T2, T3, T4, T5, T6>(ICommandUser user, Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
+    public void Send<T0, T1, T2, T3, T4, T5, T6>(ICommandUser user, Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, WarfarePlayer? fromPlayer = null)
     {
         if (user is WarfarePlayer player)
         {
-            Send(player, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
+            Send(player, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, fromPlayer);
             return;
         }
 
@@ -852,11 +859,11 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline users are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    public void Send<T0, T1, T2, T3, T4, T5, T6, T7>(ICommandUser user, Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
+    public void Send<T0, T1, T2, T3, T4, T5, T6, T7>(ICommandUser user, Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, WarfarePlayer? fromPlayer = null)
     {
         if (user is WarfarePlayer player)
         {
-            Send(player, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+            Send(player, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, fromPlayer);
             return;
         }
 
@@ -874,11 +881,11 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline users are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    public void Send<T0, T1, T2, T3, T4, T5, T6, T7, T8>(ICommandUser user, Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
+    public void Send<T0, T1, T2, T3, T4, T5, T6, T7, T8>(ICommandUser user, Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, WarfarePlayer? fromPlayer = null)
     {
         if (user is WarfarePlayer player)
         {
-            Send(player, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+            Send(player, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, fromPlayer);
             return;
         }
 
@@ -896,11 +903,11 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline users are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    public void Send<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(ICommandUser user, Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
+    public void Send<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(ICommandUser user, Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, WarfarePlayer? fromPlayer = null)
     {
         if (user is WarfarePlayer player)
         {
-            Send(player, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+            Send(player, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, fromPlayer);
             return;
         }
 
@@ -919,7 +926,7 @@ public class ChatService
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
     /// <exception cref="ArgumentException">The translation has arguments.</exception>
-    public void Broadcast(in LanguageSet set, Translation translation)
+    public void Broadcast(in LanguageSet set, Translation translation, WarfarePlayer? fromPlayer = null)
     {
         if (translation == null)
             throw new ArgumentNullException(nameof(translation));
@@ -928,7 +935,7 @@ public class ChatService
             return;
 
         string value = translation.Translate(in set, out Color textColor, canUseIMGUI: true);
-        SendTranslationSet(value, textColor, translation, in set);
+        SendTranslationSet(value, textColor, translation, in set, fromPlayer);
     }
 
     /// <summary>
@@ -936,7 +943,7 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    public void Broadcast<T0>(in LanguageSet set, Translation<T0> translation, T0 arg0)
+    public void Broadcast<T0>(in LanguageSet set, Translation<T0> translation, T0 arg0, WarfarePlayer? fromPlayer = null)
     {
         if (translation == null)
             throw new ArgumentNullException(nameof(translation));
@@ -945,7 +952,7 @@ public class ChatService
             return;
 
         string value = translation.Translate(arg0, in set, out Color textColor, canUseIMGUI: true);
-        SendTranslationSet(value, textColor, translation, in set);
+        SendTranslationSet(value, textColor, translation, in set, fromPlayer);
     }
 
     /// <summary>
@@ -953,7 +960,7 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    public void Broadcast<T0, T1>(in LanguageSet set, Translation<T0, T1> translation, T0 arg0, T1 arg1)
+    public void Broadcast<T0, T1>(in LanguageSet set, Translation<T0, T1> translation, T0 arg0, T1 arg1, WarfarePlayer? fromPlayer = null)
     {
         if (translation == null)
             throw new ArgumentNullException(nameof(translation));
@@ -962,7 +969,7 @@ public class ChatService
             return;
 
         string value = translation.Translate(arg0, arg1, in set, out Color textColor, canUseIMGUI: true);
-        SendTranslationSet(value, textColor, translation, in set);
+        SendTranslationSet(value, textColor, translation, in set, fromPlayer);
     }
 
     /// <summary>
@@ -970,7 +977,7 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    public void Broadcast<T0, T1, T2>(in LanguageSet set, Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2)
+    public void Broadcast<T0, T1, T2>(in LanguageSet set, Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2, WarfarePlayer? fromPlayer = null)
     {
         if (translation == null)
             throw new ArgumentNullException(nameof(translation));
@@ -979,7 +986,7 @@ public class ChatService
             return;
 
         string value = translation.Translate(arg0, arg1, arg2, in set, out Color textColor, canUseIMGUI: true);
-        SendTranslationSet(value, textColor, translation, in set);
+        SendTranslationSet(value, textColor, translation, in set, fromPlayer);
     }
 
     /// <summary>
@@ -987,7 +994,7 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    public void Broadcast<T0, T1, T2, T3>(in LanguageSet set, Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3)
+    public void Broadcast<T0, T1, T2, T3>(in LanguageSet set, Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, WarfarePlayer? fromPlayer = null)
     {
         if (translation == null)
             throw new ArgumentNullException(nameof(translation));
@@ -996,7 +1003,7 @@ public class ChatService
             return;
 
         string value = translation.Translate(arg0, arg1, arg2, arg3, in set, out Color textColor, canUseIMGUI: true);
-        SendTranslationSet(value, textColor, translation, in set);
+        SendTranslationSet(value, textColor, translation, in set, fromPlayer);
     }
 
     /// <summary>
@@ -1004,7 +1011,7 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    public void Broadcast<T0, T1, T2, T3, T4>(in LanguageSet set, Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
+    public void Broadcast<T0, T1, T2, T3, T4>(in LanguageSet set, Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, WarfarePlayer? fromPlayer = null)
     {
         if (translation == null)
             throw new ArgumentNullException(nameof(translation));
@@ -1013,7 +1020,7 @@ public class ChatService
             return;
 
         string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, in set, out Color textColor, canUseIMGUI: true);
-        SendTranslationSet(value, textColor, translation, in set);
+        SendTranslationSet(value, textColor, translation, in set, fromPlayer);
     }
 
     /// <summary>
@@ -1021,7 +1028,7 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    public void Broadcast<T0, T1, T2, T3, T4, T5>(in LanguageSet set, Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
+    public void Broadcast<T0, T1, T2, T3, T4, T5>(in LanguageSet set, Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, WarfarePlayer? fromPlayer = null)
     {
         if (translation == null)
             throw new ArgumentNullException(nameof(translation));
@@ -1030,7 +1037,7 @@ public class ChatService
             return;
 
         string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, in set, out Color textColor, canUseIMGUI: true);
-        SendTranslationSet(value, textColor, translation, in set);
+        SendTranslationSet(value, textColor, translation, in set, fromPlayer);
     }
 
     /// <summary>
@@ -1038,7 +1045,7 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    public void Broadcast<T0, T1, T2, T3, T4, T5, T6>(in LanguageSet set, Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
+    public void Broadcast<T0, T1, T2, T3, T4, T5, T6>(in LanguageSet set, Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, WarfarePlayer? fromPlayer = null)
     {
         if (translation == null)
             throw new ArgumentNullException(nameof(translation));
@@ -1047,7 +1054,7 @@ public class ChatService
             return;
 
         string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, arg6, in set, out Color textColor, canUseIMGUI: true);
-        SendTranslationSet(value, textColor, translation, in set);
+        SendTranslationSet(value, textColor, translation, in set, fromPlayer);
     }
 
     /// <summary>
@@ -1055,7 +1062,7 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    public void Broadcast<T0, T1, T2, T3, T4, T5, T6, T7>(in LanguageSet set, Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
+    public void Broadcast<T0, T1, T2, T3, T4, T5, T6, T7>(in LanguageSet set, Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, WarfarePlayer? fromPlayer = null)
     {
         if (translation == null)
             throw new ArgumentNullException(nameof(translation));
@@ -1064,7 +1071,7 @@ public class ChatService
             return;
 
         string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, in set, out Color textColor, canUseIMGUI: true);
-        SendTranslationSet(value, textColor, translation, in set);
+        SendTranslationSet(value, textColor, translation, in set, fromPlayer);
     }
 
     /// <summary>
@@ -1072,7 +1079,7 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    public void Broadcast<T0, T1, T2, T3, T4, T5, T6, T7, T8>(in LanguageSet set, Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
+    public void Broadcast<T0, T1, T2, T3, T4, T5, T6, T7, T8>(in LanguageSet set, Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, WarfarePlayer? fromPlayer = null)
     {
         if (translation == null)
             throw new ArgumentNullException(nameof(translation));
@@ -1081,7 +1088,7 @@ public class ChatService
             return;
 
         string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, in set, out Color textColor, canUseIMGUI: true);
-        SendTranslationSet(value, textColor, translation, in set);
+        SendTranslationSet(value, textColor, translation, in set, fromPlayer);
     }
 
     /// <summary>
@@ -1089,7 +1096,7 @@ public class ChatService
     /// </summary>
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
-    public void Broadcast<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(in LanguageSet set, Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
+    public void Broadcast<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(in LanguageSet set, Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, WarfarePlayer? fromPlayer = null)
     {
         if (translation == null)
             throw new ArgumentNullException(nameof(translation));
@@ -1098,7 +1105,7 @@ public class ChatService
             return;
 
         string value = translation.Translate(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, in set, out Color textColor, canUseIMGUI: true);
-        SendTranslationSet(value, textColor, translation, in set);
+        SendTranslationSet(value, textColor, translation, in set, fromPlayer);
     }
 
     /// <summary>
@@ -1108,13 +1115,13 @@ public class ChatService
     /// <exception cref="ArgumentNullException"/>
     /// <exception cref="ArgumentException">The translation has arguments.</exception>
     /// <exception cref="NotSupportedException">Not on main thread.</exception>
-    public void Broadcast(LanguageSetEnumerator set, Translation translation)
+    public void Broadcast(LanguageSetEnumerator set, Translation translation, WarfarePlayer? fromPlayer = null)
     {
         if (GameThread.IsCurrent)
         {
             while (set.MoveNext())
             {
-                Broadcast(in set.Set, translation);
+                Broadcast(in set.Set, translation, fromPlayer);
             }
 
             set.Dispose();
@@ -1125,6 +1132,7 @@ public class ChatService
         set.Dispose();
 
         Translation t = translation;
+        WarfarePlayer? fromPlayer2 = fromPlayer;
         UniTask.Create(async () =>
         {
             await UniTask.SwitchToMainThread();
@@ -1132,7 +1140,7 @@ public class ChatService
             LanguageSet[] sets = c.Sets!;
             for (int i = 0; i < sets.Length; ++i)
             {
-                Broadcast(in sets[i], t);
+                Broadcast(in sets[i], t, fromPlayer2);
             }
         });
     }
@@ -1143,13 +1151,13 @@ public class ChatService
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
     /// <exception cref="NotSupportedException">Not on main thread.</exception>
-    public void Broadcast<T0>(LanguageSetEnumerator set, Translation<T0> translation, T0 arg0)
+    public void Broadcast<T0>(LanguageSetEnumerator set, Translation<T0> translation, T0 arg0, WarfarePlayer? fromPlayer = null)
     {
         if (GameThread.IsCurrent)
         {
             while (set.MoveNext())
             {
-                Broadcast(in set.Set, translation, arg0);
+                Broadcast(in set.Set, translation, arg0, fromPlayer);
             }
 
             set.Dispose();
@@ -1161,6 +1169,7 @@ public class ChatService
 
         T0 a0 = arg0;
         Translation<T0> t = translation;
+        WarfarePlayer? fromPlayer2 = fromPlayer;
         UniTask.Create(async () =>
         {
             await UniTask.SwitchToMainThread();
@@ -1168,7 +1177,7 @@ public class ChatService
             LanguageSet[] sets = c.Sets!;
             for (int i = 0; i < sets.Length; ++i)
             {
-                Broadcast(in sets[i], t, a0);
+                Broadcast(in sets[i], t, a0, fromPlayer2);
             }
         });
     }
@@ -1179,13 +1188,13 @@ public class ChatService
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
     /// <exception cref="NotSupportedException">Not on main thread.</exception>
-    public void Broadcast<T0, T1>(LanguageSetEnumerator set, Translation<T0, T1> translation, T0 arg0, T1 arg1)
+    public void Broadcast<T0, T1>(LanguageSetEnumerator set, Translation<T0, T1> translation, T0 arg0, T1 arg1, WarfarePlayer? fromPlayer = null)
     {
         if (GameThread.IsCurrent)
         {
             while (set.MoveNext())
             {
-                Broadcast(in set.Set, translation, arg0, arg1);
+                Broadcast(in set.Set, translation, arg0, arg1, fromPlayer);
             }
 
             set.Dispose();
@@ -1197,6 +1206,7 @@ public class ChatService
 
         T0 a0 = arg0; T1 a1 = arg1;
         Translation<T0, T1> t = translation;
+        WarfarePlayer? fromPlayer2 = fromPlayer;
         UniTask.Create(async () =>
         {
             await UniTask.SwitchToMainThread();
@@ -1204,7 +1214,7 @@ public class ChatService
             LanguageSet[] sets = c.Sets!;
             for (int i = 0; i < sets.Length; ++i)
             {
-                Broadcast(in sets[i], t, a0, a1);
+                Broadcast(in sets[i], t, a0, a1, fromPlayer2);
             }
         });
     }
@@ -1215,13 +1225,13 @@ public class ChatService
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
     /// <exception cref="NotSupportedException">Not on main thread.</exception>
-    public void Broadcast<T0, T1, T2>(LanguageSetEnumerator set, Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2)
+    public void Broadcast<T0, T1, T2>(LanguageSetEnumerator set, Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2, WarfarePlayer? fromPlayer = null)
     {
         if (GameThread.IsCurrent)
         {
             while (set.MoveNext())
             {
-                Broadcast(in set.Set, translation, arg0, arg1, arg2);
+                Broadcast(in set.Set, translation, arg0, arg1, arg2, fromPlayer);
             }
 
             set.Dispose();
@@ -1233,6 +1243,7 @@ public class ChatService
 
         T0 a0 = arg0; T1 a1 = arg1; T2 a2 = arg2;
         Translation<T0, T1, T2> t = translation;
+        WarfarePlayer? fromPlayer2 = fromPlayer;
         UniTask.Create(async () =>
         {
             await UniTask.SwitchToMainThread();
@@ -1240,7 +1251,7 @@ public class ChatService
             LanguageSet[] sets = c.Sets!;
             for (int i = 0; i < sets.Length; ++i)
             {
-                Broadcast(in sets[i], t, a0, a1, a2);
+                Broadcast(in sets[i], t, a0, a1, a2, fromPlayer2);
             }
         });
     }
@@ -1251,13 +1262,13 @@ public class ChatService
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
     /// <exception cref="NotSupportedException">Not on main thread.</exception>
-    public void Broadcast<T0, T1, T2, T3>(LanguageSetEnumerator set, Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3)
+    public void Broadcast<T0, T1, T2, T3>(LanguageSetEnumerator set, Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, WarfarePlayer? fromPlayer = null)
     {
         if (GameThread.IsCurrent)
         {
             while (set.MoveNext())
             {
-                Broadcast(in set.Set, translation, arg0, arg1, arg2, arg3);
+                Broadcast(in set.Set, translation, arg0, arg1, arg2, arg3, fromPlayer);
             }
 
             set.Dispose();
@@ -1269,6 +1280,7 @@ public class ChatService
 
         T0 a0 = arg0; T1 a1 = arg1; T2 a2 = arg2; T3 a3 = arg3;
         Translation<T0, T1, T2, T3> t = translation;
+        WarfarePlayer? fromPlayer2 = fromPlayer;
         UniTask.Create(async () =>
         {
             await UniTask.SwitchToMainThread();
@@ -1276,7 +1288,7 @@ public class ChatService
             LanguageSet[] sets = c.Sets!;
             for (int i = 0; i < sets.Length; ++i)
             {
-                Broadcast(in sets[i], t, a0, a1, a2, a3);
+                Broadcast(in sets[i], t, a0, a1, a2, a3, fromPlayer2);
             }
         });
     }
@@ -1287,13 +1299,13 @@ public class ChatService
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
     /// <exception cref="NotSupportedException">Not on main thread.</exception>
-    public void Broadcast<T0, T1, T2, T3, T4>(LanguageSetEnumerator set, Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
+    public void Broadcast<T0, T1, T2, T3, T4>(LanguageSetEnumerator set, Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, WarfarePlayer? fromPlayer = null)
     {
         if (GameThread.IsCurrent)
         {
             while (set.MoveNext())
             {
-                Broadcast(in set.Set, translation, arg0, arg1, arg2, arg3, arg4);
+                Broadcast(in set.Set, translation, arg0, arg1, arg2, arg3, arg4, fromPlayer);
             }
 
             set.Dispose();
@@ -1305,6 +1317,7 @@ public class ChatService
 
         T0 a0 = arg0; T1 a1 = arg1; T2 a2 = arg2; T3 a3 = arg3; T4 a4 = arg4;
         Translation<T0, T1, T2, T3, T4> t = translation;
+        WarfarePlayer? fromPlayer2 = fromPlayer;
         UniTask.Create(async () =>
         {
             await UniTask.SwitchToMainThread();
@@ -1312,7 +1325,7 @@ public class ChatService
             LanguageSet[] sets = c.Sets!;
             for (int i = 0; i < sets.Length; ++i)
             {
-                Broadcast(in sets[i], t, a0, a1, a2, a3, a4);
+                Broadcast(in sets[i], t, a0, a1, a2, a3, a4, fromPlayer2);
             }
         });
     }
@@ -1323,13 +1336,13 @@ public class ChatService
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
     /// <exception cref="NotSupportedException">Not on main thread.</exception>
-    public void Broadcast<T0, T1, T2, T3, T4, T5>(LanguageSetEnumerator set, Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
+    public void Broadcast<T0, T1, T2, T3, T4, T5>(LanguageSetEnumerator set, Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, WarfarePlayer? fromPlayer = null)
     {
         if (GameThread.IsCurrent)
         {
             while (set.MoveNext())
             {
-                Broadcast(in set.Set, translation, arg0, arg1, arg2, arg3, arg4, arg5);
+                Broadcast(in set.Set, translation, arg0, arg1, arg2, arg3, arg4, arg5, fromPlayer);
             }
 
             set.Dispose();
@@ -1341,6 +1354,7 @@ public class ChatService
 
         T0 a0 = arg0; T1 a1 = arg1; T2 a2 = arg2; T3 a3 = arg3; T4 a4 = arg4; T5 a5 = arg5;
         Translation<T0, T1, T2, T3, T4, T5> t = translation;
+        WarfarePlayer? fromPlayer2 = fromPlayer;
         UniTask.Create(async () =>
         {
             await UniTask.SwitchToMainThread();
@@ -1348,7 +1362,7 @@ public class ChatService
             LanguageSet[] sets = c.Sets!;
             for (int i = 0; i < sets.Length; ++i)
             {
-                Broadcast(in sets[i], t, a0, a1, a2, a3, a4, a5);
+                Broadcast(in sets[i], t, a0, a1, a2, a3, a4, a5, fromPlayer2);
             }
         });
     }
@@ -1359,13 +1373,13 @@ public class ChatService
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
     /// <exception cref="NotSupportedException">Not on main thread.</exception>
-    public void Broadcast<T0, T1, T2, T3, T4, T5, T6>(LanguageSetEnumerator set, Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
+    public void Broadcast<T0, T1, T2, T3, T4, T5, T6>(LanguageSetEnumerator set, Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, WarfarePlayer? fromPlayer = null)
     {
         if (GameThread.IsCurrent)
         {
             while (set.MoveNext())
             {
-                Broadcast(in set.Set, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
+                Broadcast(in set.Set, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, fromPlayer);
             }
 
             set.Dispose();
@@ -1377,6 +1391,7 @@ public class ChatService
 
         T0 a0 = arg0; T1 a1 = arg1; T2 a2 = arg2; T3 a3 = arg3; T4 a4 = arg4; T5 a5 = arg5; T6 a6 = arg6;
         Translation<T0, T1, T2, T3, T4, T5, T6> t = translation;
+        WarfarePlayer? fromPlayer2 = fromPlayer;
         UniTask.Create(async () =>
         {
             await UniTask.SwitchToMainThread();
@@ -1384,7 +1399,7 @@ public class ChatService
             LanguageSet[] sets = c.Sets!;
             for (int i = 0; i < sets.Length; ++i)
             {
-                Broadcast(in sets[i], t, a0, a1, a2, a3, a4, a5, a6);
+                Broadcast(in sets[i], t, a0, a1, a2, a3, a4, a5, a6, fromPlayer2);
             }
         });
     }
@@ -1395,13 +1410,13 @@ public class ChatService
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
     /// <exception cref="NotSupportedException">Not on main thread.</exception>
-    public void Broadcast<T0, T1, T2, T3, T4, T5, T6, T7>(LanguageSetEnumerator set, Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
+    public void Broadcast<T0, T1, T2, T3, T4, T5, T6, T7>(LanguageSetEnumerator set, Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, WarfarePlayer? fromPlayer = null)
     {
         if (GameThread.IsCurrent)
         {
             while (set.MoveNext())
             {
-                Broadcast(in set.Set, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+                Broadcast(in set.Set, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, fromPlayer);
             }
 
             set.Dispose();
@@ -1413,6 +1428,7 @@ public class ChatService
 
         T0 a0 = arg0; T1 a1 = arg1; T2 a2 = arg2; T3 a3 = arg3; T4 a4 = arg4; T5 a5 = arg5; T6 a6 = arg6; T7 a7 = arg7;
         Translation<T0, T1, T2, T3, T4, T5, T6, T7> t = translation;
+        WarfarePlayer? fromPlayer2 = fromPlayer;
         UniTask.Create(async () =>
         {
             await UniTask.SwitchToMainThread();
@@ -1420,7 +1436,7 @@ public class ChatService
             LanguageSet[] sets = c.Sets!;
             for (int i = 0; i < sets.Length; ++i)
             {
-                Broadcast(in sets[i], t, a0, a1, a2, a3, a4, a5, a6, a7);
+                Broadcast(in sets[i], t, a0, a1, a2, a3, a4, a5, a6, a7, fromPlayer2);
             }
         });
     }
@@ -1431,13 +1447,13 @@ public class ChatService
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
     /// <exception cref="NotSupportedException">Not on main thread.</exception>
-    public void Broadcast<T0, T1, T2, T3, T4, T5, T6, T7, T8>(LanguageSetEnumerator set, Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
+    public void Broadcast<T0, T1, T2, T3, T4, T5, T6, T7, T8>(LanguageSetEnumerator set, Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, WarfarePlayer? fromPlayer = null)
     {
         if (GameThread.IsCurrent)
         {
             while (set.MoveNext())
             {
-                Broadcast(in set.Set, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+                Broadcast(in set.Set, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, fromPlayer);
             }
 
             set.Dispose();
@@ -1449,6 +1465,7 @@ public class ChatService
 
         T0 a0 = arg0; T1 a1 = arg1; T2 a2 = arg2; T3 a3 = arg3; T4 a4 = arg4; T5 a5 = arg5; T6 a6 = arg6; T7 a7 = arg7; T8 a8 = arg8;
         Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> t = translation;
+        WarfarePlayer? fromPlayer2 = fromPlayer;
         UniTask.Create(async () =>
         {
             await UniTask.SwitchToMainThread();
@@ -1456,7 +1473,7 @@ public class ChatService
             LanguageSet[] sets = c.Sets!;
             for (int i = 0; i < sets.Length; ++i)
             {
-                Broadcast(in sets[i], t, a0, a1, a2, a3, a4, a5, a6, a7, a8);
+                Broadcast(in sets[i], t, a0, a1, a2, a3, a4, a5, a6, a7, a8, fromPlayer2);
             }
         });
     }
@@ -1467,13 +1484,13 @@ public class ChatService
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
     /// <exception cref="NotSupportedException">Not on main thread.</exception>
-    public void Broadcast<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(LanguageSetEnumerator set, Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
+    public void Broadcast<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(LanguageSetEnumerator set, Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, WarfarePlayer? fromPlayer = null)
     {
         if (GameThread.IsCurrent)
         {
             while (set.MoveNext())
             {
-                Broadcast(in set.Set, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+                Broadcast(in set.Set, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, fromPlayer);
             }
 
             set.Dispose();
@@ -1485,6 +1502,7 @@ public class ChatService
 
         T0 a0 = arg0; T1 a1 = arg1; T2 a2 = arg2; T3 a3 = arg3; T4 a4 = arg4; T5 a5 = arg5; T6 a6 = arg6; T7 a7 = arg7; T8 a8 = arg8; T9 a9 = arg9;
         Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> t = translation;
+        WarfarePlayer? fromPlayer2 = fromPlayer;
         UniTask.Create(async () =>
         {
             await UniTask.SwitchToMainThread();
@@ -1492,7 +1510,7 @@ public class ChatService
             LanguageSet[] sets = c.Sets!;
             for (int i = 0; i < sets.Length; ++i)
             {
-                Broadcast(in sets[i], t, a0, a1, a2, a3, a4, a5, a6, a7, a8, a9);
+                Broadcast(in sets[i], t, a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, fromPlayer2);
             }
         });
     }
@@ -1504,9 +1522,9 @@ public class ChatService
     /// <exception cref="ArgumentNullException"/>
     /// <exception cref="ArgumentException">The translation has arguments.</exception>
     /// <exception cref="NotSupportedException">Not on main thread.</exception>
-    public void Broadcast(Translation translation)
+    public void Broadcast(Translation translation, WarfarePlayer? fromPlayer = null)
     {
-        Broadcast(_translationService.SetOf.AllPlayers(), translation);
+        Broadcast(_translationService.SetOf.AllPlayers(), translation, fromPlayer);
     }
 
     /// <summary>
@@ -1515,9 +1533,9 @@ public class ChatService
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
     /// <exception cref="NotSupportedException">Not on main thread.</exception>
-    public void Broadcast<T0>(Translation<T0> translation, T0 arg0)
+    public void Broadcast<T0>(Translation<T0> translation, T0 arg0, WarfarePlayer? fromPlayer = null)
     {
-        Broadcast(_translationService.SetOf.AllPlayers(), translation, arg0);
+        Broadcast(_translationService.SetOf.AllPlayers(), translation, arg0, fromPlayer);
     }
 
     /// <summary>
@@ -1526,9 +1544,9 @@ public class ChatService
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
     /// <exception cref="NotSupportedException">Not on main thread.</exception>
-    public void Broadcast<T0, T1>(Translation<T0, T1> translation, T0 arg0, T1 arg1)
+    public void Broadcast<T0, T1>(Translation<T0, T1> translation, T0 arg0, T1 arg1, WarfarePlayer? fromPlayer = null)
     {
-        Broadcast(_translationService.SetOf.AllPlayers(), translation, arg0, arg1);
+        Broadcast(_translationService.SetOf.AllPlayers(), translation, arg0, arg1, fromPlayer);
     }
 
     /// <summary>
@@ -1537,9 +1555,9 @@ public class ChatService
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
     /// <exception cref="NotSupportedException">Not on main thread.</exception>
-    public void Broadcast<T0, T1, T2>(Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2)
+    public void Broadcast<T0, T1, T2>(Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2, WarfarePlayer? fromPlayer = null)
     {
-        Broadcast(_translationService.SetOf.AllPlayers(), translation, arg0, arg1, arg2);
+        Broadcast(_translationService.SetOf.AllPlayers(), translation, arg0, arg1, arg2, fromPlayer);
     }
 
     /// <summary>
@@ -1548,9 +1566,9 @@ public class ChatService
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
     /// <exception cref="NotSupportedException">Not on main thread.</exception>
-    public void Broadcast<T0, T1, T2, T3>(Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3)
+    public void Broadcast<T0, T1, T2, T3>(Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, WarfarePlayer? fromPlayer = null)
     {
-        Broadcast(_translationService.SetOf.AllPlayers(), translation, arg0, arg1, arg2, arg3);
+        Broadcast(_translationService.SetOf.AllPlayers(), translation, arg0, arg1, arg2, arg3, fromPlayer);
     }
 
     /// <summary>
@@ -1559,9 +1577,9 @@ public class ChatService
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
     /// <exception cref="NotSupportedException">Not on main thread.</exception>
-    public void Broadcast<T0, T1, T2, T3, T4>(Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
+    public void Broadcast<T0, T1, T2, T3, T4>(Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, WarfarePlayer? fromPlayer = null)
     {
-        Broadcast(_translationService.SetOf.AllPlayers(), translation, arg0, arg1, arg2, arg3, arg4);
+        Broadcast(_translationService.SetOf.AllPlayers(), translation, arg0, arg1, arg2, arg3, arg4, fromPlayer);
     }
 
     /// <summary>
@@ -1570,9 +1588,9 @@ public class ChatService
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
     /// <exception cref="NotSupportedException">Not on main thread.</exception>
-    public void Broadcast<T0, T1, T2, T3, T4, T5>(Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
+    public void Broadcast<T0, T1, T2, T3, T4, T5>(Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, WarfarePlayer? fromPlayer = null)
     {
-        Broadcast(_translationService.SetOf.AllPlayers(), translation, arg0, arg1, arg2, arg3, arg4, arg5);
+        Broadcast(_translationService.SetOf.AllPlayers(), translation, arg0, arg1, arg2, arg3, arg4, arg5, fromPlayer);
     }
 
     /// <summary>
@@ -1581,9 +1599,9 @@ public class ChatService
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
     /// <exception cref="NotSupportedException">Not on main thread.</exception>
-    public void Broadcast<T0, T1, T2, T3, T4, T5, T6>(Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
+    public void Broadcast<T0, T1, T2, T3, T4, T5, T6>(Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, WarfarePlayer? fromPlayer = null)
     {
-        Broadcast(_translationService.SetOf.AllPlayers(), translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
+        Broadcast(_translationService.SetOf.AllPlayers(), translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, fromPlayer);
     }
 
     /// <summary>
@@ -1592,9 +1610,9 @@ public class ChatService
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
     /// <exception cref="NotSupportedException">Not on main thread.</exception>
-    public void Broadcast<T0, T1, T2, T3, T4, T5, T6, T7>(Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
+    public void Broadcast<T0, T1, T2, T3, T4, T5, T6, T7>(Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, WarfarePlayer? fromPlayer = null)
     {
-        Broadcast(_translationService.SetOf.AllPlayers(), translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+        Broadcast(_translationService.SetOf.AllPlayers(), translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, fromPlayer);
     }
 
     /// <summary>
@@ -1603,9 +1621,9 @@ public class ChatService
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
     /// <exception cref="NotSupportedException">Not on main thread.</exception>
-    public void Broadcast<T0, T1, T2, T3, T4, T5, T6, T7, T8>(Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
+    public void Broadcast<T0, T1, T2, T3, T4, T5, T6, T7, T8>(Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, WarfarePlayer? fromPlayer = null)
     {
-        Broadcast(_translationService.SetOf.AllPlayers(), translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+        Broadcast(_translationService.SetOf.AllPlayers(), translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, fromPlayer);
     }
 
     /// <summary>
@@ -1614,73 +1632,74 @@ public class ChatService
     /// <remarks>Thread-safe. Messages to offline players are ignored.</remarks>
     /// <exception cref="ArgumentNullException"/>
     /// <exception cref="NotSupportedException">Not on main thread.</exception>
-    public void Broadcast<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
+    public void Broadcast<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, WarfarePlayer? fromPlayer = null)
     {
-        Broadcast(_translationService.SetOf.AllPlayers(), translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+        Broadcast(_translationService.SetOf.AllPlayers(), translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, fromPlayer);
     }
 
     /// <summary>
     /// Send a raw message directly to a player without processing.
     /// </summary>
-    private void SendRawMessage(string text, Color color, EChatMode mode, string? iconURL, bool richText, WarfarePlayer recipient)
+    private void SendRawMessage(string text, Color color, EChatMode mode, string? iconURL, bool richText, WarfarePlayer recipient, WarfarePlayer? fromPlayer)
     {
         GameThread.AssertCurrent();
 
         iconURL ??= string.Empty;
 
         bool shouldAllow = true;
-        OnSendingChatMessage?.Invoke(recipient, text, color, mode, iconURL, richText, ref shouldAllow);
+        OnSendingChatMessage?.Invoke(recipient, text, color, mode, iconURL, richText, fromPlayer, ref shouldAllow);
         if (!shouldAllow)
             return;
 
         if (_sendChatIndividual == null)
         {
-            ChatManager.serverSendMessage(text, color, null, recipient.SteamPlayer, mode, iconURL, richText);
+            ChatManager.serverSendMessage(text, color, fromPlayer?.SteamPlayer, recipient.SteamPlayer, mode, iconURL, richText);
             return;
         }
 
         try
         {
-            ChatManager.onServerSendingMessage?.Invoke(ref text, ref color, null, recipient.SteamPlayer, mode, ref iconURL, ref richText);
+            ChatManager.onServerSendingMessage?.Invoke(ref text, ref color, fromPlayer?.SteamPlayer, recipient.SteamPlayer, mode, ref iconURL, ref richText);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error invoking ChatManager.onServerSendingMessage event.");
         }
 
-        _sendChatIndividual.Invoke(ENetReliability.Reliable, recipient.Connection, CSteamID.Nil, iconURL, mode, color, richText, text);
+        _sendChatIndividual.Invoke(ENetReliability.Reliable, recipient.Connection, fromPlayer?.Steam64 ?? CSteamID.Nil, iconURL, mode, color, richText, text);
     }
 
     /// <summary>
     /// Send a raw message directly to a player without processing.
     /// </summary>
-    private void SendRawMessageBatch(string text, Color color, EChatMode mode, string? iconURL, bool richText, PooledTransportConnectionList transportConnections)
+    private void SendRawMessageBatch(string text, Color color, EChatMode mode, string? iconURL, bool richText, PooledTransportConnectionList transportConnections, WarfarePlayer? fromPlayer)
     {
         GameThread.AssertCurrent();
 
         iconURL ??= string.Empty;
-
+        
         if (_sendChatIndividual == null)
         {
+            SteamPlayer? fromSteamPlayer = fromPlayer?.SteamPlayer;
             foreach (ITransportConnection tc in transportConnections)
             {
                 SteamPlayer? pl = Provider.findPlayer(tc);
                 if (pl != null)
-                    ChatManager.serverSendMessage(text, color, null, pl, mode, iconURL, richText);
+                    ChatManager.serverSendMessage(text, color, fromSteamPlayer, pl, mode, iconURL, richText);
             }
 
             return;
         }
 
-        _sendChatIndividual.Invoke(ENetReliability.Reliable, transportConnections, CSteamID.Nil, iconURL, mode, color, richText, text);
+        _sendChatIndividual.Invoke(ENetReliability.Reliable, transportConnections, fromPlayer?.Steam64 ?? CSteamID.Nil, iconURL, mode, color, richText, text);
     }
 
-    private void SendTranslationMessage(string value, Color textColor, Translation translation, WarfarePlayer player)
+    private void SendTranslationMessage(string value, Color textColor, Translation translation, WarfarePlayer player, WarfarePlayer? fromPlayer)
     {
         if (GameThread.IsCurrent)
         {
             CheckTranslationLength(player.Locale.LanguageInfo, ref value, translation, ref textColor, player.Save.IMGUI);
-            SendRawMessage(value, textColor, EChatMode.SAY, null, (translation.Options & TranslationOptions.NoRichText) == 0, player);
+            SendRawMessage(value, textColor, EChatMode.SAY, null, (translation.Options & TranslationOptions.NoRichText) == 0, player, fromPlayer);
         }
         else
         {
@@ -1689,6 +1708,7 @@ public class ChatService
             LanguageInfo lang2 = player.Locale.LanguageInfo;
             Color cl2 = textColor;
             Translation tr2 = translation;
+            WarfarePlayer? fromPlayer2 = null;
             UniTask.Create(async () =>
             {
                 await UniTask.SwitchToMainThread();
@@ -1697,7 +1717,7 @@ public class ChatService
                     return;
 
                 CheckTranslationLength(lang2, ref vl2, tr2, ref cl2, pl2.Save.IMGUI);
-                SendRawMessage(vl2, cl2, EChatMode.SAY, null, (tr2.Options & TranslationOptions.NoRichText) == 0, pl2);
+                SendRawMessage(vl2, cl2, EChatMode.SAY, null, (tr2.Options & TranslationOptions.NoRichText) == 0, pl2, fromPlayer2);
             });
         }
     }
@@ -1720,7 +1740,7 @@ public class ChatService
         }
     }
 
-    private void SendTranslationSet(string value, Color textColor, Translation translation, in LanguageSet set)
+    private void SendTranslationSet(string value, Color textColor, Translation translation, in LanguageSet set, WarfarePlayer? fromPlayer)
     {
         if (GameThread.IsCurrent)
         {
@@ -1730,12 +1750,12 @@ public class ChatService
             if (OnSendingChatMessage != null)
             {
                 LanguageSet set2 = set;
-                RemoveDisallowedFromTcList(ref set2, value, textColor, EChatMode.SAY, null, list);
+                RemoveDisallowedFromTcList(ref set2, value, textColor, EChatMode.SAY, null, list, fromPlayer);
                 if (list.Count == 0)
                     return;
             }
 
-            SendRawMessageBatch(value, textColor, EChatMode.SAY, null, (translation.Options & TranslationOptions.NoRichText) == 0, set.GatherTransportConnections());
+            SendRawMessageBatch(value, textColor, EChatMode.SAY, null, (translation.Options & TranslationOptions.NoRichText) == 0, set.GatherTransportConnections(), fromPlayer);
         }
         else
         {
@@ -1745,6 +1765,7 @@ public class ChatService
             Color cl2 = textColor;
             Translation tr2 = translation;
             LanguageSet set2 = set.Preserve();
+            WarfarePlayer? fromPlayer2 = fromPlayer;
             UniTask.Create(async () =>
             {
                 await UniTask.SwitchToMainThread();
@@ -1754,12 +1775,12 @@ public class ChatService
                 PooledTransportConnectionList list = set2.GatherTransportConnections();
                 if (OnSendingChatMessage != null)
                 {
-                    RemoveDisallowedFromTcList(ref set2, vl2, cl2, EChatMode.SAY, null, list);
+                    RemoveDisallowedFromTcList(ref set2, vl2, cl2, EChatMode.SAY, null, list, fromPlayer);
                     if (list.Count == 0)
                         return;
                 }
 
-                SendRawMessageBatch(vl2, cl2, EChatMode.SAY, null, (tr2.Options & TranslationOptions.NoRichText) == 0, list);
+                SendRawMessageBatch(vl2, cl2, EChatMode.SAY, null, (tr2.Options & TranslationOptions.NoRichText) == 0, list, fromPlayer2);
             });
         }
     }

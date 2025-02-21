@@ -878,6 +878,9 @@ public sealed class WarfareModule
         bldr.RegisterType<GuidedMissileLaunchTweaks>()
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+        bldr.RegisterType<VehicleRestrictions>()
+            .AsSelf().AsImplementedInterfaces()
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
         bldr.RegisterType<VehicleInteractionTweaks>()
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
