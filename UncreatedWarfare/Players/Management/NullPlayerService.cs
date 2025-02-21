@@ -81,8 +81,8 @@ public class NullPlayerService : IPlayerService
     }
 
     /// <inheritdoc />
-    public void SubscribeToPlayerEvent<TDelegate>(Action<Player, TDelegate> subscribe, TDelegate value) where TDelegate : MulticastDelegate { }
+    public void SubscribeToPlayerEvent<TDelegate>(Action<WarfarePlayer, TDelegate> subscribe, TDelegate value) where TDelegate : MulticastDelegate { }
 
     /// <inheritdoc />
-    public void UnsubscribeFromPlayerEvent<TDelegate>(Action<Player, TDelegate> unsubscribe, TDelegate value) where TDelegate : MulticastDelegate { }
+    public void UnsubscribeFromPlayerEvent<TDelegate>(Action<WarfarePlayer, TDelegate> unsubscribe, TDelegate value) where TDelegate : MulticastDelegate { }
 }

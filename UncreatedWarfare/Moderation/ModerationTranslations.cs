@@ -108,4 +108,8 @@ public class ModerationTranslations : PropertiesTranslationCollection
 
     [TranslationData("Broadcasted when a player is unmuted by something other than a player (like the console or an automated system).", "Offender")]
     public readonly Translation<IPlayer> UnmuteSuccessBroadcastNoActor = new Translation<IPlayer>("<#9999ff><#d8addb>{0}</color> was unmuted.", arg0Fmt: WarfarePlayer.FormatCharacterName);
+
+
+    [TranslationData("Text on the mute notification UI that shows up next to the voice chat icon.")]
+    public readonly Translation MutedUI = new Translation("MUTED", TranslationOptions.TMProUI);
 }

@@ -85,7 +85,8 @@ public class VehicleInfoStore : IHostedService, IDisposable, IUnlockRequirementP
 
             vehicle.Configuration = config;
 
-            config.GetReloadToken().RegisterChangeCallback(ReloadVehicleInfoConfiguration, vehicle);
+            IDisposable changeTokenReg = config.GetReloadToken().RegisterChangeCallback(ReloadVehicleInfoConfiguration, vehicle);
+            _disposableConfigurationRoots.Add(changeTokenReg);
 
             lock (_watchedFiles)
             {

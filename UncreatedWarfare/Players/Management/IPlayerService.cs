@@ -75,10 +75,10 @@ public interface IPlayerService
     /// <summary>
     /// Subscribes to an instance event on a player.
     /// </summary>
-    void SubscribeToPlayerEvent<TDelegate>(Action<Player, TDelegate> subscribe, TDelegate value) where TDelegate : MulticastDelegate;
+    void SubscribeToPlayerEvent<TDelegate>(Action<WarfarePlayer, TDelegate> subscribe, TDelegate value) where TDelegate : MulticastDelegate;
 
     /// <summary>
     /// Unsubscribes from an instance event on a player.
     /// </summary>
-    void UnsubscribeFromPlayerEvent<TDelegate>(Action<Player, TDelegate> unsubscribe, TDelegate value) where TDelegate : MulticastDelegate;
+    void UnsubscribeFromPlayerEvent<TDelegate>(Action<WarfarePlayer, TDelegate> unsubscribe, TDelegate value) where TDelegate : MulticastDelegate;
 }

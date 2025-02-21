@@ -7,7 +7,7 @@ namespace Uncreated.Warfare.Players.Saves;
 
 public class BinaryPlayerSave : ISaveableState
 {
-    private const byte DataVersion = 2;
+    private const byte DataVersion = 3;
 
     private readonly ILogger _logger;
 
@@ -19,6 +19,7 @@ public class BinaryPlayerSave : ISaveableState
     public uint LastGameId { get; set; }
     public bool ShouldRespawnOnJoin { get; set; }
     public bool IMGUI { get; set; }
+    public bool HasSeenVoiceChatNotice { get; set; }
     public bool WasNitroBoosting { get; set; }
 
     /// <summary>
@@ -59,6 +60,7 @@ public class BinaryPlayerSave : ISaveableState
         block.writeBoolean(WasNitroBoosting);
         block.writeBoolean(TrackQuests);
         block.writeBoolean(IsNerd);
+        block.writeBoolean(HasSeenVoiceChatNotice);
 
         Thread.BeginCriticalRegion();
         try
@@ -114,6 +116,8 @@ public class BinaryPlayerSave : ISaveableState
         TrackQuests = block.readBoolean();
         if (v > 1)
             IsNerd = block.readBoolean();
+        if (v > 2)
+            HasSeenVoiceChatNotice = block.readBoolean();
 
         WasReadFromFile = true;
 

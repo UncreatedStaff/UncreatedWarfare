@@ -151,13 +151,12 @@ public class PlayerService : IPlayerService
             IPlayerComponent[] components = AddComponents(player);
 
             WarfarePlayer joined = new WarfarePlayer(this, player, in taskData, taskData.Player, logger, components, _serviceProvider);
+
+            // copy so components dont mess with it
+            PlayerEventSubscription[] subs = _eventSubscriptions.ToArray();
+
             _onlinePlayers.Add(joined);
             _onlinePlayersDictionary.Add(joined, joined);
-
-            foreach (PlayerEventSubscription sub in _eventSubscriptions)
-            {
-                sub.Apply(joined);
-            }
 
             WarfarePlayer[] newList = new WarfarePlayer[_threadsafeList.Length + 1];
             Array.Copy(_threadsafeList, 0, newList, 0, _threadsafeList.Length);
@@ -171,6 +170,11 @@ public class PlayerService : IPlayerService
                 IPlayerComponent component = components[i];
 
                 component.Init(serviceProvider, true);
+            }
+
+            foreach (PlayerEventSubscription sub in subs)
+            {
+                sub.Apply(joined);
             }
 
             return joined;
@@ -382,7 +386,7 @@ public class PlayerService : IPlayerService
     );
 
     /// <inheritdoc />
-    public void SubscribeToPlayerEvent<TDelegate>(Action<Player, TDelegate> subscribe, TDelegate value) where TDelegate : MulticastDelegate
+    public void SubscribeToPlayerEvent<TDelegate>(Action<WarfarePlayer, TDelegate> subscribe, TDelegate value) where TDelegate : MulticastDelegate
     {
         if (subscribe == null)
             throw new ArgumentNullException(nameof(subscribe));
@@ -398,12 +402,12 @@ public class PlayerService : IPlayerService
             _eventSubscriptions.Add(new PlayerEventSubscription<TDelegate>(subscribe, value));
             foreach (WarfarePlayer player in _onlinePlayers)
             {
-                subscribe(player.UnturnedPlayer, value);
+                subscribe(player, value);
             }
         }
         else
         {
-            Action<Player, TDelegate> a1 = subscribe;
+            Action<WarfarePlayer, TDelegate> a1 = subscribe;
             TDelegate v1 = value;
             UniTask.Create(async () =>
             {
@@ -415,7 +419,7 @@ public class PlayerService : IPlayerService
     }
 
     /// <inheritdoc />
-    public void UnsubscribeFromPlayerEvent<TDelegate>(Action<Player, TDelegate> unsubscribe, TDelegate value) where TDelegate : MulticastDelegate
+    public void UnsubscribeFromPlayerEvent<TDelegate>(Action<WarfarePlayer, TDelegate> unsubscribe, TDelegate value) where TDelegate : MulticastDelegate
     {
         if (unsubscribe == null)
             throw new ArgumentNullException(nameof(unsubscribe));
@@ -432,12 +436,12 @@ public class PlayerService : IPlayerService
             _eventSubscriptions.RemoveAt(index);
             foreach (WarfarePlayer player in _onlinePlayers)
             {
-                unsubscribe(player.UnturnedPlayer, value);
+                unsubscribe(player, value);
             }
         }
         else
         {
-            Action<Player, TDelegate> a1 = unsubscribe;
+            Action<WarfarePlayer, TDelegate> a1 = unsubscribe;
             TDelegate v1 = value;
             UniTask.Create(async () =>
             {
@@ -456,11 +460,11 @@ public class PlayerService : IPlayerService
 
     private class PlayerEventSubscription<TDelegate> : PlayerEventSubscription where TDelegate : MulticastDelegate
     {
-        private readonly Action<Player, TDelegate> _subscribeCallback;
+        private readonly Action<WarfarePlayer, TDelegate> _subscribeCallback;
         private readonly TDelegate _handler;
 
         /// <inheritdoc />
-        public PlayerEventSubscription(Action<Player, TDelegate> subscribeCallback, TDelegate handler)
+        public PlayerEventSubscription(Action<WarfarePlayer, TDelegate> subscribeCallback, TDelegate handler)
         {
             _subscribeCallback = subscribeCallback;
             _handler = handler;
@@ -469,7 +473,7 @@ public class PlayerService : IPlayerService
         /// <inheritdoc />
         public override void Apply(WarfarePlayer player)
         {
-            _subscribeCallback(player.UnturnedPlayer, _handler);
+            _subscribeCallback(player, _handler);
         }
 
         /// <inheritdoc />

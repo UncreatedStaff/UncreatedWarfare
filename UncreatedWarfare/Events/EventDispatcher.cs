@@ -140,8 +140,8 @@ public partial class EventDispatcher : IHostedService, IDisposable
         PlayerEquipment.OnUseableChanged_Global += PlayerEquipmentUseableChanged;
         PlayerLife.OnSelectingRespawnPoint += OnPlayerChooseSpawnAfterDeath;
         PlayerLife.OnPreDeath += PlayerLifeOnOnPreDeath;
-        _playerService.SubscribeToPlayerEvent<PlayerEquipRequestHandler>((player, value) => player.equipment.onEquipRequested += value, OnPlayerEquipRequested);
-        _playerService.SubscribeToPlayerEvent<PlayerDequipRequestHandler>((player, value) => player.equipment.onDequipRequested += value, OnPlayerDequipRequested);
+        _playerService.SubscribeToPlayerEvent<PlayerEquipRequestHandler>((player, value) => player.UnturnedPlayer.equipment.onEquipRequested += value, OnPlayerEquipRequested);
+        _playerService.SubscribeToPlayerEvent<PlayerDequipRequestHandler>((player, value) => player.UnturnedPlayer.equipment.onDequipRequested += value, OnPlayerDequipRequested);
 
         /* Projectiles */
         UseableGun.onProjectileSpawned += OnProjectileSpawned;
@@ -195,8 +195,8 @@ public partial class EventDispatcher : IHostedService, IDisposable
         PlayerEquipment.OnUseableChanged_Global -= PlayerEquipmentUseableChanged;
         PlayerLife.OnSelectingRespawnPoint -= OnPlayerChooseSpawnAfterDeath;
         PlayerLife.OnPreDeath -= PlayerLifeOnOnPreDeath;
-        _playerService.UnsubscribeFromPlayerEvent<PlayerEquipRequestHandler>((player, value) => player.equipment.onEquipRequested -= value, OnPlayerEquipRequested);
-        _playerService.UnsubscribeFromPlayerEvent<PlayerDequipRequestHandler>((player, value) => player.equipment.onDequipRequested -= value, OnPlayerDequipRequested);
+        _playerService.UnsubscribeFromPlayerEvent<PlayerEquipRequestHandler>((player, value) => player.UnturnedPlayer.equipment.onEquipRequested -= value, OnPlayerEquipRequested);
+        _playerService.UnsubscribeFromPlayerEvent<PlayerDequipRequestHandler>((player, value) => player.UnturnedPlayer.equipment.onDequipRequested -= value, OnPlayerDequipRequested);
 
         /* Projectiles */
         UseableGun.onProjectileSpawned -= OnProjectileSpawned;

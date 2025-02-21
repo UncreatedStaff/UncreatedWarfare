@@ -20,7 +20,8 @@ internal sealed class VehicleRestrictions :
     IEventListener<VehicleSwapSeatRequested>,
     IEventListener<VehicleDespawned>
 {
-    private const float MaxHeightToExitVehicle = 50f;
+    private const float MaxHeightToExitVehicleDriver = 30f;
+    private const float MaxHeightToExitVehiclePassenger = 50f;
 
     private readonly IAssetLink<ItemGunAsset>[]? _whitelistedGuns;
     private readonly ChatService _chatService;
@@ -63,7 +64,8 @@ internal sealed class VehicleRestrictions :
         if (vehicle == null || !vehicle.asset.engine.IsFlyingEngine())
             return;
 
-        if (TerrainUtility.GetDistanceToGround(e.ExitLocation) <= MaxHeightToExitVehicle)
+        bool isDriving = e.Player.UnturnedPlayer.movement.getSeat() == 0;
+        if (TerrainUtility.GetDistanceToGround(e.ExitLocation) <= (isDriving ? MaxHeightToExitVehicleDriver : MaxHeightToExitVehiclePassenger))
             return;
 
         _chatService.Send(e.Player, _translations.VehicleTooHigh);

@@ -13,12 +13,6 @@ public sealed class PlayersTranslations : PropertiesTranslationCollection
 
     protected override string FileName => "Players";
 
-    [TranslationData("Gets broadcasted when a player connects.", "Connecting player")]
-    public readonly Translation<IPlayer> PlayerConnected = new Translation<IPlayer>("<#e6e3d5>{0} joined the server.");
-
-    [TranslationData("Gets broadcasted when a player disconnects.", "Disconnecting player")]
-    public readonly Translation<IPlayer> PlayerDisconnected = new Translation<IPlayer>("<#e6e3d5>{0} left the server.");
-
     [TranslationData("Kick message for a player that suffers from a rare bug which will cause GameObject.get_transform() to throw a NullReferenceException (not return null). They are kicked if this happens.", "Discord Join Code")]
     public readonly Translation<string> NullTransformKickMessage = new Translation<string>("Your character is bugged, which messes up our zone plugin. Rejoin or contact a Director if this continues. (discord.gg/{0}).");
 
@@ -58,6 +52,7 @@ public sealed class PlayersTranslations : PropertiesTranslationCollection
     [TranslationData("Sent 2 times before a player is kicked for inactivity.", "Time code")]
     public readonly Translation<string> InactivityWarning = new Translation<string>("<#fa9e9e>You will be AFK-Kicked in <#cedcde>{0}</color> if you don't move.</color>");
 
+    // todo
     [TranslationData("Broadcasted when a player is removed from the game by BattlEye.", "Player being kicked.")]
     public readonly Translation<IPlayer> BattlEyeKickBroadcast = new Translation<IPlayer>("<#00ffff><#d8addb>{0}</color> was kicked by <#feed00>BattlEye</color>.", arg0Fmt: WarfarePlayer.FormatPlayerName);
 
