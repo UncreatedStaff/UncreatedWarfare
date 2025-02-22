@@ -1,4 +1,4 @@
-﻿using HarmonyLib;
+using HarmonyLib;
 using JetBrains.Annotations;
 using SDG.Unturned;
 using Steamworks;
@@ -36,7 +36,7 @@ internal static class EventPatches
         PatchUtil.PatchMethod(typeof(VehicleManager).GetMethod("addVehicle", BindingFlags.Instance | BindingFlags.NonPublic), ref _fail,
             postfix: PatchUtil.GetMethodInfo(OnVehicleSpawned));
 
-        PatchUtil.PatchMethod(typeof(InteractableTrap).GetMethod("OnTriggerEnter", BindingFlags.Instance | BindingFlags.NonPublic), ref _fail,
+        PatchUtil.PatchMethod(typeof(InteractableTrap).GetMethod("NotifyTrapEntered", BindingFlags.Instance | BindingFlags.NonPublic), ref _fail,
             prefix: PatchUtil.GetMethodInfo(TrapOnTriggerEnter));
 
         PatchUtil.PatchMethod(typeof(InteractableSign).GetMethod("updateText", BindingFlags.Instance | BindingFlags.Public), ref _fail,
@@ -276,25 +276,28 @@ internal static class EventPatches
             EventDispatcher.InvokeOnVehicleSpawned(__result);
         }
     }
-    // SDG.Unturned.InteractableTrap.OnTriggerEnter
+    // SDG.Unturned.InteractableTrap.NotifyTrapEntered
     /// <summary>
-    /// Prefix of <see cref="InteractableTrap.OnTriggerEnter(Collider)"/> to change explosion behavior.
+    /// Prefix of <see cref="InteractableTrap.NotifyTrapEntered(Collider)"/> to change explosion behavior.
     /// </summary>
     private static bool TrapOnTriggerEnter(Collider other, InteractableTrap __instance, float ___lastActive, float ___setupDelay, ref float ___lastTriggered,
-        float ___cooldown, bool ___isExplosive, float ___playerDamage, float ___zombieDamage, float ___animalDamage, float ___barricadeDamage,
+        float ___cooldown, bool ___isExplosive, bool ___requiresPower, float ___playerDamage, float ___zombieDamage, float ___animalDamage, float ___barricadeDamage,
         float ___structureDamage, float ___vehicleDamage, float ___resourceDamage, float ___objectDamage, float ___range2, float ___explosionLaunchSpeed,
         ushort ___explosion2, bool ___isBroken)
     {
         float time = Time.realtimeSinceStartup;
-        if (other.isTrigger ||                          // collider is another trigger
-            time - ___lastActive < ___setupDelay ||     // in setup phase
-                                                        // collider is part of the trap barricade
-            __instance.transform.parent == other.transform.parent && other.transform.parent != null ||
-            time - ___lastTriggered < ___cooldown ||    // on cooldown
-                                                        // gamemode not active
+        if (other.isTrigger                               // collider is another trigger
+            || time - ___lastActive < ___setupDelay       // in setup phase
+            || (___requiresPower && !__instance.isWired)  // powered
+                                                          // collider is part of the trap barricade
+            || __instance.transform.parent == other.transform.parent && other.transform.parent != null
+            || time - ___lastTriggered < ___cooldown ||   // on cooldown
             Data.Gamemode is null || Data.Gamemode.State != Gamemodes.State.Active
             )
+        {
             return false;
+        }
+
         ___lastTriggered = time;
         BarricadeDrop? barricade = BarricadeManager.FindBarricadeByRootTransform(__instance.gameObject.transform.parent) ?? BarricadeManager.FindBarricadeByRootTransform(__instance.gameObject.transform);
         if (barricade is null) return false;
