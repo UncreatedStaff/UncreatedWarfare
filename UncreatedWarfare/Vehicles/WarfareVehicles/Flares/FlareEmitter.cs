@@ -1,12 +1,9 @@
-using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Vehicles.UI;
-using UnityEngine.Serialization;
 using Random = UnityEngine.Random;
 
 namespace Uncreated.Warfare.Vehicles.WarfareVehicles.Flares;
@@ -32,9 +29,9 @@ public class FlareEmitter : MonoBehaviour
 
     public FlareEmitter Init(WarfareVehicle vehicle, AssetConfiguration assetConfiguration)
     {
-        Vehicle = vehicle;                                           // todo
-        _flareAsset = assetConfiguration.GetAssetLink<VehicleAsset>("llalllalalalala").GetAssetOrFail();
-        _dropFlaresSound = assetConfiguration.GetAssetLink<EffectAsset>("llalllalalalala").GetAssetOrFail();
+        Vehicle = vehicle;
+        _flareAsset = assetConfiguration.GetAssetLink<VehicleAsset>("Vehicles:Countermeasure").GetAssetOrFail();
+        _dropFlaresSound = assetConfiguration.GetAssetLink<EffectAsset>("Effects:CountermeasuresDeploy").GetAssetOrFail();
         ReloadCountermeasures();
         PlayerKeys.PressedPluginKey1 += OnFlareKeyPressed;
         return this;
@@ -54,7 +51,7 @@ public class FlareEmitter : MonoBehaviour
         TotalFlaresLeft = Vehicle.Info.Type switch
         {
             VehicleType.AttackHeli => StartingFlaresAttackHeli,
-            VehicleType.TransportAir => StartingFlaresTransportHeli,
+            VehicleType.TransportHeli => StartingFlaresTransportHeli,
             VehicleType.Jet => StartingFlaresJet,
             _ => TotalFlaresLeft
         };

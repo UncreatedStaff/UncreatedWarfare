@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace Uncreated.Warfare.Interaction.Commands;
 
@@ -132,7 +132,7 @@ public class CommandParser(CommandDispatcher dispatcher)
             }
 
             isEmpty = false;
-            int flagPrefix = flagPrefixes.IndexOf(c);
+            int flagPrefix = args.Length > 1 && char.IsWhiteSpace(args[1]) ? -1 : flagPrefixes.IndexOf(c);
             if (flagPrefix >= 0)
             {
                 int firstNonFlag = 1;

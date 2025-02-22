@@ -1,4 +1,4 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
 using HarmonyLib;
 using System;
@@ -19,7 +19,7 @@ internal sealed class PlayerMovementUpdateVehicle : IHarmonyPatch
 
     void IHarmonyPatch.Patch(ILogger logger, Harmony patcher)
     {
-        _target = typeof(PlayerMovement).GetMethod("updateVehicle", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        _target = typeof(PlayerMovement).GetMethod("ApplyPendingVehicleChange", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
 
         if (_target != null)
         {
@@ -30,7 +30,7 @@ internal sealed class PlayerMovementUpdateVehicle : IHarmonyPatch
         }
 
         logger.LogError("Failed to find method: {0}.",
-            new MethodDefinition("updateVehicle")
+            new MethodDefinition("ApplyPendingVehicleChange")
                 .DeclaredIn<PlayerMovement>(isStatic: false)
                 .WithNoParameters()
                 .ReturningVoid()

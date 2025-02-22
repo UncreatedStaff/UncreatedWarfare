@@ -110,6 +110,10 @@ public class ModerationTranslations : PropertiesTranslationCollection
     public readonly Translation<IPlayer> UnmuteSuccessBroadcastNoActor = new Translation<IPlayer>("<#9999ff><#d8addb>{0}</color> was unmuted.", arg0Fmt: WarfarePlayer.FormatCharacterName);
 
 
+    [TranslationData("Broadcasted when a player is removed from the game by BattlEye.", "Player being kicked.")]
+    public readonly Translation<IPlayer> BattlEyeKickBroadcast = new Translation<IPlayer>("<#00ffff><#d8addb>{0}</color> was kicked by <#feed00>BattlEye</color>.", arg0Fmt: WarfarePlayer.FormatPlayerName);
+
+
     [TranslationData("Text on the mute notification UI that shows up next to the voice chat icon.")]
     public readonly Translation MutedUI = new Translation("MUTED", TranslationOptions.TMProUI);
 }

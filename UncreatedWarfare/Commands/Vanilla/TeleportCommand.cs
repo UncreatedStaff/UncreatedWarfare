@@ -55,7 +55,7 @@ internal sealed class TeleportCommand : IExecutableCommand
             throw Context.Reply(_translations.TeleportSelfLocationSuccess, $"({castPt.x.ToString("0.##", Context.Culture)}, {castPt.y.ToString("0.##", Context.Culture)}, {castPt.z.ToString("0.##", Context.Culture)})");
         }
 
-        const float heightOffset = 0.75f;
+        const float heightOffset = 0.325f;
 
         Vector3 pos;
         switch (Context.ArgumentCount)
@@ -213,7 +213,7 @@ internal sealed class TeleportCommand : IExecutableCommand
                     string p = Context.Get(1)!;
                     if (p.StartsWith("~", StringComparison.Ordinal))
                         y = pos.y + GetOffset(p);
-                    else if (p is [ '-' ])
+                    else if (Context.MatchParameter(1, "-"))
                         y = float.NaN;
                     else
                         throw Context.Reply(_translations.TeleportInvalidCoordinates);
@@ -261,7 +261,7 @@ internal sealed class TeleportCommand : IExecutableCommand
                     string p = Context.Get(2)!;
                     if (p.StartsWith("~", StringComparison.Ordinal))
                         y = pos.y + GetOffset(p);
-                    else if (p is [ '-' ])
+                    else if (Context.MatchParameter(2, "-"))
                         y = float.NaN;
                     else
                         throw Context.Reply(_translations.TeleportInvalidCoordinates);

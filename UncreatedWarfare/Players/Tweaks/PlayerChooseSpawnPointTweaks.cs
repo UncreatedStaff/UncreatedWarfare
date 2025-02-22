@@ -68,12 +68,12 @@ public class PlayerChooseSpawnPointTweaks :
         // respawn in main if the player has a team
         if (e.Player.Team != Team.NoTeam)
         {
-            Zone? main = zones.SearchZone(ZoneType.MainBase, e.Player.Team.Faction);
-            if (main == null) // ignore if we don't know what the player's main base is
+            Zone? warRoom = zones.SearchZone(ZoneType.WarRoom, e.Player.Team.Faction);
+            if (warRoom == null) // ignore if we don't know what the player's main base is
                 return;
 
-            e.SpawnPoint = main.Spawn;
-            e.Yaw = main.SpawnYaw;
+            e.SpawnPoint = warRoom.Spawn;
+            e.Yaw = warRoom.SpawnYaw;
             return;
         }
         else

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -91,7 +91,8 @@ public class PolygonProximity : IPolygonProximity, IFormattable
         // Area of a polygon: https://web.archive.org/web/20100405070507/http://valis.cs.uiuc.edu/~sariel/research/CG/compgeom/msg00831.html
         float ttlArea = 0;
         float sideSurfaceArea = 0;
-        Vector2 max = points[0], min = points[0];
+        ref Vector2 p0 = ref points[0];
+        Vector3 max = new Vector3(p0.x, 0, p0.y), min = new Vector3(p0.x, 0, p0.y);
         for (int i = 0; i < _points.Length; ++i)
         {
             ref Vector2 point1 = ref _points[i];
@@ -112,10 +113,10 @@ public class PolygonProximity : IPolygonProximity, IFormattable
             else if (point1.x < min.x)
                 min.x = point1.x;
 
-            if (point1.y > max.y)
-                max.y = point1.y;
-            else if (point1.y < min.y)
-                min.y = point1.y;
+            if (point1.y > max.z)
+                max.z = point1.y;
+            else if (point1.y < min.z)
+                min.z = point1.y;
         }
 
         ttlArea = Mathf.Abs(ttlArea) / 2f;
@@ -124,9 +125,11 @@ public class PolygonProximity : IPolygonProximity, IFormattable
         surfaceArea = ttlArea * 2 + sideSurfaceArea;
         Area = ttlArea;
 
-        Vector3 extents = new Vector3((max.x - min.x) / 2f, height / 2f, (max.y - min.y) / 2f);
-        _bounds.extents = extents;
-        _bounds.center = new Vector3(min.x + extents.x, centerY, min.y + extents.y);
+        min.y = centerY - height / 2f;
+        max.y = centerY + height / 2f;
+
+        _bounds = default;
+        _bounds.SetMinMax(min, max);
     }
 
     private PolygonProximity(in Bounds bounds, float minHeight, float maxHeight, Vector2[] points, PolygonLineInfo[] lines, ReadOnlyCollection<Vector2>? pointsReadOnly, float area, float volume)
@@ -154,7 +157,7 @@ public class PolygonProximity : IPolygonProximity, IFormattable
         {
             return false;
         }
-
+        
         if (!float.IsNaN(_minHeight) && position.y < _minHeight
          || !float.IsNaN(_maxHeight) && position.y > _maxHeight)
         {

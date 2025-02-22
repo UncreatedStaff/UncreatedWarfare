@@ -231,7 +231,7 @@ public static class BuildableExtensions
                 position,
                 rotation,
                 owner.GetEAccountType() == EAccountType.k_EAccountTypeIndividual ? owner.m_SteamID : 0ul,
-                group.GetEAccountType() == EAccountType.k_EAccountTypeIndividual ? group.m_SteamID : 0ul
+                group.m_SteamID
             );
 
             if (t is null)
@@ -266,7 +266,7 @@ public static class BuildableExtensions
                     position,
                     rotation,
                     owner.GetEAccountType() == EAccountType.k_EAccountTypeIndividual ? owner.m_SteamID : 0ul,
-                    group.GetEAccountType() == EAccountType.k_EAccountTypeIndividual ? group.m_SteamID : 0ul))
+                    group.m_SteamID))
             {
                 throw new Exception("Failed to find added structure. This shouldn't happen.");
             }

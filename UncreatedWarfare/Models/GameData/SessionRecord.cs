@@ -106,5 +106,5 @@ public class SessionRecord
     [NotMapped]
     internal int EventCount;
 
-    public void MarkDirty() => ++EventCount;
+    public void MarkDirty() => Interlocked.Increment(ref EventCount);
 }

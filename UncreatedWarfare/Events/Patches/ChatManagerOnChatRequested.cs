@@ -240,7 +240,7 @@ internal sealed class ChatManagerOnChatRequested : IHarmonyPatch
                         continue;
 
                     list.Add(destPlayer);
-                    chatService.Send(destPlayer, msg, argsRequested.MessageColor, argsRequested.ChatMode, argsRequested.IconUrlOverride, argsRequested.AllowRichText);
+                    chatService.Send(destPlayer, msg, argsRequested.MessageColor, argsRequested.ChatMode, argsRequested.IconUrlOverride, argsRequested.AllowRichText, argsRequested.Player);
                 }
 
                 targetPlayers = _ => list;

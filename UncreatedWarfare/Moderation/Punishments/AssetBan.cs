@@ -81,11 +81,11 @@ public class AssetBan : DurationPunishment
 
         if (input.StartsWith("transport", StringComparison.InvariantCultureIgnoreCase))
         {
-            vehicleTypes = [ VehicleType.TransportAir, VehicleType.TransportGround ];
+            vehicleTypes = [ VehicleType.TransportHeli, VehicleType.TransportGround ];
         }
         else if (input.StartsWith("air", StringComparison.InvariantCultureIgnoreCase))
         {
-            vehicleTypes = [ VehicleType.TransportAir, VehicleType.Jet, VehicleType.AttackHeli ];
+            vehicleTypes = [ VehicleType.TransportHeli, VehicleType.Jet, VehicleType.AttackHeli ];
         }
         else if (input.StartsWith("armor", StringComparison.InvariantCultureIgnoreCase))
         {
@@ -93,7 +93,7 @@ public class AssetBan : DurationPunishment
         }
         else if (input.StartsWith("logi", StringComparison.InvariantCultureIgnoreCase))
         {
-            vehicleTypes = [ VehicleType.LogisticsGround, VehicleType.TransportAir ];
+            vehicleTypes = [ VehicleType.LogisticsGround, VehicleType.TransportHeli ];
         }
         else if (input.StartsWith("assault air", StringComparison.InvariantCultureIgnoreCase)
                || input.StartsWith("assaultair", StringComparison.InvariantCultureIgnoreCase)
@@ -113,10 +113,10 @@ public class AssetBan : DurationPunishment
         List<VehicleType> types = new List<VehicleType>(VehicleTypeFilter);
         if (roundTrip || lang == null || lang.IsDefault)
         {
-            if (Array.IndexOf(VehicleTypeFilter, VehicleType.TransportAir) != -1 && Array.IndexOf(VehicleTypeFilter, VehicleType.Jet) != -1
+            if (Array.IndexOf(VehicleTypeFilter, VehicleType.TransportHeli) != -1 && Array.IndexOf(VehicleTypeFilter, VehicleType.Jet) != -1
                 && Array.IndexOf(VehicleTypeFilter, VehicleType.AttackHeli) != -1)
             {
-                types.Remove(VehicleType.TransportAir);
+                types.Remove(VehicleType.TransportHeli);
                 types.Remove(VehicleType.Jet);
                 types.Remove(VehicleType.AttackHeli);
                 if (sb.Length > 0)
@@ -155,17 +155,17 @@ public class AssetBan : DurationPunishment
                     sb.Append(", ");
                 sb.Append("Emplacements");
             }
-            if (Array.IndexOf(VehicleTypeFilter, VehicleType.LogisticsGround) != -1 && Array.IndexOf(VehicleTypeFilter, VehicleType.TransportAir) != -1)
+            if (Array.IndexOf(VehicleTypeFilter, VehicleType.LogisticsGround) != -1 && Array.IndexOf(VehicleTypeFilter, VehicleType.TransportHeli) != -1)
             {
                 types.Remove(VehicleType.LogisticsGround);
-                types.Remove(VehicleType.TransportAir);
+                types.Remove(VehicleType.TransportHeli);
                 if (sb.Length > 0)
                     sb.Append(", ");
                 sb.Append("Logistics");
             }
-            if (Array.IndexOf(VehicleTypeFilter, VehicleType.TransportAir) != -1 && Array.IndexOf(VehicleTypeFilter, VehicleType.TransportGround) != -1)
+            if (Array.IndexOf(VehicleTypeFilter, VehicleType.TransportHeli) != -1 && Array.IndexOf(VehicleTypeFilter, VehicleType.TransportGround) != -1)
             {
-                types.Remove(VehicleType.TransportAir);
+                types.Remove(VehicleType.TransportHeli);
                 types.Remove(VehicleType.TransportGround);
                 sb.Append("Transports");
             }

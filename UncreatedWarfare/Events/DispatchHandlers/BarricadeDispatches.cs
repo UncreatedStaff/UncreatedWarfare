@@ -114,8 +114,9 @@ partial class EventDispatcher
     {
         BarricadeData data = drop.GetServersideData();
 
+        IBuildable buildable = new BuildableBarricade(drop);
         BuildableContainer buildableContainer = drop.model.GetOrAddComponent<BuildableContainer>();
-        buildableContainer.Init(new BuildableBarricade(drop));
+        buildableContainer.Init(buildable);
 
         WarfarePlayer? owner = new CSteamID(data.owner).GetEAccountType() == EAccountType.k_EAccountTypeIndividual
             ? _playerService.GetOnlinePlayerOrNull(data.owner)
@@ -144,11 +145,11 @@ partial class EventDispatcher
             Owner = owner,
             VehicleRegionIndex = plant,
             RegionPosition = new RegionCoord(x, y),
-            Region = region
+            Region = region,
+            Buildable = buildable
         };
 
         _ = WarfareModule.EventDispatcher.DispatchEventAsync(args, _unloadToken);
-
     }
 
     /// <summary>

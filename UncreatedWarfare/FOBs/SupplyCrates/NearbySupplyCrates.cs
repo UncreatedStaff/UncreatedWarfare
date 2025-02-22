@@ -32,7 +32,7 @@ public class NearbySupplyCrates
         var supplyCrates = fobManager.Entities
             .OfType<SupplyCrate>()
             .Where(e => e.Buildable.Group == team && e.IsWithinRadius(supplyPoint))
-            .ToTrackingList();  
+            .ToTrackingList();
 
         return new NearbySupplyCrates(supplyCrates, supplyPoint, team, fobManager);
     }

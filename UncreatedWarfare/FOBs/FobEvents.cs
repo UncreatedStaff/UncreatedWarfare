@@ -187,7 +187,7 @@ public partial class FobManager :
         }
 
         ShovelableBuildable? shovelable = GetBuildableFobEntity<ShovelableBuildable>(e.Buildable);
-        if (shovelable != null)
+        if (shovelable != null && e.WasSalvaged)
         {
             BunkerFob? nearestFriendlyFob = FindNearestBunkerFob(shovelable.Buildable.Group, shovelable.Buildable.Position);
 
@@ -224,6 +224,7 @@ public partial class FobManager :
         if (supplyCrateInfo != null)
         {
             _ = new FallingBuildable(
+                e.Player,
                 e.DroppedItem,
                 supplyCrateInfo.SupplyItemAsset.GetAssetOrFail(),
                 supplyCrateInfo.PlacementEffect?.GetAsset(),

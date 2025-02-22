@@ -1,4 +1,4 @@
-﻿using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Languages;
 
 namespace Uncreated.Warfare.Vehicles.WarfareVehicles;
@@ -70,7 +70,7 @@ public enum VehicleType
     [Translatable(Languages.Polish, "Helikopter")]
     [Translatable(Languages.ChineseSimplified, "运输直升机")]
     [Translatable("Transport Heli")]
-    TransportAir,
+    TransportHeli,
 
     [Translatable(Languages.Russian, "Верталёт")]
     [Translatable(Languages.Spanish, "Helicoptero")]

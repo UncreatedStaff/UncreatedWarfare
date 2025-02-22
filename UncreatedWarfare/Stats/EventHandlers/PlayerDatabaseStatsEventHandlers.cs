@@ -40,6 +40,9 @@ internal sealed class PlayerDatabaseStatsEventHandlers :
     {
         bool hasInstigator = !e.Medic.Equals(e.Player);
 
+        e.Medic.CurrentSession?.MarkDirty();
+        e.Player.CurrentSession?.MarkDirty();
+
         AidRecord record = new AidRecord
         {
             Steam64 = e.Player.Steam64.m_SteamID,
@@ -50,13 +53,11 @@ internal sealed class PlayerDatabaseStatsEventHandlers :
             Item = new UnturnedAssetReference(e.Item),
             InstigatorPosition = e.Medic.Position,
             Position = e.Player.Position,
-            InstigatorSessionId = e.Medic.CurrentSession.SessionId,
-            SessionId = e.Player.CurrentSession.SessionId,
+            InstigatorSessionId = e.Medic.CurrentSession?.SessionId,
+            SessionId = e.Player.CurrentSession?.SessionId,
             NearestLocation = serviceProvider.GetRequiredService<ZoneStore>().GetClosestLocationName(e.Player.Position),
             Timestamp = DateTimeOffset.UtcNow
         };
-
-        Interlocked.Increment(ref e.Player.CurrentSession.EventCount);
 
         Task.Run(async () =>
         {
@@ -97,6 +98,12 @@ internal sealed class PlayerDatabaseStatsEventHandlers :
 
         bool hasKiller = !isSuicide && args.Instigator.GetEAccountType() == EAccountType.k_EAccountTypeIndividual;
         bool hasThirdParty = args.ThirdPartyId.HasValue && args.ThirdPartyId.Value.GetEAccountType() == EAccountType.k_EAccountTypeIndividual;
+
+        args.Session?.MarkDirty();
+        if (hasKiller)
+            args.KillerSession?.MarkDirty();
+        if (hasThirdParty)
+            args.ThirdPartySession?.MarkDirty();
 
         DamageRecord record = new DamageRecord
         {
@@ -150,6 +157,12 @@ internal sealed class PlayerDatabaseStatsEventHandlers :
 
         bool hasKiller = !args.WasSuicide && args.Instigator.GetEAccountType() == EAccountType.k_EAccountTypeIndividual;
         bool hasThirdParty = args.ThirdPartyId.HasValue && args.ThirdPartyId.Value.GetEAccountType() == EAccountType.k_EAccountTypeIndividual;
+
+        args.Session?.MarkDirty();
+        if (hasKiller)
+            args.KillerSession?.MarkDirty();
+        if (hasThirdParty)
+            args.ThirdPartySession?.MarkDirty();
 
         DeathRecord record = new DeathRecord
         {
@@ -207,12 +220,14 @@ internal sealed class PlayerDatabaseStatsEventHandlers :
 
         WarfarePlayer? creator = _playerService.GetOnlinePlayerOrNull(normalFob.Creator);
 
+        creator?.CurrentSession?.MarkDirty();
+
         FobRecord record = new FobRecord
         {
             Steam64 = normalFob.Creator.m_SteamID,
             FobName = normalFob.Name,
             FobType = FobType.BunkerFob,
-            SessionId = creator?.CurrentSession.SessionId,
+            SessionId = creator?.CurrentSession?.SessionId,
             
             Position = normalFob.Position,
             FobAngle = normalFob.Buildable.Rotation.eulerAngles,
@@ -260,6 +275,8 @@ internal sealed class PlayerDatabaseStatsEventHandlers :
 
             record.InstigatorSessionId = e.Event.Instigator?.CurrentSession.SessionId;
             record.InstigatorPosition = e.Event.Instigator?.Position;
+
+            e.Event.Instigator?.CurrentSession?.MarkDirty();
         }
 
         record.DestroyedAt = DateTimeOffset.UtcNow;

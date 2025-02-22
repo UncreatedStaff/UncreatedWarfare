@@ -131,7 +131,8 @@ public class WarfareVehicleInfo : IEquatable<WarfareVehicleInfo>, ITranslationAr
         Trunk = other.Trunk;
         // todo Delays = other.Delays;
 
-        if (DependantInfo != null && DependantInfo.TryGetTarget(out WarfareVehicleInfo? info))
+        WeakReference<WarfareVehicleInfo>? dependent = DependantInfo;
+        if (dependent != null && dependent.TryGetTarget(out WarfareVehicleInfo? info))
         {
             info.UpdateFrom(other);
         }
