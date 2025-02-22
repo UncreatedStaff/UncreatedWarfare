@@ -59,13 +59,14 @@ public class SquadSignInstanceProvider : ISignInstanceProvider
 
         StringBuilder.Clear();
         StringBuilder
-            .AppendColorized($"<b>{SquadNumber.ToString(culture)}", "#9effc6")
+            .AppendColorized($"<b>SQUAD {SquadNumber.ToString(culture)}", "#9effc6")
             .Append("  ")
-            .AppendColorized($"{squad.Name}</b>", "#ffffff")
+            .AppendColorized($"({squad.Members.Count}/{Squad.MaxMembers})", "#ffffff")
             .AppendLine()
-            .AppendColorized($"{squad.Members.Count}/{Squad.MaxMembers}", "#8b8b8b")
+            .AppendColorized($"{squad.Name}</b>", "#8b8b8b")
             .AppendLine()
-            .AppendColorized(squad.Leader.Names.CharacterName, "#8b8b8b");
+            .AppendLine()
+            .AppendColorized(squad.Leader.Names.PlayerName, "#3e3e3e");
         
         return StringBuilder.ToString();
     }
