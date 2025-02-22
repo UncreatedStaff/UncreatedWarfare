@@ -34,7 +34,7 @@ public partial class FobManager : ILayoutHostedService
     /// <summary>
     /// Items placed by players that aren't linked to a specific FOB.
     /// </summary>
-    public IReadOnlyList<IFobEntity> Entities => _entities.AsReadOnly();
+    public IReadOnlyList<IFobEntity> Entities { get; }
 
     /// <summary>
     /// List of all FOBs in the world.
@@ -51,6 +51,7 @@ public partial class FobManager : ILayoutHostedService
         _logger = logger;
         _fobs = new TrackingList<IFob>(24);
         _entities = new TrackingList<IFobEntity>(32);
+        Entities = _entities.AsReadOnly();
 
         Fobs = new ReadOnlyTrackingList<IFob>(_fobs);
     }

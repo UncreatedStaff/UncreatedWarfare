@@ -1,4 +1,4 @@
-﻿#if DEBUG
+#if DEBUG
 #define SPOTTER_DEBUG_LOG
 #endif
 using System;
@@ -52,7 +52,7 @@ public class SpottableObjectComponent : MonoBehaviour, IManualOnDestroy
         new SpotterTypeStats(SpottedType.Armor,        VehicleType.APC,             30f,  0.5f, "Effects:Spotted:APC",           Vector3.zero),
         new SpotterTypeStats(SpottedType.Armor,        VehicleType.IFV,             30f,  0.5f, "Effects:Spotted:IFV",           Vector3.zero),
         new SpotterTypeStats(SpottedType.Armor,        VehicleType.MBT,             30f,  0.5f, "Effects:Spotted:MBT",           Vector3.zero),
-        new SpotterTypeStats(SpottedType.Aircraft,     VehicleType.TransportAir,    15f,  0.5f, "Effects:Spotted:TransportHeli", Vector3.zero),
+        new SpotterTypeStats(SpottedType.Aircraft,     VehicleType.TransportHeli,    15f,  0.5f, "Effects:Spotted:TransportHeli", Vector3.zero),
         new SpotterTypeStats(SpottedType.Aircraft,     VehicleType.AttackHeli,      15f,  0.5f, "Effects:Spotted:AttackHeli",    Vector3.zero),
         new SpotterTypeStats(SpottedType.Aircraft,     VehicleType.Jet,             10f,  0.5f, "Effects:Spotted:Jet",           Vector3.zero),
         new SpotterTypeStats(SpottedType.Emplacement,  VehicleType.AA,              240f, 1.0f, "Effects:Spotted:AA",            Vector3.zero),

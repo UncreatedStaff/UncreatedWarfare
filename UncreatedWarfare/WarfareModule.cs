@@ -881,6 +881,8 @@ public sealed class WarfareModule
         bldr.RegisterType<VehicleRestrictions>()
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+        bldr.RegisterType<BattlEyeBanEventHandler>()
+            .AsSelf().AsImplementedInterfaces();
         bldr.RegisterType<VehicleInteractionTweaks>()
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);

@@ -1,7 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
-using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.Fobs.SupplyCrates;
@@ -16,15 +15,13 @@ namespace Uncreated.Warfare.FOBs.SupplyCrates.VehicleResupply;
 public class VehicleSupplyCrate : FallingItem
 {
     private static readonly Collider[] TempHitColliders = new Collider[4];
-    private readonly WarfarePlayer _resupplier;
     private readonly EffectAsset _resupplyEffect;
     private readonly FobManager _fobManager;
     private readonly AmmoTranslations _translations;
 
     public VehicleSupplyCrate(ItemData itemData, Vector3 originalDropPosition, WarfarePlayer resupplier, EffectAsset resupplyEffect, IServiceProvider serviceProvider)
-        : base(itemData, originalDropPosition)
+        : base(resupplier, itemData, originalDropPosition)
     {
-        _resupplier = resupplier;
         _resupplyEffect = resupplyEffect;
         _fobManager = serviceProvider.GetRequiredService<FobManager>();
         _translations = serviceProvider.GetRequiredService<TranslationInjection<AmmoTranslations>>().Value;
@@ -46,17 +43,17 @@ public class VehicleSupplyCrate : FallingItem
                 continue;
 
             // todo: do we need to give back the item if it fails?
-            ResourceFob? nearestFob = _fobManager.FindNearestResourceFob(_resupplier.Team, FinalRestPosition);
+            ResourceFob? nearestFob = _fobManager.FindNearestResourceFob(Player.Team, FinalRestPosition);
             if (nearestFob == null)
             {
-                _resupplier.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastAmmoNotNearFob.Translate(_resupplier)));
+                Player.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastAmmoNotNearFob.Translate(Player)));
                 return;
             }
 
             int requiredAmmoCount = warfareVehicleComponent.WarfareVehicle.Info.Rearm.AmmoConsumed;
             if (nearestFob.AmmoCount < warfareVehicleComponent.WarfareVehicle.Info.Rearm.AmmoConsumed)
             {
-                _resupplier.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastInsufficientAmmo.Translate(nearestFob.AmmoCount, requiredAmmoCount, _resupplier)));
+                Player.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastInsufficientAmmo.Translate(nearestFob.AmmoCount, requiredAmmoCount, Player)));
                 return;
             }
 
@@ -88,6 +85,6 @@ public class VehicleSupplyCrate : FallingItem
             reliable = true
         });
         
-        _resupplier.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastLoseAmmo.Translate(ammoToConsume, _resupplier)));
+        Player.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastLoseAmmo.Translate(ammoToConsume, Player)));
     }
 }

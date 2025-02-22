@@ -8,6 +8,7 @@ using Uncreated.Framework.UI.Reflection;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Fobs;
+using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
@@ -21,6 +22,7 @@ public class FobHUD :
     IEventListener<FobRegistered>,
     IEventListener<FobDeregistered>,
     IEventListener<FobBuilt>,
+    IEventListener<PlayerTeamChanged>,
     IEventListener<FobDestroyed>,
     IEventListener<FobProxyChanged>,
     IEventListener<FobSuppliesChanged>
@@ -30,7 +32,7 @@ public class FobHUD :
     public FobElement[] Fobs { get; } = ElementPatterns.CreateArray<FobElement>("Fob_{0}/Fob{1}_{0}", 1, to: 12);
 
     public FobHUD(IServiceProvider serviceProvider, AssetConfiguration assetConfig, ILoggerFactory loggerFactory)
-        : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:FobHUD"), /* todo turn off */ debugLogging: true, staticKey: true)
+        : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:FobHUD"), debugLogging: false, staticKey: true)
     {
         _fobManager = serviceProvider.GetRequiredService<FobManager>();
         _playerService = serviceProvider.GetRequiredService<IPlayerService>();
@@ -42,6 +44,7 @@ public class FobHUD :
             UpdateForPlayer(player);
         }
     }
+
     private void UpdateForPlayer(WarfarePlayer player)
     {
         List<IFob> visibleFobs = _fobManager.Fobs.Where(f => f.IsVibileToPlayer(player)).ToList();
@@ -76,6 +79,11 @@ public class FobHUD :
                 element.AmmoCount.Hide(player);
             }
         }
+    }
+
+    public void HandleEvent(PlayerTeamChanged e, IServiceProvider serviceProvider)
+    {
+        UpdateForPlayer(e.Player);
     }
 
     public void HandleEvent(FobRegistered e, IServiceProvider serviceProvider)

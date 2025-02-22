@@ -327,7 +327,7 @@ public class DutyService : IAsyncEventListener<PlayerLeft>
 
     async UniTask IAsyncEventListener<PlayerLeft>.HandleEventAsync(PlayerLeft e, IServiceProvider serviceProvider, CancellationToken token)
     {
-        if (await SetDutyStateAsync(e.Steam64, false, token).ConfigureAwait(false))
+        if (await SetDutyStateAsync(e.Steam64, false, CancellationToken.None).ConfigureAwait(false))
         {
             _chatService.Broadcast(_translations.TranslationService.SetOf.AllPlayers(), _translations.DutyOffBroadcast, e.Player);
             _logger.LogInformation("{0} ({1}) went off duty from disconnecting.", e.Player.Names.GetDisplayNameOrPlayerName(), e.Player.Steam64);

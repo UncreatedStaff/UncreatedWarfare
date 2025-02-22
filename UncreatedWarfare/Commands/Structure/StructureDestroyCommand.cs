@@ -1,3 +1,4 @@
+using System;
 using System.Globalization;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Events;
@@ -160,6 +161,8 @@ internal sealed class StructureDestroyCommand : IExecutableCommand
                 }
 
                 BarricadeManager.destroyBarricade(args.Barricade, x, y, plant);
+                Context.Reply(_translations.StructureDestroyed, bDrop.asset);
+                RemoveBuiladble(null, bDrop);
             });
         }
         finally
@@ -173,6 +176,7 @@ internal sealed class StructureDestroyCommand : IExecutableCommand
 
         BarricadeManager.destroyBarricade(bDrop, x, y, ushort.MaxValue);
         Context.Reply(_translations.StructureDestroyed, bDrop.asset);
+        RemoveBuiladble(null, bDrop);
     }
 
     private async UniTask DestroyStructure(StructureDrop sDrop, WarfarePlayer player, CancellationToken token = default)
@@ -236,6 +240,7 @@ internal sealed class StructureDestroyCommand : IExecutableCommand
 
                 StructureManager.destroyStructure(sDrop, x, y, Vector3.Reflect(sDrop.GetServersideData().point - player.Position, Vector3.up).normalized * 4);
                 Context.Reply(_translations.StructureDestroyed, sDrop.asset);
+                RemoveBuiladble(sDrop, null);
             });
         }
         finally
@@ -251,5 +256,28 @@ internal sealed class StructureDestroyCommand : IExecutableCommand
 
         StructureManager.destroyStructure(sDrop, x, y, Vector3.Reflect(sDrop.GetServersideData().point - player.Position, Vector3.up).normalized * 4);
         Context.Reply(_translations.StructureDestroyed, sDrop.asset);
+        RemoveBuiladble(sDrop, null);
+    }
+
+    private void RemoveBuiladble(StructureDrop? structure, BarricadeDrop? barricade)
+    {
+        _ = Task.Run(async () =>
+        {
+            bool success;
+            try
+            {
+                success = structure != null
+                    ? await _buildableSaver.DiscardStructureAsync(structure.instanceID, CancellationToken.None)
+                    : await _buildableSaver.DiscardBarricadeAsync(barricade!.instanceID, CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                Context.Logger.LogError(ex, "Error unsaving buildable.");
+                return;
+            }
+
+            if (success)
+                Context.Reply(_translations.StructureUnsaved, (ItemPlaceableAsset?)structure?.asset ?? barricade!.asset);
+        }, CancellationToken.None);
     }
 }

@@ -9,8 +9,6 @@ namespace Uncreated.Warfare.Events.Models.Barricades;
 /// </summary>
 public class BarricadePlaced : IBuildablePlacedEvent
 {
-    protected IBuildable? BuildableCache;
-
     /// <summary>
     /// The owner of the barricade, if they're online.
     /// </summary>
@@ -60,7 +58,7 @@ public class BarricadePlaced : IBuildablePlacedEvent
     /// <summary>
     /// Abstracted <see cref="IBuildable"/> of the barricade.
     /// </summary>
-    public IBuildable Buildable => BuildableCache ??= new BuildableBarricade(Barricade);
+    public required IBuildable Buildable { get; init; }
 
     /// <summary>
     /// If this barricade is being placed on a vehicle.

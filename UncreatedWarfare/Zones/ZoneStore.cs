@@ -371,7 +371,7 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService
     }
 
     /// <summary>
-    /// Find the first zone matching the given zone type and faction.
+    /// Check if a point is inside at least one zone matching the given type and faction.
     /// </summary>
     public bool IsInsideZone(Vector3 point, ZoneType type, FactionInfo? faction)
     {
@@ -381,7 +381,7 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService
     }
 
     /// <summary>
-    /// Find the first zone matching the given zone type and faction.
+    /// Check if a point is inside at least one zone matching the given type and faction.
     /// </summary>
     public bool IsInsideZone(Vector2 point, ZoneType type, FactionInfo? faction)
     {

@@ -52,10 +52,6 @@ public sealed class PlayersTranslations : PropertiesTranslationCollection
     [TranslationData("Sent 2 times before a player is kicked for inactivity.", "Time code")]
     public readonly Translation<string> InactivityWarning = new Translation<string>("<#fa9e9e>You will be AFK-Kicked in <#cedcde>{0}</color> if you don't move.</color>");
 
-    // todo
-    [TranslationData("Broadcasted when a player is removed from the game by BattlEye.", "Player being kicked.")]
-    public readonly Translation<IPlayer> BattlEyeKickBroadcast = new Translation<IPlayer>("<#00ffff><#d8addb>{0}</color> was kicked by <#feed00>BattlEye</color>.", arg0Fmt: WarfarePlayer.FormatPlayerName);
-
     [TranslationData("Sent when an unauthorized player attempts to edit a sign.")]
     public readonly Translation ProhibitedSignEditing = new Translation("<#ff8c69>You are not allowed to edit that sign.");
 

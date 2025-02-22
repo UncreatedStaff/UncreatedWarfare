@@ -19,9 +19,13 @@ namespace Uncreated.Warfare.Tweaks;
 public class PlayerJumpComponent : IPlayerComponent, IAsyncEventListener<PlayerPunched>
 {
     public static readonly PermissionLeaf AutoJumpPermission = new PermissionLeaf("warfare::commands.teleport");
+
+#nullable disable
     private ChatService _chatService;
     public bool IsActive { get; set; }
     public WarfarePlayer Player { get; private set; }
+#nullable restore
+
     public void Init(IServiceProvider serviceProvider, bool isOnJoin)
     {
         _chatService = serviceProvider.GetRequiredService<ChatService>();
@@ -65,16 +69,37 @@ public class PlayerJumpComponent : IPlayerComponent, IAsyncEventListener<PlayerP
 
         Vector3 castPt = default;
         Transform aim = Player.UnturnedPlayer.look.aim;
+        bool isDown = false;
         if (raycast)
         {
             distance = 10f;
-            raycast = Physics.Raycast(new Ray(aim.position, aim.forward), out RaycastHit hit,
-                1024, RayMasks.BLOCK_COLLISION, QueryTriggerInteraction.Ignore);
+            raycast = Physics.Raycast(new Ray(aim.position, aim.forward), out RaycastHit hit, 1024, RayMasks.BLOCK_COLLISION & ~RayMasks.CLIP, QueryTriggerInteraction.Ignore);
             if (raycast)
                 castPt = hit.point;
+
+            // basically is looking down, teleport down through a roof or floor
+            if (raycast && Math.Abs(castPt.x - aim.position.x) < 3 && Math.Abs(castPt.z - aim.position.z) < 3 && castPt.y < aim.position.y)
+            {
+                isDown = true;
+            }
         }
+
         if (!raycast)
             castPt = Player.Position + aim.forward * distance;
+
+        if (isDown)
+        {
+            float terrainHeight = LevelGround.getHeight(castPt);
+            for (float y = castPt.y - 1f; y > terrainHeight; --y)
+            {
+                if (!PlayerStance.hasStandingHeightClearanceAtPosition(castPt with { y = y }))
+                    continue;
+
+                castPt.y = y;
+                Player.UnturnedPlayer.teleportToLocationUnsafe(castPt, Player.Yaw);
+                break;
+            }
+        }
 
         int c = 0;
         while (!PlayerStance.hasStandingHeightClearanceAtPosition(castPt) && ++c < 12)
