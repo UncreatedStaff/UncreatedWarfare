@@ -11,7 +11,10 @@ using Uncreated.Warfare.Players;
 namespace Uncreated.Warfare.Squads.UI;
 
 [UnturnedUI(BasePath = "PlayerSquad")]
-public class PlayerSquadHUD : UnturnedUI, IEventListener<SquadMemberJoined>, IEventListener<SquadMemberLeft>
+public class PlayerSquadHUD : UnturnedUI,
+    IEventListener<SquadMemberJoined>,
+    IEventListener<SquadMemberLeft>,
+    IEventListener<SquadLeaderUpdated>
 {
     public UnturnedLabel SquadName { get; } = new UnturnedLabel("PlayerSquadName");
     public UnturnedLabel SquadNumber { get; } = new UnturnedLabel("PlayerSquadName/PlayerSquadNumber");
@@ -27,6 +30,10 @@ public class PlayerSquadHUD : UnturnedUI, IEventListener<SquadMemberJoined>, IEv
     public void HandleEvent(SquadMemberLeft e, IServiceProvider serviceProvider)
     {
         ClearFromPlayer(e.Player.Connection);
+        UpdateForSquad(e.Squad);
+    }
+    public void HandleEvent(SquadLeaderUpdated e, IServiceProvider serviceProvider)
+    {
         UpdateForSquad(e.Squad);
     }
     private void UpdateForSquad(Squad squad)

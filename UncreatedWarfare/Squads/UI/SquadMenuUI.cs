@@ -23,7 +23,8 @@ internal class SquadMenuUI :
     IEventListener<SquadCreated>,
     IEventListener<SquadDisbanded>,
     IEventListener<SquadMemberJoined>,
-    IEventListener<SquadMemberLeft>
+    IEventListener<SquadMemberLeft>,
+    IEventListener<SquadLeaderUpdated>
 {
     private readonly SquadManager _squadManager;
     private readonly IPlayerService _playerService;
@@ -95,6 +96,10 @@ internal class SquadMenuUI :
     }
 
     public void HandleEvent(SquadMemberLeft e, IServiceProvider serviceProvider)
+    {
+        UpdateForViewingPlayers(e.Squad.Team);
+    }
+    public void HandleEvent(SquadLeaderUpdated e, IServiceProvider serviceProvider)
     {
         UpdateForViewingPlayers(e.Squad.Team);
     }

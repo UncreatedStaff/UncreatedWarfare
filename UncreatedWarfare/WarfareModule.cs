@@ -69,6 +69,7 @@ using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Sessions;
 using Uncreated.Warfare.Signs;
 using Uncreated.Warfare.Squads;
+using Uncreated.Warfare.Squads.Signs;
 using Uncreated.Warfare.Squads.Spotted;
 using Uncreated.Warfare.Squads.UI;
 using Uncreated.Warfare.Stats;
@@ -852,11 +853,17 @@ public sealed class WarfareModule
 
         bldr.RegisterType<SquadConfiguration>()
             .SingleInstance();
+        
+        bldr.RegisterType<SquadSignEvents>()
+            .AsSelf().AsImplementedInterfaces()
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
 
+        // Spotting
         bldr.RegisterType<SpottedService>()
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
 
+        // Projectiles
         bldr.RegisterType<ProjectileSolver>()
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();

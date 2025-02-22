@@ -65,7 +65,7 @@ public class Squad : ITranslationArgument
         player.Component<SquadPlayerComponent>().ClearSquad();
         _ = WarfareModule.EventDispatcher.DispatchEventAsync(new SquadMemberLeft { Squad = this, Player = player });
 
-        // leader removed
+        // if the squad leader left the squad
         if (index == 0 && _members.Count > 0)
         {
             _ = WarfareModule.EventDispatcher.DispatchEventAsync(new SquadLeaderUpdated { Squad = this, OldLeader = oldLeader, NewLeader = player });

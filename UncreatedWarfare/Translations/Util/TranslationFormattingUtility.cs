@@ -36,6 +36,17 @@ public static class TranslationFormattingUtility
 
         return stringBuilder;
     }
+    
+    /// <summary>
+    /// Adds the correct color tags around text for TMPro or Unity rich text and appends it to a <see cref="StringBuilder"/>.
+    /// </summary>
+    /// <param name="imgui">Use Unity rich text instead of TMPro.</param>
+    public static StringBuilder AppendColorized(this StringBuilder stringBuilder, ReadOnlySpan<char> text, string hexColor, bool imgui = false, bool end = true)
+    {
+        HexStringHelper.TryParseHexColor32(hexColor, out Color32 color);
+        
+        return AppendColorized(stringBuilder, text, color, imgui, end);
+    }
 
     /// <summary>
     /// Adds the correct color tags around text for TMPro or Unity rich text.
