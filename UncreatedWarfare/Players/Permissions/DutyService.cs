@@ -12,9 +12,11 @@ using Uncreated.Warfare.Exceptions;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Signs;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Tweaks;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Players.Permissions;
 
@@ -24,6 +26,7 @@ public class DutyService : IAsyncEventListener<PlayerLeft>
     private readonly ChatService _chatService;
     private readonly ILogger<DutyService> _logger;
     private readonly IPlayerService _playerService;
+    private readonly DutyUI _dutyUi;
     private readonly UserPermissionStore _permissionStore;
     private readonly DutyCommandTranslations _translations;
 
@@ -45,13 +48,15 @@ public class DutyService : IAsyncEventListener<PlayerLeft>
         ILogger<DutyService> logger,
         UserPermissionStore permissionStore,
         IConfiguration configuration,
-        IPlayerService playerService)
+        IPlayerService playerService,
+        DutyUI dutyUi)
     {
         _signs = signs;
         _chatService = chatService;
         _logger = logger;
         _permissionStore = permissionStore;
         _playerService = playerService;
+        _dutyUi = dutyUi;
         _translations = translations.Value;
 
         IConfigurationSection permSection = configuration.GetSection("permissions");
@@ -233,6 +238,13 @@ public class DutyService : IAsyncEventListener<PlayerLeft>
             player.UnturnedPlayer.look.sendWorkzoneAllowed(workzone);
         }
 
+        ItemJar? heldItem = player.GetHeldItem(out _);
+        if (heldItem != null && heldItem.GetAsset() is ItemGunAsset gun && (EFiremode)player.UnturnedPlayer.equipment.state[11] == EFiremode.SAFETY)
+        {
+            player.UnturnedPlayer.equipment.state[11] = (byte)ItemUtility.GetDefaultFireMode(gun);
+            player.UnturnedPlayer.equipment.sendUpdateState();
+        }
+
         if (!player.IsOnDuty)
         {
             _chatService.Send(player, _translations.DutyOnFeedback);
@@ -251,6 +263,8 @@ public class DutyService : IAsyncEventListener<PlayerLeft>
         }
 
         player.UpdateDutyState(true, level);
+
+        _dutyUi.SendToPlayer(player);
 
         try
         {
@@ -288,6 +302,18 @@ public class DutyService : IAsyncEventListener<PlayerLeft>
                 if (player.UnturnedPlayer.movement.pluginJumpMultiplier != 1f)
                     player.UnturnedPlayer.movement.sendPluginJumpMultiplier(1f);
             }
+
+            ItemJar? heldItem = player.GetHeldItem(out _);
+            ItemAsset? heldAsset = heldItem?.GetAsset();
+            if (heldAsset is ItemGunAsset && (EFiremode)player.UnturnedPlayer.equipment.state[11] != EFiremode.SAFETY)
+            {
+                player.UnturnedPlayer.equipment.state[11] = (byte)EFiremode.SAFETY;
+                player.UnturnedPlayer.equipment.sendUpdateState();
+            }
+            else if (heldAsset is ItemThrowableAsset)
+            {
+                player.UnturnedPlayer.equipment.ServerEquip(byte.MaxValue, 0, 0);
+            }
         }
 
         player.Component<PlayerJumpComponent>().IsActive = false;
@@ -314,6 +340,8 @@ public class DutyService : IAsyncEventListener<PlayerLeft>
         }
 
         player.UpdateDutyState(false, level);
+
+        _dutyUi.ClearFromPlayer(player.Connection);
 
         try
         {

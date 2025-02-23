@@ -57,7 +57,10 @@ internal sealed class VoiceChatRestrictionsTweak : IHostedService
 
             // clear UI after one second of not talking
             if (_mutedUi.TryGetId(out ushort id))
+            {
+                Console.WriteLine("hide muted ui (timeout)");
                 EffectManager.askEffectClearByID(id, player.Connection);
+            }
 
             component.LastMuteUI = -1f;
         }
@@ -65,12 +68,19 @@ internal sealed class VoiceChatRestrictionsTweak : IHostedService
 
     private void PlayerVoiceOnRelayVoice(PlayerVoice speaker, bool wantsToUseWalkieTalkie, ref bool shouldAllow, ref bool shouldBroadcastOverRadio, ref PlayerVoice.RelayVoiceCullingHandler cullingHandler)
     {
-        if (!shouldAllow)
-            return;
-
+        // todo: if nelson changes the voice thing use PlayerVoice.customAllowTalking
         WarfarePlayer player = _playerService.GetOnlinePlayer(speaker);
         PlayerModerationCacheComponent comp = player.Component<PlayerModerationCacheComponent>();
-        bool isMuted = comp.VoiceMuteExpiryTime > DateTime.UtcNow;
+
+        bool isMuted;
+        if (!shouldAllow)
+        {
+            isMuted = true;
+        }
+        else
+        {
+            isMuted = comp.VoiceMuteExpiryTime > DateTime.UtcNow;
+        }
 
         shouldAllow = isMuted;
 
@@ -80,14 +90,20 @@ internal sealed class VoiceChatRestrictionsTweak : IHostedService
         if (isMuted)
         {
             if (_mutedUi.TryGetId(out ushort id))
+            {
+                Console.WriteLine("show muted ui");
                 EffectManager.sendUIEffect(id, -1, speaker.channel.owner.transportConnection, reliable: true, _translations.MutedUI.Translate(player));
+            }
 
             comp.LastMuteUI = Time.realtimeSinceStartup;
         }
         else
         {
             if (_mutedUi.TryGetId(out ushort id))
+            {
+                Console.WriteLine("hide muted ui");
                 EffectManager.askEffectClearByID(id, speaker.channel.owner.transportConnection);
+            }
 
             comp.LastMuteUI = -1f;
         }

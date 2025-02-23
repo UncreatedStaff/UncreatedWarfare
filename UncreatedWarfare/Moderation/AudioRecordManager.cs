@@ -1,4 +1,5 @@
-﻿using HarmonyLib;
+using DanielWillett.ReflectionTools;
+using HarmonyLib;
 using Microsoft.Extensions.Configuration;
 using SDG.NetPak;
 using System;
@@ -9,8 +10,12 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Text.Json;
 using Uncreated.Warfare.Networking;
+using Uncreated.Warfare.Patches;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Players.UI;
+using Uncreated.Warfare.Services;
+using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 using UnityEngine.Networking;
 
@@ -20,10 +25,12 @@ namespace Uncreated.Warfare.Moderation;
 /// Uses Senior S's audio converter web API for converting Steam Voice to .wav files.
 /// </summary>
 /// <remarks><see href="https://github.com/Senior-S/SVD-Example-Use/"/></remarks>
-[HarmonyPatch]
-public class AudioRecordManager
+[Priority(1)] // before VoiceChatRestrictionsTweak
+public class AudioRecordManager : IHostedService
 {
     private readonly ILogger<AudioRecordManager> _logger;
+    private readonly IPlayerService _playerService;
+    private readonly ModerationTranslations _moderationTranslations;
     private DateTime _lastAuthenticate = DateTime.MinValue;
     private string? _tokenStr;
 
@@ -33,9 +40,16 @@ public class AudioRecordManager
 
     public int VoiceBufferSize { get; }
 
-    public AudioRecordManager(IConfiguration systemConfiguration, ILogger<AudioRecordManager> logger)
+    public AudioRecordManager(
+        IConfiguration systemConfiguration,
+        ILogger<AudioRecordManager> logger,
+        HarmonyPatchService patchService,
+        IPlayerService playerService,
+        TranslationInjection<ModerationTranslations> moderationTranslations)
     {
         _logger = logger;
+        _playerService = playerService;
+        _moderationTranslations = moderationTranslations.Value;
         IConfigurationSection section = systemConfiguration.GetSection("audio_recording");
         string? baseUriStr = section["base_uri"];
         string? username = section["username"];
@@ -55,6 +69,69 @@ public class AudioRecordManager
         _decodeUri = new Uri(baseUri, "decoder/form");
 
         VoiceBufferSize = section.GetValue<int>("buffer_size");
+
+        try
+        {
+            patchService.Patcher.CreateClassProcessor(typeof(AudioRecordManager)).Patch();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to parse audio listener.");
+        }
+
+    }
+
+    UniTask IHostedService.StartAsync(CancellationToken token)
+    {
+        Console.WriteLine("relaying voice subbed");
+        PlayerVoice.onRelayVoice += OnRelayVoice;
+        return UniTask.CompletedTask;
+    }
+
+    UniTask IHostedService.StopAsync(CancellationToken token)
+    {
+        PlayerVoice.onRelayVoice -= OnRelayVoice;
+        return UniTask.CompletedTask;
+    }
+    
+    private void OnRelayVoice(PlayerVoice speaker, bool wantsToUseWalkieTalkie, ref bool shouldAllow, ref bool shouldBroadcastOverRadio, ref PlayerVoice.RelayVoiceCullingHandler cullingHandler)
+    {
+        WarfarePlayer player = _playerService.GetOnlinePlayer(speaker);
+        if (player.Save.HasSeenVoiceChatNotice)
+            return;
+        
+        shouldAllow = false;
+        ToastManager toastManager = player.Component<ToastManager>();
+        if (player.Component<AudioRecordPlayerComponent>().HasPressedDeny
+            || toastManager.TryFindCurrentToastInfo(ToastMessageStyle.Popup, out _))
+        {
+            return;
+        }
+
+        ToastMessage message = ToastMessage.Popup(
+            _moderationTranslations.VoiceRecordNoticeTitle.Translate(player),
+            _moderationTranslations.VoiceRecordNoticeDescription.Translate(player),
+            _moderationTranslations.VoiceRecordNoticeAcceptButton.Translate(player),
+            _moderationTranslations.VoiceRecordNoticeDenyButton.Translate(player),
+            callbacks: new PopupCallbacks(AcceptPressed, DenyPressed)
+        );
+
+        player.SendToast(message);
+    }
+
+    private void DenyPressed(WarfarePlayer player, int button, in ToastMessage message, ref bool consume, ref bool closewindow)
+    {
+        player.Component<AudioRecordPlayerComponent>().HasPressedDeny = true;
+        _logger.LogInformation($"Player {player} denied the voice chat recording agreement.");
+    }
+
+    private void AcceptPressed(WarfarePlayer player, int button, in ToastMessage message, ref bool consume, ref bool closewindow)
+    {
+        player.Component<AudioRecordPlayerComponent>().HasPressedDeny = false;
+        player.Save.HasSeenVoiceChatNotice = true;
+        player.Save.Save();
+
+        _logger.LogInformation($"Player {player} accepted the voice chat recording agreement.");
     }
 
     public async UniTask<AudioConvertResult> TryWriteWavAsync(byte[] multipartData, Stream writeTo, bool leaveOpen = true, CancellationToken token = default)

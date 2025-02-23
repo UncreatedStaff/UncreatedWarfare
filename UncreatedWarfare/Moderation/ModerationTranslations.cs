@@ -116,4 +116,19 @@ public class ModerationTranslations : PropertiesTranslationCollection
 
     [TranslationData("Text on the mute notification UI that shows up next to the voice chat icon.")]
     public readonly Translation MutedUI = new Translation("MUTED", TranslationOptions.TMProUI);
+
+    [TranslationData("Text on the UI that lets staff know they're on duty.", IsPriorityTranslation = false)]
+    public readonly Translation OnDutyUI = new Translation("ON <#aaf>DUTY</color>", TranslationOptions.TMProUI);
+
+    [TranslationData("Popup title for the notification that voice chat is being recorded.")]
+    public readonly Translation VoiceRecordNoticeTitle = new Translation("Notice", TranslationOptions.TMProUI);
+
+    [TranslationData("Popup description for the notification that voice chat is being recorded.")]
+    public readonly Translation VoiceRecordNoticeDescription = new Translation("Voice chat is being recorded for moderation purposes. Recordings will stay private amongst the staff team and are only saved when needed. To continue to use voice chat, please press 'Accept' below.", TranslationOptions.TMProUI);
+
+    [TranslationData("Accept button for the notification that voice chat is being recorded.")]
+    public readonly Translation VoiceRecordNoticeAcceptButton = new Translation("Accept", TranslationOptions.TMProUI);
+
+    [TranslationData("Deny button for the notification that voice chat is being recorded. This button will also mute the player.")]
+    public readonly Translation VoiceRecordNoticeDenyButton = new Translation("Deny (mute)", TranslationOptions.TMProUI);
 }

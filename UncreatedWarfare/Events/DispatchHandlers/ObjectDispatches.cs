@@ -1,4 +1,5 @@
 using Uncreated.Warfare.Events.Models.Objects;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Util;
 
@@ -24,6 +25,22 @@ partial class EventDispatcher
             ObjectIndex = foundObject.Index,
             RegionPosition = foundObject.Coord,
             Transform = obj.transform
+        };
+
+        _ = DispatchEventAsync(args, _unloadToken);
+    }
+
+    /// <summary>
+    /// Invoked by <see cref="NPCEventManager.onEvent"/>.
+    /// </summary>
+    private void NPCEventManagerOnEvent(Player instigatingplayer, string eventId)
+    {
+        WarfarePlayer? player = _playerService.GetOnlinePlayerOrNull(instigatingplayer);
+
+        NpcEventTriggered args = new NpcEventTriggered
+        {
+            Player = player,
+            Id = eventId
         };
 
         _ = DispatchEventAsync(args, _unloadToken);

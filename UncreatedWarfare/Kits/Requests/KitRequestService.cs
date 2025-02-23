@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Uncreated.Warfare.Database.Abstractions;
@@ -313,25 +314,6 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         }
     }
 
-    private async Task<bool> GiveUnarmedKitAsyncIntl(WarfarePlayer player, bool silent = false, CancellationToken token = default)
-    {
-        Kit? kit = null;
-        uint unarmedKit = player.Team.Faction.UnarmedKit.GetValueOrDefault();
-        if (unarmedKit != 0)
-            kit = await _kitDataStore.QueryKitAsync(unarmedKit, KitInclude.Giveable, token).ConfigureAwait(false);
-
-        kit ??= await _kitDataStore.QueryKitAsync(DefaultKitId, KitInclude.Giveable, token).ConfigureAwait(false);
-
-        if (kit != null)
-        {
-            await GiveKitIntlAsync(player, new KitBestowData(kit) { Silent = silent }, false, token).ConfigureAwait(false);
-            return true;
-        }
-
-        await RemoveKitAsync(player, token);
-        return false;
-    }
-
     public async Task<bool> GiveAvailableFreeKitAsync(WarfarePlayer player, bool silent = false, CancellationToken token = default)
     {
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
@@ -385,6 +367,30 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         }
     }
 
+    private async Task<bool> GiveUnarmedKitAsyncIntl(WarfarePlayer player, bool silent = false, CancellationToken token = default)
+    {
+        Kit? kit = null;
+        uint unarmedKit = player.Team.Faction.UnarmedKit.GetValueOrDefault();
+        if (unarmedKit != 0)
+            kit = await _kitDataStore.QueryKitAsync(unarmedKit, KitInclude.Giveable, token).ConfigureAwait(false);
+
+        kit ??= await _kitDataStore.QueryKitAsync(DefaultKitId, KitInclude.Giveable, token).ConfigureAwait(false);
+
+        if (!player.IsOnline)
+            return false;
+
+        KitPlayerComponent comp = player.Component<KitPlayerComponent>();
+        if (kit != null)
+        {
+            if (comp.ActiveKitKey != kit.Key)
+                await GiveKitIntlAsync(player, new KitBestowData(kit) { Silent = silent }, false, token).ConfigureAwait(false);
+            return true;
+        }
+
+        if (comp.ActiveKitKey.HasValue)
+            await RemoveKitAsync(player, token);
+        return false;
+    }
 
     public async Task GiveKitAsync(WarfarePlayer player, KitBestowData kitBestowData, CancellationToken token = default)
     {

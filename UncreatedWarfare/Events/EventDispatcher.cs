@@ -149,6 +149,7 @@ public partial class EventDispatcher : IHostedService, IDisposable
 
         /* Objects */
         ObjectManager.OnQuestObjectUsed += ObjectManagerOnQuestObjectUsed;
+        NPCEventManager.onEvent += NPCEventManagerOnEvent;
 
         return UniTask.CompletedTask;
     }
@@ -201,6 +202,10 @@ public partial class EventDispatcher : IHostedService, IDisposable
 
         /* Projectiles */
         UseableGun.onProjectileSpawned -= OnProjectileSpawned;
+
+        /* Objects */
+        ObjectManager.OnQuestObjectUsed -= ObjectManagerOnQuestObjectUsed;
+        NPCEventManager.onEvent -= NPCEventManagerOnEvent;
 
         if (_activeEvents > 0)
         {

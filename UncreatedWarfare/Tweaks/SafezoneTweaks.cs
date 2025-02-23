@@ -1,5 +1,5 @@
 using System;
-using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Buildables;
 using Uncreated.Warfare.Events.Models.Players;
@@ -7,6 +7,7 @@ using Uncreated.Warfare.Events.Models.Vehicles;
 using Uncreated.Warfare.Events.Models.Zones;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Requests;
+using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Tweaks;
@@ -30,40 +31,41 @@ public class SafezoneTweaks :
         _kitRequestService = kitRequestService;
         _logger = logger;
     }
-    
+
+    [EventListener(MustRunInstantly = true)]
     public void HandleEvent(PlayerUseableEquipped e, IServiceProvider serviceProvider)
     {
         if (!_zoneStore.IsInMainBase(e.Player.Position))
             return;
 
-        Console.WriteLine($"Dequipped item: {AssetLink.Create(e.DequippedItem?.GetAsset()).ToDisplayString()} @ {e.DequippedItemPage}.");
-        // if the player is dequipping a gun in main, it's convenient to turn safety off for them in to save them from having to do it themselves later
+        // if the player is dequipping a gun in main, it's convenient to turn
+        // safety off for them in to save them from having to do it themselves later
         if (e.DequippedItem?.GetAsset() is ItemGunAsset dequippedGunAsset && (EFiremode)e.DequippedItem.item.state[11] == EFiremode.SAFETY)
         {
-            e.DequippedItem.item.state[11] = (byte)GetDefaultFireMode(dequippedGunAsset);
+            e.DequippedItem.item.state[11] = (byte)ItemUtility.GetDefaultFireMode(dequippedGunAsset);
             byte index = e.Player.UnturnedPlayer.inventory.getIndex((byte)e.DequippedItemPage, e.DequippedItem.x, e.DequippedItem.y);
             if (index != byte.MaxValue)
                 e.Inventory.updateState((byte)e.DequippedItemPage, index, e.DequippedItem.item.state);
         }
-        
+        else if (e.DequippedVehicle != null)
+        {
+            // exiting a turret
+            InteractableVehicle vehicle = e.DequippedVehicle;
+            Passenger passenger = vehicle.passengers[e.DequippedSeat];
+            TurretInfo turret = passenger.turret;
+            if (Assets.find(EAssetType.ITEM, turret.itemID) is ItemGunAsset gunAsset)
+            {
+                passenger.state[11] = (byte)ItemUtility.GetDefaultFireMode(gunAsset);
+                passenger.player?.player.equipment.updateState();
+            }
+        }
+
         // turn on safety for guns in main if not on duty
-        if (e.Useable is not UseableGun || e.Player.IsOnDuty)
+        if (e.Useable is not UseableGun || (e.Player.IsOnDuty && !e.Equipment.isTurret))
             return;
         
         e.Equipment.state[11] = (byte) EFiremode.SAFETY;
         e.Equipment.sendUpdateState();
-    }
-
-    private static EFiremode GetDefaultFireMode(ItemGunAsset gunAsset)
-    {
-        if (gunAsset.hasAuto)
-            return EFiremode.AUTO;
-        if (gunAsset.hasSemi)
-            return EFiremode.SEMI;
-        if (gunAsset.hasBurst)
-            return EFiremode.BURST;
-
-        return EFiremode.SAFETY;
     }
 
     public void HandleEvent(EquipUseableRequested e, IServiceProvider serviceProvider)
@@ -81,14 +83,20 @@ public class SafezoneTweaks :
         e.Cancel();
     }
 
+    [EventListener(MustRunInstantly = true)]
     public void HandleEvent(PlayerEnteredZone e, IServiceProvider serviceProvider)
     {
-        // give safezone kit if they dont have one
-        if (e.Zone.Type is ZoneType.MainBase or ZoneType.Lobby or ZoneType.WarRoom)
+        if (e.Zone.Type is ZoneType.MainBase or ZoneType.Lobby)
         {
+            // heal player
             if (!e.Player.UnturnedPlayer.life.isDead)
                 e.Player.UnturnedPlayer.life.sendRevive();
-            if (e.Player.Component<KitPlayerComponent>().ActiveClass <= Class.Unarmed)
+
+            // give safezone kit if they dont have one
+            KitPlayerComponent component = e.Player.Component<KitPlayerComponent>();
+            if (!component.ActiveKitKey.HasValue
+                || component.ActiveClass == Class.None
+                || component.ActiveClass == Class.Unarmed && e.Player.Team.Faction.UnarmedKit != component.ActiveKitKey.Value)
             {
                 Task.Run(async () =>
                 {
@@ -104,7 +112,7 @@ public class SafezoneTweaks :
             }
         }
 
-        if (e.Player.IsOnDuty)
+        if (e.Player.IsOnDuty && !e.Equipment.isTurret)
             return;
 
         if (e.Zone.Type is not ZoneType.MainBase)
@@ -120,9 +128,6 @@ public class SafezoneTweaks :
 
     public void HandleEvent(PlayerExitedZone e, IServiceProvider serviceProvider)
     {
-        if (e.Player.IsOnDuty)
-            return;
-
         if (e.Zone.Type is not ZoneType.MainBase || _zoneStore.IsInMainBase(e.Player))
             return;
         
@@ -130,13 +135,13 @@ public class SafezoneTweaks :
             return;
         
         // turn off safety for guns when leaving main to spare the player from having to do it themselves
-        e.Equipment.state[11] = (byte)GetDefaultFireMode(gun.equippedGunAsset);
+        e.Equipment.state[11] = (byte)ItemUtility.GetDefaultFireMode(gun.equippedGunAsset);
         e.Equipment.sendUpdateState();
     }
 
     public void HandleEvent(ChangeFiremodeRequested e, IServiceProvider serviceProvider)
     {
-        if (e.Player.IsOnDuty)
+        if (e.Player.IsOnDuty || !_zoneStore.IsInMainBase(e.Player))
             return;
 
         e.Cancel();

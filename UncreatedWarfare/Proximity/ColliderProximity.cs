@@ -1,4 +1,4 @@
-﻿using SDG.Framework.Utilities;
+using SDG.Framework.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -128,9 +128,27 @@ public class ColliderProximity : MonoBehaviour, ITrackingProximity<WarfarePlayer
     private void OnTriggerStay(Collider collider)
     {
         WarfarePlayer? player = _playerService.GetOnlinePlayerOrNull(DamageTool.getPlayer(collider.transform));
-        if (player == null)
+        if (player != null)
+        {
+            OnPlayerStay(player);
+            return;
+        }
+
+        InteractableVehicle? vehicle = collider.GetComponentInParent<InteractableVehicle>();
+        if (vehicle is null)
             return;
 
+        foreach (Passenger passenger in vehicle.passengers)
+        {
+            WarfarePlayer? pl = _playerService.GetOnlinePlayerOrNull(passenger.player?.player);
+            if (pl != null)
+                OnPlayerStay(pl);
+        }
+        return;
+    }
+
+    private void OnPlayerStay(WarfarePlayer player)
+    {
         Vector3 position = player.Position;
         for (int i = 0; i < _players.Count; ++i)
         {

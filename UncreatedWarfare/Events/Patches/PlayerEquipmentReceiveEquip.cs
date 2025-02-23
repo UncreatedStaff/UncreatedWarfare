@@ -60,6 +60,18 @@ internal sealed class PlayerEquipmentReceiveEquip : IHarmonyPatch
         IPlayerService playerService = WarfareModule.Singleton.ServiceProvider.Resolve<IPlayerService>();
         WarfarePlayer player = playerService.GetOnlinePlayer(__instance);
 
+        InteractableVehicle vehicle = player.UnturnedPlayer.movement.getVehicle();
+        
+        if (vehicle != null && player.UnturnedPlayer.equipment.asset is ItemGunAsset gun)
+        {
+            byte seat = player.UnturnedPlayer.movement.getSeat();
+            if (vehicle.passengers[seat].turret.itemID == gun.id)
+            {
+                player.Data["LastEquippedItem"] = new LastEquipData { Vehicle = vehicle, Seat = seat };
+                return;
+            }
+        }
+
         ItemJar? equippedItem = player.GetHeldItem(out _);
         if (equippedItem == null)
         {
@@ -67,7 +79,14 @@ internal sealed class PlayerEquipmentReceiveEquip : IHarmonyPatch
         }
         else
         {
-            player.Data["LastEquippedItem"] = equippedItem;
+            player.Data["LastEquippedItem"] = new LastEquipData { Item = equippedItem };
         }
     }
+}
+
+internal class LastEquipData
+{
+    public ItemJar? Item { get; init; }
+    public InteractableVehicle? Vehicle { get; init; }
+    public byte Seat { get; init; }
 }

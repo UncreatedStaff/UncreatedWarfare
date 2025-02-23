@@ -159,6 +159,12 @@ public class PointsUI : UnturnedUI,
     void IEventListener<VehicleSwappedSeat>.HandleEvent(VehicleSwappedSeat e, IServiceProvider serviceProvider)
     {
         UpdatePointsUI(e.Player);
+        UniTask.Create(async () =>
+        {
+            await UniTask.NextFrame(e.Player.DisconnectToken);
+            if (e.Player.IsOnline)
+                UpdatePointsUI(e.Player);
+        });
     }
     
     [EventListener(MustRunInstantly = true)]

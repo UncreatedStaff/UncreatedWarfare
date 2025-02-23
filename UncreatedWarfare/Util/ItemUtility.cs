@@ -1132,6 +1132,21 @@ public static class ItemUtility
 
         return posX + sizeX > pageSizeX || posY + sizeY > pageSizeY;
     }
+    
+    /// <summary>
+    /// Gets the default firemode for a certain gun asset.
+    /// </summary>
+    public static EFiremode GetDefaultFireMode(ItemGunAsset gunAsset)
+    {
+        if (gunAsset.hasAuto)
+            return EFiremode.AUTO;
+        if (gunAsset.hasSemi)
+            return EFiremode.SEMI;
+        if (gunAsset.hasBurst)
+            return EFiremode.BURST;
+
+        return EFiremode.SAFETY;
+    }
 
     /// <summary>
     /// Find a item by it's instance ID.

@@ -9,6 +9,7 @@ using Uncreated.Framework.UI.Presets;
 using Uncreated.Framework.UI.Reflection;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models;
+using Uncreated.Warfare.Events.Models.Objects;
 using Uncreated.Warfare.Events.Models.Squads;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Layouts.Teams;
@@ -24,7 +25,8 @@ internal class SquadMenuUI :
     IEventListener<SquadDisbanded>,
     IEventListener<SquadMemberJoined>,
     IEventListener<SquadMemberLeft>,
-    IEventListener<SquadLeaderUpdated>
+    IEventListener<SquadLeaderUpdated>,
+    IEventListener<NpcEventTriggered>
 {
     private readonly SquadManager _squadManager;
     private readonly IPlayerService _playerService;
@@ -103,6 +105,14 @@ internal class SquadMenuUI :
     {
         UpdateForViewingPlayers(e.Squad.Team);
     }
+    void IEventListener<NpcEventTriggered>.HandleEvent(NpcEventTriggered e, IServiceProvider serviceProvider)
+    {
+        if (e.Id.Equals("Uncreated.Warfare.Squads.OpenMenu", StringComparison.Ordinal) && e.Player != null)
+        {
+            OpenUI(e.Player);
+        }
+    }
+
     public IEnumerable<WarfarePlayer> ViewingPlayersOnTeam(Team team) => _playerService.OnlinePlayers.Where(p =>
     {
         PlayerViewingState data = GetOrAddData(p.Steam64, steam64 => new PlayerViewingState
