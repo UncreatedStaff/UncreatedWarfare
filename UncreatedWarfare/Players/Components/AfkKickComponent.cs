@@ -54,7 +54,7 @@ internal sealed class AfkKickComponent : IPlayerComponent, IDisposable
     {
         Vector3 pos = Player.Position;
         float rt = Time.realtimeSinceStartup;
-        if (_lastAfk < 0 || MathUtility.SquaredDistance(in pos, in _lastPos, false) > 0.0005)
+        if (_lastAfk < 0 || MathUtility.SquaredDistance(in pos, in _lastPos, false) > 0.0005 || Player.IsOnDuty)
         {
             _lastPos = pos;
             _lastAfk = rt;

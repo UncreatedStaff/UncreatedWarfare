@@ -17,7 +17,7 @@ public static class TranslationFormattingUtility
     /// <param name="imgui">Use Unity rich text instead of TMPro.</param>
     public static StringBuilder AppendColorized(this StringBuilder stringBuilder, ReadOnlySpan<char> text, Color32 color, bool imgui = false, bool end = true)
     {
-        if (text.Length == 0)
+        if (text.Length == 0 && end)
             return stringBuilder;
 
         Span<char> colorSpan = stackalloc char[color.a == 255 ? 6 : 8];

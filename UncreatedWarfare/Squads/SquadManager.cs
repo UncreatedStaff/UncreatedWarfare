@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
@@ -76,11 +76,28 @@ public class SquadManager : IEventListener<PlayerTeamChanged>
 
     public Squad CreateSquad(WarfarePlayer squadLeader, string squadName)
     {
+        GameThread.AssertCurrent();
+
         Squad squad = new Squad(squadLeader.Team, squadName, GetSquadIdentificationNumber(squadLeader.Team), this);
         _squads.Add(squad);
-        _ = WarfareModule.EventDispatcher.DispatchEventAsync(new SquadCreated { Squad = squad, Player = squadLeader });
-        // note: SquadCreated event must run before SquadMemberJoined
-        squad.AddMember(squadLeader);
+        squad.AddMemberWithoutNotify(squadLeader);
+
+        UniTask.Create(async () =>
+        {
+            // note: SquadCreated event must run before SquadMemberJoined
+            await WarfareModule.EventDispatcher.DispatchEventAsync(new SquadCreated
+            {
+                Squad = squad,
+                Player = squadLeader
+            });
+            await WarfareModule.EventDispatcher.DispatchEventAsync(new SquadMemberJoined
+            {
+                Squad = squad,
+                IsNewSquad = true,
+                Player = squadLeader
+            });
+        });
+        
         _logger.LogDebug("Created new Squad: " + squad);
         return squad;
     }
@@ -99,6 +116,8 @@ public class SquadManager : IEventListener<PlayerTeamChanged>
 
     public bool DisbandSquad(Squad squad)
     {
+        GameThread.AssertCurrent();
+
         Squad? existing = _squads.FindAndRemove(s => s == squad);
         if (existing == null)
             return false;

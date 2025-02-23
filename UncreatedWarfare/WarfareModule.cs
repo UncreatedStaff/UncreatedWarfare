@@ -778,6 +778,9 @@ public sealed class WarfareModule
         bldr.RegisterType<SignInstancer>()
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
+        bldr.RegisterInstance(new TextMeasurementService())
+            .OwnedByLifetimeScope()
+            .SingleInstance();
 
         // Stripe
         bldr.RegisterType<UnityWebRequestsHttpClient>()
