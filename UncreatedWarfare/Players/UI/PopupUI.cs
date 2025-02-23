@@ -4,6 +4,7 @@ using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Uncreated.Framework.UI;
+using Uncreated.Framework.UI.Patterns;
 using Uncreated.Framework.UI.Presets;
 using Uncreated.Framework.UI.Reflection;
 using Uncreated.Warfare.Configuration;
@@ -40,10 +41,7 @@ public class PopupUI : UnturnedUI
     public PopupUI(AssetConfiguration assetConfig, IPlayerService playerService, ILoggerFactory loggerFactory) : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:Toasts:Popup"), staticKey: true)
     {
         _playerService = playerService;
-        for (int i = 0; i < Buttons.Length; ++i)
-        {
-            Buttons[i].OnClicked += OnButtonClicked;
-        }
+        ElementPatterns.SubscribeAll(Buttons, OnButtonClicked);
     }
 
     public static void SendToastCallback(WarfarePlayer player, in ToastMessage message, ToastMessageInfo info, UnturnedUI ui, IServiceProvider serviceProvider)
@@ -150,7 +148,21 @@ public class PopupUI : UnturnedUI
 
         if (warfarePlayer.Component<ToastManager>().TryFindCurrentToastInfo(ToastMessageStyle.Popup, out ToastMessage message))
         {
-            if (OnToastButtonPressed != null)
+            if (message.State is PopupCallbacks callbacks)
+            {
+                ToastPopupButtonPressed? callback = index switch
+                {
+                    0 => callbacks.Button1,
+                    1 => callbacks.Button2,
+                    2 => callbacks.Button3,
+                    3 => callbacks.Button4,
+                    _ => null
+                };
+
+                callback?.Invoke(warfarePlayer, index, in message, ref consumed, ref closeWindow);
+            }
+
+            if (!consumed && OnToastButtonPressed != null)
             {
                 foreach (ToastPopupButtonPressed action in OnToastButtonPressed.GetInvocationList().Cast<ToastPopupButtonPressed>())
                 {
@@ -188,10 +200,18 @@ public class PopupUI : UnturnedUI
     }
 }
 
-public static class PopupExtensions
+public struct PopupCallbacks
 {
-    public static void SendPopup(this WarfarePlayer player)
-    {
+    public ToastPopupButtonPressed? Button1;
+    public ToastPopupButtonPressed? Button2;
+    public ToastPopupButtonPressed? Button3;
+    public ToastPopupButtonPressed? Button4;
 
+    public PopupCallbacks(ToastPopupButtonPressed? button1 = null, ToastPopupButtonPressed? button2 = null, ToastPopupButtonPressed? button3 = null, ToastPopupButtonPressed? button4 = null)
+    {
+        Button1 = button1;
+        Button2 = button2;
+        Button3 = button3;
+        Button4 = button4;
     }
 }

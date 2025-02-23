@@ -27,6 +27,14 @@ internal sealed class KitGiveCommand : IExecutableCommand
 
     public async UniTask ExecuteAsync(CancellationToken token)
     {
+        if (Context.MatchParameter(0, "null"))
+        {
+            Context.AssertRanByPlayer();
+
+            await _kitRequestService.RemoveKitAsync(Context.Player, token);
+            throw Context.Reply(_translations.KitGiveSuccess, null!);
+        }
+
         KitCommandLookResult kitArg = await _lookResolver.ResolveFromArgumentsOrLook(Context, 0, 0, KitInclude.Giveable, token).ConfigureAwait(false);
 
         WarfarePlayer? player = null;

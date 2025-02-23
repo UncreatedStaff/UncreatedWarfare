@@ -17,10 +17,10 @@ public class RequestTranslations : PropertiesTranslationCollection
     protected override string FileName => "Requests/Common";
 
     [TranslationData("Sends a generic request error that's used to abstract requests a bit more.")]
-    public readonly Translation<string> RequestError = new Translation<string>("<#ff8c69>Unable to fufill request: {0}.");
+    public readonly Translation<string> RequestError = new Translation<string>("<#ff8c69>Unable to fufill request: <#ffffff>{0}</color>.");
 
     [TranslationData("Sends a generic successful request message that's used to abstract requests a bit more.")]
-    public readonly Translation<IRequestable<object>> RequestedSuccess = new Translation<IRequestable<object>>("<#9cffb3>Fufilled request for {0}.");
+    public readonly Translation<IRequestable<object>> RequestedSuccess = new Translation<IRequestable<object>>("<#9cffb3>Fufilled request for <#ffffff>{0}</color>.");
 
     [TranslationData("Sent when a player tries to request something that requires purchasing.", "Total credits required")]
     public readonly Translation<int> RequestNotOwnedCreditsCanAfford = new Translation<int>("<#99918d>Look at this sign and type '<#ffe2ab>/buy</color>' to unlock this permanently for <#b8ffc1>C </color><#ffffff>{0}</color>.");

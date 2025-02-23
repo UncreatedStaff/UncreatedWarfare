@@ -391,6 +391,6 @@ public class ClaimToRearmTweaks :
         if (kit == null)
             return;
         
-        await _kitRequestService.GiveKitAsync(player, new KitBestowData(kit) { IsLowAmmo = false }, token);
+        await _kitRequestService.GiveKitAsync(player, new KitBestowData(kit) { IsLowAmmo = false, Silent = true }, token);
     }
 }

@@ -55,6 +55,8 @@ public class UcsGlobalBanService : IGlobalBanService, IEventListener<PlayerDied>
                                         "&steamid={0}" +
                                         "&hwid={1}";
 
+    private static readonly DateTime AutomatedBanIgnoreThreshold = new DateTime(2024, 12, 29, 19, 55, 59, DateTimeKind.Utc);
+
     /// <inheritdoc />
     public async Task<GlobalBan> GetGlobalBanAsync(CSteamID steam64, IPv4Range ipAddress, HWID[] hwids, CancellationToken token = default)
     {
@@ -117,6 +119,14 @@ public class UcsGlobalBanService : IGlobalBanService, IEventListener<PlayerDied>
 
         if (ban == null)
             return default;
+
+        // don't auto-kick for auto bans since Infected kinda spammed their entire ban list
+        if (ban.TimeBanned <= AutomatedBanIgnoreThreshold
+            && ban.BanReason?.EndsWith("Take with grain of salt. Automated", StringComparison.Ordinal) is true)
+        {
+            _moderationSql.SendSuspectedCheaterMessage(steam64, ban.Id);
+            return default;
+        }
 
         ulong bannedPlayerSteam64 = 0;
 
@@ -283,7 +293,7 @@ public class UcsGlobalBanService : IGlobalBanService, IEventListener<PlayerDied>
         {
             try
             {
-                await PostBanAsync(steam64, ip, hwids, names, "Guaranteed cheater.", "AUTOMATED", DateTimeOffset.UtcNow);
+                await PostBanAsync(steam64, ip, hwids, names, "Guaranteed cheater (ask @danielwillett for more info).", "AUTOMATED", DateTimeOffset.UtcNow);
             }
             catch (Exception ex)
             {

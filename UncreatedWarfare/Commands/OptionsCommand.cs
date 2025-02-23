@@ -22,6 +22,7 @@ internal sealed class OptionsCommand : IExecutableCommand
         Context.AssertRanByPlayer();
 
         _optionsUi.Open(Context.Player);
+        Context.Defer();
         return UniTask.CompletedTask;
     }
 }

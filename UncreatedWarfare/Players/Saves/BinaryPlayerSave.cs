@@ -1,3 +1,4 @@
+using DanielWillett.SpeedBytes;
 using System;
 using System.IO;
 using Uncreated.Warfare.Configuration;
@@ -7,12 +8,18 @@ namespace Uncreated.Warfare.Players.Saves;
 
 public class BinaryPlayerSave : ISaveableState
 {
-    private const byte DataVersion = 4;
+    private const byte DataVersion = 1;
+
+    private const int FlagLength = 8;
+
+    private static readonly ByteReader Reader = new ByteReader();
+    private static readonly ByteWriter Writer = new ByteWriter(64);
+    private static readonly bool[] FlagBuffer = new bool[FlagLength];
 
     private readonly ILogger _logger;
 
     public CSteamID Steam64 { get; }
-    public int TeamId { get; set; }
+    public ulong TeamId { get; set; }
     public uint KitId { get; set; }
     public string SquadName { get; set; }
 
@@ -43,6 +50,7 @@ public class BinaryPlayerSave : ISaveableState
     {
         Steam64 = steam64;
         _logger = logger;
+        SquadName = string.Empty;
     }
 
     public void ResetOnGameStart()
@@ -61,27 +69,36 @@ public class BinaryPlayerSave : ISaveableState
     {
         GameThread.AssertCurrent();
 
-        Block block = new Block { longBinaryData = true };
-        block.writeByte(DataVersion);
-        block.writeInt32(TeamId);
-        block.writeUInt32(KitId);
-        block.writeString(SquadName);
-        block.writeBoolean(HasQueueSkip);
-        block.writeUInt64(LastGameId);
-        block.writeBoolean(ShouldRespawnOnJoin);
-        block.writeBoolean(IsFirstLife);
-        block.writeBoolean(IMGUI);
-        block.writeBoolean(WasNitroBoosting);
-        block.writeBoolean(TrackQuests);
-        block.writeBoolean(IsNerd);
-        block.writeBoolean(HasSeenVoiceChatNotice);
+        bool[] flags = FlagBuffer;
+        flags[0] = HasQueueSkip;
+        flags[1] = ShouldRespawnOnJoin;
+        flags[2] = IsFirstLife;
+        flags[3] = IMGUI;
+        flags[4] = WasNitroBoosting;
+        flags[5] = TrackQuests;
+        flags[6] = IsNerd;
+        flags[7] = HasSeenVoiceChatNotice;
+
+        Writer.Write(DataVersion);
+
+        Writer.Write(TeamId);
+        Writer.Write(KitId);
+        Writer.Write(SquadName);
+        Writer.Write(LastGameId);
+
+        Writer.Write(flags);
 
         Thread.BeginCriticalRegion();
         try
         {
             string path = GetPlayerSaveFilePath(Steam64);
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            ReadWrite.writeBlock(path, false, false, block);
+            ArraySegment<byte> data = Writer.ToArraySegmentAndDontFlush();
+            
+            using FileStream stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read);
+            stream.Write(data.Array!, data.Offset, data.Count);
+
+            Writer.Flush();
         }
         catch (Exception ex)
         {
@@ -100,15 +117,15 @@ public class BinaryPlayerSave : ISaveableState
         GameThread.AssertCurrent();
 
         WasReadFromFile = false;
-        if (!ServerSavedata.fileExists(GetPlayerSaveFilePath(Steam64)))
-            return;
-
         string path = GetPlayerSaveFilePath(Steam64);
 
-        Block block;
+        if (!File.Exists(path))
+            return;
+
+        byte[] bytes;
         try
         {
-            block = ReadWrite.readBlock(path, false, false, 0);
+            bytes = File.ReadAllBytes(path);
         }
         catch (Exception ex)
         {
@@ -116,24 +133,39 @@ public class BinaryPlayerSave : ISaveableState
             return;
         }
 
-        block.longBinaryData = true;
+        Reader.LoadNew(bytes);
 
-        byte v = block.readByte();
-        TeamId = block.readInt32();
-        KitId = block.readUInt32();
-        SquadName = block.readString();
-        HasQueueSkip = block.readBoolean();
-        LastGameId = block.readUInt64();
-        ShouldRespawnOnJoin = block.readBoolean();
-        if (v > 3)
-            IsFirstLife = block.readBoolean();
-        IMGUI = block.readBoolean();
-        WasNitroBoosting = block.readBoolean();
-        TrackQuests = block.readBoolean();
-        if (v > 1)
-            IsNerd = block.readBoolean();
-        if (v > 2)
-            HasSeenVoiceChatNotice = block.readBoolean();
+        // version
+        _ = Reader.ReadUInt8();
+
+        TeamId = Reader.ReadUInt64();
+        KitId = Reader.ReadUInt32();
+        SquadName = Reader.ReadString();
+        LastGameId = Reader.ReadUInt64();
+
+        bool[] flags = Reader.ReadBoolArray();
+        if (flags.Length < FlagLength)
+            Array.Resize(ref flags, FlagLength);
+
+        if (Reader.HasFailed)
+        {
+            _logger.LogWarning("Corrupted player save: {0}.", Steam64);
+            TeamId = 0;
+            KitId = 0;
+            SquadName = string.Empty;
+            LastGameId = 0;
+            Save();
+            return;
+        }
+
+        HasQueueSkip = flags[0];
+        ShouldRespawnOnJoin = flags[1];
+        IsFirstLife = flags[2];
+        IMGUI = flags[3];
+        WasNitroBoosting = flags[4];
+        TrackQuests = flags[5];
+        IsNerd = flags[6];
+        HasSeenVoiceChatNotice = flags[7];
 
         WasReadFromFile = true;
 

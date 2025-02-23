@@ -210,7 +210,7 @@ public class FastItemDistributionService : IItemDistributionService
         Team stateTeam = state.RequestingTeam;
 
         // sfx for equipping clothes
-        bool hasPlayedEffect = false;
+        bool hasPlayedEffect = state.Silent;
 
         int ct = 0;
 

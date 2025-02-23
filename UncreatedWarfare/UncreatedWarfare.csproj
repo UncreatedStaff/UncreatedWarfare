@@ -156,8 +156,6 @@
 
     <PackageReference Include="SSH.NET" Version="2024.2.0" />
 
-    <!-- for the love of god do not touch these version numbers -->
-
     <PackageReference Include="System.Data.Common" Version="4.3.0" />
     <PackageReference Include="System.Runtime.Caching" Version="8.0.1" />
 
@@ -287,7 +285,7 @@
     </When>
     <Otherwise>
       <PropertyGroup>
-        <UnturnedDllPath>$(SolutionDir)Libraries</UnturnedDllPath>
+        <UnturnedDllPath>../Libraries</UnturnedDllPath>
       </PropertyGroup>
     </Otherwise>
   </Choose>

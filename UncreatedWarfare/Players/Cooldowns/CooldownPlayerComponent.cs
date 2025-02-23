@@ -53,7 +53,7 @@ public class PlayerCooldownList
                 if (c.TypeEquals(cooldown))
                 {
                     _cooldowns[i] = cooldown;
-                    break;
+                    return;
                 }
             }
 

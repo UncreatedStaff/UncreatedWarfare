@@ -1,4 +1,5 @@
 namespace Uncreated.Warfare.Players.UI;
+
 public struct ToastMessage
 {
     public ToastMessageStyle Style { get; }
@@ -51,7 +52,7 @@ public struct ToastMessage
         [ValueProvider("Uncreated.Warfare.Players.UI.PopupUI")] string? btn3 = null,
         [ValueProvider("Uncreated.Warfare.Players.UI.PopupUI")] string? btn4 = null,
         string? imageUrl = null,
-        object? state = null)
+        PopupCallbacks callbacks = default)
     {
         int nullFlags = (string.IsNullOrEmpty(desc) ? 1 : 0) * (1 << 1)
                         | (string.IsNullOrEmpty(btn1) ? 1 : 0) * (1 << 2)
@@ -59,7 +60,14 @@ public struct ToastMessage
                         | (string.IsNullOrEmpty(btn3) ? 1 : 0) * (1 << 4)
                         | (string.IsNullOrEmpty(btn4) ? 1 : 0) * (1 << 5)
                         | (string.IsNullOrEmpty(imageUrl) ? 1 : 0) * (1 << 6);
-        
+
+        object? state = callbacks.Button1 != null
+                        || callbacks.Button2 != null
+                        || callbacks.Button3 != null
+                        || callbacks.Button4 != null
+            ? callbacks
+            : null;
+
         string?[] args;
         switch (nullFlags)
         {

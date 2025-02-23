@@ -106,9 +106,12 @@ public class KitBestowService
         public readonly Kit? Kit => _kit;
         public Team RequestingTeam { get; }
 
+        public bool Silent { get; }
+
         public BestowKitGiveItemsState(in KitBestowData data, WarfarePlayer requester)
         {
             _kit = data.Kit;
+            Silent = data.Silent;
             _options = data.IsLowAmmo ? BestowKitOptions.LowAmmo : 0;
             _layoutTransformations = data.Layouts ?? Array.Empty<KitLayoutTransformation>();
             _itemCountsTable = (_options & BestowKitOptions.LowAmmo) != 0 ? new List<KeyValuePair<Guid, int>>(16) : null;
@@ -264,6 +267,7 @@ public readonly struct KitBestowData
     public Kit Kit { get; }
     public IReadOnlyList<KitLayoutTransformation>? Layouts { get; }
     public bool IsLowAmmo { get; init; }
+    public bool Silent { get; init; }
     public KitBestowData(Kit kit) : this(kit, null) { }
     internal KitBestowData(Kit kit, IReadOnlyList<KitLayoutTransformation>? layouts)
     {
@@ -275,7 +279,8 @@ public readonly struct KitBestowData
     {
         return new KitBestowData(Kit, layouts)
         {
-            IsLowAmmo = IsLowAmmo
+            IsLowAmmo = IsLowAmmo,
+            Silent = Silent
         };
     }
 }

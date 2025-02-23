@@ -43,7 +43,7 @@ public readonly struct Cooldown : ITranslationArgument, IEquatable<Cooldown>, IC
     /// </summary>
     public TimeSpan GetTimeLeft()
     {
-        return DateTime.UtcNow - StartTime;
+        return StartTime.Add(Duration) - DateTime.UtcNow;
     }
 
     /// <summary>

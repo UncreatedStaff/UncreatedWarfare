@@ -31,6 +31,8 @@ using Uncreated.Warfare.Vehicles.WarfareVehicles;
 using UnityEngine.Networking;
 
 namespace Uncreated.Warfare.Moderation;
+
+[RpcClass]
 public class DatabaseInterface : IHostedService
 {
     private readonly object _cacheSync = new object();
@@ -1684,6 +1686,24 @@ public class DatabaseInterface : IHostedService
             UpdateUsernames(name.Steam64, name);
         }
     }
+
+    public void SendSuspectedCheaterMessage(CSteamID steam64, uint banId)
+    {
+        Task.Run(async () =>
+        {
+            try
+            {
+                await SendSuspectedCheater(steam64.m_SteamID, banId).IgnoreNoConnections();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error sending suspected cheater message.");
+            }
+        });
+    }
+
+    [RpcSend]
+    protected virtual RpcTask SendSuspectedCheater(ulong steam64, uint ucsBanId) => RpcTask.NotImplemented;
 
     private static readonly string GetIPAddressesQuery = $"SELECT {MySqlSnippets.ColumnList(ColumnIPAddressesPrimaryKey,
         ColumnIPAddressesSteam64, ColumnIPAddressesPackedIP, ColumnIPAddressesLoginCount,

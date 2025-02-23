@@ -1157,7 +1157,7 @@ public partial class ModerationUI : UnturnedUI
 
         ModerationHistoryEntry ui = ModerationHistory[index];
         ModerationEntryType? type = ModerationReflection.GetType(entry.GetType());
-        string typeStr = type.HasValue ? ModerationEntryTypeToString(type.Value, player.Locale.LanguageInfo) : entry.GetType().Name;
+        string typeStr;
         string? msg = entry.GetDisplayMessage();
         ui.Message.SetText(connection, string.IsNullOrWhiteSpace(msg) ? "== No Message ==" : msg);
         ui.Reputation.SetText(connection, FormatReputation(entry.Reputation, player.Locale.CultureInfo, false));
@@ -1206,12 +1206,24 @@ public partial class ModerationUI : UnturnedUI
 
         if (entry.Removed)
         {
-            typeStr += " <#ccff66>(RM)</color>";
+            typeStr = "<#ccff66>(RM)</color>";
         }
         else if (entry is IForgiveableModerationEntry { Forgiven: true })
         {
-            typeStr += " <#99ff99>(FG)</color>";
+            typeStr = "<#99ff99>(FG)</color>";
         }
+        else if (entry is DurationPunishment p)
+        {
+            typeStr = p.IsApplied(false) ? "<#ff6666>(AC)</color>" : "<#ffcc99>(EX)</color>";
+        }
+        else
+        {
+            typeStr = string.Empty;
+        }
+
+        typeStr += type.HasValue
+            ? ModerationEntryTypeToString(type.Value, player.Locale.LanguageInfo)
+            : entry.GetType().Name;
 
         ui.Type.SetText(connection, typeStr);
 

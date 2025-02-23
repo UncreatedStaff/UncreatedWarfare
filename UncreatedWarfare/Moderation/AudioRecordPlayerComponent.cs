@@ -1,4 +1,4 @@
-﻿using DanielWillett.SpeedBytes;
+using DanielWillett.SpeedBytes;
 using Microsoft.Extensions.DependencyInjection;
 using SDG.Framework.Utilities;
 using System;
@@ -10,7 +10,6 @@ using System.Linq;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Util;
-using Unity.Collections;
 
 namespace Uncreated.Warfare.Moderation;
 
@@ -34,6 +33,7 @@ public class AudioRecordPlayerComponent : IPlayerComponent, IDisposable
 
     public event Action<WarfarePlayer, bool>? VoiceChatStateUpdated;
 
+    internal bool HasPressedDeny { get; set; }
     public WarfarePlayer Player { get; set; }
     public int PacketCount => _packets?.Count ?? 0;
     public ArraySegment<byte> RingSectionOne
@@ -242,7 +242,6 @@ public class AudioRecordPlayerComponent : IPlayerComponent, IDisposable
             {
                 writer.WriteBlock(_voiceBuffer, packet.StartIndex, packetSize);
             }
-
         }
     }
 

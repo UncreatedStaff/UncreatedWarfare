@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using System;
+using System.Diagnostics;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Kits;
@@ -24,6 +25,7 @@ public class WarTableDoorTweak :
     private readonly IAssetLink<ObjectAsset>[] _teleportDoors;
     private readonly ushort _flagId;
 
+    private const short FlagValueNotInZone = -3;
     private const short FlagValueNoKit = -2;
     private const short FlagValueDeploying = -1;
     private const short FlagValueDeployable = 0;
@@ -109,7 +111,7 @@ public class WarTableDoorTweak :
         else if (!_zoneStore.IsInsideZone(player.Position, ZoneType.WarRoom, player.Team.Faction))
         {
             // not in war zone
-            player.SetFlag(_flagId, FlagValueDeploying);
+            player.SetFlag(_flagId, FlagValueNotInZone);
         }
         else
         {

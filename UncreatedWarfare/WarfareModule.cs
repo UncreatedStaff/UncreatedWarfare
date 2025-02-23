@@ -505,6 +505,7 @@ public sealed class WarfareModule
 
         // UI
         bldr.RegisterType<ModerationUI>().SingleInstance();
+        bldr.RegisterType<DutyUI>().SingleInstance();
         bldr.RegisterType<SquadMenuUI>()
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
@@ -892,6 +893,9 @@ public sealed class WarfareModule
         bldr.RegisterType<GuidedMissileLaunchTweaks>()
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+        bldr.RegisterType<VoiceChatRestrictionsTweak>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
         bldr.RegisterType<VehicleRestrictions>()
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
@@ -940,7 +944,8 @@ public sealed class WarfareModule
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
         bldr.RegisterType<SafezoneTweaks>()
-            .AsSelf().AsImplementedInterfaces();
+            .AsSelf().AsImplementedInterfaces()
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
 
         // Localization
         bldr.RegisterType<LanguageService>()
@@ -982,7 +987,7 @@ public sealed class WarfareModule
 
         SshTunnelHelper.AddSshTunnelService(bldr);
 
-        bldr.RegisterType<DatabaseInterface>()
+        bldr.RegisterRpcType<DatabaseInterface>()
             .AsSelf()
             .SingleInstance();
 

@@ -69,7 +69,6 @@ partial class EventDispatcher
             if (!args.Player.UnturnedPlayer.inventory.items[(int)args.Page].items.Contains(args.Item))
                 return;
             
-            args.Player.Data["LastEquippedItem"] = args.Player.GetHeldItem(out _);
             args.Player.UnturnedPlayer.equipment.ServerEquip((byte)args.Page, args.Item.x, args.Item.y);
         });
     }
@@ -101,7 +100,6 @@ partial class EventDispatcher
             if (!args.Player.IsOnline)
                 return;
 
-            args.Player.Data["LastEquippedItem"] = args.Player.GetHeldItem(out _);
             args.Player.UnturnedPlayer.equipment.ServerEquip(byte.MaxValue, 0, 0);
         });
     }
@@ -295,15 +293,36 @@ partial class EventDispatcher
     {
         WarfarePlayer player = _playerService.GetOnlinePlayer(equipment);
 
+        Page dequippedPage = default;
+        ItemJar? dequipped = null;
+        InteractableVehicle? dequippedVehicle = null;
+        byte dequippedSeat = 0;
+
+        if (player.Data.TryRemove("LastEquippedItem", out object? jarBox)
+            && jarBox is LastEquipData data)
+        {
+            if (data.Item != null && ItemUtility.TryFindJarPage(equipment.player.inventory, data.Item, out dequippedPage))
+            {
+                dequipped = data.Item;
+            }
+            else if (data.Vehicle != null)
+            {
+                dequippedVehicle = data.Vehicle;
+                dequippedSeat = data.Seat;
+            }
+        }
+
         PlayerUseableEquipped args = new PlayerUseableEquipped
         {
             Player = player,
             Item = equipment.asset,
             Useable = equipment.useable,
-            DequippedItem = player.Data.TryRemove("LastEquippedItem", out object? itemJar) ? itemJar as ItemJar : null
+            DequippedItem = dequipped,
+            DequippedItemPage = dequippedPage,
+            DequippedSeat = dequippedSeat,
+            DequippedVehicle = dequippedVehicle
         };
 
         _ = DispatchEventAsync(args, _unloadToken);
     }
-
 }
