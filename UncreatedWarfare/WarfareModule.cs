@@ -932,6 +932,8 @@ public sealed class WarfareModule
         bldr.RegisterType<PreventLeaveGroupTweak>()
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+        bldr.RegisterType<SafezoneTweaks>()
+            .AsSelf().AsImplementedInterfaces();
 
         // Localization
         bldr.RegisterType<LanguageService>()

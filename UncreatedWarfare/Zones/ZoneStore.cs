@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
+using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Models.Zones;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Players;
@@ -25,6 +27,7 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService
     private readonly IPlayerService _playerService;
     private readonly ILogger<ZoneStore> _logger;
     private readonly WarfareModule _warfare;
+    private readonly EventDispatcher _eventDispatcher;
 
     /// <summary>
     /// All available zones (not just the ones in-game).
@@ -42,12 +45,13 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService
     /// </summary>
     public bool IsGlobal { get; }
 
-    public ZoneStore(IEnumerable<IZoneProvider> zoneProviders, IPlayerService playerService, ILogger<ZoneStore> logger, bool isGlobal, WarfareModule warfare)
+    public ZoneStore(IEnumerable<IZoneProvider> zoneProviders, IPlayerService playerService, ILogger<ZoneStore> logger, bool isGlobal, WarfareModule warfare, EventDispatcher eventDispatcher)
     {
         _zoneProviders = zoneProviders.ToList();
         _playerService = playerService;
         _logger = logger;
         _warfare = warfare;
+        _eventDispatcher = eventDispatcher;
         IsGlobal = isGlobal;
 
         Zones = Array.Empty<Zone>();
@@ -101,7 +105,35 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService
         List<ZoneProximity> proxZones = new List<ZoneProximity>(zones.Count);
         foreach (Zone zone in zones)
         {
-            proxZones.Add(new ZoneProximity(CreateProximityForZone(zone), zone));
+            if (zone.Type is ZoneType.Flag)
+                proxZones.Add(new ZoneProximity(CreateProximityForZone(zone), zone));
+            else
+            {
+                ITrackingProximity<WarfarePlayer> colliderForZone = CreateColliderForZone(zone);
+
+                colliderForZone.OnObjectEntered += (player) =>
+                {
+                    PlayerEnteredZone args = new PlayerEnteredZone
+                    {
+                        Player = player,
+                        Zone = zone
+                    };
+
+                    _ = _eventDispatcher.DispatchEventAsync(args, CancellationToken.None);
+                };
+                colliderForZone.OnObjectExited += (player) =>
+                {
+                    PlayerExitedZone args = new PlayerExitedZone
+                    {
+                        Player = player,
+                        Zone = zone
+                    };
+
+                    _ = _eventDispatcher.DispatchEventAsync(args, CancellationToken.None);
+                };
+                
+                proxZones.Add(new ZoneProximity(colliderForZone, zone));
+            }
         }
 
         ProximityZones = proxZones.AsReadOnly();

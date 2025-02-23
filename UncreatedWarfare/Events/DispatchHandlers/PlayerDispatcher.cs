@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Events.Patches;
@@ -67,7 +68,8 @@ partial class EventDispatcher
 
             if (!args.Player.UnturnedPlayer.inventory.items[(int)args.Page].items.Contains(args.Item))
                 return;
-
+            
+            args.Player.Data["LastEquippedItem"] = args.Player.GetHeldItem(out _);
             args.Player.UnturnedPlayer.equipment.ServerEquip((byte)args.Page, args.Item.x, args.Item.y);
         });
     }
@@ -99,6 +101,7 @@ partial class EventDispatcher
             if (!args.Player.IsOnline)
                 return;
 
+            args.Player.Data["LastEquippedItem"] = args.Player.GetHeldItem(out _);
             args.Player.UnturnedPlayer.equipment.ServerEquip(byte.MaxValue, 0, 0);
         });
     }
@@ -296,7 +299,8 @@ partial class EventDispatcher
         {
             Player = player,
             Item = equipment.asset,
-            Useable = equipment.useable
+            Useable = equipment.useable,
+            DequippedItem = player.Data.TryRemove("LastEquippedItem", out object? itemJar) ? itemJar as ItemJar : null
         };
 
         _ = DispatchEventAsync(args, _unloadToken);
