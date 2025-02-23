@@ -60,15 +60,25 @@ public class SquadSignInstanceProvider : ISignInstanceProvider
         
         Squad? squad = _squadManager.Squads.FirstOrDefault(s => s.Team == Team && s.TeamIdentificationNumber == SquadNumber);
         if (squad == null)
-            return "";
+        {
+
+        }
 
         StringBuilder.Clear();
+
         StringBuilder
             .AppendColorized($"<b>SQUAD {SquadNumber.ToString(culture)}", "#9effc6")
             .Append("  ")
             .AppendColorized($"({squad.Members.Count}/{Squad.MaxMembers})", "#ffffff")
-            .AppendLine()
-            .AppendColorized($"{squad.Name}</b>", "#8b8b8b")
+            .AppendLine();
+        AppendName(squad, out bool hasExtraLine);
+        StringBuilder.Append("</b>");
+
+        // if name takes up only one line, add an extra line
+        if (!hasExtraLine)
+            StringBuilder.AppendLine();
+
+        StringBuilder
             .AppendLine()
             .AppendLine()
             .AppendColorized(squad.Leader.Names.PlayerName, "#3e3e3e");
@@ -81,7 +91,7 @@ public class SquadSignInstanceProvider : ISignInstanceProvider
         Span<Range> outRanges = stackalloc Range[2]; // max 2 lines
         int nameSplits = _measurementService.SplitLines(squad.Name, 1.3f, _signMetrics, outRanges);
 
-        StringBuilder.Append("<#ffffff>");
+        StringBuilder.Append("<#8b8b8b>");
         if (nameSplits > 1)
         {
             ReadOnlySpan<char> nameSpan = squad.Name.AsSpan();

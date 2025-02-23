@@ -15,8 +15,10 @@ public class BinaryPlayerSave : ISaveableState
     public int TeamId { get; set; }
     public uint KitId { get; set; }
     public string SquadName { get; set; }
+
+    // todo: not used
     public bool HasQueueSkip { get; set; }
-    public uint LastGameId { get; set; }
+    public ulong LastGameId { get; set; }
     public bool ShouldRespawnOnJoin { get; set; }
     /// <summary>
     /// If the player has not died yet during this layout.
@@ -43,6 +45,13 @@ public class BinaryPlayerSave : ISaveableState
         _logger = logger;
     }
 
+    public void ResetOnGameStart()
+    {
+        KitId = 0;
+        SquadName = string.Empty;
+        ShouldRespawnOnJoin = false;
+    }
+
     public static string GetPlayerSaveFilePath(CSteamID steam64)
     {
         return ConfigurationHelper.GetPlayerFilePath(steam64, "Player Save.dat");
@@ -58,7 +67,7 @@ public class BinaryPlayerSave : ISaveableState
         block.writeUInt32(KitId);
         block.writeString(SquadName);
         block.writeBoolean(HasQueueSkip);
-        block.writeInt64(LastGameId);
+        block.writeUInt64(LastGameId);
         block.writeBoolean(ShouldRespawnOnJoin);
         block.writeBoolean(IsFirstLife);
         block.writeBoolean(IMGUI);
@@ -113,8 +122,8 @@ public class BinaryPlayerSave : ISaveableState
         TeamId = block.readInt32();
         KitId = block.readUInt32();
         SquadName = block.readString();
-        LastGameId = block.readUInt32();
         HasQueueSkip = block.readBoolean();
+        LastGameId = block.readUInt64();
         ShouldRespawnOnJoin = block.readBoolean();
         if (v > 3)
             IsFirstLife = block.readBoolean();
