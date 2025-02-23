@@ -9,10 +9,13 @@ using System.Linq;
 using System.Runtime.ExceptionServices;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database.Abstractions;
+using Uncreated.Warfare.Events.Models;
+using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Exceptions;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Models.GameData;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Plugins;
 using Uncreated.Warfare.Services;
@@ -22,12 +25,13 @@ using UnityEngine.SceneManagement;
 namespace Uncreated.Warfare.Layouts;
 
 [Priority(int.MinValue)] // run last
-public class LayoutFactory : IHostedService
+public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
 {
     private readonly WarfareModule _warfare;
     private readonly ILogger<LayoutFactory> _logger;
     private readonly IGameDataDbContext _dbContext;
     private readonly MapScheduler _mapScheduler;
+    private readonly IPlayerService _playerService;
     private readonly byte _region;
     private UniTask _setupTask;
 
@@ -38,13 +42,15 @@ public class LayoutFactory : IHostedService
         ILogger<LayoutFactory> logger,
         IGameDataDbContext dbContext,
         MapScheduler mapScheduler,
-        IConfiguration systemConfig)
+        IConfiguration systemConfig,
+        IPlayerService playerService)
     {
         _warfare = warfare;
         _logger = logger;
         _dbContext = dbContext;
         _dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
         _mapScheduler = mapScheduler;
+        _playerService = playerService;
         _region = systemConfig.GetValue<byte>("region");
     }
 
@@ -143,7 +149,7 @@ public class LayoutFactory : IHostedService
             {
                 if (hasPlayerConnectionLock)
                 {
-                    _warfare.ServiceProvider.ResolveOptional<IPlayerService>()?.ReleasePlayerConnectionLock();
+                    _playerService?.ReleasePlayerConnectionLock();
                     _hasPlayerLock = false;
                 }
             }
@@ -159,8 +165,6 @@ public class LayoutFactory : IHostedService
         
         LayoutInfo newLayout = SelectRandomLayouts();
 
-        IPlayerService? playerServiceImpl = _warfare.ServiceProvider.ResolveOptional<IPlayerService>();
-
         await UniTask.SwitchToMainThread(token);
 
         // stops players from joining both before the first layout starts and between layouts.
@@ -170,9 +174,9 @@ public class LayoutFactory : IHostedService
         {
             if (_warfare.IsLayoutActive())
             {
-                if (playerServiceImpl != null && !playerJoinLockTaken)
+                if (!playerJoinLockTaken)
                 {
-                    await playerServiceImpl.TakePlayerConnectionLock(token);
+                    await _playerService.TakePlayerConnectionLock(token);
                     playerJoinLockTaken = true;
                     _hasPlayerLock = true;
                 }
@@ -197,9 +201,9 @@ public class LayoutFactory : IHostedService
         }
         catch (Exception ex)
         {
-            if (playerJoinLockTaken && playerServiceImpl != null)
+            if (playerJoinLockTaken)
             {
-                playerServiceImpl.ReleasePlayerConnectionLock();
+                _playerService.ReleasePlayerConnectionLock();
                 _hasPlayerLock = false; 
             }
 
@@ -250,7 +254,7 @@ public class LayoutFactory : IHostedService
         await UniTask.SwitchToMainThread(CancellationToken.None);
         await layout.InitializeLayoutAsync(record, CancellationToken.None);
 
-        if (scopedProvider.Resolve<IPlayerService>() is PlayerService playerServiceImpl)
+        if (_playerService is PlayerService playerServiceImpl)
         {
             playerServiceImpl.ReinitializeScopedPlayerComponentServices();
         }
@@ -287,7 +291,7 @@ public class LayoutFactory : IHostedService
 
         if (playerJoinLockTaken && _hasPlayerLock)
         {
-            layout.ServiceProvider.ResolveOptional<IPlayerService>()?.ReleasePlayerConnectionLock();
+            _playerService?.ReleasePlayerConnectionLock();
             _hasPlayerLock = false;
         }
     }
@@ -556,6 +560,17 @@ public class LayoutFactory : IHostedService
             layout.LayoutStats.StartTimestamp = DateTimeOffset.UtcNow;
             _dbContext.Update(layout.LayoutStats);
             await _dbContext.SaveChangesAsync(CancellationToken.None);
+
+            await UniTask.SwitchToMainThread(token);
+
+            // set layout ID of all players
+            foreach (WarfarePlayer player in _playerService.OnlinePlayers)
+            {
+                player.Save.LastGameId = layout.LayoutId;
+                player.Save.ResetOnGameStart();
+                player.Save.Save();
+            }
+
             _logger.LogDebug("Layout {0} hosted.", layout);
             return;
         }
@@ -654,5 +669,16 @@ public class LayoutFactory : IHostedService
             _logger.LogError("Errors encountered while ending layout {0}:", layout);
             FormattingUtility.PrintTaskErrors(_logger, tasks, hostedServices);
         }
+    }
+
+    void IEventListener<PlayerJoined>.HandleEvent(PlayerJoined e, IServiceProvider serviceProvider)
+    {
+        ulong loadoutId = _warfare.IsLayoutActive() ? _warfare.GetActiveLayout().LayoutId : 0;
+        if (e.Player.Save.LastGameId == loadoutId)
+            return;
+
+        e.Player.Save.LastGameId = loadoutId;
+        e.Player.Save.ResetOnGameStart();
+        e.Player.Save.Save();
     }
 }

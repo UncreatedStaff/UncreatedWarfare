@@ -1,4 +1,4 @@
-﻿using Autofac.Core;
+using Autofac.Core;
 using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.Configuration;
 using System;
@@ -12,6 +12,7 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Layouts.Phases;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Models.GameData;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
 

@@ -307,13 +307,11 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>
                 .Append(nameSpan[outRanges[0]])
                 .Append('\n')
                 .Append(nameSpan[outRanges[1]]);
-            Console.WriteLine("\"" + nameSpan[outRanges[0]].Concat('/', nameSpan[outRanges[1]]) + "\"");
             hasExtraLine = true;
         }
         else
         {
             KitSignBuffer.Append(kitName);
-            Console.WriteLine("\"" + kitName + "\"");
             hasExtraLine = false;
         }
 

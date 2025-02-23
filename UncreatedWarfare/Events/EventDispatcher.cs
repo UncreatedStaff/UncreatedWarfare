@@ -15,6 +15,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Uncreated.Warfare.Events.Models;
+using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Projectiles;
@@ -255,11 +256,10 @@ public partial class EventDispatcher : IHostedService, IDisposable
     /// <returns>If the action should continue if <paramref name="eventArgs"/> is <see cref="ICancellable"/>, otherwise <see langword="true"/>.</returns>
     public async UniTask<bool> DispatchEventAsync<TEventArgs>(TEventArgs eventArgs, CancellationToken token = default, bool allowAsync = true) where TEventArgs : class
     {
-        using CombinedTokenSources tokens = token.CombineTokensIfNeeded(_unloadToken);
-
         await UniTask.SwitchToMainThread(token);
 
         Type type = typeof(TEventArgs);
+
         EventInvocationListenerCache cache = GetEventListenersCache<TEventArgs>(out IServiceProvider serviceProvider);
 
         List<EventListenerResult> eventListeners = ListPool<EventListenerResult>.claim();
