@@ -37,6 +37,7 @@ using Uncreated.Warfare.FOBs.SupplyCrates.AutoResupply;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Interaction.Icons;
+using Uncreated.Warfare.Interaction.Requests;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Kits.Loadouts;
@@ -744,6 +745,9 @@ public sealed class WarfareModule
         bldr.RegisterType<KitRequestService>()
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+        
+        bldr.RegisterType<PunchToRequestTweaks>()
+            .AsSelf().AsImplementedInterfaces();
 
         if (false && ItemUtility.SupportsFastKits)
         {
