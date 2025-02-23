@@ -69,7 +69,6 @@ partial class EventDispatcher
             if (!args.Player.UnturnedPlayer.inventory.items[(int)args.Page].items.Contains(args.Item))
                 return;
             
-            args.Player.Data["LastEquippedItem"] = args.Player.GetHeldItem(out _);
             args.Player.UnturnedPlayer.equipment.ServerEquip((byte)args.Page, args.Item.x, args.Item.y);
         });
     }
@@ -101,7 +100,6 @@ partial class EventDispatcher
             if (!args.Player.IsOnline)
                 return;
 
-            args.Player.Data["LastEquippedItem"] = args.Player.GetHeldItem(out _);
             args.Player.UnturnedPlayer.equipment.ServerEquip(byte.MaxValue, 0, 0);
         });
     }

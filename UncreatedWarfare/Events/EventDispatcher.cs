@@ -378,12 +378,14 @@ public partial class EventDispatcher : IHostedService, IDisposable
                     {
                         hasSkippedToNextFrame = true;
                         await UniTask.NextFrame(token, cancelImmediately: false);
+                        token.ThrowIfCancellationRequested();
                     }
 
                     // EnsureMainThread
                     if ((underlying[i].Flags & BitEnsureMainThread) != 0 && !GameThread.IsCurrent)
                     {
                         await UniTask.SwitchToMainThread(token);
+                        token.ThrowIfCancellationRequested();
                     }
 
                     // RequireActiveLayout
@@ -395,7 +397,10 @@ public partial class EventDispatcher : IHostedService, IDisposable
                     // Invoke handler
                     UniTask invokeResult = InvokeListener(ref underlying[i], eventArgs, serviceProvider, token);
                     if (invokeResult.Status != UniTaskStatus.Succeeded)
+                    {
                         await invokeResult;
+                        token.ThrowIfCancellationRequested();
+                    }
                 }
                 catch (ControlException) { }
                 catch (Exception ex)

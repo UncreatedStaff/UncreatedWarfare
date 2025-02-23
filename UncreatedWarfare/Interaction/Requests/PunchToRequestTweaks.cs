@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics.CodeAnalysis;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
@@ -39,11 +39,17 @@ public class PunchToRequestTweaks : IAsyncEventListener<PlayerPunched>
         );
     }
 
-    private bool TryGetTargetRootTransform(WarfarePlayer player, [MaybeNullWhen(false)] out Transform transform)
+    private static bool TryGetTargetRootTransform(WarfarePlayer player, [MaybeNullWhen(false)] out Transform transform)
     {
         Transform aim = player.UnturnedPlayer.look.aim;
         RaycastInfo info = DamageTool.raycast(new Ray(aim.position, aim.forward), UnturnedPunchDistance, RayMasks.DAMAGE_CLIENT & ~RayMasks.ENEMY, player.UnturnedPlayer);
+        if (info.transform == null)
+        {
+            transform = null;
+            return false;
+        }
+
         transform = info.transform.root;
-        return transform != null;
+        return true;
     }
 }

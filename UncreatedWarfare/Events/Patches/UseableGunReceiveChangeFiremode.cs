@@ -89,13 +89,13 @@ internal sealed class UseableGunReceiveChangeFiremode : IHarmonyPatch
             _isInPatch = true;
             try
             {
-                gun.ReceiveChangeFiremode(firemode);
+                gun.ReceiveChangeFiremode(args.Firemode);
             }
             finally
             {
                 _isInPatch = false;
             }
-        });
+        }, _ => true);
 
         return shouldAllow;
     }

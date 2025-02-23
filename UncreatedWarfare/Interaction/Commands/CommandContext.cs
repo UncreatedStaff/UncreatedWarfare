@@ -1092,8 +1092,14 @@ public class CommandContext : ControlException
 
         Transform aim = Player.UnturnedPlayer.look.aim;
         RaycastInfo info = DamageTool.raycast(new Ray(aim.position, aim.forward), distance, mask == 0 ? (RayMasks.PLAYER_INTERACT & ~RayMasks.ENEMY) : mask, Player.UnturnedPlayer);
+        if (info.transform == null)
+        {
+            transform = null;
+            return false;
+        }
+
         transform = info.transform.root;
-        return transform != null;
+        return true;
     }
 
     /// <summary>

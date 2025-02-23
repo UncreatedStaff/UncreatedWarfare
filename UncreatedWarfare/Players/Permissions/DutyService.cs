@@ -330,7 +330,7 @@ public class DutyService : IAsyncEventListener<PlayerLeft>
     {
         if (await SetDutyStateAsync(e.Steam64, false, CancellationToken.None).ConfigureAwait(false))
         {
-            _chatService.Broadcast(_translations.TranslationService.SetOf.AllPlayers(), _translations.DutyOffBroadcast, e.Player);
+            _chatService.Broadcast<IPlayer>(_translations.TranslationService.SetOf.AllPlayers(), _translations.DutyOffBroadcast, e.Player);
             _logger.LogInformation("{0} ({1}) went off duty from disconnecting.", e.Player.Names.GetDisplayNameOrPlayerName(), e.Player.Steam64);
         }
     }

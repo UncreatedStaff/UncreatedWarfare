@@ -300,7 +300,39 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         }
     }
 
-    public async Task<bool> GiveAvailableFreeKitAsync(WarfarePlayer player, CancellationToken token = default)
+    public async Task<bool> GiveUnarmedKitAsync(WarfarePlayer player, bool silent = false, CancellationToken token = default)
+    {
+        await _semaphore.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            return await GiveUnarmedKitAsyncIntl(player, silent, token).ConfigureAwait(false);
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
+    }
+
+    private async Task<bool> GiveUnarmedKitAsyncIntl(WarfarePlayer player, bool silent = false, CancellationToken token = default)
+    {
+        Kit? kit = null;
+        uint unarmedKit = player.Team.Faction.UnarmedKit.GetValueOrDefault();
+        if (unarmedKit != 0)
+            kit = await _kitDataStore.QueryKitAsync(unarmedKit, KitInclude.Giveable, token).ConfigureAwait(false);
+
+        kit ??= await _kitDataStore.QueryKitAsync(DefaultKitId, KitInclude.Giveable, token).ConfigureAwait(false);
+
+        if (kit != null)
+        {
+            await GiveKitIntlAsync(player, new KitBestowData(kit) { Silent = silent }, false, token).ConfigureAwait(false);
+            return true;
+        }
+
+        await RemoveKitAsync(player, token);
+        return false;
+    }
+
+    public async Task<bool> GiveAvailableFreeKitAsync(WarfarePlayer player, bool silent = false, CancellationToken token = default)
     {
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
@@ -311,7 +343,7 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
                 Kit? defaultKit = await _kitDataStore.QueryKitAsync(DefaultKitId, KitInclude.Giveable, token);
                 if (defaultKit != null)
                 {
-                    await GiveKitIntlAsync(player, new KitBestowData(defaultKit), false, token).ConfigureAwait(false);
+                    await GiveKitIntlAsync(player, new KitBestowData(defaultKit) { Silent = silent }, false, token).ConfigureAwait(false);
                     return true;
                 }
             }
@@ -330,34 +362,27 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
                 token: token
             ).ConfigureAwait(false);
 
+
             Kit? kit = null;
             if (kits.Count != 0)
             {
                 kit = await _kitDataStore.QueryKitAsync(kits[kits.GetRandomIndex()], KitInclude.Giveable, token).ConfigureAwait(false);
             }
 
-            if (kit == null)
-            {
-                uint unarmedKit = player.Team.Faction.UnarmedKit.GetValueOrDefault();
-                if (unarmedKit != 0)
-                    kit = await _kitDataStore.QueryKitAsync(unarmedKit, KitInclude.Giveable, token).ConfigureAwait(false);
-            }
-
-            kit ??= await _kitDataStore.QueryKitAsync(DefaultKitId, KitInclude.Giveable, token).ConfigureAwait(false);
-
             if (kit != null)
             {
-                await GiveKitIntlAsync(player, new KitBestowData(kit), false, token).ConfigureAwait(false);
+                await GiveKitIntlAsync(player, new KitBestowData(kit) { Silent = silent }, false, token).ConfigureAwait(false);
                 return true;
+            }
+            else
+            {
+                return await GiveUnarmedKitAsyncIntl(player, silent, token).ConfigureAwait(false);
             }
         }
         finally
         {
             _semaphore.Release();
         }
-
-        await RemoveKitAsync(player, token);
-        return false;
     }
 
 

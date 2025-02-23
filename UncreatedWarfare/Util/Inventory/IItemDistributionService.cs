@@ -45,7 +45,7 @@ public interface IItemDistributionService
         public bool ClearClothes => true;
         public Kit? Kit => null;
         public Team RequestingTeam => Team.NoTeam;
-
+        public bool Silent => false;
         public bool ShouldGrantItem(IClothingItem item, ref KitItemResolutionResult resolvedItem)
         {
             return true;
@@ -81,9 +81,9 @@ public interface IItemDistributionService
 public interface IItemClearState
 {
     bool ClearClothes { get; }
+    bool Silent { get; }
 
     bool ShouldClearItem(ClothingType clothingType, ItemAsset clothing, byte[] state, byte quality);
-
     bool ShouldClearItem(ItemJar jar, Page page, ItemAsset item);
 }
 
@@ -91,6 +91,8 @@ public interface IItemDistributionState
 {
     Kit? Kit { get; }
     Team RequestingTeam { get; }
+    bool Silent { get; }
+
     bool ShouldGrantItem(IClothingItem item, ref KitItemResolutionResult resolvedItem);
     bool ShouldGrantItem(IPageItem item, ref KitItemResolutionResult resolvedItem, ref byte x, ref byte y, ref Page page, ref byte rotation);
     void OnAddingPreviousItem(in KitItemResolutionResult result, byte x, byte y, byte rot, Page page, Item item);

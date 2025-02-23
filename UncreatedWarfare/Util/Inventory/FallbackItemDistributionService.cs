@@ -60,7 +60,7 @@ public class FallbackItemDistributionService : IItemDistributionService
 
         PlayerClothing clothing = nativePlayer.clothing;
 
-        bool hasPlayedEffect = false;
+        bool hasPlayedEffect = _isAutoClearing || state.Silent;
 
         WorkingItemList.Clear();
 
@@ -224,7 +224,7 @@ public class FallbackItemDistributionService : IItemDistributionService
         Team stateTeam = state.RequestingTeam;
 
         // sfx for equipping clothes
-        bool hasPlayedEffect = false;
+        bool hasPlayedEffect = state.Silent;
 
         int ct = 0;
 

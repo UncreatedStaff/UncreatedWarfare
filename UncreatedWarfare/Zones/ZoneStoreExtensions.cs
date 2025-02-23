@@ -1,4 +1,4 @@
-﻿using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Zones;
@@ -16,11 +16,7 @@ public static class ZoneStoreExtensions
 
     public static bool IsInMainBase(this ZoneStore zoneStore, WarfarePlayer player)
     {
-        return zoneStore.IsInsideZone(player.Position, ZoneType.MainBase, null);
-    }
-    public static bool IsInWarRoom(this ZoneStore zoneStore, WarfarePlayer player)
-    {
-        return zoneStore.IsInsideZone(player.Position, ZoneType.WarRoom, null);
+        return player.IsOnline && zoneStore.IsInsideZone(player.Position, ZoneType.MainBase, null);
     }
 
     public static bool IsInMainBase(this ZoneStore zoneStore, Vector3 point, FactionInfo faction)
@@ -35,7 +31,37 @@ public static class ZoneStoreExtensions
 
     public static bool IsInMainBase(this ZoneStore zoneStore, WarfarePlayer player, FactionInfo faction)
     {
-        return zoneStore.IsInsideZone(player.Position, ZoneType.MainBase, faction);
+        return player.IsOnline && zoneStore.IsInsideZone(player.Position, ZoneType.MainBase, faction);
+    }
+
+    public static bool IsInWarRoom(this ZoneStore zoneStore, Vector3 point)
+    {
+        return zoneStore.IsInsideZone(point, ZoneType.WarRoom, null);
+    }
+
+    public static bool IsInWarRoom(this ZoneStore zoneStore, Vector2 point)
+    {
+        return zoneStore.IsInsideZone(point, ZoneType.WarRoom, null);
+    }
+
+    public static bool IsInWarRoom(this ZoneStore zoneStore, WarfarePlayer player)
+    {
+        return player.IsOnline && zoneStore.IsInsideZone(player.Position, ZoneType.WarRoom, null);
+    }
+
+    public static bool IsInWarRoom(this ZoneStore zoneStore, Vector3 point, FactionInfo faction)
+    {
+        return zoneStore.IsInsideZone(point, ZoneType.WarRoom, faction);
+    }
+
+    public static bool IsInWarRoom(this ZoneStore zoneStore, Vector2 point, FactionInfo faction)
+    {
+        return zoneStore.IsInsideZone(point, ZoneType.WarRoom, faction);
+    }
+
+    public static bool IsInWarRoom(this ZoneStore zoneStore, WarfarePlayer player, FactionInfo faction)
+    {
+        return player.IsOnline && zoneStore.IsInsideZone(player.Position, ZoneType.WarRoom, faction);
     }
 
     public static bool IsInAntiMainCamp(this ZoneStore zoneStore, Vector3 point)
@@ -50,7 +76,7 @@ public static class ZoneStoreExtensions
 
     public static bool IsInAntiMainCamp(this ZoneStore zoneStore, WarfarePlayer player)
     {
-        return zoneStore.IsInsideZone(player.Position, ZoneType.AntiMainCampArea, null);
+        return player.IsOnline && zoneStore.IsInsideZone(player.Position, ZoneType.AntiMainCampArea, null);
     }
 
     public static bool IsInAntiMainCamp(this ZoneStore zoneStore, Vector3 point, FactionInfo faction)
@@ -65,7 +91,7 @@ public static class ZoneStoreExtensions
 
     public static bool IsInAntiMainCamp(this ZoneStore zoneStore, WarfarePlayer player, FactionInfo faction)
     {
-        return zoneStore.IsInsideZone(player.Position, ZoneType.AntiMainCampArea, faction);
+        return player.IsOnline && zoneStore.IsInsideZone(player.Position, ZoneType.AntiMainCampArea, faction);
     }
 
     public static bool IsInLobby(this ZoneStore zoneStore, Vector3 point)
@@ -80,6 +106,6 @@ public static class ZoneStoreExtensions
 
     public static bool IsInLobby(this ZoneStore zoneStore, WarfarePlayer player)
     {
-        return zoneStore.IsInsideZone(player.Position, ZoneType.Lobby, null);
+        return player.IsOnline && zoneStore.IsInsideZone(player.Position, ZoneType.Lobby, null);
     }
 }

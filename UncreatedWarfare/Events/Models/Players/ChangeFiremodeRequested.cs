@@ -1,5 +1,3 @@
-using Uncreated.Warfare.Kits.Items;
-
 namespace Uncreated.Warfare.Events.Models.Players;
 
 /// <summary>

@@ -130,13 +130,13 @@ public class PlayerLobbyComponent : IPlayerComponent
         if (!joiningTeam.IsValid)
             return;
 
-        // teleport to main base
+        // teleport to war room
         await UniTask.SwitchToMainThread(Player.DisconnectToken);
         Zone? warRoom = _zoneStore.SearchZone(ZoneType.WarRoom, joiningTeam.Faction);
 
         if (warRoom == null)
         {
-            _logger.LogWarning("Unable to find main base to teleport player {0} to for team {1}.", Player, joiningTeam.Faction.Name);
+            _logger.LogWarning("Unable to find war room to teleport player {0} to for team {1}.", Player, joiningTeam.Faction.Name);
         }
         else
         {

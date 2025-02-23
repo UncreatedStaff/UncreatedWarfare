@@ -1,9 +1,12 @@
 using System;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Buildables;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Events.Models.Vehicles;
 using Uncreated.Warfare.Events.Models.Zones;
+using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Kits.Requests;
 using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Tweaks;
@@ -18,10 +21,14 @@ public class SafezoneTweaks :
     IEventListener<DamageVehicleRequested>
 {
     private readonly ZoneStore _zoneStore;
+    private readonly KitRequestService _kitRequestService;
+    private readonly ILogger<SafezoneTweaks> _logger;
 
-    public SafezoneTweaks(ZoneStore zoneStore)
+    public SafezoneTweaks(ZoneStore zoneStore, KitRequestService kitRequestService, ILogger<SafezoneTweaks> logger)
     {
         _zoneStore = zoneStore;
+        _kitRequestService = kitRequestService;
+        _logger = logger;
     }
     
     public void HandleEvent(PlayerUseableEquipped e, IServiceProvider serviceProvider)
@@ -29,8 +36,9 @@ public class SafezoneTweaks :
         if (!_zoneStore.IsInMainBase(e.Player.Position))
             return;
 
+        Console.WriteLine($"Dequipped item: {AssetLink.Create(e.DequippedItem?.GetAsset()).ToDisplayString()} @ {e.DequippedItemPage}.");
         // if the player is dequipping a gun in main, it's convenient to turn safety off for them in to save them from having to do it themselves later
-        if (e.DequippedItem?.GetAsset() is ItemGunAsset dequippedGunAsset)
+        if (e.DequippedItem?.GetAsset() is ItemGunAsset dequippedGunAsset && (EFiremode)e.DequippedItem.item.state[11] == EFiremode.SAFETY)
         {
             e.DequippedItem.item.state[11] = (byte)GetDefaultFireMode(dequippedGunAsset);
             byte index = e.Player.UnturnedPlayer.inventory.getIndex((byte)e.DequippedItemPage, e.DequippedItem.x, e.DequippedItem.y);
@@ -75,6 +83,30 @@ public class SafezoneTweaks :
 
     public void HandleEvent(PlayerEnteredZone e, IServiceProvider serviceProvider)
     {
+        // give safezone kit if they dont have one
+        if (e.Zone.Type is ZoneType.MainBase or ZoneType.Lobby or ZoneType.WarRoom)
+        {
+            if (!e.Player.UnturnedPlayer.life.isDead)
+                e.Player.UnturnedPlayer.life.sendRevive();
+            if (e.Player.Component<KitPlayerComponent>().ActiveClass <= Class.Unarmed)
+            {
+                Task.Run(async () =>
+                {
+                    try
+                    {
+                        await _kitRequestService.GiveUnarmedKitAsync(e.Player, silent: true, e.Player.DisconnectToken);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error giving safezone kit.");
+                    }
+                });
+            }
+        }
+
+        if (e.Player.IsOnDuty)
+            return;
+
         if (e.Zone.Type is not ZoneType.MainBase)
             return;
         
@@ -88,10 +120,13 @@ public class SafezoneTweaks :
 
     public void HandleEvent(PlayerExitedZone e, IServiceProvider serviceProvider)
     {
-        if (e.Zone.Type is not ZoneType.MainBase)
+        if (e.Player.IsOnDuty)
+            return;
+
+        if (e.Zone.Type is not ZoneType.MainBase || _zoneStore.IsInMainBase(e.Player))
             return;
         
-        if (e.Equipment.useable is not UseableGun gun)
+        if (e.Equipment.useable is not UseableGun gun || (EFiremode)e.Equipment.state[11] != EFiremode.SAFETY)
             return;
         
         // turn off safety for guns when leaving main to spare the player from having to do it themselves
@@ -104,8 +139,7 @@ public class SafezoneTweaks :
         if (e.Player.IsOnDuty)
             return;
 
-        e.Firemode = EFiremode.SAFETY;
-        e.Cancel(cancelAction: false);
+        e.Cancel();
     }
 
     // prevent damage to buildables and vehicles in sz
