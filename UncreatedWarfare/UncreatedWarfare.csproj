@@ -287,79 +287,50 @@
     </When>
     <Otherwise>
       <PropertyGroup>
-        <UnturnedDllPath>../Libraries</UnturnedDllPath>
+        <UnturnedDllPath>$(SolutionDir)Libraries</UnturnedDllPath>
       </PropertyGroup>
     </Otherwise>
   </Choose>
 
+  <!-- Unturned Files -->
   <ItemGroup>
-    <!-- Unturned -->
-    <Reference Include="Assembly-CSharp">
-      <HintPath>$(UnturnedDllPath)/Assembly-CSharp.dll</HintPath>
 
-      <!-- Prevents copying to output dir -->
-      <Private>!$(CopyToModule)</Private>
-    </Reference>
-    <Reference Include="SDG.NetTransport">
-      <HintPath>$(UnturnedDllPath)/SDG.NetTransport.dll</HintPath>
-      <Private>!$(CopyToModule)</Private>
-    </Reference>
-    <Reference Include="SDG.NetPak.Runtime">
-      <HintPath>$(UnturnedDllPath)/SDG.NetPak.Runtime.dll</HintPath>
-      <Private>!$(CopyToModule)</Private>
-    </Reference>
-    <Reference Include="UnturnedDat">
-      <HintPath>$(UnturnedDllPath)/UnturnedDat.dll</HintPath>
-      <Private>!$(CopyToModule)</Private>
-    </Reference>
-    <Reference Include="UnityEx">
-      <HintPath>$(UnturnedDllPath)/UnityEx.dll</HintPath>
-      <Private>!$(CopyToModule)</Private>
-    </Reference>
+	  <UnturnedLibrary Include="Assembly-CSharp" />
+	  <UnturnedLibrary Include="SDG.NetTransport" />
+	  <UnturnedLibrary Include="Unity.TextMeshPro" />
+	  <UnturnedLibrary Include="SDG.NetPak.Runtime" />
+	  <UnturnedLibrary Include="UnturnedDat" />
+	  <UnturnedLibrary Include="UnityEx" />
+	  <UnturnedLibrary Include="com.rlabrecque.steamworks.net" />
+	  <UnturnedLibrary Include="UnityEngine" />
+	  <UnturnedLibrary Include="UnityEngine.CoreModule" />
+	  <UnturnedLibrary Include="UnityEngine.UI" />
+	  <UnturnedLibrary Include="UnityEngine.UIModule" />
+	  <UnturnedLibrary Include="UnityEngine.PhysicsModule" />
+	  <UnturnedLibrary Include="UnityEngine.ImageConversionModule" />
+	  <UnturnedLibrary Include="UnityEngine.UnityWebRequestModule" />
+	  <UnturnedLibrary Include="UnityEngine.AssetBundleModule" />
 
-    <!-- Third Party -->
-    <Reference Include="com.rlabrecque.steamworks.net">
-      <HintPath>$(UnturnedDllPath)/com.rlabrecque.steamworks.net.dll</HintPath>
-      <Private>!$(CopyToModule)</Private>
-    </Reference>
+  </ItemGroup>
+
+  <!-- Reference all unturned in ~/Libraries -->
+  <ItemGroup>
+	  <Reference Include="@(UnturnedLibrary->'%(Identity)')" HintPath="$(UnturnedDllPath)\%(Identity).dll" Private="!$(CopyToModule)"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    
+	  <!-- Third Party -->
     <Reference Include="UniTask">
       <HintPath>../Libraries/UniTask.dll</HintPath>
       <Private>!$(CopyToModule)</Private>
     </Reference>
+
     <Reference Include="Pty.Net">
       <HintPath>../Libraries/Pty.Net/Pty.Net.dll</HintPath>
       <Private>!$(CopyToModule)</Private>
     </Reference>
 
-    <!-- Unity -->
-    <Reference Include="UnityEngine">
-      <HintPath>$(UnturnedDllPath)/UnityEngine.dll</HintPath>
-      <Private>!$(CopyToModule)</Private>
-    </Reference>
-    <Reference Include="UnityEngine.CoreModule">
-      <HintPath>$(UnturnedDllPath)/UnityEngine.CoreModule.dll</HintPath>
-      <Private>!$(CopyToModule)</Private>
-    </Reference>
-    <Reference Include="UnityEngine.UIModule">
-      <HintPath>$(UnturnedDllPath)/UnityEngine.UIModule.dll</HintPath>
-      <Private>!$(CopyToModule)</Private>
-    </Reference>
-    <Reference Include="UnityEngine.PhysicsModule">
-      <HintPath>$(UnturnedDllPath)/UnityEngine.PhysicsModule.dll</HintPath>
-      <Private>!$(CopyToModule)</Private>
-    </Reference>
-    <Reference Include="UnityEngine.ImageConversionModule">
-      <HintPath>$(UnturnedDllPath)/UnityEngine.ImageConversionModule.dll</HintPath>
-      <Private>!$(CopyToModule)</Private>
-    </Reference>
-    <Reference Include="UnityEngine.UnityWebRequestModule">
-      <HintPath>$(UnturnedDllPath)/UnityEngine.UnityWebRequestModule.dll</HintPath>
-      <Private>!$(CopyToModule)</Private>
-    </Reference>
-    <Reference Include="UnityEngine.AssetBundleModule">
-      <HintPath>$(UnturnedDllPath)/UnityEngine.AssetBundleModule.dll</HintPath>
-      <Private>!$(CopyToModule)</Private>
-    </Reference>
   </ItemGroup>
 
   <ItemGroup>
@@ -371,7 +342,17 @@
     </Compile>
   </ItemGroup>
 
+  <!-- Copy unturned files from U3DS to ~/Libraries -->
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent" Condition="exists('$(ServerPath)/Unturned_Data/Managed/Assembly-CSharp.dll')">
-    <Exec Command="&#xD;&#xA;					XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),Assembly-CSharp.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,Assembly-CSharp.dll))*&quot;&#xD;&#xA;&#xD;&#xA;          XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnturnedDat.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnturnedDat.dll))*&quot;&#xD;&#xA;&#xD;&#xA;          XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnityEx.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnityEx.dll))*&quot;&#xD;&#xA;&#xD;&#xA;          XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),SDG.NetTransport.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,SDG.NetTransport.dll))*&quot;&#xD;&#xA;&#xD;&#xA;          XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),SDG.NetPak.Runtime.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,SDG.NetPak.Runtime.dll))*&quot;&#xD;&#xA;&#xD;&#xA;          XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),com.rlabrecque.steamworks.net.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,com.rlabrecque.steamworks.net.dll))*&quot;&#xD;&#xA;&#xD;&#xA;          XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnityEngine.CoreModule.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnityEngine.CoreModule.dll))*&quot;&#xD;&#xA;&#xD;&#xA;          XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnityEngine.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnityEngine.dll))*&quot;&#xD;&#xA;&#xD;&#xA;          XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnityEngine.UIModule.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnityEngine.UIModule.dll))*&quot;&#xD;&#xA;&#xD;&#xA;          XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnityEngine.ImageConversionModule.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnityEngine.ImageConversionModule.dll))*&quot;&#xD;&#xA;&#xD;&#xA;          XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnityEngine.PhysicsModule.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnityEngine.PhysicsModule.dll))*&quot;&#xD;&#xA;&#xD;&#xA;          XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnityEngine.UnityWebRequestModule.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnityEngine.UnityWebRequestModule.dll))*&quot;&#xD;&#xA;&#xD;&#xA;          XCOPY /v /y &quot;$([System.IO.Path]::Combine($(UnturnedDllPath),UnityEngine.AssetBundleModule.dll))*&quot; &quot;$([System.IO.Path]::Combine(../Libraries,UnityEngine.AssetBundleModule.dll))*&quot;" />
+	  <Copy SourceFiles="$(UnturnedDllPath)/%(UnturnedLibrary.Identity).dll" DestinationFolder="$(SolutionDir)Libraries" />
+	  <Copy SourceFiles="$(UnturnedDllPath)/%(UnturnedLibrary.Identity).xml" DestinationFolder="$(SolutionDir)Libraries" ContinueOnError="true" />
+  </Target>
+  <!-- Copy xml docs for unity files to U3DS -->
+  <Target Name="PreBuildXml2Unturned" BeforeTargets="PreBuildEvent" Condition="exists('$(ServerPath)/Unturned_Data/Managed/Assembly-CSharp.dll') And exists('C:\Program Files\Unity\Hub\Editor\2021.3.29f1\Editor\Data\Managed\UnityEngine')">
+	  <Copy SourceFiles="C:\Program Files\Unity\Hub\Editor\2021.3.29f1\Editor\Data\Managed\UnityEngine\%(UnturnedLibrary.Identity).xml" DestinationFolder="$(ServerPath)/Unturned_Data/Managed" ContinueOnError="true" />
+  </Target>
+  <!-- Copy xml docs for unity files to ~/Libraries -->
+  <Target Name="PreBuildXml2Libraries" BeforeTargets="PreBuildEvent" Condition="exists('C:\Program Files\Unity\Hub\Editor\2021.3.29f1\Editor\Data\Managed\UnityEngine')">
+	  <Copy SourceFiles="C:\Program Files\Unity\Hub\Editor\2021.3.29f1\Editor\Data\Managed\UnityEngine\%(UnturnedLibrary.Identity).xml" DestinationFolder="$(SolutionDir)Libraries" ContinueOnError="true" />
   </Target>
 </Project>

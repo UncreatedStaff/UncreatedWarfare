@@ -322,7 +322,7 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
             if (kit.Type != KitType.Loadout || LoadoutIdHelper.Parse(kit.Id, out CSteamID player) < 0)
                 continue;
 
-            if (player.m_SteamID != e.Steam64.m_SteamID && _playerService!.IsPlayerOnline(player))
+            if (player.m_SteamID != e.Steam64.m_SteamID && _playerService!.IsPlayerOnlineThreadSafe(player))
                 continue;
 
             ulong s64 = player.m_SteamID;

@@ -74,7 +74,7 @@ public class VehicleBaySignInstanceProvider : ISignInstanceProvider, IRequestabl
 
         try
         {
-            TranslateKitSign(LoadoutSignBuffer, Vehicle, Spawn, language, culture, player);
+            TranslateVehicleBaySign(LoadoutSignBuffer, Vehicle, Spawn, language, culture, player);
             return LoadoutSignBuffer.ToString();
         }
         finally
@@ -83,7 +83,7 @@ public class VehicleBaySignInstanceProvider : ISignInstanceProvider, IRequestabl
         }
     }
 
-    private void TranslateKitSign(StringBuilder bldr, WarfareVehicleInfo info, VehicleSpawner spawner, LanguageInfo language, CultureInfo culture, WarfarePlayer? player)
+    private void TranslateVehicleBaySign(StringBuilder bldr, WarfareVehicleInfo info, VehicleSpawner spawner, LanguageInfo language, CultureInfo culture, WarfarePlayer? player)
     {
         string name = info.ShortName ?? info.VehicleAsset.GetAsset()?.FriendlyName ?? info.VehicleAsset.ToString();
         bldr.AppendColorized(name, VbsNameColor)

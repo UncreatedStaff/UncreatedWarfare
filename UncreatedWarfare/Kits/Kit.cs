@@ -354,15 +354,17 @@ public class Kit : IRequestable<Kit>, ITranslationArgument
 
     private void UpdateTranslationsFromModel(List<KitTranslation> translations, ICachableLanguageDataStore languageDataStore)
     {
-        _translations = new TranslationList(translations.Count);
+        TranslationList tList = new TranslationList(translations.Count);
         foreach (KitTranslation translation in translations)
         {
             LanguageInfo? lang = languageDataStore.GetInfoCached(translation.LanguageId);
             if (lang != null)
             {
-                _translations.Add(lang, translation.Value);
+                tList.Add(lang, translation.Value);
             }
         }
+
+        _translations = tList;
     }
 
     private void UpdateBundlesFromModel(List<KitEliteBundle> bundles)

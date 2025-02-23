@@ -1,4 +1,5 @@
 using DanielWillett.ModularRpcs.Annotations;
+using DanielWillett.ModularRpcs.Async;
 using DanielWillett.ModularRpcs.Exceptions;
 using Microsoft.Extensions.Configuration;
 using System;
@@ -64,7 +65,7 @@ public class DutyService : IAsyncEventListener<PlayerLeft>
     }
 
     [RpcSend]
-    protected virtual void SendDutyChanged(ulong steam64, DutyLevel level, bool isOnDuty) { }
+    protected virtual RpcTask SendDutyChanged(ulong steam64, DutyLevel level, bool isOnDuty) => RpcTask.NotImplemented;
 
     /// <summary>
     /// Switch the player's duty state to whatever it isn't currently.
@@ -155,7 +156,7 @@ public class DutyService : IAsyncEventListener<PlayerLeft>
         ActionLog.Add(ActionLogType.DutyChanged, isOnDuty ? "ON DUTY (offline)" : "OFF DUTY (offline)", steam64.m_SteamID);
         try
         {
-            SendDutyChanged(steam64.m_SteamID, level, isOnDuty);
+            await SendDutyChanged(steam64.m_SteamID, level, isOnDuty);
         }
         catch (RpcNoConnectionsException) { }
         catch (Exception ex)
@@ -253,7 +254,7 @@ public class DutyService : IAsyncEventListener<PlayerLeft>
 
         try
         {
-            SendDutyChanged(player.Steam64.m_SteamID, level, true);
+            await SendDutyChanged(player.Steam64.m_SteamID, level, true);
         }
         catch (RpcNoConnectionsException) { }
         catch (Exception ex)
@@ -316,7 +317,7 @@ public class DutyService : IAsyncEventListener<PlayerLeft>
 
         try
         {
-            SendDutyChanged(player.Steam64.m_SteamID, level, false);
+            await SendDutyChanged(player.Steam64.m_SteamID, level, false);
         }
         catch (RpcNoConnectionsException) { }
         catch (Exception ex)

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Events.Models.Squads;
 using Uncreated.Warfare.Layouts.Teams;
@@ -41,15 +41,19 @@ public class Squad : ITranslationArgument
         return _squadManager.DisbandSquad(this);
     }
 
+    internal void AddMemberWithoutNotify(WarfarePlayer player)
+    {
+        _members.Add(player);
+        player.Component<SquadPlayerComponent>().ChangeSquad(this);
+    }
+
     public bool AddMember(WarfarePlayer player)
     {
         if (ContainsPlayer(player))
             return false;
 
-        bool isNewSquad = _members.Count == 0;
-        _members.Add(player);
-        player.Component<SquadPlayerComponent>().ChangeSquad(this);
-        _ = WarfareModule.EventDispatcher.DispatchEventAsync(new SquadMemberJoined { Squad = this, Player = player, IsNewSquad = isNewSquad });
+        AddMemberWithoutNotify(player);
+        _ = WarfareModule.EventDispatcher.DispatchEventAsync(new SquadMemberJoined { Squad = this, Player = player, IsNewSquad = false });
         return true;
     }
 

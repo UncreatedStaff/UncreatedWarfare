@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace Uncreated.Warfare.Util;
 public static class SpanExtensions
@@ -30,6 +30,30 @@ public static class SpanExtensions
         public int Span1Len;
         public char* Span2Ptr;
         public int Span2Len;
+        public char Combine;
+    }
+
+    /// <summary>
+    /// Concat 2 spans without allocating extra memory.
+    /// </summary>
+    public static unsafe string Concat(this ReadOnlySpan<char> span, char combine, ReadOnlySpan<char> span2)
+    {
+        fixed (char* ptr = span)
+        fixed (char* ptr2 = span2)
+        {
+            Concat2SpanState state = default;
+            state.Span1Ptr = ptr;
+            state.Span1Len = span.Length;
+            state.Combine = combine;
+            state.Span2Ptr = ptr2;
+            state.Span2Len = span2.Length;
+            return string.Create(span.Length + span2.Length + 1, state, (span, state) =>
+            {
+                new ReadOnlySpan<char>(state.Span1Ptr, state.Span1Len).CopyTo(span);
+                span[state.Span1Len] = state.Combine;
+                new ReadOnlySpan<char>(state.Span2Ptr, state.Span2Len).CopyTo(span[(state.Span1Len + 1)..]);
+            });
+        }
     }
 
     /// <summary>

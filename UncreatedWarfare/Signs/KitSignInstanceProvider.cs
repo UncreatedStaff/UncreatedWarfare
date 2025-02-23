@@ -14,6 +14,7 @@ using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Addons;
 using Uncreated.Warfare.Translations.Util;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Signs;
 
@@ -21,12 +22,15 @@ namespace Uncreated.Warfare.Signs;
 [SignPrefix("loadout_")]
 public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>
 {
+    private static readonly StringBuilder KitSignBuffer = new StringBuilder(230);
+
     private readonly KitRequestService _kitRequestService;
     private readonly IKitDataStore _kitDataStore;
     private readonly PlayerNitroBoostService _nitroBoostService;
     private readonly IConfiguration _systemConfig;
     private readonly KitSignTranslations _translations;
-    private static readonly StringBuilder KitSignBuffer = new StringBuilder(230);
+    private readonly TextMeasurementService _measurementService;
+    private SignMetrics _signMetrics;
 
     private static readonly Color32 ColorKitFavoritedName = new Color32(255, 255, 153, 255);
     private static readonly Color32 ColorKitUnfavoritedName = new Color32(255, 255, 255, 255);
@@ -43,19 +47,23 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>
         IKitDataStore kitDataStore,
         TranslationInjection<KitSignTranslations> translations,
         PlayerNitroBoostService nitroBoostService,
-        IConfiguration systemConfig)
+        IConfiguration systemConfig,
+        TextMeasurementService measurementService)
     {
         _kitRequestService = kitRequestService;
         _kitDataStore = kitDataStore;
         _nitroBoostService = nitroBoostService;
         _systemConfig = systemConfig;
         _translations = translations.Value;
+        _measurementService = measurementService;
         LoadoutNumber = -1;
         KitId = null!;
     }
 
     public void Initialize(BarricadeDrop barricade, string extraInfo, IServiceProvider serviceProvider)
     {
+        _signMetrics = _measurementService.GetSignMetrics(barricade.asset.GUID);
+
         if (((InteractableSign)barricade.interactable).text.StartsWith("loadout_"))
         {
             if (int.TryParse(extraInfo, NumberStyles.Number, CultureInfo.InvariantCulture, out int id) && id >= 0)
@@ -121,17 +129,16 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>
 
     private void TranslateKitSign(StringBuilder bldr, Kit kit, LanguageInfo language, CultureInfo culture, WarfarePlayer? player)
     {
-        string kitName = kit.GetDisplayName(language, true);
+        string kitName = kit.GetDisplayName(language, true, removeNewLine: true);
 
         // if the name has a newline we want to skip the empty line so all the text is roughly the same size
-        bool nameHasNewLine = kitName.IndexOf('\n', StringComparison.Ordinal) >= 0;
-
         bool isFavorited = player != null && player.Component<KitPlayerComponent>().IsKitFavorited(kit.Key);
 
-        bldr.Append("<b>")
-            .AppendColorized(kitName.ToUpper(culture), isFavorited ? ColorKitFavoritedName : ColorKitUnfavoritedName)
-            .Append('\n');
+        bldr.Append("<b>");
+        AppendName(kitName, isFavorited ? ColorKitFavoritedName : ColorKitUnfavoritedName, out bool nameHasNewLine);
+        bldr.Append("</b>\n");
 
+        // if the name has a newline we want to skip the empty line so all the text is roughly the same size
         if (!nameHasNewLine)
             bldr.Append('\n');
 
@@ -248,15 +255,11 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>
 
         string kitName = kit.GetDisplayName(language, true, removeNewLine: false);
 
-        // if the name has a newline we want to skip the empty line so all the text is roughly the same size
-        bool nameHasNewLine = kitName.IndexOf('\n', StringComparison.Ordinal) >= 0;
-
         bool isFavorited = player != null && kitPlayerComponent!.IsKitFavorited(kit.Key);
 
-        bldr.Append("<b>")
-            .AppendColorized(kitName.ToUpper(culture), isFavorited ? ColorKitFavoritedName : ColorKitUnfavoritedName)
-            .Append("</b>")
-            .Append('\n');
+        bldr.Append("<b>");
+        AppendName(kitName, isFavorited ? ColorKitFavoritedName : ColorKitUnfavoritedName, out bool nameHasNewLine);
+        bldr.Append("</b>\n");
 
         bool needsUpgrade = kit.Season < WarfareModule.Season;
 
@@ -266,6 +269,7 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>
         if (!hasSubtitle)
             bldr.Append('\n');
 
+        // if the name has a newline we want to skip the empty line so all the text is roughly the same size
         if (!nameHasNewLine)
             bldr.Append('\n');
 
@@ -288,6 +292,32 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>
 
         if (!kit.IsLocked && !needsUpgrade)
             AppendPlayerCount(bldr, player, kit, language, culture, useClassLimit: true);
+    }
+
+    private void AppendName(string kitName, Color32 color, out bool hasExtraLine)
+    {
+        Span<Range> outRanges = stackalloc Range[2]; // max 2 lines
+        int nameSplits = _measurementService.SplitLines(kitName, 1.3f, _signMetrics, outRanges);
+
+        KitSignBuffer.AppendColorized(ReadOnlySpan<char>.Empty, color, end: false);
+        if (nameSplits > 1)
+        {
+            ReadOnlySpan<char> nameSpan = kitName.AsSpan();
+            KitSignBuffer
+                .Append(nameSpan[outRanges[0]])
+                .Append('\n')
+                .Append(nameSpan[outRanges[1]]);
+            Console.WriteLine("\"" + nameSpan[outRanges[0]].Concat('/', nameSpan[outRanges[1]]) + "\"");
+            hasExtraLine = true;
+        }
+        else
+        {
+            KitSignBuffer.Append(kitName);
+            Console.WriteLine("\"" + kitName + "\"");
+            hasExtraLine = false;
+        }
+
+        KitSignBuffer.Append("</color>");
     }
 }
 
