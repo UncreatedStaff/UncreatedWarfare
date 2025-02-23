@@ -406,11 +406,8 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         await UniTask.SwitchToMainThread(token);
 
         await _droppedItemTracker.DestroyItemsDroppedByPlayerAsync(player.Steam64, false, token);
-
-        Class oldClass = player.Component<KitPlayerComponent>().ActiveClass;
-        bool spawnWithLowAmmo = oldClass is not (Class.None or Class.Unarmed);
-
-        await GiveKitIntlAsync(player, new KitBestowData(kit) { IsLowAmmo = spawnWithLowAmmo }, true, token).ConfigureAwait(false);
+        
+        await GiveKitIntlAsync(player, new KitBestowData(kit) { IsLowAmmo = !player.Save.IsFirstLife }, true, token).ConfigureAwait(false);
 
         resultHandler.Success(player, kit);
 

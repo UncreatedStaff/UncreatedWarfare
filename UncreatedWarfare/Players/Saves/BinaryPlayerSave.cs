@@ -7,7 +7,7 @@ namespace Uncreated.Warfare.Players.Saves;
 
 public class BinaryPlayerSave : ISaveableState
 {
-    private const byte DataVersion = 3;
+    private const byte DataVersion = 4;
 
     private readonly ILogger _logger;
 
@@ -20,6 +20,10 @@ public class BinaryPlayerSave : ISaveableState
     public bool HasQueueSkip { get; set; }
     public ulong LastGameId { get; set; }
     public bool ShouldRespawnOnJoin { get; set; }
+    /// <summary>
+    /// If the player has not died yet during this layout.
+    /// </summary>
+    public bool IsFirstLife { get; set; }
     public bool IMGUI { get; set; }
     public bool HasSeenVoiceChatNotice { get; set; }
     public bool WasNitroBoosting { get; set; }
@@ -65,6 +69,7 @@ public class BinaryPlayerSave : ISaveableState
         block.writeBoolean(HasQueueSkip);
         block.writeUInt64(LastGameId);
         block.writeBoolean(ShouldRespawnOnJoin);
+        block.writeBoolean(IsFirstLife);
         block.writeBoolean(IMGUI);
         block.writeBoolean(WasNitroBoosting);
         block.writeBoolean(TrackQuests);
@@ -120,6 +125,8 @@ public class BinaryPlayerSave : ISaveableState
         HasQueueSkip = block.readBoolean();
         LastGameId = block.readUInt64();
         ShouldRespawnOnJoin = block.readBoolean();
+        if (v > 3)
+            IsFirstLife = block.readBoolean();
         IMGUI = block.readBoolean();
         WasNitroBoosting = block.readBoolean();
         TrackQuests = block.readBoolean();
