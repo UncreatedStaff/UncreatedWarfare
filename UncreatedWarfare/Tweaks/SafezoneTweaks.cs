@@ -1,7 +1,8 @@
-﻿using System;
+using System;
 using Uncreated.Warfare.Events.Models;
-using Uncreated.Warfare.Events.Models.Flags;
+using Uncreated.Warfare.Events.Models.Buildables;
 using Uncreated.Warfare.Events.Models.Players;
+using Uncreated.Warfare.Events.Models.Vehicles;
 using Uncreated.Warfare.Events.Models.Zones;
 using Uncreated.Warfare.Zones;
 
@@ -11,7 +12,10 @@ public class SafezoneTweaks :
     IEventListener<PlayerUseableEquipped>,
     IEventListener<EquipUseableRequested>,
     IEventListener<PlayerEnteredZone>,
-    IEventListener<PlayerExitedZone>
+    IEventListener<PlayerExitedZone>,
+    IEventListener<ChangeFiremodeRequested>,
+    IEventListener<IDamageBuildableRequestedEvent>,
+    IEventListener<DamageVehicleRequested>
 {
     private readonly ZoneStore _zoneStore;
 
@@ -29,11 +33,13 @@ public class SafezoneTweaks :
         if (e.DequippedItem?.GetAsset() is ItemGunAsset dequippedGunAsset)
         {
             e.DequippedItem.item.state[11] = (byte)GetDefaultFireMode(dequippedGunAsset);
-            e.Equipment.sendUpdateState();
+            byte index = e.Player.UnturnedPlayer.inventory.getIndex((byte)e.DequippedItemPage, e.DequippedItem.x, e.DequippedItem.y);
+            if (index != byte.MaxValue)
+                e.Inventory.updateState((byte)e.DequippedItemPage, index, e.DequippedItem.item.state);
         }
         
-        // turn on safety for guns in main
-        if (e.Useable is not UseableGun)
+        // turn on safety for guns in main if not on duty
+        if (e.Useable is not UseableGun || e.Player.IsOnDuty)
             return;
         
         e.Equipment.state[11] = (byte) EFiremode.SAFETY;
@@ -51,15 +57,19 @@ public class SafezoneTweaks :
 
         return EFiremode.SAFETY;
     }
+
     public void HandleEvent(EquipUseableRequested e, IServiceProvider serviceProvider)
     {
+        if (e.Player.IsOnDuty)
+            return;
+
         if (!_zoneStore.IsInMainBase(e.Player.Position))
             return;
         
         if (e.Asset is not ItemThrowableAsset)
             return;
         
-        // prevent equipping all throwables in main
+        // prevent equipping all throwables in main if not on duty
         e.Cancel();
     }
 
@@ -87,5 +97,31 @@ public class SafezoneTweaks :
         // turn off safety for guns when leaving main to spare the player from having to do it themselves
         e.Equipment.state[11] = (byte)GetDefaultFireMode(gun.equippedGunAsset);
         e.Equipment.sendUpdateState();
+    }
+
+    public void HandleEvent(ChangeFiremodeRequested e, IServiceProvider serviceProvider)
+    {
+        if (e.Player.IsOnDuty)
+            return;
+
+        e.Firemode = EFiremode.SAFETY;
+        e.Cancel(cancelAction: false);
+    }
+
+    // prevent damage to buildables and vehicles in sz
+    public void HandleEvent(IDamageBuildableRequestedEvent e, IServiceProvider serviceProvider)
+    {
+        if (_zoneStore.IsInsideZone(e.Buildable.Position, ZoneType.MainBase, null))
+        {
+            e.Cancel();
+        }
+    }
+
+    public void HandleEvent(DamageVehicleRequested e, IServiceProvider serviceProvider)
+    {
+        if (_zoneStore.IsInsideZone(e.Vehicle.Position, ZoneType.MainBase, null))
+        {
+            e.Cancel();
+        }
     }
 }

@@ -295,15 +295,25 @@ partial class EventDispatcher
     {
         WarfarePlayer player = _playerService.GetOnlinePlayer(equipment);
 
+        Page dequippedPage = default;
+        ItemJar? dequipped = null;
+
+        if (player.Data.TryRemove("LastEquippedItem", out object? jarBox)
+            && jarBox is ItemJar jar
+            && ItemUtility.TryFindJarPage(equipment.player.inventory, jar, out dequippedPage))
+        {
+            dequipped = jar;
+        }
+
         PlayerUseableEquipped args = new PlayerUseableEquipped
         {
             Player = player,
             Item = equipment.asset,
             Useable = equipment.useable,
-            DequippedItem = player.Data.TryRemove("LastEquippedItem", out object? itemJar) ? itemJar as ItemJar : null
+            DequippedItem = dequipped,
+            DequippedItemPage = dequippedPage
         };
 
         _ = DispatchEventAsync(args, _unloadToken);
     }
-
 }

@@ -20,13 +20,22 @@ public class SquadSignInstanceProvider : ISignInstanceProvider
     private readonly ITeamManager<Team> _teamManager;
     private readonly SquadManager _squadManager;
     private readonly TextMeasurementService _measurementService;
+    private readonly SquadTranslations _translations;
     private SignMetrics _signMetrics;
 
-    public SquadSignInstanceProvider(ITeamManager<Team> teamManager, SquadManager squadManager, TextMeasurementService measurementService)
+    public SquadSignInstanceProvider(
+        ITeamManager<Team> teamManager,
+        SquadManager squadManager,
+        TextMeasurementService measurementService,
+        TranslationInjection<SquadTranslations> translations)
     {
+        Team = Team.NoTeam;
+        SquadNumber = -1;
+
         _teamManager = teamManager;
         _squadManager = squadManager;
         _measurementService = measurementService;
+        _translations = translations.Value;
     }
     
     public bool CanBatchTranslate => true;
@@ -56,18 +65,19 @@ public class SquadSignInstanceProvider : ISignInstanceProvider
         CultureInfo culture, WarfarePlayer? player)
     {
         if (SquadNumber is < 1 or > SquadManager.MaxSquadCount)
-            return "";
+            return "Invalid Sign";
         
         Squad? squad = _squadManager.Squads.FirstOrDefault(s => s.Team == Team && s.TeamIdentificationNumber == SquadNumber);
         if (squad == null)
         {
-
+            return _translations.EmptySquadSignTranslation.Translate(SquadNumber, language, culture, TimeZoneInfo.Utc);
         }
 
         StringBuilder.Clear();
 
         StringBuilder
-            .AppendColorized($"<b>SQUAD {SquadNumber.ToString(culture)}", "#9effc6")
+            .Append("<b>")
+            .AppendColorized(_translations.SquadSignHeader.Translate(SquadNumber, language, culture, TimeZoneInfo.Utc), "#9effc6")
             .Append("  ")
             .AppendColorized($"({squad.Members.Count}/{Squad.MaxMembers})", "#ffffff")
             .AppendLine();
