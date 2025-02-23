@@ -34,8 +34,10 @@ internal sealed class RequestCommand : ICompoundingCooldownCommand
     public async UniTask ExecuteAsync(CancellationToken token)
     {
         Context.AssertRanByPlayer();
-
-        IRequestable<object>? requestable = GetRequestable();
+        
+        IRequestable<object>? requestable = null;
+        if (Context.TryGetTargetRootTransform(out Transform? transform))
+            requestable = RequestHelper.GetRequestable(transform, _signInstancer);
 
         if (requestable == null)
         {
@@ -52,27 +54,5 @@ internal sealed class RequestCommand : ICompoundingCooldownCommand
         );
 
         Context.Defer();
-    }
-
-    private IRequestable<object>? GetRequestable()
-    {
-        if (!Context.TryGetTargetRootTransform(out Transform? transform))
-        {
-            return null;
-        }
-        IRequestable<object>? requestable = ContainerHelper.FindComponent<IRequestable<object>>(transform);
-        if (requestable != null || !(transform.CompareTag("Barricade") || transform.CompareTag("Vehicle")))
-        {
-            return requestable;
-        }
-
-        BarricadeDrop? barricade = BarricadeManager.FindBarricadeByRootTransform(transform);
-        if (barricade?.interactable is not InteractableSign)
-        {
-            return null;
-        }
-
-        ISignInstanceProvider? provider = _signInstancer.GetSignProvider(barricade);
-        return provider as IRequestable<object>;
     }
 }

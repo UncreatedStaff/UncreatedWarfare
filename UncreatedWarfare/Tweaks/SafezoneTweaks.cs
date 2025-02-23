@@ -29,7 +29,7 @@ public class SafezoneTweaks :
         if (!_zoneStore.IsInMainBase(e.Player.Position))
             return;
 
-        // if the player is dequipping a gun in main, it's convenient to turn safety off for them in to save them from having todo it themselves later
+        // if the player is dequipping a gun in main, it's convenient to turn safety off for them in to save them from having to do it themselves later
         if (e.DequippedItem?.GetAsset() is ItemGunAsset dequippedGunAsset)
         {
             e.DequippedItem.item.state[11] = (byte)GetDefaultFireMode(dequippedGunAsset);

@@ -7,8 +7,10 @@ using System.Reflection;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Costs;
+using Uncreated.Warfare.Signs;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Collections;
+using Uncreated.Warfare.Util.Containers;
 
 namespace Uncreated.Warfare.Interaction.Requests;
 public static class RequestHelper
@@ -104,5 +106,23 @@ public static class RequestHelper
 
         // call RequestAsync
         return (Task<bool>)method.Invoke(reqHandler, [ player, requestable, resultHandler, token ]);
+    }
+
+    public static IRequestable<object>? GetRequestable(Transform transform, SignInstancer signInstancer)
+    {
+        IRequestable<object>? requestable = ContainerHelper.FindComponent<IRequestable<object>>(transform);
+        if (requestable != null || !(transform.CompareTag("Barricade") || transform.CompareTag("Vehicle")))
+        {
+            return requestable;
+        }
+
+        BarricadeDrop? barricade = BarricadeManager.FindBarricadeByRootTransform(transform);
+        if (barricade?.interactable is not InteractableSign)
+        {
+            return null;
+        }
+
+        ISignInstanceProvider? provider = signInstancer.GetSignProvider(barricade);
+        return provider as IRequestable<object>;
     }
 }
