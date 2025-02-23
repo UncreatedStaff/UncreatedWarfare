@@ -18,6 +18,10 @@ public static class ZoneStoreExtensions
     {
         return zoneStore.IsInsideZone(player.Position, ZoneType.MainBase, null);
     }
+    public static bool IsInWarRoom(this ZoneStore zoneStore, WarfarePlayer player)
+    {
+        return zoneStore.IsInsideZone(player.Position, ZoneType.WarRoom, null);
+    }
 
     public static bool IsInMainBase(this ZoneStore zoneStore, Vector3 point, FactionInfo faction)
     {

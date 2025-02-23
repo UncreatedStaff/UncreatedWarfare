@@ -7,6 +7,7 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Barricades;
+using Uncreated.Warfare.Events.Models.Zones;
 using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.Fobs.SupplyCrates;
 using Uncreated.Warfare.FOBs.SupplyCrates;
@@ -14,14 +15,19 @@ using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Kits.Requests;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Containers;
 using Uncreated.Warfare.Util.Inventory;
+using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.FOBs.Deployment.Tweaks;
-public class ClaimToRearmTweaks : IAsyncEventListener<ClaimBedRequested>
+public class ClaimToRearmTweaks : 
+    IAsyncEventListener<ClaimBedRequested>,
+    IAsyncEventListener<PlayerEnteredZone>,
+    IAsyncEventListener<PlayerExitedZone>
 {
     private readonly KitRequestService _kitRequestService;
     private readonly FobManager _fobManager;
@@ -29,6 +35,7 @@ public class ClaimToRearmTweaks : IAsyncEventListener<ClaimBedRequested>
     private readonly ChatService _chatService;
     private readonly AmmoTranslations _translations;
     private readonly ILogger _logger;
+    private readonly ZoneStore? _zoneStore;
 
     public ClaimToRearmTweaks(IServiceProvider serviceProvider, ILogger<ClaimToRearmTweaks> logger)
     {
@@ -37,6 +44,7 @@ public class ClaimToRearmTweaks : IAsyncEventListener<ClaimBedRequested>
         _kitWeaponTextService = serviceProvider.GetService<KitWeaponTextService>();
         _chatService = serviceProvider.GetRequiredService<ChatService>();
         _translations = serviceProvider.GetRequiredService<TranslationInjection<AmmoTranslations>>().Value;
+        _zoneStore = serviceProvider.GetService<ZoneStore>();
         _logger = logger;
         
     }
@@ -341,5 +349,48 @@ public class ClaimToRearmTweaks : IAsyncEventListener<ClaimBedRequested>
             default:
                 return 0;
         }
+    }
+    
+    [EventListener(Priority = -1)]
+    public async UniTask HandleEventAsync(PlayerEnteredZone e, IServiceProvider serviceProvider, CancellationToken token = default)
+    {
+        if (e.Zone.Type is not ZoneType.MainBase)
+            return;
+
+        if (_zoneStore == null)
+            return;
+
+        if (!_zoneStore.IsInWarRoom(e.Player))
+            return;
+
+        await AutoResupplyKit(e.Player, token);
+    }
+
+    [EventListener(Priority = -1)]
+    public async UniTask HandleEventAsync(PlayerExitedZone e, IServiceProvider serviceProvider, CancellationToken token = default)
+    {
+        if (e.Zone.Type is not ZoneType.WarRoom)
+            return;
+
+        if (_zoneStore == null)
+            return;
+
+        if (!_zoneStore.IsInMainBase(e.Player))
+            return;
+
+        await AutoResupplyKit(e.Player, token);
+    }
+    
+    private async Task AutoResupplyKit(WarfarePlayer player, CancellationToken token = default)
+    {
+        KitPlayerComponent kitComponent = player.Component<KitPlayerComponent>();
+        if (!player.Component<KitPlayerComponent>().ActiveKitKey.HasValue)
+            return;
+        
+        Kit? kit = await kitComponent.GetActiveKitAsync(KitInclude.Giveable, token).ConfigureAwait(false);
+        if (kit == null)
+            return;
+        
+        await _kitRequestService.GiveKitAsync(player, new KitBestowData(kit) { IsLowAmmo = false }, token);
     }
 }
