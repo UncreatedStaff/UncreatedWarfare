@@ -16,6 +16,7 @@ using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Cooldowns;
 using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Signs;
 using Uncreated.Warfare.Teams;
@@ -156,8 +157,17 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
             // check credits bought
             if (kit is { Type: KitType.Public, CreditCost: > 0 } && !player.Component<KitPlayerComponent>().IsKitAccessible(kit.Key))
             {
-                resultHandler.MissingCreditsOwnership(player, kit, kit.CreditCost);
-                return false;
+                // resultHandler.MissingCreditsOwnership(player, kit, kit.CreditCost);
+                // return false;
+                ToastMessage message = ToastMessage.Popup(
+                    _kitReqTranslations.ModalConfirmPurchaseKitHeading.Translate(player),
+                    _kitReqTranslations.ModalConfirmPurchaseKitDescription.Translate(player),
+                    _kitReqTranslations.ModalConfirmPurchaseKitAcceptButton.Translate(player),
+                    _kitReqTranslations.ModalConfirmPurchaseKitCancelButton.Translate(player),
+                    callbacks: new PopupCallbacks(AcceptPressed, DenyPressed)
+                );
+
+                player.SendToast(message);
             }
 
             // elite access

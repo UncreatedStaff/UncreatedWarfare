@@ -292,6 +292,18 @@ public class RequestKitsTranslations : PropertiesTranslationCollection
 
     [TranslationData("Sent when a player tries to request a premium kit that requires boosting in Discord but they aren't.")]
     public readonly Translation<Cooldown> RequiresNitroBoost = new Translation<Cooldown>("Requires <#e00ec9>NITRO BOOST</color> in <#7483c4>Discord</color>", arg0Fmt: Cooldown.FormatTimeShort);
+    
+    [TranslationData("Modal heading for when a player is asked if they want to purchase a kit that they don't yet own.")]
+    public readonly Translation ModalConfirmPurchaseKitHeading = new Translation("Purchase Kit");
+
+    [TranslationData("Modal description for when a player is asked if they want to purchase a kit that they don't yet own.")]
+    public readonly Translation<int> ModalConfirmPurchaseKitDescription = new Translation<int>("Would you like to purchase this kit for <#b8ffc1>C</color> <#ffffff>{0}</color> credits?");
+
+    [TranslationData("Modal accept button text for when a player is asked if they want to purchase a kit that they don't yet own.")]
+    public readonly Translation ModalConfirmPurchaseKitAcceptButton = new Translation("Purchase Kit");
+
+    [TranslationData("Modal cancel button text for when a player is asked if they want to purchase a kit that they don't yet own.")]
+    public readonly Translation ModalConfirmPurchaseKitCancelButton = new Translation("Purchase Kit");
 }
 
 public class RequestVehicleTranslations : PropertiesTranslationCollection
