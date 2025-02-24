@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Uncreated.Warfare.Database.Abstractions;
@@ -390,6 +389,26 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         if (comp.ActiveKitKey.HasValue)
             await RemoveKitAsync(player, token);
         return false;
+    }
+
+    public async Task RestockKitAsync(WarfarePlayer player, CancellationToken token = default)
+    {
+        await _semaphore.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            if (!player.Component<KitPlayerComponent>().HasKit)
+            {
+                await GiveUnarmedKitAsyncIntl(player, true, token).ConfigureAwait(false);
+                return;
+            }
+
+            await UniTask.SwitchToMainThread(token);
+            _kitBestowService.RestockKit(player);
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
     }
 
     public async Task GiveKitAsync(WarfarePlayer player, KitBestowData kitBestowData, CancellationToken token = default)

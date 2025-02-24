@@ -1,8 +1,5 @@
 using DanielWillett.ReflectionTools;
-using SDG.Framework.Utilities;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
@@ -16,7 +13,6 @@ namespace Uncreated.Warfare.Commands;
 [Command("give", "i", "item"), Priority(1), MetadataFile]
 internal sealed class GiveCommand : IExecutableCommand
 {
-    private readonly IFactionDataStore _factionDataStore;
     private readonly AssetRedirectService _assetRedirectService;
     
     private const int MaxItems = 100;
@@ -24,9 +20,8 @@ internal sealed class GiveCommand : IExecutableCommand
     /// <inheritdoc />
     public required CommandContext Context { get; init; }
 
-    public GiveCommand(IFactionDataStore factionDataStore, AssetRedirectService assetRedirectService)
+    public GiveCommand(AssetRedirectService assetRedirectService)
     {
-        _factionDataStore = factionDataStore;
         _assetRedirectService = assetRedirectService;
     }
 
@@ -77,24 +72,7 @@ internal sealed class GiveCommand : IExecutableCommand
             }
             if (state != null && gunAsset != null)
             {
-                ushort oldItem = BitConverter.ToUInt16(state, (int)AttachmentType.Magazine);
-                if (Assets.find(EAssetType.ITEM, oldItem) is ItemMagazineAsset magAsset)
-                    asset = magAsset;
-                else if (Assets.find(EAssetType.ITEM, gunAsset.getMagazineID()) is ItemMagazineAsset magAsset2)
-                    asset = magAsset2;
-                else
-                {
-                    List<ItemMagazineAsset> mags = ListPool<ItemMagazineAsset>.claim();
-                    try
-                    {
-                        Assets.find(mags);
-                        asset = mags.FirstOrDefault(x => x.calibers.Any(y => gunAsset.magazineCalibers.Contains(y)));
-                    }
-                    finally
-                    {
-                        ListPool<ItemMagazineAsset>.release(mags);
-                    }
-                }
+                asset = ItemUtility.FindMagazineAsset(gunAsset, state);
                 itemSt = Array.Empty<byte>();
                 if (asset != null)
                     itemAmt = asset.amount;

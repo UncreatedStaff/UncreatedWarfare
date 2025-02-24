@@ -58,8 +58,6 @@ public class KitCommandLookResolver
 
         if (kit == null && ctx.TryGet(startArgument, out string? kitId))
         {
-            Console.WriteLine(kitId);
-
             //  kit give kit-id [other... ]
             ++argIndex;
             kit = await _kitDataStore.QueryKitAsync(kitId, include, token).ConfigureAwait(false);

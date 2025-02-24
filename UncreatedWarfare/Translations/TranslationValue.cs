@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Util;
@@ -10,7 +10,6 @@ namespace Uncreated.Warfare.Translations;
 /// </summary>
 public class TranslationValue
 {
-    private string _rawValue;
 
     private int _colorStrippedValueStart;
     private int _colorStrippedValueLength;
@@ -18,12 +17,8 @@ public class TranslationValue
     private int _imguiColorStrippedValueStart;
     private int _imguiColorStrippedValueLength;
 
-    private int _terminalColorStrippedValueStart;
-    private int _terminalColorStrippedValueLength;
-
     private string? _colorStrippedValueCache;
     private string? _colorStrippedIMGUIValueCache;
-    private string? _colorStrippedTerminalValueCache;
 
 #nullable disable
     private ArgumentSpan[] _pluralizations;
@@ -41,6 +36,11 @@ public class TranslationValue
     /// Language of translations this value contains.
     /// </summary>
     public LanguageInfo Language { get; }
+
+    /// <summary>
+    /// The raw value of the translation without pluralization replacements.
+    /// </summary>
+    public string RawValue { get; private set; }
 
     /// <summary>
     /// The value of the translation, with pluralizations replaced with their singular values.
@@ -96,20 +96,6 @@ public class TranslationValue
         }
     }
 
-    /// <summary>
-    /// Value converted to virtual terminal sequences with the outer color span removed.
-    /// </summary>
-    /// <remarks>Use <see cref="ColorStrippedTerminalValueSpan"/> if possible.</remarks>
-    public string ColorStrippedTerminalValue
-    {
-        get
-        {
-            if (_terminalPluralizations == null)
-                InitTerminal();
-
-            return _colorStrippedTerminalValueCache ??= new string(ColorStrippedTerminalValueSpan);
-        }
-    }
 #nullable restore
 
     /// <summary>
@@ -137,20 +123,6 @@ public class TranslationValue
     }
 
     /// <summary>
-    /// Span of text excluding the background color (Virtual terminal sequences).
-    /// </summary>
-    public ReadOnlySpan<char> ColorStrippedTerminalValueSpan
-    {
-        get
-        {
-            if (_terminalPluralizations == null)
-                InitTerminal();
-
-            return TerminalValue.AsSpan(_terminalColorStrippedValueStart, _terminalColorStrippedValueLength);
-        }
-    }
-
-    /// <summary>
     /// Offset into the <see cref="Value"/> string the color-stripped value starts.
     /// </summary>
     public int ColorStrippedValueOffset => _colorStrippedValueStart;
@@ -164,13 +136,13 @@ public class TranslationValue
     {
         Language = language;
         Translation = translation;
-        _rawValue = value;
+        RawValue = value;
         SetValue(value);
     }
 
     internal ArgumentSpan[] GetPluralizations(in TranslationArguments args, out int argumentOffset)
     {
-        if (!args.Language.SupportsPluralization)
+        if (!Language.SupportsPluralization)
         {
             argumentOffset = 0;
             return Array.Empty<ArgumentSpan>();
@@ -181,7 +153,7 @@ public class TranslationValue
             if (_terminalPluralizations == null)
                 InitTerminal();
 
-            argumentOffset = args.UseUncoloredTranslation ? _terminalColorStrippedValueStart : 0;
+            argumentOffset = 0;
             return _terminalPluralizations!;
         }
 
@@ -202,7 +174,7 @@ public class TranslationValue
     {
         if (forTerminal)
         {
-            return useUncoloredTranslation ? ColorStrippedTerminalValueSpan : TerminalValue;
+            return TerminalValue;
         }
         if (useIMGUI)
         {
@@ -216,7 +188,7 @@ public class TranslationValue
     {
         if (forTerminal)
         {
-            return useUncoloredTranslation ? ColorStrippedTerminalValue : TerminalValue;
+            return TerminalValue;
         }
         if (useIMGUI)
         {
@@ -228,7 +200,7 @@ public class TranslationValue
 
     public void SetValue(string value)
     {
-        _rawValue = value;
+        RawValue = value;
         _pluralizations = TranslationArgumentModifiers.ExtractModifiers(out string? newValue, value, 'p');
 
         Value = newValue ?? value;
@@ -243,7 +215,7 @@ public class TranslationValue
     {
         if (_pluralizations.Length > 0)
         {
-            string imguiUnformatted = TranslationFormattingUtility.CreateIMGUIString(_rawValue);
+            string imguiUnformatted = TranslationFormattingUtility.CreateIMGUIString(RawValue);
             _imguiPluralizations = TranslationArgumentModifiers.ExtractModifiers(out string? newIMGUIString, imguiUnformatted, 'p');
             _imguiValue = newIMGUIString ?? imguiUnformatted;
         }
@@ -251,16 +223,16 @@ public class TranslationValue
         {
             _imguiPluralizations = _pluralizations;
             _imguiValue = TranslationFormattingUtility.CreateIMGUIString(Value);
-
-            TranslationFormattingUtility.ExtractColor(_imguiValue, out _imguiColorStrippedValueStart, out _imguiColorStrippedValueLength);
         }
+
+        TranslationFormattingUtility.ExtractColor(_imguiValue, out _imguiColorStrippedValueStart, out _imguiColorStrippedValueLength);
     }
 
     private void InitTerminal()
     {
         if (_pluralizations.Length > 0)
         {
-            string terminalUnformatted = TerminalColorHelper.ConvertRichTextToVirtualTerminalSequences(_rawValue, Translation.TranslationService.TerminalColoring);
+            string terminalUnformatted = TerminalColorHelper.ConvertRichTextToVirtualTerminalSequences(RawValue, Translation.TranslationService.TerminalColoring);
             _terminalPluralizations = TranslationArgumentModifiers.ExtractModifiers(out string? newTerminalString, terminalUnformatted, 'p');
             _terminalValue = newTerminalString ?? terminalUnformatted;
         }
@@ -268,8 +240,6 @@ public class TranslationValue
         {
             _terminalPluralizations = _pluralizations;
             _terminalValue = TerminalColorHelper.ConvertRichTextToVirtualTerminalSequences(Value, Translation.TranslationService.TerminalColoring);
-
-            TranslationFormattingUtility.ExtractColor(_terminalValue, out _terminalColorStrippedValueStart, out _terminalColorStrippedValueLength);
         }
     }
 }
