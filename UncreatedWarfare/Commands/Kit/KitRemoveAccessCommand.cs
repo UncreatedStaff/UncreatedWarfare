@@ -33,7 +33,7 @@ internal sealed class KitRemoveAccessCommand : IExecutableCommand
 
     public async UniTask ExecuteAsync(CancellationToken token)
     {
-        (CSteamID? steam64, WarfarePlayer? onlinePlayer) = await Context.TryGetPlayer(1).ConfigureAwait(false);
+        (CSteamID? steam64, WarfarePlayer? onlinePlayer) = await Context.TryGetPlayer(0).ConfigureAwait(false);
 
         if (!steam64.HasValue || !Context.TryGet(1, out string? kitName))
         {
