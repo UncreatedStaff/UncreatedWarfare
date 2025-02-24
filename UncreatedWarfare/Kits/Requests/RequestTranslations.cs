@@ -291,7 +291,7 @@ public class RequestKitsTranslations : PropertiesTranslationCollection
     public readonly Translation<Cooldown> RequiresNitroBoost = new Translation<Cooldown>("Requires <#e00ec9>NITRO BOOST</color> in <#7483c4>Discord</color>", arg0Fmt: Cooldown.FormatTimeShort);
     
     [TranslationData("Sent when a player successfully purchases a kit.")]
-    public readonly Translation<Kit, int> KitPurchaseSuccess = new Translation<Kit, int>("<#f3d98f>You have successfully purchased  <#ffffff>{0}</color> for <#b8ffc1>C</color> <#ffffff>{1}</color> credits.");
+    public readonly Translation<Kit, int> KitPurchaseSuccess = new Translation<Kit, int>("<#f3e2b4>You have successfully purchased kit <#ffffff>{0}</color> for <#b8ffc1>C</color> <#ffffff>{1}</color> credits.");
 
     
     [TranslationData("Modal heading for when a player is asked if they want to purchase a kit that they don't yet own.")]
