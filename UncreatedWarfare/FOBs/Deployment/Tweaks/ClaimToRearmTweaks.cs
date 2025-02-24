@@ -360,10 +360,7 @@ public class ClaimToRearmTweaks :
         if (_zoneStore == null)
             return;
 
-        if (!_zoneStore.IsInWarRoom(e.Player))
-            return;
-
-        await _kitRequestService.RestockKitAsync(e.Player, silent: true, token);
+        await _kitRequestService.RestockKitAsync(e.Player, token);
     }
 
     [EventListener(Priority = -1)]
@@ -378,6 +375,6 @@ public class ClaimToRearmTweaks :
         if (!_zoneStore.IsInMainBase(e.Player))
             return;
 
-        await _kitRequestService.RestockKitAsync(e.Player, silent: true, token);
+        await _kitRequestService.RestockKitAsync(e.Player, token);
     }
 }

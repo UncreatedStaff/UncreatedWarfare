@@ -104,7 +104,6 @@ public class SafezoneTweaks :
                 {
                     try
                     {
-                        Console.WriteLine($"Giving player {e.Player} on team {e.Player.Team} their unarmed kit.");
                         await _kitRequestService.GiveUnarmedKitAsync(e.Player, silent: true, e.Player.DisconnectToken);
                     }
                     catch (Exception ex)
