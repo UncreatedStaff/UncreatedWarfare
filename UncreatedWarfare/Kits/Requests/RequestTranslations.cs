@@ -21,12 +21,9 @@ public class RequestTranslations : PropertiesTranslationCollection
 
     [TranslationData("Sends a generic successful request message that's used to abstract requests a bit more.")]
     public readonly Translation<IRequestable<object>> RequestedSuccess = new Translation<IRequestable<object>>("<#9cffb3>Fufilled request for <#ffffff>{0}</color>.");
-
-    [TranslationData("Sent when a player tries to request something that requires purchasing.", "Total credits required")]
-    public readonly Translation<int> RequestNotOwnedCreditsCanAfford = new Translation<int>("<#99918d>Look at this sign and type '<#ffe2ab>/buy</color>' to unlock this permanently for <#b8ffc1>C </color><#ffffff>{0}</color>.");
-
-    [TranslationData("Sent when a player tries to request something that requires purchasing, but they can't afford the kit yet.", "The player's current balance", "Total credits required")]
-    public readonly Translation<int, int> RequestNotOwnedCreditsCantAfford = new Translation<int, int>("<#a8918a>You only have <#b8ffc1>C </color><#ffffff>{0}</color> / <#b8ffc1>C </color><#ffffff>{1}</color> needed to unlock this.");
+    
+    [TranslationData("Sent when a player tries to request something that requires purchasing, but they can't afford it yet.", "The player's current balance", "Total credits required")]
+    public readonly Translation<int, int> RequestNotOwnedCreditsCannotAfford = new Translation<int, int>("<#a8918a>You only have <#b8ffc1>C </color><#ffffff>{0}</color> / <#b8ffc1>C </color><#ffffff>{1}</color> needed to unlock this.");
 
     [TranslationData("Sent when a player tries to request something that costs real money.")]
     public readonly Translation<string> RequestNotOwnedDonor = new Translation<string>("<#a8918a>You don't have access to this premium content. This is available for <#ffffff>{0}</color> and can be purchased in our <#7483c4>Discord</color>.");
@@ -292,6 +289,22 @@ public class RequestKitsTranslations : PropertiesTranslationCollection
 
     [TranslationData("Sent when a player tries to request a premium kit that requires boosting in Discord but they aren't.")]
     public readonly Translation<Cooldown> RequiresNitroBoost = new Translation<Cooldown>("Requires <#e00ec9>NITRO BOOST</color> in <#7483c4>Discord</color>", arg0Fmt: Cooldown.FormatTimeShort);
+    
+    [TranslationData("Sent when a player successfully purchases a kit.")]
+    public readonly Translation<Kit, int> KitPurchaseSuccess = new Translation<Kit, int>("<#f3e2b4>You have successfully purchased kit <#ffffff>{0}</color> for <#b8ffc1>C</color> <#ffffff>{1}</color> credits.");
+
+    
+    [TranslationData("Modal heading for when a player is asked if they want to purchase a kit that they don't yet own.")]
+    public readonly Translation ModalConfirmPurchaseKitHeading = new Translation("Purchase Kit");
+
+    [TranslationData("Modal description for when a player is asked if they want to purchase a kit that they don't yet own.")]
+    public readonly Translation<Kit, int> ModalConfirmPurchaseKitDescription = new Translation<Kit, int>("Purchase kit <#ffffff>{0}</color> for <#b8ffc1>C</color> <#ffffff>{1}</color> credits?");
+
+    [TranslationData("Modal accept button text for when a player is asked if they want to purchase a kit that they don't yet own.")]
+    public readonly Translation ModalConfirmPurchaseKitAcceptButton = new Translation("Confirm Purchase");
+
+    [TranslationData("Modal cancel button text for when a player is asked if they want to purchase a kit that they don't yet own.")]
+    public readonly Translation ModalConfirmPurchaseKitCancelButton = new Translation("Cancel");
 }
 
 public class RequestVehicleTranslations : PropertiesTranslationCollection

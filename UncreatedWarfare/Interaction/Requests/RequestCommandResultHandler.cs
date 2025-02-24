@@ -38,14 +38,7 @@ public class RequestCommandResultHandler : IRequestResultHandler
 
     public void MissingCreditsOwnership(WarfarePlayer player, IRequestable<object> value, double creditCost)
     {
-        if (creditCost > player.CachedPoints.Credits)
-        {
-            _chatService.Send(player, _translations.RequestNotOwnedCreditsCantAfford, (int)player.CachedPoints.Credits, (int)creditCost);
-        }
-        else
-        {
-            _chatService.Send(player, _translations.RequestNotOwnedCreditsCanAfford, (int)creditCost);
-        }
+        _chatService.Send(player, _translations.RequestNotOwnedCreditsCannotAfford, (int)player.CachedPoints.Credits, (int)creditCost);
     }
 
     public void MissingDonorOwnership(WarfarePlayer player, IRequestable<object> value, decimal usdCost)

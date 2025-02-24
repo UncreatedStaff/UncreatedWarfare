@@ -3,9 +3,11 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models.Kits;
+using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Interaction.Requests;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Kits.Loadouts;
@@ -16,8 +18,10 @@ using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Cooldowns;
 using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Signs;
+using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
@@ -40,8 +44,10 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
     private readonly EventDispatcher _eventDispatcher;
     private readonly DroppedItemTracker _droppedItemTracker;
     private readonly AssetRedirectService _assetRedirectService;
+    private readonly PointsService _pointsService;
     private readonly RequestKitsTranslations _kitReqTranslations;
     private readonly IPlayerService _playerService;
+    private readonly ChatService _chatService;
 
     private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
 
@@ -59,7 +65,9 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         IKitsDbContext kitDbContext,
         EventDispatcher eventDispatcher,
         DroppedItemTracker droppedItemTracker,
-        AssetRedirectService assetRedirectService)
+        AssetRedirectService assetRedirectService,
+        PointsService pointsService,
+        ChatService chatService)
     {
         _kitDataStore = kitDataStore;
         _loadoutService = loadoutService;
@@ -74,8 +82,10 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         _eventDispatcher = eventDispatcher;
         _droppedItemTracker = droppedItemTracker;
         _assetRedirectService = assetRedirectService;
+        _pointsService = pointsService;
         _valueFormatter = valueFormatter;
         _kitReqTranslations = translations.Value;
+        _chatService = chatService;
     }
 
     /// <inheritdoc />
@@ -153,10 +163,39 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
                 return false;
             }
 
-            // check credits bought
+            // kit is purchasable and player does not own yet
             if (kit is { Type: KitType.Public, CreditCost: > 0 } && !player.Component<KitPlayerComponent>().IsKitAccessible(kit.Key))
             {
-                resultHandler.MissingCreditsOwnership(player, kit, kit.CreditCost);
+                // check enough credits
+                if (player.CachedPoints.Credits < kit.CreditCost)
+                {
+                    resultHandler.MissingCreditsOwnership(player, kit, kit.CreditCost);
+                    return false;
+                }
+                
+                // confirm purchase kit modal
+                ToastMessage message = ToastMessage.Popup(
+                    _kitReqTranslations.ModalConfirmPurchaseKitHeading.Translate(player),
+                    _kitReqTranslations.ModalConfirmPurchaseKitDescription.Translate(kit, kit.CreditCost, player),
+                    _kitReqTranslations.ModalConfirmPurchaseKitAcceptButton.Translate(player),
+                    _kitReqTranslations.ModalConfirmPurchaseKitCancelButton.Translate(player),
+                    callbacks: new PopupCallbacks((WarfarePlayer warfarePlayer, int button,
+                        in ToastMessage toastMessage, ref bool consume, ref bool window) =>
+                    {
+                        // purchase kit
+                        _kitAccessService.UpdateAccessAsync(player.Steam64, kit.Key, KitAccessType.Purchase, CSteamID.Nil, player.DisconnectToken);
+                        _pointsService.ApplyEvent(player, new ResolvedEventInfo(default, null, -kit.CreditCost, null), player.DisconnectToken);
+
+                        // "cash register" sound effect
+                        IAssetLink<EffectAsset> purchaseEffect = AssetLink.Create<EffectAsset>("5e2a0073025849d39322932d88609777");
+                        EffectUtility.TriggerEffect(purchaseEffect, EffectManager.SMALL, player.Position, true);
+                        
+                        _chatService.Send(player, _kitReqTranslations.KitPurchaseSuccess, kit, kit.CreditCost);
+                    }, null)
+                );
+                
+
+                player.SendToast(message);
                 return false;
             }
 
