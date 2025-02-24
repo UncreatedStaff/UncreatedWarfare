@@ -472,10 +472,10 @@ public class PointsTranslations : PropertiesTranslationCollection
     public readonly Translation<double> XPToastLoseXP = new Translation<double>("-{0} XP", TranslationOptions.TMProUI, "F0");
 
     [TranslationData(IsPriorityTranslation = false)]
-    public readonly Translation<double> XPToastGainCredits = new Translation<double>("+{0} <color=#b8ffc1>C</color>", TranslationOptions.TMProUI, "F0");
+    public readonly Translation<double> XPToastGainCredits = new Translation<double>("+<color=#b8ffc1>C</color> {0}", TranslationOptions.TMProUI, "F0");
 
     [TranslationData(IsPriorityTranslation = false)]
-    public readonly Translation<double> XPToastPurchaseCredits = new Translation<double>("-{0} <color=#b8ffc1>C</color>", TranslationOptions.TMProUI, "F0");
+    public readonly Translation<double> XPToastPurchaseWithCredits = new Translation<double>("-<color=#b8ffc1>C</color> {0}", TranslationOptions.TMProUI, "F0");
 
     [TranslationData(IsPriorityTranslation = false)]
     public readonly Translation<double> XPToastLoseCredits = new Translation<double>("-{0} <color=#d69898>C</color>", TranslationOptions.TMProUI, "F0");
@@ -488,7 +488,7 @@ public class PointsTranslations : PropertiesTranslationCollection
 
     [TranslationData("Sent to a player on the points popup when XP or credits given from the console.")]
     public Translation XPToastFromOperator = new Translation("FROM OPERATOR", TranslationOptions.TMProUI);
-
+    
     [TranslationData("Sent to a player after they're given a quest reward.", "Quest name")]
     public Translation<string> XPToastQuestReward = new Translation<string>("{0} REWARD", TranslationOptions.TMProUI, UppercaseAddon.Instance);
 
