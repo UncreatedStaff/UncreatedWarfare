@@ -176,14 +176,14 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>
         if (kit.RequiresSquad)
         {
             Squad? squad = player.GetSquad();
-            if (kit.Class == Class.Squadleader && !player.IsSquadLeader())
-            {
-                bldr.Append(_translations.KitRequiresSquadLeader.Translate(language));
-                return;
-            }
             if (squad == null)
             {
                 bldr.Append(_translations.KitRequiresJoinSquad.Translate(language));
+                return;
+            }
+            if (kit.Class == Class.Squadleader && !player.IsSquadLeader())
+            {
+                bldr.Append(_translations.KitRequiresSquadLeader.Translate(language));
                 return;
             }
             if (_kitRequestService.IsKitAlreadyTakenInSquad(kit, squad))
@@ -402,7 +402,7 @@ public class KitSignTranslations : PropertiesTranslationCollection
     public readonly Translation KitCurrentlyUsing = new Translation("<#a0a670>Current</color>", TranslationOptions.TMProSign);
     
     [TranslationData(IsPriorityTranslation = false)]
-    public readonly Translation KitRequiresSquadLeader = new Translation("<#a69870>SL only</color>", TranslationOptions.TMProSign);
+    public readonly Translation KitRequiresSquadLeader = new Translation("<#a69870>Squad Leader only</color>", TranslationOptions.TMProSign);
 
     [TranslationData(IsPriorityTranslation = false)]
     public readonly Translation KitRequiresJoinSquad = new Translation("<#a69870>Join a Squad</color>", TranslationOptions.TMProSign);
