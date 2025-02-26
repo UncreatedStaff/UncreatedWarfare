@@ -279,7 +279,7 @@ public class RequestKitsTranslations : PropertiesTranslationCollection
     public readonly Translation<int, Class> RequestKitClassLimited = new Translation<int, Class>("Too many players (<#d9e882>{0}</color>) on your team are using <#cedcde>{1}</color> kits", arg1Fmt: UppercaseAddon.Instance);
 
     [TranslationData("Sent when a player tries to request a kit but they have to be a Squad Leader.")]
-    public readonly Translation RequestKitNotSquadleader = new Translation("<#cedcde>SQUAD LEADER</color> required");
+    public readonly Translation RequestKitNotSquadleader = new Translation("You must be the leader of a squad in order to request a <#cedcde>SQUAD LEADER</color> kit.");
 
     [TranslationData("Sent when a player tries to request a kit but it's already equipped.")]
     public readonly Translation AlreadyEquipped = new Translation("Kit already equipped. Use /ammo to refill your kit");

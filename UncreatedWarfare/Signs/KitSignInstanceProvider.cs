@@ -176,6 +176,11 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>
         if (kit.RequiresSquad)
         {
             Squad? squad = player.GetSquad();
+            if (kit.Class == Class.Squadleader && !player.IsSquadLeader())
+            {
+                bldr.Append(_translations.KitRequiresSquadLeader.Translate(language));
+                return;
+            }
             if (squad == null)
             {
                 bldr.Append(_translations.KitRequiresJoinSquad.Translate(language));
@@ -189,11 +194,6 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>
             if (!_kitRequestService.SquadHasEnoughPlayersForKit(kit, squad))
             {
                 bldr.Append(_translations.KitNotEnoughPlayersInSquad.Translate(squad.Members.Count, kit.MinRequiredSquadMembers ?? 0, language, culture, TimeZoneInfo.Utc));
-                return;
-            }
-            if (kit.Class == Class.Squadleader && !player.IsSquadLeader())
-            {
-                bldr.Append(_translations.KitRequiresSquadLeader.Translate(language));
                 return;
             }
         }
