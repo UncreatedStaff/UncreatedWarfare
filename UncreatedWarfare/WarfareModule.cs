@@ -1,4 +1,5 @@
 using DanielWillett.ModularRpcs.DependencyInjection;
+using DanielWillett.ModularRpcs.Reflection;
 using DanielWillett.ModularRpcs.Serialization;
 using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.IoC;
@@ -484,7 +485,7 @@ public sealed class WarfareModule
         bldr.Register<HarmonyPatchService, Harmony>((_, p) => p.Patcher)
             .SingleInstance();
 
-        bldr.RegisterInstance(_gameObjectHost.GetOrAddComponent<WarfareLifetimeComponent>())
+        bldr.RegisterInstance((WarfareLifetimeComponent)_gameObjectHost.AddComponent(ProxyGenerator.Instance.GetProxyType<WarfareLifetimeComponent>()))
             .SingleInstance();
 
         bldr.RegisterInstance(FileProvider)
@@ -1033,8 +1034,9 @@ public sealed class WarfareModule
 
     public async UniTask ShutdownAsync(string reason, CancellationToken token = default)
     {
-        await UniTask.SwitchToMainThread(token);
+        await ServiceProvider.Resolve<WarfareLifetimeComponent>().NotifyShutdownNow(reason);
 
+        await UniTask.SwitchToMainThread(token);
 
         // prevent players from joining after shutdown start
         IPlayerService? playerService = ServiceProvider.ResolveOptional<IPlayerService>();

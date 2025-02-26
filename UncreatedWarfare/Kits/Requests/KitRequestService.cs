@@ -53,6 +53,7 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
     private readonly RequestKitsTranslations _kitReqTranslations;
     private readonly IPlayerService _playerService;
     private readonly ChatService _chatService;
+    private readonly ILogger<KitRequestService> _logger;
 
     private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
 
@@ -74,7 +75,8 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         AssetRedirectService assetRedirectService,
         PointsService pointsService,
         SquadMenuUI squadMenuUI,
-        ChatService chatService)
+        ChatService chatService,
+        ILogger<KitRequestService> logger)
     {
         _kitDataStore = kitDataStore;
         _loadoutService = loadoutService;
@@ -95,6 +97,7 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         _valueFormatter = valueFormatter;
         _kitReqTranslations = translations.Value;
         _chatService = chatService;
+        _logger = logger;
     }
 
     /// <inheritdoc />
@@ -181,6 +184,13 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
                     resultHandler.MissingCreditsOwnership(player, kit, kit.CreditCost);
                     return false;
                 }
+
+                // get the position the player is looking at to play the effect at
+                Physics.Raycast(player.UnturnedPlayer.look.aim.position, player.UnturnedPlayer.look.aim.forward, out RaycastHit hit, 4f,
+                    RayMasks.PLAYER_INTERACT & ~RayMasks.ENEMY, QueryTriggerInteraction.Ignore);
+
+                if (hit.transform == null || hit.transform.gameObject.layer != LayerMasks.BARRICADE)
+                    hit = default;
                 
                 // confirm purchase kit modal
                 ToastMessage message = ToastMessage.Popup(
@@ -188,18 +198,9 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
                     _kitReqTranslations.ModalConfirmPurchaseKitDescription.Translate(kit, kit.CreditCost, player),
                     _kitReqTranslations.ModalConfirmPurchaseKitAcceptButton.Translate(player),
                     _kitReqTranslations.ModalConfirmPurchaseKitCancelButton.Translate(player),
-                    callbacks: new PopupCallbacks((WarfarePlayer warfarePlayer, int button,
-                        in ToastMessage toastMessage, ref bool consume, ref bool window) =>
+                    callbacks: new PopupCallbacks((WarfarePlayer player, int _, in ToastMessage _, ref bool _, ref bool _) =>
                     {
-                        // purchase kit
-                        _kitAccessService.UpdateAccessAsync(player.Steam64, kit.Key, KitAccessType.Purchase, CSteamID.Nil, player.DisconnectToken);
-                        _pointsService.ApplyEvent(player, new ResolvedEventInfo(default, null, -kit.CreditCost, null), player.DisconnectToken);
-
-                        // "cash register" sound effect
-                        IAssetLink<EffectAsset> purchaseEffect = AssetLink.Create<EffectAsset>("5e2a0073025849d39322932d88609777");
-                        EffectUtility.TriggerEffect(purchaseEffect, EffectManager.SMALL, player.Position, true);
-                        
-                        _chatService.Send(player, _kitReqTranslations.KitPurchaseSuccess, kit, kit.CreditCost);
+                        _ = BuyKitAsync(player, kit, hit.transform?.position, player.DisconnectToken);
                     }, null)
                 );
                 
@@ -351,6 +352,65 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         {
             _semaphore.Release();
         }
+    }
+
+    /// <summary>
+    /// Purchase a kit for a player.
+    /// </summary>
+    /// <param name="target">Where to play the purchase SFX. If <see langword="null"/> the effect will be played at the player's position.</param>
+    /// <returns><see langword="false"/> if the kit's credit cost is 0 or if the kit can't be found, otherwise <see langword="true"/>.</returns>
+    public async Task<bool> BuyKitAsync(WarfarePlayer player, Kit kit, Vector3? target = null, CancellationToken token = default)
+    {
+        if (kit.CreditCost <= 0)
+            return false;
+
+        using CombinedTokenSources srcComb = token.CombineTokensIfNeeded(player.DisconnectToken);
+
+        await _semaphore.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            // give access to the kit
+            if (!await _kitAccessService.UpdateAccessAsync(player.Steam64, kit.Key, KitAccessType.Purchase, CSteamID.Nil, token))
+            {
+                return false;
+            }
+            
+            try
+            {
+                // purchase the kit
+                await _pointsService.ApplyEvent(player, _pointsService.GetPurchaseEvent(player, kit.CreditCost), token);
+            }
+            catch
+            {
+                // if purchase somehow failed, remove access before rethrowing
+                try
+                {
+                    await _kitAccessService.UpdateAccessAsync(player.Steam64, kit.Key, null, CSteamID.Nil, CancellationToken.None);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Unable to remove access after removing credits failed.");
+                }
+                throw;
+            }
+
+            await UniTask.SwitchToMainThread(CancellationToken.None);
+
+            if (!player.IsOnline)
+                return true;
+
+            // "cash register" sound effect
+            IAssetLink<EffectAsset> purchaseEffect = AssetLink.Create<EffectAsset>("5e2a0073025849d39322932d88609777");
+            EffectUtility.TriggerEffect(purchaseEffect, EffectManager.SMALL, target ?? player.Position, true);
+
+            _chatService.Send(player, _kitReqTranslations.KitPurchaseSuccess, kit, kit.CreditCost);
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
+
+        return true;
     }
 
     public async Task<bool> GiveUnarmedKitAsync(WarfarePlayer player, bool silent = false, CancellationToken token = default)

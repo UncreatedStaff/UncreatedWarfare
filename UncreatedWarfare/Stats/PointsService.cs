@@ -3,8 +3,12 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
+using System.Linq;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
+using Uncreated.Warfare.Layouts;
+using Uncreated.Warfare.Layouts.Phases;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Extensions;
@@ -17,9 +21,11 @@ using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.Stats;
+
 public class PointsService : IEventListener<PlayerTeamChanged> // todo player equipment changed
 {
     private readonly PointsConfiguration _configuration;
+    private readonly WarfareModule _module;
     private readonly IPointsStore _pointsSql;
     private readonly IPlayerService _playerService;
     private readonly ILogger<PointsService> _logger;
@@ -54,7 +60,8 @@ public class PointsService : IEventListener<PlayerTeamChanged> // todo player eq
         IPlayerService playerService,
         TranslationInjection<PointsTranslations> translations,
         ILogger<PointsService> logger,
-        PointsUI ui)
+        PointsUI ui,
+        WarfareModule module)
     {
         _translations = translations.Value;
         _configuration = configuration;
@@ -62,6 +69,7 @@ public class PointsService : IEventListener<PlayerTeamChanged> // todo player eq
         _playerService = playerService;
         _logger = logger;
         _ui = ui;
+        _module = module;
         _event = configuration.GetSection("Events");
         IConfigurationSection levelsSection = configuration.GetSection("Levels");
 
@@ -148,6 +156,17 @@ public class PointsService : IEventListener<PlayerTeamChanged> // todo player eq
     }
 
     /// <summary>
+    /// Get an event meant for credit purchases.
+    /// </summary>
+    /// <param name="credits">The number of credits to remove. This should not be negative.</param>
+    public ResolvedEventInfo GetPurchaseEvent(WarfarePlayer player, double credits)
+    {
+        EventInfo purchase = GetEvent("Purchase");
+        return new ResolvedEventInfo(in purchase, null, -credits, null)
+            .WithTranslation(_translations.XPToastPurchase, player);
+    }
+
+    /// <summary>
     /// Get an event from settings.
     /// </summary>
     public EventInfo GetEvent(string eventId)
@@ -227,7 +246,7 @@ public class PointsService : IEventListener<PlayerTeamChanged> // todo player eq
         double newRep;
         if (rep != 0)
         {
-            newRep = await _pointsSql.AddToReputationAsync(playerId, rep, token).ConfigureAwait(false);
+            newRep = await _pointsSql.AddToReputationAsync(playerId, rep, CancellationToken.None).ConfigureAwait(false);
             oldRep = newRep - rep;
         }
         else
@@ -267,7 +286,7 @@ public class PointsService : IEventListener<PlayerTeamChanged> // todo player eq
         if (oldRep != rep)
             ActionLog.Add(ActionLogType.ReputationChanged, $"{oldRep} -> {rep} | Event: '{@event.EventName}'", playerId);
 
-        await UniTask.SwitchToMainThread(token);
+        await UniTask.SwitchToMainThread(CancellationToken.None);
 
         player = _playerService.GetOnlinePlayerOrNull(playerId);
 
@@ -288,7 +307,12 @@ public class PointsService : IEventListener<PlayerTeamChanged> // todo player eq
             // credits toast
             if (credits != 0)
             {
-                string numberTxt = (credits > 0 ? _translations.XPToastGainCredits : _translations.XPToastLoseCredits).Translate(Math.Abs(credits), player);
+                string numberTxt = (credits <= 0
+                    ? @event.IsPurchase
+                        ? _translations.XPToastPurchaseWithCredits
+                        : _translations.XPToastLoseCredits
+                    : _translations.XPToastGainCredits)
+                    .Translate(Math.Abs(credits), player);
 
                 string text = !string.IsNullOrWhiteSpace(@event.Message)
                     ? numberTxt + "\n" + TranslationFormattingUtility.Colorize(@event.Message, MessageColor)
@@ -309,17 +333,36 @@ public class PointsService : IEventListener<PlayerTeamChanged> // todo player eq
             if (xp != 0 || credits != 0)
                 _ui.UpdatePointsUI(player);
 
-            if (!@event.ExcludeFromLeaderboard && factionId == player.Team.Faction.PrimaryKey)
+            if (!@event.ExcludeFromLeaderboard)
             {
-                PlayerGameStatsComponent? comp = player.ComponentOrNull<PlayerGameStatsComponent>();
-                if (comp != null)
+                if (factionId == player.Team.Faction.PrimaryKey)
                 {
-                    if (credits != 0)
-                        comp.AddToStat(KnownStatNames.Credits, credits);
-                    if (rep != 0)
-                        comp.AddToStat(KnownStatNames.Reputation, rep);
-                    if (xp != 0)
-                        comp.AddToStat(KnownStatNames.XP, xp);
+                    PlayerGameStatsComponent? comp = player.ComponentOrNull<PlayerGameStatsComponent>();
+                    if (comp != null)
+                    {
+                        if (credits != 0)
+                            comp.AddToStat(KnownStatNames.Credits, credits);
+                        if (rep != 0)
+                            comp.AddToStat(KnownStatNames.Reputation, rep);
+                        if (xp != 0)
+                            comp.AddToStat(KnownStatNames.XP, xp);
+                    }
+                }
+                else if (_module.IsLayoutActive())
+                {
+                    Layout layout = _module.GetActiveLayout();
+                    uint fId2 = factionId;
+                    Team? team = layout.TeamManager.AllTeams.FirstOrDefault(x => x.Faction.PrimaryKey == fId2);
+                    LeaderboardPhase? phase = layout.Phases.OfType<LeaderboardPhase>().FirstOrDefault();
+                    if (phase != null && team != null)
+                    {
+                        if (credits != 0)
+                            phase.AddToOfflineStat(phase.GetStatIndex(KnownStatNames.Credits), credits, playerId, team);
+                        if (rep != 0)
+                            phase.AddToOfflineStat(phase.GetStatIndex(KnownStatNames.Reputation), rep, playerId, team);
+                        if (xp != 0)
+                            phase.AddToOfflineStat(phase.GetStatIndex(KnownStatNames.XP), xp, playerId, team);
+                    }
                 }
             }
 
@@ -353,10 +396,11 @@ public class ResolvedEventInfo
     public bool IgnoresGlobalMultiplier { get; }
     public string? Message { get; set; }
     public string? EventName { get; set; }
-    public ResolvedEventInfo(EventInfo @event) : this(@event, null, null, null) { }
-    public ResolvedEventInfo(EventInfo @event, double scaleFactor)
+    public bool IsPurchase { get; }
+    public ResolvedEventInfo(in EventInfo @event) : this(@event, null, null, null) { }
+    public ResolvedEventInfo(in EventInfo @event, double scaleFactor)
     : this(@event, @event.XP * scaleFactor, @event.Credits * scaleFactor, @event.Reputation * scaleFactor) { }
-    public ResolvedEventInfo(EventInfo @event, double? overrideXp, double? overrideCredits, double? overrideReputation)
+    public ResolvedEventInfo(in EventInfo @event, double? overrideXp, double? overrideCredits, double? overrideReputation)
     {
         XP = overrideXp ?? @event.XP;
         Credits = overrideCredits ?? @event.Credits;
@@ -371,6 +415,7 @@ public class ResolvedEventInfo
         ExcludeFromLeaderboard = c.GetValue("ExcludeFromLeaderboard", false);
         IgnoresBoosts = c.GetValue("IgnoresBoosts", false);
         IgnoresGlobalMultiplier = c.GetValue("IgnoresGlobalMultiplier", false);
+        IsPurchase = c.GetValue("IsPurchase", false);
     }
 
     public ResolvedEventInfo WithTranslation(Translation translation, WarfarePlayer? player)
@@ -426,12 +471,19 @@ public readonly struct EventInfo
 {   
     public IConfigurationSection Configuration { get; }
     public string? Name => Configuration?.Key;
-    public double XP => Configuration?.GetValue("XP", 0d) ?? 0d;
-    public double Credits => ParsePercentageOrValueOfXP("Credits", 0.15);
-    public double Reputation => ParsePercentageOrValueOfXP("Reputation", 0);
+    public double XP { get; }
+    public double Credits { get; }
+    public double Reputation { get; }
+
     public EventInfo(IConfigurationSection configuration)
     {
         Configuration = configuration;
+        if (configuration == null)
+            return;
+
+        XP = configuration.GetValue("XP", 0d);
+        Credits = ParsePercentageOrValueOfXP("Credits", 0.15);
+        Reputation = ParsePercentageOrValueOfXP("Reputation", 0);
     }
 
     private double ParsePercentageOrValueOfXP(string key, double defaultPercentage)
@@ -453,7 +505,7 @@ public readonly struct EventInfo
     }
 
 
-    public ResolvedEventInfo Resolve() => new ResolvedEventInfo(this);
+    public ResolvedEventInfo Resolve() => new ResolvedEventInfo(in this);
 
     public static implicit operator ResolvedEventInfo(EventInfo @event)
     {
@@ -488,6 +540,9 @@ public class PointsTranslations : PropertiesTranslationCollection
 
     [TranslationData("Sent to a player on the points popup when XP or credits given from the console.")]
     public Translation XPToastFromOperator = new Translation("FROM OPERATOR", TranslationOptions.TMProUI);
+    
+    [TranslationData("Sent to a player on the points popup when a purchase is made.")]
+    public Translation XPToastPurchase = new Translation("PURCHASE", TranslationOptions.TMProUI);
     
     [TranslationData("Sent to a player after they're given a quest reward.", "Quest name")]
     public Translation<string> XPToastQuestReward = new Translation<string>("{0} REWARD", TranslationOptions.TMProUI, UppercaseAddon.Instance);
