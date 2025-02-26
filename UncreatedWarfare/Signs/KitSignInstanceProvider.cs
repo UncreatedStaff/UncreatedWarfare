@@ -159,20 +159,26 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>
         if (hasWeaponText)
             bldr.Append(kit.WeaponText!.ToUpper(culture)).Append('\n');
 
-        AppendPlayerCount(bldr, player, kit, language, culture);
+        AppendAvailability(bldr, player, kit, language, culture);
     }
 
-    private void AppendPlayerCount(StringBuilder bldr, WarfarePlayer? player, Kit kit, LanguageInfo language, CultureInfo culture)
+    private void AppendAvailability(StringBuilder bldr, WarfarePlayer? player, Kit kit, LanguageInfo language, CultureInfo culture)
     {
         if (player == null)
             return;
+
+        if (player.Component<KitPlayerComponent>().ActiveKitId == kit.Id)
+        {
+            bldr.Append(_translations.KitCurrentlyUsing.Translate(language));
+            return;
+        }
 
         if (kit.RequiresSquad)
         {
             Squad? squad = player.GetSquad();
             if (squad == null)
             {
-                bldr.Append(_translations.KitRequireJoinSquad.Translate(language));
+                bldr.Append(_translations.KitRequiresJoinSquad.Translate(language));
                 return;
             }
             if (_kitRequestService.IsKitAlreadyTakenInSquad(kit, squad))
@@ -183,6 +189,11 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>
             if (!_kitRequestService.SquadHasEnoughPlayersForKit(kit, squad))
             {
                 bldr.Append(_translations.KitNotEnoughPlayersInSquad.Translate(squad.Members.Count, kit.MinRequiredSquadMembers ?? 0, language, culture, TimeZoneInfo.Utc));
+                return;
+            }
+            if (kit.Class == Class.Squadleader && !player.IsSquadLeader())
+            {
+                bldr.Append(_translations.KitRequiresSquadLeader.Translate(language));
                 return;
             }
         }
@@ -313,7 +324,7 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>
         }
 
         if (!kit.IsLocked && !needsUpgrade)
-            AppendPlayerCount(bldr, player, kit, language, culture);
+            AppendAvailability(bldr, player, kit, language, culture);
     }
 
     private void AppendName(string kitName, Color32 color, out bool hasExtraLine)
@@ -388,7 +399,13 @@ public class KitSignTranslations : PropertiesTranslationCollection
     public readonly Translation<string> LoadoutLetter = new Translation<string>("<sub><#7878ff>LOADOUT {0}</color></sub>", TranslationOptions.TMProSign, arg0Fmt: UppercaseAddon.Instance);
     
     [TranslationData(IsPriorityTranslation = false)]
-    public readonly Translation KitRequireJoinSquad = new Translation("<#a0a670>Join a squad</color>", TranslationOptions.TMProSign);
+    public readonly Translation KitCurrentlyUsing = new Translation("<#a0a670>Current</color>", TranslationOptions.TMProSign);
+    
+    [TranslationData(IsPriorityTranslation = false)]
+    public readonly Translation KitRequiresSquadLeader = new Translation("<#a69870>SL only</color>", TranslationOptions.TMProSign);
+
+    [TranslationData(IsPriorityTranslation = false)]
+    public readonly Translation KitRequiresJoinSquad = new Translation("<#a69870>Join a Squad</color>", TranslationOptions.TMProSign);
     
     [TranslationData(IsPriorityTranslation = false)]
     public readonly Translation KitAlreadyTakenBySquadMember = new Translation("<#c2603e>Taken</color>", TranslationOptions.TMProSign);
