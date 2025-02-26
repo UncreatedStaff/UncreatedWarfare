@@ -364,16 +364,20 @@ public class ReportService : IDisposable, IHostedService, IEventListener<PlayerL
     {
         await UniTask.SwitchToMainThread(token);
         ShotRecord[]? records = null;
-        for (int i = _requestableData.Count - 1; i >= 0; --i)
-        {
-            RequestableData requestableData = _requestableData[i];
-            if (requestableData is not ShotData shotData || requestableData.Report.Id != reportId)
-            {
-                continue;
-            }
 
-            records = shotData.Shots;
-            break;
+        lock (_requestableData)
+        {
+            for (int i = _requestableData.Count - 1; i >= 0; --i)
+            {
+                RequestableData requestableData = _requestableData[i];
+                if (requestableData is not ShotData shotData || requestableData.Report.Id != reportId)
+                {
+                    continue;
+                }
+
+                records = shotData.Shots;
+                break;
+            }
         }
 
         if (records == null)
@@ -396,68 +400,77 @@ public class ReportService : IDisposable, IHostedService, IEventListener<PlayerL
     [RpcReceive]
     public async Task<byte[]?> RequestScreenshot(uint reportId, CancellationToken token = default)
     {
-        await UniTask.SwitchToMainThread(token);
-
-        for (int i = _requestableData.Count - 1; i >= 0; --i)
+        byte[]? data = null;
+        Report? report = null;
+        lock (_requestableData)
         {
-            RequestableData requestableData = _requestableData[i];
-            if (requestableData is not ScreenshotData scData || requestableData.Report.Id != reportId)
+            for (int i = _requestableData.Count - 1; i >= 0; --i)
             {
-                continue;
+                RequestableData requestableData = _requestableData[i];
+                if (requestableData is not ScreenshotData scData || requestableData.Report.Id != reportId)
+                {
+                    continue;
+                }
+
+                data = scData.Jpg;
+                report = requestableData.Report;
+
             }
+        }
 
-            requestableData.Report.ScreenshotJpgData = scData.Jpg;
+        if (report == null || data == null)
+            return null;
 
-            try
+        report.ScreenshotJpgData = data;
+        try
+        {
+            await _moderationSql.AddOrUpdate(report, CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Unable to update report {0} with requested screenshot data.", reportId);
+        }
+
+        return data;
+    }
+
+    [RpcReceive]
+    public string[]? RequestChatRecords(uint reportId, CancellationToken token = default)
+    {
+        lock (_requestableData)
+        {
+            for (int i = _requestableData.Count - 1; i >= 0; --i)
             {
-                await _moderationSql.AddOrUpdate(requestableData.Report, CancellationToken.None);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Unable to update report {0} with requested screenshot data.", reportId);
-            }
+                RequestableData requestableData = _requestableData[i];
+                if (requestableData is not ChatData chatData || requestableData.Report.Id != reportId)
+                {
+                    continue;
+                }
 
-            return scData.Jpg;
+                return chatData.Chats;
+            }
         }
 
         return null;
     }
 
     [RpcReceive]
-    public async Task<string[]?> RequestChatRecords(uint reportId, CancellationToken token = default)
+    public byte[]? RequestVoiceChatRecords(uint reportId, CancellationToken token = default)
     {
-        await UniTask.SwitchToMainThread(token);
-
-        for (int i = _requestableData.Count - 1; i >= 0; --i)
+        lock (_requestableData)
         {
-            RequestableData requestableData = _requestableData[i];
-            if (requestableData is not ChatData chatData || requestableData.Report.Id != reportId)
+            for (int i = _requestableData.Count - 1; i >= 0; --i)
             {
-                continue;
+                RequestableData requestableData = _requestableData[i];
+                if (requestableData is not VoiceChatData vcData || requestableData.Report.Id != reportId)
+                {
+                    continue;
+                }
+
+                return vcData.RawWav;
             }
-
-            return chatData.Chats;
         }
-
-        return null;
-    }
-
-    [RpcReceive]
-    public async Task<byte[]?> RequestVoiceChatRecords(uint reportId, CancellationToken token = default)
-    {
-        await UniTask.SwitchToMainThread(token);
-
-        for (int i = _requestableData.Count - 1; i >= 0; --i)
-        {
-            RequestableData requestableData = _requestableData[i];
-            if (requestableData is not VoiceChatData vcData || requestableData.Report.Id != reportId)
-            {
-                continue;
-            }
-
-            return vcData.RawWav;
-        }
-
+        
         return null;
     }
 
@@ -465,33 +478,40 @@ public class ReportService : IDisposable, IHostedService, IEventListener<PlayerL
     {
         int maxIndex = -1;
         DateTime now = DateTime.UtcNow;
-        for (int i = 0; i < _requestableData.Count; ++i)
+        lock (_requestableData)
         {
-            RequestableData data = _requestableData[i];
-            if (now - data.Saved <= RequestableDataKeepDuration)
-                break;
+            for (int i = 0; i < _requestableData.Count; ++i)
+            {
+                RequestableData data = _requestableData[i];
+                if (now - data.Saved <= RequestableDataKeepDuration)
+                    break;
 
-            maxIndex = i;
+                maxIndex = i;
+            }
+
+            _requestableData.RemoveRange(0, maxIndex + 1);
         }
-
-        _requestableData.RemoveRange(0, maxIndex + 1);
     }
 
     private void AddRequestableScreenshotData(Report report, byte[] spyResult)
     {
-        _requestableData.Add(new ScreenshotData { Jpg = spyResult, Report = report, Saved = DateTime.UtcNow });
+        lock (_requestableData)
+            _requestableData.Add(new ScreenshotData { Jpg = spyResult, Report = report, Saved = DateTime.UtcNow });
     }
     private void AddRequestableShotData(Report report, PlayerData player)
     {
-        _requestableData.Add(new ShotData { Shots = player.Shots.ToArray(), Report = report, Saved = DateTime.UtcNow });
+        lock (_requestableData)
+            _requestableData.Add(new ShotData { Shots = player.Shots.ToArray(), Report = report, Saved = DateTime.UtcNow });
     }
     private void AddRequestableChatData(Report report, string[] records)
     {
-        _requestableData.Add(new ChatData { Chats = records, Report = report, Saved = DateTime.UtcNow });
+        lock (_requestableData)
+            _requestableData.Add(new ChatData { Chats = records, Report = report, Saved = DateTime.UtcNow });
     }
     private void AddRequestableVoiceChatData(Report report, byte[] raw)
     {
-        _requestableData.Add(new VoiceChatData { RawWav = raw, Report = report, Saved = DateTime.UtcNow });
+        lock (_requestableData)
+            _requestableData.Add(new VoiceChatData { RawWav = raw, Report = report, Saved = DateTime.UtcNow });
     }
 
     private async UniTask FillReportDetails(Report report, PlayerData? playerData, CancellationToken token)
@@ -528,8 +548,8 @@ public class ReportService : IDisposable, IHostedService, IEventListener<PlayerL
         if (recordComp != null)
         {
             using MemoryStream stream = new MemoryStream(262144);
-            AudioRecordManager.AudioConvertResult status = await recordComp.TryConvert(stream, true, token);
-            if (status == AudioRecordManager.AudioConvertResult.Success)
+            AudioConvertResult status = await recordComp.TryConvert(stream, true, token);
+            if (status == AudioConvertResult.Success)
             {
                 if (report is VoiceChatAbuseReport voiceChatAbuseReport)
                     voiceChatAbuseReport.PreviousVoiceData = stream.ToArray();

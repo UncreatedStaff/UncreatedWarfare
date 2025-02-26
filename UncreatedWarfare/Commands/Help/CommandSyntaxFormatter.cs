@@ -1,9 +1,11 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Util;
 
@@ -35,7 +37,7 @@ public class CommandSyntaxFormatter : IDisposable
     /// <summary>
     /// Enriches a description string with tags like caller, target, param, etc.
     /// </summary>
-    public string? GetRichDescription(ICommandDescriptor command, ICommandParameterDescriptor parameter, ICommandFlagDescriptor? flag, ISyntaxWriter writer, LanguageInfo? language)
+    public string? GetRichDescription(ICommandParameterDescriptor parameter, ICommandFlagDescriptor? flag, ISyntaxWriter writer, LanguageInfo? language)
     {
         string? desc = flag?.Description?.Translate(language) ?? parameter.Description?.Translate(language);
 
@@ -238,7 +240,8 @@ public class CommandSyntaxFormatter : IDisposable
             // try to match a verbatim parameter.
             // Ex. "/help tp jump" will just print jump instead of showing it as an option, then show the parameters for jump
             ICommandParameterDescriptor matchedMeta = meta;
-            if (arg != null && TryMatchParameter(ref matchedMeta, arg) && await HasPermissionAsync(user, matchedMeta.Permission, token))
+
+            if (arg != null && TryMatchParameter(ref matchedMeta, arg, (user as WarfarePlayer)?.Locale.CultureInfo ?? CultureInfo.InvariantCulture) && await HasPermissionAsync(user, matchedMeta.Permission, token))
             {
                 meta = matchedMeta;
                 if (argMeta.Description != null)
@@ -478,7 +481,7 @@ public class CommandSyntaxFormatter : IDisposable
         return await _permissionStore.HasPermissionAsync(user, perm, token);
     }
 
-    private static bool TryMatchParameter(ref ICommandParameterDescriptor meta, string arg)
+    private static bool TryMatchParameter(ref ICommandParameterDescriptor meta, string arg, CultureInfo culture)
     {
         bool found = false;
         int p = 0;
@@ -511,9 +514,62 @@ public class CommandSyntaxFormatter : IDisposable
             }
         }
 
+        if (!found)
+        {
+            int nonVerbatimCt = 0;
+            int nonVerbatimIndex = -1;
+            for (p = 0; p < meta.Parameters.Count; ++p)
+            {
+                ICommandParameterDescriptor parameter = meta.Parameters[p];
+                if (parameter.Types.Contains(typeof(VerbatimParameterType)))
+                    continue;
+
+                ++nonVerbatimCt;
+                nonVerbatimIndex = p;
+
+                foreach (Type type in parameter.Types)
+                {
+                    if (CheckParameterValue(arg, type, culture))
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (found)
+                    break;
+            }
+
+            if (!found && nonVerbatimCt == 1)
+            {
+                p = nonVerbatimIndex;
+                found = true;
+            }
+        }
+
         if (found)
             meta = meta.Parameters[p];
         return found;
+    }
+
+    private static bool CheckParameterValue(string arg, Type type, CultureInfo culture)
+    {
+        if (typeof(Asset).IsAssignableFrom(type))
+        {
+            return Guid.TryParse(arg, out _) || ushort.TryParse(arg, NumberStyles.Number, culture, out _);
+        }
+
+        if (FormattingUtility.TryParseAny(arg, culture, type, out _))
+        {
+            return true;
+        }
+
+        if (type == typeof(IPlayer))
+        {
+            return true;
+        }
+
+        return false;
     }
 
     public void Dispose()

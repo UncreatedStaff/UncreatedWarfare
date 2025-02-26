@@ -67,6 +67,14 @@ public static class AssetLink
     }
 
     /// <summary>
+    /// Returns an empty asset link.
+    /// </summary>
+    public static IAssetLink<Asset> Empty(Type assetType)
+    {
+        return Create(0, assetType);
+    }
+
+    /// <summary>
     /// Create an asset link from a GUID in string form.
     /// </summary>
     public static IAssetLink<TAsset> Create<TAsset>(string guid) where TAsset : Asset

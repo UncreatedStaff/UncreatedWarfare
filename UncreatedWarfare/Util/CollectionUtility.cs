@@ -482,6 +482,14 @@ public static class CollectionUtility
 
         return enumerable.ToArray();
     }
+
+    /// <summary>
+    /// Extract a span from a list.
+    /// </summary>
+    public static ReadOnlySpan<TElement> AsSpan<TElement>(this List<TElement> list)
+    {
+        return list.GetUnderlyingArrayOrCopy().AsSpan(0, list.Count);
+    }
 }
 
 public class DistanceComparer<TValue> : IComparer<TValue>

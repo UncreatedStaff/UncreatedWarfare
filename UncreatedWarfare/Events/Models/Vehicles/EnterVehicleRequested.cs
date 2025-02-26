@@ -1,5 +1,4 @@
-﻿using System;
-using Uncreated.Warfare.Components;
+using System;
 using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.Events.Models.Vehicles;

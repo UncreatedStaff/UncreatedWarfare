@@ -34,28 +34,17 @@ public class AudioRecordPlayerComponent : IPlayerComponent, IDisposable
     public event Action<WarfarePlayer, bool>? VoiceChatStateUpdated;
 
     internal bool HasPressedDeny { get; set; }
-    public WarfarePlayer Player { get; set; }
+    public required WarfarePlayer Player { get; set; }
     public int PacketCount => _packets?.Count ?? 0;
-    public ArraySegment<byte> RingSectionOne
-    {
-        get
-        {
-            return _voiceBuffer == null
-                ? default
-                : new ArraySegment<byte>(_voiceBuffer, _startIndex, _startIndex + _byteCount > _voiceBuffer.Length
-                    ? _voiceBuffer.Length - _startIndex
-                    : _byteCount);
-        }
-    }
-    public ArraySegment<byte> RingSectionTwo
-    {
-        get
-        {
-            return _voiceBuffer != null && _startIndex + _byteCount > _voiceBuffer.Length
-                ? new ArraySegment<byte>(_voiceBuffer, 0, _startIndex + _byteCount - _voiceBuffer.Length)
-                : default;
-        }
-    }
+    public ArraySegment<byte> RingSectionOne => _voiceBuffer == null
+        ? default
+        : new ArraySegment<byte>(_voiceBuffer, _startIndex, _startIndex + _byteCount > _voiceBuffer.Length
+            ? _voiceBuffer.Length - _startIndex
+            : _byteCount);
+
+    public ArraySegment<byte> RingSectionTwo => _voiceBuffer != null && _startIndex + _byteCount > _voiceBuffer.Length
+        ? new ArraySegment<byte>(_voiceBuffer, 0, _startIndex + _byteCount - _voiceBuffer.Length)
+        : default;
 
     internal byte[] InternalBuffer => _voiceBuffer ?? Array.Empty<byte>();
     internal int StartIndex => _startIndex;
@@ -87,6 +76,19 @@ public class AudioRecordPlayerComponent : IPlayerComponent, IDisposable
     public void AppendPacket(ArraySegment<byte> packet)
     {
         _lastVoiceChat = Time.realtimeSinceStartup;
+        if (!_lastVoiceChatState)
+        {
+            try
+            {
+                VoiceChatStateUpdated?.Invoke(Player, true);
+            }
+            catch (Exception ex)
+            {
+                WarfareModule.Singleton.GlobalLogger.LogError(ex, "Error invoking VoiceChatStateUpdated in AudioRecordPlayerComponent.");
+            }
+
+            _lastVoiceChatState = true;
+        }
 
         int newSize = _byteCount + packet.Count;
 
@@ -133,20 +135,44 @@ public class AudioRecordPlayerComponent : IPlayerComponent, IDisposable
 
         _byteCount += packet.Count;
         _packets!.Add(new PacketInfo(Time.realtimeSinceStartup, startIndex));
-
-        Dump();
     }
 
-    public async UniTask<AudioRecordManager.AudioConvertResult> TryConvert(Stream writeTo, bool leaveOpen = true, CancellationToken token = default)
+    public ArraySegment<byte>[] CreatePackets()
+    {
+        GameThread.AssertCurrent();
+
+        if (_packets == null || _packets.Count == 0 || _voiceBuffer == null)
+            return Array.Empty<ArraySegment<byte>>();
+
+        ArraySegment<byte>[] output = new ArraySegment<byte>[_packets.Count];
+        for (int i = 0; i < _packets.Count; i++)
+        {
+            PacketInfo info = _packets[i];
+            int stInd = info.StartIndex;
+            int endInd = i == _packets.Count - 1 ? (_startIndex + _byteCount) % _voiceBuffer.Length : _packets[i + 1].StartIndex;
+            int packetSize = endInd < stInd ? _voiceBuffer.Length - stInd + endInd : endInd - stInd;
+            if (stInd > endInd)
+            {
+                byte[] packet = new byte[packetSize];
+                Buffer.BlockCopy(_voiceBuffer, stInd, packet, 0, _voiceBuffer.Length - stInd);
+                Buffer.BlockCopy(_voiceBuffer, 0, packet, packetSize - endInd, endInd);
+                output[i] = new ArraySegment<byte>(packet);
+            }
+            else
+            {
+                output[i] = new ArraySegment<byte>(_voiceBuffer, stInd, packetSize);
+            }
+        }
+
+        return output;
+    }
+
+    public async Task<AudioConvertResult> TryConvert(Stream writeTo, bool leaveOpen = true, CancellationToken token = default)
     {
         await UniTask.SwitchToMainThread(token);
 
-        byte[] data = _audioListenService.CreateMultipartPacket(this);
-        if (data.Length == 0)
-            return AudioRecordManager.AudioConvertResult.NoData;
-        // for debugging File.WriteAllBytes(@"C:\Users\danny\OneDrive\Desktop\multi-part.txt", data);
-
-        return await _audioListenService.TryWriteWavAsync(data, writeTo, leaveOpen, token);
+        ArraySegment<byte>[] packets = CreatePackets();
+        return await _audioListenService.ConvertVoiceAsync(packets, writeTo, leaveOpen, token).ConfigureAwait(false);
     }
 
     public void WriteMetaFile(Stream writeTo, bool includeData = false, bool leaveOpen = true)
@@ -247,7 +273,7 @@ public class AudioRecordPlayerComponent : IPlayerComponent, IDisposable
 
     private void Update()
     {
-        bool vcState = Player.IsOnline && Time.realtimeSinceStartup - _lastVoiceChat < 1f;
+        bool vcState = Player.IsOnline && Time.realtimeSinceStartup - _lastVoiceChat < 0.35f;
         if (vcState == _lastVoiceChatState)
             return;
 

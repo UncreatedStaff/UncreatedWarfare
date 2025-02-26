@@ -365,7 +365,6 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
         int uiIndex = 0;
         foreach (ValuablePlayerMatch stat in _valuablePlayers!)
         {
-            GetLogger().LogInformation("{0} - {1} - {2}", stat.GetTitle(in set), stat.Player, stat.StatValue);
             string formattedStatValue = stat.FormatValue(in set);
             string title = stat.GetTitle(in set);
 
@@ -588,7 +587,7 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
                 }
 
                 // voice chat icon
-                uiRow.VoiceChatState.SetVisibility(c, player.Player.IsOnline && player.Player.ComponentOrNull<AudioRecordPlayerComponent>() is { RecentlyUsedVoiceChat: false });
+                uiRow.VoiceChatState.SetVisibility(c, player.Player.IsOnline && player.Player.ComponentOrNull<AudioRecordPlayerComponent>() is { RecentlyUsedVoiceChat: true });
                 uiRow.Root.SetVisibility(c, true);
             }
         }
