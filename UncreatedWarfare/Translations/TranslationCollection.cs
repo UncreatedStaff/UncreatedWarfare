@@ -1,4 +1,4 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
@@ -81,22 +81,25 @@ public abstract class TranslationCollection
     {
         IReadOnlyDictionary<TranslationLanguageKey, string> translationData = Storage.Load();
 
-        foreach (KeyValuePair<TranslationLanguageKey, string> translation in translationData)
+        lock (_translations)
         {
-            if (!_translations.TryGetValue(translation.Key.TranslationKey, out Translation translationMember))
+            foreach (KeyValuePair<TranslationLanguageKey, string> translation in translationData)
             {
-                _logger.LogWarning("Unknown translation in collection {0}.", GetType());
-                continue;
+                if (!_translations.TryGetValue(translation.Key.TranslationKey, out Translation translationMember))
+                {
+                    _logger.LogWarning("Unknown translation in collection {0}.", GetType());
+                    continue;
+                }
+
+                LanguageInfo? language = _languageDataStore.GetInfoCached(translation.Key.LanguageCode);
+
+                if (language is null)
+                {
+                    _logger.LogWarning("Unknown language {0} in collection {1}.", translation.Key.LanguageCode, GetType());
+                }
+
+                translationMember.UpdateValue(translation.Value, language ?? new LanguageInfo(translation.Key.LanguageCode, LanguageService));
             }
-
-            LanguageInfo? language = _languageDataStore.GetInfoCached(translation.Key.LanguageCode);
-
-            if (language is null)
-            {
-                _logger.LogWarning("Unknown language {0} in collection {1}.", translation.Key.LanguageCode, GetType());
-            }
-
-            translationMember.UpdateValue(translation.Value, language ?? new LanguageInfo(translation.Key.LanguageCode, LanguageService));
         }
     }
 

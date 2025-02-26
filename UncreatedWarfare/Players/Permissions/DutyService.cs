@@ -17,6 +17,7 @@ using Uncreated.Warfare.Signs;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Tweaks;
 using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Players.Permissions;
 
@@ -27,6 +28,7 @@ public class DutyService : IAsyncEventListener<PlayerLeft>
     private readonly ILogger<DutyService> _logger;
     private readonly IPlayerService _playerService;
     private readonly DutyUI _dutyUi;
+    private readonly ZoneStore _zoneStore;
     private readonly UserPermissionStore _permissionStore;
     private readonly DutyCommandTranslations _translations;
 
@@ -49,7 +51,8 @@ public class DutyService : IAsyncEventListener<PlayerLeft>
         UserPermissionStore permissionStore,
         IConfiguration configuration,
         IPlayerService playerService,
-        DutyUI dutyUi)
+        DutyUI dutyUi,
+        ZoneStore zoneStore)
     {
         _signs = signs;
         _chatService = chatService;
@@ -57,6 +60,7 @@ public class DutyService : IAsyncEventListener<PlayerLeft>
         _permissionStore = permissionStore;
         _playerService = playerService;
         _dutyUi = dutyUi;
+        _zoneStore = zoneStore;
         _translations = translations.Value;
 
         IConfigurationSection permSection = configuration.GetSection("permissions");
@@ -238,11 +242,14 @@ public class DutyService : IAsyncEventListener<PlayerLeft>
             player.UnturnedPlayer.look.sendWorkzoneAllowed(workzone);
         }
 
-        ItemJar? heldItem = player.GetHeldItem(out _);
-        if (heldItem != null && heldItem.GetAsset() is ItemGunAsset gun && (EFiremode)player.UnturnedPlayer.equipment.state[11] == EFiremode.SAFETY)
+        if (_zoneStore.IsInMainBase(player))
         {
-            player.UnturnedPlayer.equipment.state[11] = (byte)ItemUtility.GetDefaultFireMode(gun);
-            player.UnturnedPlayer.equipment.sendUpdateState();
+            ItemJar? heldItem = player.GetHeldItem(out _);
+            if (heldItem != null && heldItem.GetAsset() is ItemGunAsset gun && (EFiremode)player.UnturnedPlayer.equipment.state[11] == EFiremode.SAFETY)
+            {
+                player.UnturnedPlayer.equipment.state[11] = (byte)ItemUtility.GetDefaultFireMode(gun);
+                player.UnturnedPlayer.equipment.sendUpdateState();
+            }
         }
 
         if (!player.IsOnDuty)
@@ -303,16 +310,19 @@ public class DutyService : IAsyncEventListener<PlayerLeft>
                     player.UnturnedPlayer.movement.sendPluginJumpMultiplier(1f);
             }
 
-            ItemJar? heldItem = player.GetHeldItem(out _);
-            ItemAsset? heldAsset = heldItem?.GetAsset();
-            if (heldAsset is ItemGunAsset && (EFiremode)player.UnturnedPlayer.equipment.state[11] != EFiremode.SAFETY)
+            if (_zoneStore.IsInMainBase(player))
             {
-                player.UnturnedPlayer.equipment.state[11] = (byte)EFiremode.SAFETY;
-                player.UnturnedPlayer.equipment.sendUpdateState();
-            }
-            else if (heldAsset is ItemThrowableAsset)
-            {
-                player.UnturnedPlayer.equipment.ServerEquip(byte.MaxValue, 0, 0);
+                ItemJar? heldItem = player.GetHeldItem(out _);
+                ItemAsset? heldAsset = heldItem?.GetAsset();
+                if (heldAsset is ItemGunAsset && (EFiremode)player.UnturnedPlayer.equipment.state[11] != EFiremode.SAFETY)
+                {
+                    player.UnturnedPlayer.equipment.state[11] = (byte)EFiremode.SAFETY;
+                    player.UnturnedPlayer.equipment.sendUpdateState();
+                }
+                else if (heldAsset is ItemThrowableAsset)
+                {
+                    player.UnturnedPlayer.equipment.ServerEquip(byte.MaxValue, 0, 0);
+                }
             }
         }
 

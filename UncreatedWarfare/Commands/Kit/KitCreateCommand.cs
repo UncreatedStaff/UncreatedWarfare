@@ -59,7 +59,7 @@ internal sealed class KitCreateCommand : IExecutableCommand
             {
                 await UniTask.SwitchToMainThread(token);
 
-                List<IItem> items = ItemUtility.ItemsFromInventory(Context.Player, assetRedirectService: _assetRedirectService);
+                List<IItem> items = ItemUtility.ItemsFromInventory(Context.Player, refillItems: true, assetRedirectService: _assetRedirectService);
 
                 kit.Items.Clear();
                 foreach (IItem item in items)
@@ -121,7 +121,7 @@ internal sealed class KitCreateCommand : IExecutableCommand
         {
             await UniTask.SwitchToMainThread(token);
 
-            List<IItem> items = ItemUtility.ItemsFromInventory(Context.Player, assetRedirectService: _assetRedirectService);
+            List<IItem> items = ItemUtility.ItemsFromInventory(Context.Player, refillItems: true, assetRedirectService: _assetRedirectService);
 
             kit.Items.Clear();
             foreach (IItem item in items)

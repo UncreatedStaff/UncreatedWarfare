@@ -43,9 +43,7 @@ public class SafezoneTweaks :
         if (e.DequippedItem?.GetAsset() is ItemGunAsset dequippedGunAsset && (EFiremode)e.DequippedItem.item.state[11] == EFiremode.SAFETY)
         {
             e.DequippedItem.item.state[11] = (byte)ItemUtility.GetDefaultFireMode(dequippedGunAsset);
-            byte index = e.Player.UnturnedPlayer.inventory.getIndex((byte)e.DequippedItemPage, e.DequippedItem.x, e.DequippedItem.y);
-            if (index != byte.MaxValue)
-                e.Inventory.updateState((byte)e.DequippedItemPage, index, e.DequippedItem.item.state);
+            e.Inventory.sendUpdateInvState((byte)e.DequippedItemPage, e.DequippedItem.x, e.DequippedItem.y, e.DequippedItem.item.state);
         }
         else if (e.DequippedVehicle != null)
         {
@@ -56,7 +54,11 @@ public class SafezoneTweaks :
             if (Assets.find(EAssetType.ITEM, turret.itemID) is ItemGunAsset gunAsset)
             {
                 passenger.state[11] = (byte)ItemUtility.GetDefaultFireMode(gunAsset);
-                passenger.player?.player.equipment.updateState();
+                if (passenger.player != null)
+                {
+                    PlayerEquipment eq = passenger.player.player.equipment;
+                    eq.sendUpdateState();
+                }
             }
         }
 

@@ -17,7 +17,7 @@ public class Translation : IDisposable
     private static List<string>? _pluralBuffer;
 
     private readonly string _defaultText;
-    public TranslationValue Original { get; private set; }
+    public TranslationValue Original { get; private set; } = null!;
     public string Key { get; private set; }
     public TranslationData Data { get; private set; }
     public TranslationCollection Collection { get; private set; } = null!;
@@ -120,6 +120,8 @@ public class Translation : IDisposable
     /// </summary>
     protected ReadOnlySpan<char> ApplyPluralizers(scoped in TranslationArguments args, ArgumentSpan[] pluralizers, int argumentOffset, int argCt, Func<int, object?> accessor)
     {
+        LanguageInfo language = args.ValueSet.Language;
+
         Span<int> indices = stackalloc int[pluralizers.Length];
         int numToReplace = 0;
         int firstToReplace = -1;
@@ -134,8 +136,8 @@ public class Translation : IDisposable
 
             object? argValue = accessor(argSpan.Argument);
 
-            bool isOne = argValue is IConvertible conv && !TranslationPluralizations.IsOne(conv);
-            if (isOne ^ argSpan.Inverted)
+            bool isNotOne = argValue is IConvertible conv && !TranslationPluralizations.IsOne(conv);
+            if (isNotOne ^ argSpan.Inverted)
             {
                 if (firstToReplace == -1)
                     firstToReplace = i;
@@ -153,7 +155,7 @@ public class Translation : IDisposable
         {
             ref ArgumentSpan span = ref pluralizers[firstToReplace];
             ReadOnlySpan<char> word = args.PreformattedValue.Slice(span.StartIndex + argumentOffset, span.Length);
-            string pluralWord = TranslationPluralizations.Pluralize(word, args.Language);
+            string pluralWord = TranslationPluralizations.Pluralize(word, language);
             return TranslationArgumentModifiers.ReplaceModifiers(args.PreformattedValue, pluralWord, indices, pluralizers, argumentOffset);
         }
 
@@ -174,7 +176,7 @@ public class Translation : IDisposable
                     continue;
 
                 ReadOnlySpan<char> word = args.PreformattedValue.Slice(span.StartIndex + argumentOffset, span.Length);
-                string pluralWord = TranslationPluralizations.Pluralize(word, args.Language);
+                string pluralWord = TranslationPluralizations.Pluralize(word, language);
                 index = totalSize;
                 totalSize += pluralWord.Length;
                 pluralBuffer.Add(pluralWord);

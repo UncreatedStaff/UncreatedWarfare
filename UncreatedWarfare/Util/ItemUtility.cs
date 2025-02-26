@@ -1,15 +1,19 @@
 using DanielWillett.ReflectionTools;
+using SDG.Framework.Utilities;
 using SDG.NetPak;
 using SDG.NetTransport;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
+using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Util.Inventory;
 using Uncreated.Warfare.Util.Region;
+using ItemAsset = SDG.Unturned.ItemAsset;
 
 namespace Uncreated.Warfare.Util;
 
@@ -190,6 +194,39 @@ public static class ItemUtility
         GameThread.AssertCurrent();
 
         return new DroppedItemIterator(x, y, maxRegionDistance);
+    }
+
+    /// <summary>
+    /// Enumerate through all of a player's clothing slots (filled or not).
+    /// </summary>
+    [Pure]
+    public static EquippedClothingIterator EnumerateClothingSlots(WarfarePlayer player)
+    {
+        GameThread.AssertCurrent();
+
+        return new EquippedClothingIterator(player);
+    }
+
+    /// <summary>
+    /// Enumerate through all of a player's clothing slots (filled or not).
+    /// </summary>
+    [Pure]
+    public static EquippedClothingIterator EnumerateClothingSlots(Player player)
+    {
+        GameThread.AssertCurrent();
+
+        return new EquippedClothingIterator(player);
+    }
+
+    /// <summary>
+    /// Enumerate through all of a player's clothing slots (filled or not).
+    /// </summary>
+    [Pure]
+    public static EquippedClothingIterator EnumerateClothingSlots(PlayerClothing clothing)
+    {
+        GameThread.AssertCurrent();
+
+        return new EquippedClothingIterator(clothing);
     }
 
     /// <summary>
@@ -560,7 +597,8 @@ public static class ItemUtility
     /// <summary>
     /// Get an array of kit item abstractions from a player's inventory and clothing.
     /// </summary>
-    public static List<IItem> ItemsFromInventory(WarfarePlayer player, bool addClothes = true, bool addItems = true, AssetRedirectService? assetRedirectService = null)
+    /// <param name="refillItems">If items should be fully refilled (like guns, etc.)</param>
+    public static List<IItem> ItemsFromInventory(WarfarePlayer player, bool addClothes = true, bool addItems = true, bool refillItems = false, AssetRedirectService? assetRedirectService = null)
     {
         GameThread.AssertCurrent();
         if (!addItems && !addClothes)
@@ -588,7 +626,8 @@ public static class ItemUtility
                         continue;
                     if (assetRedirectService != null && assetRedirectService.TryFindRedirectType(asset, out type, out _, out string? variant))
                         items.Add(new RedirectedPageItem(jar.x, jar.y, (Page)page, jar.rot, type, variant));
-                    else items.Add(new ConcretePageItem(jar.x, jar.y, (Page)page, jar.rot, AssetLink.Create(asset), jar.item.state, jar.item.amount));
+                    else
+                        items.Add(new ConcretePageItem(jar.x, jar.y, (Page)page, jar.rot, AssetLink.Create(asset), RefillIfNeeded(refillItems, jar.item.state, asset), refillItems ? asset.amount : jar.item.amount));
                 }
             }
         }
@@ -601,54 +640,142 @@ public static class ItemUtility
                 if (playerFaction != null && assetRedirectService != null && assetRedirectService.TryFindRedirectType(playerClothes.shirtAsset, out type, out FactionInfo? faction, out string? variant, clothingOnly: true) && (faction == null || Equals(faction, playerFaction)))
                     items.Add(new RedirectedClothingItem(ClothingType.Shirt, type, variant));
                 else
-                    items.Add(new ConcreteClothingItem(ClothingType.Shirt, AssetLink.Create(playerClothes.shirtAsset), playerClothes.shirtState));
+                    items.Add(new ConcreteClothingItem(ClothingType.Shirt, AssetLink.Create(playerClothes.shirtAsset), RefillIfNeeded(refillItems, playerClothes.shirtState, playerClothes.shirtAsset)));
             }
             if (playerClothes.pantsAsset != null)
             {
                 if (playerFaction != null && assetRedirectService != null && assetRedirectService.TryFindRedirectType(playerClothes.pantsAsset, out type, out FactionInfo? faction, out string? variant, clothingOnly: true) && (faction == null || Equals(faction, playerFaction)))
                     items.Add(new RedirectedClothingItem(ClothingType.Pants, type, variant));
                 else
-                    items.Add(new ConcreteClothingItem(ClothingType.Pants, AssetLink.Create(playerClothes.pantsAsset), playerClothes.pantsState));
+                    items.Add(new ConcreteClothingItem(ClothingType.Pants, AssetLink.Create(playerClothes.pantsAsset), RefillIfNeeded(refillItems, playerClothes.pantsState, playerClothes.pantsAsset)));
             }
             if (playerClothes.vestAsset != null)
             {
                 if (playerFaction != null && assetRedirectService != null && assetRedirectService.TryFindRedirectType(playerClothes.vestAsset, out type, out FactionInfo? faction, out string? variant, clothingOnly: true) && (faction == null || Equals(faction, playerFaction)))
                     items.Add(new RedirectedClothingItem(ClothingType.Vest, type, variant));
                 else
-                    items.Add(new ConcreteClothingItem(ClothingType.Vest, AssetLink.Create(playerClothes.vestAsset), playerClothes.vestState));
+                    items.Add(new ConcreteClothingItem(ClothingType.Vest, AssetLink.Create(playerClothes.vestAsset), RefillIfNeeded(refillItems, playerClothes.vestState, playerClothes.vestAsset)));
             }
             if (playerClothes.hatAsset != null)
             {
                 if (playerFaction != null && assetRedirectService != null && assetRedirectService.TryFindRedirectType(playerClothes.hatAsset, out type, out FactionInfo? faction, out string? variant, clothingOnly: true) && (faction == null || Equals(faction, playerFaction)))
                     items.Add(new RedirectedClothingItem(ClothingType.Hat, type, variant));
                 else
-                    items.Add(new ConcreteClothingItem(ClothingType.Hat, AssetLink.Create(playerClothes.hatAsset), playerClothes.hatState));
+                    items.Add(new ConcreteClothingItem(ClothingType.Hat, AssetLink.Create(playerClothes.hatAsset), RefillIfNeeded(refillItems, playerClothes.hatState, playerClothes.hatAsset)));
             }
             if (playerClothes.maskAsset != null)
             {
                 if (playerFaction != null && assetRedirectService != null && assetRedirectService.TryFindRedirectType(playerClothes.maskAsset, out type, out FactionInfo? faction, out string? variant, clothingOnly: true) && (faction == null || Equals(faction, playerFaction)))
                     items.Add(new RedirectedClothingItem(ClothingType.Mask, type, variant));
                 else
-                    items.Add(new ConcreteClothingItem(ClothingType.Mask, AssetLink.Create(playerClothes.maskAsset), playerClothes.maskState));
+                    items.Add(new ConcreteClothingItem(ClothingType.Mask, AssetLink.Create(playerClothes.maskAsset), RefillIfNeeded(refillItems, playerClothes.maskState, playerClothes.maskAsset)));
             }
             if (playerClothes.backpackAsset != null)
             {
                 if (playerFaction != null && assetRedirectService != null && assetRedirectService.TryFindRedirectType(playerClothes.backpackAsset, out type, out FactionInfo? faction, out string? variant, clothingOnly: true) && (faction == null || Equals(faction, playerFaction)))
                     items.Add(new RedirectedClothingItem(ClothingType.Backpack, type, variant));
                 else
-                    items.Add(new ConcreteClothingItem(ClothingType.Backpack, AssetLink.Create(playerClothes.backpackAsset), playerClothes.backpackState));
+                    items.Add(new ConcreteClothingItem(ClothingType.Backpack, AssetLink.Create(playerClothes.backpackAsset), RefillIfNeeded(refillItems, playerClothes.backpackState, playerClothes.backpackAsset)));
             }
             if (playerClothes.glassesAsset != null)
             {
                 if (playerFaction != null && assetRedirectService != null && assetRedirectService.TryFindRedirectType(playerClothes.glassesAsset, out type, out FactionInfo? faction, out string? variant, clothingOnly: true) && (faction == null || Equals(faction, playerFaction)))
                     items.Add(new RedirectedClothingItem(ClothingType.Glasses, type, variant));
                 else
-                    items.Add(new ConcreteClothingItem(ClothingType.Glasses, AssetLink.Create(playerClothes.glassesAsset), playerClothes.glassesState));
+                    items.Add(new ConcreteClothingItem(ClothingType.Glasses, AssetLink.Create(playerClothes.glassesAsset), RefillIfNeeded(refillItems, playerClothes.glassesState, playerClothes.glassesAsset)));
             }
         }
 
         return items;
+
+        static byte[] RefillIfNeeded(bool refillItems, byte[] state, ItemAsset asset)
+        {
+            if (!refillItems)
+                return state.CloneBytes();
+
+            RefillState(ref state, asset);
+            return state;
+        }
     }
+
+    /// <summary>
+    /// Copy and refill a state array to it's ideal values for a given asset.
+    /// </summary>
+    public static void RefillState(ref byte[] state, ItemAsset asset)
+    {
+        if (state.Length == 0)
+            return;
+
+        switch (asset)
+        {
+            case ItemGunAsset gun:
+                state = state.CloneBytes();
+                if (Assets.find(EAssetType.ITEM, BitConverter.ToUInt16(state, (int)AttachmentType.Magazine)) is ItemMagazineAsset mag)
+                {
+                    state[10] = mag.amount;
+                }
+                else if (FindMagazineAsset(gun) is { } otherMag && otherMag.id != 0)
+                {
+                    BitConverter.TryWriteBytes(state.AsSpan((int)AttachmentType.Magazine), otherMag.id);
+                    state[10] = otherMag.amount;
+                }
+                else
+                {
+                    state[10] = 0;
+                }
+
+                state[11] = (byte)GetDefaultFireMode(gun);
+                state[12] = BitConverter.ToUInt16(state, (int)AttachmentType.Tactical) != 0 ? (byte)1 : (byte)0;
+                state[13] = 100;
+                state[14] = 100;
+                state[15] = 100;
+                state[16] = 100;
+                state[17] = 100;
+                break;
+
+            case ItemGlassesAsset glasses when glasses.vision != ELightingVision.NONE:
+                state = state.CloneBytes();
+                state[0] = 0;
+                break;
+
+            default:
+                byte[] defaultState = asset.getState(EItemOrigin.ADMIN);
+                if (defaultState.Length == 0)
+                    return;
+                state = defaultState;
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Gets a default magazine for the gun, or falls back to the first asset that matches the caliber of the gun.
+    /// </summary>
+    /// <param name="state">Used to select the current magazine if supplied.</param>
+    public static ItemMagazineAsset? FindMagazineAsset(ItemGunAsset gunAsset, byte[]? state = null)
+    {
+        GameThread.AssertCurrent();
+
+        if (state is { Length: >= 10 }
+            && Assets.find(EAssetType.ITEM, BitConverter.ToUInt16(state, (int)AttachmentType.Magazine)) is ItemMagazineAsset magazine)
+        {
+            return magazine;
+        }
+
+        if (gunAsset.SelectDefaultMagazine() is { } magAsset2)
+            return magAsset2;
+        
+        List<ItemMagazineAsset> mags = ListPool<ItemMagazineAsset>.claim();
+        try
+        {
+            Assets.find(mags);
+            return mags.FirstOrDefault(x => x.calibers.Any(y => gunAsset.magazineCalibers.Contains(y)));
+        }
+        finally
+        {
+            ListPool<ItemMagazineAsset>.release(mags);
+        }
+    }
+
 
     /// <summary>
     /// Clear the playery's inventory and update their third-person model for other players.
@@ -962,6 +1089,19 @@ public static class ItemUtility
 
         page = (Page)byte.MaxValue;
         return null;
+    }
+
+    /// <summary>
+    /// Check if the given item is currently equipped.
+    /// </summary>
+    public static bool IsHeldItem(WarfarePlayer player, Page page, byte x, byte y)
+    {
+        GameThread.AssertCurrent();
+        if (!player.IsOnline)
+            return false;
+        
+        PlayerEquipment eq = player.UnturnedPlayer.equipment;
+        return eq.asset != null && eq.equippedPage == (byte)page && eq.equipped_x == x && eq.equipped_y == y;
     }
 
     /// <summary>
@@ -1712,8 +1852,7 @@ public static class ItemUtility
     [Pure]
     public static FirearmClass GetFirearmClass(ItemGunAsset gun)
     {
-        Asset? magazineAsset = Assets.find(EAssetType.ITEM, gun.getMagazineID());
-        ItemMagazineAsset? magazine = magazineAsset as ItemMagazineAsset;
+        ItemMagazineAsset? magazine = gun.SelectDefaultMagazine();
 
         if (magazine?.pellets > 1)
         {

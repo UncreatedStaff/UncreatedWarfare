@@ -324,4 +324,10 @@ public class FastItemDistributionService : IItemDistributionService
         ItemUtility.UpdateSlots(player);
         return ct;
     }
+
+    /// <inheritdoc />
+    public int RestockItems<TState>(IEnumerable<IItem> items, WarfarePlayer player, TState state) where TState : IItemDistributionState
+    {
+        throw new NotImplementedException();
+    }
 }

@@ -33,6 +33,16 @@ Parameters:
         Type: Verbatim
         Description: "Open the squad UI."
         
+  # /warfaredev reload
+  - Name: reload
+    Type: Verbatim
+    Description: "Reload some features."
+    Parameters:
+      - Name: translations
+        Alias: lang
+        Type: Verbatim
+        Description: "Re-read all translations."
+        
   # /warfaredev steamguard
   - Name: steamguard
     Type: Verbatim

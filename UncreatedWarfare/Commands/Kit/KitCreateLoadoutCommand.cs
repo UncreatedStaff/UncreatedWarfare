@@ -56,7 +56,7 @@ internal sealed class KitCreateLoadoutCommand : IExecutableCommand
         {
             await UniTask.SwitchToMainThread(token);
 
-            List<IItem> items = ItemUtility.ItemsFromInventory(Context.Player, assetRedirectService: _assetRedirectService);
+            List<IItem> items = ItemUtility.ItemsFromInventory(Context.Player, refillItems: true, assetRedirectService: _assetRedirectService);
 
             kit.Items ??= new List<KitItemModel>(items.Count);
             foreach (IItem item in items)

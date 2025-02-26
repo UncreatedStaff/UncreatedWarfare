@@ -360,10 +360,7 @@ public class ClaimToRearmTweaks :
         if (_zoneStore == null)
             return;
 
-        if (!_zoneStore.IsInWarRoom(e.Player))
-            return;
-
-        await AutoResupplyKit(e.Player, token);
+        await _kitRequestService.RestockKitAsync(e.Player, token);
     }
 
     [EventListener(Priority = -1)]
@@ -378,19 +375,6 @@ public class ClaimToRearmTweaks :
         if (!_zoneStore.IsInMainBase(e.Player))
             return;
 
-        await AutoResupplyKit(e.Player, token);
-    }
-    
-    private async Task AutoResupplyKit(WarfarePlayer player, CancellationToken token = default)
-    {
-        KitPlayerComponent kitComponent = player.Component<KitPlayerComponent>();
-        if (!player.Component<KitPlayerComponent>().ActiveKitKey.HasValue)
-            return;
-        
-        Kit? kit = await kitComponent.GetActiveKitAsync(KitInclude.Giveable, token).ConfigureAwait(false);
-        if (kit == null)
-            return;
-        
-        await _kitRequestService.GiveKitAsync(player, new KitBestowData(kit) { IsLowAmmo = false, Silent = true }, token);
+        await _kitRequestService.RestockKitAsync(e.Player, token);
     }
 }
