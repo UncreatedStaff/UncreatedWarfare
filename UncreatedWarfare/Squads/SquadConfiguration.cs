@@ -1,9 +1,6 @@
 using Microsoft.Extensions.Configuration;
-using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Kits;
 
 namespace Uncreated.Warfare.Squads;

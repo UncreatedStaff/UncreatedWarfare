@@ -1,9 +1,9 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Runtime.CompilerServices;
-using Uncreated.Warfare.Database;
 
-// only initialize if library exists
+namespace Uncreated.Warfare.Database;
+
 public static class SshTunnelHelper
 {
     public static void AddSshTunnelService(ContainerBuilder serviceCollection)

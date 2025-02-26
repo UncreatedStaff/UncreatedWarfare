@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Events.Models.Flags;
 using Uncreated.Warfare.Layouts.Teams;
@@ -10,6 +10,10 @@ namespace Uncreated.Warfare.Layouts.Flags;
 public class FlagObjective : IDisposable
 {
     private readonly HashSet<Team> _previousOwners;
+
+    private readonly List<Team> _discoveredTeams;
+
+
     public ZoneRegion Region { get; }
     public Vector3 Center => Region.Primary.Zone.Center;
     public string Name => Region.Name;
@@ -25,11 +29,42 @@ public class FlagObjective : IDisposable
         _previousOwners = new HashSet<Team> { startingOwner };
         Contest = new SingleLeaderContest(startingOwner, 64);
         Region = region;
+
+        _discoveredTeams = new List<Team>(2);
+        if (startingOwner.IsValid)
+        {
+            _discoveredTeams.Add(startingOwner);
+        }
+
         Contest.OnPointsChanged += OnPointsChangedIntl;
         Contest.OnWon += OnCapturedIntl;
         Contest.OnRestarted += OnNeutralizedIntl;
         Region.OnPlayerEntered += OnPlayerEnteredIntl;
         Region.OnPlayerExited += OnPlayerExitedIntl;
+    }
+
+    /// <summary>
+    /// Check if a team has discovered the flag.
+    /// </summary>
+    public bool IsDiscovered(Team team)
+    {
+        return team.IsValid && _discoveredTeams.Contains(team);
+    }
+
+    /// <summary>
+    /// Add a team to the list of teams who have discovered this flag.
+    /// </summary>
+    /// <returns><see langword="true"/> if the team is valid and didn't already discover this flag, otherwise <see langword="false"/>.</returns>
+    public bool Discover(Team team)
+    {
+        if (!team.IsValid)
+            return false;
+
+        if (_discoveredTeams.Contains(team))
+            return false;
+
+        _discoveredTeams.Add(team);
+        return true;
     }
 
     // we have an issue where AwardPoints needs to run before this event

@@ -242,6 +242,11 @@ public class DutyService : IAsyncEventListener<PlayerLeft>
             player.UnturnedPlayer.look.sendWorkzoneAllowed(workzone);
         }
 
+        if (player.UnturnedPlayer.interact != null)
+        {
+            player.UnturnedPlayer.interact.sendSalvageTimeOverride(1f);
+        }
+
         if (_zoneStore.IsInMainBase(player))
         {
             ItemJar? heldItem = player.GetHeldItem(out _);
@@ -308,6 +313,11 @@ public class DutyService : IAsyncEventListener<PlayerLeft>
                     player.UnturnedPlayer.movement.sendPluginSpeedMultiplier(1f);
                 if (player.UnturnedPlayer.movement.pluginJumpMultiplier != 1f)
                     player.UnturnedPlayer.movement.sendPluginJumpMultiplier(1f);
+            }
+
+            if (player.UnturnedPlayer.interact != null)
+            {
+                player.UnturnedPlayer.interact.sendSalvageTimeOverride(-1f);
             }
 
             if (_zoneStore.IsInMainBase(player))
