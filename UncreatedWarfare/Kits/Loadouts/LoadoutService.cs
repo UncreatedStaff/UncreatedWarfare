@@ -414,7 +414,8 @@ public class LoadoutService
                 kit.Season = WarfareModule.Season;
                 kit.Class = @class;
                 kit.Branch = KitDefaults.GetDefaultBranch(@class);
-                kit.TeamLimit = KitDefaults.GetDefaultTeamLimit(@class);
+                kit.MinRequiredSquadMembers = KitDefaults.GetDefaultMinRequiredSquadMembers(@class);
+                kit.RequiresSquad = KitDefaults.GetDefaultRequiresSquad(@class);
                 kit.SquadLevel = KitDefaults.GetDefaultSquadLevel(@class);
                 kit.RequestCooldown = KitDefaults.GetDefaultRequestCooldown(@class);
 

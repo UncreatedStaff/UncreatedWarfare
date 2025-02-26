@@ -95,11 +95,16 @@ public class Kit : IRequestable<Kit>, ITranslationArgument
     /// The individual cooldown between requests for this kit.
     /// </summary>
     public TimeSpan RequestCooldown { get; private set; }
-
+    
     /// <summary>
-    /// The percentage of the team that can use this kit at once.
+    /// A player can only use this kit after this many players are in their squad.
     /// </summary>
-    public float TeamLimit { get; private set; }
+    public int? MinRequiredSquadMembers { get; private set; }
+    
+    /// <summary>
+    /// Whether a player needs to be in a squad in order to use this kit.
+    /// </summary>
+    public bool RequiresSquad { get; private set; }
 
     /// <summary>
     /// Cost to unlock this kit in in-game credits.
@@ -235,7 +240,8 @@ public class Kit : IRequestable<Kit>, ITranslationArgument
         RequiresServerBoost = model.RequiresNitro;
         Season = model.Season;
         RequestCooldown = TimeSpan.FromSeconds(model.RequestCooldown);
-        TeamLimit = model.TeamLimit.HasValue ? Mathf.Clamp01(model.TeamLimit.Value) : KitDefaults.GetDefaultTeamLimit(model.Class);
+        MinRequiredSquadMembers = model.MinRequiredSquadMembers;
+        RequiresSquad = model.RequiresSquad;
         CreditCost = model.CreditCost;
         PremiumCost = model.PremiumCost;
         WeaponText = model.Weapons;

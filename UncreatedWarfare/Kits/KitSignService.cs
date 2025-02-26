@@ -1,4 +1,7 @@
 using System;
+using Uncreated.Warfare.Events.Models;
+using Uncreated.Warfare.Events.Models.Kits;
+using Uncreated.Warfare.Events.Models.Squads;
 using Uncreated.Warfare.Kits.Loadouts;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
@@ -7,7 +10,10 @@ using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Kits;
 
-public class KitSignService
+public class KitSignService :
+    IEventListener<PlayerKitChanged>,
+    IEventListener<SquadMemberJoined>,
+    IEventListener<SquadMemberLeft>
 {
     private readonly SignInstancer _signs;
     private readonly IPlayerService _playerService;
@@ -271,5 +277,20 @@ public class KitSignService
                 _signs.UpdateSigns<KitSignInstanceProvider>(player, (_, provider) => string.Equals(provider.KitId, capturedKitId, StringComparison.Ordinal));
             }
         }
+    }
+
+    public void HandleEvent(PlayerKitChanged e, IServiceProvider serviceProvider)
+    {
+        UpdateSigns();
+    }
+
+    public void HandleEvent(SquadMemberJoined e, IServiceProvider serviceProvider)
+    {
+        UpdateSigns();
+    }
+
+    public void HandleEvent(SquadMemberLeft e, IServiceProvider serviceProvider)
+    {
+        UpdateSigns();
     }
 }

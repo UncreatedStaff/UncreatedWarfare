@@ -58,7 +58,6 @@ internal sealed class KitSetCommand : IExecutableCommand
             Class oldClass = kit.Class;
             Branch oldbranch = kit.Branch;
             float oldReqCooldown = kit.RequestCooldown;
-            float? oldTeamLimit = kit.TeamLimit;
             result = SettableUtil<KitModel>.SetProperty(kit, property, newValue, Context.ParseFormat, _serviceProvider, out property, out propertyType);
 
             if (result != SetPropertyResult.Success)
@@ -70,8 +69,6 @@ internal sealed class KitSetCommand : IExecutableCommand
                 return;
 
             // check for default values from the old class if the class changed and update those
-            if (oldTeamLimit.HasValue && Mathf.Abs(KitDefaults.GetDefaultTeamLimit(oldClass) - oldTeamLimit.Value) < 0.005f)
-                kit.TeamLimit = null;
 
             if (KitDefaults.GetDefaultBranch(oldClass) == oldbranch)
                 kit.Branch = KitDefaults.GetDefaultBranch(kit.Class);

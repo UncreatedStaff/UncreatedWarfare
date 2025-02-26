@@ -93,7 +93,8 @@ internal sealed class KitCopyFromCommand : IExecutableCommand
         kit.Class = source.Class;
         kit.Branch = source.Branch;
         kit.Type = source.Type;
-        kit.TeamLimit = KitDefaults.GetDefaultTeamLimit(source.Class) == source.TeamLimit ? null : source.TeamLimit;
+        kit.MinRequiredSquadMembers = source.MinRequiredSquadMembers;
+        kit.RequiresSquad = source.RequiresSquad;
         kit.CreditCost = source.CreditCost;
         kit.PremiumCost = source.PremiumCost;
         kit.SquadLevel = source.SquadLevel;

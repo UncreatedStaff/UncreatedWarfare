@@ -17,10 +17,13 @@ using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Cooldowns;
+using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Signs;
+using Uncreated.Warfare.Squads;
+using Uncreated.Warfare.Squads.UI;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
@@ -45,6 +48,8 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
     private readonly DroppedItemTracker _droppedItemTracker;
     private readonly AssetRedirectService _assetRedirectService;
     private readonly PointsService _pointsService;
+    private readonly SquadMenuUI _squadMenuUI;
+    private readonly SquadConfiguration _squadConfiguration;
     private readonly RequestKitsTranslations _kitReqTranslations;
     private readonly IPlayerService _playerService;
     private readonly ChatService _chatService;
@@ -65,8 +70,10 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         IKitsDbContext kitDbContext,
         EventDispatcher eventDispatcher,
         DroppedItemTracker droppedItemTracker,
+        SquadConfiguration squadConfiguration,
         AssetRedirectService assetRedirectService,
         PointsService pointsService,
+        SquadMenuUI squadMenuUI,
         ChatService chatService)
     {
         _kitDataStore = kitDataStore;
@@ -81,8 +88,10 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         _kitDbContext.ChangeTracker.AutoDetectChangesEnabled = false;
         _eventDispatcher = eventDispatcher;
         _droppedItemTracker = droppedItemTracker;
+        _squadConfiguration = squadConfiguration;
         _assetRedirectService = assetRedirectService;
         _pointsService = pointsService;
+        _squadMenuUI = squadMenuUI;
         _valueFormatter = valueFormatter;
         _kitReqTranslations = translations.Value;
         _chatService = chatService;
@@ -209,15 +218,33 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
                 return false;
             }
 
-            // team limits
-            if (kit.Type != KitType.Loadout
-                    ? IsLimited(kit, out _, out int allowedPlayers, team)
-                    : IsClassLimited(kit, out _, out allowedPlayers, team))
+            // kit user limits
+            if (kit.RequiresSquad)
             {
-                resultHandler.MissingRequirement(player, kit,
-                    kit.Type != KitType.Loadout
-                        ? _kitReqTranslations.RequestKitLimited.Translate(allowedPlayers, player)
-                        : _kitReqTranslations.RequestKitClassLimited.Translate(allowedPlayers, kit.Class, player)
+                Squad? squad = player.GetSquad();
+                if (squad == null)
+                {
+                    _squadMenuUI.OpenUI(player);
+                    return false;
+                }
+                if (IsKitAlreadyTakenInSquad(kit, squad))
+                {
+                    resultHandler.MissingRequirement(player, kit, _kitReqTranslations.RequestKitTakenInSquad.Translate(player)
+                    );
+                    return false;
+                }
+                if (SquadHasEnoughPlayersForKit(kit, squad))
+                {
+                    resultHandler.MissingRequirement(player, kit, _kitReqTranslations.RequestKitNotEnoughSquadMembers.Translate(kit.MinRequiredSquadMembers ?? 0, player)
+                    );
+                    return false;
+                }
+            }
+
+            int allowedPerXUsers = _squadConfiguration.KitClassesAllowedPerXTeammates.GetValueOrDefault(kit.Class);
+            if (allowedPerXUsers > 0 && IsKitLimitedForClass(kit.Class, player.Team, allowedPerXUsers, out int currentUsers, out _, out _))
+            {
+                resultHandler.MissingRequirement(player, kit, _kitReqTranslations.RequestKitClassLimited.Translate(currentUsers, kit.Class, player)
                 );
                 return false;
             }
@@ -304,19 +331,6 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
             if (team != player.Team)
             {
                 throw new OperationCanceledException("Changed teams before kit could be granted.");
-            }
-
-            // recheck limits to make sure people can't request at the same time to avoid limits.
-            if (kit.Type != KitType.Loadout
-                    ? IsLimited(kit, out _, out allowedPlayers, team)
-                    : IsClassLimited(kit, out _, out allowedPlayers, team))
-            {
-                resultHandler.MissingRequirement(player, kit,
-                    kit.Type != KitType.Loadout
-                        ? _kitReqTranslations.RequestKitLimited.Translate(allowedPlayers, player)
-                        : _kitReqTranslations.RequestKitClassLimited.Translate(allowedPlayers, kit.Class, player)
-                );
-                return false;
             }
 
             if (kit.Type == KitType.Loadout && LoadoutIdHelper.Parse(kit.Id, out CSteamID intendedPlayer) > 0 && intendedPlayer.m_SteamID == player.Steam64.m_SteamID)
@@ -592,47 +606,41 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
                 WasRequested = isRequest
             }, CancellationToken.None);
     }
-
-    internal bool IsLimited(Kit kit, out int currentPlayers, out int allowedPlayers, Team team)
+    
+    internal bool IsKitAlreadyTakenInSquad(Kit kit, Squad squad)
     {
-        currentPlayers = 0;
-
-        int ttl = 0;
-        foreach (WarfarePlayer player in _playerService.OnlinePlayersOnTeam(team))
-        {
-            ++ttl;
-            if (player.Component<KitPlayerComponent>().ActiveKitKey is { } pk && pk == kit.Key)
-                ++currentPlayers;
-        }
-
-        allowedPlayers = Mathf.CeilToInt(kit.TeamLimit * ttl);
-        if (kit.TeamLimit >= 1f)
-        {
+        if (kit.MinRequiredSquadMembers == null)
             return false;
+        
+        foreach (WarfarePlayer player in squad.Members)
+        {
+            if (player.Component<KitPlayerComponent>().ActiveKitKey is { } pk && pk == kit.Key)
+                return true;
         }
-
-        return currentPlayers + 1 > allowedPlayers;
+        
+        return false;
+    }
+    internal bool SquadHasEnoughPlayersForKit(Kit kit, Squad squad)
+    {
+        if (kit.MinRequiredSquadMembers == null)
+            return true;
+        
+        return squad.Members.Count >= kit.MinRequiredSquadMembers;
     }
 
-    internal bool IsClassLimited(Kit kit, out int currentPlayers, out int allowedPlayers, Team team)
+    internal bool IsKitLimitedForClass(Class @class,  Team team, int allowedPerXUsers, out int currentUsers, out int kitsAllowed, out int teammates)
     {
-        currentPlayers = 0;
-
-        int ttl = 0;
+        currentUsers = 0;
+        teammates = 0;
         foreach (WarfarePlayer player in _playerService.OnlinePlayersOnTeam(team))
         {
-            ++ttl;
-            if (player.Component<KitPlayerComponent>().ActiveClass == kit.Class)
-                ++currentPlayers;
+            teammates++;
+            if (player.Component<KitPlayerComponent>().ActiveClass == @class)
+                currentUsers++;
         }
 
-        allowedPlayers = Mathf.CeilToInt(kit.TeamLimit * ttl);
-        if (kit.TeamLimit >= 1f)
-        {
-            return false;
-        }
-
-        return currentPlayers + 1 > allowedPlayers;
+        kitsAllowed = teammates / allowedPerXUsers + 1;
+        return currentUsers + 1 > kitsAllowed;
     }
 
     private bool IsCurrentMapAllowed(Kit kit)

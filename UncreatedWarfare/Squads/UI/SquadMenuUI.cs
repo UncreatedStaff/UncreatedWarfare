@@ -19,7 +19,7 @@ using Uncreated.Warfare.Players.Management;
 namespace Uncreated.Warfare.Squads.UI;
 
 [UnturnedUI(BasePath = "SquadMenuBox")]
-internal class SquadMenuUI : 
+public class SquadMenuUI : 
     UnturnedUI,
     IEventListener<SquadCreated>,
     IEventListener<SquadDisbanded>,
