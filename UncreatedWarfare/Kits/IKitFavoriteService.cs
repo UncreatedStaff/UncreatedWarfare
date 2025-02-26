@@ -124,10 +124,8 @@ public class MySqlKitFavoriteService : IKitFavoriteService, IDisposable
                     if (value.Type == KitType.Loadout)
                     {
                         component.UpdateLoadout(value);
-                        Console.WriteLine($"Updated loadouts for {onlinePlayer}: {string.Join(", ", component.Loadouts.Select(x => x.Id))}.");
                     }
                     
-                    Console.WriteLine($"Updating signs for {value.Id} - {onlinePlayer}.");
                     _kitSignService.UpdateSigns(value, onlinePlayer);
                 }
             }

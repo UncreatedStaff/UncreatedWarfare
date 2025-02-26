@@ -1,4 +1,4 @@
-﻿using DanielWillett.JavaPropertiesParser;
+using DanielWillett.JavaPropertiesParser;
 using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
 using Microsoft.Extensions.DependencyInjection;
@@ -92,10 +92,10 @@ public class PropertiesTranslationStorage : ITranslationStorage
 
         Type type = translation.GetType();
 
-        string value = translation.Original.Value;
+        string value = translation.Original.RawValue;
         if (language != null && translation.Table.TryGetValue(language.Code, out TranslationValue valueEntry))
         {
-            value = valueEntry.Value;
+            value = valueEntry.RawValue;
         }
 
         if (!string.IsNullOrWhiteSpace(translation.Data.Description))
@@ -136,19 +136,19 @@ public class PropertiesTranslationStorage : ITranslationStorage
                 if (fmt.FormatAddons.Length == 1)
                 {
                     argBuilder
-                        .Append("  Addon: ")
+                        .Append(" | Addon: ")
                         .Append(fmt.FormatAddons[0].DisplayName ?? Accessor.Formatter.Format(fmt.FormatAddons[0].GetType()));
                     writer.WriteComment(argBuilder.ToString());
                 }
                 else
                 {
-                    argBuilder.Append("  Addons:");
+                    argBuilder.Append(" | Addons:");
                     writer.WriteComment(argBuilder.ToString());
                     argBuilder.Clear();
                     for (int a = 0; a < fmt.FormatAddons.Length; ++a)
                     {
                         argBuilder
-                            .Append("   - ")
+                            .Append(" |  - ")
                             .Append(fmt.FormatAddons[a].DisplayName ?? Accessor.Formatter.Format(fmt.FormatAddons[a].GetType()));
                         writer.WriteComment(argBuilder.ToString());
                         argBuilder.Clear();
@@ -163,9 +163,9 @@ public class PropertiesTranslationStorage : ITranslationStorage
         }
 
         // write default value if it doesn't match current value.
-        if (!translation.Original.Value.Equals(value, StringComparison.Ordinal))
+        if (!translation.Original.RawValue.Equals(value, StringComparison.Ordinal))
         {
-            writer.WriteComment("Default: " + translation.Original.Value);
+            writer.WriteComment("Default: " + translation.Original.RawValue);
         }
 
         writer.WriteKeyValue(translation.Key, value);

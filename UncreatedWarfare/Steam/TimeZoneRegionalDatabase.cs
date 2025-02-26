@@ -317,7 +317,7 @@ public class TimeZoneRegionalDatabase : IHostedService
             if (_timeZones.TryGetValue(territory, out TimeZoneInfo? existingTimezone))
             {
                 if (!Array.Exists(defaults, x => x.Key.Equals(territory, StringComparison.Ordinal)))
-                    Console.WriteLine($"Conflicting territory |{territory}| tz: \"{existingTimezone.Id}\" with \"{tz.Id}\".");
+                    _logger.LogWarning($"Conflicting territory |{territory}| tz: \"{existingTimezone.Id}\" with \"{tz.Id}\".");
             }
             else
             {

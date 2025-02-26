@@ -68,7 +68,7 @@ public class SquadSignInstanceProvider : ISignInstanceProvider
             return "Invalid Sign";
         
         Squad? squad = _squadManager.Squads.FirstOrDefault(s => s.Team == Team && s.TeamIdentificationNumber == SquadNumber);
-        if (squad == null)
+        if (squad == null || /* about to get disbanded */ squad.Members.Count == 0)
         {
             return _translations.EmptySquadSignTranslation.Translate(SquadNumber, language, culture, TimeZoneInfo.Utc);
         }

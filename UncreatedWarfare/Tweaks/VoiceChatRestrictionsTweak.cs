@@ -58,7 +58,6 @@ internal sealed class VoiceChatRestrictionsTweak : IHostedService
             // clear UI after one second of not talking
             if (_mutedUi.TryGetId(out ushort id))
             {
-                Console.WriteLine("hide muted ui (timeout)");
                 EffectManager.askEffectClearByID(id, player.Connection);
             }
 
@@ -91,7 +90,6 @@ internal sealed class VoiceChatRestrictionsTweak : IHostedService
         {
             if (_mutedUi.TryGetId(out ushort id))
             {
-                Console.WriteLine("show muted ui");
                 EffectManager.sendUIEffect(id, -1, speaker.channel.owner.transportConnection, reliable: true, _translations.MutedUI.Translate(player));
             }
 
@@ -101,7 +99,6 @@ internal sealed class VoiceChatRestrictionsTweak : IHostedService
         {
             if (_mutedUi.TryGetId(out ushort id))
             {
-                Console.WriteLine("hide muted ui");
                 EffectManager.askEffectClearByID(id, speaker.channel.owner.transportConnection);
             }
 

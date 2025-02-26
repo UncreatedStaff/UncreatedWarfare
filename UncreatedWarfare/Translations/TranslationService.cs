@@ -1,10 +1,11 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using StackCleaner;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Translations.Languages;
 
@@ -35,6 +36,14 @@ public class TranslationService : ITranslationService
         SetOf = new LanguageSets(playerService);
 
         TerminalColoring = systemConfig.GetValue("logging:terminal_coloring", StackColorFormatType.ExtendedANSIColor);
+
+#if DEBUG // delete default translations
+        WarfareModule module = serviceProvider.GetRequiredService<WarfareModule>();
+        string translationsFolder = Path.Combine(module.HomeDirectory, TranslationsFolder, LanguageService.GetDefaultLanguage().Code);
+
+        if (Directory.Exists(translationsFolder))
+            Directory.Delete(translationsFolder, true);
+#endif
     }
 
     public T Get<T>() where T : TranslationCollection, new()
@@ -43,6 +52,14 @@ public class TranslationService : ITranslationService
 
         c.TryInitialize(this, _serviceProvider);
         return (T)c;
+    }
+
+    public void ReloadAll()
+    {
+        foreach (TranslationCollection collection in _collections.Values)
+        {
+            collection.Reload();
+        }
     }
 }
 
@@ -78,4 +95,9 @@ public interface ITranslationService
     /// Get a translation collection from this provider.
     /// </summary>
     T Get<T>() where T : TranslationCollection, new();
+
+    /// <summary>
+    /// Reload all translation collections.
+    /// </summary>
+    void ReloadAll();
 }

@@ -40,6 +40,22 @@ public interface IItemDistributionService
         return GiveItems(items, player, new DefaultItemDistributionState());
     }
 
+    /// <summary>
+    /// Give new items and update the states of existing items but don't clear any.
+    /// </summary>
+    /// <param name="state">Allows for intercepting adding specific items and modifying their contents.</param>
+    /// <returns>The number of items and clothes modified or added to the player's inventory.</returns>
+    int RestockItems<TState>(IEnumerable<IItem> items, WarfarePlayer player, TState state) where TState : IItemDistributionState;
+
+    /// <summary>
+    /// Give new items and update the states of existing items but don't clear any.
+    /// </summary>
+    /// <returns>The number of items and clothes modified or added to the player's inventory.</returns>
+    int RestockItems(IEnumerable<IItem> items, WarfarePlayer player)
+    {
+        return RestockItems(items, player, new DefaultItemDistributionState());
+    }
+
     protected struct DefaultItemDistributionState : IItemDistributionState, IItemClearState
     {
         public bool ClearClothes => true;

@@ -83,7 +83,6 @@ public class AudioRecordManager : IHostedService
 
     UniTask IHostedService.StartAsync(CancellationToken token)
     {
-        Console.WriteLine("relaying voice subbed");
         PlayerVoice.onRelayVoice += OnRelayVoice;
         return UniTask.CompletedTask;
     }

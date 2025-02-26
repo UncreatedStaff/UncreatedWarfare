@@ -25,7 +25,7 @@ public class KitBestowService
         _tipService = tipService;
         _translations = translations.Value;
     }
-
+    
     /// <summary>
     /// Remove any kit from the player (effectively clearing their inventory).
     /// </summary>
@@ -88,6 +88,26 @@ public class KitBestowService
         }
     }
 
+    /// <summary>
+    /// Restock the player's current kit without removing any items.
+    /// </summary>
+    public void RestockKit(WarfarePlayer player)
+    {
+        GameThread.AssertCurrent();
+
+        if (!player.IsOnline)
+            throw new ArgumentException("Player offline.", nameof(player));
+
+        Kit? kit = player.Component<KitPlayerComponent>().CachedKit;
+        if (kit == null)
+            return;
+
+        IKitItem[] items = kit.Items;
+
+        using BestowKitGiveItemsState state = new BestowKitGiveItemsState(new KitBestowData(kit) { RestockOnly = true }, player);
+        _itemDistributionService.RestockItems(items, player, state);
+    }
+
     private struct BestowKitGiveItemsState : IItemDistributionState, IDisposable
     {
         private static readonly ItemTransformation NullItemTransformation = new ItemTransformation(0, 0, byte.MaxValue, byte.MaxValue, byte.MaxValue, byte.MaxValue, null!);
@@ -113,6 +133,10 @@ public class KitBestowService
             _kit = data.Kit;
             Silent = data.Silent;
             _options = data.IsLowAmmo ? BestowKitOptions.LowAmmo : 0;
+            if (data.Silent)
+                _options |= BestowKitOptions.Silent;
+            if (data.RestockOnly)
+                _options |= BestowKitOptions.IsRestock;
             _layoutTransformations = data.Layouts ?? Array.Empty<KitLayoutTransformation>();
             _itemCountsTable = (_options & BestowKitOptions.LowAmmo) != 0 ? new List<KeyValuePair<Guid, int>>(16) : null;
 
@@ -255,7 +279,9 @@ public class KitBestowService
     [Flags]
     private enum BestowKitOptions
     {
-        LowAmmo = 1
+        LowAmmo = 1,
+        Silent = 1 << 1,
+        IsRestock = 1 << 2
     }
 }
 
@@ -268,6 +294,7 @@ public readonly struct KitBestowData
     public IReadOnlyList<KitLayoutTransformation>? Layouts { get; }
     public bool IsLowAmmo { get; init; }
     public bool Silent { get; init; }
+    internal bool RestockOnly { get; init; }
     public KitBestowData(Kit kit) : this(kit, null) { }
     internal KitBestowData(Kit kit, IReadOnlyList<KitLayoutTransformation>? layouts)
     {

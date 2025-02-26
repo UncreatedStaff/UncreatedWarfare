@@ -313,7 +313,7 @@
 
   <!-- Reference all unturned in ~/Libraries -->
   <ItemGroup>
-	  <Reference Include="@(UnturnedLibrary->'%(Identity)')" HintPath="$(UnturnedDllPath)\%(Identity).dll" Private="!$(CopyToModule)"/>
+	  <Reference Include="@(UnturnedLibrary->'%(Identity)')" HintPath="$(UnturnedDllPath)\%(Identity).dll" Private="!$(CopyToModule)" />
   </ItemGroup>
 
   <ItemGroup>

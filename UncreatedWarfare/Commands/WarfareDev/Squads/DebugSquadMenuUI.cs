@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Squads.UI;
