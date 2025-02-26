@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
@@ -9,7 +10,9 @@ using Uncreated.Warfare.Kits.Loadouts;
 using Uncreated.Warfare.Kits.Requests;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Players.Unlocks;
+using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Addons;
@@ -27,6 +30,7 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>
     private readonly KitRequestService _kitRequestService;
     private readonly IKitDataStore _kitDataStore;
     private readonly PlayerNitroBoostService _nitroBoostService;
+    private readonly SquadConfiguration _squadConfiguration;
     private readonly IConfiguration _systemConfig;
     private readonly KitSignTranslations _translations;
     private readonly TextMeasurementService _measurementService;
@@ -47,12 +51,14 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>
         IKitDataStore kitDataStore,
         TranslationInjection<KitSignTranslations> translations,
         PlayerNitroBoostService nitroBoostService,
+        SquadConfiguration squadConfiguration,
         IConfiguration systemConfig,
         TextMeasurementService measurementService)
     {
         _kitRequestService = kitRequestService;
         _kitDataStore = kitDataStore;
         _nitroBoostService = nitroBoostService;
+        _squadConfiguration = squadConfiguration;
         _systemConfig = systemConfig;
         _translations = translations.Value;
         _measurementService = measurementService;
@@ -153,26 +159,42 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>
         if (hasWeaponText)
             bldr.Append(kit.WeaponText!.ToUpper(culture)).Append('\n');
 
-        AppendPlayerCount(bldr, player, kit, language, culture, useClassLimit: false);
+        AppendPlayerCount(bldr, player, kit, language, culture);
     }
 
-    private void AppendPlayerCount(StringBuilder bldr, WarfarePlayer? player, Kit kit, LanguageInfo language, CultureInfo culture, bool useClassLimit)
+    private void AppendPlayerCount(StringBuilder bldr, WarfarePlayer? player, Kit kit, LanguageInfo language, CultureInfo culture)
     {
-        if (player == null || kit.TeamLimit is >= 1f or <= 0f)
+        if (player == null)
+            return;
+
+        if (kit.RequiresSquad)
         {
-            bldr.Append(_translations.KitUnlimited.Translate(language));
+            Squad? squad = player.GetSquad();
+            if (squad == null)
+            {
+                bldr.Append(_translations.KitRequireJoinSquad.Translate(language));
+                return;
+            }
+            if (_kitRequestService.IsKitAlreadyTakenInSquad(kit, squad))
+            {
+                bldr.Append(_translations.KitAlreadyTakenBySquadMember.Translate(language));
+                return;
+            }
+            if (!_kitRequestService.SquadHasEnoughPlayersForKit(kit, squad))
+            {
+                bldr.Append(_translations.KitNotEnoughPlayersInSquad.Translate(squad.Members.Count, kit.MinRequiredSquadMembers ?? 0, language, culture, TimeZoneInfo.Utc));
+                return;
+            }
         }
-        else if (useClassLimit
-                     ? _kitRequestService.IsClassLimited(kit, out int currentPlayers, out int allowedPlayers, player.Team)
-                     : _kitRequestService.IsLimited(kit, out currentPlayers, out allowedPlayers, player.Team)
-                )
+        
+        int allowedPerXUsers = _squadConfiguration.KitClassesAllowedPerXTeammates.GetValueOrDefault(kit.Class);
+        if (allowedPerXUsers > 0 && _kitRequestService.IsKitLimitedForClass(kit.Class, player.Team, allowedPerXUsers, out int currentUsers, out int kitsAllowed, out _))
         {
-            bldr.Append(_translations.KitPlayerCountUnavailable.Translate(currentPlayers, allowedPlayers, language, culture, TimeZoneInfo.Utc));
+            bldr.Append(_translations.KitTeamClassLimitReached.Translate(currentUsers, kitsAllowed, language, culture, TimeZoneInfo.Utc));
+            return;
         }
-        else
-        {
-            bldr.Append(_translations.KitPlayerCountAvailable.Translate(currentPlayers, allowedPlayers, language, culture, TimeZoneInfo.Utc));
-        }
+        
+        bldr.Append(_translations.KitAvailable.Translate(language));
     }
 
     private void AppendCost(StringBuilder bldr, Kit kit, LanguageInfo language, CultureInfo culture, WarfarePlayer? player)
@@ -291,7 +313,7 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>
         }
 
         if (!kit.IsLocked && !needsUpgrade)
-            AppendPlayerCount(bldr, player, kit, language, culture, useClassLimit: true);
+            AppendPlayerCount(bldr, player, kit, language, culture);
     }
 
     private void AppendName(string kitName, Color32 color, out bool hasExtraLine)
@@ -359,9 +381,6 @@ public class KitSignTranslations : PropertiesTranslationCollection
     [TranslationData("Shown on a kit sign when the player has not purchased the kit with credits.", IsPriorityTranslation = false)]
     public readonly Translation<int> KitCreditCost = new Translation<int>("<#b8ffc1>C</color> <#fff>{0}</color>", TranslationOptions.TMProSign);
 
-    [TranslationData("Shown on a kit sign when there is no limit to how many other players can be using the kit.")]
-    public readonly Translation KitUnlimited = new Translation("<#111111>unlimited</color>", TranslationOptions.TMProSign);
-
     [TranslationData("Shown on an unused loadout sign.", "The number of the loadout sign.")]
     public readonly Translation<int> LoadoutNumber = new Translation<int>("<b><#7878ff>LOADOUT #{0}</color></b>", TranslationOptions.TMProSign);
     
@@ -369,10 +388,22 @@ public class KitSignTranslations : PropertiesTranslationCollection
     public readonly Translation<string> LoadoutLetter = new Translation<string>("<sub><#7878ff>LOADOUT {0}</color></sub>", TranslationOptions.TMProSign, arg0Fmt: UppercaseAddon.Instance);
     
     [TranslationData(IsPriorityTranslation = false)]
-    public readonly Translation<int, int> KitPlayerCountUnavailable = new Translation<int, int>("<#c2603e>{0}/{1}</color>", TranslationOptions.TMProSign);
+    public readonly Translation KitRequireJoinSquad = new Translation("<#a0a670>Join a squad</color>", TranslationOptions.TMProSign);
     
     [TranslationData(IsPriorityTranslation = false)]
-    public readonly Translation<int, int> KitPlayerCountAvailable = new Translation<int, int>("<#96ffb2>{0}/{1}</color>", TranslationOptions.TMProSign);
+    public readonly Translation KitAlreadyTakenBySquadMember = new Translation("<#c2603e>Taken</color>", TranslationOptions.TMProSign);
+    
+    [TranslationData(IsPriorityTranslation = false)]
+    public readonly Translation<int, int> KitNotEnoughPlayersInSquad = new Translation<int, int>("<#c2846e>Squad: {0}/{1}</color>", TranslationOptions.TMProSign);
+    
+    [TranslationData(IsPriorityTranslation = false)]
+    public readonly Translation<int, int> KitTeamClassLimitReached = new Translation<int, int>("<#c2846e>{0}/{1} on team</color>", TranslationOptions.TMProSign);
+    
+    [TranslationData(IsPriorityTranslation = false)]
+    public readonly Translation KitAvailable = new Translation("<#96ffb2>Available</color>", TranslationOptions.TMProSign);
+    
+    [TranslationData("Shown on a kit sign when there is no limit to how many other players can be using the kit.")]
+    public readonly Translation KitAvailableUnlimited = new Translation("<#111111>Available</color>", TranslationOptions.TMProSign);
 
     [TranslationData(IsPriorityTranslation = false)]
     public readonly Translation KitLoadoutUpgrade = new Translation("<#33cc33>/req upgrade</color>", TranslationOptions.TMProSign);

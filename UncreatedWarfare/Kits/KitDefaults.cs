@@ -2,18 +2,30 @@ namespace Uncreated.Warfare.Kits;
 
 public class KitDefaults
 {
-    /// <returns>The number of ammo boxes required to refill the kit based on it's <see cref="Class"/>.</returns>
-    public static int GetAmmoCost(Class @class) => @class switch
+    public static int? GetDefaultMinRequiredSquadMembers(Class @class) => @class switch
     {
-        Class.HAT or Class.MachineGunner or Class.CombatEngineer => 3,
-        Class.LAT or Class.AutomaticRifleman or Class.Grenadier => 2,
-        _ => 1
+        Class.Rifleman => null,
+        Class.Crewman => null,
+        Class.Pilot => null,
+        Class.Squadleader => null,
+        Class.Medic => 0,
+        Class.Breacher => 0,
+        Class.LAT => 0,
+        Class.AutomaticRifleman => 3,
+        Class.Grenadier => 3,
+        Class.APRifleman => 3,
+        Class.Marksman => 4,
+        Class.MachineGunner => 4,
+        Class.Sniper => 4,
+        Class.HAT => 4,
+        Class.CombatEngineer => 4,
+        Class.SpecOps => 4,
+        _ => null
     };
-
-    public static float GetDefaultTeamLimit(Class @class) => @class switch
+    public static bool GetDefaultRequiresSquad(Class @class) => @class switch
     {
-        Class.HAT => 0.1f,
-        _ => 1f
+        Class.Rifleman => false,
+        _ => true
     };
 
     public static float GetDefaultRequestCooldown(Class @class) => @class switch

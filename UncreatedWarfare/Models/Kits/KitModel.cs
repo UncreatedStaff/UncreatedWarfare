@@ -60,9 +60,13 @@ public class KitModel
     [DefaultValue(0f)]
     [CommandSettable]
     public float RequestCooldown { get; set; }
-
+    
     [CommandSettable]
-    public float? TeamLimit { get; set; }
+    public int? MinRequiredSquadMembers { get; set; }
+    
+    [DefaultValue(true)]
+    [CommandSettable]
+    public bool RequiresSquad { get; set; }
 
     [DefaultValue(0)]
     [CommandSettable]

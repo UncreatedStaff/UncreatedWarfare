@@ -190,7 +190,7 @@
   <!-- Embedded Files -->
   <ItemGroup>
 
-    <EmbeddedResource Include="$(SolutionDir)Translation README.md" />
+    <EmbeddedResource Include="..\Translation README.md" />
 
     <EmbeddedResource Include="Commands\LinkCommand.meta.yml" />
 
@@ -342,8 +342,8 @@
 
   <!-- Copy unturned files from U3DS to ~/Libraries -->
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent" Condition="exists('$(ServerPath)/Unturned_Data/Managed/Assembly-CSharp.dll')">
-	  <Copy SourceFiles="$(UnturnedDllPath)/%(UnturnedLibrary.Identity).dll" DestinationFolder="$(SolutionDir)Libraries" />
-	  <Copy SourceFiles="$(UnturnedDllPath)/%(UnturnedLibrary.Identity).xml" DestinationFolder="$(SolutionDir)Libraries" ContinueOnError="true" />
+	  <Copy SourceFiles="$(UnturnedDllPath)/%(UnturnedLibrary.Identity).dll" DestinationFolder="..\Libraries" />
+	  <Copy SourceFiles="$(UnturnedDllPath)/%(UnturnedLibrary.Identity).xml" DestinationFolder="..\Libraries" ContinueOnError="true" />
   </Target>
   <!-- Copy xml docs for unity files to U3DS -->
   <Target Name="PreBuildXml2Unturned" BeforeTargets="PreBuildEvent" Condition="exists('$(ServerPath)/Unturned_Data/Managed/Assembly-CSharp.dll') And exists('C:\Program Files\Unity\Hub\Editor\2021.3.29f1\Editor\Data\Managed\UnityEngine')">
@@ -351,6 +351,6 @@
   </Target>
   <!-- Copy xml docs for unity files to ~/Libraries -->
   <Target Name="PreBuildXml2Libraries" BeforeTargets="PreBuildEvent" Condition="exists('C:\Program Files\Unity\Hub\Editor\2021.3.29f1\Editor\Data\Managed\UnityEngine')">
-	  <Copy SourceFiles="C:\Program Files\Unity\Hub\Editor\2021.3.29f1\Editor\Data\Managed\UnityEngine\%(UnturnedLibrary.Identity).xml" DestinationFolder="$(SolutionDir)Libraries" ContinueOnError="true" />
+	  <Copy SourceFiles="C:\Program Files\Unity\Hub\Editor\2021.3.29f1\Editor\Data\Managed\UnityEngine\%(UnturnedLibrary.Identity).xml" DestinationFolder="..\Libraries" ContinueOnError="true" />
   </Target>
 </Project>

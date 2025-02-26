@@ -490,6 +490,9 @@ namespace Uncreated.Warfare.Migrations
 
                     b.HasIndex("FactionId");
 
+                    b.HasIndex("Id")
+                        .IsUnique();
+
                     b.ToTable("kits_bundles");
                 });
 
@@ -794,6 +797,9 @@ namespace Uncreated.Warfare.Migrations
                     b.Property<bool>("MapFilterIsWhitelist")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<int?>("MinRequiredSquadMembers")
+                        .HasColumnType("int");
+
                     b.Property<decimal>("PremiumCost")
                         .HasColumnType("decimal(65,30)");
 
@@ -803,15 +809,15 @@ namespace Uncreated.Warfare.Migrations
                     b.Property<bool>("RequiresNitro")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<bool>("RequiresSquad")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<int>("Season")
                         .HasColumnType("int");
 
                     b.Property<string>("SquadLevel")
                         .IsRequired()
                         .HasColumnType("enum('Member','Commander')");
-
-                    b.Property<float?>("TeamLimit")
-                        .HasColumnType("float");
 
                     b.Property<string>("Type")
                         .IsRequired()
@@ -2019,8 +2025,8 @@ namespace Uncreated.Warfare.Migrations
                         .HasColumnType("tinyint(1)");
 
                     b.Property<string>("PlayerChangeRequest")
-                        .HasMaxLength(100)
-                        .HasColumnType("varchar(100)");
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
 
                     b.Property<DateTime?>("PlayerChangeRequestDate")
                         .HasColumnType("datetime");
@@ -2030,7 +2036,7 @@ namespace Uncreated.Warfare.Migrations
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasColumnType("enum('AwaitingPayment','AwaitingApproval','ChangesRequested','InProgress','Completed')");
+                        .HasColumnType("enum('AwaitingApproval','ChangesRequested','InProgress','Completed')");
 
                     b.Property<ulong>("Steam64")
                         .HasColumnType("bigint unsigned")
