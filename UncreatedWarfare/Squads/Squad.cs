@@ -83,23 +83,23 @@ public class Squad : ITranslationArgument
         return true;
     }
 
-    public bool LockSquad(WarfarePlayer player)
+    public bool LockSquad(WarfarePlayer? instigator)
     {
         if (IsLocked)
             return false;
 
         IsLocked = true;
-        _ = WarfareModule.EventDispatcher.DispatchEventAsync(new SquadLockUpdated { Squad = this, NewLockState = true });
+        _ = WarfareModule.EventDispatcher.DispatchEventAsync(new SquadLockUpdated { Squad = this, NewLockState = true, Instigator = instigator });
         return true;
     }
 
-    public bool UnlockSquad(WarfarePlayer player)
+    public bool UnlockSquad(WarfarePlayer? instigator)
     {
         if (!IsLocked)
             return false;
 
         IsLocked = false;
-        _ = WarfareModule.EventDispatcher.DispatchEventAsync(new SquadLockUpdated { Squad = this, NewLockState = false });
+        _ = WarfareModule.EventDispatcher.DispatchEventAsync(new SquadLockUpdated { Squad = this, NewLockState = false, Instigator = instigator });
         return true;
     }
 

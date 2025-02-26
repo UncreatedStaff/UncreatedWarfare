@@ -1,4 +1,5 @@
-﻿using Uncreated.Warfare.Squads;
+using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Squads;
 
 namespace Uncreated.Warfare.Events.Models.Squads;
 
@@ -12,4 +13,9 @@ public class SquadLockUpdated : SquadUpdated
     /// If the squad is now locked. The old state is just the opposite of this.
     /// </summary>
     public required bool NewLockState { get; init; }
+
+    /// <summary>
+    /// The player who locked/unlocked the squad, if any.
+    /// </summary>
+    public required WarfarePlayer? Instigator { get; init; }
 }

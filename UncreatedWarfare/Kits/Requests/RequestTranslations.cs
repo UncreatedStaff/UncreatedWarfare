@@ -270,10 +270,10 @@ public class RequestKitsTranslations : PropertiesTranslationCollection
     public readonly Translation KitTeamNotAllowed = new Translation("Kit not allowed for your team");
 
     [TranslationData("Sent when a player tries to request a kit but there is already someone in their squad who is using it.")]
-    public readonly Translation RequestKitTakenInSquad = new Translation("Someone in your squad is already using this kit.");
+    public readonly Translation RequestKitTakenInSquad = new Translation("Someone in your squad is already using this kit");
     
     [TranslationData("Sent when a player tries to request a kit but there aren't enough players in the squad to request it.")]
-    public readonly Translation<int> RequestKitNotEnoughSquadMembers = new Translation<int>("This kit is only usable with {0} members in your squad.");
+    public readonly Translation<int> RequestKitNotEnoughSquadMembers = new Translation<int>("This kit is only usable with {0} members in your squad");
 
     [TranslationData("Sent when a player tries to request a kit but there are too many players already using the same class of kit.")]
     public readonly Translation<int, Class> RequestKitClassLimited = new Translation<int, Class>("Too many players (<#d9e882>{0}</color>) on your team are using <#cedcde>{1}</color> kits", arg1Fmt: UppercaseAddon.Instance);

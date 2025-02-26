@@ -103,15 +103,13 @@ public class SquadManager : IEventListener<PlayerTeamChanged>
     }
     private int GetSquadIdentificationNumber(Team team)
     {
-        int identificationNumber = 1;
-        foreach (var squad in Squads.Where(s => s.Team == team).OrderBy(s => s.TeamIdentificationNumber))
+        for (int id = 1;; ++id)
         {
-            if (squad.TeamIdentificationNumber != identificationNumber)
-                return identificationNumber;
+            if (Squads.Any(s => s.Team == team && s.TeamIdentificationNumber == id))
+                continue;
 
-            identificationNumber++;
+            return id;
         }
-        return identificationNumber;
     }
 
     public bool DisbandSquad(Squad squad)
