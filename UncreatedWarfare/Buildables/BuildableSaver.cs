@@ -24,7 +24,7 @@ namespace Uncreated.Warfare.Buildables;
 /// Responsible for saving structures or barricades that are restored if they're destroyed.
 /// </summary>
 [Priority(1)]
-public class BuildableSaver : ILayoutHostedService, IDisposable, IEventListener<IBuildableTransformedEvent>, IEventListener<SignTextChanged>
+public class BuildableSaver : ILayoutHostedService, IDisposable, IEventListener<IBuildableTransformedEvent>, IEventListener<SignTextChanged>, IEventListener<ISalvageBuildableRequestedEvent>
 {
     private readonly IBuildablesDbContext _dbContext;
     private readonly ILogger<BuildableSaver> _logger;
@@ -938,6 +938,28 @@ public class BuildableSaver : ILayoutHostedService, IDisposable, IEventListener<
 
                 await SaveBuildableAsync(e.Buildable);
                 _logger.LogDebug("Updated save for {0}.", AssetLink.Create(e.Buildable.Asset));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating save after transform.");
+            }
+        });
+    }
+
+    /// <inheritdoc />
+    void IEventListener<ISalvageBuildableRequestedEvent>.HandleEvent(ISalvageBuildableRequestedEvent e, IServiceProvider serviceProvider)
+    {
+        if (!e.Player.IsOnDuty)
+            return;
+
+        Task.Run(async () =>
+        {
+            try
+            {
+                if (await DiscardBuildableAsync(e.Buildable))
+                {
+                    _logger.LogDebug("Removed save for {0}.", AssetLink.Create(e.Buildable.Asset));
+                }
             }
             catch (Exception ex)
             {

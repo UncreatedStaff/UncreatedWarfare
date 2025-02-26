@@ -1,4 +1,4 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.DependencyInjection;
 using SDG.NetTransport;
 using System;
@@ -25,7 +25,6 @@ public class SignInstancer : ILayoutHostedService, IEventListener<BarricadePlace
     private readonly WarfareModule _warfare;
     private IServiceProvider? _serviceProvider;
     private readonly SignInstanceData[] _types;
-    private readonly string?[] _batchBuffer;
     private readonly Dictionary<uint, ISignInstanceProvider> _signProviders = new Dictionary<uint, ISignInstanceProvider>(256);
     private readonly Dictionary<uint, int> _signProviderTypeIndexes = new Dictionary<uint, int>(256);
     private readonly ILogger<SignInstancer> _logger;
@@ -55,7 +54,6 @@ public class SignInstancer : ILayoutHostedService, IEventListener<BarricadePlace
         }
 
         _types = instances.ToArray();
-        _batchBuffer = new string[_types.Length];
     }
 
     UniTask ILayoutHostedService.StartAsync(CancellationToken token)
@@ -231,9 +229,6 @@ public class SignInstancer : ILayoutHostedService, IEventListener<BarricadePlace
     {
         GameThread.AssertCurrent();
 
-        for (int i = 0; i < _batchBuffer.Length; ++i)
-            _batchBuffer[i] = null;
-
         int ct = 0;
         foreach (BarricadeInfo barricade in BarricadeUtility.EnumerateBarricades())
         {
@@ -246,7 +241,8 @@ public class SignInstancer : ILayoutHostedService, IEventListener<BarricadePlace
             int dataIndex = _signProviderTypeIndexes[barricade.Drop.instanceID];
             ref SignInstanceData data = ref _types[dataIndex];
 
-            BroadcastUpdate(set, provider, in barricade, sign, ref data.CanBatch, ref data.HasCanBatch, ref _batchBuffer[dataIndex]);
+            string? batch = null;
+            BroadcastUpdate(set, provider, in barricade, sign, ref data.CanBatch, ref data.HasCanBatch, ref batch);
             ++ct;
         }
 
@@ -261,7 +257,6 @@ public class SignInstancer : ILayoutHostedService, IEventListener<BarricadePlace
     {
         GameThread.AssertCurrent();
 
-        string? batchTranslate = null;
         bool hasCanBatch = false, canBatch = false;
 
         int ct = 0;
@@ -273,6 +268,7 @@ public class SignInstancer : ILayoutHostedService, IEventListener<BarricadePlace
             if (!_signProviders.TryGetValue(barricade.Drop.instanceID, out ISignInstanceProvider provider) || provider is not TProvider)
                 continue;
 
+            string? batchTranslate = null;
             BroadcastUpdate(set, provider, in barricade, sign, ref canBatch, ref hasCanBatch, ref batchTranslate);
             ++ct;
         }
@@ -288,7 +284,6 @@ public class SignInstancer : ILayoutHostedService, IEventListener<BarricadePlace
     {
         GameThread.AssertCurrent();
 
-        string? batchTranslate = null;
         bool hasCanBatch = false, canBatch = false;
 
         int ct = 0;
@@ -300,6 +295,7 @@ public class SignInstancer : ILayoutHostedService, IEventListener<BarricadePlace
             if (!_signProviders.TryGetValue(barricade.Drop.instanceID, out ISignInstanceProvider p) || p is not TProvider provider || !selector(sign, provider))
                 continue;
 
+            string? batchTranslate = null;
             BroadcastUpdate(set, p, in barricade, sign, ref canBatch, ref hasCanBatch, ref batchTranslate);
             ++ct;
         }
