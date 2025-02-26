@@ -227,15 +227,21 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
                     _squadMenuUI.OpenUI(player);
                     return false;
                 }
+                if (kit.Class == Class.Squadleader && !player.IsSquadLeader())
+                {
+                    resultHandler.MissingRequirement(player, kit, _kitReqTranslations.RequestKitNotSquadleader.Translate(player)
+                    );
+                    return false;
+                }
                 if (IsKitAlreadyTakenInSquad(kit, squad))
                 {
                     resultHandler.MissingRequirement(player, kit, _kitReqTranslations.RequestKitTakenInSquad.Translate(player)
                     );
                     return false;
                 }
-                if (SquadHasEnoughPlayersForKit(kit, squad))
+                if (!SquadHasEnoughPlayersForKit(kit, squad))
                 {
-                    resultHandler.MissingRequirement(player, kit, _kitReqTranslations.RequestKitNotEnoughSquadMembers.Translate(kit.MinRequiredSquadMembers ?? 0, player)
+                    resultHandler.MissingRequirement(player, kit, _kitReqTranslations.RequestKitNotEnoughSquadMembers.Translate(kit.MinRequiredSquadMembers ?? -1, player)
                     );
                     return false;
                 }
