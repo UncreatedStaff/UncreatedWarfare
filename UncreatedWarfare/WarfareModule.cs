@@ -1054,6 +1054,8 @@ public sealed class WarfareModule
             Provider.kick(Provider.clients[i].playerID.steamID, !string.IsNullOrWhiteSpace(reason) ? "Shutting down: \"" + reason + "\"." : "Shutting down.");
         }
 
+        await EventDispatcher.WaitForEvents(CancellationToken.None);
+
         Object.Destroy(_gameObjectHost);
         _gameObjectHost = null!;
 

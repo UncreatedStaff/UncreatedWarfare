@@ -98,6 +98,25 @@ public partial class EventDispatcher : IHostedService, IDisposable
         player.UnturnedPlayer.life.onHurt += OnPlayerHurt;
     }
 
+    public async Task WaitForEvents(CancellationToken token = default)
+    {
+        if (_activeEvents <= 0)
+        {
+            return;
+        }
+
+        DateTime spinStart = DateTime.UtcNow;
+        while (_activeEvents == 0)
+        {
+            await Task.Delay(25, token);
+            if ((DateTime.UtcNow - spinStart).TotalSeconds < 10)
+                continue;
+
+            _logger.LogWarning("Timed out waiting for events to finish.");
+            break;
+        }
+    }
+
     UniTask IHostedService.StartAsync(CancellationToken token)
     {
         /* Provider */
@@ -207,19 +226,7 @@ public partial class EventDispatcher : IHostedService, IDisposable
         ObjectManager.OnQuestObjectUsed -= ObjectManagerOnQuestObjectUsed;
         NPCEventManager.onEvent -= NPCEventManagerOnEvent;
 
-        if (_activeEvents > 0)
-        {
-            DateTime spinStart = DateTime.UtcNow;
-            while (_activeEvents == 0)
-            {
-                await Task.Delay(25, token);
-                if ((DateTime.UtcNow - spinStart).TotalSeconds < 10)
-                    continue;
-
-                _logger.LogWarning("Timed out waiting for events to finish.");
-                break;
-            }
-        }
+        await WaitForEvents(CancellationToken.None);
 
         _cancellationTokenSource.Cancel();
         _cancellationTokenSource.Dispose();
