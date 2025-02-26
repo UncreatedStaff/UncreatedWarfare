@@ -68,9 +68,9 @@ public class VehicleRequestService : ILayoutHostedService,
         return UniTask.CompletedTask;
     }
 
-    Task<bool> IRequestHandler<VehicleBaySignInstanceProvider, VehicleSpawner>.RequestAsync(WarfarePlayer player, VehicleBaySignInstanceProvider sign, IRequestResultHandler resultHandler, CancellationToken token)
+    Task<bool> IRequestHandler<VehicleBaySignInstanceProvider, VehicleSpawner>.RequestAsync(WarfarePlayer player, VehicleBaySignInstanceProvider? sign, IRequestResultHandler resultHandler, CancellationToken token)
     {
-        if (!_spawnerService.TryGetSpawner(sign.BarricadeInstanceId, out VehicleSpawner? spawner))
+        if (sign == null || !_spawnerService.TryGetSpawner(sign.BarricadeInstanceId, out VehicleSpawner? spawner))
         {
             resultHandler.NotFoundOrRegistered(player);
             return Task.FromResult(false);
@@ -79,9 +79,9 @@ public class VehicleRequestService : ILayoutHostedService,
         return RequestAsync(player, spawner, resultHandler, token);
     }
 
-    Task<bool> IRequestHandler<WarfareVehicleComponent, VehicleSpawner>.RequestAsync(WarfarePlayer player, WarfareVehicleComponent vehicleComponent, IRequestResultHandler resultHandler, CancellationToken token)
+    Task<bool> IRequestHandler<WarfareVehicleComponent, VehicleSpawner>.RequestAsync(WarfarePlayer player, WarfareVehicleComponent? vehicleComponent, IRequestResultHandler resultHandler, CancellationToken token)
     {
-        if (vehicleComponent.WarfareVehicle.Spawn == null)
+        if (vehicleComponent?.WarfareVehicle.Spawn == null)
         {
             resultHandler.NotFoundOrRegistered(player);
             return Task.FromResult(false);
@@ -94,7 +94,7 @@ public class VehicleRequestService : ILayoutHostedService,
     /// Request unlocking a vehicle from a spawn.
     /// </summary>
     /// <remarks>Thread-safe</remarks>
-    public async Task<bool> RequestAsync(WarfarePlayer player, VehicleSpawner spawn, IRequestResultHandler resultHandler, CancellationToken token = default)
+    public async Task<bool> RequestAsync(WarfarePlayer player, VehicleSpawner? spawn, IRequestResultHandler resultHandler, CancellationToken token = default)
     {
         await UniTask.SwitchToMainThread(token);
 
@@ -103,7 +103,7 @@ public class VehicleRequestService : ILayoutHostedService,
             return false;
         }
 
-        if (spawn.Buildable == null || spawn.Buildable.IsDead || !spawn.VehicleInfo.VehicleAsset.TryGetAsset(out VehicleAsset? vehicleAsset))
+        if (spawn?.Buildable == null || spawn.Buildable.IsDead || !spawn.VehicleInfo.VehicleAsset.TryGetAsset(out VehicleAsset? vehicleAsset))
         {
             resultHandler.NotFoundOrRegistered(player);
             return false;

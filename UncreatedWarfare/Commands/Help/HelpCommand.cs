@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using System.Linq;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Interaction.Commands.Syntax;
@@ -53,7 +53,6 @@ public sealed class HelpCommand : IExecutableCommand
 
         writer = CreateSyntaxWriter(true);
         string? description = formatter.GetRichDescription(
-            foundCommand,
             syntaxInfo.TargetParameter,
             syntaxInfo.TargetFlag,
             writer,

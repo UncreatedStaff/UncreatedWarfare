@@ -33,14 +33,23 @@ internal sealed class SaveVoiceBufferCommand : IExecutableCommand
         if (playerComp == null)
             throw Context.SendUnknownError();
 
+        string path = Path.Combine(_warfare.HomeDirectory, "Voice",
+            onlinePlayer.Steam64.m_SteamID.ToString(CultureInfo.InvariantCulture) + "_" +
+            DateTime.UtcNow.ToString("s").Replace(':', '_') + ".wav");
+
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+
         FileStream fs = new FileStream(
-            Path.Combine(_warfare.HomeDirectory, "Voice", onlinePlayer.Steam64.m_SteamID.ToString(CultureInfo.InvariantCulture) + "_" + DateTime.UtcNow.ToString("s").Replace(':', '_') + ".wav"),
+            path,
             FileMode.Create,
             FileAccess.Write, FileShare.Read
         );
 
-        AudioRecordManager.AudioConvertResult status = await playerComp.TryConvert(fs, leaveOpen: false, token);
-        Context.ReplyString($"Converted audio for {onlinePlayer}. Status: {status}.");
+        AudioConvertResult status = await playerComp.TryConvert(fs, leaveOpen: false, token);
+        Context.ReplyString(status == AudioConvertResult.Success
+            ? $"Converted audio for {onlinePlayer}."
+            : $"Failed to convert audio for {onlinePlayer}. Reason: {status}.");
+
         playerComp.Reset();
     }
 }

@@ -67,6 +67,8 @@ internal sealed class VoiceChatRestrictionsTweak : IHostedService
 
     private void PlayerVoiceOnRelayVoice(PlayerVoice speaker, bool wantsToUseWalkieTalkie, ref bool shouldAllow, ref bool shouldBroadcastOverRadio, ref PlayerVoice.RelayVoiceCullingHandler cullingHandler)
     {
+        WarfareModule.Singleton.GlobalLogger.LogInformation("Voice received.");
+
         // todo: if nelson changes the voice thing use PlayerVoice.customAllowTalking
         WarfarePlayer player = _playerService.GetOnlinePlayer(speaker);
         PlayerModerationCacheComponent comp = player.Component<PlayerModerationCacheComponent>();
@@ -79,9 +81,8 @@ internal sealed class VoiceChatRestrictionsTweak : IHostedService
         else
         {
             isMuted = comp.VoiceMuteExpiryTime > DateTime.UtcNow;
+            shouldAllow = !isMuted;
         }
-
-        shouldAllow = isMuted;
 
         if (isMuted == comp.LastMuteUI >= 0)
             return;

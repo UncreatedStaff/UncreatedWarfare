@@ -8,6 +8,7 @@ using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Steam;
 using UnityEngine.Networking;
 
@@ -258,12 +259,21 @@ public static class FormattingUtility
     public static bool TryParseAny(string input, IFormatProvider provider, Type type, out object? value)
     {
         value = null!;
-        if (input is null || type is null || string.IsNullOrEmpty(input)) return false;
+
+        if (input is null || type is null)
+            return false;
+
         if (type.IsClass)
         {
             if (type == typeof(string))
             {
                 value = input;
+                return true;
+            }
+
+            if (input.Equals("null", StringComparison.InvariantCultureIgnoreCase))
+            {
+                value = null;
                 return true;
             }
             
@@ -284,13 +294,13 @@ public static class FormattingUtility
                         value = null!;
                     return value is not null;
                 }
-
-                if (!input.Equals("null", StringComparison.OrdinalIgnoreCase))
-                    return false;
-
-                value = Activator.CreateInstance(type);
-                return true;
             }
+            return false;
+        }
+
+        if (input.Equals("null", StringComparison.InvariantCultureIgnoreCase))
+        {
+            value = null;
             return false;
         }
 
@@ -455,15 +465,39 @@ public static class FormattingUtility
         {
             if (input.Equals("null", StringComparison.OrdinalIgnoreCase))
             {
-                value = Activator.CreateInstance(typeof(Nullable<>).MakeGenericType(type));
-                return value is not null;
+                value = null;
+                return true;
             }
             
-            Type @internal = type.GenericTypeArguments[0];
-            if (!@internal.IsGenericType && TryParseAny(input, provider, @internal, out object? val) && val is not null)
+            Type @internal = type.GetGenericArguments()[0];
+            if (!@internal.IsGenericType && TryParseAny(input, provider, @internal, out object? val))
             {
-                value = Activator.CreateInstance(typeof(Nullable<>).MakeGenericType(type), val);
+                value = val;
+                return true;
+            }
+
+            return false;
+        }
+
+        if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IAssetLink<>))
+        {
+            Type assetType = type.GetGenericArguments()[0];
+            if (input.Equals("null", StringComparison.OrdinalIgnoreCase))
+            {
+                value = AssetLink.Empty(assetType);
                 return value is not null;
+            }
+
+            if (Guid.TryParse(input, out Guid guid))
+            {
+                value = AssetLink.Create(guid, assetType);
+                return true;
+            }
+
+            if (ushort.TryParse(input, NumberStyles.Any, provider, out ushort id))
+            {
+                value = AssetLink.Create(id, assetType);
+                return true;
             }
 
             return false;
