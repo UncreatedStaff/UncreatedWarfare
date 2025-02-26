@@ -32,6 +32,7 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
     private readonly IGameDataDbContext _dbContext;
     private readonly MapScheduler _mapScheduler;
     private readonly IPlayerService _playerService;
+    private readonly WarfareLifetimeComponent _shutdownService;
     private readonly byte _region;
     private UniTask _setupTask;
 
@@ -43,7 +44,8 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
         IGameDataDbContext dbContext,
         MapScheduler mapScheduler,
         IConfiguration systemConfig,
-        IPlayerService playerService)
+        IPlayerService playerService,
+        WarfareLifetimeComponent shutdownService)
     {
         _warfare = warfare;
         _logger = logger;
@@ -51,6 +53,7 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
         _dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
         _mapScheduler = mapScheduler;
         _playerService = playerService;
+        _shutdownService = shutdownService;
         _region = systemConfig.GetValue<byte>("region");
     }
 
@@ -669,6 +672,8 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
             _logger.LogError("Errors encountered while ending layout {0}:", layout);
             FormattingUtility.PrintTaskErrors(_logger, tasks, hostedServices);
         }
+
+        await _shutdownService.NotifyLayoutEnding(CancellationToken.None);
     }
 
     void IEventListener<PlayerJoined>.HandleEvent(PlayerJoined e, IServiceProvider serviceProvider)
