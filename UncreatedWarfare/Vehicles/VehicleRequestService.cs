@@ -24,6 +24,7 @@ using Uncreated.Warfare.Vehicles.Spawners;
 using Uncreated.Warfare.Zones;
 using Uncreated.Warfare.Kits.Requests;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Stats;
 
 namespace Uncreated.Warfare.Vehicles;
 
@@ -33,6 +34,7 @@ public class VehicleRequestService : ILayoutHostedService,
     IRequestHandler<VehicleSpawner, VehicleSpawner>,
     IRequestHandler<WarfareVehicleComponent, VehicleSpawner>
 {
+    private static readonly IAssetLink<EffectAsset> _unlockSound = AssetLink.Create<EffectAsset>("bc41e0feaebe4e788a3612811b8722d3"); 
     private readonly IServiceProvider _serviceProvider;
     private readonly RequestVehicleTranslations _reqTranslations;
     private readonly VehicleInfoStore _vehicleInfoStore;
@@ -41,6 +43,7 @@ public class VehicleRequestService : ILayoutHostedService,
     private readonly ILogger<VehicleRequestService> _logger;
     private readonly WarfareModule _module;
     private readonly ZoneStore _globalZoneStore;
+    private readonly PointsService _pointsService;
     private readonly DatabaseInterface _moderationSql;
 
     private const float MaxVehicleAbandonmentDistance = 300;
@@ -54,6 +57,7 @@ public class VehicleRequestService : ILayoutHostedService,
         _vehicleService = serviceProvider.GetRequiredService<VehicleService>();
         _module = serviceProvider.GetRequiredService<WarfareModule>();
         _globalZoneStore = serviceProvider.GetRequiredService<ZoneStore>();
+        _pointsService = serviceProvider.GetRequiredService<PointsService>();
         _moderationSql = serviceProvider.GetRequiredService<DatabaseInterface>();
         _reqTranslations = serviceProvider.GetRequiredService<TranslationInjection<RequestVehicleTranslations>>().Value;
     }
@@ -207,8 +211,10 @@ public class VehicleRequestService : ILayoutHostedService,
             }
         }
 
-        if (!await RequestHelper.TryApplyCosts(vehicleInfo.UnlockCosts, spawn, resultHandler, player, team, token))
+        // check enough credits
+        if (player.CachedPoints.Credits < vehicleInfo.CreditCost)
         {
+            resultHandler.MissingCreditsOwnership(player, spawn, vehicleInfo.CreditCost);
             return false;
         }
 
@@ -226,11 +232,32 @@ public class VehicleRequestService : ILayoutHostedService,
             await _vehicleService.SpawnVehicleAsync(spawn, token);
             await UniTask.SwitchToMainThread(token);
         }
+        
 
         vehicle = spawn.LinkedVehicle;
 
         VehicleManager.ServerSetVehicleLock(vehicle, player.Steam64, player.Team.GroupId, true);
+        
+        DropAmmoitems(vehicleInfo, player);
+            
+        EffectUtility.TriggerEffect(_unlockSound, EffectManager.SMALL, vehicle.transform.position, true);
+        
+        // purchase the kit
+        if (vehicleInfo.CreditCost > 0)
+            await _pointsService.ApplyEvent(player, _pointsService.GetPurchaseEvent(player, vehicleInfo.CreditCost), token);
+        
         resultHandler.Success(player, spawn);
         return true;
+    }
+
+    private void DropAmmoitems(WarfareVehicleInfo vehicleInfo, WarfarePlayer player)
+    {
+        foreach (WarfareVehicleInfo.RequestItem item in vehicleInfo.RequestItems)
+        {
+            if (item.Item.TryGetAsset(out ItemAsset? asset))
+                ItemManager.dropItem(new Item(asset, EItemOrigin.WORLD), player.Position, true, true, true);
+            else
+                _logger.LogWarning($"Vehicle rearm item not found: {item.Item}");
+        }
     }
 }
