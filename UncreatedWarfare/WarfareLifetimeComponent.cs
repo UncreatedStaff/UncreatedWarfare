@@ -1,6 +1,9 @@
 using DanielWillett.ModularRpcs.Annotations;
 using DanielWillett.ModularRpcs.Async;
 using System;
+using Uncreated.Warfare.Commands;
+using Uncreated.Warfare.Interaction;
+using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare;
 
@@ -10,26 +13,71 @@ namespace Uncreated.Warfare;
 /// <remarks>Can be used as the target for coroutines, UniTask functions, etc.</remarks>
 public class WarfareLifetimeComponent : MonoBehaviour
 {
-    private WarfareModule _module = null!;
-    private float _shutdownTime = -1f;
+    // seconds
+    private readonly float[] _shutdownSteps = [ 1, 2, 3, 4, 5, 15, 30, 60, 300, 900 ];
+    private const float TimeBetweenNextGameWarnings = 120f;
 
-    private const string DefaultShutdownReason = "Unknown reason";
+    private WarfareModule _module = null!;
+    private ShutdownTranslations _shutdownTranslations = null!;
+    private ChatService _chatService = null!;
+    private float _shutdownTime = -1f;
+    private float _lastLayoutShutdownWarning;
+    private int _shutdownStep = -1;
+
+    private const string DefaultShutdownReason = "unknown reason";
 
     public ShutdownMode QueuedShutdownType { get; private set; }
     public DateTime ShutdownTime { get; private set; }
     public string? ShutdownReason { get; private set; }
 
+    [UsedImplicitly]
     private void Awake()
     {
         _module = WarfareModule.Singleton;
     }
 
+    [UsedImplicitly]
     private void Update()
     {
-        if (_shutdownTime > 0 && Time.realtimeSinceStartup >= _shutdownTime)
+        if (_chatService == null || _shutdownTranslations == null)
+        {
+            if (_module.ServiceProvider == null)
+                return;
+
+            _chatService = _module.ServiceProvider.Resolve<ChatService>();
+            _shutdownTranslations = _module.ServiceProvider.Resolve<TranslationInjection<ShutdownTranslations>>().Value;
+        }
+
+        if (_shutdownTime < 0)
+            return;
+        
+        float rt = Time.realtimeSinceStartup;
+
+        if (rt >= _shutdownTime)
         {
             _ = _module.ShutdownAsync(ShutdownReason ?? DefaultShutdownReason, CancellationToken.None);
         }
+        else if (_shutdownStep >= 0 && rt >= _shutdownTime - _shutdownSteps[_shutdownStep])
+        {
+            SendShutdownStep();
+            --_shutdownStep;
+        }
+        else if (QueuedShutdownType == ShutdownMode.OnLayoutEnd && rt - _lastLayoutShutdownWarning > TimeBetweenNextGameWarnings)
+        {
+            _chatService.Broadcast(_shutdownTranslations.ShutdownBroadcastAfterGameReminder, ShutdownReason ?? DefaultShutdownReason, TimeSpan.FromSeconds(Math.Round((_shutdownTime - rt) / 5)) * 5);
+            _lastLayoutShutdownWarning = rt;
+        }
+    }
+
+    private static void FixShutdownReason(ref string? shutdownReason)
+    {
+        if (shutdownReason != null && shutdownReason.EndsWith('.'))
+            shutdownReason = shutdownReason[..^1];
+    }
+
+    private void SendShutdownStep()
+    {
+        _chatService.Broadcast(_shutdownTranslations.ShutdownBroadcastTimeReminder, TimeSpan.FromSeconds(_shutdownSteps[_shutdownStep]), ShutdownReason ?? DefaultShutdownReason);
     }
 
     [RpcSend]
@@ -43,12 +91,12 @@ public class WarfareLifetimeComponent : MonoBehaviour
             case ShutdownMode.Time:
                 if (ShutdownReason == null)
                     return "Time|" + ShutdownTime.ToString("O");
-                return "Time|" + ShutdownTime.ToString("O") + ShutdownReason;
+                return "Time|" + ShutdownTime.ToString("O") + "|" + ShutdownReason;
 
             case ShutdownMode.OnLayoutEnd:
                 if (ShutdownReason == null)
-                    return "OnLayoutEnd";
-                return "OnLayoutEnd|" + ShutdownReason;
+                    return "OnLayoutEnd|" + ShutdownTime.ToString("O");
+                return "OnLayoutEnd|" + ShutdownTime.ToString("O") + "|" + ShutdownReason;
 
             case ShutdownMode.Now:
                 if (ShutdownReason == null)
@@ -61,17 +109,44 @@ public class WarfareLifetimeComponent : MonoBehaviour
     }
 
     [RpcReceive]
+    public void QueueShutdownInstant(string? shutdownReason = null)
+    {
+        FixShutdownReason(ref shutdownReason);
+        CancelShutdown();
+        _ = _module.ShutdownAsync(shutdownReason ?? DefaultShutdownReason);
+    }
+
+    private int GetPassedShutdownStep()
+    {
+        DateTime dt = DateTime.UtcNow;
+
+        for (int i = _shutdownSteps.Length - 1; i >= 0; --i)
+        {
+            if (dt + TimeSpan.FromSeconds(_shutdownSteps[i]) > ShutdownTime)
+                continue;
+
+            return i;
+        }
+
+        return -1;
+    }
+
+    [RpcReceive]
     public void QueueShutdownInTime(TimeSpan time, string? shutdownReason = null)
     {
         DateTime dt = DateTime.UtcNow.Add(time);
         if (QueuedShutdownType == ShutdownMode.Time && ShutdownTime > dt)
             return;
 
+        FixShutdownReason(ref shutdownReason);
         ShutdownTime = dt;
         ShutdownReason = shutdownReason;
         QueuedShutdownType = ShutdownMode.Time;
         _shutdownTime = (float)(Time.realtimeSinceStartup + time.TotalSeconds);
+        _shutdownStep = GetPassedShutdownStep();
         UpdateShutdownState();
+
+        _chatService.Broadcast(_shutdownTranslations.ShutdownBroadcastTime, time, shutdownReason ?? DefaultShutdownReason);
     }
 
     [RpcReceive]
@@ -80,11 +155,16 @@ public class WarfareLifetimeComponent : MonoBehaviour
         if (QueuedShutdownType == ShutdownMode.OnLayoutEnd)
             return;
 
+        FixShutdownReason(ref shutdownReason);
         QueuedShutdownType = ShutdownMode.OnLayoutEnd;
-        ShutdownReason = shutdownReason;
-        ShutdownTime = default;
-        _shutdownTime = -1;
+        ShutdownReason = shutdownReason ;
+        ShutdownTime = DateTime.UtcNow.AddHours(1d);
+        _shutdownTime = Time.realtimeSinceStartup + 3600f;
+        _shutdownStep = GetPassedShutdownStep();
         UpdateShutdownState();
+
+        _chatService.Broadcast(_shutdownTranslations.ShutdownBroadcastAfterGame, shutdownReason ?? DefaultShutdownReason, TimeSpan.FromHours(1d).Subtract(TimeSpan.FromSeconds(1d)));
+        _lastLayoutShutdownWarning = Time.realtimeSinceStartup;
     }
 
     [RpcReceive]
@@ -97,7 +177,10 @@ public class WarfareLifetimeComponent : MonoBehaviour
         ShutdownTime = default;
         ShutdownReason = null;
         _shutdownTime = -1;
+        _shutdownStep = -1;
         UpdateShutdownState();
+
+        _chatService.Broadcast(_shutdownTranslations.ShutdownBroadcastCancelled);
     }
 
     internal async Task NotifyShutdownNow(string? reason)
@@ -116,9 +199,10 @@ public class WarfareLifetimeComponent : MonoBehaviour
         }
 
         QueuedShutdownType = ShutdownMode.Now;
-        ShutdownReason = reason ?? DefaultShutdownReason;
+        ShutdownReason = reason;
         ShutdownTime = default;
         _shutdownTime = -1;
+        _shutdownStep = -1;
         try
         {
             await SendShutdownUpdate(GetShutdownReason(), true);

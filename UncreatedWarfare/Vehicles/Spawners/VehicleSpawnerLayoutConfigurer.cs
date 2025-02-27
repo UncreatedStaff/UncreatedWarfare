@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
@@ -8,7 +8,7 @@ using System.Text;
 using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Vehicles.Spawners;
-using static Uncreated.Warfare.Vehicles.VehicleSpawnerStore;
+using static Uncreated.Warfare.Vehicles.Spawners.VehicleSpawnerStore;
 
 namespace Uncreated.Warfare.Vehicles;
 public class VehicleSpawnerLayoutConfigurer : ILayoutHostedService

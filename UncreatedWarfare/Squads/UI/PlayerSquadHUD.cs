@@ -4,9 +4,11 @@ using Uncreated.Framework.UI.Patterns;
 using Uncreated.Framework.UI.Reflection;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models;
+using Uncreated.Warfare.Events.Models.Kits;
 using Uncreated.Warfare.Events.Models.Squads;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Extensions;
 
 namespace Uncreated.Warfare.Squads.UI;
 
@@ -14,7 +16,8 @@ namespace Uncreated.Warfare.Squads.UI;
 public class PlayerSquadHUD : UnturnedUI,
     IEventListener<SquadMemberJoined>,
     IEventListener<SquadMemberLeft>,
-    IEventListener<SquadLeaderUpdated>
+    IEventListener<SquadLeaderUpdated>,
+    IEventListener<PlayerKitChanged>
 {
     public UnturnedLabel SquadName { get; } = new UnturnedLabel("PlayerSquadName");
     public UnturnedLabel SquadNumber { get; } = new UnturnedLabel("PlayerSquadName/PlayerSquadNumber");
@@ -35,6 +38,12 @@ public class PlayerSquadHUD : UnturnedUI,
     public void HandleEvent(SquadLeaderUpdated e, IServiceProvider serviceProvider)
     {
         UpdateForSquad(e.Squad);
+    }
+    public void HandleEvent(PlayerKitChanged e, IServiceProvider serviceProvider)
+    {
+        Squad? squad = e.Player.GetSquad();
+        if (squad != null)
+            UpdateForSquad(squad);
     }
     private void UpdateForSquad(Squad squad)
     {

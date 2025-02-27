@@ -12,7 +12,6 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Layouts.Phases;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Models.GameData;
-using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
 
@@ -26,6 +25,7 @@ public class Layout : IDisposable
     private int _activePhase = -1;
     private readonly IDisposable _configListener;
     private readonly CancellationTokenSource _cancellationTokenSource;
+    private readonly WarfareLifetimeComponent _appLifetime;
     internal bool UnloadedHostedServices;
     private readonly IList<IDisposable> _disposableVariationConfigurationRoots;
 
@@ -146,6 +146,7 @@ public class Layout : IDisposable
 
         // inject services
         _factory = serviceProvider.Resolve<LayoutFactory>();
+        _appLifetime = serviceProvider.Resolve<WarfareLifetimeComponent>();
 
         // listens for changes to the config file
         _configListener = LayoutConfiguration.GetReloadToken().RegisterChangeCallback(_ =>
@@ -507,6 +508,8 @@ public class Layout : IDisposable
         await _factory.UnhostLayoutAsync(this, token);
 
         (LayoutInfo.Layout as IDisposable)?.Dispose();
+
+        await _appLifetime.NotifyLayoutEnding(CancellationToken.None);
     }
 
     /// <summary>

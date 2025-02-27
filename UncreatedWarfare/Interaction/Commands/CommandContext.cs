@@ -398,7 +398,7 @@ public class CommandContext : ControlException
         for (int i = 0; i < Flags.Length; ++i)
         {
             ref CommandFlagInfo info = ref Flags[i];
-            if (info.DashCount == 1 && info.FlagName.IndexOf(check[0]) != 0)
+            if (info.DashCount == 1 && info.FlagName.IndexOf(check[0]) >= 0)
                 return true;
         }
 

@@ -60,7 +60,7 @@ public class SquadMenuUI :
         if (squad.ContainsPlayer(warfarePlayer))
             squad.RemoveMember(warfarePlayer);
         else
-            squad.AddMember(warfarePlayer);
+            squad.TryAddMember(warfarePlayer);
     }
 
     private void CloseMenuButton_OnClicked(UnturnedButton button, Player player)

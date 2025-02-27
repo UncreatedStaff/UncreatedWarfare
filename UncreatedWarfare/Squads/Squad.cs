@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Uncreated.Warfare.Events.Models.Squads;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
@@ -45,6 +46,15 @@ public class Squad : ITranslationArgument
     {
         _members.Add(player);
         player.Component<SquadPlayerComponent>().ChangeSquad(this);
+    }
+
+    public bool TryAddMember(WarfarePlayer player)
+    {
+        if (Members.Contains(player) || Members.Count >= MaxMembers)
+            return false;
+
+        AddMember(player);
+        return true;
     }
 
     public bool AddMember(WarfarePlayer player)

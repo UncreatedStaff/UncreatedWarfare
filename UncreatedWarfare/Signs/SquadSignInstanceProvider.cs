@@ -3,18 +3,18 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using Uncreated.Warfare.Interaction.Requests;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Util;
-using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Signs;
 
 [SignPrefix("squad_")]
-public class SquadSignInstanceProvider : ISignInstanceProvider
+public class SquadSignInstanceProvider : ISignInstanceProvider, IRequestable<Squad>
 {
     private static StringBuilder StringBuilder = new();
     private readonly ITeamManager<Team> _teamManager;

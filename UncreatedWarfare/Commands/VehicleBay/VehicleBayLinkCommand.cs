@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Linq;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Interaction.Commands;
@@ -50,13 +50,11 @@ internal sealed class VehicleBayLinkCommand : IExecutableCommand
             if (spawnerFromSign == null)
                 throw Context.Reply(_translations.SpawnNotRegistered);
 
-            await UniTask.SwitchToMainThread(token);
-
             if (!spawnerFromSign.Signs.Any(s => s.Equals(buildable)))
                 spawnerFromSign.Signs.Add(buildable);
             spawnerFromSign.SpawnInfo.SignInstanceIds = spawnerFromSign.Signs.Select(s => s.InstanceId).ToList();
 
-            await _spawnerStore.SpawnerStore.AddOrUpdateSpawnAsync(spawnerFromSign.SpawnInfo);
+            await _spawnerStore.SpawnerStore.AddOrUpdateSpawnAsync(spawnerFromSign.SpawnInfo, CancellationToken.None);
 
             await UniTask.SwitchToMainThread(token);
 
@@ -67,7 +65,6 @@ internal sealed class VehicleBayLinkCommand : IExecutableCommand
             BarricadeUtility.SetServersideSignText((BarricadeDrop)buildable.Drop, spawnerFromSign.ServerSignText);
 
             await _buildableSaver.SaveBuildableAsync(buildable, token);
-
         }
         // if looking at a spawner
         else if (_spawnerStore.TryGetSpawner(buildable, out VehicleSpawner? spawner))

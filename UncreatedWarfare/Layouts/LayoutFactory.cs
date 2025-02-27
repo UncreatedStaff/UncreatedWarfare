@@ -38,6 +38,8 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
 
     private bool _hasPlayerLock = true;
 
+    public FileInfo? NextLayout { get; set; }
+
     public LayoutFactory(
         WarfareModule warfare,
         ILogger<LayoutFactory> logger,
@@ -166,7 +168,19 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
     {
         await UniTask.SwitchToThreadPool();
         
-        LayoutInfo newLayout = SelectRandomLayouts();
+
+        LayoutInfo? newLayout = null;
+        if (NextLayout != null)
+        {
+            newLayout = ReadLayoutInfo(NextLayout.FullName);
+            if (newLayout == null)
+                _logger.LogWarning($"Failed to find preferred next layout {NextLayout.Name}.");
+            else
+                _logger.LogInformation($"Loading preferred next layout {NextLayout.Name} ({newLayout.DisplayName}).");
+            NextLayout = null;
+        }
+
+        newLayout ??= SelectRandomLayouts();
 
         await UniTask.SwitchToMainThread(token);
 
@@ -250,9 +264,17 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
             Map = _mapScheduler.Current,
             Region = _region
         };
-        _dbContext.Games.Add(record);
 
-        await _dbContext.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
+        try
+        {
+            _dbContext.Games.Add(record);
+
+            await _dbContext.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating layout record.");
+        }
 
         await UniTask.SwitchToMainThread(CancellationToken.None);
         await layout.InitializeLayoutAsync(record, CancellationToken.None);
@@ -400,6 +422,38 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
                 }
             }
         };
+    }
+
+    public LayoutInfo? SelectLayoutByName(string layoutName)
+    {
+        LayoutInfo? layout = ReadLayoutInfo(Path.Combine(
+            _warfare.HomeDirectory,
+            "Layouts",
+            !layoutName.EndsWith(".yml", StringComparison.OrdinalIgnoreCase) ? layoutName + ".yml" : layoutName)
+        );
+
+        if (layout != null)
+            return layout;
+
+        List<FileInfo> all = GetBaseLayoutFiles();
+        FileInfo? single = null;
+        foreach (FileInfo info in all)
+        {
+            if (!info.Name.Equals(layoutName, StringComparison.InvariantCultureIgnoreCase))
+            {
+                continue;
+            }
+
+            if (single == null)
+                single = info;
+            else
+                return null;
+        }
+
+        if (single == null)
+            return null;
+
+        return ReadLayoutInfo(single.FullName);
     }
 
     /// <summary>
@@ -639,6 +693,8 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
 
         await _dbContext.SaveChangesAsync(token);
 
+        _dbContext.ChangeTracker.Clear();
+
         if (layout.UnloadedHostedServices)
             return;
 
@@ -672,8 +728,6 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
             _logger.LogError("Errors encountered while ending layout {0}:", layout);
             FormattingUtility.PrintTaskErrors(_logger, tasks, hostedServices);
         }
-
-        await _shutdownService.NotifyLayoutEnding(CancellationToken.None);
     }
 
     void IEventListener<PlayerJoined>.HandleEvent(PlayerJoined e, IServiceProvider serviceProvider)

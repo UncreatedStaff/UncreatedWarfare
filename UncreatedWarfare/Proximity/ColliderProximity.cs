@@ -8,7 +8,7 @@ using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Proximity;
 
-public class ColliderProximity : MonoBehaviour, ITrackingProximity<WarfarePlayer>, IDisposable, IFormattable
+public class ColliderProximity : MonoBehaviour, ITrackingProximity<WarfarePlayer>, IDisposable, IFormattable, INearestPointProximity
 {
     private readonly List<WarfarePlayer> _players = new List<WarfarePlayer>(8);
     private Collider? _collider;
@@ -281,6 +281,16 @@ public class ColliderProximity : MonoBehaviour, ITrackingProximity<WarfarePlayer
     float IShapeVolume.internalVolume => _proximity.internalVolume;
     float IShapeVolume.surfaceArea => _proximity.surfaceArea;
     bool IShapeVolume.containsPoint(Vector3 point) => _proximity.containsPoint(point);
+
+    /// <inheritdoc />
+    public Vector3 GetNearestPointOnBorder(in Vector3 fromLocation)
+    {
+        if (_proximity is not INearestPointProximity p)
+            throw new NotSupportedException("Expected INearestPointProximity.");
+
+        return p.GetNearestPointOnBorder(in fromLocation);
+    }
+
     object ICloneable.Clone() => throw new NotSupportedException();
 
     /// <inheritdoc />

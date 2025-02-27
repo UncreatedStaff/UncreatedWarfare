@@ -1,13 +1,12 @@
 using DanielWillett.ReflectionTools;
-using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Services;
-using Uncreated.Warfare.Vehicles.Spawners;
 
-namespace Uncreated.Warfare.Vehicles;
+namespace Uncreated.Warfare.Vehicles.Spawners;
 
 /// <summary>
 /// Saves vehicle spawns linked to structures or barricades in the level savedata.
@@ -17,25 +16,20 @@ namespace Uncreated.Warfare.Vehicles;
 [Priority(-1 /* load after BuildableSaver and VehicleInfoStore */)]
 public class VehicleSpawnerStore : ILayoutHostedService, IDisposable
 {
-    private YamlDataStore<List<VehicleSpawnInfo>> _dataStore;
-    private readonly WarfareModule _warfare;
-    private readonly IConfiguration _configuration;
-    private readonly ILogger<VehicleSpawnerStore> _logger;
+    private readonly YamlDataStore<List<VehicleSpawnInfo>> _dataStore;
 
     /// <summary>
     /// List of all spawns.
     /// </summary>
     /// <remarks>Use <see cref="SaveAsync"/> or <see cref="AddOrUpdateSpawnAsync"/> when making changes.</remarks>
     public IReadOnlyList<VehicleSpawnInfo> Spawns => _dataStore.Data;
-    public Action OnSpawnsReloaded { get; set; }
 
-    public VehicleSpawnerStore(WarfareModule warfare, IConfiguration configuration, ILogger<VehicleSpawnerStore> logger)
+    public event Action? OnSpawnsReloaded;
+
+    public VehicleSpawnerStore(ILogger<VehicleSpawnerStore> logger)
     {
-        _warfare = warfare;
-        _configuration = configuration;
-        _logger = logger;
         _dataStore = new YamlDataStore<List<VehicleSpawnInfo>>(GetFolderPath(), logger, reloadOnFileChanged: true, () => new List<VehicleSpawnInfo>());
-        _dataStore.OnFileReload = (dataStore) =>
+        _dataStore.OnFileReload = _ =>
         {
             OnSpawnsReloaded?.Invoke();
         };
@@ -86,7 +80,7 @@ public class VehicleSpawnerStore : ILayoutHostedService, IDisposable
             _dataStore.Data.Add(spawnInfo);
         }
 
-        _dataStore.Data.Sort((x, y) => x.UniqueName.CompareTo(y.UniqueName));
+        _dataStore.Data.Sort((x, y) => string.Compare(x.UniqueName, y.UniqueName, CultureInfo.InvariantCulture, CompareOptions.IgnoreCase));
         _dataStore.Save();
     }
 
@@ -114,7 +108,7 @@ public class VehicleSpawnerStore : ILayoutHostedService, IDisposable
     {
         await UniTask.SwitchToMainThread(token);
 
-        _dataStore.Save(); // todo: make an async Save() function
+        _dataStore.Save();
     }
 
     public void Dispose()

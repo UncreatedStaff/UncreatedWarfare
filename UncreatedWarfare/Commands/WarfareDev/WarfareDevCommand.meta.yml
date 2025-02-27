@@ -43,6 +43,20 @@ Parameters:
         Type: Verbatim
         Description: "Re-read all translations."
         
+  # /warfaredev layout
+  - Name: layout
+    Alias: gamemode
+    Type: Verbatim
+    Description: "Queue a new layout by name to be loaded next."
+    Parameters:
+      - Name: layoutName
+        Type: string
+        Description: File name or relative path to the Loadouts folder of the new loadout.
+    Flags:
+      - Name: i
+        Alias: instant
+        Description: "Instantly start the new loadout instead of queueing it."
+        
   # /warfaredev steamguard
   - Name: steamguard
     Type: Verbatim
