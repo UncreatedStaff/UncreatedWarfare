@@ -707,7 +707,7 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
             }
 
             Type? switchCommand = ctx.SwitchCommand;
-            if (switchCommand != null)
+            if (switchCommand != null && !token.IsCancellationRequested)
             {
                 switchInfo = FindCommand(switchCommand);
                 if (switchInfo == null)

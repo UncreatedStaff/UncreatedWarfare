@@ -514,8 +514,7 @@ public sealed class WarfareModule
         bldr.RegisterType<PlayerSquadHUD>()
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
-
-        bldr.RegisterType<SquadList>().SingleInstance();
+        
         bldr.RegisterType<FobHUD>()
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
@@ -1067,6 +1066,11 @@ public sealed class WarfareModule
         await UniTask.SwitchToMainThread(CancellationToken.None);
         UnloadModule();
         Provider.shutdown();
+
+        while (true)
+        {
+            await UniTask.Delay(1000, cancellationToken: CancellationToken.None);
+        }
     }
 
     /// <summary>

@@ -48,6 +48,7 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
     [Ignore] private readonly SquadManager _squadManager;
     [Ignore] private readonly PointsService _pointsService;
     [Ignore] private readonly ITranslationService _translationService;
+    private readonly WarfareLifetimeComponent _appLifetime;
     [Ignore] private readonly Func<CSteamID, DualSidedLeaderboardPlayerData> _createData;
 
     public readonly UnturnedUIElement TopSquadsParent = new UnturnedUIElement("GameInfo/Squads");
@@ -85,8 +86,8 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
         IPlayerService playerService,
         SquadManager squadManager,
         PointsService pointsService,
-        ITranslationService translationService)
-
+        ITranslationService translationService,
+        WarfareLifetimeComponent appLifetime)
         : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:DualSidedLeaderboardUI"), staticKey: true, debugLogging: false)
     {
         _createData = CreateData;
@@ -96,6 +97,7 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
         _squadManager = squadManager;
         _pointsService = pointsService;
         _translationService = translationService;
+        _appLifetime = appLifetime;
 
         ElementPatterns.SubscribeAll(Leaderboards[0].StatHeaders, Team1ButtonPressed);
         ElementPatterns.SubscribeAll(Leaderboards[1].StatHeaders, Team2ButtonPressed);
@@ -187,9 +189,15 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
     private void SendToPlayers(LanguageSet set)
     {
         Team? winningTeam = _layout.Data[KnownLayoutDataKeys.WinnerTeam] as Team;
+        string layoutName = _layout.LayoutInfo.DisplayName;
+        if (_appLifetime.QueuedShutdownType == ShutdownMode.OnLayoutEnd)
+        {
+            layoutName += " - Shutting down:";
+        }
+
         while (set.MoveNext())
         {
-            LayoutName.SetText(set.Next.Connection, _layout.LayoutInfo.DisplayName);
+            LayoutName.SetText(set.Next.Connection, layoutName);
             SendPointsSection(set.Next);
         }
         set.Reset();

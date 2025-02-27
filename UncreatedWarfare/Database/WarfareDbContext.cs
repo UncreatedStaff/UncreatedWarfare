@@ -107,7 +107,9 @@ public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContex
         optionsBuilder.UseMySql(
             connectionString,
             ServerVersion.AutoDetect(connectionString),
-            o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
+            o => o
+                .UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
+                .EnableRetryOnFailure()
         );
 
         optionsBuilder.UseBatchEF_MySQLPomelo();

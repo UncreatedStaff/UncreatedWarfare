@@ -298,6 +298,12 @@
             Prevents menu from being shown twice without a restart.
             </summary>
         </member>
+        <member name="F:SDG.Unturned.Items.onItemRemoved">
+            <summary>
+            Nelson 2025-02-24: Warning that this is invoked *before* the item is actually removed from the items list.
+            (public issue #4894)
+            </summary>
+        </member>
         <member name="M:SDG.Unturned.Items.checkSpaceEmpty(System.Byte,System.Byte,System.Byte,System.Byte,System.Byte)">
             checks whether a space contains any filled slots
         </member>
@@ -7580,6 +7586,23 @@
             If so pause menu, dashboard, and other menus cannot be opened.
             </summary>
         </member>
+        <member name="T:SDG.Unturned.Rk4Spring3">
+            <summary>
+            Thanks to Glenn Fiedler for this RK4 implementation article:
+            https://gafferongames.com/post/integration_basics/
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.Rk4Spring3.stiffness">
+            <summary>
+            Higher values return to the target position faster.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.Rk4Spring3.damping">
+            <summary>
+            Higher values reduce bounciness and settle at the target position faster.
+            e.g. a value of zero will bounce back and forth for a long time (indefinitely?)
+            </summary>
+        </member>
         <member name="T:SDG.Unturned.ItemPlaceableAsset">
             <summary>
             Common base for barricades and structures.
@@ -7615,23 +7638,6 @@
         <member name="M:SDG.Unturned.ItemPlaceableAsset.FindDefaultSalvageItemAsset">
             <summary>
             By default a crafting ingredient is salvaged.
-            </summary>
-        </member>
-        <member name="T:SDG.Unturned.Rk4Spring3">
-            <summary>
-            Thanks to Glenn Fiedler for this RK4 implementation article:
-            https://gafferongames.com/post/integration_basics/
-            </summary>
-        </member>
-        <member name="F:SDG.Unturned.Rk4Spring3.stiffness">
-            <summary>
-            Higher values return to the target position faster.
-            </summary>
-        </member>
-        <member name="F:SDG.Unturned.Rk4Spring3.damping">
-            <summary>
-            Higher values reduce bounciness and settle at the target position faster.
-            e.g. a value of zero will bounce back and forth for a long time (indefinitely?)
             </summary>
         </member>
         <member name="T:SDG.Unturned.InteractableObjectQuestEventHook">
@@ -15820,6 +15826,11 @@
             around the guid naming, simplified by overriding name.
             </summary>
         </member>
+        <member name="F:SDG.Unturned.BarricadeData.rotation">
+            <summary>
+            Note: If barricade is attached to a vehicle this is the local rotation.
+            </summary>
+        </member>
         <member name="T:SDG.Unturned.PhysicsEx">
             <summary>
             Extensions to the built-in Physics class.
@@ -15861,11 +15872,6 @@
         <member name="T:SDG.Unturned.SleekEditorLevel">
             <summary>
             Button in the list of levels for the map editor.
-            </summary>
-        </member>
-        <member name="F:SDG.Unturned.BarricadeData.rotation">
-            <summary>
-            Note: If barricade is attached to a vehicle this is the local rotation.
             </summary>
         </member>
         <member name="T:SDG.Unturned.GlazierElementBase_IMGUI">

@@ -199,6 +199,8 @@
 
     <EmbeddedResource Include="Commands\ReportCommand.meta.yml" />
 
+    <EmbeddedResource Include="Commands\Vanilla\ShutdownCommand.meta.yml" />
+
     <EmbeddedResource Include="Commands\Whitelist\WhitelistCommand.meta.yml" />
 
     <EmbeddedResource Include="Commands\TeamsCommand.meta.yml" />
