@@ -25,6 +25,7 @@ using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Timing;
+using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Fobs;
 public partial class FobManager :
@@ -119,7 +120,7 @@ public partial class FobManager :
         if (_assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:Gameplay:RepairStation").MatchAsset(buildable.Asset))
         {
             Team team = serviceProvider.GetRequiredService<ITeamManager<Team>>().GetTeam(buildable.Group);
-            RepairStation repairStation = new RepairStation(buildable, team, serviceProvider.GetRequiredService<ILoopTickerFactory>(), this, _assetConfiguration);
+            RepairStation repairStation = new RepairStation(buildable, team, serviceProvider.GetRequiredService<ILoopTickerFactory>(), this, _assetConfiguration, serviceProvider.GetRequiredService<ZoneStore>());
             RegisterFobEntity(repairStation);
         }
         else if (completedFortification != null)

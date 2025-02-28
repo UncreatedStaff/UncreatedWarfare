@@ -10,12 +10,14 @@ using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Timing;
 using Uncreated.Warfare.Vehicles.WarfareVehicles;
+using Uncreated.Warfare.Zones;
 using MathUtility = Uncreated.Warfare.Util.MathUtility;
 
 namespace Uncreated.Warfare.FOBs.Construction;
 public class RepairStation : IBuildableFobEntity, IDisposable
 {
     private readonly AssetConfiguration _assetConfiguration;
+    private readonly ZoneStore _zoneStore;
     private readonly ILoopTicker _ticker;
 
     public float GroundRepairRadius => 15;
@@ -30,15 +32,16 @@ public class RepairStation : IBuildableFobEntity, IDisposable
 
     public IAssetLink<Asset> IdentifyingAsset { get; }
 
-    public RepairStation(IBuildable buildable, Team team, ILoopTickerFactory loopTickerFactory, FobManager fobManager, AssetConfiguration assetConfiguration)
+    public RepairStation(IBuildable buildable, Team team, ILoopTickerFactory loopTickerFactory, FobManager fobManager, AssetConfiguration assetConfiguration, ZoneStore zoneStore)
     {
         Buildable = buildable;
         _assetConfiguration = assetConfiguration;
+        _zoneStore = zoneStore;
         IdentifyingAsset = AssetLink.Create(Buildable.Asset);
         _ticker = loopTickerFactory.CreateTicker(TimeSpan.FromSeconds(4), false, true);
         _ticker.OnTick += (_, _, _) =>
         {
-            var supplyCrateGroup = NearbySupplyCrates.FindNearbyCrates(buildable.Position, team.GroupId, fobManager);
+            NearbySupplyCrates supplyCrateGroup = NearbySupplyCrates.FindNearbyCrates(buildable.Position, team.GroupId, fobManager);
 
             List<InteractableVehicle> vehicles = ListPool<InteractableVehicle>.claim();
 
@@ -54,10 +57,13 @@ public class RepairStation : IBuildableFobEntity, IDisposable
                 if (isGroundVehicle && !MathUtility.WithinRange(vehicle.transform.position, buildable.Position, GroundRepairRadius))
                     continue;
 
-                if (supplyCrateGroup.BuildCount <= 0)
-                    break;
-
-                supplyCrateGroup.SubstractSupplies(1, SupplyType.Build, SupplyChangeReason.ConsumeRepairVehicle);
+                if (!_zoneStore.IsInMainBase(vehicle.transform.position))
+                {
+                    if (supplyCrateGroup.BuildCount > 0)
+                        supplyCrateGroup.SubstractSupplies(1, SupplyType.Build, SupplyChangeReason.ConsumeRepairVehicle);
+                    else
+                        break;
+                }
 
                 Repair(vehicle);
                 Refuel(vehicle);
