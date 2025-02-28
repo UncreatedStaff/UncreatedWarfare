@@ -349,8 +349,6 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
                 ActionLog.Add(ActionLogType.RequestKit, $"Kit {kit.Id}, Team {player.Team.Faction.Name}, Class: {_valueFormatter.FormatEnum(kit.Class, null)}", player.Steam64);
             }
 
-            // todo: make a tweak for KitRequests.CheckOrCreateSquadForSquadleaderKit
-
             await GrantKitRequest(player, kit, resultHandler, token).ConfigureAwait(false);
             return true;
         }

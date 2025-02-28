@@ -225,6 +225,8 @@ public class MySqlPointsStore : IPointsStore
     private readonly IManualMySqlProvider _sql;
     private readonly IPlayerService _playerService;
 
+    public const double MaxCredits = 1000;
+
     // selects stats
     private const string GetPointsQuery = $"SELECT `{ColumnPointsXP}`,`{ColumnPointsCredits}` FROM `{TablePoints}` WHERE " +
                                           $"`{ColumnPointsSteam64}`=@0 AND " +
@@ -248,7 +250,7 @@ public class MySqlPointsStore : IPointsStore
                                               $"`{ColumnReputationSteam64}`=@0 LIMIT 1;";
 
     private const string SetPointsQuery = $"INSERT INTO `{TablePoints}` (`{ColumnPointsSteam64}`,`{ColumnPointsFaction}`,`{ColumnPointsSeason}`,`{ColumnPointsXP}`,`{ColumnPointsCredits}`) " +
-                                          $"VALUES (@0,@1,@2,GREATEST(0,@3),GREATEST(0,@4)) AS `new` " +
+                                          $"VALUES (@0,@1,@2,GREATEST(0,@3),LEAST(GREATEST(0,@4),@5)) AS `new` " +
                                           $"ON DUPLICATE KEY UPDATE " +
                                           $"`{TablePoints}`.`{ColumnPointsXP}`=`new`.`{ColumnPointsXP}`," +
                                           $"`{TablePoints}`.`{ColumnPointsCredits}`=`new`.`{ColumnPointsCredits}`;";
@@ -259,7 +261,7 @@ public class MySqlPointsStore : IPointsStore
                                       $"`{TablePoints}`.`{ColumnPointsXP}`=`new`.`{ColumnPointsXP}`;";
 
     private const string SetCreditsQuery = $"INSERT INTO `{TablePoints}` (`{ColumnPointsSteam64}`,`{ColumnPointsFaction}`,`{ColumnPointsSeason}`,`{ColumnPointsXP}`,`{ColumnPointsCredits}`) " +
-                                           $"VALUES (@0,@1,@2,0,GREATEST(0,@3)) AS `new` " +
+                                           $"VALUES (@0,@1,@2,0,LEAST(GREATEST(0,@3),@4)) AS `new` " +
                                            $"ON DUPLICATE KEY UPDATE " +
                                            $"`{TablePoints}`.`{ColumnPointsCredits}`=`new`.`{ColumnPointsCredits}`;";
     
@@ -270,10 +272,10 @@ public class MySqlPointsStore : IPointsStore
 
     // adds XP and credits to the current value, clamping at 0. can be negative
     private const string AddOrUpdatePointsQuery = $"INSERT INTO `{TablePoints}` (`{ColumnPointsSteam64}`,`{ColumnPointsFaction}`,`{ColumnPointsSeason}`,`{ColumnPointsXP}`,`{ColumnPointsCredits}`) " +
-                                                  $"VALUES (@0,@1,@2,GREATEST(0,@3),GREATEST(0,@4)) AS `new` " +
+                                                  $"VALUES (@0,@1,@2,GREATEST(0,@3),LEAST(GREATEST(0,@4),@5)) AS `new` " +
                                                   $"ON DUPLICATE KEY UPDATE " +
                                                   $"`{TablePoints}`.`{ColumnPointsXP}`=GREATEST(0,`{TablePoints}`.`{ColumnPointsXP}`+@3)," +
-                                                  $"`{TablePoints}`.`{ColumnPointsCredits}`=GREATEST(0,`{TablePoints}`.`{ColumnPointsCredits}`+@4);{GetPointsQuery}";
+                                                  $"`{TablePoints}`.`{ColumnPointsCredits}`=LEAST(GREATEST(0,`{TablePoints}`.`{ColumnPointsCredits}`+@4),@5);{GetPointsQuery}";
 
     // adds XP to the current value, clamping at 0. can be negative
     private const string AddOrUpdateXPQuery = $"INSERT INTO `{TablePoints}` (`{ColumnPointsSteam64}`,`{ColumnPointsFaction}`,`{ColumnPointsSeason}`,`{ColumnPointsXP}`,`{ColumnPointsCredits}`) " +
@@ -283,9 +285,9 @@ public class MySqlPointsStore : IPointsStore
 
     // adds credits to the current value, clamping at 0. can be negative
     private const string AddOrUpdateCreditsQuery = $"INSERT INTO `{TablePoints}` (`{ColumnPointsSteam64}`,`{ColumnPointsFaction}`,`{ColumnPointsSeason}`,`{ColumnPointsXP}`,`{ColumnPointsCredits}`) " +
-                                                   $"VALUES (@0,@1,@2,0,GREATEST(0,@3)) AS `new` " +
+                                                   $"VALUES (@0,@1,@2,0,LEAST(GREATEST(0,@3),@4)) AS `new` " +
                                                    $"ON DUPLICATE KEY UPDATE " +
-                                                   $"`{TablePoints}`.`{ColumnPointsCredits}`=GREATEST(0,`{TablePoints}`.`{ColumnPointsCredits}`+@3);{GetPointsQuery}";
+                                                   $"`{TablePoints}`.`{ColumnPointsCredits}`=LEAST(GREATEST(0,`{TablePoints}`.`{ColumnPointsCredits}`+@3),@4);{GetPointsQuery}";
 
     // adds reputation to the current value. can be negative
     private const string AddOrUpdateReputationQuery = $"INSERT INTO `{TableReputation}` (`{ColumnReputationSteam64}`,`{ColumnReputationValue}`) " +
@@ -448,7 +450,7 @@ public class MySqlPointsStore : IPointsStore
         if (season < 0)
             throw new ArgumentOutOfRangeException(nameof(season));
 
-        object[] parameters = [ player.m_SteamID, factionId, season, deltaXp, deltaCredits ];
+        object[] parameters = [ player.m_SteamID, factionId, season, deltaXp, deltaCredits, MaxCredits ];
 
         PlayerPoints pts = default;
         await _sql.QueryAsync(AddOrUpdatePointsQuery, parameters, token,
@@ -500,7 +502,7 @@ public class MySqlPointsStore : IPointsStore
         if (season < 0)
             throw new ArgumentOutOfRangeException(nameof(season));
 
-        object[] parameters = [ player.m_SteamID, factionId, season, deltaCredits ];
+        object[] parameters = [ player.m_SteamID, factionId, season, deltaCredits, MaxCredits ];
 
         PlayerPoints pts = default;
         await _sql.QueryAsync(AddOrUpdateCreditsQuery, parameters, token,
@@ -546,7 +548,7 @@ public class MySqlPointsStore : IPointsStore
         if (season < 0)
             throw new ArgumentOutOfRangeException(nameof(season));
 
-        object[] parameters = [ player.m_SteamID, factionId, season, xp, credits ];
+        object[] parameters = [ player.m_SteamID, factionId, season, xp, credits, MaxCredits ];
 
         return _sql.NonQueryAsync(SetPointsQuery, parameters, token);
     }
@@ -575,7 +577,7 @@ public class MySqlPointsStore : IPointsStore
         if (season < 0)
             throw new ArgumentOutOfRangeException(nameof(season));
 
-        object[] parameters = [ player.m_SteamID, factionId, season, credits ];
+        object[] parameters = [ player.m_SteamID, factionId, season, credits, MaxCredits ];
 
         await _sql.NonQueryAsync(SetCreditsQuery, parameters, token).ConfigureAwait(false);
 

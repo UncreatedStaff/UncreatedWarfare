@@ -24,12 +24,11 @@ public class VehicleBaySignInstanceProvider : ISignInstanceProvider, IRequestabl
     private static readonly Color32 VbsNameColor = new Color32(255, 255, 255, 255);
 
     private readonly VehicleSpawnerService _spawnerService;
-    private readonly VehicleInfoStore _infoStore;
     private readonly ITranslationValueFormatter _valueFormatter;
     private readonly VehicleBaySignTranslations _translations;
     private Guid _fallbackGuid;
     private VehicleAsset? _fallbackAsset;
-    private BarricadeDrop _barricade;
+    private BarricadeDrop _barricade = null!;
     public uint BarricadeInstanceId => _barricade.instanceID;
 
     public VehicleSpawner? Spawn { get; private set; }
@@ -43,12 +42,10 @@ public class VehicleBaySignInstanceProvider : ISignInstanceProvider, IRequestabl
 
     public VehicleBaySignInstanceProvider(
         VehicleSpawnerService spawnerService,
-        VehicleInfoStore infoStore,
         ITranslationValueFormatter valueFormatter,
         TranslationInjection<VehicleBaySignTranslations> translations)
     {
         _spawnerService = spawnerService;
-        _infoStore = infoStore;
         _valueFormatter = valueFormatter;
         _translations = translations.Value;
     }
@@ -63,7 +60,6 @@ public class VehicleBaySignInstanceProvider : ISignInstanceProvider, IRequestabl
 
     public string Translate(ITranslationValueFormatter formatter, IServiceProvider serviceProvider, LanguageInfo language, CultureInfo culture, WarfarePlayer? player)
     {
-        
         Spawn ??= _spawnerService.GetSpawner(_barricade.instanceID);
         Vehicle ??= Spawn?.VehicleInfo;
 
