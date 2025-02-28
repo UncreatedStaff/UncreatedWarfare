@@ -20,7 +20,7 @@ public class RequestTranslations : PropertiesTranslationCollection
     public readonly Translation<string> RequestError = new Translation<string>("<#ff8c69>Unable to fufill request: <#ffffff>{0}</color>.");
 
     [TranslationData("Sends a generic successful request message that's used to abstract requests a bit more.")]
-    public readonly Translation<IRequestable<object>> RequestedSuccess = new Translation<IRequestable<object>>("<#9cffb3>Fufilled request for <#ffffff>{0}</color>.");
+    public readonly Translation<IRequestable<object>> RequestedSuccess = new Translation<IRequestable<object>>("<#abcd9e>Successfully requested <#ffffff>{0}</color>.");
     
     [TranslationData("Sent when a player tries to request something that requires purchasing, but they can't afford it yet.", "The player's current balance", "Total credits required")]
     public readonly Translation<int, int> RequestNotOwnedCreditsCannotAfford = new Translation<int, int>("<#a8918a>You only have <#b8ffc1>C </color><#ffffff>{0}</color> / <#b8ffc1>C </color><#ffffff>{1}</color> needed to unlock this.");
