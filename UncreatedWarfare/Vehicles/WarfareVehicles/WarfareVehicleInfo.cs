@@ -39,7 +39,7 @@ public class WarfareVehicleInfo : IEquatable<WarfareVehicleInfo>, ITranslationAr
     public required AbandonInfo Abandon { get; set; }
 
     public IReadOnlyList<UnlockRequirement> UnlockRequirements { get; set; } = Array.Empty<UnlockRequirement>();
-    public IReadOnlyList<UnlockCost> UnlockCosts { get; set; } = Array.Empty<UnlockCost>();
+    public required int CreditCost { get; set; }
     public IReadOnlyList<TrunkItem> Trunk { get; set; } = Array.Empty<TrunkItem>();
     public IReadOnlyList<RequestItem> RequestItems { get; set; } = Array.Empty<RequestItem>();
     public static void EnsureInitialized(WarfareVehicleInfo v)
@@ -52,7 +52,7 @@ public class WarfareVehicleInfo : IEquatable<WarfareVehicleInfo>, ITranslationAr
         v.Rearm ??= new RearmInfo();
 
         v.UnlockRequirements ??= Array.Empty<UnlockRequirement>();
-        v.UnlockCosts ??= Array.Empty<UnlockCost>();
+        v.CreditCost = 0;
         v.Trunk ??= Array.Empty<TrunkItem>();
         v.RequestItems ??= Array.Empty<RequestItem>();
 
@@ -127,7 +127,7 @@ public class WarfareVehicleInfo : IEquatable<WarfareVehicleInfo>, ITranslationAr
         Abandon.AllowAbandon = other.Abandon.AllowAbandon;
 
         UnlockRequirements = other.UnlockRequirements;
-        UnlockCosts = other.UnlockCosts;
+        CreditCost = other.CreditCost;
         Trunk = other.Trunk;
         // todo Delays = other.Delays;
 
@@ -180,6 +180,7 @@ public class WarfareVehicleInfo : IEquatable<WarfareVehicleInfo>, ITranslationAr
             Branch = Branch.Default,
             Class = Class.None,
             TicketCost = 0,
+            CreditCost = 0,
             RespawnTime = TimeSpan.Zero,
             Cooldown = TimeSpan.Zero,
             PaintColor = Color.clear,

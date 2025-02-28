@@ -105,14 +105,12 @@ public class VehicleBaySignInstanceProvider : ISignInstanceProvider, IRequestabl
             break;
         }
 
-        if (info.UnlockCosts.Count > 0)
+        if (info.CreditCost > 0)
         {
-            UnlockCost cost = info.UnlockCosts[0];
-
             if (anyUnlockReq)
                 bldr.Append(' ', 4);
 
-            cost.AppendSignText(bldr, player, language, culture);
+            bldr.Append(_translations.VBSCreditCost.Translate(info.CreditCost, language, culture, TimeZoneInfo.Utc));
         }
 
         bldr.Append('\n');
@@ -155,6 +153,9 @@ public class VehicleBaySignTranslations : PropertiesTranslationCollection
     [TranslationData("Displays the ticket cost on a vehicle bay sign.")]
     public readonly Translation<int> VBSTickets = new Translation<int>("<#ffffff>{0}</color> <#f0f0f0>Tickets</color>", TranslationOptions.TMProSign);
 
+    [TranslationData("Displays the credit cost on a vehicle bay sign.", IsPriorityTranslation = false)]
+    public readonly Translation<int> VBSCreditCost = new Translation<int>("<#b8ffc1>C</color> <#fff>{0}</color>", TranslationOptions.TMProSign);
+    
     [TranslationData("Displays the state of the sign when the vehicle is ready to be requested.")]
     public readonly Translation VBSStateReady = new Translation("<#33cc33>Ready!</color> <#aaa><b>/request</b></color>");
 

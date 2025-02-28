@@ -399,7 +399,7 @@ public class KitSignTranslations : PropertiesTranslationCollection
     public readonly Translation<string> LoadoutLetter = new Translation<string>("<sub><#7878ff>LOADOUT {0}</color></sub>", TranslationOptions.TMProSign, arg0Fmt: UppercaseAddon.Instance);
     
     [TranslationData(IsPriorityTranslation = false)]
-    public readonly Translation KitCurrentlyUsing = new Translation("<#a0a670>Current</color>", TranslationOptions.TMProSign);
+    public readonly Translation KitCurrentlyUsing = new Translation("<#827d6d>Selected</color>", TranslationOptions.TMProSign);
     
     [TranslationData(IsPriorityTranslation = false)]
     public readonly Translation KitRequiresSquadLeader = new Translation("<#a69870>Squad Leader only</color>", TranslationOptions.TMProSign);
