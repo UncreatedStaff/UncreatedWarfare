@@ -20,7 +20,7 @@ public class RepairStation : IBuildableFobEntity, IDisposable
 {
     private readonly VehicleService _vehicleService;
     private readonly AssetConfiguration _assetConfiguration;
-    private readonly ZoneStore _zoneStore;
+    private readonly ZoneStore? _zoneStore;
     private readonly ILoopTicker _ticker;
 
     public float GroundRepairRadius => 15;
@@ -35,7 +35,7 @@ public class RepairStation : IBuildableFobEntity, IDisposable
 
     public IAssetLink<Asset> IdentifyingAsset { get; }
 
-    public RepairStation(IBuildable buildable, Team team, ILoopTickerFactory loopTickerFactory, VehicleService vehicleService, FobManager fobManager, AssetConfiguration assetConfiguration, ZoneStore zoneStore)
+    public RepairStation(IBuildable buildable, Team team, ILoopTickerFactory loopTickerFactory, VehicleService vehicleService, FobManager fobManager, AssetConfiguration assetConfiguration, ZoneStore? zoneStore)
     {
         Buildable = buildable;
         _vehicleService = vehicleService;
@@ -57,11 +57,11 @@ public class RepairStation : IBuildableFobEntity, IDisposable
             foreach (WarfareVehicle vehicle in nearbyVehicles)
             {
                 // planes and helis get a larger repair radius
-                bool isGroundVehicle = !(vehicle.Asset.engine == EEngine.PLANE || vehicle.Asset.engine == EEngine.HELICOPTER);
+                bool isGroundVehicle = !(vehicle.Asset.engine is EEngine.PLANE or EEngine.HELICOPTER);
                 if (isGroundVehicle && !MathUtility.WithinRange(vehicle.Position, buildable.Position, GroundRepairRadius))
                     continue;
 
-                if (!_zoneStore.IsInMainBase(vehicle.Position))
+                if (_zoneStore != null && !_zoneStore.IsInMainBase(vehicle.Position))
                 {
                     if (supplyCrateGroup.BuildCount > 0)
                         supplyCrateGroup.SubstractSupplies(1, SupplyType.Build, SupplyChangeReason.ConsumeRepairVehicle);
