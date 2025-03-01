@@ -893,6 +893,9 @@ public sealed class WarfareModule
         bldr.RegisterType<GuidedMissileLaunchTweaks>()
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+        bldr.RegisterType<QueueShutdownOnUnturnedUpdate>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
         bldr.RegisterType<VoiceChatRestrictionsTweak>()
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();

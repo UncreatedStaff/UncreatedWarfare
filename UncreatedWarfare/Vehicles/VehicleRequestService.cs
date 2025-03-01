@@ -1,14 +1,11 @@
 using DanielWillett.ReflectionTools;
-using HarmonyLib;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Linq;
-using Uncreated.Warfare.Buildables;
-using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Interaction.Requests;
-using Uncreated.Warfare.Layouts;
+using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Kits.Requests;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Moderation.Punishments;
@@ -17,14 +14,12 @@ using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Signs;
+using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
-using Uncreated.Warfare.Vehicles.WarfareVehicles;
 using Uncreated.Warfare.Vehicles.Spawners;
+using Uncreated.Warfare.Vehicles.WarfareVehicles;
 using Uncreated.Warfare.Zones;
-using Uncreated.Warfare.Kits.Requests;
-using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Stats;
 
 namespace Uncreated.Warfare.Vehicles;
 
@@ -34,14 +29,12 @@ public class VehicleRequestService : ILayoutHostedService,
     IRequestHandler<VehicleSpawner, VehicleSpawner>,
     IRequestHandler<WarfareVehicleComponent, VehicleSpawner>
 {
-    private static readonly IAssetLink<EffectAsset> _unlockSound = AssetLink.Create<EffectAsset>("bc41e0feaebe4e788a3612811b8722d3"); 
-    private readonly IServiceProvider _serviceProvider;
+    private static readonly IAssetLink<EffectAsset> UnlockSound = AssetLink.Create<EffectAsset>("bc41e0feaebe4e788a3612811b8722d3");
     private readonly RequestVehicleTranslations _reqTranslations;
     private readonly VehicleInfoStore _vehicleInfoStore;
     private readonly VehicleSpawnerService _spawnerService;
     private readonly VehicleService _vehicleService;
     private readonly ILogger<VehicleRequestService> _logger;
-    private readonly WarfareModule _module;
     private readonly ZoneStore _globalZoneStore;
     private readonly PointsService _pointsService;
     private readonly DatabaseInterface _moderationSql;
@@ -50,12 +43,10 @@ public class VehicleRequestService : ILayoutHostedService,
 
     public VehicleRequestService(IServiceProvider serviceProvider, ILogger<VehicleRequestService> logger)
     {
-        _serviceProvider = serviceProvider;
         _logger = logger;
         _vehicleInfoStore = serviceProvider.GetRequiredService<VehicleInfoStore>();
         _spawnerService = serviceProvider.GetRequiredService<VehicleSpawnerService>();
         _vehicleService = serviceProvider.GetRequiredService<VehicleService>();
-        _module = serviceProvider.GetRequiredService<WarfareModule>();
         _globalZoneStore = serviceProvider.GetRequiredService<ZoneStore>();
         _pointsService = serviceProvider.GetRequiredService<PointsService>();
         _moderationSql = serviceProvider.GetRequiredService<DatabaseInterface>();
@@ -100,6 +91,8 @@ public class VehicleRequestService : ILayoutHostedService,
     /// <remarks>Thread-safe</remarks>
     public async Task<bool> RequestAsync(WarfarePlayer player, VehicleSpawner? spawn, IRequestResultHandler resultHandler, CancellationToken token = default)
     {
+        _logger.LogInformation($"requesting {spawn}.");
+
         await UniTask.SwitchToMainThread(token);
 
         if (!player.IsOnline)
@@ -148,6 +141,7 @@ public class VehicleRequestService : ILayoutHostedService,
                     ? _reqTranslations.AssetBannedPermanent.Translate(commaList, player)
                     : _reqTranslations.AssetBanned.Translate(commaList, existingAssetBan.GetTimeUntilExpiry(false), player)
             );
+            return false;
         }
 
         InteractableVehicle? vehicle = spawn.LinkedVehicle;
@@ -237,27 +231,30 @@ public class VehicleRequestService : ILayoutHostedService,
         vehicle = spawn.LinkedVehicle;
 
         VehicleManager.ServerSetVehicleLock(vehicle, player.Steam64, player.Team.GroupId, true);
-        
-        DropAmmoitems(vehicleInfo, player);
+
+        DropAmmoItems(vehicleInfo, player);
             
-        EffectUtility.TriggerEffect(_unlockSound, EffectManager.SMALL, vehicle.transform.position, true);
+        _logger.LogInformation("playing effect..");
+        EffectUtility.TriggerEffect(UnlockSound, EffectManager.SMALL, player.Position /* todo: vehicle!.transform.position */, true);
         
-        // purchase the kit
+        // purchase the vehicle
         if (vehicleInfo.CreditCost > 0)
+        {
             await _pointsService.ApplyEvent(player, _pointsService.GetPurchaseEvent(player, vehicleInfo.CreditCost), token);
-        
+        }
+
         resultHandler.Success(player, spawn);
         return true;
     }
 
-    private void DropAmmoitems(WarfareVehicleInfo vehicleInfo, WarfarePlayer player)
+    private void DropAmmoItems(WarfareVehicleInfo vehicleInfo, WarfarePlayer player)
     {
-        foreach (WarfareVehicleInfo.RequestItem item in vehicleInfo.RequestItems)
+        foreach (IAssetLink<ItemAsset> item in vehicleInfo.Rearm.Items)
         {
-            if (item.Item.TryGetAsset(out ItemAsset? asset))
+            if (item.TryGetAsset(out ItemAsset? asset))
                 ItemManager.dropItem(new Item(asset, EItemOrigin.WORLD), player.Position, true, true, true);
             else
-                _logger.LogWarning($"Vehicle rearm item not found: {item.Item}");
+                _logger.LogWarning($"Vehicle rearm item not found: {item}");
         }
     }
 }

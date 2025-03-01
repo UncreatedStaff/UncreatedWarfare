@@ -11,6 +11,8 @@ using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Signs;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.ValueFormatters;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Timing;
 using Uncreated.Warfare.Vehicles.Spawners.Delays;
@@ -19,7 +21,7 @@ using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Vehicles.Spawners;
 
-public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable
+public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITranslationArgument
 {
     public const float IdleDistance = 200;
     public const float EnemyIdleDistance = 40;
@@ -520,6 +522,12 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable
     public override string ToString()
     {
         return ToDisplayString();
+    }
+
+    /// <inheritdoc />
+    public string Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
+    {
+        return formatter.Colorize(VehicleInfo.VehicleAsset.Asset?.FriendlyName ?? VehicleInfo.VehicleAsset.Guid.ToString("N"), Team.Faction.Color, parameters.Options);
     }
 
     /// <summary>
