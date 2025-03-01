@@ -704,6 +704,7 @@ public sealed class WarfareModule
 
         bldr.RegisterType<KitCreateMissingDefaultKitsTweak>().As<ILayoutHostedService>();
         bldr.RegisterType<KitNoSwapStorageClothingTweak>().AsSelf().AsImplementedInterfaces();
+        bldr.RegisterType<KitGiveDefaultOnLeaveSquadKit>().AsSelf().AsImplementedInterfaces();
 
         bldr.RegisterType<MySqlKitsDataStore>()
             .AsSelf().AsImplementedInterfaces()
