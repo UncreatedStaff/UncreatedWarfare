@@ -44,7 +44,7 @@ internal sealed class KitSetCommand : IExecutableCommand
 
         if (kit == null)
         {
-            throw Context.Reply(_translations.KitNotFound);
+            throw Context.Reply(_translations.KitNotFound, kitId);
         }
 
         kitId = kit.Id;

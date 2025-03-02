@@ -12,15 +12,15 @@ namespace Uncreated.Warfare.Tweaks;
 internal sealed class VoiceChatRestrictionsTweak : IHostedService
 {
     private readonly IPlayerService _playerService;
-    private readonly ModerationTranslations _translations;
-    private readonly IAssetLink<EffectAsset> _mutedUi;
+    //private readonly ModerationTranslations _translations;
+    //private readonly IAssetLink<EffectAsset> _mutedUi;
 
-    public VoiceChatRestrictionsTweak(IPlayerService playerService, AssetConfiguration assetConfiguration, TranslationInjection<ModerationTranslations> translations)
+    public VoiceChatRestrictionsTweak(IPlayerService playerService)
     {
         _playerService = playerService;
-        _translations = translations.Value;
+        //_translations = translations.Value;
 
-        _mutedUi = assetConfiguration.GetAssetLink<EffectAsset>("UI:MutedUI");
+        //_mutedUi = assetConfiguration.GetAssetLink<EffectAsset>("UI:MutedUI");
     }
 
     /// <inheritdoc />
@@ -56,10 +56,10 @@ internal sealed class VoiceChatRestrictionsTweak : IHostedService
                 continue;
 
             // clear UI after one second of not talking
-            if (_mutedUi.TryGetId(out ushort id))
-            {
-                EffectManager.askEffectClearByID(id, player.Connection);
-            }
+            //if (_mutedUi.TryGetId(out ushort id))
+            //{
+            //    EffectManager.askEffectClearByID(id, player.Connection);
+            //}
 
             component.LastMuteUI = -1f;
         }
@@ -89,19 +89,19 @@ internal sealed class VoiceChatRestrictionsTweak : IHostedService
 
         if (isMuted)
         {
-            if (_mutedUi.TryGetId(out ushort id))
-            {
-                EffectManager.sendUIEffect(id, -1, speaker.channel.owner.transportConnection, reliable: true, _translations.MutedUI.Translate(player));
-            }
+            //if (_mutedUi.TryGetId(out ushort id))
+            //{
+            //    EffectManager.sendUIEffect(id, -1, speaker.channel.owner.transportConnection, reliable: true, _translations.MutedUI.Translate(player));
+            //}
 
             comp.LastMuteUI = Time.realtimeSinceStartup;
         }
         else
         {
-            if (_mutedUi.TryGetId(out ushort id))
-            {
-                EffectManager.askEffectClearByID(id, speaker.channel.owner.transportConnection);
-            }
+            //if (_mutedUi.TryGetId(out ushort id))
+            //{
+            //    EffectManager.askEffectClearByID(id, speaker.channel.owner.transportConnection);
+            //}
 
             comp.LastMuteUI = -1f;
         }

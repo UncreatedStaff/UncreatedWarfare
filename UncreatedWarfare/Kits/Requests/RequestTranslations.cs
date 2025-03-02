@@ -279,7 +279,7 @@ public class RequestKitsTranslations : PropertiesTranslationCollection
     public readonly Translation<int, Class> RequestKitClassLimited = new Translation<int, Class>("Too many players (<#d9e882>{0}</color>) on your team are using <#cedcde>{1}</color> kits", arg1Fmt: UppercaseAddon.Instance);
 
     [TranslationData("Sent when a player tries to request a kit but they have to be a Squad Leader.")]
-    public readonly Translation RequestKitNotSquadleader = new Translation("You must be the leader of a squad in order to request a <#cedcde>SQUAD LEADER</color> kit.");
+    public readonly Translation RequestKitNotSquadleader = new Translation("You must be the leader of a squad in order to request a <#cedcde>SQUAD LEADER</color> kit");
 
     [TranslationData("Sent when a player tries to request a kit but it's already equipped.")]
     public readonly Translation AlreadyEquipped = new Translation("Kit already equipped. Use /ammo to refill your kit");
@@ -291,7 +291,7 @@ public class RequestKitsTranslations : PropertiesTranslationCollection
     public readonly Translation<Cooldown> OnCooldown = new Translation<Cooldown>("Premium kit on cooldown for another <#bafeff>{0}</color>", arg0Fmt: Cooldown.FormatTimeShort);
 
     [TranslationData("Sent when a player tries to request a premium kit that requires boosting in Discord but they aren't.")]
-    public readonly Translation<Cooldown> RequiresNitroBoost = new Translation<Cooldown>("Requires <#e00ec9>NITRO BOOST</color> in <#7483c4>Discord</color>", arg0Fmt: Cooldown.FormatTimeShort);
+    public readonly Translation RequiresNitroBoost = new Translation("Requires <#e00ec9>NITRO BOOST</color> in <#7483c4>Discord</color>");
     
     [TranslationData("Sent when a player successfully purchases a kit.")]
     public readonly Translation<Kit, int> KitPurchaseSuccess = new Translation<Kit, int>("<#f3e2b4>You have successfully purchased kit <#ffffff>{0}</color> for <#b8ffc1>C</color> <#ffffff>{1}</color> credits.");

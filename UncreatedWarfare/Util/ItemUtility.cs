@@ -500,6 +500,50 @@ public static class ItemUtility
     }
 
     /// <summary>
+    /// Property clean up and replicate destroying (taking) a dropped item.
+    /// </summary>
+    /// <exception cref="ArgumentNullException"/>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
+    public static bool DestroyDroppedItem(Item item, bool despawned, bool playTakeItemSound = false)
+    {
+        if (item == null)
+            throw new ArgumentNullException(nameof(item));
+
+        GameThread.AssertCurrent();
+
+        ItemInfo itemInfo = FindItem(item);
+
+        if (!itemInfo.HasValue)
+            return false;
+
+        RegionCoord region = itemInfo.Coord;
+        RemoveDroppedItemUnsafe(region.x, region.y, itemInfo.Index, despawned, CSteamID.Nil, playTakeItemSound, 0, 0, 0, 0);
+        return true;
+    }
+
+    /// <summary>
+    /// Property clean up and replicate destroying (taking) a dropped item that was picked up by a player.
+    /// </summary>
+    /// <exception cref="ArgumentNullException"/>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
+    public static bool DestroyDroppedItem(Item item, bool despawned, WarfarePlayer pickUpPlayer, Page pickupPage = (Page)byte.MaxValue, byte pickupX = 0, byte pickupY = 0, byte pickupRot = 0, bool playTakeItemSound = false)
+    {
+        if (item == null)
+            throw new ArgumentNullException(nameof(item));
+
+        GameThread.AssertCurrent();
+
+        ItemInfo itemInfo = FindItem(item);
+
+        if (!itemInfo.HasValue)
+            return false;
+
+        RegionCoord region = itemInfo.Coord;
+        RemoveDroppedItemUnsafe(region.x, region.y, itemInfo.Index, despawned, despawned ? CSteamID.Nil : pickUpPlayer.Steam64, playTakeItemSound, pickupPage, pickupX, pickupY, pickupRot);
+        return true;
+    }
+
+    /// <summary>
     /// Property clean up and replicate destroying (taking) a dropped item that was picked up by a player.
     /// </summary>
     /// <exception cref="ArgumentNullException"/>
@@ -1312,6 +1356,29 @@ public static class ItemUtility
     }
 
     /// <summary>
+    /// Find a item by it's <see cref="Item"/> instance.
+    /// </summary>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
+    [Pure]
+    public static ItemInfo FindItem(Item item)
+    {
+        return FindItem(item, (byte)(Regions.WORLD_SIZE / 2), (byte)(Regions.WORLD_SIZE / 2));
+    }
+
+    /// <summary>
+    /// Find a item by it's <see cref="Item"/> instance, with help from a position to prevent having to search every region.
+    /// </summary>
+    /// <remarks>All regions will be searched if it's not found near the expected position.</remarks>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
+    [Pure]
+    public static ItemInfo FindItem(Item item, Vector3 expectedPosition)
+    {
+        return Regions.tryGetCoordinate(expectedPosition, out byte x, out byte y)
+            ? FindItem(item, x, y)
+            : FindItem(item, (byte)(Regions.WORLD_SIZE / 2), (byte)(Regions.WORLD_SIZE / 2));
+    }
+
+    /// <summary>
     /// Find a item by it's instance ID, with help from an expected region to prevent having to search every region.
     /// </summary>
     /// <remarks>All regions will be searched if it's not found in the expected region.</remarks>
@@ -1329,6 +1396,31 @@ public static class ItemUtility
             for (int i = 0; i < region.items.Count; ++i)
             {
                 if (region.items[i].instanceID == instanceId)
+                    return new ItemInfo(region.items[i], i, coord);
+            }
+        }
+
+        return new ItemInfo(null, -1, new RegionCoord(expectedRegionX, expectedRegionY));
+    }
+
+    /// <summary>
+    /// Find a item by it's <see cref="Item"/> instance, with help from an expected region to prevent having to search every region.
+    /// </summary>
+    /// <remarks>All regions will be searched if it's not found in the expected region.</remarks>
+    /// <exception cref="GameThreadException">Not on main thread.</exception>
+    [Pure]
+    public static ItemInfo FindItem(Item item, byte expectedRegionX, byte expectedRegionY)
+    {
+        GameThread.AssertCurrent();
+
+        SurroundingRegionsIterator iterator = RegionUtility.EnumerateRegions(expectedRegionX, expectedRegionY);
+        while (iterator.MoveNext())
+        {
+            RegionCoord coord = iterator.Current;
+            ItemRegion region = ItemManager.regions[coord.x, coord.y];
+            for (int i = 0; i < region.items.Count; ++i)
+            {
+                if (region.items[i].item == item)
                     return new ItemInfo(region.items[i], i, coord);
             }
         }

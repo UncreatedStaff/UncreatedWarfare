@@ -1,24 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+using System;
 using Uncreated.Warfare.Events.Models;
-using Uncreated.Warfare.Events.Models.Items;
 using Uncreated.Warfare.Events.Models.Squads;
-using Uncreated.Warfare.Models.Kits;
-using Uncreated.Warfare.Teams;
-using Uncreated.Warfare.Translations.Languages;
+using Uncreated.Warfare.Kits.Requests;
 
 namespace Uncreated.Warfare.Kits.Tweaks;
 
 internal sealed class KitGiveDefaultOnLeaveSquadKit : IAsyncEventListener<SquadMemberLeft>
 {
-    private readonly KitBestowService _kitBestowService;
-    private readonly IKitDataStore _kitDataStore;
+    private readonly KitRequestService _kitRequestService;
 
-    public KitGiveDefaultOnLeaveSquadKit(KitBestowService kitBestowService, IKitDataStore kitDataStore)
+    public KitGiveDefaultOnLeaveSquadKit(KitRequestService kitRequestService)
     {
-        _kitBestowService = kitBestowService;
-        _kitDataStore = kitDataStore;
+        _kitRequestService = kitRequestService;
     }
     public async UniTask HandleEventAsync(SquadMemberLeft e, IServiceProvider serviceProvider, CancellationToken token = default)
     {
@@ -26,24 +19,6 @@ internal sealed class KitGiveDefaultOnLeaveSquadKit : IAsyncEventListener<SquadM
         if (!kitPlayerComponent.HasKit || kitPlayerComponent.ActiveClass == Class.Unarmed)
             return;
 
-        Kit? riflemanKit = await _kitDataStore.QueryKitAsync(
-            KitInclude.Base, kits => kits.Where(
-                x => x.Type == KitType.Public
-                     && x.PremiumCost == 0
-                     && !x.RequiresNitro
-                     && !x.Disabled
-                     && x.FactionId == e.Player.Team.Faction.PrimaryKey
-                     && x.Id.EndsWith("rif1")), token); // convention for default rifleman kit ends with "rif1" e.g. usrif1token);
-            
-        if (riflemanKit == null)
-            return;
-        
-        await UniTask.SwitchToMainThread(token);
-        
-        _kitBestowService.BestowKit(e.Player, new KitBestowData(riflemanKit)
-        {
-            Silent = true,
-            IsLowAmmo = true
-        });
+        await _kitRequestService.GiveAvailableFreeKitAsync(e.Player, silent: true, isLowAmmo: true, token: token);
     }
 }

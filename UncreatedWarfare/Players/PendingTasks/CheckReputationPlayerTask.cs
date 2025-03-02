@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Stats;
@@ -22,7 +22,7 @@ internal class CheckReputationPlayerTask(IPointsStore pointsSql) : IPlayerPendin
         {
             PlayerSkills playerSkill = player.UnturnedPlayer.skills;
 
-            playerSkill.askRep(playerSkill.reputation - (int)Math.Round(_reputation));
+            playerSkill.askRep((int)Math.Round(_reputation) - playerSkill.reputation);
         }
         finally
         {

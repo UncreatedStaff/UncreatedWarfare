@@ -52,7 +52,7 @@ public class PlayerInjureComponent : MonoBehaviour,
     /// <summary>
     /// Number of seconds between each marker update.
     /// </summary>
-    private const float MarkerUpdateFrequency = 0.31f;
+    private const float MarkerUpdateFrequency = 0.66f;
 
     /// <summary>
     /// Maximum distance from which a medic or injured marker will render.
@@ -405,14 +405,29 @@ public class PlayerInjureComponent : MonoBehaviour,
 
     private void ClearMedicIcons()
     {
-        if (_assetConfiguration.GetAssetLink<EffectAsset>("Effect:Medic").TryGetGuid(out Guid medicUi))
+        if (_assetConfiguration.GetAssetLink<EffectAsset>("Effects:Medic").TryGetGuid(out Guid medicUi))
             EffectManager.ClearEffectByGuid(medicUi, Player.Connection);
     }
 
     private IEnumerator SpawnMedicMarkersCoroutine()
     {
-        _assetConfiguration.GetAssetLink<EffectAsset>("Effect:Medic").TryGetAsset(out EffectAsset? medicAsset);
-        _assetConfiguration.GetAssetLink<EffectAsset>("Effect:Injured").TryGetAsset(out EffectAsset? injuredAsset);
+        float time = Time.realtimeSinceStartup;
+        float targetTime = MathF.Ceiling(time / MarkerUpdateFrequency) * MarkerUpdateFrequency;
+
+        // skip to nearest MarkerUpdateFrequency so all markers blink together
+        targetTime -= time;
+        if (targetTime > 0.001f)
+        {
+            yield return new WaitForSecondsRealtime(targetTime);
+        }
+
+        _assetConfiguration.GetAssetLink<EffectAsset>("Effects:Medic").TryGetAsset(out EffectAsset? medicAsset);
+        _assetConfiguration.GetAssetLink<EffectAsset>("Effects:Injured").TryGetAsset(out EffectAsset? injuredAsset);
+
+        if (medicAsset == null)
+            _logger.LogWarning("Medic effect not found.");
+        if (injuredAsset == null)
+            _logger.LogWarning("Injure effect not found.");
 
         while (_isInjured)
         {
@@ -438,7 +453,7 @@ public class PlayerInjureComponent : MonoBehaviour,
 
             if (injuredAsset != null)
                 EffectUtility.TriggerEffect(injuredAsset, medicList, position, true);
-
+            
             yield return new WaitForSeconds(MarkerUpdateFrequency);
         }
     }

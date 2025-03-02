@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Addons;
@@ -28,10 +28,10 @@ public class VehicleBayCommandTranslations : PropertiesTranslationCollection
     public readonly Translation<VehicleAsset> SpawnAlreadyRegistered = new Translation<VehicleAsset>("<#ff8c69>This spawn is already registered to a {0}.", arg0Fmt: RarityColorAddon.Instance);
 
     [TranslationData("Sent after a spawner is linked to a vehicle type.", IsPriorityTranslation = false)]
-    public readonly Translation<string, VehicleAsset> SpawnRegistered = new Translation<string, VehicleAsset>("<#a0ad8e>Successfully registered spawn '{0}'. {1} will spawn here.", arg0Fmt: new ArgumentFormat(PluralAddon.Always(), RarityColorAddon.Instance));
+    public readonly Translation<string, VehicleAsset> SpawnRegistered = new Translation<string, VehicleAsset>("<#a0ad8e>Successfully registered spawn '{0}'. {1} will spawn here.", arg1Fmt: new ArgumentFormat(PluralAddon.Always(), RarityColorAddon.Instance));
     
     [TranslationData("Sent after a spawner is unlinked from a vehicle type.", IsPriorityTranslation = false)]
-    public readonly Translation<string, VehicleAsset> SpawnDeregistered = new Translation<string, VehicleAsset>("<#a0ad8e>Successfully deregistered spawn '{0}'. {1} will no longer spawn here.", arg0Fmt: new ArgumentFormat(PluralAddon.Always(), RarityColorAddon.Instance));
+    public readonly Translation<string, VehicleAsset> SpawnDeregistered = new Translation<string, VehicleAsset>("<#a0ad8e>Successfully deregistered spawn '{0}'. {1} will no longer spawn here.", arg1Fmt: new ArgumentFormat(PluralAddon.Always(), RarityColorAddon.Instance));
 
     [TranslationData("Sent when a player tries to deregister a spawner that isn't registered.", IsPriorityTranslation = false)]
     public readonly Translation SpawnNotRegistered = new Translation("<#ff8c69>This vehicle bay is not registered.");

@@ -114,8 +114,8 @@ public class ModerationTranslations : PropertiesTranslationCollection
     public readonly Translation<IPlayer> BattlEyeKickBroadcast = new Translation<IPlayer>("<#00ffff><#d8addb>{0}</color> was kicked by <#feed00>BattlEye</color>.", arg0Fmt: WarfarePlayer.FormatPlayerName);
 
 
-    [TranslationData("Text on the mute notification UI that shows up next to the voice chat icon.")]
-    public readonly Translation MutedUI = new Translation("MUTED", TranslationOptions.TMProUI);
+    //[TranslationData("Text on the mute notification UI that shows up next to the voice chat icon.")]
+    //public readonly Translation MutedUI = new Translation("MUTED", TranslationOptions.TMProUI);
 
     [TranslationData("Text on the UI that lets staff know they're on duty.", IsPriorityTranslation = false)]
     public readonly Translation OnDutyUI = new Translation("ON <#aaf>DUTY</color>", TranslationOptions.TMProUI);

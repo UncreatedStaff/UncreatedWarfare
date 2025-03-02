@@ -129,6 +129,8 @@ public class AudioRecordManager : IHostedService
     {
         player.Component<AudioRecordPlayerComponent>().HasPressedDeny = true;
         _logger.LogInformation($"Player {player} denied the voice chat recording agreement.");
+        if (player.UnturnedPlayer.voice.GetCustomAllowTalking())
+            player.UnturnedPlayer.voice.ServerSetPermissions(player.UnturnedPlayer.voice.GetAllowTalkingWhileDead(), false);
     }
 
     private void AcceptPressed(WarfarePlayer player, int button, in ToastMessage message, ref bool consume, ref bool closewindow)
@@ -136,6 +138,11 @@ public class AudioRecordManager : IHostedService
         player.Component<AudioRecordPlayerComponent>().HasPressedDeny = false;
         player.Save.HasSeenVoiceChatNotice = true;
         player.Save.Save();
+
+        if (!player.Component<PlayerModerationCacheComponent>().IsMuted() && !player.UnturnedPlayer.voice.GetCustomAllowTalking())
+        {
+            player.UnturnedPlayer.voice.ServerSetPermissions(player.UnturnedPlayer.voice.GetAllowTalkingWhileDead(), true);
+        }
 
         _logger.LogInformation($"Player {player} accepted the voice chat recording agreement.");
     }
