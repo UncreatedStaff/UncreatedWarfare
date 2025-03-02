@@ -5,6 +5,7 @@ using System.Collections.ObjectModel;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.FOBs.SupplyCrates;
+using Uncreated.Warfare.FOBs.SupplyCrates.Throwable;
 using Uncreated.Warfare.FOBs.SupplyCrates.VehicleResupply;
 
 namespace Uncreated.Warfare.Fobs;
@@ -15,9 +16,8 @@ namespace Uncreated.Warfare.Fobs;
 public sealed class FobConfiguration : BaseAlternateConfigurationFile
 {
     public IReadOnlyList<SupplyCrateInfo> SupplyCrates { get; private set; } = null!;
-
-    public IReadOnlyList<VehicleSupplyCrateInfo> VehicleOrdinanceCrates { get; private set; } = null!;
-
+    public IReadOnlyList<ThrownAmmoBagInfo> ThrowableAmmoBags { get; private set; } = null!;
+    public IReadOnlyList<ThrownVehicleCrateInfo> ThrowableVehicleSupplyCrates { get; private set; } = null!;
     public IReadOnlyList<ShovelableInfo> Shovelables { get; private set; } = null!;
 
     /// <summary>
@@ -39,14 +39,22 @@ public sealed class FobConfiguration : BaseAlternateConfigurationFile
         });
         SupplyCrates = new ReadOnlyCollection<SupplyCrateInfo>((IList<SupplyCrateInfo>?)supplyCrates ?? Array.Empty<SupplyCrateInfo>());
 
-        List<VehicleSupplyCrateInfo>? vehicleCrates = UnderlyingConfiguration.GetSection("VehicleOrdinanceCrates").Get<List<VehicleSupplyCrateInfo>>();
+        List<ThrownVehicleCrateInfo>? vehicleCrates = UnderlyingConfiguration.GetSection("ThrowableVehicleSupplyCrates").Get<List<ThrownVehicleCrateInfo>>();
         vehicleCrates?.ForEach(crate =>
         {
-            crate.SupplyItemAsset ??= AssetLink.Empty<ItemAsset>();
+            crate.ThrowableItemAsset ??= AssetLink.Empty<ItemAsset>();
             crate.ResupplyEffect ??= AssetLink.Empty<EffectAsset>();
         });
-        VehicleOrdinanceCrates = new ReadOnlyCollection<VehicleSupplyCrateInfo>((IList<VehicleSupplyCrateInfo>?)vehicleCrates ?? Array.Empty<VehicleSupplyCrateInfo>());
+        ThrowableVehicleSupplyCrates = new ReadOnlyCollection<ThrownVehicleCrateInfo>((IList<ThrownVehicleCrateInfo>?)vehicleCrates ?? Array.Empty<ThrownVehicleCrateInfo>());
 
+        List<ThrownAmmoBagInfo>? ammoBags = UnderlyingConfiguration.GetSection("ThrowableAmmoBags").Get<List<ThrownAmmoBagInfo>>();
+        ammoBags?.ForEach(crate =>
+        {
+            crate.ThrowableItemAsset ??= AssetLink.Empty<ItemAsset>();
+            crate.AmmoBagBarricadeAsset ??= AssetLink.Empty<ItemBarricadeAsset>();
+        });
+        ThrowableAmmoBags = new ReadOnlyCollection<ThrownAmmoBagInfo>((IList<ThrownAmmoBagInfo>?)ammoBags ?? Array.Empty<ThrownAmmoBagInfo>());
+        
         List<ShovelableInfo>? shovelables = UnderlyingConfiguration.GetSection("Shovelables").Get<List<ShovelableInfo>>();
         shovelables?.ForEach(info =>
         {

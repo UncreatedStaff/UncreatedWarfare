@@ -250,19 +250,6 @@ public partial class FobManager :
             );
             return;
         }
-        
-        VehicleSupplyCrateInfo? vehicleSupplyCrate = Configuration.VehicleOrdinanceCrates.FirstOrDefault(s => s.SupplyItemAsset.MatchAsset(asset));
-
-        if (vehicleSupplyCrate != null)
-        {
-            new VehicleSupplyCrate(
-                e.DroppedItem,
-                e.Player.Position,
-                e.Player,
-                vehicleSupplyCrate.ResupplyEffect.GetAssetOrFail(),
-                serviceProvider
-            );
-        }
     }
 
     void IEventListener<VehicleSpawned>.HandleEvent(VehicleSpawned e, IServiceProvider serviceProvider)
