@@ -7,6 +7,7 @@ using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.ItemTracking;
 using Uncreated.Warfare.Players.Skillsets;
 using Uncreated.Warfare.Players.UI;
+using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Inventory;
@@ -127,6 +128,7 @@ public class KitBestowService
         public Team RequestingTeam { get; }
 
         public bool Silent { get; }
+        public bool RefillAmmoBags { get; }
 
         public BestowKitGiveItemsState(in KitBestowData data, WarfarePlayer requester)
         {
@@ -137,6 +139,7 @@ public class KitBestowService
                 _options |= BestowKitOptions.Silent;
             if (data.RestockOnly)
                 _options |= BestowKitOptions.IsRestock;
+            RefillAmmoBags = data.RefillAmmoBags;
             _layoutTransformations = data.Layouts ?? Array.Empty<KitLayoutTransformation>();
             _itemCountsTable = (_options & BestowKitOptions.LowAmmo) != 0 ? new List<KeyValuePair<Guid, int>>(16) : null;
 
@@ -155,6 +158,9 @@ public class KitBestowService
 
         public bool ShouldGrantItem(IPageItem item, ref KitItemResolutionResult resolvedItem, ref byte x, ref byte y, ref Page page, ref byte rotation)
         {
+            if (!RefillAmmoBags && item is IRedirectedItem {Item: RedirectType.AmmoBag})
+                return false;
+            
             if (_pendingTransformation.NewX != byte.MaxValue)
                 _pendingTransformation = NullItemTransformation;
 
@@ -294,6 +300,7 @@ public readonly struct KitBestowData
     public IReadOnlyList<KitLayoutTransformation>? Layouts { get; }
     public bool IsLowAmmo { get; init; }
     public bool Silent { get; init; }
+    public bool RefillAmmoBags { get; init; } = true;
     internal bool RestockOnly { get; init; }
     public KitBestowData(Kit kit) : this(kit, null) { }
     internal KitBestowData(Kit kit, IReadOnlyList<KitLayoutTransformation>? layouts)
@@ -307,7 +314,9 @@ public readonly struct KitBestowData
         return new KitBestowData(Kit, layouts)
         {
             IsLowAmmo = IsLowAmmo,
-            Silent = Silent
+            Silent = Silent,
+            RestockOnly = RestockOnly,
+            RefillAmmoBags = RefillAmmoBags
         };
     }
 }
