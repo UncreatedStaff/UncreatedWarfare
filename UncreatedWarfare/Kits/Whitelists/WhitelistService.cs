@@ -164,6 +164,7 @@ public class WhitelistService :
             return whitelist.Amount <= 0 ? -1 : whitelist.Amount;
         }
 
+        int amt = 0;
         foreach (IWhitelistExceptionProvider provider in _module.ScopedProvider.Resolve<IEnumerable<IWhitelistExceptionProvider>>())
         {
             if (!GameThread.IsCurrent)
@@ -171,12 +172,14 @@ public class WhitelistService :
                 await UniTask.SwitchToMainThread(token);
             }
 
-            int amt = await provider.GetWhitelistAmount(assetContainer).ConfigureAwait(false);
-            if (amt != 0)
-                return amt < 0 ? -1 : amt;
+            int amtNum = await provider.GetWhitelistAmount(assetContainer).ConfigureAwait(false);
+            if (amtNum < 0)
+                return -1;
+
+            amt += amtNum;
         }
 
-        return 0;
+        return amt;
     }
 
     /// <summary>
@@ -487,12 +490,12 @@ public class WhitelistService :
             if (whitelistAmount == 0)
             {
                 e.Cancel();
-                _chatService.Send(e.Player, _translations.WhitelistProhibitedPlace, e.Asset);
+                _chatService.Send(e.Player, _translations.WhitelistProhibitedPickup, e.Asset);
             }
             else
             {
                 e.Cancel();
-                _chatService.Send(e.Player, _translations.WhitelistProhibitedPlaceAmt, maximumItems, e.Asset);
+                _chatService.Send(e.Player, _translations.WhitelistProhibitedPickupAmt, maximumItems, e.Asset);
             }
         }
     }

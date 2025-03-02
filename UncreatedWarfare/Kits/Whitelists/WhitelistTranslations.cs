@@ -58,9 +58,9 @@ public class WhitelistTranslations : PropertiesTranslationCollection
     );
 
     [TranslationData("Sent to a player when they try to pick up an un-whitelisted item that isn't in their kit or when they have too many of the item already in their inventory.")]
-    public readonly Translation<ItemAsset> WhitelistProhibitedPickupAmt = new Translation<ItemAsset>(
-        "<#ff8c69>You can't carry any more {0}.",
-        arg0Fmt: new ArgumentFormat(PluralAddon.Always(), RarityColorAddon.Instance)
+    public readonly Translation<int, ItemAsset> WhitelistProhibitedPickupAmt = new Translation<int, ItemAsset>(
+        "<#ff8c69>You can't carry more than {0} {1}.",
+        arg1Fmt: new ArgumentFormat(PluralAddon.WhenArgument(0), RarityColorAddon.Instance)
     );
 
     [TranslationData("Sent to a player when they try to place an un-whitelisted placeable that isn't in their kit.")]

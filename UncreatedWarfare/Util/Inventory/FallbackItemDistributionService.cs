@@ -305,6 +305,7 @@ public class FallbackItemDistributionService : IItemDistributionService
                 continue;
 
             KitItemResolutionResult result = _itemResolver.ResolveKitItem(pageItem, stateKit, stateTeam);
+            // find item position
             if (!itemTracking.TryGetCurrentItemPosition(pageItem.Page, pageItem.X, pageItem.Y, out Page page, out byte x, out byte y, out bool isDropped, out Item? itemInstance))
             {
                 x = pageItem.X;
@@ -314,6 +315,10 @@ public class FallbackItemDistributionService : IItemDistributionService
 
             if (isDropped)
             {
+                // they dropped the item, this is hard to deal with so just despawn it and itll be re-added later.
+                if (itemInstance != null)
+                    ItemUtility.DestroyDroppedItem(itemInstance, true);
+                leftoverItems.Add((item, result));
                 continue;
             }
 
@@ -383,9 +388,11 @@ public class FallbackItemDistributionService : IItemDistributionService
 
     private static void RestockItem(PlayerEquipment equipment, PlayerInventory inventory, Page page, byte x, byte y, ItemJar jar, in KitItemResolutionResult result, ref int ct)
     {
+        // equipped items need to use a different method to update.
         bool equipped = equipment.checkSelection((byte)page, x, y);
         bool hasIncremented = false;
 
+        // amount
         if (jar.item.amount < result.Amount)
         {
             ++ct;
@@ -393,6 +400,7 @@ public class FallbackItemDistributionService : IItemDistributionService
             inventory.sendUpdateAmount((byte)page, x, y, result.Amount);
         }
 
+        // quality
         if (jar.item.quality < result.Quality)
         {
             if (!hasIncremented)
@@ -412,6 +420,7 @@ public class FallbackItemDistributionService : IItemDistributionService
             }
         }
 
+        // if state is already up to date
         if (jar.item.state.Length == 0
             || jar.item.state.Length != result.State.Length
             || jar.item.state.SequenceEqual(result.State)
@@ -422,9 +431,11 @@ public class FallbackItemDistributionService : IItemDistributionService
 
         if (result.Asset is ItemGunAsset)
         {
+            // refill ammo
             if (Assets.find(EAssetType.ITEM, BitConverter.ToUInt16(jar.item.state, (int)AttachmentType.Magazine)) is ItemMagazineAsset mag)
                 jar.item.state[10] = mag.amount;
 
+            // attachment durabilities
             jar.item.state[13] = 100;
             jar.item.state[14] = 100;
             jar.item.state[15] = 100;
@@ -433,6 +444,7 @@ public class FallbackItemDistributionService : IItemDistributionService
         }
         else
         {
+            // fix state for other items
             Buffer.BlockCopy(result.State, 0, jar.item.state, 0, result.State.Length);
         }
 

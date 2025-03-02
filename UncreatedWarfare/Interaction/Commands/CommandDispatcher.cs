@@ -347,7 +347,7 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
             {
                 for (int i = cmd.WaitTasks.Count - 1; i >= 0; --i)
                 {
-                    CommandWaitTask task = command.WaitTasks[i];
+                    CommandWaitTask task = cmd.WaitTasks[i];
                     if ((task.Options & CommandWaitOptions.AbortOnOtherCommandExecuted) == 0 || task.User != null && !task.User.Equals(user) || foundTasks != null && foundTasks.Contains(task))
                         continue;
 

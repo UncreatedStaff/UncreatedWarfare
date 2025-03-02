@@ -18,7 +18,7 @@ public class WarfareLifetimeComponent : MonoBehaviour
     private const float TimeBetweenNextGameWarnings = 120f;
 
     private WarfareModule _module = null!;
-    private ShutdownTranslations _shutdownTranslations = null!;
+    private ShutdownTranslations? _shutdownTranslations;
     private ChatService _chatService = null!;
     private float _shutdownTime = -1f;
     private float _lastLayoutShutdownWarning;
@@ -30,6 +30,7 @@ public class WarfareLifetimeComponent : MonoBehaviour
     public DateTime ShutdownTime { get; private set; }
     public string? ShutdownReason { get; private set; }
 
+    // todo: start throws an error
     [UsedImplicitly]
     private void Awake()
     {
@@ -39,13 +40,12 @@ public class WarfareLifetimeComponent : MonoBehaviour
     [UsedImplicitly]
     private void Update()
     {
-        if (_chatService == null || _shutdownTranslations == null)
+        if (_chatService == null)
         {
             if (_module.ServiceProvider == null)
                 return;
 
             _chatService = _module.ServiceProvider.Resolve<ChatService>();
-            _shutdownTranslations = _module.ServiceProvider.Resolve<TranslationInjection<ShutdownTranslations>>().Value;
         }
 
         if (_shutdownTime < 0)
@@ -64,9 +64,16 @@ public class WarfareLifetimeComponent : MonoBehaviour
         }
         else if (QueuedShutdownType == ShutdownMode.OnLayoutEnd && rt - _lastLayoutShutdownWarning > TimeBetweenNextGameWarnings)
         {
-            _chatService.Broadcast(_shutdownTranslations.ShutdownBroadcastAfterGameReminder, ShutdownReason ?? DefaultShutdownReason, TimeSpan.FromSeconds(Math.Round((_shutdownTime - rt) / 5)) * 5);
+            CheckTranslations();
+            if (_shutdownTranslations != null)
+                _chatService.Broadcast(_shutdownTranslations.ShutdownBroadcastAfterGameReminder, ShutdownReason ?? DefaultShutdownReason, TimeSpan.FromSeconds(Math.Round((_shutdownTime - rt) / 5)) * 5);
             _lastLayoutShutdownWarning = rt;
         }
+    }
+
+    private void CheckTranslations()
+    {
+        _shutdownTranslations ??= _module.ServiceProvider?.Resolve<TranslationInjection<ShutdownTranslations>>().Value;
     }
 
     private static void FixShutdownReason(ref string? shutdownReason)
@@ -77,7 +84,9 @@ public class WarfareLifetimeComponent : MonoBehaviour
 
     private void SendShutdownStep()
     {
-        _chatService.Broadcast(_shutdownTranslations.ShutdownBroadcastTimeReminder, TimeSpan.FromSeconds(_shutdownSteps[_shutdownStep]), ShutdownReason ?? DefaultShutdownReason);
+        CheckTranslations();
+        if (_shutdownTranslations != null)
+            _chatService.Broadcast(_shutdownTranslations.ShutdownBroadcastTimeReminder, TimeSpan.FromSeconds(_shutdownSteps[_shutdownStep]), ShutdownReason ?? DefaultShutdownReason);
     }
 
     [RpcSend]
@@ -146,7 +155,9 @@ public class WarfareLifetimeComponent : MonoBehaviour
         _shutdownStep = GetPassedShutdownStep();
         UpdateShutdownState();
 
-        _chatService.Broadcast(_shutdownTranslations.ShutdownBroadcastTime, time, shutdownReason ?? DefaultShutdownReason);
+        CheckTranslations();
+        if (_shutdownTranslations != null)
+            _chatService.Broadcast(_shutdownTranslations.ShutdownBroadcastTime, time, shutdownReason ?? DefaultShutdownReason);
     }
 
     [RpcReceive]
@@ -163,7 +174,9 @@ public class WarfareLifetimeComponent : MonoBehaviour
         _shutdownStep = GetPassedShutdownStep();
         UpdateShutdownState();
 
-        _chatService.Broadcast(_shutdownTranslations.ShutdownBroadcastAfterGame, shutdownReason ?? DefaultShutdownReason, TimeSpan.FromHours(1d).Subtract(TimeSpan.FromSeconds(1d)));
+        CheckTranslations();
+        if (_shutdownTranslations != null)
+            _chatService.Broadcast(_shutdownTranslations.ShutdownBroadcastAfterGame, shutdownReason ?? DefaultShutdownReason, TimeSpan.FromHours(1d).Subtract(TimeSpan.FromSeconds(1d)));
         _lastLayoutShutdownWarning = Time.realtimeSinceStartup;
     }
 
@@ -180,7 +193,9 @@ public class WarfareLifetimeComponent : MonoBehaviour
         _shutdownStep = -1;
         UpdateShutdownState();
 
-        _chatService.Broadcast(_shutdownTranslations.ShutdownBroadcastCancelled);
+        CheckTranslations();
+        if (_shutdownTranslations != null)
+            _chatService.Broadcast(_shutdownTranslations.ShutdownBroadcastCancelled);
     }
 
     internal async Task NotifyShutdownNow(string? reason)

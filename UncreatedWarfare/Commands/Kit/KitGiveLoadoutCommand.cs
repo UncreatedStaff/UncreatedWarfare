@@ -36,7 +36,7 @@ internal sealed class KitGiveLoadoutCommand : IExecutableCommand
             if (!Context.HasArgs(1))
                 throw Context.SendHelp();
 
-            throw Context.Reply(_translations.ClassNotFound);
+            throw Context.Reply(_translations.ClassNotFound, Context.Get(0)!);
         }
 
         (_, WarfarePlayer? player) = await Context.TryGetPlayer(1).ConfigureAwait(false);

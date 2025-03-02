@@ -41,7 +41,7 @@ public class WarfareVehicleInfo : IEquatable<WarfareVehicleInfo>, ITranslationAr
     public IReadOnlyList<UnlockRequirement> UnlockRequirements { get; set; } = Array.Empty<UnlockRequirement>();
     public required int CreditCost { get; set; }
     public IReadOnlyList<TrunkItem> Trunk { get; set; } = Array.Empty<TrunkItem>();
-    public IReadOnlyList<RequestItem> RequestItems { get; set; } = Array.Empty<RequestItem>();
+
     public static void EnsureInitialized(WarfareVehicleInfo v)
     {
         v.VehicleAsset ??= AssetLink.Empty<VehicleAsset>();
@@ -52,9 +52,7 @@ public class WarfareVehicleInfo : IEquatable<WarfareVehicleInfo>, ITranslationAr
         v.Rearm ??= new RearmInfo();
 
         v.UnlockRequirements ??= Array.Empty<UnlockRequirement>();
-        v.CreditCost = 0;
         v.Trunk ??= Array.Empty<TrunkItem>();
-        v.RequestItems ??= Array.Empty<RequestItem>();
 
         v.Crew.Seats ??= Array.Empty<int>();
         v.Rearm.Items ??= Array.Empty<IAssetLink<ItemAsset>>();
@@ -113,8 +111,6 @@ public class WarfareVehicleInfo : IEquatable<WarfareVehicleInfo>, ITranslationAr
         TicketCost = other.TicketCost;
         RespawnTime = other.RespawnTime;
         Cooldown = other.Cooldown;
-
-        RequestItems = other.RequestItems;
 
         Crew.Seats = other.Crew.Seats;
         Crew.Invincible = other.Crew.Invincible;

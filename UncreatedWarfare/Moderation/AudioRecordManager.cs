@@ -23,7 +23,7 @@ public class AudioRecordManager : IHostedService
     private readonly ILogger<AudioRecordManager> _logger;
     private readonly IPlayerService _playerService;
     private readonly IConfiguration _sysConfig;
-    private readonly IAudioConverter _audioConverter;
+    private readonly IAudioConverter? _audioConverter;
     private readonly ModerationTranslations _moderationTranslations;
 
     private static AudioRecordManager? _instance;
@@ -35,8 +35,8 @@ public class AudioRecordManager : IHostedService
         ILogger<AudioRecordManager> logger,
         HarmonyPatchService patchService,
         IPlayerService playerService,
-        IAudioConverter audioConverter,
-        TranslationInjection<ModerationTranslations> moderationTranslations)
+        TranslationInjection<ModerationTranslations> moderationTranslations,
+        IAudioConverter? audioConverter = null)
     {
         _logger = logger;
         _playerService = playerService;
@@ -85,7 +85,7 @@ public class AudioRecordManager : IHostedService
     
     public Task<AudioConvertResult> ConvertVoiceAsync([InstantHandle] IEnumerable<ArraySegment<byte>> data, Stream stream, bool leaveOpen, CancellationToken token = default)
     {
-        if (_audioConverter.Enabled)
+        if (_audioConverter is { Enabled: true })
         {
             float volume = _sysConfig.GetValue("audio_recording:volume", 1.5f);
             return _audioConverter.ConvertAsync(stream, leaveOpen, data, volume, token);
@@ -99,7 +99,7 @@ public class AudioRecordManager : IHostedService
 
     private void OnRelayVoice(PlayerVoice speaker, bool wantsToUseWalkieTalkie, ref bool shouldAllow, ref bool shouldBroadcastOverRadio, ref PlayerVoice.RelayVoiceCullingHandler cullingHandler)
     {
-        if (!_audioConverter.Enabled)
+        if (_audioConverter is not { Enabled: true })
             return;
 
         WarfarePlayer player = _playerService.GetOnlinePlayer(speaker);
@@ -129,6 +129,8 @@ public class AudioRecordManager : IHostedService
     {
         player.Component<AudioRecordPlayerComponent>().HasPressedDeny = true;
         _logger.LogInformation($"Player {player} denied the voice chat recording agreement.");
+        if (player.UnturnedPlayer.voice.GetCustomAllowTalking())
+            player.UnturnedPlayer.voice.ServerSetPermissions(player.UnturnedPlayer.voice.GetAllowTalkingWhileDead(), false);
     }
 
     private void AcceptPressed(WarfarePlayer player, int button, in ToastMessage message, ref bool consume, ref bool closewindow)
@@ -137,12 +139,17 @@ public class AudioRecordManager : IHostedService
         player.Save.HasSeenVoiceChatNotice = true;
         player.Save.Save();
 
+        if (!player.Component<PlayerModerationCacheComponent>().IsMuted() && !player.UnturnedPlayer.voice.GetCustomAllowTalking())
+        {
+            player.UnturnedPlayer.voice.ServerSetPermissions(player.UnturnedPlayer.voice.GetAllowTalkingWhileDead(), true);
+        }
+
         _logger.LogInformation($"Player {player} accepted the voice chat recording agreement.");
     }
 
     private static void OnVoiceActivity(PlayerVoice voice, ArraySegment<byte> data)
     {
-        if (_instance == null || !_instance._audioConverter.Enabled)
+        if (_instance?._audioConverter == null || !_instance._audioConverter.Enabled)
             return;
 
         IPlayerService playerService = _instance._playerService;

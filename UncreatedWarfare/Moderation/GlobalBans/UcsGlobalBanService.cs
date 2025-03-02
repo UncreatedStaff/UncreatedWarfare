@@ -122,7 +122,7 @@ public class UcsGlobalBanService : IGlobalBanService, IEventListener<PlayerDied>
 
         // don't auto-kick for auto bans since Infected kinda spammed their entire ban list
         if (ban.TimeBanned <= AutomatedBanIgnoreThreshold
-            && ban.BanReason?.EndsWith("Take with grain of salt. Automated", StringComparison.Ordinal) is true)
+            && ban.BanReason?.Contains("Take with grain of salt. Automated", StringComparison.Ordinal) is true)
         {
             _moderationSql.SendSuspectedCheaterMessage(steam64, ban.Id);
             return default;

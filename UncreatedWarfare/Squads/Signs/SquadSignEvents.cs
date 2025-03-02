@@ -6,7 +6,9 @@ using Uncreated.Warfare.Events.Models.Squads;
 using Uncreated.Warfare.Interaction.Requests;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Signs;
+using Uncreated.Warfare.Squads.UI;
 
 namespace Uncreated.Warfare.Squads.Signs;
 
@@ -20,11 +22,13 @@ public class SquadSignEvents :
 {
     private readonly SignInstancer _signInstancer;
     private readonly SquadManager _squadManager;
+    private readonly SquadMenuUI _squadMenu;
 
-    public SquadSignEvents(SignInstancer signInstancer, SquadManager squadManager)
+    public SquadSignEvents(SignInstancer signInstancer, SquadManager squadManager, SquadMenuUI squadMenu)
     {
         _signInstancer = signInstancer;
         _squadManager = squadManager;
+        _squadMenu = squadMenu;
     }
 
     /// <inheritdoc />
@@ -42,14 +46,23 @@ public class SquadSignEvents :
         Squad? squad = _squadManager.Squads.FirstOrDefault(x => x.Team == requestable.Team && x.TeamIdentificationNumber == requestable.SquadNumber);
         if (squad == null || squad.Team != player.Team)
         {
-            resultHandler.NotFoundOrRegistered(player);
+            _squadMenu.OpenUI(player);
             return Task.FromResult(false);
         }
 
         if (squad.ContainsPlayer(player))
+        {
             squad.RemoveMember(player);
+        }
+        else if (player.IsInSquad())
+        {
+            _squadMenu.OpenUI(player);
+            return Task.FromResult(false);
+        }
         else
+        {
             squad.TryAddMember(player);
+        }
 
         return Task.FromResult(true);
     }

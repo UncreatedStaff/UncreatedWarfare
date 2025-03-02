@@ -11,6 +11,8 @@ namespace Uncreated.Warfare.Moderation;
 public class PlayerModerationCacheComponent : IPlayerComponent
 {
     private DatabaseInterface _moderationSql;
+    private Coroutine? _unmuteCoroutine;
+    private ILogger<PlayerModerationCacheComponent> _logger;
     public WarfarePlayer Player { get; private set; }
 
     public string? TextMuteReason { get; private set; }
@@ -26,6 +28,7 @@ public class PlayerModerationCacheComponent : IPlayerComponent
     void IPlayerComponent.Init(IServiceProvider serviceProvider, bool isOnJoin)
     {
         _moderationSql = serviceProvider.GetRequiredService<DatabaseInterface>();
+        _logger = serviceProvider.GetRequiredService<ILogger<PlayerModerationCacheComponent>>();
         Task.Run(async () =>
         {
             try
@@ -35,9 +38,14 @@ public class PlayerModerationCacheComponent : IPlayerComponent
             catch (OperationCanceledException)  { throw; }
             catch (Exception ex)
             {
-                serviceProvider.GetRequiredService<ILogger<PlayerModerationCacheComponent>>().LogError(ex, "Error fetching mute info.");
+                _logger.LogError(ex, "Error fetching mute info.");
             }
         });
+    }
+
+    public bool IsMuted()
+    {
+        return DateTime.UtcNow < VoiceMuteExpiryTime;
     }
 
     public async Task RefreshActiveMute()
@@ -51,18 +59,26 @@ public class PlayerModerationCacheComponent : IPlayerComponent
             await _moderationSql.GetHWIDs(Player.Steam64, token), detail: false, token: token,
             condition: $"`{DatabaseInterface.ColumnEntriesResolvedTimestamp}` IS NOT NULL");
 
+        TextMuteReason = null;
+        TextMuteType = MuteType.None;
+        TextMuteExpiryTime = default;
+        VoiceMuteReason = null;
+        VoiceMuteType = MuteType.None;
+        VoiceMuteExpiryTime = default;
         if (mutes.Length == 0)
         {
-            TextMuteReason = null;
-            TextMuteType = MuteType.None;
-            TextMuteExpiryTime = default;
-            VoiceMuteReason = null;
-            VoiceMuteType = MuteType.None;
-            VoiceMuteExpiryTime = default;
+            if (!Player.UnturnedPlayer.voice.GetCustomAllowTalking())
+            {
+                await UniTask.SwitchToMainThread(token);
+                if (Player.IsOnline)
+                    Player.UnturnedPlayer.voice.ServerSetPermissions(Player.UnturnedPlayer.voice.GetAllowTalkingWhileDead(), true);
+            }
             return;
         }
 
         MuteType handled = MuteType.None;
+
+        bool allowTalking = true;
 
         foreach (Mute mute in mutes.OrderByDescending(x => x.GetExpiryTimestamp(false)))
         {
@@ -104,6 +120,43 @@ public class PlayerModerationCacheComponent : IPlayerComponent
             if (handled == MuteType.Both)
                 break;
         }
+
+        await UniTask.SwitchToMainThread(CancellationToken.None);
+        if (!Player.IsOnline)
+            return;
+
+        allowTalking = Player.Save.HasSeenVoiceChatNotice && TextMuteExpiryTime < DateTime.UtcNow.AddSeconds(1d);
+        if (allowTalking != Player.UnturnedPlayer.voice.GetCustomAllowTalking())
+        {
+            Player.UnturnedPlayer.voice.ServerSetPermissions(Player.UnturnedPlayer.voice.GetAllowTalkingWhileDead(), allowTalking);
+        }
+
+        if (_unmuteCoroutine != null)
+        {
+            Player.UnturnedPlayer.StopCoroutine(_unmuteCoroutine);
+        }
+
+        if (!allowTalking && TextMuteExpiryTime < DateTime.MaxValue && Player.IsOnline)
+        {
+            Player.UnturnedPlayer.StartCoroutine(RecheckMute(TextMuteExpiryTime - DateTime.UtcNow));
+        }
+    }
+
+    private IEnumerator RecheckMute(TimeSpan waitTime)
+    {
+        yield return new WaitForSecondsRealtime((float)waitTime.TotalSeconds + 1);
+        Task.Run(async () =>
+        {
+            try
+            {
+                await RefreshActiveMute();
+            }
+            catch (OperationCanceledException) { throw; }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error re-fetching mute info.");
+            }
+        });
     }
 
     WarfarePlayer IPlayerComponent.Player { get => Player; set => Player = value; }

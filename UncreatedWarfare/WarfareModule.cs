@@ -709,6 +709,9 @@ public sealed class WarfareModule
         bldr.RegisterType<MySqlKitsDataStore>()
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
+        bldr.RegisterType<KitSettableRegistration>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
 
         bldr.RegisterType<MySqlKitFavoriteService>()
             .AsSelf().AsImplementedInterfaces()
@@ -894,6 +897,9 @@ public sealed class WarfareModule
         bldr.RegisterType<GuidedMissileLaunchTweaks>()
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+        bldr.RegisterType<QueueShutdownOnUnturnedUpdate>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
         bldr.RegisterType<VoiceChatRestrictionsTweak>()
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();

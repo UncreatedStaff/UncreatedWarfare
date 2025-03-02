@@ -257,13 +257,13 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
             }
 
             // cooldowns
-            if (_cooldownManager.HasCooldown(player, KnownCooldowns.RequestKit, out Cooldown requestCooldown) && kit.Class is not Class.Crewman and not Class.Pilot)
+            if (!player.IsOnDuty && _cooldownManager.HasCooldown(player, KnownCooldowns.RequestKit, out Cooldown requestCooldown) && kit.Class is not Class.Crewman and not Class.Pilot)
             {
                 resultHandler.MissingRequirement(player, kit, _kitReqTranslations.OnGlobalCooldown.Translate(requestCooldown, player));
                 return false;
             }
 
-            if (kit is { IsPaid: true, RequestCooldown.Ticks: > 0 } && _cooldownManager.HasCooldown(player, KnownCooldowns.RequestPremiumKit, out Cooldown premiumCooldown, kit.Id))
+            if (!player.IsOnDuty && kit is { IsPaid: true, RequestCooldown.Ticks: > 0 } && _cooldownManager.HasCooldown(player, KnownCooldowns.RequestPremiumKit, out Cooldown premiumCooldown, kit.Id))
             {
                 resultHandler.MissingRequirement(player, kit, _kitReqTranslations.OnCooldown.Translate(premiumCooldown, player));
                 return false;
@@ -310,7 +310,7 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
 
                         if (!nitroBoosting)
                         {
-                            resultHandler.MissingRequirement(player, kit, _kitReqTranslations.RequiresNitroBoost.Translate(requestCooldown, player));
+                            resultHandler.MissingRequirement(player, kit, _kitReqTranslations.RequiresNitroBoost.Translate(player));
                             return false;
                         }
                     }
@@ -430,7 +430,7 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         }
     }
 
-    public async Task<bool> GiveAvailableFreeKitAsync(WarfarePlayer player, bool silent = false, CancellationToken token = default)
+    public async Task<bool> GiveAvailableFreeKitAsync(WarfarePlayer player, bool silent = false, bool isLowAmmo = false, CancellationToken token = default)
     {
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
@@ -441,13 +441,14 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
                 Kit? defaultKit = await _kitDataStore.QueryKitAsync(DefaultKitId, KitInclude.Giveable, token);
                 if (defaultKit != null)
                 {
-                    await GiveKitIntlAsync(player, new KitBestowData(defaultKit) { Silent = silent }, false, token).ConfigureAwait(false);
+                    await GiveKitIntlAsync(player, new KitBestowData(defaultKit) { Silent = silent, IsLowAmmo = isLowAmmo }, false, token).ConfigureAwait(false);
                     return true;
                 }
             }
 
             ulong steam64 = player.Steam64.m_SteamID;
             List<uint> kits = await _kitDataStore.QueryListAsync(kits => kits
+                .OrderByDescending(x => x.Class == Class.Rifleman)
                 .Where(x => x.Type == KitType.Public
                             && x.Season == WarfareModule.Season
                             && x.PremiumCost == 0
@@ -469,7 +470,7 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
 
             if (kit != null)
             {
-                await GiveKitIntlAsync(player, new KitBestowData(kit) { Silent = silent }, false, token).ConfigureAwait(false);
+                await GiveKitIntlAsync(player, new KitBestowData(kit) { Silent = silent, IsLowAmmo = isLowAmmo }, false, token).ConfigureAwait(false);
                 return true;
             }
             else
@@ -577,6 +578,9 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         await GiveKitIntlAsync(player, new KitBestowData(kit) { IsLowAmmo = !player.Save.IsFirstLife }, true, token).ConfigureAwait(false);
 
         resultHandler.Success(player, kit);
+
+        if (player.IsOnDuty)
+            return;
 
         if (kit is { IsPaid: true, RequestCooldown.Ticks: > 0 })
         {

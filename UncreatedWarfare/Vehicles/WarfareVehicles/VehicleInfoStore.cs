@@ -7,14 +7,16 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using Uncreated.Framework.UI;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Kits.Whitelists;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Vehicles.WarfareVehicles;
 [Priority(-1 /* run before VehicleSpawnerStore */)]
-public class VehicleInfoStore : IHostedService, IDisposable, IUnlockRequirementProvider
+public class VehicleInfoStore : IHostedService, IDisposable, IUnlockRequirementProvider, IWhitelistExceptionProvider
 {
     private readonly WarfareModule _warfare;
     private readonly ILogger<VehicleInfoStore> _logger;
@@ -36,6 +38,22 @@ public class VehicleInfoStore : IHostedService, IDisposable, IUnlockRequirementP
         _logger = logger;
         _fileProvider = new PhysicalFileProvider(Path.Join(_warfare.HomeDirectory, "Vehicles"));
         Vehicles = new ReadOnlyCollection<WarfareVehicleInfo>(_vehicles);
+    }
+
+    /// <inheritdoc />
+    ValueTask<int> IWhitelistExceptionProvider.GetWhitelistAmount(IAssetContainer assetContainer)
+    {
+        int num = 0;
+        foreach (WarfareVehicleInfo vehicle in _vehicles)
+        {
+            foreach (IAssetLink<ItemAsset> item in vehicle.Rearm.Items)
+            {
+                if (item.MatchAsset(assetContainer))
+                    ++num;
+            }
+        }
+
+        return new ValueTask<int>(num);
     }
 
     /// <summary>

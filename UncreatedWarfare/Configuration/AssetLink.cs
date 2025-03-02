@@ -473,6 +473,26 @@ public static class AssetLink
     }
 
     /// <summary>
+    /// Compare an asset link to another asset link.
+    /// </summary>
+    public static bool MatchAsset(this IAssetLink<Asset>? link, IAssetContainer? container)
+    {
+        if (ReferenceEquals(link, container))
+            return true;
+
+        if (container == null || link == null)
+            return false;
+
+        if (container.Guid != Guid.Empty && link.Guid != Guid.Empty)
+            return link.Guid == container.Guid;
+
+        if (container.Id != 0 && link.Id != 0)
+            return link.Id == container.Id;
+
+        return container.Id == 0 && link.Id == 0 && container.Guid == Guid.Empty && link.Guid == Guid.Empty;
+    }
+
+    /// <summary>
     /// Compare an asset link to a short ID.
     /// </summary>
     public static bool MatchId(this IAssetLink<Asset>? link, ushort id)

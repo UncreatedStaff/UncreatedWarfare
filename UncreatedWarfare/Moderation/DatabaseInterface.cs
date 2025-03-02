@@ -1935,6 +1935,7 @@ public class DatabaseInterface : IHostedService
     public const string ColumnUserDataFirstJoined = "FirstJoined";
     public const string ColumnUserDataLastJoined = "LastJoined";
     public const string ColumnUserDataDiscordId = "DiscordId";
+    public const string ColumnUserDataLastPrivacyPolicyAccepted = "LastPrivacyPolicyAccepted";
     
     [Obsolete] public const string TableUsernames = "usernames";
     [Obsolete] public const string TableDiscordIds = "discordnames";

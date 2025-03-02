@@ -47,6 +47,10 @@ public class WarfareUserData
     [Column(DatabaseInterface.ColumnUserDataDiscordId)]
     public ulong DiscordId { get; set; }
 
+    /// <remarks>UTC</remarks>
+    [Column(DatabaseInterface.ColumnUserDataLastPrivacyPolicyAccepted)]
+    public DateTimeOffset? LastPrivacyPolicyAccepted { get; set; }
+
     public IList<PlayerHWID> HWIDs { get; set; }
     public IList<PlayerIPAddress> IPAddresses { get; set; }
 }

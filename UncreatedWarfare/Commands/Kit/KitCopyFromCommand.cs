@@ -7,6 +7,7 @@ using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Kits.Loadouts;
+using Uncreated.Warfare.Kits.Requests;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Localization;
@@ -27,12 +28,14 @@ internal sealed class KitCopyFromCommand : IExecutableCommand
     private readonly LoadoutService _loadoutService;
     private readonly LanguageService _languageService;
     private readonly ICachableLanguageDataStore _languageSql;
+    private readonly KitRequestService _kitRequestService;
 
     public required CommandContext Context { get; init; }
 
     public KitCopyFromCommand(IServiceProvider serviceProvider)
     {
         _languageService = serviceProvider.GetRequiredService<LanguageService>();
+        _kitRequestService = serviceProvider.GetRequiredService<KitRequestService>();
         _languageSql = serviceProvider.GetRequiredService<ICachableLanguageDataStore>();
         _kitDataStore = serviceProvider.GetRequiredService<IKitDataStore>();
         _translations = serviceProvider.GetRequiredService<TranslationInjection<KitCommandTranslations>>().Value;
@@ -112,6 +115,7 @@ internal sealed class KitCopyFromCommand : IExecutableCommand
         {
             KitItemModel model = new KitItemModel { KitId = kit.PrimaryKey };
             KitItemUtility.CreateKitItemModel(item, model);
+            model.Id = 0;
             kit.Items.Add(model);
         }
 

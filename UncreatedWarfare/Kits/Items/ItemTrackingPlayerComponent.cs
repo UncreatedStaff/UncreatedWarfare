@@ -258,8 +258,21 @@ public class ItemTrackingPlayerComponent : IPlayerComponent, IEventListener<Item
 
     void IEventListener<ItemDestroyed>.HandleEvent(ItemDestroyed e, IServiceProvider serviceProvider)
     {
-        if (e.Item == null || !e.PickedUp || e.PickUpPage == (Page)byte.MaxValue || (byte)e.PickUpPage >= PlayerInventory.STORAGE)
+        if (e.Item == null)
             return;
+
+        if (!e.PickedUp || e.PickUpPage == (Page)byte.MaxValue || (byte)e.PickUpPage >= PlayerInventory.STORAGE)
+        {
+            for (int i = 0; i < ItemDropTransformations.Count; ++i)
+            {
+                ItemDropTransformation d = ItemDropTransformations[i];
+                if (d.Item != e.Item)
+                    continue;
+
+                ItemDropTransformations.RemoveAtFast(i);
+                return;
+            }
+        }
 
         byte origX = byte.MaxValue, origY = byte.MaxValue;
         Page origPage = (Page)byte.MaxValue;
