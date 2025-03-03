@@ -4,6 +4,8 @@ using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Buildables;
 using Uncreated.Warfare.Interaction;
+using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Zones;
@@ -16,19 +18,23 @@ public class AutoSaveMainStructuresTweak : IAsyncEventListener<IBuildablePlacedE
     private readonly ZoneStore _zoneStore;
     private readonly ChatService _chatService;
     private readonly StructureTranslations _translations;
+    private readonly IPlayerService _playerService;
 
-    public AutoSaveMainStructuresTweak(BuildableSaver buildableSaver, ZoneStore zoneStore, ChatService chatService, TranslationInjection<StructureTranslations> translations)
+    public AutoSaveMainStructuresTweak(BuildableSaver buildableSaver, ZoneStore zoneStore, ChatService chatService, TranslationInjection<StructureTranslations> translations, IPlayerService playerService)
     {
         _buildableSaver = buildableSaver;
         _zoneStore = zoneStore;
         _chatService = chatService;
+        _playerService = playerService;
         _translations = translations.Value;
     }
 
     /// <inheritdoc />
     public async UniTask HandleEventAsync(IBuildablePlacedEvent e, IServiceProvider serviceProvider, CancellationToken token = default)
     {
-        if (!e.OwnerId.IsIndividual())
+        WarfarePlayer? player = _playerService.GetOnlinePlayerOrNullThreadSafe(e.OwnerId);
+
+        if (player is not { IsOnDuty: true })
         {
             return;
         }

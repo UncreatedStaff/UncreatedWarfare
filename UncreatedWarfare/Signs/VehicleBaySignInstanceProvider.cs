@@ -137,6 +137,9 @@ public class VehicleBaySignInstanceProvider : ISignInstanceProvider, IRequestabl
             case VehicleSpawnerState.Disposed:
                 bldr.Append(_translations.VBSStateDisposed.Translate(language));
                 break;
+            case VehicleSpawnerState.Glitched:
+                bldr.Append(_translations.VBSStateGlitched.Translate(language));
+                break;
 
             default:
                 bldr.Append(_translations.VBSStateReady.Translate(language));
@@ -176,4 +179,7 @@ public class VehicleBaySignTranslations : PropertiesTranslationCollection
 
     [TranslationData("Displays the state of the sign when the vehicle spawner is has been disposed and is no longer useable.")]
     public readonly Translation VBSStateDisposed = new Translation("<#798082>Disposed</color>");
+
+    [TranslationData("Displays the state of the sign when the vehicle was gliched when it tried to spawn.")]
+    public readonly Translation VBSStateGlitched = new Translation("<#ff0000>Error</color>");
 }

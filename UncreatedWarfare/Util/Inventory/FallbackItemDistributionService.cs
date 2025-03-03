@@ -245,25 +245,7 @@ public class FallbackItemDistributionService : IItemDistributionService
                     continue;
                 }
 
-                Item newItem = new Item(result.Asset.id, result.Amount, result.Quality, result.State ?? result.Asset.getState(true));
-
-                if (inventory.tryAddItem(newItem, x, y, (byte)page, rot))
-                {
-                    state.OnAddingPreviousItem(in result, x, y, rot, page, newItem);
-                    continue;
-                }
-
-                if (!inventory.tryAddItem(newItem, false, false))
-                {
-                    _droppedItemTracker.SetNextDroppedItemInstigator(newItem, player.Steam64.m_SteamID);
-                    Vector3 position = player.Position;
-                    ItemManager.dropItem(newItem, position, !hasPlayedEffect, true, true);
-                    state.OnDroppingPreviousItem(in result, position, newItem);
-                }
-                else if (typeof(TState) != typeof(IItemDistributionService.DefaultItemDistributionState) && ItemUtility.TryFindItem(inventory, newItem, out x, out y, out page, out rot))
-                {
-                    state.OnAddingPreviousItem(in result, x, y, rot, page, newItem);
-                }
+                AddItem(in result, x, y, page, rot, inventory, ref hasPlayedEffect, ref state);
             }
         }
         finally
@@ -274,6 +256,38 @@ public class FallbackItemDistributionService : IItemDistributionService
         ItemUtility.UpdateSlots(player);
 
         return ct;
+    }
+
+    private ItemJar? AddItem<TState>(in KitItemResolutionResult result, byte x, byte y, Page page, byte rot, PlayerInventory inventory, ref bool hasPlayedEffect, ref TState state) where TState : IItemDistributionState
+    {
+        Item newItem = new Item(result.Asset!.id, result.Amount, result.Quality, result.State ?? result.Asset.getState(true));
+
+        if (inventory.tryAddItem(newItem, x, y, (byte)page, rot))
+        {
+            state.OnAddingPreviousItem(in result, x, y, rot, page, newItem);
+            ItemJar? jar = inventory.getItem((byte)page, inventory.getIndex((byte)page, x, y));
+            return jar;
+        }
+
+        if (!inventory.tryAddItem(newItem, false, false))
+        {
+            _droppedItemTracker.SetNextDroppedItemInstigator(newItem, inventory.channel.owner.playerID.steamID.m_SteamID);
+            Vector3 position = inventory.player.transform.position;
+            ItemManager.dropItem(newItem, position, !hasPlayedEffect, true, true);
+            state.OnDroppingPreviousItem(in result, position, newItem);
+        }
+        else if (ItemUtility.TryFindItem(inventory, newItem, out x, out y, out page, out rot))
+        {
+            if (typeof(TState) != typeof(IItemDistributionService.DefaultItemDistributionState) && ItemUtility.TryFindItem(inventory, newItem, out x, out y, out page, out rot))
+            {
+                state.OnAddingPreviousItem(in result, x, y, rot, page, newItem);
+            }
+
+            ItemJar? jar = inventory.getItem((byte)page, inventory.getIndex((byte)page, x, y));
+            return jar;
+        }
+
+        return null;
     }
 
     /// <inheritdoc />
@@ -305,12 +319,12 @@ public class FallbackItemDistributionService : IItemDistributionService
                 continue;
 
             KitItemResolutionResult result = _itemResolver.ResolveKitItem(pageItem, stateKit, stateTeam);
+            KitItemResolutionResult origResult = result;
             // find item position
             if (!itemTracking.TryGetCurrentItemPosition(pageItem.Page, pageItem.X, pageItem.Y, out Page page, out byte x, out byte y, out bool isDropped, out Item? itemInstance))
             {
-                x = pageItem.X;
-                y = pageItem.Y;
-                page = pageItem.Page;
+                leftoverItems.Add((item, origResult));
+                continue;
             }
 
             if (isDropped)
@@ -318,12 +332,18 @@ public class FallbackItemDistributionService : IItemDistributionService
                 // they dropped the item, this is hard to deal with so just despawn it and itll be re-added later.
                 if (itemInstance != null)
                     ItemUtility.DestroyDroppedItem(itemInstance, true);
-                leftoverItems.Add((item, result));
+                leftoverItems.Add((item, origResult));
                 continue;
             }
 
             byte index = inventory.getIndex((byte)page, x, y);
             ItemJar? jar = inventory.getItem((byte)page, index);
+
+            if (jar != null && matchedItems.Contains(jar))
+            {
+                leftoverItems.Add((item, origResult));
+                continue;
+            }
 
             byte refXTmp = pageItem.X, refYTmp = pageItem.Y;
             Page refPgTmp = pageItem.Page;
@@ -333,6 +353,7 @@ public class FallbackItemDistributionService : IItemDistributionService
 
             if (asset == null || !state.ShouldGrantItem(pageItem, ref result, ref refXTmp, ref refYTmp, ref refPgTmp, ref rot) || result.Asset == null)
             {
+                // item was marked as shouldn't be granted
                 if (jar != null)
                     matchedItems.Add(jar);
                 continue;
@@ -340,26 +361,47 @@ public class FallbackItemDistributionService : IItemDistributionService
 
             if (jar == null || (itemInstance != null && jar.item != itemInstance) || result.Asset != asset)
             {
-                leftoverItems.Add((item, result));
+                leftoverItems.Add((item, origResult));
                 continue;
             }
 
+            // found original kit item
             matchedItems.Add(jar);
             RestockItem(equipment, inventory, page, x, y, jar, in result, ref ct);
+            ++ct;
         }
 
+        // fallback to existing items
         foreach ((IItem item, KitItemResolutionResult result) in leftoverItems)
         {
+            IPageItem pageItem = (IPageItem)item;
+
+            ItemAsset? asset = result.Asset;
+
+            byte refXTmp = pageItem.X, refYTmp = pageItem.Y;
+            Page refPgTmp = pageItem.Page;
+            byte rot = pageItem.Rotation;
+
+            KitItemResolutionResult res = result;
+
+            if (asset == null || !state.ShouldGrantItem(pageItem, ref res, ref refXTmp, ref refYTmp, ref refPgTmp, ref rot) || result.Asset == null)
+            {
+                continue;
+            }
+
+            asset = result.Asset;
+
             ItemJar? jar = null;
             Page page = 0;
-            for (int pg = 0; pg < PlayerInventory.STORAGE; ++pg)
+            // find an item of the same type
+            for (int pg = 0; pg < PlayerInventory.STORAGE && jar == null; ++pg)
             {
                 int itemCt = inventory.items[pg].getItemCount();
                 for (int i = 0; i < itemCt; ++i)
                 {
                     ItemJar j = inventory.items[pg].getItem((byte)i);
 
-                    if (result.Asset!.id != j.item.id)
+                    if (asset.id != j.item.id)
                         continue;
 
                     if (matchedItems.Contains(j))
@@ -370,15 +412,20 @@ public class FallbackItemDistributionService : IItemDistributionService
                     page = (Page)pg;
                     break;
                 }
-
-                if (jar != null)
-                    break;
             }
 
+            // found a matching item
             if (jar != null)
             {
                 RestockItem(equipment, inventory, page, jar.x, jar.y, jar, in result, ref ct);
+                continue;
             }
+
+            bool hasPlayedEffect = true;
+            jar = AddItem(in result, refXTmp, refYTmp, page, rot, inventory, ref hasPlayedEffect, ref state);
+            ++ct;
+            if (jar != null)
+                matchedItems.Add(jar);
         }
 
         ItemUtility.UpdateSlots(player);

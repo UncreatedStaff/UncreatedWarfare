@@ -1,5 +1,7 @@
+using DanielWillett.ModularRpcs;
 using DanielWillett.ModularRpcs.DependencyInjection;
 using DanielWillett.ModularRpcs.Reflection;
+using DanielWillett.ModularRpcs.Routing;
 using DanielWillett.ModularRpcs.Serialization;
 using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.IoC;
@@ -486,7 +488,7 @@ public sealed class WarfareModule
         bldr.Register<HarmonyPatchService, Harmony>((_, p) => p.Patcher)
             .SingleInstance();
 
-        bldr.RegisterInstance((WarfareLifetimeComponent)_gameObjectHost.AddComponent(ProxyGenerator.Instance.GetProxyType<WarfareLifetimeComponent>()))
+        bldr.Register(sp => (WarfareLifetimeComponent)ProxyGenerator.Instance.CreateProxyComponent(_gameObjectHost, typeof(WarfareLifetimeComponent), sp.Resolve<IRpcRouter>()))
             .SingleInstance();
 
         bldr.RegisterInstance(FileProvider)
