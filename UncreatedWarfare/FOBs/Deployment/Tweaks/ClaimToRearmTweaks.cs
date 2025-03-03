@@ -42,7 +42,6 @@ public class ClaimToRearmTweaks :
     private readonly IPlayerService _playerService;
     private readonly PointsService? _pointsService;
     private readonly AssetConfiguration _assetConfiguration;
-    private IAssetLink<EffectAsset> _resupplyEffect;
 
 
     public ClaimToRearmTweaks(IServiceProvider serviceProvider, ILogger<ClaimToRearmTweaks> logger)
@@ -57,7 +56,6 @@ public class ClaimToRearmTweaks :
         _translations = serviceProvider.GetRequiredService<TranslationInjection<AmmoTranslations>>().Value;
         _zoneStore = serviceProvider.GetService<ZoneStore>();
         _logger = logger;
-        _resupplyEffect = _assetConfiguration.GetAssetLink<EffectAsset>("Effects:Resupply");
     }
 
     [EventListener(RequireActiveLayout = true)]
@@ -115,13 +113,6 @@ public class ClaimToRearmTweaks :
         Task task = _kitRequestService.RestockKitAsync(e.Player, resupplyAmmoBags: ammoStorage is not PlacedAmmoBagComponent, token);
 
         ammoStorage.SubtractAmmo(rearmCost);
-        
-        EffectUtility.TriggerEffect(
-            _resupplyEffect.GetAssetOrFail(),
-            EffectManager.SMALL,
-            e.Player.Position,
-            true
-        );
 
         e.Player.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastLoseAmmo.Translate(rearmCost, e.Player)));
         _chatService.Send(e.Player, _translations.AmmoResuppliedKit, rearmCost, ammoStorage.AmmoCount);
@@ -132,6 +123,13 @@ public class ClaimToRearmTweaks :
             AmmoConsumed = rearmCost,
             AmmoStorage = ammoStorage
         }, CancellationToken.None);
+        
+        EffectUtility.TriggerEffect(
+            _assetConfiguration.GetAssetLink<EffectAsset>("Effects:Resupply").GetAssetOrFail(),
+            EffectManager.SMALL,
+            e.Player.Position,
+            true
+        );
         
         e.Cancel();
 

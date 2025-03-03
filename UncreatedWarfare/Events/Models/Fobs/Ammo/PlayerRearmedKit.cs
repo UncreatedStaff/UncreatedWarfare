@@ -5,7 +5,7 @@ using Uncreated.Warfare.Players;
 namespace Uncreated.Warfare.Events.Models.Fobs.Ammo;
 
 /// <summary>
-/// Event listener args which fires after a player rearms from a <see cref="IAmmoStorage"/>.
+/// Event listener args which fires after a player their kit rearms from a <see cref="IAmmoStorage"/>.
 /// </summary>
 public class PlayerRearmedKit : PlayerEvent
 {
@@ -15,7 +15,7 @@ public class PlayerRearmedKit : PlayerEvent
     public required float AmmoConsumed { get; init; }
     
     /// <summary>
-    /// The <see cref="IAmmoStorage"/> that was used to rearm the player.
+    /// The <see cref="IAmmoStorage"/> that was used to rearm the player's kit.
     /// </summary>
     public required IAmmoStorage AmmoStorage { get; init; }
 }

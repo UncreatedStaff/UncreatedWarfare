@@ -29,7 +29,6 @@ public class ThrownAmmoBag : ThrownSupplyCrate
             MidairCheckLayerMask);
 
         
-        Console.WriteLine($"ammo box nearby colliders: {resultsCount}");
         if (resultsCount <= 0) // check that this ammo bag isn't being destroyed while midair
         {
             RespawnThrowableItem();

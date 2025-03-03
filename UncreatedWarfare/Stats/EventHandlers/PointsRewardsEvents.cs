@@ -456,6 +456,9 @@ internal class PointsRewardsEvents :
         if (ammoBagOwner == null)
             return;
         
+        if (ammoBagOwner.Equals(e.Player))
+            return;
+        
         EventInfo @event = _points.GetEvent("ResuppliedTeammate");
         ResolvedEventInfo scaledEvent = new ResolvedEventInfo(@event, e.AmmoConsumed / @event.Configuration.GetValue<double>("NominalAmmoPerReward", 1));
 
