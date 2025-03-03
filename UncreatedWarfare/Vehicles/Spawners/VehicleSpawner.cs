@@ -224,7 +224,7 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
         if (Buildable == null)
             return;
 
-        if (State == VehicleSpawnerState.Disposed)
+        if (State is VehicleSpawnerState.Disposed or VehicleSpawnerState.Glitched)
             return;
 
         if (timeSinceStart.Seconds % 10 == 0)
@@ -281,7 +281,7 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
             UpdateLinkedSigns();
         }
         // Delayed in Layout configuration
-        else if (IsDelayed(out TimeSpan timeLeft))
+        else if (IsDelayed(out _))
         {
             if (State != VehicleSpawnerState.LayoutDelayed)
             {
@@ -378,6 +378,7 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
             }
             catch (Exception ex)
             {
+                State = VehicleSpawnerState.Glitched;
                 WarfareModule.Singleton.GlobalLogger.LogError(ex, "Error respawning vehicle at spawner {0}.", VehicleInfo.VehicleAsset);
             }
             finally
@@ -557,5 +558,10 @@ public enum VehicleSpawnerState
     LayoutDelayed,
     AwaitingRespawn,
     LayoutDisabled,
-    Disposed
+    Disposed,
+
+    /// <summary>
+    /// The vanilla vehicle couldn't spawn for some reason. This is deadlocked until next game.
+    /// </summary>
+    Glitched
 }

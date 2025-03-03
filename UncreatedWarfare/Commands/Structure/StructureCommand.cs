@@ -20,6 +20,9 @@ public sealed class StructureTranslations : PropertiesTranslationCollection
     public readonly Translation<ItemAsset> StructureSaved = new Translation<ItemAsset>("<#e6e3d5>Saved <#c6d4b8>{0}</color>.");
 
     [TranslationData(IsPriorityTranslation = false)]
+    public readonly Translation<ItemAsset> StructureUpdated = new Translation<ItemAsset>("<#e6e3d5>Updated save for <#c6d4b8>{0}</color>.");
+
+    [TranslationData(IsPriorityTranslation = false)]
     public readonly Translation<ItemAsset> StructureAlreadySaved = new Translation<ItemAsset>("<#e6e3d5><#c6d4b8>{0}</color> is already saved.");
 
     [TranslationData(IsPriorityTranslation = false)]

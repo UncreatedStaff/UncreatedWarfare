@@ -5,17 +5,21 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Events.Models.Buildables;
+using Uncreated.Warfare.Interaction;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Models.Buildables;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Signs;
+using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Buildables;
@@ -24,7 +28,12 @@ namespace Uncreated.Warfare.Buildables;
 /// Responsible for saving structures or barricades that are restored if they're destroyed.
 /// </summary>
 [Priority(1)]
-public class BuildableSaver : ILayoutHostedService, IDisposable, IEventListener<IBuildableTransformedEvent>, IEventListener<SignTextChanged>, IEventListener<ISalvageBuildableRequestedEvent>
+public class BuildableSaver :
+    ILayoutHostedService,
+    IDisposable,
+    IEventListener<IBuildableTransformedEvent>,
+    IEventListener<SignTextChanged>,
+    IEventListener<ISalvageBuildableRequestedEvent>
 {
     private readonly IBuildablesDbContext _dbContext;
     private readonly ILogger<BuildableSaver> _logger;
@@ -32,6 +41,8 @@ public class BuildableSaver : ILayoutHostedService, IDisposable, IEventListener<
     private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
     private readonly SignInstancer? _signs;
     private readonly MapScheduler _mapScheduler;
+    private readonly ChatService? _chatService;
+    private readonly StructureTranslations? _translations;
 
     private List<BuildableSave>? _saves;
 
@@ -43,6 +54,9 @@ public class BuildableSaver : ILayoutHostedService, IDisposable, IEventListener<
         _dbContext = serviceProvider.GetRequiredService<IBuildablesDbContext>();
 
         _signs = serviceProvider.GetService<SignInstancer>();
+        _chatService = serviceProvider.GetService<ChatService>();
+        _translations = serviceProvider.GetService<TranslationInjection<StructureTranslations>>()?.Value;
+
         _logger = serviceProvider.GetRequiredService<ILogger<BuildableSaver>>();
         _playerService = serviceProvider.GetRequiredService<IPlayerService>();
         _mapScheduler = serviceProvider.GetRequiredService<MapScheduler>();
@@ -938,6 +952,11 @@ public class BuildableSaver : ILayoutHostedService, IDisposable, IEventListener<
 
                 await SaveBuildableAsync(e.Buildable);
                 _logger.LogDebug("Updated save for {0}.", AssetLink.Create(e.Buildable.Asset));
+                if (e.Instigator != null && _translations != null && _chatService != null)
+                {
+                    _chatService.Send(e.Instigator, _translations.StructureUpdated, e.Buildable.Asset);
+                    ActionLog.Add(ActionLogType.SaveStructure, e.Buildable.InstanceId + " " + AssetLink.Create(e.Buildable.Asset).ToDisplayString(), e.Instigator.Steam64);
+                }
             }
             catch (Exception ex)
             {
@@ -956,14 +975,21 @@ public class BuildableSaver : ILayoutHostedService, IDisposable, IEventListener<
         {
             try
             {
-                if (await DiscardBuildableAsync(e.Buildable))
+                if (!await DiscardBuildableAsync(e.Buildable))
                 {
-                    _logger.LogDebug("Removed save for {0}.", AssetLink.Create(e.Buildable.Asset));
+                    return;
+                }
+
+                _logger.LogDebug("Removed save for {0}.", AssetLink.Create(e.Buildable.Asset));
+                if (e.Instigator != null && _translations != null && _chatService != null)
+                {
+                    _chatService.Send(e.Instigator, _translations.StructureUnsaved, e.Buildable.Asset);
+                    ActionLog.Add(ActionLogType.UnsaveStructure, e.Buildable.InstanceId + " " + AssetLink.Create(e.Buildable.Asset).ToDisplayString(), e.Instigator.Steam64);
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating save after transform.");
+                _logger.LogError(ex, "Error removing save after salvage.");
             }
         });
     }
@@ -980,10 +1006,15 @@ public class BuildableSaver : ILayoutHostedService, IDisposable, IEventListener<
 
                 await SaveBarricadeAsync(e.Barricade);
                 _logger.LogDebug("Updated save for {0}.", AssetLink.Create(e.Barricade.asset));
+                if (e.Instigator != null && _translations != null && _chatService != null)
+                {
+                    _chatService.Send(e.Instigator, _translations.StructureUpdated, e.Buildable.Asset);
+                    ActionLog.Add(ActionLogType.SaveStructure, e.Buildable.InstanceId + " " + AssetLink.Create(e.Buildable.Asset).ToDisplayString(), e.Instigator.Steam64);
+                }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating save after transform.");
+                _logger.LogError(ex, "Error updating save after sign text change.");
             }
         });
     }
