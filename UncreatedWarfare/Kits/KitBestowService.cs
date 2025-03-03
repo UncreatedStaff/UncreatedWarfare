@@ -92,7 +92,7 @@ public class KitBestowService
     /// <summary>
     /// Restock the player's current kit without removing any items.
     /// </summary>
-    public void RestockKit(WarfarePlayer player)
+    public void RestockKit(WarfarePlayer player, bool resupplyAmmoBags)
     {
         GameThread.AssertCurrent();
 
@@ -105,7 +105,7 @@ public class KitBestowService
 
         IKitItem[] items = kit.Items;
 
-        using BestowKitGiveItemsState state = new BestowKitGiveItemsState(new KitBestowData(kit) { RestockOnly = true }, player);
+        using BestowKitGiveItemsState state = new BestowKitGiveItemsState(new KitBestowData(kit) { RestockOnly = true, ResupplyAmmoBags = resupplyAmmoBags}, player);
         _itemDistributionService.RestockItems(items, player, state);
     }
 
@@ -128,7 +128,7 @@ public class KitBestowService
         public Team RequestingTeam { get; }
 
         public bool Silent { get; }
-        public bool RefillAmmoBags { get; }
+        public bool ResupplyAmmoBags { get; }
 
         public BestowKitGiveItemsState(in KitBestowData data, WarfarePlayer requester)
         {
@@ -139,7 +139,7 @@ public class KitBestowService
                 _options |= BestowKitOptions.Silent;
             if (data.RestockOnly)
                 _options |= BestowKitOptions.IsRestock;
-            RefillAmmoBags = data.RefillAmmoBags;
+            ResupplyAmmoBags = data.ResupplyAmmoBags;
             _layoutTransformations = data.Layouts ?? Array.Empty<KitLayoutTransformation>();
             _itemCountsTable = (_options & BestowKitOptions.LowAmmo) != 0 ? new List<KeyValuePair<Guid, int>>(16) : null;
 
@@ -158,7 +158,7 @@ public class KitBestowService
 
         public bool ShouldGrantItem(IPageItem item, ref KitItemResolutionResult resolvedItem, ref byte x, ref byte y, ref Page page, ref byte rotation)
         {
-            if (!RefillAmmoBags && item is IRedirectedItem {Item: RedirectType.AmmoBag})
+            if (!ResupplyAmmoBags && item is IRedirectedItem {Item: RedirectType.AmmoBag})
                 return false;
             
             if (_pendingTransformation.NewX != byte.MaxValue)
@@ -300,7 +300,7 @@ public readonly struct KitBestowData
     public IReadOnlyList<KitLayoutTransformation>? Layouts { get; }
     public bool IsLowAmmo { get; init; }
     public bool Silent { get; init; }
-    public bool RefillAmmoBags { get; init; } = true;
+    public bool ResupplyAmmoBags { get; init; } = true;
     internal bool RestockOnly { get; init; }
     public KitBestowData(Kit kit) : this(kit, null) { }
     internal KitBestowData(Kit kit, IReadOnlyList<KitLayoutTransformation>? layouts)
@@ -316,7 +316,7 @@ public readonly struct KitBestowData
             IsLowAmmo = IsLowAmmo,
             Silent = Silent,
             RestockOnly = RestockOnly,
-            RefillAmmoBags = RefillAmmoBags
+            ResupplyAmmoBags = ResupplyAmmoBags
         };
     }
 }

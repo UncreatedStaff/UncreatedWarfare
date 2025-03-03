@@ -1,23 +1,24 @@
-﻿using Uncreated.Warfare.Configuration;
+﻿using System;
+using System.Collections.Generic;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.Fobs.SupplyCrates;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Util;
-using Uncreated.Warfare.Util.Timing;
 using Uncreated.Warfare.Vehicles.WarfareVehicles;
 using Uncreated.Warfare.Zones;
 
-namespace Uncreated.Warfare.FOBs.SupplyCrates.Throwable;
+namespace Uncreated.Warfare.FOBs.SupplyCrates.Throwable.Vehicle;
 
 public class ThrownVehicleCrate : ThrownSupplyCrate
 {
+    private static readonly Collider[] TempHitColliders = new Collider[4];
     private readonly EffectAsset _resupplyEffectAsset;
     private readonly FobManager? _fobManager;
     private readonly ZoneStore? _zoneStore;
     private readonly AmmoTranslations _translations;
-    private ThrownVehicleCrateComponent _thrownVehicleCrateComponent;
-    private WarfareVehicle? _warfareVehicle;
+    private ThrownComponent _thrownVehicleCrateComponent;
 
     public ThrownVehicleCrate(GameObject throwable, WarfarePlayer thrower, ItemThrowableAsset thrownAsset, EffectAsset resupplyEffectAsset, FobManager? fobManager, ZoneStore? zoneStore, AmmoTranslations translations)
         : base(throwable, thrownAsset, thrower)
@@ -26,13 +27,30 @@ public class ThrownVehicleCrate : ThrownSupplyCrate
         _fobManager = fobManager;
         _zoneStore = zoneStore;
         _translations = translations;
-        _thrownVehicleCrateComponent = throwable.gameObject.AddComponent<ThrownVehicleCrateComponent>();
-        _thrownVehicleCrateComponent.OnCollideWithVehicle += OnCollideWithVehicle;
+        _thrownVehicleCrateComponent = throwable.gameObject.AddComponent<ThrownComponent>();
         _thrownVehicleCrateComponent.OnThrowableDestroyed += OnThrowableDestroyed;
     }
 
     private void OnThrowableDestroyed()
     {
+        // descending distance comparer
+        IComparer<Component> comparer = new DistanceComparer<Component>(_throwable.transform.position, x => x.transform.position, false, reverse: false);
+
+        int results = Physics.OverlapSphereNonAlloc(_throwable.transform.position, 5f, TempHitColliders, 1 << LayerMasks.VEHICLE);
+        Array.Sort<Collider>(TempHitColliders, 0, results, comparer);
+        Console.WriteLine("collided with vehicle colliders: " + results);
+        WarfareVehicle? _warfareVehicle = null;
+        for (int i = 0; i < results; i++)
+        {
+            Collider collider = TempHitColliders[i];
+            WarfareVehicleComponent? warfareVehicleComponent = collider.GetComponentInParent<WarfareVehicleComponent>();
+            if (warfareVehicleComponent != null)
+            {
+                _warfareVehicle = warfareVehicleComponent.WarfareVehicle;
+                break;
+            }
+        }
+
         if (_warfareVehicle == null)
         {
             RespawnThrowableItem();
@@ -63,15 +81,6 @@ public class ThrownVehicleCrate : ThrownSupplyCrate
         
         DropSupplies(_warfareVehicle);
     }
-    
-    private void OnCollideWithVehicle(InteractableVehicle vehicle)
-    {
-        WarfareVehicleComponent warfareVehicleComponent = vehicle.GetComponentInParent<WarfareVehicleComponent>();
-        if (warfareVehicleComponent == null)
-            return;
-        
-        _warfareVehicle = warfareVehicleComponent.WarfareVehicle;
-    }
 
     private void DropSupplies(WarfareVehicle warfareVehicle)
     {
@@ -81,7 +90,7 @@ public class ThrownVehicleCrate : ThrownSupplyCrate
             if (asset == null)
                 continue;
             
-            ItemManager.dropItem(new Item(asset, EItemOrigin.CRAFT), _throwable.transform.position, false, true, true);
+            ItemManager.dropItem(new Item(asset, EItemOrigin.CRAFT), _thrower.Position, false, true, true);
         }
         
         // spawn a nice effect

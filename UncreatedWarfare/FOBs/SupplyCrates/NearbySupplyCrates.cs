@@ -69,11 +69,11 @@ public class NearbySupplyCrates
             if (remainder <= 0)
             {
                 crate.Buildable.Destroy();
-                // move on and try to substract the remainder from the next crate
+                // move on and try to subtract the remainder from the next crate
                 amount = -remainder;
             }
 
-            if (remainder >= 0) // no need to substract from any further crates
+            if (remainder >= 0) // no need to subtract from any further crates
                 break;
         }
         ChangeSupplies(-originalAmount, type, changeReason);

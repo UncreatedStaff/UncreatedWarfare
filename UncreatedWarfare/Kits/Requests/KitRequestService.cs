@@ -509,7 +509,7 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         return false;
     }
 
-    public async Task RestockKitAsync(WarfarePlayer player, CancellationToken token = default)
+    public async Task RestockKitAsync(WarfarePlayer player, bool resupplyAmmoBags = false, CancellationToken token = default)
     {
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
@@ -521,7 +521,7 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
             }
 
             await UniTask.SwitchToMainThread(token);
-            _kitBestowService.RestockKit(player);
+            _kitBestowService.RestockKit(player, resupplyAmmoBags);
         }
         finally
         {

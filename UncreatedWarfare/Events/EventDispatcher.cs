@@ -165,6 +165,9 @@ public partial class EventDispatcher : IHostedService, IDisposable
 
         /* Projectiles */
         UseableGun.onProjectileSpawned += OnProjectileSpawned;
+        
+        /* Throwables */
+        UseableThrowable.onThrowableSpawned += OnThrowableSpawned;
 
         /* Objects */
         ObjectManager.OnQuestObjectUsed += ObjectManagerOnQuestObjectUsed;
@@ -221,6 +224,9 @@ public partial class EventDispatcher : IHostedService, IDisposable
 
         /* Projectiles */
         UseableGun.onProjectileSpawned -= OnProjectileSpawned;
+        
+        /* Throwables */
+        UseableThrowable.onThrowableSpawned -= OnThrowableSpawned;
 
         /* Objects */
         ObjectManager.OnQuestObjectUsed -= ObjectManagerOnQuestObjectUsed;

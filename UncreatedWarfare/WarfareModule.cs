@@ -35,6 +35,7 @@ using Uncreated.Warfare.FOBs.Deployment.Tweaks;
 using Uncreated.Warfare.FOBs.StateStorage;
 using Uncreated.Warfare.FOBs.StateStorage.Tweaks;
 using Uncreated.Warfare.FOBs.SupplyCrates.AutoResupply;
+using Uncreated.Warfare.FOBs.SupplyCrates.Throwable;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Interaction.Icons;
@@ -835,6 +836,10 @@ public sealed class WarfareModule
         bldr.RegisterType<FobManager>()
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+        
+        bldr.RegisterType<ThrowableSupplyCrateTweaks>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
 
         bldr.RegisterType<WorldIconManager>()
             .AsSelf().AsImplementedInterfaces()

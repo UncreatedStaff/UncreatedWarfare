@@ -50,7 +50,7 @@ public class RepairStation : IBuildableFobEntity, IDisposable
             IEnumerable<WarfareVehicle> nearbyVehicles = _vehicleService.Vehicles.Where(v =>
                 !v.Vehicle.isDead
                 && v.Vehicle.lockedGroup == buildable.Group
-                && v.Vehicle.ReplicatedSpeed > 3
+                && v.Vehicle.ReplicatedSpeed < 3
                 && !v.Info.Type.IsEmplacement()
                 && MathUtility.WithinRange(buildable.Position, v.Position, AircraftRepairRadius));
             

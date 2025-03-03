@@ -8,6 +8,7 @@ using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Flags;
 using Uncreated.Warfare.Events.Models.Fobs;
+using Uncreated.Warfare.Events.Models.Fobs.Ammo;
 using Uncreated.Warfare.Events.Models.Fobs.Shovelables;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Events.Models.Vehicles;
@@ -32,7 +33,8 @@ internal class PointsRewardsEvents :
     IAsyncEventListener<PlayerRevived>,
     IAsyncEventListener<PlayerAided>,
     IAsyncEventListener<PlayerDeployed>,
-    IAsyncEventListener<ExitVehicle>
+    IAsyncEventListener<ExitVehicle>,
+    IAsyncEventListener<PlayerRearmedKit>
 {
     private const double DriverAssistScaleFactor = 0.5; // 0.5 means both the gunner and driver share the total reward equally
     private readonly PointsService _points;
@@ -442,5 +444,24 @@ internal class PointsRewardsEvents :
             driver.Team.Faction.PrimaryKey,
             scaledEvent.WithTranslation(translation, driver), token)
             .ConfigureAwait(false);
+    }
+
+    public async UniTask HandleEventAsync(PlayerRearmedKit e, IServiceProvider serviceProvider, CancellationToken token = default)
+    {
+        IPlayerService? playerService = serviceProvider.GetService<IPlayerService>();
+        if (playerService == null)
+            return;
+        
+        WarfarePlayer? ammoBagOwner = playerService.GetOnlinePlayerOrNull(e.AmmoStorage.Owner);
+        if (ammoBagOwner == null)
+            return;
+        
+        EventInfo @event = _points.GetEvent("ResuppliedTeammate");
+        ResolvedEventInfo scaledEvent = new ResolvedEventInfo(@event, e.AmmoConsumed / @event.Configuration.GetValue<double>("NominalAmmoPerReward", 1));
+
+        await _points.ApplyEvent(
+            ammoBagOwner,
+            scaledEvent.WithTranslation(_translations.XPToastResuppliedTeammate, ammoBagOwner), token
+        ).ConfigureAwait(false);
     }
 }

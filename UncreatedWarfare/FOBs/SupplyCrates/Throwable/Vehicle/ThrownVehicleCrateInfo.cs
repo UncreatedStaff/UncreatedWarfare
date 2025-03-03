@@ -1,6 +1,6 @@
 using Uncreated.Warfare.Configuration;
 
-namespace Uncreated.Warfare.FOBs.SupplyCrates.VehicleResupply;
+namespace Uncreated.Warfare.FOBs.SupplyCrates.Throwable.Vehicle;
 
 public class ThrownVehicleCrateInfo
 {

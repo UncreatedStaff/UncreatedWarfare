@@ -9,15 +9,15 @@ public class AmmoTranslations : PropertiesTranslationCollection
 
     public readonly Translation AmmoNoTarget = new Translation("<#ffab87>Look at an <#cedcde>AMMO CRATE</color>, <#cedcde>AMMO BAG</color> or <#cedcde>VEHICLE</color> in order to resupply.");
     
-    public readonly Translation<float, float> AmmoResuppliedKit = new Translation<float, float>("<#d1bda7>Resupplied kit. Consumed: <#e25d5d>{0} AMMO</color> <#948f8a>({1} left)</color>.");
+    public readonly Translation<float, float> AmmoResuppliedKit = new Translation<float, float>("<#d1bda7>Resupplied kit. Consumed: <#e25d5d>{0} AMMO</color> <#948f8a>({1} left)</color>.", arg0Fmt: "0.#", arg1Fmt: "0.#");
     
-    public readonly Translation<int> AmmoResuppliedKitMain = new Translation<int>("<#d1bda7>Resupplied kit. Consumed: <#e25d5d>{0} AMMO</color>.");
+    public readonly Translation<int> AmmoResuppliedKitMain = new Translation<int>("<#d1bda7>Resupplied kit. Consumed: <#e25d5d>{0} AMMO</color>.", arg0Fmt: "0.#");
     
     public readonly Translation VehicleAutoSupply = new Translation("<#b3a6a2>Vehicle has been <#ebbda9>AUTO RESUPPLIED</color>.");
     
     public readonly Translation AmmoNotNearFOB = new Translation("<#b3a6a2>This ammo crate is not built on a friendly FOB.");
     
-    public readonly Translation<float, float> AmmoInsufficient = new Translation<float, float>("<#b3a6a2>Insufficient ammo. <#e25d5d>{0}/{1} AMMO</color> needed.");
+    public readonly Translation<float, float> AmmoInsufficient = new Translation<float, float>("<#b3a6a2>Insufficient ammo. <#e25d5d>{0}/{1} AMMO</color> needed.", arg0Fmt: "0.#", arg1Fmt: "0.#");
     public readonly Translation AmmoAlreadyFull = new Translation("<#b3a6a2>Your kit is already full on ammo.</color>");
     
     public readonly Translation AmmoNoKit = new Translation("<#b3a6a2>You don't have a kit yet. Go request one from the armory in your team's headquarters.");
@@ -40,7 +40,7 @@ public class AmmoTranslations : PropertiesTranslationCollection
     
     [TranslationData(IsPriorityTranslation = false)]
     public Translation ToastAmmoNotNearFob = new Translation("<color=#b3a6a2>No fob nearby</color>", TranslationOptions.TMProUI);
-    public Translation ToastAmmoNotNearVehicle = new Translation("<color=#b3a6a2>No vehicle or emplacement nearby</color>", TranslationOptions.TMProUI);
+    public Translation ToastAmmoNotNearVehicle = new Translation("<color=#b3a6a2>Throw at vehicle or emplacement to resupply</color>", TranslationOptions.TMProUI);
     public Translation<float, float> ToastInsufficientAmmo = new Translation<float, float>("<#b3a6a2>Insufficient ammo: <#e25d5d>{0}/{1} AMMO</color> needed.", TranslationOptions.TMProUI);
 
     

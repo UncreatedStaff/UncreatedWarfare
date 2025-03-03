@@ -65,7 +65,8 @@ internal sealed class PlayerEquipmentReceiveEquip : IHarmonyPatch
         if (vehicle != null && player.UnturnedPlayer.equipment.asset is ItemGunAsset gun)
         {
             byte seat = player.UnturnedPlayer.movement.getSeat();
-            if (vehicle.passengers[seat].turret.itemID == gun.id)
+            TurretInfo? turretInfo = vehicle.passengers[seat].turret;
+            if (turretInfo?.itemID == gun.id)
             {
                 player.Data["LastEquippedItem"] = new LastEquipData { Vehicle = vehicle, Seat = seat };
                 return;

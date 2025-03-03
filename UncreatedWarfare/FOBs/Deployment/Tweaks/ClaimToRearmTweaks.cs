@@ -6,15 +6,20 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Barricades;
+using Uncreated.Warfare.Events.Models.Fobs.Ammo;
 using Uncreated.Warfare.Events.Models.Zones;
 using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.Fobs.SupplyCrates;
 using Uncreated.Warfare.FOBs.SupplyCrates;
+using Uncreated.Warfare.FOBs.SupplyCrates.Throwable.AmmoBags;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Kits.Requests;
+using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.UI;
+using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Containers;
@@ -34,9 +39,17 @@ public class ClaimToRearmTweaks :
     private readonly AmmoTranslations _translations;
     private readonly ILogger _logger;
     private readonly ZoneStore? _zoneStore;
+    private readonly IPlayerService _playerService;
+    private readonly PointsService? _pointsService;
+    private readonly AssetConfiguration _assetConfiguration;
+    private IAssetLink<EffectAsset> _resupplyEffect;
+
 
     public ClaimToRearmTweaks(IServiceProvider serviceProvider, ILogger<ClaimToRearmTweaks> logger)
     {
+        _assetConfiguration = serviceProvider.GetRequiredService<AssetConfiguration>();
+        _playerService = serviceProvider.GetRequiredService<IPlayerService>();
+        _pointsService = serviceProvider.GetService<PointsService>();
         _fobManager = serviceProvider.GetRequiredService<FobManager>();
         _kitRequestService = serviceProvider.GetRequiredService<KitRequestService>();
         _kitWeaponTextService = serviceProvider.GetService<KitWeaponTextService>();
@@ -44,19 +57,30 @@ public class ClaimToRearmTweaks :
         _translations = serviceProvider.GetRequiredService<TranslationInjection<AmmoTranslations>>().Value;
         _zoneStore = serviceProvider.GetService<ZoneStore>();
         _logger = logger;
-        
+        _resupplyEffect = _assetConfiguration.GetAssetLink<EffectAsset>("Effects:Resupply");
     }
 
     [EventListener(RequireActiveLayout = true)]
     public async UniTask HandleEventAsync(ClaimBedRequested e, IServiceProvider serviceProvider, CancellationToken token = default)
     {
-        SupplyCrate? ammoCrate = _fobManager.Entities.OfType<SupplyCrate>().FirstOrDefault(s =>
-            s.Type == SupplyType.Ammo &&
-            !s.Buildable.IsDead &&
-            s.Buildable.Equals(e.Buildable)
-        );
-
-        if (ammoCrate == null)
+        IAmmoStorage? ammoStorage = null;
+        if (e.Buildable.Model.TryGetComponent(out PlacedAmmoBagComponent ammoBag))
+        {
+            ammoStorage = ammoBag;
+        }
+        else
+        {
+            SupplyCrate? ammoCrate = _fobManager.Entities.OfType<SupplyCrate>().FirstOrDefault(s =>
+                s.Type == SupplyType.Ammo &&
+                !s.Buildable.IsDead &&
+                s.Buildable.Equals(e.Buildable)
+            );
+            
+            if (ammoCrate != null)
+                ammoStorage = AmmoSupplyCrate.FromSupplyCrate(ammoCrate, _fobManager);
+        }
+        
+        if (ammoStorage == null)
             return;
 
         Kit? kit = null;
@@ -80,21 +104,35 @@ public class ClaimToRearmTweaks :
             e.Cancel();
             return;
         }
+        
+        // if (rearmCost > ammoStorage.AmmoCount)
+        // {
+        //     _chatService.Send(e.Player, _translations.AmmoInsufficient, ammoStorage.AmmoCount, rearmCost);
+        //     e.Cancel();
+        //     return;
+        // }
 
-        NearbySupplyCrates supplyCrate = NearbySupplyCrates.FromSingleCrate(ammoCrate, _fobManager);
-        if (rearmCost > supplyCrate.AmmoCount)
-        {
-            _chatService.Send(e.Player, _translations.AmmoInsufficient, supplyCrate.AmmoCount, rearmCost);
-            e.Cancel();
-            return;
-        }
+        Task task = _kitRequestService.RestockKitAsync(e.Player, resupplyAmmoBags: ammoStorage is not PlacedAmmoBagComponent, token);
 
-        Task task = _kitRequestService.GiveKitAsync(e.Player, new KitBestowData(kit) { IsLowAmmo = true }, token);
-
-        supplyCrate.SubstractSupplies(rearmCost, SupplyType.Ammo, SupplyChangeReason.ConsumeGeneral);
+        ammoStorage.SubtractAmmo(rearmCost);
+        
+        EffectUtility.TriggerEffect(
+            _resupplyEffect.GetAssetOrFail(),
+            EffectManager.SMALL,
+            e.Player.Position,
+            true
+        );
 
         e.Player.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastLoseAmmo.Translate(rearmCost, e.Player)));
-        _chatService.Send(e.Player, _translations.AmmoResuppliedKit, rearmCost, supplyCrate.AmmoCount);
+        _chatService.Send(e.Player, _translations.AmmoResuppliedKit, rearmCost, ammoStorage.AmmoCount);
+        
+        _ = WarfareModule.EventDispatcher.DispatchEventAsync(new PlayerRearmedKit()
+        {
+            Player = e.Player,
+            AmmoConsumed = rearmCost,
+            AmmoStorage = ammoStorage
+        }, CancellationToken.None);
+        
         e.Cancel();
 
         await task.ConfigureAwait(false);
@@ -196,8 +234,9 @@ public class ClaimToRearmTweaks :
     private int CountFullMags(PlayerInventory inventory, ItemGunAsset gun, HashSet<Item> alreadyCounted)
     {
         int count = 0;
-        foreach (Items page in inventory.items)
+        for (int p = 0; p < PlayerInventory.STORAGE; ++p)
         {
+            Items page = inventory.items[p];
             foreach (ItemJar itemJar in page.items)
             {
                 Item item = itemJar.item;
@@ -256,8 +295,9 @@ public class ClaimToRearmTweaks :
     private int CountItemsInInventory(PlayerInventory inventory, ItemAsset matchingItem)
     {
         int count = 0;
-        foreach (Items page in inventory.items)
+        for (int p = 0; p < PlayerInventory.STORAGE; ++p)
         {
+            Items page = inventory.items[p];
             foreach (ItemJar itemJar in page.items)
             {
                 // todo: replace with GUID whenever nelson makes that happen
@@ -358,7 +398,7 @@ public class ClaimToRearmTweaks :
         if (_zoneStore == null)
             return;
 
-        await _kitRequestService.RestockKitAsync(e.Player, token);
+        await _kitRequestService.RestockKitAsync(e.Player, true, token);
     }
 
     [EventListener(Priority = -1)]
@@ -373,6 +413,6 @@ public class ClaimToRearmTweaks :
         if (!_zoneStore.IsInMainBase(e.Player))
             return;
 
-        await _kitRequestService.RestockKitAsync(e.Player, token);
+        await _kitRequestService.RestockKitAsync(e.Player, true, token);
     }
 }

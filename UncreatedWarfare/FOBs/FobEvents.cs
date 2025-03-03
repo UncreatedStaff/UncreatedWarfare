@@ -17,7 +17,6 @@ using Uncreated.Warfare.FOBs.Entities;
 using Uncreated.Warfare.FOBs.Rallypoints;
 using Uncreated.Warfare.Fobs.SupplyCrates;
 using Uncreated.Warfare.FOBs.SupplyCrates;
-using Uncreated.Warfare.FOBs.SupplyCrates.VehicleResupply;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Extensions;
