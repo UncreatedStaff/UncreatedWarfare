@@ -119,12 +119,20 @@ public class PlayerContributionTracker : IEnumerable<PlayerWork>
                 return;
             }
 
-            PlayerWork[] newWork = new PlayerWork[_work.Length * 2];
-            lock (newWork)
+            if (_workCount == _work.Length)
             {
-                _work = newWork;
-                _work[_workCount] = new PlayerWork(player, workPoints, time);
+                PlayerWork[] newWork = new PlayerWork[_work.Length * 2];
+                lock (newWork)
+                {
+                    _work = newWork;
+                    _work[_workCount] = new PlayerWork(player, workPoints, time);
+                    ++_workCount;
+                    return;
+                }
             }
+
+            _work[_workCount] = new PlayerWork(player, workPoints, time);
+            ++_workCount;
         }
     }
 
