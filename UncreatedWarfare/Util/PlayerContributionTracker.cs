@@ -118,8 +118,8 @@ public class PlayerContributionTracker : IEnumerable<PlayerWork>
                 w.LastUpdated = time;
                 return;
             }
-
-            if (_workCount == _work.Length)
+            
+            if (_workCount >= _work.Length)
             {
                 PlayerWork[] newWork = new PlayerWork[_work.Length * 2];
                 lock (newWork)
