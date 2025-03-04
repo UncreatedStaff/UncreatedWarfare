@@ -24,7 +24,7 @@ internal class VehicleInteractionTweaks :
     IEventListener<VehicleSwapSeatRequested>,
     IEventListener<ExitVehicleRequested>
 {
-    public const float MaxAllowedHeightToExitVehicle = 20f;
+    public const float MaxAllowedHeightToExitVehicle = 10;
 
     private readonly ILogger<VehicleInteractionTweaks> _logger;
     private readonly ChatService _chatService;

@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using Uncreated.Warfare.Events.Models.Fobs;
 using Uncreated.Warfare.Fobs;
@@ -69,6 +70,7 @@ public class NearbySupplyCrates
             if (remainder <= 0)
             {
                 crate.Buildable.Destroy();
+                
                 // move on and try to subtract the remainder from the next crate
                 amount = -remainder;
             }

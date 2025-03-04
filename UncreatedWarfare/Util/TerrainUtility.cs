@@ -1,3 +1,5 @@
+using System;
+
 namespace Uncreated.Warfare.Util;
 public static class TerrainUtility
 {
@@ -41,7 +43,7 @@ public static class TerrainUtility
     /// <remarks>The raycast could hit a building, etc. If the raycast doesn't hit anything, <see cref="Level.HEIGHT"/> will be returned.</remarks>
     public static float GetDistanceToGround(in Vector3 point)
     {
-        if (Physics.SphereCast(new Vector3(point.x, Level.HEIGHT, point.z), PlayerStance.RADIUS + 0.01f, Vector3.down, out RaycastHit hit, Level.HEIGHT, RayMasks.BLOCK_COLLISION & ~RayMasks.CLIP, QueryTriggerInteraction.Ignore))
+        if (Physics.Raycast(point, Vector3.down, out RaycastHit hit, Level.HEIGHT, RayMasks.BLOCK_COLLISION & ~RayMasks.CLIP, QueryTriggerInteraction.Ignore))
         {
             return hit.distance;
         }

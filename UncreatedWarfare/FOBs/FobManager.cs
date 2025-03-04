@@ -32,10 +32,6 @@ public partial class FobManager : ILayoutHostedService
     private readonly TrackingList<IFobEntity> _entities;
     private readonly TrackingList<IFob> _fobs;
     private readonly ChatService _chatService;
-    private readonly ITeamManager<Team> _teamService;
-    private readonly ILoopTickerFactory _loopTickerFactory;
-    private readonly VehicleService _vehicleService;
-    private readonly ZoneStore _zoneStore;
 
     public FobConfiguration Configuration { get; }
 
@@ -55,10 +51,6 @@ public partial class FobManager : ILayoutHostedService
         _translations = serviceProvider.GetRequiredService<TranslationInjection<FobTranslations>>().Value;
         _assetConfiguration = serviceProvider.GetRequiredService<AssetConfiguration>();
         _chatService = serviceProvider.GetRequiredService<ChatService>();
-        _teamService = serviceProvider.GetRequiredService<ITeamManager<Team>>();
-        _loopTickerFactory = serviceProvider.GetRequiredService<ILoopTickerFactory>();
-        _vehicleService = serviceProvider.GetRequiredService<VehicleService>();
-        _zoneStore = serviceProvider.GetRequiredService<ZoneStore>();
         _serviceProvider = serviceProvider;
         _logger = logger;
         _fobs = new TrackingList<IFob>(24);
@@ -70,8 +62,6 @@ public partial class FobManager : ILayoutHostedService
 
     UniTask ILayoutHostedService.StartAsync(CancellationToken token)
     {
-        RegisterExistingRepairStations();
-        
         return UniTask.CompletedTask;
     }
 
@@ -188,18 +178,5 @@ public partial class FobManager : ILayoutHostedService
         return _entities.OfType<EmplacementEntity>().FirstOrDefault(f =>
             f.Vehicle.Vehicle.instanceID == emplacementVehicle.instanceID
         );
-    }
-    private void RegisterExistingRepairStations()
-    {
-        // todo: make this better and clean up services in this class pls
-        foreach (BarricadeInfo barricade in BarricadeUtility.EnumerateNonPlantedBarricades())
-        {
-            if (_assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:Gameplay:RepairStation").MatchAsset(barricade.Drop.asset))
-            {
-                Team team = _teamService.GetTeam(new CSteamID(barricade.Data.group));
-                RepairStation repairStation = new RepairStation(new BuildableBarricade(barricade.Drop), team, _loopTickerFactory, _vehicleService, this, _assetConfiguration, _zoneStore);
-                RegisterFobEntity(repairStation);
-            }
-        }
     }
 }

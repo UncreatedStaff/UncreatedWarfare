@@ -209,6 +209,16 @@ public partial class FobManager :
         if (supplyCrate != null)
         {
             NearbySupplyCrates.FromSingleCrate(supplyCrate, this).NotifyChanged(supplyCrate.Type, -supplyCrate.SupplyCount, SupplyChangeReason.ConsumeSuppliesDestroyed);
+            
+            // clear barricade state to prevent items from dropping out of the crate after it is destroyed
+            if (!supplyCrate.Buildable.IsStructure && supplyCrate.Buildable.GetDrop<BarricadeDrop>() is { interactable: InteractableStorage { items: { } } storage })
+            {
+                for (int i = storage.items.getItemCount(); i > 0; --i)
+                {
+                    storage.items.removeItem(0);
+                }
+                storage.rebuildState();
+            }
         }
 
         _entities.RemoveAll(en => en is IBuildableFobEntity bfe && bfe.Buildable.Equals(e.Buildable));

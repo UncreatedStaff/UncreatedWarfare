@@ -27,7 +27,7 @@ using Uncreated.Warfare.Util.Inventory;
 using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.FOBs.Deployment.Tweaks;
-public class ClaimToRearmTweaks : 
+public class ClaimToRearmTweaks : // todo: move this class out of this namespace
     IAsyncEventListener<ClaimBedRequested>,
     IAsyncEventListener<PlayerEnteredZone>,
     IAsyncEventListener<PlayerExitedZone>
