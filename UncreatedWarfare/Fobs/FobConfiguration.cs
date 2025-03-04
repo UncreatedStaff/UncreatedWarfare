@@ -19,6 +19,11 @@ public sealed class FobConfiguration : BaseAlternateConfigurationFile
     public IReadOnlyList<ThrownAmmoBagInfo> ThrowableAmmoBags { get; private set; } = null!;
     public IReadOnlyList<ThrownVehicleCrateInfo> ThrowableVehicleSupplyCrates { get; private set; } = null!;
     public IReadOnlyList<ShovelableInfo> Shovelables { get; private set; } = null!;
+    public float RepairStationGroundVehicleRepairRadius { get; private set; }
+    public float RepairStationAircraftRepairRadius { get; private set; }
+    public float RepairStationBuildConsumedPerTick { get; private set; }
+    public ushort RepairStationHealthPerTick { get; private set; }
+    public ushort RepairStationFuelPerTick { get; private set; }
 
     /// <summary>
     /// Home for storing FOB and buildable data.
@@ -63,5 +68,20 @@ public sealed class FobConfiguration : BaseAlternateConfigurationFile
                 info.Emplacement = null;
         });
         Shovelables = new ReadOnlyCollection<ShovelableInfo>((IList<ShovelableInfo>?)shovelables ?? Array.Empty<ShovelableInfo>());
+
+        RepairStationGroundVehicleRepairRadius =
+            UnderlyingConfiguration.GetValue("RepairStation:GroundVehicleRepairRadius", 0.25f);
+        
+        RepairStationAircraftRepairRadius =
+            UnderlyingConfiguration.GetValue("RepairStation:AircraftRepairRadius", 0.25f);
+        
+        RepairStationHealthPerTick =
+            UnderlyingConfiguration.GetValue<ushort>("RepairStation:HealthPerTick", 40);
+        
+        RepairStationFuelPerTick =
+            UnderlyingConfiguration.GetValue<ushort>("RepairStation:FuelPerTick", 260);
+        
+        RepairStationBuildConsumedPerTick =
+            UnderlyingConfiguration.GetValue("RepairStation:BuildConsumedPerTick", 0.25f);
     }
 }
