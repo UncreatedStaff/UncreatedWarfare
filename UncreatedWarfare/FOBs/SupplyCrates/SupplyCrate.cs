@@ -2,6 +2,7 @@ using System;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.FOBs.Entities;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Timing;
 
@@ -24,7 +25,7 @@ public class SupplyCrate : IBuildableFobEntity, IDisposable
 
     public IAssetLink<Asset> IdentifyingAsset { get; }
 
-    public SupplyCrate(SupplyCrateInfo info, IBuildable buildable, ILoopTickerFactory loopTickerFactory)
+    public SupplyCrate(SupplyCrateInfo info, IBuildable buildable, ILoopTickerFactory loopTickerFactory, bool enableAutoRefill = false)
     {
         Buildable = buildable;
         Type = info.Type;
@@ -34,7 +35,9 @@ public class SupplyCrate : IBuildableFobEntity, IDisposable
         IdentifyingAsset = info.SupplyItemAsset;
         if (!buildable.IsStructure)
             _originalBarricadeState = buildable.GetItem<Barricade>().state;
-        _refillLoop = loopTickerFactory.CreateTicker(TimeSpan.FromSeconds(60), false, true, OnRefillTick);
+        
+        if (enableAutoRefill)
+            _refillLoop = loopTickerFactory.CreateTicker(TimeSpan.FromSeconds(60), false, true, OnRefillTick);
     }
 
     // Supply crates that are barricades reset to their original barricade state every 60 seconds or so.

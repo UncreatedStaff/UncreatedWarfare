@@ -233,7 +233,7 @@ public partial class FobManager :
                 e.Player.Yaw,
                 buildable =>
                 {
-                    SupplyCrate supplyCrate = new SupplyCrate(supplyCrateInfo, buildable, serviceProvider.GetRequiredService<ILoopTickerFactory>());
+                    SupplyCrate supplyCrate = new SupplyCrate(supplyCrateInfo, buildable, serviceProvider.GetRequiredService<ILoopTickerFactory>(), !e.Player.IsOnDuty);
                     RegisterFobEntity(supplyCrate);
 
                     NearbySupplyCrates
