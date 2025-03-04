@@ -13,20 +13,6 @@ public class EmplacementInfo
     public required IAssetLink<VehicleAsset> Vehicle { get; set; }
 
     /// <summary>
-    /// Item used when resupplying with ammo.
-    /// </summary>
-    public IAssetLink<ItemAsset>? AmmoItem { get; set; }
-
-    /// <summary>
-    /// Number of <see cref="AmmoItem"/> items to spawn.
-    /// </summary>
-    public int AmmoCount { get; set; } = 1;
-    /// <summary>
-    /// The number of supplies substracted when resupplying this vehicle.
-    /// </summary>
-    public int ResupplyCost { get; set; } = 1;
-
-    /// <summary>
     /// If this emplacement should warn friendlies when they're in the fire zone.
     /// </summary>
     public bool ShouldWarnFriendlies { get; set; } = false;
