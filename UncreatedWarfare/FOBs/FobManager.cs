@@ -6,6 +6,7 @@ using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models.Fobs;
 using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.FOBs.Entities;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Layouts.Teams;
@@ -14,6 +15,9 @@ using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.List;
+using Uncreated.Warfare.Util.Timing;
+using Uncreated.Warfare.Vehicles;
+using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Fobs;
 
@@ -28,6 +32,10 @@ public partial class FobManager : ILayoutHostedService
     private readonly TrackingList<IFobEntity> _entities;
     private readonly TrackingList<IFob> _fobs;
     private readonly ChatService _chatService;
+    private readonly ITeamManager<Team> _teamService;
+    private readonly ILoopTickerFactory _loopTickerFactory;
+    private readonly VehicleService _vehicleService;
+    private readonly ZoneStore _zoneStore;
 
     public FobConfiguration Configuration { get; }
 
@@ -47,6 +55,10 @@ public partial class FobManager : ILayoutHostedService
         _translations = serviceProvider.GetRequiredService<TranslationInjection<FobTranslations>>().Value;
         _assetConfiguration = serviceProvider.GetRequiredService<AssetConfiguration>();
         _chatService = serviceProvider.GetRequiredService<ChatService>();
+        _teamService = serviceProvider.GetRequiredService<ITeamManager<Team>>();
+        _loopTickerFactory = serviceProvider.GetRequiredService<ILoopTickerFactory>();
+        _vehicleService = serviceProvider.GetRequiredService<VehicleService>();
+        _zoneStore = serviceProvider.GetRequiredService<ZoneStore>();
         _serviceProvider = serviceProvider;
         _logger = logger;
         _fobs = new TrackingList<IFob>(24);
@@ -58,6 +70,8 @@ public partial class FobManager : ILayoutHostedService
 
     UniTask ILayoutHostedService.StartAsync(CancellationToken token)
     {
+        RegisterExistingRepairStations();
+        
         return UniTask.CompletedTask;
     }
 
@@ -65,7 +79,6 @@ public partial class FobManager : ILayoutHostedService
     {
         return UniTask.CompletedTask;
     }
-
     public BunkerFob RegisterBunkerFob(IBuildable fobBuildable)
     {
         GridLocation griddy = new GridLocation(fobBuildable.Position);
@@ -175,5 +188,18 @@ public partial class FobManager : ILayoutHostedService
         return _entities.OfType<EmplacementEntity>().FirstOrDefault(f =>
             f.Vehicle.Vehicle.instanceID == emplacementVehicle.instanceID
         );
+    }
+    private void RegisterExistingRepairStations()
+    {
+        // todo: make this better and clean up services in this class pls
+        foreach (BarricadeInfo barricade in BarricadeUtility.EnumerateNonPlantedBarricades())
+        {
+            if (_assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:Gameplay:RepairStation").MatchAsset(barricade.Drop.asset))
+            {
+                Team team = _teamService.GetTeam(new CSteamID(barricade.Data.group));
+                RepairStation repairStation = new RepairStation(new BuildableBarricade(barricade.Drop), team, _loopTickerFactory, _vehicleService, this, _assetConfiguration, _zoneStore);
+                RegisterFobEntity(repairStation);
+            }
+        }
     }
 }
