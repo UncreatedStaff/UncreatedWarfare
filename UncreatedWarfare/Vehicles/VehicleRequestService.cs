@@ -29,7 +29,7 @@ public class VehicleRequestService : ILayoutHostedService,
     IRequestHandler<VehicleSpawner, VehicleSpawner>,
     IRequestHandler<WarfareVehicleComponent, VehicleSpawner>
 {
-    private static readonly IAssetLink<EffectAsset> UnlockSound = AssetLink.Create<EffectAsset>("bc41e0feaebe4e788a3612811b8722d3");
+    private static readonly IAssetLink<EffectAsset> UnlockSound = AssetLink.Create<EffectAsset>("4bfd3e5fcb3e4d109d3ec5ecca87d603");//AssetLink.Create<EffectAsset>("bc41e0feaebe4e788a3612811b8722d3");
     private readonly RequestVehicleTranslations _reqTranslations;
     private readonly VehicleInfoStore _vehicleInfoStore;
     private readonly VehicleSpawnerService _spawnerService;

@@ -25,10 +25,10 @@ public class WarTableDoorTweak :
     private readonly IAssetLink<ObjectAsset>[] _teleportDoors;
     private readonly ushort _flagId;
 
-    private const short FlagValueAlreadyDeployed = -3;
-    private const short FlagValueNoKit = -2;
-    private const short FlagValueDeploying = -1;
-    private const short FlagValueDeployable = 0;
+    private const short FlagValueAlreadyDeployed = -2; // -2 confirmed
+    private const short FlagValueNoKit = -1; // -1 confirmed
+    private const short FlagValueDeploying = -3;
+    private const short FlagValueDeployable = 0; // 0 confirmed
 
     public WarTableDoorTweak(AssetConfiguration assetConfig, ZoneStore zoneStore, DeploymentService deploymentService)
     {
@@ -98,7 +98,7 @@ public class WarTableDoorTweak :
 
     private void UpdateFlag(WarfarePlayer player)
     {
-        if (player.Component<DeploymentComponent>().CurrentDeployment is Zone { Type: ZoneType.WarRoom })
+        if (player.Component<DeploymentComponent>().CurrentDeployment is Zone { Type: ZoneType.MainBase })
         {
             // already deploying
             player.SetFlag(_flagId, FlagValueDeploying);

@@ -54,6 +54,9 @@ public class PlayerSquadHUD : UnturnedUI,
     }
     private void UpdateForPlayer(WarfarePlayer player, Squad squad)
     {
+        if (!player.IsOnline)
+            return;
+
         SquadName.SetText(player, $"{squad.Name}  {squad.Members.Count}/{Squad.MaxMembers}");
         SquadNumber.SetText(player, squad.TeamIdentificationNumber.ToString());
         for (int i = 0; i < SquadMembers.Length; i++)

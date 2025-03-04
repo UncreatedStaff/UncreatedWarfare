@@ -1,29 +1,29 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 
-namespace Uncreated.Warfare.Components;
+namespace Uncreated.Warfare.Vehicles.WarfareVehicles.Flares;
+
 internal class FlareCountermeasure : MonoBehaviour
 {
     public bool Burning { get; private set; }
-    private float _startTime;
+
     public static readonly List<FlareCountermeasure> ActiveCountermeasures = [];
 
+    private InteractableVehicle? _vehicle;
+
     [UsedImplicitly]
-    private void Start()
+    private IEnumerator Start()
     {
-        _startTime = Time.time;
         Burning = true;
         ActiveCountermeasures.Add(this);
-    }
+        _vehicle = GetComponent<InteractableVehicle>();
 
-    [UsedImplicitly]
-    private void FixedUpdate()
-    {
-        float elapsed = Time.time - _startTime;
+        yield return new WaitForSeconds(3f);
+        Burning = false;
 
-        if (elapsed > 3f)
-            Burning = false;
-
-        if (elapsed > 8)
+        yield return new WaitForSeconds(5f);
+        if (_vehicle != null)
+            VehicleManager.askVehicleDestroy(_vehicle);
+        else
             Destroy(gameObject);
     }
 

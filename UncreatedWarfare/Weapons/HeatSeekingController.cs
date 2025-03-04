@@ -2,9 +2,9 @@ using DanielWillett.ReflectionTools;
 using System;
 using System.Collections.Generic;
 using Uncreated.Framework.UI;
-using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Vehicles.WarfareVehicles;
+using Uncreated.Warfare.Vehicles.WarfareVehicles.Flares;
 
 namespace Uncreated.Warfare.Weapons;
 internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'Aim' gameobject to allow it to control projectiles

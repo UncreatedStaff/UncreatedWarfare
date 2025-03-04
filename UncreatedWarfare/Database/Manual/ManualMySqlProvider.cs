@@ -332,7 +332,7 @@ public class ManualMySqlProvider : IManualMySqlProvider
             }
             else
             {
-                sb.Append(Accessor.Formatter.Format(obj.GetType())).Append(" - ").Append('"').Append(obj).Append('"');
+                sb.Append(Accessor.Formatter.Format(obj.GetType())).Append(" - ").Append('"').Append(obj is byte[] b ? Convert.ToBase64String(b) : obj.ToString()).Append('"');
             }
         }
 

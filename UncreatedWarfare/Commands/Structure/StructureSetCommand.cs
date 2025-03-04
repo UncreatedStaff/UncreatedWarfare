@@ -54,11 +54,30 @@ internal sealed class StructureSetCommand : IExecutableCommand
         }
         else throw Context.Reply(_translations.StructureNoTarget);
 
-        CSteamID? ownerOrGroupId = await Context.TryGetSteamId(1).ConfigureAwait(false);
+        CSteamID? ownerOrGroupId = null;
+
+        if (Context.MatchParameter(1, "0"))
+        {
+            ownerOrGroupId = CSteamID.Nil;
+        }
+        else if (Context.MatchParameter(1, "me"))
+        {
+            ownerOrGroupId = isSettingGroup ? Context.Player.UnturnedPlayer.quests.groupID : Context.CallerId;
+        }
+        else if (isSettingGroup && Context.TryGet(1, out ulong groupId))
+        {
+            ownerOrGroupId = new CSteamID(groupId);
+        }
+        else if (!isSettingGroup && !(ownerOrGroupId = await Context.TryGetSteamId(1).ConfigureAwait(false)).HasValue)
+        {
+            string? faction = Context.Get(1);
+            Team? team = _teamManager.FindTeam(faction);
+            ownerOrGroupId = team?.GroupId;
+        }
 
         await UniTask.SwitchToMainThread(token);
 
-        if (!ownerOrGroupId.HasValue || ownerOrGroupId != CSteamID.Nil && !isSettingGroup && ownerOrGroupId.Value.IsIndividual())
+        if (!ownerOrGroupId.HasValue)
         {
             if (!Context.MatchParameter(1, "me"))
                 throw Context.SendHelp();
