@@ -1001,6 +1001,9 @@ public class BuildableSaver :
         {
             try
             {
+                if (e.Instigator == null)
+                    return;
+
                 BuildableSave? save = await GetBarricadeSaveAsync(e.Barricade.instanceID);
                 if (save == null) return;
 

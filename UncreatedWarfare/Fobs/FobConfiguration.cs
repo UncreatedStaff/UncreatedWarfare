@@ -5,7 +5,6 @@ using System.Collections.ObjectModel;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.FOBs.SupplyCrates;
-using Uncreated.Warfare.FOBs.SupplyCrates.Throwable;
 using Uncreated.Warfare.FOBs.SupplyCrates.Throwable.AmmoBags;
 using Uncreated.Warfare.FOBs.SupplyCrates.Throwable.Vehicle;
 

@@ -173,16 +173,25 @@ public class VehicleRequestService : ILayoutHostedService,
             return false;
         }
 
-        Vector3 pos = player.Position;
+        Vector3 pos = spawn.Buildable.Position;
 
         foreach (VehicleSpawner otherSpawn in _spawnerService.Spawners)
         {
-            if (otherSpawn == spawn || otherSpawn.LinkedVehicle == null || otherSpawn.LinkedVehicle.isDead || otherSpawn.LinkedVehicle.isExploded || otherSpawn.LinkedVehicle.isDrowned)
+            if (otherSpawn == spawn
+                || !otherSpawn.Team.IsFriendly(player.Team)
+                || otherSpawn.LinkedVehicle == null
+                || otherSpawn.LinkedVehicle.isDead
+                || otherSpawn.LinkedVehicle.isExploded
+                || otherSpawn.LinkedVehicle.isDrowned)
+            {
                 continue;
+            }
 
             InteractableVehicle v = otherSpawn.LinkedVehicle;
-            if (v.lockedOwner.m_SteamID != player.Steam64.m_SteamID || MathUtility.SquaredDistance(v.transform.position, in pos) > MaxVehicleAbandonmentDistance * MaxVehicleAbandonmentDistance)
+            if (v.lockedOwner.m_SteamID != player.Steam64.m_SteamID || !MathUtility.WithinRange(v.transform.position, in pos, MaxVehicleAbandonmentDistance))
+            {
                 continue;
+            }
 
             resultHandler.MissingRequirement(player, spawn, _reqTranslations.AnotherVehicleAlreadyOwned.Translate(v.asset, player));
             return false;
@@ -234,7 +243,6 @@ public class VehicleRequestService : ILayoutHostedService,
 
         DropAmmoItems(vehicleInfo, player);
             
-        _logger.LogInformation("playing effect..");
         EffectUtility.TriggerEffect(UnlockSound, EffectManager.SMALL, player.Position /* todo: vehicle!.transform.position */, true);
         
         // purchase the vehicle

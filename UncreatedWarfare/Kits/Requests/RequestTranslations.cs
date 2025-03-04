@@ -129,7 +129,7 @@ public class RequestTranslations : PropertiesTranslationCollection
     public readonly Translation<FactionInfo> RequestVehicleOtherTeam = new Translation<FactionInfo>("<#a8918a>You must be on {0} to request this vehicle.", arg0Fmt: FactionInfo.FormatColorDisplayName);
 
     [TranslationData("Sent when a player tries to request a vehicle but needs another kit class.", "The name of the required class")]
-    public readonly Translation<Class> RequestVehicleWrongClass = new Translation<Class>("<#b3ab9f>You need a <#cedcde><uppercase>{0}</uppercase></color> kit in order to request this vehicle.");
+    public readonly Translation<Class> RequestVehicleWrongClass = new Translation<Class>("<#b3ab9f>You need a <#cedcde><uppercase>{0}</uppercase></color> kit in order to request this vehicle");
 
     [TranslationData("Sent when a player tries to request a vehicle but they're too low level.", "Name of the level needed", "Number of the level needed")]
     public readonly Translation<WarfareRank, WarfareRank> RequestVehicleMissingLevels = new Translation<WarfareRank, WarfareRank>("<#b3ab9f>You must be <#ffc29c>{0}</color> ({1}) to request this vehicle.", arg0Fmt: WarfareRank.FormatName, arg1Fmt: WarfareRank.FormatLPrefixedNumeric);
@@ -325,7 +325,7 @@ public class RequestVehicleTranslations : PropertiesTranslationCollection
     public readonly Translation IncorrectTeam = new Translation("Vehicle not allowed for your team");
 
     [TranslationData("Sent when a player tries to request a vehicle that requires a specific class.")]
-    public readonly Translation<Class> IncorrectKitClass = new Translation<Class>("You need a <#cedcde>{0}</color> kit in order to request this vehicle.", arg0Fmt: UppercaseAddon.Instance);
+    public readonly Translation<Class> IncorrectKitClass = new Translation<Class>("You need a <#cedcde>{0}</color> kit in order to request this vehicle", arg0Fmt: UppercaseAddon.Instance);
 
     [TranslationData("Sent when a player tries to request a vehicle but already owns one nearby.")]
     public readonly Translation<VehicleAsset> AnotherVehicleAlreadyOwned = new Translation<VehicleAsset>("<#cedcde>{0}</color> already requested", arg0Fmt: RarityColorAddon.Instance);

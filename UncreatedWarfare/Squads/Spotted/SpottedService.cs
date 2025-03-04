@@ -3,8 +3,11 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Fobs;
+using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
@@ -31,6 +34,7 @@ internal sealed class SpottedService : ILayoutHostedService
     private readonly ITranslationValueFormatter _formatter;
     private readonly SpottedTranslations _translations;
     private readonly ChatService _chatService;
+    private readonly FobConfiguration _fobConfiguration;
     private ITeamManager<Team>? _teamManager;
 
     public IReadOnlyList<SpottableObjectComponent> AliveSpottableObjects { get; }
@@ -44,6 +48,7 @@ internal sealed class SpottedService : ILayoutHostedService
         _formatter = serviceProvider.GetRequiredService<ITranslationValueFormatter>();
         _translations = serviceProvider.GetRequiredService<TranslationInjection<SpottedTranslations>>().Value;
         _playerService = serviceProvider.GetRequiredService<IPlayerService>();
+        _fobConfiguration = serviceProvider.GetRequiredService<FobConfiguration>();
         _laserDesignator = serviceProvider.GetRequiredService<AssetConfiguration>()
                                           .GetAssetLink<ItemGunAsset>("Items:LaserDesignator");
 
@@ -72,12 +77,21 @@ internal sealed class SpottedService : ILayoutHostedService
 
     private void UseableGunOnBulletHit(UseableGun gun, BulletInfo bullet, InputInfo hit, ref bool shouldAllow)
     {
-        if (!_laserDesignator.MatchAsset(gun.equippedGunAsset) || !shouldAllow || hit.transform == null)
+        if (!_laserDesignator.MatchAsset(gun.equippedGunAsset) || !shouldAllow)
         {
             return;
         }
 
+        if (hit.transform == null)
+        {
+            shouldAllow = false;
+            return;
+        }
+
         WarfarePlayer spotter = _playerService.GetOnlinePlayer(gun.player);
+
+        if (_teamManager == null && _module.IsLayoutActive())
+            _teamManager = _module.GetActiveLayout().TeamManager;
 
         IBuildable? buildable = null;
         switch (hit.type)
@@ -102,16 +116,16 @@ internal sealed class SpottedService : ILayoutHostedService
             // vehicles
             case ERaycastInfoType.VEHICLE:
                 InteractableVehicle? vehicle = hit.vehicle;
-                if (vehicle == null || !vehicle.TryGetComponent(out WarfareVehicleComponent vehComp))
+                if (vehicle == null)
                 {
                     _logger.LogDebug("Invalid spot: no vehicle found.");
                     break;
                 }
 
-                Team? team = vehComp.WarfareVehicle.Spawn?.Team;
-                if (team == null || !spotter.Team.IsOpponent(team))
+                Team? team = _teamManager?.GetTeam(vehicle.lockedGroup);
+                if (team is null || !team.IsValid || !team.IsOpponent(spotter.Team))
                 {
-                    _logger.LogDebug("Invalid spot: no vehicle team: {0}.", vehicle.asset);
+                    _logger.LogDebug("Invalid spot: no vehicle team: {0}.", buildable);
                     break;
                 }
 
@@ -151,13 +165,17 @@ internal sealed class SpottedService : ILayoutHostedService
                     buildable = new BuildableBarricade(barricade);
                 }
 
-                if (_teamManager == null && _module.IsLayoutActive())
-                    _teamManager = _module.GetActiveLayout().TeamManager;
-
                 team = _teamManager?.GetTeam(buildable.Group);
                 if (team is null || !team.IsValid || !team.IsOpponent(spotter.Team))
                 {
                     _logger.LogDebug("Invalid spot: no team on buildable: {0}.", buildable);
+                    break;
+                }
+
+                ShovelableInfo? shovelable = _fobConfiguration.Shovelables.FirstOrDefault(x => x.CompletedStructure.MatchAsset(buildable.Asset));
+                if (shovelable is not { ConstuctionType: ShovelableType.Fob })
+                {
+                    _logger.LogDebug("Invalid spot: not FOB: {0}.", buildable);
                     break;
                 }
 
