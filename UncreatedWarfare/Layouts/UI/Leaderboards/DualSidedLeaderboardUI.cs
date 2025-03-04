@@ -105,7 +105,7 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
 
     private void Team1ButtonPressed(UnturnedButton button, Player player)
     {
-        int ind = Array.IndexOf(Leaderboards[0].StatHeaders, button);
+        int ind = Array.FindIndex(Leaderboards[0].StatHeaders, b => b.Button == button);
         if (ind == -1)
             return;
 
@@ -114,7 +114,7 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
 
     private void Team2ButtonPressed(UnturnedButton button, Player player)
     {
-        int ind = Array.IndexOf(Leaderboards[1].StatHeaders, button);
+        int ind = Array.FindIndex(Leaderboards[1].StatHeaders, b => b.Button == button);
         if (ind == -1)
             return;
 

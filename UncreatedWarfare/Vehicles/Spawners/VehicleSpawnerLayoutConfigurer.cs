@@ -1,20 +1,16 @@
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Text;
-using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.Services;
-using Uncreated.Warfare.Vehicles.Spawners;
-using static Uncreated.Warfare.Vehicles.Spawners.VehicleSpawnerStore;
 
-namespace Uncreated.Warfare.Vehicles;
+namespace Uncreated.Warfare.Vehicles.Spawners;
+
 public class VehicleSpawnerLayoutConfigurer : ILayoutHostedService
 {
-    private IConfiguration _configuration;
-    public VehicleSpawnerLayoutConfigurer(IConfiguration configuration, ILogger<VehicleSpawnerLayoutConfigurer> logger)
+    private readonly IConfiguration _configuration;
+    public VehicleSpawnerLayoutConfigurer(IConfiguration configuration)
     {
         _configuration = configuration;
     }

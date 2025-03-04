@@ -62,7 +62,7 @@ public class AssetRedirectService
             return false;
 
         // todo add more
-        if (item is ItemPlaceableAsset && _assetConfig.GetAssetLink<ItemPlaceableAsset>("Buildables:Gameplay:AmmoBag").MatchGuid(itemGuid))
+        if (item is ItemThrowableAsset && _assetConfig.GetAssetLink<ItemThrowableAsset>("Items:AmmoBag").MatchGuid(itemGuid))
             type = RedirectType.AmmoBag;
 
         else if (item is ItemPlaceableAsset && _assetConfig.GetAssetLink<ItemPlaceableAsset>("Buildables:Gameplay:InsurgencyCache").MatchGuid(itemGuid))
@@ -215,7 +215,7 @@ public class AssetRedirectService
                 break;
 
             case RedirectType.AmmoBag:
-                toReturn = _assetConfig.GetAssetLink<ItemPlaceableAsset>("Buildables:Gameplay:AmmoBag").GetAsset();
+                toReturn = _assetConfig.GetAssetLink<ItemThrowableAsset>("Items:AmmoBag").GetAsset();
                 break;
                 
             case RedirectType.Cache:

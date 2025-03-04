@@ -1,4 +1,3 @@
-﻿using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.Events.Models.Vehicles;

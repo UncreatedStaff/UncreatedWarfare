@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Players;
@@ -36,6 +35,7 @@ public class FlareEmitter : MonoBehaviour
         PlayerKeys.PressedPluginKey1 += OnFlareKeyPressed;
         return this;
     }
+
     private void OnDestroy()
     {
         PlayerKeys.PressedPluginKey1 -= OnFlareKeyPressed;
@@ -43,6 +43,9 @@ public class FlareEmitter : MonoBehaviour
 
     private void OnFlareKeyPressed(WarfarePlayer player, ref bool handled)
     {
+        if (player.UnturnedPlayer.movement.getVehicle() != Vehicle.Vehicle || player.UnturnedPlayer.movement.getSeat() != 0)
+            return;
+
         TryDropFlares();
         handled = true;
     }
@@ -73,7 +76,7 @@ public class FlareEmitter : MonoBehaviour
             if (passenger.player == null)
                 continue;
             
-            EffectManager.sendUIEffect(_dropFlaresSound.id, (short)_dropFlaresSound.id, passenger.player.transportConnection, true);
+            EffectManager.sendUIEffect(_dropFlaresSound.id, -1, passenger.player.transportConnection, true);
         }
     }
     public void ReceiveMissileWarning()

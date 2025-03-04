@@ -1,26 +1,30 @@
-using Microsoft.Extensions.DependencyInjection;
 using System;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
+using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Players.Tweaks;
+
 public class PlayerChooseSpawnPointTweaks :
     IEventListener<PlayerChooseSpawnAfterLogin>,
     IEventListener<PlayerChooseSpawnAfterDeath>
 {
+    private readonly Layout _layout;
+    private readonly ZoneStore _zoneStore;
+
+    public PlayerChooseSpawnPointTweaks(Layout layout, ZoneStore zoneStore)
+    {
+        _layout = layout;
+        _zoneStore = zoneStore;
+    }
+
     [EventListener(RequireActiveLayout = true)]
     public void HandleEvent(PlayerChooseSpawnAfterLogin e, IServiceProvider serviceProvider)
     {
-        ZoneStore? zones = serviceProvider.GetService<ZoneStore>();
-        ITeamManager<Team>? teamManager = serviceProvider.GetService<ITeamManager<Team>>();
-
-        if (zones == null || teamManager == null) // do not modify the player's spawn if zones or teams are not supported
-            return;
-
-        Team lastPlayedTeam = teamManager.GetTeam(new CSteamID((ulong)e.PlayerSave.TeamId));
+        Team lastPlayedTeam = _layout.TeamManager.GetTeam(new CSteamID(e.PlayerSave.TeamId));
 
         // spawn back on the battlefield where they last logged off if they are rejoining a round and do not need a new spawn point
         bool shouldSpawnInTheField = !e.JoiningIntoNewRound && !e.NeedsNewSpawnPoint;
@@ -34,7 +38,7 @@ public class PlayerChooseSpawnPointTweaks :
         bool shouldSpawnAtMain = lastPlayedTeam != Team.NoTeam && !e.JoiningIntoNewRound && e.NeedsNewSpawnPoint;
         if (shouldSpawnAtMain)
         {
-            Zone? warRoom = zones.SearchZone(ZoneType.WarRoom, lastPlayedTeam.Faction);
+            Zone? warRoom = _zoneStore.SearchZone(ZoneType.WarRoom, lastPlayedTeam.Faction);
             if (warRoom == null) // ignore if we don't know what the player's war room is
                 return;
 
@@ -47,7 +51,7 @@ public class PlayerChooseSpawnPointTweaks :
         bool shouldSpawnInLobby = e.FirstTimeJoiningServer || e.JoiningIntoNewRound;
         if (shouldSpawnInLobby)
         {
-            Zone? lobby = zones.SearchZone(ZoneType.Lobby);
+            Zone? lobby = _zoneStore.SearchZone(ZoneType.Lobby);
             if (lobby == null) // ignore if there is no apparent lobby
                 return;
 
@@ -59,16 +63,10 @@ public class PlayerChooseSpawnPointTweaks :
     [EventListener(RequireActiveLayout = true)]
     public void HandleEvent(PlayerChooseSpawnAfterDeath e, IServiceProvider serviceProvider)
     {
-        ZoneStore? zones = serviceProvider.GetService<ZoneStore>();
-        ITeamManager<Team>? teamManager = serviceProvider.GetService<ITeamManager<Team>>();
-
-        if (zones == null || teamManager == null) // do not modify the player's spawn if zones or teams are not supported
-            return;
-
         // respawn in main if the player has a team
         if (e.Player.Team != Team.NoTeam)
         {
-            Zone? warRoom = zones.SearchZone(ZoneType.WarRoom, e.Player.Team.Faction);
+            Zone? warRoom = _zoneStore.SearchZone(ZoneType.WarRoom, e.Player.Team.Faction);
             if (warRoom == null) // ignore if we don't know what the player's main base is
                 return;
 
@@ -80,7 +78,7 @@ public class PlayerChooseSpawnPointTweaks :
         {
             // otherwise, respawn in lobby
 
-            Zone? lobby = zones.SearchZone(ZoneType.Lobby);
+            Zone? lobby = _zoneStore.SearchZone(ZoneType.Lobby);
             if (lobby == null) // ignore if there is no apparent lobby
                 return;
 

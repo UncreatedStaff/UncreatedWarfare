@@ -31,23 +31,6 @@ partial class EventDispatcher
         }
 
         // update team
-        Team team = Team.NoTeam;
-        if (steamPlayer.player.quests.isMemberOfAGroup)
-        {
-            steamPlayer.player.quests.leaveGroup(true);
-            /* todo make some kind of 'joining previous team...' section of the lobby
-            if (!_warfare.IsLayoutActive())
-            {
-                steamPlayer.player.quests.leaveGroup(true);
-            }
-            else
-            {
-                team = _warfare.GetActiveLayout().TeamManager.GetTeam(steamPlayer.player.quests.groupID);
-                if (team == Team.NoTeam)
-                    steamPlayer.player.quests.leaveGroup(true);
-            }
-            */
-        }
 
         ulong s64 = steam64.m_SteamID;
 
@@ -92,8 +75,6 @@ partial class EventDispatcher
         WarfarePlayer newPlayer = implPlayerService.CreateWarfarePlayer(steamPlayer.player, in data);
 
         SubscribePlayerEvents(newPlayer);
-
-        newPlayer.UpdateTeam(team);
 
         PlayerJoined args = new PlayerJoined
         {

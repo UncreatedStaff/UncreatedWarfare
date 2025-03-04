@@ -1,9 +1,8 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Uncreated.Warfare.Exceptions;
-using Uncreated.Warfare.Layouts.Phases;
 
 namespace Uncreated.Warfare.Zones.Pathing;
 public class ManualZonePathingProvider : IZonePathingProvider
@@ -35,13 +34,13 @@ public class ManualZonePathingProvider : IZonePathingProvider
             Zone? zone = _zones.Zones.FirstOrDefault(zone => zone.IsPrimary && zone.Name.Equals(zoneName, StringComparison.Ordinal));
             if (zone == null)
             {
-                _logger.LogError("There is no zone by the name \"{0}\" (#{1}).", zoneName.Length, i);
+                _logger.LogError("There is no zone by the name \"{0}\" (#{1}).", zoneName, i);
                 Fail();
             }
 
             if (zones.Contains(zone!))
             {
-                _logger.LogError("Duplicate zone \"{0}\" (#{1}) in zone list.", zoneName.Length, i);
+                _logger.LogError("Duplicate zone \"{0}\" (#{1}) in zone list.", zoneName, i);
                 Fail();
             }
 

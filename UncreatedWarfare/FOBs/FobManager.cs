@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Uncreated.Framework.UI;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models.Fobs;
@@ -9,19 +10,16 @@ using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.FOBs.Entities;
 using Uncreated.Warfare.Interaction;
+using Uncreated.Warfare.Kits.Whitelists;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Locations;
-using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.List;
-using Uncreated.Warfare.Util.Timing;
-using Uncreated.Warfare.Vehicles;
-using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Fobs;
 
-public partial class FobManager : ILayoutHostedService
+public partial class FobManager : IWhitelistExceptionProvider
 {
     internal const float EmplacementSpawnOffset = 2f;
 
@@ -60,15 +58,6 @@ public partial class FobManager : ILayoutHostedService
         Fobs = new ReadOnlyTrackingList<IFob>(_fobs);
     }
 
-    UniTask ILayoutHostedService.StartAsync(CancellationToken token)
-    {
-        return UniTask.CompletedTask;
-    }
-
-    UniTask ILayoutHostedService.StopAsync(CancellationToken token)
-    {
-        return UniTask.CompletedTask;
-    }
     public BunkerFob RegisterBunkerFob(IBuildable fobBuildable)
     {
         GridLocation griddy = new GridLocation(fobBuildable.Position);
@@ -109,6 +98,11 @@ public partial class FobManager : ILayoutHostedService
     }
     public void RegisterFobEntity(IFobEntity entity)
     {
+        if (_entities.Contains(entity))
+        {
+            _logger.LogWarning($"FOB Entity registered twice: {entity}");
+            return;
+        }
         _entities.Add(entity);
         _logger.LogDebug("Registered new FOB Entity: " + entity);
 
@@ -178,5 +172,18 @@ public partial class FobManager : ILayoutHostedService
         return _entities.OfType<EmplacementEntity>().FirstOrDefault(f =>
             f.Vehicle.Vehicle.instanceID == emplacementVehicle.instanceID
         );
+    }
+
+    /// <inheritdoc />
+    ValueTask<int> IWhitelistExceptionProvider.GetWhitelistAmount(IAssetContainer assetContainer)
+    {
+        int amt = 0;
+        foreach (ShovelableInfo shovelable in Configuration.Shovelables)
+        {
+            if (shovelable.Foundation.MatchAsset(assetContainer))
+                ++amt;
+        }
+
+        return new ValueTask<int>(amt);
     }
 }

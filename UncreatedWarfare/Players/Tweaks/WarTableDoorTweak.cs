@@ -6,6 +6,7 @@ using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Kits;
 using Uncreated.Warfare.Events.Models.Objects;
 using Uncreated.Warfare.Events.Models.Players;
+using Uncreated.Warfare.Events.Models.Zones;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Players.Extensions;
@@ -17,6 +18,7 @@ public class WarTableDoorTweak :
     IEventListener<PlayerTeamChanged>,
     IEventListener<QuestObjectInteracted>,
     IEventListener<PlayerJoined>,
+    IEventListener<PlayerEnteredZone>,
     IEventListener<PlayerDeployed>
 {
     private readonly ZoneStore _zoneStore;
@@ -25,10 +27,10 @@ public class WarTableDoorTweak :
     private readonly IAssetLink<ObjectAsset>[] _teleportDoors;
     private readonly ushort _flagId;
 
-    private const short FlagValueAlreadyDeployed = -3;
-    private const short FlagValueNoKit = -2;
-    private const short FlagValueDeploying = -1;
-    private const short FlagValueDeployable = 0;
+    private const short FlagValueAlreadyDeployed = -2; // -2 confirmed
+    private const short FlagValueNoKit = -1; // -1 confirmed
+    private const short FlagValueDeploying = -3;
+    private const short FlagValueDeployable = 0; // 0 confirmed
 
     public WarTableDoorTweak(AssetConfiguration assetConfig, ZoneStore zoneStore, DeploymentService deploymentService)
     {
@@ -88,6 +90,11 @@ public class WarTableDoorTweak :
         UpdateFlag(e.Player);
     }
 
+    void IEventListener<PlayerEnteredZone>.HandleEvent(PlayerEnteredZone e, IServiceProvider serviceProvider)
+    {
+        UpdateFlag(e.Player);
+    }
+
     void IEventListener<PlayerDeployed>.HandleEvent(PlayerDeployed e, IServiceProvider serviceProvider)
     {
         if (e.Destination is Zone { Type: ZoneType.WarRoom or ZoneType.MainBase })
@@ -98,7 +105,7 @@ public class WarTableDoorTweak :
 
     private void UpdateFlag(WarfarePlayer player)
     {
-        if (player.Component<DeploymentComponent>().CurrentDeployment is Zone { Type: ZoneType.WarRoom })
+        if (player.Component<DeploymentComponent>().CurrentDeployment is Zone { Type: ZoneType.MainBase })
         {
             // already deploying
             player.SetFlag(_flagId, FlagValueDeploying);

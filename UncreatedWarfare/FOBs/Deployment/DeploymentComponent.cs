@@ -12,6 +12,7 @@ using Uncreated.Warfare.Players.Cooldowns;
 using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.Languages;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Zones;
 
@@ -195,32 +196,36 @@ public class DeploymentComponent : MonoBehaviour, IPlayerComponent, IEventListen
 
     private void InstantDeploy(IDeployable deployable, DeploySettings settings, IDeployable? deployFrom, PlayerDeployed args)
     {
-        Player.UnturnedPlayer.teleportToLocationUnsafe(deployable.SpawnPosition, deployable.Yaw);
-        if (deployFrom is { IsSafeZone: true })
+        try
         {
-            _lastDeployedFromSafeZone = DateTime.UtcNow;
+            Player.UnturnedPlayer.teleportToLocationUnsafe(deployable.SpawnPosition, deployable.Yaw);
+            if (deployFrom is { IsSafeZone: true })
+            {
+                _lastDeployedFromSafeZone = DateTime.UtcNow;
+            }
+
+            deployFrom?.OnDeployFrom(Player, in settings);
+            deployable.OnDeployTo(Player, in settings);
+            ActionLog.Add(ActionLogType.DeployToLocation, deployable.ToString(), Player);
+
+            _ = WarfareModule.EventDispatcher.DispatchEventAsync(args);
+
+            if (!settings.DisableInitialChatUpdates)
+                _chatService.Send(Player, _translations.DeploySuccess, deployable);
+            if (!settings.DisableStartingCooldown && _cooldownManager != null)
+            {
+                _cooldownManager.StartCooldown(Player, settings.CooldownType ?? KnownCooldowns.Deploy, 30f /* todo RapidDeployment.GetDeployTime(Player) */);
+            }
         }
-
-        deployFrom?.OnDeployFrom(Player, in settings);
-        deployable.OnDeployTo(Player, in settings);
-        ActionLog.Add(ActionLogType.DeployToLocation, deployable.ToString(), Player);
-
-        _ = WarfareModule.EventDispatcher.DispatchEventAsync(args);
-
-        if (!settings.DisableInitialChatUpdates)
-            _chatService.Send(Player, _translations.DeploySuccess, deployable);
-        if (!settings.DisableStartingCooldown && _cooldownManager != null)
+        finally
         {
-            _cooldownManager.StartCooldown(Player, settings.CooldownType ?? KnownCooldowns.Deploy, 30f /* todo RapidDeployment.GetDeployTime(Player) */);
+            CurrentDeployment = null;
         }
-
-        CurrentDeployment = null;
     }
 
     private IEnumerator DeployCoroutine(IDeployable deployable, DeploySettings settings, IDeployable? deployFrom, PlayerDeployed args)
     {
         CurrentDeployment = deployable;
-
                              // set by calling function
         float delay = (float)settings.Delay.GetValueOrDefault().TotalSeconds;
 
@@ -235,10 +240,18 @@ public class DeploymentComponent : MonoBehaviour, IPlayerComponent, IEventListen
             delay -= waitTime;
             yield return new WaitForSecondsRealtime(waitTime);
 
-            if (!VerifyDeploymentTick(deployable, in settings, ref startState))
+            try
             {
-                CancelDeployment(false);
-                yield break;
+                if (!VerifyDeploymentTick(deployable, in settings, ref startState))
+                {
+                    CancelDeployment(false);
+                    yield break;
+                }
+            }
+            catch
+            {
+                CurrentDeployment = null;
+                throw;
             }
         }
         while (delay > 0);

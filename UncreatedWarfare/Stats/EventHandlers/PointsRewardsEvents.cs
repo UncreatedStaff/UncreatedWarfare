@@ -136,7 +136,7 @@ internal class PointsRewardsEvents :
         {
             EventInfo @event = _points.GetEvent("DestroyEnemyVehicle:" + e.Vehicle.Info.Type);
 
-            Translation translation = e.Vehicle.Info.Type.IsAircraft()
+            Translation<VehicleType> translation = e.Vehicle.Info.Type.IsAircraft()
                 ? _translations.XPToastAircraftDestroyed
                 : _translations.XPToastVehicleDestroyed;
 
@@ -171,7 +171,7 @@ internal class PointsRewardsEvents :
                 else
                     resolvedEvent = new ResolvedEventInfo(@event, contributionPercentage);
 
-                Task task = _points.ApplyEvent(contributor.Steam64, faction, resolvedEvent.WithTranslation(translation, contributor), token);
+                Task task = _points.ApplyEvent(contributor.Steam64, faction, resolvedEvent.WithTranslation(translation, e.Vehicle.Info.Type, contributor), token);
                 tasks.Add(task);
             }
             await Task.WhenAll(tasks);

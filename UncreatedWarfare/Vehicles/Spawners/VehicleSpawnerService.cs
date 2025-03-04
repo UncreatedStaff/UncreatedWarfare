@@ -14,7 +14,7 @@ using Uncreated.Warfare.Vehicles.WarfareVehicles;
 namespace Uncreated.Warfare.Vehicles.Spawners;
 
 [Priority(-2 /* run after vehicle storage services (specifically VehicleSpawnerStore and VehicleInfoStore) */)]
-public class VehicleSpawnerService : ILayoutHostedService
+public class VehicleSpawnerService : ILayoutHostedService, IDisposable
 {
     private readonly TrackingList<VehicleSpawner> _spawns;
     private readonly VehicleSpawnerStore _spawnerStore;
@@ -40,16 +40,22 @@ public class VehicleSpawnerService : ILayoutHostedService
         Spawners = new ReadOnlyTrackingList<VehicleSpawner>(_spawns);
     }
 
-    public UniTask StartAsync(CancellationToken token)
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        _updateTicker.Dispose();
+    }
+
+    UniTask ILayoutHostedService.StartAsync(CancellationToken token)
     {
         return UniTask.CompletedTask;
     }
 
-    public UniTask StopAsync(CancellationToken token)
+    UniTask ILayoutHostedService.StopAsync(CancellationToken token)
     {
-        _updateTicker.Dispose();
         return UniTask.CompletedTask;
     }
+
     public bool TryGetSpawner(uint signInstanceId, [NotNullWhen(true)] out VehicleSpawner? spawner)
     {
         spawner = _spawns.FirstOrDefault(x => x.Signs.Any(x => x.InstanceId == signInstanceId));
@@ -122,18 +128,27 @@ public class VehicleSpawnerService : ILayoutHostedService
                 return;
             }
 
-            VehicleSpawner? existing = _spawns.FirstOrDefault(s => s.Buildable?.InstanceId == record.BuildableInstanceId && s.Buildable.IsStructure ==  record.IsStructure); 
+            VehicleSpawner? existing = _spawns.FirstOrDefault(s => s.Buildable?.InstanceId == record.BuildableInstanceId && s.Buildable.IsStructure == record.IsStructure);
             if (existing != null)
             {
-                existing.SoftReload(record, vehicleInfo);
-                _logger.LogDebug($"Soft reloaded existing spawn: {existing}");
+                if (existing.Layout == currentLayout)
+                {
+                    existing.SoftReload(record, vehicleInfo);
+                    _logger.LogDebug($"Soft reloaded existing spawn: {vehicleInfo.VehicleAsset}");
+                    continue;
+                }
+
+                existing.Dispose();
+                _spawns.Remove(existing);
+                _logger.LogDebug($"Replacing existing spawn: {vehicleInfo.VehicleAsset}");
             }
             else
             {
-                VehicleSpawner newSpawner = new VehicleSpawner(record, vehicleInfo, _updateTicker, layoutServiceProvider);
-                _spawns.Add(newSpawner);
-                _logger.LogDebug($"Added new spawn: {newSpawner}");
+                _logger.LogDebug($"Adding new spawn: {vehicleInfo.VehicleAsset}");
             }
+
+            VehicleSpawner newSpawner = new VehicleSpawner(record, vehicleInfo, _updateTicker, layoutServiceProvider);
+            _spawns.Add(newSpawner);
         }
 
         _logger.LogDebug($"Successfully loaded {_spawns.Count} spawns");

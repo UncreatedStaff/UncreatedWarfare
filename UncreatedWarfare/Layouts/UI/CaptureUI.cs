@@ -1,26 +1,37 @@
-﻿using System;
+using System;
+using System.Linq;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Data;
 using Uncreated.Framework.UI.Reflection;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Interaction.UI;
+using Uncreated.Warfare.Layouts.Flags;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Layouts.UI;
 
 [UnturnedUI(BasePath = "Box")]
-public class CaptureUI : UnturnedUI
+public class CaptureUI : UnturnedUI, IHudUIListener
 {
     private readonly Func<CSteamID, CaptureUIData> _getCaptureUIData;
+    private readonly IPlayerService _playerService;
+    private readonly WarfareModule _module;
+    private readonly ITranslationService _translationService;
+    private bool _isHidden;
 
     public UnturnedLabel Title { get; } = new UnturnedLabel("TitleLabel");
     public ImageProgressBar CaptureProgress { get; } = new ImageProgressBar("CaptureProgress");
-    public CaptureUI(AssetConfiguration assetConfig, ILoggerFactory loggerFactory)
+    public CaptureUI(AssetConfiguration assetConfig, ILoggerFactory loggerFactory, IPlayerService playerService, WarfareModule module, ITranslationService translationService)
         : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:CaptureHUD"), reliable: false)
     {
+        _playerService = playerService;
+        _module = module;
+        _translationService = translationService;
         IsSendReliable = true;
         _getCaptureUIData = GetCaptureUIData;
     }
@@ -40,6 +51,16 @@ public class CaptureUI : UnturnedUI
         {
             WarfarePlayer player = set.Next;
             CaptureUIData data = GetOrAddData(player);
+            if (_isHidden)
+            {
+                if (!data.HasUI)
+                    continue;
+
+                data.HasUI = false;
+                ClearFromPlayer(player.Connection);
+                continue;
+            }
+
             if (!data.HasUI)
             {
                 data.HasUI = true;
@@ -109,6 +130,56 @@ public class CaptureUI : UnturnedUI
     private CaptureUIData GetCaptureUIData(CSteamID steam64)
     {
         return new CaptureUIData(steam64, this);
+    }
+
+    /// <inheritdoc />
+    public void Hide(WarfarePlayer? player)
+    {
+        if (player != null)
+        {
+            ClearFromPlayer(player.Connection);
+            GetOrAddData(player).HasUI = false;
+            return;
+        }
+
+        _isHidden = true;
+        ClearFromAllPlayers();
+        foreach (WarfarePlayer pl in _playerService.OnlinePlayers)
+        {
+            GetOrAddData(pl).HasUI = false;
+        }
+    }
+
+    /// <inheritdoc />
+    public void Restore(WarfarePlayer? player)
+    {
+        Layout layout = _module.GetActiveLayout();
+        IFlagRotationService rot = layout.ServiceProvider.Resolve<IFlagRotationService>();
+        DefaultCaptureUIFlagEvents? uiEvents = layout.ServiceProvider.ResolveOptional<DefaultCaptureUIFlagEvents>();
+
+        if (player != null)
+        {
+            FlagObjective? flag = rot.ActiveFlags.FirstOrDefault(f => f.Players.Contains(player));
+            if (flag != null && uiEvents != null)
+            {
+                CaptureUIState state = uiEvents.EvaluateCaptureUI(flag, new LanguageSet(player));
+                UpdateCaptureUI(player, in state);
+            }
+            return;
+        }
+
+        _isHidden = false;
+        if (uiEvents == null)
+            return;
+
+        foreach (FlagObjective flag in rot.ActiveFlags)
+        {
+            foreach (LanguageSet set in _translationService.SetOf.PlayersIn(flag.Players))
+            {
+                CaptureUIState state = uiEvents.EvaluateCaptureUI(flag, set);
+                UpdateCaptureUI(set, in state);
+            }
+        }
     }
 
     private class CaptureUIData : IUnturnedUIData

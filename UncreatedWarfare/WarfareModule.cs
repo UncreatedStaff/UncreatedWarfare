@@ -508,8 +508,14 @@ public sealed class WarfareModule
             .SingleInstance();
 
         // UI
+        bldr.RegisterType<HudManager>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
+
         bldr.RegisterType<ModerationUI>().SingleInstance();
-        bldr.RegisterType<DutyUI>().SingleInstance();
+        bldr.RegisterType<DutyUI>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
         bldr.RegisterType<SquadMenuUI>()
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
@@ -534,7 +540,7 @@ public sealed class WarfareModule
         bldr.RegisterType<TeamSelectorUI>().SingleInstance();
         bldr.RegisterType<VehicleHUD>().SingleInstance();
         bldr.RegisterType<FlagListUI>().SingleInstance();
-        bldr.RegisterType<CaptureUI>().SingleInstance();
+        bldr.RegisterType<CaptureUI>().AsSelf().AsImplementedInterfaces().SingleInstance();
         bldr.RegisterType<OptionsUI>().SingleInstance();
 
         bldr.RegisterType<TipService>()
@@ -910,6 +916,9 @@ public sealed class WarfareModule
         bldr.RegisterType<VoiceChatRestrictionsTweak>()
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
+        bldr.RegisterType<RemoveKitOnGameEnd>()
+            .AsSelf().AsImplementedInterfaces()
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
         bldr.RegisterType<VehicleRestrictions>()
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
@@ -920,7 +929,10 @@ public sealed class WarfareModule
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
         bldr.RegisterType<PlayerChooseSpawnPointTweaks>()
             .AsSelf().AsImplementedInterfaces()
-            .SingleInstance();
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+        bldr.RegisterType<KeepPlayerStateOnRejoinTweak>()
+            .AsSelf().AsImplementedInterfaces()
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
         bldr.RegisterType<KeepItemsAndStatsOnDeathTweak>()
             .AsImplementedInterfaces();
         bldr.RegisterType<ShovelableWarningTweak>()

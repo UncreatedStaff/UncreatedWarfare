@@ -31,7 +31,6 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
     private readonly IPlayerService _playerService;
     private readonly ITeamManager<Team> _teamManager;
     private readonly VehicleService _vehicleService;
-    private readonly Layout? _currentLayout;
     private readonly VehicleSpawnerLayoutConfigurer? _vehicleSpawnerSelector;
     private readonly ZoneStore _zoneStore;
 
@@ -44,6 +43,7 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
 
     private readonly ILoopTicker _updateTicker;
 
+    public Layout? Layout { get; private set; }
     public VehicleSpawnInfo SpawnInfo { get; private set; }
     public WarfareVehicleInfo VehicleInfo { get; private set; }
     /// <summary>
@@ -78,7 +78,7 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
         _teamManager = layoutServiceProvider.GetRequiredService<ITeamManager<Team>>();
         _zoneStore = layoutServiceProvider.GetRequiredService<ZoneStore>();
         _vehicleService = layoutServiceProvider.GetRequiredService<VehicleService>();
-        _currentLayout = layoutServiceProvider.GetService<Layout>();
+        Layout = layoutServiceProvider.GetService<Layout>();
         _vehicleSpawnerSelector = layoutServiceProvider.GetService<VehicleSpawnerLayoutConfigurer>();
         _updateTicker = updateTicker;
         updateTicker.OnTick += Update;
@@ -485,7 +485,7 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
     }
     public TimeSpan GetLayoutDelayTimeLeft()
     {
-        if (_vehicleSpawnerSelector == null || _currentLayout == null)
+        if (_vehicleSpawnerSelector == null || Layout == null)
             return TimeSpan.Zero;
 
         if (!_vehicleSpawnerSelector.TryGetSpawnerConfiguration(SpawnInfo, out VehicleSpawnerLayoutConfiguration? configuration))
@@ -494,7 +494,7 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
         if (configuration.Delay == null)
             return TimeSpan.Zero;
 
-        return configuration.Delay.GetTimeLeft(new LayoutDelayContext(_currentLayout, TeamLayoutRole));
+        return configuration.Delay.GetTimeLeft(new LayoutDelayContext(Layout, TeamLayoutRole));
     }
     public bool IsEnabledInLayout() => _vehicleSpawnerSelector?.IsEnabledInLayout(SpawnInfo) ?? true;
 
@@ -504,8 +504,8 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
         TryDestroyLinkedVehicle();
         State = VehicleSpawnerState.Disposed;
         UpdateLinkedSigns();
-            
     }
+
     public string ToDisplayString()
     {
         string buildableType;

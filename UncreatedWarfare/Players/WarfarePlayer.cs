@@ -247,6 +247,7 @@ public class WarfarePlayer :
     public void UpdateTeam(Team team)
     {
         Team = team;
+        Save.TeamId = team.GroupId.m_SteamID;
     }
 
     public void ApplyOfflineState()

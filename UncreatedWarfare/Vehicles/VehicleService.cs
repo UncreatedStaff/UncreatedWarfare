@@ -205,9 +205,17 @@ public class VehicleService :
         return warfareVehicle;
     }
 
-    public void RefillTrunkItems(WarfareVehicle warfareVehicle, IEnumerable<WarfareVehicleInfo.TrunkItem> trunkItems, bool dropItemsOnGroundIfNoSpace = true)
+    public void RefillTrunkItems(WarfareVehicle warfareVehicle, IReadOnlyCollection<WarfareVehicleInfo.TrunkItem> trunkItems, bool dropItemsOnGroundIfNoSpace = true)
     {
-        warfareVehicle.Vehicle.trunkItems.clear();
+        Items? items = warfareVehicle.Vehicle.trunkItems;
+        if (items == null || trunkItems.Count == 0)
+            return;
+
+        for (int i = items.getItemCount(); i > 0; --i)
+        {
+            items.removeItem(0);
+        }
+
         foreach (WarfareVehicleInfo.TrunkItem item in trunkItems)
         {
             if (!item.Item.TryGetAsset(out ItemAsset? itemAsset))
@@ -217,11 +225,11 @@ public class VehicleService :
             }
 
             Item info = new Item(itemAsset.id, itemAsset.amount, 100, item.State ?? itemAsset.getState(EItemOrigin.ADMIN));
-            if (warfareVehicle.Vehicle.trunkItems.checkSpaceEmpty(item.X, item.Y, itemAsset.size_x, itemAsset.size_y, item.Rotation))
+            if (items.checkSpaceEmpty(item.X, item.Y, itemAsset.size_x, itemAsset.size_y, item.Rotation))
             {
-                warfareVehicle.Vehicle.trunkItems.addItem(item.X, item.Y, item.Rotation, info);
+                items.addItem(item.X, item.Y, item.Rotation, info);
             }
-            else if (!warfareVehicle.Vehicle.trunkItems.tryAddItem(info) && dropItemsOnGroundIfNoSpace)
+            else if (!items.tryAddItem(info) && dropItemsOnGroundIfNoSpace)
             {
                 ItemManager.dropItem(info, warfareVehicle.Position, false, true, true);
             }

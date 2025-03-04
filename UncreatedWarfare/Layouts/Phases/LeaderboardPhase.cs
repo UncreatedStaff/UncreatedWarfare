@@ -14,6 +14,7 @@ using Uncreated.Warfare.Layouts.UI.Leaderboards;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Stats.Leaderboard;
 using Uncreated.Warfare.Util;
@@ -30,8 +31,10 @@ public class LeaderboardPhase : BasePhase<PhaseTeamSettings>, IDisposable, IEven
     private readonly ILoopTickerFactory _tickerFactory;
     private readonly IPlayerService _playerService;
     private readonly ILeaderboardUI _leaderboardUi;
+    private readonly HudManager _hudManager;
     private readonly List<LeaderboardPlayer>[] _players;
     private IDisposable? _statsFile;
+    private IDisposable? _hudHideHandle;
 
     [UsedImplicitly]
     public LeaderboardPhaseStatInfo[] PlayerStats { get; set; } = Array.Empty<LeaderboardPhaseStatInfo>();
@@ -49,6 +52,7 @@ public class LeaderboardPhase : BasePhase<PhaseTeamSettings>, IDisposable, IEven
         _tickerFactory = serviceProvider.GetRequiredService<ILoopTickerFactory>();
         _session = serviceProvider.GetRequiredService<Layout>();
         _leaderboardUi = serviceProvider.GetRequiredService<ILeaderboardUI>();
+        _hudManager = serviceProvider.GetRequiredService<HudManager>();
 
         _playerService = serviceProvider.GetRequiredService<IPlayerService>();
 
@@ -150,6 +154,8 @@ public class LeaderboardPhase : BasePhase<PhaseTeamSettings>, IDisposable, IEven
         if (Duration.Ticks <= 0)
             Duration = TimeSpan.FromSeconds(30d);
 
+        _hudHideHandle = _hudManager.HideHud();
+
         // try statement prevents the game loop from getting stuck after the leaderboard
         try
         {
@@ -195,7 +201,7 @@ public class LeaderboardPhase : BasePhase<PhaseTeamSettings>, IDisposable, IEven
 
         _leaderboardUi.Close();
         Dispose();
-
+        
         await base.EndPhaseAsync(token);
     }
 
@@ -203,6 +209,7 @@ public class LeaderboardPhase : BasePhase<PhaseTeamSettings>, IDisposable, IEven
     {
         Interlocked.Exchange(ref _ticker, null)?.Dispose();
         Interlocked.Exchange(ref _statsFile, null)?.Dispose();
+        Interlocked.Exchange(ref _hudHideHandle, null)?.Dispose();
     }
 
     public void AddToOfflineStat(int index, double amount, CSteamID steam64, Team team)

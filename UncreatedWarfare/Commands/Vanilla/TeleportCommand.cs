@@ -177,7 +177,7 @@ internal sealed class TeleportCommand : IExecutableCommand
 
                     if (target.UnturnedPlayer.teleportToLocation(pos, onlinePlayer.Yaw))
                     {
-                        _chatService.Send(target,  _translations.TeleportSelfSuccessPlayer, onlinePlayer);
+                        _chatService.Send<IPlayer>(target,  _translations.TeleportSelfSuccessPlayer, onlinePlayer);
                         throw Context.Reply(_translations.TeleportOtherSuccessPlayer, target, onlinePlayer);
                     }
                     throw Context.Reply(_translations.TeleportOtherObstructedPlayer, target, onlinePlayer);

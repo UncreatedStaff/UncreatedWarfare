@@ -3,7 +3,6 @@ using DanielWillett.ReflectionTools.Formatting;
 using HarmonyLib;
 using System;
 using System.Reflection;
-using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Models.Vehicles;
 using Uncreated.Warfare.Patches;
 using Uncreated.Warfare.Players;

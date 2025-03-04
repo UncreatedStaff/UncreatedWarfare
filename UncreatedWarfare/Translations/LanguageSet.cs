@@ -144,7 +144,7 @@ public struct LanguageSet : IEnumerable<WarfarePlayer>, IEnumerator<WarfarePlaye
             int ct = i + _players.Count;
             for (; i < ct; i++)
             {
-                PlayerMovement movement = Next.UnturnedPlayer.movement;
+                PlayerMovement movement = _players[i].UnturnedPlayer.movement;
                 WarfarePlayer pl = arr[i];
                 if (pl.IsOnline && Regions.checkArea(movement.region_x, movement.region_y, x, y, area))
                     list.Add(pl.Connection);
