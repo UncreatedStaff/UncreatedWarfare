@@ -612,55 +612,7 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         await UniTask.SwitchToMainThread(token);
 
         // update hotkey list
-        HotkeyPlayerComponent hotkeyComponent = player.Component<HotkeyPlayerComponent>();
-        hotkeyComponent.HotkeyBindings = null;
-
-        // clear hotkeys, todo: see if needed
-        // for (int i = 0; i <= 9; ++i)
-        //     player.UnturnedPlayer.equipment.ServerClearItemHotkey(KitItemUtility.GetHotkeyIndex((byte)i));
-
-        _kitBestowService.BestowKit(player, kitBestowData.Copy(layouts));
-
-        ItemTrackingPlayerComponent itemTracker = player.Component<ItemTrackingPlayerComponent>();
-
-        hotkeyComponent.HotkeyBindings = hotkeys;
-        foreach (KitHotkey hotkey in hotkeys)
-        {
-            byte index = KitItemUtility.GetHotkeyIndex(hotkey.Slot);
-            if (index == byte.MaxValue)
-                continue;
-
-            if (!itemTracker.TryGetCurrentItemPosition(hotkey.Page, hotkey.X, hotkey.Y, out Page page, out byte x, out byte y, out bool isDropped, out Item? item))
-                continue;
-            
-            if (isDropped)
-            {
-                // find suitable item after original was dropped
-                hotkeyComponent.HandleItemDropped(item, hotkey.X, hotkey.Y, hotkey.Page);
-                continue;
-            }
-
-            ItemAsset itemAsset = item.GetAsset();
-            if (itemAsset == null)
-                continue;
-
-            if (hotkey.Item.HasValue && !hotkey.Item.Value.Equals(itemAsset))
-            {
-                // hotkey item mismatch (concrete)
-                continue;
-            }
-
-            if (hotkey.Redirect.HasValue && _assetRedirectService.TryFindRedirectType(itemAsset, out RedirectType redirect, out _, out _) && hotkey.Redirect.Value != redirect)
-            {
-                // hotkey item mismatch (redirect)
-                continue;
-            }
-
-            if (KitItemUtility.CanBindHotkeyTo(itemAsset, page))
-            {
-                player.UnturnedPlayer.equipment.ServerBindItemHotkey(index, itemAsset, (byte)page, x, y);
-            }
-        }
+        GiveKitMainThread(player, kitBestowData, layouts, hotkeys, false);
 
         Kit kit = kitBestowData.Kit;
         await _eventDispatcher.DispatchEventAsync(
@@ -674,7 +626,84 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
                 WasRequested = isRequest
             }, CancellationToken.None);
     }
-    
+
+
+    /// <summary>
+    /// Used to give all players the unarmed kit when the game is over. It doesn't check layouts or hotkeys.
+    /// </summary>
+    public void GiveKitMainThread(WarfarePlayer player, KitBestowData kitBestowData)
+    {
+        GiveKitMainThread(player, kitBestowData, null, null, false);
+    }
+
+    private void GiveKitMainThread(WarfarePlayer player, KitBestowData kitBestowData, List<KitLayoutTransformation>? layouts, List<KitHotkey>? hotkeys, bool invokeEvent)
+    {
+        Kit kit = kitBestowData.Kit;
+        HotkeyPlayerComponent hotkeyComponent = player.Component<HotkeyPlayerComponent>();
+        hotkeyComponent.HotkeyBindings = null;
+
+        _kitBestowService.BestowKit(player, layouts == null ? kitBestowData : kitBestowData.Copy(layouts));
+
+        ItemTrackingPlayerComponent itemTracker = player.Component<ItemTrackingPlayerComponent>();
+
+        hotkeyComponent.HotkeyBindings = hotkeys;
+        if (hotkeys != null)
+        {
+
+            foreach (KitHotkey hotkey in hotkeys)
+            {
+                byte index = KitItemUtility.GetHotkeyIndex(hotkey.Slot);
+                if (index == byte.MaxValue)
+                    continue;
+
+                if (!itemTracker.TryGetCurrentItemPosition(hotkey.Page, hotkey.X, hotkey.Y, out Page page, out byte x, out byte y, out bool isDropped, out Item? item))
+                    continue;
+
+                if (isDropped)
+                {
+                    // find suitable item after original was dropped
+                    hotkeyComponent.HandleItemDropped(item, hotkey.X, hotkey.Y, hotkey.Page);
+                    continue;
+                }
+
+                ItemAsset itemAsset = item.GetAsset();
+                if (itemAsset == null)
+                    continue;
+
+                if (hotkey.Item.HasValue && !hotkey.Item.Value.Equals(itemAsset))
+                {
+                    // hotkey item mismatch (concrete)
+                    continue;
+                }
+
+                if (hotkey.Redirect.HasValue && _assetRedirectService.TryFindRedirectType(itemAsset, out RedirectType redirect, out _, out _) && hotkey.Redirect.Value != redirect)
+                {
+                    // hotkey item mismatch (redirect)
+                    continue;
+                }
+
+                if (KitItemUtility.CanBindHotkeyTo(itemAsset, page))
+                {
+                    player.UnturnedPlayer.equipment.ServerBindItemHotkey(index, itemAsset, (byte)page, x, y);
+                }
+            }
+        }
+
+        if (!invokeEvent)
+        {
+            _ = _eventDispatcher.DispatchEventAsync(
+                new PlayerKitChanged
+                {
+                    Player = player,
+                    Class = kit.Class,
+                    Kit = kit,
+                    KitId = kit.Key,
+                    KitName = kit.Id,
+                    WasRequested = false
+                }, CancellationToken.None);
+        }
+    }
+
     internal bool IsKitAlreadyTakenInSquad(Kit kit, Squad squad)
     {
         if (kit.MinRequiredSquadMembers == null)

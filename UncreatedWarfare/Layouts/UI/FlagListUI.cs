@@ -1,5 +1,4 @@
 using SDG.NetTransport;
-using StackCleaner;
 using System;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Data;
@@ -11,7 +10,6 @@ using Uncreated.Warfare.Layouts.Tickets;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
-using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Layouts.UI;
 
@@ -25,14 +23,23 @@ public class FlagListUI : UnturnedUI
     public readonly UnturnedLabel TicketsFlagIcon = new UnturnedLabel("Tickets/FactionFlagIcon");
     public readonly UnturnedLabel GamemodeTitle = new UnturnedLabel("HeaderFlags");
     public readonly FlagElement[] Rows = ElementPatterns.CreateArray<FlagElement>("Flag_{0}/Flag{1}_{0}", 1, to: 10);
+
+    public bool IsHidden { get; set; }
     
-    public FlagListUI(TranslationInjection<FlagUITranslations> translations, AssetConfiguration assetConfig, ILoggerFactory loggerFactory) : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:FlagHUD"), reliable: false)
+    public FlagListUI(TranslationInjection<FlagUITranslations> translations, AssetConfiguration assetConfig, ILoggerFactory loggerFactory)
+        : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:FlagHUD"), reliable: false)
     {
         IsSendReliable = true;
 
         _translations = translations.Value;
 
         _getFlagListUIData = GetFlagListUIData;
+    }
+
+    public void ClearFromPlayer(WarfarePlayer player)
+    {
+        ClearFromPlayer(player.UnturnedPlayer);
+        GetOrAddData(player).HasUI = false;
     }
 
     private FlagListUIData GetOrAddData(WarfarePlayer player)
@@ -48,7 +55,7 @@ public class FlagListUI : UnturnedUI
     public void UpdateFlagList(IFlagListUIProvider flagProvider, ITicketTracker ticketTracker, string layoutName, LanguageSet set, bool ticketsOnly = false)
     {
         // hide UI for invalid teams
-        if (!set.Team.IsValid)
+        if (!set.Team.IsValid || IsHidden)
         {
             while (set.MoveNext())
             {

@@ -6,6 +6,7 @@ using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Kits;
 using Uncreated.Warfare.Events.Models.Objects;
 using Uncreated.Warfare.Events.Models.Players;
+using Uncreated.Warfare.Events.Models.Zones;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Players.Extensions;
@@ -17,6 +18,7 @@ public class WarTableDoorTweak :
     IEventListener<PlayerTeamChanged>,
     IEventListener<QuestObjectInteracted>,
     IEventListener<PlayerJoined>,
+    IEventListener<PlayerEnteredZone>,
     IEventListener<PlayerDeployed>
 {
     private readonly ZoneStore _zoneStore;
@@ -84,6 +86,11 @@ public class WarTableDoorTweak :
     }
 
     void IEventListener<PlayerJoined>.HandleEvent(PlayerJoined e, IServiceProvider serviceProvider)
+    {
+        UpdateFlag(e.Player);
+    }
+
+    void IEventListener<PlayerEnteredZone>.HandleEvent(PlayerEnteredZone e, IServiceProvider serviceProvider)
     {
         UpdateFlag(e.Player);
     }

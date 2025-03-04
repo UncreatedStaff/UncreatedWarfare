@@ -1,10 +1,12 @@
-﻿using System;
+using System;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Flags;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Events.Models.Tickets;
 using Uncreated.Warfare.Layouts.Tickets;
 using Uncreated.Warfare.Layouts.UI;
+using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Layouts.Flags;
@@ -13,7 +15,8 @@ public class DefaultFlagListUIEvents :
     IEventListener<PlayerTeamChanged>,
     IEventListener<FlagCaptured>,
     IEventListener<FlagNeutralized>,
-    IEventListener<TicketsChanged>
+    IEventListener<TicketsChanged>,
+    IHudUIListener
 {
     private readonly FlagListUI _ui;
     private readonly IFlagListUIProvider _uiProvider;
@@ -28,6 +31,32 @@ public class DefaultFlagListUIEvents :
         _ticketTracker = ticketTracker;
         _translationService = translationService;
         _layout = layout;
+    }
+
+    /// <inheritdoc />
+    public void Hide(WarfarePlayer? player)
+    {
+        if (player != null)
+        {
+            _ui.ClearFromPlayer(player);
+            return;
+        }
+
+        _ui.IsHidden = true;
+        UpdateFlagListForAllPlayers();
+    }
+
+    /// <inheritdoc />
+    public void Restore(WarfarePlayer? player)
+    {
+        if (player != null)
+        {
+            _ui.UpdateFlagList(_uiProvider, _ticketTracker, _layout.LayoutInfo.DisplayName, new LanguageSet(player));
+            return;
+        }
+
+        _ui.IsHidden = false;
+        UpdateFlagListForAllPlayers();
     }
 
     private void UpdateFlagList(LanguageSet set, bool ticketsOnly)

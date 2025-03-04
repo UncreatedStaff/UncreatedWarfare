@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Flags;
 using Uncreated.Warfare.Layouts.Phases;
@@ -50,7 +50,7 @@ public class DefaultCaptureUIFlagEvents :
         }
     }
 
-    protected virtual CaptureUIState EvaluateCaptureUI(FlagObjective flag, LanguageSet languageSet)
+    public virtual CaptureUIState EvaluateCaptureUI(FlagObjective flag, LanguageSet languageSet)
     {
         Team team = languageSet.Team;
 

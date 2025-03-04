@@ -8,7 +8,7 @@ using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Players.UI;
 
-public class DutyUI : UnturnedUI
+public class DutyUI : UnturnedUI, IHudUIListener
 {
     private readonly IPlayerService _playerService;
     private readonly ModerationTranslations _translations;
@@ -77,5 +77,38 @@ public class DutyUI : UnturnedUI
         SendToPlayer(player.Connection, _translations.OnDutyUI.Translate(player));
         if (_votePosition)
             _positionVote.SetVisibility(player, true);
+    }
+
+    public void Hide(WarfarePlayer? player)
+    {
+        if (player != null)
+            ClearFromPlayer(player.Connection);
+        else
+            ClearFromAllPlayers();
+    }
+
+    public void Restore(WarfarePlayer? player)
+    {
+        if (player != null)
+        {
+            if (player.IsOnDuty)
+            {
+                SendToPlayer(player);
+                if (_votePosition)
+                    _positionVote.SetVisibility(player.Connection, true);
+            }
+            
+            return;
+        }
+
+        foreach (WarfarePlayer pl in _playerService.OnlinePlayers)
+        {
+            if (!pl.IsOnDuty)
+                continue;
+
+            SendToPlayer(pl.Connection);
+            if (_votePosition)
+                _positionVote.SetVisibility(pl.Connection, true);
+        }
     }
 }

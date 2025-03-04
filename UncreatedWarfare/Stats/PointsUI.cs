@@ -15,6 +15,7 @@ using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.Layouts.Phases;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Util;
@@ -28,7 +29,8 @@ public class PointsUI : UnturnedUI,
     IEventListener<VehicleSwappedSeat>,
     IEventListener<EnterVehicle>,
     IEventListener<ExitVehicle>,
-    ILayoutHostedService
+    ILayoutHostedService,
+    IHudUIListener
 {
     private static readonly InstanceGetter<VehicleAsset, bool>? GetUsesEngineRpmAndGears = Accessor.GenerateInstancePropertyGetter<VehicleAsset, bool>("UsesEngineRpmAndGears", allowUnsafeTypeBinding: true);
 
@@ -40,6 +42,7 @@ public class PointsUI : UnturnedUI,
 
     private ILoopTicker? _loopTicker;
     private int _currentStatIndex;
+    private bool _isHidden;
     private LeaderboardPhaseStatInfo? _currentStat;
 
     private readonly UnturnedUIElement[] _positionElements =
@@ -124,7 +127,40 @@ public class PointsUI : UnturnedUI,
             UpdatePointsUI(player);
         }
     }
-    
+
+    /// <inheritdoc />
+    public void Hide(WarfarePlayer? player)
+    {
+        if (player != null)
+        {
+            ClearFromPlayer(player.Connection);
+            return;
+        }
+
+        _isHidden = true;
+        ClearFromAllPlayers();
+        foreach (WarfarePlayer pl in _playerService.OnlinePlayers)
+        {
+            GetUIData(pl.Steam64).HasUI = false;
+        }
+    }
+
+    /// <inheritdoc />
+    public void Restore(WarfarePlayer? player)
+    {
+        if (player != null)
+        {
+            UpdatePointsUI(player);
+            return;
+        }
+
+        _isHidden = false;
+        foreach (WarfarePlayer pl in _playerService.OnlinePlayers)
+        {
+            UpdatePointsUI(pl);
+        }
+    }
+
     public bool IsStatRelevant(LeaderboardPhaseStatInfo stat)
     {
         if (_currentStat == null)
@@ -223,7 +259,7 @@ public class PointsUI : UnturnedUI,
 
         PointsUIData data = GetUIData(player.Steam64);
 
-        if (!player.Team.IsValid)
+        if (!player.Team.IsValid || _isHidden)
         {
             if (!data.HasUI)
                 return;

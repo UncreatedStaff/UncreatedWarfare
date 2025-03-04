@@ -24,7 +24,7 @@ using Uncreated.Warfare.Zones;
 namespace Uncreated.Warfare.Vehicles;
 
 [Priority(-3 /* run after vehicle storage services (specifically VehicleSpawnerStore and VehicleInfoStore) */)]
-public class VehicleRequestService : ILayoutHostedService,
+public class VehicleRequestService : 
     IRequestHandler<VehicleBaySignInstanceProvider, VehicleSpawner>,
     IRequestHandler<VehicleSpawner, VehicleSpawner>,
     IRequestHandler<WarfareVehicleComponent, VehicleSpawner>
@@ -51,16 +51,6 @@ public class VehicleRequestService : ILayoutHostedService,
         _pointsService = serviceProvider.GetRequiredService<PointsService>();
         _moderationSql = serviceProvider.GetRequiredService<DatabaseInterface>();
         _reqTranslations = serviceProvider.GetRequiredService<TranslationInjection<RequestVehicleTranslations>>().Value;
-    }
-
-    async UniTask ILayoutHostedService.StartAsync(CancellationToken token)
-    {
-        
-    }
-
-    UniTask ILayoutHostedService.StopAsync(CancellationToken token)
-    {
-        return UniTask.CompletedTask;
     }
 
     Task<bool> IRequestHandler<VehicleBaySignInstanceProvider, VehicleSpawner>.RequestAsync(WarfarePlayer player, VehicleBaySignInstanceProvider? sign, IRequestResultHandler resultHandler, CancellationToken token)

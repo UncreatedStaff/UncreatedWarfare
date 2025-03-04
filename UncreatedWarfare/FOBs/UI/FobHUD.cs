@@ -12,6 +12,7 @@ using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Translations.Util;
 
 namespace Uncreated.Warfare.Fobs.UI;
@@ -25,10 +26,12 @@ public class FobHUD :
     IEventListener<PlayerTeamChanged>,
     IEventListener<FobDestroyed>,
     IEventListener<FobProxyChanged>,
-    IEventListener<FobSuppliesChanged>
+    IEventListener<FobSuppliesChanged>,
+    IHudUIListener
 {
     private readonly FobManager _fobManager;
     private readonly IPlayerService _playerService;
+    private bool _isHidden;
     public FobElement[] Fobs { get; } = ElementPatterns.CreateArray<FobElement>("Fob_{0}/Fob{1}_{0}", 1, to: 12);
 
     public FobHUD(IServiceProvider serviceProvider, AssetConfiguration assetConfig, ILoggerFactory loggerFactory)
@@ -37,6 +40,37 @@ public class FobHUD :
         _fobManager = serviceProvider.GetRequiredService<FobManager>();
         _playerService = serviceProvider.GetRequiredService<IPlayerService>();
     }
+
+    /// <inheritdoc />
+    public void Hide(WarfarePlayer? player)
+    {
+        _isHidden = true;
+        if (player != null)
+        {
+            ClearFromPlayer(player.Connection);
+            return;
+        }
+
+        ClearFromAllPlayers();
+    }
+
+    /// <inheritdoc />
+    public void Restore(WarfarePlayer? player)
+    {
+        if (player != null)
+        {
+            UpdateForPlayer(player);
+            return;
+        }
+
+        _isHidden = false;
+
+        foreach (WarfarePlayer pl in _playerService.OnlinePlayers)
+        {
+            UpdateForPlayer(pl);
+        }
+    }
+
     private void UpdateRelevantPlayers(IFob fob)
     {
         foreach (WarfarePlayer player in _playerService.OnlinePlayers.Where(fob.IsVibileToPlayer))
@@ -47,17 +81,25 @@ public class FobHUD :
 
     private void UpdateForPlayer(WarfarePlayer player)
     {
-        List<IFob> visibleFobs = _fobManager.Fobs.Where(f => f.IsVibileToPlayer(player)).ToList();
+        if (_isHidden)
+        {
+            ClearFromPlayer(player.Connection);
+            return;
+        }
+
+        using IEnumerator<IFob> enumerator = _fobManager.Fobs.Where(f => f.IsVibileToPlayer(player)).GetEnumerator();
+        bool isDone = false;
         for (int i = 0; i < Fobs.Length; i++)
         {
             FobElement element = Fobs[i];
-            if (i >= visibleFobs.Count)
+            if (isDone || !enumerator.MoveNext())
             {
+                isDone = true;
                 element.Root.Hide(player);
                 continue;
             }
 
-            IFob fob = visibleFobs[i];
+            IFob fob = enumerator.Current!;
 
             SendToPlayer(player.Connection); // todo: maybe only send the UI when a player joins a team?
             string fobName = TranslationFormattingUtility.Colorize(fob.Name.ToUpper(), fob.Color);
