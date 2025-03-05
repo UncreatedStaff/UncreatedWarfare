@@ -180,7 +180,7 @@ public partial class FobManager : IWhitelistExceptionProvider
         int amt = 0;
         foreach (ShovelableInfo shovelable in Configuration.Shovelables)
         {
-            if (shovelable.Foundation.MatchAsset(assetContainer))
+            if (shovelable.Foundation.MatchAsset(assetContainer) || shovelable.CompletedStructure.MatchAsset(assetContainer))
                 ++amt;
         }
 

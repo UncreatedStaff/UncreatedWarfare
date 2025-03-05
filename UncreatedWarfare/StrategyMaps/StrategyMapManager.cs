@@ -24,7 +24,7 @@ using Uncreated.Warfare.Util.List;
 namespace Uncreated.Warfare.StrategyMaps;
 
 [Priority(-1) /* after FlagService */]
-public class StrategyMapManager : 
+public class StrategyMapManager :
     ILayoutHostedService,
     IEventListenerProvider,
     IEventListener<BarricadePlaced>,

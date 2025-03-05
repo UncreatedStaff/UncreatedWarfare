@@ -28,6 +28,7 @@ using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Kits.Requests;
 
@@ -54,6 +55,7 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
     private readonly IPlayerService _playerService;
     private readonly ChatService _chatService;
     private readonly ILogger<KitRequestService> _logger;
+    private readonly ZoneStore _zoneStore;
 
     private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
 
@@ -76,6 +78,7 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         PointsService pointsService,
         SquadMenuUI squadMenuUI,
         ChatService chatService,
+        ZoneStore zoneStore,
         ILogger<KitRequestService> logger)
     {
         _kitDataStore = kitDataStore;
@@ -97,6 +100,7 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         _valueFormatter = valueFormatter;
         _kitReqTranslations = translations.Value;
         _chatService = chatService;
+        _zoneStore = zoneStore;
         _logger = logger;
     }
 
@@ -575,7 +579,7 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
 
         await _droppedItemTracker.DestroyItemsDroppedByPlayerAsync(player.Steam64, false, token);
         
-        await GiveKitIntlAsync(player, new KitBestowData(kit) { IsLowAmmo = !player.Save.IsFirstLife }, true, token).ConfigureAwait(false);
+        await GiveKitIntlAsync(player, new KitBestowData(kit) { IsLowAmmo = _zoneStore.IsInWarRoom(player) && !player.Save.IsFirstLife }, true, token).ConfigureAwait(false);
 
         resultHandler.Success(player, kit);
 
