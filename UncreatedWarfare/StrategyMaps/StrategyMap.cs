@@ -127,7 +127,7 @@ public class StrategyMap : IDisposable, IEventListener<ClaimBedRequested>
 
         if (mapTack is not DeployableMapTack d)
         {
-            e.Cancel();
+            // we can't cancel action here because this will run for both strategy maps
             return;
         }
 
@@ -135,7 +135,6 @@ public class StrategyMap : IDisposable, IEventListener<ClaimBedRequested>
 
         if (e.Player.Component<DeploymentComponent>().CurrentDeployment != null)
         {
-            // todo: send chat message
             e.Cancel();
             return;
         }

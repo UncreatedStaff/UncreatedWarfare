@@ -1,6 +1,5 @@
-using System;
-
 namespace Uncreated.Warfare.Util;
+
 public static class TerrainUtility
 {
     /// <summary>

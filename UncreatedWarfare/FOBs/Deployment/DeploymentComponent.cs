@@ -180,9 +180,9 @@ public class DeploymentComponent : MonoBehaviour, IPlayerComponent, IEventListen
 
         settings.Delay = delay;
 
+        CurrentDeployment = location;
         if (delay == TimeSpan.Zero)
         {
-            CurrentDeployment = location;
             InstantDeploy(location, settings, deployFrom, args);
         }
         else
@@ -225,7 +225,6 @@ public class DeploymentComponent : MonoBehaviour, IPlayerComponent, IEventListen
 
     private IEnumerator DeployCoroutine(IDeployable deployable, DeploySettings settings, IDeployable? deployFrom, PlayerDeployed args)
     {
-        CurrentDeployment = deployable;
                              // set by calling function
         float delay = (float)settings.Delay.GetValueOrDefault().TotalSeconds;
 

@@ -117,7 +117,7 @@ public class SafezoneTweaks :
         if (e.Player.IsOnDuty && !e.Equipment.isTurret)
             return;
 
-        if (e.Zone.Type is not ZoneType.MainBase)
+        if (e.Zone.Type is not ZoneType.MainBase || _zoneStore.IsInWarRoom(e.Player))
             return;
         
         if (e.Equipment.useable is not UseableGun)

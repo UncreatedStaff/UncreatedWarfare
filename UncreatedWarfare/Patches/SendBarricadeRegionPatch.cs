@@ -1,4 +1,4 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
 using HarmonyLib;
 using SDG.NetPak;
@@ -74,7 +74,12 @@ internal sealed class SendBarricadeRegionPatch : IHarmonyPatch
         IPlayerService playerService = serviceProvider.Resolve<IPlayerService>();
         SignInstancer signInstancer = serviceProvider.Resolve<SignInstancer>();
 
-        WarfarePlayer player = playerService.GetOnlinePlayer(client);
+        WarfarePlayer? player = playerService.GetOnlinePlayerOrNull(client);
+        if (player == null)
+        {
+            WarfareModule.Singleton.GlobalLogger.LogWarning("Player not found in BarricadeManager.SendRegion.");
+            return true;
+        }
         if (region.drops.Count <= 0)
         {
             SendMultipleBarricades.Invoke(ENetReliability.Reliable, client.transportConnection, writer =>
