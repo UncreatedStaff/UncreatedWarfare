@@ -139,9 +139,9 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable
     public void ChangeSupplies(SupplyType supplyType, float amount)
     {
         if (supplyType == SupplyType.Build)
-            BuildCount += amount;
+            BuildCount = Mathf.Min(BuildCount + amount, 0);
         else if (supplyType == SupplyType.Ammo)
-            AmmoCount += amount;
+            AmmoCount += Mathf.Min(AmmoCount + amount, 0);
     }
 
     public Vector3 SpawnPosition => Position; // todo
