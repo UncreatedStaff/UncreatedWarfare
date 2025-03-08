@@ -26,7 +26,7 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
 
 #nullable restore
 
-    private EffectAsset? _effect;
+    private EffectAsset? _lockOnEffect;
     private Player? _lastKnownGunner;
 
     private float _aquisitionTime;
@@ -78,7 +78,7 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
                 Hardpoints.Add(hardpoint);
         }
 
-        if (!lockOnEffect.TryGetAsset(out _effect))
+        if (!lockOnEffect.TryGetAsset(out _lockOnEffect))
         {
             logger.LogWarning("HEATSEAKER ERROR: Lock on sound effect not found: {0}.", lockOnEffect?.Guid ?? Guid.Empty);
         }
@@ -109,7 +109,7 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
                 Hardpoints.Add(hardpoint);
         }
 
-        if (!lockOnEffect.TryGetAsset(out _effect))
+        if (!lockOnEffect.TryGetAsset(out _lockOnEffect))
         {
             logger.LogWarning("HEATSEAKER ERROR: Lock on sound effect not found: {0}.", lockOnEffect?.Guid ?? Guid.Empty);
         }
@@ -260,17 +260,17 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
     private static readonly short LockOnEffectKey = UnturnedUIKeyPool.Claim();
     private void PlayLockOnSound(Player gunner)
     {
-        if (_effect == null || gunner == null)
+        if (_lockOnEffect == null || gunner == null)
             return;
 
-        EffectManager.sendUIEffect(_effect.id, LockOnEffectKey, gunner.channel.owner.transportConnection, true);
+        EffectManager.sendUIEffect(_lockOnEffect.id, LockOnEffectKey, gunner.channel.owner.transportConnection, true);
     }
     private void CancelLockOnSound(Player gunner)
     {
-        if (_effect == null || gunner == null)
+        if (_lockOnEffect == null || gunner == null)
             return;
 
-        EffectManager.ClearEffectByGuid(_effect.GUID, gunner.channel.owner.transportConnection);
+        EffectManager.ClearEffectByGuid(_lockOnEffect.GUID, gunner.channel.owner.transportConnection);
     }
 
     public bool IsInRange(Vector3 target)

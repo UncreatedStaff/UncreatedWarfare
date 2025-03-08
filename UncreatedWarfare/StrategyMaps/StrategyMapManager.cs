@@ -140,12 +140,21 @@ public class StrategyMapManager :
 
     public void HandleEvent(FobRegistered e, IServiceProvider serviceProvider)
     {
-        MapTack newTack;
+        MapTack? newTack = null;
         if (e.Fob is BunkerFob)
             newTack = new DeployableMapTack(_assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:MapTacks:FobUnbuilt"), e.Fob);
-        else if (e.Fob is RallyPoint)
-            newTack = new DeployableMapTack(_assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:MapTacks:Rallypoint"), e.Fob);
-        else
+        else if (e.Fob is RallyPoint rallypoint)
+        {
+            Dictionary<int, IAssetLink<ItemBarricadeAsset>> rallyPointMapTacks =
+                _assetConfiguration.GetSection("Buildables:MapTacks:Rallypoints")
+                    .Get<Dictionary<int, IAssetLink<ItemBarricadeAsset>>>() ??
+                new Dictionary<int, IAssetLink<ItemBarricadeAsset>>();
+            
+            if (rallyPointMapTacks.TryGetValue(rallypoint.Squad.TeamIdentificationNumber, out IAssetLink<ItemBarricadeAsset> rallyPointMapTack))
+                newTack = new DeployableMapTack(rallyPointMapTack, e.Fob);
+        }
+        
+        if (newTack == null)
             return;
 
         foreach (StrategyMap map in StrategyMapsOfTeam(e.Fob.Team))
