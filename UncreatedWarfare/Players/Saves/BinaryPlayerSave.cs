@@ -21,7 +21,7 @@ public class BinaryPlayerSave : ISaveableState
     public CSteamID Steam64 { get; }
     public ulong TeamId { get; set; }
     public uint KitId { get; set; }
-    public string SquadName { get; set; }
+    public byte SquadTeamIdentificationNumber { get; set; }
 
     // todo: not used
     public bool HasQueueSkip { get; set; }
@@ -50,13 +50,13 @@ public class BinaryPlayerSave : ISaveableState
     {
         Steam64 = steam64;
         _logger = logger;
-        SquadName = string.Empty;
+        SquadTeamIdentificationNumber = 0;
     }
 
     public void ResetOnGameStart()
     {
         KitId = 0;
-        SquadName = string.Empty;
+        SquadTeamIdentificationNumber = 0;
         ShouldRespawnOnJoin = false;
     }
 
@@ -83,7 +83,7 @@ public class BinaryPlayerSave : ISaveableState
 
         Writer.Write(TeamId);
         Writer.Write(KitId);
-        Writer.Write(SquadName);
+        Writer.Write(SquadTeamIdentificationNumber);
         Writer.Write(LastGameId);
 
         Writer.Write(flags);
@@ -140,7 +140,7 @@ public class BinaryPlayerSave : ISaveableState
 
         TeamId = Reader.ReadUInt64();
         KitId = Reader.ReadUInt32();
-        SquadName = Reader.ReadString();
+        SquadTeamIdentificationNumber = Reader.ReadUInt8();
         LastGameId = Reader.ReadUInt64();
 
         bool[] flags = Reader.ReadBoolArray();
@@ -152,7 +152,7 @@ public class BinaryPlayerSave : ISaveableState
             _logger.LogWarning("Corrupted player save: {0}.", Steam64);
             TeamId = 0;
             KitId = 0;
-            SquadName = string.Empty;
+            SquadTeamIdentificationNumber = 0;
             LastGameId = 0;
             Save();
             return;

@@ -30,7 +30,7 @@ public class SquadSignInstanceProvider : ISignInstanceProvider, IRequestable<Squ
         TranslationInjection<SquadTranslations> translations)
     {
         Team = Team.NoTeam;
-        SquadNumber = -1;
+        SquadNumber = 0;
 
         _teamManager = teamManager;
         _squadManager = squadManager;
@@ -41,7 +41,7 @@ public class SquadSignInstanceProvider : ISignInstanceProvider, IRequestable<Squ
     public bool CanBatchTranslate => true;
     public string FallbackText => $"Squad #{SquadNumber}";
     public Team Team { get; private set; }
-    public int SquadNumber { get; private set; }
+    public byte SquadNumber { get; private set; }
     public void Initialize(BarricadeDrop barricade, string extraInfo, IServiceProvider serviceProvider)
     {
         Match regexMatch = Regex.Match(extraInfo, @"team(\d+)_(\d+)");
@@ -50,7 +50,7 @@ public class SquadSignInstanceProvider : ISignInstanceProvider, IRequestable<Squ
 
         if (!regexMatch.Success || regexMatch.Groups.Count != 3)
         {
-            SquadNumber = -1;
+            SquadNumber = 0;
             return;
         }
         
@@ -58,7 +58,7 @@ public class SquadSignInstanceProvider : ISignInstanceProvider, IRequestable<Squ
         string squadNumber = regexMatch.Groups[2].Value;
         
         Team = _teamManager.GetTeam(new CSteamID(ulong.Parse(team, CultureInfo.InvariantCulture)));
-        SquadNumber = int.Parse(squadNumber, CultureInfo.InvariantCulture);
+        SquadNumber = byte.Parse(squadNumber, CultureInfo.InvariantCulture);
     }
 
     public string Translate(ITranslationValueFormatter formatter, IServiceProvider serviceProvider, LanguageInfo language,

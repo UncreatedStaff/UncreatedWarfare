@@ -19,19 +19,19 @@ public class Squad : ITranslationArgument
     /// <summary>
     /// A number starting at 1 that uniquely identifies the squad among the squads of a specific team.
     /// </summary>
-    public int TeamIdentificationNumber { get; }
+    public byte TeamIdentificationNumber { get; }
     public Team Team { get; }
     public IReadOnlyList<WarfarePlayer> Members { get; }
     public WarfarePlayer Leader => _members[0];
     public bool IsFull => _members.Count >= MaxMembers;
     public bool IsLocked { get; private set; }
 
-    internal Squad(Team team, string squadName, int squadNumber, SquadManager squadManager)
+    internal Squad(Team team, string squadName, byte teamIdentificationNumber, SquadManager squadManager)
     {
         _members = new List<WarfarePlayer>();
         Members = _members.AsReadOnly();
         Name = squadName;
-        TeamIdentificationNumber = squadNumber;
+        TeamIdentificationNumber = teamIdentificationNumber;
         Team = team;
         IsLocked = false;
         _squadManager = squadManager;
@@ -46,6 +46,7 @@ public class Squad : ITranslationArgument
     {
         _members.Add(player);
         player.Component<SquadPlayerComponent>().ChangeSquad(this);
+        player.Save.SquadTeamIdentificationNumber = (byte)TeamIdentificationNumber;
     }
 
     public bool TryAddMember(WarfarePlayer player)
@@ -76,6 +77,7 @@ public class Squad : ITranslationArgument
         WarfarePlayer oldLeader = _members[0];
 
         _members.RemoveAt(index);
+        player.Save.SquadTeamIdentificationNumber = 0;
         player.Component<SquadPlayerComponent>().ClearSquad();
         _ = WarfareModule.EventDispatcher.DispatchEventAsync(new SquadMemberLeft { Squad = this, Player = player });
 
@@ -128,6 +130,7 @@ public class Squad : ITranslationArgument
         foreach (WarfarePlayer player in _members)
         {
             player.Component<SquadPlayerComponent>().ClearSquad();
+            player.Save.SquadTeamIdentificationNumber = 0;
             _ = WarfareModule.EventDispatcher.DispatchEventAsync(new SquadMemberLeft { Squad = this, Player = player, IsForciblyDisbanded = true });
         }
 

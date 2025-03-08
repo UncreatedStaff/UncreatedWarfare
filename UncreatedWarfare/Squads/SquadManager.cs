@@ -12,7 +12,9 @@ using Uncreated.Warfare.Util.List;
 
 namespace Uncreated.Warfare.Squads;
 
-public class SquadManager : IEventListener<PlayerTeamChanged>
+public class SquadManager : 
+    IEventListener<PlayerTeamChanged>,
+    IEventListener<PlayerJoined>
 {
     public const int MaxSquadCount = 8;
 
@@ -101,9 +103,9 @@ public class SquadManager : IEventListener<PlayerTeamChanged>
         _logger.LogDebug("Created new Squad: " + squad);
         return squad;
     }
-    private int GetSquadIdentificationNumber(Team team)
+    private byte GetSquadIdentificationNumber(Team team)
     {
-        for (int id = 1;; ++id)
+        for (byte id = 1;; ++id)
         {
             if (Squads.Any(s => s.Team == team && s.TeamIdentificationNumber == id))
                 continue;
@@ -129,7 +131,21 @@ public class SquadManager : IEventListener<PlayerTeamChanged>
 
     public void HandleEvent(PlayerTeamChanged e, IServiceProvider serviceProvider)
     {
-        if (e.Player.IsInSquad())
-            e.Player.GetSquad()!.RemoveMember(e.Player);
+        if (!e.Player.IsInSquad())
+            return;
+        
+        e.Player.GetSquad()!.RemoveMember(e.Player);
+    }
+
+    public void HandleEvent(PlayerJoined e, IServiceProvider serviceProvider)
+    {
+        if (e.IsNewPlayer)
+            return;
+
+        Squad? previouslyJoinedSquad = Squads.FirstOrDefault(s => s.Team == e.Player.Team && s.TeamIdentificationNumber == e.SaveData.SquadTeamIdentificationNumber);
+        if (previouslyJoinedSquad == null)
+            return;
+        
+        previouslyJoinedSquad.AddMember(e.Player);
     }
 }
