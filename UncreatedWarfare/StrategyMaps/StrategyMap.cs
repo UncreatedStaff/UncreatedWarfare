@@ -139,10 +139,18 @@ public class StrategyMap : IDisposable, IEventListener<ClaimBedRequested>
             return;
         }
 
+        // override the deploy yaw to the player's rotation relative to the map
+        // originally it was a bit disorienting when deploying
+        Quaternion rotation = e.Player.UnturnedPlayer.look.aim.rotation;
+        Quaternion buildableRotation = MapTable.Rotation * BarricadeUtility.InverseDefaultBarricadeRotation;
+
+        rotation = Quaternion.Inverse(buildableRotation) * rotation;
+
         deploymentService.TryStartDeployment(e.Player, d.Deployable,
             new DeploySettings
             {
                 AllowNearbyEnemies = false,
+                YawOverride = rotation.eulerAngles.y
             }
         );
 

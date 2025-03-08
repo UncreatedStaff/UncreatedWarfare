@@ -1,6 +1,5 @@
 using System;
 using Uncreated.Warfare.Events.Models.Players;
-using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 
@@ -8,12 +7,11 @@ namespace Uncreated.Warfare.Events;
 partial class EventDispatcher
 {
     /// <summary>
-    /// Invoked by <see cref="Provider.onServerConnected"/> when a player successfully joins the server.
+    /// Invoked by <see cref="Provider.onEnemyConnected"/> when a player successfully joins the server but just before <see cref="ProviderOnServerConnected"/>.
     /// </summary>
-    private void ProviderOnServerConnected(CSteamID steam64)
+    private void ProviderOnServerConnectedEarly(SteamPlayer steamPlayer)
     {
-        SteamPlayer? steamPlayer = PlayerTool.getSteamPlayer(steam64.m_SteamID);
-
+        CSteamID steam64 = steamPlayer.playerID.steamID;
         if (_playerService is not PlayerService implPlayerService)
         {
             ILogger logger = GetLogger(typeof(Provider), nameof(Provider.onServerConnected));
@@ -21,16 +19,6 @@ partial class EventDispatcher
             Provider.kick(steam64, "Invalid player service setup.");
             return;
         }
-        
-        if (steamPlayer == null || steamPlayer.player == null)
-        {
-            ILogger logger = GetLogger(typeof(Provider), nameof(Provider.onServerConnected));
-            logger.LogError("Unknown player connected: {0}.", steam64);
-            Provider.kick(steam64, "Can't find player.");
-            return;
-        }
-
-        // update team
 
         ulong s64 = steam64.m_SteamID;
 
@@ -63,6 +51,7 @@ partial class EventDispatcher
                 {
                     await d.Scope.DisposeAsync();
                 }
+                catch (OperationCanceledException) { }
                 catch (Exception ex)
                 {
                     _logger.LogWarning(ex, "Error disposing player task scope for {0}.", d.Player.Steam64);
@@ -72,26 +61,46 @@ partial class EventDispatcher
 
         ILifetimeScope? scope = data.Scope;
 
-        WarfarePlayer newPlayer = implPlayerService.CreateWarfarePlayer(steamPlayer.player, in data);
+        WarfarePlayer player = implPlayerService.CreateWarfarePlayer(steamPlayer.player, in data);
+        player.Data["PendingDataScope"] = scope;
 
-        SubscribePlayerEvents(newPlayer);
+        PlayerEarlyJoined args = new PlayerEarlyJoined
+        {
+            Player = player,
+            SaveData = player.Save,
+            IsNewPlayer = !player.Save.WasReadFromFile
+        };
+
+        _ = DispatchEventAsync(args, CancellationToken.None, allowAsync: false);
+    }
+
+    /// <summary>
+    /// Invoked by <see cref="Provider.onServerConnected"/> when a player successfully joins the server.
+    /// </summary>
+    private void ProviderOnServerConnected(CSteamID steam64)
+    {
+        WarfarePlayer player = _playerService.GetOnlinePlayer(steam64);
+
+        SubscribePlayerEvents(player);
+
+        ((PlayerService)_playerService).FinishConnectingPlayer(player);
 
         PlayerJoined args = new PlayerJoined
         {
-            Player = newPlayer,
-            SaveData = newPlayer.Save,
-            IsNewPlayer = !newPlayer.Save.WasReadFromFile
+            Player = player,
+            SaveData = player.Save,
+            IsNewPlayer = !player.Save.WasReadFromFile
         };
 
         UniTask.Create(async () =>
         {
             await DispatchEventAsync(args, args.Player.DisconnectToken);
-            if (scope != null)
+            if (args.Player.Data.TryRemove("PendingDataScope", out object? obj) && obj is ILifetimeScope scope)
                 await scope.DisposeAsync();
             args.Player.EndConnecting();
         });
 
-        newPlayer.UnturnedPlayer.sendTerminalRelay("michael smells");
+        player.UnturnedPlayer.sendTerminalRelay("michael smells");
     }
 
     /// <summary>
@@ -145,6 +154,22 @@ partial class EventDispatcher
         {
             ILogger logger = GetLogger(typeof(Provider), nameof(Provider.onServerDisconnected));
             logger.LogError(ex, "Failed to remove player {0} from player manager.", steam64);
+        }
+
+        if (args.Player.Data.TryRemove("PendingDataScope", out object? obj) && obj is ILifetimeScope scope)
+        {
+            Task.Run(async () =>
+            {
+                try
+                {
+                    await scope.DisposeAsync();
+                }
+                catch (OperationCanceledException) { }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Error disposing player task scope for {0}.", args.Player.Steam64);
+                }
+            }, CancellationToken.None);
         }
     }
 

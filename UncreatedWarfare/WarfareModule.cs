@@ -12,6 +12,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.FileProviders.Physical;
+using MySqlConnector;
 using SDG.Framework.Modules;
 using StackCleaner;
 using Stripe;
@@ -1136,9 +1137,10 @@ public sealed class WarfareModule
 
         // migrate database before loading services
         _logger.LogDebug("Migrating database...");
-        await using (ILifetimeScope scope = ServiceProvider.BeginLifetimeScope())
-        await using (IDbContext dbContext = scope.Resolve<IDbContext>())
+        try
         {
+            await using ILifetimeScope scope = ServiceProvider.BeginLifetimeScope();
+            await using IDbContext dbContext = scope.Resolve<IDbContext>();
             const double timeoutSec = 10;
 
             // check connection before migrating with a 2.5 second timeout
@@ -1158,7 +1160,7 @@ public sealed class WarfareModule
                 }
 
             }, token), Task.Delay(TimeSpan.FromSeconds(timeoutSec), token));
-            
+
             if (!connected)
             {
                 _logger.LogWarning($"Connection for migration timed out after {timeoutSec} second(s).");
@@ -1169,6 +1171,16 @@ public sealed class WarfareModule
                 await dbContext.Database.MigrateAsync(token).ConfigureAwait(false);
                 _logger.LogInformation("Migration completed.");
             }
+        }
+        catch (Exception ex) when (ex.GetBaseException() is MySqlException mySqlException && ex.Message.Contains("timeout", StringComparison.InvariantCultureIgnoreCase))
+        {
+            // todo: use error code instead of Contains as soon as i figure out what it is
+            await UniTask.SwitchToMainThread();
+            Console.WriteLine("TODO: Error code: " + mySqlException.ErrorCode);
+            _logger.LogError("Timed out connecting to SQL database.");
+            UnloadModule();
+            Provider.shutdown();
+            return;
         }
 
         if (!connected)

@@ -10,6 +10,7 @@ using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Models.GameData;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Players.PendingTasks;
 using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Players.Saves;
 using Uncreated.Warfare.Squads.Spotted;
@@ -46,6 +47,7 @@ public class WarfarePlayer :
     private readonly CancellationTokenSource _disconnectTokenSource;
     private readonly ILogger _logger;
     private PlayerNames _playerNameHelper;
+    private PlayerService.PlayerTaskData _playerTaskData;
     private PlayerPoints _cachedPoints;
     private readonly uint _acctId;
     private readonly SingleUseTypeDictionary<IPlayerComponent> _components;
@@ -103,6 +105,7 @@ public class WarfarePlayer :
     public PlayerSummary SteamSummary { get; }
     public SessionRecord CurrentSession { get; internal set; }
     public ref PlayerPoints CachedPoints => ref _cachedPoints;
+    public bool IsFirstTimePlaying { get; }
 
     /// <summary>
     /// List of steam IDs of this player's friends, if theyre public.
@@ -181,6 +184,7 @@ public class WarfarePlayer :
         SteamSummary = pendingEvent.Summary;
         _disconnectTokenSource = taskData.TokenSource;
         _logger = logger;
+        _playerTaskData = taskData;
         _playerNameHelper = new PlayerNames(player);
         UnturnedPlayer = player;
         SteamPlayer = player.channel.owner;
@@ -197,17 +201,18 @@ public class WarfarePlayer :
         Components = new ReadOnlyCollection<IPlayerComponent>(_components.Values);
 
         Team = Team.NoTeam;
-        _logger.LogInformation("Player {0} joined the server", this);
 
         for (int i = 0; i < components.Length; ++i)
         {
             components[i].Player = this;
         }
 
-        for (int i = 0; i < taskData.PendingTasks.Length; ++i)
-        {
-            taskData.PendingTasks[i].Apply(this);
-        }
+        IsFirstTimePlaying = !Save.WasReadFromFile;
+
+        if (IsFirstTimePlaying)
+            _logger.LogInformation($"Player {this} joined the server for the first time.");
+        else
+            _logger.LogInformation($"Player {this} joined the server.");
     }
 
     /// <inheritdoc />
@@ -244,13 +249,13 @@ public class WarfarePlayer :
         DutyLevel = level;
     }
 
-    public void UpdateTeam(Team team)
+    internal void UpdateTeam(Team team)
     {
         Team = team;
         Save.TeamId = team.GroupId.m_SteamID;
     }
 
-    public void ApplyOfflineState()
+    internal void ApplyOfflineState()
     {
         try
         {
@@ -266,13 +271,21 @@ public class WarfarePlayer :
             _logger.LogInformation("Player {0} left the server.", this);
         }
     }
-    public void StartDisconnecting()
+
+    internal void StartDisconnecting()
     {
         IsDisconnecting = true;
         IsConnecting = false;
     }
-    public void EndConnecting()
+
+    internal void EndConnecting()
     {
+        IPlayerPendingTask[] tasks = _playerTaskData.PendingTasks;
+        for (int i = 0; i < tasks.Length; ++i)
+        {
+            tasks[i].Apply(this);
+        }
+
         IsConnecting = false;
     }
 
@@ -426,7 +439,7 @@ public class WarfarePlayer :
 
     ValueTask<string> IModerationActor.GetDisplayName(DatabaseInterface database, CancellationToken token)
     {
-        throw new NotImplementedException();
+        return new ValueTask<string>(SteamSummary.PlayerName);
     }
 
     bool ISpotter.IsTrackable => true;

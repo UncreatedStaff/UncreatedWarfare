@@ -198,7 +198,7 @@ public class DeploymentComponent : MonoBehaviour, IPlayerComponent, IEventListen
     {
         try
         {
-            Player.UnturnedPlayer.teleportToLocationUnsafe(deployable.SpawnPosition, deployable.Yaw);
+            Player.UnturnedPlayer.teleportToLocationUnsafe(deployable.SpawnPosition, settings.YawOverride ?? deployable.Yaw);
             if (deployFrom is { IsSafeZone: true })
             {
                 _lastDeployedFromSafeZone = DateTime.UtcNow;
