@@ -132,6 +132,35 @@ public class LeaderboardPhase : BasePhase<PhaseTeamSettings>, IDisposable, IEven
                 tempVars ??= GetVariables(), stat.Expression, Logger);
         }
 
+        // extra validation/warnings
+        bool hasDefault = false;
+        for (int i = 0; i < PlayerStats.Length; ++i)
+        {
+            LeaderboardPhaseStatInfo stat = PlayerStats[i];
+            if (!string.IsNullOrWhiteSpace(stat.DefaultLeaderboardSort))
+            {
+                if (!stat.IsLeaderboardColumn)
+                {
+                    Logger.LogWarning("Stat #{0} ({1}) has DefaultLeaderboardSort set when IsLeaderboardColumn is false.", i, stat.Name);
+                    stat.DefaultLeaderboardSort = null;
+                }
+                else if (hasDefault)
+                {
+                    Logger.LogWarning("Stat #{0} ({1}) has a duplicate DefaultLeaderboardSort set.", i, stat.Name);
+                    stat.DefaultLeaderboardSort = null;
+                }
+                else if (stat.DefaultLeaderboardSort is not "Ascending" and not "Descending")
+                {
+                    Logger.LogWarning("Stat #{0} ({1}) has an invalid value for DefaultLeaderboardSort: {2}.", i, stat.Name, stat.DefaultLeaderboardSort);
+                    stat.DefaultLeaderboardSort = null;
+                }
+                else
+                {
+                    hasDefault = true;
+                }
+            }
+        }
+
         // initialize LeaderboardPlayer objects for existing players
         for (int i = 0; i < _players.Length; ++i)
         {
@@ -444,6 +473,11 @@ public class LeaderboardPhaseStatInfo
     /// If the stat is shown as a sum of all players stats under the game stats section.
     /// </summary>
     public bool IsGlobalStat { get; set; }
+
+    /// <summary>
+    /// How this stat is sorted if it's the default sort stat. Valid values: 'Descending', 'Ascending'.
+    /// </summary>
+    public string? DefaultLeaderboardSort { get; set; }
 
     /// <summary>
     /// Evaluatable expression to calculate the stat from other stats.

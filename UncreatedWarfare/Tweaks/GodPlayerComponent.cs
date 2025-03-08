@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
@@ -16,14 +16,34 @@ public class GodPlayerComponent : IPlayerComponent, IEventListener<DamagePlayerR
 {
     public const string GodPermissionName = "warfare::features.god";
     public static readonly PermissionLeaf GodPermission = new PermissionLeaf(GodPermissionName);
-    public bool IsActive { get; set; }
+
+    private bool _isAdminActive;
+    private bool _isGameplayActive;
+
+    public bool IsActive => _isAdminActive || _isGameplayActive;
+
     public WarfarePlayer Player { get; private set; }
+
     public void Init(IServiceProvider serviceProvider, bool isOnJoin)
     {
-        if (!isOnJoin)
-            return;
+        // reset gameplay god mode when the next layout starts
+        _isGameplayActive = false;
+    }
 
-        IsActive = false;
+    /// <summary>
+    /// If god mode should be active as requested by an admin.
+    /// </summary>
+    public void SetAdminActive(bool isAdminActive)
+    {
+        _isAdminActive = isAdminActive;
+    }
+
+    /// <summary>
+    /// If god mode should be active as part of the game (ex. during the leaderboard).
+    /// </summary>
+    public void SetGameplayActive(bool isGameplayActive)
+    {
+        _isGameplayActive = isGameplayActive;
     }
 
     [EventListener(Priority = 100)]

@@ -1,4 +1,4 @@
-﻿using Uncreated.Warfare.Injures;
+using Uncreated.Warfare.Injures;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Tweaks;
@@ -19,13 +19,17 @@ internal sealed class GodCommand : IExecutableCommand
     }
 
     /// <inheritdoc />
-    public UniTask ExecuteAsync(CancellationToken token)
+    public async UniTask ExecuteAsync(CancellationToken token)
     {
         Context.AssertRanByPlayer();
 
+        await Context.AssertPermissions(GodPlayerComponent.GodPermission, token);
+        
+        await UniTask.SwitchToMainThread(token);
+
         GodPlayerComponent component = Context.Player.Component<GodPlayerComponent>();
 
-        component.IsActive = !component.IsActive;
+        component.SetAdminActive(!component.IsActive);
 
         if (component.IsActive)
         {
@@ -41,8 +45,6 @@ internal sealed class GodCommand : IExecutableCommand
         {
             Context.Reply(_translations.GodModeDisabled);
         }
-
-        return UniTask.CompletedTask;
     }
 }
 

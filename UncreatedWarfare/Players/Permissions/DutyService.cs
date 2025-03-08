@@ -338,7 +338,7 @@ public class DutyService : IAsyncEventListener<PlayerLeft>
 
         player.Component<PlayerJumpComponent>().IsActive = false;
         player.Component<VanishPlayerComponent>().IsActive = false;
-        player.Component<GodPlayerComponent>().IsActive = false;
+        player.Component<GodPlayerComponent>().SetAdminActive(false);
 
         _signs.UpdateSigns<KitSignInstanceProvider>(player);
 

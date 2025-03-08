@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
@@ -11,12 +11,12 @@ public class DefaultTeamSelectorBehavior : ITeamSelectorBehavior
     /// Minimum allowed standard deviations of team player counts to allow players to join any team.
     /// </summary>
     // todo config
-    private const double MaximumStandardDeviation = 2.25;
+    private const double MaximumStandardDeviation = 2;
 
     /// <summary>
     /// Minimum allowed standard deviations from the team the player's trying to join to the mean of all teams.
     /// </summary>
-    private const double MaximumScore = 0.75;
+    private const double MaximumScore = 0.70;
 
     private readonly IPlayerService _playerService;
     public TeamInfo[]? Teams { get; set; }

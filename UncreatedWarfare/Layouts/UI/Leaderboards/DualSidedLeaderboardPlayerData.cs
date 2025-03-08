@@ -26,8 +26,8 @@ internal class DualSidedLeaderboardPlayerData : IUnturnedUIData
         SortColumns = new LeaderboardSortColumn[2];
         ref LeaderboardSortColumn col = ref SortColumns[0];
 
-        col.ColumnIndex = 5;
-        col.Descending = true;
+        col.ColumnIndex = ((DualSidedLeaderboardUI)owner).DefaultSortColumn;
+        col.Descending = ((DualSidedLeaderboardUI)owner).DefaultSortMode;
         SortColumns[1] = col;
     }
 }
