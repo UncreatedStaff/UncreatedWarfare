@@ -120,6 +120,7 @@ public partial class EventDispatcher : IHostedService, IDisposable
     UniTask IHostedService.StartAsync(CancellationToken token)
     {
         /* Provider */
+        Provider.onEnemyConnected += ProviderOnServerConnectedEarly;
         Provider.onServerConnected += ProviderOnServerConnected;
         Provider.onServerDisconnected += ProviderOnServerDisconnected;
         Provider.onBattlEyeKick += ProviderOnBattlEyeKick;

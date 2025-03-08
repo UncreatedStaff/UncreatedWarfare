@@ -48,8 +48,12 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
     [Ignore] private readonly SquadManager _squadManager;
     [Ignore] private readonly PointsService _pointsService;
     [Ignore] private readonly ITranslationService _translationService;
-    private readonly WarfareLifetimeComponent _appLifetime;
+    [Ignore] private readonly WarfareLifetimeComponent _appLifetime;
     [Ignore] private readonly Func<CSteamID, DualSidedLeaderboardPlayerData> _createData;
+
+    // visible column index
+    [Ignore] internal int DefaultSortColumn;
+    [Ignore] internal bool DefaultSortMode;
 
     public readonly UnturnedUIElement TopSquadsParent = new UnturnedUIElement("GameInfo/Squads");
     public readonly TopSquad[] TopSquads = ElementPatterns.CreateArray<TopSquad>("GameInfo/Squads/Squad_T{0}", 1, to: 2);
@@ -74,7 +78,6 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
     public readonly UnturnedUIElement PointsDowngradeArrow = new UnturnedUIElement("GameInfo/Stats/Player/RankDowngrade");
     public readonly UnturnedLabel PointsCurrentRank = new UnturnedLabel("GameInfo/Stats/Player/RankCurrent");
     public readonly UnturnedLabel PointsNextRank = new UnturnedLabel("GameInfo/Stats/Player/RankNext");
-
 
     public bool IsActive { get; private set; }
 
@@ -127,6 +130,21 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
 
         if (IsActive)
             return;
+
+        LeaderboardPhaseStatInfo? defaultSortStat = phase.PlayerStats.FirstOrDefault(s => s.DefaultLeaderboardSort != null);
+
+        if (defaultSortStat == null)
+        {
+            DefaultSortColumn = 0;
+            DefaultSortMode = true;
+        }
+        else
+        {
+            DefaultSortColumn = Array.IndexOf(sets[0].VisibleStats, defaultSortStat);
+            if (DefaultSortColumn < 0)
+                DefaultSortColumn = 0;
+            DefaultSortMode = defaultSortStat.DefaultLeaderboardSort == "Descending";
+        }
 
         _startTimestamp = DateTime.UtcNow;
 

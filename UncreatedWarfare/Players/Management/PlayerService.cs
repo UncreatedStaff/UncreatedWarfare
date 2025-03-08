@@ -152,9 +152,6 @@ public class PlayerService : IPlayerService
 
             WarfarePlayer joined = new WarfarePlayer(this, player, in taskData, taskData.Player, logger, components, _serviceProvider);
 
-            // copy so components dont mess with it
-            PlayerEventSubscription[] subs = _eventSubscriptions.ToArray();
-
             _onlinePlayers.Add(joined);
             _onlinePlayersDictionary.Add(joined, joined);
 
@@ -163,22 +160,28 @@ public class PlayerService : IPlayerService
             newList[^1] = joined;
             _threadsafeList = newList;
 
-            IServiceProvider serviceProvider = _warfare.ScopedProvider.Resolve<IServiceProvider>();
-
-            for (int i = 0; i < components.Length; ++i)
-            {
-                IPlayerComponent component = components[i];
-
-                component.Init(serviceProvider, true);
-            }
-
-            foreach (PlayerEventSubscription sub in subs)
-            {
-                sub.Apply(joined);
-            }
-
             return joined;
         }
+    }
+
+    internal void FinishConnectingPlayer(WarfarePlayer player)
+    {
+        IServiceProvider serviceProvider = _warfare.ScopedProvider.Resolve<IServiceProvider>();
+
+        // copy so components dont mess with it
+        PlayerEventSubscription[] subs = _eventSubscriptions.ToArray();
+
+        foreach (IPlayerComponent component in player.Components)
+        {
+            component.Init(serviceProvider, true);
+        }
+
+        foreach (PlayerEventSubscription sub in subs)
+        {
+            sub.Apply(player);
+        }
+
+        player.EndConnecting();
     }
 
     internal WarfarePlayer OnPlayerLeft(WarfarePlayer player)

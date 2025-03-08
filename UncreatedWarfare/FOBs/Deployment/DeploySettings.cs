@@ -69,4 +69,9 @@ public struct DeploySettings
     /// If chat interaction with the player should be used after the initial check.
     /// </summary>
     public bool DisableTickingChatUpdates { get; set; } = false;
+
+    /// <summary>
+    /// Optionally override the yaw the player will be teleported to.
+    /// </summary>
+    public float? YawOverride { get; set; }
 }

@@ -122,9 +122,9 @@ public class LeaderboardSet
     /// Maps row indices to which row they would show as for a player's UI if sorted by the given column.
     /// </summary>
     /// <remarks>Use like this <c>for i in rows</c>: <c>ui = ui.players[invSortMap[rowIndex]];</c></remarks>
-    public int[] GetSortMap(int columnIndex, bool descending)
+    public int[] GetSortMap(int visibleStatIndex, bool descending)
     {
-        int index = columnIndex * 2 + (descending ? 1 : 0);
+        int index = visibleStatIndex * 2 + (descending ? 1 : 0);
 
         ref int[]? targetArray = ref _inverseSortMaps[index];
         if (targetArray != null)
@@ -134,7 +134,9 @@ public class LeaderboardSet
         for (int i = 0; i < rows.Length; ++i)
             _sortMapBuffer[i] = i;
 
-        IComparer<int> comparer = descending ? new DescendingRowComparer(columnIndex, this) : new AscendingRowComparer(columnIndex, this);
+        int dataIndex = VisibleStats[visibleStatIndex].Index;
+
+        IComparer<int> comparer = descending ? new DescendingRowComparer(dataIndex, this) : new AscendingRowComparer(dataIndex, this);
         Array.Sort(_sortMapBuffer, comparer);
 
         int[] invSortMap = new int[rows.Length];
