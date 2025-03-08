@@ -73,7 +73,6 @@ public class DamageTracker
     public void UpdateLatestInstigatorWeapon(Asset? asset) // todo: need to call this method places, otherwise advanced damage won't work properly
     {
         LatestInstigatorWeapon = asset;
-        Console.WriteLine("Damage upated to: {0}", asset);
     }
     public float GetDamageContribution(CSteamID playerId, out float total) => _damageContributors.GetContribution(playerId, out total);
     public float GetDamageContribution(CSteamID playerId, DateTime after, out float total) => _damageContributors.GetContribution(playerId, after, out total);

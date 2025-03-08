@@ -25,6 +25,7 @@ using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Timing;
 using Uncreated.Warfare.Vehicles;
+using Uncreated.Warfare.Vehicles.WarfareVehicles;
 using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Fobs;
@@ -32,6 +33,7 @@ public partial class FobManager :
     IEventListener<IBuildablePlacedEvent>,
     IEventListener<PlaceBarricadeRequested>,
     IEventListener<IBuildableDestroyedEvent>,
+    IEventListener<DropItemRequested>,
     IEventListener<ItemDropped>,
     IEventListener<VehicleSpawned>,
     IEventListener<VehicleDespawned>,
@@ -224,6 +226,22 @@ public partial class FobManager :
         _entities.RemoveAll(en => en is IBuildableFobEntity bfe && bfe.Buildable.Equals(e.Buildable));
     }
 
+    [EventListener(MustRunLast = true)]
+    void IEventListener<DropItemRequested>.HandleEvent(DropItemRequested e, IServiceProvider serviceProvider)
+    {
+        InteractableVehicle vehicle = e.Player.UnturnedPlayer.movement.getVehicle();
+        if (vehicle is null || vehicle.asset.engine.IsFlyingEngine())
+            return;
+
+        SupplyCrateInfo? supplyCrateInfo = Configuration.SupplyCrates.FirstOrDefault(s => s.SupplyItemAsset.MatchAsset(e.Asset));
+        if (supplyCrateInfo == null)
+            return;
+
+        Vector3 dropPos = FindDropPositionForSupplyCrate(vehicle, e.Position);
+
+        e.Position = dropPos;
+    }
+
     void IEventListener<ItemDropped>.HandleEvent(ItemDropped e, IServiceProvider serviceProvider)
     {
         if (e.Item == null || e.DroppedItem == null)
@@ -232,33 +250,32 @@ public partial class FobManager :
         ItemAsset asset = e.Item.GetAsset();
         SupplyCrateInfo? supplyCrateInfo = Configuration.SupplyCrates.FirstOrDefault(s => s.SupplyItemAsset.MatchAsset(asset));
 
-        if (supplyCrateInfo != null)
-        {
-            _ = new FallingBuildable(
-                e.Player,
-                e.DroppedItem,
-                supplyCrateInfo.SupplyItemAsset.GetAssetOrFail(),
-                supplyCrateInfo.PlacementEffect?.GetAsset(),
-                e.Player.Position,
-                e.Player.Yaw,
-                buildable =>
-                {
-                    SupplyCrate supplyCrate = new SupplyCrate(supplyCrateInfo, buildable, serviceProvider.GetRequiredService<ILoopTickerFactory>(), !e.Player.IsOnDuty);
-                    RegisterFobEntity(supplyCrate);
-
-                    NearbySupplyCrates
-                        .FromSingleCrate(supplyCrate, this)
-                        .NotifyChanged(supplyCrate.Type, supplyCrate.SupplyCount, SupplyChangeReason.ResupplyFob, e.Player);
-                    
-                    string tipMsg = supplyCrate.Type == SupplyType.Ammo
-                        ? serviceProvider.GetRequiredService<TranslationInjection<AmmoTranslations>>().Value.ToastGainAmmo.Translate(supplyCrate.SupplyCount, e.Player)
-                        : _translations.ToastGainBuild.Translate(supplyCrate.SupplyCount, e.Player);
-
-                    e.Player.SendToast(new ToastMessage(ToastMessageStyle.Tip, tipMsg));
-                }
-            );
+        if (supplyCrateInfo == null)
             return;
-        }
+
+        _ = new FallingBuildable(
+            e.Player,
+            e.DroppedItem,
+            supplyCrateInfo.SupplyItemAsset.GetAssetOrFail(),
+            supplyCrateInfo.PlacementEffect?.GetAsset(),
+            e.Player.Position,
+            e.Player.Yaw,
+            buildable =>
+            {
+                SupplyCrate supplyCrate = new SupplyCrate(supplyCrateInfo, buildable, serviceProvider.GetRequiredService<ILoopTickerFactory>(), !e.Player.IsOnDuty);
+                RegisterFobEntity(supplyCrate);
+
+                NearbySupplyCrates
+                    .FromSingleCrate(supplyCrate, this)
+                    .NotifyChanged(supplyCrate.Type, supplyCrate.SupplyCount, SupplyChangeReason.ResupplyFob, e.Player);
+                    
+                string tipMsg = supplyCrate.Type == SupplyType.Ammo
+                    ? serviceProvider.GetRequiredService<TranslationInjection<AmmoTranslations>>().Value.ToastGainAmmo.Translate(supplyCrate.SupplyCount, e.Player)
+                    : _translations.ToastGainBuild.Translate(supplyCrate.SupplyCount, e.Player);
+
+                e.Player.SendToast(new ToastMessage(ToastMessageStyle.Tip, tipMsg));
+            }
+        );
     }
 
     void IEventListener<VehicleSpawned>.HandleEvent(VehicleSpawned e, IServiceProvider serviceProvider)
@@ -295,5 +312,45 @@ public partial class FobManager :
             correspondingFob.DamageTracker.RecordDamage(e.InstigatorId, e.PendingDamage, e.DamageOrigin);
         else
             correspondingFob.DamageTracker.RecordDamage(e.DamageOrigin);
+    }
+
+    private const float MaxBoxRadius = 1.5f;
+    private Vector3 FindDropPositionForSupplyCrate(InteractableVehicle vehicle, Vector3 currentDropPosition)
+    {
+        const float distanceToBack = 7.5f + MaxBoxRadius;
+        const float distanceToFront = 5f + MaxBoxRadius;
+
+        Vector3 behind = vehicle.transform.TransformVector(Vector3.back);
+        Vector3 front = vehicle.transform.TransformVector(Vector3.forward);
+
+        // from player exit position code
+        Vector3 backPos = RaycastFindEmptySpot(vehicle, currentDropPosition, behind, distanceToBack, out bool didHit);
+        if (didHit)
+        {
+            Vector3 frontPos = RaycastFindEmptySpot(vehicle, currentDropPosition, front, distanceToFront, out didHit);
+            if (!didHit)
+                return frontPos;
+        }
+
+        return backPos;
+    }
+
+    private static readonly RaycastHit[] HitArray = new RaycastHit[32];
+    private Vector3 RaycastFindEmptySpot(InteractableVehicle vehicle, Vector3 origin, Vector3 direction, float maxDistance, out bool didHit)
+    {
+        didHit = false;
+        float hitDistance = maxDistance;
+        int amt = Physics.RaycastNonAlloc(new Ray(origin, direction), HitArray, maxDistance, RayMasks.BLOCK_EXIT);
+        foreach (RaycastHit raycastHit in new ArraySegment<RaycastHit>(HitArray, 0, amt))
+        {
+            Transform transform = raycastHit.transform;
+            if (transform != null && !transform.IsChildOf(vehicle.transform) && transform != vehicle.transform)
+            {
+                hitDistance = Mathf.Min(hitDistance, raycastHit.distance);
+                didHit = true;
+            }
+        }
+
+        return origin + direction * (hitDistance - (MaxBoxRadius / 2 + 0.1f));
     }
 }

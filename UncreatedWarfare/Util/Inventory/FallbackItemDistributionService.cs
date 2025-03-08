@@ -127,7 +127,6 @@ public class FallbackItemDistributionService : IItemDistributionService
         {
             Item item = pg.getItem((byte)i).item;
             list.Add(item);
-            Console.WriteLine($"removing item: {i} ({item.GetAsset()})");
             pg.removeItem((byte)i);
         }
     }

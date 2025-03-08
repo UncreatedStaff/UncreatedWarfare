@@ -1,8 +1,6 @@
-using Microsoft.Extensions.DependencyInjection;
 using System;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Vehicles;
-using Uncreated.Warfare.Vehicles.UI;
 using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.Vehicles.Events.Tweaks;

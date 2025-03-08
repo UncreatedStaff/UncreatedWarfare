@@ -106,7 +106,7 @@ public partial class EventDispatcher : IHostedService, IDisposable
         }
 
         DateTime spinStart = DateTime.UtcNow;
-        while (_activeEvents == 0)
+        while (_activeEvents > 0)
         {
             await Task.Delay(25, token);
             if ((DateTime.UtcNow - spinStart).TotalSeconds < 10)

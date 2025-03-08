@@ -298,24 +298,11 @@ public class DroppedItemTracker : IHostedService, IEventListener<PlayerLeft>
                 break;
         }
 
-        ItemRegion? region = null;
-
-        if (!Regions.tryGetCoordinate(point, out byte x, out byte y))
-        {
-            x = (byte)(Regions.WORLD_SIZE / 2);
-            y = (byte)(Regions.WORLD_SIZE / 2);
-        }
-        else
-        {
-            region = ItemManager.regions?[x, y];
-        }
-
         DropItemRequested args = new DropItemRequested
         {
             Player = player,
-            Region = region,
-            RegionPosition = new RegionCoord(x, y),
             Item = item,
+            Asset = item.GetAsset(),
             Page = (Page)foundPage,
             Index = foundIndex,
             X = foundJar?.x ?? 0,
@@ -329,19 +316,40 @@ public class DroppedItemTracker : IHostedService, IEventListener<PlayerLeft>
             if (!args.Player.IsOnline)
                 return;
 
-            _itemsPendingDrop[item] = player.Steam64.m_SteamID;
+            ItemJar? item = args.Player.UnturnedPlayer.inventory.GetItemAt(args.Page, args.X, args.Y, out byte index);
+            if (item?.item != args.Item)
+                return;
+
+            _itemsPendingDrop[args.Item] = args.Player.Steam64.m_SteamID;
 
             ItemManager.dropItem(args.Item, args.Position, true, true, false);
-            args.Player.UnturnedPlayer.inventory.removeItem(args.X, args.Y);
+
+            ItemInfo droppedItem = ItemUtility.FindItem(args.Item, args.Position);
+
+            args.Player.UnturnedPlayer.inventory.removeItem((byte)args.Page, index);
             if ((int)args.Page <= PlayerInventory.SLOTS)
             {
                 args.Player.UnturnedPlayer.equipment.sendSlot((byte)args.Page);
             }
-        });
 
-        if (shouldAllow)
-        {
-            _itemsPendingDrop[item] = player.Steam64.m_SteamID;
-        }
+
+            ItemDropped dropArgs = new ItemDropped
+            {
+                Player = player,
+                Region = droppedItem.GetRegion(),
+                RegionPosition = droppedItem.Coord,
+                Index = (ushort)droppedItem.Index,
+                Item = args.Item,
+                Asset = args.Item?.GetAsset(),
+                DroppedItem = droppedItem.Item,
+                OldPage = (Page)args.Page,
+                OldX = args.X,
+                OldY = args.Y,
+                OldRotation = args.Rotation
+            };
+
+            _ = _eventDispatcher.DispatchEventAsync(dropArgs, CancellationToken.None);
+
+        }, _ => true);
     }
 }

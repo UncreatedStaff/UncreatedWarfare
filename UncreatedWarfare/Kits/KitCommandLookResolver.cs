@@ -24,7 +24,6 @@ public class KitCommandLookResolver
     public async Task<KitCommandLookResult> ResolveFromArgumentsOrLook(CommandContext ctx, int startArgument, int requiredExtraArguments, KitInclude include, CancellationToken token = default)
     {
         int totalArgs = ctx.Parameters.Count - requiredExtraArguments - startArgument;
-        Console.WriteLine(totalArgs);
         if (totalArgs < 0)
         {
             throw ctx.SendHelp();

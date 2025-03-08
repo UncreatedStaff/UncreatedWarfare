@@ -61,7 +61,7 @@ public class DefaultTeamSelectorBehavior : ITeamSelectorBehavior
 
         int playerCount = Teams[index].PlayerCount;
 
-        if (playerCount <= mean)
+        if (playerCount <= mean || playerCount == 0)
             return true;
 
         if (variance <= MaximumStandardDeviation * MaximumStandardDeviation)

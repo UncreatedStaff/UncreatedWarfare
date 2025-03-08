@@ -66,8 +66,6 @@ internal sealed class VehicleRestrictions :
 
         bool isDriving = e.Player.UnturnedPlayer.movement.getSeat() == 0;
 
-        Console.WriteLine(e.ExitLocation);
-
         if (TerrainUtility.GetDistanceToGround(e.Vehicle.Position) <= (isDriving ? MaxHeightToExitVehicleDriver : MaxHeightToExitVehiclePassenger))
             return;
 

@@ -26,7 +26,10 @@ internal sealed class DebugSearchPlayersCommand : IExecutableCommand
 
         int ct = _playerService.GetOnlinePlayers(searchTerm, output, Context.Culture, PlayerNameType.CharacterName);
 
-        Context.ReplyString($"Found {ct} players. Check console.");
+        if (ct == 0)
+            throw Context.SendPlayerNotFound();
+
+        Context.ReplyString($"Found {ct} players (1. {output[0]}). Check console for more.");
 
         Context.Logger.LogInformation("Found players: {0}.", ct);
         

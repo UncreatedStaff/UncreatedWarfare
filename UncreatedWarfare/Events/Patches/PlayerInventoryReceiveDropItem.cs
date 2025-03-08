@@ -178,6 +178,7 @@ internal sealed class PlayerInventoryReceiveDropItem : IHarmonyPatch
             RegionPosition = region,
             Index = index,
             Item = item,
+            Asset = item?.GetAsset(),
             DroppedItem = data,
             OldPage = (Page)page,
             OldX = x,

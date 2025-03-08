@@ -105,12 +105,15 @@ public class SquadManager :
     }
     private byte GetSquadIdentificationNumber(Team team)
     {
-        for (byte id = 1;; ++id)
+        checked
         {
-            if (Squads.Any(s => s.Team == team && s.TeamIdentificationNumber == id))
-                continue;
+            for (byte id = 1; ; ++id)
+            {
+                if (Squads.Any(s => s.Team == team && s.TeamIdentificationNumber == id))
+                    continue;
 
-            return id;
+                return id;
+            }
         }
     }
 
@@ -146,6 +149,6 @@ public class SquadManager :
         if (previouslyJoinedSquad == null)
             return;
         
-        previouslyJoinedSquad.AddMember(e.Player);
+        previouslyJoinedSquad.TryAddMember(e.Player);
     }
 }

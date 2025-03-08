@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Fobs;
@@ -38,7 +38,6 @@ public class ThrownVehicleCrate : ThrownSupplyCrate
 
         int results = Physics.OverlapSphereNonAlloc(_throwable.transform.position, 5f, TempHitColliders, 1 << LayerMasks.VEHICLE);
         Array.Sort<Collider>(TempHitColliders, 0, results, comparer);
-        Console.WriteLine("collided with vehicle colliders: " + results);
         WarfareVehicle? _warfareVehicle = null;
         for (int i = 0; i < results; i++)
         {

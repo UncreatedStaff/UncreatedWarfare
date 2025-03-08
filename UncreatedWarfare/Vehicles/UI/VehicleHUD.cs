@@ -14,7 +14,7 @@ public class VehicleHUD : UnturnedUI
     public readonly UnturnedLabel FlareCount = new UnturnedLabel("VH_FlareCount");
 
     public VehicleHUD(AssetConfiguration assetConfig, ILoggerFactory loggerFactory)
-        : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:VehicleHud"), staticKey: true)
+        : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:VehicleHud"), staticKey: true, debugLogging: true)
     {
         
     }
@@ -60,8 +60,11 @@ public class VehicleHUD : UnturnedUI
                 continue;
 
             MissileWarning.SetVisibility(passenger.player.transportConnection, isEnabled);
-            if (i == 0) // drivers get an extra line of warning text telling them to drop flares
-                MissileWarningDriver.SetVisibility(passenger.player.transportConnection, isEnabled);
+            if (i != 0) // drivers get an extra line of warning text telling them to drop flares 
+                continue;
+            
+            MissileWarningDriver.SetVisibility(passenger.player.transportConnection, isEnabled);
+            MissileWarningDriver.SetText(passenger.player.transportConnection, "PRESS '<b><color=#ffffff><plugin_1/></color></b>' FOR FLARES");
         }
     }
 }

@@ -14,20 +14,16 @@ public class DropItemRequested : CancellablePlayerEvent
     public required Item Item { get; init; }
 
     /// <summary>
+    /// The asset of the item being dropped.
+    /// </summary>
+    public required ItemAsset? Asset { get; init; }
+
+    /// <summary>
     /// The position of the item where it will be dropped.
     /// </summary>
-    public required Vector3 Position { get; init; }
+    /// <remarks>This can be changed.</remarks>
+    public required Vector3 Position { get; set; }
 
-    /// <summary>
-    /// The coordinates of the region the item will be dropped in.
-    /// </summary>
-    public required RegionCoord RegionPosition { get; init; }
-
-    /// <summary>
-    /// The region the item will be dropped in.
-    /// </summary>
-    public required ItemRegion? Region { get; init; }
-    
     /// <summary>
     /// The page of the item that will be dropped.
     /// </summary>

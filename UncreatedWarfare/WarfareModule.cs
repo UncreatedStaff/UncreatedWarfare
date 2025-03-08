@@ -911,6 +911,9 @@ public sealed class WarfareModule
         bldr.RegisterType<GuidedMissileLaunchTweaks>()
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+        bldr.RegisterType<FlareTweaks>()
+            .AsSelf().AsImplementedInterfaces()
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
         bldr.RegisterType<QueueShutdownOnUnturnedUpdate>()
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();

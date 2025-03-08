@@ -18,6 +18,11 @@ public class ItemDropped : PlayerEvent
     public required Item? Item { get; init; }
 
     /// <summary>
+    /// The asset of the item being dropped.
+    /// </summary>
+    public required ItemAsset? Asset { get; init; }
+
+    /// <summary>
     /// The position of the item where it was originally dropped.
     /// </summary>
     /// <remarks>Items are not simulated on the server so this may change on clients.</remarks>
