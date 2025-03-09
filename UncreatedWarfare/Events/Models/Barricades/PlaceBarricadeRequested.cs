@@ -21,7 +21,7 @@ public class PlaceBarricadeRequested : CancellableEvent, IPlaceBuildableRequeste
     /// <summary>
     /// The player that initially tried to place the barricade.
     /// </summary>
-    public required WarfarePlayer? OriginalPlacer { get; init; }
+    public required WarfarePlayer OriginalPlacer { get; init; }
 
     /// <summary>
     /// Barricade instantiation data.

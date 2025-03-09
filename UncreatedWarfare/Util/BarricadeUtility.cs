@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
+using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
@@ -1785,6 +1786,18 @@ public static class BarricadeUtility
                 mannequin.clearClothes();
                 break;
         }
+    }
+
+    public static void WipeStorage(IBuildable buildable)
+    {
+        if (buildable.IsStructure || buildable.GetDrop<BarricadeDrop>() is not { interactable: InteractableStorage { items: { } } storage })
+            return;
+        
+        for (int i = storage.items.getItemCount(); i > 0; --i)
+        {
+            storage.items.removeItem(0);
+        }
+        storage.rebuildState();
     }
 }
 

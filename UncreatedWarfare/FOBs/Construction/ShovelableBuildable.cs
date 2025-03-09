@@ -27,6 +27,7 @@ public class ShovelableBuildable : IBuildableFobEntity
     public Vector3 Position => Buildable.Position;
 
     public Quaternion Rotation => Buildable.Rotation;
+    public bool WipeStorageOnDestroy => false;
 
     public IAssetLink<Asset> IdentifyingAsset { get; }
 

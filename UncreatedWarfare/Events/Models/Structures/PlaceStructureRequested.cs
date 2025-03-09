@@ -18,7 +18,7 @@ public class PlaceStructureRequested : CancellableEvent, IPlaceBuildableRequeste
     /// <summary>
     /// The player that initially tried to place the structure.
     /// </summary>
-    public required WarfarePlayer? OriginalPlacer { get; init; }
+    public required WarfarePlayer OriginalPlacer { get; init; }
 
     /// <summary>
     /// Asset of the structure being placed.

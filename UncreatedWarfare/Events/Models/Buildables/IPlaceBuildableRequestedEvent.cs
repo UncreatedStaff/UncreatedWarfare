@@ -12,7 +12,7 @@ public interface IPlaceBuildableRequestedEvent : ICancellable
     /// <summary>
     /// The player that initially tried to place the barricade.
     /// </summary>
-    WarfarePlayer? OriginalPlacer { get; }
+    WarfarePlayer OriginalPlacer { get; }
 
     /// <summary>
     /// Coordinate of the region the buildable was placed in.

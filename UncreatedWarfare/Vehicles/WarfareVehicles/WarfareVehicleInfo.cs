@@ -40,6 +40,7 @@ public class WarfareVehicleInfo : IEquatable<WarfareVehicleInfo>, ITranslationAr
 
     public IReadOnlyList<UnlockRequirement> UnlockRequirements { get; set; } = Array.Empty<UnlockRequirement>();
     public required int CreditCost { get; set; }
+    public required bool WipeTrunkOnDestroyed { get; set; }
     public IReadOnlyList<TrunkItem> Trunk { get; set; } = Array.Empty<TrunkItem>();
 
     public static void EnsureInitialized(WarfareVehicleInfo v)
@@ -124,6 +125,7 @@ public class WarfareVehicleInfo : IEquatable<WarfareVehicleInfo>, ITranslationAr
 
         UnlockRequirements = other.UnlockRequirements;
         CreditCost = other.CreditCost;
+        WipeTrunkOnDestroyed = other.WipeTrunkOnDestroyed;
         Trunk = other.Trunk;
         // todo Delays = other.Delays;
 
@@ -177,6 +179,7 @@ public class WarfareVehicleInfo : IEquatable<WarfareVehicleInfo>, ITranslationAr
             Class = Class.None,
             TicketCost = 0,
             CreditCost = 0,
+            WipeTrunkOnDestroyed = true,
             RespawnTime = TimeSpan.Zero,
             Cooldown = TimeSpan.Zero,
             PaintColor = Color.clear,

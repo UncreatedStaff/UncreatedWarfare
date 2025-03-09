@@ -22,7 +22,7 @@ public class RepairStation : IBuildableFobEntity, IDisposable
     private readonly VehicleService _vehicleService;
     private readonly AssetConfiguration _assetConfiguration;
     private readonly ZoneStore? _zoneStore;
-    private readonly ILoopTicker _ticker;
+    private readonly ILoopTicker _repairTicker;
     private readonly ILoopTicker _refillTicker;
     private byte[]? _originalBarricadeState;
 
@@ -31,6 +31,7 @@ public class RepairStation : IBuildableFobEntity, IDisposable
     public Vector3 Position => Buildable.Position;
 
     public Quaternion Rotation => Buildable.Rotation;
+    public bool WipeStorageOnDestroy => true;
 
     public IAssetLink<Asset> IdentifyingAsset { get; }
 
@@ -44,8 +45,8 @@ public class RepairStation : IBuildableFobEntity, IDisposable
         IdentifyingAsset = AssetLink.Create(Buildable.Asset);
         if (!buildable.IsStructure)
             _originalBarricadeState = buildable.GetItem<Barricade>().state;
-        _ticker = loopTickerFactory.CreateTicker(TimeSpan.FromSeconds(4), false, true);
-        _ticker.OnTick += (_, _, _) =>
+        _repairTicker = loopTickerFactory.CreateTicker(TimeSpan.FromSeconds(4), false, true);
+        _repairTicker.OnTick += (_, _, _) =>
         {
             NearbySupplyCrates supplyCrateGroup = NearbySupplyCrates.FindNearbyCrates(buildable.Position, team.GroupId, fobManager);
 
@@ -140,7 +141,8 @@ public class RepairStation : IBuildableFobEntity, IDisposable
 
     public void Dispose()
     {
-        _ticker.Dispose();
+        _repairTicker.Dispose();
+        _refillTicker.Dispose();
     }
 
     public override bool Equals(object? obj)

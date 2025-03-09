@@ -60,8 +60,7 @@ public partial class FobManager :
         if (e.Asset is not ItemTrapAsset || !IsTrapTooNearFobSpawn(e.Position))
             return;
 
-        if (e.OriginalPlacer != null)
-            _chatService.Send(e.OriginalPlacer, _translations.BuildableNotAllowed);
+        _chatService.Send(e.OriginalPlacer, _translations.BuildableNotAllowed);
 
         e.Cancel();
     }
@@ -219,20 +218,15 @@ public partial class FobManager :
             e.Instigator?.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastGainBuild.Translate(shovelable.Info.SupplyCost, e.Instigator)));
         }
        
-        SupplyCrate? supplyCrate = _entities.OfType<SupplyCrate>().FirstOrDefault(i => i.Buildable.Equals(e.Buildable));
-        if (supplyCrate != null)
+        IBuildableFobEntity? entity = GetBuildableFobEntity<IBuildableFobEntity>(e.Buildable);
+        if (entity != null)
         {
-            NearbySupplyCrates.FromSingleCrate(supplyCrate, this).NotifyChanged(supplyCrate.Type, -supplyCrate.SupplyCount, SupplyChangeReason.ConsumeSuppliesDestroyed);
+            if (entity is SupplyCrate supplyCrate)
+                NearbySupplyCrates.FromSingleCrate(supplyCrate, this).NotifyChanged(supplyCrate.Type, -supplyCrate.SupplyCount, SupplyChangeReason.ConsumeSuppliesDestroyed);
             
             // clear barricade state to prevent items from dropping out of the crate after it is destroyed
-            if (!supplyCrate.Buildable.IsStructure && supplyCrate.Buildable.GetDrop<BarricadeDrop>() is { interactable: InteractableStorage { items: { } } storage })
-            {
-                for (int i = storage.items.getItemCount(); i > 0; --i)
-                {
-                    storage.items.removeItem(0);
-                }
-                storage.rebuildState();
-            }
+            if (entity.WipeStorageOnDestroy)
+                BarricadeUtility.WipeStorage(entity.Buildable);
         }
 
         _entities.RemoveAll(en => en is IBuildableFobEntity bfe && bfe.Buildable.Equals(e.Buildable));

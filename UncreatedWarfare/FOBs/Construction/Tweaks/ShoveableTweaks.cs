@@ -42,9 +42,6 @@ internal class ShoveableTweaks :
 
     void IEventListener<IPlaceBuildableRequestedEvent>.HandleEvent(IPlaceBuildableRequestedEvent e, IServiceProvider serviceProvider)
     {
-        if (e.OriginalPlacer == null)
-            return;
-
         if (_assetConfiguration.GetAssetLink<ItemPlaceableAsset>("Buildables:Gameplay:FobUnbuilt").MatchAsset(e.Asset))
             return;
 

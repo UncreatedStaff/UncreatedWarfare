@@ -317,9 +317,6 @@ public class WhitelistService :
     [EventListener(RequiresMainThread = true)]
     async UniTask IAsyncEventListener<IPlaceBuildableRequestedEvent>.HandleEventAsync(IPlaceBuildableRequestedEvent e, IServiceProvider serviceProvider, CancellationToken token)
     {
-        if (e.OriginalPlacer == null)
-            return;
-
         UserPermissionStore permissions = serviceProvider.GetRequiredService<UserPermissionStore>();
         if (await permissions.HasPermissionAsync(e.OriginalPlacer, PermissionPlaceBuildable, token))
         {

@@ -22,6 +22,7 @@ public class SupplyCrate : IBuildableFobEntity, IDisposable
     public Vector3 Position => Buildable.Position;
 
     public Quaternion Rotation => Buildable.Rotation;
+    public bool WipeStorageOnDestroy => true;
 
     public IAssetLink<Asset> IdentifyingAsset { get; }
 

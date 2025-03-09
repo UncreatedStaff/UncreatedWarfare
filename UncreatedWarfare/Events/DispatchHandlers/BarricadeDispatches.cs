@@ -2,6 +2,7 @@ using System;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Models.Barricades;
+using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
@@ -56,6 +57,10 @@ partial class EventDispatcher
             coords.x = x;
             coords.y = y;
         }
+        
+        WarfarePlayer? onlinePlayer = _playerService.GetOnlinePlayerOrNull(owner);
+        if (onlinePlayer == null)
+            return; // this event does not support care packages being placed
 
         PlaceBarricadeRequested args = new PlaceBarricadeRequested
         {
@@ -68,12 +73,23 @@ partial class EventDispatcher
             RegionPosition = coords,
             Rotation = Quaternion.Euler(angleX, angleY, angleZ),
             Owner = new CSteamID(owner),
-            OriginalPlacer = _playerService.GetOnlinePlayerOrNull(owner),
+            OriginalPlacer = onlinePlayer,
             GroupOwner = new CSteamID(group)
         };
 
+        byte equippedX = args.OriginalPlacer.UnturnedPlayer.equipment.equipped_x;
+        byte equippedY = args.OriginalPlacer.UnturnedPlayer.equipment.equipped_y;
+        byte equippedPage = args.OriginalPlacer.UnturnedPlayer.equipment.equippedPage;
+        byte equippedIndex = args.OriginalPlacer.UnturnedPlayer.inventory.getIndex(equippedPage, equippedX, equippedY);
+        ItemJar oldEquippedJar = args.OriginalPlacer.UnturnedPlayer.inventory.getItem(equippedPage, equippedIndex);
+
         EventContinuations.Dispatch(args, this, _unloadToken, out shouldAllow, continuation: args =>
         {
+            // check if the item hasn't been moved in invetory for some reason
+            ItemJar newEquippedJar = args.OriginalPlacer.UnturnedPlayer.inventory.getItem(equippedPage, equippedIndex);
+            if (newEquippedJar == null || oldEquippedJar != newEquippedJar)
+                return;
+            
             bool plantTargetAlive = args.TargetVehicle != null;
             if (!plantTargetAlive && args.TargetVehicle is not null || plantTargetAlive && args.HitTarget == null)
             {
@@ -83,7 +99,7 @@ partial class EventDispatcher
 
             Vector3 rot = args.Rotation.eulerAngles;
             Quaternion rotation = BarricadeManager.getRotation(args.Barricade.asset, rot.x, rot.y, rot.z);
-
+            
             if (plantTargetAlive)
             {
                 BarricadeManager.dropPlantedBarricade(args.HitTarget, args.Barricade, args.Position, rotation, args.Owner.m_SteamID, args.GroupOwner.m_SteamID);
@@ -93,7 +109,17 @@ partial class EventDispatcher
                 BarricadeManager.dropNonPlantedBarricade(args.Barricade, args.Position, rotation, args.Owner.m_SteamID, args.GroupOwner.m_SteamID);
             }
             
-            _logger.LogWarning("Event continuation of PlaceBarricadeRequested completed, and the code does not seem to remove the player's item.");
+            // since shouldAllow is immediately set to false when the contiuation runs, the item doesn't get consumed in the player's hands.
+            // so we need to manually remove it
+            args.OriginalPlacer.UnturnedPlayer.inventory.removeItem(equippedPage, equippedIndex);
+
+            // if there is another item of the same type, try to equip it
+            InventorySearch inventorySearch = args.OriginalPlacer.UnturnedPlayer.inventory.has(newEquippedJar.item.id);
+            if (inventorySearch == null)
+                return;
+            
+            args.OriginalPlacer.UnturnedPlayer.inventory.ReceiveDragItem(inventorySearch.page, inventorySearch.jar.x, inventorySearch.jar.y, equippedPage, equippedX, equippedY, newEquippedJar.rot);
+            args.OriginalPlacer.UnturnedPlayer.equipment.ServerEquip(equippedPage, equippedX, equippedY);
         });
 
         if (!shouldAllow)

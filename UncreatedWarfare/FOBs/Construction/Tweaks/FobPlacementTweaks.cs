@@ -52,9 +52,6 @@ public class FobPlacementTweaks :
         {
             return;
         }
-
-        if (e.OriginalPlacer == null)
-            return;
         
         ChatService chatService = serviceProvider.GetRequiredService<ChatService>();
 
@@ -69,6 +66,8 @@ public class FobPlacementTweaks :
             }
             return;
         }
+        
+        await UniTask.SwitchToMainThread(token);
 
         ShovelableInfo? shovelableInfo = _fobManager.Configuration.Shovelables
             .FirstOrDefault(s => s.Foundation != null && s.Foundation.Guid == e.Asset.GUID);

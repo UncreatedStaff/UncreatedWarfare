@@ -931,6 +931,9 @@ public sealed class WarfareModule
         bldr.RegisterType<VehicleInteractionTweaks>()
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+        bldr.RegisterType<VehicleTrunkTweaks>()
+            .AsSelf().AsImplementedInterfaces()
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
         bldr.RegisterType<PlayerChooseSpawnPointTweaks>()
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
