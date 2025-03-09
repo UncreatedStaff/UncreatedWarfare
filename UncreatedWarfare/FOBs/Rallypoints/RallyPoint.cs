@@ -51,9 +51,11 @@ public class RallyPoint : IBuildableFob, IDisposable
     {
         if (IsBurned)
             return;
-
-        // todo: should the rallypoint be destroyed here?
+        
         IsBurned = CheckBurned();
+
+        if (IsBurned)
+            Buildable.Destroy();
     }
     private bool CheckBurned()
     {
