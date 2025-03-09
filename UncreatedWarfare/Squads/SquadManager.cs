@@ -14,7 +14,8 @@ namespace Uncreated.Warfare.Squads;
 
 public class SquadManager : 
     IEventListener<PlayerTeamChanged>,
-    IEventListener<PlayerJoined>
+    IEventListener<PlayerJoined>,
+    IEventListener<PlayerLeft>
 {
     public const int MaxSquadCount = 8;
 
@@ -154,5 +155,13 @@ public class SquadManager :
             return;
         
         previouslyJoinedSquad.TryAddMember(e.Player);
+    }
+
+    public void HandleEvent(PlayerLeft e, IServiceProvider serviceProvider)
+    {
+        if (!e.Player.IsInSquad())
+            return;
+        
+        e.Player.GetSquad()!.RemoveMember(e.Player);
     }
 }

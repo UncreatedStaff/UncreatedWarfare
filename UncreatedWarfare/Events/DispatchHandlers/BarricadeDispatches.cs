@@ -92,6 +92,8 @@ partial class EventDispatcher
             {
                 BarricadeManager.dropNonPlantedBarricade(args.Barricade, args.Position, rotation, args.Owner.m_SteamID, args.GroupOwner.m_SteamID);
             }
+            
+            _logger.LogWarning("Event continuation of PlaceBarricadeRequested completed, and the code does not seem to remove the player's item.");
         });
 
         if (!shouldAllow)

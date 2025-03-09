@@ -22,11 +22,13 @@ public class ThrowableSupplyCrateTweaks : IEventListener<ThrowableSpawned>
         FobManager? fobManager = serviceProvider.GetService<FobManager>();
         if (fobManager == null)
             return;
+        
+        bool isInMain = serviceProvider.GetService<ZoneStore>()?.IsInMainBase(e.Object.transform.position) ?? false;
 
         ThrownAmmoBagInfo? thrownAmmoBagInfo = fobManager.Configuration.ThrowableAmmoBags.FirstOrDefault(t => t.ThrowableItemAsset.MatchAsset(e.Asset));
         if (thrownAmmoBagInfo != null)
         {
-            new ThrownAmmoBag(e.Object, e.Player, e.Asset, thrownAmmoBagInfo.AmmoBagBarricadeAsset.GetAssetOrFail(), thrownAmmoBagInfo.StartingAmmo);
+            new ThrownAmmoBag(e.Object, e.Player, e.Asset, thrownAmmoBagInfo.AmmoBagBarricadeAsset.GetAssetOrFail(), thrownAmmoBagInfo.StartingAmmo, isInMain);
         }
         ThrownVehicleCrateInfo? thrownVehicleCrateInfo = fobManager.Configuration.ThrowableVehicleSupplyCrates.FirstOrDefault(t => t.ThrowableItemAsset.MatchAsset(e.Asset));
         if (thrownVehicleCrateInfo != null)

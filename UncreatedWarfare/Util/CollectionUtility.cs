@@ -520,3 +520,31 @@ public class DistanceComparer<TValue> : IComparer<TValue>
         return _reverse ? bDist.CompareTo(aDist) : aDist.CompareTo(bDist);
     }
 }
+
+public class LookAtComparer<TValue> : IComparer<TValue>
+{
+    private readonly Vector3 _lookOrigin;
+    private readonly Func<TValue, Vector3> _getLookDirection;
+    private readonly bool _horizontalDistanceOnly;
+    private readonly bool _reverse;
+
+    public LookAtComparer(Vector3 lookOrigin, Func<TValue, Vector3> getLookDirection, bool reverse)
+    {
+        _lookOrigin = lookOrigin;
+        _getLookDirection = getLookDirection;
+        _reverse = reverse;
+    }
+
+    /// <inheritdoc />
+    public int Compare(TValue a, TValue b)
+    {
+        if (ReferenceEquals(a, b))
+            return 0;
+
+        Vector3 dA = _getLookDirection(a);
+        Vector3 dB = _getLookDirection(b);
+        float aAngle = Vector3.Angle(dA, _lookOrigin);
+        float bAngle = Vector3.Angle(dB, _lookOrigin);
+        return _reverse ? bAngle.CompareTo(aAngle) : aAngle.CompareTo(bAngle);
+    }
+}

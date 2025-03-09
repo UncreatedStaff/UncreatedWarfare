@@ -23,6 +23,8 @@ public class RepairStation : IBuildableFobEntity, IDisposable
     private readonly AssetConfiguration _assetConfiguration;
     private readonly ZoneStore? _zoneStore;
     private readonly ILoopTicker _ticker;
+    private readonly ILoopTicker _refillTicker;
+    private byte[]? _originalBarricadeState;
 
     public IBuildable Buildable { get; }
 
@@ -40,6 +42,8 @@ public class RepairStation : IBuildableFobEntity, IDisposable
         _assetConfiguration = assetConfiguration;
         _zoneStore = zoneStore;
         IdentifyingAsset = AssetLink.Create(Buildable.Asset);
+        if (!buildable.IsStructure)
+            _originalBarricadeState = buildable.GetItem<Barricade>().state;
         _ticker = loopTickerFactory.CreateTicker(TimeSpan.FromSeconds(4), false, true);
         _ticker.OnTick += (_, _, _) =>
         {
@@ -78,6 +82,17 @@ public class RepairStation : IBuildableFobEntity, IDisposable
                 Repair(vehicle);
                 Refuel(vehicle);
             }
+        };
+        _refillTicker = loopTickerFactory.CreateTicker(TimeSpan.FromSeconds(60), false, true);
+        _refillTicker.OnTick += (_, _, _) =>
+        {
+            if (Buildable.IsStructure || _originalBarricadeState == null)
+                return;
+
+            BarricadeDrop drop = Buildable.GetDrop<BarricadeDrop>();
+            BarricadeUtility.WriteOwnerAndGroup(_originalBarricadeState, drop, Buildable.Owner.m_SteamID,
+                Buildable.Group.m_SteamID);
+            BarricadeUtility.SetState(drop, _originalBarricadeState);
         };
     }
 

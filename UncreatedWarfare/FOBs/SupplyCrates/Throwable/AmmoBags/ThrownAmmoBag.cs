@@ -12,22 +12,29 @@ public class ThrownAmmoBag : ThrownSupplyCrate
     private static readonly Collider[] TempHitColliders = new Collider[4];
     private readonly ItemBarricadeAsset _completedAmmoCrateAsset;
     private readonly float _startingAmmo;
+    private readonly bool _isInMain;
     private readonly ThrownComponent _thrownComponent;
 
-    public ThrownAmmoBag(GameObject throwable, WarfarePlayer thrower, ItemThrowableAsset thrownAsset, ItemBarricadeAsset completedAmmoCrateAsset, float startingAmmo)
+    public ThrownAmmoBag(GameObject throwable, WarfarePlayer thrower, ItemThrowableAsset thrownAsset, ItemBarricadeAsset completedAmmoCrateAsset, float startingAmmo, bool isInMain)
         : base(throwable, thrownAsset, thrower)
     {
         _completedAmmoCrateAsset = completedAmmoCrateAsset;
         _startingAmmo = startingAmmo;
+        _isInMain = isInMain;
         _thrownComponent = _throwable.AddComponent<ThrownComponent>();
         _thrownComponent.OnThrowableDestroyed = OnThrowableDestroyed;
     }
 
     private void OnThrowableDestroyed()
     {
+        if (_isInMain)
+        {
+            RespawnThrowableItem();
+            return;
+        }
+        
         int resultsCount = Physics.OverlapSphereNonAlloc(_throwable.transform.position, 0.5f, TempHitColliders, 
             MidairCheckLayerMask);
-
         
         if (resultsCount <= 0) // check that this ammo bag isn't being destroyed while midair
         {

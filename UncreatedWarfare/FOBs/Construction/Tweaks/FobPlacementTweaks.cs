@@ -47,6 +47,11 @@ public class FobPlacementTweaks :
         {
             return;
         }
+        
+        if (!_assetConfiguration.GetAssetLink<ItemPlaceableAsset>("Buildables:Gameplay:FobUnbuilt").MatchAsset(e.Asset))
+        {
+            return;
+        }
 
         if (e.OriginalPlacer == null)
             return;

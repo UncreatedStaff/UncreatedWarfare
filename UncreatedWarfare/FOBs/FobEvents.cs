@@ -124,13 +124,20 @@ public partial class FobManager :
         ShovelableInfo? completedFortification = Configuration.Shovelables
             .FirstOrDefault(s => s.Emplacement == null && s.CompletedStructure.MatchAsset(buildable.Asset));
 
-        if (_assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:Gameplay:RepairStation").MatchAsset(buildable.Asset))
+        if (completedFortification == null)
+            return;
+
+        if (completedFortification.ConstuctionType == ShovelableType.RepairStation)
         {
             Team team = serviceProvider.GetRequiredService<ITeamManager<Team>>().GetTeam(buildable.Group);
-            RepairStation repairStation = new RepairStation(buildable, team, serviceProvider.GetRequiredService<ILoopTickerFactory>(), serviceProvider.GetRequiredService<VehicleService>(), this, _assetConfiguration, serviceProvider.GetService<ZoneStore>());
+            RepairStation repairStation = new RepairStation(buildable, team,
+                serviceProvider.GetRequiredService<ILoopTickerFactory>(),
+                serviceProvider.GetRequiredService<VehicleService>(), this, _assetConfiguration,
+                serviceProvider.GetService<ZoneStore>());
+            
             RegisterFobEntity(repairStation);
         }
-        else if (completedFortification != null)
+        else if (completedFortification.ConstuctionType == ShovelableType.Fortification)
         {
             RegisterFobEntity(new FortificationEntity(buildable));
         }
@@ -255,6 +262,10 @@ public partial class FobManager :
         ItemAsset asset = e.Item.GetAsset();
         SupplyCrateInfo? supplyCrateInfo = Configuration.SupplyCrates.FirstOrDefault(s => s.SupplyItemAsset.MatchAsset(asset));
 
+        bool isInMain = serviceProvider.GetService<ZoneStore>()?.IsInMainBase(e.ServersidePoint) ?? false;
+        if (isInMain)
+            return;
+        
         if (supplyCrateInfo == null)
             return;
 

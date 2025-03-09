@@ -63,7 +63,6 @@ internal class VehicleInteractionTweaks :
 
             return;
         }
-
         
         // if the player is trying to enter a crew seat
         if (e.Vehicle.Info.IsCrewSeat(e.Seat))

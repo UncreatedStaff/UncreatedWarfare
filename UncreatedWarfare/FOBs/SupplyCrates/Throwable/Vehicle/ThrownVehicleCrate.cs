@@ -34,7 +34,7 @@ public class ThrownVehicleCrate : ThrownSupplyCrate
     private void OnThrowableDestroyed()
     {
         // descending distance comparer
-        IComparer<Component> comparer = new DistanceComparer<Component>(_throwable.transform.position, x => x.transform.position, false, reverse: false);
+        IComparer<Component> comparer = new LookAtComparer<Component>(_throwable.transform.forward, x => x.transform.position - _throwable.transform.position, reverse: false);
 
         int results = Physics.OverlapSphereNonAlloc(_throwable.transform.position, 5f, TempHitColliders, 1 << LayerMasks.VEHICLE);
         Array.Sort<Collider>(TempHitColliders, 0, results, comparer);
