@@ -967,9 +967,6 @@ public sealed class WarfareModule
         bldr.RegisterType<CombatCooldownTweak>()
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
-        bldr.RegisterType<NoDamageInMainTweak>()
-            .AsSelf().AsImplementedInterfaces()
-            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
         bldr.RegisterType<LandmineExplosionRestrictions>()
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);

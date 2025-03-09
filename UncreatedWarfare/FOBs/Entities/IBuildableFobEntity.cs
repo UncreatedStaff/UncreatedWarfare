@@ -10,5 +10,5 @@ public interface IBuildableFobEntity : IFobEntity
     Vector3 ITransformObject.Scale { get => Buildable.Scale; set => Buildable.Scale = value; }
     void ITransformObject.SetPositionAndRotation(Vector3 position, Quaternion rotation) => Buildable.SetPositionAndRotation(position, rotation);
     bool ITransformObject.Alive => Buildable.Alive;
-    bool WipeStorageOnDestroy { get; }
+    bool PreventItemDrops { get; }
 }

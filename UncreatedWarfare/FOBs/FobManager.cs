@@ -73,6 +73,20 @@ public partial class FobManager : IWhitelistExceptionProvider, ILayoutHostedServ
     /// <inheritdoc />
     UniTask ILayoutHostedService.StopAsync(CancellationToken token)
     {
+        for (int i = _fobs.Count - 1; i >= 0; --i)
+        {
+            DeregisterFob(_fobs[i]);
+        }
+
+        _fobs.Clear();
+
+        for (int i = _entities.Count - 1; i >= 0; --i)
+        {
+            DeregisterFobEntity(_entities[i]);
+        }
+
+        _entities.Clear();
+
         return UniTask.CompletedTask;
     }
 
@@ -122,7 +136,7 @@ public partial class FobManager : IWhitelistExceptionProvider, ILayoutHostedServ
             return;
         }
         _entities.Add(entity);
-        _logger.LogDebug("Registered new FOB Entity: " + entity);
+        _logger.LogDebug($"Registered new FOB Entity: {entity}");
 
     }
     public bool DeregisterFobEntity(IFobEntity entity)
@@ -143,7 +157,7 @@ public partial class FobManager : IWhitelistExceptionProvider, ILayoutHostedServ
             }
         }
 
-        _logger.LogDebug("Deregistered FOB Entity: " + entity);
+        _logger.LogDebug($"Deregistered FOB Entity: {entity}");
         return true;
     }
     public TBuildableFobType? FindBuildableFob<TBuildableFobType>(IBuildable matchingBuildable) where TBuildableFobType : IBuildableFob

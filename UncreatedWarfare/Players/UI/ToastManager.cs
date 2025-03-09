@@ -177,13 +177,15 @@ public sealed class ToastManager : IPlayerComponent, IDisposable
         ToastMessageInfo info = ToastMessages[(int)style];
 
         if (GameThread.IsCurrent)
-            SkipExpirationIntl(info.Channel);
+            SkipExpirationIntl(info.Channel, style);
         else
         {
+            ToastMessageInfo info2 = info;
+            ToastMessageStyle style2 = style;
             UniTask.Create(async () =>
             {
                 await UniTask.SwitchToMainThread(Player.DisconnectToken);
-                SkipExpirationIntl(info.Channel);
+                SkipExpirationIntl(info2.Channel, style2);
             });
         }
     }
@@ -192,13 +194,13 @@ public sealed class ToastManager : IPlayerComponent, IDisposable
     public void SkipExpiration(int channel)
     {
         if (GameThread.IsCurrent)
-            SkipExpirationIntl(channel);
+            SkipExpirationIntl(channel, (ToastMessageStyle)(-1));
         else
         {
             UniTask.Create(async () =>
             {
                 await UniTask.SwitchToMainThread(Player.DisconnectToken);
-                SkipExpirationIntl(channel);
+                SkipExpirationIntl(channel, (ToastMessageStyle)(-1));
             });
         }
     }
@@ -266,10 +268,10 @@ public sealed class ToastManager : IPlayerComponent, IDisposable
         HasToasts = updateAny;
     }
 
-    private void SkipExpirationIntl(int channel)
+    private void SkipExpirationIntl(int channel, ToastMessageStyle style)
     {
         ToastMessageChannel chnl = Channels[channel];
-        if (!chnl.HasToasts)
+        if (!chnl.HasToasts || style != (ToastMessageStyle)(-1) && chnl.CurrentMessage.Style != style)
             return;
 
         chnl.Dequeue();

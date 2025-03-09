@@ -14,7 +14,7 @@ namespace Uncreated.Warfare.Vehicles.Spawners;
 /// <remarks>Decided to go with raw binary instead of SQL since this kind of relies on other level savedata and the map, plus it was easier.</remarks>
 
 [Priority(-1 /* load after BuildableSaver and VehicleInfoStore */)]
-public class VehicleSpawnerStore : ILayoutHostedService, IDisposable
+public class VehicleSpawnerStore : IDisposable
 {
     private readonly YamlDataStore<List<VehicleSpawnInfo>> _dataStore;
 
@@ -35,21 +35,12 @@ public class VehicleSpawnerStore : ILayoutHostedService, IDisposable
         };
     }
 
-    UniTask ILayoutHostedService.StartAsync(CancellationToken token)
-    {
-        ReloadSpawners();
-        return UniTask.CompletedTask;
-    }
-
-    UniTask ILayoutHostedService.StopAsync(CancellationToken token)
-    {
-        return UniTask.CompletedTask;
-    }
-    private void ReloadSpawners()
+    public void ReloadSpawners()
     {
         _dataStore.Reload();
         OnSpawnsReloaded?.Invoke();
     }
+
     private static string GetFolderPath()
     {
         return Path.Combine(

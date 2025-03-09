@@ -20,6 +20,12 @@ partial class EventDispatcher
         if (!shouldAllow)
             return;
 
+        WarfarePlayer? player = _playerService.GetOnlinePlayerOrNull(owner);
+        if (player == null)
+        {
+            return;
+        }
+
         if (!Regions.tryGetCoordinate(point, out byte x, out byte y))
         {
             shouldAllow = false;
@@ -34,13 +40,39 @@ partial class EventDispatcher
             RegionPosition = new RegionCoord(x, y),
             Rotation = Quaternion.Euler(angleX, angleY, angleZ),
             Owner = new CSteamID(owner),
-            OriginalPlacer = _playerService.GetOnlinePlayerOrNull(owner),
+            OriginalPlacer = player,
             GroupOwner = new CSteamID(group)
         };
 
+        byte equippedX = args.OriginalPlacer.UnturnedPlayer.equipment.equipped_x;
+        byte equippedY = args.OriginalPlacer.UnturnedPlayer.equipment.equipped_y;
+        byte equippedPage = args.OriginalPlacer.UnturnedPlayer.equipment.equippedPage;
+        byte equippedIndex = args.OriginalPlacer.UnturnedPlayer.inventory.getIndex(equippedPage, equippedX, equippedY);
+        ItemJar oldEquippedJar = args.OriginalPlacer.UnturnedPlayer.inventory.getItem(equippedPage, equippedIndex);
+
         EventContinuations.Dispatch(args, this, _unloadToken, out shouldAllow, continuation: args =>
         {
+            if (!args.OriginalPlacer.IsOnline)
+                return;
+
+            // check if the item hasn't been moved in invetory for some reason
+            ItemJar newEquippedJar = args.OriginalPlacer.UnturnedPlayer.inventory.getItem(equippedPage, equippedIndex);
+            if (newEquippedJar == null || oldEquippedJar != newEquippedJar)
+                return;
+
             StructureManager.dropReplicatedStructure(args.Structure, args.Position, args.Rotation, args.Owner.m_SteamID, args.GroupOwner.m_SteamID);
+
+            // since shouldAllow is immediately set to false when the contiuation runs, the item doesn't get consumed in the player's hands.
+            // so we need to manually remove it
+            args.OriginalPlacer.UnturnedPlayer.inventory.removeItem(equippedPage, equippedIndex);
+
+            // if there is another item of the same type, try to equip it
+            InventorySearch inventorySearch = args.OriginalPlacer.UnturnedPlayer.inventory.has(newEquippedJar.item.id);
+            if (inventorySearch == null)
+                return;
+
+            args.OriginalPlacer.UnturnedPlayer.inventory.ReceiveDragItem(inventorySearch.page, inventorySearch.jar.x, inventorySearch.jar.y, equippedPage, equippedX, equippedY, newEquippedJar.rot);
+            args.OriginalPlacer.UnturnedPlayer.equipment.ServerEquip(equippedPage, equippedX, equippedY);
         });
 
         if (!shouldAllow)

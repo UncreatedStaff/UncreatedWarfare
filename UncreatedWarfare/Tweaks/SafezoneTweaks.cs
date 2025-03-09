@@ -19,7 +19,8 @@ public class SafezoneTweaks :
     IEventListener<PlayerExitedZone>,
     IEventListener<ChangeFiremodeRequested>,
     IEventListener<IDamageBuildableRequestedEvent>,
-    IEventListener<DamageVehicleRequested>
+    IEventListener<DamageVehicleRequested>,
+    IEventListener<DamagePlayerRequested>
 {
     private readonly ZoneStore _zoneStore;
     private readonly KitRequestService _kitRequestService;
@@ -30,6 +31,12 @@ public class SafezoneTweaks :
         _zoneStore = zoneStore;
         _kitRequestService = kitRequestService;
         _logger = logger;
+    }
+
+    void IEventListener<DamagePlayerRequested>.HandleEvent(DamagePlayerRequested e, IServiceProvider serviceProvider)
+    {
+        if (e.Parameters.cause != EDeathCause.KILL && _zoneStore.IsInMainBase(e.Player, e.Player.Team.Faction))
+            e.Cancel();
     }
 
     [EventListener(MustRunInstantly = true)]

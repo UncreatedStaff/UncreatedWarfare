@@ -1,4 +1,4 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
@@ -159,13 +159,49 @@ public static class WarfareDatabaseReflection
                 string dataType;
                 if (member != null)
                 {
-                    Attribute[] attributes = Attribute.GetCustomAttributes(member, typeof(ExcludedEnumAttribute));
+                    List<ExcludedEnumAttribute> excludedList = Attribute
+                        .GetCustomAttributes(member, typeof(ExcludedEnumAttribute))
+                        .Concat(Attribute.GetCustomAttributes(clrType, typeof(ExcludedEnumAttribute)))
+                        .Cast<ExcludedEnumAttribute>()
+                        .ToList();
 
-                    if (attributes.Length == 0)
-                        attributes = Attribute.GetCustomAttributes(clrType, typeof(ExcludedEnumAttribute));
+                    List<IncludedEnumAttribute> includedList = Attribute
+                        .GetCustomAttributes(member, typeof(IncludedEnumAttribute))
+                        .Concat(Attribute.GetCustomAttributes(clrType, typeof(IncludedEnumAttribute)))
+                        .Cast<IncludedEnumAttribute>()
+                        .ToList();
 
-                    object[] values = attributes.Select(x => ((ExcludedEnumAttribute)x).Value!).Where(x => x != null).ToArray();
-                    if (values.Length == 0)
+                    excludedList.RemoveAll(x => !clrType.IsInstanceOfType(x.Value));
+
+                    object[] excludedValues = excludedList.Select(x => x.Value!).ToArray();
+                    if (includedList.Count > 0)
+                    {
+                        ArrayList list = new ArrayList();
+                        for (int i = 0; i < excludedValues.Length; ++i)
+                        {
+                            object value1 = excludedValues[i];
+                            list.Add(Convert.ChangeType(value1, clrType));
+                        }
+
+                        Array excludeArray = list.ToArray(clrType);
+                        list.Clear();
+                        for (int i = 0; i < includedList.Count; ++i)
+                        {
+                            object value1 = includedList[i].Value!;
+                            list.Add(Convert.ChangeType(value1, clrType));
+                        }
+                        Array includeArray = list.ToArray(clrType);
+
+                        MethodInfo sqlEnumMethod = typeof(MySqlSnippets)
+                            .GetMethods()
+                            .Single(x => x.Name.Equals(nameof(MySqlSnippets.EnumList), StringComparison.Ordinal)
+                                         && x.GetParameters().Length == 2 && x.GetParameters()[1].ParameterType.IsArray);
+
+                        dataType = (string)sqlEnumMethod
+                            .MakeGenericMethod(clrType)
+                            .Invoke(null, [ excludeArray, includeArray ])!;
+                    }
+                    else if (excludedValues.Length == 0)
                     {
                         MethodInfo sqlEnumMethod = typeof(MySqlSnippets)
                             .GetMethods()
@@ -174,9 +210,9 @@ public static class WarfareDatabaseReflection
 
                         dataType = (string)sqlEnumMethod
                             .MakeGenericMethod(clrType)
-                            .Invoke(null, values)!;
+                            .Invoke(null, excludedValues)!;
                     }
-                    else if (values.Length == 1)
+                    else if (excludedValues.Length == 1)
                     {
                         MethodInfo sqlEnumMethod = typeof(MySqlSnippets)
                             .GetMethods()
@@ -185,33 +221,26 @@ public static class WarfareDatabaseReflection
 
                         dataType = (string)sqlEnumMethod
                             .MakeGenericMethod(clrType)
-                            .Invoke(null, values)!;
+                            .Invoke(null, excludedValues)!;
                     }
-                    else if (values.Length == 2)
+                    else if (excludedValues.Length == 2)
                     {
                         MethodInfo sqlEnumMethod = typeof(MySqlSnippets)
                             .GetMethods()
                             .Single(x => x.Name.Equals(nameof(MySqlSnippets.EnumList), StringComparison.Ordinal)
-                                         && x.GetParameters().Length == 2);
+                                         && x.GetParameters().Length == 2 && !x.GetParameters()[1].ParameterType.IsArray);
 
                         dataType = (string)sqlEnumMethod
                             .MakeGenericMethod(clrType)
-                            .Invoke(null, values)!;
+                            .Invoke(null, excludedValues)!;
                     }
                     else
                     {
                         ArrayList list = new ArrayList();
-                        for (int i = 0; i < values.Length; ++i)
+                        for (int i = 0; i < excludedValues.Length; ++i)
                         {
-                            object value1 = values[i];
-
-                            // check for duplicates
-                            for (int j = 0; j < i; ++j)
-                                if (values[j].Equals(value1))
-                                    goto c;
-
+                            object value1 = excludedValues[i];
                             list.Add(Convert.ChangeType(value1, clrType));
-                        c:;
                         }
 
                         Array array = list.ToArray(clrType);

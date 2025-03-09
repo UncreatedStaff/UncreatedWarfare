@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using SDG.NetTransport;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -308,6 +309,9 @@ public static class BarricadeUtility
         GameThread.AssertCurrent();
 
         VerifyState(state, barricade.asset);
+
+        if (barricade.GetServersideData().barricade.state.SequenceEqual(state))
+            return;
 
         switch (barricade.interactable)
         {
@@ -1786,18 +1790,6 @@ public static class BarricadeUtility
                 mannequin.clearClothes();
                 break;
         }
-    }
-
-    public static void WipeStorage(IBuildable buildable)
-    {
-        if (buildable.IsStructure || buildable.GetDrop<BarricadeDrop>() is not { interactable: InteractableStorage { items: { } } storage })
-            return;
-        
-        for (int i = storage.items.getItemCount(); i > 0; --i)
-        {
-            storage.items.removeItem(0);
-        }
-        storage.rebuildState();
     }
 }
 

@@ -41,12 +41,16 @@ public class VehicleService :
         _vehicleSpawnerStore = serviceProvider.GetRequiredService<VehicleSpawnerStore>();
     }
 
-    public async UniTask StartAsync(CancellationToken token)
+    async UniTask ILayoutHostedService.StartAsync(CancellationToken token)
     {
         await DeleteAllVehiclesAsync(token);
+
+        await UniTask.SwitchToMainThread(token);
+
+        _vehicleSpawnerStore.ReloadSpawners();
     }
 
-    public UniTask StopAsync(CancellationToken token)
+    UniTask ILayoutHostedService.StopAsync(CancellationToken token)
     {
         return UniTask.CompletedTask;
     }

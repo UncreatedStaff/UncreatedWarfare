@@ -9,7 +9,7 @@ public class FortificationEntity : IBuildableFobEntity
     public IAssetLink<Asset> IdentifyingAsset { get; }
     public Vector3 Position => Buildable.Position;
     public Quaternion Rotation => Buildable.Rotation;
-    public bool WipeStorageOnDestroy => false;
+    public bool PreventItemDrops => false;
 
     public FortificationEntity(IBuildable buildable)
     {

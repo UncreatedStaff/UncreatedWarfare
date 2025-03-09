@@ -1,4 +1,4 @@
-﻿using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Commands;
@@ -15,8 +15,14 @@ public sealed class DevBuildablesTranslations : PropertiesTranslationCollection
     [TranslationData("Sent to an admin/developer when they try to save a barricade's state under an unknown faction.", IsPriorityTranslation = false)]
     public readonly Translation<string> FactionsNotFound = new Translation<string>("<#ff8c69>'{0}' is not a known faction.");
 
-    [TranslationData("Sent to an admin/developer when they try to use a command but fobs are not supported.", IsPriorityTranslation = false)]
+    [TranslationData("Sent to an admin/developer when they try to use a command while not looking at a barricade.", IsPriorityTranslation = false)]
     public readonly Translation NotLookingAtBarricade = new Translation("<#ff8c69>You must be looking at a buildable.");
+
+    [TranslationData("Sent to an admin/developer when they try to use a command while looking at an unsaved barricade.", IsPriorityTranslation = false)]
+    public readonly Translation NotLookingAtSavedBarricade = new Translation("<#ff8c69>You must be looking at a buildable.");
+
+    [TranslationData("Sent to an admin/developer when they try forcefully restock a barricade.", IsPriorityTranslation = false)]
+    public readonly Translation StateRestocked = new Translation("<#ff8c69>Barricade restocked.");
 
     [TranslationData("Sent to an admin/developer when they successfully save a barricade's state.", IsPriorityTranslation = false)]
     public readonly Translation<ItemPlaceableAsset, FactionInfo> BarricadeSaveStateSuccess = new Translation<ItemPlaceableAsset, FactionInfo>(

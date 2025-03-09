@@ -15,6 +15,7 @@ using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.FOBs.Entities;
 using Uncreated.Warfare.FOBs.Rallypoints;
+using Uncreated.Warfare.FOBs.StateStorage;
 using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
@@ -128,11 +129,7 @@ public partial class FobManager :
 
         if (completedFortification.ConstuctionType == ShovelableType.RepairStation)
         {
-            Team team = serviceProvider.GetRequiredService<ITeamManager<Team>>().GetTeam(buildable.Group);
-            RepairStation repairStation = new RepairStation(buildable, team,
-                serviceProvider.GetRequiredService<ILoopTickerFactory>(),
-                serviceProvider.GetRequiredService<VehicleService>(), this, _assetConfiguration,
-                serviceProvider.GetService<ZoneStore>());
+            RepairStation repairStation = new RepairStation(buildable, this, serviceProvider);
             
             RegisterFobEntity(repairStation);
         }
@@ -169,6 +166,7 @@ public partial class FobManager :
         return true;
     }
 
+    [EventListener(MustRunInstantly = true)]
     void IEventListener<IBuildableDestroyedEvent>.HandleEvent(IBuildableDestroyedEvent e, IServiceProvider serviceProvider)
     {
         IBuildableFob? fob = FindBuildableFob<IBuildableFob>(e.Buildable);
@@ -200,8 +198,11 @@ public partial class FobManager :
             DeregisterFob(fob);
         }
 
-        ShovelableBuildable? shovelable = GetBuildableFobEntity<ShovelableBuildable>(e.Buildable);
-        if (shovelable != null && e.WasSalvaged)
+        IBuildableFobEntity? entity = GetBuildableFobEntity<IBuildableFobEntity>(e.Buildable);
+        if (entity == null)
+            return;
+
+        if (entity is ShovelableBuildable shovelable && e.WasSalvaged)
         {
             BunkerFob? nearestFriendlyFob = FindNearestBunkerFob(shovelable.Buildable.Group, shovelable.Buildable.Position);
 
@@ -218,18 +219,10 @@ public partial class FobManager :
             e.Instigator?.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastGainBuild.Translate(shovelable.Info.SupplyCost, e.Instigator)));
         }
        
-        IBuildableFobEntity? entity = GetBuildableFobEntity<IBuildableFobEntity>(e.Buildable);
-        if (entity != null)
-        {
-            if (entity is SupplyCrate supplyCrate)
-                NearbySupplyCrates.FromSingleCrate(supplyCrate, this).NotifyChanged(supplyCrate.Type, -supplyCrate.SupplyCount, SupplyChangeReason.ConsumeSuppliesDestroyed);
+        if (entity is SupplyCrate supplyCrate)
+            NearbySupplyCrates.FromSingleCrate(supplyCrate, this).NotifyChanged(supplyCrate.Type, -supplyCrate.SupplyCount, SupplyChangeReason.ConsumeSuppliesDestroyed);
             
-            // clear barricade state to prevent items from dropping out of the crate after it is destroyed
-            if (entity.WipeStorageOnDestroy)
-                BarricadeUtility.WipeStorage(entity.Buildable);
-        }
-
-        _entities.RemoveAll(en => en is IBuildableFobEntity bfe && bfe.Buildable.Equals(e.Buildable));
+        DeregisterFobEntity(entity);
     }
 
     [EventListener(MustRunLast = true)]
@@ -272,7 +265,7 @@ public partial class FobManager :
             e.Player.Yaw,
             buildable =>
             {
-                SupplyCrate supplyCrate = new SupplyCrate(supplyCrateInfo, buildable, serviceProvider.GetRequiredService<ILoopTickerFactory>(), !e.Player.IsOnDuty);
+                SupplyCrate supplyCrate = new SupplyCrate(supplyCrateInfo, buildable, serviceProvider, !e.Player.IsOnDuty);
                 RegisterFobEntity(supplyCrate);
 
                 NearbySupplyCrates

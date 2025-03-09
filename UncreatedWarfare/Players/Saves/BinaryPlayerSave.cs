@@ -8,7 +8,7 @@ namespace Uncreated.Warfare.Players.Saves;
 
 public class BinaryPlayerSave : ISaveableState
 {
-    private const byte DataVersion = 1;
+    private const byte DataVersion = 2;
 
     private const int FlagLength = 9;
 
@@ -27,6 +27,7 @@ public class BinaryPlayerSave : ISaveableState
     public bool HasQueueSkip { get; set; }
     public ulong LastGameId { get; set; }
     public bool ShouldRespawnOnJoin { get; set; }
+
     /// <summary>
     /// If the player has not died yet during this layout.
     /// </summary>
@@ -41,6 +42,11 @@ public class BinaryPlayerSave : ISaveableState
     /// </summary>
     public bool TrackQuests { get; set; } = true;
     public bool IsNerd { get; set; }
+
+    /// <summary>
+    /// The amount of time a player was main camping when they disconnected.
+    /// </summary>
+    public DateTime MainCampTime { get; set; }
 
     /// <summary>
     /// If this save has been read from or written to a file.
@@ -87,6 +93,7 @@ public class BinaryPlayerSave : ISaveableState
         Writer.Write(KitId);
         Writer.Write(SquadTeamIdentificationNumber);
         Writer.Write(LastGameId);
+        Writer.Write(MainCampTime);
 
         Writer.Write(flags);
 
@@ -138,12 +145,13 @@ public class BinaryPlayerSave : ISaveableState
         Reader.LoadNew(bytes);
 
         // version
-        _ = Reader.ReadUInt8();
+        byte v = Reader.ReadUInt8();
 
         TeamId = Reader.ReadUInt64();
         KitId = Reader.ReadUInt32();
         SquadTeamIdentificationNumber = Reader.ReadUInt8();
         LastGameId = Reader.ReadUInt64();
+        MainCampTime = v > 1 ? Reader.ReadDateTime() : default;
 
         bool[] flags = Reader.ReadBoolArray();
         if (flags.Length < FlagLength)

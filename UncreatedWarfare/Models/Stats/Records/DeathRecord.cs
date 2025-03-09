@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Uncreated.Warfare.Database.Automation;
+using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Models.Assets;
 
 namespace Uncreated.Warfare.Models.Stats;
@@ -13,6 +14,7 @@ public class DeathRecord : RelatedPlayerRecord
     public string DeathMessage { get; set; }
 
     [DefaultValue(nameof(EDeathCause.KILL))]
+    [IncludedEnum(DeathTracker.InEnemyMainDeathCause)]
     public EDeathCause DeathCause { get; set; }
 
     [DefaultValue(0f)]

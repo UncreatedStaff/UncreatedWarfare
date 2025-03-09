@@ -1,3 +1,5 @@
+using Microsoft.EntityFrameworkCore;
+using MySqlConnector;
 using System;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Services;
@@ -49,8 +51,16 @@ public class DatabaseStatsBuffer : IDisposable, IHostedService, ILayoutHostedSer
 
     public async Task FlushAsyncNoLock(CancellationToken token)
     {
-        await _dbContext.SaveChangesAsync(token).ConfigureAwait(false);
-        _logger.LogConditional("Flushed stats data.");
+        try
+        {
+            await _dbContext.SaveChangesAsync(token).ConfigureAwait(false);
+            _logger.LogConditional("Flushed stats data.");
+        }
+        catch (DbUpdateException ex)
+        {
+            _logger.LogError(ex, "Error flushing stat data.");
+            _dbContext.ChangeTracker.Clear();
+        }
     }
 
     public Task WaitAsync(CancellationToken token = default)

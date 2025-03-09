@@ -26,11 +26,12 @@ public class BarricadeStateStore : ILayoutHostedService, IDisposable
     {
         _warfareModule = warfareModule;
         _dataStore = new YamlDataStore<List<BarricadeStateSave>>(GetFolderPath(), logger, reloadOnFileChanged: true, () => []);
+        ReloadSaves();
     }
 
     UniTask ILayoutHostedService.StartAsync(CancellationToken token)
     {
-        ReloadSpawners();
+        ReloadSaves();
         return UniTask.CompletedTask;
     }
 
@@ -38,7 +39,7 @@ public class BarricadeStateStore : ILayoutHostedService, IDisposable
     {
         return UniTask.CompletedTask;
     }
-    private void ReloadSpawners()
+    private void ReloadSaves()
     {
         _dataStore.Reload();
     }
@@ -107,7 +108,7 @@ public class BarricadeStateStore : ILayoutHostedService, IDisposable
     /// <returns></returns>
     public BarricadeStateSave? FindBarricadeSave(ItemPlaceableAsset matchingAsset, FactionInfo? matchingfactionInfo = null)
     {
-        if (matchingfactionInfo != null)
+        if (matchingfactionInfo is { IsDefaultFaction: false })
         {
             BarricadeStateSave? save = _dataStore.Data.FirstOrDefault(s => s.BarricadeAsset.MatchAsset(matchingAsset)
                                                                            && string.Equals(s.FactionId, matchingfactionInfo.FactionId, StringComparison.Ordinal));

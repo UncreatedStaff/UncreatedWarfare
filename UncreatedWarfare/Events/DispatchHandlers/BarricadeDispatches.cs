@@ -85,11 +85,14 @@ partial class EventDispatcher
 
         EventContinuations.Dispatch(args, this, _unloadToken, out shouldAllow, continuation: args =>
         {
+            if (!args.OriginalPlacer.IsOnline)
+                return;
+
             // check if the item hasn't been moved in invetory for some reason
             ItemJar newEquippedJar = args.OriginalPlacer.UnturnedPlayer.inventory.getItem(equippedPage, equippedIndex);
             if (newEquippedJar == null || oldEquippedJar != newEquippedJar)
                 return;
-            
+
             bool plantTargetAlive = args.TargetVehicle != null;
             if (!plantTargetAlive && args.TargetVehicle is not null || plantTargetAlive && args.HitTarget == null)
             {

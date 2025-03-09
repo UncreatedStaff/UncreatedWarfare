@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations.Schema;
 using Uncreated.Warfare.Database.Automation;
+using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Models.Assets;
 
 namespace Uncreated.Warfare.Models.Stats;
@@ -20,6 +21,7 @@ public class DamageRecord : RelatedPlayerRecord
     [AddName]
     public UnturnedAssetReference? Vehicle { get; set; }
 
+    [IncludedEnum(DeathTracker.InEnemyMainDeathCause)]
     public EDeathCause Cause { get; set; }
 
     [DefaultValue(null)]
