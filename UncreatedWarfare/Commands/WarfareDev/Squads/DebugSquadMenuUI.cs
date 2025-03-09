@@ -23,6 +23,8 @@ internal sealed class DebugSquadMenuUI : IExecutableCommand
 
         _squadMenuUI.OpenUI(Context.Player);
 
+        Context.Defer();
+
         return UniTask.CompletedTask;
     }
 }

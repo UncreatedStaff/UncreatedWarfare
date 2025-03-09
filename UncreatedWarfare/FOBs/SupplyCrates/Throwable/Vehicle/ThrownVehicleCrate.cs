@@ -38,19 +38,19 @@ public class ThrownVehicleCrate : ThrownSupplyCrate
 
         int results = Physics.OverlapSphereNonAlloc(_throwable.transform.position, 5f, TempHitColliders, 1 << LayerMasks.VEHICLE);
         Array.Sort<Collider>(TempHitColliders, 0, results, comparer);
-        WarfareVehicle? _warfareVehicle = null;
+        WarfareVehicle? warfareVehicle = null;
         for (int i = 0; i < results; i++)
         {
             Collider collider = TempHitColliders[i];
             WarfareVehicleComponent? warfareVehicleComponent = collider.GetComponentInParent<WarfareVehicleComponent>();
             if (warfareVehicleComponent != null)
             {
-                _warfareVehicle = warfareVehicleComponent.WarfareVehicle;
+                warfareVehicle = warfareVehicleComponent.WarfareVehicle;
                 break;
             }
         }
 
-        if (_warfareVehicle == null)
+        if (warfareVehicle == null)
         {
             RespawnThrowableItem();
             _thrower.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastAmmoNotNearVehicle.Translate(_thrower)));
@@ -67,18 +67,19 @@ public class ThrownVehicleCrate : ThrownSupplyCrate
                 return;
             }
             
-            int requiredAmmoCount = _warfareVehicle.Info.Rearm.AmmoConsumed;
-            if (nearestFob.AmmoCount < _warfareVehicle.Info.Rearm.AmmoConsumed)
+            int requiredAmmoCount = warfareVehicle.Info.Rearm.AmmoConsumed;
+            if (nearestFob.AmmoCount < warfareVehicle.Info.Rearm.AmmoConsumed)
             {
                 RespawnThrowableItem();
                 _thrower.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastInsufficientAmmo.Translate(nearestFob.AmmoCount, requiredAmmoCount, _thrower)));
+                return;
             }
             
             nearestFob.ChangeSupplies(SupplyType.Ammo, requiredAmmoCount);
             _thrower.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastLoseAmmo.Translate(requiredAmmoCount, _thrower)));
         }
         
-        DropSupplies(_warfareVehicle);
+        DropSupplies(warfareVehicle);
     }
 
     private void DropSupplies(WarfareVehicle warfareVehicle)

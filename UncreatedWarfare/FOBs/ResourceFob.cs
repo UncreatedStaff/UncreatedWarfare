@@ -125,7 +125,7 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable
     public bool IsVibileToPlayer(WarfarePlayer player) => player.Team == Team;
     private float GetProxyScore(WarfarePlayer enemy)
     {
-        if (enemy.UnturnedPlayer.life.isDead || enemy.UnturnedPlayer.movement.getVehicle() != null)
+        if (enemy.UnturnedPlayer.life.isDead || enemy.UnturnedPlayer.movement.getVehicle() != null || enemy.Team == Team)
             return 0;
 
         float distanceFromFob = (enemy.Position - Position).magnitude;
