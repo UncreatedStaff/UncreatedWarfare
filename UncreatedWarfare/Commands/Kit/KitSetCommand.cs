@@ -128,7 +128,7 @@ internal sealed class KitSetCommand : IExecutableCommand
             uint? kitKey = component.ActiveKitKey;
             if (kitKey.HasValue && kitKey.Value == kitWithItems.Key)
             {
-                component.UpdateKit(kitWithItems);
+                component.UpdateKit(kitWithItems, component.HasLowAmmo);
 
                 PlayerKitChanged args = new PlayerKitChanged
                 {

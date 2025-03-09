@@ -14,6 +14,9 @@ internal sealed class InvinciblePassengersTweak(VehicleService vehicleService) :
 {
     void IEventListener<DamagePlayerRequested>.HandleEvent(DamagePlayerRequested e, IServiceProvider serviceProvider)
     {
+        if (e.Parameters.cause != EDeathCause.GUN)
+            return;
+
         InteractableVehicle? vehicle = e.Player.UnturnedPlayer.movement.getVehicle();
         if (vehicle is null)
             return;

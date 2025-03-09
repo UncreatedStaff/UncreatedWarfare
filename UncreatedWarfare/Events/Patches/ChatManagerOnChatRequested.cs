@@ -152,11 +152,11 @@ internal sealed class ChatManagerOnChatRequested : IHarmonyPatch
                 ShouldReplicate = true,
                 TargetPlayers = args =>
                 {
-                    const float localSqrRadius = 128 * 128;
+                    const float localSqrRadius = 64 * 64;
                     Vector3 pos = args.Player.Position;
                     return args.ChatMode switch
                     {
-                        EChatMode.LOCAL => playerService.OnlinePlayers.Where(x => (pos - x.Position).sqrMagnitude <= localSqrRadius || x.IsInSquadWith(x)),
+                        EChatMode.LOCAL => playerService.OnlinePlayers.Where(x => (pos - x.Position).sqrMagnitude <= localSqrRadius || x.IsInSquadWith(args.Player)),
                         EChatMode.GROUP => playerService.OnlinePlayers.Where(x => x.Team == args.Player.Team),
                         _ => playerService.OnlinePlayers
                     };

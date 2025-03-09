@@ -1,4 +1,5 @@
 using System;
+using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Teams;
@@ -17,6 +18,7 @@ public class BarricadeApplySavedStateTweaks : IEventListener<BarricadePlaced>
         _barricadeStateStore = barricadeStateStore;
     }
 
+    [EventListener(Priority = int.MaxValue, MustRunInstantly = true)]
     void IEventListener<BarricadePlaced>.HandleEvent(BarricadePlaced e, IServiceProvider serviceProvider)
     {
         FactionInfo? factionInfo = e.Owner?.Team?.Faction;

@@ -9,12 +9,13 @@ namespace Uncreated.Warfare.Vehicles.UI;
 [UnturnedUI(BasePath = "Canvas")]
 public class VehicleHUD : UnturnedUI
 {
+    // todo: translations for this class
     public readonly UnturnedLabel MissileWarning = new UnturnedLabel("VH_MissileWarning");
     public readonly UnturnedLabel MissileWarningDriver = new UnturnedLabel("VH_MissileWarningDriver");
     public readonly UnturnedLabel FlareCount = new UnturnedLabel("VH_FlareCount");
 
     public VehicleHUD(AssetConfiguration assetConfig, ILoggerFactory loggerFactory)
-        : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:VehicleHud"), staticKey: true, debugLogging: true)
+        : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:VehicleHud"), staticKey: true, debugLogging: false)
     {
         
     }

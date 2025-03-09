@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Vehicles;
 using Uncreated.Warfare.Services;
@@ -278,8 +279,7 @@ public class VehicleService :
         // empty trunk so items don't drop
         if (vehicle.trunkItems != null)
         {
-            int ct = vehicle.trunkItems.getItemCount();
-            for (int i = ct - 1; i >= 0; --i)
+            for (int i = vehicle.trunkItems.getItemCount() - 1; i >= 0; --i)
                 vehicle.trunkItems.removeItem((byte)i);
         }
 
@@ -314,8 +314,11 @@ public class VehicleService :
             _logger.LogError(ex, "Failed to unlink vehicle spawn for vehicle {0} ({1}).", vehicle.asset.FriendlyName, vehicle.asset.GUID);
         }
     }
+
+    [EventListener(MustRunInstantly = true)]
     public void HandleEvent(VehicleDespawned e, IServiceProvider serviceProvider)
     {
+        PrepareToDeleteVehicle(e.Vehicle.Vehicle);
         DeregisterWarfareVehicle(e.Vehicle.Vehicle);
     }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace Uncreated.Warfare.Util.Region;
@@ -31,8 +31,8 @@ public struct ListRegionsEnumerator<T> : IEnumerable<T>, IEnumerator<T>
 
     public bool MoveNext()
     {
-        ++_index;
-        while (_currentRegion == null || _index >= _currentRegion.Count)
+        --_index;
+        while (_currentRegion == null || _index < 0)
         {
             if (_regions == null)
                 return false;
@@ -45,7 +45,7 @@ public struct ListRegionsEnumerator<T> : IEnumerable<T>, IEnumerator<T>
             _currentRegion = _regions[Coordinate.x, Coordinate.y];
             if (_currentRegion.Count == 0)
                 continue;
-            _index = 0;
+            _index = _currentRegion.Count - 1;
         }
 
         _current = _currentRegion[_index];

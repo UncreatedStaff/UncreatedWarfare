@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace Uncreated.Warfare.Util.Region;
@@ -42,6 +42,7 @@ public struct BarricadeIterator : IEnumerable<BarricadeInfo>, IEnumerator<Barric
                 RegionCoord coord = _xyIterator.Current;
                 _coord = coord;
                 _region = BarricadeManager.regions[coord.x, coord.y].drops;
+                _index = _region.Count;
                 _state = 2;
                 goto case 2;
 
@@ -55,13 +56,14 @@ public struct BarricadeIterator : IEnumerable<BarricadeInfo>, IEnumerator<Barric
 
                 _plant = 0;
                 _region = BarricadeManager.vehicleRegions[0].drops;
+                _index = _region.Count;
                 _state = 3;
                 goto case 3;
 
             // loop non planted
             case 2:
-                ++_index;
-                if (_index >= _region!.Count)
+                --_index;
+                if (_index < 0)
                 {
                     if (!_xyIterator.MoveNext())
                         goto case 1;
@@ -69,7 +71,7 @@ public struct BarricadeIterator : IEnumerable<BarricadeInfo>, IEnumerator<Barric
                     coord = _xyIterator.Current;
                     _coord = coord;
                     _region = BarricadeManager.regions[coord.x, coord.y].drops;
-                    _index = -1;
+                    _index = _region.Count;
                     goto case 2;
                 }
 
@@ -78,15 +80,15 @@ public struct BarricadeIterator : IEnumerable<BarricadeInfo>, IEnumerator<Barric
 
             // loop planted
             case 3:
-                ++_index;
-                if (_index >= _region!.Count)
+                --_index;
+                if (_index < 0)
                 {
                     unchecked { ++_plant; }
                     if (_plant == 0 || _plant >= BarricadeManager.vehicleRegions.Count)
                         return false;
 
                     _region = BarricadeManager.vehicleRegions[_plant].drops;
-                    _index = -1;
+                    _index = _region.Count;
                     goto case 3;
                 }
 

@@ -309,6 +309,9 @@ public class FallbackItemDistributionService : IItemDistributionService
         List<(IItem, KitItemResolutionResult)> leftoverItems = new List<(IItem, KitItemResolutionResult)>(16);
         List<ItemJar> matchedItems = new List<ItemJar>(16);
 
+
+        _ = _droppedItemTracker.DestroyItemsDroppedByPlayerAsync(player.Steam64, true);
+
         foreach (IItem item in items)
         {
             if (item is IClothingItem)
@@ -328,9 +331,6 @@ public class FallbackItemDistributionService : IItemDistributionService
 
             if (isDropped)
             {
-                // they dropped the item, this is hard to deal with so just despawn it and itll be re-added later.
-                if (itemInstance != null)
-                    ItemUtility.DestroyDroppedItem(itemInstance, true);
                 leftoverItems.Add((item, origResult));
                 continue;
             }

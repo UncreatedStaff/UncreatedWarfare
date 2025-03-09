@@ -53,8 +53,10 @@ public class AutoResupplyLoop : ILayoutHostedService, ILayoutStartingListener
         {
             if (vehicle.Vehicle.ReplicatedSpeed > 0.5f)
                 continue;
-            
-            if (!_zoneStore.IsInMainBase(vehicle.Position))
+
+            bool isInMain = _zoneStore.IsInMainBase(vehicle.Position);
+
+            if (!isInMain)
             {
                 if (!vehicle.NeedsAutoResupply)
                     vehicle.NeedsAutoResupply = true;
@@ -69,7 +71,7 @@ public class AutoResupplyLoop : ILayoutHostedService, ILayoutStartingListener
             
             _vehicleService.RefillTrunkItems(vehicle, vehicle.Info.Trunk);
             vehicle.FlareEmitter?.ReloadCountermeasures();
-            vehicle.NeedsAutoResupply = true;
+            vehicle.NeedsAutoResupply = false;
 
             WarfarePlayer? owner = _playerService.GetOnlinePlayerOrNull(vehicle.Vehicle.lockedOwner);
             owner?.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.VehicleAutoSupply.Translate(owner)));

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace Uncreated.Warfare.Util.Region;
@@ -35,13 +35,14 @@ public struct StructureIterator : IEnumerable<StructureInfo>, IEnumerator<Struct
             RegionCoord coord = _xyIterator.Current;
             _coord = coord;
             _region = StructureManager.regions[coord.x, coord.y].drops;
+            _index = _region.Count;
             _hasInited = true;
         }
 
         while (true)
         {
-            ++_index;
-            if (_index >= _region!.Count)
+            --_index;
+            if (_index < 0)
             {
                 if (!_xyIterator.MoveNext())
                     return false;
@@ -49,7 +50,7 @@ public struct StructureIterator : IEnumerable<StructureInfo>, IEnumerator<Struct
                 RegionCoord coord = _xyIterator.Current;
                 _coord = coord;
                 _region = StructureManager.regions[coord.x, coord.y].drops;
-                _index = -1;
+                _index = _region.Count;
                 continue;
             }
 

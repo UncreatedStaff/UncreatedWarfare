@@ -58,6 +58,11 @@ public class KitPlayerComponent : IPlayerComponent
     public bool HasKit => ActiveKitKey.HasValue;
 
     /// <summary>
+    /// If the player's current kit was equipped with low ammo.
+    /// </summary>
+    public bool HasLowAmmo { get; private set; }
+
+    /// <summary>
     /// Get a copy of the kit from the kit cache if it's added. Use <see cref="GetActiveKitAsync"/> to get an up-to-date copy.
     /// </summary>
     /// <remarks>Guaranteed to have <see cref="KitInclude.Giveable"/> data.</remarks>
@@ -150,7 +155,7 @@ public class KitPlayerComponent : IPlayerComponent
     /// <summary>
     /// Set the current kit, or <see langword="null"/> for no kit.
     /// </summary>
-    internal void UpdateKit(Kit? kit)
+    internal void UpdateKit(Kit? kit, bool isLowAmmo)
     {
         if (kit != null)
         {
@@ -169,6 +174,8 @@ public class KitPlayerComponent : IPlayerComponent
             ActiveClass = Class.None;
             ActiveBranch = Branch.Default;
         }
+
+        HasLowAmmo = isLowAmmo;
     }
 
     public bool IsKitAccessible(uint kitPk)

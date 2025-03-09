@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -45,11 +45,9 @@ public class BarricadeStateStore : ILayoutHostedService, IDisposable
     private string GetFolderPath()
     {
         return Path.Combine(
-            UnturnedPaths.RootDirectory.FullName,
-            ServerSavedata.directoryName,
-            Provider.serverID,
             _warfareModule.HomeDirectory,
-            "Barricades",
+            "Maps",
+            Provider.map,
             "BarricadeStateSaves.yml"
         );
     }
@@ -61,7 +59,7 @@ public class BarricadeStateStore : ILayoutHostedService, IDisposable
     {
         await UniTask.SwitchToMainThread(token);
 
-        int existingRecordIndex = _dataStore.Data.FindIndex(s => s.BarricadeAsset.MatchAsset(asset));
+        int existingRecordIndex = _dataStore.Data.FindIndex(s => s.BarricadeAsset.MatchAsset(asset) && (faction == null || string.Equals(s.FactionId, faction.FactionId)));
 
         BarricadeStateSave newSave = new BarricadeStateSave
         {

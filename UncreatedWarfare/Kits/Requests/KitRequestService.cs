@@ -518,13 +518,24 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            if (!player.Component<KitPlayerComponent>().HasKit)
+            KitPlayerComponent kitComp = player.Component<KitPlayerComponent>();
+            if (!kitComp.HasKit)
             {
                 await GiveUnarmedKitAsyncIntl(player, true, token).ConfigureAwait(false);
                 return;
             }
 
             await UniTask.SwitchToMainThread(token);
+            if (resupplyAmmoBags && kitComp.HasLowAmmo)
+            {
+                Kit? kit = await kitComp.GetActiveKitAsync(KitInclude.Giveable, token);
+                if (kit != null)
+                {
+                    await GiveKitIntlAsync(player, new KitBestowData(kit) { Silent = true }, false, token);
+                    return;
+                }
+            }
+
             _kitBestowService.RestockKit(player, resupplyAmmoBags);
         }
         finally

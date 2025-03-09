@@ -43,7 +43,7 @@ public class KitBestowService
         player.Save.Save();
 
         player.Component<SkillsetPlayerComponent>().EnsureSkillsets(Array.Empty<Skillset>());
-        player.Component<KitPlayerComponent>().UpdateKit(null);
+        player.Component<KitPlayerComponent>().UpdateKit(null, false);
     }
 
     /// <summary>
@@ -71,7 +71,7 @@ public class KitBestowService
         player.Save.Save();
 
         player.Component<SkillsetPlayerComponent>().EnsureSkillsets(skillsets);
-        player.Component<KitPlayerComponent>().UpdateKit(kit);
+        player.Component<KitPlayerComponent>().UpdateKit(kit, data.IsLowAmmo);
 
         if (data.IsLowAmmo)
         {

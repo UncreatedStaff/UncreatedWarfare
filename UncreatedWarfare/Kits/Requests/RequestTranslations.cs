@@ -282,7 +282,7 @@ public class RequestKitsTranslations : PropertiesTranslationCollection
     public readonly Translation RequestKitNotSquadleader = new Translation("You must be the leader of a squad in order to request a <#cedcde>SQUAD LEADER</color> kit");
 
     [TranslationData("Sent when a player tries to request a kit but it's already equipped.")]
-    public readonly Translation AlreadyEquipped = new Translation("Kit already equipped. Use /ammo to refill your kit");
+    public readonly Translation AlreadyEquipped = new Translation("Kit already equipped. Use an ammo crate or go to your headquarters to refill your ammo");
 
     [TranslationData("Sent when a player tries to request a kit but they're on a global cooldown.")]
     public readonly Translation<Cooldown> OnGlobalCooldown = new Translation<Cooldown>("On cooldown for another <#bafeff>{0}</color>", arg0Fmt: Cooldown.FormatTimeShort);

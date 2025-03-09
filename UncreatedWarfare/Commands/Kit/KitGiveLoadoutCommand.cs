@@ -47,7 +47,7 @@ internal sealed class KitGiveLoadoutCommand : IExecutableCommand
 
         IReadOnlyList<IItem> items = _defaultLoadoutItemsConfiguration.GetDefaultsForClass(@class);
 
-        Context.Player.Component<KitPlayerComponent>().UpdateKit(null);
+        Context.Player.Component<KitPlayerComponent>().UpdateKit(null, false);
 
         _itemDistributionService.GiveItems(items, player);
 

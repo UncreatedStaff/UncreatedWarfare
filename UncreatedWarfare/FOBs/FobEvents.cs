@@ -2,7 +2,6 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Linq;
 using Uncreated.Warfare.Buildables;
-using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
@@ -11,11 +10,11 @@ using Uncreated.Warfare.Events.Models.Buildables;
 using Uncreated.Warfare.Events.Models.Fobs;
 using Uncreated.Warfare.Events.Models.Items;
 using Uncreated.Warfare.Events.Models.Vehicles;
+using Uncreated.Warfare.Fobs.SupplyCrates;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.FOBs.Entities;
 using Uncreated.Warfare.FOBs.Rallypoints;
-using Uncreated.Warfare.Fobs.SupplyCrates;
 using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
@@ -116,6 +115,12 @@ public partial class FobManager :
 
     private void TryRegisterEntity(IBuildable buildable, IServiceProvider serviceProvider)
     {
+        if (_entities.Any(x => x is IBuildableFobEntity b && b.Buildable.Equals(buildable)))
+        {
+            _logger.LogDebug($"Buildable {buildable} already registered as an entity.");
+            return;
+        }
+
         ShovelableInfo? completedFortification = Configuration.Shovelables
             .FirstOrDefault(s => s.Emplacement == null && s.CompletedStructure.MatchAsset(buildable.Asset));
 
@@ -237,7 +242,7 @@ public partial class FobManager :
         if (supplyCrateInfo == null)
             return;
 
-        Vector3 dropPos = FindDropPositionForSupplyCrate(vehicle, e.Position);
+        Vector3 dropPos = FindDropPositionForSupplyCrate(vehicle);
 
         e.Position = dropPos;
     }
@@ -315,19 +320,21 @@ public partial class FobManager :
     }
 
     private const float MaxBoxRadius = 1.5f;
-    private Vector3 FindDropPositionForSupplyCrate(InteractableVehicle vehicle, Vector3 currentDropPosition)
+    private static Vector3 FindDropPositionForSupplyCrate(InteractableVehicle vehicle)
     {
-        const float distanceToBack = 7.5f + MaxBoxRadius;
-        const float distanceToFront = 5f + MaxBoxRadius;
+        const float distanceToBack = 7.75f + MaxBoxRadius;
+        const float distanceToFront = 4.25f + MaxBoxRadius;
+
+        Vector3 vehiclePosition = vehicle.GetSentryTargetingPoint();
 
         Vector3 behind = vehicle.transform.TransformVector(Vector3.back);
         Vector3 front = vehicle.transform.TransformVector(Vector3.forward);
 
         // from player exit position code
-        Vector3 backPos = RaycastFindEmptySpot(vehicle, currentDropPosition, behind, distanceToBack, out bool didHit);
+        Vector3 backPos = RaycastFindEmptySpot(vehicle, vehiclePosition, behind, distanceToBack, out bool didHit);
         if (didHit)
         {
-            Vector3 frontPos = RaycastFindEmptySpot(vehicle, currentDropPosition, front, distanceToFront, out didHit);
+            Vector3 frontPos = RaycastFindEmptySpot(vehicle, vehiclePosition, front, distanceToFront, out didHit);
             if (!didHit)
                 return frontPos;
         }
@@ -336,7 +343,7 @@ public partial class FobManager :
     }
 
     private static readonly RaycastHit[] HitArray = new RaycastHit[32];
-    private Vector3 RaycastFindEmptySpot(InteractableVehicle vehicle, Vector3 origin, Vector3 direction, float maxDistance, out bool didHit)
+    private static Vector3 RaycastFindEmptySpot(InteractableVehicle vehicle, Vector3 origin, Vector3 direction, float maxDistance, out bool didHit)
     {
         didHit = false;
         float hitDistance = maxDistance;

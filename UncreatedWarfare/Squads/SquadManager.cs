@@ -78,6 +78,10 @@ public class SquadManager :
 
     public Squad CreateSquad(WarfarePlayer squadLeader, string squadName)
     {
+        // this limit is for the SQL database column
+        if (squadName.Length > 32)
+            throw new ArgumentOutOfRangeException(nameof(squadName));
+
         GameThread.AssertCurrent();
 
         Squad squad = new Squad(squadLeader.Team, squadName, GetSquadIdentificationNumber(squadLeader.Team), this);

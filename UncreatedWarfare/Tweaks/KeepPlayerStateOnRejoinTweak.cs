@@ -41,7 +41,7 @@ internal sealed class KeepPlayerStateOnRejoinTweak : IAsyncEventListener<PlayerJ
         {
             Kit? kit = await _kitDataStore.QueryKitAsync(e.SaveData.KitId, KitInclude.Giveable, token);
 
-            e.Player.Component<KitPlayerComponent>().UpdateKit(kit);
+            e.Player.Component<KitPlayerComponent>().UpdateKit(kit, e.SaveData.WasKitLowAmmo);
 
             if (kit != null)
             {
@@ -58,7 +58,7 @@ internal sealed class KeepPlayerStateOnRejoinTweak : IAsyncEventListener<PlayerJ
         }
         else
         {
-            e.Player.Component<KitPlayerComponent>().UpdateKit(null);
+            e.Player.Component<KitPlayerComponent>().UpdateKit(null, false);
         }
     }
 }

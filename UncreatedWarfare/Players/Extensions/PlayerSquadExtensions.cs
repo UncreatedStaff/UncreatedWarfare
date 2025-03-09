@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using Uncreated.Warfare.Squads;
 
 namespace Uncreated.Warfare.Players.Extensions;
@@ -57,12 +57,12 @@ public static class PlayerSquadExtensions
             return false;
 
         if (other is WarfarePlayer pl)
-            return pl.Component<SquadPlayerComponent>().Squad == squad;
+            return pl.Team == player.Team && pl.Component<SquadPlayerComponent>().Squad == squad;
         
         foreach (WarfarePlayer member in squad.Members)
         {
             if (member.Equals(other))
-                return true;
+                return player.IsInSquadWith(member);
         }
 
         return false;

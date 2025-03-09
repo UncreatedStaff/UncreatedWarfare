@@ -25,7 +25,13 @@ namespace Uncreated.Warfare.Lobby;
 /// <summary>
 /// Handles visual effects in the lobby.
 /// </summary>
-public class LobbyZoneManager : IHostedService, ILevelHostedService, IEventListener<QuestObjectInteracted>, ILayoutStartingListener, IEventListener<PlayerGroupChanged>, IEventListener<PlayerLeft>
+public class LobbyZoneManager :
+    IHostedService,
+    ILevelHostedService,
+    IEventListener<QuestObjectInteracted>,
+    ILayoutStartingListener,
+    IEventListener<PlayerTeamChanged>,
+    IEventListener<PlayerLeft>
 {
     private const short FlagJoining = -1;
     private const short FlagFull = 0;
@@ -420,14 +426,14 @@ public class LobbyZoneManager : IHostedService, ILevelHostedService, IEventListe
     }
 
     [EventListener(MustRunInstantly = true)]
-    void IEventListener<PlayerGroupChanged>.HandleEvent(PlayerGroupChanged e, IServiceProvider serviceProvider)
+    void IEventListener<PlayerTeamChanged>.HandleEvent(PlayerTeamChanged e, IServiceProvider serviceProvider)
     {
         // update lobby counts
         if (Disabled)
             return;
 
-        if (e.NewTeam is not null && e.NewTeam.IsValid)
-            UpdateTeamCount(e.NewTeam, +1);
+        if (e.Team is not null && e.Team.IsValid)
+            UpdateTeamCount(e.Team, +1);
 
         if (e.OldTeam.IsValid)
             UpdateTeamCount(e.OldTeam, -1);

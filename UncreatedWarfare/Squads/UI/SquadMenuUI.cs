@@ -1,3 +1,4 @@
+using Humanizer;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
@@ -15,6 +16,7 @@ using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Squads.UI;
 
@@ -76,6 +78,8 @@ public class SquadMenuUI :
         string? squadName = textBoxData.Text;
         if (string.IsNullOrWhiteSpace(squadName))
             squadName = $"{player.channel.owner.playerID.playerName}'s Squad";
+
+        squadName = squadName.TruncateWithEllipses(32);
 
         _squadManager.CreateSquad(squadleader, squadName);
     }

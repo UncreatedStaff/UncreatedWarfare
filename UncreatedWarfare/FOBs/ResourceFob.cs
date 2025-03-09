@@ -138,14 +138,27 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable
     public bool IsWithinRadius(Vector3 point) => MathUtility.WithinRange(Position, point, EffectiveRadius);
     public void ChangeSupplies(SupplyType supplyType, float amount)
     {
-        if (supplyType == SupplyType.Build)
-            BuildCount = Mathf.Min(BuildCount + amount, 0);
-        else if (supplyType == SupplyType.Ammo)
-            AmmoCount += Mathf.Min(AmmoCount + amount, 0);
+        if (supplyType == SupplyType.Ammo)
+        {
+            amount = Math.Max(-AmmoCount, amount);
+            AmmoCount += amount;
+        }
+        else if (supplyType == SupplyType.Build)
+        {
+            amount = Math.Max(-BuildCount, amount);
+            BuildCount += amount;
+        }
+
+        NotifySuppliesChanged(supplyType, amount);
     }
 
     public Vector3 SpawnPosition => Position; // todo
     public float Yaw => 0f;
+
+    protected virtual void NotifySuppliesChanged(SupplyType supplyType, float change)
+    {
+
+    }
 
     public virtual TimeSpan GetDelay(WarfarePlayer player)
     {

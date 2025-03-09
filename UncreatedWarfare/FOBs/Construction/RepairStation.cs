@@ -45,18 +45,26 @@ public class RepairStation : IBuildableFobEntity, IDisposable
         {
             NearbySupplyCrates supplyCrateGroup = NearbySupplyCrates.FindNearbyCrates(buildable.Position, team.GroupId, fobManager);
 
+            float maxRadius = Math.Max(
+                _fobConfiguration.RepairStationAircraftRepairRadius,
+                _fobConfiguration.RepairStationGroundVehicleRepairRadius
+            );
             IEnumerable<WarfareVehicle> nearbyVehicles = _vehicleService.Vehicles.Where(v =>
                 !v.Vehicle.isDead
                 && v.Vehicle.lockedGroup == buildable.Group
                 && v.Vehicle.ReplicatedSpeed < 3
                 && !v.Info.Type.IsEmplacement()
-                && MathUtility.WithinRange(buildable.Position, v.Position, _fobConfiguration.RepairStationAircraftRepairRadius));
+                && MathUtility.WithinRange(buildable.Position, v.Position, maxRadius));
             
             foreach (WarfareVehicle vehicle in nearbyVehicles)
             {
                 // planes and helis get a larger repair radius
-                bool isGroundVehicle = !(vehicle.Asset.engine is EEngine.PLANE or EEngine.HELICOPTER);
+                bool isGroundVehicle = !vehicle.Asset.engine.IsFlyingEngine();
+
                 if (isGroundVehicle && !MathUtility.WithinRange(vehicle.Position, buildable.Position, _fobConfiguration.RepairStationGroundVehicleRepairRadius))
+                    continue;
+
+                if (!isGroundVehicle && !MathUtility.WithinRange(vehicle.Position, buildable.Position, _fobConfiguration.RepairStationAircraftRepairRadius))
                     continue;
 
                 if (_zoneStore != null && !_zoneStore.IsInMainBase(vehicle.Position))

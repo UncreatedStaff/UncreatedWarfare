@@ -13,13 +13,14 @@ using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits.Whitelists;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Locations;
+using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.List;
 
 namespace Uncreated.Warfare.Fobs;
 
-public partial class FobManager : IWhitelistExceptionProvider
+public partial class FobManager : IWhitelistExceptionProvider, ILayoutHostedService
 {
     internal const float EmplacementSpawnOffset = 2f;
 
@@ -56,6 +57,23 @@ public partial class FobManager : IWhitelistExceptionProvider
         Entities = _entities.AsReadOnly();
 
         Fobs = new ReadOnlyTrackingList<IFob>(_fobs);
+    }
+
+    /// <inheritdoc />
+    UniTask ILayoutHostedService.StartAsync(CancellationToken token)
+    {
+        foreach (BarricadeInfo barricade in BarricadeUtility.EnumerateNonPlantedBarricades())
+        {
+            TryRegisterEntity(new BuildableBarricade(barricade.Drop), _serviceProvider);
+        }
+
+        return UniTask.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    UniTask ILayoutHostedService.StopAsync(CancellationToken token)
+    {
+        return UniTask.CompletedTask;
     }
 
     public BunkerFob RegisterBunkerFob(IBuildable fobBuildable)

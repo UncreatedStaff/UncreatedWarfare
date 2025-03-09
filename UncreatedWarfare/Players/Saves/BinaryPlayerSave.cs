@@ -10,7 +10,7 @@ public class BinaryPlayerSave : ISaveableState
 {
     private const byte DataVersion = 1;
 
-    private const int FlagLength = 8;
+    private const int FlagLength = 9;
 
     private static readonly ByteReader Reader = new ByteReader();
     private static readonly ByteWriter Writer = new ByteWriter(64);
@@ -32,6 +32,7 @@ public class BinaryPlayerSave : ISaveableState
     /// </summary>
     public bool IsFirstLife { get; set; }
     public bool IMGUI { get; set; }
+    public bool WasKitLowAmmo { get; set; }
     public bool HasSeenVoiceChatNotice { get; set; }
     public bool WasNitroBoosting { get; set; }
 
@@ -78,6 +79,7 @@ public class BinaryPlayerSave : ISaveableState
         flags[5] = TrackQuests;
         flags[6] = IsNerd;
         flags[7] = HasSeenVoiceChatNotice;
+        flags[8] = WasKitLowAmmo;
 
         Writer.Write(DataVersion);
 
@@ -166,6 +168,7 @@ public class BinaryPlayerSave : ISaveableState
         TrackQuests = flags[5];
         IsNerd = flags[6];
         HasSeenVoiceChatNotice = flags[7];
+        WasKitLowAmmo = flags[8];
 
         WasReadFromFile = true;
 

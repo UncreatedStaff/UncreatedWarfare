@@ -206,7 +206,10 @@ public static class StringUtility
         if (str is null || str.Length <= length)
             return str;
 
-        return string.Create(length + 3, str, (span, state) =>
+        if (length <= 3)
+            return new string('.', length);
+
+        return string.Create(length, str, (span, state) =>
         {
             state.AsSpan(0, span.Length - 3).CopyTo(span);
             span.Slice(span.Length - 3, 3).Fill('.');

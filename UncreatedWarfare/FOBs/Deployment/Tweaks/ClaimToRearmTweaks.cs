@@ -411,6 +411,8 @@ public class ClaimToRearmTweaks : // todo: move this class out of this namespace
         if (!_zoneStore.IsInMainBase(e.Player))
             return;
 
-        await _kitRequestService.RestockKitAsync(e.Player, true, token);
+        Kit? kit = await e.Player.Component<KitPlayerComponent>().GetActiveKitAsync(KitInclude.Giveable, token);
+        if (kit is { Class: > Class.Unarmed })
+            await _kitRequestService.GiveKitAsync(e.Player, new KitBestowData(kit) { Silent = true }, token);
     }
 }

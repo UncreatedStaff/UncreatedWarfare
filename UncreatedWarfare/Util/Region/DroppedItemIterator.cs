@@ -35,13 +35,14 @@ public struct DroppedItemIterator : IEnumerable<ItemInfo>, IEnumerator<ItemInfo>
             RegionCoord coord = _xyIterator.Current;
             _coord = coord;
             _region = ItemManager.regions[coord.x, coord.y].items;
+            _index = _region.Count - 1;
             _hasInited = true;
         }
 
         while (true)
         {
-            ++_index;
-            if (_index >= _region!.Count)
+            --_index;
+            if (_index < 0)
             {
                 if (!_xyIterator.MoveNext())
                     return false;
@@ -49,7 +50,7 @@ public struct DroppedItemIterator : IEnumerable<ItemInfo>, IEnumerator<ItemInfo>
                 RegionCoord coord = _xyIterator.Current;
                 _coord = coord;
                 _region = ItemManager.regions[coord.x, coord.y].items;
-                _index = -1;
+                _index = _region.Count;
                 continue;
             }
 

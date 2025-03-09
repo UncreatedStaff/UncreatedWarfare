@@ -210,7 +210,7 @@ public class LeaderboardSet
                     
                 for (int j = 0; j < playerCount; ++j)
                 {
-                    int index = i * playerCount + j;
+                    int index = j * statCount + i;
                     allStrings[index] = allData[index].ToString(stat.NumberFormat ?? "0.##", culture);
                 }
             }

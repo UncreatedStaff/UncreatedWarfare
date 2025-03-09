@@ -70,13 +70,13 @@ public sealed class FobConfiguration : BaseAlternateConfigurationFile
         Shovelables = new ReadOnlyCollection<ShovelableInfo>((IList<ShovelableInfo>?)shovelables ?? Array.Empty<ShovelableInfo>());
 
         RepairStationGroundVehicleRepairRadius =
-            UnderlyingConfiguration.GetValue("RepairStation:GroundVehicleRepairRadius", 0.25f);
+            UnderlyingConfiguration.GetValue("RepairStation:GroundVehicleRepairRadius", 15);
         
         RepairStationAircraftRepairRadius =
-            UnderlyingConfiguration.GetValue("RepairStation:AircraftRepairRadius", 0.25f);
+            UnderlyingConfiguration.GetValue("RepairStation:AircraftRepairRadius", 25);
         
         RepairStationHealthPerTick =
-            UnderlyingConfiguration.GetValue<ushort>("RepairStation:HealthPerTick", 40);
+            UnderlyingConfiguration.GetValue<ushort>("RepairStation:HealthPerTick", 80);
         
         RepairStationFuelPerTick =
             UnderlyingConfiguration.GetValue<ushort>("RepairStation:FuelPerTick", 260);

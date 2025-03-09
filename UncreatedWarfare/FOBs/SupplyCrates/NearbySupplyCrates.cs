@@ -33,6 +33,7 @@ public class NearbySupplyCrates
         var supplyCrates = fobManager.Entities
             .OfType<SupplyCrate>()
             .Where(e => e.Buildable.Group == team && e.IsWithinRadius(supplyPoint))
+            .OrderByDescending(x => x.Buildable.Position.y) // top ones are used first so less likely for them to be floating
             .ToTrackingList();
 
         return new NearbySupplyCrates(supplyCrates, supplyPoint, team, fobManager);
@@ -46,9 +47,15 @@ public class NearbySupplyCrates
     private void ChangeSupplies(float amount, SupplyType type, SupplyChangeReason changeReason)
     {
         if (type == SupplyType.Ammo)
-            AmmoCount = Mathf.Max(AmmoCount + amount, 0);
-        else if(type == SupplyType.Build)
-            BuildCount = Mathf.Max(BuildCount + amount, 0);
+        {
+            amount = Math.Max(-AmmoCount, amount);
+            AmmoCount += amount;
+        }
+        else if (type == SupplyType.Build)
+        {
+            amount = Math.Max(-BuildCount, amount);
+            BuildCount += amount;
+        }
 
         NotifyChanged(type, amount, changeReason);
     }
@@ -78,6 +85,7 @@ public class NearbySupplyCrates
             if (remainder >= 0) // no need to subtract from any further crates
                 break;
         }
+
         ChangeSupplies(-originalAmount, type, changeReason);
     }
 
@@ -97,6 +105,7 @@ public class NearbySupplyCrates
             float amountAddedToCrate = newAmount - amountBeforeAdd;
             totalAmountToAdd -= amountAddedToCrate;
         }
+
         ChangeSupplies(amount, type, SupplyChangeReason.ResupplyShoveableSalvaged);
     }
 
