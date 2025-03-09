@@ -87,6 +87,8 @@ public class FobHUD :
             return;
         }
 
+        SendToPlayer(player.Connection);
+
         using IEnumerator<IFob> enumerator = _fobManager.Fobs.Where(f => f.IsVibileToPlayer(player)).GetEnumerator();
         bool isDone = false;
         for (int i = 0; i < Fobs.Length; i++)
@@ -101,7 +103,6 @@ public class FobHUD :
 
             IFob fob = enumerator.Current!;
 
-            SendToPlayer(player.Connection); // todo: maybe only send the UI when a player joins a team?
             string fobName = TranslationFormattingUtility.Colorize(fob.Name.ToUpper(), fob.Color);
 
             element.Root.Show(player);
