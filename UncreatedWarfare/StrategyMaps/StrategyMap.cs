@@ -6,9 +6,13 @@ using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.FOBs.Deployment;
+using Uncreated.Warfare.Interaction;
+using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.StrategyMaps.MapTacks;
+using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.List;
+using RallyPoint = Uncreated.Warfare.FOBs.Rallypoints.RallyPoint;
 
 namespace Uncreated.Warfare.StrategyMaps;
 
@@ -16,7 +20,7 @@ public class StrategyMap : IDisposable, IEventListener<ClaimBedRequested>
 {
     private readonly MapTableInfo _tableInfo;
     private readonly TrackingList<MapTack> _activeMapTacks;
-    
+
     public IBuildable MapTable { get; set; }
 
     public StrategyMap(IBuildable buildable, MapTableInfo tableInfo)
@@ -132,9 +136,18 @@ public class StrategyMap : IDisposable, IEventListener<ClaimBedRequested>
         }
 
         DeploymentService deploymentService = serviceProvider.GetRequiredService<DeploymentService>();
+        ChatService chatService = serviceProvider.GetRequiredService<ChatService>();
+        DeploymentTranslations translations = serviceProvider.GetRequiredService<TranslationInjection<DeploymentTranslations>>().Value;
 
         if (e.Player.Component<DeploymentComponent>().CurrentDeployment != null)
         {
+            e.Cancel();
+            return;
+        }
+        
+        if (d.Deployable is RallyPoint rallyPoint && !rallyPoint.Squad.ContainsPlayer(e.Player))
+        {
+            chatService.Send(e.Player, translations.DeployRallyPointWrongSquad, rallyPoint.Squad.TeamIdentificationNumber, rallyPoint.Squad);
             e.Cancel();
             return;
         }
