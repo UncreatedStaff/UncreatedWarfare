@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
@@ -110,18 +111,16 @@ internal class PointsRewardsEvents :
     {
         if (e.Instigator == null)
             return;
-
+        
         uint faction = e.InstigatorTeam?.Faction.PrimaryKey ?? 0;
-
+        
         if (faction == 0)
             return;
 
         IPlayerService? playerService = serviceProvider.GetService<IPlayerService>();
         if (playerService == null)
             return;
-
-        CSteamID instigator = e.InstigatorId;
-
+        
         if (e.InstigatorTeam!.GroupId.m_SteamID == e.Team)
         {
             EventInfo @event = _points.GetEvent("DestroyFriendlyVehicle:" + e.Vehicle.Info.Type);
@@ -130,7 +129,7 @@ internal class PointsRewardsEvents :
                 ? _translations.XPToastAircraftDestroyed
                 : _translations.XPToastVehicleDestroyed;
 
-            await _points.ApplyEvent(instigator, faction, @event.Resolve().WithTranslation(translation, e.Vehicle.Info.Type, e.Instigator), token).ConfigureAwait(false);
+            await _points.ApplyEvent(e.InstigatorId, faction, @event.Resolve().WithTranslation(translation, e.Vehicle.Info.Type, e.Instigator), token).ConfigureAwait(false);
         }
         else
         {
@@ -144,7 +143,7 @@ internal class PointsRewardsEvents :
             foreach (CSteamID playerId in e.Vehicle.DamageTracker.Contributors)
             {
                 float contributionPercentage = e.Vehicle.DamageTracker.GetDamageContributionPercentage(playerId, DateTime.Now.Subtract(TimeSpan.FromMinutes(3)));
-
+                
                 WarfarePlayer? contributor = playerService.GetOnlinePlayerOrNull(playerId);
                 if (contributor == null)
                     continue;
@@ -155,21 +154,22 @@ internal class PointsRewardsEvents :
                 {
                     if (ShouldAwardDriverAssist(e.Instigator, serviceProvider, out WarfarePlayer? driver))
                     {
-                        resolvedEvent = new ResolvedEventInfo(@event, contributionPercentage * DriverAssistScaleFactor);
+                        ResolvedEventInfo driverAssistEvent = new ResolvedEventInfo(@event, contributionPercentage * DriverAssistScaleFactor);
 
                         Task driverAssistTask = _points.ApplyEvent(
                             driver.Steam64,
                             driver.Team.Faction.PrimaryKey,
-                            resolvedEvent.WithTranslation(_translations.XPToastKillDriverAssist, driver), token);
+                            driverAssistEvent.WithTranslation(_translations.XPToastKillDriverAssist, driver), token);
                         tasks.Add(driverAssistTask);
                     }
-                    else
-                        resolvedEvent = new ResolvedEventInfo(@event, contributionPercentage);
-                }
-                else if (contributionPercentage < 0.15)
-                    continue;
-                else
                     resolvedEvent = new ResolvedEventInfo(@event, contributionPercentage);
+                }
+                else if (contributionPercentage >= 0.15)
+                {
+                    resolvedEvent = new ResolvedEventInfo(@event, contributionPercentage);
+                }
+                else
+                    continue;
 
                 Task task = _points.ApplyEvent(contributor.Steam64, faction, resolvedEvent.WithTranslation(translation, e.Vehicle.Info.Type, contributor), token);
                 tasks.Add(task);

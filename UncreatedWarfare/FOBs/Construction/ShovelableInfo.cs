@@ -7,7 +7,8 @@ public class ShovelableInfo : ITranslationArgument
 {
     public required IAssetLink<ItemPlaceableAsset> Foundation { get; set; }
     public required ShovelableType ConstuctionType { get; set; }
-    public required int SupplyCost { get; set; }
+    public required float SupplyCost { get; set; }
+    public required int RequiredShovelHits { get; set; }
     public int? MaxAllowedPerFob { get; set; } 
     public bool CombatEngineerCanPlaceAnywhere { get; set; }
     public IAssetLink<ItemPlaceableAsset>? CompletedStructure { get; set; }
@@ -18,7 +19,8 @@ public class ShovelableInfo : ITranslationArgument
         return $"ShovelableInfo:\n" +
                $"  Foundation: {Foundation}\n" +
                $"  ConstructionType: {ConstuctionType}\n" +
-               $"  RequiredHits: {SupplyCost}\n" +
+               $"  SupplyCost: {SupplyCost}\n" +
+               $"  RequiredShovelHits: {RequiredShovelHits}\n" +
                $"  CompletedStructure: {(CompletedStructure?.ToString() ?? "None")}\n" +
                $"  CompletedEffect: {(CompletedEffect?.ToString() ?? "None")}\n" +
                $"  Emplacement: {(Emplacement?.ToString() ?? "None")}";

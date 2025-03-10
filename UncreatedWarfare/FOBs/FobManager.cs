@@ -209,13 +209,14 @@ public partial class FobManager : IWhitelistExceptionProvider, ILayoutHostedServ
     /// <inheritdoc />
     ValueTask<int> IWhitelistExceptionProvider.GetWhitelistAmount(IAssetContainer assetContainer)
     {
-        int amt = 0;
         foreach (ShovelableInfo shovelable in Configuration.Shovelables)
         {
-            if (shovelable.Foundation.MatchAsset(assetContainer) || shovelable.CompletedStructure.MatchAsset(assetContainer))
-                ++amt;
+            if (shovelable.Foundation.MatchAsset(assetContainer))
+            {
+                return new ValueTask<int>(-1);
+            }
         }
-
-        return new ValueTask<int>(amt);
+        
+        return new ValueTask<int>(0);
     }
 }

@@ -20,11 +20,23 @@ public readonly struct FlagListUIEntry
 {
     public readonly string Text;
     public readonly string Icon;
-    public FlagListUIEntry(string text, string icon)
+    public FlagListUIEntry(string text, FlagIcon icon)
     {
         Text = text;
-        Icon = icon;
+        Icon = icon switch
+        {
+            FlagIcon.Attack => "<#ff8963>µ</color>",
+            FlagIcon.Defend => "<#a962ff>´</color>",
+            _ => ""
+        };
     }
+}
+
+public enum FlagIcon : byte
+{
+    None,
+    Attack,
+    Defend
 }
 
 public enum ElectricalGridBehaivor : byte

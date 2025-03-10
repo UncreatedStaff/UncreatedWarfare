@@ -166,7 +166,7 @@ public abstract class DualSidedFlagService :
                 .ToArray();
 
             ZoneRegion region = new ZoneRegion(zones, TeamManager);
-            flagList.Add(new FlagObjective(region, Team.NoTeam));
+            flagList.Add(new FlagObjective(region, i, Team.NoTeam));
         }
 
         _flags = flagList.ToArrayFast();
@@ -327,6 +327,12 @@ public abstract class DualSidedFlagService :
     public abstract FlagContestState GetContestResult(FlagObjective flag, IEnumerable<Team> possibleContestingTeams);
     public abstract FlagObjective? GetObjective(Team team);
 
+    public bool IsEnemyObjective(FlagObjective flag, Team friendlyTeam)
+    {
+        return Layout.TeamManager.AllTeams.Where(t => t != friendlyTeam)
+            .Any(t => ReferenceEquals(GetObjective(t), flag));
+    }
+
     public virtual IEnumerable<FlagObjective> EnumerateObjectives()
     {
         foreach (Team team in TeamManager.AllTeams)
@@ -347,23 +353,29 @@ public abstract class DualSidedFlagService :
             for (int i = ActiveFlags.Count - 1; i >= 0; --i)
             {
                 FlagObjective flag = ActiveFlags[i];
-                yield return GetEntry(flag, ReferenceEquals(flag, objective));
+                
+                yield return GetEntry(flag, set.Team, objective);
             }
         }
         else
         {
             foreach (FlagObjective flag in ActiveFlags)
             {
-                yield return GetEntry(flag, ReferenceEquals(flag, objective));
+                yield return GetEntry(flag, set.Team, objective);
             }
         }
 
         yield break;
 
-        static FlagListUIEntry GetEntry(FlagObjective flag, bool isObjective)
+        FlagListUIEntry GetEntry(FlagObjective flag, Team displayTeam, FlagObjective? displayTeamObjective)
         {
-            const string objectiveIcon = "<#ff8963>µ</color>";
-            return new FlagListUIEntry(TranslationFormattingUtility.Colorize(flag.Name, flag.Owner.Faction.Color), isObjective ? objectiveIcon : string.Empty);
+            FlagIcon flagIcon = FlagIcon.None;
+            if (ReferenceEquals(flag, displayTeamObjective))
+                flagIcon =  FlagIcon.Attack;
+            else if (IsEnemyObjective(flag, displayTeam))
+                flagIcon = FlagIcon.Defend;
+            
+            return new FlagListUIEntry(TranslationFormattingUtility.Colorize(flag.Name, flag.Owner.Faction.Color), flagIcon);
         }
     }
 }

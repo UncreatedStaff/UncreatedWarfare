@@ -38,7 +38,7 @@ public class ShovelableBuildable : IBuildableFobEntity
         Info = info;
         Buildable = foundation;
         _shovelEffect = shovelEffect?.GetAssetOrFail();
-        HitsRemaining = info.SupplyCost;
+        HitsRemaining = info.RequiredShovelHits;
         Builders = new PlayerContributionTracker();
         _serviceProvider = serviceProvider;
 

@@ -17,18 +17,20 @@ public class FlagObjective : IDisposable
     public ZoneRegion Region { get; }
     public Vector3 Center => Region.Primary.Zone.Center;
     public string Name => Region.Name;
+    public int Index { get; }
     public ReadOnlyTrackingList<WarfarePlayer> Players => Region.Players;
     public Team Owner => Contest.IsWon ? Contest.Leader : Team.NoTeam;
     public SingleLeaderContest Contest { get; }
     public bool IsContested { get; private set; }
 
     public FlagContestState CurrentContestState { get; private set; }
-    public FlagObjective(ZoneRegion region) : this(region, Team.NoTeam) { }
-    public FlagObjective(ZoneRegion region, Team startingOwner)
+    public FlagObjective(ZoneRegion region, int index) : this(region, index, Team.NoTeam) { }
+    public FlagObjective(ZoneRegion region, int index, Team startingOwner)
     {
         _previousOwners = new HashSet<Team> { startingOwner };
         Contest = new SingleLeaderContest(startingOwner, 64);
         Region = region;
+        Index = index;
 
         _discoveredTeams = new List<Team>(2);
         if (startingOwner.IsValid)
