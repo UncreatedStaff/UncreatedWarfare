@@ -12,6 +12,8 @@ using Uncreated.Warfare.Util;
 namespace Uncreated.Warfare.Events;
 partial class EventDispatcher
 {
+    private static bool _isEquipping;
+
     /// <summary>
     /// Invoked by <see cref="DamageTool.damagePlayerRequested"/> when a player starts to get damaged. Can be cancelled.
     /// </summary>
@@ -45,6 +47,9 @@ partial class EventDispatcher
     /// </summary>
     private void OnPlayerEquipRequested(PlayerEquipment equipment, ItemJar jar, ItemAsset asset, ref bool shouldAllow)
     {
+        if (_isEquipping)
+            return;
+
         if (!ItemUtility.TryFindJarPage(equipment.player.inventory, jar, out Page page) || asset == null)
         {
             shouldAllow = false;
@@ -68,8 +73,16 @@ partial class EventDispatcher
 
             if (!args.Player.UnturnedPlayer.inventory.items[(int)args.Page].items.Contains(args.Item))
                 return;
-            
-            args.Player.UnturnedPlayer.equipment.ServerEquip((byte)args.Page, args.Item.x, args.Item.y);
+
+            _isEquipping = true;
+            try
+            {
+                args.Player.UnturnedPlayer.equipment.ServerEquip((byte)args.Page, args.Item.x, args.Item.y);
+            }
+            finally
+            {
+                _isEquipping = false;
+            }
         });
     }
 
@@ -78,6 +91,9 @@ partial class EventDispatcher
     /// </summary>
     private void OnPlayerDequipRequested(PlayerEquipment equipment, ref bool shouldAllow)
     {
+        if (_isEquipping)
+            return;
+
         WarfarePlayer player = _playerService.GetOnlinePlayer(equipment);
 
         ItemJar? equipped = player.GetHeldItem(out Page page);
@@ -100,7 +116,15 @@ partial class EventDispatcher
             if (!args.Player.IsOnline)
                 return;
 
-            args.Player.UnturnedPlayer.equipment.ServerEquip(byte.MaxValue, 0, 0);
+            _isEquipping = true;
+            try
+            {
+                args.Player.UnturnedPlayer.equipment.ServerEquip(byte.MaxValue, 0, 0);
+            }
+            finally
+            {
+                _isEquipping = false;
+            }
         });
     }
 

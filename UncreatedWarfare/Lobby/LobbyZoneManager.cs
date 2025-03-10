@@ -324,21 +324,6 @@ public class LobbyZoneManager :
         UpdateAllFlags(teamIndex);
     }
 
-    internal void UpdateTeamCount(Team team, int change)
-    {
-        if (Disabled || team is null || !team.IsValid || TeamFlags == null)
-            return;
-
-        for (int i = 0; i < TeamFlags.Length; ++i)
-        {
-            if (TeamFlags[i].Team != team)
-                continue;
-
-            UpdateTeamCount(i, change);
-            break;
-        }
-    }
-
     private void OnFixedUpdate()
     {
         if (_zoneCollider == null)
@@ -421,8 +406,7 @@ public class LobbyZoneManager :
     [EventListener(MustRunInstantly = true)]
     void IEventListener<PlayerLeft>.HandleEvent(PlayerLeft e, IServiceProvider serviceProvider)
     {
-        if (e.Team != null && e.Team.IsValid)
-            UpdateTeamCount(e.Team, -1);
+        UpdateTeamCounts();
     }
 
     [EventListener(MustRunInstantly = true)]
@@ -432,11 +416,7 @@ public class LobbyZoneManager :
         if (Disabled)
             return;
 
-        if (e.Team is not null && e.Team.IsValid)
-            UpdateTeamCount(e.Team, +1);
-
-        if (e.OldTeam.IsValid)
-            UpdateTeamCount(e.OldTeam, -1);
+        UpdateTeamCounts();
     }
 
     void IEventListener<QuestObjectInteracted>.HandleEvent(QuestObjectInteracted e, IServiceProvider serviceProvider)
