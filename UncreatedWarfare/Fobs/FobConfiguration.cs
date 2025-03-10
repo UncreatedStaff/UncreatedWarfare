@@ -60,7 +60,7 @@ public sealed class FobConfiguration : BaseAlternateConfigurationFile
         });
         ThrowableAmmoBags = new ReadOnlyCollection<ThrownAmmoBagInfo>((IList<ThrownAmmoBagInfo>?)ammoBags ?? Array.Empty<ThrownAmmoBagInfo>());
         
-        List<ShovelableInfo>? shovelables = UnderlyingConfiguration.GetSection("Shovelables").Get<List<ShovelableInfo>>();
+        List<ShovelableInfo>? shovelables = UnderlyingConfiguration.GetSection("Shovelables").Get<List<ShovelableInfo>>(); // todo: List serialization is flaky. List items get silently skipped if they have fields that can't be serialized
         shovelables?.ForEach(info =>
         {
             info.Foundation ??= AssetLink.Empty<ItemPlaceableAsset>();

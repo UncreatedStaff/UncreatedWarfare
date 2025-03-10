@@ -116,7 +116,7 @@ internal sealed class SpottedService : ILayoutHostedService
             // vehicles
             case ERaycastInfoType.VEHICLE:
                 InteractableVehicle? vehicle = hit.vehicle;
-                if (vehicle == null)
+                if (vehicle == null || vehicle.isDead || vehicle.isDrowned || vehicle.isExploded)
                 {
                     _logger.LogDebug("Invalid spot: no vehicle found.");
                     break;

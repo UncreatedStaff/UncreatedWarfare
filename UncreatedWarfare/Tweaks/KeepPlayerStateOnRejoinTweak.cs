@@ -25,8 +25,16 @@ internal sealed class KeepPlayerStateOnRejoinTweak : IAsyncEventListener<PlayerJ
     [EventListener(RequireActiveLayout = true, Priority = int.MaxValue)]
     async UniTask IAsyncEventListener<PlayerJoined>.HandleEventAsync(PlayerJoined e, IServiceProvider serviceProvider, CancellationToken token)
     {
+        await UniTask.SwitchToMainThread(token);
+
+        if (e.Player.UnturnedPlayer.quests.groupID != CSteamID.Nil)
+            e.Player.UnturnedPlayer.quests.leaveGroup(true);
+
         if (e.SaveData.LastGameId != _layout.LayoutId)
+        {
+            await _layout.TeamManager.JoinTeamAsync(e.Player, Team.NoTeam, token);
             return;
+        }
 
         if (e.SaveData.TeamId != 0)
         {

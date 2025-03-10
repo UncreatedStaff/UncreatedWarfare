@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Vehicles;
 
@@ -21,6 +21,9 @@ public class VehicleTrunkTweaks :
     }
     private void WipeTrunkItems(InteractableVehicle vehicle)
     {
+        if (vehicle.trunkItems == null)
+            return;
+
         int ct = vehicle.trunkItems.getItemCount();
         for (int i = ct - 1; i >= 0; --i)
             vehicle.trunkItems.removeItem((byte)i);

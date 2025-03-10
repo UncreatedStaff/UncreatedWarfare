@@ -393,7 +393,7 @@ public class ClaimToRearmTweaks : // todo: move this class out of this namespace
         if (e.Zone.Type is not ZoneType.MainBase)
             return;
 
-        if (_zoneStore == null)
+        if (_zoneStore == null || _zoneStore.IsInWarRoom(e.Player))
             return;
 
         await _kitRequestService.RestockKitAsync(e.Player, true, token);
@@ -408,7 +408,7 @@ public class ClaimToRearmTweaks : // todo: move this class out of this namespace
         if (_zoneStore == null)
             return;
 
-        if (!_zoneStore.IsInMainBase(e.Player))
+        if (!_zoneStore.IsInMainBase(e.Player) || _zoneStore.IsInWarRoom(e.Player))
             return;
 
         Kit? kit = await e.Player.Component<KitPlayerComponent>().GetActiveKitAsync(KitInclude.Giveable, token);

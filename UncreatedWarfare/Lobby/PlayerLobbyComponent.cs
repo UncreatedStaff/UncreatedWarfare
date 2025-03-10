@@ -267,7 +267,7 @@ public class PlayerLobbyComponent : IPlayerComponent
             }
 
             UnturnedLabel lblName = _ui.FactionInfo[index];
-            lblName.SetText(connection, squad.Leader.Names.CharacterName);
+            lblName.SetText(connection, squad.Leader.Names.CharacterName + " |");
             lblName.SetVisibility(connection, true);
             ++index;
         }

@@ -1691,6 +1691,11 @@ public class ChatService
             return;
         }
 
+        if (fromPlayer != null)
+        {
+            text = text.Replace("%SPEAKER%", fromPlayer.Names.CharacterName);
+        }
+
         _sendChatIndividual.Invoke(ENetReliability.Reliable, transportConnections, fromPlayer?.Steam64 ?? CSteamID.Nil, iconURL, mode, color, richText, text);
     }
 
@@ -1775,7 +1780,7 @@ public class ChatService
                 PooledTransportConnectionList list = set2.GatherTransportConnections();
                 if (OnSendingChatMessage != null)
                 {
-                    RemoveDisallowedFromTcList(ref set2, vl2, cl2, EChatMode.SAY, null, list, fromPlayer);
+                    RemoveDisallowedFromTcList(ref set2, vl2, cl2, EChatMode.SAY, null, list, fromPlayer2);
                     if (list.Count == 0)
                         return;
                 }

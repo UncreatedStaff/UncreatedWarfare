@@ -305,6 +305,19 @@ public class DeathMessageResolver
                 new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Killer | DeathFlags.Item, "{0} bled out after being hit by {1}'s {3} from {4}m away."),
                 new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Suicide, "{0} bled out after blowing themselves up with a missile."),
                 new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Suicide | DeathFlags.Item, "{0} bled out after blowing themselves up with a {3}."),
+                new DeathTranslation(DeathFlags.Player3, "{0} was hit by a missile from a vehicle driven by {5}."),
+                new DeathTranslation(DeathFlags.Player3 | DeathFlags.Killer, "{0} was hit by a missile from {1} in a vehicle driven by {5} from {4}m away."),
+                new DeathTranslation(DeathFlags.Player3 | DeathFlags.Killer | DeathFlags.Item, "{1} blew up {0} with a {3} from {4}m away while in a vehicle driven by {5}."),
+                new DeathTranslation(DeathFlags.Player3 | DeathFlags.Bleeding | DeathFlags.Killer, "{0} bled out after being hit by a missile from {1} in a vehicle driven by {5} from {4}m away."),
+                new DeathTranslation(DeathFlags.Player3 | DeathFlags.Bleeding | DeathFlags.Killer | DeathFlags.Item, "{0} bled out after being hit by a missile from {1} while in a vehicle driven by {5} with a {3} from {4}m away."),
+                new DeathTranslation(DeathFlags.Item2 | DeathFlags.Killer, "{0} was blown up by a {1} from {4}m away from a {6}."),
+                new DeathTranslation(DeathFlags.Item2 | DeathFlags.Killer | DeathFlags.Item, "{1} blew up {0} with a {3} from a {6} {4}m away."),
+                new DeathTranslation(DeathFlags.Item2 | DeathFlags.Bleeding | DeathFlags.Killer, "{0} bled out after being blown up by {1} from a {6} {4}m away."),
+                new DeathTranslation(DeathFlags.Item2 | DeathFlags.Bleeding | DeathFlags.Killer | DeathFlags.Item, "{0} bled out after being blown up by {1} with a {3} from a {6} {4}m away."),
+                new DeathTranslation(DeathFlags.Item2 | DeathFlags.Player3 | DeathFlags.Killer, "{0} was hit by a missile from {1} in a vehicle driven by {5} from a {6} {4}m away."),
+                new DeathTranslation(DeathFlags.Item2 | DeathFlags.Player3 | DeathFlags.Killer | DeathFlags.Item, "{1} blew up {0} with a {3} from {4}m away while in a {6} driven by {5}."),
+                new DeathTranslation(DeathFlags.Item2 | DeathFlags.Player3 | DeathFlags.Bleeding | DeathFlags.Killer, "{0} bled out after being hit by a missile from {1} in a {6} driven by {5} from {4}m away."),
+                new DeathTranslation(DeathFlags.Item2 | DeathFlags.Player3 | DeathFlags.Bleeding | DeathFlags.Killer | DeathFlags.Item, "{0} bled out after being blown up by {1} while in a {6} driven by {5} with a {3} from {4}m away.")
             ]
         },
         new CauseGroup(EDeathCause.PUNCH)
