@@ -1,4 +1,5 @@
 using Uncreated.Warfare.Players.Cooldowns;
+using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Addons;
 using Uncreated.Warfare.Zones;
@@ -46,6 +47,9 @@ public class DeploymentTranslations : PropertiesTranslationCollection
 
     [TranslationData("Sent to a player while they're waiting for deployment if they cancel it.")]
     public readonly Translation<string> DeployableNotFound = new Translation<string>("<#ffa238>There is no location by the name of <#e3c27f>{0}</color>.", arg0Fmt: UppercaseAddon.Instance);
+    
+    [TranslationData("Sent to a player while they try to deploy to a Rally Point map tack but they aren't in the correct squad.")]
+    public readonly Translation<int, Squad> DeployRallyPointWrongSquad = new Translation<int, Squad>("<#ffa238>Join Squad <#9effc6>{0}</color> - {1} in order to use their <#67ff85>Rally Point</color>.", arg0Fmt: UppercaseAddon.Instance);
 
     [TranslationData("Sent to a player after they request deployment to a FOB if they're already on the FOB.", "The location name")]
     public readonly Translation<IDeployable> DeployableAlreadyOnFOB = new Translation<IDeployable>("<#ffa238>You are already on <#e3c27f>{0}</color>.", arg0Fmt: Flags.ColorNameFormat);

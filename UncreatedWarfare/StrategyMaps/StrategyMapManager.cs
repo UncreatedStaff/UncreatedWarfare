@@ -151,7 +151,7 @@ public class StrategyMapManager :
                 new Dictionary<int, IAssetLink<ItemBarricadeAsset>>();
             
             if (rallyPointMapTacks.TryGetValue(rallypoint.Squad.TeamIdentificationNumber, out IAssetLink<ItemBarricadeAsset> rallyPointMapTack))
-                newTack = new DeployableMapTack(rallyPointMapTack, e.Fob);
+                newTack = new DeployableMapTack(rallyPointMapTack, rallypoint);
         }
         
         if (newTack == null)
