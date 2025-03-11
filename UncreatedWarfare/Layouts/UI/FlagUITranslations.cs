@@ -26,7 +26,7 @@ public sealed class FlagUITranslations : PropertiesTranslationCollection
     public readonly Translation<string> Contesting = new Translation<string>("Contesting {0}", TranslationOptions.TMProUI);
 
     [TranslationData("Shown when you're on a flag but it's not the objective.")]
-    public readonly Translation<string> Ineffective = new Translation<string>("{0} Lost - Ineffective force", TranslationOptions.TMProUI);
+    public readonly Translation<string> Ineffective = new Translation<string>("Cannot capture {0} - Ineffective", TranslationOptions.TMProUI);
 
     [TranslationData("Shown when your team is capturing a flag still owned by the other team.")]
     public readonly Translation<string> Clearing = new Translation<string>("Clearing {0}", TranslationOptions.TMProUI);

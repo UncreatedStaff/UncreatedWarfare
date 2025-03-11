@@ -157,6 +157,7 @@ public abstract class DualSidedFlagService :
         // create zones as objects with colliders
         
         List<FlagObjective> flagList = new List<FlagObjective>(PathingResult.Count);
+        int flagIndex = 0;
         for (int i = 1; i < PathingResult.Count - 1; i++)
         {
             Zone zone = PathingResult[i];
@@ -166,7 +167,7 @@ public abstract class DualSidedFlagService :
                 .ToArray();
 
             ZoneRegion region = new ZoneRegion(zones, TeamManager);
-            flagList.Add(new FlagObjective(region, i, Team.NoTeam));
+            flagList.Add(new FlagObjective(region, flagIndex++, Team.NoTeam));
         }
 
         _flags = flagList.ToArrayFast();
@@ -332,6 +333,10 @@ public abstract class DualSidedFlagService :
         return Layout.TeamManager.AllTeams.Where(t => t != friendlyTeam)
             .Any(t => ReferenceEquals(GetObjective(t), flag));
     }
+    public bool IsDefenseObjective(FlagObjective flag, Team friendlyTeam)
+    {
+        return flag.Owner == friendlyTeam && IsEnemyObjective(flag, friendlyTeam);
+    }
 
     public virtual IEnumerable<FlagObjective> EnumerateObjectives()
     {
@@ -372,7 +377,7 @@ public abstract class DualSidedFlagService :
             FlagIcon flagIcon = FlagIcon.None;
             if (ReferenceEquals(flag, displayTeamObjective))
                 flagIcon =  FlagIcon.Attack;
-            else if (IsEnemyObjective(flag, displayTeam))
+            else if (IsDefenseObjective(flag, displayTeam))
                 flagIcon = FlagIcon.Defend;
             
             return new FlagListUIEntry(TranslationFormattingUtility.Colorize(flag.Name, flag.Owner.Faction.Color), flagIcon);
