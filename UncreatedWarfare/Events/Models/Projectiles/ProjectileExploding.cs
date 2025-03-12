@@ -22,7 +22,7 @@ public class ProjectileExploding : CancellablePlayerEvent
     public required Transform HitObject { get; init; }
     public required Collider HitCollider { get; init; }
 
-    public required InteractableVehicle? Vehicle { get; init; }
+    public required InteractableVehicle? HitVehicle { get; init; }
     public required WarfareProjectile Projectile { get; init; }
 
     /// <summary>

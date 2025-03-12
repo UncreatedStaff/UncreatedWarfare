@@ -15,7 +15,7 @@ public class AdvancedVehicleDamageTweaks :
     ILayoutHostedService,
     IEventListener<ProjectileSpawned>,
     IEventListener<ProjectileExploding>,
-    IEventListener<DamageVehicleRequested>,
+    IEventListener<VehiclePreDamaged>,
     IDisposable
 {
     private readonly AssetConfiguration _assetConfiguration;
@@ -74,7 +74,7 @@ public class AdvancedVehicleDamageTweaks :
     [EventListener(MustRunInstantly = true)]
     public void HandleEvent(ProjectileExploding e, IServiceProvider serviceProvider)
     {
-        if (e.Vehicle == null || !e.Vehicle.TryGetComponent(out WarfareVehicleComponent comp))
+        if (e.HitVehicle == null || !e.HitVehicle.TryGetComponent(out WarfareVehicleComponent comp))
             return;
 
         float dmgMult = AdvancedVehicleDamageApplier.GetComponentDamageMultiplier(e.HitCollider.transform);
@@ -92,7 +92,7 @@ public class AdvancedVehicleDamageTweaks :
         e.Object.gameObject.AddComponent<AdvancedVehicleDamageProjectile>().Init(e.RocketComponent, e.Asset);
     }
 
-    public void HandleEvent(DamageVehicleRequested e, IServiceProvider serviceProvider)
+    public void HandleEvent(VehiclePreDamaged e, IServiceProvider serviceProvider)
     {
         float finalMultiplier = 1;
         
@@ -100,20 +100,35 @@ public class AdvancedVehicleDamageTweaks :
         
         AdvancedVehicleDamageApplier.AdvancedDamagePending? directHit = e.Vehicle.AdvancedDamageApplier.ApplyLatestPendingDirectHit();
         
+        bool misusedDirectHitWeapon = false;
+        
         if (directHit.HasValue) // direct hit
             finalMultiplier = directHit.Value.Multiplier;
-        else if (!_fullDamageOnIndirectHitWeapons.ContainsAsset(latestInstigatorWeapon))
-            // weapons that do not participate in advanced damage do full damage on an indirect hit
-            finalMultiplier = 0.1f;
+        else if (!_fullDamageOnIndirectHitWeapons.ContainsAsset(latestInstigatorWeapon)) // indirect hit
+            // only specified weapons do full damage on an indirect hit 
+            misusedDirectHitWeapon = true;
 
-        bool isAircraft = e.Vehicle.Info.Type.IsAircraft();
-        if (isAircraft && _groundAttackOnlyWeapons.ContainsAsset(latestInstigatorWeapon))
-            finalMultiplier *= 0.1f;
-        else if (!isAircraft && _antiAirOnlyWeapons.ContainsAsset(latestInstigatorWeapon))
-            finalMultiplier *= 0.1f;
+        bool misusedGroundAttackWeapon = e.Vehicle.Info.Type.IsAircraft() &&
+                                       _groundAttackOnlyWeapons.ContainsAsset(latestInstigatorWeapon);
+        bool misusedAntiAirWeapon = !e.Vehicle.Info.Type.IsAircraft() &&
+                                    _antiAirOnlyWeapons.ContainsAsset(latestInstigatorWeapon);
+        
+        if (misusedGroundAttackWeapon || misusedAntiAirWeapon || misusedDirectHitWeapon)
+            finalMultiplier = 0.1f;
         
         ushort newDamage = (ushort) Mathf.RoundToInt(e.PendingDamage * finalMultiplier);
-        _logger.LogDebug($"Final damage multiplier of {finalMultiplier} (caused by weapon: {latestInstigatorWeapon?.FriendlyName ?? "unknown"}) will be applied to vehicle {e.Vehicle.Vehicle.asset.FriendlyName}. Original damage: {e.PendingDamage} - New damage: {newDamage}");
+        _logger.LogDebug(
+            $"Final damage multiplier of {finalMultiplier} " +
+            $"(caused by weapon: {latestInstigatorWeapon?.FriendlyName ?? "unknown"}) " +
+            $"will be applied to vehicle {e.Vehicle.Vehicle.asset.FriendlyName}.\n" +
+            $"Original damage: {e.PendingDamage} - " +
+            $"New damage: {newDamage} - " +
+            $"Direct Hit: {directHit.HasValue} - " +
+            $"Direct Hit Multiplier: {directHit?.Multiplier} - " +
+            $"Misused Direct Hit Weapon: {misusedDirectHitWeapon} - " +
+            $"Misused Ground Attack: {misusedGroundAttackWeapon} - " +
+            $"Misused Anti Air: {misusedAntiAirWeapon}");
+        
         e.PendingDamage = newDamage;
     }
 

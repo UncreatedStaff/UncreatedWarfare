@@ -10,16 +10,16 @@ using Uncreated.Warfare.Vehicles.WarfareVehicles;
 using Uncreated.Warfare.Vehicles.WarfareVehicles.Damage;
 
 namespace Uncreated.Warfare.Tweaks;
-internal sealed class VehicleDamageTrackerItemTweak : IEventListener<VehiclePreDamaged>
+internal sealed class VehicleDamageTrackerItemTweaks : IEventListener<VehiclePreDamaged>
 {
     private readonly IPlayerService _playerService;
 
-    public VehicleDamageTrackerItemTweak(IPlayerService playerService)
+    public VehicleDamageTrackerItemTweaks(IPlayerService playerService)
     {
         _playerService = playerService;
     }
 
-    [EventListener(MustRunInstantly = true)]
+    [EventListener(MustRunInstantly = true, Priority = int.MaxValue)]
     void IEventListener<VehiclePreDamaged>.HandleEvent(VehiclePreDamaged e, IServiceProvider serviceProvider)
     {
         WarfareVehicle vehicle = e.Vehicle;
@@ -39,7 +39,8 @@ internal sealed class VehicleDamageTrackerItemTweak : IEventListener<VehiclePreD
         WarfarePlayer? instigator = _playerService.GetOnlinePlayerOrNull(instigator64);
 
         PlayerDeathTrackingComponent? deathComponent = instigator == null ? null : PlayerDeathTrackingComponent.GetOrAdd(instigator.UnturnedPlayer);
-
+        
+        
         switch (e.InstantaneousDamageOrigin)
         {
             default:

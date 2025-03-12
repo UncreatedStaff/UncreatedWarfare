@@ -228,6 +228,8 @@ partial class EventDispatcher
 
         _ = DispatchEventAsync(args, _unloadToken, allowAsync: false);
         
+        pendingTotalDamage = args.PendingDamage;
+        canRepair = args.CanRepair;
         shouldAllow = !args.IsCancelled;
     }
 

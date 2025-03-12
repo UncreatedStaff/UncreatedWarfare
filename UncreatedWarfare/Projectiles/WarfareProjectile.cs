@@ -45,7 +45,7 @@ public class WarfareProjectile : MonoBehaviour
 #nullable restore
     public ItemMagazineAsset? Ammo { get; private set; }
     public ItemBarrelAsset? Barrel { get; private set; }
-    public InteractableVehicle? Vehicle { get; private set; }
+    public InteractableVehicle? OwnerVehicle { get; private set; }
     public bool HasLanded => HasExploded;
     public bool HasSpawned { get; private set; }
     public bool HasExploded { get; private set; }
@@ -93,7 +93,7 @@ public class WarfareProjectile : MonoBehaviour
         }
     }
 
-    internal void Initialize(Rocket rocket, WarfarePlayer owner, UseableGun gun, ItemGunAsset asset, ItemMagazineAsset? magazine, ItemBarrelAsset? barrel, Vector3 origin, Vector3 direction, bool canSolve, InteractableVehicle? vehicle, EventDispatcher eventDispatcher, ProjectileSolver projectileSolver)
+    internal void Initialize(Rocket rocket, WarfarePlayer owner, UseableGun gun, ItemGunAsset asset, ItemMagazineAsset? magazine, ItemBarrelAsset? barrel, Vector3 origin, Vector3 direction, bool canSolve, InteractableVehicle? ownerVehicle, EventDispatcher eventDispatcher, ProjectileSolver projectileSolver)
     {
         _eventDispatcher = eventDispatcher;
         _projectileSolver = projectileSolver;
@@ -103,7 +103,7 @@ public class WarfareProjectile : MonoBehaviour
         Origin = origin;
         Direction = direction;
 
-        Vehicle = vehicle;
+        OwnerVehicle = ownerVehicle;
         Owner = owner;
         Team = owner.Team;
         Asset = asset;
@@ -120,6 +120,8 @@ public class WarfareProjectile : MonoBehaviour
         // cant use OnTriggerEnter like we originally did because we can't know it'll occur before the explosion
         HasExploded = true;
         ImpactTime = DateTime.UtcNow;
+        
+        InteractableVehicle? hitVehicle = other.GetComponentInParent<InteractableVehicle>();
 
         ProjectileExploding args = new ProjectileExploding(parameters)
         {
@@ -134,7 +136,7 @@ public class WarfareProjectile : MonoBehaviour
             Object = gameObject,
             Player = Owner,
             Projectile = this,
-            Vehicle = Vehicle,
+            HitVehicle = hitVehicle,
             ImpactTime = ImpactTime,
             PredictedHitPosition = _solved ? _solvedLandingPosition : null,
             PredictedImpactTime = _solved ? _solvedImpactTime : null,
@@ -226,7 +228,7 @@ public class WarfareProjectile : MonoBehaviour
             Object = gameObject,
             RocketComponent = Rocket,
             Projectile = this,
-            Vehicle = Vehicle,
+            Vehicle = OwnerVehicle,
             LaunchedTime = LaunchTime,
             FiredTime = FireTime
         };

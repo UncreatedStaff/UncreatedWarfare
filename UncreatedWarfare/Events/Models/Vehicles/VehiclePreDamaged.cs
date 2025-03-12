@@ -8,8 +8,8 @@ namespace Uncreated.Warfare.Events.Models.Vehicles;
 public class VehiclePreDamaged
 {
     public required WarfareVehicle Vehicle { get; init; }
-    public required ushort PendingDamage { get; init; }
-    public required bool CanRepair { get; init; }
+    public required ushort PendingDamage { get; set; }
+    public required bool CanRepair { get; set; }
     public required CSteamID? InstantaneousInstigator { get; init; }
     public required CSteamID? LastKnownInstigator { get; init; }
     public required EDamageOrigin InstantaneousDamageOrigin { get; init; }

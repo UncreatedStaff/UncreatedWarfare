@@ -1,5 +1,6 @@
 using DanielWillett.ReflectionTools.Formatting;
 using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools.Emit;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -24,7 +25,8 @@ public class VehicleOnPreDamage : IHarmonyPatch
 
     void IHarmonyPatch.Patch(ILogger logger, HarmonyLib.Harmony patcher)
     {
-        _target = typeof(VehicleManager).GetMethod(nameof(VehicleManager.damage), BindingFlags.Static | BindingFlags.Public);
+        _target = typeof(VehicleManager).GetMethod(nameof(VehicleManager.damage),
+            BindingFlags.Static | BindingFlags.Public);
         if (_target != null)
         {
             patcher.Patch(_target, transpiler: Accessor.GetMethod(Transpiler));
@@ -55,40 +57,53 @@ public class VehicleOnPreDamage : IHarmonyPatch
         _target = null;
     }
 
-    private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+    private static IEnumerable<CodeInstruction> Transpiler(MethodBase method, IEnumerable<CodeInstruction> instructions,
+        ILGenerator generator)
     {
-        MethodInfo askDamageMethod = typeof(InteractableVehicle).GetMethod("askDamage", BindingFlags.Public | BindingFlags.Instance);
+        MethodInfo askDamageMethod =
+            typeof(InteractableVehicle).GetMethod("askDamage", BindingFlags.Public | BindingFlags.Instance);
         if (askDamageMethod == null)
         {
             WarfareModule.Singleton.GlobalLogger.LogWarning("Unable to find method: InteractableVehicle.askDamage");
         }
 
-        bool patchDone = false;
-        foreach (CodeInstruction instruction in instructions)
+        TranspileContext ctx = new TranspileContext(method, generator, instructions);
+
+        while (ctx.MoveNext())
         {
-            // strategy: insert the invoker call just before the call to vehicle.askDamage (near the end of the method)
-
-            if (!patchDone && askDamageMethod != null && instruction.Calls(askDamageMethod))
+            // find the call to VehicleManager.damage()
+            if (!ctx.Instruction.Calls(askDamageMethod))
             {
-                yield return new CodeInstruction(OpCodes.Ldarg_0); // method arg 0: vehicle
-                yield return new CodeInstruction(OpCodes.Ldloc_0); // local variable 0: pendingDamage
-                yield return new CodeInstruction(OpCodes.Ldarg_3); // method arg 3: canRepair
-                yield return new CodeInstruction(OpCodes.Ldarg_S, (byte)4); // method arg 4: instigatorSteamID
-                yield return new CodeInstruction(OpCodes.Ldarg_S, (byte)5); // method arg 5: damageOrigin
-                yield return new CodeInstruction(OpCodes.Call, Accessor.GetMethod(PreVehicleDamageInvoker));
-                WarfareModule.Singleton.GlobalLogger.LogInformation("Inserted PreVehicleDamageInvoker call into method VehicleManager.damage.");
-                
-                CodeInstruction old = new CodeInstruction(instruction); // make sure the original askDamage instruction is still called
-                yield return old;
-
-                patchDone = true;
                 continue;
             }
 
-            yield return instruction;
+            // move 3 instructions back before the arguments of VehicleManager.damage() are loaded onto the stack
+            while (ctx.Instruction.opcode != OpCodes.Ldarg_0)
+            {
+                ctx.CaretIndex--;
+            }
+
+            // get local variable 0 which is the 'pendingDamage' variable
+            LocalReference pendingDamageLocal = PatchUtil.GetLocal(ctx[ctx.CaretIndex + 1], false);
+
+
+            ctx.EmitAbove(emit =>
+            {
+                emit.LoadArgument(0)
+                    .LoadLocalAddress(pendingDamageLocal)
+                    .LoadArgumentAddress(3)
+                    .LoadArgument(4)
+                    .LoadArgument(5)
+                    .Invoke(Accessor.GetMethod(PreVehicleDamageInvoker)!);
+            });
+            
+            break;
         }
+
+        return ctx;
     }
-    private static void PreVehicleDamageInvoker(InteractableVehicle vehicle, ushort pendingDamage, bool canRepair, CSteamID instigatorId, EDamageOrigin damageOrigin)
+    
+    private static void PreVehicleDamageInvoker(InteractableVehicle vehicle, ref ushort pendingDamage, ref bool canRepair, CSteamID instigatorId, EDamageOrigin damageOrigin)
     {
         VehicleService vehicleService = WarfareModule.Singleton.ServiceProvider.Resolve<VehicleService>();
 
@@ -126,7 +141,11 @@ public class VehicleOnPreDamage : IHarmonyPatch
             LastKnownInstigator = warfareVehicle.DamageTracker.LastKnownDamageInstigator,
             InstantaneousDamageOrigin = damageOrigin
         };
-
+        
         _ = WarfareModule.EventDispatcher.DispatchEventAsync(args, allowAsync: false);
+
+        pendingDamage = args.PendingDamage;
+        canRepair = args.CanRepair;
     }
 }
+    

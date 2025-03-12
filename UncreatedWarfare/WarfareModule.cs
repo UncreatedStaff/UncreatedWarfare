@@ -637,6 +637,9 @@ public sealed class WarfareModule
             .AsImplementedInterfaces().AsSelf()
             .SingleInstance();
         
+        bldr.RegisterType<VehicleDamageTrackerItemTweaks>()
+            .AsImplementedInterfaces().AsSelf()
+            .SingleInstance();
         bldr.RegisterType<AdvancedVehicleDamageTweaks>()
             .AsImplementedInterfaces().AsSelf()
             .SingleInstance();
