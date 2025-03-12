@@ -132,7 +132,7 @@ public class ShovelableBuildable : IBuildableFobEntity
         if (!shoveler.TryGetFromContainer(out ToastManager? toastManager))
             return;
 
-        float progressPercent = 1 - (float)HitsRemaining / Info.SupplyCost;
+        float progressPercent = Mathf.Clamp(1 - (float)HitsRemaining / Info.RequiredShovelHits, 0, 1);
         int barCharactersToWrite = Mathf.RoundToInt(progressPercent * 25); // the toast UI has 25 characters
         toastManager.Queue(new ToastMessage(ToastMessageStyle.ProgressBar, new string('█', barCharactersToWrite)));
     }
