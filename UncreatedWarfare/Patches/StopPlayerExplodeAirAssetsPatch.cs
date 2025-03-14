@@ -1,4 +1,4 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Emit;
 using DanielWillett.ReflectionTools.Formatting;
 using HarmonyLib;

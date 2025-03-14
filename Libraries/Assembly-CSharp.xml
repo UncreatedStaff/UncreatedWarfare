@@ -1875,6 +1875,15 @@
             them... will need to clean this up, but it will be tricky because the game does not hold a reference to them.
             </summary>
         </member>
+        <member name="P:SDG.Unturned.SkinAsset.ShouldHideMagazine">
+            <summary>
+            If true, sets the Magazine attachment hook inactive while this skin is applied. (guns only)
+            
+            Nelson 2025-03-10: Adding this to address mismatched Ace bullets with certain skins. (public issue #4923)
+            It should be fine for vanilla guns because there shouldn't be assumptions about Magazine enable/disable,
+            but modded guns may have different expectations (particularly with GunAttachmentEventHook).
+            </summary>
+        </member>
         <member name="F:SDG.Unturned.SkinAsset.specialAudioOverride">
             <summary>
             Used by melee skins to override impact sound.
@@ -3168,6 +3177,17 @@
             Favorite and bookmark buttons can be hidden depending whether the necessary server details are set.
             </summary>
         </member>
+        <member name="P:SDG.Unturned.BlueprintSupply.ShouldTreatEmptyAsOne">
+            <summary>
+            If true, items with an "amount" of zero are included in eligible supplies as amount 1.
+            In practice (as of 2025-03-03), items with zero amount are empty containers such as magazines.
+            </summary>
+        </member>
+        <member name="P:SDG.Unturned.BlueprintSupply.Prioritization">
+            <summary>
+            Controls which items are used first. For example, whether to use the lowest quality items first.
+            </summary>
+        </member>
         <member name="T:SDG.Unturned.EVehicleBuildablePlacementRule">
             <summary>
             Controls whether vehicle allows barricades to be attached to it.
@@ -3908,6 +3928,18 @@
             seconds they will be kicked.
             </summary>
         </member>
+        <member name="F:SDG.Unturned.ServerConfigData.Bad_Packet_Rate_Limit_Window_Seconds">
+            <summary>
+            If bad packets (that *may* be legitimate) are received more than threshold times within this many seconds
+            of each other, reject the calling connection.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ServerConfigData.Bad_Packet_Rate_Limit_Threshold">
+            <summary>
+            If more than this many bad packets (that *may* be legitimate) are received within window seconds of each
+            other, reject the calling connection.
+            </summary>
+        </member>
         <member name="F:SDG.Unturned.ServerConfigData.Rate_Limit_Kick_Threshold">
             <summary>
             If a rate-limited method is called this many times within cooldown window the client will be kicked.
@@ -4272,6 +4304,11 @@
             Hack for previewing the "aura" cosmetic items.
             </summary>
         </member>
+        <member name="F:SDG.Unturned.HumanClothes.isCosmeticPreview">
+            <summary>
+            If true, this character is for capturing clothing icons.
+            </summary>
+        </member>
         <member name="F:SDG.Unturned.GraphicsSettings.planarReflectionUpdateIndex">
             <summary>
             Planar reflection component updates its culling distance and culling mask when this is incremented.
@@ -4513,6 +4550,11 @@
         <member name="F:SDG.Unturned.ESteamConnectionFailureInfo.CONNECT_RATE_LIMITING">
             <summary>
             Received too many connection requests from player in a short window.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ESteamConnectionFailureInfo.BAD_PACKET_RATE_LIMITING">
+            <summary>
+            Received too many invalid messages from connection in a short window.
             </summary>
         </member>
         <member name="F:SDG.Unturned.SleekChatEntryV2.shouldFadeOutWithAge">
@@ -6276,6 +6318,12 @@
             Set after initial response is received.
             </summary>
         </member>
+        <member name="F:SDG.Unturned.Provider.badMessageRateLimiter">
+            <summary>
+            Counts "bad" packets per-connection. Bad packets *may* be legitimate, for example a delayed burst of ping
+            requests. Beyond a certain point, however, it's likely a cheater is trying to waste server processing time.
+            </summary>
+        </member>
         <member name="P:SDG.Unturned.Provider.players">
             <summary>
             Exposed for Rocket transition to modules backwards compatibility.
@@ -6540,6 +6588,11 @@
             <summary>
             Close connection, and refuse all future connection attempts from a remote player.
             Used when garbage messages are received from hacked clients to avoid wasting time on them.
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.Provider.IncrementBadPacketsFromConnection(SDG.NetTransport.ITransportConnection)">
+            <summary>
+            Record that a bad packet was received from connection and maybe kick them if rate limit is exceeded.
             </summary>
         </member>
         <member name="F:SDG.Unturned.Provider._constNetEvents">
@@ -7586,23 +7639,6 @@
             If so pause menu, dashboard, and other menus cannot be opened.
             </summary>
         </member>
-        <member name="T:SDG.Unturned.Rk4Spring3">
-            <summary>
-            Thanks to Glenn Fiedler for this RK4 implementation article:
-            https://gafferongames.com/post/integration_basics/
-            </summary>
-        </member>
-        <member name="F:SDG.Unturned.Rk4Spring3.stiffness">
-            <summary>
-            Higher values return to the target position faster.
-            </summary>
-        </member>
-        <member name="F:SDG.Unturned.Rk4Spring3.damping">
-            <summary>
-            Higher values reduce bounciness and settle at the target position faster.
-            e.g. a value of zero will bounce back and forth for a long time (indefinitely?)
-            </summary>
-        </member>
         <member name="T:SDG.Unturned.ItemPlaceableAsset">
             <summary>
             Common base for barricades and structures.
@@ -7638,6 +7674,23 @@
         <member name="M:SDG.Unturned.ItemPlaceableAsset.FindDefaultSalvageItemAsset">
             <summary>
             By default a crafting ingredient is salvaged.
+            </summary>
+        </member>
+        <member name="T:SDG.Unturned.Rk4Spring3">
+            <summary>
+            Thanks to Glenn Fiedler for this RK4 implementation article:
+            https://gafferongames.com/post/integration_basics/
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.Rk4Spring3.stiffness">
+            <summary>
+            Higher values return to the target position faster.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.Rk4Spring3.damping">
+            <summary>
+            Higher values reduce bounciness and settle at the target position faster.
+            e.g. a value of zero will bounce back and forth for a long time (indefinitely?)
             </summary>
         </member>
         <member name="T:SDG.Unturned.InteractableObjectQuestEventHook">
@@ -10338,6 +10391,23 @@
             Allows foreach loop to iterate renderers defined in lod group.
             </summary>
         </member>
+        <member name="T:SDG.Unturned.TransportConnectionRateLimiter">
+            <summary>
+            Counts hits per-IPv4 address (if available) and per-SteamID (if available).
+            Connection is blocked if more than "threshold" hits occur within category (IPv4/SteamID).
+            Hit count resets when "window" seconds have passed since last hit.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.TransportConnectionRateLimiter.window">
+            <summary>
+            If hit is within this many seconds of previous hit, it counts. Otherwise, counter is reset.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.TransportConnectionRateLimiter.threshold">
+            <summary>
+            If more than this many hits occur the limit is reached.
+            </summary>
+        </member>
         <member name="F:SDG.Unturned.SleekInventory.extraTooltip">
             <summary>
             Hack, we put this string on a newline for box probabilities.
@@ -11471,6 +11541,11 @@
             parent should only be set if that system also calls ClearAttachments, otherwise attachedEffects will leak memory.
             </summary>
         </member>
+        <member name="F:SDG.Unturned.Attachments.wasMagazineHookHiddenBySkin">
+            <summary>
+            Nelson 2025-03-10: This aims to avoid messing with Magazine transform IsActive unless skin already did.
+            </summary>
+        </member>
         <member name="M:SDG.Unturned.Attachments.SelectAttachmentParent(UnityEngine.Transform,SDG.Unturned.ItemCaliberAsset)">
             <summary>
             Nelson 2024-11-15: By default, attachments use their corresponding "hook" transform. For example, magazines
@@ -11971,6 +12046,11 @@
         <member name="M:SDG.Unturned.EditorObjects.releaseHandle">
             <summary>
             Reset dragging handle and register transformation.
+            </summary>
+        </member>
+        <member name="P:SDG.Unturned.MythicAsset.ShouldBodyCosmeticsUseAreaPrefab">
+            <summary>
+            If true, vest and backpack spawn System_Area instead of System_Hook.
             </summary>
         </member>
         <member name="M:SDG.Unturned.NetworkSnapshotBuffer`1.updateLastSnapshot(`0)">
@@ -13675,6 +13755,11 @@
             Version string of the currently loaded level packed into an integer.
             </summary>
         </member>
+        <member name="M:SDG.Unturned.Level.FindLevel(SDG.Unturned.SavedLevelSelection)">
+            <summary>
+            Find level matching both name AND workshop file ID (can be zero).
+            </summary>
+        </member>
         <member name="M:SDG.Unturned.Level.ReadLevelInfo(System.String,System.UInt64)">
             <summary>
             Load level details from Level.dat in directory path.
@@ -13911,6 +13996,11 @@
             Received too many connection requests from player in a short window.
             </summary>
         </member>
+        <member name="F:SDG.Unturned.ESteamRejection.BAD_PACKET_RATE_LIMITING">
+            <summary>
+            Received too many invalid messages from connection in a short window.
+            </summary>
+        </member>
         <member name="M:SDG.Unturned.NetId.IsNull">
             <summary>
             Zero is treated as unset.
@@ -13926,6 +14016,11 @@
             <summary>
             Kept because lots of modders have been using this script in Unity,
             so removing legacy effect id would break their content.
+            </summary>
+        </member>
+        <member name="T:SDG.Unturned.SavedLevelSelection">
+            <summary>
+            Matches level with same file name AND workshop file ID.
             </summary>
         </member>
         <member name="F:SDG.Unturned.PlaySettings.SAVEDATA_VERSION_INITIAL">
@@ -15557,6 +15652,11 @@
             Item legacy ID to grant the player.
             </summary>
         </member>
+        <member name="M:SDG.Unturned.InteractableFarm.GrowAfterRealtime(System.Single)">
+            <summary>
+            Uses unscaled time (realtime) because "planted" time is a timestamp.
+            </summary>
+        </member>
         <member name="T:SDG.Unturned.ReceivedChatMessage">
             <summary>
             Created when a chat entry is received from the server for display in the UI.
@@ -16088,6 +16188,16 @@
             hole volume cuts is helpful when upgrading to remove hole volumes from a map.
             </summary>
         </member>
+        <member name="F:SDG.Framework.Landscapes.LandscapeTile.isHeightsLodDataDirty">
+            <summary>
+            If true, SetHeightsDelayLOD was called without calling SyncHeightmap yet.
+            </summary>
+        </member>
+        <member name="F:SDG.Framework.Landscapes.LandscapeTile.isHolesLodDataDirty">
+            <summary>
+            If true, SetHolesDelayLOD was called without calling SyncTexture yet.
+            </summary>
+        </member>
         <member name="F:SDG.Framework.Landscapes.LandscapeTile.dataWithoutHoles">
             <summary>
             Heightmap-only data used in level editor. Refer to Landscape.DisableHoleColliders for explanation.
@@ -16153,6 +16263,13 @@
         <member name="M:SDG.Framework.Landscapes.Landscape.onSatellitePostCapture">
             <summary>
             Finished capturing ortho view of map, so we restore the terrain to preferred quality.
+            </summary>
+        </member>
+        <member name="P:SDG.Framework.Landscapes.Landscape.ShouldUseSetHolesDelayLOD">
+            <summary>
+            Nelson 2025-03-10: I want to experiment whether this fixes a strange terrain hole painting bug (public issue
+            #4851) without potentially introducing crashes for other players. (Per an earlier, undated comment we'd
+            run into a SetHolesDelayLOD-related crash in 2019 LTS.)
             </summary>
         </member>
         <member name="F:SDG.Framework.Devkit.Tools.EDevkitLandscapeToolHeightmapFlattenMethod.REGULAR">

@@ -10,10 +10,10 @@ namespace Uncreated.Warfare.Moderation;
 [PlayerComponent]
 public class PlayerModerationCacheComponent : IPlayerComponent
 {
-    private DatabaseInterface _moderationSql;
+    private DatabaseInterface _moderationSql = null!;
     private Coroutine? _unmuteCoroutine;
-    private ILogger<PlayerModerationCacheComponent> _logger;
-    public WarfarePlayer Player { get; private set; }
+    private ILogger<PlayerModerationCacheComponent> _logger = null!;
+    public WarfarePlayer Player { get; private set; } = null!;
 
     public string? TextMuteReason { get; private set; }
     public MuteType TextMuteType { get; private set; }
@@ -138,7 +138,7 @@ public class PlayerModerationCacheComponent : IPlayerComponent
 
         if (!allowTalking && TextMuteExpiryTime < DateTime.MaxValue && Player.IsOnline)
         {
-            Player.UnturnedPlayer.StartCoroutine(RecheckMute(TextMuteExpiryTime - DateTime.UtcNow));
+            _unmuteCoroutine = Player.UnturnedPlayer.StartCoroutine(RecheckMute(TextMuteExpiryTime - DateTime.UtcNow));
         }
     }
 

@@ -263,7 +263,7 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
         if (_lockOnEffect == null || gunner == null)
             return;
 
-        EffectManager.sendUIEffect(_lockOnEffect.id, LockOnEffectKey, gunner.channel.owner.transportConnection, true);
+        EffectManager.SendUIEffect(_lockOnEffect, LockOnEffectKey, gunner.channel.owner.transportConnection, true);
     }
     private void CancelLockOnSound(Player gunner)
     {

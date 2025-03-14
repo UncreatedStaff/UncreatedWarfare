@@ -461,7 +461,7 @@ public static class AssetUtility
     public static void SyncAssetsFromOrigin(AssetOrigin origin) => SyncAssetsFromOriginMethod?.Invoke(origin);
     public static void LoadAsset(string filePath, AssetOrigin origin)
     {
-        LoadFile(filePath, origin);
+        (LoadFile ?? throw new MemberAccessException("LoadFile not created."))(filePath, origin);
     }
 
     private static readonly DatParser _parser = new DatParser();
@@ -499,8 +499,8 @@ public static class AssetUtility
         return _parser.Parse(inputReader);
     }
 
-    private static readonly Action<string, AssetOrigin> LoadFile;
-    private static readonly Action<AssetOrigin> SyncAssetsFromOriginMethod;
+    private static readonly Action<string, AssetOrigin>? LoadFile;
+    private static readonly Action<AssetOrigin>? SyncAssetsFromOriginMethod;
     static AssetUtility()
     {
         SyncAssetsFromOriginMethod = (Action<AssetOrigin>)typeof(Assets)

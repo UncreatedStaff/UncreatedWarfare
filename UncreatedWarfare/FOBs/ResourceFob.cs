@@ -203,6 +203,9 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable
 
     public void Dispose()
     {
+        NearbyFriendlies.Dispose();
+        NearbyEnemies.Dispose();
+
         _loopTicker.Dispose();
     }
 

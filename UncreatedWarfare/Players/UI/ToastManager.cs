@@ -20,7 +20,7 @@ public sealed class ToastManager : IPlayerComponent, IDisposable
 
     private static int _channelCount;
     private static bool _initialized;
-    private static IServiceProvider _serviceProvider;
+    private static IServiceProvider _serviceProvider = null!;
 
     private ModalHandle _modal;
 
@@ -33,9 +33,9 @@ public sealed class ToastManager : IPlayerComponent, IDisposable
     /// <summary>
     /// Overlapping toasts are split up into channels. Each channel can only show one toast at a time.
     /// </summary>
-    public ToastMessageChannel[] Channels { get; private set; }
+    public ToastMessageChannel[] Channels { get; private set; } = null!;
 
-    public WarfarePlayer Player { get; private set; }
+    public WarfarePlayer Player { get; private set; } = null!;
 
     public bool HasToasts { get; private set; }
 
@@ -114,7 +114,7 @@ public sealed class ToastManager : IPlayerComponent, IDisposable
             DisableFlags = EPluginWidgetFlags.ShowCenterDot | EPluginWidgetFlags.ShowInteractWithEnemy,
             EnableFlags = EPluginWidgetFlags.ForceBlur | EPluginWidgetFlags.Modal
         };
-        ToastMessages[(int)ToastMessageStyle.FlashingWarning] = new ToastMessageInfo(ToastMessageStyle.FlashingWarning, 4, configuration.GetValue<IAssetLink<EffectAsset>>("UI:Toasts:Alert"), requiresClearing: true, canResend: true)
+        ToastMessages[(int)ToastMessageStyle.FlashingWarning] = new ToastMessageInfo(ToastMessageStyle.FlashingWarning, 4, configuration.GetAssetLink<EffectAsset>("UI:Toasts:Alert"), requiresClearing: true, canResend: true)
         {
             ResendNames = [ "Canvas/Text" ],
             ClearableSlots = 1
@@ -294,13 +294,13 @@ public sealed class ToastManager : IPlayerComponent, IDisposable
     {
         HasToasts = true;
         channel.UpdateInfo(in message, info);
-        ushort id = info.Asset.Id;
+        EffectAsset? asset = info.Asset.GetAsset();
         if (info.UI != null)
         {
             info.UI.SendToPlayer(Player.Connection);
             info.SendCallback?.Invoke(Player, in message, info, info.UI, _serviceProvider);
         }
-        else if (id != 0)
+        else if (asset != null)
         {
             if (message.Argument != null)
             {
@@ -308,19 +308,19 @@ public sealed class ToastManager : IPlayerComponent, IDisposable
                 {
                     case 0:
                     case 1:
-                        EffectManager.sendUIEffect(id, info.Key, Player.Connection, info.Reliable, message.Argument);
+                        EffectManager.SendUIEffect(asset, info.Key, Player.Connection, info.Reliable, message.Argument);
                         break;
 
                     case 2:
-                        EffectManager.sendUIEffect(id, info.Key, Player.Connection, info.Reliable, message.Argument, string.Empty);
+                        EffectManager.SendUIEffect(asset, info.Key, Player.Connection, info.Reliable, message.Argument, string.Empty);
                         break;
 
                     case 3:
-                        EffectManager.sendUIEffect(id, info.Key, Player.Connection, info.Reliable, message.Argument, string.Empty, string.Empty);
+                        EffectManager.SendUIEffect(asset, info.Key, Player.Connection, info.Reliable, message.Argument, string.Empty, string.Empty);
                         break;
 
                     default:
-                        EffectManager.sendUIEffect(id, info.Key, Player.Connection, info.Reliable, message.Argument, string.Empty, string.Empty, string.Empty);
+                        EffectManager.SendUIEffect(asset, info.Key, Player.Connection, info.Reliable, message.Argument, string.Empty, string.Empty, string.Empty);
                         break;
                 }
 
@@ -337,19 +337,19 @@ public sealed class ToastManager : IPlayerComponent, IDisposable
                         switch (info.ClearableSlots)
                         {
                             case <= 0:
-                                EffectManager.sendUIEffect(id, info.Key, Player.Connection, info.Reliable);
+                                EffectManager.SendUIEffect(asset, info.Key, Player.Connection, info.Reliable);
                                 break;
                             case 1:
-                                EffectManager.sendUIEffect(id, info.Key, Player.Connection, info.Reliable, string.Empty);
+                                EffectManager.SendUIEffect(asset, info.Key, Player.Connection, info.Reliable, string.Empty);
                                 break;
                             case 2:
-                                EffectManager.sendUIEffect(id, info.Key, Player.Connection, info.Reliable, string.Empty, string.Empty);
+                                EffectManager.SendUIEffect(asset, info.Key, Player.Connection, info.Reliable, string.Empty, string.Empty);
                                 break;
                             case 3:
-                                EffectManager.sendUIEffect(id, info.Key, Player.Connection, info.Reliable, string.Empty, string.Empty, string.Empty);
+                                EffectManager.SendUIEffect(asset, info.Key, Player.Connection, info.Reliable, string.Empty, string.Empty, string.Empty);
                                 break;
                             default:
-                                EffectManager.sendUIEffect(id, info.Key, Player.Connection, info.Reliable, string.Empty, string.Empty, string.Empty, string.Empty);
+                                EffectManager.SendUIEffect(asset, info.Key, Player.Connection, info.Reliable, string.Empty, string.Empty, string.Empty, string.Empty);
                                 break;
                         }
                         break;
@@ -359,16 +359,16 @@ public sealed class ToastManager : IPlayerComponent, IDisposable
                         {
                             case 0:
                             case 1:
-                                EffectManager.sendUIEffect(id, info.Key, Player.Connection, info.Reliable, message.Arguments[0]);
+                                EffectManager.SendUIEffect(asset, info.Key, Player.Connection, info.Reliable, message.Arguments[0]);
                                 break;
                             case 2:
-                                EffectManager.sendUIEffect(id, info.Key, Player.Connection, info.Reliable, message.Arguments[0], string.Empty);
+                                EffectManager.SendUIEffect(asset, info.Key, Player.Connection, info.Reliable, message.Arguments[0], string.Empty);
                                 break;
                             case 3:
-                                EffectManager.sendUIEffect(id, info.Key, Player.Connection, info.Reliable, message.Arguments[0], string.Empty, string.Empty);
+                                EffectManager.SendUIEffect(asset, info.Key, Player.Connection, info.Reliable, message.Arguments[0], string.Empty, string.Empty);
                                 break;
                             default:
-                                EffectManager.sendUIEffect(id, info.Key, Player.Connection, info.Reliable, message.Arguments[0], string.Empty, string.Empty, string.Empty);
+                                EffectManager.SendUIEffect(asset, info.Key, Player.Connection, info.Reliable, message.Arguments[0], string.Empty, string.Empty, string.Empty);
                                 break;
                         }
                         break;
@@ -377,13 +377,13 @@ public sealed class ToastManager : IPlayerComponent, IDisposable
                         switch (info.ClearableSlots)
                         {
                             case <= 2:
-                                EffectManager.sendUIEffect(id, info.Key, Player.Connection, info.Reliable, message.Arguments[0], message.Arguments[1]);
+                                EffectManager.SendUIEffect(asset, info.Key, Player.Connection, info.Reliable, message.Arguments[0], message.Arguments[1]);
                                 break;
                             case 3:
-                                EffectManager.sendUIEffect(id, info.Key, Player.Connection, info.Reliable, message.Arguments[0], message.Arguments[1], string.Empty);
+                                EffectManager.SendUIEffect(asset, info.Key, Player.Connection, info.Reliable, message.Arguments[0], message.Arguments[1], string.Empty);
                                 break;
                             default:
-                                EffectManager.sendUIEffect(id, info.Key, Player.Connection, info.Reliable, message.Arguments[0], message.Arguments[1], string.Empty, string.Empty);
+                                EffectManager.SendUIEffect(asset, info.Key, Player.Connection, info.Reliable, message.Arguments[0], message.Arguments[1], string.Empty, string.Empty);
                                 break;
                         }
                         break;
@@ -392,16 +392,16 @@ public sealed class ToastManager : IPlayerComponent, IDisposable
                         switch (info.ClearableSlots)
                         {
                             case <= 3:
-                                EffectManager.sendUIEffect(id, info.Key, Player.Connection, info.Reliable, message.Arguments[0], message.Arguments[1], message.Arguments[2]);
+                                EffectManager.SendUIEffect(asset, info.Key, Player.Connection, info.Reliable, message.Arguments[0], message.Arguments[1], message.Arguments[2]);
                                 break;
                             default:
-                                EffectManager.sendUIEffect(id, info.Key, Player.Connection, info.Reliable, message.Arguments[0], message.Arguments[1], message.Arguments[2], string.Empty);
+                                EffectManager.SendUIEffect(asset, info.Key, Player.Connection, info.Reliable, message.Arguments[0], message.Arguments[1], message.Arguments[2], string.Empty);
                                 break;
                         }
                         break;
 
                     default:
-                        EffectManager.sendUIEffect(id, info.Key, Player.Connection, info.Reliable, message.Arguments[0], message.Arguments[1], message.Arguments[2], message.Arguments[3]);
+                        EffectManager.SendUIEffect(asset, info.Key, Player.Connection, info.Reliable, message.Arguments[0], message.Arguments[1], message.Arguments[2], message.Arguments[3]);
                         break;
                 }
 
@@ -409,7 +409,7 @@ public sealed class ToastManager : IPlayerComponent, IDisposable
             }
             else
             {
-                EffectManager.sendUIEffect(id, info.Key, Player.Connection, info.Reliable);
+                EffectManager.SendUIEffect(asset, info.Key, Player.Connection, info.Reliable);
             }
         }
 

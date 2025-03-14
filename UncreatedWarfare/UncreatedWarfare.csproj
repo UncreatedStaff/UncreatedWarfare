@@ -145,7 +145,7 @@
     <PackageReference Include="DanielWillett.ModularRPCs" Version="[1.0.0-prerelease08, 2)" />
     <PackageReference Include="DanielWillett.ModularRPCs.Unity" Version="[1.0.0-prerelease03, 2)" />
     <PackageReference Include="DanielWillett.ModularRPCs.WebSockets" Version="[1.0.0-prerelease07, 2)" />
-    <PackageReference Include="Uncreated.UI" Version="1.3.2" />
+    <PackageReference Include="Uncreated.UI" Version="1.3.4" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="Stripe.net" Version="43.4.0" />
     <PackageReference Include="JetBrains.Annotations" Version="2018.2.1" Aliases="JetBrains" />

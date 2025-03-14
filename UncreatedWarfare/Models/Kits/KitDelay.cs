@@ -9,9 +9,6 @@ namespace Uncreated.Warfare.Models.Kits;
 [Table("kits_delays")]
 public class KitDelay : BaseDelay
 {
-    [Key, DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-    public uint Id { get; set; }
-
     [Required, Column("Kit")]
     public uint KitId { get; set; }
 
@@ -19,7 +16,6 @@ public class KitDelay : BaseDelay
 
     public KitDelay(KitDelay other) : base(other)
     {
-        Id = other.Id;
         KitId = other.KitId;
     }
 

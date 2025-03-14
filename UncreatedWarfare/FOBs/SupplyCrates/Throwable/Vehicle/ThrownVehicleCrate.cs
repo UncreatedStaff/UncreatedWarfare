@@ -18,7 +18,6 @@ public class ThrownVehicleCrate : ThrownSupplyCrate
     private readonly FobManager? _fobManager;
     private readonly ZoneStore? _zoneStore;
     private readonly AmmoTranslations _translations;
-    private ThrownComponent _thrownVehicleCrateComponent;
 
     public ThrownVehicleCrate(GameObject throwable, WarfarePlayer thrower, ItemThrowableAsset thrownAsset, EffectAsset resupplyEffectAsset, FobManager? fobManager, ZoneStore? zoneStore, AmmoTranslations translations)
         : base(throwable, thrownAsset, thrower)
@@ -27,16 +26,16 @@ public class ThrownVehicleCrate : ThrownSupplyCrate
         _fobManager = fobManager;
         _zoneStore = zoneStore;
         _translations = translations;
-        _thrownVehicleCrateComponent = throwable.gameObject.AddComponent<ThrownComponent>();
-        _thrownVehicleCrateComponent.OnThrowableDestroyed += OnThrowableDestroyed;
+        ThrownComponent thrownVehicleCrateComponent = throwable.gameObject.AddComponent<ThrownComponent>();
+        thrownVehicleCrateComponent.OnThrowableDestroyed += OnThrowableDestroyed;
     }
 
     private void OnThrowableDestroyed()
     {
         // descending distance comparer
-        IComparer<Component> comparer = new LookAtComparer<Component>(_throwable.transform.forward, x => x.transform.position - _throwable.transform.position, reverse: false);
+        IComparer<Component> comparer = new LookAtComparer<Component>(Throwable.transform.forward, x => x.transform.position - Throwable.transform.position, reverse: false);
 
-        int results = Physics.OverlapSphereNonAlloc(_throwable.transform.position, 5f, TempHitColliders, 1 << LayerMasks.VEHICLE);
+        int results = Physics.OverlapSphereNonAlloc(Throwable.transform.position, 5f, TempHitColliders, 1 << LayerMasks.VEHICLE);
         Array.Sort<Collider>(TempHitColliders, 0, results, comparer);
         WarfareVehicle? warfareVehicle = null;
         for (int i = 0; i < results; i++)
@@ -53,17 +52,17 @@ public class ThrownVehicleCrate : ThrownSupplyCrate
         if (warfareVehicle == null)
         {
             RespawnThrowableItem();
-            _thrower.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastAmmoNotNearVehicle.Translate(_thrower)));
+            Thrower.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastAmmoNotNearVehicle.Translate(Thrower)));
             return;
         }
         
-        if (_fobManager != null && !(_zoneStore != null && _zoneStore.IsInMainBase(_throwable.transform.position)))
+        if (_fobManager != null && !(_zoneStore != null && _zoneStore.IsInMainBase(Throwable.transform.position)))
         {
-            ResourceFob? nearestFob = _fobManager.FindNearestResourceFob(_thrower.Team, _throwable.transform.position);
+            ResourceFob? nearestFob = _fobManager.FindNearestResourceFob(Thrower.Team, Throwable.transform.position);
             if (nearestFob == null)
             {
                 RespawnThrowableItem();
-                _thrower.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastAmmoNotNearFob.Translate(_thrower)));
+                Thrower.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastAmmoNotNearFob.Translate(Thrower)));
                 return;
             }
             
@@ -71,12 +70,12 @@ public class ThrownVehicleCrate : ThrownSupplyCrate
             if (nearestFob.AmmoCount < warfareVehicle.Info.Rearm.AmmoConsumed)
             {
                 RespawnThrowableItem();
-                _thrower.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastInsufficientAmmo.Translate(nearestFob.AmmoCount, requiredAmmoCount, _thrower)));
+                Thrower.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastInsufficientAmmo.Translate(nearestFob.AmmoCount, requiredAmmoCount, Thrower)));
                 return;
             }
             
             nearestFob.ChangeSupplies(SupplyType.Ammo, requiredAmmoCount);
-            _thrower.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastLoseAmmo.Translate(requiredAmmoCount, _thrower)));
+            Thrower.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastLoseAmmo.Translate(requiredAmmoCount, Thrower)));
         }
         
         DropSupplies(warfareVehicle);
@@ -90,13 +89,13 @@ public class ThrownVehicleCrate : ThrownSupplyCrate
             if (asset == null)
                 continue;
             
-            ItemManager.dropItem(new Item(asset, EItemOrigin.CRAFT), _thrower.Position, false, true, true);
+            ItemManager.dropItem(new Item(asset, EItemOrigin.CRAFT), Thrower.Position, false, true, true);
         }
         
         // spawn a nice effect
         EffectManager.triggerEffect(new TriggerEffectParameters(_resupplyEffectAsset)
         {
-            position = _throwable.transform.position,
+            position = Throwable.transform.position,
             relevantDistance = 70,
             reliable = true
         });

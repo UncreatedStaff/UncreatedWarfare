@@ -22,7 +22,7 @@ public class QuestRewardExpression : RewardExpression
     public QuestRewardExpression(Type rewardType, Type questType, string expression, ILogger logger)
         : base($"EvaluateReward_{questType.Name}_{rewardType.Name}", typeof(IQuestReward),
             GetReturnType(rewardType, questType, out ConstructorInfo createCtor, out Type? stateType, out IEmittableVariable[] variables),
-            rewardType, questType, variables, expression, logger)
+            questType, variables, expression, logger)
     {
         _createCtor = createCtor;
 

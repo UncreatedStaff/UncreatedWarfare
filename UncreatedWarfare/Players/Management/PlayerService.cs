@@ -130,7 +130,14 @@ public class PlayerService : IPlayerService
         {
             foreach (IPlayerComponent component in player.Components)
             {
-                component.Init(serviceProvider, false);
+                try
+                {
+                    component.Init(serviceProvider, false);
+                }
+                catch (Exception ex)
+                {
+                    _loggerFactory.CreateLogger(component.GetType()).LogError(ex, "Error re-initializing.");
+                }
             }
         }
     }
@@ -173,7 +180,17 @@ public class PlayerService : IPlayerService
 
         foreach (IPlayerComponent component in player.Components)
         {
-            component.Init(serviceProvider, true);
+            try
+            {
+                component.Init(serviceProvider, true);
+            }
+            catch (Exception ex)
+            {
+                _loggerFactory.CreateLogger(component.GetType()).LogError(ex, "Error initializing.");
+                player.EndConnecting();
+                Provider.kick(player.Steam64, $"Error connecting - initializing {component.GetType().Name}. Please show a Director this.");
+                return;
+            }
         }
 
         foreach (PlayerEventSubscription sub in subs)

@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
+using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Events.Models.Zones;
@@ -118,7 +119,7 @@ public abstract class BasePhase<TTeamSettings> : ILayoutPhase,
     void IEventListener<PlayerTeamChanged>.HandleEvent(PlayerTeamChanged e, IServiceProvider serviceProvider)
     {
         // make sure Invincible is respected if the player changes to that team during the phase
-        if (!IsActive)
+        if (!IsActive || e.Player.IsDisconnecting || !e.Player.IsOnline)
             return;
 
         UpdatePlayerInvinciblity(e.Player);
@@ -127,7 +128,7 @@ public abstract class BasePhase<TTeamSettings> : ILayoutPhase,
     void IEventListener<PlayerJoined>.HandleEvent(PlayerJoined e, IServiceProvider serviceProvider)
     {
         // make sure Invincible is respected if the player joins the server during the phase
-        if (!IsActive)
+        if (!IsActive || e.Player.IsDisconnecting || !e.Player.IsOnline)
             return;
 
         UpdatePlayerInvinciblity(e.Player);
@@ -175,10 +176,11 @@ public abstract class BasePhase<TTeamSettings> : ILayoutPhase,
         }
     }
 
+    [EventListener(MustRunInstantly = true)]
     void IEventListener<PlayerExitedZone>.HandleEvent(PlayerExitedZone e, IServiceProvider serviceProvider)
     {
         // code for PhaseTeamSettings.Grounded
-        if (!IsActive)
+        if (!IsActive || e.Player.IsDisconnecting || !e.Player.IsOnline)
             return;
 
         if (e.Player.IsOnDuty || !e.Player.Team.IsValid)
