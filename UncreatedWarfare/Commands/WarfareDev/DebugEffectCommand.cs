@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Util;
 
@@ -49,27 +49,27 @@ internal sealed class DebugEffectCommand : IExecutableCommand
             switch (args.Count)
             {
                 case <= 0:
-                    EffectManager.sendUIEffect(asset.id, key, Context.Player.Connection, true);
+                    EffectManager.SendUIEffect(asset, key, Context.Player.Connection, true);
                     Context.ReplyString($"<#9fa1a6>Sent {asset.name} to you with no arguments and key {key}.");
                     break;
 
                 case 1:
-                    EffectManager.sendUIEffect(asset.id, key, Context.Player.Connection, true, args[0]);
+                    EffectManager.SendUIEffect(asset, key, Context.Player.Connection, true, args[0]);
                     Context.ReplyString($"<#9fa1a6>Sent {asset.name} to you with {{0}} = \"{args[0]}\" and key {key}.");
                     break;
 
                 case 2:
-                    EffectManager.sendUIEffect(asset.id, key, Context.Player.Connection, true, args[0], args[1]);
+                    EffectManager.SendUIEffect(asset, key, Context.Player.Connection, true, args[0], args[1]);
                     Context.ReplyString($"<#9fa1a6>Sent {asset.name} to you with {{0}} = \"{args[0]}\", {{1}} = \"{args[1]}\" and key {key}.");
                     break;
 
                 case 3:
-                    EffectManager.sendUIEffect(asset.id, key, Context.Player.Connection, true, args[0], args[1], args[2]);
+                    EffectManager.SendUIEffect(asset, key, Context.Player.Connection, true, args[0], args[1], args[2]);
                     Context.ReplyString($"<#9fa1a6>Sent {asset.name} to you with {{0}} = \"{args[0]}\", {{1}} = \"{args[1]}\", {{2}} = \"{args[2]}\" and key {key}.");
                     break;
 
                 default:
-                    EffectManager.sendUIEffect(asset.id, key, Context.Player.Connection, true, args[0], args[1], args[2], args[3]);
+                    EffectManager.SendUIEffect(asset, key, Context.Player.Connection, true, args[0], args[1], args[2], args[3]);
                     Context.ReplyString($"<#9fa1a6>Sent {asset.name} to you with {{0}} = \"{args[0]}\", {{1}} = \"{args[1]}\", {{2}} = \"{args[2]}\", {{3}} = \"{args[3]}\" and key {key}.");
                     break;
             }

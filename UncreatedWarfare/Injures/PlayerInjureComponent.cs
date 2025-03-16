@@ -36,7 +36,8 @@ public class PlayerInjureComponent : MonoBehaviour,
     IEventListener<DamagePlayerRequested>,
     IEventListener<AidPlayerRequested>,
     IEventListener<PlayerAided>,
-    IEventListener<EnterVehicleRequested>
+    IEventListener<EnterVehicleRequested>,
+    IEventListener<EquipUseableRequested>
 {
 
     /// <summary>
@@ -60,14 +61,14 @@ public class PlayerInjureComponent : MonoBehaviour,
     private const float MarkerRenderDistance = 150;
 
     /// <summary>
-    /// The amount of time it takes to bleed out with no intervention.
+    /// The amount of seconds it takes to bleed out with no intervention.
     /// </summary>
     private const float InjureStandardBleedoutDuration = 30;
 
     /// <summary>
     /// A damage multiplier of incoming damage while injured.
     /// </summary>
-    private const float InjuredDamageMultiplier = 0.25f;
+    private const float InjuredDamageMultiplier = 0.4f;
 
     /// <summary>
     /// Defines which players can revive other players.
@@ -110,6 +111,9 @@ public class PlayerInjureComponent : MonoBehaviour,
     private bool _isInjured;
     private bool _isReviving;
     private WarfarePlayer? _reviver;
+    private EffectAsset? _giveUpUi;
+    private EffectAsset? _medicEffect;
+    private EffectAsset? _injuredEffect;
 
     private DamagePlayerParameters _injureParameters;
     private float _injureStart;
@@ -164,6 +168,17 @@ public class PlayerInjureComponent : MonoBehaviour,
         _logger = serviceProvider.GetRequiredService<ILogger<PlayerInjureComponent>>();
         _xpTranslations = serviceProvider.GetRequiredService<TranslationInjection<PointsTranslations>>().Value;
         _playerTranslations = serviceProvider.GetRequiredService<TranslationInjection<PlayersTranslations>>().Value;
+
+        _giveUpUi = _assetConfiguration.GetAssetLink<EffectAsset>("UI:GiveUp").GetAsset();
+        _medicEffect = _assetConfiguration.GetAssetLink<EffectAsset>("Effects:Medic").GetAsset();
+        _injuredEffect = _assetConfiguration.GetAssetLink<EffectAsset>("Effects:Injured").GetAsset();
+
+        if (_medicEffect == null)
+            _logger.LogWarning("Medic effect not found.");
+        if (_injuredEffect == null)
+            _logger.LogWarning("Injure effect not found.");
+        if (_giveUpUi == null)
+            _logger.LogWarning("Give Up UI not found.");
 
         if (!isOnJoin)
             return;
@@ -389,24 +404,24 @@ public class PlayerInjureComponent : MonoBehaviour,
 
     private void SendGiveUpUI()
     {
-        if (!_assetConfiguration.GetAssetLink<EffectAsset>("UI:GiveUp").TryGetId(out ushort uiInjuredId))
+        if (_giveUpUi == null)
             return;
 
         // GiveUpText has to be resent because initial values don't get their hotkeys filled but resent values do
-        EffectManager.sendUIEffect(uiInjuredId, GiveUpUiKey, Player.Connection, true, _playerTranslations.InjuredUIHeader.Translate(Player), string.Empty);
+        EffectManager.SendUIEffect(_giveUpUi, GiveUpUiKey, Player.Connection, true, _playerTranslations.InjuredUIHeader.Translate(Player), string.Empty);
         EffectManager.sendUIEffectText(GiveUpUiKey, Player.Connection, true, "Canvas/GameObject/GiveUpText", _playerTranslations.InjuredUIGiveUp.Translate(Player));
     }
 
     private void ClearGiveUpUI()
     {
-        if (_assetConfiguration.GetAssetLink<EffectAsset>("UI:GiveUp").TryGetGuid(out Guid uiInjuredId))
-            EffectManager.ClearEffectByGuid(uiInjuredId, Player.Connection);
+        if (_giveUpUi != null)
+            EffectManager.ClearEffectByGuid(_giveUpUi.GUID, Player.Connection);
     }
 
     private void ClearMedicIcons()
     {
-        if (_assetConfiguration.GetAssetLink<EffectAsset>("Effects:Medic").TryGetGuid(out Guid medicUi))
-            EffectManager.ClearEffectByGuid(medicUi, Player.Connection);
+        if (_medicEffect != null)
+            EffectManager.ClearEffectByGuid(_medicEffect.GUID, Player.Connection);
     }
 
     private IEnumerator SpawnMedicMarkersCoroutine()
@@ -421,13 +436,6 @@ public class PlayerInjureComponent : MonoBehaviour,
             yield return new WaitForSecondsRealtime(targetTime);
         }
 
-        _assetConfiguration.GetAssetLink<EffectAsset>("Effects:Medic").TryGetAsset(out EffectAsset? medicAsset);
-        _assetConfiguration.GetAssetLink<EffectAsset>("Effects:Injured").TryGetAsset(out EffectAsset? injuredAsset);
-
-        if (medicAsset == null)
-            _logger.LogWarning("Medic effect not found.");
-        if (injuredAsset == null)
-            _logger.LogWarning("Injure effect not found.");
 
         while (_isInjured)
         {
@@ -445,14 +453,14 @@ public class PlayerInjureComponent : MonoBehaviour,
                     continue;
                 }
 
-                if (medicAsset != null)
-                    EffectUtility.TriggerEffect(medicAsset, Player.Connection, player.Position, true);
+                if (_medicEffect != null)
+                    EffectUtility.TriggerEffect(_medicEffect, Player.Connection, player.Position, true);
 
                 medicList.Add(player.Connection);
             }
 
-            if (injuredAsset != null)
-                EffectUtility.TriggerEffect(injuredAsset, medicList, position, true);
+            if (_injuredEffect != null)
+                EffectUtility.TriggerEffect(_injuredEffect, medicList, position, true);
             
             yield return new WaitForSeconds(MarkerUpdateFrequency);
         }
@@ -597,7 +605,7 @@ public class PlayerInjureComponent : MonoBehaviour,
                 parameters.cause = _injureParameters.cause;
                 // times per second simulate() is ran times bleed damage ticks = how many seconds it will take to lose 1 hp
                 float bleedsPerSecond = Time.timeScale / PlayerInput.RATE / Provider.modeConfigData.Players.Bleed_Damage_Ticks;
-                parameters.damage *= /* todo UCWarfare.Config.InjuredDamageMultiplier */ 0.4f / 10 * bleedsPerSecond * /* todo UCWarfare.Config.InjuredLifeTimeSeconds */ 30;
+                parameters.damage *= InjuredDamageMultiplier / 10 * bleedsPerSecond * InjureStandardBleedoutDuration;
             }
             else
             {
@@ -653,5 +661,11 @@ public class PlayerInjureComponent : MonoBehaviour,
 
         e.Cancel();
         _chatService.Send(Player, _playerTranslations.InjuredUIGiveUpChat);
+    }
+
+    void IEventListener<EquipUseableRequested>.HandleEvent(EquipUseableRequested e, IServiceProvider serviceProvider)
+    {
+        if (_isInjured)
+            e.Cancel();
     }
 }

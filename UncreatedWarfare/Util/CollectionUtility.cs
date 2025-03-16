@@ -525,7 +525,6 @@ public class LookAtComparer<TValue> : IComparer<TValue>
 {
     private readonly Vector3 _lookOrigin;
     private readonly Func<TValue, Vector3> _getLookDirection;
-    private readonly bool _horizontalDistanceOnly;
     private readonly bool _reverse;
 
     public LookAtComparer(Vector3 lookOrigin, Func<TValue, Vector3> getLookDirection, bool reverse)

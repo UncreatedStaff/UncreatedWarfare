@@ -490,7 +490,6 @@ public class WhitelistService :
 
         int whitelistAmount = await GetWhitelistedAmount(assetContainer, token);
         await UniTask.SwitchToMainThread(token);
-        Console.WriteLine("Pick up whitelisted amount: " + whitelistAmount);
 
         if (whitelistAmount == -1)
             return;

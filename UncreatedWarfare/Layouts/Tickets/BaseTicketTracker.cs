@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Events.Models.Tickets;
+using Uncreated.Warfare.Layouts.Phases;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
@@ -43,7 +44,8 @@ public abstract class BaseTicketTracker : ILayoutHostedService, ITicketTracker
     {
         GameThread.AssertCurrent();
 
-        if (!team.IsValid)
+        // todo: id prefer a better way to keep tickets from running in main phases
+        if (!team.IsValid || Layout.ActivePhase is not ActionPhase)
             return;
 
         int newTicketCount;

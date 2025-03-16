@@ -128,7 +128,7 @@ public class LeaderboardPhase : BasePhase<PhaseTeamSettings>, IDisposable, IEven
                 continue;
 
             stat.CachedExpression = new RewardExpression($"Stat_{stat.Name}_{Layout.LayoutInfo.DisplayName}",
-                typeof(double), typeof(double), typeof(ILeaderboardRow), typeof(LeaderboardPhase),
+                typeof(double), typeof(double), typeof(LeaderboardPhase),
                 tempVars ??= GetVariables(), stat.Expression, Logger);
         }
 

@@ -10,16 +10,17 @@ namespace Uncreated.Warfare.Vehicles.WarfareVehicles.Flares;
 
 public class FlareEmitter : MonoBehaviour
 {
-    public WarfareVehicle Vehicle { get; private set; }
-    
+    public WarfareVehicle Vehicle { get; private set; } = null!;
+
+
     private const int StartingFlaresAttackHeli = 30;
     private const int StartingFlaresTransportHeli = 50;
     private const int StartingFlaresJet = 30;
     private const int FlareBurstCount = 10;
     private const int FlareCooldown = 11;
     
-    private VehicleAsset _flareAsset;
-    private EffectAsset _dropFlaresSound;
+    private VehicleAsset _flareAsset = null!;
+    private EffectAsset _dropFlaresSound = null!;
     
     private float _timeLastFlareSpawned;
     private float _timeLastFlareDrop;
@@ -37,6 +38,7 @@ public class FlareEmitter : MonoBehaviour
         return this;
     }
 
+    [UsedImplicitly]
     private void OnDestroy()
     {
         PlayerKeys.PressedPluginKey3 -= OnFlareKeyPressed;
@@ -77,7 +79,7 @@ public class FlareEmitter : MonoBehaviour
             if (passenger.player == null)
                 continue;
             
-            EffectManager.sendUIEffect(_dropFlaresSound.id, -1, passenger.player.transportConnection, true);
+            EffectManager.SendUIEffect(_dropFlaresSound, -1, passenger.player.transportConnection, true);
         }
     }
     public void ReceiveMissileWarning()
@@ -97,7 +99,8 @@ public class FlareEmitter : MonoBehaviour
         yield return new WaitForSeconds(1);
         vehicleHUD.ToggleMissileWarning(Vehicle, false);
     }
-    
+
+    [UsedImplicitly]
     private void FixedUpdate()
     {
         if (TotalFlaresLeft <= 0 || _flareBurst <= 0 || Time.time - _timeLastFlareSpawned < 0.2f)

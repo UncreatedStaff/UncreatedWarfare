@@ -15,22 +15,21 @@ public class RewardExpression
     private readonly string _methodName;
     private readonly Type _methodReturnType;
     private readonly Type _dataReturnType;
-    private readonly Type? _inputType;
     private readonly Type _ownerType;
     private readonly IReadOnlyList<IEmittableVariable> _variables;
     private readonly string _expression;
-    private string _expression2;
+    private string? _expression2;
     private EvaluateDelegate? _method;
     private static MethodInfo[]? _mathMethods;
     private readonly ILogger _logger;
     private List<string>? _tokens;
     private const bool DebugLogging = false;
-    public RewardExpression(string methodName, Type methodReturnType, Type dataReturnType, Type? inputType, Type ownerType, IReadOnlyList<IEmittableVariable> variables, string expression, ILogger logger)
+
+    public RewardExpression(string methodName, Type methodReturnType, Type dataReturnType, Type ownerType, IReadOnlyList<IEmittableVariable> variables, string expression, ILogger logger)
     {
         _methodName = methodName;
         _methodReturnType = methodReturnType;
         _dataReturnType = dataReturnType;
-        _inputType = inputType;
         _ownerType = ownerType;
         _variables = variables;
         _expression = expression;

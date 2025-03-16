@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Util;
@@ -21,7 +21,7 @@ public class ThrownAmmoBag : ThrownSupplyCrate
         _completedAmmoCrateAsset = completedAmmoCrateAsset;
         _startingAmmo = startingAmmo;
         _isInMain = isInMain;
-        _thrownComponent = _throwable.AddComponent<ThrownComponent>();
+        _thrownComponent = Throwable.AddComponent<ThrownComponent>();
         _thrownComponent.OnThrowableDestroyed = OnThrowableDestroyed;
     }
 
@@ -33,7 +33,7 @@ public class ThrownAmmoBag : ThrownSupplyCrate
             return;
         }
         
-        int resultsCount = Physics.OverlapSphereNonAlloc(_throwable.transform.position, 0.5f, TempHitColliders, 
+        int resultsCount = Physics.OverlapSphereNonAlloc(Throwable.transform.position, 0.5f, TempHitColliders, 
             MidairCheckLayerMask);
         
         if (resultsCount <= 0) // check that this ammo bag isn't being destroyed while midair
@@ -44,11 +44,11 @@ public class ThrownAmmoBag : ThrownSupplyCrate
             
         IBuildable buildable = BuildableExtensions.DropBuildable(
             _completedAmmoCrateAsset,
-            _throwable.transform.position,
-            Quaternion.Euler(-90, _throwable.transform.eulerAngles.y, 0),
-            _thrower.Steam64,
-            _thrower.GroupId
+            Throwable.transform.position,
+            Quaternion.Euler(-90, Throwable.transform.eulerAngles.y, 0),
+            Thrower.Steam64,
+            Thrower.GroupId
         );
-        buildable.Model.gameObject.AddComponent<PlacedAmmoBagComponent>().Init(_thrower, buildable, _startingAmmo);
+        buildable.Model.gameObject.AddComponent<PlacedAmmoBagComponent>().Init(Thrower, buildable, _startingAmmo);
     }
 }
