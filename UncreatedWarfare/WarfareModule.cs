@@ -978,7 +978,10 @@ public sealed class WarfareModule
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
         bldr.RegisterType<SafezoneTweaks>()
             .AsSelf().AsImplementedInterfaces()
-            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);        
+        bldr.RegisterType<MapMarkerTweaks>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
 
         // Localization
         bldr.RegisterType<LanguageService>()

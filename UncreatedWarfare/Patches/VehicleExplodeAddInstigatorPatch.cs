@@ -43,6 +43,8 @@ internal sealed class VehicleExplodeAddInstigatorPatch : IHarmonyPatch
         _target = null;
     }
 
+    // major tech debt: This prefix patch is doing too much
+    
     // SDG.Unturned.InteractableVehicle
     /// <summary>
     /// Overriding prefix of <see cref="InteractableVehicle.explode"/> to set an instigator.
@@ -129,7 +131,6 @@ internal sealed class VehicleExplodeAddInstigatorPatch : IHarmonyPatch
 
         __instance.GetComponent<Rigidbody>().AddForce(force);
         __instance.GetComponent<Rigidbody>().AddTorque(16f, 0.0f, 0.0f);
-        __instance.dropTrunkItems();
 
         if (__instance.asset.ShouldExplosionCauseDamage)
         {
@@ -154,6 +155,11 @@ internal sealed class VehicleExplodeAddInstigatorPatch : IHarmonyPatch
         // __instance.DropScrapItems();
         
         VehicleManager.sendVehicleExploded(__instance);
+        
+        // the original method drops trunk items at the beginning, however we want to do this after vehicle exploding events are invoked
+        // in case any event listeners need to remove their items
+        __instance.dropTrunkItems();
+        
         EffectAsset effect = __instance.asset.FindExplosionEffectAsset();
         if (effect != null)
         {

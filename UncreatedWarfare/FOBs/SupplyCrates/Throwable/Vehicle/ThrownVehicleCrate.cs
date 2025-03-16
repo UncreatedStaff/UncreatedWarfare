@@ -90,7 +90,7 @@ public class ThrownVehicleCrate : ThrownSupplyCrate
             if (asset == null)
                 continue;
             
-            ItemManager.dropItem(new Item(asset, EItemOrigin.CRAFT), _thrower.Position, false, true, true);
+            ItemManager.dropItem(new Item(asset, EItemOrigin.CRAFT), _throwable.transform.position, false, true, true);
         }
         
         // spawn a nice effect

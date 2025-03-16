@@ -231,7 +231,7 @@ public class VehicleRequestService :
 
         VehicleManager.ServerSetVehicleLock(vehicle, player.Steam64, player.Team.GroupId, true);
 
-        DropAmmoItems(vehicleInfo, player);
+        DropStartingItems(vehicleInfo, player);
             
         EffectUtility.TriggerEffect(UnlockSound, EffectManager.SMALL, player.Position /* todo: vehicle!.transform.position */, true);
         
@@ -245,14 +245,14 @@ public class VehicleRequestService :
         return true;
     }
 
-    private void DropAmmoItems(WarfareVehicleInfo vehicleInfo, WarfarePlayer player)
+    private void DropStartingItems(WarfareVehicleInfo vehicleInfo, WarfarePlayer player)
     {
-        foreach (IAssetLink<ItemAsset> item in vehicleInfo.Rearm.Items)
+        foreach (IAssetLink<ItemAsset> item in vehicleInfo.StartingItems)
         {
             if (item.TryGetAsset(out ItemAsset? asset))
                 ItemManager.dropItem(new Item(asset, EItemOrigin.WORLD), player.Position, true, true, true);
             else
-                _logger.LogWarning($"Vehicle rearm item not found: {item}");
+                _logger.LogWarning($"Vehicle starting item not found: {item}");
         }
     }
 }

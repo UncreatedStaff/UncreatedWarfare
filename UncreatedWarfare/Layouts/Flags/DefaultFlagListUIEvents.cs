@@ -7,11 +7,17 @@ using Uncreated.Warfare.Layouts.Tickets;
 using Uncreated.Warfare.Layouts.UI;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.UI;
+using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Layouts.Flags;
 
+/// <summary>
+/// Default UI listeners for common Flag events.
+/// This service should not be registered directly by the WarfareModule, but rather by each flag plugin.
+/// </summary>
 public class DefaultFlagListUIEvents :
+    ILayoutStartingListener,
     IEventListener<PlayerTeamChanged>,
     IEventListener<FlagCaptured>,
     IEventListener<FlagNeutralized>,
@@ -71,7 +77,11 @@ public class DefaultFlagListUIEvents :
             UpdateFlagList(set, ticketsOnly: false);
         }
     }
-
+    public UniTask HandleLayoutStartingAsync(Layout layout, CancellationToken token = default)
+    {
+        UpdateFlagListForAllPlayers();
+        return UniTask.CompletedTask;
+    }
     void IEventListener<PlayerTeamChanged>.HandleEvent(PlayerTeamChanged e, IServiceProvider serviceProvider)
     {
         UpdateFlagList(new LanguageSet(e.Player), ticketsOnly: false);
@@ -86,6 +96,7 @@ public class DefaultFlagListUIEvents :
     {
         UpdateFlagListForAllPlayers();
     }
+
     void IEventListener<TicketsChanged>.HandleEvent(TicketsChanged e, IServiceProvider serviceProvider)
     {
         foreach (LanguageSet set in _translationService.SetOf.PlayersOnTeam(e.Team))

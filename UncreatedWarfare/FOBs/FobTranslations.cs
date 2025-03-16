@@ -67,7 +67,7 @@ public class FobTranslations : PropertiesTranslationCollection
 
     [TranslationData("Indicates that a player doesn't have permissions or is missing the required kit, etc. to place a buildable.")]
     public readonly Translation BuildableNotAllowed = new Translation("<#ffa238>You are not allowed to place this buildable.");
-
+    
     [TranslationData(IsPriorityTranslation = false)]
     public readonly Translation<IDeployable, GridLocation, string> FOBUI = new Translation<IDeployable, GridLocation, string>("{0}  <color=#d6d2c7>{1}</color>  {2}", TranslationOptions.UnityUI, arg0Fmt: Flags.ColorNameFormat);
 

@@ -9,6 +9,7 @@ using Uncreated.Warfare.Events.Models.Fobs;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.FOBs.Entities;
+using Uncreated.Warfare.FOBs.SupplyCrates.Throwable.Vehicle;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits.Whitelists;
 using Uncreated.Warfare.Layouts.Teams;
@@ -212,6 +213,11 @@ public partial class FobManager : IWhitelistExceptionProvider, ILayoutHostedServ
         foreach (ShovelableInfo shovelable in Configuration.Shovelables)
         {
             if (shovelable.Foundation.MatchAsset(assetContainer))
+                return new ValueTask<int>(-1);
+        }
+        foreach (ThrownVehicleCrateInfo vehicleCrate in Configuration.ThrowableVehicleSupplyCrates)
+        {
+            if (vehicleCrate.ThrowableItemAsset.MatchAsset(assetContainer))
                 return new ValueTask<int>(-1);
         }
 

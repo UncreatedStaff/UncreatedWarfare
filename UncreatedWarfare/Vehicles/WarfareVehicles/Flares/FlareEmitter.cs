@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Interaction;
@@ -31,14 +32,14 @@ public class FlareEmitter : MonoBehaviour
         Vehicle = vehicle;
         _flareAsset = assetConfiguration.GetAssetLink<VehicleAsset>("Vehicles:Countermeasure").GetAssetOrFail();
         _dropFlaresSound = assetConfiguration.GetAssetLink<EffectAsset>("Effects:CountermeasuresDeploy").GetAssetOrFail();
-        ReloadCountermeasures();
-        PlayerKeys.PressedPluginKey1 += OnFlareKeyPressed;
+        ReloadFlares();
+        PlayerKeys.PressedPluginKey3 += OnFlareKeyPressed;
         return this;
     }
 
     private void OnDestroy()
     {
-        PlayerKeys.PressedPluginKey1 -= OnFlareKeyPressed;
+        PlayerKeys.PressedPluginKey3 -= OnFlareKeyPressed;
     }
 
     private void OnFlareKeyPressed(WarfarePlayer player, ref bool handled)
@@ -49,7 +50,7 @@ public class FlareEmitter : MonoBehaviour
         TryDropFlares();
         handled = true;
     }
-    public void ReloadCountermeasures()
+    public void ReloadFlares()
     {
         TotalFlaresLeft = Vehicle.Info.Type switch
         {

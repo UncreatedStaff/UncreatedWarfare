@@ -5,11 +5,13 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models.Fobs.Shovelables;
 using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.FOBs.Entities;
+using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Containers;
 using Uncreated.Warfare.Vehicles;
+using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.FOBs.Construction;
 
@@ -19,7 +21,18 @@ public class ShovelableBuildable : IBuildableFobEntity
     private readonly EffectAsset? _shovelEffect;
     public ShovelableInfo Info { get; }
     public IBuildable Buildable { get; }
-    public int HitsRemaining { get; private set; }
+
+    public int HitsRemaining
+    {
+        get => field;
+        set
+        {
+            if (value < 0)
+                field = 0;
+            else
+                field = value;
+        }
+    }
     public bool IsCompleted => HitsRemaining <= 0;
     public bool IsEmplacement => Info.Emplacement != null;
     public PlayerContributionTracker Builders { get; }
@@ -88,13 +101,18 @@ public class ShovelableBuildable : IBuildableFobEntity
                 Vector3 position = Buildable.Position + Vector3.up * FobManager.EmplacementSpawnOffset;
                 Quaternion rotation = Buildable.Rotation * BarricadeUtility.InverseDefaultBarricadeRotation;
 
-                await _serviceProvider.GetRequiredService<VehicleService>().SpawnVehicleAsync(
+                WarfareVehicle warfareVehicle = await _serviceProvider.GetRequiredService<VehicleService>().SpawnVehicleAsync(
                     emplacementInfo.Vehicle,
                     position,
                     rotation,
                     Buildable.Owner,
                     Buildable.Group
                 );
+
+                foreach (var itemAsset in warfareVehicle.Info.StartingItems)
+                {
+                    ItemManager.dropItem(new Item(itemAsset.GetAssetOrFail(), EItemOrigin.ADMIN), position, false, true, true);
+                }
             }
             catch (Exception ex)
             {
@@ -108,7 +126,11 @@ public class ShovelableBuildable : IBuildableFobEntity
         if (IsCompleted)
             return false;
 
-        HitsRemaining--;
+        if (shoveler.Component<KitPlayerComponent>().ActiveClass == Class.CombatEngineer)
+            HitsRemaining -= 2;
+        else
+            HitsRemaining--;
+        
         if (shoveler.CurrentSession != null)
             Builders.RecordWork(shoveler.Steam64, 1);
 

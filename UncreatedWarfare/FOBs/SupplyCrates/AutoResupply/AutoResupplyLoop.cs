@@ -70,7 +70,7 @@ public class AutoResupplyLoop : ILayoutHostedService, ILayoutStartingListener
                 continue;
             
             _vehicleService.RefillTrunkItems(vehicle, vehicle.Info.Trunk);
-            vehicle.FlareEmitter?.ReloadCountermeasures();
+            vehicle.FlareEmitter?.ReloadFlares();
             vehicle.NeedsAutoResupply = false;
 
             WarfarePlayer? owner = _playerService.GetOnlinePlayerOrNull(vehicle.Vehicle.lockedOwner);

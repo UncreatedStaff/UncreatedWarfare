@@ -40,8 +40,9 @@ public class WarfareVehicleInfo : IEquatable<WarfareVehicleInfo>, ITranslationAr
 
     public IReadOnlyList<UnlockRequirement> UnlockRequirements { get; set; } = Array.Empty<UnlockRequirement>();
     public required int CreditCost { get; set; }
-    public required bool WipeTrunkOnDestroyed { get; set; }
+    public required bool WipeTrunkOnDestroyed { get; set; } = true;
     public IReadOnlyList<TrunkItem> Trunk { get; set; } = Array.Empty<TrunkItem>();
+    public IReadOnlyList<IAssetLink<ItemAsset>> StartingItems { get; set; } = Array.Empty<IAssetLink<ItemAsset>>();
 
     public static void EnsureInitialized(WarfareVehicleInfo v)
     {
@@ -57,6 +58,7 @@ public class WarfareVehicleInfo : IEquatable<WarfareVehicleInfo>, ITranslationAr
 
         v.Crew.Seats ??= Array.Empty<int>();
         v.Rearm.Items ??= Array.Empty<IAssetLink<ItemAsset>>();
+        v.StartingItems ??= Array.Empty<IAssetLink<ItemAsset>>();
     }
 
     public class CrewInfo
@@ -81,13 +83,6 @@ public class WarfareVehicleInfo : IEquatable<WarfareVehicleInfo>, ITranslationAr
         /// Amount of credits lost per second of vehicle life.
         /// </summary>
         public double ValueLossSpeed { get; set; } = 0.125d;
-    }
-
-    public class RequestItem
-    {
-        public required IAssetLink<ItemAsset> Item { get; set; }
-        public byte[]? State { get; set; }
-        public int Amount { get; set; } = 1;
     }
 
     public class TrunkItem
@@ -127,6 +122,7 @@ public class WarfareVehicleInfo : IEquatable<WarfareVehicleInfo>, ITranslationAr
         CreditCost = other.CreditCost;
         WipeTrunkOnDestroyed = other.WipeTrunkOnDestroyed;
         Trunk = other.Trunk;
+        StartingItems = other.StartingItems;
         // todo Delays = other.Delays;
 
         WeakReference<WarfareVehicleInfo>? dependent = DependantInfo;
@@ -186,7 +182,8 @@ public class WarfareVehicleInfo : IEquatable<WarfareVehicleInfo>, ITranslationAr
             ShortName = vehicleAsset.FriendlyName,
             Crew = new CrewInfo(),
             Rearm = new RearmInfo(),
-            Abandon = new AbandonInfo()
+            Abandon = new AbandonInfo(),
+            StartingItems = Array.Empty<IAssetLink<ItemAsset>>(),
         };
     }
 }

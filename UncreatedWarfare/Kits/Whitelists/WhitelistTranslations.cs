@@ -62,6 +62,9 @@ public class WhitelistTranslations : PropertiesTranslationCollection
         "<#ff8c69>You can't carry more than {0} {1}.",
         arg1Fmt: new ArgumentFormat(PluralAddon.WhenArgument(0), RarityColorAddon.Instance)
     );
+    
+    [TranslationData("Sent to a player when they try to place a barricade on a vehicle.")]
+    public readonly Translation WhitelistProhibitedPlaceOnFriendlyVehicle = new Translation("<#ff8c69>You are not allowed to place barricades on friendly vehicles.");
 
     [TranslationData("Sent to a player when they try to place an un-whitelisted placeable that isn't in their kit.")]
     public readonly Translation<ItemAsset> WhitelistProhibitedPlace = new Translation<ItemAsset>(

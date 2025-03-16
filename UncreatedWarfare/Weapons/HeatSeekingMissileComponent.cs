@@ -132,7 +132,7 @@ public class HeatSeekingMissileComponent : MonoBehaviour
         if (_lastKnownTarget == null || _lost)
         {
             idealDirection = _projectile.transform.TransformPoint(_randomRelativePosition) - _projectile.transform.position;
-            guidanceMultiplier *= 0.1f;
+            guidanceMultiplier = 0.1f;
         }
         else
         {

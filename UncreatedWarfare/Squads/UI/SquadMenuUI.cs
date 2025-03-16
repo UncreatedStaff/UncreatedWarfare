@@ -16,6 +16,7 @@ using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Squads.UI;
@@ -32,15 +33,18 @@ public class SquadMenuUI :
 {
     private readonly SquadManager _squadManager;
     private readonly IPlayerService _playerService;
+    private readonly SquadTranslations _translations;
     public LabeledButton CloseMenuButton { get; } = new LabeledButton("SquadMenuCloseButton");
     public LabeledStateButton CreateSquadButton { get; } = new LabeledStateButton("CreateSquadButton", "./Label", "./ButtonState");
     public UnturnedTextBox CreateSquadInput { get; } = new UnturnedTextBox("CreateSquadInput") { UseData = true };
+    public UnturnedTextBox CreateSquadFeedback { get; } = new UnturnedTextBox("CreateSquadFeedback");
     public SquadMenuElement[] Squads { get; } = ElementPatterns.CreateArray<SquadMenuElement>("ScrollView/Viewport/Content/Squad_{0}/Squad{1}_{0}", 1, to: SquadManager.MaxSquadCount);
     
     public SquadMenuUI(IServiceProvider serviceProvider, AssetConfiguration assetConfig, ILoggerFactory loggerFactory)
         : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:SquadMenuHUD"), debugLogging: false, staticKey: true)
     {
         _squadManager = serviceProvider.GetRequiredService<SquadManager>();
+        _translations = serviceProvider.GetRequiredService<TranslationInjection<SquadTranslations>>().Value;
         _playerService = serviceProvider.GetRequiredService<IPlayerService>();
         CreateSquadButton.OnClicked += CreateSquadButton_OnClicked;
         CloseMenuButton.OnClicked += CloseMenuButton_OnClicked;
@@ -78,6 +82,16 @@ public class SquadMenuUI :
         string? squadName = textBoxData.Text;
         if (string.IsNullOrWhiteSpace(squadName))
             squadName = $"{player.channel.owner.playerID.playerName}'s Squad";
+        
+        int numberOfExistingSquads = _squadManager.Squads.Count(s => s.Team == squadleader.Team);
+        int numberOfTeammates = _playerService.OnlinePlayers.Count(p => p.Team == squadleader.Team);
+        
+        int maxAllowedSquads = Mathf.CeilToInt((float)numberOfTeammates / Squad.MaxMembers) + 1;
+        if (numberOfExistingSquads > maxAllowedSquads)
+        {
+            CreateSquadFeedback.SetText(squadleader, _translations.SquadLimitReached.Translate(squadleader));
+            return;
+        }
 
         squadName = squadName.TruncateWithEllipses(32);
 

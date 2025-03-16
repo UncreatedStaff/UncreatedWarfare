@@ -81,6 +81,13 @@ public class ClaimToRearmTweaks : // todo: move this class out of this namespace
         if (ammoStorage == null)
             return;
 
+        if (e.Player.Team.GroupId != e.Buildable.Group)
+        {
+            _chatService.Send(e.Player, _translations.AmmoWrongTeam);
+            e.Cancel();
+            return;
+        }
+
         Kit? kit = null;
         if (e.Player.TryGetFromContainer(out KitPlayerComponent? kitComponent) && kitComponent.ActiveKitKey.HasValue)
         {

@@ -1,6 +1,8 @@
 using System;
+using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Vehicles;
+using Uncreated.Warfare.Events.Patches;
 
 namespace Uncreated.Warfare.Vehicles.Events.Tweaks;
 
@@ -8,6 +10,7 @@ public class VehicleTrunkTweaks :
     IEventListener<VehicleExploded>,
     IEventListener<VehicleDespawned>
 {
+    [EventListener(MustRunInstantly = true)]
     public void HandleEvent(VehicleExploded e, IServiceProvider serviceProvider)
     {
         if (e.Vehicle.Info.WipeTrunkOnDestroyed)

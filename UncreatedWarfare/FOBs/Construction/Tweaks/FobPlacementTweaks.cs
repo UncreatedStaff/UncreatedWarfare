@@ -113,7 +113,7 @@ public class FobPlacementTweaks :
                 return;
             }
         }
-
+        
         if (WaterUtility.isPointUnderwater(e.Position))
         {
             chatService.Send(e.OriginalPlacer, _translations.BuildFOBUnderwater);

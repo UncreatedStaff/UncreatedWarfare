@@ -57,7 +57,7 @@ public class RangeCommandTranslations : PropertiesTranslationCollection
     public readonly Translation RangeNoMarker = new Translation("<#9e9c99>You squad has no marker.");
 
     [TranslationData("Output if the player is not the squad leader.")]
-    public readonly Translation RangeNotSquadleader = new Translation("<#9e9c99>Only <#cedcde>SQUAD LEADERS</color> can place markers.");
+    public readonly Translation DropMarkerNotSquadleader = new Translation("<#9e9c99>Only <#cedcde>SQUAD LEADERS</color> can place markers.");
 
     [TranslationData("Output if the player is not in a squad.")]
     public readonly Translation RangeNotInSquad = new Translation("<#9e9c99>You must JOIN A SQUAD in order to do /range.");

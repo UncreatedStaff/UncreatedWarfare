@@ -1,4 +1,5 @@
 using System;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Buildables;
@@ -7,6 +8,7 @@ using Uncreated.Warfare.Events.Models.Vehicles;
 using Uncreated.Warfare.Events.Models.Zones;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Requests;
+using Uncreated.Warfare.Kits.Whitelists;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Zones;
 
@@ -14,7 +16,7 @@ namespace Uncreated.Warfare.Tweaks;
 
 public class SafezoneTweaks :
     IEventListener<PlayerUseableEquipped>,
-    IEventListener<EquipUseableRequested>,
+    IAsyncEventListener<EquipUseableRequested>,
     IEventListener<PlayerEnteredZone>,
     IEventListener<PlayerExitedZone>,
     IEventListener<ChangeFiremodeRequested>,
@@ -24,12 +26,14 @@ public class SafezoneTweaks :
 {
     private readonly ZoneStore _zoneStore;
     private readonly KitRequestService _kitRequestService;
+    private readonly WhitelistService _whitelistService;
     private readonly ILogger<SafezoneTweaks> _logger;
 
-    public SafezoneTweaks(ZoneStore zoneStore, KitRequestService kitRequestService, ILogger<SafezoneTweaks> logger)
+    public SafezoneTweaks(ZoneStore zoneStore, KitRequestService kitRequestService, WhitelistService whitelistService, ILogger<SafezoneTweaks> logger)
     {
         _zoneStore = zoneStore;
         _kitRequestService = kitRequestService;
+        _whitelistService = whitelistService;
         _logger = logger;
     }
 
@@ -77,7 +81,7 @@ public class SafezoneTweaks :
         e.Equipment.sendUpdateState();
     }
 
-    public void HandleEvent(EquipUseableRequested e, IServiceProvider serviceProvider)
+    public async UniTask HandleEventAsync(EquipUseableRequested e, IServiceProvider serviceProvider, CancellationToken token = default)
     {
         if (e.Player.IsOnDuty)
             return;
@@ -85,10 +89,13 @@ public class SafezoneTweaks :
         if (!_zoneStore.IsInMainBase(e.Player.Position))
             return;
         
+        // prevent equipping all throwables in main if not on duty
         if (e.Asset is not ItemThrowableAsset)
             return;
         
-        // prevent equipping all throwables in main if not on duty
+        if (await _whitelistService.IsWhitelisted(AssetLink.Create(e.Asset), token))
+            return;
+        
         e.Cancel();
     }
 

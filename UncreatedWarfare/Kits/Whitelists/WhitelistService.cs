@@ -181,6 +181,33 @@ public class WhitelistService :
 
         return amt;
     }
+    
+    /// <summary>
+    /// Checks if an item is whitelisted and can be picked up by the player, regardless of the whitelisted max amount. Takes <see cref="IWhitelistExceptionProvider"/>'s into account.
+    /// </summary>
+    /// <returns><see langword="true"/> if the item can be picked up by the player, <see langword="false"/> otherwise.</returns>
+    public async Task<bool> IsWhitelisted(IAssetContainer assetContainer, CancellationToken token = default)
+    {
+        ItemWhitelist? whitelist = await GetWhitelistAsync(assetContainer, token).ConfigureAwait(false);
+        if (whitelist != null)
+        {
+            return whitelist.Amount != 0;
+        }
+        
+        foreach (IWhitelistExceptionProvider provider in _module.ScopedProvider.Resolve<IEnumerable<IWhitelistExceptionProvider>>())
+        {
+            if (!GameThread.IsCurrent)
+            {
+                await UniTask.SwitchToMainThread(token);
+            }
+
+            int amtNum = await provider.GetWhitelistAmount(assetContainer).ConfigureAwait(false);
+            if (amtNum != 0)
+                return true;
+        }
+
+        return false;
+    }
 
     /// <summary>
     /// Get the amount value on whitelists. Takes <see cref="IWhitelistExceptionProvider"/>'s into account.
@@ -304,10 +331,8 @@ public class WhitelistService :
         IAssetLink<ItemAsset> asset = AssetLink.Create(e.Buildable.Asset);
         if (kit != null && _kitItemResolver.ContainsItem(kit, asset, e.Player.Team))
             return;
-
-        ItemWhitelist? whitelist = await GetWhitelistAsync(asset, token).ConfigureAwait(false);
-
-        if (whitelist is not { Amount: not 0 })
+        
+        if (!await IsWhitelisted(asset, token))
         {
             _chatService.Send(e.Player, _translations.WhitelistProhibitedSalvage, e.Buildable.Asset);
             e.Cancel();
@@ -324,6 +349,13 @@ public class WhitelistService :
         }
 
         await UniTask.SwitchToMainThread(token);
+        
+        if (e.IsOnVehicle && e.OriginalPlacer.Team.GroupId == e.TargetVehicle!.lockedGroup)
+        {
+            _chatService.Send(e.OriginalPlacer, _translations.WhitelistProhibitedPlaceOnFriendlyVehicle);
+            e.Cancel();
+            return;
+        }
 
         if (_zoneStore.IsInMainBase(e.OriginalPlacer))
         {
@@ -360,13 +392,13 @@ public class WhitelistService :
             return;
         }
 
-        FobManager? fobManager = serviceProvider.GetService<FobManager>();
-        if (fobManager != null
-            && fobManager.Configuration.Shovelables
-                .Any(x => x.Foundation.MatchAsset(assetContainer) || x.CompletedStructure.MatchAsset(assetContainer)))
-        {
-            return;
-        }
+        // FobManager? fobManager = serviceProvider.GetService<FobManager>();
+        // if (fobManager != null
+        //     && fobManager.Configuration.Shovelables
+        //         .Any(x => x.Foundation.MatchAsset(assetContainer) || x.CompletedStructure.MatchAsset(assetContainer)))
+        // {
+        //     return;
+        // }
 
         bool isBarricade = e.Asset is ItemBarricadeAsset;
 
