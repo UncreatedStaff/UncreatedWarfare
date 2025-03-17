@@ -79,6 +79,8 @@ public class ThrownVehicleCrate : ThrownSupplyCrate
         }
         
         DropSupplies(warfareVehicle);
+        if (warfareVehicle.FlareEmitter != null)
+            warfareVehicle.FlareEmitter.ReloadFlares();
     }
 
     private void DropSupplies(WarfareVehicle warfareVehicle)
