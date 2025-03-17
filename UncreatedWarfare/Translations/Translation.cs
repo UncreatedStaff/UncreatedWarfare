@@ -156,7 +156,7 @@ public class Translation : IDisposable
             if (numToReplace == 1)
             {
                 ref ArgumentSpan span = ref pluralizers[firstToReplace];
-                ReadOnlySpan<char> word = args.PreformattedValue.Slice(span.StartIndex + argumentOffset, span.Length);
+                ReadOnlySpan<char> word = args.PreformattedValue.Slice(span.StartIndex - argumentOffset, span.Length);
                 string pluralWord = TranslationPluralizations.Pluralize(word, language);
                 return TranslationArgumentModifiers.ReplaceModifiers(args.PreformattedValue, pluralWord, indices, pluralizers, argumentOffset);
             }
@@ -177,7 +177,7 @@ public class Translation : IDisposable
                     if (index < 0)
                         continue;
 
-                    ReadOnlySpan<char> word = args.PreformattedValue.Slice(span.StartIndex + argumentOffset, span.Length);
+                    ReadOnlySpan<char> word = args.PreformattedValue.Slice(span.StartIndex - argumentOffset, span.Length);
                     string pluralWord = TranslationPluralizations.Pluralize(word, language);
                     index = totalSize;
                     totalSize += pluralWord.Length;
