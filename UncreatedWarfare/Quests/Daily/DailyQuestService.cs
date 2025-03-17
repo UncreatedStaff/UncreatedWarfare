@@ -389,6 +389,10 @@ public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoin
          *
          */
 
+        string iconPath = string.IsNullOrWhiteSpace(_modIconPath)
+            ? Path.GetFullPath(_modIconPath, _module.HomeDirectory)
+            : string.Empty;
+
         ulong? modId = await _uploader.UploadMod(new WorkshopUploadParameters
         {
             Title = "Uncreated Daily Quests",
@@ -399,7 +403,7 @@ public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoin
             Username = _steamcmdLoginUsername!,
             Password = _steamcmdLoginPassword!,
             ModId = _workshopId,
-            ImageFile = !string.IsNullOrWhiteSpace(_modIconPath) && File.Exists(_modIconPath) ? _modIconPath : string.Empty
+            ImageFile = iconPath
         }, _logger, token);
 
         if (modId.HasValue)

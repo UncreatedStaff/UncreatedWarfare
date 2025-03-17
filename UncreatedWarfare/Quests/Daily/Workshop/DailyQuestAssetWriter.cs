@@ -15,6 +15,8 @@ internal static class DailyQuestAssetWriter
         if (Directory.Exists(contentFolder))
             Directory.Delete(contentFolder, recursive: true);
 
+        Directory.CreateDirectory(contentFolder);
+
         // meta file allows Unturned to find the mod item
         File.WriteAllBytes(Path.Combine(contentFolder, "Object.meta"), new byte[1]);
 

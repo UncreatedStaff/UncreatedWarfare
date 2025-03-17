@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Uncreated.Warfare.Layouts.Teams;
 
 namespace Uncreated.Warfare.Layouts.Flags;
@@ -57,6 +57,7 @@ public class SingleLeaderContest
     {
         LeaderPoints = Mathf.Clamp(LeaderPoints + points, 0, MaxPossiblePoints);
     }
+
     /// <summary>
     /// Award points to specific team.
     /// All teams compete to be the only team reaching the max amount of points possible.

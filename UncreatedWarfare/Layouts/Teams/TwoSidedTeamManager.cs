@@ -109,7 +109,7 @@ public class TwoSidedTeamManager : ITeamManager<Team>
         team ??= Team.NoTeam;
         Team oldTeam = player.Team;
 
-        if (oldTeam == team)
+        if (oldTeam == team && player.UnturnedPlayer.quests.groupID == team.GroupId)
             return;
 
         if (!team.IsValid)

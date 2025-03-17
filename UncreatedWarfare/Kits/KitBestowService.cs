@@ -68,6 +68,7 @@ public class KitBestowService
         }
 
         player.Save.KitId = kit.Key;
+        player.Save.WasKitLowAmmo = data.IsLowAmmo;
         player.Save.Save();
 
         player.Component<SkillsetPlayerComponent>().EnsureSkillsets(skillsets);

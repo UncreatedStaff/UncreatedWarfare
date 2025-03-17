@@ -27,22 +27,27 @@ internal sealed class KeepPlayerStateOnRejoinTweak : IAsyncEventListener<PlayerJ
     {
         await UniTask.SwitchToMainThread(token);
 
-        if (e.Player.UnturnedPlayer.quests.groupID != CSteamID.Nil)
-            e.Player.UnturnedPlayer.quests.leaveGroup(true);
-
         if (e.SaveData.LastGameId != _layout.LayoutId)
         {
             await _layout.TeamManager.JoinTeamAsync(e.Player, Team.NoTeam, token);
             return;
         }
 
+        bool changedTeam = false;
         if (e.SaveData.TeamId != 0)
         {
             Team team = _layout.TeamManager.GetTeam(new CSteamID(e.SaveData.TeamId));
             if (team.IsValid)
             {
+                changedTeam = true;
                 await _layout.TeamManager.JoinTeamAsync(e.Player, team, token);
+                await UniTask.SwitchToMainThread(token);
             }
+        }
+
+        if (!changedTeam && e.Player.UnturnedPlayer.quests.isMemberOfAGroup)
+        {
+            e.Player.UnturnedPlayer.quests.leaveGroup(true);
         }
 
         if (e.SaveData.KitId != 0)

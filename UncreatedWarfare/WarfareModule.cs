@@ -945,6 +945,8 @@ public sealed class WarfareModule
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
         bldr.RegisterType<KeepItemsAndStatsOnDeathTweak>()
             .AsImplementedInterfaces();
+        bldr.RegisterType<DisallowGroupsTweak>()
+            .AsImplementedInterfaces();
         bldr.RegisterType<ShovelableWarningTweak>()
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);

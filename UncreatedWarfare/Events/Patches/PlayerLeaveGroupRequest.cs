@@ -2,13 +2,10 @@ using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
 using HarmonyLib;
 using System.Reflection;
-using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Events.Models.Players;
-using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Patches;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
-using Uncreated.Warfare.Players.Permissions;
 
 namespace Uncreated.Warfare.Events.Patches;
 
