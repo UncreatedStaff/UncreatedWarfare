@@ -157,30 +157,6 @@ public static class RandomUtility
     }
 
     /// <summary>
-    /// Thread-safe function to get a random index within a <paramref name="list"/>.
-    /// </summary>
-    /// <exception cref="ArgumentException"><paramref name="list"/> is empty.</exception>
-    public static int GetIndex<T>(ICollection<T> list)
-    {
-        if (list.Count == 0)
-            throw new ArgumentException("List is empty", nameof(list));
-
-        return GetInteger(0, list.Count);
-    }
-
-    /// <summary>
-    /// Thread-safe function to get a random index within a <paramref name="list"/>.
-    /// </summary>
-    /// <exception cref="ArgumentException"><paramref name="list"/> is empty.</exception>
-    public static int GetIndex<T>(IReadOnlyCollection<T> list)
-    {
-        if (list.Count == 0)
-            throw new ArgumentException("List is empty", nameof(list));
-
-        return GetInteger(0, list.Count);
-    }
-
-    /// <summary>
     /// Thread-safe function to get a random index within a <paramref name="list"/> given a weight for each element.
     /// </summary>
     /// <exception cref="ArgumentException"><paramref name="list"/> is empty.</exception>

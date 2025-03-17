@@ -5,7 +5,6 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.IO;
 using System.Linq;
 using System.Reflection;
 using Uncreated.Warfare.Configuration;
@@ -130,14 +129,14 @@ public class Layout : IDisposable
     /// Create a new <see cref="Layout"/>.
     /// </summary>
     /// <remarks>For any classes overriding this class, any services injecting the layout must be initialized using the <see cref="IServiceProvider"/> in the constructor.</remarks>
-    public Layout(ILifetimeScope serviceProvider, LayoutInfo layoutInfo)
+    public Layout(ILifetimeScope serviceProvider, LayoutInfo layoutInfo, List<IDisposable> disposableConfigs)
     {
         _cancellationTokenSource = new CancellationTokenSource();
         ServiceProvider = serviceProvider;
         LayoutInfo = layoutInfo;
         Logger = (ILogger<Layout>)serviceProvider.Resolve(typeof(ILogger<>).MakeGenericType(GetType()));
         
-        _disposableVariationConfigurationRoots = new List<IDisposable>();
+        _disposableVariationConfigurationRoots = disposableConfigs;
         PhaseList = new List<ILayoutPhase>();
         Phases = new ReadOnlyCollection<ILayoutPhase>(PhaseList);
 
@@ -170,100 +169,36 @@ public class Layout : IDisposable
     /// <returns>The new phase, or <see langword="null"/> to not use the phase. An error will be logged.</returns>
     protected virtual UniTask<ILayoutPhase?> ReadPhaseAsync(Type phaseType, IConfigurationSection configSection, CancellationToken token = default)
     {
-        ILayoutPhase? phase;
-        List<PhaseVariationInfo>? variations = ReadPhaseVariations(phaseType, configSection);
-        if (variations is not { Count: > 0 })
-        {
-            phase = (ILayoutPhase?)ReflectionUtility.CreateInstanceFixed(ServiceProvider.Resolve<IServiceProvider>(), phaseType, [ configSection ]);
-
-            try
-            {
-                configSection.Bind(phase);
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError(ex, "Unable to bind phase {0} of type {1}.", configSection.Path, phaseType);
-                return UniTask.FromResult<ILayoutPhase?>(null);
-            }
-
-            return UniTask.FromResult(phase);
-        }
-
-
-        int index = RandomUtility.GetIndex(variations, info => info.Weight);
-        PhaseVariationInfo info = variations[index];
-
-        ConfigurationBuilder configBuilder = new ConfigurationBuilder();
-        
-        IConfigurationRoot root = configBuilder
-                                    .AddYamlFile(info.FileName, true, true)
-                                    .Add(new ChainedConfigurationSource { Configuration = configSection, ShouldDisposeConfiguration = false })
-                                    .Build();
-
-        if (root is IDisposable disposable)
-            _disposableVariationConfigurationRoots.Add(disposable);
+        IConfiguration variedConfigSection = configSection;
+        _factory.ApplyVariation(ref variedConfigSection, Accessor.Formatter.Format(phaseType), LayoutInfo.FilePath);
 
         try
         {
-            phase = (ILayoutPhase?)ReflectionUtility.CreateInstanceFixed(ServiceProvider.Resolve<IServiceProvider>(), phaseType, [ root ]);
+            ILayoutPhase? phase = (ILayoutPhase?)ReflectionUtility.CreateInstanceFixed(ServiceProvider.Resolve<IServiceProvider>(), phaseType, [ variedConfigSection ]);
 
             try
             {
-                root.Bind(phase);
+                variedConfigSection.Bind(phase);
             }
             catch (Exception ex)
             {
                 Logger.LogError(ex, "Unable to bind phase {0} of type {1}.", configSection.Path, phaseType);
+                if (variedConfigSection is IDisposable d)
+                    d.Dispose();
                 return UniTask.FromResult<ILayoutPhase?>(null);
             }
+
+            if (variedConfigSection is IDisposable disposable)
+                _disposableVariationConfigurationRoots.Add(disposable);
 
             return UniTask.FromResult(phase);
         }
         catch
         {
-            if (root is not IDisposable d)
-                throw;
-
-            d.Dispose();
-            _disposableVariationConfigurationRoots.Remove(d);
+            if (variedConfigSection is IDisposable d)
+                d.Dispose();
             throw;
         }
-    }
-
-    protected virtual List<PhaseVariationInfo>? ReadPhaseVariations(Type phaseType, IConfigurationSection configSection)
-    {
-        string? variationsPath = configSection["Variations"];
-        if (string.IsNullOrEmpty(variationsPath))
-            return null;
-
-        if (!Path.IsPathRooted(variationsPath))
-        {
-            string? fileDir = Path.GetDirectoryName(LayoutInfo.FilePath);
-            if (!string.IsNullOrEmpty(fileDir))
-                variationsPath = Path.Join(fileDir, variationsPath);
-        }
-
-        if (!Directory.Exists(variationsPath))
-        {
-            Logger.LogWarning("Variation directory {0} does not exist for phase {1}.", variationsPath, phaseType);
-            return null;
-        }
-
-        // find variation files
-        List<PhaseVariationInfo> variationFiles = new List<PhaseVariationInfo>();
-        foreach (string variationFile in Directory.GetFiles(variationsPath, "*.yml", SearchOption.TopDirectoryOnly))
-        {
-            if (!YamlUtility.CheckMatchesMapFilterAndReadWeight(variationFile, out double weight))
-                continue;
-
-            PhaseVariationInfo variation = default;
-            variation.Weight = weight;
-            variation.FileName = variationFile;
-
-            variationFiles.Add(variation);
-        }
-
-        return variationFiles;
     }
 
     /// <summary>

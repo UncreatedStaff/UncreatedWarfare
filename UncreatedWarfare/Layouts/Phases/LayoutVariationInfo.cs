@@ -1,5 +1,5 @@
-﻿namespace Uncreated.Warfare.Layouts.Phases;
-public struct PhaseVariationInfo
+namespace Uncreated.Warfare.Layouts.Phases;
+public struct LayoutVariationInfo
 {
     /// <summary>
     /// Name of the file where the variation is stored.

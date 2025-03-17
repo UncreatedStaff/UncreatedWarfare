@@ -1,6 +1,8 @@
 using Autofac.Builder;
 using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.FileSystemGlobbing;
+using Microsoft.Extensions.FileSystemGlobbing.Abstractions;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -12,6 +14,7 @@ using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Exceptions;
+using Uncreated.Warfare.Layouts.Phases;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Models.GameData;
@@ -32,7 +35,6 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
     private readonly IGameDataDbContext _dbContext;
     private readonly MapScheduler _mapScheduler;
     private readonly IPlayerService _playerService;
-    private readonly WarfareLifetimeComponent _shutdownService;
     private readonly byte _region;
     private UniTask _setupTask;
 
@@ -46,8 +48,7 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
         IGameDataDbContext dbContext,
         MapScheduler mapScheduler,
         IConfiguration systemConfig,
-        IPlayerService playerService,
-        WarfareLifetimeComponent shutdownService)
+        IPlayerService playerService)
     {
         _warfare = warfare;
         _logger = logger;
@@ -55,7 +56,6 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
         _dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
         _mapScheduler = mapScheduler;
         _playerService = playerService;
-        _shutdownService = shutdownService;
         _region = systemConfig.GetValue<byte>("region");
     }
 
@@ -172,7 +172,7 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
         LayoutInfo? newLayout = null;
         if (NextLayout != null)
         {
-            newLayout = ReadLayoutInfo(NextLayout.FullName);
+            newLayout = ReadLayoutInfo(NextLayout.FullName, true);
             if (newLayout == null)
                 _logger.LogWarning($"Failed to find preferred next layout {NextLayout.Name}.");
             else
@@ -180,7 +180,7 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
             NextLayout = null;
         }
 
-        newLayout ??= SelectRandomLayouts();
+        newLayout ??= SelectRandomLayout();
 
         await UniTask.SwitchToMainThread(token);
 
@@ -243,14 +243,20 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
             throw new ArgumentException($"Type {Accessor.ExceptionFormatter.Format(layoutInfo.LayoutType)} is not assignable to Layout.", nameof(layoutInfo));
         }
 
+        List<IDisposable> stuffThatNeedsDisposedLater = new List<IDisposable>();
         // load plugin services
-        Action<ContainerBuilder> lifetimeAction = GetServiceChildLifetimeFactory(layoutInfo, layoutInfo.Layout.GetSection("Services"), layoutInfo.Layout.GetSection("Components"));
+        Action<ContainerBuilder> lifetimeAction = GetServiceChildLifetimeFactory(
+            layoutInfo,
+            layoutInfo.Layout.GetSection("Services"),
+            layoutInfo.Layout.GetSection("Components"),
+            stuffThatNeedsDisposedLater
+            );
 
         ILifetimeScope scopedProvider = await _warfare.CreateScopeAsync(lifetimeAction, token);
         await UniTask.SwitchToMainThread(token);
 
         // active layout is set in Layout default constructor
-        Layout layout = (Layout)Activator.CreateInstance(layoutInfo.LayoutType, [ scopedProvider, layoutInfo ])!;
+        Layout layout = (Layout)Activator.CreateInstance(layoutInfo.LayoutType, [ scopedProvider, layoutInfo, stuffThatNeedsDisposedLater ])!;
         if (_warfare.GetActiveLayout() != layout)
         {
             _warfare.SetActiveLayout(layout);
@@ -324,7 +330,7 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
     /// <summary>
     /// Loads all instances of <see cref="ILayoutServiceConfigurer"/> from the 'Services' list in the config and creates a lifetime scope builder using them.
     /// </summary>
-    private Action<ContainerBuilder> GetServiceChildLifetimeFactory(LayoutInfo layoutInfo, IConfiguration serviceInfo, IConfiguration collectionInfo)
+    private Action<ContainerBuilder> GetServiceChildLifetimeFactory(LayoutInfo layoutInfo, IConfiguration serviceInfo, IConfiguration componentInfo, IList<IDisposable> disposableConfiguration)
     {
         List<(string?, Type?)> types = serviceInfo.GetChildren()
             .Select(x => (x.Value, ContextualTypeResolver.ResolveType(x.Value, typeof(ILayoutServiceConfigurer))))
@@ -344,10 +350,10 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
             throw new AggregateException(missingTypeExceptions);
         }
 
-        List<(IConfigurationSection, Type)> componentTypes = new List<(IConfigurationSection, Type)>();
+        List<(IConfiguration, Type)> componentTypes = new List<(IConfiguration, Type)>();
 
         bool anyComponentFailed = false;
-        foreach (IConfigurationSection section in collectionInfo.GetChildren())
+        foreach (IConfigurationSection section in componentInfo.GetChildren())
         {
             string? componentTypeStr = section["Type"];
             if (!ContextualTypeResolver.TryResolveType(componentTypeStr, out Type? type))
@@ -357,7 +363,11 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
                 continue;
             }
 
-            componentTypes.Add((section, type));
+            IConfiguration componentConfig = section;
+            ApplyVariation(ref componentConfig, Accessor.Formatter.Format(type), layoutInfo.FilePath);
+            if (componentConfig is IDisposable disp)
+                disposableConfiguration.Add(disp);
+            componentTypes.Add((componentConfig, type));
         }
 
         if (anyComponentFailed)
@@ -368,18 +378,19 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
         {
             IServiceProvider serviceProvider = _warfare.ServiceProvider.Resolve<IServiceProvider>();
 
+            // register components
             for (int i = 0; i < componentTypes.Count; i++)
             {
-                (IConfigurationSection section, Type type) = componentTypes[i];
+                (IConfiguration section, Type type) = componentTypes[i];
                 IRegistrationBuilder<object, ConcreteReflectionActivatorData, SingleRegistrationStyle> reg = bldr.RegisterType(type);
 
                 type.ForEachBaseType((x, _) => reg.As(x));
-                reg.AsImplementedInterfaces();
-
-                reg.SingleInstance();
-                reg.WithParameter(TypedParameter.From<IConfiguration>(section));
+                reg.AsImplementedInterfaces()
+                   .SingleInstance()
+                   .WithParameter(TypedParameter.From(section));
             }
 
+            // run service configurers
             foreach ((_, Type? configurerType) in types)
             {
                 ILayoutServiceConfigurer configurer =
@@ -429,7 +440,8 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
         LayoutInfo? layout = ReadLayoutInfo(Path.Combine(
             _warfare.HomeDirectory,
             "Layouts",
-            !layoutName.EndsWith(".yml", StringComparison.OrdinalIgnoreCase) ? layoutName + ".yml" : layoutName)
+            !layoutName.EndsWith(".yml", StringComparison.OrdinalIgnoreCase) ? layoutName + ".yml" : layoutName),
+            false
         );
 
         if (layout != null)
@@ -453,7 +465,7 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
         if (single == null)
             return null;
 
-        return ReadLayoutInfo(single.FullName);
+        return ReadLayoutInfo(single.FullName, false);
     }
 
     /// <summary>
@@ -461,10 +473,10 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
     /// </summary>
     /// <remarks>Reading them each time keeps us from having to reload config.</remarks>
     /// <exception cref="InvalidOperationException">No layouts are configured.</exception>
-    public LayoutInfo SelectRandomLayouts()
+    public LayoutInfo SelectRandomLayout()
     {
         List<LayoutInfo> layouts = GetBaseLayoutFiles()
-            .Select(x => ReadLayoutInfo(x.FullName))
+            .Select(x => ReadLayoutInfo(x.FullName, false))
             .Where(x => x != null)
             .ToList()!;
 
@@ -478,19 +490,16 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
         // dispose other config providers
         for (int i = 0; i < layouts.Count; ++i)
         {
-            if (i == index)
-                continue;
-
-            (layouts[i].Layout as IDisposable)?.Dispose();
+            layouts[i].Dispose();
         }
 
-        return layouts[index];
+        return ReadLayoutInfo(layouts[index].FilePath, true) ?? throw new InvalidOperationException("Failed to load a layout somehow.");
     }
 
     /// <summary>
     /// Read a <see cref="LayoutInfo"/> from the given file and open a configuration root for the file.
     /// </summary>
-    public LayoutInfo? ReadLayoutInfo(string file)
+    public LayoutInfo? ReadLayoutInfo(string file, bool variations)
     {
         if (!File.Exists(file))
             return null;
@@ -526,14 +535,108 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
             displayName = Path.GetFileNameWithoutExtension(file);
         }
 
+        IConfiguration configuration = root;
+        if (variations)
+            ApplyVariation(ref configuration, displayName, file);
+
         return new LayoutInfo
         {
             LayoutType = layoutType,
-            Layout = root,
+            Layout = (IConfigurationRoot)configuration,
             Weight = weight,
             DisplayName = displayName,
             FilePath = file
         };
+    }
+
+    /// <summary>
+    /// Apply variations read from a specific configuration section.
+    /// </summary>
+    public void ApplyVariation(ref IConfiguration configuration, string context, string baseFilePath)
+    {
+        List<LayoutVariationInfo>? variations = ReadVariations(context, baseFilePath, configuration);
+        if (variations is not { Count: > 0 })
+            return;
+
+        LayoutVariationInfo variation = variations[RandomUtility.GetIndex(variations, v => v.Weight)];
+        configuration = new ConfigurationBuilder()
+            .Add(new ChainedConfigurationSource { Configuration = configuration, ShouldDisposeConfiguration = true })
+            .AddYamlFile(variation.FileName, false, true)
+            .Build();
+
+        _logger.LogInformation($"Variation chosen for {context}: {variation.FileName}.");
+    }
+
+    /// <summary>
+    /// Read a list of variations from a configuration section.
+    /// </summary>
+    public List<LayoutVariationInfo>? ReadVariations(string context, string baseFilePath, IConfiguration configSection)
+    {
+        IConfigurationSection variationInclude = configSection.GetSection("IncludedVariations");
+        IConfigurationSection variationExclude = configSection.GetSection("ExcludedVariations");
+
+        bool anyMatches = false;
+        Matcher matcher = new Matcher(StringComparison.OrdinalIgnoreCase);
+        if (variationInclude.Get<string[]>() is { Length: > 0 } includes)
+        {
+            foreach (string str in includes)
+            {
+                matcher.AddInclude(str);
+                anyMatches = true;
+            }
+        }
+        else if (variationInclude.Get<string>() is { } include && !string.IsNullOrWhiteSpace(include))
+        {
+            matcher.AddInclude(include);
+            anyMatches = true;
+        }
+
+        if (variationExclude.Get<string[]>() is { Length: > 0 } excludes)
+        {
+            foreach (string str in excludes)
+                matcher.AddExclude(str);
+        }
+        else if (variationExclude.Get<string>() is { } exclude && !string.IsNullOrWhiteSpace(exclude))
+            matcher.AddExclude(exclude);
+
+        if (!anyMatches)
+            return null;
+
+
+        string? baseDir = Path.GetDirectoryName(baseFilePath);
+        if (baseDir == null)
+            return null;
+
+
+        PatternMatchingResult result = matcher.Execute(new DirectoryInfoWrapper(new DirectoryInfo(baseDir)));
+
+        // find variation files
+        List<LayoutVariationInfo> variationFiles = [];
+        if (result.HasMatches)
+        {
+            foreach (FilePatternMatch variationFile in result.Files)
+            {
+                string path = Path.GetFullPath(variationFile.Path, baseDir);
+                if (!YamlUtility.CheckMatchesMapFilterAndReadWeight(path, out double weight))
+                {
+                    _logger.LogDebug($"Variations - {context} skipped variation {variationFile.Stem ?? path}.");
+                    continue;
+                }
+
+                LayoutVariationInfo variation = default;
+                variation.Weight = weight;
+                variation.FileName = path;
+
+                variationFiles.Add(variation);
+                _logger.LogDebug($"Variations - {context} matched variation {variationFile.Stem ?? path}.");
+            }
+        }
+
+        if (variationFiles.Count != 0)
+            return variationFiles;
+
+        _logger.LogWarning($"There are no matching variation files for {context}.");
+        return null;
     }
 
     /// <summary>

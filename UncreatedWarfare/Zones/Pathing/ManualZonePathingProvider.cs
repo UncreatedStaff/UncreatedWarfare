@@ -45,6 +45,9 @@ public class ManualZonePathingProvider : IZonePathingProvider
             }
 
             zones.Add(zone!);
+
+            if (i != 0 && zone!.Type == ZoneType.MainBase)
+                break;
         }
 
         if (zones.Count <= 2 || zones[0].Type != ZoneType.MainBase || zones[^1].Type != ZoneType.MainBase)
