@@ -1758,6 +1758,56 @@
             Editor-only helper to read all text/dialogue.
             </summary>
         </member>
+        <member name="P:SDG.Unturned.SkinAsset.lightingTime">
+            <summary>
+            Used by dawn and dusk skins which pull per-level lighting colors.
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.SkinAsset.SetMaterialProperties(UnityEngine.Material)">
+            <summary>
+            Note: unfortunately it appears the stupid skin system always instantiated materials, but never destroys
+            them... will need to clean this up, but it will be tricky because the game does not hold a reference to them.
+            </summary>
+        </member>
+        <member name="P:SDG.Unturned.SkinAsset.ShouldHideMagazine">
+            <summary>
+            If true, sets the Magazine attachment hook inactive while this skin is applied. (guns only)
+            
+            Nelson 2025-03-10: Adding this to address mismatched Ace bullets with certain skins. (public issue #4923)
+            It should be fine for vanilla guns because there shouldn't be assumptions about Magazine enable/disable,
+            but modded guns may have different expectations (particularly with GunAttachmentEventHook).
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.SkinAsset.specialAudioOverride">
+            <summary>
+            Used by melee skins to override impact sound.
+            </summary>
+        </member>
+        <member name="T:SDG.Unturned.CraftingBlacklistAsset">
+            <summary>
+            Restricts which items can be crafted.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.CraftingBlacklistAsset.inputItems">
+            <summary>
+            Restrict blueprints that consume these items.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.CraftingBlacklistAsset.outputItems">
+            <summary>
+            Restrict blueprints that generate these items.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.CraftingBlacklistAsset.allowCoreBlueprints">
+            <summary>
+            If false, blueprints on vanilla/core/built-in items are not allowed. Defaults to true.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.CraftingBlacklistAsset.blueprints">
+            <summary>
+            Restrict specific blueprints.
+            </summary>
+        </member>
         <member name="F:SDG.Unturned.LightingManager.SAVEDATA_VERSION_INITIAL">
             <summary>
             Version before named version constants were introduced. (2023-11-07)
@@ -1863,56 +1913,6 @@
         </member>
         <member name="M:SDG.Unturned.LightingManager.InitPerpetualWeather">
             <returns>True if perpetual weather was enabled, false otherwise.</returns>
-        </member>
-        <member name="P:SDG.Unturned.SkinAsset.lightingTime">
-            <summary>
-            Used by dawn and dusk skins which pull per-level lighting colors.
-            </summary>
-        </member>
-        <member name="M:SDG.Unturned.SkinAsset.SetMaterialProperties(UnityEngine.Material)">
-            <summary>
-            Note: unfortunately it appears the stupid skin system always instantiated materials, but never destroys
-            them... will need to clean this up, but it will be tricky because the game does not hold a reference to them.
-            </summary>
-        </member>
-        <member name="P:SDG.Unturned.SkinAsset.ShouldHideMagazine">
-            <summary>
-            If true, sets the Magazine attachment hook inactive while this skin is applied. (guns only)
-            
-            Nelson 2025-03-10: Adding this to address mismatched Ace bullets with certain skins. (public issue #4923)
-            It should be fine for vanilla guns because there shouldn't be assumptions about Magazine enable/disable,
-            but modded guns may have different expectations (particularly with GunAttachmentEventHook).
-            </summary>
-        </member>
-        <member name="F:SDG.Unturned.SkinAsset.specialAudioOverride">
-            <summary>
-            Used by melee skins to override impact sound.
-            </summary>
-        </member>
-        <member name="T:SDG.Unturned.CraftingBlacklistAsset">
-            <summary>
-            Restricts which items can be crafted.
-            </summary>
-        </member>
-        <member name="F:SDG.Unturned.CraftingBlacklistAsset.inputItems">
-            <summary>
-            Restrict blueprints that consume these items.
-            </summary>
-        </member>
-        <member name="F:SDG.Unturned.CraftingBlacklistAsset.outputItems">
-            <summary>
-            Restrict blueprints that generate these items.
-            </summary>
-        </member>
-        <member name="F:SDG.Unturned.CraftingBlacklistAsset.allowCoreBlueprints">
-            <summary>
-            If false, blueprints on vanilla/core/built-in items are not allowed. Defaults to true.
-            </summary>
-        </member>
-        <member name="F:SDG.Unturned.CraftingBlacklistAsset.blueprints">
-            <summary>
-            Restrict specific blueprints.
-            </summary>
         </member>
         <member name="T:SDG.Unturned.Rk4Spring2">
             <summary>
