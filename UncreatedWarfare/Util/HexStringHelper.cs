@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -412,5 +412,35 @@ public static class HexStringHelper
             nibl = b & 0xF;
             span[1] = nibl > 9 ? (char)(nibl + 87) : (char)(nibl + 48);
         }
+    }
+
+    /// <summary>
+    /// Parse a <see cref="Color32"/> value.
+    /// </summary>
+    /// <exception cref="FormatException"/>
+    public static Color32 ParseColor32(ReadOnlySpan<char> hex, IFormatProvider? formatProvider = null, bool throwOnError = true)
+    {
+        if (TryParseColor32(hex, formatProvider, out Color32 c32))
+            return c32;
+
+        if (throwOnError)
+            throw new FormatException("Failed to parse color.");
+
+        return new Color32(255, 255, 255, 255);
+    }
+
+    /// <summary>
+    /// Parse a <see cref="Color"/> value.
+    /// </summary>
+    /// <exception cref="FormatException"/>
+    public static Color ParseColor(ReadOnlySpan<char> hex, IFormatProvider? formatProvider = null, bool throwOnError = true)
+    {
+        if (TryParseColor(hex, formatProvider, out Color clr))
+            return clr;
+
+        if (throwOnError)
+            throw new FormatException("Failed to parse color.");
+
+        return new Color(1f, 1f, 1f, 1f);
     }
 }

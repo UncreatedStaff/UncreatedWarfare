@@ -122,7 +122,7 @@ internal sealed class KitSetCommand : IExecutableCommand
         
         List<UniTask> eventTasks = new List<UniTask>();
 
-        foreach (WarfarePlayer player in _playerService.OnlinePlayers)
+        foreach (WarfarePlayer player in _playerService.GetThreadsafePlayerList())
         {
             KitPlayerComponent component = player.Component<KitPlayerComponent>();
             uint? kitKey = component.ActiveKitKey;

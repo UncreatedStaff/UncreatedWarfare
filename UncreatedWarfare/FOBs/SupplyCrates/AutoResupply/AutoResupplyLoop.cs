@@ -39,6 +39,7 @@ public class AutoResupplyLoop : ILayoutHostedService, ILayoutStartingListener
     public UniTask StopAsync(CancellationToken token)
     {
         _resupplyLoop?.Dispose();
+        _resupplyLoop = null;
         return UniTask.CompletedTask;
     }
     public UniTask HandleLayoutStartingAsync(Layout layout, CancellationToken token = default)

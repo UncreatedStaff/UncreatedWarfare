@@ -5,7 +5,7 @@ namespace Uncreated.Warfare.Events.Models.Objects;
 /// <summary>
 /// Invoked by <see cref="NPCEventManager.onEvent"/>.
 /// </summary>
-public class NpcEventTriggered
+public class NpcEventTriggered : ConsumableEvent
 {
     /// <summary>
     /// Unique ID stored in the .dat file.

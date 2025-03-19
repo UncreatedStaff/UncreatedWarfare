@@ -13,12 +13,9 @@ using Microsoft.Extensions.DependencyInjection;
 using SDG.Framework.Utilities;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Reflection;
 using Uncreated.Warfare.Events.Models;
-using Uncreated.Warfare.Events.Models.Players;
-using Uncreated.Warfare.Events.Models.Vehicles;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Projectiles;
@@ -329,14 +326,7 @@ public partial class EventDispatcher : IHostedService, IDisposable
 #if LOG_TRACE_TO_FILE
         _eventFileWriter.WriteLine("{0}  Invoking {1} for {2} listeners.", traceNum, Accessor.Formatter.Format(type), ct);
 #endif
-        // NOT: PlayerUseableEquipped, PlayerDied, VehicleExploded
-//        if (eventArgs is PlayerDamaged)
-//        {
-//#if LOG_TRACE_TO_FILE
-//            _eventFileWriter.WriteLine("{0}  Disabled", traceNum);
-//#endif
-//            return true;
-//        }
+
 #if LOG_EVENT_LISTENERS
         using (_logger.BeginScope(typeof(TEventArgs)))
         {

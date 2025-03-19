@@ -653,6 +653,9 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
 
     private void GiveKitMainThread(WarfarePlayer player, KitBestowData kitBestowData, List<KitLayoutTransformation>? layouts, List<KitHotkey>? hotkeys, bool invokeEvent)
     {
+        if (!player.IsOnline)
+            throw new OperationCanceledException("Player disconnected.");
+
         Kit kit = kitBestowData.Kit;
         HotkeyPlayerComponent hotkeyComponent = player.Component<HotkeyPlayerComponent>();
         hotkeyComponent.HotkeyBindings = null;
@@ -723,15 +726,16 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
     {
         if (kit.MinRequiredSquadMembers == null)
             return false;
-        
+
         foreach (WarfarePlayer player in squad.Members)
         {
             if (player.Component<KitPlayerComponent>().ActiveKitKey is { } pk && pk == kit.Key)
                 return true;
         }
-        
+
         return false;
     }
+
     internal bool SquadHasEnoughPlayersForKit(Kit kit, Squad squad)
     {
         if (kit.MinRequiredSquadMembers == null)

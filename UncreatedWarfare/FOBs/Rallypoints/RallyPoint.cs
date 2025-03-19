@@ -42,7 +42,7 @@ public class RallyPoint : IBuildableFob, IDisposable
         Team = Squad.Team;
         _deploymentStarted = DateTime.MinValue;
 
-        Color = ColorUtility.TryParseHtmlString("#67ff85", out Color color) ? color : UnityEngine.Color.white;
+        Color = HexStringHelper.ParseColor32("#67ff85", throwOnError: false);
 
         _loopTicker = serviceProvider.GetRequiredService<ILoopTickerFactory>().CreateTicker(TimeSpan.FromSeconds(1f), true, true, OnTick);
     }

@@ -252,7 +252,8 @@ public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoin
         if (TickRegenerate())
         {
             DailyQuestRegenerateResult result = await RegenerateDailyQuests();
-            StartDailyQuestUpload(result);
+            if (result.Days != null)
+                StartDailyQuestUpload(result);
         }
         else
         {
@@ -287,6 +288,14 @@ public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoin
     {
         _isAwaitingDailyQuestRenewal = true;
         List<QuestTemplate> availableTemplates = _questService.Templates.Where(x => x.CanBeDailyQuest).ToList();
+        int presetLength = PresetLength;
+        if (availableTemplates.Count < PresetLength)
+        {
+            _logger.LogWarning("Not enough quests to generate a full day.");
+            presetLength = availableTemplates.Count;
+            if (presetLength == 0)
+                return default;
+        }
 
         bool shift = _index >= DaySectionLength && _config.Days != null && _config.Days.All(x => x?.Presets != null && x.Presets.All(y => y != null));
 
@@ -303,7 +312,7 @@ public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoin
         ushort startId = (ushort)(shift ? days[DaySectionLength - 1].Id + 1 : StartQuestAssetId);
         ushort flagStartId = (ushort)(shift ? days[DaySectionLength - 1].Presets![^1]!.Flag + 1 : StartFlagId);
 
-        if (startId - StartQuestAssetId >= DaySectionLength && flagStartId - StartFlagId >= DaySectionLength * PresetLength)
+        if (startId - StartQuestAssetId >= DaySectionLength && flagStartId - StartFlagId >= DaySectionLength * presetLength)
         {
             startId = StartQuestAssetId;
             flagStartId = StartFlagId;
@@ -316,14 +325,19 @@ public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoin
                 StartTime = time,
                 Asset = Guid.NewGuid(),
                 Id = startId++,
-                Presets = new DailyQuestPreset?[PresetLength]
+                Presets = new DailyQuestPreset?[presetLength]
             };
 
             time = time.Add(DaySimulatedLength);
-            for (int preset = 0; preset < PresetLength; ++preset)
+            for (int preset = 0; preset < presetLength; ++preset)
             {
-                int templateIndex = RandomUtility.GetIndex((ICollection)availableTemplates);
-                QuestTemplate template = availableTemplates[templateIndex];
+                QuestTemplate template;
+                do
+                {
+                    int templateIndex = RandomUtility.GetIndex(availableTemplates);
+                    template = availableTemplates[templateIndex];
+                }
+                while (Array.Exists(d.Presets, x => x != null && string.Equals(x.TemplateName, template.Name)));
 
                 DailyQuestPreset p = new DailyQuestPreset
                 {
@@ -471,7 +485,8 @@ public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoin
                 if (TickRegenerate())
                 {
                     DailyQuestRegenerateResult result = await RegenerateDailyQuests();
-                    StartDailyQuestUpload(result);
+                    if (result.Days != null)
+                        StartDailyQuestUpload(result);
                 }
                 else
                 {
@@ -737,7 +752,8 @@ public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoin
                 try
                 {
                     DailyQuestRegenerateResult result = await RegenerateDailyQuests();
-                    StartDailyQuestUpload(result);
+                    if (result.Days != null)
+                        StartDailyQuestUpload(result);
                 }
                 catch (Exception ex)
                 {

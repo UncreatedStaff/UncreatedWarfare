@@ -10,6 +10,7 @@ using Uncreated.Framework.UI.Reflection;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
+using Uncreated.Warfare.Events.Models.Kits;
 using Uncreated.Warfare.Events.Models.Objects;
 using Uncreated.Warfare.Events.Models.Squads;
 using Uncreated.Warfare.Interaction;
@@ -32,7 +33,8 @@ public class SquadMenuUI :
     IEventListener<SquadMemberLeft>,
     IEventListener<SquadLockUpdated>,
     IEventListener<SquadLeaderUpdated>,
-    IEventListener<NpcEventTriggered>
+    IEventListener<NpcEventTriggered>,
+    IEventListener<PlayerKitChanged>
 {
     private readonly SquadManager _squadManager;
     private readonly IPlayerService _playerService;
@@ -67,6 +69,7 @@ public class SquadMenuUI :
         ElementPatterns.SubscribeAll(MySquad.Members.Skip(1).Select(x => x.KickButton), KickMemberClicked);
         ElementPatterns.SubscribeAll(MySquad.Members.Skip(1).Select(x => x.PromoteButton), PromoteMemberClicked);
 
+        MySquad.LeaveButton.OnClicked += JoinLeaveButtonClicked;
         MySquad.ToggleLockedButton.OnToggleUpdated += SquadLockedToggleUpdated;
         ElementPatterns.SubscribeAll(Squads.Select(e => e.SquadJoinLeaveButton), JoinLeaveButtonClicked);
     }
@@ -139,7 +142,7 @@ public class SquadMenuUI :
     {
         WarfarePlayer warfarePlayer = _playerService.GetOnlinePlayer(player);
 
-        if (ReferenceEquals(button, MySquad.LeaveButton.Button) && warfarePlayer.GetSquad() is { } mySquad)
+        if (ReferenceEquals(button, MySquad.LeaveButton.Button) && warfarePlayer.GetSquad() is { } mySquad && mySquad.Leader.Equals(player))
         {
             mySquad.RemoveMember(warfarePlayer);
             return;
@@ -201,12 +204,13 @@ public class SquadMenuUI :
         return ChatFilterHelper.GetChatFilterViolation(squadName) == null;
     }
 
+    [EventListener(MustRunInstantly = true, RequireActiveLayout = true)]
     public void HandleEvent(SquadCreated e, IServiceProvider serviceProvider)
     {
         UpdateForViewingPlayers(e.Squad);
     }
 
-    [EventListener(MustRunInstantly = true)]
+    [EventListener(MustRunInstantly = true, RequireActiveLayout = true)]
     public void HandleEvent(SquadLockUpdated e, IServiceProvider serviceProvider)
     {
         if (_isLocking)
@@ -215,34 +219,55 @@ public class SquadMenuUI :
             UpdateForViewingPlayers(e.Squad);
     }
 
+    [EventListener(MustRunInstantly = true, RequireActiveLayout = true)]
     public void HandleEvent(SquadDisbanded e, IServiceProvider serviceProvider)
     {
         UpdateForViewingPlayers(e.Squad);
     }
 
+    [EventListener(MustRunInstantly = true, RequireActiveLayout = true)]
     public void HandleEvent(SquadMemberJoined e, IServiceProvider serviceProvider)
     {
         UpdateForViewingPlayers(e.Squad);
     }
 
+    [EventListener(MustRunInstantly = true, RequireActiveLayout = true)]
     public void HandleEvent(SquadMemberLeft e, IServiceProvider serviceProvider)
     {
         UpdateForViewingPlayers(e.Squad);
     }
-    
+
+    [EventListener(MustRunInstantly = true, RequireActiveLayout = true)]
     public void HandleEvent(SquadLeaderUpdated e, IServiceProvider serviceProvider)
     {
         UpdateForViewingPlayers(e.Squad);
     }
 
-    void IEventListener<NpcEventTriggered>.HandleEvent(NpcEventTriggered e, IServiceProvider serviceProvider)
+    [EventListener(MustRunInstantly = true, RequireActiveLayout = true)]
+    void IEventListener<PlayerKitChanged>.HandleEvent(PlayerKitChanged e, IServiceProvider serviceProvider)
     {
-        if (e.Id.Equals("Uncreated.Warfare.Squads.OpenMenu", StringComparison.Ordinal) && e.Player != null)
-        {
-            OpenUI(e.Player);
-        }
+        Squad? squad = e.Player.GetSquad();
+        if (squad == null)
+            return;
+
+        WarfarePlayer leader = squad.Leader;
+        if (GetOrAddData(leader).IsViewing)
+            SendMySquadDetail(leader);
+
+        UpdateForViewingPlayersExceptOwner(squad);
     }
 
+    [EventListener(RequireActiveLayout = true)]
+    void IEventListener<NpcEventTriggered>.HandleEvent(NpcEventTriggered e, IServiceProvider serviceProvider)
+    {
+        if (!e.Id.Equals("Uncreated.Warfare.Squads.OpenMenu", StringComparison.Ordinal) || e.Player == null)
+            return;
+
+        OpenUI(e.Player);
+        e.Consume();
+    }
+
+    [EventListener(MustRunInstantly = true, RequireActiveLayout = true)]
     public IEnumerable<WarfarePlayer> ViewingPlayersOnTeam(Team team) => _playerService.OnlinePlayers.Where(p => GetOrAddData(p).IsViewing && p.Team == team);
 
     private SquadMenuUIPlayerData GetOrAddData(WarfarePlayer player)
@@ -278,6 +303,9 @@ public class SquadMenuUI :
 
     private void UpdateForViewingPlayers(Squad squad)
     {
+        if (squad.Members.Count == 0)
+            return;
+
         WarfarePlayer owner = squad.Leader;
         foreach (WarfarePlayer player in ViewingPlayersOnTeam(squad.Team))
         {
@@ -293,6 +321,9 @@ public class SquadMenuUI :
     }
     private void UpdateForViewingPlayersExceptOwner(Squad squad)
     {
+        if (squad.Members.Count == 0)
+            return;
+
         WarfarePlayer owner = squad.Leader;
         foreach (WarfarePlayer player in ViewingPlayersOnTeam(squad.Team))
         {
@@ -451,7 +482,7 @@ public class SquadMenuUI :
         public LabeledStateButton SquadJoinLeaveButton { get; set; }
 
         [ArrayPattern(1, To = 6)]
-        [Pattern("SquadMember_{1}")]
+        [Pattern("SquadMember_{0}")]
         public UnturnedLabel[] MemberNames { get; set; }
     }
     public class SquadMenuUIPlayerData : IUnturnedUIData
