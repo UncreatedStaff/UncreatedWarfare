@@ -373,7 +373,7 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
                     
                     WarfarePlayer member = topSquad.Members[m];
                     UnturnedLabel memberElement = squadElement.Members[m];
-                    char classIcon = member.Component<KitPlayerComponent>().ActiveClass.GetIcon();
+                    string classIcon = member.Component<KitPlayerComponent>().ActiveClass.GetIconString();
                     string rank = _pointsService.GetRankFromExperience(member.CachedPoints.XP).Abbreviation;
                     string memberName = $"{rank} {member.Names.CharacterName}";
                     if (member.IsSquadLeader())

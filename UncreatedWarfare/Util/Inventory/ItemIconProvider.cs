@@ -285,7 +285,7 @@ public class ItemIconProvider
             }
         }
 
-        return Class.None.GetIcon().ToString();
+        return Class.None.GetIconString();
     }
     public bool TryGetIcon(RedirectType type, out string str, bool rich = true, bool tmpro = false)
     {
@@ -298,7 +298,7 @@ public class ItemIconProvider
             }
         }
 
-        str = new string(Class.None.GetIcon(), 1);
+        str = Class.None.GetIconString();
         return false;
     }
     public bool TryGetIcon(ItemAsset asset, out string str, bool rich = true, bool tmpro = false) => TryGetIcon(asset.GUID, out str, rich, tmpro);
@@ -314,7 +314,7 @@ public class ItemIconProvider
             }
         }
 
-        str = new string(Class.None.GetIcon(), 1);
+        str = Class.None.GetIconString();
         return false;
     }
 
@@ -328,7 +328,7 @@ public class ItemIconProvider
             }
         }
 
-        return Class.None.GetIcon().ToString();
+        return Class.None.GetIconString();
     }
 
     public string GetIconOrName(ItemAsset asset, bool rich = true, bool tmpro = false)

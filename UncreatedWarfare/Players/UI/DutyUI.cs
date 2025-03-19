@@ -106,7 +106,7 @@ public class DutyUI : UnturnedUI, IHudUIListener
             if (!pl.IsOnDuty)
                 continue;
 
-            SendToPlayer(pl.Connection);
+            SendToPlayer(pl);
             if (_votePosition)
                 _positionVote.SetVisibility(pl.Connection, true);
         }

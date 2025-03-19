@@ -227,8 +227,9 @@ public class DeathTracker : IHostedService
         e.MessageCause = cause;
         e.Point = dead.Position;
         e.Session = dead.CurrentSession;
-        Interlocked.Increment(ref e.Session.EventCount);
-        e.TimeDeployed = (float)dead.Component<DeploymentComponent>().GetTimeDeployed().TotalSeconds;
+        if (e.Session != null)
+            Interlocked.Increment(ref e.Session.EventCount);
+        e.TimeDeployed = (float)(dead.ComponentOrNull<DeploymentComponent>()?.GetTimeDeployed().TotalSeconds ?? 0d);
         switch (cause)
         {
             // death causes only possible through PvE:
@@ -270,7 +271,8 @@ public class DeathTracker : IHostedService
         if (killer != null)
         {
             e.KillerSession = killer.CurrentSession;
-            Interlocked.Increment(ref e.KillerSession.EventCount);
+            if (e.KillerSession != null)
+                Interlocked.Increment(ref e.KillerSession.EventCount);
             e.KillerPoint = killer.Position;
             KitPlayerComponent killerKitComp = killer.Component<KitPlayerComponent>();
             e.KillerKitName = killerKitComp.ActiveKitId;
@@ -365,7 +367,8 @@ public class DeathTracker : IHostedService
                     e.ThirdPartyId = triggerer.Steam64;
                     e.ThirdPartyPoint = triggerer.Position;
                     e.ThirdPartySession = triggerer.CurrentSession;
-                    Interlocked.Increment(ref e.ThirdPartySession.EventCount);
+                    if (e.ThirdPartySession != null)
+                        Interlocked.Increment(ref e.ThirdPartySession.EventCount);
                     e.ThirdPartyTeam = triggerer.Team;
 
                     // if all 3 parties are on the same team count it as a teamkill on the triggerer, as it's likely intentional
@@ -452,7 +455,8 @@ public class DeathTracker : IHostedService
                             e.ThirdPartyId = e.DriverAssist.Steam64;
                             e.ThirdPartyPoint = e.DriverAssist.Position;
                             e.ThirdPartySession = e.DriverAssist.CurrentSession;
-                            Interlocked.Increment(ref e.ThirdPartySession.EventCount);
+                            if (e.ThirdPartySession != null)
+                                Interlocked.Increment(ref e.ThirdPartySession.EventCount);
                             e.MessageFlags |= DeathFlags.Player3;
                         }
                     }
@@ -572,7 +576,8 @@ public class DeathTracker : IHostedService
                         e.ThirdPartyId = e.DriverAssist.Steam64;
                         e.ThirdPartyPoint = e.DriverAssist.Position;
                         e.ThirdPartySession = e.DriverAssist.CurrentSession;
-                        Interlocked.Increment(ref e.ThirdPartySession.EventCount);
+                        if (e.ThirdPartySession != null)
+                            Interlocked.Increment(ref e.ThirdPartySession.EventCount);
                         e.MessageFlags |= DeathFlags.Player3;
                     }
                 }
@@ -604,7 +609,8 @@ public class DeathTracker : IHostedService
                                 e.ThirdPartyId = e.DriverAssist.Steam64;
                                 e.ThirdPartyPoint = e.DriverAssist.Position;
                                 e.ThirdPartySession = e.DriverAssist.CurrentSession;
-                                Interlocked.Increment(ref e.ThirdPartySession.EventCount);
+                                if (e.ThirdPartySession != null)
+                                    Interlocked.Increment(ref e.ThirdPartySession.EventCount);
                                 e.MessageFlags |= DeathFlags.Player3;
                             }
                         }

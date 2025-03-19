@@ -132,31 +132,54 @@ public enum Class : byte
 public static class ClassExtensions
 {
     private static readonly char[] Icons = new char[(int)EnumUtility.GetMaximumValue<Class>() + 1];
+    private static readonly string[] IconStrings = new string[(int)EnumUtility.GetMaximumValue<Class>() + 1];
     static ClassExtensions()
     {
         Array.Fill(Icons, '±');
+        Array.Fill(IconStrings, "±");
 
         Icons[(int)Class.Squadleader] = '¦';
+        IconStrings[(int)Class.Squadleader] = "¦";
         Icons[(int)Class.Rifleman] = '¡';
+        IconStrings[(int)Class.Rifleman] = "¡";
         Icons[(int)Class.Medic] = '¢';
+        IconStrings[(int)Class.Medic] = "¢";
         Icons[(int)Class.Breacher] = '¤';
+        IconStrings[(int)Class.Breacher] = "¤";
         Icons[(int)Class.AutomaticRifleman] = '¥';
+        IconStrings[(int)Class.AutomaticRifleman] = "¥";
         Icons[(int)Class.Grenadier] = '¬';
+        IconStrings[(int)Class.Grenadier] = "¬";
         Icons[(int)Class.MachineGunner] = '«';
+        IconStrings[(int)Class.MachineGunner] = "«";
         Icons[(int)Class.LAT] = '®';
+        IconStrings[(int)Class.LAT] = "®";
         Icons[(int)Class.HAT] = '¯';
+        IconStrings[(int)Class.HAT] = "¯";
         Icons[(int)Class.Marksman] = '¨';
+        IconStrings[(int)Class.Marksman] = "¨";
         Icons[(int)Class.Sniper] = '£';
+        IconStrings[(int)Class.Sniper] = "£";
         Icons[(int)Class.APRifleman] = '©';
+        IconStrings[(int)Class.APRifleman] = "©";
         Icons[(int)Class.CombatEngineer] = 'ª';
+        IconStrings[(int)Class.CombatEngineer] = "ª";
         Icons[(int)Class.Crewman] = '§';
+        IconStrings[(int)Class.Crewman] = "§";
         Icons[(int)Class.Pilot] = '°';
+        IconStrings[(int)Class.Pilot] = "°";
         Icons[(int)Class.SpecOps] = '×';
+        IconStrings[(int)Class.SpecOps] = "×";
     }
 
     public static char GetIcon(this Class @class)
     {
         return (int)@class < Icons.Length ? Icons[(int)@class] : Icons[0];
+    }
+
+    public static string GetIconString(this Class @class)
+    {
+        return (int)@class < Icons.Length ? IconStrings[(int)@class] : IconStrings[0];
     }
 
     public static bool TryParseClass(string val, out Class @class)

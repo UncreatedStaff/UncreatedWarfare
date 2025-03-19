@@ -59,6 +59,28 @@ public static class AssetLink
     public static readonly SpecialFormat AssetLinkFriendlyNoColor = new SpecialFormat("Friendly (no color)", "nf", useForToString: false);
 
     /// <summary>
+    /// Returns a max 48 length string with the item name, defaulting to '00000000000000000000000000000000'.
+    /// </summary>
+    public static string GetDatabaseName(this IAssetLink<Asset>? assetLink)
+    {
+        if (assetLink != null && assetLink.TryGetAsset(out Asset? asset) && !string.IsNullOrEmpty(asset.FriendlyName))
+            return asset.FriendlyName.Truncate(48);
+
+        return "00000000000000000000000000000000";
+    }
+
+    /// <summary>
+    /// Returns a max 48 length string with the item name, defaulting to '00000000000000000000000000000000'.
+    /// </summary>
+    public static string GetDatabaseName(this Asset? asset)
+    {
+        if (asset is { FriendlyName: { Length: > 0 } fn } )
+            return fn.Truncate(48);
+
+        return "00000000000000000000000000000000";
+    }
+
+    /// <summary>
     /// Returns an empty asset link.
     /// </summary>
     public static IAssetLink<TAsset> Empty<TAsset>() where TAsset : Asset

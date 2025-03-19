@@ -26,9 +26,9 @@ internal sealed class VehicleExplodeAddInstigatorPatch : IHarmonyPatch
         }
 
         logger.LogError("Failed to find method: {0}.",
-            new MethodDefinition(nameof(InteractableCharge.detonate))
+            new MethodDefinition("explode")
                 .DeclaredIn<InteractableCharge>(isStatic: false)
-                .WithParameter<CSteamID>("killer")
+                .WithNoParameters()
                 .ReturningVoid()
         );
     }

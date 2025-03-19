@@ -10,7 +10,6 @@ using System.Net;
 using System.Reflection;
 using Uncreated.Warfare.Database.Manual;
 using Uncreated.Warfare.Database.ValueConverters;
-using Uncreated.Warfare.Database.ValueGenerators;
 using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Networking;
@@ -128,28 +127,6 @@ public static class WarfareDatabaseReflection
             {
                 efCompat.AddIndex(property.DeclaringEntityType, property);
                 logger.LogDebug("Added generic index for {0}.{1}.", Accessor.Formatter.Format(efCompat.GetClrType(property.DeclaringEntityType)), member?.Name ?? "null");
-            }
-
-            if (member != null && member.TryGetAttributeSafe(out AddNameAttribute addNameAttribute))
-            {
-                string originalName = efCompat.GetName(property);
-                string name = addNameAttribute.ColumnName ?? (originalName + "Name");
-                if (!efCompat.GetProperties(property.DeclaringEntityType).Any(x => efCompat.GetName(x).Equals(name, StringComparison.Ordinal)))
-                {
-                    IMutableProperty assetNameProperty = efCompat.AddProperty(property.DeclaringEntityType, name, typeof(string));
-                    efCompat.SetMaxLength(assetNameProperty, MaxAssetNameLength);
-                    efCompat.SetIsNullable(assetNameProperty, nullable);
-                    efCompat.SetDefaultValue(assetNameProperty, nullable ? null : new string('0', 32));
-
-                    efCompat.SetValueGeneratorFactory(assetNameProperty,
-                        (_, entityType) => AssetNameValueGenerator.Get(entityType, originalName));
-
-                    logger.LogDebug("Added asset name column for {0}.{1}: {2} (max length: {3})", Accessor.Formatter.Format(efCompat.GetClrType(property.DeclaringEntityType)), member?.Name ?? "null", name, MaxAssetNameLength);
-                }
-                else
-                {
-                    logger.LogDebug("Asset name column already exists in {0}.{1}: {2}", Accessor.Formatter.Format(efCompat.GetClrType(property.DeclaringEntityType)), member?.Name ?? "null", name);
-                }
             }
 
             // enum types

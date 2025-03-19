@@ -1,7 +1,10 @@
 using Microsoft.EntityFrameworkCore;
-using MySqlConnector;
+using Microsoft.EntityFrameworkCore.ChangeTracking.Internal;
 using System;
+using System.Collections.Concurrent;
 using Uncreated.Warfare.Database.Abstractions;
+using Uncreated.Warfare.Models.Stats;
+using Uncreated.Warfare.Patches;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util.Timing;
 
@@ -16,29 +19,56 @@ namespace Uncreated.Warfare.Stats;
 /// </remarks>
 public class DatabaseStatsBuffer : IDisposable, IHostedService, ILayoutHostedService
 {
+    private readonly ConcurrentQueue<object> _statEntries = new ConcurrentQueue<object>();
     private readonly IStatsDbContext _dbContext;
     private readonly ILogger<DatabaseStatsBuffer> _logger;
     private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(0, 1);
     private readonly ILoopTickerFactory _loopTickerFactory;
     private ILoopTicker? _loopTicker;
 
-    public IStatsDbContext DbContext => _dbContext;
-    public DatabaseStatsBuffer(IStatsDbContext dbContext, ILogger<DatabaseStatsBuffer> logger, ILoopTickerFactory loopTickerFactory)
+    public DatabaseStatsBuffer(IStatsDbContext dbContext, HarmonyPatchService patcher, ILogger<DatabaseStatsBuffer> logger, ILoopTickerFactory loopTickerFactory)
     {
         _dbContext = dbContext;
         _dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
         _logger = logger;
         _loopTickerFactory = loopTickerFactory;
+
+        //PatchUtil.AddFunctionStepthrough(patcher.Patcher, typeof(InternalEntityEntry).GetMethod(nameof(InternalEntityEntry.SetEntityState)!));
+    }
+
+    public void Enqueue(DamageRecord dmg)
+    {
+        _statEntries.Enqueue(dmg);
+    }
+
+    public void Enqueue(DeathRecord death)
+    {
+        _statEntries.Enqueue(death);
+    }
+
+    public void Enqueue(AidRecord aid)
+    {
+        _statEntries.Enqueue(aid);
+    }
+
+    public void Enqueue(FobRecord fob)
+    {
+        _statEntries.Enqueue(fob);
+    }
+
+    public void Enqueue(FobItemRecord fobItem)
+    {
+        _statEntries.Enqueue(fobItem);
     }
 
     public async Task FlushAsync(CancellationToken token = default)
     {
-        if (!_dbContext.ChangeTracker.HasChanges())
+        if (_statEntries.Count == 0)
         {
             return;
         }
 
-        await _semaphore.WaitAsync(10000, token).ConfigureAwait(false);
+        await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
             await FlushAsyncNoLock(token).ConfigureAwait(false);
@@ -53,6 +83,63 @@ public class DatabaseStatsBuffer : IDisposable, IHostedService, ILayoutHostedSer
     {
         try
         {
+            _logger.LogConditional("Flushing stats data...");
+            while (_statEntries.TryDequeue(out object value))
+            {
+                switch (value)
+                {
+                    case DeathRecord death:
+                        if (death.Id != 0)
+                        {
+                            _dbContext.Update(death);
+                            break;
+                        }
+
+                        _dbContext.DeathRecords.Add(death);
+                        if (death.KillShot == null)
+                            break;
+
+                        if (_dbContext.Entry(death.KillShot).State == EntityState.Detached)
+                        {
+                            death.KillShotId = death.KillShot.Id;
+                            death.KillShot = null;
+                        }
+                        break;
+
+                    case DamageRecord dmg:
+                        if (dmg.Id == 0)
+                            _dbContext.DamageRecords.Add(dmg);
+                        else
+                            _dbContext.Update(dmg);
+                        break;
+
+                    case AidRecord aid:
+                        if (aid.Id == 0)
+                            _dbContext.AidRecords.Add(aid);
+                        else
+                            _dbContext.Update(aid);
+                        break;
+
+                    case FobRecord fob:
+                        if (fob.Id == 0)
+                            _dbContext.FobRecords.Add(fob);
+                        else
+                            _dbContext.Update(fob);
+                        break;
+
+                    case FobItemRecord fobItem:
+                        if (fobItem.Id == 0)
+                            _dbContext.FobItemRecords.Add(fobItem);
+                        else
+                            _dbContext.Update(fobItem);
+                        break;
+
+                    default:
+                        _logger.LogWarning($"Unknown record type: {value.GetType()}.");
+                        break;
+                }
+            }
+
             await _dbContext.SaveChangesAsync(token).ConfigureAwait(false);
             _logger.LogConditional("Flushed stats data.");
         }
@@ -63,21 +150,11 @@ public class DatabaseStatsBuffer : IDisposable, IHostedService, ILayoutHostedSer
         }
     }
 
-    public Task WaitAsync(CancellationToken token = default)
-    {
-        return _semaphore.WaitAsync(10000, token);
-    }
-
-    public void Release()
-    {
-        _semaphore.Release();
-    }
-
     UniTask ILayoutHostedService.StartAsync(CancellationToken token) => UniTask.CompletedTask;
 
     async UniTask ILayoutHostedService.StopAsync(CancellationToken token)
     {
-        await _semaphore.WaitAsync(10000, token).ConfigureAwait(false);
+        await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
             await FlushAsyncNoLock(token).ConfigureAwait(false);
@@ -96,7 +173,7 @@ public class DatabaseStatsBuffer : IDisposable, IHostedService, ILayoutHostedSer
         _loopTicker?.Dispose();
 
 #if DEBUG
-        TimeSpan delay = TimeSpan.FromSeconds(5);
+        TimeSpan delay = TimeSpan.FromSeconds(0.5f);
 #else
         TimeSpan delay = TimeSpan.FromSeconds(30);
 #endif

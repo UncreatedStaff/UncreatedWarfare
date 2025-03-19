@@ -172,15 +172,14 @@ public static class RandomUtility
         }
 
         float pick = GetFloat(0, totalWeight);
-        totalWeight = 0;
-        for (int i = 0; i < list.Count; ++i)
+        totalWeight = weightSelector(list[0]);
+        for (int i = 1; i < list.Count; ++i)
         {
+            if (pick > totalWeight)
+                return i - 1;
             totalWeight += weightSelector(list[i]);
-            if (totalWeight > pick)
-                return i;
         }
 
-        // should never happen
         return list.Count - 1;
     }
 
@@ -200,12 +199,12 @@ public static class RandomUtility
         }
 
         double pick = GetDouble(0, totalWeight);
-        totalWeight = 0;
-        for (int i = 0; i < list.Count; ++i)
+        totalWeight = weightSelector(list[0]);
+        for (int i = 1; i < list.Count; ++i)
         {
+            if (pick > totalWeight)
+                return i - 1;
             totalWeight += weightSelector(list[i]);
-            if (totalWeight > pick)
-                return i;
         }
 
         // should never happen

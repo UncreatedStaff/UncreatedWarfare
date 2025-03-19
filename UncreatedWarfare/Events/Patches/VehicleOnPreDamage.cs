@@ -1,20 +1,16 @@
-using DanielWillett.ReflectionTools.Formatting;
 using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Emit;
-using System;
+using DanielWillett.ReflectionTools.Formatting;
+using HarmonyLib;
 using System.Collections.Generic;
 using System.Reflection;
-using System.Text;
-using Uncreated.Warfare.Events.Models.Players;
-using Uncreated.Warfare.Patches;
-using Uncreated.Warfare.Players.Management;
-using Uncreated.Warfare.Players;
-using HarmonyLib;
 using System.Reflection.Emit;
-using System.Linq;
+using Uncreated.Warfare.Events.Models.Vehicles;
+using Uncreated.Warfare.Patches;
+using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Vehicles;
 using Uncreated.Warfare.Vehicles.WarfareVehicles;
-using Uncreated.Warfare.Events.Models.Vehicles;
 
 namespace Uncreated.Warfare.Events.Patches;
 
@@ -23,7 +19,7 @@ public class VehicleOnPreDamage : IHarmonyPatch
 {
     private static MethodInfo? _target;
 
-    void IHarmonyPatch.Patch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Patch(ILogger logger, Harmony patcher)
     {
         _target = typeof(VehicleManager).GetMethod(nameof(VehicleManager.damage),
             BindingFlags.Static | BindingFlags.Public);
@@ -47,7 +43,7 @@ public class VehicleOnPreDamage : IHarmonyPatch
         );
     }
 
-    void IHarmonyPatch.Unpatch(ILogger logger, HarmonyLib.Harmony patcher)
+    void IHarmonyPatch.Unpatch(ILogger logger, Harmony patcher)
     {
         if (_target == null)
             return;

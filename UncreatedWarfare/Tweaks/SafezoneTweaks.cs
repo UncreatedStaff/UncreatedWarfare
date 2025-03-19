@@ -1,4 +1,6 @@
+using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Linq;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
@@ -9,6 +11,7 @@ using Uncreated.Warfare.Events.Models.Zones;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Requests;
 using Uncreated.Warfare.Kits.Whitelists;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Zones;
 
@@ -110,9 +113,14 @@ public class SafezoneTweaks :
 
             // give safezone kit if they dont have one
             KitPlayerComponent component = e.Player.Component<KitPlayerComponent>();
-            if (!component.ActiveKitKey.HasValue
+            if (!e.Player.IsOnDuty
+                && (!component.ActiveKitKey.HasValue
                 || component.ActiveClass == Class.None
-                || component.ActiveClass == Class.Unarmed && e.Player.Team.Faction.UnarmedKit != component.ActiveKitKey.Value)
+                || component.ActiveClass == Class.Unarmed && e.Player.Team.Faction.UnarmedKit != component.ActiveKitKey.Value
+                // equipped with enemy team kit
+                || component.CachedKit is { Faction.IsDefaultFaction: false } kit
+                    && serviceProvider.GetService<ITeamManager<Team>>()?.AllTeams.FirstOrDefault(x => x.Faction.Equals(kit.Faction)) is { } team
+                    && team.IsOpponent(e.Player.Team)))
             {
                 Task.Run(async () =>
                 {

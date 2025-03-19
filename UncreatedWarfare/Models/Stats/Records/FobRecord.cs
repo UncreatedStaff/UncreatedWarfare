@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using Uncreated.Warfare.Database.Automation;
 using Uncreated.Warfare.Models.Assets;
 
 namespace Uncreated.Warfare.Models.Stats;
@@ -16,12 +15,18 @@ public class FobRecord : InstigatedPlayerRecord
     public FobType FobType { get; set; }
 
     [DefaultValue(null)]
-    [AddName]
     public UnturnedAssetReference? PrimaryAsset { get; set; }
 
+    [DefaultValue("00000000000000000000000000000000")]
+    [StringLength(48)]
+    public string? PrimaryAssetName { get; set; }
+
     [DefaultValue(null)]
-    [AddName]
     public UnturnedAssetReference? SecondaryAsset { get; set; }
+
+    [DefaultValue("00000000000000000000000000000000")]
+    [StringLength(48)]
+    public string? SecondaryAssetName { get; set; }
 
     [Required]
     [StringLength(32)]

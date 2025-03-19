@@ -51,11 +51,40 @@ public class Squad : ITranslationArgument
 
     public bool TryAddMember(WarfarePlayer player)
     {
-        if (Members.Contains(player) || Members.Count >= MaxMembers)
+        if (!CanJoinSquad(player))
             return false;
 
         AddMember(player);
         return true;
+    }
+
+    public bool CanJoinSquad(WarfarePlayer player)
+    {
+        if (Members.Count >= MaxMembers || Members.Contains(player))
+            return false;
+
+        if (!IsLocked)
+            return true;
+
+        if (Members.Count == 0)
+            return false;
+
+        WarfarePlayer leader = Members[0];
+        if (leader.UnturnedPlayer.channel.owner.playerID.group == player.UnturnedPlayer.channel.owner.playerID.group)
+        {
+            // same steam group
+            return true;
+        }
+
+        // leader has player in friends
+        if (Array.IndexOf(leader.SteamFriends, player.Steam64.m_SteamID) != -1)
+            return true;
+
+        // player has leader in friends (if the leader has a private friends list but the player doesn't this will sometimes fix it)
+        if (Array.IndexOf(player.SteamFriends, leader.Steam64.m_SteamID) != -1)
+            return true;
+
+        return false;
     }
 
     public bool AddMember(WarfarePlayer player)
@@ -66,6 +95,20 @@ public class Squad : ITranslationArgument
         AddMemberWithoutNotify(player);
         _ = WarfareModule.EventDispatcher.DispatchEventAsync(new SquadMemberJoined { Squad = this, Player = player, IsNewSquad = false });
         return true;
+    }
+
+    public void PromoteMember(WarfarePlayer member)
+    {
+        int index = _members.IndexOf(member);
+
+        WarfarePlayer leader = _members[0];
+        if (leader.Equals(member))
+            return;
+
+        _members[0] = member;
+        _members[index] = leader;
+
+        _ = WarfareModule.EventDispatcher.DispatchEventAsync(new SquadLeaderUpdated { Squad = this, OldLeader = leader, NewLeader = member });
     }
 
     public bool RemoveMember(WarfarePlayer player)

@@ -81,7 +81,7 @@ public class PlayerSquadHUD : UnturnedUI,
             {
                 WarfarePlayer member = squad.Members[i];
                 Class kitClass = member.Component<KitPlayerComponent>().ActiveClass;
-                string memberName = $"{kitClass.GetIcon()}  {member.Names.PlayerName}";
+                string memberName = $"<mspace=20>{kitClass.GetIconString()}</mspace>  {member.Names.PlayerName}";
 
                 element.Show(player);
                 element.SetText(player, memberName);

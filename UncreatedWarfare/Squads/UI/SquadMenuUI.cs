@@ -1,4 +1,3 @@
-using Humanizer;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
@@ -9,12 +8,15 @@ using Uncreated.Framework.UI.Patterns;
 using Uncreated.Framework.UI.Presets;
 using Uncreated.Framework.UI.Reflection;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Objects;
 using Uncreated.Warfare.Events.Models.Squads;
+using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
@@ -28,34 +30,122 @@ public class SquadMenuUI :
     IEventListener<SquadDisbanded>,
     IEventListener<SquadMemberJoined>,
     IEventListener<SquadMemberLeft>,
+    IEventListener<SquadLockUpdated>,
     IEventListener<SquadLeaderUpdated>,
     IEventListener<NpcEventTriggered>
 {
     private readonly SquadManager _squadManager;
     private readonly IPlayerService _playerService;
     private readonly SquadTranslations _translations;
+    private readonly ChatService _chatService;
+    private readonly Func<CSteamID, SquadMenuUIPlayerData> _getData;
+
     public LabeledButton CloseMenuButton { get; } = new LabeledButton("SquadMenuCloseButton");
     public LabeledStateButton CreateSquadButton { get; } = new LabeledStateButton("CreateSquadButton", "./Label", "./ButtonState");
-    public UnturnedTextBox CreateSquadInput { get; } = new UnturnedTextBox("CreateSquadInput") { UseData = true };
+    public PlaceholderTextBox CreateSquadInput { get; } = new PlaceholderTextBox("CreateSquadInput", "./Viewport/Placeholder") { UseData = true };
     public UnturnedTextBox CreateSquadFeedback { get; } = new UnturnedTextBox("CreateSquadFeedback");
-    public SquadMenuElement[] Squads { get; } = ElementPatterns.CreateArray<SquadMenuElement>("ScrollView/Viewport/Content/Squad_{0}/Squad{1}_{0}", 1, to: SquadManager.MaxSquadCount);
-    
+    public UnturnedLabel SquadsTitle { get; } = new UnturnedLabel("JoinSquadHeader");
+    public SquadMenuElement[] Squads { get; } = ElementPatterns.CreateArray<SquadMenuElement>("ScrollView/Viewport/Content/Squad_{0}", 1, to: SquadManager.MaxSquadCount);
+    public MySquadMenu MySquad { get; } = new MySquadMenu();
+
     public SquadMenuUI(IServiceProvider serviceProvider, AssetConfiguration assetConfig, ILoggerFactory loggerFactory)
         : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:SquadMenuHUD"), debugLogging: false, staticKey: true)
     {
         _squadManager = serviceProvider.GetRequiredService<SquadManager>();
         _translations = serviceProvider.GetRequiredService<TranslationInjection<SquadTranslations>>().Value;
         _playerService = serviceProvider.GetRequiredService<IPlayerService>();
-        CreateSquadButton.OnClicked += CreateSquadButton_OnClicked;
-        CloseMenuButton.OnClicked += CloseMenuButton_OnClicked;
-        ElementPatterns.SubscribeAll(Squads.Select(e => e.SquadJoinLeaveButton), SquadJoinLeaveButton_OnClicked);
+        _chatService = serviceProvider.GetRequiredService<ChatService>();
+        CreateSquadButton.OnClicked += SquadButtonClicked;
+        CloseMenuButton.OnClicked += CloseButtonClicked;
+
+        _getData = steam64 => new SquadMenuUIPlayerData
+        {
+            Player = steam64,
+            Owner = this
+        };
+
+        ElementPatterns.SubscribeAll(MySquad.Members.Skip(1).Select(x => x.KickButton), KickMemberClicked);
+        ElementPatterns.SubscribeAll(MySquad.Members.Skip(1).Select(x => x.PromoteButton), PromoteMemberClicked);
+
+        MySquad.ToggleLockedButton.OnToggleUpdated += SquadLockedToggleUpdated;
+        ElementPatterns.SubscribeAll(Squads.Select(e => e.SquadJoinLeaveButton), JoinLeaveButtonClicked);
     }
 
-    private void SquadJoinLeaveButton_OnClicked(UnturnedButton button, Player player)
+    private bool _isLocking;
+
+    private void SquadLockedToggleUpdated(UnturnedToggle toggle, Player player, bool isLocked)
     {
         WarfarePlayer warfarePlayer = _playerService.GetOnlinePlayer(player);
 
-        int index = Array.FindIndex(Squads, e => e.SquadJoinLeaveButton.Button == button);
+        if (!warfarePlayer.IsSquadLeader())
+        {
+            return;
+        }
+
+        Squad squad = warfarePlayer.GetSquad()!;
+        _isLocking = true;
+        try
+        {
+            if (isLocked)
+                squad.LockSquad(warfarePlayer);
+            else
+                squad.UnlockSquad(warfarePlayer);
+        }
+        finally
+        {
+            _isLocking = false;
+        }
+    }
+
+    private void PromoteMemberClicked(UnturnedButton button, Player player)
+    {
+        int index = Array.FindLastIndex(MySquad.Members, x => ReferenceEquals(x.KickButton, button));
+        if (index <= 0)
+            return;
+
+        WarfarePlayer warfarePlayer = _playerService.GetOnlinePlayer(player);
+        if (!warfarePlayer.IsSquadLeader())
+            return;
+
+        Squad squad = warfarePlayer.GetSquad()!;
+        if (squad.Members.Count >= index)
+            return;
+
+        WarfarePlayer member = squad.Members[index];
+        squad.PromoteMember(member);
+        _chatService.Send(member, _translations.SquadPromoted, squad);
+    }
+
+    private void KickMemberClicked(UnturnedButton button, Player player)
+    {
+        int index = Array.FindLastIndex(MySquad.Members, x => ReferenceEquals(x.KickButton, button));
+        if (index <= 0)
+            return;
+
+        WarfarePlayer warfarePlayer = _playerService.GetOnlinePlayer(player);
+        if (!warfarePlayer.IsSquadLeader())
+            return;
+
+        Squad squad = warfarePlayer.GetSquad()!;
+        if (squad.Members.Count >= index)
+            return;
+
+        WarfarePlayer member = squad.Members[index];
+        squad.RemoveMember(member);
+        _chatService.Send(member, _translations.SquadKicked, squad);
+    }
+
+    private void JoinLeaveButtonClicked(UnturnedButton button, Player player)
+    {
+        WarfarePlayer warfarePlayer = _playerService.GetOnlinePlayer(player);
+
+        if (ReferenceEquals(button, MySquad.LeaveButton.Button) && warfarePlayer.GetSquad() is { } mySquad)
+        {
+            mySquad.RemoveMember(warfarePlayer);
+            return;
+        }
+
+        int index = Array.FindIndex(Squads, e => ReferenceEquals(e.SquadJoinLeaveButton.Button, button));
         List<Squad> friendlySquads = _squadManager.Squads.Where(s => s.Team == warfarePlayer.Team).ToList();
 
         if (index >= friendlySquads.Count)
@@ -69,19 +159,25 @@ public class SquadMenuUI :
             squad.TryAddMember(warfarePlayer);
     }
 
-    private void CloseMenuButton_OnClicked(UnturnedButton button, Player player)
+    private void CloseButtonClicked(UnturnedButton button, Player player)
     {
         CloseUI(_playerService.GetOnlinePlayer(player));
     }
 
-    private void CreateSquadButton_OnClicked(UnturnedButton button, Player player)
+    private void SquadButtonClicked(UnturnedButton button, Player player)
     {
         WarfarePlayer squadleader = _playerService.GetOnlinePlayer(player);
-        UnturnedTextBoxData textBoxData = CreateSquadInput.GetOrAddData(player);
 
-        string? squadName = textBoxData.Text;
+        string? squadName = CreateSquadInput.TextBox.GetOrAddData(player).Text;
         if (string.IsNullOrWhiteSpace(squadName))
-            squadName = $"{player.channel.owner.playerID.playerName}'s Squad";
+        {
+            squadName = $"{squadleader.Names.CharacterName}'s Squad";
+        }
+        else if (!PassesSquadNameFilter(squadName))
+        {
+            CreateSquadFeedback.SetText(squadleader, _translations.SquadNameFilterViolated.Translate(squadleader));
+            return;
+        }
         
         int numberOfExistingSquads = _squadManager.Squads.Count(s => s.Team == squadleader.Team);
         int numberOfTeammates = _playerService.OnlinePlayers.Count(p => p.Team == squadleader.Team);
@@ -96,33 +192,49 @@ public class SquadMenuUI :
         squadName = squadName.TruncateWithEllipses(32);
 
         _squadManager.CreateSquad(squadleader, squadName);
+        CreateSquadFeedback.SetText(player, string.Empty);
     }
+
+    private static bool PassesSquadNameFilter(string squadName)
+    {
+        // todo: better verifications
+        return ChatFilterHelper.GetChatFilterViolation(squadName) == null;
+    }
+
     public void HandleEvent(SquadCreated e, IServiceProvider serviceProvider)
     {
-        UpdateForViewingPlayers(e.Squad.Team);
+        UpdateForViewingPlayers(e.Squad);
     }
+
+    [EventListener(MustRunInstantly = true)]
     public void HandleEvent(SquadLockUpdated e, IServiceProvider serviceProvider)
     {
-        UpdateForViewingPlayers(e.Squad.Team);
+        if (_isLocking)
+            UpdateForViewingPlayersExceptOwner(e.Squad);
+        else
+            UpdateForViewingPlayers(e.Squad);
     }
+
     public void HandleEvent(SquadDisbanded e, IServiceProvider serviceProvider)
     {
-        UpdateForViewingPlayers(e.Squad.Team);
+        UpdateForViewingPlayers(e.Squad);
     }
 
     public void HandleEvent(SquadMemberJoined e, IServiceProvider serviceProvider)
     {
-        UpdateForViewingPlayers(e.Squad.Team);
+        UpdateForViewingPlayers(e.Squad);
     }
 
     public void HandleEvent(SquadMemberLeft e, IServiceProvider serviceProvider)
     {
-        UpdateForViewingPlayers(e.Squad.Team);
+        UpdateForViewingPlayers(e.Squad);
     }
+    
     public void HandleEvent(SquadLeaderUpdated e, IServiceProvider serviceProvider)
     {
-        UpdateForViewingPlayers(e.Squad.Team);
+        UpdateForViewingPlayers(e.Squad);
     }
+
     void IEventListener<NpcEventTriggered>.HandleEvent(NpcEventTriggered e, IServiceProvider serviceProvider)
     {
         if (e.Id.Equals("Uncreated.Warfare.Squads.OpenMenu", StringComparison.Ordinal) && e.Player != null)
@@ -131,49 +243,84 @@ public class SquadMenuUI :
         }
     }
 
-    public IEnumerable<WarfarePlayer> ViewingPlayersOnTeam(Team team) => _playerService.OnlinePlayers.Where(p =>
+    public IEnumerable<WarfarePlayer> ViewingPlayersOnTeam(Team team) => _playerService.OnlinePlayers.Where(p => GetOrAddData(p).IsViewing && p.Team == team);
+
+    private SquadMenuUIPlayerData GetOrAddData(WarfarePlayer player)
     {
-        PlayerViewingState data = GetOrAddData(p.Steam64, steam64 => new PlayerViewingState
-        {
-            Player = steam64,
-            Owner = this
-        });
-        return data != null && data.IsViewing && p.Team == team;
-    });
+        return GetOrAddData(player.Steam64, _getData);
+    }
+
     public void OpenUI(WarfarePlayer player)
     {
-        PlayerViewingState data = GetOrAddData(player.Steam64, steam64 => new PlayerViewingState
+        SquadMenuUIPlayerData data = GetOrAddData(player);
+        if (!data.IsViewing)
         {
-            Player = steam64,
-            Owner = this
-        });
-        data.IsViewing = true;
-        SendToPlayer(player.Connection);
-        CreateSquadInput.UpdateFromData(player.UnturnedPlayer);
-        ModalHandle.TryGetModalHandle(player, ref data.Modal);
+            data.IsViewing = true;
+            SendToPlayer(player.Connection);
+            CreateSquadInput.SetPlaceholder(player, _translations.SquadSquadNamePlaceholder.Translate(player));
+            CreateSquadInput.TextBox.UpdateFromData(player.UnturnedPlayer);
+            CreateSquadButton.SetText(player, _translations.SquadButtonCreate.Translate(player));
+            MySquad.LeaveButton.SetText(player, _translations.SquadButtonLeave.Translate(player));
+            SquadsTitle.SetText(player, _translations.SquadsTitle.Translate(player));
+            ModalHandle.TryGetModalHandle(player, ref data.Modal);
+        }
+
         UpdateForPlayer(player);
     }
+
     public void CloseUI(WarfarePlayer player)
     {
-        PlayerViewingState data = GetOrAddData(player.Steam64, steam64 => new PlayerViewingState
-        {
-            Player = steam64,
-            Owner = this
-        });
+        SquadMenuUIPlayerData data = GetOrAddData(player);
         data.IsViewing = false;
         ClearFromPlayer(player.Connection);
         data.Modal.Dispose();
     }
-    private void UpdateForViewingPlayers(Team team)
+
+    private void UpdateForViewingPlayers(Squad squad)
     {
-        foreach (WarfarePlayer player in ViewingPlayersOnTeam(team))
+        WarfarePlayer owner = squad.Leader;
+        foreach (WarfarePlayer player in ViewingPlayersOnTeam(squad.Team))
         {
-            UpdateForPlayer(player);
+            if (player.Equals(owner))
+            {
+                SendMySquadDetail(player);
+            }
+            else
+            {
+                UpdateForPlayer(player);
+            }
         }
     }
+    private void UpdateForViewingPlayersExceptOwner(Squad squad)
+    {
+        WarfarePlayer owner = squad.Leader;
+        foreach (WarfarePlayer player in ViewingPlayersOnTeam(squad.Team))
+        {
+            if (!player.Equals(owner))
+            {
+                UpdateForPlayer(player);
+            }
+        }
+    }
+
     private void UpdateForPlayer(WarfarePlayer player)
     {
-        List<Squad> friendlySquads = _squadManager.Squads.Where(s => s.Team == player.Team).ToList();
+        List<Squad> friendlySquads = _squadManager.Squads
+            .Where(s => s.Team == player.Team)
+            .OrderByDescending(x => x.ContainsPlayer(player))
+            .ThenBy(x => x.TeamIdentificationNumber)
+            .ToList();
+
+        if (player.IsSquadLeader())
+        {
+            SendMySquadDetail(player);
+            friendlySquads.RemoveAt(0);
+        }
+        else
+        {
+            MySquad.Root.Hide(player);
+        }
+
         for (int i = 0; i < Squads.Length; i++)
         {
             SquadMenuElement element = Squads[i];
@@ -185,66 +332,129 @@ public class SquadMenuUI :
             else
                 element.Root.Hide(player);
         }
-        bool notYetInSquad = player.Component<SquadPlayerComponent>().Squad == null;
-        CreateSquadButton.SetState(player.Connection, notYetInSquad);
+
+        CreateSquadButton.SetState(player.Connection, !player.IsInSquad());
     }
+
+    private void SendMySquadDetail(WarfarePlayer player)
+    {
+        Squad squad = player.GetSquad()!;
+
+        MySquad.Name.SetText(player, squad.Name);
+        MySquad.Number.SetText(player, squad.TeamIdentificationNumber.ToString(player.Locale.CultureInfo));
+        MySquad.MemberCount.SetText(player, $"{squad.Members.Count.ToString(player.Locale.CultureInfo)}/{Squad.MaxMembers.ToString(player.Locale.CultureInfo)}");
+        MySquad.ToggleLockedButton.Set(player.UnturnedPlayer, squad.IsLocked);
+
+        int i = 0;
+        int ct = Math.Min(MySquad.Members.Length, squad.Members.Count);
+        for (; i < ct; ++i)
+        {
+            MySquadMember ui = MySquad.Members[i];
+            WarfarePlayer member = squad.Members[i];
+            ui.Show(player);
+
+            Class cl = member.Component<KitPlayerComponent>().ActiveClass;
+            ui.Name.SetText(player, $"<mspace=20>{cl.GetIconString()}</mspace>  {member.Names.CharacterName}");
+            ui.Avatar.SetImage(player, member.SteamSummary.AvatarUrlSmall);
+        }
+
+        for (; i < MySquad.Members.Length; ++i)
+        {
+            MySquad.Members[i].Hide(player);
+        }
+
+        MySquad.Root.Show(player);
+    }
+
     private void SendSquadDetail(SquadMenuElement element, Squad squad, WarfarePlayer player)
     {
-        element.Root.Show(player);
         element.SquadName.SetText(player, squad.Name);
         element.SquadNumber.SetText(player, squad.TeamIdentificationNumber.ToString());
-        element.MemberCount.SetText(player, $"{squad.Members.Count}/{Squad.MaxMembers}");
+        element.MemberCount.SetText(player, $"{squad.Members.Count.ToString(player.Locale.CultureInfo)}/{Squad.MaxMembers.ToString(player.Locale.CultureInfo)}");
+        element.LockIcon.SetVisibility(player, squad.IsLocked);
 
-        element.SquadJoinLeaveButton.Enable(player);
         if (squad.ContainsPlayer(player))
-            element.SquadJoinLeaveButton.SetText(player.Connection, "Leave");
-        else if (player.Component<SquadPlayerComponent>().Squad != null)
-            element.SquadJoinLeaveButton.Disable(player);
+        {
+            element.SquadJoinLeaveButton.Enable(player);
+            element.SquadJoinLeaveButton.SetText(player, _translations.SquadButtonLeave.Translate(player));
+        }
         else
-            element.SquadJoinLeaveButton.SetText(player.Connection, "Join");
+        {
+            element.SquadJoinLeaveButton.SetState(player, !player.IsInSquad() && squad.CanJoinSquad(player));
+            element.SquadJoinLeaveButton.SetText(player, _translations.SquadButtonJoin.Translate(player));
+        }
 
         for (int j = 0; j < element.MemberNames.Length; j++)
         {
             var memberElement = element.MemberNames[j];
             if (j < squad.Members.Count)
             {
-                memberElement.Show(player);
-
                 WarfarePlayer member = squad.Members[j];
                 Class kitClass = member.Component<KitPlayerComponent>().ActiveClass;
-                string memberName = $"{kitClass.GetIcon()}  {member.Names.PlayerName}";
+                string memberName = $"<mspace=20>{kitClass.GetIconString()}</mspace> {member.Names.PlayerName}";
                 if (j == 0)
-                    memberName = "Leader: " + memberName;
+                    memberName = _translations.SquadLeader.Translate(memberName, player);
 
                 memberElement.SetText(player, memberName);
+                memberElement.Show(player);
             }
             else
                 memberElement.Hide(player);
         }
+
+        element.Root.Show(player);
     }
 #nullable disable
-    public class SquadMenuElement
-    {
-        [Pattern("", Root = true, CleanJoin = '_')]
-        public UnturnedUIElement Root { get; set; }
 
-        [Pattern("Number", Mode = FormatMode.Format)]
+    public class MySquadMenu
+    {
+        public UnturnedUIElement Root { get; } = new UnturnedUIElement("ScrollView/Viewport/Content/MySquad");
+        public UnturnedLabel Number { get; } = new UnturnedLabel("ScrollView/Viewport/Content/MySquad/Number");
+        public UnturnedLabel Name { get; } = new UnturnedLabel("ScrollView/Viewport/Content/MySquad/Name");
+        public UnturnedLabel MemberCount { get; } = new UnturnedLabel("ScrollView/Viewport/Content/MySquad/MemberCount");
+        public LabeledButton LeaveButton { get; } = new LabeledButton("ScrollView/Viewport/Content/MySquad/SquadMenuHUD_LeaveMySquadButton");
+        public LabeledUnturnedToggle ToggleLockedButton { get; } = new LabeledUnturnedToggle(true, "ScrollView/Viewport/Content/MySquad/SquadMenuHUD_ToggleLockedMySquadButton", "./ToggleState", "./LockLabel", null);
+        public UnturnedLabel LockButtonDescription { get; } = new UnturnedLabel("ScrollView/Viewport/Content/MySquad/SquadMenuHUD_ToggleLockedMySquadButton/LockLabelDescription");
+        public MySquadMember[] Members { get; } = ElementPatterns.CreateArray<MySquadMember>("ScrollView/Viewport/Content/MySquad/SquadMember_{0}", 1, to: Squad.MaxMembers);
+    }
+
+    public class MySquadMember : PatternRoot
+    {
+        [Pattern("Name")]
+        public UnturnedLabel Name { get; set; }
+
+        [Pattern("Avatar", AdditionalPath = "AvatarMask")]
+        public UnturnedImage Avatar { get; set; }
+
+        [Pattern("SquadMenuHUD_KickMySquadMember_{0}")]
+        public UnturnedButton KickButton { get; set; }
+
+        [Pattern("SquadMenuHUD_PromoteMySquadMember_{0}")]
+        public UnturnedButton PromoteButton { get; set; }
+    }
+
+    public class SquadMenuElement : PatternRoot
+    {
+        [Pattern("Number")]
         public UnturnedLabel SquadNumber { get; set; }
         
-        [Pattern("Name", Mode = FormatMode.Format)]
+        [Pattern("Name")]
         public UnturnedLabel SquadName { get; set; }
 
-        [Pattern("MemberCount", Mode = FormatMode.Format)]
+        [Pattern("MemberCount")]
         public UnturnedLabel MemberCount { get; set; }
 
-        [Pattern("JoinLeaveButton", PresetPaths = ["./Label", "./ButtonState"], Mode = FormatMode.Format)]
+        [Pattern("Lock")]
+        public UnturnedUIElement LockIcon { get; set; }
+
+        [Pattern("SquadMenuHUD_JoinLeaveButton_{0}", PresetPaths = [ "./Label", "./ButtonState" ])]
         public LabeledStateButton SquadJoinLeaveButton { get; set; }
 
         [ArrayPattern(1, To = 6)]
-        [Pattern("SquadMember_{0}", Mode = FormatMode.Replace)]
+        [Pattern("SquadMember_{1}")]
         public UnturnedLabel[] MemberNames { get; set; }
     }
-    public class PlayerViewingState : IUnturnedUIData
+    public class SquadMenuUIPlayerData : IUnturnedUIData
     {
         internal ModalHandle Modal;
         public required CSteamID Player { get; init; }

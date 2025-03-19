@@ -821,17 +821,35 @@ public class OptionsUI : UnturnedUI
         if (search.Length > 3 && search.StartsWith("UTC", StringComparison.OrdinalIgnoreCase))
         {
             int plusOrMinusIndex = search.IndexOf('+', 3);
+            bool isMinus = false;
             if (plusOrMinusIndex == -1)
-                plusOrMinusIndex = search.IndexOf('-', 3);
-            if (plusOrMinusIndex != -1 && plusOrMinusIndex < search.Length - 1 && TimeSpan.TryParse(search.AsSpan(plusOrMinusIndex + 1), player.Locale.ParseFormat, out TimeSpan timeSpan))
             {
-                if (timeSpan is { Days: > 0, Hours: 0, Minutes: 0, Seconds: 0, Milliseconds: 0 })
-                    timeSpan = new TimeSpan(timeSpan.Days, 0, 0);
-                
-                foreach (TimeZoneInfo tz in _allTimeZones)
+                isMinus = true;
+                plusOrMinusIndex = search.IndexOf('-', 3);
+            }
+            if (plusOrMinusIndex != -1 && plusOrMinusIndex < search.Length - 1)
+            {
+                TimeSpan ts = default;
+                if (int.TryParse(search.AsSpan(plusOrMinusIndex + 1), NumberStyles.Any, player.Locale.ParseFormat, out int hours))
                 {
-                    if (tz.BaseUtcOffset == timeSpan && !_timeZoneSearch.Contains(tz))
-                        _timeZoneSearch.Add(tz);
+                    ts = TimeSpan.FromHours(hours);
+                }
+                else if (TimeSpan.TryParse(search.AsSpan(plusOrMinusIndex + 1), player.Locale.ParseFormat, out TimeSpan timeSpan))
+                {
+                    ts = timeSpan is { Days: > 0, Hours: 0, Minutes: 0, Seconds: 0, Milliseconds: 0 }
+                        ? new TimeSpan(timeSpan.Days, 0, 0)
+                        : timeSpan;
+                }
+
+                if (ts.Ticks != 0)
+                {
+                    if (isMinus)
+                        ts = -ts;
+                    foreach (TimeZoneInfo tz in _allTimeZones.OrderBy(x => x.DisplayName is [ '+', .. ] or [ '-', .. ]))
+                    {
+                        if (tz.BaseUtcOffset == ts && !_timeZoneSearch.Contains(tz))
+                            _timeZoneSearch.Add(tz);
+                    }
                 }
             }
 

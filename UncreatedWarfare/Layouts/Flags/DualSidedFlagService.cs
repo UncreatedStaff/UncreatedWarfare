@@ -215,11 +215,11 @@ public abstract class DualSidedFlagService :
             if (contestState.State == FlagContestState.ContestState.OneTeamIsLeading)
             {
                 flag.MarkContested(false);
-                float speed = Layout.LayoutConfiguration.GetValue("TickMultiplier", 3.222f)
+                float speed = Configuration.GetValue("TickMultiplier", 3.222f)
                               * Mathf.Log10((flag.CurrentContestState.Winner is not { IsValid: true }
-                                  ? flag.Players.Count(x => x.Team.IsValid)
-                                  : flag.Players.Count(x => x.Team.IsFriendly(flag.CurrentContestState.Winner)))
-                                + 1);
+                                                ? flag.Players.Count(x => x.Team.IsValid)
+                                                : flag.Players.Count(x => x.Team.IsFriendly(flag.CurrentContestState.Winner)))
+                                            + 1);
                 flag.Contest.AwardPoints(contestState.Winner!, Mathf.RoundToInt(speed));
             }
             else if (contestState.State == FlagContestState.ContestState.Contested)

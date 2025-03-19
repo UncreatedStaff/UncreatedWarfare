@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using Uncreated.Warfare.Buildables;
@@ -219,126 +220,167 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
         return TimeSpan.Zero;
     }
 
+    private static readonly Stopwatch _sw = new Stopwatch();
     private void Update(ILoopTicker ticker, TimeSpan timeSinceStart, TimeSpan deltaTime)
     {
-        if (Buildable == null)
-            return;
-
-        if (State is VehicleSpawnerState.Disposed or VehicleSpawnerState.Glitched)
-            return;
-
-        if (timeSinceStart.Seconds % 10 == 0)
+        _sw.Reset();
+        _sw.Start();
+        try
         {
-            if (!IsEnabledInLayout())
-            {
-                State = VehicleSpawnerState.LayoutDisabled;
-                UpdateLinkedSigns();
-            }
-            else if (State == VehicleSpawnerState.LayoutDisabled)
-            {
-                State = VehicleSpawnerState.AwaitingRespawn;
-                UpdateLinkedSigns();
-            }
-        }
+            if (Buildable == null)
+                return;
 
-        if (State == VehicleSpawnerState.LayoutDisabled)
-            return;
+            if (State is VehicleSpawnerState.Disposed or VehicleSpawnerState.Glitched)
+                return;
 
-        if (_isSpawningVehicle)
-            return;
-
-        if (State == VehicleSpawnerState.AwaitingRespawn)
-        {
-            if (LinkedVehicle == null)
+            if (timeSinceStart.Seconds % 10 == 0)
             {
-                RespawnVehicle();
-            }
-
-            if (LinkedVehicle != null && !LinkedVehicle.isExploded && !LinkedVehicle.isDead && !LinkedVehicle.isDrowned)
-            {
-                if (IsDelayed(out _))
-                    State = VehicleSpawnerState.LayoutDelayed;
-                else
-                    State = VehicleSpawnerState.Ready;
-                _lastLocation = null;
-                _timeStartedIdle = DateTime.MaxValue;
-                _timeDestroyed = DateTime.MaxValue;
-                UpdateLinkedSigns();
-            }
-        }
-        // Destroyed
-        else if (LinkedVehicle == null || LinkedVehicle.isExploded || LinkedVehicle.isDead || LinkedVehicle.isDrowned)
-        {
-            if (State != VehicleSpawnerState.Destroyed)
-            {
-                State = VehicleSpawnerState.Destroyed;
-                _timeDestroyed = DateTime.Now;
-                _timeStartedIdle = DateTime.MaxValue;
-                _lastLocation = null;
-            }
-
-            CheckRespawn();
-            UpdateLinkedSigns();
-        }
-        // Delayed in Layout configuration
-        else if (IsDelayed(out _))
-        {
-            if (State != VehicleSpawnerState.LayoutDelayed)
-            {
-                State = VehicleSpawnerState.LayoutDelayed;
-            }
-            UpdateLinkedSigns();
-        }
-        // Ready
-        else if (LinkedVehicle.lockedOwner.m_SteamID == 0 && LinkedVehicle.isLocked)
-        {
-            if (State != VehicleSpawnerState.Ready)
-            {
-                State = VehicleSpawnerState.Ready;
-                _lastLocation = null;
-                _timeStartedIdle = DateTime.MaxValue;
-                _timeDestroyed = DateTime.MaxValue;
-                UpdateLinkedSigns();
-            }
-        }
-        // Idle
-        else if (IsIdle(LinkedVehicle))
-        {
-            if (State != VehicleSpawnerState.Idle)
-            {
-                State = VehicleSpawnerState.Idle;
-                _lastLocation = null;
-                _timeStartedIdle = DateTime.Now;
-                _timeDestroyed = DateTime.MaxValue;
-            }
-
-            CheckRespawn();
-            UpdateLinkedSigns();
-        }
-        // Deployed
-        else
-        {
-            if (State != VehicleSpawnerState.Deployed)
-            {
-                State = VehicleSpawnerState.Deployed;
-                UpdateLinkedSigns();
-            }
-
-            Vector3 vehiclePos = LinkedVehicle.transform.position;
-
-            // every 2.5 meters moved horizontally re-check closest zone to update sign's in-use location
-            if (_lastLocation == null || MathUtility.SquaredDistance(in vehiclePos, in _lastZoneCheckPos) > 2.5 * 2.5)
-            {
-                _lastZoneCheckPos.x = vehiclePos.x;
-                _lastZoneCheckPos.y = vehiclePos.z;
-                Zone? zone = _zoneStore.FindClosestZone(vehiclePos);
-                if (!ReferenceEquals(zone, _lastLocation))
+                if (!IsEnabledInLayout())
                 {
-                    _lastLocation = zone;
+                    State = VehicleSpawnerState.LayoutDisabled;
+                    UpdateLinkedSigns();
+                }
+                else if (State == VehicleSpawnerState.LayoutDisabled)
+                {
+                    State = VehicleSpawnerState.AwaitingRespawn;
                     UpdateLinkedSigns();
                 }
             }
+
+            if (State == VehicleSpawnerState.LayoutDisabled)
+                return;
+
+            if (_isSpawningVehicle)
+                return;
+
+            if (State == VehicleSpawnerState.AwaitingRespawn)
+            {
+                if (LinkedVehicle == null)
+                {
+                    RespawnVehicle();
+                }
+
+                if (LinkedVehicle != null && !LinkedVehicle.isExploded && !LinkedVehicle.isDead && !LinkedVehicle.isDrowned)
+                {
+                    if (IsDelayed(out _))
+                        State = VehicleSpawnerState.LayoutDelayed;
+                    else
+                        State = VehicleSpawnerState.Ready;
+                    _lastLocation = null;
+                    _timeStartedIdle = DateTime.MaxValue;
+                    _timeDestroyed = DateTime.MaxValue;
+                    UpdateLinkedSigns();
+                }
+            }
+            // Destroyed
+            else if (LinkedVehicle == null || LinkedVehicle.isExploded || LinkedVehicle.isDead || LinkedVehicle.isDrowned)
+            {
+                if (State != VehicleSpawnerState.Destroyed)
+                {
+                    State = VehicleSpawnerState.Destroyed;
+                    _timeDestroyed = DateTime.Now;
+                    _timeStartedIdle = DateTime.MaxValue;
+                    _lastLocation = null;
+                }
+
+                CheckRespawn();
+                UpdateLinkedSigns();
+            }
+            // Delayed in Layout configuration
+            else if (IsDelayed(out _))
+            {
+                if (State != VehicleSpawnerState.LayoutDelayed)
+                {
+                    State = VehicleSpawnerState.LayoutDelayed;
+                }
+                UpdateLinkedSigns();
+            }
+            // Ready
+            else if (LinkedVehicle.lockedOwner.m_SteamID == 0 && LinkedVehicle.isLocked)
+            {
+                if (State != VehicleSpawnerState.Ready)
+                {
+                    State = VehicleSpawnerState.Ready;
+                    _lastLocation = null;
+                    _timeStartedIdle = DateTime.MaxValue;
+                    _timeDestroyed = DateTime.MaxValue;
+                    UpdateLinkedSigns();
+                }
+            }
+            // Idle
+            else if (IsIdle(LinkedVehicle))
+            {
+                if (State != VehicleSpawnerState.Idle)
+                {
+                    State = VehicleSpawnerState.Idle;
+                    _lastLocation = null;
+                    _timeStartedIdle = DateTime.Now;
+                    _timeDestroyed = DateTime.MaxValue;
+                }
+
+                CheckRespawn();
+                UpdateLinkedSigns();
+            }
+            // Deployed
+            else
+            {
+                if (State != VehicleSpawnerState.Deployed)
+                {
+                    State = VehicleSpawnerState.Deployed;
+                    UpdateLinkedSigns();
+                }
+
+                Vector3 vehiclePos = LinkedVehicle.transform.position;
+
+                // every 2.5 meters moved horizontally re-check closest zone to update sign's in-use location
+                if (_lastLocation == null || MathUtility.SquaredDistance(in vehiclePos, in _lastZoneCheckPos) > 2.5 * 2.5)
+                {
+                    _lastZoneCheckPos.x = vehiclePos.x;
+                    _lastZoneCheckPos.y = vehiclePos.z;
+                    Zone? zone = null;//;_zoneStore.FindClosestZone(vehiclePos); todo
+                    if (!ReferenceEquals(zone, _lastLocation))
+                    {
+                        _lastLocation = zone;
+                        UpdateLinkedSigns();
+                    }
+                }
+            }
         }
+        finally
+        {
+            _sw.Stop();
+            double ms = _sw.ElapsedMilliseconds;
+
+            _minUpdateMs = Math.Min(ms, _minUpdateMs);
+            _maxUpdateMs = Math.Max(ms, _maxUpdateMs);
+            double sum = _avgUpdateMs * _updateCt;
+            ++_updateCt;
+            _avgUpdateMs = (sum + ms) / _updateCt;
+            int frameCount = Time.frameCount;
+            if (_lastFrame == frameCount)
+                ++_updateCtPerFrame;
+            else
+            {
+                _updateCtPerFrame = 1;
+                _lastFrame = frameCount;
+            }
+        }
+    }
+
+    private static double _minUpdateMs = double.MaxValue;
+    private static double _maxUpdateMs;
+    private static double _avgUpdateMs;
+    private static int _updateCt;
+    private static int _updateCtPerFrame;
+    private static int _lastFrame;
+
+    internal static void DumpVehicleSpawner()
+    {
+        WarfareModule.Singleton.GlobalLogger.LogInformation($"Minimum: {_minUpdateMs:F4} ms.");
+        WarfareModule.Singleton.GlobalLogger.LogInformation($"Maximum: {_maxUpdateMs:F4} ms.");
+        WarfareModule.Singleton.GlobalLogger.LogInformation($"Average: {_avgUpdateMs:F4} ms.");
+        WarfareModule.Singleton.GlobalLogger.LogInformation($"TotalCt: {_updateCt}.");
+        WarfareModule.Singleton.GlobalLogger.LogInformation($"FrameCt: {_updateCtPerFrame}.");
     }
 
     private bool IsIdle(InteractableVehicle vehicle)
