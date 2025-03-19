@@ -227,30 +227,24 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
         _sw.Start();
         try
         {
-            if (Buildable == null)
+            if (Buildable == null || _isSpawningVehicle)
                 return;
 
             if (State is VehicleSpawnerState.Disposed or VehicleSpawnerState.Glitched)
                 return;
 
-            if (timeSinceStart.Seconds % 10 == 0)
+            if (!IsEnabledInLayout())
             {
-                if (!IsEnabledInLayout())
-                {
-                    State = VehicleSpawnerState.LayoutDisabled;
-                    UpdateLinkedSigns();
-                }
-                else if (State == VehicleSpawnerState.LayoutDisabled)
-                {
-                    State = VehicleSpawnerState.AwaitingRespawn;
-                    UpdateLinkedSigns();
-                }
+                State = VehicleSpawnerState.LayoutDisabled;
+                UpdateLinkedSigns();
+            }
+            else if (State == VehicleSpawnerState.LayoutDisabled)
+            {
+                State = VehicleSpawnerState.AwaitingRespawn;
+                UpdateLinkedSigns();
             }
 
             if (State == VehicleSpawnerState.LayoutDisabled)
-                return;
-
-            if (_isSpawningVehicle)
                 return;
 
             if (State == VehicleSpawnerState.AwaitingRespawn)
@@ -293,6 +287,9 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
                 {
                     State = VehicleSpawnerState.LayoutDelayed;
                 }
+                _lastLocation = null;
+                _timeStartedIdle = DateTime.MaxValue;
+                _timeDestroyed = DateTime.MaxValue;
                 UpdateLinkedSigns();
             }
             // Ready
@@ -337,7 +334,7 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
                 {
                     _lastZoneCheckPos.x = vehiclePos.x;
                     _lastZoneCheckPos.y = vehiclePos.z;
-                    Zone? zone = null;//;_zoneStore.FindClosestZone(vehiclePos); todo
+                    Zone? zone = _zoneStore.FindClosestZone(vehiclePos);
                     if (!ReferenceEquals(zone, _lastLocation))
                     {
                         _lastLocation = zone;
@@ -538,7 +535,10 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
 
         return configuration.Delay.GetTimeLeft(new LayoutDelayContext(Layout, TeamLayoutRole));
     }
-    public bool IsEnabledInLayout() => _vehicleSpawnerSelector?.IsEnabledInLayout(SpawnInfo) ?? true;
+    public bool IsEnabledInLayout()
+    {
+        return _vehicleSpawnerSelector?.IsEnabledInLayout(SpawnInfo) ?? true;
+    }
 
     public void Dispose()
     {

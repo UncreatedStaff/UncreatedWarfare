@@ -20,6 +20,7 @@ using Uncreated.Warfare.Services;
 using Uncreated.Warfare.StrategyMaps.MapTacks;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.List;
+using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.StrategyMaps;
 
@@ -36,13 +37,21 @@ public class StrategyMapManager :
     IEventListener<FobProxyChanged>,
     IEventListener<FlagsSetUp>,
     IEventListener<FlagCaptured>,
-    IEventListener<FlagNeutralized>
+    IEventListener<FlagNeutralized>,
+    IDisposable
 {
     private readonly TrackingList<StrategyMap> _strategyMaps;
     private readonly ILogger<StrategyMapManager> _logger;
     private readonly IServiceProvider _serviceProvider;
     private readonly StrategyMapsConfiguration _configuration;
     private readonly AssetConfiguration _assetConfiguration;
+
+    private Dictionary<int, IAssetLink<ItemBarricadeAsset>> _rallyPoints = null!;
+    private IAssetLink<ItemBarricadeAsset> _fobUnbuilt = null!;
+    private IAssetLink<ItemBarricadeAsset> _fobBuilt = null!;
+    private IAssetLink<ItemBarricadeAsset> _fobProxied = null!;
+    private IAssetLink<ItemBarricadeAsset> _mainBase = null!;
+    private IAssetLink<ItemBarricadeAsset> _neutralFlag = null!;
 
     public StrategyMapManager(ILogger<StrategyMapManager> logger, IServiceProvider serviceProvider)
     {
@@ -53,7 +62,21 @@ public class StrategyMapManager :
         _configuration = serviceProvider.GetRequiredService<StrategyMapsConfiguration>();
         _assetConfiguration = serviceProvider.GetRequiredService<AssetConfiguration>();
 
+        OnAssetConfigurationChange(_assetConfiguration);
+
         _logger.LogInformation("Configured Strategy MapTables: " + (_configuration.MapTables?.Count.ToString() ?? "config not found"));
+    }
+
+    private void OnAssetConfigurationChange(IConfiguration obj)
+    {
+        _rallyPoints = _assetConfiguration.GetSection("Buildables:MapTacks:Rallypoints")
+            .Get<Dictionary<int, IAssetLink<ItemBarricadeAsset>>>() ?? new Dictionary<int, IAssetLink<ItemBarricadeAsset>>();
+
+        _fobUnbuilt = _assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:MapTacks:FobUnbuilt");
+        _fobBuilt = _assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:MapTacks:Fob");
+        _fobProxied = _assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:MapTacks:FobProxied");
+        _mainBase = _assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:MapTacks:MainBase");
+        _neutralFlag = _assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:MapTacks:NeutralFlag");
     }
 
     public UniTask StartAsync(CancellationToken token)
@@ -142,15 +165,10 @@ public class StrategyMapManager :
     {
         MapTack? newTack = null;
         if (e.Fob is BunkerFob)
-            newTack = new DeployableMapTack(_assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:MapTacks:FobUnbuilt"), e.Fob);
+            newTack = new DeployableMapTack(_fobUnbuilt, e.Fob);
         else if (e.Fob is RallyPoint rallypoint)
         {
-            Dictionary<int, IAssetLink<ItemBarricadeAsset>> rallyPointMapTacks =
-                _assetConfiguration.GetSection("Buildables:MapTacks:Rallypoints")
-                    .Get<Dictionary<int, IAssetLink<ItemBarricadeAsset>>>() ??
-                new Dictionary<int, IAssetLink<ItemBarricadeAsset>>();
-            
-            if (rallyPointMapTacks.TryGetValue(rallypoint.Squad.TeamIdentificationNumber, out IAssetLink<ItemBarricadeAsset> rallyPointMapTack))
+            if (_rallyPoints.TryGetValue(rallypoint.Squad.TeamIdentificationNumber, out IAssetLink<ItemBarricadeAsset> rallyPointMapTack))
                 newTack = new DeployableMapTack(rallyPointMapTack, rallypoint);
         }
         
@@ -175,7 +193,7 @@ public class StrategyMapManager :
     {
         MapTack newTack;
         if (e.Fob != null)
-            newTack = new DeployableMapTack(_assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:MapTacks:Fob"), e.Fob);
+            newTack = new DeployableMapTack(_fobBuilt, e.Fob);
         else
             return;
 
@@ -190,7 +208,7 @@ public class StrategyMapManager :
     {
         MapTack newTack;
         if (e.Fob is BunkerFob)
-            newTack = new DeployableMapTack(_assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:MapTacks:FobUnbuilt"), e.Fob);
+            newTack = new DeployableMapTack(_fobUnbuilt, e.Fob);
         else
             return;
 
@@ -205,7 +223,7 @@ public class StrategyMapManager :
     {
         MapTack newTack;
         if (e.Fob is BunkerFob bf && bf.IsBuilt)
-            newTack = new DeployableMapTack(_assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:MapTacks:" + (e.IsProxied ? "FobProxied" : "Fob")), e.Fob);
+            newTack = new DeployableMapTack(e.IsProxied ? _fobProxied : _fobBuilt, e.Fob);
         else
             return;
 
@@ -240,7 +258,7 @@ public class StrategyMapManager :
     }
     private void RepopulateFlagTacks(StrategyMap map, DualSidedFlagService flagService)
     {
-        map.RemoveMapTacks(m => m is FlagMapTack);
+        map.RemoveMapTacks(m => m is FlagMapTack or DeployableMapTack { Deployable: Zone { Type: ZoneType.MainBase } });
 
         foreach (var flag in flagService.ActiveFlags)
         {
@@ -253,7 +271,7 @@ public class StrategyMapManager :
     }
     private void RepopulateDeployableFobTacks(StrategyMap map, FobManager fobManager)
     {
-        map.RemoveMapTacks(m => m is DeployableMapTack fm && fm.Deployable is BunkerFob);
+        map.RemoveMapTacks(m => m is DeployableMapTack { Deployable: BunkerFob or RallyPoint });
 
         foreach (var fob in fobManager.Fobs)
         {
@@ -264,9 +282,10 @@ public class StrategyMapManager :
             {
                 map.AddMapTack(CreateBunkerFobTack(bf));
             }
-            else if (fob is RallyPoint)
+            else if (fob is RallyPoint rp)
             {
-                map.AddMapTack(new DeployableMapTack(_assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:MapTacks:Rallypoint"), fob));
+                if (_rallyPoints.TryGetValue(rp.Squad.TeamIdentificationNumber, out IAssetLink<ItemBarricadeAsset> tack))
+                    map.AddMapTack(new DeployableMapTack(tack, fob));
             }
         }
     }
@@ -274,19 +293,27 @@ public class StrategyMapManager :
     private DeployableMapTack CreateBunkerFobTack(BunkerFob fob)
     {
         if (fob.IsBuilt)
-            return new DeployableMapTack(_assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:MapTacks:" + (fob.IsProxied ? "FobProxied" : "Fob")), fob);
+            return new DeployableMapTack(fob.IsProxied ? _fobProxied : _fobBuilt, fob);
         else
-            return new DeployableMapTack(_assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:MapTacks:FobUnbuilt"), fob);
+            return new DeployableMapTack(_fobUnbuilt, fob);
     }
+
     private DeployableMapTack CreateMainBaseTack(IDeployable mainBase)
     {
-        return new DeployableMapTack(_assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:MapTacks:MainBase"), mainBase);
+        return new DeployableMapTack(_mainBase, mainBase);
     }
+
     private FlagMapTack CreateFlagTack(FlagObjective flag)
     {
         if (flag.Owner == Team.NoTeam || flag.Owner.Faction.MapTackFlag == null)
-            return new FlagMapTack(_assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:MapTacks:NeutralFlag"), flag);
+            return new FlagMapTack(_neutralFlag, flag);
         else
             return new FlagMapTack(flag.Owner.Faction.MapTackFlag, flag);
+    }
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        _assetConfiguration.OnChange -= OnAssetConfigurationChange;
     }
 }

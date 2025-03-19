@@ -17,6 +17,7 @@ public class AssetConfiguration : IConfiguration, IDisposable
     public string FilePath { get; }
     public IConfiguration UnderlyingConfiguration { get; }
 
+
     public event Action<IConfiguration>? OnChange;
     public AssetConfiguration(WarfareModule module)
     {

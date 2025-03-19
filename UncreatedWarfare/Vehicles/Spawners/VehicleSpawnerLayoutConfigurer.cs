@@ -10,21 +10,52 @@ namespace Uncreated.Warfare.Vehicles.Spawners;
 public class VehicleSpawnerLayoutConfigurer : ILayoutHostedService
 {
     private readonly IConfiguration _configuration;
+    private IDisposable? _reloadToken;
+
+    /// <summary>
+    /// List of all vehicle spawners that are enabled along with their configuration.
+    /// </summary>
+    public List<VehicleSpawnerLayoutConfiguration> EnabledSpawnerLayouts { get; private set; }
+
     public VehicleSpawnerLayoutConfigurer(IConfiguration configuration)
     {
         _configuration = configuration;
+        EnabledSpawnerLayouts = GetEnabledSpawnerNames();
     }
 
-    public UniTask StartAsync(CancellationToken token) => UniTask.CompletedTask;
+    public UniTask StartAsync(CancellationToken token)
+    {
+        _reloadToken ??= _configuration.GetReloadToken().RegisterChangeCallback(OnReload, null);
+        return UniTask.CompletedTask;
+    }
 
-    public UniTask StopAsync(CancellationToken token) => UniTask.CompletedTask;
+    public UniTask StopAsync(CancellationToken token)
+    {
+        _reloadToken?.Dispose();
+        _reloadToken = null;
+        return UniTask.CompletedTask;
+    }
 
-    public List<VehicleSpawnerLayoutConfiguration> GetEnabledSpawnerNames() => _configuration.GetRequiredSection("EnabledVehicleSpawners").Get<List<VehicleSpawnerLayoutConfiguration>>() ?? throw new Exception("Invalid EnabledVehicleSpawners config");
+    private void OnReload(object? obj)
+    {
+        EnabledSpawnerLayouts = GetEnabledSpawnerNames();
+    }
 
-    public bool IsEnabledInLayout(VehicleSpawnInfo vehicleSpawnInfo) => GetEnabledSpawnerNames().Exists(s => vehicleSpawnInfo.UniqueName.Equals(s.SpawnerName, StringComparison.OrdinalIgnoreCase));
+    public List<VehicleSpawnerLayoutConfiguration> GetEnabledSpawnerNames()
+    {
+        return _configuration.GetRequiredSection("EnabledVehicleSpawners").Get<List<VehicleSpawnerLayoutConfiguration>>()
+               ?? throw new Exception("Invalid EnabledVehicleSpawners config");
+    }
+
+    public bool IsEnabledInLayout(VehicleSpawnInfo vehicleSpawnInfo)
+    {
+        return EnabledSpawnerLayouts.Exists(s =>
+            vehicleSpawnInfo.UniqueName.Equals(s.SpawnerName, StringComparison.OrdinalIgnoreCase));
+    }
+
     public bool TryGetSpawnerConfiguration(VehicleSpawnInfo vehicleSpawnInfo, [NotNullWhen(true)] out VehicleSpawnerLayoutConfiguration? configuration)
     {
-        configuration = GetEnabledSpawnerNames().FirstOrDefault(s => vehicleSpawnInfo.UniqueName.Equals(s.SpawnerName, StringComparison.OrdinalIgnoreCase));
+        configuration = EnabledSpawnerLayouts.FirstOrDefault(s => vehicleSpawnInfo.UniqueName.Equals(s.SpawnerName, StringComparison.OrdinalIgnoreCase));
         return configuration != null;
     }
 }
