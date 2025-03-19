@@ -15,10 +15,13 @@ using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Kits.Whitelists;
 using Uncreated.Warfare.Players.Extensions;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Permissions;
+using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Zones;
+using RallyPoint = Uncreated.Warfare.FOBs.Rallypoints.RallyPoint;
 
 namespace Uncreated.Warfare.FOBs.Construction.Tweaks;
 
@@ -27,14 +30,16 @@ public class FobPlacementTweaks :
 {
     private readonly AssetConfiguration _assetConfiguration;
     private readonly FobManager _fobManager;
+    private readonly IPlayerService _playerService;
     private readonly UserPermissionStore _userPermissionStore;
     private readonly FobTranslations _translations;
     private readonly IKitItemResolver _kitItemResolver;
 
-    public FobPlacementTweaks(AssetConfiguration assetConfiguration, TranslationInjection<FobTranslations> translations, FobManager fobManager, UserPermissionStore userPermissionStore, IKitItemResolver kitItemResolver)
+    public FobPlacementTweaks(AssetConfiguration assetConfiguration, TranslationInjection<FobTranslations> translations, FobManager fobManager, IPlayerService playerService, UserPermissionStore userPermissionStore, IKitItemResolver kitItemResolver)
     {
         _assetConfiguration = assetConfiguration;
         _fobManager = fobManager;
+        _playerService = playerService;
         _userPermissionStore = userPermissionStore;
         _kitItemResolver = kitItemResolver;
         _translations = translations.Value;
@@ -54,6 +59,12 @@ public class FobPlacementTweaks :
         }
         
         ChatService chatService = serviceProvider.GetRequiredService<ChatService>();
+        
+        if (e.OriginalPlacer.Team.Faction.RallyPoint.MatchAsset(e.Asset) && RallyPoint.CheckBurned(_playerService, e.Position, e.OriginalPlacer.Team))
+        {
+            chatService.Send(e.OriginalPlacer, _translations.PlaceRallyPointNearbyEnemies);
+            return;
+        }
 
         NearbySupplyCrates supplyCrates = NearbySupplyCrates.FindNearbyCrates(e.Position, e.OriginalPlacer.Team.GroupId, _fobManager);
 

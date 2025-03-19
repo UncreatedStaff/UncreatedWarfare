@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Security;
+using UnityEngine.PlayerLoop;
 using Random = System.Random;
 
 namespace Uncreated.Warfare.Util;
@@ -16,9 +17,8 @@ public static class RandomUtility
 
     private static bool _unityLoaded;
     private static bool _unityLoadedSet;
-
-    private static int _randomSeed;
-    private static Random GetNonGameThreadRandom() => _random ??= new Random(Interlocked.Increment(ref _randomSeed));
+    
+    private static Random GetNonGameThreadRandom() => _random ??= new Random((int) DateTime.UtcNow.Ticks);
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     private static void SetUnityLoaded()
@@ -172,14 +172,13 @@ public static class RandomUtility
         }
 
         float pick = GetFloat(0, totalWeight);
-        totalWeight = weightSelector(list[0]);
-        for (int i = 1; i < list.Count; ++i)
+        totalWeight = 0;
+        for (int i = 0; i < list.Count; ++i)
         {
-            if (pick > totalWeight)
-                return i - 1;
             totalWeight += weightSelector(list[i]);
+            if (pick < totalWeight)
+                return i;
         }
-
         return list.Count - 1;
     }
 
@@ -199,15 +198,13 @@ public static class RandomUtility
         }
 
         double pick = GetDouble(0, totalWeight);
-        totalWeight = weightSelector(list[0]);
-        for (int i = 1; i < list.Count; ++i)
+        totalWeight = 0;
+        for (int i = 0; i < list.Count; ++i)
         {
-            if (pick > totalWeight)
-                return i - 1;
             totalWeight += weightSelector(list[i]);
+            if (pick < totalWeight)
+                return i;
         }
-
-        // should never happen
         return list.Count - 1;
     }
 }

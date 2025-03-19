@@ -34,6 +34,9 @@ public class FobTranslations : PropertiesTranslationCollection
 
     [TranslationData("Indicates that a buildable can only be placed within a friendly FOB.")]
     public readonly Translation BuildEnemy = new Translation("<#ffab87>You may not build on an enemy FOB.");
+    
+    [TranslationData("Indicates that a player cannot shovel up an enemy fob, emplacement or fortification.")]
+    public readonly Translation ShovelableNotFriendly = new Translation("<#ffab87>You cannot shovel up enemy fortifications.");
 
     [TranslationData("Indicates that a buildable needs more building supplies to be built.", "Progress shovel hits", "Required shovel hits")]
     public readonly Translation<float, float> BuildMissingSupplies = new Translation<float, float>("<#ffab87>You're missing nearby building supplies! <#f3ce82>Build required: <#e0d8b8>{0}/{1}</color></color>.");
@@ -67,6 +70,9 @@ public class FobTranslations : PropertiesTranslationCollection
 
     [TranslationData("Indicates that a player doesn't have permissions or is missing the required kit, etc. to place a buildable.")]
     public readonly Translation BuildableNotAllowed = new Translation("<#ffa238>You are not allowed to place this buildable.");
+    
+    [TranslationData("Indicates that a player cannot place a rally point because there are enemies nearby.")]
+    public readonly Translation PlaceRallyPointNearbyEnemies = new Translation("<#ffaa42>Rally point unavailable - there are enemies nearby.");
     
     [TranslationData(IsPriorityTranslation = false)]
     public readonly Translation<IDeployable, GridLocation, string> FOBUI = new Translation<IDeployable, GridLocation, string>("{0}  <color=#d6d2c7>{1}</color>  {2}", TranslationOptions.UnityUI, arg0Fmt: Flags.ColorNameFormat);

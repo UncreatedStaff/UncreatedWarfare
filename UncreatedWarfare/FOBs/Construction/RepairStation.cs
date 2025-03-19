@@ -49,15 +49,16 @@ public class RepairStation : RestockableBuildableFobEntity
             
             foreach (WarfareVehicle vehicle in nearbyVehicles)
             {
+                if (vehicle.Vehicle.lockedGroup == CSteamID.Nil)
+                    continue;
+                
                 // planes and helis get a larger repair radius
-                bool isGroundVehicle = !vehicle.Asset.engine.IsFlyingEngine();
-
-                if (isGroundVehicle && !MathUtility.WithinRange(vehicle.Position, Buildable.Position, _fobConfiguration.RepairStationGroundVehicleRepairRadius))
+                if (vehicle.Info.Type.IsGroundVehicle() && !MathUtility.WithinRange(vehicle.Position, Buildable.Position, _fobConfiguration.RepairStationGroundVehicleRepairRadius))
                     continue;
-
-                if (!isGroundVehicle && !MathUtility.WithinRange(vehicle.Position, Buildable.Position, _fobConfiguration.RepairStationAircraftRepairRadius))
+                
+                if (vehicle.Info.Type.IsAircraft() && !MathUtility.WithinRange(vehicle.Position, Buildable.Position, _fobConfiguration.RepairStationAircraftRepairRadius))
                     continue;
-
+                
                 if (zoneStore != null && !zoneStore.IsInMainBase(vehicle.Position))
                 {
                     if (supplyCrateGroup.BuildCount > 0)
