@@ -41,10 +41,12 @@ public class RallyPoint : IBuildableFob, IDisposable
         Squad = squad;
         Team = Squad.Team;
         _deploymentStarted = DateTime.MinValue;
+        
+        IsBurned = false;
 
         Color = HexStringHelper.ParseColor32("#67ff85", throwOnError: false);
 
-        _loopTicker = serviceProvider.GetRequiredService<ILoopTickerFactory>().CreateTicker(TimeSpan.FromSeconds(1f), true, true, OnTick);
+        _loopTicker = serviceProvider.GetRequiredService<ILoopTickerFactory>().CreateTicker(TimeSpan.FromSeconds(1f), false, true, OnTick);
     }
 
     private void OnTick(ILoopTicker ticker, TimeSpan timeSinceStart, TimeSpan deltaTime)
@@ -52,14 +54,14 @@ public class RallyPoint : IBuildableFob, IDisposable
         if (IsBurned)
             return;
         
-        IsBurned = CheckBurned();
+        IsBurned = CheckBurned(_playerService, Buildable.Position, Team);
 
         if (IsBurned)
             Buildable.Destroy();
     }
-    private bool CheckBurned()
+    public static bool CheckBurned(IPlayerService playerService, Vector3 rallyPointPosition, Team team)
     {
-        return _playerService.OnlinePlayers.Any(p => p.Team != Team && MathUtility.WithinRange(p.Position, Buildable.Position, BurnRadius));
+        return playerService.OnlinePlayers.Any(p => p.Team != team && MathUtility.WithinRange(p.Position, rallyPointPosition, BurnRadius));
     }
     public bool IsVibileToPlayer(WarfarePlayer player) => Squad.ContainsPlayer(player);
     public bool CheckDeployableFrom(WarfarePlayer player, ChatService chatService, DeploymentTranslations translations, in DeploySettings settings, IDeployable deployingTo)

@@ -128,6 +128,13 @@ internal class ShoveableTweaks :
             return;
 
         ShovelableBuildable? shovelable = _fobManager.GetBuildableFobEntity<ShovelableBuildable>(buildable);
+
+        if (shovelable?.Buildable.Group != e.Player.Team.GroupId)
+        {
+            _chatService.Send(e.Player, _translations.ShovelableNotFriendly);
+            return;
+        }
+        
         shovelable?.Shovel(e.Player, e.InputInfo.point);
     }
 }

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Security;
+using UnityEngine.PlayerLoop;
 using Random = System.Random;
 
 namespace Uncreated.Warfare.Util;
@@ -178,7 +179,6 @@ public static class RandomUtility
             if (pick < totalWeight)
                 return i;
         }
-
         return list.Count - 1;
     }
 

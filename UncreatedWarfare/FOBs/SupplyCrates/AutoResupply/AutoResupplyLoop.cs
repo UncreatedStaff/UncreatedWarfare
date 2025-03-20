@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Fobs.SupplyCrates;
 using Uncreated.Warfare.Layouts;
@@ -52,19 +53,24 @@ public class AutoResupplyLoop : ILayoutHostedService, ILayoutStartingListener
     {
         foreach (WarfareVehicle vehicle in _vehicleService.Vehicles)
         {
-            if (vehicle.Vehicle.ReplicatedSpeed > 0.5f)
+            if (vehicle.Vehicle.lockedOwner == CSteamID.Nil)
                 continue;
 
             bool isInMain = _zoneStore.IsInMainBase(vehicle.Position);
-
+            
             if (!isInMain)
             {
                 if (!vehicle.NeedsAutoResupply)
+                {
                     vehicle.NeedsAutoResupply = true;
+                }
                 continue;
             }
             
             if (!vehicle.NeedsAutoResupply)
+                continue;
+            
+            if (vehicle.Vehicle.ReplicatedSpeed > 0.5f)
                 continue;
             
             if (vehicle.Info.Trunk.Count == 0)
@@ -74,7 +80,7 @@ public class AutoResupplyLoop : ILayoutHostedService, ILayoutStartingListener
             vehicle.FlareEmitter?.ReloadFlares();
             vehicle.NeedsAutoResupply = false;
 
-            WarfarePlayer? owner = _playerService.GetOnlinePlayerOrNull(vehicle.Vehicle.lockedOwner);
+            WarfarePlayer? owner = _playerService.GetOnlinePlayerOrNull(vehicle.TranportTracker.LastKnownDriver.GetValueOrDefault());
             owner?.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.VehicleAutoSupply.Translate(owner)));
         }
     }
