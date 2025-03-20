@@ -43,7 +43,7 @@ public class BaseKitItemResolver : IKitItemResolver
     }
 
     /// <inheritdoc />
-    public bool ContainsItem(Kit kitWithItems, IAssetLink<ItemAsset> asset, Team requestingTeam)
+    public bool ContainsItem(Kit kitWithItems, IAssetLink<ItemAsset> asset, Team requestingTeam, bool includeAttachments = false)
     {
         IKitItem[] items = kitWithItems.Items;
 
@@ -53,6 +53,8 @@ public class BaseKitItemResolver : IKitItemResolver
                 continue;
 
             if (concrete.Item.MatchAsset(asset))
+                return true;
+            if (includeAttachments && CheckAttached(concrete.Item, concrete.State, asset))
                 return true;
         }
 
@@ -74,7 +76,7 @@ public class BaseKitItemResolver : IKitItemResolver
     }
 
     /// <inheritdoc />
-    public int CountItems(Kit kitWithItems, IAssetLink<ItemAsset> asset, Team requestingTeam)
+    public int CountItems(Kit kitWithItems, IAssetLink<ItemAsset> asset, Team requestingTeam, bool includeAttachments = false)
     {
         IKitItem[] items = kitWithItems.Items;
 
@@ -85,6 +87,8 @@ public class BaseKitItemResolver : IKitItemResolver
                 continue;
 
             if (concrete.Item.MatchAsset(asset))
+                ++ct;
+            else if (includeAttachments && CheckAttached(concrete.Item, concrete.State, asset))
                 ++ct;
         }
 
@@ -107,6 +111,28 @@ public class BaseKitItemResolver : IKitItemResolver
         }
 
         return ct;
+    }
+
+    private static bool CheckAttached(IAssetLink<ItemAsset> asset, byte[]? state, IAssetLink<ItemAsset> comparator)
+    {
+        if (state == null
+            || state.Length != 18
+            || !asset.TryGetAsset(out ItemAsset? gun)
+            || gun is not ItemGunAsset
+            || !comparator.TryGetId(out ushort id))
+        {
+            return false;
+        }
+
+        for (int a = 0; a < 5; ++a)
+        {
+            if (BitConverter.ToUInt16(state, a * 2) == id)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
 

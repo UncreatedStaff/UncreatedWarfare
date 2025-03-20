@@ -16,10 +16,7 @@ using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Kits.Requests;
-using Uncreated.Warfare.Players;
-using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.UI;
-using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Containers;
@@ -39,16 +36,12 @@ public class ClaimToRearmTweaks : // todo: move this class out of this namespace
     private readonly AmmoTranslations _translations;
     private readonly ILogger _logger;
     private readonly ZoneStore? _zoneStore;
-    private readonly IPlayerService _playerService;
-    private readonly PointsService? _pointsService;
     private readonly AssetConfiguration _assetConfiguration;
 
 
     public ClaimToRearmTweaks(IServiceProvider serviceProvider, ILogger<ClaimToRearmTweaks> logger)
     {
         _assetConfiguration = serviceProvider.GetRequiredService<AssetConfiguration>();
-        _playerService = serviceProvider.GetRequiredService<IPlayerService>();
-        _pointsService = serviceProvider.GetService<PointsService>();
         _fobManager = serviceProvider.GetRequiredService<FobManager>();
         _kitRequestService = serviceProvider.GetRequiredService<KitRequestService>();
         _kitWeaponTextService = serviceProvider.GetService<KitWeaponTextService>();
@@ -291,8 +284,6 @@ public class ClaimToRearmTweaks : // todo: move this class out of this namespace
             {
                 count++;
             }
-            else
-                continue;
         }
         return count;
     }
@@ -420,6 +411,6 @@ public class ClaimToRearmTweaks : // todo: move this class out of this namespace
 
         Kit? kit = await e.Player.Component<KitPlayerComponent>().GetActiveKitAsync(KitInclude.Giveable, token);
         if (kit is { Class: > Class.Unarmed })
-            await _kitRequestService.GiveKitAsync(e.Player, new KitBestowData(kit) { Silent = true }, token);
+            await _kitRequestService.RestockKitAsync(e.Player, true, token);
     }
 }

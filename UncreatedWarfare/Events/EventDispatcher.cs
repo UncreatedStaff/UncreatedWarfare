@@ -498,7 +498,7 @@ public partial class EventDispatcher : IHostedService, IDisposable
 
                     ILogger logger = serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(listenerType);
                     bool cancelled;
-                    if (ex is OperationCanceledException && token.IsCancellationRequested)
+                    if (ex is OperationCanceledException)
                     {
                         cancelled = true;
                         logger.LogInformation(ex, "Execution of event handler {0} cancelled by CancellationToken.", info.Method);

@@ -66,7 +66,7 @@ public class KitPlayerComponent : IPlayerComponent
     /// Get a copy of the kit from the kit cache if it's added. Use <see cref="GetActiveKitAsync"/> to get an up-to-date copy.
     /// </summary>
     /// <remarks>Guaranteed to have <see cref="KitInclude.Giveable"/> data.</remarks>
-    public Kit? CachedKit { get; private set; }
+    public Kit? CachedKit { get; internal set; }
 
     /// <summary>
     /// Ordered list of all loadouts including the <see cref="KitInclude.Cached"/> include level.

@@ -276,9 +276,9 @@ public class DroppedItemTracker : IHostedService, IEventListener<PlayerLeft>
         Vector3 point = inv.transform.position + inv.transform.forward * 0.5f;
 
         ItemJar? foundJar = null;
-        byte foundPage = byte.MaxValue;
+        Page foundPage = (Page)byte.MaxValue;
         byte foundIndex = byte.MaxValue;
-        for (byte page = 0; page < PlayerInventory.AREA; ++page)
+        for (int page = 0; page < PlayerInventory.AREA; ++page)
         {
             Items pg = inv.items[page];
             int ct = pg.getItemCount();
@@ -289,7 +289,7 @@ public class DroppedItemTracker : IHostedService, IEventListener<PlayerLeft>
                     continue;
 
                 foundJar = jar;
-                foundPage = page;
+                foundPage = (Page)page;
                 foundIndex = (byte)i;
                 break;
             }
@@ -303,7 +303,7 @@ public class DroppedItemTracker : IHostedService, IEventListener<PlayerLeft>
             Player = player,
             Item = item,
             Asset = item.GetAsset(),
-            Page = (Page)foundPage,
+            Page = foundPage,
             Index = foundIndex,
             X = foundJar?.x ?? 0,
             Y = foundJar?.y ?? 0,
@@ -327,7 +327,7 @@ public class DroppedItemTracker : IHostedService, IEventListener<PlayerLeft>
             ItemInfo droppedItem = ItemUtility.FindItem(args.Item, args.Position);
 
             args.Player.UnturnedPlayer.inventory.removeItem((byte)args.Page, index);
-            if ((int)args.Page <= PlayerInventory.SLOTS)
+            if ((int)args.Page < PlayerInventory.SLOTS)
             {
                 args.Player.UnturnedPlayer.equipment.sendSlot((byte)args.Page);
             }
@@ -335,14 +335,14 @@ public class DroppedItemTracker : IHostedService, IEventListener<PlayerLeft>
 
             ItemDropped dropArgs = new ItemDropped
             {
-                Player = player,
-                Region = droppedItem.GetRegion(),
+                Player = args.Player,
+                Region = droppedItem.HasValue ? droppedItem.GetRegion() : null,
                 RegionPosition = droppedItem.Coord,
                 Index = (ushort)droppedItem.Index,
                 Item = args.Item,
                 Asset = args.Item?.GetAsset(),
                 DroppedItem = droppedItem.Item,
-                OldPage = (Page)args.Page,
+                OldPage = args.Page,
                 OldX = args.X,
                 OldY = args.Y,
                 OldRotation = args.Rotation

@@ -8,9 +8,9 @@ public interface IKitItemResolver
 {
     KitItemResolutionResult ResolveKitItem(IItem item, Kit? kit, Team requestingTeam);
 
-    bool ContainsItem(Kit kitWithItems, IAssetLink<ItemAsset> asset, Team requestingTeam);
+    bool ContainsItem(Kit kitWithItems, IAssetLink<ItemAsset> asset, Team requestingTeam, bool includeAttachments = false);
 
-    int CountItems(Kit kitWithItems, IAssetLink<ItemAsset> asset, Team requestingTeam);
+    int CountItems(Kit kitWithItems, IAssetLink<ItemAsset> asset, Team requestingTeam, bool includeAttachments = false);
 }
 
 public struct KitItemResolutionResult
