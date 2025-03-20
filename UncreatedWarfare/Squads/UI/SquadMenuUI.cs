@@ -309,14 +309,7 @@ public class SquadMenuUI :
         WarfarePlayer owner = squad.Leader;
         foreach (WarfarePlayer player in ViewingPlayersOnTeam(squad.Team))
         {
-            if (player.Equals(owner))
-            {
-                SendMySquadDetail(player);
-            }
-            else
-            {
-                UpdateForPlayer(player);
-            }
+            UpdateForPlayer(player);
         }
     }
     private void UpdateForViewingPlayersExceptOwner(Squad squad)
