@@ -506,6 +506,11 @@ public readonly struct EventInfo
 
 
     public ResolvedEventInfo Resolve() => new ResolvedEventInfo(in this);
+    public ResolvedEventInfo Resolve(double multiplier) => new ResolvedEventInfo(in this, multiplier);
+    public ResolvedEventInfo Resolve(double? overrideXp = null, double? overrideCredits = null, double? overrideReputation = null)
+    {
+        return new ResolvedEventInfo(in this, overrideXp, overrideCredits, overrideReputation);
+    }
 
     public static implicit operator ResolvedEventInfo(EventInfo @event)
     {

@@ -54,6 +54,7 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
     public Team Team { get; private set; }
     public IBuildable? Buildable { get; private set; }
     public List<IBuildable> Signs { get; }
+    public DateTime RequestTime { get; private set; }
     public string ServerSignText => "vbs_" + SpawnInfo.VehicleAsset.Guid.ToString("N", CultureInfo.InvariantCulture);
 
     public VehicleSpawnerState State
@@ -63,6 +64,11 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
         {
             if (_state == value)
                 return;
+
+            if (_state is not VehicleSpawnerState.Deployed and not VehicleSpawnerState.Idle)
+            {
+                RequestTime = default;
+            }
 
             _logger.LogConditional("Vehicle Spawner {0} state updated. {1} -> {2}.", ToDisplayString(), _state, value);
             _state = value;
@@ -480,6 +486,10 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
     {
         timeLeft = GetLayoutDelayTimeLeft();
         return timeLeft > TimeSpan.Zero;
+    }
+    internal void NotifyRequsted()
+    {
+        RequestTime = DateTime.UtcNow;
     }
     public TimeSpan GetLayoutDelayTimeLeft()
     {
