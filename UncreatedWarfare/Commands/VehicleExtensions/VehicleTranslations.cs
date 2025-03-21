@@ -19,7 +19,7 @@ internal sealed class VehicleTranslations : PropertiesTranslationCollection
     public readonly Translation<IPlayer?> VehicleLinkedVehicleNotOwnedByCaller = new Translation<IPlayer?>("<#ff8c69>This vehicle is owned by {0}.", arg0Fmt: WarfarePlayer.FormatColoredCharacterName);
     
     [TranslationData("Sent to the player after /vehicle give is ran successfully.")]
-    public readonly Translation<VehicleAsset, IPlayer> VehicleGiven = new Translation<VehicleAsset, IPlayer>("<#d1bda7>Gave your <#a0ad8e>{0}</color> to {1}.", arg0Fmt: AssetValueFormatter, arg1Fmt: WarfarePlayer.FormatColoredCharacterName);
+    public readonly Translation<VehicleAsset, IPlayer> VehicleGiven = new Translation<VehicleAsset, IPlayer>("<#d1bda7>Gave your <#a0ad8e>{0}</color> to {1}.", arg1Fmt: WarfarePlayer.FormatColoredCharacterName);
 
     [TranslationData("Sent to the player after /vehicle give is ran successfully.")]
     public readonly Translation<VehicleAsset, IPlayer> VehicleGivenDm = new Translation<VehicleAsset, IPlayer>("<#d1bda7>{1} gave you their <#a0ad8e>{0}</color>.", arg1Fmt: WarfarePlayer.FormatColoredNickName);
