@@ -1,3 +1,6 @@
 ﻿# AbandonCommand
 Description: "If you no longer want to use your vehicle, you can return it to the vehicle pool."
 Aliases: [ av ]
+Parameters:
+  - Name: vehicle
+    Type: Look/SDG.Unturned.InteractableVehicle
