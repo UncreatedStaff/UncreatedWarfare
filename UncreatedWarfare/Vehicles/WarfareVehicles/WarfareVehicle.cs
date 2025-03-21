@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Diagnostics.CodeAnalysis;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles.Spawners;
 using Uncreated.Warfare.Vehicles.UI;
@@ -25,6 +26,12 @@ public class WarfareVehicle : IDisposable, ITransformObject, IEquatable<WarfareV
     public TranportTracker TranportTracker { get; }
     public VehicleHUD? VehicleHUD { get; }
     public FlareEmitter? FlareEmitter { get; private set; }
+
+    /// <summary>
+    /// The player who originally owned the vehicle. The owner can change when players use '/vehicle give' so this stores the first owner.
+    /// </summary>
+    /// <remarks>This is also who is awarded credits from '/abandon'.</remarks>
+    public CSteamID OriginalOwner { get; private set; }
 
     [field: MaybeNull]
     public WarfareVehicleComponent Component
@@ -75,6 +82,7 @@ public class WarfareVehicle : IDisposable, ITransformObject, IEquatable<WarfareV
         TranportTracker = new TranportTracker();
         AdvancedDamageApplier = new AdvancedVehicleDamageApplier(serviceProvider.GetRequiredService<ILogger<AdvancedVehicleDamageApplier>>());
         NeedsAutoResupply = false;
+        OriginalOwner = interactableVehicle.lockedOwner;
 
         // allow thread-safe initialization so GetVehicle can add the component if it doesn't already exist
         if (GameThread.IsCurrent)

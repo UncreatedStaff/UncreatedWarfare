@@ -2,7 +2,6 @@ using System;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Models.Barricades;
-using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;

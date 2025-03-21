@@ -1,4 +1,4 @@
-﻿# ZoneCommand
+# ZoneCommand
 Description: "View or teleport to zones."
 Parameters:
     # /zone go <location>
@@ -9,7 +9,7 @@ Parameters:
     Parameters:
       - Name: location
         Type: Uncreated.Warfare.Zones.Zone
-        IsRemainder: true
+        Remainder: true
     # /zone util <location>
   - Name: util
     Aliases: [ u, tools ]
@@ -28,5 +28,5 @@ Parameters:
     Parameters:
       - Name: location
         Type: Uncreated.Warfare.Zones.Zone
-        IsRemainder: true
+        Remainder: true
         Optional: true

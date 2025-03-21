@@ -11,7 +11,14 @@ public class AssetValueFormatter : IValueFormatter<Asset>
         bool rarity = (parameters.Options & TranslationOptions.NoRichText) != 0
                       && (AssetLink.AssetLinkFriendly.Match(in parameters) || AssetLink.AssetLinkDescriptive.Match(in parameters));
 
-        string name = rarity ? RarityColorAddon.Apply(asset.name, asset, formatter, in parameters) : $"\"{asset.name}\"";
+        string name;
+        if ((parameters.Options & TranslationOptions.ForTerminal) == 0)
+        {
+            name = asset.FriendlyName ?? asset.name;
+            return rarity ? RarityColorAddon.Apply(name, asset, formatter, in parameters) : name;
+        }
+
+        name = rarity ? RarityColorAddon.Apply(asset.name, asset, formatter, in parameters) : $"\"{asset.name}\"";
 
         Guid guid = asset.GUID;
         ushort id = asset.id;

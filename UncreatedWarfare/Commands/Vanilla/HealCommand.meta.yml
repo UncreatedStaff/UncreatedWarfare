@@ -1,8 +1,8 @@
-﻿# HealCommand
+# HealCommand
 Description: "Heals the <caller /> to maximum health and vitals, reviving them if they're injured."
 Parameters:
   - Name: player
     Type: Uncreated.Warfare.Players.IPlayer
     Description: "Heals <param 'player' /> to maximum health and vitals, reviving them if they're injured."
-    IsRemainder: true
-    IsOptional: true
+    Remainder: true
+    Optional: true

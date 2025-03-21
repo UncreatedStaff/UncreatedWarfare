@@ -75,7 +75,11 @@ internal sealed class VehicleBayRegisterCommand : IExecutableCommand
             throw Context.Reply(_translations.SpawnAlreadyRegistered, vehicleType);
         }
 
-        VehicleSpawner newSpawner = await _spawnerStore.RegisterNewSpawner(buildable, vehicleInfo, uniqueName, token);
+        VehicleSpawner? newSpawner = await _spawnerStore.RegisterNewSpawner(buildable, vehicleInfo, uniqueName, token);
+        if (newSpawner == null)
+        {
+            throw Context.SendUnknownError();
+        }
 
         Context.LogAction(ActionLogType.RegisteredSpawn, newSpawner.ToDisplayString());
 

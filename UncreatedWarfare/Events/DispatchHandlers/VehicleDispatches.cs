@@ -28,7 +28,7 @@ partial class EventDispatcher
         if (player is null)
             return;
 
-        WarfareVehicle warfareVehicle = _vehicleService.GetVehicle(vehicle);
+        WarfareVehicle warfareVehicle = VehicleService.GetVehicle(vehicle);
 
         ChangeVehicleLockRequested args = new ChangeVehicleLockRequested
         {
@@ -77,7 +77,7 @@ partial class EventDispatcher
     /// </summary>
     private void VehicleManagerOnToggledVehicleLock(InteractableVehicle vehicle)
     {
-        WarfareVehicle warfareVehicle = _vehicleService.GetVehicle(vehicle);
+        WarfareVehicle warfareVehicle = VehicleService.GetVehicle(vehicle);
 
         WarfarePlayer? player = warfareVehicle.DamageTracker.LastLockingPlayer;
         warfareVehicle.DamageTracker.LastLockingPlayer = null;
@@ -101,7 +101,7 @@ partial class EventDispatcher
     /// </summary>
     private void VehicleManagerOnVehicleExploded(InteractableVehicle vehicle)
     {
-        WarfareVehicle warfareVehicle = _vehicleService.GetVehicle(vehicle);
+        WarfareVehicle warfareVehicle = VehicleService.GetVehicle(vehicle);
 
         ITeamManager<Team>? teamManager = _warfare.IsLayoutActive() ? _warfare.ScopedProvider.Resolve<ITeamManager<Team>>() : null;
 
@@ -153,7 +153,7 @@ partial class EventDispatcher
     {
         WarfarePlayer player = _playerService.GetOnlinePlayer(unturnedPlayer);
 
-        WarfareVehicle warfareVehicle = _vehicleService.GetVehicle(vehicle);
+        WarfareVehicle warfareVehicle = VehicleService.GetVehicle(vehicle);
 
         byte seat = player.UnturnedPlayer.movement.getSeat();
 
@@ -191,7 +191,7 @@ partial class EventDispatcher
 
         WarfarePlayer player = _playerService.GetOnlinePlayer(unturnedPlayer);
 
-        WarfareVehicle warfareVehicle = _vehicleService.GetVehicle(vehicle);
+        WarfareVehicle warfareVehicle = VehicleService.GetVehicle(vehicle);
 
         VehicleSwapSeatRequested args = new VehicleSwapSeatRequested
         {
@@ -215,7 +215,7 @@ partial class EventDispatcher
 
     private void OnDamageVehicleRequested(CSteamID instigatorsSteamID, InteractableVehicle vehicle, ref ushort pendingTotalDamage, ref bool canRepair, ref bool shouldAllow, EDamageOrigin damageOrigin)
     {
-        WarfareVehicle warfareVehicle = _vehicleService.GetVehicle(vehicle);
+        WarfareVehicle warfareVehicle = VehicleService.GetVehicle(vehicle);
         
         DamageVehicleRequested args = new DamageVehicleRequested
         {
@@ -235,7 +235,7 @@ partial class EventDispatcher
 
     private void VehicleManagerOnPreDestroyVehicle(InteractableVehicle vehicle)
     {
-        WarfareVehicle warfareVehicle = _vehicleService.GetVehicle(vehicle);
+        WarfareVehicle warfareVehicle = VehicleService.GetVehicle(vehicle);
         
         VehicleDespawned args = new VehicleDespawned
         {

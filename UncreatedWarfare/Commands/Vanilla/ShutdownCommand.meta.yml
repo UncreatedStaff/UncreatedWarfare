@@ -4,35 +4,35 @@ Parameters:
   - Name: inst
     Type: Verbatim
     Description: "Instantly shuts down the server."
-    IsOptional: true
+    Optional: true
     Parameters:
       - Name: reason
         Type: string
         Description: Reason the server is being shut down.
-        IsRemainder: true
-        IsOptional: true
+        Remainder: true
+        Optional: true
   - Name: after
     Type: Verbatim
     Description: "Shuts down the server after the current layout ends (or an hour, whichever comes first)."
-    IsOptional: true
+    Optional: true
     Parameters:
       - Name: reason
         Type: string
         Description: Reason the server is being shut down.
-        IsRemainder: true
-        IsOptional: true
+        Remainder: true
+        Optional: true
   - Name: time
     Type: System.Timespan
     Description: "Shuts down the server after a set amount of time."
-    IsOptional: true
+    Optional: true
     Parameters:
       - Name: reason
         Type: string
         Description: Reason the server is being shut down.
-        IsRemainder: true
-        IsOptional: true
+        Remainder: true
+        Optional: true
   - Name: reason
     Type: string
     Description: Reason the server is being shut down.
-    IsRemainder: true
-    IsOptional: true
+    Remainder: true
+    Optional: true

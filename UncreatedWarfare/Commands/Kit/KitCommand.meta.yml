@@ -94,7 +94,7 @@ Parameters:
     Parameters:
       - Name: name
         Type: string
-        IsRemainder: true
+        Remainder: true
   # /kit create <name> [class] [type] [faction]
   - Name: create
     Aliases: [ c, override ]
@@ -123,7 +123,7 @@ Parameters:
     Parameters:
       - Name: kit
         Type: Uncreated.Warfare.Models.Kits.Kit
-        IsRemainder: true
+        Remainder: true
   # /kit upgrade <name> <class>
   - Name: upgrade
     Aliases: [ update, upg ]
@@ -143,7 +143,7 @@ Parameters:
     Parameters:
       - Name: kit
         Type: Uncreated.Warfare.Models.Kits.Kit
-        IsRemainder: true
+        Remainder: true
   # /kit lock <kit... >
   - Name: lock
     Type: Verbatim
@@ -151,7 +151,7 @@ Parameters:
     Parameters:
       - Name: kit
         Type: Uncreated.Warfare.Models.Kits.Kit
-        IsRemainder: true
+        Remainder: true
   # /kit set <property> <kit> <value... >
   - Name: set
     Aliases: [ s ]
@@ -170,7 +170,7 @@ Parameters:
                 Parameters:
                   - Name: display-text
                     Type: string
-                    IsRemainder: true
+                    Remainder: true
       - Name: property
         Type: string
         Parameters:
@@ -179,7 +179,7 @@ Parameters:
             Parameters:
               - Name: value
                 Type: object
-                IsRemainder: true
+                Remainder: true
   # /kit giveaccess <player> <kit> [access type]
   - Name: giveaccess
     Aliases: [ givea, ga ]
@@ -231,7 +231,7 @@ Parameters:
             Parameters:
               - Name: display-text
                 Type: string
-                IsRemainder: true
+                Remainder: true
   # /kit skills <kit> <add|remove> <skill> [level]
   - Name: skills
     Aliases: [ skillset, skillsets ]

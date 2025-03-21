@@ -1,4 +1,4 @@
-﻿# IPWhitelistCommand
+# IPWhitelistCommand
 Description: "Manages the IP whitelist which allows players with overlapping IPs to not count against each other."
 Aliases: [ whitelistip, whip, ipwh, iw ]
 Parameters:
@@ -12,7 +12,7 @@ Parameters:
         Parameters:
           - Name: range
             Type: Uncreated.Warfare.Networking.IPv4Range
-            IsOptional: true
+            Optional: true
   - Name: remove
     Aliases: [ delete, rem, blacklist ]
     Type: Verbatim
@@ -23,4 +23,4 @@ Parameters:
         Parameters:
           - Name: range
             Type: Uncreated.Warfare.Networking.IPv4Range
-            IsOptional: true
+            Optional: true

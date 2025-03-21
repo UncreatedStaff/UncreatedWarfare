@@ -201,6 +201,8 @@
 
     <EmbeddedResource Include="Commands\Vanilla\ShutdownCommand.meta.yml" />
 
+    <EmbeddedResource Include="Commands\Vanilla\VehicleCommand.meta.yml" />
+
     <EmbeddedResource Include="Commands\Whitelist\WhitelistCommand.meta.yml" />
 
     <EmbeddedResource Include="Commands\TeamsCommand.meta.yml" />

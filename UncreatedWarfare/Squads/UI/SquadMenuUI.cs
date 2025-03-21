@@ -51,7 +51,7 @@ public class SquadMenuUI :
     public MySquadMenu MySquad { get; } = new MySquadMenu();
 
     public SquadMenuUI(IServiceProvider serviceProvider, AssetConfiguration assetConfig, ILoggerFactory loggerFactory)
-        : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:SquadMenuHUD"), debugLogging: false, staticKey: true)
+        : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:SquadMenuHUD"), debugLogging: true, staticKey: true)
     {
         _squadManager = serviceProvider.GetRequiredService<SquadManager>();
         _translations = serviceProvider.GetRequiredService<TranslationInjection<SquadTranslations>>().Value;
@@ -102,7 +102,7 @@ public class SquadMenuUI :
 
     private void PromoteMemberClicked(UnturnedButton button, Player player)
     {
-        int index = Array.FindLastIndex(MySquad.Members, x => ReferenceEquals(x.KickButton, button));
+        int index = Array.FindLastIndex(MySquad.Members, x => ReferenceEquals(x.PromoteButton, button));
         if (index <= 0)
             return;
 

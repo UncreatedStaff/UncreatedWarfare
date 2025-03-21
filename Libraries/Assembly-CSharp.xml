@@ -5942,16 +5942,6 @@
             False for deprecated (landscape hole volume) types.
             </summary>
         </member>
-        <member name="T:SDG.Unturned.UnturnedDatEx">
-            <summary>
-            These are methods moved from the Data class which rely on core types and so cannot go in the UnturnedDat assembly.
-            </summary>
-        </member>
-        <member name="M:SDG.Unturned.UnturnedDatEx.ParseGuidOrLegacyId(SDG.Unturned.DatDictionary,System.String,System.Guid@)">
-            <summary>
-            Intended as a drop-in replacement for existing assets with property uint16s.
-            </summary>
-        </member>
         <member name="F:SDG.Unturned.InteractableTrap.explosion2">
             <summary>
             Kept because lots of modders have been using this script in Unity,
@@ -5961,6 +5951,16 @@
         <member name="F:SDG.Unturned.InteractableTrap.poweredGameObject">
             <summary>
             Active while powered.
+            </summary>
+        </member>
+        <member name="T:SDG.Unturned.UnturnedDatEx">
+            <summary>
+            These are methods moved from the Data class which rely on core types and so cannot go in the UnturnedDat assembly.
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.UnturnedDatEx.ParseGuidOrLegacyId(SDG.Unturned.DatDictionary,System.String,System.Guid@)">
+            <summary>
+            Intended as a drop-in replacement for existing assets with property uint16s.
             </summary>
         </member>
         <member name="P:SDG.Unturned.PurchaseNode.radius">
@@ -14846,7 +14846,7 @@
             Helpers on the dedicated server to optimize client prefabs for server usage.
             </summary>
         </member>
-        <member name="M:SDG.Unturned.ServerPrefabUtil.RemoveClientComponents(UnityEngine.GameObject)">
+        <member name="M:SDG.Unturned.ServerPrefabUtil.RemoveClientComponents(UnityEngine.GameObject,SDG.Unturned.Asset)">
             <summary>
             Optimize client prefab for server usage.
             </summary>
