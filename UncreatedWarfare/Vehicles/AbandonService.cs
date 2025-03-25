@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
@@ -94,11 +94,15 @@ public class AbandonService
         WarfareVehicle warfareVehicle = _vehicleService.GetVehicle(vehicle);
         Team team = _teamManager.GetTeam(vehicle.lockedGroup);
         if (!team.IsValid)
+        {
+            //Console.WriteLine($"invalid team {vehicle.lockedGroup}.");
             return false;
+        }
 
         CSteamID owner = warfareVehicle.OriginalOwner;
         if (owner.GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
         {
+            //Console.WriteLine($"invalid owner {warfareVehicle.OriginalOwner}.");
             return false;
         }
 
@@ -167,25 +171,25 @@ public class AbandonTranslations : PropertiesTranslationCollection
     public readonly Translation AbandonNoTarget = new Translation("<#ff8c69>You must be looking at a vehicle.");
 
     [TranslationData(Description = "Sent when a player is looking at a vehicle they didn't request.")]
-    public readonly Translation<InteractableVehicle> AbandonNotOwned = new Translation<InteractableVehicle>("<#ff8c69>You did not request that {0}.");
+    public readonly Translation<VehicleAsset> AbandonNotOwned = new Translation<VehicleAsset>("<#ff8c69>You did not request that {0}.");
 
     [TranslationData(Description = "Sent when a player does /abandon while not in main.")]
     public readonly Translation AbandonNotInMain = new Translation("<#ff8c69>You must be in main to abandon a vehicle.");
 
     [TranslationData(Description = "Sent when a player tries to abandon a damaged vehicle.")]
-    public readonly Translation<InteractableVehicle> AbandonDamaged = new Translation<InteractableVehicle>("<#ff8c69>Your <#cedcde>{0}</color> is damaged, repair it before returning it to the yard.");
+    public readonly Translation<VehicleAsset> AbandonDamaged = new Translation<VehicleAsset>("<#ff8c69>Your <#cedcde>{0}</color> is damaged, repair it before returning it to the yard.");
 
     [TranslationData(Description = "Sent when a player tries to abandon a vehicle with low fuel.")]
-    public readonly Translation<InteractableVehicle> AbandonNeedsFuel = new Translation<InteractableVehicle>("<#ff8c69>Your <#cedcde>{0}</color> is not fully fueled.");
+    public readonly Translation<VehicleAsset> AbandonNeedsFuel = new Translation<VehicleAsset>("<#ff8c69>Your <#cedcde>{0}</color> is not fully fueled.");
 
     [TranslationData(Description = "Sent when a player tries to abandon a vehicle and all the bays for that vehicle are already full, theoretically should never happen.")]
-    public readonly Translation<InteractableVehicle> AbandonNoSpace = new Translation<InteractableVehicle>("<#ff8c69>There's no space for <#cedcde>{0}</color> in the yard.", arg0Fmt: PluralAddon.Always());
+    public readonly Translation<VehicleAsset> AbandonNoSpace = new Translation<VehicleAsset>("<#ff8c69>There's no space for <#cedcde>{0}</color> in the yard.", arg0Fmt: PluralAddon.Always());
 
     [TranslationData(Description = "Sent when a player tries to abandon a vehicle that isn't allowed to be abandoned.")]
-    public readonly Translation<InteractableVehicle> AbandonNotAllowed = new Translation<InteractableVehicle>("<#ff8c69><#cedcde>{0}</color> can not be abandoned.", arg0Fmt: PluralAddon.Always());
+    public readonly Translation<VehicleAsset> AbandonNotAllowed = new Translation<VehicleAsset>("<#ff8c69><#cedcde>{0}</color> can not be abandoned.", arg0Fmt: PluralAddon.Always());
 
     [TranslationData(Description = "Sent when a player abandons a vehicle.")]
-    public readonly Translation<InteractableVehicle> AbandonSuccess = new Translation<InteractableVehicle>("<#a0ad8e>Your <#cedcde>{0}</color> was returned to the yard.");
+    public readonly Translation<VehicleAsset> AbandonSuccess = new Translation<VehicleAsset>("<#a0ad8e>Your <#cedcde>{0}</color> was returned to the yard.");
 
     [TranslationData(Description = "Credits toast for returning a vehicle soon after requesting it.")]
     public readonly Translation AbandonCompensationToast = new Translation("RETURNED VEHICLE", TranslationOptions.TMProUI);

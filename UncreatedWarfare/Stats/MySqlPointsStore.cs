@@ -3,6 +3,7 @@ using Uncreated.Warfare.Database.Manual;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Stats;
 
@@ -666,22 +667,29 @@ public class MySqlPointsStore : IPointsStore
         if (!xp.HasValue && !creds.HasValue || pl.Team.Faction.PrimaryKey != factionId)
             return;
         
-        QueuePointsCacheChange(pl, factionId, xp, creds);
+        if (GameThread.IsCurrent)
+        {
+            UpdatePointsCacheChange(pl, factionId, xp, creds);
+        }
+        else
+        {
+            UniTask.Create(async () =>
+            {
+                await UniTask.SwitchToMainThread();
+                UpdatePointsCacheChange(pl, factionId, xp, creds);
+            });
+        }
     }
 
-    private static void QueuePointsCacheChange(WarfarePlayer pl, uint factionId, double? xp, double? creds)
+    private static void UpdatePointsCacheChange(WarfarePlayer pl, uint factionId, double? xp, double? creds)
     {
-        UniTask.Create(async () =>
-        {
-            await UniTask.SwitchToMainThread();
-            if (!pl.IsOnline || pl.Team.Faction.PrimaryKey != factionId)
-                return;
+        if (!pl.IsOnline || pl.Team.Faction.PrimaryKey != factionId)
+            return;
 
-            if (xp.HasValue)
-                pl.CachedPoints.XP = xp.Value;
-            if (creds.HasValue)
-                pl.CachedPoints.Credits = creds.Value;
-        });
+        if (xp.HasValue)
+            pl.CachedPoints.XP = xp.Value;
+        if (creds.HasValue)
+            pl.CachedPoints.Credits = creds.Value;
     }
 }
 

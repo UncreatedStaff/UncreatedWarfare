@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Util;
 
@@ -176,12 +176,14 @@ internal static class TranslationPluralizations
             TypeCode.UInt32 => (uint)conv == 1,
             TypeCode.Int64 => (long)conv == 1,
             TypeCode.UInt64 => (ulong)conv == 1,
-            TypeCode.Single => Math.Abs((float)conv - 1) <= float.Epsilon,
-            TypeCode.Double => Math.Abs((double)conv - 1) <= double.Epsilon,
+            TypeCode.Single => Math.Abs((float)conv - 1) <= 0.000001,
+            TypeCode.Double => Math.Abs((double)conv - 1) <= 0.00000000001,
             TypeCode.Decimal => ((decimal)conv).Equals(1m),
             TypeCode.DateTime => ((DateTime)conv).Ticks == 1,
             TypeCode.String => ((string)conv).Equals("1", StringComparison.InvariantCultureIgnoreCase) ||
-                               ((string)conv).Equals("one", StringComparison.InvariantCultureIgnoreCase),
+                               ((string)conv).Equals("one", StringComparison.InvariantCultureIgnoreCase) ||
+                               ((string)conv).Equals("a", StringComparison.InvariantCultureIgnoreCase) ||
+                               ((string)conv).Equals("an", StringComparison.InvariantCultureIgnoreCase),
             _ => false
         };
     }

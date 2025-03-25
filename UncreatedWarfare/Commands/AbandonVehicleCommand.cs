@@ -1,4 +1,4 @@
-﻿using Uncreated.Warfare.Interaction.Commands;
+using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Vehicles;
 using Uncreated.Warfare.Vehicles.WarfareVehicles;
@@ -47,32 +47,32 @@ internal sealed class AbandonVehicleCommand : IExecutableCommand
 
         if (!warfareVehicle.Info.Abandon.AllowAbandon)
         {
-            throw Context.Reply(_translations.AbandonNotAllowed, vehicle);
+            throw Context.Reply(_translations.AbandonNotAllowed, vehicle.asset);
         }
 
         if (!Context.Player.Equals(vehicle.lockedOwner))
         {
-            throw Context.Reply(_translations.AbandonNotOwned, vehicle);
+            throw Context.Reply(_translations.AbandonNotOwned, vehicle.asset);
         }
 
         if ((float)vehicle.health / vehicle.asset.health < 0.9f)
         {
-            throw Context.Reply(_translations.AbandonDamaged, vehicle);
+            throw Context.Reply(_translations.AbandonDamaged, vehicle.asset);
         }
 
         if ((float)vehicle.fuel / vehicle.asset.fuel < 0.9f)
         {
-            throw Context.Reply(_translations.AbandonNeedsFuel, vehicle);
+            throw Context.Reply(_translations.AbandonNeedsFuel, vehicle.asset);
         }
 
         if (warfareVehicle.Spawn == null || warfareVehicle.Spawn.LinkedVehicle != vehicle)
         {
-            throw Context.Reply(_translations.AbandonNoSpace, vehicle);
+            throw Context.Reply(_translations.AbandonNoSpace, vehicle.asset);
         }
 
         if (await _abandonService.AbandonVehicleAsync(vehicle, respawn: true, token))
         {
-            Context.Reply(_translations.AbandonSuccess, vehicle);
+            Context.Reply(_translations.AbandonSuccess, vehicle.asset);
         }
         else
         {
