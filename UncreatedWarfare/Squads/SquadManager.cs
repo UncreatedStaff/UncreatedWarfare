@@ -130,9 +130,13 @@ public class SquadManager :
         if (existing == null)
             return false;
 
+        WarfarePlayer owner = existing.Leader;
+
+        WarfarePlayer[] members = existing.Members.ToArray();
+
         existing.DisbandMembers();
 
-        _ = WarfareModule.EventDispatcher.DispatchEventAsync(new SquadDisbanded { Squad = squad });
+        _ = WarfareModule.EventDispatcher.DispatchEventAsync(new SquadDisbanded { Squad = squad, PreviousOwner = owner, PreviousMembers = members });
         _logger.LogDebug("Disbanded squad: " + squad);
         return true;
     }

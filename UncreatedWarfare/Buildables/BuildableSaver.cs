@@ -616,11 +616,9 @@ public class BuildableSaver :
                 }
 
                 Regions.tryGetCoordinate(pos, out byte x, out byte y);
-                StructureManager.tryGetRegion(x, y, out _);
                 drop = StructureManager.regions[x, y].drops.GetTail();
                 instanceId = ((StructureDrop)drop).instanceID;
                 save.InstanceId = instanceId;
-                save.Buildable = new BuildableStructure((StructureDrop)drop);
                 instanceIdObj = (save.InstanceIds ??= new List<BuildableInstanceId>()).FirstOrDefault(id => id.RegionId == _region);
                 if (instanceIdObj == null)
                 {
@@ -639,51 +637,70 @@ public class BuildableSaver :
                     instanceIdObj.InstanceId = instanceId;
                     _dbContext.Update(instanceIdObj);
                 }
-                return dirty;
-            }
-
-            state = save.State ?? Array.Empty<byte>();
-            if (state.Length > 0)
-            {
-                byte[] newState = new byte[state.Length];
-                Buffer.BlockCopy(state, 0, newState, 0, state.Length);
-                state = newState;
-            }
-
-            Transform? barricade = BarricadeManager.dropNonPlantedBarricade(
-                new Barricade((ItemBarricadeAsset)asset, ((ItemBarricadeAsset)asset).health, state),
-                pos, Quaternion.Euler(rot), save.Owner, save.Group
-            );
-
-            drop = BarricadeManager.FindBarricadeByRootTransform(barricade);
-
-            if (drop == null)
-            {
-                _logger.LogError("Failed to place barricade buildable {0} ({1} - {2}) at {3}", save.Id, save.Item, asset.FriendlyName, pos);
-                saves?.RemoveAt(index);
-                return dirty;
-            }
-
-            save.Buildable = new BuildableBarricade((BarricadeDrop)drop);
-            instanceId = ((BarricadeDrop)drop).instanceID;
-            save.InstanceId = instanceId;
-            instanceIdObj = (save.InstanceIds ??= new List<BuildableInstanceId>()).FirstOrDefault(id => id.RegionId == _region);
-            if (instanceIdObj == null)
-            {
-                instanceIdObj = new BuildableInstanceId
-                {
-                    RegionId = _region,
-                    InstanceId = instanceId,
-                    Save = save,
-                    SaveId = save.Id
-                };
-                save.InstanceIds.Add(instanceIdObj);
-                _dbContext.Add(instanceIdObj);
             }
             else
             {
-                instanceIdObj.InstanceId = instanceId;
-                _dbContext.Update(instanceIdObj);
+                state = save.State.CloneBytes() ?? Array.Empty<byte>();
+
+                if (state.Length == 0)
+                {
+                    state = asset.getState(EItemOrigin.ADMIN);
+                    if (state.Length != 0)
+                    {
+                        _logger.LogWarning("Invalid empty state for missing barricade buildable {0} ({1} - {2}) at {3}.", save.Id, save.Item, asset.FriendlyName, pos);
+                        save.State = state;
+                        dirty = true;
+                    }
+                }
+                else
+                {
+                    try
+                    {
+                        BarricadeUtility.VerifyState(state, (ItemBarricadeAsset)asset);
+                    }
+                    catch (InvalidBarricadeStateException ex)
+                    {
+                        _logger.LogWarning(ex, "Invalid state for missing barricade buildable {0} ({1} - {2}) at {3}. State: {4}.", save.Id, save.Item, asset.FriendlyName, pos, save.State);
+                        state = asset.getState(EItemOrigin.ADMIN);
+                        save.State = state;
+                        dirty = true;
+                    }
+                }
+
+                Transform? barricade = BarricadeManager.dropNonPlantedBarricade(
+                    new Barricade((ItemBarricadeAsset)asset, ((ItemBarricadeAsset)asset).health, state),
+                    pos, Quaternion.Euler(rot), save.Owner, save.Group
+                );
+
+                drop = BarricadeManager.FindBarricadeByRootTransform(barricade);
+
+                if (drop == null)
+                {
+                    _logger.LogError("Failed to place barricade buildable {0} ({1} - {2}) at {3}", save.Id, save.Item, asset.FriendlyName, pos);
+                    saves?.RemoveAt(index);
+                    return dirty;
+                }
+
+                instanceId = ((BarricadeDrop)drop).instanceID;
+                save.InstanceId = instanceId;
+                instanceIdObj = (save.InstanceIds ??= new List<BuildableInstanceId>()).FirstOrDefault(id => id.RegionId == _region);
+                if (instanceIdObj == null)
+                {
+                    instanceIdObj = new BuildableInstanceId
+                    {
+                        RegionId = _region,
+                        InstanceId = instanceId,
+                        Save = save,
+                        SaveId = save.Id
+                    };
+                    save.InstanceIds.Add(instanceIdObj);
+                    _dbContext.Add(instanceIdObj);
+                }
+                else
+                {
+                    instanceIdObj.InstanceId = instanceId;
+                    _dbContext.Update(instanceIdObj);
+                }
             }
         }
 
@@ -706,13 +723,15 @@ public class BuildableSaver :
 
             if (sDrop.asset.health > sData.structure.health)
             {
-                StructureManager.repair(sDrop.model, sDrop.asset.health, 1f, Provider.server);
+                _logger.LogInformation("Repairing structure {0} ({1} - {2}) at health: {3}.", save.Id, save.Item, asset.FriendlyName, sDrop.asset.health);
+                StructureManager.repair(sDrop.model, sDrop.asset.health - sData.structure.health, 1f, Provider.server);
             }
 
             save.Buildable = new BuildableStructure((StructureDrop)drop);
 
             if (sData.owner != save.Owner || sData.group != save.Group)
             {
+                _logger.LogInformation("Updating owner and group of structure {0} ({1} - {2}) owner: {3} group: {4}.", save.Id, save.Item, asset.FriendlyName, save.Owner, save.Group);
                 StructureUtility.SetOwnerOrGroup(sDrop, new CSteamID(save.Owner), new CSteamID(save.Group));
             }
 
@@ -729,13 +748,14 @@ public class BuildableSaver :
             || MeasurementTool.angleToByte(angle.z) != rotZ
             || !bData.point.IsNearlyEqual(save.Position))
         {
-            _logger.LogInformation("Moving misplaced structure {0} ({1} - {2}) at pos: {3} rot: {4}.", save.Id, save.Item, asset.FriendlyName, save.Position, save.Rotation);
+            _logger.LogInformation("Moving misplaced barricade {0} ({1} - {2}) at pos: {3} rot: {4}.", save.Id, save.Item, asset.FriendlyName, save.Position, save.Rotation);
             BarricadeManager.ServerSetBarricadeTransform(bDrop.model, save.Position, Quaternion.Euler(save.Rotation));
         }
 
         if (bDrop.asset.health > bData.barricade.health)
         {
-            StructureManager.repair(bDrop.model, bDrop.asset.health, 1f, Provider.server);
+            _logger.LogInformation("Repairing barricade {0} ({1} - {2}) at health: {3}.", save.Id, save.Item, asset.FriendlyName, bDrop.asset.health);
+            BarricadeManager.repair(bDrop.model, bDrop.asset.health - bData.barricade.health, 1f, Provider.server);
         }
 
         save.Buildable = new BuildableBarricade((BarricadeDrop)drop);
@@ -763,16 +783,16 @@ public class BuildableSaver :
                 }
                 else
                 {
-                    ushort myhticId = dispData.Mythic.GetAsset<MythicAsset>()?.id ?? 0;
+                    ushort mythicId = dispData.Mythic.GetAsset<MythicAsset>()?.id ?? 0;
                     ushort skinId = dispData.Skin.GetAsset<SkinAsset>()?.id ?? 0;
-                    if (storage.displayMythic != myhticId
+                    if (storage.displayMythic != mythicId
                         || storage.displaySkin != skinId
                         || storage.rot_comp != dispData.Rotation
                         || !string.Equals(storage.displayTags, dispData.Tags, StringComparison.Ordinal)
                         || !string.Equals(storage.displayDynamicProps, dispData.DynamicProps, StringComparison.Ordinal))
                     {
                         storage.applyRotation(dispData.Rotation);
-                        storage.displayMythic = myhticId;
+                        storage.displayMythic = mythicId;
                         storage.displaySkin = skinId;
                         storage.displayTags = dispData.Tags;
                         storage.displayDynamicProps = dispData.DynamicProps;
@@ -806,6 +826,7 @@ public class BuildableSaver :
                     {
                         _logger.LogInformation("Removing item with mismatched quality, amount, or rotation to storage item {0} ({1} - {2}) at ({3}, {4}).", save.Id, save.Item, asset.FriendlyName, item.x, item.y);
                         storage.items.removeItem((byte)i);
+                        isDifferent = true;
                         continue;
                     }
 
@@ -815,28 +836,18 @@ public class BuildableSaver :
                     {
                         _logger.LogInformation("Removing item with mismatched asset to storage item {0} ({1} - {2}) at ({3}, {4}).", save.Id, save.Item, asset.FriendlyName, item.x, item.y);
                         storage.items.removeItem((byte)i);
+                        isDifferent = true;
                         continue;
                     }
 
                     state = item.item.state ?? Array.Empty<byte>();
                     expectedState = matchingItem.State ?? Array.Empty<byte>();
-                    bool isItemDifferent = state.Length != expectedState.Length;
-                    if (!isItemDifferent)
-                    {
-                        for (int j = 0; j < expectedState.Length; ++j)
-                        {
-                            if (state[j] == expectedState[j])
-                                continue;
 
-                            isItemDifferent = true;
-                            break;
-                        }
-                    }
-
-                    if (isItemDifferent)
+                    if (!CollectionUtility.CompareBytes(state, expectedState))
                     {
                         _logger.LogInformation("Removing item with mismatched state to storage item {0} ({1} - {2}) at ({3}, {4}).", save.Id, save.Item, asset.FriendlyName, item.x, item.y);
                         storage.items.removeItem((byte)i);
+                        isDifferent = true;
                         continue;
                     }
 
@@ -845,6 +856,7 @@ public class BuildableSaver :
                 else
                 {
                     storage.items.removeItem((byte)i);
+                    isDifferent = true;
                 }
             }
 
@@ -858,16 +870,21 @@ public class BuildableSaver :
                 if (expectedAsset == null)
                 {
                     _logger.LogInformation("Unknown asset in storage item for {0} ({1} - {2}) at ({3}, {4}).", save.Id, save.Item, asset.FriendlyName, storageItem.PositionX, storageItem.PositionY);
-                    storage.items.removeItem((byte)i);
                     continue;
                 }
 
                 storage.items.addItem(storageItem.PositionX, storageItem.PositionY, storageItem.Rotation, new Item(expectedAsset, EItemOrigin.WORLD)
                 {
-                    state = storageItem.State,
+                    state = storageItem.State.CloneBytes(),
                     amount = storageItem.Amount,
                     quality = storageItem.Quality
                 });
+                isDifferent = true;
+            }
+
+            if (isDifferent)
+            {
+                storage.rebuildState();
             }
 
             if (bData.owner != save.Owner || bData.group != save.Group)
@@ -882,7 +899,9 @@ public class BuildableSaver :
             }
 
             if (!replicated && isDifferent)
+            {
                 BarricadeUtility.ReplicateBarricadeState(bDrop, _playerService, _signs);
+            }
 
             return dirty;
         }
@@ -890,23 +909,22 @@ public class BuildableSaver :
         state = bData.barricade.state ?? Array.Empty<byte>();
         expectedState = save.State ?? Array.Empty<byte>();
 
-        isDifferent |= state.Length != expectedState.Length;
         if (!isDifferent)
-        {
-            for (int i = 0; i < expectedState.Length; ++i)
-            {
-                if (state[i] == expectedState[i])
-                    continue;
-
-                isDifferent = true;
-                break;
-            }
-        }
+            isDifferent = !CollectionUtility.CompareBytes(state, expectedState);
 
         if (isDifferent)
         {
-            BarricadeManager.updateState(bDrop.model, expectedState, expectedState.Length);
-            bDrop.ReceiveUpdateState(expectedState);
+            try
+            {
+                _logger.LogInformation("Updating state in barricade {0} ({1} - {2}) state: {3}.", save.Id, save.Item, asset.FriendlyName, expectedState);
+                BarricadeUtility.SetState(bDrop, expectedState);
+            }
+            catch (InvalidBarricadeStateException ex)
+            {
+                _logger.LogInformation(ex, "Invalid state in barricade {0} ({1} - {2}) state: {3}.", save.Id, save.Item, asset.FriendlyName, expectedState);
+                save.State = bDrop.GetServersideData().barricade.state;
+                dirty = true;
+            }
         }
 
         if (bData.owner != save.Owner || bData.group != save.Group)
@@ -914,20 +932,7 @@ public class BuildableSaver :
             replicated = BarricadeUtility.SetOwnerOrGroup(bDrop, _playerService, _signs, new CSteamID(save.Owner), new CSteamID(save.Group));
             state = bData.barricade.state ?? Array.Empty<byte>();
 
-            bool isDifferent2 = state.Length != expectedState.Length;
-            if (!isDifferent2)
-            {
-                for (int i = 0; i < expectedState.Length; ++i)
-                {
-                    if (state[i] == expectedState[i])
-                        continue;
-
-                    isDifferent2 = true;
-                    break;
-                }
-            }
-
-            if (isDifferent2)
+            if (!CollectionUtility.CompareBytes(state, expectedState))
             {
                 save.State = state;
                 dirty = true;
@@ -935,7 +940,9 @@ public class BuildableSaver :
         }
 
         if (!replicated && isDifferent)
+        {
             BarricadeUtility.ReplicateBarricadeState(bDrop, _playerService, _signs);
+        }
 
         return dirty;
     }

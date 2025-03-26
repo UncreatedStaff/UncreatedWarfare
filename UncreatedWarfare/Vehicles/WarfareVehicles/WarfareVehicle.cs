@@ -31,7 +31,7 @@ public class WarfareVehicle : IDisposable, ITransformObject, IEquatable<WarfareV
     /// The player who originally owned the vehicle. The owner can change when players use '/vehicle give' so this stores the first owner.
     /// </summary>
     /// <remarks>This is also who is awarded credits from '/abandon'.</remarks>
-    public CSteamID OriginalOwner { get; private set; }
+    public CSteamID OriginalOwner { get; internal set; }
 
     [field: MaybeNull]
     public WarfareVehicleComponent Component

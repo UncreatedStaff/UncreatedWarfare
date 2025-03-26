@@ -7,6 +7,7 @@ using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Translations.ValueFormatters;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Squads;
 
@@ -15,7 +16,7 @@ public class Squad : ITranslationArgument
     public const int MaxMembers = 6;
     private readonly List<WarfarePlayer> _members;
     private readonly SquadManager _squadManager;
-    public string Name { get; }
+    public string Name { get; private set; }
     /// <summary>
     /// A number starting at 1 that uniquely identifies the squad among the squads of a specific team.
     /// </summary>
@@ -108,7 +109,14 @@ public class Squad : ITranslationArgument
         _members[0] = member;
         _members[index] = leader;
 
-        _ = WarfareModule.EventDispatcher.DispatchEventAsync(new SquadLeaderUpdated { Squad = this, OldLeader = leader, NewLeader = member });
+        bool didUpdateName = false;
+        if (Name.Equals($"{leader.Names.CharacterName}'s Squad", StringComparison.Ordinal))
+        {
+            didUpdateName = true;
+            Name = $"{member.Names.CharacterName}'s Squad".TruncateWithEllipses(32);
+        }
+
+        _ = WarfareModule.EventDispatcher.DispatchEventAsync(new SquadLeaderUpdated { Squad = this, OldLeader = leader, NewLeader = member, DidUpdateName = didUpdateName });
     }
 
     public bool RemoveMember(WarfarePlayer player)
@@ -117,24 +125,16 @@ public class Squad : ITranslationArgument
         if (index == -1)
             return false;
 
-        WarfarePlayer oldLeader = _members[0];
+        if (index == 0)
+        {
+            Disband();
+            return true;
+        }
 
         _members.RemoveAt(index);
         player.Save.SquadTeamIdentificationNumber = 0;
         player.Component<SquadPlayerComponent>().ClearSquad();
         _ = WarfareModule.EventDispatcher.DispatchEventAsync(new SquadMemberLeft { Squad = this, Player = player });
-
-        // if the squad leader left the squad
-        if (index == 0 && _members.Count > 0)
-        {
-            _ = WarfareModule.EventDispatcher.DispatchEventAsync(new SquadLeaderUpdated { Squad = this, OldLeader = oldLeader, NewLeader = player });
-        }
-
-        if (_members.Count == 0)
-        {
-            _squadManager.DisbandSquad(this);
-        }
-
         return true;
     }
 
@@ -198,6 +198,6 @@ public class Squad : ITranslationArgument
 
     public override string ToString()
     {
-        return $"{TeamIdentificationNumber}-{Name}@{Team.Faction.Name}({Members.Count}/{MaxMembers})";
+        return $"sq-{TeamIdentificationNumber} \"{Name}\" @ {Team.Faction.Name} ({Members.Count}/{MaxMembers} members)";
     }
 }

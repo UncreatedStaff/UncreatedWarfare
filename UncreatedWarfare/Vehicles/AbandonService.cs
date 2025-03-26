@@ -94,17 +94,11 @@ public class AbandonService
         WarfareVehicle warfareVehicle = _vehicleService.GetVehicle(vehicle);
         Team team = _teamManager.GetTeam(vehicle.lockedGroup);
         if (!team.IsValid)
-        {
-            //Console.WriteLine($"invalid team {vehicle.lockedGroup}.");
             return false;
-        }
 
         CSteamID owner = warfareVehicle.OriginalOwner;
         if (owner.GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
-        {
-            //Console.WriteLine($"invalid owner {warfareVehicle.OriginalOwner}.");
             return false;
-        }
 
         WarfarePlayer? ownerPlayer = _playerService.GetOnlinePlayerOrNull(owner);
 

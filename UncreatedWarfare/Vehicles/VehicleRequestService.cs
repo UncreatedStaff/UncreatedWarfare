@@ -227,7 +227,16 @@ public class VehicleRequestService :
 
         vehicle = spawn.LinkedVehicle;
 
+        if (vehicle == null)
+        {
+            resultHandler.NotFoundOrRegistered(player);
+            return false;
+        }
+
         VehicleManager.ServerSetVehicleLock(vehicle, player.Steam64, player.Team.GroupId, true);
+
+        WarfareVehicle warfareVehicle = _vehicleService.GetVehicle(vehicle);
+        warfareVehicle.OriginalOwner = player.Steam64;
 
         spawn.NotifyRequsted();
 
