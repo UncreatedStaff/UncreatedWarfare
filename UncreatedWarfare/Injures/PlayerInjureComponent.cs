@@ -233,7 +233,7 @@ public class PlayerInjureComponent : MonoBehaviour,
 
     private void OnPressedReviveSelf(WarfarePlayer player, ref bool handled)
     {
-#if false // todo
+#if false // todo: self revive feature from traits
         if (!player.Equals(Player) || !_isInjured) 
             return;
 

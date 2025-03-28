@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -10,9 +9,6 @@ using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Localization;
-using Uncreated.Warfare.Moderation;
-using Uncreated.Warfare.Moderation.Punishments;
-using Uncreated.Warfare.Moderation.Punishments.Presets;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests.Parameters;
 using Uncreated.Warfare.Translations;
@@ -29,13 +25,8 @@ public class DeathMessageResolver
     private readonly ITranslationService _translationService;
     private readonly ChatService _chatService;
     private readonly LanguageService _languageService;
-    private readonly ICachableLanguageDataStore _languageDataStore;
     private readonly IUserDataService _userDataService;
     private readonly WarfareModule _warfare;
-    private readonly DatabaseInterface _moderationDb;
-
-    // intentional dont change
-    private readonly string _dscIn;
 
     public DeathMessageResolver(
         EventDispatcher dispatcher,
@@ -44,9 +35,6 @@ public class DeathMessageResolver
         ITranslationService translationService,
         ChatService chatService,
         LanguageService languageService,
-        IConfiguration systemConfig,
-        DatabaseInterface moderationDb,
-        ICachableLanguageDataStore languageDataStore,
         IUserDataService userDataService,
         WarfareModule warfare)
     {
@@ -56,12 +44,8 @@ public class DeathMessageResolver
         _translationService = translationService;
         _chatService = chatService;
         _languageService = languageService;
-        _moderationDb = moderationDb;
-        _languageDataStore = languageDataStore;
         _userDataService = userDataService;
         _warfare = warfare;
-        // intentional dont change
-        _dscIn = systemConfig["d" + "is" + "co" + "rd" + "_i" + "nv" + "ite" + "_co" + "de"] ?? string.Empty;
     }
 
     /*
@@ -557,60 +541,12 @@ public class DeathMessageResolver
 
         e.DefaultMessage = str!;
 
-        // todo move to somewhere else
-        // if (e.Player.UnturnedPlayer.TryGetPlayerData(out UCPlayerData data))
-        //     data.CancelDeployment();
-
-        PlayerDied toDispatch = e;
-
         // invoke PlayerDied event
-        _ = UniTask.Create(async () =>
-        {
-            await _dispatcher.DispatchEventAsync(toDispatch, CancellationToken.None);
-            await UniTask.SwitchToMainThread();
-
-            // todo
-            //if (e is { WasEffectiveKill: true, Killer.PendingCheaterDeathBan: false } and { Cause: EDeathCause.GUN, Limb: ELimb.LEFT_FOOT or ELimb.RIGHT_FOOT or ELimb.LEFT_HAND or ELimb.RIGHT_HAND or ELimb.LEFT_BACK or ELimb.RIGHT_BACK or ELimb.LEFT_FRONT or ELimb.RIGHT_FRONT, KillDistance: > 3f })
-            //{
-            //    e.Killer.PendingCheaterDeathBan = true;
-            //    UCWarfare.I.StartCoroutine(BanInRandomTime(e.Killer.Steam64, e.Killer.SteamPlayer.joined));
-            //}
-        });
+        _ = _dispatcher.DispatchEventAsync(e, CancellationToken.None);
     }
 
-    private IEnumerator<WaitForSecondsRealtime> BanInRandomTime(CSteamID steam64, float joined)
-    {
-        DateTimeOffset now = DateTimeOffset.UtcNow;
-        // make it harder to search for the source code causing it
-        _logger.LogInformation("Aut" + "o " + "ban " + "by a" + "nti" + "che" + "at: " + steam64.m_SteamID.ToString(CultureInfo.InvariantCulture) + ".", ConsoleColor.Cyan);
-        yield return new WaitForSecondsRealtime(UnityEngine.Random.Range(50f, 80f));
-
-        Ban ban = new Ban
-        {
-            Player = steam64.m_SteamID,
-            Actors =
-            [
-                new RelatedActor(RelatedActor.RolePrimaryAdmin, true, Actors.AntiCheat)
-            ],
-            RelevantLogsBegin = now.Subtract(TimeSpan.FromSeconds(Time.realtimeSinceStartup - joined)),
-            RelevantLogsEnd = now,
-            StartedTimestamp = now,
-            ResolvedTimestamp = now,
-                      // intentional leave this
-            Message = "Au" + "tob" + "an by an" + "ti" + "-" + "ch" + "ea" + "t. Ap" + "pe" + "al at di" + "sc" + "or" + "d.g" + "g/{_dscIn}.",
-            Duration = Timeout.InfiniteTimeSpan,
-            PresetLevel = 1,
-            PresetType = PresetType.Cheating
-        };
-
-        UniTask.Create(async () =>
-        {
-            await _moderationDb.AddOrUpdate(ban, CancellationToken.None);
-        });
-    }
     private void Log(bool tk, string msg, PlayerDied e)
     {
-        // todo string log = Util.RemoveRichText(msg);
         _logger.LogInformation(msg);
         if (e.Instigator.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
         {
@@ -783,29 +719,30 @@ public class DeathMessageResolver
             FileInfo[] langFiles = directoryInfo.GetFiles("*", SearchOption.TopDirectoryOnly);
             foreach (FileInfo info in langFiles)
             {
-                if (info.Name.Equals("deaths.json", StringComparison.InvariantCultureIgnoreCase))
-                {
-                    if (_translationList.ContainsKey(lang)) continue;
-                    using FileStream stream = info.OpenRead();
-                    if (stream.Length > int.MaxValue)
-                        continue;
-                    byte[] bytes = new byte[stream.Length];
-                    stream.Read(bytes, 0, bytes.Length);
-                    Utf8JsonReader reader = new Utf8JsonReader(bytes, ConfigurationSettings.JsonReaderOptions);
-                    while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
-                    {
-                        if (reader.TokenType == JsonTokenType.StartObject)
-                        {
-                            CauseGroup info2 = new CauseGroup();
-                            info2.ReadJson(ref reader);
-                            causes.Add(info2);
-                        }
-                    }
+                if (!info.Name.Equals("deaths.json", StringComparison.InvariantCultureIgnoreCase))
+                    continue;
 
-                    _translationList.Add(lang, causes.ToArray());
-                    causes.Clear();
-                    break;
+                if (_translationList.ContainsKey(lang)) continue;
+                using FileStream stream = info.OpenRead();
+                if (stream.Length > int.MaxValue)
+                    continue;
+
+                byte[] bytes = new byte[stream.Length];
+                int read = stream.Read(bytes, 0, bytes.Length);
+                Utf8JsonReader reader = new Utf8JsonReader(bytes.AsSpan(0, read), ConfigurationSettings.JsonReaderOptions);
+                while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
+                {
+                    if (reader.TokenType != JsonTokenType.StartObject)
+                        continue;
+
+                    CauseGroup info2 = new CauseGroup();
+                    info2.ReadJson(ref reader);
+                    causes.Add(info2);
                 }
+
+                _translationList.Add(lang, causes.ToArray());
+                causes.Clear();
+                break;
             }
         }
     }

@@ -1,11 +1,13 @@
-﻿using System;
+using System;
+using Uncreated.Warfare.Events.Models;
+using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.FOBs.Deployment;
-public class DeploymentService : ILayoutHostedService
+public class DeploymentService : ILayoutHostedService, IEventListener<PlayerDied>
 {
     public const float DefaultNearbyEnemyRange = 35;
 
@@ -56,6 +58,15 @@ public class DeploymentService : ILayoutHostedService
             {
                 component.CancelDeployment(chat);
             }
+        }
+    }
+
+    /// <inheritdoc />
+    void IEventListener<PlayerDied>.HandleEvent(PlayerDied e, IServiceProvider serviceProvider)
+    {
+        if (e.Player.ComponentOrNull<DeploymentComponent>() is { CurrentDeployment: not null } depComp)
+        {
+            depComp.CancelDeployment(false);
         }
     }
 }

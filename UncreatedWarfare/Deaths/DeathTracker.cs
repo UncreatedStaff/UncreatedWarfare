@@ -147,36 +147,33 @@ public class DeathTracker : IHostedService
 
         UniTask.Create(async () =>
         {
-            if (cause != EDeathCause.BLEEDING || comp?.BleedOutInfo == null)
+            PlayerInjureComponent? injureComp = dead.ComponentOrNull<PlayerInjureComponent>();
+            if (injureComp != null && injureComp is { State: PlayerHealthState.Injured, PendingDeathInfo: not null })
             {
-                PlayerInjureComponent? injureComp = dead.ComponentOrNull<PlayerInjureComponent>();
-                if (injureComp != null && injureComp is { State: PlayerHealthState.Injured, PendingDeathInfo: not null })
+                PlayerDied deathInfo = injureComp.PendingDeathInfo;
+                injureComp.PendingDeathInfo = null;
+                await _deathMessageResolver.BroadcastDeath(deathInfo);
+            }
+            else if (cause != EDeathCause.BLEEDING || comp?.BleedOutInfo == null)
+            {
+                PlayerDied e;
+
+                if (dead.Data.TryRemove("LastPlayerDying", out object? dyingArgs) && dyingArgs is PlayerDying dying)
                 {
-                    PlayerDied deathInfo = injureComp.PendingDeathInfo;
-                    injureComp.PendingDeathInfo = null;
-                    await _deathMessageResolver.BroadcastDeath(deathInfo);
+                    e = new PlayerDied(in dying.Parameters) { Player = dead };
                 }
                 else
                 {
-                    PlayerDied e;
-                    
-                    if (dead.Data.TryRemove("LastPlayerDying", out object? dyingArgs) && dyingArgs is PlayerDying dying)
+                    DamagePlayerParameters parameters = new DamagePlayerParameters(dead.UnturnedPlayer)
                     {
-                        e = new PlayerDied(in dying.Parameters) { Player = dead };
-                    }
-                    else
-                    {
-                        DamagePlayerParameters parameters = new DamagePlayerParameters(dead.UnturnedPlayer)
-                        {
-                            limb = limb,
-                            cause = cause,
-                            killer = instigator
-                        };
-                        e = new PlayerDied(in parameters) { Player = dead };
-                    }
-                    FillArgs(dead, cause, limb, instigator, e);
-                    await _deathMessageResolver.BroadcastDeath(e);
+                        limb = limb,
+                        cause = cause,
+                        killer = instigator
+                    };
+                    e = new PlayerDied(in parameters) { Player = dead };
                 }
+                FillArgs(dead, cause, limb, instigator, e);
+                await _deathMessageResolver.BroadcastDeath(e);
             }
             else
             {
@@ -184,7 +181,6 @@ public class DeathTracker : IHostedService
                 await _deathMessageResolver.BroadcastDeath(comp.BleedOutInfo);
             }
         });
-
 
         if (comp == null)
         {
