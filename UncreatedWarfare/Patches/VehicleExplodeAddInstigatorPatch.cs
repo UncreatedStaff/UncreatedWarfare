@@ -82,13 +82,11 @@ internal sealed class VehicleExplodeAddInstigatorPatch : IHarmonyPatch
                     if (__instance.passengers[0].player != null)
                     {
                         instigator2 = __instance.passengers[0].player.playerID.steamID;
-                        vehicle.DamageTracker.RecordDamage(instigator2, vehicle.Vehicle.health, lastDamageType);
                     }
                     // no current driver, check if the last driver exited the vehicle within the last 30 seconds
                     else if (vehicle.TranportTracker.LastKnownDriver.HasValue && (DateTime.UtcNow - vehicle.TranportTracker.LastKnownDriverExitTime.GetValueOrDefault()).TotalSeconds <= 30f)
                     {
                         instigator2 = vehicle.TranportTracker.LastKnownDriver.Value;
-                        vehicle.DamageTracker.RecordDamage(vehicle.TranportTracker.LastKnownDriver.Value, vehicle.Vehicle.health, lastDamageType);
                     }
                     else instigator2 = CSteamID.Nil;
                 }
@@ -122,7 +120,6 @@ internal sealed class VehicleExplodeAddInstigatorPatch : IHarmonyPatch
             }
         }
 
-        WarfareModule.Singleton.GlobalLogger.LogConditional("Decided explosion instigator: {0}.", instigator2);
         Vector3 force = new Vector3(
             RandomUtility.GetFloat(__instance.asset.minExplosionForce.x, __instance.asset.maxExplosionForce.x),
             RandomUtility.GetFloat(__instance.asset.minExplosionForce.y, __instance.asset.maxExplosionForce.y),

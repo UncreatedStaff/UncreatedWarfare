@@ -18,6 +18,7 @@ using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.Stats.EventHandlers;
@@ -109,7 +110,7 @@ internal class PointsRewardsEvents :
     [EventListener(Priority = int.MinValue)]
     public async UniTask HandleEventAsync(VehicleExploded e, IServiceProvider serviceProvider, CancellationToken token = default)
     {
-        if (e.Instigator == null)
+        if (!e.InstigatorId.IsIndividual())
             return;
         
         uint faction = e.InstigatorTeam?.Faction.PrimaryKey ?? 0;
@@ -129,6 +130,7 @@ internal class PointsRewardsEvents :
                 ? _translations.XPToastAircraftDestroyed
                 : _translations.XPToastVehicleDestroyed;
 
+            Console.WriteLine($"Friendly vehicle taking {@event.XP} {@event.Credits} {@event.Reputation} {@event.Name}.");
             await _points.ApplyEvent(e.InstigatorId, faction, @event.Resolve().WithTranslation(translation, e.Vehicle.Info.Type, e.Instigator), token).ConfigureAwait(false);
         }
         else
@@ -171,6 +173,7 @@ internal class PointsRewardsEvents :
                 else
                     continue;
 
+                Console.WriteLine($"Enemy vehicle taking {contributor.Steam64} {resolvedEvent.XP} {resolvedEvent.Credits} {resolvedEvent.Reputation} {@event.Name}.");
                 Task task = _points.ApplyEvent(contributor.Steam64, faction, resolvedEvent.WithTranslation(translation, e.Vehicle.Info.Type, contributor), token);
                 tasks.Add(task);
             }

@@ -2,6 +2,7 @@ using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Emit;
 using DanielWillett.ReflectionTools.Formatting;
 using HarmonyLib;
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -9,6 +10,7 @@ using Uncreated.Warfare.Events.Models.Vehicles;
 using Uncreated.Warfare.Patches;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles;
 using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
@@ -67,13 +69,13 @@ public class VehicleOnPreDamage : IHarmonyPatch
 
         while (ctx.MoveNext())
         {
-            // find the call to VehicleManager.damage()
+            // find the call to InteractableVehicle.askDamage()
             if (!ctx.Instruction.Calls(askDamageMethod))
             {
                 continue;
             }
 
-            // move 3 instructions back before the arguments of VehicleManager.damage() are loaded onto the stack
+            // move 3 instructions back before the arguments of InteractableVehicle.askDamage() are loaded onto the stack
             while (ctx.Instruction.opcode != OpCodes.Ldarg_0)
             {
                 ctx.CaretIndex--;
@@ -113,17 +115,18 @@ public class VehicleOnPreDamage : IHarmonyPatch
             instigatorVehicle = onlineInstigator.UnturnedPlayer.movement.getVehicle().transform.GetComponent<WarfareVehicleComponent>().WarfareVehicle;
 
         // landmines get special treatment in VehicleDamageTrackerItemTweak
+        Console.WriteLine($"Damage origin: {damageOrigin}, damage: {pendingDamage}, canRepair: {canRepair}, instigator: {instigatorId}.");
         if (damageOrigin != EDamageOrigin.Trap_Explosion)
         {
             if (onlineInstigator != null)
             {
                 if (instigatorVehicle != null)
-                    warfareVehicle.DamageTracker.RecordDamage(onlineInstigator, instigatorVehicle, pendingDamage, damageOrigin);
+                    warfareVehicle.DamageTracker.RecordDamage(onlineInstigator, instigatorVehicle, pendingDamage, damageOrigin, onlineInstigator.Team.IsFriendly(vehicle.lockedGroup));
                 else
-                    warfareVehicle.DamageTracker.RecordDamage(onlineInstigator, pendingDamage, damageOrigin);
+                    warfareVehicle.DamageTracker.RecordDamage(onlineInstigator, pendingDamage, damageOrigin, onlineInstigator.Team.IsFriendly(vehicle.lockedGroup));
             }
-            else if (instigatorId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
-                warfareVehicle.DamageTracker.RecordDamage(instigatorId, pendingDamage, damageOrigin);
+            else if (instigatorId.IsIndividualRef())
+                warfareVehicle.DamageTracker.RecordDamage(instigatorId, pendingDamage, damageOrigin, false);
             else
                 warfareVehicle.DamageTracker.RecordDamage(damageOrigin);
         }
@@ -133,7 +136,7 @@ public class VehicleOnPreDamage : IHarmonyPatch
             Vehicle = warfareVehicle,
             PendingDamage = pendingDamage,
             CanRepair = canRepair,
-            InstantaneousInstigator = instigatorId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual ? instigatorId : null,
+            InstantaneousInstigator = instigatorId.IsIndividualRef() ? instigatorId : null,
             LastKnownInstigator = warfareVehicle.DamageTracker.LastKnownDamageInstigator,
             InstantaneousDamageOrigin = damageOrigin
         };

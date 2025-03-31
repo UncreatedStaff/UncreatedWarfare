@@ -78,7 +78,7 @@ public class WarfareVehicle : IDisposable, ITransformObject, IEquatable<WarfareV
         Asset = interactableVehicle.asset;
         Info = info;
         VehicleHUD = serviceProvider.GetService<VehicleHUD>();
-        DamageTracker = new VehicleDamageTracker();
+        DamageTracker = new VehicleDamageTracker(info.VehicleAsset.ToDisplayString());
         TranportTracker = new TranportTracker();
         AdvancedDamageApplier = new AdvancedVehicleDamageApplier(serviceProvider.GetRequiredService<ILogger<AdvancedVehicleDamageApplier>>());
         NeedsAutoResupply = false;

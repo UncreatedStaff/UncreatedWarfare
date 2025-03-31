@@ -119,11 +119,11 @@ internal sealed class VehicleDamageTrackerItemTweaks : IEventListener<VehiclePre
                 // lay fault onto the triggerer if they were on the same team as the player that placed the landmine
                 if (triggerer != null && triggerer.Team.IsFriendly(barricadeGroupId))
                 {
-                    tracker.RecordDamage(triggerer.Steam64, e.PendingDamage, EDamageOrigin.Trap_Explosion);
+                    tracker.RecordDamage(triggerer.Steam64, e.PendingDamage, EDamageOrigin.Trap_Explosion, true);
                 }
                 else
                 {
-                    tracker.RecordDamage(instigator64, e.PendingDamage, EDamageOrigin.Trap_Explosion);
+                    tracker.RecordDamage(instigator64, e.PendingDamage, EDamageOrigin.Trap_Explosion, false);
                 }
 
                 break;

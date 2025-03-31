@@ -193,20 +193,18 @@ public class DeathTracker : IHostedService
         comp.LastRoadkillVehicle = null;
     }
 
-    internal PlayerDied OnInjured(in DamagePlayerParameters parameters)
+    internal PlayerDied GetInjuredArguments(in DamagePlayerParameters parameters)
     {
         WarfarePlayer pl = _playerService.GetOnlinePlayer(parameters.player);
 
         if (parameters.cause == EDeathCause.BLEEDING && PlayerDeathTrackingComponent.GetOrAdd(pl.UnturnedPlayer) is { BleedOutInfo: { } bleedOutInfo })
         {
             bleedOutInfo.MessageFlags |= DeathFlags.Bleeding;
-            pl.Component<PlayerInjureComponent>().PendingDeathInfo = bleedOutInfo;
             return bleedOutInfo;
         }
 
         PlayerDied e = new PlayerDied(in parameters) { Player = pl };
         FillArgs(pl, parameters.cause, parameters.limb, parameters.killer, e);
-        pl.Component<PlayerInjureComponent>().PendingDeathInfo = e;
         return e;
     }
 
@@ -426,38 +424,29 @@ public class DeathTracker : IHostedService
                 if (cause == EDeathCause.MELEE)
                     break;
 
-                veh = killer.UnturnedPlayer.movement.getVehicle();
-                if (veh == null || veh.isDead)
-                    break;
-
                 // check if the player is on a turret, use the vehicle as item2, and give the driver third-party.
-                for (int i = 0; i < veh.turrets.Length; ++i)
-                {
-                    if (veh.turrets[i].turret == null || veh.turrets[i].turret.itemID != killer.UnturnedPlayer.equipment.asset.id)
-                    {
-                        continue;
-                    }
-
-                    e.TurretVehicleOwner = AssetLink.Create(veh.asset);
-                    e.SecondaryAsset = e.TurretVehicleOwner;
-                    e.MessageFlags |= DeathFlags.Item2;
-
-                    if (veh.passengers.Length > 0 && veh.passengers[0].player is { } sp && sp.player != null)
-                    {
-                        e.DriverAssist = _playerService.GetOnlinePlayer(sp);
-                        if (e.DriverAssist != null && sp.playerID.steamID.m_SteamID != killer.Steam64.m_SteamID)
-                        {
-                            e.ThirdParty = e.DriverAssist;
-                            e.ThirdPartyId = e.DriverAssist.Steam64;
-                            e.ThirdPartyPoint = e.DriverAssist.Position;
-                            e.ThirdPartySession = e.DriverAssist.CurrentSession;
-                            if (e.ThirdPartySession != null)
-                                Interlocked.Increment(ref e.ThirdPartySession.EventCount);
-                            e.MessageFlags |= DeathFlags.Player3;
-                        }
-                    }
-
+                veh = killer.UnturnedPlayer.movement.getVehicle();
+                byte seat = killer.UnturnedPlayer.movement.getSeat();
+                if (veh == null || veh.isDead || veh.passengers[seat].turret == null || veh.passengers[seat].turret.itemID != killer.UnturnedPlayer.equipment.asset.id)
                     break;
+
+                e.TurretVehicleOwner = AssetLink.Create(veh.asset);
+                e.SecondaryAsset = e.TurretVehicleOwner;
+                e.MessageFlags |= DeathFlags.Item2;
+
+                if (veh.passengers.Length > 0 && veh.passengers[0].player is { } sp2 && sp2.player != null)
+                {
+                    e.DriverAssist = _playerService.GetOnlinePlayer(sp2);
+                    if (e.DriverAssist != null && sp2.playerID.steamID.m_SteamID != killer.Steam64.m_SteamID)
+                    {
+                        e.ThirdParty = e.DriverAssist;
+                        e.ThirdPartyId = e.DriverAssist.Steam64;
+                        e.ThirdPartyPoint = e.DriverAssist.Position;
+                        e.ThirdPartySession = e.DriverAssist.CurrentSession;
+                        if (e.ThirdPartySession != null)
+                            Interlocked.Increment(ref e.ThirdPartySession.EventCount);
+                        e.MessageFlags |= DeathFlags.Player3;
+                    }
                 }
 
                 e.ActiveVehicle = veh;

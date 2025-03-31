@@ -24,6 +24,8 @@
     <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.0" />
     <PackageReference Include="DanielWillett.StackCleaner" Version="1.5.1" />
     <PackageReference Include="NetEscapades.Configuration.Yaml" Version="3.1.0" />
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.1" />
 
     <PackageReference Include="JetBrains.Annotations" Version="2018.2.1" Aliases="JetBrains" />
 

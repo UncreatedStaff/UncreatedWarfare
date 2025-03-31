@@ -15,20 +15,17 @@ using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.FOBs.Entities;
 using Uncreated.Warfare.FOBs.Rallypoints;
-using Uncreated.Warfare.FOBs.StateStorage;
 using Uncreated.Warfare.FOBs.SupplyCrates;
-using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
-using Uncreated.Warfare.Util.Timing;
-using Uncreated.Warfare.Vehicles;
 using Uncreated.Warfare.Vehicles.WarfareVehicles;
 using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Fobs;
+
 public partial class FobManager :
     IEventListener<IBuildablePlacedEvent>,
     IEventListener<PlaceBarricadeRequested>,
@@ -312,7 +309,7 @@ public partial class FobManager :
             return;
 
         if (e.InstigatorId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
-            correspondingFob.DamageTracker.RecordDamage(e.InstigatorId, e.PendingDamage, e.DamageOrigin);
+            correspondingFob.DamageTracker.RecordDamage(e.InstigatorId, e.PendingDamage, e.DamageOrigin, e.InstigatorTeam.IsFriendly(e.Buildable.Group));
         else
             correspondingFob.DamageTracker.RecordDamage(e.DamageOrigin);
     }

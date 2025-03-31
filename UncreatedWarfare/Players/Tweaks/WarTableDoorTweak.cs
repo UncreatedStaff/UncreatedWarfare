@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Configuration;
 using System;
-using System.Diagnostics;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Kits;
@@ -13,6 +12,7 @@ using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Players.Tweaks;
+
 public class WarTableDoorTweak :
     IEventListener<PlayerKitChanged>,
     IEventListener<PlayerTeamChanged>,
@@ -27,10 +27,14 @@ public class WarTableDoorTweak :
     private readonly IAssetLink<ObjectAsset>[] _teleportDoors;
     private readonly ushort _flagId;
 
-    private const short FlagValueAlreadyDeployed = -2; // -2 confirmed
-    private const short FlagValueNoKit = -1; // -1 confirmed
-    private const short FlagValueDeploying = -3;
-    private const short FlagValueDeployable = 0; // 0 confirmed
+
+    private static class Flags
+    {
+        public const short AlreadyDeployed = -3;
+        public const short NoKit = -2;
+        public const short Deploying = -1;
+        public const short Open = 0;
+    }
 
     public WarTableDoorTweak(AssetConfiguration assetConfig, ZoneStore zoneStore, DeploymentService deploymentService)
     {
@@ -71,7 +75,7 @@ public class WarTableDoorTweak :
             DisableTickingChatUpdates = true
         }))
         {
-            e.Player.SetFlag(_flagId, FlagValueDeploying);
+            e.Player.SetFlag(_flagId, Flags.Deploying);
         }
     }
 
@@ -108,22 +112,22 @@ public class WarTableDoorTweak :
         if (player.Component<DeploymentComponent>().CurrentDeployment is Zone { Type: ZoneType.MainBase })
         {
             // already deploying
-            player.SetFlag(_flagId, FlagValueDeploying);
+            player.SetFlag(_flagId, Flags.Deploying);
         }
         else if (player.Component<KitPlayerComponent>().ActiveClass <= Class.Unarmed)
         {
             // invalid kit
-            player.SetFlag(_flagId, FlagValueNoKit);
+            player.SetFlag(_flagId, Flags.NoKit);
         }
         else if (!_zoneStore.IsInsideZone(player.Position, ZoneType.WarRoom, player.Team.Faction))
         {
             // not in war zone
-            player.SetFlag(_flagId, FlagValueAlreadyDeployed);
+            player.SetFlag(_flagId, Flags.AlreadyDeployed);
         }
         else
         {
             // all good
-            player.SetFlag(_flagId, FlagValueDeployable);
+            player.SetFlag(_flagId, Flags.Open);
         }
     }
 }

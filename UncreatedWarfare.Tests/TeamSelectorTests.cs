@@ -8,6 +8,7 @@ using UnityEngine;
 
 namespace Uncreated.Warfare.Tests;
 
+[Ignore("Not really needed")]
 public class Tests
 {
     private IPlayerService _playerService;

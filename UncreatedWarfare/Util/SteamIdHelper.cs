@@ -24,7 +24,7 @@ public static class SteamIdHelper
     /// <summary>
     /// Check if a Steam64 ID belongs to an individual.
     /// </summary>
-    public static bool IsIndividual(this in CSteamID steamId)
+    public static bool IsIndividualRef(this in CSteamID steamId)
     {
         return Unsafe.AsRef(in steamId).GetEAccountType() == EAccountType.k_EAccountTypeIndividual;
     }
@@ -197,7 +197,7 @@ public static class SteamIdHelper
     {
         if (TryParseSteamId(str, out CSteamID steamId))
         {
-            return steamId.IsIndividual() ? new ValueTask<CSteamID?>(steamId) : default;
+            return steamId.IsIndividualRef() ? new ValueTask<CSteamID?>(steamId) : default;
         }
 
         if (!str.Contains("steamcommunity.com", StringComparison.OrdinalIgnoreCase))

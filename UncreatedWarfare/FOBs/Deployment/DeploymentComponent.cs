@@ -199,6 +199,7 @@ public class DeploymentComponent : MonoBehaviour, IPlayerComponent, IEventListen
         try
         {
             Player.UnturnedPlayer.teleportToLocationUnsafe(deployable.SpawnPosition, settings.YawOverride ?? deployable.Yaw);
+            CurrentDeployment = null;
             if (deployFrom is { IsSafeZone: true })
             {
                 _lastDeployedFromSafeZone = DateTime.UtcNow;
@@ -217,9 +218,10 @@ public class DeploymentComponent : MonoBehaviour, IPlayerComponent, IEventListen
                 _cooldownManager.StartCooldown(Player, settings.CooldownType ?? KnownCooldowns.Deploy, 30f /* todo RapidDeployment.GetDeployTime(Player) */);
             }
         }
-        finally
+        catch
         {
             CurrentDeployment = null;
+            throw;
         }
     }
 

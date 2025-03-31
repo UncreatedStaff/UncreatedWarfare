@@ -224,7 +224,13 @@ public class PointsService : IEventListener<PlayerTeamChanged> // todo player eq
         PlayerPoints oldPoints = default, newPoints = default;
 
         WarfarePlayer? player = _playerService.GetOnlinePlayerOrNull(playerId);
-        double oldRep = player?.UnturnedPlayer.skills.reputation ?? 0;
+        double oldRep = player?.CachedReputation ?? double.NaN;
+        if (double.IsNaN(oldRep))
+        {
+            oldRep = await _pointsSql.GetReputationAsync(playerId, token).ConfigureAwait(false);
+            if (player != null)
+                player.CachedReputation = oldRep;
+        }
 
         if (xp != 0 || credits != 0)
         {
@@ -242,28 +248,39 @@ public class PointsService : IEventListener<PlayerTeamChanged> // todo player eq
             xp = newPoints.XP - oldPoints.XP;
             credits = newPoints.Credits - oldPoints.Credits;
         }
+        else
+        {
+            xp = 0;
+            credits = 0;
+        }
 
         double newRep;
         if (rep != 0)
         {
             newRep = await _pointsSql.AddToReputationAsync(playerId, rep, CancellationToken.None).ConfigureAwait(false);
+            if (player != null)
+                player.CachedReputation = newRep;
             oldRep = newRep - rep;
         }
         else
         {
             newRep = oldRep;
+            rep = 0;
         }
 
         if (newPoints.WasFound)
         {
-            _logger.LogInformation("Applied event {0}. XP: {1} -> {2}, Credits: {3} -> {4}. Reputation: {5} -> {6}. Faction: {7}, Season: {8}.",
+            _logger.LogInformation("Applied event {0}. XP: {1} -> {2} ({3}), Credits: {4} -> {5} ({6}). Reputation: {7} -> {8} ({9}). Faction: {10}, Season: {11}.",
                 @event.EventName,
                 oldPoints.XP,
                 newPoints.XP,
+                xp,
                 oldPoints.Credits,
                 newPoints.Credits,
+                credits,
                 oldRep,
                 newRep,
+                rep,
                 factionId,
                 season
             );
@@ -273,12 +290,20 @@ public class PointsService : IEventListener<PlayerTeamChanged> // todo player eq
             if (newPoints.Credits != oldPoints.Credits)
                 ActionLog.Add(ActionLogType.CreditsChanged, $"{oldPoints.Credits} -> {newPoints.Credits} | Event: '{@event.EventName}'", playerId);
         }
-        else
+        else if (!double.IsNaN(oldRep))
         {
-            _logger.LogInformation("Applied event {0}. Reputation: {1} -> {2}. Season: {3}.",
+            _logger.LogInformation("Applied event {0}. Reputation: {1} -> {2} ({3}). Season: {4}.",
                 @event.EventName,
                 oldRep,
                 newRep,
+                rep,
+                season
+            );
+        }
+        else
+        {
+            _logger.LogInformation("Applied event {0}. No changes. Season: {1}.",
+                @event.EventName,
                 season
             );
         }
@@ -327,7 +352,7 @@ public class PointsService : IEventListener<PlayerTeamChanged> // todo player eq
         {
             if (newPoints.WasFound)
                 player.CachedPoints = newPoints;
-            if (rep != 0)
+            if (!double.IsNaN(newRep))
                 player.SetReputation((int)Math.Round(newRep));
 
             if (xp != 0 || credits != 0)
@@ -470,7 +495,7 @@ public class ResolvedEventInfo
 public readonly struct EventInfo
 {   
     public IConfigurationSection Configuration { get; }
-    public string? Name => Configuration?.Key;
+    public string? Name => Configuration?.Path;
     public double XP { get; }
     public double Credits { get; }
     public double Reputation { get; }

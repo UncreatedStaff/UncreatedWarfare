@@ -34,8 +34,6 @@ public class PlayerContributionTracker : IEnumerable<PlayerWork>
         }
     }
 
-    public float GetWorkDoneNoLock() => _totalWorkDone;
-
     /// <returns>The percentage of the work <paramref name="player"/> has done (from 0 to 1).</returns>
     public float GetContributionPercentage(CSteamID player)
     {
@@ -54,6 +52,7 @@ public class PlayerContributionTracker : IEnumerable<PlayerWork>
     /// </returns>
     public float GetContribution(CSteamID player, out float total)
     {
+        total = _totalWorkDone;
         for (int i = 0; i < _workCount; ++i)
         {
             ref PlayerWork w = ref _work[i];
@@ -62,12 +61,10 @@ public class PlayerContributionTracker : IEnumerable<PlayerWork>
             
             lock (_work)
             {
-                total = _totalWorkDone;
                 return w.WorkPoints;
             }
         }
 
-        total = 0;
         return 0f;
     }
 

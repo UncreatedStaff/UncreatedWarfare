@@ -28,7 +28,7 @@ public class BunkerFob : ResourceFob
     {
         IsBuilt = false;
         HasBeenRebuilt = false;
-        DamageTracker = new DamageTracker();
+        DamageTracker = new DamageTracker(name);
     }
     public void MarkBuilt(IBuildable newBuildable)
     {
