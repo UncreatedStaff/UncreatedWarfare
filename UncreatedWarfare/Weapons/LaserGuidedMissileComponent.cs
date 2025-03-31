@@ -123,7 +123,7 @@ internal class LaserGuidedMissileComponent : MonoBehaviour
         if (_firer is null || _spottedService == null)
             return false;
 
-        foreach (SpottableObjectComponent spotted in _spottedService.AliveSpottableObjects)
+        foreach (SpottableObjectComponent spotted in _spottedService.AllSpottableObjects)
         {
             if (!spotted.IsLaserTarget(_team))
             {

@@ -54,6 +54,9 @@ public class VehicleSeatRestrictionService :
     /// <remarks>Cooldowns are not considered.</remarks>
     public VehicleChangeSeatsResult TryEnterSeat(WarfareVehicle vehicle, WarfarePlayer player, byte seat)
     {
+        if (player.IsOnDuty)
+            return new VehicleChangeSeatsResult(null, ChangeSeatsResult.Success);
+        
         // is grounded in prep phase
         if (_module != null
             && _module.IsLayoutActive()
@@ -122,6 +125,9 @@ public class VehicleSeatRestrictionService :
     /// <remarks>Cooldowns are not considered.</remarks>
     public VehicleChangeSeatsResult TrySwapSeat(WarfareVehicle vehicle, WarfarePlayer player, byte toSeat, byte fromSeat = byte.MaxValue)
     {
+        if (player.IsOnDuty)
+            return new VehicleChangeSeatsResult(null, ChangeSeatsResult.Success);
+        
         if (fromSeat == byte.MaxValue)
             fromSeat = player.UnturnedPlayer.movement.getSeat();
 
@@ -156,7 +162,7 @@ public class VehicleSeatRestrictionService :
         }
 
         // prevent abandoning driver's seat on the battlefield
-        if (!CanAbandonDriverSeat(player, vehicle.Info, fromSeat, toSeat))
+        if (!CanAbandonDriverSeat(player, vehicle, toSeat))
         {
             return new VehicleChangeSeatsResult(null, ChangeSeatsResult.AbandonDriver);
         }
@@ -170,6 +176,9 @@ public class VehicleSeatRestrictionService :
     /// <remarks>Cooldowns are not considered.</remarks>
     public ChangeSeatsResult TryExitSeat(WarfareVehicle vehicle, WarfarePlayer player, byte fromSeat = byte.MaxValue)
     {
+        if (player.IsOnDuty)
+            return ChangeSeatsResult.Success;
+        
         if (fromSeat == byte.MaxValue)
             fromSeat = player.UnturnedPlayer.movement.getSeat();
 
@@ -177,12 +186,6 @@ public class VehicleSeatRestrictionService :
         if (!CanExitAircraftMidair(vehicle.Vehicle, vehicle.Info))
         {
             return ChangeSeatsResult.AbandonMidAir;
-        }
-
-        // prevent abandoning driver's seat on the battlefield
-        if (!CanAbandonDriverSeat(player, vehicle.Info, fromSeat))
-        {
-            return ChangeSeatsResult.AbandonDriver;
         }
 
         return ChangeSeatsResult.Success;
@@ -388,17 +391,20 @@ public class VehicleSeatRestrictionService :
         return true;
     }
 
-    private bool CanAbandonDriverSeat(WarfarePlayer exitingPlayer, WarfareVehicleInfo info, int currentSeatIndex, int? newSeatIndex = null)
+    private bool CanAbandonDriverSeat(WarfarePlayer exitingPlayer, WarfareVehicle warfareVehicle, int? newSeatIndex = null)
     {
         if (_zoneStore == null)
             return true;
 
-        if (info.Class == Class.None)
+        if (warfareVehicle.Info.Class == Class.None || warfareVehicle.Info.Type.IsEmplacement())
             return true;
 
-        if (currentSeatIndex == 0 &&
-            info.IsCrewSeat(currentSeatIndex) &&
-            info.IsCrewSeat(newSeatIndex ?? -1) &&
+        SteamPlayer? driver = warfareVehicle.Vehicle.passengers[0].player;
+        bool vehicleHasDriver = driver != null && !exitingPlayer.Equals(driver);
+
+        if (newSeatIndex != 0 &&
+            !vehicleHasDriver &&
+            warfareVehicle.Info.IsCrewSeat(newSeatIndex ?? -1) &&
             !_zoneStore.IsInMainBase(exitingPlayer))
             return false;
 
