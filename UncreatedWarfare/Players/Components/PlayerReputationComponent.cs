@@ -1,4 +1,4 @@
-﻿using SDG.Framework.Utilities;
+using SDG.Framework.Utilities;
 using System;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Util;
@@ -68,6 +68,9 @@ public class PlayerReputationComponent : IPlayerComponent, IDisposable
 
     private void ModifyReputationIntl(int deltaReputation)
     {
+        if (deltaReputation == 0)
+            return;
+
         Patches.CancelReputationPatch.IsSettingReputation = true;
         try
         {

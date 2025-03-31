@@ -59,6 +59,10 @@ public class LoggingFormattingTests
             .WithParameter("xmlDoc", xmlDoc)
             .SingleInstance();
 
+        WarfareModule module = new WarfareModule();
+        module.InitForTests(bldr);
+        bldr.RegisterInstance(module);
+
         bldr.RegisterInstance(new ConfigurationBuilder().Add(new MemoryConfigurationSource
         {
             InitialData =

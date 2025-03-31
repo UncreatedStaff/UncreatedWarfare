@@ -89,6 +89,8 @@ public class WarfareLoggerProvider : ILoggerProvider
         config.HiddenTypes = hiddenTypes;
 
         StackCleaner = new StackTraceCleaner(config);
+
+        TimeUtility.updated += Update;
     }
 
     /// <summary>

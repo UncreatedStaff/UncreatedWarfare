@@ -207,6 +207,28 @@ public sealed class WarfareModule
         Init();
     }
 
+    // for unit testing
+    internal void InitForTests(ContainerBuilder bldr)
+    {
+        HomeDirectory = Path.Combine(Environment.CurrentDirectory, "Warfare");
+
+        Directory.CreateDirectory(HomeDirectory);
+
+        // Add system configuration provider.
+        IConfigurationBuilder configBuilder = new ConfigurationBuilder();
+
+        string systemConfigLocation = Path.Join(HomeDirectory, "System Config.yml");
+
+        FileProvider = new PhysicalFileProvider(HomeDirectory, ExclusionFilters.Sensitive);
+
+        ConfigurationHelper.AddJsonOrYamlFile(configBuilder, FileProvider, systemConfigLocation, optional: true, reloadOnChange: true);
+        Configuration = configBuilder.Build();
+
+        bldr.RegisterInstance(Configuration);
+
+        bldr.RegisterBuildCallback(s => ServiceProvider = (IContainer)s);
+    }
+
     private void Init()
     {
         Singleton = this;

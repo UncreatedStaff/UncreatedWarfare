@@ -28,6 +28,8 @@ internal class CheckReputationPlayerTask(IPointsStore pointsSql) : IPlayerPendin
         {
             Patches.CancelReputationPatch.IsSettingReputation = false;
         }
+
+        player.CachedReputation = _reputation;
     }
 
     bool IPlayerPendingTask.CanReject => false;

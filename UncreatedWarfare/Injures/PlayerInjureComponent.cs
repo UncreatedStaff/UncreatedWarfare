@@ -278,7 +278,7 @@ public class PlayerInjureComponent : MonoBehaviour,
 
         ActionLog.Add(ActionLogType.Injured, "by " + (killer == null ? "self" : killer.Steam64.m_SteamID.ToString(CultureInfo.InvariantCulture)), parameters.player.channel.owner.playerID.steamID.m_SteamID);
 
-        _deathTracker.OnInjured(in parameters);
+        PendingDeathInfo = _deathTracker.GetInjuredArguments(in parameters);
 
         if (killerId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
         {

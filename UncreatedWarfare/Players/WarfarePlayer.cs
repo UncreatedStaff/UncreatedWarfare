@@ -105,6 +105,7 @@ public class WarfarePlayer :
     public PlayerSummary SteamSummary { get; }
     public SessionRecord CurrentSession { get; internal set; }
     public ref PlayerPoints CachedPoints => ref _cachedPoints;
+    public double CachedReputation { get; internal set; } = double.NaN;
     public bool IsFirstTimePlaying { get; }
 
     /// <summary>

@@ -662,7 +662,10 @@ public class MySqlPointsStore : IPointsStore
             return;
 
         if (rep.HasValue)
+        {
             pl.SetReputation((int)Math.Round(rep.Value));
+            pl.CachedReputation = rep.Value;
+        }
 
         if (!xp.HasValue && !creds.HasValue || pl.Team.Faction.PrimaryKey != factionId)
             return;
