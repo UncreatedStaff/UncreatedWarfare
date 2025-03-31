@@ -1,159 +1,193 @@
-﻿//using System.Collections.Generic;
-//using Uncreated.Warfare.Components;
-//using Uncreated.Warfare.Layouts.Teams;
-//using Uncreated.Warfare.Players;
-//using Uncreated.Warfare.Players.Management;
-//using Uncreated.Warfare.Players.UI;
-//using Uncreated.Warfare.Translations;
-//using Uncreated.Warfare.Translations.Addons;
-//using Uncreated.Warfare.Zones;
+using System;
+using System.Collections.Generic;
+using Uncreated.Warfare.Layouts.Teams;
+using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Players.UI;
+using Uncreated.Warfare.Stats;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.Addons;
+using Uncreated.Warfare.Vehicles.Spawners;
+using Uncreated.Warfare.Vehicles.WarfareVehicles;
+using Uncreated.Warfare.Zones;
 
-//namespace Uncreated.Warfare.Vehicles;
+namespace Uncreated.Warfare.Vehicles;
 
-///// <summary>
-///// Handles abandoning vehicles.
-///// </summary>
-//public class AbandonService
-//{
-//    private readonly IPlayerService _playerService;
-//    private readonly VehicleService _vehicleService;
-//    private readonly ITranslationValueFormatter _formatter;
-//    private readonly AbandonTranslations _translations;
-//    private readonly ZoneStore _zoneStore;
-//    private readonly ITeamManager<Team> _teamManager;
+/// <summary>
+/// Handles abandoning vehicles.
+/// </summary>
+public class AbandonService
+{
+    private readonly IPlayerService _playerService;
+    private readonly VehicleService _vehicleService;
+    private readonly ITranslationValueFormatter _formatter;
+    private readonly AbandonTranslations _translations;
+    private readonly ZoneStore _zoneStore;
+    private readonly ITeamManager<Team> _teamManager;
+    private readonly PointsService _pointsService;
 
-//    public AbandonService(IPlayerService playerService, VehicleService vehicleService, TranslationInjection<AbandonTranslations> translations, ITranslationValueFormatter formatter, ZoneStore zoneStore, ITeamManager<Team> teamManager)
-//    {
-//        _playerService = playerService;
-//        _vehicleService = vehicleService;
-//        _formatter = formatter;
-//        _zoneStore = zoneStore;
-//        _teamManager = teamManager;
-//        _translations = translations.Value;
-//    }
+    public AbandonService(
+        IPlayerService playerService,
+        VehicleService vehicleService,
+        TranslationInjection<AbandonTranslations> translations,
+        ITranslationValueFormatter formatter,
+        ZoneStore zoneStore,
+        ITeamManager<Team> teamManager,
+        PointsService pointsService)
+    {
+        _playerService = playerService;
+        _vehicleService = vehicleService;
+        _formatter = formatter;
+        _zoneStore = zoneStore;
+        _teamManager = teamManager;
+        _pointsService = pointsService;
+        _translations = translations.Value;
+    }
 
-//    public async UniTask AbandonAllVehiclesAsync(bool respawn, CancellationToken token = default)
-//    {
-//        await UniTask.SwitchToMainThread(token);
+    public async UniTask AbandonAllVehiclesAsync(bool respawn, CancellationToken token = default)
+    {
+        await UniTask.SwitchToMainThread(token);
 
-//        List<InteractableVehicle> candidates = new List<InteractableVehicle>(16);
-//        for (int i = 0; i < VehicleManager.vehicles.Count; ++i)
-//        {
-//            InteractableVehicle vehicle = VehicleManager.vehicles[i];
+        List<InteractableVehicle> candidates = new List<InteractableVehicle>(16);
+        for (int i = 0; i < VehicleManager.vehicles.Count; ++i)
+        {
+            InteractableVehicle vehicle = VehicleManager.vehicles[i];
 
-//            if (vehicle.isDead || vehicle.isExploded || vehicle.isDrowned || !vehicle.TryGetComponent(out VehicleComponent vehicleComponent))
-//            {
-//                continue;
-//            }
+            if (vehicle.isDead || vehicle.isExploded || vehicle.isDrowned)
+            {
+                continue;
+            }
 
-//            if (vehicleComponent.Spawn == null)
-//                continue;
+            WarfareVehicle warfareVehicle = _vehicleService.GetVehicle(vehicle);
+            if (warfareVehicle.Spawn == null)
+                continue;
 
-//            Team t = _teamManager.GetTeam(vehicle.lockedGroup);
-//            if (t.IsValid && _zoneStore.IsInsideZone(vehicle.transform.position, ZoneType.MainBase, t.Faction))
-//            {
-//                candidates.Add(vehicle);
-//            }
-//        }
+            Team t = _teamManager.GetTeam(vehicle.lockedGroup);
+            if (t.IsValid && _zoneStore.IsInsideZone(vehicle.transform.position, ZoneType.MainBase, t.Faction))
+            {
+                candidates.Add(vehicle);
+            }
+        }
 
-//        foreach (InteractableVehicle vehicle in candidates)
-//        {
-//            await AbandonVehicle(vehicle, respawn, token);
-//        }
-//    }
+        UniTask<bool>[] tasks = new UniTask<bool>[candidates.Count];
 
-//    /// <summary>
-//    /// Try to abandon the given vehicle.
-//    /// </summary>
-//    /// <returns><see langword="true"/> if all the info is found about the vehicle and its deleted, <see langword="false"/> if it's just deleted (or is already dead).</returns>
-//    public async UniTask<bool> AbandonVehicle(InteractableVehicle vehicle, bool respawn, CancellationToken token = default)
-//    {
-//        await UniTask.SwitchToMainThread(token);
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            InteractableVehicle vehicle = candidates[i];
+            tasks[i] = AbandonVehicleAsync(vehicle, respawn, token);
+        }
 
-//        if (vehicle == null || vehicle.isDead || vehicle.isExploded || vehicle.isDrowned)
-//            return false;
+        await UniTask.WhenAll(tasks);
+    }
 
-//        if (!vehicle.TryGetComponent(out VehicleComponent vehicleComponent))
-//            return false;
+    /// <summary>
+    /// Try to abandon the given vehicle.
+    /// </summary>
+    /// <returns><see langword="true"/> if all the info is found about the vehicle and its deleted, <see langword="false"/> if it's just deleted (or is already dead).</returns>
+    public async UniTask<bool> AbandonVehicleAsync(InteractableVehicle vehicle, bool respawn, CancellationToken token = default)
+    {
+        await UniTask.SwitchToMainThread(token);
 
-//        WarfarePlayer? owner = _playerService.GetOnlinePlayer(vehicle.lockedOwner.m_SteamID);
-//        bool found = false;
-//        VehicleSpawnInfo? originalSpawn = vehicleComponent.Spawn?.SpawnInfo;
-//        if (originalSpawn != null)
-//        {
-//#if false // todo
-//            VehicleBayComponent? component =
-//                originalSpawn.Spawner?.Model == null
-//                ? null
-//                : originalSpawn.Spawner.Model.GetComponent<VehicleBayComponent>();
+        if (vehicle == null || vehicle.isDead || vehicle.isExploded || vehicle.isDrowned)
+            return false;
 
-//            CreditUnlockCost? creditCost = vehicleComponent.VehicleData?.UnlockCosts.OfType<CreditUnlockCost>().FirstOrDefault();
+        WarfareVehicle warfareVehicle = _vehicleService.GetVehicle(vehicle);
+        Team team = _teamManager.GetTeam(vehicle.lockedGroup);
+        if (!team.IsValid)
+            return false;
 
-//            found = owner != null && component != null && creditCost != null;
+        CSteamID owner = warfareVehicle.OriginalOwner;
+        if (owner.GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
+            return false;
 
-//            if (found && creditCost!.Credits > 0
-//                      && component!.RequestTime != 0
-//                      && vehicleComponent.VehicleData!.Abandon.AllowAbandon
-//                      && vehicleComponent.OwnerHistory.Count < 2)
-//            {
-//                int creditReward = creditCost.Credits - Mathf.Min(creditCost.Credits,
-//                    (int)Math.Floor(vehicleComponent.VehicleData.Abandon.ValueLossSpeed * (Time.realtimeSinceStartup - component.RequestTime)));
+        WarfarePlayer? ownerPlayer = _playerService.GetOnlinePlayerOrNull(owner);
 
-//                Points.AwardCredits(owner!, creditReward, _translations.AbandonCompensationToast.Translate(owner!), redmessage: false, isPurchase: false);
-//            }
-//            else
-//            {
-//                found = false;
-//            }
-//#endif
-//        }
-//        else if (owner != null)
-//        {
-//            owner.SendToast(new ToastMessage(ToastMessageStyle.Mini, _formatter.Colorize(_translations.AbandonCompensationToastTransferred.Translate(owner), new Color32(173, 173, 173, 255), TranslationOptions.TMProUI)));
-//        }
+        WarfarePlayer? currentOwner = _playerService.GetOnlinePlayerOrNull(warfareVehicle.Vehicle.lockedOwner);
+        VehicleSpawner? originalSpawn = warfareVehicle.Spawn;
+        if (originalSpawn != null)
+        {
+            WarfareVehicleInfo info = warfareVehicle.Info;
+            int creditCost = info.CreditCost;
 
-//        await _vehicleService.DeleteVehicleAsync(vehicle, token);
+            if (creditCost > 0
+                 && originalSpawn.RequestTime != DateTime.MinValue
+                 && info.Abandon.AllowAbandon)
+            {
+                int creditReward = creditCost - Mathf.Min(
+                    creditCost,
+                    Mathf.FloorToInt((float)(info.Abandon.ValueLossSpeed * (DateTime.UtcNow - originalSpawn.RequestTime).TotalSeconds))
+                );
 
-//        if (respawn && originalSpawn != null)
-//        {
-//            await _vehicleService.SpawnVehicleAsync(originalSpawn, token);
-//        }
+                if (creditReward > 0)
+                {
+                    ResolvedEventInfo e = _pointsService
+                                          .GetEvent("VehicleAbandon")
+                                          .Resolve(overrideCredits: creditReward);
 
-//        return found;
-//    }
-//}
+                    if (ownerPlayer != null)
+                    {
+                        e = e.WithTranslation(_translations.AbandonCompensationToast, ownerPlayer);
+                    }
 
-//public class AbandonTranslations : PropertiesTranslationCollection
-//{
-//    protected override string FileName => "Commands/Abandon";
+                    await _pointsService.ApplyEvent(owner, team.Faction.PrimaryKey, e, token);
 
-//    [TranslationData(Description = "Sent when a player isn't looking at a vehicle when doing /abandon.")]
-//    public readonly Translation AbandonNoTarget = new Translation("<#ff8c69>You must be looking at a vehicle.");
+                    await UniTask.SwitchToMainThread(token);
+                }
+            }
+        }
+        if (originalSpawn == null || !Equals(ownerPlayer, currentOwner))
+        {
+            currentOwner?.SendToast(
+                new ToastMessage(ToastMessageStyle.Mini,
+                                 _formatter.Colorize(_translations.AbandonCompensationToastTransferred.Translate(currentOwner),
+                                                     new Color32(173, 173, 173, 255), TranslationOptions.TMProUI))
+                );
+        }
 
-//    [TranslationData(Description = "Sent when a player is looking at a vehicle they didn't request.")]
-//    public readonly Translation<InteractableVehicle> AbandonNotOwned = new Translation<InteractableVehicle>("<#ff8c69>You did not request that {0}.");
+        await _vehicleService.DeleteVehicleAsync(vehicle, token);
 
-//    [TranslationData(Description = "Sent when a player does /abandon while not in main.")]
-//    public readonly Translation AbandonNotInMain = new Translation("<#ff8c69>You must be in main to abandon a vehicle.");
+        await UniTask.SwitchToMainThread(token);
 
-//    [TranslationData(Description = "Sent when a player tries to abandon a damaged vehicle.")]
-//    public readonly Translation<InteractableVehicle> AbandonDamaged = new Translation<InteractableVehicle>("<#ff8c69>Your <#cedcde>{0}</color> is damaged, repair it before returning it to the yard.");
+        if (respawn && originalSpawn != null && originalSpawn.LinkedVehicle == null)
+        {
+            await _vehicleService.SpawnVehicleAsync(originalSpawn, token);
+        }
 
-//    [TranslationData(Description = "Sent when a player tries to abandon a vehicle with low fuel.")]
-//    public readonly Translation<InteractableVehicle> AbandonNeedsFuel = new Translation<InteractableVehicle>("<#ff8c69>Your <#cedcde>{0}</color> is not fully fueled.");
+        return true;
+    }
+}
 
-//    [TranslationData(Description = "Sent when a player tries to abandon a vehicle and all the bays for that vehicle are already full, theoretically should never happen.")]
-//    public readonly Translation<InteractableVehicle> AbandonNoSpace = new Translation<InteractableVehicle>("<#ff8c69>There's no space for <#cedcde>{0}</color> in the yard.", arg0Fmt: PluralAddon.Always());
+public class AbandonTranslations : PropertiesTranslationCollection
+{
+    protected override string FileName => "Commands/Abandon";
 
-//    [TranslationData(Description = "Sent when a player tries to abandon a vehicle that isn't allowed to be abandoned.")]
-//    public readonly Translation<InteractableVehicle> AbandonNotAllowed = new Translation<InteractableVehicle>("<#ff8c69><#cedcde>{0}</color> can not be abandoned.", arg0Fmt: PluralAddon.Always());
+    [TranslationData(Description = "Sent when a player isn't looking at a vehicle when doing /abandon.")]
+    public readonly Translation AbandonNoTarget = new Translation("<#ff8c69>You must be looking at a vehicle.");
 
-//    [TranslationData(Description = "Sent when a player abandons a vehicle.")]
-//    public readonly Translation<InteractableVehicle> AbandonSuccess = new Translation<InteractableVehicle>("<#a0ad8e>Your <#cedcde>{0}</color> was returned to the yard.");
+    [TranslationData(Description = "Sent when a player is looking at a vehicle they didn't request.")]
+    public readonly Translation<VehicleAsset> AbandonNotOwned = new Translation<VehicleAsset>("<#ff8c69>You did not request that {0}.");
 
-//    [TranslationData(Description = "Credits toast for returning a vehicle soon after requesting it.")]
-//    public readonly Translation AbandonCompensationToast = new Translation("RETURNED VEHICLE", TranslationOptions.TMProUI);
+    [TranslationData(Description = "Sent when a player does /abandon while not in main.")]
+    public readonly Translation AbandonNotInMain = new Translation("<#ff8c69>You must be in main to abandon a vehicle.");
 
-//    [TranslationData(Description = "Credits toast for returning a vehicle soon after requesting it, but not getting anything because the vehicle was transferred.")]
-//    public readonly Translation AbandonCompensationToastTransferred = new Translation("+0 <color=#b8ffc1>C</color> [GIVEN]\nRETURNED VEHICLE", TranslationOptions.TMProUI);
-//}
+    [TranslationData(Description = "Sent when a player tries to abandon a damaged vehicle.")]
+    public readonly Translation<VehicleAsset> AbandonDamaged = new Translation<VehicleAsset>("<#ff8c69>Your <#cedcde>{0}</color> is damaged, repair it before returning it to the yard.");
+
+    [TranslationData(Description = "Sent when a player tries to abandon a vehicle with low fuel.")]
+    public readonly Translation<VehicleAsset> AbandonNeedsFuel = new Translation<VehicleAsset>("<#ff8c69>Your <#cedcde>{0}</color> is not fully fueled.");
+
+    [TranslationData(Description = "Sent when a player tries to abandon a vehicle and all the bays for that vehicle are already full, theoretically should never happen.")]
+    public readonly Translation<VehicleAsset> AbandonNoSpace = new Translation<VehicleAsset>("<#ff8c69>There's no space for <#cedcde>{0}</color> in the yard.", arg0Fmt: PluralAddon.Always());
+
+    [TranslationData(Description = "Sent when a player tries to abandon a vehicle that isn't allowed to be abandoned.")]
+    public readonly Translation<VehicleAsset> AbandonNotAllowed = new Translation<VehicleAsset>("<#ff8c69><#cedcde>{0}</color> can not be abandoned.", arg0Fmt: PluralAddon.Always());
+
+    [TranslationData(Description = "Sent when a player abandons a vehicle.")]
+    public readonly Translation<VehicleAsset> AbandonSuccess = new Translation<VehicleAsset>("<#a0ad8e>Your <#cedcde>{0}</color> was returned to the yard.");
+
+    [TranslationData(Description = "Credits toast for returning a vehicle soon after requesting it.")]
+    public readonly Translation AbandonCompensationToast = new Translation("RETURNED VEHICLE", TranslationOptions.TMProUI);
+
+    [TranslationData(Description = "Credits toast for returning a vehicle soon after requesting it, but not getting anything because the vehicle was transferred.")]
+    public readonly Translation AbandonCompensationToastTransferred = new Translation("+0 <color=#b8ffc1>C</color> [TRANSFERRED]\nRETURNED VEHICLE", TranslationOptions.TMProUI);
+}

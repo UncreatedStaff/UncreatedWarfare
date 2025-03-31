@@ -28,6 +28,7 @@ using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Util.Inventory;
 using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Kits.Requests;
@@ -45,6 +46,7 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
     private readonly IKitAccessService _kitAccessService;
     private readonly KitBestowService _kitBestowService;
     private readonly IKitsDbContext _kitDbContext;
+    private readonly IKitItemResolver _kitItemResolver;
     private readonly EventDispatcher _eventDispatcher;
     private readonly DroppedItemTracker _droppedItemTracker;
     private readonly AssetRedirectService _assetRedirectService;
@@ -71,6 +73,7 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         IKitAccessService kitAccessService,
         KitBestowService kitBestowService,
         IKitsDbContext kitDbContext,
+        IKitItemResolver kitItemResolver,
         EventDispatcher eventDispatcher,
         DroppedItemTracker droppedItemTracker,
         SquadConfiguration squadConfiguration,
@@ -90,6 +93,7 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         _kitAccessService = kitAccessService;
         _kitBestowService = kitBestowService;
         _kitDbContext = kitDbContext;
+        _kitItemResolver = kitItemResolver;
         _kitDbContext.ChangeTracker.AutoDetectChangesEnabled = false;
         _eventDispatcher = eventDispatcher;
         _droppedItemTracker = droppedItemTracker;
@@ -525,15 +529,13 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
                 return;
             }
 
+            Kit? kit = await kitComp.GetActiveKitAsync(KitInclude.Giveable, token);
             await UniTask.SwitchToMainThread(token);
-            if (resupplyAmmoBags && kitComp.HasLowAmmo)
+            kitComp.CachedKit = kit;
+            if (kit != null && resupplyAmmoBags && NeedsToFullRestock(player, kit))
             {
-                Kit? kit = await kitComp.GetActiveKitAsync(KitInclude.Giveable, token);
-                if (kit != null)
-                {
-                    await GiveKitIntlAsync(player, new KitBestowData(kit) { Silent = true }, false, token);
-                    return;
-                }
+                await GiveKitIntlAsync(player, new KitBestowData(kit) { Silent = true }, false, token);
+                return;
             }
 
             _kitBestowService.RestockKit(player, resupplyAmmoBags);
@@ -542,6 +544,38 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         {
             _semaphore.Release();
         }
+    }
+
+    private bool NeedsToFullRestock(WarfarePlayer player, Kit kit)
+    {
+        if (player.Component<KitPlayerComponent>().HasLowAmmo)
+            return true;
+
+        // check if any clothes are missing or the wrong item
+        IKitItem[] items = kit.Items;
+        foreach (IKitItem item in items)
+        {
+            if (item is not IClothingItem cl)
+                continue;
+
+            ClothingItem clothingItem = new ClothingItem(player.UnturnedPlayer.clothing, cl.ClothingType);
+            if (!clothingItem.HasStorage)
+                continue;
+
+            if (cl is IConcreteItem concrete)
+            {
+                if (!concrete.Item.MatchAsset(clothingItem.Asset))
+                    return true;
+            }
+            else
+            {
+                KitItemResolutionResult result = _kitItemResolver.ResolveKitItem(item, kit, player.Team);
+                if (result.Asset != null && (clothingItem.Asset == null || clothingItem.Asset.GUID != result.Asset.GUID))
+                    return true;
+            }
+        }
+
+        return false;
     }
 
     public async Task GiveKitAsync(WarfarePlayer player, KitBestowData kitBestowData, CancellationToken token = default)

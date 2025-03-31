@@ -15,7 +15,8 @@ public class WarfareLifetimeComponent : MonoBehaviour
 {
     // seconds
     private readonly float[] _shutdownSteps = [ 1, 2, 3, 4, 5, 15, 30, 60, 300, 900 ];
-    private const float TimeBetweenNextGameWarnings = 120f;
+    private const float SecondsBetweenNextGameWarnings = 120f;           //  2 mins
+    private const float SecondsUntilFallbackShutdownAfterUpdate = 2520f; // 45 mins
 
     private WarfareModule _module = null!;
     private ShutdownTranslations? _shutdownTranslations;
@@ -62,7 +63,7 @@ public class WarfareLifetimeComponent : MonoBehaviour
             SendShutdownStep();
             --_shutdownStep;
         }
-        else if (QueuedShutdownType == ShutdownMode.OnLayoutEnd && rt - _lastLayoutShutdownWarning > TimeBetweenNextGameWarnings)
+        else if (QueuedShutdownType == ShutdownMode.OnLayoutEnd && rt - _lastLayoutShutdownWarning > SecondsBetweenNextGameWarnings)
         {
             CheckTranslations();
             if (_shutdownTranslations != null)
@@ -170,7 +171,7 @@ public class WarfareLifetimeComponent : MonoBehaviour
         QueuedShutdownType = ShutdownMode.OnLayoutEnd;
         ShutdownReason = shutdownReason ;
         ShutdownTime = DateTime.UtcNow.AddHours(1d);
-        _shutdownTime = Time.realtimeSinceStartup + 3600f;
+        _shutdownTime = Time.realtimeSinceStartup + SecondsUntilFallbackShutdownAfterUpdate;
         _shutdownStep = GetPassedShutdownStep();
         UpdateShutdownState();
 

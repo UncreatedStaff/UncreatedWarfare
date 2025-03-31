@@ -8,6 +8,8 @@ public static class KnownCooldowns
 
     public const string Report = "Report";
 
+    public const string VehicleInteract = "Vehicle Interact";
+
     public const string Combat = "Combat";
 
     public const string Revive = "Revive XP";

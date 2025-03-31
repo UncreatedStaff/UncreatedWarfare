@@ -47,6 +47,7 @@ public class WhitelistService :
     private readonly SemaphoreSlim _semaphore;
     private readonly WhitelistTranslations _translations;
     private readonly IKitItemResolver _kitItemResolver;
+    private readonly ILogger<WhitelistService> _logger;
 
     public WhitelistService(IWhitelistDbContext dbContext,
         ZoneStore zoneStore,
@@ -54,7 +55,8 @@ public class WhitelistService :
         WarfareModule module,
         BuildableSaver buildableSaver,
         TranslationInjection<WhitelistTranslations> translations,
-        IKitItemResolver kitItemResolver)
+        IKitItemResolver kitItemResolver,
+        ILogger<WhitelistService> logger)
     {
         _dbContext = dbContext;
         _dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
@@ -65,6 +67,7 @@ public class WhitelistService :
         _buildableSaver = buildableSaver;
         _kitItemResolver = kitItemResolver;
         _translations = translations.Value;
+        _logger = logger;
 
         _semaphore = new SemaphoreSlim(1, 1);
     }
@@ -82,7 +85,7 @@ public class WhitelistService :
                 amount = -1;
 
             string guidLookup = item.Guid.ToString("N", CultureInfo.InvariantCulture);
-            string idLookup = item.Id.ToString();
+            string idLookup = item.Id.ToString(CultureInfo.InvariantCulture);
 
             ItemWhitelist? whitelist = await _dbContext.Whitelists.FirstOrDefaultAsync(
                 whitelist => Convert.ToString(whitelist.Item) == guidLookup || idLookup != "0" && Convert.ToString(whitelist.Item) == idLookup,
@@ -129,7 +132,7 @@ public class WhitelistService :
         try
         {
             string guidLookup = item.Guid.ToString("N", CultureInfo.InvariantCulture);
-            string idLookup = item.Id.ToString();
+            string idLookup = item.Id.ToString(CultureInfo.InvariantCulture);
 
             ItemWhitelist? whitelist = await _dbContext.Whitelists.FirstOrDefaultAsync(
                 whitelist => Convert.ToString(whitelist.Item) == guidLookup || idLookup != "0" && Convert.ToString(whitelist.Item) == idLookup,
@@ -489,10 +492,11 @@ public class WhitelistService :
         IAssetLink<ItemAsset> assetContainer = AssetLink.Create(e.Asset);
 
         int whitelistAmount = await GetWhitelistedAmount(assetContainer, token);
-        await UniTask.SwitchToMainThread(token);
-
         if (whitelistAmount == -1)
+        {
             return;
+        }
+
 
         // don't allow putting kit items or non-whitelisted items in storage
         if (e.DestinationPage == Page.Storage && whitelistAmount == 0)
@@ -500,6 +504,8 @@ public class WhitelistService :
             e.Cancel();
             return;
         }
+
+        await UniTask.SwitchToMainThread(token);
 
         Kit? equippedKit = e.Player.Component<KitPlayerComponent>().CachedKit;
 
@@ -510,10 +516,16 @@ public class WhitelistService :
             return;
         }
 
-        int maximumItems = equippedKit == null ? whitelistAmount : Math.Max(_kitItemResolver.CountItems(equippedKit, assetContainer, e.Player.Team), whitelistAmount);
+        // counts attachments on guns as well
+        bool includeAttachments = e.Asset is ItemCaliberAsset;
 
-        int itemCount = ItemUtility.CountItems(e.PlayerObject, assetContainer, maximumItems);
+        int kitItemCount = equippedKit == null ? 0 : _kitItemResolver.CountItems(equippedKit, assetContainer, e.Player.Team, includeAttachments);
 
+        int maximumItems = equippedKit == null ? whitelistAmount : Math.Max(kitItemCount, whitelistAmount);
+
+        int itemCount = ItemUtility.CountItems(e.PlayerObject, assetContainer, maximumItems, includeAttachments);
+
+        
         if (itemCount >= maximumItems)
         {
             if (whitelistAmount == 0)

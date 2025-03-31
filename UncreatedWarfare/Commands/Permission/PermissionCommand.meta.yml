@@ -17,11 +17,11 @@ Parameters:
               - Name: display-name
                 Type: string
                 Description: "Set a <param 'player'/> back to a <param 'member'/> and give them a <param 'display-name' />."
-                IsOptional: true
+                Optional: true
               - Name: "null"
                 Type: Verbatim
                 Description: "Set a <param 'player'/> back to a <param 'member'/> and remove their <param 'display-name' />."
-                IsOptional: true
+                Optional: true
                 
           - Name: staff
             Description: "Set a <param 'player'/> to a basic <param 'staff'/> member."
@@ -30,11 +30,11 @@ Parameters:
               - Name: display-name
                 Type: string
                 Description: "Set a <param 'player'/> to a basic <param 'staff'/> member and give them a <param 'display-name' />."
-                IsOptional: true
+                Optional: true
               - Name: "null"
                 Type: Verbatim
                 Description: "Set a <param 'player'/> to a basic <param 'staff'/> member and remove their <param 'display-name' />."
-                IsOptional: true
+                Optional: true
                 
           - Name: trial
             Description: "Set a <param 'player'/> to a <param 'trial'/> admin."
@@ -44,11 +44,11 @@ Parameters:
               - Name: display-name
                 Type: string
                 Description: "Set a <param 'player'/> to a <param 'trial'/> admin and give them a <param 'display-name' />."
-                IsOptional: true
+                Optional: true
               - Name: "null"
                 Type: Verbatim
                 Description: "Set a <param 'player'/> to a <param 'trial'/> admin and remove their <param 'display-name' />."
-                IsOptional: true
+                Optional: true
                 
           - Name: admin
             Description: "Set a <param 'player'/> to an <param 'admin'/>."
@@ -57,11 +57,11 @@ Parameters:
               - Name: display-name
                 Type: string
                 Description: "Set a <param 'player'/> to an <param 'admin'/> and give them a <param 'display-name' />."
-                IsOptional: true
+                Optional: true
               - Name: "null"
                 Type: Verbatim
                 Description: "Set a <param 'player'/> to an <param 'admin'/> and remove their <param 'display-name' />."
-                IsOptional: true
+                Optional: true
                 
           - Name: owner
             Description: "Set a <param 'player'/> to an <param 'owner'/>."
@@ -70,11 +70,11 @@ Parameters:
               - Name: display-name
                 Type: string
                 Description: "Set a <param 'player'/> to an <param 'owner'/> and give them a <param 'display-name' />."
-                IsOptional: true
+                Optional: true
               - Name: "null"
                 Type: Verbatim
                 Description: "Set a <param 'player'/> to an <param 'owner'/> and remove their <param 'display-name' />."
-                IsOptional: true
+                Optional: true
                 
           - Name: permission-group
             Description: "Give a <param 'player'/> a specific <param 'permission-group'/>."
@@ -83,7 +83,7 @@ Parameters:
               - Name: remove
                 Description: "Remove a specific <param 'permission-group'/> from a <param 'player'/>."
                 Type: Verbatim
-                IsOptional: true
+                Optional: true
                 
           - Name: permission
             Description: "Give a <param 'player'/> an individual <param 'permission'/> unrelated to their permission groups."
@@ -92,4 +92,4 @@ Parameters:
               - Name: remove
                 Description: "Remove an individual <param 'permission'/> from a <param 'player'/>."
                 Type: Verbatim
-                IsOptional: true
+                Optional: true

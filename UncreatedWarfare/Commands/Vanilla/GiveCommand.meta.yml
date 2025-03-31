@@ -9,17 +9,17 @@ Parameters:
       - Name: amount
         Type: byte
         Range: "#(1:250)"
-        IsOptional: true
+        Optional: true
 
   - Name: item
     Type: SDG.Unturned.ItemAsset
     Description: "Gives the <caller /> a specificed amount of an <param 'item'/>."
-    IsRemainder: true
+    Remainder: true
     Parameters:
       - Name: amount
         Type: byte
         Range: "#(1:250)"
-        IsOptional: true
+        Optional: true
 
   - Name: redirect
     Type: Uncreated.Warfare.Teams.RedirectType
@@ -28,4 +28,4 @@ Parameters:
       - Name: amount
         Type: byte
         Range: "#(1:250)"
-        IsOptional: true
+        Optional: true

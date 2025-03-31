@@ -51,7 +51,7 @@ public class SquadMenuUI :
     public MySquadMenu MySquad { get; } = new MySquadMenu();
 
     public SquadMenuUI(IServiceProvider serviceProvider, AssetConfiguration assetConfig, ILoggerFactory loggerFactory)
-        : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:SquadMenuHUD"), debugLogging: false, staticKey: true)
+        : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:SquadMenuHUD"), debugLogging: true, staticKey: true)
     {
         _squadManager = serviceProvider.GetRequiredService<SquadManager>();
         _translations = serviceProvider.GetRequiredService<TranslationInjection<SquadTranslations>>().Value;
@@ -102,7 +102,7 @@ public class SquadMenuUI :
 
     private void PromoteMemberClicked(UnturnedButton button, Player player)
     {
-        int index = Array.FindLastIndex(MySquad.Members, x => ReferenceEquals(x.KickButton, button));
+        int index = Array.FindLastIndex(MySquad.Members, x => ReferenceEquals(x.PromoteButton, button));
         if (index <= 0)
             return;
 
@@ -111,7 +111,7 @@ public class SquadMenuUI :
             return;
 
         Squad squad = warfarePlayer.GetSquad()!;
-        if (squad.Members.Count >= index)
+        if (index >= squad.Members.Count)
             return;
 
         WarfarePlayer member = squad.Members[index];
@@ -130,7 +130,7 @@ public class SquadMenuUI :
             return;
 
         Squad squad = warfarePlayer.GetSquad()!;
-        if (squad.Members.Count >= index)
+        if (index >= squad.Members.Count)
             return;
 
         WarfarePlayer member = squad.Members[index];
@@ -144,6 +144,13 @@ public class SquadMenuUI :
 
         if (ReferenceEquals(button, MySquad.LeaveButton.Button) && warfarePlayer.GetSquad() is { } mySquad && mySquad.Leader.Equals(player))
         {
+            // promote other player to leader first
+            if (mySquad.Members.Count > 1)
+            {
+                WarfarePlayer newLeader = mySquad.Members.Skip(1).Aggregate((x, best) => x.CachedPoints.XP > best.CachedPoints.XP ? x : best);
+                mySquad.PromoteMember(newLeader);
+                _chatService.Send(newLeader, _translations.SquadPromoted, mySquad);
+            }
             mySquad.RemoveMember(warfarePlayer);
             return;
         }
@@ -222,7 +229,10 @@ public class SquadMenuUI :
     [EventListener(MustRunInstantly = true, RequireActiveLayout = true)]
     public void HandleEvent(SquadDisbanded e, IServiceProvider serviceProvider)
     {
-        UpdateForViewingPlayers(e.Squad);
+        foreach (WarfarePlayer player in ViewingPlayersOnTeam(e.Squad.Team))
+        {
+            UpdateForPlayer(player);
+        }
     }
 
     [EventListener(MustRunInstantly = true, RequireActiveLayout = true)]
@@ -305,18 +315,10 @@ public class SquadMenuUI :
     {
         if (squad.Members.Count == 0)
             return;
-
-        WarfarePlayer owner = squad.Leader;
+        
         foreach (WarfarePlayer player in ViewingPlayersOnTeam(squad.Team))
         {
-            if (player.Equals(owner))
-            {
-                SendMySquadDetail(player);
-            }
-            else
-            {
-                UpdateForPlayer(player);
-            }
+            UpdateForPlayer(player);
         }
     }
     private void UpdateForViewingPlayersExceptOwner(Squad squad)

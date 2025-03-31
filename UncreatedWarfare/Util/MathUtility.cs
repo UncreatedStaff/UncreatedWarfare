@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Runtime.CompilerServices;
 
 namespace Uncreated.Warfare.Util;
@@ -155,6 +155,18 @@ public static class MathUtility
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool WithinRange2D(in Vector3 pos1, in Vector3 pos2, float range) => SquaredDistance(in pos1, in pos2, true) <= range * range;
+
+    /// <summary>
+    /// Returns true if <paramref name="pos1"/> and <paramref name="pos2"/> are less than <paramref name="range"/> units away from each other, otherwise false. Compares using square magnitude for speed.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool WithinRange(Vector3 pos1, Vector3 pos2, float range) => SquaredDistance(in pos1, in pos2, false) <= range * range;
+
+    /// <summary>
+    /// Returns true if <paramref name="pos1"/> and <paramref name="pos2"/> are less than <paramref name="range"/> units away from each other, otherwise false. Compares using square magnitude for speed.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool WithinRange2D(Vector3 pos1, Vector3 pos2, float range) => SquaredDistance(in pos1, in pos2, true) <= range * range;
 
     /// <summary>
     /// Counts the number of digits in a number, not counting the negative sign.

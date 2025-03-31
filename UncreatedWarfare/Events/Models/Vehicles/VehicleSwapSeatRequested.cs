@@ -1,4 +1,5 @@
 using System;
+using Uncreated.Warfare.Players.Cooldowns;
 using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.Events.Models.Vehicles;
@@ -35,6 +36,11 @@ public class VehicleSwapSeatRequested : CancellablePlayerEvent
     /// Passenger index in the vehicle's seat info for the player's old seat.
     /// </summary>
     public required int OldPassengerIndex { get; init; }
+    
+    /// <summary>
+    /// If the <see cref="KnownCooldowns.VehicleInteract"/> cooldown should be ignored.
+    /// </summary>
+    public bool IgnoreInteractCooldown { get; init; }
 
     /// <summary>
     /// The seat object for the player's old seat.

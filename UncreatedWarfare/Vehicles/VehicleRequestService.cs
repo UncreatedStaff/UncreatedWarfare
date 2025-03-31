@@ -81,8 +81,6 @@ public class VehicleRequestService :
     /// <remarks>Thread-safe</remarks>
     public async Task<bool> RequestAsync(WarfarePlayer player, VehicleSpawner? spawn, IRequestResultHandler resultHandler, CancellationToken token = default)
     {
-        _logger.LogInformation($"requesting {spawn}.");
-
         await UniTask.SwitchToMainThread(token);
 
         if (!player.IsOnline)
@@ -229,7 +227,18 @@ public class VehicleRequestService :
 
         vehicle = spawn.LinkedVehicle;
 
+        if (vehicle == null)
+        {
+            resultHandler.NotFoundOrRegistered(player);
+            return false;
+        }
+
         VehicleManager.ServerSetVehicleLock(vehicle, player.Steam64, player.Team.GroupId, true);
+
+        WarfareVehicle warfareVehicle = _vehicleService.GetVehicle(vehicle);
+        warfareVehicle.OriginalOwner = player.Steam64;
+
+        spawn.NotifyRequsted();
 
         DropStartingItems(vehicleInfo, player);
             

@@ -1,11 +1,13 @@
 using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.DependencyInjection;
+using SDG.NetTransport;
 using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Vehicles;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles.Spawners;
@@ -20,25 +22,35 @@ public class VehicleService :
 {
     private readonly List<WarfareVehicle> _vehicles;
 
+    private static readonly ClientStaticMethod<uint, byte, byte>? SendSwapVehicleSeats
+        = ReflectionUtility.FindRpc<VehicleManager, ClientStaticMethod<uint, byte, byte>>("SendSwapVehicleSeats");
+
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<VehicleService> _logger;
     private readonly VehicleInfoStore _vehicleInfoStore;
     private readonly VehicleSpawnerStore _vehicleSpawnerStore;
+    private readonly VehicleSeatRestrictionService _seatRestrictions;
+    private EventDispatcher? _eventDispatcher;
 
     public const float VehicleSpawnOffset = 5f;
     public const ushort MaxBatteryCharge = 10000;
 
     public IReadOnlyList<WarfareVehicle> Vehicles { get; }
 
-    public VehicleService(IServiceProvider serviceProvider, ILogger<VehicleService> logger)
+    public VehicleService(IServiceProvider serviceProvider,
+        ILogger<VehicleService> logger,
+        VehicleInfoStore vehicleInfoStore,
+        VehicleSpawnerStore vehicleSpawnerStore,
+        VehicleSeatRestrictionService vehicleSeatRestrictionService)
     {
         _vehicles = new List<WarfareVehicle>(64);
         Vehicles = _vehicles.AsReadOnly();
 
         _logger = logger;
         _serviceProvider = serviceProvider;
-        _vehicleInfoStore = serviceProvider.GetRequiredService<VehicleInfoStore>();
-        _vehicleSpawnerStore = serviceProvider.GetRequiredService<VehicleSpawnerStore>();
+        _vehicleInfoStore = vehicleInfoStore;
+        _vehicleSpawnerStore = vehicleSpawnerStore;
+        _seatRestrictions = vehicleSeatRestrictionService;
     }
 
     async UniTask ILayoutHostedService.StartAsync(CancellationToken token)
@@ -53,6 +65,84 @@ public class VehicleService :
     UniTask ILayoutHostedService.StopAsync(CancellationToken token)
     {
         return UniTask.CompletedTask;
+    }
+
+    public async UniTask<bool> TryMovePlayerToEmptySeat(WarfarePlayer player)
+    {
+        if (SendSwapVehicleSeats == null)
+        {
+            return false;
+        }
+
+        await UniTask.SwitchToMainThread();
+
+        InteractableVehicle vehicle = player.UnturnedPlayer.movement.getVehicle();
+        WarfareVehicle warfareVehicle = GetVehicle(vehicle);
+
+        if (vehicle == null)
+        {
+            return false;
+        }
+
+        // keep running in case a player happens to move while the event is dispatching or something
+        do
+        {
+            byte fromSeat = player.UnturnedPlayer.movement.getSeat();
+
+            int freeSeat = -1;
+            VehicleChangeSeatsResult swapResult;
+
+            for (int i = 0; i < vehicle.passengers.Length; ++i)
+            {
+                if (vehicle.passengers[i].player != null)
+                    continue;
+
+                swapResult = _seatRestrictions.TrySwapSeat(warfareVehicle, player, (byte)i, fromSeat);
+                if (swapResult.Result != ChangeSeatsResult.Success)
+                    continue;
+
+                freeSeat = i;
+                break;
+            }
+
+            if (freeSeat < 0 || freeSeat >= vehicle.passengers.Length)
+            {
+                return false;
+            }
+
+            VehicleSwapSeatRequested swapSeatRequest = new VehicleSwapSeatRequested
+            {
+                Player = player,
+                Vehicle = warfareVehicle,
+                NewPassengerIndex = freeSeat,
+                OldPassengerIndex = fromSeat,
+                IgnoreInteractCooldown = true
+            };
+
+
+            // event dispatcher circular reference
+            _eventDispatcher ??= _serviceProvider.GetRequiredService<EventDispatcher>();
+            bool canContinue = await _eventDispatcher.DispatchEventAsync(swapSeatRequest, player.DisconnectToken);
+            if (!canContinue)
+                return false;
+
+            await UniTask.SwitchToMainThread(player.DisconnectToken);
+
+            if (player.UnturnedPlayer.movement.getSeat() != fromSeat)
+                continue;
+
+            // recheck swap to see if it's still valid in case a player moved
+            swapResult = _seatRestrictions.TrySwapSeat(warfareVehicle, player, (byte)freeSeat, fromSeat);
+            if (swapResult.Result != ChangeSeatsResult.Success)
+                continue;
+
+            SendSwapVehicleSeats.InvokeAndLoopback(ENetReliability.Reliable, Provider.GatherRemoteClientConnections(), vehicle.instanceID, fromSeat, (byte)freeSeat);
+
+            return player.Equals(vehicle.passengers[freeSeat].player);
+        }
+        while (vehicle == player.UnturnedPlayer.movement.getVehicle());
+
+        throw new OperationCanceledException("Vehicle changed");
     }
 
     public WarfareVehicle RegisterWarfareVehicle(InteractableVehicle vehicle)

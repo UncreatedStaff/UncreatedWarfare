@@ -20,7 +20,7 @@ namespace Uncreated.Warfare.Projectiles;
 /// Simulates projectiles to guess their landing position before they land.
 /// </summary>
 /// <remarks>To actually use it subscribe to <see cref="WarfareProjectile.OnProjectileSolved"/>.</remarks>
-internal class ProjectileSolver : ILevelHostedService, IDisposable
+public class ProjectileSolver : ILevelHostedService, IDisposable
 {
     private readonly ILogger<ProjectileSolver> _logger;
     private readonly WarfareLifetimeComponent _warfareLifetimeComponent;

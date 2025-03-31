@@ -85,12 +85,12 @@ Parameters:
         Parameters:
           - Name: amount
             Type: double
-            IsOptional: true
+            Optional: true
             Parameters:
               - Name: player
                 Type: Uncreated.Warfare.Players.IPlayer
-                IsOptional: true
-                IsRemainder: true
+                Optional: true
+                Remainder: true
         
   # /warfaredev quickwin
   - Name: quickwin
@@ -101,8 +101,8 @@ Parameters:
       - Name: winner
         Type: Uncreated.Warfare.Layouts.Teams.Team
         Description: "Skip to the next phase in the current layout and sets the winner of the game to <param 'winner'/>."
-        IsOptional: true
-        IsRemainder: true
+        Optional: true
+        Remainder: true
 
   # /warfaredev clearcooldowns
   - Name: clearcooldowns
@@ -113,8 +113,8 @@ Parameters:
       - Name: player
         Type: Uncreated.Warfare.Players.IPlayer
         Description: "Clear cooldowns for another <param 'player'/>."
-        IsOptional: true
-        IsRemainder: true
+        Optional: true
+        Remainder: true
 
   # /warfaredev injure
   - Name: injure
@@ -141,12 +141,12 @@ Parameters:
         Alias: ae
         Type: Verbatim
         Description: "Increment the event counter for the <caller />'s current session. Does not start a new session."
-        IsOptional: true
+        Optional: true
       - Name: player
         Type: Uncreated.Warfare.Players.IPlayer
         Description: "Starts a new session for <param 'player'/>."
-        IsOptional: true
-        IsRemainder: true
+        Optional: true
+        Remainder: true
         
   # /warfaredev effectattach
   - Name: effectattach
@@ -223,9 +223,9 @@ Parameters:
           - Name: key
             Type: short
             Description: "Spawn a UI for <caller /> with up to 4 formatting <param 'args'/> and an optional <param 'key'/>."
-            IsOptional: true
+            Optional: true
             Parameters:
               - Name: args
                 Type: string
-                IsRemainder: true
-                IsOptional: true
+                Remainder: true
+                Optional: true

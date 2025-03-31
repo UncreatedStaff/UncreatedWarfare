@@ -1,5 +1,7 @@
+//#define DEBUG_LOGGING
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Kits;
@@ -16,13 +18,31 @@ public class FallbackItemDistributionService : IItemDistributionService
 
     private readonly IKitItemResolver _itemResolver;
     private readonly DroppedItemTracker _droppedItemTracker;
+#if DEBUG_LOGGING
+    private readonly ILogger<FallbackItemDistributionService> _logger;
+#endif
 
     private bool _isAutoClearing;
 
-    public FallbackItemDistributionService(IKitItemResolver itemResolver, DroppedItemTracker droppedItemTracker)
+    public FallbackItemDistributionService(IKitItemResolver itemResolver, DroppedItemTracker droppedItemTracker
+#if DEBUG_LOGGING
+        , ILogger<FallbackItemDistributionService> logger
+#endif
+    )
     {
         _itemResolver = itemResolver;
         _droppedItemTracker = droppedItemTracker;
+#if DEBUG_LOGGING
+        _logger = logger;
+#endif
+    }
+
+    [Conditional("DEBUG_LOGGING"), StringFormatMethod("fmt"), UsedImplicitly]
+    private void DebugLog(string fmt, params object?[]? args)
+    {
+#if DEBUG_LOGGING
+        _logger.LogDebug(fmt, args);
+#endif
     }
 
     public int ClearInventory<TState>(WarfarePlayer player, TState state) where TState : IItemClearState
@@ -261,7 +281,8 @@ public class FallbackItemDistributionService : IItemDistributionService
     {
         Item newItem = new Item(result.Asset!.id, result.Amount, result.Quality, result.State ?? result.Asset.getState(true));
 
-        if (inventory.tryAddItem(newItem, x, y, (byte)page, rot))
+        if (x != byte.MaxValue && y != byte.MaxValue && page != (Page)byte.MaxValue && rot < 4
+            && inventory.tryAddItem(newItem, x, y, (byte)page, rot))
         {
             state.OnAddingPreviousItem(in result, x, y, rot, page, newItem);
             ItemJar? jar = inventory.getItem((byte)page, inventory.getIndex((byte)page, x, y));
@@ -301,6 +322,11 @@ public class FallbackItemDistributionService : IItemDistributionService
 
         Player nativePlayer = player.UnturnedPlayer;
 
+#if DEBUG_LOGGING
+        using IDisposable? scope = _logger.BeginScope(player);
+        DebugLog("Restocking...");
+#endif
+
         PlayerInventory inventory = nativePlayer.inventory;
         PlayerEquipment equipment = nativePlayer.equipment;
 
@@ -312,6 +338,31 @@ public class FallbackItemDistributionService : IItemDistributionService
 
         _ = _droppedItemTracker.DestroyItemsDroppedByPlayerAsync(player.Steam64, true);
 
+        // list of all attached items that are expected in a fresh kit
+        List<ItemCaliberAsset> kitAttachedItems = new List<ItemCaliberAsset>(8);
+        
+        // list of all attachment items on all guns in the inventory
+        List<ushort> startingAttachedItems = new List<ushort>(8);
+        for (int pg = 0; pg < PlayerInventory.STORAGE; ++pg)
+        {
+            Items page = inventory.items[pg];
+            for (int i = page.getItemCount() - 1; i >= 0; --i)
+            {
+                ItemJar jar = page.getItem((byte)i);
+                if (jar.item.metadata.Length != 18 || jar.item.GetAsset() is not ItemGunAsset)
+                    continue;
+
+                for (int a = 0; a < 5; ++a)
+                {
+                    ushort id = BitConverter.ToUInt16(jar.item.metadata, a * 2);
+                    if (id != 0)
+                        startingAttachedItems.Add(id);
+                }
+            }
+        }
+
+        DebugLog(" Found starting attached items: {0}.", startingAttachedItems);
+
         foreach (IItem item in items)
         {
             if (item is IClothingItem)
@@ -321,16 +372,31 @@ public class FallbackItemDistributionService : IItemDistributionService
                 continue;
 
             KitItemResolutionResult result = _itemResolver.ResolveKitItem(pageItem, stateKit, stateTeam);
+            if (result is { Asset: ItemGunAsset, State.Length: 18 })
+            {
+                for (int a = 0; a < 5; ++a)
+                {
+                    ushort id = BitConverter.ToUInt16(result.State, a * 2);
+                    if (id != 0 && Assets.find(EAssetType.ITEM, id) is ItemCaliberAsset attachmentAsset)
+                    {
+                        if (!startingAttachedItems.Remove(attachmentAsset.id))
+                            kitAttachedItems.Add(attachmentAsset);
+                    }
+                }
+            }
+
             KitItemResolutionResult origResult = result;
             // find item position
             if (!itemTracking.TryGetCurrentItemPosition(pageItem.Page, pageItem.X, pageItem.Y, out Page page, out byte x, out byte y, out bool isDropped, out Item? itemInstance))
             {
+                DebugLog(" Current position not found: {0}.", pageItem);
                 leftoverItems.Add((item, origResult));
                 continue;
             }
 
             if (isDropped)
             {
+                DebugLog(" Current position dropped: {0}.", pageItem);
                 leftoverItems.Add((item, origResult));
                 continue;
             }
@@ -340,6 +406,7 @@ public class FallbackItemDistributionService : IItemDistributionService
 
             if (jar != null && matchedItems.Contains(jar))
             {
+                DebugLog(" Jar already matched: {0} ({1}, {2}).", pageItem, jar.x, jar.y);
                 leftoverItems.Add((item, origResult));
                 continue;
             }
@@ -352,24 +419,31 @@ public class FallbackItemDistributionService : IItemDistributionService
 
             if (asset == null || !state.ShouldGrantItem(pageItem, ref result, ref refXTmp, ref refYTmp, ref refPgTmp, ref rot) || result.Asset == null)
             {
+                DebugLog(" Shouldnt grant: {0} ({1}).", pageItem, result.Asset);
                 // item was marked as shouldn't be granted
                 if (jar != null)
                     matchedItems.Add(jar);
                 continue;
             }
 
-            if (jar == null || (itemInstance != null && jar.item != itemInstance) || result.Asset != asset)
+            if (jar == null || (itemInstance != null && jar.item != itemInstance) || jar.item.id != asset.id || result.Asset != asset)
             {
+                DebugLog(" Wrong item type: {0} ({1}).", pageItem, result.Asset);
                 leftoverItems.Add((item, origResult));
                 continue;
             }
 
             // found original kit item
+            DebugLog(" Found original: {0} ({1}): {2}, ({3}, {4}).", pageItem, result.Asset, page, x, y);
             matchedItems.Add(jar);
             RestockItem(equipment, inventory, page, x, y, jar, in result, ref ct);
             ++ct;
         }
 
+        DebugLog(" New original attached items: {0}.", startingAttachedItems.ToArray());
+        DebugLog(" Found kit attached items: {0}.", kitAttachedItems.Select(x => x.id).ToArray());
+
+        DebugLog(" Running fallbacks...");
         // fallback to existing items
         foreach ((IItem item, KitItemResolutionResult result) in leftoverItems)
         {
@@ -388,48 +462,115 @@ public class FallbackItemDistributionService : IItemDistributionService
                 continue;
             }
 
-            asset = result.Asset;
+            ConsumeMissingItem(nativePlayer, in result, matchedItems, startingAttachedItems, kitAttachedItems, ref ct, refXTmp, refYTmp, rot, ref state);
+        }
 
-            ItemJar? jar = null;
-            Page page = 0;
-            // find an item of the same type
-            for (int pg = 0; pg < PlayerInventory.STORAGE && jar == null; ++pg)
-            {
-                int itemCt = inventory.items[pg].getItemCount();
-                for (int i = 0; i < itemCt; ++i)
-                {
-                    ItemJar j = inventory.items[pg].getItem((byte)i);
+        // add missing attachments
+        DebugLog(" Running attachments...");
+        for (int i = kitAttachedItems.Count - 1; i >= 0; --i)
+        {
+            ItemCaliberAsset c = kitAttachedItems[i];
+            KitItemResolutionResult res = new KitItemResolutionResult(c, c.getState(EItemOrigin.ADMIN), c.amount, 100);
 
-                    if (asset.id != j.item.id)
-                        continue;
-
-                    if (matchedItems.Contains(j))
-                        continue;
-
-                    matchedItems.Add(j);
-                    jar = j;
-                    page = (Page)pg;
-                    break;
-                }
-            }
-
-            // found a matching item
-            if (jar != null)
-            {
-                RestockItem(equipment, inventory, page, jar.x, jar.y, jar, in result, ref ct);
-                continue;
-            }
-
-            bool hasPlayedEffect = true;
-            jar = AddItem(in result, refXTmp, refYTmp, page, rot, inventory, ref hasPlayedEffect, ref state);
-            ++ct;
-            if (jar != null)
-                matchedItems.Add(jar);
+            ConsumeMissingItem(nativePlayer, in res, matchedItems, startingAttachedItems, kitAttachedItems, ref ct,
+                byte.MaxValue, byte.MaxValue, byte.MaxValue, ref state);
         }
 
         ItemUtility.UpdateSlots(player);
 
         return ct;
+    }
+
+    private void ConsumeMissingItem<TState>(Player player,
+        in KitItemResolutionResult result,
+        List<ItemJar> matchedItems,
+        List<ushort> startingAttachedItems,
+        List<ItemCaliberAsset> kitAttachedItems,
+        ref int ct,
+        byte x,
+        byte y,
+        byte rot,
+        ref TState state) where TState : IItemDistributionState
+    {
+        PlayerInventory inventory = player.inventory;
+        PlayerEquipment equipment = player.equipment;
+
+        ItemAsset asset = result.Asset!;
+
+        ItemJar? jar = null;
+        Page page = 0;
+        // find an item of the same type
+        for (int pg = 0; pg < PlayerInventory.STORAGE && jar == null; ++pg)
+        {
+            int itemCt = inventory.items[pg].getItemCount();
+            for (int i = 0; i < itemCt; ++i)
+            {
+                ItemJar j = inventory.items[pg].getItem((byte)i);
+
+                if (asset.id != j.item.id)
+                    continue;
+
+                if (matchedItems.Contains(j))
+                    continue;
+
+                matchedItems.Add(j);
+                jar = j;
+                page = (Page)pg;
+                break;
+            }
+        }
+
+        // found a matching item
+        if (jar != null)
+        {
+            DebugLog(" Found restocking item {0} ({1}, {2}): {3}", page, jar.x, jar.y, asset);
+            RestockItem(equipment, inventory, page, jar.x, jar.y, jar, in result, ref ct);
+            return;
+        }
+
+        // find oldest dropped item
+        foreach (ItemData droppedItem in _droppedItemTracker
+                     .EnumerateDroppedItems(player.channel.owner.playerID.steamID)
+                     .OrderBy(x => x.lastDropped))
+        {
+            if (droppedItem.item.id != asset.id)
+            {
+                continue;
+            }
+
+            DebugLog(" Found dropped item: {0}, {1} (#{2}).", asset, droppedItem.point, droppedItem.instanceID);
+            ItemUtility.DestroyDroppedItem(droppedItem, true, false);
+            break;
+        }
+
+        // find item attached to a gun
+        int attachmentIndex = startingAttachedItems.IndexOf(asset.id);
+        if (attachmentIndex != -1)
+        {
+            startingAttachedItems.RemoveAtFast(attachmentIndex);
+            DebugLog(" Consumed attached attachment: {0}", asset);
+            return;
+        }
+
+        // finally add the item if we've exhausted all other possibilities
+        bool hasPlayedEffect = true;
+        DebugLog(" Adding item: {0}, {1} ({2}, {3} @ {4}).", asset, page, x, y, rot);
+
+        // remove default attachments from needed attachments
+        if (result.State.Length == 18 && result.Asset is ItemGunAsset)
+        {
+            for (int a = 0; a < 5; ++a)
+            {
+                ushort id = BitConverter.ToUInt16(result.State, a * 2);
+                int index = kitAttachedItems.FindIndex(x => x.id == id);
+                if (index != -1)
+                    kitAttachedItems.RemoveAt(index);
+            }
+        }
+        jar = AddItem(in result, x, y, page, rot, inventory, ref hasPlayedEffect, ref state);
+        ++ct;
+        if (jar != null)
+            matchedItems.Add(jar);
     }
 
     private static void RestockItem(PlayerEquipment equipment, PlayerInventory inventory, Page page, byte x, byte y, ItemJar jar, in KitItemResolutionResult result, ref int ct)

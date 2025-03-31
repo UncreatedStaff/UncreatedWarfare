@@ -1,5 +1,4 @@
 using DanielWillett.ReflectionTools;
-using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -19,23 +18,26 @@ public class VehicleSpawnerService : ILayoutHostedService, IDisposable
     private readonly TrackingList<VehicleSpawner> _spawns;
     private readonly VehicleSpawnerStore _spawnerStore;
     private readonly VehicleInfoStore _vehicleStore;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly WarfareModule _module;
     private readonly ILogger<VehicleSpawnerService> _logger;
     private readonly ILoopTicker _updateTicker;
 
     public VehicleSpawnerStore SpawnerStore => _spawnerStore;
-    public readonly ReadOnlyTrackingList<VehicleSpawner> Spawners;
+    public ReadOnlyTrackingList<VehicleSpawner> Spawners { get; }
 
-    public VehicleSpawnerService(IServiceProvider serviceProvider, ILogger<VehicleSpawnerService> logger)
+    public VehicleSpawnerService(VehicleSpawnerStore spawnerStore,
+        VehicleInfoStore vehicleStore,
+        ILoopTickerFactory loopTickerFactory,
+        ILogger<VehicleSpawnerService> logger,
+        WarfareModule module)
     {
         _spawns = new TrackingList<VehicleSpawner>();
-        _spawnerStore = serviceProvider.GetRequiredService<VehicleSpawnerStore>();
+        _spawnerStore = spawnerStore;
         _spawnerStore.OnSpawnsReloaded += () => ReloadSpawners(_spawnerStore.Spawns);
-        _vehicleStore = serviceProvider.GetRequiredService<VehicleInfoStore>();
-        _serviceProvider = serviceProvider;
+        _vehicleStore = vehicleStore;
         _logger = logger;
-        _updateTicker = serviceProvider.GetRequiredService<ILoopTickerFactory>()
-            .CreateTicker(TimeSpan.FromSeconds(1), false, true);
+        _module = module;
+        _updateTicker = loopTickerFactory.CreateTicker(TimeSpan.FromSeconds(1), false, true);
 
         Spawners = new ReadOnlyTrackingList<VehicleSpawner>(_spawns);
     }
@@ -61,20 +63,30 @@ public class VehicleSpawnerService : ILayoutHostedService, IDisposable
         spawner = _spawns.FirstOrDefault(x => x.Signs.Any(x => x.InstanceId == signInstanceId));
         return spawner != null;
     }
+
     public bool TryGetSpawner(IBuildable spawnerBuildable, [NotNullWhen(true)] out VehicleSpawner? spawner)
     {
         spawner = _spawns.FirstOrDefault(x => x.Buildable != null && x.Buildable.Equals(spawnerBuildable));
         return spawner != null;
     }
+
     public bool TryGetSpawner(string uniqueName, [NotNullWhen(true)] out VehicleSpawner? spawner)
     {
         spawner = _spawns.FirstOrDefault(x => x.SpawnInfo.UniqueName.Equals(uniqueName, StringComparison.OrdinalIgnoreCase));
         return spawner != null;
     }
-    public VehicleSpawner? GetSpawner(uint signInstanceId) => _spawns.FirstOrDefault(x => x.Signs.Any(x => x.InstanceId == signInstanceId));
-    public async UniTask<VehicleSpawner> RegisterNewSpawner(IBuildable spawnerBuildable, WarfareVehicleInfo vehicleInfo, string uniqueName, CancellationToken token = default)
+
+    public VehicleSpawner? GetSpawner(uint signInstanceId)
     {
-        IServiceProvider layoutServiceProvider = _serviceProvider.GetRequiredService<Layout>().ServiceProvider.Resolve<IServiceProvider>();
+        return _spawns.FirstOrDefault(x => x.Signs.Any(x => x.InstanceId == signInstanceId));
+    }
+
+    public async UniTask<VehicleSpawner?> RegisterNewSpawner(IBuildable spawnerBuildable, WarfareVehicleInfo vehicleInfo, string uniqueName, CancellationToken token = default)
+    {
+        if (!_module.IsLayoutActive())
+            return null;
+
+        IServiceProvider layoutServiceProvider = _module.ScopedProvider.Resolve<IServiceProvider>();
 
         VehicleSpawnInfo spawnerInfo = new VehicleSpawnInfo
         {
@@ -90,21 +102,23 @@ public class VehicleSpawnerService : ILayoutHostedService, IDisposable
         _spawns.Add(spawner);
         return spawner;
     }
+
     public async UniTask DeregisterSpawner(VehicleSpawner existingSpawner, CancellationToken token = default)
     {
         existingSpawner.Dispose();
         await _spawnerStore.RemoveSpawnAsync(existingSpawner.SpawnInfo, token); // todo: clean up async stuff
         _spawns.RemoveAll(s => s.SpawnInfo.BuildableInstanceId == existingSpawner.SpawnInfo.BuildableInstanceId);
     }
+
     public void ReloadSpawners(IReadOnlyList<VehicleSpawnInfo> records)
     {
-        Layout? currentLayout = _serviceProvider.GetService<Layout>();
-
-        if (currentLayout == null)
+        if (!_module.IsLayoutActive())
         {
             _logger.LogWarning("Could not get current Layout. Vehicle spawners will not be reloaded.");
             return;
         }
+
+        Layout currentLayout = _module.GetActiveLayout();
 
         IServiceProvider layoutServiceProvider = currentLayout.ServiceProvider.Resolve<IServiceProvider>();
 

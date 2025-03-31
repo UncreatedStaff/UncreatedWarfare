@@ -206,11 +206,11 @@ internal sealed class GiveCommand : IExecutableCommand
 
         amount = Math.Min(amount, 250);
 
-        Item itemFromID = new Item(asset!.id, itemAmt is <= 0 or > byte.MaxValue ? asset.amount : (byte)itemAmt, 100, itemSt ?? asset.getState(true));
         for (int i = 0; i < amount; i++)
         {
-            if (!Context.Player.UnturnedPlayer.inventory.tryAddItem(itemFromID, true))
-                ItemManager.dropItem(itemFromID, Context.Player.Position, true, true, true);
+            Item itemInstance = new Item(asset!.id, itemAmt is <= 0 or > byte.MaxValue ? asset.amount : (byte)itemAmt, 100, itemSt ?? asset.getState(true));
+            if (!Context.Player.UnturnedPlayer.inventory.tryAddItem(itemInstance, true))
+                ItemManager.dropItem(itemInstance, Context.Player.Position, true, true, true);
         }
 
         string message = TranslationFormattingUtility.Colorize($"Giving you {(amount == 1 ? "a" : TranslationFormattingUtility.Colorize(amount.ToString(Context.Culture) + "x", "9dc9f5"))} <color=#ffdf91>{asset.itemName}</color> - <color=#a7b6c4>{asset.id}</color>", "bfb9ac");

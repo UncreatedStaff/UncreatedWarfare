@@ -47,7 +47,8 @@ public partial class EventDispatcher : IHostedService, IDisposable
     private readonly ProjectileSolver _projectileSolver;
     private readonly CancellationToken _unloadToken;
     private readonly ILogger<EventDispatcher> _logger;
-    private readonly VehicleService _vehicleService;
+    [field: CanBeNull]
+    private VehicleService VehicleService => field ??= _warfare.ServiceProvider.Resolve<VehicleService>();
     private IServiceProvider? _scopedServiceProvider;
     private readonly ILoggerFactory _loggerFactory;
     private readonly Dictionary<EventListenerCacheKey, EventListenerInfo> _listeners = new Dictionary<EventListenerCacheKey, EventListenerInfo>(128);
@@ -72,20 +73,19 @@ public partial class EventDispatcher : IHostedService, IDisposable
     private readonly StreamWriter _eventFileWriter = new StreamWriter("./Logs/eventlogs.txt", false);
 #endif
 
-    public EventDispatcher(IServiceProvider serviceProvider)
+    public EventDispatcher(ILoggerFactory loggerFactory,
+        ProjectileSolver projectileSolver,
+        IPlayerService playerService,
+        WarfareModule module)
     {
-        _logger = serviceProvider.GetRequiredService<ILogger<EventDispatcher>>();
         _cancellationTokenSource = new CancellationTokenSource();
         _unloadToken = _cancellationTokenSource.Token;
 
-        _loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
-        _projectileSolver = serviceProvider.GetRequiredService<ProjectileSolver>();
-
-        _playerService = serviceProvider.GetRequiredService<IPlayerService>();
-
-        _vehicleService = serviceProvider.GetRequiredService<VehicleService>();
-
-        _warfare = serviceProvider.GetRequiredService<WarfareModule>();
+        _logger = loggerFactory.CreateLogger<EventDispatcher>();
+        _loggerFactory = loggerFactory;
+        _projectileSolver = projectileSolver;
+        _playerService = playerService;
+        _warfare = module;
 
         _warfare.LayoutStarted += OnLayoutStarted;
 
@@ -498,7 +498,7 @@ public partial class EventDispatcher : IHostedService, IDisposable
 
                     ILogger logger = serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(listenerType);
                     bool cancelled;
-                    if (ex is OperationCanceledException && token.IsCancellationRequested)
+                    if (ex is OperationCanceledException)
                     {
                         cancelled = true;
                         logger.LogInformation(ex, "Execution of event handler {0} cancelled by CancellationToken.", info.Method);

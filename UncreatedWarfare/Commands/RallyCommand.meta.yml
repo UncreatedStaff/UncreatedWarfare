@@ -1,4 +1,4 @@
-﻿# RallyCommand
+# RallyCommand
 Description: "Teleports your squad to your current location after a delay if they don't opt out."
 Parameters:
 
@@ -6,4 +6,4 @@ Parameters:
     Type: Verbatim
     Aliases: [ c, abort, deny ]
     Description: Cancels pending deployment to a rallypoint for your squadmembers.
-    IsOptional: true
+    Optional: true

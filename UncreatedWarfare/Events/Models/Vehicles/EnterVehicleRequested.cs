@@ -1,4 +1,5 @@
 using System;
+using Uncreated.Warfare.Players.Cooldowns;
 using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.Events.Models.Vehicles;
@@ -32,4 +33,9 @@ public class EnterVehicleRequested : CancellablePlayerEvent
             field = value;
         }
     }
+    
+    /// <summary>
+    /// If the <see cref="KnownCooldowns.VehicleInteract"/> cooldown should be ignored.
+    /// </summary>
+    public bool IgnoreInteractCooldown { get; init; }
 }

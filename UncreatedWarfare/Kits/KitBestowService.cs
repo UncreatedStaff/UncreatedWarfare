@@ -106,7 +106,7 @@ public class KitBestowService
 
         IKitItem[] items = kit.Items;
 
-        using BestowKitGiveItemsState state = new BestowKitGiveItemsState(new KitBestowData(kit) { RestockOnly = true, ResupplyAmmoBags = resupplyAmmoBags}, player);
+        using BestowKitGiveItemsState state = new BestowKitGiveItemsState(new KitBestowData(kit) { RestockOnly = true, ResupplyAmmoBags = resupplyAmmoBags }, player);
         _itemDistributionService.RestockItems(items, player, state);
     }
 

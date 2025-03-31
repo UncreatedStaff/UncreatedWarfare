@@ -17,8 +17,8 @@ public static class RandomUtility
 
     private static bool _unityLoaded;
     private static bool _unityLoadedSet;
-    
-    private static Random GetNonGameThreadRandom() => _random ??= new Random((int) DateTime.UtcNow.Ticks);
+
+    private static Random GetNonGameThreadRandom() => _random ??= new Random((int)DateTime.UtcNow.Ticks);
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     private static void SetUnityLoaded()
@@ -141,7 +141,7 @@ public static class RandomUtility
     /// </summary>
     public static double GetDouble(double lowerInclusive, double upperInclusive)
     {
-        return GetNonGameThreadRandom().NextDouble() * (upperInclusive - lowerInclusive) + lowerInclusive;
+        return GetDouble() * (upperInclusive - lowerInclusive) + lowerInclusive;
     }
 
     /// <summary>
@@ -205,6 +205,7 @@ public static class RandomUtility
             if (pick < totalWeight)
                 return i;
         }
+
         return list.Count - 1;
     }
 }

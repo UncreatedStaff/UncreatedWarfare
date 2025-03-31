@@ -1,3 +1,4 @@
+using Uncreated.Warfare.Players.Cooldowns;
 using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.Events.Models.Vehicles;
@@ -34,4 +35,9 @@ public class ExitVehicleRequested : CancellablePlayerEvent
     /// The seat object for the player's current seat.
     /// </summary>
     public Passenger PassengerData => Vehicle.Vehicle.passengers.Length >= PassengerIndex ? null! : Vehicle.Vehicle.passengers[PassengerIndex];
+
+    /// <summary>
+    /// If the <see cref="KnownCooldowns.VehicleInteract"/> cooldown should be ignored.
+    /// </summary>
+    public bool IgnoreInteractCooldown { get; init; }
 }

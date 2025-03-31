@@ -278,7 +278,7 @@ public class PointsUI : UnturnedUI,
             data.LastExperienceValue = -1;
             data.LastCreditsValue = -1;
             data.LastRank = -1;
-            data.Position = 0;
+            data.Position = -1;
             _lblUsername.SetText(player.Connection, TranslationFormattingUtility.Colorize(player.Names.GetDisplayNameOrCharacterName(), player.Team.Faction.Color));
         }
 

@@ -244,9 +244,9 @@ public static class ItemUtility
     /// </summary>
     /// <exception cref="ArgumentNullException"/>
     /// <exception cref="GameThreadException">Not on main thread.</exception>
-    public static bool HasItem(Player player, IAssetLink<ItemAsset> asset)
+    public static bool HasItem(Player player, IAssetLink<ItemAsset> asset, bool includeAttachments = false)
     {
-        return CountItems(player, asset, 1) > 0;
+        return CountItems(player, asset, 1, includeAttachments) > 0;
     }
 
     /// <summary>
@@ -264,7 +264,7 @@ public static class ItemUtility
     /// </summary>
     /// <exception cref="ArgumentNullException"/>
     /// <exception cref="GameThreadException">Not on main thread.</exception>
-    public static int CountItems(Player player, IAssetLink<ItemAsset> asset, int max = -1)
+    public static int CountItems(Player player, IAssetLink<ItemAsset> asset, int max = -1, bool includeAttachments = false)
     {
         if (asset == null)
             throw new ArgumentNullException(nameof(asset));
@@ -275,7 +275,10 @@ public static class ItemUtility
 
         int totalItemCount = 0;
 
-        int pageCt = PlayerInventory.PAGES - PlayerInventory.STORAGE;
+        if (!asset.TryGetId(out ushort id))
+            return 0;
+
+        int pageCt = PlayerInventory.STORAGE;
         for (byte page = 0; page < pageCt; ++page)
         {
             int ct = inv.getItemCount(page);
@@ -283,8 +286,10 @@ public static class ItemUtility
             {
                 ItemJar jar = inv.getItem(page, i);
 
-                if (!(jar.item.id != 0 && asset.MatchId(jar.item.id) || asset.MatchAsset(jar.GetAsset())))
+                if (jar.item.id != id && (!includeAttachments || !CheckAttached(jar, id)))
+                {
                     continue;
+                }
 
                 ++totalItemCount;
                 if (max >= 0 && totalItemCount >= max)
@@ -295,6 +300,22 @@ public static class ItemUtility
         }
 
         return totalItemCount;
+    }
+
+    private static bool CheckAttached(ItemJar jar, ushort id)
+    {
+        if (id == 0 || jar.item.state.Length != 18 || jar.item.GetAsset() is ItemGunAsset)
+            return false;
+        
+        for (int a = 0; a < 5; ++a)
+        {
+            if (BitConverter.ToUInt16(jar.item.state, a * 2) == id)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -313,7 +334,7 @@ public static class ItemUtility
 
         int totalItemCount = 0;
 
-        int pageCt = PlayerInventory.PAGES - PlayerInventory.STORAGE;
+        int pageCt = PlayerInventory.STORAGE;
         for (byte page = 0; page < pageCt; ++page)
         {
             int ct = inv.getItemCount(page);

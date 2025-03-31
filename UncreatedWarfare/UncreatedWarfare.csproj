@@ -84,7 +84,6 @@
   </ItemGroup>
   
   <ItemGroup>
-    <None Remove="Commands\AbandonCommand.meta.yml" />
     <None Remove="Commands\AmmoCommand.meta.yml" />
     <None Remove="Commands\AttachCommand.meta.yml" />
     <None Remove="Commands\BuyCommand.meta.yml" />
@@ -201,6 +200,8 @@
 
     <EmbeddedResource Include="Commands\Vanilla\ShutdownCommand.meta.yml" />
 
+    <EmbeddedResource Include="Commands\Vanilla\VehicleCommand.meta.yml" />
+
     <EmbeddedResource Include="Commands\Whitelist\WhitelistCommand.meta.yml" />
 
     <EmbeddedResource Include="Commands\TeamsCommand.meta.yml" />
@@ -230,7 +231,7 @@
     <EmbeddedResource Include="Commands\BuyCommand.meta.yml" />
     <EmbeddedResource Include="Commands\AttachCommand.meta.yml" />
     <EmbeddedResource Include="Commands\Clear\ClearCommand.meta.yml" />
-    <EmbeddedResource Include="Commands\AbandonCommand.meta.yml" />
+    <EmbeddedResource Include="Commands\AbandonVehicleCommand.meta.yml" />
     <EmbeddedResource Include="Commands\Kit\KitCommand.meta.yml" />
     <EmbeddedResource Include="Commands\Points\PointsCommand.meta.yml" />
     <EmbeddedResource Include="Commands\Request\RequestCommand.meta.yml" />

@@ -92,7 +92,6 @@ using Uncreated.Warfare.Util.Timing;
 using Uncreated.Warfare.Vehicles;
 using Uncreated.Warfare.Vehicles.Events.Tweaks;
 using Uncreated.Warfare.Vehicles.Events.Tweaks.AdvancedDamage;
-using Uncreated.Warfare.Vehicles.Events.Vehicles;
 using Uncreated.Warfare.Vehicles.Spawners;
 using Uncreated.Warfare.Vehicles.UI;
 using Uncreated.Warfare.Vehicles.WarfareVehicles;
@@ -617,9 +616,9 @@ public sealed class WarfareModule
             .AsImplementedInterfaces().AsSelf()
             .SingleInstance();
 
-        //bldr.RegisterType<AbandonService>()
-        //    .AsImplementedInterfaces().AsSelf()
-        //    .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+        bldr.RegisterType<AbandonService>()
+            .AsImplementedInterfaces().AsSelf()
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
 
         bldr.RegisterType<VehicleService>()
             .AsImplementedInterfaces().AsSelf()
@@ -636,7 +635,11 @@ public sealed class WarfareModule
         bldr.RegisterType<VehicleSpawnerService>()
             .AsImplementedInterfaces().AsSelf()
             .SingleInstance();
-        
+
+        bldr.RegisterType<VehicleSeatRestrictionService>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
+
         bldr.RegisterType<VehicleDamageTrackerItemTweaks>()
             .AsImplementedInterfaces().AsSelf()
             .SingleInstance();
@@ -931,9 +934,6 @@ public sealed class WarfareModule
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
         bldr.RegisterType<BattlEyeBanEventHandler>()
             .AsSelf().AsImplementedInterfaces();
-        bldr.RegisterType<VehicleInteractionTweaks>()
-            .AsSelf().AsImplementedInterfaces()
-            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
         bldr.RegisterType<VehicleTrunkTweaks>()
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);

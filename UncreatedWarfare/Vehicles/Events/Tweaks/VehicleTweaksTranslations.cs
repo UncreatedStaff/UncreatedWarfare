@@ -1,13 +1,10 @@
-using System;
-using System.Collections.Generic;
-using System.Text;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Layouts.Phases;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Translations;
 
-namespace Uncreated.Warfare.Vehicles.Events.Vehicles;
-internal class VehicleTweaksTranslations : PropertiesTranslationCollection
+namespace Uncreated.Warfare.Vehicles.Events.Tweaks;
+
+public sealed class VehicleTweaksTranslations : PropertiesTranslationCollection
 {
     protected override string FileName => "Tweaks/Vehicles";
 
@@ -27,7 +24,7 @@ internal class VehicleTweaksTranslations : PropertiesTranslationCollection
     public readonly Translation<int> VehicleMaxAllowedCrewReached = new Translation<int>("The vehicle is already being operated by a crew of {0}.");
 
     [TranslationData("Send when a player tries to enter a crew seat but its owner is still online and not in yet in the vehicle.")]
-    public readonly Translation<WarfarePlayer> EnterVehicleOwnerNotInside = new Translation<WarfarePlayer>("Wait until this vehicle's owner ({0}) is in this vehicle before you can enter, or join their squad.");
+    public readonly Translation<IPlayer?> EnterVehicleOwnerNotInside = new Translation<IPlayer?>("Wait until this vehicle's owner ({0}) is in this vehicle before you can enter, or join their squad.");
     
     [TranslationData("Send when a player tries to enter a vehicle but their team is currently grounded by the Layout's active phase.")]
     public readonly Translation<string> EnterVehicleGrounded = new Translation<string>("You cannot enter this vehicle during the {0}.");

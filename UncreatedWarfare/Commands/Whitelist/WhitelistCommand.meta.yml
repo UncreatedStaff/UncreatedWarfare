@@ -1,4 +1,4 @@
-﻿# WhitelistCommand
+# WhitelistCommand
 Description: "Add or remove items from the global whitelist."
 Aliases: [ wh ]
 Parameters:
@@ -10,12 +10,12 @@ Parameters:
     Parameters:
       - Name: item
         Type: SDG.Unturned.ItemAsset
-        IsRemainder: true
+        Remainder: true
         Parameters:
           - Name: amount
             Type: int
             Range: "#(-1, 254)"
-            IsOptional: true
+            Optional: true
 
   - Name: remove
     Type: Verbatim
@@ -24,7 +24,7 @@ Parameters:
     Parameters:
       - Name: item
         Type: SDG.Unturned.ItemAsset
-        IsRemainder: true
+        Remainder: true
         
   - Name: set
     Type: Verbatim
@@ -38,7 +38,7 @@ Parameters:
         Parameters:
           - Name: item
             Type: SDG.Unturned.ItemAsset
-            IsRemainder: true
+            Remainder: true
             Parameters:
               - Name: amount
                 Type: int
