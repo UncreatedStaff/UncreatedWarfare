@@ -6,6 +6,8 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Events.Models;
+using Uncreated.Warfare.Events.Models.Vehicles;
 using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.Interaction;
@@ -21,7 +23,7 @@ using Uncreated.Warfare.Vehicles.WarfareVehicles;
 namespace Uncreated.Warfare.Squads.Spotted;
 
 [Priority(1)]
-internal sealed class SpottedService : ILayoutHostedService
+internal sealed class SpottedService : ILayoutHostedService, IEventListener<VehicleExploded>
 {
     private readonly List<SpottableObjectComponent> _allSpottableObjects;
     
@@ -37,7 +39,7 @@ internal sealed class SpottedService : ILayoutHostedService
     private readonly FobConfiguration _fobConfiguration;
     private ITeamManager<Team>? _teamManager;
 
-    public IReadOnlyList<SpottableObjectComponent> AliveSpottableObjects { get; }
+    public IReadOnlyList<SpottableObjectComponent> AllSpottableObjects { get; }
 
     public SpottedService(IServiceProvider serviceProvider, ILogger<SpottedService> logger)
     {
@@ -53,7 +55,7 @@ internal sealed class SpottedService : ILayoutHostedService
                                           .GetAssetLink<ItemGunAsset>("Items:LaserDesignator");
 
         _allSpottableObjects = new List<SpottableObjectComponent>(64);
-        AliveSpottableObjects = new ReadOnlyCollection<SpottableObjectComponent>(_allSpottableObjects);
+        AllSpottableObjects = new ReadOnlyCollection<SpottableObjectComponent>(_allSpottableObjects);
     }
 
     UniTask ILayoutHostedService.StartAsync(CancellationToken token)
@@ -217,5 +219,14 @@ internal sealed class SpottedService : ILayoutHostedService
     internal void RemoveSpottableObject(SpottableObjectComponent comp)
     {
         _allSpottableObjects.Remove(comp);
+    }
+
+    public void HandleEvent(VehicleExploded e, IServiceProvider serviceProvider)
+    {
+        SpottableObjectComponent? spotted = AllSpottableObjects.FirstOrDefault(f => f.Vehicle == e.Vehicle.Vehicle);
+        if (spotted == null)
+            return;
+        
+        Object.Destroy(spotted);
     }
 }

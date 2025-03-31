@@ -10,7 +10,7 @@ public class FallingBuildable : FallingItem
 {
     private readonly ItemPlaceableAsset _buildableToPlace;
     private readonly EffectAsset? _placementEffect;
-    private readonly float _placementYaw;
+    private float _placementYaw;
     private readonly Action<IBuildable>? _onConvertedToBuildable;
 
     public FallingBuildable(WarfarePlayer player, ItemData itemData, ItemPlaceableAsset buildableToPlace, EffectAsset? placementEffect, Vector3 originalDropPosition, float placementYaw, Action<IBuildable>? onConvertedToBuildable = null)
@@ -28,9 +28,35 @@ public class FallingBuildable : FallingItem
 
         float offset = _buildableToPlace is ItemBarricadeAsset b ? b.offset : 0;
 
+        bool isBehindPlayer = Player.Transform.InverseTransformPoint(FinalRestPosition).z < 0;
+        if (isBehindPlayer)
+            _placementYaw += 180;
+        
+        Vector3 placePosition = FinalRestPosition;
+        const float distanceBetweenAdjacentCrateCenters = 1.5f;
+        
+        Collider[] colliders = new Collider[1];
+        
+        for (int attempts = 0; attempts < 10; attempts++)
+        {
+            Console.WriteLine($"Supply crate placement attempt #{attempts + 1}");
+            int numberOfOverlaps = Physics.OverlapSphereNonAlloc(placePosition, distanceBetweenAdjacentCrateCenters / 2 - 0.1f, colliders, RayMasks.BARRICADE);
+            if (numberOfOverlaps > 0)
+            {
+                placePosition += Quaternion.Euler(0, _placementYaw, 0) * new Vector3(0, 0, distanceBetweenAdjacentCrateCenters);
+                Console.WriteLine($"Supply crate encountered obstruction. It will attempt to place a little further away - {Vector3.Distance(placePosition, FinalRestPosition)} away from the original drop point.");
+                placePosition.y = TerrainUtility.GetHighestPoint(placePosition, 0);
+            }
+            else
+            {
+                Console.WriteLine($"No more obstructions encountered. Supply crate will place {Vector3.Distance(placePosition, FinalRestPosition)} away from the original drop point.");
+                break;
+            }
+        }
+
         IBuildable buildable = BuildableExtensions.DropBuildable(
             _buildableToPlace,
-            FinalRestPosition + Vector3.up * offset,
+            placePosition + Vector3.up * offset,
             Quaternion.Euler(-90, _placementYaw, 0),
             owner: Player.Steam64,
             group: Team.GroupId
