@@ -49,9 +49,6 @@ public class RepairStation : RestockableBuildableFobEntity
             
             foreach (WarfareVehicle vehicle in nearbyVehicles)
             {
-                if (vehicle.Vehicle.lockedGroup == CSteamID.Nil)
-                    continue;
-                
                 // planes and helis get a larger repair radius
                 if (vehicle.Info.Type.IsGroundVehicle() && !MathUtility.WithinRange(vehicle.Position, Buildable.Position, _fobConfiguration.RepairStationGroundVehicleRepairRadius))
                     continue;
@@ -78,7 +75,7 @@ public class RepairStation : RestockableBuildableFobEntity
         if (vehicle.Vehicle.fuel >= vehicle.Vehicle.asset.fuel)
             return;
         
-        vehicle.Vehicle.askFillFuel(_fobConfiguration.RepairStationHealthPerTick);
+        vehicle.Vehicle.askFillFuel(_fobConfiguration.RepairStationFuelPerTick);
 
         EffectUtility.TriggerEffect(
             _assetConfiguration.GetAssetLink<EffectAsset>("Effects:RepairStation:RefuelSound").GetAssetOrFail(),
@@ -92,7 +89,7 @@ public class RepairStation : RestockableBuildableFobEntity
 
     private void Repair(WarfareVehicle vehicle)
     {
-        ushort newHealth = (ushort)Math.Clamp(vehicle.Vehicle.health + _fobConfiguration.RepairStationFuelPerTick, 0, vehicle.Vehicle.asset.health);
+        ushort newHealth = (ushort)Math.Clamp(vehicle.Vehicle.health + _fobConfiguration.RepairStationHealthPerTick, 0, vehicle.Vehicle.asset.health);
         if (newHealth >= vehicle.Vehicle.asset.health)
         {
             if (vehicle.Vehicle.transform.TryGetComponent(out WarfareVehicleComponent c))
@@ -100,7 +97,8 @@ public class RepairStation : RestockableBuildableFobEntity
                 c.WarfareVehicle.DamageTracker.ClearDamage();
             }
             
-            return;
+            if (vehicle.Vehicle.health >= newHealth) // vehicle is already full health, so health does not need to be updated
+                return;
         }
 
         VehicleManager.sendVehicleHealth(vehicle.Vehicle, newHealth);

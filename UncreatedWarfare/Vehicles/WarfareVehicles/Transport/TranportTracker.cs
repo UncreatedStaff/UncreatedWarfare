@@ -26,7 +26,6 @@ public class TranportTracker
     {
         if (LastKnownDriver.HasValue && LastKnownDriver.Value.m_SteamID == steam64)
         {
-            LastKnownDriver = null;
             LastKnownDriverExitTime = DateTime.UtcNow;
         }
 
