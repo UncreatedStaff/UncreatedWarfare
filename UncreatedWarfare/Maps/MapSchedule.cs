@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -27,7 +27,7 @@ public class MapScheduler
         new MapData("Nuijamaa",         [ 2557112412, 2407740920 ]),
         new MapData("Gulf of Aqaba",    [ 2726964335, 2407740920 ]),
         new MapData("Changbai Shan",    [ 2943688379, 2407740920 ]),
-        new MapData("S4Map" /* todo */, [ 2407740920 ])
+        new MapData("Yellowknife",      [ 3456355722, 2407740920 ])
     ];
 
     /// <summary>
