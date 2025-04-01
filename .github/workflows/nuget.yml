@@ -24,7 +24,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
       with:
-        ref: 'uncreated-networking-cleanup'
+        ref: 'master'
         
     - name: SetupDotNet
       uses: actions/setup-dotnet@v4
@@ -52,7 +52,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: 'uncreated-networking-cleanup'
+          ref: 'master'
           fetch-depth: 0
           
       - name: SetupRepo
