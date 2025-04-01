@@ -49,7 +49,7 @@ namespace Uncreated.Warfare;
 public delegate void VoidDelegate();
 public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
 {
-    public static readonly TimeSpan RestartTime = new TimeSpan(6, 00, 0); // 2:00 AM EST
+    public static readonly TimeSpan RestartTime = new TimeSpan(1, 00, 0); // 9:00 PM EST
     public static readonly Version Version = new Version(3, 2, 6, 0);
     private readonly SystemConfig _config = UCWarfareNexus.Active ? new SystemConfig() : null!;
     private readonly List<UCTask> _tasks = UCWarfareNexus.Active ? new List<UCTask>(16) : null!;
@@ -122,17 +122,6 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
               "Please stop using this plugin now.", ConsoleColor.Green);
 
         L.IsBufferingLogs = true;
-
-        // adds the plugin to the server lobby screen and sets the plugin framework type to 'Unknown'.
-        IPluginAdvertising pluginAdvService = PluginAdvertising.Get();
-
-        pluginAdvService.AddPlugin("Uncreated Warfare");
-
-        pluginAdvService
-            .GetType()
-            .GetProperty("PluginFrameworkTag", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.FlattenHierarchy)
-           ?.GetSetMethod(true)
-           ?.Invoke(pluginAdvService, [ "uw" ]);
 
         Accessor.Logger = new L.UCLoggerFactory().CreateReflectionToolsLogger(disposeFactoryOnDispose: true);
 #if DEBUG
@@ -407,7 +396,6 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
         ItemManager.onTakeItemRequested += EventFunctions.OnPickedUpItemRequested;
         PlayerEquipment.OnPunch_Global += EventFunctions.OnPunch;
         UseableGun.onBulletSpawned += EventFunctions.BulletSpawned;
-        UseableGun.onChangeBarrelRequested += EventFunctions.ChangeBarrelRequested;
         UseableGun.onProjectileSpawned += EventFunctions.ProjectileSpawned;
         PlayerLife.OnSelectingRespawnPoint += EventFunctions.OnCalculateSpawnDuringRevive;
         Provider.onLoginSpawning += EventFunctions.OnCalculateSpawnDuringJoin;
@@ -460,7 +448,6 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
         ItemManager.onTakeItemRequested -= EventFunctions.OnPickedUpItemRequested;
         PlayerEquipment.OnPunch_Global -= EventFunctions.OnPunch;
         UseableGun.onBulletSpawned -= EventFunctions.BulletSpawned;
-        UseableGun.onChangeBarrelRequested -= EventFunctions.ChangeBarrelRequested;
         UseableGun.onProjectileSpawned -= EventFunctions.ProjectileSpawned;
         PlayerLife.OnSelectingRespawnPoint -= EventFunctions.OnCalculateSpawnDuringRevive;
         Provider.onLoginSpawning -= EventFunctions.OnCalculateSpawnDuringJoin;

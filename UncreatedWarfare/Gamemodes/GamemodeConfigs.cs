@@ -102,9 +102,6 @@ public sealed class GamemodeConfigData : JSONConfigData
 
     [JsonPropertyName("item_laser_designator")]
     public RotatableConfig<JsonAssetReference<ItemGunAsset>> ItemLaserDesignator { get; set; }
-
-    [JsonPropertyName("item_april_fools_barrel")]
-    public RotatableConfig<JsonAssetReference<ItemBarrelAsset>> ItemAprilFoolsBarrel { get; set; }
     #endregion
 
     #region UI and Effects
@@ -626,7 +623,6 @@ public sealed class GamemodeConfigData : JSONConfigData
         #region Items
         ItemEntrenchingTool = new JsonAssetReference<ItemMeleeAsset>("6cee2662e8884d7bad3a5d743f8222da");
         ItemLaserDesignator = new JsonAssetReference<ItemGunAsset>("3879d9014aca4a17b3ed749cf7a9283e");
-        ItemAprilFoolsBarrel = new JsonAssetReference<ItemBarrelAsset>("c3d3123823334847a9fd294e5d764889");
         #endregion
 
         #region UI and Effects

@@ -18,6 +18,7 @@ namespace Uncreated.Warfare.Kits;
 
 public class KitDistribution(KitManager manager)
 {
+    private static readonly Guid Dootpressor = new Guid("c3d3123823334847a9fd294e5d764889");
     public KitManager Manager { get; } = manager;
 
     /// <remarks>Thread Safe</remarks>
@@ -174,11 +175,7 @@ public class KitDistribution(KitManager manager)
                 ItemAsset? asset = item.GetItem(kit, faction, out byte amt, out byte[] state);
 
                 // Dootpressor
-                if (item is not IAssetRedirectKitItem
-                    && asset is ItemGunAsset
-                    && !UCWarfare.Config.DisableAprilFools
-                    && HolidayUtil.isHolidayActive(ENPCHoliday.APRIL_FOOLS)
-                    && Gamemode.Config.ItemAprilFoolsBarrel.ValidReference(out ItemBarrelAsset barrel))
+                if (item is not IAssetRedirectKitItem && asset is ItemGunAsset && !UCWarfare.Config.DisableAprilFools && HolidayUtil.isHolidayActive(ENPCHoliday.APRIL_FOOLS) && Assets.find(Dootpressor) is ItemBarrelAsset barrel)
                 {
                     unsafe
                     {
