@@ -3,33 +3,73 @@ using System;
 namespace Uncreated.Warfare.Util;
 public static class SpanExtensions
 {
+#pragma warning disable CS8500 // This takes the address of, gets the size of, or declares a pointer to a managed type
     /// <summary>
     /// Concat 2 spans without allocating extra memory.
     /// </summary>
     public static unsafe string Concat(this ReadOnlySpan<char> span, ReadOnlySpan<char> span2)
     {
-        fixed (char* ptr = span)
-        fixed (char* ptr2 = span2)
+        Concat2SpanState state = default;
+        state.Span1Ptr = &span;
+        state.Span2Ptr = &span2;
+        return string.Create(span.Length + span2.Length, state, (span, state) =>
         {
-            Concat2SpanState state = default;
-            state.Span1Ptr = ptr;
-            state.Span1Len = span.Length;
-            state.Span2Ptr = ptr2;
-            state.Span2Len = span2.Length;
-            return string.Create(span.Length + span2.Length, state, (span, state) =>
-            {
-                new ReadOnlySpan<char>(state.Span1Ptr, state.Span1Len).CopyTo(span);
-                new ReadOnlySpan<char>(state.Span2Ptr, state.Span2Len).CopyTo(span[state.Span1Len..]);
-            });
-        }
+            state.Span1Ptr->CopyTo(span);
+            state.Span2Ptr->CopyTo(span[state.Span1Ptr->Length..]);
+        });
     }
 
     private unsafe struct Concat2SpanState
     {
-        public char* Span1Ptr;
-        public int Span1Len;
-        public char* Span2Ptr;
-        public int Span2Len;
+        public ReadOnlySpan<char>* Span1Ptr;
+        public ReadOnlySpan<char>* Span2Ptr;
+        public char Combine;
+    }
+
+    /// <summary>
+    /// Concat 3 spans without allocating extra memory.
+    /// </summary>
+    public static unsafe string Concat(this ReadOnlySpan<char> span, ReadOnlySpan<char> span2, ReadOnlySpan<char> span3)
+    {
+        Concat3SpanState state = default;
+        state.Span1Ptr = &span;
+        state.Span2Ptr = &span2;
+        state.Span3Ptr = &span3;
+        return string.Create(span.Length + span2.Length + span3.Length, state, (span, state) =>
+        {
+            state.Span1Ptr->CopyTo(span);
+            int len1 = state.Span1Ptr->Length;
+            state.Span2Ptr->CopyTo(span[len1..]);
+            state.Span3Ptr->CopyTo(span[(len1 + state.Span2Ptr->Length)..]);
+        });
+    }
+
+    /// <summary>
+    /// Concat 3 spans without allocating extra memory.
+    /// </summary>
+    public static unsafe string Concat(this ReadOnlySpan<char> span, char span2, ReadOnlySpan<char> span3, ReadOnlySpan<char> span4)
+    {
+        Concat3SpanState state = default;
+        state.Span1Ptr = &span;
+        state.Span2Ptr = &span3;
+        state.Span3Ptr = &span4;
+        state.Combine = span2;
+        return string.Create(span.Length + span3.Length + span4.Length + 1, state, (span, state) =>
+        {
+            state.Span1Ptr->CopyTo(span);
+            int len1 = state.Span1Ptr->Length;
+            span[len1] = state.Combine;
+            ++len1;
+            state.Span2Ptr->CopyTo(span[len1..]);
+            state.Span3Ptr->CopyTo(span[(len1 + state.Span2Ptr->Length)..]);
+        });
+    }
+
+    private unsafe struct Concat3SpanState
+    {
+        public ReadOnlySpan<char>* Span1Ptr;
+        public ReadOnlySpan<char>* Span2Ptr;
+        public ReadOnlySpan<char>* Span3Ptr;
         public char Combine;
     }
 
@@ -38,22 +78,17 @@ public static class SpanExtensions
     /// </summary>
     public static unsafe string Concat(this ReadOnlySpan<char> span, char combine, ReadOnlySpan<char> span2)
     {
-        fixed (char* ptr = span)
-        fixed (char* ptr2 = span2)
+        Concat2SpanState state = default;
+        state.Span1Ptr = &span;
+        state.Span2Ptr = &span2;
+        state.Combine = combine;
+        return string.Create(span.Length + span2.Length, state, (span, state) =>
         {
-            Concat2SpanState state = default;
-            state.Span1Ptr = ptr;
-            state.Span1Len = span.Length;
-            state.Combine = combine;
-            state.Span2Ptr = ptr2;
-            state.Span2Len = span2.Length;
-            return string.Create(span.Length + span2.Length + 1, state, (span, state) =>
-            {
-                new ReadOnlySpan<char>(state.Span1Ptr, state.Span1Len).CopyTo(span);
-                span[state.Span1Len] = state.Combine;
-                new ReadOnlySpan<char>(state.Span2Ptr, state.Span2Len).CopyTo(span[(state.Span1Len + 1)..]);
-            });
-        }
+            state.Span1Ptr->CopyTo(span);
+            int len1 = state.Span1Ptr->Length;
+            span[len1] = state.Combine;
+            state.Span2Ptr->CopyTo(span[(len1 + 1)..]);
+        });
     }
 
     /// <summary>
@@ -61,27 +96,23 @@ public static class SpanExtensions
     /// </summary>
     public static unsafe string Concat(this ReadOnlySpan<char> span, string str)
     {
-        fixed (char* ptr = span)
+        ConcatSpan2StringState state = default;
+        state.Span = &span;
+        state.String = str;
+        return string.Create(span.Length + str.Length, state, (span, state) =>
         {
-            ConcatSpan2StringState state = default;
-            state.Span1Ptr = ptr;
-            state.Span1Len = span.Length;
-            state.String = str;
-            return string.Create(span.Length + str.Length, state, (span, state) =>
-            {
-                new ReadOnlySpan<char>(state.Span1Ptr, state.Span1Len).CopyTo(span);
-                state.String.AsSpan().CopyTo(span[state.Span1Len..]);
-            });
-        }
+            state.Span->CopyTo(span);
+            state.String.AsSpan().CopyTo(span[state.Span->Length..]);
+        });
     }
 
     private unsafe struct ConcatSpan2StringState
     {
-        public char* Span1Ptr;
-        public int Span1Len;
+        public ReadOnlySpan<char>* Span;
         public string String;
     }
 
+#pragma warning restore CS8500 // This takes the address of, gets the size of, or declares a pointer to a managed type
     /// <summary>
     /// Gets the index of an object in a span with an offset.
     /// </summary>

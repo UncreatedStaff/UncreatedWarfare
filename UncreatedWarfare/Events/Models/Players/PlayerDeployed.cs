@@ -34,7 +34,7 @@ public class PlayerDeployed : PlayerEvent, IActionLoggableEvent
     /// <inheritdoc />
     public ActionLogEntry GetActionLogEntry(IServiceProvider serviceProvider, ref ActionLogEntry[]? multipleEntries)
     {
-        return new ActionLogEntry(ActionLogTypes.Chat,
+        return new ActionLogEntry(ActionLogTypes.PlayerDeployed,
             $"Destination: {Destination}, Settings: (combat: {(Settings.AllowCombat ? "T" : "F")}, " +
             $"movement: {(Settings.AllowMovement ? "T" : "F")}, " +
             $"injure: {(Settings.AllowInjured ? "T" : "F")}, " +

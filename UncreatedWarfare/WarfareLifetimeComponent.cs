@@ -170,7 +170,7 @@ public class WarfareLifetimeComponent : MonoBehaviour
         FixShutdownReason(ref shutdownReason);
         QueuedShutdownType = ShutdownMode.OnLayoutEnd;
         ShutdownReason = shutdownReason ;
-        ShutdownTime = DateTime.UtcNow.AddHours(1d);
+        ShutdownTime = DateTime.UtcNow.AddSeconds(SecondsUntilFallbackShutdownAfterUpdate);
         _shutdownTime = Time.realtimeSinceStartup + SecondsUntilFallbackShutdownAfterUpdate;
         _shutdownStep = GetPassedShutdownStep();
         UpdateShutdownState();

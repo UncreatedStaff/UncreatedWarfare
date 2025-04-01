@@ -1,3 +1,10 @@
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
+using Uncreated.Warfare.Logging;
+
 namespace Uncreated.Warfare.Events.Logging;
 
 public static class ActionLogTypes
@@ -45,20 +52,185 @@ public static class ActionLogTypes
     public static ActionLogType PlayerInjured           { get; } = new ActionLogType("Player injured",                      "INJURED",                      41);
     public static ActionLogType Melee                   { get; } = new ActionLogType("Player meleed",                       "MELEE",                        42);
 
-    public static ActionLogType ChatGlobal              { get; } = new ActionLogType("Send global chat message",            "CHAT_GLOBAL",                  1);
-    public static ActionLogType ChatAreaOrSquad         { get; } = new ActionLogType("Send area/squad chat message",        "CHAT_AREA_OR_SQUAD",           2);
-    public static ActionLogType ChatGroup               { get; } = new ActionLogType("Send team chat message",              "CHAT_GROUP",                   3);
-    public static ActionLogType RequestAmmo             { get; } = new ActionLogType("Request ammo",                        "REQUEST_AMMO",                 4);
-    public static ActionLogType DutyChanged             { get; } = new ActionLogType("Update duty status",                  "DUTY_CHANGED",                 5);
-    public static ActionLogType ModeratePlayer          { get; } = new ActionLogType("Apply moderation entry to player",    "MODERATE_PLAYER",              6);
-    public static ActionLogType StartReport             { get; } = new ActionLogType("Start a player report",               "START_REPORT",                 7);
-    public static ActionLogType ConfirmReport           { get; } = new ActionLogType("Complete a player report",            "CONFIRM_REPORT",               8);
-    public static ActionLogType BuyKit                  { get; } = new ActionLogType("Purchase a kit",                      "BUY_KIT",                      9);
-    public static ActionLogType ClearItems              { get; } = new ActionLogType("Clear ground items",                  "CLEAR_ITEMS",                  10);
-    public static ActionLogType ClearInventory          { get; } = new ActionLogType("Clear player inventory",              "CLEAR_INVENTORY",              11);
-    public static ActionLogType ClearVehicles           { get; } = new ActionLogType("Clear all vehicles",                  "CLEAR_VEHICLES",               12);
-    public static ActionLogType ClearStructures         { get; } = new ActionLogType("Clear structures and barricades",     "CLEAR_STRUCTURES",             13);
-    public static ActionLogType ChangeGroupWithCommand  { get; } = new ActionLogType("Change group via command",            "CHANGE_GROUP_WITH_COMMAND",    14);
-    public static ActionLogType ChangeGroupInLobby      { get; } = new ActionLogType("Change group via lobby",              "CHANGE_GROUP_WITH_UI",         15);
-    public static ActionLogType GiveItem                { get; } = new ActionLogType("Give the player an item",             "GIVE_ITEM",                    19);
+    private static readonly ActionLogType?[] TypesById;
+
+    /// <summary>
+    /// List of all action log types sorted in ascending order of <see cref="ActionLogType.Id"/>.
+    /// </summary>
+    public static IReadOnlyList<ActionLogType> All { get; }
+
+    /// <summary>
+    /// Get the action log type corresponding to the given <paramref name="id"/>.
+    /// </summary>
+    public static ActionLogType? FromId(ushort id)
+    {
+        if (id >= TypesById.Length)
+            return null;
+
+        return TypesById[id];
+    }
+
+    public static bool TryParse(ReadOnlySpan<char> span, [MaybeNullWhen(false)] out ActionLogType type)
+    {
+        if (span.IsEmpty)
+        {
+            type = null;
+            return false;
+        }
+
+        char firstLetter = span[0];
+        char otherFirstLetter = char.IsUpper(firstLetter) ? char.ToLowerInvariant(firstLetter) : char.ToUpperInvariant(firstLetter);
+
+        foreach (ActionLogType? t in TypesById)
+        {
+            if (t == null)
+                continue;
+
+            if (t.LogName[0] != firstLetter && t.LogName[0] != otherFirstLetter)
+                continue;
+
+            if (t.LogName.AsSpan().Equals(span, StringComparison.OrdinalIgnoreCase))
+            {
+                type = t;
+                return true;
+            }
+        }
+
+        type = null;
+        return false;
+    }
+
+    static ActionLogTypes()
+    {
+        PropertyInfo[] types = typeof(ActionLogTypes).GetProperties(BindingFlags.Public | BindingFlags.Static);
+
+        List<ActionLogType> logTypes = new List<ActionLogType>();
+        foreach (PropertyInfo prop in types)
+        {
+            if (prop.GetValue(null) is ActionLogType type)
+                logTypes.Add(type);
+        }
+
+        logTypes.Sort((a, b) => a.Id.CompareTo(b.Id));
+
+        int maxId = logTypes[^1].Id;
+
+        TypesById = new ActionLogType[maxId + 1];
+        foreach (ActionLogType type in logTypes)
+        {
+            TypesById[type.Id] = type;
+        }
+
+        All = new ReadOnlyCollection<ActionLogType>(logTypes.ToArray());
+    }
+
+    public static ActionLogType? FromLegacyType(ActionLogTypeOld legacyType)
+    {
+        return legacyType switch
+        {
+            ActionLogTypeOld.Disconnect => Disconnect,
+            ActionLogTypeOld.GiveItem => null,
+            ActionLogTypeOld.ChangeLanguage => null,
+            ActionLogTypeOld.LoadSupplies => null,
+            ActionLogTypeOld.LoadOldBans => null,
+            ActionLogTypeOld.MutePlayer => null,
+            ActionLogTypeOld.UnmutePlayer => null,
+            ActionLogTypeOld.ReloadComponent => null,
+            ActionLogTypeOld.RequestKit => null,
+            ActionLogTypeOld.RequestVehicle => null,
+            ActionLogTypeOld.ShutdownServer => null,
+            ActionLogTypeOld.PopStructure => null,
+            ActionLogTypeOld.SaveStructure => null,
+            ActionLogTypeOld.UnsaveStructure => null,
+            ActionLogTypeOld.SaveRequestSign => null,
+            ActionLogTypeOld.UnsaveRequestSign => null,
+            ActionLogTypeOld.AddWhitelist => null,
+            ActionLogTypeOld.RemoveWhitelist => null,
+            ActionLogTypeOld.SetWhitelistMaxAmount => null,
+            ActionLogTypeOld.DestroyBarricade => BuildableDestroyed,
+            ActionLogTypeOld.DestroyStructure => BuildableDestroyed,
+            ActionLogTypeOld.PlaceBarricade => BuildablePlaced,
+            ActionLogTypeOld.PlaceStructure => BuildablePlaced,
+            ActionLogTypeOld.EnterVehicleSeat => EnterVehicle,
+            ActionLogTypeOld.LeaveVehicleSeat => LeaveVehicle,
+            ActionLogTypeOld.HelpBuildBuildable => ShovelableBuilt,
+            ActionLogTypeOld.DeployToLocation => PlayerDeployed,
+            ActionLogTypeOld.Teleport => null,
+            ActionLogTypeOld.ChangeGamemodeCommand => null,
+            ActionLogTypeOld.GamemodeChangedAuto => null,
+            ActionLogTypeOld.TeamWon => null,
+            ActionLogTypeOld.TeamCapturedObjective => null,
+            ActionLogTypeOld.BuildZoneMap => null,
+            ActionLogTypeOld.DischargeOfficer => null,
+            ActionLogTypeOld.SetOfficerRank => null,
+            ActionLogTypeOld.Injured => PlayerInjured,
+            ActionLogTypeOld.RevivedPlayer => AidedPlayer,
+            ActionLogTypeOld.Death => PlayerDied,
+            ActionLogTypeOld.StartQuest => null,
+            ActionLogTypeOld.MakeQuestProgress => null,
+            ActionLogTypeOld.CompleteQuest => null,
+            ActionLogTypeOld.XPChanged => null,
+            ActionLogTypeOld.CreditsChanged => null,
+            ActionLogTypeOld.CreatedSquad => null,
+            ActionLogTypeOld.JoinedSquad => null,
+            ActionLogTypeOld.LeftSquad => null,
+            ActionLogTypeOld.DisbandedSquad => null,
+            ActionLogTypeOld.LockedSquad => null,
+            ActionLogTypeOld.UnlockedSquad => null,
+            ActionLogTypeOld.PlacedRally => null,
+            ActionLogTypeOld.TeleportedToRally => null,
+            ActionLogTypeOld.CreatedOrder => null,
+            ActionLogTypeOld.FufilledOrder => null,
+            ActionLogTypeOld.OwnedVehicleDied => VehicleExploded,
+            ActionLogTypeOld.ServerStartup => null,
+            ActionLogTypeOld.CreateKit => null,
+            ActionLogTypeOld.DeleteKit => null,
+            ActionLogTypeOld.GiveKit => null,
+            ActionLogTypeOld.ChangeKitAccess => null,
+            ActionLogTypeOld.EditKit => null,
+            ActionLogTypeOld.SetKitProperty => null,
+            ActionLogTypeOld.CreateVehicleData => null,
+            ActionLogTypeOld.DeleteVehicleData => null,
+            ActionLogTypeOld.RegisteredSpawn => null,
+            ActionLogTypeOld.DeregisteredSpawn => null,
+            ActionLogTypeOld.LinkedVehicleBaySign => null,
+            ActionLogTypeOld.UnlinkedVehicleBaySign => null,
+            ActionLogTypeOld.SetVehicleDataProperty => null,
+            ActionLogTypeOld.VehicleBayForceSpawn => null,
+            ActionLogTypeOld.PermissionLevelChanged => null,
+            ActionLogTypeOld.ChatFilterViolation => null,
+            ActionLogTypeOld.KickedByBattlEye => null,
+            ActionLogTypeOld.Teamkill => Teamkilled,
+            ActionLogTypeOld.Kill => KilledPlayer,
+            ActionLogTypeOld.RequestTrait => null,
+            ActionLogTypeOld.SetSavedStructureProperty => null,
+            ActionLogTypeOld.SetTraitProperty => null,
+            ActionLogTypeOld.GiveTrait => null,
+            ActionLogTypeOld.RevokeTrait => null,
+            ActionLogTypeOld.ClearTraits => null,
+            ActionLogTypeOld.MainCampAttempt => null,
+            ActionLogTypeOld.LeftMain => PlayerExitedZone,
+            ActionLogTypeOld.PossibleSolo => null,
+            ActionLogTypeOld.SoloRTB => null,
+            ActionLogTypeOld.EnterMain => PlayerEnteredZone,
+            ActionLogTypeOld.Attach => null,
+            ActionLogTypeOld.Detach => null,
+            ActionLogTypeOld.SetAmmo => null,
+            ActionLogTypeOld.SetFiremode => null,
+            ActionLogTypeOld.AddSkillset => null,
+            ActionLogTypeOld.RemoveSkillset => null,
+            ActionLogTypeOld.NitroBoostStateUpdated => null,
+            ActionLogTypeOld.UpgradeLoadout => null,
+            ActionLogTypeOld.UnlockLoadout => null,
+            ActionLogTypeOld.IPWhitelist => null,
+            ActionLogTypeOld.ChangeCulture => null,
+            ActionLogTypeOld.ForgiveModerationEntry => null,
+            ActionLogTypeOld.EditModerationEntry => null,
+            ActionLogTypeOld.CreateModerationEntry => null,
+            ActionLogTypeOld.RemoveModerationEntry => null,
+            ActionLogTypeOld.LockLoadout => null,
+            ActionLogTypeOld.ReputationChanged => null,
+            _ => null
+        };
+    }
 }

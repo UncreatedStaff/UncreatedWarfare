@@ -30,6 +30,7 @@ using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Discord;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.ListenerProviders;
+using Uncreated.Warfare.Events.Logging;
 using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.Fobs.UI;
 using Uncreated.Warfare.FOBs.Construction.Tweaks;
@@ -455,6 +456,10 @@ public sealed class WarfareModule
             .SingleInstance();
 
         bldr.RegisterType<ServerHeartbeatTimer>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
+
+        bldr.RegisterType<ActionLoggerService>()
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
 
