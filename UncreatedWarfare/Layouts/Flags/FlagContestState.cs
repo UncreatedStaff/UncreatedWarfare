@@ -1,4 +1,5 @@
-﻿using Uncreated.Warfare.Layouts.Teams;
+using Uncreated.Warfare.Layouts.Teams;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Layouts.Flags;
 public struct FlagContestState
@@ -24,6 +25,6 @@ public struct FlagContestState
 
     public override string ToString()
     {
-        return Winner == null ? State.ToString() : $"{State} - {Winner}";
+        return Winner == null ? EnumUtility.GetNameSafe(State) : $"{EnumUtility.GetNameSafe(State)} - {Winner}";
     }
 }

@@ -92,7 +92,7 @@ public class DamageTracker
     public float GetDamageContribution(CSteamID playerId, DateTime after, out float total) => _damageContributors.GetContribution(playerId, after, out total);
     public float GetDamageContributionPercentage(CSteamID playerId) => _damageContributors.GetContributionPercentage(playerId);
     public float GetDamageContributionPercentage(CSteamID playerId, DateTime after) => _damageContributors.GetContributionPercentage(playerId, after);
-    public IEnumerable<CSteamID> Contributors => _damageContributors.Contributors;
+    public PlayerContributionTracker.ContributorEnumerator Contributors => _damageContributors.Contributors;
 
     /// <inheritdoc />
     public override string ToString()

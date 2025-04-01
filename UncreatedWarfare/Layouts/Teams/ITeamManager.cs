@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using Microsoft.Extensions.Configuration;
 using Uncreated.Warfare.Players;
 
@@ -53,5 +53,5 @@ public interface ITeamManager<out TTeam> where TTeam : Team
     /// <summary>
     /// Joins a player into a team if they're not already.
     /// </summary>
-    UniTask JoinTeamAsync(WarfarePlayer player, Team team, CancellationToken token = default);
+    UniTask JoinTeamAsync(WarfarePlayer player, Team team, bool wasByAdminCommand, CancellationToken token = default);
 }

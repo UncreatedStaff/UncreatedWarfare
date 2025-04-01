@@ -102,7 +102,7 @@ public class TwoSidedTeamManager : ITeamManager<Team>
     }
 
     /// <inheritdoc />
-    public async UniTask JoinTeamAsync(WarfarePlayer player, Team team, CancellationToken token = default)
+    public async UniTask JoinTeamAsync(WarfarePlayer player, Team team, bool wasByAdminCommand, CancellationToken token = default)
     {
         await UniTask.SwitchToMainThread(token);
 
@@ -146,7 +146,8 @@ public class TwoSidedTeamManager : ITeamManager<Team>
             GroupId = team.GroupId,
             Team = team,
             Player = player,
-            OldTeam = oldTeam
+            OldTeam = oldTeam,
+            WasByAdminCommand = wasByAdminCommand
         };
 
         _ = _eventDispatcher.DispatchEventAsync(args, CancellationToken.None);

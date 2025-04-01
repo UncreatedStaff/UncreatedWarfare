@@ -788,6 +788,42 @@ public static class AssetLink
     }
 
     /// <summary>
+    /// Convert an asset to a display string.
+    /// </summary>
+    public static string ToDisplayString<TAsset>(TAsset? asset) where TAsset : Asset
+    {
+        return asset == null ? "0" : ToDisplayString(asset, asset.id, asset.GUID);
+    }
+
+    /// <summary>
+    /// Convert an asset to a display string.
+    /// </summary>
+    public static string ToDisplayString<TAsset>(TAsset? asset, ushort id, Guid guid) where TAsset : Asset
+    {
+        if (asset == null)
+        {
+            return guid == Guid.Empty ? id.ToString("D", CultureInfo.InvariantCulture) : guid.ToString("N", CultureInfo.InvariantCulture);
+        }
+
+        if (guid != Guid.Empty)
+        {
+            if (id != 0)
+                return "\"" + asset.name + "\" {" + guid.ToString("N", CultureInfo.InvariantCulture) + "} (" +
+                       AssetUtility.GetAssetCategory(asset) + "/" +
+                       id.ToString("D", CultureInfo.InvariantCulture) + ")";
+
+            return "\"" + asset.name + "\" {" + guid.ToString("N", CultureInfo.InvariantCulture) + "}";
+        }
+
+        if (id != 0)
+            return "\"" + asset.name + "\" (" +
+                   AssetUtility.GetAssetCategory(asset) + "/" +
+                   id.ToString("F0", CultureInfo.InvariantCulture) + ")";
+
+        return "\"" + asset.name + "\"";
+    }
+
+    /// <summary>
     /// Caches a reference to an asset either by short ID or GUID.
     /// </summary>
     /// <typeparam name="TAsset">The type of asset to reference.</typeparam>
@@ -924,28 +960,7 @@ public static class AssetLink
 
         public string ToDisplayString()
         {
-            TAsset? asset = GetAsset();
-            if (asset == null)
-            {
-                return Guid == Guid.Empty ? Id.ToString("D", CultureInfo.InvariantCulture) : Guid.ToString("N", CultureInfo.InvariantCulture);
-            }
-
-            if (Guid != Guid.Empty)
-            {
-                if (Id != 0)
-                    return "\"" + asset.name + "\" {" + Guid.ToString("N", CultureInfo.InvariantCulture) + "} (" +
-                           AssetUtility.GetAssetCategory(asset) + "/" +
-                           Id.ToString("D", CultureInfo.InvariantCulture) + ")";
-
-                return "\"" + asset.name + "\" {" + Guid.ToString("N", CultureInfo.InvariantCulture) + "}";
-            }
-
-            if (Id != 0)
-                return "\"" + asset.name + "\" (" +
-                       AssetUtility.GetAssetCategory(asset) + "/" +
-                       Id.ToString("F0", CultureInfo.InvariantCulture) + ")";
-
-            return "\"" + asset.name + "\"";
+            return AssetLink.ToDisplayString(GetAsset(), Id, Guid);
         }
 
         public string ToDisplayString(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)

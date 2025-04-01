@@ -1,4 +1,7 @@
-﻿using Uncreated.Warfare.Events.Components;
+using System;
+using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Events.Components;
+using Uncreated.Warfare.Events.Logging;
 using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Events.Models.Barricades;
@@ -6,7 +9,7 @@ namespace Uncreated.Warfare.Events.Models.Barricades;
 /// <summary>
 /// Event listener args which handles a patch after trap triggered.
 /// </summary>
-public class TrapTriggered
+public class TrapTriggered : IActionLoggableEvent
 {
     /// <summary>
     /// Player that placed the barricade.
@@ -62,4 +65,38 @@ public class TrapTriggered
     /// Animal that triggered the trap.
     /// </summary>
     public required Animal? TriggeringAnimal { get; init; }
+
+    /// <inheritdoc />
+    public ActionLogEntry GetActionLogEntry(IServiceProvider serviceProvider, ref ActionLogEntry[]? multipleEntries)
+    {
+        BarricadeData serversideData = Barricade.GetServersideData();
+        if (TriggeringThrowableAssset != null)
+        {
+            return new ActionLogEntry(ActionLogTypes.TrapTriggered,
+                $"Barricade {AssetLink.ToDisplayString(Barricade.asset)} owned by {serversideData.owner} ({serversideData.group}) # {Barricade.instanceID} " +
+                $"Triggered by throwable {AssetLink.ToDisplayString(TriggeringThrowableAssset)}",
+                TriggeringPlayer
+            );
+        }
+        if (TriggeringZombie != null)
+        {
+            return new ActionLogEntry(ActionLogTypes.BuildableSignChanged,
+                $"Barricade {AssetLink.ToDisplayString(Barricade.asset)} owned by {serversideData.owner} ({serversideData.group}) # {Barricade.instanceID} triggered by zombie",
+                TriggeringPlayer
+            );
+        }
+        if (TriggeringAnimal != null)
+        {
+            return new ActionLogEntry(ActionLogTypes.BuildableSignChanged,
+                $"Barricade {AssetLink.ToDisplayString(Barricade.asset)} owned by {serversideData.owner} ({serversideData.group}) # {Barricade.instanceID} " +
+                $"triggered by animal {AssetLink.ToDisplayString(TriggeringAnimal.asset)}",
+                TriggeringPlayer
+            );
+        }
+
+        return new ActionLogEntry(ActionLogTypes.BuildableSignChanged,
+            $"Barricade {AssetLink.ToDisplayString(Barricade.asset)} owned by {serversideData.owner} ({serversideData.group}) # {Barricade.instanceID}",
+            TriggeringPlayer
+        );
+    }
 }

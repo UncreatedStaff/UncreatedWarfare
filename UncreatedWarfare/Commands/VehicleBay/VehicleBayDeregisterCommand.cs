@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Interaction.Commands;
@@ -64,7 +64,7 @@ internal sealed class VehicleBayDeregisterCommand : IExecutableCommand
             }
         }
 
-        Context.LogAction(ActionLogType.DeregisteredSpawn, spawner.ToDisplayString());
+        // todo: Context.LogAction(ActionLogType.DeregisteredSpawn, spawner.ToDisplayString());
         Context.Reply(_translations.SpawnDeregistered!, spawner.SpawnInfo.UniqueName, spawner.VehicleInfo.VehicleAsset.GetAsset());
     }
 }

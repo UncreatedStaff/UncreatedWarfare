@@ -1,11 +1,13 @@
-﻿using Uncreated.Warfare.Layouts.Teams;
+using System;
+using Uncreated.Warfare.Events.Logging;
+using Uncreated.Warfare.Layouts.Teams;
 
 namespace Uncreated.Warfare.Events.Models.Players;
 
 /// <summary>
 /// Event listener args which handles <see cref="Provider.onServerConnected"/>.
 /// </summary>
-public class PlayerLeft : PlayerEvent
+public class PlayerLeft : PlayerEvent, IActionLoggableEvent
 {
     /*
      *  All this data is made available for events that need to access it after the player object has already been destroyed.
@@ -15,6 +17,11 @@ public class PlayerLeft : PlayerEvent
     /// The position of the player when they left.
     /// </summary>
     public required Vector3 Position { get; init; }
+
+    /// <summary>
+    /// The amount of time the player was online.
+    /// </summary>
+    public required TimeSpan TimeOnline { get; init; }
 
     /// <summary>
     /// The rotation of the player when they left.
@@ -42,4 +49,13 @@ public class PlayerLeft : PlayerEvent
     /// Token that gets cancelled once the player is about to be disconnected.
     /// </summary>
     public required CancellationToken DisconnectToken { get; init; }
+
+    /// <inheritdoc />
+    public ActionLogEntry GetActionLogEntry(IServiceProvider serviceProvider, ref ActionLogEntry[]? multipleEntries)
+    {
+        return new ActionLogEntry(ActionLogTypes.Disconnect,
+            $"{Player} @ {Position:F2}, {Rotation:F2}, Team: {Team}, Time online: {TimeOnline:c}",
+            Player.Steam64.m_SteamID
+        );
+    }
 }

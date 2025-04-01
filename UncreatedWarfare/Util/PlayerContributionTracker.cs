@@ -144,6 +144,8 @@ public class PlayerContributionTracker : IEnumerable<PlayerWork>
         private readonly PlayerContributionTracker _tracker;
         private int _index;
 
+        public int Count => _tracker.ContributorCount;
+
         /// <inheritdoc />
         public CSteamID Current { get; private set; }
 

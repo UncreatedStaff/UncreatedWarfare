@@ -1,4 +1,4 @@
-﻿using Uncreated.Warfare.Squads;
+using Uncreated.Warfare.Squads;
 
 namespace Uncreated.Warfare.Events.Models.Squads;
 

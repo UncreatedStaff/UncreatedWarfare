@@ -93,7 +93,7 @@ public partial class FobManager :
                         return;
 
                     unbuiltFob.MarkBuilt(completedBuildable!);
-                    _ = WarfareModule.EventDispatcher.DispatchEventAsync(new FobBuilt { Fob = unbuiltFob }, CancellationToken.None);
+                    _ = WarfareModule.EventDispatcher.DispatchEventAsync(new FobBuilt { Fob = unbuiltFob, Shovelable = shovelable }, CancellationToken.None);
                 };
             }
             return;

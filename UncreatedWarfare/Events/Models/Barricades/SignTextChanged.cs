@@ -1,4 +1,7 @@
-﻿using Uncreated.Warfare.Buildables;
+using System;
+using Uncreated.Warfare.Buildables;
+using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Events.Logging;
 using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Events.Models.Barricades;
@@ -6,7 +9,7 @@ namespace Uncreated.Warfare.Events.Models.Barricades;
 /// <summary>
 /// Event listener args which handles a patch on <see cref="InteractableSign.updateText"/>.
 /// </summary>
-public class SignTextChanged
+public class SignTextChanged : IActionLoggableEvent
 {
     private IBuildable? _cachedBuildable;
 
@@ -64,5 +67,16 @@ public class SignTextChanged
     /// <summary>
     /// New text on the sign.
     /// </summary>
-    public string Text => Sign.text;
+    public required string Text { get; init; }
+
+    /// <inheritdoc />
+    public ActionLogEntry GetActionLogEntry(IServiceProvider serviceProvider, ref ActionLogEntry[]? multipleEntries)
+    {
+        BarricadeData serversideData = Barricade.GetServersideData();
+        return new ActionLogEntry(ActionLogTypes.BuildableSignChanged,
+            $"Barricade {AssetLink.ToDisplayString(Barricade.asset)} owned by {serversideData.owner} ({serversideData.group}) # {Barricade.instanceID}, " +
+            $"New text: \"{Text}\"",
+            Instigator
+        );
+    }
 }

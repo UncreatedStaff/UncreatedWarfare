@@ -1,13 +1,12 @@
-﻿using Uncreated.Warfare.Buildables;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Fobs;
-using Uncreated.Warfare.Layouts.Teams;
-using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.FOBs.SupplyCrates;
 
 public class AmmoSupplyCrate : IAmmoStorage
 {
     private readonly NearbySupplyCrates _nearbySupplyCrates;
+    private readonly SupplyCrate _supplyCrate;
     public float AmmoCount => _nearbySupplyCrates.AmmoCount;
     public CSteamID Owner { get; }
 
@@ -15,6 +14,7 @@ public class AmmoSupplyCrate : IAmmoStorage
     {
         _nearbySupplyCrates = NearbySupplyCrates.FromSingleCrate(supplyCrate, fobManager);
         Owner = supplyCrate.Buildable.Owner;
+        _supplyCrate = supplyCrate;
     }
 
     public static AmmoSupplyCrate FromSupplyCrate(SupplyCrate supplyCrate, FobManager fobManager)
@@ -26,4 +26,9 @@ public class AmmoSupplyCrate : IAmmoStorage
         _nearbySupplyCrates.SubstractSupplies(ammoCount, SupplyType.Ammo, SupplyChangeReason.ConsumeGeneral);
     }
 
+    /// <inheritdoc />
+    public override string ToString()
+    {
+        return AssetLink.ToDisplayString(_supplyCrate.Buildable.Asset) + $" ({AmmoCount:F2} ammo)";
+    }
 }

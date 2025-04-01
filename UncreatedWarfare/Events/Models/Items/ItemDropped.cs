@@ -1,3 +1,6 @@
+using System;
+using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Events.Logging;
 using Uncreated.Warfare.Kits.Items;
 
 namespace Uncreated.Warfare.Events.Models.Items;
@@ -5,7 +8,7 @@ namespace Uncreated.Warfare.Events.Models.Items;
 /// <summary>
 /// Invoked by <see cref="PlayerInventory.ReceiveDropItem"/>.
 /// </summary>
-public class ItemDropped : PlayerEvent
+public class ItemDropped : PlayerEvent, IActionLoggableEvent
 {
     /// <summary>
     /// Extra information about the dropped item.
@@ -66,5 +69,14 @@ public class ItemDropped : PlayerEvent
     /// <summary>
     /// The rotation of the old item that was dropped before it was removed.
     /// </summary>
-    public required byte OldRotation { get; init;}
+    public required byte OldRotation { get; init; }
+
+    /// <inheritdoc />
+    public ActionLogEntry GetActionLogEntry(IServiceProvider serviceProvider, ref ActionLogEntry[]? multipleEntries)
+    {
+        return new ActionLogEntry(ActionLogTypes.DroppedItem,
+            $"Item {AssetLink.ToDisplayString(Asset)} from {OldPage} @ {OldX}, {OldY}, r{OldRotation} to # {InstanceId} @ {ServersidePoint}",
+            Player.Steam64.m_SteamID
+        );
+    }
 }

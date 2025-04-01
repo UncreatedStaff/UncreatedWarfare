@@ -6,6 +6,7 @@ using Uncreated.Framework.UI;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Logging;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Events.Models.Vehicles;
@@ -276,7 +277,7 @@ public class PlayerInjureComponent : MonoBehaviour,
         AddInjureModifiers(ref parameters);
         _injureParameters = parameters;
 
-        ActionLog.Add(ActionLogType.Injured, "by " + (killer == null ? "self" : killer.Steam64.m_SteamID.ToString(CultureInfo.InvariantCulture)), parameters.player.channel.owner.playerID.steamID.m_SteamID);
+        // todo: ActionLog.Add(ActionLogType.Injured, "by " + (killer == null ? "self" : killer.Steam64.m_SteamID.ToString(CultureInfo.InvariantCulture)), parameters.player.channel.owner.playerID.steamID.m_SteamID);
 
         PendingDeathInfo = _deathTracker.GetInjuredArguments(in parameters);
 
@@ -533,12 +534,6 @@ public class PlayerInjureComponent : MonoBehaviour,
 
         if (!canRevive)
             return;
-
-        ActionLog.Add(
-            ActionLogType.RevivedPlayer,
-            e.Player.Steam64.m_SteamID.ToString(CultureInfo.InvariantCulture),
-            e.Medic.Steam64
-        );
 
         Revive(e.Medic);
 

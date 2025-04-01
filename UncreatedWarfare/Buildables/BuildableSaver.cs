@@ -12,7 +12,6 @@ using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Events.Models.Buildables;
 using Uncreated.Warfare.Interaction;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Models.Buildables;
@@ -962,7 +961,7 @@ public class BuildableSaver :
                 if (e.Instigator != null && _translations != null && _chatService != null)
                 {
                     _chatService.Send(e.Instigator, _translations.StructureUpdated, e.Buildable.Asset);
-                    ActionLog.Add(ActionLogType.SaveStructure, e.Buildable.InstanceId + " " + AssetLink.Create(e.Buildable.Asset).ToDisplayString(), e.Instigator.Steam64);
+                    // todo: ActionLog.Add(ActionLogType.SaveStructure, e.Buildable.InstanceId + " " + AssetLink.Create(e.Buildable.Asset).ToDisplayString(), e.Instigator.Steam64);
                 }
             }
             catch (Exception ex)
@@ -991,7 +990,7 @@ public class BuildableSaver :
                 if (e.Instigator != null && _translations != null && _chatService != null)
                 {
                     _chatService.Send(e.Instigator, _translations.StructureUnsaved, e.Buildable.Asset);
-                    ActionLog.Add(ActionLogType.UnsaveStructure, e.Buildable.InstanceId + " " + AssetLink.Create(e.Buildable.Asset).ToDisplayString(), e.Instigator.Steam64);
+                    // todo: ActionLog.Add(ActionLogType.UnsaveStructure, e.Buildable.InstanceId + " " + AssetLink.Create(e.Buildable.Asset).ToDisplayString(), e.Instigator.Steam64);
                 }
             }
             catch (Exception ex)
@@ -1019,7 +1018,7 @@ public class BuildableSaver :
                 if (e.Instigator != null && _translations != null && _chatService != null)
                 {
                     _chatService.Send(e.Instigator, _translations.StructureUpdated, e.Buildable.Asset);
-                    ActionLog.Add(ActionLogType.SaveStructure, e.Buildable.InstanceId + " " + AssetLink.Create(e.Buildable.Asset).ToDisplayString(), e.Instigator.Steam64);
+                    // todo: ActionLog.Add(ActionLogType.SaveStructure, e.Buildable.InstanceId + " " + AssetLink.Create(e.Buildable.Asset).ToDisplayString(), e.Instigator.Steam64);
                 }
             }
             catch (Exception ex)

@@ -1,4 +1,4 @@
-﻿using Uncreated.Warfare.Interaction.Commands;
+using Uncreated.Warfare.Interaction.Commands;
 
 namespace Uncreated.Warfare.Commands;
 
@@ -127,7 +127,7 @@ internal sealed class LoadCommand : IExecutableCommand
 
         vehicleComponent.StartForceLoadSupplies(Context.Player, type, amount);
 
-        Context.LogAction(ActionLogType.LoadSupplies, type + " x" + amount);
+        // todo: Context.LogAction(ActionLogType.LoadSupplies, type + " x" + amount);
         Context.Defer();
 #endif
         return UniTask.CompletedTask;

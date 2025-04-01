@@ -1,4 +1,4 @@
-﻿using Uncreated.Warfare.Events.Components;
+using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 

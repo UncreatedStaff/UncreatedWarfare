@@ -1,9 +1,14 @@
+using System;
+using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Events.Logging;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.Events.Models.Vehicles;
-public class VehicleExploded
+
+public class VehicleExploded : IActionLoggableEvent
 {
     /// <summary>
     /// The actual vehicle that was destroyed.
@@ -59,4 +64,13 @@ public class VehicleExploded
     /// The origin of the damage done to this vehicle.
     /// </summary>
     public required EDamageOrigin DamageOrigin { get; init; }
+
+    /// <inheritdoc />
+    public ActionLogEntry GetActionLogEntry(IServiceProvider serviceProvider, ref ActionLogEntry[]? multipleEntries)
+    {
+        return new ActionLogEntry(ActionLogTypes.VehicleExploded,
+            $"{AssetLink.ToDisplayString(Vehicle.Asset)} owned by {Vehicle.Vehicle.lockedOwner} ({Team}), Damage origin: {EnumUtility.GetName(DamageOrigin)}, Last driver: {LastDriverId}",
+            InstigatorId
+        );
+    }
 }

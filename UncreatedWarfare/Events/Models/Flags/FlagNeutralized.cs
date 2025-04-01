@@ -1,4 +1,6 @@
-﻿using Uncreated.Warfare.Layouts.Flags;
+using System;
+using Uncreated.Warfare.Events.Logging;
+using Uncreated.Warfare.Layouts.Flags;
 using Uncreated.Warfare.Layouts.Teams;
 
 namespace Uncreated.Warfare.Events.Models.Flags;
@@ -8,7 +10,7 @@ namespace Uncreated.Warfare.Events.Models.Flags;
 /// "Neutralized" means one team successfully reduced the former owner team's contest points to zero, 
 /// causing <see cref="FlagObjective.Owner"/> to become neutral (<see cref="Team.NoTeam"/>).
 /// </summary>
-public class FlagNeutralized
+public class FlagNeutralized : IActionLoggableEvent
 {
     /// <summary>
     /// The flag that was neutralized.
@@ -19,4 +21,13 @@ public class FlagNeutralized
     /// but rather simply the team that caused it's owner to change.
     /// </summary>
     public required Team Neutralizer { get; init; }
+
+    /// <inheritdoc />
+    public ActionLogEntry GetActionLogEntry(IServiceProvider serviceProvider, ref ActionLogEntry[]? multipleEntries)
+    {
+        return new ActionLogEntry(ActionLogTypes.FlagCaptured,
+            $"Flag {Flag.Index}: \"{Flag.Name}\" neutralized by team {Neutralizer} (on flag: {string.Join(", ", Flag.Players)}).",
+            0
+        );
+    }
 }

@@ -1,4 +1,4 @@
-﻿namespace Uncreated.Warfare.Events.Models.Objects;
+namespace Uncreated.Warfare.Events.Models.Objects;
 
 /// <summary>
 /// Triggers after a <see cref="InteractableObjectQuest"/> or <see cref="InteractableObjectNote"/> gets interacted with.

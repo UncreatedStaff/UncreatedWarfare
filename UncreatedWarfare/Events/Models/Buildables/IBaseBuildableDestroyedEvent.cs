@@ -1,16 +1,17 @@
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Layouts.Teams;
-using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Events.Logging;
 using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Events.Models.Structures;
+using Uncreated.Warfare.Layouts.Teams;
+using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Events.Models.Buildables;
 
 /// <summary>
 /// Invoked when a barricade or structure is destroyed (<see cref="BarricadeDestroyed"/> and <see cref="StructureDestroyed"/>)
 /// </summary>
-public interface IBuildableDestroyedEvent : IBaseBuildableDestroyedEvent;
+public interface IBuildableDestroyedEvent : IBaseBuildableDestroyedEvent, IActionLoggableEvent;
 
 /// <summary>
 /// Invoked when a barricade or structure is about to be damaged (<see cref="DamageBarricadeRequested"/> and <see cref="DamageStructureRequested"/>).

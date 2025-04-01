@@ -1,4 +1,7 @@
+using System;
 using Uncreated.Warfare.Buildables;
+using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Events.Logging;
 using Uncreated.Warfare.Events.Models.Buildables;
 using Uncreated.Warfare.Players;
 
@@ -64,4 +67,14 @@ public class BarricadePlaced : IBuildablePlacedEvent
     /// If this barricade is being placed on a vehicle.
     /// </summary>
     public bool IsOnVehicle => VehicleRegionIndex != ushort.MaxValue;
+
+    /// <inheritdoc />
+    public ActionLogEntry GetActionLogEntry(IServiceProvider serviceProvider, ref ActionLogEntry[]? multipleEntries)
+    {
+        return new ActionLogEntry(ActionLogTypes.BuildableDestroyed,
+            $"Barricade {AssetLink.ToDisplayString(Barricade.asset)} owned by {ServersideData.owner} ({ServersideData.group}) # {Barricade.instanceID} (on vehicle: {IsOnVehicle}) " +
+            $"@ {ServersideData.point:F2}, {ServersideData.rotation:F2}",
+            Owner?.Steam64.m_SteamID ?? 0
+        );
+    }
 }

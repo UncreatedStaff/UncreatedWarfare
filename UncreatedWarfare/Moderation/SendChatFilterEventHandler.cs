@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Interaction;
@@ -31,7 +31,7 @@ internal class SendChatFilterEventHandler : IEventListener<PlayerChatRequested>
             return;
 
         _chatService.Send(e.Player, _translations.ChatFilterFeedback, match);
-        ActionLog.Add(ActionLogType.ChatFilterViolation, e.ChatMode switch { EChatMode.LOCAL => "AREA/SQUAD: ", EChatMode.GLOBAL => "GLOBAL: ", _ => "TEAM: " } + e.Text, e.Steam64);
+        // todo: ActionLog.Add(ActionLogType.ChatFilterViolation, e.ChatMode switch { EChatMode.LOCAL => "AREA/SQUAD: ", EChatMode.GLOBAL => "GLOBAL: ", _ => "TEAM: " } + e.Text, e.Steam64);
         e.Cancel();
     }
 }

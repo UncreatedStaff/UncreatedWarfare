@@ -107,6 +107,7 @@ public class WarfarePlayer :
     public ref PlayerPoints CachedPoints => ref _cachedPoints;
     public double CachedReputation { get; internal set; } = double.NaN;
     public bool IsFirstTimePlaying { get; }
+    public DateTime JoinTime { get; }
 
     /// <summary>
     /// List of steam IDs of this player's friends, if theyre public.
@@ -195,6 +196,8 @@ public class WarfarePlayer :
         Save = new BinaryPlayerSave(Steam64, _logger);
         Save.Load();
 
+        JoinTime = DateTime.UtcNow;
+        
         pendingEvent.LanguagePreferences.Steam64 = _steam64.m_SteamID;
         Locale = new WarfarePlayerLocale(this, pendingEvent.LanguagePreferences, serviceProvider);
 

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Interaction;
@@ -29,7 +29,7 @@ public static class RallyManager
                     player.Squad.RallyPoint.Destroy();
                 }
 
-                ActionLog.Add(ActionLogType.PlacedRally, "AT " + drop.model.position.ToString("F1"), player.Squad.Leader);
+                // todo: ActionLog.Add(ActionLogType.PlacedRally, "AT " + drop.model.position.ToString("F1"), player.Squad.Leader);
 
                 RallyPoint rallypoint = drop.model.gameObject.AddComponent<RallyPoint>();
                 rallypoint.Initialize(player.Squad);
@@ -193,7 +193,7 @@ public class RallyPoint : MonoBehaviour, IManualOnDestroy
         if (player.IsOnline && !player.Player.life.isDead && player.Player.movement.getVehicle() == null)
         {
             player.Player.teleportToLocation(new Vector3(transform.position.x, transform.position.y + RallyManager.TELEPORT_HEIGHT_OFFSET, transform.position.z), transform.rotation.eulerAngles.y);
-            ActionLog.Add(ActionLogType.TeleportedToRally, "AT " + transform.position.ToString() + " PLACED BY " + Squad.Leader.Steam64.ToString(), player);
+            // todo: ActionLog.Add(ActionLogType.TeleportedToRally, "AT " + transform.position.ToString() + " PLACED BY " + Squad.Leader.Steam64.ToString(), player);
             player.SendChat(T.RallySuccess);
         }
 

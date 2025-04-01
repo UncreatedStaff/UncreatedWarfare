@@ -130,7 +130,6 @@ internal class PointsRewardsEvents :
                 ? _translations.XPToastAircraftDestroyed
                 : _translations.XPToastVehicleDestroyed;
 
-            Console.WriteLine($"Friendly vehicle taking {@event.XP} {@event.Credits} {@event.Reputation} {@event.Name}.");
             await _points.ApplyEvent(e.InstigatorId, faction, @event.Resolve().WithTranslation(translation, e.Vehicle.Info.Type, e.Instigator), token).ConfigureAwait(false);
         }
         else
@@ -141,8 +140,9 @@ internal class PointsRewardsEvents :
                 ? _translations.XPToastAircraftDestroyed
                 : _translations.XPToastVehicleDestroyed;
 
-            List<Task> tasks = new List<Task>();
-            foreach (CSteamID playerId in e.Vehicle.DamageTracker.Contributors)
+            PlayerContributionTracker.ContributorEnumerator contributers = e.Vehicle.DamageTracker.Contributors;
+            List<Task> tasks = new List<Task>(contributers.Count);
+            foreach (CSteamID playerId in contributers)
             {
                 float contributionPercentage = e.Vehicle.DamageTracker.GetDamageContributionPercentage(playerId, DateTime.Now.Subtract(TimeSpan.FromMinutes(3)));
                 
@@ -173,7 +173,6 @@ internal class PointsRewardsEvents :
                 else
                     continue;
 
-                Console.WriteLine($"Enemy vehicle taking {contributor.Steam64} {resolvedEvent.XP} {resolvedEvent.Credits} {resolvedEvent.Reputation} {@event.Name}.");
                 Task task = _points.ApplyEvent(contributor.Steam64, faction, resolvedEvent.WithTranslation(translation, e.Vehicle.Info.Type, contributor), token);
                 tasks.Add(task);
             }

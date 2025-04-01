@@ -117,7 +117,7 @@ public class PlayerLobbyComponent : IPlayerComponent
             joiningTeam = _joiningTeam < 0 || _joiningTeam >= _lobbyManager.TeamFlags.Length ? Team.NoTeam : (_lobbyManager.TeamFlags[_joiningTeam].Team ?? Team.NoTeam);
 
             // join Unturned group
-            UniTask joinTeamTask = _teamManager.JoinTeamAsync(Player, joiningTeam, Player.DisconnectToken);
+            UniTask joinTeamTask = _teamManager.JoinTeamAsync(Player, joiningTeam, wasByAdminCommand: false, Player.DisconnectToken);
             _joiningTeam = -1;
             await joinTeamTask;
         }

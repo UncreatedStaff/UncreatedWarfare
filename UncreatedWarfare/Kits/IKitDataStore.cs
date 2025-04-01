@@ -528,7 +528,7 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
     [MethodImpl(MethodImplOptions.NoInlining)]
     private void ApplyCreateKitModuleActive(Kit kit, ulong creatingPlayer)
     {
-        ActionLog.Add(ActionLogType.CreateKit, kit.Id, creatingPlayer);
+        // todo: ActionLog.Add(ActionLogType.CreateKit, kit.Id, creatingPlayer);
 
         if (kit.Type == KitType.Loadout && LoadoutIdHelper.Parse(kit.Id, out CSteamID player) >= 0)
         {

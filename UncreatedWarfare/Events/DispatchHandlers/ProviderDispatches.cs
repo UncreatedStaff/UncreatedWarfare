@@ -134,6 +134,7 @@ partial class EventDispatcher
             Player = player,
             Position = t.position,
             Rotation = t.rotation,
+            TimeOnline = DateTime.UtcNow - player.JoinTime,
             LookPosition = aim.position,
             LookForward = aim.forward,
             Team = player.Team,

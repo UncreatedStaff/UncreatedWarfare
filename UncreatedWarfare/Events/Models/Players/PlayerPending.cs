@@ -1,16 +1,18 @@
 using System;
 using System.Globalization;
 using System.Reflection;
+using Uncreated.Warfare.Events.Logging;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players.Saves;
 using Uncreated.Warfare.Steam.Models;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Events.Models.Players;
 
 /// <summary>
 /// Event listener args which handles a patch on when the player gets put in the queue.
 /// </summary>
-public sealed class PlayerPending : CancellableEvent
+public sealed class PlayerPending : CancellableEvent, IActionLoggableEvent
 {
     internal readonly LanguagePreferences LanguagePreferences;
 
@@ -441,5 +443,35 @@ public sealed class PlayerPending : CancellableEvent
         RejectReason = reason;
         Cancel();
         return new ControlException();
+    }
+
+    /// <inheritdoc />
+    public ActionLogEntry GetActionLogEntry(IServiceProvider serviceProvider, ref ActionLogEntry[]? multipleEntries)
+    {
+        return new ActionLogEntry(ActionLogTypes.TryConnect,
+            $"{Steam64} Sn: {PlayerName}, Cn: {CharacterName}, Nn: {NickName}, Character: {CharacterIndex}, " +
+            $"New player: {(IsNewPlayer ? "T" : "F")}, " +
+            $"Face: {FaceIndex} (#{HexStringHelper.FormatHexColor(SkinColor)}), " +
+            $"Beard: {BeardIndex}, " +
+            $"Hair: {HairIndex} (#{HexStringHelper.FormatHexColor(HairColor)}), " +
+            $"Marker: #{HexStringHelper.FormatHexColor(MarkerColor)}, " +
+            $"Hand: {(IsLeftHanded ? "LEFT" : "RIGHT")}, " +
+            $"HasGold: {(HasGold ? "T" : "F")}, " +
+            $"Skillset: {EnumUtility.GetNameSafe(Skillset)}, " +
+            $"Steam Language: {Language}, " +
+            $"Shirt: {EquippedMarketplaceShirt}, " +
+            $"Pants: {EquippedMarketplacePants}, " +
+            $"Hat: {EquippedMarketplaceHat}, " +
+            $"Backpack: {EquippedMarketplaceBackpack}, " +
+            $"Vest: {EquippedMarketplaceVest}, " +
+            $"Mask: {EquippedMarketplaceMask}, " +
+            $"Glasses: {EquippedMarketplaceGlasses}, " +
+            $"Skins: [ {string.Join(", ", EquippedSkins)} ], " +
+            $"Language: {LanguageInfo.Code}, " +
+            $"Culture: {CultureInfo.Name}, " +
+            $"TimeZone: {TimeZone.Id}, " +
+            $"Profile: {Summary.ProfileUrl}",
+            Steam64
+        );
     }
 }

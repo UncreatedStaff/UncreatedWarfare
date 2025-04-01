@@ -1,12 +1,15 @@
+using System;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Deaths;
+using Uncreated.Warfare.Events.Logging;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Models.GameData;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Events.Models.Players;
-public class PlayerDied : PlayerEvent
+public class PlayerDied : PlayerEvent, IActionLoggableEvent
 {
     private DamagePlayerParameters _parameters;
 
@@ -74,5 +77,25 @@ public class PlayerDied : PlayerEvent
     public PlayerDied(in DamagePlayerParameters parameters)
     {
         _parameters = parameters;
+    }
+
+    /// <inheritdoc />
+    public ActionLogEntry GetActionLogEntry(IServiceProvider serviceProvider, ref ActionLogEntry[]? multipleEntries)
+    {
+        string msg = DefaultMessage ?? string.Empty;
+        msg += $" - DeadSession: {Session?.SessionId}, KillerSession: {KillerSession?.SessionId}, ThirdPartySession: {ThirdPartySession?.SessionId}, Cheater: {IsGuaranteedCheaterKill}, Bannable: {WillBan}";
+        ActionLogEntry died = new ActionLogEntry(ActionLogTypes.PlayerDied, msg, Player.Steam64.m_SteamID);
+
+        if (!Instigator.IsIndividual() || Instigator.m_SteamID == Player.Steam64.m_SteamID)
+        {
+            return died;
+        }
+
+        multipleEntries =
+        [
+            died,
+            new ActionLogEntry(WasTeamkill ? ActionLogTypes.Teamkilled : ActionLogTypes.KilledPlayer, msg, Instigator)
+        ];
+        return default;
     }
 }

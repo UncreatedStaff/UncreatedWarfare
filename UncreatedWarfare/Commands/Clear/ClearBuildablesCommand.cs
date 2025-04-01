@@ -1,4 +1,4 @@
-﻿using Uncreated.Warfare.Buildables;
+using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Translations;
@@ -25,7 +25,7 @@ internal sealed class ClearBuildablesCommand : IExecutableCommand
 
         await UniTask.SwitchToMainThread(token);
 
-        Context.LogAction(ActionLogType.ClearStructures);
+        // todo: Context.LogAction(ActionLogType.ClearStructures);
         Context.Reply(_translations.ClearStructures);
     }
 }

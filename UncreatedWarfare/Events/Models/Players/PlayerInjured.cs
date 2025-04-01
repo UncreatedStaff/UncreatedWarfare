@@ -1,11 +1,14 @@
-﻿using Uncreated.Warfare.Players;
+using System;
+using Uncreated.Warfare.Events.Logging;
+using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Events.Models.Players;
 
 /// <summary>
 /// Handles a player being injured.
 /// </summary>
-public class PlayerInjured : PlayerEvent
+public class PlayerInjured : PlayerEvent, IActionLoggableEvent
 {
     private readonly DamagePlayerParameters _parameters;
 
@@ -21,5 +24,14 @@ public class PlayerInjured : PlayerEvent
     public PlayerInjured(in DamagePlayerParameters parameters)
     {
         _parameters = parameters;
+    }
+
+    /// <inheritdoc />
+    public ActionLogEntry GetActionLogEntry(IServiceProvider serviceProvider, ref ActionLogEntry[]? multipleEntries)
+    {
+        return new ActionLogEntry(ActionLogTypes.PlayerInjured,
+            $"{Player}, Cause: {EnumUtility.GetNameSafe(Parameters.cause)}, Limb: {EnumUtility.GetNameSafe(Parameters.limb)}.",
+            Instigator
+        );
     }
 }

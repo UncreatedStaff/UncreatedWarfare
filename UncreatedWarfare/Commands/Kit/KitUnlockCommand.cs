@@ -51,7 +51,7 @@ internal sealed class KitUnlockCommand : IExecutableCommand
             kit.Disabled = false;
         }, Context.CallerId, token).ConfigureAwait(false);
 
-        Context.LogAction(ActionLogType.SetKitProperty, kit.Id + ": DISABLED >> FALSE");
+        // todo: Context.LogAction(ActionLogType.SetKitProperty, kit.Id + ": DISABLED >> FALSE");
 
         throw Context.Reply(_translations.KitUnlocked, kit);
     }

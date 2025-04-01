@@ -162,7 +162,7 @@ public class DutyService : IAsyncEventListener<PlayerLeft>
             return;
         }
 
-        ActionLog.Add(ActionLogType.DutyChanged, isOnDuty ? "ON DUTY (offline)" : "OFF DUTY (offline)", steam64.m_SteamID);
+        // todo: ActionLog.Add(ActionLogType.DutyChanged, isOnDuty ? "ON DUTY (offline)" : "OFF DUTY (offline)", steam64.m_SteamID);
         try
         {
             await SendDutyChanged(steam64.m_SteamID, level, isOnDuty);
@@ -271,7 +271,7 @@ public class DutyService : IAsyncEventListener<PlayerLeft>
                 level == DutyLevel.Staff
             );
 
-            ActionLog.Add(ActionLogType.DutyChanged, "ON DUTY", player.Steam64);
+            // todo: ActionLog.Add(ActionLogType.DutyChanged, "ON DUTY", player.Steam64);
         }
 
         player.UpdateDutyState(true, level);
@@ -356,7 +356,7 @@ public class DutyService : IAsyncEventListener<PlayerLeft>
                 level == DutyLevel.Staff
             );
 
-            ActionLog.Add(ActionLogType.DutyChanged, "OFF DUTY", player.Steam64);
+            // todo: ActionLog.Add(ActionLogType.DutyChanged, "OFF DUTY", player.Steam64);
         }
 
         player.UpdateDutyState(false, level);

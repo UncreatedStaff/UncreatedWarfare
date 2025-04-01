@@ -1049,7 +1049,7 @@ partial class ModerationUI
                     current = entry;
                     if (current is AssetBan b)
                         logger.LogDebug("Entries: '{0}'.", b.VehicleTypeFilter);
-                    ActionLog.Add(ActionLogType.CreateModerationEntry, $"Entry Id {entry.Id}. {entry.GetType().Name}, \"{entry.Message ?? "No Message"}\".", player.Steam64);
+                    // todo: ActionLog.Add(ActionLogType.CreateModerationEntry, $"Entry Id {entry.Id}. {entry.GetType().Name}, \"{entry.Message ?? "No Message"}\".", player.Steam64);
                 }
                 else
                 {
@@ -1136,7 +1136,7 @@ partial class ModerationUI
                         return current;
                     }
 
-                    ActionLog.Add(ActionLogType.EditModerationEntry, $"Entry Id {entry.Id}. {entry.GetType().Name}. Changes: \"{changes}\"", player.Steam64);
+                    // todo: ActionLog.Add(ActionLogType.EditModerationEntry, $"Entry Id {entry.Id}. {entry.GetType().Name}. Changes: \"{changes}\"", player.Steam64);
                 }
 
                 await ui._moderationSql.AddOrUpdate(current, token).ConfigureAwait(false);
@@ -1226,7 +1226,7 @@ partial class ModerationUI
                     entry.Removed = true;
                     entry.PendingReputation -= entry.Reputation;
 
-                    ActionLog.Add(ActionLogType.RemoveModerationEntry, $"Entry #{entry.Id} ({entry.GetType().Name}) - " + msg, player.Steam64);
+                    // todo: ActionLog.Add(ActionLogType.RemoveModerationEntry, $"Entry #{entry.Id} ({entry.GetType().Name}) - " + msg, player.Steam64);
                     await _moderationSql.AddOrUpdate(entry, CancellationToken.None).ConfigureAwait(false);
                     select = entry;
                 }
@@ -1242,7 +1242,7 @@ partial class ModerationUI
                     entry.Removed = true;
                     entry.PendingReputation -= entry.Reputation;
 
-                    ActionLog.Add(ActionLogType.RemoveModerationEntry, $"Entry #{entry.Id} ({entry.GetType().Name}) - " + msg, player.Steam64);
+                    // todo: ActionLog.Add(ActionLogType.RemoveModerationEntry, $"Entry #{entry.Id} ({entry.GetType().Name}) - " + msg, player.Steam64);
                     await _moderationSql.AddOrUpdate(entry, CancellationToken.None).ConfigureAwait(false);
                     select ??= entry;
                 }
@@ -1288,7 +1288,7 @@ partial class ModerationUI
                     entry.ForgivenBy = actor;
                     entry.Forgiven = true;
 
-                    ActionLog.Add(ActionLogType.ForgiveModerationEntry, $"Entry #{entry.Id} ({entry.GetType().Name}) - " + msg, player.Steam64);
+                    // todo: ActionLog.Add(ActionLogType.ForgiveModerationEntry, $"Entry #{entry.Id} ({entry.GetType().Name}) - " + msg, player.Steam64);
                     await _moderationSql.AddOrUpdate(entry, CancellationToken.None);
                     data.PrimaryEditingEntry = entry as ModerationEntry;
                     if (data.PendingPreset != PresetType.None && entry is Punishment p)
@@ -1309,7 +1309,7 @@ partial class ModerationUI
                     entry.ForgivenBy = actor;
                     entry.Forgiven = true;
 
-                    ActionLog.Add(ActionLogType.ForgiveModerationEntry, $"Entry #{entry.Id} ({entry.GetType().Name}) - " + msg, player.Steam64);
+                    // todo: ActionLog.Add(ActionLogType.ForgiveModerationEntry, $"Entry #{entry.Id} ({entry.GetType().Name}) - " + msg, player.Steam64);
                     await _moderationSql.AddOrUpdate(entry, CancellationToken.None);
                     data.SecondaryEditingEntry = entry as ModerationEntry;
                     if (!sel)

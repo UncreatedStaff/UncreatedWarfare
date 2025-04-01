@@ -47,7 +47,7 @@ internal sealed class KitDeleteCommand : IExecutableCommand
 
         await _kitSql.DeleteKitAsync(kit.Key, token: token).ConfigureAwait(false);
 
-        Context.LogAction(ActionLogType.DeleteKit, kitName);
+        // todo: Context.LogAction(ActionLogType.DeleteKit, kitName);
 
         Context.Reply(_translations.KitDeleted, kit);
     }

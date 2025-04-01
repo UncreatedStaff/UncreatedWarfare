@@ -1,7 +1,5 @@
-using Microsoft.Extensions.Configuration;
 using SDG.Framework.Utilities;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models;

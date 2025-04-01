@@ -1,11 +1,10 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Players.Extensions;
-using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Tweaks;

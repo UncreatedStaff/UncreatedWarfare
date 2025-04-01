@@ -47,5 +47,5 @@ public class DropItemRequested : CancellablePlayerEvent
     /// <summary>
     /// The rotation of the item that will be dropped.
     /// </summary>
-    public required byte Rotation { get; init;}
+    public required byte Rotation { get; init; }
 }

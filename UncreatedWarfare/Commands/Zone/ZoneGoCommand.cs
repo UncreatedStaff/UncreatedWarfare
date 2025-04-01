@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Globalization;
 using Uncreated.Warfare.FOBs.Deployment;
@@ -115,7 +115,7 @@ internal sealed class ZoneGoCommand : IExecutableCommand
             DeploySettings settings = default;
             _deploymentService.TryStartDeployment(Context.Player, deployable, in settings);
             Context.Reply(_deployTranslations.DeploySuccess, deployable);
-            Context.LogAction(ActionLogType.Teleport, deployable.Translate(_translationService));
+            // todo: Context.LogAction(ActionLogType.Teleport, deployable.Translate(_translationService));
         }
         else
         {
@@ -126,7 +126,7 @@ internal sealed class ZoneGoCommand : IExecutableCommand
                 Context.Reply(_translations.ZoneGoSuccessRaw, loc.locationName);
             else
                 Context.Reply(_translations.ZoneGoSuccessGridLocation, location);
-            Context.LogAction(ActionLogType.Teleport, loc == null ? zone == null ? location.ToString() : zone.Name.ToUpper() : loc.locationName);
+            // todo: Context.LogAction(ActionLogType.Teleport, loc == null ? zone == null ? location.ToString() : zone.Name.ToUpper() : loc.locationName);
         }
 
         return UniTask.CompletedTask;

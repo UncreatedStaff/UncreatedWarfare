@@ -81,7 +81,7 @@ internal sealed class VehicleBayRegisterCommand : IExecutableCommand
             throw Context.SendUnknownError();
         }
 
-        Context.LogAction(ActionLogType.RegisteredSpawn, newSpawner.ToDisplayString());
+        // todo: Context.LogAction(ActionLogType.RegisteredSpawn, newSpawner.ToDisplayString());
 
         Context.Reply(_translations.SpawnRegistered, newSpawner.SpawnInfo.UniqueName, vehicleType);
     }

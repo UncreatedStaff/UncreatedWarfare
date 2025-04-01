@@ -221,6 +221,6 @@ internal sealed class GiveCommand : IExecutableCommand
             message += TranslationFormattingUtility.Colorize($" ({similarNamesCount} similarly named items exist)", "7f8182");
 
         Context.ReplyString(message);
-        Context.LogAction(ActionLogType.GiveItem, $"GAVE {amount}x {AssetLink.Create(asset).ToDisplayString()}");
+        // todo: Context.LogAction(ActionLogType.GiveItem, $"GAVE {amount}x {AssetLink.Create(asset).ToDisplayString()}");
     }
 }

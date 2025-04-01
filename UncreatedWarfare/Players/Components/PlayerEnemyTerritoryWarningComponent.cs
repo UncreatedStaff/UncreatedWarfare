@@ -162,8 +162,8 @@ internal class PlayerEnemyTerritoryWarningComponent : IPlayerComponent,
         _isMainCamping = false;
         Player.Save.MainCampTime = DateTime.MinValue;
         Player.Component<ToastManager>().SkipExpiration(ToastMessageStyle.FlashingWarning);
-        ActionLog.Add(ActionLogType.MainCampAttempt, $"Player team: {Player.Team}, " +
-                                                     $"Location: {Player.Position.ToString("0.#", CultureInfo.InvariantCulture)}", Player);
+        // todo: ActionLog.Add(ActionLogType.MainCampAttempt, $"Player team: {Player.Team}, " +
+        //                                              $"Location: {Player.Position.ToString("0.#", CultureInfo.InvariantCulture)}", Player);
     }
 
     private void CheckIsMainCamping()

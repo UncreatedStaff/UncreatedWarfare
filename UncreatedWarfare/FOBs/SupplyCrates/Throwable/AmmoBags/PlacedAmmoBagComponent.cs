@@ -1,8 +1,7 @@
-﻿using System;
 using Uncreated.Warfare.Buildables;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Util;
-using UnityEngine.Serialization;
 
 namespace Uncreated.Warfare.FOBs.SupplyCrates.Throwable.AmmoBags;
 
@@ -32,5 +31,11 @@ public class PlacedAmmoBagComponent : MonoBehaviour, IAmmoStorage
                 _buildable.Destroy();
             });
         }
+    }
+
+    /// <inheritdoc />
+    public override string ToString()
+    {
+        return AssetLink.ToDisplayString(_buildable.Asset) + $" ({AmmoCount:F2} ammo)";
     }
 }

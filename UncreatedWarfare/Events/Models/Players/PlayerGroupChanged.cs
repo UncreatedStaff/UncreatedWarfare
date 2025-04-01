@@ -1,4 +1,4 @@
-﻿using Uncreated.Warfare.Layouts.Teams;
+using Uncreated.Warfare.Layouts.Teams;
 
 namespace Uncreated.Warfare.Events.Models.Players;
 

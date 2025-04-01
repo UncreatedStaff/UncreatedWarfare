@@ -44,10 +44,10 @@ internal sealed class WhitelistAddCommand : IExecutableCommand
 
         await UniTask.SwitchToMainThread();
 
-        Context.LogAction(ActionLogType.AddWhitelist, $"{asset.itemName} / {asset.id} / {asset.GUID:N}");
+        // todo: Context.LogAction(ActionLogType.AddWhitelist, $"{asset.itemName} / {asset.id} / {asset.GUID:N}");
         if (amount != -1)
         {
-            Context.LogAction(ActionLogType.SetWhitelistMaxAmount, $"{asset.itemName} / {asset.id} / {asset.GUID:N} set to {amount}");
+            // todo: Context.LogAction(ActionLogType.SetWhitelistMaxAmount, $"{asset.itemName} / {asset.id} / {asset.GUID:N} set to {amount}");
         }
 
         Context.Reply(_translations.WhitelistAdded, asset);

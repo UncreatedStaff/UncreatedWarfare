@@ -29,7 +29,7 @@ internal sealed class KeepPlayerStateOnRejoinTweak : IAsyncEventListener<PlayerJ
 
         if (e.SaveData.LastGameId != _layout.LayoutId)
         {
-            await _layout.TeamManager.JoinTeamAsync(e.Player, Team.NoTeam, token);
+            await _layout.TeamManager.JoinTeamAsync(e.Player, Team.NoTeam, wasByAdminCommand: false, token);
             return;
         }
 
@@ -40,7 +40,7 @@ internal sealed class KeepPlayerStateOnRejoinTweak : IAsyncEventListener<PlayerJ
             if (team.IsValid)
             {
                 changedTeam = true;
-                await _layout.TeamManager.JoinTeamAsync(e.Player, team, token);
+                await _layout.TeamManager.JoinTeamAsync(e.Player, team, wasByAdminCommand: false, token);
                 await UniTask.SwitchToMainThread(token);
             }
         }

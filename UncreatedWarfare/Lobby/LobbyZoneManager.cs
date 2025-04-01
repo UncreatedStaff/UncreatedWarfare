@@ -172,7 +172,7 @@ public class LobbyZoneManager :
     /// </summary>
     public async UniTask JoinLobbyAsync(WarfarePlayer player, CancellationToken token = default)
     {
-        await _module.GetActiveLayout().TeamManager.JoinTeamAsync(player, Team.NoTeam, token);
+        await _module.GetActiveLayout().TeamManager.JoinTeamAsync(player, Team.NoTeam, wasByAdminCommand: false, token);
 
         if (_lobbyZone == null)
             return;

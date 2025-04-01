@@ -32,7 +32,7 @@ internal sealed class ClearVehiclesCommand : IExecutableCommand
         }
         // todo respawn all vehicles
 
-        Context.LogAction(ActionLogType.ClearVehicles);
+        // todo: Context.LogAction(ActionLogType.ClearVehicles);
         Context.Reply(_translations.ClearVehicles);
     }
 }

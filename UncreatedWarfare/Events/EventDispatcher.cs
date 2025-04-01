@@ -170,7 +170,6 @@ public partial class EventDispatcher : IHostedService, IDisposable
         DamageTool.damagePlayerRequested += DamageToolOnPlayerDamageRequested;
         UseableConsumeable.onPerformingAid += UseableConsumeableOnPlayerPerformingAid;
         UseableConsumeable.onPerformedAid += UseableConsumeableOnPlayerPerformedAid;
-        PlayerEquipment.OnPunch_Global += PlayerEquipmentOnPlayerPunch;
         PlayerQuests.onGroupChanged += PlayerQuestsOnGroupChanged;
         PlayerEquipment.OnUseableChanged_Global += PlayerEquipmentUseableChanged;
         PlayerLife.OnSelectingRespawnPoint += OnPlayerChooseSpawnAfterDeath;
@@ -229,7 +228,6 @@ public partial class EventDispatcher : IHostedService, IDisposable
         DamageTool.damagePlayerRequested -= DamageToolOnPlayerDamageRequested;
         UseableConsumeable.onPerformingAid -= UseableConsumeableOnPlayerPerformingAid;
         UseableConsumeable.onPerformedAid -= UseableConsumeableOnPlayerPerformedAid;
-        PlayerEquipment.OnPunch_Global -= PlayerEquipmentOnPlayerPunch;
         PlayerQuests.onGroupChanged -= PlayerQuestsOnGroupChanged;
         PlayerEquipment.OnUseableChanged_Global -= PlayerEquipmentUseableChanged;
         PlayerLife.OnSelectingRespawnPoint -= OnPlayerChooseSpawnAfterDeath;

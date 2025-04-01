@@ -101,7 +101,7 @@ internal sealed class KitRenameCommand : IExecutableCommand
 
         int ldId = LoadoutIdHelper.Parse(kit.Id);
         string ldIdStr = ldId == -1 ? "???" : LoadoutIdHelper.GetLoadoutLetter(ldId).ToUpperInvariant();
-        Context.LogAction(ActionLogType.SetKitProperty, $"{kit.Id}: SIGN TEXT | \"{defaultLanguage.Code}\" >> \"{newName}\" (using /kit rename)");
+        // todo: Context.LogAction(ActionLogType.SetKitProperty, $"{kit.Id}: SIGN TEXT | \"{defaultLanguage.Code}\" >> \"{newName}\" (using /kit rename)");
         Context.Reply(_translations.KitRenamed, ldIdStr, oldName, newName);
     }
 }

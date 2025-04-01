@@ -39,7 +39,7 @@ internal sealed class WhitelistRemoveCommand : IExecutableCommand
         }
 
         await UniTask.SwitchToMainThread();
-        Context.LogAction(ActionLogType.RemoveWhitelist, $"{asset.itemName} / {asset.id} / {asset.GUID:N}");
+        // todo: Context.LogAction(ActionLogType.RemoveWhitelist, $"{asset.itemName} / {asset.id} / {asset.GUID:N}");
         Context.Reply(_translations.WhitelistRemoved, asset);
     }
 }

@@ -120,7 +120,7 @@ internal sealed class KitSkillsetsCommand : IExecutableCommand
             throw Context.Reply(_translations.KitSkillsetNotFound, set, kit);
         }
 
-        Context.LogAction(add ? ActionLogType.AddSkillset : ActionLogType.RemoveSkillset, set + " ON " + kit.Id);
+        // todo: Context.LogAction(add ? ActionLogType.AddSkillset : ActionLogType.RemoveSkillset, set + " ON " + kit.Id);
         Context.Reply(add ? _translations.KitSkillsetAdded : _translations.KitSkillsetRemoved, set, kit);
 
         // update skills for all players

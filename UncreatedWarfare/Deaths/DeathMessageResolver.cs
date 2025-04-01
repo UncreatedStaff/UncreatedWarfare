@@ -537,26 +537,12 @@ public class DeathMessageResolver
         }
 
         str = await TranslateMessage(_languageService.GetDefaultLanguage(), CultureInfo.InvariantCulture, e, true, TranslationOptions.ForTerminal, token);
-        Log(tk, str, e);
+        _logger.LogInformation(str);
 
         e.DefaultMessage = str!;
 
         // invoke PlayerDied event
         _ = _dispatcher.DispatchEventAsync(e, CancellationToken.None);
-    }
-
-    private void Log(bool tk, string msg, PlayerDied e)
-    {
-        _logger.LogInformation(msg);
-        if (e.Instigator.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
-        {
-            ActionLog.Add(ActionLogType.Death, msg + " | Killer: " + e.Instigator.m_SteamID, e.Player.Steam64);
-            ActionLog.Add(ActionLogType.Kill, msg + " | Dead: " + e.Player.Steam64, e.Instigator.m_SteamID);
-            if (tk)
-                ActionLog.Add(ActionLogType.Teamkill, msg + " | Dead: " + e.Player.Steam64, e.Instigator.m_SteamID);
-        }
-        else
-            ActionLog.Add(ActionLogType.Death, msg, e.Player.Steam64);
     }
 
     private const string JsonComment = """

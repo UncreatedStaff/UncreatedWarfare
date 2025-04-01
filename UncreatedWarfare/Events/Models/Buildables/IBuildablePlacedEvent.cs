@@ -1,4 +1,5 @@
 using Uncreated.Warfare.Buildables;
+using Uncreated.Warfare.Events.Logging;
 using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Events.Models.Buildables;
@@ -6,7 +7,7 @@ namespace Uncreated.Warfare.Events.Models.Buildables;
 /// <summary>
 /// Base event for when a barricade or structure is placed.
 /// </summary>
-public interface IBuildablePlacedEvent
+public interface IBuildablePlacedEvent : IActionLoggableEvent
 {
     /// <summary>
     /// The owner of the buildable, if they're online.

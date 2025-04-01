@@ -108,7 +108,7 @@ internal sealed class KitSetCommand : IExecutableCommand
                 }
 
                 Context.Reply(_translations.KitPropertySet, property, kit!, newValue);
-                Context.LogAction(ActionLogType.SetKitProperty, kitId + ": " + property.ToUpper() + " >> " + newValue.ToUpper());
+                // todo: Context.LogAction(ActionLogType.SetKitProperty, kitId + ": " + property.ToUpper() + " >> " + newValue.ToUpper());
                 break;
         }
     }

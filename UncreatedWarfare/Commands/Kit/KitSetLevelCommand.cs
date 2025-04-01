@@ -81,6 +81,6 @@ internal sealed class KitSetLevelCommand : IExecutableCommand
         await UniTask.SwitchToMainThread(token);
 
         Context.Reply(_translations.KitPropertySet, "Level", kit, level.ToString(Context.Culture));
-        Context.LogAction(ActionLogType.SetKitProperty, kitId + ": LEVEL >> " + level);
+        // todo: Context.LogAction(ActionLogType.SetKitProperty, kitId + ": LEVEL >> " + level);
     }
 }

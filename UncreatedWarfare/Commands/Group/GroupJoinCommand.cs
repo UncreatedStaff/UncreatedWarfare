@@ -78,7 +78,7 @@ internal sealed class GroupJoinCommand : IExecutableCommand
 
         if (newTeam.IsValid)
         {
-            await _teamManager.JoinTeamAsync(Context.Player, newTeam, token);
+            await _teamManager.JoinTeamAsync(Context.Player, newTeam, wasByAdminCommand: true, token);
             await UniTask.SwitchToMainThread(token);
 
             if (Context.Player.Team != newTeam)
@@ -98,13 +98,13 @@ internal sealed class GroupJoinCommand : IExecutableCommand
         {
             Context.Reply(_translations.JoinedGroup, newTeam.GroupId.m_SteamID, newTeam.Faction.Name, newTeam.Faction.Color);
             Context.Logger.LogInformation("{0} ({1}) joined group \"{2}\": {3} (ID {4}).", Context.Player.Names.GetDisplayNameOrPlayerName(), Context.CallerId, newTeam.Faction, newTeam, groupInfo.groupID);
-            Context.LogAction(ActionLogType.ChangeGroupWithCommand, "GROUP: " + newTeam.Faction.Name.ToUpper());
+            // todo: Context.LogAction(ActionLogType.ChangeGroupWithCommand, "GROUP: " + newTeam.Faction.Name.ToUpper());
         }
         else
         {
             Context.Reply(_translations.JoinedGroupNoName, groupInfo.groupID.m_SteamID);
             Context.Logger.LogInformation("{0} ({1}) joined group ID {2}.", Context.Player.Names.GetDisplayNameOrPlayerName(), Context.CallerId, groupInfo.groupID);
-            Context.LogAction(ActionLogType.ChangeGroupWithCommand, "GROUP: " + groupInfo.groupID.m_SteamID.ToString("D17", CultureInfo.InvariantCulture));
+            // todo: Context.LogAction(ActionLogType.ChangeGroupWithCommand, "GROUP: " + groupInfo.groupID.m_SteamID.ToString("D17", CultureInfo.InvariantCulture));
         }
     }
 }

@@ -254,20 +254,6 @@ partial class EventDispatcher
     }
 
     /// <summary>
-    /// Invoked by <see cref="PlayerEquipment.OnPunch_Global"/> when a player punches with either hand.
-    /// </summary>
-    private void PlayerEquipmentOnPlayerPunch(PlayerEquipment player, EPlayerPunch punchType)
-    {
-        PlayerPunched args = new PlayerPunched
-        {
-            Player = _playerService.GetOnlinePlayer(player.player),
-            PunchType = punchType
-        };
-
-        _ = DispatchEventAsync(args, _unloadToken);
-    }
-
-    /// <summary>
     /// Invoked by <see cref="PlayerQuests.onGroupChanged"/> when a player's group ID or rank chnages.
     /// </summary>
     private void PlayerQuestsOnGroupChanged(PlayerQuests sender, CSteamID oldGroupId, EPlayerGroupRank oldGroupRank, CSteamID newGroupId, EPlayerGroupRank newGroupRank)

@@ -89,6 +89,14 @@ public static class EnumUtility
     /// <remarks>Flag enums will simply call back to <see cref="Enum.ToString"/> for composite values.</remarks>
     /// <returns>The name of the field represented by the enum, or a comma separated list of all flags if the <see cref="FlagsAttribute"/> is present.</returns>
     /// <exception cref="InvalidOperationException">Invalid enum type.</exception>
+    public static string GetNameSafe<TEnum>(TEnum value) where TEnum : unmanaged, Enum => GetName(value) ?? value.ToString();
+
+    /// <summary>
+    /// Get the name of the enum which is cached after first use. Significantly faster than <see cref="Type.GetEnumName"/> for repeated use.
+    /// </summary>
+    /// <remarks>Flag enums will simply call back to <see cref="Enum.ToString"/> for composite values.</remarks>
+    /// <returns>The name of the field represented by the enum, or a comma separated list of all flags if the <see cref="FlagsAttribute"/> is present.</returns>
+    /// <exception cref="InvalidOperationException">Invalid enum type.</exception>
     public static string? GetName<TEnum>(TEnum value) where TEnum : unmanaged, Enum
     {
         TEnum[] values = EnumDataCache<TEnum>.Values ??= (TEnum[])Enum.GetValues(typeof(TEnum));

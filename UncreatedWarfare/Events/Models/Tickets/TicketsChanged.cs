@@ -1,4 +1,4 @@
-﻿using Uncreated.Warfare.Layouts.Teams;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Layouts.Tickets;
 
 namespace Uncreated.Warfare.Events.Models.Tickets;

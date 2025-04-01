@@ -59,7 +59,7 @@ internal sealed class VehicleBayLinkCommand : IExecutableCommand
             await UniTask.SwitchToMainThread(token);
 
             Context.Reply(_translations.VehicleBayLinkFinished, spawnerFromSign.VehicleInfo.VehicleAsset.GetAsset()!);
-            Context.LogAction(ActionLogType.LinkedVehicleBaySign, spawnerFromSign.ToDisplayString());
+            // todo: Context.LogAction(ActionLogType.LinkedVehicleBaySign, spawnerFromSign.ToDisplayString());
 
             // updates sign instance via the SignTextChanged event
             BarricadeUtility.SetServersideSignText((BarricadeDrop)buildable.Drop, spawnerFromSign.ServerSignText);

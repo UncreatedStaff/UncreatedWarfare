@@ -1,8 +1,11 @@
+using System;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Events.Logging;
 using Uncreated.Warfare.Events.Models.Buildables;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Events.Models.Structures;
 
@@ -88,4 +91,17 @@ public class StructureDestroyed : IBuildableDestroyedEvent
 
     /// <inheritdoc />
     bool IBaseBuildableDestroyedEvent.IsOnVehicle => false;
+
+    /// <inheritdoc />
+    public ActionLogEntry GetActionLogEntry(IServiceProvider serviceProvider, ref ActionLogEntry[]? multipleEntries)
+    {
+        return new ActionLogEntry(ActionLogTypes.BuildableDestroyed,
+            InstigatorId.IsIndividual()
+                ? $"Structure {AssetLink.ToDisplayString(Structure.asset)} owned by {ServersideData.owner} ({ServersideData.group}) # {InstanceId}, " +
+                  $"Salvaged: {WasSalvaged}, DamageOrigin: {DamageOrigin}, Instigator: {Instigator?.ToString() ?? InstigatorId.m_SteamID.ToString()} on team {InstigatorTeam}."
+                : $"Structure {AssetLink.ToDisplayString(Structure.asset)} owned by {ServersideData.owner} ({ServersideData.group}) # {InstanceId}, " +
+                  $"Salvaged: {WasSalvaged}, DamageOrigin: {DamageOrigin}.",
+            InstigatorId
+        );
+    }
 }

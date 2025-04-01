@@ -285,10 +285,10 @@ public class PointsService : IEventListener<PlayerTeamChanged> // todo player eq
                 season
             );
 
-            if (newPoints.XP != oldPoints.XP)
-                ActionLog.Add(ActionLogType.XPChanged, $"{oldPoints.XP} -> {newPoints.XP} | Event: '{@event.EventName}'", playerId);
-            if (newPoints.Credits != oldPoints.Credits)
-                ActionLog.Add(ActionLogType.CreditsChanged, $"{oldPoints.Credits} -> {newPoints.Credits} | Event: '{@event.EventName}'", playerId);
+            //if (newPoints.XP != oldPoints.XP)
+            //    // todo: ActionLog.Add(ActionLogType.XPChanged, $"{oldPoints.XP} -> {newPoints.XP} | Event: '{@event.EventName}'", playerId);
+            //if (newPoints.Credits != oldPoints.Credits)
+            //    // todo: ActionLog.Add(ActionLogType.CreditsChanged, $"{oldPoints.Credits} -> {newPoints.Credits} | Event: '{@event.EventName}'", playerId);
         }
         else if (!double.IsNaN(oldRep))
         {
@@ -309,7 +309,7 @@ public class PointsService : IEventListener<PlayerTeamChanged> // todo player eq
         }
 
         if (oldRep != rep)
-            ActionLog.Add(ActionLogType.ReputationChanged, $"{oldRep} -> {rep} | Event: '{@event.EventName}'", playerId);
+            // todo: ActionLog.Add(ActionLogType.ReputationChanged, $"{oldRep} -> {rep} | Event: '{@event.EventName}'", playerId);
 
         await UniTask.SwitchToMainThread(CancellationToken.None);
 

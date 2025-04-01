@@ -59,7 +59,7 @@ internal sealed class KitGiveCommand : IExecutableCommand
         Kit kit = kitArg.Kit;
         await _kitRequestService.GiveKitAsync(player ?? Context.Player, new KitBestowData(kit), token).ConfigureAwait(false);
 
-        Context.LogAction(ActionLogType.GiveKit, kit.Id);
+        // todo: Context.LogAction(ActionLogType.GiveKit, kit.Id);
 
         if (player == null)
         {

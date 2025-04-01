@@ -113,8 +113,8 @@ internal sealed class StructureSetCommand : IExecutableCommand
                 await _saver.SaveBarricadeAsync(barricade!, token);
 
             await UniTask.SwitchToMainThread(token);
-            Context.LogAction(ActionLogType.SetSavedStructureProperty, $"{asset?.itemName ?? "null"} / {asset?.id ?? 0} / {asset?.GUID ?? Guid.Empty:N} - " +
-                                                                       $"SET {(isSettingGroup ? "GROUP" : "OWNER")} >> {ownerOrGroupDisplay}.");
+            // todo: Context.LogAction(ActionLogType.SetSavedStructureProperty, $"{asset?.itemName ?? "null"} / {asset?.id ?? 0} / {asset?.GUID ?? Guid.Empty:N} - " +
+            //                                                            $"SET {(isSettingGroup ? "GROUP" : "OWNER")} >> {ownerOrGroupDisplay}.");
         }
 
         if (isSettingGroup)

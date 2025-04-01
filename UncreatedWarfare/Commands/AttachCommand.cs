@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Translations;
@@ -79,7 +79,7 @@ internal sealed class AttachCommand : IExecutableCommand
             Context.Player.UnturnedPlayer.equipment.sendUpdateState();
             if (_firemodeEffect != null)
                 EffectUtility.TriggerEffect(_firemodeEffect, EffectManager.SMALL, Context.Player.Position, true);
-            Context.LogAction(ActionLogType.Detach, "Gun: " + ActionLog.AsAsset(gunAsset) + " | Type: " + type + (Assets.find(EAssetType.ITEM, oldItem) is ItemAsset iAsset ? (" | Prev: " + ActionLog.AsAsset(iAsset)) : string.Empty));
+            // todo: Context.LogAction(ActionLogType.Detach, "Gun: " + ActionLog.AsAsset(gunAsset) + " | Type: " + type + (Assets.find(EAssetType.ITEM, oldItem) is ItemAsset iAsset ? (" | Prev: " + ActionLog.AsAsset(iAsset)) : string.Empty));
             throw Context.Reply(_translations.AttachClearSuccess, gunAsset, type);
         }
 
@@ -90,7 +90,7 @@ internal sealed class AttachCommand : IExecutableCommand
             Context.Player.UnturnedPlayer.equipment.sendUpdateState();
             if (_firemodeEffect != null)
                 EffectUtility.TriggerEffect(_firemodeEffect, EffectManager.SMALL, Context.Player.Position, true);
-            Context.LogAction(ActionLogType.SetAmmo, "Gun: " + ActionLog.AsAsset(gunAsset) + " | Amt: " + amt + (prevAmt != amt ? " | Prev: " + prevAmt : string.Empty));
+            // todo: Context.LogAction(ActionLogType.SetAmmo, "Gun: " + ActionLog.AsAsset(gunAsset) + " | Amt: " + amt + (prevAmt != amt ? " | Prev: " + prevAmt : string.Empty));
             throw Context.Reply(_translations.AttachSetAmmoSuccess, gunAsset, amt);
         }
 
@@ -101,7 +101,7 @@ internal sealed class AttachCommand : IExecutableCommand
             Context.Player.UnturnedPlayer.equipment.sendUpdateState();
             if (_firemodeEffect != null)
                 EffectUtility.TriggerEffect(_firemodeEffect, EffectManager.SMALL, Context.Player.Position, true);
-            Context.LogAction(ActionLogType.SetFiremode, "Gun: " + ActionLog.AsAsset(gunAsset) + " | Mode: " + mode + (prevMode != mode ? " | Prev: " + prevMode : string.Empty));
+            // todo: Context.LogAction(ActionLogType.SetFiremode, "Gun: " + ActionLog.AsAsset(gunAsset) + " | Mode: " + mode + (prevMode != mode ? " | Prev: " + prevMode : string.Empty));
             throw Context.Reply(_translations.AttachSetFiremodeSuccess, gunAsset, mode);
         }
 
@@ -133,7 +133,7 @@ internal sealed class AttachCommand : IExecutableCommand
         Context.Player.UnturnedPlayer.equipment.sendUpdateState();
         if (_firemodeEffect != null)
             EffectUtility.TriggerEffect(_firemodeEffect, EffectManager.SMALL, Context.Player.Position, true);
-        Context.LogAction(ActionLogType.Attach, "Gun: " + ActionLog.AsAsset(gunAsset) + " | Type: " + type + " | Item: " + ActionLog.AsAsset(asset) + (Assets.find(EAssetType.ITEM, oldItem) is ItemAsset iAsset2 ? " | Prev: " + ActionLog.AsAsset(iAsset2) : string.Empty));
+        // todo: Context.LogAction(ActionLogType.Attach, "Gun: " + ActionLog.AsAsset(gunAsset) + " | Type: " + type + " | Item: " + ActionLog.AsAsset(asset) + (Assets.find(EAssetType.ITEM, oldItem) is ItemAsset iAsset2 ? " | Prev: " + ActionLog.AsAsset(iAsset2) : string.Empty));
         throw Context.Reply(_translations.AttachSuccess, gunAsset, type, asset);
     }
 

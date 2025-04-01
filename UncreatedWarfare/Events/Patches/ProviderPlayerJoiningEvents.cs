@@ -69,7 +69,7 @@ internal sealed class ProviderPlayerJoiningEvents : IHarmonyPatch
     /// </summary>
     private static bool Prefix(SteamPending __instance)
     {
-        ActionLog.Add(ActionLogType.TryConnect, $"Steam Name: {__instance.playerID.playerName}, Public Name: {__instance.playerID.characterName}, Private Name: {__instance.playerID.nickName}, Character ID: {__instance.playerID.characterID}.", __instance.playerID.steamID.m_SteamID);
+        // todo: ActionLog.Add(ActionLogType.TryConnect, $"Steam Name: {__instance.playerID.playerName}, Public Name: {__instance.playerID.characterName}, Private Name: {__instance.playerID.nickName}, Character ID: {__instance.playerID.characterID}.", __instance.playerID.steamID.m_SteamID);
 
         // this method could be recalled while the verify event is running if another player gets verified.
         if (PendingPlayers.Contains(__instance.playerID.steamID.m_SteamID))

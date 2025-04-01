@@ -84,6 +84,7 @@ internal sealed class InteractableSignUpdateText : IHarmonyPatch
             VehicleRegionIndex = plant,
             Region = region,
             Sign = __instance,
+            Text = __instance.text,
             ServersideData = data
         };
 

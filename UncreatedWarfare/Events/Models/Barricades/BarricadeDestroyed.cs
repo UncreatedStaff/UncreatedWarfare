@@ -1,8 +1,11 @@
+using System;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Events.Logging;
 using Uncreated.Warfare.Events.Models.Buildables;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Events.Models.Barricades;
 
@@ -93,4 +96,17 @@ public class BarricadeDestroyed : IBuildableDestroyedEvent
     /// Abstracted <see cref="IBuildable"/> of the barricade.
     /// </summary>
     public IBuildable Buildable => BuildableCache ??= new BuildableBarricade(Barricade);
+
+    /// <inheritdoc />
+    public ActionLogEntry GetActionLogEntry(IServiceProvider serviceProvider, ref ActionLogEntry[]? multipleEntries)
+    {
+        return new ActionLogEntry(ActionLogTypes.BuildableDestroyed,
+            InstigatorId.IsIndividual()
+                ? $"Barricade {AssetLink.ToDisplayString(Barricade.asset)} owned by {ServersideData.owner} ({ServersideData.group}) # {InstanceId} (on vehicle: {IsOnVehicle}), " +
+                  $"Salvaged: {WasSalvaged}, DamageOrigin: {DamageOrigin}, Instigator: {Instigator?.ToString() ?? InstigatorId.m_SteamID.ToString()} on team {InstigatorTeam}."
+                : $"Barricade {AssetLink.ToDisplayString(Barricade.asset)} owned by {ServersideData.owner} ({ServersideData.group}) # {InstanceId} (on vehicle: {IsOnVehicle}), " +
+                  $"Salvaged: {WasSalvaged}, DamageOrigin: {DamageOrigin}.",
+            InstigatorId
+        );
+    }
 }

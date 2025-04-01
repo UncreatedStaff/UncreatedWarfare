@@ -1,13 +1,15 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using Uncreated.Warfare.Events.Logging;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Events.Models.Players;
 
 /// <summary>
 /// Invoked after a player sends a chat message.
 /// </summary>
-public class PlayerChatSent : PlayerEvent
+public class PlayerChatSent : PlayerEvent, IActionLoggableEvent
 {
     /// <summary>
     /// The text that will be sent to everyone else.
@@ -70,4 +72,13 @@ public class PlayerChatSent : PlayerEvent
     /// Formats the message for a player.
     /// </summary>
     public required Func<WarfarePlayer, bool, string?> FormatHandler { get; init; }
+
+    /// <inheritdoc />
+    public ActionLogEntry GetActionLogEntry(IServiceProvider serviceProvider, ref ActionLogEntry[]? multipleEntries)
+    {
+        return new ActionLogEntry(ActionLogTypes.Chat,
+            $"Mode: {EnumUtility.GetNameSafe(ChatMode)}, Message: \"{OriginalText}\" sent from {Player.Position:F2}",
+            Player.Steam64.m_SteamID
+        );
+    }
 }

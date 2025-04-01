@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using Uncreated.Warfare.Events.Logging;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
@@ -15,6 +16,7 @@ using Uncreated.Warfare.Util;
 namespace Uncreated.Warfare.Logging;
 public class ActionLog : MonoBehaviour
 {
+    #if FALSE
     public const string DateHeaderFormat = "yyyy-MM-dd_HH-mm-ss";
     public const string DateLineFormat = "s";
     public const int DateLineFormatLength = 19;
@@ -678,58 +680,17 @@ public class ActionLog : MonoBehaviour
         //    return Task.CompletedTask;
         //}
     }
+#endif
 }
+
+
+
+
 
 // Add a Translatable attribute in all caps format and update ActionLogType.Max if you add a log type
 [Translatable(IsPrioritizedTranslation = false)]
-public enum ActionLogType : byte
+public enum ActionLogTypeOld : byte
 {
-    [Translatable("NONE")]
-    None,
-    [Translatable("CHAT_GLOBAL")]
-    ChatGlobal,
-    [Translatable("CHAT_AREA_OR_SQUAD")]
-    ChatAreaOrSquad,
-    [Translatable("CHAT_GROUP")]
-    ChatGroup,
-    [Translatable("REQUEST_AMMO")]
-    RequestAmmo,
-    [Translatable("DUTY_CHANGED")]
-    DutyChanged,
-    [Translatable("BAN_PLAYER")]
-    BanPlayer,
-    [Translatable("KICK_PLAYER")]
-    KickPlayer,
-    [Translatable("UNBAN_PLAYER")]
-    UnbanPlayer,
-    [Translatable("WARN_PLAYER")]
-    WarnPlayer,
-    [Translatable("START_REPORT")]
-    StartReport,
-    [Translatable("CONFIRM_REPORT")]
-    ConfirmReport,
-    [Translatable("BUY_KIT")]
-    BuyKit,
-    [Translatable("CLEAR_ITEMS")]
-    ClearItems,
-    [Translatable("CLEAR_INVENTORY")]
-    ClearInventory,
-    [Translatable("CLEAR_VEHICLES")]
-    ClearVehicles,
-    [Translatable("CLEAR_STRUCTURES")]
-    ClearStructures,
-    [Translatable("ADD_CACHE")]
-    AddCache,
-    [Translatable("ADD_INTEL")]
-    AddIntel,
-    [Translatable("CHANGE_GROUP_WITH_COMMAND")]
-    ChangeGroupWithCommand,
-    [Translatable("CHANGE_GROUP_WITH_UI")]
-    ChangeGroupWithUI,
-    [Translatable("TRY_CONNECT")]
-    TryConnect,
-    [Translatable("CONNECT")]
-    Connect,
     [Translatable("DISCONNECT")]
     Disconnect,
     [Translatable("GIVE_ITEM")]

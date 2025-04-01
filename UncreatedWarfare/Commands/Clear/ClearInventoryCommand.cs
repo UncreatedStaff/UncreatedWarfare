@@ -33,14 +33,14 @@ internal sealed class ClearInventoryCommand : IExecutableCommand
             
             ItemUtility.ClearInventoryAndSlots(pl);
 
-            Context.LogAction(ActionLogType.ClearInventory, "CLEARED INVENTORY OF " + pl.Steam64.m_SteamID.ToString(CultureInfo.InvariantCulture));
+            // todo: Context.LogAction(ActionLogType.ClearInventory, "CLEARED INVENTORY OF " + pl.Steam64.m_SteamID.ToString(CultureInfo.InvariantCulture));
             Context.Reply(_translations.ClearInventoryOther, pl);
         }
         else if (!Context.Caller.IsTerminal)
         {
             // clear inv
             ItemUtility.ClearInventoryAndSlots(Context.Player);
-            Context.LogAction(ActionLogType.ClearInventory, "CLEARED PERSONAL INVENTORY");
+            // todo: Context.LogAction(ActionLogType.ClearInventory, "CLEARED PERSONAL INVENTORY");
             Context.Reply(_translations.ClearInventorySelf);
         }
         else

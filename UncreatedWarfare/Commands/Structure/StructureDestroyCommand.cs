@@ -1,11 +1,9 @@
 using System;
-using System.Globalization;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Events.Models.Structures;
 using Uncreated.Warfare.Interaction.Commands;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
@@ -43,9 +41,9 @@ internal sealed class StructureDestroyCommand : IExecutableCommand
         {
             await _vehicleService.DeleteVehicleAsync(vehicle, token);
 
-            Context.LogAction(ActionLogType.PopStructure,
-                $"VEHICLE: {vehicle.asset.vehicleName} / {vehicle.asset.id} /" +
-                $" {vehicle.asset.GUID:N} at {vehicle.transform.position:N2} ({vehicle.instanceID})");
+            // todo: Context.LogAction(ActionLogType.PopStructure,
+            //     $"VEHICLE: {vehicle.asset.vehicleName} / {vehicle.asset.id} /" +
+            //     $" {vehicle.asset.GUID:N} at {vehicle.transform.position:N2} ({vehicle.instanceID})");
             Context.Reply(_translations.StructureDestroyed, vehicle.asset);
         }
         else if (Context.TryGetStructureTarget(out StructureDrop? structure))
@@ -54,16 +52,16 @@ internal sealed class StructureDestroyCommand : IExecutableCommand
             await UniTask.SwitchToMainThread(token);
             if (removedSave)
             {
-                Context.LogAction(ActionLogType.UnsaveStructure, $"{structure.asset.itemName} / {structure.asset.id} / {structure.asset.GUID:N} " +
-                                                                 $"at {structure.GetServersideData().point} ({structure.instanceID})");
+                // todo: Context.LogAction(ActionLogType.UnsaveStructure, $"{structure.asset.itemName} / {structure.asset.id} / {structure.asset.GUID:N} " +
+                //                                                  $"at {structure.GetServersideData().point} ({structure.instanceID})");
                 Context.Reply(_translations.StructureUnsaved, structure.asset);
             }
 
             await UnsaveBuildable(new BuildableStructure(structure), token);
             await DestroyStructure(structure, Context.Player, CancellationToken.None);
-            Context.LogAction(ActionLogType.PopStructure,
-                $"STRUCTURE: {structure.asset.itemName} / {structure.asset.id} /" +
-                $" {structure.asset.GUID:N} at {structure.model.transform.position.ToString("N2", CultureInfo.InvariantCulture)} ({structure.instanceID})");
+            // todo: Context.LogAction(ActionLogType.PopStructure,
+            //     $"STRUCTURE: {structure.asset.itemName} / {structure.asset.id} /" +
+            //     $" {structure.asset.GUID:N} at {structure.model.transform.position.ToString("N2", CultureInfo.InvariantCulture)} ({structure.instanceID})");
         }
         else if (Context.TryGetBarricadeTarget(out BarricadeDrop? barricade))
         {
@@ -71,16 +69,16 @@ internal sealed class StructureDestroyCommand : IExecutableCommand
             await UniTask.SwitchToMainThread(token);
             if (removedSave)
             {
-                Context.LogAction(ActionLogType.UnsaveStructure, $"{barricade.asset.itemName} / {barricade.asset.id} / {barricade.asset.GUID:N} " +
-                                                                 $"at {barricade.GetServersideData().point} ({barricade.instanceID})");
+                // todo: Context.LogAction(ActionLogType.UnsaveStructure, $"{barricade.asset.itemName} / {barricade.asset.id} / {barricade.asset.GUID:N} " +
+                //                                                  $"at {barricade.GetServersideData().point} ({barricade.instanceID})");
                 Context.Reply(_translations.StructureUnsaved, barricade.asset);
             }
 
             await UnsaveBuildable(new BuildableBarricade(barricade), token);
             await DestroyBarricade(barricade, Context.Player, CancellationToken.None);
-            Context.LogAction(ActionLogType.PopStructure,
-                $"BARRICADE: {barricade.asset.itemName} / {barricade.asset.id} /" +
-                $" {barricade.asset.GUID:N} at {barricade.model.transform.position.ToString("N2", CultureInfo.InvariantCulture)} ({barricade.instanceID})");
+            // todo: Context.LogAction(ActionLogType.PopStructure,
+            //     $"BARRICADE: {barricade.asset.itemName} / {barricade.asset.id} /" +
+            //     $" {barricade.asset.GUID:N} at {barricade.model.transform.position.ToString("N2", CultureInfo.InvariantCulture)} ({barricade.instanceID})");
             Context.Defer();
         }
         else

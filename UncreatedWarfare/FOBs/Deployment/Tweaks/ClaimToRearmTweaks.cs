@@ -102,7 +102,7 @@ public class ClaimToRearmTweaks : // todo: move this class out of this namespace
             e.Cancel();
             return;
         }
-        
+
         // if (rearmCost > ammoStorage.AmmoCount)
         // {
         //     _chatService.Send(e.Player, _translations.AmmoInsufficient, ammoStorage.AmmoCount, rearmCost);
@@ -121,7 +121,8 @@ public class ClaimToRearmTweaks : // todo: move this class out of this namespace
         {
             Player = e.Player,
             AmmoConsumed = rearmCost,
-            AmmoStorage = ammoStorage
+            AmmoStorage = ammoStorage,
+            Kit = kit
         }, CancellationToken.None);
         
         EffectUtility.TriggerEffect(

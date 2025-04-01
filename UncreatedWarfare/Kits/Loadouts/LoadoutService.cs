@@ -183,7 +183,7 @@ public class LoadoutService
         {
             wasDisabled = kit.Disabled;
             if (wasDisabled)
-                ActionLog.Add(ActionLogType.UnlockLoadout, kit.Id, kit.LastEditor);
+                // todo: ActionLog.Add(ActionLogType.UnlockLoadout, kit.Id, kit.LastEditor);
             kit.Disabled = false;
         }, instigator, token).ConfigureAwait(false);
 
@@ -240,7 +240,7 @@ public class LoadoutService
         {
             wasDisabled = kit.Disabled;
             if (!wasDisabled)
-                ActionLog.Add(ActionLogType.LockLoadout, kit.Id, kit.LastEditor);
+                // todo: ActionLog.Add(ActionLogType.LockLoadout, kit.Id, kit.LastEditor);
             kit.Disabled = true;
         }, instigator, token).ConfigureAwait(false);
 
@@ -594,7 +594,7 @@ public class LoadoutService
         };
         if (WarfareModule.IsActive)
         {
-            ActionLog.Add(ActionLogType.LockLoadout, kit.Id, kit.CreatingPlayer);
+            // todo: ActionLog.Add(ActionLogType.LockLoadout, kit.Id, kit.CreatingPlayer);
             await _eventDispatcher!.DispatchEventAsync(args, CancellationToken.None);
             // todo: swap kit with free kit, message player 'Your loadout has been disabled while X is working on it.', update signs
         }
@@ -620,7 +620,7 @@ public class LoadoutService
 
         if (WarfareModule.IsActive)
         {
-            ActionLog.Add(ActionLogType.ChangeKitAccess, $"{forPlayer.m_SteamID.ToString(CultureInfo.InvariantCulture)} GIVEN ACCESS TO {kit.Id}, REASON: {KitAccessType.Purchase}", kit.CreatingPlayer);
+            // todo: ActionLog.Add(ActionLogType.ChangeKitAccess, $"{forPlayer.m_SteamID.ToString(CultureInfo.InvariantCulture)} GIVEN ACCESS TO {kit.Id}, REASON: {KitAccessType.Purchase}", kit.CreatingPlayer);
 
             await _eventDispatcher!.DispatchEventAsync(args, CancellationToken.None);
             // todo: message player 'X has started working on your loadout'.
@@ -647,9 +647,9 @@ public class LoadoutService
 
         if (WarfareModule.IsActive)
         {
-            ActionLog.Add(ActionLogType.UpgradeLoadout, $"ID: {kit.Id} (#{kit.Key}). Class: {oldClass} -> {kit.Class}. Old Faction: {oldFaction ?? "none"}", kit.LastEditingPlayer);
+            // todo: ActionLog.Add(ActionLogType.UpgradeLoadout, $"ID: {kit.Id} (#{kit.Key}). Class: {oldClass} -> {kit.Class}. Old Faction: {oldFaction ?? "none"}", kit.LastEditingPlayer);
             if (accessAdded)
-                ActionLog.Add(ActionLogType.ChangeKitAccess, $"{forPlayer.m_SteamID.ToString(CultureInfo.InvariantCulture)} GIVEN ACCESS TO {kit.Id}, REASON: {KitAccessType.Purchase}", kit.LastEditingPlayer);
+                // todo: ActionLog.Add(ActionLogType.ChangeKitAccess, $"{forPlayer.m_SteamID.ToString(CultureInfo.InvariantCulture)} GIVEN ACCESS TO {kit.Id}, REASON: {KitAccessType.Purchase}", kit.LastEditingPlayer);
 
             await _eventDispatcher!.DispatchEventAsync(args, CancellationToken.None);
             // todo: message player 'X has started working on your loadout'.

@@ -1841,7 +1841,7 @@ public class DatabaseInterface : IHostedService
 
         if (Provider.isInitialized)
         {
-            ActionLog.Add(ActionLogType.IPWhitelist, $"IP {(add ? "WHITELIST" : "BLACKLIST")} {targetId.m_SteamID.ToString(CultureInfo.InvariantCulture)} FOR {range}.", callerId);
+            // todo: ActionLog.Add(ActionLogType.IPWhitelist, $"IP {(add ? "WHITELIST" : "BLACKLIST")} {targetId.m_SteamID.ToString(CultureInfo.InvariantCulture)} FOR {range}.", callerId);
         }
 
         _logger.LogInformation("{0} was ip {1} by {2} on {3}.", targetId, add ? "whitelisted" : "blacklisted", callerId, range);

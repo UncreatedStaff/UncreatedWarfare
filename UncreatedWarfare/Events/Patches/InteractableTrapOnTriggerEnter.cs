@@ -55,6 +55,9 @@ internal sealed class InteractableTrapOnTriggerEnter : IHarmonyPatch
         _target = null;
     }
 
+    private static readonly InstanceGetter<Zombie, Player>? GetAlertedPlayer =
+        Accessor.GenerateInstanceGetter<Zombie, Player>("player", throwOnError: false);
+
     // SDG.Unturned.InteractableTrap.NotifyTrapEntered
     /// <summary>
     /// Prefix of <see cref="InteractableTrap.NotifyTrapEntered(Collider)"/> to change explosion behavior.
@@ -136,6 +139,14 @@ internal sealed class InteractableTrapOnTriggerEnter : IHarmonyPatch
             {
                 animalTriggerer = DamageTool.getAnimal(other.transform);
                 zombieTriggerer = null;
+                if (animalTriggerer != null)
+                {
+                    playerTriggerer = playerService.GetOnlinePlayerOrNull(animalTriggerer.GetTargetPlayer());
+                }
+            }
+            else
+            {
+                playerTriggerer = playerService.GetOnlinePlayerOrNull(GetAlertedPlayer?.Invoke(zombieTriggerer));
             }
         }
         else if (other.TryGetComponent(out throwable!))

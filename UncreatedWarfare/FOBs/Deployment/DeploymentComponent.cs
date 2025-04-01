@@ -12,7 +12,6 @@ using Uncreated.Warfare.Players.Cooldowns;
 using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Translations;
-using Uncreated.Warfare.Translations.Languages;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Zones;
 
@@ -207,7 +206,7 @@ public class DeploymentComponent : MonoBehaviour, IPlayerComponent, IEventListen
 
             deployFrom?.OnDeployFrom(Player, in settings);
             deployable.OnDeployTo(Player, in settings);
-            ActionLog.Add(ActionLogType.DeployToLocation, deployable.ToString(), Player);
+            // todo: ActionLog.Add(ActionLogType.DeployToLocation, deployable.ToString(), Player);
 
             _ = WarfareModule.EventDispatcher.DispatchEventAsync(args);
 

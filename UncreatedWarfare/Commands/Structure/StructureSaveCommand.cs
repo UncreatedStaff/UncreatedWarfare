@@ -1,4 +1,4 @@
-﻿using Uncreated.Warfare.Buildables;
+using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Translations;
@@ -35,8 +35,8 @@ internal sealed class StructureSaveCommand : IExecutableCommand
             await UniTask.SwitchToMainThread(token);
 
             Context.Reply(_translations.StructureSaved, structure.asset);
-            Context.LogAction(ActionLogType.SaveStructure, $"{structure.asset.itemName} / {structure.asset.id} / {structure.asset.GUID:N} " +
-                                                           $"at {structure.GetServersideData().point:0:##} ({structure.instanceID})");
+            // todo: Context.LogAction(ActionLogType.SaveStructure, $"{structure.asset.itemName} / {structure.asset.id} / {structure.asset.GUID:N} " +
+            //                                                $"at {structure.GetServersideData().point:0:##} ({structure.instanceID})");
         }
         else if (Context.TryGetBarricadeTarget(out BarricadeDrop? barricade))
         {
@@ -48,8 +48,8 @@ internal sealed class StructureSaveCommand : IExecutableCommand
             await UniTask.SwitchToMainThread(token);
 
             Context.Reply(_translations.StructureSaved, barricade.asset);
-            Context.LogAction(ActionLogType.SaveStructure, $"{barricade.asset.itemName} / {barricade.asset.id} / {barricade.asset.GUID:N} " +
-                                                           $"at {barricade.GetServersideData().point:0:##} ({barricade.instanceID})");
+            // todo: Context.LogAction(ActionLogType.SaveStructure, $"{barricade.asset.itemName} / {barricade.asset.id} / {barricade.asset.GUID:N} " +
+            //                                                $"at {barricade.GetServersideData().point:0:##} ({barricade.instanceID})");
         }
         else throw Context.Reply(_translations.StructureNoTarget);
     }

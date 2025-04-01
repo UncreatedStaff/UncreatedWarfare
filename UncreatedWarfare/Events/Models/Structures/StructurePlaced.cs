@@ -1,4 +1,7 @@
+using System;
 using Uncreated.Warfare.Buildables;
+using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Events.Logging;
 using Uncreated.Warfare.Events.Models.Buildables;
 using Uncreated.Warfare.Players;
 
@@ -59,4 +62,14 @@ public class StructurePlaced : IBuildablePlacedEvent
     ushort IBuildablePlacedEvent.VehicleRegionIndex => ushort.MaxValue;
 
     bool IBuildablePlacedEvent.IsOnVehicle => false;
+
+    /// <inheritdoc />
+    public ActionLogEntry GetActionLogEntry(IServiceProvider serviceProvider, ref ActionLogEntry[]? multipleEntries)
+    {
+        return new ActionLogEntry(ActionLogTypes.BuildableDestroyed,
+            $"Structure {AssetLink.ToDisplayString(Structure.asset)} owned by {ServersideData.owner} ({ServersideData.group}) # {Structure.instanceID} " +
+            $"@ {ServersideData.point:F2}, {ServersideData.rotation:F2}",
+            Owner?.Steam64.m_SteamID ?? 0
+        );
+    }
 }

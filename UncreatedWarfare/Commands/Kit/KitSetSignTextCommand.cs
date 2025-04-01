@@ -78,6 +78,6 @@ internal sealed class KitSetSignTextCommand : IExecutableCommand
         newName = newName.Replace("\n", "<br>");
 
         Context.Reply(_translations.KitPropertySet, $"Name ({language.Code})", kit, newName);
-        Context.LogAction(ActionLogType.SetKitProperty, $"{kitId}: SIGN TEXT | \"{language.Code}\" >> \"{newName}\"");
+        // todo: Context.LogAction(ActionLogType.SetKitProperty, $"{kitId}: SIGN TEXT | \"{language.Code}\" >> \"{newName}\"");
     }
 }

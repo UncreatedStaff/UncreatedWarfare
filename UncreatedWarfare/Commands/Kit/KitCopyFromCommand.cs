@@ -87,7 +87,7 @@ internal sealed class KitCopyFromCommand : IExecutableCommand
             }, token);
         }
 
-        Context.LogAction(ActionLogType.CreateKit, newKitId + " COPIED FROM " + sourceKit.Id);
+        // todo: Context.LogAction(ActionLogType.CreateKit, newKitId + " COPIED FROM " + sourceKit.Id);
         Context.Reply(_translations.KitCopied, sourceKit, kit);
     }
 

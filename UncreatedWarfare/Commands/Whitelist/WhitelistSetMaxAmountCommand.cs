@@ -58,14 +58,14 @@ internal sealed class WhitelistSetMaxAmountCommand : IExecutableCommand
 
         if (whitelistedOrUpdated && existing == null)
         {
-            Context.LogAction(ActionLogType.AddWhitelist, $"{asset.itemName} / {asset.id} / {asset.GUID:N}");
+            // todo: Context.LogAction(ActionLogType.AddWhitelist, $"{asset.itemName} / {asset.id} / {asset.GUID:N}");
             if (amount > 0)
-                Context.LogAction(ActionLogType.SetWhitelistMaxAmount, $"{asset.itemName} / {asset.id} / {asset.GUID:N} set to {amount}");
+                // todo: Context.LogAction(ActionLogType.SetWhitelistMaxAmount, $"{asset.itemName} / {asset.id} / {asset.GUID:N} set to {amount}");
             Context.Reply(_translations.WhitelistAdded, asset);
             throw Context.Reply(_translations.WhitelistSetAmount, asset, amount);
         }
 
-        Context.LogAction(ActionLogType.SetWhitelistMaxAmount, $"{asset.itemName} / {asset.id} / {asset.GUID:N} set to {(amount <= 0 ? -1 : amount)}");
+        // todo: Context.LogAction(ActionLogType.SetWhitelistMaxAmount, $"{asset.itemName} / {asset.id} / {asset.GUID:N} set to {(amount <= 0 ? -1 : amount)}");
         Context.Reply(_translations.WhitelistSetAmount, asset, amount);
     }
 }

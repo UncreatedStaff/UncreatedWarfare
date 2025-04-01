@@ -9,6 +9,7 @@ using System.Runtime.InteropServices;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Logging;
 using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
@@ -33,6 +34,7 @@ public class CommandContext : ControlException
     private readonly IPlayerService _playerService;
     private readonly CooldownManager? _cooldownManager;
     private readonly ChatService _chatService;
+    private readonly ActionLoggerService? _actionLoggerService;
     private readonly int _argumentCount;
     private ILogger? _logger;
 
@@ -201,6 +203,7 @@ public class CommandContext : ControlException
         ServiceProvider = serviceProvider;
 
         _chatService = serviceProvider.GetRequiredService<ChatService>();
+        _actionLoggerService = serviceProvider.GetRequiredService<ActionLoggerService>();
         _permissionsStore = serviceProvider.GetRequiredService<UserPermissionStore>();
         _playerService = serviceProvider.GetRequiredService<IPlayerService>();
         _cooldownManager = serviceProvider.GetService<CooldownManager>();
@@ -1363,9 +1366,10 @@ public class CommandContext : ControlException
     /// <summary>
     /// Add an entry to the <see cref="ActionLog"/>.
     /// </summary>
-    public void LogAction(ActionLogType type, string? data = null)
+    public void LogAction([ValueProvider("Uncreated.Warfare.Events.Logging.ActionLogTypes")] ActionLogType type, string? data = null)
     {
-        ActionLog.Add(type, data, CallerId.m_SteamID);
+        ActionLogEntry action = new ActionLogEntry(type, data ?? string.Empty, CallerId.m_SteamID);
+        _actionLoggerService?.AddAction(in action);
     }
 
     /// <summary>

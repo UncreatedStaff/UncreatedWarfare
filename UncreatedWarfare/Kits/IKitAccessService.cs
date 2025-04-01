@@ -594,10 +594,10 @@ public class MySqlKitAccessService : IKitAccessService, IDisposable
         else
             kitId = primaryKey.ToString(CultureInfo.InvariantCulture);
 
-        if (newAccess.HasValue)
-            ActionLog.Add(ActionLogType.ChangeKitAccess, player.ToString(CultureInfo.InvariantCulture) + " GIVEN ACCESS TO " + kitId + ", REASON: " + newAccess.Value, instigator);
-        else
-            ActionLog.Add(ActionLogType.ChangeKitAccess, player.ToString(CultureInfo.InvariantCulture) + " DENIED ACCESS TO " + kitId, instigator);
+        //if (newAccess.HasValue)
+        //    // todo: ActionLog.Add(ActionLogType.ChangeKitAccess, player.ToString(CultureInfo.InvariantCulture) + " GIVEN ACCESS TO " + kitId + ", REASON: " + newAccess.Value, instigator);
+        //else
+        //    // todo: ActionLog.Add(ActionLogType.ChangeKitAccess, player.ToString(CultureInfo.InvariantCulture) + " DENIED ACCESS TO " + kitId, instigator);
     }
 
     [RpcReceive]
@@ -636,10 +636,10 @@ public class MySqlKitAccessService : IKitAccessService, IDisposable
             else
                 kitId = pk.ToString(CultureInfo.InvariantCulture);
 
-            if (newAccess.HasValue)
-                ActionLog.Add(ActionLogType.ChangeKitAccess, player.ToString(CultureInfo.InvariantCulture) + " GIVEN ACCESS TO " + kitId + ", REASON: " + newAccess.Value, instigator);
-            else
-                ActionLog.Add(ActionLogType.ChangeKitAccess, player.ToString(CultureInfo.InvariantCulture) + " DENIED ACCESS TO " + kitId, instigator);
+            //if (newAccess.HasValue)
+            //    // todo: ActionLog.Add(ActionLogType.ChangeKitAccess, player.ToString(CultureInfo.InvariantCulture) + " GIVEN ACCESS TO " + kitId + ", REASON: " + newAccess.Value, instigator);
+            //else
+            //    // todo: ActionLog.Add(ActionLogType.ChangeKitAccess, player.ToString(CultureInfo.InvariantCulture) + " DENIED ACCESS TO " + kitId, instigator);
         }
     }
 

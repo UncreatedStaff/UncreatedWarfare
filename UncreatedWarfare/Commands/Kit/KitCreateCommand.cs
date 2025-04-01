@@ -76,7 +76,7 @@ internal sealed class KitCreateCommand : IExecutableCommand
             if (existingKit == null)
                 throw Context.SendUnknownError();
 
-            Context.LogAction(ActionLogType.EditKit, "OVERRIDE ITEMS " + existingKit.Id + ".");
+            // todo: Context.LogAction(ActionLogType.EditKit, "OVERRIDE ITEMS " + existingKit.Id + ".");
             Context.Reply(_translations.KitOverwrote, existingKit);
             return;
         }
@@ -138,7 +138,7 @@ internal sealed class KitCreateCommand : IExecutableCommand
 
         }, token).ConfigureAwait(false);
 
-        Context.LogAction(ActionLogType.CreateKit, kitId);
+        // todo: Context.LogAction(ActionLogType.CreateKit, kitId);
         Context.Reply(_translations.KitCreated, kit);
     }
 }

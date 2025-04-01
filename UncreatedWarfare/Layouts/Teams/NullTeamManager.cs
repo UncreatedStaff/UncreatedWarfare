@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Players;
@@ -35,7 +35,7 @@ public class NullTeamManager : ITeamManager<Team>
     public IConfiguration? Configuration { get; set; }
 
     /// <inheritdoc />
-    public UniTask JoinTeamAsync(WarfarePlayer player, Team team, CancellationToken token = default)
+    public UniTask JoinTeamAsync(WarfarePlayer player, Team team, bool wasByAdminCommand, CancellationToken token = default)
     {
         throw new NotSupportedException();
     }
