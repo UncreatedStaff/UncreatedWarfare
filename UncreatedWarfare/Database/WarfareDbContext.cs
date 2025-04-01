@@ -1,8 +1,7 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Diagnostics;
-using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using Pomelo.EntityFrameworkCore.MySql.Infrastructure;
 using System;
 using Uncreated.Warfare.Database.Abstractions;
@@ -25,7 +24,7 @@ namespace Uncreated.Warfare.Database;
 #pragma warning disable CS8644
 public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContext, IKitsDbContext, IStatsDbContext, IGameDataDbContext, IBuildablesDbContext, IWhitelistDbContext
 {
-    private readonly ILogger<WarfareDbContext> _logger;
+    private readonly ILogger _logger;
 
     public DbSet<LanguageInfo> Languages => Set<LanguageInfo>();
     public DbSet<LanguagePreferences> LanguagePreferences => Set<LanguagePreferences>();
@@ -59,13 +58,13 @@ public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContex
 
 
 
-    public WarfareDbContext(ILogger<WarfareDbContext> logger, DbContextOptions<WarfareDbContext> options) : base(options)
+    public WarfareDbContext(DbContextOptions<WarfareDbContext> options) : this(null, options) { }
+    public WarfareDbContext(ILogger<WarfareDbContext>? logger, DbContextOptions<WarfareDbContext> options) : base(options)
     {
         // supress exceptions from being logged separately
         // this allows us to catch Unique Key and Primary Key
         // constraint violation exceptions for threadsafe add operations (MySQL 1062: DuplicateKeyEntry)
-
-        _logger = logger;
+        _logger = logger ?? new NullLoggerFactory().CreateLogger(typeof(WarfareDbContext));
         EFCompat.Instance.DontLogExceptionDuringSaveChanges(this);
     }
 

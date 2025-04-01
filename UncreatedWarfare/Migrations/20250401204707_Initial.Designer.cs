@@ -9,8 +9,8 @@ using Uncreated.Warfare.Database;
 namespace Uncreated.Warfare.Migrations
 {
     [DbContext(typeof(WarfareDbContext))]
-    [Migration("20250102193338_AddBanListWhitelist")]
-    partial class AddBanListWhitelist
+    [Migration("20250401204707_Initial")]
+    partial class Initial
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
@@ -258,7 +258,7 @@ namespace Uncreated.Warfare.Migrations
 
                     b.Property<string>("Redirect")
                         .IsRequired()
-                        .HasColumnType("enum('Shirt','Pants','Vest','Hat','Mask','Backpack','Glasses','AmmoSupply','BuildSupply','RallyPoint','Radio','AmmoBag','AmmoCrate','RepairStation','Bunker','EntrenchingTool','UAV','RepairStationBuilt','AmmoCrateBuilt','BunkerBuilt','Cache','RadioDamaged','LaserDesignator','MapTackFlag')");
+                        .HasColumnType("enum('Shirt','Pants','Vest','Hat','Mask','Backpack','Glasses','AmmoSupply','BuildSupply','RallyPoint','Radio','AmmoBag','AmmoCrate','RepairStation','Bunker','VehicleBay','EntrenchingTool','UAV','RepairStationBuilt','AmmoCrateBuilt','BunkerBuilt','Cache','RadioDamaged','LaserDesignator','MapTackFlag')");
 
                     b.Property<string>("VariantKey")
                         .HasMaxLength(32)
@@ -492,6 +492,9 @@ namespace Uncreated.Warfare.Migrations
 
                     b.HasIndex("FactionId");
 
+                    b.HasIndex("Id")
+                        .IsUnique();
+
                     b.ToTable("kits_bundles");
                 });
 
@@ -510,92 +513,6 @@ namespace Uncreated.Warfare.Migrations
                     b.HasIndex("BundleId");
 
                     b.ToTable("kits_bundle_items");
-                });
-
-            modelBuilder.Entity("Uncreated.Warfare.Models.Kits.Kit", b =>
-                {
-                    b.Property<uint>("PrimaryKey")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int unsigned")
-                        .HasColumnName("pk");
-
-                    b.Property<string>("Branch")
-                        .IsRequired()
-                        .HasColumnType("enum('Infantry','Armor','Airforce','SpecOps','Navy')");
-
-                    b.Property<string>("Class")
-                        .IsRequired()
-                        .HasColumnType("enum('Unarmed','Squadleader','Rifleman','Medic','Breacher','AutomaticRifleman','Grenadier','MachineGunner','LAT','HAT','Marksman','Sniper','APRifleman','CombatEngineer','Crewman','Pilot','SpecOps')");
-
-                    b.Property<DateTime>("CreatedTimestamp")
-                        .HasColumnType("datetime")
-                        .HasColumnName("CreatedAt");
-
-                    b.Property<ulong>("Creator")
-                        .HasColumnType("bigint unsigned");
-
-                    b.Property<int>("CreditCost")
-                        .HasColumnType("int");
-
-                    b.Property<bool>("Disabled")
-                        .HasColumnType("tinyint(1)");
-
-                    b.Property<bool>("FactionFilterIsWhitelist")
-                        .HasColumnType("tinyint(1)");
-
-                    b.Property<uint?>("FactionId")
-                        .HasColumnType("int unsigned")
-                        .HasColumnName("Faction");
-
-                    b.Property<string>("InternalName")
-                        .IsRequired()
-                        .HasMaxLength(25)
-                        .HasColumnType("varchar(25)")
-                        .HasColumnName("Id");
-
-                    b.Property<DateTime>("LastEditedTimestamp")
-                        .HasColumnType("datetime")
-                        .HasColumnName("LastEditedAt");
-
-                    b.Property<ulong>("LastEditor")
-                        .HasColumnType("bigint unsigned");
-
-                    b.Property<bool>("MapFilterIsWhitelist")
-                        .HasColumnType("tinyint(1)");
-
-                    b.Property<decimal>("PremiumCost")
-                        .HasColumnType("decimal(65,30)");
-
-                    b.Property<float>("RequestCooldown")
-                        .HasColumnType("float");
-
-                    b.Property<bool>("RequiresNitro")
-                        .HasColumnType("tinyint(1)");
-
-                    b.Property<int>("Season")
-                        .HasColumnType("int");
-
-                    b.Property<string>("SquadLevel")
-                        .IsRequired()
-                        .HasColumnType("enum('Member','Commander')");
-
-                    b.Property<float?>("TeamLimit")
-                        .HasColumnType("float");
-
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasColumnType("enum('Public','Elite','Special','Loadout','Template')");
-
-                    b.Property<string>("WeaponText")
-                        .HasMaxLength(128)
-                        .HasColumnType("varchar(128)")
-                        .HasColumnName("Weapons");
-
-                    b.HasKey("PrimaryKey");
-
-                    b.HasIndex("FactionId");
-
-                    b.ToTable("kits");
                 });
 
             modelBuilder.Entity("Uncreated.Warfare.Models.Kits.KitAccess", b =>
@@ -621,6 +538,37 @@ namespace Uncreated.Warfare.Migrations
                     b.HasIndex("Steam64");
 
                     b.ToTable("kits_access");
+                });
+
+            modelBuilder.Entity("Uncreated.Warfare.Models.Kits.KitDelay", b =>
+                {
+                    b.Property<uint>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int unsigned")
+                        .HasColumnName("pk");
+
+                    b.Property<string>("Data")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("varchar(512)");
+
+                    b.Property<uint>("KitId")
+                        .HasColumnType("int unsigned")
+                        .HasColumnName("Kit");
+
+                    b.Property<uint?>("KitModelPrimaryKey")
+                        .HasColumnType("int unsigned");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("KitModelPrimaryKey");
+
+                    b.ToTable("kits_delays");
                 });
 
             modelBuilder.Entity("Uncreated.Warfare.Models.Kits.KitFavorite", b =>
@@ -664,8 +612,7 @@ namespace Uncreated.Warfare.Migrations
                         .HasColumnName("Kit");
 
                     b.Property<uint>("Map")
-                        .HasColumnType("int unsigned")
-                        .HasColumnName("Map");
+                        .HasColumnType("int unsigned");
 
                     b.HasKey("KitId", "Map");
 
@@ -693,7 +640,7 @@ namespace Uncreated.Warfare.Migrations
                         .HasColumnType("enum('Primary','Secondary','Hands','Backpack','Vest','Shirt','Pants','Storage','Area')");
 
                     b.Property<string>("Redirect")
-                        .HasColumnType("enum('Shirt','Pants','Vest','Hat','Mask','Backpack','Glasses','AmmoSupply','BuildSupply','RallyPoint','Radio','AmmoBag','AmmoCrate','RepairStation','Bunker','EntrenchingTool','UAV','RepairStationBuilt','AmmoCrateBuilt','BunkerBuilt','Cache','RadioDamaged','LaserDesignator','MapTackFlag')");
+                        .HasColumnType("enum('Shirt','Pants','Vest','Hat','Mask','Backpack','Glasses','AmmoSupply','BuildSupply','RallyPoint','Radio','AmmoBag','AmmoCrate','RepairStation','Bunker','VehicleBay','EntrenchingTool','UAV','RepairStationBuilt','AmmoCrateBuilt','BunkerBuilt','Cache','RadioDamaged','LaserDesignator','MapTackFlag')");
 
                     b.Property<byte>("X")
                         .HasColumnType("tinyint unsigned");
@@ -736,7 +683,7 @@ namespace Uncreated.Warfare.Migrations
                         .HasColumnType("enum('Primary','Secondary','Hands','Backpack','Vest','Shirt','Pants','Storage','Area')");
 
                     b.Property<string>("Redirect")
-                        .HasColumnType("enum('Shirt','Pants','Vest','Hat','Mask','Backpack','Glasses','AmmoSupply','BuildSupply','RallyPoint','Radio','AmmoBag','AmmoCrate','RepairStation','Bunker','EntrenchingTool','UAV','RepairStationBuilt','AmmoCrateBuilt','BunkerBuilt','Cache','RadioDamaged','LaserDesignator','MapTackFlag')");
+                        .HasColumnType("enum('Shirt','Pants','Vest','Hat','Mask','Backpack','Glasses','AmmoSupply','BuildSupply','RallyPoint','Radio','AmmoBag','AmmoCrate','RepairStation','Bunker','VehicleBay','EntrenchingTool','UAV','RepairStationBuilt','AmmoCrateBuilt','BunkerBuilt','Cache','RadioDamaged','LaserDesignator','MapTackFlag')");
 
                     b.Property<string>("RedirectVariant")
                         .HasMaxLength(36)
@@ -805,6 +752,94 @@ namespace Uncreated.Warfare.Migrations
                     b.ToTable("kits_layouts");
                 });
 
+            modelBuilder.Entity("Uncreated.Warfare.Models.Kits.KitModel", b =>
+                {
+                    b.Property<uint>("PrimaryKey")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int unsigned")
+                        .HasColumnName("pk");
+
+                    b.Property<string>("Branch")
+                        .IsRequired()
+                        .HasColumnType("enum('Infantry','Armor','Airforce','SpecOps','Navy')");
+
+                    b.Property<string>("Class")
+                        .IsRequired()
+                        .HasColumnType("enum('Unarmed','Squadleader','Rifleman','Medic','Breacher','AutomaticRifleman','Grenadier','MachineGunner','LAT','HAT','Marksman','Sniper','APRifleman','CombatEngineer','Crewman','Pilot','SpecOps')");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime");
+
+                    b.Property<ulong>("Creator")
+                        .HasColumnType("bigint unsigned");
+
+                    b.Property<int>("CreditCost")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("Disabled")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("FactionFilterIsWhitelist")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<uint?>("FactionId")
+                        .HasColumnType("int unsigned")
+                        .HasColumnName("Faction");
+
+                    b.Property<string>("Id")
+                        .IsRequired()
+                        .HasMaxLength(25)
+                        .HasColumnType("varchar(25)");
+
+                    b.Property<DateTime>("LastEditedAt")
+                        .HasColumnType("datetime");
+
+                    b.Property<ulong>("LastEditor")
+                        .HasColumnType("bigint unsigned");
+
+                    b.Property<bool>("MapFilterIsWhitelist")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<int?>("MinRequiredSquadMembers")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("PremiumCost")
+                        .HasColumnType("decimal(65,30)");
+
+                    b.Property<float>("RequestCooldown")
+                        .HasColumnType("float");
+
+                    b.Property<bool>("RequiresNitro")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("RequiresSquad")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<int>("Season")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SquadLevel")
+                        .IsRequired()
+                        .HasColumnType("enum('Member','Commander')");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("enum('Public','Elite','Special','Loadout','Template')");
+
+                    b.Property<string>("Weapons")
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)");
+
+                    b.HasKey("PrimaryKey");
+
+                    b.HasIndex("FactionId");
+
+                    b.HasIndex("Id")
+                        .IsUnique();
+
+                    b.ToTable("kits");
+                });
+
             modelBuilder.Entity("Uncreated.Warfare.Models.Kits.KitSkillset", b =>
                 {
                     b.Property<uint>("Id")
@@ -850,8 +885,6 @@ namespace Uncreated.Warfare.Migrations
 
                     b.HasKey("KitId", "LanguageId");
 
-                    b.HasIndex("LanguageId");
-
                     b.ToTable("kits_sign_text");
                 });
 
@@ -862,14 +895,19 @@ namespace Uncreated.Warfare.Migrations
                         .HasColumnType("int unsigned")
                         .HasColumnName("pk");
 
-                    b.Property<string>("Json")
+                    b.Property<string>("Data")
                         .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("varchar(255)");
+                        .HasMaxLength(512)
+                        .HasColumnType("varchar(512)");
 
                     b.Property<uint>("KitId")
                         .HasColumnType("int unsigned")
                         .HasColumnName("Kit");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)");
 
                     b.HasKey("Id");
 
@@ -1014,6 +1052,10 @@ namespace Uncreated.Warfare.Migrations
                     b.Property<DateTime>("LastUpdated")
                         .HasColumnType("datetime");
 
+                    b.Property<string>("TimeZone")
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
                     b.Property<bool>("UseCultureForCommandInput")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("tinyint(1)")
@@ -1097,7 +1139,7 @@ namespace Uncreated.Warfare.Migrations
                     b.ToTable("seasons");
                 });
 
-            modelBuilder.Entity("Uncreated.Warfare.Models.Stats.Records.AidRecord", b =>
+            modelBuilder.Entity("Uncreated.Warfare.Models.Stats.AidRecord", b =>
                 {
                     b.Property<ulong>("Id")
                         .ValueGeneratedOnAdd()
@@ -1132,10 +1174,8 @@ namespace Uncreated.Warfare.Migrations
 
                     b.Property<string>("ItemName")
                         .IsRequired()
-                        .ValueGeneratedOnAdd()
                         .HasMaxLength(48)
-                        .HasColumnType("varchar(48)")
-                        .HasDefaultValue("00000000000000000000000000000000");
+                        .HasColumnType("varchar(48)");
 
                     b.Property<string>("NearestLocation")
                         .IsRequired()
@@ -1181,7 +1221,7 @@ namespace Uncreated.Warfare.Migrations
                     b.ToTable("stats_aid_records");
                 });
 
-            modelBuilder.Entity("Uncreated.Warfare.Models.Stats.Records.DamageRecord", b =>
+            modelBuilder.Entity("Uncreated.Warfare.Models.Stats.DamageRecord", b =>
                 {
                     b.Property<ulong>("Id")
                         .ValueGeneratedOnAdd()
@@ -1189,7 +1229,7 @@ namespace Uncreated.Warfare.Migrations
 
                     b.Property<string>("Cause")
                         .IsRequired()
-                        .HasColumnType("enum('BLEEDING','BONES','FREEZING','BURNING','FOOD','WATER','GUN','MELEE','ZOMBIE','ANIMAL','SUICIDE','KILL','INFECTION','PUNCH','BREATH','ROADKILL','VEHICLE','GRENADE','SHRED','LANDMINE','ARENA','MISSILE','CHARGE','SPLASH','SENTRY','ACID','BOULDER','BURNER','SPIT','SPARK')");
+                        .HasColumnType("enum('BLEEDING','BONES','FREEZING','BURNING','FOOD','WATER','GUN','MELEE','ZOMBIE','ANIMAL','SUICIDE','KILL','INFECTION','PUNCH','BREATH','ROADKILL','VEHICLE','GRENADE','SHRED','LANDMINE','ARENA','MISSILE','CHARGE','SPLASH','SENTRY','ACID','BOULDER','BURNER','SPIT','SPARK','37')");
 
                     b.Property<float>("Damage")
                         .HasColumnType("float");
@@ -1319,7 +1359,7 @@ namespace Uncreated.Warfare.Migrations
                     b.ToTable("stats_damage");
                 });
 
-            modelBuilder.Entity("Uncreated.Warfare.Models.Stats.Records.DeathRecord", b =>
+            modelBuilder.Entity("Uncreated.Warfare.Models.Stats.DeathRecord", b =>
                 {
                     b.Property<ulong>("Id")
                         .ValueGeneratedOnAdd()
@@ -1327,7 +1367,7 @@ namespace Uncreated.Warfare.Migrations
 
                     b.Property<string>("DeathCause")
                         .IsRequired()
-                        .HasColumnType("enum('BLEEDING','BONES','FREEZING','BURNING','FOOD','WATER','GUN','MELEE','ZOMBIE','ANIMAL','SUICIDE','KILL','INFECTION','PUNCH','BREATH','ROADKILL','VEHICLE','GRENADE','SHRED','LANDMINE','ARENA','MISSILE','CHARGE','SPLASH','SENTRY','ACID','BOULDER','BURNER','SPIT','SPARK')");
+                        .HasColumnType("enum('BLEEDING','BONES','FREEZING','BURNING','FOOD','WATER','GUN','MELEE','ZOMBIE','ANIMAL','SUICIDE','KILL','INFECTION','PUNCH','BREATH','ROADKILL','VEHICLE','GRENADE','SHRED','LANDMINE','ARENA','MISSILE','CHARGE','SPLASH','SENTRY','ACID','BOULDER','BURNER','SPIT','SPARK','37')");
 
                     b.Property<string>("DeathMessage")
                         .IsRequired()
@@ -1459,7 +1499,7 @@ namespace Uncreated.Warfare.Migrations
                     b.ToTable("stats_deaths");
                 });
 
-            modelBuilder.Entity("Uncreated.Warfare.Models.Stats.Records.FobItemBuilderRecord", b =>
+            modelBuilder.Entity("Uncreated.Warfare.Models.Stats.FobItemBuilderRecord", b =>
                 {
                     b.Property<ulong>("Id")
                         .ValueGeneratedOnAdd()
@@ -1517,7 +1557,7 @@ namespace Uncreated.Warfare.Migrations
                     b.ToTable("stats_fob_items_builders");
                 });
 
-            modelBuilder.Entity("Uncreated.Warfare.Models.Stats.Records.FobItemRecord", b =>
+            modelBuilder.Entity("Uncreated.Warfare.Models.Stats.FobItemRecord", b =>
                 {
                     b.Property<ulong>("Id")
                         .ValueGeneratedOnAdd()
@@ -1657,7 +1697,7 @@ namespace Uncreated.Warfare.Migrations
                     b.ToTable("stats_fob_items");
                 });
 
-            modelBuilder.Entity("Uncreated.Warfare.Models.Stats.Records.FobRecord", b =>
+            modelBuilder.Entity("Uncreated.Warfare.Models.Stats.FobRecord", b =>
                 {
                     b.Property<ulong>("Id")
                         .ValueGeneratedOnAdd()
@@ -1723,21 +1763,9 @@ namespace Uncreated.Warfare.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("varchar(32)");
 
-                    b.Property<int>("FobNumber")
-                        .HasColumnType("int");
-
-                    b.Property<float>("FobPositionX")
-                        .HasColumnType("float");
-
-                    b.Property<float>("FobPositionY")
-                        .HasColumnType("float");
-
-                    b.Property<float>("FobPositionZ")
-                        .HasColumnType("float");
-
                     b.Property<string>("FobType")
                         .IsRequired()
-                        .HasColumnType("enum('Other','RadioFob','SpecialFob','Cache')");
+                        .HasColumnType("enum('Other','BunkerFob','Cache')");
 
                     b.Property<int>("FortificationsBuilt")
                         .HasColumnType("int");
@@ -1832,6 +1860,21 @@ namespace Uncreated.Warfare.Migrations
                     b.ToTable("stats_fobs");
                 });
 
+            modelBuilder.Entity("Uncreated.Warfare.Models.Users.GlobalBanWhitelist", b =>
+                {
+                    b.Property<ulong>("Steam64")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint unsigned");
+
+                    b.Property<DateTime>("EffectiveTime")
+                        .HasColumnType("datetime")
+                        .HasColumnName("EffectiveTimeUTC");
+
+                    b.HasKey("Steam64");
+
+                    b.ToTable("moderation_global_ban_whitelist");
+                });
+
             modelBuilder.Entity("Uncreated.Warfare.Models.Users.Permission", b =>
                 {
                     b.Property<uint>("PrimaryKey")
@@ -1898,62 +1941,152 @@ namespace Uncreated.Warfare.Migrations
                 {
                     b.Property<ulong>("Steam64")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint unsigned");
+                        .HasColumnType("bigint unsigned")
+                        .HasColumnName("Steam64");
 
                     b.Property<string>("CharacterName")
                         .IsRequired()
                         .HasMaxLength(30)
-                        .HasColumnType("varchar(30)");
+                        .HasColumnType("varchar(30)")
+                        .HasColumnName("CharacterName");
 
                     b.Property<ulong>("DiscordId")
-                        .HasColumnType("bigint unsigned");
+                        .HasColumnType("bigint unsigned")
+                        .HasColumnName("DiscordId");
 
                     b.Property<string>("DisplayName")
                         .HasMaxLength(30)
-                        .HasColumnType("varchar(30)");
+                        .HasColumnType("varchar(30)")
+                        .HasColumnName("DisplayName");
 
                     b.Property<DateTime?>("FirstJoined")
-                        .HasColumnType("datetime");
+                        .HasColumnType("datetime")
+                        .HasColumnName("FirstJoined");
 
                     b.Property<DateTime?>("LastJoined")
-                        .HasColumnType("datetime");
+                        .HasColumnType("datetime")
+                        .HasColumnName("LastJoined");
+
+                    b.Property<DateTime?>("LastPrivacyPolicyAccepted")
+                        .HasColumnType("datetime")
+                        .HasColumnName("LastPrivacyPolicyAccepted");
 
                     b.Property<string>("NickName")
                         .IsRequired()
                         .HasMaxLength(30)
-                        .HasColumnType("varchar(30)");
+                        .HasColumnType("varchar(30)")
+                        .HasColumnName("NickName");
 
                     b.Property<string>("PlayerName")
                         .IsRequired()
                         .HasMaxLength(48)
-                        .HasColumnType("varchar(48)");
+                        .HasColumnType("varchar(48)")
+                        .HasColumnName("PlayerName");
 
                     b.HasKey("Steam64");
 
                     b.ToTable("users");
                 });
 
+            modelBuilder.Entity("Uncreated.Warfare.Models.Web.LoadoutPurchase", b =>
+                {
+                    b.Property<uint>("KitId")
+                        .HasColumnType("int unsigned")
+                        .HasColumnName("CreatedKit");
+
+                    b.Property<string>("AdminChangeRequest")
+                        .HasMaxLength(512)
+                        .HasColumnType("varchar(512)");
+
+                    b.Property<DateTime?>("AdminChangeRequestDate")
+                        .HasColumnType("datetime");
+
+                    b.Property<ulong?>("AdminChangeRequesterId")
+                        .HasColumnType("bigint unsigned")
+                        .HasColumnName("AdminChangeRequester");
+
+                    b.Property<DateTime>("Created")
+                        .HasColumnType("datetime");
+
+                    b.Property<string>("Edit")
+                        .IsRequired()
+                        .HasColumnType("enum('None','EditRequested','EditAllowed','SeasonalUpdate')");
+
+                    b.Property<DateTime>("FormModified")
+                        .HasColumnType("datetime");
+
+                    b.Property<string>("FormYaml")
+                        .HasMaxLength(65535)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("FormYaml");
+
+                    b.Property<DateTime>("LastUpdated")
+                        .HasColumnType("datetime");
+
+                    b.Property<int>("LoadoutId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("Paid")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("PlayerChangeRequest")
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
+
+                    b.Property<DateTime?>("PlayerChangeRequestDate")
+                        .HasColumnType("datetime");
+
+                    b.Property<int>("Season")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("enum('AwaitingApproval','ChangesRequested','InProgress','Completed')");
+
+                    b.Property<ulong>("Steam64")
+                        .HasColumnType("bigint unsigned")
+                        .HasColumnName("Steam64");
+
+                    b.Property<string>("StripeSessionId")
+                        .HasMaxLength(70)
+                        .HasColumnType("varchar(70)");
+
+                    b.HasKey("KitId");
+
+                    b.HasIndex("AdminChangeRequesterId");
+
+                    b.HasIndex("Steam64");
+
+                    b.ToTable("loadout_purchases");
+                });
+
             modelBuilder.Entity("Uncreated.Warfare.Moderation.PlayerHWID", b =>
                 {
                     b.Property<uint>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int unsigned");
+                        .HasColumnType("int unsigned")
+                        .HasColumnName("Id");
 
                     b.Property<DateTime?>("FirstLogin")
-                        .HasColumnType("datetime");
+                        .HasColumnType("datetime")
+                        .HasColumnName("FirstLogin");
 
                     b.Property<byte[]>("HWID")
                         .IsRequired()
-                        .HasColumnType("binary(20)");
+                        .HasColumnType("binary(20)")
+                        .HasColumnName("HWID");
 
                     b.Property<int>("Index")
-                        .HasColumnType("int");
+                        .HasColumnType("int")
+                        .HasColumnName("Index");
 
                     b.Property<DateTime>("LastLogin")
-                        .HasColumnType("datetime");
+                        .HasColumnType("datetime")
+                        .HasColumnName("LastLogin");
 
                     b.Property<int>("LoginCount")
-                        .HasColumnType("int");
+                        .HasColumnType("int")
+                        .HasColumnName("LoginCount");
 
                     b.Property<ulong>("Steam64")
                         .HasColumnType("bigint unsigned")
@@ -1972,20 +2105,24 @@ namespace Uncreated.Warfare.Migrations
                 {
                     b.Property<uint>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int unsigned");
+                        .HasColumnType("int unsigned")
+                        .HasColumnName("Id");
 
                     b.Property<DateTime?>("FirstLogin")
-                        .HasColumnType("datetime");
+                        .HasColumnType("datetime")
+                        .HasColumnName("FirstLogin");
 
                     b.Property<string>("IPAddress")
                         .HasColumnType("varchar(45)")
                         .HasColumnName("Unpacked");
 
                     b.Property<DateTime>("LastLogin")
-                        .HasColumnType("datetime");
+                        .HasColumnType("datetime")
+                        .HasColumnName("LastLogin");
 
                     b.Property<int>("LoginCount")
-                        .HasColumnType("int");
+                        .HasColumnType("int")
+                        .HasColumnName("LoginCount");
 
                     b.Property<uint>("PackedIP")
                         .HasColumnType("int unsigned")
@@ -2046,7 +2183,7 @@ namespace Uncreated.Warfare.Migrations
 
             modelBuilder.Entity("Uncreated.Warfare.Models.Factions.Faction", b =>
                 {
-                    b.HasOne("Uncreated.Warfare.Models.Kits.Kit", "UnarmedKit")
+                    b.HasOne("Uncreated.Warfare.Models.Kits.KitModel", "UnarmedKit")
                         .WithMany()
                         .HasForeignKey("UnarmedKitId")
                         .OnDelete(DeleteBehavior.SetNull);
@@ -2106,7 +2243,7 @@ namespace Uncreated.Warfare.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Uncreated.Warfare.Models.Kits.Kit", "Kit")
+                    b.HasOne("Uncreated.Warfare.Models.Kits.KitModel", "Kit")
                         .WithMany()
                         .HasForeignKey("KitId")
                         .OnDelete(DeleteBehavior.SetNull);
@@ -2180,7 +2317,7 @@ namespace Uncreated.Warfare.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Uncreated.Warfare.Models.Kits.Kit", "Kit")
+                    b.HasOne("Uncreated.Warfare.Models.Kits.KitModel", "Kit")
                         .WithMany("Bundles")
                         .HasForeignKey("KitId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -2191,19 +2328,9 @@ namespace Uncreated.Warfare.Migrations
                     b.Navigation("Kit");
                 });
 
-            modelBuilder.Entity("Uncreated.Warfare.Models.Kits.Kit", b =>
-                {
-                    b.HasOne("Uncreated.Warfare.Models.Factions.Faction", "Faction")
-                        .WithMany()
-                        .HasForeignKey("FactionId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("Faction");
-                });
-
             modelBuilder.Entity("Uncreated.Warfare.Models.Kits.KitAccess", b =>
                 {
-                    b.HasOne("Uncreated.Warfare.Models.Kits.Kit", "Kit")
+                    b.HasOne("Uncreated.Warfare.Models.Kits.KitModel", "Kit")
                         .WithMany("Access")
                         .HasForeignKey("KitId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -2220,10 +2347,17 @@ namespace Uncreated.Warfare.Migrations
                     b.Navigation("PlayerData");
                 });
 
+            modelBuilder.Entity("Uncreated.Warfare.Models.Kits.KitDelay", b =>
+                {
+                    b.HasOne("Uncreated.Warfare.Models.Kits.KitModel", null)
+                        .WithMany("Delays")
+                        .HasForeignKey("KitModelPrimaryKey");
+                });
+
             modelBuilder.Entity("Uncreated.Warfare.Models.Kits.KitFavorite", b =>
                 {
-                    b.HasOne("Uncreated.Warfare.Models.Kits.Kit", "Kit")
-                        .WithMany()
+                    b.HasOne("Uncreated.Warfare.Models.Kits.KitModel", "Kit")
+                        .WithMany("Favorites")
                         .HasForeignKey("KitId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -2241,37 +2375,31 @@ namespace Uncreated.Warfare.Migrations
 
             modelBuilder.Entity("Uncreated.Warfare.Models.Kits.KitFilteredFaction", b =>
                 {
-                    b.HasOne("Uncreated.Warfare.Models.Factions.Faction", "Faction")
+                    b.HasOne("Uncreated.Warfare.Models.Factions.Faction", null)
                         .WithMany()
                         .HasForeignKey("FactionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Uncreated.Warfare.Models.Kits.Kit", "Kit")
+                    b.HasOne("Uncreated.Warfare.Models.Kits.KitModel", null)
                         .WithMany("FactionFilter")
                         .HasForeignKey("KitId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Faction");
-
-                    b.Navigation("Kit");
                 });
 
             modelBuilder.Entity("Uncreated.Warfare.Models.Kits.KitFilteredMap", b =>
                 {
-                    b.HasOne("Uncreated.Warfare.Models.Kits.Kit", "Kit")
+                    b.HasOne("Uncreated.Warfare.Models.Kits.KitModel", null)
                         .WithMany("MapFilter")
                         .HasForeignKey("KitId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Kit");
                 });
 
             modelBuilder.Entity("Uncreated.Warfare.Models.Kits.KitHotkey", b =>
                 {
-                    b.HasOne("Uncreated.Warfare.Models.Kits.Kit", "Kit")
+                    b.HasOne("Uncreated.Warfare.Models.Kits.KitModel", "Kit")
                         .WithMany()
                         .HasForeignKey("KitId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -2290,18 +2418,16 @@ namespace Uncreated.Warfare.Migrations
 
             modelBuilder.Entity("Uncreated.Warfare.Models.Kits.KitItemModel", b =>
                 {
-                    b.HasOne("Uncreated.Warfare.Models.Kits.Kit", "Kit")
-                        .WithMany("ItemModels")
+                    b.HasOne("Uncreated.Warfare.Models.Kits.KitModel", null)
+                        .WithMany("Items")
                         .HasForeignKey("KitId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Kit");
                 });
 
             modelBuilder.Entity("Uncreated.Warfare.Models.Kits.KitLayoutTransformation", b =>
                 {
-                    b.HasOne("Uncreated.Warfare.Models.Kits.Kit", "Kit")
+                    b.HasOne("Uncreated.Warfare.Models.Kits.KitModel", null)
                         .WithMany()
                         .HasForeignKey("KitId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -2313,50 +2439,44 @@ namespace Uncreated.Warfare.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Kit");
-
                     b.Navigation("PlayerData");
+                });
+
+            modelBuilder.Entity("Uncreated.Warfare.Models.Kits.KitModel", b =>
+                {
+                    b.HasOne("Uncreated.Warfare.Models.Factions.Faction", "Faction")
+                        .WithMany()
+                        .HasForeignKey("FactionId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Faction");
                 });
 
             modelBuilder.Entity("Uncreated.Warfare.Models.Kits.KitSkillset", b =>
                 {
-                    b.HasOne("Uncreated.Warfare.Models.Kits.Kit", "Kit")
+                    b.HasOne("Uncreated.Warfare.Models.Kits.KitModel", null)
                         .WithMany("Skillsets")
                         .HasForeignKey("KitId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Kit");
                 });
 
             modelBuilder.Entity("Uncreated.Warfare.Models.Kits.KitTranslation", b =>
                 {
-                    b.HasOne("Uncreated.Warfare.Models.Kits.Kit", "Kit")
+                    b.HasOne("Uncreated.Warfare.Models.Kits.KitModel", null)
                         .WithMany("Translations")
                         .HasForeignKey("KitId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.HasOne("Uncreated.Warfare.Models.Localization.LanguageInfo", "Language")
-                        .WithMany()
-                        .HasForeignKey("LanguageId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Kit");
-
-                    b.Navigation("Language");
                 });
 
             modelBuilder.Entity("Uncreated.Warfare.Models.Kits.KitUnlockRequirement", b =>
                 {
-                    b.HasOne("Uncreated.Warfare.Models.Kits.Kit", "Kit")
-                        .WithMany("UnlockRequirementsModels")
+                    b.HasOne("Uncreated.Warfare.Models.Kits.KitModel", null)
+                        .WithMany("UnlockRequirements")
                         .HasForeignKey("KitId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Kit");
                 });
 
             modelBuilder.Entity("Uncreated.Warfare.Models.Localization.LanguageAlias", b =>
@@ -2457,7 +2577,7 @@ namespace Uncreated.Warfare.Migrations
                     b.Navigation("Map");
                 });
 
-            modelBuilder.Entity("Uncreated.Warfare.Models.Stats.Records.AidRecord", b =>
+            modelBuilder.Entity("Uncreated.Warfare.Models.Stats.AidRecord", b =>
                 {
                     b.HasOne("Uncreated.Warfare.Models.Users.WarfareUserData", "InstigatorData")
                         .WithMany()
@@ -2488,7 +2608,7 @@ namespace Uncreated.Warfare.Migrations
                     b.Navigation("Session");
                 });
 
-            modelBuilder.Entity("Uncreated.Warfare.Models.Stats.Records.DamageRecord", b =>
+            modelBuilder.Entity("Uncreated.Warfare.Models.Stats.DamageRecord", b =>
                 {
                     b.HasOne("Uncreated.Warfare.Models.Users.WarfareUserData", "InstigatorData")
                         .WithMany()
@@ -2533,7 +2653,7 @@ namespace Uncreated.Warfare.Migrations
                     b.Navigation("Session");
                 });
 
-            modelBuilder.Entity("Uncreated.Warfare.Models.Stats.Records.DeathRecord", b =>
+            modelBuilder.Entity("Uncreated.Warfare.Models.Stats.DeathRecord", b =>
                 {
                     b.HasOne("Uncreated.Warfare.Models.Users.WarfareUserData", "InstigatorData")
                         .WithMany()
@@ -2545,9 +2665,9 @@ namespace Uncreated.Warfare.Migrations
                         .HasForeignKey("InstigatorSessionId")
                         .OnDelete(DeleteBehavior.NoAction);
 
-                    b.HasOne("Uncreated.Warfare.Models.Stats.Records.DamageRecord", "KillShot")
+                    b.HasOne("Uncreated.Warfare.Models.Stats.DamageRecord", "KillShot")
                         .WithOne()
-                        .HasForeignKey("Uncreated.Warfare.Models.Stats.Records.DeathRecord", "KillShotId");
+                        .HasForeignKey("Uncreated.Warfare.Models.Stats.DeathRecord", "KillShotId");
 
                     b.HasOne("Uncreated.Warfare.Models.Users.WarfareUserData", "RelatedPlayerData")
                         .WithMany()
@@ -2584,9 +2704,9 @@ namespace Uncreated.Warfare.Migrations
                     b.Navigation("Session");
                 });
 
-            modelBuilder.Entity("Uncreated.Warfare.Models.Stats.Records.FobItemBuilderRecord", b =>
+            modelBuilder.Entity("Uncreated.Warfare.Models.Stats.FobItemBuilderRecord", b =>
                 {
-                    b.HasOne("Uncreated.Warfare.Models.Stats.Records.FobItemRecord", "FobItem")
+                    b.HasOne("Uncreated.Warfare.Models.Stats.FobItemRecord", "FobItem")
                         .WithMany("Builders")
                         .HasForeignKey("FobItemId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -2609,9 +2729,9 @@ namespace Uncreated.Warfare.Migrations
                     b.Navigation("Session");
                 });
 
-            modelBuilder.Entity("Uncreated.Warfare.Models.Stats.Records.FobItemRecord", b =>
+            modelBuilder.Entity("Uncreated.Warfare.Models.Stats.FobItemRecord", b =>
                 {
-                    b.HasOne("Uncreated.Warfare.Models.Stats.Records.FobRecord", "Fob")
+                    b.HasOne("Uncreated.Warfare.Models.Stats.FobRecord", "Fob")
                         .WithMany("Items")
                         .HasForeignKey("FobId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -2648,7 +2768,7 @@ namespace Uncreated.Warfare.Migrations
                     b.Navigation("Session");
                 });
 
-            modelBuilder.Entity("Uncreated.Warfare.Models.Stats.Records.FobRecord", b =>
+            modelBuilder.Entity("Uncreated.Warfare.Models.Stats.FobRecord", b =>
                 {
                     b.HasOne("Uncreated.Warfare.Models.Users.WarfareUserData", "InstigatorData")
                         .WithMany()
@@ -2677,6 +2797,31 @@ namespace Uncreated.Warfare.Migrations
                     b.Navigation("PlayerData");
 
                     b.Navigation("Session");
+                });
+
+            modelBuilder.Entity("Uncreated.Warfare.Models.Web.LoadoutPurchase", b =>
+                {
+                    b.HasOne("Uncreated.Warfare.Models.Users.WarfareUserData", "AdminChangeRequester")
+                        .WithMany()
+                        .HasForeignKey("AdminChangeRequesterId");
+
+                    b.HasOne("Uncreated.Warfare.Models.Kits.KitModel", "Kit")
+                        .WithMany()
+                        .HasForeignKey("KitId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Uncreated.Warfare.Models.Users.WarfareUserData", "User")
+                        .WithMany()
+                        .HasForeignKey("Steam64")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AdminChangeRequester");
+
+                    b.Navigation("Kit");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Uncreated.Warfare.Moderation.PlayerHWID", b =>
@@ -2727,15 +2872,19 @@ namespace Uncreated.Warfare.Migrations
                     b.Navigation("Kits");
                 });
 
-            modelBuilder.Entity("Uncreated.Warfare.Models.Kits.Kit", b =>
+            modelBuilder.Entity("Uncreated.Warfare.Models.Kits.KitModel", b =>
                 {
                     b.Navigation("Access");
 
                     b.Navigation("Bundles");
 
+                    b.Navigation("Delays");
+
                     b.Navigation("FactionFilter");
 
-                    b.Navigation("ItemModels");
+                    b.Navigation("Favorites");
+
+                    b.Navigation("Items");
 
                     b.Navigation("MapFilter");
 
@@ -2743,7 +2892,7 @@ namespace Uncreated.Warfare.Migrations
 
                     b.Navigation("Translations");
 
-                    b.Navigation("UnlockRequirementsModels");
+                    b.Navigation("UnlockRequirements");
                 });
 
             modelBuilder.Entity("Uncreated.Warfare.Models.Localization.LanguageInfo", b =>
@@ -2765,12 +2914,12 @@ namespace Uncreated.Warfare.Migrations
                     b.Navigation("Maps");
                 });
 
-            modelBuilder.Entity("Uncreated.Warfare.Models.Stats.Records.FobItemRecord", b =>
+            modelBuilder.Entity("Uncreated.Warfare.Models.Stats.FobItemRecord", b =>
                 {
                     b.Navigation("Builders");
                 });
 
-            modelBuilder.Entity("Uncreated.Warfare.Models.Stats.Records.FobRecord", b =>
+            modelBuilder.Entity("Uncreated.Warfare.Models.Stats.FobRecord", b =>
                 {
                     b.Navigation("Items");
                 });

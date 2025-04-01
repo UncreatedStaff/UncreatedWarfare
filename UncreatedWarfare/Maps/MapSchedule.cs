@@ -16,9 +16,6 @@ public class MapScheduler
     private List<ulong>? _originalMods;
     private List<ulong>? _originalIgnoreChildren;
 
-    // todo this is bad and needs replaced eventually
-    public static int CurrentStatic => WarfareModule.Singleton.ServiceProvider.Resolve<MapScheduler>().Current;
-
     // todo add to config
     private static readonly MapData[] MapRotation =
     [

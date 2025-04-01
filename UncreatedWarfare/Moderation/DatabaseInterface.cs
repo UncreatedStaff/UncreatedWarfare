@@ -1924,7 +1924,6 @@ public class DatabaseInterface : IHostedService
     public const string TableIPAddresses = "ip_addresses";
     public const string TableHWIDs = "hwids";
     public const string TableIPWhitelists = "ip_whitelists";
-    public const string TableBanListWhitelists = "ban_list_whitelists";
 
     public const string TableUserData = "users";
     public const string ColumnUserDataSteam64 = "Steam64";
@@ -2109,11 +2108,6 @@ public class DatabaseInterface : IHostedService
     public const string ColumnReportsShotRecordHitAsset = "HitAsset";
     public const string ColumnReportsShotRecordHitAssetName = "HitAssetName";
     public const string ColumnReportsShotRecordTimestamp = "Timestamp";
-
-    public const string ColumnBanListWhitelistSteam64 = "Steam64";
-    public const string ColumnBanListWhitelistAdmin = "Admin";
-    public const string ColumnBanListWhitelistTimestamp = "TimeAddedUTC";
-    public const string ColumnBanListWhitelistReason = "Reason";
 }
 
 public enum ActorRelationType
