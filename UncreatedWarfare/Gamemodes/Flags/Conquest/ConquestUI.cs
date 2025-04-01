@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
-using Uncreated.Warfare.Gamemodes.Flags.UI;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
@@ -28,14 +27,13 @@ public static class ConquestUI
             CTFUI.ListUI.Header.SetText(c, T.FlagsHeader.Translate(player));
             if (team == 1 || team == 2)
             {
-                for (int i = 0; i < CTFUI.ListUI.Rows.Length; i++)
+                for (int i = 0; i < CTFUI.ListUI.Parents.Length; i++)
                 {
-                    FlagListUI.FlagListRow row = CTFUI.ListUI.Rows[i];
                     if (rotation.Count <= i)
-                        row.Root.SetVisibility(c, false);
+                        CTFUI.ListUI.Parents[i].SetVisibility(c, false);
                     else
                     {
-                        row.Root.SetVisibility(c, true);
+                        CTFUI.ListUI.Parents[i].SetVisibility(c, true);
                         int index = team == 1 ? i : rotation.Count - i - 1;
                         Flag flag = rotation[index];
                         string objective;
@@ -46,21 +44,20 @@ public static class ConquestUI
                         else
                             objective = $"<color=#{UCWarfare.GetColorHex("attack_icon_color")}>{Gamemode.Config.UIIconAttack}</color>";
 
-                        row.Name.SetText(c, $"<color=#{flag.TeamSpecificHexColor}>{flag.Name}</color>");
-                        row.Icon.SetText(c, objective);
+                        CTFUI.ListUI.Names[i].SetText(c, $"<color=#{flag.TeamSpecificHexColor}>{flag.Name}</color>");
+                        CTFUI.ListUI.Icons[i].SetText(c, objective);
                     }
                 }
             }
             else if (team == 3)
             {
-                for (int i = 0; i < CTFUI.ListUI.Rows.Length; i++)
+                for (int i = 0; i < CTFUI.ListUI.Parents.Length; i++)
                 {
-                    FlagListUI.FlagListRow row = CTFUI.ListUI.Rows[i];
                     if (rotation.Count <= i)
-                        row.Root.SetVisibility(c, false);
+                        CTFUI.ListUI.Parents[i].SetVisibility(c, false);
                     else
                     {
-                        row.Root.SetVisibility(c, true);
+                        CTFUI.ListUI.Parents[i].SetVisibility(c, true);
                         Flag flag = rotation[i];
                         string objective = flag.Owner switch
                         {
@@ -72,8 +69,8 @@ public static class ConquestUI
                                  $"<color=#{TeamManager.Team2ColorHex}>{Gamemode.Config.UIIconDefend}</color>",
                             _ => string.Empty
                         };
-                        row.Name.SetText(c, $"<color=#{flag.TeamSpecificHexColor}>{flag.Name}</color>");
-                        row.Icon.SetText(c, objective);
+                        CTFUI.ListUI.Names[i].SetText(c, $"<color=#{flag.TeamSpecificHexColor}>{flag.Name}</color>");
+                        CTFUI.ListUI.Icons[i].SetText(c, objective);
                     }
                 }
             }
@@ -109,11 +106,10 @@ public static class ConquestUI
                 if (pl.HasUIHidden) continue;
                 ulong team = pl.GetTeam();
                 int i2 = team == 2 ? indt2 : index;
-                FlagListUI.FlagListRow row = CTFUI.ListUI.Rows[i2];
-                row.Name.SetText(pl.Connection, name);
+                CTFUI.ListUI.Names[i2].SetText(pl.Connection, name);
                 if (team == 1 || team == 2)
                 {
-                    row.Icon.SetText(pl.Connection, team == 2 ? obj2 : obj1);
+                    CTFUI.ListUI.Icons[i2].SetText(pl.Connection, team == 2 ? obj2 : obj1);
                 }
                 else if (team == 3)
                 {
@@ -127,7 +123,7 @@ public static class ConquestUI
                              $"<color=#{TeamManager.Team2ColorHex}>{Gamemode.Config.UIIconDefend}</color>",
                         _ => string.Empty
                     };
-                    row.Icon.SetText(pl.Connection, obj3);
+                    CTFUI.ListUI.Icons[i2].SetText(pl.Connection, obj3);
                 }
             }
         }

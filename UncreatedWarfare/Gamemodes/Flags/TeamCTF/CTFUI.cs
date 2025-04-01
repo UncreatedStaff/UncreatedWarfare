@@ -216,16 +216,15 @@ public static class CTFUI
             ListUI.Header.SetText(c, T.FlagsHeader.Translate(player));
             if (team == 1 || team == 2)
             {
-                for (int i = 0; i < ListUI.Rows.Length; i++)
+                for (int i = 0; i < ListUI.Parents.Length; i++)
                 {
-                    FlagListUI.FlagListRow row = ListUI.Rows[i];
                     if (rotation.Count <= i)
                     {
-                        row.Root.SetVisibility(c, false);
+                        ListUI.Parents[i].SetVisibility(c, false);
                     }
                     else
                     {
-                        row.Root.SetVisibility(c, true);
+                        ListUI.Parents[i].SetVisibility(c, true);
                         int index = team == 1 ? i : rotation.Count - i - 1;
                         Flag flag = rotation[index];
                         string objective = string.Empty;
@@ -243,25 +242,24 @@ public static class CTFUI
                             else if (team == 1 && flag.Owner == 1)
                                 objective = $"<color=#{UCWarfare.GetColorHex("defend_icon_color")}>{Gamemode.Config.UIIconDefend}</color>";
                         }
-                        row.Name.SetText(c, flag.Discovered(team) ?
+                        ListUI.Names[i].SetText(c, flag.Discovered(team) ?
                             $"<color=#{flag.TeamSpecificHexColor}>{flag.Name}</color>" :
                             T.UndiscoveredFlag.Translate(player));
-                        row.Icon.SetText(c, objective);
+                        ListUI.Icons[i].SetText(c, objective);
                     }
                 }
             }
             else if (team == 3)
             {
-                for (int i = 0; i < ListUI.Rows.Length; i++)
+                for (int i = 0; i < ListUI.Parents.Length; i++)
                 {
-                    FlagListUI.FlagListRow row = ListUI.Rows[i];
                     if (rotation.Count <= i)
                     {
-                        row.Root.SetVisibility(c, false);
+                        ListUI.Parents[i].SetVisibility(c, false);
                     }
                     else
                     {
-                        row.Root.SetVisibility(c, true);
+                        ListUI.Parents[i].SetVisibility(c, true);
                         Flag flag = rotation[i];
                         string objective = string.Empty;
                         if (flag.T1Obj)
@@ -276,10 +274,10 @@ public static class CTFUI
                             if (flag.Owner == 1)
                                 objective += $"<color=#{TeamManager.Team1ColorHex}>{Gamemode.Config.UIIconDefend}</color>";
                         }
-                        row.Name.SetText(c, $"<color=#{flag.TeamSpecificHexColor}>{flag.Name}</color>" +
+                        ListUI.Names[i].SetText(c, $"<color=#{flag.TeamSpecificHexColor}>{flag.Name}</color>" +
                             $"{(flag.Discovered(1) ? string.Empty : $" <color=#{TeamManager.Team1ColorHex}>?</color>")}" +
                             $"{(flag.Discovered(2) ? string.Empty : $" <color=#{TeamManager.Team2ColorHex}>?</color>")}");
-                        row.Icon.SetText(c, objective);
+                        ListUI.Icons[i].SetText(c, objective);
                     }
                 }
             }
@@ -321,8 +319,8 @@ public static class CTFUI
                             objective = $"<color=#{UCWarfare.GetColorHex("defend_icon_color")}>{Gamemode.Config.UIIconDefend}</color>";
                     }
                     if (ownerChanged)
-                        ListUI.Rows[i3].Name.SetText(c, $"<color=#{flag.TeamSpecificHexColor}>{flag.Name}</color>");
-                    ListUI.Rows[i3].Icon.SetText(c, objective);
+                        ListUI.Names[i3].SetText(c, $"<color=#{flag.TeamSpecificHexColor}>{flag.Name}</color>");
+                    ListUI.Icons[i3].SetText(c, objective);
                 }
                 else
                 {
@@ -338,10 +336,10 @@ public static class CTFUI
                         if (flag.Owner == 1)
                             objective += $"<color=#{TeamManager.Team1ColorHex}>{Gamemode.Config.UIIconDefend}</color>";
                     }
-                    ListUI.Rows[i3].Name.SetText(c, $"<color=#{flag.TeamSpecificHexColor}>{flag.Name}</color>" +
-                                                    $"{(flag.Discovered(1) ? string.Empty : $" <color=#{TeamManager.Team1ColorHex}>?</color>")}" +
-                                                    $"{(flag.Discovered(2) ? string.Empty : $" <color=#{TeamManager.Team2ColorHex}>?</color>")}");
-                    ListUI.Rows[i3].Icon.SetText(c, objective);
+                    ListUI.Names[i3].SetText(c, $"<color=#{flag.TeamSpecificHexColor}>{flag.Name}</color>" +
+                                                $"{(flag.Discovered(1) ? string.Empty : $" <color=#{TeamManager.Team1ColorHex}>?</color>")}" +
+                                                $"{(flag.Discovered(2) ? string.Empty : $" <color=#{TeamManager.Team2ColorHex}>?</color>")}");
+                    ListUI.Icons[i3].SetText(c, objective);
                 }
             }
         }

@@ -48,7 +48,7 @@ internal partial class ModerationUI
 
         ModerationFormRoot.SetVisibility(player.Connection, false);
         for (int i = 0; i < ModerationActionControls.Length; ++i)
-            ModerationActionControls[i].Hide(player);
+            ModerationActionControls[i].Root.SetVisibility(player, false);
 
         data.Actors.Clear();
         data.Evidence.Clear();
@@ -468,19 +468,19 @@ internal partial class ModerationUI
         ModerationActionToggleButton2.Hide(c);
 
         int ct;
-        ModerationActionControls[0].SetText(c, "Cancel");
+        ModerationActionControls[0].Text.SetText(c, "Cancel");
         if (editingExisting)
         {
-            ModerationActionControls[1].SetText(c, "Save");
+            ModerationActionControls[1].Text.SetText(c, "Save");
             ct = 2;
             if (hasRemoveable)
             {
-                ModerationActionControls[ct].SetText(c, "Remove");
+                ModerationActionControls[ct].Text.SetText(c, "Remove");
                 ++ct;
             }
             if (hasForgiveable)
             {
-                ModerationActionControls[ct].SetText(c, "Forgive");
+                ModerationActionControls[ct].Text.SetText(c, "Forgive");
                 ++ct;
             }
 
@@ -489,16 +489,16 @@ internal partial class ModerationUI
         }
         else
         {
-            ModerationActionControls[1].SetText(c, "Add");
+            ModerationActionControls[1].Text.SetText(c, "Add");
             ct = Math.Min(2, ModerationActionControls.Length);
         }
 
         int i2 = 0;
         for (; i2 < ct; ++i2)
-            ModerationActionControls[i2].SetVisibility(c, true);
+            ModerationActionControls[i2].Root.SetVisibility(c, true);
 
         for (; i2 < ModerationActionControls.Length; ++i2)
-            ModerationActionControls[i2].SetVisibility(c, false);
+            ModerationActionControls[i2].Root.SetVisibility(c, false);
 
         TimeUtility.InvokeAfterDelay(() => LogicModerationActionsUpdateScrollVisual.Show(player), 0.125f);
 
@@ -507,7 +507,7 @@ internal partial class ModerationUI
         hideAllElements:
 
         for (int i = 0; i < ModerationActionControls.Length; ++i)
-            ModerationActionControls[i].SetVisibility(c, false);
+            ModerationActionControls[i].Root.SetVisibility(c, false);
         ModerationActionInputBox2.Hide(c);
         ModerationActionInputBox3.Hide(c);
         ModerationActionToggleButton1.Button.SetVisibility(c, false);
@@ -910,7 +910,7 @@ internal partial class ModerationUI
             }
         }
         for (int i = 0; i < ModerationActionControls.Length; ++i)
-            ModerationActionControls[i].Hide(player);
+            ModerationActionControls[i].Root.Hide(player);
 
         if (data.PrimaryEditingEntry != null && data.PrimaryEditingEntry.PendingReputation != 0)
         {
@@ -1111,7 +1111,7 @@ internal partial class ModerationUI
     }
     private void OnActionControlClicked(UnturnedButton button, Player player)
     {
-        int control = Array.FindIndex(ModerationActionControls, x => x.Button == button);
+        int control = Array.FindIndex(ModerationActionControls, x => x.Root == button);
         if (control == -1 || UCPlayer.FromPlayer(player) is not { } ucPlayer)
             return;
 
@@ -1166,7 +1166,7 @@ internal partial class ModerationUI
         IModerationActor actor = Actors.GetActor(player.Steam64);
 
         for (int i = 0; i < ModerationActionControls.Length; ++i)
-            ModerationActionControls[i].Hide(player);
+            ModerationActionControls[i].Root.Hide(player);
 
         UCWarfare.RunTask(async token =>
         {
@@ -1229,7 +1229,7 @@ internal partial class ModerationUI
         IModerationActor actor = Actors.GetActor(player.Steam64);
 
         for (int i = 0; i < ModerationActionControls.Length; ++i)
-            ModerationActionControls[i].Hide(player);
+            ModerationActionControls[i].Root.Hide(player);
 
         UCWarfare.RunTask(async token =>
         {

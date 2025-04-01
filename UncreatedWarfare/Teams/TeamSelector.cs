@@ -1,12 +1,13 @@
-﻿using Cysharp.Threading.Tasks;
-using SDG.NetTransport;
+﻿using SDG.NetTransport;
 using SDG.Unturned;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Presets;
 using Uncreated.Players;
@@ -156,15 +157,15 @@ public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
                 }
                 bool otherTeamHasRoom = CheckTeam(other, team, t1, t2);
                 JoinUI.LogicTeamSelectedToggle[other - 1].SetVisibility(c, false);
-                JoinUI.Teams[other - 1].Status.SetText(c, (otherTeamHasRoom ? T.TeamsUIClickToJoin : T.TeamsUIFull).Translate(player));
+                JoinUI.TeamStatus[other - 1].SetText(c, (otherTeamHasRoom ? T.TeamsUIClickToJoin : T.TeamsUIFull).Translate(player));
                 JoinUI.SetTeamEnabled(c, other, otherTeamHasRoom);
             }
             player.TeamSelectorData.SelectedTeam = team;
             UpdateList();
             JoinUI.SetTeamEnabled(c, team, true);
             JoinUI.LogicTeamSelectedToggle[team - 1].SetVisibility(c, true);
-            JoinUI.Teams[team - 1].Status.SetText(c, T.TeamsUIClickToJoin.Translate(player));
-            JoinUI.ButtonConfirm.SetText(c, T.TeamsUIConfirm.Translate(player));
+            JoinUI.TeamStatus[team - 1].SetText(c, T.TeamsUIClickToJoin.Translate(player));
+            JoinUI.LabelConfirm.SetText(c, T.TeamsUIConfirm.Translate(player));
             JoinUI.LogicConfirmToggle.SetVisibility(c, true);
         }
     }
@@ -193,7 +194,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
         token.CombineIfNeeded(UCWarfare.UnloadCancel);
 
         ITransportConnection c = player.Connection;
-        JoinUI.ButtonConfirm.SetText(c, T.TeamsUIJoining.Translate(player));
+        JoinUI.LabelConfirm.SetText(c, T.TeamsUIJoining.Translate(player));
 
         await UniTask.Delay(TimeSpan.FromSeconds(1d), ignoreTimeScale: true, cancellationToken: token);
 
@@ -332,7 +333,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
             ClearAllUI(player);
             JoinUI.SendToPlayer(player.Connection);
             JoinUI.LogicTeamSettings.SetVisibility(player.Connection, false);
-            JoinUI.ButtonOptionsBack.SetText(player.Connection, T.TeamsUIConfirm.Translate(player));
+            JoinUI.LabelOptionsBack.SetText(player.Connection, T.TeamsUIConfirm.Translate(player));
             player.Player.enablePluginWidgetFlag(EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur);
             player.Player.disablePluginWidgetFlag(EPluginWidgetFlags.Default);
         }
@@ -810,14 +811,15 @@ public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
     {
         ITransportConnection c = player.Connection;
         JoinUI.TeamsTitle.SetText(c, T.TeamsUIHeader.Translate(player));
-        JoinUI.Teams[0].Name.SetText(c, TeamManager.Team1Faction.GetShortName(player.Locale.LanguageInfo));
-        JoinUI.Teams[1].Name.SetText(c, TeamManager.Team2Faction.GetShortName(player.Locale.LanguageInfo));
+        JoinUI.TeamNames[0].SetText(c, TeamManager.Team1Faction.GetShortName(player.Locale.LanguageInfo));
+        JoinUI.TeamNames[1].SetText(c, TeamManager.Team2Faction.GetShortName(player.Locale.LanguageInfo));
         string status = T.TeamsUIClickToJoin.Translate(player);
-        JoinUI.Teams[0].Status.SetText(c, status);
-        JoinUI.Teams[1].Status.SetText(c, status);
+        JoinUI.TeamStatus[0].SetText(c, status);
+        JoinUI.TeamStatus[1].SetText(c, status);
+        JoinUI.LabelOptionsBack.SetText(player.Connection, T.TeamsUIConfirm.Translate(player));
 
-        JoinUI.ButtonConfirm.SetText(c, T.TeamsUIConfirm.Translate(player));
-        JoinUI.ButtonOptionsBack.SetText(c, T.TeamsUIBack.Translate(player));
+        JoinUI.LabelConfirm.SetText(c, T.TeamsUIConfirm.Translate(player));
+        JoinUI.LabelOptionsBack.SetText(player.Connection, T.TeamsUIBack.Translate(player));
     }
     private static void SendSelectionMenu(UCPlayer player, bool optionsAlreadyOpen, ulong team)
     {
@@ -833,10 +835,10 @@ public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
             JoinUI.LogicConfirmToggle.SetVisibility(c, false);
 
         if (!string.IsNullOrEmpty(TeamManager.Team1Faction.FlagImageURL))
-            JoinUI.Teams[0].Flag.SetImage(c, TeamManager.Team1Faction.FlagImageURL);
+            JoinUI.TeamFlags[0].SetImage(c, TeamManager.Team1Faction.FlagImageURL);
 
         if (!string.IsNullOrEmpty(TeamManager.Team2Faction.FlagImageURL))
-            JoinUI.Teams[1].Flag.SetImage(c, TeamManager.Team2Faction.FlagImageURL);
+            JoinUI.TeamFlags[1].SetImage(c, TeamManager.Team2Faction.FlagImageURL);
 
         int t1Ct = 0, t2Ct = 0;
         foreach (UCPlayer pl in PlayerManager.OnlinePlayers.OrderBy(pl => pl.TeamSelectorData is not null && pl.TeamSelectorData.IsSelecting))
@@ -877,8 +879,8 @@ public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
         SetButtonState(player, 1, team == 1 || CheckTeam(1, team, t1Ct, t2Ct));
         SetButtonState(player, 2, team == 2 || CheckTeam(2, team, t1Ct, t2Ct));
 
-        JoinUI.Teams[0].Count.SetText(c, t1Ct.ToString(Data.LocalLocale));
-        JoinUI.Teams[1].Count.SetText(c, t2Ct.ToString(Data.LocalLocale));
+        JoinUI.TeamCounts[0].SetText(c, t1Ct.ToString(Data.LocalLocale));
+        JoinUI.TeamCounts[1].SetText(c, t2Ct.ToString(Data.LocalLocale));
 
         SendOptionsMenuValues(player);
         JoinUI.LogicTeamSettings.SetVisibility(player.Connection, true);
@@ -888,7 +890,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
         if (team is not 1ul and not 2ul) return;
         ITransportConnection c = player.Connection;
         JoinUI.SetTeamEnabled(c, team, hasSpace);
-        JoinUI.Teams[team - 1].Status.SetText(c, (hasSpace ? T.TeamsUIClickToJoin : T.TeamsUIFull).Translate(player));
+        JoinUI.TeamStatus[team - 1].SetText(c, (hasSpace ? T.TeamsUIClickToJoin : T.TeamsUIFull).Translate(player));
     }
     
     private static void UpdateList()
@@ -984,8 +986,8 @@ public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
             if (pl.TeamSelectorData is not null && pl.TeamSelectorData.IsSelecting)
             {
                 ITransportConnection c = pl.Connection;
-                JoinUI.Teams[0].Count.SetText(c, t1Ct.ToString(pl.Locale.CultureInfo));
-                JoinUI.Teams[1].Count.SetText(c, t2Ct.ToString(pl.Locale.CultureInfo));
+                JoinUI.TeamCounts[0].SetText(c, t1Ct.ToString(pl.Locale.CultureInfo));
+                JoinUI.TeamCounts[1].SetText(c, t2Ct.ToString(pl.Locale.CultureInfo));
                 if (pl.TeamSelectorData.SelectedTeam is 1)
                 {
                     JoinUI.LogicTeamSelectedToggle[0].SetVisibility(c, true);

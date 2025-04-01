@@ -20,7 +20,6 @@ using Uncreated.Warfare.Tickets;
 using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
-using static Uncreated.Warfare.Gamemodes.Flags.UI.FlagListUI;
 
 namespace Uncreated.Warfare.Gamemodes.Flags.Hardpoint;
 public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
@@ -398,7 +397,7 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
             {
                 UCPlayer pl = PlayerManager.OnlinePlayers[i];
                 if (!pl.HasUIHidden)
-                    CTFUI.ListUI.Rows[index].Root.SetVisibility(pl.Connection, false);
+                    CTFUI.ListUI.Parents[index].SetVisibility(pl.Connection, false);
             }
 
             return;
@@ -411,10 +410,9 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
             UCPlayer player = PlayerManager.OnlinePlayers[i];
             if (player.HasUIHidden) continue;
             ITransportConnection c = player.Connection;
-            FlagListRow row = CTFUI.ListUI.Rows[index];
-            row.Name.SetText(c, s1);
-            row.Icon.SetText(c, s2);
-            row.Root.SetVisibility(c, true);
+            CTFUI.ListUI.Names[index].SetText(c, s1);
+            CTFUI.ListUI.Icons[index].SetText(c, s2);
+            CTFUI.ListUI.Parents[index].SetVisibility(c, true);
         }
     }
     public void SendListUI(UCPlayer player)
@@ -427,25 +425,24 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
         string c1 = UCWarfare.GetColorHex("undiscovered_flag");
         string c2 = UCWarfare.GetColorHex("attack_icon_color");
         string c3 = GetObjectiveColor();
-        for (int i = 0; i < CTFUI.ListUI.Rows.Length; i++)
+        for (int i = 0; i < CTFUI.ListUI.Parents.Length; i++)
         {
-            FlagListRow row = CTFUI.ListUI.Rows[i];
             if (FlagRotation.Count <= i)
             {
-                row.Root.SetVisibility(c, false);
+                CTFUI.ListUI.Parents[i].SetVisibility(c, false);
             }
             else
             {
-                row.Root.SetVisibility(c, true);
+                CTFUI.ListUI.Parents[i].SetVisibility(c, true);
                 Flag flag = FlagRotation[i];
                 if (i == _objIndex)
                 {
-                    row.Name.SetText(c, $"<color=#{c3}>{flag.Name}</color>");
-                    row.Icon.SetText(c, $"<color=#{c2}>{Config.UIIconAttack}</color>");
+                    CTFUI.ListUI.Names[i].SetText(c, $"<color=#{c3}>{flag.Name}</color>");
+                    CTFUI.ListUI.Icons[i].SetText(c, $"<color=#{c2}>{Config.UIIconAttack}</color>");
                 }
                 else
                 {
-                    row.Name.SetText(c, $"<color=#{c1}>{flag.Name}</color>");
+                    CTFUI.ListUI.Names[i].SetText(c, $"<color=#{c1}>{flag.Name}</color>");
                 }
             }
         }

@@ -173,7 +173,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
                 throw new InvalidOperationException("Invalid pathing data entered.");
             }
         }
-        while (FlagRotation.Count > CTFUI.ListUI.Rows.Length);
+        while (FlagRotation.Count > CTFUI.ListUI.Parents.Length);
     }
     public override void LoadRotation()
     {

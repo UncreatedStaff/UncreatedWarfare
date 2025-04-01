@@ -2,58 +2,60 @@
 using SDG.Unturned;
 using System;
 using Uncreated.Framework.UI;
-using Uncreated.Framework.UI.Patterns;
 using Uncreated.Framework.UI.Presets;
-using Uncreated.Framework.UI.Reflection;
 using Uncreated.Warfare.Gamemodes;
 
 namespace Uncreated.Warfare.Teams;
-
-[UnturnedUI(BasePath = "Canvas/menu_base")]
 public class TeamSelectorUI : UnturnedUI
 {
     public const int PlayerListCount = 30;
 
     /* LOGIC */
-    public readonly UnturnedUIElement LogicTeamSettings = new UnturnedUIElement("~/anim_logic_team_stuff");
-    public readonly UnturnedUIElement LogicConfirmToggle = new UnturnedUIElement("~/anim_logic_btn_confirm");
-    public readonly UnturnedUIElement LogicOpenTeamMenu = new UnturnedUIElement("~/anim_logic_page_teams");
-    public readonly UnturnedUIElement LogicOpenOptionsMenu = new UnturnedUIElement("~/anim_logic_page_options");
-    public readonly UnturnedUIElement[] LogicTeamToggle = ElementPatterns.CreateArray<UnturnedUIElement>("~/anim_logic_team_{0}", 1, length: 2);
-    public readonly UnturnedUIElement[] LogicTeamSelectedToggle = ElementPatterns.CreateArray<UnturnedUIElement>("~/anim_logic_team_{0}_selected", 1, length: 2);
+    public readonly UnturnedUIElement LogicTeamSettings = new UnturnedUIElement("anim_logic_team_stuff");
+    public readonly UnturnedUIElement LogicConfirmToggle = new UnturnedUIElement("anim_logic_btn_confirm");
+    public readonly UnturnedUIElement LogicOpenTeamMenu = new UnturnedUIElement("anim_logic_page_teams");
+    public readonly UnturnedUIElement LogicOpenOptionsMenu = new UnturnedUIElement("anim_logic_page_options");
+    public readonly UnturnedUIElement[] LogicTeamToggle = UnturnedUIPatterns.CreateArray<UnturnedUIElement>("anim_logic_team_{0}", 1, length: 2);
+    public readonly UnturnedUIElement[] LogicTeamSelectedToggle = UnturnedUIPatterns.CreateArray<UnturnedUIElement>("anim_logic_team_{0}_selected", 1, length: 2);
 
-    public readonly LabeledButton ButtonConfirm = new LabeledButton("menu_teams/btn_confirm", "./lbl_confirm");
-    public readonly LabeledButton ButtonOptionsBack = new LabeledButton("menu_options/btn_options_close", "./lbl_options_close");
-    public readonly UnturnedLabel TeamsTitle = new UnturnedLabel("menu_teams/lbl_title");
+    public readonly UnturnedButton ButtonConfirm = new UnturnedButton("btn_confirm");
+    public readonly UnturnedLabel LabelConfirm = new UnturnedLabel("lbl_confirm");
+    public readonly UnturnedButton ButtonOptionsBack = new UnturnedButton("btn_options_close");
+    public readonly UnturnedLabel LabelOptionsBack = new UnturnedLabel("lbl_options_close");
+    public readonly UnturnedLabel TeamsTitle = new UnturnedLabel("lbl_title");
 
     /* TEAM SELECTORS */
-    public readonly TeamButton[] Teams = ElementPatterns.CreateArray<TeamButton>("menu_teams/btn_{0}", 1, length: 2);
+    public readonly UnturnedButton[] TeamButtons = UnturnedUIPatterns.CreateArray<UnturnedButton>("btn_{0}", 1, length: 2);
+    public readonly UnturnedLabel[] TeamNames = UnturnedUIPatterns.CreateArray<UnturnedLabel>("lbl_name_{0}", 1, length: 2);
+    public readonly UnturnedImage[] TeamFlags = UnturnedUIPatterns.CreateArray<UnturnedImage>("img_flag_{0}", 1, length: 2);
+    public readonly UnturnedLabel[] TeamCounts = UnturnedUIPatterns.CreateArray<UnturnedLabel>("lbl_ct_{0}", 1, length: 2);
+    public readonly UnturnedLabel[] TeamStatus = UnturnedUIPatterns.CreateArray<UnturnedLabel>("lbl_status_{0}", 1, length: 2);
 
-    public readonly UnturnedLabel[] TeamPlayersTeam1 = ElementPatterns.CreateArray<UnturnedLabel>("menu_teams/players_1/pl_1_{0}", 1, length: PlayerListCount);
-    public readonly UnturnedLabel[] TeamPlayersTeam2 = ElementPatterns.CreateArray<UnturnedLabel>("menu_teams/players_2/pl_2_{0}", 1, length: PlayerListCount);
+    public readonly UnturnedLabel[] TeamPlayersTeam1 = UnturnedUIPatterns.CreateArray<UnturnedLabel>("pl_1_{0}", 1, length: PlayerListCount);
+    public readonly UnturnedLabel[] TeamPlayersTeam2 = UnturnedUIPatterns.CreateArray<UnturnedLabel>("pl_2_{0}", 1, length: PlayerListCount);
 
     public readonly UnturnedLabel[][] TeamPlayers;
 
     /* OPTIONS */
-    public readonly UnturnedToggle OptionsIMGUICheckToggle = new UnturnedToggle(false, "menu_options/chk_imgui_background", "./chk_imgui_btn");
+    public readonly UnturnedUIElement OptionsIMGUICheckToggle = new UnturnedUIElement("chk_imgui_btn");
+    public readonly UnturnedButton OptionsIMGUICheckButton = new UnturnedButton("chk_imgui_background");
 
-    public readonly UnturnedToggle OptionsTrackQuestsCheckToggle = new UnturnedToggle(true, "menu_options/chk_track_quests", "./chk_track_quests_btn");
+    public readonly UnturnedUIElement OptionsTrackQuestsCheckToggle = new UnturnedUIElement("chk_track_quests_btn");
+    public readonly UnturnedButton OptionsTrackQuestsCheckButton = new UnturnedButton("chk_track_quests");
 
     /* INTERNATIONALIZATION */
-    public readonly LanguageBox[] Languages = ElementPatterns.CreateArray<LanguageBox>("menu_options/lang_settings/Viewport/Content/box_l10n_{0}", 1, to: 6);
-    public readonly CultureBox[] Cultures = ElementPatterns.CreateArray<CultureBox>("menu_options/lang_settings/Viewport/Content/box_i14n_{0}", 1, to: 25);
+    public readonly LanguageBox[] Languages = UnturnedUIPatterns.CreateArray<LanguageBox>("box_l10n_{1}{0}", 1, to: 6);
+    public readonly CultureBox[] Cultures = UnturnedUIPatterns.CreateArray<CultureBox>("box_i14n_{1}{0}", 1, to: 25);
 
-    public readonly PlaceholderTextBox LanguageSearchBox = new PlaceholderTextBox("menu_options/lang_settings/Viewport/Content/search_l10n/txt_search_l10n", "./Viewport/txt_search_l10n_placeholder");
-    public readonly PlaceholderTextBox CultureSearchBox = new PlaceholderTextBox("menu_options/lang_settings/Viewport/Content/search_i14n/txt_search_i14n", "./Viewport/txt_search_i14n_placeholder");
+    public readonly PlaceholderTextBox LanguageSearchBox = new PlaceholderTextBox("txt_search_l10n", "txt_search_l10n_placeholder");
+    public readonly PlaceholderTextBox CultureSearchBox = new PlaceholderTextBox("txt_search_i14n", "txt_search_i14n_placeholder");
 
-    public readonly UnturnedLabel NoLanguagesLabel = new UnturnedLabel("menu_options/lang_settings/Viewport/Content/box_l10n_1/lbl_no_l10n_found");
-    public readonly UnturnedLabel NoCulturesLabel = new UnturnedLabel("menu_options/lang_settings/Viewport/Content/box_i14n_1/lbl_no_i14n_found");
+    public readonly UnturnedLabel NoLanguagesLabel = new UnturnedLabel("lbl_no_l10n_found");
+    public readonly UnturnedLabel NoCulturesLabel = new UnturnedLabel("lbl_no_i14n_found");
 
-    public readonly UnturnedLabel NewOptionsLabel = new UnturnedLabel("menu_teams/btn_options/lbl_new_options");
+    public readonly UnturnedLabel NewOptionsLabel = new UnturnedLabel("lbl_new_options");
 
-    public readonly LabeledUnturnedToggle UseCultureForCommandInput = new LabeledUnturnedToggle(true,
-        "menu_options/lang_settings/Viewport/Content/search_i14n/tgl_use_for_cmd_input",
-        "./state_tgl_use_for_cmd_input", "../lbl_use_for_cmd_input", null);
+    public readonly LabeledUnturnedToggle UseCultureForCommandInput = new LabeledUnturnedToggle(true, "tgl_use_for_cmd_input", "state_tgl_use_for_cmd_input", "lbl_use_for_cmd_input", null);
 
     public event Action<UCPlayer, ulong>? OnTeamButtonClicked;
     public event Action<UCPlayer>? OnConfirmClicked;
@@ -62,24 +64,26 @@ public class TeamSelectorUI : UnturnedUI
     public event Action<UCPlayer, string>? OnCultureSearch;
     public event Action<UCPlayer, int>? OnLanguageApply;
     public event Action<UCPlayer, int>? OnCultureApply;
-    public TeamSelectorUI() : base(Gamemode.Config.UITeamSelector.AsAssetContainer(), true, false)
+    public TeamSelectorUI() : base(Gamemode.Config.UITeamSelector, true, false)
     {
-        TeamPlayers =
-        [
+        TeamPlayers = new UnturnedLabel[][]
+        {
             TeamPlayersTeam1,
             TeamPlayersTeam2
-        ];
-
-        OptionsIMGUICheckToggle.OnToggleUpdated += OnIMGUIToggle;
-        OptionsTrackQuestsCheckToggle.OnToggleUpdated += OnTrackQuestsToggle;
-
-        ElementPatterns.SubscribeAll(Teams, btn => btn.Root, OnTeamClicked);
+        };
+        OptionsIMGUICheckButton.OnClicked += OnIMGUIToggle;
+        OptionsTrackQuestsCheckButton.OnClicked += OnTrackQuestsToggle;
+        TeamButtons[0].OnClicked += OnTeamClicked;
+        TeamButtons[1].OnClicked += OnTeamClicked;
 
         ButtonConfirm.OnClicked += OnConfirm;
         ButtonOptionsBack.OnClicked += OnOptionsBack;
 
-        ElementPatterns.SubscribeAll(Languages, box => box.ApplyButton, OnApplyLanguageButtonPressed);
-        ElementPatterns.SubscribeAll(Cultures, box => box.ApplyButton, OnApplyCultureButtonPressed);
+        foreach (LanguageBox box in Languages)
+            box.ApplyButton.OnClicked += OnApplyLanguageButtonPressed;
+
+        foreach (CultureBox box in Cultures)
+            box.ApplyButton.OnClicked += OnApplyCultureButtonPressed;
 
         LanguageSearchBox.OnTextUpdated += OnLanguageTextUpdated;
         CultureSearchBox.OnTextUpdated += OnCultureTextUpdated;
@@ -96,21 +100,23 @@ public class TeamSelectorUI : UnturnedUI
     {
         if (team is 1 or 2) LogicTeamToggle[team - 1].SetVisibility(c, value);
     }
-    private static void OnIMGUIToggle(UnturnedToggle toggle, Player player, bool value)
+    private void OnIMGUIToggle(UnturnedButton button, Player player)
     {
-        if (!PlayerSave.TryReadSaveFile(player.channel.owner.playerID.steamID.m_SteamID, out PlayerSave save))
-            return;
-
-        save.IMGUI = value;
-        PlayerSave.WriteToSaveFile(save);
+        if (PlayerSave.TryReadSaveFile(player.channel.owner.playerID.steamID.m_SteamID, out PlayerSave save))
+        {
+            save.IMGUI = !save.IMGUI;
+            OptionsIMGUICheckToggle.SetVisibility(player.channel.owner.transportConnection, save.IMGUI);
+            PlayerSave.WriteToSaveFile(save);
+        }
     }
-    private static void OnTrackQuestsToggle(UnturnedToggle toggle, Player player, bool value)
+    private void OnTrackQuestsToggle(UnturnedButton button, Player player)
     {
-        if (!PlayerSave.TryReadSaveFile(player.channel.owner.playerID.steamID.m_SteamID, out PlayerSave save))
-            return;
-
-        save.TrackQuests = value;
-        PlayerSave.WriteToSaveFile(save);
+        if (PlayerSave.TryReadSaveFile(player.channel.owner.playerID.steamID.m_SteamID, out PlayerSave save))
+        {
+            save.TrackQuests = !save.TrackQuests;
+            OptionsTrackQuestsCheckToggle.SetVisibility(player.channel.owner.transportConnection, save.TrackQuests);
+            PlayerSave.WriteToSaveFile(save);
+        }
     }
     private void OnApplyLanguageButtonPressed(UnturnedButton button, Player player)
     {
@@ -147,7 +153,7 @@ public class TeamSelectorUI : UnturnedUI
     private void OnTeamClicked(UnturnedButton button, Player player)
     {
         if (OnTeamButtonClicked == null) return;
-        ulong team = (ulong)(1 + Array.FindIndex(Teams, team => team.Root == button));
+        ulong team = (ulong)(1 + Array.IndexOf(TeamButtons, button));
         if (team is not 1 and not 2 || UCPlayer.FromPlayer(player) is not { } ucplayer)
             return;
         OnTeamButtonClicked?.Invoke(ucplayer, team);
@@ -158,68 +164,50 @@ public class TeamSelectorUI : UnturnedUI
             return;
         OnConfirmClicked?.Invoke(ucplayer);
     }
-    public class TeamButton
-    {
-        [Pattern(Root = true)]
-        public UnturnedButton Root { get; set; }
-
-        [Pattern("lbl_name_{0}")]
-        public UnturnedLabel Name { get; set; }
-
-        [Pattern("img_flag_{0}")]
-        public UnturnedImage Flag { get; set; }
-
-        [Pattern("lbl_ct_{0}")]
-        public UnturnedLabel Count { get; set; }
-
-        [Pattern("lbl_status_{0}")]
-        public UnturnedLabel Status { get; set; }
-    }
-
     public class LanguageBox
     {
-        [Pattern(Root = true)]
+        [UIPattern("", Mode = FormatMode.Format)]
         public UnturnedUIElement Root { get; set; }
 
-        [Pattern("box_l10n_name_{0}")]
+        [UIPattern("name_", Mode = FormatMode.Format)]
         public UnturnedLabel Name { get; set; }
 
-        [Pattern("box_l10n_code_{0}")]
+        [UIPattern("code_", Mode = FormatMode.Format)]
         public UnturnedLabel Details { get; set; }
 
-        [Pattern("box_l10n_contributors_{0}")]
+        [UIPattern("contributors_", Mode = FormatMode.Format)]
         public UnturnedLabel ContributorsLabel { get; set; }
 
-        [Pattern("box_l10n_contributors_value_{0}")]
+        [UIPattern("contributors_value_", Mode = FormatMode.Format)]
         public UnturnedLabel Contributors { get; set; }
 
-        [Pattern("box_l10n_btn_state_select_{0}", AdditionalPath = "box_l10n_btn_select_{0}")]
+        [UIPattern("btn_state_select_", Mode = FormatMode.Format)]
         public UnturnedUIElement ApplyState { get; set; }
 
-        [Pattern("box_l10n_btn_label_select_{0}", AdditionalPath = "box_l10n_btn_select_{0}")]
+        [UIPattern("btn_label_select_", Mode = FormatMode.Format)]
         public UnturnedLabel ApplyLabel { get; set; }
 
-        [Pattern("box_l10n_btn_select_{0}")]
+        [UIPattern("btn_select_", Mode = FormatMode.Format)]
         public UnturnedButton ApplyButton { get; set; }
     }
     public class CultureBox
     {
-        [Pattern(Root = true)]
+        [UIPattern("", Mode = FormatMode.Format)]
         public UnturnedUIElement Root { get; set; }
 
-        [Pattern("box_i14n_name_{0}")]
+        [UIPattern("name_", Mode = FormatMode.Format)]
         public UnturnedLabel Name { get; set; }
 
-        [Pattern("box_i14n_code_{0}")]
+        [UIPattern("code_", Mode = FormatMode.Format)]
         public UnturnedLabel Details { get; set; }
 
-        [Pattern("box_i14n_btn_state_select_{0}", AdditionalPath = "box_i14n_btn_select_{0}")]
+        [UIPattern("btn_state_select_", Mode = FormatMode.Format)]
         public UnturnedUIElement ApplyState { get; set; }
 
-        [Pattern("box_i14n_btn_label_select_{0}", AdditionalPath = "box_i14n_btn_select_{0}")]
+        [UIPattern("btn_lbl_select_", Mode = FormatMode.Format)]
         public UnturnedLabel ApplyLabel { get; set; }
 
-        [Pattern("box_i14n_btn_select_{0}")]
+        [UIPattern("btn_select_", Mode = FormatMode.Format)]
         public UnturnedButton ApplyButton { get; set; }
     }
 }

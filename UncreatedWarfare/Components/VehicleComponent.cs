@@ -473,7 +473,7 @@ public class VehicleComponent : MonoBehaviour
                 F.TryTriggerSupplyEffect(type, Vehicle.transform.position);
                 yield return new WaitForSeconds(1);
 
-                while (!(Vehicle.ReplicatedSpeed >= -1 && Vehicle.ReplicatedSpeed <= 1))
+                while (!(Vehicle.speed >= -1 && Vehicle.speed <= 1))
                     yield return new WaitForSeconds(1);
             }
         }
@@ -519,7 +519,7 @@ public class VehicleComponent : MonoBehaviour
                         shouldMessagePlayer = true;
 
                         yield return new WaitForSeconds(1);
-                        while (Vehicle.ReplicatedSpeed is < -1 or > 1)
+                        while (Vehicle.speed is < -1 or > 1)
                             yield return new WaitForSeconds(1);
                     }
                 }

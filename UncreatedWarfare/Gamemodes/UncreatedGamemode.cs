@@ -860,7 +860,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                     {
                         UCPlayer pl = set.Next;
                         pl.Player.enablePluginWidgetFlag(EPluginWidgetFlags.Modal);
-                        if (UCPlayer.LoadingUI.HasAssetOrId)
+                        if (UCPlayer.LoadingUI.IsValid)
                             UCPlayer.LoadingUI.SendToPlayer(pl.Connection, val);
                     }
                 }
@@ -973,7 +973,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                     if (pl.Player.quests.isMarkerPlaced)
                         pl.Player.quests.replicateSetMarker(false, Vector3.zero, string.Empty);
                 }
-                if (UCPlayer.LoadingUI.HasAssetOrId)
+                if (UCPlayer.LoadingUI.IsValid)
                     UCPlayer.LoadingUI.ClearFromAllPlayers();
             }
             await PostPlayerInit(onLoad, token).ConfigureAwait(false);

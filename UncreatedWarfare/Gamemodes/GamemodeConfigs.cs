@@ -1,4 +1,5 @@
 ﻿using SDG.Unturned;
+using System.IO;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Actions;
 using Uncreated.Warfare.Components;
@@ -25,24 +26,24 @@ public sealed class GamemodeConfig : Config<GamemodeConfigData>
     protected override void OnReload()
     {
         ToastManager.ReloadToastIds();
-        KitManager.MenuUI.LoadFromConfig(Data.UIKitMenu.AsAssetContainer());
-        VehicleComponent.VehicleHUD.LoadFromConfig(Data.UIVehicleHUD.AsAssetContainer());
-        Gamemode.WinToastUI.LoadFromConfig(Data.UIToastWin.AsAssetContainer());
-        ActionManager.ActionMenuUI.LoadFromConfig(Data.UIActionMenu.AsAssetContainer());
-        UCPlayer.LoadingUI.LoadFromConfig(Data.UILoading.AsAssetContainer());
-        UCPlayer.MutedUI.LoadFromConfig(Data.UIMuted.AsAssetContainer());
-        TicketManager.TicketUI.LoadFromConfig(Data.UITickets.AsAssetContainer());
-        TeamSelector.JoinUI.LoadFromConfig(Data.UITeamSelector.AsAssetContainer());
-        SquadManager.MenuUI.LoadFromConfig(Data.UISquadMenu.AsAssetContainer());
-        SquadManager.ListUI.LoadFromConfig(Data.UISquadList.AsAssetContainer());
-        SquadManager.RallyUI.LoadFromConfig(Data.UIRally.AsAssetContainer());
-        FOBManager.ResourceUI.LoadFromConfig(Data.UINearbyResources.AsAssetContainer());
-        FOBManager.ListUI.LoadFromConfig(Data.UIFOBList.AsAssetContainer());
-        CTFUI.CaptureUI.LoadFromConfig(Data.UICapture.AsAssetContainer());
-        CTFUI.ListUI.LoadFromConfig(Data.UIFlagList.AsAssetContainer());
-        Points.XPUI.LoadFromConfig(Data.UIXPPanel.AsAssetContainer());
-        Points.CreditsUI.LoadFromConfig(Data.UICreditsPanel.AsAssetContainer());
-        ModerationUI.Instance.LoadFromConfig(Data.UICreditsPanel.AsAssetContainer());
+        KitManager.MenuUI.LoadFromConfig(Data.UIKitMenu);
+        VehicleComponent.VehicleHUD.LoadFromConfig(Data.UIVehicleHUD);
+        Gamemode.WinToastUI.LoadFromConfig(Data.UIToastWin);
+        ActionManager.ActionMenuUI.LoadFromConfig(Data.UIActionMenu);
+        UCPlayer.LoadingUI.LoadFromConfig(Data.UILoading);
+        UCPlayer.MutedUI.LoadFromConfig(Data.UIMuted);
+        TicketManager.TicketUI.LoadFromConfig(Data.UITickets);
+        TeamSelector.JoinUI.LoadFromConfig(Data.UITeamSelector);
+        SquadManager.MenuUI.LoadFromConfig(Data.UISquadMenu);
+        SquadManager.ListUI.LoadFromConfig(Data.UISquadList);
+        SquadManager.RallyUI.LoadFromConfig(Data.UIRally);
+        FOBManager.ResourceUI.LoadFromConfig(Data.UINearbyResources);
+        FOBManager.ListUI.LoadFromConfig(Data.UIFOBList);
+        CTFUI.CaptureUI.LoadFromConfig(Data.UICapture);
+        CTFUI.ListUI.LoadFromConfig(Data.UIFlagList);
+        Points.XPUI.LoadFromConfig(Data.UIXPPanel);
+        Points.CreditsUI.LoadFromConfig(Data.UICreditsPanel);
+        ModerationUI.Instance.LoadFromConfig(Data.UICreditsPanel);
         if (Warfare.Data.Is<Flags.Conquest>())
             Warfare.Data.Gamemode.SetTiming(Data.ConquestEvaluateTime);
         if (Warfare.Data.Is<TeamCTF>() || Warfare.Data.Is<Invasion>())

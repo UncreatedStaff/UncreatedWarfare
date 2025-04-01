@@ -218,7 +218,9 @@ public static partial class Patches
                             writer.WriteBytes(serversideData.barricade.state);
                             skip:
                             writer.WriteClampedVector3(serversideData.point, fracBitCount: 11);
-                            writer.WriteQuaternion(serversideData.rotation);
+                            writer.WriteUInt8(serversideData.angle_x);
+                            writer.WriteUInt8(serversideData.angle_y);
+                            writer.WriteUInt8(serversideData.angle_z);
                             writer.WriteUInt8((byte)Mathf.RoundToInt(serversideData.barricade.health / (float)serversideData.barricade.asset.health * 100f));
                             writer.WriteUInt64(serversideData.owner);
                             writer.WriteUInt64(serversideData.group);

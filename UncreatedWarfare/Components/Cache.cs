@@ -29,7 +29,7 @@ public class Cache : IRadiusFOB, IObjective, IPlayerDisconnectListener, IDisposa
     private readonly string _cl;
     public int Number;
     public bool IsDiscovered;
-    public IBuildableDestroyedEvent? DestroyInfo { get; set; }
+    public IBuildableDestroyedEvent DestroyInfo { get; set; }
     public GridLocation GridLocation => _gc;
     public string ClosestLocation => _cl;
     public ulong Team { get; }

@@ -32,32 +32,32 @@ public sealed class ToastManager
         ToastMessages = new ToastMessageInfo[len];
         ToastMessages[(int)ToastMessageStyle.GameOver] = new ToastMessageInfo(ToastMessageStyle.GameOver, 0, Gamemode.WinToastUI, WinToastUI.SendToastCallback)
         {
-            ResendNames = [ "Header", "Team1Tickets", "Team2Tickets", "Team1Image", "Team2Image" ],
+            ResendNames = new string[] { "Header", "Team1Tickets", "Team2Tickets", "Team1Image", "Team2Image" },
             ClearableSlots = 3
         };
         ToastMessages[(int)ToastMessageStyle.Large] = new ToastMessageInfo(ToastMessageStyle.Large, 0, Gamemode.Config.UIToastLarge, canResend: true)
         {
-            ResendNames = [ "Top", "Middle", "Bottom" ],
+            ResendNames = new string[] { "Top", "Middle", "Bottom" },
             ClearableSlots = 3
         };
         ToastMessages[(int)ToastMessageStyle.Medium] = new ToastMessageInfo(ToastMessageStyle.Medium, 0, Gamemode.Config.UIToastMedium, canResend: true)
         {
-            ResendNames = [ "Middle" ],
+            ResendNames = new string[] { "Middle" },
             ClearableSlots = 1
         };
         ToastMessages[(int)ToastMessageStyle.Mini] = new ToastMessageInfo(ToastMessageStyle.Mini, 1, Gamemode.Config.UIToastXP, canResend: true)
         {
-            ResendNames = [ "Text" ],
+            ResendNames = new string[] { "Text" },
             ClearableSlots = 1
         };
         ToastMessages[(int)ToastMessageStyle.ProgressBar] = new ToastMessageInfo(ToastMessageStyle.ProgressBar, 2, Gamemode.Config.UIToastProgress, inturrupt: true, canResend: true)
         {
-            ResendNames = [ "Progress", "Bar" ],
+            ResendNames = new string[] { "Progress", "Bar" },
             ClearableSlots = 1
         };
         ToastMessages[(int)ToastMessageStyle.Tip] = new ToastMessageInfo(ToastMessageStyle.Tip, 0, Gamemode.Config.UIToastTip, canResend: true)
         {
-            ResendNames = [ "Text" ],
+            ResendNames = new string[] { "Text" },
             ClearableSlots = 1
         };
         ToastMessages[(int)ToastMessageStyle.Popup] = new ToastMessageInfo(ToastMessageStyle.Popup, 3, PopupUI.Instance, PopupUI.SendToastCallback, requiresClearing: true)
@@ -69,7 +69,7 @@ public sealed class ToastManager
         // todo update UI mod to fix the requireResend: true
         ToastMessages[(int)ToastMessageStyle.FlashingWarning] = new ToastMessageInfo(ToastMessageStyle.FlashingWarning, 4, Gamemode.Config.UIFlashingWarning, requiresClearing: true, canResend: true, requiresResend: true)
         {
-            ResendNames = [ "Text" ],
+            ResendNames = new string[] { "Text" },
             ClearableSlots = 1
         };
         int maxChannel = -1;

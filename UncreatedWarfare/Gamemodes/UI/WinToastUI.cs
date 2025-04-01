@@ -1,21 +1,16 @@
-﻿using JetBrains.Annotations;
-using Uncreated.Framework.UI;
-using Uncreated.Framework.UI.Reflection;
+﻿using Uncreated.Framework.UI;
 using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Gamemodes.UI;
-
-[UnturnedUI(BasePath = "Canvas/Content/Header")]
 public class WinToastUI : UnturnedUI
 {
-    public readonly UnturnedLabel Header = new UnturnedLabel("~/Canvas/Content/Header");
+    public readonly UnturnedLabel Header = new UnturnedLabel("Header");
     public readonly UnturnedImage Team1Flag = new UnturnedImage("Team1Image");
     public readonly UnturnedImage Team2Flag = new UnturnedImage("Team2Image");
     public readonly UnturnedLabel Team1Tickets = new UnturnedLabel("Team1Tickets");
     public readonly UnturnedLabel Team2Tickets = new UnturnedLabel("Team2Tickets");
-    public WinToastUI() : base(Gamemode.Config.UIToastWin.AsAssetContainer()) { }
+    public WinToastUI() : base(Gamemode.Config.UIToastWin) { }
 
-    [UsedImplicitly]
     public static void SendToastCallback(UCPlayer player, in ToastMessage message, ToastMessageInfo info, UnturnedUI ui)
     {
         WinToastUI winUi = (WinToastUI)ui;
