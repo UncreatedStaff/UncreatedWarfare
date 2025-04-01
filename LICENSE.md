@@ -70,4 +70,4 @@ With that said, if you have reasonable knowledge of the updated license, it shou
 ## Contact
 The authors can be contacted through Discord by joining the official Uncreated Discord server at https://discord.gg/ucn and asking for the Directors.
 
-*Last updated 09/30/2024 10:44 PM UTC*
+*Last updated 09/30/2024 11:49 PM UTC*

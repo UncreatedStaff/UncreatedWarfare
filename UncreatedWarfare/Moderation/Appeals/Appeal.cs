@@ -1,16 +1,14 @@
-﻿using System;
+﻿using DanielWillett.SpeedBytes;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading;
-using System.Threading.Tasks;
-using Uncreated.Encoding;
-using Uncreated.Framework;
-using Uncreated.SQL;
+using Uncreated.Warfare.Database.Manual;
 using Uncreated.Warfare.Moderation.Punishments;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Moderation.Appeals;
 [ModerationEntry(ModerationEntryType.Appeal)]
@@ -45,7 +43,7 @@ public class Appeal : ModerationEntry
     /// Keys to the punishments being appealed.
     /// </summary>
     [JsonPropertyName("punishments")]
-    public PrimaryKey[] PunishmentKeys { get; set; } = Array.Empty<PrimaryKey>();
+    public uint[] PunishmentKeys { get; set; } = Array.Empty<uint>();
 
     /// <summary>
     /// Responses to the asked questions.
@@ -68,7 +66,7 @@ public class Appeal : ModerationEntry
         TicketId = reader.ReadGuid();
         AppealState = reader.ReadNullableBool();
         DiscordUserId = reader.ReadNullableUInt64();
-        PunishmentKeys = new PrimaryKey[reader.ReadInt32()];
+        PunishmentKeys = new uint[reader.ReadInt32()];
         for (int i = 0; i < PunishmentKeys.Length; ++i)
             PunishmentKeys[i] = reader.ReadUInt32();
         Responses = new AppealResponse[reader.ReadInt32()];
@@ -85,7 +83,7 @@ public class Appeal : ModerationEntry
         writer.WriteNullable(DiscordUserId);
         writer.Write(PunishmentKeys.Length);
         for (int i = 0; i < PunishmentKeys.Length; ++i)
-            writer.Write(PunishmentKeys[i].Key);
+            writer.Write(PunishmentKeys[i]);
         writer.Write(Responses.Length);
         for (int i = 0; i < Responses.Length; ++i)
         {
@@ -95,7 +93,7 @@ public class Appeal : ModerationEntry
         }
     }
 
-    public override void ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
+    public override bool ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
     {
         if (propertyName.Equals("ticket_guid", StringComparison.InvariantCultureIgnoreCase))
             TicketId = reader.GetGuid();
@@ -106,11 +104,13 @@ public class Appeal : ModerationEntry
         else if (propertyName.Equals("punishments_detail", StringComparison.InvariantCultureIgnoreCase))
             Punishments = JsonSerializer.Deserialize<Punishment?[]>(ref reader, options) ?? Array.Empty<Punishment>();
         else if (propertyName.Equals("punishments", StringComparison.InvariantCultureIgnoreCase))
-            PunishmentKeys = JsonSerializer.Deserialize<PrimaryKey[]>(ref reader, options) ?? Array.Empty<PrimaryKey>();
+            PunishmentKeys = JsonSerializer.Deserialize<uint[]>(ref reader, options) ?? Array.Empty<uint>();
         else if (propertyName.Equals("responses", StringComparison.InvariantCultureIgnoreCase))
             Responses = JsonSerializer.Deserialize<AppealResponse[]>(ref reader, options) ?? Array.Empty<AppealResponse>();
         else
-            base.ReadProperty(ref reader, propertyName, options);
+            return base.ReadProperty(ref reader, propertyName, options);
+
+        return true;
     }
     public override void Write(Utf8JsonWriter writer, JsonSerializerOptions options)
     {
@@ -158,11 +158,11 @@ public class Appeal : ModerationEntry
     {
         bool hasEvidenceCalls = base.AppendWriteCall(builder, args);
 
-        builder.Append($" INSERT INTO `{DatabaseInterface.TableAppeals}` ({SqlTypes.ColumnList(
+        builder.Append($" INSERT INTO `{DatabaseInterface.TableAppeals}` ({MySqlSnippets.ColumnList(
             DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnAppealsTicketId, DatabaseInterface.ColumnAppealsState,
             DatabaseInterface.ColumnAppealsDiscordId)}) VALUES ");
 
-        F.AppendPropertyList(builder, args.Count, 3, 0, 1);
+        MySqlSnippets.AppendPropertyList(builder, args.Count, 3, 0, 1);
         builder.Append(" AS `t` " +
                        $"ON DUPLICATE KEY UPDATE `{DatabaseInterface.ColumnAppealsTicketId}` = `t`.`{DatabaseInterface.ColumnAppealsTicketId}`," +
                        $"`{DatabaseInterface.ColumnAppealsState}` = `t`.`{DatabaseInterface.ColumnAppealsState}`," +
@@ -176,12 +176,12 @@ public class Appeal : ModerationEntry
 
         if (PunishmentKeys.Length > 0)
         {
-            builder.Append($" INSERT INTO `{DatabaseInterface.TableAppealPunishments}` ({SqlTypes.ColumnList(
+            builder.Append($" INSERT INTO `{DatabaseInterface.TableAppealPunishments}` ({MySqlSnippets.ColumnList(
                 DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnAppealPunishmentsPunishment)}) VALUES ");
 
             for (int i = 0; i < PunishmentKeys.Length; ++i)
             {
-                F.AppendPropertyList(builder, args.Count, 1, i, 1);
+                MySqlSnippets.AppendPropertyList(builder, args.Count, 1, i, 1);
                 args.Add(PunishmentKeys[i]);
             }
 
@@ -192,15 +192,15 @@ public class Appeal : ModerationEntry
 
         if (Responses.Length > 0)
         {
-            builder.Append($" INSERT INTO `{DatabaseInterface.TableAppealResponses}` ({SqlTypes.ColumnList(
+            builder.Append($" INSERT INTO `{DatabaseInterface.TableAppealResponses}` ({MySqlSnippets.ColumnList(
                 DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnAppealResponsesQuestion, DatabaseInterface.ColumnAppealResponsesResponse)}) VALUES ");
 
             for (int i = 0; i < Responses.Length; ++i)
             {
                 ref AppealResponse response = ref Responses[i];
-                F.AppendPropertyList(builder, args.Count, 2, i, 1);
-                args.Add(response.Question.MaxLength(255) ?? string.Empty);
-                args.Add(response.Response.MaxLength(1024) ?? string.Empty);
+                MySqlSnippets.AppendPropertyList(builder, args.Count, 2, i, 1);
+                args.Add(response.Question.Truncate(255) ?? string.Empty);
+                args.Add(response.Response.Truncate(1024) ?? string.Empty);
             }
 
             builder.Append(';');

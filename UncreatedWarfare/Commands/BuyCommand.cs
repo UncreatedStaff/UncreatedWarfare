@@ -1,59 +1,37 @@
-﻿using SDG.Unturned;
-using System;
-using System.Threading;
-using System.Threading.Tasks;
-using Uncreated.Framework;
-using Uncreated.Warfare.Commands.CommandSystem;
-using Uncreated.Warfare.Gamemodes;
-using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Commands;
 
-public class BuyCommand : AsyncCommand
+[Command("buy"), MetadataFile]
+internal sealed class BuyCommand : IExecutableCommand
 {
-    const string Help = "Must be looking at a kit request sign. Purchases a kit for credits.";
-    const string Syntax = "/buy [help]";
-    public BuyCommand() : base("buy", EAdminType.MEMBER)
+    private readonly KitCommandTranslations _kitTranslations;
+    private readonly KitCommandLookResolver _lookResolver;
+
+    /// <inheritdoc />
+    public required CommandContext Context { get; init; }
+
+    public BuyCommand(TranslationInjection<KitCommandTranslations> translations, KitCommandLookResolver lookResolver)
     {
-        Structure = new CommandStructure
-        {
-            Description = "Purchase a kit for credits, must be looking at a kit sign."
-        };
+        _lookResolver = lookResolver;
+        _kitTranslations = translations.Value;
     }
-    public override async Task Execute(CommandInteraction ctx, CancellationToken token)
+
+    /// <inheritdoc />
+    public async UniTask ExecuteAsync(CancellationToken token)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        ctx.AssertRanByPlayer();
+        Context.AssertRanByPlayer();
 
-        if (ctx.MatchParameter(0, "help"))
-            throw ctx.SendCorrectUsage(Syntax + " - " + Help);
-        ctx.AssertGamemode(out IKitRequests gm);
-        KitManager manager = gm.KitManager;
-        if ((Data.Gamemode.State != State.Active && Data.Gamemode.State != State.Staging) || ctx.Caller is null)
-            throw ctx.SendUnknownError();
-        if (ctx.TryGetTarget(out BarricadeDrop drop) && drop.interactable is InteractableSign)
+        KitCommandLookResult result = await _lookResolver.ResolveFromArgumentsOrLook(Context, 0, 0, KitInclude.Buyable, token).ConfigureAwait(false);
+
+        if (!result.IsSign)
         {
-            if (Signs.GetKitFromSign(drop, out int ld) is { } kit)
-            {
-                await manager.Requests.BuyKit(ctx, kit, drop.model.position, token).ConfigureAwait(false);
-                return;
-            }
-            if (ld > -1)
-            {
-                if (UCWarfare.Config.WebsiteUri != null && Data.PurchasingDataStore.LoadoutProduct != null)
-                {
-                    ctx.Caller.Player.sendBrowserRequest("Purchase loadouts on our website.",
-                        new Uri(UCWarfare.Config.WebsiteUri, "kits/loadout").OriginalString);
-
-                    throw ctx.Defer();
-                }
-                throw ctx.Reply(T.RequestNotBuyable);
-            }
-            throw ctx.Reply(T.RequestKitNotRegistered);
+            throw Context.SendHelp();
         }
-        throw ctx.Reply(T.RequestNoTarget);
+
+        throw Context.SendNotImplemented();
+        //await _kitManager.Requests.BuyKit(Context, kit, drop.model.position, token).ConfigureAwait(false);
     }
 }

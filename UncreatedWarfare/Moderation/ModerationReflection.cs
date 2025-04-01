@@ -1,9 +1,9 @@
-﻿using System;
+﻿using DanielWillett.ReflectionTools;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using DanielWillett.ReflectionTools;
-using Uncreated.Framework;
+using Uncreated.Warfare.Util.List;
 
 namespace Uncreated.Warfare.Moderation;
 public static class ModerationReflection
@@ -57,7 +57,7 @@ public static class ModerationReflection
             {
                 if (Types.Contains(attr.Type))
                 {
-                    L.LogWarning($"Multiple moderation types defined with {attr.Type}.");
+                    WarfareModule.Singleton.GlobalLogger.LogWarning($"Multiple moderation types defined with {attr.Type}.");
                     continue;
                 }
 

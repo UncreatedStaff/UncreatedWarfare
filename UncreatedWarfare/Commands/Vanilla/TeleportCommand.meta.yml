@@ -1,0 +1,85 @@
+﻿# TeleportCommand
+Description: "Teleport the <caller /> to a location."
+Alias: tp
+Parameters:
+  - Name: jump
+    Type: Verbatim
+    Description: "Teleports the <caller /> to where they're looking."
+    Parmaters:
+      - Name: position
+        Type: Look/UnityEngine.Vector3
+        Description: "Teleports the <caller /> to the point they're looking at."
+
+      - Name: distance
+        Type: float
+        Description: "Explicit <param 'distance'/> (in meters) in front of the <caller /> to teleport them."
+
+      - Name: start
+        Aliases: [ s, begin ]
+        Type: Verbatim
+        Description: "Enable punch-to-jump, where the <caller /> will teleport to where they're looking when they secondary punch."
+
+      - Name: end
+        Aliases: [ e, stop ]
+        Type: Verbatim
+        Description: "Disable punch-to-jump, where the <caller /> will teleport to where they're looking when they secondary punch."
+
+  - Name: waypoint
+    Aliases: [ wp, marker ]
+    Type: Verbatim
+    Description: "Teleports the <caller /> to their map waypoint."
+    
+  - Name: player
+    Type: Uncreated.Warfare.Players.IPlayer
+    Description: "Teleports the <caller /> to another <param 'player'/>."
+    
+  - Name: grid
+    Type: Uncreated.Warfare.Locations.GridLocation
+    Description: "Teleports the <caller /> to the center of a <param 'grid'/> given it's coordinates (ex. A1-3)."
+    
+  - Name: location
+    Type: string
+    Description: "Teleports the <caller /> to a matching <param 'location' /> on the map."
+
+  - Name: x
+    Types: float
+    Chain: 3
+    Description: "Teleports the <caller /> to a set of world coordinates. Can be relative using the ~ character (ex. y=~10 means 10 blocks above them)."
+    Parameters:
+      - Name: "y"
+        Types: float
+        Parameters:
+          - Name: z
+            Types: float
+    
+  - Name: target
+    Type: Uncreated.Warfare.Players.IPlayer
+    Description: "Teleportss another player to a location."
+    Parameters:
+      - Name: waypoint
+        Aliases: [ wp, marker ]
+        Type: Verbatim
+        Description: "Teleports the <param 'target'/> to the <caller />'s map waypoint."
+    
+      - Name: player
+        Type: Uncreated.Warfare.Players.IPlayer
+        Description: "Teleports the <param 'target'/> to a <param 'player'/>."
+    
+      - Name: grid
+        Type: Uncreated.Warfare.Locations.GridLocation
+        Description: "Teleports the <param 'target'/> to the center of a <param 'grid'/> given it's coordinates (ex. A1-3)."
+    
+      - Name: location
+        Type: string
+        Description: "Teleports the <param 'target'/> to a matching <param 'location' /> on the map."
+
+      - Name: x
+        Types: float
+        Chain: 3
+        Description: "Teleports the <param 'target'/> to a set of world coordinates. Can be relative using the ~ character (ex. y=~10 means 10 blocks above them)."
+        Parameters:
+          - Name: "y"
+            Types: float
+            Parameters:
+              - Name: z
+                Types: float

@@ -1,4 +1,6 @@
-﻿namespace Uncreated.Warfare.Moderation.Punishments.Presets;
+﻿using Uncreated.Warfare.Translations;
+
+namespace Uncreated.Warfare.Moderation.Punishments.Presets;
 
 [Translatable("Preset Type", IsPrioritizedTranslation = false)]
 public enum PresetType

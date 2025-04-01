@@ -1,0 +1,83 @@
+# PointsCommand
+Description: "Give and remove XP and credits."
+Parameters:
+
+    # /points experience <add> [player] <amount> <team>
+  - Name: experience
+    Alias: xp
+    Type: Verbatim
+    Description: "Give and remove XP."
+    Parameters:
+      - Name: add
+        Type: Verbatim
+        Description: "Give a player XP."
+        Parameters:
+          - Name: player
+            Type: Uncreated.Warfare.Players.IPlayer
+            Description: "The player to give XP to."
+            Parameters:
+              - Name: amount
+                Type: double
+                Description: "The amount of XP to give the <param 'player' />."
+                Parameters:
+                  - Name: team
+                    Type: Uncreated.Warfare.Teams.FactionInfo
+                    Description: "The team to add XP to."
+          - Name: amount
+            Type: double
+            Description: "The amount of XP to give the <caller />."
+            Parameters:
+              - Name: team
+                Type: Uncreated.Warfare.Teams.FactionInfo
+                Description: "The team to add XP to."
+            
+    # /points credits <add> [player] <amount> <team>
+  - Name: credits
+    Alias: creds
+    Type: Verbatim
+    Description: "Give and remove credits."
+    Parameters:
+      - Name: add
+        Type: Verbatim
+        Description: "Give a player credits."
+        Parameters:
+          - Name: player
+            Type: Uncreated.Warfare.Players.IPlayer
+            Description: "The player to give credits to."
+            Parameters:
+              - Name: amount
+                Type: double
+                Description: "The amount of credits to give the <param 'player' />."
+                Parameters:
+                  - Name: team
+                    Type: Uncreated.Warfare.Teams.FactionInfo
+                    Description: "The team to add credits to."
+          - Name: amount
+            Type: double
+            Description: "The amount of credits to give the <caller />."
+            Parameters:
+              - Name: team
+                Type: Uncreated.Warfare.Teams.FactionInfo
+                Description: "The team to add credits to."
+                
+            
+    # /points reputation <add> [player] <amount>
+  - Name: reputation
+    Alias: rep
+    Type: Verbatim
+    Description: "Give and remove reputation."
+    Parameters:
+      - Name: add
+        Type: Verbatim
+        Description: "Give a player reputation."
+        Parameters:
+          - Name: player
+            Type: Uncreated.Warfare.Players.IPlayer
+            Description: "The player to give reputation to."
+            Parameters:
+              - Name: amount
+                Type: double
+                Description: "The amount of reputation to give the <param 'player' />."
+          - Name: amount
+            Type: double
+            Description: "The amount of reputation to give the <caller />."

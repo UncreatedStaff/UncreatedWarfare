@@ -1,0 +1,88 @@
+﻿# StructureCommand
+Description: "Manage barricades, structures, and vehicles."
+Aliases: [ struct ]
+Parameters:
+
+  - Name: destroy
+    Type: Verbatim
+    Aliases: [ pop ]
+    Description: "Destroys the structure, barricade, or vehicle the <caller/> is looking at."
+    Parameters:
+      - Name: barricade
+        Type: Look/SDG.Unturned.ItemBarrcadeAsset
+      - Name: structure
+        Type: Look/SDG.Unturned.ItemStructureAsset
+      - Name: vehicle
+        Type: Look/SDG.Unturned.VehicleAsset
+
+  - Name: examine
+    Type: Verbatim
+    Aliases: [ exam, wtf ]
+    Description: "Prints information about the structure, barricade, or vehicle the <caller/> is looking at."
+    Parameters:
+      - Name: barricade
+        Type: Look/SDG.Unturned.ItemBarrcadeAsset
+      - Name: structure
+        Type: Look/SDG.Unturned.ItemStructureAsset
+      - Name: vehicle
+        Type: Look/SDG.Unturned.VehicleAsset
+
+  - Name: remove
+    Type: Verbatim
+    Aliases: [ delete ]
+    Description: "Removes the buildable save for the structure or barricade the <caller/> is looking at."
+    Parameters:
+      - Name: barricade
+        Type: Look/SDG.Unturned.ItemBarrcadeAsset
+      - Name: structure
+        Type: Look/SDG.Unturned.ItemStructureAsset
+
+  - Name: save
+    Type: Verbatim
+    Aliases: [ delete ]
+    Description: "Adds a buildable save for the structure or barricade the <caller/> is looking at."
+    Parameters:
+      - Name: barricade
+        Type: Look/SDG.Unturned.ItemBarrcadeAsset
+      - Name: structure
+        Type: Look/SDG.Unturned.ItemStructureAsset
+
+  - Name: set
+    Type: Verbatim
+    Aliases: [ s ]
+    Description: "Sets the group or owner of the structure or barricade the <caller/> is looking at."
+    Parameters:
+      - Name: barricade
+        Type: Look/SDG.Unturned.ItemBarrcadeAsset
+        Parameters:
+          - Name: group
+            Type: Verbatim
+            Parameters:
+              - Name: value
+                Type: Steamworks.CSteamID
+              - Name: me
+                Type: Verbatim
+          - Name: owner
+            Type: Verbatim
+            Parameters:
+              - Name: value
+                Type: Steamworks.CSteamID
+              - Name: me
+                Type: Verbatim
+      - Name: structure
+        Type: Look/SDG.Unturned.ItemStructureAsset
+        Parameters:
+          - Name: group
+            Type: Verbatim
+            Parameters:
+              - Name: value
+                Type: Steamworks.CSteamID
+              - Name: me
+                Type: Verbatim
+          - Name: owner
+            Type: Verbatim
+            Parameters:
+              - Name: value
+                Type: Steamworks.CSteamID
+              - Name: me
+                Type: Verbatim

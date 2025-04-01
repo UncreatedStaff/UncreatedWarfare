@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Models.Factions;
 
 namespace Uncreated.Warfare.Models.GameData;
@@ -21,8 +19,7 @@ public class GameRecord
     public DateTimeOffset? EndTimestamp { get; set; }
 
     [Required]
-    [DefaultValue(nameof(GamemodeType.Undefined))]
-    public GamemodeType Gamemode { get; set; }
+    public string Gamemode { get; set; }
 
     [ForeignKey(nameof(WinnerFaction))]
     [Column("Winner")]

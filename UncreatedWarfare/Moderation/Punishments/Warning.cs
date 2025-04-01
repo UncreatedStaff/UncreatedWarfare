@@ -4,9 +4,7 @@ using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading;
-using System.Threading.Tasks;
-using Uncreated.SQL;
+using Uncreated.Warfare.Database.Manual;
 
 namespace Uncreated.Warfare.Moderation.Punishments;
 
@@ -28,12 +26,14 @@ public class Warning : Punishment
     public bool HasBeenDisplayed => IsLegacy || DisplayedTimestamp.HasValue;
 
     public override string GetDisplayName() => "Warning";
-    public override void ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
+    public override bool ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
     {
         if (propertyName.Equals("displayed_utc", StringComparison.InvariantCultureIgnoreCase))
             DisplayedTimestamp = reader.TokenType == JsonTokenType.Null ? null : reader.GetDateTimeOffset();
         else
-            base.ReadProperty(ref reader, propertyName, options);
+            return base.ReadProperty(ref reader, propertyName, options);
+
+        return true;
     }
     public override void Write(Utf8JsonWriter writer, JsonSerializerOptions options)
     {
@@ -58,7 +58,7 @@ public class Warning : Punishment
     {
         bool hasEvidenceCalls = base.AppendWriteCall(builder, args);
 
-        builder.Append($" INSERT INTO `{DatabaseInterface.TableWarnings}` ({SqlTypes.ColumnList(
+        builder.Append($" INSERT INTO `{DatabaseInterface.TableWarnings}` ({MySqlSnippets.ColumnList(
             DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnWarningsDisplayedTimestamp)}) VALUES " +
                        $"(@0, @{args.Count.ToString(CultureInfo.InvariantCulture)}) AS `t` " +
                        $"ON DUPLICATE KEY UPDATE `{DatabaseInterface.ColumnWarningsDisplayedTimestamp}` = `t`.`{DatabaseInterface.ColumnWarningsDisplayedTimestamp}`;");

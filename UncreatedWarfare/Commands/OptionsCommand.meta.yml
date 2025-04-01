@@ -1,0 +1,3 @@
+# OptionsCommand
+Description: "Open the configuration UI."
+Aliases: [ settings, option, config, lang, language, culture, time, timezone, tz ]

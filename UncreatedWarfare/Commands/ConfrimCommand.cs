@@ -1,39 +1,34 @@
-﻿using Uncreated.Framework;
-using Uncreated.Warfare.Commands.CommandSystem;
+﻿using DanielWillett.ReflectionTools;
+using Uncreated.Warfare.Interaction.Commands;
 
 namespace Uncreated.Warfare.Commands;
 
-public class ConfirmCommand : Command
+[Command("confirm", "c"), HideFromHelp]
+[Priority(-1)]
+public sealed class ConfirmCommand : IExecutableCommand
 {
-    public ConfirmCommand() : base("confirm", EAdminType.MEMBER, priority: -1)
-    {
-        AddAlias("c");
-        Structure = new CommandStructure
-        {
-            Description = "Confirm a pending action."
-        };
-    }
+    /// <inheritdoc />
+    public required CommandContext Context { get; init; }
 
-    public override void Execute(CommandInteraction ctx)
+    /// <inheritdoc />
+    public UniTask ExecuteAsync(CancellationToken token)
     {
-        ctx.Defer();
+        Context.Defer();
+        return default;
     }
 }
 
-public class DenyCommand : Command
+[Command("deny"), HideFromHelp]
+[Priority(-1)]
+public sealed class DenyCommand : IExecutableCommand
 {
-    public DenyCommand() : base("deny", EAdminType.MEMBER, priority: -1)
-    {
-        AddAlias("cancel");
-        AddAlias("d");
-        Structure = new CommandStructure
-        {
-            Description = "Cancel a pending action."
-        };
-    }
+    /// <inheritdoc />
+    public required CommandContext Context { get; init; }
 
-    public override void Execute(CommandInteraction ctx)
+    /// <inheritdoc />
+    public UniTask ExecuteAsync(CancellationToken token)
     {
-        ctx.Defer();
+        Context.Defer();
+        return default;
     }
 }

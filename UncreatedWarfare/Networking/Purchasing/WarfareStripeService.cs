@@ -1,18 +1,18 @@
-﻿using System;
+﻿using Stripe;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
-using Stripe;
-using Uncreated.Framework;
 
 namespace Uncreated.Warfare.Networking.Purchasing;
 public interface IStripeService
 {
     IStripeClient StripeClient { get; }
     ProductService ProductService { get; }
-    UCSemaphore Semaphore { get; }
+    SemaphoreSlim Semaphore { get; }
     CultureInfo PriceFormatting { get; }
     bool Available { get; }
 }
+
 public class StripeService : IStripeService, IDisposable
 {
     public const string TaxCode = "txcd_10000000";
@@ -22,17 +22,18 @@ public class StripeService : IStripeService, IDisposable
     };
     public IStripeClient StripeClient { get; }
     public ProductService ProductService { get; }
-    public UCSemaphore Semaphore { get; }
+    public SemaphoreSlim Semaphore { get; }
     public CultureInfo PriceFormatting { get; }
     public bool Available => StripeClient != null;
-    public StripeService() : this(StripeConfiguration.StripeClient) { }
-    public StripeService(IStripeClient client)
+
+    public StripeService(IStripeClient stripeClient, ProductService productService)
     {
-        StripeClient = client;
-        ProductService = new ProductService(StripeClient);
-        Semaphore = new UCSemaphore();
+        StripeClient = stripeClient;
+        ProductService = productService;
+        Semaphore = new SemaphoreSlim(1, 1);
         PriceFormatting = new CultureInfo("en-US");
     }
+
     public void Dispose()
     {
         if (StripeClient is IDisposable disp)
@@ -40,30 +41,3 @@ public class StripeService : IStripeService, IDisposable
         Semaphore.Dispose();
     }
 }
-#if NETSTANDARD || NETFRAMEWORK
-public class WarfareStripeService : IStripeService
-{
-    public IStripeClient StripeClient { get; }
-    public ProductService ProductService { get; }
-    public UCSemaphore Semaphore { get; }
-    public CultureInfo PriceFormatting { get; }
-    public bool Available => StripeClient != null;
-
-    public WarfareStripeService()
-    {
-        if (UCWarfare.Config.StripeAPIKey == null)
-            return;
-
-        StripeClient = new StripeClient(UCWarfare.Config.StripeAPIKey, httpClient: new UnityWebRequestsHttpClient(), clientId: $"Uncreated Warfare/{UCWarfare.Version}");
-        ProductService = new ProductService(StripeClient);
-        Semaphore = new UCSemaphore();
-        PriceFormatting = new CultureInfo("en-US");
-    }
-    public void Dispose()
-    {
-        if (StripeClient is IDisposable disp)
-            disp.Dispose();
-        Semaphore.Dispose();
-    }
-}
-#endif

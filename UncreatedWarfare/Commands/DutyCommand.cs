@@ -1,144 +1,50 @@
-﻿using SDG.Unturned;
-using System;
-using Uncreated.Framework;
-using Uncreated.Warfare.Commands.CommandSystem;
-using Uncreated.Warfare.Commands.Permissions;
-using Uncreated.Warfare.Teams;
-using UnityEngine;
-using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
+using Uncreated.Warfare.Interaction.Commands;
+using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Permissions;
+using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Commands;
-public class DutyCommand : Command
+
+[SynchronizedCommand, Command("duty", "onduty", "offduty", "d"), MetadataFile]
+internal sealed class DutyCommand : IExecutableCommand
 {
-    private const string Syntax = "/duty";
-    private const string Help = "Swap your duty status between on and off. For admins and trial admins.";
+    private readonly DutyService _dutyService;
 
-    public DutyCommand() : base("duty", EAdminType.TRIAL_ADMIN | EAdminType.ADMIN)
+    /// <inheritdoc />
+    public required CommandContext Context { get; init; }
+
+    public DutyCommand(DutyService dutyService)
     {
-        AddAlias("onduty");
-        AddAlias("offduty");
-        AddAlias("d");
-        Structure = new CommandStructure
-        {
-            Description = "Switch between being on and off duty."
-        };
+        _dutyService = dutyService;
     }
 
-    public override void Execute(CommandInteraction ctx)
+    /// <inheritdoc />
+    public async UniTask ExecuteAsync(CancellationToken token)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        ctx.AssertRanByPlayer();
+        Context.AssertRanByPlayer();
 
-        ctx.AssertHelpCheck(0, Syntax + " - " + Help);
-
-        EAdminType level = ctx.Caller.PermissionLevel;
-
-        switch (level)
+        if (!await _dutyService.ToggleDutyStateAsync(Context.CallerId, token).ConfigureAwait(false))
         {
-            default:
-                throw ctx.SendNoPermission();
-            case EAdminType.ADMIN_OFF_DUTY:
-                AdminOffToOn(ctx.Caller);
-                throw ctx.Defer();
-            case EAdminType.ADMIN_ON_DUTY:
-                AdminOnToOff(ctx.Caller);
-                throw ctx.Defer();
-            case EAdminType.TRIAL_ADMIN_OFF_DUTY:
-                InternOffToOn(ctx.Caller);
-                throw ctx.Defer();
-            case EAdminType.TRIAL_ADMIN_ON_DUTY:
-                InternOnToOff(ctx.Caller);
-                throw ctx.Defer();
-        }
-    }
-    private static void ClearAdminPermissions(UCPlayer player)
-    {
-        if (player.Player != null)
-        {
-            if (player.Player.look != null)
-            {
-                player.Player.look.sendFreecamAllowed(false);
-                player.Player.look.sendWorkzoneAllowed(false);
-            }
-
-            if (player.Player.movement != null)
-            {
-                if (player.Player.movement.pluginSpeedMultiplier != 1f)
-                    player.Player.movement.sendPluginSpeedMultiplier(1f);
-                if (player.Player.movement.pluginJumpMultiplier != 1f)
-                    player.Player.movement.sendPluginJumpMultiplier(1f);
-            }
+            throw Context.SendNoPermission();
         }
 
-        player.JumpOnPunch = false;
-        SetVanishMode(player, false);
-        player.GodMode = false;
+        Context.Defer();
+    }
+}
 
-        Signs.UpdateKitSigns(player, null);
-        Signs.UpdateLoadoutSigns(player);
-    }
-    private static void GiveAdminPermissions(UCPlayer player, bool isIntern)
-    {
-        if (player.Player.look != null)
-        {
-            player.Player.look.sendFreecamAllowed(!isIntern);
-            player.Player.look.sendWorkzoneAllowed(!isIntern);
-        }
-        Signs.UpdateKitSigns(player, null);
-        Signs.UpdateLoadoutSigns(player);
-    }
-    public static void AdminOffToOn(UCPlayer player)
-    {
-        L.Log($"{player.Name.PlayerName} ({player.Steam64.ToString(Data.AdminLocale)}) went on duty.", ConsoleColor.Cyan);
-        PermissionSaver.Instance.SetPlayerPermissionLevel(player.Steam64, EAdminType.ADMIN_ON_DUTY);
-        player.SendChat(T.DutyOnFeedback);
-        Chat.Broadcast(LanguageSet.AllBut(player.Steam64), T.DutyOnBroadcast, player);
-        GiveAdminPermissions(player, false);
-        PlayerManager.NetCalls.SendDutyChanged.NetInvoke(player.CSteamID.m_SteamID, true);
-        ActionLog.Add(ActionLogType.DutyChanged, "ON DUTY", player.CSteamID.m_SteamID);
-    }
-    public static void AdminOnToOff(UCPlayer player)
-    {
-        L.Log($"{player.Name.PlayerName} ({player.Steam64.ToString(Data.AdminLocale)}) went off duty.", ConsoleColor.Cyan);
-        PermissionSaver.Instance.SetPlayerPermissionLevel(player.Steam64, EAdminType.ADMIN_OFF_DUTY);
-        Chat.Broadcast(LanguageSet.AllBut(player.Steam64), T.DutyOffBroadcast, player);
-        player.SendChat(T.DutyOffFeedback);
-        ClearAdminPermissions(player);
-        PlayerManager.NetCalls.SendDutyChanged.NetInvoke(player.CSteamID.m_SteamID, false);
-        ActionLog.Add(ActionLogType.DutyChanged, "OFF DUTY", player.CSteamID.m_SteamID);
-    }
-    public static void InternOffToOn(UCPlayer player)
-    {
-        L.Log($"{player.Name.PlayerName} ({player.Steam64.ToString(Data.AdminLocale)}) went on duty.", ConsoleColor.Cyan);
-        PermissionSaver.Instance.SetPlayerPermissionLevel(player.Steam64, EAdminType.TRIAL_ADMIN_ON_DUTY);
-        player.SendChat(T.DutyOnFeedback);
-        Chat.Broadcast(LanguageSet.AllBut(player.Steam64), T.DutyOnBroadcast, player);
-        GiveAdminPermissions(player, true);
-        PlayerManager.NetCalls.SendDutyChanged.NetInvoke(player.CSteamID.m_SteamID, true);
-        ActionLog.Add(ActionLogType.DutyChanged, "ON DUTY", player.CSteamID.m_SteamID);
-    }
-    public static void InternOnToOff(UCPlayer player)
-    {
-        L.Log($"{player.Name.PlayerName} ({player.Steam64.ToString(Data.AdminLocale)}) went off duty.", ConsoleColor.Cyan);
-        PermissionSaver.Instance.SetPlayerPermissionLevel(player.Steam64, EAdminType.TRIAL_ADMIN_OFF_DUTY);
-        Chat.Broadcast(LanguageSet.AllBut(player.Steam64), T.DutyOffBroadcast, player);
-        player.SendChat(T.DutyOffFeedback);
-        ClearAdminPermissions(player);
-        PlayerManager.NetCalls.SendDutyChanged.NetInvoke(player.CSteamID.m_SteamID, false);
-        ActionLog.Add(ActionLogType.DutyChanged, "OFF DUTY", player.CSteamID.m_SteamID);
-    }
-    public static void SetVanishMode(Player player, bool vanished)
-    {
-        if (player.movement.canAddSimulationResultsToUpdates != vanished)
-            return;
+public class DutyCommandTranslations : PropertiesTranslationCollection
+{
+    protected override string FileName => "Commands/Duty";
 
-        player.movement.canAddSimulationResultsToUpdates = !vanished;
-        Vector3 pos = TeamManager.LobbySpawn;
-        float angle = TeamManager.LobbySpawnAngle;
-        player.movement.updates.Add(vanished
-            ? new PlayerStateUpdate(pos, 0, MeasurementTool.angleToByte(angle))
-            : new PlayerStateUpdate(player.transform.position, player.look.angle, player.look.rot));
-    }
+    [TranslationData("Sent to a player when they go on duty.", IsPriorityTranslation = false)]
+    public readonly Translation DutyOnFeedback = new Translation("<#c6d4b8>You are now <#95ff4a>on duty</color>.");
+
+    [TranslationData("Sent to a player when they go off duty.", IsPriorityTranslation = false)]
+    public readonly Translation DutyOffFeedback = new Translation("<#c6d4b8>You are now <#ff8c4a>off duty</color>.");
+
+    [TranslationData("Sent to all players when a player goes on duty (gains permissions).")]
+    public readonly Translation<IPlayer> DutyOnBroadcast = new Translation<IPlayer>("<#c6d4b8><#d9e882>{0}</color> is now <#95ff4a>on duty</color>.", arg0Fmt: WarfarePlayer.FormatDisplayOrPlayerName);
+
+    [TranslationData("Sent to all players when a player goes off duty (loses permissions).")]
+    public readonly Translation<IPlayer> DutyOffBroadcast = new Translation<IPlayer>("<#c6d4b8><#d9e882>{0}</color> is now <#ff8c4a>off duty</color>.", arg0Fmt: WarfarePlayer.FormatDisplayOrPlayerName);
 }

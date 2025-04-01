@@ -1,86 +1,70 @@
-﻿using System;
-using System.Threading;
-using System.Threading.Tasks;
-using Uncreated.Framework;
-using Uncreated.Networking;
-using Uncreated.Players;
-using Uncreated.Warfare.Commands.CommandSystem;
+using System;
+using Uncreated.Warfare.Interaction.Commands;
+using Uncreated.Warfare.Moderation;
+using Uncreated.Warfare.Networking;
+using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Commands;
-public class IPWhitelistCommand : AsyncCommand
+
+[Command("ipwhitelist", "whitelistip", "whip", "ipwh", "iw"), MetadataFile]
+internal sealed class IPWhitelistCommand : IExecutableCommand
 {
-    private const string SYNTAX = "/ipwhitelist <add|remove> <steam64> [ip = any]";
-    private const string HELP = "Whitelist a player's IP to not be IP banned.";
-    private static readonly string[] RemArgs = { "remove", "delete", "rem", "blacklist" };
+    private readonly IUserDataService _userDataService;
+    private readonly DatabaseInterface _moderationSql;
+    private readonly IPWhitelistCommandTranslations _translations;
 
-    public IPWhitelistCommand() : base("ipwhitelist", EAdminType.STAFF)
+    private static readonly string[] RemArgs = [ "remove", "delete", "rem", "blacklist" ];
+
+    /// <inheritdoc />
+    public required CommandContext Context { get; init; }
+
+    public IPWhitelistCommand(TranslationInjection<IPWhitelistCommandTranslations> translations, IUserDataService userDataService, DatabaseInterface moderationSql)
     {
-        AddAlias("whitelistip");
-        AddAlias("whip");
-        AddAlias("ipwh");
-        AddAlias("iw");
-        Structure = new CommandStructure
-        {
-            Description = HELP,
-            Parameters = new CommandParameter[]
-            {
-                new CommandParameter("Add")
-                {
-                    Aliases = new string[] { "whitelist", "create" },
-                    Description = "Add an IP range to the IP whitelist.",
-                    Parameters = new CommandParameter[]
-                    {
-                        new CommandParameter("Player", typeof(IPlayer))
-                        {
-                            Parameters = new CommandParameter[]
-                            {
-                                new CommandParameter("IP", typeof(IPv4Range))
-                                {
-                                    IsOptional = true
-                                }
-                            }
-                        }
-                    }
-                },
-                new CommandParameter("Remove")
-                {
-                    Aliases = new string[] { "delete", "rem", "blacklist" },
-                    Description = "Remove an ip range from the IP whitelist.",
-                    Parameters = new CommandParameter[]
-                    {
-                        new CommandParameter("Player", typeof(IPlayer))
-                        {
-                            Parameters = new CommandParameter[]
-                            {
-                                new CommandParameter("IP", typeof(IPv4Range))
-                                {
-                                    IsOptional = true
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        };
+        _userDataService = userDataService;
+        _moderationSql = moderationSql;
+        _translations = translations.Value;
     }
 
-    public override async Task Execute(CommandInteraction ctx, CancellationToken token)
+    /// <inheritdoc />
+    public async UniTask ExecuteAsync(CancellationToken token)
     {
-        ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
+        bool remove = Context.MatchParameter(0, RemArgs);
+        if (!remove && !Context.MatchParameter(0, "add", "whitelist", "create"))
+            throw Context.SendHelp();
+        
+        IPv4Range range = default;
 
-        bool remove = ctx.MatchParameter(0, RemArgs);
-        if (remove || ctx.MatchParameter(0, "add", "whitelist", "create"))
+        (CSteamID? player, _) = await Context.TryGetPlayer(1).ConfigureAwait(false);
+
+        if (!player.HasValue || Context.TryGet(2, out string? str) && !IPv4Range.TryParse(str, out range) && !IPv4Range.TryParseIPv4(str, out range))
         {
-            IPv4Range range = default;
-            if (!ctx.TryGet(1, out ulong player, out _) || ctx.TryGet(2, out string str) && !IPv4Range.TryParse(str, out range) && !IPv4Range.TryParseIPv4(str, out range))
-                throw ctx.SendCorrectUsage(SYNTAX);
-
-            PlayerNames names = await F.GetPlayerOriginalNamesAsync(player, token).ConfigureAwait(false);
-            if (await Data.ModerationSql.WhitelistIP(player, ctx.CallerID, range, !remove, DateTimeOffset.UtcNow, token).ConfigureAwait(false) == StandardErrorCode.Success)
-                ctx.Reply(remove ? T.IPUnwhitelistSuccess : T.IPWhitelistSuccess, names, range);
-            else
-                ctx.Reply(T.IPWhitelistNotFound, names, range);
+            throw Context.SendHelp();
         }
-        else ctx.SendCorrectUsage(SYNTAX);
+
+        PlayerNames names = await _userDataService.GetUsernamesAsync(player.Value.m_SteamID, token).ConfigureAwait(false);
+
+        if (await _moderationSql.WhitelistIP(player.Value, Context.CallerId, range, !remove, DateTimeOffset.UtcNow, token).ConfigureAwait(false))
+        {
+            Context.Reply(remove ? _translations.IPUnwhitelistSuccess : _translations.IPWhitelistSuccess, names, range);
+        }
+        else
+        {
+            Context.Reply(_translations.IPWhitelistNotFound, names, range);
+        }
     }
+}
+
+public class IPWhitelistCommandTranslations : PropertiesTranslationCollection
+{
+    protected override string FileName => "Commands/IP Whitelist";
+
+    [TranslationData(IsPriorityTranslation = false)]
+    public readonly Translation<IPlayer, IPv4Range> IPWhitelistSuccess = new Translation<IPlayer, IPv4Range>("<#00ffff>Whitelisted the IP range: <#9cffb3>{1}</color> for {0}.");
+
+    [TranslationData(IsPriorityTranslation = false)]
+    public readonly Translation<IPlayer, IPv4Range> IPUnwhitelistSuccess = new Translation<IPlayer, IPv4Range>("<#00ffff>Unwhitelisted the IP range: <#9cffb3>{1}</color> for {0}.");
+
+    [TranslationData(IsPriorityTranslation = false)]
+    public readonly Translation<IPlayer, IPv4Range> IPWhitelistNotFound = new Translation<IPlayer, IPv4Range>("<#b3a6a2>The IP range: <#9cffb3>{1}</color> is not whitelisted for {0}.");
 }

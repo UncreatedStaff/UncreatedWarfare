@@ -1,14 +1,12 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using Uncreated.Warfare.Database.Automation;
-using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.Models.Assets;
-using Uncreated.Warfare.Models.Stats.Base;
-using UnityEngine;
 
-namespace Uncreated.Warfare.Models.Stats.Records;
+namespace Uncreated.Warfare.Models.Stats;
 
 [Table("stats_fob_items")]
 public class FobItemRecord : InstigatedPlayerRecord
@@ -22,8 +20,7 @@ public class FobItemRecord : InstigatedPlayerRecord
 
     public FobRecord Fob { get; set; }
 
-    [ExcludedEnum(BuildableType.Radio)]
-    public BuildableType Type { get; set; }
+    public ShovelableType Type { get; set; }
 
     [DefaultValue(0)]
     public int PlayerKills { get; set; }
@@ -41,16 +38,25 @@ public class FobItemRecord : InstigatedPlayerRecord
     public DateTimeOffset? DestroyedAt { get; set; }
 
     [DefaultValue(null)]
-    [AddName]
     public UnturnedAssetReference? Item { get; set; }
 
-    [DefaultValue(null)]
-    [AddName]
-    public UnturnedAssetReference? PrimaryAsset { get; set; }
+    [DefaultValue("00000000000000000000000000000000")]
+    [StringLength(48)]
+    public string? ItemName { get; set; }
 
     [DefaultValue(null)]
-    [AddName]
+    public UnturnedAssetReference? PrimaryAsset { get; set; }
+
+    [DefaultValue("00000000000000000000000000000000")]
+    [StringLength(48)]
+    public string? PrimaryAssetName { get; set; }
+
+    [DefaultValue(null)]
     public UnturnedAssetReference? SecondaryAsset { get; set; }
+
+    [DefaultValue("00000000000000000000000000000000")]
+    [StringLength(48)]
+    public string? SecondaryAssetName { get; set; }
 
     [DefaultValue(false)]
     public bool DestroyedByRoundEnd { get; set; }

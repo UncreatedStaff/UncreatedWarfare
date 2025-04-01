@@ -1,14 +1,12 @@
-﻿using System;
+﻿using DanielWillett.SpeedBytes;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading;
-using System.Threading.Tasks;
-using Uncreated.Encoding;
-using Uncreated.Framework;
-using Uncreated.SQL;
+using Uncreated.Warfare.Database.Manual;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Moderation.Commendation;
 
@@ -38,14 +36,15 @@ public class BugReportAccepted : ModerationEntry
         writer.WriteNullable(Issue);
     }
 
-    public override void ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
+    public override bool ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
     {
         if (propertyName.Equals("commit", StringComparison.InvariantCultureIgnoreCase))
             Commit = reader.GetString();
         else if (propertyName.Equals("issue", StringComparison.InvariantCultureIgnoreCase))
             Issue = reader.TokenType == JsonTokenType.Null ? null : reader.GetInt32();
         else
-            base.ReadProperty(ref reader, propertyName, options);
+            return base.ReadProperty(ref reader, propertyName, options);
+        return true;
     }
     public override void Write(Utf8JsonWriter writer, JsonSerializerOptions options)
     {
@@ -71,13 +70,13 @@ public class BugReportAccepted : ModerationEntry
     {
         bool hasEvidenceCalls = base.AppendWriteCall(builder, args);
 
-        builder.Append($" INSERT INTO `{DatabaseInterface.TableBugReportAccepteds}` ({SqlTypes.ColumnList(
+        builder.Append($" INSERT INTO `{DatabaseInterface.TableBugReportAccepteds}` ({MySqlSnippets.ColumnList(
             DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnTableBugReportAcceptedsCommit, DatabaseInterface.ColumnTableBugReportAcceptedsIssue)}) VALUES " +
                        $"(@0, @{args.Count.ToString(CultureInfo.InvariantCulture)}) AS `t` " +
                        $"ON DUPLICATE KEY UPDATE `{DatabaseInterface.ColumnTableBugReportAcceptedsCommit}` = `t`.`{DatabaseInterface.ColumnTableBugReportAcceptedsCommit}`," +
                        $"`{DatabaseInterface.ColumnTableBugReportAcceptedsIssue}` = `t`.`{DatabaseInterface.ColumnTableBugReportAcceptedsIssue}`;");
 
-        args.Add((object?)Commit.MaxLength(7) ?? DBNull.Value);
+        args.Add((object?)Commit.Truncate(7) ?? DBNull.Value);
         args.Add(Issue.HasValue ? Issue.Value : DBNull.Value);
 
         return hasEvidenceCalls;

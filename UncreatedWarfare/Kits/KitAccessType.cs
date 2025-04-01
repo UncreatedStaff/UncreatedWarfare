@@ -1,4 +1,4 @@
-﻿namespace Uncreated.Warfare.Kits;
+namespace Uncreated.Warfare.Kits;
 public enum KitAccessType : byte
 {
     Unknown,

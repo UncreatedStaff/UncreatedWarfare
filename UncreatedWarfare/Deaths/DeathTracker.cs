@@ -1,135 +1,236 @@
-﻿using DanielWillett.ReflectionTools;
-using SDG.Unturned;
-using Steamworks;
+using DanielWillett.ReflectionTools;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Components;
-using Uncreated.Warfare.Events.Players;
-using Uncreated.Warfare.Gamemodes.Interfaces;
-using Uncreated.Warfare.Revives;
-using Uncreated.Warfare.Singletons;
+using Uncreated.Warfare.Events.Models.Players;
+using Uncreated.Warfare.FOBs.Deployment;
+using Uncreated.Warfare.Injures;
+using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Layouts.Teams;
+using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Services;
+using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.Deaths;
-public class DeathTracker : BaseReloadSingleton
+public class DeathTracker : IHostedService
 {
+    private readonly ILogger<DeathTracker> _logger;
+    private readonly DeathMessageResolver _deathMessageResolver;
+    private readonly IPlayerService _playerService;
+
     public const EDeathCause MainCampDeathCauseOffset = (EDeathCause)100;
     public const EDeathCause InEnemyMainDeathCause = (EDeathCause)37;
-    private static DeathTracker Singleton;
-    private static readonly Dictionary<ulong, InjuredDeathCache> _injuredPlayers = new Dictionary<ulong, InjuredDeathCache>(Provider.maxPlayers);
-    public static bool Loaded => Singleton.IsLoaded();
-    public DeathTracker() : base("deaths") { }
-    public override void Load()
+
+    private static readonly InstanceSetter<PlayerLife, bool>? PVPDeathField = Accessor.GenerateInstancePropertySetter<PlayerLife, bool>("wasPvPDeath");
+    private static readonly InstanceGetter<InteractableSentry, Player>? SentryTargetPlayerField = Accessor.GenerateInstanceGetter<InteractableSentry, Player>("targetPlayer");
+
+    public DeathTracker(ILogger<DeathTracker> logger, DeathMessageResolver deathMessageResolver, IPlayerService playerService)
     {
-        Singleton = this;
+        _logger = logger;
+        _playerService = playerService;
+        _deathMessageResolver = deathMessageResolver;
+    }
+
+    UniTask IHostedService.StartAsync(CancellationToken token)
+    {
+        CommandWindow.shouldLogDeaths = false;
+
+        // not using event dispatcher for this because this class is responsible for dispatching the player died event.
         PlayerLife.onPlayerDied += OnPlayerDied;
+        UseableGun.onProjectileSpawned += UseableGunOnProjectileSpawned;
+        UseableThrowable.onThrowableSpawned += OnThrowableSpawned;
+        UseableConsumeable.onConsumePerformed += UseableConsumeableOnConsumePerformed;
+
         EDeathCause[] causes = Enum.GetValues(typeof(EDeathCause)).Cast<EDeathCause>().ToArray();
         if (causes.Contains(InEnemyMainDeathCause))
-            L.LogWarning("Death cause " + InEnemyMainDeathCause + " is already in use to be used as InEnemyMainDeathCause (#" + (int)InEnemyMainDeathCause + ").");
+        {
+            _logger.LogWarning("Death cause {0} is already in use to be used as InEnemyMainDeathCause (#{1}).",
+                InEnemyMainDeathCause, (int)InEnemyMainDeathCause
+            );
+        }
+
         foreach (EDeathCause cause in causes)
         {
             if (cause >= MainCampDeathCauseOffset)
-                L.LogWarning("Death cause " + cause + " is already in use to be used as MainCampDeathCause offset (#" + (int)cause + ") for "
-                             + (EDeathCause)((int)cause - (int)MainCampDeathCauseOffset) + ".");
+            {
+                _logger.LogWarning("Death cause {0} is already in use to be used as MainCampDeathCause offset (#{1}) for {2}.",
+                    cause, (int)cause, (EDeathCause)((int)cause - (int)MainCampDeathCauseOffset)
+                );
+            }
         }
+
+
+        return UniTask.CompletedTask;
     }
-    public override void Reload()
-    {
-        Localization.Reload();
-    }
-    public override void Unload()
+
+    UniTask IHostedService.StopAsync(CancellationToken token)
     {
         PlayerLife.onPlayerDied -= OnPlayerDied;
-        Singleton = null!;
+        UseableGun.onProjectileSpawned -= UseableGunOnProjectileSpawned;
+        UseableThrowable.onThrowableSpawned -= OnThrowableSpawned;
+        UseableConsumeable.onConsumePerformed -= UseableConsumeableOnConsumePerformed;
+
+        return UniTask.CompletedTask;
     }
-    private static readonly InstanceSetter<PlayerLife, bool>? PVPDeathField = Accessor.GenerateInstancePropertySetter<PlayerLife, bool>("wasPvPDeath");
-    private static readonly InstanceGetter<InteractableSentry, Player>? SentryTargetPlayerField =
-        Accessor.GenerateInstanceGetter<InteractableSentry, Player>("targetPlayer");
+
+    private static void UseableConsumeableOnConsumePerformed(Player instigatingPlayer, ItemConsumeableAsset consumeableAsset)
+    {
+        PlayerDeathTrackingComponent deathTrackingComponent = PlayerDeathTrackingComponent.GetOrAdd(instigatingPlayer);
+
+        deathTrackingComponent.LastExplosiveConsumed = null;
+
+        if (consumeableAsset.IsExplosive)
+        {
+            deathTrackingComponent.LastExplosiveConsumed = AssetLink.Create(consumeableAsset);
+        }
+        else if (consumeableAsset.virus != 0)
+        {
+            deathTrackingComponent.LastInfectionItemConsumed = AssetLink.Create(consumeableAsset);
+        }
+    }
+
+    private static void UseableGunOnProjectileSpawned(UseableGun sender, GameObject projectile)
+    {
+        PlayerDeathTrackingComponent deathTrackingComponent = PlayerDeathTrackingComponent.GetOrAdd(sender.player);
+
+        ItemGunAsset gun = sender.equippedGunAsset;
+
+        deathTrackingComponent.LastRocketShot = AssetLink.Create(gun);
+
+        InteractableVehicle? vehicle = sender.player.movement.getVehicle();
+        if (vehicle is null)
+        {
+            deathTrackingComponent.LastRocketShotFromVehicle = null;
+            return;
+        }
+
+        byte seat = sender.player.movement.getSeat();
+        if (seat >= vehicle.passengers.Length || vehicle.passengers[seat].turret == null || !deathTrackingComponent.LastRocketShot.MatchId(vehicle.passengers[seat].turret.itemID))
+        {
+            deathTrackingComponent.LastRocketShotFromVehicle = null;
+            return;
+        }
+
+        deathTrackingComponent.LastRocketShotFromVehicle = vehicle;
+
+        if (seat != 0 && vehicle.isDriven)
+        {
+            deathTrackingComponent.LastRocketShotFromVehicleDriverAssist = vehicle.passengers[0].player.playerID.steamID;
+        }
+    }
+
+    private void OnThrowableSpawned(UseableThrowable useable, GameObject throwable)
+    {
+        ThrowableComponent comp = throwable.AddComponent<ThrowableComponent>();
+        PlayerDeathTrackingComponent deathTrackingComponent = PlayerDeathTrackingComponent.GetOrAdd(useable.player);
+
+        WarfarePlayer? player = _playerService.GetOnlinePlayerOrNull(useable.player);
+
+        ItemThrowableAsset asset = useable.equippedThrowableAsset;
+
+        deathTrackingComponent.ActiveThrownItems.Add(comp);
+        comp.Throwable = asset;
+        comp.Owner = player;
+        comp.ToRemoveFrom = deathTrackingComponent.ActiveThrownItems;
+        comp.Team = player?.Team ?? Team.NoTeam;
+    }
+
     private void OnPlayerDied(PlayerLife sender, EDeathCause cause, ELimb limb, CSteamID instigator)
     {
-        UCPlayer? dead = UCPlayer.FromPlayer(sender.player);
-        if (dead is null) return;
-        if (cause == EDeathCause.BLEEDING)
+        WarfarePlayer dead = _playerService.GetOnlinePlayer(sender.player);
+
+        PlayerDeathTrackingComponent comp = PlayerDeathTrackingComponent.GetOrAdd(sender.player);
+
+        UniTask.Create(async () =>
         {
-            if (dead.Player.TryGetPlayerData(out UCPlayerData deadData))
+            PlayerInjureComponent? injureComp = dead.ComponentOrNull<PlayerInjureComponent>();
+            if (injureComp != null && injureComp is { State: PlayerHealthState.Injured, PendingDeathInfo: not null })
             {
-                if (deadData.LastBleedingEvent is not null)
-                {
-                    deadData.LastBleedingArgs.Flags |= DeathFlags.Bleeding;
-                    Localization.BroadcastDeath(deadData.LastBleedingEvent, deadData.LastBleedingArgs);
-                    goto clear;
-                }
+                PlayerDied deathInfo = injureComp.PendingDeathInfo;
+                injureComp.PendingDeathInfo = null;
+                await _deathMessageResolver.BroadcastDeath(deathInfo);
             }
-        }
-        if (ReviveManager.Loaded
-            && Data.Is(out IRevives revives)
-            && revives.ReviveManager.IsInjured(dead.Steam64)
-            && _injuredPlayers.TryGetValue(dead.Steam64, out InjuredDeathCache cache))
+            else if (cause != EDeathCause.BLEEDING || comp?.BleedOutInfo == null)
+            {
+                PlayerDied e;
+
+                if (dead.Data.TryRemove("LastPlayerDying", out object? dyingArgs) && dyingArgs is PlayerDying dying)
+                {
+                    e = new PlayerDied(in dying.Parameters) { Player = dead };
+                }
+                else
+                {
+                    DamagePlayerParameters parameters = new DamagePlayerParameters(dead.UnturnedPlayer)
+                    {
+                        limb = limb,
+                        cause = cause,
+                        killer = instigator
+                    };
+                    e = new PlayerDied(in parameters) { Player = dead };
+                }
+                FillArgs(dead, cause, limb, instigator, e);
+                await _deathMessageResolver.BroadcastDeath(e);
+            }
+            else
+            {
+                comp.BleedOutInfo.MessageFlags |= DeathFlags.Bleeding;
+                await _deathMessageResolver.BroadcastDeath(comp.BleedOutInfo);
+            }
+        });
+
+        if (comp == null)
         {
-            Localization.BroadcastDeath(cache.EventArgs, cache.MessageArgs);
+            return;
         }
-        else
-        {
-            PlayerDied e = new PlayerDied(dead);
-            DeathMessageArgs args = new DeathMessageArgs();
-            FillArgs(dead, cause, limb, instigator, ref args, e);
-            Localization.BroadcastDeath(e, args);
-        }
-        clear:
-        if (dead.Player.TryGetPlayerData(out UCPlayerData data))
-        {
-            data.LastInfectableConsumed = default;
-            data.LastBleedingArgs = default;
-            data.LastBleedingEvent = null;
-            data.LastShreddedBy = default;
-            data.LastVehicleHitBy = default;
-        }
+
+        comp.LastInfectionItemConsumed = null;
+        comp.BleedOutInfo = null;
+        comp.LastShreddedBy = null;
+        comp.LastRoadkillVehicle = null;
     }
-    internal static PlayerDied OnInjured(in DamagePlayerParameters parameters)
+
+    internal PlayerDied GetInjuredArguments(in DamagePlayerParameters parameters)
     {
-        UCPlayer? pl = UCPlayer.FromPlayer(parameters.player);
-        if (pl is null) return null!;
-        if (parameters.cause == EDeathCause.BLEEDING)
+        WarfarePlayer pl = _playerService.GetOnlinePlayer(parameters.player);
+
+        if (parameters.cause == EDeathCause.BLEEDING && PlayerDeathTrackingComponent.GetOrAdd(pl.UnturnedPlayer) is { BleedOutInfo: { } bleedOutInfo })
         {
-            if (pl.Player.TryGetPlayerData(out UCPlayerData deadData))
-            {
-                if (deadData.LastBleedingEvent is not null)
-                {
-                    deadData.LastBleedingArgs.Flags |= DeathFlags.Bleeding;
-                    _injuredPlayers.Add(pl.Steam64, new InjuredDeathCache(deadData.LastBleedingEvent, deadData.LastBleedingArgs));
-                    return deadData.LastBleedingEvent;
-                }
-            }
+            bleedOutInfo.MessageFlags |= DeathFlags.Bleeding;
+            return bleedOutInfo;
         }
-        PlayerDied e = new PlayerDied(pl);
-        DeathMessageArgs args = new DeathMessageArgs();
-        FillArgs(pl, parameters.cause, parameters.limb, parameters.killer, ref args, e);
-        _injuredPlayers.Add(pl.Steam64, new InjuredDeathCache(e, args));
+
+        PlayerDied e = new PlayerDied(in parameters) { Player = pl };
+        FillArgs(pl, parameters.cause, parameters.limb, parameters.killer, e);
         return e;
     }
-    internal static void FillArgs(UCPlayer dead, EDeathCause cause, ELimb limb, CSteamID instigator, ref DeathMessageArgs args, PlayerDied e)
+
+    internal void FillArgs(WarfarePlayer dead, EDeathCause cause, ELimb limb, CSteamID instigator, PlayerDied e)
     {
-        args.DeadPlayerName = dead.Name.CharacterName;
-        ulong deadTeam = dead.GetTeam();
-        args.DeadPlayerTeam = deadTeam;
+        Team deadTeam = dead.Team;
         e.DeadTeam = deadTeam;
-        args.DeathCause = cause;
-        args.Limb = limb;
-        args.Flags = DeathFlags.None;
+        e.MessageFlags = DeathFlags.None;
         e.WasTeamkill = false;
         e.WasSuicide = false;
         e.Instigator = instigator;
         e.Limb = limb;
         e.Cause = cause;
+        e.MessageCause = cause;
         e.Point = dead.Position;
         e.Session = dead.CurrentSession;
+        if (e.Session != null)
+            Interlocked.Increment(ref e.Session.EventCount);
+        e.TimeDeployed = (float)(dead.ComponentOrNull<DeploymentComponent>()?.GetTimeDeployed().TotalSeconds ?? 0d);
         switch (cause)
         {
             // death causes only possible through PvE:
             case InEnemyMainDeathCause:
-                args.SpecialKey = "maindeath";
-                goto case EDeathCause.ZOMBIE;
+                e.MessageKey = "maindeath";
+                return;
+
             case EDeathCause.ACID:
             case EDeathCause.ANIMAL:
             case EDeathCause.BONES:
@@ -145,145 +246,168 @@ public class DeathTracker : BaseReloadSingleton
             case EDeathCause.WATER:
             case EDeathCause.ZOMBIE:
                 return;
+
             case >= MainCampDeathCauseOffset:
-                args.SpecialKey = "maincamp";
-                args.DeathCause = (EDeathCause)((int)cause - (int)MainCampDeathCauseOffset);
-                PVPDeathField?.Invoke(dead.Player.life, true);
+                e.MessageKey = "maincamp";
+                e.MessageCause = (EDeathCause)((int)cause - (int)MainCampDeathCauseOffset);
+                PVPDeathField?.Invoke(dead.UnturnedPlayer.life, true);
                 break;
         }
-        UCPlayer? killer = UCPlayer.FromCSteamID(instigator);
-        dead.Player.TryGetPlayerData(out UCPlayerData? deadData);
-        UCPlayerData? killerData = null;
-        killer?.Player?.TryGetPlayerData(out killerData);
+        WarfarePlayer? killer = _playerService.GetOnlinePlayerOrNull(instigator);
+        PlayerDeathTrackingComponent? deadData = dead.UnturnedPlayer == null ? null : PlayerDeathTrackingComponent.GetOrAdd(dead.UnturnedPlayer);
+        PlayerDeathTrackingComponent? killerData = null;
+        if (killer is { IsOnline: true })
+        {
+            killerData = PlayerDeathTrackingComponent.GetOrAdd(killer.UnturnedPlayer);
+        }
+        
         e.Killer = killer;
-        e.KillerSession = killer?.CurrentSession;
-        e.KillerPoint = killer?.Position ?? e.Point;
+        if (killer != null)
+        {
+            e.KillerSession = killer.CurrentSession;
+            if (e.KillerSession != null)
+                Interlocked.Increment(ref e.KillerSession.EventCount);
+            e.KillerPoint = killer.Position;
+            KitPlayerComponent killerKitComp = killer.Component<KitPlayerComponent>();
+            e.KillerKitName = killerKitComp.ActiveKitId;
+            e.KillerClass = killerKitComp.ActiveClass;
+            e.KillerBranch = killerKitComp.ActiveBranch;
+        }
+        else
+        {
+            e.KillerPoint = e.Point;
+        }
 
         if (cause == EDeathCause.LANDMINE)
         {
-            UCPlayer? triggerer = null;
+            WarfarePlayer? triggerer = null;
             BarricadeDrop? drop = null;
             ThrowableComponent? throwable = null;
             bool isTriggerer = false;
+
             if (killerData != null)
             {
-                drop = killerData.ExplodingLandmine;
-                if (deadData != null && deadData.TriggeringLandmine == drop)
+                drop = killerData.OwnedTrap;
+                if (deadData != null && deadData.TriggeredTrapExplosive == drop)
                 {
                     isTriggerer = true;
-                    throwable = deadData.TriggeringThrowable;
+                    throwable = deadData.ThrowableTrapTrigger;
                 }
             }
-            else if (deadData != null && deadData.TriggeringLandmine != null)
+            else if (deadData != null && deadData.TriggeredTrapExplosive != null)
             {
                 isTriggerer = true;
-                throwable = deadData.TriggeringThrowable;
+                throwable = deadData.ThrowableTrapTrigger;
             }
+
             if (drop != null)
             {
-                args.Flags |= DeathFlags.Item;
-                e.PrimaryAsset = drop.asset.GUID;
-                args.ItemName = drop.asset.itemName;
-                args.ItemGuid = drop.asset.GUID;
+                e.MessageFlags |= DeathFlags.Item;
+                e.PrimaryAsset = AssetLink.Create(drop.asset);
                 if (!isTriggerer)
                 {
-                    for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
+                    foreach (WarfarePlayer player in _playerService.OnlinePlayers)
                     {
-                        UCPlayer pl = PlayerManager.OnlinePlayers[i];
-                        if (pl.Steam64 != dead.Steam64 && pl.Player.TryGetPlayerData(out UCPlayerData triggererData))
-                        {
-                            if (triggererData.TriggeringLandmine != null && triggererData.TriggeringLandmine == drop)
-                            {
-                                triggerer = pl;
-                                throwable = triggererData.TriggeringThrowable;
-                                break;
-                            }
-                        }
+                        if (player.Equals(dead))
+                            continue;
+
+                        PlayerDeathTrackingComponent comp = PlayerDeathTrackingComponent.GetOrAdd(player.UnturnedPlayer);
+                        if (comp.TriggeredTrapExplosive != drop)
+                            continue;
+
+                        triggerer = player;
+                        throwable = comp.ThrowableTrapTrigger;
+                        break;
                     }
                 }
             }
             else if (triggerer == null)
             {
                 // if it didnt find the triggerer, look for nearby players that just triggered a landmine. Needed in case the owner leaves.
-                for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
+                foreach (WarfarePlayer player in _playerService.OnlinePlayers)
                 {
-                    UCPlayer pl = PlayerManager.OnlinePlayers[i];
-                    if (pl.Steam64 != dead.Steam64 && pl.Player.TryGetPlayerData(out UCPlayerData triggererData))
+                    if (player.Equals(dead)
+                        || !player.UnturnedPlayer.TryGetComponent(out PlayerDeathTrackingComponent triggererData)
+                        || triggererData.TriggeredTrapExplosive == null
+                        || !((triggererData.TriggeredTrapExplosive.model.position - dead.Position).sqrMagnitude < 400f /* 20m */)
+                       )
                     {
-                        if (triggererData.TriggeringLandmine != null && (triggererData.TriggeringLandmine.model.position - dead.Position).sqrMagnitude < 225f)
-                        {
-                            drop = triggererData.TriggeringLandmine;
-                            args.Flags |= DeathFlags.Item;
-                            e.PrimaryAsset = drop.asset.GUID;
-                            args.ItemName = drop.asset.itemName;
-                            args.ItemGuid = drop.asset.GUID;
-                            triggerer = pl;
-                            throwable = triggererData.TriggeringThrowable;
-                            break;
-                        }
+                        continue;
                     }
+
+                    drop = triggererData.TriggeredTrapExplosive;
+                    e.MessageFlags |= DeathFlags.Item;
+                    e.PrimaryAsset = AssetLink.Create(drop.asset);
+                    triggerer = player;
+                    throwable = triggererData.ThrowableTrapTrigger;
+                    break;
                 }
             }
+
             if (triggerer != null)
             {
                 // checks if the dead player triggered the trap and it's on their own team.
                 if (isTriggerer && drop != null)
                 {
-                    if (drop.GetServersideData().group.GetTeam() == deadTeam)
-                        args.Flags |= DeathFlags.Suicide;
+                    if (deadTeam.IsFriendly(new CSteamID(drop.GetServersideData().group)))
+                        e.MessageFlags |= DeathFlags.Suicide;
                     else
-                        args.Flags &= ~DeathFlags.Killer; // removes the killer as it's them but from the other team
+                        e.MessageFlags &= ~DeathFlags.Killer; // removes the killer as it's them but from the other team
                 }
                 else if (killer == null || triggerer.Steam64 != killer.Steam64)
                 {
-                    args.Player3Name = triggerer.Name.CharacterName;
-                    args.Player3Team = triggerer.GetTeam();
-                    args.Flags |= DeathFlags.Player3;
-                    e.Player3 = triggerer;
-                    e.Player3Id = triggerer.Steam64;
-                    e.Player3Point = triggerer.Position;
-                    e.Player3Session = triggerer.CurrentSession;
+                    e.MessageFlags |= DeathFlags.Player3;
+                    e.ThirdParty = triggerer;
+                    e.ThirdPartyId = triggerer.Steam64;
+                    e.ThirdPartyPoint = triggerer.Position;
+                    e.ThirdPartySession = triggerer.CurrentSession;
+                    if (e.ThirdPartySession != null)
+                        Interlocked.Increment(ref e.ThirdPartySession.EventCount);
+                    e.ThirdPartyTeam = triggerer.Team;
+
                     // if all 3 parties are on the same team count it as a teamkill on the triggerer, as it's likely intentional
-                    if (triggerer.GetTeam() == deadTeam && killer != null && killer.GetTeam() == deadTeam)
-                        args.IsTeamkill = true;
+                    if (triggerer.Team.IsFriendly(deadTeam) && killer != null && killer.Team.IsFriendly(deadTeam))
+                    {
+                        e.WasTeamkill = true;
+                        e.ThirdPartyAtFault = true;
+                    }
                 }
                 // if triggerer == placer, count it as a teamkill on the placer
-                else if (killer.GetTeam() == deadTeam)
+                else if (killer.Team.IsFriendly(deadTeam))
                 {
-                    args.IsTeamkill = true;
+                    e.WasTeamkill = true;
                 }
             }
-            if (throwable != null && Assets.find(throwable.Throwable) is ItemThrowableAsset asset)
+            if (throwable != null && throwable.Throwable != null)
             {
-                args.Flags |= DeathFlags.Item2;
-                e.SecondaryItem = asset.GUID;
-                args.Item2Name = asset.itemName;
+                e.MessageFlags |= DeathFlags.Item2;
+                e.SecondaryAsset = AssetLink.Create(throwable.Throwable);
             }
         }
         else if (killer is not null && killer.Steam64 == dead.Steam64)
         {
-            args.Flags |= DeathFlags.Suicide;
+            e.MessageFlags |= DeathFlags.Suicide;
         }
+
         if (killer is not null)
         {
             if (killer.Steam64 != dead.Steam64)
             {
-                args.KillerName = killer.Name.CharacterName;
-                args.KillerTeam = killer.GetTeam();
-                e.KillerTeam = args.KillerTeam;
-                args.Flags |= DeathFlags.Killer;
-                args.KillDistance = (killer.Position - dead.Position).magnitude;
-                e.KillDistance = args.KillDistance;
-                if (deadTeam == args.KillerTeam)
+                e.KillerTeam = killer.Team;
+                e.MessageFlags |= DeathFlags.Killer;
+                e.KillDistance = (killer.Position - dead.Position).magnitude;
+                if (deadTeam.IsFriendly(e.KillerTeam))
                 {
-                    args.IsTeamkill = true;
                     e.WasTeamkill = true;
                 }
             }
             else
+            {
                 e.WasSuicide = true;
+            }
         }
 
+        InteractableVehicle? veh;
         switch (cause)
         {
             case EDeathCause.BLEEDING:
@@ -291,269 +415,291 @@ public class DeathTracker : BaseReloadSingleton
             case EDeathCause.GUN:
             case EDeathCause.MELEE:
             case EDeathCause.SPLASH:
-                if (killer is not null && killer.Player!.equipment.asset is not null)
+                if (killer == null || killer.UnturnedPlayer.equipment.asset == null)
+                    break;
+
+                e.PrimaryAsset = AssetLink.Create(killer.UnturnedPlayer.equipment.asset);
+                e.MessageFlags |= DeathFlags.Item;
+
+                if (cause == EDeathCause.MELEE)
+                    break;
+
+                // check if the player is on a turret, use the vehicle as item2, and give the driver third-party.
+                veh = killer.UnturnedPlayer.movement.getVehicle();
+                byte seat = killer.UnturnedPlayer.movement.getSeat();
+                if (veh == null || veh.isDead || veh.passengers[seat].turret == null || veh.passengers[seat].turret.itemID != killer.UnturnedPlayer.equipment.asset.id)
+                    break;
+
+                e.TurretVehicleOwner = AssetLink.Create(veh.asset);
+                e.SecondaryAsset = e.TurretVehicleOwner;
+                e.MessageFlags |= DeathFlags.Item2;
+
+                if (veh.passengers.Length > 0 && veh.passengers[0].player is { } sp2 && sp2.player != null)
                 {
-                    args.ItemName = killer.Player.equipment.asset.itemName;
-                    args.ItemGuid = killer.Player.equipment.asset.GUID;
-                    e.PrimaryAsset = killer.Player.equipment.asset.GUID;
-                    args.Flags |= DeathFlags.Item;
-                    if (cause != EDeathCause.MELEE)
+                    e.DriverAssist = _playerService.GetOnlinePlayer(sp2);
+                    if (e.DriverAssist != null && sp2.playerID.steamID.m_SteamID != killer.Steam64.m_SteamID)
                     {
-                        InteractableVehicle? veh = killer.Player.movement.getVehicle();
-                        if (veh != null)
-                        {
-                            for (int i = 0; i < veh.turrets.Length; ++i)
-                            {
-                                if (veh.turrets[i].turret != null && veh.turrets[i].turret.itemID == killer.Player.equipment.asset.id)
-                                {
-                                    e.TurretVehicleOwner = veh.asset.GUID;
-                                    args.Item2Guid = veh.asset.GUID;
-                                    args.Item2Name = veh.asset.vehicleName;
-                                    args.Flags |= DeathFlags.Item2;
-                                    if (veh.passengers.Length > 0 && veh.passengers[0].player is { } sp && sp.player != null)
-                                    {
-                                        e.DriverAssist = UCPlayer.FromSteamPlayer(sp);
-                                        if (sp.playerID.steamID.m_SteamID != killer.Steam64)
-                                        {
-                                            args.Player3Name = e.DriverAssist?.Name.CharacterName ?? sp.playerID.characterName;
-                                            args.Player3Team = sp.GetTeam();
-                                            if (e.DriverAssist != null)
-                                            {
-                                                e.Player3 = e.DriverAssist;
-                                                e.Player3Id = e.DriverAssist.Steam64;
-                                                e.Player3Point = e.DriverAssist.Position;
-                                                e.Player3Session = e.DriverAssist.CurrentSession;
-                                            }
-                                            args.Flags |= DeathFlags.Player3;
-                                        }
-                                    }
-                                    break;
-                                }
-                            }
-                            e.ActiveVehicle = veh;
-                        }
+                        e.ThirdParty = e.DriverAssist;
+                        e.ThirdPartyId = e.DriverAssist.Steam64;
+                        e.ThirdPartyPoint = e.DriverAssist.Position;
+                        e.ThirdPartySession = e.DriverAssist.CurrentSession;
+                        if (e.ThirdPartySession != null)
+                            Interlocked.Increment(ref e.ThirdPartySession.EventCount);
+                        e.MessageFlags |= DeathFlags.Player3;
                     }
                 }
+
+                e.ActiveVehicle = veh;
                 break;
+
             case EDeathCause.INFECTION:
-                if (deadData != null && deadData.LastInfectableConsumed != default)
+                if (deadData != null && deadData.LastInfectionItemConsumed != null)
                 {
-                    ItemAsset? a = Assets.find<ItemAsset>(deadData.LastInfectableConsumed);
-                    if (a != null)
+                    ItemAsset? lastConsumed = deadData.LastInfectionItemConsumed.GetAsset();
+                    if (lastConsumed != null)
                     {
-                        args.ItemName = a.itemName;
-                        e.PrimaryAsset = a.GUID;
-                        args.Flags |= DeathFlags.Item;
-                        args.ItemGuid = a.GUID;
+                        e.PrimaryAsset = deadData.LastInfectionItemConsumed;
+                        e.MessageFlags |= DeathFlags.Item;
                     }
                 }
                 break;
+
             case EDeathCause.ROADKILL:
-                if (deadData != null && deadData.LastVehicleHitBy != default)
+                if (deadData != null && deadData.LastRoadkillVehicle != null)
                 {
-                    VehicleAsset? a = Assets.find<VehicleAsset>(deadData.LastVehicleHitBy);
-                    if (a != null)
+                    VehicleAsset? lastRoadkilledBy = deadData.LastRoadkillVehicle.GetAsset();
+                    if (lastRoadkilledBy != null)
                     {
-                        args.ItemName = a.vehicleName;
-                        e.PrimaryAsset = a.GUID;
-                        e.PrimaryAssetIsVehicle = true;
-                        args.Flags |= DeathFlags.Item;
-                        args.ItemIsVehicle = true;
-                        args.ItemGuid = a.GUID;
+                        e.PrimaryAsset = deadData.LastRoadkillVehicle;
+                        e.MessageFlags |= DeathFlags.Item;
                     }
                 }
                 break;
+
             case EDeathCause.VEHICLE:
-                if (killerData != null && killerData.ExplodingVehicle != null && killerData.ExplodingVehicle.Vehicle != null)
+                if (killerData == null || killerData.LastVehicleExploded == null || killerData.LastVehicleExploded.Vehicle == null)
                 {
-                    args.ItemName = killerData.ExplodingVehicle.Vehicle.asset.vehicleName;
-                    args.Flags |= DeathFlags.Item;
-                    e.PrimaryAsset = killerData.ExplodingVehicle.Vehicle.asset.GUID;
-                    args.ItemIsVehicle = true;
-                    args.ItemGuid = killerData.ExplodingVehicle.Vehicle.asset.GUID;
-                    if (killerData.ExplodingVehicle.LastItem != default)
-                    {
-                        if (Assets.find(killerData.ExplodingVehicle.LastItem) is { } a)
-                        {
-                            args.Item2Name = a.FriendlyName;
-                            args.Item2Guid = a.GUID;
-                            e.SecondaryItem = a.GUID;
-                            args.Flags |= DeathFlags.Item2;
-                        }
-                    }
-                    if (killer is not null)
-                    {
-                        // removes distance if the driver is blamed
-                        InteractableVehicle? veh = killer.Player!.movement.getVehicle();
-                        if (veh != null)
-                        {
-                            if (veh.passengers.Length > 0 && veh.passengers[0].player is not null && veh.passengers[0].player.player != null)
-                            {
-                                if (killer.Steam64 == veh.passengers[0].player.playerID.steamID.m_SteamID)
-                                {
-                                    args.Flags = (args.Flags | DeathFlags.NoDistance) & ~DeathFlags.Player3;
-                                }
-                            }
-                        }
-                    }
+                    break;
                 }
-                break;
-            case EDeathCause.GRENADE:
-                if (killerData != null)
+
+                WarfareVehicle vComp = killerData.LastVehicleExploded;
+                e.MessageFlags |= DeathFlags.Item;
+                e.PrimaryAsset = AssetLink.Create(vComp.Vehicle.asset);
+
+                if (vComp.DamageTracker.LatestInstigatorWeapon != null)
                 {
-                    ThrowableComponent? comp = killerData.ActiveThrownItems.FirstOrDefault(x => x.isActiveAndEnabled && x.IsExplosive);
-                    if (comp == null) break;
-                    ItemAsset? a = Assets.find<ItemAsset>(comp.Throwable);
-                    if (a != null)
-                    {
-                        args.ItemName = a.itemName;
-                        args.Flags |= DeathFlags.Item;
-                        e.PrimaryAsset = a.GUID;
-                        args.ItemGuid = a.GUID;
-                    }
+                    e.SecondaryAsset = AssetLink.Create(vComp.DamageTracker.LatestInstigatorWeapon);
+                    e.MessageFlags |= DeathFlags.Item2;
                 }
-                break;
-            case EDeathCause.SHRED:
-                if (deadData != null && deadData.LastShreddedBy != default)
-                {
-                    Asset? a = Assets.find(deadData.LastShreddedBy);
-                    if (a != null)
-                    {
-                        args.ItemName = a.FriendlyName;
-                        args.Flags |= DeathFlags.Item;
-                        e.PrimaryAsset = a.GUID;
-                        args.ItemGuid = a.GUID;
-                    }
-                }
-                args.IsTeamkill = false;
-                e.WasTeamkill = false;
-                break;
-            case EDeathCause.MISSILE:
+
                 if (killer is not null)
                 {
-                    if (killer.Player!.TryGetPlayerData(out UCPlayerData data) && data.LastRocketShot != default && Assets.find(data.LastRocketShot) is ItemAsset asset)
+                    // removes distance if the driver is blamed
+                    veh = killer.UnturnedPlayer.movement.getVehicle();
+                    if (veh != null
+                        && veh.passengers.Length > 0
+                        && veh.passengers[0].player?.player != null
+                        && killer.Steam64.m_SteamID == veh.passengers[0].player.playerID.steamID.m_SteamID)
                     {
-                        args.ItemName = asset.itemName;
-                        args.ItemGuid = asset.GUID;
-                        e.PrimaryAsset = asset.GUID;
-                        args.Flags |= DeathFlags.Item;
-                        e.TurretVehicleOwner = data.LastRocketShotVehicleAsset;
+                        e.MessageFlags = (e.MessageFlags | DeathFlags.NoDistance) & ~DeathFlags.Player3;
                     }
-                    else if (killer.Player!.equipment.asset is not null)
+                }
+                break;
+            
+            case EDeathCause.GRENADE:
+                if (killerData == null)
+                    break;
+
+                ThrowableComponent? comp = killerData.ActiveThrownItems.FirstOrDefault(x => x.isActiveAndEnabled && x.Throwable is { isExplosive: true });
+                if (comp == null)
+                    break;
+
+                ItemThrowableAsset throwable = comp.Throwable!; // null checked in linq ^
+                e.MessageFlags |= DeathFlags.Item;
+                e.PrimaryAsset = AssetLink.Create(throwable);
+                break;
+
+            case EDeathCause.SHRED:
+                if (deadData != null && deadData.LastShreddedBy != null)
+                {
+                    ItemBarricadeAsset? trap = deadData.LastShreddedBy.GetAsset();
+                    if (trap != null)
                     {
-                        args.ItemName = killer.Player.equipment.asset.itemName;
-                        args.ItemGuid = killer.Player.equipment.asset.GUID;
-                        e.PrimaryAsset = killer.Player.equipment.asset.GUID;
-                        args.Flags |= DeathFlags.Item;
-                        InteractableVehicle? veh = killer.Player.movement.getVehicle();
-                        if (veh != null)
+                        e.MessageFlags |= DeathFlags.Item;
+                        e.PrimaryAsset = AssetLink.Create(trap);
+                    }
+                }
+
+                e.WasTeamkill = false;
+                break;
+            
+            case EDeathCause.MISSILE:
+                if (killer == null)
+                    break;
+
+                if (killerData != null && killerData.LastRocketShot?.GetAsset() is { } lastRocketShot)
+                {
+                    e.PrimaryAsset = AssetLink.Create(lastRocketShot);
+                    e.MessageFlags |= DeathFlags.Item;
+                    InteractableVehicle? turretOwner = killerData.LastRocketShotFromVehicle;
+
+                    if (turretOwner is null)
+                        break;
+
+                    e.TurretVehicleOwner = AssetLink.Create(turretOwner.asset);
+                    e.SecondaryAsset = e.TurretVehicleOwner;
+                    e.MessageFlags |= DeathFlags.Item2;
+
+                    CSteamID? driverAssist = killerData.LastRocketShotFromVehicleDriverAssist;
+                    if (!driverAssist.HasValue || driverAssist.Value.GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
+                        break;
+
+                    e.DriverAssist = _playerService.GetOnlinePlayerOrNull(driverAssist.Value.m_SteamID);
+                    if (e.DriverAssist != null && driverAssist.Value.m_SteamID != killer.Steam64.m_SteamID)
+                    {
+                        e.ThirdParty = e.DriverAssist;
+                        e.ThirdPartyId = e.DriverAssist.Steam64;
+                        e.ThirdPartyPoint = e.DriverAssist.Position;
+                        e.ThirdPartySession = e.DriverAssist.CurrentSession;
+                        if (e.ThirdPartySession != null)
+                            Interlocked.Increment(ref e.ThirdPartySession.EventCount);
+                        e.MessageFlags |= DeathFlags.Player3;
+                    }
+                }
+                else if (killer.UnturnedPlayer.equipment.asset != null)
+                {
+                    e.PrimaryAsset = AssetLink.Create(killer.UnturnedPlayer.equipment.asset);
+                    e.MessageFlags |= DeathFlags.Item;
+
+                    veh = killer.UnturnedPlayer.movement.getVehicle();
+                    if (veh == null)
+                        break;
+
+                    for (int i = 0; i < veh.turrets.Length; ++i)
+                    {
+                        TurretInfo? turretInfo = veh.turrets[i].turret;
+                        if (turretInfo == null || turretInfo.itemID != killer.UnturnedPlayer.equipment.asset.id)
+                            continue;
+
+                        e.TurretVehicleOwner = AssetLink.Create(veh.asset);
+                        e.SecondaryAsset = e.TurretVehicleOwner;
+                        e.MessageFlags |= DeathFlags.Item2;
+
+                        if (veh.passengers.Length > 0 && veh.passengers[0].player is { } sp && sp.player != null)
                         {
-                            for (int i = 0; i < veh.turrets.Length; ++i)
+                            e.DriverAssist = _playerService.GetOnlinePlayerOrNull(sp);
+                            if (e.DriverAssist != null && sp.playerID.steamID.m_SteamID != killer.Steam64.m_SteamID)
                             {
-                                if (veh.turrets[i].turret != null && veh.turrets[i].turret.itemID == killer.Player.equipment.asset.id)
-                                {
-                                    e.TurretVehicleOwner = veh.asset.GUID;
-                                    break;
-                                }
+                                e.ThirdParty = e.DriverAssist;
+                                e.ThirdPartyId = e.DriverAssist.Steam64;
+                                e.ThirdPartyPoint = e.DriverAssist.Position;
+                                e.ThirdPartySession = e.DriverAssist.CurrentSession;
+                                if (e.ThirdPartySession != null)
+                                    Interlocked.Increment(ref e.ThirdPartySession.EventCount);
+                                e.MessageFlags |= DeathFlags.Player3;
                             }
                         }
+                        break;
                     }
                 }
                 break;
+
             case EDeathCause.CHARGE:
-                if (killerData != null && killerData.LastChargeDetonated != default)
+                if (killerData != null && killerData.LastChargeDetonated != null)
                 {
-                    Asset? a = Assets.find(killerData.LastChargeDetonated);
-                    if (a != null)
+                    ItemBarricadeAsset? lastCharge = killerData.LastChargeDetonated.GetAsset();
+                    if (lastCharge != null)
                     {
-                        args.ItemName = a.FriendlyName;
-                        e.PrimaryAsset = a.GUID;
-                        args.Flags |= DeathFlags.Item;
-                        args.ItemGuid = a.GUID;
-                    }/*
-                    if (killer != null && killer.Player.equipment.asset != null && killer.Player.equipment.asset.useableType == typeof(UseableDetonator))
-                    {
-                        args.Item2Name = killer.Player.equipment.asset.itemName;
-                        args.Flags |= EDeathFlags.ITEM2;
-                    }*/
+                        e.PrimaryAsset = killerData.LastChargeDetonated;
+                        e.MessageFlags |= DeathFlags.Item;
+                    }
                 }
-                else if (deadData != null && deadData.LastExplosiveConsumed != default)
+                else if (deadData != null && deadData.LastExplosiveConsumed != null)
                 {
-                    Asset? a = Assets.find(deadData.LastExplosiveConsumed);
-                    if (a != null)
+                    ItemConsumeableAsset? lastCharge = deadData.LastExplosiveConsumed.GetAsset();
+                    if (lastCharge != null)
                     {
-                        args.ItemName = a.FriendlyName;
-                        e.PrimaryAsset = a.GUID;
-                        args.Flags = DeathFlags.Item; // intentional
-                        args.ItemGuid = a.GUID;
-                        args.SpecialKey = "explosive-consumable";
+                        e.PrimaryAsset = deadData.LastExplosiveConsumed;
+                        e.MessageFlags = DeathFlags.Item; // intentional
+                        e.MessageKey = "explosive-consumable";
                     }
                 }
                 break;
+
             case EDeathCause.SENTRY:
-                if (instigator != CSteamID.Nil)
+                if (instigator.GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
+                    break;
+
+                // find target sentry
+                List<BarricadeInfo> drops = BarricadeUtility.EnumerateBarricades()
+                    .Where(x =>
+                        x.Drop != null &&
+                        x.Drop.GetServersideData().owner == e.Instigator.m_SteamID &&
+                        x.Drop.interactable is InteractableSentry sentry &&
+                        SentryTargetPlayerField?.Invoke(sentry) is { } target &&
+                        target != null && target.channel.owner.playerID.steamID.m_SteamID == e.Steam64.m_SteamID
+                    ).ToList();
+
+                if (drops.Count == 0)
                 {
-                    List<BarricadeDrop> drops = UCBarricadeManager.GetBarricadesWhere(x =>
-                        x.GetServersideData().owner == instigator.m_SteamID &&
-                        x.interactable is InteractableSentry sentry &&
-                        SentryTargetPlayerField != null &&
-                        SentryTargetPlayerField(sentry) is { } target &&
-                        target != null && target.channel.owner.playerID.steamID.m_SteamID ==
-                        dead.Steam64
-                    );
-                    if (drops.Count > 0)
-                    {
-                        BarricadeDrop drop = drops[0];
-                        InteractableSentry sentry = (InteractableSentry)drop.interactable;
-                        args.ItemName = drop.asset.itemName;
-                        args.ItemGuid = drop.asset.GUID;
-                        args.Flags |= DeathFlags.Item;
-                        e.PrimaryAsset = drop.asset.GUID;
-                        Item? item = sentry.items.items.FirstOrDefault()?.item;
-                        if (item != null && Assets.find(EAssetType.ITEM, item.id) is ItemAsset a)
-                        {
-                            args.Item2Name = a.itemName;
-                            args.Item2Guid = a.GUID;
-                            e.SecondaryItem = a.GUID;
-                            args.Flags |= DeathFlags.Item2;
-                        }
-                    }
+                    break;
                 }
+
+                Vector3 pos = e.Point;
+
+                // closest sentry
+                BarricadeDrop drop = drops.Aggregate((closest, next) => (closest.Drop.GetServersideData().point - pos).sqrMagnitude > (next.Drop.GetServersideData().point - pos).sqrMagnitude ? next : closest).Drop;
+
+                InteractableSentry sentry = (InteractableSentry)drop.interactable;
+                e.MessageFlags |= DeathFlags.Item;
+                e.PrimaryAsset = AssetLink.Create(drop.asset);
+                Item? item = sentry.items.items.FirstOrDefault()?.item;
+                if (item?.GetAsset() is ItemGunAsset gun)
+                {
+                    e.SecondaryAsset = AssetLink.Create(gun);
+                    e.MessageFlags |= DeathFlags.Item2;
+                }
+                
                 break;
+
             case >= MainCampDeathCauseOffset:
-                EDeathCause mainCampCause = args.DeathCause;
-                GetItems(mainCampCause, instigator.m_SteamID, killer?.Player, killerData, deadData, dead, out Asset? item1, out Asset? item2);
-                if (item1 != null)
+                EDeathCause mainCampCause = e.MessageCause;
+
+                GetItems(mainCampCause, instigator.m_SteamID, killer?.UnturnedPlayer, killerData, deadData, dead.UnturnedPlayer!, out IAssetLink<Asset>? primary, out IAssetLink<Asset>? secondary);
+
+                if (primary != null)
                 {
-                    args.ItemName = item1.FriendlyName;
-                    args.ItemIsVehicle = item1 is VehicleAsset;
-                    args.Flags |= DeathFlags.Item;
-                    e.PrimaryAsset = item1.GUID;
-                    e.PrimaryAssetIsVehicle = args.ItemIsVehicle;
-                    args.ItemGuid = item1.GUID;
+                    e.MessageFlags |= DeathFlags.Item;
+                    e.PrimaryAsset = primary;
                 }
-                if (item2 != null)
+
+                if (secondary != null)
                 {
-                    args.Item2Name = item2.FriendlyName;
-                    args.Item2Guid = item2.GUID;
-                    e.SecondaryItem = item2.GUID;
-                    args.Flags |= DeathFlags.Item2;
+                    e.SecondaryAsset = secondary;
+                    e.MessageFlags |= DeathFlags.Item2;
                 }
+
                 break;
         }
     }
 
-
-    private static void GetItems(EDeathCause cause, ulong killerId, Player? killer, UCPlayerData? killerData, UCPlayerData? deadData, Player dead, out Asset? item1, out Asset? item2)
+    private void GetItems(EDeathCause cause, ulong killerId, Player? killer, PlayerDeathTrackingComponent? killerData, PlayerDeathTrackingComponent? deadData, Player dead, out IAssetLink<Asset>? item1, out IAssetLink<Asset>? item2)
     {
-        if (killer != null && killerData is null)
-            killer.TryGetPlayerData(out killerData);
-        if (deadData is null)
-            dead.TryGetPlayerData(out deadData);
         item2 = null;
     repeat:
         switch (cause)
         {
+            // died from main camping
+            case >= MainCampDeathCauseOffset:
+                cause = (EDeathCause)((int)cause - (int)MainCampDeathCauseOffset);
+                if (cause >= MainCampDeathCauseOffset || killer == null)
+                {
+                    item1 = null;
+                    return;
+                }
+                (dead, killer) = (killer, dead);
+                goto repeat;
+
             // death causes that dont have a related item:
             default:
             case InEnemyMainDeathCause:
@@ -576,159 +722,165 @@ public class DeathTracker : BaseReloadSingleton
             case EDeathCause.SPARK:
                 item1 = null;
                 return;
-            case >= MainCampDeathCauseOffset:
-                cause = (EDeathCause)((int)cause - (int)MainCampDeathCauseOffset);
-                if (cause >= MainCampDeathCauseOffset || killer == null)
-                {
-                    item1 = null;
-                    return;
-                }
-                (dead, killer) = (killer, dead);
-                goto repeat;
+
             case EDeathCause.GUN:
             case EDeathCause.MELEE:
             case EDeathCause.SPLASH:
 #pragma warning disable IDE0031
-                item1 = killer != null ? killer.equipment.asset : null;
+                item1 = killer != null ? AssetLink.Create(killer.equipment.asset) : null;
 #pragma warning restore IDE0031
                 break;
+
             case EDeathCause.BLEEDING:
                 if (deadData != null)
                 {
-                    item1 = Assets.find(deadData.LastBleedingArgs.ItemGuid);
-                    item2 = Assets.find(deadData.LastBleedingArgs.Item2Guid);
+                    item1 = deadData.BleedOutInfo?.PrimaryAsset;
+                    item2 = deadData.BleedOutInfo?.SecondaryAsset;
                 }
                 else item1 = null;
                 break;
+
             case EDeathCause.INFECTION:
-                item1 = deadData != null && deadData.LastInfectableConsumed != default ? Assets.find(deadData.LastInfectableConsumed) : null;
+                item1 = deadData?.LastInfectionItemConsumed;
                 break;
+
             case EDeathCause.ROADKILL:
-                item1 = deadData != null && deadData.LastVehicleHitBy != default ? Assets.find(deadData.LastInfectableConsumed) : null;
+                item1 = deadData?.LastRoadkillVehicle;
                 break;
+
             case EDeathCause.VEHICLE:
-                if (killerData != null && killerData.ExplodingVehicle != null)
+                if (killerData != null && killerData.LastVehicleExploded != null)
                 {
-                    item1 = killerData.ExplodingVehicle.Vehicle.asset;
-                    item2 = Assets.find(killerData.ExplodingVehicle.LastItem);
+                    item1 = AssetLink.Create(killerData.LastVehicleExploded.Vehicle.asset);
+                    if (killerData.LastVehicleExploded.DamageTracker.LatestInstigatorWeapon != null)
+                        item2 = AssetLink.Create(killerData.LastVehicleExploded.DamageTracker.LatestInstigatorWeapon);
                 }
                 else item1 = null;
                 break;
+
             case EDeathCause.GRENADE:
                 if (killerData != null)
                 {
-                    ThrowableComponent? comp = killerData.ActiveThrownItems.FirstOrDefault(x => x.IsExplosive);
-                    item1 = comp == null ? null : Assets.find(comp.Throwable);
+                    ThrowableComponent? comp = killerData.ActiveThrownItems.FirstOrDefault(x => x.Throwable is { isExplosive: true });
+                    item1 = comp == null ? null : AssetLink.Create(comp.Throwable);
                 }
                 else item1 = null;
                 break;
+
             case EDeathCause.SHRED:
-                item1 = deadData != null && deadData.LastShreddedBy != default ? Assets.find(deadData.LastShreddedBy) : null;
+                item1 = deadData?.LastShreddedBy;
                 break;
+
             case EDeathCause.LANDMINE:
                 BarricadeDrop? drop = null;
                 ThrowableComponent? throwable = null;
                 if (killerData != null)
                 {
-                    drop = killerData.ExplodingLandmine;
-                    if (drop != null && drop == killerData.TriggeringLandmine)
+                    drop = killerData.OwnedTrap;
+                    if (drop != null && drop == killerData.TriggeredTrapExplosive)
                     {
-                        throwable = killerData.TriggeringThrowable;
+                        throwable = killerData.ThrowableTrapTrigger;
                     }
                 }
-                else if (deadData != null && deadData.TriggeringLandmine != null)
+                else if (deadData != null && deadData.TriggeredTrapExplosive != null)
                 {
-                    drop = deadData.TriggeringLandmine;
-                    throwable = deadData.TriggeringThrowable;
+                    drop = deadData.TriggeredTrapExplosive;
+                    throwable = deadData.ThrowableTrapTrigger;
                 }
                 else
                 {
                     // if it didnt find the triggerer, look for nearby players that just triggered a landmine. Needed in case the owner leaves.
-                    for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
+                    foreach (WarfarePlayer player in _playerService.OnlinePlayers)
                     {
-                        UCPlayer pl = PlayerManager.OnlinePlayers[i];
-                        if (pl.Steam64 != dead.channel.owner.playerID.steamID.m_SteamID && pl.Player.TryGetPlayerData(out UCPlayerData triggererData))
+                        if (player.Steam64.m_SteamID == dead.channel.owner.playerID.steamID.m_SteamID
+                            || !player.UnturnedPlayer.TryGetComponent(out PlayerDeathTrackingComponent triggererData)
+                            || triggererData.TriggeredTrapExplosive == null
+                            || !((triggererData.TriggeredTrapExplosive.model.position - dead.transform.position).sqrMagnitude < 400f /* 20m */)
+                           )
                         {
-                            if (triggererData.TriggeringLandmine != null && (triggererData.TriggeringLandmine.model.position - dead.transform.position).sqrMagnitude < 225f)
-                            {
-                                drop = triggererData.TriggeringLandmine;
-                                throwable = triggererData.TriggeringThrowable;
-                                break;
-                            }
+                            continue;
                         }
+
+                        drop = triggererData.TriggeredTrapExplosive;
+                        throwable = triggererData.ThrowableTrapTrigger;
+                        break;
                     }
                 }
 
-                item1 = drop?.asset;
-                item2 = throwable != null ? Assets.find(throwable.Throwable) : null;
+                item1 = drop != null ? AssetLink.Create(drop.asset) : null;
+                item2 = throwable != null ? AssetLink.Create(throwable.Throwable) : null;
                 break;
+
             case EDeathCause.MISSILE:
-                item1 = killerData != null && killerData.LastRocketShot != default ? Assets.find(killerData.LastRocketShot) : null;
+                item1 = killerData?.LastRocketShot;
                 break;
+
             case EDeathCause.CHARGE:
-                item1 = killerData != null && killerData.LastChargeDetonated != default ? Assets.find(killerData.LastChargeDetonated) : null;
+                item1 = killerData?.LastChargeDetonated;
                 break;
+
             case EDeathCause.SENTRY:
-                if (killerId != default)
+                if (killerId == 0ul)
                 {
-                    List<BarricadeDrop> drops = UCBarricadeManager.GetBarricadesWhere(x =>
-                        x.GetServersideData().owner == killerId &&
-                        x.interactable is InteractableSentry sentry &&
-                        SentryTargetPlayerField != null &&
-                        SentryTargetPlayerField(sentry) is { } target &&
+                    item1 = null;
+                    break;
+                }
+
+                // find target sentry
+                List<BarricadeInfo> drops = BarricadeUtility.EnumerateBarricades()
+                    .Where(x =>
+                        x.Drop != null &&
+                        x.Drop.GetServersideData().owner == killerId &&
+                        x.Drop.interactable is InteractableSentry sentry &&
+                        SentryTargetPlayerField?.Invoke(sentry) is { } target &&
                         target != null && target.channel.owner.playerID.steamID.m_SteamID ==
                         dead.channel.owner.playerID.steamID.m_SteamID
-                    );
-                    if (drops.Count == 0)
+                    ).ToList();
+
+                if (drops.Count == 0)
+                {
+                    item1 = null;
+                }
+                else
+                {
+                    Vector3 pos = dead.transform.position;
+
+                    // closest sentry
+                    drop = drops.Aggregate((closest, next) => (closest.Drop.GetServersideData().point - pos).sqrMagnitude > (next.Drop.GetServersideData().point - pos).sqrMagnitude ? next : closest).Drop;
+
+                    InteractableSentry sentry = (InteractableSentry)drop.interactable;
+                    item1 = AssetLink.Create(drop.asset);
+
+                    if (sentry.items.getItemCount() > 0)
                     {
-                        item1 = null;
+                        Item item = sentry.items.getItem(0).item;
+                        if (Assets.find(EAssetType.ITEM, item.id) is ItemGunAsset gun)
+                        {
+                            item2 = AssetLink.Create(gun);
+                        }
                     }
                     else
                     {
-                        drop = drops[0];
-                        InteractableSentry sentry = (InteractableSentry)drop.interactable;
-                        item1 = drop.asset;
-                        Item? item = sentry.items.items.FirstOrDefault()?.item;
-                        item2 = item != null ? Assets.find(EAssetType.ITEM, item.id) as ItemAsset : null;
+                        item2 = null;
                     }
                 }
-                else item1 = null;
+
                 break;
         }
     }
-    internal static void OnWillStartBleeding(ref DamagePlayerParameters parameters)
+    internal void OnWillStartBleeding(ref DamagePlayerParameters parameters)
     {
-        if (!parameters.player.TryGetPlayerData(out UCPlayerData data))
-            return;
-
+        PlayerDeathTrackingComponent comp = PlayerDeathTrackingComponent.GetOrAdd(parameters.player);
+        
         if (parameters.cause == EDeathCause.BLEEDING)
             return;
 
-        UCPlayer? dead = UCPlayer.FromPlayer(parameters.player);
-        if (dead is null) return;
-        DeathMessageArgs args = new DeathMessageArgs();
-        PlayerDied e = new PlayerDied(dead);
-        FillArgs(dead, parameters.cause, parameters.limb, parameters.killer, ref args, e);
-        data.LastBleedingArgs = args;
-        data.LastBleedingEvent = e;
+        WarfarePlayer dead = _playerService.GetOnlinePlayer(parameters.player);
+
+        PlayerDied e = new PlayerDied(in parameters) { Player = dead };
+        FillArgs(dead, parameters.cause, parameters.limb, parameters.killer, e);
         e.WasBleedout = true;
-    }
-    internal static void ReviveManagerUnloading()
-    {
-        _injuredPlayers.Clear();
-    }
-    internal static void RemovePlayerInfo(ulong steam64)
-    {
-        _injuredPlayers.Remove(steam64);
-    }
-    private readonly struct InjuredDeathCache
-    {
-        public readonly PlayerDied EventArgs;
-        public readonly DeathMessageArgs MessageArgs;
-        public InjuredDeathCache(PlayerDied eventArgs, DeathMessageArgs messageArgs)
-        {
-            EventArgs = eventArgs;
-            MessageArgs = messageArgs;
-        }
+
+        comp.BleedOutInfo = e;
     }
 }

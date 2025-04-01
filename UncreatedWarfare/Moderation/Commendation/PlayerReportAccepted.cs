@@ -1,13 +1,11 @@
-﻿using System;
+﻿using DanielWillett.SpeedBytes;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading;
-using System.Threading.Tasks;
-using Uncreated.Encoding;
-using Uncreated.SQL;
+using Uncreated.Warfare.Database.Manual;
 using Uncreated.Warfare.Moderation.Reports;
 
 namespace Uncreated.Warfare.Moderation.Commendation;
@@ -17,7 +15,7 @@ namespace Uncreated.Warfare.Moderation.Commendation;
 public class PlayerReportAccepted : ModerationEntry
 {
     [JsonPropertyName("report_id")]
-    public PrimaryKey ReportKey { get; set; }
+    public uint ReportKey { get; set; }
     public Report? Report { get; set; }
 
     public override string GetDisplayName() => "Player Report Accepted";
@@ -31,42 +29,44 @@ public class PlayerReportAccepted : ModerationEntry
     {
         base.WriteIntl(writer);
 
-        writer.Write(ReportKey.Key);
+        writer.Write(ReportKey);
     }
-    public override void ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
+    public override bool ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
     {
         if (propertyName.Equals("report_id", StringComparison.InvariantCultureIgnoreCase))
             ReportKey = reader.GetUInt32();
         else
-            base.ReadProperty(ref reader, propertyName, options);
+            return base.ReadProperty(ref reader, propertyName, options);
+
+        return true;
     }
     public override void Write(Utf8JsonWriter writer, JsonSerializerOptions options)
     {
         base.Write(writer, options);
-        writer.WriteNumber("report_id", ReportKey.Key);
+        writer.WriteNumber("report_id", ReportKey);
     }
     internal override int EstimateParameterCount() => base.EstimateParameterCount() + 1;
     public override async Task AddExtraInfo(DatabaseInterface db, List<string> workingList, IFormatProvider formatter, CancellationToken token = default)
     {
         await base.AddExtraInfo(db, workingList, formatter, token);
-        if (ReportKey.IsValid)
-            workingList.Add($"Report ID: \"{ReportKey.Key.ToString(formatter)}\"");
+        if (ReportKey != 0u)
+            workingList.Add($"Report ID: \"{ReportKey.ToString(formatter)}\"");
     }
     internal override async Task FillDetail(DatabaseInterface db, CancellationToken token = default)
     {
-        Report = ReportKey.IsValid ? await db.ReadOne<Report>(ReportKey, true, true, false, token).ConfigureAwait(false) : null;
+        Report = ReportKey != 0u ? await db.ReadOne<Report>(ReportKey, true, true, false, token).ConfigureAwait(false) : null;
         await base.FillDetail(db, token).ConfigureAwait(false);
     }
     internal override bool AppendWriteCall(StringBuilder builder, List<object> args)
     {
         bool hasEvidenceCalls = base.AppendWriteCall(builder, args);
 
-        builder.Append($" INSERT INTO `{DatabaseInterface.TablePlayerReportAccepteds}` ({SqlTypes.ColumnList(
+        builder.Append($" INSERT INTO `{DatabaseInterface.TablePlayerReportAccepteds}` ({MySqlSnippets.ColumnList(
             DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnPlayerReportAcceptedsReport)}) VALUES " +
                        $"(@0, @{args.Count.ToString(CultureInfo.InvariantCulture)}) AS `t` " +
                        $"ON DUPLICATE KEY UPDATE `{DatabaseInterface.ColumnPlayerReportAcceptedsReport}` = `t`.`{DatabaseInterface.ColumnPlayerReportAcceptedsReport}`;");
 
-        args.Add(ReportKey.IsValid ? ReportKey.Key : DBNull.Value);
+        args.Add(ReportKey != 0u ? ReportKey : DBNull.Value);
 
         return hasEvidenceCalls;
     }

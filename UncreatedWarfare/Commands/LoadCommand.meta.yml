@@ -1,0 +1,28 @@
+# LoadCommand
+Description: "Loads supplies into the <caller />'s logistics truck. If no <param 'amount'/> is given, it fills the vehicle. If '<param 'half'/>' is given, it fills half the empty slots."
+Aliases: [ language, foreign, local ]
+Parameters:
+  - Name: build
+    Type: Verbatim
+    Parameters:
+      - Name: amount
+        Type: int
+        Description: "Loads the <caller />'s vehicle's trunk with a set <param 'amount'/> of supplies (or until it's full)."
+        Optional: true
+      - Name: half
+        Type: Verbatim
+        Aliases: [ "1/2", ".5", "0.5", ",5", "0,5" ]
+        Description: "Loads half the empty space in the <caller />'s vehicle's trunk with supplies (or until it's full)."
+        Optional: true
+  - Name: ammo
+    Type: Verbatim
+    Parameters:
+      - Name: amount
+        Type: int
+        Description: "Loads the <caller />'s vehicle's trunk with a set <param 'amount'/> of supplies (or until it's full)."
+        Optional: true
+      - Name: half
+        Type: Verbatim
+        Aliases: [ "1/2", ".5", "0.5", ",5", "0,5" ]
+        Description: "Loads half the empty space in the <caller />'s vehicle's trunk with supplies (or until it's full)."
+        Optional: true

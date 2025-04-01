@@ -1,19 +1,19 @@
-﻿using MySql.Data.MySqlClient;
-using SDG.Unturned;
+using DanielWillett.ModularRpcs.Annotations;
+using DanielWillett.ModularRpcs.Async;
+using DanielWillett.ModularRpcs.Exceptions;
+using MySqlConnector;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Net;
+using System.Runtime.CompilerServices;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using Uncreated.Framework;
-using Uncreated.Networking;
-using Uncreated.Players;
-using Uncreated.SQL;
-using Uncreated.Warfare.Commands;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using Uncreated.Framework.UI;
+using Uncreated.Warfare.Database.Manual;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Moderation.Appeals;
 using Uncreated.Warfare.Moderation.Commendation;
 using Uncreated.Warfare.Moderation.Punishments;
@@ -21,28 +21,37 @@ using Uncreated.Warfare.Moderation.Punishments.Presets;
 using Uncreated.Warfare.Moderation.Records;
 using Uncreated.Warfare.Moderation.Reports;
 using Uncreated.Warfare.Networking;
-using Uncreated.Warfare.Structures;
-using Uncreated.Warfare.Vehicles;
-using UnityEngine;
-using ChatAbuseReport = Uncreated.Warfare.Moderation.Reports.ChatAbuseReport;
-using CheatingReport = Uncreated.Warfare.Moderation.Reports.CheatingReport;
-using Report = Uncreated.Warfare.Moderation.Reports.Report;
+using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Services;
+using Uncreated.Warfare.Steam;
+using Uncreated.Warfare.Steam.Models;
+using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Vehicles.WarfareVehicles;
+using UnityEngine.Networking;
 
 namespace Uncreated.Warfare.Moderation;
-public abstract class DatabaseInterface
+
+[RpcClass]
+public class DatabaseInterface : IHostedService
 {
+    private readonly object _cacheSync = new object();
     public readonly TimeSpan DefaultInvalidateDuration = TimeSpan.FromSeconds(3);
+    private readonly ILogger<DatabaseInterface> _logger;
+    private readonly IUserDataService _userDataService;
+    private readonly IPlayerService _playerService;
     private readonly Dictionary<ulong, string> _iconUrlCacheSmall = new Dictionary<ulong, string>(128);
     private readonly Dictionary<ulong, string> _iconUrlCacheMedium = new Dictionary<ulong, string>(128);
     private readonly Dictionary<ulong, string> _iconUrlCacheFull = new Dictionary<ulong, string>(128);
     private readonly Dictionary<ulong, PlayerNames> _usernameCache = new Dictionary<ulong, PlayerNames>(128);
+    internal IManualMySqlProvider Sql { get; }
 
     private IIPAddressFilter[]? _nonRemotePlayAddressFilters;
     private IIPAddressFilter[]? _ipAddressFilters;
     private IPv4AddressRangeFilter[]? _remotePlayAddressFilters;
 
-    private readonly string[] _columns =
-    {
+    private static readonly string[] Columns =
+    [
         ColumnEntriesPrimaryKey,
         ColumnEntriesType, ColumnEntriesSteam64,
         ColumnEntriesMessage,
@@ -52,47 +61,151 @@ public abstract class DatabaseInterface
         ColumnEntriesRelavantLogsStartTimestamp,
         ColumnEntriesRelavantLogsEndTimestamp,
         ColumnEntriesRemoved, ColumnEntriesRemovedBy,
-        ColumnEntriesRemovedTimestamp, ColumnEntriesRemovedReason
-    };
+        ColumnEntriesRemovedTimestamp, ColumnEntriesRemovedReason, ColumnEntriesDiscordMessageId
+    ];
 
-    public IIPAddressFilter[] NonRemotePlayFilters => _nonRemotePlayAddressFilters ??= new IIPAddressFilter[]
-    {
-        new MySqlAddressFilter(() => Sql)
-    };
-    public IIPAddressFilter[] IPAddressFilters => _ipAddressFilters ??= new IIPAddressFilter[]
-    {
+    private static readonly string[] ColumnsNoPk =
+    [
+        ColumnEntriesType, ColumnEntriesSteam64, ColumnEntriesMessage,
+        ColumnEntriesIsLegacy, ColumnEntriesStartTimestamp, ColumnEntriesResolvedTimestamp,
+        ColumnEntriesReputation, ColumnEntriesPendingReputation, ColumnEntriesLegacyId,
+        ColumnEntriesRelavantLogsStartTimestamp, ColumnEntriesRelavantLogsEndTimestamp,
+        ColumnEntriesRemoved, ColumnEntriesRemovedBy, ColumnEntriesRemovedTimestamp,
+        ColumnEntriesRemovedReason, ColumnEntriesDiscordMessageId
+    ];
+
+    private static readonly string[] ShotRecordColumns =
+    [
+        ColumnExternalPrimaryKey, ColumnReportsShotRecordAmmo, ColumnReportsShotRecordAmmoName,
+        ColumnReportsShotRecordItem, ColumnReportsShotRecordItemName,
+        ColumnReportsShotRecordDamageDone, ColumnReportsShotRecordLimb,
+        ColumnReportsShotRecordIsProjectile, ColumnReportsShotRecordDistance,
+        ColumnReportsShotRecordHitPointX, ColumnReportsShotRecordHitPointY, ColumnReportsShotRecordHitPointZ,
+        ColumnReportsShotRecordShootFromPointX, ColumnReportsShotRecordShootFromPointY, ColumnReportsShotRecordShootFromPointZ,
+        ColumnReportsShotRecordShootFromRotationX, ColumnReportsShotRecordShootFromRotationY, ColumnReportsShotRecordShootFromRotationZ,
+        ColumnReportsShotRecordHitType, ColumnReportsShotRecordHitActor,
+        ColumnReportsShotRecordHitAsset, ColumnReportsShotRecordHitAssetName,
+        ColumnReportsShotRecordTimestamp
+    ];
+
+    public IIPAddressFilter[] IPAddressFilters => _ipAddressFilters ??=
+    [
         IPv4AddressRangeFilter.GeforceNow,
         IPv4AddressRangeFilter.VKPlay,
         NonRemotePlayFilters[0]
-    };
-    public IPv4AddressRangeFilter[] RemotePlayAddressFilters => _remotePlayAddressFilters ??= new IPv4AddressRangeFilter[]
-    {
+    ];
+
+    public IIPAddressFilter[] NonRemotePlayFilters => _nonRemotePlayAddressFilters ??=
+    [
+        new MySqlAddressFilter(() => Sql)
+    ];
+
+    public IPv4AddressRangeFilter[] RemotePlayAddressFilters => _remotePlayAddressFilters ??=
+    [
         IPv4AddressRangeFilter.GeforceNow,
         IPv4AddressRangeFilter.VKPlay
-    };
+    ];
 
     public event Action<ModerationEntry>? OnNewModerationEntryAdded;
     public event Action<ModerationEntry>? OnModerationEntryUpdated;
-    public ModerationCache Cache { get; } = new ModerationCache(64);
+    public ModerationCache Cache { get; } = new ModerationCache();
+    internal ISteamApiService SteamAPI { get; }
+    public DatabaseInterface(IManualMySqlProvider mySqlProvider, ILogger<DatabaseInterface> logger, ISteamApiService steamApi, IUserDataService userDataService, IPlayerService playerService)
+    {
+        SteamAPI = steamApi;
+        Sql = mySqlProvider;
+        _logger = logger;
+        _userDataService = userDataService;
+        _playerService = playerService;
+    }
+    /// <inheritdoc />
+    async UniTask IHostedService.StartAsync(CancellationToken token)
+    {
+        // downloads a live list of IPv4 ranges from Geforce Now remote play service.
+        using UnityWebRequest downloadGfnIpsRequest = UnityWebRequest.Get("https://ipranges.nvidiangn.net/v1/ips");
+        downloadGfnIpsRequest.timeout = 2;
+
+        try
+        {
+            await downloadGfnIpsRequest.SendWebRequest();
+            List<string>? ips = JsonSerializer.Deserialize<GeforceIpList>(downloadGfnIpsRequest.downloadHandler.text)?.IPs;
+            if (ips != null)
+            {
+                List<IPv4Range> ranges = new List<IPv4Range>(ips.Count);
+                ranges.AddRange(IPv4AddressRangeFilter.GeforceNow.Ranges);
+                int oldCount = ranges.Count;
+
+                foreach (string ip in ips)
+                {
+                    if (!IPv4Range.TryParse(ip, out IPv4Range range))
+                        continue;
+
+                    if (!ranges.Contains(range))
+                        ranges.Add(range);
+                }
+
+                IPv4AddressRangeFilter.GeforceNow.Ranges = ranges.ToArrayFast();
+                _logger.LogDebug("Downloaded {0} GeforceNow IPs (from {1} pre-defined).", ranges.Count, oldCount);
+            }
+        }
+        catch (UnityWebRequestException ex)
+        {
+            _logger.LogError(ex, "Error querying GeForceNow IPs.");
+        }
+    }
+    private class GeforceIpList
+    {
+        [JsonPropertyName("ipList")]
+        public List<string>? IPs { get; set; }
+    }
+
+    /// <inheritdoc />
+    UniTask IHostedService.StopAsync(CancellationToken token)
+    {
+        return UniTask.CompletedTask;
+    }
+
     public bool TryGetAvatar(IModerationActor actor, AvatarSize size, out string avatar)
     {
-        if (!Util.IsValidSteam64Id(actor.Id))
+        if (new CSteamID(actor.Id).GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
         {
             avatar = null!;
             return false;
         }
         return TryGetAvatar(actor.Id, size, out avatar);
     }
+
     public bool TryGetAvatar(ulong steam64, AvatarSize size, out string avatar)
     {
+        WarfarePlayer? online = _playerService.GetOnlinePlayerOrNullThreadSafe(steam64);
+        if (online != null)
+        {
+            avatar = size switch
+            {
+                AvatarSize.Full => online.SteamSummary.AvatarUrlFull,
+                AvatarSize.Medium => online.SteamSummary.AvatarUrlMedium,
+                _ => online.SteamSummary.AvatarUrlSmall
+            };
+        }
+        else avatar = null!;
+
         Dictionary<ulong, string> dict = size switch
         {
             AvatarSize.Full => _iconUrlCacheFull,
             AvatarSize.Medium => _iconUrlCacheMedium,
             _ => _iconUrlCacheSmall
         };
-        return dict.TryGetValue(steam64, out avatar);
+
+        if (!string.IsNullOrEmpty(avatar))
+        {
+            dict[steam64] = avatar;
+            return true;
+        }
+
+        lock (_cacheSync)
+            return dict.TryGetValue(steam64, out avatar);
     }
+
     public void UpdateAvatar(ulong steam64, AvatarSize size, string value)
     {
         Dictionary<ulong, string> dict = size switch
@@ -101,40 +214,111 @@ public abstract class DatabaseInterface
             AvatarSize.Medium => _iconUrlCacheMedium,
             _ => _iconUrlCacheSmall
         };
-        dict[steam64] = value;
+
+        lock (_cacheSync)
+            dict[steam64] = value;
     }
+
     public bool TryGetUsernames(IModerationActor actor, out PlayerNames names)
     {
-        if (!Util.IsValidSteam64Id(actor.Id))
+        CSteamID steam64 = new CSteamID(actor.Id);
+        if (steam64.GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
         {
             names = default;
             return false;
         }
-        return TryGetUsernames(actor.Id, out names);
+
+        return TryGetUsernames(steam64, out names);
     }
-    public bool TryGetUsernames(ulong steam64, out PlayerNames names)
+
+    public bool TryGetUsernames(CSteamID steam64, out PlayerNames names)
     {
-        return _usernameCache.TryGetValue(steam64, out names);
+        lock (_cacheSync)
+            return _usernameCache.TryGetValue(steam64.m_SteamID, out names);
     }
-    public void UpdateUsernames(ulong steam64, PlayerNames names)
+
+    public void UpdateUsernames(CSteamID steam64, PlayerNames names)
     {
-        _usernameCache[steam64] = names;
+        lock (_cacheSync)
+            _usernameCache[steam64.m_SteamID] = names;
     }
-    public abstract IWarfareSql Sql { get; }
-    public Task VerifyTables(CancellationToken token = default) => Sql.VerifyTables(Schema, token);
-    public async Task<PlayerNames> GetUsernames(ulong id, bool useCache, CancellationToken token = default)
+
+    public ValueTask<string> GetAvatarAsync(CSteamID steam64, AvatarSize size, bool allowCache = true, CancellationToken token = default)
+    {
+        if (allowCache && TryGetAvatar(steam64.m_SteamID, size, out string avatar))
+        {
+            return new ValueTask<string>(avatar);
+        }
+
+        return Core(this, steam64.m_SteamID, size, token);
+
+        static async ValueTask<string> Core(DatabaseInterface t, ulong steam64, AvatarSize size, CancellationToken token)
+        {
+            PlayerSummary summary = await t.SteamAPI.GetPlayerSummaryAsync(steam64, token).ConfigureAwait(false);
+            lock (t._cacheSync)
+            {
+                t._iconUrlCacheSmall[summary.Steam64] = summary.AvatarUrlSmall;
+                t._iconUrlCacheMedium[summary.Steam64] = summary.AvatarUrlMedium;
+                t._iconUrlCacheFull[summary.Steam64] = summary.AvatarUrlFull;
+            }
+
+            return size switch
+            {
+                AvatarSize.Full => summary.AvatarUrlFull,
+                AvatarSize.Medium => summary.AvatarUrlMedium,
+                _ => summary.AvatarUrlSmall
+            };
+        }
+    }
+
+    public async Task CacheAvatarsAsync(IEnumerable<ulong> steamIds, AvatarSize size, CancellationToken token = default)
+    {
+        List<ulong> s64 = steamIds.ToList();
+
+        Dictionary<ulong, string> dict = size switch
+        {
+            AvatarSize.Full => _iconUrlCacheFull,
+            AvatarSize.Medium => _iconUrlCacheMedium,
+            _ => _iconUrlCacheSmall
+        };
+
+        lock (_cacheSync)
+        {
+            for (int i = s64.Count - 1; i >= 0; --i)
+            {
+                if (dict.TryGetValue(s64[i], out _))
+                    s64.RemoveAtFast(i);
+            }
+        }
+
+        if (s64.Count == 0)
+            return;
+
+        PlayerSummary[] summaries = await SteamAPI.GetPlayerSummariesAsync(s64, token).ConfigureAwait(false);
+        lock (_cacheSync)
+        {
+            for (int i = 0; i < summaries.Length; ++i)
+            {
+                PlayerSummary summary = summaries[i];
+                _iconUrlCacheSmall[summary.Steam64]  = summary.AvatarUrlSmall;
+                _iconUrlCacheMedium[summary.Steam64] = summary.AvatarUrlMedium;
+                _iconUrlCacheFull[summary.Steam64]   = summary.AvatarUrlFull;
+            }
+        }
+    }
+
+    public async Task<PlayerNames> GetUsernames(CSteamID id, bool useCache, CancellationToken token = default)
     {
         if (useCache && TryGetUsernames(id, out PlayerNames names))
             return names;
 
-        if (UCWarfare.IsLoaded)
-            return await F.GetPlayerOriginalNamesAsync(id, token).ConfigureAwait(false);
-
-        names = await Sql.GetUsernamesAsync(id, token).ConfigureAwait(false);
-        UpdateUsernames(id, names);
+        names = await _userDataService.GetUsernamesAsync(id.m_SteamID, token).ConfigureAwait(false);
+        if (names.WasFound)
+            UpdateUsernames(id, names);
         return names;
     }
-    public async Task<T?> ReadOne<T>(PrimaryKey id, bool tryGetFromCache, bool detail = true, bool baseOnly = false, CancellationToken token = default) where T : class, IModerationEntry
+
+    public async Task<T?> ReadOne<T>(uint id, bool tryGetFromCache, bool detail = true, bool baseOnly = false, CancellationToken token = default) where T : class, IModerationEntry
     {
         if (tryGetFromCache && Cache.TryGet(id, out T val, DefaultInvalidateDuration))
             return val;
@@ -144,31 +328,31 @@ public abstract class DatabaseInterface
         AppendTables(sb, flag);
         sb.Append($" WHERE `main`.`{ColumnEntriesPrimaryKey}` = @0;");
 
-        object[] pkArgs = { id.Key };
+        object[] pkArgs = { id };
         ModerationEntry? entry = null;
-        await Sql.QueryAsync(sb.ToString(), pkArgs, reader =>
+        await Sql.QueryAsync(sb.ToString(), pkArgs, token, reader =>
         {
             entry = ReadEntry(flag, reader);
-            return true;
-        }, token).ConfigureAwait(false);
+            return false;
+        }).ConfigureAwait(false);
 
         if (entry == null)
         {
-            Cache.Remove(id.Key);
+            Cache.TryRemove(id, out _);
             return null;
         }
 
-        await Fill(new IModerationEntry[] { entry }, detail, baseOnly, null, token).ConfigureAwait(false);
+        await Fill([ entry ], detail, baseOnly, null, token).ConfigureAwait(false);
         
         return entry as T;
     }
-    public async Task<T?[]> ReadAll<T>(PrimaryKey[] ids, bool tryGetFromCache, bool detail = true, bool baseOnly = false, CancellationToken token = default) where T : class, IModerationEntry
+    public async Task<T?[]> ReadAll<T>(uint[] ids, bool tryGetFromCache, bool detail = true, bool baseOnly = false, CancellationToken token = default) where T : class, IModerationEntry
     {
         T?[] result = new T?[ids.Length];
         await ReadAll(result, ids, tryGetFromCache, detail, baseOnly, token).ConfigureAwait(false);
         return result;
     }
-    public async Task ReadAll<T>(T?[] result, PrimaryKey[] ids, bool tryGetFromCache, bool detail = true, bool baseOnly = false, CancellationToken token = default) where T : class, IModerationEntry
+    public async Task ReadAll<T>(T?[] result, uint[] ids, bool tryGetFromCache, bool detail = true, bool baseOnly = false, CancellationToken token = default) where T : class, IModerationEntry
     {
         if (result.Length != ids.Length)
             throw new ArgumentException("Result must be the same length as ids.", nameof(result));
@@ -177,12 +361,8 @@ public abstract class DatabaseInterface
         int flag = AppendReadColumns(sb, typeof(T), baseOnly);
         AppendTables(sb, flag);
         sb.Append($" WHERE `main`.`{ColumnEntriesPrimaryKey}` IN (");
-        SqlTypes.AppendParameterList(sb, 0, ids.Length);
+        MySqlSnippets.AppendParameterList(sb, 0, ids.Length);
         sb.Append(");");
-
-        object[] parameters = new object[ids.Length];
-        for (int i = 0; i < ids.Length; ++i)
-            parameters[i] = ids[i].Key;
         
         BitArray? mask = null;
         if (tryGetFromCache)
@@ -190,7 +370,7 @@ public abstract class DatabaseInterface
             bool miss = false;
             for (int i = 0; i < ids.Length; ++i)
             {
-                if (Cache.TryGet(ids[i].Key, out T val, DefaultInvalidateDuration))
+                if (Cache.TryGet(ids[i], out T val, DefaultInvalidateDuration))
                     result[i] = val;
                 else
                     miss = true;
@@ -203,16 +383,21 @@ public abstract class DatabaseInterface
             for (int i = 0; i < mask.Length; ++i)
                 mask[i] = result[i] is null;
         }
-        await Sql.QueryAsync(sb.ToString(), parameters, reader =>
+
+        object[] parameters = new object[ids.Length];
+        for (int i = 0; i < parameters.Length; ++i)
+            parameters[i] = ids[i];
+
+        await Sql.QueryAsync(sb.ToString(), parameters, token, reader =>
         {
             ModerationEntry? entry = ReadEntry(flag, reader);
             if (entry == null)
                 return;
-            int pk = entry.Id;
+            uint pk = entry.Id;
             int index = -1;
             for (int j = 0; j < ids.Length; ++j)
             {
-                if (ids[j].Key == pk)
+                if (ids[j] == pk)
                 {
                     index = j;
                     break;
@@ -221,14 +406,14 @@ public abstract class DatabaseInterface
             if (index == -1 || entry is not T val)
                 return;
             result[index] = val;
-        }, token).ConfigureAwait(false);
+        }).ConfigureAwait(false);
         
         // ReSharper disable once CoVariantArrayConversion
         await Fill(result, detail, baseOnly, mask, token).ConfigureAwait(false);
     }
-    public async Task<T[]> ReadAll<T>(ulong actor, ActorRelationType relation, bool detail = true, bool baseOnly = false, DateTimeOffset? start = null, DateTimeOffset? end = null, string? condition = null, string? orderBy = null, object[]? conditionArgs = null, CancellationToken token = default) where T : IModerationEntry
+    public async Task<T[]> ReadAll<T>(CSteamID actor, ActorRelationType relation, bool detail = true, bool baseOnly = false, DateTimeOffset? start = null, DateTimeOffset? end = null, string? condition = null, string? orderBy = null, object[]? conditionArgs = null, CancellationToken token = default) where T : IModerationEntry
         => (T[])await ReadAll(typeof(T), actor, relation, detail, baseOnly, start, end, condition, orderBy, conditionArgs, token).ConfigureAwait(false);
-    public async Task<Array> ReadAll(Type type, ulong actor, ActorRelationType relation, bool detail = true, bool baseOnly = false, DateTimeOffset? start = null, DateTimeOffset? end = null, string? condition = null, string? orderBy = null, object[]? conditionArgs = null, CancellationToken token = default)
+    public async Task<Array> ReadAll(Type type, CSteamID actor, ActorRelationType relation, bool detail = true, bool baseOnly = false, DateTimeOffset? start = null, DateTimeOffset? end = null, string? condition = null, string? orderBy = null, object[]? conditionArgs = null, CancellationToken token = default)
     {
         ModerationEntryType[]? types = null;
         if (type != typeof(ModerationEntry) && type != typeof(IModerationEntry))
@@ -238,12 +423,12 @@ public abstract class DatabaseInterface
         int flag = AppendReadColumns(sb, type, baseOnly);
         AppendTables(sb, flag);
         sb.Append(" WHERE");
-        List<object?> args = new List<object?>((types == null ? 0 : types.Length) + (conditionArgs == null ? 0 : conditionArgs.Length) + 3) { actor };
+        List<object?> args = new List<object?>((types == null ? 0 : types.Length) + (conditionArgs == null ? 0 : conditionArgs.Length) + 3) { actor.m_SteamID };
         if (conditionArgs != null && !string.IsNullOrEmpty(condition))
         {
             args.AddRange(conditionArgs);
             for (int i = 0; i < conditionArgs.Length; ++i)
-                condition = Util.QuickFormat(condition, "@" + (i + 1).ToString(CultureInfo.InvariantCulture), i, repeat: true);
+                condition = UnturnedUIUtility.QuickFormat(condition, "@" + (i + 1).ToString(CultureInfo.InvariantCulture), i);
         }
 
         if (!string.IsNullOrEmpty(condition))
@@ -268,14 +453,15 @@ public abstract class DatabaseInterface
         
         if (start.HasValue && end.HasValue)
         {
-            sb.Append($" AND `main`.`{ColumnEntriesStartTimestamp}` >= @{args.Count.ToString(CultureInfo.InvariantCulture)} AND `main`.`{ColumnEntriesStartTimestamp}` <= @{(args.Count + 1).ToString(CultureInfo.InvariantCulture)}");
+            sb.Append($" AND `main`.`{ColumnEntriesStartTimestamp}` >= @").Append(args.Count.ToString(CultureInfo.InvariantCulture))
+                .Append($" AND `main`.`{ColumnEntriesStartTimestamp}` <= @").Append((args.Count + 1).ToString(CultureInfo.InvariantCulture));
 
             args.Add(start.Value.UtcDateTime);
             args.Add(end.Value.UtcDateTime);
         }
         else if (start.HasValue)
         {
-            sb.Append($" AND `main`.`{ColumnEntriesStartTimestamp}` >= @{args.Count.ToString(CultureInfo.InvariantCulture)}");
+            sb.Append($" AND `main`.`{ColumnEntriesStartTimestamp}` >= @").Append(args.Count.ToString(CultureInfo.InvariantCulture));
             args.Add(start.Value.UtcDateTime);
         }
         else if (end.HasValue)
@@ -299,19 +485,19 @@ public abstract class DatabaseInterface
             sb.Append(")");
         }
 
-        if (orderBy != null)
-            sb.Append(" ORDER BY " + orderBy);
+        if (!string.IsNullOrWhiteSpace(orderBy))
+            sb.Append(" ORDER BY ").Append(orderBy);
 
         sb.Append(';');
 
 
         ArrayList entries = new ArrayList(16);
-        await Sql.QueryAsync(sb.ToString(), args, reader =>
+        await Sql.QueryAsync(sb.ToString(), args, token, reader =>
         {
             ModerationEntry? entry = ReadEntry(flag, reader);
             if (type.IsInstanceOfType(entry))
                 entries.Add(entry);
-        }, token).ConfigureAwait(false);
+        }).ConfigureAwait(false);
 
         Array rtn = entries.ToArray(type);
 
@@ -339,7 +525,7 @@ public abstract class DatabaseInterface
             where = true;
             args.AddRange(conditionArgs);
             for (int i = 0; i < conditionArgs.Length; ++i)
-                condition = Util.QuickFormat(condition, "@" + i.ToString(CultureInfo.InvariantCulture), i, repeat: true);
+                condition = UnturnedUIUtility.QuickFormat(condition, "@" + i.ToString(CultureInfo.InvariantCulture), i);
         }
         if (!string.IsNullOrEmpty(condition))
         {
@@ -356,7 +542,8 @@ public abstract class DatabaseInterface
             }
             if (!and)
                 sb.Append(" AND ");
-            sb.Append($"`main`.`{ColumnEntriesStartTimestamp}` >= @{args.Count.ToString(CultureInfo.InvariantCulture)} AND `main`.`{ColumnEntriesStartTimestamp}` <= @{(args.Count + 1).ToString(CultureInfo.InvariantCulture)}");
+            sb.Append($"`main`.`{ColumnEntriesStartTimestamp}` >= @").Append(args.Count.ToString(CultureInfo.InvariantCulture))
+                .Append($" AND `main`.`{ColumnEntriesStartTimestamp}` <= @").Append((args.Count + 1).ToString(CultureInfo.InvariantCulture));
 
             args.Add(start.Value.UtcDateTime);
             args.Add(end.Value.UtcDateTime);
@@ -370,7 +557,7 @@ public abstract class DatabaseInterface
             }
             if (!and)
                 sb.Append(" AND ");
-            sb.Append($"`main`.`{ColumnEntriesStartTimestamp}` >= @{args.Count.ToString(CultureInfo.InvariantCulture)}");
+            sb.Append($"`main`.`{ColumnEntriesStartTimestamp}` >= @").Append(args.Count.ToString(CultureInfo.InvariantCulture));
             args.Add(start.Value.UtcDateTime);
         }
         else if (end.HasValue)
@@ -411,12 +598,12 @@ public abstract class DatabaseInterface
         sb.Append(';');
 
         ArrayList entries = new ArrayList(16);
-        await Sql.QueryAsync(sb.ToString(), args, reader =>
+        await Sql.QueryAsync(sb.ToString(), args, token, reader =>
         {
             ModerationEntry? entry = ReadEntry(flag, reader);
             if (type.IsInstanceOfType(entry))
                 entries.Add(entry);
-        }, token).ConfigureAwait(false);
+        }).ConfigureAwait(false);
 
         Array rtn = entries.ToArray(type);
 
@@ -425,9 +612,9 @@ public abstract class DatabaseInterface
         
         return rtn;
     }
-    public async Task<T[]> GetEntriesOfLevel<T>(ulong player, int level, PresetType type, bool detail = true, bool baseOnly = false, CancellationToken token = default) where T : Punishment
+    public async Task<T[]> GetEntriesOfLevel<T>(CSteamID player, int level, PresetType type, bool detail = true, bool baseOnly = false, CancellationToken token = default) where T : Punishment
         => (T[])await GetEntriesOfLevel(typeof(T), player, level, type, detail, baseOnly, token).ConfigureAwait(false);
-    public async Task<Array> GetEntriesOfLevel(Type type, ulong player, int level, PresetType presetType, bool detail = true, bool baseOnly = false, CancellationToken token = default)
+    public async Task<Array> GetEntriesOfLevel(Type type, CSteamID player, int level, PresetType presetType, bool detail = true, bool baseOnly = false, CancellationToken token = default)
     {
         if (!typeof(Punishment).IsAssignableFrom(type))
             return Array.Empty<Punishment>();
@@ -440,7 +627,7 @@ public abstract class DatabaseInterface
 
         args[0] = presetType.ToString();
         args[1] = level;
-        args[2] = player;
+        args[2] = player.m_SteamID;
 
         sb.Append($" WHERE `main`.`{ColumnEntriesRemoved}`=0 AND `pnsh`.`{ColumnPunishmentsPresetType}`=@0 AND `pnsh`.`{ColumnPunishmentsPresetLevel}`=@1 AND `main`.`{ColumnEntriesSteam64}`=@2");
 
@@ -462,12 +649,12 @@ public abstract class DatabaseInterface
         sb.Append(';');
 
         ArrayList entries = new ArrayList(2);
-        await Sql.QueryAsync(sb.ToString(), args, reader =>
+        await Sql.QueryAsync(sb.ToString(), args, token, reader =>
         {
             ModerationEntry? entry = ReadEntry(flag, reader);
             if (type.IsInstanceOfType(entry))
                 entries.Add(entry);
-        }, token).ConfigureAwait(false);
+        }).ConfigureAwait(false);
 
         Array rtn = entries.ToArray(type);
 
@@ -482,7 +669,7 @@ public abstract class DatabaseInterface
         if (entries.Length == 0 || entries.Length == 1 && (entries[0] is null || mask is not null && !mask[0])) return;
         string inArg;
         if (entries.Length == 1)
-            inArg = " = " + entries[0]!.Id.Key.ToString(CultureInfo.InvariantCulture);
+            inArg = " = " + entries[0]!.Id.ToString(CultureInfo.InvariantCulture);
         else
         {
             StringBuilder sb = new StringBuilder("IN (", entries.Length * 4 + 6);
@@ -494,7 +681,7 @@ public abstract class DatabaseInterface
                 ++ct;
                 if (i != 0)
                     sb.Append(',');
-                sb.Append(e.Id.Key.ToString(CultureInfo.InvariantCulture));
+                sb.Append(e.Id.ToString(CultureInfo.InvariantCulture));
             }
 
             if (ct == 0)
@@ -506,7 +693,7 @@ public abstract class DatabaseInterface
         bool anyPunishments = false;
         bool anyAppeals = false;
         bool anyAssetBans = false;
-        bool anyGreifingReports = false;
+        bool anyGriefingReports = false;
         bool anyChatAbuseReports = false;
         bool anyCheatingReports = false;
         for (int i = 0; i < entries.Length; ++i)
@@ -523,7 +710,7 @@ public abstract class DatabaseInterface
             else if (entry is Appeal)
                 anyAppeals = true;
             else if (entry is GriefingReport)
-                anyGreifingReports = true;
+                anyGriefingReports = true;
             else if (entry is ChatAbuseReport)
                 anyChatAbuseReports = true;
             else if (entry is CheatingReport)
@@ -531,55 +718,55 @@ public abstract class DatabaseInterface
         }
 
         // Actors
-        string query = $"SELECT {SqlTypes.ColumnList(ColumnExternalPrimaryKey, ColumnActorsId, ColumnActorsRole, ColumnActorsAsAdmin)} " +
+        string query = $"SELECT {MySqlSnippets.ColumnList(ColumnExternalPrimaryKey, ColumnActorsId, ColumnActorsRole, ColumnActorsAsAdmin)} " +
                 $"FROM `{TableActors}` WHERE `{ColumnExternalPrimaryKey}` {inArg} ORDER BY `{ColumnExternalPrimaryKey}`, `{ColumnActorsIndex}`;";
 
         List<PrimaryKeyPair<RelatedActor>> actors = new List<PrimaryKeyPair<RelatedActor>>();
-        await Sql.QueryAsync(query, null, reader =>
+        await Sql.QueryAsync(query, null, token, reader =>
         {
-            actors.Add(new PrimaryKeyPair<RelatedActor>(reader.GetInt32(0), ReadActor(reader, 1)));
-        }, token).ConfigureAwait(false);
+            actors.Add(new PrimaryKeyPair<RelatedActor>(reader.GetUInt32(0), ReadActor(reader, 1)));
+        }).ConfigureAwait(false);
 
-        F.ApplyQueriedList(actors, (key, arr) =>
+        MySqlSnippets.ApplyQueriedList(actors, (key, arr) =>
         {
-            IModerationEntry? info = entries.FindIndexed((x, i) => x != null && (mask is null || mask[i]) && x.Id.Key == key);
+            IModerationEntry? info = entries.FindIndexed((x, i) => x != null && (mask is null || mask[i]) && x.Id == key);
             if (info != null)
                 info.Actors = arr;
         }, false);
 
         // Evidence
-        query = $"SELECT {SqlTypes.ColumnList(ColumnExternalPrimaryKey, ColumnEvidenceId, ColumnEvidenceLink,
+        query = $"SELECT {MySqlSnippets.ColumnList(ColumnExternalPrimaryKey, ColumnEvidenceId, ColumnEvidenceLink,
             ColumnEvidenceLocalSource, ColumnEvidenceMessage, ColumnEvidenceIsImage,
             ColumnEvidenceTimestamp, ColumnEvidenceActorId)} " +
                 $"FROM `{TableEvidence}` WHERE `{ColumnExternalPrimaryKey}` {inArg} ORDER BY `{ColumnExternalPrimaryKey}`, `{ColumnEvidenceId}`;";
 
         List<PrimaryKeyPair<Evidence>> evidence = new List<PrimaryKeyPair<Evidence>>();
-        await Sql.QueryAsync(query, null, reader =>
+        await Sql.QueryAsync(query, null, token, reader =>
         {
-            evidence.Add(new PrimaryKeyPair<Evidence>(reader.GetInt32(0), ReadEvidence(reader, 1)));
-        }, token).ConfigureAwait(false);
+            evidence.Add(new PrimaryKeyPair<Evidence>(reader.GetUInt32(0), ReadEvidence(reader, 1)));
+        }).ConfigureAwait(false);
 
-        F.ApplyQueriedList(evidence, (key, arr) =>
+        MySqlSnippets.ApplyQueriedList(evidence, (key, arr) =>
         {
-            IModerationEntry? info = entries.FindIndexed((x, i) => x != null && (mask is null || mask[i]) && x.Id.Key == key);
+            IModerationEntry? info = entries.FindIndexed((x, i) => x != null && (mask is null || mask[i]) && x.Id == key);
             if (info != null)
                 info.Evidence = arr;
         }, false);
 
-        List<PrimaryKeyPair<PrimaryKey>> links = new List<PrimaryKeyPair<PrimaryKey>>();
+        List<PrimaryKeyPair<uint>> links = new List<PrimaryKeyPair<uint>>();
 
         if (!baseOnly)
         {
             // RelatedEntries
-            query = $"SELECT {SqlTypes.ColumnList(ColumnExternalPrimaryKey, ColumnRelatedEntry)} FROM `{TableRelatedEntries}` WHERE `{ColumnExternalPrimaryKey}` {inArg} ORDER BY `{ColumnExternalPrimaryKey}`;";
-            await Sql.QueryAsync(query, null, reader =>
+            query = $"SELECT {MySqlSnippets.ColumnList(ColumnExternalPrimaryKey, ColumnRelatedEntry)} FROM `{TableRelatedEntries}` WHERE `{ColumnExternalPrimaryKey}` {inArg} ORDER BY `{ColumnExternalPrimaryKey}`;";
+            await Sql.QueryAsync(query, null, token, reader =>
             {
-                links.Add(new PrimaryKeyPair<PrimaryKey>(reader.GetInt32(0), reader.GetUInt32(1)));
-            }, token).ConfigureAwait(false);
+                links.Add(new PrimaryKeyPair<uint>(reader.GetUInt32(0), reader.GetUInt32(1)));
+            }).ConfigureAwait(false);
 
-            F.ApplyQueriedList(links, (key, arr) =>
+            MySqlSnippets.ApplyQueriedList(links, (key, arr) =>
             {
-                IModerationEntry? info = entries.FindIndexed((x, i) => x != null && (mask is null || mask[i]) && x.Id.Key == key);
+                IModerationEntry? info = entries.FindIndexed((x, i) => x != null && (mask is null || mask[i]) && x.Id == key);
                 if (info != null)
                     info.RelatedEntryKeys = arr;
             }, false);
@@ -592,15 +779,15 @@ public abstract class DatabaseInterface
                 links.Clear();
 
                 // Punishment.Appeals
-                query = $"SELECT {SqlTypes.ColumnList(ColumnExternalPrimaryKey, ColumnLinkedAppealsAppeal)} FROM `{TableLinkedAppeals}` WHERE `{ColumnExternalPrimaryKey}` {inArg} ORDER BY `{ColumnExternalPrimaryKey}`;";
-                await Sql.QueryAsync(query, null, reader =>
+                query = $"SELECT {MySqlSnippets.ColumnList(ColumnExternalPrimaryKey, ColumnLinkedAppealsAppeal)} FROM `{TableLinkedAppeals}` WHERE `{ColumnExternalPrimaryKey}` {inArg} ORDER BY `{ColumnExternalPrimaryKey}`;";
+                await Sql.QueryAsync(query, null, token, reader =>
                 {
-                    links.Add(new PrimaryKeyPair<PrimaryKey>(reader.GetInt32(0), reader.GetUInt32(1)));
-                }, token).ConfigureAwait(false);
+                    links.Add(new PrimaryKeyPair<uint>(reader.GetUInt32(0), reader.GetUInt32(1)));
+                }).ConfigureAwait(false);
 
-                F.ApplyQueriedList(links, (key, arr) =>
+                MySqlSnippets.ApplyQueriedList(links, (key, arr) =>
                 {
-                    Punishment? info = (Punishment?)entries.FindIndexed((x, i) => x is Punishment && (mask is null || mask[i]) && x.Id.Key == key);
+                    Punishment? info = (Punishment?)entries.FindIndexed((x, i) => x is Punishment && (mask is null || mask[i]) && x.Id == key);
                     if (info != null)
                         info.AppealKeys = arr;
                 }, false);
@@ -608,15 +795,15 @@ public abstract class DatabaseInterface
                 links.Clear();
 
                 // Punishment.Reports
-                query = $"SELECT {SqlTypes.ColumnList(ColumnExternalPrimaryKey, ColumnLinkedReportsReport)} FROM `{TableLinkedReports}` WHERE `{ColumnExternalPrimaryKey}` {inArg} ORDER BY `{ColumnExternalPrimaryKey}`;";
-                await Sql.QueryAsync(query, null, reader =>
+                query = $"SELECT {MySqlSnippets.ColumnList(ColumnExternalPrimaryKey, ColumnLinkedReportsReport)} FROM `{TableLinkedReports}` WHERE `{ColumnExternalPrimaryKey}` {inArg} ORDER BY `{ColumnExternalPrimaryKey}`;";
+                await Sql.QueryAsync(query, null, token, reader =>
                 {
-                    links.Add(new PrimaryKeyPair<PrimaryKey>(reader.GetInt32(0), reader.GetUInt32(1)));
-                }, token).ConfigureAwait(false);
+                    links.Add(new PrimaryKeyPair<uint>(reader.GetUInt32(0), reader.GetUInt32(1)));
+                }).ConfigureAwait(false);
 
-                F.ApplyQueriedList(links, (key, arr) =>
+                MySqlSnippets.ApplyQueriedList(links, (key, arr) =>
                 {
-                    Punishment? info = (Punishment?)entries.FindIndexed((x, i) => x is Punishment && (mask is null || mask[i]) && x.Id.Key == key);
+                    Punishment? info = (Punishment?)entries.FindIndexed((x, i) => x is Punishment && (mask is null || mask[i]) && x.Id == key);
                     if (info != null)
                         info.ReportKeys = arr;
                 }, false);
@@ -627,15 +814,15 @@ public abstract class DatabaseInterface
                 List<PrimaryKeyPair<VehicleType>> types = new List<PrimaryKeyPair<VehicleType>>();
 
                 // AssetBan.AssetFilter
-                query = $"SELECT {SqlTypes.ColumnList(ColumnExternalPrimaryKey, ColumnAssetBanFiltersType)} FROM `{TableAssetBanTypeFilters}` WHERE `{ColumnExternalPrimaryKey}` {inArg} ORDER BY `{ColumnExternalPrimaryKey}`;";
-                await Sql.QueryAsync(query, null, reader =>
+                query = $"SELECT {MySqlSnippets.ColumnList(ColumnExternalPrimaryKey, ColumnAssetBanFiltersType)} FROM `{TableAssetBanTypeFilters}` WHERE `{ColumnExternalPrimaryKey}` {inArg} ORDER BY `{ColumnExternalPrimaryKey}`;";
+                await Sql.QueryAsync(query, null, token, reader =>
                 {
-                    types.Add(new PrimaryKeyPair<VehicleType>(reader.GetInt32(0), reader.ReadStringEnum(1, VehicleType.None)));
-                }, token).ConfigureAwait(false);
+                    types.Add(new PrimaryKeyPair<VehicleType>(reader.GetUInt32(0), reader.ReadStringEnum(1, VehicleType.None)));
+                }).ConfigureAwait(false);
 
-                F.ApplyQueriedList(types, (key, arr) =>
+                MySqlSnippets.ApplyQueriedList(types, (key, arr) =>
                 {
-                    AssetBan? info = (AssetBan?)entries.FindIndexed((x, i) => x is AssetBan && (mask is null || mask[i]) && x.Id.Key == key);
+                    AssetBan? info = (AssetBan?)entries.FindIndexed((x, i) => x is AssetBan && (mask is null || mask[i]) && x.Id == key);
                     if (info != null)
                         info.VehicleTypeFilter = arr;
                 }, false);
@@ -647,15 +834,15 @@ public abstract class DatabaseInterface
             links.Clear();
 
             // Appeal.Punishments
-            query = $"SELECT {SqlTypes.ColumnList(ColumnExternalPrimaryKey, ColumnAppealPunishmentsPunishment)} FROM `{TableAppealPunishments}` WHERE `{ColumnExternalPrimaryKey}` {inArg} ORDER BY `{ColumnExternalPrimaryKey}`;";
-            await Sql.QueryAsync(query, null, reader =>
+            query = $"SELECT {MySqlSnippets.ColumnList(ColumnExternalPrimaryKey, ColumnAppealPunishmentsPunishment)} FROM `{TableAppealPunishments}` WHERE `{ColumnExternalPrimaryKey}` {inArg} ORDER BY `{ColumnExternalPrimaryKey}`;";
+            await Sql.QueryAsync(query, null, token, reader =>
             {
-                links.Add(new PrimaryKeyPair<PrimaryKey>(reader.GetInt32(0), reader.GetUInt32(1)));
-            }, token).ConfigureAwait(false);
+                links.Add(new PrimaryKeyPair<uint>(reader.GetUInt32(0), reader.GetUInt32(1)));
+            }).ConfigureAwait(false);
 
-            F.ApplyQueriedList(links, (key, arr) =>
+            MySqlSnippets.ApplyQueriedList(links, (key, arr) =>
             {
-                Appeal? info = (Appeal?)entries.FindIndexed((x, i) => x is Appeal && (mask is null || mask[i]) && x.Id.Key == key);
+                Appeal? info = (Appeal?)entries.FindIndexed((x, i) => x is Appeal && (mask is null || mask[i]) && x.Id == key);
                 if (info != null)
                     info.PunishmentKeys = arr;
             }, false);
@@ -663,16 +850,16 @@ public abstract class DatabaseInterface
             List<PrimaryKeyPair<AppealResponse>> responses = new List<PrimaryKeyPair<AppealResponse>>();
 
             // Appeal.Responses
-            query = $"SELECT {SqlTypes.ColumnList(ColumnExternalPrimaryKey, ColumnAppealResponsesQuestion, ColumnAppealResponsesResponse)} " +
+            query = $"SELECT {MySqlSnippets.ColumnList(ColumnExternalPrimaryKey, ColumnAppealResponsesQuestion, ColumnAppealResponsesResponse)} " +
                     $"FROM `{TableAppealResponses}` WHERE `{ColumnExternalPrimaryKey}` {inArg} ORDER BY `{ColumnExternalPrimaryKey}`;";
-            await Sql.QueryAsync(query, null, reader =>
+            await Sql.QueryAsync(query, null, token, reader =>
             {
-                responses.Add(new PrimaryKeyPair<AppealResponse>(reader.GetInt32(0), new AppealResponse(reader.GetString(1), reader.GetString(2))));
-            }, token).ConfigureAwait(false);
+                responses.Add(new PrimaryKeyPair<AppealResponse>(reader.GetUInt32(0), new AppealResponse(reader.GetString(1), reader.GetString(2))));
+            }).ConfigureAwait(false);
 
-            F.ApplyQueriedList(responses, (key, arr) =>
+            MySqlSnippets.ApplyQueriedList(responses, (key, arr) =>
             {
-                Appeal? info = (Appeal?)entries.FindIndexed((x, i) => x is Appeal && (mask is null || mask[i]) && x.Id.Key == key);
+                Appeal? info = (Appeal?)entries.FindIndexed((x, i) => x is Appeal && (mask is null || mask[i]) && x.Id == key);
                 if (info != null)
                     info.Responses = arr;
             }, false);
@@ -683,16 +870,16 @@ public abstract class DatabaseInterface
             List<PrimaryKeyPair<AbusiveChatRecord>> chats = new List<PrimaryKeyPair<AbusiveChatRecord>>();
 
             // ChatAbuseReport.Messages
-            query = $"SELECT {SqlTypes.ColumnList(ColumnExternalPrimaryKey, ColumnReportsChatRecordsMessage, ColumnReportsChatRecordsTimestamp)} " +
+            query = $"SELECT {MySqlSnippets.ColumnList(ColumnExternalPrimaryKey, ColumnReportsChatRecordsMessage, ColumnReportsChatRecordsTimestamp)} " +
                     $"FROM `{TableReportChatRecords}` WHERE `{ColumnExternalPrimaryKey}` {inArg} ORDER BY `{ColumnExternalPrimaryKey}`, `{ColumnReportsChatRecordsIndex}`;";
-            await Sql.QueryAsync(query, null, reader =>
+            await Sql.QueryAsync(query, null, token, reader =>
             {
-                chats.Add(new PrimaryKeyPair<AbusiveChatRecord>(reader.GetInt32(0), new AbusiveChatRecord(reader.GetString(1), new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(2), DateTimeKind.Utc)))));
-            }, token).ConfigureAwait(false);
+                chats.Add(new PrimaryKeyPair<AbusiveChatRecord>(reader.GetUInt32(0), new AbusiveChatRecord(reader.GetString(1), new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(2), DateTimeKind.Utc)))));
+            }).ConfigureAwait(false);
 
-            F.ApplyQueriedList(chats, (key, arr) =>
+            MySqlSnippets.ApplyQueriedList(chats, (key, arr) =>
             {
-                ChatAbuseReport? info = (ChatAbuseReport?)entries.FindIndexed((x, i) => x is ChatAbuseReport && (mask is null || mask[i]) && x.Id.Key == key);
+                ChatAbuseReport? info = (ChatAbuseReport?)entries.FindIndexed((x, i) => x is ChatAbuseReport && (mask is null || mask[i]) && x.Id == key);
                 if (info != null)
                     info.Messages = arr;
             }, false);
@@ -703,29 +890,20 @@ public abstract class DatabaseInterface
             List<PrimaryKeyPair<ShotRecord>> shots = new List<PrimaryKeyPair<ShotRecord>>();
 
             // CheatingReport.Shots
-            query = $"SELECT {SqlTypes.ColumnList(ColumnExternalPrimaryKey, ColumnReportsShotRecordAmmo, ColumnReportsShotRecordAmmoName,
-                ColumnReportsShotRecordItem, ColumnReportsShotRecordItemName,
-                ColumnReportsShotRecordDamageDone, ColumnReportsShotRecordLimb,
-                ColumnReportsShotRecordIsProjectile, ColumnReportsShotRecordDistance,
-                ColumnReportsShotRecordHitPointX, ColumnReportsShotRecordHitPointY, ColumnReportsShotRecordHitPointZ,
-                ColumnReportsShotRecordShootFromPointX, ColumnReportsShotRecordShootFromPointY, ColumnReportsShotRecordShootFromPointZ,
-                ColumnReportsShotRecordShootFromRotationX, ColumnReportsShotRecordShootFromRotationY, ColumnReportsShotRecordShootFromRotationZ,
-                ColumnReportsShotRecordHitType, ColumnReportsShotRecordHitActor,
-                ColumnReportsShotRecordHitAsset, ColumnReportsShotRecordHitAssetName,
-                ColumnReportsShotRecordTimestamp)} " +
+            query = $"SELECT {MySqlSnippets.ColumnList(ShotRecordColumns)} " +
                     $"FROM `{TableReportShotRecords}` WHERE `{ColumnExternalPrimaryKey}` {inArg} ORDER BY `{ColumnExternalPrimaryKey}`;";
-            await Sql.QueryAsync(query, null, reader =>
+            await Sql.QueryAsync(query, null, token, reader =>
             {
-                shots.Add(new PrimaryKeyPair<ShotRecord>(reader.GetInt32(0), new ShotRecord(
+                shots.Add(new PrimaryKeyPair<ShotRecord>(reader.GetUInt32(0), new ShotRecord(
                     reader.GetGuid(3),
                     reader.GetGuid(1),
                     reader.IsDBNull(4) ? null : reader.GetString(4),
                     reader.IsDBNull(2) ? null : reader.GetString(2),
-                    reader.ReadStringEnum(18, EPlayerKill.NONE),
+                    reader.ReadStringEnum(18, ERaycastInfoType.NONE),
                     reader.IsDBNull(19) ? null : Actors.GetActor(reader.GetUInt64(19)),
                     reader.IsDBNull(20) ? null : reader.GetGuid(20),
                     reader.IsDBNull(21) ? null : reader.GetString(21),
-                    reader.IsDBNull(6) ? null : (reader.ReadStringEnum<ELimb>(6) ?? null),
+                    reader.ReadStringEnum<ELimb>(6),
                     new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(22), DateTimeKind.Utc)),
                     new Vector3(reader.GetFloat(12), reader.GetFloat(13), reader.GetFloat(14)),
                     new Vector3(reader.GetFloat(15), reader.GetFloat(16), reader.GetFloat(17)),
@@ -734,37 +912,37 @@ public abstract class DatabaseInterface
                     reader.IsDBNull(5) ? 0 : reader.GetInt32(5),
                     reader.IsDBNull(8) ? 0d : reader.GetDouble(8)
                 )));
-            }, token).ConfigureAwait(false);
+            }).ConfigureAwait(false);
 
-            F.ApplyQueriedList(shots, (key, arr) =>
+            MySqlSnippets.ApplyQueriedList(shots, (key, arr) =>
             {
-                CheatingReport? info = (CheatingReport?)entries.FindIndexed((x, i) => x is CheatingReport && (mask is null || mask[i]) && x.Id.Key == key);
+                CheatingReport? info = (CheatingReport?)entries.FindIndexed((x, i) => x is CheatingReport && (mask is null || mask[i]) && x.Id == key);
                 if (info != null)
                     info.Shots = arr;
             }, false);
         }
 
-        if (!baseOnly && anyGreifingReports)
+        if (!baseOnly && anyGriefingReports)
         {
             List<PrimaryKeyPair<StructureDamageRecord>> damages = new List<PrimaryKeyPair<StructureDamageRecord>>();
 
             // GriefingReport.DamageRecord
-            query = $"SELECT {SqlTypes.ColumnList(ColumnExternalPrimaryKey, ColumnReportsStructureDamageDamage, ColumnReportsStructureDamageDamageOrigin,
+            query = $"SELECT {MySqlSnippets.ColumnList(ColumnExternalPrimaryKey, ColumnReportsStructureDamageDamage, ColumnReportsStructureDamageDamageOrigin,
                 ColumnReportsStructureDamageInstanceId, ColumnReportsStructureDamageStructure, ColumnReportsStructureDamageStructureName,
                 ColumnReportsStructureDamageStructureOwner, ColumnReportsStructureDamageStructureType, ColumnReportsStructureDamageWasDestroyed,
                 ColumnReportsStructureDamageTimestamp)} " +
                     $"FROM `{TableReportStructureDamageRecords}` WHERE `{ColumnExternalPrimaryKey}` {inArg} ORDER BY `{ColumnExternalPrimaryKey}`;";
-            await Sql.QueryAsync(query, null, reader =>
+            await Sql.QueryAsync(query, null, token, reader =>
             {
-                damages.Add(new PrimaryKeyPair<StructureDamageRecord>(reader.GetInt32(0),
-                    new StructureDamageRecord(reader.ReadGuidString(4) ?? Guid.Empty, reader.GetString(5), reader.GetUInt64(6),
-                        reader.ReadStringEnum(2, EDamageOrigin.Unknown), reader.ReadStringEnum(7, StructType.Unknown), reader.GetUInt32(3),
+                damages.Add(new PrimaryKeyPair<StructureDamageRecord>(reader.GetUInt32(0),
+                    new StructureDamageRecord(reader.ReadGuidStringOrDefault(4), reader.GetString(5), reader.GetUInt64(6),
+                        reader.ReadStringEnum(2, EDamageOrigin.Unknown), reader.GetBoolean(7), reader.GetUInt32(3),
                         reader.GetInt32(1), reader.GetBoolean(8), new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(9), DateTimeKind.Utc)))));
-            }, token).ConfigureAwait(false);
+            }).ConfigureAwait(false);
 
-            F.ApplyQueriedList(damages, (key, arr) =>
+            MySqlSnippets.ApplyQueriedList(damages, (key, arr) =>
             {
-                GriefingReport? info = (GriefingReport?)entries.FindIndexed((x, i) => x is GriefingReport && (mask is null || mask[i]) && x.Id.Key == key);
+                GriefingReport? info = (GriefingReport?)entries.FindIndexed((x, i) => x is GriefingReport && (mask is null || mask[i]) && x.Id == key);
                 if (info != null)
                     info.DamageRecord = arr;
             }, false);
@@ -772,19 +950,19 @@ public abstract class DatabaseInterface
             List<PrimaryKeyPair<TeamkillRecord>> tks = new List<PrimaryKeyPair<TeamkillRecord>>();
 
             // GriefingReport.TeamkillRecord
-            query = $"SELECT {SqlTypes.ColumnList(ColumnExternalPrimaryKey, ColumnReportsTeamkillRecordVictim, ColumnReportsTeamkillRecordDeathCause,
+            query = $"SELECT {MySqlSnippets.ColumnList(ColumnExternalPrimaryKey, ColumnReportsTeamkillRecordVictim, ColumnReportsTeamkillRecordDeathCause,
                 ColumnReportsTeamkillRecordWasIntentional, ColumnReportsTeamkillRecordTeamkill, ColumnReportsTeamkillRecordMessage, ColumnReportsTeamkillRecordTimestamp)} " +
                     $"FROM `{TableReportTeamkillRecords}` WHERE `{ColumnExternalPrimaryKey}` {inArg} ORDER BY `{ColumnExternalPrimaryKey}`;";
-            await Sql.QueryAsync(query, null, reader =>
+            await Sql.QueryAsync(query, null, token, reader =>
             {
-                tks.Add(new PrimaryKeyPair<TeamkillRecord>(reader.GetInt32(0),
+                tks.Add(new PrimaryKeyPair<TeamkillRecord>(reader.GetUInt32(0),
                     new TeamkillRecord(reader.GetUInt32(4), reader.GetUInt64(1), reader.ReadStringEnum(2, EDeathCause.KILL),
                         reader.GetString(5), reader.IsDBNull(3) ? null : reader.GetBoolean(3), new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(6), DateTimeKind.Utc)))));
-            }, token).ConfigureAwait(false);
+            }).ConfigureAwait(false);
 
-            F.ApplyQueriedList(tks, (key, arr) =>
+            MySqlSnippets.ApplyQueriedList(tks, (key, arr) =>
             {
-                GriefingReport? info = (GriefingReport?)entries.FindIndexed((x, i) => x is GriefingReport && (mask is null || mask[i]) && x.Id.Key == key);
+                GriefingReport? info = (GriefingReport?)entries.FindIndexed((x, i) => x is GriefingReport && (mask is null || mask[i]) && x.Id == key);
                 if (info != null)
                     info.TeamkillRecord = arr;
             }, false);
@@ -792,19 +970,19 @@ public abstract class DatabaseInterface
             List<PrimaryKeyPair<VehicleTeamkillRecord>> vtks = new List<PrimaryKeyPair<VehicleTeamkillRecord>>();
 
             // GriefingReport.VehicleTeamkillRecord
-            query = $"SELECT {SqlTypes.ColumnList(ColumnExternalPrimaryKey, ColumnReportsVehicleTeamkillRecordVictim, ColumnReportsVehicleTeamkillRecordDamageOrigin,
+            query = $"SELECT {MySqlSnippets.ColumnList(ColumnExternalPrimaryKey, ColumnReportsVehicleTeamkillRecordVictim, ColumnReportsVehicleTeamkillRecordDamageOrigin,
                 ColumnReportsVehicleTeamkillRecordTeamkill, ColumnReportsVehicleTeamkillRecordMessage, ColumnReportsVehicleTeamkillRecordTimestamp)} " +
                     $"FROM `{TableReportVehicleTeamkillRecords}` WHERE `{ColumnExternalPrimaryKey}` {inArg} ORDER BY `{ColumnExternalPrimaryKey}`;";
-            await Sql.QueryAsync(query, null, reader =>
+            await Sql.QueryAsync(query, null, token, reader =>
             {
-                vtks.Add(new PrimaryKeyPair<VehicleTeamkillRecord>(reader.GetInt32(0),
+                vtks.Add(new PrimaryKeyPair<VehicleTeamkillRecord>(reader.GetUInt32(0),
                     new VehicleTeamkillRecord(reader.GetUInt32(3), reader.GetUInt64(1), reader.ReadStringEnum(2, EDamageOrigin.Unknown),
                         reader.GetString(4), new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(5), DateTimeKind.Utc)))));
-            }, token).ConfigureAwait(false);
+            }).ConfigureAwait(false);
 
-            F.ApplyQueriedList(vtks, (key, arr) =>
+            MySqlSnippets.ApplyQueriedList(vtks, (key, arr) =>
             {
-                GriefingReport? info = (GriefingReport?)entries.FindIndexed((x, i) => x is GriefingReport && (mask is null || mask[i]) && x.Id.Key == key);
+                GriefingReport? info = (GriefingReport?)entries.FindIndexed((x, i) => x is GriefingReport && (mask is null || mask[i]) && x.Id == key);
                 if (info != null)
                     info.VehicleTeamkillRecord = arr;
             }, false);
@@ -812,21 +990,21 @@ public abstract class DatabaseInterface
             List<PrimaryKeyPair<VehicleRequestRecord>> reqs = new List<PrimaryKeyPair<VehicleRequestRecord>>();
 
             // GriefingReport.VehicleRequestRecord
-            query = $"SELECT {SqlTypes.ColumnList(ColumnExternalPrimaryKey, ColumnReportsVehicleRequestRecordAsset, ColumnReportsVehicleRequestRecordVehicle,
+            query = $"SELECT {MySqlSnippets.ColumnList(ColumnExternalPrimaryKey, ColumnReportsVehicleRequestRecordAsset, ColumnReportsVehicleRequestRecordVehicle,
                 ColumnReportsVehicleRequestRecordVehicleName, ColumnReportsVehicleRequestRecordInstigator, ColumnReportsVehicleRequestRecordDamageOrigin,
                 ColumnReportsVehicleRequestRecordRequestTimestamp, ColumnReportsVehicleRequestRecordDestroyTimestamp)} " +
                     $"FROM `{TableReportVehicleTeamkillRecords}` WHERE `{ColumnExternalPrimaryKey}` {inArg} ORDER BY `{ColumnExternalPrimaryKey}`;";
-            await Sql.QueryAsync(query, null, reader =>
+            await Sql.QueryAsync(query, null, token, reader =>
             {
-                reqs.Add(new PrimaryKeyPair<VehicleRequestRecord>(reader.GetInt32(0),
-                    new VehicleRequestRecord(reader.ReadGuidString(2) ?? Guid.Empty, reader.IsDBNull(1) ? PrimaryKey.NotAssigned : reader.GetUInt32(1), reader.GetString(3),
+                reqs.Add(new PrimaryKeyPair<VehicleRequestRecord>(reader.GetUInt32(0),
+                    new VehicleRequestRecord(reader.ReadGuidStringOrDefault(2), reader.IsDBNull(1) ? 0u : reader.GetUInt32(1), reader.GetString(3),
                     new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(6), DateTimeKind.Utc)),
                     reader.IsDBNull(7) ? null : new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(7), DateTimeKind.Utc)), reader.ReadStringEnum(5, EDamageOrigin.Unknown), reader.GetUInt64(4))));
-            }, token).ConfigureAwait(false);
+            }).ConfigureAwait(false);
 
-            F.ApplyQueriedList(reqs, (key, arr) =>
+            MySqlSnippets.ApplyQueriedList(reqs, (key, arr) =>
             {
-                GriefingReport? info = (GriefingReport?)entries.FindIndexed((x, i) => x is GriefingReport && (mask is null || mask[i]) && x.Id.Key == key);
+                GriefingReport? info = (GriefingReport?)entries.FindIndexed((x, i) => x is GriefingReport && (mask is null || mask[i]) && x.Id == key);
                 if (info != null)
                     info.VehicleRequestRecord = arr;
             }, false);
@@ -847,12 +1025,12 @@ public abstract class DatabaseInterface
                 tasks.Add(e.FillDetail(this, token));
             }
 
-            await Task.WhenAll(tasks.AsArrayFast()).ConfigureAwait(false);
+            await Task.WhenAll(tasks.ToArrayFast()).ConfigureAwait(false);
         }
     }
-    public async Task<T[]> GetActiveEntries<T>(ulong steam64, bool detail = true, bool baseOnly = false, string? condition = null, string? orderBy = null, object[]? conditionArgs = null, DateTimeOffset? start = null, DateTimeOffset? end = null, CancellationToken token = default) where T : IDurationModerationEntry
+    public async Task<T[]> GetActiveEntries<T>(CSteamID steam64, bool detail = true, bool baseOnly = false, string? condition = null, string? orderBy = null, object[]? conditionArgs = null, DateTimeOffset? start = null, DateTimeOffset? end = null, CancellationToken token = default) where T : IDurationModerationEntry
         => (T[])await GetActiveEntries(typeof(T), steam64, detail, baseOnly, condition, orderBy, conditionArgs, start, end, token);
-    public Task<Array> GetActiveEntries(Type type, ulong steam64, bool detail = true, bool baseOnly = false, string? condition = null, string? orderBy = null, object[]? conditionArgs = null, DateTimeOffset? start = null, DateTimeOffset? end = null, CancellationToken token = default)
+    public Task<Array> GetActiveEntries(Type type, CSteamID steam64, bool detail = true, bool baseOnly = false, string? condition = null, string? orderBy = null, object[]? conditionArgs = null, DateTimeOffset? start = null, DateTimeOffset? end = null, CancellationToken token = default)
     {
         bool dur = typeof(IDurationModerationEntry).IsAssignableFrom(type);
         string cond = (dur
@@ -860,7 +1038,7 @@ public abstract class DatabaseInterface
             : string.Empty) + $"`main`.`{ColumnEntriesRemoved}` = 0";
         if (dur)
         {
-            cond += " AND " + Util.BuildCheckDurationClause("dur", "main", ColumnDurationsDurationSeconds, ColumnEntriesResolvedTimestamp, ColumnEntriesStartTimestamp);
+            cond += " AND " + MySqlSnippets.BuildCheckDurationClause("dur", "main", ColumnDurationsDurationSeconds, ColumnEntriesResolvedTimestamp, ColumnEntriesStartTimestamp);
         }
 
         if (condition != null)
@@ -871,16 +1049,16 @@ public abstract class DatabaseInterface
 
         return ReadAll(type, steam64, ActorRelationType.IsTarget, detail, baseOnly, start, end, cond, orderBy, conditionArgs, token: token);
     }
-    public async Task<T[]> GetActiveEntries<T>(ulong baseSteam64, IReadOnlyList<PlayerIPAddress> addresses, IReadOnlyList<PlayerHWID> hwids, bool detail = true, bool baseOnly = false, string? condition = null, string? orderBy = null, object[]? conditionArgs = null, DateTimeOffset? start = null, DateTimeOffset? end = null, CancellationToken token = default) where T : IDurationModerationEntry
+    public async Task<T[]> GetActiveEntries<T>(CSteamID baseSteam64, IReadOnlyList<PlayerIPAddress> addresses, IReadOnlyList<PlayerHWID> hwids, bool detail = true, bool baseOnly = false, string? condition = null, string? orderBy = null, object[]? conditionArgs = null, DateTimeOffset? start = null, DateTimeOffset? end = null, CancellationToken token = default) where T : IDurationModerationEntry
         => (T[])await GetActiveEntries(typeof(T), baseSteam64, addresses, hwids, detail, baseOnly, condition, orderBy, conditionArgs, start, end, token);
-    public async Task<Array> GetActiveEntries(Type type, ulong baseSteam64, IReadOnlyList<PlayerIPAddress> addresses, IReadOnlyList<PlayerHWID> hwids, bool detail = true, bool baseOnly = false, string? condition = null, string? orderBy = null, object[]? conditionArgs = null, DateTimeOffset? start = null, DateTimeOffset? end = null, CancellationToken token = default)
+    public async Task<Array> GetActiveEntries(Type type, CSteamID baseSteam64, IReadOnlyList<PlayerIPAddress> addresses, IReadOnlyList<PlayerHWID> hwids, bool detail = true, bool baseOnly = false, string? condition = null, string? orderBy = null, object[]? conditionArgs = null, DateTimeOffset? start = null, DateTimeOffset? end = null, CancellationToken token = default)
     {
         bool dur = typeof(IDurationModerationEntry).IsAssignableFrom(type);
         string cond = (dur
             ? $"(`dur`.`{ColumnDurationsForgiven}` = 0 OR `dur`.`{ColumnDurationsForgiven}` IS NULL) AND "
             : string.Empty) + $"`main`.`{ColumnEntriesRemoved}` = 0";
         if (dur)
-            cond += " AND " + Util.BuildCheckDurationClause("dur", "main", ColumnDurationsDurationSeconds, ColumnEntriesResolvedTimestamp, ColumnEntriesStartTimestamp);
+            cond += " AND " + MySqlSnippets.BuildCheckDurationClause("dur", "main", ColumnDurationsDurationSeconds, ColumnEntriesResolvedTimestamp, ColumnEntriesStartTimestamp);
 
         if (condition != null)
             cond += " AND (" + condition + ")";
@@ -893,12 +1071,12 @@ public abstract class DatabaseInterface
         int flag = AppendReadColumns(sb, type, baseOnly);
         AppendTables(sb, flag);
         sb.Append(" WHERE");
-        List<object?> args = new List<object?>((types == null ? 0 : types.Length) + (conditionArgs == null ? 0 : conditionArgs.Length) + 2 + hwids.Count * 2) { baseSteam64 };
+        List<object?> args = new List<object?>((types == null ? 0 : types.Length) + (conditionArgs == null ? 0 : conditionArgs.Length) + 2 + hwids.Count * 2) { baseSteam64.m_SteamID };
         if (conditionArgs != null && !string.IsNullOrEmpty(condition))
         {
             args.AddRange(conditionArgs);
             for (int i = 0; i < conditionArgs.Length; ++i)
-                cond = Util.QuickFormat(cond, "@" + (i + 1).ToString(CultureInfo.InvariantCulture), i, repeat: true);
+                cond = UnturnedUIUtility.QuickFormat(cond, "@" + (i + 1).ToString(CultureInfo.InvariantCulture), i);
         }
 
         if (!string.IsNullOrEmpty(cond))
@@ -952,9 +1130,9 @@ public abstract class DatabaseInterface
 
         if (addresses.Count > 0)
         {
-            sb.Append($"(EXISTS (SELECT * FROM `{WarfareSQL.TableIPAddresses}` AS `ip` WHERE `ip`.`{WarfareSQL.ColumnIPAddressesSteam64}`=`main`.`{ColumnEntriesSteam64}`");
+            sb.Append($"(EXISTS (SELECT * FROM `{TableIPAddresses}` AS `ip` WHERE `ip`.`{ColumnIPAddressesSteam64}`=`main`.`{ColumnEntriesSteam64}`");
 
-            sb.Append($"AND `ip`.`{WarfareSQL.ColumnIPAddressesPackedIP}` IN (");
+            sb.Append($"AND `ip`.`{ColumnIPAddressesPackedIP}` IN (");
 
             for (int i = 0; i < addresses.Count; ++i)
             {
@@ -970,9 +1148,9 @@ public abstract class DatabaseInterface
         {
             if (addresses.Count > 0)
                 sb.Append(" OR ");
-            sb.Append($"(EXISTS (SELECT * FROM `{WarfareSQL.TableHWIDs}` AS `hwid` WHERE `hwid`.`{WarfareSQL.ColumnHWIDsSteam64}`=`main`.`{ColumnEntriesSteam64}`");
+            sb.Append($"(EXISTS (SELECT * FROM `{TableHWIDs}` AS `hwid` WHERE `hwid`.`{ColumnHWIDsSteam64}`=`main`.`{ColumnEntriesSteam64}`");
 
-            sb.Append($"AND `hwid`.`{WarfareSQL.ColumnHWIDsHWID}` IN (");
+            sb.Append($"AND `hwid`.`{ColumnHWIDsHWID}` IN (");
 
             for (int i = 0; i < hwids.Count; ++i)
             {
@@ -996,12 +1174,12 @@ public abstract class DatabaseInterface
         sb.Append(';');
 
         ArrayList entries = new ArrayList(16);
-        await Sql.QueryAsync(sb.ToString(), args, reader =>
+        await Sql.QueryAsync(sb.ToString(), args, token, reader =>
         {
             ModerationEntry? entry = ReadEntry(flag, reader);
             if (type.IsInstanceOfType(entry))
                 entries.Add(entry);
-        }, token).ConfigureAwait(false);
+        }).ConfigureAwait(false);
 
         Array rtn = entries.ToArray(type);
 
@@ -1010,43 +1188,49 @@ public abstract class DatabaseInterface
 
         return rtn;
     }
-    public async Task<AssetBan?> GetActiveAssetBan(ulong steam64, VehicleType type, bool detail = true, CancellationToken token = default)
+
+    private static readonly string GetActiveAssetBanQuery = $"SELECT {MySqlSnippets.AliasedColumnList("e", Columns)}, " +
+                                                            $"{MySqlSnippets.AliasedColumnList("d", ColumnDurationsDurationSeconds, ColumnDurationsForgiven, ColumnDurationsForgivenBy, ColumnDurationsForgivenTimestamp, ColumnDurationsForgivenReason)}, " +
+                                                            $"{MySqlSnippets.AliasedColumnList("pnsh", ColumnPunishmentsPresetType, ColumnPunishmentsPresetLevel)}" +
+                                                            $"FROM `{TableEntries}` AS `e` " +
+                                                            $"LEFT JOIN `{TableDurationPunishments}` AS `d` ON `e`.`{ColumnEntriesPrimaryKey}`=`d`.`{ColumnExternalPrimaryKey}` " +
+                                                            $"LEFT JOIN `{TablePunishments}` AS `pnsh` ON `e`.`{ColumnEntriesPrimaryKey}`=`pnsh`.`{ColumnExternalPrimaryKey}` " +
+                                                            $"WHERE `e`.`{ColumnEntriesSteam64}` = @0 " +
+                                                            $"AND `e`.`{ColumnEntriesType}` = '{nameof(ModerationEntryType.AssetBan)}' " +
+                                                            $"AND `d`.`{ColumnDurationsForgiven}` = 0 " +
+                                                            $"AND `e`.`{ColumnEntriesRemoved}` = 0 " +
+                                                            $"AND {MySqlSnippets.BuildCheckDurationClause("d", "e", ColumnDurationsDurationSeconds, ColumnEntriesResolvedTimestamp, ColumnEntriesStartTimestamp)} " +
+                                                            $"AND (NOT EXISTS (SELECT NULL FROM `{TableAssetBanTypeFilters}` AS `a` WHERE `a`.`{ColumnExternalPrimaryKey}`=`e`.`{ColumnEntriesPrimaryKey}`) " +
+                                                            $"OR (@1 IN (SELECT `a`.`{ColumnAssetBanFiltersType}` FROM `{TableAssetBanTypeFilters}` AS `a` WHERE `a`.`{ColumnExternalPrimaryKey}`=`e`.`{ColumnEntriesPrimaryKey}`))) " +
+                                                            $"ORDER BY (IF(`d`.`{ColumnDurationsDurationSeconds}` < 0, 2147483647, `d`.`{ColumnDurationsDurationSeconds}`)) DESC;";
+
+
+    public async Task<AssetBan?> GetActiveAssetBan(CSteamID steam64, VehicleType type, bool detail = true, CancellationToken token = default)
     {
         AssetBan? result = null;
         
-        await Sql.QueryAsync(
-            $"SELECT {SqlTypes.ColumnListAliased("e", _columns)}, " +
-            $"{SqlTypes.ColumnListAliased("d", ColumnDurationsDurationSeconds, ColumnDurationsForgiven, ColumnDurationsForgivenBy, ColumnDurationsForgivenTimestamp, ColumnDurationsForgivenReason)}, " +
-            $"{SqlTypes.ColumnListAliased("pnsh", ColumnPunishmentsPresetType, ColumnPunishmentsPresetLevel)}" +
-            $"FROM `{TableEntries}` AS `e` LEFT JOIN `{TableDurationPunishments}` AS `d` ON `e`.`{ColumnEntriesPrimaryKey}`=`d`.`{ColumnExternalPrimaryKey}` LEFT JOIN `{TablePunishments}` AS `pnsh` ON `e`.`{ColumnEntriesPrimaryKey}`=`pnsh`.`{ColumnExternalPrimaryKey}` " +
-            $"WHERE `e`.`{ColumnEntriesSteam64}` = @0 " +
-            $"AND `e`.`{ColumnEntriesType}` = '" + nameof(ModerationEntryType.AssetBan) + "' " +
-            $"AND `d`.`{ColumnDurationsForgiven}` = 0 " +
-            $"AND `e`.`{ColumnEntriesRemoved}` = 0 " +
-            $"AND {Util.BuildCheckDurationClause("d", "e", ColumnDurationsDurationSeconds, ColumnEntriesResolvedTimestamp, ColumnEntriesStartTimestamp)} " +
-            $"AND (NOT EXISTS (SELECT NULL FROM `{TableAssetBanTypeFilters}` AS `a` WHERE `a`.`{ColumnExternalPrimaryKey}`=`e`.`{ColumnEntriesPrimaryKey}`) " +
-            $"OR (@1 IN (SELECT `a`.`{ColumnAssetBanFiltersType}` FROM `{TableAssetBanTypeFilters}` AS `a` WHERE `a`.`{ColumnExternalPrimaryKey}`=`e`.`{ColumnEntriesPrimaryKey}`))) " +
-            $"ORDER BY (IF(`d`.`{ColumnDurationsDurationSeconds}` < 0, 2147483647, `d`.`{ColumnDurationsDurationSeconds}`)) DESC;",
-            new object[] { steam64, type.ToString() },
+        await Sql.QueryAsync(GetActiveAssetBanQuery,
+            [ steam64.m_SteamID, type.ToString() ],
+            token,
             reader =>
             {
-                result = ReadEntry(1 | (1 << 9), reader) as AssetBan;
-                return true;
-            }, token).ConfigureAwait(false);
+                result = ReadEntry(1 | (1 << 10), reader) as AssetBan;
+                return false;
+            }).ConfigureAwait(false);
 
         if (detail && result != null)
-            await Fill(new IModerationEntry[] { result }, true, false, token: token).ConfigureAwait(false);
+            await Fill([ result ], true, false, token: token).ConfigureAwait(false);
 
         return result;
     }
     private int AppendReadColumns(StringBuilder sb, Type type, bool baseOnly)
     {
-        sb.Append(SqlTypes.ColumnListAliased("main", _columns));
+        sb.Append(MySqlSnippets.AliasedColumnList("main", Columns));
         int flag = 0;
         if (type.IsAssignableFrom(typeof(IDurationModerationEntry)) || typeof(IDurationModerationEntry).IsAssignableFrom(type) || type.IsAssignableFrom(typeof(DurationPunishment)) || typeof(DurationPunishment).IsAssignableFrom(type))
         {
             flag |= 1;
-            sb.Append("," + SqlTypes.ColumnListAliased("dur", ColumnDurationsDurationSeconds, ColumnDurationsForgiven, ColumnDurationsForgivenBy, ColumnDurationsForgivenTimestamp, ColumnDurationsForgivenReason));
+            sb.Append("," + MySqlSnippets.AliasedColumnList("dur", ColumnDurationsDurationSeconds, ColumnDurationsForgiven, ColumnDurationsForgivenBy, ColumnDurationsForgivenTimestamp, ColumnDurationsForgivenReason));
         }
         if (type.IsAssignableFrom(typeof(Mute)) || typeof(Mute).IsAssignableFrom(type))
         {
@@ -1066,32 +1250,37 @@ public abstract class DatabaseInterface
         if (!baseOnly && (type.IsAssignableFrom(typeof(BugReportAccepted)) || typeof(BugReportAccepted).IsAssignableFrom(type)))
         {
             flag |= 1 << 4;
-            sb.Append("," + SqlTypes.ColumnListAliased("braccept", ColumnTableBugReportAcceptedsIssue, ColumnTableBugReportAcceptedsCommit));
+            sb.Append("," + MySqlSnippets.AliasedColumnList("braccept", ColumnTableBugReportAcceptedsIssue, ColumnTableBugReportAcceptedsCommit));
         }
         if (!baseOnly && (type.IsAssignableFrom(typeof(Teamkill)) || typeof(Teamkill).IsAssignableFrom(type)))
         {
             flag |= 1 << 5;
-            sb.Append("," + SqlTypes.ColumnListAliased("tks", ColumnTeamkillsAsset, ColumnTeamkillsAssetName, ColumnTeamkillsDeathCause, ColumnTeamkillsDistance, ColumnTeamkillsLimb));
+            sb.Append("," + MySqlSnippets.AliasedColumnList("tks", ColumnTeamkillsAsset, ColumnTeamkillsAssetName, ColumnTeamkillsDeathCause, ColumnTeamkillsDistance, ColumnTeamkillsLimb));
         }
         if (!baseOnly && (type.IsAssignableFrom(typeof(VehicleTeamkill)) || typeof(VehicleTeamkill).IsAssignableFrom(type)))
         {
             flag |= 1 << 6;
-            sb.Append("," + SqlTypes.ColumnListAliased("vtks", ColumnVehicleTeamkillsDamageOrigin, ColumnVehicleTeamkillsVehicleAsset, ColumnVehicleTeamkillsVehicleAssetName));
+            sb.Append("," + MySqlSnippets.AliasedColumnList("vtks", ColumnVehicleTeamkillsDamageOrigin, ColumnVehicleTeamkillsVehicleAsset, ColumnVehicleTeamkillsVehicleAssetName));
         }
         if (!baseOnly && (type.IsAssignableFrom(typeof(Appeal)) || typeof(Appeal).IsAssignableFrom(type)))
         {
             flag |= 1 << 7;
-            sb.Append("," + SqlTypes.ColumnListAliased("app", ColumnAppealsState, ColumnAppealsDiscordId, ColumnAppealsTicketId));
+            sb.Append("," + MySqlSnippets.AliasedColumnList("app", ColumnAppealsState, ColumnAppealsDiscordId, ColumnAppealsTicketId));
         }
         if (type.IsAssignableFrom(typeof(Report)) || typeof(Report).IsAssignableFrom(type))
         {
             flag |= 1 << 8;
-            sb.Append(",`rep`.`" + ColumnReportsType + "`");
+            sb.Append("," + MySqlSnippets.AliasedColumnList("rep", ColumnReportsType, ColumnReportsScreenshotData));
+            if (type.IsAssignableFrom(typeof(VoiceChatAbuseReport)) || typeof(VoiceChatAbuseReport).IsAssignableFrom(type))
+            {
+                flag |= 1 << 9;
+                sb.Append(",`vrep`.`" + ColumnVoiceChatReportsData + "`");
+            }
         }
         if (type.IsAssignableFrom(typeof(Punishment)) || typeof(Punishment).IsAssignableFrom(type))
         {
-            flag |= 1 << 9;
-            sb.Append("," + SqlTypes.ColumnListAliased("pnsh", ColumnPunishmentsPresetType, ColumnPunishmentsPresetLevel));
+            flag |= 1 << 10;
+            sb.Append("," + MySqlSnippets.AliasedColumnList("pnsh", ColumnPunishmentsPresetType, ColumnPunishmentsPresetLevel));
         }
 
         return flag;
@@ -1138,16 +1327,20 @@ public abstract class DatabaseInterface
         }
         if ((flag & (1 << 9)) != 0)
         {
+            sb.Append($" LEFT JOIN `{TableVoiceChatReports}` AS `vrep` ON `main`.`{ColumnEntriesPrimaryKey}` = `vrep`.`{ColumnExternalPrimaryKey}`");
+        }
+        if ((flag & (1 << 10)) != 0)
+        {
             sb.Append($" LEFT JOIN `{TablePunishments}` AS `pnsh` ON `main`.`{ColumnEntriesPrimaryKey}` = `pnsh`.`{ColumnExternalPrimaryKey}`");
         }
     }
-    private static ModerationEntry? ReadEntry(int flag, MySqlDataReader reader)
+    private ModerationEntry? ReadEntry(int flag, MySqlDataReader reader)
     {
         ModerationEntryType? type = reader.ReadStringEnum<ModerationEntryType>(1);
         Type? csType = type.HasValue ? ModerationReflection.GetType(type.Value) : null;
         if (csType == null)
         {
-            Logging.LogWarning($"Invalid type while reading moderation entry: {reader.GetString(1)}.");
+            _logger.LogWarning("Invalid type while reading moderation entry: {0}.", reader.GetString(1));
             return null;
         }
 
@@ -1167,8 +1360,9 @@ public abstract class DatabaseInterface
         entry.RemovedBy = reader.IsDBNull(13) ? null : Actors.GetActor(reader.GetUInt64(13));
         entry.RemovedTimestamp = reader.IsDBNull(14) ? null : DateTime.SpecifyKind(reader.GetDateTime(14), DateTimeKind.Utc);
         entry.RemovedMessage = reader.IsDBNull(15) ? null : reader.GetString(15);
+        entry.DiscordMessageId = reader.IsDBNull(16) ? 0 : reader.GetUInt64(16);
 
-        int offset = 15;
+        int offset = 16;
         if ((flag & 1) != 0)
         {
             offset += 5;
@@ -1189,7 +1383,7 @@ public abstract class DatabaseInterface
             ++offset;
             if (entry is Mute mute)
             {
-                MuteType? sec = reader.IsDBNull(offset) ? null : reader.ReadStringEnum<MuteType>(offset);
+                MuteType? sec = reader.ReadStringEnum<MuteType>(offset);
                 mute.Type = sec ?? MuteType.None;
             }
         }
@@ -1206,7 +1400,7 @@ public abstract class DatabaseInterface
             ++offset;
             if (entry is PlayerReportAccepted praccept)
             {
-                praccept.ReportKey = reader.IsDBNull(offset) ? PrimaryKey.NotAssigned : reader.GetUInt32(offset);
+                praccept.ReportKey = reader.IsDBNull(offset) ? 0u : reader.GetUInt32(offset);
             }
         }
         if ((flag & (1 << 4)) != 0)
@@ -1223,11 +1417,11 @@ public abstract class DatabaseInterface
             offset += 5;
             if (entry is Teamkill tk)
             {
-                tk.Item = reader.IsDBNull(offset - 4) ? null : reader.ReadGuidString(offset - 4);
+                tk.Item = reader.ReadGuidString(offset - 4);
                 tk.ItemName = reader.IsDBNull(offset - 3) ? null : reader.GetString(offset - 3);
-                tk.Cause = reader.IsDBNull(offset - 2) ? null : reader.ReadStringEnum<EDeathCause>(offset - 2);
+                tk.Cause = reader.ReadStringEnum<EDeathCause>(offset - 2);
                 tk.Distance = reader.IsDBNull(offset - 1) ? null : reader.GetDouble(offset - 1);
-                tk.Limb = reader.IsDBNull(offset) ? null : reader.ReadStringEnum<ELimb>(offset);
+                tk.Limb = reader.ReadStringEnum<ELimb>(offset);
             }
         }
         if ((flag & (1 << 6)) != 0)
@@ -1235,8 +1429,8 @@ public abstract class DatabaseInterface
             offset += 3;
             if (entry is VehicleTeamkill tk)
             {
-                tk.Origin = reader.IsDBNull(offset - 2) ? null : reader.ReadStringEnum<EDamageOrigin>(offset - 2);
-                tk.Vehicle = reader.IsDBNull(offset - 1) ? null : reader.ReadGuidString(offset - 1);
+                tk.Origin = reader.ReadStringEnum<EDamageOrigin>(offset - 2);
+                tk.Vehicle = reader.ReadGuidString(offset - 1);
                 tk.VehicleName = reader.IsDBNull(offset) ? null : reader.GetString(offset);
             }
         }
@@ -1247,24 +1441,35 @@ public abstract class DatabaseInterface
             {
                 app.AppealState = !reader.IsDBNull(offset - 2) && reader.GetBoolean(offset - 2);
                 app.DiscordUserId = reader.IsDBNull(offset - 1) ? null : reader.GetUInt64(offset - 1);
-                app.TicketId = reader.IsDBNull(offset) ? Guid.Empty : (reader.ReadGuidString(offset) ?? Guid.Empty);
+                app.TicketId = reader.ReadGuidStringOrDefault(offset);
             }
         }
         if ((flag & (1 << 8)) != 0)
         {
-            ++offset;
+            offset += 2;
             if (entry is Report rep)
             {
-                ReportType? sec = reader.IsDBNull(offset) ? null : reader.ReadStringEnum<ReportType>(offset);
+                ReportType? sec = reader.ReadStringEnum<ReportType>(offset - 1);
+                byte[]? imgData = reader.IsDBNull(offset) ? null : reader.ReadByteArray(offset);
                 rep.Type = sec ?? ReportType.Custom;
+                rep.ScreenshotJpgData = imgData;
             }
         }
         if ((flag & (1 << 9)) != 0)
         {
+            ++offset;
+            if (entry is VoiceChatAbuseReport vrep)
+            {
+                byte[] voiceData = reader.ReadByteArray(offset);
+                vrep.PreviousVoiceData = voiceData;
+            }
+        }
+        if ((flag & (1 << 10)) != 0)
+        {
             offset += 2;
             if (entry is Punishment punishment)
             {
-                punishment.PresetType = reader.IsDBNull(offset - 1) ? PresetType.None : reader.ReadStringEnum(offset - 1, PresetType.None);
+                punishment.PresetType = reader.ReadStringEnum(offset - 1, PresetType.None);
                 punishment.PresetLevel = reader.IsDBNull(offset) ? 0 : reader.GetInt32(offset);
             }
         }
@@ -1274,7 +1479,7 @@ public abstract class DatabaseInterface
     private static Evidence ReadEvidence(MySqlDataReader reader, int offset)
     {
         return new Evidence(
-            reader.IsDBNull(offset) ? PrimaryKey.NotAssigned : reader.GetUInt32(offset),
+            reader.IsDBNull(offset) ? 0u : reader.GetUInt32(offset),
             reader.GetString(1 + offset),
             reader.IsDBNull(3 + offset) ? null : reader.GetString(3 + offset),
             reader.IsDBNull(2 + offset) ? null : reader.GetString(2 + offset),
@@ -1292,12 +1497,12 @@ public abstract class DatabaseInterface
     public async Task AddOrUpdate(IModerationEntry entry, CancellationToken token = default)
     {
         token.ThrowIfCancellationRequested();
-        PrimaryKey pk = entry.Id;
-        bool isNew = !pk.IsValid;
-        object[] objs = new object[!isNew ? 16 : 15];
+        uint pk = entry.Id;
+        bool isNew = pk == 0u;
+        object[] objs = new object[!isNew ? 17 : 16];
         objs[0] = (ModerationReflection.GetType(entry.GetType()) ?? ModerationEntryType.None).ToString();
         objs[1] = entry.Player;
-        objs[2] = (object?)entry.Message.MaxLength(1024) ?? DBNull.Value;
+        objs[2] = (object?)entry.Message.Truncate(1024) ?? DBNull.Value;
         objs[3] = entry.IsLegacy;
         objs[4] = entry.StartedTimestamp.UtcDateTime;
         objs[5] = entry.ResolvedTimestamp.HasValue ? entry.ResolvedTimestamp.Value.UtcDateTime : DBNull.Value;
@@ -1310,29 +1515,28 @@ public abstract class DatabaseInterface
         objs[12] = entry.RemovedBy == null ? DBNull.Value : entry.RemovedBy.Id;
         objs[13] = entry.RemovedTimestamp.HasValue ? entry.RemovedTimestamp.Value.UtcDateTime : DBNull.Value;
         objs[14] = (object?)entry.RemovedMessage ?? DBNull.Value;
+        objs[15] = entry.DiscordMessageId;
 
         if (!isNew)
-            objs[15] = pk.Key;
+            objs[16] = pk;
 
-        string query = F.BuildInitialInsertQuery(TableEntries, ColumnEntriesPrimaryKey, !isNew, null, null,
-            ColumnEntriesType, ColumnEntriesSteam64, ColumnEntriesMessage,
-            ColumnEntriesIsLegacy, ColumnEntriesStartTimestamp, ColumnEntriesResolvedTimestamp, ColumnEntriesReputation,
-            ColumnEntriesPendingReputation, ColumnEntriesLegacyId,
-            ColumnEntriesRelavantLogsStartTimestamp, ColumnEntriesRelavantLogsEndTimestamp,
-            ColumnEntriesRemoved, ColumnEntriesRemovedBy, ColumnEntriesRemovedTimestamp, ColumnEntriesRemovedReason);
+        string query = MySqlSnippets.BuildInitialInsertQuery(TableEntries, ColumnEntriesPrimaryKey, !isNew, null, null, ColumnsNoPk);
 
-        await Sql.QueryAsync(query, objs, reader =>
+        await Sql.QueryAsync(query, objs, token, reader =>
         {
             pk = reader.GetUInt32(0);
-        }, token).ConfigureAwait(false);
+        }).ConfigureAwait(false);
 
-        if (pk.IsValid)
+        if (pk != 0u)
             entry.Id = pk;
 
         if (entry is not ModerationEntry mod)
+        {
+            InvokeSendModerationEntryUpdated(entry.Id, isNew);
             return;
+        }
 
-        List<object> args = new List<object>(mod.EstimateParameterCount()) { pk.Key };
+        List<object> args = new List<object>(mod.EstimateParameterCount()) { pk };
 
         StringBuilder builder = new StringBuilder(82);
 
@@ -1340,19 +1544,19 @@ public abstract class DatabaseInterface
 
         if (!hasNewEvidence)
         {
-            await Sql.NonQueryAsync(builder.ToString(), args.ToArray(), token).ConfigureAwait(false);
+            await Sql.NonQueryAsync(builder.ToString(), args, CancellationToken.None).ConfigureAwait(false);
         }
         else
         {
-            await Sql.QueryAsync(builder.ToString(), args.ToArray(), reader =>
+            await Sql.QueryAsync(builder.ToString(), args, CancellationToken.None, reader =>
             {
                 Evidence read = ReadEvidence(reader, 0);
                 for (int i = 0; i < mod.Evidence.Length; ++i)
                 {
                     ref Evidence existing = ref mod.Evidence[i];
-                    if (existing.Id.IsValid)
+                    if (existing.Id != 0u)
                     {
-                        if (read.Id.Key == existing.Id.Key)
+                        if (read.Id == existing.Id)
                         {
                             existing = read;
                             return;
@@ -1363,16 +1567,34 @@ public abstract class DatabaseInterface
                         existing = read;
                     }
                 }
-            }, token).ConfigureAwait(false);
+            }).ConfigureAwait(false);
         }
 
         Cache.AddOrUpdate(mod);
 
-        if (isNew)
-            UCWarfare.RunOnMainThread(() => OnNewModerationEntryAdded?.Invoke(mod));
+        if (WarfareModule.IsActive)
+        {
+            UniTask.Create(async () =>
+            {
+                await UniTask.SwitchToMainThread(CancellationToken.None);
+
+                if (isNew)
+                    OnNewModerationEntryAdded?.Invoke(mod);
+                else
+                    OnModerationEntryUpdated?.Invoke(mod);
+            });
+        }
         else
-            UCWarfare.RunOnMainThread(() => OnModerationEntryUpdated?.Invoke(mod));
+        {
+            if (isNew)
+                OnNewModerationEntryAdded?.Invoke(mod);
+            else
+                OnModerationEntryUpdated?.Invoke(mod);
+        }
+
+        InvokeSendModerationEntryUpdated(mod.Id, isNew);
     }
+
     public async Task<int> GetNextPresetLevel(ulong player, PresetType type, CancellationToken token = default)
     {
         if (type == PresetType.None)
@@ -1382,104 +1604,122 @@ public abstract class DatabaseInterface
         await Sql.QueryAsync($"SELECT MAX(`pnsh`.`{ColumnPunishmentsPresetLevel}`) " +
                              $"FROM `{TableEntries}` as `main` " +
                              $"LEFT JOIN `{TablePunishments}` AS `pnsh` ON `main`.`{ColumnEntriesPrimaryKey}` = `pnsh`.`{ColumnExternalPrimaryKey}` " +
-                             $"WHERE `main`.`{ColumnEntriesSteam64}` = @1 AND `pnsh`.`{ColumnPunishmentsPresetType}` = @0 AND `main`.`{ColumnEntriesRemoved}` = 0;", new object[] { type.ToString(), player },
+                             $"WHERE `main`.`{ColumnEntriesSteam64}` = @1 AND `pnsh`.`{ColumnPunishmentsPresetType}` = @0 AND `main`.`{ColumnEntriesRemoved}` = 0;", [ type.ToString(), player ],
+            token,
             reader =>
             {
                 if (!reader.IsDBNull(0))
                     max = reader.GetInt32(0);
 
-                return true;
+                return false;
 
-            }, token).ConfigureAwait(false);
+            }).ConfigureAwait(false);
 
         if (max == -1)
             return 1;
         
         return max + 1;
     }
+
     public async Task<ulong[]> GetActorSteam64IDs(IList<IModerationActor> actors, CancellationToken token = default)
     {
         ulong[] steamIds = new ulong[actors.Count];
-        bool anyDiscord = false;
-        StringBuilder? sb = null;
-        for (int i = 0; i < steamIds.Length; ++i)
+        int discordCt = 0;
+        int index = -1;
+        foreach (IModerationActor actor in actors)
         {
-            IModerationActor actor = actors[i];
             if (actor is DiscordActor)
-            {
-                sb ??= new StringBuilder("IN (");
-                if (anyDiscord)
-                    sb.Append(',');
-                else anyDiscord = true;
-                sb.Append(actor.Id.ToString(CultureInfo.InvariantCulture));
-            }
+                ++discordCt;
 
-            steamIds[i] = actor.Id;
+            steamIds[++index] = actor.Id;
         }
 
-        if (!anyDiscord)
+        if (discordCt > 0)
         {
-            for (int k = 0; k < steamIds.Length; ++k)
+            ulong[] discordIds = new ulong[discordCt];
+            discordCt = 0;
+            foreach (IModerationActor actor in actors)
             {
-                if (!Util.IsValidSteam64Id(steamIds[k]))
-                    steamIds[k] = 0ul;
+                if (actor is not DiscordActor)
+                    continue;
+                discordIds[discordCt] = actor.Id;
+                ++discordCt;
             }
 
-            return steamIds;
-        }
-
-        await Sql.QueryAsync(
-            $"SELECT `{WarfareSQL.ColumnDiscordIdsSteam64}`,`{WarfareSQL.ColumnDiscordIdsDiscordId}` FROM `{WarfareSQL.TableDiscordIds}` WHERE `{WarfareSQL.ColumnDiscordIdsDiscordId}` {sb});",
-            null, reader =>
+            ulong[] steam64Ids = await _userDataService.GetSteam64sAsync(discordIds, token).ConfigureAwait(false);
+            index = -1;
+            discordCt = 0;
+            foreach (IModerationActor actor in actors)
             {
-                ulong d = reader.GetUInt64(1);
-                for (int j = 0; j < steamIds.Length; ++j)
-                {
-                    if (d == steamIds[j])
-                    {
-                        steamIds[j] = reader.GetUInt64(0);
-                        break;
-                    }
-                }
-            }, token);
+                ++index;
+                if (actor is not DiscordActor)
+                    continue;
+
+                steamIds[index] = steam64Ids[discordCt];
+                ++discordCt;
+            }
+        }
 
         for (int k = 0; k < steamIds.Length; ++k)
         {
-            if (!Util.IsValidSteam64Id(steamIds[k]))
+            if (new CSteamID(steamIds[k]).GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
                 steamIds[k] = 0ul;
         }
 
         return steamIds;
     }
+
+    public Task<ulong> GetActorSteam64ID(IModerationActor actor, CancellationToken token = default)
+    {
+        ulong id = actor.Id;
+        return actor is DiscordActor
+            ? _userDataService.GetSteam64Async(id, token)
+            : Task.FromResult(Unsafe.As<ulong, CSteamID>(ref id).GetEAccountType() == EAccountType.k_EAccountTypeIndividual ? id : 0ul);
+    }
+
     public async Task CacheUsernames(ulong[] players, CancellationToken token = default)
     {
-        if (UCWarfare.IsLoaded)
+        PlayerNames[] names = await _userDataService.GetUsernamesAsync(players, token);
+        for (int i = 0; i < names.Length; ++i)
         {
-            _ = await Sql.GetUsernamesAsync(players, token);
-        }
-        else
-        {
-            PlayerNames[] names = await Sql.GetUsernamesAsync(players, token);
-            for (int i = 0; i < names.Length; ++i)
-            {
-                PlayerNames name = names[i];
-                UpdateUsernames(name.Steam64, name);
-            }
+            PlayerNames name = names[i];
+            UpdateUsernames(name.Steam64, name);
         }
     }
-    public async Task<PlayerIPAddress[]> GetIPAddresses(ulong player, bool removeFiltered, CancellationToken token = default)
+
+    public void SendSuspectedCheaterMessage(CSteamID steam64, uint banId)
+    {
+        Task.Run(async () =>
+        {
+            try
+            {
+                await SendSuspectedCheater(steam64.m_SteamID, banId).IgnoreNoConnections();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error sending suspected cheater message.");
+            }
+        });
+    }
+
+    [RpcSend]
+    protected virtual RpcTask SendSuspectedCheater(ulong steam64, uint ucsBanId) => RpcTask.NotImplemented;
+
+    private static readonly string GetIPAddressesQuery = $"SELECT {MySqlSnippets.ColumnList(ColumnIPAddressesPrimaryKey,
+        ColumnIPAddressesSteam64, ColumnIPAddressesPackedIP, ColumnIPAddressesLoginCount,
+        ColumnIPAddressesLastLogin, ColumnIPAddressesFirstLogin)} FROM `{TableIPAddresses}` WHERE `{ColumnIPAddressesSteam64}`=@0;";
+
+    public async Task<PlayerIPAddress[]> GetIPAddresses(CSteamID player, bool removeFiltered, CancellationToken token = default)
     {
         List<PlayerIPAddress> addresses = new List<PlayerIPAddress>(4);
 
-        await Sql.QueryAsync($"SELECT {SqlTypes.ColumnList(WarfareSQL.ColumnIPAddressesPrimaryKey,
-            WarfareSQL.ColumnIPAddressesSteam64, WarfareSQL.ColumnIPAddressesPackedIP, WarfareSQL.ColumnIPAddressesLoginCount,
-            WarfareSQL.ColumnIPAddressesLastLogin, WarfareSQL.ColumnIPAddressesFirstLogin)} FROM `{WarfareSQL.TableIPAddresses}` WHERE `{WarfareSQL.ColumnIPAddressesSteam64}`=@0;",
-            new object[] { player }, reader =>
+        await Sql.QueryAsync(GetIPAddressesQuery,
+            [ player.m_SteamID ], token, reader =>
             {
                 addresses.Add(new PlayerIPAddress(reader.GetUInt32(0), reader.GetUInt64(1), reader.GetUInt32(2), reader.GetInt32(3),
                     reader.IsDBNull(5) ? null : new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(5), DateTimeKind.Utc)),
                     new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(4), DateTimeKind.Utc))));
-            }, token).ConfigureAwait(false);
+            }).ConfigureAwait(false);
 
         IPv4AddressRangeFilter[] remotePlay = RemotePlayAddressFilters;
 
@@ -1488,16 +1728,16 @@ public abstract class DatabaseInterface
             PlayerIPAddress ipAddr = addresses[i];
             for (int j = 0; j < remotePlay.Length; ++j)
             {
-                if (remotePlay[j].IsFiltered(ipAddr.PackedIP))
+                if (!remotePlay[j].IsFiltered(ipAddr.PackedIP))
+                    continue;
+
+                ipAddr.RemotePlay = true;
+                if (removeFiltered)
                 {
-                    ipAddr.RemotePlay = true;
-                    if (removeFiltered)
-                    {
-                        addresses.RemoveAt(i);
-                        --i;
-                    }
-                    break;
+                    addresses.RemoveAt(i);
+                    --i;
                 }
+                break;
             }
         }
 
@@ -1513,24 +1753,27 @@ public abstract class DatabaseInterface
 
         return addressArray;
     }
-    public async Task<PlayerHWID[]> GetHWIDs(ulong player, CancellationToken token = default)
+
+    private static readonly string GetHWIDsQuery = $"SELECT {MySqlSnippets.ColumnList(ColumnHWIDsPrimaryKey, ColumnHWIDsIndex,
+        ColumnHWIDsSteam64, ColumnHWIDsHWID, ColumnHWIDsLoginCount,
+        ColumnHWIDsLastLogin, ColumnHWIDsFirstLogin)} FROM `{TableHWIDs}` WHERE `{ColumnHWIDsSteam64}`=@0";
+
+    public async Task<PlayerHWID[]> GetHWIDs(CSteamID player, CancellationToken token = default)
     {
         List<PlayerHWID> hwids = new List<PlayerHWID>(9);
 
-        await Sql.QueryAsync($"SELECT {SqlTypes.ColumnList(WarfareSQL.ColumnHWIDsPrimaryKey, WarfareSQL.ColumnHWIDsIndex,
-            WarfareSQL.ColumnHWIDsSteam64, WarfareSQL.ColumnHWIDsHWID, WarfareSQL.ColumnHWIDsLoginCount,
-            WarfareSQL.ColumnHWIDsLastLogin, WarfareSQL.ColumnHWIDsFirstLogin)} FROM `{WarfareSQL.TableHWIDs}` WHERE `{WarfareSQL.ColumnHWIDsSteam64}`=@0",
-            new object[] { player }, reader =>
+        await Sql.QueryAsync(GetHWIDsQuery,
+            [ player.m_SteamID ], token, reader =>
             {
                 hwids.Add(new PlayerHWID(reader.GetUInt32(0), reader.GetInt32(1),
                     reader.GetUInt64(2), HWID.ReadFromDataReader(3, reader), reader.GetInt32(4),
                     reader.IsDBNull(6) ? null : new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(6), DateTimeKind.Utc)),
                     new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(5), DateTimeKind.Utc))));
-            }, token).ConfigureAwait(false);
+            }).ConfigureAwait(false);
 
         return hwids.ToArray();
     }
-    public bool IsRemotePlay(IPAddress address) => IsRemotePlay(OffenseManager.Pack(address));
+    public bool IsRemotePlay(IPAddress address) => IsRemotePlay(IPv4Range.Pack(address));
     public bool IsRemotePlay(uint address)
     {
         IPv4AddressRangeFilter[] filters = RemotePlayAddressFilters;
@@ -1543,7 +1786,7 @@ public abstract class DatabaseInterface
 
         return false;
     }
-    public bool IsAnyRemotePlay(IEnumerable<IPAddress> addresses) => IsAnyRemotePlay(addresses.Select(OffenseManager.Pack));
+    public bool IsAnyRemotePlay(IEnumerable<IPAddress> addresses) => IsAnyRemotePlay(addresses.Select(IPv4Range.Pack));
     public bool IsAnyRemotePlay(IEnumerable<uint> addresses)
     {
         IPv4AddressRangeFilter[] filters = RemotePlayAddressFilters;
@@ -1559,54 +1802,97 @@ public abstract class DatabaseInterface
 
         return false;
     }
-    public async Task<bool> IsIPFiltered(IPAddress address, ulong steam64, CancellationToken token = default)
+    public async Task<bool> IsIPFiltered(uint packedIp, CSteamID steam64, CancellationToken token = default)
     {
         IIPAddressFilter[] filters = IPAddressFilters;
 
         for (int i = 0; i < filters.Length; ++i)
         {
-            if (await filters[i].IsFiltered(address, steam64, token).ConfigureAwait(false))
+            if (await filters[i].IsFiltered(packedIp, steam64, token).ConfigureAwait(false))
                 return true;
         }
 
         return false;
     }
-    public Task<StandardErrorCode> WhitelistIP(ulong targetId, ulong callerId, IPv4Range range, DateTimeOffset timestamp, CancellationToken token = default)
+    public Task<bool> WhitelistIP(CSteamID targetId, CSteamID callerId, IPv4Range range, DateTimeOffset timestamp, CancellationToken token = default)
         => WhitelistIP(targetId, callerId, range, true, timestamp, token);
-    public Task<StandardErrorCode> UnwhitelistIP(ulong targetId, ulong callerId, IPv4Range range, DateTimeOffset timestamp, CancellationToken token = default)
+    public Task<bool> UnwhitelistIP(CSteamID targetId, CSteamID callerId, IPv4Range range, DateTimeOffset timestamp, CancellationToken token = default)
         => WhitelistIP(targetId, callerId, range, false, timestamp, token);
-    public async Task<StandardErrorCode> WhitelistIP(ulong targetId, ulong callerId, IPv4Range range, bool add, DateTimeOffset timestamp, CancellationToken token)
+    public async Task<bool> WhitelistIP(CSteamID targetId, CSteamID callerId, IPv4Range range, bool add, DateTimeOffset timestamp, CancellationToken token)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (add)
         {
             await Sql.NonQueryAsync(
-                $"DELETE FROM `{WarfareSQL.TableIPWhitelists}` WHERE `{WarfareSQL.ColumnIPWhitelistsSteam64}` = @0 AND " +
-                $"`{WarfareSQL.ColumnIPWhitelistsIPRange}` = @2; INSERT INTO `{WarfareSQL.TableIPWhitelists}` " +
-                $"(`{WarfareSQL.ColumnIPWhitelistsSteam64}`, `{WarfareSQL.ColumnIPWhitelistsAdmin}`, `{WarfareSQL.ColumnIPWhitelistsIPRange}`) VALUES (@0, @1, @2);",
-                new object[] { targetId, callerId, range.ToString() }, token).ConfigureAwait(false);
+                $"DELETE FROM `{TableIPWhitelists}` WHERE `{ColumnIPWhitelistsSteam64}` = @0 AND " +
+                $"`{ColumnIPWhitelistsIPRange}` = @2; INSERT INTO `{TableIPWhitelists}` " +
+                $"(`{ColumnIPWhitelistsSteam64}`, `{ColumnIPWhitelistsAdmin}`, `{ColumnIPWhitelistsIPRange}`) VALUES (@0, @1, @2);",
+                [ targetId.m_SteamID, callerId.m_SteamID, range.ToString() ], token).ConfigureAwait(false);
         }
         else
         {
 
-            StandardErrorCode success = (await Sql.NonQueryAsync(
-                $"DELETE FROM `{WarfareSQL.TableIPWhitelists}` WHERE `{WarfareSQL.ColumnIPWhitelistsSteam64}` = @0 AND `{WarfareSQL.ColumnIPWhitelistsIPRange}` = @1;",
-                new object[] { targetId, range.ToString() }, token).ConfigureAwait(false)) > 0 ? StandardErrorCode.Success : StandardErrorCode.NotFound;
+            bool success = await Sql.NonQueryAsync(
+                $"DELETE FROM `{TableIPWhitelists}` WHERE `{ColumnIPWhitelistsSteam64}` = @0 AND `{ColumnIPWhitelistsIPRange}` = @1;",
+                [ targetId.m_SteamID, range.ToString() ], token).ConfigureAwait(false) > 0;
 
-            if (success == StandardErrorCode.NotFound)
-                return StandardErrorCode.NotFound;
+            if (!success)
+                return false;
         }
 
-        if (UCWarfare.IsLoaded)
+        if (Provider.isInitialized)
         {
-            ActionLog.Add(ActionLogType.IPWhitelist, $"IP {(add ? "WHITELIST" : "BLACKLIST")} {targetId.ToString(CultureInfo.InvariantCulture)} FOR {range}.", callerId);
-
-            L.Log($"{targetId} was ip {(add ? "whitelisted" : "blacklisted")} by {callerId} on {range}.", ConsoleColor.Cyan);
+            // todo: ActionLog.Add(ActionLogType.IPWhitelist, $"IP {(add ? "WHITELIST" : "BLACKLIST")} {targetId.m_SteamID.ToString(CultureInfo.InvariantCulture)} FOR {range}.", callerId);
         }
 
-        return StandardErrorCode.Success;
+        _logger.LogInformation("{0} was ip {1} by {2} on {3}.", targetId, add ? "whitelisted" : "blacklisted", callerId, range);
+        return true;
+    }
+
+    private void InvokeSendModerationEntryUpdated(uint entryId, bool isNew)
+    {
+        try
+        {
+            SendModerationEntryUpdated(entryId, isNew);
+        }
+        catch (NotImplementedException)
+        {
+            _logger.LogWarning("Moderation.DatabaseInterface was not created as an RPC service.");
+        }
+        catch (RpcNoConnectionsException) { }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Error sending moderation entry update via RPC.");
+        }
+    }
+
+    [RpcSend("ReceiveModerationEntryUpdated")]
+    protected virtual void SendModerationEntryUpdated(uint entryId, bool isNew) { _ = RpcTask.NotImplemented; }
+
+    [RpcReceive("SendModerationEntryUpdated")]
+    private void ReceiveModerationEntryUpdated(uint entryId, bool isNew)
+    {
+        Task.Run(async () =>
+        {
+            try
+            {
+                ModerationEntry? entry = await ReadOne<ModerationEntry>(entryId, tryGetFromCache: false, detail: false, baseOnly: true, CancellationToken.None);
+
+                if (entry == null)
+                    return;
+
+                await UniTask.SwitchToMainThread();
+
+                if (isNew)
+                    OnNewModerationEntryAdded?.Invoke(entry);
+                else
+                    OnModerationEntryUpdated?.Invoke(entry);
+                // ReadOne auto-caches
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating moderation entry from cache after requested by homebase.");
+            }
+        });
     }
 
     public const string TableEntries = "moderation_entries";
@@ -1629,11 +1915,59 @@ public abstract class DatabaseInterface
     public const string TableAppealResponses = "moderation_appeal_responses";
     public const string TableReports = "moderation_reports";
     public const string TableReportChatRecords = "moderation_report_chat_records";
+    public const string TableVoiceChatReports = "moderation_voice_chat_reports";
     public const string TableReportStructureDamageRecords = "moderation_report_struct_dmg_records";
     public const string TableReportVehicleRequestRecords = "moderation_report_veh_req_records";
     public const string TableReportTeamkillRecords = "moderation_report_tk_records";
     public const string TableReportVehicleTeamkillRecords = "moderation_report_veh_tk_records";
     public const string TableReportShotRecords = "moderation_report_shot_record";
+    public const string TableIPAddresses = "ip_addresses";
+    public const string TableHWIDs = "hwids";
+    public const string TableIPWhitelists = "ip_whitelists";
+    public const string TableBanListWhitelists = "ban_list_whitelists";
+
+    public const string TableUserData = "users";
+    public const string ColumnUserDataSteam64 = "Steam64";
+    public const string ColumnUserDataPlayerName = "PlayerName";
+    public const string ColumnUserDataCharacterName = "CharacterName";
+    public const string ColumnUserDataNickName = "NickName";
+    public const string ColumnUserDataDisplayName = "DisplayName";
+    public const string ColumnUserDataFirstJoined = "FirstJoined";
+    public const string ColumnUserDataLastJoined = "LastJoined";
+    public const string ColumnUserDataDiscordId = "DiscordId";
+    public const string ColumnUserDataLastPrivacyPolicyAccepted = "LastPrivacyPolicyAccepted";
+    
+    [Obsolete] public const string TableUsernames = "usernames";
+    [Obsolete] public const string TableDiscordIds = "discordnames";
+
+    [Obsolete] public const string ColumnUsernamesSteam64 = "Steam64";
+    [Obsolete] public const string ColumnUsernamesPlayerName = "PlayerName";
+    [Obsolete] public const string ColumnUsernamesCharacterName = "CharacterName";
+    [Obsolete] public const string ColumnUsernamesNickName = "NickName";
+
+    [Obsolete] public const string ColumnDiscordIdsSteam64 = "Steam64";
+    [Obsolete] public const string ColumnDiscordIdsDiscordId = "DiscordID";
+
+    public const string ColumnIPWhitelistsSteam64 = "Steam64";
+    public const string ColumnIPWhitelistsIPRange = "IPRange";
+    public const string ColumnIPWhitelistsAdmin = "Admin";
+
+    public const string ColumnHWIDsPrimaryKey = "Id";
+    public const string ColumnHWIDsIndex = "Index";
+    public const string ColumnHWIDsSteam64 = "Steam64";
+    public const string ColumnHWIDsHWID = "HWID";
+    public const string ColumnHWIDsLoginCount = "LoginCount";
+    public const string ColumnHWIDsLastLogin = "LastLogin";
+    public const string ColumnHWIDsFirstLogin = "FirstLogin";
+
+    public const string ColumnIPAddressesPrimaryKey = "Id";
+    public const string ColumnIPAddressesSteam64 = "Steam64";
+    public const string ColumnIPAddressesPackedIP = "Packed";
+    public const string ColumnIPAddressesUnpackedIP = "Unpacked";
+    public const string ColumnIPAddressesLoginCount = "LoginCount";
+    public const string ColumnIPAddressesLastLogin = "LastLogin";
+    public const string ColumnIPAddressesFirstLogin = "FirstLogin";
+
 
     public const string ColumnExternalPrimaryKey = "Entry";
     
@@ -1654,6 +1988,7 @@ public abstract class DatabaseInterface
     public const string ColumnEntriesRemovedBy = "RemovedBy";
     public const string ColumnEntriesRemovedTimestamp = "RemovedTimeUTC";
     public const string ColumnEntriesRemovedReason = "RemovedReason";
+    public const string ColumnEntriesDiscordMessageId = "DiscordMessageId";
 
     public const string ColumnActorsId = "ActorId";
     public const string ColumnActorsRole = "ActorRole";
@@ -1713,6 +2048,9 @@ public abstract class DatabaseInterface
     public const string ColumnAppealResponsesResponse = "Response";
 
     public const string ColumnReportsType = "Type";
+    public const string ColumnReportsScreenshotData = "ScreenshotData";
+
+    public const string ColumnVoiceChatReportsData = "VoiceData";
 
     public const string ColumnReportsChatRecordsTimestamp = "TimeUTC";
     public const string ColumnReportsChatRecordsMessage = "Message";
@@ -1772,570 +2110,10 @@ public abstract class DatabaseInterface
     public const string ColumnReportsShotRecordHitAssetName = "HitAssetName";
     public const string ColumnReportsShotRecordTimestamp = "Timestamp";
 
-    public static Schema[] Schema =
-    {
-        new Schema(TableEntries, new Schema.Column[]
-        {
-            new Schema.Column(ColumnEntriesPrimaryKey, SqlTypes.INCREMENT_KEY)
-            {
-                PrimaryKey = true,
-                AutoIncrement = true
-            },
-            new Schema.Column(ColumnEntriesType, SqlTypes.Enum(exclude: ModerationEntryType.None)),
-            new Schema.Column(ColumnEntriesSteam64, SqlTypes.STEAM_64)
-            {
-                Indexed = true
-            },
-            new Schema.Column(ColumnEntriesMessage, SqlTypes.String(1024))
-            {
-                Nullable = true
-            },
-            new Schema.Column(ColumnEntriesIsLegacy, SqlTypes.BOOLEAN)
-            {
-                Default = "b'0'"
-            },
-            new Schema.Column(ColumnEntriesLegacyId, SqlTypes.UINT)
-            {
-                Nullable = true
-            },
-            new Schema.Column(ColumnEntriesStartTimestamp, SqlTypes.DATETIME),
-            new Schema.Column(ColumnEntriesResolvedTimestamp, SqlTypes.DATETIME)
-            {
-                Nullable = true
-            },
-            new Schema.Column(ColumnEntriesPendingReputation, SqlTypes.DOUBLE)
-            {
-                Nullable = true,
-                Default = "'0'"
-            },
-            new Schema.Column(ColumnEntriesReputation, SqlTypes.DOUBLE)
-            {
-                Default = "'0'"
-            },
-            new Schema.Column(ColumnEntriesRelavantLogsStartTimestamp, SqlTypes.DATETIME)
-            {
-                Nullable = true
-            },
-            new Schema.Column(ColumnEntriesRelavantLogsEndTimestamp, SqlTypes.DATETIME)
-            {
-                Nullable = true
-            },
-            new Schema.Column(ColumnEntriesRemoved, SqlTypes.BOOLEAN)
-            {
-                Default = "b'0'"
-            },
-            new Schema.Column(ColumnEntriesRemovedBy, SqlTypes.STEAM_64)
-            {
-                Indexed = true,
-                Nullable = true
-            },
-            new Schema.Column(ColumnEntriesRemovedTimestamp, SqlTypes.DATETIME)
-            {
-                Nullable = true
-            },
-            new Schema.Column(ColumnEntriesRemovedReason, SqlTypes.String(1024))
-            {
-                Nullable = true
-            }
-        }, true, typeof(ModerationEntry)),
-        new Schema(TableActors, new Schema.Column[]
-        {
-            new Schema.Column(ColumnExternalPrimaryKey, SqlTypes.INCREMENT_KEY)
-            {
-                ForeignKey = true,
-                ForeignKeyColumn = ColumnEntriesPrimaryKey,
-                ForeignKeyTable = TableEntries
-            },
-            new Schema.Column(ColumnActorsRole, SqlTypes.STRING_255),
-            new Schema.Column(ColumnActorsId, SqlTypes.STEAM_64)
-            {
-                Indexed = true
-            },
-            new Schema.Column(ColumnActorsAsAdmin, SqlTypes.BOOLEAN),
-            new Schema.Column(ColumnActorsIndex, SqlTypes.INT)
-        }, false, typeof(RelatedActor)),
-        new Schema(TableRelatedEntries, new Schema.Column[]
-        {
-            new Schema.Column(ColumnExternalPrimaryKey, SqlTypes.INCREMENT_KEY)
-            {
-                ForeignKey = true,
-                ForeignKeyColumn = ColumnEntriesPrimaryKey,
-                ForeignKeyTable = TableEntries
-            },
-            new Schema.Column(ColumnRelatedEntry, SqlTypes.INCREMENT_KEY)
-            {
-                ForeignKey = true,
-                ForeignKeyColumn = ColumnEntriesPrimaryKey,
-                ForeignKeyTable = TableEntries
-            }
-        }, false, typeof(ModerationEntry)),
-        new Schema(TableEvidence, new Schema.Column[]
-        {
-            new Schema.Column(ColumnEvidenceId, SqlTypes.INCREMENT_KEY)
-            {
-                PrimaryKey = true,
-                AutoIncrement = true
-            },
-            new Schema.Column(ColumnExternalPrimaryKey, SqlTypes.INCREMENT_KEY)
-            {
-                ForeignKey = true,
-                ForeignKeyColumn = ColumnEntriesPrimaryKey,
-                ForeignKeyTable = TableEntries,
-                ForeignKeyDeleteBehavior = ConstraintBehavior.SetNull,
-                Nullable = true
-            },
-            new Schema.Column(ColumnEvidenceLink, SqlTypes.String(512)),
-            new Schema.Column(ColumnEvidenceLocalSource, SqlTypes.String(512))
-            {
-                Nullable = true
-            },
-            new Schema.Column(ColumnEvidenceIsImage, SqlTypes.BOOLEAN),
-            new Schema.Column(ColumnEvidenceTimestamp, SqlTypes.DATETIME),
-            new Schema.Column(ColumnEvidenceActorId, SqlTypes.STEAM_64)
-            {
-                Nullable = true
-            },
-            new Schema.Column(ColumnEvidenceMessage, SqlTypes.String(1024))
-            {
-                Nullable = true
-            }
-        }, false, typeof(Evidence)),
-        new Schema(TableAssetBanTypeFilters, new Schema.Column[]
-        {
-            new Schema.Column(ColumnExternalPrimaryKey, SqlTypes.INCREMENT_KEY)
-            {
-                ForeignKey = true,
-                ForeignKeyColumn = ColumnEntriesPrimaryKey,
-                ForeignKeyTable = TableEntries
-            },
-            new Schema.Column(ColumnAssetBanFiltersType, SqlTypes.Enum<VehicleType>())
-        }, false, typeof(VehicleType)),
-        new Schema(TablePunishments, new Schema.Column[]
-        {
-            new Schema.Column(ColumnExternalPrimaryKey, SqlTypes.INCREMENT_KEY)
-            {
-                PrimaryKey = true,
-                AutoIncrement = true,
-                ForeignKey = true,
-                ForeignKeyColumn = ColumnEntriesPrimaryKey,
-                ForeignKeyTable = TableEntries
-            },
-            new Schema.Column(ColumnPunishmentsPresetType, SqlTypes.Enum<PresetType>())
-            {
-                Indexed = true,
-                Nullable = true
-            },
-            new Schema.Column(ColumnPunishmentsPresetLevel, SqlTypes.INT)
-            {
-                Indexed = true,
-                Nullable = true
-            }
-        }, false, typeof(Punishment)),
-        new Schema(TableDurationPunishments, new Schema.Column[]
-        {
-            new Schema.Column(ColumnExternalPrimaryKey, SqlTypes.INCREMENT_KEY)
-            {
-                PrimaryKey = true,
-                AutoIncrement = true,
-                ForeignKey = true,
-                ForeignKeyColumn = ColumnEntriesPrimaryKey,
-                ForeignKeyTable = TableEntries
-            },
-            new Schema.Column(ColumnDurationsDurationSeconds, SqlTypes.LONG),
-            new Schema.Column(ColumnDurationsForgiven, SqlTypes.BOOLEAN)
-            {
-                Default = "b'0'"
-            },
-            new Schema.Column(ColumnDurationsForgivenBy, SqlTypes.STEAM_64)
-            {
-                Indexed = true,
-                Nullable = true
-            },
-            new Schema.Column(ColumnDurationsForgivenTimestamp, SqlTypes.DATETIME)
-            {
-                Nullable = true
-            },
-            new Schema.Column(ColumnDurationsForgivenReason, SqlTypes.String(1024))
-            {
-                Nullable = true
-            }
-        }, false, typeof(DurationPunishment)),
-        new Schema(TableLinkedAppeals, new Schema.Column[]
-        {
-            new Schema.Column(ColumnExternalPrimaryKey, SqlTypes.INCREMENT_KEY)
-            {
-                ForeignKey = true,
-                ForeignKeyColumn = ColumnEntriesPrimaryKey,
-                ForeignKeyTable = TableEntries
-            },
-            new Schema.Column(ColumnLinkedAppealsAppeal, SqlTypes.INCREMENT_KEY)
-            {
-                ForeignKey = true,
-                ForeignKeyColumn = ColumnEntriesPrimaryKey,
-                ForeignKeyTable = TableEntries
-            }
-        }, false, typeof(Appeal)),
-        new Schema(TableLinkedReports, new Schema.Column[]
-        {
-            new Schema.Column(ColumnExternalPrimaryKey, SqlTypes.INCREMENT_KEY)
-            {
-                ForeignKey = true,
-                ForeignKeyColumn = ColumnEntriesPrimaryKey,
-                ForeignKeyTable = TableEntries
-            },
-            new Schema.Column(ColumnLinkedReportsReport, SqlTypes.INCREMENT_KEY)
-            {
-                ForeignKey = true,
-                ForeignKeyColumn = ColumnEntriesPrimaryKey,
-                ForeignKeyTable = TableEntries
-            }
-        }, false, typeof(Report)),
-        new Schema(TableMutes, new Schema.Column[]
-        {
-            new Schema.Column(ColumnExternalPrimaryKey, SqlTypes.INCREMENT_KEY)
-            {
-                PrimaryKey = true,
-                AutoIncrement = true,
-                ForeignKey = true,
-                ForeignKeyColumn = ColumnEntriesPrimaryKey,
-                ForeignKeyTable = TableEntries
-            },
-            new Schema.Column(ColumnMutesType, SqlTypes.Enum(exclude: MuteType.None))
-        }, false, typeof(Mute)),
-        new Schema(TableWarnings, new Schema.Column[]
-        {
-            new Schema.Column(ColumnExternalPrimaryKey, SqlTypes.INCREMENT_KEY)
-            {
-                PrimaryKey = true,
-                AutoIncrement = true,
-                ForeignKey = true,
-                ForeignKeyColumn = ColumnEntriesPrimaryKey,
-                ForeignKeyTable = TableEntries
-            },
-            new Schema.Column(ColumnWarningsDisplayedTimestamp, SqlTypes.DATETIME)
-            {
-                Indexed = true,
-                Nullable = true
-            }
-        }, false, typeof(Warning)),
-        new Schema(TablePlayerReportAccepteds, new Schema.Column[]
-        {
-            new Schema.Column(ColumnExternalPrimaryKey, SqlTypes.INCREMENT_KEY)
-            {
-                PrimaryKey = true,
-                AutoIncrement = true,
-                ForeignKey = true,
-                ForeignKeyColumn = ColumnEntriesPrimaryKey,
-                ForeignKeyTable = TableEntries
-            },
-            new Schema.Column(ColumnPlayerReportAcceptedsReport, SqlTypes.INCREMENT_KEY)
-            {
-                ForeignKey = true,
-                ForeignKeyColumn = ColumnEntriesPrimaryKey,
-                ForeignKeyTable = TableEntries,
-                Nullable = true
-            }
-        }, false, typeof(PlayerReportAccepted)),
-        new Schema(TableBugReportAccepteds, new Schema.Column[]
-        {
-            new Schema.Column(ColumnExternalPrimaryKey, SqlTypes.INCREMENT_KEY)
-            {
-                PrimaryKey = true,
-                AutoIncrement = true,
-                ForeignKey = true,
-                ForeignKeyColumn = ColumnEntriesPrimaryKey,
-                ForeignKeyTable = TableEntries
-            },
-            new Schema.Column(ColumnTableBugReportAcceptedsCommit, "char(7)")
-            {
-                Nullable = true
-            },
-            new Schema.Column(ColumnTableBugReportAcceptedsIssue, SqlTypes.INT)
-            {
-                Nullable = true
-            }
-        }, false, typeof(PlayerReportAccepted)),
-        new Schema(TableTeamkills, new Schema.Column[]
-        {
-            new Schema.Column(ColumnExternalPrimaryKey, SqlTypes.INCREMENT_KEY)
-            {
-                PrimaryKey = true,
-                AutoIncrement = true,
-                ForeignKey = true,
-                ForeignKeyColumn = ColumnEntriesPrimaryKey,
-                ForeignKeyTable = TableEntries
-            },
-            new Schema.Column(ColumnTeamkillsAsset, SqlTypes.GUID_STRING)
-            {
-                Nullable = true
-            },
-            new Schema.Column(ColumnTeamkillsAssetName, SqlTypes.String(48))
-            {
-                Nullable = true
-            },
-            new Schema.Column(ColumnTeamkillsDeathCause, SqlTypes.Enum<EDeathCause>())
-            {
-                Nullable = true
-            },
-            new Schema.Column(ColumnTeamkillsDistance, SqlTypes.FLOAT)
-            {
-                Nullable = true
-            },
-            new Schema.Column(ColumnTeamkillsLimb, SqlTypes.Enum<ELimb>())
-            {
-                Nullable = true
-            }
-        }, false, typeof(Teamkill)),
-        new Schema(TableVehicleTeamkills, new Schema.Column[]
-        {
-            new Schema.Column(ColumnExternalPrimaryKey, SqlTypes.INCREMENT_KEY)
-            {
-                PrimaryKey = true,
-                AutoIncrement = true,
-                ForeignKey = true,
-                ForeignKeyColumn = ColumnEntriesPrimaryKey,
-                ForeignKeyTable = TableEntries
-            },
-            new Schema.Column(ColumnVehicleTeamkillsVehicleAsset, SqlTypes.GUID_STRING)
-            {
-                Nullable = true
-            },
-            new Schema.Column(ColumnVehicleTeamkillsVehicleAssetName, SqlTypes.String(48))
-            {
-                Nullable = true
-            },
-            new Schema.Column(ColumnVehicleTeamkillsDamageOrigin, SqlTypes.Enum<EDamageOrigin>())
-            {
-                Nullable = true
-            }
-        }, false, typeof(VehicleTeamkill)),
-        new Schema(TableAppeals, new Schema.Column[]
-        {
-            new Schema.Column(ColumnExternalPrimaryKey, SqlTypes.INCREMENT_KEY)
-            {
-                PrimaryKey = true,
-                AutoIncrement = true,
-                ForeignKey = true,
-                ForeignKeyColumn = ColumnEntriesPrimaryKey,
-                ForeignKeyTable = TableEntries
-            },
-            new Schema.Column(ColumnAppealsTicketId, SqlTypes.GUID_STRING),
-            new Schema.Column(ColumnAppealsState, SqlTypes.BOOLEAN)
-            {
-                Nullable = true
-            },
-            new Schema.Column(ColumnAppealsDiscordId, SqlTypes.ULONG)
-            {
-                Indexed = true,
-                Nullable = true
-            }
-        }, false, typeof(Appeal)),
-        new Schema(TableAppealPunishments, new Schema.Column[]
-        {
-            new Schema.Column(ColumnExternalPrimaryKey, SqlTypes.INCREMENT_KEY)
-            {
-                ForeignKey = true,
-                ForeignKeyColumn = ColumnEntriesPrimaryKey,
-                ForeignKeyTable = TableEntries
-            },
-            new Schema.Column(ColumnAppealPunishmentsPunishment, SqlTypes.INCREMENT_KEY)
-            {
-                ForeignKey = true,
-                ForeignKeyColumn = ColumnEntriesPrimaryKey,
-                ForeignKeyTable = TableEntries
-            }
-        }, false, typeof(Punishment)),
-        new Schema(TableAppealResponses, new Schema.Column[]
-        {
-            new Schema.Column(ColumnExternalPrimaryKey, SqlTypes.INCREMENT_KEY)
-            {
-                ForeignKey = true,
-                ForeignKeyColumn = ColumnEntriesPrimaryKey,
-                ForeignKeyTable = TableEntries
-            },
-            new Schema.Column(ColumnAppealResponsesQuestion, SqlTypes.STRING_255),
-            new Schema.Column(ColumnAppealResponsesResponse, SqlTypes.String(1024))
-        }, false, typeof(AppealResponse)),
-        new Schema(TableReports, new Schema.Column[]
-        {
-            new Schema.Column(ColumnExternalPrimaryKey, SqlTypes.INCREMENT_KEY)
-            {
-                PrimaryKey = true,
-                AutoIncrement = true,
-                ForeignKey = true,
-                ForeignKeyColumn = ColumnEntriesPrimaryKey,
-                ForeignKeyTable = TableEntries
-            },
-            new Schema.Column(ColumnReportsType, SqlTypes.Enum<ReportType>())
-        }, false, typeof(Report)),
-        new Schema(TableReportChatRecords, new Schema.Column[]
-        {
-            new Schema.Column(ColumnExternalPrimaryKey, SqlTypes.INCREMENT_KEY)
-            {
-                ForeignKey = true,
-                ForeignKeyColumn = ColumnEntriesPrimaryKey,
-                ForeignKeyTable = TableEntries
-            },
-            new Schema.Column(ColumnReportsChatRecordsMessage, SqlTypes.String(512)),
-            new Schema.Column(ColumnReportsChatRecordsTimestamp, SqlTypes.DATETIME),
-            new Schema.Column(ColumnReportsChatRecordsIndex, SqlTypes.INT)
-        }, false, typeof(AbusiveChatRecord)),
-        new Schema(TableReportStructureDamageRecords, new Schema.Column[]
-        {
-            new Schema.Column(ColumnExternalPrimaryKey, SqlTypes.INCREMENT_KEY)
-            {
-                ForeignKey = true,
-                ForeignKeyColumn = ColumnEntriesPrimaryKey,
-                ForeignKeyTable = TableEntries
-            },
-            new Schema.Column(ColumnReportsStructureDamageStructure, SqlTypes.GUID_STRING),
-            new Schema.Column(ColumnReportsStructureDamageStructureName, SqlTypes.String(48)),
-            new Schema.Column(ColumnReportsStructureDamageStructureOwner, SqlTypes.STEAM_64),
-            new Schema.Column(ColumnReportsStructureDamageStructureType, SqlTypes.Enum(StructType.Unknown)),
-            new Schema.Column(ColumnReportsStructureDamageDamage, SqlTypes.INT),
-            new Schema.Column(ColumnReportsStructureDamageDamageOrigin, SqlTypes.Enum<EDamageOrigin>()),
-            new Schema.Column(ColumnReportsStructureDamageInstanceId, SqlTypes.INSTANCE_ID),
-            new Schema.Column(ColumnReportsStructureDamageWasDestroyed, SqlTypes.BOOLEAN)
-            {
-                Default = "b'0'"
-            },
-            new Schema.Column(ColumnReportsStructureDamageTimestamp, SqlTypes.DATETIME)
-        }, false, typeof(StructureDamageRecord)),
-        new Schema(TableReportTeamkillRecords, new Schema.Column[]
-        {
-            new Schema.Column(ColumnExternalPrimaryKey, SqlTypes.INCREMENT_KEY)
-            {
-                ForeignKey = true,
-                ForeignKeyColumn = ColumnEntriesPrimaryKey,
-                ForeignKeyTable = TableEntries
-            },
-            new Schema.Column(ColumnReportsTeamkillRecordTeamkill, SqlTypes.INCREMENT_KEY)
-            {
-                ForeignKey = true,
-                ForeignKeyColumn = ColumnEntriesPrimaryKey,
-                ForeignKeyTable = TableEntries,
-                ForeignKeyDeleteBehavior = ConstraintBehavior.SetNull,
-                Nullable = true
-            },
-            new Schema.Column(ColumnReportsTeamkillRecordVictim, SqlTypes.STEAM_64),
-            new Schema.Column(ColumnReportsTeamkillRecordDeathCause, SqlTypes.Enum<EDeathCause>()),
-            new Schema.Column(ColumnReportsTeamkillRecordWasIntentional, SqlTypes.BOOLEAN)
-            {
-                Nullable = true
-            },
-            new Schema.Column(ColumnReportsTeamkillRecordMessage, SqlTypes.STRING_255)
-            {
-                Nullable = true
-            }
-        }, false, typeof(TeamkillRecord)),
-        new Schema(TableReportVehicleTeamkillRecords, new Schema.Column[]
-        {
-            new Schema.Column(ColumnExternalPrimaryKey, SqlTypes.INCREMENT_KEY)
-            {
-                ForeignKey = true,
-                ForeignKeyColumn = ColumnEntriesPrimaryKey,
-                ForeignKeyTable = TableEntries
-            },
-            new Schema.Column(ColumnReportsVehicleTeamkillRecordTeamkill, SqlTypes.INCREMENT_KEY)
-            {
-                ForeignKey = true,
-                ForeignKeyColumn = ColumnEntriesPrimaryKey,
-                ForeignKeyTable = TableEntries,
-                ForeignKeyDeleteBehavior = ConstraintBehavior.SetNull,
-                Nullable = true
-            },
-            new Schema.Column(ColumnReportsVehicleTeamkillRecordVictim, SqlTypes.STEAM_64),
-            new Schema.Column(ColumnReportsVehicleTeamkillRecordDamageOrigin, SqlTypes.Enum<EDamageOrigin>()),
-            new Schema.Column(ColumnReportsVehicleTeamkillRecordMessage, SqlTypes.STRING_255)
-            {
-                Nullable = true
-            }
-        }, false, typeof(VehicleTeamkillRecord)),
-        new Schema(TableReportVehicleRequestRecords, new Schema.Column[]
-        {
-            new Schema.Column(ColumnExternalPrimaryKey, SqlTypes.INCREMENT_KEY)
-            {
-                ForeignKey = true,
-                ForeignKeyColumn = ColumnEntriesPrimaryKey,
-                ForeignKeyTable = TableEntries
-            },
-            new Schema.Column(ColumnReportsVehicleRequestRecordAsset, SqlTypes.INCREMENT_KEY)
-            {
-                ForeignKey = true,
-                ForeignKeyTable = VehicleBay.TABLE_MAIN,
-                ForeignKeyColumn = VehicleBay.COLUMN_PK,
-                ForeignKeyDeleteBehavior = ConstraintBehavior.SetNull,
-                Nullable = true
-            },
-            new Schema.Column(ColumnReportsVehicleRequestRecordVehicle, SqlTypes.GUID_STRING),
-            new Schema.Column(ColumnReportsVehicleRequestRecordVehicleName, SqlTypes.String(48)),
-            new Schema.Column(ColumnReportsVehicleRequestRecordDamageOrigin, SqlTypes.Enum<EDamageOrigin>()),
-            new Schema.Column(ColumnReportsVehicleRequestRecordInstigator, SqlTypes.STEAM_64)
-            {
-                Nullable = true
-            },
-            new Schema.Column(ColumnReportsVehicleRequestRecordRequestTimestamp, SqlTypes.DATETIME),
-            new Schema.Column(ColumnReportsVehicleRequestRecordDestroyTimestamp, SqlTypes.DATETIME)
-            {
-                Nullable = true
-            }
-        }, false, typeof(VehicleRequestRecord)),
-        new Schema(TableReportShotRecords, new Schema.Column[]
-        {
-            new Schema.Column(ColumnExternalPrimaryKey, SqlTypes.INCREMENT_KEY)
-            {
-                ForeignKey = true,
-                ForeignKeyColumn = ColumnEntriesPrimaryKey,
-                ForeignKeyTable = TableEntries
-            },
-            new Schema.Column(ColumnReportsShotRecordAmmo, SqlTypes.GUID_STRING),
-            new Schema.Column(ColumnReportsShotRecordAmmoName, SqlTypes.String(48)),
-            new Schema.Column(ColumnReportsShotRecordItem, SqlTypes.GUID_STRING),
-            new Schema.Column(ColumnReportsShotRecordItemName, SqlTypes.String(48)),
-            new Schema.Column(ColumnReportsShotRecordDamageDone, SqlTypes.INT),
-            new Schema.Column(ColumnReportsShotRecordLimb, SqlTypes.Enum<ELimb>())
-            {
-                Nullable = true
-            },
-            new Schema.Column(ColumnReportsShotRecordIsProjectile, SqlTypes.BOOLEAN),
-            new Schema.Column(ColumnReportsShotRecordDistance, SqlTypes.DOUBLE)
-            {
-                Nullable = true
-            },
-            new Schema.Column(ColumnReportsShotRecordHitPointX, SqlTypes.FLOAT)
-            {
-                Nullable = true
-            },
-            new Schema.Column(ColumnReportsShotRecordHitPointY, SqlTypes.FLOAT)
-            {
-                Nullable = true
-            },
-            new Schema.Column(ColumnReportsShotRecordHitPointZ, SqlTypes.FLOAT)
-            {
-                Nullable = true
-            },
-            new Schema.Column(ColumnReportsShotRecordShootFromPointX, SqlTypes.FLOAT),
-            new Schema.Column(ColumnReportsShotRecordShootFromPointY, SqlTypes.FLOAT),
-            new Schema.Column(ColumnReportsShotRecordShootFromPointZ, SqlTypes.FLOAT),
-            new Schema.Column(ColumnReportsShotRecordShootFromRotationX, SqlTypes.FLOAT),
-            new Schema.Column(ColumnReportsShotRecordShootFromRotationY, SqlTypes.FLOAT),
-            new Schema.Column(ColumnReportsShotRecordShootFromRotationZ, SqlTypes.FLOAT),
-            new Schema.Column(ColumnReportsShotRecordHitType, SqlTypes.Enum<EPlayerHit>()),
-            new Schema.Column(ColumnReportsShotRecordHitActor, SqlTypes.STEAM_64)
-            {
-                Nullable = true
-            },
-            new Schema.Column(ColumnReportsShotRecordHitAsset, SqlTypes.GUID_STRING)
-            {
-                Nullable = true
-            },
-            new Schema.Column(ColumnReportsShotRecordHitAssetName, SqlTypes.String(48))
-            {
-                Nullable = true
-            },
-            new Schema.Column(ColumnReportsShotRecordTimestamp, SqlTypes.DATETIME)
-        }, false, typeof(ShotRecord))
-    };
+    public const string ColumnBanListWhitelistSteam64 = "Steam64";
+    public const string ColumnBanListWhitelistAdmin = "Admin";
+    public const string ColumnBanListWhitelistTimestamp = "TimeAddedUTC";
+    public const string ColumnBanListWhitelistReason = "Reason";
 }
 
 public enum ActorRelationType
@@ -2344,9 +2122,4 @@ public enum ActorRelationType
     IsAdminActor,
     IsNonAdminActor,
     IsActor
-}
-
-internal class WarfareDatabaseInterface : DatabaseInterface
-{
-    public override IWarfareSql Sql => Data.AdminSql;
 }

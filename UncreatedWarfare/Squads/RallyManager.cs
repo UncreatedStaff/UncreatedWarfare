@@ -1,28 +1,27 @@
-﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Interaction;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management.Legacy;
+using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Quests;
-using Uncreated.Warfare.Teams;
-using UnityEngine;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Squads;
 
 public static class RallyManager
 {
+#if false
     public const float TELEPORT_HEIGHT_OFFSET = 2f;
     public static void OnBarricadePlaced(BarricadeDrop drop, BarricadeRegion region)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         BarricadeData data = drop.GetServersideData();
 
         if (IsRally(drop.asset))
         {
-            UCPlayer? player = UCPlayer.FromID(data.owner);
+            WarfarePlayer? player = WarfarePlayer.FromID(data.owner);
             if (player?.Squad != null)
             {
                 if (player.Squad.RallyPoint != null)
@@ -30,7 +29,7 @@ public static class RallyManager
                     player.Squad.RallyPoint.Destroy();
                 }
 
-                ActionLog.Add(ActionLogType.PlacedRally, "AT " + drop.model.position.ToString("F1"), player.Squad.Leader);
+                // todo: ActionLog.Add(ActionLogType.PlacedRally, "AT " + drop.model.position.ToString("F1"), player.Squad.Leader);
 
                 RallyPoint rallypoint = drop.model.gameObject.AddComponent<RallyPoint>();
                 rallypoint.Initialize(player.Squad);
@@ -51,13 +50,10 @@ public static class RallyManager
         ref bool shouldAllow
     )
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (!IsRally(barricade.asset))
             return;
 
-        UCPlayer? player = UCPlayer.FromID(owner);
+        WarfarePlayer? player = WarfarePlayer.FromID(owner);
         if (player == null) return;
         if (player.Squad != null && player.Squad.Leader.Steam64 == player.Steam64)
         {
@@ -76,7 +72,7 @@ public static class RallyManager
                     player.SendChat(T.RallyEnemiesNearby);
                     shouldAllow = false;
                 }
-                else if (!F.CanStandAtLocation(new Vector3(point.x, point.y + TELEPORT_HEIGHT_OFFSET, point.z)))
+                else if (!PlayerStance.hasStandingHeightClearanceAtPosition(new Vector3(point.x, point.y + TELEPORT_HEIGHT_OFFSET, point.z)))
                 {
                     player.SendChat(T.RallyObstructedPlace);
                     shouldAllow = false;
@@ -99,15 +95,11 @@ public static class RallyManager
     {
         try
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             SquadManager.RallyUI.ClearFromAllPlayers();
 
-            foreach (BarricadeDrop drop in GetRallyPointBarricades().ToList())
+            foreach (BarricadeInfo barricade in GetRallyPointBarricades().ToList())
             {
-                if (Regions.tryGetCoordinate(drop.model.position, out byte x, out byte y))
-                    BarricadeManager.destroyBarricade(drop, x, y, ushort.MaxValue);
+                BarricadeManager.destroyBarricade(barricade.Drop, barricade.Coord.x, barricade.Coord.y, barricade.Plant);
             }
         }
         catch (Exception ex)
@@ -116,23 +108,26 @@ public static class RallyManager
             L.LogError(ex);
         }
     }
-    public static IEnumerable<BarricadeDrop> GetRallyPointBarricades()
+
+    private static IEnumerable<BarricadeInfo> GetRallyPointBarricades()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        if (BarricadeManager.regions is null)
-            return Array.Empty<BarricadeDrop>();
-        return UCBarricadeManager.NonPlantedBarricades.Where(b => IsRally(b.asset));
+        if (BarricadeManager.regions == null)
+            return Array.Empty<BarricadeInfo>();
+
+        return BarricadeUtility.EnumerateBarricades().Where(b => IsRally(b.Drop.asset));
     }
-    public static bool IsRally(ItemBarricadeAsset asset) => Gamemode.Config.RallyPoints != null &&
-                                                            Gamemode.Config.RallyPoints.HasValue &&
-                                                            Gamemode.Config.RallyPoints.Value.Any(r => r.MatchGuid(asset.GUID));
+
+    public static bool IsRally(ItemBarricadeAsset asset)
+    {
+        return Gamemode.Config.RallyPoints.ContainsAsset(asset);
+    }
+#endif
 }
 
 public class RallyPoint : MonoBehaviour, IManualOnDestroy
 {
-    public List<UCPlayer> AwaitingPlayers { get; private set; } // list of players currently waiting to teleport to the rally
+#if false
+    public List<WarfarePlayer> AwaitingPlayers { get; private set; } // list of players currently waiting to teleport to the rally
     public Squad Squad { get; private set; }
     public bool IsDeploying { get; private set; }
     public bool IsActive { get; set; }
@@ -142,7 +137,7 @@ public class RallyPoint : MonoBehaviour, IManualOnDestroy
     {
         Squad = squad;
         Squad.RallyPoint = this;
-        AwaitingPlayers = new List<UCPlayer>(6);
+        AwaitingPlayers = new List<WarfarePlayer>(6);
         IsActive = true;    
         IsDeploying = false;
         NearestLocation = F.GetClosestLocationName(transform.position);
@@ -153,16 +148,13 @@ public class RallyPoint : MonoBehaviour, IManualOnDestroy
 
     public void UpdateUIForAwaitingPlayers(int secondsLeft)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (!IsActive)
             return;
         TimeSpan seconds = TimeSpan.FromSeconds(secondsLeft);
 
         for (int i = AwaitingPlayers.Count - 1; i >= 0; i--)
         {
-            UCPlayer? player = AwaitingPlayers[i];
+            WarfarePlayer? player = AwaitingPlayers[i];
             if (!player.IsOnline || player.Squad != Squad)
             {
                 AwaitingPlayers.RemoveAt(i);
@@ -172,7 +164,7 @@ public class RallyPoint : MonoBehaviour, IManualOnDestroy
             SquadManager.RallyUI.SendToPlayer(player.Connection, T.RallyUITimer.Translate(player, false, secondsLeft >= 0 ? seconds : TimeSpan.Zero, NearestLocation));
         }
     }
-    public void ShowUIForPlayer(UCPlayer player)
+    public void ShowUIForPlayer(WarfarePlayer player)
     {
         if (!player.IsOnline)
             return;
@@ -181,10 +173,10 @@ public class RallyPoint : MonoBehaviour, IManualOnDestroy
     }
     public void ShowUIForSquad()
     {
-        foreach (UCPlayer member in Squad.Members)
+        foreach (WarfarePlayer member in Squad.Members)
             ShowUIForPlayer(member);
     }
-    public void ClearUIForPlayer(UCPlayer player)
+    public void ClearUIForPlayer(WarfarePlayer player)
     {
         if (!player.IsOnline)
             return;
@@ -193,15 +185,15 @@ public class RallyPoint : MonoBehaviour, IManualOnDestroy
     }
     public void ClearUIForSquad ()
     {
-        foreach (UCPlayer member in Squad.Members)
+        foreach (WarfarePlayer member in Squad.Members)
             ClearUIForPlayer(member);
     }
-    public void TeleportPlayer(UCPlayer player)
+    public void TeleportPlayer(WarfarePlayer player)
     {
         if (player.IsOnline && !player.Player.life.isDead && player.Player.movement.getVehicle() == null)
         {
             player.Player.teleportToLocation(new Vector3(transform.position.x, transform.position.y + RallyManager.TELEPORT_HEIGHT_OFFSET, transform.position.z), transform.rotation.eulerAngles.y);
-            ActionLog.Add(ActionLogType.TeleportedToRally, "AT " + transform.position.ToString() + " PLACED BY " + Squad.Leader.Steam64.ToString(), player);
+            // todo: ActionLog.Add(ActionLogType.TeleportedToRally, "AT " + transform.position.ToString() + " PLACED BY " + Squad.Leader.Steam64.ToString(), player);
             player.SendChat(T.RallySuccess);
         }
 
@@ -235,26 +227,19 @@ public class RallyPoint : MonoBehaviour, IManualOnDestroy
                 player.SendChat(T.RallyWaitSL, SecondsLeft);
             else
                 player.SendChat(T.RallyWait, SecondsLeft);
-            Tips.TryGiveTip(player, 5, T.RallyToast, SecondsLeft);
+            TipService.TryGiveTip(player, 5, T.RallyToast, SecondsLeft);
         }
 
         while (SecondsLeft > 0)
         {
-#if DEBUG
-            IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
 
             UpdateUIForAwaitingPlayers(SecondsLeft);
-
-#if DEBUG
-            profiler.Dispose();
-#endif
 
             yield return new WaitForSecondsRealtime(1);
             SecondsLeft--;
         }
 
-        foreach (UCPlayer player in AwaitingPlayers)
+        foreach (WarfarePlayer player in AwaitingPlayers)
         {
             if (player.IsOnline && player.Squad == Squad)
                 TeleportPlayer(player);
@@ -275,14 +260,14 @@ public class RallyPoint : MonoBehaviour, IManualOnDestroy
             if (enemyTeam == 0)
                 return;
 
-            List<UCPlayer> enemies = PlayerManager.OnlinePlayers.Where(p =>
+            List<WarfarePlayer> enemies = PlayerManager.OnlinePlayers.Where(p =>
                 p.GetTeam() == enemyTeam &&
                 (p.Position - transform.position).sqrMagnitude < Math.Pow(SquadManager.Config.RallyDespawnDistance, 2)
             ).ToList();
 
             if (enemies.Count > 0)
             {
-                foreach (UCPlayer member in Squad.Members)
+                foreach (WarfarePlayer member in Squad.Members)
                 {
                     if (member is { IsOnline: true }) // was throwing an error for some reason
                         member.SendChat(T.RallyEnemiesNearbyTp);
@@ -292,12 +277,12 @@ public class RallyPoint : MonoBehaviour, IManualOnDestroy
             }
         }
     }
-
+#endif
     void IManualOnDestroy.ManualOnDestroy()
     {
         if (this != null)
         {
-            Deactivate();
+            //Deactivate();
             Destroy(this);
         }
     }

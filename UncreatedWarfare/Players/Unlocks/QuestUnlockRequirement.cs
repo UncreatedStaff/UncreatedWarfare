@@ -1,145 +1,162 @@
-﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text.Json;
-using Uncreated.Encoding;
-using Uncreated.Framework;
-using Uncreated.Warfare.Commands.CommandSystem;
-using Uncreated.Warfare.Models.Kits;
-using Uncreated.Warfare.Quests;
-using Uncreated.Warfare.Traits;
-using Uncreated.Warfare.Vehicles;
+using Uncreated.Warfare.Interaction.Commands;
+using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Kits.Requests;
+using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.Players.Unlocks;
 
-[UnlockRequirement(3, "unlock_presets", "quest_id")]
-public class QuestUnlockRequirement : UnlockRequirement
+public class QuestUnlockRequirement : UnlockRequirement, IEquatable<QuestUnlockRequirement>
 {
-    public Guid QuestID;
-    public Guid[] UnlockPresets = Array.Empty<Guid>();
-    public override bool CanAccess(UCPlayer player)
+    private readonly RequestTranslations _reqTranslations;
+    public Guid QuestId { get; set; }
+    public Guid[] UnlockPresets { get; set; } = Array.Empty<Guid>();
+
+    public QuestUnlockRequirement(TranslationInjection<RequestTranslations> reqTranslations)
+    {
+        _reqTranslations = reqTranslations.Value;
+    }
+
+    /// <inheritdoc />
+    public override bool CanAccessFast(WarfarePlayer player)
     {
         for (int i = 0; i < UnlockPresets.Length; i++)
         {
-            if (!player.QuestComplete(UnlockPresets[i]))
-                return false;
+            // todo if (!player.QuestComplete(UnlockPresets[i]))
+            //     return false;
         }
         return true;
     }
-    public override string GetSignText(UCPlayer player)
-    {
-        bool access = CanAccess(player);
-        if (access)
-            return T.KitRequiredQuestsComplete.Translate(player);
-        if (Assets.find(QuestID) is QuestAsset quest)
-            return T.KitRequiredQuest.Translate(player, false, quest, UCWarfare.GetColor("kit_level_unavailable"));
 
-        return T.KitRequiredQuestsMultiple.Translate(player, false, UnlockPresets.Length, UCWarfare.GetColor("kit_level_unavailable"), UnlockPresets.Length.S());
+    /// <inheritdoc />
+    public override string GetSignText(WarfarePlayer? player, LanguageInfo language, CultureInfo culture)
+    {
+        bool access = CanAccessFast(player);
+        //if (access)
+        //    return T.KitRequiredQuestsComplete.Translate(player);
+        // if (Assets.find(QuestId) is QuestAsset quest)
+        //     return T.KitRequiredQuest.Translate(quest, UCWarfare.GetColor("kit_level_unavailable"), player);
+
+        return "not implemented";/*KitRequiredQuestsMultiple.Translate(UnlockPresets.Length , UCWarfare.GetColor("kit_level_unavailable"), UnlockPresets.Length == 1 ? string.Empty : "S", player );*/
     }
-    protected override void ReadProperty(ref Utf8JsonReader reader, string property)
+
+    /// <inheritdoc />
+    protected override void ReadLegacyProperty(ILogger? logger, ref Utf8JsonReader reader, string property)
     {
         if (property.Equals("unlock_presets", StringComparison.OrdinalIgnoreCase))
         {
-            if (reader.TokenType == JsonTokenType.StartArray)
+            if (reader.TokenType != JsonTokenType.StartArray)
+                return;
+
+            List<Guid> ids = new List<Guid>(4);
+            while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
             {
-                List<Guid> ids = new List<Guid>(4);
-                while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
-                {
-                    if (reader.TryGetGuid(out Guid guid) && !ids.Contains(guid))
-                        ids.Add(guid);
-                }
-                UnlockPresets = ids.ToArray();
+                if (reader.TryGetGuid(out Guid guid) && !ids.Contains(guid))
+                    ids.Add(guid);
             }
+
+            UnlockPresets = ids.ToArray();
         }
         else if (property.Equals("quest_id", StringComparison.OrdinalIgnoreCase))
         {
-            if (!reader.TryGetGuid(out QuestID))
-                L.LogWarning("Failed to convert " + property + " with value \"" + (reader.GetString() ?? "null") + "\" to a GUID.");
+            if (!reader.TryGetGuid(out Guid questID))
+            {
+                logger.LogError("Failed to convert {0} with value \"{1}\" to a GUID in quest unlock requirement.", property, (reader.GetString() ?? "null"));
+            }
+            else
+            {
+                QuestId = questID;
+            }
         }
     }
-    protected override void WriteProperties(Utf8JsonWriter writer)
-    {
-        writer.WritePropertyName("unlock_presets");
-        writer.WriteStartArray();
-        for (int i = 0; i < UnlockPresets.Length; i++)
-        {
-            writer.WriteStringValue(UnlockPresets[i]);
-        }
-        writer.WriteEndArray();
 
-        writer.WriteString("quest_id", QuestID);
-    }
+    /// <inheritdoc />
     public override object Clone()
     {
-        QuestUnlockRequirement req = new QuestUnlockRequirement
+        QuestUnlockRequirement req = new QuestUnlockRequirement(new TranslationInjection<RequestTranslations>(_reqTranslations))
         {
-            QuestID = QuestID,
+            QuestId = QuestId,
             UnlockPresets = new Guid[UnlockPresets.Length]
         };
         Array.Copy(UnlockPresets, req.UnlockPresets, UnlockPresets.Length);
         return req;
     }
-    protected override void Read(ByteReader reader)
+
+    /// <inheritdoc />
+    public override Exception RequestKitFailureToMeet(CommandContext ctx, Kit kit)
     {
-        QuestID = reader.ReadGuid();
-        UnlockPresets = reader.ReadGuidArray();
-    }
-    protected override void Write(ByteWriter writer)
-    {
-        writer.Write(QuestID);
-        writer.Write(UnlockPresets);
+        if (Assets.find(QuestId) is not QuestAsset asset)
+        {
+            return ctx.Reply(_reqTranslations.RequestKitQuestIncomplete, null!);
+        }
+
+        // todo QuestManager.TryAddQuest(ctx.Player, asset);
+        return ctx.Reply(_reqTranslations.RequestKitQuestIncomplete, asset);
     }
 
-    public override Exception RequestKitFailureToMeet(CommandInteraction ctx, Kit kit)
+    /// <inheritdoc />
+    public override Exception RequestVehicleFailureToMeet(CommandContext ctx, WarfareVehicleInfo data)
     {
-        if (Assets.find(QuestID) is QuestAsset asset)
+        if (Assets.find(QuestId) is not QuestAsset asset)
         {
-            QuestManager.TryAddQuest(ctx.Caller, asset);
-            return ctx.Reply(T.RequestKitQuestIncomplete, asset);
+            return ctx.Reply(_reqTranslations.RequestVehicleQuestIncomplete, null!);
         }
-        return ctx.Reply(T.RequestKitQuestIncomplete, null!);
+
+        // todo QuestManager.TryAddQuest(ctx.Player, asset);
+        return ctx.Reply(_reqTranslations.RequestVehicleQuestIncomplete, asset);
     }
-    public override Exception RequestVehicleFailureToMeet(CommandInteraction ctx, VehicleData data)
+
+#if false
+    /// <inheritdoc />
+    public override Exception RequestTraitFailureToMeet(CommandContext ctx, TraitData trait)
     {
-        if (Assets.find(QuestID) is QuestAsset asset)
+        if (Assets.find(QuestId) is not QuestAsset asset)
         {
-            QuestManager.TryAddQuest(ctx.Caller, asset);
-            return ctx.Reply(T.RequestVehicleQuestIncomplete, asset);
+            return ctx.Reply(T.RequestTraitQuestIncomplete, trait, null!);
         }
-        return ctx.Reply(T.RequestVehicleQuestIncomplete, null!);
+
+        // todo QuestManager.TryAddQuest(ctx.Player, asset);
+        return ctx.Reply(T.RequestTraitQuestIncomplete, trait, asset);
     }
-    public override Exception RequestTraitFailureToMeet(CommandInteraction ctx, TraitData trait)
+#endif
+
+    /// <inheritdoc />
+    public override bool Equals(object? obj)
     {
-        if (Assets.find(QuestID) is QuestAsset asset)
-        {
-            QuestManager.TryAddQuest(ctx.Caller, asset);
-            return ctx.Reply(T.RequestTraitQuestIncomplete, trait, asset);
-        }
-        return ctx.Reply(T.RequestTraitQuestIncomplete, trait, null!);
+        return obj is QuestUnlockRequirement r && Equals(r);
     }
-    public override bool Equals(object obj)
+
+    /// <inheritdoc />
+    public bool Equals(QuestUnlockRequirement other)
     {
-        if (!(obj is QuestUnlockRequirement r && r.QuestID == QuestID))
+        if (other.QuestId != QuestId)
             return false;
-        if (r.UnlockPresets is not { Length: > 0 } && UnlockPresets is not { Length: > 0 })
+
+        if (other.UnlockPresets is not { Length: > 0 } && UnlockPresets is not { Length: > 0 })
             return true;
-        if (r.UnlockPresets.Length != UnlockPresets.Length)
+
+        if (other.UnlockPresets.Length != UnlockPresets.Length)
             return false;
+
         for (int i = 0; i < UnlockPresets.Length; ++i)
         {
-            if (r.UnlockPresets[i] != UnlockPresets[i])
+            if (other.UnlockPresets[i] != UnlockPresets[i])
                 return false;
         }
 
         return true;
     }
 
-    protected bool Equals(QuestUnlockRequirement other)
+    /// <inheritdoc />
+    public override int GetHashCode()
     {
-        return QuestID.Equals(other.QuestID) && UnlockPresets.Equals(other.UnlockPresets);
+        // ReSharper disable NonReadonlyMemberInGetHashCode
+        return HashCode.Combine(QuestId, UnlockPresets.Length);
+        // ReSharper restore NonReadonlyMemberInGetHashCode
     }
-
-    // ReSharper disable NonReadonlyMemberInGetHashCode
-    public override int GetHashCode() => HashCode.Combine(QuestID, UnlockPresets.Length);
-    // ReSharper restore NonReadonlyMemberInGetHashCode
 }

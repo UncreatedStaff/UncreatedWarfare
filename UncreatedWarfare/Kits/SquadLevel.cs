@@ -1,6 +1,7 @@
-﻿namespace Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Translations;
 
-/// <summary>Max field character limit: <see cref="KitEx.SquadLevelMaxCharLimit"/>.</summary>
+namespace Uncreated.Warfare.Kits;
+
 [Translatable("Squad Level", Description = "Rank level associated with a Kit.")]
 public enum SquadLevel : byte
 {

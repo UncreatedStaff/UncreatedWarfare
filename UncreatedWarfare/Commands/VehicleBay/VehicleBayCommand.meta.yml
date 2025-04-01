@@ -1,0 +1,72 @@
+# VehicleBayCommand
+Description: "Manage vehicle spawners."
+Aliases: [ vb ]
+Parameters:
+  # /vb reg <unique-name> <vehicle>
+  - Name: register
+    Type: Verbatim
+    Alias: reg
+    Description: "Links a <param 'spawner'/> to a <param 'vehicle'/> type and saves the buildable."
+    Parameters:
+      - Name: spawner
+        Type: Look/SDG.Unturned.ItemPlaceableAsset
+        Description: "The <param 'spawner'/> to link."
+        Parameters:
+          - Name: unique-name
+            Type: string
+            Description: "A <param 'unique-name'/> to identify this <param 'spawner'/>."
+            Parameters:
+              - Name: vehicle
+                Type: SDG.Unturned.VehicleAsset
+                Description: "The <param 'vehicle'/> to be linked to the <param 'spawner'/> with a <param 'unique-name'/>."
+
+  # /vb dereg
+  - Name: deregister
+    Type: Verbatim
+    Aliases: [ dereg, unregister, unreg ]
+    Description: "Unlinks a <param 'spawner'/> from a <param 'vehicle'/> type and unsaves the buildable."
+    Parameters:
+      - Name: spawner
+        Type: Look/SDG.Unturned.ItemPlaceableAsset
+        Description: "The <param 'spawner'/> to unlink."
+
+  # /vb force
+  - Name: respawn
+    Type: Verbatim
+    Alias: force
+    Description: "Forces a <param 'spawner'/> to respawn, deleting any currently linked vehicle."
+    Parameters:
+      - Name: spawner
+        Type: Look/SDG.Unturned.ItemPlaceableAsset
+        Description: "The <param 'spawner'/> to spawn a new vehicle at."
+
+  # /vb check
+  - Name: check
+    Type: Verbatim
+    Aliases: [ id, wtf ]
+    Description: "Replies with the vehicle registered at a certain <param 'spawner'/>."
+    Parameters:
+      - Name: spawner
+        Type: Look/SDG.Unturned.ItemPlaceableAsset
+        Description: "The <param 'spawner'/> to check."
+
+  # /vb link
+  - Name: link
+    Type: Verbatim
+    Description: "Creates a link between a <param 'spawner'/> and <param 'sign'/>. Run once on a <param 'spawner'/> then again on a <param 'sign'/>."
+    Parameters:
+      - Name: spawner
+        Type: Look/SDG.Unturned.ItemPlaceableAsset
+        Description: "The <param 'spawner'/> to link to <param 'sign'/>."
+      - Name: sign
+        Type: Look/SDG.Unturned.ItemBarricadeAsset
+        Description: "The <param 'sign'/> to link to <param 'spawner'/>."
+
+  # /vb unlink
+  - Name: unlink
+    Type: Verbatim
+    Description: "Removes the link between a <param 'sign'/> and all linked spawners."
+    Parameters:
+      - Name: sign
+        Type: Look/SDG.Unturned.ItemBarricadeAsset
+        Description: "The <param 'sign'/> to unlink from all linked spawners."

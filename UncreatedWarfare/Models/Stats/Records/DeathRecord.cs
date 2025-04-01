@@ -1,12 +1,11 @@
-﻿using SDG.Unturned;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Uncreated.Warfare.Database.Automation;
+using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Models.Assets;
-using Uncreated.Warfare.Models.Stats.Base;
 
-namespace Uncreated.Warfare.Models.Stats.Records;
+namespace Uncreated.Warfare.Models.Stats;
 
 [Table("stats_deaths")]
 public class DeathRecord : RelatedPlayerRecord
@@ -15,6 +14,7 @@ public class DeathRecord : RelatedPlayerRecord
     public string DeathMessage { get; set; }
 
     [DefaultValue(nameof(EDeathCause.KILL))]
+    [IncludedEnum(DeathTracker.InEnemyMainDeathCause)]
     public EDeathCause DeathCause { get; set; }
 
     [DefaultValue(0f)]
@@ -39,14 +39,23 @@ public class DeathRecord : RelatedPlayerRecord
     public DamageRecord? KillShot { get; set; }
 
     [DefaultValue(null)]
-    [AddName]
     public UnturnedAssetReference? PrimaryAsset { get; set; }
 
-    [DefaultValue(null)]
-    [AddName]
-    public UnturnedAssetReference? SecondaryAsset { get; set; }
+    [DefaultValue("00000000000000000000000000000000")]
+    [StringLength(48)]
+    public string? PrimaryAssetName { get; set; }
 
     [DefaultValue(null)]
-    [AddName]
+    public UnturnedAssetReference? SecondaryAsset { get; set; }
+
+    [DefaultValue("00000000000000000000000000000000")]
+    [StringLength(48)]
+    public string? SecondaryAssetName { get; set; }
+
+    [DefaultValue(null)]
     public UnturnedAssetReference? Vehicle { get; set; }
+
+    [DefaultValue("00000000000000000000000000000000")]
+    [StringLength(48)]
+    public string? VehicleName { get; set; }
 }

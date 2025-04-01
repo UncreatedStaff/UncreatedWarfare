@@ -1,12 +1,12 @@
-﻿using System;
+﻿using DanielWillett.SpeedBytes;
+using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Uncreated.Encoding;
-using Uncreated.Framework;
-using Uncreated.SQL;
+using Uncreated.Warfare.Configuration.JsonConverters;
+using Uncreated.Warfare.Database.Manual;
+using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Moderation.Reports;
 
@@ -19,15 +19,19 @@ public class Report : ModerationEntry
     public ReportType Type { get; set; }
 
     [JsonPropertyName("screenshot_data")]
-    [JsonConverter(typeof(Base64Converter))]
+    [JsonConverter(typeof(ByteArrayJsonConverter))]
     public byte[]? ScreenshotJpgData { get; set; }
+
+    [JsonIgnore]
+    public virtual bool ShouldScreenshot => true;
+
     public override string GetDisplayName() => "Report";
     protected override void ReadIntl(ByteReader reader, ushort version)
     {
         base.ReadIntl(reader, version);
 
         Type = (ReportType)reader.ReadUInt16();
-        ScreenshotJpgData = reader.ReadBool() ? reader.ReadLongBytes() : null;
+        ScreenshotJpgData = reader.ReadBool() ? reader.ReadLongUInt8Array() : null;
     }
 
     protected override void WriteIntl(ByteWriter writer)
@@ -43,7 +47,7 @@ public class Report : ModerationEntry
         else writer.Write(false);
     }
 
-    public override void ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
+    public override bool ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
     {
         if (propertyName.Equals("report_type", StringComparison.InvariantCultureIgnoreCase))
         {
@@ -53,82 +57,37 @@ public class Report : ModerationEntry
                 if (num >= 0)
                 {
                     Type = (ReportType)num;
-                    return;
+                    return true;
                 }
 
                 throw new JsonException($"Invalid integer for ReportType: {num}.");
             }
+
             string str = reader.GetString()!;
             if (!Enum.TryParse(str, true, out ReportType type))
             {
-                if (Enum.TryParse(str, true, out EReportType legacyReportType))
+                // parse legacy report type
+                type = str.ToUpperInvariant() switch
                 {
-                    Type = legacyReportType switch
-                    {
-                        EReportType.CHAT_ABUSE => ReportType.ChatAbuse,
-                        EReportType.GREIFING_FOBS or EReportType.INTENTIONAL_TEAMKILL or EReportType.SOLOING_VEHICLE or EReportType.WASTING_ASSETS => ReportType.Greifing,
-                        _ => ReportType.Custom
-                    };
-                    return;
-                }
-
-                throw new JsonException("Invalid string value for ReportType.");
+                    "CHAT_ABUSE" or "VOICE_CHAT_ABUSE" => ReportType.ChatAbuse,
+                    "GREIFING_FOBS" or "INTENTIONAL_TEAMKILL" or "SOLOING_VEHICLE" or "WASTING_ASSETS" => ReportType.Griefing,
+                    "CUSTOM" => ReportType.Custom,
+                    "CHEATING" => ReportType.Cheating,
+                    _ => throw new JsonException("Invalid string value for ReportType.")
+                };
             }
             Type = type;
         }
-        else if (propertyName.Equals("screenshot_data", StringComparison.InvariantCultureIgnoreCase))
-        {
-            if (reader.TokenType == JsonTokenType.String)
-            {
-                string b64 = reader.GetString()!;
-                ScreenshotJpgData = Convert.FromBase64String(b64);
-                return;
-            }
-            if (reader.TokenType == JsonTokenType.StartArray)
-            {
-                List<byte> bytes = new List<byte>(short.MaxValue);
-                while (reader.Read())
-                {
-                    if (reader.TokenType == JsonTokenType.EndArray)
-                        break;
-                    if (reader.TokenType == JsonTokenType.Number)
-                    {
-                        if (reader.TryGetByte(out byte b))
-                        {
-                            bytes.Add(b);
-                            continue;
-                        }
-                    }
-                    else if (reader.TokenType == JsonTokenType.String)
-                    {
-                        string str = reader.GetString()!;
-                        if (byte.TryParse(str, NumberStyles.Any, CultureInfo.InvariantCulture, out byte b))
-                        {
-                            bytes.Add(b);
-                            continue;
-                        }
-                    }
-                    throw new JsonException("Failed to get byte reading ScreenshotJpgData.");
-                }
-                ScreenshotJpgData = bytes.ToArray();
-                return;
-            }
-            if (reader.TokenType == JsonTokenType.Null)
-                ScreenshotJpgData = null;
-            else
-                throw new JsonException("Unexpected token " + reader.TokenType + " while reading ScreenshotJpgData.");
-        }
         else
-            base.ReadProperty(ref reader, propertyName, options);
+            return base.ReadProperty(ref reader, propertyName, options);
+
+        return true;
     }
     public override void Write(Utf8JsonWriter writer, JsonSerializerOptions options)
     {
         base.Write(writer, options);
 
         writer.WriteString("report_type", Type.ToString());
-
-        if (ScreenshotJpgData != null)
-            writer.WriteString("screenshot_data", Convert.ToBase64String(ScreenshotJpgData));
     }
 
     internal override int EstimateParameterCount() => base.EstimateParameterCount() + 2;
@@ -136,25 +95,29 @@ public class Report : ModerationEntry
     {
         bool hasEvidenceCalls = base.AppendWriteCall(builder, args);
 
-        builder.Append($" INSERT INTO `{DatabaseInterface.TableReports}` ({SqlTypes.ColumnList(
-            DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnReportsType)}) VALUES ");
+        builder.Append($" INSERT INTO `{DatabaseInterface.TableReports}` ({MySqlSnippets.ColumnList(
+            DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnReportsType, DatabaseInterface.ColumnReportsScreenshotData)}) VALUES ");
 
-        F.AppendPropertyList(builder, args.Count, 1, 0, 1);
+        MySqlSnippets.AppendPropertyList(builder, args.Count, 2, 0, 1);
         builder.Append(" AS `t` " +
-                       $"ON DUPLICATE KEY UPDATE `{DatabaseInterface.ColumnReportsType}` = " +
-                       $"`t`.`{DatabaseInterface.ColumnReportsType}`;");
+                       $"ON DUPLICATE KEY UPDATE `{DatabaseInterface.ColumnReportsType}`=`t`.`{DatabaseInterface.ColumnReportsType}`," +
+                       $"`{DatabaseInterface.ColumnReportsScreenshotData}`=`t`.`{DatabaseInterface.ColumnReportsScreenshotData}`;");
 
         args.Add(Type.ToString());
+        args.Add((object?)ScreenshotJpgData ?? DBNull.Value);
         
         return hasEvidenceCalls;
     }
 }
 
+[Translatable("Player Report Type")]
 public enum ReportType
 {
     Custom,
-    Greifing,
-    ChatAbuse
+    Griefing,
+    ChatAbuse,
+    VoiceChatAbuse,
+    Cheating
 }
 public sealed class ReportTypeLegacyConverter : JsonConverter<ReportType>
 {
@@ -168,15 +131,19 @@ public sealed class ReportTypeLegacyConverter : JsonConverter<ReportType>
         
         if (reader.TokenType == JsonTokenType.String)
         {
-            if (Enum.TryParse(reader.GetString()!, true, out ReportType reportType))
+            string str = reader.GetString()!;
+            if (Enum.TryParse(str, true, out ReportType reportType))
                 return reportType;
-            if (Enum.TryParse(reader.GetString()!, true, out EReportType reportTypeOld))
-                return reportTypeOld switch
-                {
-                    EReportType.CHAT_ABUSE => ReportType.ChatAbuse,
-                    EReportType.GREIFING_FOBS or EReportType.INTENTIONAL_TEAMKILL or EReportType.SOLOING_VEHICLE or EReportType.WASTING_ASSETS => ReportType.Greifing,
-                    _ => ReportType.Custom
-                };
+
+            return str.ToUpperInvariant() switch
+            {
+                "CHAT_ABUSE" => ReportType.ChatAbuse,
+                "VOICE_CHAT_ABUSE" => ReportType.VoiceChatAbuse,
+                "GREIFING_FOBS" or "INTENTIONAL_TEAMKILL" or "SOLOING_VEHICLE" or "WASTING_ASSETS" => ReportType.Griefing,
+                "CUSTOM" => ReportType.Custom,
+                "CHEATING" => ReportType.Cheating,
+                _ => throw new JsonException("Invalid string value for ReportType.")
+            };
         }
 
         if (reader.TokenType is not JsonTokenType.String and not JsonTokenType.Null)

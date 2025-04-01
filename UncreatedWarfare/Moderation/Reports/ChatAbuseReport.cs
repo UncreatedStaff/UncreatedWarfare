@@ -1,13 +1,11 @@
-﻿using System;
+﻿using DanielWillett.SpeedBytes;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading;
-using System.Threading.Tasks;
-using Uncreated.Encoding;
-using Uncreated.Framework;
-using Uncreated.SQL;
+using Uncreated.Warfare.Database.Manual;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Moderation.Reports;
 [ModerationEntry(ModerationEntryType.ChatAbuseReport)]
@@ -16,6 +14,9 @@ public class ChatAbuseReport : Report
 {
     [JsonPropertyName("messages")]
     public AbusiveChatRecord[] Messages { get; set; } = Array.Empty<AbusiveChatRecord>();
+
+    public override bool ShouldScreenshot => false;
+
     public override string GetDisplayName() => "Chat Abuse Report";
     protected override void ReadIntl(ByteReader reader, ushort version)
     {
@@ -34,12 +35,14 @@ public class ChatAbuseReport : Report
         for (int i = 0; i < Messages.Length; ++i)
             Messages[i].Write(writer);
     }
-    public override void ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
+    public override bool ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
     {
         if (propertyName.Equals("messages", StringComparison.InvariantCultureIgnoreCase))
             Messages = JsonSerializer.Deserialize<AbusiveChatRecord[]>(ref reader, options) ?? Array.Empty<AbusiveChatRecord>();
         else
-            base.ReadProperty(ref reader, propertyName, options);
+            return base.ReadProperty(ref reader, propertyName, options);
+
+        return true;
     }
     public override void Write(Utf8JsonWriter writer, JsonSerializerOptions options)
     {
@@ -64,17 +67,17 @@ public class ChatAbuseReport : Report
 
         if (Messages.Length > 0)
         {
-            builder.Append($" INSERT INTO `{DatabaseInterface.TableReportChatRecords}` ({SqlTypes.ColumnList(
+            builder.Append($" INSERT INTO `{DatabaseInterface.TableReportChatRecords}` ({MySqlSnippets.ColumnList(
                 DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnReportsChatRecordsTimestamp,
                 DatabaseInterface.ColumnReportsChatRecordsIndex, DatabaseInterface.ColumnReportsChatRecordsMessage)}) VALUES ");
 
             for (int i = 0; i < Messages.Length; ++i)
             {
                 ref AbusiveChatRecord record = ref Messages[i];
-                F.AppendPropertyList(builder, args.Count, 3, i, 1);
+                MySqlSnippets.AppendPropertyList(builder, args.Count, 3, i, 1);
                 args.Add(record.Timestamp.UtcDateTime);
                 args.Add(i);
-                args.Add(record.Message.MaxLength(512) ?? string.Empty);
+                args.Add(record.Message.Truncate(512) ?? string.Empty);
             }
 
             builder.Append(';');

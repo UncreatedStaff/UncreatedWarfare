@@ -1,12 +1,10 @@
-﻿using SDG.Unturned;
-using UnityEngine;
-
 namespace Uncreated.Warfare.Events.Components;
 internal class DestroyerComponent : MonoBehaviour
 {
     private ulong _destroyer;
     private float _time;
     public EDamageOrigin DamageOrigin { get; private set; }
+    public bool Salvaged { get; private set; }
     public float RelevantTime => _time;
     public ulong Destroyer
     {
@@ -41,18 +39,20 @@ internal class DestroyerComponent : MonoBehaviour
         time = Time.realtimeSinceStartup;
         return 0ul;
     }
-    public static void AddOrUpdate(GameObject obj, ulong destroyer, EDamageOrigin origin)
+    public static void AddOrUpdate(GameObject obj, ulong destroyer, bool salvaged, EDamageOrigin origin)
     {
         if (!obj.TryGetComponent(out DestroyerComponent comp))
             comp = obj.AddComponent<DestroyerComponent>();
         comp.DamageOrigin = origin;
         comp.Destroyer = destroyer;
+        comp.Salvaged = salvaged;
     }
-    public static void AddOrUpdate(GameObject obj, ulong destroyer, EDamageOrigin origin, float time)
+    public static void AddOrUpdate(GameObject obj, ulong destroyer, bool salvaged, EDamageOrigin origin, float time)
     {
         if (!obj.TryGetComponent(out DestroyerComponent comp))
             comp = obj.AddComponent<DestroyerComponent>();
         comp.DamageOrigin = origin;
+        comp.Salvaged = salvaged;
         comp._destroyer = destroyer;
         comp._time = time;
     }

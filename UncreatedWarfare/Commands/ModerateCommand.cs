@@ -1,33 +1,27 @@
-﻿using System.Threading;
-using System.Threading.Tasks;
-using Uncreated.Framework;
-using Uncreated.Warfare.Commands.CommandSystem;
+﻿using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Moderation;
 
 namespace Uncreated.Warfare.Commands;
-public sealed class ModerateCommand : AsyncCommand
+
+[Command("moderate", "mod", "m"), MetadataFile]
+internal sealed class ModerateCommand : IExecutableCommand
 {
-    private const string Syntax = "/moderate";
-    private const string Help = "Opens the moderation menu.";
-    public ModerateCommand() : base("moderate", EAdminType.MODERATOR)
+    private readonly ModerationUI _ui;
+
+    /// <inheritdoc />
+    public required CommandContext Context { get; init; }
+
+    public ModerateCommand(ModerationUI ui)
     {
-        Structure = new CommandStructure
-        {
-            Description = "Opens the moderation menu"
-        };
-        AddAlias("mod");
-        AddAlias("m");
+        _ui = ui;
     }
 
-    public override async Task Execute(CommandInteraction ctx, CancellationToken token)
+    /// <inheritdoc />
+    public async UniTask ExecuteAsync(CancellationToken token)
     {
-        ctx.AssertOnDuty();
-
-        ctx.AssertRanByPlayer();
+        Context.AssertRanByPlayer();
         
-        ctx.AssertHelpCheck(0, Syntax + " - " + Help);
-        
-        await ModerationUI.Instance.Open(ctx.Caller, token).ConfigureAwait(false);
-        ctx.Defer();
+        await _ui.Open(Context.Player, token);
+        Context.Defer();
     }
 }

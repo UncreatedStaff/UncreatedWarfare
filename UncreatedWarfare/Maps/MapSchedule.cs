@@ -1,143 +1,189 @@
-﻿using SDG.Unturned;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using JetBrains.Annotations;
-using Uncreated.SQL;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Maps;
-internal class MapScheduler : MonoBehaviour
+
+public class MapScheduler
 {
-    internal static MapScheduler Instance;
+    private readonly ILogger<MapScheduler> _logger;
+    private readonly int _configuredMap;
+    private readonly string? _configuredMapNameOverride;
 
-                                 // intentional is
-    public static int Current => Instance is null ? -1 : Instance._map;
-    // active map
-    private int _map = -1;
+    private List<ulong>? _originalMods;
+    private List<ulong>? _originalIgnoreChildren;
 
-    /* MAP DATA */
-    private static readonly List<MapData> MapRotation =
+    // todo this is bad and needs replaced eventually
+    public static int CurrentStatic => WarfareModule.Singleton.ServiceProvider.Resolve<MapScheduler>().Current;
+
+    // todo add to config
+    private static readonly MapData[] MapRotation =
     [
         new MapData("Fool's Road",      [ 2407566267, 2407740920 ], removeChildren: [ 2407566267 ]),
-        new MapData("Goose Bay",        [ 2301006771 ]),
-        new MapData("Nuijamaa",         [ 2557112412 ]),
-        new MapData("Gulf of Aqaba",    [ 2726964335 ]),
+        new MapData("Goose Bay",        [ 2301006771, 2407740920 ]),
+        new MapData("Nuijamaa",         [ 2557112412, 2407740920 ]),
+        new MapData("Gulf of Aqaba",    [ 2726964335, 2407740920 ]),
         new MapData("Changbai Shan",    [ 2943688379, 2407740920 ]),
+        new MapData("Yellowknife",      [ 3456355722, 2407740920 ])
     ];
 
-    /* MAP NAMES */
-    public static readonly string FoolsRoad     = MapRotation[0].Name;
-    public static readonly string GooseBay      = MapRotation[1].Name;
-    public static readonly string Nuijamaa      = MapRotation[2].Name;
-    public static readonly string GulfOfAqaba   = MapRotation[3].Name;
-    public static readonly string ChangbaiShan  = MapRotation[4].Name;
+    /// <summary>
+    /// The index of the current map in <see cref="MapRotation"/>. Lines up with the primary key in the season info database.
+    /// </summary>
+    public int Current { get; private set; } = -1;
 
-    public static string GetMapName(uint index) => MapRotation[(int)index].Name;
+    /// <summary>
+    /// Number of maps in rotation.
+    /// </summary>
+    public static int MapCount => MapRotation.Length;
 
-    // Map to load if rotation is undefined
-    private static readonly string DefaultMap = GulfOfAqaba;
-
-    private static List<ulong> _originalMods;
-    private static List<ulong> _originalIgnoreChildren;
-    public static int MapCount => MapRotation.Count;
-
-    [UsedImplicitly]
-    void Awake()
+    public MapScheduler(IConfiguration systemConfiguration, ILogger<MapScheduler> logger)
     {
-        if (Instance != null)
-            Destroy(Instance);
-        Instance = this;
+        _logger = logger;
+
+        string? mapName = systemConfiguration["map"];
+
+        int map = FindMap(mapName);
+        if (map < 0)
+        {
+            throw new InvalidOperationException("Map not configured or doesn't match an existing map.");
+        }
+
+                                     // this is so map names can be hidden from source code
+        _configuredMapNameOverride = systemConfiguration["map_name_override"];
+        _configuredMap = map;
+    }
+
+    internal void ApplyMapSetting()
+    {
+        // save currently configured workshop items
         WorkshopDownloadConfig config = WorkshopDownloadConfig.getOrLoad();
         _originalMods = config.File_IDs;
         _originalIgnoreChildren = config.Ignore_Children_File_IDs;
-        TryLoadMap(DefaultMap);
+
+        _logger.LogInformation("Loading map {0}: \"{1}\".", _configuredMap, GetMapName(_configuredMap));
+
+        LoadMap(_configuredMap);
     }
 
-    public bool TryLoadMap(string name)
+    /// <summary>
+    /// Find the index of a map from it's name or ID as a string.
+    /// </summary>
+    public int FindMap(string? mapName)
     {
-        for (int i = 0; i < MapRotation.Count; ++i)
+        if (string.IsNullOrWhiteSpace(mapName))
+            return -1;
+
+        if (int.TryParse(mapName, NumberStyles.Number, CultureInfo.InvariantCulture, out int mapNumber) && mapNumber >= 0 && mapNumber < MapRotation.Length)
         {
-            MapData d = MapRotation[i];
-            if (d.Name.Equals(name, StringComparison.Ordinal))
+            return mapNumber;
+        }
+
+        for (int i = 0; i < MapRotation.Length; ++i)
+        {
+            ref MapData map = ref MapRotation[i];
+            if (map.Name.Equals(mapName, StringComparison.OrdinalIgnoreCase))
             {
-                LoadMap(i);
-                return true;
+                return i;
             }
         }
-        return false;
+
+        return -1;
     }
+
+    /// <summary>
+    /// Get the name of a map from it's index.
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException"/>
+    public string GetMapName(int index)
+    {
+        return index < 0 || index >= MapRotation.Length
+            ? throw new ArgumentOutOfRangeException(nameof(index))
+            : MapRotation[index].Name;
+    }
+
     private void LoadMap(int index)
     {
-        MapData d = MapRotation[index];
+        ref MapData map = ref MapRotation[index];
         if (Level.info != null)
         {
-            // trigger restart or something idk
-            L.LogWarning("Tried to switch maps after the level " + Level.info.name + " was already loaded.");
+            throw new InvalidOperationException("Map has already been loaded, too late to change maps.");
         }
-        else
+
+        Provider.map = _configuredMapNameOverride ?? map.Name;
+        WorkshopDownloadConfig config = WorkshopDownloadConfig.getOrLoad();
+
+        config.File_IDs = _originalMods?.ToList() ?? new List<ulong>();
+        config.Ignore_Children_File_IDs = _originalIgnoreChildren?.ToList() ?? new List<ulong>();
+
+        for (int i = 0; i < map.AddMods.Length; ++i)
         {
-            L.Log("Selected " + d.Name + " to load.", ConsoleColor.Blue);
-            Provider.map = d.Name;
-            WorkshopDownloadConfig config = WorkshopDownloadConfig.getOrLoad();
-            config.File_IDs = _originalMods.ToList();
-            config.Ignore_Children_File_IDs = _originalIgnoreChildren.ToList();
-            for (int i = 0; i < d.AddMods.Length; ++i)
+            ulong mod = map.AddMods[i];
+            for (int j = 0; j < config.File_IDs.Count; ++j)
             {
-                ulong mod = d.AddMods[i];
-                for (int j = 0; j < config.File_IDs.Count; ++j)
-                {
-                    if (config.File_IDs[j] == mod) goto c;
-                }
+                if (config.File_IDs[j] == mod) goto c;
+            }
 
-                L.Log("Added " + mod + " to the workshop queue.", ConsoleColor.Magenta);
-                config.File_IDs.Add(mod);
+            _logger.LogInformation("Added {0} to the workshop queue.", mod);
+            config.File_IDs.Add(mod);
             c:;
-            }
+        }
 
-            if (d.RemoveMods is not null)
+        if (map.RemoveMods is not null)
+        {
+            for (int i = 0; i < map.RemoveMods.Length; ++i)
             {
-                for (int i = 0; i < d.RemoveMods.Length; ++i)
+                ulong mod = map.RemoveMods[i];
+                for (int j = config.File_IDs.Count - 1; j >= 0; --j)
                 {
-                    ulong mod = d.RemoveMods[i];
-                    for (int j = config.File_IDs.Count - 1; j >= 0; --j)
-                    {
-                        if (config.File_IDs[j] == mod)
-                        {
-                            config.File_IDs.RemoveAt(j);
-                            L.Log("Removed " + mod + " from the workshop queue.", ConsoleColor.Magenta);
-                        }
-                    }
-                }
-            }
-
-            if (d.RemoveChildren is not null)
-                config.Ignore_Children_File_IDs.AddRange(d.RemoveChildren);
-
-            DirectoryInfo info = new DirectoryInfo(Path.Combine(Application.dataPath, "..", "Servers", Provider.serverID, "Workshop", "Steam", "content", Provider.APP_ID.m_AppId.ToString(Data.AdminLocale)));
-            if (info.Exists)
-            {
-                foreach (DirectoryInfo modFolder in info.EnumerateDirectories("*", SearchOption.TopDirectoryOnly))
-                {
-                    if (!ulong.TryParse(modFolder.Name, NumberStyles.Number, Data.AdminLocale, out ulong mod))
+                    if (config.File_IDs[j] != mod)
                         continue;
-                    for (int i = 0; i < config.File_IDs.Count; ++i)
-                    {
-                        if (config.File_IDs[i] == mod) goto c;
-                    }
 
-                    L.Log("Deleting unused mod folder " + mod + " from workshop directory.", ConsoleColor.Magenta);
-                    modFolder.Delete(true);
-                c:;
+                    config.File_IDs.RemoveAt(j);
+                    _logger.LogInformation("Removed {0} from the workshop queue.", mod);
                 }
             }
-            else
+        }
+
+        if (map.RemoveChildren is not null)
+        {
+            config.Ignore_Children_File_IDs.AddRange(map.RemoveChildren);
+        }
+
+        Current = index;
+
+        string baseGamePath = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
+        string expectedModPath = Path.Combine(baseGamePath, "Servers", Provider.serverID, "Workshop", "Steam", "content", Provider.APP_ID.m_AppId.ToString(CultureInfo.InvariantCulture));
+
+        DirectoryInfo expectedModFolder = new DirectoryInfo(expectedModPath);
+        if (!expectedModFolder.Exists)
+            return;
+
+        foreach (DirectoryInfo modFolder in expectedModFolder.EnumerateDirectories("*", SearchOption.TopDirectoryOnly))
+        {
+            if (!ulong.TryParse(modFolder.Name, NumberStyles.Number, CultureInfo.InvariantCulture, out ulong mod))
             {
-                L.Log(info.FullName + " does not exist: ");
+                continue;
             }
-            _map = index;
+            
+            if (config.File_IDs.Contains(mod))
+            {
+                continue;
+            }
+
+            string displayPath = Path.GetRelativePath(baseGamePath, modFolder.FullName);
+            try
+            {
+                modFolder.Delete(true);
+                _logger.LogInformation("Deleted unused mod folder {0} from workshop directory: \"{1}\".", mod, displayPath);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Unable to delete unused mod folder {0} from workshop directory: \"{1}\".", mod, displayPath);
+            }
         }
     }
 

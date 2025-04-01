@@ -1,5 +1,4 @@
-﻿using JetBrains.Annotations;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using System.Net;
@@ -20,7 +19,7 @@ public class IPAddressValueConverter : ValueConverter<IPAddress?, string?>
     [UsedImplicitly]
     public static void Apply(ModelBuilder modelBuilder, IMutableProperty property, bool nullable)
     {
-        EFCompat.SetValueConverter(property, Instance);
+        EFCompat.Instance.SetValueConverter(property, Instance);
         property.SetColumnType("varchar(45)");
     }
 }

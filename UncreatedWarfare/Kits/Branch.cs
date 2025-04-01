@@ -1,8 +1,9 @@
-﻿using Uncreated.Warfare.Database.Automation;
+using Uncreated.Warfare.Database.Automation;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.Languages;
 
 namespace Uncreated.Warfare.Kits;
 
-/// <summary>Max field character limit: <see cref="KitEx.BranchMaxCharLimit"/>.</summary>
 [Translatable("Branch", Description = "Branch or section of the military the kit falls into.")]
 [ExcludedEnum(Default)]
 public enum Branch : byte

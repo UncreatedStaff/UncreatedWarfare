@@ -1,5 +1,4 @@
-﻿using JetBrains.Annotations;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using System;
@@ -21,7 +20,7 @@ public class UnturnedAssetReferenceValueConverter : ValueConverter<UnturnedAsset
     [UsedImplicitly]
     public static void Apply(ModelBuilder modelBuilder, IMutableProperty property, bool nullable)
     {
-        EFCompat.SetValueConverter(property, nullable ? NullableInstance : Instance);
+        EFCompat.Instance.SetValueConverter(property, nullable ? NullableInstance : Instance);
         property.SetColumnType("char(32)");
     }
 }

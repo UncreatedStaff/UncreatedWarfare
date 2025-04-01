@@ -1,29 +1,9 @@
-﻿#if DEBUG
-using System;
-using Uncreated.Warfare.Gamemodes.Flags;
+#if DEBUG
 #endif
-using JetBrains.Annotations;
-using SDG.Unturned;
-using System.Collections;
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using Uncreated.Warfare.Commands;
-using Uncreated.Warfare.Components;
-using Uncreated.Warfare.Gamemodes;
-using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Locations;
-using Uncreated.Warfare.Models.Kits;
-using Uncreated.Warfare.Players;
-using Uncreated.Warfare.Teams;
-using Uncreated.Warfare.Traits;
-using UnityEngine;
-
 namespace Uncreated.Warfare.Squads.Commander;
-public class UAV : MonoBehaviour, IBuff
+public class UAV : MonoBehaviour//, IBuff
 {
+#if false
     public const float GroundHeightOffset = 150f;
     private bool _inited;
     private UCPlayer _requester;
@@ -89,7 +69,7 @@ public class UAV : MonoBehaviour, IBuff
             return;
         }
 
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
 
         if (reqKit.Class != Class.Squadleader || !requester.IsSquadLeader())
             requester.SendChat(T.RequestUAVNotSquadleader);
@@ -105,7 +85,7 @@ public class UAV : MonoBehaviour, IBuff
                 else if (team == 2) _isRequestActiveT2 = true;
                 requester.SendChat(T.RequestUAVSent, activeCommander);
                 activeCommander.SendChat(T.RequestUAVTell, requester, requester.Squad!, new GridLocation(pos));
-                Tips.TryGiveTip(activeCommander, 0, T.TipUAVRequest, requester);
+                TipService.TryGiveTip(activeCommander, 0, T.TipUAVRequest, requester);
                 UCWarfare.I.StartCoroutine(RequestUAVCoroutine(team, requester, activeCommander, isMarker, pos));
             }
             else
@@ -221,9 +201,6 @@ public class UAV : MonoBehaviour, IBuff
     }
     private void Init(ulong team, UCPlayer requester, UCPlayer approver, Vector3 loc, bool isMarker)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         _requester = requester;
         _approver = approver;
         _startTime = Time.realtimeSinceStartup;
@@ -335,7 +312,7 @@ public class UAV : MonoBehaviour, IBuff
             {
                 KeyValuePair<float, SpottedComponent>[] sp2 = _scanOutput.ToArray();
                 _scanOutput.Clear();
-                L.LogDebug(time.ToString("0.##", Data.AdminLocale) + " Scanning, " + sp2.Length + " existing spotters.");
+                L.LogDebug(time.ToString("0.##", CultureInfo.InvariantCulture) + " Scanning, " + sp2.Length + " existing spotters.");
                 Scan();
                 for (int j = 0; j < sp2.Length; ++j)
                 {
@@ -345,21 +322,21 @@ public class UAV : MonoBehaviour, IBuff
                         if (ReferenceEquals(c, _scanOutput[i].Value))
                             goto next;
                     }
-                    L.LogDebug(time.ToString("0.##", Data.AdminLocale) + " spotter left: " + c + ".");
+                    L.LogDebug(time.ToString("0.##", CultureInfo.InvariantCulture) + " spotter left: " + c + ".");
                     c.OnUAVLeft();
                 next:;
                 }
-                L.LogDebug(time.ToString("0.##", Data.AdminLocale) +  " spotters remaining: " + _scanOutput.Count + ".");
+                L.LogDebug(time.ToString("0.##", CultureInfo.InvariantCulture) +  " spotters remaining: " + _scanOutput.Count + ".");
             }
             else
             {
-                L.LogDebug(time.ToString("0.##", Data.AdminLocale) + " Scanning, no existing spotters.");
+                L.LogDebug(time.ToString("0.##", CultureInfo.InvariantCulture) + " Scanning, no existing spotters.");
                 Scan();
             }
             _activeIndex = 0;
             _reachDistSqr = 0;
             _nextReachDistSqr = 0;
-            L.LogDebug(time.ToString("0.##", Data.AdminLocale) + $" Metrics: Reach: {_reachDistSqr:F2}, Active Index: {_activeIndex}.");
+            L.LogDebug(time.ToString("0.##", CultureInfo.InvariantCulture) + $" Metrics: Reach: {_reachDistSqr:F2}, Active Index: {_activeIndex}.");
             return;
         }
         else if (_scanOutput.Count > 0 && _reachDistSqr < _radius * _radius)
@@ -378,48 +355,48 @@ public class UAV : MonoBehaviour, IBuff
                         {
                             _nextReachDistSqr = dist;
                             _activeIndex = i;
-                            L.LogDebug(time.ToString("0.##", Data.AdminLocale) + $" Metrics: Reach: {Mathf.Sqrt(_reachDistSqr):F2}, Active Index: {_activeIndex}.");
+                            L.LogDebug(time.ToString("0.##", CultureInfo.InvariantCulture) + $" Metrics: Reach: {Mathf.Sqrt(_reachDistSqr):F2}, Active Index: {_activeIndex}.");
                         }
                         break;
                     }
                     SpottedComponent spot = c.Value;
-                    L.LogDebug(time.ToString("0.##", Data.AdminLocale) + " Dequeued " + spot + ".");
+                    L.LogDebug(time.ToString("0.##", CultureInfo.InvariantCulture) + " Dequeued " + spot + ".");
 
                     if (spot.UAVMode && spot.CurrentSpotter != null)
                     {
                         if (spot.CurrentSpotter.Steam64 == _requester.Steam64)
                         {
                             spot.UAVLastKnown = spot.transform.position;
-                            L.LogDebug(time.ToString("0.##", Data.AdminLocale) + " Updating spotter: " + spot);
+                            L.LogDebug(time.ToString("0.##", CultureInfo.InvariantCulture) + " Updating spotter: " + spot);
                         }
                         else
                         {
-                            L.LogDebug(time.ToString("0.##", Data.AdminLocale) + " Spotter: " + spot +
+                            L.LogDebug(time.ToString("0.##", CultureInfo.InvariantCulture) + " Spotter: " + spot +
                                        ": is already under the control of another UAV.");
                         }
                     }
                     else
                     {
                         spot.Activate(_requester, true);
-                        L.LogDebug(time.ToString("0.##", Data.AdminLocale) + " Activated spotter: " + spot);
+                        L.LogDebug(time.ToString("0.##", CultureInfo.InvariantCulture) + " Activated spotter: " + spot);
                     }
                 }
             }
         }
 #if DEBUG
-        if (time - _lastPing > 1.5f)
-        {
-            _lastPing = time;
-            if (_modelAnimTransform != null)
-            {
-                ClassConfig config = SquadManager.Config.Classes.FirstOrDefault(x => x.Class == Class.Sniper);
-                if (config.MarkerEffect.ValidReference(out EffectAsset asset))
-                {
-                    EffectManager.ClearEffectByGuid_AllPlayers(asset.GUID);
-                    F.TriggerEffectReliable(asset, Level.size * 2, _modelAnimTransform.position);
-                }
-            }
-        }
+        if (time - _lastPing <= 1.5f)
+            return;
+
+        _lastPing = time;
+        if (_modelAnimTransform == null)
+            return;
+
+        ClassConfig? config = SquadManager.Config.Classes.FirstOrDefault(x => x.Class == Class.Sniper);
+        if (!(config?.MarkerEffect).TryGetAsset(out EffectAsset? asset))
+            return;
+
+        EffectManager.ClearEffectByGuid_AllPlayers(asset.GUID);
+        EffectUtility.TriggerEffect(asset, Level.size * 2, _modelAnimTransform.position, false);
 #endif
     }
     private void Activate()
@@ -432,31 +409,31 @@ public class UAV : MonoBehaviour, IBuff
         CircleZone.CalculateParticleSpawnPoints(out Vector2[] pts, _radius, new Vector2(_deployPosition.x, _deployPosition.z));
         if (ZonePlayerComponent.Airdrop != null)
         {
-            F.TriggerEffectReliable(ZonePlayerComponent.Airdrop, Level.size, _deployPosition);
+            EffectUtility.TriggerEffect(ZonePlayerComponent.Airdrop, Level.size, _deployPosition, false);
             for (int i = 0; i < pts.Length; ++i)
             {
                 ref Vector2 pt = ref pts[i];
-                F.TriggerEffectReliable(ZonePlayerComponent.Airdrop, Level.size, new Vector3(pt.x, F.GetHeight(pt, 0f), pt.y));
+                EffectUtility.TriggerEffect(ZonePlayerComponent.Airdrop, Level.size, new Vector3(pt.x, F.GetHeight(pt, 0f), pt.y), false);
             }
         }
 #endif
-        if (_drop == null && Gamemode.Config.BarricadeUAV.ValidReference(out ItemBarricadeAsset asset))
-        {
-            Transform tr = BarricadeManager.dropNonPlantedBarricade(new Barricade(asset, asset.health, asset.getState()),
-                _deployPosition, Quaternion.Euler(new Vector3(-90f, 0f, 0f)), _requester.Steam64,
-                TeamManager.GetGroupID(_team));
-            _drop = BarricadeManager.FindBarricadeByRootTransform(tr);
-            if (_drop != null)
-            {
-                _didDropExist = true;
-                _modelAnimTransform = _drop.model.Find("UAV");
-            }
-        }
+        if (_drop != null || !Gamemode.Config.BarricadeUAV.TryGetAsset(out ItemBarricadeAsset? asset))
+            return;
+        
+        Transform tr = BarricadeManager.dropNonPlantedBarricade(
+            new Barricade(asset, asset.health, asset.getState()), _deployPosition, Quaternion.Euler(new Vector3(-90f, 0f, 0f)), _requester.Steam64, TeamManager.GetGroupID(_team)
+        );
+
+        _drop = BarricadeManager.FindBarricadeByRootTransform(tr);
+        if (_drop == null)
+            return;
+
+        _didDropExist = true;
+        _modelAnimTransform = _drop.model.Find("UAV");
     }
     private void Scan()
     {
 #if DEBUG
-        IDisposable profiler = ProfilingUtils.StartTracking();
         float time = Time.realtimeSinceStartup;
 #endif
         float rad = _radius * _radius;
@@ -472,12 +449,11 @@ public class UAV : MonoBehaviour, IBuff
 
         _scanOutput.Sort((a, b) => a.Key.CompareTo(b.Key));
 #if DEBUG
-        profiler.Dispose();
-        L.LogDebug(time.ToString("0.##", Data.AdminLocale) + " Scan output: ");
+        L.LogDebug(time.ToString("0.##", CultureInfo.InvariantCulture) + " Scan output: ");
         using IDisposable d = L.IndentLog(1);
         for (int i = 0; i < _scanOutput.Count; ++i)
         {
-            L.LogDebug(Mathf.Sqrt(_scanOutput[i].Key).ToString("0.##", Data.AdminLocale) + "m: " + _scanOutput[i].Value);
+            L.LogDebug(Mathf.Sqrt(_scanOutput[i].Key).ToString("0.##", CultureInfo.InvariantCulture) + "m: " + _scanOutput[i].Value);
         }
 #endif
     }
@@ -485,4 +461,5 @@ public class UAV : MonoBehaviour, IBuff
     {
         return spotType switch { _ => true };
     }
+#endif
 }

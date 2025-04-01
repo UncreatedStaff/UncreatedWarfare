@@ -1,4 +1,4 @@
-﻿namespace Uncreated.Warfare.Kits.Items;
+namespace Uncreated.Warfare.Kits.Items;
 public enum Page : byte
 {
     Primary = 0,

@@ -1,0 +1,95 @@
+# PermissionCommand
+Description: "View your permissions, or manage permissions as an admin."
+Aliases: [ p ]
+Parameters:
+  - Name: set
+    Type: Verbatim
+    Parameters:
+      - Name: player
+        Description: "Set a <param 'player'/>'s permission level."
+        Type: "Uncreated.Warfare.Players.IPlayer, Uncreated.Warfare"
+        Parameters:
+          - Name: member
+            Description: "Set a <param 'player'/> back to a <param 'member'/>."
+            Alias: player
+            Type: Verbatim
+            Parameters:
+              - Name: display-name
+                Type: string
+                Description: "Set a <param 'player'/> back to a <param 'member'/> and give them a <param 'display-name' />."
+                Optional: true
+              - Name: "null"
+                Type: Verbatim
+                Description: "Set a <param 'player'/> back to a <param 'member'/> and remove their <param 'display-name' />."
+                Optional: true
+                
+          - Name: staff
+            Description: "Set a <param 'player'/> to a basic <param 'staff'/> member."
+            Type: Verbatim
+            Parameters:
+              - Name: display-name
+                Type: string
+                Description: "Set a <param 'player'/> to a basic <param 'staff'/> member and give them a <param 'display-name' />."
+                Optional: true
+              - Name: "null"
+                Type: Verbatim
+                Description: "Set a <param 'player'/> to a basic <param 'staff'/> member and remove their <param 'display-name' />."
+                Optional: true
+                
+          - Name: trial
+            Description: "Set a <param 'player'/> to a <param 'trial'/> admin."
+            Aliases: [ trialadmin, trial_admin ]
+            Type: Verbatim
+            Parameters:
+              - Name: display-name
+                Type: string
+                Description: "Set a <param 'player'/> to a <param 'trial'/> admin and give them a <param 'display-name' />."
+                Optional: true
+              - Name: "null"
+                Type: Verbatim
+                Description: "Set a <param 'player'/> to a <param 'trial'/> admin and remove their <param 'display-name' />."
+                Optional: true
+                
+          - Name: admin
+            Description: "Set a <param 'player'/> to an <param 'admin'/>."
+            Type: Verbatim
+            Parameters:
+              - Name: display-name
+                Type: string
+                Description: "Set a <param 'player'/> to an <param 'admin'/> and give them a <param 'display-name' />."
+                Optional: true
+              - Name: "null"
+                Type: Verbatim
+                Description: "Set a <param 'player'/> to an <param 'admin'/> and remove their <param 'display-name' />."
+                Optional: true
+                
+          - Name: owner
+            Description: "Set a <param 'player'/> to an <param 'owner'/>."
+            Type: Verbatim
+            Parameters:
+              - Name: display-name
+                Type: string
+                Description: "Set a <param 'player'/> to an <param 'owner'/> and give them a <param 'display-name' />."
+                Optional: true
+              - Name: "null"
+                Type: Verbatim
+                Description: "Set a <param 'player'/> to an <param 'owner'/> and remove their <param 'display-name' />."
+                Optional: true
+                
+          - Name: permission-group
+            Description: "Give a <param 'player'/> a specific <param 'permission-group'/>."
+            Type: string
+            Parameters:
+              - Name: remove
+                Description: "Remove a specific <param 'permission-group'/> from a <param 'player'/>."
+                Type: Verbatim
+                Optional: true
+                
+          - Name: permission
+            Description: "Give a <param 'player'/> an individual <param 'permission'/> unrelated to their permission groups."
+            Type: string
+            Parameters:
+              - Name: remove
+                Description: "Remove an individual <param 'permission'/> from a <param 'player'/>."
+                Type: Verbatim
+                Optional: true

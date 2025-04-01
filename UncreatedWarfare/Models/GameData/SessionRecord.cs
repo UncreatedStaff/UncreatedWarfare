@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -47,7 +47,7 @@ public class SessionRecord
 
     [Required]
     public MapData Map { get; set; }
-    public byte Team { get; set; }
+    public int Team { get; set; }
 
     [Column("StartedTimestampUTC")]
     public DateTimeOffset StartedTimestamp { get; set; }
@@ -93,7 +93,7 @@ public class SessionRecord
     [ForeignKey(nameof(Kit))]
     [Column("Kit")]
     public uint? KitId { get; set; }
-    public Kit? Kit { get; set; }
+    public KitModel? Kit { get; set; }
 
     [StringLength(25)]
     public string? KitName { get; set; }
@@ -101,4 +101,10 @@ public class SessionRecord
     public bool StartedGame { get; set; }
     public bool FinishedGame { get; set; }
     public bool UnexpectedTermination { get; set; }
+
+
+    [NotMapped]
+    internal int EventCount;
+
+    public void MarkDirty() => Interlocked.Increment(ref EventCount);
 }

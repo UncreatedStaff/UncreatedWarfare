@@ -1,14 +1,11 @@
-﻿using SDG.Unturned;
+﻿using DanielWillett.SpeedBytes;
 using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading;
-using System.Threading.Tasks;
-using Uncreated.Encoding;
-using Uncreated.Framework;
-using Uncreated.SQL;
+using Uncreated.Warfare.Database.Manual;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Moderation.Records;
 [ModerationEntry(ModerationEntryType.VehicleTeamkill)]
@@ -55,7 +52,7 @@ public class VehicleTeamkill : ModerationEntry
         writer.WriteNullable(Vehicle);
         writer.WriteNullable(VehicleName);
     }
-    public override void ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
+    public override bool ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
     {
         if (propertyName.Equals("death_cause", StringComparison.InvariantCultureIgnoreCase))
         {
@@ -65,7 +62,7 @@ public class VehicleTeamkill : ModerationEntry
                 if (num >= 0)
                 {
                     Origin = (EDamageOrigin)num;
-                    return;
+                    return true;
                 }
 
                 throw new JsonException($"Invalid integer for EDamageOrigin: {num}.");
@@ -74,7 +71,7 @@ public class VehicleTeamkill : ModerationEntry
             if (reader.TokenType == JsonTokenType.Null)
             {
                 Origin = null;
-                return;
+                return true;
             }
 
             string str = reader.GetString()!;
@@ -87,7 +84,9 @@ public class VehicleTeamkill : ModerationEntry
         else if (propertyName.Equals("vehicle_name", StringComparison.InvariantCultureIgnoreCase))
             VehicleName = reader.GetString();
         else
-            base.ReadProperty(ref reader, propertyName, options);
+            return base.ReadProperty(ref reader, propertyName, options);
+
+        return true;
     }
     public override void Write(Utf8JsonWriter writer, JsonSerializerOptions options)
     {
@@ -109,7 +108,7 @@ public class VehicleTeamkill : ModerationEntry
         if (Vehicle.HasValue)
         {
             string name;
-            if (UCWarfare.IsLoaded && Assets.find(Vehicle.Value) is VehicleAsset veh)
+            if (Provider.isInitialized && Assets.find(Vehicle.Value) is VehicleAsset veh)
             {
                 name = veh.FriendlyName ?? veh.name;
                 if (veh.id > 0)
@@ -125,18 +124,18 @@ public class VehicleTeamkill : ModerationEntry
     {
         bool hasEvidenceCalls = base.AppendWriteCall(builder, args);
 
-        builder.Append($" INSERT INTO `{DatabaseInterface.TableVehicleTeamkills}` ({SqlTypes.ColumnList(
+        builder.Append($" INSERT INTO `{DatabaseInterface.TableVehicleTeamkills}` ({MySqlSnippets.ColumnList(
             DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnVehicleTeamkillsVehicleAsset,
             DatabaseInterface.ColumnVehicleTeamkillsVehicleAssetName, DatabaseInterface.ColumnVehicleTeamkillsDamageOrigin)}) VALUES ");
 
-        F.AppendPropertyList(builder, args.Count, 3, 0, 1);
+        MySqlSnippets.AppendPropertyList(builder, args.Count, 3, 0, 1);
         builder.Append(" AS `t` " +
                        $"ON DUPLICATE KEY UPDATE `{DatabaseInterface.ColumnVehicleTeamkillsVehicleAsset}` = `t`.`{DatabaseInterface.ColumnVehicleTeamkillsVehicleAsset}`," +
                        $"`{DatabaseInterface.ColumnVehicleTeamkillsVehicleAssetName}` = `t`.`{DatabaseInterface.ColumnVehicleTeamkillsVehicleAssetName}`," +
                        $"`{DatabaseInterface.ColumnVehicleTeamkillsDamageOrigin}` = `t`.`{DatabaseInterface.ColumnVehicleTeamkillsDamageOrigin}`;");
 
         args.Add(Vehicle.HasValue ? Vehicle.Value.ToString("N") : DBNull.Value);
-        args.Add((object?)VehicleName.MaxLength(48) ?? DBNull.Value);
+        args.Add((object?)VehicleName.Truncate(48) ?? DBNull.Value);
         args.Add(Origin.HasValue ? Origin.Value.ToString() : DBNull.Value);
 
         return hasEvidenceCalls;

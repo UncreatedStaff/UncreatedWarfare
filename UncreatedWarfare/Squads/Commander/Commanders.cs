@@ -1,6 +1,7 @@
 ﻿namespace Uncreated.Warfare.Squads.Commander;
 public class Commanders
 {
+#if false
     private UCPlayer? _commanderT1;
     private UCPlayer? _commanderT2;
 
@@ -47,4 +48,5 @@ public class Commanders
     {
 
     }
+#endif
 }

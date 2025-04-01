@@ -16,6 +16,7 @@ public static class DbContextEx
         catch (InvalidOperationException)
         {
         }
+
         EntityEntry<TEntity> entry = dbContext.Entry(entity);
         if (entry.State == EntityState.Added)
         {

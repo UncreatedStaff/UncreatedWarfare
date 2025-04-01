@@ -1,66 +1,64 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
-using System.Net;
-using System.Threading;
-using System.Threading.Tasks;
-using Uncreated.Networking;
-using Uncreated.SQL;
+using Uncreated.Warfare.Database.Manual;
+using Uncreated.Warfare.Moderation;
 
 namespace Uncreated.Warfare.Networking;
 public sealed class MySqlAddressFilter : IIPAddressFilter
 {
-    private readonly Func<IMySqlDatabase> _database;
-    public MySqlAddressFilter(Func<IMySqlDatabase> database)
+    private readonly Func<IManualMySqlProvider> _database;
+    public MySqlAddressFilter(Func<IManualMySqlProvider> database)
     {
         _database = database;
     }
-    public async ValueTask<bool> IsFiltered(IPAddress ip, ulong player, CancellationToken token)
+    public async ValueTask<bool> IsFiltered(uint packedIp, CSteamID player, CancellationToken token)
     {
         bool matched = false;
-        await _database().QueryAsync($"SELECT `{WarfareSQL.ColumnIPWhitelistsIPRange}` FROM `{WarfareSQL.TableIPWhitelists}` WHERE `{WarfareSQL.ColumnIPWhitelistsSteam64}` = @0;",
-            new object[] { player }, reader =>
+        await _database().QueryAsync($"SELECT `{DatabaseInterface.ColumnIPWhitelistsIPRange}` FROM `{DatabaseInterface.TableIPWhitelists}` WHERE `{DatabaseInterface.ColumnIPWhitelistsSteam64}` = @0;",
+            [ player.m_SteamID ], token, reader =>
             {
-                if (!reader.IsDBNull(0))
-                {
-                    string str = reader.GetString(0);
-                    if (str.Equals("*", StringComparison.Ordinal) || str.Equals("%", StringComparison.Ordinal))
-                        matched = true;
-                    else if (IPv4Range.TryParse(str, out IPv4Range range) || IPv4Range.TryParseIPv4(str, out range))
-                        matched = range.InRange(ip);
+                if (reader.IsDBNull(0))
+                    return true;
 
-                    if (matched)
-                        return false;
+                string str = reader.GetString(0);
+
+                if (str.Equals("*", StringComparison.Ordinal) || str.Equals("%", StringComparison.Ordinal))
+                {
+                    matched = true;
+                }
+                else if (IPv4Range.TryParse(str, out IPv4Range range) || IPv4Range.TryParseIPv4(str, out range))
+                {
+                    matched = range.InRange(packedIp);
                 }
 
-                return true;
-            }, token).ConfigureAwait(false);
+                return !matched;
+            }).ConfigureAwait(false);
 
         return matched;
     }
-    public async ValueTask RemoveFilteredIPs<T>(IList<T> ips, Func<T, uint> selector, ulong player, CancellationToken token)
+    public async ValueTask RemoveFilteredIPs<T>(IList<T> ips, Func<T, uint> selector, CSteamID player, CancellationToken token)
     {
-        await _database().QueryAsync($"SELECT `{WarfareSQL.ColumnIPWhitelistsIPRange}` FROM `{WarfareSQL.TableIPWhitelists}` WHERE `{WarfareSQL.ColumnIPWhitelistsSteam64}` = @0;",
-            new object[] { player }, reader =>
+        await _database().QueryAsync($"SELECT `{DatabaseInterface.ColumnIPWhitelistsIPRange}` FROM `{DatabaseInterface.TableIPWhitelists}` WHERE `{DatabaseInterface.ColumnIPWhitelistsSteam64}` = @0;",
+            [ player.m_SteamID ], token, reader =>
             {
-                if (!reader.IsDBNull(0))
-                {
-                    string str = reader.GetString(0);
-                    if (str.Equals("*", StringComparison.Ordinal) || str.Equals("%", StringComparison.Ordinal))
-                        ips.Clear();
-                    else if (IPv4Range.TryParse(str, out IPv4Range range) || IPv4Range.TryParseIPv4(str, out range))
-                    {
-                        for (int i = ips.Count - 1; i >= 0; --i)
-                        {
-                            if (range.InRange(selector(ips[i])))
-                                ips.RemoveAt(i);
-                        }
-                    }
+                if (reader.IsDBNull(0))
+                    return true;
 
-                    if (ips.Count == 0)
-                        return false;
+                string str = reader.GetString(0);
+                if (str.Equals("*", StringComparison.Ordinal) || str.Equals("%", StringComparison.Ordinal))
+                {
+                    ips.Clear();
+                }
+                else if (IPv4Range.TryParse(str, out IPv4Range range) || IPv4Range.TryParseIPv4(str, out range))
+                {
+                    for (int i = ips.Count - 1; i >= 0; --i)
+                    {
+                        if (range.InRange(selector(ips[i])))
+                            ips.RemoveAt(i);
+                    }
                 }
 
-                return true;
-            }, token).ConfigureAwait(false);
+                return ips.Count != 0;
+            }).ConfigureAwait(false);
     }
 }

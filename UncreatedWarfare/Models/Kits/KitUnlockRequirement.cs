@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Uncreated.Warfare.Models.Base;
@@ -8,21 +8,23 @@ namespace Uncreated.Warfare.Models.Kits;
 [Table("kits_unlock_requirements")]
 public class KitUnlockRequirement : BaseUnlockRequirement, ICloneable
 {
-    [Required]
-    public Kit Kit { get; set; }
-    
-    [Required]
-    [ForeignKey(nameof(Kit))]
-    [Column("Kit", Order = 1)]
+    [Required, Column("Kit", Order = 1)]
     public uint KitId { get; set; }
 
-    public object Clone()
+    public KitUnlockRequirement() { }
+
+    public KitUnlockRequirement(KitUnlockRequirement other)
     {
-        return new KitUnlockRequirement
+        KitId = other.KitId;
+    }
+
+    public override object Clone()
+    {
+        return new KitUnlockRequirement(this)
         {
-            KitId = KitId,
-            Kit = Kit,
-            Json = Json
+            Data = Data,
+            Type = Type,
+            Id = Id
         };
     }
 }

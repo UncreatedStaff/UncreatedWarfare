@@ -1,11 +1,10 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations.Schema;
 using Uncreated.Warfare.Models.GameData;
 using Uncreated.Warfare.Models.Users;
-using UnityEngine;
 
-namespace Uncreated.Warfare.Models.Stats.Base;
+namespace Uncreated.Warfare.Models.Stats;
 public abstract class RelatedPlayerRecord : InstigatedPlayerRecord
 {
     private Vector3 _relatedPlayerPosition;
@@ -65,7 +64,7 @@ public abstract class RelatedPlayerRecord : InstigatedPlayerRecord
             _relatedPlayerPosHasValue = false;
     }
 
-    public new static void Map<TEntity>(ModelBuilder modelBuilder) where TEntity : RelatedPlayerRecord, new()
+    public static new void Map<TEntity>(ModelBuilder modelBuilder) where TEntity : RelatedPlayerRecord, new()
     {
         InstigatedPlayerRecord.Map<TEntity>(modelBuilder);
 

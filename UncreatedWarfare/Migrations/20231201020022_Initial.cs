@@ -1181,8 +1181,7 @@ namespace Uncreated.Warfare.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_stats_sessions_PreviousSession",
                 table: "stats_sessions",
-                column: "PreviousSession",
-                unique: true);
+                column: "PreviousSession");
 
             migrationBuilder.CreateIndex(
                 name: "IX_stats_sessions_Season",

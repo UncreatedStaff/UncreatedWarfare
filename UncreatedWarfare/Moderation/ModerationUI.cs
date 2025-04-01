@@ -1,82 +1,88 @@
-﻿using Cysharp.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using SDG.NetTransport;
-using SDG.Unturned;
-using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using Uncreated.Framework;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Data;
+using Uncreated.Framework.UI.Patterns;
 using Uncreated.Framework.UI.Presets;
-using Uncreated.Players;
-using Uncreated.Warfare.Commands;
-using Uncreated.Warfare.Gamemodes;
+using Uncreated.Framework.UI.Reflection;
+using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Moderation.Punishments;
 using Uncreated.Warfare.Moderation.Punishments.Presets;
 using Uncreated.Warfare.Players;
-using Uncreated.Warfare.Teams;
-using UnityEngine;
+using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Stats;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Util.Inventory;
 
 namespace Uncreated.Warfare.Moderation;
-internal partial class ModerationUI : UnturnedUI
+
+[UnturnedUI(BasePath = "Container/Backdrop/PageModeration")]
+public partial class ModerationUI : UnturnedUI
 {
+    private readonly ITranslationValueFormatter _valueFormatter;
+    private readonly IPlayerService _playerService;
+    private readonly IUserDataService _userDataService;
+    private readonly DatabaseInterface _moderationSql;
+    private readonly IPointsStore _pointsStore;
+    private readonly ItemIconProvider _itemIconProvider;
+
+    private readonly string? _discordInviteCode;
+
     public const int ModerationHistoryLength = 30;
     public const string PositiveReputationColor = "00cc00";
     public const string NegativeReputationColor = "cc0000";
     public const string DateTimeFormat = "yyyy\\/MM\\/dd\\ hh\\:mm\\:ss\\ \\U\\T\\C\\-\\2\\4";
     public const string DateTimeFormatInput = "yyyy\\/MM\\/dd\\ hh\\:mm\\:ss";
 
-    private readonly List<UCPlayer> _tempPlayerSearchBuffer = new List<UCPlayer>(Provider.maxPlayers);
-    public static ModerationUI Instance { get; } = new ModerationUI();
+    private readonly List<WarfarePlayer> _tempPlayerSearchBuffer = new List<WarfarePlayer>(Provider.maxPlayers);
 
     /* HEADERS */
     public LabeledButton[] Headers { get; } =
     {
-        new LabeledButton("ButtonModeration"),
-        new LabeledButton("ButtonPlayers"),
-        new LabeledButton("ButtonTickets"),
-        new LabeledButton("ButtonLogs")
+        new LabeledButton("~/Container/ButtonModeration", "./ButtonModerationLabel"),
+        new LabeledButton("~/Container/ButtonPlayers", "./ButtonPlayersLabel"),
+        new LabeledButton("~/Container/ButtonTickets", "./ButtonTicketsLabel"),
+        new LabeledButton("~/Container/ButtonLogs", "./ButtonLogsLabel")
     };
 
-    public LabeledButton ButtonClose { get; } = new LabeledButton("ButtonClose");
+    public LabeledButton ButtonClose { get; } = new LabeledButton("~/Container/ButtonClose", "./ButtonCloseLabel");
 
     public UnturnedUIElement[] PageLogic { get; } =
     {
-        new UnturnedUIElement("LogicPageModeration"),
-        new UnturnedUIElement("LogicPagePlayers"),
-        new UnturnedUIElement("LogicPageTickets"),
-        new UnturnedUIElement("LogicPageLogs")
+        new UnturnedUIElement("~/LogicPageModeration"),
+        new UnturnedUIElement("~/LogicPagePlayers"),
+        new UnturnedUIElement("~/LogicPageTickets"),
+        new UnturnedUIElement("~/LogicPageLogs")
     };
     
     /* PLAYER LIST */
-    public PlayerListEntry[] ModerationPlayerList { get; } = UnturnedUIPatterns.CreateArray<PlayerListEntry>("ModerationPlayer{1}_{0}", 1, to: 30);
-    public UnturnedTextBox PlayerSearch { get; } = new UnturnedTextBox("ModerationPlayersInputSearch");
+    public PlayerListEntry[] ModerationPlayerList { get; } = ElementPatterns.CreateArray<PlayerListEntry>("ModerationPlayerList/Viewport/Content/ModerationPlayer_{0}", 1, to: 30);
     public UnturnedTextBox ModerationPlayerSearch { get; } = new UnturnedTextBox("ModerationPlayersInputSearch")
     {
         UseData = true
     };
     public UnturnedEnumButton<PlayerSearchMode> ModerationPlayerSearchModeButton { get; }
-        = new UnturnedEnumButton<PlayerSearchMode>(PlayerSearchMode.Online, "ModerationButtonToggleOnline", "ModerationButtonToggleOnlineLabel")
-        {
-            TextFormatter = (v, player) => "View - " + Localization.TranslateEnum(v, UCPlayer.FromPlayer(player)?.Locale.LanguageInfo)
-        };
 
     /* MODERATION HISTORY LIST */
-    public ModerationHistoryEntry[] ModerationHistory { get; } = UnturnedUIPatterns.CreateArray<ModerationHistoryEntry>("ModerationEntry{1}_{0}", 1, to: ModerationHistoryLength);
-    public LabeledStateButton ModerationHistoryBackButton { get; } = new LabeledStateButton("ModerationListBackButton");
-    public LabeledStateButton ModerationHistoryNextButton { get; } = new LabeledStateButton("ModerationListNextButton");
-    public StateTextBox ModerationHistoryPage { get; } = new StateTextBox("ModerationListPageInput");
+    public ModerationHistoryEntry[] ModerationHistory { get; } = ElementPatterns.CreateArray<ModerationHistoryEntry>("ModerationList/Viewport/Content/ModerationEntry_{0}", 1, to: ModerationHistoryLength);
+    public LabeledStateButton ModerationHistoryBackButton { get; } = new LabeledStateButton("ModerationListControls/ModerationListBackButton", "./ModerationListBackButtonLabel", "./ModerationListBackButtonState");
+    public LabeledStateButton ModerationHistoryNextButton { get; } = new LabeledStateButton("ModerationListControls/ModerationListNextButton", "./ModerationListNextButtonLabel", "./ModerationListNextButtonState");
+    public StateTextBox ModerationHistoryPage { get; } = new StateTextBox("ModerationListControls/ModerationListPageInput", "./ModerationListPageInputState");
     public UnturnedTextBox ModerationHistorySearch { get; } = new UnturnedTextBox("ModerationInputSearch")
     {
         UseData = true
     };
-    public LabeledButton ModerationResetHistory { get; } = new LabeledButton("ModerationResetHistory");
+    public LabeledButton ModerationResetHistory { get; } = new LabeledButton("ModerationResetHistory", "./ModerationRefreshHistoryLabel");
     public UnturnedEnumButton<ModerationEntryType> ModerationHistoryTypeButton { get; }
-        = new UnturnedEnumButton<ModerationEntryType>(new ModerationEntryType[]
-        {
+        = new UnturnedEnumButton<ModerationEntryType>(
+        [
             ModerationEntryType.None,
             ModerationEntryType.Commendation,
             ModerationEntryType.Note,
@@ -90,102 +96,142 @@ internal partial class ModerationUI : UnturnedUI
             ModerationEntryType.Appeal,
             ModerationEntryType.Teamkill,
             ModerationEntryType.VehicleTeamkill,
-        }, ModerationEntryType.None, "ModerationButtonToggleType", "ModerationButtonToggleTypeLabel", null, "ModerationButtonToggleTypeRightClickListener")
+        ], ModerationEntryType.None, "ModerationButtonToggleType", "./ModerationButtonToggleTypeLabel", null, "./ModerationButtonToggleTypeRightClickListener")
         {
             TextFormatter = (v, _) => v == ModerationEntryType.None ? "Type - Any" : ("Type - " + GetModerationTypeButtonText(v))
         };
     public UnturnedEnumButton<ModerationHistorySearchMode> ModerationHistorySearchTypeButton { get; }
-        = new UnturnedEnumButton<ModerationHistorySearchMode>(ModerationHistorySearchMode.Message, "ModerationButtonToggleSearchMode", "ModerationButtonToggleSearchModeLabel", null, "ModerationButtonToggleSearchModeRightClickListener")
-        {
-            TextFormatter = (v, player) => "Search - " + Localization.TranslateEnum(v, UCPlayer.FromPlayer(player)?.Locale.LanguageInfo)
-        };
     public UnturnedEnumButton<ModerationHistorySortMode> ModerationHistorySortModeButton { get; }
-        = new UnturnedEnumButton<ModerationHistorySortMode>(ModerationHistorySortMode.Latest, "ModerationButtonToggleSortType", "ModerationButtonToggleSortTypeLabel", null, "ModerationButtonToggleSortTypeRightClickListener")
-        {
-            TextFormatter = (v, player) => "Sort - " + Localization.TranslateEnum(v, UCPlayer.FromPlayer(player)?.Locale.LanguageInfo)
-        };
 
     /* MODERATION SELECTED ENTRY */
-    public UnturnedUIElement ModerationInfoRoot { get; } = new UnturnedUIElement("ModerationInfoContent");
-    public UnturnedUIElement ModerationInfoActorsHeader { get; } = new UnturnedUIElement("ModerationInfoActorsHeader");
-    public UnturnedUIElement ModerationInfoEvidenceHeader { get; } = new UnturnedUIElement("ModerationInfoEvidenceHeader");
-    public UnturnedImage ModerationInfoProfilePicture { get; } = new UnturnedImage("ModerationInfoPfp");
-    public UnturnedLabel ModerationInfoType { get; } = new UnturnedLabel("ModerationInfoType");
-    public UnturnedLabel ModerationInfoTimestamp { get; } = new UnturnedLabel("ModerationInfoTimestamp");
-    public UnturnedLabel ModerationInfoReputation { get; } = new UnturnedLabel("ModerationInfoReputation");
-    public UnturnedLabel ModerationInfoReason { get; } = new UnturnedLabel("ModerationInfoReason");
-    public UnturnedLabel ModerationInfoPlayerName { get; } = new UnturnedLabel("ModerationInfoPlayerName");
-    public UnturnedLabel ModerationInfoPlayerId { get; } = new UnturnedLabel("ModerationInfoPlayerId");
-    public UnturnedLabel[] ModerationInfoExtraInfo { get; } = UnturnedUIPatterns.CreateArray<UnturnedLabel>("ModerationInfoExtra_{0}", 1, to: 12);
-    public ModerationInfoActor[] ModerationInfoActors { get; } = UnturnedUIPatterns.CreateArray<ModerationInfoActor>("Moderation{1}Actor_{0}", 1, to: 10);
-    public ModerationInfoEvidence[] ModerationInfoEvidenceEntries { get; } = UnturnedUIPatterns.CreateArray<ModerationInfoEvidence>("Moderation{1}Evidence_{0}", 1, to: 10);
-    public UnturnedUIElement LogicModerationInfoUpdateScrollVisual { get; } = new UnturnedUIElement("LogicModerationInfoUpdateScrollVisual");
+    public UnturnedUIElement ModerationInfoRoot { get; } = new UnturnedUIElement("ModerationInfo/Viewport/ModerationInfoContent");
+    public UnturnedUIElement ModerationInfoActorsHeader { get; } = new UnturnedUIElement("ModerationInfo/Viewport/ModerationInfoContent/ModerationInfoActorsHeader");
+    public UnturnedUIElement ModerationInfoEvidenceHeader { get; } = new UnturnedUIElement("ModerationInfo/Viewport/ModerationInfoContent/ModerationInfoEvidenceHeader");
+    public UnturnedImage ModerationInfoProfilePicture { get; } = new UnturnedImage("ModerationInfo/Viewport/ModerationInfoContent/ModerationInfoSection1/ModerationInfoPfpMask/ModerationInfoPfp");
+    public UnturnedLabel ModerationInfoType { get; } = new UnturnedLabel("ModerationInfo/Viewport/ModerationInfoContent/ModerationInfoSection1/ModerationInfoType");
+    public UnturnedLabel ModerationInfoTimestamp { get; } = new UnturnedLabel("ModerationInfo/Viewport/ModerationInfoContent/ModerationInfoSection1/ModerationInfoTimestamp");
+    public UnturnedLabel ModerationInfoReputation { get; } = new UnturnedLabel("ModerationInfo/Viewport/ModerationInfoContent/ModerationInfoSection1/ModerationInfoReputation");
+    public UnturnedLabel ModerationInfoReason { get; } = new UnturnedLabel("ModerationInfo/Viewport/ModerationInfoContent/ModerationInfoSection1/ModerationInfoReasonBox/ModerationInfoReason");
+    public UnturnedLabel ModerationInfoPlayerName { get; } = new UnturnedLabel("ModerationInfo/Viewport/ModerationInfoContent/ModerationInfoSection1/ModerationInfoPlayerName");
+    public UnturnedLabel ModerationInfoPlayerId { get; } = new UnturnedLabel("ModerationInfo/Viewport/ModerationInfoContent/ModerationInfoSection1/ModerationInfoPlayerId");
+    public UnturnedLabel[] ModerationInfoExtraInfo { get; } = ElementPatterns.CreateArray<UnturnedLabel>("ModerationInfo/Viewport/ModerationInfoContent/ModerationInfoExtraInfoBox/ModerationInfoExtra_{0}", 1, to: 12);
+    public ModerationInfoActor[] ModerationInfoActors { get; } = ElementPatterns.CreateArray<ModerationInfoActor>("ModerationInfo/Viewport/ModerationInfoContent/ModerationActorGrid/ModerationActor_{0}", 1, to: 10);
+    public ModerationInfoEvidence[] ModerationInfoEvidenceEntries { get; } = ElementPatterns.CreateArray<ModerationInfoEvidence>("ModerationInfo/Viewport/ModerationInfoContent/ModerationInfoEvidenceBox/ModerationEvidence_{0}", 1, to: 10);
+    public UnturnedUIElement LogicModerationInfoUpdateScrollVisual { get; } = new UnturnedUIElement("ModerationInfo/LogicModerationInfoUpdateScrollVisual");
 
 
     /* ACTION BUTTONS */
-    public LabeledStateButton ModerationButtonNote { get; } = new LabeledStateButton("ButtonNote");
-    public LabeledStateButton ModerationButtonCommend { get; } = new LabeledStateButton("ButtonCommend");
-    public LabeledStateButton ModerationButtonAcceptedBugReport { get; } = new LabeledStateButton("ButtonAcceptedBugReport");
-    public LabeledStateButton ModerationButtonAssetBan { get; } = new LabeledStateButton("ButtonAssetBan");
-    public LabeledStateButton ModerationButtonWarn { get; } = new LabeledStateButton("ButtonWarn");
-    public LabeledStateButton ModerationButtonKick { get; } = new LabeledStateButton("ButtonKick");
-    public LabeledStateButton ModerationButtonMute { get; } = new LabeledStateButton("ButtonMute");
-    public LabeledStateButton ModerationButtonBan { get; } = new LabeledStateButton("ButtonBan");
+    public LabeledStateButton ModerationButtonNote { get; } = new LabeledStateButton("ActionsPane/ActionsButtonBox/ActionsButtonGrid/ButtonNote", "./ButtonNoteLabel", "./ButtonNoteState");
+    public LabeledStateButton ModerationButtonCommend { get; } = new LabeledStateButton("ActionsPane/ActionsButtonBox/ActionsButtonGrid/ButtonCommend", "./ButtonCommendLabel", "./ButtonCommendState");
+    public LabeledStateButton ModerationButtonAcceptedBugReport { get; } = new LabeledStateButton("ActionsPane/ActionsButtonBox/ActionsButtonGrid/ButtonAcceptedBugReport", "./ButtonAcceptedBugReportLabel", "./ButtonAcceptedBugReportState");
+    public LabeledStateButton ModerationButtonAssetBan { get; } = new LabeledStateButton("ActionsPane/ActionsButtonBox/ActionsButtonGrid/ButtonAssetBan", "./ButtonAssetBanLabel", "./ButtonAssetBanState");
+    public LabeledStateButton ModerationButtonWarn { get; } = new LabeledStateButton("ActionsPane/ActionsButtonBox/ActionsButtonGrid/ButtonWarn", "./ButtonWarnLabel", "./ButtonWarnState");
+    public LabeledStateButton ModerationButtonKick { get; } = new LabeledStateButton("ActionsPane/ActionsButtonBox/ActionsButtonGrid/ButtonKick", "./ButtonKickLabel", "./ButtonKickState");
+    public LabeledStateButton ModerationButtonMute { get; } = new LabeledStateButton("ActionsPane/ActionsButtonBox/ActionsButtonGrid/ButtonMute", "./ButtonMuteLabel", "./ButtonMuteState");
+    public LabeledStateButton ModerationButtonBan { get; } = new LabeledStateButton("ActionsPane/ActionsButtonBox/ActionsButtonGrid/ButtonBan", "./ButtonBanLabel", "./ButtonBanState");
 
-    public LabeledStateButton[] Presets { get; } = UnturnedUIPatterns.CreateArray(index =>
-        new LabeledStateButton("ButtonPreset_" + index.ToString(CultureInfo.InvariantCulture),
-            "ButtonPreset_" + index.ToString(CultureInfo.InvariantCulture) + "_Label",
-            "ButtonPreset_" + index.ToString(CultureInfo.InvariantCulture) + "_State"), 1, to: 12);
+    public LabeledStateButton[] Presets { get; } = ElementPatterns.CreateArray(index =>
+    {
+        string ind = index.ToString(CultureInfo.InvariantCulture);
+        return new LabeledStateButton(
+            "ActionsPane/ActionsButtonBox/ActionsButtonGrid/ButtonPreset_" + ind,
+            "./ButtonPreset_" + ind + "_Label",
+            "./ButtonPreset_" + ind + "_State"
+        );
+    }, 1, to: 12);
 
     /* ACTION FORM */
-    public UnturnedUIElement ActionButtonBox { get; } = new UnturnedUIElement("ActionsButtonBox");
-    public UnturnedUIElement ModerationFormRoot { get; } = new UnturnedUIElement("ActionsScrollBox");
-    public UnturnedLabel ModerationActionHeader { get; } = new UnturnedLabel("ModerationActionsLabel");
-    public UnturnedLabel ModerationActionTypeHeader { get; } = new UnturnedLabel("ModerationSelectedActionBoxLabel");
-    public UnturnedLabel ModerationActionPlayerHeader { get; } = new UnturnedLabel("ModerationSelectedPlayerBoxLabel");
-    public UnturnedLabel ModerationActionPresetHeader { get; } = new UnturnedLabel("ModerationSelectedActionPresetBoxLabel");
-    public UnturnedLabel ModerationActionOtherEditor { get; } = new UnturnedLabel("ModerationSelectedActionWarningBoxLabel");
-    public UnturnedUIElement ModerationActionPresetHeaderRoot { get; } = new UnturnedUIElement("ModerationSelectedActionPresetBox");
-    public UnturnedUIElement ModerationActionOtherEditorRoot { get; } = new UnturnedUIElement("ModerationSelectedActionWarningBox");
-    public UnturnedTextBox ModerationActionMessage { get; } = new UnturnedTextBox("ModerationInputMessage")
+    public UnturnedUIElement ActionButtonBox { get; } = new UnturnedUIElement("ActionsPane/ActionsButtonBox");
+    public UnturnedUIElement ModerationFormRoot { get; } = new UnturnedUIElement("ActionsPane/ActionsScrollBox");
+    public UnturnedLabel ModerationActionHeader { get; } = new UnturnedLabel("ModerationActionsHeader/ModerationActionsLabel");
+    public UnturnedLabel ModerationActionTypeHeader { get; } = new UnturnedLabel("ActionsPane/ActionsScrollBox/Viewport/ActionsContent/ModerationsSelectedActionTopBar/ModerationSelectedActionBox/ModerationSelectedActionBoxLabel");
+    public UnturnedLabel ModerationActionPlayerHeader { get; } = new UnturnedLabel("ActionsPane/ActionsScrollBox/Viewport/ActionsContent/ModerationsSelectedActionTopBar/ModerationSelectedPlayerBox/ModerationSelectedPlayerBoxLabel");
+    public UnturnedLabel ModerationActionPresetHeader { get; } = new UnturnedLabel("ActionsPane/ActionsScrollBox/Viewport/ActionsContent/ModerationSelectedActionPresetBox/ModerationSelectedActionPresetBoxLabel");
+    public UnturnedLabel ModerationActionOtherEditor { get; } = new UnturnedLabel("ActionsPane/ActionsScrollBox/Viewport/ActionsContent/ModerationSelectedActionWarningBox/ModerationSelectedActionWarningBoxLabel");
+    public UnturnedUIElement ModerationActionPresetHeaderRoot { get; } = new UnturnedUIElement("ActionsPane/ActionsScrollBox/Viewport/ActionsContent/ModerationSelectedActionPresetBox");
+    public UnturnedUIElement ModerationActionOtherEditorRoot { get; } = new UnturnedUIElement("ActionsPane/ActionsScrollBox/Viewport/ActionsContent/ModerationSelectedActionWarningBox");
+    public UnturnedTextBox ModerationActionMessage { get; } = new UnturnedTextBox("ActionsPane/ActionsScrollBox/Viewport/ActionsContent/ModerationInputMessage")
     {
         UseData = true
     };
-    public PlaceholderTextBox ModerationActionInputBox2 { get; } = new PlaceholderTextBox("ModerationInputBox2")
+    public PlaceholderTextBox ModerationActionInputBox2 { get; } = new PlaceholderTextBox("ActionsPane/ActionsScrollBox/Viewport/ActionsContent/ModerationInputBox2", "./Viewport/ModerationInputBox2Placeholder")
     {
         UseData = true
     };
-    public PlaceholderTextBox ModerationActionInputBox3 { get; } = new PlaceholderTextBox("ModerationInputBox3")
+    public PlaceholderTextBox ModerationActionInputBox3 { get; } = new PlaceholderTextBox("ActionsPane/ActionsScrollBox/Viewport/ActionsContent/ModerationInputBox3", "./Viewport/ModerationInputBox3Placeholder")
     {
         UseData = true
     };
-    public PlaceholderTextBox ModerationActionMiniInputBox1 { get; } = new PlaceholderTextBox("ModerationMiniInput1")
+    public PlaceholderTextBox ModerationActionMiniInputBox1 { get; } = new PlaceholderTextBox("ActionsPane/ActionsScrollBox/Viewport/ActionsContent/ModerationInputHoriz/ModerationMiniInput1", "./Viewport/ModerationMiniInput1Placeholder")
     {
         UseData = true
     };
-    public PlaceholderTextBox ModerationActionMiniInputBox2 { get; } = new PlaceholderTextBox("ModerationMiniInput2")
+    public PlaceholderTextBox ModerationActionMiniInputBox2 { get; } = new PlaceholderTextBox("ActionsPane/ActionsScrollBox/Viewport/ActionsContent/ModerationInputHoriz/ModerationMiniInput2", "./Viewport/ModerationMiniInput2Placeholder")
     {
         UseData = true
     };
-    public LabeledRightClickableButton ModerationActionToggleButton1 { get; } = new LabeledRightClickableButton("ModerationToggleButton1");
-    public LabeledRightClickableButton ModerationActionToggleButton2 { get; } = new LabeledRightClickableButton("ModerationToggleButton2");
-    public ModerationSelectedActor[] ModerationActionActors { get; } = UnturnedUIPatterns.CreateArray<ModerationSelectedActor>("Moderation{1}SelectedActor_{0}", 1, to: 10);
-    public ModerationSelectedEvidence[] ModerationActionEvidence { get; } = UnturnedUIPatterns.CreateArray<ModerationSelectedEvidence>("ModerationSelectedEvidence{1}_{0}", 1, to: 10);
-    public LabeledStateButton ModerationActionAddActorButton { get; } = new LabeledStateButton("ModerationSelectedActorsHeaderAdd");
-    public LabeledStateButton ModerationActionAddEvidenceButton { get; } = new LabeledStateButton("ModerationSelectedEvidenceHeaderAdd");
-    public UnturnedEnumButtonTracker<MuteType> MuteTypeTracker { get; }
-    public UnturnedUIElement LogicModerationActionsUpdateScrollVisual { get; } = new UnturnedUIElement("LogicModerationActionsUpdateScrollVisual");
+    public LabeledRightClickableButton ModerationActionToggleButton1 { get; } = new LabeledRightClickableButton("ActionsPane/ActionsScrollBox/Viewport/ActionsContent/ModerationInputHoriz/ModerationToggleButton1", "./ModerationToggleButton1Label", "./ModerationToggleButton1LabelRightClickListener");
+    public LabeledRightClickableButton ModerationActionToggleButton2 { get; } = new LabeledRightClickableButton("ActionsPane/ActionsScrollBox/Viewport/ActionsContent/ModerationInputHoriz/ModerationToggleButton2", "./ModerationToggleButton2Label", "./ModerationToggleButton2RightClickListener");
+    public ModerationSelectedActor[] ModerationActionActors { get; } = ElementPatterns.CreateArray<ModerationSelectedActor>("ActionsPane/ActionsScrollBox/Viewport/ActionsContent/ModerationSelectedActorGrid/ModerationSelectedActor_{0}", 1, to: 10);
+    public ModerationSelectedEvidence[] ModerationActionEvidence { get; } = ElementPatterns.CreateArray<ModerationSelectedEvidence>("ActionsPane/ActionsScrollBox/Viewport/ActionsContent/ModerationInfoSelectedEvidenceBox/ModerationSelectedEvidence_{0}", 1, to: 10);
+    public LabeledStateButton ModerationActionAddActorButton { get; } = new LabeledStateButton("ActionsPane/ActionsScrollBox/Viewport/ActionsContent/ModerationSelectedActorsHeader/ModerationSelectedActorsHeaderAdd", "./ModerationSelectedActorsHeaderAddLabel", "./ModerationSelectedActorsHeaderAddState");
+    public LabeledStateButton ModerationActionAddEvidenceButton { get; } = new LabeledStateButton("ActionsPane/ActionsScrollBox/Viewport/ActionsContent/ModerationSelectedEvidenceHeader/ModerationSelectedEvidenceHeaderAdd", "./ModerationSelectedActorsHeaderAddLabel", "./ModerationSelectedActorsHeaderAddState");
+    public UnturnedEnumButton<MuteType> MuteTypeTracker { get; }
+    public UnturnedUIElement LogicModerationActionsUpdateScrollVisual { get; } = new UnturnedUIElement("ActionsPane/LogicModerationActionsUpdateScrollVisual");
 
     /* ACTION CONTROLS */
-    public ActionControl[] ModerationActionControls { get; } = UnturnedUIPatterns.CreateArray<ActionControl>("ModerationActionControl{1}_{0}", 1, to: 4);
-
-    public ModerationUI() : base(Gamemode.Config.UIModerationMenu, debugLogging: false)
+    public LabeledButton[] ModerationActionControls { get; } = ElementPatterns.CreateArray(index =>
     {
-        MuteTypeTracker = new UnturnedEnumButtonTracker<MuteType>(MuteType.Both, ModerationActionToggleButton1)
+        string ind = index.ToString(CultureInfo.InvariantCulture);
+        return new LabeledButton(
+            "ActionsPane/ActionsControls/ModerationActionControl_" + ind,
+            "./ModerationActionControlLabel_" + ind
+        );
+    }, 1, to: 4);
+
+    public ModerationUI(IServiceProvider serviceProvider)
+        : base(serviceProvider.GetRequiredService<ILoggerFactory>(), serviceProvider.GetRequiredService<AssetConfiguration>().GetAssetLink<EffectAsset>("UI:ModerationMenu"), staticKey: true)
+    {
+        _pointsStore = serviceProvider.GetRequiredService<IPointsStore>();
+        _valueFormatter = serviceProvider.GetRequiredService<ITranslationValueFormatter>();
+        _playerService = serviceProvider.GetRequiredService<IPlayerService>();
+        _userDataService = serviceProvider.GetRequiredService<IUserDataService>();
+        _moderationSql = serviceProvider.GetRequiredService<DatabaseInterface>();
+        _itemIconProvider = serviceProvider.GetRequiredService<ItemIconProvider>();
+
+        IConfiguration systemConfig = serviceProvider.GetRequiredService<IConfiguration>();
+        _discordInviteCode = systemConfig["discord_invite_code"];
+
+        ModerationHistorySearchTypeButton = new UnturnedEnumButton<ModerationHistorySearchMode>(ModerationHistorySearchMode.Message, "ModerationButtonToggleSearchMode",
+            "./ModerationButtonToggleSearchModeLabel", null, "./ModerationButtonToggleSearchModeRightClickListener")
+        {
+            TextFormatter = (v, player) => "Search - " + _valueFormatter.FormatEnum(v, _playerService.GetOnlinePlayerOrNull(player)?.Locale.LanguageInfo)
+        };
+
+        LateRegisterElement(ModerationHistorySearchTypeButton);
+
+        ModerationHistorySortModeButton = new UnturnedEnumButton<ModerationHistorySortMode>(ModerationHistorySortMode.Latest, "ModerationButtonToggleSortType",
+            "./ModerationButtonToggleSortTypeLabel", null, "./ModerationButtonToggleSortTypeRightClickListener")
+        {
+            TextFormatter = (v, player) => "Sort - " + _valueFormatter.FormatEnum(v, _playerService.GetOnlinePlayerOrNull(player)?.Locale.LanguageInfo)
+        };
+
+        LateRegisterElement(ModerationHistorySortModeButton);
+
+        ModerationPlayerSearchModeButton = new UnturnedEnumButton<PlayerSearchMode>(PlayerSearchMode.Online, "ModerationButtonToggleOnline", "./ModerationButtonToggleOnlineLabel")
+        {
+            TextFormatter = (v, player) => "View - " + _valueFormatter.FormatEnum(v, _playerService.GetOnlinePlayerOrNull(player)?.Locale.LanguageInfo)
+        };
+
+        LateRegisterElement(ModerationPlayerSearchModeButton);
+
+        MuteTypeTracker = new UnturnedEnumButton<MuteType>(MuteType.Both, ModerationActionToggleButton1)
         {
             Ignored = MuteType.None,
-            TextFormatter = (type, player) => "Mute Type - " + Localization.TranslateEnum(type, Localization.GetLanguageCached(player.channel.owner.playerID.steamID.m_SteamID))
+            TextFormatter = (type, player) => "Mute Type - " + _valueFormatter.FormatEnum(type, _playerService.GetOnlinePlayerOrNull(player)?.Locale.LanguageInfo)
         };
+
+        LateRegisterElement(MuteTypeTracker);
 
         ButtonClose.OnClicked += OnButtonCloseClicked;
         ModerationPlayerSearchModeButton.OnValueUpdated += OnModerationPlayerSearchModeUpdated;
@@ -200,7 +246,11 @@ internal partial class ModerationUI : UnturnedUI
         }
 
         for (int i = 0; i < ModerationInfoEvidenceEntries.Length; ++i)
-            ModerationInfoEvidenceEntries[i].PreviewImageButton.OnClicked += OnEvidenceClicked;
+        {
+            ModerationInfoEvidence entry = ModerationInfoEvidenceEntries[i];
+            entry.PreviewImageButton.OnClicked += OnEvidenceClicked;
+            entry.PreviewImage.ShouldCache = false;
+        }
 
         ModerationButtonNote.OnClicked              += (_, pl) => OnClickedModerateButton(pl, ModerationEntryType.Note);
         ModerationButtonCommend.OnClicked           += (_, pl) => OnClickedModerateButton(pl, ModerationEntryType.Commendation);
@@ -249,6 +299,7 @@ internal partial class ModerationUI : UnturnedUI
             ui.Steam64Input.OnTextUpdated += OnTypedEvidenceSteam64;
             ui.NowButton.OnClicked += OnClickedEvidenceNowButton;
             ui.YouButton.OnClicked += OnClickedEvidenceYouButton;
+            ui.PreviewImage.ShouldCache = false;
         }
 
         ModerationActionMessage.OnTextUpdated += OnMessageUpdated;
@@ -258,8 +309,25 @@ internal partial class ModerationUI : UnturnedUI
         ModerationActionMiniInputBox1.OnTextUpdated += OnDurationUpdated;
         ModerationActionMiniInputBox2.OnTextUpdated += OnDurationUpdated;
 
-        for (int i = 0; i < ModerationActionControls.Length; ++i)
-            ModerationActionControls[i].Root.OnClicked += OnActionControlClicked;
+        ElementPatterns.SubscribeAll(ModerationInfoEvidenceEntries.Select(x => x.PreviewImageButton), OnOpenPreviewImageInBrowserClicked);
+        ElementPatterns.SubscribeAll(ModerationInfoEvidenceEntries.Select(x => x.OpenButton), OnOpenPreviewImageInBrowserClicked);
+
+        ElementPatterns.SubscribeAll(ModerationActionControls, OnActionControlClicked);
+    }
+
+    private void OnOpenPreviewImageInBrowserClicked(UnturnedButton button, Player player)
+    {
+        int index = Array.FindIndex(ModerationInfoEvidenceEntries, x => x.OpenButton == button || x.PreviewImageButton == button);
+
+        if (index < 0)
+            return;
+
+        ModerationData data = GetOrAddModerationData(player.channel.owner.playerID.steamID.m_SteamID);
+        if (data.SelectedEntry == null || index >= data.Evidence.Count)
+            return;
+
+        Evidence evidence = data.Evidence[index];
+        player.sendBrowserRequest(evidence.Message ?? $"Open evidence {index} in browser.", evidence.URL);
     }
 
     private void OnEvidenceClicked(UnturnedButton button, Player player)
@@ -278,10 +346,7 @@ internal partial class ModerationUI : UnturnedUI
 
     private void OnReset(UnturnedButton button, Player player)
     {
-        UCPlayer? ucp = UCPlayer.FromPlayer(player);
-        if (ucp == null)
-            return;
-
+        WarfarePlayer ucp = _playerService.GetOnlinePlayer(player);
         ModerationData data = GetOrAddModerationData(ucp);
         data.SelectedPlayer = 0ul;
         EndEditInActionMenu(ucp);
@@ -294,13 +359,13 @@ internal partial class ModerationUI : UnturnedUI
         ModerationHistorySortModeButton.SetDefault(player);
         ModerationHistorySearch.SetText(ucp, string.Empty);
 
-        UnturnedTextBoxData? textBoxData = UnturnedUIDataSource.GetData<UnturnedTextBoxData>(ucp.CSteamID, ModerationHistorySearch);
+        UnturnedTextBoxData? textBoxData = UnturnedUIDataSource.GetData<UnturnedTextBoxData>(ucp.Steam64, ModerationHistorySearch);
         if (textBoxData != null)
             textBoxData.Text = string.Empty;
 
         UpdateSelectedPlayer(ucp);
 
-        UCWarfare.RunTask(RefreshModerationHistory, ucp, ucp.DisconnectToken, ctx: $"Reset history for {ucp.Steam64}");
+        _ = RefreshModerationHistory(ucp, ucp.DisconnectToken);
     }
     private static string FormatReputation(double rep, IFormatProvider formatter, bool endTag)
     {
@@ -330,10 +395,7 @@ internal partial class ModerationUI : UnturnedUI
         if (index == -1)
             return;
 
-        UCPlayer? ucp = UCPlayer.FromPlayer(player);
-
-        if (ucp == null)
-            return;
+        WarfarePlayer ucp = _playerService.GetOnlinePlayer(player);
 
         ModerationData data = GetOrAddModerationData(ucp);
         if (data.PlayerList == null || index >= data.PlayerList.Length)
@@ -347,7 +409,7 @@ internal partial class ModerationUI : UnturnedUI
         
         UpdateSelectedPlayer(ucp);
 
-        UCWarfare.RunTask(RefreshModerationHistory, ucp, ucp.DisconnectToken, $"Update moderation history of {data.SelectedPlayer} for {ucp.Steam64}.");
+        _ = RefreshModerationHistory(ucp, ucp.DisconnectToken);
     }
     private void OnClickedModerationEntry(UnturnedButton button, Player player)
     {
@@ -355,65 +417,57 @@ internal partial class ModerationUI : UnturnedUI
         if (index == -1)
             return;
 
-        UCPlayer? ucp = UCPlayer.FromPlayer(player);
-
-        if (ucp == null)
-            return;
+        WarfarePlayer ucp = _playerService.GetOnlinePlayer(player);
 
         ModerationData data = GetOrAddModerationData(ucp);
         index += data.HistoryPage * ModerationHistory.Length;
         if (data.HistoryView == null || index >= data.HistoryView.Length)
         {
-            L.LogWarning($"Invalid history index: {index} (p. {data.HistoryPage} / {data.PageCount}).");
+            GetLogger().LogWarning("Invalid history index: {0} (p. {1} / {2}).", index, data.HistoryPage, data.PageCount);
             return;
         }
         
         SelectEntry(ucp, data.HistoryView[index]);
     }
-    private void OnModerationPlayerSearchModeUpdated(UnturnedEnumButtonTracker<PlayerSearchMode> button, Player player, PlayerSearchMode value)
+    private void OnModerationPlayerSearchModeUpdated(UnturnedEnumButton<PlayerSearchMode> button, Player player, PlayerSearchMode value)
     {
-        UCPlayer? ucPlayer = UCPlayer.FromPlayer(player);
-        if (ucPlayer != null)
-            SendModerationPlayerList(ucPlayer);
+        WarfarePlayer ucp = _playerService.GetOnlinePlayer(player);
+        SendModerationPlayerList(ucp);
     }
     private void OnModerationPlayerSearchTextUpdated(UnturnedTextBox button, Player player, string text)
     {
-        UCPlayer? ucPlayer = UCPlayer.FromPlayer(player);
-        if (ucPlayer != null)
-            SendModerationPlayerList(ucPlayer);
+        WarfarePlayer ucp = _playerService.GetOnlinePlayer(player);
+        SendModerationPlayerList(ucp);
     }
     private void OnButtonCloseClicked(UnturnedButton button, Player player)
     {
-        UCPlayer? ucPlayer = UCPlayer.FromPlayer(player);
-        if (ucPlayer != null)
-            Close(ucPlayer);
+        WarfarePlayer ucp = _playerService.GetOnlinePlayer(player);
+        Close(ucp);
     }
     private void TryQueueHistoryUpdate(Player player, int ms = 500)
     {
-        UCPlayer? ucPlayer = UCPlayer.FromPlayer(player);
-        if (ucPlayer == null)
-            return;
+        WarfarePlayer ucp = _playerService.GetOnlinePlayer(player);
 
         UniTask.Create(async () =>
         {
-            ModerationData mod = GetOrAddModerationData(ucPlayer);
+            ModerationData mod = GetOrAddModerationData(ucp);
             int v = Interlocked.Increment(ref mod.HistorySearchUpdateVersion);
 
             if (ms > 0)
             {
-                await UniTask.Delay(ms, cancellationToken: ucPlayer.DisconnectToken);
+                await UniTask.Delay(ms, cancellationToken: ucp.DisconnectToken);
                 if (v != mod.HistorySearchUpdateVersion)
                     return;
             }
 
-            _ = UCWarfare.RunTask(RefreshModerationHistory, ucPlayer, ucPlayer.DisconnectToken);
+            await RefreshModerationHistory(ucp, ucp.DisconnectToken);
         });
     }
-    private void OnModerationHistorySortModeUpdated(UnturnedEnumButtonTracker<ModerationHistorySortMode> button, Player player, ModerationHistorySortMode value)
+    private void OnModerationHistorySortModeUpdated(UnturnedEnumButton<ModerationHistorySortMode> button, Player player, ModerationHistorySortMode value)
     {
         TryQueueHistoryUpdate(player);
     }
-    private void OnModerationHistorySearchTypeUpdated(UnturnedEnumButtonTracker<ModerationHistorySearchMode> button, Player player, ModerationHistorySearchMode value)
+    private void OnModerationHistorySearchTypeUpdated(UnturnedEnumButton<ModerationHistorySearchMode> button, Player player, ModerationHistorySearchMode value)
     {
         UnturnedTextBoxData data = ModerationHistorySearch.GetOrAddData(player);
 
@@ -421,7 +475,7 @@ internal partial class ModerationUI : UnturnedUI
             return;
         TryQueueHistoryUpdate(player);
     }
-    private void OnModerationHistoryTypeUpdated(UnturnedEnumButtonTracker<ModerationEntryType> button, Player player, ModerationEntryType value)
+    private void OnModerationHistoryTypeUpdated(UnturnedEnumButton<ModerationEntryType> button, Player player, ModerationEntryType value)
     {
         TryQueueHistoryUpdate(player);
     }
@@ -432,23 +486,24 @@ internal partial class ModerationUI : UnturnedUI
     private void OnModerationHistoryNext(UnturnedButton button, Player player)
     {
         ModerationData data = GetOrAddModerationData(player.channel.owner.playerID.steamID.m_SteamID);
-        UCPlayer? ucPlayer = UCPlayer.FromPlayer(player);
+        WarfarePlayer? ucp = _playerService.GetOnlinePlayerOrNull(player);
+
         ++data.HistoryPage;
 
         ModerationHistoryNextButton.Disable(player);
         ModerationHistoryBackButton.Disable(player);
         ModerationHistoryPage.Disable(player);
-        ModerationHistoryPage.SetText(player, (data.HistoryPage + 1).ToString((IFormatProvider?)ucPlayer?.Locale.ParseFormat ?? CultureInfo.InvariantCulture));
+        ModerationHistoryPage.SetText(player, (data.HistoryPage + 1).ToString((IFormatProvider?)ucp?.Locale.ParseFormat ?? CultureInfo.InvariantCulture));
 
         TryQueueHistoryUpdate(player, 0);
     }
     private void OnModerationHistoryPageTyped(UnturnedTextBox textBox, Player player, string text)
     {
         ModerationData data = GetOrAddModerationData(player.channel.owner.playerID.steamID.m_SteamID);
-        UCPlayer? ucPlayer = UCPlayer.FromPlayer(player);
+        WarfarePlayer? ucp = _playerService.GetOnlinePlayerOrNull(player);
         if (!int.TryParse(text, out int page))
         {
-            ModerationHistoryPage.SetText(player, (data.HistoryPage + 1).ToString((IFormatProvider?)ucPlayer?.Locale.ParseFormat ?? CultureInfo.InvariantCulture));
+            ModerationHistoryPage.SetText(player, (data.HistoryPage + 1).ToString((IFormatProvider?)ucp?.Locale.ParseFormat ?? CultureInfo.InvariantCulture));
             return;
         }
 
@@ -461,14 +516,14 @@ internal partial class ModerationUI : UnturnedUI
         ModerationHistoryNextButton.Disable(player);
         ModerationHistoryBackButton.Disable(player);
         ModerationHistoryPage.Disable(player);
-        ModerationHistoryPage.SetText(player, (page + 1).ToString((IFormatProvider?)ucPlayer?.Locale.ParseFormat ?? CultureInfo.InvariantCulture));
+        ModerationHistoryPage.SetText(player, (page + 1).ToString((IFormatProvider?)ucp?.Locale.ParseFormat ?? CultureInfo.InvariantCulture));
 
         TryQueueHistoryUpdate(player, 0);
     }
     private void OnModerationHistoryBack(UnturnedButton button, Player player)
     {
         ModerationData data = GetOrAddModerationData(player.channel.owner.playerID.steamID.m_SteamID);
-        UCPlayer? ucPlayer = UCPlayer.FromPlayer(player);
+        WarfarePlayer? ucp = _playerService.GetOnlinePlayerOrNull(player);
         --data.HistoryPage;
         if (data.HistoryPage < 0)
             data.HistoryPage = 0;
@@ -476,51 +531,50 @@ internal partial class ModerationUI : UnturnedUI
         ModerationHistoryNextButton.Disable(player);
         ModerationHistoryBackButton.Disable(player);
         ModerationHistoryPage.Disable(player);
-        ModerationHistoryPage.SetText(player, (data.HistoryPage + 1).ToString((IFormatProvider?)ucPlayer?.Locale.ParseFormat ?? CultureInfo.InvariantCulture));
+        ModerationHistoryPage.SetText(player, (data.HistoryPage + 1).ToString((IFormatProvider?)ucp?.Locale.ParseFormat ?? CultureInfo.InvariantCulture));
 
         TryQueueHistoryUpdate(player, 0);
     }
-    public async Task Open(UCPlayer player, CancellationToken token = default)
+    public async UniTask Open(WarfarePlayer player, CancellationToken token = default)
     {
-        token.CombineIfNeeded(player.DisconnectToken);
-        await UCWarfare.ToUpdate(token);
-
-        if (TeamSelector.Instance != null)
-            TeamSelector.Instance.Close(player);
-
-        player.ModalNeeded = true;
-        player.Player.enablePluginWidgetFlag(EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur);
-        player.Player.disablePluginWidgetFlag(EPluginWidgetFlags.Default);
-
-        if (!player.HasModerationUI)
-        {
-            SendToPlayer(player.Connection);
-            player.HasModerationUI = true;
-        }
+        using CombinedTokenSources tokens = token.CombineTokensIfNeeded(player.DisconnectToken);
+        await UniTask.SwitchToMainThread(token);
 
         ModerationData data = GetOrAddModerationData(player);
+        ModalHandle.TryGetModalHandle(player, ref data.Modal);
+
+        player.UnturnedPlayer.disablePluginWidgetFlag(EPluginWidgetFlags.Default);
+
+
+        if (!data.HasModerationUI)
+        {
+            SendToPlayer(player.Connection);
+            data.HasModerationUI = true;
+        }
         data.HistoryCount = 0;
         data.PlayerCount = 0;
         data.InfoActorCount = 0;
         data.InfoEvidenceCount = 0;
-        await SetPage(player, Page.Moderation, false, token).ConfigureAwait(false);
+        await SetPage(player, Page.Moderation, false, token);
     }
-    public void Close(UCPlayer player)
+    public void Close(WarfarePlayer player)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
-        player.ModalNeeded = false;
-        player.Player.disablePluginWidgetFlag(EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur);
-        player.Player.enablePluginWidgetFlag(EPluginWidgetFlags.Default);
+        ModerationData data = GetOrAddModerationData(player);
+
+        data.Modal.Dispose();
+
+        player.UnturnedPlayer.enablePluginWidgetFlag(EPluginWidgetFlags.Default);
         ClearFromPlayer(player.Connection);
-        player.HasModerationUI = false;
+        data.HasModerationUI = false;
     }
-    public async Task SetPage(UCPlayer player, Page page, bool isAlreadyInView, CancellationToken token = default)
+    public async UniTask SetPage(WarfarePlayer player, Page page, bool isAlreadyInView, CancellationToken token = default)
     {
-        token.CombineIfNeeded(player.DisconnectToken);
+        using CombinedTokenSources tokens = token.CombineTokensIfNeeded(player.DisconnectToken);
         if (page is not Page.Moderation and not Page.Players and not Page.Tickets and not Page.Logs)
             throw new ArgumentOutOfRangeException(nameof(page));
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
         if (!isAlreadyInView)
         {
             PageLogic[(int)page].Show(player);
@@ -531,27 +585,24 @@ internal partial class ModerationUI : UnturnedUI
             Page.Players => PreparePlayersPage(player, token),
             Page.Tickets => PrepareTicketsPage(player, token),
             _ => PrepareLogsPage(player, token)
-        }).ConfigureAwait(false);
+        });
     }
-    private async Task PrepareModerationPage(UCPlayer player, CancellationToken token = default)
+    private async UniTask PrepareModerationPage(WarfarePlayer player, CancellationToken token = default)
     {
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
 
         UpdateSelectedPlayer(player);
 
-        await PlayerManager.TryDownloadAllPlayerSummaries(token: token);
-        await UCWarfare.ToUpdate(token);
-
         ModerationData data = GetOrAddModerationData(player);
         
-        UnturnedTextBoxData? textBoxData = UnturnedUIDataSource.GetData<UnturnedTextBoxData>(player.CSteamID, ModerationPlayerSearch);
+        UnturnedTextBoxData? textBoxData = UnturnedUIDataSource.GetData<UnturnedTextBoxData>(player.Steam64, ModerationPlayerSearch);
         if (textBoxData != null)
             ModerationPlayerSearch.SetText(player, textBoxData.Text ?? string.Empty);
 
-        ModerationHistoryTypeButton.Update(player.Player, false);
-        ModerationHistorySearchTypeButton.Update(player.Player, false);
-        ModerationHistorySortModeButton.Update(player.Player, false);
-        ModerationPlayerSearchModeButton.Update(player.Player, false);
+        ModerationHistoryTypeButton.Update(player.UnturnedPlayer, false);
+        ModerationHistorySearchTypeButton.Update(player.UnturnedPlayer, false);
+        ModerationHistorySortModeButton.Update(player.UnturnedPlayer, false);
+        ModerationPlayerSearchModeButton.Update(player.UnturnedPlayer, false);
 
         SendModerationPlayerList(player);
 
@@ -578,30 +629,30 @@ internal partial class ModerationUI : UnturnedUI
 
         LoadActionMenu(player, false);
 
-        await RefreshModerationHistory(player, token).ConfigureAwait(false);
+        await RefreshModerationHistory(player, token);
     }
-    private Task PreparePlayersPage(UCPlayer player, CancellationToken token = default)
+    private UniTask PreparePlayersPage(WarfarePlayer player, CancellationToken token = default)
     {
-        return Task.CompletedTask;
+        return UniTask.CompletedTask;
     }
-    private Task PrepareTicketsPage(UCPlayer player, CancellationToken token = default)
+    private UniTask PrepareTicketsPage(WarfarePlayer player, CancellationToken token = default)
     {
-        return Task.CompletedTask;
+        return UniTask.CompletedTask;
     }
-    private Task PrepareLogsPage(UCPlayer player, CancellationToken token = default)
+    private UniTask PrepareLogsPage(WarfarePlayer player, CancellationToken token = default)
     {
-        return Task.CompletedTask;
+        return UniTask.CompletedTask;
     }
-    public ModerationData? GetModerationData(UCPlayer player)
+    public ModerationData? GetModerationData(WarfarePlayer player)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
-        return UnturnedUIDataSource.GetData<ModerationData>(player.CSteamID, Headers[(int)Page.Moderation].Button);
+        return UnturnedUIDataSource.GetData<ModerationData>(player.Steam64, Headers[(int)Page.Moderation].Button);
     }
-    public ModerationData GetOrAddModerationData(UCPlayer player) => GetOrAddModerationData(player.Steam64);
+    public ModerationData GetOrAddModerationData(WarfarePlayer player) => GetOrAddModerationData(player.Steam64.m_SteamID);
     public ModerationData GetOrAddModerationData(ulong steam64)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         ModerationData? data = UnturnedUIDataSource.GetData<ModerationData>(new CSteamID(steam64), Headers[(int)Page.Moderation].Button);
         if (data == null)
@@ -612,10 +663,10 @@ internal partial class ModerationUI : UnturnedUI
 
         return data;
     }
-    private void UpdateSelectedPlayer(UCPlayer player)
+    private void UpdateSelectedPlayer(WarfarePlayer player)
     {
         ModerationData data = GetOrAddModerationData(player);
-        if (!Util.IsValidSteam64Id(data.SelectedPlayer))
+        if (new CSteamID(data.SelectedPlayer).GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
         {
             ModerationActionPlayerHeader.SetText(player, string.Empty);
             ModerationFormRoot.Hide(player);
@@ -624,7 +675,8 @@ internal partial class ModerationUI : UnturnedUI
             return;
         }
 
-        if (UCPlayer.FromID(data.SelectedPlayer) is null)
+        
+        if (_playerService.GetOnlinePlayerOrNull(data.SelectedPlayer) == null)
         {
             ModerationButtonKick.Disable(player);
             if (data.PendingType == ModerationEntryType.Kick)
@@ -639,26 +691,25 @@ internal partial class ModerationUI : UnturnedUI
             ModerationButtonKick.Enable(player);
         }
 
-        UCWarfare.RunTask(async token =>
+        UniTask.Create(async () =>
         {
-            ValueTask<PlayerNames> nameTask = F.GetPlayerOriginalNamesAsync(data.SelectedPlayer, token);
-            if (nameTask.IsCompleted)
+            if (_playerService.GetOnlinePlayerOrNull(data.SelectedPlayer) is { } pl)
             {
-                ModerationActionPlayerHeader.SetText(player, nameTask.Result.PlayerName + " (" + data.SelectedPlayer.ToString(CultureInfo.InvariantCulture) + ")");
-                ModerationActionHeader.SetText(player, "Actions - " + nameTask.Result.PlayerName);
+                ModerationActionPlayerHeader.SetText(player, pl.Names.GetDisplayNameOrPlayerName() + " (" + data.SelectedPlayer.ToString(CultureInfo.InvariantCulture) + ")");
+                ModerationActionHeader.SetText(player, "Actions - " + pl.Names.GetDisplayNameOrPlayerName());
             }
             else
             {
-                PlayerNames names = await nameTask;
-                ModerationActionPlayerHeader.SetText(player, names.PlayerName + " (" + data.SelectedPlayer.ToString(CultureInfo.InvariantCulture) + ")");
-                ModerationActionHeader.SetText(player, "Actions - " + names.PlayerName);
+                PlayerNames names = await _userDataService.GetUsernamesAsync(data.SelectedPlayer, player.DisconnectToken);
+                ModerationActionPlayerHeader.SetText(player, names.GetDisplayNameOrPlayerName() + " (" + data.SelectedPlayer.ToString(CultureInfo.InvariantCulture) + ")");
+                ModerationActionHeader.SetText(player, "Actions - " + names.GetDisplayNameOrPlayerName());
             }
 
             ActionButtonBox.Show(player);
 
-        }, player.DisconnectToken, ctx: "Update player name.");
+        });
     }
-    public void SetHistoryPage(UCPlayer player, ModerationData data, int page)
+    public void SetHistoryPage(WarfarePlayer player, ModerationData data, int page)
     {
         ModerationEntry[] entries = data.HistoryView ?? Array.Empty<ModerationEntry>();
         data.HistoryPage = page;
@@ -694,31 +745,32 @@ internal partial class ModerationUI : UnturnedUI
 
         data.HistoryCount = c;
     }
-    public void SendModerationPlayerList(UCPlayer player)
+    public void SendModerationPlayerList(WarfarePlayer player)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         ITransportConnection connection = player.Connection;
 
-        if (!ModerationPlayerSearchModeButton.TryGetSelection(player.Player, out PlayerSearchMode searchMode))
+        if (!ModerationPlayerSearchModeButton.TryGetSelection(player.UnturnedPlayer, out PlayerSearchMode searchMode))
             searchMode = PlayerSearchMode.Online;
         ModerationData data = GetOrAddModerationData(player);
-        UnturnedTextBoxData? textBoxData = UnturnedUIDataSource.GetData<UnturnedTextBoxData>(player.CSteamID, ModerationPlayerSearch);
+        UnturnedTextBoxData? textBoxData = UnturnedUIDataSource.GetData<UnturnedTextBoxData>(player.Steam64, ModerationPlayerSearch);
         string searchText = textBoxData?.Text ?? string.Empty;
         data.PlayerList ??= new ulong[ModerationPlayerList.Length];
         if (searchText.Length < 1 || searchMode == PlayerSearchMode.Online)
         {
-            List<UCPlayer> buffer;
+            IReadOnlyList<WarfarePlayer> buffer;
             bool clr;
             if (!string.IsNullOrWhiteSpace(searchText))
             {
-                UCPlayer.Search(searchText, UCPlayer.NameSearch.PlayerName, _tempPlayerSearchBuffer);
+                _tempPlayerSearchBuffer.Clear();
+                _playerService.GetOnlinePlayers(searchText, _tempPlayerSearchBuffer, player.Locale.CultureInfo, PlayerNameType.PlayerName);
                 buffer = _tempPlayerSearchBuffer;
                 clr = true;
             }
             else
             {
-                buffer = PlayerManager.OnlinePlayers;
+                buffer = _playerService.OnlinePlayers;
                 clr = false;
             }
 
@@ -728,27 +780,16 @@ internal partial class ModerationUI : UnturnedUI
                 int i = 0;
                 for (; i < ct; ++i)
                 {
-                    UCPlayer listPlayer = buffer[i];
+                    WarfarePlayer listPlayer = buffer[i];
                     PlayerListEntry entry = ModerationPlayerList[i];
-                    entry.SteamId.SetText(connection, listPlayer.Steam64.ToString(CultureInfo.InvariantCulture));
-                    entry.Name.SetText(connection, listPlayer.Name.PlayerName);
-                    if (Data.ModerationSql.TryGetAvatar(listPlayer.Steam64, AvatarSize.Small, out string avatarUrl))
-                        entry.ProfilePicture.SetImage(connection, avatarUrl);
-                    else
-                    {
-                        entry.ProfilePicture.SetImage(connection, string.Empty);
-                        UniTask.Create(async () =>
-                        {
-                            string? icon = await listPlayer.GetProfilePictureURL(AvatarSize.Small, player.DisconnectToken);
-                            await UniTask.SwitchToMainThread(player.DisconnectToken);
-                            entry.ProfilePicture.SetImage(player, icon ?? string.Empty);
-                        });
-                    }
+                    entry.SteamId.SetText(connection, listPlayer.Steam64.m_SteamID.ToString(CultureInfo.InvariantCulture));
+                    entry.Name.SetText(connection, listPlayer.Names.GetDisplayNameOrPlayerName());
+                    entry.ProfilePicture.SetImage(connection, listPlayer.SteamSummary.AvatarUrlSmall);
 
                     if (i >= data.InfoActorCount)
                         entry.Root.SetVisibility(player, true);
 
-                    data.PlayerList[i] = listPlayer.Steam64;
+                    data.PlayerList[i] = listPlayer.Steam64.m_SteamID;
                 }
 
                 for (; i < data.PlayerCount; ++i)
@@ -762,25 +803,27 @@ internal partial class ModerationUI : UnturnedUI
             finally
             {
                 if (clr)
-                    buffer.Clear();
+                    ((IList<WarfarePlayer>)buffer).Clear();
             }
         }
         else
         {
-            UCWarfare.RunTask(async token =>
+            UniTask.Create(async () =>
             {
+                CancellationToken token = player.DisconnectToken;
                 ITransportConnection connection = player.Connection;
 
                 token.ThrowIfCancellationRequested();
 
                 int version = Interlocked.Increment(ref data.SearchVersion);
-                List<PlayerNames> names = await Data.AdminSql.SearchAllPlayers(searchText, UCPlayer.NameSearch.PlayerName, true, token);
+                List<PlayerNames> names = await _userDataService.SearchPlayersAsync(searchText, PlayerNameType.PlayerName, byLastJoined: true, ModerationPlayerList.Length, token);
 
                 if (data.SearchVersion != version)
                     return;
+
                 token.ThrowIfCancellationRequested();
 
-                await UCWarfare.ToUpdate(token);
+                await UniTask.SwitchToMainThread(token);
 
                 int ct = Math.Min(ModerationPlayerList.Length, names.Count);
                 int i2 = 0;
@@ -788,9 +831,9 @@ internal partial class ModerationUI : UnturnedUI
                 {
                     PlayerNames name = names[i2];
                     PlayerListEntry entry = ModerationPlayerList[i2];
-                    entry.SteamId.SetText(connection, name.Steam64.ToString(CultureInfo.InvariantCulture));
-                    entry.Name.SetText(connection, name.PlayerName);
-                    if (Data.ModerationSql.TryGetAvatar(name.Steam64, AvatarSize.Small, out string avatarUrl))
+                    entry.SteamId.SetText(connection, name.Steam64.m_SteamID.ToString(CultureInfo.InvariantCulture));
+                    entry.Name.SetText(connection, name.GetDisplayNameOrPlayerName());
+                    if (_moderationSql.TryGetAvatar(name.Steam64.m_SteamID, AvatarSize.Small, out string avatarUrl))
                         entry.ProfilePicture.SetImage(connection, avatarUrl);
                     else
                         entry.ProfilePicture.SetImage(connection, string.Empty);
@@ -799,7 +842,7 @@ internal partial class ModerationUI : UnturnedUI
                     if (i2 >= data.InfoActorCount)
                         entry.Root.SetVisibility(player.Connection, true);
 
-                    data.PlayerList[i2] = name.Steam64;
+                    data.PlayerList[i2] = name.Steam64.m_SteamID;
                 }
 
                 for (; i2 < data.PlayerCount; ++i2)
@@ -810,23 +853,24 @@ internal partial class ModerationUI : UnturnedUI
 
                 data.PlayerCount = ct;
 
-                
-                await Data.ModerationSql.CacheAvatars(names.Select(x => x.Steam64), token);
+                await _moderationSql.CacheAvatarsAsync(names.Select(x => x.Steam64.m_SteamID), AvatarSize.Small, token);
+
+                await UniTask.SwitchToMainThread(token);
 #if DEBUG
-                ThreadUtil.assertIsGameThread();
+                GameThread.AssertCurrent();
 #endif
                 for (int i = 0; i < ct; ++i)
                 {
                     PlayerNames name = names[i];
-                    if (Data.ModerationSql.TryGetAvatar(name.Steam64, AvatarSize.Small, out string avatarUrl))
+                    if (_moderationSql.TryGetAvatar(name.Steam64.m_SteamID, AvatarSize.Small, out string avatarUrl))
                         ModerationPlayerList[i].ProfilePicture.SetImage(connection, avatarUrl);
                 }
-            }, player.DisconnectToken, ctx: "Update moderation player list for " + player.Steam64.ToString(CultureInfo.InvariantCulture) + ".");
+            });
         }
     }
-    public void SelectEntry(UCPlayer player, ModerationEntry? entry)
+    public void SelectEntry(WarfarePlayer player, ModerationEntry? entry)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         ModerationData data = GetOrAddModerationData(player);
         if (entry != null && data.SelectedEntry == entry)
@@ -847,6 +891,7 @@ internal partial class ModerationUI : UnturnedUI
             data.SelectedEntry = entry;
             data.LastViewedTime = Time.realtimeSinceStartup;
         }
+
         int v = Interlocked.Increment(ref data.InfoVersion);
         ITransportConnection c = player.Connection;
 
@@ -861,14 +906,14 @@ internal partial class ModerationUI : UnturnedUI
         ModerationInfoReputation.SetText(c, FormatReputation(entry.Reputation, player.Locale.CultureInfo, false) + " Reputation");
         ModerationInfoReason.SetText(c, string.IsNullOrWhiteSpace(entry.Message) ? "No message." : entry.Message!);
         ModerationInfoPlayerId.SetText(c, entry.Player.ToString(CultureInfo.InvariantCulture));
-        if (Data.ModerationSql.TryGetAvatar(entry.Player, AvatarSize.Full, out string avatarUrl))
+        if (_moderationSql.TryGetAvatar(entry.Player, AvatarSize.Full, out string avatarUrl))
             ModerationInfoProfilePicture.SetImage(c, avatarUrl);
         else
         {
             ModerationInfoProfilePicture.SetImage(c, string.Empty);
             UniTask.Create(async () =>
             {
-                string? icon = await F.GetProfilePictureURL(entry.Player, AvatarSize.Full, player.DisconnectToken);
+                string? icon = await _moderationSql.GetAvatarAsync(new CSteamID(entry.Player), AvatarSize.Full, token: player.DisconnectToken);
 
                 await UniTask.SwitchToMainThread(player.DisconnectToken);
 
@@ -936,14 +981,14 @@ internal partial class ModerationUI : UnturnedUI
 
             data.InfoEvidenceCount = ct;
 
-            UCWarfare.RunTask(async token =>
+            UniTask.Create(async () =>
             {
                 if (data.InfoVersion != v)
                     return;
                 for (int j = 0; j < ct; ++j)
                 {
                     IModerationActor actor = entry.Evidence[j].Actor;
-                    ValueTask<string> name = actor.GetDisplayName(Data.ModerationSql, token);
+                    ValueTask<string> name = actor.GetDisplayName(_moderationSql, player.DisconnectToken);
                     UnturnedLabel nameLbl = ModerationInfoEvidenceEntries[j].ActorName;
                     if (name.IsCompleted)
                     {
@@ -957,7 +1002,7 @@ internal partial class ModerationUI : UnturnedUI
                             nameLbl.SetText(c, nameText);
                     }
                 }
-            }, player.DisconnectToken);
+            });
         }
         else
         {
@@ -969,7 +1014,7 @@ internal partial class ModerationUI : UnturnedUI
 
         if (entry.Actors.Length > 0)
         {
-            UCWarfare.RunTask(async token =>
+            UniTask.Create(async () =>
             {
                 if (data.InfoVersion != v)
                     return;
@@ -979,11 +1024,12 @@ internal partial class ModerationUI : UnturnedUI
                 for (int j = 0; j < ct; ++j)
                 {
                     RelatedActor actor = entry.Actors[i];
-                    if (Util.IsValidSteam64Id(actor.Actor.Id))
+                    if (new CSteamID(actor.Actor.Id).GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
                         profilePictures.Add(actor.Actor.Id);
                 }
 
-                await Data.ModerationSql.CacheAvatars(profilePictures, token);
+                await _moderationSql.CacheAvatarsAsync(profilePictures, AvatarSize.Medium, player.DisconnectToken);
+                await UniTask.SwitchToMainThread(player.DisconnectToken);
 
                 if (data.InfoVersion != v)
                     return;
@@ -992,7 +1038,7 @@ internal partial class ModerationUI : UnturnedUI
                     RelatedActor actor = entry.Actors[i];
                     ModerationInfoActor actorUi = ModerationInfoActors[i];
                     actorUi.Role.SetText(c, string.IsNullOrWhiteSpace(actor.Role) ? "No role" : actor.Role);
-                    if (Util.IsValidSteam64Id(actor.Actor.Id))
+                    if (new CSteamID(actor.Actor.Id).GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
                         actorUi.Steam64.SetText(c, actor.Actor.Id.ToString(CultureInfo.InvariantCulture));
                     else actorUi.Steam64.SetText(c, "...");
                     if (i >= data.InfoActorCount)
@@ -1008,16 +1054,17 @@ internal partial class ModerationUI : UnturnedUI
                 {
                     RelatedActor actor = entry.Actors[j];
                     ModerationInfoActor actorUi = ModerationInfoActors[j];
-                    ValueTask<string> unTask = actor.Actor.GetDisplayName(Data.ModerationSql, token);
+                    ValueTask<string> unTask = actor.Actor.GetDisplayName(_moderationSql, player.DisconnectToken);
                     ValueTask<string?> imgTask;
 
-                    if (Util.IsValidSteam64Id(actor.Actor.Id) && Data.ModerationSql.TryGetAvatar(actor.Actor.Id, AvatarSize.Medium, out string avatar))
+                    if (new CSteamID(actor.Actor.Id).GetEAccountType() == EAccountType.k_EAccountTypeIndividual
+                        && _moderationSql.TryGetAvatar(actor.Actor.Id, AvatarSize.Medium, out string avatar))
                     {
                         imgTask = new ValueTask<string?>(avatar);
                     }
                     else
                     {
-                        imgTask = actor.Actor.GetProfilePictureURL(Data.ModerationSql, AvatarSize.Medium, token);
+                        imgTask = actor.Actor.GetProfilePictureURL(_moderationSql, AvatarSize.Medium, player.DisconnectToken);
                     }
 
                     bool imgDone = false;
@@ -1051,7 +1098,7 @@ internal partial class ModerationUI : UnturnedUI
                     }
                 }
 
-            }, player.DisconnectToken, ctx: $"Update actor info for moderation entry {entry.Id}.");
+            });
         }
         else
         {
@@ -1061,22 +1108,23 @@ internal partial class ModerationUI : UnturnedUI
             }
         }
 
-        UCWarfare.RunTask(async token =>
+        UniTask.Create(async () =>
         {
-            PlayerNames names = await F.GetPlayerOriginalNamesAsync(entry.Player, token).ConfigureAwait(false);
+            PlayerNames names = await _userDataService.GetUsernamesAsync(entry.Player, player.DisconnectToken).ConfigureAwait(false);
             if (data.InfoVersion == v)
                 ModerationInfoPlayerName.SetText(c, names.ToString(false));
-        }, player.DisconnectToken, ctx: $"Update username for entry owner: {entry.Player}");
+        });
 
-        UCWarfare.RunTask(async token =>
+        UniTask.Create(async () =>
         {
             List<string> extraInfo = new List<string>();
-            await entry.AddExtraInfo(Data.ModerationSql, extraInfo, player.Locale.CultureInfo, token);
+            await entry.AddExtraInfo(_moderationSql, extraInfo, player.Locale.CultureInfo, player.DisconnectToken);
 
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(player.DisconnectToken);
 
             if (data.InfoVersion != v)
                 return;
+
             int ct = Math.Min(extraInfo.Count, ModerationInfoExtraInfo.Length);
             int i = 0;
             for (; i < ct; ++i)
@@ -1088,19 +1136,28 @@ internal partial class ModerationUI : UnturnedUI
             for (; i < ModerationInfoExtraInfo.Length; ++i)
                 ModerationInfoExtraInfo[i].SetVisibility(c, false);
 
-            await UniTask.WaitForSeconds(0.125f, true, cancellationToken: token);
+            await UniTask.WaitForSeconds(0.125f, true, cancellationToken: player.DisconnectToken);
 
             if (data.InfoVersion == v)
                 LogicModerationInfoUpdateScrollVisual.SetVisibility(c, true);
-        }, player.DisconnectToken, ctx: $"Update extra info for moderation entry {entry.Id}.");
+        });
     }
-    private void UpdateModerationEntry(UCPlayer player, int index, ModerationEntry entry)
+
+    private string ModerationEntryTypeToString(ModerationEntryType entryType, LanguageInfo language)
+    {
+        if (entryType is ModerationEntryType.ChatAbuseReport or ModerationEntryType.CheatingReport or ModerationEntryType.GriefingReport or ModerationEntryType.VoiceChatAbuseReport)
+            entryType = ModerationEntryType.Report;
+
+        return _valueFormatter.FormatEnum(entryType, language);
+    }
+
+    private void UpdateModerationEntry(WarfarePlayer player, int index, ModerationEntry entry)
     {
         ITransportConnection connection = player.Connection;
 
         ModerationHistoryEntry ui = ModerationHistory[index];
         ModerationEntryType? type = ModerationReflection.GetType(entry.GetType());
-        ui.Type.SetText(connection, type.HasValue ? type.Value.ToString() : entry.GetType().Name);
+        string typeStr;
         string? msg = entry.GetDisplayMessage();
         ui.Message.SetText(connection, string.IsNullOrWhiteSpace(msg) ? "== No Message ==" : msg);
         ui.Reputation.SetText(connection, FormatReputation(entry.Reputation, player.Locale.CultureInfo, false));
@@ -1109,27 +1166,27 @@ internal partial class ModerationUI : UnturnedUI
         {
             if (!actor.Actor.Async)
             {
-                ui.Admin.SetText(connection, actor.Actor.GetDisplayName(Data.ModerationSql, CancellationToken.None).Result);
-                ui.AdminProfilePicture.SetImage(connection, actor.Actor.GetProfilePictureURL(Data.ModerationSql, AvatarSize.Medium, CancellationToken.None).Result ?? string.Empty, false);
+                ui.Admin.SetText(connection, actor.Actor.GetDisplayName(_moderationSql, CancellationToken.None).Result);
+                ui.AdminProfilePicture.SetImage(connection, actor.Actor.GetProfilePictureURL(_moderationSql, AvatarSize.Medium, CancellationToken.None).Result ?? string.Empty, false);
             }
             else
             {
-                bool av = Data.ModerationSql.TryGetAvatar(actor.Actor, AvatarSize.Medium, out string avatarUrl);
-                bool nm = Data.ModerationSql.TryGetUsernames(actor.Actor, out PlayerNames names);
+                bool av = _moderationSql.TryGetAvatar(actor.Actor, AvatarSize.Medium, out string avatarUrl);
+                bool nm = _moderationSql.TryGetUsernames(actor.Actor, out PlayerNames names);
                 if (av)
                     ui.AdminProfilePicture.SetImage(connection, avatarUrl);
                 else
                     ui.AdminProfilePicture.SetImage(connection, Provider.configData.Browser.Icon);
                 if (nm)
-                    ui.Admin.SetText(connection, names.PlayerName);
+                    ui.Admin.SetText(connection, names.GetDisplayNameOrPlayerName());
                 else
                     ui.Admin.SetText(connection, "...");
                 if (!av || !nm)
                 {
                     UniTask.Create(async () =>
                     {
-                        ValueTask<string?> pfpTask = av ? new ValueTask<string?>(avatarUrl) : actor.Actor.GetProfilePictureURL(Data.ModerationSql, AvatarSize.Medium, player.DisconnectToken);
-                        ValueTask<string> displayNameTask = nm ? new ValueTask<string>(names.PlayerName) : actor.Actor.GetDisplayName(Data.ModerationSql, player.DisconnectToken);
+                        ValueTask<string?> pfpTask = av ? new ValueTask<string?>(avatarUrl) : actor.Actor.GetProfilePictureURL(_moderationSql, AvatarSize.Medium, player.DisconnectToken);
+                        ValueTask<string> displayNameTask = nm ? new ValueTask<string>(names.GetDisplayNameOrPlayerName()) : actor.Actor.GetDisplayName(_moderationSql, player.DisconnectToken);
                         string displayName = await displayNameTask.ConfigureAwait(false);
                         string? icon = await pfpTask.ConfigureAwait(false);
                         await UniTask.SwitchToMainThread(player.DisconnectToken);
@@ -1147,31 +1204,54 @@ internal partial class ModerationUI : UnturnedUI
             ui.AdminProfilePicture.SetImage(connection, Provider.configData.Browser.Icon);
         }
 
+        if (entry.Removed)
+        {
+            typeStr = "<#ccff66>(RM)</color>";
+        }
+        else if (entry is IForgiveableModerationEntry { Forgiven: true })
+        {
+            typeStr = "<#99ff99>(FG)</color>";
+        }
+        else if (entry is DurationPunishment p)
+        {
+            typeStr = p.IsApplied(false) ? "<#ff6666>(AC)</color>" : "<#ffcc99>(EX)</color>";
+        }
+        else
+        {
+            typeStr = string.Empty;
+        }
+
+        typeStr += type.HasValue
+            ? ModerationEntryTypeToString(type.Value, player.Locale.LanguageInfo)
+            : entry.GetType().Name;
+
+        ui.Type.SetText(connection, typeStr);
+
         if (entry is IDurationModerationEntry duration)
         {
-            ui.Duration.SetText(connection, duration.IsPermanent ? "∞" : Util.ToTimeString((int)Math.Round(duration.Duration.TotalSeconds), 2));
+            ui.Duration.SetText(connection, duration.IsPermanent ? "∞" : FormattingUtility.ToTimeString(duration.Duration, 2));
             ui.Icon.SetText(connection, string.Empty);
         }
         else
         {
             ui.Duration.SetText(connection, string.Empty);
             Guid? icon = entry.GetIcon();
-            ui.Icon.SetText(connection, icon.HasValue ? ItemIconProvider.GetIcon(icon.Value, tmpro: true) : string.Empty);
+            ui.Icon.SetText(connection, icon.HasValue ? _itemIconProvider.GetIcon(icon.Value, tmpro: true) : string.Empty);
         }
     }
-    private async Task RefreshModerationHistory(UCPlayer player, CancellationToken token = default)
+    private async UniTask RefreshModerationHistory(WarfarePlayer player, CancellationToken token = default)
     {
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
 
         ModerationHistoryNextButton.Disable(player.Connection);
         ModerationHistoryBackButton.Disable(player.Connection);
         ModerationHistoryPage.Disable(player.Connection);
 
         ModerationData data = GetOrAddModerationData(player);
-        UnturnedTextBoxData? textBoxData = UnturnedUIDataSource.GetData<UnturnedTextBoxData>(player.CSteamID, ModerationHistorySearch);
-        ModerationHistoryTypeButton.TryGetSelection(player.Player, out ModerationEntryType filter);
-        ModerationHistorySearchTypeButton.TryGetSelection(player.Player, out ModerationHistorySearchMode searchMode);
-        ModerationHistorySortModeButton.TryGetSelection(player.Player, out ModerationHistorySortMode sortMode);
+        UnturnedTextBoxData? textBoxData = UnturnedUIDataSource.GetData<UnturnedTextBoxData>(player.Steam64, ModerationHistorySearch);
+        ModerationHistoryTypeButton.TryGetSelection(player.UnturnedPlayer, out ModerationEntryType filter);
+        ModerationHistorySearchTypeButton.TryGetSelection(player.UnturnedPlayer, out ModerationHistorySearchMode searchMode);
+        ModerationHistorySortModeButton.TryGetSelection(player.UnturnedPlayer, out ModerationHistorySortMode sortMode);
         Type type = (filter == ModerationEntryType.None ? null : ModerationReflection.GetType(filter)) ?? typeof(ModerationEntry);
         DateTimeOffset? start = null, end = null;
         string? orderBy = null;
@@ -1200,33 +1280,33 @@ internal partial class ModerationUI : UnturnedUI
                 if (noType)
                     condition += " AND ";
                 condition += $"`main`.`{DatabaseInterface.ColumnEntriesMessage}` LIKE {{0}}";
-                conditionArgs = new object[] { "%" + text + "%" };
+                conditionArgs = [ "%" + text + "%" ];
             }
             else if (searchMode == ModerationHistorySearchMode.Admin)
             {
                 if (noType)
                     condition += " AND ";
-                if (ulong.TryParse(text, NumberStyles.Number, player.Locale.CultureInfo, out ulong steam64) && Util.IsValidSteam64Id(steam64))
+                if (ulong.TryParse(text, NumberStyles.Number, player.Locale.CultureInfo, out ulong steam64) && new CSteamID(steam64).GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
                 {
                     condition += $"EXISTS (SELECT COUNT(*) FROM `{DatabaseInterface.TableActors}` AS `a` " +
                                  $"WHERE `a`.`{DatabaseInterface.ColumnExternalPrimaryKey}` = `main`.`{DatabaseInterface.ColumnEntriesPrimaryKey}` " +
                                  $"AND `a`.`{DatabaseInterface.ColumnActorsId}`={{0}} " +
                                  $"AND `a`.`{DatabaseInterface.ColumnActorsAsAdmin}` != 0) " +
                                 $"> 0";
-                    conditionArgs = new object[] { steam64 };
+                    conditionArgs = [ steam64 ];
                 }
                 else
                 {
                     condition += $"(SELECT COUNT(*) FROM `{DatabaseInterface.TableActors}` AS `a` " +
                                  $"WHERE `a`.`{DatabaseInterface.ColumnExternalPrimaryKey}` = `main`.`{DatabaseInterface.ColumnEntriesPrimaryKey}` " +
                                  $"AND " +
-                                 $"EXISTS (SELECT COUNT(*) FROM `{WarfareSQL.TableUsernames}` AS `u` " +
-                                  $"WHERE `a`.`{DatabaseInterface.ColumnActorsId}`=`u`.`{WarfareSQL.ColumnUsernamesSteam64}` " +
+                                 $"EXISTS (SELECT COUNT(*) FROM `{DatabaseInterface.TableUserData}` AS `u` " +
+                                  $"WHERE `a`.`{DatabaseInterface.ColumnActorsId}`=`u`.`{DatabaseInterface.ColumnUserDataSteam64}` " +
                                  $"AND " +
-                                  $"(`u`.`{WarfareSQL.ColumnUsernamesPlayerName}` LIKE {{0}} OR `u`.`{WarfareSQL.ColumnUsernamesCharacterName}` LIKE {{0}} OR `u`.`{WarfareSQL.ColumnUsernamesNickName}` LIKE {{0}}))" +
+                                  $"(`u`.`{DatabaseInterface.ColumnUserDataPlayerName}` LIKE {{0}} OR `u`.`{DatabaseInterface.ColumnUserDataCharacterName}` LIKE {{0}} OR `u`.`{DatabaseInterface.ColumnUserDataNickName}` LIKE {{0}} OR `u`.`{DatabaseInterface.ColumnUserDataDisplayName}` LIKE {{0}}))" +
                                  $" > 0)" +
                                 $" > 0";
-                    conditionArgs = new object[] { "%" + text + "%" };
+                    conditionArgs = [ "%" + text + "%" ];
                 }
             }
             else if (!noType)
@@ -1236,17 +1316,17 @@ internal partial class ModerationUI : UnturnedUI
                 if (filter != ModerationEntryType.None)
                 {
                     condition += $"`main`.`{DatabaseInterface.ColumnEntriesType}` = {{0}}";
-                    conditionArgs = new object[] { filter.ToString() };
+                    conditionArgs = [ filter.ToString() ];
                 }
                 else if (Enum.TryParse(text, true, out ModerationEntryType entryType))
                 {
                     condition += $"`main`.`{DatabaseInterface.ColumnEntriesType}` = {{0}}";
-                    conditionArgs = new object[] { entryType.ToString() };
+                    conditionArgs = [ entryType.ToString() ];
                 }
                 else
                 {
                     condition += $"`main`.`{DatabaseInterface.ColumnEntriesType}` LIKE {{0}}";
-                    conditionArgs = new object[] { "%" + text + "%" };
+                    conditionArgs = [ "%" + text + "%" ];
                 }
             }
         }
@@ -1269,19 +1349,20 @@ internal partial class ModerationUI : UnturnedUI
         }
 
         ModerationEntry[] entries;
-        
-        bool showRecentActors = text is not { Length: > 0 } && !Util.IsValidSteam64Id(data.SelectedPlayer);
-        if (showRecentActors || Util.IsValidSteam64Id(data.SelectedPlayer))
+
+        bool validPlayer = new CSteamID(data.SelectedPlayer).GetEAccountType() == EAccountType.k_EAccountTypeIndividual;
+        bool showRecentActors = text is not { Length: > 0 } && !validPlayer;
+        if (showRecentActors || validPlayer)
         {
-            entries = (ModerationEntry[])await Data.ModerationSql.ReadAll(type, showRecentActors ? player.Steam64 : data.SelectedPlayer,
+            entries = (ModerationEntry[])await _moderationSql.ReadAll(type, showRecentActors ? player.Steam64 : new CSteamID(data.SelectedPlayer),
                 showRecentActors ? ActorRelationType.IsActor : ActorRelationType.IsTarget, false, true, start, end, condition, orderBy, conditionArgs, token);
         }
         else
         {
-            entries = (ModerationEntry[])await Data.ModerationSql.ReadAll(type, false, true, start, end, condition, orderBy, conditionArgs, token);
+            entries = (ModerationEntry[])await _moderationSql.ReadAll(type, false, true, start, end, condition, orderBy, conditionArgs, token);
         }
 
-        await UCWarfare.ToUpdate(token);
+        await UniTask.SwitchToMainThread(token);
 
         data.HistoryView = entries;
         int pgCt = data.PageCount;
@@ -1298,19 +1379,18 @@ internal partial class ModerationUI : UnturnedUI
                 usernamesAndPicturesToCache.Add(actor.Actor);
         }
 
-        _ = UCWarfare.RunTask(async token =>
+        UniTask.Create(async () =>
         {
-            ulong[] steam64Ids = await Data.ModerationSql.GetActorSteam64IDs(usernamesAndPicturesToCache, token);
+            ulong[] steam64Ids = await _moderationSql.GetActorSteam64IDs(usernamesAndPicturesToCache, player.DisconnectToken);
 
-            Task usernames = Data.ModerationSql.CacheUsernames(steam64Ids, token);
+            Task usernames = _moderationSql.CacheUsernames(steam64Ids, player.DisconnectToken);
 
-            await Data.ModerationSql.CacheAvatars(steam64Ids, token);
+            await _moderationSql.CacheAvatarsAsync(steam64Ids, AvatarSize.Medium, player.DisconnectToken);
             await usernames;
 
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(player.DisconnectToken);
             SetHistoryPage(player, data, newPage);
-
-        }, player.DisconnectToken);
+        });
     }
     public enum Page
     {
@@ -1319,188 +1399,182 @@ internal partial class ModerationUI : UnturnedUI
         Tickets,
         Logs
     }
+#nullable disable
     public class PlayerListEntry
     {
-        [UIPattern("", Mode = FormatMode.Format)]
+        [Pattern(Root = true)]
         public UnturnedUIElement Root { get; set; }
 
-        [UIPattern("Name", Mode = FormatMode.Format)]
+        [Pattern("ModerationPlayerName_{0}")]
         public UnturnedLabel Name { get; set; }
 
-        [UIPattern("ModerateButton", Mode = FormatMode.Format)]
+        [Pattern("ModerationPlayerModerateButton_{0}")]
         public UnturnedButton ModerateButton { get; set; }
 
-        [UIPattern("ModerateButtonLabel", Mode = FormatMode.Format)]
+        [Pattern("ModerationPlayerModerateButtonLabel_{0}", AdditionalPath = "ModerationPlayerModerateButton_{0}")]
         public UnturnedLabel ModerateButtonLabel { get; set; }
 
-        [UIPattern("SteamID", Mode = FormatMode.Format)]
+        [Pattern("ModerationPlayerSteamID_{0}")]
         public UnturnedLabel SteamId { get; set; }
 
-        [UIPattern("Pfp", Mode = FormatMode.Format)]
+        [Pattern("ModerationPlayerPfp_{0}", AdditionalPath = "ModerationPlayerPfpMask_{0}")]
         public UnturnedImage ProfilePicture { get; set; }
     }
     public class ModerationHistoryEntry
     {
-        [UIPattern("", Mode = FormatMode.Format)]
+        [Pattern(Root = true)]
         public UnturnedButton Root { get; set; }
 
-        [UIPattern("Type", Mode = FormatMode.Format)]
+        [Pattern("ModerationEntryType_{0}")]
         public UnturnedLabel Type { get; set; }
 
-        [UIPattern("Reputation", Mode = FormatMode.Format)]
+        [Pattern("ModerationEntryReputation_{0}")]
         public UnturnedLabel Reputation { get; set; }
 
-        [UIPattern("Duration", Mode = FormatMode.Format)]
+        [Pattern("ModerationEntryDuration_{0}")]
         public UnturnedLabel Duration { get; set; }
 
-        [UIPattern("Icon", Mode = FormatMode.Format)]
+        [Pattern("ModerationEntryIcon_{0}")]
         public UnturnedLabel Icon { get; set; }
 
-        [UIPattern("Message", Mode = FormatMode.Format)]
+        [Pattern("ModerationEntryMessage_{0}")]
         public UnturnedLabel Message { get; set; }
 
-        [UIPattern("AdminPfp", Mode = FormatMode.Format)]
+        [Pattern("ModerationEntryAdminPfp_{0}", AdditionalPath = "ModerationEntryAdminPfpMask_{0}")]
         public UnturnedImage AdminProfilePicture { get; set; }
 
-        [UIPattern("Admin", Mode = FormatMode.Format)]
+        [Pattern("ModerationEntryAdmin_{0}")]
         public UnturnedLabel Admin { get; set; }
 
-        [UIPattern("Timestamp", Mode = FormatMode.Format)]
+        [Pattern("ModerationEntryTimestamp_{0}")]
         public UnturnedLabel Timestamp { get; set; }
     }
     public class ModerationInfoActor
     {
-        [UIPattern("", Mode = FormatMode.Format)]
+        [Pattern(Root = true)]
         public UnturnedUIElement Root { get; set; }
 
-        [UIPattern("Pfp", Mode = FormatMode.Format)]
+        [Pattern("ModerationPfpActor_{0}", AdditionalPath = "ModerationPfpActorMask_{0}")]
         public UnturnedImage ProfilePicture { get; set; }
 
-        [UIPattern("Name", Mode = FormatMode.Format)]
+        [Pattern("ModerationNameActor_{0}")]
         public UnturnedLabel Name { get; set; }
 
-        [UIPattern("Steam64", Mode = FormatMode.Format)]
+        [Pattern("ModerationSteam64Actor_{0}")]
         public UnturnedLabel Steam64 { get; set; }
 
-        [UIPattern("Role", Mode = FormatMode.Format)]
+        [Pattern("ModerationRoleActor_{0}")]
         public UnturnedLabel Role { get; set; }
     }
     public class ModerationInfoEvidence
     {
-        [UIPattern("", Mode = FormatMode.Format)]
+        [Pattern(Root = true)]
         public UnturnedUIElement Root { get; set; }
 
-        [UIPattern("Preview", Mode = FormatMode.Format)]
+        [Pattern("ModerationPreviewEvidence_{0}", AdditionalPath = "ModerationPreviewEvidenceMask_{0}")]
         public UnturnedImage PreviewImage { get; set; }
 
-        [UIPattern("Open", Mode = FormatMode.Format)]
+        [Pattern("ModerationPreviewEvidence_{0}")]
         public UnturnedButton PreviewImageButton { get; set; }
 
-        [UIPattern("PreviewName", Mode = FormatMode.Format)]
+        [Pattern("ModerationPreviewNameEvidence_{0}")]
         public UnturnedLabel PreviewName { get; set; }
 
-        [UIPattern("NoPreviewName", Mode = FormatMode.Format)]
+        [Pattern("ModerationNoPreviewNameEvidence_{0}")]
         public UnturnedLabel NoPreviewName { get; set; }
 
-        [UIPattern("PreviewMessage", Mode = FormatMode.Format)]
+        [Pattern("ModerationPreviewMessageEvidence_{0}")]
         public UnturnedLabel PreviewMessage { get; set; }
 
-        [UIPattern("NoPreviewMessage", Mode = FormatMode.Format)]
+        [Pattern("ModerationNoPreviewMessageEvidence_{0}")]
         public UnturnedLabel NoPreviewMessage { get; set; }
 
-        [UIPattern("Actor", Mode = FormatMode.Format)]
+        [Pattern("ModerationActorEvidence_{0}")]
         public UnturnedLabel ActorName { get; set; }
 
-        [UIPattern("Actor64", Mode = FormatMode.Format)]
+        [Pattern("ModerationActor64Evidence_{0}")]
         public UnturnedLabel ActorId { get; set; }
 
-        [UIPattern("Link", Mode = FormatMode.Format)]
+        [Pattern("ModerationLink_{0}")]
         public UnturnedLabel Link { get; set; }
 
-        [UIPattern("Timestamp", Mode = FormatMode.Format)]
+        [Pattern("ModerationTimestampEvidence_{0}")]
         public UnturnedLabel Timestamp { get; set; }
 
-        [UIPattern("Open", Mode = FormatMode.Format)]
+        [Pattern("ModerationOpenEvidence_{0}")]
         public UnturnedButton OpenButton { get; set; }
     }
     public class ModerationSelectedActor
     {
-        [UIPattern("", Mode = FormatMode.Format)]
+        [Pattern(Root = true)]
         public UnturnedUIElement Root { get; set; }
 
-        [UIPattern("Pfp", Mode = FormatMode.Format)]
+        [Pattern("ModerationPfpSelectedActor_{0}", AdditionalPath = "ModerationPfpSelectedActorMask_{0}")]
         public UnturnedImage ProfilePicture { get; set; }
 
-        [UIPattern("Name", Mode = FormatMode.Format)]
+        [Pattern("ModerationNameSelectedActor_{0}")]
         public UnturnedLabel Name { get; set; }
 
-        [UIPattern("Role", Mode = FormatMode.Format)]
+        [Pattern("ModerationRoleSelectedActor_{0}")]
         public UnturnedTextBox RoleInput { get; set; }
 
-        [UIPattern("Steam64", Mode = FormatMode.Format)]
+        [Pattern("ModerationSteam64SelectedActor_{0}")]
         public UnturnedTextBox Steam64Input { get; set; }
 
-        [UIPattern("You", Mode = FormatMode.Format)]
+        [Pattern("ModerationYouSelectedActor_{0}")]
         public UnturnedButton YouButton { get; set; }
 
-        [UIPattern("AsAdminCheck", Mode = FormatMode.Format)]
+        [Pattern("ModerationAsAdminCheckSelectedActor_{0}")]
         public UnturnedButton AsAdminToggleButton { get; set; }
 
-        [UIPattern("AsAdminCheckToggleState", Mode = FormatMode.Format)]
+        [Pattern("ModerationAsAdminCheckToggleStateSelectedActor_{0}", AdditionalPath = "ModerationAsAdminCheckSelectedActor_{0}")]
         public UnturnedUIElement AsAdminToggleState { get; set; }
 
-        [UIPattern("Remove", Mode = FormatMode.Format)]
+        [Pattern("ModerationRemoveSelectedActor_{0}")]
         public UnturnedButton RemoveButton { get; set; }
     }
     public class ModerationSelectedEvidence
     {
-        [UIPattern("", Mode = FormatMode.Format)]
+        [Pattern(Root = true)]
         public UnturnedUIElement Root { get; set; }
 
-        [UIPattern("Preview", Mode = FormatMode.Format)]
+        [Pattern("ModerationSelectedEvidencePreview_{0}", AdditionalPath = "ModerationSelectedEvidencePreviewMask_{0}")]
         public UnturnedImage PreviewImage { get; set; }
 
-        [UIPattern("PreviewMask", Mode = FormatMode.Format)]
+        [Pattern("ModerationSelectedEvidencePreviewMask_{0}")]
         public UnturnedUIElement PreviewRoot { get; set; }
 
-        [UIPattern("PreviewName", Mode = FormatMode.Format)]
+        [Pattern("ModerationSelectedEvidencePreviewName_{0}")]
         public UnturnedLabel PreviewName { get; set; }
 
-        [UIPattern("NoPreviewName", Mode = FormatMode.Format)]
+        [Pattern("ModerationSelectedEvidenceNoPreviewName_{0}")]
         public UnturnedLabel NoPreviewName { get; set; }
 
-        [UIPattern("Actor", Mode = FormatMode.Format)]
+        [Pattern("ModerationSelectedEvidenceActor_{0}")]
         public UnturnedLabel ActorName { get; set; }
 
-        [UIPattern("Timestamp", Mode = FormatMode.Format)]
+        [Pattern("ModerationSelectedEvidenceTimestamp_{0}")]
         public UnturnedTextBox TimestampInput { get; set; }
 
-        [UIPattern("Message", Mode = FormatMode.Format)]
+        [Pattern("ModerationSelectedEvidenceMessage_{0}")]
         public UnturnedTextBox MessageInput { get; set; }
 
-        [UIPattern("Link", Mode = FormatMode.Format)]
+        [Pattern("ModerationSelectedEvidenceLink_{0}")]
         public UnturnedTextBox LinkInput { get; set; }
 
-        [UIPattern("Steam64", Mode = FormatMode.Format)]
+        [Pattern("ModerationSelectedEvidenceSteam64_{0}")]
         public UnturnedTextBox Steam64Input { get; set; }
 
-        [UIPattern("ButtonNow", Mode = FormatMode.Format)]
+        [Pattern("ModerationSelectedEvidenceButtonNow_{0}")]
         public UnturnedButton NowButton { get; set; }
 
-        [UIPattern("ButtonYou", Mode = FormatMode.Format)]
+        [Pattern("ModerationSelectedEvidenceButtonYou_{0}")]
         public UnturnedButton YouButton { get; set; }
 
-        [UIPattern("ButtonRemove", Mode = FormatMode.Format)]
+        [Pattern("ModerationSelectedEvidenceButtonRemove_{0}")]
         public UnturnedButton RemoveButton { get; set; }
     }
-    public class ActionControl
-    {
-        [UIPattern("", Mode = FormatMode.Format)]
-        public UnturnedButton Root { get; set; }
-
-        [UIPattern("Label", Mode = FormatMode.Format)]
-        public UnturnedLabel Text { get; set; }
-    }
+#nullable restore
     public class ModerationData : IUnturnedUIData
     {
         internal int ActionModeVersion;
@@ -1509,6 +1583,8 @@ internal partial class ModerationUI : UnturnedUI
         internal int ActionVersion;
         internal int HistorySearchUpdateVersion;
         internal int EvidenceVersion;
+        internal bool HasModerationUI;
+        internal ModalHandle Modal;
         public CSteamID Player { get; }
         public ModerationUI Owner { get; }
         UnturnedUI IUnturnedUIData.Owner => Owner;

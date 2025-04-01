@@ -1,116 +1,87 @@
-﻿using System;
-using Uncreated.Framework;
-using Uncreated.Warfare.Commands.CommandSystem;
-using Uncreated.Warfare.Components;
-using Uncreated.Warfare.FOBs;
-using Uncreated.Warfare.Gamemodes.Insurgency;
-using Uncreated.Warfare.Gamemodes.Interfaces;
-using Uncreated.Warfare.Teams;
-using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
+﻿using Microsoft.Extensions.DependencyInjection;
+using System;
+using Uncreated.Warfare.FOBs.Deployment;
+using Uncreated.Warfare.Interaction.Commands;
+using Uncreated.Warfare.Players.Extensions;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Commands;
-public class DeployCommand : Command
-{
-    private const string Syntax = "/deploy main -OR- /deploy <fob name>";
-    private const string Help = "Deploy to a point of interest such as a main base, FOB, VCP, or cache.";
 
-    public DeployCommand() : base("deploy", EAdminType.MEMBER)
+[Command("deploy", "dep", "warp", "warps", "tpa", "go", "goto", "fob", "deployfob", "df", "dp"), MetadataFile]
+internal sealed class DeployCommand : IExecutableCommand
+{
+    private readonly ZoneStore _globalZoneStore;
+    private readonly DeploymentTranslations _translations;
+    private readonly DeploymentService _deploymentService;
+
+    /// <inheritdoc />
+    public required CommandContext Context { get; init; }
+
+    public DeployCommand(IServiceProvider serviceProvider)
     {
-        AddAlias("dep");
-        AddAlias("warp");
-        AddAlias("warps");
-        AddAlias("tpa");
-        AddAlias("go");
-        AddAlias("goto");
-        AddAlias("fob");
-        AddAlias("deployfob");
-        AddAlias("df");
-        AddAlias("dp");
-        Structure = new CommandStructure
-        {
-            Description = "Deploy to a point of interest such as a main base, FOB, VCP, or cache.",
-            Parameters =
-            [
-                new CommandParameter("Location", typeof(IDeployable), "Lobby", "Main"),
-                new CommandParameter("Cancel")
-                {
-                    Aliases = [ "stop" ]
-                }
-            ]
-        };
+        _globalZoneStore = serviceProvider.GetRequiredService<ZoneStore>();
+        _deploymentService = serviceProvider.GetRequiredService<DeploymentService>();
+        _translations = serviceProvider.GetRequiredService<TranslationInjection<DeploymentTranslations>>().Value;
     }
 
-    public override void Execute(CommandInteraction ctx)
+    /// <inheritdoc />
+    public UniTask ExecuteAsync(CancellationToken token)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        ctx.AssertRanByPlayer();
+        Context.AssertRanByPlayer();
 
-        ctx.AssertArgs(1, Syntax + " - " + Help);
+        Context.AssertArgs(1);
 
-        if (ctx.MatchParameter(0, "cancel", "stop") && ctx.Caller.Player.TryGetPlayerData(out UCPlayerData comp) && comp.CurrentTeleportRequest != null)
+        if (Context.MatchParameter(0, "cancel", "stop"))
         {
-            comp.CancelDeployment();
-            throw ctx.Reply(T.DeployCancelled);
+            DeploymentComponent comp = Context.Player.Component<DeploymentComponent>();
+
+            if (comp.CurrentDeployment == null)
+                throw Context.Reply(_translations.DeployCancelNotDeploying);
+
+            comp.CancelDeployment(false);
+            throw Context.Reply(_translations.DeployCancelled);
         }
 
-        if (Data.Is(out IRevives r) && r.ReviveManager.IsInjured(ctx.CallerID))
-            throw ctx.Reply(T.DeployInjured);
-
-        string input = ctx.GetRange(0)!;
-
-        UCPlayerData? c = ctx.Caller.Player.GetPlayerData(out _);
-        if (c is null) throw ctx.SendUnknownError();
-
-        ulong team = ctx.Caller.GetTeam();
-        if (team is not 1 and not 2)
-            throw ctx.Reply(T.NotOnCaptureTeam);
-
-        bool inMain = ctx.Caller.Player.IsInMain();
-        bool inLobby = !inMain && TeamManager.LobbyZone.IsInside(ctx.Caller.Position);
-        bool shouldCancelOnMove = !inMain;
-        bool shouldCancelOnDamage = !inMain;
-
-        if (CooldownManager.HasCooldown(ctx.Caller, CooldownType.Deploy, out Cooldown cooldown))
-            throw ctx.Reply(T.DeployCooldown, cooldown);
-
-        IFOB? deployFromFob = null;
-
-        if (!(inMain || inLobby))
+        if (Context.Player.IsInjured())
         {
-            if (CooldownManager.HasCooldown(ctx.Caller, CooldownType.Combat, out Cooldown combatlog))
-                throw ctx.Reply(T.DeployInCombat, combatlog);
-
-            if (!(ctx.Caller.IsOnFOB(out deployFromFob) && deployFromFob is not FOB { Bleeding: true } && deployFromFob.CheckDeployable(ctx.Caller, null)))
-                throw ctx.Reply(Data.Is<Insurgency>() ? T.DeployNotNearFOBInsurgency : T.DeployNotNearFOB);
+            throw Context.Reply(_translations.DeployInjured);
         }
+
+        string input = Context.GetRange(0)!;
 
         IDeployable? destination = null;
-        if (!FOBManager.Loaded || !FOBManager.TryFindFOB(input, team, out destination))
-        {
-            if (input.Equals("lobby", StringComparison.InvariantCultureIgnoreCase))
-                throw ctx.Reply(T.DeployLobbyRemoved);
 
-            if (input.Equals("main", StringComparison.InvariantCultureIgnoreCase) ||
-                input.Equals("base", StringComparison.InvariantCultureIgnoreCase) ||
-                input.Equals("home", StringComparison.InvariantCultureIgnoreCase) ||
-                input.Equals("mainbase", StringComparison.InvariantCultureIgnoreCase) ||
-                input.Equals("main base", StringComparison.InvariantCultureIgnoreCase) ||
-                input.Equals("homebase", StringComparison.InvariantCultureIgnoreCase) ||
-                input.Equals("home base", StringComparison.InvariantCultureIgnoreCase))
-            {
-                destination = TeamManager.GetMain(team);
-            }
-        }
+        DeploySettings deploySettings = default;
+
+        // todo if (false /*!FOBManager.Loaded || !FOBManager.TryFindFOB(input, Context.Player.Team, out destination) */)
+        // todo {
+        // todo     if (input.Equals("lobby", StringComparison.InvariantCultureIgnoreCase))
+        // todo         throw Context.Reply(_translations.DeployLobbyRemoved);
+        // todo 
+        // todo     if (input.Equals("main", StringComparison.InvariantCultureIgnoreCase) ||
+        // todo         input.Equals("base", StringComparison.InvariantCultureIgnoreCase) ||
+        // todo         input.Equals("home", StringComparison.InvariantCultureIgnoreCase) ||
+        // todo         input.Equals("mainbase", StringComparison.InvariantCultureIgnoreCase) ||
+        // todo         input.Equals("main base", StringComparison.InvariantCultureIgnoreCase) ||
+        // todo         input.Equals("homebase", StringComparison.InvariantCultureIgnoreCase) ||
+        // todo         input.Equals("home base", StringComparison.InvariantCultureIgnoreCase))
+        // todo     {
+        // todo         destination = _globalZoneStore.SearchZone(ZoneType.MainBase, Context.Player.Team.Faction);
+        // todo     }
+        // todo }
 
         if (destination == null)
-            throw ctx.Reply(T.DeployableNotFound, input);
+            throw Context.Reply(_translations.DeployableNotFound, input);
 
-        if (destination.Equals(deployFromFob))
-            throw ctx.Reply(T.DeployableAlreadyOnFOB);
-        
-        Deployment.DeployTo(ctx.Caller, deployFromFob, destination, ctx, shouldCancelOnMove, shouldCancelOnDamage, startCooldown: true);
-        ctx.Defer();
+        if (_globalZoneStore.IsInMainBase(Context.Player))
+        {
+            deploySettings.AllowMovement = true;
+            deploySettings.AllowNearbyEnemies = true;
+        }
+
+        _deploymentService.TryStartDeployment(Context.Player, destination, deploySettings);
+        Context.Defer();
+        return default;
     }
 }

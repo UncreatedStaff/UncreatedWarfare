@@ -1,14 +1,11 @@
-﻿using SDG.Unturned;
+﻿using DanielWillett.SpeedBytes;
 using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading;
-using System.Threading.Tasks;
-using Uncreated.Encoding;
-using Uncreated.Framework;
-using Uncreated.SQL;
+using Uncreated.Warfare.Database.Manual;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Moderation.Records;
 [ModerationEntry(ModerationEntryType.Teamkill)]
@@ -68,7 +65,7 @@ public class Teamkill : ModerationEntry
 
         writer.WriteNullable(Distance);
     }
-    public override void ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
+    public override bool ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
     {
         if (propertyName.Equals("death_cause", StringComparison.InvariantCultureIgnoreCase))
         {
@@ -78,7 +75,7 @@ public class Teamkill : ModerationEntry
                 if (num >= 0)
                 {
                     Cause = (EDeathCause)num;
-                    return;
+                    return true;
                 }
 
                 throw new JsonException($"Invalid integer for EDeathCause: {num}.");
@@ -87,7 +84,7 @@ public class Teamkill : ModerationEntry
             if (reader.TokenType == JsonTokenType.Null)
             {
                 Cause = null;
-                return;
+                return true;
             }
 
             string str = reader.GetString()!;
@@ -103,7 +100,7 @@ public class Teamkill : ModerationEntry
                 if (num >= 0)
                 {
                     Limb = (ELimb)num;
-                    return;
+                    return true;
                 }
 
                 throw new JsonException($"Invalid integer for ELimb: {num}.");
@@ -112,7 +109,7 @@ public class Teamkill : ModerationEntry
             if (reader.TokenType == JsonTokenType.Null)
             {
                 Limb = null;
-                return;
+                return true;
             }
 
             string str = reader.GetString()!;
@@ -127,7 +124,9 @@ public class Teamkill : ModerationEntry
         else if (propertyName.Equals("distance", StringComparison.InvariantCultureIgnoreCase))
             Distance = reader.TokenType == JsonTokenType.Null ? new double?() : reader.GetSingle();
         else
-            base.ReadProperty(ref reader, propertyName, options);
+            return base.ReadProperty(ref reader, propertyName, options);
+
+        return true;
     }
     public override void Write(Utf8JsonWriter writer, JsonSerializerOptions options)
     {
@@ -177,7 +176,7 @@ public class Teamkill : ModerationEntry
         if (Item.HasValue)
         {
             string name;
-            if (UCWarfare.IsLoaded && Assets.find(Item.Value) is ItemAsset item)
+            if (Provider.isInitialized && Assets.find(Item.Value) is ItemAsset item)
             {
                 name = item.FriendlyName ?? item.name;
                 if (item.id > 0)
@@ -192,11 +191,11 @@ public class Teamkill : ModerationEntry
     {
         bool hasEvidenceCalls = base.AppendWriteCall(builder, args);
 
-        builder.Append($" INSERT INTO `{DatabaseInterface.TableTeamkills}` ({SqlTypes.ColumnList(
+        builder.Append($" INSERT INTO `{DatabaseInterface.TableTeamkills}` ({MySqlSnippets.ColumnList(
             DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnTeamkillsAsset, DatabaseInterface.ColumnTeamkillsAssetName,
             DatabaseInterface.ColumnTeamkillsDeathCause, DatabaseInterface.ColumnTeamkillsDistance, DatabaseInterface.ColumnTeamkillsLimb)}) VALUES ");
 
-        F.AppendPropertyList(builder, args.Count, 5, 0, 1);
+        MySqlSnippets.AppendPropertyList(builder, args.Count, 5, 0, 1);
         builder.Append(" AS `t` " +
                        $"ON DUPLICATE KEY UPDATE `{DatabaseInterface.ColumnTeamkillsAsset}` = `t`.`{DatabaseInterface.ColumnTeamkillsAsset}`," +
                        $"`{DatabaseInterface.ColumnTeamkillsAssetName}` = `t`.`{DatabaseInterface.ColumnTeamkillsAssetName}`," +
@@ -205,7 +204,7 @@ public class Teamkill : ModerationEntry
                        $"`{DatabaseInterface.ColumnTeamkillsLimb}` = `t`.`{DatabaseInterface.ColumnTeamkillsLimb}`;");
         
         args.Add(Item.HasValue ? Item.Value.ToString("N") : DBNull.Value);
-        args.Add((object?)ItemName.MaxLength(48) ?? DBNull.Value);
+        args.Add((object?)ItemName.Truncate(48) ?? DBNull.Value);
         args.Add(Cause.HasValue ? Cause.Value.ToString() : DBNull.Value);
         args.Add(Distance.HasValue ? Distance.Value : DBNull.Value);
         args.Add(Limb.HasValue ? Limb.Value.ToString() : DBNull.Value);

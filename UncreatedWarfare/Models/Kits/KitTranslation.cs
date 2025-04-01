@@ -1,32 +1,20 @@
-﻿using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Text.Json.Serialization;
 using Uncreated.Warfare.Models.Base;
 
 namespace Uncreated.Warfare.Models.Kits;
 
 [Table("kits_sign_text")]
-public class KitTranslation : BaseTranslation, ICloneable
+public class KitTranslation : BaseTranslation
 {
-    [Required]
-    [JsonIgnore]
-    public Kit Kit { get; set; }
-
-    [ForeignKey(nameof(Kit))]
-    [Required]
-    [Column("Kit", Order = 1)]
+    [Required, Column("Kit", Order = 1)]
     public uint KitId { get; set; }
 
-    public object Clone()
+    public KitTranslation() { }
+    public KitTranslation(KitTranslation other) : base(other)
     {
-        return new KitTranslation
-        {
-            KitId = KitId,
-            Kit = Kit,
-            Value = Value,
-            Language = Language,
-            LanguageId = LanguageId
-        };
+        KitId = other.KitId;
     }
+
+    public override object Clone() => new KitTranslation(this);
 }

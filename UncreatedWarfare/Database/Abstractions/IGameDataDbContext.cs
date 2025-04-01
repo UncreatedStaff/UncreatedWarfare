@@ -3,11 +3,11 @@ using Uncreated.Warfare.Models.GameData;
 using Uncreated.Warfare.Models.Users;
 
 namespace Uncreated.Warfare.Database.Abstractions;
-public interface IGameDataDbContext : IDbContext
+public interface IGameDataDbContext : IFactionDbContext, ISeasonsDbContext
 {
     DbSet<GameRecord> Games { get; }
     DbSet<SessionRecord> Sessions { get; }
-    public static void ConfigureModels(ModelBuilder modelBuilder)
+    public new static void ConfigureModels(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<WarfareUserData>()
             .HasMany<SessionRecord>()
@@ -19,15 +19,16 @@ public interface IGameDataDbContext : IDbContext
             .WithOne(x => x.Game)
             .OnDelete(DeleteBehavior.Restrict);
 
+        // need to use WithMany here for these because deleting a row is a lot harder if a unique key gets added
         modelBuilder.Entity<SessionRecord>()
             .HasOne(x => x.PreviousSession)
-            .WithOne()
+            .WithMany()
             .IsRequired(false)
             .OnDelete(DeleteBehavior.SetNull);
 
         modelBuilder.Entity<SessionRecord>()
             .HasOne(x => x.NextSession)
-            .WithOne()
+            .WithMany()
             .IsRequired(false)
             .OnDelete(DeleteBehavior.SetNull);
 

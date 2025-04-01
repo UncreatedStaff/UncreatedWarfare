@@ -1,14 +1,15 @@
-﻿using System;
+using DanielWillett.SpeedBytes;
+using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading;
-using System.Threading.Tasks;
-using Uncreated.Encoding;
-using Uncreated.Framework;
-using Uncreated.SQL;
+using Uncreated.Warfare.Database.Manual;
+using Uncreated.Warfare.Logging;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Moderation;
 
@@ -26,7 +27,7 @@ public abstract class ModerationEntry : IModerationEntry
 
     /// <inheritdoc/>
     [JsonPropertyName("id")]
-    public PrimaryKey Id { get; set; } = PrimaryKey.NotAssigned;
+    public uint Id { get; set; }
 
     /// <inheritdoc/>
     [JsonPropertyName("target_steam_64")]
@@ -56,6 +57,7 @@ public abstract class ModerationEntry : IModerationEntry
     [JsonPropertyName("reputation")]
     public double Reputation { get; set; }
 
+    // todo: remove this
     /// <inheritdoc/>
     [JsonPropertyName("pending_reputation")]
     public double PendingReputation { get; set; }
@@ -95,11 +97,15 @@ public abstract class ModerationEntry : IModerationEntry
 
     /// <inheritdoc/>
     [JsonPropertyName("related_entries")]
-    public PrimaryKey[] RelatedEntryKeys { get; set; } = Array.Empty<PrimaryKey>();
+    public uint[] RelatedEntryKeys { get; set; } = Array.Empty<uint>();
 
     /// <inheritdoc/>
     [JsonIgnore]
     public ModerationEntry?[]? RelatedEntries { get; set; }
+
+    /// <inheritdoc/>
+    [JsonPropertyName("discord_message_id")]
+    public ulong DiscordMessageId { get; set; }
 
     /// <summary>
     /// Fills any cached properties.
@@ -116,7 +122,7 @@ public abstract class ModerationEntry : IModerationEntry
     public virtual Guid? GetIcon() => null;
     public virtual async Task AddExtraInfo(DatabaseInterface db, List<string> workingList, IFormatProvider formatter, CancellationToken token = default)
     {
-        workingList.Add($"Entry ID: {Id.Key.ToString(formatter)}");
+        workingList.Add($"Entry ID: {Id.ToString(formatter)}");
         if (IsLegacy)
         {
             workingList.Add($"Legacy ID: {(LegacyId.HasValue ? LegacyId.Value.ToString(formatter) : "--")}");
@@ -146,7 +152,7 @@ public abstract class ModerationEntry : IModerationEntry
             }
             if (RemovedMessage != null)
             {
-                workingList.Add("For: \"" + RemovedMessage.MaxLength(64) + "\"");
+                workingList.Add("For: \"" + RemovedMessage.Truncate(64) + "\"");
             }
         }
 
@@ -190,7 +196,7 @@ public abstract class ModerationEntry : IModerationEntry
         actor = new RelatedActor(role, false, ConsoleActor.Instance);
         return false;
     }
-    public virtual void ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
+    public virtual bool ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
     {
         if (propertyName.Equals("id", StringComparison.InvariantCultureIgnoreCase))
             Id = reader.GetUInt32();
@@ -226,10 +232,15 @@ public abstract class ModerationEntry : IModerationEntry
             RemovedTimestamp = reader.TokenType == JsonTokenType.Null ? null : new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(), DateTimeKind.Utc));
         else if (propertyName.Equals("removed_message", StringComparison.InvariantCultureIgnoreCase))
             RemovedMessage = reader.GetString();
+        else if (propertyName.Equals("discord_message_id", StringComparison.InvariantCultureIgnoreCase))
+            DiscordMessageId = reader.GetUInt64();
+        else return false;
+
+        return true;
     }
     public virtual void Write(Utf8JsonWriter writer, JsonSerializerOptions options)
     {
-        writer.WriteNumber("id", Id.Key);
+        writer.WriteNumber("id", Id);
         writer.WriteNumber("target_steam_64", Player);
         writer.WriteString("message", Message);
 
@@ -247,6 +258,8 @@ public abstract class ModerationEntry : IModerationEntry
             writer.WriteString("relevant_logs_begin_utc", RelevantLogsBegin.Value.UtcDateTime);
         if (RelevantLogsEnd.HasValue)
             writer.WriteString("relevant_logs_end_utc", RelevantLogsEnd.Value.UtcDateTime);
+        if (DiscordMessageId != 0)
+            writer.WriteNumber("discord_message_id", DiscordMessageId);
 
         writer.WritePropertyName("actors");
         JsonSerializer.Serialize(writer, Actors, options);
@@ -317,16 +330,20 @@ public abstract class ModerationEntry : IModerationEntry
             RemovedMessage = reader.ReadNullableString();
         }
 
+        DiscordMessageId = (flag & 4) != 0 ? reader.ReadUInt64() : 0;
+
         ReadIntl(reader, version);
     }
     internal void WriteContent(ByteWriter writer)
     {
         writer.Write(DataVersion);
 
-        writer.Write(Id.Key);
+        writer.Write(Id);
         writer.Write(Player);
         writer.WriteNullable(Message);
-        byte flag = (byte)((IsLegacy ? 1 : 0) | (Removed ? 2 : 0));
+        bool removed = Removed;
+        ulong discordMessageId = DiscordMessageId;
+        byte flag = (byte)((IsLegacy ? 1 : 0) | (removed ? 2 : 0) | (discordMessageId != 0 ? 4 : 0));
         writer.Write(flag);
         writer.Write(StartedTimestamp);
         writer.WriteNullable(ResolvedTimestamp);
@@ -344,12 +361,15 @@ public abstract class ModerationEntry : IModerationEntry
         for (int i = 0; i < Evidence.Length; ++i)
             Evidence[i].Write(writer);
 
-        if (Removed)
+        if (removed)
         {
             writer.Write(RemovedBy == null ? 0ul : RemovedBy.Id);
             writer.WriteNullable(RemovedTimestamp);
             writer.WriteNullable(RemovedMessage);
         }
+
+        if (discordMessageId != 0)
+            writer.Write(discordMessageId);
 
         WriteIntl(writer);
     }
@@ -360,7 +380,7 @@ public abstract class ModerationEntry : IModerationEntry
         builder.Append($"DELETE FROM `{DatabaseInterface.TableActors}` WHERE `{DatabaseInterface.ColumnExternalPrimaryKey}` = @0;");
         if (Actors is { Length: > 0 })
         {
-            builder.Append($" INSERT INTO `{DatabaseInterface.TableActors}` ({SqlTypes.ColumnList(
+            builder.Append($" INSERT INTO `{DatabaseInterface.TableActors}` ({MySqlSnippets.ColumnList(
                 DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnActorsIndex,
                 DatabaseInterface.ColumnActorsId, DatabaseInterface.ColumnActorsRole, DatabaseInterface.ColumnActorsAsAdmin)}) VALUES ");
             
@@ -368,11 +388,11 @@ public abstract class ModerationEntry : IModerationEntry
             {
                 ref RelatedActor actor = ref Actors[i];
 
-                F.AppendPropertyList(builder, args.Count, 4, i, 1);
+                MySqlSnippets.AppendPropertyList(builder, args.Count, 4, i, 1);
 
                 args.Add(i);
                 args.Add(actor.Actor.Id);
-                args.Add(actor.Role.MaxLength(255) ?? string.Empty);
+                args.Add(actor.Role.Truncate(255) ?? string.Empty);
                 args.Add(actor.Admin);
             }
             builder.Append(';');
@@ -388,7 +408,7 @@ public abstract class ModerationEntry : IModerationEntry
             for (int i = 0; i < Evidence.Length; ++i)
             {
                 ref Evidence evidence = ref Evidence[i];
-                if (evidence.Id.IsValid)
+                if (evidence.Id != 0u)
                     anyOld = true;
                 else
                     anyNew = true;
@@ -396,7 +416,7 @@ public abstract class ModerationEntry : IModerationEntry
 
             if (anyOld)
             {
-                builder.Append($" INSERT INTO `{DatabaseInterface.TableEvidence}` ({SqlTypes.ColumnList(
+                builder.Append($" INSERT INTO `{DatabaseInterface.TableEvidence}` ({MySqlSnippets.ColumnList(
                     DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnEvidenceId,
                     DatabaseInterface.ColumnEvidenceActorId, DatabaseInterface.ColumnEvidenceIsImage,
                     DatabaseInterface.ColumnEvidenceLink, DatabaseInterface.ColumnEvidenceLocalSource,
@@ -405,17 +425,17 @@ public abstract class ModerationEntry : IModerationEntry
                 for (int i = 0; i < Evidence.Length; ++i)
                 {
                     ref Evidence evidence = ref Evidence[i];
-                    if (!evidence.Id.IsValid)
+                    if (evidence.Id == 0u)
                         continue;
 
-                    F.AppendPropertyList(builder, args.Count, 7, i, 1);
+                    MySqlSnippets.AppendPropertyList(builder, args.Count, 7, i, 1);
 
-                    args.Add(evidence.Id.Key);
+                    args.Add(evidence.Id);
                     args.Add(evidence.Actor == null ? DBNull.Value : evidence.Actor.Id);
                     args.Add(evidence.Image);
-                    args.Add(evidence.URL.MaxLength(512)!);
-                    args.Add((object?)evidence.SavedLocation.MaxLength(512) ?? DBNull.Value);
-                    args.Add((object?)evidence.Message.MaxLength(1024) ?? DBNull.Value);
+                    args.Add(evidence.URL.Truncate(512)!);
+                    args.Add((object?)evidence.SavedLocation.Truncate(512) ?? DBNull.Value);
+                    args.Add((object?)evidence.Message.Truncate(1024) ?? DBNull.Value);
                     args.Add(evidence.Timestamp.UtcDateTime);
                 }
 
@@ -431,7 +451,7 @@ public abstract class ModerationEntry : IModerationEntry
 
             if (anyNew)
             {
-                builder.Append($" INSERT INTO `{DatabaseInterface.TableEvidence}` ({SqlTypes.ColumnList(
+                builder.Append($" INSERT INTO `{DatabaseInterface.TableEvidence}` ({MySqlSnippets.ColumnList(
                     DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnEvidenceActorId,
                     DatabaseInterface.ColumnEvidenceIsImage, DatabaseInterface.ColumnEvidenceLink,
                     DatabaseInterface.ColumnEvidenceLocalSource, DatabaseInterface.ColumnEvidenceMessage,
@@ -440,20 +460,20 @@ public abstract class ModerationEntry : IModerationEntry
                 for (int i = 0; i < Evidence.Length; ++i)
                 {
                     ref Evidence evidence = ref Evidence[i];
-                    if (evidence.Id.IsValid)
+                    if (evidence.Id != 0u)
                         continue;
 
-                    F.AppendPropertyList(builder, args.Count, 6, i, 1);
+                    MySqlSnippets.AppendPropertyList(builder, args.Count, 6, i, 1);
 
                     args.Add(evidence.Actor == null ? DBNull.Value : evidence.Actor.Id);
                     args.Add(evidence.Image);
-                    args.Add(evidence.URL.MaxLength(512)!);
-                    args.Add((object?)evidence.SavedLocation?.MaxLength(512) ?? DBNull.Value);
-                    args.Add((object?)evidence.Message?.MaxLength(1024) ?? DBNull.Value);
+                    args.Add(evidence.URL.Truncate(512)!);
+                    args.Add((object?)evidence.SavedLocation?.Truncate(512) ?? DBNull.Value);
+                    args.Add((object?)evidence.Message?.Truncate(1024) ?? DBNull.Value);
                     args.Add(evidence.Timestamp.UtcDateTime);
                 }
 
-                builder.Append($"; SELECT {SqlTypes.ColumnList(DatabaseInterface.ColumnEvidenceId,
+                builder.Append($"; SELECT {MySqlSnippets.ColumnList(DatabaseInterface.ColumnEvidenceId,
                     DatabaseInterface.ColumnEvidenceLink, DatabaseInterface.ColumnEvidenceMessage,
                     DatabaseInterface.ColumnEvidenceLocalSource, DatabaseInterface.ColumnEvidenceIsImage,
                     DatabaseInterface.ColumnEvidenceTimestamp, DatabaseInterface.ColumnEvidenceActorId)} FROM `{DatabaseInterface.TableEvidence}` WHERE `{DatabaseInterface.ColumnExternalPrimaryKey}` = @0;");
@@ -463,13 +483,14 @@ public abstract class ModerationEntry : IModerationEntry
         return anyNew;
     }
 }
+
 public interface IModerationEntry
 {
     /// <summary>
     /// Unique ID to all types of entries.
     /// </summary>
     [JsonPropertyName("id")]
-    PrimaryKey Id { get; set; }
+    uint Id { get; set; }
 
     /// <summary>
     /// Steam64 ID for the target player.
@@ -572,14 +593,21 @@ public interface IModerationEntry
     /// The keys of related moderation entries.
     /// </summary>
     [JsonPropertyName("related_entries")]
-    PrimaryKey[] RelatedEntryKeys { get; set; }
+    uint[] RelatedEntryKeys { get; set; }
 
     /// <summary>
     /// Related moderation entries to this one.
     /// </summary>
     [JsonIgnore]
     ModerationEntry?[]? RelatedEntries { get; set; }
+
+    /// <summary>
+    /// Message ID of the offense or report message, if applicable, otherwise 0.
+    /// </summary>
+    [JsonPropertyName("discord_message_id")]
+    ulong DiscordMessageId { get; set; }
 }
+
 public interface IForgiveableModerationEntry : IDurationModerationEntry
 {
     /// <summary>
@@ -639,24 +667,23 @@ public interface IDurationModerationEntry : IModerationEntry
     bool IsPermanent { get; set; }
 }
 
-public class ModerationCache : Dictionary<uint, ModerationEntryCacheEntry>
+public class ModerationCache : ConcurrentDictionary<uint, ModerationEntryCacheEntry>
 {
-    public ModerationCache() { }
-    public ModerationCache(int capacity) : base(capacity) { }
     public new IModerationEntry this[uint key]
     {
         get => base[key].Entry;
         set => base[key] = new ModerationEntryCacheEntry(value);
     }
+
     public void AddOrUpdate(IModerationEntry entry)
     {
-        if (entry.Id.IsValid)
-            this[entry.Id.Key] = entry;
+        if (entry.Id != 0u)
+            this[entry.Id] = entry;
     }
 
-    public bool TryGet<T>(PrimaryKey key, out T value) where T : ModerationEntry
+    public bool TryGet<T>(uint key, out T value) where T : ModerationEntry
     {
-        if (key.IsValid && TryGetValue(key.Key, out ModerationEntryCacheEntry entry))
+        if (key != 0u && TryGetValue(key, out ModerationEntryCacheEntry entry))
         {
             value = (entry.Entry as T)!;
             return value != null;
@@ -665,9 +692,10 @@ public class ModerationCache : Dictionary<uint, ModerationEntryCacheEntry>
         value = null!;
         return false;
     }
-    public bool TryGet<T>(PrimaryKey key, out T value, TimeSpan timeout) where T : class, IModerationEntry
+
+    public bool TryGet<T>(uint key, out T value, TimeSpan timeout) where T : class, IModerationEntry
     {
-        if (key.IsValid && timeout.Ticks > 0 && TryGetValue(key.Key, out ModerationEntryCacheEntry entry))
+        if (key != 0u && timeout.Ticks > 0 && TryGetValue(key, out ModerationEntryCacheEntry entry))
         {
             value = (entry.Entry as T)!;
             return value != null && (DateTime.UtcNow - entry.LastRefreshed) < timeout;
@@ -677,6 +705,7 @@ public class ModerationCache : Dictionary<uint, ModerationEntryCacheEntry>
         return false;
     }
 }
+
 public readonly struct ModerationEntryCacheEntry
 {
     public IModerationEntry Entry { get; }
@@ -688,6 +717,7 @@ public readonly struct ModerationEntryCacheEntry
         LastRefreshed = lastRefreshed;
     }
 }
+
 public sealed class ModerationEntryConverter : JsonConverter<ModerationEntry>
 {
     public override ModerationEntry Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
@@ -699,47 +729,35 @@ public sealed class ModerationEntryConverter : JsonConverter<ModerationEntry>
 
         Utf8JsonReader reader2 = reader;
         ModerationEntryType? type = null;
-        while (reader2.Read())
+        JsonUtility.ReadTopLevelProperties(ref reader2, ref type, (ref Utf8JsonReader reader, string propertyName, ref ModerationEntryType? type) =>
         {
-            if (reader.TokenType == JsonTokenType.EndObject)
-                break;
-            if (reader.TokenType == JsonTokenType.StartObject)
-                while (reader.Read() && reader.TokenType != JsonTokenType.EndObject);
-            if (reader.TokenType == JsonTokenType.StartArray)
-                while (reader.Read() && reader.TokenType != JsonTokenType.EndArray);
-            if (reader.TokenType == JsonTokenType.PropertyName && reader.GetString()!.Equals("type", StringComparison.InvariantCultureIgnoreCase))
+            if (reader.TokenType == JsonTokenType.String)
             {
-                if (!reader.Read())
-                    break;
-
-                if (reader.TokenType == JsonTokenType.String)
+                string str = reader.GetString()!;
+                if (int.TryParse(str, NumberStyles.Any, CultureInfo.InvariantCulture, out int val) && val <= (int)ModerationEntry.MaxEntry && val >= 0)
                 {
-                    string str = reader.GetString()!;
-                    if (int.TryParse(str, NumberStyles.Any, CultureInfo.InvariantCulture, out int val) && val <= (int)ModerationEntry.MaxEntry && val >= 0)
-                    {
-                        type = (ModerationEntryType)val;
-                        break;
-                    }
-                    if (Enum.TryParse(str, true, out ModerationEntryType type2))
-                    {
-                        type = type2;
-                        break;
-                    }
-
-                    throw new JsonException("Invalid string value for ModerationEntryType");
-                }
-                if (reader.TokenType == JsonTokenType.Number)
-                {
-                    if (!reader.TryGetInt32(out int val) || val > (int)ModerationEntry.MaxEntry && val < 0)
-                        throw new JsonException("Invalid number value for ModerationEntryType");
-
                     type = (ModerationEntryType)val;
-                    break;
+                    return;
+                }
+                if (Enum.TryParse(str, true, out ModerationEntryType type2))
+                {
+                    type = type2;
+                    return;
                 }
 
-                throw new JsonException($"Unexpected token for 'type' of ModerationEntry: {reader.TokenType}.");
+                throw new JsonException("Invalid string value for ModerationEntryType");
             }
-        }
+            if (reader.TokenType == JsonTokenType.Number)
+            {
+                if (!reader.TryGetInt32(out int val) || val > (int)ModerationEntry.MaxEntry && val < 0)
+                    throw new JsonException("Invalid number value for ModerationEntryType");
+
+                type = (ModerationEntryType)val;
+                return;
+            }
+
+            throw new JsonException($"Unexpected token for 'type' of ModerationEntry: {reader.TokenType}.");
+        });
 
         if (!type.HasValue || ModerationReflection.GetType(type.Value) is not { } valueType)
             throw new JsonException("The property, 'type', is not specified for ModerationEntry.");
@@ -807,7 +825,8 @@ public enum ModerationEntryType : ushort
     [Translatable("Accepted Bug Report")]
     BugReportAccepted,
     [Translatable("Accepted Player Report")]
-    PlayerReportAccepted
+    PlayerReportAccepted,
+    VoiceChatAbuseReport
 
     // update ModerationEntry.MaxEntry when adding
 }

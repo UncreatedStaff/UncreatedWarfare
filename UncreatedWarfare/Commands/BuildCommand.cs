@@ -1,16 +1,25 @@
-﻿using Uncreated.Framework;
-using Uncreated.Warfare.Commands.CommandSystem;
-using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
+﻿using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Interaction.Commands;
+using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Commands;
-public class BuildCommand : Command
+
+[HideFromHelp, Command("build")]
+internal sealed class BuildCommand : IExecutableCommand
 {
-    public BuildCommand() : base("build", EAdminType.MEMBER)
+    private readonly FobTranslations _translations;
+
+    /// <inheritdoc />
+    public required CommandContext Context { get; init; }
+
+    public BuildCommand(TranslationInjection<FobTranslations> translations)
     {
-        Structure = new CommandStructure
-        {
-            Description = "Legacy command, tells you to use your shovel."
-        };
+        _translations = translations.Value;
     }
-    public override void Execute(CommandInteraction ctx) => ctx.Reply(T.BuildLegacyExplanation);
+
+    /// <inheritdoc />
+    public UniTask ExecuteAsync(CancellationToken token)
+    {
+        throw Context.Reply(_translations.BuildLegacyExplanation);
+    }
 }

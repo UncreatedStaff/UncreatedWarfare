@@ -1,1200 +1,1403 @@
-﻿using HarmonyLib;
-using SDG.Framework.Debug;
-using SDG.Unturned;
-using Steamworks;
+#if DEBUG
+//#define LOG_SYNCHRONIZATION_STEPS
+//#define LOG_EVENT_LISTENERS
+//#define LOG_RESOLVE_STEPS
+//#define LOG_TRACE_TO_FILE
+#endif
+
+using Autofac.Core;
+using Autofac.Core.Lifetime;
+using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools.Formatting;
+using Microsoft.Extensions.DependencyInjection;
+using SDG.Framework.Utilities;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Threading;
-using System.Threading.Tasks;
-using Uncreated.Players;
-using Uncreated.SQL;
-using Uncreated.Warfare.Components;
-using Uncreated.Warfare.Events.Barricades;
-using Uncreated.Warfare.Events.Components;
-using Uncreated.Warfare.Events.Items;
-using Uncreated.Warfare.Events.Players;
-using Uncreated.Warfare.Events.Structures;
-using Uncreated.Warfare.Events.Vehicles;
-using Uncreated.Warfare.FOBs;
-using Uncreated.Warfare.Gamemodes;
-using Uncreated.Warfare.Kits.Items;
+using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Players;
-using Uncreated.Warfare.Structures;
+using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Projectiles;
+using Uncreated.Warfare.Services;
+using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Util.List;
 using Uncreated.Warfare.Vehicles;
-using UnityEngine;
+using Service = Autofac.Core.Service;
 
 namespace Uncreated.Warfare.Events;
-public static class EventDispatcher
+
+/// <summary>
+/// Handles dispatching <see cref="IEventListener{TEventArgs}"/> and <see cref="IAsyncEventListener{TEventArgs}"/> objects.
+/// </summary>
+public partial class EventDispatcher : IHostedService, IDisposable
 {
-    private static readonly List<ISalvageInfo> WorkingSalvageInfo = new List<ISalvageInfo>(4);
+    // bits for EventListenerResult.Flags
+    private const int BitIsAsync = 1;
+    // CompareEventListenerResults relies on this being 2, check if changing
+    private const int BitMustRunInstantly = 2;
+    private const int BitEnsureMainThread = 4;
+    private const int BitRequireActiveLayout = 8;
+    private const int BitRequireNextFrame = 16;
+    private const int BitMustRunLast = 32;
 
-    public static event EventDelegate<ExitVehicleRequested> ExitVehicleRequested;
-    public static event EventDelegate<EnterVehicleRequested> EnterVehicleRequested;
-    public static event EventDelegate<VehicleSwapSeatRequested> VehicleSwapSeatRequested;
-    public static event EventDelegate<VehicleSpawned> VehicleSpawned;
-    public static event EventDelegate<ExitVehicle> ExitVehicle;
-    public static event EventDelegate<EnterVehicle> EnterVehicle;
-    public static event EventDelegate<VehicleSwapSeat> VehicleSwapSeat;
-    public static event EventDelegate<VehicleDestroyed> VehicleDestroyed;
-    public static event EventDelegate<VehicleLockChangeRequested> VehicleLockChangeRequested;
+    private int _activeEvents;
+    private readonly WarfareModule _warfare;
+    private readonly IPlayerService _playerService;
+    private readonly ProjectileSolver _projectileSolver;
+    private readonly CancellationToken _unloadToken;
+    private readonly ILogger<EventDispatcher> _logger;
+    [field: CanBeNull]
+    private VehicleService VehicleService => field ??= _warfare.ServiceProvider.Resolve<VehicleService>();
+    private IServiceProvider? _scopedServiceProvider;
+    private readonly ILoggerFactory _loggerFactory;
+    private readonly Dictionary<EventListenerCacheKey, EventListenerInfo> _listeners = new Dictionary<EventListenerCacheKey, EventListenerInfo>(128);
+    private readonly Dictionary<Type, EventInvocationListenerCache> _listenerCaches = new Dictionary<Type, EventInvocationListenerCache>(128);
+    private readonly Dictionary<Type, MethodInfo> _syncInvokeMethods = new Dictionary<Type, MethodInfo>(64);
+    private readonly Dictionary<Type, MethodInfo> _asyncInvokeMethods = new Dictionary<Type, MethodInfo>(64);
+    private readonly Dictionary<Type, Action<object, object, IServiceProvider>> _syncGeneratedInvokeMethods
+        = new Dictionary<Type, Action<object, object, IServiceProvider>>(16);
+    private readonly Dictionary<Type, Func<object, object, IServiceProvider, CancellationToken, UniTask>> _asyncGeneratedInvokeMethods
+        = new Dictionary<Type, Func<object, object, IServiceProvider, CancellationToken, UniTask>>(16);
+    private readonly List<IEventListenerProvider> _eventProviders;
 
-    public static event EventDelegate<BarricadeDestroyed> BarricadeDestroyed;
-    public static event EventDelegate<PlaceBarricadeRequested> BarricadePlaceRequested;
-    public static event EventDelegate<SalvageBarricadeRequested> SalvageBarricadeRequested;
-    public static event EventDelegate<BarricadePlaced> BarricadePlaced;
-    public static event EventDelegate<LandmineExploding> LandmineExploding;
-    public static event EventDelegate<SignTextChanged> SignTextChanged;
+    private readonly CancellationTokenSource _cancellationTokenSource;
 
-    public static event EventDelegate<StructureDestroyed> StructureDestroyed;
-    public static event EventDelegate<SalvageStructureRequested> SalvageStructureRequested;
-    public static event EventDelegate<DamageStructureRequested> DamageStructureRequested;
+    private readonly Dictionary<string, PlayerDictionary<SynchronizationBucket>> _tagPlayerSynchronizations = new Dictionary<string, PlayerDictionary<SynchronizationBucket>>();
+    private readonly Dictionary<string, SynchronizationBucket> _tagSynchronizations = new Dictionary<string, SynchronizationBucket>();
 
-    public static event EventDelegate<ItemDropRequested> ItemDropRequested;
-    public static event EventDelegate<ItemDropped> ItemDropped;
-    public static event EventDelegate<InventoryItemRemoved> InventoryItemRemoved;
-    public static event EventDelegate<ItemPickedUp> ItemPickedUp;
-    public static event EventDelegate<CraftRequested> CraftRequested;
-    public static event EventDelegate<ItemMoveRequested> ItemMoveRequested;
-    public static event EventDelegate<ItemMoved> ItemMoved;
-    public static event EventDelegate<SwapClothingRequested> SwapClothingRequested;
+    private readonly Dictionary<Type, PlayerDictionary<SynchronizationBucket>> _typePlayerSynchronizations = new Dictionary<Type, PlayerDictionary<SynchronizationBucket>>();
+    private readonly Dictionary<Type, SynchronizationBucket> _typeSynchronizations = new Dictionary<Type, SynchronizationBucket>();
 
-    public static event EventDelegate<ThrowableSpawned> ThrowableSpawned;
-    public static event EventDelegate<ThrowableSpawned> ThrowableDespawning;
+#if LOG_TRACE_TO_FILE
+    private readonly StreamWriter _eventFileWriter = new StreamWriter("./Logs/eventlogs.txt", false);
+#endif
 
-    public static event EventDelegate<ProjectileSpawned> ProjectileSpawned;
-    public static event EventDelegate<ProjectileSpawned> ProjectileExploded;
-
-    public static event EventDelegate<PlayerPending> PlayerPending;
-    public static event AsyncEventDelegate<PlayerPending> PlayerPendingAsync;
-    public static event EventDelegate<PlayerJoined> PlayerJoined;
-    public static event EventDelegate<PlayerEvent> PlayerLeaving;
-    public static event EventDelegate<PlayerEvent> PlayerLeft;
-    public static event EventDelegate<BattlEyeKicked> PlayerBattlEyeKicked;
-    public static event EventDelegate<PlayerDied> PlayerDied;
-    public static event EventDelegate<GroupChanged> GroupChanged;
-    public static event EventDelegate<PlayerInjured> PlayerInjuring;
-    public static event EventDelegate<PlayerEvent> PlayerInjured;
-    public static event EventDelegate<PlayerAided> PlayerAidRequested;
-    public static event EventDelegate<PlayerAided> PlayerAided;
-    public static event EventDelegate<PlayerEvent> UIRefreshRequested;
-
-    internal static void SubscribeToAll()
+    public EventDispatcher(ILoggerFactory loggerFactory,
+        ProjectileSolver projectileSolver,
+        IPlayerService playerService,
+        WarfareModule module)
     {
-        EventPatches.TryPatchAll();
-        VehicleManager.onExitVehicleRequested += VehicleManagerOnExitVehicleRequested;
-        VehicleManager.onEnterVehicleRequested += InvokeVehicleManagerOnEnterVehicleRequested;
-        VehicleManager.onSwapSeatRequested += InvokeVehicleManagerOnSwapSeatRequested;
-        VehicleManager.OnVehicleExploded += VehicleManagerOnVehicleExploded;
-        InteractableVehicle.OnPassengerAdded_Global += InteractableVehicleOnPassengerAdded;
-        InteractableVehicle.OnPassengerRemoved_Global += InteractableVehicleOnPassengerRemoved;
-        InteractableVehicle.OnPassengerChangedSeats_Global += InteractableVehicleOnPassengerChangedSeats;
-        BarricadeManager.onDeployBarricadeRequested += BarricadeManagerOnDeployBarricadeRequested;
-        BarricadeManager.onBarricadeSpawned += BarricadeManagerOnBarricadeSpawned;
-        Provider.onServerConnected += ProviderOnServerConnected;
-        Provider.onServerDisconnected += ProviderOnServerDisconnected;
-        Provider.onCheckValidWithExplanation += ProviderOnCheckValidWithExplanation;
-        Provider.onBattlEyeKick += ProviderOnBattlEyeKick;
-        UseableThrowable.onThrowableSpawned += UseableThrowableOnThrowableSpawned;
-        UseableGun.onProjectileSpawned += ProjectileOnProjectileSpawned;
-        UseableGun.onBulletHit += OnBulletHit;
-        PlayerInput.onPluginKeyTick += OnPluginKeyTick;
-        PlayerCrafting.onCraftBlueprintRequested += PlayerCraftingOnCraftRequested;
-        StructureDrop.OnSalvageRequested_Global += StructureDropOnSalvageRequested;
-        BarricadeDrop.OnSalvageRequested_Global += BarricadeDropOnSalvageRequested;
-        StructureManager.onDamageStructureRequested += StructureManagerOnDamageStructureRequested;
-        PlayerQuests.onGroupChanged += PlayerQuestsOnGroupChanged;
-        VehicleManager.OnToggleVehicleLockRequested += VehicleManagerOnOnToggleVehicleLockRequested;
-        EventPatches.OnStartVerifying += IntlOnStartVerifyingPlayerConnection;
+        _cancellationTokenSource = new CancellationTokenSource();
+        _unloadToken = _cancellationTokenSource.Token;
+
+        _logger = loggerFactory.CreateLogger<EventDispatcher>();
+        _loggerFactory = loggerFactory;
+        _projectileSolver = projectileSolver;
+        _playerService = playerService;
+        _warfare = module;
+
+        _warfare.LayoutStarted += OnLayoutStarted;
+
+        _eventProviders = new List<IEventListenerProvider>(8);
+        FindEventListenerProviders(_warfare.IsLayoutActive() ? _warfare.ScopedProvider : _warfare.ServiceProvider, _eventProviders);
+
+#if LOG_TRACE_TO_FILE
+        _eventFileWriter.AutoFlush = true;
+        _eventFileWriter.WriteLine("Startup");
+#endif
     }
-    internal static void UnsubscribeFromAll()
+    void IDisposable.Dispose()
     {
-        EventPatches.OnStartVerifying -= IntlOnStartVerifyingPlayerConnection;
-        VehicleManager.OnToggleVehicleLockRequested -= VehicleManagerOnOnToggleVehicleLockRequested;
-        PlayerQuests.onGroupChanged -= PlayerQuestsOnGroupChanged;
-        StructureManager.onDamageStructureRequested -= StructureManagerOnDamageStructureRequested;
-        StructureDrop.OnSalvageRequested_Global -= StructureDropOnSalvageRequested;
-        BarricadeDrop.OnSalvageRequested_Global -= BarricadeDropOnSalvageRequested;
-        PlayerCrafting.onCraftBlueprintRequested -= PlayerCraftingOnCraftRequested;
-        UseableGun.onBulletHit -= OnBulletHit;
-        PlayerInput.onPluginKeyTick -= OnPluginKeyTick;
-        UseableGun.onProjectileSpawned -= ProjectileOnProjectileSpawned;
-        UseableThrowable.onThrowableSpawned -= UseableThrowableOnThrowableSpawned;
-        Provider.onBattlEyeKick -= ProviderOnBattlEyeKick;
-        Provider.onCheckValidWithExplanation -= ProviderOnCheckValidWithExplanation;
-        Provider.onServerDisconnected -= ProviderOnServerDisconnected;
-        Provider.onServerConnected -= ProviderOnServerConnected;
-        BarricadeManager.onBarricadeSpawned += BarricadeManagerOnBarricadeSpawned;
-        BarricadeManager.onDeployBarricadeRequested += BarricadeManagerOnDeployBarricadeRequested;
-        InteractableVehicle.OnPassengerChangedSeats_Global -= InteractableVehicleOnPassengerChangedSeats;
-        InteractableVehicle.OnPassengerRemoved_Global -= InteractableVehicleOnPassengerRemoved;
-        InteractableVehicle.OnPassengerAdded_Global -= InteractableVehicleOnPassengerAdded;
-        VehicleManager.OnVehicleExploded -= VehicleManagerOnVehicleExploded;
-        VehicleManager.onSwapSeatRequested -= InvokeVehicleManagerOnSwapSeatRequested;
-        VehicleManager.onEnterVehicleRequested -= InvokeVehicleManagerOnEnterVehicleRequested;
-        VehicleManager.onExitVehicleRequested -= VehicleManagerOnExitVehicleRequested;
-    }
-    private static void TryInvoke<TState>(EventDelegate<TState> @delegate, TState request, string name) where TState : EventState
-    {
-        try
-        {
-            @delegate.Invoke(request);
-        }
-        catch (ControlException) { }
-        catch (Exception ex)
-        {
-            try
-            {
-                MethodInfo? i = @delegate.Method;
-                if (i is not null)
-                    name = i.Name;
-            }
-            catch (MemberAccessException) { }
-            L.LogError("EventDispatcher ran into an error invoking: " + name, method: name);
-            L.LogError(ex, method: name);
-        }
-    }
-    private static async Task TryInvoke<TState>(AsyncEventDelegate<TState> @delegate, TState request, string name, CancellationToken token = default, bool mainThread = true) where TState : EventState
-    {
-        try
-        {
-            if (mainThread && !UCWarfare.IsMainThread)
-            {
-                await UCWarfare.ToUpdate(token);
-                ThreadUtil.assertIsGameThread();
-            }
+        _warfare.LayoutStarted -= OnLayoutStarted;
 
-            await @delegate.Invoke(request, token).ConfigureAwait(true);
-        }
-        catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
-        catch (ControlException) { }
-        catch (Exception ex)
-        {
-            try
-            {
-                MethodInfo? i = @delegate.Method;
-                if (i is not null)
-                    name = i.FullDescription();
-            }
-            catch (MemberAccessException) { }
+#if LOG_TRACE_TO_FILE
+        _eventFileWriter.WriteLine("Shutdown");
+        _eventFileWriter.Dispose();
+#endif
+    }
 
-            L.LogError("EventDispatcher ran into an error invoking: " + name, method: name);
-            L.LogError(ex, method: name);
-        }
-    }
-    private static void VehicleManagerOnExitVehicleRequested(Player player, InteractableVehicle vehicle, ref bool shouldAllow, ref Vector3 pendingLocation, ref float pendingYaw)
+    private void SubscribePlayerEvents(WarfarePlayer player)
     {
-        if (ExitVehicleRequested == null || !shouldAllow) return;
-        ExitVehicleRequested request = new ExitVehicleRequested(player, vehicle, shouldAllow, pendingLocation, pendingYaw);
-        foreach (EventDelegate<ExitVehicleRequested> inv in ExitVehicleRequested.GetInvocationList().Cast<EventDelegate<ExitVehicleRequested>>())
-        {
-            if (!request.CanContinue) break;
-            TryInvoke(inv, request, nameof(ExitVehicleRequested));
-        }
-        if (!request.CanContinue)
-            shouldAllow = false;
-        else
-        {
-            pendingLocation = request.ExitLocation;
-            pendingYaw = request.ExitLocationYaw;
-        }
+        player.UnturnedPlayer.life.onHurt += OnPlayerHurt;
     }
-    internal static void InvokeVehicleManagerOnEnterVehicleRequested(Player player, InteractableVehicle vehicle, ref bool shouldAllow)
-    {
-        if (EnterVehicleRequested == null || !shouldAllow || vehicle == null || player == null) return;
-        EnterVehicleRequested request = new EnterVehicleRequested(player, vehicle, shouldAllow);
-        foreach (EventDelegate<EnterVehicleRequested> inv in EnterVehicleRequested.GetInvocationList().Cast<EventDelegate<EnterVehicleRequested>>())
-        {
-            if (!request.CanContinue) break;
-            TryInvoke(inv, request, nameof(EnterVehicleRequested));
-        }
-        if (!request.CanContinue)
-            shouldAllow = false;
-    }
-    internal static void InvokeVehicleManagerOnSwapSeatRequested(Player player, InteractableVehicle vehicle, ref bool shouldAllow, byte fromSeatIndex, ref byte toSeatIndex)
-    {
-        if (VehicleSwapSeatRequested == null || !shouldAllow) return;
-        VehicleSwapSeatRequested request = new VehicleSwapSeatRequested(player, vehicle, shouldAllow, fromSeatIndex, toSeatIndex);
-        foreach (EventDelegate<VehicleSwapSeatRequested> inv in VehicleSwapSeatRequested.GetInvocationList().Cast<EventDelegate<VehicleSwapSeatRequested>>())
-        {
-            if (!request.CanContinue) break;
-            TryInvoke(inv, request, nameof(VehicleSwapSeatRequested));
-        }
-        if (!request.CanContinue) shouldAllow = false;
-        else toSeatIndex = request.FinalSeat;
-    }
-    private static void VehicleManagerOnVehicleExploded(InteractableVehicle vehicle)
-    {
-        SpottedComponent spotted = vehicle.transform.GetComponent<SpottedComponent>();
 
-        VehicleDestroyed request = new VehicleDestroyed(vehicle, spotted);
-        if (request.Instigator != null && request.Instigator.Player.TryGetPlayerData(out UCPlayerData data))
-            data.LastExplodedVehicle = request.Vehicle.asset.GUID;
-        if (VehicleDestroyed != null)
-        {
-            foreach (EventDelegate<VehicleDestroyed> inv in VehicleDestroyed.GetInvocationList().Cast<EventDelegate<VehicleDestroyed>>())
-            {
-                if (!request.CanContinue) break;
-                TryInvoke(inv, request, nameof(VehicleDestroyed));
-            }
-        }
-        if (spotted != null)
-            UnityEngine.Object.Destroy(spotted);
-    }
-    private static void InteractableVehicleOnPassengerChangedSeats(InteractableVehicle vehicle, int fromSeatIndex, int toSeatIndex)
+    public async Task WaitForEvents(CancellationToken token = default)
     {
-        if (VehicleSwapSeat == null) return;
-        Passenger? pl = vehicle.passengers[toSeatIndex];
-        if (pl is null || pl.player is null || pl.player.player == null) return;
-        UCPlayer? pl2 = UCPlayer.FromPlayer(pl.player.player);
-        if (pl2 is null) return;
-        VehicleSwapSeat request = new VehicleSwapSeat(pl2, vehicle, (byte)fromSeatIndex, (byte)toSeatIndex);
-        foreach (EventDelegate<VehicleSwapSeat> inv in VehicleSwapSeat.GetInvocationList().Cast<EventDelegate<VehicleSwapSeat>>())
+        if (_activeEvents <= 0)
         {
-            if (!request.CanContinue) break;
-            TryInvoke(inv, request, nameof(VehicleSwapSeat));
-        }
-    }
-    private static void InteractableVehicleOnPassengerRemoved(InteractableVehicle vehicle, int seatIndex, Player player)
-    {
-        if (ExitVehicle == null || player == null) return;
-        UCPlayer? pl2 = UCPlayer.FromPlayer(player);
-        if (pl2 is null) return;
-        ExitVehicle request = new ExitVehicle(pl2, vehicle, (byte)seatIndex);
-        foreach (EventDelegate<ExitVehicle> inv in ExitVehicle.GetInvocationList().Cast<EventDelegate<ExitVehicle>>())
-        {
-            if (!request.CanContinue) break;
-            TryInvoke(inv, request, nameof(ExitVehicle));
-        }
-    }
-    private static void InteractableVehicleOnPassengerAdded(InteractableVehicle vehicle, int seatIndex)
-    {
-        if (EnterVehicle == null || vehicle == null) return;
-        Passenger? pl = vehicle.passengers[seatIndex];
-        if (pl is null || pl.player is null || pl.player.player == null) return;
-        UCPlayer? pl2 = UCPlayer.FromPlayer(pl.player.player);
-        if (pl2 is null) return;
-        EnterVehicle request = new EnterVehicle(pl2, vehicle, (byte)seatIndex);
-        foreach (EventDelegate<EnterVehicle> inv in EnterVehicle.GetInvocationList().Cast<EventDelegate<EnterVehicle>>())
-        {
-            if (!request.CanContinue) break;
-            TryInvoke(inv, request, nameof(EnterVehicle));
-        }
-    }
-    private static void VehicleManagerOnOnToggleVehicleLockRequested(InteractableVehicle vehicle, ref bool shouldallow)
-    {
-        if (VehicleLockChangeRequested == null || vehicle == null || !vehicle.isDriven) return;
-        UCPlayer? pl2 = UCPlayer.FromSteamPlayer(vehicle.passengers[0].player);
-        if (pl2 is null) return;
-        VehicleLockChangeRequested request = new VehicleLockChangeRequested(pl2, vehicle, shouldallow);
-        foreach (EventDelegate<VehicleLockChangeRequested> inv in VehicleLockChangeRequested.GetInvocationList().Cast<EventDelegate<VehicleLockChangeRequested>>())
-        {
-            if (!request.CanContinue) break;
-            TryInvoke(inv, request, nameof(VehicleLockChangeRequested));
-        }
-
-        if (!request.CanContinue)
-            shouldallow = false;
-    }
-    internal static void InvokeOnVehicleSpawned(InteractableVehicle result)
-    {
-        if (VehicleSpawned == null) return;
-        VehicleSpawned args = new VehicleSpawned(result);
-        foreach (EventDelegate<VehicleSpawned> inv in VehicleSpawned.GetInvocationList().Cast<EventDelegate<VehicleSpawned>>())
-        {
-            if (!args.CanContinue) break;
-            TryInvoke(inv, args, nameof(VehicleSpawned));
-        }
-    }
-    internal static void InvokeOnBarricadeDestroyed(BarricadeDrop barricade, BarricadeData barricadeData, ulong instigator, BarricadeRegion region, byte x, byte y, ushort plant, EDamageOrigin origin)
-    {
-        UCPlayer? player = UCPlayer.FromID(instigator);
-        StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
-        SqlItem<SavedStructure>? barricadeSave = saver?.GetSaveItemSync(barricade.instanceID, StructType.Barricade);
-        // todo add item tracking
-        BarricadeDestroyed args = new BarricadeDestroyed(player, instigator, barricade, barricadeData, region, x, y, plant, barricadeSave, origin, default, default);
-
-        if (barricade.model.TryGetComponent(out ShovelableComponent shovelableComponent))
-            shovelableComponent.DestroyInfo = args;
-
-        if (BarricadeDestroyed == null || Data.Gamemode is not { State: State.Active or State.Staging })
             return;
-        foreach (EventDelegate<BarricadeDestroyed> inv in BarricadeDestroyed.GetInvocationList().Cast<EventDelegate<BarricadeDestroyed>>())
-        {
-            if (!args.CanContinue) break;
-            TryInvoke(inv, args, nameof(BarricadeDestroyed));
-        }
-    }
-    internal static void InvokeOnPlayerDied(PlayerDied e)
-    {
-        if (PlayerDied == null) return;
-        if (e.Player.Player.TryGetPlayerData(out UCPlayerData data))
-            data.CancelDeployment();
-        
-        foreach (EventDelegate<PlayerDied> inv in PlayerDied.GetInvocationList().Cast<EventDelegate<PlayerDied>>())
-        {
-            if (!e.CanContinue) break;
-            TryInvoke(inv, e, nameof(PlayerDied));
-        }
-        e.ActiveVehicle = null;
-    }
-    private static void ProviderOnServerDisconnected(CSteamID steamID)
-    {
-        UCPlayer? player = UCPlayer.FromCSteamID(steamID);
-        if (player is null) return;
-        lock (player)
-            player.IsLeaving = true;
-        PlayerEvent args = new PlayerEvent(player);
-        if (PlayerLeaving != null)
-        {
-            foreach (EventDelegate<PlayerEvent> inv in PlayerLeaving.GetInvocationList().Cast<EventDelegate<PlayerEvent>>())
-            {
-                if (!args.CanContinue) break;
-                TryInvoke(inv, args, nameof(PlayerLeaving));
-            }
-        }
-        try
-        {
-            PlayerManager.InvokePlayerDisconnected(player);
-        }
-        catch (Exception ex)
-        {
-            L.LogError("Failed to remove a player from player manager.");
-            L.LogError(ex);
-        }
-        
-        if (PlayerLeft == null) return;
-        foreach (EventDelegate<PlayerEvent> inv in PlayerLeft.GetInvocationList().Cast<EventDelegate<PlayerEvent>>())
-        {
-            if (!args.CanContinue) break;
-            TryInvoke(inv, args, nameof(PlayerLeft));
         }
 
-        GC.Collect(2, GCCollectionMode.Optimized, false, false);
-    }
-
-    private static List<PendingAsyncData> _pendingAsyncData = new InspectableList<PendingAsyncData>(4);
-    private static void ProviderOnServerConnected(CSteamID steamID)
-    {
-        if (PlayerJoined == null) return;
-        UCPlayer player;
-        bool newPlayer;
-        try
+        DateTime spinStart = DateTime.UtcNow;
+        while (_activeEvents > 0)
         {
-            Player pl = PlayerTool.getPlayer(steamID);
-            if (pl is null)
-                goto error;
-            int index = _pendingAsyncData.FindIndex(x => x.Steam64 == steamID.m_SteamID);
-            if (index == -1)
-            {
-                Provider.kick(steamID, "Unable to find your async data.");
-                return;
-            }
-
-            PendingAsyncData data = _pendingAsyncData[index];
-
-            _pendingAsyncData.RemoveAt(index);
-            _pendingAsyncData.RemoveAll(x => !Provider.pending.Exists(y => y.playerID.steamID.m_SteamID == x.Steam64));
-
-            player = PlayerManager.InvokePlayerConnected(pl, data, out newPlayer);
-
-
-            if (player is null)
-                goto error;
-        }
-        catch (Exception ex)
-        {
-            L.LogError("Error in EventDispatcher.ProviderOnServerConnected loading player into OnlinePlayers:");
-            L.LogError(ex);
-            goto error;
-        }
-        PlayerJoined args = new PlayerJoined(player, newPlayer);
-        foreach (EventDelegate<PlayerJoined> inv in PlayerJoined.GetInvocationList().Cast<EventDelegate<PlayerJoined>>())
-        {
-            if (!args.CanContinue) break;
-            TryInvoke(inv, args, nameof(PlayerJoined));
-        }
-
-        return;
-    error:
-        Provider.kick(steamID, "There was a fatal error connecting you to the server.");
-    }
-    private static void ProviderOnCheckValidWithExplanation(ValidateAuthTicketResponse_t callback, ref bool isValid, ref string explanation)
-    {
-        if (PlayerPending == null || !isValid) return;
-        SteamPending? pending = null;
-        for (int i = 0; i < Provider.pending.Count; ++i)
-        {
-            if (Provider.pending[i].playerID.steamID.m_SteamID != callback.m_SteamID.m_SteamID)
+            await Task.Delay(25, token);
+            if ((DateTime.UtcNow - spinStart).TotalSeconds < 10)
                 continue;
-            
-            pending = Provider.pending[i];
+
+            _logger.LogWarning("Timed out waiting for events to finish.");
             break;
         }
-        if (pending is null) return;
-        PlayerSave.TryReadSaveFile(callback.m_SteamID.m_SteamID, out PlayerSave? save);
-        PlayerPending args = new PlayerPending(pending, save, null, isValid, explanation);
-        foreach (EventDelegate<PlayerPending> inv in PlayerPending.GetInvocationList().Cast<EventDelegate<PlayerPending>>())
-        {
-            if (!args.CanContinue) break;
-            TryInvoke(inv, args, nameof(PlayerPending));
-        }
-        if (!args.CanContinue)
-        {
-            isValid = false;
-            explanation = args.RejectReason;
-        }
     }
-    private static void ProviderOnBattlEyeKick(SteamPlayer client, string reason)
-    {
-        if (PlayerBattlEyeKicked == null) return;
-        UCPlayer? player = UCPlayer.FromSteamPlayer(client);
-        if (player is null) return;
-        BattlEyeKicked args = new BattlEyeKicked(player, reason);
-        foreach (EventDelegate<BattlEyeKicked> inv in PlayerBattlEyeKicked.GetInvocationList().Cast<EventDelegate<BattlEyeKicked>>())
-        {
-            if (!args.CanContinue) break;
-            TryInvoke(inv, args, nameof(PlayerBattlEyeKicked));
-        }
-    }
-    private static void BarricadeManagerOnDeployBarricadeRequested(Barricade barricade, ItemBarricadeAsset asset, Transform hit, ref Vector3 point, ref float angleX, ref float angleY, ref float angleZ, ref ulong owner, ref ulong group, ref bool shouldAllow)
-    {
-        if (BarricadePlaceRequested == null || !shouldAllow) return;
-        UCPlayer? player = UCPlayer.FromID(owner);
-        InteractableVehicle? vehicle = null;
-        if (hit != null && hit.CompareTag("Vehicle"))
-            vehicle = BarricadeManager.FindVehicleRegionByTransform(hit)?.vehicle;
-        Vector3 rotation = new Vector3(angleX, angleY, angleZ);
-        PlaceBarricadeRequested args = new PlaceBarricadeRequested(player, vehicle, barricade, asset, hit, point, rotation, owner, group, shouldAllow);
-        foreach (EventDelegate<PlaceBarricadeRequested> inv in BarricadePlaceRequested.GetInvocationList().Cast<EventDelegate<PlaceBarricadeRequested>>())
-        {
-            if (!args.CanContinue) break;
-            TryInvoke(inv, args, nameof(BarricadePlaceRequested));
-        }
-        if (!args.CanContinue)
-            shouldAllow = false;
-        else
-        {
-            point = args.Position;
-            angleX = args.Rotation.x;
-            angleY = args.Rotation.y;
-            angleZ = args.Rotation.z;
-            owner = args.Owner;
-            group = args.GroupOwner;
-        }
-    }
-    private static void BarricadeManagerOnBarricadeSpawned(BarricadeRegion region, BarricadeDrop drop)
-    {
-        if (BarricadePlaced == null) return;
-        BarricadeData data = drop.GetServersideData();
-        UCPlayer? owner = UCPlayer.FromID(data.owner);
-        if (owner is null) return;
-        BarricadePlaced args = new BarricadePlaced(owner, drop, data, region);
-        foreach (EventDelegate<BarricadePlaced> inv in BarricadePlaced.GetInvocationList().Cast<EventDelegate<BarricadePlaced>>())
-        {
-            if (!args.CanContinue) break;
-            TryInvoke(inv, args, nameof(BarricadePlaced));
-        }
-    }
-    private static void UseableThrowableOnThrowableSpawned(UseableThrowable useable, GameObject throwable)
-    {
-        ThrowableComponent c = throwable.AddComponent<ThrowableComponent>();
-        c.Throwable = useable.equippedThrowableAsset.GUID;
-        c.Owner = useable.player.channel.owner.playerID.steamID.m_SteamID;
-        c.IsExplosive = useable.equippedThrowableAsset.isExplosive;
-        if (ThrowableSpawned == null) return;
-        UCPlayer? owner = UCPlayer.FromPlayer(useable.player);
-        if (owner is null) return;
-        if (owner.Player.TryGetPlayerData(out UCPlayerData comp))
-            comp.ActiveThrownItems.Add(c);
-        ThrowableSpawned args = new ThrowableSpawned(owner, useable.equippedThrowableAsset, throwable);
-        foreach (EventDelegate<ThrowableSpawned> inv in ThrowableSpawned.GetInvocationList().Cast<EventDelegate<ThrowableSpawned>>())
-        {
-            if (!args.CanContinue) break;
-            TryInvoke(inv, args, nameof(ThrowableSpawned));
-        }
-    }
-    internal static void InvokeOnThrowableDespawning(ThrowableComponent throwableComponent)
-    {
-        if (ThrowableDespawning == null) return;
-        UCPlayer? owner = UCPlayer.FromID(throwableComponent.Owner);
-        if (owner is null || Assets.find(throwableComponent.Throwable) is not ItemThrowableAsset asset) return;
-        ThrowableSpawned args = new ThrowableSpawned(owner, asset, throwableComponent.gameObject);
-        foreach (EventDelegate<ThrowableSpawned> inv in ThrowableDespawning.GetInvocationList().Cast<EventDelegate<ThrowableSpawned>>())
-        {
-            if (!args.CanContinue) break;
-            TryInvoke(inv, args, nameof(ThrowableDespawning));
-        }
-        owner.Player.StartCoroutine(ThrowableDespawnCoroutine(owner, throwableComponent.UnityInstanceID));
-    }
-    private static IEnumerator ThrowableDespawnCoroutine(UCPlayer player, int instId)
-    {
-        yield return null;
-        if (player.IsOnline && player.Player.TryGetPlayerData(out UCPlayerData component))
-        {
-            for (int i = component.ActiveThrownItems.Count - 1; i >= 0; --i)
-                if (component.ActiveThrownItems[i] == null || component.ActiveThrownItems[i].UnityInstanceID == instId)
-                    component.ActiveThrownItems.RemoveAt(i);
-        }
-    }
-    private static void ProjectileOnProjectileSpawned(UseableGun gun, GameObject projectile)
-    {
-        foreach (Rocket rocket in projectile.GetComponentsInChildren<Rocket>(true))
-        {
-            ProjectileComponent c = rocket.gameObject.AddComponent<ProjectileComponent>();
 
-            c.GunID = gun.equippedGunAsset.GUID;
-            c.Owner = gun.player.channel.owner.playerID.steamID.m_SteamID;
-            if (ProjectileSpawned == null) continue;
-            UCPlayer? owner = UCPlayer.FromPlayer(gun.player);
-            if (owner is null) continue;
-            ProjectileSpawned args = new ProjectileSpawned(owner, gun.equippedGunAsset, rocket.gameObject, rocket);
-            foreach (EventDelegate<ProjectileSpawned> inv in ProjectileSpawned.GetInvocationList().Cast<EventDelegate<ProjectileSpawned>>())
-            {
-                if (!args.CanContinue) break;
-                TryInvoke(inv, args, nameof(ProjectileSpawned));
-            }
-        }
-    }
-    internal static void InvokeOnProjectileExploded(ProjectileComponent projectileComponent, Collider other)
+    UniTask IHostedService.StartAsync(CancellationToken token)
     {
-        InteractableVehicle vehicle = other.GetComponentInParent<InteractableVehicle>();
+        /* Provider */
+        Provider.onEnemyConnected += ProviderOnServerConnectedEarly;
+        Provider.onServerConnected += ProviderOnServerConnected;
+        Provider.onServerDisconnected += ProviderOnServerDisconnected;
+        Provider.onBattlEyeKick += ProviderOnBattlEyeKick;
+        Provider.onLoginSpawning = OnPlayerChooseSpawnAfterLogin;
 
-        if (vehicle != null)
-            VehicleDamageCalculator.RegisterForAdvancedDamage(vehicle, VehicleDamageCalculator.GetComponentDamageMultiplier(projectileComponent, other));
+        /* Barricades */
+        BarricadeManager.onDeployBarricadeRequested += BarricadeManagerOnDeployBarricadeRequested;
+        BarricadeManager.onBarricadeSpawned += BarricadeManagerOnBarricadeSpawned;
+        BarricadeDrop.OnSalvageRequested_Global += BarricadeDropOnSalvageRequested;
+        BarricadeManager.onModifySignRequested += BarricadeManagerOnModifySignRequested;
+        BarricadeManager.onDamageBarricadeRequested += BarricadeManagerOnDamageBarricadeRequested;
 
-        if (ProjectileExploded == null) return;
-        UCPlayer? owner = UCPlayer.FromID(projectileComponent.Owner);
-        if (Assets.find(projectileComponent.GunID) is not ItemGunAsset asset) return;
-        ProjectileSpawned args = new ProjectileSpawned(owner, asset, projectileComponent.gameObject, projectileComponent.RocketComponent);
+        /* Structures */
+        StructureManager.onDeployStructureRequested += StructureManagerOnDeployStructureRequested;
+        StructureManager.onStructureSpawned += StructureManagerOnStructureSpawned;
+        StructureDrop.OnSalvageRequested_Global += StructureDropOnSalvageRequested;
+        StructureManager.onDamageStructureRequested += StructureManagerOnDamageStructureRequested;
 
-        foreach (EventDelegate<ProjectileSpawned> inv in ProjectileExploded.GetInvocationList().Cast<EventDelegate<ProjectileSpawned>>())
-        {
-            if (!args.CanContinue) break;
-            TryInvoke(inv, args, nameof(ProjectileExploded));
-        }
-    }
-    internal static void OnBulletHit(UseableGun gun, BulletInfo bullet, InputInfo input, ref bool shouldAllow)
-    {
-        //L.Log("     Normal: " + input.normal);
-        //L.Log("     Bullet Forward: " + bullet.);
+        /* Vehicles */
+        VehicleManager.OnToggleVehicleLockRequested += VehicleManagerOnToggleVehicleLockRequested;
+        VehicleManager.OnToggledVehicleLock += VehicleManagerOnToggledVehicleLock;
+        VehicleManager.onDamageVehicleRequested += OnDamageVehicleRequested;
+        VehicleManager.OnVehicleExploded += VehicleManagerOnVehicleExploded;
+        VehicleManager.onExitVehicleRequested += VehicleManagerOnPassengerExitRequested;
+        VehicleManager.onSwapSeatRequested += VehicleManagerOnSwapSeatRequested;
+        VehicleManager.OnPreDestroyVehicle += VehicleManagerOnPreDestroyVehicle;
 
-        if (input.vehicle != null)
-            VehicleDamageCalculator.RegisterForAdvancedDamage(input.vehicle, VehicleDamageCalculator.GetComponentDamageMultiplier(input));
-    }
-    internal static void InvokeOnLandmineExploding(UCPlayer? owner, BarricadeDrop barricade, InteractableTrap trap, UCPlayer triggerer, GameObject triggerObject, ref bool shouldExplode)
-    {
-        if (LandmineExploding == null || !shouldExplode) return;
-        LandmineExploding request = new LandmineExploding(owner, barricade, trap, triggerer, triggerObject, shouldExplode);
-        foreach (EventDelegate<LandmineExploding> inv in LandmineExploding.GetInvocationList().Cast<EventDelegate<LandmineExploding>>())
-        {
-            if (!request.CanContinue) break;
-            TryInvoke(inv, request, nameof(LandmineExploding));
-        }
-        if (!request.CanContinue) shouldExplode = false;
-    }
-    private static void PlayerCraftingOnCraftRequested(PlayerCrafting crafting, ref ushort itemID, ref byte blueprintIndex, ref bool shouldAllow)
-    {
-        if (CraftRequested == null || !shouldAllow) return;
-        UCPlayer? pl = UCPlayer.FromPlayer(crafting.player);
-        if (pl == null || Assets.find(EAssetType.ITEM, itemID) is not ItemAsset asset || asset.blueprints.Count <= blueprintIndex)
-            return;
-        Blueprint bp = asset.blueprints[blueprintIndex];
-        if (bp is null)
-            return;
-        CraftRequested request = new CraftRequested(pl, asset, bp, shouldAllow);
-        foreach (EventDelegate<CraftRequested> inv in CraftRequested.GetInvocationList().Cast<EventDelegate<CraftRequested>>())
-        {
-            if (!request.CanContinue) break;
-            TryInvoke(inv, request, nameof(CraftRequested));
-        }
-        itemID = request.ItemId;
-        blueprintIndex = request.BlueprintIndex;
-        if (!request.CanContinue) shouldAllow = false;
-    }
-    internal static void InvokeOnDropItemRequested(UCPlayer player, PlayerInventory inventory, Item item, ref bool shouldAllow)
-    {
-        if (ItemDropRequested == null || !shouldAllow) return;
-        ItemJar? jar = null;
-        byte pageNum = default, index = default;
-        bool found = false;
-        for (byte i = 0; i < PlayerInventory.PAGES; ++i)
-        {
-            SDG.Unturned.Items page = inventory.items[i];
-            for (byte j = 0; j < page.items.Count; ++j)
-            {
-                if (page.items[j].item == item)
-                {
-                    jar = page.items[j];
-                    pageNum = i;
-                    index = j;
-                    found = true;
-                    break;
-                }
-            }
-            if (found)
-                break;
-        }
-        if (found)
-        {
-            ItemDropRequested request = new ItemDropRequested(player, item, jar!, pageNum, index, shouldAllow);
-            foreach (EventDelegate<ItemDropRequested> inv in ItemDropRequested.GetInvocationList().Cast<EventDelegate<ItemDropRequested>>())
-            {
-                if (!request.CanContinue) break;
-                TryInvoke(inv, request, nameof(ItemDropRequested));
-            }
-            if (!request.CanContinue) shouldAllow = false;
-        }
-    }
-    private static void PlayerQuestsOnGroupChanged(PlayerQuests sender, CSteamID oldgroupid, EPlayerGroupRank oldgrouprank, CSteamID newgroupid, EPlayerGroupRank newgrouprank)
-    {
-        if (GroupChanged == null || sender == null || UCPlayer.FromPlayer(sender.player) is not { IsOnline: true } player) return;
-        GroupChanged args = new GroupChanged(player, oldgroupid.m_SteamID, oldgrouprank, newgroupid.m_SteamID, newgrouprank);
-        foreach (EventDelegate<GroupChanged> inv in GroupChanged.GetInvocationList().Cast<EventDelegate<GroupChanged>>())
-        {
-            if (!args.CanContinue) break;
-            TryInvoke(inv, args, nameof(GroupChanged));
-        }
-    }
-    internal static void InvokeUIRefreshRequest(UCPlayer player)
-    {
-        if (UIRefreshRequested == null || player is null) return;
-        PlayerEvent args = new PlayerEvent(player);
-        foreach (EventDelegate<PlayerEvent> inv in UIRefreshRequested.GetInvocationList().Cast<EventDelegate<PlayerEvent>>())
-        {
-            if (!args.CanContinue) break;
-            TryInvoke(inv, args, nameof(UIRefreshRequested));
-        }
-    }
-    private static void OnPluginKeyTick(Player player, uint simulation, byte key, bool state)
-    {
-        if (key == 0)
-            PlayerManager.FromID(player.channel.owner.playerID.steamID.m_SteamID)?.Keys.Simulate();
-    }
-    internal static void OnKeyDown(UCPlayer player, PlayerKey key, KeyDown? callback)
-    {
-        if (callback == null || !player.IsOnline) return;
-        bool handled = false;
-        foreach (KeyDown inv in callback.GetInvocationList().Cast<KeyDown>())
-        {
-            inv?.Invoke(player, ref handled);
-            if (handled) break;
-        }
-    }
-    internal static void OnKeyUp(UCPlayer player, PlayerKey key, float timeDown, KeyUp? callback)
-    {
-        if (callback == null || !player.IsOnline) return;
-        bool handled = false;
-        foreach (KeyUp inv in callback.GetInvocationList().Cast<KeyUp>())
-        {
-            inv?.Invoke(player, timeDown, ref handled);
-            if (handled) break;
-        }
-    }
-    private static void StructureDropOnSalvageRequested(StructureDrop structure, SteamPlayer instigatorClient, ref bool shouldAllow)
-    {
-        if (!shouldAllow) return;
-        if (instigatorClient != null) DestroyerComponent.AddOrUpdate(structure.model.gameObject, instigatorClient.playerID.steamID.m_SteamID, EDamageOrigin.Unknown);
-        else return;
+        /* Items */
+        ItemManager.onTakeItemRequested += ItemManagerOnTakeItemRequested;
+        PlayerCrafting.onCraftBlueprintRequested += PlayerCraftingCraftBlueprintRequested;
 
-        if (SalvageStructureRequested == null) return;
-        UCPlayer? player = UCPlayer.FromSteamPlayer(instigatorClient);
-        if (player == null) return;
-        StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
-        SqlItem<SavedStructure>? save = saver?.GetSaveItemSync(structure.instanceID, StructType.Structure);
-        if (!StructureManager.tryGetRegion(structure.model, out byte x, out byte y, out StructureRegion region))
-            return;
-        SalvageStructureRequested args = new SalvageStructureRequested(player, structure, structure.GetServersideData(), region!, x, y, save, default, default);
-        structure.model.GetComponents(WorkingSalvageInfo);
-        try
-        {
-            for (int i = 0; i < WorkingSalvageInfo.Count; ++i)
-            {
-                ISalvageInfo salvageInfo = WorkingSalvageInfo[i];
-                salvageInfo.Salvager = instigatorClient.playerID.steamID.m_SteamID;
-                salvageInfo.IsSalvaged = true;
-                if (salvageInfo is ISalvageListener listener)
-                {
-                    listener.OnSalvageRequested(args);
-                    if (!args.CanContinue)
-                    {
-                        shouldAllow = false;
-                        break;
-                    }
+        /* Players */
+        DamageTool.damagePlayerRequested += DamageToolOnPlayerDamageRequested;
+        UseableConsumeable.onPerformingAid += UseableConsumeableOnPlayerPerformingAid;
+        UseableConsumeable.onPerformedAid += UseableConsumeableOnPlayerPerformedAid;
+        PlayerQuests.onGroupChanged += PlayerQuestsOnGroupChanged;
+        PlayerEquipment.OnUseableChanged_Global += PlayerEquipmentUseableChanged;
+        PlayerLife.OnSelectingRespawnPoint += OnPlayerChooseSpawnAfterDeath;
+        PlayerLife.OnPreDeath += PlayerLifeOnOnPreDeath;
+        _playerService.SubscribeToPlayerEvent<PlayerEquipRequestHandler>((player, value) => player.UnturnedPlayer.equipment.onEquipRequested += value, OnPlayerEquipRequested);
+        _playerService.SubscribeToPlayerEvent<PlayerDequipRequestHandler>((player, value) => player.UnturnedPlayer.equipment.onDequipRequested += value, OnPlayerDequipRequested);
 
-                }
-            }
-            if (args.CanContinue)
-            {
-                foreach (EventDelegate<SalvageStructureRequested> inv in SalvageStructureRequested.GetInvocationList().Cast<EventDelegate<SalvageStructureRequested>>())
-                {
-                    if (!args.CanContinue) break;
-                    TryInvoke(inv, args, nameof(SalvageStructureRequested));
-                }
-                if (!args.CanContinue)
-                    shouldAllow = false;
-            }
-        }
-        finally
+        /* Projectiles */
+        UseableGun.onProjectileSpawned += OnProjectileSpawned;
+        
+        /* Throwables */
+        UseableThrowable.onThrowableSpawned += OnThrowableSpawned;
+
+        /* Objects */
+        ObjectManager.OnQuestObjectUsed += ObjectManagerOnQuestObjectUsed;
+        NPCEventManager.onEvent += NPCEventManagerOnEvent;
+
+        return UniTask.CompletedTask;
+    }
+
+    async UniTask IHostedService.StopAsync(CancellationToken token)
+    {
+        /* Provider */
+        Provider.onServerConnected -= ProviderOnServerConnected;
+        Provider.onServerDisconnected -= ProviderOnServerDisconnected;
+        Provider.onBattlEyeKick -= ProviderOnBattlEyeKick;
+        Provider.onLoginSpawning = null;
+
+        /* Barricades */
+        BarricadeManager.onDeployBarricadeRequested -= BarricadeManagerOnDeployBarricadeRequested;
+        BarricadeManager.onBarricadeSpawned -= BarricadeManagerOnBarricadeSpawned;
+        BarricadeDrop.OnSalvageRequested_Global -= BarricadeDropOnSalvageRequested;
+        BarricadeManager.onModifySignRequested -= BarricadeManagerOnModifySignRequested;
+        BarricadeManager.onDamageBarricadeRequested -= BarricadeManagerOnDamageBarricadeRequested;
+
+        /* Structures */
+        StructureManager.onDeployStructureRequested -= StructureManagerOnDeployStructureRequested;
+        StructureManager.onStructureSpawned -= StructureManagerOnStructureSpawned;
+        StructureDrop.OnSalvageRequested_Global -= StructureDropOnSalvageRequested;
+        StructureManager.onDamageStructureRequested -= StructureManagerOnDamageStructureRequested;
+
+        /* Vehicles */
+        VehicleManager.OnToggleVehicleLockRequested -= VehicleManagerOnToggleVehicleLockRequested;
+        VehicleManager.OnToggledVehicleLock -= VehicleManagerOnToggledVehicleLock;
+        VehicleManager.onDamageVehicleRequested -= OnDamageVehicleRequested;
+        VehicleManager.OnVehicleExploded -= VehicleManagerOnVehicleExploded;
+        VehicleManager.onExitVehicleRequested -= VehicleManagerOnPassengerExitRequested;
+        VehicleManager.onSwapSeatRequested -= VehicleManagerOnSwapSeatRequested;
+        VehicleManager.OnPreDestroyVehicle -= VehicleManagerOnPreDestroyVehicle;
+
+        /* Items */
+        ItemManager.onTakeItemRequested -= ItemManagerOnTakeItemRequested;
+        PlayerCrafting.onCraftBlueprintRequested -= PlayerCraftingCraftBlueprintRequested;
+
+        /* Players */
+        DamageTool.damagePlayerRequested -= DamageToolOnPlayerDamageRequested;
+        UseableConsumeable.onPerformingAid -= UseableConsumeableOnPlayerPerformingAid;
+        UseableConsumeable.onPerformedAid -= UseableConsumeableOnPlayerPerformedAid;
+        PlayerQuests.onGroupChanged -= PlayerQuestsOnGroupChanged;
+        PlayerEquipment.OnUseableChanged_Global -= PlayerEquipmentUseableChanged;
+        PlayerLife.OnSelectingRespawnPoint -= OnPlayerChooseSpawnAfterDeath;
+        PlayerLife.OnPreDeath -= PlayerLifeOnOnPreDeath;
+        _playerService.UnsubscribeFromPlayerEvent<PlayerEquipRequestHandler>((player, value) => player.UnturnedPlayer.equipment.onEquipRequested -= value, OnPlayerEquipRequested);
+        _playerService.UnsubscribeFromPlayerEvent<PlayerDequipRequestHandler>((player, value) => player.UnturnedPlayer.equipment.onDequipRequested -= value, OnPlayerDequipRequested);
+
+        /* Projectiles */
+        UseableGun.onProjectileSpawned -= OnProjectileSpawned;
+        
+        /* Throwables */
+        UseableThrowable.onThrowableSpawned -= OnThrowableSpawned;
+
+        /* Objects */
+        ObjectManager.OnQuestObjectUsed -= ObjectManagerOnQuestObjectUsed;
+        NPCEventManager.onEvent -= NPCEventManagerOnEvent;
+
+        await WaitForEvents(CancellationToken.None);
+
+        _cancellationTokenSource.Cancel();
+        _cancellationTokenSource.Dispose();
+    }
+
+    /// <summary>
+    /// Create a logger for a handler of a specific <see cref="EventInfo"/> from a declaring type and name.
+    /// </summary>
+    public ILogger GetLogger(Type declaringType, string eventName)
+    {
+        EventInfo? eventInfo = declaringType.GetEvent(eventName, BindingFlags.Public | BindingFlags.NonPublic);
+        return eventInfo == null
+            ? _loggerFactory.CreateLogger(declaringType)
+            : _loggerFactory.CreateLogger(Accessor.Formatter.Format(eventInfo, includeAccessors: false, includeEventKeyword: false));
+    }
+
+    private void OnLayoutStarted()
+    {
+        GameThread.AssertCurrent();
+
+        // clears the cache for all event types
+        lock (_listenerCaches)
         {
-            try
+            ILifetimeScope scope = _warfare.IsLayoutActive() ? _warfare.ScopedProvider : _warfare.ServiceProvider;
+            _scopedServiceProvider = null;
+            foreach (EventInvocationListenerCache cache in _listenerCaches.Values)
             {
-                if (!shouldAllow)
-                {
-                    for (int i = 0; i < WorkingSalvageInfo.Count; ++i)
-                    {
-                        ISalvageInfo salvageInfo = WorkingSalvageInfo[i];
-                        salvageInfo.Salvager = instigatorClient.playerID.steamID.m_SteamID;
-                        salvageInfo.IsSalvaged = false;
-                    }
-                }
+                ListPool<EventListenerResult>.release(cache.Results);
             }
-            finally
-            {
-                WorkingSalvageInfo.Clear();
-            }
+            _listenerCaches.Clear();
+            _eventProviders.Clear();
+            FindEventListenerProviders(scope, _eventProviders);
         }
     }
-    private static void BarricadeDropOnSalvageRequested(BarricadeDrop barricade, SteamPlayer instigatorClient, ref bool shouldAllow)
+
+#if LOG_TRACE_TO_FILE
+    private static int _traceNum;
+#endif
+
+    /// <summary>
+    /// Invoke an event with the given arguments.
+    /// </summary>
+    /// <returns>If the action should continue if <paramref name="eventArgs"/> is <see cref="ICancellable"/>, otherwise <see langword="true"/>.</returns>
+    public async UniTask<bool> DispatchEventAsync<TEventArgs>(TEventArgs eventArgs, CancellationToken token = default, bool allowAsync = true) where TEventArgs : class
     {
-        if (!shouldAllow) return;
-        if (instigatorClient != null)
-            DestroyerComponent.AddOrUpdate(barricade.model.gameObject, instigatorClient.playerID.steamID.m_SteamID, EDamageOrigin.Unknown);
-        else
+#if LOG_TRACE_TO_FILE
+        int traceNum = Interlocked.Increment(ref _traceNum);
+#endif
+
+        await UniTask.SwitchToMainThread(token);
+
+        Type type = typeof(TEventArgs);
+
+        EventInvocationListenerCache cache = GetEventListenersCache<TEventArgs>(out IServiceProvider serviceProvider);
+
+        List<EventListenerResult> eventListeners = ListPool<EventListenerResult>.claim();
+        eventListeners.AddRange(cache.Results);
+
+        // IEventListenerProviders
+        foreach (IEventListenerProvider provider in _eventProviders)
         {
-            DestroyerComponent.AddOrUpdate(barricade.model.gameObject, 0ul, EDamageOrigin.Unknown);
-            return;
+            foreach (IEventListener<TEventArgs> eventListener in provider.EnumerateNormalListeners(eventArgs))
+            {
+                AddProviderResults(eventListener, eventListeners, false, type);
+            }
+
+            foreach (IAsyncEventListener<TEventArgs> eventListener in provider.EnumerateAsyncListeners(eventArgs))
+            {
+                AddProviderResults(eventListener, eventListeners, true, type);
+            }
         }
 
-        if (SalvageBarricadeRequested == null) return;
-        UCPlayer? player = UCPlayer.FromSteamPlayer(instigatorClient);
-        if (player == null) return;
-        StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
-        SqlItem<SavedStructure>? save = saver?.GetSaveItemSync(barricade.instanceID, StructType.Barricade);
-        if (!BarricadeManager.tryGetRegion(barricade.model, out byte x, out byte y, out ushort plant, out BarricadeRegion region))
-            return;
-        SalvageBarricadeRequested args = new SalvageBarricadeRequested(player, barricade, barricade.GetServersideData(), region!, x, y, plant, save, default, default);
-        barricade.model.GetComponents(WorkingSalvageInfo);
-        try
-        {
-            for (int i = 0; i < WorkingSalvageInfo.Count; ++i)
-            {
-                ISalvageInfo salvageInfo = WorkingSalvageInfo[i];
-                salvageInfo.Salvager = instigatorClient.playerID.steamID.m_SteamID;
-                salvageInfo.IsSalvaged = true;
-                if (salvageInfo is ISalvageListener listener)
-                {
-                    listener.OnSalvageRequested(args);
-                    if (!args.CanContinue)
-                    {
-                        shouldAllow = false;
-                        break;
-                    }
-                }
-            }
-            if (args.CanContinue)
-            {
-                foreach (EventDelegate<SalvageBarricadeRequested> inv in SalvageBarricadeRequested.GetInvocationList().Cast<EventDelegate<SalvageBarricadeRequested>>())
-                {
-                    if (!args.CanContinue) break;
-                    TryInvoke(inv, args, nameof(SalvageBarricadeRequested));
-                }
-                if (!args.CanContinue)
-                    shouldAllow = false;
-            }
-        }
-        finally
-        {
-            try
-            {
-                if (!shouldAllow)
-                {
-                    for (int i = 0; i < WorkingSalvageInfo.Count; ++i)
-                    {
-                        ISalvageInfo salvageInfo = WorkingSalvageInfo[i];
-                        salvageInfo.Salvager = instigatorClient.playerID.steamID.m_SteamID;
-                        salvageInfo.IsSalvaged = false;
-                    }
-                }
-            }
-            finally
-            {
-                WorkingSalvageInfo.Clear();
-            }
-        }
-    }
-    private static void StructureManagerOnDamageStructureRequested(CSteamID instigatorSteamID, Transform structureTransform, ref ushort pendingTotalDamage, ref bool shouldAllow, EDamageOrigin damageOrigin)
-    {
-        if (!shouldAllow) return;
-        try
-        {
-            if (DamageStructureRequested == null) return;
-            StructureDrop drop = StructureManager.FindStructureByRootTransform(structureTransform);
-            if (drop == null) return;
-            UCPlayer? player = UCPlayer.FromCSteamID(instigatorSteamID);
-            StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
-            SqlItem<SavedStructure>? save = saver?.GetSaveItemSync(drop.instanceID, StructType.Structure);
-            if (!StructureManager.tryGetRegion(structureTransform, out byte x, out byte y, out StructureRegion region))
-                return;
+        int ct = eventListeners.Count;
 
-            // todo add item tracking
-            DamageStructureRequested args = new DamageStructureRequested(player, instigatorSteamID.m_SteamID, drop, drop.GetServersideData(), region!, x, y, save, damageOrigin, pendingTotalDamage, default, default);
-            foreach (EventDelegate<DamageStructureRequested> inv in DamageStructureRequested.GetInvocationList().Cast<EventDelegate<DamageStructureRequested>>())
-            {
-                if (!args.CanContinue) break;
-                TryInvoke(inv, args, nameof(DamageStructureRequested));
-            }
-            if (!args.CanContinue)
-                shouldAllow = false;
-            else
-                pendingTotalDamage = args.PendingDamage;
-        }
-        finally
+        _logger.LogConditional("Invoke {0} - Dispatching event for {1} listener(s).", type, ct);
+#if LOG_TRACE_TO_FILE
+        _eventFileWriter.WriteLine("{0}  Invoking {1} for {2} listeners.", traceNum, Accessor.Formatter.Format(type), ct);
+#endif
+
+#if LOG_EVENT_LISTENERS
+        using (_logger.BeginScope(typeof(TEventArgs)))
         {
-            if (shouldAllow)
+            int index = -1;
+            foreach (EventListenerResult result in eventListeners)
             {
-                if (OffenseManager.IsValidSteam64Id(instigatorSteamID))
-                    DestroyerComponent.AddOrUpdate(structureTransform.gameObject, instigatorSteamID.m_SteamID, damageOrigin);
+                if (result.Model == null)
+                    _logger.LogDebug("#{0} listener {1} (priority: {2} f:0b{3}) hash {4} returned from listener provider.", ++index, result.Listener.GetType(), result.Priority, Convert.ToString(result.Flags, 2), result.Listener.GetHashCode());
                 else
-                    DestroyerComponent.AddOrUpdate(structureTransform.gameObject, 0ul, EDamageOrigin.Unknown);
+                    _logger.LogDebug("#{0} listener {1} (priority: {2} f:0b{3}) hash {4} of {5} cached.", ++index, result.Listener.GetType(), result.Priority, Convert.ToString(result.Flags, 2), result.Listener.GetHashCode(), result.Model);
             }
         }
+#endif
 
-    }
-
-    private static readonly List<IManualOnDestroy> WorkingOnDestroy = new List<IManualOnDestroy>(2);
-    internal static void InvokeOnStructureDestroyed(StructureDrop drop, ulong instigator, Vector3 ragdoll, bool wasPickedUp, StructureRegion region, byte x, byte y, EDamageOrigin origin)
-    {
-        UCPlayer? player = UCPlayer.FromID(instigator);
-        StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
-        SqlItem<SavedStructure>? save = saver?.GetSaveItemSync(drop.instanceID, StructType.Structure);
-
-        // todo add item tracking
-        StructureDestroyed args = new StructureDestroyed(player, instigator, drop, drop.GetServersideData(), region, x, y, save, ragdoll, wasPickedUp, origin, default, default);
-
-        if (drop.model.TryGetComponent(out ShovelableComponent shovelableComponent))
-            shovelableComponent.DestroyInfo = args;
-
-        if (StructureDestroyed != null)
+#if LOG_TRACE_TO_FILE
         {
-            foreach (EventDelegate<StructureDestroyed> inv in StructureDestroyed.GetInvocationList().Cast<EventDelegate<StructureDestroyed>>())
+            int index = -1;
+            foreach (EventListenerResult result in eventListeners)
             {
-                if (!args.CanContinue) break;
-                TryInvoke(inv, args, nameof(StructureDestroyed));
+                if (result.Model == null)
+                    _eventFileWriter.WriteLine("{0}  #{1} listener {2} (priority: {3} f:0b{4}) hash {5} returned from listener provider.", traceNum, ++index, result.Listener.GetType(), result.Priority, Convert.ToString(result.Flags, 2), result.Listener.GetHashCode());
+                else
+                    _eventFileWriter.WriteLine("{0}  #{1} listener {2} (priority: {3} f:0b{4}) hash {5} of {6} cached.", traceNum, ++index, result.Listener.GetType(), result.Priority, Convert.ToString(result.Flags, 2), result.Listener.GetHashCode(), result.Model);
             }
         }
+#endif
 
-        drop.model.GetComponents(WorkingOnDestroy);
-        try
-        {
-            for (int i = 0; i < WorkingOnDestroy.Count; ++i)
-                WorkingOnDestroy[i].ManualOnDestroy();
-        }
-        finally
-        {
-            WorkingOnDestroy.Clear();
-        }
-    }
-    internal static void InvokeOnInjuringPlayer(PlayerInjuring args)
-    {
-        if (PlayerInjuring == null) return;
-        foreach (EventDelegate<PlayerInjuring> inv in PlayerInjuring.GetInvocationList().Cast<EventDelegate<PlayerInjuring>>())
-        {
-            if (!args.CanContinue) break;
-            TryInvoke(inv, args, nameof(PlayerInjuring));
-        }
-    }
-    internal static void InvokeOnPlayerAided(UCPlayer medic, UCPlayer player, ItemConsumeableAsset asset, bool isRevive, ref bool shouldAllow)
-    {
-        if (!shouldAllow || PlayerAidRequested == null && PlayerAided == null)
-            return;
+        List<SynchronizationBucket>? buckets = null;
+        List<Task>? tasks = null;
 
-        PlayerAided args = new PlayerAided(medic, player, asset, isRevive, shouldAllow);
-        if (PlayerAidRequested != null)
+        // enter sync buckets
+        if (allowAsync)
         {
-            foreach (EventDelegate<PlayerAided> inv in PlayerAidRequested.GetInvocationList().Cast<EventDelegate<PlayerAided>>())
+            EventModelAttribute? modelInfo = cache.ModelInfo;
+            if (modelInfo != null && modelInfo.SynchronizationContext != EventSynchronizationContext.None)
             {
-                if (!args.CanContinue) break;
-                TryInvoke(inv, args, nameof(PlayerAidRequested));
-            }
+                buckets = ListPool<SynchronizationBucket>.claim();
+                tasks = ListPool<Task>.claim();
+                EnterSynchronizationBuckets(eventArgs, modelInfo, type, buckets, tasks, token);
+#if LOG_SYNCHRONIZATION_STEPS
+                _logger.LogDebug("Invoke {0} - Synchronizing with {1} bucket(s).", type, buckets.Count);
+#endif
+                tasks.RemoveAll(x => x.IsCompleted);
 
-            if (!args.CanContinue)
-            {
-                shouldAllow = false;
-                return;
-            }
-        }
-
-        foreach (EventDelegate<PlayerAided> inv in PlayerAided.GetInvocationList().Cast<EventDelegate<PlayerAided>>())
-        {
-            TryInvoke(inv, args, nameof(PlayerAided));
-        }
-    }
-    internal static void InvokeOnPlayerInjured(PlayerInjured args)
-    {
-        if (PlayerInjured == null) return;
-        foreach (EventDelegate<PlayerInjured> inv in PlayerInjured.GetInvocationList().Cast<EventDelegate<PlayerInjured>>())
-        {
-            if (!args.CanContinue) break;
-            TryInvoke(inv, args, nameof(PlayerInjured));
-        }
-    }
-    internal static void IntlOnStartVerifyingPlayerConnection(SteamPending player, ref bool shouldDeferContinuation)
-    {
-        if (PlayerPendingAsync == null)
-            return;
-
-        ulong s64 = player.playerID.steamID.m_SteamID;
-        PlayerSave.TryReadSaveFile(s64, out PlayerSave? save);
-
-        PendingAsyncData data = new PendingAsyncData(player);
-        CancellationTokenSource? src = null;
-
-        for (int i = 0; i < PlayerManager.PlayerConnectCancellationTokenSources.Count; ++i)
-        {
-            KeyValuePair<ulong, CancellationTokenSource> kvp = PlayerManager.PlayerConnectCancellationTokenSources[i];
-            if (kvp.Key == s64)
-            {
-                src = kvp.Value;
-                break;
-            }
-        }
-
-        PlayerPending args = new PlayerPending(player, save, data, true, string.Empty);
-        Task task = InvokePrePlayerConnectAsync(args, src == null ? CancellationToken.None : src.Token);
-        if (task.IsCompleted)
-        {
-            if (args.CanContinue)
-                return;
-
-            EventPatches.RemovePlayer(player, args.Rejection, args.RejectReason);
-            return;
-        }
-
-        UCWarfare.RunTask(task, ctx: "Player connecting: {" + player.playerID.steamID.m_SteamID.ToString(Data.AdminLocale) + "} [" + player.playerID.playerName + "].");
-        shouldDeferContinuation = true;
-    }
-    private static async Task InvokePrePlayerConnectAsync(PlayerPending args, CancellationToken token = default)
-    {
-        await UCWarfare.I.PlayerJoinLock.WaitAsync(token).ConfigureAwait(false);
-        try
-        {
-            if (PlayerPendingAsync == null)
-                return;
-
-            foreach (AsyncEventDelegate<PlayerPending> inv in PlayerPendingAsync.GetInvocationList().Cast<AsyncEventDelegate<PlayerPending>>())
-            {
-                if (!args.CanContinue)
-                    break;
-
-                await TryInvoke(inv, args, nameof(PlayerPendingAsync), token).ConfigureAwait(true);
-            }
-
-            await UCWarfare.ToUpdate(token);
-
-            if (args.CanContinue)
-            {
-                _pendingAsyncData.Add(args.AsyncData);
-                EventPatches.ContinueSendingVerifyPacket(args.PendingPlayer);
-            }
-            else
-                EventPatches.RemovePlayer(args.PendingPlayer, args.Rejection, args.RejectReason ?? "An unknown error occured.");
-        }
-        catch (Exception ex)
-        {
-            L.LogError(ex);
-            await UCWarfare.ToUpdate(token);
-            EventPatches.ContinueSendingVerifyPacket(args.PendingPlayer);
-        }
-        finally
-        {
-            UCWarfare.I.PlayerJoinLock.Release();
-        }
-    }
-    internal static void InvokeOnSignTextChanged(InteractableSign sign)
-    {
-        if (SignTextChanged == null) return;
-        BarricadeDrop? drop = UCBarricadeManager.GetSignFromInteractable(sign);
-        if (drop == null)
-            return;
-        UCPlayer? player = null;
-        if (drop.model.TryGetComponent(out BarricadeComponent comp) && comp.EditTick >= UCWarfare.I.Debugger.Updates)
-            player = UCPlayer.FromID(comp.LastEditor);
-        StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
-        SqlItem<SavedStructure>? save = saver?.GetSaveItemSync(drop.instanceID, StructType.Structure);
-        BarricadeManager.tryGetRegion(drop.model, out byte x, out byte y, out ushort plant, out BarricadeRegion region);
-        SignTextChanged args = new SignTextChanged(player, drop, region, x, y, plant, save);
-        foreach (EventDelegate<SignTextChanged> inv in SignTextChanged.GetInvocationList().Cast<EventDelegate<SignTextChanged>>())
-        {
-            if (!args.CanContinue) break;
-            TryInvoke(inv, args, nameof(SignTextChanged));
-        }
-    }
-    internal static bool OnDraggingOrSwappingItem(PlayerInventory playerInv, byte pageFrom, ref byte pageTo, byte xFrom, ref byte xTo, byte yFrom, ref byte yTo, ref byte rotTo, bool swap)
-    {
-        if (ItemMoveRequested != null && UCPlayer.FromPlayer(playerInv.player) is { IsOnline: true } pl)
-        {
-            if (pageTo < PlayerInventory.SLOTS)
-                rotTo = 0;
-            ItemJar? jar = playerInv.getItem(pageFrom, playerInv.getIndex(pageFrom, xFrom, yFrom));
-            ItemJar? swapping = !swap ? null : playerInv.getItem(pageTo, playerInv.getIndex(pageTo, xTo, yTo));
-            ItemMoveRequested args = new ItemMoveRequested(pl, (Page)pageFrom, (Page)pageTo, xFrom, xTo, yFrom, yTo, rotTo, swap, jar, swapping);
-            foreach (EventDelegate<ItemMoveRequested> inv in ItemMoveRequested.GetInvocationList().Cast<EventDelegate<ItemMoveRequested>>())
-            {
-                if (!args.CanContinue) break;
-                TryInvoke(inv, args, nameof(ItemMoveRequested));
-            }
-
-            if (!args.CanContinue)
-                return false;
-            pageTo = (byte)args.NewPage;
-            xTo = args.NewX;
-            yTo = args.NewY;
-            rotTo = args.NewRotation;
-        }
-
-        return true;
-    }
-    internal static void OnDraggedOrSwappedItem(PlayerInventory playerInv, byte pageFrom, byte pageTo, byte xFrom, byte xTo, byte yFrom, byte yTo, byte rotFrom, byte rotTo, bool swap)
-    {
-        if (ItemMoved != null && UCPlayer.FromPlayer(playerInv.player) is { IsOnline: true } pl)
-        {
-            ItemJar? jar = playerInv.getItem(pageTo, playerInv.getIndex(pageTo, xTo, yTo));
-            if (!swap) rotFrom = byte.MaxValue;
-            ItemJar? swapped = playerInv.getItem(pageFrom, playerInv.getIndex(pageFrom, xFrom, yFrom));
-            ItemMoved args = new ItemMoved(pl, (Page)pageFrom, (Page)pageTo, xFrom, xTo, yFrom, yTo, rotFrom, rotTo, swap, jar, swapped);
-            foreach (EventDelegate<ItemMoved> inv in ItemMoved.GetInvocationList().Cast<EventDelegate<ItemMoved>>())
-            {
-                if (!args.CanContinue) break;
-                TryInvoke(inv, args, nameof(ItemMoved));
-            }
-        }
-    }
-
-    internal static void OnPickedUpItem(Player player, byte regionX, byte regionY, uint instanceId, byte toX, byte toY, byte toRot, byte toPage, ItemData? data)
-    {
-        if (ItemPickedUp != null && UCPlayer.FromPlayer(player) is { IsOnline: true } pl)
-        {
-            PlayerInventory playerInv = player.inventory;
-            ItemRegion? region = null;
-            ItemJar? jar = null;
-            if (ItemManager.regions != null && Regions.checkSafe(regionX, regionY))
-                region = ItemManager.regions[regionX, regionY];
-            if (data != null)
-            {
-                if (toPage != byte.MaxValue)
-                    jar = playerInv.getItem(toPage, playerInv.getIndex(toPage, toX, toY));
-                if (jar == null || jar.item != data.item)
+                if (tasks.Count > 0)
                 {
-                    for (int page = 0; page < PlayerInventory.AREA; ++page)
-                    {
-                        SDG.Unturned.Items p = playerInv.items[page];
-                        for (int index = 0; index < p.items.Count; ++index)
-                        {
-                            if (p.items[index].item == data.item)
-                            {
-                                jar = p.items[index];
-                                toX = jar.x;
-                                toY = jar.y;
-                                toPage = (byte)page;
-                                toRot = jar.rot;
-                                goto d;
-                            }
-                        }
-                    }
+#if LOG_SYNCHRONIZATION_STEPS
+                    _logger.LogDebug("Invoke {0} - Awaiting {1} bucket(s).", type, buckets.Count);
+#endif
+                    await Task.WhenAll(tasks).ConfigureAwait(false);
+#if LOG_SYNCHRONIZATION_STEPS
+                    _logger.LogDebug("Invoke {0} - Done awaiting buckets.", type);
+#endif
                 }
             }
-            d:
-
-            ItemPickedUp args = new ItemPickedUp(pl, (Page)toPage, toX, toY, toRot, regionX, regionY, instanceId, region, data, jar, data?.item);
-            foreach (EventDelegate<ItemPickedUp> inv in ItemPickedUp.GetInvocationList().Cast<EventDelegate<ItemPickedUp>>())
-            {
-                if (!args.CanContinue) break;
-                TryInvoke(inv, args, nameof(ItemPickedUp));
-            }
         }
-    }
-    internal static void OnDroppedItem(PlayerInventory playerInv, byte page, byte x, byte y, byte rot, Item? item)
-    {
-        if (ItemDropped != null && UCPlayer.FromPlayer(playerInv.player) is { IsOnline: true } pl)
+
+        Interlocked.Increment(ref _activeEvents);
+
+        try
         {
-            ItemData? data = null;
-            if (ItemManager.regions != null && item != null)
+            if (ct == 0)
             {
-                if (Regions.tryGetCoordinate(playerInv.player.transform.position, out byte x2, out byte y2))
+                return true;
+            }
+
+            EventListenerResult[] underlying = eventListeners.GetUnderlyingArray();
+
+            // remove async events for any listeners that don't match the arg type exactly, otherwise throw an exception.
+            if (!allowAsync)
+            {
+                for (int i = 0; i < ct; ++i)
                 {
-                    ItemRegion r = ItemManager.regions[x2, y2];
-                    for (int i = 0; i < r.items.Count; ++i)
+                    ref EventListenerResult result = ref underlying[i];
+                    if ((result.Flags & BitIsAsync) == 0)
+                        continue;
+
+                    if (result.Model == type)
                     {
-                        if (r.items[i].item == item)
-                        {
-                            data = r.items[i];
+                        throw new InvalidOperationException($"Async event listeners not supported for event model {Accessor.ExceptionFormatter.Format<TEventArgs>()}, as with listener {Accessor.ExceptionFormatter.Format(result.Listener.GetType())}.");
+                    }
+                    
+                    _logger.LogDebug("Skipping event invocation of listener type {0} for event model {1} (listening model type {2}) because async event handlers are not allowed.", result.Listener.GetType(), type, result.Model);
+                    result.Model = null;
+                }
+            }
+
+            bool hasSkippedToNextFrame = false;
+            for (int i = 0; i < ct; i++)
+            {
+                // skipped
+                if (underlying[i].Model is null)
+                    continue;
+
+                try
+                {
+                    if (eventArgs is ICancellable { IsCancelled: true })
+                    {
+#if LOG_TRACE_TO_FILE
+                        _eventFileWriter.WriteLine("{0}  Cancelled", traceNum);
+#endif
+                        // check if a MustRunLast cancelled (they shouldn't be allowed to)
+                        if (i > 0 && (underlying[i - 1].Flags & BitMustRunLast) != 0)
+                            throw new InvalidOperationException($"Event cancelled by a listener using 'MustRunLast': {underlying[i - 1].Model} in {underlying[i - 1].Listener.GetType()}.");
+                        break;
+                    }
+
+                    // RequireNextFrame
+                    if (!hasSkippedToNextFrame && (underlying[i].Flags & BitRequireNextFrame) != 0)
+                    {
+#if LOG_TRACE_TO_FILE
+                        _eventFileWriter.WriteLine("{0}  RequireNextFrame", traceNum);
+#endif
+                        hasSkippedToNextFrame = true;
+                        await UniTask.NextFrame(token, cancelImmediately: false);
+                        token.ThrowIfCancellationRequested();
+                    }
+
+                    // EnsureMainThread
+                    if ((underlying[i].Flags & BitEnsureMainThread) != 0 && !GameThread.IsCurrent)
+                    {
+#if LOG_TRACE_TO_FILE
+                        _eventFileWriter.WriteLine("{0}  EnsureMainThread", traceNum);
+#endif
+                        await UniTask.SwitchToMainThread(token);
+                        token.ThrowIfCancellationRequested();
+                    }
+
+                    // RequireActiveLayout
+                    if ((underlying[i].Flags & BitRequireActiveLayout) != 0 && !_warfare.IsLayoutActive())
+                    {
+#if LOG_TRACE_TO_FILE
+                        _eventFileWriter.WriteLine("{0}  BitRequireActiveLayout", traceNum);
+#endif
+                        continue;
+                    }
+
+                    // Invoke handler
+#if LOG_TRACE_TO_FILE
+                    _eventFileWriter.WriteLine("{0}  Invoking {1} ({2}).", traceNum, Accessor.Formatter.Format(underlying[i].Listener.GetType()!), Accessor.Formatter.Format(underlying[i].Model!));
+#endif
+                    UniTask invokeResult = InvokeListener(ref underlying[i], eventArgs, serviceProvider, token);
+                    if (invokeResult.Status != UniTaskStatus.Succeeded)
+                    {
+                        await invokeResult;
+#if LOG_TRACE_TO_FILE
+                        _eventFileWriter.WriteLine("{0}  Done invoking {1} ({2}).", traceNum, Accessor.Formatter.Format(underlying[i].Listener.GetType()!), Accessor.Formatter.Format(underlying[i].Model!));
+#endif
+                        token.ThrowIfCancellationRequested();
+                    }
+                    else
+                    {
+#if LOG_TRACE_TO_FILE
+                        _eventFileWriter.WriteLine("{0}  Done invoking {1} ({2}).", traceNum, Accessor.Formatter.Format(underlying[i].Listener.GetType()!), Accessor.Formatter.Format(underlying[i].Model!));
+#endif
+                    }
+                }
+                catch (ControlException) { }
+                catch (Exception ex)
+                {
+                    if (!GameThread.IsCurrent)
+                    {
+                        await UniTask.SwitchToMainThread(CancellationToken.None);
+                    }
+
+                    Type listenerType = underlying[i].Listener.GetType();
+
+                    GetInfo(underlying[i].Model!, (underlying[i].Flags & BitIsAsync) != 0, listenerType, out EventListenerInfo info);
+
+                    ILogger logger = serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(listenerType);
+                    bool cancelled;
+                    if (ex is OperationCanceledException)
+                    {
+                        cancelled = true;
+                        logger.LogInformation(ex, "Execution of event handler {0} cancelled by CancellationToken.", info.Method);
+                    }
+                    else
+                    {
+                        cancelled = false;
+                        logger.LogError(ex, "Error executing event handler: {0}.", info.Method);
+                    }
+
+                    if (eventArgs is not ICancellable c)
+                    {
+                        if (cancelled)
                             break;
-                        }
+
+                        continue;
+                    }
+
+                    c.Cancel();
+                    logger.LogInformation("Cancelling event handler {0} due to exception described above.", info.Method);
+                    break;
+                }
+            }
+
+            return eventArgs is not ICancellable { IsActionCancelled: true };
+        }
+        finally
+        {
+            await UniTask.SwitchToMainThread();
+
+            Interlocked.Decrement(ref _activeEvents);
+
+            if (buckets != null)
+            {
+#if LOG_SYNCHRONIZATION_STEPS
+                _logger.LogDebug("Invoke {0} - Releasing {1} bucket(s).", type, buckets.Count);
+#endif
+                foreach (SynchronizationBucket bucket in buckets)
+                {
+#if LOG_SYNCHRONIZATION_STEPS
+                    _logger.LogDebug("Invoke {0} - Releasing bucket: \"{1}\".", type, bucket);
+#endif
+                    bucket.Semaphore.Release();
+                }
+            }
+
+            ListPool<EventListenerResult>.release(eventListeners);
+            if (buckets != null)
+                ListPool<SynchronizationBucket>.release(buckets);
+            if (tasks != null)
+                ListPool<Task>.release(tasks);
+        }
+    }
+
+    private static readonly MethodInfo InvokeAsyncOpenGenericMtd = typeof(EventDispatcher).GetMethod(nameof(InvokeAsyncOpenGeneric), BindingFlags.NonPublic | BindingFlags.Instance)!;
+    private static readonly MethodInfo InvokeNormalOpenGenericMtd = typeof(EventDispatcher).GetMethod(nameof(InvokeNormalOpenGeneric), BindingFlags.NonPublic | BindingFlags.Instance)!;
+
+    private UniTask InvokeListener<TEventArgs>(ref EventListenerResult result, TEventArgs args, IServiceProvider serviceProvider, CancellationToken token) where TEventArgs : class
+    {
+        // create and cache generic versions of InvokeAsyncOpenGeneric and InvokeNormalOpenGeneric (below)
+        //  to invoke different levels of listeners
+        if ((result.Flags & BitIsAsync) != 0)
+        {
+            // shortcut for highest level (will be used most)
+            if (result.Model == typeof(TEventArgs))
+            {
+                return ((IAsyncEventListener<TEventArgs>)result.Listener).HandleEventAsync(args, serviceProvider, token);
+            }
+
+            if (!_asyncGeneratedInvokeMethods.TryGetValue(result.Model!, out Func<object, object, IServiceProvider, CancellationToken, UniTask> invoker))
+            {
+                _asyncGeneratedInvokeMethods.Add(result.Model!,
+                    invoker = (Func<object, object, IServiceProvider, CancellationToken, UniTask>)InvokeAsyncOpenGenericMtd
+                        .MakeGenericMethod(result.Model)
+                        .CreateDelegate(typeof(Func<object, object, IServiceProvider, CancellationToken, UniTask>), this)
+                );
+            }
+
+            return invoker!(result.Listener, args, serviceProvider, token);
+        }
+        else
+        {
+            // shortcut for highest level (will be used most)
+            if (result.Model == typeof(TEventArgs))
+            {
+                ((IEventListener<TEventArgs>)result.Listener).HandleEvent(args, serviceProvider);
+                return UniTask.CompletedTask;
+            }
+
+            if (!_syncGeneratedInvokeMethods.TryGetValue(result.Model!, out Action<object, object, IServiceProvider> invoker))
+            {
+                _syncGeneratedInvokeMethods.Add(result.Model!,
+                    invoker = (Action<object, object, IServiceProvider>)InvokeNormalOpenGenericMtd
+                        .MakeGenericMethod(result.Model)
+                        .CreateDelegate(typeof(Action<object, object, IServiceProvider>), this)
+                );
+            }
+
+            invoker!(result.Listener, args, serviceProvider);
+            return UniTask.CompletedTask;
+        }
+    }
+
+    [UsedImplicitly]
+    private UniTask InvokeAsyncOpenGeneric<TEventArgs>(object listener, object args, IServiceProvider serviceProvider, CancellationToken token) where TEventArgs : class
+    {
+        return ((IAsyncEventListener<TEventArgs>)listener).HandleEventAsync((TEventArgs)args, serviceProvider, token);
+    }
+
+    [UsedImplicitly]
+    private void InvokeNormalOpenGeneric<TEventArgs>(object listener, object args, IServiceProvider serviceProvider) where TEventArgs : class
+    {
+        ((IEventListener<TEventArgs>)listener).HandleEvent((TEventArgs)args, serviceProvider);
+    }
+
+    private EventInvocationListenerCache GetEventListenersCache<TEventArgs>(out IServiceProvider serviceProvider) where TEventArgs : class
+    {
+        Type type = typeof(TEventArgs);
+        EventInvocationListenerCache cache;
+
+        lock (_listenerCaches)
+        {
+            bool isScope = _warfare.IsLayoutActive();
+            ILifetimeScope scope = isScope ? _warfare.ScopedProvider : _warfare.ServiceProvider;
+
+            _scopedServiceProvider ??= scope.Resolve<IServiceProvider>();
+            serviceProvider = _scopedServiceProvider;
+
+            if (_listenerCaches.TryGetValue(type, out cache))
+            {
+                return cache;
+            }
+
+            cache.ModelInfo = type.GetAttributeSafe<EventModelAttribute>();
+
+            List<EventListenerResult> eventListeners = ListPool<EventListenerResult>.claim();
+
+            // find all services assignable from ILayoutPhaseListener<phase.GetType()>
+            FindServices<TEventArgs>(scope, eventListeners);
+
+            cache.Results = eventListeners;
+
+            _listenerCaches.Add(type, cache);
+        }
+
+        return cache;
+    }
+
+    // checks to see if a service registration can be created from the given service provider scope
+    private static bool InScope(ILifetimeScope scope, IComponentRegistration registration, out ILifetimeScope applicableScope)
+    {
+        applicableScope = scope;
+        ISharingLifetimeScope? sharingScope = scope as ISharingLifetimeScope;
+        switch (registration.Lifetime)
+        {
+            case MatchingScopeLifetime matchingScopeLifetime:
+                if (sharingScope == null)
+                    return false;
+                for (ILifetimeScope? childScope = scope; childScope != null; childScope = (childScope as ISharingLifetimeScope)?.ParentLifetimeScope)
+                {
+                    if (childScope.Tag != null && matchingScopeLifetime.TagsToMatch.Contains(childScope.Tag))
+                    {
+                        applicableScope = childScope;
+                        return true;
                     }
                 }
-                if (data == null)
+                return false;
+
+            case RootScopeLifetime or CurrentScopeLifetime:
+                if (sharingScope != null)
+                    applicableScope = sharingScope.RootLifetimeScope;
+                return true;
+
+            default:
+                if (sharingScope == null)
+                    return false;
+                
+                try
                 {
-                    for (x2 = 0; x2 < Regions.WORLD_SIZE; ++x2)
+                    if (registration.Lifetime.FindScope(sharingScope) is { } s)
                     {
-                        for (y2 = 0; y2 < Regions.WORLD_SIZE; ++y2)
+                        applicableScope = s;
+                        return true;
+                    }
+
+                    return false;
+                }
+                catch
+                {
+                    return false;
+                }
+        }
+    }
+
+    // finds all registered IEventListenerProvider types and caches them in a list.
+    private void FindEventListenerProviders(ILifetimeScope scope, List<IEventListenerProvider> providers)
+    {
+        // find all IEventListenerProvider services but ignore unscoped ones
+        IEnumerable<Parameter> parameters = Array.Empty<Parameter>();
+
+        Type? noOpType = typeof(ILifetimeScope).Assembly.GetType("Autofac.Core.Registration.ExternalComponentRegistration+NoOpActivator");
+
+        List<ILifetimeScope> scopes = GetScopes(scope);
+        for (int j = 0; j < scopes.Count; ++j)
+        {
+            IComponentRegistry compReg = scopes[j].ComponentRegistry;
+            foreach (IComponentRegistration serviceRegistration in compReg.Registrations)
+            {
+                if (noOpType is not null && noOpType.IsInstanceOfType(serviceRegistration.Activator))
+                    continue;
+
+                if (!InScope(scope, serviceRegistration, out ILifetimeScope applicableScope))
+                    continue;
+
+                Service? service = serviceRegistration.Services.FirstOrDefault(x => x is IServiceWithType t && t.ServiceType == typeof(IEventListenerProvider));
+                if (service == null)
+                    continue;
+                
+                Type? concreteType = serviceRegistration.Services
+                    .OfType<IServiceWithType>()
+                    .Where(x => !x.ServiceType.IsInterface)
+                    .OrderByDescending(x => x.ServiceType, TypeComparer.Instance)
+                    .FirstOrDefault()?.ServiceType;
+
+                IEventListenerProvider? implementation = null;
+                try
+                {
+                    // resolve component from its registration
+                    if (concreteType != null)
+                    {
+                        for (Type? baseType = concreteType; baseType != null && typeof(IEventListenerProvider).IsAssignableFrom(baseType); baseType = baseType.BaseType)
                         {
-                            ItemRegion r = ItemManager.regions[x2, y2];
-                            for (int i = 0; i < r.items.Count; ++i)
+                            implementation = (IEventListenerProvider?)scope.ResolveOptional(baseType);
+#if LOG_RESOLVE_STEPS
+                            if (implementation != null)
                             {
-                                if (r.items[i].item == item)
+                                _logger.LogConditional("Resolved concrete listener provider {0}: {1} - {2}", baseType, implementation.GetType(), implementation.GetHashCode());
+                                break;
+                            }
+#endif
+                        }
+
+                        if (implementation == null)
+                        {
+                            _logger.LogWarning("Unable to resolve service {0} for listener provider.", serviceRegistration.Activator);
+                            continue;
+                        }
+                    }
+                    else
+                    {
+                        ServiceRegistration reg = new ServiceRegistration(serviceRegistration.ResolvePipeline, serviceRegistration);
+                        implementation = (IEventListenerProvider)applicableScope.ResolveComponent(new ResolveRequest(service, reg, parameters, serviceRegistration));
+                        
+                        if (serviceRegistration.Sharing != InstanceSharing.None)
+                            _logger.LogWarning("Resolved listener provider from service (may cause duplicating service issues): {0} - {1}", implementation.GetType(), implementation.GetHashCode());
+                    }
+
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Error resolving service {0} for listener provider.", serviceRegistration.Activator);
+                    continue;
+                }
+
+                int priority = implementation.GetType().GetPriority();
+                for (int i = 0; i < providers.Count; ++i)
+                {
+                    if (providers[i].GetType().GetPriority() >= priority)
+                    {
+                        continue;
+                    }
+
+                    providers.Insert(i, implementation);
+                    break;
+                }
+
+                providers.Add(implementation);
+            }
+        }
+
+        _logger.LogDebug("Reset event caches. Found new listener providers: {0}.", providers.Select(x => x.GetType()));
+        ListPool<ILifetimeScope>.release(scopes);
+    }
+
+    // enumerates through the scope and all it's parent scopes because Autofac makes it awful to loop through all services
+    private static List<ILifetimeScope> GetScopes(ILifetimeScope scope)
+    {
+        List<ILifetimeScope> scopes = ListPool<ILifetimeScope>.claim();
+        scopes.Add(scope);
+        if (scope is not ISharingLifetimeScope s)
+            return scopes;
+
+        for (ISharingLifetimeScope? next = s.ParentLifetimeScope; next != null; next = next.ParentLifetimeScope)
+        {
+            scopes.Add(next);
+        }
+
+        return scopes;
+    }
+
+    // find and instantiate all handler services for this event model. This does not include handlers returned by IEventListenerProvider services
+    private void FindServices<TEventArgs>(ILifetimeScope scope, List<EventListenerResult> eventListeners) where TEventArgs : class
+    {
+        IEnumerable<Parameter> parameters = Array.Empty<Parameter>();
+
+        Type? noOpType = typeof(ILifetimeScope).Assembly.GetType("Autofac.Core.Registration.ExternalComponentRegistration+NoOpActivator");
+
+        List<ILifetimeScope> scopes = GetScopes(scope);
+        for (int j = 0; j < scopes.Count; ++j)
+        {
+            ILifetimeScope scopeLevel = scopes[j];
+            IComponentRegistry compReg = scopeLevel.ComponentRegistry;
+            foreach (IComponentRegistration serviceRegistration in compReg.Registrations)
+            {
+                if (noOpType is not null && noOpType.IsInstanceOfType(serviceRegistration.Activator))
+                    continue;
+
+#if DEBUG
+                using IDisposable? logScope = _logger.BeginScope(serviceRegistration.Activator);
+#endif
+                if (!InScope(scope, serviceRegistration, out ILifetimeScope applicableScope))
+                    continue;
+
+                object? implementation = null;
+                foreach (Service service in serviceRegistration.Services)
+                {
+                    if (service is not IServiceWithType serviceWithType)
+                        continue;
+
+                    Type serviceType = serviceWithType.ServiceType;
+                    if (!serviceType.IsInterface || !serviceType.IsConstructedGenericType)
+                        continue;
+
+                    // check generic type
+                    Type genericTypeDef = serviceType.GetGenericTypeDefinition();
+                    bool isAsync = false;
+                    if (genericTypeDef != typeof(IEventListener<>))
+                    {
+                        if (genericTypeDef != typeof(IAsyncEventListener<>))
+                            continue;
+
+                        if (!typeof(IAsyncEventListener<TEventArgs>).IsAssignableFrom(serviceType))
+                            continue;
+
+                        isAsync = true;
+                    }
+                    else if (!typeof(IEventListener<TEventArgs>).IsAssignableFrom(serviceType))
+                        continue;
+
+                    if (implementation == null)
+                    {
+                        Type? concreteType = serviceRegistration.Services
+                            .OfType<IServiceWithType>()
+                            .Where(x => !x.ServiceType.IsInterface)
+                            .OrderByDescending(x => x.ServiceType, TypeComparer.Instance)
+                            .FirstOrDefault()?.ServiceType;
+                        
+                        try
+                        {
+                            // resolve component from its registration
+                            if (concreteType != null)
+                            {
+                                for (Type? baseType = concreteType; baseType != null && serviceType.IsAssignableFrom(baseType); baseType = baseType.BaseType)
                                 {
-                                    data = r.items[i];
-                                    break;
+                                    implementation = scope.ResolveOptional(baseType);
+                                    if (implementation != null)
+                                    {
+#if LOG_RESOLVE_STEPS
+                                        _logger.LogInformation("Resolved concrete {0}: {1} - {2}", baseType, implementation.GetType(), implementation.GetHashCode());
+#endif
+                                        break;
+                                    }
+                                }
+
+                                if (implementation == null)
+                                {
+                                    _logger.LogWarning("Unable to resolve service {0} for event args {1}.", serviceRegistration.Activator, typeof(TEventArgs));
+                                    continue;
                                 }
                             }
+                            else
+                            {
+                                ServiceRegistration reg = new ServiceRegistration(serviceRegistration.ResolvePipeline, serviceRegistration);
+                                implementation = applicableScope.ResolveComponent(new ResolveRequest(service, reg, parameters, serviceRegistration));
+
+                                if (serviceRegistration.Sharing != InstanceSharing.None)
+                                    _logger.LogWarning("Resolved from service (may cause duplicating service issues): {0} - {1}", implementation.GetType(), implementation.GetHashCode());
+                            }
+
                         }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "Error resolving service {0} for event args {1}.", serviceRegistration.Activator, typeof(TEventArgs));
+                            continue;
+                        }
+                    }
+
+                    EventListenerResult result = new EventListenerResult { Listener = implementation, Flags = (byte)((isAsync ? 1 : 0) * BitIsAsync), Model = serviceType.GetGenericArguments()[0] };
+                    FillResults(ref result);
+                    InsertEventListener(ref result, eventListeners);
+                }
+            }
+        }
+
+        ListPool<ILifetimeScope>.release(scopes);
+    }
+
+    private static void InsertEventListener(ref EventListenerResult result, List<EventListenerResult> eventListeners)
+    {
+        // insert an event listener from a IEventListenerProvider that has already been filled
+        //  this avoids resorting the entire lisst
+
+        EventListenerResult[] underlying = eventListeners.GetUnderlyingArray();
+        for (int i = 0; i < underlying.Length; ++i)
+        {
+            if (CompareEventListenerResults(ref underlying[i], ref result) <= 0)
+            {
+                continue;
+            }
+
+            eventListeners.Insert(i, result);
+            return;
+        }
+
+        eventListeners.Add(result);
+    }
+    
+    // allows a few different methods for syncronizing 'on request' events so multiple can't be running at once
+    //   ex. two requests to place a fob item at the same time would possibly lead to outdated 'do we have enough build supply' checks
+    private void EnterSynchronizationBuckets(object eventArgs, EventModelAttribute modelInfo, Type type, List<SynchronizationBucket> buckets, List<Task> tasks, CancellationToken token)
+    {
+        if (modelInfo.SynchronizationContext != EventSynchronizationContext.PerPlayer)
+        {
+            // global sync buckets + all players
+            if (!_typeSynchronizations.TryGetValue(type, out SynchronizationBucket bucket))
+            {
+                bucket = new SynchronizationBucket(type, false);
+                _typeSynchronizations.Add(type, bucket);
+            }
+
+            buckets.Add(bucket);
+            tasks.Add(bucket.Semaphore.WaitAsync(token));
+#if LOG_SYNCHRONIZATION_STEPS
+            _logger.LogDebug("Invoke {0} - Locking on type {0}.", type);
+#endif
+
+            if (_typePlayerSynchronizations.TryGetValue(type, out PlayerDictionary<SynchronizationBucket> dict))
+            {
+#if LOG_SYNCHRONIZATION_STEPS
+                _logger.LogDebug("Invoke {0} - Locking on type {0} for all players:", type);
+#endif
+                foreach (SynchronizationBucket b in dict.Values)
+                {
+                    buckets.Add(b);
+                    tasks.Add(b.Semaphore.WaitAsync(token));
+#if LOG_SYNCHRONIZATION_STEPS
+                    _logger.LogDebug("Invoke {0} - Locking on type {0} for player {1}.", type, b.Player?.Steam64.m_SteamID.ToString() ?? "null");
+#endif
+                }
+            }
+
+            if (modelInfo.RequestModel != null)
+            {
+                if (!_typeSynchronizations.TryGetValue(modelInfo.RequestModel, out bucket))
+                {
+                    bucket = new SynchronizationBucket(modelInfo.RequestModel, false);
+                    _typeSynchronizations.Add(modelInfo.RequestModel, bucket);
+                }
+
+                buckets.Add(bucket);
+                tasks.Add(bucket.Semaphore.WaitAsync(token));
+#if LOG_SYNCHRONIZATION_STEPS
+                _logger.LogDebug("Invoke {0} - Locking on request type {1}.", type, modelInfo.RequestModel);
+#endif
+
+                if (_typePlayerSynchronizations.TryGetValue(modelInfo.RequestModel, out dict))
+                {
+#if LOG_SYNCHRONIZATION_STEPS
+                    _logger.LogDebug("Invoke {0} - Locking on request type {1} for all players:", type, modelInfo.RequestModel);
+#endif
+                    foreach (SynchronizationBucket b in dict.Values)
+                    {
+                        buckets.Add(b);
+                        tasks.Add(b.Semaphore.WaitAsync(token));
+#if LOG_SYNCHRONIZATION_STEPS
+                        _logger.LogDebug("Invoke {0} - Locking on request type {1} for player {2}.", type, modelInfo.RequestModel, b.Player?.Steam64.m_SteamID.ToString() ?? "null");
+#endif
                     }
                 }
             }
-            ItemDropped args = new ItemDropped(pl, item, data, (Page)page, x, y, rot);
-            foreach (EventDelegate<ItemDropped> inv in ItemDropped.GetInvocationList().Cast<EventDelegate<ItemDropped>>())
+
+            if (modelInfo.SynchronizedModelTags == null)
+                return;
+            
+            for (int i = 0; i < modelInfo.SynchronizedModelTags.Length; ++i)
             {
-                if (!args.CanContinue) break;
-                TryInvoke(inv, args, nameof(ItemDropped));
+                string tag = modelInfo.SynchronizedModelTags[i];
+                if (!_tagSynchronizations.TryGetValue(tag, out bucket))
+                {
+                    bucket = new SynchronizationBucket(type, false);
+                    _tagSynchronizations.Add(tag, bucket);
+                }
+
+                buckets.Add(bucket);
+                tasks.Add(bucket.Semaphore.WaitAsync(token));
+#if LOG_SYNCHRONIZATION_STEPS
+                _logger.LogDebug("Invoke {0} - Locking on tag \"{1}\".", type, tag);
+#endif
+
+                if (!_tagPlayerSynchronizations.TryGetValue(tag, out dict))
+                    continue;
+
+#if LOG_SYNCHRONIZATION_STEPS
+                _logger.LogDebug("Invoke {0} - Locking on tag \"{1}\" for all players.", type, tag);
+#endif
+                foreach (SynchronizationBucket b in dict.Values)
+                {
+                    buckets.Add(b);
+                    tasks.Add(b.Semaphore.WaitAsync(token));
+#if LOG_SYNCHRONIZATION_STEPS
+                    _logger.LogDebug("Invoke {0} - Locking on tag \"{1}\" for player {2}.", type, tag, b.Player?.Steam64.m_SteamID.ToString() ?? "null");
+#endif
+                }
+            }
+            
+        }
+        else if (eventArgs is IPlayerEvent playerArgs)
+        {
+            if (_typeSynchronizations.TryGetValue(type, out SynchronizationBucket? bucket) && bucket.Semaphore.CurrentCount < 1)
+            {
+                buckets.Add(bucket);
+                tasks.Add(bucket.Semaphore.WaitAsync(token));
+#if LOG_SYNCHRONIZATION_STEPS
+                _logger.LogDebug("Invoke {0} - Locking on type {0} (already locked).", type);
+#endif
+            }
+
+            if (_typePlayerSynchronizations.TryGetValue(type, out PlayerDictionary<SynchronizationBucket> dict))
+            {
+                if (!dict.TryGetValue(playerArgs.Steam64, out bucket))
+                {
+                    bucket = new SynchronizationBucket(type, false, playerArgs.Player);
+                    dict.Add(playerArgs.Steam64, bucket);
+                }
+            }
+            else
+            {
+                dict = new PlayerDictionary<SynchronizationBucket>();
+                bucket = new SynchronizationBucket(type, false, playerArgs.Player);
+                dict.Add(playerArgs.Steam64, bucket);
+                _typePlayerSynchronizations.Add(type, dict);
+            }
+
+            buckets.Add(bucket);
+            tasks.Add(bucket.Semaphore.WaitAsync(token));
+#if LOG_SYNCHRONIZATION_STEPS
+            _logger.LogDebug("Invoke {0} - Locking on type {0} for player {1}.", type, bucket.Player?.Steam64.m_SteamID.ToString() ?? "null");
+#endif
+
+            if (modelInfo.RequestModel != null)
+            {
+                if (_typeSynchronizations.TryGetValue(modelInfo.RequestModel, out bucket) && bucket.Semaphore.CurrentCount < 1)
+                {
+                    buckets.Add(bucket);
+                    tasks.Add(bucket.Semaphore.WaitAsync(token));
+#if LOG_SYNCHRONIZATION_STEPS
+                    _logger.LogDebug("Invoke {0} - Locking on request type {1} (already locked).", type, modelInfo.RequestModel);
+#endif
+                }
+
+                if (_typePlayerSynchronizations.TryGetValue(modelInfo.RequestModel, out dict))
+                {
+                    if (!dict.TryGetValue(playerArgs.Steam64, out bucket))
+                    {
+                        bucket = new SynchronizationBucket(modelInfo.RequestModel, false, playerArgs.Player);
+                        dict.Add(playerArgs.Steam64, bucket);
+                    }
+                }
+                else
+                {
+                    dict = new PlayerDictionary<SynchronizationBucket>();
+                    bucket = new SynchronizationBucket(modelInfo.RequestModel, false, playerArgs.Player);
+                    dict.Add(playerArgs.Steam64, bucket);
+                    _typePlayerSynchronizations.Add(modelInfo.RequestModel, dict);
+                }
+
+                buckets.Add(bucket);
+                tasks.Add(bucket.Semaphore.WaitAsync(token));
+#if LOG_SYNCHRONIZATION_STEPS
+                _logger.LogDebug("Invoke {0} - Locking on request type {1} for player {2}.", type, modelInfo.RequestModel, bucket.Player?.Steam64.m_SteamID.ToString() ?? "null");
+#endif
+            }
+
+            if (modelInfo.SynchronizedModelTags == null)
+                return;
+
+            for (int i = 0; i < modelInfo.SynchronizedModelTags.Length; ++i)
+            {
+                string tag = modelInfo.SynchronizedModelTags[i];
+
+                if (_tagSynchronizations.TryGetValue(tag, out bucket) && bucket.Semaphore.CurrentCount < 1)
+                {
+                    buckets.Add(bucket);
+                    tasks.Add(bucket.Semaphore.WaitAsync(token));
+#if LOG_SYNCHRONIZATION_STEPS
+                    _logger.LogDebug("Invoke {0} - Locking on tag \"{1}\" (already locked).", type, tag);
+#endif
+                }
+
+                if (_tagPlayerSynchronizations.TryGetValue(tag, out dict))
+                {
+                    if (!dict.TryGetValue(playerArgs.Steam64, out bucket))
+                    {
+                        bucket = new SynchronizationBucket(type, false, playerArgs.Player);
+                        dict.Add(playerArgs.Steam64, bucket);
+                    }
+                }
+                else
+                {
+                    dict = new PlayerDictionary<SynchronizationBucket>();
+                    bucket = new SynchronizationBucket(type, false, playerArgs.Player);
+                    dict.Add(playerArgs.Steam64, bucket);
+                    _tagPlayerSynchronizations.Add(tag, dict);
+                }
+
+                buckets.Add(bucket);
+                tasks.Add(bucket.Semaphore.WaitAsync(token));
+#if LOG_SYNCHRONIZATION_STEPS
+                _logger.LogDebug("Invoke {0} - Locking on tag \"{1}\" for player {2}.", type, tag, bucket.Player?.Steam64.m_SteamID.ToString() ?? "null");
+#endif
             }
         }
-    }
-
-    public static void InvokeOnItemRemoved(UCPlayer player, byte page, byte index, ItemJar jar)
-    {
-        if (InventoryItemRemoved == null) return;
-
-        InventoryItemRemoved args = new InventoryItemRemoved(player, (Page)page, jar.x, jar.y, index, jar);
-        foreach (EventDelegate<InventoryItemRemoved> inv in InventoryItemRemoved.GetInvocationList().Cast<EventDelegate<InventoryItemRemoved>>())
+        else
         {
-            if (!args.CanContinue) break;
-            TryInvoke(inv, args, nameof(InventoryItemRemoved));
+            _logger.LogWarning("Event arg {0} has Per-Player synchronization setting but doesn't implement {1}.", type, typeof(IPlayerEvent));
         }
     }
 
-    internal static bool InvokeSwapClothingRequest(ClothingType type, UCPlayer player, byte page, byte x, byte y)
+    // adds results from IEventListenerProvider services to the working eventListeners list and initializes them
+    //  if any returned listener has more than one applicable interface, it is added multiple times, in order of reverse hierarchy ('object', 'IPlayerEvent', 'PlayerJoined')
+    private void AddProviderResults(object eventListner, List<EventListenerResult> eventListeners, bool isAsync, Type argType)
     {
-        if (SwapClothingRequested == null) return true;
-        ItemJar? jar = page < player.Player.inventory.items.Length ? player.Player.inventory.items[page].getItem(player.Player.inventory.items[page].getIndex(x, y)) : null;
-        SwapClothingRequested args = new SwapClothingRequested(player, type, jar, (Page)page, x, y);
-        foreach (EventDelegate<SwapClothingRequested> inv in SwapClothingRequested.GetInvocationList().Cast<EventDelegate<SwapClothingRequested>>())
+        byte flag = (byte)((isAsync ? 1 : 0) * BitIsAsync);
+        Type?[] interfaces = eventListner.GetType().GetInterfaces();
+        int ct = 0, index = -1;
+        for (int i = 0; i < interfaces.Length; ++i)
         {
-            if (!args.CanContinue) break;
-            TryInvoke(inv, args, nameof(SwapClothingRequested));
+            Type intx = interfaces[i]!;
+            if (!intx.IsConstructedGenericType)
+            {
+                interfaces[i] = null;
+                continue;
+            }
+
+            Type argTypeIntx = intx.GetGenericArguments()[0];
+            if (!argTypeIntx.IsAssignableFrom(argType))
+            {
+                interfaces[i] = null;
+                continue;
+            }
+
+            interfaces[i] = argTypeIntx;
+            ++ct;
+            index = i;
         }
 
-        return args.CanContinue;
-    }
-}
-public delegate void EventDelegate<in TState>(TState e) where TState : EventState;
-public delegate Task AsyncEventDelegate<in TState>(TState e, CancellationToken token = default) where TState : EventState;
+        // interfaces now contains all listening arg types that are assignable from argType
 
-/// <summary>Meant purely to break execution.</summary>
-public class ControlException : Exception
-{
-    public ControlException() { }
-    public ControlException(string message) : base(message) { }
+        if (ct == 1)
+        {
+            // take a shortcut if only one is found
+            EventListenerResult newResult = new EventListenerResult { Listener = eventListner, Flags = flag, Model = interfaces[index] };
+            FillResults(ref newResult);
+            InsertEventListener(ref newResult, eventListeners);
+            return;
+        }
+
+        // continuously remove the 'lowest' type argument in the class hierarchy, ordering them in order of class hierarchy
+        for (int c = 0; c < ct; ++c)
+        {
+            Type? lowestType = null;
+            int lowestTypeIndex = -1;
+            for (int i = 0; i < interfaces.Length; ++i)
+            {
+                Type? argTypeIntx = interfaces[i];
+                if (argTypeIntx is null)
+                    continue;
+
+                if (lowestTypeIndex == -1 || argTypeIntx.IsAssignableFrom(lowestType))
+                {
+                    lowestType = argTypeIntx;
+                    lowestTypeIndex = i;
+                }
+            }
+
+            if (lowestTypeIndex == -1)
+                break;
+
+            interfaces[lowestTypeIndex] = null;
+            EventListenerResult newResult = new EventListenerResult { Listener = eventListner, Flags = flag, Model = lowestType };
+            FillResults(ref newResult);
+            InsertEventListener(ref newResult, eventListeners);
+        }
+    }
+
+    // set up flags and priority
+    private void FillResults(ref EventListenerResult result)
+    {
+        bool isAsync = (result.Flags & BitIsAsync) != 0;
+        GetInfo(result.Model!, isAsync, result.Listener.GetType(), out EventListenerInfo info);
+
+        result.Priority = info.Priority;
+        result.Flags = (byte)(result.Flags
+                              | ((info.MustRunInstantly & !isAsync ? 1 : 0) * BitMustRunInstantly)
+                              | ((info.EnsureMainThread ? 1 : 0) * BitEnsureMainThread)
+                              | ((info.RequireActiveLayout ? 1 : 0) * BitRequireActiveLayout)
+                              | ((info.RequireNextFrame ? 1 : 0) * BitRequireNextFrame)
+                              | ((info.MustRunLast ? 1 : 0) * BitMustRunLast)
+                              );
+    }
+
+    private void GetInfo(Type modelType, bool isAsync, Type listenerType, out EventListenerInfo info)
+    {
+        EventListenerCacheKey key = default;
+        key.ModelType = modelType;
+        key.ListenerType = listenerType;
+        key.IsAsync = isAsync;
+
+        if (_listeners.TryGetValue(key, out info))
+            return;
+        
+        // caches the MethodInfos for the methods in the event listener interfaces
+        Dictionary<Type, MethodInfo> methodCache = isAsync ? _asyncInvokeMethods : _syncInvokeMethods;
+
+        if (!methodCache.TryGetValue(modelType, out MethodInfo? interfaceMethod))
+        {
+            methodCache.Add(modelType, interfaceMethod = isAsync ? GetAsyncHandlerMethod(modelType) : GetNormalHandlerMethod(modelType));
+        }
+
+        // find the MethodInfo for the method in the listener class, not the one in the interface so we can get the attribute from that
+        MethodInfo? implementedMethod = Accessor.GetImplementedMethod(listenerType, interfaceMethod);
+        EventListenerAttribute? attribute = implementedMethod?.GetAttributeSafe<EventListenerAttribute>();
+
+        info = default;
+        info.EnsureMainThread = attribute is not { HasRequiredMainThread: true } ? !isAsync : attribute.RequiresMainThread;
+        if (attribute != null)
+        {
+            info.Priority = attribute.Priority;
+            info.MustRunInstantly = attribute.MustRunInstantly;
+            info.RequireActiveLayout = attribute.RequireActiveLayout;
+            info.RequireNextFrame = attribute.RequireNextFrame;
+            info.MustRunLast = attribute.MustRunLast;
+        }
+
+        if (info is { MustRunLast: true, MustRunInstantly: true })
+        {
+            throw new NotSupportedException("Event listeners can not use the 'MustRunLast' and 'MustRunInstantly' properties together.");
+        }
+
+        if (info is { RequireNextFrame: true, MustRunInstantly: true })
+        {
+            throw new NotSupportedException("Event listeners can not use the 'RequireNextFrame' and 'MustRunInstantly' properties together.");
+        }
+
+        if (isAsync && info.MustRunInstantly)
+        {
+            throw new NotSupportedException("Async event listeners can not use the 'MustRunInstantly' property.");
+        }
+
+        info.Method = implementedMethod ?? interfaceMethod;
+        _listeners.Add(key, info);
+    }
+
+    private static MethodInfo GetNormalHandlerMethod(Type eventArgsType)
+    {
+        Type declType = typeof(IEventListener<>).MakeGenericType(eventArgsType);
+        return declType.GetMethod(nameof(IEventListener<object>.HandleEvent), BindingFlags.Instance | BindingFlags.Public)
+               ?? throw new InvalidOperationException($"Unable to find method {Accessor.ExceptionFormatter.Format(new MethodDefinition(nameof(IEventListener<object>.HandleEvent))
+                   .DeclaredIn(declType, isStatic: false)
+                   .WithParameter(eventArgsType, "e")
+                   .WithParameter<IServiceProvider>("serviceProvider")
+                   .ReturningVoid())}."
+                );
+    }
+    private static MethodInfo GetAsyncHandlerMethod(Type eventArgsType)
+    {
+        Type declType = typeof(IAsyncEventListener<>).MakeGenericType(eventArgsType);
+        return declType.GetMethod(nameof(IAsyncEventListener<object>.HandleEventAsync), BindingFlags.Instance | BindingFlags.Public)
+               ?? throw new InvalidOperationException($"Unable to find method {Accessor.ExceptionFormatter.Format(new MethodDefinition(nameof(IAsyncEventListener<object>.HandleEventAsync))
+                   .DeclaredIn(declType, isStatic: false)
+                   .WithParameter(eventArgsType, "e")
+                   .WithParameter<IServiceProvider>("serviceProvider")
+                   .WithParameter<CancellationToken>("token")
+                   .ReturningVoid())}."
+                );
+    }
+
+    private class TypeComparer : IComparer<Type>
+    {
+        public static readonly TypeComparer Instance = new TypeComparer();
+
+        public int Compare(Type x, Type y)
+        {
+            if (x.IsSubclassOf(y))
+                return 1;
+            if (y.IsSubclassOf(x))
+                return -1;
+
+            return 0;
+        }
+    }
+
+    private static int CompareEventListenerResults(ref EventListenerResult a, ref EventListenerResult b)
+    {
+        // handle MustRunLast
+        if ((a.Flags & BitMustRunLast) != 0)
+        {
+            if ((b.Flags & BitMustRunLast) == 0)
+                return -1;
+
+            int cmp = b.Priority.CompareTo(a.Priority);
+            if (cmp != 0)
+                return cmp;
+        }
+        else if ((b.Flags & BitMustRunLast) != 0)
+        {
+            return 1;
+        }
+        else
+        {
+            // handle MustRunInstantly then compare priority
+            int cmp = (a.Flags & BitMustRunInstantly) != (b.Flags & BitMustRunInstantly) ? (b.Flags & BitMustRunInstantly) - 1 : b.Priority.CompareTo(a.Priority);
+            if (cmp != 0)
+                return cmp;
+        }
+
+
+        if (a.Model is not null && b.Model is not null && a.Model != b.Model)
+        {
+            // IEventListener<IPlayerEvent> comes before IEventListener<PlayerXxxArgs : PlayerEvent>
+            int cmp = !b.Model.IsAssignableFrom(a.Model) ? -(a.Model.IsAssignableFrom(b.Model) ? 1 : 0) : 1;
+            if (cmp != 0)
+                return cmp;
+        }
+
+        // main thread and not in same class, main thread comes first
+        if ((a.Flags & BitEnsureMainThread) != (b.Flags & BitEnsureMainThread))
+            return (b.Flags & BitEnsureMainThread) != 0 ? 1 : -1;
+
+        return 0;
+    }
+
+    private struct EventInvocationListenerCache
+    {
+        public List<EventListenerResult> Results;
+        public EventModelAttribute? ModelInfo;
+    }
+
+    private struct EventListenerInfo
+    {
+        public int Priority;
+        public bool RequireActiveLayout;
+        public bool EnsureMainThread;
+        public bool MustRunInstantly;
+        public bool RequireNextFrame;
+        public bool MustRunLast;
+        public MethodInfo Method;
+    }
+
+    private struct EventListenerResult
+    {
+        public object Listener;
+        public Type? Model;
+
+        // to save struct size, trying to keep performance good for these
+        // bits: 0 (1 ): IsAsyncListener
+        //       1 (2 ): MustRunInstantly
+        //       2 (4 ): EnsureMainThread
+        //       3 (8 ): RequireActiveLayout
+        //       4 (16): RequireNextFrame
+        //       5 (32): MustRunLast
+        public byte Flags;
+        public int Priority;
+    }
+
+    private struct EventListenerCacheKey : IEquatable<EventListenerCacheKey>
+    {
+        public Type ListenerType;
+        public Type ModelType;
+        public bool IsAsync;
+        public override readonly int GetHashCode()
+        {
+            return HashCode.Combine(ListenerType, ModelType) * (IsAsync ? -1 : 1);
+        }
+        public readonly bool Equals(EventListenerCacheKey other)
+        {
+            return IsAsync == other.IsAsync && ListenerType == other.ListenerType && ModelType == other.ModelType;
+        }
+        public override readonly bool Equals(object? obj)
+        {
+            return obj is EventListenerCacheKey key && Equals(key);
+        }
+    }
 }

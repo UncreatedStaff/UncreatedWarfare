@@ -1,7 +1,6 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using Stripe;
 using Uncreated.Warfare.Models.Factions;
 
 namespace Uncreated.Warfare.Models.Kits.Bundles;
@@ -39,7 +38,4 @@ public class EliteBundle
     public decimal Cost { get; set; }
 
     public IReadOnlyList<KitEliteBundle> Kits { get; set; }
-
-    [NotMapped]
-    public Product? Product { get; set; }
 }

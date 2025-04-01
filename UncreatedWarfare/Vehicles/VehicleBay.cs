@@ -1,4 +1,5 @@
-﻿using SDG.Unturned;
+﻿
+#if false
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -6,26 +7,20 @@ using System.IO;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
-using Uncreated.Framework;
-using Uncreated.Json;
-using Uncreated.SQL;
+using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Events.Players;
-using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Items;
+using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Models.Assets;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
-using Uncreated.Warfare.Structures;
-using Uncreated.Warfare.Teams;
-using UnityEngine;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Vehicles;
-
 [SingletonDependency(typeof(Whitelister))]
 public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsync, IDeclareWinListenerAsync, IPlayerPostInitListenerAsync, IQuestCompletedHandler
 {
@@ -89,8 +84,8 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
         {
             if (Whitelister.Loaded && !_hasWhitelisted) // whitelist all vehicle bay items
             {
-                if (!UCWarfare.IsMainThread)
-                    await UCWarfare.ToUpdate(token);
+                if (!GameThread.IsCurrent)
+                    await UniTask.SwitchToMainThread(token);
                 WhitelistItems();
             }
         }
@@ -101,12 +96,12 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
     }
     async Task IDeclareWinListenerAsync.OnWinnerDeclared(ulong winner, CancellationToken token)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         await WaitAsync(token).ConfigureAwait(false);
         try
         {
-            if (!UCWarfare.IsMainThread)
-                await UCWarfare.ToUpdate(token);
+            if (!GameThread.IsCurrent)
+                await UniTask.SwitchToMainThread(token);
             VehicleSpawner.GetSingletonQuick()?.AbandonAllVehicles(true);
         }
         finally
@@ -120,14 +115,11 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
     }
     private async Task SendQuests(UCPlayer player, CancellationToken token = default)
     {
-        ThreadUtil.assertIsGameThread();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
+        GameThread.AssertCurrent();
         await WaitAsync(token).ConfigureAwait(false);
         try
         {
-            await UCWarfare.ToUpdate(token);
+            await UniTask.SwitchToMainThread(token);
             WriteWait();
             try
             {
@@ -141,13 +133,13 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                         {
                             if (data.UnlockRequirements[j] is QuestUnlockRequirement req && req.UnlockPresets is { Length: > 0 } && !req.CanAccess(player))
                             {
-                                if (Assets.find(req.QuestID) is QuestAsset quest)
+                                if (Assets.find(req.QuestId) is QuestAsset quest)
                                 {
                                     QuestManager.TryAddQuest(player, quest);
                                 }
                                 else
                                 {
-                                    L.LogWarning("Unknown quest id " + req.QuestID + " in vehicle requirement for " + data.VehicleID.ToString("N"));
+                                    L.LogWarning("Unknown quest id " + req.QuestId + " in vehicle requirement for " + data.VehicleID.ToString("N"));
                                 }
                                 for (int r = 0; r < req.UnlockPresets.Length; r++)
                                 {
@@ -176,28 +168,22 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
     public async Task AddRequestableVehicle(InteractableVehicle vehicle, CancellationToken token = default)
     {
         AssertLoadedIntl();
-        if (!UCWarfare.IsMainThread)
+        if (!GameThread.IsCurrent)
             await UCWarfare.ToUpdate();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         VehicleData data = new VehicleData(vehicle.asset.GUID)
         {
             PrimaryKey = PrimaryKey.NotAssigned
         };
         data.SaveMetaData(vehicle);
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
         await AddOrUpdate(data, token).ConfigureAwait(false);
     }
     /// <remarks>Thread Safe</remarks>
     public async Task<bool> RemoveRequestableVehicle(Guid vehicle, CancellationToken token = default)
     {
         AssertLoadedIntl();
-        if (!UCWarfare.IsMainThread)
+        if (!GameThread.IsCurrent)
             await UCWarfare.ToUpdate();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         SqlItem<VehicleData>? data = await GetDataProxy(vehicle, token).ConfigureAwait(false);
         if (data is not null)
         {
@@ -319,7 +305,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                 return (SetPropertyResult.ObjectNotFound, null);
         }
 
-        if (!UCWarfare.IsMainThread)
+        if (!GameThread.IsCurrent)
             await UCWarfare.ToUpdate();
         return await SetPropertyNoLock(item, property, value, true, token).ConfigureAwait(false);
     }
@@ -339,7 +325,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
         {
             if (proxy.Item == null)
                 return false;
-            if (!UCWarfare.IsMainThread)
+            if (!GameThread.IsCurrent)
                 await UCWarfare.ToUpdate();
             if (proxy.Item.CrewSeats == null)
             {
@@ -375,7 +361,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
         {
             if (proxy.Item == null)
                 return false;
-            if (!UCWarfare.IsMainThread)
+            if (!GameThread.IsCurrent)
                 await UCWarfare.ToUpdate();
             if (proxy.Item.CrewSeats == null || proxy.Item.CrewSeats.Length == 0)
                 return false;
@@ -416,7 +402,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
         {
             if (proxy.Item == null)
                 return false;
-            if (!UCWarfare.IsMainThread)
+            if (!GameThread.IsCurrent)
                 await UCWarfare.ToUpdate();
             if (clone)
             {
@@ -793,7 +779,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                     }
                 }, token).ConfigureAwait(false);
                 builder.Clear();
-                await UCWarfare.ToUpdate(token);
+                await UniTask.SwitchToMainThread(token);
                 if (storages != null)
                 {
                     List<ItemJarData> jars = new List<ItemJarData>(storages.Count * 8);
@@ -1068,7 +1054,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                                          if (f)
                                              sb.Append(',');
                                          else f = true;
-                                         sb.Append('@').Append(objs2.Count.ToString(Data.AdminLocale));
+                                         sb.Append('@').Append(objs2.Count.ToString(CultureInfo.InvariantCulture));
                                          objs2.Add(bpk);
                                          break;
                                      }
@@ -1344,7 +1330,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                                  if (f)
                                      sb.Append(',');
                                  else f = true;
-                                 sb.Append('@').Append(objs2.Count.ToString(Data.AdminLocale));
+                                 sb.Append('@').Append(objs2.Count.ToString(CultureInfo.InvariantCulture));
                                  objs2.Add(bpk);
                              }, token).ConfigureAwait(false);
         if (f)
@@ -1490,3 +1476,4 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
     }
     #endregion
 }
+#endif

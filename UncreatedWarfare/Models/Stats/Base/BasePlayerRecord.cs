@@ -1,16 +1,14 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using Uncreated.Warfare.Database.Automation;
 using Uncreated.Warfare.Models.GameData;
 using Uncreated.Warfare.Models.Users;
-using UnityEngine;
 
-namespace Uncreated.Warfare.Models.Stats.Base;
+namespace Uncreated.Warfare.Models.Stats;
 
-[NotMapped]
+[NotMapped, Index(nameof(Team))]
 public abstract class BasePlayerRecord
 {
     private Vector3 _position;
@@ -20,7 +18,6 @@ public abstract class BasePlayerRecord
     public ulong Id { get; set; }
 
     [DefaultValue((byte)0)]
-    [Index]
     public byte Team { get; set; }
 
     [ForeignKey(nameof(PlayerData))]

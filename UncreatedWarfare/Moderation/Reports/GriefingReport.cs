@@ -1,15 +1,11 @@
-﻿using SDG.Unturned;
+﻿using DanielWillett.SpeedBytes;
 using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading;
-using System.Threading.Tasks;
-using Uncreated.Encoding;
-using Uncreated.Framework;
-using Uncreated.SQL;
-using Uncreated.Warfare.Structures;
+using Uncreated.Warfare.Database.Manual;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Moderation.Reports;
 
@@ -32,7 +28,7 @@ public class GriefingReport : Report
 
     [JsonPropertyName("vehicle_teamkills")]
     public VehicleTeamkillRecord[] VehicleTeamkillRecord { get; set; } = Array.Empty<VehicleTeamkillRecord>();
-    public override string GetDisplayName() => "Greifing Report";
+    public override string GetDisplayName() => "Griefing Report";
     protected override void ReadIntl(ByteReader reader, ushort version)
     {
         base.ReadIntl(reader, version);
@@ -74,7 +70,7 @@ public class GriefingReport : Report
         for (int i = 0; i < VehicleTeamkillRecord.Length; ++i)
             VehicleTeamkillRecord[i].Write(writer);
     }
-    public override void ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
+    public override bool ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
     {
         if (propertyName.Equals("structure_damage", StringComparison.InvariantCultureIgnoreCase))
             DamageRecord = JsonSerializer.Deserialize<StructureDamageRecord[]>(ref reader, options) ?? Array.Empty<StructureDamageRecord>();
@@ -85,7 +81,9 @@ public class GriefingReport : Report
         else if (propertyName.Equals("vehicle_teamkills", StringComparison.InvariantCultureIgnoreCase))
             VehicleTeamkillRecord = JsonSerializer.Deserialize<VehicleTeamkillRecord[]>(ref reader, options) ?? Array.Empty<VehicleTeamkillRecord>();
         else
-            base.ReadProperty(ref reader, propertyName, options);
+            return base.ReadProperty(ref reader, propertyName, options);
+
+        return true;
     }
     public override void Write(Utf8JsonWriter writer, JsonSerializerOptions options)
     {
@@ -126,7 +124,7 @@ public class GriefingReport : Report
 
         if (DamageRecord.Length > 0)
         {
-            builder.Append($" INSERT INTO `{DatabaseInterface.TableReportStructureDamageRecords}` ({SqlTypes.ColumnList(
+            builder.Append($" INSERT INTO `{DatabaseInterface.TableReportStructureDamageRecords}` ({MySqlSnippets.ColumnList(
                 DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnReportsStructureDamageStructure,
                 DatabaseInterface.ColumnReportsStructureDamageStructureName, DatabaseInterface.ColumnReportsStructureDamageStructureOwner,
                 DatabaseInterface.ColumnReportsStructureDamageStructureType, DatabaseInterface.ColumnReportsStructureDamageDamageOrigin,
@@ -136,12 +134,12 @@ public class GriefingReport : Report
             for (int i = 0; i < DamageRecord.Length; ++i)
             {
                 ref StructureDamageRecord record = ref DamageRecord[i];
-                F.AppendPropertyList(builder, args.Count, 9, i, 1);
+                MySqlSnippets.AppendPropertyList(builder, args.Count, 9, i, 1);
 
                 args.Add(record.Structure.ToString("N"));
-                args.Add(record.Name.MaxLength(48) ?? string.Empty);
+                args.Add(record.Name.Truncate(48) ?? string.Empty);
                 args.Add(record.Owner);
-                args.Add(record.Type.ToString());
+                args.Add(record.IsStructure);
                 args.Add(record.Origin.ToString());
                 args.Add(record.ID);
                 args.Add(record.Damage);
@@ -156,7 +154,7 @@ public class GriefingReport : Report
 
         if (TeamkillRecord.Length > 0)
         {
-            builder.Append($" INSERT INTO `{DatabaseInterface.TableReportTeamkillRecords}` ({SqlTypes.ColumnList(
+            builder.Append($" INSERT INTO `{DatabaseInterface.TableReportTeamkillRecords}` ({MySqlSnippets.ColumnList(
                 DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnReportsTeamkillRecordTeamkill,
                 DatabaseInterface.ColumnReportsTeamkillRecordVictim, DatabaseInterface.ColumnReportsTeamkillRecordDeathCause,
                 DatabaseInterface.ColumnReportsTeamkillRecordWasIntentional, DatabaseInterface.ColumnReportsTeamkillRecordMessage,
@@ -165,13 +163,13 @@ public class GriefingReport : Report
             for (int i = 0; i < TeamkillRecord.Length; ++i)
             {
                 ref TeamkillRecord record = ref TeamkillRecord[i];
-                F.AppendPropertyList(builder, args.Count, 6, i, 1);
+                MySqlSnippets.AppendPropertyList(builder, args.Count, 6, i, 1);
 
-                args.Add(record.Teamkill.IsValid ? record.Teamkill.Key : DBNull.Value);
+                args.Add(record.Teamkill != 0u ? record.Teamkill : DBNull.Value);
                 args.Add(record.Victim);
                 args.Add(record.Cause.ToString());
                 args.Add(record.Intentional.HasValue ? record.Intentional.Value : DBNull.Value);
-                args.Add((object?)record.Message.MaxLength(255) ?? DBNull.Value);
+                args.Add((object?)record.Message.Truncate(255) ?? DBNull.Value);
                 args.Add(record.Timestamp.UtcDateTime);
             }
 
@@ -182,7 +180,7 @@ public class GriefingReport : Report
 
         if (VehicleTeamkillRecord.Length > 0)
         {
-            builder.Append($" INSERT INTO `{DatabaseInterface.TableReportVehicleTeamkillRecords}` ({SqlTypes.ColumnList(
+            builder.Append($" INSERT INTO `{DatabaseInterface.TableReportVehicleTeamkillRecords}` ({MySqlSnippets.ColumnList(
                 DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnReportsVehicleTeamkillRecordTeamkill,
                 DatabaseInterface.ColumnReportsVehicleTeamkillRecordDamageOrigin, DatabaseInterface.ColumnReportsVehicleTeamkillRecordVictim,
                 DatabaseInterface.ColumnReportsVehicleTeamkillRecordMessage, DatabaseInterface.ColumnReportsVehicleTeamkillRecordTimestamp)}) VALUES ");
@@ -190,12 +188,12 @@ public class GriefingReport : Report
             for (int i = 0; i < VehicleTeamkillRecord.Length; ++i)
             {
                 ref VehicleTeamkillRecord record = ref VehicleTeamkillRecord[i];
-                F.AppendPropertyList(builder, args.Count, 5, i, 1);
+                MySqlSnippets.AppendPropertyList(builder, args.Count, 5, i, 1);
 
-                args.Add(record.Teamkill.IsValid ? record.Teamkill.Key : DBNull.Value);
+                args.Add(record.Teamkill != 0u ? record.Teamkill : DBNull.Value);
                 args.Add(record.Origin.ToString());
                 args.Add(record.Victim);
-                args.Add((object?)record.Message.MaxLength(255) ?? DBNull.Value);
+                args.Add((object?)record.Message.Truncate(255) ?? DBNull.Value);
                 args.Add(record.Timestamp.UtcDateTime);
             }
 
@@ -206,7 +204,7 @@ public class GriefingReport : Report
 
         if (VehicleRequestRecord.Length > 0)
         {
-            builder.Append($" INSERT INTO `{DatabaseInterface.TableReportVehicleRequestRecords}` ({SqlTypes.ColumnList(
+            builder.Append($" INSERT INTO `{DatabaseInterface.TableReportVehicleRequestRecords}` ({MySqlSnippets.ColumnList(
                 DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnReportsVehicleRequestRecordVehicle,
                 DatabaseInterface.ColumnReportsVehicleRequestRecordVehicleName, DatabaseInterface.ColumnReportsVehicleRequestRecordDamageOrigin,
                 DatabaseInterface.ColumnReportsVehicleRequestRecordRequestTimestamp, DatabaseInterface.ColumnReportsVehicleRequestRecordDestroyTimestamp,
@@ -215,14 +213,14 @@ public class GriefingReport : Report
             for (int i = 0; i < VehicleRequestRecord.Length; ++i)
             {
                 ref VehicleRequestRecord record = ref VehicleRequestRecord[i];
-                F.AppendPropertyList(builder, args.Count, 6, i, 1);
+                MySqlSnippets.AppendPropertyList(builder, args.Count, 6, i, 1);
 
                 args.Add(record.Vehicle.ToString("N"));
-                args.Add(record.Name.MaxLength(48) ?? string.Empty);
+                args.Add(record.Name.Truncate(48) ?? string.Empty);
                 args.Add(record.Origin.ToString());
                 args.Add(record.Timestamp.UtcDateTime);
                 args.Add(record.Destroyed.HasValue ? record.Destroyed.Value.UtcDateTime : DBNull.Value);
-                args.Add(Util.IsValidSteam64Id(record.Instigator) ? record.Instigator : DBNull.Value);
+                args.Add(new CSteamID(record.Instigator).GetEAccountType() == EAccountType.k_EAccountTypeIndividual ? record.Instigator : DBNull.Value);
             }
 
             builder.Append(';');
@@ -249,7 +247,7 @@ public struct StructureDamageRecord
 
     [JsonPropertyName("type")]
     [JsonConverter(typeof(JsonStringEnumConverter))]
-    public StructType Type { get; set; }
+    public bool IsStructure { get; set; }
 
     [JsonPropertyName("id")]
     public uint ID { get; set; }
@@ -264,13 +262,13 @@ public struct StructureDamageRecord
     public DateTimeOffset Timestamp { get; set; }
     
     public StructureDamageRecord() { }
-    public StructureDamageRecord(Guid structure, string name, ulong owner, EDamageOrigin origin, StructType type, uint id, int damage, bool destroyed, DateTimeOffset timestamp)
+    public StructureDamageRecord(Guid structure, string name, ulong owner, EDamageOrigin origin, bool isStructure, uint id, int damage, bool destroyed, DateTimeOffset timestamp)
     {
         Structure = structure;
         Name = name;
         Owner = owner;
         Origin = origin;
-        Type = type;
+        IsStructure = isStructure;
         ID = id;
         Damage = damage;
         Destroyed = destroyed;
@@ -282,7 +280,7 @@ public struct StructureDamageRecord
         Name = reader.ReadString();
         Owner = reader.ReadUInt64();
         Origin = (EDamageOrigin)reader.ReadUInt16();
-        Type = (StructType)reader.ReadUInt8();
+        IsStructure = reader.ReadBool();
         ID = reader.ReadUInt32();
         Damage = reader.ReadInt32();
         Destroyed = reader.ReadBool();
@@ -294,7 +292,7 @@ public struct StructureDamageRecord
         writer.Write(Name);
         writer.Write(Owner);
         writer.Write((ushort)Origin);
-        writer.Write((byte)Type);
+        writer.Write(IsStructure);
         writer.Write(ID);
         writer.Write(Damage);
         writer.Write(Destroyed);
@@ -304,7 +302,7 @@ public struct StructureDamageRecord
 public struct TeamkillRecord
 {
     [JsonPropertyName("teamkill")]
-    public PrimaryKey Teamkill { get; set; }
+    public uint Teamkill { get; set; }
 
     [JsonPropertyName("victim")]
     public ulong Victim { get; set; }
@@ -323,7 +321,7 @@ public struct TeamkillRecord
     public DateTimeOffset Timestamp { get; set; }
 
     public TeamkillRecord() { }
-    public TeamkillRecord(PrimaryKey teamkill, ulong victim, EDeathCause cause, string message, bool? intentional, DateTimeOffset timestamp)
+    public TeamkillRecord(uint teamkill, ulong victim, EDeathCause cause, string message, bool? intentional, DateTimeOffset timestamp)
     {
         Teamkill = teamkill;
         Victim = victim;
@@ -343,7 +341,7 @@ public struct TeamkillRecord
     }
     public void Write(ByteWriter writer)
     {
-        writer.Write(Teamkill.Key);
+        writer.Write(Teamkill);
         writer.Write(Victim);
         writer.Write((ushort)Cause);
         writer.WriteNullable(Message);
@@ -354,7 +352,7 @@ public struct TeamkillRecord
 public struct VehicleTeamkillRecord
 {
     [JsonPropertyName("teamkill")]
-    public PrimaryKey Teamkill { get; set; }
+    public uint Teamkill { get; set; }
 
     [JsonPropertyName("victim")]
     public ulong Victim { get; set; }
@@ -370,7 +368,7 @@ public struct VehicleTeamkillRecord
     public DateTimeOffset Timestamp { get; set; }
 
     public VehicleTeamkillRecord() { }
-    public VehicleTeamkillRecord(PrimaryKey teamkill, ulong victim, EDamageOrigin origin, string? message, DateTimeOffset timestamp)
+    public VehicleTeamkillRecord(uint teamkill, ulong victim, EDamageOrigin origin, string? message, DateTimeOffset timestamp)
     {
         Teamkill = teamkill;
         Victim = victim;
@@ -388,7 +386,7 @@ public struct VehicleTeamkillRecord
     }
     public void Write(ByteWriter writer)
     {
-        writer.Write(Teamkill.Key);
+        writer.Write(Teamkill);
         writer.Write(Victim);
         writer.Write((ushort)Origin);
         writer.WriteNullable(Message);
@@ -401,7 +399,7 @@ public struct VehicleRequestRecord
     public Guid Vehicle { get; set; }
 
     [JsonPropertyName("vehicle_bay_id")]
-    public PrimaryKey Asset { get; set; }
+    public uint Asset { get; set; }
 
     [JsonPropertyName("name")]
     public string Name { get; set; }
@@ -419,7 +417,7 @@ public struct VehicleRequestRecord
     [JsonPropertyName("instigator")]
     public ulong Instigator { get; set; }
     public VehicleRequestRecord() { }
-    public VehicleRequestRecord(Guid vehicle, PrimaryKey asset, string name, DateTimeOffset timestamp, DateTimeOffset? destroyed, EDamageOrigin origin, ulong instigator)
+    public VehicleRequestRecord(Guid vehicle, uint asset, string name, DateTimeOffset timestamp, DateTimeOffset? destroyed, EDamageOrigin origin, ulong instigator)
     {
         Vehicle = vehicle;
         Asset = asset;

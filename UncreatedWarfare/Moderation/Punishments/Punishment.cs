@@ -1,17 +1,15 @@
-﻿using System;
+﻿using DanielWillett.SpeedBytes;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading;
-using System.Threading.Tasks;
-using Uncreated.Encoding;
-using Uncreated.Framework;
-using Uncreated.SQL;
+using Uncreated.Warfare.Database.Manual;
 using Uncreated.Warfare.Moderation.Appeals;
 using Uncreated.Warfare.Moderation.Punishments.Presets;
+using Uncreated.Warfare.Util;
 using Report = Uncreated.Warfare.Moderation.Reports.Report;
 
 namespace Uncreated.Warfare.Moderation.Punishments;
@@ -36,13 +34,13 @@ public abstract class Punishment : ModerationEntry
     /// Keys for all related appeals.
     /// </summary>
     [JsonPropertyName("appeals")]
-    public PrimaryKey[] AppealKeys { get; set; } = Array.Empty<PrimaryKey>();
+    public uint[] AppealKeys { get; set; } = Array.Empty<uint>();
 
     /// <summary>
     /// Keys for all related reports.
     /// </summary>
     [JsonPropertyName("reports")]
-    public PrimaryKey[] ReportKeys { get; set; } = Array.Empty<PrimaryKey>();
+    public uint[] ReportKeys { get; set; } = Array.Empty<uint>();
 
     /// <summary>
     /// All related appeals.
@@ -97,10 +95,10 @@ public abstract class Punishment : ModerationEntry
     {
         base.ReadIntl(reader, version);
         
-        AppealKeys = new PrimaryKey[reader.ReadInt32()];
+        AppealKeys = new uint[reader.ReadInt32()];
         for (int i = 0; i < AppealKeys.Length; ++i)
             AppealKeys[i] = reader.ReadUInt32();
-        ReportKeys = new PrimaryKey[reader.ReadInt32()];
+        ReportKeys = new uint[reader.ReadInt32()];
         for (int i = 0; i < ReportKeys.Length; ++i)
             ReportKeys[i] = reader.ReadUInt32();
         Appeals = null;
@@ -113,20 +111,20 @@ public abstract class Punishment : ModerationEntry
         
         writer.Write(AppealKeys.Length);
         for (int i = 0; i < AppealKeys.Length; ++i)
-            writer.Write(AppealKeys[i].Key);
+            writer.Write(AppealKeys[i]);
         writer.Write(ReportKeys.Length);
         for (int i = 0; i < ReportKeys.Length; ++i)
-            writer.Write(ReportKeys[i].Key);
+            writer.Write(ReportKeys[i]);
     }
 
-    public override void ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
+    public override bool ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
     {
         if (propertyName.Equals("appeals", StringComparison.InvariantCultureIgnoreCase))
-            AppealKeys = JsonSerializer.Deserialize<PrimaryKey[]>(ref reader, options) ?? Array.Empty<PrimaryKey>();
+            AppealKeys = JsonSerializer.Deserialize<uint[]>(ref reader, options) ?? Array.Empty<uint>();
         else if (propertyName.Equals("appeals_detail", StringComparison.InvariantCultureIgnoreCase))
             Appeals = JsonSerializer.Deserialize<Appeal[]>(ref reader, options);
         else if (propertyName.Equals("reports", StringComparison.InvariantCultureIgnoreCase))
-            ReportKeys = JsonSerializer.Deserialize<PrimaryKey[]>(ref reader, options) ?? Array.Empty<PrimaryKey>();
+            ReportKeys = JsonSerializer.Deserialize<uint[]>(ref reader, options) ?? Array.Empty<uint>();
         else if (propertyName.Equals("reports_detail", StringComparison.InvariantCultureIgnoreCase))
             Reports = JsonSerializer.Deserialize<Report[]>(ref reader, options);
         else if (propertyName.Equals("preset_level", StringComparison.InvariantCultureIgnoreCase))
@@ -151,7 +149,9 @@ public abstract class Punishment : ModerationEntry
             }
         }
         else
-            base.ReadProperty(ref reader, propertyName, options);
+            return base.ReadProperty(ref reader, propertyName, options);
+
+        return true;
     }
 
     public override void Write(Utf8JsonWriter writer, JsonSerializerOptions options)
@@ -186,17 +186,17 @@ public abstract class Punishment : ModerationEntry
         await base.AddExtraInfo(db, workingList, formatter, token);
         if (PresetType != PresetType.None)
         {
-            workingList.Add($"Preset: {(UCWarfare.IsLoaded ? Localization.TranslateEnum(PresetType) : PresetType.ToString())} | Level {PresetLevel.ToString(formatter)}");
+            workingList.Add($"Preset: {(/* todo Provider.isInitialized ? Localization.TranslateEnum(PresetType) : */PresetType.ToString())} | Level {PresetLevel.ToString(formatter)}");
         }
     }
     internal override bool AppendWriteCall(StringBuilder builder, List<object> args)
     {
         bool hasEvidenceCalls = base.AppendWriteCall(builder, args);
 
-        builder.Append($" INSERT INTO `{DatabaseInterface.TablePunishments}` ({SqlTypes.ColumnList(
+        builder.Append($" INSERT INTO `{DatabaseInterface.TablePunishments}` ({MySqlSnippets.ColumnList(
             DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnPunishmentsPresetType, DatabaseInterface.ColumnPunishmentsPresetLevel)}) VALUES ");
 
-        F.AppendPropertyList(builder, args.Count, 2, 0, 1);
+        MySqlSnippets.AppendPropertyList(builder, args.Count, 2, 0, 1);
         builder.Append(" AS `t` " +
                        $"ON DUPLICATE KEY UPDATE `{DatabaseInterface.ColumnPunishmentsPresetType}` = `t`.`{DatabaseInterface.ColumnPunishmentsPresetType}`," +
                        $"`{DatabaseInterface.ColumnPunishmentsPresetLevel}` = `t`.`{DatabaseInterface.ColumnPunishmentsPresetLevel}`;");
@@ -208,12 +208,12 @@ public abstract class Punishment : ModerationEntry
 
         if (ReportKeys.Length > 0)
         {
-            builder.Append($" INSERT INTO `{DatabaseInterface.TableLinkedReports}` ({SqlTypes.ColumnList(
+            builder.Append($" INSERT INTO `{DatabaseInterface.TableLinkedReports}` ({MySqlSnippets.ColumnList(
                 DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnLinkedReportsReport)}) VALUES ");
             for (int i = 0; i < ReportKeys.Length; ++i)
             {
-                F.AppendPropertyList(builder, args.Count, 1, i, 1);
-                args.Add(ReportKeys[i].Key);
+                MySqlSnippets.AppendPropertyList(builder, args.Count, 1, i, 1);
+                args.Add(ReportKeys[i]);
             }
             builder.Append(';');
         }
@@ -221,12 +221,12 @@ public abstract class Punishment : ModerationEntry
         
         if (AppealKeys.Length > 0)
         {
-            builder.Append($" INSERT INTO `{DatabaseInterface.TableLinkedAppeals}` ({SqlTypes.ColumnList(
+            builder.Append($" INSERT INTO `{DatabaseInterface.TableLinkedAppeals}` ({MySqlSnippets.ColumnList(
                 DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnLinkedAppealsAppeal)}) VALUES ");
             for (int i = 0; i < AppealKeys.Length; ++i)
             {
-                F.AppendPropertyList(builder, args.Count, 1, i, 1);
-                args.Add(AppealKeys[i].Key);
+                MySqlSnippets.AppendPropertyList(builder, args.Count, 1, i, 1);
+                args.Add(AppealKeys[i]);
             }
             builder.Append(';');
         }
@@ -389,7 +389,7 @@ public abstract class DurationPunishment : Punishment, IForgiveableModerationEnt
 
         return IsPermanent || timestamp.UtcDateTime < ResolvedTimestamp.Value.UtcDateTime.Add(Duration);
     }
-    public override void ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
+    public override bool ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
     {
         if (propertyName.Equals("duration", StringComparison.InvariantCultureIgnoreCase))
         {
@@ -424,7 +424,9 @@ public abstract class DurationPunishment : Punishment, IForgiveableModerationEnt
         else if (propertyName.Equals("forgive_message", StringComparison.InvariantCultureIgnoreCase))
             RemovedMessage = reader.GetString();
         else
-            base.ReadProperty(ref reader, propertyName, options);
+            return base.ReadProperty(ref reader, propertyName, options);
+
+        return true;
     }
     public override void Write(Utf8JsonWriter writer, JsonSerializerOptions options)
     {
@@ -451,7 +453,7 @@ public abstract class DurationPunishment : Punishment, IForgiveableModerationEnt
         if (IsPermanent)
             workingList.Add("Permanent");
         else
-            workingList.Add($"Duration: {Util.ToTimeString((int)Math.Round(Duration.TotalSeconds))}");
+            workingList.Add($"Duration: {FormattingUtility.ToTimeString(Duration)}");
 
         if (!Removed && Forgiven)
         {
@@ -472,7 +474,7 @@ public abstract class DurationPunishment : Punishment, IForgiveableModerationEnt
             }
             if (ForgiveMessage != null)
             {
-                workingList.Add("For: \"" + ForgiveMessage.MaxLength(64) + "\"");
+                workingList.Add("For: \"" + ForgiveMessage.Truncate(64) + "\"");
             }
         }
     }
@@ -481,11 +483,11 @@ public abstract class DurationPunishment : Punishment, IForgiveableModerationEnt
     {
         bool hasEvidenceCalls = base.AppendWriteCall(builder, args);
 
-        builder.Append($" INSERT INTO `{DatabaseInterface.TableDurationPunishments}` ({SqlTypes.ColumnList(
+        builder.Append($" INSERT INTO `{DatabaseInterface.TableDurationPunishments}` ({MySqlSnippets.ColumnList(
             DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnDurationsDurationSeconds, DatabaseInterface.ColumnDurationsForgiven,
             DatabaseInterface.ColumnDurationsForgivenBy, DatabaseInterface.ColumnDurationsForgivenTimestamp, DatabaseInterface.ColumnDurationsForgivenReason)}) VALUES ");
 
-        F.AppendPropertyList(builder, args.Count, 5, 0, 1);
+        MySqlSnippets.AppendPropertyList(builder, args.Count, 5, 0, 1);
         builder.Append(" AS `t` " +
                        $"ON DUPLICATE KEY UPDATE `{DatabaseInterface.ColumnDurationsDurationSeconds}` = `t`.`{DatabaseInterface.ColumnDurationsDurationSeconds}`," +
                        $"`{DatabaseInterface.ColumnDurationsForgiven}` = `t`.`{DatabaseInterface.ColumnDurationsForgiven}`," +
@@ -497,7 +499,7 @@ public abstract class DurationPunishment : Punishment, IForgiveableModerationEnt
         args.Add(Forgiven);
         args.Add(ForgivenBy == null ? DBNull.Value : ForgivenBy.Id);
         args.Add(ForgiveTimestamp.HasValue ? ForgiveTimestamp.Value.UtcDateTime : DBNull.Value);
-        args.Add((object?)ForgiveMessage.MaxLength(1024) ?? DBNull.Value);
+        args.Add((object?)ForgiveMessage.Truncate(1024) ?? DBNull.Value);
 
         return hasEvidenceCalls;
     }

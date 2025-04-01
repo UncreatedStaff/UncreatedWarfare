@@ -1,6 +1,9 @@
-﻿namespace Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.Languages;
 
-/// <summary>Max field character limit: <see cref="KitEx.TypeMaxCharLimit"/>.</summary>
+namespace Uncreated.Warfare.Kits;
+
 [Translatable("Kit Type", Description = "Determines kit request behavior.")]
 public enum KitType : byte
 {

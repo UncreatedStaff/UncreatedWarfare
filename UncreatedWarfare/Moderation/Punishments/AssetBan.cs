@@ -1,16 +1,15 @@
-﻿using SDG.Framework.Utilities;
-using SDG.Unturned;
+using DanielWillett.SpeedBytes;
+using SDG.Framework.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading;
-using System.Threading.Tasks;
-using Uncreated.Encoding;
-using Uncreated.SQL;
+using Uncreated.Warfare.Configuration.JsonConverters;
+using Uncreated.Warfare.Database.Manual;
 using Uncreated.Warfare.Models.Localization;
-using Uncreated.Warfare.Vehicles;
+using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.Moderation.Punishments;
 
@@ -24,11 +23,11 @@ public class AssetBan : DurationPunishment
     public override bool IsAppealable => true;
 
     [JsonPropertyName("vehicle_type_filter")]
-    [JsonConverter(typeof(ArrayConverter<VehicleType, JsonStringEnumConverter>))]
+    [JsonConverter(typeof(ArrayFactoryConverter<VehicleType, JsonStringEnumConverter>))]
     public VehicleType[] VehicleTypeFilter { get; set; } = Array.Empty<VehicleType>();
     internal void FillFromText(string? text)
     {
-        ThreadUtil.assertIsGameThread();
+        GameThread.AssertCurrent();
 
         if (string.IsNullOrWhiteSpace(text)
             || text.Equals("*", StringComparison.InvariantCultureIgnoreCase)
@@ -38,7 +37,7 @@ public class AssetBan : DurationPunishment
             return;
         }
 
-        _split ??= new char[] { ',' };
+        _split ??= [ ',' ];
         string[] splits = text.Split(_split, StringSplitOptions.RemoveEmptyEntries);
         List<VehicleType>? vehicleTypes = null;
         
@@ -82,30 +81,30 @@ public class AssetBan : DurationPunishment
 
         if (input.StartsWith("transport", StringComparison.InvariantCultureIgnoreCase))
         {
-            vehicleTypes = new VehicleType[] { VehicleType.TransportAir, VehicleType.TransportGround };
+            vehicleTypes = [ VehicleType.TransportHeli, VehicleType.TransportGround ];
         }
         else if (input.StartsWith("air", StringComparison.InvariantCultureIgnoreCase))
         {
-            vehicleTypes = new VehicleType[] { VehicleType.TransportAir, VehicleType.Jet, VehicleType.AttackHeli };
+            vehicleTypes = [ VehicleType.TransportHeli, VehicleType.Jet, VehicleType.AttackHeli ];
         }
         else if (input.StartsWith("armor", StringComparison.InvariantCultureIgnoreCase))
         {
-            vehicleTypes = new VehicleType[] { VehicleType.APC, VehicleType.IFV, VehicleType.MBT, VehicleType.ScoutCar };
+            vehicleTypes = [ VehicleType.APC, VehicleType.IFV, VehicleType.MBT, VehicleType.ScoutCar ];
         }
         else if (input.StartsWith("logi", StringComparison.InvariantCultureIgnoreCase))
         {
-            vehicleTypes = new VehicleType[] { VehicleType.LogisticsGround, VehicleType.TransportAir };
+            vehicleTypes = [ VehicleType.LogisticsGround, VehicleType.TransportHeli ];
         }
         else if (input.StartsWith("assault air", StringComparison.InvariantCultureIgnoreCase)
                || input.StartsWith("assaultair", StringComparison.InvariantCultureIgnoreCase)
                || input.StartsWith("airassault", StringComparison.InvariantCultureIgnoreCase)
                || input.StartsWith("air assault", StringComparison.InvariantCultureIgnoreCase))
         {
-            vehicleTypes = new VehicleType[] { VehicleType.AttackHeli, VehicleType.Jet };
+            vehicleTypes = [ VehicleType.AttackHeli, VehicleType.Jet ];
         }
         else if (input.StartsWith("empl", StringComparison.InvariantCultureIgnoreCase))
         {
-            vehicleTypes = new VehicleType[] { VehicleType.HMG, VehicleType.ATGM, VehicleType.AA, VehicleType.Mortar };
+            vehicleTypes = [ VehicleType.HMG, VehicleType.ATGM, VehicleType.AA, VehicleType.Mortar ];
         }
     }
     public string GetCommaList(bool roundTrip, LanguageInfo? lang = null)
@@ -114,10 +113,10 @@ public class AssetBan : DurationPunishment
         List<VehicleType> types = new List<VehicleType>(VehicleTypeFilter);
         if (roundTrip || lang == null || lang.IsDefault)
         {
-            if (Array.IndexOf(VehicleTypeFilter, VehicleType.TransportAir) != -1 && Array.IndexOf(VehicleTypeFilter, VehicleType.Jet) != -1
+            if (Array.IndexOf(VehicleTypeFilter, VehicleType.TransportHeli) != -1 && Array.IndexOf(VehicleTypeFilter, VehicleType.Jet) != -1
                 && Array.IndexOf(VehicleTypeFilter, VehicleType.AttackHeli) != -1)
             {
-                types.Remove(VehicleType.TransportAir);
+                types.Remove(VehicleType.TransportHeli);
                 types.Remove(VehicleType.Jet);
                 types.Remove(VehicleType.AttackHeli);
                 if (sb.Length > 0)
@@ -156,17 +155,17 @@ public class AssetBan : DurationPunishment
                     sb.Append(", ");
                 sb.Append("Emplacements");
             }
-            if (Array.IndexOf(VehicleTypeFilter, VehicleType.LogisticsGround) != -1 && Array.IndexOf(VehicleTypeFilter, VehicleType.TransportAir) != -1)
+            if (Array.IndexOf(VehicleTypeFilter, VehicleType.LogisticsGround) != -1 && Array.IndexOf(VehicleTypeFilter, VehicleType.TransportHeli) != -1)
             {
                 types.Remove(VehicleType.LogisticsGround);
-                types.Remove(VehicleType.TransportAir);
+                types.Remove(VehicleType.TransportHeli);
                 if (sb.Length > 0)
                     sb.Append(", ");
                 sb.Append("Logistics");
             }
-            if (Array.IndexOf(VehicleTypeFilter, VehicleType.TransportAir) != -1 && Array.IndexOf(VehicleTypeFilter, VehicleType.TransportGround) != -1)
+            if (Array.IndexOf(VehicleTypeFilter, VehicleType.TransportHeli) != -1 && Array.IndexOf(VehicleTypeFilter, VehicleType.TransportGround) != -1)
             {
-                types.Remove(VehicleType.TransportAir);
+                types.Remove(VehicleType.TransportHeli);
                 types.Remove(VehicleType.TransportGround);
                 sb.Append("Transports");
             }
@@ -175,13 +174,13 @@ public class AssetBan : DurationPunishment
         {
             if (sb.Length > 0)
                 sb.Append(", ");
-            sb.Append(roundTrip ? types[i].ToString() : Localization.TranslateEnum(types[i], lang));
+            sb.Append(types[i].ToString() /* todo roundTrip ? types[i].ToString() : Localization.TranslateEnum(types[i], lang) */);
         }
         return sb.ToString();
     }
     public bool IsAssetBanned(VehicleType type, bool considerForgiven, bool checkStillActive = true)
     {
-        if (checkStillActive && !IsApplied(considerForgiven))
+        if (checkStillActive && (!ResolvedTimestamp.HasValue || !IsApplied(considerForgiven)))
             return false;
 
         if (!checkStillActive && considerForgiven && (Forgiven || Removed))
@@ -216,7 +215,7 @@ public class AssetBan : DurationPunishment
     }
 
     public override string GetDisplayName() => "Asset Ban";
-    public override void ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
+    public override bool ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
     {
         if (propertyName.Equals("vehicle_type_filter", StringComparison.InvariantCultureIgnoreCase))
         {
@@ -226,7 +225,7 @@ public class AssetBan : DurationPunishment
             {
                 List<VehicleType> list;
                 bool pooled = false;
-                if (UCWarfare.IsLoaded && UCWarfare.IsMainThread)
+                if (Provider.isInitialized && GameThread.IsCurrent)
                 {
                     pooled = true;
                     list = ListPool<VehicleType>.claim();
@@ -267,7 +266,9 @@ public class AssetBan : DurationPunishment
                 throw new JsonException($"Invalid token type: {reader.TokenType} for VehicleType[].");
         }
         else
-            base.ReadProperty(ref reader, propertyName, options);
+            return base.ReadProperty(ref reader, propertyName, options);
+
+        return true;
     }
     public override void Write(Utf8JsonWriter writer, JsonSerializerOptions options)
     {
@@ -302,12 +303,12 @@ public class AssetBan : DurationPunishment
 
         if (VehicleTypeFilter.Length > 0)
         {
-            builder.Append($" INSERT INTO `{DatabaseInterface.TableAssetBanTypeFilters}` ({SqlTypes.ColumnList(
+            builder.Append($" INSERT INTO `{DatabaseInterface.TableAssetBanTypeFilters}` ({MySqlSnippets.ColumnList(
                 DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnAssetBanFiltersType)}) VALUES ");
 
             for (int i = 0; i < VehicleTypeFilter.Length; ++i)
             {
-                F.AppendPropertyList(builder, args.Count, 1, i, 1);
+                MySqlSnippets.AppendPropertyList(builder, args.Count, 1, i, 1);
                 args.Add(VehicleTypeFilter[i].ToString());
             }
 

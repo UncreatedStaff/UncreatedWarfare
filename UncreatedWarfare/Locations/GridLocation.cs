@@ -1,21 +1,31 @@
-﻿using SDG.Unturned;
+﻿using DanielWillett.SpeedBytes;
 using System;
+using System.ComponentModel;
 using System.Globalization;
 using System.Text.Json.Serialization;
-using Uncreated.Encoding;
 using Uncreated.Warfare.Configuration.JsonConverters;
-using Uncreated.Warfare.Models.Localization;
-using Uncreated.Warfare.Singletons;
-using UnityEngine;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.ValueFormatters;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Locations;
 
+/// <summary>
+/// Handles translating coordinates to/from grid coordinates.
+/// </summary>
 [JsonConverter(typeof(GridLocationConverter))]
+[TypeConverter(typeof(GridLocationTypeConverter))]
 public readonly struct GridLocation : ITranslationArgument, IEquatable<GridLocation>, IComparable<GridLocation>
+#if NET6_0_OR_GREATER
+    , ISpanFormattable
+#else
+    , IFormattable
+#endif
+#if NET7_0_OR_GREATER
+    , ISpanParsable<GridLocation>
+#endif
 {
     private readonly uint _data;
-
-    private static LevelData? _lvl;
 
     /// <summary>
     /// Square root of the amount of subgrids in a grid. Ex. in a 3x3 = 9 subgrid, this value will be 3.
@@ -85,48 +95,83 @@ public readonly struct GridLocation : ITranslationArgument, IEquatable<GridLocat
     /// <summary>
     /// The center of the referenced grid or sub-grid.
     /// </summary>
-    /// <exception cref="SingletonUnloadedException">Not ran on an active server.</exception>
+    /// <exception cref="NotSupportedException">Not ran on an active server.</exception>
     [JsonIgnore]
     [Newtonsoft.Json.JsonIgnore]
     public Vector2 Center
     {
         get
         {
-            if (!UCWarfare.IsLoaded)
-                throw new SingletonUnloadedException(typeof(UCWarfare));
+            if (!Level.isInitialized)
+                throw new NotSupportedException("Not ran on an active server.");
 
-            int index = Index is 0 or > SubgridAmount * SubgridAmount ? Mathf.CeilToInt(SubgridAmount * SubgridAmount / 2f) : Index;
-            int subgridx = X * SubgridAmount;
-            int subgridy = Y * SubgridAmount;
-            subgridx += (index - 1) % SubgridAmount;
-            subgridy += SubgridAmount - Mathf.CeilToInt(index / (float)SubgridAmount);
-            CartographyVolume? cartographyVolume = VolumeManager<CartographyVolume, CartographyVolumeManager>.Get()?.GetMainVolume();
-            if (cartographyVolume != null)
+            int index = Index is 0 or > SubgridAmount * SubgridAmount
+                ? Mathf.CeilToInt(SubgridAmount * SubgridAmount / 2f) // middle subgrid
+                : Index;
+
+            int subgridPosX = X * SubgridAmount;
+            int subgridPosY = Y * SubgridAmount;
+
+            // offset the index to be linear instead of spread out like a numpad
+            subgridPosX += (index - 1) % SubgridAmount;
+            subgridPosY += SubgridAmount - Mathf.CeilToInt(index / (float)SubgridAmount);
+
+            Vector2 center = default;
+
+            if (!CartographyUtility.UsesLegacyCartography)
             {
-                Vector3 box = cartographyVolume.GetBoxSize();
-                GetMapMetrics(Mathf.RoundToInt(box.x), Mathf.RoundToInt(box.z), out int sectionsX, out int sectionsY, out _, out _, out int border);
-                float bdrx = (border / box.x);
-                float bdry = (border / box.z);
-                float sizeX = 1f - bdrx * 2f;
-                float sizeY = 1f - bdry * 2f;
-                Vector3 pos = cartographyVolume.transform.TransformPoint(
-                    bdrx + sizeX * ((float)subgridx / (sectionsX * SubgridAmount)) - 0.5f + sizeX / (sectionsX * SubgridAmount * 2f), 0,
-                    -(bdry + sizeY * ((float)subgridy / (sectionsY * SubgridAmount)) - 0.5f + sizeY / (sectionsY * SubgridAmount * 2f)));
-                return new Vector2(pos.x, pos.z);
+                Vector2Int mapImageSize = CartographyUtility.MapImageSize;
+
+                GetMapMetrics(mapImageSize.x, mapImageSize.y, out int gridSizeX, out int gridSizeY, out _, out _, out double borderSize);
+
+                Vector3 mapLocalPos = default;
+                Vector2 areaSize = CartographyUtility.WorldCaptureAreaDimensions;
+
+                // add half of subgrid offset and scale to grid relative coords [0,1]
+                mapLocalPos.x = (subgridPosX + 0.5f) / (gridSizeX * SubgridAmount);
+                mapLocalPos.y = (subgridPosY + 0.5f) / (gridSizeY * SubgridAmount);
+
+                // scale to [-1,1]
+                mapLocalPos.x = mapLocalPos.x * 2f - 1f;
+                mapLocalPos.y = mapLocalPos.y * 2f - 1f;
+
+                // scale up to capture area size
+                mapLocalPos.x *= (areaSize.x - (float)borderSize * 2f) / areaSize.x;
+                mapLocalPos.y *= -(areaSize.y - (float)borderSize * 2f) / areaSize.y;
+
+                Vector3 point3d = CartographyUtility.MapToWorld.MultiplyPoint3x4(mapLocalPos);
+
+                center.x = point3d.x;
+                center.y = point3d.z;
+                return center;
             }
-            int sqrCt = GetLegacyGridSize() * SubgridAmount;
-            if (subgridx >= sqrCt)
-                subgridx = sqrCt - 1;
-            if (subgridy >= sqrCt)
-                subgridy = sqrCt - 1;
-            int size = Level.size;
-            float actualSize = size / (size / (size - Level.border * 2f));
-            int bdr = Mathf.RoundToInt(actualSize * BorderPercentage);
-            float gridSize = actualSize - bdr * 2;
-            float sqrSize = gridSize / sqrCt;
-            return new Vector2(
-                bdr + gridSize * ((float)subgridx / sqrCt) + sqrSize / 2f - actualSize / 2f,
-                actualSize / 2f - (bdr + gridSize * ((float)subgridy / sqrCt) + sqrSize / 2f));
+
+            int subgridCount = GetLegacyGridSize() * SubgridAmount;
+
+            // clamp to grid
+            subgridPosX = Math.Min(subgridPosX, subgridCount - 1);
+            subgridPosY = Math.Min(subgridPosY, subgridCount - 1);
+
+            // size of the mapped area (world)
+            float captureAreaSize = Level.size - Level.border * 2;
+
+            // size of the area between the edge of the map and the start of the grid
+            int gridBorderSize = Mathf.RoundToInt(captureAreaSize * BorderPercentage);
+
+            float gridSize = captureAreaSize - gridBorderSize * 2;
+            float sqrSize = gridSize / subgridCount;
+
+            float relativeGridPosX = (float)subgridPosX / subgridCount;
+            float relativeGridPosY = (float)subgridPosY / subgridCount;
+
+            // offset to middle of subgrid
+            float halfOffset = sqrSize / 2f;
+
+            // border + grid position + half of subgrid - center point (y is flipped)
+            center.x = gridBorderSize + gridSize * relativeGridPosX + halfOffset - captureAreaSize / 2f;
+            center.y = captureAreaSize / 2f - (gridBorderSize + gridSize * relativeGridPosY + halfOffset);
+
+            return center;
         }
     }
 
@@ -167,85 +212,71 @@ public readonly struct GridLocation : ITranslationArgument, IEquatable<GridLocat
     /// <summary>
     /// Create a <see cref="GridLocation"/> from any given point inside a grid and subgrid.
     /// </summary>
-    /// <exception cref="SingletonUnloadedException">Not ran on an active server.</exception>
+    /// <exception cref="NotSupportedException">Not ran on an active server.</exception>
     public GridLocation(in Vector3 pos)
     {
-        if (!UCWarfare.IsLoaded)
-            throw new SingletonUnloadedException(typeof(UCWarfare));
+        if (!Level.isInitialized)
+            throw new NotSupportedException("Not ran on an active server.");
 
-        byte xVal, yVal, indexVal;
-        CartographyVolume? cartographyVolume = VolumeManager<CartographyVolume, CartographyVolumeManager>.Get()?.GetMainVolume();
-        if (cartographyVolume != null)
+        int subgridPosX, subgridPosY;
+        bool isOutOfGridBounds;
+
+        if (!CartographyUtility.UsesLegacyCartography)
         {
-            Vector3 local = cartographyVolume.transform.InverseTransformPoint(pos);
-            Vector3 box = cartographyVolume.GetBoxSize();
-            GetMapMetrics(Mathf.RoundToInt(box.x), Mathf.RoundToInt(box.z), out int sectionsX, out int sectionsY, out _, out _, out int border);
-            float bdrx = border / box.x;
-            float bdry = border / box.z;
-            local.x += 0.5f;
-            local.z = 0.5f - local.z;
-            int subgridx = Mathf.FloorToInt((local.x - bdrx) / ((1f - bdrx * 2f) / (sectionsX * SubgridAmount)));
-            int subgridy = Mathf.FloorToInt((local.z - bdry) / ((1f - bdry * 2f) / (sectionsY * SubgridAmount)));
-            xVal = (byte)(subgridx / SubgridAmount);
-            yVal = (byte)(subgridy / SubgridAmount);
-            if (local.x < bdrx || local.z < bdry || local.x > 1f - bdrx || local.z > 1f - bdry)
-                indexVal = 0;
-            else
-                indexVal = (byte)(subgridx % SubgridAmount + ((SubgridAmount - 1) - subgridy % SubgridAmount) * SubgridAmount + 1);
+            Vector2Int mapImageSize = CartographyUtility.MapImageSize;
+            GetMapMetrics(mapImageSize.x, mapImageSize.y, out int gridSizeX, out int gridSizeY, out _, out _, out double borderSize);
 
-            _data = 0xFF000000u | (uint)(xVal << 16 | yVal << 8 | indexVal);
-            return;
-        }
+            Vector2 areaSize = CartographyUtility.WorldCaptureAreaDimensions;
+            Vector2 mapLocalPos = CartographyUtility.WorldToMap.MultiplyPoint3x4(pos);
 
-        int sqrCt = GetLegacyGridSize() * SubgridAmount;
-        int size = Level.size;
-        float actualSize = size / (size / (size - Level.border * 2f)); // size of the mapped area (world)
-        int bdr = Mathf.RoundToInt(actualSize * BorderPercentage);
-        float gridSize = actualSize - bdr * 2;
-        float sqrSize = gridSize / sqrCt;
-        float x = actualSize / 2 + pos.x;
-        float y = actualSize / 2 - pos.z;
+            // rescale to inside border and flip vertical axis
+            mapLocalPos.x /= (areaSize.x - (float)borderSize * 2f) / areaSize.x;
+            mapLocalPos.y /= -((areaSize.y - (float)borderSize * 2f) / areaSize.y);
 
-        int xSqr;
-        bool isOut = false;
-        if (x < bdr)
-        {
-            isOut = true;
-            xSqr = 0;
-        }
-        else if (x > bdr + gridSize)
-        {
-            isOut = true;
-            xSqr = sqrCt - 1;
+            // rescale [0,1] inside grid
+            mapLocalPos.x = (mapLocalPos.x + 1) / 2f;   
+            mapLocalPos.y = (mapLocalPos.y + 1) / 2f;
+
+            subgridPosX = Math.Clamp((int)(mapLocalPos.x * (gridSizeX * SubgridAmount)), 0, gridSizeX * SubgridAmount - 1);
+            subgridPosY = Math.Clamp((int)(mapLocalPos.y * (gridSizeY * SubgridAmount)), 0, gridSizeY * SubgridAmount - 1);
+
+            isOutOfGridBounds = mapLocalPos.x < 0 || mapLocalPos.x > 1 || mapLocalPos.y < 0 || mapLocalPos.y > 1;
         }
         else
-            xSqr = Mathf.FloorToInt((x - bdr) / sqrSize);
-        int ySqr;
-        if (y < bdr)
         {
-            isOut = true;
-            ySqr = 0;
-        }
-        else if (y > bdr + gridSize)
-        {
-            isOut = true;
-            ySqr = sqrCt - 1;
-        }
-        else
-            ySqr = Mathf.FloorToInt((y - bdr) / sqrSize);
-        xVal = (byte)(xSqr / SubgridAmount);
-        yVal = (byte)(ySqr / SubgridAmount);
-        if (!isOut)
-            indexVal = (byte)((xSqr % SubgridAmount) + ((SubgridAmount - 1) - (ySqr % SubgridAmount)) * SubgridAmount + 1);
-        else indexVal = 0;
+            int subgridCount = GetLegacyGridSize() * SubgridAmount;
 
-        _data = 0xFF000000u | (uint)(xVal << 16 | yVal << 8 | indexVal);
+            // size of the mapped area (world)
+            float captureAreaSize = Level.size - Level.border * 2;
+
+            // size of the area between the edge of the map and the start of the grid
+            int gridBorderSize = Mathf.RoundToInt(captureAreaSize * BorderPercentage);
+
+            float gridAreaSize = captureAreaSize - gridBorderSize * 2;
+
+            float subgridSize = gridAreaSize / subgridCount;
+
+            float gridRelativeX = captureAreaSize / 2 + pos.x;
+            float gridRelativeY = captureAreaSize / 2 - pos.z;
+
+            isOutOfGridBounds = gridRelativeX < gridBorderSize || gridRelativeX > gridBorderSize + gridAreaSize || gridRelativeY < gridBorderSize || gridRelativeY > gridBorderSize + gridAreaSize;
+
+            subgridPosX = Math.Clamp((int)((gridRelativeX - gridBorderSize) / subgridSize), 0, subgridCount - 1);
+            subgridPosY = Math.Clamp((int)((gridRelativeY - gridBorderSize) / subgridSize), 0, subgridCount - 1);
+        }
+
+        byte gridPosX = (byte)(subgridPosX / SubgridAmount);
+        byte gridPosY = (byte)(subgridPosY / SubgridAmount);
+
+        byte subGridIndex = isOutOfGridBounds ? (byte)0 : (byte)((subgridPosX % SubgridAmount) + (SubgridAmount - 1 - (subgridPosY % SubgridAmount)) * SubgridAmount + 1);
+
+        _data = 0xFF000000u | (uint)(gridPosX << 16 | gridPosY << 8 | subGridIndex);
     }
 
     /// <summary>
     /// Check if two locations are in the same grid.
     /// </summary>
-    public bool GridEquals(GridLocation other) => (_data & 0xFFFFFF00u) == (other._data & 0xFFFFFF00u);
+    public bool GridEquals(GridLocation other) => (_data >> 8) == (other._data >> 8);
 
     /// <summary>
     /// Check if two locations are in the same grid and sub-grid.
@@ -261,7 +292,9 @@ public readonly struct GridLocation : ITranslationArgument, IEquatable<GridLocat
     /// Check if two locations are in the same grid and sub-grid.
     /// </summary>
     public override bool Equals(object? obj) => obj is GridLocation location && Equals(location);
-    public override int GetHashCode() => unchecked((int)(_data & 0xFFFFFF | ~(_data & 0xFF000000)));
+
+    /// <inheritdoc />
+    public override int GetHashCode() => unchecked ( (int)_data );
 
     /// <summary>
     /// Check if two locations are in the same grid and sub-grid.
@@ -294,38 +327,104 @@ public readonly struct GridLocation : ITranslationArgument, IEquatable<GridLocat
     public static bool operator >=(GridLocation left, GridLocation right) => left._data >= right._data;
 
     /// <summary>
+    /// Convert this grid location to a string representation, formatted like A1-1.
+    /// </summary>
+    public override string ToString()
+    {
+        int x = (int)((_data >> 16) & 0xFF);
+        int y = (int)((_data >> 8) & 0xFF) + 1;
+        int index = (int)(_data & 0xFF);
+
+        int len = y > 9 ? 5 : 4;
+        if (index == 0)
+            len -= 2;
+
+        int state = x << 16 | y << 8 | index;
+        return string.Create(len, state, (span, state) =>
+        {
+            int x = state >> 16;
+            int y = (state >> 8) & 0xFF;
+            int index = state & 0xFF;
+
+            WriteSpan(span, span.Length, x, y, index);
+        });
+    }
+
+    /// <inheritdoc />
+    string ITranslationArgument.Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
+    {
+        return ToString();
+    }
+
+    /// <summary>
     /// Convert a grid location with the given <paramref name="x"/>, <paramref name="y"/>, and <paramref name="index"/> to a string representation, formatted like A1-1.
     /// </summary>
-    public static unsafe string ToString(byte x, byte y, byte index)
+    public static string ToString(byte x, byte y, byte index)
     {
         ++y;
         int len = y > 9 ? 5 : 4;
         if (index == 0)
             len -= 2;
-        char* ptr = stackalloc char[len];
 
-        ptr[0] = (char)(x + 65);
-        if (y > 9)
+        int state = x << 16 | y << 8 | index;
+        return string.Create(len, state, (span, state) =>
         {
-            ptr[1] = (char)(y / 10 + 48);
-            ptr[2] = (char)(y % 10 + 48);
-        }
-        else
-            ptr[1] = (char)(y + 48);
-        if (index != 0)
-        {
-            int a = len == 5 ? 3 : 2;
-            ptr[a] = '-';
-            ptr[a + 1] = (char)(index + 48);
-        }
-        return new string(ptr, 0, len);
+            int x = state >> 16;
+            int y = (state >> 8) & 0xFF;
+            int index = state & 0xFF;
+
+            WriteSpan(span, span.Length, x, y, index);
+        });
     }
 
-    /// <returns>String representation of the grid, formatted like A1-1.</returns>
-    public override string ToString() => ToString(X, Y, Index);
+    /// <inheritdoc />
+    public string ToString(string? format, IFormatProvider? formatProvider)
+    {
+        return ToString();
+    }
 
-    string ITranslationArgument.Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
-        ref TranslationFlags flags) => ToString();
+    /// <summary>
+    /// Convert this grid location to a string representation, formatted like A1-1.
+    /// </summary>
+    public bool TryFormat(Span<char> destination, out int charsWritten, ReadOnlySpan<char> format, IFormatProvider? provider)
+    {
+        int x = (int)((_data >> 16) & 0xFF);
+        int y = (int)((_data >> 8) & 0xFF) + 1;
+        int index = (int)(_data & 0xFF);
+
+        int len = y > 9 ? 5 : 4;
+        if (index == 0)
+            len -= 2;
+
+        if (destination.Length < len)
+        {
+            charsWritten = len;
+            return false;
+        }
+
+        charsWritten = len;
+        WriteSpan(destination, len, x, y, index);
+        return true;
+    }
+
+    private static void WriteSpan(Span<char> span, int len, int x, int y, int index)
+    {
+        span[0] = (char)(x + 65);
+        if (y > 9)
+        {
+            span[1] = (char)(y / 10 + 48);
+            span[2] = (char)(y % 10 + 48);
+        }
+        else
+            span[1] = (char)(y + 48);
+
+        if (index == 0)
+            return;
+
+        int a = len == 5 ? 3 : 2;
+        span[a] = '-';
+        span[a + 1] = (char)(index + 48);
+    }
 
     /// <summary>
     /// Parse a case-insensitive string representing a <see cref="GridLocation"/>, ignoring whitespace.
@@ -333,6 +432,7 @@ public readonly struct GridLocation : ITranslationArgument, IEquatable<GridLocat
     /// <returns><see langword="True"/> if a valid <see cref="GridLocation"/> was parsed, otherwise <see langword="false"/>.</returns>
     public static bool TryParse(ReadOnlySpan<char> value, out GridLocation location)
     {
+        value = value.Trim(' ');
         if (value.Length is < 2 or > 8)
         {
             location = default;
@@ -393,6 +493,25 @@ public readonly struct GridLocation : ITranslationArgument, IEquatable<GridLocat
         return false;
         rtnTrue:
         location = new GridLocation(x, y, index);
+        return !Level.isInitialized || CheckSafe(x, y);
+    }
+
+    private static bool CheckSafe(byte x, byte y)
+    {
+        if (CartographyUtility.UsesLegacyCartography)
+        {
+            GetMapMetrics(Level.info.size, out int gridSize, out _, out _);
+            if (Math.Max(x, y) >= gridSize)
+                return false;
+        }
+        else
+        {
+            Vector2Int captureAreaSize = CartographyUtility.MapImageSize;
+            GetMapMetrics(captureAreaSize.x, captureAreaSize.y, out int gridSizeX, out int gridSizeY, out _, out _, out _);
+            if (x >= gridSizeX || y >= gridSizeY)
+                return false;
+        }
+
         return true;
     }
 
@@ -406,18 +525,62 @@ public readonly struct GridLocation : ITranslationArgument, IEquatable<GridLocat
             throw new FormatException("Unable to parse GridLocation.");
         return location;
     }
+
+    /// <summary>
+    /// Parse a case-insensitive string representing a <see cref="GridLocation"/>, ignoring whitespace.
+    /// </summary>
+    /// <exception cref="FormatException"/>
+    [Obsolete]
+    public static GridLocation Parse(string s, IFormatProvider? provider)
+    {
+        return Parse(s);
+    }
+
+    /// <summary>
+    /// Parse a case-insensitive string representing a <see cref="GridLocation"/>, ignoring whitespace.
+    /// </summary>
+    /// <returns><see langword="True"/> if a valid <see cref="GridLocation"/> was parsed, otherwise <see langword="false"/>.</returns>
+    [Obsolete]
+    public static bool TryParse(string? s, IFormatProvider? provider, out GridLocation result)
+    {
+        return TryParse(s, out result);
+    }
+
+
+    /// <summary>
+    /// Parse a case-insensitive string representing a <see cref="GridLocation"/>, ignoring whitespace.
+    /// </summary>
+    /// <exception cref="FormatException"/>
+    [Obsolete]
+    public static GridLocation Parse(ReadOnlySpan<char> s, IFormatProvider? provider)
+    {
+        return Parse(s);
+    }
+
+    /// <summary>
+    /// Parse a case-insensitive string representing a <see cref="GridLocation"/>, ignoring whitespace.
+    /// </summary>
+    /// <returns><see langword="True"/> if a valid <see cref="GridLocation"/> was parsed, otherwise <see langword="false"/>.</returns>
+    [Obsolete]
+    public static bool TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, out GridLocation result)
+    {
+        return TryParse(s, out result);
+    }
+
     internal static int GetLegacyGridSize() => Level.info == null ? 1 : GetLegacyGridSize(Level.info.size);
+
+    // not using constants to prevent loading Level class in third party references
 
     /// <summary>
     /// Get the size of the map's image (and total size) based on a legacy size.
     /// </summary>
     public static int GetLegacyMapSize(ELevelSize size) => size switch
     {
-        ELevelSize.TINY => Level.TINY_SIZE,
-        ELevelSize.SMALL => Level.SMALL_SIZE,
-        ELevelSize.MEDIUM => Level.MEDIUM_SIZE,
-        ELevelSize.LARGE => Level.LARGE_SIZE,
-        ELevelSize.INSANE => Level.INSANE_SIZE,
+        ELevelSize.TINY => 512,
+        ELevelSize.SMALL => 1024,
+        ELevelSize.MEDIUM => 2048,
+        ELevelSize.LARGE => 4096,
+        ELevelSize.INSANE => 8192,
         _ => 0,
     };
 
@@ -426,15 +589,15 @@ public readonly struct GridLocation : ITranslationArgument, IEquatable<GridLocat
     /// </summary>
     public static ELevelSize? GetLegacySizeFromMapSize(int mapSize)
     {
-        if (mapSize == Level.TINY_SIZE)
+        if (mapSize == 512)
             return ELevelSize.TINY;
-        if (mapSize == Level.SMALL_SIZE)
+        if (mapSize == 1024)
             return ELevelSize.SMALL;
-        if (mapSize == Level.MEDIUM_SIZE)
+        if (mapSize == 2048)
             return ELevelSize.MEDIUM;
-        if (mapSize == Level.LARGE_SIZE)
+        if (mapSize == 4096)
             return ELevelSize.LARGE;
-        if (mapSize == Level.INSANE_SIZE)
+        if (mapSize == 8192)
             return ELevelSize.INSANE;
 
         return null;
@@ -445,11 +608,9 @@ public readonly struct GridLocation : ITranslationArgument, IEquatable<GridLocat
     /// </summary>
     public static int GetLegacyBorderSize(ELevelSize size) => size switch
     {
-        ELevelSize.TINY => Level.TINY_BORDER,
-        ELevelSize.SMALL => Level.SMALL_BORDER,
-        ELevelSize.MEDIUM => Level.MEDIUM_BORDER,
-        ELevelSize.LARGE => Level.LARGE_BORDER,
-        ELevelSize.INSANE => Level.INSANE_BORDER,
+        ELevelSize.TINY => 16,
+        ELevelSize.SMALL or ELevelSize.MEDIUM or ELevelSize.LARGE => 64,
+        ELevelSize.INSANE => 128,
         _ => 0,
     };
 
@@ -470,66 +631,62 @@ public readonly struct GridLocation : ITranslationArgument, IEquatable<GridLocat
     /// Only works with maps without a cartography volume.
     /// </summary>
     /// <param name="sectionWidth">world scale</param>
-    /// <param name="border">world scale</param>
-    public static void GetMapMetrics(ELevelSize size, out int sections, out int sectionWidth, out int border)
+    /// <param name="borderSize">world scale</param>
+    public static void GetMapMetrics(ELevelSize size, out int gridSize, out double sectionWidth, out double borderSize)
     {
         int fullSize = (int)Math.Pow(2, (int)size + 9);
-        float actualSize = fullSize / (fullSize / (fullSize - (size switch
-        {
-            ELevelSize.TINY => 16f,
-            ELevelSize.SMALL or ELevelSize.MEDIUM or ELevelSize.LARGE => 64f,
-            ELevelSize.INSANE => 128f,
-            _ => 0f
-        }) * 2f));
-        border = Mathf.RoundToInt(actualSize * BorderPercentage);
-        sections = GetLegacyGridSize(size);
-        sectionWidth = Mathf.RoundToInt((actualSize - border * 2) / sections);
+        float actualSize = fullSize - GetLegacyBorderSize(size) * 2f;
+        borderSize = actualSize * BorderPercentage;
+        gridSize = GetLegacyGridSize(size);
+        sectionWidth = (actualSize - borderSize * 2d) / gridSize;
     }
 
     /// <summary>
     /// Only works with maps with a cartography volume.
     /// </summary>
-    /// <param name="length">world scale</param>
-    /// <param name="width">world scale</param>
-    /// <param name="sectionWidthX">world scale</param>
-    /// <param name="sectionWidthY">world scale</param>
-    /// <param name="border">world scale</param>
-    public static void GetMapMetrics(int length, int width, out int sectionsX, out int sectionsY, out int sectionWidthX, out int sectionWidthY, out int border)
+    /// <remarks>Used by grid generator in Discord bot.</remarks>
+    public static void GetMapMetrics(int imgSizeX, int imgSizeY, out int gridSizeX, out int gridSizeY, out double sectionWidthX, out double sectionWidthY, out double borderSize)
     {
-        border = Mathf.RoundToInt(Math.Min(length, width) * BorderPercentage);
-        int l2 = length - border * 2;
-        int w2 = width - border * 2;
-        sectionsX = l2 / OptimalGridSizeWorldScale;
-        int xmod = l2 % OptimalGridSizeWorldScale;
-        if (xmod != 0)
+        borderSize = Math.Min(imgSizeX, imgSizeY) * BorderPercentage;
+
+        double gridAreaX = imgSizeX - borderSize * 2;
+        double gridAreaY = imgSizeY - borderSize * 2;
+
+        gridSizeX = (int)(gridAreaX / OptimalGridSizeWorldScale);
+
+        int remX = (int)gridAreaX % OptimalGridSizeWorldScale;
+        if (remX != 0)
         {
-            if (xmod > OptimalGridSizeWorldScale / 2)
-                ++sectionsX;
-            sectionWidthX = l2 / sectionsX;
+            if (remX > OptimalGridSizeWorldScale / 2)
+                ++gridSizeX;
+            sectionWidthX = gridAreaX / gridSizeX;
         }
         else
             sectionWidthX = OptimalGridSizeWorldScale;
-        sectionsY = w2 / OptimalGridSizeWorldScale;
-        int ymod = w2 % OptimalGridSizeWorldScale;
-        if (ymod != 0)
+
+        gridSizeY = (int)(gridAreaY / OptimalGridSizeWorldScale);
+
+        int remY = (int)gridAreaY % OptimalGridSizeWorldScale;
+        if (remY != 0)
         {
-            if (xmod > OptimalGridSizeWorldScale / 2)
-                ++sectionsY;
-            sectionWidthY = w2 / sectionsY;
+            if (remX > OptimalGridSizeWorldScale / 2)
+                ++gridSizeY;
+            sectionWidthY = gridAreaY / gridSizeY;
         }
         else
             sectionWidthY = OptimalGridSizeWorldScale;
-        if (sectionsX > 26)
+
+        if (gridSizeX > 26)
         {
-            sectionsX = 26;
-            sectionWidthX = l2 / sectionsX;
+            gridSizeX = 26;
+            sectionWidthX = gridAreaX / gridSizeX;
         }
 
-        if (sectionsY <= 26)
+        if (gridSizeY <= 26)
             return;
         
-        sectionsY = 26;
-        sectionWidthY = w2 / sectionsY;
+        gridSizeY = 26;
+        sectionWidthY = gridAreaY / gridSizeY;
     }
 
     /// <summary>
@@ -550,94 +707,22 @@ public readonly struct GridLocation : ITranslationArgument, IEquatable<GridLocat
         int data = reader.ReadInt32();
         return new GridLocation((byte)((data >> 16) & 0xFF), (byte)((data >> 8) & 0xFF), (byte)(data & 0xFF));
     }
+}
 
-    public static Vector2Int ImageSize => (_lvl ??= new LevelData()).ImageSizeIntl;
-    public static bool LegacyMapping => (_lvl ??= new LevelData()).LegacyMappingIntl;
-    public static Vector2 CaptureSize => (_lvl ??= new LevelData()).CaptureSizeIntl;
-    public static Vector2 DistanceScale => (_lvl ??= new LevelData()).DistanceScaleIntl;
-    public static Matrix4x4 TransformMatrix => (_lvl ??= new LevelData()).TransformMatrixIntl;
-    public static Matrix4x4 TransformMatrixInverse => (_lvl ??= new LevelData()).TransformMatrixInverseIntl;
-    public static float WorldDistanceToMapDistanceX(float x)
+public class GridLocationTypeConverter : TypeConverter
+{
+    public override bool CanConvertFrom(ITypeDescriptorContext? context, Type sourceType)
     {
-        _lvl ??= new LevelData();
-        
-        return x / _lvl.DistanceScaleIntl.x;
+        return sourceType == typeof(string) || base.CanConvertFrom(context, sourceType);
     }
-    public static float WorldDistanceToMapDistanceY(float y)
-    {
-        _lvl ??= new LevelData();
-        
-        return y / _lvl.DistanceScaleIntl.x;
-    }
-    public static float MapDistanceToWorldDistanceX(float x)
-    {
-        _lvl ??= new LevelData();
-        
-        return x * _lvl.DistanceScaleIntl.x;
-    }
-    public static float MapDistanceToWorldDistanceY(float y)
-    {
-        _lvl ??= new LevelData();
-        
-        return y * _lvl.DistanceScaleIntl.x;
-    }
-    public static Vector2 WorldCoordsToMapCoords(Vector3 worldPos)
-    {
-        _lvl ??= new LevelData();
 
-        Vector3 n = new Vector3((worldPos.x / _lvl.CaptureSizeIntl.x + 0.5f) * _lvl.ImageSizeIntl.x, 0f, (worldPos.z / _lvl.CaptureSizeIntl.y + 0.5f) * _lvl.ImageSizeIntl.y);
-        return _lvl.TransformMatrixInverseIntl.MultiplyPoint3x4(n);
-    }
-    public static Vector3 MapCoordsToWorldCoords(Vector2 mapPos)
+    public override object ConvertTo(ITypeDescriptorContext? context, CultureInfo? culture, object? value, Type destinationType)
     {
-        _lvl ??= new LevelData();
-
-        Vector3 n = new Vector3((mapPos.x / _lvl.ImageSizeIntl.x - 0.5f) * _lvl.CaptureSizeIntl.x, (mapPos.y / _lvl.ImageSizeIntl.y - 0.5f) * _lvl.CaptureSizeIntl.y, 0f);
-        return _lvl.TransformMatrixIntl.MultiplyPoint3x4(n);
+        return value == null ? "null" : ((GridLocation)value).ToString();
     }
-    private sealed class LevelData
-    {
-        public bool LegacyMappingIntl;
-        public Matrix4x4 TransformMatrixIntl;
-        public Matrix4x4 TransformMatrixInverseIntl;
-        public Vector2Int ImageSizeIntl;
-        public Vector2 CaptureSizeIntl;
-        public Vector2 DistanceScaleIntl; // * = map to world, / = world to map
-        public LevelData()
-        {
-            if (Level.isLoaded)
-                Reset(Level.BUILD_INDEX_GAME);
-            else
-                Level.onPrePreLevelLoaded += Reset;
-        }
-        private void Reset(int lvlLoaded)
-        {
-            if (lvlLoaded != Level.BUILD_INDEX_GAME)
-                return;
-            CartographyVolume vol = CartographyVolumeManager.Get().GetMainVolume();
-            if (vol != null)
-            {
-                LegacyMappingIntl = false;
-                TransformMatrixIntl = Matrix4x4.TRS(vol.transform.position, vol.transform.rotation * Quaternion.Euler(90f, 0.0f, 0.0f), Vector3.one);
-                TransformMatrixInverseIntl = TransformMatrixIntl.inverse;
-                Vector3 size = vol.CalculateLocalBounds().size;
-                ImageSizeIntl = new Vector2Int(Mathf.CeilToInt(size.x), Mathf.CeilToInt(size.z));
-                CaptureSizeIntl = new Vector2(size.x, size.z);
-                DistanceScaleIntl = new Vector2(CaptureSizeIntl.x / ImageSizeIntl.x, CaptureSizeIntl.y / ImageSizeIntl.y);
-            }
-            else
-            {
-                LegacyMappingIntl = true;
-                TransformMatrixIntl = Matrix4x4.TRS(new Vector3(0.0f, 1028f, 0.0f), Quaternion.Euler(90f, 0.0f, 0.0f), Vector3.one);
-                TransformMatrixInverseIntl = TransformMatrixIntl.inverse;
-                ushort s = Level.size;
-                float w = s - Level.border * 2f;
-                ImageSizeIntl = new Vector2Int(s, s);
-                CaptureSizeIntl = new Vector2(w, w);
-                DistanceScaleIntl = new Vector2(w / s, w / s);
-            }
 
-            Level.onPrePreLevelLoaded -= Reset;
-        }
+    public override object? ConvertFrom(ITypeDescriptorContext context, CultureInfo culture, object? value)
+    {
+        return value is not string str ? base.ConvertFrom(context, culture, value) : GridLocation.Parse(str);
     }
 }

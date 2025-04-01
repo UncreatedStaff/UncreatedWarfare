@@ -1,16 +1,13 @@
-﻿using System;
+using DanielWillett.SpeedBytes;
+using DanielWillett.SpeedBytes.Unity;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading;
-using System.Threading.Tasks;
-using SDG.Unturned;
-using Uncreated.Encoding;
-using Uncreated.Framework;
-using Uncreated.Json;
-using Uncreated.SQL;
-using UnityEngine;
+using Uncreated.Warfare.Configuration.JsonConverters;
+using Uncreated.Warfare.Database.Manual;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Moderation.Reports;
 
@@ -20,14 +17,14 @@ public class CheatingReport : Report
 {
     [JsonPropertyName("hits")]
     public ShotRecord[] Shots { get; set; } = Array.Empty<ShotRecord>();
-    public double GetAccuracy(EPlayerKill? type = null)
+    public double GetAccuracy(ERaycastInfoType? type = null)
     {
         int hits = 0;
 
         for (int i = 0; i < Shots.Length; ++i)
         {
             ref ShotRecord shot = ref Shots[i];
-            if (shot.HitType == EPlayerKill.NONE || type.HasValue && shot.HitType != type.Value)
+            if (shot.HitType == ERaycastInfoType.NONE || type.HasValue && shot.HitType != type.Value)
                 continue;
 
             ++hits;
@@ -36,14 +33,14 @@ public class CheatingReport : Report
         return hits / (double)Shots.Length;
     }
 
-    public double GetAccuracy(out AccuracyMap map, EPlayerKill? type = null)
+    public double GetAccuracy(out AccuracyMap map, ERaycastInfoType? type = null)
     {
         int hits = 0, head = 0, spine = 0, lfoot = 0, rfoot = 0, lleg = 0, rleg = 0, lhand = 0, rhand = 0, larm = 0, rarm = 0, lback = 0, rback = 0, lfront = 0, rfront = 0;
 
         for (int i = 0; i < Shots.Length; ++i)
         {
             ref ShotRecord shot = ref Shots[i];
-            if (shot.HitType == EPlayerKill.NONE || type.HasValue && shot.HitType != type.Value)
+            if (shot.HitType == ERaycastInfoType.NONE || type.HasValue && shot.HitType != type.Value)
                 continue;
 
             ++hits;
@@ -122,12 +119,14 @@ public class CheatingReport : Report
         for (int i = 0; i < Shots.Length; ++i)
             Shots[i].Write(writer);
     }
-    public override void ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
+    public override bool ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
     {
         if (propertyName.Equals("hits", StringComparison.InvariantCultureIgnoreCase))
             Shots = JsonSerializer.Deserialize<ShotRecord[]>(ref reader, options) ?? Array.Empty<ShotRecord>();
         else
-            base.ReadProperty(ref reader, propertyName, options);
+            return base.ReadProperty(ref reader, propertyName, options);
+
+        return true;
     }
     public override void Write(Utf8JsonWriter writer, JsonSerializerOptions options)
     {
@@ -141,7 +140,7 @@ public class CheatingReport : Report
     {
         await base.AddExtraInfo(db, workingList, formatter, token);
         
-        GetAccuracy(out AccuracyMap map, EPlayerKill.PLAYER);
+        GetAccuracy(out AccuracyMap map, ERaycastInfoType.PLAYER);
         StringBuilder limbMask = new StringBuilder(16);
 
         if (map.HeadAccuracy > 0)
@@ -195,7 +194,7 @@ public class CheatingReport : Report
 
         if (Shots.Length > 0)
         {
-            builder.Append($" INSERT INTO `{DatabaseInterface.TableReportShotRecords}` ({SqlTypes.ColumnList(
+            builder.Append($" INSERT INTO `{DatabaseInterface.TableReportShotRecords}` ({MySqlSnippets.ColumnList(
                 DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnReportsShotRecordAmmo, DatabaseInterface.ColumnReportsShotRecordAmmoName,
                 DatabaseInterface.ColumnReportsShotRecordItem, DatabaseInterface.ColumnReportsShotRecordItemName,
                 DatabaseInterface.ColumnReportsShotRecordDamageDone, DatabaseInterface.ColumnReportsShotRecordLimb,
@@ -210,11 +209,11 @@ public class CheatingReport : Report
             for (int i = 0; i < Shots.Length; ++i)
             {
                 ref ShotRecord record = ref Shots[i];
-                F.AppendPropertyList(builder, args.Count, 22, i, 1);
+                MySqlSnippets.AppendPropertyList(builder, args.Count, 22, i, 1);
                 args.Add(record.Ammo.ToString("N"));
-                args.Add(record.AmmoName.MaxLength(48) ?? string.Empty);
+                args.Add(record.AmmoName.Truncate(48) ?? string.Empty);
                 args.Add(record.Item.ToString("N"));
-                args.Add(record.ItemName.MaxLength(48) ?? string.Empty);
+                args.Add(record.ItemName.Truncate(48) ?? string.Empty);
                 args.Add(record.DamageDone);
                 args.Add(record.Limb.HasValue ? record.Limb.Value.ToString() : DBNull.Value);
                 args.Add(record.IsProjectile);
@@ -239,7 +238,7 @@ public class CheatingReport : Report
                 args.Add(record.ShootFromRotation.z);
                 args.Add(record.HitType.ToString());
                 args.Add(record.HitActor == null ? DBNull.Value : record.HitActor.Id);
-                args.Add(record.HitAsset.HasValue ? record.HitAsset.Value : DBNull.Value);
+                args.Add(record.HitAsset.HasValue ? record.HitAsset.Value.ToString("N") : DBNull.Value);
                 args.Add(record is { HitAsset: not null, HitAssetName: not null } ? record.HitAssetName : DBNull.Value);
                 args.Add(record.Timestamp.UtcDateTime);
             }
@@ -335,7 +334,7 @@ public readonly struct ShotRecord
 
     [JsonPropertyName("hit_type")]
     [JsonConverter(typeof(JsonStringEnumConverter))]
-    public EPlayerKill HitType { get; }
+    public ERaycastInfoType HitType { get; }
 
     [JsonPropertyName("hit_actor")]
     [JsonConverter(typeof(ActorConverter))]
@@ -376,7 +375,7 @@ public readonly struct ShotRecord
     public double Distance { get; }
 
     public ShotRecord() { }
-    public ShotRecord(Guid item, Guid ammo, string? itemName, string? ammoName, EPlayerKill hitType, IModerationActor? hitActor, Guid? hitAsset, string? hitAssetName, ELimb? limb, DateTimeOffset timestamp, Vector3 shootFromPoint, Vector3 shootFromRotation, Vector3? hitPoint, bool isProjectile, int damageDone, double distance)
+    public ShotRecord(Guid item, Guid ammo, string? itemName, string? ammoName, ERaycastInfoType hitType, IModerationActor? hitActor, Guid? hitAsset, string? hitAssetName, ELimb? limb, DateTimeOffset timestamp, Vector3 shootFromPoint, Vector3 shootFromRotation, Vector3? hitPoint, bool isProjectile, int damageDone, double distance)
     {
         Item = item;
         Ammo = ammo;
@@ -402,9 +401,9 @@ public readonly struct ShotRecord
         ItemName = reader.ReadNullableString();
         Ammo = reader.ReadGuid();
         AmmoName = reader.ReadNullableString();
-        HitType = (EPlayerKill)reader.ReadUInt8();
+        HitType = (ERaycastInfoType)reader.ReadUInt8();
         byte flag = reader.ReadUInt8();
-        if (HitType != EPlayerKill.NONE)
+        if (HitType != ERaycastInfoType.NONE)
         {
             HitActor = (flag & 1) != 0 ? Actors.GetActor(reader.ReadUInt64()) : null;
             HitAsset = (flag & 2) != 0 ? reader.ReadGuid() : null;
@@ -435,7 +434,7 @@ public readonly struct ShotRecord
         writer.Write((byte)HitType);
         byte flag = (byte)((HitActor != null ? 1 : 0) | (HitAsset.HasValue ? 2 : 0) | (Limb.HasValue ? 4 : 0) | (IsProjectile ? 8 : 0) | (HitPoint.HasValue ? 16 : 0));
         writer.Write(flag);
-        if (HitType != EPlayerKill.NONE)
+        if (HitType != ERaycastInfoType.NONE)
         {
             if (HitActor != null)
                 writer.Write(HitActor.Id);

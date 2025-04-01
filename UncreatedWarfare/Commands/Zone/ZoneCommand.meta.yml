@@ -1,0 +1,32 @@
+# ZoneCommand
+Description: "View or teleport to zones."
+Parameters:
+    # /zone go <location>
+  - Name: go
+    Aliases: [ tp, goto, teleport ]
+    Type: Verbatim
+    Description: "Teleport the <caller /> to <param 'location'/>'s spawn point."
+    Parameters:
+      - Name: location
+        Type: Uncreated.Warfare.Zones.Zone
+        Remainder: true
+    # /zone util <location>
+  - Name: util
+    Aliases: [ u, tools ]
+    Type: Verbatim
+    Description: "Utilities for creating or managing zones."
+    Parameters:
+      - Name: location
+        Aliases: [ position, loc, pos ]
+        Type: Verbatim
+        Description: "Print the <caller />'s current position and look angle."
+    # /zone visualize
+  - Name: visualize
+    Aliases: [ vis ]
+    Type: Verbatim
+    Description: "See the border of the zone the <caller />'s currently inside of, or <param 'location'/>."
+    Parameters:
+      - Name: location
+        Type: Uncreated.Warfare.Zones.Zone
+        Remainder: true
+        Optional: true
