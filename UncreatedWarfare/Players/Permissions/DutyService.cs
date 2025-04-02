@@ -11,6 +11,7 @@ using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Exceptions;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Logging;
+using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Signs;
@@ -318,6 +319,15 @@ public class DutyService : IAsyncEventListener<PlayerLeft>
             if (player.UnturnedPlayer.interact != null)
             {
                 player.UnturnedPlayer.interact.sendSalvageTimeOverride(-1f);
+            }
+
+            if (player.UnturnedPlayer.quests != null)
+            {
+                if (player.UnturnedPlayer.quests.isMarkerPlaced)
+                {
+                    if (!player.IsSquadLeader() || player.UnturnedPlayer.quests.markerTextOverride == null)
+                        player.UnturnedPlayer.quests.replicateSetMarker(false, Vector3.zero);
+                }
             }
 
             if (_zoneStore.IsInMainBase(player))

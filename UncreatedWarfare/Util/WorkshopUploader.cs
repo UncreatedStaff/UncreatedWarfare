@@ -8,6 +8,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using Uncreated.Warfare.Services;
@@ -162,6 +163,10 @@ public class WorkshopUploader : IHostedService
                 string? workingDirectory = Path.GetDirectoryName(parameters.SteamCmdPath);
 
                 string app = parameters.SteamCmdPath;
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                {
+                    app = "/bin/bash " + app;
+                }
 
                 string[] cl = [ $"+login {parameters.Username} {parameters.Password}", $"+workshop_build_item \"{vdfPath}\"", "+quit" ];
 

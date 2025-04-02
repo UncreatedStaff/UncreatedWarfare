@@ -51,7 +51,7 @@ public class SquadMenuUI :
     public MySquadMenu MySquad { get; } = new MySquadMenu();
 
     public SquadMenuUI(IServiceProvider serviceProvider, AssetConfiguration assetConfig, ILoggerFactory loggerFactory)
-        : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:SquadMenuHUD"), debugLogging: true, staticKey: true)
+        : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:SquadMenuHUD"), debugLogging: false, staticKey: true)
     {
         _squadManager = serviceProvider.GetRequiredService<SquadManager>();
         _translations = serviceProvider.GetRequiredService<TranslationInjection<SquadTranslations>>().Value;

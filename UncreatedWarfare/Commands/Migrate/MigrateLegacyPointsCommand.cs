@@ -1,4 +1,3 @@
-﻿#if DEBUG
 using Microsoft.EntityFrameworkCore;
 using MySqlConnector;
 using System.Collections.Generic;
@@ -11,7 +10,7 @@ using Uncreated.Warfare.Stats;
 
 namespace Uncreated.Warfare.Commands;
 
-[Command("offenses"), HideFromHelp, SubCommandOf(typeof(MigrateCommand))]
+[Command("points"), HideFromHelp, SubCommandOf(typeof(MigrateCommand))]
 internal sealed class MigrateLegacyPointsCommand : IExecutableCommand
 {
     private readonly IManualMySqlProvider _mySqlProvider;
@@ -102,4 +101,3 @@ internal sealed class MigrateLegacyPointsCommand : IExecutableCommand
         public uint Credits;
     }
 }
-#endif

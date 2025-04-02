@@ -1,4 +1,3 @@
-﻿#if DEBUG
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -422,4 +421,3 @@ internal sealed class MigrateLegacyOffensesCommand : IExecutableCommand
         }
     }
 }
-#endif

@@ -1,17 +1,13 @@
 using System;
-using System.Diagnostics.CodeAnalysis;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
-using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Signs;
-using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Interaction.Requests;
 
 public class PunchToRequestTweaks : IAsyncEventListener<PlayerPunched>
 {
-    private const float UnturnedPunchDistance = 1.75f;
     private readonly SignInstancer _signInstancer;
     private readonly ILogger _logger;
     private readonly ZoneStore _zoneStore;
@@ -26,14 +22,16 @@ public class PunchToRequestTweaks : IAsyncEventListener<PlayerPunched>
     public async UniTask HandleEventAsync(PlayerPunched e, IServiceProvider serviceProvider, CancellationToken token = default)
     {
         // ignore punches if outside main
-        if (!_zoneStore.IsInMainBase(e.Player, e.Player.Team.Faction))
-            return;
-
         IRequestable<object>? requestable = null;
-        if (TryGetTargetRootTransform(e.Player, out Transform? transform))
-            requestable = RequestHelper.GetRequestable(transform, _signInstancer);
+
+        if (e.InputInfo.type is ERaycastInfoType.BARRICADE or ERaycastInfoType.STRUCTURE or ERaycastInfoType.VEHICLE or ERaycastInfoType.OBJECT)
+            requestable = RequestHelper.GetRequestable(e.InputInfo.transform, _signInstancer);
 
         if (requestable == null)
+            return;
+
+        Vector3 pos = e.InputInfo.transform.position;
+        if (!_zoneStore.IsInMainBase(pos) && !_zoneStore.IsInWarRoom(pos))
             return;
 
         await RequestHelper.RequestAsync(
@@ -44,19 +42,5 @@ public class PunchToRequestTweaks : IAsyncEventListener<PlayerPunched>
             typeof(RequestCommandResultHandler),
             token
         );
-    }
-
-    private static bool TryGetTargetRootTransform(WarfarePlayer player, [MaybeNullWhen(false)] out Transform transform)
-    {
-        Transform aim = player.UnturnedPlayer.look.aim;
-        RaycastInfo info = DamageTool.raycast(new Ray(aim.position, aim.forward), UnturnedPunchDistance, RayMasks.DAMAGE_CLIENT & ~RayMasks.ENEMY, player.UnturnedPlayer);
-        if (info.transform == null)
-        {
-            transform = null;
-            return false;
-        }
-
-        transform = info.transform.root;
-        return true;
     }
 }

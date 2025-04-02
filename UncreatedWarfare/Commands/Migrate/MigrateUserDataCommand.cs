@@ -1,4 +1,3 @@
-#if DEBUG
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -95,7 +94,7 @@ internal sealed class MigrateUserDataCommand : IExecutableCommand
         await foreach (KitAccess access in _dbContext.KitAccess.AsAsyncEnumerable().WithCancellation(token))
             knownPlayers.Add(access.Steam64);
 
-        await foreach(WarfareUserData data in _dbContext.UserData.AsAsyncEnumerable().WithCancellation(token))
+        await foreach (WarfareUserData data in _dbContext.UserData.AsAsyncEnumerable().WithCancellation(token))
             knownPlayers.Remove(data.Steam64);
 
         int c = 0;
@@ -104,7 +103,7 @@ internal sealed class MigrateUserDataCommand : IExecutableCommand
             ++c;
             if (c % 50 == 0 || c == knownPlayers.Count || c == 1)
             {
-                Context.ReplyString($"Users migrated: {c} / {knownPlayers.Count} ({c / knownPlayers.Count:P2}.");
+                Context.ReplyString($"Users migrated: {c} / {knownPlayers.Count} ({(double)c / knownPlayers.Count:P2}.");
             }
 
             PlayerNames username = default;
@@ -115,23 +114,28 @@ internal sealed class MigrateUserDataCommand : IExecutableCommand
                 reader =>
                 {
                     username.CharacterName = reader.IsDBNull(0) ? null! : reader.GetString(0);
-                    username.NickName      = reader.IsDBNull(1) ? null! : reader.GetString(1);
-                    username.PlayerName    = reader.IsDBNull(2) ? null! : reader.GetString(2);
+                    username.NickName = reader.IsDBNull(1) ? null! : reader.GetString(1);
+                    username.PlayerName = reader.IsDBNull(2) ? null! : reader.GetString(2);
                     username.WasFound = true;
                     return false;
                 });
 
             username.CharacterName ??= steam64.ToString("D17", CultureInfo.InvariantCulture);
-            username.NickName      ??= steam64.ToString("D17", CultureInfo.InvariantCulture);
-            username.PlayerName    ??= steam64.ToString("D17", CultureInfo.InvariantCulture);
+            username.NickName ??= steam64.ToString("D17", CultureInfo.InvariantCulture);
+            username.PlayerName ??= steam64.ToString("D17", CultureInfo.InvariantCulture);
 
             DateTimeOffset? firstJoined = null;
             DateTimeOffset? lastJoined = null;
-            await _mySqlProvider.QueryAsync($"SELECT `FirstLoggedIn`, `LastLoggedIn` FROM `logindata` WHERE `Steam64` = {steam64};", null, token,
+            await _mySqlProvider.QueryAsync(
+                $"SELECT `FirstLoggedIn`, `LastLoggedIn` FROM `logindata` WHERE `Steam64` = {steam64};", null, token,
                 reader =>
                 {
-                    firstJoined = reader.IsDBNull(0) ? null : new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(0), DateTimeKind.Utc));
-                    lastJoined = reader.IsDBNull(1) ? null : new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(1), DateTimeKind.Utc));
+                    firstJoined = reader.IsDBNull(0)
+                        ? null
+                        : new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(0), DateTimeKind.Utc));
+                    lastJoined = reader.IsDBNull(1)
+                        ? null
+                        : new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(1), DateTimeKind.Utc));
                     return false;
                 });
 
@@ -166,4 +170,3 @@ internal sealed class MigrateUserDataCommand : IExecutableCommand
         Context.ReplyString("Done.");
     }
 }
-#endif

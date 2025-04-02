@@ -1,4 +1,4 @@
-﻿namespace Uncreated.Warfare.Events.Models.Players;
+namespace Uncreated.Warfare.Events.Models.Players;
 
 public class PlayerDropMarkerRequested : CancellablePlayerEvent
 {
@@ -11,7 +11,7 @@ public class PlayerDropMarkerRequested : CancellablePlayerEvent
     /// </summary>
     public string MarkerDisplayText { get; set; }
     /// <summary>
-    /// The displayed text of the marker that the player is requesting to place.
+    /// If the marker is being placed instead of cleared.
     /// </summary>
     public bool IsNewMarkerBeingPlaced { get; set; }
 }

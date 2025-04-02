@@ -1,4 +1,4 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
@@ -111,7 +111,7 @@ public static class RequestHelper
     public static IRequestable<object>? GetRequestable(Transform transform, SignInstancer signInstancer)
     {
         IRequestable<object>? requestable = ContainerHelper.FindComponent<IRequestable<object>>(transform);
-        if (requestable != null || !(transform.CompareTag("Barricade") || transform.CompareTag("Vehicle")))
+        if (requestable != null || !transform.CompareTag("Barricade") && !transform.CompareTag("Vehicle"))
         {
             return requestable;
         }
