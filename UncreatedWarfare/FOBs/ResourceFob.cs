@@ -94,7 +94,7 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable
             {
                 Ticker = _loopTicker,
                 Proximity = FriendlyProximity,
-                ObjectsToCollect = () => _playerService.OnlinePlayers.Where(p => p.Team == Team),
+                ObjectsToCollect = () => _playerService.OnlinePlayers.Where(p => p.Team.IsFriendly(Team)),
                 PositionFunction = p => p.Position
             }
         );
@@ -103,7 +103,7 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable
             {
                 Ticker = _loopTicker,
                 Proximity = FriendlyProximity,
-                ObjectsToCollect = () => _playerService.OnlinePlayers.Where(p => p.Team != Team),
+                ObjectsToCollect = () => _playerService.OnlinePlayers.Where(p => p.Team.IsOpponent(Team)),
                 PositionFunction = p => p.Position
             }
         );
@@ -122,10 +122,10 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable
     }
 
 
-    public bool IsVibileToPlayer(WarfarePlayer player) => player.Team == Team;
+    public bool IsVibileToPlayer(WarfarePlayer player) => player.IsOnline && player.Team == Team;
     private float GetProxyScore(WarfarePlayer enemy)
     {
-        if (enemy.UnturnedPlayer.life.isDead || enemy.UnturnedPlayer.movement.getVehicle() != null || enemy.Team == Team)
+        if (!enemy.IsOnline || enemy.UnturnedPlayer.life.isDead || enemy.UnturnedPlayer.movement.getVehicle() != null || enemy.Team.IsFriendly(Team))
             return 0;
 
         float distanceFromFob = (enemy.Position - Position).magnitude;

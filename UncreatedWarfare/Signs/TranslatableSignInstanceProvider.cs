@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Globalization;
 using System.Linq;
 using Uncreated.Warfare.Models.Localization;
@@ -11,6 +11,7 @@ namespace Uncreated.Warfare.Signs;
 /// <summary>
 /// Handles direct translations in signs.
 /// </summary>
+[SignPrefix("sign")]
 internal class TranslatableSignInstanceProvider : ISignInstanceProvider
 {
     private readonly ITranslationService _translationService;

@@ -115,7 +115,7 @@ public class VehicleOnPreDamage : IHarmonyPatch
             instigatorVehicle = onlineInstigator.UnturnedPlayer.movement.getVehicle().transform.GetComponent<WarfareVehicleComponent>().WarfareVehicle;
 
         // landmines get special treatment in VehicleDamageTrackerItemTweak
-        Console.WriteLine($"Damage origin: {damageOrigin}, damage: {pendingDamage}, canRepair: {canRepair}, instigator: {instigatorId}.");
+        
         if (damageOrigin != EDamageOrigin.Trap_Explosion)
         {
             if (onlineInstigator != null)

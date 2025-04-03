@@ -112,7 +112,6 @@ partial class EventDispatcher
 
         WarfarePlayer? owner = _playerService.GetOnlinePlayerOrNull(vehicle.lockedOwner);
 
-        Console.WriteLine($"Damage tracker: {warfareVehicle.DamageTracker.LatestDamageInstigator} ({warfareVehicle.DamageTracker.LatestDamageCause}).");
         if (warfareVehicle.DamageTracker.LatestDamageInstigator != null)
         {
             instigatorId = warfareVehicle.DamageTracker.LatestDamageInstigator.Value;
@@ -123,7 +122,6 @@ partial class EventDispatcher
 
         if (warfareVehicle.TranportTracker.LastKnownDriver != null)
         {
-            Console.WriteLine($"Driver: {warfareVehicle.TranportTracker.LastKnownDriver}.");
             lastDriverId = warfareVehicle.TranportTracker.LastKnownDriver.Value;
             lastDriver = _playerService.GetOnlinePlayerOrNull(lastDriverId);
         }

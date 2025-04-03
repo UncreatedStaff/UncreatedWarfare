@@ -382,7 +382,7 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         try
         {
             // give access to the kit
-            if (!await _kitAccessService.UpdateAccessAsync(player.Steam64, kit.Key, KitAccessType.Purchase, CSteamID.Nil, token))
+            if (!await _kitAccessService.UpdateAccessAsync(player.Steam64, kit.Key, KitAccessType.Credits, CSteamID.Nil, token))
             {
                 return false;
             }

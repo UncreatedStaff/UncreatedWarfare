@@ -289,6 +289,7 @@ public class DutyService : IAsyncEventListener<PlayerLeft>
             _logger.LogDebug(ex, "Failed to trigger SendDutyChanged.");
         }
 
+        await UniTask.SwitchToMainThread(token);
         _signs.UpdateSigns<KitSignInstanceProvider>(player);
     }
 

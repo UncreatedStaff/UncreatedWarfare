@@ -151,7 +151,7 @@ public class ClaimToRearmTweaks : // todo: move this class out of this namespace
 
             if (fullmags >= requiredMags)
             {
-                _logger.LogDebug($"Weapon '{gun.FriendlyName}' ({firearmClass}) already has {fullmags}/{requiredMags} full mags, and does not need to be resupplied.");
+                //_logger.LogDebug($"Weapon '{gun.FriendlyName}' ({firearmClass}) already has {fullmags}/{requiredMags} full mags, and does not need to be resupplied.");
                 continue;
             }
 
@@ -159,7 +159,7 @@ public class ClaimToRearmTweaks : // todo: move this class out of this namespace
             
             float magazinesRefillCost = GetMagazineCost(firearmClass) * magsThatNeedRefilling;
 
-            _logger.LogDebug($"Weapon '{gun.FriendlyName}' ({firearmClass}) has {magsThatNeedRefilling} that need refilling ({fullmags}/{requiredMags} full mags). The resupply cost will be {magazinesRefillCost}.");
+            //_logger.LogDebug($"Weapon '{gun.FriendlyName}' ({firearmClass}) has {magsThatNeedRefilling} that need refilling ({fullmags}/{requiredMags} full mags). The resupply cost will be {magazinesRefillCost}.");
 
             totalRearmCost += magazinesRefillCost;
         }
@@ -173,13 +173,13 @@ public class ClaimToRearmTweaks : // todo: move this class out of this namespace
 
             if (countInInventory >= requiredCount)
             {
-                _logger.LogDebug($"Equipment type '{equipmentAsset.FriendlyName}' already has {countInInventory}/{requiredCount} units, and does not need to be resupplied.");
+                //_logger.LogDebug($"Equipment type '{equipmentAsset.FriendlyName}' already has {countInInventory}/{requiredCount} units, and does not need to be resupplied.");
                 continue;
             }
             int numberToResupply = requiredCount - countInInventory;
             float equipmentResupplyCost = GetEquipmentCost(equipmentAsset) * numberToResupply;
 
-            _logger.LogDebug($"Equipment type '{equipmentAsset.FriendlyName}' is missing {numberToResupply} units ({countInInventory}/{requiredCount} required). The resupply cost will be {equipmentResupplyCost}.");
+            //_logger.LogDebug($"Equipment type '{equipmentAsset.FriendlyName}' is missing {numberToResupply} units ({countInInventory}/{requiredCount} required). The resupply cost will be {equipmentResupplyCost}.");
 
             totalRearmCost += equipmentResupplyCost;
         }

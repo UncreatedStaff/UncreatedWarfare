@@ -308,7 +308,7 @@ public class PointsService : IEventListener<PlayerTeamChanged> // todo player eq
             );
         }
 
-        if (oldRep != rep)
+        // if (oldRep != rep)
             // todo: ActionLog.Add(ActionLogType.ReputationChanged, $"{oldRep} -> {rep} | Event: '{@event.EventName}'", playerId);
 
         await UniTask.SwitchToMainThread(CancellationToken.None);

@@ -22,16 +22,16 @@ public class WarfareUserData
     public string PlayerName { get; set; } = null!;
 
     [Required]
-    [MaxLength(30)]
+    [MaxLength(40)]
     [Column(DatabaseInterface.ColumnUserDataCharacterName)]
     public string CharacterName { get; set; } = null!;
 
     [Required]
-    [MaxLength(30)]
+    [MaxLength(40)]
     [Column(DatabaseInterface.ColumnUserDataNickName)]
     public string NickName { get; set; } = null!;
 
-    [MaxLength(30)]
+    [MaxLength(40)]
     [Column(DatabaseInterface.ColumnUserDataDisplayName)]
     public string? DisplayName { get; set; }
 

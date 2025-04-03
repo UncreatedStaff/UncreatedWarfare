@@ -1,5 +1,6 @@
 using Autofac.Builder;
 using DanielWillett.ReflectionTools;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.FileSystemGlobbing;
 using Microsoft.Extensions.FileSystemGlobbing.Abstractions;
@@ -721,6 +722,8 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
             _dbContext.Update(layout.LayoutStats);
             await _dbContext.SaveChangesAsync(CancellationToken.None);
 
+            _dbContext.ChangeTracker.Clear();;
+
             await UniTask.SwitchToMainThread(token);
 
             // set layout ID of all players
@@ -788,13 +791,9 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
                 layout.LayoutStats.WinnerFactionId = team.Faction.PrimaryKey;
             }
             _dbContext.Update(layout.LayoutStats);
-        }
-        else
-        {
-            _dbContext.Remove(layout.LayoutStats);
-        }
 
-        await _dbContext.SaveChangesAsync(token);
+            await _dbContext.SaveChangesAsync(token);
+        }
 
         _dbContext.ChangeTracker.Clear();
 

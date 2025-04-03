@@ -39,17 +39,15 @@ public class FallingBuildable : FallingItem
         
         for (int attempts = 0; attempts < 10; attempts++)
         {
-            Console.WriteLine($"Supply crate placement attempt #{attempts + 1}");
+            
             int numberOfOverlaps = Physics.OverlapSphereNonAlloc(placePosition, distanceBetweenAdjacentCrateCenters / 2 - 0.1f, colliders, RayMasks.BARRICADE);
             if (numberOfOverlaps > 0)
             {
                 placePosition += Quaternion.Euler(0, _placementYaw, 0) * new Vector3(0, 0, distanceBetweenAdjacentCrateCenters);
-                Console.WriteLine($"Supply crate encountered obstruction. It will attempt to place a little further away - {Vector3.Distance(placePosition, FinalRestPosition)} away from the original drop point.");
                 placePosition.y = TerrainUtility.GetHighestPoint(placePosition, 0);
             }
             else
             {
-                Console.WriteLine($"No more obstructions encountered. Supply crate will place {Vector3.Distance(placePosition, FinalRestPosition)} away from the original drop point.");
                 break;
             }
         }

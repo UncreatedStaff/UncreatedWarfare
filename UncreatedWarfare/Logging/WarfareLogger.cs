@@ -69,8 +69,16 @@ public class WarfareLogger : ILogger
 
         if (exception != null)
         {
+#if RELEASE
+            if (exception is not OperationCanceledException)
+            {
+                formattedText += Environment.NewLine + ExceptionFormatter.FormatException(exception, _loggerProvider.StackCleaner);
+                unformattedText += Environment.NewLine + exception;
+            }
+#else
             formattedText += Environment.NewLine + ExceptionFormatter.FormatException(exception, _loggerProvider.StackCleaner);
             unformattedText += Environment.NewLine + exception;
+#endif
         }
 
         _loggerProvider.QueueOutput(logLevel, formattedText, unformattedText);

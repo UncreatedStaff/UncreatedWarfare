@@ -158,7 +158,7 @@ public class SessionManager :
                 }
             }
 
-            _logger.LogDebug("Created session {0} for: {1}.", record.SessionId, player);
+            _logger.LogConditional("Created session {0} for: {1}.", record.SessionId, player);
             return record;
         }
         finally
@@ -223,7 +223,7 @@ public class SessionManager :
                 }
             }
 
-            _logger.LogDebug("Created sessions for all players.");
+            _logger.LogConditional("Created sessions for all players.");
         }
         finally
         {
@@ -356,14 +356,14 @@ public class SessionManager :
         _dbContext.Update(record);
         FixupSession(_dbContext, record);
 
-        _logger.LogDebug("Ended session {0} for {1}.", record.SessionId, record.Steam64);
+        _logger.LogConditional("Ended session {0} for {1}.", record.SessionId, record.Steam64);
     }
 
     private void TryStartCreateSessionForPlayerIfNeeded(WarfarePlayer player, string context)
     {
         if (player.IsDisconnected || !IsSessionExpired(player))
         {
-            _logger.LogDebug("Skipping new session for player {0} (" + context + ").", player);
+            _logger.LogConditional("Skipping new session for player {0} (" + context + ").", player);
             return;
         }
 
@@ -372,7 +372,7 @@ public class SessionManager :
             try
             {
                 await StartNewSession(player, false, player.DisconnectToken);
-                _logger.LogDebug("Started new session for player {0} (" + context + ").", player);
+                _logger.LogConditional("Started new session for player {0} (" + context + ").", player);
             }
             catch (Exception ex)
             {
@@ -447,7 +447,7 @@ public class SessionManager :
     [EventListener(MustRunInstantly = true)]
     void IEventListener<PlayerJoined>.HandleEvent(PlayerJoined e, IServiceProvider serviceProvider)
     {
-        _logger.LogDebug("Creating session for {0}. (joined)", e.Player);
+        _logger.LogConditional("Creating session for {0}. (joined)", e.Player);
         if (_sessions.TryRemove(e.Steam64.m_SteamID, out SessionRecord r))
         {
             _logger.LogWarning("Removed pre-existing session for {0} on join. This should never happen.", e.Player);

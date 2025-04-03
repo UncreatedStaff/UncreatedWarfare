@@ -84,11 +84,10 @@ internal sealed class SpottedService : ILayoutHostedService, IEventListener<Vehi
             return;
         }
 
+        shouldAllow = false;
+
         if (hit.transform == null)
-        {
-            shouldAllow = false;
             return;
-        }
 
         WarfarePlayer spotter = _playerService.GetOnlinePlayer(gun.player);
 
@@ -189,8 +188,6 @@ internal sealed class SpottedService : ILayoutHostedService, IEventListener<Vehi
                 Spot(spotter, team, spotted, _translations.SpottedTargetFOB.Translate());
                 break;
         }
-
-        shouldAllow = false;
     }
 
     private void Spot(WarfarePlayer spotter, Team targetTeam, SpottableObjectComponent spottedComp, string targetName)

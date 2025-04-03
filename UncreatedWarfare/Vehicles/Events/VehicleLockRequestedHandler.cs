@@ -1,22 +1,31 @@
-﻿namespace Uncreated.Warfare.Vehicles.Events;
-#if false
+using System;
+using Uncreated.Warfare.Events.Models;
+using Uncreated.Warfare.Events.Models.Vehicles;
+using Uncreated.Warfare.Interaction;
+using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Translations;
+
+namespace Uncreated.Warfare.Vehicles.Events;
+
 internal class VehicleLockRequestedHandler : IEventListener<ChangeVehicleLockRequested>
 {
+    private readonly ChatService _chatService;
+    private readonly PlayersTranslations _translations;
+
+    public VehicleLockRequestedHandler(ChatService chatService, TranslationInjection<PlayersTranslations> translations)
+    {
+        _chatService = chatService;
+        _translations = translations.Value;
+    }
+
     void IEventListener<ChangeVehicleLockRequested>.HandleEvent(ChangeVehicleLockRequested e, IServiceProvider serviceProvider)
     {
-        if (e.IsLocking || e.Vehicle.isDead || e.Player.OnDuty())
+        if (e.IsLocking || e.Vehicle.Vehicle.isDead || e.Player.IsOnDuty)
             return;
 
         // unlocking
 
-        if (!e.Vehicle.TryGetComponent(out VehicleComponent vehicleComponent))
-            return;
-
-        if (TeamManager.IsInAnyMain(e.Vehicle.transform.position) && e.Vehicle.lockedOwner.m_SteamID == e.Steam64.m_SteamID)
-            return;
-
-        e.Player.SendChat(T.UnlockVehicleNotAllowed);
+        _chatService.Send(e.Player, _translations.UnlockVehicleNotAllowed);
         e.Cancel();
     }
 }
-#endif

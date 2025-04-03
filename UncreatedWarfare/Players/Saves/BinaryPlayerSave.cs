@@ -10,7 +10,7 @@ public class BinaryPlayerSave : ISaveableState
 {
     private const byte DataVersion = 2;
 
-    private const int FlagLength = 9;
+    private const int FlagLength = 10;
 
     private static readonly ByteReader Reader = new ByteReader();
     private static readonly ByteWriter Writer = new ByteWriter(64);
@@ -36,6 +36,7 @@ public class BinaryPlayerSave : ISaveableState
     public bool WasKitLowAmmo { get; set; }
     public bool HasSeenVoiceChatNotice { get; set; }
     public bool WasNitroBoosting { get; set; }
+    public bool NeedsNewKitOnSpawn { get; set; }
 
     /// <summary>
     /// If quests (mainly daily quests) are auto-tracked.
@@ -86,6 +87,7 @@ public class BinaryPlayerSave : ISaveableState
         flags[6] = IsNerd;
         flags[7] = HasSeenVoiceChatNotice;
         flags[8] = WasKitLowAmmo;
+        flags[9] = NeedsNewKitOnSpawn;
 
         Writer.Write(DataVersion);
 
@@ -177,6 +179,7 @@ public class BinaryPlayerSave : ISaveableState
         IsNerd = flags[6];
         HasSeenVoiceChatNotice = flags[7];
         WasKitLowAmmo = flags[8];
+        NeedsNewKitOnSpawn = flags[9];
 
         WasReadFromFile = true;
 

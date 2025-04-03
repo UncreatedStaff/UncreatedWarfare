@@ -91,6 +91,7 @@ using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Inventory;
 using Uncreated.Warfare.Util.Timing;
 using Uncreated.Warfare.Vehicles;
+using Uncreated.Warfare.Vehicles.Events;
 using Uncreated.Warfare.Vehicles.Events.Tweaks;
 using Uncreated.Warfare.Vehicles.Events.Tweaks.AdvancedDamage;
 using Uncreated.Warfare.Vehicles.Spawners;
@@ -938,6 +939,9 @@ public sealed class WarfareModule
         bldr.RegisterType<ShoveableTweaks>()
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+        bldr.RegisterType<VehicleLockRequestedHandler>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
         bldr.RegisterType<ClaimToRearmTweaks>()
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);

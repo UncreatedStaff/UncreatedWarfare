@@ -22,7 +22,7 @@ public class AdvancedVehicleDamageApplier
             Multiplier = damageMultiplier,
             Timestamp = DateTime.Now
         });
-        _logger.LogDebug($"Registered direct hit damage multiplier of {damageMultiplier} for vehicle. Multipliers queued for this vehicle: {_damageQueue.Count}");
+        //_logger.LogDebug($"Registered direct hit damage multiplier of {damageMultiplier} for vehicle. Multipliers queued for this vehicle: {_damageQueue.Count}");
     }
 
     public AdvancedDamagePending? ApplyLatestPendingDirectHit()
@@ -34,7 +34,7 @@ public class AdvancedVehicleDamageApplier
             if (timeElapsedSinceDamageRegistered.TotalSeconds > 0.1f) // do not apply pending that's too old (older than a fraction of a second)
                 continue;
             
-            _logger.LogDebug($"Applying advanced vehicle damage multiplier of {pendingDamage.Multiplier}.");
+            //_logger.LogDebug($"Applying advanced vehicle damage multiplier of {pendingDamage.Multiplier}.");
             return pendingDamage;
         }
         

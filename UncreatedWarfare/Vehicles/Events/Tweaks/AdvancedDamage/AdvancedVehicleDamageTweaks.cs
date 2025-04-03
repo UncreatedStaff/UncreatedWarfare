@@ -117,17 +117,17 @@ public class AdvancedVehicleDamageTweaks :
             finalMultiplier = 0.1f;
         
         ushort newDamage = (ushort) Mathf.RoundToInt(e.PendingDamage * finalMultiplier);
-        _logger.LogDebug(
-            $"Final damage multiplier of {finalMultiplier} " +
-            $"(caused by weapon: {latestInstigatorWeapon?.FriendlyName ?? "unknown"}) " +
-            $"will be applied to vehicle {e.Vehicle.Vehicle.asset.FriendlyName}.\n" +
-            $"Original damage: {e.PendingDamage} - " +
-            $"New damage: {newDamage} - " +
-            $"Direct Hit: {directHit.HasValue} - " +
-            $"Direct Hit Multiplier: {directHit?.Multiplier} - " +
-            $"Misused Direct Hit Weapon: {misusedDirectHitWeapon} - " +
-            $"Misused Ground Attack: {misusedGroundAttackWeapon} - " +
-            $"Misused Anti Air: {misusedAntiAirWeapon}");
+        //_logger.LogDebug(
+        //    $"Final damage multiplier of {finalMultiplier} " +
+        //    $"(caused by weapon: {latestInstigatorWeapon?.FriendlyName ?? "unknown"}) " +
+        //    $"will be applied to vehicle {e.Vehicle.Vehicle.asset.FriendlyName}.\n" +
+        //    $"Original damage: {e.PendingDamage} - " +
+        //    $"New damage: {newDamage} - " +
+        //    $"Direct Hit: {directHit.HasValue} - " +
+        //    $"Direct Hit Multiplier: {directHit?.Multiplier} - " +
+        //    $"Misused Direct Hit Weapon: {misusedDirectHitWeapon} - " +
+        //    $"Misused Ground Attack: {misusedGroundAttackWeapon} - " +
+        //    $"Misused Anti Air: {misusedAntiAirWeapon}");
         
         e.PendingDamage = newDamage;
     }

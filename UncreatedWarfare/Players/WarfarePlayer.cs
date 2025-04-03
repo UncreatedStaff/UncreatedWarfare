@@ -118,7 +118,7 @@ public class WarfarePlayer :
     /// <inheritdoc />
     public Vector3 Position
     {
-        get => Transform.position;
+        get => IsOnline ? Transform.position : Vector3.zero;
         set
         {
             GameThread.AssertCurrent();

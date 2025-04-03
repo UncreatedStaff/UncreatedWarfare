@@ -119,11 +119,11 @@ namespace Uncreated.Warfare.Migrations
                         .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn),
                     PlayerName = table.Column<string>(type: "varchar(48)", maxLength: 48, nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
-                    CharacterName = table.Column<string>(type: "varchar(30)", maxLength: 30, nullable: false)
+                    CharacterName = table.Column<string>(type: "varchar(40)", maxLength: 30, nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
-                    NickName = table.Column<string>(type: "varchar(30)", maxLength: 30, nullable: false)
+                    NickName = table.Column<string>(type: "varchar(40)", maxLength: 30, nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
-                    DisplayName = table.Column<string>(type: "varchar(30)", maxLength: 30, nullable: true)
+                    DisplayName = table.Column<string>(type: "varchar(40)", maxLength: 30, nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     FirstJoined = table.Column<DateTime>(type: "datetime", nullable: true),
                     LastJoined = table.Column<DateTime>(type: "datetime", nullable: true),
@@ -1276,7 +1276,7 @@ namespace Uncreated.Warfare.Migrations
                 {
                     Id = table.Column<ulong>(type: "bigint unsigned", nullable: false)
                         .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn),
-                    DeathMessage = table.Column<string>(type: "varchar(256)", maxLength: 256, nullable: false)
+                    DeathMessage = table.Column<string>(type: "varchar(512)", maxLength: 512, nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     DeathCause = table.Column<string>(type: "enum('BLEEDING','BONES','FREEZING','BURNING','FOOD','WATER','GUN','MELEE','ZOMBIE','ANIMAL','SUICIDE','KILL','INFECTION','PUNCH','BREATH','ROADKILL','VEHICLE','GRENADE','SHRED','LANDMINE','ARENA','MISSILE','CHARGE','SPLASH','SENTRY','ACID','BOULDER','BURNER','SPIT','SPARK','37')", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),

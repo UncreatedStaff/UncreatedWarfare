@@ -167,6 +167,14 @@ public class Squad : ITranslationArgument
     {
         return player.Equals(_members[0]);
     }
+    
+    public ulong[] GetMemberList()
+    {
+        ulong[] arr = new ulong[_members.Count];
+        for (int i = 0; i < arr.Length; ++i)
+            arr[i] = _members[i].Steam64.m_SteamID;
+        return arr;
+    }
 
     internal void DisbandMembers()
     {

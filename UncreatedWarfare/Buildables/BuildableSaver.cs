@@ -55,7 +55,7 @@ public class BuildableSaver :
         _signs = serviceProvider.GetService<SignInstancer>();
         _chatService = serviceProvider.GetService<ChatService>();
         _translations = serviceProvider.GetService<TranslationInjection<StructureTranslations>>()?.Value;
-
+        
         _logger = serviceProvider.GetRequiredService<ILogger<BuildableSaver>>();
         _playerService = serviceProvider.GetRequiredService<IPlayerService>();
         _mapScheduler = serviceProvider.GetRequiredService<MapScheduler>();

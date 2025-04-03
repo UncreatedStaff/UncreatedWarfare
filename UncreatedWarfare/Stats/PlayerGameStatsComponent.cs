@@ -15,6 +15,7 @@ public class PlayerGameStatsComponent : IPlayerComponent, IDisposable, ILeaderbo
 {
     private LeaderboardPhase? _phase;
     private PointsUI? _pointsUi;
+    private IAssetLink<ItemGunAsset> _laserDesignator;
 
 #nullable disable
 
@@ -42,6 +43,8 @@ public class PlayerGameStatsComponent : IPlayerComponent, IDisposable, ILeaderbo
 
         _phase = layout.Phases.OfType<LeaderboardPhase>().FirstOrDefault();
         _pointsUi = serviceProvider.GetService<PointsUI>();
+        _laserDesignator = serviceProvider.GetRequiredService<AssetConfiguration>()
+            .GetAssetLink<ItemGunAsset>("Items:LaserDesignator");
 
         Stats = Array.Empty<double>();
 
@@ -67,7 +70,7 @@ public class PlayerGameStatsComponent : IPlayerComponent, IDisposable, ILeaderbo
 
     private void OnBulletHit(UseableGun gun, BulletInfo bullet, InputInfo hit, ref bool shouldallow)
     {
-        if (!shouldallow || hit.type != ERaycastInfoType.PLAYER || !Player.Equals(gun.player))
+        if (!shouldallow || hit.type != ERaycastInfoType.PLAYER || !Player.Equals(gun.player) || _laserDesignator.MatchAsset(gun.equippedGunAsset))
             return;
 
         InteractableVehicle? vehicle = gun.player.movement.getVehicle();

@@ -1,4 +1,4 @@
-#define DAMAGE_LOGGING
+//#define DAMAGE_LOGGING
 using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Players;

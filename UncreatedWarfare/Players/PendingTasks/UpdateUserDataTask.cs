@@ -1,3 +1,5 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using SDG.NetTransport;
 using System;
 using Uncreated.Warfare.Database.Abstractions;
@@ -92,7 +94,9 @@ public class UpdateUserDataTask : IPlayerPendingTask
                 found = true;
                 ++existingHwid.LoginCount;
                 existingHwid.LastLogin = now;
-                dbContext.Update(existingHwid);
+                EntityEntry<PlayerHWID> entry = dbContext.Entry(existingHwid);
+                if (entry.State != EntityState.Added)
+                    entry.State = EntityState.Modified;
                 break;
             }
 
@@ -119,7 +123,9 @@ public class UpdateUserDataTask : IPlayerPendingTask
             ++existingIp.LoginCount;
             existingIp.LastLogin = now;
             existingIp.RemotePlay = _isRemotePlay;
-            dbContext.Update(existingIp);
+            EntityEntry<PlayerIPAddress> entry = dbContext.Entry(existingIp);
+            if (entry.State != EntityState.Added)
+                entry.State = EntityState.Modified;
             break;
         }
 

@@ -1,3 +1,4 @@
+using SDG.Framework.Utilities;
 using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Util.List;
@@ -23,22 +24,31 @@ public abstract class LoopTickerCollector<T> : IDisposable
 
     private void OnTick(ILoopTicker ticker, TimeSpan timeSinceStart, TimeSpan deltaTime)
     {
-        foreach (T item in ItemsToAdd())
+        IEnumerable<T> itemsToAdd = ItemsToAdd(out bool pooled);
+        foreach (T item in itemsToAdd)
         {
             if (_collection.AddIfNotExists(item))
                 _onItemAdded?.Invoke(item);
         }
-        foreach (T item in ItemsToRemove())
+
+        if (itemsToAdd is List<T> list && pooled)
+            ListPool<T>.release(list);
+
+        IEnumerable<T> itemsToRemove = ItemsToRemove(out pooled);
+        foreach (T item in itemsToRemove)
         {
             if (_collection.Remove(item))
                 _onItemRemove?.Invoke(item);
         }
+
+        if (itemsToRemove is List<T> list2 && pooled)
+            ListPool<T>.release(list2);
     }
 
     protected LoopTickerCollector(ILoopTicker ticker) : this(ticker, null, null) { }
 
-    protected abstract IEnumerable<T> ItemsToAdd();
-    protected abstract IEnumerable<T> ItemsToRemove();
+    protected abstract IEnumerable<T> ItemsToAdd(out bool pooled);
+    protected abstract IEnumerable<T> ItemsToRemove(out bool pooled);
 
     /// <inheritdoc />
     public void Dispose()

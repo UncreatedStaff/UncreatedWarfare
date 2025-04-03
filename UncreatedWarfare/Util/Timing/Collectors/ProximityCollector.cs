@@ -1,3 +1,4 @@
+using SDG.Framework.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,14 +19,22 @@ public class ProximityCollector<T> : LoopTickerCollector<T>
         _getPosition = options.PositionFunction;
     }
 
-    protected override IEnumerable<T> ItemsToAdd()
+    protected override IEnumerable<T> ItemsToAdd(out bool pooled)
     {
-        return _getObjects.Invoke().Where(i => Proximity.TestPoint(_getPosition.Invoke(i)));
+        pooled = false;
+        return _getObjects().Where(i => Proximity.TestPoint(_getPosition.Invoke(i)));
     }
 
-    protected override IEnumerable<T> ItemsToRemove()
+    protected override IEnumerable<T> ItemsToRemove(out bool pooled)
     {
-        return _getObjects.Invoke().Where(i => !Proximity.TestPoint(_getPosition.Invoke(i)));
+        // _getObjects().Where ... doesn't include offline players
+        List<T> listPool = ListPool<T>.claim();
+        pooled = true;
+        foreach (T c in Collection.Where(i => !Proximity.TestPoint(_getPosition.Invoke(i))))
+        {
+            listPool.Add(c);
+        }
+        return listPool;
     }
     public struct ProximityCollectorOptions
     {

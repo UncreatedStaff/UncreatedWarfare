@@ -85,7 +85,6 @@ public class UserDataService : IUserDataService, IDisposable
     public UserDataService(IUserDataDbContext dbContext)
     {
         _dbContext = dbContext;
-        _dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
         _semaphore = new SemaphoreSlim(1, 1);
     }
 
@@ -103,7 +102,7 @@ public class UserDataService : IUserDataService, IDisposable
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            return await _dbContext.UserData.Where(x => x.Steam64 == steam64).Select(x => x.DiscordId).FirstOrDefaultAsync(token).ConfigureAwait(false);
+            return await _dbContext.UserData.Where(x => x.Steam64 == steam64).AsNoTracking().Select(x => x.DiscordId).FirstOrDefaultAsync(token).ConfigureAwait(false);
         }
         finally
         {
@@ -120,7 +119,7 @@ public class UserDataService : IUserDataService, IDisposable
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            return await _dbContext.UserData.Where(x => x.DiscordId == discordId).Select(x => x.Steam64).FirstOrDefaultAsync(token).ConfigureAwait(false);
+            return await _dbContext.UserData.Where(x => x.DiscordId == discordId).AsNoTracking().Select(x => x.Steam64).FirstOrDefaultAsync(token).ConfigureAwait(false);
         }
         finally
         {
@@ -147,6 +146,7 @@ public class UserDataService : IUserDataService, IDisposable
         {
             ulong[] output = new ulong[steamIdArray.Length];
             await foreach (var idPair in _dbContext.UserData
+                               .AsNoTracking()
                                .Where(x => steamIdArray.Contains(x.DiscordId))
                                .Select(x => new { x.Steam64, x.DiscordId })
                                .AsAsyncEnumerable()
@@ -184,6 +184,7 @@ public class UserDataService : IUserDataService, IDisposable
         {
             ulong[] output = new ulong[discordIdArray.Length];
             await foreach (var idPair in _dbContext.UserData
+                               .AsNoTracking()
                                .Where(x => discordIdArray.Contains(x.DiscordId))
                                .Select(x => new { x.Steam64, x.DiscordId })
                                .AsAsyncEnumerable()
@@ -209,6 +210,7 @@ public class UserDataService : IUserDataService, IDisposable
         try
         {
             var result = await _dbContext.UserData
+                .AsNoTracking()
                 .Where(x => x.Steam64 == steam64)
                 .Select(x => new { x.CharacterName, x.NickName, x.PlayerName, x.DisplayName })
                 .FirstOrDefaultAsync(token)
@@ -247,12 +249,12 @@ public class UserDataService : IUserDataService, IDisposable
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            WarfareUserData? data = await Set().FirstOrDefaultAsync(x => x.Steam64 == steam64, token).ConfigureAwait(false);
-            _dbContext.ChangeTracker.Clear();
+            WarfareUserData? data = await Set().AsNoTracking().FirstOrDefaultAsync(x => x.Steam64 == steam64, token).ConfigureAwait(false);
             return data;
         }
         finally
         {
+            _dbContext.ChangeTracker.Clear();
             _semaphore.Release();
         }
     }
@@ -265,12 +267,12 @@ public class UserDataService : IUserDataService, IDisposable
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            List<WarfareUserData> result = await Set().Where(x => steam64.Contains(x.Steam64)).ToListAsync(token).ConfigureAwait(false);
-            _dbContext.ChangeTracker.Clear();
+            List<WarfareUserData> result = await Set().AsNoTracking().Where(x => steam64.Contains(x.Steam64)).ToListAsync(token).ConfigureAwait(false);
             return result;
         }
         finally
         {
+            _dbContext.ChangeTracker.Clear();
             _semaphore.Release();
         }
     }
@@ -284,12 +286,12 @@ public class UserDataService : IUserDataService, IDisposable
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            WarfareUserData? data = await Set().FirstOrDefaultAsync(x => x.DiscordId == discordId, token).ConfigureAwait(false);
-            _dbContext.ChangeTracker.Clear();
+            WarfareUserData? data = await Set().AsNoTracking().FirstOrDefaultAsync(x => x.DiscordId == discordId, token).ConfigureAwait(false);
             return data;
         }
         finally
         {
+            _dbContext.ChangeTracker.Clear();
             _semaphore.Release();
         }
     }
@@ -306,7 +308,6 @@ public class UserDataService : IUserDataService, IDisposable
             {
                 update(existing, _dbContext);
                 existing.Steam64 = steam64;
-                _dbContext.Update(existing);
             }
             else
             {
@@ -326,7 +327,7 @@ public class UserDataService : IUserDataService, IDisposable
 
                 update(data, _dbContext);
 
-                _dbContext.Add(data);
+                _dbContext.UserData.Add(data);
                 existing = data;
             }
 
@@ -334,6 +335,7 @@ public class UserDataService : IUserDataService, IDisposable
         }
         finally
         {
+            _dbContext.ChangeTracker.Clear();
             _semaphore.Release();
         }
 
@@ -354,7 +356,7 @@ public class UserDataService : IUserDataService, IDisposable
         await _semaphore.WaitAsync(token);
         try
         {
-            var nameData = await data.Select(x => new { x.Steam64, x.CharacterName, x.PlayerName, x.NickName, x.DisplayName }).FirstOrDefaultAsync(token).ConfigureAwait(false);
+            var nameData = await data.AsNoTracking().Select(x => new { x.Steam64, x.CharacterName, x.PlayerName, x.NickName, x.DisplayName }).FirstOrDefaultAsync(token).ConfigureAwait(false);
             PlayerNames names = default;
             if (nameData == null)
             {
@@ -400,7 +402,7 @@ public class UserDataService : IUserDataService, IDisposable
         try
         {
             int ct = 0;
-            await foreach (var nameData in data.Select(x => new { x.Steam64, x.CharacterName, x.PlayerName, x.NickName, x.DisplayName }).AsAsyncEnumerable().WithCancellation(token).ConfigureAwait(false))
+            await foreach (var nameData in data.AsNoTracking().Select(x => new { x.Steam64, x.CharacterName, x.PlayerName, x.NickName, x.DisplayName }).AsAsyncEnumerable().WithCancellation(token).ConfigureAwait(false))
             {
                 PlayerNames names = default;
                 names.WasFound = true;

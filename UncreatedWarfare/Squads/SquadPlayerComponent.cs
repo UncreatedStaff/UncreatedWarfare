@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 
