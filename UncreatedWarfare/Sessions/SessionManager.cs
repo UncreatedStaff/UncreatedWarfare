@@ -100,7 +100,14 @@ public class SessionManager :
 
     async UniTask ILayoutHostedService.StartAsync(CancellationToken token)
     {
-        await StartNewSessionForAllPlayers(true, token);
+        try
+        {
+            await StartNewSessionForAllPlayers(true, token);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Uncaught exception restarting new sessions.");
+        }
     }
 
     async UniTask ILayoutHostedService.StopAsync(CancellationToken token)
@@ -224,6 +231,45 @@ public class SessionManager :
             }
 
             _logger.LogConditional("Created sessions for all players.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error starting new sessions, hard clearing...");
+            _dbContext.ChangeTracker.Clear();
+
+            await UniTask.SwitchToMainThread(token);
+
+            WarfarePlayer[] onlinePlayers = _playerService.OnlinePlayers.ToArray();
+            foreach (WarfarePlayer player in onlinePlayers)
+            {
+                SessionRecord record = StartCreatingSession(player, startedGame, out SessionRecord? previousSession);
+                player.CurrentSession = record;
+            }
+
+            try
+            {
+                await _dbContext.SaveChangesAsync(token);
+            }
+            catch (Exception ex2)
+            {
+                _logger.LogError(ex2, "Error saving ended sessions");
+                _dbContext.ChangeTracker.Clear();
+            }
+
+            foreach (WarfarePlayer player in onlinePlayers)
+            {
+                _dbContext.Add(player.CurrentSession);
+            }
+
+            try
+            {
+                await _dbContext.SaveChangesAsync(token);
+            }
+            catch (Exception ex2)
+            {
+                _logger.LogError(ex2, "Error saving new sessions.");
+                _dbContext.ChangeTracker.Clear();
+            }
         }
         finally
         {

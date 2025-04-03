@@ -810,7 +810,7 @@ public class BuildableSaver :
                 int ind = -1;
                 for (int j = 0; j < items.Count; ++j)
                 {
-                    BuildableStorageItem storageItem = items[i];
+                    BuildableStorageItem storageItem = items[j];
                     if (storageItem.PositionX != item.x || storageItem.PositionY != item.y)
                         continue;
 

@@ -47,7 +47,7 @@ internal static class VehicleTargetCommandHelper
         if (ctx.TryGetRange(argOffset, out string? query))
         {
             int start = query.Length;
-            while (char.IsDigit(query, start - 1))
+            while (start > 0 && char.IsDigit(query, start - 1))
             {
                 --start;
             }

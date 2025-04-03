@@ -243,7 +243,7 @@ public class VehicleSeatRestrictionService :
                 break;
 
             case ChangeSeatsResult.OwnerNearby:
-                _chatService.Send(e.Player, _translations.EnterVehicleOwnerNotInside, _playerService?.GetOnlinePlayerOrNull(e.Vehicle.Vehicle.lockedOwner));
+                _chatService.Send<IPlayer?>(e.Player, _translations.EnterVehicleOwnerNotInside, _playerService?.GetOnlinePlayerOrNull(e.Vehicle.Vehicle.lockedOwner));
                 e.Cancel();
                 break;
         }

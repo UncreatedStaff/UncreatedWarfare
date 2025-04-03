@@ -700,6 +700,7 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
                 token.ThrowIfCancellationRequested();
                 await UniTask.SwitchToMainThread(token);
                 await hostedServices[i].StartAsync(token);
+                continue;
             }
             catch (OperationCanceledException ex) when (token.IsCancellationRequested)
             {
@@ -713,6 +714,8 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
                 errIndex = i;
                 thrownException = ex;
             }
+
+            break;
         }
 
         // handles if a service failed to start up, unloads the services that did start up and ends the layout.
@@ -721,8 +724,6 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
             layout.LayoutStats.StartTimestamp = DateTimeOffset.UtcNow;
             _dbContext.Update(layout.LayoutStats);
             await _dbContext.SaveChangesAsync(CancellationToken.None);
-
-            _dbContext.ChangeTracker.Clear();;
 
             await UniTask.SwitchToMainThread(token);
 
