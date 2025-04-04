@@ -320,7 +320,7 @@ public partial class EventDispatcher : IHostedService, IDisposable
 
         int ct = eventListeners.Count;
 
-        _logger.LogConditional("Invoke {0} - Dispatching event for {1} listener(s).", type, ct);
+        _logger.LogDebug($"Invoke {type} - Dispatching event for {ct} listener(s).");
 #if LOG_TRACE_TO_FILE
         _eventFileWriter.WriteLine("{0}  Invoking {1} for {2} listeners.", traceNum, Accessor.Formatter.Format(type), ct);
 #endif

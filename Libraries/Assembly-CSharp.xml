@@ -2089,6 +2089,11 @@
             Material on Model_0, the low-speed actual blade.
             </summary>
         </member>
+        <member name="F:SDG.Unturned.PropellerModel.motionBlurRenderer">
+            <summary>
+            Renderer on Model_1.
+            </summary>
+        </member>
         <member name="F:SDG.Unturned.PropellerModel.motionBlurMaterial">
             <summary>
             Material on Model_1, the high-speed blurred outline.
@@ -5870,6 +5875,13 @@
             Find a new smaller circle within the old circle and clamp it to the playable level area.
             </summary>
         </member>
+        <member name="M:SDG.Unturned.LevelManager.ReceiveAirdropState(System.UInt16,UnityEngine.Vector3,UnityEngine.Vector3,System.Single,System.Single,System.Single)">
+            <summary>
+            Nelson 2025-04-01: default position intBitCount of 13 has range of [-4096, 4096), but on "insane" size maps
+            the aircraft starts 2 km outside that range. This causes the care package to spawn at the wrong position.
+            Bumping intBitCount to 14 enables a range of [-8192, 8192). (public issue #4972)
+            </summary>
+        </member>
         <member name="P:SDG.Unturned.WeatherAssetBase.fadeInDuration">
             <summary>
             Seconds between weather event starting and reaching full intensity.
@@ -5942,6 +5954,16 @@
             False for deprecated (landscape hole volume) types.
             </summary>
         </member>
+        <member name="T:SDG.Unturned.UnturnedDatEx">
+            <summary>
+            These are methods moved from the Data class which rely on core types and so cannot go in the UnturnedDat assembly.
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.UnturnedDatEx.ParseGuidOrLegacyId(SDG.Unturned.DatDictionary,System.String,System.Guid@)">
+            <summary>
+            Intended as a drop-in replacement for existing assets with property uint16s.
+            </summary>
+        </member>
         <member name="F:SDG.Unturned.InteractableTrap.explosion2">
             <summary>
             Kept because lots of modders have been using this script in Unity,
@@ -5951,16 +5973,6 @@
         <member name="F:SDG.Unturned.InteractableTrap.poweredGameObject">
             <summary>
             Active while powered.
-            </summary>
-        </member>
-        <member name="T:SDG.Unturned.UnturnedDatEx">
-            <summary>
-            These are methods moved from the Data class which rely on core types and so cannot go in the UnturnedDat assembly.
-            </summary>
-        </member>
-        <member name="M:SDG.Unturned.UnturnedDatEx.ParseGuidOrLegacyId(SDG.Unturned.DatDictionary,System.String,System.Guid@)">
-            <summary>
-            Intended as a drop-in replacement for existing assets with property uint16s.
             </summary>
         </member>
         <member name="P:SDG.Unturned.PurchaseNode.radius">
@@ -8842,6 +8854,26 @@
             Ideally we could do "where T : TryParse" but for the meantime there are specialized subclasses.
             </summary>
         </member>
+        <member name="F:SDG.Unturned.LevelRoads.regionSegmentRenderers">
+            <summary>
+            Maps region coord to a list of sub-road renderers in that region.
+            Unlike older "region" features, coord can be outside of the old bounds.
+            Not used in the editor or the dedicated server.
+            
+            Nelson 2025-03-28: experimenting with this to see whether it reduces time spent culling far-away road
+            renderers on Rio de Janeiro Remastered. (Lots of roads on this map.)
+            </summary>
+        </member>
+        <member name="P:SDG.Unturned.LevelRoads.RoadMaxDistance">
+            <summary>
+            Max draw distance outside editor.
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.LevelRoads.ImmediatelySyncRegionalVisibility">
+            <summary>
+            Called by navmesh baking to complete pending object changes that may affect which nav objects are enabled.
+            </summary>
+        </member>
         <member name="T:SDG.Unturned.NpcGlobalEventMessenger">
             <summary>
             Allows Unity events to broadcast Event NPC rewards.
@@ -10108,6 +10140,17 @@
         <member name="F:SDG.Unturned.CustomWeatherEventHook.parsedGuid">
             <summary>
             GUID parsed from WeatherAssetGuid parameter.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.EInteractableObjectBinaryStateEmissiveMaterialMode.Auto">
+            <summary>
+            Default. Create a material instance for child renderer of Toggle game object.
+            Downside of this is exclusion from level batching texture atlas.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.EInteractableObjectBinaryStateEmissiveMaterialMode.None">
+            <summary>
+            Object does not have any toggleable emissive materials.
             </summary>
         </member>
         <member name="F:SDG.Unturned.ObjectAsset.hasLoadedModel">
@@ -11725,6 +11768,57 @@
             Used if address is zero.
             </summary>
         </member>
+        <member name="F:SDG.Unturned.RegionVisibilityData.progressIndex">
+            <summary>
+            If -1, this region is finished activating/deactivating.
+            Otherwise, incremented once per frame until per-region count is reached.
+            
+            Per-region data is removed when isInsideMask is false and progressIndex is -1.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.RegionVisibilityData.isInsideMask">
+            <summary>
+            If true, this region is within MaxDistance of current CameraCoord.
+            </summary>
+        </member>
+        <member name="T:SDG.Unturned.RegionIncrementalVisibilityTracker">
+            <summary>
+            Tracks activation and deactivation of Regions as camera moves around the level.
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.RegionIncrementalVisibilityTracker.FlushProgress">
+            <summary>
+            Mark all cells as finished loading and remove cells outside the camera view.
+            Used after teleporting or loading.
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.RegionIncrementalVisibilityTracker.UpdateRegions(System.Collections.Generic.Dictionary{UnityEngine.Vector2Int,SDG.Unturned.RegionVisibilityData})">
+            <summary>
+            Caller passes an empty dictionary to be filled with update info.
+            Increments progressIndex for each returned region.
+            If region is finished updating, call NotifyRegionFinishedUpdating.
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.RegionIncrementalVisibilityTracker.NotifyRegionFinishedUpdating(UnityEngine.Vector2Int)">
+            <summary>
+            Called when progressIndex has reached end of given region.
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.RegionIncrementalVisibilityTracker.PopulateCoordsInsideMask(System.Collections.Generic.HashSet{UnityEngine.Vector2Int})">
+            <summary>
+            Fill output set with mask offsets applied to current camera coordinate.
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.RegionIncrementalVisibilityTracker.ApplyCoordChanges">
+            <summary>
+            Find changes between old and current coordinate sets to mark regions in/out of mask.
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.RegionIncrementalVisibilityTracker.SetCoordIsInsideMask(UnityEngine.Vector2Int,System.Boolean)">
+            <summary>
+            Reset region's progress counter and change inside/outside status.
+            </summary>
+        </member>
         <member name="T:SDG.Unturned.EffectSpawner">
             <summary>
             Allows Unity events to spawn effects.
@@ -11782,6 +11876,11 @@
         <member name="M:SDG.Unturned.Regions.getUnsafeCoordinates(UnityEngine.Vector3,System.Int32@,System.Int32@)">
             <summary>
             Convert world-space point into region coordinates that may be out of bounds.
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.Regions.GetCoordinateVector2Int(UnityEngine.Vector3)">
+            <summary>
+            Convert world-space position into a region coordinate that may be out-of-bounds.
             </summary>
         </member>
         <member name="M:SDG.Unturned.Regions.clampPositionIntoBounds(UnityEngine.Vector3@)">
@@ -11858,6 +11957,23 @@
         <member name="E:SDG.Unturned.NPCEventManager.onEvent">
             <summary>
             instigatingPlayer can be null. For example, if instigated by NpcGlobalEventMessenger.
+            </summary>
+        </member>
+        <member name="T:SDG.Unturned.RegionRadiusMask">
+            <summary>
+            Circular mask for 2D distances in meters on a 2D cell grid.
+            Includes a cell if the meters distance between the center cell
+            and the closest point on test cell is within radius.
+            </summary>
+        </member>
+        <member name="P:SDG.Unturned.RegionRadiusMask.Radius">
+            <summary>
+            World space distance in meters.
+            </summary>
+        </member>
+        <member name="P:SDG.Unturned.RegionRadiusMask.CellSize">
+            <summary>
+            Region cell size in meters.
             </summary>
         </member>
         <member name="T:SDG.Unturned.ServerListCurationFile">
@@ -14089,6 +14205,11 @@
             If true, don't assign texture atlas to material so batched materials are obvious.
             </summary>
         </member>
+        <member name="F:SDG.Unturned.LevelBatching.wantsToPreviewMeshExclusions">
+            <summary>
+            If true, assign a red material to excluded meshes so they are obvious.
+            </summary>
+        </member>
         <member name="F:SDG.Unturned.LevelBatching.wantsToPreviewUniqueMaterials">
             <summary>
             If true, replace each unique material with a colored one before static batching.
@@ -14227,15 +14348,15 @@
             Chat message values to show.
             </summary>
         </member>
+        <member name="P:SDG.Unturned.ResourceSpawnpoint.isActiveInRegion">
+            <summary>
+            Tree activation is time-sliced, so this does not necessarily match whether the region is active.
+            </summary>
+        </member>
         <member name="P:SDG.Unturned.ResourceSpawnpoint.canBeDamaged">
             <summary>
             Can this tree be damaged?
             Allows holiday restrictions to be taken into account. (Otherwise holiday trees could be destroyed out of season.)
-            </summary>
-        </member>
-        <member name="M:SDG.Unturned.ResourceSpawnpoint.updateConditions">
-            <summary>
-            Used if the asset has holiday restrictions.
             </summary>
         </member>
         <member name="T:SDG.Unturned.SteamConnectedClientBase">
@@ -16799,8 +16920,9 @@
             Save tiles during level save. 
             </summary>
         </member>
-        <member name="M:SDG.Framework.Foliage.FoliageInfoAsset.addFoliageToSurface(UnityEngine.Vector3,UnityEngine.Vector3,System.Boolean,System.Boolean)">
+        <member name="M:SDG.Framework.Foliage.FoliageInfoAsset.addFoliageToSurface(UnityEngine.Vector3,UnityEngine.Vector3,System.Boolean,System.Boolean,System.Boolean)">
             <param name="followRules">Should angle limits and subtractive volumes be respected? Disabled when manually placing individually.</param>
+            <param name="doCollisionChecks">If true, trees do a sphere overlap to prevent placement inside objects.</param>
         </member>
         <member name="M:SDG.Framework.Foliage.FoliageInfoAsset.getTestPosition(UnityEngine.Bounds)">
             <summary>
