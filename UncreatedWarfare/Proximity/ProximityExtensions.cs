@@ -34,10 +34,12 @@ public static class ProximityExtensions
     public static Vector3 GetNearestPointOnBorder(ISphereProximity proximity, in Vector3 fromLocation)
     {
         BoundingSphere sphere = proximity.Sphere;
-        Vector3 diff = sphere.position - fromLocation;
-        float distance = Math.Max(MathF.Sqrt(diff.x * diff.x + diff.y * diff.y + diff.z * diff.z), float.Epsilon);
-        float radius = sphere.radius;
-        return new Vector3(diff.x / distance * radius, diff.y / distance * radius, diff.z / distance * radius);
+        if (sphere.position.IsNearlyEqual(fromLocation))
+        {
+            return sphere.position + new Vector3(0f, 0f, sphere.radius);
+        }
+
+        return sphere.position + (fromLocation - sphere.position).normalized * sphere.radius;
     }
 
     /// <summary>
@@ -182,9 +184,6 @@ public static class ProximityExtensions
         Vector3 center = proximity.Center;
         SnapAxis axis = proximity.Axis;
 
-        float radius = proximity.Radius;
-        float sqrRadius = radius * radius;
-
         float height = proximity.Height;
         bool infinite = !float.IsFinite(height);
         height /= 2;
@@ -208,8 +207,6 @@ public static class ProximityExtensions
             _  /* Z */ => relX * relX + relY * relY
         };
 
-        bool inCircle = sqrDistance <= sqrRadius;
-
         Vector3 fromLoc = fromLocation;
         if (!inHeightRange)
         {
@@ -229,17 +226,16 @@ public static class ProximityExtensions
             }
         }
 
-        if (!inCircle && !inHeightRange)
-            return fromLoc;
-
         float distance = Math.Max(MathF.Sqrt(sqrDistance), float.Epsilon);
-        
+
+        float radius = proximity.Radius;
+
         // scale by unit vector
         return axis switch
         {
-            SnapAxis.X => new Vector3(fromLoc.x, relY / distance * radius, relZ / distance * radius),
-            SnapAxis.Y => new Vector3(relX / distance * radius, fromLoc.y, relZ / distance * radius),
-            _  /* Z */ => new Vector3(relX / distance * radius, relY / distance * radius, fromLoc.z)
+            SnapAxis.X => new Vector3(fromLoc.x, center.y + relY / distance * radius, center.z + relZ / distance * radius),
+            SnapAxis.Y => new Vector3(center.x + relX / distance * radius, fromLoc.y, center.z + relZ / distance * radius),
+            _  /* Z */ => new Vector3(center.x + relX / distance * radius, center.y + relY / distance * radius, fromLoc.z)
         };
     }
 

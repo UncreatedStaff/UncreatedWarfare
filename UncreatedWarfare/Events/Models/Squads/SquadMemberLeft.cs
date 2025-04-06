@@ -6,7 +6,6 @@ namespace Uncreated.Warfare.Events.Models.Squads;
 /// <summary>
 /// Event listener args which fires after a player leaves a <see cref="Squad"/>.
 /// </summary>
-[EventModel(SynchronizedModelTags = [ "squads" ])]
 public class SquadMemberLeft : SquadUpdated, IPlayerEvent
 {
     /// <summary>

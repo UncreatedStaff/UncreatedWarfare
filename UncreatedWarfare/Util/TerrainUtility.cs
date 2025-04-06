@@ -9,7 +9,7 @@ public static class TerrainUtility
     public static float GetHighestPoint(in Vector2 point, float minHeight)
     {
         float height;
-        if (Physics.SphereCast(new Vector3(point.x, Level.HEIGHT, point.y), PlayerStance.RADIUS + 0.01f, Vector3.down, out RaycastHit hit, Level.HEIGHT, RayMasks.BLOCK_COLLISION & ~RayMasks.CLIP, QueryTriggerInteraction.Ignore))
+        if (Physics.SphereCast(new Vector3(point.x, Level.HEIGHT, point.y), PlayerStance.RADIUS + 0.01f, Vector3.down, out RaycastHit hit, Level.HEIGHT, RayMasks.BLOCK_COLLISION & ~(RayMasks.CLIP | RayMasks.VEHICLE), QueryTriggerInteraction.Ignore))
         {
             height = hit.point.y;
             return !float.IsNaN(minHeight) ? Mathf.Max(height, minHeight) : height;
@@ -26,7 +26,7 @@ public static class TerrainUtility
     public static float GetHighestPoint(in Vector3 point, float minHeight)
     {
         float height;
-        if (Physics.SphereCast(new Vector3(point.x, Level.HEIGHT, point.z), PlayerStance.RADIUS + 0.01f, Vector3.down, out RaycastHit hit, Level.HEIGHT, RayMasks.BLOCK_COLLISION & ~RayMasks.CLIP, QueryTriggerInteraction.Ignore))
+        if (Physics.SphereCast(new Vector3(point.x, Level.HEIGHT, point.z), PlayerStance.RADIUS + 0.01f, Vector3.down, out RaycastHit hit, Level.HEIGHT, RayMasks.BLOCK_COLLISION & ~(RayMasks.CLIP | RayMasks.VEHICLE), QueryTriggerInteraction.Ignore))
         {
             height = hit.point.y;
             return !float.IsNaN(minHeight) ? Mathf.Max(height, minHeight) : height;
@@ -42,7 +42,7 @@ public static class TerrainUtility
     /// <remarks>The raycast could hit a building, etc. If the raycast doesn't hit anything, <see cref="Level.HEIGHT"/> will be returned.</remarks>
     public static float GetDistanceToGround(in Vector3 point)
     {
-        if (Physics.Raycast(point, Vector3.down, out RaycastHit hit, Level.HEIGHT, RayMasks.BLOCK_COLLISION & ~RayMasks.CLIP, QueryTriggerInteraction.Ignore))
+        if (Physics.Raycast(point, Vector3.down, out RaycastHit hit, Level.HEIGHT, RayMasks.BLOCK_COLLISION & ~(RayMasks.CLIP | RayMasks.VEHICLE), QueryTriggerInteraction.Ignore))
         {
             return hit.distance;
         }

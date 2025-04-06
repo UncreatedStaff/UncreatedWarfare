@@ -312,11 +312,6 @@ public static class BuildableExtensions
         if (StructureManager.regions == null)
             throw new InvalidOperationException("StructureManager not loaded.");
 
-        if (destroyOld && !buildable.IsDead)
-        {
-            buildable.Destroy();
-        }
-
         // planted barricade
         if (buildable.IsOnVehicle && asset is ItemBarricadeAsset barricadeAsset)
         {
@@ -350,14 +345,27 @@ public static class BuildableExtensions
                 }
 
                 drop = BarricadeManager.FindBarricadeByRootTransform(t);
-                if (drop != null)
-                    return new BuildableBarricade(drop);
+                if (drop == null)
+                {
+                    throw new Exception("Failed to find added planted barricade. This shouldn't happen.");
+                }
 
-                throw new Exception("Failed to find added planted barricade. This shouldn't happen.");
+                if (destroyOld && !buildable.IsDead)
+                {
+                    buildable.Destroy();
+                }
+
+                return new BuildableBarricade(drop);
+
             }
         }
 
         IBuildable newBuildable = DropBuildable(asset, buildable.Position, buildable.Rotation, buildable.Owner, buildable.Group, health, state);
+        if (destroyOld && !buildable.IsDead)
+        {
+            buildable.Destroy();
+        }
+
         return newBuildable;
     }
 }

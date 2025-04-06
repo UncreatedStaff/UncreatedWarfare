@@ -2,15 +2,17 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Uncreated.Warfare.Database;
 
 namespace Uncreated.Warfare.Migrations
 {
     [DbContext(typeof(WarfareDbContext))]
-    partial class WarfareDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250406201723_DropItemNameColumns")]
+    partial class DropItemNameColumns
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1342,8 +1344,8 @@ namespace Uncreated.Warfare.Migrations
 
                     b.Property<string>("DeathMessage")
                         .IsRequired()
-                        .HasMaxLength(512)
-                        .HasColumnType("varchar(512)");
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
 
                     b.Property<float?>("Distance")
                         .HasColumnType("float");

@@ -1,19 +1,13 @@
+using System;
 using Uncreated.Warfare.Buildables;
-using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.FOBs.Construction;
+using Uncreated.Warfare.Layouts.Teams;
 
 namespace Uncreated.Warfare.FOBs.Entities;
 
-public class FortificationEntity : IBuildableFobEntity
+public class FortificationEntity : BuildableFobEntity<ShovelableInfo>
 {
-    public IBuildable Buildable { get; }
-    public IAssetLink<Asset> IdentifyingAsset { get; }
-    public Vector3 Position => Buildable.Position;
-    public Quaternion Rotation => Buildable.Rotation;
-    public bool PreventItemDrops => false;
-
-    public FortificationEntity(IBuildable buildable)
-    {
-        Buildable = buildable;
-        IdentifyingAsset = AssetLink.Create(buildable.Asset);
-    }
+    public FortificationEntity(ShovelableInfo info, Team team, IBuildable buildable, IServiceProvider serviceProvider)
+        : base(info, buildable, team, serviceProvider)
+    { }
 }

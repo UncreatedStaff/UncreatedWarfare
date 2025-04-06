@@ -68,6 +68,14 @@ partial class DualSidedLeaderboardUI :
         UpdateChat();
     }
 
+    private void OpenChatLate(WarfarePlayer player)
+    {
+        ChatModeToggle.Update(player.UnturnedPlayer);
+        ChatTextBox.TextBox.SetText(player.UnturnedPlayer, string.Empty);
+        
+        UpdateChat(player);
+    }
+
     private void ChatSubmitted(UnturnedButton textbox, Player player)
     {
         string? text = ChatTextBox.TextBox.GetOrAddData(player).Text;

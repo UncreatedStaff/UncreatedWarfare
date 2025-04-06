@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
@@ -16,6 +17,7 @@ using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.FOBs.Entities;
 using Uncreated.Warfare.FOBs.Rallypoints;
 using Uncreated.Warfare.FOBs.SupplyCrates;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Players.UI;
@@ -73,6 +75,12 @@ public partial class FobManager :
     [EventListener(RequireNextFrame = true)]
     void IEventListener<IBuildablePlacedEvent>.HandleEvent(IBuildablePlacedEvent e, IServiceProvider serviceProvider)
     {
+        Team team = _teamManager.GetTeam(e.Buildable.Group);
+        if (!team.IsValid)
+            return;
+
+        ShovelableBuildable? shovelable;
+
         // if barricade is Fob foundation, register a new Fob, or find the existing fob at this poisition
         if (_assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:Gameplay:FobUnbuilt").MatchAsset(e.Buildable.Asset))
         {
@@ -85,9 +93,10 @@ public partial class FobManager :
             }
 
             // fobs need their own special shoveable with a completed event
-            if (TryCreateShoveable(e.Buildable, e.Owner, out ShovelableBuildable? shovelable, shouldConsumeSupplies: !unbuiltFob.HasBeenRebuilt))
+            if (TryCreateShoveable(e.Buildable, team, e.Owner, out shovelable, shouldConsumeSupplies: !unbuiltFob.HasBeenRebuilt))
             {
-                shovelable!.OnComplete += completedBuildable =>
+                shovelable.IsIconVisible = !unbuiltFob.HasBeenRebuilt;
+                shovelable.OnComplete += completedBuildable =>
                 {
                     if (unbuiltFob == null)
                         return;
@@ -106,11 +115,11 @@ public partial class FobManager :
         }
 
         // other entities and shovelables get registered here
-        TryRegisterEntity(e.Buildable, serviceProvider);
-        TryCreateShoveable(e.Buildable, e.Owner, out _);
+        TryRegisterEntity(e.Buildable, team, serviceProvider);
+        TryCreateShoveable(e.Buildable, team, e.Owner, out shovelable);
     }
 
-    private void TryRegisterEntity(IBuildable buildable, IServiceProvider serviceProvider)
+    private void TryRegisterEntity(IBuildable buildable, Team team, IServiceProvider serviceProvider)
     {
         if (_entities.Any(x => x is IBuildableFobEntity b && b.Buildable.Equals(buildable)))
         {
@@ -126,26 +135,29 @@ public partial class FobManager :
 
         if (completedFortification.ConstuctionType == ShovelableType.RepairStation)
         {
-            RepairStation repairStation = new RepairStation(buildable, this, serviceProvider);
+            RepairStation repairStation = new RepairStation(completedFortification, team, buildable, this, serviceProvider);
             
             RegisterFobEntity(repairStation);
         }
         else if (completedFortification.ConstuctionType == ShovelableType.Fortification)
         {
-            RegisterFobEntity(new FortificationEntity(buildable));
+            RegisterFobEntity(new FortificationEntity(completedFortification, team, buildable, serviceProvider));
         }
     }
 
-    private bool TryCreateShoveable(IBuildable buildable, WarfarePlayer? placer, out ShovelableBuildable? shovelable, bool shouldConsumeSupplies = true)
+    private bool TryCreateShoveable(IBuildable buildable, Team team, WarfarePlayer? placer, [MaybeNullWhen(false)] out ShovelableBuildable shovelable, bool shouldConsumeSupplies = true)
     {
         shovelable = null;
 
-        ShovelableInfo? shovelableInfo = Configuration.Shovelables.FirstOrDefault(s => s.Foundation != null && s.Foundation.MatchAsset(buildable.Asset));
+        if (!team.IsValid)
+            return false;
+
+        ShovelableInfo? shovelableInfo = Configuration.Shovelables.FirstOrDefault(s => s.Foundation.MatchAsset(buildable.Asset));
 
         if (shovelableInfo == null)
             return false;
 
-        ShovelableBuildable newShovelable = new ShovelableBuildable(shovelableInfo, buildable, _serviceProvider, _assetConfiguration.GetAssetLink<EffectAsset>("Effects:ShovelHit"));
+        ShovelableBuildable newShovelable = new ShovelableBuildable(team, shovelableInfo, buildable, _serviceProvider, _assetConfiguration.GetAssetLink<EffectAsset>("Effects:ShovelHit"));
         shovelable = newShovelable;
 
         RegisterFobEntity(newShovelable);
@@ -171,26 +183,26 @@ public partial class FobManager :
         {
             if (buildableFob.IsBuilt)
             {
-                _logger.LogInformation("Replacing FOB foundation with unbuilt...");
+                _logger.LogDebug("Replacing FOB foundation with unbuilt...");
 
                 ItemPlaceableAsset unbuiltFob = _assetConfiguration.GetAssetLink<ItemPlaceableAsset>("Buildables:Gameplay:FobUnbuilt").GetAssetOrFail();
 
                 IBuildable buildable = e.Buildable.ReplaceBuildable(unbuiltFob, destroyOld: false);
                 buildableFob.MarkUnbuilt(buildable);
 
-                _logger.LogInformation("FOB foundation successfully replaced with unbuilt version.");
+                _logger.LogDebug("FOB foundation successfully replaced with unbuilt version.");
 
                 _ = WarfareModule.EventDispatcher.DispatchEventAsync(new FobDestroyed { Fob = buildableFob, Event = e });
             }
             else
             {
-                _logger.LogInformation("Buildable fob base was destroyed and will be deregistered.");
+                _logger.LogDebug("Buildable fob base was destroyed and will be deregistered.");
                 DeregisterFob(fob);
             }
         }
         else if (fob != null)
         {
-            _logger.LogInformation("Attempting to destroy other buildable fob.");
+            _logger.LogDebug("Attempting to destroy other buildable fob.");
             _ = WarfareModule.EventDispatcher.DispatchEventAsync(new FobDestroyed { Fob = fob, Event = e });
             DeregisterFob(fob);
         }
@@ -233,11 +245,12 @@ public partial class FobManager :
         if (supplyCrateInfo == null)
             return;
 
-        Vector3 dropPos = FindDropPositionForSupplyCrate(vehicle);
+        Vector3 dropPos = FindDropPositionForSupplyCrate(vehicle, e.Player.Position);
 
         e.Position = dropPos;
     }
 
+    [EventListener(MustRunInstantly = true)]
     void IEventListener<ItemDropped>.HandleEvent(ItemDropped e, IServiceProvider serviceProvider)
     {
         if (e.Item == null || e.DroppedItem == null)
@@ -253,6 +266,10 @@ public partial class FobManager :
         if (supplyCrateInfo == null)
             return;
 
+        Team team = e.Player.Team;
+        if (!team.IsValid)
+            return;
+
         _ = new FallingBuildable(
             e.Player,
             e.DroppedItem,
@@ -262,7 +279,7 @@ public partial class FobManager :
             e.Player.Yaw,
             buildable =>
             {
-                SupplyCrate supplyCrate = new SupplyCrate(supplyCrateInfo, buildable, serviceProvider, !e.Player.IsOnDuty);
+                SupplyCrate supplyCrate = new SupplyCrate(supplyCrateInfo, buildable, serviceProvider, team, !e.Player.IsOnDuty);
                 RegisterFobEntity(supplyCrate);
 
                 NearbySupplyCrates
@@ -285,7 +302,11 @@ public partial class FobManager :
         if (emplacementShoveable == null)
             return;
 
-        RegisterFobEntity(new EmplacementEntity(e.Vehicle, emplacementShoveable.Foundation));
+        Team team = _teamManager.GetTeam(e.Vehicle.Vehicle.lockedGroup);
+        if (!team.IsValid)
+            return;
+
+        RegisterFobEntity(new EmplacementEntity(e.Vehicle, team, emplacementShoveable.Foundation));
 
     }
 
@@ -315,8 +336,24 @@ public partial class FobManager :
     }
 
     private const float MaxBoxRadius = 1.5f;
-    private static Vector3 FindDropPositionForSupplyCrate(InteractableVehicle vehicle)
+    private static readonly Collider?[] ColliderBuffer = new Collider?[1];
+    private static Vector3 FindDropPositionForSupplyCrate(InteractableVehicle vehicle, Vector3 playerSeatPosition)
     {
+        if (vehicle.asset.engine.IsFlyingEngine() && TerrainUtility.GetDistanceToGround(in playerSeatPosition) > 2.5f)
+        {
+            // toss out side of vehicle, choose side closest to player (based on their relative position from the center of the vehicle)
+            Vector3 relativeSeatPosition = vehicle.transform.InverseTransformPoint(playerSeatPosition);
+            Vector3 tossVector = vehicle.transform.TransformVector(relativeSeatPosition.x >= 0 ? 0.5f : -0.5f, 0f, 0f);
+            do
+            {
+                playerSeatPosition += tossVector;
+            } while (Physics.OverlapSphereNonAlloc(playerSeatPosition, 2.5f, ColliderBuffer, RayMasks.VEHICLE) > 0);
+
+            ColliderBuffer[0] = null;
+
+            return playerSeatPosition;
+        }
+
         const float distanceToBack = 7.75f + MaxBoxRadius;
         const float distanceToFront = 4.25f + MaxBoxRadius;
 

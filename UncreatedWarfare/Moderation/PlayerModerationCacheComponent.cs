@@ -29,6 +29,10 @@ public class PlayerModerationCacheComponent : IPlayerComponent
     {
         _moderationSql = serviceProvider.GetRequiredService<DatabaseInterface>();
         _logger = serviceProvider.GetRequiredService<ILogger<PlayerModerationCacheComponent>>();
+
+        if (!isOnJoin)
+            return;
+
         Task.Run(async () =>
         {
             try

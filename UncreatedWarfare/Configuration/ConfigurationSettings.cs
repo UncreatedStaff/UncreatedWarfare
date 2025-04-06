@@ -73,5 +73,9 @@ public static class ConfigurationSettings
     internal static void SetupTypeConverters()
     {
         TimeSpanConverterWithTimeString.Setup();
+        Vector2TypeConverter.Setup();
+        Vector3TypeConverter.Setup();
+        Vector4TypeConverter.Setup();
+        QuaternionTypeConverter.Setup();
     }
 }

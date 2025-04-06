@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Primitives;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -21,6 +22,7 @@ public class QuestService : ILayoutHostedService, IEventListenerProvider, IDispo
 {
     private readonly List<QuestTracker> _activeTrackers = new List<QuestTracker>(256);
     private IConfigurationRoot? _questConfiguration;
+    private IDisposable? _reloadListener;
     private List<QuestTemplate>? _templates;
 
     private readonly WarfareModule _module;
@@ -60,15 +62,20 @@ public class QuestService : ILayoutHostedService, IEventListenerProvider, IDispo
 
         await ReloadQuestConfiguration(_questConfiguration, true, token);
 
-        _questConfiguration.GetReloadToken().RegisterChangeCallback(OnConfigurationUpdated, null);
+        _reloadListener?.Dispose();
+        _reloadListener = ChangeToken.OnChange(
+            _questConfiguration.GetReloadToken,
+            OnConfigurationUpdated,
+            _questConfiguration
+        );
     }
 
     private void OnConfigurationUpdated(object? state)
     {
-        if (state is not IConfiguration config)
+        if (state is not IConfiguration conf)
             return;
 
-        _ = ReloadQuestConfiguration(config, false, CancellationToken.None);
+        _ = ReloadQuestConfiguration(conf, false, CancellationToken.None);
     }
 
     private async UniTask ReloadQuestConfiguration(IConfiguration config, bool isStartup, CancellationToken token)
@@ -168,6 +175,9 @@ public class QuestService : ILayoutHostedService, IEventListenerProvider, IDispo
             RemoveTracker(_activeTrackers[i]);
         }
 
+        _reloadListener?.Dispose();
+        _reloadListener = null;
+
         if (_questConfiguration is IDisposable disp)
             disp.Dispose();
 
@@ -177,6 +187,8 @@ public class QuestService : ILayoutHostedService, IEventListenerProvider, IDispo
 
     void IDisposable.Dispose()
     {
+        _reloadListener?.Dispose();
+        _reloadListener = null;
         if (_questConfiguration is IDisposable disp)
             disp.Dispose();
 

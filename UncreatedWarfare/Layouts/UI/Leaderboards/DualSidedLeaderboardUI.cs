@@ -185,6 +185,14 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
         IsActive = true;
     }
 
+    public void OpenLate(WarfarePlayer player)
+    {
+        SendToPlayer(player.Connection);
+        SendToPlayers(new LanguageSet(player));
+
+        OpenChatLate(player);
+    }
+
     public void Close()
     {
         GameThread.AssertCurrent();

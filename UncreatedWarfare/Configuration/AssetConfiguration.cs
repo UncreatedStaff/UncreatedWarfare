@@ -29,14 +29,16 @@ public class AssetConfiguration : IConfiguration, IDisposable
 
         UnderlyingConfiguration = _configuration;
 
-        _reloadToken = _configuration.GetReloadToken().RegisterChangeCallback(_ =>
-        {
-            UniTask.Create(async () =>
+        _reloadToken = ChangeToken.OnChange(
+            _configuration.GetReloadToken,
+            () =>
             {
-                await UniTask.SwitchToMainThread();
-                OnChange?.Invoke(this);
+                UniTask.Create(async () =>
+                {
+                    await UniTask.SwitchToMainThread();
+                    OnChange?.Invoke(this);
+                });
             });
-        }, null);
     }
 
     public string? this[string key] { get => _configuration[key]; set => _configuration[key] = value; }

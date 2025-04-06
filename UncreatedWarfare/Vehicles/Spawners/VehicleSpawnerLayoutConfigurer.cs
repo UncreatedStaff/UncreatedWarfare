@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Primitives;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -7,7 +8,7 @@ using Uncreated.Warfare.Services;
 
 namespace Uncreated.Warfare.Vehicles.Spawners;
 
-public class VehicleSpawnerLayoutConfigurer : ILayoutHostedService
+public class VehicleSpawnerLayoutConfigurer : ILayoutHostedService, IDisposable
 {
     private readonly IConfiguration _configuration;
     private IDisposable? _reloadToken;
@@ -25,7 +26,10 @@ public class VehicleSpawnerLayoutConfigurer : ILayoutHostedService
 
     public UniTask StartAsync(CancellationToken token)
     {
-        _reloadToken ??= _configuration.GetReloadToken().RegisterChangeCallback(OnReload, null);
+        _reloadToken ??= ChangeToken.OnChange(
+            _configuration.GetReloadToken,
+            OnReload
+        );
         return UniTask.CompletedTask;
     }
 
@@ -36,7 +40,7 @@ public class VehicleSpawnerLayoutConfigurer : ILayoutHostedService
         return UniTask.CompletedTask;
     }
 
-    private void OnReload(object? obj)
+    private void OnReload()
     {
         EnabledSpawnerLayouts = GetEnabledSpawnerNames();
     }
@@ -57,5 +61,11 @@ public class VehicleSpawnerLayoutConfigurer : ILayoutHostedService
     {
         configuration = EnabledSpawnerLayouts.FirstOrDefault(s => vehicleSpawnInfo.UniqueName.Equals(s.SpawnerName, StringComparison.OrdinalIgnoreCase));
         return configuration != null;
+    }
+
+    public void Dispose()
+    {
+        _reloadToken?.Dispose();
+        _reloadToken = null;
     }
 }

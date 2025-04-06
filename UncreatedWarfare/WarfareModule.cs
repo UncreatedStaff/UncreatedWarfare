@@ -242,9 +242,6 @@ public sealed class WarfareModule
 
         ConfigurationSettings.SetupTypeConverters();
 
-        // todo rewrite action log
-        _gameObjectHost.AddComponent<ActionLog>();
-
         // cant create the real logger factory until the service provider is built, but we need a logger to load plugins
         using ILoggerFactory tempLoggerFactory =
             new LoggerFactory(
@@ -940,6 +937,9 @@ public sealed class WarfareModule
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
         bldr.RegisterType<VehicleLockRequestedHandler>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
+        bldr.RegisterType<SendChatFilterEventHandler>()
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
         bldr.RegisterType<ClaimToRearmTweaks>()

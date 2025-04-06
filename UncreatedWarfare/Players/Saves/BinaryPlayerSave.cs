@@ -66,6 +66,7 @@ public class BinaryPlayerSave : ISaveableState
         KitId = 0;
         SquadTeamIdentificationNumber = 0;
         ShouldRespawnOnJoin = false;
+        NeedsNewKitOnSpawn = false;
     }
 
     public static string GetPlayerSaveFilePath(CSteamID steam64)

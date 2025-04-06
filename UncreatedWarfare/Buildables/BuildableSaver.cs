@@ -157,6 +157,8 @@ public class BuildableSaver :
 
             _dbContext.Saves.RemoveRange(saves);
 
+            await UniTask.SwitchToMainThread(token);
+
             Vector3 rot = data.rotation.eulerAngles;
             BuildableSave newSave = new BuildableSave
             {

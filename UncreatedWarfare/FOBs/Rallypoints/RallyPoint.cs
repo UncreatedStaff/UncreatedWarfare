@@ -64,6 +64,9 @@ public class RallyPoint : IBuildableFob, IDisposable
         return playerService.OnlinePlayers.Any(p => p.Team != team && MathUtility.WithinRange(p.Position, rallyPointPosition, BurnRadius));
     }
     public bool IsVibileToPlayer(WarfarePlayer player) => Squad.ContainsPlayer(player);
+
+    public virtual void UpdateConfiguration(FobConfiguration configuration) { }
+
     public bool CheckDeployableFrom(WarfarePlayer player, ChatService chatService, DeploymentTranslations translations, in DeploySettings settings, IDeployable deployingTo)
     {
         return true;

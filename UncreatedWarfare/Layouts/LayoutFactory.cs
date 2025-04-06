@@ -41,6 +41,28 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
 
     private bool _hasPlayerLock = true;
 
+    public bool IsLoading
+    {
+        get;
+        private set
+        {
+            if (field == value)
+                return;
+
+            field = value;
+            try
+            {
+                LoadingStateUpdated?.Invoke(value);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error thrown from LoadingStateUpdated listener.");
+            }
+        }
+    }
+
+    public event Action<bool>? LoadingStateUpdated;
+
     public FileInfo? NextLayout { get; set; }
 
     public LayoutFactory(
@@ -58,6 +80,7 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
         _mapScheduler = mapScheduler;
         _playerService = playerService;
         _region = systemConfig.GetValue<byte>("region");
+        IsLoading = true;
     }
 
     /// <inheritdoc />
@@ -92,15 +115,23 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
             return;
         
         Layout layout = _warfare.GetActiveLayout();
-        if (layout.IsActive)
+        IsLoading = true;
+        try
         {
-            await layout.EndLayoutAsync(CancellationToken.None);
+            if (layout.IsActive)
+            {
+                await layout.EndLayoutAsync(CancellationToken.None);
+            }
+
+            layout.Dispose();
+
+            await UniTask.SwitchToMainThread(CancellationToken.None);
+            _warfare.SetActiveLayout(null);
         }
-
-        layout.Dispose();
-
-        await UniTask.SwitchToMainThread(CancellationToken.None);
-        _warfare.SetActiveLayout(null);
+        finally
+        {
+            IsLoading = false;
+        }
     }
 
     private void OnSceneLoded(Scene scene, LoadSceneMode mode)
@@ -187,7 +218,7 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
 
         // stops players from joining both before the first layout starts and between layouts.
         bool playerJoinLockTaken = _hasPlayerLock;
-
+        IsLoading = true;
         try
         {
             if (_warfare.IsLayoutActive())
@@ -219,6 +250,7 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
         }
         catch (Exception ex)
         {
+            IsLoading = false;
             if (playerJoinLockTaken)
             {
                 _playerService.ReleasePlayerConnectionLock();
@@ -300,31 +332,38 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
     private async Task StartPendingLayoutAsync(bool playerJoinLockTaken)
     {
         Layout layout = _warfare.GetActiveLayout();
-
-        IEnumerable<ILayoutStartingListener> listeners = _warfare.ScopedProvider.Resolve<IEnumerable<ILayoutStartingListener>>()
-            .OrderByDescending(x => x.GetType().GetPriority());
-
-        foreach (ILayoutStartingListener listener in listeners)
+        try
         {
-            try
-            {
-                if (!GameThread.IsCurrent)
-                    await UniTask.SwitchToMainThread(CancellationToken.None);
+            IEnumerable<ILayoutStartingListener> listeners = _warfare.ScopedProvider.Resolve<IEnumerable<ILayoutStartingListener>>()
+                .OrderByDescending(x => x.GetType().GetPriority());
 
-                await listener.HandleLayoutStartingAsync(layout, CancellationToken.None);
-            }
-            catch (Exception ex)
+            foreach (ILayoutStartingListener listener in listeners)
             {
-                _logger.LogError(ex, "Error hosting ILayoutStartingListener {0} for layout {1}.", listener.GetType(), layout);
+                try
+                {
+                    if (!GameThread.IsCurrent)
+                        await UniTask.SwitchToMainThread(CancellationToken.None);
+
+                    await listener.HandleLayoutStartingAsync(layout, CancellationToken.None);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error hosting ILayoutStartingListener {0} for layout {1}.", listener.GetType(), layout);
+                }
+            }
+
+            await layout.BeginLayoutAsync(CancellationToken.None);
+
+            if (playerJoinLockTaken && _hasPlayerLock)
+            {
+                _playerService?.ReleasePlayerConnectionLock();
+                _hasPlayerLock = false;
             }
         }
-
-        await layout.BeginLayoutAsync(CancellationToken.None);
-
-        if (playerJoinLockTaken && _hasPlayerLock)
+        finally
         {
-            _playerService?.ReleasePlayerConnectionLock();
-            _hasPlayerLock = false;
+            if (_warfare.IsLayoutActive() && _warfare.GetActiveLayout() == layout)
+                IsLoading = false;
         }
     }
 

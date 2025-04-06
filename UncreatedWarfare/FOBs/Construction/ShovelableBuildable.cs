@@ -6,6 +6,7 @@ using Uncreated.Warfare.Events.Models.Fobs.Shovelables;
 using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.FOBs.Entities;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Util;
@@ -15,16 +16,14 @@ using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.FOBs.Construction;
 
-public class ShovelableBuildable : IBuildableFobEntity
+public class ShovelableBuildable : BuildableFobEntity<ShovelableInfo>
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly EffectAsset? _shovelEffect;
-    public ShovelableInfo Info { get; }
-    public IBuildable Buildable { get; }
 
     public int HitsRemaining
     {
-        get => field;
+        get;
         set
         {
             if (value < 0)
@@ -33,29 +32,21 @@ public class ShovelableBuildable : IBuildableFobEntity
                 field = value;
         }
     }
+
     public bool IsCompleted => HitsRemaining <= 0;
     public bool IsEmplacement => Info.Emplacement != null;
     public PlayerContributionTracker Builders { get; }
-
-    public Vector3 Position => Buildable.Position;
-
-    public Quaternion Rotation => Buildable.Rotation;
-    public bool PreventItemDrops => false;
-
-    public IAssetLink<Asset> IdentifyingAsset { get; }
+    public new ShovelableInfo Info => base.Info!;
 
     public event Action<IBuildable?>? OnComplete;
 
-    public ShovelableBuildable(ShovelableInfo info, IBuildable foundation, IServiceProvider serviceProvider, IAssetLink<EffectAsset>? shovelEffect = null)
+    public ShovelableBuildable(Team team, ShovelableInfo info, IBuildable foundation, IServiceProvider serviceProvider, IAssetLink<EffectAsset>? shovelEffect = null)
+        : base(info ?? throw new ArgumentNullException(nameof(info)), foundation, team, serviceProvider, "Effects:Fobs:Shovel")
     {
-        Info = info;
-        Buildable = foundation;
         _shovelEffect = shovelEffect?.GetAssetOrFail();
         HitsRemaining = info.RequiredShovelHits;
         Builders = new PlayerContributionTracker();
         _serviceProvider = serviceProvider;
-
-        IdentifyingAsset = Info.Foundation;
     }
 
     public virtual void Complete(WarfarePlayer shoveler)
@@ -85,6 +76,8 @@ public class ShovelableBuildable : IBuildableFobEntity
         }
 
         _ = WarfareModule.EventDispatcher.DispatchEventAsync(new ShovelableBuilt { Shovelable = this });
+
+        DestroyIcon();
 
         Buildable.Destroy(); // make sure to only destroy the foundation events are invoked
     }
@@ -155,7 +148,7 @@ public class ShovelableBuildable : IBuildableFobEntity
             return;
 
         float progressPercent = Mathf.Clamp(1 - (float)HitsRemaining / Info.RequiredShovelHits, 0, 1);
-        int barCharactersToWrite = Mathf.RoundToInt(progressPercent * 25); // the toast UI has 25 characters
+        int barCharactersToWrite = Mathf.RoundToInt(progressPercent * 29); // the toast UI has 29 characters
         toastManager.Queue(new ToastMessage(ToastMessageStyle.ProgressBar, new string('█', barCharactersToWrite)));
     }
 

@@ -52,12 +52,10 @@ internal sealed class PlayerDatabaseStatsEventHandlers :
             Health = e.HealthChange,
             IsRevive = e.IsRevive,
             Item = new UnturnedAssetReference(e.Item),
-            ItemName = e.Item.GetDatabaseName(),
             InstigatorPosition = e.Medic.Position,
             Position = e.Player.Position,
             InstigatorSessionId = e.Medic.CurrentSession?.SessionId,
             SessionId = e.Player.CurrentSession?.SessionId,
-            NearestLocation = serviceProvider.GetRequiredService<ZoneStore>().GetClosestLocationName(e.Player.Position),
             Timestamp = DateTimeOffset.UtcNow
         };
 
@@ -111,20 +109,16 @@ internal sealed class PlayerDatabaseStatsEventHandlers :
             IsSuicide = isSuicide,
             IsTeamkill = isTeamkill,
             Limb = args.Limb,
-            NearestLocation = serviceProvider.GetRequiredService<ZoneStore>().GetClosestLocationName(args.Point),
             IsInjured = injured && !e.IsInjure,
             Team = (byte)(args.DeadTeam?.Id ?? 0),
             Timestamp = DateTimeOffset.UtcNow,
             TimeDeployedSeconds = args.TimeDeployed,
             PrimaryAsset = args.PrimaryAsset == null ? default : new UnturnedAssetReference(args.PrimaryAsset),
-            PrimaryAssetName = args.PrimaryAsset.GetDatabaseName(),
             SecondaryAsset = args.SecondaryAsset == null ? default : new UnturnedAssetReference(args.SecondaryAsset),
-            SecondaryAssetName = args.SecondaryAsset.GetDatabaseName(),
             RelatedPlayer = hasThirdParty ? args.ThirdPartyId!.Value.m_SteamID : null,
             RelatedPlayerPosition = hasThirdParty ? args.ThirdPartyPoint : null,
             RelatedPlayerSessionId = hasThirdParty ? args.ThirdPartySession?.SessionId : null,
-            Vehicle = new UnturnedAssetReference(args.ActiveVehicle?.asset),
-            VehicleName = args.ActiveVehicle?.asset.GetDatabaseName()
+            Vehicle = new UnturnedAssetReference(args.ActiveVehicle?.asset)
         };
 
         if (e.IsDeath)
@@ -161,19 +155,15 @@ internal sealed class PlayerDatabaseStatsEventHandlers :
             IsSuicide = args.WasSuicide,
             IsTeamkill = args.WasTeamkill,
             IsBleedout = e.WasBleedout,
-            NearestLocation = serviceProvider.GetRequiredService<ZoneStore>().GetClosestLocationName(args.Point),
             Team = (byte)(args.DeadTeam?.Id ?? 0),
             Timestamp = DateTimeOffset.UtcNow,
             TimeDeployedSeconds = args.TimeDeployed,
             PrimaryAsset = args.PrimaryAsset == null ? default : new UnturnedAssetReference(args.PrimaryAsset),
-            PrimaryAssetName = args.PrimaryAsset.GetDatabaseName(),
             SecondaryAsset = args.SecondaryAsset == null ? default : new UnturnedAssetReference(args.SecondaryAsset),
-            SecondaryAssetName = args.SecondaryAsset.GetDatabaseName(),
             RelatedPlayer = hasThirdParty ? args.ThirdPartyId!.Value.m_SteamID : null,
             RelatedPlayerPosition = hasThirdParty ? args.ThirdPartyPoint : null,
             RelatedPlayerSessionId = hasThirdParty ? args.ThirdPartySession?.SessionId : null,
-            Vehicle = new UnturnedAssetReference(args.ActiveVehicle?.asset),
-            VehicleName = args.ActiveVehicle?.asset.GetDatabaseName()
+            Vehicle = new UnturnedAssetReference(args.ActiveVehicle?.asset)
         };
 
         if (e.Player.Data.TryRemove("KillShot", out object? obj) && obj is DamageRecord killShot)
@@ -205,7 +195,6 @@ internal sealed class PlayerDatabaseStatsEventHandlers :
             FobAngle = normalFob.Buildable.Rotation.eulerAngles,
             Timestamp = DateTimeOffset.UtcNow,
             Team = (byte)normalFob.Team.Id,
-            NearestLocation = serviceProvider.GetRequiredService<ZoneStore>().GetClosestLocationName(normalFob.Position),
 
             Items = new List<FobItemRecord>()
         };
@@ -242,9 +231,7 @@ internal sealed class PlayerDatabaseStatsEventHandlers :
         record.DestroyedAt = DateTimeOffset.UtcNow;
         record.DestroyedByRoundEnd = !hasInstigator && e.Event.WasSalvaged;
         record.PrimaryAsset = e.Event.PrimaryAsset != null ? new UnturnedAssetReference(e.Event.PrimaryAsset) : null;
-        record.PrimaryAssetName = e.Event.PrimaryAsset.GetDatabaseName();
         record.SecondaryAsset = e.Event.SecondaryAsset != null ? new UnturnedAssetReference(e.Event.SecondaryAsset) : null;
-        record.SecondaryAssetName = e.Event.SecondaryAsset.GetDatabaseName();
         record.Teamkilled = e.Event.InstigatorTeam.IsFriendly(normalFob.Team);
 
         _buffer.Enqueue(record);

@@ -28,4 +28,9 @@ public interface IFob : IDeployable
     /// Whether the specified player should be able to see this fob on their FOB HUD.
     /// </summary>
     bool IsVibileToPlayer(WarfarePlayer player);
+
+    /// <summary>
+    /// Called when the <see cref="FobConfiguration"/> is updated.
+    /// </summary>
+    void UpdateConfiguration(FobConfiguration configuration);
 }

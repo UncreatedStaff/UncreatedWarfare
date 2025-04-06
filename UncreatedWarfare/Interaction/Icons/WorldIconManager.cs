@@ -19,7 +19,7 @@ using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Interaction.Icons;
 
-public class WorldIconManager : ILayoutHostedService, IEventListener<PlayerLeft>, IEventListener<PlayerTeamChanged>
+public class WorldIconManager : ILayoutHostedService, IEventListener<PlayerLeft>, IEventListener<PlayerTeamChanged>, IDisposable
 {
     public const float DefaultTickSpeed = 1f;
     private const float TimeTolerance = 0.05f;
@@ -47,6 +47,20 @@ public class WorldIconManager : ILayoutHostedService, IEventListener<PlayerLeft>
 
         _lowestTickSpeed = DefaultTickSpeed;
         _greatestTickSpeed = DefaultTickSpeed;
+
+        _playerService.SubscribeToPlayerEvent<PlayerTeleported>((p, d) => p.UnturnedPlayer.onPlayerTeleported += d, OnPlayerTeleported);
+    }
+
+    public void Dispose()
+    {
+        _playerService.UnsubscribeFromPlayerEvent<PlayerTeleported>((p, d) => p.UnturnedPlayer.onPlayerTeleported -= d, OnPlayerTeleported);
+    }
+
+    private void OnPlayerTeleported(Player player, Vector3 point)
+    {
+        WarfarePlayer? onlinePlayer = _playerService.GetOnlinePlayerOrNull(player);
+        if (onlinePlayer != null)
+            UpdateForPlayer(onlinePlayer);
     }
 
     [Conditional("ICONS_DEBUG_LOGGING"), StringFormatMethod(nameof(msg))]
@@ -321,6 +335,7 @@ public class WorldIconManager : ILayoutHostedService, IEventListener<PlayerLeft>
             list.Add(icon);
         }
 
+        icon.Manager = this;
         _allIcons.Add(icon);
 
         Log("{0} | Creating {1}", rt.ToString("000.000", CultureInfo.InvariantCulture), icon);
@@ -477,7 +492,7 @@ public class WorldIconManager : ILayoutHostedService, IEventListener<PlayerLeft>
             for (int i = list.Count - 1; i >= 0; --i)
             {
                 WorldIconInfo icon = list[i];
-                if (!player.Equals(icon.TargetPlayer) && (team is null || icon.TargetTeam == team))
+                if (!player.Equals(icon.TargetPlayer) || team is null || icon.TargetTeam != team)
                     continue;
 
                 Log("{0} | Removing player specific for {1} {2} - {3}", rt.ToString("000.000", CultureInfo.InvariantCulture), player, team, icon);

@@ -55,10 +55,6 @@ public abstract class BasePlayerRecord
         set => _position.z = value;
     }
 
-    [StringLength(255)]
-    [Required]
-    public string NearestLocation { get; set; }
-
     [Column("TimestampUTC")]
     public DateTimeOffset Timestamp { get; set; }
 

@@ -1,19 +1,21 @@
 using System;
 using Uncreated.Warfare.Buildables;
+using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.Fobs.Entities;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.FOBs.SupplyCrates;
 
-public class SupplyCrate : RestockableBuildableFobEntity
+public class SupplyCrate : RestockableBuildableFobEntity<SupplyCrateInfo>
 {
     public SupplyType Type { get; }
     public float SupplyCount { get; set; }
     public float MaxSupplyCount { get; }
     public float SupplyRadius { get; set; }
 
-    public SupplyCrate(SupplyCrateInfo info, IBuildable buildable, IServiceProvider serviceProvider, bool enableAutoRestock = false)
-        : base(buildable, serviceProvider, enableAutoRestock)
+    public SupplyCrate(SupplyCrateInfo info, IBuildable buildable, IServiceProvider serviceProvider, Team team, bool enableAutoRestock = false)
+        : base(buildable, serviceProvider, enableAutoRestock, info, team)
     {
         Type = info.Type;
         SupplyCount = info.StartingSupplies;

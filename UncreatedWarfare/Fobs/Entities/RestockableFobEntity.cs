@@ -2,7 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Linq;
 using Uncreated.Warfare.Buildables;
-using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.FOBs.Entities;
 using Uncreated.Warfare.FOBs.StateStorage;
 using Uncreated.Warfare.Layouts.Teams;
@@ -14,7 +14,7 @@ namespace Uncreated.Warfare.Fobs.Entities;
 /// <summary>
 /// Buildable fob entity that periodically refills it's inventory from a <see cref="BarricadeStateSave"/>.
 /// </summary>
-public abstract class RestockableBuildableFobEntity : IBuildableFobEntity, IDisposable
+public abstract class RestockableBuildableFobEntity<TInfo> : BuildableFobEntity<TInfo> where TInfo : IBuildableFobEntityInfo
 {
     private readonly byte[]? _refillState;
 
@@ -25,35 +25,17 @@ public abstract class RestockableBuildableFobEntity : IBuildableFobEntity, IDisp
     /// </summary>
     public event Action? OnRestock;
 
-    /// <inheritdoc />
-    public virtual IAssetLink<Asset> IdentifyingAsset { get; }
-
-    /// <summary>
-    /// The buildable this FOB entity is based on.
-    /// </summary>
-    public IBuildable Buildable { get; }
-
-    /// <summary>
-    /// The team this buildable belongs to.
-    /// </summary>
-    public Team Team { get; }
-
-    /// <summary>
-    /// Keeps contained items from being dropped when this buildable is destroyed.
-    /// </summary>
-    public virtual bool PreventItemDrops => true;
+    public override bool PreventItemDrops => true;
 
     protected RestockableBuildableFobEntity(
         IBuildable buildable,
         IServiceProvider serviceProvider,
         bool enableAutoRestock,
+        TInfo? info,
+        Team team,
         TimeSpan refillInterval = default)
+        : base(info, buildable, team, serviceProvider)
     {
-        Buildable = buildable;
-        IdentifyingAsset = AssetLink.Create(Buildable.Asset);
-
-        Team = serviceProvider.GetService<ITeamManager<Team>>()?.GetTeam(buildable.Group) ?? Team.NoTeam;
-
         if (buildable.IsStructure || !enableAutoRestock)
             return;
 
@@ -131,8 +113,9 @@ public abstract class RestockableBuildableFobEntity : IBuildableFobEntity, IDisp
 
     protected virtual void HandleRestock() { }
 
-    public virtual void Dispose()
+    public override void Dispose()
     {
+        base.Dispose();
         Interlocked.Exchange(ref _loopTicker, null)?.Dispose();
         if (!Buildable.IsStructure && PreventItemDrops)
         {

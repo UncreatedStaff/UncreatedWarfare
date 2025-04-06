@@ -399,6 +399,7 @@ public class SessionManager :
         if (!update)
             return;
 
+
         _dbContext.Update(record);
         FixupSession(_dbContext, record);
 
