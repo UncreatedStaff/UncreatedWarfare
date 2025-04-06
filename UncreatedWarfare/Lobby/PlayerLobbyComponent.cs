@@ -199,7 +199,6 @@ public class PlayerLobbyComponent : IPlayerComponent, IDisposable
 
                 Vector3 newPosition = flagPosition + (position - flagPosition).normalized * 3;
                 newPosition.y = position.y;
-                Console.WriteLine($"Too close, new position: {newPosition} b ");
                 Player.UnturnedPlayer.movement.updates.Add(new PlayerStateUpdate(newPosition, Player.UnturnedPlayer.look.angle, Player.UnturnedPlayer.look.rot));
                 Player.UnturnedPlayer.movement.tellState(newPosition, Player.UnturnedPlayer.look.angle, Player.UnturnedPlayer.look.rot);
                 break;
@@ -208,7 +207,6 @@ public class PlayerLobbyComponent : IPlayerComponent, IDisposable
 
         if (!inAnyFlagRadius && !Player.UnturnedPlayer.movement.canAddSimulationResultsToUpdates)
         {
-            Console.WriteLine($"Far enough, syncing position b");
             Player.UnturnedPlayer.movement.canAddSimulationResultsToUpdates = true;
             Player.UnturnedPlayer.movement.updates.Add(new PlayerStateUpdate(position, Player.UnturnedPlayer.look.angle, Player.UnturnedPlayer.look.rot));
             Player.UnturnedPlayer.movement.tellState(position, Player.UnturnedPlayer.look.angle, Player.UnturnedPlayer.look.rot);
