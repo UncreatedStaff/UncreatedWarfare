@@ -16,7 +16,7 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
     private const float AquisitionFrequency = 0.25f;
 
 
-    private float _horizontalRange = 700;
+    private float _horizontalRange = 1000;
     private float? _verticalRange = 1500;
 #nullable disable
 
