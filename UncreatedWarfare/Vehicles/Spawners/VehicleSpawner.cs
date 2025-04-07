@@ -406,7 +406,7 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
             return;
         foreach (IBuildable sign in Signs)
         {
-            if (sign.IsStructure || sign.IsDead)
+            if (sign.IsStructure || !sign.Alive)
                 continue;
 
             _signInstancer.UpdateSign(sign.GetDrop<BarricadeDrop>());

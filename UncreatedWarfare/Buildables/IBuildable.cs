@@ -40,8 +40,9 @@ public interface IBuildable :
     InteractableVehicle? VehicleParent { get; }
 
     /// <summary>
-    /// If the buildable has been destroyed.
+    /// If the buildable has been destroyed by its health dropping to 0.
     /// </summary>
+    /// <remarks>This is not the same as not spawned.</remarks>
     bool IsDead { get; }
 
     /// <summary>
@@ -121,7 +122,7 @@ public class BuildableBarricade : IBuildable
     public InteractableVehicle? VehicleParent { get; }
     public bool IsDead => Data.barricade.isDead;
     public ItemPlaceableAsset Asset => Drop.asset;
-    public Transform Model => Drop.model == null || Data.barricade.isDead ? null! : Drop.model; // so you can use ? on it
+    public Transform Model => Drop.model == null || Drop.GetNetId().id == 0 ? null! : Drop.model; // so you can use ? on it
     public CSteamID Owner => Unsafe.As<ulong, CSteamID>(ref Data.owner);
     public CSteamID Group => Unsafe.As<ulong, CSteamID>(ref Data.group);
     public NetId NetId => Drop.GetNetId();
@@ -155,13 +156,13 @@ public class BuildableBarricade : IBuildable
         Drop = drop;
         Data = drop.GetServersideData();
         Transform parent = drop.model.parent;
-        if (!BarricadeManager.tryGetPlant(parent, out _, out _, out ushort plant, out BarricadeRegion region))
+        if (!BarricadeManager.tryGetPlant(parent, out _, out _, out _, out BarricadeRegion region) || region is not VehicleBarricadeRegion vehRegion)
         {
             return;
         }
 
         IsOnVehicle = true;
-        VehicleParent = (region as VehicleBarricadeRegion)?.vehicle;
+        VehicleParent = vehRegion.vehicle;
     }
 
     public void SetPositionAndRotation(Vector3 position, Quaternion rotation)
@@ -171,7 +172,7 @@ public class BuildableBarricade : IBuildable
         BarricadeManager.ServerSetBarricadeTransform(Drop.model, position, rotation);
     }
 
-    bool ITransformObject.Alive => !Data.barricade.isDead;
+    public bool Alive => Drop.GetNetId().id != 0;
     object IBuildable.Drop => Drop;
     object IBuildable.Data => Data;
     object IBuildable.Item => Data.barricade;
@@ -190,7 +191,7 @@ public class BuildableBarricade : IBuildable
     bool IEquatable<BuildableStructure>.Equals(BuildableStructure? other) => false;
     public override bool Equals(object? obj) => obj is IBuildable b && Equals(b);
     public override int GetHashCode() => unchecked ( (int)Drop.instanceID );
-    public override string ToString() =>  $"BuildableBarricade[InstanceId: {InstanceId} Asset itemName: {Asset.itemName} Asset GUID: {Asset.GUID:N} Owner: {Owner} Group: {Group} IsDead: {IsDead}]";
+    public override string ToString() =>  $"BuildableBarricade[InstanceId: {InstanceId} Asset itemName: {Asset.itemName} Asset GUID: {Asset.GUID:N} Owner: {Owner} Group: {Group} Alive: {Alive}]";
 }
 
 [CannotApplyEqualityOperator]
@@ -200,7 +201,7 @@ public class BuildableStructure : IBuildable
     public bool IsStructure => true;
     public bool IsDead => Data.structure.isDead;
     public ItemPlaceableAsset Asset => Drop.asset;
-    public Transform Model => Drop.model == null || Data.structure.isDead ? null! : Drop.model; // so you can use ? on it
+    public Transform Model => Drop.model == null || Drop.GetNetId().id == 0 ? null! : Drop.model; // so you can use ? on it
     public CSteamID Owner => Unsafe.As<ulong, CSteamID>(ref Data.owner);
     public CSteamID Group => Unsafe.As<ulong, CSteamID>(ref Data.group);
     public NetId NetId => Drop.GetNetId();
@@ -241,7 +242,7 @@ public class BuildableStructure : IBuildable
         StructureManager.ServerSetStructureTransform(Drop.model, position, rotation);
     }
 
-    bool ITransformObject.Alive => !Data.structure.isDead;
+    public bool Alive => Drop.GetNetId().id != 0;
     object IBuildable.Drop => Drop;
     object IBuildable.Data => Data;
     object IBuildable.Item => Data.structure;
@@ -262,5 +263,5 @@ public class BuildableStructure : IBuildable
     public bool Equals(IBuildable? other) => other is not null && other.IsStructure && other.InstanceId == Drop.instanceID;
     public override bool Equals(object? obj) => obj is IBuildable b && Equals(b);
     public override int GetHashCode() => unchecked ( (int)Drop.instanceID );
-    public override string ToString() => $"BuildableStructure[InstanceId: {InstanceId} Asset itemName: {Asset.itemName} Asset GUID: {Asset.GUID:N} Owner: {Owner} Group: {Group} IsDead: {IsDead}]";
+    public override string ToString() => $"BuildableStructure[InstanceId: {InstanceId} Asset itemName: {Asset.itemName} Asset GUID: {Asset.GUID:N} Owner: {Owner} Group: {Group} Alive: {Alive}]";
 }

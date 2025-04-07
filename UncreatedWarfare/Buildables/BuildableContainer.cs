@@ -37,7 +37,7 @@ public class BuildableContainer : MonoBehaviour, IComponentContainer<IBuildableC
     {
         GameThread.AssertCurrent();
 
-        if (buildable.IsDead)
+        if (!buildable.Alive)
             throw new InvalidOperationException("Buildable is dead.");
 
         if (!buildable.Model.TryGetComponent(out BuildableContainer container))

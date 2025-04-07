@@ -59,7 +59,7 @@ public static class BuildableExtensions
 
         GameThread.AssertCurrent();
 
-        if (buildable.Model != null && !buildable.IsDead)
+        if (buildable.Model != null && buildable.Alive)
         {
             if (!buildable.IsStructure)
             {
@@ -350,7 +350,7 @@ public static class BuildableExtensions
                     throw new Exception("Failed to find added planted barricade. This shouldn't happen.");
                 }
 
-                if (destroyOld && !buildable.IsDead)
+                if (destroyOld && buildable.Alive)
                 {
                     buildable.Destroy();
                 }
@@ -361,7 +361,7 @@ public static class BuildableExtensions
         }
 
         IBuildable newBuildable = DropBuildable(asset, buildable.Position, buildable.Rotation, buildable.Owner, buildable.Group, health, state);
-        if (destroyOld && !buildable.IsDead)
+        if (destroyOld && buildable.Alive)
         {
             buildable.Destroy();
         }

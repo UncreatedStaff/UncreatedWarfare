@@ -233,7 +233,7 @@ public class VehicleService :
 
         spawner.UnlinkVehicle();
 
-        if (spawner.Buildable == null || spawner.Buildable.IsDead)
+        if (spawner.Buildable == null || !spawner.Buildable.Alive)
         {
             throw new InvalidOperationException("Spawner buildable no longer exists.");
         }

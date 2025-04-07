@@ -88,7 +88,7 @@ public class VehicleRequestService :
             return false;
         }
 
-        if (spawn?.Buildable == null || spawn.Buildable.IsDead || !spawn.VehicleInfo.VehicleAsset.TryGetAsset(out VehicleAsset? vehicleAsset))
+        if (spawn?.Buildable == null || !spawn.Buildable.Alive || !spawn.VehicleInfo.VehicleAsset.TryGetAsset(out VehicleAsset? vehicleAsset))
         {
             resultHandler.NotFoundOrRegistered(player);
             return false;

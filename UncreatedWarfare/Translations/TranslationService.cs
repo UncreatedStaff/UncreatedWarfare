@@ -31,19 +31,20 @@ public class TranslationService : ITranslationService
         LanguageService = serviceProvider.GetRequiredService<LanguageService>();
         ValueFormatter = serviceProvider.GetRequiredService<ITranslationValueFormatter>();
 
+        if (systemConfig.GetValue<bool>("translations:auto_reset_translations"))
+        {
+            WarfareModule module = serviceProvider.GetRequiredService<WarfareModule>();
+            string translationsFolder = Path.Combine(module.HomeDirectory, TranslationsFolder, LanguageService.GetDefaultLanguage().Code);
+
+            if (Directory.Exists(translationsFolder))
+                Directory.Delete(translationsFolder, true);
+        }
+
         TranslationCollections = new ReadOnlyDictionary<Type, TranslationCollection>(_collections);
 
         SetOf = new LanguageSets(playerService);
 
         TerminalColoring = systemConfig.GetValue("logging:terminal_coloring", StackColorFormatType.ExtendedANSIColor);
-
-#if DEBUG // delete default translations
-        WarfareModule module = serviceProvider.GetRequiredService<WarfareModule>();
-        string translationsFolder = Path.Combine(module.HomeDirectory, TranslationsFolder, LanguageService.GetDefaultLanguage().Code);
-
-        if (Directory.Exists(translationsFolder))
-            Directory.Delete(translationsFolder, true);
-#endif
     }
 
     public T Get<T>() where T : TranslationCollection, new()

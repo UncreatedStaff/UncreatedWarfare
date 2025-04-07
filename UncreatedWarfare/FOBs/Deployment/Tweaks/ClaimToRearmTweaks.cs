@@ -63,7 +63,7 @@ public class ClaimToRearmTweaks : // todo: move this class out of this namespace
         {
             SupplyCrate? ammoCrate = _fobManager.Entities.OfType<SupplyCrate>().FirstOrDefault(s =>
                 s.Type == SupplyType.Ammo &&
-                !s.Buildable.IsDead &&
+                s.Buildable.Alive &&
                 s.Buildable.Equals(e.Buildable)
             );
             
@@ -338,9 +338,9 @@ public class ClaimToRearmTweaks : // todo: move this class out of this namespace
             case FirearmClass.GrenadeLauncher:
                 return 0.2f;
             case FirearmClass.LightAntiTank:
-                return 1f;
+                return 0.8f;
             case FirearmClass.HeavyAntiTank:
-                return 1f;
+                return 0.85f;
             default:
                 return 0.2f;
         }

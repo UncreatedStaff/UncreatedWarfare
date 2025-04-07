@@ -6,6 +6,7 @@ using Uncreated.Framework.UI.Reflection;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Interaction.UI;
 using Uncreated.Warfare.Layouts.Flags;
+using Uncreated.Warfare.Layouts.Phases;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
@@ -156,6 +157,12 @@ public class CaptureUI : UnturnedUI, IHudUIListener
         Layout layout = _module.GetActiveLayout();
         IFlagRotationService rot = layout.ServiceProvider.Resolve<IFlagRotationService>();
         DefaultCaptureUIFlagEvents? uiEvents = layout.ServiceProvider.ResolveOptional<DefaultCaptureUIFlagEvents>();
+
+        if (layout.ActivePhase is not ActionPhase)
+        {
+            _isHidden = false;
+            return;
+        }
 
         if (player != null)
         {

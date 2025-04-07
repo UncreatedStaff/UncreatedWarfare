@@ -28,11 +28,13 @@ namespace Uncreated.Warfare.Fobs;
 /// </summary>
 public class ResourceFob : IBuildableFob, IResourceFob, IDisposable
 {
+    // ReSharper disable once PrivateFieldCanBeConvertedToLocalVariable
     private readonly IPlayerService _playerService;
     private readonly AssetConfiguration _assetConfiguration;
-    private WorldIconManager? _worldIconManager;
+    private readonly WorldIconManager? _worldIconManager;
     protected readonly FobManager FobManager;
     private readonly ILoopTicker _loopTicker;
+    private readonly Func<WarfarePlayer, float> _getProxyScore;
 
     public IBuildable Buildable { get; protected set; }
 
@@ -66,21 +68,6 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable
     public ProximityCollector<WarfarePlayer> NearbyFriendlies { get; private set; }
     public ProximityCollector<WarfarePlayer> NearbyEnemies { get; private set; }
     public IEnumerable<IFobEntity> EnumerateEntities() => FobManager.Entities.Where(e => MathUtility.WithinRange(Position, e.Position, EffectiveRadius));
-    /// <summary>
-    /// Invoked when a player enters the radius of the FOB.
-    /// </summary>
-    public event Action<WarfarePlayer>? OnPlayerEntered;
-
-    /// <summary>
-    /// Invoked when a player exits the radius of the FOB. Always invoked before the player enters the next FOB if they teleport to another.
-    /// </summary>
-    public event Action<WarfarePlayer>? OnPlayerExited;
-
-    public event Action<InteractableVehicle>? OnVehicleEntered;
-    public event Action<InteractableVehicle>? OnVehicleExited;
-
-    public event Action<IFobEntity>? OnItemAdded;
-    public event Action<IFobEntity>? OnItemRemoved;
 
     public WorldIconInfo? Icon { get; private set; }
 
@@ -96,7 +83,7 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable
 
         FriendlyProximity = new SphereProximity(Position, EffectiveRadius);
 
-        _loopTicker = serviceProvider.GetRequiredService<ILoopTickerFactory>().CreateTicker(TimeSpan.FromSeconds(0.5f), true, true);
+        _loopTicker = serviceProvider.GetRequiredService<ILoopTickerFactory>().CreateTicker(TimeSpan.FromSeconds(0.25f), true, true);
 
         NearbyFriendlies = new ProximityCollector<WarfarePlayer>(
             new ProximityCollector<WarfarePlayer>.ProximityCollectorOptions
@@ -116,15 +103,18 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable
                 PositionFunction = p => p.Position
             }
         );
+
+        _getProxyScore = GetProxyScore;
         _loopTicker.OnTick += (ticker, timeSinceStart, deltaTime) =>
         {
-            bool newProxyState = NearbyEnemies.Collection.Sum(GetProxyScore) >= 1;
+            bool newProxyState = NearbyEnemies.Collection.Sum(_getProxyScore) >= 1;
             if (newProxyState != IsProxied)
             {
                 IsProxied = newProxyState;
                 _ = WarfareModule.EventDispatcher.DispatchEventAsync(new FobProxyChanged { Fob = this, IsProxied = newProxyState });
             }
         };
+
         NearbySupplyCrates supplyCrates = NearbySupplyCrates.FindNearbyCrates(Position, Team.GroupId, FobManager);
         ChangeSupplies(SupplyType.Build, supplyCrates.BuildCount);
         ChangeSupplies(SupplyType.Ammo, supplyCrates.AmmoCount);
@@ -188,7 +178,7 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable
 
     private float GetProxyScore(WarfarePlayer enemy)
     {
-        if (!enemy.IsOnline || enemy.UnturnedPlayer.life.isDead || enemy.UnturnedPlayer.movement.getVehicle() != null || enemy.Team.IsFriendly(Team))
+        if (!enemy.IsOnline || enemy.UnturnedPlayer.life.isDead || enemy.Team.IsFriendly(Team))
             return 0;
 
         float distanceFromFob = (enemy.Position - Position).magnitude;
@@ -270,6 +260,8 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable
         NearbyEnemies.Dispose();
 
         _loopTicker.Dispose();
+        Icon?.Dispose();
+        Icon = null;
     }
 
     public int CompareTo(IFob other)
