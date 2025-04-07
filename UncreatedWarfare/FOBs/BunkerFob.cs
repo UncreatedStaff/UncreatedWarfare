@@ -8,7 +8,7 @@ using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Util.DamageTracking;
 
 namespace Uncreated.Warfare.FOBs;
-public class BunkerFob : ResourceFob
+public class BunkerFob : ResourceFob, IDeployable
 {
     public bool IsBuilt { get; private set; }
     public bool HasBeenRebuilt { get; private set; }
@@ -24,23 +24,37 @@ public class BunkerFob : ResourceFob
             return base.Color;
         }
     }
+
     public BunkerFob(IServiceProvider serviceProvider, string name, IBuildable buildable) : base(serviceProvider, name, buildable)
     {
         IsBuilt = false;
         HasBeenRebuilt = false;
         DamageTracker = new DamageTracker(name);
+
+        // show shovelable icon instead
+        if (Icon != null)
+            Icon.IsVisible = false;
     }
+
     public void MarkBuilt(IBuildable newBuildable)
     {
         IsBuilt = true;
         HasBeenRebuilt = true;
         Buildable = newBuildable;
+        UpdateIcon();
     }
     public void MarkUnbuilt(IBuildable newBuildable)
     {
         IsBuilt = false;
         Buildable = newBuildable;
+        UpdateIcon();
     }
+
+    void IDeployable.OnDeployTo(WarfarePlayer player, in DeploySettings settings)
+    {
+        player.Component<FobDeploymentInvulnerabilityCooldown>().StartCooldown();
+    }
+
     public override bool CheckDeployableToTick(WarfarePlayer player, ChatService chatService, DeploymentTranslations translations, in DeploySettings settings)
     {
         if (!base.CheckDeployableTo(player, chatService, translations, settings))

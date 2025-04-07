@@ -13,6 +13,7 @@ namespace Uncreated.Warfare.Squads;
 
 public class Squad : ITranslationArgument
 {
+    // todo: something is wrong with squads, a few times errors are being thrown for players not being in squads or being in more than one
     public const int MaxMembers = 6;
     private readonly List<WarfarePlayer> _members;
     private readonly SquadManager _squadManager;
@@ -127,8 +128,16 @@ public class Squad : ITranslationArgument
 
         if (index == 0)
         {
-            Disband();
-            return true;
+            if (_members.Count == 1)
+            {
+                Disband();
+                return true;
+            }
+
+            PromoteMember(_members[1]);
+            if (!_members[1].Equals(player))
+                return false;
+            index = 1;
         }
 
         _members.RemoveAt(index);

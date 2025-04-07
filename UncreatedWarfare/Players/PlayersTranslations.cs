@@ -25,14 +25,8 @@ public sealed class PlayersTranslations : PropertiesTranslationCollection
     [TranslationData("Generic message sent when a player is placing something in a place they shouldn't.", "Item being placed")]
     public readonly Translation<ItemAsset> ProhibitedPlacement = new Translation<ItemAsset>("<#fa9e9e>You're not allowed to place {0} here.", arg0Fmt: new ArgumentFormat(PluralAddon.Always(), RarityColorAddon.Instance));
 
-    [TranslationData("Generic message sent when a player is dropping an item where they shouldn't.", "Item being dropped", "Zone or flag the player is dropping their item in.")]
-    public readonly Translation<ItemAsset, IDeployable> ProhibitedDropZone = new Translation<ItemAsset, IDeployable>("<#fa9e9e>You're not allowed to drop {0} in {1}.", arg0Fmt: new ArgumentFormat(PluralAddon.Always(), RarityColorAddon.Instance), arg1Fmt: Flags.ColorNameDiscoverFormat);
-
-    [TranslationData("Generic message sent when a player is picking up an item where they shouldn't.", "Item being picked up", "Zone or flag the player is picking up their item in.")]
-    public readonly Translation<ItemAsset, IDeployable> ProhibitedPickupZone = new Translation<ItemAsset, IDeployable>("<#fa9e9e>You're not allowed to pick up {0} in {1}.", arg0Fmt: new ArgumentFormat(PluralAddon.Always(), RarityColorAddon.Instance), arg1Fmt: Flags.ColorNameDiscoverFormat);
-
-    [TranslationData("Generic message sent when a player is placing something in a zone they shouldn't be.", "Item being placed", "Zone or flag the player is placing their item in.")]
-    public readonly Translation<ItemAsset, IDeployable> ProhibitedPlacementZone = new Translation<ItemAsset, IDeployable>("<#fa9e9e>You're not allowed to place {0} in {1}.", arg0Fmt: new ArgumentFormat(PluralAddon.Always(), RarityColorAddon.Instance), arg1Fmt: Flags.ColorNameDiscoverFormat);
+    [TranslationData("Generic message sent when a player is dropping something in a place they shouldn't.", "Item being placed")]
+    public readonly Translation<ItemAsset> ProhibitedItemDrop = new Translation<ItemAsset>("<#fa9e9e>You're not allowed to drop {0} here.", arg0Fmt: new ArgumentFormat(PluralAddon.Always(), RarityColorAddon.Instance));
 
     [TranslationData("Sent when a player tries to steal a battery.")]
     public readonly Translation NoStealingBatteries = new Translation("<#fa9e9e>Stealing batteries is not allowed.</color>");

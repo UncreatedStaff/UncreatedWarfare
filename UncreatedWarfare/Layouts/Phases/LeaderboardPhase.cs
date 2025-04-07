@@ -337,12 +337,22 @@ public class LeaderboardPhase : BasePhase<PhaseTeamSettings>, IDisposable, IEven
 
     void IEventListener<PlayerJoined>.HandleEvent(PlayerJoined e, IServiceProvider serviceProvider)
     {
-        CheckPlayer(e.Player);
+        if (!_leaderboardUi.IsActive)
+        {
+            CheckPlayer(e.Player);
+        }
+        else
+        {
+            _leaderboardUi.Open(CreateLeaderboardSets(), this);
+        }
     }
 
     void IEventListener<PlayerTeamChanged>.HandleEvent(PlayerTeamChanged e, IServiceProvider serviceProvider)
     {
-        CheckPlayer(e.Player);
+        if (!_leaderboardUi.IsActive)
+        {
+            CheckPlayer(e.Player);
+        }
     }
 
     private void CheckPlayer(WarfarePlayer player)

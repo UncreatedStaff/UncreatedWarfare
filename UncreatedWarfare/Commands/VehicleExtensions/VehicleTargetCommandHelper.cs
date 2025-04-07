@@ -109,6 +109,8 @@ internal static class VehicleTargetCommandHelper
         }
 
         Vector3 playerPosition = ctx.Player.Position;
+        bool playerInMain = zoneStore.IsInMainBase(playerPosition);
+
         foreach (VehicleSpawner spawn in spawnerService.Spawners)
         {
             InteractableVehicle? linked = spawn.LinkedVehicle;
@@ -120,7 +122,7 @@ internal static class VehicleTargetCommandHelper
             Vector3 vehiclePosition = linked.transform.position;
             if (linked.asset.engine is EEngine.HELICOPTER or EEngine.PLANE || MathUtility.WithinRange(in playerPosition, in vehiclePosition, 150))
             {
-                if (!zoneStore.IsInMainBase(vehiclePosition) && !zoneStore.IsInAntiMainCamp(vehiclePosition))
+                if (playerInMain && !zoneStore.IsInMainBase(vehiclePosition) && !zoneStore.IsInAntiMainCamp(vehiclePosition))
                     continue;
             }
 

@@ -44,10 +44,7 @@ public interface ITransformObject
     /// <summary>
     /// This object's position relative to the map grid.
     /// </summary>
-    GridLocation GridLocation
-    {
-        get => new GridLocation(Position);
-    }
+    GridLocation GridLocation => new GridLocation(Position);
 }
 
 public static class TransformObjectExtensions
@@ -62,5 +59,11 @@ public static class TransformObjectExtensions
         float y = pos.y - position.y;
         float z = pos.z - position.z;
         return ((x * x) + ((!is2d ? 1 : 0) * (y * y)) + (z * z)) <= (radius * radius);
+    }
+
+    public static Vector3 TransformPoint(this ITransformObject @object, Vector3 point)
+    {
+        Matrix4x4 matrix = Matrix4x4.TRS(@object.Position, @object.Rotation, @object.Scale);
+        return matrix.MultiplyPoint3x4(point);
     }
 }

@@ -5,13 +5,17 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Buildables;
+using Uncreated.Warfare.Events.Models.Items;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Events.Models.Vehicles;
 using Uncreated.Warfare.Events.Models.Zones;
+using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Requests;
 using Uncreated.Warfare.Kits.Whitelists;
 using Uncreated.Warfare.Layouts.Teams;
+using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Zones;
 
@@ -25,24 +29,59 @@ public class SafezoneTweaks :
     IEventListener<ChangeFiremodeRequested>,
     IEventListener<IDamageBuildableRequestedEvent>,
     IEventListener<DamageVehicleRequested>,
-    IEventListener<DamagePlayerRequested>
+    IEventListener<DamagePlayerRequested>,
+    IEventListener<DropItemRequested>
 {
     private readonly ZoneStore _zoneStore;
     private readonly KitRequestService _kitRequestService;
     private readonly WhitelistService _whitelistService;
+    private readonly ChatService _chatService;
+    private readonly PlayersTranslations _translations;
     private readonly ILogger<SafezoneTweaks> _logger;
 
-    public SafezoneTweaks(ZoneStore zoneStore, KitRequestService kitRequestService, WhitelistService whitelistService, ILogger<SafezoneTweaks> logger)
+    public SafezoneTweaks(
+        ZoneStore zoneStore,
+        KitRequestService kitRequestService,
+        WhitelistService whitelistService,
+        ChatService chatService,
+        TranslationInjection<PlayersTranslations> translations,
+        ILogger<SafezoneTweaks> logger)
     {
         _zoneStore = zoneStore;
         _kitRequestService = kitRequestService;
         _whitelistService = whitelistService;
+        _chatService = chatService;
+        _translations = translations.Value;
         _logger = logger;
+        
+    }
+
+    public static bool IsSafezone(ZoneType zoneType)
+    {
+        return zoneType is ZoneType.MainBase or ZoneType.Lobby or ZoneType.WarRoom;
+    }
+
+    private bool CanDamage(Vector3 position)
+    {
+        foreach (Zone zone in _zoneStore.EnumerateInsideZones(position))
+        {
+            if (!IsSafezone(zone.Type))
+            {
+                continue;
+            }
+
+            return false;
+        }
+
+        return true;
     }
 
     void IEventListener<DamagePlayerRequested>.HandleEvent(DamagePlayerRequested e, IServiceProvider serviceProvider)
     {
-        if (e.Parameters.cause != EDeathCause.KILL && _zoneStore.IsInMainBase(e.Player, e.Player.Team.Faction))
+        if (e.Parameters.cause == EDeathCause.KILL)
+            return;
+
+        if (!CanDamage(e.Player.Position))
             e.Cancel();
     }
 
@@ -182,9 +221,19 @@ public class SafezoneTweaks :
 
     public void HandleEvent(DamageVehicleRequested e, IServiceProvider serviceProvider)
     {
-        if (_zoneStore.IsInsideZone(e.Vehicle.Position, ZoneType.MainBase, null))
-        {
+        if (!CanDamage(e.Vehicle.Position))
             e.Cancel();
-        }
+    }
+
+    public void HandleEvent(DropItemRequested e, IServiceProvider serviceProvider)
+    {
+        if (e.Player.IsOnDuty)
+            return;
+
+        if (!_zoneStore.IsInWarRoom(e.Player))
+            return;
+        
+        _chatService.Send(e.Player, _translations.ProhibitedItemDrop, e.Item.GetAsset());
+        e.Cancel();
     }
 }

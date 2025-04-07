@@ -3,12 +3,15 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Buildables;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models.Fobs;
 using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.FOBs.Entities;
 using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Interaction;
+using Uncreated.Warfare.Interaction.Icons;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
@@ -26,6 +29,8 @@ namespace Uncreated.Warfare.Fobs;
 public class ResourceFob : IBuildableFob, IResourceFob, IDisposable
 {
     private readonly IPlayerService _playerService;
+    private readonly AssetConfiguration _assetConfiguration;
+    private WorldIconManager? _worldIconManager;
     protected readonly FobManager FobManager;
     private readonly ILoopTicker _loopTicker;
 
@@ -77,6 +82,8 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable
     public event Action<IFobEntity>? OnItemAdded;
     public event Action<IFobEntity>? OnItemRemoved;
 
+    public WorldIconInfo? Icon { get; private set; }
+
     public ResourceFob(IServiceProvider serviceProvider, string name, IBuildable buildable)
     {
         Name = name;
@@ -84,6 +91,8 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable
         Team = serviceProvider.GetRequiredService<ITeamManager<Team>>().GetTeam(buildable.Group);
         _playerService = serviceProvider.GetRequiredService<IPlayerService>();
         FobManager = serviceProvider.GetRequiredService<FobManager>();
+        _assetConfiguration = serviceProvider.GetRequiredService<AssetConfiguration>();
+        _worldIconManager = serviceProvider.GetService<WorldIconManager>();
 
         FriendlyProximity = new SphereProximity(Position, EffectiveRadius);
 
@@ -119,10 +128,64 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable
         NearbySupplyCrates supplyCrates = NearbySupplyCrates.FindNearbyCrates(Position, Team.GroupId, FobManager);
         ChangeSupplies(SupplyType.Build, supplyCrates.BuildCount);
         ChangeSupplies(SupplyType.Ammo, supplyCrates.AmmoCount);
+
+        UpdateIcon();
+    }
+
+    public virtual void UpdateConfiguration(FobConfiguration configuration)
+    {
+        UpdateIcon();
+    }
+
+    protected void UpdateIcon()
+    {
+        if (Icon != null)
+        {
+            Icon.Dispose();
+            Icon = null;
+        }
+
+        ShovelableInfo? shovelable = FobManager.Configuration.Shovelables.FirstOrDefault(x =>
+            x.Foundation.MatchAsset(Buildable.Asset) || x.CompletedStructure.MatchAsset(Buildable.Asset)
+        );
+
+        if (shovelable == null)
+        {
+            return;
+        }
+
+        string? icon = null;
+        Vector3 offset = shovelable.IconOffset;
+
+        if (shovelable.Foundation.MatchAsset(Buildable.Asset) && !string.IsNullOrEmpty(shovelable.FoundationIcon))
+        {
+            icon = shovelable.FoundationIcon;
+        }
+
+        if (!string.IsNullOrEmpty(shovelable.Icon))
+            icon ??= shovelable.Icon;
+
+        if (icon == null)
+            return;
+
+        IAssetLink<EffectAsset> iconAsset = _assetConfiguration.GetAssetLink<EffectAsset>(icon);
+
+        if (!iconAsset.TryGetAsset(out _) || _worldIconManager == null)
+            return;
+
+        Icon = new WorldIconInfo(Buildable, iconAsset, Team)
+        {
+            Offset = offset,
+            RelevanceDistance = 512f,
+            TickSpeed = 10f
+        };
+
+        _worldIconManager.CreateIcon(Icon);
     }
 
 
     public bool IsVibileToPlayer(WarfarePlayer player) => player.IsOnline && player.Team == Team;
+
     private float GetProxyScore(WarfarePlayer enemy)
     {
         if (!enemy.IsOnline || enemy.UnturnedPlayer.life.isDead || enemy.UnturnedPlayer.movement.getVehicle() != null || enemy.Team.IsFriendly(Team))

@@ -33,6 +33,8 @@ public class EFMigrationDesignTimeFactory : IDesignTimeDbContextFactory<WarfareD
                                         $"Add the path to \"possiblePaths\" in \"EFMigrationDesignTimeFactory.cs\".");
         }
 
+        WarfareDbContext.IsInDesignTimeFactory = true;
+
         try
         {
             ThreadUtil.setupGameThread();

@@ -1,6 +1,7 @@
 using Autofac.Core;
 using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Primitives;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -148,14 +149,16 @@ public class Layout : IDisposable
         _appLifetime = serviceProvider.Resolve<WarfareLifetimeComponent>();
 
         // listens for changes to the config file
-        _configListener = LayoutConfiguration.GetReloadToken().RegisterChangeCallback(_ =>
-        {
-            UniTask.Create(async () =>
+        _configListener = ChangeToken.OnChange(
+            LayoutConfiguration.GetReloadToken,
+            () =>
             {
-                await UniTask.SwitchToMainThread();
-                await ApplyLayoutConfigurationUpdateAsync(CancellationToken.None);
+                UniTask.Create(async () =>
+                {
+                    await UniTask.SwitchToMainThread();
+                    await ApplyLayoutConfigurationUpdateAsync(CancellationToken.None);
+                });
             });
-        }, null);
     }
 
     /// <summary>

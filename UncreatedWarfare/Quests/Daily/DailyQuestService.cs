@@ -272,13 +272,24 @@ public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoin
         _isClosing = true;
 
         _regenerationTokenSource?.Cancel();
-        if (_regenerationTask is { IsCompleted: false })
+        if (_regenerationTask is { IsCompleted: false } regenTask)
         {
-            await _regenerationTask.ConfigureAwait(false);
+            try
+            {
+                await regenTask.ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error continuing regen task.");
+            }
             _regenerationTask = null;
         }
 
         _regenerationTokenSource?.Dispose();
+
+        await UniTask.SwitchToMainThread(token);
+
+        UpdateTimers();
     }
 
     /// <summary>
@@ -638,6 +649,18 @@ public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoin
 
     private bool UpdateTimers()
     {
+        if (_isClosing)
+        {
+            if (_tickTimer != null)
+            {
+                _tickTimer.Change(Timeout.Infinite, Timeout.Infinite);
+                _tickTimer.Dispose();
+                _tickTimer = null;
+            }
+
+            return false;
+        }
+
         DateTime now = DateTime.UtcNow;
         DateTime nowBuffer = now.AddSeconds(3d);
 

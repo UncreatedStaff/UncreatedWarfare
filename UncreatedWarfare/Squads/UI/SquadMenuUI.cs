@@ -261,7 +261,7 @@ public class SquadMenuUI :
             return;
 
         WarfarePlayer leader = squad.Leader;
-        if (GetOrAddData(leader).IsViewing)
+        if (leader.IsInSquad() && GetOrAddData(leader).IsViewing)
             SendMySquadDetail(leader);
 
         UpdateForViewingPlayersExceptOwner(squad);

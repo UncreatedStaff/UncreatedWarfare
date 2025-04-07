@@ -32,6 +32,10 @@ public static class RandomUtility
         {
             _unityLoaded = false;
         }
+        catch (UnityException)
+        {
+            _unityLoaded = true;
+        }
 
         Interlocked.MemoryBarrier();
         _unityLoadedSet = true;

@@ -516,10 +516,9 @@ public class SpottableObjectComponent : MonoBehaviour, IManualOnDestroy
         {
             _worldIconManager!.RemoveIcon(icon);
             icon = anySpotterIsTickable
-                ? new WorldIconInfo(transform, _asset, team, lifetimeSec: duration)
-                : new WorldIconInfo(transform.position, _asset, team, lifetimeSec: duration);
+                ? new WorldIconInfo(transform, _asset, team, lifetimeSec: duration) { TickSpeed = _updateFrequency }
+                : new WorldIconInfo(transform.position, _asset, team, lifetimeSec: duration) { TickSpeed = _updateFrequency };
 
-            icon.TickSpeed = _updateFrequency;
             icon.Offset = _offset;
 
             Log($" Icon created team: {team} duration: {duration}.");

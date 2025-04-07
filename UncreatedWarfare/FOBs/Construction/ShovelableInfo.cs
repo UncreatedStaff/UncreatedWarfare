@@ -3,7 +3,7 @@ using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.ValueFormatters;
 
 namespace Uncreated.Warfare.FOBs.Construction;
-public class ShovelableInfo : ITranslationArgument
+public class ShovelableInfo : ITranslationArgument, IBuildableFobEntityInfo
 {
     public required IAssetLink<ItemPlaceableAsset> Foundation { get; set; }
     public required ShovelableType ConstuctionType { get; set; }
@@ -14,6 +14,17 @@ public class ShovelableInfo : ITranslationArgument
     public IAssetLink<ItemPlaceableAsset>? CompletedStructure { get; set; }
     public IAssetLink<EffectAsset>? CompletedEffect { get; set; }
     public EmplacementInfo? Emplacement { get; set; }
+
+    public string? Icon { get; set; }
+
+    /// <summary>
+    /// Used for FOBs after they've been built at least once.
+    /// </summary>
+    public string? FoundationIcon { get; set; }
+    public Vector3 IconOffset { get; set; }
+
+    IAssetLink<ItemPlaceableAsset> IBuildableFobEntityInfo.IdentifyingAsset => Foundation;
+
     public override string ToString()
     {
         return $"ShovelableInfo:\n" +

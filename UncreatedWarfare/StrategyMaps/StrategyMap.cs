@@ -5,6 +5,7 @@ using System.Linq;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Barricades;
+using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Squads;
@@ -128,10 +129,15 @@ public class StrategyMap : IDisposable, IEventListener<ClaimBedRequested>
     void IEventListener<ClaimBedRequested>.HandleEvent(ClaimBedRequested e, IServiceProvider serviceProvider)
     {
         MapTack? mapTack = _activeMapTacks.FirstOrDefault(t => t.Marker.Equals(e.Barricade));
+        if (mapTack == null)
+        {
+            // we can't cancel action here because this will run for both strategy maps
+            return;
+        }
 
         if (mapTack is not DeployableMapTack d)
         {
-            // we can't cancel action here because this will run for both strategy maps
+            e.Cancel();
             return;
         }
 
@@ -162,7 +168,8 @@ public class StrategyMap : IDisposable, IEventListener<ClaimBedRequested>
         deploymentService.TryStartDeployment(e.Player, d.Deployable,
             new DeploySettings
             {
-                AllowNearbyEnemies = false,
+                // allow nearby enemies on non-fobs since the main bases should always be deployable
+                AllowNearbyEnemies = d.Deployable is not IFob,
                 YawOverride = rotation.eulerAngles.y
             }
         );

@@ -26,6 +26,8 @@ public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContex
 {
     private readonly ILogger _logger;
 
+    internal static bool IsInDesignTimeFactory;
+
     public DbSet<LanguageInfo> Languages => Set<LanguageInfo>();
     public DbSet<LanguagePreferences> LanguagePreferences => Set<LanguagePreferences>();
     public DbSet<WarfareUserData> UserData => Set<WarfareUserData>();
@@ -105,7 +107,7 @@ public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContex
 
         optionsBuilder.UseMySql(
             connectionString,
-            ServerVersion.AutoDetect(connectionString),
+            IsInDesignTimeFactory ? new MySqlServerVersion("8.0.23") : ServerVersion.AutoDetect(connectionString),
             o => o
                 .UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
                 .EnableRetryOnFailure()

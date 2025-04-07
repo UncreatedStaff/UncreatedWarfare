@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using SDG.Framework.Utilities;
 using SDG.NetTransport;
 using StackCleaner;
 using System;
@@ -13,13 +14,15 @@ using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Zones;
 using static Uncreated.Warfare.Lobby.LobbyZoneManager;
+using MathUtility = Uncreated.Warfare.Util.MathUtility;
 
 namespace Uncreated.Warfare.Lobby;
 
 [PlayerComponent]
-public class PlayerLobbyComponent : IPlayerComponent
+public class PlayerLobbyComponent : IPlayerComponent, IDisposable
 {
     private QuestAsset? _previouslyTrackedQuest;
+    private uint _simCount = uint.MaxValue;
 
 #nullable disable
     private LobbyZoneManager _lobbyManager;
@@ -128,7 +131,12 @@ public class PlayerLobbyComponent : IPlayerComponent
         }
 
         if (!joiningTeam.IsValid)
+        {
+            if (Player.UnturnedPlayer.movement.pluginSpeedMultiplier < 1f)
+                Player.UnturnedPlayer.movement.sendPluginSpeedMultiplier(1f);
+
             return;
+        }
 
         // teleport to war room
         await UniTask.SwitchToMainThread(Player.DisconnectToken);
@@ -142,6 +150,9 @@ public class PlayerLobbyComponent : IPlayerComponent
         {
             Player.UnturnedPlayer.teleportToLocationUnsafe(warRoom.Spawn, warRoom.SpawnYaw);
         }
+
+        if (Player.UnturnedPlayer.movement.pluginSpeedMultiplier < 1f)
+            Player.UnturnedPlayer.movement.sendPluginSpeedMultiplier(1f);
     }
 
     public void EnterLobby()
@@ -154,10 +165,58 @@ public class PlayerLobbyComponent : IPlayerComponent
 
         IsInLobby = true;
         UpdateUI(send: true);
+
+        if (_simCount == uint.MaxValue)
+        {
+            TimeUtility.physicsUpdated += FixedUpdate;
+            _simCount = 0;
+        }
+    }
+
+    private void FixedUpdate()
+    {
+        if (_lobbyManager.TeamFlags == null)
+            return;
+
+        ++_simCount;
+
+        Vector3 position = Player.Position;
+        bool inAnyFlagRadius = false;
+        foreach (FlagInfo flag in _lobbyManager.TeamFlags)
+        {
+            Vector3 flagPosition = flag.Position;
+            if (MathUtility.WithinRange(in position, in flagPosition, 3))
+            {
+                inAnyFlagRadius = true;
+                if (Player.UnturnedPlayer.movement.canAddSimulationResultsToUpdates)
+                {
+                    Player.UnturnedPlayer.movement.canAddSimulationResultsToUpdates = false;
+                }
+                else if (_simCount % PlayerInput.SAMPLES != 0u)
+                {
+                    return;
+                }
+
+                Vector3 newPosition = flagPosition + (position - flagPosition).normalized * 3;
+                newPosition.y = position.y;
+                Player.UnturnedPlayer.movement.updates.Add(new PlayerStateUpdate(newPosition, Player.UnturnedPlayer.look.angle, Player.UnturnedPlayer.look.rot));
+                Player.UnturnedPlayer.movement.tellState(newPosition, Player.UnturnedPlayer.look.angle, Player.UnturnedPlayer.look.rot);
+                break;
+            }
+        }
+
+        if (!inAnyFlagRadius && !Player.UnturnedPlayer.movement.canAddSimulationResultsToUpdates)
+        {
+            Player.UnturnedPlayer.movement.canAddSimulationResultsToUpdates = true;
+            Player.UnturnedPlayer.movement.updates.Add(new PlayerStateUpdate(position, Player.UnturnedPlayer.look.angle, Player.UnturnedPlayer.look.rot));
+            Player.UnturnedPlayer.movement.tellState(position, Player.UnturnedPlayer.look.angle, Player.UnturnedPlayer.look.rot);
+        }
     }
 
     public void ExitLobby()
     {
+        Player.UnturnedPlayer.movement.canAddSimulationResultsToUpdates = true;
+
         _ui.ClearFromPlayer(Player.Connection);
         _hasUi = false;
         _lookingTeam = -1;
@@ -167,6 +226,12 @@ public class PlayerLobbyComponent : IPlayerComponent
         if (_previouslyTrackedQuest != null)
         {
             QuestService.ServerTrackQuest(Player, _previouslyTrackedQuest);
+        }
+
+        if (_simCount != uint.MaxValue)
+        {
+            TimeUtility.physicsUpdated -= FixedUpdate;
+            _simCount = uint.MaxValue;
         }
     }
 
@@ -309,5 +374,14 @@ public class PlayerLobbyComponent : IPlayerComponent
         }
 
         return true;
+    }
+
+    public void Dispose()
+    {
+        if (_simCount != uint.MaxValue)
+        {
+            TimeUtility.physicsUpdated -= FixedUpdate;
+            _simCount = uint.MaxValue;
+        }
     }
 }

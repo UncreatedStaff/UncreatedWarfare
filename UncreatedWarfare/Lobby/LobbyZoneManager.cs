@@ -10,6 +10,7 @@ using Uncreated.Warfare.Events.Models.Objects;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Exceptions;
 using Uncreated.Warfare.Layouts;
+using Uncreated.Warfare.Layouts.Phases;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
@@ -43,6 +44,7 @@ public class LobbyZoneManager :
     private readonly IFactionDataStore _factionDataStore;
     private readonly ILogger<LobbyZoneManager> _logger;
     private readonly WarfareModule _module;
+    private readonly LayoutFactory _layoutFactory;
     private ITrackingProximity<WarfarePlayer>? _zoneCollider;
     private Zone? _lobbyZone;
     private Guid _settingsFlagGuid;
@@ -71,9 +73,11 @@ public class LobbyZoneManager :
         WarfareModule module,
         ITeamSelectorBehavior behavior,
         IPlayerService playerService,
-        OptionsUI optionsUi)
+        OptionsUI optionsUi,
+        LayoutFactory layoutFactory)
     {
         _optionsUi = optionsUi;
+        _layoutFactory = layoutFactory;
         _zoneStore = zoneStore;
         _lobbyConfig = lobbyConfig;
         _factionDataStore = factionDataStore;
@@ -81,6 +85,30 @@ public class LobbyZoneManager :
         _module = module;
         _behavior = behavior;
         _playerService = playerService;
+        _layoutFactory.LoadingStateUpdated += LoadingStateUpdated;
+    }
+
+    private void LoadingStateUpdated(bool isLoading)
+    {
+        if (_zoneCollider == null)
+            return;
+
+        if (isLoading)
+        {
+            foreach (WarfarePlayer player in _zoneCollider.ActiveObjects)
+            {
+                if (player.UnturnedPlayer.movement.pluginSpeedMultiplier != 0f)
+                    player.UnturnedPlayer.movement.sendPluginSpeedMultiplier(0f);
+            }
+        }
+        else
+        {
+            foreach (WarfarePlayer player in _zoneCollider.ActiveObjects)
+            {
+                if (player.UnturnedPlayer.movement.pluginSpeedMultiplier < 1f)
+                    player.UnturnedPlayer.movement.sendPluginSpeedMultiplier(1f);
+            }
+        }
     }
 
     UniTask ILevelHostedService.LoadLevelAsync(CancellationToken token)
@@ -179,6 +207,16 @@ public class LobbyZoneManager :
 
         await UniTask.SwitchToMainThread(CancellationToken.None);
         player.UnturnedPlayer.teleportToLocationUnsafe(_lobbyZone.Spawn, _lobbyZone.SpawnYaw);
+        if (_layoutFactory.IsLoading)
+        {
+            if (player.UnturnedPlayer.movement.pluginSpeedMultiplier != 0f)
+                player.UnturnedPlayer.movement.sendPluginSpeedMultiplier(0f);
+        }
+        else
+        {
+            if (player.UnturnedPlayer.movement.pluginSpeedMultiplier < 1f)
+                player.UnturnedPlayer.movement.sendPluginSpeedMultiplier(1f);
+        }
     }
 
     /// <summary>
@@ -421,7 +459,7 @@ public class LobbyZoneManager :
 
     void IEventListener<QuestObjectInteracted>.HandleEvent(QuestObjectInteracted e, IServiceProvider serviceProvider)
     {
-        if (Disabled)
+        if (Disabled || _layoutFactory.IsLoading || !_module.IsLayoutActive() || _module.GetActiveLayout().ActivePhase is LeaderboardPhase)
             return;
 
         if (e.Object.GUID == _settingsFlagGuid)

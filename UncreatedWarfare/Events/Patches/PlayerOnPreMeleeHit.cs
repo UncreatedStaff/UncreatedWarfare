@@ -151,6 +151,13 @@ internal sealed class PlayerOnPreMeleeHit : IHarmonyPatch
         IPlayerService playerService = WarfareModule.Singleton.ServiceProvider.Resolve<IPlayerService>();
 
         WarfarePlayer hitter = playerService.GetOnlinePlayer(useable.player);
+
+        if (info == null)
+        {
+            WarfareModule.Singleton.GlobalLogger.LogWarning($"Input null from player melee for {hitter}.");
+            return false;
+        }
+
         PlayerMeleeRequested args = new PlayerMeleeRequested
         {
             Player = hitter,

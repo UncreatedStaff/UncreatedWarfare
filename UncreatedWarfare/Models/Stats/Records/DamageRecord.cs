@@ -1,5 +1,4 @@
 using System.ComponentModel;
-using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Uncreated.Warfare.Database.Automation;
 using Uncreated.Warfare.Deaths;
@@ -13,23 +12,11 @@ public class DamageRecord : RelatedPlayerRecord
     [DefaultValue(null)]
     public UnturnedAssetReference? PrimaryAsset { get; set; }
 
-    [DefaultValue("00000000000000000000000000000000")]
-    [StringLength(48)]
-    public string? PrimaryAssetName { get; set; }
-
     [DefaultValue(null)]
     public UnturnedAssetReference? SecondaryAsset { get; set; }
 
-    [DefaultValue("00000000000000000000000000000000")]
-    [StringLength(48)]
-    public string? SecondaryAssetName { get; set; }
-
     [DefaultValue(null)]
     public UnturnedAssetReference? Vehicle { get; set; }
-
-    [DefaultValue("00000000000000000000000000000000")]
-    [StringLength(48)]
-    public string? VehicleName { get; set; }
 
     [IncludedEnum(DeathTracker.InEnemyMainDeathCause)]
     public EDeathCause Cause { get; set; }

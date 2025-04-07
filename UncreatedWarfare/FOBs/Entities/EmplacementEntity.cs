@@ -1,6 +1,8 @@
 using System;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Fobs;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
@@ -13,11 +15,15 @@ public class EmplacementEntity : IFobEntity
     public Vector3 Position { get => Vehicle.Position; set => SetPosition(value); }
     public Quaternion Rotation { get => Vehicle.Rotation; set => SetRotation(value); }
     public IAssetLink<Asset> IdentifyingAsset { get; }
-    public EmplacementEntity(WarfareVehicle emplacementVehicle, IAssetLink<ItemPlaceableAsset> foundationAsset, IBuildable? foundation = null)
+
+    public Team Team { get; }
+
+    public EmplacementEntity(WarfareVehicle emplacementVehicle, Team team, IAssetLink<ItemPlaceableAsset> foundationAsset, IBuildable? foundation = null)
     {
         Vehicle = emplacementVehicle;
         AuxilliaryBuildable = foundation;
         IdentifyingAsset = foundationAsset;
+        Team = team;
     }
 
     public override bool Equals(object? obj)
@@ -55,6 +61,8 @@ public class EmplacementEntity : IFobEntity
         Vehicle.SetPositionAndRotation(position, rotation);
         AuxilliaryBuildable?.SetPositionAndRotation(position, rotation);
     }
+
+    public void UpdateConfiguration(FobConfiguration configuration) { }
 
     bool ITransformObject.Alive => Vehicle.Alive;
 }

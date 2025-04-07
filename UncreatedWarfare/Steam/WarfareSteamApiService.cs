@@ -35,6 +35,8 @@ internal class WarfareSteamApiService : ISteamApiService
 
         for (int tryNum = 0; tryNum < TryCount; ++tryNum)
         {
+            await UniTask.SwitchToMainThread(token);
+
             using UnityWebRequest request = new UnityWebRequest(url, "GET", downloadHandler: new DownloadHandlerBuffer(), uploadHandler: null);
             string data;
             try

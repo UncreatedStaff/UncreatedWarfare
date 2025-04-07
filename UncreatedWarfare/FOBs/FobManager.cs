@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
@@ -18,10 +19,11 @@ using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.List;
+using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Fobs;
 
-public partial class FobManager : IWhitelistExceptionProvider, ILayoutHostedService
+public partial class FobManager : IWhitelistExceptionProvider, ILayoutHostedService, IDisposable
 {
     internal const float EmplacementSpawnOffset = 3f;
 
@@ -32,6 +34,8 @@ public partial class FobManager : IWhitelistExceptionProvider, ILayoutHostedServ
     private readonly TrackingList<IFobEntity> _entities;
     private readonly TrackingList<IFob> _fobs;
     private readonly ChatService _chatService;
+    private readonly ITeamManager<Team> _teamManager;
+    private readonly ZoneStore _zoneStore;
 
     public FobConfiguration Configuration { get; }
 
@@ -51,6 +55,8 @@ public partial class FobManager : IWhitelistExceptionProvider, ILayoutHostedServ
         _translations = serviceProvider.GetRequiredService<TranslationInjection<FobTranslations>>().Value;
         _assetConfiguration = serviceProvider.GetRequiredService<AssetConfiguration>();
         _chatService = serviceProvider.GetRequiredService<ChatService>();
+        _teamManager = serviceProvider.GetRequiredService<ITeamManager<Team>>();
+        _zoneStore = serviceProvider.GetRequiredService<ZoneStore>();
         _serviceProvider = serviceProvider;
         _logger = logger;
         _fobs = new TrackingList<IFob>(24);
@@ -58,17 +64,42 @@ public partial class FobManager : IWhitelistExceptionProvider, ILayoutHostedServ
         Entities = _entities.AsReadOnly();
 
         Fobs = new ReadOnlyTrackingList<IFob>(_fobs);
+
+        Configuration.OnChange += OnConfigUpdated;
     }
 
     /// <inheritdoc />
     UniTask ILayoutHostedService.StartAsync(CancellationToken token)
     {
+        // registers all existing buildables inside main bases
         foreach (BarricadeInfo barricade in BarricadeUtility.EnumerateNonPlantedBarricades())
         {
-            TryRegisterEntity(new BuildableBarricade(barricade.Drop), _serviceProvider);
+            TryRegisterExistingBuildable(new BuildableBarricade(barricade.Drop));
+        }
+
+        foreach (StructureInfo structure in StructureUtility.EnumerateStructures())
+        {
+            TryRegisterExistingBuildable(new BuildableStructure(structure.Drop));
         }
 
         return UniTask.CompletedTask;
+
+        void TryRegisterExistingBuildable(IBuildable buildable)
+        {
+            if (_entities.Any(x => x is IBuildableFobEntity f && f.Buildable.Equals(buildable)))
+                return;
+
+            // get team from which zones the barricade is in
+            Zone? mainBase = _zoneStore.EnumerateInsideZones(buildable.Position, ZoneType.MainBase).FirstOrDefault();
+            if (mainBase == null)
+                return;
+
+            Team? team = _teamManager.FindTeam(mainBase.Faction);
+            if (team == null)
+                return;
+
+            TryRegisterEntity(buildable, team, _serviceProvider);
+        }
     }
 
     /// <inheritdoc />
@@ -222,5 +253,23 @@ public partial class FobManager : IWhitelistExceptionProvider, ILayoutHostedServ
         }
 
         return new ValueTask<int>(0);
+    }
+
+    private void OnConfigUpdated(IConfiguration obj)
+    {
+        foreach (IFob fob in Fobs)
+        {
+            fob.UpdateConfiguration(Configuration);
+        }
+
+        foreach (IFobEntity entity in Entities)
+        {
+            entity.UpdateConfiguration(Configuration);
+        }
+    }
+
+    public void Dispose()
+    {
+        Configuration.OnChange -= OnConfigUpdated;
     }
 }

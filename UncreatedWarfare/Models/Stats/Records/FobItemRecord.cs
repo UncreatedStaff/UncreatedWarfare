@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.Models.Assets;
@@ -40,23 +39,11 @@ public class FobItemRecord : InstigatedPlayerRecord
     [DefaultValue(null)]
     public UnturnedAssetReference? Item { get; set; }
 
-    [DefaultValue("00000000000000000000000000000000")]
-    [StringLength(48)]
-    public string? ItemName { get; set; }
-
     [DefaultValue(null)]
     public UnturnedAssetReference? PrimaryAsset { get; set; }
 
-    [DefaultValue("00000000000000000000000000000000")]
-    [StringLength(48)]
-    public string? PrimaryAssetName { get; set; }
-
     [DefaultValue(null)]
     public UnturnedAssetReference? SecondaryAsset { get; set; }
-
-    [DefaultValue("00000000000000000000000000000000")]
-    [StringLength(48)]
-    public string? SecondaryAssetName { get; set; }
 
     [DefaultValue(false)]
     public bool DestroyedByRoundEnd { get; set; }

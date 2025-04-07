@@ -18,7 +18,6 @@ public class SshTunnelService : IDisposable
     {
         _systemConfig = systemConfig.GetSection("database");
         _logger = logger;
-
     }
 
     public async UniTask StartAsync(CancellationToken cancellationToken)
@@ -42,7 +41,7 @@ public class SshTunnelService : IDisposable
         PrivateKeyFile keyFile;
         using (FileStream sshFile = new FileStream(sshFilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
         {
-            keyFile = new PrivateKeyFile(sshFile);
+            keyFile = new PrivateKeyFile(sshFile, _systemConfig["ssh_password"]);
         }
 
         PrivateKeyAuthenticationMethod method = new PrivateKeyAuthenticationMethod(username, keyFile);

@@ -19,9 +19,15 @@ public class WorldIconInfo : ITransformObject, IDisposable
     internal float LastSpawnRealtime;
     internal float LastPositionUpdateRealtime;
     internal float FirstSpawnRealtime;
+    private int _disposed;
+
+    internal WorldIconManager? Manager;
 
     // used when distance is specified to clear from players who have left the area
     private List<WarfarePlayer>? _previousPlayers;
+
+    // used to check if its necessary to resend
+    private List<ulong>? _previousViewers;
 
     private Vector3 _position;
 
@@ -33,6 +39,7 @@ public class WorldIconInfo : ITransformObject, IDisposable
     private readonly bool _canTrackLifetime;
     private readonly float _maximumLifetime;
     private readonly float _minimumLifetime;
+    private bool _isVisible;
 
     /// <summary>
     /// Optional player-only target.
@@ -142,9 +149,29 @@ public class WorldIconInfo : ITransformObject, IDisposable
     /// Number of seconds between updates.
     /// </summary>
     /// <remarks>Defaults to 1 second. Changes after originally creating the icon will not be applied.</remarks>
-    public float TickSpeed { get; set; } = 1f;
+    public float TickSpeed { get; init; } = 1f;
+
+    public bool IsVisible
+    {
+        get => _isVisible;
+        set
+        {
+            if (_isVisible == value)
+                return;
+
+            _isVisible = value;
+            if (Alive)
+                Manager?.UpdateIcon(Effect);
+        }
+    }
 
     public bool Alive { get; internal set; }
+
+    /// <summary>
+    /// If the rotation and scale of the target object should be taken into account. Defaults to <see langword="false"/>.
+    /// </summary>
+    /// <remarks>Has no effect if <see cref="EffectPosition"/> is set.</remarks>
+    public bool ApplyFullTransform { get; internal set; }
 
     /// <summary>
     /// Radius in regions this effect should be shown. Takes the minimum of this and <see cref="RelevanceDistance"/>.
@@ -183,6 +210,7 @@ public class WorldIconInfo : ITransformObject, IDisposable
         TargetPlayer = targetPlayer;
         PlayerSelector = playerSelector;
         LifetimeSeconds = lifetimeSec == 0 || !float.IsFinite(lifetimeSec) ? float.MaxValue : lifetimeSec;
+        _isVisible = true;
 
         if (!Effect.TryGetAsset(out EffectAsset? asset) || asset.lifetime <= 0)
             return;
@@ -331,23 +359,34 @@ public class WorldIconInfo : ITransformObject, IDisposable
         Vector3 v3;
         if (TransformableObject != null)
         {
-            v3 = TransformableObject.Position;
+            try
+            {
+                v3 = !ApplyFullTransform ? TransformableObject.Position + Offset : TransformableObject.TransformPoint(Offset);
+            }
+            catch (NullReferenceException)
+            {
+                // TransformableObject is wrapping a unity object that was destroyed
+                Alive = false;
+                position = default;
+                return false;
+            }
         }
         else if (UnityObject is null)
         {
-            v3 = _position;
+            v3 = _position + Offset;
         }
         else if (UnityObject != null)
         {
-            v3 = UnityObject.position;
+            v3 = !ApplyFullTransform ? UnityObject.position + Offset : UnityObject.TransformPoint(Offset);
         }
         else
         {
+            Alive = false;
             position = default;
             return false;
         }
 
-        position = v3 + Offset;
+        position = v3;
         return true;
     }
 
@@ -405,6 +444,9 @@ public class WorldIconInfo : ITransformObject, IDisposable
             pos = LastSpawnPosition;
         }
 
+        if (!IsVisible)
+            return;
+
         TriggerEffectParameters parameters = new TriggerEffectParameters(effect);
 
         if (_color.a == byte.MaxValue)
@@ -417,6 +459,25 @@ public class WorldIconInfo : ITransformObject, IDisposable
 
             parameters.SetDirection(_colorForward);
             parameters.SetUniformScale(_colorScale);
+        }
+        else if (ApplyFullTransform)
+        {
+            if (TransformableObject != null)
+            {
+                try
+                {
+                    parameters.SetRotation(TransformableObject.Rotation);
+                }
+                catch (NullReferenceException)
+                {
+                    Alive = false;
+                    // TransformableObject is wrapping a unity object that was destroyed
+                }
+            }
+            else if (UnityObject is not null && UnityObject != null)
+            {
+                parameters.SetRotation(UnityObject.rotation);
+            }
         }
 
         LastSpawnPosition = pos;
@@ -613,11 +674,24 @@ public class WorldIconInfo : ITransformObject, IDisposable
             str += $", color={HexStringHelper.FormatHexColor(Color)}";
         }
 
+        if (!Offset.IsNearlyZero())
+        {
+            str += $", offset={Offset:F2}";
+        }
+
         return str + "}";
     }
 
     public void Dispose()
     {
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+            return;
+
         Alive = false;
+        if (IsVisible)
+        {
+            Manager?.UpdateIcon(Effect);
+            Manager = null;
+        }
     }
 }

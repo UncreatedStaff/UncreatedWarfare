@@ -217,7 +217,7 @@ public class CommandSyntaxFormatter : IDisposable
         ICommandFlagDescriptor? flagDesc;
         if (meta == null || !await HasPermissionAsync(user, meta.Permission, token))
         {
-            flagDesc = meta?.Flags.FirstOrDefault(x => x.Name.Equals(flag, StringComparison.Ordinal));
+            flagDesc = meta?.Flags?.FirstOrDefault(x => x.Name.Equals(flag, StringComparison.Ordinal));
             return new SyntaxStringInfo(
                 writer.EndWrite(bldr, SyntaxStringType.SyntaxString),
                 meta ?? new CommandMetadata
@@ -355,7 +355,7 @@ public class CommandSyntaxFormatter : IDisposable
         {
             for (ICommandParameterDescriptor? p = meta; p != null && flagDesc == null; p = p.Parent)
             {
-                flagDesc = p.Flags.FirstOrDefault(x => x.Name.Equals(flag, StringComparison.Ordinal));
+                flagDesc = p.Flags?.FirstOrDefault(x => x.Name.Equals(flag, StringComparison.Ordinal));
             }
         }
 

@@ -38,14 +38,19 @@ internal sealed class DebugEffectAttachCommand : IExecutableCommand
         WorldIconInfo info;
         if (raycast.transform.gameObject.layer == (int)ELayerMask.GROUND)
         {
-            info = new WorldIconInfo(raycast.point, effect, targetTeam, targetPlayer, null, lifetime);
+            info = new WorldIconInfo(raycast.point, effect, targetTeam, targetPlayer, null, lifetime)
+            {
+                TickSpeed = tickSpeed
+            };
         }
         else
         {
-            info = new WorldIconInfo(raycast.transform, effect, targetTeam, targetPlayer, null, lifetime);
+            info = new WorldIconInfo(raycast.transform, effect, targetTeam, targetPlayer, null, lifetime)
+            {
+                TickSpeed = tickSpeed
+            };
         }
 
-        info.TickSpeed = tickSpeed;
         if (distance < 0)
             info.RelevanceRegions = (byte)Math.Round(-distance);
         else

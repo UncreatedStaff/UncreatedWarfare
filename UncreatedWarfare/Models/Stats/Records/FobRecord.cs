@@ -17,16 +17,8 @@ public class FobRecord : InstigatedPlayerRecord
     [DefaultValue(null)]
     public UnturnedAssetReference? PrimaryAsset { get; set; }
 
-    [DefaultValue("00000000000000000000000000000000")]
-    [StringLength(48)]
-    public string? PrimaryAssetName { get; set; }
-
     [DefaultValue(null)]
     public UnturnedAssetReference? SecondaryAsset { get; set; }
-
-    [DefaultValue("00000000000000000000000000000000")]
-    [StringLength(48)]
-    public string? SecondaryAssetName { get; set; }
 
     [Required]
     [StringLength(32)]

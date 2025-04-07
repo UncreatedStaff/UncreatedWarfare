@@ -13,6 +13,7 @@ namespace Uncreated.Warfare.Configuration;
 public abstract class BaseAlternateConfigurationFile : IConfiguration, IDisposable
 {
     private readonly IConfiguration _configuration;
+    private readonly IDisposable _reloadToken;
 
     /// <summary>
     /// Full path to the configuratin file.
@@ -54,15 +55,18 @@ public abstract class BaseAlternateConfigurationFile : IConfiguration, IDisposab
         ConfigurationHelper.AddSourceWithMapOverride(builder, WarfareModule.Singleton.FileProvider, FilePath);
         _configuration = builder.Build();
 
-        _configuration.GetReloadToken().RegisterChangeCallback(_ =>
-        {
-            UniTask.Create(async () =>
+        _reloadToken = ChangeToken.OnChange(
+            _configuration.GetReloadToken,
+            () =>
             {
-                await UniTask.SwitchToMainThread();
-                HandleChange();
-                OnChange?.Invoke(this);
+                UniTask.Create(async () =>
+                {
+                    await UniTask.SwitchToMainThread();
+                    WarfareModule.Singleton.GlobalLogger.LogInformation($"Configuration file reloaded: {Path.GetFileName(FilePath)}");
+                    HandleChange();
+                    OnChange?.Invoke(this);
+                });
             });
-        }, null);
 
         UnderlyingConfiguration = _configuration;
     }
@@ -87,6 +91,7 @@ public abstract class BaseAlternateConfigurationFile : IConfiguration, IDisposab
     /// <inheritdoc />
     void IDisposable.Dispose()
     {
+        _reloadToken.Dispose();
         if (_configuration is IDisposable disp)
             disp.Dispose();
     }

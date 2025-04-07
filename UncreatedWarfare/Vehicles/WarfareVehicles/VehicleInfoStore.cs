@@ -103,7 +103,11 @@ public class VehicleInfoStore : IHostedService, IDisposable, IUnlockRequirementP
 
             vehicle.Configuration = config;
 
-            IDisposable changeTokenReg = config.GetReloadToken().RegisterChangeCallback(ReloadVehicleInfoConfiguration, vehicle);
+            IDisposable changeTokenReg = ChangeToken.OnChange(
+                config.GetReloadToken,
+                ReloadVehicleInfoConfiguration,
+                vehicle
+            );
             _disposableConfigurationRoots.Add(changeTokenReg);
 
             lock (_watchedFiles)
@@ -178,7 +182,12 @@ public class VehicleInfoStore : IHostedService, IDisposable, IUnlockRequirementP
 
                     vehicle.Configuration = config;
 
-                    config.GetReloadToken().RegisterChangeCallback(ReloadVehicleInfoConfiguration, vehicle);
+                    IDisposable changeTokenReg = ChangeToken.OnChange(
+                        config.GetReloadToken,
+                        ReloadVehicleInfoConfiguration,
+                        vehicle
+                    );
+                    _disposableConfigurationRoots.Add(changeTokenReg);
 
                     if (config is IDisposable disposableConfig2)
                         newDisposables.Add(disposableConfig2);
