@@ -3,7 +3,7 @@ namespace Uncreated.Warfare.Events.Models.Players;
 /// <summary>
 /// Invoked when a player tries to change their firemode on their held gun.
 /// </summary>
-[EventModel(SynchronizationContext = EventSynchronizationContext.PerPlayer, SynchronizedModelTags = [ "modify_inventory", "modify_useable" ])]
+[EventModel(EventSynchronizationContext.PerPlayer, SynchronizedModelTags = [ "modify_inventory", "modify_useable" ])]
 public class ChangeFiremodeRequested : CancellablePlayerEvent
 {
     /// <summary>

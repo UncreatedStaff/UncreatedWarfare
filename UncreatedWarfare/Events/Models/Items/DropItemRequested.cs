@@ -5,7 +5,7 @@ namespace Uncreated.Warfare.Events.Models.Items;
 /// <summary>
 /// Invoked by <see cref="PlayerInventory.onDropItemRequested"/>.
 /// </summary>
-[EventModel(SynchronizationContext = EventSynchronizationContext.PerPlayer, SynchronizedModelTags = [ "modify_inventory", "modify_item_regions", "modify_useable" ])]
+[EventModel(EventSynchronizationContext.PerPlayer, SynchronizedModelTags = [ "modify_inventory", "modify_item_regions", "modify_useable" ])]
 public class DropItemRequested : CancellablePlayerEvent
 {
     /// <summary>

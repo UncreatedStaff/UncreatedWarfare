@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Players;
 
@@ -7,7 +7,7 @@ namespace Uncreated.Warfare.Events.Models.Players;
 /// <summary>
 /// Invoked when a player tries to send a chat message.
 /// </summary>
-[EventModel(SynchronizationContext = EventSynchronizationContext.PerPlayer)]
+[EventModel(EventSynchronizationContext.PerPlayer)]
 public class PlayerChatRequested : CancellablePlayerEvent
 {
     private EChatMode _chatMode;

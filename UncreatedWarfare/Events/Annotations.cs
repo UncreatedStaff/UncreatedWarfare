@@ -74,6 +74,11 @@ public class EventModelAttribute : Attribute
     /// List of tags that this model is synchronized with. Other models must also share at least one of these tags to be synchronized.
     /// </summary>
     public string[]? SynchronizedModelTags { get; set; }
+    
+    public EventModelAttribute(EventSynchronizationContext sync)
+    {
+        SynchronizationContext = sync;
+    }
 }
 
 /// <summary>

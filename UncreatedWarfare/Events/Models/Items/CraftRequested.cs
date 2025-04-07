@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 
 namespace Uncreated.Warfare.Events.Models.Items;
 
-[EventModel(SynchronizationContext = EventSynchronizationContext.PerPlayer, SynchronizedModelTags = [ "modify_inventory", "modify_useable" ])]
+[EventModel(EventSynchronizationContext.PerPlayer, SynchronizedModelTags = [ "modify_inventory", "modify_useable" ])]
 public class CraftItemRequested : CancellablePlayerEvent
 {
     // ReSharper disable once ReplaceWithFieldKeyword

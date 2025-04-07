@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics.CodeAnalysis;
 using Uncreated.Warfare.Buildables;
 
@@ -7,7 +7,7 @@ namespace Uncreated.Warfare.Events.Models.Barricades;
 /// <summary>
 /// Event listener args which handles a patch on <see cref="InteractableSign.updateText"/>.
 /// </summary>
-[EventModel(SynchronizationContext = EventSynchronizationContext.Global, SynchronizedModelTags = [ "modify_world" ])]
+[EventModel(EventSynchronizationContext.Global, SynchronizedModelTags = [ "modify_world" ])]
 public class ChangeSignTextRequested : CancellablePlayerEvent
 {
     /// <summary>

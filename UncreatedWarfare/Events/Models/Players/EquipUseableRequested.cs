@@ -5,7 +5,7 @@ namespace Uncreated.Warfare.Events.Models.Players;
 /// <summary>
 /// Invoked when a player wants to equip a <see cref="Useable"/>.
 /// </summary>
-[EventModel(SynchronizationContext = EventSynchronizationContext.PerPlayer, SynchronizedModelTags = [ "modify_inventory", "modify_useable" ])]
+[EventModel(EventSynchronizationContext.PerPlayer, SynchronizedModelTags = [ "modify_inventory", "modify_useable" ])]
 public class EquipUseableRequested : CancellablePlayerEvent
 {
     public required ItemJar Item { get; init; }

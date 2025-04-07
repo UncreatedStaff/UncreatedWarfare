@@ -3,7 +3,7 @@ using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.Events.Models.Vehicles;
 
-[EventModel(SynchronizationContext = EventSynchronizationContext.Global, SynchronizedModelTags = [ "modify_vehicle" ])]
+[EventModel(EventSynchronizationContext.Global, SynchronizedModelTags = [ "modify_vehicle" ])]
 public class ExitVehicleRequested : CancellablePlayerEvent
 {
     /// <summary>

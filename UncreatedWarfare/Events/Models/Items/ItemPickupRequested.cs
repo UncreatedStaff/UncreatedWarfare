@@ -6,7 +6,7 @@ namespace Uncreated.Warfare.Events.Models.Items;
 /// <summary>
 /// Triggers when a player tries to pick up a dropped item.
 /// </summary>
-[EventModel(SynchronizationContext = EventSynchronizationContext.PerPlayer, SynchronizedModelTags = [ "modify_inventory", "modify_item_regions" ])]
+[EventModel(EventSynchronizationContext.PerPlayer, SynchronizedModelTags = [ "modify_inventory", "modify_item_regions" ])]
 public class ItemPickupRequested : CancellablePlayerEvent
 {
     private Page _oldPage;

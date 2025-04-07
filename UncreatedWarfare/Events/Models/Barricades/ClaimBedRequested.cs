@@ -1,11 +1,11 @@
-﻿using Uncreated.Warfare.Buildables;
+using Uncreated.Warfare.Buildables;
 
 namespace Uncreated.Warfare.Events.Models.Barricades;
 
 /// <summary>
 /// Event listener args which handles a patch on <see cref="InteractableBed.ReceiveClaimRequest(in ServerInvocationContext)"/>.
 /// </summary>
-[EventModel(SynchronizationContext = EventSynchronizationContext.Global, SynchronizedModelTags = [ "modify_world" ])]
+[EventModel(EventSynchronizationContext.Global, SynchronizedModelTags = [ "modify_world" ])]
 public class ClaimBedRequested : CancellablePlayerEvent
 {
     private IBuildable? _cachedBuildable;

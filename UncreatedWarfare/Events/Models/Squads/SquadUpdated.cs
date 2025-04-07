@@ -5,7 +5,7 @@ namespace Uncreated.Warfare.Events.Models.Squads;
 /// <summary>
 /// Base event for all <see cref="Warfare.Squads.Squad"/> updates.
 /// </summary>
-[EventModel(SynchronizedModelTags = [ "squads" ])]
+[EventModel(EventSynchronizationContext.Global, SynchronizedModelTags = [ "squads" ])]
 public abstract class SquadUpdated
 {
     /// <summary>
