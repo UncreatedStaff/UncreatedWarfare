@@ -300,6 +300,7 @@ internal class PointsRewardsEvents :
         if (e.SupplyType == SupplyType.Ammo && e.Fob.AmmoCount >= 120)
             return;
 
+        // todo: maximum
         EventInfo @event = _points.GetEvent("ResuppliedFob");
         Translation translation = _translations.XPToastResuppliedFob;
 

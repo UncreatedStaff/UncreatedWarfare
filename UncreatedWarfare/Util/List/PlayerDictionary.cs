@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
@@ -32,10 +32,28 @@ public class PlayerDictionary<TValue> :
     public int Count => _dictionary.Count;
 
     /// <inheritdoc cref="IDictionary{TKey,TValue}"/>
-    public ICollection<TValue> Values => _dictionary.Values;
+    public Dictionary<ulong, TValue>.ValueCollection Values => _dictionary.Values;
 
-    /// <inheritdoc cref="IReadOnlyDictionary{TKey,TValue}"/>
-    public IEnumerable<CSteamID> Keys => _dictionary.Keys.Select(x => Unsafe.As<ulong, CSteamID>(ref x));
+    /// <inheritdoc cref="IDictionary{TKey,TValue}"/>
+    public Dictionary<ulong, TValue>.KeyCollection Keys => _dictionary.Keys;
+
+    /// <inheritdoc cref="IDictionary{TKey,TValue}"/>
+    ICollection<TValue> IDictionary<WarfarePlayer, TValue>.Values => _dictionary.Values;
+
+    /// <inheritdoc cref="IDictionary{TKey,TValue}"/>
+    ICollection<TValue> IDictionary<IPlayer, TValue>.Values => _dictionary.Values;
+
+    /// <inheritdoc cref="IDictionary{TKey,TValue}"/>
+    ICollection<TValue> IDictionary<SteamPlayer, TValue>.Values => _dictionary.Values;
+
+    /// <inheritdoc cref="IDictionary{TKey,TValue}"/>
+    ICollection<TValue> IDictionary<Player, TValue>.Values => _dictionary.Values;
+
+    /// <inheritdoc cref="IDictionary{TKey,TValue}"/>
+    ICollection<TValue> IDictionary<CSteamID, TValue>.Values => _dictionary.Values;
+
+    /// <inheritdoc cref="IDictionary{TKey,TValue}"/>
+    ICollection<TValue> IDictionary<ulong, TValue>.Values => _dictionary.Values;
 
     public PlayerDictionary() : this(0) { }
     public PlayerDictionary(int capacity)
@@ -665,6 +683,9 @@ public class PlayerDictionary<TValue> :
 
     /// <inheritdoc />
     ICollection<ulong> IDictionary<ulong, TValue>.Keys => _dictionary.Keys;
+
+    /// <inheritdoc cref="IReadOnlyDictionary{TKey,TValue}"/>
+    IEnumerable<CSteamID> IReadOnlyDictionary<CSteamID, TValue>.Keys => _dictionary.Keys.Select(x => Unsafe.As<ulong, CSteamID>(ref x));
 
     /// <summary>Not supported</summary>
     /// <exception cref="NotSupportedException"/>

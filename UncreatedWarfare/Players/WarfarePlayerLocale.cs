@@ -12,7 +12,7 @@ namespace Uncreated.Warfare.Players;
 public class WarfarePlayerLocale
 {
     private readonly IServiceProvider _serviceProvider;
-    private readonly EventDispatcher _eventDispatcher;
+    private readonly EventDispatcher? _eventDispatcher;
     public static event Action<WarfarePlayer>? OnLocaleUpdated;
 
     private readonly bool _init;
@@ -31,15 +31,29 @@ public class WarfarePlayerLocale
         {
             value.Steam64 = Player.Steam64.m_SteamID;
 
-            LanguageService langService = _serviceProvider.GetRequiredService<LanguageService>();
+            LanguageService? langService = _serviceProvider.GetService<LanguageService>();
             ILogger<WarfarePlayerLocale> logger = _serviceProvider.GetRequiredService<ILogger<WarfarePlayerLocale>>();
             bool updated = false;
 
-            langService.GetDefaultLocaleSettings(Player.SteamPlayer.language, value, Player.SteamSummary,
-                out LanguageInfo language,
-                out CultureInfo culture,
-                out TimeZoneInfo timeZone
-            );
+            LanguageInfo? language = null;
+            CultureInfo? culture = null;
+            TimeZoneInfo? timeZone = null;
+
+            if (langService != null)
+            {
+                langService.GetDefaultLocaleSettings(Player.SteamPlayer.language, value, Player.SteamSummary,
+                    out language,
+                    out culture,
+                    out timeZone
+                );
+            }
+            else
+            {
+                // occurs during unit testing
+                language = value.Language ?? new LanguageInfo { Code = "en-US", DisplayName = "English " };
+                culture = CultureInfo.InvariantCulture;
+                timeZone = TimeZoneInfo.Local;
+            }
 
             if (_init)
             {
@@ -62,13 +76,13 @@ public class WarfarePlayerLocale
                 }
             }
 
-            IsDefaultLanguage = language.Equals(langService.GetDefaultLanguage());
-            IsDefaultCulture = culture.Name.Equals(langService.GetDefaultCulture().Name, StringComparison.Ordinal);
+            IsDefaultLanguage = langService == null || language.Equals(langService.GetDefaultLanguage());
+            IsDefaultCulture = langService == null || culture.Name.Equals(langService.GetDefaultCulture().Name, StringComparison.Ordinal);
             IsUtcTime = timeZone.Equals(TimeZoneInfo.Utc);
             LanguageInfo = language;
             TimeZone = timeZone;
             CultureInfo = culture;
-            ParseFormat = value.UseCultureForCommandInput
+            ParseFormat = value.UseCultureForCommandInput || langService == null
                 ? culture.NumberFormat
                 : langService.GetDefaultCulture().NumberFormat;
             PreferencesIsDirty |= updated;
@@ -98,7 +112,7 @@ public class WarfarePlayerLocale
         Preferences = preferences;
         _init = true;
 
-        _eventDispatcher = serviceProvider.GetRequiredService<EventDispatcher>();
+        _eventDispatcher = serviceProvider.GetService<EventDispatcher>();
     }
 #pragma warning restore CS8618
 
@@ -112,7 +126,7 @@ public class WarfarePlayerLocale
 
     private void InvokeOnLocaleUpdated()
     {
-        if (OnLocaleUpdated == null || !Player.IsOnline)
+        if (!Player.IsOnline || _eventDispatcher == null)
             return;
 
         // ReSharper disable once ConstantConditionalAccessQualifier
@@ -120,7 +134,7 @@ public class WarfarePlayerLocale
         {
             try
             {
-                OnLocaleUpdated.Invoke(Player);
+                OnLocaleUpdated?.Invoke(Player);
             }
             catch (Exception ex)
             {

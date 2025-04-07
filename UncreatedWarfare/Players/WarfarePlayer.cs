@@ -8,6 +8,7 @@ using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Models.GameData;
+using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.PendingTasks;
@@ -96,6 +97,10 @@ public class WarfarePlayer :
     /// </summary>
     public ConcurrentDictionary<string, object?> Data { get; } = new ConcurrentDictionary<string, object?>();
 
+    /// <summary>
+    /// If this player was created for unit tests.
+    /// </summary>
+    public bool IsTesting { get; }
     public Player UnturnedPlayer { get; }
     public SteamPlayer SteamPlayer { get; }
     public Transform Transform { get; }
@@ -118,7 +123,7 @@ public class WarfarePlayer :
     /// <inheritdoc />
     public Vector3 Position
     {
-        get => IsOnline ? Transform.position : Vector3.zero;
+        get => IsOnline && !IsTesting ? Transform.position : Vector3.zero;
         set
         {
             GameThread.AssertCurrent();
@@ -181,8 +186,12 @@ public class WarfarePlayer :
     /// A <see cref="CancellationToken"/> that cancels after the player leaves.
     /// </summary>
     public CancellationToken DisconnectToken => _disconnectTokenSource.Token;
+
     internal WarfarePlayer(PlayerService playerService, Player player, in PlayerService.PlayerTaskData taskData, PlayerPending pendingEvent, ILogger logger, IPlayerComponent[] components, IServiceProvider serviceProvider)
     {
+        /*
+         *  Real constructor used for live build
+         */
         SteamSummary = pendingEvent.Summary;
         _disconnectTokenSource = taskData.TokenSource;
         _logger = logger;
@@ -217,6 +226,71 @@ public class WarfarePlayer :
             _logger.LogInformation($"Player {this} joined the server for the first time.");
         else
             _logger.LogInformation($"Player {this} joined the server.");
+    }
+
+    internal WarfarePlayer(uint id, ILogger logger, IServiceProvider serviceProvider, Action<WarfarePlayer>? modification = null)
+    {
+        /*
+         * Creates a test WarfarePlayer for unit testing and sets everything up properly.
+         */
+        UnturnedPlayer = null!;
+        SteamPlayer = null!;
+        Transform = null!;
+        CurrentSession = new SessionRecord
+        {
+            StartedTimestamp = DateTimeOffset.UtcNow,
+            StartedGame = true
+        };
+
+        _steam64 = new CSteamID(new AccountID_t(id), EUniverse.k_EUniversePublic, EAccountType.k_EAccountTypeIndividual);
+        _acctId = id;
+        _logger = logger;
+        Locale = new WarfarePlayerLocale(this, new LanguagePreferences { Steam64 = _steam64.m_SteamID, Language = new LanguageInfo { Code = "en-US" }, LanguageId = 1 }, serviceProvider);
+        JoinTime = DateTime.UtcNow;
+        Team = Team.NoTeam;
+        Save = new BinaryPlayerSave(Steam64, _logger);
+        _disconnectTokenSource = new CancellationTokenSource();
+        _components = new SingleUseTypeDictionary<IPlayerComponent>();
+        Components = new ReadOnlyCollection<IPlayerComponent>(_components.Values);
+        string name = "t_" + id;
+        SteamSummary = new PlayerSummary
+        {
+            Steam64 = _steam64.m_SteamID,
+            AvatarUrlSmall = "https://avatars.fastly.steamstatic.com/fef49e7fa7e1997310d705b2a6158ff8dc1cdfeb.jpg",
+            AvatarUrlFull = "https://avatars.fastly.steamstatic.com/fef49e7fa7e1997310d705b2a6158ff8dc1cdfeb_full.jpg",
+            AvatarUrlMedium = "https://avatars.fastly.steamstatic.com/fef49e7fa7e1997310d705b2a6158ff8dc1cdfeb_medium.jpg",
+            CountryCode = "US",
+            PlayerName = name,
+            AvatarHash = "fef49e7fa7e1997310d705b2a6158ff8dc1cdfeb",
+            ProfileUrl = $"https://steamcommunity.com/profiles/{_steam64.m_SteamID:D17}/",
+            Visibility = 3,
+            ProfileState = 1,
+            RealName = $"Test User {id}",
+            RegionCode = "NC",
+            TimeCreated = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+            LastLogOff = DateTimeOffset.UtcNow.ToUnixTimeSeconds() - 3600,
+            PlayerState = 0,
+            PlayerStateFlags = 0,
+            PrimaryGroupId = 103582791457436331,
+            CommentPermissionLevel = 1
+        };
+        SteamFriends = Array.Empty<ulong>();
+        IsTesting = true;
+        IsOnline = true;
+        IsDisconnecting = false;
+        IsConnecting = false;
+
+        _playerNameHelper = new PlayerNames
+        {
+            WasFound = true,
+            Steam64 = _steam64,
+            CharacterName = name,
+            PlayerName = name,
+            NickName = name
+        };
+
+        IsFirstTimePlaying = true;
+        modification?.Invoke(this);
     }
 
     /// <inheritdoc />

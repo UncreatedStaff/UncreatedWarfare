@@ -21,7 +21,6 @@ using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Projectiles;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
-using Uncreated.Warfare.Util.List;
 using Uncreated.Warfare.Vehicles;
 using Service = Autofac.Core.Service;
 
@@ -41,16 +40,19 @@ public partial class EventDispatcher : IHostedService, IDisposable
     private const int BitRequireNextFrame = 16;
     private const int BitMustRunLast = 32;
 
-    private static readonly TimeSpan DefaultWaitTimeout = TimeSpan.FromSeconds(2d);
-
     private int _activeEvents;
+
+    private readonly EventSynchronizer _eventSynchronizer;
+
     private readonly WarfareModule _warfare;
     private readonly IPlayerService _playerService;
     private readonly ProjectileSolver _projectileSolver;
     private readonly CancellationToken _unloadToken;
     private readonly ILogger<EventDispatcher> _logger;
+
     [field: CanBeNull]
     private VehicleService VehicleService => field ??= _warfare.ServiceProvider.Resolve<VehicleService>();
+
     private IServiceProvider? _scopedServiceProvider;
     private readonly ILoggerFactory _loggerFactory;
     private readonly Dictionary<EventListenerCacheKey, EventListenerInfo> _listeners = new Dictionary<EventListenerCacheKey, EventListenerInfo>(128);
@@ -65,12 +67,6 @@ public partial class EventDispatcher : IHostedService, IDisposable
 
     private readonly CancellationTokenSource _cancellationTokenSource;
 
-    private readonly Dictionary<string, PlayerDictionary<SynchronizationBucket>> _tagPlayerSynchronizations = new Dictionary<string, PlayerDictionary<SynchronizationBucket>>();
-    private readonly Dictionary<string, SynchronizationBucket> _tagSynchronizations = new Dictionary<string, SynchronizationBucket>();
-
-    private readonly Dictionary<Type, PlayerDictionary<SynchronizationBucket>> _typePlayerSynchronizations = new Dictionary<Type, PlayerDictionary<SynchronizationBucket>>();
-    private readonly Dictionary<Type, SynchronizationBucket> _typeSynchronizations = new Dictionary<Type, SynchronizationBucket>();
-
 #if LOG_TRACE_TO_FILE
     private readonly StreamWriter _eventFileWriter = new StreamWriter("./Logs/eventlogs.txt", false);
 #endif
@@ -78,6 +74,7 @@ public partial class EventDispatcher : IHostedService, IDisposable
     public EventDispatcher(ILoggerFactory loggerFactory,
         ProjectileSolver projectileSolver,
         IPlayerService playerService,
+        EventSynchronizer eventSynchronizer,
         WarfareModule module)
     {
         _cancellationTokenSource = new CancellationTokenSource();
@@ -87,6 +84,7 @@ public partial class EventDispatcher : IHostedService, IDisposable
         _loggerFactory = loggerFactory;
         _projectileSolver = projectileSolver;
         _playerService = playerService;
+        _eventSynchronizer = eventSynchronizer;
         _warfare = module;
 
         _warfare.LayoutStarted += OnLayoutStarted;
@@ -354,43 +352,21 @@ public partial class EventDispatcher : IHostedService, IDisposable
         }
 #endif
 
-        List<SynchronizationBucket>? buckets = null;
-        List<Task<bool>>? tasks = null;
+        SynchronizationEntry? syncEntry = null;
+        EventModelAttribute? modelInfo = null;
 
         // enter sync buckets
         if (allowAsync)
         {
-            EventModelAttribute? modelInfo = cache.ModelInfo;
+            modelInfo = cache.ModelInfo;
             if (modelInfo != null && modelInfo.SynchronizationContext != EventSynchronizationContext.None)
             {
-                buckets = ListPool<SynchronizationBucket>.claim();
-                tasks = ListPool<Task<bool>>.claim();
-                EnterSynchronizationBuckets(eventArgs, modelInfo, type, buckets, tasks, token);
-#if LOG_SYNCHRONIZATION_STEPS
-                _logger.LogDebug("Invoke {0} - Synchronizing with {1} bucket(s).", type, buckets.Count);
-#endif
-                tasks.RemoveAll(x => x.IsCompleted);
-
-                if (tasks.Count > 0)
-                {
-#if LOG_SYNCHRONIZATION_STEPS
-                    _logger.LogDebug("Invoke {0} - Awaiting {1} bucket(s).", type, buckets.Count);
-#endif
-                    await Task.WhenAll(tasks).ConfigureAwait(false);
-#if LOG_SYNCHRONIZATION_STEPS
-                    _logger.LogDebug("Invoke {0} - Done awaiting buckets.", type);
-#endif
-
-                    for (int i = 0; i < tasks.Count; i++)
-                    {
-                        Task<bool> t = tasks[i];
-                        if (t.Result)
-                            continue;
-
-                        _logger.LogWarning($"Invoke {type} - Failed to enter bucket {buckets[i]} (timed out).");
-                    }
-                }
+                syncEntry = await _eventSynchronizer.EnterEvent(eventArgs, modelInfo);
             }
+        }
+        else if (cache.ModelInfo is { SynchronizationContext: not EventSynchronizationContext.None })
+        {
+            throw new InvalidOperationException($"SynchronizationContext not supported for event model {Accessor.ExceptionFormatter.Format<TEventArgs>()} when allowAsync = false.");
         }
 
         Interlocked.Increment(ref _activeEvents);
@@ -540,25 +516,12 @@ public partial class EventDispatcher : IHostedService, IDisposable
 
             Interlocked.Decrement(ref _activeEvents);
 
-            if (buckets != null)
+            if (syncEntry != null)
             {
-#if LOG_SYNCHRONIZATION_STEPS
-                _logger.LogDebug("Invoke {0} - Releasing {1} bucket(s).", type, buckets.Count);
-#endif
-                foreach (SynchronizationBucket bucket in buckets)
-                {
-#if LOG_SYNCHRONIZATION_STEPS
-                    _logger.LogDebug("Invoke {0} - Releasing bucket: \"{1}\".", type, bucket);
-#endif
-                    bucket.Semaphore.Release();
-                }
+                _eventSynchronizer.ExitEvent(syncEntry, modelInfo);
             }
 
             ListPool<EventListenerResult>.release(eventListeners);
-            if (buckets != null)
-                ListPool<SynchronizationBucket>.release(buckets);
-            if (tasks != null)
-                ListPool<Task<bool>>.release(tasks);
         }
     }
 
@@ -933,217 +896,6 @@ public partial class EventDispatcher : IHostedService, IDisposable
         }
 
         eventListeners.Add(result);
-    }
-    
-    // allows a few different methods for syncronizing 'on request' events so multiple can't be running at once
-    //   ex. two requests to place a fob item at the same time would possibly lead to outdated 'do we have enough build supply' checks
-    private void EnterSynchronizationBuckets(object eventArgs, EventModelAttribute modelInfo, Type type, List<SynchronizationBucket> buckets, List<Task<bool>> tasks, CancellationToken token)
-    {
-        if (modelInfo.SynchronizationContext != EventSynchronizationContext.PerPlayer)
-        {
-            // global sync buckets + all players
-            if (!_typeSynchronizations.TryGetValue(type, out SynchronizationBucket bucket))
-            {
-                bucket = new SynchronizationBucket(type, false);
-                _typeSynchronizations.Add(type, bucket);
-            }
-
-            buckets.Add(bucket);
-            tasks.Add(bucket.Semaphore.WaitAsync(DefaultWaitTimeout, token));
-#if LOG_SYNCHRONIZATION_STEPS
-            _logger.LogDebug("Invoke {0} - Locking on type {0}.", type);
-#endif
-
-            if (_typePlayerSynchronizations.TryGetValue(type, out PlayerDictionary<SynchronizationBucket> dict))
-            {
-#if LOG_SYNCHRONIZATION_STEPS
-                _logger.LogDebug("Invoke {0} - Locking on type {0} for all players:", type);
-#endif
-                foreach (SynchronizationBucket b in dict.Values)
-                {
-                    buckets.Add(b);
-                    tasks.Add(b.Semaphore.WaitAsync(DefaultWaitTimeout, token));
-#if LOG_SYNCHRONIZATION_STEPS
-                    _logger.LogDebug("Invoke {0} - Locking on type {0} for player {1}.", type, b.Player?.Steam64.m_SteamID.ToString() ?? "null");
-#endif
-                }
-            }
-
-            if (modelInfo.RequestModel != null)
-            {
-                if (!_typeSynchronizations.TryGetValue(modelInfo.RequestModel, out bucket))
-                {
-                    bucket = new SynchronizationBucket(modelInfo.RequestModel, false);
-                    _typeSynchronizations.Add(modelInfo.RequestModel, bucket);
-                }
-
-                buckets.Add(bucket);
-                tasks.Add(bucket.Semaphore.WaitAsync(DefaultWaitTimeout, token));
-#if LOG_SYNCHRONIZATION_STEPS
-                _logger.LogDebug("Invoke {0} - Locking on request type {1}.", type, modelInfo.RequestModel);
-#endif
-
-                if (_typePlayerSynchronizations.TryGetValue(modelInfo.RequestModel, out dict))
-                {
-#if LOG_SYNCHRONIZATION_STEPS
-                    _logger.LogDebug("Invoke {0} - Locking on request type {1} for all players:", type, modelInfo.RequestModel);
-#endif
-                    foreach (SynchronizationBucket b in dict.Values)
-                    {
-                        buckets.Add(b);
-                        tasks.Add(b.Semaphore.WaitAsync(DefaultWaitTimeout, token));
-#if LOG_SYNCHRONIZATION_STEPS
-                        _logger.LogDebug("Invoke {0} - Locking on request type {1} for player {2}.", type, modelInfo.RequestModel, b.Player?.Steam64.m_SteamID.ToString() ?? "null");
-#endif
-                    }
-                }
-            }
-
-            if (modelInfo.SynchronizedModelTags == null)
-                return;
-            
-            for (int i = 0; i < modelInfo.SynchronizedModelTags.Length; ++i)
-            {
-                string tag = modelInfo.SynchronizedModelTags[i];
-                if (!_tagSynchronizations.TryGetValue(tag, out bucket))
-                {
-                    bucket = new SynchronizationBucket(type, false);
-                    _tagSynchronizations.Add(tag, bucket);
-                }
-
-                buckets.Add(bucket);
-                tasks.Add(bucket.Semaphore.WaitAsync(DefaultWaitTimeout, token));
-#if LOG_SYNCHRONIZATION_STEPS
-                _logger.LogDebug("Invoke {0} - Locking on tag \"{1}\".", type, tag);
-#endif
-
-                if (!_tagPlayerSynchronizations.TryGetValue(tag, out dict))
-                    continue;
-
-#if LOG_SYNCHRONIZATION_STEPS
-                _logger.LogDebug("Invoke {0} - Locking on tag \"{1}\" for all players.", type, tag);
-#endif
-                foreach (SynchronizationBucket b in dict.Values)
-                {
-                    buckets.Add(b);
-                    tasks.Add(b.Semaphore.WaitAsync(DefaultWaitTimeout, token));
-#if LOG_SYNCHRONIZATION_STEPS
-                    _logger.LogDebug("Invoke {0} - Locking on tag \"{1}\" for player {2}.", type, tag, b.Player?.Steam64.m_SteamID.ToString() ?? "null");
-#endif
-                }
-            }
-            
-        }
-        else if (eventArgs is IPlayerEvent playerArgs)
-        {
-            if (_typeSynchronizations.TryGetValue(type, out SynchronizationBucket? bucket) && bucket.Semaphore.CurrentCount < 1)
-            {
-                buckets.Add(bucket);
-                tasks.Add(bucket.Semaphore.WaitAsync(DefaultWaitTimeout, token));
-#if LOG_SYNCHRONIZATION_STEPS
-                _logger.LogDebug("Invoke {0} - Locking on type {0} (already locked).", type);
-#endif
-            }
-
-            if (_typePlayerSynchronizations.TryGetValue(type, out PlayerDictionary<SynchronizationBucket> dict))
-            {
-                if (!dict.TryGetValue(playerArgs.Steam64, out bucket))
-                {
-                    bucket = new SynchronizationBucket(type, false, playerArgs.Player);
-                    dict.Add(playerArgs.Steam64, bucket);
-                }
-            }
-            else
-            {
-                dict = new PlayerDictionary<SynchronizationBucket>();
-                bucket = new SynchronizationBucket(type, false, playerArgs.Player);
-                dict.Add(playerArgs.Steam64, bucket);
-                _typePlayerSynchronizations.Add(type, dict);
-            }
-
-            buckets.Add(bucket);
-            tasks.Add(bucket.Semaphore.WaitAsync(DefaultWaitTimeout, token));
-#if LOG_SYNCHRONIZATION_STEPS
-            _logger.LogDebug("Invoke {0} - Locking on type {0} for player {1}.", type, bucket.Player?.Steam64.m_SteamID.ToString() ?? "null");
-#endif
-
-            if (modelInfo.RequestModel != null)
-            {
-                if (_typeSynchronizations.TryGetValue(modelInfo.RequestModel, out bucket) && bucket.Semaphore.CurrentCount < 1)
-                {
-                    buckets.Add(bucket);
-                    tasks.Add(bucket.Semaphore.WaitAsync(DefaultWaitTimeout, token));
-#if LOG_SYNCHRONIZATION_STEPS
-                    _logger.LogDebug("Invoke {0} - Locking on request type {1} (already locked).", type, modelInfo.RequestModel);
-#endif
-                }
-
-                if (_typePlayerSynchronizations.TryGetValue(modelInfo.RequestModel, out dict))
-                {
-                    if (!dict.TryGetValue(playerArgs.Steam64, out bucket))
-                    {
-                        bucket = new SynchronizationBucket(modelInfo.RequestModel, false, playerArgs.Player);
-                        dict.Add(playerArgs.Steam64, bucket);
-                    }
-                }
-                else
-                {
-                    dict = new PlayerDictionary<SynchronizationBucket>();
-                    bucket = new SynchronizationBucket(modelInfo.RequestModel, false, playerArgs.Player);
-                    dict.Add(playerArgs.Steam64, bucket);
-                    _typePlayerSynchronizations.Add(modelInfo.RequestModel, dict);
-                }
-
-                buckets.Add(bucket);
-                tasks.Add(bucket.Semaphore.WaitAsync(DefaultWaitTimeout, token));
-#if LOG_SYNCHRONIZATION_STEPS
-                _logger.LogDebug("Invoke {0} - Locking on request type {1} for player {2}.", type, modelInfo.RequestModel, bucket.Player?.Steam64.m_SteamID.ToString() ?? "null");
-#endif
-            }
-
-            if (modelInfo.SynchronizedModelTags == null)
-                return;
-
-            for (int i = 0; i < modelInfo.SynchronizedModelTags.Length; ++i)
-            {
-                string tag = modelInfo.SynchronizedModelTags[i];
-
-                if (_tagSynchronizations.TryGetValue(tag, out bucket) && bucket.Semaphore.CurrentCount < 1)
-                {
-                    buckets.Add(bucket);
-                    tasks.Add(bucket.Semaphore.WaitAsync(DefaultWaitTimeout, token));
-#if LOG_SYNCHRONIZATION_STEPS
-                    _logger.LogDebug("Invoke {0} - Locking on tag \"{1}\" (already locked).", type, tag);
-#endif
-                }
-
-                if (_tagPlayerSynchronizations.TryGetValue(tag, out dict))
-                {
-                    if (!dict.TryGetValue(playerArgs.Steam64, out bucket))
-                    {
-                        bucket = new SynchronizationBucket(type, false, playerArgs.Player);
-                        dict.Add(playerArgs.Steam64, bucket);
-                    }
-                }
-                else
-                {
-                    dict = new PlayerDictionary<SynchronizationBucket>();
-                    bucket = new SynchronizationBucket(type, false, playerArgs.Player);
-                    dict.Add(playerArgs.Steam64, bucket);
-                    _tagPlayerSynchronizations.Add(tag, dict);
-                }
-
-                buckets.Add(bucket);
-                tasks.Add(bucket.Semaphore.WaitAsync(DefaultWaitTimeout, token));
-#if LOG_SYNCHRONIZATION_STEPS
-                _logger.LogDebug("Invoke {0} - Locking on tag \"{1}\" for player {2}.", type, tag, bucket.Player?.Steam64.m_SteamID.ToString() ?? "null");
-#endif
-            }
-        }
-        else
-        {
-            _logger.LogWarning("Event arg {0} has Per-Player synchronization setting but doesn't implement {1}.", type, typeof(IPlayerEvent));
-        }
     }
 
     // adds results from IEventListenerProvider services to the working eventListeners list and initializes them

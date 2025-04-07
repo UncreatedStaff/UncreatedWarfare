@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Quests.Parameters;
 using Cysharp.Threading.Tasks;
+using Uncreated.Warfare.Tests.Utility;
 
 namespace Uncreated.Warfare.Tests;
 

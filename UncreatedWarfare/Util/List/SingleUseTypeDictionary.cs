@@ -1,4 +1,4 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
@@ -17,6 +17,13 @@ public class SingleUseTypeDictionary<TType> where TType : notnull
     /// List of all values in order of their types.
     /// </summary>
     public TType[] Values => _values;
+
+    public SingleUseTypeDictionary()
+    {
+        _values = [];
+        _types = [];
+    }
+
     public SingleUseTypeDictionary(Type[] types, TType[] values)
     {
         _values = values;

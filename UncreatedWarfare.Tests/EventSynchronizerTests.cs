@@ -1,0 +1,149 @@
+using Cysharp.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using NUnit.Framework;
+using System;
+using System.Threading.Tasks;
+using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Models;
+using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Tests.Utility;
+
+namespace Uncreated.Warfare.Tests;
+
+[NonParallelizable]
+internal class EventSynchronizerTests
+{
+    private EventSynchronizer _eventSynchronizer;
+    private IServiceProvider _serviceProvider;
+
+    [SetUp]
+    public void Setup()
+    {
+        ServiceCollection serviceContainer = new ServiceCollection();
+
+        serviceContainer.AddLogging(l => l.AddSimpleConsole());
+        serviceContainer.AddSingleton<TestPlayerService>();
+        serviceContainer.AddTransient<IPlayerService>(sp => sp.GetRequiredService<TestPlayerService>());
+        serviceContainer.AddSingleton<EventSynchronizer>();
+
+        IServiceProvider serviceProvider = _serviceProvider = serviceContainer.BuildServiceProvider();
+
+        _eventSynchronizer = serviceProvider.GetRequiredService<EventSynchronizer>();
+
+        TestHelpers.SetupMainThread();
+    }
+
+    public void SwitchToMainThread()
+    {
+        TestHelpers.SetupMainThread();
+    }
+
+    [Test]
+    public async Task BasicLockTest()
+    {
+        GlobalSyncEventModel m1 = new GlobalSyncEventModel();
+        GlobalSyncEventModel m2 = new GlobalSyncEventModel();
+
+        // first entry finishes instantly
+        UniTask<SynchronizationEntry> entry1Task = _eventSynchronizer.EnterEvent(m1);
+
+        Assert.That(entry1Task.Status, Is.EqualTo(UniTaskStatus.Succeeded));
+
+        SynchronizationEntry entry1 = await entry1Task;
+        SwitchToMainThread();
+
+        // first entry did not create a task completion source
+        Assert.IsNotNull(entry1);
+        Assert.That(entry1!.WaitEvent, Is.EqualTo(null));
+        Assert.That(entry1.WaitCount, Is.EqualTo(0));
+
+
+        // second entry waits on first entry
+        UniTask<SynchronizationEntry> entry2Task = _eventSynchronizer.EnterEvent(m2);
+
+        Assert.That(entry2Task.Status, Is.EqualTo(UniTaskStatus.Pending));
+
+        await Task.Delay(50);
+        SwitchToMainThread();
+
+        Assert.That(entry2Task.Status, Is.EqualTo(UniTaskStatus.Pending));
+
+        _eventSynchronizer.ExitEvent(entry1);
+
+        Assert.That(entry2Task.Status, Is.EqualTo(UniTaskStatus.Succeeded));
+
+        SynchronizationEntry entry2 = await entry2Task;
+
+        Assert.IsNotNull(entry2);
+        Assert.IsNotNull(entry2.WaitEvent);
+        Assert.That(entry2.WaitCount, Is.EqualTo(0));
+
+        _eventSynchronizer.ExitEvent(entry2);
+    }
+
+    [Test]
+    public async Task TestGlobalBlocksPlayers()
+    {
+        WarfarePlayer player1 = await TestHelpers.AddPlayer(1, _serviceProvider);
+        WarfarePlayer player2 = await TestHelpers.AddPlayer(2, _serviceProvider);
+        SwitchToMainThread();
+
+        PerPlayerSyncEventModel mPre = new PerPlayerSyncEventModel { Player = player2 };
+        
+        SynchronizationEntry entryPre = await _eventSynchronizer.EnterEvent(mPre);
+        SwitchToMainThread();
+        _eventSynchronizer.ExitEvent(entryPre);
+
+        GlobalSyncEventModel m1 = new GlobalSyncEventModel();
+        PerPlayerSyncEventModel m2 = new PerPlayerSyncEventModel { Player = player1 };
+
+        SynchronizationEntry entry1 = await _eventSynchronizer.EnterEvent(m1);
+        SwitchToMainThread();
+
+        // check that player waits for global
+        UniTask<SynchronizationEntry> entry2Task = _eventSynchronizer.EnterEvent(m2);
+
+        Assert.That(entry2Task.Status, Is.EqualTo(UniTaskStatus.Pending));
+
+        await Task.Delay(50);
+        SwitchToMainThread();
+
+        Assert.That(entry2Task.Status, Is.EqualTo(UniTaskStatus.Pending));
+
+        _eventSynchronizer.ExitEvent(entry1!);
+
+        Assert.That(entry2Task.Status, Is.EqualTo(UniTaskStatus.Succeeded));
+
+        SynchronizationEntry entry2 = await entry2Task;
+
+        Assert.IsNotNull(entry2);
+        Assert.IsNotNull(entry2.WaitEvent);
+        Assert.That(entry2.WaitCount, Is.EqualTo(0));
+
+        // check that one player doens't wait on the other
+        UniTask<SynchronizationEntry> entryPreTask = _eventSynchronizer.EnterEvent(mPre);
+        await entryPreTask;
+        SwitchToMainThread();
+
+        Assert.That(entryPreTask.Status, Is.EqualTo(UniTaskStatus.Succeeded));
+
+        entryPre = await entry2Task;
+
+        Assert.IsNotNull(entryPre);
+        Assert.IsNotNull(entryPre.WaitEvent);
+        Assert.That(entryPre.WaitCount, Is.EqualTo(0));
+
+        _eventSynchronizer.ExitEvent(entry2);
+
+        _eventSynchronizer.ExitEvent(entryPre);
+
+    }
+}
+
+[EventModel(EventSynchronizationContext.Global, SynchronizedModelTags = [ "TestGlobalBlocksExistingPlayer" ])]
+public class GlobalSyncEventModel;
+
+[EventModel(EventSynchronizationContext.PerPlayer, SynchronizedModelTags = [ "TestGlobalBlocksExistingPlayer" ])]
+public class PerPlayerSyncEventModel : PlayerEvent;

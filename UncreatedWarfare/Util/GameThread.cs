@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Runtime.CompilerServices;
 
 namespace Uncreated.Warfare.Util;
@@ -52,6 +52,7 @@ public static class GameThread
     [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization)]
     internal static void Setup()
     {
+        _isCurrent = true;
         ThreadUtil.assertIsGameThread();
     }
 }

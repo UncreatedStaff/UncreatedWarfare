@@ -613,6 +613,7 @@ public sealed class WarfareModule
             .AsImplementedInterfaces().AsSelf()
             .SingleInstance();
 
+        bldr.RegisterType<EventSynchronizer>();
         bldr.RegisterType<EventDispatcher>()
             .AsImplementedInterfaces().AsSelf()
             .SingleInstance();

@@ -1,0 +1,1 @@
+This had to be recompiled because the one on NuGet uses a strong name which leaves it incompatible with the regular one.

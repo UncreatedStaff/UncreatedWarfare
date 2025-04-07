@@ -1,8 +1,9 @@
-﻿using DanielWillett.SpeedBytes;
+using DanielWillett.SpeedBytes;
 using DanielWillett.SpeedBytes.Formatting;
 using NUnit.Framework;
 using System;
 using Uncreated.Warfare.Players.Permissions;
+using Uncreated.Warfare.Tests.Utility;
 
 namespace Uncreated.Warfare.Tests;
 
