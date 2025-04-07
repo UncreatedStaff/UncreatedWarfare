@@ -227,6 +227,9 @@ public class SafezoneTweaks :
 
     public void HandleEvent(DropItemRequested e, IServiceProvider serviceProvider)
     {
+        if (e.Player.IsOnDuty)
+            return;
+
         if (!_zoneStore.IsInWarRoom(e.Player))
             return;
         
