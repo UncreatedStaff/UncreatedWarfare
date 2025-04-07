@@ -338,9 +338,9 @@ public class ClaimToRearmTweaks : // todo: move this class out of this namespace
             case FirearmClass.GrenadeLauncher:
                 return 0.2f;
             case FirearmClass.LightAntiTank:
-                return 0.8f;
+                return 1f;
             case FirearmClass.HeavyAntiTank:
-                return 0.85f;
+                return 1f;
             default:
                 return 0.2f;
         }
