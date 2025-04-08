@@ -238,16 +238,24 @@ public partial class FobManager :
     void IEventListener<DropItemRequested>.HandleEvent(DropItemRequested e, IServiceProvider serviceProvider)
     {
         InteractableVehicle vehicle = e.Player.UnturnedPlayer.movement.getVehicle();
-        if (vehicle is null || vehicle.asset.engine.IsFlyingEngine())
-            return;
 
         SupplyCrateInfo? supplyCrateInfo = Configuration.SupplyCrates.FirstOrDefault(s => s.SupplyItemAsset.MatchAsset(e.Asset));
         if (supplyCrateInfo == null)
             return;
 
-        Vector3 dropPos = FindDropPositionForSupplyCrate(vehicle, e.Player.Position);
+        if (vehicle != null)
+        {
+            Vector3 dropPos = FindDropPositionForSupplyCrate(vehicle, e.Player.Position);
 
-        e.Position = dropPos;
+            e.Position = dropPos;
+        }
+        else
+        {
+            e.Position = e.Player.Position + Vector3.up;
+        }
+
+        e.Grounded = false;
+        e.Exact = true;
     }
 
     [EventListener(MustRunInstantly = true)]
@@ -270,16 +278,16 @@ public partial class FobManager :
         if (!team.IsValid)
             return;
 
-        _ = new FallingBuildable(
+        _ = new FallingSupplyCrate(
             e.Player,
             e.DroppedItem,
-            supplyCrateInfo.SupplyItemAsset.GetAssetOrFail(),
-            supplyCrateInfo.PlacementEffect?.GetAsset(),
-            e.Player.Position,
+            e.LandingPoint,
+            e.DropPoint,
+            supplyCrateInfo,
             e.Player.Yaw,
-            buildable =>
+            serviceProvider,
+            supplyCrate =>
             {
-                SupplyCrate supplyCrate = new SupplyCrate(supplyCrateInfo, buildable, serviceProvider, team, !e.Player.IsOnDuty);
                 RegisterFobEntity(supplyCrate);
 
                 NearbySupplyCrates
@@ -355,7 +363,7 @@ public partial class FobManager :
         }
 
         const float distanceToBack = 7.75f + MaxBoxRadius;
-        const float distanceToFront = 4.25f + MaxBoxRadius;
+        const float distanceToFront = 5.25f + MaxBoxRadius;
 
         Vector3 vehiclePosition = vehicle.GetSentryTargetingPoint();
 
@@ -379,12 +387,21 @@ public partial class FobManager :
     {
         didHit = false;
         float hitDistance = maxDistance;
-        int amt = Physics.RaycastNonAlloc(new Ray(origin, direction), HitArray, maxDistance, RayMasks.BLOCK_EXIT);
+        int amt = Physics.RaycastNonAlloc(new Ray(origin, direction), HitArray, maxDistance, RayMasks.BLOCK_ITEM | RayMasks.LOGIC, QueryTriggerInteraction.Collide);
         foreach (RaycastHit raycastHit in new ArraySegment<RaycastHit>(HitArray, 0, amt))
         {
             Transform transform = raycastHit.transform;
             if (transform != null && !transform.IsChildOf(vehicle.transform) && transform != vehicle.transform)
             {
+                if (transform.gameObject.layer == LayerMasks.LOGIC && transform.TryGetComponent(out SupplyStackComponent stack))
+                {
+                    didHit = false;
+                    if (stack.Stack.TryGetNextCratePosition(out _, out _, out Vector3 position))
+                    {
+                        return position + Vector3.up;
+                    }
+                }
+
                 hitDistance = Mathf.Min(hitDistance, raycastHit.distance);
                 didHit = true;
             }

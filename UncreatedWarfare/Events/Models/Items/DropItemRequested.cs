@@ -16,13 +16,31 @@ public class DropItemRequested : CancellablePlayerEvent
     /// <summary>
     /// The asset of the item being dropped.
     /// </summary>
-    public required ItemAsset? Asset { get; init; }
+    public required ItemAsset Asset { get; init; }
 
     /// <summary>
     /// The position of the item where it will be dropped.
     /// </summary>
     /// <remarks>This can be changed.</remarks>
     public required Vector3 Position { get; set; }
+
+    /// <summary>
+    /// If the item should be dropped from the air on client's screen, which doesn't usually happen in vanilla.
+    /// </summary>
+    /// <remarks>This can be changed.</remarks>
+    public bool Grounded { get; set; } = true;
+
+    /// <summary>
+    /// If the item should not spread out at all when dropping.
+    /// </summary>
+    /// <remarks>This can be changed.</remarks>
+    public bool Exact { get; set; }
+
+    /// <summary>
+    /// If the item should be spread out a bit more when dropping.
+    /// </summary>
+    /// <remarks>This can be changed.</remarks>
+    public bool WideSpread { get; set; }
 
     /// <summary>
     /// The page of the item that will be dropped.

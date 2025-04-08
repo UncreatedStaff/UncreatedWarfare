@@ -1,4 +1,5 @@
 using DanielWillett.ReflectionTools;
+using SDG.NetTransport;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -29,6 +30,9 @@ public class DroppedItemTracker : IHostedService, IEventListener<PlayerLeft>
     private readonly PlayerDictionary<List<uint>> _droppedItems = new PlayerDictionary<List<uint>>(Provider.maxPlayers);
     private readonly Dictionary<Item, ulong> _itemsPendingDrop = new Dictionary<Item, ulong>(4);
     private readonly StaticGetter<uint>? _getNextInstanceId = Accessor.GenerateStaticGetter<ItemManager, uint>("instanceCount");
+    private readonly StaticSetter<uint>? _setNextInstanceId = Accessor.GenerateStaticSetter<ItemManager, uint>("instanceCount");
+    private readonly ClientStaticMethod<byte, byte, ushort, byte, byte, byte[], Vector3, uint, bool>? SendItem
+        = ReflectionUtility.FindRpc<ItemManager, ClientStaticMethod<byte, byte, ushort, byte, byte, byte[], Vector3, uint, bool>>("SendItem");
 
     public DroppedItemTracker(IPlayerService playerService, EventDispatcher eventDispatcher, WarfareModule module)
     {
@@ -273,6 +277,12 @@ public class DroppedItemTracker : IHostedService, IEventListener<PlayerLeft>
     {
         WarfarePlayer player = _playerService.GetOnlinePlayer(inv);
 
+        if (item.GetAsset() is not { isPro: false } asset)
+        {
+            shouldAllow = false;
+            return;
+        }
+
         Vector3 point = inv.transform.position + inv.transform.forward * 0.5f;
 
         ItemJar? foundJar = null;
@@ -302,7 +312,7 @@ public class DroppedItemTracker : IHostedService, IEventListener<PlayerLeft>
         {
             Player = player,
             Item = item,
-            Asset = item.GetAsset(),
+            Asset = asset,
             Page = foundPage,
             Index = foundIndex,
             X = foundJar?.x ?? 0,
@@ -311,27 +321,127 @@ public class DroppedItemTracker : IHostedService, IEventListener<PlayerLeft>
             Position = point
         };
 
-        EventContinuations.Dispatch(args, _eventDispatcher, player.DisconnectToken, out shouldAllow, continuation: args =>
+        EventContinuations.Dispatch(args, _eventDispatcher, player.DisconnectToken, out shouldAllow, continuation: async (args, token) =>
         {
             if (!args.Player.IsOnline)
                 return;
 
-            ItemJar? item = args.Player.UnturnedPlayer.inventory.GetItemAt(args.Page, args.X, args.Y, out byte index);
-            if (item?.item != args.Item)
+            Vector3 point = args.Position;
+
+            bool isCustomDropping = _getNextInstanceId != null && _setNextInstanceId != null && SendItem != null;
+
+            if (isCustomDropping && !args.Exact)
+            {
+                if (args.WideSpread)
+                {
+                    point.x += UnityEngine.Random.Range(-0.75f, 0.75f);
+                    point.z += UnityEngine.Random.Range(-0.75f, 0.75f);
+                }
+                else
+                {
+                    point.x += UnityEngine.Random.Range(-0.125f, 0.125f);
+                    point.z += UnityEngine.Random.Range(-0.125f, 0.125f);
+                }
+            }
+
+            Vector3 serversidePoint = point;
+            if (isCustomDropping)
+            {
+                if (Physics.SphereCast(new Ray(point + Vector3.up, Vector3.down), 0.1f, out RaycastHit hitInfo, 2048f, RayMasks.BLOCK_ITEM))
+                {
+                    point.y = hitInfo.point.y;
+                }
+
+                if (args.Grounded)
+                    serversidePoint = point;
+            }
+
+            byte x = 0, y = 0;
+            if (isCustomDropping && !Regions.tryGetCoordinate(point, out x, out y))
+            {
+                return;
+            }
+
+            ItemJar? itemJar = args.Player.UnturnedPlayer.inventory.GetItemAt(args.Page, args.X, args.Y, out byte index);
+            if (itemJar?.item != args.Item)
                 return;
 
             _itemsPendingDrop[args.Item] = args.Player.Steam64.m_SteamID;
 
-            ItemManager.dropItem(args.Item, args.Position, true, true, false);
+            ItemInfo droppedItem;
+            if (!isCustomDropping)
+            {
+                ItemManager.dropItem(args.Item, point, true, true, args.WideSpread);
+                droppedItem = ItemUtility.FindItem(args.Item, args.Position);
+            }
+            else
+            {
+                _ignoreSpawningItemEvent = true;
+                try
+                {
+                    bool shouldAllow = true;
+                    ItemManager.onServerSpawningItemDrop?.Invoke(args.Item, ref point, ref shouldAllow);
+                    if (!shouldAllow)
+                        return;
+                }
+                finally
+                {
+                    _ignoreSpawningItemEvent = false;
+                }
 
-            ItemInfo droppedItem = ItemUtility.FindItem(args.Item, args.Position);
+                uint instId = _getNextInstanceId!();
+                ++instId;
+                _setNextInstanceId!(instId);
+                ItemSpawning spawningArgs = new ItemSpawning
+                {
+                    Position = point,
+                    InstanceId = instId,
+                    IsDroppedByPlayer = true,
+                    PlayerDropped = args.Player,
+                    PlayerDroppedId = args.Player.Steam64,
+                    IsWideSpread = args.WideSpread,
+                    PlayDropEffect = true,
+                    Item = args.Item
+                };
+
+                if (!await _eventDispatcher.DispatchEventAsync(spawningArgs, token))
+                {
+                    return;
+                }
+
+                if (!args.Grounded && serversidePoint.y - point.y > 17.5f) // max range is 20m, use a lower number to be safe
+                {
+                    serversidePoint.y = point.y + 17.5f;
+                }
+
+                ItemData itemData = new ItemData(args.Item, instId, serversidePoint, true);
+                
+                ItemRegion region = ItemManager.regions[x, y];
+                int droppedItemIndex = region.items.Count;
+                region.items.Add(itemData);
+                droppedItem = new ItemInfo(itemData, droppedItemIndex, new RegionCoord(x, y));
+
+                Item item = args.Item;
+                SendItem!.Invoke(
+                    ENetReliability.Reliable,
+                    Regions.GatherClientConnections(x, y, ItemManager.ITEM_REGIONS),
+                    x,
+                    y,
+                    item.id,
+                    item.amount,
+                    item.quality,
+                    item.state,
+                    serversidePoint,
+                    instId,
+                    true
+                );
+            }
 
             args.Player.UnturnedPlayer.inventory.removeItem((byte)args.Page, index);
             if ((int)args.Page < PlayerInventory.SLOTS)
             {
                 args.Player.UnturnedPlayer.equipment.sendSlot((byte)args.Page);
             }
-
 
             ItemDropped dropArgs = new ItemDropped
             {
@@ -345,7 +455,9 @@ public class DroppedItemTracker : IHostedService, IEventListener<PlayerLeft>
                 OldPage = args.Page,
                 OldX = args.X,
                 OldY = args.Y,
-                OldRotation = args.Rotation
+                OldRotation = args.Rotation,
+                LandingPoint = point,
+                DropPoint = args.Position
             };
 
             _ = _eventDispatcher.DispatchEventAsync(dropArgs, CancellationToken.None);

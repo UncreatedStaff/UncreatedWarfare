@@ -198,38 +198,8 @@ internal sealed class TeleportCommand : IExecutableCommand
 
             case 3:
                 Context.AssertRanByPlayer();
-                pos = Context.Player.Position;
-                if (!Context.TryGet(2, out float z))
-                {
-                    string p = Context.Get(2)!;
-                    if (p.StartsWith("~", StringComparison.Ordinal))
-                        z = pos.z + GetOffset(p);
-                    else
-                        throw Context.Reply(_translations.TeleportInvalidCoordinates);
-                }
-
-                if (!Context.TryGet(1, out float y))
-                {
-                    string p = Context.Get(1)!;
-                    if (p.StartsWith("~", StringComparison.Ordinal))
-                        y = pos.y + GetOffset(p);
-                    else if (Context.MatchParameter(1, "-"))
-                        y = float.NaN;
-                    else
-                        throw Context.Reply(_translations.TeleportInvalidCoordinates);
-                }
-
-                if (!Context.TryGet(0, out float x))
-                {
-                    string p = Context.Get(0)!;
-                    if (p.StartsWith("~", StringComparison.Ordinal))
-                        x = pos.x + GetOffset(p);
-                    else
-                        throw Context.Reply(_translations.TeleportInvalidCoordinates);
-                }
-
-                pos = new Vector3(x, y, z);
-                if (float.IsNaN(y))
+                pos = ParseCoordiantes(0, Context.Player.Position);
+                if (float.IsNaN(pos.y))
                     pos.y = TerrainUtility.GetHighestPoint(in pos, float.NaN) + heightOffset;
 
                 throw Context.Reply(Context.Player.UnturnedPlayer.teleportToLocation(pos, Context.Player.Yaw)
@@ -247,36 +217,8 @@ internal sealed class TeleportCommand : IExecutableCommand
                 if (target.UnturnedPlayer.life.isDead)
                     throw Context.Reply(_translations.TeleportTargetDead, target);
 
-                pos = Context.Player.Position;
-                if (!Context.TryGet(3, out z))
-                {
-                    string p = Context.Get(3)!;
-                    if (p.StartsWith("~", StringComparison.Ordinal))
-                        z = pos.z + GetOffset(p);
-                    else
-                        throw Context.Reply(_translations.TeleportInvalidCoordinates);
-                }
-                if (!Context.TryGet(2, out y))
-                {
-                    string p = Context.Get(2)!;
-                    if (p.StartsWith("~", StringComparison.Ordinal))
-                        y = pos.y + GetOffset(p);
-                    else if (Context.MatchParameter(2, "-"))
-                        y = float.NaN;
-                    else
-                        throw Context.Reply(_translations.TeleportInvalidCoordinates);
-                }
-                if (!Context.TryGet(1, out x))
-                {
-                    string p = Context.Get(1)!;
-                    if (p.StartsWith("~", StringComparison.Ordinal))
-                        x = pos.x + GetOffset(p);
-                    else
-                        throw Context.Reply(_translations.TeleportInvalidCoordinates);
-                }
-
-                pos = new Vector3(x, y, z);
-                if (float.IsNaN(y))
+                pos = ParseCoordiantes(1, Context.Player.Position);
+                if (float.IsNaN(pos.y))
                     pos.y = TerrainUtility.GetHighestPoint(in pos, float.NaN) + heightOffset;
 
                 string locName = $"({pos.x.ToString("0.##", Context.Culture)}, {pos.y.ToString("0.##", Context.Culture)}, {pos.z.ToString("0.##", Context.Culture)})";
@@ -291,6 +233,53 @@ internal sealed class TeleportCommand : IExecutableCommand
                 throw Context.SendCorrectUsage(Syntax);
         }
     }
+
+    private Vector3 ParseCoordiantes(int offset, Vector3 pos)
+    {
+        Vector3 v3 = default;
+
+        string? xStr = Context.Get(offset);
+        string? yStr = Context.Get(offset + 1);
+        string? zStr = Context.Get(offset + 2);
+
+        if (xStr != null && xStr.StartsWith('('))
+            xStr = xStr[1..];
+        if (xStr != null && xStr.EndsWith(','))
+            xStr = xStr[..^1];
+        if (yStr != null && yStr.EndsWith(','))
+            yStr = yStr[..^1];
+        if (zStr != null && zStr.EndsWith(')'))
+            zStr = zStr[..^1];
+
+        if (!float.TryParse(xStr, NumberStyles.Number, CultureInfo.InvariantCulture, out v3.x))
+        {
+            if (xStr != null && xStr.StartsWith("~", StringComparison.Ordinal))
+                v3.x = pos.x + GetOffset(xStr);
+            else
+                throw Context.Reply(_translations.TeleportInvalidCoordinates);
+        }
+
+        if (!float.TryParse(yStr, NumberStyles.Number, CultureInfo.InvariantCulture, out v3.y))
+        {
+            if (yStr != null && yStr.StartsWith("~", StringComparison.Ordinal))
+                v3.y = pos.y + GetOffset(yStr);
+            else if (yStr == "-")
+                v3.y = float.NaN;
+            else
+                throw Context.Reply(_translations.TeleportInvalidCoordinates);
+        }
+
+        if (!float.TryParse(zStr, NumberStyles.Number, CultureInfo.InvariantCulture, out v3.z))
+        {
+            if (zStr != null && zStr.StartsWith("~", StringComparison.Ordinal))
+                v3.z = pos.z + GetOffset(zStr);
+            else
+                throw Context.Reply(_translations.TeleportInvalidCoordinates);
+        }
+
+        return v3;
+    }
+
     private float GetOffset(string arg)
     {
         if (arg.Length < 2 || !float.TryParse(arg.AsSpan(1), NumberStyles.Number, Context.ParseFormat, out float offset))

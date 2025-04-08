@@ -180,6 +180,8 @@ internal sealed class PlayerInventoryReceiveDropItem : IHarmonyPatch
             Item = item,
             Asset = item?.GetAsset(),
             DroppedItem = data,
+            LandingPoint = data?.point ?? Vector3.zero,
+            DropPoint = data?.point ?? Vector3.zero,
             OldPage = (Page)page,
             OldX = x,
             OldY = y,

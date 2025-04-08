@@ -32,6 +32,18 @@ public class ItemDropped : PlayerEvent, IActionLoggableEvent
     public Vector3 ServersidePoint => DroppedItem?.point ?? Vector3.zero;
 
     /// <summary>
+    /// The position of the item where it will land. Usually this is the same as <see cref="ServersidePoint"/>.
+    /// </summary>
+    /// <remarks>Items are not simulated on the server so this may change on clients.</remarks>
+    public required Vector3 LandingPoint { get; init; }
+
+    /// <summary>
+    /// The position of the item where it was dropped.
+    /// </summary>
+    /// <remarks>Items are not simulated on the server so this may change on clients.</remarks>
+    public required Vector3 DropPoint { get; init; }
+
+    /// <summary>
     /// The unique instance ID of this item.
     /// </summary>
     public uint InstanceId => DroppedItem?.instanceID ?? uint.MaxValue;

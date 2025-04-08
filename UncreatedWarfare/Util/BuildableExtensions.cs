@@ -10,6 +10,9 @@ using Uncreated.Warfare.Models.Buildables;
 namespace Uncreated.Warfare.Util;
 public static class BuildableExtensions
 {
+    private static readonly Dictionary<Guid, Bounds> CachedBarricadeBounds = new Dictionary<Guid, Bounds>();
+    private static readonly List<Collider> WorkingColliders = new List<Collider>();
+
     /// <summary>
     /// Destroyes every buildable that isn't currently saved.
     /// </summary>
@@ -367,5 +370,101 @@ public static class BuildableExtensions
         }
 
         return newBuildable;
+    }
+
+    /// <summary>
+    /// Get the local bounds for a buildable asset type. Cached after first use for each asset type.
+    /// </summary>
+    /// <remarks>Note that these bounds are rotated so that up is actually up.</remarks>
+    public static bool TryGetBuildableBounds(ItemPlaceableAsset buildableAsset, out Bounds localBounds)
+    {
+        localBounds = default;
+
+        if (buildableAsset.GUID == Guid.Empty)
+            return false;
+
+        if (CachedBarricadeBounds.TryGetValue(buildableAsset.GUID, out localBounds))
+            return true;
+
+        GameObject? model = buildableAsset switch
+        {
+            ItemBarricadeAsset barricade => barricade.barricade,
+            ItemStructureAsset structure => structure.structure,
+            _ => null
+        };
+
+        if (model == null)
+            return false;
+
+        Bounds workingBounds = default;
+        model.GetComponentsInChildren(WorkingColliders);
+        try
+        {
+            if (WorkingColliders.Count == 0)
+                return false;
+
+            for (int i = 0; i < WorkingColliders.Count; i++)
+            {
+                Collider collider = WorkingColliders[i];
+                if (collider.gameObject.layer == LayerMasks.NAVMESH)
+                    continue;
+
+                Bounds b = default;
+                switch (collider)
+                {
+                    case BoxCollider box:
+                        b.center = box.center;
+                        b.size = box.size;
+                        break;
+
+                    case CapsuleCollider capsule:
+                        b.center = capsule.center;
+                        float r = capsule.radius;
+                        b.extents = capsule.direction switch
+                        {
+                            0 => new Vector3(capsule.height / 2f, r, r),
+                            1 => new Vector3(r, capsule.height / 2f, r),
+                            _ => new Vector3(r, r, capsule.height / 2f)
+                        };
+                        break;
+
+                    case MeshCollider mesh:
+                        b = mesh.sharedMesh.bounds;
+                        break;
+
+                    case SphereCollider sphere:
+                        b.center = sphere.center;
+                        r = sphere.radius;
+                        b.extents = new Vector3(r, r, r);
+                        break;
+
+                    default:
+                        continue;
+                }
+
+                if (i == 0)
+                    workingBounds = b;
+                else
+                    workingBounds.Encapsulate(b);
+            }
+        }
+        finally
+        {
+            WorkingColliders.Clear();
+        }
+
+        Vector3 e = workingBounds.extents;
+        workingBounds.extents = new Vector3(Math.Abs(e.x), Math.Abs(e.z), Math.Abs(e.y));
+
+        if (buildableAsset is ItemBarricadeAsset { offset: not 0 } bAsset)
+        {
+            Vector3 c = workingBounds.center;
+            c.y += bAsset.offset;
+            workingBounds.center = c;
+        }
+
+        localBounds = workingBounds;
+        CachedBarricadeBounds.Add(buildableAsset.GUID, workingBounds);
+        return true;
     }
 }

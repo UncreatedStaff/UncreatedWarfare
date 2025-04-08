@@ -1,4 +1,4 @@
-﻿using SDG.NetTransport;
+using SDG.NetTransport;
 using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Configuration;
@@ -684,7 +684,7 @@ public class WorldIconInfo : ITransformObject, IDisposable
 
     public void Dispose()
     {
-        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+        if (!Alive || Interlocked.Exchange(ref _disposed, 1) != 0)
             return;
 
         Alive = false;

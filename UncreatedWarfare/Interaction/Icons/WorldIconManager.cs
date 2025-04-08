@@ -1,5 +1,5 @@
 #if DEBUG
-#define ICONS_DEBUG_LOGGING
+//#define ICONS_DEBUG_LOGGING
 #endif
 using SDG.Framework.Utilities;
 using SDG.NetTransport;
