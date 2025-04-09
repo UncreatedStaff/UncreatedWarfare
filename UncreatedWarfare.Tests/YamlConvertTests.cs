@@ -30,6 +30,6 @@ internal class YamlConvertTests
         string yaml = _serializer.Serialize(asset);
         var deserialized = _deserializer.Deserialize<IAssetLink<VehicleAsset>>(yaml);
 
-        Assert.AreEqual(asset.GUID, deserialized.GUID);
+        Assert.That(deserialized.GUID, Is.EqualTo(asset.GUID));
     }
 }

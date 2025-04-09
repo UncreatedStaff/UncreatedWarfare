@@ -19,7 +19,7 @@ public class SteamIdHelperTests
         if (!SteamIdHelper.TryParseSteamId(steamIdInput, out CSteamID steamId))
             Assert.Fail();
 
-        Assert.AreEqual(steamId.m_SteamID, 76561198267927009ul);
+        Assert.That(steamId.m_SteamID, Is.EqualTo(76561198267927009ul));
     }
 
     [Test]
@@ -39,8 +39,8 @@ public class SteamIdHelperTests
     {
         CSteamID? steamId = await SteamIdHelper.TryParseSteamIdOrUrl(basicUrl);
 
-        Assert.NotNull(steamId);
-        Assert.AreEqual(steamId.Value.m_SteamID, 76561198267927009ul);
+        Assert.That(steamId, Is.Not.Null);
+        Assert.That(steamId.Value.m_SteamID, Is.EqualTo(76561198267927009ul));
     }
 
     [Test]
@@ -60,7 +60,7 @@ public class SteamIdHelperTests
     {
         CSteamID? steamId = await SteamIdHelper.TryParseSteamIdOrUrl(customUrl);
 
-        Assert.NotNull(steamId);
-        Assert.AreEqual(steamId.Value.m_SteamID, 76561198267927009ul);
+        Assert.That(steamId, Is.Not.Null);
+        Assert.That(steamId.Value.m_SteamID, Is.EqualTo(76561198267927009ul));
     }
 }

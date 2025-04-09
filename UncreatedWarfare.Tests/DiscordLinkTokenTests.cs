@@ -1,4 +1,4 @@
-﻿using NUnit.Framework;
+using NUnit.Framework;
 using System;
 using Uncreated.Warfare.Moderation.Discord;
 
@@ -29,7 +29,7 @@ internal class DiscordLinkTokenTests
     {
         string normalized = AccountLinkingService.NormalizeToken(value);
 
-        Assert.AreEqual(value, normalized);
+        Assert.That(value, Is.EqualTo(normalized));
 
         Assert.That(ReferenceEquals(normalized, value), Is.True, "Normalized reference is the same as input.");
     }
@@ -40,7 +40,7 @@ internal class DiscordLinkTokenTests
     {
         string normalized = AccountLinkingService.NormalizeToken(value);
 
-        Assert.AreEqual(expected, normalized);
+        Assert.That(expected, Is.EqualTo(normalized));
     }
 
     [Test]
@@ -49,7 +49,7 @@ internal class DiscordLinkTokenTests
     {
         string normalized = AccountLinkingService.NormalizeToken(value);
 
-        Assert.AreEqual(expected, normalized);
+        Assert.That(expected, Is.EqualTo(normalized));
     }
 
     [Test]
@@ -58,7 +58,7 @@ internal class DiscordLinkTokenTests
     {
         string normalized = AccountLinkingService.NormalizeToken(value);
 
-        Assert.AreEqual(expected, normalized);
+        Assert.That(expected, Is.EqualTo(normalized));
     }
 
     [Test]
@@ -67,7 +67,7 @@ internal class DiscordLinkTokenTests
     {
         string normalized = AccountLinkingService.NormalizeToken(value);
 
-        Assert.AreEqual(expected, normalized);
+        Assert.That(expected, Is.EqualTo(normalized));
     }
 
     [Test]
@@ -76,7 +76,7 @@ internal class DiscordLinkTokenTests
     {
         string normalized = AccountLinkingService.NormalizeToken(value);
 
-        Assert.AreEqual(expected, normalized);
+        Assert.That(expected, Is.EqualTo(normalized));
     }
 
     [Test]
@@ -86,7 +86,7 @@ internal class DiscordLinkTokenTests
     {
         string normalized = AccountLinkingService.NormalizeToken(value);
 
-        Assert.AreEqual(expected, normalized);
+        Assert.That(expected, Is.EqualTo(normalized));
     }
 
     [Test]
@@ -96,7 +96,7 @@ internal class DiscordLinkTokenTests
     {
         string normalized = AccountLinkingService.NormalizeToken(value);
 
-        Assert.AreEqual(expected, normalized);
+        Assert.That(expected, Is.EqualTo(normalized));
     }
 
     [Test]
@@ -106,6 +106,6 @@ internal class DiscordLinkTokenTests
     {
         string normalized = AccountLinkingService.NormalizeToken(value);
 
-        Assert.AreEqual(expected, normalized);
+        Assert.That(expected, Is.EqualTo(normalized));
     }
 }

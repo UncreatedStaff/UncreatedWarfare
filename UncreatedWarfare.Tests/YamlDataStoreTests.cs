@@ -35,7 +35,7 @@ public class YamlDataStoreTests
     {
         var dataStore = new YamlDataStore<List<ExampleRecord>>(Path.Combine(_testDirectory, "test-save-data.yml"), CreateLogger(), true, () => new List<ExampleRecord>());
 
-        Assert.AreEqual(0, dataStore.Data.Count);
+        Assert.That(dataStore.Data.Count, Is.Zero);
 
         dataStore.Data.Add(
             new ExampleRecord
@@ -56,7 +56,7 @@ public class YamlDataStoreTests
 
         dataStore.Save();
         dataStore.Reload();
-        Assert.AreEqual(2, dataStore.Data.Count);
+        Assert.That(dataStore.Data.Count, Is.EqualTo(2));
 
         dataStore.Data.Add(
             new ExampleRecord
@@ -69,7 +69,7 @@ public class YamlDataStoreTests
         );
         dataStore.Save();
         dataStore.Reload();
-        Assert.AreEqual(3, dataStore.Data.Count);
+        Assert.That(dataStore.Data.Count, Is.EqualTo(3));
     }
 
     [Test]
@@ -99,7 +99,7 @@ public class YamlDataStoreTests
         var dataStore = new YamlDataStore<List<ExampleRecord>>(sourceFilePath, CreateLogger(), true, () => new List<ExampleRecord>());
 
         dataStore.Reload();
-        Assert.AreEqual(2, dataStore.Data.Count);
+        Assert.That(dataStore.Data.Count, Is.EqualTo(2));
     }
     [Test]
     public async Task TestFileWatcherReloadAsync()
@@ -128,7 +128,7 @@ public class YamlDataStoreTests
         var dataStore = new YamlDataStore<List<ExampleRecord>>(sourceFilePath, CreateLogger(), true, () => new List<ExampleRecord>());
 
         dataStore.Reload();
-        Assert.AreEqual(2, dataStore.Data.Count);
+        Assert.That(dataStore.Data.Count, Is.EqualTo(2));
 
         records.Add(
             new ExampleRecord
@@ -142,7 +142,7 @@ public class YamlDataStoreTests
         WriteRecordsToFile(sourceFilePath, records);
 
         await Task.Delay(1000); // wait a little bit for the file watcher to notice that the file changed
-        Assert.AreEqual(3, dataStore.Data.Count);
+        Assert.That(dataStore.Data.Count, Is.EqualTo(3));
     }
     private void WriteRecordsToFile(string filePath, List<ExampleRecord> records)
     {

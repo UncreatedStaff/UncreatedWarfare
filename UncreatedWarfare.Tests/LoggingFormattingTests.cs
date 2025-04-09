@@ -84,6 +84,12 @@ public class LoggingFormattingTests
         _formatter = Container.Resolve<ITranslationValueFormatter>();
     }
 
+    [TearDown]
+    public void TearDown()
+    {
+        Container.Dispose();
+    }
+
     [Test]
     public void TempTextConverter()
     {

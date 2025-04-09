@@ -57,7 +57,7 @@ public class FormattingUtilityTests
         if (!HexStringHelper.TryParseColor32(colorInput, CultureInfo.InvariantCulture, out Color32 color))
             Assert.Fail();
 
-        Assert.AreEqual(value, color);
+        Assert.That(color, Is.EqualTo(value));
     }
     [Test]
     [TestCase("#0066ff")]
@@ -71,7 +71,7 @@ public class FormattingUtilityTests
         if (!HexStringHelper.TryParseColor32(colorInput, CultureInfo.InvariantCulture, out Color32 color))
             Assert.Fail();
 
-        Assert.AreEqual(value, color);
+        Assert.That(color, Is.EqualTo(value));
     }
     [Test]
     [TestCase("#0066ff99")]
@@ -82,7 +82,7 @@ public class FormattingUtilityTests
         if (!HexStringHelper.TryParseHexColor32(colorInput, out Color32 color))
             Assert.Fail();
 
-        Assert.AreEqual(value, color);
+        Assert.That(color, Is.EqualTo(value));
     }
     [Test]
     [TestCase("#0066ff")]
@@ -93,7 +93,7 @@ public class FormattingUtilityTests
         if (!HexStringHelper.TryParseHexColor32(colorInput, out Color32 color))
             Assert.Fail();
 
-        Assert.AreEqual(value, color);
+        Assert.That(color, Is.EqualTo(value));
     }
     [Test]
     [TestCase("#ac49")]
@@ -104,7 +104,7 @@ public class FormattingUtilityTests
         if (!HexStringHelper.TryParseHexColor32(colorInput, out Color32 color))
             Assert.Fail();
 
-        Assert.AreEqual(value, color);
+        Assert.That(color, Is.EqualTo(value));
     }
     [Test]
     [TestCase("#ac4")]
@@ -115,7 +115,7 @@ public class FormattingUtilityTests
         if (!HexStringHelper.TryParseHexColor32(colorInput, out Color32 color))
             Assert.Fail();
 
-        Assert.AreEqual(value, color);
+        Assert.That(color, Is.EqualTo(value));
     }
     [Test]
     [TestCase("#a9")]
@@ -126,7 +126,7 @@ public class FormattingUtilityTests
         if (!HexStringHelper.TryParseHexColor32(colorInput, out Color32 color))
             Assert.Fail();
 
-        Assert.AreEqual(value, color);
+        Assert.That(color, Is.EqualTo(value));
     }
     [Test]
     [TestCase("#a")]
@@ -137,6 +137,6 @@ public class FormattingUtilityTests
         if (!HexStringHelper.TryParseHexColor32(colorInput, out Color32 color))
             Assert.Fail();
 
-        Assert.AreEqual(value, color);
+        Assert.That(color, Is.EqualTo(value));
     }
 }

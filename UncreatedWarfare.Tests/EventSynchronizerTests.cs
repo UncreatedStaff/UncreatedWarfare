@@ -15,7 +15,12 @@ namespace Uncreated.Warfare.Tests;
 [NonParallelizable]
 internal class EventSynchronizerTests
 {
+#pragma warning disable NUnit1032 // An IDisposable field/property should be Disposed in a TearDown method
+
     private EventSynchronizer _eventSynchronizer;
+
+#pragma warning restore NUnit1032 // An IDisposable field/property should be Disposed in a TearDown method
+
     private IServiceProvider _serviceProvider;
 
     [SetUp]
@@ -33,6 +38,13 @@ internal class EventSynchronizerTests
         _eventSynchronizer = serviceProvider.GetRequiredService<EventSynchronizer>();
 
         TestHelpers.SetupMainThread();
+    }
+
+    [TearDown]
+    public void TearDown()
+    {
+        if (_serviceProvider is IDisposable d)
+            d.Dispose();
     }
 
     public void SwitchToMainThread()
@@ -55,7 +67,7 @@ internal class EventSynchronizerTests
         SwitchToMainThread();
 
         // first entry did not create a task completion source
-        Assert.IsNotNull(entry1);
+        Assert.That(entry1, Is.Not.Null);
         Assert.That(entry1!.WaitEvent, Is.EqualTo(null));
         Assert.That(entry1.WaitCount, Is.EqualTo(0));
 
@@ -76,8 +88,8 @@ internal class EventSynchronizerTests
 
         SynchronizationEntry entry2 = await entry2Task;
 
-        Assert.IsNotNull(entry2);
-        Assert.IsNotNull(entry2.WaitEvent);
+        Assert.That(entry2, Is.Not.Null);
+        Assert.That(entry2.WaitEvent, Is.Not.Null);
         Assert.That(entry2.WaitCount, Is.EqualTo(0));
 
         _eventSynchronizer.ExitEvent(entry2);
@@ -118,8 +130,8 @@ internal class EventSynchronizerTests
 
         SynchronizationEntry entry2 = await entry2Task;
 
-        Assert.IsNotNull(entry2);
-        Assert.IsNotNull(entry2.WaitEvent);
+        Assert.That(entry2, Is.Not.Null);
+        Assert.That(entry2.WaitEvent, Is.Not.Null);
         Assert.That(entry2.WaitCount, Is.EqualTo(0));
 
         // check that one player doens't wait on the other
@@ -131,8 +143,8 @@ internal class EventSynchronizerTests
 
         entryPre = await entry2Task;
 
-        Assert.IsNotNull(entryPre);
-        Assert.IsNotNull(entryPre.WaitEvent);
+        Assert.That(entryPre, Is.Not.Null);
+        Assert.That(entryPre.WaitEvent, Is.Not.Null);
         Assert.That(entryPre.WaitCount, Is.EqualTo(0));
 
         _eventSynchronizer.ExitEvent(entry2);

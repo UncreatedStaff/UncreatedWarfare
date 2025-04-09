@@ -22,7 +22,7 @@ public class PermissionTests
     {
         PermissionLeaf leaf = PermissionLeaf.Parse(leafStr);
 
-        Assert.AreEqual(leafStr, leaf.ToString());
+        Assert.That(leafStr, Is.EqualTo(leaf.ToString()));
     }
 
     [Test]
@@ -68,7 +68,7 @@ public class PermissionTests
         if (branchStr.Length > 0 && branchStr[0] == '+')
             branchStr = branchStr[1..];
 
-        Assert.AreEqual(branchStr, branch.ToString());
+        Assert.That(branchStr, Is.EqualTo(branch.ToString()));
     }
 
     [Test]
@@ -107,10 +107,10 @@ public class PermissionTests
         PermissionBranch branch = PermissionBranch.Parse(branchStr);
         PermissionLeaf leaf = PermissionLeaf.Parse(leafStr);
 
-        Assert.IsTrue(branch.Valid);
-        Assert.IsTrue(leaf.Valid);
+        Assert.That(branch.Valid, Is.True);
+        Assert.That(leaf.Valid, Is.True);
 
-        Assert.IsTrue(branch.Contains(leaf));
+        Assert.That(branch.Contains(leaf), Is.True);
     }
 
     [Test]
@@ -124,10 +124,10 @@ public class PermissionTests
         PermissionBranch branch = PermissionBranch.Parse(branchStr);
         PermissionLeaf leaf = PermissionLeaf.Parse(leafStr);
 
-        Assert.IsTrue(branch.Valid);
-        Assert.IsTrue(leaf.Valid);
+        Assert.That(branch.Valid, Is.True);
+        Assert.That(leaf.Valid, Is.True);
 
-        Assert.IsFalse(branch.Contains(leaf));
+        Assert.That(branch.Contains(leaf), Is.False);
     }
 
     [Test]
@@ -137,7 +137,7 @@ public class PermissionTests
     {
         PermissionLeaf leaf = PermissionLeaf.Parse(leafStr);
         Console.WriteLine(leaf.ToString());
-        Assert.IsTrue(leaf.Valid);
+        Assert.That(leaf.Valid, Is.True);
 
         ByteWriter writer = new ByteWriter(64);
         ByteReader reader = new ByteReader();
@@ -147,7 +147,7 @@ public class PermissionTests
         reader.LoadNew(writer.ToArray());
         Console.WriteLine(Environment.NewLine + ByteFormatter.FormatBinary(reader.InternalBuffer!, ByteStringFormat.Base16 | ByteStringFormat.Columns8));
 
-        Assert.AreEqual(leaf, PermissionLeaf.Read(reader));
+        Assert.That(leaf, Is.EqualTo(PermissionLeaf.Read(reader)));
     }
 
     [Test]
@@ -173,7 +173,7 @@ public class PermissionTests
     {
         PermissionBranch branch = PermissionBranch.Parse(branchStr);
         Console.WriteLine(branch.ToString());
-        Assert.IsTrue(branch.Valid);
+        Assert.That(branch.Valid, Is.True);
 
         ByteWriter writer = new ByteWriter(64);
         ByteReader reader = new ByteReader();
@@ -183,6 +183,6 @@ public class PermissionTests
         reader.LoadNew(writer.ToArray());
         Console.WriteLine(Environment.NewLine + ByteFormatter.FormatBinary(reader.InternalBuffer!, ByteStringFormat.Base16 | ByteStringFormat.Columns8));
 
-        Assert.AreEqual(branch, PermissionBranch.Read(reader));
+        Assert.That(branch, Is.EqualTo(PermissionBranch.Read(reader)));
     }
 }

@@ -1,4 +1,4 @@
-﻿using NUnit.Framework;
+using NUnit.Framework;
 using Steamworks;
 using System.ComponentModel.Design;
 using Uncreated.Warfare.Layouts.Teams;
@@ -41,36 +41,36 @@ public class KitLimiterTests
     [Test]
     public void TestNoCurrentUsers()
     {
-        Assert.False(IsLimited(3, 0, 1)); 
-        Assert.False(IsLimited(3, 0, 2)); 
-        Assert.False(IsLimited(3, 0, 3)); 
-        Assert.False(IsLimited(3, 0, 4)); 
-        Assert.False(IsLimited(3, 0, 6));
-        Assert.False(IsLimited(3, 0, 8));
+        Assert.That(IsLimited(3, 0, 1), Is.False); 
+        Assert.That(IsLimited(3, 0, 2), Is.False); 
+        Assert.That(IsLimited(3, 0, 3), Is.False); 
+        Assert.That(IsLimited(3, 0, 4), Is.False); 
+        Assert.That(IsLimited(3, 0, 6), Is.False);
+        Assert.That(IsLimited(3, 0, 8), Is.False);
         
     }
     [Test]
     public void TestOneCurrentUser()
     {
-        Assert.True(IsLimited(3, 1, 1)); 
-        Assert.True(IsLimited(3, 1, 2)); 
-        Assert.False(IsLimited(3, 1, 3)); 
-        Assert.False(IsLimited(3, 1, 4)); 
-        Assert.False(IsLimited(3, 1, 5));
-        Assert.False(IsLimited(3, 1, 6));
-        Assert.False(IsLimited(3, 1, 8));   
+        Assert.That(IsLimited(3, 1, 1), Is.True); 
+        Assert.That(IsLimited(3, 1, 2), Is.True); 
+        Assert.That(IsLimited(3, 1, 3), Is.False); 
+        Assert.That(IsLimited(3, 1, 4), Is.False); 
+        Assert.That(IsLimited(3, 1, 5), Is.False);
+        Assert.That(IsLimited(3, 1, 6), Is.False);
+        Assert.That(IsLimited(3, 1, 8), Is.False);   
     }
     [Test]
     public void TestTwoCurrentUsers()
     {
-        Assert.True(IsLimited(3, 2, 1)); 
-        Assert.True(IsLimited(3, 2, 2)); 
-        Assert.True(IsLimited(3, 2, 3)); 
-        Assert.True(IsLimited(3, 2, 4)); 
-        Assert.True(IsLimited(3, 2, 5));
-        Assert.False(IsLimited(3, 2, 6));
-        Assert.False(IsLimited(3, 2, 7));
-        Assert.False(IsLimited(3, 2, 8));     
-        Assert.False(IsLimited(3, 2, 9));     
+        Assert.That(IsLimited(3, 2, 1), Is.True); 
+        Assert.That(IsLimited(3, 2, 2), Is.True); 
+        Assert.That(IsLimited(3, 2, 3), Is.True); 
+        Assert.That(IsLimited(3, 2, 4), Is.True); 
+        Assert.That(IsLimited(3, 2, 5), Is.True);
+        Assert.That(IsLimited(3, 2, 6), Is.False);
+        Assert.That(IsLimited(3, 2, 7), Is.False);
+        Assert.That(IsLimited(3, 2, 8), Is.False);     
+        Assert.That(IsLimited(3, 2, 9), Is.False);     
     }
 }
