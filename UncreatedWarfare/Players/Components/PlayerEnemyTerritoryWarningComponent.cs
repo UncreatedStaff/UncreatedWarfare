@@ -57,7 +57,8 @@ internal class PlayerEnemyTerritoryWarningComponent : IPlayerComponent,
     void IEventListener<PlayerEnteredZone>.HandleEvent(PlayerEnteredZone e, IServiceProvider serviceProvider)
     {
         if (e.Zone.Type != ZoneType.AntiMainCampArea
-            || string.Equals(e.Zone.Faction, Player.Team.Faction.FactionId, StringComparison.Ordinal))
+            || string.Equals(e.Zone.Faction, Player.Team.Faction.FactionId, StringComparison.Ordinal)
+            || e.Player.IsOnDuty)
         {
             return;
         }

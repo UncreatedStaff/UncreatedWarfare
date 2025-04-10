@@ -23,6 +23,11 @@ public interface IRpcConnectionService
     /// Get the connection for Warfare.
     /// </summary>
     bool TryGetWarfareConnection([MaybeNullWhen(false)] out IModularRpcRemoteConnection connection);
+
+    /// <summary>
+    /// Get the identity string of a connection.
+    /// </summary>
+    string? GetIdentity(IModularRpcRemoteConnection connection);
 }
 
 public class NullRpcConnectionService : IRpcConnectionService
@@ -45,4 +50,7 @@ public class NullRpcConnectionService : IRpcConnectionService
         connection = null;
         return false;
     }
+
+    /// <inheritdoc />
+    public string? GetIdentity(IModularRpcRemoteConnection connection) => null;
 }

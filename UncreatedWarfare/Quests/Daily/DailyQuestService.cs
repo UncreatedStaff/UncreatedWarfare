@@ -35,6 +35,7 @@ public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoin
     private readonly WorkshopUploader _uploader;
     private readonly QuestTranslations _translations;
     private readonly IPlayerService _playerService;
+    private readonly EventDispatcher _eventDispatcher;
 
     // basic JSON storage for the generated daily quest file which stored the randomly generated quests for the next 2 weeks
     private readonly DailyQuestConfiguration _config;
@@ -123,13 +124,15 @@ public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoin
         QuestService questService,
         WorkshopUploader uploader,
         TranslationInjection<QuestTranslations> translations,
-        IPlayerService playerService)
+        IPlayerService playerService,
+        EventDispatcher eventDispatcher)
     {
         _chatService = chatService;
         _logger = logger;
         _questService = questService;
         _uploader = uploader;
         _playerService = playerService;
+        _eventDispatcher = eventDispatcher;
         _translations = translations.Value;
         _module = module;
         _config = new DailyQuestConfiguration(Path.Combine(module.HomeDirectory, "Quests", "Daily Quests.json"), configLogger, questService);
@@ -791,6 +794,17 @@ public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoin
         SetupQuestDayForAllPlayers();
         UpdateTimers();
         _logger.LogInformation("Moved daily quests to next day ({0}).", _index);
+        if (_index is >= 0 and < DayLength && _config.Days != null && _config.Days.Length > _index && _config.Days[_index] is { Presets: not null } day && day.Presets.All(x => x != null))
+        {
+            DailyQuestsUpdated questUpdated = new DailyQuestsUpdated
+            {
+                Day = day,
+                Days = _config.Days,
+                Service = this
+            };
+
+            _ = _eventDispatcher.DispatchEventAsync(questUpdated, CancellationToken.None);
+        }
         return false;
     }
 
@@ -1024,4 +1038,11 @@ public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoin
 public struct DailyQuestRegenerateResult
 {
     public DailyQuestDay[] Days;
+}
+
+public sealed class DailyQuestsUpdated
+{
+    public required DailyQuestDay Day { get; init; }
+    public required DailyQuestDay?[] Days { get; init; }
+    public required DailyQuestService Service { get; init; }
 }

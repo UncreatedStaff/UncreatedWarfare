@@ -443,6 +443,7 @@ public class DeathTracker : IHostedService
                         e.ThirdPartyId = e.DriverAssist.Steam64;
                         e.ThirdPartyPoint = e.DriverAssist.Position;
                         e.ThirdPartySession = e.DriverAssist.CurrentSession;
+                        e.ThirdPartyTeam = e.DriverAssist.Team;
                         if (e.ThirdPartySession != null)
                             Interlocked.Increment(ref e.ThirdPartySession.EventCount);
                         e.MessageFlags |= DeathFlags.Player3;
@@ -561,6 +562,7 @@ public class DeathTracker : IHostedService
                         e.ThirdPartyId = e.DriverAssist.Steam64;
                         e.ThirdPartyPoint = e.DriverAssist.Position;
                         e.ThirdPartySession = e.DriverAssist.CurrentSession;
+                        e.ThirdPartyTeam = e.DriverAssist.Team;
                         if (e.ThirdPartySession != null)
                             Interlocked.Increment(ref e.ThirdPartySession.EventCount);
                         e.MessageFlags |= DeathFlags.Player3;
@@ -594,6 +596,7 @@ public class DeathTracker : IHostedService
                                 e.ThirdPartyId = e.DriverAssist.Steam64;
                                 e.ThirdPartyPoint = e.DriverAssist.Position;
                                 e.ThirdPartySession = e.DriverAssist.CurrentSession;
+                                e.ThirdPartyTeam = e.DriverAssist.Team;
                                 if (e.ThirdPartySession != null)
                                     Interlocked.Increment(ref e.ThirdPartySession.EventCount);
                                 e.MessageFlags |= DeathFlags.Player3;

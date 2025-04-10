@@ -26,6 +26,11 @@ public interface ITeamManager<out TTeam> where TTeam : Team
     TTeam GetTeam(CSteamID groupId);
 
     /// <summary>
+    /// Gets the role of the team in the current layout.
+    /// </summary>
+    LayoutRole GetLayoutRole(Team team) => LayoutRole.NotApplicable;
+
+    /// <summary>
     /// Used to initialize team info from the layout and map configuration.
     /// </summary>
     UniTask InitializeAsync(CancellationToken token = default);

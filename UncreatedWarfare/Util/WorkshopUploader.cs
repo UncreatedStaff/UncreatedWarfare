@@ -163,14 +163,16 @@ public class WorkshopUploader : IHostedService
                 string? workingDirectory = Path.GetDirectoryName(parameters.SteamCmdPath);
 
                 string app = parameters.SteamCmdPath;
+
+                string[] cl = [ app, $"+login {parameters.Username} {parameters.Password}", $"+workshop_build_item \"{vdfPath}\"", "+quit" ];
+                int offset = 1;
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 {
-                    app = "/bin/bash " + app;
+                    app = "/bin/bash";
+                    offset = 0;
                 }
 
-                string[] cl = [ $"+login {parameters.Username} {parameters.Password}", $"+workshop_build_item \"{vdfPath}\"", "+quit" ];
-
-                string commandLine = app + " " + string.Join(' ', cl);
+                string commandLine = app + " " + string.Join(' ', cl, offset, cl.Length - offset);
 
                 logger.LogInformation("Starting SteamCMD. Command line: {0}.", commandLine.Replace(parameters.Password, "[redacted]"));
 

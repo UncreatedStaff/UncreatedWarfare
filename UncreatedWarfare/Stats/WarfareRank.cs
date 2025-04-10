@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Configuration;
+using DanielWillett.ModularRpcs.Serialization;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Translations;
@@ -6,47 +7,56 @@ using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Translations.ValueFormatters;
 
 namespace Uncreated.Warfare.Stats;
-public class WarfareRank : ITranslationArgument
+
+[RpcSerializable(SerializationHelper.MinimumStringSize * 2 + 8 * 2 + 4 * 2, isFixedSize: false)]
+public class WarfareRank : ITranslationArgument, IRpcSerializable
 {
     /// <summary>
     /// The name of the rank.
     /// </summary>
-    public string Name { get; }
+    public string Name { get; private set; }
 
     /// <summary>
     /// An abbreviation for the name of the rank.
     /// </summary>
-    public string Abbreviation { get; }
+    public string Abbreviation { get; private set; }
 
     /// <summary>
     /// The experience to get from the this rank to the next rank.
     /// </summary>
-    public double Experience { get; }
+    public double Experience { get; private set; }
 
     /// <summary>
     /// The total experience to get to this rank.
     /// </summary>
-    public double CumulativeExperience { get; }
+    public double CumulativeExperience { get; private set; }
 
     /// <summary>
     /// The zero-based index of this rank.
     /// </summary>
-    public int RankIndex { get; }
+    public int RankIndex { get; private set; }
 
     /// <summary>
     /// The one-based level/index of this rank.
     /// </summary>
-    public int Level { get; }
+    public int Level { get; private set; }
     
     /// <summary>
     /// A reference to the next rank.
     /// </summary>
-    public WarfareRank? Next { get; }
+    public WarfareRank? Next { get; private set; }
 
     /// <summary>
     /// A reference to the previous rank.
     /// </summary>
-    public WarfareRank? Previous { get; }
+    public WarfareRank? Previous { get; private set; }
+
+    // for serialization
+    public WarfareRank()
+    {
+        Name = string.Empty;
+        Abbreviation = string.Empty;
+    }
 
     internal WarfareRank(WarfareRank? previous, IEnumerator<IConfigurationSection> configEnumerator, int index, ref int ct)
     {
@@ -111,5 +121,49 @@ public class WarfareRank : ITranslationArgument
     public override string ToString()
     {
         return $"L{Level} - {Name} ({Abbreviation})";
+    }
+
+    /// <inheritdoc />
+    public int GetSize(IRpcSerializer serializer)
+    {
+        return 8 * 2 + 4 * 2 + serializer.GetSize(Name) + serializer.GetSize(Abbreviation);
+    }
+
+    /// <inheritdoc />
+    public int Write(Span<byte> writeTo, IRpcSerializer serializer)
+    {
+        int index = 0;
+        index += serializer.WriteObject(Name, writeTo);
+        index += serializer.WriteObject(Abbreviation, writeTo[index..]);
+        index += serializer.WriteObject(Experience, writeTo[index..]);
+        index += serializer.WriteObject(CumulativeExperience, writeTo[index..]);
+        index += serializer.WriteObject(RankIndex, writeTo[index..]);
+        index += serializer.WriteObject(Level, writeTo[index..]);
+        return index;
+    }
+
+    /// <inheritdoc />
+    public int Read(Span<byte> readFrom, IRpcSerializer serializer)
+    {
+        int index = 0;
+        Name = serializer.ReadObject<string>(readFrom, out int bytesRead) ?? string.Empty;
+        index += bytesRead;
+
+        Abbreviation = serializer.ReadObject<string>(readFrom[index..], out bytesRead) ?? string.Empty;
+        index += bytesRead;
+
+        Experience = serializer.ReadObject<double>(readFrom[index..], out bytesRead);
+        index += bytesRead;
+
+        CumulativeExperience = serializer.ReadObject<double>(readFrom[index..], out bytesRead);
+        index += bytesRead;
+
+        RankIndex = serializer.ReadObject<int>(readFrom[index..], out bytesRead);
+        index += bytesRead;
+
+        Level = serializer.ReadObject<int>(readFrom[index..], out bytesRead);
+        index += bytesRead;
+
+        return index;
     }
 }

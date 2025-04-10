@@ -161,12 +161,6 @@ public class WhitelistService :
     /// <returns>0 if the item isn't whitelisted, -1 if it's infinite, otherwise the amount.</returns>
     public async Task<int> GetWhitelistedAmount(IAssetContainer assetContainer, CancellationToken token = default)
     {
-        ItemWhitelist? whitelist = await GetWhitelistAsync(assetContainer, token).ConfigureAwait(false);
-        if (whitelist != null)
-        {
-            return whitelist.Amount <= 0 ? -1 : whitelist.Amount;
-        }
-
         int amt = 0;
         foreach (IWhitelistExceptionProvider provider in _module.ScopedProvider.Resolve<IEnumerable<IWhitelistExceptionProvider>>())
         {
@@ -180,6 +174,15 @@ public class WhitelistService :
                 return -1;
 
             amt += amtNum;
+        }
+
+        ItemWhitelist? whitelist = await GetWhitelistAsync(assetContainer, token).ConfigureAwait(false);
+        if (whitelist is { Amount: < 0 })
+            return -1;
+
+        if (whitelist != null)
+        {
+            amt += whitelist.Amount;
         }
 
         return amt;
@@ -370,10 +373,11 @@ public class WhitelistService :
         IAssetLink<ItemAsset> assetContainer = AssetLink.Create(e.Asset);
 
         int whitelistAmount = await GetWhitelistedAmount(assetContainer, token);
-        await UniTask.SwitchToMainThread(token);
 
         if (whitelistAmount == -1)
             return;
+
+        await UniTask.SwitchToMainThread(token);
 
         Kit? equippedKit = e.OriginalPlacer.Component<KitPlayerComponent>().CachedKit;
 

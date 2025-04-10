@@ -4,6 +4,7 @@ using System.Linq;
 using Uncreated.Warfare.Events.Models.Squads;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Translations.ValueFormatters;
@@ -53,6 +54,11 @@ public class Squad : ITranslationArgument
 
     public bool TryAddMember(WarfarePlayer player)
     {
+        if (player.IsInSquad())
+        {
+            return false;
+        }
+
         if (!CanJoinSquad(player))
             return false;
 

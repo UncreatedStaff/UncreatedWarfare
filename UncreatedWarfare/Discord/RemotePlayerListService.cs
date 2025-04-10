@@ -1,9 +1,7 @@
 using DanielWillett.ModularRpcs.Abstractions;
 using DanielWillett.ModularRpcs.Annotations;
 using DanielWillett.ModularRpcs.Async;
-using DanielWillett.ModularRpcs.Exceptions;
-using DanielWillett.ModularRpcs.Reflection;
-using DanielWillett.SpeedBytes;
+using DanielWillett.ModularRpcs.Serialization;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
@@ -23,40 +21,38 @@ namespace Uncreated.Warfare.Discord;
 /// </summary>
 /// <remarks>This class is meant to be used on both the server and the discord bot.</remarks>
 [RpcClass]
-public class RemotePlayerListService : ILayoutHostedService, IAsyncEventListener<PlayerJoined>, IAsyncEventListener<PlayerLeft>, IEventListener<HomebaseConnected>
+public class RemotePlayerListService :
+    ILayoutHostedService,
+    IAsyncEventListener<PlayerJoined>,
+    IAsyncEventListener<PlayerLeft>,
+    IEventListener<HomebaseConnected>
 {
     private readonly IPlayerService? _playerService;
     private readonly IUserDataService? _userDataService;
     private readonly ILogger<RemotePlayerListService> _logger;
-
-    private ReplicatedServerState _replicatedServerState;
-
-    /// <summary>
-    /// State declaring the status of the server.
-    /// </summary>
-    public ReplicatedServerState ReplicatedServerState => _replicatedServerState;
+    private ReplicatedServerState _replicatedServerStateWarfareOnly;
 
     // these events are meant to be used from the discord bot
 
     /// <summary>
     /// Invoked when a player connects to the server.
     /// </summary>
-    public event Action<ReplicatedPlayerListEntry>? OnPlayerConnected;
+    public event Action<ReplicatedPlayerListEntry, IModularRpcRemoteConnection>? OnPlayerConnected;
 
     /// <summary>
     /// Invoked when a player disconnects from the server.
     /// </summary>
-    public event Action<ReplicatedPlayerListEntry>? OnPlayerDisconnected;
+    public event Action<ReplicatedPlayerListEntry, IModularRpcRemoteConnection>? OnPlayerDisconnected;
 
     /// <summary>
     /// Invoked when the entire player list is refreshed (occasionally to prevent desync).
     /// </summary>
-    public event Action<ReplicatedPlayerListEntry[]>? OnPlayerListRefreshed;
+    public event Action<ReplicatedPlayerListEntry[], IModularRpcRemoteConnection>? OnPlayerListRefreshed;
 
     /// <summary>
     /// Invoked when the server's state updated
     /// </summary>
-    public event Action<ReplicatedServerState, ReplicatedServerState>? OnStateUpdated;
+    public event Action<ReplicatedServerState, IModularRpcRemoteConnection>? OnStateUpdated;
 
     public RemotePlayerListService(IServiceProvider serviceProvider)
     {
@@ -81,38 +77,24 @@ public class RemotePlayerListService : ILayoutHostedService, IAsyncEventListener
         return UniTask.CompletedTask;
     }
 
-    internal Task UpdateReplicatedServerState()
-    {
-        return UpdateReplicatedServerState(_replicatedServerState.Type, _replicatedServerState.Description);
-    }
-
     internal async Task UpdateReplicatedServerState(ServerStateType type, string? description)
     {
-        if (type != _replicatedServerState.Type || !string.Equals(description, _replicatedServerState.Description, StringComparison.Ordinal))
-        {
-            _replicatedServerState = new ReplicatedServerState(type, description, DateTimeOffset.UtcNow);
-        }
-
+        ReplicatedServerState state = new ReplicatedServerState(type, description, DateTimeOffset.UtcNow);
+        _replicatedServerStateWarfareOnly = state;
         try
         {
-            await SendServerStateUpdated(_replicatedServerState.Type, _replicatedServerState.Description, _replicatedServerState.StartTime).IgnoreNoConnections();
+            await SendServerStateUpdated(state).IgnoreNoConnections();
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, $"Error sending player list state update: {_replicatedServerState.Type} (desc: {_replicatedServerState.Description}).");
+            _logger.LogWarning(ex, $"Error sending player list state update: {state.Type} (desc: {state.Description}).");
         }
     }
 
     [RpcReceive]
-    private void ReceiveServerState(ServerStateType type, string? description, DateTimeOffset time)
+    private void ReceiveServerState(ReplicatedServerState state, IModularRpcRemoteConnection connection)
     {
-        ReplicatedServerState state = new ReplicatedServerState(type, description, time);
-        if (state.Equals(_replicatedServerState))
-            return;
-
-        ReplicatedServerState oldState = _replicatedServerState;
-        _replicatedServerState = state;
-        OnStateUpdated?.Invoke(oldState, state);
+        OnStateUpdated?.Invoke(state, connection);
     }
 
     /// <summary>
@@ -138,35 +120,19 @@ public class RemotePlayerListService : ILayoutHostedService, IAsyncEventListener
 
         ulong[] discordIds = await _userDataService!.GetDiscordIdsAsync(list.Select(x => x.Steam64.m_SteamID).ToList(), token).ConfigureAwait(false);
 
-        ByteWriter writer = new ByteWriter();
-
-        int size = ProxyGenerator.Instance.CalculateOverheadSize(SendPlayerList, out _);
-        if (size == -1)
-        {
-            _logger.LogError("SendPlayerList not registered.");
-            return;
-        }
-
-        writer.WriteBlock(0, size);
-
-        writer.Write(_replicatedServerState.Type);
-        writer.WriteNullable(_replicatedServerState.Description);
-        writer.Write(_replicatedServerState.StartTime);
-
-        writer.Write(list.Count);
+        ReplicatedPlayerListEntry[] entries = new ReplicatedPlayerListEntry[list.Count];
         int index = 0;
         foreach (WarfarePlayer player in list)
         {
-            writer.Write(player.Steam64.m_SteamID);
-            writer.Write(player.Names.PlayerName);
-            writer.Write(player.Names.CharacterName);
-            writer.Write(player.Names.NickName);
-            writer.Write(discordIds[index++]);
+            entries[index] = new ReplicatedPlayerListEntry(player.Steam64.m_SteamID, player.Names.PlayerName,
+                player.Names.CharacterName, player.Names.NickName, discordIds[index]);
+
+            ++index;
         }
 
         try
         {
-            await SendPlayerList(writer, true, token).IgnoreNoConnections();
+            await SendPlayerList(_replicatedServerStateWarfareOnly, entries).IgnoreNoConnections();
         }
         catch (Exception ex)
         {
@@ -184,11 +150,11 @@ public class RemotePlayerListService : ILayoutHostedService, IAsyncEventListener
     }
 
     [RpcReceive]
-    private void ReceivePlayerConnected(ulong steam64, string playerName, string characterName, string nickName, ulong discordId)
+    private void ReceivePlayerConnected(ReplicatedPlayerListEntry player, IModularRpcRemoteConnection connection)
     {
         try
         {
-            OnPlayerConnected?.Invoke(new ReplicatedPlayerListEntry(steam64, playerName, characterName, nickName, discordId));
+            OnPlayerConnected?.Invoke(player, connection);
         }
         catch (Exception ex)
         {
@@ -197,11 +163,11 @@ public class RemotePlayerListService : ILayoutHostedService, IAsyncEventListener
     }
 
     [RpcReceive]
-    private void ReceivePlayerDisconnected(ulong steam64, string playerName, string characterName, string nickName, ulong discordId)
+    private void ReceivePlayerDisconnected(ReplicatedPlayerListEntry player, IModularRpcRemoteConnection connection)
     {
         try
         {
-            OnPlayerDisconnected?.Invoke(new ReplicatedPlayerListEntry(steam64, playerName, characterName, nickName, discordId));
+            OnPlayerDisconnected?.Invoke(player, connection);
         }
         catch (Exception ex)
         {
@@ -209,38 +175,20 @@ public class RemotePlayerListService : ILayoutHostedService, IAsyncEventListener
         }
     }
 
-    [RpcReceive(Raw = true)]
-    private void ReceivePlayerList(ArraySegment<byte> data)
+    [RpcReceive]
+    private void ReceivePlayerList(ReplicatedServerState state, ReplicatedPlayerListEntry[] playerList, IModularRpcRemoteConnection connection)
     {
-        if (OnPlayerListRefreshed == null)
-            return;
-
-        ByteReader reader = new ByteReader();
-        reader.LoadNew(data);
-
-        ReplicatedServerState state = new ReplicatedServerState(reader.ReadEnum<ServerStateType>(), reader.ReadNullableString(), reader.ReadDateTimeOffset());
-
-        if (!state.Equals(_replicatedServerState))
-        {
-            ReplicatedServerState oldState = _replicatedServerState;
-            _replicatedServerState = state;
-            OnStateUpdated?.Invoke(oldState, state);
-        }
-
-        int ct = reader.ReadInt32();
-        if (ct > byte.MaxValue)
-            throw new RpcParseException("Invalid player count amount, expected 0-255.") { ErrorCode = 10 };
-
-        ReplicatedPlayerListEntry[] entries = new ReplicatedPlayerListEntry[ct];
-
-        for (int i = 0; i < ct; ++i)
-        {
-            entries[i] = new ReplicatedPlayerListEntry(reader.ReadUInt64(), reader.ReadString(), reader.ReadString(), reader.ReadString(), reader.ReadUInt64());
-        }
-
         try
         {
-            OnPlayerListRefreshed?.Invoke(entries);
+            OnStateUpdated?.Invoke(state, connection);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error invoking OnPlayerListRefreshed.");
+        }
+        try
+        {
+            OnPlayerListRefreshed?.Invoke(playerList, connection);
         }
         catch (Exception ex)
         {
@@ -249,16 +197,16 @@ public class RemotePlayerListService : ILayoutHostedService, IAsyncEventListener
     }
 
     [RpcSend(nameof(ReceiveServerState)), RpcTimeout(Timeouts.Seconds * 3)]
-    protected virtual RpcTask SendServerStateUpdated(ServerStateType stateType, string? description, DateTimeOffset startTime) => RpcTask.NotImplemented;
+    protected virtual RpcTask SendServerStateUpdated(ReplicatedServerState state) => RpcTask.NotImplemented;
 
     [RpcSend(nameof(ReceivePlayerConnected)), RpcTimeout(Timeouts.Seconds * 3)]
-    protected virtual RpcTask SendPlayerConnected(ulong steam64, string playerName, string characterName, string nickName, ulong discordId) => RpcTask.NotImplemented;
+    protected virtual RpcTask SendPlayerConnected(ReplicatedPlayerListEntry player) => RpcTask.NotImplemented;
 
     [RpcSend(nameof(ReceivePlayerDisconnected)), RpcTimeout(Timeouts.Seconds * 3)]
-    protected virtual RpcTask SendPlayerDisconnected(ulong steam64, string playerName, string characterName, string nickName, ulong discordId) => RpcTask.NotImplemented;
+    protected virtual RpcTask SendPlayerDisconnected(ReplicatedPlayerListEntry player) => RpcTask.NotImplemented;
 
-    [RpcSend(nameof(ReceivePlayerList), Raw = true), RpcTimeout(Timeouts.Seconds * 5)]
-    protected virtual RpcTask SendPlayerList(ByteWriter writer, bool canTakeOwnership, CancellationToken token = default)
+    [RpcSend(nameof(ReceivePlayerList)), RpcTimeout(Timeouts.Seconds * 5)]
+    protected virtual RpcTask SendPlayerList(ReplicatedServerState state, ReplicatedPlayerListEntry[] playerList)
     {
         return _ = RpcTask.NotImplemented;
     }
@@ -267,16 +215,20 @@ public class RemotePlayerListService : ILayoutHostedService, IAsyncEventListener
     async UniTask IAsyncEventListener<PlayerJoined>.HandleEventAsync(PlayerJoined e, IServiceProvider serviceProvider, CancellationToken token)
     {
         WarfarePlayer player = e.Player;
-        ulong discordId = await _userDataService!.GetDiscordIdAsync(player.Steam64.m_SteamID, token);
-        SendPlayerConnected(player.Steam64.m_SteamID, player.Names.PlayerName, player.Names.CharacterName, player.Names.NickName, discordId);
+        ulong discordId = await _userDataService!.GetDiscordIdAsync(player.Steam64.m_SteamID, token).ConfigureAwait(false);
+        await SendPlayerConnected(
+            new ReplicatedPlayerListEntry(player.Steam64.m_SteamID, player.Names.PlayerName, player.Names.CharacterName, player.Names.NickName, discordId)
+        ).IgnoreNoConnections();
     }
     
     [EventListener(Priority = int.MinValue)]
     async UniTask IAsyncEventListener<PlayerLeft>.HandleEventAsync(PlayerLeft e, IServiceProvider serviceProvider, CancellationToken token)
     {
         WarfarePlayer player = e.Player;
-        ulong discordId = await _userDataService!.GetDiscordIdAsync(player.Steam64.m_SteamID, token);
-        SendPlayerDisconnected(player.Steam64.m_SteamID, player.Names.PlayerName, player.Names.CharacterName, player.Names.NickName, discordId);
+        ulong discordId = await _userDataService!.GetDiscordIdAsync(player.Steam64.m_SteamID, token).ConfigureAwait(false);
+        await SendPlayerDisconnected(
+            new ReplicatedPlayerListEntry(player.Steam64.m_SteamID, player.Names.PlayerName, player.Names.CharacterName, player.Names.NickName, discordId)
+        ).IgnoreNoConnections();
     }
 
     void IEventListener<HomebaseConnected>.HandleEvent(HomebaseConnected e, IServiceProvider serviceProvider)
@@ -295,9 +247,87 @@ public class RemotePlayerListService : ILayoutHostedService, IAsyncEventListener
     }
 }
 
-public record struct ReplicatedPlayerListEntry(ulong Steam64, string PlayerName, string CharacterName, string NickName, ulong DiscordId);
+[RpcSerializable(8 + 8 + SerializationHelper.MinimumStringSize * 3, isFixedSize: false)]
+public record struct ReplicatedPlayerListEntry(ulong Steam64, string PlayerName, string CharacterName, string NickName, ulong DiscordId) : IRpcSerializable
+{
+    /// <inheritdoc />
+    public int GetSize(IRpcSerializer serializer)
+    {
+        return 8 + 8 + serializer.GetSize(PlayerName) + serializer.GetSize(CharacterName) + serializer.GetSize(NickName);
+    }
 
-public record struct ReplicatedServerState(ServerStateType Type, string? Description, DateTimeOffset StartTime);
+    /// <inheritdoc />
+    public int Write(Span<byte> writeTo, IRpcSerializer serializer)
+    {
+        int index = 0;
+        index += serializer.WriteObject(Steam64, writeTo);
+        index += serializer.WriteObject(PlayerName, writeTo[index..]);
+        index += serializer.WriteObject(CharacterName, writeTo[index..]);
+        index += serializer.WriteObject(NickName, writeTo[index..]);
+        index += serializer.WriteObject(DiscordId, writeTo[index..]);
+        return index;
+    }
+
+    /// <inheritdoc />
+    public int Read(Span<byte> readFrom, IRpcSerializer serializer)
+    {
+        int index = 0;
+        
+        Steam64 = serializer.ReadObject<ulong>(readFrom, out int bytesRead);
+        index += bytesRead;
+
+        PlayerName = serializer.ReadObject<string>(readFrom[index..], out bytesRead) ?? string.Empty;
+        index += bytesRead;
+
+        CharacterName = serializer.ReadObject<string>(readFrom[index..], out bytesRead) ?? string.Empty;
+        index += bytesRead;
+
+        NickName = serializer.ReadObject<string>(readFrom[index..], out bytesRead) ?? string.Empty;
+        index += bytesRead;
+
+        DiscordId = serializer.ReadObject<ulong>(readFrom[index..], out bytesRead);
+        index += bytesRead;
+
+        return index;
+    }
+}
+
+[RpcSerializable(1 + SerializationHelper.MinimumStringSize * 2, isFixedSize: false)]
+public record struct ReplicatedServerState(ServerStateType Type, string? Description, DateTimeOffset StartTime) : IRpcSerializable
+{
+    /// <inheritdoc />
+    public int GetSize(IRpcSerializer serializer)
+    {
+        return 1 + serializer.GetSize(Description) + serializer.GetSize(StartTime);
+    }
+
+    /// <inheritdoc />
+    public int Write(Span<byte> writeTo, IRpcSerializer serializer)
+    {
+        int index = 0;
+        index += serializer.WriteObject(Type, writeTo);
+        index += serializer.WriteObject(Description, writeTo[index..]);
+        index += serializer.WriteObject(StartTime, writeTo[index..]);
+        return index;
+    }
+
+    /// <inheritdoc />
+    public int Read(Span<byte> readFrom, IRpcSerializer serializer)
+    {
+        int index = 0;
+
+        Type = serializer.ReadObject<ServerStateType>(readFrom, out int bytesRead);
+        index += bytesRead;
+
+        Description = serializer.ReadObject<string>(readFrom[index..], out bytesRead) ?? string.Empty;
+        index += bytesRead;
+
+        StartTime = serializer.ReadObject<DateTimeOffset>(readFrom[index..], out bytesRead);
+        index += bytesRead;
+
+        return index;
+    }
+}
 
 public enum ServerStateType : byte
 {

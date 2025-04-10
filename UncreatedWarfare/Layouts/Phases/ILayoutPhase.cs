@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 
 namespace Uncreated.Warfare.Layouts.Phases;
 
@@ -11,6 +11,11 @@ public interface ILayoutPhase
     /// If this phase is currently activated.
     /// </summary>
     bool IsActive { get; }
+
+    /// <summary>
+    /// Display name of the phase.
+    /// </summary>
+    string Name { get; }
 
     /// <summary>
     /// The configuration section used to create this phase.

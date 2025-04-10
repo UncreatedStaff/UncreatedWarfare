@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 
 namespace Uncreated.Warfare.Layouts.Phases;
 
@@ -9,6 +9,9 @@ public class NullPhase : ILayoutPhase
 {
     /// <inheritdoc />
     public bool IsActive => false;
+
+    /// <inheritdoc />
+    public string Name => "Null Phase";
 
     /// <inheritdoc />
     public IConfiguration Configuration { get; }
