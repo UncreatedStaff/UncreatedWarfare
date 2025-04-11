@@ -328,9 +328,9 @@ public class ClaimToRearmTweaks : // todo: move this class out of this namespace
             case FirearmClass.BattleRifle:
                 return 0.25f;
             case FirearmClass.LightMachineGun:
-                return 0.5f;
+                return 0.4f;
             case FirearmClass.GeneralPurposeMachineGun:
-                return 0.6f;
+                return 0.5f;
             case FirearmClass.DMR:
                 return 0.3f;
             case FirearmClass.Sniper:
@@ -338,9 +338,9 @@ public class ClaimToRearmTweaks : // todo: move this class out of this namespace
             case FirearmClass.GrenadeLauncher:
                 return 0.2f;
             case FirearmClass.LightAntiTank:
-                return 1f;
+                return 0.7f;
             case FirearmClass.HeavyAntiTank:
-                return 1f;
+                return 0.7f;
             default:
                 return 0.2f;
         }
