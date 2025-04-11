@@ -1,4 +1,5 @@
 using Cysharp.Threading.Tasks;
+using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NUnit.Framework;
@@ -28,7 +29,7 @@ internal class EventSynchronizerTests
     {
         ServiceCollection serviceContainer = new ServiceCollection();
 
-        serviceContainer.AddLogging(l => l.AddSimpleConsole());
+        serviceContainer.AddLogging(l => l.SetMinimumLevel(LogLevel.Trace).AddSystemdConsole());
         serviceContainer.AddSingleton<TestPlayerService>();
         serviceContainer.AddTransient<IPlayerService>(sp => sp.GetRequiredService<TestPlayerService>());
         serviceContainer.AddSingleton<EventSynchronizer>();
@@ -150,6 +151,69 @@ internal class EventSynchronizerTests
         _eventSynchronizer.ExitEvent(entry2);
 
         _eventSynchronizer.ExitEvent(entryPre);
+
+    }
+
+    [Test]
+    public async Task ReplicateTimeoutError()
+    {
+        WarfarePlayer player = null;
+        for (uint i = 1; i <= 23; ++i)
+        {
+            WarfarePlayer pl = await TestHelpers.AddPlayer(i, _serviceProvider);
+            PerPlayerSyncEventModel perPlayerArgs = new PerPlayerSyncEventModel { Player = pl };
+            _eventSynchronizer.ExitEvent(await _eventSynchronizer.EnterEvent(perPlayerArgs));
+            player ??= pl;
+        }
+
+        ReplicateTimeoutErrorModel args1 = new ReplicateTimeoutErrorModel { Player = player! };
+
+        SynchronizationEntry entry1 = null;
+        SwitchToMainThread();
+        Task t1 = new Func<Task>(async () =>
+        {
+            entry1 = await _eventSynchronizer.EnterEvent(args1, 11916, args1.GetType().GetAttributeSafe<EventModelAttribute>());
+
+            await Task.Delay(200);
+
+            SwitchToMainThread();
+            if (entry1 != null)
+                _eventSynchronizer.ExitEvent(entry1);
+        })();
+
+        ReplicateTimeoutErrorModel args2 = new ReplicateTimeoutErrorModel { Player = player! };
+
+        SynchronizationEntry entry2 = null;
+        Task t2 = new Func<Task>(async () =>
+        {
+            entry2 = await _eventSynchronizer.EnterEvent(args2, 11917, args2.GetType().GetAttributeSafe<EventModelAttribute>());
+
+            await Task.Delay(200);
+
+            SwitchToMainThread();
+            if (entry2 != null)
+                _eventSynchronizer.ExitEvent(entry2);
+        })();
+
+        await t1;
+        await t2;
+
+        SwitchToMainThread();
+        ReplicateTimeoutErrorModel args3 = new ReplicateTimeoutErrorModel { Player = player! };
+        SynchronizationEntry entry3 = await _eventSynchronizer.EnterEvent(args3, 11918, args3.GetType().GetAttributeSafe<EventModelAttribute>());
+
+        SwitchToMainThread();
+        if (entry3 != null)
+            _eventSynchronizer.ExitEvent(entry3);
+
+        _eventSynchronizer.CheckForAllTimeouts();
+
+        Assert.Pass();
+    }
+    
+    [EventModel(EventSynchronizationContext.Global, SynchronizedModelTags = ["modify_world"])]
+    private class ReplicateTimeoutErrorModel : CancellablePlayerEvent
+    {
 
     }
 }

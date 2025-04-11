@@ -1,3 +1,5 @@
+using DanielWillett.ModularRpcs.Serialization;
+using Humanizer;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -217,10 +219,46 @@ public class DailyQuestConfiguration
     }
 }
 
-public class DailyQuestDay
+[RpcSerializable(SerializationHelper.MinimumStringSize + 8 + 16 + 2, isFixedSize: false)]
+public class DailyQuestDay : IRpcSerializable
 {
     public DateTime StartTime { get; set; }
     public Guid Asset { get; set; }
     public ushort Id { get; set; }
     public DailyQuestPreset?[]? Presets { get; set; }
+
+    /// <inheritdoc />
+    public int GetSize(IRpcSerializer serializer)
+    {
+        return 8 + 16 + 2 + serializer.GetSerializablesSize(Presets);
+    }
+
+    /// <inheritdoc />
+    public int Write(Span<byte> writeTo, IRpcSerializer serializer)
+    {
+        int index = 0;
+        index += serializer.WriteObject(StartTime, writeTo);
+        index += serializer.WriteObject(Asset, writeTo[index..]);
+        index += serializer.WriteObject(Id, writeTo[index..]);
+        index += serializer.WriteSerializableObjects(Presets, writeTo[index..]);
+        return index;
+    }
+
+    /// <inheritdoc />
+    public int Read(Span<byte> readFrom, IRpcSerializer serializer)
+    {
+        int index = 0;
+        StartTime = serializer.ReadObject<DateTime>(readFrom, out int bytesRead);
+        index += bytesRead;
+
+        Asset = serializer.ReadObject<Guid>(readFrom[index..], out bytesRead);
+        index += bytesRead;
+
+        Id = serializer.ReadObject<ushort>(readFrom[index..], out bytesRead);
+        index += bytesRead;
+
+        Presets = serializer.ReadSerializableObjects<DailyQuestPreset>(readFrom[index..], out bytesRead);
+        index += bytesRead;
+        return index;
+    }
 }

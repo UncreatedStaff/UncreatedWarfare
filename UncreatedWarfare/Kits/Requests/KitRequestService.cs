@@ -381,6 +381,11 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
+            if (await _kitAccessService.GetAccessAsync(player.Steam64, kit.Key, token) != null)
+            {
+                return false;
+            }
+
             // give access to the kit
             if (!await _kitAccessService.UpdateAccessAsync(player.Steam64, kit.Key, KitAccessType.Credits, CSteamID.Nil, token))
             {

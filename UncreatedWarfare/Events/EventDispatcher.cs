@@ -2,7 +2,6 @@
 //#define LOG_SYNCHRONIZATION_STEPS
 //#define LOG_EVENT_LISTENERS
 //#define LOG_RESOLVE_STEPS
-//#define LOG_TRACE_TO_FILE
 #endif
 
 using Autofac.Core;
@@ -41,6 +40,7 @@ public partial class EventDispatcher : IHostedService, IDisposable
     private const int BitMustRunLast = 32;
 
     private int _activeEvents;
+    private long _eventId;
 
     private readonly EventSynchronizer _eventSynchronizer;
 
@@ -67,10 +67,6 @@ public partial class EventDispatcher : IHostedService, IDisposable
 
     private readonly CancellationTokenSource _cancellationTokenSource;
 
-#if LOG_TRACE_TO_FILE
-    private readonly StreamWriter _eventFileWriter = new StreamWriter("./Logs/eventlogs.txt", false);
-#endif
-
     public EventDispatcher(ILoggerFactory loggerFactory,
         ProjectileSolver projectileSolver,
         IPlayerService playerService,
@@ -91,20 +87,10 @@ public partial class EventDispatcher : IHostedService, IDisposable
 
         _eventProviders = new List<IEventListenerProvider>(8);
         FindEventListenerProviders(_warfare.IsLayoutActive() ? _warfare.ScopedProvider : _warfare.ServiceProvider, _eventProviders);
-
-#if LOG_TRACE_TO_FILE
-        _eventFileWriter.AutoFlush = true;
-        _eventFileWriter.WriteLine("Startup");
-#endif
     }
     void IDisposable.Dispose()
     {
         _warfare.LayoutStarted -= OnLayoutStarted;
-
-#if LOG_TRACE_TO_FILE
-        _eventFileWriter.WriteLine("Shutdown");
-        _eventFileWriter.Dispose();
-#endif
     }
 
     private void SubscribePlayerEvents(WarfarePlayer player)
@@ -281,20 +267,12 @@ public partial class EventDispatcher : IHostedService, IDisposable
         }
     }
 
-#if LOG_TRACE_TO_FILE
-    private static int _traceNum;
-#endif
-
     /// <summary>
     /// Invoke an event with the given arguments.
     /// </summary>
     /// <returns>If the action should continue if <paramref name="eventArgs"/> is <see cref="ICancellable"/>, otherwise <see langword="true"/>.</returns>
     public async UniTask<bool> DispatchEventAsync<TEventArgs>(TEventArgs eventArgs, CancellationToken token = default, bool allowAsync = true) where TEventArgs : class
     {
-#if LOG_TRACE_TO_FILE
-        int traceNum = Interlocked.Increment(ref _traceNum);
-#endif
-
         await UniTask.SwitchToMainThread(token);
 
         Type type = typeof(TEventArgs);
@@ -320,11 +298,6 @@ public partial class EventDispatcher : IHostedService, IDisposable
 
         int ct = eventListeners.Count;
 
-        _logger.LogDebug($"Invoke {type} - Dispatching event for {ct} listener(s).");
-#if LOG_TRACE_TO_FILE
-        _eventFileWriter.WriteLine("{0}  Invoking {1} for {2} listeners.", traceNum, Accessor.Formatter.Format(type), ct);
-#endif
-
 #if LOG_EVENT_LISTENERS
         using (_logger.BeginScope(typeof(TEventArgs)))
         {
@@ -339,21 +312,11 @@ public partial class EventDispatcher : IHostedService, IDisposable
         }
 #endif
 
-#if LOG_TRACE_TO_FILE
-        {
-            int index = -1;
-            foreach (EventListenerResult result in eventListeners)
-            {
-                if (result.Model == null)
-                    _eventFileWriter.WriteLine("{0}  #{1} listener {2} (priority: {3} f:0b{4}) hash {5} returned from listener provider.", traceNum, ++index, result.Listener.GetType(), result.Priority, Convert.ToString(result.Flags, 2), result.Listener.GetHashCode());
-                else
-                    _eventFileWriter.WriteLine("{0}  #{1} listener {2} (priority: {3} f:0b{4}) hash {5} of {6} cached.", traceNum, ++index, result.Listener.GetType(), result.Priority, Convert.ToString(result.Flags, 2), result.Listener.GetHashCode(), result.Model);
-            }
-        }
-#endif
-
         SynchronizationEntry? syncEntry = null;
         EventModelAttribute? modelInfo = null;
+
+        Interlocked.Increment(ref _activeEvents);
+        long eventId = Interlocked.Increment(ref _eventId);
 
         // enter sync buckets
         if (allowAsync)
@@ -361,7 +324,8 @@ public partial class EventDispatcher : IHostedService, IDisposable
             modelInfo = cache.ModelInfo;
             if (modelInfo != null && modelInfo.SynchronizationContext != EventSynchronizationContext.None)
             {
-                syncEntry = await _eventSynchronizer.EnterEvent(eventArgs, modelInfo);
+                _logger.LogTrace($"  {eventId}  Locking {type}...");
+                syncEntry = await _eventSynchronizer.EnterEvent(eventArgs, eventId, modelInfo);
             }
         }
         else if (cache.ModelInfo is { SynchronizationContext: not EventSynchronizationContext.None })
@@ -369,7 +333,8 @@ public partial class EventDispatcher : IHostedService, IDisposable
             throw new InvalidOperationException($"SynchronizationContext not supported for event model {Accessor.ExceptionFormatter.Format<TEventArgs>()} when allowAsync = false.");
         }
 
-        Interlocked.Increment(ref _activeEvents);
+        _logger.LogTrace($"  {eventId}  Invoke {type} - Dispatching event for {ct} listener(s), " +
+                         $"locked: {syncEntry != null} ({syncEntry?.WaitCount ?? 0} waiting).");
 
         try
         {
@@ -402,17 +367,19 @@ public partial class EventDispatcher : IHostedService, IDisposable
             bool hasSkippedToNextFrame = false;
             for (int i = 0; i < ct; i++)
             {
+                EventListenerResult result = underlying[i];
                 // skipped
-                if (underlying[i].Model is null)
+                if (result.Model is null)
+                {
+                    _logger.LogTrace($"  {eventId}  Skipped: {result.Listener.GetType()}.");
                     continue;
+                }
 
                 try
                 {
                     if (eventArgs is ICancellable { IsCancelled: true })
                     {
-#if LOG_TRACE_TO_FILE
-                        _eventFileWriter.WriteLine("{0}  Cancelled", traceNum);
-#endif
+                        _logger.LogTrace($"  {eventId}  Stopping at {result.Listener.GetType()} ({result.Model!}): Cancelled.");
                         // check if a MustRunLast cancelled (they shouldn't be allowed to)
                         if (i > 0 && (underlying[i - 1].Flags & BitMustRunLast) != 0)
                             throw new InvalidOperationException($"Event cancelled by a listener using 'MustRunLast': {underlying[i - 1].Model} in {underlying[i - 1].Listener.GetType()}.");
@@ -420,66 +387,55 @@ public partial class EventDispatcher : IHostedService, IDisposable
                     }
 
                     // RequireNextFrame
-                    if (!hasSkippedToNextFrame && (underlying[i].Flags & BitRequireNextFrame) != 0)
+                    if (!hasSkippedToNextFrame && (result.Flags & BitRequireNextFrame) != 0)
                     {
-#if LOG_TRACE_TO_FILE
-                        _eventFileWriter.WriteLine("{0}  RequireNextFrame", traceNum);
-#endif
+                        _logger.LogTrace($"  {eventId}  Waiting for {result.Listener.GetType()} ({result.Model!}): RequireNextFrame.");
                         hasSkippedToNextFrame = true;
                         await UniTask.NextFrame(token, cancelImmediately: false);
                         token.ThrowIfCancellationRequested();
                     }
 
                     // EnsureMainThread
-                    if ((underlying[i].Flags & BitEnsureMainThread) != 0 && !GameThread.IsCurrent)
+                    if ((result.Flags & BitEnsureMainThread) != 0 && !GameThread.IsCurrent)
                     {
-#if LOG_TRACE_TO_FILE
-                        _eventFileWriter.WriteLine("{0}  EnsureMainThread", traceNum);
-#endif
+                        _logger.LogTrace($"  {eventId}  Not invoking {result.Listener.GetType()} ({result.Model!}): EnsureMainThread.");
                         await UniTask.SwitchToMainThread(token);
                         token.ThrowIfCancellationRequested();
                     }
 
                     // RequireActiveLayout
-                    if ((underlying[i].Flags & BitRequireActiveLayout) != 0 && !_warfare.IsLayoutActive())
+                    if ((result.Flags & BitRequireActiveLayout) != 0 && !_warfare.IsLayoutActive())
                     {
-#if LOG_TRACE_TO_FILE
-                        _eventFileWriter.WriteLine("{0}  BitRequireActiveLayout", traceNum);
-#endif
+                        _logger.LogTrace($"  {eventId}  Not invoking {result.Listener.GetType()} ({result.Model!}): RequireActiveLayout.");
                         continue;
                     }
 
                     // Invoke handler
-#if LOG_TRACE_TO_FILE
-                    _eventFileWriter.WriteLine("{0}  Invoking {1} ({2}).", traceNum, Accessor.Formatter.Format(underlying[i].Listener.GetType()!), Accessor.Formatter.Format(underlying[i].Model!));
-#endif
-                    UniTask invokeResult = InvokeListener(ref underlying[i], eventArgs, serviceProvider, token);
+                    _logger.LogTrace($"  {eventId}  Invoking {result.Listener.GetType()} ({result.Model!}).");
+                    UniTask invokeResult = InvokeListener(ref result, eventArgs, serviceProvider, token);
                     if (invokeResult.Status != UniTaskStatus.Succeeded)
                     {
                         await invokeResult;
-#if LOG_TRACE_TO_FILE
-                        _eventFileWriter.WriteLine("{0}  Done invoking {1} ({2}).", traceNum, Accessor.Formatter.Format(underlying[i].Listener.GetType()!), Accessor.Formatter.Format(underlying[i].Model!));
-#endif
+                        _logger.LogTrace($"  {eventId}  Invoked with continuation {result.Listener.GetType()} ({result.Model!}).");
                         token.ThrowIfCancellationRequested();
                     }
                     else
                     {
-#if LOG_TRACE_TO_FILE
-                        _eventFileWriter.WriteLine("{0}  Done invoking {1} ({2}).", traceNum, Accessor.Formatter.Format(underlying[i].Listener.GetType()!), Accessor.Formatter.Format(underlying[i].Model!));
-#endif
+                        _logger.LogTrace($"  {eventId}  Invoked without continuation {result.Listener.GetType()} ({result.Model!}).");
                     }
                 }
                 catch (ControlException) { }
                 catch (Exception ex)
                 {
+                    _logger.LogTrace(ex, $"  {eventId}  Threw exception: {result.Listener.GetType()} ({result.Model!}).");
                     if (!GameThread.IsCurrent)
                     {
                         await UniTask.SwitchToMainThread(CancellationToken.None);
                     }
 
-                    Type listenerType = underlying[i].Listener.GetType();
+                    Type listenerType = result.Listener.GetType();
 
-                    GetInfo(underlying[i].Model!, (underlying[i].Flags & BitIsAsync) != 0, listenerType, out EventListenerInfo info);
+                    GetInfo(result.Model!, (result.Flags & BitIsAsync) != 0, listenerType, out EventListenerInfo info);
 
                     ILogger logger = serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(listenerType);
                     bool cancelled;
@@ -512,6 +468,7 @@ public partial class EventDispatcher : IHostedService, IDisposable
         }
         finally
         {
+            _logger.LogTrace($"  finally invoked - eventId: {eventId}.");
             await UniTask.SwitchToMainThread();
 
             Interlocked.Decrement(ref _activeEvents);
@@ -522,6 +479,7 @@ public partial class EventDispatcher : IHostedService, IDisposable
             }
 
             ListPool<EventListenerResult>.release(eventListeners);
+            _logger.LogTrace($"  Exited event {type}, eventId: {eventId}.");
         }
     }
 

@@ -465,6 +465,10 @@ public sealed class WarfareModule
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
 
+        bldr.RegisterRpcType<WarfareGameStateService>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
+
         bldr.RegisterRpcType<RemotePlayerListService>()
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();

@@ -33,21 +33,37 @@ internal sealed class VehicleBayDeregisterCommand : IExecutableCommand
     public async UniTask ExecuteAsync(CancellationToken token)
     {
         Context.AssertRanByPlayer();
-
-        if (!Context.TryGetBuildableTarget(out IBuildable? buildable))
+        VehicleSpawner? spawner;
+        if (Context.TryGetRange(0, out string? vbName))
         {
-            throw Context.Reply(_translations.NoTarget);
+            await UniTask.SwitchToMainThread(token);
+
+            if (!_spawnerStore.TryGetSpawner(vbName, out spawner))
+            {
+                throw Context.Reply(_translations.SpawnNotRegistered);
+            }
         }
-
-        await UniTask.SwitchToMainThread(token);
-
-        if (!_spawnerStore.TryGetSpawner(buildable, out VehicleSpawner? spawner))
+        else
         {
-            throw Context.Reply(_translations.SpawnNotRegistered);
+            if (!Context.TryGetBuildableTarget(out IBuildable? buildable))
+            {
+                throw Context.Reply(_translations.NoTarget);
+            }
+
+            await UniTask.SwitchToMainThread(token);
+
+            if (!_spawnerStore.TryGetSpawner(buildable, out spawner))
+            {
+                throw Context.Reply(_translations.SpawnNotRegistered);
+            }
         }
 
         await _spawnerStore.DeregisterSpawner(spawner, token);
-        await _buildableSaver.DiscardBuildableAsync(buildable, token);
+
+        if (spawner.Buildable != null)
+        {
+            await _buildableSaver.DiscardBuildableAsync(spawner.Buildable, token);
+        }
 
         List<IBuildable> signs = spawner.Signs.ToList();
         foreach (IBuildable sign in signs)

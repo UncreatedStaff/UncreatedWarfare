@@ -59,6 +59,8 @@ public abstract class BasePhase<TTeamSettings> : ILayoutPhase,
     [UsedImplicitly]
     public TranslationList? Name { get; set; }
 
+    string ILayoutPhase.Name => Name?.Translate(null) ?? GetType().Name;
+
     /// <summary>
     /// Per-team behavior of the phase.
     /// </summary>

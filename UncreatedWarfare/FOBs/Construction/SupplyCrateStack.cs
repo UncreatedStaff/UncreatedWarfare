@@ -304,7 +304,9 @@ public class SupplyCrateStack : IDisposable
             if (lvl.All(x => x == null))
             {
                 _levels.RemoveAt(level);
-                if (updateBounds)
+                if (_levels.Count == 0)
+                    Dispose();
+                else if (updateBounds)
                     UpdateBounds();
             }
             else if (index == 0 || index == lvl.Count - 1)

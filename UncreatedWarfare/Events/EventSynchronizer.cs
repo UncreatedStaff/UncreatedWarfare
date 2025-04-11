@@ -83,6 +83,17 @@ public class EventSynchronizer : IDisposable
         }
     }
 
+    internal void CheckForAllTimeouts()
+    {
+        DateTime now = DateTime.UtcNow;
+        foreach (SynchronizationGroup group in _playerGroups.Values)
+        {
+            group.CheckForTimeouts(_logger, now);
+        }
+
+        _globalGroup.CheckForTimeouts(_logger, now);
+    }
+
     /*
      *
      *  Globally syncronized events need to lock in a few ways:
@@ -100,13 +111,13 @@ public class EventSynchronizer : IDisposable
     internal UniTask<SynchronizationEntry?> EnterEvent<TEventArgs>(TEventArgs args) where TEventArgs : class
     {
         // used for tests
-        return EnterEvent(args, typeof(TEventArgs).GetAttributeSafe<EventModelAttribute>());
+        return EnterEvent(args, 0, typeof(TEventArgs).GetAttributeSafe<EventModelAttribute>());
     }
 
     /// <summary>
     /// Wait for an event to be able to start and lock the necessary buckets.
     /// </summary>
-    internal UniTask<SynchronizationEntry?> EnterEvent<TEventArgs>(TEventArgs args, EventModelAttribute? modelInfo) where TEventArgs : class
+    internal UniTask<SynchronizationEntry?> EnterEvent<TEventArgs>(TEventArgs args, long eventId, EventModelAttribute? modelInfo) where TEventArgs : class
     {
         GameThread.AssertCurrent();
 
@@ -118,7 +129,7 @@ public class EventSynchronizer : IDisposable
             case EventSynchronizationContext.PerPlayer:
 
                 if (args is IPlayerEvent)
-                    return EnterPerPlayerEvent(args, modelInfo);
+                    return EnterPerPlayerEvent(args, modelInfo, eventId);
 
                 // PerPlayers should implement IPlayerEvent
                 _logger.LogWarning($"Model {args.GetType()} has PerPlayer synchronization mode but doesn't implement {typeof(IPlayerEvent)}.");
@@ -126,15 +137,15 @@ public class EventSynchronizer : IDisposable
 
             case EventSynchronizationContext.Global:
 
-                return EnterGlobalEvent(args, modelInfo);
+                return EnterGlobalEvent(args, modelInfo, eventId);
         }
 
         return UniTask.FromResult<SynchronizationEntry?>(null);
     }
 
-    private UniTask<SynchronizationEntry?> EnterGlobalEvent<TEventArgs>(TEventArgs args, EventModelAttribute modelInfo) where TEventArgs : class
+    private UniTask<SynchronizationEntry?> EnterGlobalEvent<TEventArgs>(TEventArgs args, EventModelAttribute modelInfo, long eventId) where TEventArgs : class
     {
-        SynchronizationEntry entry = new SynchronizationEntry(args, modelInfo);
+        SynchronizationEntry entry = new SynchronizationEntry(args, modelInfo, eventId);
 
         DateTime now = DateTime.UtcNow;
 
@@ -150,9 +161,9 @@ public class EventSynchronizer : IDisposable
         return entry.WaitEvent?.Task ?? UniTask.FromResult<SynchronizationEntry?>(entry);
     }
 
-    private UniTask<SynchronizationEntry?> EnterPerPlayerEvent<TEventArgs>(TEventArgs args, EventModelAttribute modelInfo) where TEventArgs : class
+    private UniTask<SynchronizationEntry?> EnterPerPlayerEvent<TEventArgs>(TEventArgs args, EventModelAttribute modelInfo, long eventId) where TEventArgs : class
     {
-        SynchronizationEntry entry = new SynchronizationEntry(args, modelInfo);
+        SynchronizationEntry entry = new SynchronizationEntry(args, modelInfo, eventId);
 
         WarfarePlayer player = ((IPlayerEvent)args).Player;
 
@@ -208,13 +219,13 @@ public class EventSynchronizer : IDisposable
         {
             case EventSynchronizationContext.Global:
 
-                _globalGroup.ExitEvent(args);
+                _globalGroup.ExitEvent(args, _logger);
 
                 List<ulong>? playersToRemove = null;
 
                 foreach (SynchronizationGroup playerGroup in _playerGroups.Values)
                 {
-                    if (!playerGroup.ExitEvent(args))
+                    if (!playerGroup.ExitEvent(args, _logger))
                         continue;
 
                     playersToRemove ??= ListPool<ulong>.claim();
@@ -246,7 +257,7 @@ public class EventSynchronizer : IDisposable
                     break;
                 }
 
-                if (grp.ExitEvent(args))
+                if (grp.ExitEvent(args, _logger))
                 {
                     _playerGroups.Remove(player);
                 }
@@ -296,13 +307,13 @@ internal class SynchronizationGroup
     }
 
     /// <returns>If the group is empty and can be removed.</returns>
-    public bool ExitEvent(object args)
+    public bool ExitEvent(object args, ILogger logger)
     {
         bool canBeRemoved = Player is { IsDisconnected: true };
         bool any = false;
         foreach (SynchronizationBucket bucket in Tags.Values)
         {
-            any |= bucket.ExitEvent(args);
+            any |= bucket.ExitEvent(args, logger);
             if (canBeRemoved && bucket.Current != null)
                 canBeRemoved = false;
         }
@@ -314,7 +325,7 @@ internal class SynchronizationGroup
         {
             if (canBeRemoved && bucket.Current != null)
                 canBeRemoved = false;
-            if (!any && bucket.ExitEvent(args))
+            if (!any && bucket.ExitEvent(args, logger))
                 break;
         }
 
@@ -351,18 +362,22 @@ internal class SynchronizationBucket
                 return;
 
             logger.LogWarning($"Timeout reached in bucket {_context} from" +
-                              $" {Current.ModelType.Name}: {now - Current.CreateTime}. " +
+                              $" {Current.ModelType.Name} (#{Current.EventId}): {now - Current.CreateTime}. " +
                               $"(adding entry: {newEntry?.ModelType.Name}) " +
                               $"Create time: {Current.CreateTime} UTC."
             );
 
             if (Queue.Count == 0)
             {
+                logger.LogTrace($"Queueing {newEntry?.EventId} after timeout, none to dequeue in {_context}.");
                 Current = newEntry;
+                if (newEntry != null && newEntry.CreateTime < now)
+                    newEntry.CreateTime = now;
                 return;
             }
 
             SynchronizationEntry nextEntry = Queue.Dequeue();
+            logger.LogTrace($"Exiting dequeued event {Current?.EventId}, dequeued {nextEntry.EventId} to current in {_context}.");
             --nextEntry.WaitCount;
             if (nextEntry.WaitCount <= 0)
             {
@@ -379,17 +394,21 @@ internal class SynchronizationBucket
         if (Current == null)
         {
             Current = entry;
+            logger.LogTrace($"Entered current event {entry.EventId} in {_context}.");
             return;
         }
 
         CheckForTimeout(logger, now, entry);
+        if (Current == entry)
+            return;
 
         ++entry.WaitCount;
         entry.WaitEvent ??= new UniTaskCompletionSource<SynchronizationEntry?>();
+        logger.LogTrace($"Enqueued event {entry.EventId} in {_context}.");
         Queue.Enqueue(entry);
     }
 
-    public bool ExitEvent(object args)
+    public bool ExitEvent(object args, ILogger logger)
     {
         SynchronizationEntry? entry = Current;
         if (entry?.Model != args)
@@ -397,11 +416,13 @@ internal class SynchronizationBucket
 
         if (!Queue.TryDequeue(out SynchronizationEntry? newEntry))
         {
+            logger.LogTrace($"Exiting dequeued event {Current?.EventId}, none to dequeue in {_context}.");
             Current = null;
             return true;
         }
 
         --newEntry.WaitCount;
+        logger.LogTrace($"Exiting dequeued event {Current?.EventId}, dequeued {newEntry.EventId} to current in {_context}.");
         if (newEntry.WaitCount <= 0)
         {
             newEntry.WaitEvent?.TrySetResult(newEntry);
@@ -417,16 +438,18 @@ internal class SynchronizationEntry
     public readonly object Model;
     public readonly Type ModelType;
     public readonly EventModelAttribute ModelInfo;
+    public readonly long EventId;
 
     public DateTime CreateTime;
     public int WaitCount;
     public UniTaskCompletionSource<SynchronizationEntry?>? WaitEvent;
 
-    public SynchronizationEntry(object model, EventModelAttribute modelInfo)
+    public SynchronizationEntry(object model, EventModelAttribute modelInfo, long eventId)
     {
         ModelType = model.GetType();
         Model = model;
         ModelInfo = modelInfo;
+        EventId = eventId;
         CreateTime = DateTime.UtcNow;
     }
 }

@@ -50,5 +50,7 @@ public class SupplyCrate : RestockableBuildableFobEntity<SupplyCrateInfo>
     {
         if (!StackInfo.IsRemoved)
             Stack.RemoveCrate(StackInfo);
+
+        base.Dispose();
     }
 }

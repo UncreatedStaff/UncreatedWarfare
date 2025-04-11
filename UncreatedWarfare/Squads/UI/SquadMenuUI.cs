@@ -156,12 +156,10 @@ public class SquadMenuUI :
         }
 
         int index = Array.FindIndex(Squads, e => ReferenceEquals(e.SquadJoinLeaveButton.Button, button));
-        List<Squad> friendlySquads = _squadManager.Squads.Where(s => s.Team == warfarePlayer.Team).ToList();
 
-        if (index >= friendlySquads.Count)
+        Squad? squad = GetSquadAtIndex(warfarePlayer, index);
+        if (squad == null)
             return;
-
-        Squad squad = friendlySquads[index];
 
         if (squad.ContainsPlayer(warfarePlayer))
             squad.RemoveMember(warfarePlayer);
@@ -336,13 +334,22 @@ public class SquadMenuUI :
         }
     }
 
-    private void UpdateForPlayer(WarfarePlayer player)
+    private Squad? GetSquadAtIndex(WarfarePlayer player, int index)
     {
-        List<Squad> friendlySquads = _squadManager.Squads
+        return GetVisibleSquadList(player).Skip(index).FirstOrDefault();
+    }
+
+    private IEnumerable<Squad> GetVisibleSquadList(WarfarePlayer player)
+    {
+        return _squadManager.Squads
             .Where(s => s.Team == player.Team)
             .OrderByDescending(x => x.ContainsPlayer(player))
-            .ThenBy(x => x.TeamIdentificationNumber)
-            .ToList();
+            .ThenBy(x => x.TeamIdentificationNumber);
+    }
+
+    private void UpdateForPlayer(WarfarePlayer player)
+    {
+        List<Squad> friendlySquads = GetVisibleSquadList(player).ToList();
 
         if (player.IsSquadLeader())
         {

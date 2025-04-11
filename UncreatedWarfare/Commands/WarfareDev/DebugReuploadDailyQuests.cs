@@ -3,7 +3,7 @@ using Uncreated.Warfare.Quests.Daily;
 
 namespace Uncreated.Warfare.Commands;
 
-[Command("steamguard"), SubCommandOf(typeof(WarfareDevCommand))]
+[Command("reuploadquests"), SubCommandOf(typeof(WarfareDevCommand))]
 internal sealed class DebugReuploadDailyQuests : IExecutableCommand
 {
     private readonly DailyQuestService _dailyQuestService;
