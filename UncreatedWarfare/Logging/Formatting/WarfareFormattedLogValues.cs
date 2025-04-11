@@ -68,40 +68,53 @@ internal struct WarfareFormattedLogValues
 
     public readonly StringParameterList Parameters;
     public readonly string Message;
+    public readonly LogLevel EffectiveLogLevel;
     public ITranslationValueFormatter? ValueFormatter;
 
-    public WarfareFormattedLogValues(string message, object?[] args)
+    public WarfareFormattedLogValues(string message, LogLevel logLevel, object?[] args)
     {
+        WarfareLogger.CheckForMessageLog(ref logLevel, ref message);
+        EffectiveLogLevel = logLevel;
         Parameters = new StringParameterList(args);
         Message = message;
     }
 
-    public WarfareFormattedLogValues(string message, StringParameterList parameterList)
+    public WarfareFormattedLogValues(string message, LogLevel logLevel, StringParameterList parameterList)
     {
+        WarfareLogger.CheckForMessageLog(ref logLevel, ref message);
+        EffectiveLogLevel = logLevel;
         Parameters = parameterList;
         Message = message;
     }
 
-    public WarfareFormattedLogValues(string message, object? arg1)
+    public WarfareFormattedLogValues(string message, LogLevel logLevel, object? arg1)
     {
+        WarfareLogger.CheckForMessageLog(ref logLevel, ref message);
+        EffectiveLogLevel = logLevel;
         Parameters = new StringParameterList(arg1);
         Message = message;
     }
 
-    public WarfareFormattedLogValues(string message, object? arg1, object? arg2)
+    public WarfareFormattedLogValues(string message, LogLevel logLevel, object? arg1, object? arg2)
     {
+        WarfareLogger.CheckForMessageLog(ref logLevel, ref message);
+        EffectiveLogLevel = logLevel;
         Parameters = new StringParameterList(arg1, arg2);
         Message = message;
     }
 
-    public WarfareFormattedLogValues(string message, object? arg1, object? arg2, object? arg3)
+    public WarfareFormattedLogValues(string message, LogLevel logLevel, object? arg1, object? arg2, object? arg3)
     {
+        WarfareLogger.CheckForMessageLog(ref logLevel, ref message);
+        EffectiveLogLevel = logLevel;
         Parameters = new StringParameterList(arg1, arg2, arg3);
         Message = message;
     }
 
-    public WarfareFormattedLogValues(string message, object? arg1, object? arg2, object? arg3, object? arg4)
+    public WarfareFormattedLogValues(string message, LogLevel logLevel, object? arg1, object? arg2, object? arg3, object? arg4)
     {
+        WarfareLogger.CheckForMessageLog(ref logLevel, ref message);
+        EffectiveLogLevel = logLevel;
         Parameters = new StringParameterList(arg1, arg2, arg3, arg4);
         Message = message;
     }

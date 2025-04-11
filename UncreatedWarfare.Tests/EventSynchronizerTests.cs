@@ -157,6 +157,11 @@ internal class EventSynchronizerTests
     [Test]
     public async Task ReplicateTimeoutError()
     {
+        /*
+         *  This replicates an issue that was causing massive lag on release.
+         *   It's caused when the first invocation causes the second one to wait and
+         *   when the first one is done the second doesn't switch contexts.
+         */
         WarfarePlayer player = null;
         for (uint i = 1; i <= 23; ++i)
         {
@@ -188,8 +193,6 @@ internal class EventSynchronizerTests
         {
             entry2 = await _eventSynchronizer.EnterEvent(args2, 11917, args2.GetType().GetAttributeSafe<EventModelAttribute>());
 
-            await Task.Delay(200);
-
             SwitchToMainThread();
             if (entry2 != null)
                 _eventSynchronizer.ExitEvent(entry2);
@@ -198,17 +201,23 @@ internal class EventSynchronizerTests
         await t1;
         await t2;
 
-        SwitchToMainThread();
-        ReplicateTimeoutErrorModel args3 = new ReplicateTimeoutErrorModel { Player = player! };
-        SynchronizationEntry entry3 = await _eventSynchronizer.EnterEvent(args3, 11918, args3.GetType().GetAttributeSafe<EventModelAttribute>());
+        Task taskTimeout = new Func<Task>(async () =>
+        {
+            SwitchToMainThread();
+            ReplicateTimeoutErrorModel args3 = new ReplicateTimeoutErrorModel { Player = player! };
+            SynchronizationEntry entry3 = await _eventSynchronizer.EnterEvent(args3, 11918, args3.GetType().GetAttributeSafe<EventModelAttribute>());
 
-        SwitchToMainThread();
-        if (entry3 != null)
-            _eventSynchronizer.ExitEvent(entry3);
+            SwitchToMainThread();
+            if (entry3 != null)
+                _eventSynchronizer.ExitEvent(entry3);
 
-        _eventSynchronizer.CheckForAllTimeouts();
+        })();
 
-        Assert.Pass();
+        await taskTimeout;
+
+        await Task.WhenAny(Task.Delay(500), taskTimeout);
+
+        Assert.That(taskTimeout.IsCompleted, Is.True);
     }
     
     [EventModel(EventSynchronizationContext.Global, SynchronizedModelTags = ["modify_world"])]

@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Runtime.CompilerServices;
+using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Logging.Formatting;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Util;
@@ -20,6 +21,22 @@ public class WarfareLogger : ILogger
     private readonly ITranslationValueFormatter? _formatter;
 
     private List<Scope>? _scopeHierarchy;
+
+    /// <summary>
+    /// Removes the value added by <see cref="ICommandUser"/> to override when Information is disabled.
+    /// </summary>
+    /// <param name="logLevel"></param>
+    /// <param name="message"></param>
+    public static void CheckForMessageLog(ref LogLevel logLevel, ref string message)
+    {
+        if (message == null || logLevel != LogLevel.Critical || !message.StartsWith("msg: ", StringComparison.Ordinal) || message.Length <= 5)
+        {
+            return;
+        }
+
+        logLevel = LogLevel.Information;
+        message = message.Substring(5);
+    }
 
     public WarfareLogger(string categoryName, WarfareLoggerProvider loggerProvider, ITranslationValueFormatter? formatter)
     {
@@ -55,10 +72,14 @@ public class WarfareLogger : ILogger
             stateValues.ValueFormatter = _formatter;
             formattedText = stateValues.Format(true);
             unformattedText = stateValues.Format(false);
+            logLevel = stateValues.EffectiveLogLevel;
         }
         else
         {
-            formattedText = unformattedText = formatter(state, exception);
+            string message = formatter(state, exception);
+            CheckForMessageLog(ref logLevel, ref message);
+            unformattedText = message;
+            formattedText = message;
         }
 
         if (logLevel is < LogLevel.Trace or > LogLevel.Critical)

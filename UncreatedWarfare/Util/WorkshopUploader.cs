@@ -49,6 +49,11 @@ public enum ESteamWorkshopVisibility : byte
 /// Usually you could just use the Process API but SteamCMD is written in a way that makes it impossible to read from the output buffer normally,
 /// Pty.Net is a workaround.
 /// </para>
+///
+/// <para>
+/// Pty.Net does not work on Ubuntu when running Mono as it turns out.. I added a small hotfix below it that continuously checks the mod until it actually updates
+/// using Steamworks API to notice when it finishes updating. Only downside is this doesn't look for the steam guard code.
+/// </para>
 ///</remarks>
 [Priority(100)]
 public class WorkshopUploader : IHostedService
@@ -128,6 +133,8 @@ public class WorkshopUploader : IHostedService
         {
             await UniTask.SwitchToThreadPool();
         }
+
+        long startUnixTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
         await _sempahore.WaitAsync(token);
         try
@@ -259,12 +266,104 @@ public class WorkshopUploader : IHostedService
             }
             finally
             {
-                _connection?.Dispose();
+                //_connection?.Dispose();
                 _connection = null;
                 cts.Dispose();
             }
 
-            if (exitCode == 0 && !wasExitFailure.Value)
+            bool didModUpdate = false;
+            // check if it still worked even if Pty.Net failed to read the incoming stream
+            if (true || wasExitFailure.Value)
+            {
+                using CancellationTokenSource cts2 = new CancellationTokenSource();
+
+                Task t1 = Task.Run(async () =>
+                {
+                    while (true)
+                    {
+                        await Task.Delay(5000, CancellationToken.None).ConfigureAwait(false);
+                        _logger.LogDebug("Checking if mod updated...");
+
+                        await UniTask.SwitchToMainThread(token);
+
+                        TaskCompletionSource<SteamUGCQueryCompleted_t> completionSource = new TaskCompletionSource<SteamUGCQueryCompleted_t>();
+
+                        using CallResult<SteamUGCQueryCompleted_t> queryCompleted = CallResult<SteamUGCQueryCompleted_t>.Create((t, failure) =>
+                        {
+                            completionSource.TrySetResult(failure
+                                ? new SteamUGCQueryCompleted_t { m_eResult = (EResult)(-1) }
+                                : t);
+                        });
+
+                        UGCQueryHandle_t handle = SteamGameServerUGC.CreateQueryUGCDetailsRequest([ new PublishedFileId_t(parameters.ModId) ], 1);
+
+                        queryCompleted.Set(SteamGameServerUGC.SendQueryUGCRequest(handle));
+
+                        SteamUGCQueryCompleted_t result = await completionSource.Task.ConfigureAwait(false);
+                        try
+                        {
+                            if (result.m_handle != handle)
+                            {
+                                _logger.LogWarning("Handle mismatch.");
+                                continue;
+                            }
+
+                            if (result.m_eResult == (EResult)(-1))
+                            {
+                                _logger.LogWarning("Invalid check response.");
+                                continue;
+                            }
+                            else if (result.m_eResult != EResult.k_EResultOK)
+                            {
+                                _logger.LogWarning($"Invalid check response: {result.m_eResult}.");
+                                continue;
+                            }
+
+                            await UniTask.SwitchToMainThread(token);
+                            if (SteamGameServerUGC.GetQueryUGCResult(result.m_handle, 0, out SteamUGCDetails_t pDetails))
+                            {
+                                didModUpdate = pDetails.m_rtimeUpdated > startUnixTimestamp;
+                                if (didModUpdate)
+                                {
+                                    _logger.LogInformation($"Detected update: {DateTimeOffset.FromUnixTimeSeconds(pDetails.m_rtimeUpdated)}.");
+                                    // ReSharper disable once AccessToDisposedClosure
+                                    cts2.Cancel();
+                                    break;
+                                }
+                                else
+                                    _logger.LogDebug("Mod not updated yet.");
+                            }
+                            else
+                            {
+                                _logger.LogWarning("Could not get query UGC result 0.");
+                            }
+                        }
+                        finally
+                        {
+                            SteamGameServerUGC.ReleaseQueryUGCRequest(handle);
+                        }
+                    }
+                }, CancellationToken.None);
+
+                Task delay = Task.Delay(TimeSpan.FromMinutes(5d), cts2.Token);
+
+                await Task.WhenAny(delay, t1).ConfigureAwait(false);
+
+                if (!t1.IsCompleted)
+                {
+                    logger.LogError("Failed upload timeout reached.");
+                }
+                else if (didModUpdate)
+                {
+                    logger.LogInformation("Mod update detected successful.");
+                }
+                else
+                {
+                    logger.LogWarning("The mod did not update in time.");
+                }
+            }
+
+            if (didModUpdate || exitCode == 0 && !wasExitFailure.Value)
             {
                 return ReadModId(File.ReadAllText(vdfPath));
             }

@@ -12,6 +12,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.FileProviders.Physical;
+using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Primitives;
 using MySqlConnector;
 using SDG.Framework.Modules;
 using StackCleaner;
@@ -136,6 +138,8 @@ public sealed class WarfareModule
 
 
 #nullable restore
+
+    private IDisposable? _systemConfigChangeToken;
 
     public event Action? LayoutStarted;
     private bool _unloadedHostedServices = true;
@@ -290,6 +294,11 @@ public sealed class WarfareModule
         ConfigurationHelper.AddSourceWithMapOverride(configBuilder, FileProvider, systemConfigLocation);
         Configuration = configBuilder.Build();
 
+        _systemConfigChangeToken = ChangeToken.OnChange(
+            () => Configuration.GetReloadToken(),
+            HandleSystemConfigUpdated
+        );
+
         ContainerBuilder bldr = new ContainerBuilder();
 
         _pluginLoader = new WarfarePluginLoader(this, tempLoggerFactory);
@@ -304,23 +313,9 @@ public sealed class WarfareModule
 
         bldr.RegisterFromCollection(collection =>
         {
-            collection.AddLogging(bldr =>
-            {
-                // configure logging from config
-                IConfigurationSection loggingSection = Configuration.GetSection("logging");
-
-                string? logLvl = loggingSection["minimum_level"];
-                bldr.SetMinimumLevel(logLvl == null
-                    ? LogLevel.Trace
-                    : Enum.Parse<LogLevel>(loggingSection["minimum_level"],
-                        ignoreCase: true)
-                );
-
-                foreach (IConfigurationSection value in loggingSection.GetSection("filters").GetChildren())
-                {
-                    bldr.AddFilter(value.Key, Enum.Parse<LogLevel>(value.Value, ignoreCase: true));
-                }
-            });
+            collection.AddTransient<IOptionsMonitor<LoggerFilterOptions>, LoggerOptionsMonitor>();
+            collection.Configure<LoggerFactoryOptions>(o => { });
+            collection.AddLogging();
         });
 
         // service configurers from config
@@ -390,6 +385,11 @@ public sealed class WarfareModule
         });
     }
 
+    private void HandleSystemConfigUpdated()
+    {
+        ServiceProvider.Resolve<ILoggerFactory>();
+    }
+
     internal void Shutdown()
     {
         AppDomain.CurrentDomain.AssemblyResolve -= HandleAssemblyResolve;
@@ -398,6 +398,9 @@ public sealed class WarfareModule
             Singleton = null;
 
         _dispatcher = null;
+
+        _systemConfigChangeToken?.Dispose();
+        _systemConfigChangeToken = null;
 
         if (Configuration is IDisposable disposableConfig)
             disposableConfig.Dispose();

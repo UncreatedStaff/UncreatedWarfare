@@ -24,7 +24,16 @@ public class TerminalUser : ICommandUser
     public void SendMessage(string message)
     {
         GameThread.AssertCurrent();
-        _logger.LogInformation(message);
+        if (!_logger.IsEnabled(LogLevel.Information))
+        {
+            // note: using critical so it can't be turned off,
+            // "msg: " is removed automatically by WarfareFormattedLogValues in the constructor
+            _logger.LogCritical("msg: " + message);
+        }
+        else
+        {
+            _logger.LogInformation(message);
+        }
     }
 
     public IModerationActor GetModerationActor()

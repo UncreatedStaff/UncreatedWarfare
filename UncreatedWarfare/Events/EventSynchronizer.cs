@@ -379,12 +379,12 @@ internal class SynchronizationBucket
             SynchronizationEntry nextEntry = Queue.Dequeue();
             logger.LogTrace($"Exiting dequeued event {Current?.EventId}, dequeued {nextEntry.EventId} to current in {_context}.");
             --nextEntry.WaitCount;
+            Current = nextEntry;
             if (nextEntry.WaitCount <= 0)
             {
                 nextEntry.WaitEvent?.TrySetResult(nextEntry);
             }
 
-            Current = nextEntry;
         } while (true);
     }
 
@@ -423,12 +423,12 @@ internal class SynchronizationBucket
 
         --newEntry.WaitCount;
         logger.LogTrace($"Exiting dequeued event {Current?.EventId}, dequeued {newEntry.EventId} to current in {_context}.");
+        Current = newEntry;
         if (newEntry.WaitCount <= 0)
         {
             newEntry.WaitEvent?.TrySetResult(newEntry);
         }
 
-        Current = newEntry;
         return true;
     }
 }

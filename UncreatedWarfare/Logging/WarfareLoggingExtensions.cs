@@ -2545,7 +2545,7 @@ public static class WarfareLoggingExtensions
         args ??= Array.Empty<object?>();
         if (WarfareModule.IsActive)
         {
-            logger.Log(logLevel, eventId, new WarfareFormattedLogValues(message, args), exception, MessageFormatter);
+            logger.Log(logLevel, eventId, new WarfareFormattedLogValues(message, logLevel, args), exception, MessageFormatter);
         }
         else
         {
@@ -2609,7 +2609,7 @@ public static class WarfareLoggingExtensions
 
         if (WarfareModule.IsActive)
         {
-            logger.Log(logLevel, eventId, new WarfareFormattedLogValues(message, Array.Empty<object>()), exception, MessageFormatter);
+            logger.Log(logLevel, eventId, new WarfareFormattedLogValues(message, logLevel, Array.Empty<object>()), exception, MessageFormatter);
         }
         else
         {
@@ -2673,7 +2673,7 @@ public static class WarfareLoggingExtensions
 
         if (WarfareModule.IsActive)
         {
-            logger.Log(logLevel, eventId, new WarfareFormattedLogValues(message, arg1), exception, MessageFormatter);
+            logger.Log(logLevel, eventId, new WarfareFormattedLogValues(message, logLevel, arg1), exception, MessageFormatter);
         }
         else
         {
@@ -2698,7 +2698,7 @@ public static class WarfareLoggingExtensions
 
         if (WarfareModule.IsActive)
         {
-            logger.Log(logLevel, eventId, new WarfareFormattedLogValues(message, parameterList), exception, MessageFormatter);
+            logger.Log(logLevel, eventId, new WarfareFormattedLogValues(message, logLevel, parameterList), exception, MessageFormatter);
         }
         else
         {
@@ -2762,7 +2762,7 @@ public static class WarfareLoggingExtensions
 
         if (WarfareModule.IsActive)
         {
-            logger.Log(logLevel, eventId, new WarfareFormattedLogValues(message, arg1, arg2), exception, MessageFormatter);
+            logger.Log(logLevel, eventId, new WarfareFormattedLogValues(message, logLevel, arg1, arg2), exception, MessageFormatter);
         }
         else
         {
@@ -2826,7 +2826,7 @@ public static class WarfareLoggingExtensions
 
         if (WarfareModule.IsActive)
         {
-            logger.Log(logLevel, eventId, new WarfareFormattedLogValues(message, arg1, arg2, arg3), exception, MessageFormatter);
+            logger.Log(logLevel, eventId, new WarfareFormattedLogValues(message, logLevel, arg1, arg2, arg3), exception, MessageFormatter);
         }
         else
         {
@@ -2891,7 +2891,7 @@ public static class WarfareLoggingExtensions
 
         if (WarfareModule.IsActive)
         {
-            logger.Log(logLevel, eventId, new WarfareFormattedLogValues(message, arg1, arg2, arg3, arg4), exception, MessageFormatter);
+            logger.Log(logLevel, eventId, new WarfareFormattedLogValues(message, logLevel, arg1, arg2, arg3, arg4), exception, MessageFormatter);
         }
         else
         {

@@ -109,7 +109,7 @@ public class LoggingFormattingTests
     [Test]
     public void TestEmptyFormat()
     {
-        WarfareFormattedLogValues values = new WarfareFormattedLogValues("message", Array.Empty<object>())
+        WarfareFormattedLogValues values = new WarfareFormattedLogValues("message", LogLevel.Information, Array.Empty<object>())
         {
             ValueFormatter = _formatter
         };
@@ -124,7 +124,7 @@ public class LoggingFormattingTests
     {
         const int arg = 8;
 
-        WarfareFormattedLogValues values = new WarfareFormattedLogValues("7 {0} 9", arg)
+        WarfareFormattedLogValues values = new WarfareFormattedLogValues("7 {0} 9", LogLevel.Information, arg)
         {
             ValueFormatter = _formatter
         };
@@ -143,7 +143,7 @@ public class LoggingFormattingTests
     {
         const int arg1 = 7, arg2 = 8;
 
-        WarfareFormattedLogValues values = new WarfareFormattedLogValues("{0} {1} 9", arg1, arg2)
+        WarfareFormattedLogValues values = new WarfareFormattedLogValues("{0} {1} 9", LogLevel.Information, arg1, arg2)
         {
             ValueFormatter = _formatter
         };
@@ -162,7 +162,7 @@ public class LoggingFormattingTests
     {
         const int arg1 = 7, arg2 = 8, arg3 = 9;
 
-        WarfareFormattedLogValues values = new WarfareFormattedLogValues("{0} {1} {2}", arg1, arg2, arg3)
+        WarfareFormattedLogValues values = new WarfareFormattedLogValues("{0} {1} {2}", LogLevel.Information, arg1, arg2, arg3)
         {
             ValueFormatter = _formatter
         };
@@ -182,7 +182,7 @@ public class LoggingFormattingTests
         const int arg1 = 7, arg2 = 8, arg3 = 9;
         const string arg4 = ":(";
 
-        WarfareFormattedLogValues values = new WarfareFormattedLogValues("{0} {1} {2} {3}", arg1, arg2, arg3, arg4)
+        WarfareFormattedLogValues values = new WarfareFormattedLogValues("{0} {1} {2} {3}", LogLevel.Information, arg1, arg2, arg3, arg4)
         {
             ValueFormatter = _formatter
         };
@@ -202,7 +202,7 @@ public class LoggingFormattingTests
         const int arg2 = 7, arg3 = 8, arg4 = 9;
         const string arg1 = ":)", arg5 = ":(";
 
-        WarfareFormattedLogValues values = new WarfareFormattedLogValues("{0} {1} {2} {3} {4}", [ arg1, arg2, arg3, arg4, arg5 ])
+        WarfareFormattedLogValues values = new WarfareFormattedLogValues("{0} {1} {2} {3} {4}", LogLevel.Information, [ arg1, arg2, arg3, arg4, arg5 ])
         {
             ValueFormatter = _formatter
         };
