@@ -6,18 +6,14 @@ using System.Linq;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
-using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Events.Models.Buildables;
 using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Interaction;
-using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Kits.Whitelists;
-using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Permissions;
-using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Zones;
@@ -48,24 +44,38 @@ public class FobPlacementTweaks :
     [EventListener(RequiresMainThread = true, Priority = 1 /* before WhitelistService */)]
     public async UniTask HandleEventAsync(IPlaceBuildableRequestedEvent e, IServiceProvider serviceProvider, CancellationToken token = default)
     {
-        if (!_assetConfiguration.GetAssetLink<ItemPlaceableAsset>("Buildables:Gameplay:FobUnbuilt").MatchAsset(e.Asset))
-        {
-            return;
-        }
-        
-        if (!_assetConfiguration.GetAssetLink<ItemPlaceableAsset>("Buildables:Gameplay:FobUnbuilt").MatchAsset(e.Asset))
-        {
-            return;
-        }
-        
         ChatService chatService = serviceProvider.GetRequiredService<ChatService>();
-        
-        if (e.OriginalPlacer.Team.Faction.RallyPoint.MatchAsset(e.Asset) && RallyPoint.CheckBurned(_playerService, e.Position, e.OriginalPlacer.Team))
+
+        // rally point restrictions
+        if (e.OriginalPlacer.Team.Faction.RallyPoint.MatchAsset(e.Asset))
         {
-            chatService.Send(e.OriginalPlacer, _translations.PlaceRallyPointNearbyEnemies);
+            if (RallyPoint.CheckBurned(_playerService, e.Position, e.OriginalPlacer.Team))
+            {
+                chatService.Send(e.OriginalPlacer, _translations.PlaceRallyPointNearbyEnemies);
+                e.Cancel();
+            }
+
+            if (!e.OriginalPlacer.IsOnDuty && (e.IsOnVehicle || WaterUtility.isPointUnderwater(e.Position)))
+            {
+                chatService.Send(e.OriginalPlacer, _translations.PlaceRallyPointInvalid);
+                e.Cancel();
+            }
+
             return;
         }
 
+        if (!_assetConfiguration.GetAssetLink<ItemPlaceableAsset>("Buildables:Gameplay:FobUnbuilt").MatchAsset(e.Asset))
+        {
+            return;
+        }
+
+        if (e.IsOnVehicle)
+        {
+            chatService.Send(e.OriginalPlacer, _translations.BuildFOBInvalidPosition);
+            e.Cancel();
+            return;
+        }
+        
         NearbySupplyCrates supplyCrates = NearbySupplyCrates.FindNearbyCrates(e.Position, e.OriginalPlacer.Team.GroupId, _fobManager);
 
         if (supplyCrates.BuildCount == 0)
@@ -78,8 +88,6 @@ public class FobPlacementTweaks :
             return;
         }
         
-        await UniTask.SwitchToMainThread(token);
-
         ShovelableInfo? shovelableInfo = _fobManager.Configuration.Shovelables
             .FirstOrDefault(s => s.Foundation != null && s.Foundation.Guid == e.Asset.GUID);
         if (shovelableInfo != null && supplyCrates.BuildCount < shovelableInfo.SupplyCost)
@@ -123,6 +131,13 @@ public class FobPlacementTweaks :
                 e.Cancel();
                 return;
             }
+        }
+        
+        if (WaterUtility.isPointUnderwater(e.Position))
+        {
+            chatService.Send(e.OriginalPlacer, _translations.BuildFOBUnderwater);
+            e.Cancel();
+            return;
         }
         
         if (WaterUtility.isPointUnderwater(e.Position))

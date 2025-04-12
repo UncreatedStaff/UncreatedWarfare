@@ -129,7 +129,7 @@ public class WarfareGameStateService :
         {
             try
             {
-                await SendFullStateRpc(GameId, PublicIP, Port, BookmarkHost, ActiveFactions, LayoutName, Phase, LayoutStartTime, Ranks, DailyQuests, Squads);
+                await SendFullStateRpc(GameId, PublicIP, Port, BookmarkHost, ActiveFactions, LayoutName, Phase, LayoutStartTime, Ranks, DailyQuests, Squads?.ToArray());
             }
             catch (Exception ex)
             {
@@ -180,7 +180,7 @@ public class WarfareGameStateService :
         DateTime layoutStartTime,
         WarfareRank[]? ranks,
         DailyQuestDay?[]? dailyQuests,
-        List<SquadInfo>? squads)
+        SquadInfo[]? squads)
     {
         return RpcTask.NotImplemented;
     }
@@ -197,7 +197,7 @@ public class WarfareGameStateService :
         DateTime layoutStartTime,
         WarfareRank[]? ranks,
         DailyQuestDay?[]? dailyQuests,
-        List<SquadInfo>? squads)
+        SquadInfo[]? squads)
     {
         lock (_sync)
         {
@@ -214,7 +214,7 @@ public class WarfareGameStateService :
 
             DailyQuests = dailyQuests;
 
-            Squads = squads;
+            Squads = squads?.ToList();
 
             InvokeLayoutUpdated();
             InvokeDailyQuestsUpdated();
@@ -246,7 +246,7 @@ public class WarfareGameStateService :
         await UniTask.SwitchToMainThread();
         SendFullState(false);
 
-        await SendFullStateRpc(GameId, PublicIP, Port, BookmarkHost, ActiveFactions, LayoutName, Phase, LayoutStartTime, Ranks, DailyQuests, Squads);
+        await SendFullStateRpc(GameId, PublicIP, Port, BookmarkHost, ActiveFactions, LayoutName, Phase, LayoutStartTime, Ranks, DailyQuests, Squads?.ToArray());
     }
 
     [RpcSend(nameof(ReceiveGameInfoRequest))]

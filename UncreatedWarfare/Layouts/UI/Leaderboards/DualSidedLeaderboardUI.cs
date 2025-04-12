@@ -373,7 +373,7 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
             {
                 squadElement.Name.SetText(set.Next.Connection, topSquad.Name);
                 squadElement.Flag.SetText(set.Next.Connection, topSquad.Team.Faction.Sprite);
-                
+
                 for (int m = 0; m < topSquad.Members.Count; m++)
                 {
                     if (m >= squadElement.Members.Length)
@@ -387,7 +387,10 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
                     if (member.IsSquadLeader())
                         memberName = $"<#ccffd4>{memberName}</color>";
                     memberElement.SetText(set.Next.Connection, $"<mspace=2em>{classIcon}</mspace> {memberName}");
+                    memberElement.SetVisibility(set.Next.Connection, true);
                 }
+
+                // dont need to clear extra  members since they start as invisible
                 
                 squadElement.ImportantStatistic.SetText(set.Next.Connection, totalSquadXPWithHeader);
             }

@@ -44,6 +44,12 @@ public class FobTranslations : PropertiesTranslationCollection
     [TranslationData("Indicates that a buildable can only be placed nearby a supply crate.")]
     public readonly Translation BuildFOBNoSupplyCrate = new Translation("<#ffab87>You must be near a friendly <#cedcde>SUPPLY CRATE</color> in order to build a FOB.");
 
+    [TranslationData("Indicates that a FOB can't be placed in a weird position, like on a vehicle.")]
+    public readonly Translation BuildFOBInvalidPosition = new Translation("<#ffab87>You can not build FOBs here.");
+
+    [TranslationData("Indicates that a FOB buildable can't be placed in a weird position, like on a vehicle.")]
+    public readonly Translation BuildFOBBuildableInvalidPosition = new Translation("<#ffab87>You can not build this here.");
+
     [TranslationData("Indicates that no more FOBs can be built because the maximum amount has been reached.")]
     public readonly Translation BuildMaxFOBsHit = new Translation("<#ffab87>The max number of FOBs on your team has been reached.");
 
@@ -73,6 +79,9 @@ public class FobTranslations : PropertiesTranslationCollection
     
     [TranslationData("Indicates that a player cannot place a rally point because there are enemies nearby.")]
     public readonly Translation PlaceRallyPointNearbyEnemies = new Translation("<#ffaa42>Rally point unavailable - there are enemies nearby.");
+    
+    [TranslationData("Indicates that a player cannot place a rally point because of environmental restrictions.")]
+    public readonly Translation PlaceRallyPointInvalid = new Translation("<#ffaa42>You may not place rally points here.");
     
     [TranslationData(IsPriorityTranslation = false)]
     public readonly Translation<IDeployable, GridLocation, string> FOBUI = new Translation<IDeployable, GridLocation, string>("{0}  <color=#d6d2c7>{1}</color>  {2}", TranslationOptions.UnityUI, arg0Fmt: Flags.ColorNameFormat);

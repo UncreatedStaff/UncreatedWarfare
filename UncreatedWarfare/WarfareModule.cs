@@ -941,7 +941,7 @@ public sealed class WarfareModule
         bldr.RegisterType<FobPlacementTweaks>()
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
-        bldr.RegisterType<ShoveableTweaks>()
+        bldr.RegisterType<ShovelableTweaks>()
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
         bldr.RegisterType<VehicleLockRequestedHandler>()

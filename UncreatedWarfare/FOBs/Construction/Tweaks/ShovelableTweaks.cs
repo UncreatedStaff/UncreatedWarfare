@@ -16,7 +16,7 @@ using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.FOBs.Construction.Tweaks;
 
-internal class ShoveableTweaks :
+internal class ShovelableTweaks :
     IEventListener<IPlaceBuildableRequestedEvent>,
     IEventListener<PlayerMeleeRequested>
 {
@@ -26,7 +26,7 @@ internal class ShoveableTweaks :
     private readonly IKitItemResolver _kitItemResolver;
     private readonly FobManager _fobManager;
 
-    public ShoveableTweaks(
+    public ShovelableTweaks(
         AssetConfiguration assetConfiguration,
         TranslationInjection<FobTranslations> translations,
         ChatService chatService,
@@ -51,33 +51,40 @@ internal class ShoveableTweaks :
         if (shovelableInfo == null)
             return;
 
+        if (e.IsOnVehicle)
+        {
+            _chatService.Send(e.OriginalPlacer, _translations.BuildFOBBuildableInvalidPosition);
+            e.Cancel();
+            return;
+        }
+
         KitPlayerComponent kitComponent = e.OriginalPlacer.Component<KitPlayerComponent>();
 
         IAssetLink<ItemPlaceableAsset> buildableAsset = AssetLink.Create(e.Asset);
 
         bool buildableInKit = false;
         Kit? cachedKit = kitComponent.CachedKit;
-        int maxAllowedInKit = 0;
         if (cachedKit != null)
         {
-            maxAllowedInKit = _kitItemResolver.CountItems(cachedKit, buildableAsset, e.OriginalPlacer.Team);
+            int maxAllowedInKit = _kitItemResolver.CountItems(cachedKit, buildableAsset, e.OriginalPlacer.Team);
             buildableInKit = maxAllowedInKit > 0;
         }
 
         bool placerIsCombatEngineer = kitComponent.ActiveClass == Class.CombatEngineer;
 
-        List<IBuildableFobEntity> similarPlacedByPlayer = _fobManager.Entities
-            .OfType<IBuildableFobEntity>()
-            .Where(en => en.Buildable.Owner == e.OriginalPlacer.Steam64 && en.IdentifyingAsset.MatchAsset(buildableAsset))
-            .ToList();
+        // removed because this is handled by WhitelistService already
+        //List<IBuildableFobEntity> similarPlacedByPlayer = _fobManager.Entities
+        //    .OfType<IBuildableFobEntity>()
+        //    .Where(en => en.Buildable.Owner == e.OriginalPlacer.Steam64 && en.IdentifyingAsset.MatchAsset(buildableAsset))
+        //    .ToList();
 
-        if (similarPlacedByPlayer.Count >= maxAllowedInKit && similarPlacedByPlayer.Count > 0)
-        {
-            IBuildableFobEntity oldest = similarPlacedByPlayer
-                .Aggregate((oldest, next) => BuildableContainer.Get(oldest.Buildable).CreateTime < BuildableContainer.Get(next.Buildable).CreateTime ? oldest : next);
+        //if (similarPlacedByPlayer.Count >= maxAllowedInKit && similarPlacedByPlayer.Count > 0)
+        //{
+        //    IBuildableFobEntity oldest = similarPlacedByPlayer
+        //        .Aggregate((oldest, next) => BuildableContainer.Get(oldest.Buildable).CreateTime < BuildableContainer.Get(next.Buildable).CreateTime ? oldest : next);
 
-            oldest.Buildable.Destroy();
-        }
+        //    oldest.Buildable.Destroy();
+        //}
 
         if (!shovelableInfo.MaxAllowedPerFob.HasValue || buildableInKit)
             return;

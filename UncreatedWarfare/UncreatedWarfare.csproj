@@ -198,6 +198,8 @@
 
     <EmbeddedResource Include="Commands\ReportCommand.meta.yml" />
 
+    <EmbeddedResource Include="Commands\SquadsCommand.meta.yml" />
+
     <EmbeddedResource Include="Commands\Vanilla\ShutdownCommand.meta.yml" />
 
     <EmbeddedResource Include="Commands\Vanilla\VehicleCommand.meta.yml" />
@@ -209,8 +211,6 @@
     <EmbeddedResource Include="Commands\SaveVoiceBufferCommand.meta.yml" />
 
     <EmbeddedResource Include="Commands\RangeCommand.meta.yml" />
-
-    <EmbeddedResource Include="Commands\RallyCommand.meta.yml" />
 
     <EmbeddedResource Include="Commands\OptionsCommand.meta.yml" />
 

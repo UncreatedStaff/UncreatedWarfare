@@ -321,6 +321,15 @@ public static class BuildableExtensions
             InteractableVehicle? vehicle = buildable.VehicleParent;
             if (vehicle != null)
             {
+                if (state == null)
+                {
+                    state = barricadeAsset.getState(EItemOrigin.ADMIN);
+                }
+                else
+                {
+                    BarricadeUtility.VerifyState(state, barricadeAsset);
+                }
+
                 Barricade barricade = new Barricade(barricadeAsset,
                     health is < 0 or > ushort.MaxValue ? barricadeAsset.health : (ushort)health, state);
 
