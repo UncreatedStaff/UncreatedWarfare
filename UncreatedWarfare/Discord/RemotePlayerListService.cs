@@ -9,6 +9,7 @@ using System.Linq;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
+using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
@@ -22,6 +23,7 @@ namespace Uncreated.Warfare.Discord;
 /// <remarks>This class is meant to be used on both the server and the discord bot.</remarks>
 [RpcClass]
 public class RemotePlayerListService :
+    IHostedService,
     ILayoutHostedService,
     IAsyncEventListener<PlayerJoined>,
     IAsyncEventListener<PlayerLeft>,
@@ -29,6 +31,7 @@ public class RemotePlayerListService :
 {
     private readonly IPlayerService? _playerService;
     private readonly IUserDataService? _userDataService;
+    private readonly WarfareModule? _warfare;
     private readonly ILogger<RemotePlayerListService> _logger;
     private ReplicatedServerState _replicatedServerStateWarfareOnly;
 
@@ -61,26 +64,50 @@ public class RemotePlayerListService :
             // these are only needed on the server
             _playerService = serviceProvider.GetRequiredService<IPlayerService>();
             _userDataService = serviceProvider.GetRequiredService<IUserDataService>();
+            _warfare = serviceProvider.GetRequiredService<WarfareModule>();
         }
 
         _logger = serviceProvider.GetRequiredService<ILogger<RemotePlayerListService>>();
     }
 
-    UniTask ILayoutHostedService.StartAsync(CancellationToken token)
+    public async UniTask StopAsync(CancellationToken token)
     {
+        await UpdateReplicatedServerState(ServerStateType.Shutdown, null);
+    }
+
+    public async UniTask StartAsync(CancellationToken token)
+    {
+        await UpdateReplicatedServerState(ServerStateType.Loading, null);
+    }
+
+    async UniTask ILayoutHostedService.StartAsync(CancellationToken token)
+    {
+        Layout? layout = _warfare != null && _warfare.IsLayoutActive() ? _warfare.GetActiveLayout() : null;
+        if (layout != null)
+        {
+            await UpdateReplicatedServerState(ServerStateType.Active, layout.LayoutInfo.DisplayName, false);
+        }
+        else if (_replicatedServerStateWarfareOnly.Type != ServerStateType.Shutdown)
+        {
+            await UpdateReplicatedServerState(ServerStateType.Loading, null, false);
+        }
+
         // ILayoutHostedService already has the player connection lock, need to separate the unlocked version of the function
-        return SendCurrentPlayerListIntl(token).AsUniTask();
+        await SendCurrentPlayerListIntl(token).AsUniTask();
     }
 
-    UniTask ILayoutHostedService.StopAsync(CancellationToken token)
+    async UniTask ILayoutHostedService.StopAsync(CancellationToken token)
     {
-        return UniTask.CompletedTask;
+        await UpdateReplicatedServerState(ServerStateType.Loading, null);
     }
 
-    internal async Task UpdateReplicatedServerState(ServerStateType type, string? description)
+    internal async Task UpdateReplicatedServerState(ServerStateType type, string? description, bool send = true)
     {
-        ReplicatedServerState state = new ReplicatedServerState(type, description, DateTimeOffset.UtcNow);
+        ReplicatedServerState state = new ReplicatedServerState(type, description, DateTimeOffset.UtcNow, Provider.maxPlayers);
         _replicatedServerStateWarfareOnly = state;
+        if (!send)
+            return;
+
         try
         {
             await SendServerStateUpdated(state).IgnoreNoConnections();
@@ -125,7 +152,7 @@ public class RemotePlayerListService :
         foreach (WarfarePlayer player in list)
         {
             entries[index] = new ReplicatedPlayerListEntry(player.Steam64.m_SteamID, player.Names.PlayerName,
-                player.Names.CharacterName, player.Names.NickName, discordIds[index]);
+                player.Names.CharacterName, player.Names.NickName, discordIds[index], player.Team.Faction.PrimaryKey, player.IsOnDuty);
 
             ++index;
         }
@@ -217,7 +244,7 @@ public class RemotePlayerListService :
         WarfarePlayer player = e.Player;
         ulong discordId = await _userDataService!.GetDiscordIdAsync(player.Steam64.m_SteamID, token).ConfigureAwait(false);
         await SendPlayerConnected(
-            new ReplicatedPlayerListEntry(player.Steam64.m_SteamID, player.Names.PlayerName, player.Names.CharacterName, player.Names.NickName, discordId)
+            new ReplicatedPlayerListEntry(player.Steam64.m_SteamID, player.Names.PlayerName, player.Names.CharacterName, player.Names.NickName, discordId, e.Player.Team.Faction.PrimaryKey, e.Player.IsOnDuty)
         ).IgnoreNoConnections();
     }
     
@@ -227,7 +254,7 @@ public class RemotePlayerListService :
         WarfarePlayer player = e.Player;
         ulong discordId = await _userDataService!.GetDiscordIdAsync(player.Steam64.m_SteamID, token).ConfigureAwait(false);
         await SendPlayerDisconnected(
-            new ReplicatedPlayerListEntry(player.Steam64.m_SteamID, player.Names.PlayerName, player.Names.CharacterName, player.Names.NickName, discordId)
+            new ReplicatedPlayerListEntry(player.Steam64.m_SteamID, player.Names.PlayerName, player.Names.CharacterName, player.Names.NickName, discordId, e.Player.Team.Faction.PrimaryKey, e.Player.IsOnDuty)
         ).IgnoreNoConnections();
     }
 
@@ -247,13 +274,13 @@ public class RemotePlayerListService :
     }
 }
 
-[RpcSerializable(8 + 8 + SerializationHelper.MinimumStringSize * 3, isFixedSize: false)]
-public record struct ReplicatedPlayerListEntry(ulong Steam64, string PlayerName, string CharacterName, string NickName, ulong DiscordId) : IRpcSerializable
+[RpcSerializable(8 + 8 + 4 + 1 + SerializationHelper.MinimumStringSize * 3, isFixedSize: false)]
+public record struct ReplicatedPlayerListEntry(ulong Steam64, string PlayerName, string CharacterName, string NickName, ulong DiscordId, uint Faction, bool IsOnDuty) : IRpcSerializable
 {
     /// <inheritdoc />
     public int GetSize(IRpcSerializer serializer)
     {
-        return 8 + 8 + serializer.GetSize(PlayerName) + serializer.GetSize(CharacterName) + serializer.GetSize(NickName);
+        return 8 + 8 + 4 + 1 + serializer.GetSize(PlayerName) + serializer.GetSize(CharacterName) + serializer.GetSize(NickName);
     }
 
     /// <inheritdoc />
@@ -265,6 +292,8 @@ public record struct ReplicatedPlayerListEntry(ulong Steam64, string PlayerName,
         index += serializer.WriteObject(CharacterName, writeTo[index..]);
         index += serializer.WriteObject(NickName, writeTo[index..]);
         index += serializer.WriteObject(DiscordId, writeTo[index..]);
+        index += serializer.WriteObject(Faction, writeTo[index..]);
+        index += serializer.WriteObject(IsOnDuty, writeTo[index..]);
         return index;
     }
 
@@ -288,17 +317,23 @@ public record struct ReplicatedPlayerListEntry(ulong Steam64, string PlayerName,
         DiscordId = serializer.ReadObject<ulong>(readFrom[index..], out bytesRead);
         index += bytesRead;
 
+        Faction = serializer.ReadObject<uint>(readFrom[index..], out bytesRead);
+        index += bytesRead;
+
+        IsOnDuty = serializer.ReadObject<bool>(readFrom[index..], out bytesRead);
+        index += bytesRead;
+
         return index;
     }
 }
 
-[RpcSerializable(1 + SerializationHelper.MinimumStringSize * 2, isFixedSize: false)]
-public record struct ReplicatedServerState(ServerStateType Type, string? Description, DateTimeOffset StartTime) : IRpcSerializable
+[RpcSerializable(1 + 1 + SerializationHelper.MinimumStringSize * 2, isFixedSize: false)]
+public record struct ReplicatedServerState(ServerStateType Type, string? Description, DateTimeOffset StartTime, byte MaxPlayers) : IRpcSerializable
 {
     /// <inheritdoc />
     public int GetSize(IRpcSerializer serializer)
     {
-        return 1 + serializer.GetSize(Description) + serializer.GetSize(StartTime);
+        return 1 + 1 + serializer.GetSize(Description) + serializer.GetSize(StartTime);
     }
 
     /// <inheritdoc />
@@ -308,6 +343,7 @@ public record struct ReplicatedServerState(ServerStateType Type, string? Descrip
         index += serializer.WriteObject(Type, writeTo);
         index += serializer.WriteObject(Description, writeTo[index..]);
         index += serializer.WriteObject(StartTime, writeTo[index..]);
+        index += serializer.WriteObject(MaxPlayers, writeTo[index..]);
         return index;
     }
 
@@ -325,6 +361,9 @@ public record struct ReplicatedServerState(ServerStateType Type, string? Descrip
         StartTime = serializer.ReadObject<DateTimeOffset>(readFrom[index..], out bytesRead);
         index += bytesRead;
 
+        MaxPlayers = serializer.ReadObject<byte>(readFrom[index..], out bytesRead);
+        index += bytesRead;
+
         return index;
     }
 }
@@ -334,7 +373,5 @@ public enum ServerStateType : byte
     Unknown,
     Shutdown,
     Loading,
-    Active,
-    PendingShutdownTime,
-    PendingShutdownAfterGame
+    Active
 }

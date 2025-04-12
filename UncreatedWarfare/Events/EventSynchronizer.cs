@@ -22,6 +22,9 @@ public class EventSynchronizer : IDisposable
     private readonly PlayerDictionary<SynchronizationGroup> _playerGroups;
     private readonly List<SynchronizationEntry> _globalPlayerEntries;
 
+    private readonly List<SynchronizationEntry> _toContinueBuffer = new List<SynchronizationEntry>(2);
+    private readonly List<ulong> _toRemoveBuffer = new List<ulong>(4);
+
     private int _timeoutCheckIndex;
     private bool _hasUpdatedHandler;
 
@@ -59,39 +62,45 @@ public class EventSynchronizer : IDisposable
     private void OnUpdate()
     {
         DateTime now = DateTime.UtcNow;
+        _toContinueBuffer.Clear();
         if (_playerGroups.Count > 0)
         {
             ++_timeoutCheckIndex;
             if (_timeoutCheckIndex >= _playerGroups.Count)
             {
-                _globalGroup.CheckForTimeouts(_logger, now);
+                _globalGroup.CheckForTimeouts(_logger, now, _toContinueBuffer);
                 _timeoutCheckIndex = 0;
             }
             else
             {
-                _playerGroups.Values.ElementAt(_timeoutCheckIndex).CheckForTimeouts(_logger, now);
+                _playerGroups.Values.ElementAt(_timeoutCheckIndex).CheckForTimeouts(_logger, now, _toContinueBuffer);
             }
-
-            return;
         }
-
-        ++_timeoutCheckIndex;
-        if (_timeoutCheckIndex > 10)
+        else
         {
-            _globalGroup.CheckForTimeouts(_logger, now);
-            _timeoutCheckIndex = 0;
+            ++_timeoutCheckIndex;
+            if (_timeoutCheckIndex > 10)
+            {
+                _globalGroup.CheckForTimeouts(_logger, now, _toContinueBuffer);
+                _timeoutCheckIndex = 0;
+            }
         }
+
+        Continue();
     }
 
     internal void CheckForAllTimeouts()
     {
+        _toContinueBuffer.Clear();
         DateTime now = DateTime.UtcNow;
         foreach (SynchronizationGroup group in _playerGroups.Values)
         {
-            group.CheckForTimeouts(_logger, now);
+            group.CheckForTimeouts(_logger, now, _toContinueBuffer);
         }
 
-        _globalGroup.CheckForTimeouts(_logger, now);
+        _globalGroup.CheckForTimeouts(_logger, now, _toContinueBuffer);
+
+        Continue();
     }
 
     /*
@@ -149,12 +158,15 @@ public class EventSynchronizer : IDisposable
 
         DateTime now = DateTime.UtcNow;
 
-        _globalGroup.EnterEvent(entry, now, _logger);
+        _toContinueBuffer.Clear();
+        _globalGroup.EnterEvent(entry, now, _logger, _toContinueBuffer);
 
         foreach (SynchronizationGroup group in _playerGroups.Values)
         {
-            group.EnterEvent(entry, now, _logger);
+            group.EnterEvent(entry, now, _logger, _toContinueBuffer);
         }
+
+        Continue();
 
         _globalPlayerEntries.Add(entry);
 
@@ -171,7 +183,10 @@ public class EventSynchronizer : IDisposable
 
         SynchronizationGroup group = GetOrCreatePlayerGroup(player, now);
 
-        group.EnterEvent(entry, now, _logger);
+        _toContinueBuffer.Clear();
+        group.EnterEvent(entry, now, _logger, _toContinueBuffer);
+
+        Continue();
 
         return entry.WaitEvent?.Task ?? UniTask.FromResult<SynchronizationEntry?>(entry);
     }
@@ -184,9 +199,10 @@ public class EventSynchronizer : IDisposable
         }
 
         group = new SynchronizationGroup(player);
+        _toContinueBuffer.Clear();
         foreach (SynchronizationEntry entry in _globalPlayerEntries)
         {
-            group.EnterEvent(entry, now, _logger);
+            group.EnterEvent(entry, now, _logger, _toContinueBuffer);
         }
 
         _playerGroups.Add(player, group);
@@ -215,32 +231,28 @@ public class EventSynchronizer : IDisposable
             return;
 
         object args = entry.Model;
+
+        _toContinueBuffer.Clear();
+
         switch (modelInfo.SynchronizationContext)
         {
             case EventSynchronizationContext.Global:
 
-                _globalGroup.ExitEvent(args, _logger);
+                _globalGroup.ExitEvent(args, _logger, _toContinueBuffer);
 
-                List<ulong>? playersToRemove = null;
-
+                _toRemoveBuffer.Clear();
                 foreach (SynchronizationGroup playerGroup in _playerGroups.Values)
                 {
-                    if (!playerGroup.ExitEvent(args, _logger))
+                    if (!playerGroup.ExitEvent(args, _logger, _toContinueBuffer))
                         continue;
 
-                    playersToRemove ??= ListPool<ulong>.claim();
-                    playersToRemove.Add(playerGroup.Player!.Steam64.m_SteamID);
+                    _toRemoveBuffer.Add(playerGroup.Player!.Steam64.m_SteamID);
                 }
 
                 // remove empty groups from players that are offline
-                if (playersToRemove != null)
+                foreach (ulong s64 in _toRemoveBuffer)
                 {
-                    foreach (ulong s64 in playersToRemove)
-                    {
-                        _playerGroups.Remove(s64);
-                    }
-
-                    ListPool<ulong>.release(playersToRemove);
+                    _playerGroups.Remove(s64);
                 }
 
                 _globalPlayerEntries.Remove(entry);
@@ -257,13 +269,25 @@ public class EventSynchronizer : IDisposable
                     break;
                 }
 
-                if (grp.ExitEvent(args, _logger))
+                if (grp.ExitEvent(args, _logger, _toContinueBuffer))
                 {
                     _playerGroups.Remove(player);
                 }
 
                 break;
         }
+
+        Continue();
+    }
+
+    private void Continue()
+    {
+        foreach (SynchronizationEntry entry in _toContinueBuffer)
+        {
+            entry.WaitEvent?.TrySetResult(entry);
+        }
+
+        _toContinueBuffer.Clear();
     }
 }
 
@@ -279,7 +303,7 @@ internal class SynchronizationGroup
         Player = player;
     }
 
-    public void EnterEvent(SynchronizationEntry entry, DateTime now, ILogger logger)
+    public void EnterEvent(SynchronizationEntry entry, DateTime now, ILogger logger, List<SynchronizationEntry> continueBuffer)
     {
         string[]? tags = entry.ModelInfo.SynchronizedModelTags;
         
@@ -292,7 +316,7 @@ internal class SynchronizationGroup
                     Tags.Add(tag, bkt = new SynchronizationBucket($"Tag: \"{tag}\" for {Player?.ToString() ?? "Global"}"));
                 }
 
-                bkt.EnterEvent(entry, now, logger);
+                bkt.EnterEvent(entry, now, logger, continueBuffer);
             }
         }
         else
@@ -302,18 +326,18 @@ internal class SynchronizationGroup
                 Types.Add(entry.ModelType, bkt = new SynchronizationBucket($"Type: \"{entry.ModelType.Name}\" for {Player?.ToString() ?? "Global"}"));
             }
 
-            bkt.EnterEvent(entry, now, logger);
+            bkt.EnterEvent(entry, now, logger, continueBuffer);
         }
     }
 
     /// <returns>If the group is empty and can be removed.</returns>
-    public bool ExitEvent(object args, ILogger logger)
+    public bool ExitEvent(object args, ILogger logger, List<SynchronizationEntry> continueBuffer)
     {
         bool canBeRemoved = Player is { IsDisconnected: true };
         bool any = false;
         foreach (SynchronizationBucket bucket in Tags.Values)
         {
-            any |= bucket.ExitEvent(args, logger);
+            any |= bucket.ExitEvent(args, logger, continueBuffer);
             if (canBeRemoved && bucket.Current != null)
                 canBeRemoved = false;
         }
@@ -325,18 +349,18 @@ internal class SynchronizationGroup
         {
             if (canBeRemoved && bucket.Current != null)
                 canBeRemoved = false;
-            if (!any && bucket.ExitEvent(args, logger))
+            if (!any && bucket.ExitEvent(args, logger, continueBuffer))
                 break;
         }
 
         return canBeRemoved;
     }
 
-    public void CheckForTimeouts(ILogger logger, DateTime now)
+    public void CheckForTimeouts(ILogger logger, DateTime now, List<SynchronizationEntry> continueBuffer)
     {
         foreach (SynchronizationBucket bucket in Tags.Values)
         {
-            bucket.CheckForTimeout(logger, now, null);
+            bucket.CheckForTimeout(logger, now, null, continueBuffer);
         }
     }
 }
@@ -354,7 +378,7 @@ internal class SynchronizationBucket
 
     private static readonly TimeSpan MaxTimeout = TimeSpan.FromSeconds(15);
 
-    public void CheckForTimeout(ILogger logger, DateTime now, SynchronizationEntry? newEntry)
+    public void CheckForTimeout(ILogger logger, DateTime now, SynchronizationEntry? newEntry, List<SynchronizationEntry> continueBuffer)
     {
         do
         {
@@ -380,16 +404,16 @@ internal class SynchronizationBucket
             logger.LogTrace($"Exiting dequeued event {Current?.EventId}, dequeued {nextEntry.EventId} to current in {_context}.");
             --nextEntry.WaitCount;
             Current = nextEntry;
-            if (nextEntry.WaitCount <= 0)
+            if (newEntry is { WaitCount: <= 0, WaitEvent: not null })
             {
-                nextEntry.WaitEvent?.TrySetResult(nextEntry);
+                continueBuffer.Add(newEntry);
             }
 
         } while (true);
     }
 
 
-    public void EnterEvent(SynchronizationEntry entry, DateTime now, ILogger logger)
+    public void EnterEvent(SynchronizationEntry entry, DateTime now, ILogger logger, List<SynchronizationEntry> continueBuffer)
     {
         if (Current == null)
         {
@@ -398,7 +422,7 @@ internal class SynchronizationBucket
             return;
         }
 
-        CheckForTimeout(logger, now, entry);
+        CheckForTimeout(logger, now, entry, continueBuffer);
         if (Current == entry)
             return;
 
@@ -408,7 +432,7 @@ internal class SynchronizationBucket
         Queue.Enqueue(entry);
     }
 
-    public bool ExitEvent(object args, ILogger logger)
+    public bool ExitEvent(object args, ILogger logger, List<SynchronizationEntry> continueBuffer)
     {
         SynchronizationEntry? entry = Current;
         if (entry?.Model != args)
@@ -424,9 +448,11 @@ internal class SynchronizationBucket
         --newEntry.WaitCount;
         logger.LogTrace($"Exiting dequeued event {Current?.EventId}, dequeued {newEntry.EventId} to current in {_context}.");
         Current = newEntry;
-        if (newEntry.WaitCount <= 0)
+        if (newEntry is { WaitCount: <= 0, WaitEvent: not null })
         {
-            newEntry.WaitEvent?.TrySetResult(newEntry);
+            // note: this used to directly call TrySetResult but since that runs the continuation instantly
+            // it would result in a collection modified exception when looping through all players
+            continueBuffer.Add(newEntry);
         }
 
         return true;
