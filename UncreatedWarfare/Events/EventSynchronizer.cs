@@ -86,7 +86,7 @@ public class EventSynchronizer : IDisposable
             }
         }
 
-        Continue();
+        RunContinuations();
     }
 
     internal void CheckForAllTimeouts()
@@ -100,7 +100,7 @@ public class EventSynchronizer : IDisposable
 
         _globalGroup.CheckForTimeouts(_logger, now, _toContinueBuffer);
 
-        Continue();
+        RunContinuations();
     }
 
     /*
@@ -166,7 +166,7 @@ public class EventSynchronizer : IDisposable
             group.EnterEvent(entry, now, _logger, _toContinueBuffer);
         }
 
-        Continue();
+        RunContinuations();
 
         _globalPlayerEntries.Add(entry);
 
@@ -186,7 +186,7 @@ public class EventSynchronizer : IDisposable
         _toContinueBuffer.Clear();
         group.EnterEvent(entry, now, _logger, _toContinueBuffer);
 
-        Continue();
+        RunContinuations();
 
         return entry.WaitEvent?.Task ?? UniTask.FromResult<SynchronizationEntry?>(entry);
     }
@@ -277,17 +277,34 @@ public class EventSynchronizer : IDisposable
                 break;
         }
 
-        Continue();
+        RunContinuations();
     }
 
-    private void Continue()
+    private void RunContinuations()
     {
-        foreach (SynchronizationEntry entry in _toContinueBuffer)
+        switch (_toContinueBuffer.Count)
         {
-            entry.WaitEvent?.TrySetResult(entry);
-        }
+            case 0:
+                break;
 
-        _toContinueBuffer.Clear();
+            case 1:
+                // one is most common, no need to make a copy
+                SynchronizationEntry buffer = _toContinueBuffer[0];
+                _toContinueBuffer.Clear();
+                buffer.WaitEvent?.TrySetResult(buffer);
+                break;
+
+            case 2:
+                // avoid collection modified exception
+                SynchronizationEntry[] copy = _toContinueBuffer.ToArray();
+                _toContinueBuffer.Clear();
+                foreach (SynchronizationEntry entry in copy)
+                {
+                    entry.WaitEvent?.TrySetResult(entry);
+                }
+
+                break;
+        }
     }
 }
 

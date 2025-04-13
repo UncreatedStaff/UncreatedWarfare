@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Renci.SshNet;
 using System;
 using System.IO;
+using System.Net.Sockets;
 
 namespace Uncreated.Warfare.Database;
 
@@ -52,11 +53,17 @@ public class SshTunnelService : IDisposable
         _sshClient = new SshClient(connectionInfo);
         await _sshClient.ConnectAsync(cancellationToken);
 
-        ForwardedPortLocal fwd = new ForwardedPortLocal("127.0.0.1", 3306, "127.0.0.1", 3306);
-        _sshClient.AddForwardedPort(fwd);
-        fwd.Start();
-
-        _logger.LogInformation("Forwarded port 3306");
+        try
+        {
+            ForwardedPortLocal fwd = new ForwardedPortLocal("127.0.0.1", 3306, "127.0.0.1", 3306);
+            _sshClient.AddForwardedPort(fwd);
+            fwd.Start();
+            _logger.LogInformation("Forwarded port 3306");
+        }
+        catch (SocketException)
+        {
+            _logger.LogWarning("SSH port already forwarded.");
+        }
     }
 
     public void Dispose()

@@ -77,7 +77,7 @@ public class RemotePlayerListService :
 
     public async UniTask StartAsync(CancellationToken token)
     {
-        await UpdateReplicatedServerState(ServerStateType.Loading, null);
+        await UpdateReplicatedServerState(ServerStateType.Loading, Provider.serverName);
     }
 
     async UniTask ILayoutHostedService.StartAsync(CancellationToken token)
@@ -89,7 +89,7 @@ public class RemotePlayerListService :
         }
         else if (_replicatedServerStateWarfareOnly.Type != ServerStateType.Shutdown)
         {
-            await UpdateReplicatedServerState(ServerStateType.Loading, null, false);
+            await UpdateReplicatedServerState(ServerStateType.Loading, Provider.serverName, false);
         }
 
         // ILayoutHostedService already has the player connection lock, need to separate the unlocked version of the function
