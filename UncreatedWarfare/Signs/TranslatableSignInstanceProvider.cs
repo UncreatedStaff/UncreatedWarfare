@@ -11,7 +11,7 @@ namespace Uncreated.Warfare.Signs;
 /// <summary>
 /// Handles direct translations in signs.
 /// </summary>
-[SignPrefix("sign")]
+[SignPrefix("sign_")]
 internal class TranslatableSignInstanceProvider : ISignInstanceProvider
 {
     private readonly ITranslationService _translationService;
