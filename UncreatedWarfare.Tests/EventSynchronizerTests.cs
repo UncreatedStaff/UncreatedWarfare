@@ -7,6 +7,7 @@ using System;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
+using Uncreated.Warfare.Events.Models.Buildables;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Tests.Utility;
@@ -224,6 +225,66 @@ internal class EventSynchronizerTests
     {
 
     }
+
+    private UniTask<SynchronizationEntry> EnterEvent<TEventArgs>(TEventArgs args, int eventId = 0) where TEventArgs : class
+    {
+        lock (_eventSynchronizer)
+        {
+            SwitchToMainThread();
+            return _eventSynchronizer.EnterEvent(args, eventId, typeof(TEventArgs).GetAttributeSafe<EventModelAttribute>());
+        }
+    }
+    private void ExitEvent(SynchronizationEntry entry)
+    {
+        lock (_eventSynchronizer)
+        {
+            SwitchToMainThread();
+            _eventSynchronizer.ExitEvent(entry);
+        }
+    }
+
+    [Test]
+    public async Task ReplicateTimeoutError2()
+    {
+        /*
+         *  This replicates another issue that was causing massive lag on release.
+         */
+        WarfarePlayer player = null;
+        for (uint i = 1; i <= 55; ++i)
+        {
+            WarfarePlayer pl = await TestHelpers.AddPlayer(i, _serviceProvider);
+            PerPlayerSyncEventModel perPlayerArgs = new PerPlayerSyncEventModel { Player = pl };
+            _eventSynchronizer.ExitEvent(await EnterEvent(perPlayerArgs));
+            player ??= pl;
+        }
+
+        PlaceBarricadeRequested args1 = new PlaceBarricadeRequested();
+
+        SynchronizationEntry entry1 = await EnterEvent(args1, 403618);
+
+        EquipUseableRequested args2 = new EquipUseableRequested { Player = player! };
+
+        UniTask<SynchronizationEntry> entry2Task = EnterEvent(args2, 403628);
+
+        _ = Task.Delay(1000).ContinueWith(_ =>
+        {
+            ExitEvent(entry1);
+        });
+
+        SynchronizationEntry entry2 = await entry2Task;
+
+        ExitEvent(entry2);
+
+        _eventSynchronizer.CheckForAllTimeouts();
+
+        Assert.Pass();
+    }
+
+    [EventModel(EventSynchronizationContext.Global, SynchronizedModelTags = ["modify_inventory", "modify_world"])]
+    public class PlaceBarricadeRequested : CancellableEvent;
+
+    [EventModel(EventSynchronizationContext.PerPlayer, SynchronizedModelTags = ["modify_inventory", "modify_useable"])]
+    public class EquipUseableRequested : CancellablePlayerEvent;
 }
 
 [EventModel(EventSynchronizationContext.Global, SynchronizedModelTags = [ "TestGlobalBlocksExistingPlayer" ])]
