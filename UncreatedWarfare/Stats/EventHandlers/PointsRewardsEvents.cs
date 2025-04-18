@@ -15,6 +15,8 @@ using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Events.Models.Vehicles;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.FOBs.SupplyCrates;
+using Uncreated.Warfare.Layouts;
+using Uncreated.Warfare.Layouts.Phases;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Translations;
@@ -255,9 +257,14 @@ internal class PointsRewardsEvents :
         await Task.WhenAll(tasks);
     }
 
+    [EventListener(RequireActiveLayout = true)]
     public async UniTask HandleEventAsync(FobDeregistered e, IServiceProvider serviceProvider, CancellationToken token = default)
     {
         if (e.Fob is not BunkerFob buildableFob)
+            return;
+
+        Layout? layout = serviceProvider.GetService<Layout>();
+        if (layout == null || layout.ActivePhase is not ActionPhase)
             return;
 
         IPlayerService? playerService = serviceProvider.GetService<IPlayerService>();
@@ -272,11 +279,19 @@ internal class PointsRewardsEvents :
         Translation translation;
         if (instigator.Team == buildableFob.Team)
         {
+            if (buildableFob.DamageTracker.GetDamageContributionPercentage(instigator.Steam64) < 0.50f)
+            {
+                return;
+            }
             @event = _points.GetEvent("FriendlyFobDestroyed");
             translation = _translations.XPToastFriendlyFOBDestroyed;
         }
         else
         {
+            if (buildableFob.DamageTracker.GetDamageContributionPercentage(instigator.Steam64) < 0.10f)
+            {
+                return;
+            }
             @event = _points.GetEvent("EnemyFobDestroyed");
             translation = _translations.XPToastFOBDestroyed;
         }

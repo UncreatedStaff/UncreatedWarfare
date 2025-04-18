@@ -114,22 +114,41 @@ public class UnityLoopTicker<TState> : ILoopTicker<TState>
     private IEnumerator Coroutine(TimeSpan initialDelay)
     {
         if (_isDisposed)
+        {
+            _coroutine = null;
             yield break;
+        }
 
         if (initialDelay > TimeSpan.Zero)
         {
             yield return new WaitForSecondsRealtime((float)initialDelay.TotalSeconds);
+            if (_isDisposed)
+            {
+                _coroutine = null;
+                yield break;
+            }
+
             InvokeTimer();
         }
 
         if (PeriodicDelay <= TimeSpan.Zero)
+        {
+            _coroutine = null;
             yield break;
+        }
 
         while (!_isDisposed)
         {
             yield return new WaitForSecondsRealtime((float)PeriodicDelay.TotalSeconds);
+            if (_isDisposed)
+            {
+                _coroutine = null;
+                yield break;
+            }
             InvokeTimer();
         }
+
+        _coroutine = null;
     }
 
     ~UnityLoopTicker()

@@ -20,6 +20,8 @@ public class AccountLinkingService
     private readonly SemaphoreSlim _semaphore;
     private readonly ILogger<AccountLinkingService> _logger;
 
+    public event Action<CSteamID>? OnLinkUpdated;
+
     public AccountLinkingService(IUserDataService userDataService, IUserDataDbContext dbContext, ILogger<AccountLinkingService> logger)
     {
         _userDataService = userDataService;
@@ -39,9 +41,6 @@ public class AccountLinkingService
         if (steamId.GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
             throw new ArgumentException("Invalid Steam64 ID.", nameof(steamId));
 
-        if (discordId == 0)
-            throw new ArgumentException("Invalid Discord ID.", nameof(discordId));
-
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
@@ -50,7 +49,7 @@ public class AccountLinkingService
             // remove pending links for either accounts, also expired links while we're at it
             DateTime now = DateTime.UtcNow.AddSeconds(30d);
             await _dbContext.PendingLinks
-                .DeleteRangeAsync((DbContext)_dbContext, x => x.Steam64 == s64 || x.DiscordId == discordId || x.ExpiryTimestamp < now, cancellationToken: token)
+                .DeleteRangeAsync((DbContext)_dbContext, x => x.Steam64 == s64 || discordId != 0 && x.DiscordId == discordId || x.ExpiryTimestamp < now, cancellationToken: token)
                 .ConfigureAwait(false);
 
             await LinkAccountsIntl(s64, discordId, token).ConfigureAwait(false);
@@ -221,8 +220,8 @@ public class AccountLinkingService
         await RemoveExpiredAsync(token).ConfigureAwait(false);
 
         SteamDiscordPendingLink? existing = await (s64 != 0
-            ? _dbContext.PendingLinks.FirstOrDefaultAsync(x => x.ExpiryTimestamp >= now && !x.DiscordId.HasValue && x.Token == validToken, token)
-            : _dbContext.PendingLinks.FirstOrDefaultAsync(x => x.ExpiryTimestamp >= now && !x.Steam64.HasValue && x.Token == validToken, token));
+            ? _dbContext.PendingLinks.FirstOrDefaultAsync(x => x.ExpiryTimestamp >= now && x.DiscordId.HasValue && x.Token == validToken, token)
+            : _dbContext.PendingLinks.FirstOrDefaultAsync(x => x.ExpiryTimestamp >= now && x.Steam64.HasValue && x.Token == validToken, token));
 
         if (existing == null)
             return false;
@@ -261,15 +260,21 @@ public class AccountLinkingService
             .ConfigureAwait(false);
 
         // remove other Steam IDs linked to a discord ID
-        int numUpdated = await _dbContext.UserData.BatchUpdate((DbContext)_dbContext)
+        int numUpdated = discordId == 0 ? 0 : await _dbContext.UserData.BatchUpdate((DbContext)_dbContext)
             .Set(x => x.DiscordId, _ => 0ul)
             .Where(x => x.DiscordId == discordId && x.Steam64 != steam64)
             .ExecuteAsync(cancellationToken: token)
             .ConfigureAwait(false);
 
+        InvokeLinkUpdated(steam64);
+
         if (oldDiscordId != 0)
         {
             _logger.LogInformation("Relinked Discord account {0} with Steam account {1} after unlinking {2} other Steam account(s). Old discord ID was {3}.", discordId, steam64, numUpdated, oldDiscordId);
+        }
+        else if (discordId == 0)
+        {
+            _logger.LogInformation("Unlinked Steam account {0}.", steam64);
         }
         else
         {
@@ -297,20 +302,20 @@ public class AccountLinkingService
             return GuildStatusResult.NotLinked;
 
         ulong discordId = await _userDataService.GetDiscordIdAsync(steam64.m_SteamID, token).ConfigureAwait(false);
-        return await IsInGuild(discordId, token).ConfigureAwait(false);
+        return await IsInGuild(discordId).ConfigureAwait(false);
     }
 
     /// <summary>
     /// Check if a player is currently in the Discord server by their Discord user ID.
     /// </summary>
-    public async Task<GuildStatusResult> IsInGuild(ulong discordId, CancellationToken token = default)
+    public async Task<GuildStatusResult> IsInGuild(ulong discordId)
     {
         if (discordId == 0)
             return GuildStatusResult.NotLinked;
 
         try
         {
-            GuildStatusResult result = await SendIsInGuild(discordId, token);
+            GuildStatusResult result = await SendIsInGuild(discordId);
             return result;
         }
         catch
@@ -323,10 +328,47 @@ public class AccountLinkingService
     /// Check if a player is currently in the Discord server by their Discord user ID.
     /// </summary>
     [RpcSend]
-    protected virtual RpcTask<GuildStatusResult> SendIsInGuild(ulong discordId, CancellationToken token = default)
+    protected virtual RpcTask<GuildStatusResult> SendIsInGuild(ulong discordId)
     {
         return RpcTask<GuildStatusResult>.NotImplemented;
     }
+
+    private void InvokeLinkUpdated(ulong steam64)
+    {
+        ReceiveLinkUpdated(steam64);
+        try
+        {
+            SendLinkUpdated(steam64);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error invoking SendLinkUpdated.");
+        }
+    }
+
+    /// <summary>
+    /// Invoke the 'link updated' method on the remote side.
+    /// </summary>
+    [RpcSend(nameof(ReceiveLinkUpdated)), RpcFireAndForget]
+    protected virtual void SendLinkUpdated(ulong steam64)
+    {
+        _ = RpcTask.NotImplemented;
+    }
+
+    [RpcReceive]
+    private void ReceiveLinkUpdated(ulong steam64)
+    {
+        try
+        {
+            OnLinkUpdated?.Invoke(new CSteamID(steam64));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error on OnLinkUpdated.");
+        }
+    }
+
+
 
 
     private static readonly char[] Dashes = ['-', '‐', '‑', '‒', '–', '—', '―', '⸺', '⸻', '﹘'];

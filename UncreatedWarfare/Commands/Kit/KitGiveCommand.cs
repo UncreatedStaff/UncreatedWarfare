@@ -39,7 +39,7 @@ internal sealed class KitGiveCommand : IExecutableCommand
 
         WarfarePlayer? player = null;
 
-        if (Context.HasArgument(kitArg.OptionalArgumentStart))
+        if (kitArg.OptionalArgumentStart > 0 && Context.HasArgument(kitArg.OptionalArgumentStart))
         {
             (_, player) = await Context.TryGetPlayer(kitArg.OptionalArgumentStart).ConfigureAwait(false);
             if (player == null)

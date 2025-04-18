@@ -465,6 +465,8 @@ public class PlayerInjureComponent : MonoBehaviour,
             
             yield return new WaitForSeconds(MarkerUpdateFrequency);
         }
+
+        _markerCoroutine = null;
     }
 
     // specially invoked after the AidPlayerRequested event to setup

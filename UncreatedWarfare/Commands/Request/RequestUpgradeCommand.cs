@@ -1,10 +1,8 @@
-using DanielWillett.ModularRpcs.Exceptions;
-using Uncreated.Warfare.Discord;
+using Microsoft.Extensions.Configuration;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Loadouts;
 using Uncreated.Warfare.Kits.Requests;
-using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Signs;
 using Uncreated.Warfare.Translations;
 
@@ -14,9 +12,8 @@ namespace Uncreated.Warfare.Commands;
 internal sealed class RequestUpgradeCommand : IExecutableCommand
 {
     private readonly LoadoutService _loadoutService;
+    private readonly string _domain;
     private readonly SignInstancer _signInstancer;
-    private readonly IUserDataService _userData;
-    private readonly DiscordUserService _discordUserService;
     private readonly RequestTranslations _requestTranslations;
     private readonly KitCommandTranslations _kitTranslations;
 
@@ -27,14 +24,12 @@ internal sealed class RequestUpgradeCommand : IExecutableCommand
         TranslationInjection<RequestTranslations> requestTranslations,
         TranslationInjection<KitCommandTranslations> kitTranslations,
         SignInstancer signInstancer,
-        IUserDataService userData,
-        DiscordUserService discordUserService,
-        LoadoutService loadoutService)
+        LoadoutService loadoutService,
+        IConfiguration systemConfig)
     {
         _signInstancer = signInstancer;
-        _userData = userData;
-        _discordUserService = discordUserService;
         _loadoutService = loadoutService;
+        _domain = systemConfig["domain"] ?? "https://uncreated.network";
         _requestTranslations = requestTranslations.Value;
         _kitTranslations = kitTranslations.Value;
     }
@@ -55,34 +50,7 @@ internal sealed class RequestUpgradeCommand : IExecutableCommand
             throw Context.Reply(_requestTranslations.RequestNoTarget);
         }
 
-        ulong discordId = await _userData.GetDiscordIdAsync(Context.CallerId.m_SteamID, token).ConfigureAwait(false);
-        if (discordId == 0ul)
-        {
-            Context.Reply(_requestTranslations.DiscordNotLinked1);
-            Context.Reply(_requestTranslations.DiscordNotLinked2, Context.Player);
-            return;
-        }
-
         int loadoutIndex = kitSign.LoadoutNumber;
-
-        bool inDiscordServer;
-        try
-        {
-            inDiscordServer = await _discordUserService.IsMemberOfGuild(discordId);
-        }
-        catch (RpcInvocationException ex)
-        {
-            Context.Logger.LogError(ex, "Error checking for member of guild.");
-            throw Context.SendUnknownError();
-        }
-        catch (RpcException ex)
-        {
-            Context.Logger.LogWarning(ex.InnerException, "Error checking for member of guild.");
-            throw Context.Reply(_requestTranslations.RequestUpgradeNotConnected);
-        }
-
-        if (!inDiscordServer)
-            throw Context.Reply(_requestTranslations.RequestUpgradeNotInDiscordServer);
 
         Kit? kit = await _loadoutService.GetLoadoutFromNumber(Context.CallerId, loadoutIndex, KitInclude.Base, token)
             .ConfigureAwait(false);
@@ -101,37 +69,7 @@ internal sealed class RequestUpgradeCommand : IExecutableCommand
             throw Context.Reply(_kitTranslations.DoesNotNeedUpgrade, kit);
         }
 
-        LoadoutService.OpenUpgradeTicketResult result;
-
-        try
-        {
-            result = await _loadoutService.TryOpenUpgradeTicket(
-                discordId,
-                Context.CallerId,
-                loadoutLetter,
-                kit.Class,
-                kit.GetDisplayName(null, true)
-            );
-        }
-        catch (RpcInvocationException ex)
-        {
-            Context.Logger.LogError(ex, "Error starting upgrade ticket.");
-            throw Context.SendUnknownError();
-        }
-        catch (RpcException)
-        {
-            throw Context.Reply(_requestTranslations.RequestUpgradeNotConnected);
-        }
-
-        switch (result)
-        {
-            case LoadoutService.OpenUpgradeTicketResult.AlreadyOpen:
-                throw Context.Reply(_requestTranslations.RequestUpgradeAlreadyOpen, kit);
-
-            case LoadoutService.OpenUpgradeTicketResult.TooManyTickets:
-                throw Context.Reply(_requestTranslations.RequestUpgradeTooManyTicketsOpen);
-        }
-
-        Context.Reply(_requestTranslations.TicketOpened, kit);
+        Context.ReplyUrl(_requestTranslations.RequestUpgradeMessage.Translate(Context.Player),
+            $"{_domain}/loadouts/{Context.CallerId.m_SteamID}/{LoadoutIdHelper.GetLoadoutLetter(loadoutLetter)}");
     }
 }

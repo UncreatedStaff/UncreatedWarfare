@@ -151,7 +151,6 @@ internal class EventSynchronizerTests
         _eventSynchronizer.ExitEvent(entry2);
 
         _eventSynchronizer.ExitEvent(entryPre);
-
     }
 
     [Test]

@@ -155,7 +155,7 @@ public class ColliderProximity : MonoBehaviour, ITrackingProximity<WarfarePlayer
             if (!player.Equals(_players[i]))
                 continue;
 
-            if (!_proximity.TestPoint(position) || _validationCheck != null && !_validationCheck(player))
+            if (!_proximity.TestPoint(in position) || _validationCheck != null && !_validationCheck(player))
             {
                 RemoveObject(i);
             }
@@ -163,7 +163,7 @@ public class ColliderProximity : MonoBehaviour, ITrackingProximity<WarfarePlayer
             return;
         }
 
-        if (!_proximity.TestPoint(position) || _validationCheck != null && !_validationCheck(player))
+        if (!_proximity.TestPoint(in position) || _validationCheck != null && !_validationCheck(player))
             return;
 
         AddObject(player);
@@ -215,12 +215,12 @@ public class ColliderProximity : MonoBehaviour, ITrackingProximity<WarfarePlayer
 
     public bool TestPoint(in Vector3 position)
     {
-        return _proximity.TestPoint(position);
+        return _proximity.TestPoint(in position);
     }
 
     public bool TestPoint(in Vector2 position)
     {
-        return _proximity.TestPoint(position);
+        return _proximity.TestPoint(in position);
     }
 
     public void Dispose()
@@ -274,6 +274,11 @@ public class ColliderProximity : MonoBehaviour, ITrackingProximity<WarfarePlayer
 
         Destroy(_collider);
         _collider = null!;
+    }
+    
+    private void OnDestroy()
+    {
+        DisposeIntl();
     }
 
     Bounds IShapeVolume.worldBounds => _proximity.worldBounds;

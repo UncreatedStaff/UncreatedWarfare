@@ -412,8 +412,8 @@ internal class SynchronizationBucket
             {
                 logger.LogTrace($"Queueing {newEntry?.EventId} after timeout, none to dequeue in {_context}.");
                 Current = newEntry;
-                if (newEntry != null && newEntry.CreateTime < now)
-                    newEntry.CreateTime = now;
+                if (newEntry != null)
+                    newEntry.TimeoutTime = now;
                 return;
             }
 
@@ -421,6 +421,7 @@ internal class SynchronizationBucket
             logger.LogTrace($"Exiting dequeued event {Current?.EventId}, dequeued {nextEntry.EventId} to current in {_context}.");
             --nextEntry.WaitCount;
             Current = nextEntry;
+            nextEntry.TimeoutTime = now;
             if (newEntry is { WaitCount: <= 0, WaitEvent: not null })
             {
                 continueBuffer.Add(newEntry);
@@ -436,6 +437,7 @@ internal class SynchronizationBucket
         {
             Current = entry;
             logger.LogTrace($"Entered current event {entry.EventId} in {_context}.");
+            entry.TimeoutTime = now;
             return;
         }
 
@@ -445,6 +447,7 @@ internal class SynchronizationBucket
 
         ++entry.WaitCount;
         entry.WaitEvent ??= new UniTaskCompletionSource<SynchronizationEntry?>();
+        entry.TimeoutTime = now;
         logger.LogTrace($"Enqueued event {entry.EventId} in {_context}.");
         Queue.Enqueue(entry);
     }
@@ -484,6 +487,7 @@ internal class SynchronizationEntry
     public readonly long EventId;
 
     public DateTime CreateTime;
+    public DateTime TimeoutTime;
     public int WaitCount;
     public UniTaskCompletionSource<SynchronizationEntry?>? WaitEvent;
 
@@ -494,5 +498,6 @@ internal class SynchronizationEntry
         ModelInfo = modelInfo;
         EventId = eventId;
         CreateTime = DateTime.UtcNow;
+        TimeoutTime = CreateTime;
     }
 }

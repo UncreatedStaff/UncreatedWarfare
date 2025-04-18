@@ -1,4 +1,6 @@
-﻿using System.Runtime.CompilerServices;
+using Microsoft.Extensions.Configuration;
+using System;
+using System.Runtime.CompilerServices;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Models.Users;
 using Uncreated.Warfare.Moderation.Discord;
@@ -15,6 +17,7 @@ internal sealed class LinkCommand : IExecutableCommand
         = new PermissionLeaf("commands.link.force", unturned: false, warfare: true);
     private readonly AccountLinkingService _linkingService;
     private readonly IUserDataService _userDataService;
+    private readonly string _domain;
     private readonly LinkCommandTranslations _translations;
 
     /// <inheritdoc />
@@ -23,10 +26,12 @@ internal sealed class LinkCommand : IExecutableCommand
     public LinkCommand(
         AccountLinkingService linkingService,
         TranslationInjection<LinkCommandTranslations> translations,
+        IConfiguration systemConfig,
         IUserDataService userDataService)
     {
         _linkingService = linkingService;
         _userDataService = userDataService;
+        _domain = systemConfig["domain"] ?? "https://uncreated.network";
         _translations = translations.Value;
     }
 
@@ -89,13 +94,12 @@ internal sealed class LinkCommand : IExecutableCommand
 
             Context.Reply(_translations.StartedLink, link.Token);
 
-            // todo allow copying from website maybe, not that it's that hard to just type out
-            //await UniTask.Delay(1000, cancellationToken: CancellationToken.None);
-            //
-            //if (!Context.Player.IsOnline)
-            //    return;
-            //
-            //Context.ReplyUrl(_translations.CopyTokenPopup.Translate(Context.Caller), "https://uncreated.network/copy-text?text=" + link.Token);
+            await UniTask.Delay(500, cancellationToken: CancellationToken.None);
+            
+            if (!Context.Player.IsOnline)
+                return;
+            
+            Context.ReplyUrl(_translations.CopyTokenPopup.Translate(link.Token, Context.Caller), _domain + "/copy-text?text=" + Uri.EscapeDataString($"/link token:{link.Token}"));
         }
     }
 }
