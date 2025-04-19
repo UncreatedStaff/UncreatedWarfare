@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Players;
-using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.List;
 
@@ -28,16 +27,13 @@ public class EventSynchronizer : IDisposable
     private int _timeoutCheckIndex;
     private bool _hasUpdatedHandler;
 
-    public EventSynchronizer(ILogger<EventSynchronizer> logger, IPlayerService playerService)
+    public TimeSpan MaxTimeout { get; init; } = TimeSpan.FromSeconds(15);
+
+    public EventSynchronizer(ILogger<EventSynchronizer> logger)
     {
-        _globalGroup = new SynchronizationGroup(null);
+        _globalGroup = new SynchronizationGroup(null, this);
         _playerGroups = new PlayerDictionary<SynchronizationGroup>(96);
         _globalPlayerEntries = new List<SynchronizationEntry>(16);
-
-        foreach (WarfarePlayer player in playerService.GetThreadsafePlayerList())
-        {
-            _playerGroups.Add(player, new SynchronizationGroup(player));
-        }
 
         _logger = logger;
 
@@ -103,6 +99,13 @@ public class EventSynchronizer : IDisposable
         RunContinuations();
     }
 
+    public bool IsCleared()
+    {
+        GameThread.AssertCurrent();
+
+        return _globalGroup.IsCleared() && _playerGroups.Values.All(x => x.IsCleared());
+    }
+
     /*
      *
      *  Globally syncronized events need to lock in a few ways:
@@ -113,7 +116,7 @@ public class EventSynchronizer : IDisposable
      *   1. if they have any tags, lock on the player
      *   2. else lock on the type for the player
      */
-    
+
     /// <summary>
     /// Wait for an event to be able to start and lock the necessary buckets.
     /// </summary>
@@ -198,7 +201,7 @@ public class EventSynchronizer : IDisposable
             return group;
         }
 
-        group = new SynchronizationGroup(player);
+        group = new SynchronizationGroup(player, this);
         _toContinueBuffer.Clear();
         foreach (SynchronizationEntry entry in _globalPlayerEntries)
         {
@@ -294,7 +297,7 @@ public class EventSynchronizer : IDisposable
                 buffer.WaitEvent?.TrySetResult(buffer);
                 break;
 
-            case 2:
+            default:
                 // avoid collection modified exception
                 SynchronizationEntry[] copy = _toContinueBuffer.ToArray();
                 _toContinueBuffer.Clear();
@@ -311,13 +314,15 @@ public class EventSynchronizer : IDisposable
 internal class SynchronizationGroup
 {
     public readonly WarfarePlayer? Player;
+    private readonly EventSynchronizer _owner;
 
     public Dictionary<string, SynchronizationBucket> Tags = new Dictionary<string, SynchronizationBucket>(32, StringComparer.Ordinal);
     public Dictionary<Type, SynchronizationBucket> Types = new Dictionary<Type, SynchronizationBucket>(32);
 
-    public SynchronizationGroup(WarfarePlayer? player)
+    public SynchronizationGroup(WarfarePlayer? player, EventSynchronizer owner)
     {
         Player = player;
+        _owner = owner;
     }
 
     public void EnterEvent(SynchronizationEntry entry, DateTime now, ILogger logger, List<SynchronizationEntry> continueBuffer)
@@ -330,7 +335,7 @@ internal class SynchronizationGroup
             {
                 if (!Tags.TryGetValue(tag, out SynchronizationBucket? bkt))
                 {
-                    Tags.Add(tag, bkt = new SynchronizationBucket($"Tag: \"{tag}\" for {Player?.ToString() ?? "Global"}"));
+                    Tags.Add(tag, bkt = new SynchronizationBucket($"Tag: \"{tag}\" for {Player?.ToString() ?? "Global"}", _owner));
                 }
 
                 bkt.EnterEvent(entry, now, logger, continueBuffer);
@@ -340,7 +345,7 @@ internal class SynchronizationGroup
         {
             if (!Types.TryGetValue(entry.ModelType, out SynchronizationBucket? bkt))
             {
-                Types.Add(entry.ModelType, bkt = new SynchronizationBucket($"Type: \"{entry.ModelType.Name}\" for {Player?.ToString() ?? "Global"}"));
+                Types.Add(entry.ModelType, bkt = new SynchronizationBucket($"Type: \"{entry.ModelType.Name}\" for {Player?.ToString() ?? "Global"}", _owner));
             }
 
             bkt.EnterEvent(entry, now, logger, continueBuffer);
@@ -380,37 +385,42 @@ internal class SynchronizationGroup
             bucket.CheckForTimeout(logger, now, null, continueBuffer);
         }
     }
+
+    public bool IsCleared()
+    {
+        return Tags.Values.All(x => x.IsCleared()) && Types.Values.All(x => x.IsCleared());
+    }
 }
 
 internal class SynchronizationBucket
 {
     private readonly string _context;
+    private readonly EventSynchronizer _owner;
     public Queue<SynchronizationEntry> Queue = new Queue<SynchronizationEntry>(2);
     public SynchronizationEntry? Current;
 
-    public SynchronizationBucket(string context)
+    public SynchronizationBucket(string context, EventSynchronizer owner)
     {
         _context = context;
+        _owner = owner;
     }
-
-    private static readonly TimeSpan MaxTimeout = TimeSpan.FromSeconds(15);
 
     public void CheckForTimeout(ILogger logger, DateTime now, SynchronizationEntry? newEntry, List<SynchronizationEntry> continueBuffer)
     {
-        do
+        while (true)
         {
-            if (Current == null || now - Current.CreateTime <= MaxTimeout)
+            if (Current == null || now - Current.TimeoutTime <= _owner.MaxTimeout)
                 return;
 
             logger.LogWarning($"Timeout reached in bucket {_context} from" +
-                              $" {Current.ModelType.Name} (#{Current.EventId}): {now - Current.CreateTime}. " +
-                              $"(adding entry: {newEntry?.ModelType.Name}) " +
+                              $" {Current.ModelType.Name} (#{Current}): {now - Current.CreateTime}. " +
+                              $"(adding entry: {newEntry}) " +
                               $"Create time: {Current.CreateTime} UTC."
             );
 
             if (Queue.Count == 0)
             {
-                logger.LogTrace($"Queueing {newEntry?.EventId} after timeout, none to dequeue in {_context}.");
+                logger.LogTrace($"Queueing {newEntry} after timeout, none to dequeue in {_context}.");
                 Current = newEntry;
                 if (newEntry != null)
                     newEntry.TimeoutTime = now;
@@ -418,7 +428,7 @@ internal class SynchronizationBucket
             }
 
             SynchronizationEntry nextEntry = Queue.Dequeue();
-            logger.LogTrace($"Exiting dequeued event {Current?.EventId}, dequeued {nextEntry.EventId} to current in {_context}.");
+            logger.LogTrace($"Exiting dequeued event {Current}, dequeued {nextEntry} to current in {_context}.");
             --nextEntry.WaitCount;
             Current = nextEntry;
             nextEntry.TimeoutTime = now;
@@ -426,8 +436,7 @@ internal class SynchronizationBucket
             {
                 continueBuffer.Add(newEntry);
             }
-
-        } while (true);
+        }
     }
 
 
@@ -436,7 +445,7 @@ internal class SynchronizationBucket
         if (Current == null)
         {
             Current = entry;
-            logger.LogTrace($"Entered current event {entry.EventId} in {_context}.");
+            logger.LogTrace($"Entered current event {entry} in {_context}.");
             entry.TimeoutTime = now;
             return;
         }
@@ -448,7 +457,7 @@ internal class SynchronizationBucket
         ++entry.WaitCount;
         entry.WaitEvent ??= new UniTaskCompletionSource<SynchronizationEntry?>();
         entry.TimeoutTime = now;
-        logger.LogTrace($"Enqueued event {entry.EventId} in {_context}.");
+        logger.LogTrace($"Enqueued event {entry} in {_context}.");
         Queue.Enqueue(entry);
     }
 
@@ -460,13 +469,13 @@ internal class SynchronizationBucket
 
         if (!Queue.TryDequeue(out SynchronizationEntry? newEntry))
         {
-            logger.LogTrace($"Exiting dequeued event {Current?.EventId}, none to dequeue in {_context}.");
+            logger.LogTrace($"Exiting dequeued event {Current}, none to dequeue in {_context}.");
             Current = null;
             return true;
         }
 
         --newEntry.WaitCount;
-        logger.LogTrace($"Exiting dequeued event {Current?.EventId}, dequeued {newEntry.EventId} to current in {_context}.");
+        logger.LogTrace($"Exiting dequeued event {Current}, dequeued {newEntry} to current in {_context}.");
         Current = newEntry;
         if (newEntry is { WaitCount: <= 0, WaitEvent: not null })
         {
@@ -476,6 +485,11 @@ internal class SynchronizationBucket
         }
 
         return true;
+    }
+
+    public bool IsCleared()
+    {
+        return Current == null && Queue.Count == 0;
     }
 }
 
@@ -499,5 +513,10 @@ internal class SynchronizationEntry
         EventId = eventId;
         CreateTime = DateTime.UtcNow;
         TimeoutTime = CreateTime;
+    }
+
+    public override string ToString()
+    {
+        return $"{{ #{EventId}, Queues: {WaitCount}, Model: {Accessor.Formatter.Format(ModelType)}, Created: {CreateTime:T}, Timeout: {TimeoutTime:T}, {(WaitEvent != null ? "w/w" : "n/w")} }}";
     }
 }

@@ -203,6 +203,12 @@ public class RemotePlayerListService :
         }
     }
 
+    [RpcSend(nameof(ReceivePlayerList)), RpcTimeout(Timeouts.Seconds * 5)]
+    protected virtual RpcTask SendPlayerList(ReplicatedServerState state, ReplicatedPlayerListEntry[] playerList)
+    {
+        return RpcTask.NotImplemented;
+    }
+
     [RpcReceive]
     private void ReceivePlayerList(ReplicatedServerState state, ReplicatedPlayerListEntry[] playerList, IModularRpcRemoteConnection connection)
     {
@@ -233,11 +239,6 @@ public class RemotePlayerListService :
     [RpcSend(nameof(ReceivePlayerDisconnected)), RpcTimeout(Timeouts.Seconds * 3)]
     protected virtual RpcTask SendPlayerDisconnected(ReplicatedPlayerListEntry player) => RpcTask.NotImplemented;
 
-    [RpcSend(nameof(ReceivePlayerList)), RpcTimeout(Timeouts.Seconds * 5)]
-    protected virtual RpcTask SendPlayerList(ReplicatedServerState state, ReplicatedPlayerListEntry[] playerList)
-    {
-        return _ = RpcTask.NotImplemented;
-    }
 
     private void UpdatePlayer(WarfarePlayer player)
     {
