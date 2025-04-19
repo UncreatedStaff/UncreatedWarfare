@@ -11,15 +11,15 @@ public class KitDefaults
         Class.Medic => 0,
         Class.Breacher => 0,
         Class.LAT => 0,
-        Class.AutomaticRifleman => 3,
+        Class.AutomaticRifleman => 4,
         Class.Grenadier => 3,
-        Class.APRifleman => 3,
+        Class.APRifleman => 0,
         Class.Marksman => 4,
         Class.MachineGunner => 4,
         Class.Sniper => 4,
         Class.HAT => 4,
-        Class.CombatEngineer => 4,
-        Class.SpecOps => 4,
+        Class.CombatEngineer => 3,
+        Class.SpecOps => 3,
         _ => null
     };
     public static bool GetDefaultRequiresSquad(Class @class) => @class switch
