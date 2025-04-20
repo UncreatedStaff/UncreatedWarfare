@@ -469,6 +469,7 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
                             && x.Delays.Count == 0
                             && x.SquadLevel == SquadLevel.Member
                             && !x.Disabled
+                            && x.Class != Class.Unarmed
                             && x.FactionId == factionId
                             && (x.CreditCost == 0 || x.Access.Any(a => a.Steam64 == steam64))).Select(x => x.PrimaryKey),
                 token: token

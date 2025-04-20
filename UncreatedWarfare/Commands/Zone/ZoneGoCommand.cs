@@ -49,17 +49,26 @@ internal sealed class ZoneGoCommand : IExecutableCommand
         string? zname = null;
 
         // t1, t2, etc
-        if (Context.HasArgs(1)
-            && (teamNumberStr = Context.Get(0) ?? string.Empty).StartsWith("t", StringComparison.OrdinalIgnoreCase)
-            && uint.TryParse(teamNumberStr.AsSpan(1), NumberStyles.Number, CultureInfo.InvariantCulture, out uint teamNumber))
+        if (Context.HasArgs(1) && (teamNumberStr = Context.Get(0) ?? string.Empty).StartsWith("t", StringComparison.OrdinalIgnoreCase))
         {
-            ITeamManager<Team> teamManager = Context.ServiceProvider.GetRequiredService<ITeamManager<Team>>();
-
-            Team team = teamManager.GetTeam(new CSteamID(teamNumber));
-            if (team.IsValid)
+            ZoneType zoneType = ZoneType.MainBase;
+            ReadOnlySpan<char> span = teamNumberStr.AsSpan(1);
+            if (span.EndsWith("war", StringComparison.OrdinalIgnoreCase))
             {
-                zone = _zoneStore.SearchZone(ZoneType.MainBase, team.Faction);
-                zname = zone?.Name;
+                span = span[..^3];
+                zoneType = ZoneType.WarRoom;
+            }
+
+            if (uint.TryParse(span, NumberStyles.Number, CultureInfo.InvariantCulture, out uint teamNumber))
+            {
+                ITeamManager<Team> teamManager = Context.ServiceProvider.GetRequiredService<ITeamManager<Team>>();
+
+                Team team = teamManager.GetTeam(new CSteamID(teamNumber));
+                if (team.IsValid)
+                {
+                    zone = _zoneStore.SearchZone(zoneType, team.Faction);
+                    zname = zone?.Name;
+                }
             }
         }
 

@@ -9,7 +9,7 @@ using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Kits.Tweaks;
 
-internal sealed class KitGiveDefaultOnLeaveSquadKit : IAsyncEventListener<SquadMemberLeft>, IAsyncEventListener<PlayerEnteredZone>
+internal sealed class KitGiveDefaultOnLeaveSquadKit : IEventListener<SquadMemberLeft>, IEventListener<PlayerEnteredZone>
 {
     private readonly KitRequestService _kitRequestService;
     private readonly ZoneStore _zoneStore;
@@ -20,7 +20,7 @@ internal sealed class KitGiveDefaultOnLeaveSquadKit : IAsyncEventListener<SquadM
         _zoneStore = zoneStore;
     }
 
-    public async UniTask HandleEventAsync(SquadMemberLeft e, IServiceProvider serviceProvider, CancellationToken token = default)
+    public void HandleEvent(SquadMemberLeft e, IServiceProvider serviceProvider)
     {
         if (e.Player.Team == Team.NoTeam)
             return;
@@ -32,7 +32,17 @@ internal sealed class KitGiveDefaultOnLeaveSquadKit : IAsyncEventListener<SquadM
         bool isLowAmmo = false;
         if (_zoneStore.IsInMainBase(e.Player) || (isLowAmmo = _zoneStore.IsInWarRoom(e.Player)))
         {
-            await _kitRequestService.GiveAvailableFreeKitAsync(e.Player, silent: false, isLowAmmo: isLowAmmo, token: token);
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _kitRequestService.GiveAvailableFreeKitAsync(e.Player, silent: false, isLowAmmo: isLowAmmo, e.Player.DisconnectToken);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex);
+                }
+            });
         }
         else
         {
@@ -41,15 +51,26 @@ internal sealed class KitGiveDefaultOnLeaveSquadKit : IAsyncEventListener<SquadM
     }
 
     [EventListener(RequiresMainThread = true)]
-    public async UniTask HandleEventAsync(PlayerEnteredZone e, IServiceProvider serviceProvider, CancellationToken token = default)
+    public void HandleEvent(PlayerEnteredZone e, IServiceProvider serviceProvider)
     {
         if (e.Zone.Type is not ZoneType.MainBase and not ZoneType.WarRoom || !string.Equals(e.Player.Team.Faction.FactionId, e.Zone.Faction, StringComparison.Ordinal))
             return;
 
-        if (e.Player.Save.NeedsNewKitOnSpawn)
+        if (!e.Player.Save.NeedsNewKitOnSpawn)
+            return;
+
+        e.Player.Save.NeedsNewKitOnSpawn = false;
+
+        _ = Task.Run(async () =>
         {
-            e.Player.Save.NeedsNewKitOnSpawn = false;
-            await _kitRequestService.GiveAvailableFreeKitAsync(e.Player, silent: false, isLowAmmo: _zoneStore.IsInWarRoom(e.Player), token).ConfigureAwait(false);
-        }
+            try
+            {
+                await _kitRequestService.GiveAvailableFreeKitAsync(e.Player, silent: false, isLowAmmo: _zoneStore.IsInWarRoom(e.Player), e.Player.DisconnectToken).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+            }
+        });
     }
 }

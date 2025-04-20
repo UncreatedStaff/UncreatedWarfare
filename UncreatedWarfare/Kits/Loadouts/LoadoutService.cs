@@ -13,7 +13,6 @@ using System.Linq;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models.Kits;
 using Uncreated.Warfare.Kits.Items;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Factions;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Networking;
@@ -61,15 +60,6 @@ public class LoadoutService
         }
 
         _logger = logger;
-    }
-
-    /// <summary>
-    /// Attempts to open a ticket in the discord for the desired player to upgrade their loadout.
-    /// </summary>
-    [RpcSend, RpcTimeout(15 * Timeouts.Seconds)]
-    public virtual RpcTask<OpenUpgradeTicketResult> TryOpenUpgradeTicket(ulong discordId, CSteamID steam64, int loadoutLetter, Class newClass, string newDisplayName)
-    {
-        return RpcTask<OpenUpgradeTicketResult>.NotImplemented;
     }
 
     /// <summary>
@@ -182,7 +172,7 @@ public class LoadoutService
         Kit? kit = await _kitSql.UpdateKitAsync(primaryKey, include, kit =>
         {
             wasDisabled = kit.Disabled;
-            if (wasDisabled)
+            //if (wasDisabled)
                 // todo: ActionLog.Add(ActionLogType.UnlockLoadout, kit.Id, kit.LastEditor);
             kit.Disabled = false;
         }, instigator, token).ConfigureAwait(false);
@@ -239,7 +229,7 @@ public class LoadoutService
         Kit? kit = await _kitSql.UpdateKitAsync(primaryKey, include, kit =>
         {
             wasDisabled = kit.Disabled;
-            if (!wasDisabled)
+            //if (!wasDisabled)
                 // todo: ActionLog.Add(ActionLogType.LockLoadout, kit.Id, kit.LastEditor);
             kit.Disabled = true;
         }, instigator, token).ConfigureAwait(false);
@@ -384,7 +374,7 @@ public class LoadoutService
         bool accessAdded = false;
         Kit? kit = await _kitSql.UpdateKitAsync(
             kitPk,
-            include | KitInclude.FactionFilter | (KitInclude)(1 << 10) | KitInclude.Items | KitInclude.UnlockRequirements | KitInclude.MapFilter | KitInclude.Delays | KitInclude.Skillsets | KitInclude.Access,
+            ~KitInclude.None & (include | KitInclude.FactionFilter | (KitInclude)(1 << 10) | KitInclude.Items | KitInclude.UnlockRequirements | KitInclude.MapFilter | KitInclude.Delays | KitInclude.Skillsets | KitInclude.Access),
             kit =>
             {
                 if (kit.Season >= WarfareModule.Season)
@@ -406,7 +396,7 @@ public class LoadoutService
                 kit.PremiumCost = LoadoutCost;
                 kit.Type = KitType.Loadout;
                 kit.Disabled = true;
-
+                
                 kit.Items.Clear();
                 kit.Weapons = string.Empty;
                 SetDefaultItems(kit);
@@ -426,8 +416,6 @@ public class LoadoutService
                 kit.Access.Add(new KitAccess
                 {
                     AccessType = KitAccessType.Purchase,
-                    Kit = kit,
-                    KitId = kit.PrimaryKey,
                     Steam64 = forPlayer.m_SteamID,
                     Timestamp = DateTimeOffset.UtcNow
                 });
@@ -463,8 +451,10 @@ public class LoadoutService
 
         foreach (IItem item in items)
         {
-            KitItemModel model = new KitItemModel { KitId = kit.PrimaryKey };
+            KitItemModel model = new KitItemModel();
             KitItemUtility.CreateKitItemModel(item, model);
+
+            model.KitId = 0;
 
             kit.Items.Add(model);
         }
@@ -648,7 +638,7 @@ public class LoadoutService
         if (WarfareModule.IsActive)
         {
             // todo: ActionLog.Add(ActionLogType.UpgradeLoadout, $"ID: {kit.Id} (#{kit.Key}). Class: {oldClass} -> {kit.Class}. Old Faction: {oldFaction ?? "none"}", kit.LastEditingPlayer);
-            if (accessAdded)
+            //if (accessAdded)
                 // todo: ActionLog.Add(ActionLogType.ChangeKitAccess, $"{forPlayer.m_SteamID.ToString(CultureInfo.InvariantCulture)} GIVEN ACCESS TO {kit.Id}, REASON: {KitAccessType.Purchase}", kit.LastEditingPlayer);
 
             await _eventDispatcher!.DispatchEventAsync(args, CancellationToken.None);
@@ -665,16 +655,16 @@ public class LoadoutService
         }
     }
 
-    [RpcSend(nameof(CreateLoadoutRpc))]
+    [RpcSend(nameof(CreateLoadoutRpc)), RpcTimeout(Timeouts.Seconds * 5)]
     protected virtual RpcTask<uint> SendCreateLoadout(IModularRpcRemoteConnection connection, CSteamID forPlayer, CSteamID creator, Class @class, string? displayName, CancellationToken token = default) => RpcTask<uint>.NotImplemented;
 
-    [RpcSend(nameof(UpgradeLoadoutRpc))]
+    [RpcSend(nameof(UpgradeLoadoutRpc)), RpcTimeout(Timeouts.Seconds * 5)]
     protected virtual RpcTask<bool> SendUpgradeLoadout(IModularRpcRemoteConnection connection, CSteamID forPlayer, CSteamID admin, Class @class, uint kitPk, CancellationToken token = default) => RpcTask<bool>.NotImplemented;
 
-    [RpcSend(nameof(UnlockLoadoutRpc))]
+    [RpcSend(nameof(UnlockLoadoutRpc)), RpcTimeout(Timeouts.Seconds * 5)]
     protected virtual RpcTask<bool> SendUnlockLoadout(IModularRpcRemoteConnection connection, CSteamID instigator, uint primaryKey, CancellationToken token = default) => RpcTask<bool>.NotImplemented;
 
-    [RpcSend(nameof(LockLoadoutRpc))]
+    [RpcSend(nameof(LockLoadoutRpc)), RpcTimeout(Timeouts.Seconds * 5)]
     protected virtual RpcTask<bool> SendLockLoadout(IModularRpcRemoteConnection connection, CSteamID instigator, uint primaryKey, CancellationToken token = default) => RpcTask<bool>.NotImplemented;
 
     [RpcSend(nameof(ReceiveInvokeLoadoutCreated)), RpcFireAndForget]

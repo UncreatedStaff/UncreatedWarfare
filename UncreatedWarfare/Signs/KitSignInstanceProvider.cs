@@ -108,6 +108,11 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>
             }
         }
 
+        if (KitId == null)
+        {
+            return "<color=#ff9933>Invalid Kit</color>";
+        }
+
         if (!_kitDataStore.CachedKitsById.TryGetValue(KitId, out Kit kit))
         {
             return $"<color=#ff9933>Invalid Kit</color>\n<color=#66ccff>{KitId}</color>";
@@ -148,7 +153,7 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>
         if (!nameHasNewLine)
             bldr.Append('\n');
 
-        bool hasWeaponText = string.IsNullOrWhiteSpace(kit.WeaponText);
+        bool hasWeaponText = !string.IsNullOrWhiteSpace(kit.WeaponText);
 
         if (!hasWeaponText)
             bldr.Append('\n');
@@ -157,7 +162,7 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>
         bldr.Append('\n');
 
         if (hasWeaponText)
-            bldr.Append(kit.WeaponText!.ToUpper(culture)).Append('\n');
+            bldr.AppendColorized(kit.WeaponText!.ToUpper(culture), new Color32(255, 255, 255, 255)).Append('\n');
 
         AppendAvailability(bldr, player, kit, language, culture);
     }
@@ -320,7 +325,7 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>
             else if (needsUpgrade)
                 bldr.Append(_translations.KitLoadoutUpgrade.Translate(language)).Append('\n');
             else
-                bldr.Append(kit.WeaponText!.ToUpper(culture)).Append('\n');
+                bldr.AppendColorized(kit.WeaponText!.ToUpper(culture), new Color32(255, 255, 255, 255)).Append('\n');
         }
 
         if (!kit.IsLocked && !needsUpgrade)

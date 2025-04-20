@@ -1,11 +1,9 @@
 using SDG.Framework.Utilities;
 using System;
-using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Services;
-using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Tweaks;
 

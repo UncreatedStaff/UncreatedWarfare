@@ -161,6 +161,7 @@ public class PlayerModerationCacheComponent : IPlayerComponent
                 _logger.LogError(ex, "Error re-fetching mute info.");
             }
         });
+        _unmuteCoroutine = null;
     }
 
     WarfarePlayer IPlayerComponent.Player { get => Player; set => Player = value; }

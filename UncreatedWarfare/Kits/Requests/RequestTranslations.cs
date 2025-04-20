@@ -44,26 +44,14 @@ public class RequestTranslations : PropertiesTranslationCollection
     [TranslationData]
     public readonly Translation<Cooldown> RequestKitOnGlobalCooldown = new Translation<Cooldown>("<#ff8c69>You can request another kit again in: <#bafeff>{0}</color>.", arg0Fmt: Cooldown.FormatTimeShort);
 
-    [TranslationData("Sent if a player tries to upgrade their loadout but either isn't linked or isn't in the Discord server.")]
-    public readonly Translation RequestUpgradeNotInDiscordServer = new Translation("<#a4baa9>Join the <#7483c4>Discord</color> server (<#fff>/discord</color>) to open a ticket.");
-
-    [TranslationData("Sent if a player tries to upgrade their loadout but the Discord bot can't connect to the server (occasionally happens due to maintenance).")]
-    public readonly Translation RequestUpgradeNotConnected = new Translation("<#a4baa9>The loadout upgrade system is not available right now, please try again later.");
-
     [TranslationData("Sent if a player tries to upgrade their loadout but they already requested it before.", "The name of the kit they're trying to upgrade")]
     public readonly Translation<Kit> RequestUpgradeAlreadyOpen = new Translation<Kit>("<#a4baa9>You already have a ticket open for <#ffebbd>{0}</color>.", arg0Fmt: Kit.FormatDisplayName);
-
-    [TranslationData("Sent if a player tries to upgrade their loadout but there are too many tickets open (Discord has a channel limit).")]
-    public readonly Translation RequestUpgradeTooManyTicketsOpen = new Translation("<#a4baa9>There are too many tickets open right now, please try again later.");
-
-    [TranslationData("Generic error trying to upgrade a player's loadout.", "Generic error message")]
-    public readonly Translation<string> RequestUpgradeError = new Translation<string>("<#a4baa9>Error opening ticket: <#fff>{0}</color>.", arg0Fmt: UppercaseAddon.Instance);
 
     [TranslationData("Sent when a player tries to upgrade a kit that isn't a loadout.", "The name of the kit they're trying to upgrade")]
     public readonly Translation<Kit> RequestUpgradeOnKit = new Translation<Kit>("<#a4baa9><#ffebbd>{0}</color> can't be upgraded.", arg0Fmt: Kit.FormatDisplayName);
 
-    [TranslationData("Sent when a player does /request upgrade on a loadout that was created in a previous season and hasn't been updated yet.", "The name of the kit they're upgrading")]
-    public readonly Translation<Kit> TicketOpened = new Translation<Kit>("<#a8918a>An upgrade request was opened in your name for <#ffebbd>{0}</color>. Please fill it out as soon as possible.", arg0Fmt: Kit.FormatDisplayName);
+    [TranslationData("Sent on the open link UI when the player does /req upgrade.", "The name of the kit they're trying to upgrade")]
+    public readonly Translation RequestUpgradeMessage = new Translation("Begin upgrading your loadout on our website.", TranslationOptions.TMProUI | TranslationOptions.NoRichText);
 
     [TranslationData("Sent when a player requests a kit from a sign.", "The class of the kit they requested")]
     public readonly Translation<Class> RequestSignGiven = new Translation<Class>("<#a8918a>You have been allocated a <#cedcde>{0}</color> kit.", arg0Fmt: UppercaseAddon.Instance);

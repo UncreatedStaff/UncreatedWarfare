@@ -3,13 +3,9 @@ name: NuGet
 on:
   workflow_dispatch:
     inputs:
-      version_prefix:
+      version:
         description: "Version"
         required: true
-        type: string
-      version_suffix:
-        description: "Pre-release"
-        required: false
         type: string
       change_notes:
         description: "Change Notes"
@@ -32,10 +28,10 @@ jobs:
         dotnet-version: '9.x.x'
         
     - name: Build
-      run: dotnet build "./UncreatedWarfare/UncreatedWarfare.csproj" --configuration Release "/p:VersionPrefix=${{ inputs.version_prefix }};VersionSuffix=${{ inputs.version_suffix }};PackageReleaseNotes=${{ inputs.change_notes }};IsInGitHubActions=True"
+      run: dotnet build "./UncreatedWarfare/UncreatedWarfare.csproj" --configuration Release "/p:Version=${{ inputs.version }};PackageReleaseNotes=${{ inputs.change_notes }};IsInGitHubActions=True"
     
     - name: Pack
-      run: dotnet pack "./UncreatedWarfare/UncreatedWarfare.csproj" --configuration Release "/p:VersionPrefix=${{ inputs.version_prefix }};VersionSuffix=${{ inputs.version_suffix }};PackageReleaseNotes=${{ inputs.change_notes }};IsInGitHubActions=True" --no-build --output .
+      run: dotnet pack "./UncreatedWarfare/UncreatedWarfare.csproj" --configuration Release "/p:Version=${{ inputs.version }};PackageReleaseNotes=${{ inputs.change_notes }};IsInGitHubActions=True" --no-build --output .
     
     - name: Push Packages
       run: dotnet nuget push *.nupkg --source https://api.nuget.org/v3/index.json --api-key ${NUGET_TOKEN}
@@ -66,7 +62,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         
       - name: Create Tag
-        run: git tag -a v${{ inputs.version_prefix }}${{ inputs.version_suffix }} -m "Uncreated.Warfare v${{ inputs.version_prefix }}${{ inputs.version_suffix }} - ${{ inputs.change_notes }}"
+        run: git tag -a v${{ inputs.version }} -m "Uncreated.Warfare v${{ inputs.version }} - ${{ inputs.change_notes }}"
         
       - name: Push Tag
         run: git push origin --tags

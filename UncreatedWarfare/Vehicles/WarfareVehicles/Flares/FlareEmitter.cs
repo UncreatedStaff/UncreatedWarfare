@@ -88,7 +88,7 @@ public class FlareEmitter : MonoBehaviour
             return;
         
         if (_warningRoutine != null)
-            Vehicle.Vehicle.StopCoroutine(_warningRoutine);
+            StopCoroutine(_warningRoutine);
 
         _warningRoutine = StartCoroutine(MissileWarningRoutine(Vehicle.VehicleHUD));
     }
@@ -98,6 +98,7 @@ public class FlareEmitter : MonoBehaviour
         vehicleHUD.ToggleMissileWarning(Vehicle, true);
         yield return new WaitForSeconds(1);
         vehicleHUD.ToggleMissileWarning(Vehicle, false);
+        _warningRoutine = null;
     }
 
     [UsedImplicitly]

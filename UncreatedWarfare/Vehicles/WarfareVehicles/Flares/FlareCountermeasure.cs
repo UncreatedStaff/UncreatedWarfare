@@ -11,14 +11,7 @@ internal class FlareCountermeasure : MonoBehaviour
     private InteractableVehicle? _vehicle;
 
     [UsedImplicitly]
-    private void Start()
-    {
-        StartCoroutine(Lifetime());
-    }
-
-    // i had tried making Start() a coroutine directly which should be allowed
-    // but i want to see if this fixes the 'Coroutine continue failure' log message
-    private IEnumerator Lifetime()
+    private IEnumerator Start()
     {
         Burning = true;
         ActiveCountermeasures.Add(this);

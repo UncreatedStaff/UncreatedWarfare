@@ -25,8 +25,9 @@ namespace Uncreated.Warfare.Discord;
 public class RemotePlayerListService :
     IHostedService,
     ILayoutHostedService,
-    IAsyncEventListener<PlayerJoined>,
-    IAsyncEventListener<PlayerLeft>,
+    IEventListener<PlayerJoined>,
+    IEventListener<PlayerTeamChanged>,
+    IEventListener<PlayerLeft>,
     IEventListener<HomebaseConnected>
 {
     private readonly IPlayerService? _playerService;
@@ -202,6 +203,12 @@ public class RemotePlayerListService :
         }
     }
 
+    [RpcSend(nameof(ReceivePlayerList)), RpcTimeout(Timeouts.Seconds * 5)]
+    protected virtual RpcTask SendPlayerList(ReplicatedServerState state, ReplicatedPlayerListEntry[] playerList)
+    {
+        return RpcTask.NotImplemented;
+    }
+
     [RpcReceive]
     private void ReceivePlayerList(ReplicatedServerState state, ReplicatedPlayerListEntry[] playerList, IModularRpcRemoteConnection connection)
     {
@@ -232,30 +239,55 @@ public class RemotePlayerListService :
     [RpcSend(nameof(ReceivePlayerDisconnected)), RpcTimeout(Timeouts.Seconds * 3)]
     protected virtual RpcTask SendPlayerDisconnected(ReplicatedPlayerListEntry player) => RpcTask.NotImplemented;
 
-    [RpcSend(nameof(ReceivePlayerList)), RpcTimeout(Timeouts.Seconds * 5)]
-    protected virtual RpcTask SendPlayerList(ReplicatedServerState state, ReplicatedPlayerListEntry[] playerList)
+
+    private void UpdatePlayer(WarfarePlayer player)
     {
-        return _ = RpcTask.NotImplemented;
+        Task.Run(async () =>
+        {
+            try
+            {
+                ulong discordId = await _userDataService!.GetDiscordIdAsync(player.Steam64.m_SteamID, player.DisconnectToken).ConfigureAwait(false);
+                await SendPlayerConnected(
+                    new ReplicatedPlayerListEntry(player.Steam64.m_SteamID, player.Names.PlayerName, player.Names.CharacterName, player.Names.NickName, discordId, player.Team.Faction.PrimaryKey, player.IsOnDuty)
+                ).IgnoreNoConnections();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating player list.");
+            }
+        });
     }
 
     [EventListener(Priority = int.MinValue)]
-    async UniTask IAsyncEventListener<PlayerJoined>.HandleEventAsync(PlayerJoined e, IServiceProvider serviceProvider, CancellationToken token)
+    void IEventListener<PlayerJoined>.HandleEvent(PlayerJoined e, IServiceProvider serviceProvider)
     {
-        WarfarePlayer player = e.Player;
-        ulong discordId = await _userDataService!.GetDiscordIdAsync(player.Steam64.m_SteamID, token).ConfigureAwait(false);
-        await SendPlayerConnected(
-            new ReplicatedPlayerListEntry(player.Steam64.m_SteamID, player.Names.PlayerName, player.Names.CharacterName, player.Names.NickName, discordId, e.Player.Team.Faction.PrimaryKey, e.Player.IsOnDuty)
-        ).IgnoreNoConnections();
+        UpdatePlayer(e.Player);
+    }
+
+    [EventListener(Priority = int.MinValue)]
+    void IEventListener<PlayerTeamChanged>.HandleEvent(PlayerTeamChanged e, IServiceProvider serviceProvider)
+    {
+        UpdatePlayer(e.Player);
     }
     
     [EventListener(Priority = int.MinValue)]
-    async UniTask IAsyncEventListener<PlayerLeft>.HandleEventAsync(PlayerLeft e, IServiceProvider serviceProvider, CancellationToken token)
+    void IEventListener<PlayerLeft>.HandleEvent(PlayerLeft e, IServiceProvider serviceProvider)
     {
-        WarfarePlayer player = e.Player;
-        ulong discordId = await _userDataService!.GetDiscordIdAsync(player.Steam64.m_SteamID, token).ConfigureAwait(false);
-        await SendPlayerDisconnected(
-            new ReplicatedPlayerListEntry(player.Steam64.m_SteamID, player.Names.PlayerName, player.Names.CharacterName, player.Names.NickName, discordId, e.Player.Team.Faction.PrimaryKey, e.Player.IsOnDuty)
-        ).IgnoreNoConnections();
+        Task.Run(async () =>
+        {
+            try
+            {
+                WarfarePlayer player = e.Player;
+                ulong discordId = await _userDataService!.GetDiscordIdAsync(player.Steam64.m_SteamID, CancellationToken.None).ConfigureAwait(false);
+                await SendPlayerDisconnected(
+                    new ReplicatedPlayerListEntry(player.Steam64.m_SteamID, player.Names.PlayerName, player.Names.CharacterName, player.Names.NickName, discordId, player.Team.Faction.PrimaryKey, player.IsOnDuty)
+                ).IgnoreNoConnections();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating player list.");
+            }
+        });
     }
 
     void IEventListener<HomebaseConnected>.HandleEvent(HomebaseConnected e, IServiceProvider serviceProvider)

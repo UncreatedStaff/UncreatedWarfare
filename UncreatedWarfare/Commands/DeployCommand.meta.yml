@@ -1,9 +1,7 @@
-﻿# DeployCommand
+# DeployCommand
 Description: "Deploy to a point of interest such as a main base, FOB, VCP, or cache."
 Aliases: [ dep, warp, warps, tpa, go, goto, fob, deployfob, df, dp ]
 Parameters:
-  - Name: location
-    Type: Uncreated.Warfare.FOBs.Deployment
   - Name: cancel
     Aliases: [ stop ]
     Type: Verbatim

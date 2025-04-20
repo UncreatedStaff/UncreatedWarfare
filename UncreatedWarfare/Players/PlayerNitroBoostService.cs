@@ -18,6 +18,7 @@ namespace Uncreated.Warfare.Players;
 /// <summary>
 /// Allows checking if players are Server Boosting in Discord.
 /// </summary>
+[RpcClass]
 public class PlayerNitroBoostService : IEventListener<PlayerJoined>
 {
     private readonly ILogger<PlayerNitroBoostService> _logger;
@@ -117,10 +118,21 @@ public class PlayerNitroBoostService : IEventListener<PlayerJoined>
     /// <summary>
     /// Requests the discord bot to check if a user is nitro boosting.
     /// </summary>
-    [RpcSend]
+    [RpcSend(nameof(CheckNitroBoostStatusRpc)), RpcTimeout(3 * Timeouts.Seconds)]
     protected virtual RpcTask<bool?> SendCheckNitroBoostStatus(ulong discordId)
     {
         return RpcTask<bool?>.NotImplemented;
+    }
+
+    [RpcReceive]
+    private Task<bool?> CheckNitroBoostStatusRpc(ulong discordId)
+    {
+        return CheckNitroBoostStatus(discordId);
+    }
+
+    protected virtual Task<bool?> CheckNitroBoostStatus(ulong discordId)
+    {
+        return Task.FromResult<bool?>(null);
     }
 
     [RpcReceive]

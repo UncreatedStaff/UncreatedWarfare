@@ -20,7 +20,7 @@ namespace Uncreated.Warfare.Zones;
 /// <summary>
 /// Stores a full list of active zones.
 /// </summary>
-public class ZoneStore : IHostedService, IEarlyLevelHostedService
+public class ZoneStore : IHostedService, IEarlyLevelHostedService, IDisposable
 {
     private readonly List<IZoneProvider> _zoneProviders;
     private int _init;
@@ -63,6 +63,21 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService
         {
             await Initialize(token);
         }
+    }
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        if (ProximityZones == null)
+            return;
+        
+        foreach (ZoneProximity prox in ProximityZones)
+        {
+            if (prox.Proximity is IDisposable disp)
+                disp.Dispose();
+        }
+
+        ProximityZones = null;
     }
 
     UniTask IHostedService.StopAsync(CancellationToken token)

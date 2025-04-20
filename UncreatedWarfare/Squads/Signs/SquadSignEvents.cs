@@ -50,20 +50,13 @@ public class SquadSignEvents :
             return Task.FromResult(false);
         }
 
-        if (squad.ContainsPlayer(player))
-        {
-            squad.RemoveMember(player);
-        }
-        else if (player.IsInSquad())
+        if (player.IsInSquad())
         {
             _squadMenu.OpenUI(player);
             return Task.FromResult(false);
         }
-        else
-        {
-            squad.TryAddMember(player);
-        }
 
+        squad.TryAddMember(player);
         return Task.FromResult(true);
     }
 

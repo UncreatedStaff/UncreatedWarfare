@@ -13,7 +13,8 @@ namespace Uncreated.Warfare.Kits;
 public class KitSignService :
     IEventListener<PlayerKitChanged>,
     IEventListener<SquadMemberJoined>,
-    IEventListener<SquadMemberLeft>
+    IEventListener<SquadMemberLeft>,
+    IEventListener<KitUpdated>
 {
     private readonly SignInstancer _signs;
     private readonly IPlayerService _playerService;
@@ -292,5 +293,15 @@ public class KitSignService :
     public void HandleEvent(SquadMemberLeft e, IServiceProvider serviceProvider)
     {
         UpdateSigns();
+    }
+
+    public void HandleEvent(KitUpdated e, IServiceProvider serviceProvider)
+    {
+        UpdateSigns(e.Kit);
+    }
+
+    public void HandleEvent(KitCreated e, IServiceProvider serviceProvider)
+    {
+        UpdateSigns(e.Kit);
     }
 }

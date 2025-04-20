@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Interaction.Commands;
@@ -30,8 +30,6 @@ internal sealed class DeployCommand : IExecutableCommand
     {
         Context.AssertRanByPlayer();
 
-        Context.AssertArgs(1);
-
         if (Context.MatchParameter(0, "cancel", "stop"))
         {
             DeploymentComponent comp = Context.Player.Component<DeploymentComponent>();
@@ -43,45 +41,6 @@ internal sealed class DeployCommand : IExecutableCommand
             throw Context.Reply(_translations.DeployCancelled);
         }
 
-        if (Context.Player.IsInjured())
-        {
-            throw Context.Reply(_translations.DeployInjured);
-        }
-
-        string input = Context.GetRange(0)!;
-
-        IDeployable? destination = null;
-
-        DeploySettings deploySettings = default;
-
-        // todo if (false /*!FOBManager.Loaded || !FOBManager.TryFindFOB(input, Context.Player.Team, out destination) */)
-        // todo {
-        // todo     if (input.Equals("lobby", StringComparison.InvariantCultureIgnoreCase))
-        // todo         throw Context.Reply(_translations.DeployLobbyRemoved);
-        // todo 
-        // todo     if (input.Equals("main", StringComparison.InvariantCultureIgnoreCase) ||
-        // todo         input.Equals("base", StringComparison.InvariantCultureIgnoreCase) ||
-        // todo         input.Equals("home", StringComparison.InvariantCultureIgnoreCase) ||
-        // todo         input.Equals("mainbase", StringComparison.InvariantCultureIgnoreCase) ||
-        // todo         input.Equals("main base", StringComparison.InvariantCultureIgnoreCase) ||
-        // todo         input.Equals("homebase", StringComparison.InvariantCultureIgnoreCase) ||
-        // todo         input.Equals("home base", StringComparison.InvariantCultureIgnoreCase))
-        // todo     {
-        // todo         destination = _globalZoneStore.SearchZone(ZoneType.MainBase, Context.Player.Team.Faction);
-        // todo     }
-        // todo }
-
-        if (destination == null)
-            throw Context.Reply(_translations.DeployableNotFound, input);
-
-        if (_globalZoneStore.IsInMainBase(Context.Player))
-        {
-            deploySettings.AllowMovement = true;
-            deploySettings.AllowNearbyEnemies = true;
-        }
-
-        _deploymentService.TryStartDeployment(Context.Player, destination, deploySettings);
-        Context.Defer();
-        return default;
+        throw Context.SendHelp();
     }
 }
