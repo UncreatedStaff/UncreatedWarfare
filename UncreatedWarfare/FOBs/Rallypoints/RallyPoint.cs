@@ -16,7 +16,7 @@ using Uncreated.Warfare.Util.Timing;
 namespace Uncreated.Warfare.FOBs.Rallypoints;
 public class RallyPoint : IBuildableFob, IDisposable
 {
-    private const int BurnRadius = 80;
+    private const int BurnRadius = 20;
     private const int DeployTimer = 20;
     private readonly IPlayerService _playerService;
     private readonly ILoopTicker _loopTicker;
