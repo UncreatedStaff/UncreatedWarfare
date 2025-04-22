@@ -273,7 +273,7 @@ public class WorkshopUploader : IHostedService
 
             bool didModUpdate = false;
             // check if it still worked even if Pty.Net failed to read the incoming stream
-            if (true || wasExitFailure.Value)
+            if (wasExitFailure.Value)
             {
                 using CancellationTokenSource cts2 = new CancellationTokenSource();
 

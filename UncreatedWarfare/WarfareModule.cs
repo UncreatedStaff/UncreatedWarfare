@@ -1170,7 +1170,7 @@ public sealed class WarfareModule
                     new Uri(Configuration.GetValue("zipkin_uri", "http://localhost:9411/")!),
                     new Uri("api/v2/spans", UriKind.Relative)
                 );
-                zipkin.ExportProcessorType = ExportProcessorType.Batch;
+                zipkin.ExportProcessorType = ExportProcessorType.Simple;
                 zipkin.BatchExportProcessorOptions = new BatchExportProcessorOptions<Activity>
                 {
                     ExporterTimeoutMilliseconds = 10000,
