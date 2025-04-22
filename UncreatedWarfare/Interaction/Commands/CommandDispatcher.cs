@@ -32,6 +32,9 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
     private readonly ILoopTickerFactory _tickerFactory;
     private readonly ILogger<CommandDispatcher> _logger;
     private readonly CooldownManager? _cooldownManager;
+#if TELEMETRY
+    private readonly ActivitySource _activitySource;
+#endif
     public CommandParser Parser { get; }
     public IReadOnlyList<CommandInfo> Commands { get; }
 
@@ -56,6 +59,8 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
 
         ChatManager.onCheckPermissions += OnChatProcessing;
         CommandWindow.onCommandWindowInputted += OnCommandInput;
+
+        _activitySource = WarfareModule.CreateActivitySource();
     }
 
     internal static List<CommandInfo> DiscoverAssemblyCommands(ILogger logger, WarfarePluginLoader? pluginLoader)
@@ -360,8 +365,12 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
         if (foundTasks != null && foundTasks.Exists(task => (task.Options & CommandWaitOptions.BlockOriginalExecution) != 0))
         {
             Lazy<CommandContext> contextFactory = new Lazy<CommandContext>(
-                () => new CommandContext(user, CancellationToken.None, args, flags, originalMessage, command, _module.ScopedProvider.Resolve<IServiceProvider>()),
-                    LazyThreadSafetyMode.ExecutionAndPublication);
+                () => new CommandContext(user, CancellationToken.None, args, flags, originalMessage, command, _module.ScopedProvider.Resolve<IServiceProvider>()
+#if TELEMETRY
+                    , null
+#endif
+                ),
+                LazyThreadSafetyMode.ExecutionAndPublication);
 
             foreach (CommandWaitTask task in foundTasks)
             {
@@ -370,10 +379,8 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
             return;
         }
 
-        UniTask.Create(async () =>
-        {
-            await ExecuteCommandAsync(command, user, args, flags, originalMessage, foundTasks, user is WarfarePlayer player ? player.DisconnectToken : CancellationToken.None);
-        });
+        _ = ExecuteCommandAsync(command, user, args, flags, originalMessage, foundTasks, user is WarfarePlayer player ? player.DisconnectToken : CancellationToken.None);
+        
     }
 
     /// <summary>
@@ -513,16 +520,38 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
     /// </summary>
     private async UniTask ExecuteVanillaCommandAsync(ICommandUser user, CommandInfo commandInfo, string[] args, string originalMessage, List<CommandWaitTask>? waitTasks, CancellationToken token = default)
     {
+#if TELEMETRY
+        Activity.Current = null;
+        using Activity? activity = _activitySource.StartActivity($"Invoke {Accessor.Formatter.Format(commandInfo.GetType())}");
+        activity?.SetTag("command", Accessor.Formatter.Format(commandInfo.Type));
+        activity?.SetTag("command-name", commandInfo.CompositeName);
+        activity?.SetTag("user", user.Steam64.m_SteamID);
+        activity?.SetTag("is-vanilla", true);
+        activity?.SetTag("command", originalMessage);
+        activity?.SetTag("argument-offset", 0);
+#endif
         await UniTask.SwitchToMainThread();
 
         Command vanillaCommand = commandInfo.VanillaCommand!;
+#if TELEMETRY
+        activity?.AddEvent(new ActivityEvent("Checking permissions"));
+#endif
         if (!await _permissions.HasPermissionAsync(user, commandInfo.DefaultPermission /* vanilla commands won't have any special permission rules */, token))
         {
+#if TELEMETRY
+            activity?.AddEvent(new ActivityEvent("Failed permissions check"));
+#endif
             await UniTask.SwitchToMainThread();
             CommonTranslations translations = _module.ScopedProvider.Resolve<TranslationInjection<CommonTranslations>>().Value;
             _chatService.Send(user, translations.NoPermissions);
+#if TELEMETRY
+            activity?.SetStatus(ActivityStatusCode.Error, "No permissions.");
+#endif
             return;
         }
+#if TELEMETRY
+        activity?.AddEvent(new ActivityEvent("Passed permissions check"));
+#endif
 
         if (GameThread.IsCurrent)
         {
@@ -537,20 +566,40 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
 
         Type commandType = vanillaCommand.GetType();
 
-        CommandContext ctx = new CommandContext(user, token, args, Array.Empty<CommandFlagInfo>(), originalMessage, commandInfo, _module.ScopedProvider.Resolve<IServiceProvider>());
+        CommandContext ctx = new CommandContext(user, token, args, Array.Empty<CommandFlagInfo>(), originalMessage, commandInfo, _module.ScopedProvider.Resolve<IServiceProvider>()
+#if TELEMETRY
+            , activity
+#endif
+        );
         VanillaCommandListener listener = new VanillaCommandListener(ctx);
         Dedicator.commandWindow.addIOHandler(listener);
         try
         {
+#if TELEMETRY
+            activity?.AddEvent(new ActivityEvent("Executing command"));
+#endif
             vanillaCommand.check(user.Steam64, vanillaCommand.command, string.Join('/', args));
+#if TELEMETRY
+            activity?.AddEvent(new ActivityEvent("Executed command"));
+            activity?.AddTag("responded", ctx.Responded);
+#endif
             if (!ctx.Responded)
             {
                 ctx.Reply(ctx.CommonTranslations.VanillaCommandDidNotRespond);
             }
+#if TELEMETRY
+            activity?.SetStatus(ActivityStatusCode.Ok, "Success");
+#endif 
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error executing vanilla command {0}.", commandType);
+#if TELEMETRY
+            activity?.AddEvent(new ActivityEvent("Exception thrown"));
+            activity?.AddTag("exception", Accessor.Formatter.Format(ex.GetType()));
+            activity?.AddTag("exception-info", ex.ToString());
+            activity?.SetStatus(ActivityStatusCode.Error, "Error");
+#endif
         }
         finally
         {
@@ -559,6 +608,9 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
             if (waitTasks != null)
             {
                 Lazy<CommandContext> contextFactory = new Lazy<CommandContext>(ctx);
+#if TELEMETRY
+                activity?.AddEvent(new ActivityEvent($"Mark {waitTasks.Count} wait task(s) completed"));
+#endif
                 foreach (CommandWaitTask waitTask in waitTasks)
                 {
                     waitTask.MarkCompleted(contextFactory, user);
@@ -576,10 +628,26 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
     /// </summary>
     private async UniTask ExecuteCommandAsync(CommandInfo command, ICommandUser user, string[] args, CommandFlagInfo[] flags, string originalMessage, int argumentOffset, List<CommandWaitTask>? waitTasks, CancellationToken token = default)
     {
+#if TELEMETRY
+        Activity.Current = null;
+        using Activity? activity = _activitySource.StartActivity($"Invoke {Accessor.Formatter.Format(command.Type)}");
+        activity?.SetTag("command", Accessor.Formatter.Format(command.Type));
+        activity?.SetTag("command-name", command.CompositeName);
+        activity?.SetTag("user", user.Steam64.m_SteamID);
+        activity?.SetTag("is-vanilla", false);
+        activity?.SetTag("command", originalMessage);
+        activity?.SetTag("argument-offset", argumentOffset);
+#endif
         SemaphoreSlim? lockTaken = command.SynchronizedSemaphore;
         if (lockTaken != null)
         {
+#if TELEMETRY
+            activity?.AddEvent(new ActivityEvent("Waiting for lock"));
+#endif
             await lockTaken.WaitAsync(token);
+#if TELEMETRY
+            activity?.AddEvent(new ActivityEvent("Entered lock"));
+#endif
         }
 
         CommandInfo? switchInfo = null;
@@ -593,19 +661,32 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
 
             await UniTask.SwitchToMainThread();
 
-            CommandContext ctx = new CommandContext(user, linkedSrc.Token, args, flags, originalMessage, command, serviceProvider)
+            CommandContext ctx = new CommandContext(user, linkedSrc.Token, args, flags, originalMessage, command, serviceProvider
+#if TELEMETRY
+                , activity
+#endif
+            )
             {
                 ArgumentOffset = argumentOffset
             };
 
+#if TELEMETRY
+            activity?.AddTag("executable", command.IsExecutable);
+#endif
             if (!command.IsExecutable)
             {
                 if (command.RedirectCommandInfo != null)
                 {
+#if TELEMETRY
+                    activity?.AddEvent(new ActivityEvent($"Redirecting to {Accessor.Formatter.Format(command.RedirectCommandInfo.Type)}"));
+#endif
                     ctx.SwitchToCommand(command.RedirectCommandInfo.Type);
                 }
                 else if (command.Type != typeof(HelpCommand))
                 {
+#if TELEMETRY
+                    activity?.AddEvent(new ActivityEvent($"Redirecting to {Accessor.Formatter.Format(typeof(HelpCommand))}"));
+#endif
                     ctx.SendHelp();
                 }
                 else
@@ -653,11 +734,32 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
 
                 try
                 {
+#if TELEMETRY
+                    activity?.AddEvent(new ActivityEvent("Checking permissions"));
+                    try
+                    {
+                        await AssertPermissions(command, ctx, token);
+                        activity?.AddEvent(new ActivityEvent("Passed permissions check"));
+                    }
+                    catch
+                    {
+                        activity?.AddEvent(new ActivityEvent("Failed permissions check"));
+                        throw;
+                    }
+#else
                     await AssertPermissions(command, ctx, token);
+#endif
 
                     await UniTask.SwitchToMainThread();
 
+#if TELEMETRY
+                    activity?.AddEvent(new ActivityEvent("Executing command"));
+#endif
                     await cmdInstance.ExecuteAsync(token);
+#if TELEMETRY
+                    activity?.AddEvent(new ActivityEvent("Executed command"));
+                    activity?.AddTag("responded", ctx.Responded);
+#endif
                     src.Cancel();
                     await UniTask.SwitchToMainThread();
 
@@ -666,9 +768,27 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
                         ctx.SendUnknownError();
                     }
                     CheckCommandShouldStartCooldown(ctx);
+#if TELEMETRY
+                    activity?.SetStatus(ActivityStatusCode.Ok, "Success");
+#endif
                 }
-                catch (OperationCanceledException)
+                catch (OperationCanceledException ex)
                 {
+#if TELEMETRY
+                    bool cancelled = token.IsCancellationRequested;
+                    if (cancelled)
+                    {
+                        activity?.AddEvent(new ActivityEvent("Cancelled"));
+                    }
+                    else
+                    {
+                        activity?.AddEvent(new ActivityEvent("Exception thrown"));
+                    }
+
+                    activity?.AddTag("exception", Accessor.Formatter.Format(ex.GetType()));
+                    activity?.AddTag("exception-info", ex.ToString());
+#endif
+
                     src.Cancel();
                     await UniTask.SwitchToMainThread();
 
@@ -676,9 +796,20 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
                     CheckCommandShouldStartCooldown(ctx);
 
                     _logger.LogDebug("Execution of {0} was cancelled for {1}.", command.CommandName, ctx.CallerId.m_SteamID);
+#if TELEMETRY
+                    if (cancelled)
+                        activity?.SetStatus(ActivityStatusCode.Error, "Cancelled");
+                    else
+                        activity?.SetStatus(ActivityStatusCode.Error, "Error");
+#endif
                 }
                 catch (ControlException)
                 {
+#if TELEMETRY
+                    activity?.AddEvent(new ActivityEvent("Executed command (control by exception)"));
+                    if (activity != null && activity.Tags.All(x => x.Key != "responded"))
+                        activity.AddTag("responded", ctx.Responded);
+#endif
                     src.Cancel();
                     await UniTask.SwitchToMainThread();
                     if (!ctx.Responded)
@@ -686,14 +817,25 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
                         ctx.SendUnknownError();
                     }
                     CheckCommandShouldStartCooldown(ctx);
+#if TELEMETRY
+                    activity?.SetStatus(ActivityStatusCode.Ok, "Success");
+#endif
                 }
                 catch (Exception ex)
                 {
+#if TELEMETRY
+                    activity?.AddEvent(new ActivityEvent("Exception thrown"));
+                    activity?.AddTag("exception", Accessor.Formatter.Format(ex.GetType()));
+                    activity?.AddTag("exception-info", ex.ToString());
+#endif
                     src.Cancel();
                     await UniTask.SwitchToMainThread();
                     ctx.SendUnknownError();
                     CheckCommandShouldStartCooldown(ctx);
                     _logger.LogError(ex, "Execution of {0} failed for {1}.", command.CommandName, ctx.CallerId.m_SteamID);
+#if TELEMETRY
+                    activity?.SetStatus(ActivityStatusCode.Error, "Error");
+#endif
                 }
             }
 
@@ -964,5 +1106,9 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
         {
             commandInfo.SynchronizedSemaphore?.Dispose();
         }
+
+#if TELEMETRY
+        _activitySource.Dispose();
+#endif
     }
 }

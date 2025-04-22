@@ -93,4 +93,10 @@ public readonly struct ActionLogEntry
 
         return new ParsedActionLogEntry(type, message, steam64, dt);
     }
+
+    /// <inheritdoc />
+    public override string ToString()
+    {
+        return !string.IsNullOrEmpty(Message) ? $"{Player} | {Type.LogName} | \"{Message}\"" : $"{Player} | {Type.LogName}";
+    }
 }

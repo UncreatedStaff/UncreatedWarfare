@@ -8,6 +8,8 @@
   <PropertyGroup>
 
     <Version>4.0.3</Version>
+		
+	  <DefineConstants>$(DefineConstants);TELEMETRY</DefineConstants>
 
   </PropertyGroup>
 
@@ -184,6 +186,13 @@
     <PackageReference Include="Zack.EFCore.Batch.MySQL.Pomelo" Version="1.5.0" />
   </ItemGroup>
   <!-- ReSharper restore VulnerablePackage -->
+
+  <ItemGroup Condition="$(DefineConstants.Contains('TELEMETRY'))">
+
+	  <PackageReference Include="OpenTelemetry" Version="1.9.0"/>
+	  <PackageReference Include="OpenTelemetry.Exporter.Zipkin" Version="1.9.0"/>
+
+  </ItemGroup>
 
   <!-- Embedded Files -->
   <ItemGroup>

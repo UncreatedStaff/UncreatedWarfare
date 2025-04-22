@@ -129,7 +129,7 @@ public class WarfareGameStateService :
         {
             try
             {
-                await SendFullStateRpc(GameId, PublicIP, Port, BookmarkHost, ActiveFactions, LayoutName, Phase, LayoutStartTime, Ranks, DailyQuests, Squads?.ToArray());
+                await SendFullStateRpc(GameId, PublicIP, Port, BookmarkHost, ActiveFactions, LayoutName, Phase, LayoutStartTime, Ranks, DailyQuests, Squads?.ToArray()).IgnoreNoConnections();
             }
             catch (Exception ex)
             {

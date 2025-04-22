@@ -2,6 +2,7 @@ using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
@@ -38,6 +39,10 @@ public class CommandContext : ControlException
     private readonly int _argumentCount;
     private ILogger? _logger;
 
+#if TELEMETRY
+    private readonly Activity? _activity;
+#endif
+
     private int _argumentOffset;
 
     internal readonly string[] OriginalParameters;
@@ -55,6 +60,10 @@ public class CommandContext : ControlException
         {
             if (value == _argumentOffset)
                 return;
+
+#if TELEMETRY
+            _activity?.AddEvent(new ActivityEvent($"Adjust argument offset: {_argumentOffset} -> {value}"));
+#endif
 
             _argumentOffset = value;
             if (OriginalParameters.Length - _argumentOffset <= 0)
@@ -195,12 +204,20 @@ public class CommandContext : ControlException
         get => _logger ??= ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(CommandInfo.Type);
     }
 
-    private CommandContext(ICommandUser user, IServiceProvider serviceProvider)
+    private CommandContext(ICommandUser user, IServiceProvider serviceProvider
+#if TELEMETRY
+        , Activity? activity
+#endif
+    )
     {
         Caller = user;
         Player = user as WarfarePlayer;
 
         ServiceProvider = serviceProvider;
+
+#if TELEMETRY
+        _activity = activity;
+#endif
 
         _chatService = serviceProvider.GetRequiredService<ChatService>();
         _actionLoggerService = serviceProvider.GetRequiredService<ActionLoggerService>();
@@ -234,9 +251,28 @@ public class CommandContext : ControlException
         Parameters = new ArraySegment<string>(OriginalParameters, 0, 0);
 
         CallerId = user.Steam64;
+
+#if TELEMETRY
+        if (_activity == null)
+            return;
+
+        _activity.AddTag("imgui", IMGUI);
+        _activity.AddTag("language", Language.Code);
+        _activity.AddTag("culture", Culture.Name);
+        _activity.AddTag("parse-culture", ParseCulture.Name);
+        _activity.AddTag("caller-id", CallerId.m_SteamID);
+#endif
     }
 
-    public CommandContext(ICommandUser user, CancellationToken token, string[] args, CommandFlagInfo[] flags, string originalMessage, CommandInfo commandInfo, IServiceProvider serviceProvider) : this(user, serviceProvider)
+    public CommandContext(ICommandUser user, CancellationToken token, string[] args, CommandFlagInfo[] flags, string originalMessage, CommandInfo commandInfo, IServiceProvider serviceProvider
+#if TELEMETRY
+        , Activity? activity
+#endif
+    ) : this(user, serviceProvider
+#if TELEMETRY
+        , activity
+#endif
+    )
     {
         CommandInfo = commandInfo;
 
@@ -257,6 +293,24 @@ public class CommandContext : ControlException
         Flags = flags;
         ArgumentCount = _argumentCount;
         Parameters = new ArraySegment<string>(OriginalParameters, 0, OriginalParameters.Length);
+
+#if TELEMETRY
+        if (_activity == null)
+            return;
+
+        _activity.AddTag("flags", Flags.Length);
+        for (int i = 0; i < flags.Length; i++)
+        {
+            CommandFlagInfo flag = flags[i];
+            _activity.AddTag($"flag-{i}", flag.ToString());
+        }
+
+        _activity.AddTag("parameters", args.Length);
+        for (int i = 0; i < args.Length; i++)
+        {
+            _activity.AddTag($"parameter-{i}", args[i]);
+        }
+#endif
     }
 
     /// <summary>
@@ -264,7 +318,11 @@ public class CommandContext : ControlException
     /// </summary>
     public static CommandContext CreateTemporary(ICommandUser user, IServiceProvider serviceProvider)
     {
-        return new CommandContext(user ?? throw new ArgumentNullException(nameof(user)), serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider)));
+        return new CommandContext(user ?? throw new ArgumentNullException(nameof(user)), serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider))
+#if TELEMETRY
+            , null
+#endif
+        );
     }
 
     /// <summary>
@@ -273,6 +331,9 @@ public class CommandContext : ControlException
     /// <returns>The instance of this <see cref="CommandContext"/> for chaining or throwing.</returns>
     public CommandContext Defer()
     {
+#if TELEMETRY
+        _activity?.AddEvent(new ActivityEvent("Deferred"));
+#endif
         Responded = true;
         return this;
     }
@@ -1369,6 +1430,9 @@ public class CommandContext : ControlException
     public void LogAction([ValueProvider("Uncreated.Warfare.Events.Logging.ActionLogTypes")] ActionLogType type, string? data = null)
     {
         ActionLogEntry action = new ActionLogEntry(type, data ?? string.Empty, CallerId.m_SteamID);
+#if TELEMETRY
+        _activity?.AddEvent(new ActivityEvent($"Log Action: {action}"));
+#endif
         _actionLoggerService?.AddAction(in action);
     }
 
@@ -1399,7 +1463,12 @@ public class CommandContext : ControlException
         }
 
         if (!vt.Result)
+        {
+#if TELEMETRY
+            _activity?.AddEvent(new ActivityEvent($"Missing permission: {permission}"));
+#endif
             throw SendNoPermission(permission);
+        }
             
         return default;
 
@@ -1407,7 +1476,12 @@ public class CommandContext : ControlException
         {
             bool hasPerm = await vt.ConfigureAwait(false);
             if (!hasPerm)
+            {
+#if TELEMETRY
+                _activity?.AddEvent(new ActivityEvent($"Missing permission: {permission}"));
+#endif
                 throw SendNoPermission(permission);
+            }
         }
     }
 
@@ -1438,6 +1512,9 @@ public class CommandContext : ControlException
         if (vt.Result)
             return default;
 
+#if TELEMETRY
+        _activity?.AddEvent(new ActivityEvent($"Missing permission: {permission1} or {permission2}"));
+#endif
         throw SendNoPermission(permission1);
 
         async Task Core(ValueTask<bool> vt, bool isFirst, PermissionLeaf permission1, PermissionLeaf permission2, CancellationToken token)
@@ -1451,7 +1528,12 @@ public class CommandContext : ControlException
 
             hasPerm = await HasPermission(permission2, token);
             if (!hasPerm)
+            {
+#if TELEMETRY
+                _activity?.AddEvent(new ActivityEvent($"Missing permission: {permission1} or {permission2}"));
+#endif
                 throw SendNoPermission(permission1);
+            }
         }
     }
 
@@ -1491,6 +1573,9 @@ public class CommandContext : ControlException
         if (vt.Result)
             return default;
 
+#if TELEMETRY
+        _activity?.AddEvent(new ActivityEvent($"Missing permission: {permission1} or {permission2} or {permission3}"));
+#endif
         throw SendNoPermission(permission1);
 
         async Task Core(ValueTask<bool> vt, int ctDone, PermissionLeaf permission1, PermissionLeaf permission2, PermissionLeaf permission3, CancellationToken token)
@@ -1511,7 +1596,12 @@ public class CommandContext : ControlException
 
             hasPerm = await HasPermission(permission3, token);
             if (!hasPerm)
+            {
+#if TELEMETRY
+                _activity?.AddEvent(new ActivityEvent($"Missing permission: {permission1} or {permission2} or {permission3}"));
+#endif
                 throw SendNoPermission(permission1);
+            }
         }
     }
 
@@ -1538,6 +1628,9 @@ public class CommandContext : ControlException
                 return;
         }
 
+#if TELEMETRY
+        _activity?.AddEvent(new ActivityEvent($"Missing one of permissions: {string.Join(", ", permissions)}"));
+#endif
         throw SendNoPermission(permissions[0]);
     }
 
@@ -1557,7 +1650,12 @@ public class CommandContext : ControlException
         }
 
         if (!vt.Result)
+        {
+#if TELEMETRY
+            _activity?.AddEvent(new ActivityEvent($"Missing permission {permission1} of: {permission1} and {permission2}"));
+#endif
             throw SendNoPermission(permission1);
+        }
 
         vt = HasPermission(permission2, token);
         if (!vt.IsCompleted)
@@ -1566,7 +1664,12 @@ public class CommandContext : ControlException
         }
 
         if (!vt.Result)
+        {
+#if TELEMETRY
+            _activity?.AddEvent(new ActivityEvent($"Missing permission {permission2} of: {permission1} and {permission2}"));
+#endif
             throw SendNoPermission(permission2);
+        }
 
         return default;
 
@@ -1574,14 +1677,24 @@ public class CommandContext : ControlException
         {
             bool hasPerm = await vt.ConfigureAwait(false);
             if (!hasPerm)
+            {
+#if TELEMETRY
+                _activity?.AddEvent(new ActivityEvent($"Missing permission {permission1} of: {permission1} and {permission2}"));
+#endif
                 throw SendNoPermission(permission1);
+            }
 
             if (!isFirst)
                 return;
 
             hasPerm = await HasPermission(permission2, token);
             if (!hasPerm)
+            {
+#if TELEMETRY
+                _activity?.AddEvent(new ActivityEvent($"Missing permission {permission2} of: {permission1} and {permission2}"));
+#endif
                 throw SendNoPermission(permission2);
+            }
         }
     }
 
@@ -1601,7 +1714,12 @@ public class CommandContext : ControlException
         }
 
         if (!vt.Result)
+        {
+#if TELEMETRY
+            _activity?.AddEvent(new ActivityEvent($"Missing permission {permission1} of: {permission1}, {permission2}, {permission3}"));
+#endif
             throw SendNoPermission(permission1);
+        }
 
         vt = HasPermission(permission2, token);
         if (!vt.IsCompleted)
@@ -1610,7 +1728,12 @@ public class CommandContext : ControlException
         }
 
         if (!vt.Result)
+        {
+#if TELEMETRY
+            _activity?.AddEvent(new ActivityEvent($"Missing permission {permission2} of: {permission1}, {permission2}, {permission3}"));
+#endif
             throw SendNoPermission(permission2);
+        }
 
         vt = HasPermission(permission3, token);
         if (!vt.IsCompleted)
@@ -1619,7 +1742,12 @@ public class CommandContext : ControlException
         }
 
         if (!vt.Result)
+        {
+#if TELEMETRY
+            _activity?.AddEvent(new ActivityEvent($"Missing permission {permission3} of: {permission1}, {permission2}, {permission3}"));
+#endif
             throw SendNoPermission(permission3);
+        }
 
         return default;
 
@@ -1627,21 +1755,36 @@ public class CommandContext : ControlException
         {
             bool hasPerm = await vt.ConfigureAwait(false);
             if (!hasPerm)
+            {
+#if TELEMETRY
+                _activity?.AddEvent(new ActivityEvent($"Missing permission {permission1} of: {permission1}, {permission2}, {permission3}"));
+#endif
                 throw SendNoPermission(permission1);
+            }
 
             if (ctDone == 2)
                 return;
 
             hasPerm = await HasPermission(ctDone == 1 ? permission3 : permission2, token);
             if (!hasPerm)
+            {
+#if TELEMETRY
+                _activity?.AddEvent(new ActivityEvent($"Missing permission {permission2} of: {permission1}, {permission2}, {permission3}"));
+#endif
                 throw SendNoPermission(permission2);
+            }
 
             if (ctDone == 1)
                 return;
 
             hasPerm = await HasPermission(permission3, token);
             if (!hasPerm)
+            {
+#if TELEMETRY
+                _activity?.AddEvent(new ActivityEvent($"Missing permission {permission3} of: {permission1}, {permission2}, {permission3}"));
+#endif
                 throw SendNoPermission(permission3);
+            }
         }
     }
 
@@ -1663,7 +1806,12 @@ public class CommandContext : ControlException
         for (int i = 0; i < permissions.Length; i++)
         {
             if (!await HasPermission(permissions[i], token))
+            {
+#if TELEMETRY
+                _activity?.AddEvent(new ActivityEvent($"Missing permission {permissions[i]} of: {string.Join(", ", permissions)}"));
+#endif
                 throw SendNoPermission(permissions[i]);
+            }
         }
     }
 
@@ -1685,56 +1833,94 @@ public class CommandContext : ControlException
             _cooldownManager.StartCooldown(Player, IsolatedCooldown);
         }
 
-        throw Reply(CommonTranslations.CommandCooldown, IsolatedCooldown!, CommandInfo.CommandName);
+#if TELEMETRY
+        _activity?.AddEvent(new ActivityEvent("On isolated cooldown"));
+#endif
+        throw Reply(CommonTranslations.CommandCooldown, IsolatedCooldown, CommandInfo.CommandName);
     }
 
     /// <exception cref="CommandContext"/>
     public void AssertRanByPlayer()
     {
         if (Player == null || !Player.IsOnline)
+        {
+#if TELEMETRY
+            _activity?.AddEvent(new ActivityEvent("Not ran by player"));
+#endif
             throw SendPlayerOnlyError();
+        }
     }
 
     /// <exception cref="CommandContext"/>
     public void AssertRanByTerminal()
     {
         if (!Caller.IsTerminal)
+        {
+#if TELEMETRY
+            _activity?.AddEvent(new ActivityEvent("Not ran by terminal"));
+#endif
             throw SendConsoleOnlyError();
+        }
     }
 
     /// <exception cref="CommandContext"/>
     public void AssertRanBy<TUser>() where TUser : ICommandUser
     {
         if (Caller is not TUser)
+        {
+#if TELEMETRY
+            _activity?.AddEvent(new ActivityEvent($"Not ran by {Accessor.Formatter.Format(typeof(TUser))}"));
+#endif
             throw SendConsoleOnlyError();
+        }
     }
 
     /// <exception cref="CommandContext"/>
     public void AssertArgs(int count, string usage)
     {
         if (!HasArgs(count))
+        {
+#if TELEMETRY
+            _activity?.AddEvent(new ActivityEvent($"Not enough args: ({count}, \"{usage}\")"));
+#endif
             throw SendCorrectUsage(usage);
+        }
     }
 
     /// <exception cref="CommandContext"/>
     public void AssertArgsExact(int count, string usage)
     {
         if (!HasArgsExact(count))
+        {
+#if TELEMETRY
+            _activity?.AddEvent(new ActivityEvent($"Not exactly {count} args: \"{usage}\""));
+#endif
             throw SendCorrectUsage(usage);
+        }
     }
 
     /// <exception cref="CommandContext"/>
     public void AssertArgs(int count)
     {
         if (!HasArgs(count))
+        {
+#if TELEMETRY
+            _activity?.AddEvent(new ActivityEvent($"Not enough args: ({count})"));
+#endif
             throw SendHelp();
+        }
     }
 
     /// <exception cref="CommandContext"/>
     public void AssertArgsExact(int count)
     {
         if (!HasArgsExact(count))
+        {
+#if TELEMETRY
+            _activity?.AddEvent(new ActivityEvent($"Not exactly {count} args"));
+#endif
             throw SendHelp();
+        }
     }
 
     /// <summary>
@@ -1760,6 +1946,9 @@ public class CommandContext : ControlException
         if (Command is TCommandType)
             throw new InvalidOperationException("Can not call SwitchToCommand from the same command type.");
 
+#if TELEMETRY
+        _activity?.AddEvent(new ActivityEvent($"Switched to command {Accessor.Formatter.Format(type)}"));
+#endif
         Responded = true;
         SwitchCommand = type;
         return this;
@@ -1778,6 +1967,9 @@ public class CommandContext : ControlException
         if (commandType.IsInstanceOfType(Command))
             throw new InvalidOperationException("Can not call SwitchToCommand from the same command type.");
 
+#if TELEMETRY
+        _activity?.AddEvent(new ActivityEvent($"Switched to command {Accessor.Formatter.Format(commandType)}"));
+#endif
         Responded = true;
         SwitchCommand = commandType;
         return this;
@@ -1816,6 +2008,9 @@ public class CommandContext : ControlException
     /// <remarks>Thread Safe</remarks>
     public Exception ReplyString(string message)
     {
+#if TELEMETRY
+        _activity?.AddEvent(new ActivityEvent($"Replied \"{message}\""));
+#endif
         _chatService.Send(Caller, message);
         Responded = true;
         return this;
@@ -1824,6 +2019,9 @@ public class CommandContext : ControlException
     /// <remarks>Thread Safe</remarks>
     public Exception ReplyString(string message, Color color)
     {
+#if TELEMETRY
+        _activity?.AddEvent(new ActivityEvent($"Replied \"{message}\""));
+#endif
         _chatService.Send(Caller, message, color);
         Responded = true;
         return this;
@@ -1832,6 +2030,9 @@ public class CommandContext : ControlException
     /// <remarks>Thread Safe</remarks>
     public Exception ReplyString(string message, ConsoleColor color)
     {
+#if TELEMETRY
+        _activity?.AddEvent(new ActivityEvent($"Replied \"{message}\""));
+#endif
         _chatService.Send(Caller, message, color);
         Responded = true;
         return this;
@@ -1840,6 +2041,9 @@ public class CommandContext : ControlException
     /// <remarks>Thread Safe</remarks>
     public Exception ReplyString(string message, string hex)
     {
+#if TELEMETRY
+        _activity?.AddEvent(new ActivityEvent($"Replied \"{message}\""));
+#endif
         HexStringHelper.TryParseColor32(hex, Culture, out Color32 color);
         _chatService.Send(Caller, message, color);
         Responded = true;
@@ -1855,6 +2059,9 @@ public class CommandContext : ControlException
             return this;
         }
 
+#if TELEMETRY
+        _activity?.AddEvent(new ActivityEvent($"Replied with browser request to \"{url}\" with message \"{message}\"."));
+#endif
         if (GameThread.IsCurrent)
         {
             Player.UnturnedPlayer.sendBrowserRequest(message, url);
@@ -1881,6 +2088,9 @@ public class CommandContext : ControlException
     /// <remarks>Thread Safe</remarks>
     public Exception Reply(Translation translation)
     {
+#if TELEMETRY
+        _activity?.AddEvent(new ActivityEvent($"Replied with translation {translation.Collection}.{translation.Key} with 0 args."));
+#endif
         _chatService.Send(Caller, translation);
         Responded = true;
         return this;
@@ -1889,6 +2099,9 @@ public class CommandContext : ControlException
     /// <remarks>Thread Safe</remarks>
     public Exception Reply<T0>(Translation<T0> translation, T0 arg0)
     {
+#if TELEMETRY
+        _activity?.AddEvent(new ActivityEvent($"Replied with translation {translation.Collection}.{translation.Key} with args: 1[ {arg0} ]."));
+#endif
         _chatService.Send(Caller, translation, arg0);
         Responded = true;
         return this;
@@ -1897,6 +2110,9 @@ public class CommandContext : ControlException
     /// <remarks>Thread Safe</remarks>
     public Exception Reply<T0, T1>(Translation<T0, T1> translation, T0 arg0, T1 arg1)
     {
+#if TELEMETRY
+        _activity?.AddEvent(new ActivityEvent($"Replied with translation {translation.Collection}.{translation.Key} with args: 2[ {arg0}, {arg1} ]."));
+#endif
         _chatService.Send(Caller, translation, arg0, arg1);
         Responded = true;
         return this;
@@ -1905,6 +2121,9 @@ public class CommandContext : ControlException
     /// <remarks>Thread Safe</remarks>
     public Exception Reply<T0, T1, T2>(Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2)
     {
+#if TELEMETRY
+        _activity?.AddEvent(new ActivityEvent($"Replied with translation {translation.Collection}.{translation.Key} with args: 3[ {arg0}, {arg1}, {arg2} ]."));
+#endif
         _chatService.Send(Caller, translation, arg0, arg1, arg2);
         Responded = true;
         return this;
@@ -1913,6 +2132,9 @@ public class CommandContext : ControlException
     /// <remarks>Thread Safe</remarks>
     public Exception Reply<T0, T1, T2, T3>(Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3)
     {
+#if TELEMETRY
+        _activity?.AddEvent(new ActivityEvent($"Replied with translation {translation.Collection}.{translation.Key} with args: 4[ {arg0}, {arg1}, {arg2}, {arg3} ]."));
+#endif
         _chatService.Send(Caller, translation, arg0, arg1, arg2, arg3);
         Responded = true;
         return this;
@@ -1921,6 +2143,9 @@ public class CommandContext : ControlException
     /// <remarks>Thread Safe</remarks>
     public Exception Reply<T0, T1, T2, T3, T4>(Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
     {
+#if TELEMETRY
+        _activity?.AddEvent(new ActivityEvent($"Replied with translation {translation.Collection}.{translation.Key} with args: 5[ {arg0}, {arg1}, {arg2}, {arg3}, {arg4} ]."));
+#endif
         _chatService.Send(Caller, translation, arg0, arg1, arg2, arg3, arg4);
         Responded = true;
         return this;
@@ -1929,6 +2154,9 @@ public class CommandContext : ControlException
     /// <remarks>Thread Safe</remarks>
     public Exception Reply<T0, T1, T2, T3, T4, T5>(Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
     {
+#if TELEMETRY
+        _activity?.AddEvent(new ActivityEvent($"Replied with translation {translation.Collection}.{translation.Key} with args: 6[ {arg0}, {arg1}, {arg2}, {arg3}, {arg4}, {arg5} ]."));
+#endif
         _chatService.Send(Caller, translation, arg0, arg1, arg2, arg3, arg4, arg5);
         Responded = true;
         return this;
@@ -1937,6 +2165,9 @@ public class CommandContext : ControlException
     /// <remarks>Thread Safe</remarks>
     public Exception Reply<T0, T1, T2, T3, T4, T5, T6>(Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
     {
+#if TELEMETRY
+        _activity?.AddEvent(new ActivityEvent($"Replied with translation {translation.Collection}.{translation.Key} with args: 7[ {arg0}, {arg1}, {arg2}, {arg3}, {arg4}, {arg5}, {arg6} ]."));
+#endif
         _chatService.Send(Caller, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
         Responded = true;
         return this;
@@ -1945,6 +2176,9 @@ public class CommandContext : ControlException
     /// <remarks>Thread Safe</remarks>
     public Exception Reply<T0, T1, T2, T3, T4, T5, T6, T7>(Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
     {
+#if TELEMETRY
+        _activity?.AddEvent(new ActivityEvent($"Replied with translation {translation.Collection}.{translation.Key} with args: 8[ {arg0}, {arg1}, {arg2}, {arg3}, {arg4}, {arg5}, {arg6}, {arg7} ]."));
+#endif
         _chatService.Send(Caller, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
         Responded = true;
         return this;
@@ -1953,6 +2187,9 @@ public class CommandContext : ControlException
     /// <remarks>Thread Safe</remarks>
     public Exception Reply<T0, T1, T2, T3, T4, T5, T6, T7, T8>(Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
     {
+#if TELEMETRY
+        _activity?.AddEvent(new ActivityEvent($"Replied with translation {translation.Collection}.{translation.Key} with args: 9[ {arg0}, {arg1}, {arg2}, {arg3}, {arg4}, {arg5}, {arg6}, {arg7}, {arg8} ]."));
+#endif
         _chatService.Send(Caller, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
         Responded = true;
         return this;
@@ -1961,6 +2198,9 @@ public class CommandContext : ControlException
     /// <remarks>Thread Safe</remarks>
     public Exception Reply<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
     {
+#if TELEMETRY
+        _activity?.AddEvent(new ActivityEvent($"Replied with translation {translation.Collection}.{translation.Key} with args: 10[ {arg0}, {arg1}, {arg2}, {arg3}, {arg4}, {arg5}, {arg6}, {arg7}, {arg8}, {arg9} ]."));
+#endif
         _chatService.Send(Caller, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
         Responded = true;
         return this;

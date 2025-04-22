@@ -4,6 +4,7 @@ using DanielWillett.ModularRpcs.Reflection;
 using DanielWillett.ModularRpcs.Routing;
 using DanielWillett.ModularRpcs.Serialization;
 using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools.Formatting;
 using DanielWillett.ReflectionTools.IoC;
 using HarmonyLib;
 using Microsoft.EntityFrameworkCore;
@@ -15,14 +16,21 @@ using Microsoft.Extensions.FileProviders.Physical;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 using MySqlConnector;
+using OpenTelemetry;
+using OpenTelemetry.Logs;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using SDG.Framework.Modules;
 using StackCleaner;
 using Stripe;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database;
@@ -235,6 +243,35 @@ public sealed class WarfareModule
         bldr.RegisterBuildCallback(s => ServiceProvider = (IContainer)s);
     }
 
+#if TELEMETRY
+    private static readonly DefaultOpCodeFormatter TelemetrySourceFormatter = new DefaultOpCodeFormatter
+    {
+        UseFullTypeNames = true
+    };
+
+    private static readonly string Version = typeof(WarfareModule).Assembly.GetName().Version.ToString();
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static ActivitySource CreateActivitySource()
+    {
+        string source = "Uncreated.Warfare";
+        try
+        {
+            StackTrace st = new StackTrace(1, false);
+            MethodBase? method = st.GetFrame(0)?.GetMethod();
+            if (method?.DeclaringType != null)
+                source = TelemetrySourceFormatter.Format(method.DeclaringType);
+        }
+        catch
+        {
+            // ignored
+        }
+
+        Singleton.GlobalLogger.LogInformation($"Created activity source: {source}.");
+        return new ActivitySource(source, Version);
+    }
+#endif
+
     private void Init()
     {
         Singleton = this;
@@ -314,8 +351,14 @@ public sealed class WarfareModule
         bldr.RegisterFromCollection(collection =>
         {
             collection.AddTransient<IOptionsMonitor<LoggerFilterOptions>, LoggerOptionsMonitor>();
-            collection.Configure<LoggerFactoryOptions>(o => { });
-            collection.AddLogging();
+            collection.Configure<LoggerFactoryOptions>(_ => { });
+            collection.AddLogging(l =>
+            {
+                //l.AddOpenTelemetry(ot =>
+                //{
+                //    ot.AddConsoleExporter();
+                //});
+            });
         });
 
         // service configurers from config
@@ -355,9 +398,9 @@ public sealed class WarfareModule
         ServiceProvider = bldr.Build();
 
         Accessor.Logger = new ReflectionToolsLoggerProxy(ServiceProvider.Resolve<ILoggerFactory>());
-        #if DEBUG
+#if DEBUG
         Accessor.LogDebugMessages = true;
-        #endif
+#endif
         Accessor.LogInfoMessages = true;
         Accessor.LogWarningMessages = true;
         Accessor.LogErrorMessages = true;
@@ -1106,6 +1149,46 @@ public sealed class WarfareModule
 
             return new ManualMySqlProvider(connectionString, serviceProvider.Resolve<ILogger<ManualMySqlProvider>>());
         });
+
+#if TELEMETRY
+        // Telemetry
+
+        TracerProvider tracerProvider = Sdk.CreateTracerProviderBuilder()
+            .AddSource(
+                "Uncreated.Warfare.Events.EventDispatcher",
+                "Uncreated.Warfare.Interaction.Commands.CommandDispatcher"
+            )
+            .ConfigureResource(resource =>
+                resource.AddService(
+                    serviceName: "Uncreated.Warfare",
+                    serviceVersion: Assembly.GetExecutingAssembly().GetName().Version.ToString()
+                )
+            )
+            .AddZipkinExporter(zipkin =>
+            {
+                zipkin.Endpoint = new Uri(
+                    new Uri(Configuration.GetValue("zipkin_uri", "http://localhost:9411/")!),
+                    new Uri("api/v2/spans", UriKind.Relative)
+                );
+                zipkin.ExportProcessorType = ExportProcessorType.Batch;
+                zipkin.BatchExportProcessorOptions = new BatchExportProcessorOptions<Activity>
+                {
+                    ExporterTimeoutMilliseconds = 10000,
+                    ScheduledDelayMilliseconds = 1000
+                };
+            })
+            .Build();
+
+        bldr.RegisterInstance(tracerProvider)
+            .OwnedByLifetimeScope();
+
+        //MeterProvider meterProvider = Sdk.CreateMeterProviderBuilder()
+        //    .AddMeter(serviceName)
+        //    .Build();
+
+        //bldr.RegisterInstance(meterProvider)
+        //    .OwnedByLifetimeScope();
+#endif
     }
 
     public async UniTask ShutdownAsync(string reason, CancellationToken token = default)
