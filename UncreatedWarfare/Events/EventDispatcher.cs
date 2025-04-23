@@ -1446,7 +1446,7 @@ public partial class EventDispatcher : IHostedService, IDisposable
 
         // require next frame and not in same class, main thread comes first
         if ((a.Flags & BitRequireNextFrame) != (b.Flags & BitRequireNextFrame))
-            return (b.Flags & BitRequireNextFrame) != 0 ? 1 : -1;
+            return (a.Flags & BitRequireNextFrame) != 0 ? 1 : -1;
 
         if (a.Model != b.Model)
         {
