@@ -8,7 +8,6 @@ using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Interaction;
-using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.StrategyMaps.MapTacks;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
@@ -20,13 +19,15 @@ namespace Uncreated.Warfare.StrategyMaps;
 public class StrategyMap : IDisposable, IEventListener<ClaimBedRequested>
 {
     private readonly MapTableInfo _tableInfo;
+    private readonly BuildableAttributesDataStore _attributeStore;
     private readonly TrackingList<MapTack> _activeMapTacks;
 
     public IBuildable MapTable { get; set; }
 
-    public StrategyMap(IBuildable buildable, MapTableInfo tableInfo)
+    public StrategyMap(IBuildable buildable, MapTableInfo tableInfo, BuildableAttributesDataStore attributeStore)
     {
         _tableInfo = tableInfo;
+        _attributeStore = attributeStore;
         MapTable = buildable;
         _activeMapTacks = new TrackingList<MapTack>();
     }
@@ -60,6 +61,7 @@ public class StrategyMap : IDisposable, IEventListener<ClaimBedRequested>
         Vector3 worldCoordsOnMapTable = TranslateWorldPointOntoMap(newMapTack.FeatureWorldPosition);
 
         newMapTack.DropMarker(worldCoordsOnMapTable, MapTable.Rotation);
+        _attributeStore.UpdateAttributes(newMapTack.Marker).Add(MainBaseBuildables.TransientAttribute, null);
 
         _activeMapTacks.Add(newMapTack);
     }

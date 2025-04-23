@@ -1,19 +1,16 @@
 using Microsoft.Extensions.DependencyInjection;
 using StackCleaner;
 using System;
-using System.Globalization;
 using Uncreated.Framework.UI;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Events;
-using Uncreated.Warfare.Events.Logging;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Events.Models.Vehicles;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Layouts.Teams;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Cooldowns;
 using Uncreated.Warfare.Players.Extensions;
@@ -153,6 +150,11 @@ public class PlayerInjureComponent : MonoBehaviour,
     }
 
     /// <summary>
+    /// If the player is injured or dead from being injured.
+    /// </summary>
+    internal bool WasInjured => _isInjured;
+
+    /// <summary>
     /// The death info for if the player bleeds out.
     /// </summary>
     public PlayerDied? PendingDeathInfo { get; internal set; }
@@ -280,6 +282,7 @@ public class PlayerInjureComponent : MonoBehaviour,
         // todo: ActionLog.Add(ActionLogType.Injured, "by " + (killer == null ? "self" : killer.Steam64.m_SteamID.ToString(CultureInfo.InvariantCulture)), parameters.player.channel.owner.playerID.steamID.m_SteamID);
 
         PendingDeathInfo = _deathTracker.GetInjuredArguments(in parameters);
+        _logger.LogDebug($"Set injure parameters: {parameters.killer}, injure args: {PendingDeathInfo.PrimaryAsset}.");
 
         if (killerId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
         {

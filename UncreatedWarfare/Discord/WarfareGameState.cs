@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
+using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Squads;
 using Uncreated.Warfare.Layouts;
@@ -379,6 +380,7 @@ public class WarfareGameStateService :
         return UniTask.CompletedTask;
     }
 
+    [EventListener(RequiresMainThread = false)]
     void IEventListener<DailyQuestsUpdated>.HandleEvent(DailyQuestsUpdated e, IServiceProvider serviceProvider)
     {
         if (e.Days == null)
@@ -398,6 +400,7 @@ public class WarfareGameStateService :
         }
     }
 
+    [EventListener(MustRunInstantly = true)]
     void IEventListener<SquadUpdated>.HandleEvent(SquadUpdated e, IServiceProvider serviceProvider)
     {
         switch (e)
@@ -429,6 +432,7 @@ public class WarfareGameStateService :
         }
     }
 
+    [EventListener]
     void IEventListener<HomebaseConnected>.HandleEvent(HomebaseConnected e, IServiceProvider serviceProvider)
     {
         SendFullState();

@@ -1,54 +1,15 @@
-using Humanizer;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Events.Components;
+using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Events.Models.Buildables;
-using Uncreated.Warfare.Models.Buildables;
 
 namespace Uncreated.Warfare.Util;
 public static class BuildableExtensions
 {
     private static readonly Dictionary<Guid, Bounds> CachedBarricadeBounds = new Dictionary<Guid, Bounds>();
     private static readonly List<Collider> WorkingColliders = new List<Collider>();
-
-    /// <summary>
-    /// Destroyes every buildable that isn't currently saved.
-    /// </summary>
-    /// <remarks>Storages won't drop their items.</remarks>
-    public static async Task<int> DestroyUnsavedBuildables(this BuildableSaver buildableSaver, CSteamID instigator = default, CancellationToken token = default)
-    {
-        List<BuildableSave> saves = await buildableSaver.GetAllSavesAsync(token).ConfigureAwait(false);
-
-        await UniTask.SwitchToMainThread(token);
-
-        bool isSalvaged = instigator.GetEAccountType() == EAccountType.k_EAccountTypeIndividual;
-
-        int ct = 0;
-        foreach (BarricadeInfo barricade in BarricadeUtility.EnumerateBarricades()
-                     .Where(structure => !saves.Exists(x => !x.IsStructure && x.InstanceId == structure.Drop.instanceID))
-                     .ToList()
-                )
-        {
-            BarricadeUtility.PreventItemDrops(barricade.Drop);
-            SetSalvageInfo(barricade.Drop.model, EDamageOrigin.Unknown, instigator, isSalvaged, null);
-            BarricadeManager.destroyBarricade(barricade.Drop, barricade.Coord.x, barricade.Coord.y, barricade.Plant);
-            ++ct;
-        }
-
-        foreach (StructureInfo structure in StructureUtility.EnumerateStructures()
-                     .Where(structure => !saves.Exists(x => x.IsStructure && x.InstanceId == structure.Drop.instanceID))
-                     .ToList()
-                )
-        {
-            SetSalvageInfo(structure.Drop.model, EDamageOrigin.Unknown, instigator, isSalvaged, null);
-            StructureManager.destroyStructure(structure.Drop, structure.Coord.x, structure.Coord.y, Vector3.zero);
-            ++ct;
-        }
-
-        return ct;
-    }
 
     /// <summary>
     /// Destroy the structure or barricade.
@@ -70,6 +31,8 @@ public static class BuildableExtensions
                     && !barricadeDrop.GetServersideData().barricade.isDead
                     && BarricadeManager.tryGetRegion(buildable.Model, out byte x, out byte y, out ushort plant, out _))
                 {
+                    BarricadeUtility.PreventItemDrops(barricadeDrop);
+                    SetSalvageInfo(barricadeDrop.model, EDamageOrigin.Unknown, CSteamID.Nil, false, null);
                     BarricadeManager.destroyBarricade(barricadeDrop, x, y, plant);
                     return true;
                 }
@@ -80,6 +43,7 @@ public static class BuildableExtensions
                     && !structureDrop.GetServersideData().structure.isDead
                     && StructureManager.tryGetRegion(buildable.Model, out byte x, out byte y, out _))
                 {
+                    SetSalvageInfo(structureDrop.model, EDamageOrigin.Unknown, CSteamID.Nil, false, null);
                     StructureManager.destroyStructure(structureDrop, x, y, Vector3.zero);
                     return true;
                 }

@@ -82,6 +82,8 @@ public struct ClothingItem
 
     public ClothingType Type;
 
+    public byte Flag => (byte)(1 << (int)Type);
+
     public readonly ItemAsset? Asset =>
         _clothing is null ? throw new InvalidOperationException("Clothing not set") : Type switch
         {

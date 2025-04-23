@@ -189,8 +189,8 @@
 
   <ItemGroup Condition="$(DefineConstants.Contains('TELEMETRY'))">
 
-	  <PackageReference Include="OpenTelemetry" Version="1.9.0"/>
-	  <PackageReference Include="OpenTelemetry.Exporter.Zipkin" Version="1.9.0"/>
+	  <PackageReference Include="OpenTelemetry" Version="1.9.0" />
+	  <PackageReference Include="OpenTelemetry.Exporter.Zipkin" Version="1.9.0" />
 
   </ItemGroup>
 

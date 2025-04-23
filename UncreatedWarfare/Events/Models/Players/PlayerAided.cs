@@ -8,7 +8,6 @@ namespace Uncreated.Warfare.Events.Models.Players;
 /// <summary>
 /// Invoked when a player uses a consumable item on another player.
 /// </summary>
-[EventModel(EventSynchronizationContext.Pure)]
 public sealed class PlayerAided : CancellablePlayerEvent, IActionLoggableEvent
 {
     /// <summary>

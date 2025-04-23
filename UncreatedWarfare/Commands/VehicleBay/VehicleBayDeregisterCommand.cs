@@ -12,7 +12,6 @@ namespace Uncreated.Warfare.Commands;
 [Command("deregister", "dereg", "unregister", "unreg"), SubCommandOf(typeof(VehicleBayCommand))]
 internal sealed class VehicleBayDeregisterCommand : IExecutableCommand
 {
-    private readonly BuildableSaver _buildableSaver;
     private readonly VehicleSpawnerService _spawnerStore;
     private readonly VehicleBayCommandTranslations _translations;
 
@@ -21,10 +20,8 @@ internal sealed class VehicleBayDeregisterCommand : IExecutableCommand
 
     public VehicleBayDeregisterCommand(
         TranslationInjection<VehicleBayCommandTranslations> translations,
-        BuildableSaver buildableSaver,
         VehicleSpawnerService spawnerStore)
     {
-        _buildableSaver = buildableSaver;
         _spawnerStore = spawnerStore;
         _translations = translations.Value;
     }
@@ -60,18 +57,10 @@ internal sealed class VehicleBayDeregisterCommand : IExecutableCommand
 
         await _spawnerStore.DeregisterSpawner(spawner, token);
 
-        if (spawner.Buildable != null)
-        {
-            await _buildableSaver.DiscardBuildableAsync(spawner.Buildable, token);
-        }
-
         List<IBuildable> signs = spawner.Signs.ToList();
-        foreach (IBuildable sign in signs)
-        {
-            await _buildableSaver.DiscardBuildableAsync(sign, token);
-        }
 
         await UniTask.SwitchToMainThread(token);
+
         foreach (IBuildable sign in signs)
         {
             if (sign.GetDrop<BarricadeDrop>().interactable is InteractableSign s)

@@ -60,7 +60,7 @@ public partial class FobManager :
         if (e.Asset is not ItemTrapAsset || !IsTrapTooNearFobSpawn(e.Position))
             return;
 
-        _chatService.Send(e.OriginalPlacer, _translations.BuildableNotAllowed);
+        _chatService.Send(e.OriginalPlacer, _translations.TrapNotAllowed);
 
         e.Cancel();
     }

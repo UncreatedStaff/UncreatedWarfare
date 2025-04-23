@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Globalization;
 using Uncreated.Warfare.Util;
 
@@ -101,7 +101,7 @@ internal static class TranslationArgumentModifiers
 
                 int segmentLength = nextIndex - segmentIndex;
 
-                int startIndex = argSpan.StartIndex + state.ArgumentStartIndexOffset;
+                int startIndex = argSpan.StartIndex - state.ArgumentStartIndexOffset;
 
                 int lenToCopy = startIndex - index;
                 // clean join spaces

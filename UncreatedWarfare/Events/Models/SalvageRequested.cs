@@ -2,7 +2,6 @@ using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Events.Models.Structures;
 using Uncreated.Warfare.Layouts.Teams;
-using Uncreated.Warfare.Models.Buildables;
 
 namespace Uncreated.Warfare.Events.Models;
 
@@ -12,7 +11,6 @@ namespace Uncreated.Warfare.Events.Models;
 public abstract class SalvageRequested : CancellablePlayerEvent
 {
     protected IBuildable? BuildableCache;
-    protected BuildableSave? SaveCache;
 
     /// <summary>
     /// Abstracted <see cref="IBuildable"/> of the buildable.

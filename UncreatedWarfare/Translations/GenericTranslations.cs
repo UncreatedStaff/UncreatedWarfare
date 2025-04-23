@@ -33,7 +33,7 @@ public class Translation<T0> : Translation
         ReadOnlySpan<char> preformattedValue = args.PreformattedValue;
         if (pluralizers.Length > 0)
         {
-            preformattedValue = ApplyPluralizers(in args, pluralizers, argOffset, 1, _argAccessor.AccessFunc);
+            preformattedValue = TranslationPluralizations.ApplyPluralizers(in args, pluralizers, argOffset, 1, _argAccessor.AccessFunc);
         }
 
         return TranslationFormattingUtility.FormatString(preformattedValue, f0.AsSpan(), default);
@@ -103,7 +103,7 @@ public class Translation<T0, T1> : Translation
         ReadOnlySpan<char> preformattedValue = args.PreformattedValue;
         if (pluralizers.Length > 0)
         {
-            preformattedValue = ApplyPluralizers(in args, pluralizers, argOffset, 2, _argAccessor.AccessFunc);
+            preformattedValue = TranslationPluralizations.ApplyPluralizers(in args, pluralizers, argOffset, 2, _argAccessor.AccessFunc);
         }
 
         return TranslationFormattingUtility.FormatString(preformattedValue, collectionSpan, indices);
@@ -192,7 +192,7 @@ public class Translation<T0, T1, T2> : Translation
         ReadOnlySpan<char> preformattedValue = args.PreformattedValue;
         if (pluralizers.Length > 0)
         {
-            preformattedValue = ApplyPluralizers(in args, pluralizers, argOffset, 3, _argAccessor.AccessFunc);
+            preformattedValue = TranslationPluralizations.ApplyPluralizers(in args, pluralizers, argOffset, 3, _argAccessor.AccessFunc);
         }
 
         return TranslationFormattingUtility.FormatString(preformattedValue, collectionSpan, indices);
@@ -293,7 +293,7 @@ public class Translation<T0, T1, T2, T3> : Translation
         ReadOnlySpan<char> preformattedValue = args.PreformattedValue;
         if (pluralizers.Length > 0)
         {
-            preformattedValue = ApplyPluralizers(in args, pluralizers, argOffset, 4, _argAccessor.AccessFunc);
+            preformattedValue = TranslationPluralizations.ApplyPluralizers(in args, pluralizers, argOffset, 4, _argAccessor.AccessFunc);
         }
 
         return TranslationFormattingUtility.FormatString(preformattedValue, collectionSpan, indices);
@@ -418,7 +418,7 @@ public class Translation<T0, T1, T2, T3, T4> : Translation
         ReadOnlySpan<char> preformattedValue = args.PreformattedValue;
         if (pluralizers.Length > 0)
         {
-            preformattedValue = ApplyPluralizers(in args, pluralizers, argOffset, 5, _argAccessor.AccessFunc);
+            preformattedValue = TranslationPluralizations.ApplyPluralizers(in args, pluralizers, argOffset, 5, _argAccessor.AccessFunc);
         }
 
         return TranslationFormattingUtility.FormatString(preformattedValue, collectionSpan, indices);
@@ -531,7 +531,7 @@ public class Translation<T0, T1, T2, T3, T4, T5> : Translation
         ReadOnlySpan<char> preformattedValue = args.PreformattedValue;
         if (pluralizers.Length > 0)
         {
-            preformattedValue = ApplyPluralizers(in args, pluralizers, argOffset, 6, _argAccessor.AccessFunc);
+            preformattedValue = TranslationPluralizations.ApplyPluralizers(in args, pluralizers, argOffset, 6, _argAccessor.AccessFunc);
         }
 
         return TranslationFormattingUtility.FormatString(preformattedValue, collectionSpan, indices);
@@ -668,7 +668,7 @@ public class Translation<T0, T1, T2, T3, T4, T5, T6> : Translation
         ReadOnlySpan<char> preformattedValue = args.PreformattedValue;
         if (pluralizers.Length > 0)
         {
-            preformattedValue = ApplyPluralizers(in args, pluralizers, argOffset, 7, _argAccessor.AccessFunc);
+            preformattedValue = TranslationPluralizations.ApplyPluralizers(in args, pluralizers, argOffset, 7, _argAccessor.AccessFunc);
         }
 
         return TranslationFormattingUtility.FormatString(preformattedValue, collectionSpan, indices);
@@ -817,7 +817,7 @@ public class Translation<T0, T1, T2, T3, T4, T5, T6, T7> : Translation
         ReadOnlySpan<char> preformattedValue = args.PreformattedValue;
         if (pluralizers.Length > 0)
         {
-            preformattedValue = ApplyPluralizers(in args, pluralizers, argOffset, 8, _argAccessor.AccessFunc);
+            preformattedValue = TranslationPluralizations.ApplyPluralizers(in args, pluralizers, argOffset, 8, _argAccessor.AccessFunc);
         }
 
         return TranslationFormattingUtility.FormatString(preformattedValue, collectionSpan, indices);
@@ -978,7 +978,7 @@ public class Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> : Translation
         ReadOnlySpan<char> preformattedValue = args.PreformattedValue;
         if (pluralizers.Length > 0)
         {
-            preformattedValue = ApplyPluralizers(in args, pluralizers, argOffset, 9, _argAccessor.AccessFunc);
+            preformattedValue = TranslationPluralizations.ApplyPluralizers(in args, pluralizers, argOffset, 9, _argAccessor.AccessFunc);
         }
 
         return TranslationFormattingUtility.FormatString(preformattedValue, collectionSpan, indices);
@@ -1151,7 +1151,7 @@ public class Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> : Translation
         ReadOnlySpan<char> preformattedValue = args.PreformattedValue;
         if (pluralizers.Length > 0)
         {
-            preformattedValue = ApplyPluralizers(in args, pluralizers, argOffset, 10, _argAccessor.AccessFunc);
+            preformattedValue = TranslationPluralizations.ApplyPluralizers(in args, pluralizers, argOffset, 10, _argAccessor.AccessFunc);
         }
 
         return TranslationFormattingUtility.FormatString(preformattedValue, collectionSpan, indices);

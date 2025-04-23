@@ -1,4 +1,3 @@
-using System;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models.Barricades;
@@ -14,21 +13,17 @@ namespace Uncreated.Warfare.Commands;
 [Command("destroy", "pop"), SubCommandOf(typeof(StructureCommand))]
 internal sealed class StructureDestroyCommand : IExecutableCommand
 {
-    private readonly BuildableSaver _saver;
     private readonly VehicleService _vehicleService;
     private readonly EventDispatcher _eventDispatcher;
     private readonly StructureTranslations _translations;
-    private readonly BuildableSaver _buildableSaver;
 
     /// <inheritdoc />
     public required CommandContext Context { get; init; }
 
-    public StructureDestroyCommand(VehicleService vehicleService, BuildableSaver saver, EventDispatcher eventDispatcher, TranslationInjection<StructureTranslations> translations, BuildableSaver buildableSaver)
+    public StructureDestroyCommand(VehicleService vehicleService, EventDispatcher eventDispatcher, TranslationInjection<StructureTranslations> translations)
     {
-        _saver = saver;
         _vehicleService = vehicleService;
         _eventDispatcher = eventDispatcher;
-        _buildableSaver = buildableSaver;
         _translations = translations.Value;
     }
 
@@ -48,16 +43,6 @@ internal sealed class StructureDestroyCommand : IExecutableCommand
         }
         else if (Context.TryGetStructureTarget(out StructureDrop? structure))
         {
-            bool removedSave = await _saver.DiscardStructureAsync(structure.instanceID, token);
-            await UniTask.SwitchToMainThread(token);
-            if (removedSave)
-            {
-                // todo: Context.LogAction(ActionLogType.UnsaveStructure, $"{structure.asset.itemName} / {structure.asset.id} / {structure.asset.GUID:N} " +
-                //                                                  $"at {structure.GetServersideData().point} ({structure.instanceID})");
-                Context.Reply(_translations.StructureUnsaved, structure.asset);
-            }
-
-            await UnsaveBuildable(new BuildableStructure(structure), token);
             await DestroyStructure(structure, Context.Player, CancellationToken.None);
             // todo: Context.LogAction(ActionLogType.PopStructure,
             //     $"STRUCTURE: {structure.asset.itemName} / {structure.asset.id} /" +
@@ -65,16 +50,6 @@ internal sealed class StructureDestroyCommand : IExecutableCommand
         }
         else if (Context.TryGetBarricadeTarget(out BarricadeDrop? barricade))
         {
-            bool removedSave = await _saver.DiscardStructureAsync(barricade.instanceID, token);
-            await UniTask.SwitchToMainThread(token);
-            if (removedSave)
-            {
-                // todo: Context.LogAction(ActionLogType.UnsaveStructure, $"{barricade.asset.itemName} / {barricade.asset.id} / {barricade.asset.GUID:N} " +
-                //                                                  $"at {barricade.GetServersideData().point} ({barricade.instanceID})");
-                Context.Reply(_translations.StructureUnsaved, barricade.asset);
-            }
-
-            await UnsaveBuildable(new BuildableBarricade(barricade), token);
             await DestroyBarricade(barricade, Context.Player, CancellationToken.None);
             // todo: Context.LogAction(ActionLogType.PopStructure,
             //     $"BARRICADE: {barricade.asset.itemName} / {barricade.asset.id} /" +
@@ -84,14 +59,6 @@ internal sealed class StructureDestroyCommand : IExecutableCommand
         else
         {
             Context.Reply(_translations.StructureNoTarget);
-        }
-    }
-
-    private async UniTask UnsaveBuildable(IBuildable buildable, CancellationToken token = default)
-    {
-        if (await _buildableSaver.DiscardBuildableAsync(buildable, token))
-        {
-            Context.Reply(_translations.StructureUnsaved, buildable.Asset);
         }
     }
 
@@ -160,7 +127,6 @@ internal sealed class StructureDestroyCommand : IExecutableCommand
 
                 BarricadeManager.destroyBarricade(args.Barricade, x, y, plant);
                 Context.Reply(_translations.StructureDestroyed, bDrop.asset);
-                RemoveBuiladble(null, bDrop);
             });
         }
         finally
@@ -174,7 +140,6 @@ internal sealed class StructureDestroyCommand : IExecutableCommand
 
         BarricadeManager.destroyBarricade(bDrop, x, y, ushort.MaxValue);
         Context.Reply(_translations.StructureDestroyed, bDrop.asset);
-        RemoveBuiladble(null, bDrop);
     }
 
     private async UniTask DestroyStructure(StructureDrop sDrop, WarfarePlayer player, CancellationToken token = default)
@@ -238,7 +203,6 @@ internal sealed class StructureDestroyCommand : IExecutableCommand
 
                 StructureManager.destroyStructure(sDrop, x, y, Vector3.Reflect(sDrop.GetServersideData().point - player.Position, Vector3.up).normalized * 4);
                 Context.Reply(_translations.StructureDestroyed, sDrop.asset);
-                RemoveBuiladble(sDrop, null);
             });
         }
         finally
@@ -254,28 +218,5 @@ internal sealed class StructureDestroyCommand : IExecutableCommand
 
         StructureManager.destroyStructure(sDrop, x, y, Vector3.Reflect(sDrop.GetServersideData().point - player.Position, Vector3.up).normalized * 4);
         Context.Reply(_translations.StructureDestroyed, sDrop.asset);
-        RemoveBuiladble(sDrop, null);
-    }
-
-    private void RemoveBuiladble(StructureDrop? structure, BarricadeDrop? barricade)
-    {
-        _ = Task.Run(async () =>
-        {
-            bool success;
-            try
-            {
-                success = structure != null
-                    ? await _buildableSaver.DiscardStructureAsync(structure.instanceID, CancellationToken.None)
-                    : await _buildableSaver.DiscardBarricadeAsync(barricade!.instanceID, CancellationToken.None);
-            }
-            catch (Exception ex)
-            {
-                Context.Logger.LogError(ex, "Error unsaving buildable.");
-                return;
-            }
-
-            if (success)
-                Context.Reply(_translations.StructureUnsaved, (ItemPlaceableAsset?)structure?.asset ?? barricade!.asset);
-        }, CancellationToken.None);
     }
 }

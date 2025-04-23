@@ -1,4 +1,4 @@
-﻿using Uncreated.Warfare.Fobs;
+using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Locations;
@@ -22,6 +22,9 @@ public class FobTranslations : PropertiesTranslationCollection
 
     [TranslationData("Sent to the player when they do /build.")]
     public readonly Translation BuildLegacyExplanation = new Translation("<#ffab87>Hit the foundation with your Entrenching Tool to build it.");
+
+    [TranslationData("Sent to the player when they try to take a supply crate from a trunk.")]
+    public readonly Translation CantTakeSupplyCrate = new Translation("<#ffab87>Drop the supply crate from the trunk directly to restock a FOB.");
 
     [TranslationData("Indicates that the maximum amount of buildables of the given type have already been built on this FOB.", "Maximum amount", "Buildable type")]
     public readonly Translation<int, ShovelableInfo> BuildLimitReached = new Translation<int, ShovelableInfo>("<#ffab87>This FOB already has {0} {1}.", arg0Fmt: "F0", arg1Fmt: PluralAddon.WhenArgument(0));
@@ -76,6 +79,9 @@ public class FobTranslations : PropertiesTranslationCollection
 
     [TranslationData("Indicates that a player doesn't have permissions or is missing the required kit, etc. to place a buildable.")]
     public readonly Translation BuildableNotAllowed = new Translation("<#ffa238>You are not allowed to place this buildable.");
+    
+    [TranslationData("Indicates that a player isn't able to place traps in a FOB.")]
+    public readonly Translation TrapNotAllowed = new Translation("<#ffa238>Traps can not be placed inside FOBs.");
     
     [TranslationData("Indicates that a player cannot place a rally point because there are enemies nearby.")]
     public readonly Translation PlaceRallyPointNearbyEnemies = new Translation("<#ffaa42>Rally point unavailable - there are enemies nearby.");

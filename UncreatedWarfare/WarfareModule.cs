@@ -684,7 +684,11 @@ public sealed class WarfareModule
         
         bldr.RegisterInstance(_gameObjectHost).ExternallyOwned();
 
-        bldr.RegisterType<BuildableSaver>()
+        bldr.RegisterType<BuildableAttributesDataStore>()
+            .AsImplementedInterfaces().AsSelf()
+            .SingleInstance();
+
+        bldr.RegisterType<MainBaseBuildables>()
             .AsImplementedInterfaces().AsSelf()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
 
@@ -1032,16 +1036,11 @@ public sealed class WarfareModule
         bldr.RegisterType<ShovelableWarningTweak>()
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+        bldr.RegisterType<DisallowPickUpSupplyCrate>()
+            .AsSelf().AsImplementedInterfaces()
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
 
         bldr.RegisterType<WarTableDoorTweak>()
-            .AsSelf().AsImplementedInterfaces()
-            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
-
-        bldr.RegisterType<WipeStructuresOnGameStartTweak>()
-            .AsSelf().AsImplementedInterfaces()
-            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
-
-        bldr.RegisterType<AutoSaveMainStructuresTweak>()
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
 
@@ -1415,7 +1414,7 @@ public sealed class WarfareModule
 
     internal async UniTask InvokeLevelLoaded(CancellationToken token)
     {
-        List<ILevelHostedService> hostedServices = ServiceProvider
+        List<ILevelHostedService> hostedServices = GetActiveLayout().ServiceProvider
             .Resolve<IEnumerable<ILevelHostedService>>()
             .OrderByDescending(x => x.GetType().GetPriority())
             .ToList();

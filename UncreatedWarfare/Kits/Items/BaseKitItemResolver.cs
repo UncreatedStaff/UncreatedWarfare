@@ -35,7 +35,7 @@ public class BaseKitItemResolver : IKitItemResolver
         if (item is not IRedirectedItem redirect
             || (asset = _redirectService.ResolveRedirect(redirect.Item, redirect.Variant ?? string.Empty, kit?.Faction.NullIfDefault(), requestingTeam, out state, out amount)) == null)
         {
-            _logger.LogWarning($"Item not found: {item}.");
+            _logger.LogDebug($"Item not found: {item}.");
             return new KitItemResolutionResult(null, Array.Empty<byte>(), 0, 100);
         }
 

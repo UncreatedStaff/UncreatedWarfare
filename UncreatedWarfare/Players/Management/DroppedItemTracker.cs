@@ -231,7 +231,7 @@ public class DroppedItemTracker : IHostedService, IEventListener<PlayerLeft>
                 {
                     _ignoreSpawningItemEvent = false;
                 }
-            });
+            }, args => args.PlayerDroppedId.IsIndividual());
         }
         finally
         {
@@ -328,7 +328,7 @@ public class DroppedItemTracker : IHostedService, IEventListener<PlayerLeft>
 
             Vector3 point = args.Position;
 
-            bool isCustomDropping = _getNextInstanceId != null && _setNextInstanceId != null && SendItem != null;
+            bool isCustomDropping = (args.Exact || !args.Grounded) && _getNextInstanceId != null && _setNextInstanceId != null && SendItem != null;
 
             if (isCustomDropping && !args.Exact)
             {
@@ -366,11 +366,12 @@ public class DroppedItemTracker : IHostedService, IEventListener<PlayerLeft>
             if (itemJar?.item != args.Item)
                 return;
 
-            _itemsPendingDrop[args.Item] = args.Player.Steam64.m_SteamID;
 
             ItemInfo droppedItem;
             if (!isCustomDropping)
             {
+                _itemsPendingDrop[args.Item] = args.Player.Steam64.m_SteamID;
+
                 ItemManager.dropItem(args.Item, point, true, true, args.WideSpread);
                 droppedItem = ItemUtility.FindItem(args.Item, args.Position);
             }
@@ -399,7 +400,7 @@ public class DroppedItemTracker : IHostedService, IEventListener<PlayerLeft>
                     IsDroppedByPlayer = true,
                     PlayerDropped = args.Player,
                     PlayerDroppedId = args.Player.Steam64,
-                    IsWideSpread = args.WideSpread,
+                    IsWideSpread = args is { WideSpread: true, Exact: false },
                     PlayDropEffect = true,
                     Item = args.Item
                 };
@@ -415,7 +416,8 @@ public class DroppedItemTracker : IHostedService, IEventListener<PlayerLeft>
                 }
 
                 ItemData itemData = new ItemData(args.Item, instId, serversidePoint, true);
-                
+
+                SavePlayerInstigator(args.Player.Steam64, instId);
                 ItemRegion region = ItemManager.regions[x, y];
                 int droppedItemIndex = region.items.Count;
                 region.items.Add(itemData);

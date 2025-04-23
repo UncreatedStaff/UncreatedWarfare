@@ -45,6 +45,7 @@ public class StrategyMapManager :
     private readonly IServiceProvider _serviceProvider;
     private readonly StrategyMapsConfiguration _configuration;
     private readonly AssetConfiguration _assetConfiguration;
+    private readonly BuildableAttributesDataStore _attributeStore;
 
     private Dictionary<int, IAssetLink<ItemBarricadeAsset>> _rallyPoints = null!;
     private IAssetLink<ItemBarricadeAsset> _fobUnbuilt = null!;
@@ -61,6 +62,7 @@ public class StrategyMapManager :
         _serviceProvider = serviceProvider;
         _configuration = serviceProvider.GetRequiredService<StrategyMapsConfiguration>();
         _assetConfiguration = serviceProvider.GetRequiredService<AssetConfiguration>();
+        _attributeStore = serviceProvider.GetRequiredService<BuildableAttributesDataStore>();
 
         OnAssetConfigurationChange(_assetConfiguration);
 
@@ -123,7 +125,7 @@ public class StrategyMapManager :
             return;
         }
 
-        StrategyMap map = new StrategyMap(buildable, tableInfo);
+        StrategyMap map = new StrategyMap(buildable, tableInfo, _attributeStore);
         _strategyMaps.AddIfNotExists(map);
 
         DualSidedFlagService? flagService = _serviceProvider.GetService<DualSidedFlagService>();

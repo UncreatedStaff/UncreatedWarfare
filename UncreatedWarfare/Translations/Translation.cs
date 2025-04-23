@@ -13,9 +13,6 @@ namespace Uncreated.Warfare.Translations;
 /// <remarks>Signs should use <see cref="SignTranslation"/> instead.</remarks>
 public class Translation : IDisposable
 {
-    [ThreadStatic]
-    private static List<string>? _pluralBuffer;
-
     private readonly string _defaultText;
     public TranslationValue Original { get; private set; } = null!;
     public string Key { get; private set; }
@@ -33,6 +30,16 @@ public class Translation : IDisposable
         _defaultText = defaultValue;
         Key = string.Empty;
         Options = options;
+    }
+
+    // for tests
+    internal Translation(string defaultValue, TranslationCollection collection, ITranslationService translationService, TranslationOptions options = default)
+    {
+        _defaultText = defaultValue;
+        Key = string.Empty;
+        Options = options;
+        Collection = collection;
+        TranslationService = translationService;
     }
 
     /// <summary>
@@ -113,99 +120,6 @@ public class Translation : IDisposable
     {
         AssertInitialized();
         Table.AddOrUpdate(new TranslationValue(language, value, this));
-    }
-
-    /// <summary>
-    /// Applies all pluralizers using the given language.
-    /// </summary>
-    protected ReadOnlySpan<char> ApplyPluralizers(scoped in TranslationArguments args, ArgumentSpan[] pluralizers, int argumentOffset, int argCt, Func<int, object?> accessor)
-    {
-        try
-        {
-            LanguageInfo language = args.ValueSet.Language;
-
-            Span<int> indices = stackalloc int[pluralizers.Length];
-            int numToReplace = 0;
-            int firstToReplace = -1;
-            for (int i = 0; i < pluralizers.Length; ++i)
-            {
-                ref ArgumentSpan argSpan = ref pluralizers[i];
-                if (argSpan.Argument >= argCt)
-                {
-                    indices[i] = -1;
-                    continue;
-                }
-
-                object? argValue = accessor(argSpan.Argument);
-
-                bool isNotOne = argValue is IConvertible conv && !TranslationPluralizations.IsOne(conv);
-                if (isNotOne ^ argSpan.Inverted)
-                {
-                    if (firstToReplace == -1)
-                        firstToReplace = i;
-                    ++numToReplace;
-                    continue;
-                }
-
-                indices[i] = -1;
-            }
-
-            if (numToReplace == 0)
-                return args.PreformattedValue;
-
-            if (numToReplace == 1)
-            {
-                ref ArgumentSpan span = ref pluralizers[firstToReplace];
-                ReadOnlySpan<char> word = args.PreformattedValue.Slice(span.StartIndex - argumentOffset, span.Length);
-                string pluralWord = TranslationPluralizations.Pluralize(word, language);
-                return TranslationArgumentModifiers.ReplaceModifiers(args.PreformattedValue, pluralWord, indices, pluralizers, argumentOffset);
-            }
-
-            List<string> pluralBuffer = _pluralBuffer ??= new List<string>(numToReplace);
-
-            if (pluralBuffer.Capacity < numToReplace)
-                pluralBuffer.Capacity = numToReplace;
-
-            try
-            {
-                int spanCt = pluralizers.Length;
-                int totalSize = 0;
-                for (int i = 0; i < spanCt; ++i)
-                {
-                    ref ArgumentSpan span = ref pluralizers[i];
-                    ref int index = ref indices[i];
-                    if (index < 0)
-                        continue;
-
-                    ReadOnlySpan<char> word = args.PreformattedValue.Slice(span.StartIndex - argumentOffset, span.Length);
-                    string pluralWord = TranslationPluralizations.Pluralize(word, language);
-                    index = totalSize;
-                    totalSize += pluralWord.Length;
-                    pluralBuffer.Add(pluralWord);
-                }
-
-                Span<char> pluralWordsBuffer = stackalloc char[totalSize];
-                int bufferIndex = 0;
-                for (int i = 0; i < pluralBuffer.Count; ++i)
-                {
-                    string pluralWord = pluralBuffer[i];
-                    pluralWord.AsSpan().CopyTo(pluralWordsBuffer[bufferIndex..]);
-                    bufferIndex += pluralWord.Length;
-                }
-
-                return TranslationArgumentModifiers.ReplaceModifiers(args.PreformattedValue, pluralWordsBuffer, indices, pluralizers, argumentOffset);
-            }
-            finally
-            {
-                pluralBuffer.Clear();
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error pluralizing {Collection.GetType().Name}.{Key} with value \"{args.PreformattedValue.ToString()}\" offset: {argumentOffset}.");
-            Console.WriteLine(ex);
-            return args.PreformattedValue;
-        }
     }
 
     /// <summary>

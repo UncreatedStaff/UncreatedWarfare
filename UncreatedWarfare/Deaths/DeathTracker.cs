@@ -148,7 +148,7 @@ public class DeathTracker : IHostedService
         UniTask.Create(async () =>
         {
             PlayerInjureComponent? injureComp = dead.ComponentOrNull<PlayerInjureComponent>();
-            if (injureComp != null && injureComp is { State: PlayerHealthState.Injured, PendingDeathInfo: not null })
+            if (injureComp != null && injureComp is { WasInjured: true, PendingDeathInfo: not null })
             {
                 PlayerDied deathInfo = injureComp.PendingDeathInfo;
                 injureComp.PendingDeathInfo = null;

@@ -1,11 +1,8 @@
-using System.Globalization;
 using System.Linq;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Interaction.Commands;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
-using Uncreated.Warfare.Vehicles;
 using Uncreated.Warfare.Vehicles.Spawners;
 
 namespace Uncreated.Warfare.Commands;
@@ -13,7 +10,6 @@ namespace Uncreated.Warfare.Commands;
 [Command("link"), SubCommandOf(typeof(VehicleBayCommand))]
 internal sealed class VehicleBayLinkCommand : IExecutableCommand
 {
-    private readonly BuildableSaver _buildableSaver;
     private readonly VehicleSpawnerService _spawnerStore;
     private readonly VehicleBayCommandTranslations _translations;
 
@@ -22,10 +18,8 @@ internal sealed class VehicleBayLinkCommand : IExecutableCommand
 
     public VehicleBayLinkCommand(
         TranslationInjection<VehicleBayCommandTranslations> translations,
-        BuildableSaver buildableSaver,
         VehicleSpawnerService spawnerStore)
     {
-        _buildableSaver = buildableSaver;
         _spawnerStore = spawnerStore;
         _translations = translations.Value;
     }
@@ -63,8 +57,6 @@ internal sealed class VehicleBayLinkCommand : IExecutableCommand
 
             // updates sign instance via the SignTextChanged event
             BarricadeUtility.SetServersideSignText((BarricadeDrop)buildable.Drop, spawnerFromSign.ServerSignText);
-
-            await _buildableSaver.SaveBuildableAsync(buildable, token);
         }
         // if looking at a spawner
         else if (_spawnerStore.TryGetSpawner(buildable, out VehicleSpawner? spawner))

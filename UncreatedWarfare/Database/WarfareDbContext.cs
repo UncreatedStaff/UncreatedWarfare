@@ -8,7 +8,6 @@ using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Database.Automation;
 using Uncreated.Warfare.Models;
 using Uncreated.Warfare.Models.Authentication;
-using Uncreated.Warfare.Models.Buildables;
 using Uncreated.Warfare.Models.Factions;
 using Uncreated.Warfare.Models.GameData;
 using Uncreated.Warfare.Models.Kits;
@@ -22,7 +21,7 @@ using Uncreated.Warfare.Moderation;
 
 namespace Uncreated.Warfare.Database;
 #pragma warning disable CS8644
-public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContext, IKitsDbContext, IStatsDbContext, IGameDataDbContext, IBuildablesDbContext, IWhitelistDbContext
+public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContext, IKitsDbContext, IStatsDbContext, IGameDataDbContext, IWhitelistDbContext
 {
     private readonly ILogger _logger;
 
@@ -51,7 +50,6 @@ public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContex
     public DbSet<DamageRecord> DamageRecords => Set<DamageRecord>();
     public DbSet<AidRecord> AidRecords => Set<AidRecord>();
     public DbSet<Permission> Permissions => Set<Permission>();
-    public DbSet<BuildableSave> Saves => Set<BuildableSave>();
     public DbSet<ItemWhitelist> Whitelists => Set<ItemWhitelist>();
     public DbSet<SteamDiscordPendingLink> PendingLinks => Set<SteamDiscordPendingLink>();
     
@@ -128,7 +126,6 @@ public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContex
 
         ILanguageDbContext.ConfigureModels(modelBuilder);
         IFactionDbContext.ConfigureModels(modelBuilder);
-        IBuildablesDbContext.ConfigureModels(modelBuilder);
         IUserDataDbContext.ConfigureModels(modelBuilder);
         IKitsDbContext.ConfigureModels(modelBuilder);
         IStatsDbContext.ConfigureModels(modelBuilder);

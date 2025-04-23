@@ -258,19 +258,19 @@ public class RemotePlayerListService :
         });
     }
 
-    [EventListener(Priority = int.MinValue)]
+    [EventListener(RequiresMainThread = false)]
     void IEventListener<PlayerJoined>.HandleEvent(PlayerJoined e, IServiceProvider serviceProvider)
     {
         UpdatePlayer(e.Player);
     }
 
-    [EventListener(Priority = int.MinValue)]
+    [EventListener(RequiresMainThread = false)]
     void IEventListener<PlayerTeamChanged>.HandleEvent(PlayerTeamChanged e, IServiceProvider serviceProvider)
     {
         UpdatePlayer(e.Player);
     }
     
-    [EventListener(Priority = int.MinValue)]
+    [EventListener(RequiresMainThread = false)]
     void IEventListener<PlayerLeft>.HandleEvent(PlayerLeft e, IServiceProvider serviceProvider)
     {
         Task.Run(async () =>
@@ -290,6 +290,7 @@ public class RemotePlayerListService :
         });
     }
 
+    [EventListener(RequiresMainThread = false)]
     void IEventListener<HomebaseConnected>.HandleEvent(HomebaseConnected e, IServiceProvider serviceProvider)
     {
         Task.Run(async () =>

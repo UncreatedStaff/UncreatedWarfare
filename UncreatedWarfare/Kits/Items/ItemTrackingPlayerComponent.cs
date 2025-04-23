@@ -4,6 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Items;
+using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.ItemTracking;
 using Uncreated.Warfare.Players.Management;
@@ -18,6 +19,11 @@ public class ItemTrackingPlayerComponent : IPlayerComponent, IEventListener<Item
 {
     internal List<ItemTransformation> ItemTransformations = new List<ItemTransformation>(16);
     internal List<ItemDropTransformation> ItemDropTransformations = new List<ItemDropTransformation>(16);
+
+    /// <summary>
+    /// Cached transformations of the current kit.
+    /// </summary>
+    internal IReadOnlyList<KitLayoutTransformation>? KitLayoutTransformations;
 
 #nullable disable
 

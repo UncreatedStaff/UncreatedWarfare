@@ -14,8 +14,6 @@ using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Events.Models.Buildables;
 using Uncreated.Warfare.Events.Models.Items;
-using Uncreated.Warfare.Fobs;
-using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Models;
@@ -32,6 +30,7 @@ public class WhitelistService :
     IAsyncEventListener<IPlaceBuildableRequestedEvent>,
     IAsyncEventListener<ChangeSignTextRequested>,
     IAsyncEventListener<ItemPickupRequested>,
+    IAsyncEventListener<ItemMoveRequested>,
     IDisposable
 {
     public static readonly PermissionLeaf PermissionChangeSignText = new PermissionLeaf("warfare::actions.barricades.edit_sign");
@@ -43,7 +42,6 @@ public class WhitelistService :
     private readonly ZoneStore _zoneStore;
     private readonly ChatService _chatService;
     private readonly WarfareModule _module;
-    private readonly BuildableSaver _buildableSaver;
     private readonly SemaphoreSlim _semaphore;
     private readonly WhitelistTranslations _translations;
     private readonly IKitItemResolver _kitItemResolver;
@@ -53,7 +51,6 @@ public class WhitelistService :
         ZoneStore zoneStore,
         ChatService chatService,
         WarfareModule module,
-        BuildableSaver buildableSaver,
         TranslationInjection<WhitelistTranslations> translations,
         IKitItemResolver kitItemResolver,
         ILogger<WhitelistService> logger)
@@ -64,7 +61,6 @@ public class WhitelistService :
         _zoneStore = zoneStore;
         _chatService = chatService;
         _module = module;
-        _buildableSaver = buildableSaver;
         _kitItemResolver = kitItemResolver;
         _translations = translations.Value;
         _logger = logger;
@@ -435,12 +431,6 @@ public class WhitelistService :
                          .OrderBy(barricade => barricade.Drop.model.TryGetComponent(out BuildableContainer comp) ? comp.CreateTime.Ticks : 0)
                          .ToList())
             {
-
-                if (await _buildableSaver.IsBarricadeSavedAsync(info.Drop.instanceID, token))
-                {
-                    continue;
-                }
-
                 --amountNeededToDestroy;
                 DestroyerComponent.AddOrUpdate(info.Drop.model.gameObject, 0ul, false, EDamageOrigin.VehicleDecay);
                 BarricadeManager.destroyBarricade(info.Drop, info.Coord.x, info.Coord.y, info.Plant);
@@ -458,12 +448,6 @@ public class WhitelistService :
                          .OrderBy(structure => structure.Drop.model.TryGetComponent(out BuildableContainer comp) ? comp.CreateTime.Ticks : 0)
                          .ToList())
             {
-
-                if (await _buildableSaver.IsStructureSavedAsync(info.Drop.instanceID, token))
-                {
-                    continue;
-                }
-
                 --amountNeededToDestroy;
                 DestroyerComponent.AddOrUpdate(info.Drop.model.gameObject, 0ul, false, EDamageOrigin.VehicleDecay);
                 StructureManager.destroyStructure(info.Drop, info.Coord.x, info.Coord.y, Vector3.zero);
@@ -543,6 +527,37 @@ public class WhitelistService :
                 _chatService.Send(e.Player, _translations.WhitelistProhibitedPickupAmt, maximumItems, e.Asset);
             }
         }
+    }
+
+    /// <inheritdoc />
+    public async UniTask HandleEventAsync(ItemMoveRequested e, IServiceProvider serviceProvider, CancellationToken token = default)
+    {
+        if (e.Player.IsOnDuty)
+            return;
+
+        if (e.SwappingJar != null)
+        {
+            if (e.NewPage == Page.Storage ^ e.OldPage == Page.Storage)
+            {
+                return;
+            }
+        }
+        else
+        {
+            if (e.NewPage != Page.Storage)
+            {
+                return;
+            }
+        }
+
+        IAssetLink<ItemAsset> asset = e.NewPage == Page.Storage ? e.Asset : AssetLink.Create(e.SwappingJar!.GetAsset());
+        if (await IsWhitelisted(asset, token))
+        {
+            return;
+        }
+
+        e.Cancel();
+        _chatService.Send(e.Player, _translations.WhitelistProhibitedStore, asset.GetAsset()!);
     }
 
     void IDisposable.Dispose()

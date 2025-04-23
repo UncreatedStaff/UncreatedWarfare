@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models.Items;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Patches;
@@ -283,6 +284,7 @@ internal sealed class PlayerInventoryReceiveDragOrSwapItem : IHarmonyPatch
             Player = player,
             IsSwap = swap,
             Jar = existingJar,
+            Asset = AssetLink.Create(existingJar.item.GetAsset()),
             NewPage = (Page)pageTo,
             OldPage = (Page)pageFrom,
             NewRotation = pageTo < PlayerInventory.SLOTS ? (byte)0 : rotTo,

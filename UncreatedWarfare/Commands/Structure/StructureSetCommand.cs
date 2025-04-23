@@ -1,9 +1,6 @@
-using System;
 using System.Globalization;
-using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Layouts.Teams;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Util;
@@ -14,16 +11,14 @@ namespace Uncreated.Warfare.Commands;
 [Command("set", "s"), SubCommandOf(typeof(StructureCommand))]
 internal sealed class StructureSetCommand : IExecutableCommand
 {
-    private readonly BuildableSaver _saver;
     private readonly ITeamManager<Team> _teamManager;
     private readonly StructureTranslations _translations;
 
     /// <inheritdoc />
     public required CommandContext Context { get; init; }
 
-    public StructureSetCommand(BuildableSaver saver, ITeamManager<Team> teamManager, TranslationInjection<StructureTranslations> translations)
+    public StructureSetCommand(ITeamManager<Team> teamManager, TranslationInjection<StructureTranslations> translations)
     {
-        _saver = saver;
         _teamManager = teamManager;
         _translations = translations.Value;
     }
@@ -90,32 +85,16 @@ internal sealed class StructureSetCommand : IExecutableCommand
 
         CSteamID? group = isSettingGroup ? ownerOrGroupId : null;
         CSteamID? owner = isSettingGroup ? null : ownerOrGroupId;
-        uint instanceId;
         if (structure != null)
         {
-            instanceId = structure.instanceID;
             StructureUtility.SetOwnerOrGroup(structure, owner, group);
         }
         else if (barricade != null)
         {
-            instanceId = barricade.instanceID;
             BarricadeUtility.SetOwnerOrGroup(barricade, Context.ServiceProvider, owner, group);
         }
         else
             throw Context.Reply(_translations.StructureNoTarget);
-
-        bool isSaved = await _saver.IsBuildableSavedAsync(instanceId, structure != null, token);
-        if (isSaved)
-        {
-            if (structure != null)
-                await _saver.SaveStructureAsync(structure, token);
-            else
-                await _saver.SaveBarricadeAsync(barricade!, token);
-
-            await UniTask.SwitchToMainThread(token);
-            // todo: Context.LogAction(ActionLogType.SetSavedStructureProperty, $"{asset?.itemName ?? "null"} / {asset?.id ?? 0} / {asset?.GUID ?? Guid.Empty:N} - " +
-            //                                                            $"SET {(isSettingGroup ? "GROUP" : "OWNER")} >> {ownerOrGroupDisplay}.");
-        }
 
         if (isSettingGroup)
         {

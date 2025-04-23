@@ -51,6 +51,12 @@ public class WhitelistTranslations : PropertiesTranslationCollection
         arg0Fmt: new ArgumentFormat(PluralAddon.Always(), RarityColorAddon.Instance)
     );
 
+    [TranslationData("Sent to a player when they try to store an un-whitelisted item in a storage.")]
+    public readonly Translation<ItemAsset> WhitelistProhibitedStore = new Translation<ItemAsset>(
+        "<#ff8c69>{0} can't be placed in storage.",
+        arg0Fmt: new ArgumentFormat(PluralAddon.Always(), RarityColorAddon.Instance)
+    );
+
     [TranslationData("Sent to a player when they try to salvage an un-whitelisted placeable that isn't in their kit.")]
     public readonly Translation<ItemAsset> WhitelistProhibitedSalvage = new Translation<ItemAsset>(
         "<#ff8c69>{0} can't be salvaged.",

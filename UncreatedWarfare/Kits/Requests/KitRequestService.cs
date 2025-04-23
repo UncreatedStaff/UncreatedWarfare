@@ -545,6 +545,8 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
             }
 
             _kitBestowService.RestockKit(player, resupplyAmmoBags);
+
+            ApplyHotkeys(player);
         }
         finally
         {
@@ -702,50 +704,8 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
 
         _kitBestowService.BestowKit(player, layouts == null ? kitBestowData : kitBestowData.Copy(layouts));
 
-        ItemTrackingPlayerComponent itemTracker = player.Component<ItemTrackingPlayerComponent>();
-
         hotkeyComponent.HotkeyBindings = hotkeys;
-        if (hotkeys != null)
-        {
-
-            foreach (KitHotkey hotkey in hotkeys)
-            {
-                byte index = KitItemUtility.GetHotkeyIndex(hotkey.Slot);
-                if (index == byte.MaxValue)
-                    continue;
-
-                if (!itemTracker.TryGetCurrentItemPosition(hotkey.Page, hotkey.X, hotkey.Y, out Page page, out byte x, out byte y, out bool isDropped, out Item? item))
-                    continue;
-
-                if (isDropped)
-                {
-                    // find suitable item after original was dropped
-                    hotkeyComponent.HandleItemDropped(item, hotkey.X, hotkey.Y, hotkey.Page);
-                    continue;
-                }
-
-                ItemAsset itemAsset = item.GetAsset();
-                if (itemAsset == null)
-                    continue;
-
-                if (hotkey.Item.HasValue && !hotkey.Item.Value.Equals(itemAsset))
-                {
-                    // hotkey item mismatch (concrete)
-                    continue;
-                }
-
-                if (hotkey.Redirect.HasValue && _assetRedirectService.TryFindRedirectType(itemAsset, out RedirectType redirect, out _, out _) && hotkey.Redirect.Value != redirect)
-                {
-                    // hotkey item mismatch (redirect)
-                    continue;
-                }
-
-                if (KitItemUtility.CanBindHotkeyTo(itemAsset, page))
-                {
-                    player.UnturnedPlayer.equipment.ServerBindItemHotkey(index, itemAsset, (byte)page, x, y);
-                }
-            }
-        }
+        ApplyHotkeys(player);
 
         if (!invokeEvent)
         {
@@ -759,6 +719,53 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
                     KitName = kit.Id,
                     WasRequested = false
                 }, CancellationToken.None);
+        }
+    }
+
+    private void ApplyHotkeys(WarfarePlayer player)
+    {
+        HotkeyPlayerComponent hotkeyComponent = player.Component<HotkeyPlayerComponent>();
+
+        if (hotkeyComponent.HotkeyBindings == null)
+            return;
+
+        ItemTrackingPlayerComponent itemTracker = player.Component<ItemTrackingPlayerComponent>();
+        foreach (KitHotkey hotkey in hotkeyComponent.HotkeyBindings)
+        {
+            byte index = KitItemUtility.GetHotkeyIndex(hotkey.Slot);
+            if (index == byte.MaxValue)
+                continue;
+
+            if (!itemTracker.TryGetCurrentItemPosition(hotkey.Page, hotkey.X, hotkey.Y, out Page page, out byte x, out byte y, out bool isDropped, out Item? item))
+                continue;
+
+            if (isDropped)
+            {
+                // find suitable item after original was dropped
+                hotkeyComponent.HandleItemDropped(item, hotkey.X, hotkey.Y, hotkey.Page);
+                continue;
+            }
+
+            ItemAsset itemAsset = item.GetAsset();
+            if (itemAsset == null)
+                continue;
+
+            if (hotkey.Item.HasValue && !hotkey.Item.Value.Equals(itemAsset))
+            {
+                // hotkey item mismatch (concrete)
+                continue;
+            }
+
+            if (hotkey.Redirect.HasValue && _assetRedirectService.TryFindRedirectType(itemAsset, out RedirectType redirect, out _, out _) && hotkey.Redirect.Value != redirect)
+            {
+                // hotkey item mismatch (redirect)
+                continue;
+            }
+
+            if (KitItemUtility.CanBindHotkeyTo(itemAsset, page))
+            {
+                player.UnturnedPlayer.equipment.ServerBindItemHotkey(index, itemAsset, (byte)page, x, y);
+            }
         }
     }
 

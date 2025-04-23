@@ -21,7 +21,7 @@ public interface IItemDistributionService
     /// <returns>The number of items and clothes removed from the player's inventory.</returns>
     int ClearInventory(WarfarePlayer player)
     {
-        return ClearInventory(player, new DefaultItemDistributionState());
+        return ClearInventory(player, new DefaultItemDistributionState(player.Team));
     }
 
     /// <summary>
@@ -37,7 +37,7 @@ public interface IItemDistributionService
     /// <returns>The number of items and clothes added to the player's inventory.</returns>
     int GiveItems(IEnumerable<IItem> items, WarfarePlayer player)
     {
-        return GiveItems(items, player, new DefaultItemDistributionState());
+        return GiveItems(items, player, new DefaultItemDistributionState(player.Team));
     }
 
     /// <summary>
@@ -53,15 +53,22 @@ public interface IItemDistributionService
     /// <returns>The number of items and clothes modified or added to the player's inventory.</returns>
     int RestockItems(IEnumerable<IItem> items, WarfarePlayer player)
     {
-        return RestockItems(items, player, new DefaultItemDistributionState());
+        return RestockItems(items, player, new DefaultItemDistributionState(player.Team));
     }
 
-    protected struct DefaultItemDistributionState : IItemDistributionState, IItemClearState
+    protected readonly struct DefaultItemDistributionState : IItemDistributionState, IItemClearState
     {
+        private readonly Team? _requestingTeam;
+
         public bool ClearClothes => true;
         public Kit? Kit => null;
-        public Team RequestingTeam => Team.NoTeam;
+        public Team RequestingTeam => _requestingTeam ?? Team.NoTeam;
         public bool Silent => false;
+
+        public DefaultItemDistributionState(Team team)
+        {
+            _requestingTeam = team;
+        }
         public bool ShouldGrantItem(IClothingItem item, ref KitItemResolutionResult resolvedItem)
         {
             return true;

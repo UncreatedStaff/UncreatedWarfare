@@ -1,4 +1,6 @@
+#if DEBUG
 //#define DEBUG_LOGGING
+#endif
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -212,20 +214,28 @@ public class FallbackItemDistributionService : IItemDistributionService
         {
             PlayerClothing clothing = player.UnturnedPlayer.clothing;
 
+            byte alreadyEqupped = 0;
+
             // loop through all items and send clothes first, since clothes have to be equipped to make room for items
             while (enumerator.MoveNext())
             {
-                if (enumerator.Current is not IClothingItem clothingItem || clothingItem.ClothingType > ClothingType.Glasses)
+                if (enumerator.Current is not IClothingItem clothingItem
+                    || clothingItem.ClothingType > ClothingType.Glasses)
+                {
+                    continue;
+                }
+
+                ClothingItem clothingHelper = new ClothingItem(clothing, clothingItem.ClothingType);
+                if ((alreadyEqupped & clothingHelper.Flag) != 0)
                     continue;
 
                 KitItemResolutionResult result = _itemResolver.ResolveKitItem(clothingItem, stateKit, stateTeam);
-                ClothingItem clothingHelper = new ClothingItem(clothing, clothingItem.ClothingType);
-
                 if (!clothingHelper.ValidAsset(result.Asset) || !state.ShouldGrantItem(clothingItem, ref result) || !clothingHelper.ValidAsset(result.Asset))
                 {
                     continue;
                 }
 
+                alreadyEqupped |= clothingHelper.Flag;
                 clothingHelper.AskWear(result.Asset, result.Quality, result.State ?? result.Asset!.getState(true), !hasPlayedEffect);
                 ++ct;
                 hasPlayedEffect = true;
@@ -336,7 +346,7 @@ public class FallbackItemDistributionService : IItemDistributionService
         List<ItemJar> matchedItems = new List<ItemJar>(16);
 
 
-        _ = _droppedItemTracker.DestroyItemsDroppedByPlayerAsync(player.Steam64, true);
+        //_ = _droppedItemTracker.DestroyItemsDroppedByPlayerAsync(player.Steam64, true);
 
         // list of all attached items that are expected in a fresh kit
         List<ItemCaliberAsset> kitAttachedItems = new List<ItemCaliberAsset>(8);
@@ -462,7 +472,7 @@ public class FallbackItemDistributionService : IItemDistributionService
                 continue;
             }
 
-            ConsumeMissingItem(nativePlayer, in result, matchedItems, startingAttachedItems, kitAttachedItems, ref ct, refXTmp, refYTmp, rot, ref state);
+            ConsumeMissingItem(nativePlayer, in result, matchedItems, startingAttachedItems, kitAttachedItems, ref ct, refPgTmp, refXTmp, refYTmp, rot, ref state);
         }
 
         // add missing attachments
@@ -472,7 +482,7 @@ public class FallbackItemDistributionService : IItemDistributionService
             ItemCaliberAsset c = kitAttachedItems[i];
             KitItemResolutionResult res = new KitItemResolutionResult(c, c.getState(EItemOrigin.ADMIN), c.amount, 100);
 
-            ConsumeMissingItem(nativePlayer, in res, matchedItems, startingAttachedItems, kitAttachedItems, ref ct,
+            ConsumeMissingItem(nativePlayer, in res, matchedItems, startingAttachedItems, kitAttachedItems, ref ct, (Page)byte.MaxValue,
                 byte.MaxValue, byte.MaxValue, byte.MaxValue, ref state);
         }
 
@@ -487,6 +497,7 @@ public class FallbackItemDistributionService : IItemDistributionService
         List<ushort> startingAttachedItems,
         List<ItemCaliberAsset> kitAttachedItems,
         ref int ct,
+        Page page,
         byte x,
         byte y,
         byte rot,
@@ -498,7 +509,7 @@ public class FallbackItemDistributionService : IItemDistributionService
         ItemAsset asset = result.Asset!;
 
         ItemJar? jar = null;
-        Page page = 0;
+        Page foundPage = 0;
         // find an item of the same type
         for (int pg = 0; pg < PlayerInventory.STORAGE && jar == null; ++pg)
         {
@@ -515,7 +526,7 @@ public class FallbackItemDistributionService : IItemDistributionService
 
                 matchedItems.Add(j);
                 jar = j;
-                page = (Page)pg;
+                foundPage = (Page)pg;
                 break;
             }
         }
@@ -523,8 +534,8 @@ public class FallbackItemDistributionService : IItemDistributionService
         // found a matching item
         if (jar != null)
         {
-            DebugLog(" Found restocking item {0} ({1}, {2}): {3}", page, jar.x, jar.y, asset);
-            RestockItem(equipment, inventory, page, jar.x, jar.y, jar, in result, ref ct);
+            DebugLog(" Found restocking item {0} ({1}, {2}): {3}", foundPage, jar.x, jar.y, asset);
+            RestockItem(equipment, inventory, foundPage, jar.x, jar.y, jar, in result, ref ct);
             return;
         }
 
@@ -533,6 +544,7 @@ public class FallbackItemDistributionService : IItemDistributionService
                      .EnumerateDroppedItems(player.channel.owner.playerID.steamID)
                      .OrderBy(x => x.lastDropped))
         {
+            DebugLog(" Checking item {0} against {1}.", droppedItem.item.id, asset.id);
             if (droppedItem.item.id != asset.id)
             {
                 continue;

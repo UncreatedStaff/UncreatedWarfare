@@ -1,6 +1,6 @@
 #if DEBUG
 //#define LOG_SYNCHRONIZATION_STEPS
-#define LOG_EVENT_LISTENERS
+//#define LOG_EVENT_LISTENERS
 //#define LOG_RESOLVE_STEPS
 #endif
 

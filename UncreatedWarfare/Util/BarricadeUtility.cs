@@ -271,28 +271,30 @@ public static class BarricadeUtility
     public static BarricadeInfo FindBarricade(uint instanceId, byte expectedRegionX, byte expectedRegionY)
     {
         GameThread.AssertCurrent();
-
-        SurroundingRegionsIterator iterator = RegionUtility.EnumerateRegions(expectedRegionX, expectedRegionY);
-        while (iterator.MoveNext())
+        if (BarricadeManager.regions != null)
         {
-            RegionCoord coord = iterator.Current;
-            List<BarricadeDrop> drops = BarricadeManager.regions[coord.x, coord.y].drops;
-            for (int i = 0; i < drops.Count; ++i)
+            SurroundingRegionsIterator iterator = RegionUtility.EnumerateRegions(expectedRegionX, expectedRegionY);
+            while (iterator.MoveNext())
             {
-                if (drops[i].instanceID == instanceId)
-                    return new BarricadeInfo(drops[i], i, coord);
+                RegionCoord coord = iterator.Current;
+                List<BarricadeDrop> drops = BarricadeManager.regions[coord.x, coord.y].drops;
+                for (int i = 0; i < drops.Count; ++i)
+                {
+                    if (drops[i].instanceID == instanceId)
+                        return new BarricadeInfo(drops[i], i, coord);
+                }
             }
-        }
 
-        IReadOnlyList<VehicleBarricadeRegion> vRegions = BarricadeManager.vehicleRegions;
-        int ct = Math.Min(ushort.MaxValue - 1, vRegions.Count);
-        for (int r = 0; r < ct; ++r)
-        {
-            List<BarricadeDrop> drops = vRegions[r].drops;
-            for (int i = 0; i < drops.Count; ++i)
+            IReadOnlyList<VehicleBarricadeRegion> vRegions = BarricadeManager.vehicleRegions;
+            int ct = Math.Min(ushort.MaxValue - 1, vRegions.Count);
+            for (int r = 0; r < ct; ++r)
             {
-                if (drops[i].instanceID == instanceId)
-                    return new BarricadeInfo(drops[i], i, (ushort)r);
+                List<BarricadeDrop> drops = vRegions[r].drops;
+                for (int i = 0; i < drops.Count; ++i)
+                {
+                    if (drops[i].instanceID == instanceId)
+                        return new BarricadeInfo(drops[i], i, (ushort)r);
+                }
             }
         }
         

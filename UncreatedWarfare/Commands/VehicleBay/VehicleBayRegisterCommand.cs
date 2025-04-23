@@ -1,7 +1,6 @@
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Interaction.Commands;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Vehicles.Spawners;
 using Uncreated.Warfare.Vehicles.WarfareVehicles;
@@ -11,7 +10,6 @@ namespace Uncreated.Warfare.Commands;
 [Command("register", "reg"), SubCommandOf(typeof(VehicleBayCommand))]
 internal sealed class VehicleBayRegisterCommand : IExecutableCommand
 {
-    private readonly BuildableSaver _buildableSaver;
     private readonly VehicleSpawnerService _spawnerStore;
     private readonly VehicleInfoStore _vehicleInfo;
     private readonly VehicleBayCommandTranslations _translations;
@@ -21,11 +19,9 @@ internal sealed class VehicleBayRegisterCommand : IExecutableCommand
 
     public VehicleBayRegisterCommand(
         TranslationInjection<VehicleBayCommandTranslations> translations,
-        BuildableSaver buildableSaver,
         VehicleSpawnerService spawnerService,
         VehicleInfoStore vehicleInfo)
     {
-        _buildableSaver = buildableSaver;
         _spawnerStore = spawnerService;
         _vehicleInfo = vehicleInfo;
         _translations = translations.Value;
@@ -60,10 +56,6 @@ internal sealed class VehicleBayRegisterCommand : IExecutableCommand
         {
             throw Context.Reply(_translations.VehicleNotRegistered, AssetLink.Create(vehicleType).ToDisplayString());
         }
-
-        await _buildableSaver.SaveBuildableAsync(buildable, token);
-
-        await UniTask.SwitchToMainThread(token);
 
         if (_spawnerStore.TryGetSpawner(uniqueName, out _))
         {

@@ -44,6 +44,7 @@ public class KitBestowService
 
         player.Component<SkillsetPlayerComponent>().EnsureSkillsets(Array.Empty<Skillset>());
         player.Component<KitPlayerComponent>().UpdateKit(null, false);
+        player.Component<ItemTrackingPlayerComponent>().KitLayoutTransformations = null;
     }
 
     /// <summary>
@@ -73,6 +74,7 @@ public class KitBestowService
 
         player.Component<SkillsetPlayerComponent>().EnsureSkillsets(skillsets);
         player.Component<KitPlayerComponent>().UpdateKit(kit, data.IsLowAmmo);
+        player.Component<ItemTrackingPlayerComponent>().KitLayoutTransformations = data.Layouts;
 
         if (data.IsLowAmmo)
         {
@@ -106,7 +108,9 @@ public class KitBestowService
 
         IKitItem[] items = kit.Items;
 
-        using BestowKitGiveItemsState state = new BestowKitGiveItemsState(new KitBestowData(kit) { RestockOnly = true, ResupplyAmmoBags = resupplyAmmoBags }, player);
+        ItemTrackingPlayerComponent? itemTracker = player.ComponentOrNull<ItemTrackingPlayerComponent>();
+
+        using BestowKitGiveItemsState state = new BestowKitGiveItemsState(new KitBestowData(kit, itemTracker?.KitLayoutTransformations) { RestockOnly = true, ResupplyAmmoBags = resupplyAmmoBags }, player);
         _itemDistributionService.RestockItems(items, player, state);
     }
 

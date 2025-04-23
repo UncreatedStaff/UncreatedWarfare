@@ -1,3 +1,4 @@
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Kits.Items;
 
 namespace Uncreated.Warfare.Events.Models.Items;
@@ -55,6 +56,11 @@ public class ItemMoveRequested : CancellablePlayerEvent
     /// The item being moved.
     /// </summary>
     public required ItemJar Jar { get; init; }
+
+    /// <summary>
+    /// The item asset being moved.
+    /// </summary>
+    public required IAssetLink<ItemAsset> Asset { get; init; }
 
     /// <summary>
     /// The item being swapped with this item, if applicable.

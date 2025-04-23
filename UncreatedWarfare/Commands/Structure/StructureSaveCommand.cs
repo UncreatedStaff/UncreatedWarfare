@@ -1,56 +1,81 @@
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Interaction.Commands;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Commands;
 
 [Command("save"), SubCommandOf(typeof(StructureCommand))]
 internal sealed class StructureSaveCommand : IExecutableCommand
 {
-    private readonly BuildableSaver _saver;
+    private readonly BuildableAttributesDataStore _attributeStore;
+    private readonly ZoneStore _zoneStore;
     private readonly StructureTranslations _translations;
 
     /// <inheritdoc />
     public required CommandContext Context { get; init; }
 
-    public StructureSaveCommand(BuildableSaver saver, TranslationInjection<StructureTranslations> translations)
+    public StructureSaveCommand(BuildableAttributesDataStore attributeStore, ZoneStore zoneStore, TranslationInjection<StructureTranslations> translations)
     {
-        _saver = saver;
+        _attributeStore = attributeStore;
+        _zoneStore = zoneStore;
         _translations = translations.Value;
     }
 
     /// <inheritdoc />
-    public async UniTask ExecuteAsync(CancellationToken token)
+    public UniTask ExecuteAsync(CancellationToken token)
     {
         Context.AssertRanByPlayer();
 
         if (Context.TryGetStructureTarget(out StructureDrop? structure))
         {
-            if (!await _saver.SaveStructureAsync(structure, token))
+            if (_attributeStore.HasAttribute(structure.instanceID, true, MainBaseBuildables.PermanentAttribute))
             {
                 throw Context.Reply(_translations.StructureAlreadySaved, structure.asset);
             }
 
-            await UniTask.SwitchToMainThread(token);
+            if (!_attributeStore.HasAttribute(structure.instanceID, true, MainBaseBuildables.TransientAttribute)
+                && (_zoneStore.IsInsideZone(structure.GetServersideData().point, ZoneType.MainBase, null)
+                    || _zoneStore.IsInsideZone(structure.GetServersideData().point, ZoneType.WarRoom, null)))
+            {
+                throw Context.Reply(_translations.StructureAlreadySaved, structure.asset);
+            }
+
+
+            _attributeStore
+                .UpdateAttributes(structure.instanceID, true)
+                .Add(MainBaseBuildables.PermanentAttribute, null);
 
             Context.Reply(_translations.StructureSaved, structure.asset);
+
             // todo: Context.LogAction(ActionLogType.SaveStructure, $"{structure.asset.itemName} / {structure.asset.id} / {structure.asset.GUID:N} " +
             //                                                $"at {structure.GetServersideData().point:0:##} ({structure.instanceID})");
         }
         else if (Context.TryGetBarricadeTarget(out BarricadeDrop? barricade))
         {
-            if (!await _saver.SaveBarricadeAsync(barricade, token))
+            if (_attributeStore.HasAttribute(barricade.instanceID, false, MainBaseBuildables.PermanentAttribute))
             {
                 throw Context.Reply(_translations.StructureAlreadySaved, barricade.asset);
             }
 
-            await UniTask.SwitchToMainThread(token);
+            if (!_attributeStore.HasAttribute(barricade.instanceID, false, MainBaseBuildables.TransientAttribute)
+                && (_zoneStore.IsInsideZone(barricade.GetServersideData().point, ZoneType.MainBase, null)
+                    || _zoneStore.IsInsideZone(barricade.GetServersideData().point, ZoneType.WarRoom, null)))
+            {
+                throw Context.Reply(_translations.StructureAlreadySaved, barricade.asset);
+            }
+
+            _attributeStore
+                .UpdateAttributes(barricade.instanceID, false)
+                .Add(MainBaseBuildables.PermanentAttribute, null);
 
             Context.Reply(_translations.StructureSaved, barricade.asset);
-            // todo: Context.LogAction(ActionLogType.SaveStructure, $"{barricade.asset.itemName} / {barricade.asset.id} / {barricade.asset.GUID:N} " +
-            //                                                $"at {barricade.GetServersideData().point:0:##} ({barricade.instanceID})");
+
+            // todo: Context.LogAction(ActionLogType.SaveStructure, $"{structure.asset.itemName} / {structure.asset.id} / {structure.asset.GUID:N} " +
+            //                                                $"at {structure.GetServersideData().point:0:##} ({structure.instanceID})");
         }
         else throw Context.Reply(_translations.StructureNoTarget);
+
+        return UniTask.CompletedTask;
     }
 }

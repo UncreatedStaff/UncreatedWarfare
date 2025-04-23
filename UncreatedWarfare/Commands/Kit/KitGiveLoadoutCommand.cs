@@ -1,9 +1,11 @@
 using System.Collections.Generic;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Kits.Loadouts;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Inventory;
 
 namespace Uncreated.Warfare.Commands;
