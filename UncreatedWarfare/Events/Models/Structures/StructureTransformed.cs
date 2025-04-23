@@ -7,6 +7,7 @@ using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Events.Models.Structures;
 
+[EventModel(EventSynchronizationContext.Pure)]
 public class StructureTransformed : IBuildableTransformedEvent
 {
     public required IBuildable Buildable { get; init; }

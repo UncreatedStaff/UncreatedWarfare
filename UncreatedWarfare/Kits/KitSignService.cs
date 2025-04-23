@@ -1,4 +1,5 @@
 using System;
+using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Kits;
 using Uncreated.Warfare.Events.Models.Squads;
@@ -280,26 +281,31 @@ public class KitSignService :
         }
     }
 
+    [EventListener(MustRunInstantly = true, RequireActiveLayout = true)]
     public void HandleEvent(PlayerKitChanged e, IServiceProvider serviceProvider)
     {
         UpdateSigns();
     }
 
+    [EventListener(MustRunInstantly = true, RequireActiveLayout = true)]
     public void HandleEvent(SquadMemberJoined e, IServiceProvider serviceProvider)
     {
         UpdateSigns();
     }
 
+    [EventListener(MustRunInstantly = true, RequireActiveLayout = true)]
     public void HandleEvent(SquadMemberLeft e, IServiceProvider serviceProvider)
     {
         UpdateSigns();
     }
 
+    [EventListener(MustRunInstantly = true, RequireActiveLayout = true)]
     public void HandleEvent(KitUpdated e, IServiceProvider serviceProvider)
     {
         UpdateSigns(e.Kit);
     }
 
+    [EventListener(MustRunInstantly = true, RequireActiveLayout = true)]
     public void HandleEvent(KitCreated e, IServiceProvider serviceProvider)
     {
         UpdateSigns(e.Kit);

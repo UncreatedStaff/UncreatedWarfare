@@ -9,6 +9,7 @@ namespace Uncreated.Warfare.Events.Models.Flags;
 /// <summary>
 /// Event listener args which fires after a <see cref="DualSidedFlagService"/> finishes building and setting up a new flag layout.
 /// </summary>
+[EventModel(EventSynchronizationContext.Pure)]
 public class FlagsSetUp : IActionLoggableEvent
 {
     /// <summary>

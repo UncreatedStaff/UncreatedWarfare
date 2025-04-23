@@ -1099,9 +1099,10 @@ public sealed class WarfareModule
 
         bldr.RegisterType<ItemIconProvider>()
             .SingleInstance();
-        
+
         bldr.RegisterType<AnnouncementService>()
-            .AsSelf().AsImplementedInterfaces();
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
 
         // Database
 
@@ -1170,7 +1171,7 @@ public sealed class WarfareModule
                     new Uri(Configuration.GetValue("zipkin_uri", "http://localhost:9411/")!),
                     new Uri("api/v2/spans", UriKind.Relative)
                 );
-                zipkin.ExportProcessorType = ExportProcessorType.Simple;
+                zipkin.ExportProcessorType = ExportProcessorType.Batch;
                 zipkin.BatchExportProcessorOptions = new BatchExportProcessorOptions<Activity>
                 {
                     ExporterTimeoutMilliseconds = 10000,
@@ -1213,7 +1214,7 @@ public sealed class WarfareModule
             Provider.kick(Provider.clients[i].playerID.steamID, !string.IsNullOrWhiteSpace(reason) ? "Shutting down: \"" + reason + "\"." : "Shutting down.");
         }
 
-        await EventDispatcher.WaitForEvents(CancellationToken.None);
+        await EventDispatcher.WaitForEvents();
 
         Object.Destroy(_gameObjectHost);
         _gameObjectHost = null!;

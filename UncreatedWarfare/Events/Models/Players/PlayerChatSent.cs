@@ -9,6 +9,7 @@ namespace Uncreated.Warfare.Events.Models.Players;
 /// <summary>
 /// Invoked after a player sends a chat message.
 /// </summary>
+[EventModel(EventSynchronizationContext.Pure)]
 public class PlayerChatSent : PlayerEvent, IActionLoggableEvent
 {
     /// <summary>

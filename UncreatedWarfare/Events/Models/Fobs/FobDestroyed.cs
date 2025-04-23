@@ -9,6 +9,7 @@ namespace Uncreated.Warfare.Events.Models.Fobs;
 /// <summary>
 /// Event listener args which fires after the main structure of any <see cref="IBuildableFob"/> subclass is destroyed.
 /// </summary>
+[EventModel(EventSynchronizationContext.Pure)]
 public class FobDestroyed : IActionLoggableEvent
 {
     /// <summary>

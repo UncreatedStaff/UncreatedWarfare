@@ -3,6 +3,7 @@ namespace Uncreated.Warfare.Events.Models.Kits;
 /// <summary>
 /// Invoked after a new loadout kit is created.
 /// </summary>
+[EventModel(EventSynchronizationContext.Pure)]
 public class LoadoutCreated : KitCreated
 {
     /// <summary>

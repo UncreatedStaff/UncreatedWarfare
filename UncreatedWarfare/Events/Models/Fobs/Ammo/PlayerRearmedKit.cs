@@ -8,6 +8,7 @@ namespace Uncreated.Warfare.Events.Models.Fobs.Ammo;
 /// <summary>
 /// Event listener args which fires after a player their kit rearms from a <see cref="IAmmoStorage"/>.
 /// </summary>
+[EventModel(EventSynchronizationContext.Pure)]
 public class PlayerRearmedKit : PlayerEvent, IActionLoggableEvent
 {
     /// <summary>

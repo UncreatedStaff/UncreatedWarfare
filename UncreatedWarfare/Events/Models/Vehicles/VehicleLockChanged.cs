@@ -1,4 +1,4 @@
-﻿using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.Events.Models.Vehicles;
@@ -6,6 +6,7 @@ namespace Uncreated.Warfare.Events.Models.Vehicles;
 /// <summary>
 /// Event listener args which handles <see cref="VehicleManager.OnToggledVehicleLock"/>.
 /// </summary>
+[EventModel(EventSynchronizationContext.Pure)]
 public class VehicleLockChanged
 {
     /// <summary>

@@ -9,6 +9,7 @@ namespace Uncreated.Warfare.Events.Models.Zones;
 /// Event listener args which fires after a <see cref="WarfarePlayer"/> enters a <see cref="Zone"/>.
 /// </summary>
 /// <remarks>NOTE: this event is not invoked when a player enters a <see cref="FlagObjective"/>, as it has its own events for the same purpose.</remarks>
+[EventModel(EventSynchronizationContext.Pure)]
 public class PlayerEnteredZone : PlayerEvent, IActionLoggableEvent
 {
     /// <summary>

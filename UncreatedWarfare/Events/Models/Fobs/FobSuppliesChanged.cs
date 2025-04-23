@@ -10,6 +10,7 @@ namespace Uncreated.Warfare.Events.Models.Fobs;
 /// <summary>
 /// Event listener args which fires after supplies are added or removed from a <see cref="IResourceFob"/>.
 /// </summary>
+[EventModel(EventSynchronizationContext.Pure)]
 public class FobSuppliesChanged : IActionLoggableEvent
 {
     /// <summary>

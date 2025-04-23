@@ -1,10 +1,11 @@
-﻿using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Events.Models.Players;
 
 /// <summary>
 /// Handles a player being revived.
 /// </summary>
+[EventModel(EventSynchronizationContext.Pure)]
 public class PlayerRevived : PlayerEvent
 {
     /// <summary>

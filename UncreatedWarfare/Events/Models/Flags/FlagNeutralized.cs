@@ -10,6 +10,7 @@ namespace Uncreated.Warfare.Events.Models.Flags;
 /// "Neutralized" means one team successfully reduced the former owner team's contest points to zero, 
 /// causing <see cref="FlagObjective.Owner"/> to become neutral (<see cref="Team.NoTeam"/>).
 /// </summary>
+[EventModel(EventSynchronizationContext.Pure)]
 public class FlagNeutralized : IActionLoggableEvent
 {
     /// <summary>

@@ -9,6 +9,8 @@ using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Events.Models.Players;
+
+[EventModel(EventSynchronizationContext.Pure)]
 public class PlayerDied : PlayerEvent, IActionLoggableEvent
 {
     private DamagePlayerParameters _parameters;

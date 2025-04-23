@@ -5,6 +5,7 @@ namespace Uncreated.Warfare.Events.Models.Objects;
 /// <summary>
 /// Invoked by <see cref="NPCEventManager.onEvent"/>.
 /// </summary>
+[EventModel(EventSynchronizationContext.Pure)]
 public class NpcEventTriggered : ConsumableEvent
 {
     /// <summary>

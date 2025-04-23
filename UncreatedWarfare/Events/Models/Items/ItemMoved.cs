@@ -2,6 +2,7 @@ using Uncreated.Warfare.Kits.Items;
 
 namespace Uncreated.Warfare.Events.Models.Items;
 
+[EventModel(EventSynchronizationContext.Pure)]
 public class ItemMoved : PlayerEvent
 {
     /// <summary>

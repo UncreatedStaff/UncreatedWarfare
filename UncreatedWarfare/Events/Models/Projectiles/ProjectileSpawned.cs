@@ -3,6 +3,8 @@ using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Projectiles;
 
 namespace Uncreated.Warfare.Events.Models.Projectiles;
+
+[EventModel(EventSynchronizationContext.Pure)]
 public class ProjectileSpawned
 {
     public required WarfarePlayer Player { get; init; }

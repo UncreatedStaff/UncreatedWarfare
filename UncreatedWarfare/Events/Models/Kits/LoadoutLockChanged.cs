@@ -3,6 +3,7 @@ namespace Uncreated.Warfare.Events.Models.Kits;
 /// <summary>
 /// Invoked after a loadout is locked or unlocked.
 /// </summary>
+[EventModel(EventSynchronizationContext.Pure)]
 public class LoadoutLockChanged : KitUpdated
 {
     /// <summary>

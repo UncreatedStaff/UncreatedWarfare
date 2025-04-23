@@ -4,6 +4,7 @@ using Uncreated.Warfare.Layouts.Teams;
 
 namespace Uncreated.Warfare.Events.Models.Players;
 
+[EventModel(EventSynchronizationContext.Pure)]
 public class PlayerTeamChanged : PlayerEvent, IActionLoggableEvent
 {
     public required CSteamID GroupId { get; init; }

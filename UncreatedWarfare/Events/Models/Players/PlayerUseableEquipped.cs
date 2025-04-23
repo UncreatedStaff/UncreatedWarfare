@@ -2,6 +2,7 @@ using Uncreated.Warfare.Kits.Items;
 
 namespace Uncreated.Warfare.Events.Models.Players;
 
+[EventModel(EventSynchronizationContext.Pure)]
 public class PlayerUseableEquipped : PlayerEvent
 {
     public required Useable? Useable { get; init; }

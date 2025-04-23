@@ -7,6 +7,7 @@ namespace Uncreated.Warfare.Events.Models.Fobs.Shovelables;
 /// <summary>
 /// Event listener args which fires after any type of <see cref="ShovelableBuildable"/> is built up.
 /// </summary>
+[EventModel(EventSynchronizationContext.Pure)]
 public class ShovelableBuilt : IActionLoggableEvent
 {
     /// <summary>

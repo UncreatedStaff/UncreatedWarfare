@@ -7,6 +7,7 @@ namespace Uncreated.Warfare.Events.Models.Flags;
 /// <summary>
 /// Event listener args which fires after a flag's <see cref="FlagObjective.CurrentContestState"/> changes to a different <see cref="FlagContestState.ContestState"/>.
 /// </summary>
+[EventModel(EventSynchronizationContext.Pure)]
 public class FlagContestStateChanged : IActionLoggableEvent
 {
     /// <summary>

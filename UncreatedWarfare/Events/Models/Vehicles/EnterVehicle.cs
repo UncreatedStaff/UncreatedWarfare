@@ -5,6 +5,7 @@ using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.Events.Models.Vehicles;
 
+[EventModel(EventSynchronizationContext.Pure)]
 public class EnterVehicle : PlayerEvent, IActionLoggableEvent
 {
     /// <summary>

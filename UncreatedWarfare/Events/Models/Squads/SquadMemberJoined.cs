@@ -6,7 +6,7 @@ namespace Uncreated.Warfare.Events.Models.Squads;
 /// <summary>
 /// Event listener args which fires after a player joines a <see cref="Squad"/>.
 /// </summary>
-[EventModel(EventSynchronizationContext.Global, SynchronizedModelTags = [ "squads" ])]
+[EventModel(EventSynchronizationContext.Pure)]
 public class SquadMemberJoined : SquadUpdated, IPlayerEvent
 {
     /// <summary>

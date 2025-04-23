@@ -5,6 +5,7 @@ namespace Uncreated.Warfare.Events.Models.Players;
 /// <summary>
 /// Handles when a player's group (therefore their team) changes for any reason.
 /// </summary>
+[EventModel(EventSynchronizationContext.Pure)]
 public class PlayerGroupChanged : PlayerEvent
 {
     public required CSteamID OldGroupId { get; init; }

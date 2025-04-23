@@ -1,6 +1,6 @@
 using System.Collections.Generic;
-using System.Linq;
 using Uncreated.Warfare.Events.Models;
+using Uncreated.Warfare.Layouts.Phases;
 using Uncreated.Warfare.Services;
 
 namespace Uncreated.Warfare.Layouts;
@@ -14,13 +14,14 @@ internal class LayoutPhaseEventListenerProvider : IEventListenerProvider
     }
 
     // allows the current phase to handle events
-    IEnumerable<IEventListener<TEventArgs>> IEventListenerProvider.EnumerateNormalListeners<TEventArgs>(TEventArgs args)
+    void IEventListenerProvider.AppendListeners<TEventArgs>(TEventArgs args, List<object> listeners)
     {
-        return _layout.Phases.OfType<IEventListener<TEventArgs>>();
-    }
-
-    IEnumerable<IAsyncEventListener<TEventArgs>> IEventListenerProvider.EnumerateAsyncListeners<TEventArgs>(TEventArgs args)
-    {
-        return _layout.Phases.OfType<IAsyncEventListener<TEventArgs>>();
+        foreach (ILayoutPhase phase in _layout.Phases)
+        {
+            if (phase is IEventListener<TEventArgs> el)
+                listeners.Add(el);
+            if (phase is IAsyncEventListener<TEventArgs> ael)
+                listeners.Add(ael);
+        }
     }
 }

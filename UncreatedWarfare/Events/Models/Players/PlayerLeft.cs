@@ -7,6 +7,7 @@ namespace Uncreated.Warfare.Events.Models.Players;
 /// <summary>
 /// Event listener args which handles <see cref="Provider.onServerConnected"/>.
 /// </summary>
+[EventModel(EventSynchronizationContext.Pure)]
 public class PlayerLeft : PlayerEvent, IActionLoggableEvent
 {
     /*

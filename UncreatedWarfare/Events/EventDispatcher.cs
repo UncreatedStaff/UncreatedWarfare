@@ -12,7 +12,6 @@ using Microsoft.Extensions.DependencyInjection;
 using SDG.Framework.Utilities;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using Uncreated.Warfare.Events.Models;
@@ -23,6 +22,9 @@ using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles;
 using Service = Autofac.Core.Service;
+#if TELEMETRY
+using System.Diagnostics;
+#endif
 
 namespace Uncreated.Warfare.Events;
 
@@ -45,7 +47,7 @@ public partial class EventDispatcher : IHostedService, IDisposable
     private const int BitMustRunLast = 32;
     private const int BitSkipAtRuntime = 64;
 
-    private int _activeEvents;
+    private bool _isTryingToShutDown;
     private long _eventId;
 
     private readonly EventSynchronizer _eventSynchronizer;
@@ -55,6 +57,7 @@ public partial class EventDispatcher : IHostedService, IDisposable
     private readonly ProjectileSolver _projectileSolver;
     private readonly CancellationToken _unloadToken;
     private readonly ILogger<EventDispatcher> _logger;
+    private readonly List<object> _listenerBuffer;
 
     [field: CanBeNull]
     private VehicleService VehicleService => field ??= _warfare.ServiceProvider.Resolve<VehicleService>();
@@ -89,6 +92,8 @@ public partial class EventDispatcher : IHostedService, IDisposable
         _eventSynchronizer = eventSynchronizer;
         _warfare = module;
 
+        _listenerBuffer = new List<object>(128);
+
         _warfare.LayoutStarted += OnLayoutStarted;
 
         _eventProviders = new List<IEventListenerProvider>(8);
@@ -111,27 +116,20 @@ public partial class EventDispatcher : IHostedService, IDisposable
         player.UnturnedPlayer.life.onHurt += OnPlayerHurt;
     }
 
-    public async Task WaitForEvents(CancellationToken token = default)
+    public async UniTask WaitForEvents()
     {
-        if (_activeEvents <= 0)
-        {
-            return;
-        }
+        _isTryingToShutDown = true;
 
-        DateTime spinStart = DateTime.UtcNow;
-        while (_activeEvents > 0)
-        {
-            await Task.Delay(25, token);
-            if ((DateTime.UtcNow - spinStart).TotalSeconds < 10)
-                continue;
+        await UniTask.SwitchToThreadPool();
 
-            _logger.LogWarning("Timed out waiting for events to finish.");
-            break;
-        }
+        SpinWait.SpinUntil(_eventSynchronizer.IsCleared, TimeSpan.FromSeconds(10));
     }
 
     UniTask IHostedService.StartAsync(CancellationToken token)
     {
+        ListPool<EventListenerResult>.warmup(8);
+        ListPool<InProgressEventTask>.warmup(32);
+
         /* Provider */
         Provider.onEnemyConnected += ProviderOnServerConnectedEarly;
         Provider.onServerConnected += ProviderOnServerConnected;
@@ -189,7 +187,7 @@ public partial class EventDispatcher : IHostedService, IDisposable
         return UniTask.CompletedTask;
     }
 
-    async UniTask IHostedService.StopAsync(CancellationToken token)
+    UniTask IHostedService.StopAsync(CancellationToken token)
     {
         /* Provider */
         Provider.onServerConnected -= ProviderOnServerConnected;
@@ -244,10 +242,10 @@ public partial class EventDispatcher : IHostedService, IDisposable
         ObjectManager.OnQuestObjectUsed -= ObjectManagerOnQuestObjectUsed;
         NPCEventManager.onEvent -= NPCEventManagerOnEvent;
 
-        await WaitForEvents(CancellationToken.None);
-
         _cancellationTokenSource.Cancel();
         _cancellationTokenSource.Dispose();
+
+        return UniTask.CompletedTask;
     }
 
     /// <summary>
@@ -286,6 +284,18 @@ public partial class EventDispatcher : IHostedService, IDisposable
     /// <returns>If the action should continue if <paramref name="eventArgs"/> is <see cref="ICancellable"/>, otherwise <see langword="true"/>.</returns>
     public async UniTask<bool> DispatchEventAsync<TEventArgs>(TEventArgs eventArgs, CancellationToken token = default, bool allowAsync = true) where TEventArgs : class
     {
+        if (_isTryingToShutDown)
+        {
+            if (eventArgs is ICancellable c)
+            {
+                c.Cancel();
+            }
+
+            _logger.LogWarning($"Event {typeof(EventArgs)} dispatched after shutdown has started.");
+
+            return false;
+        }
+
 #if TELEMETRY
         string stackTrace = new StackTrace().ToString();
 #endif
@@ -306,21 +316,37 @@ public partial class EventDispatcher : IHostedService, IDisposable
 
         EventInvocationListenerCache cache = GetEventListenersCache<TEventArgs>(out IServiceProvider serviceProvider);
 
+        bool isPure = allowAsync && cache.ModelInfo is { SynchronizationContext: EventSynchronizationContext.Pure };
+        if (isPure && eventArgs is ICancellable)
+        {
+#if TELEMETRY
+            activity?.SetStatus(ActivityStatusCode.Error, "Pure cancellable not supported.");
+#endif
+            throw new InvalidOperationException($"A pure ICancellable not supported for event model {Accessor.ExceptionFormatter.Format<TEventArgs>()}.");
+        }
+#if TELEMETRY
+        activity?.SetTag("pure", isPure);
+#endif
+
         List<EventListenerResult> eventListeners = ListPool<EventListenerResult>.claim();
         eventListeners.AddRange(cache.Results);
 
         // IEventListenerProviders
-        foreach (IEventListenerProvider provider in _eventProviders)
+        try
         {
-            foreach (IEventListener<TEventArgs> eventListener in provider.EnumerateNormalListeners(eventArgs))
+            foreach (IEventListenerProvider provider in _eventProviders)
             {
-                AddProviderResults(eventListener, eventListeners, false, type);
+                provider.AppendListeners(eventArgs, _listenerBuffer);
             }
 
-            foreach (IAsyncEventListener<TEventArgs> eventListener in provider.EnumerateAsyncListeners(eventArgs))
+            foreach (object listener in _listenerBuffer)
             {
-                AddProviderResults(eventListener, eventListeners, true, type);
+                AddProviderResults(listener, eventListeners, type);
             }
+        }
+        finally
+        {
+            _listenerBuffer.Clear();
         }
 
         int ct = eventListeners.Count;
@@ -343,22 +369,20 @@ public partial class EventDispatcher : IHostedService, IDisposable
         for (int i = 0; i < eventListeners.Count; i++)
         {
             EventListenerResult result = eventListeners[i];
-            activity?.AddTag($"event-listener-{i}-listener", Accessor.Formatter.Format(result.Listener.GetType()));
-            activity?.AddTag($"event-listener-{i}-model", Accessor.Formatter.Format(result.Model));
+            activity?.AddTag($"event-listener-{i}", $"{{ \"listener\": \"{Accessor.Formatter.Format(result.Listener.GetType())}\", \"model\": \"{Accessor.Formatter.Format(result.Model)}\" }}");
         }
 #endif
 
         SynchronizationEntry? syncEntry = null;
         EventModelAttribute? modelInfo = null;
 
-        Interlocked.Increment(ref _activeEvents);
         long eventId = Interlocked.Increment(ref _eventId);
 
         // enter sync buckets
         if (allowAsync)
         {
             modelInfo = cache.ModelInfo;
-            if (modelInfo != null && modelInfo.SynchronizationContext != EventSynchronizationContext.None)
+            if (modelInfo is { SynchronizationContext: EventSynchronizationContext.Global or EventSynchronizationContext.PerPlayer })
             {
                 _logger.LogTrace($"  {eventId}  Locking {type}...");
 #if TELEMETRY
@@ -377,8 +401,11 @@ public partial class EventDispatcher : IHostedService, IDisposable
             }
 #endif
         }
-        else if (cache.ModelInfo is { SynchronizationContext: not EventSynchronizationContext.None })
+        else if (cache.ModelInfo is { SynchronizationContext: EventSynchronizationContext.Global or EventSynchronizationContext.PerPlayer })
         {
+#if TELEMETRY
+            activity?.SetStatus(ActivityStatusCode.Error, "SynchronizationContext not supported.");
+#endif
             throw new InvalidOperationException($"SynchronizationContext not supported for event model {Accessor.ExceptionFormatter.Format<TEventArgs>()} when allowAsync = false.");
         }
 #if TELEMETRY
@@ -391,6 +418,8 @@ public partial class EventDispatcher : IHostedService, IDisposable
 
         _logger.LogTrace($"  {eventId}  Invoke {type} - Dispatching event for {ct} listener(s), " +
                          $"locked: {syncEntry != null} ({syncEntry?.WaitCount ?? 0} waiting).");
+
+        List<InProgressEventTask>? sequentialTaskList = isPure ? ListPool<InProgressEventTask>.claim() : null;
 
         try
         {
@@ -428,11 +457,18 @@ public partial class EventDispatcher : IHostedService, IDisposable
                 return !cancellable.IsActionCancelled;
             }
 
+            int purePriority = 0;
+
             for (int i = 0; i < ct; i++)
             {
                 EventListenerResult result = underlying[i];
+                if (isPure && purePriority != result.Priority && sequentialTaskList!.Count > 0)
+                {
+                    await WaitForPureEvents(sequentialTaskList, underlying, serviceProvider, token, eventId);
+                }
+
 #if TELEMETRY
-                using Activity? invokeActivity = _activitySource.CreateActivity(
+                Activity? invokeActivity = _activitySource.CreateActivity(
                     $"Invoke listener {Accessor.Formatter.Format(result.Listener.GetType())} for model {Accessor.Formatter.Format(type)}.",
                     ActivityKind.Internal,
                     parentContext: activity?.Context ?? default
@@ -453,10 +489,14 @@ public partial class EventDispatcher : IHostedService, IDisposable
 #if TELEMETRY
                     invokeActivity?.Start();
                     invokeActivity?.SetStatus(ActivityStatusCode.Error, "Child async event listener, skipped.");
+                    invokeActivity?.Dispose();
 #endif
                     continue;
                 }
 
+#if TELEMETRY
+                bool disposeActivity = true;
+#endif
                 try
                 {
                     // RequireNextFrame
@@ -509,12 +549,30 @@ public partial class EventDispatcher : IHostedService, IDisposable
                     UniTask invokeResult = InvokeListener(ref result, eventArgs, serviceProvider, token);
                     if (invokeResult.Status != UniTaskStatus.Succeeded)
                     {
-                        await invokeResult;
+                        if (isPure)
+                        {
+                            InProgressEventTask task = default;
+                            task.Index = i;
+                            task.Task = invokeResult;
 #if TELEMETRY
-                        invokeActivity?.AddEvent(new ActivityEvent("Invoked with continuation"));
+                            task.Activity = invokeActivity;
 #endif
-                        _logger.LogTrace($"  {eventId}  Invoked with continuation {result.Listener.GetType()} ({result.Model}).");
-                        token.ThrowIfCancellationRequested();
+                            sequentialTaskList!.Add(task);
+                            purePriority = result.Priority;
+#if TELEMETRY
+                            disposeActivity = false;
+                            invokeActivity?.AddEvent(new ActivityEvent("Invoked with continuation, queued simultaniously"));
+#endif
+                        }
+                        else
+                        {
+                            await invokeResult;
+#if TELEMETRY
+                            invokeActivity?.AddEvent(new ActivityEvent("Invoked with continuation"));
+#endif
+                            _logger.LogTrace($"  {eventId}  Invoked with continuation {result.Listener.GetType()} ({result.Model}).");
+                            token.ThrowIfCancellationRequested();
+                        }
                     }
                     else
                     {
@@ -524,12 +582,12 @@ public partial class EventDispatcher : IHostedService, IDisposable
                         _logger.LogTrace($"  {eventId}  Invoked without continuation {result.Listener.GetType()} ({result.Model}).");
                     }
 
+#if TELEMETRY
                     if (!previousActionCancelled && eventArgs is ICancellable { IsActionCancelled: true })
                     {
-#if TELEMETRY
                         invokeActivity?.AddEvent(new ActivityEvent("Action cancelled"));
-#endif
                     }
+#endif
 
                     if (eventArgs is ICancellable { IsCancelled: true })
                     {
@@ -602,6 +660,18 @@ public partial class EventDispatcher : IHostedService, IDisposable
                     c.Cancel();
                     break;
                 }
+#if TELEMETRY
+                finally
+                {
+                    if (disposeActivity)
+                        invokeActivity?.Dispose();
+                }
+#endif
+            }
+
+            if (isPure && sequentialTaskList!.Count > 0)
+            {
+                await WaitForPureEvents(sequentialTaskList, underlying, serviceProvider, token, eventId);
             }
 
             bool canContinue = eventArgs is not ICancellable { IsActionCancelled: true };
@@ -618,9 +688,7 @@ public partial class EventDispatcher : IHostedService, IDisposable
             activity?.AddEvent(new ActivityEvent("Event invocation ended"));
 #endif
             await UniTask.SwitchToMainThread();
-
-            Interlocked.Decrement(ref _activeEvents);
-
+            
             if (syncEntry != null)
             {
                 _eventSynchronizer.ExitEvent(syncEntry, modelInfo);
@@ -629,11 +697,102 @@ public partial class EventDispatcher : IHostedService, IDisposable
 #endif
             }
 
+            if (sequentialTaskList != null)
+                ListPool<InProgressEventTask>.release(sequentialTaskList);
             ListPool<EventListenerResult>.release(eventListeners);
             _logger.LogTrace($"  Exited event {type}, eventId: {eventId}.");
 #if TELEMETRY
             activity?.AddEvent(new ActivityEvent("Event exited"));
 #endif
+        }
+    }
+
+    // pure events are events where the handlers would have no effect on each other, consequencly they can be ran sequentially with no ill effects
+    // they will be grouped by priority, however, so only one set of priorities will be started at once
+    private async UniTask WaitForPureEvents(List<InProgressEventTask> sequentialTaskList, EventListenerResult[] results, IServiceProvider serviceProvider, CancellationToken token, long eventId)
+    {
+        UniTask[] tasks = new UniTask[sequentialTaskList.Count];
+        for (int j = 0; j < sequentialTaskList.Count; ++j)
+            tasks[j] = TryWrap(sequentialTaskList, j);
+
+        // wait for pending tasks
+        await UniTask.WhenAll(tasks);
+
+        // check for exceptions
+        for (int j = 0; j < sequentialTaskList.Count; ++j)
+        {
+            InProgressEventTask eventTask = sequentialTaskList[j];
+            switch (eventTask.Exception)
+            {
+                case null:
+#if TELEMETRY
+                    eventTask.Activity?.SetStatus(ActivityStatusCode.Ok, "Will continue.");
+#endif
+                    break;
+
+                // cancelled
+                case OperationCanceledException ex when token.IsCancellationRequested:
+
+                    ref EventListenerResult result = ref results[eventTask.Index];
+
+#if TELEMETRY
+                    eventTask.Activity?.AddEvent(new ActivityEvent("Cancelled by cancellation token"));
+                    eventTask.Activity?.AddTag("exception", Accessor.Formatter.Format(ex.GetType()));
+                    eventTask.Activity?.AddTag("exception-info", ex.ToString());
+#endif
+                    _logger.LogTrace($"  {eventId}  Threw cancellation: {result.Listener.GetType()} ({result.Model}).");
+
+                    Type listenerType = result.Listener.GetType();
+                    ILogger logger = serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(listenerType);
+
+                    logger.LogInformation(ex, $"Execution of event handler {Accessor.Formatter.Format(listenerType)} for {Accessor.Formatter.Format(result.Model)} cancelled by CancellationToken.");
+
+#if TELEMETRY
+                    eventTask.Activity?.SetStatus(ActivityStatusCode.Error, "Cancellation not supported.");
+#endif
+                    break;
+
+                // exception thrown
+                case var ex:
+
+                    result = ref results[eventTask.Index];
+
+#if TELEMETRY
+                    eventTask.Activity?.AddEvent(new ActivityEvent("Exception thrown"));
+                    eventTask.Activity?.AddTag("exception", Accessor.Formatter.Format(ex.GetType()));
+                    eventTask.Activity?.AddTag("exception-info", ex.ToString());
+#endif
+                    _logger.LogTrace($"  {eventId}  Threw exception: {result.Listener.GetType()} ({result.Model}).");
+
+                    listenerType = result.Listener.GetType();
+                    logger = serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(listenerType);
+
+                    logger.LogError(ex, $"Execution of event handler {eventId} {Accessor.Formatter.Format(listenerType)} for {Accessor.Formatter.Format(result.Model)} threw an error.");
+
+#if TELEMETRY
+                    eventTask.Activity?.SetStatus(ActivityStatusCode.Error, "Error thrown.");
+#endif
+                    break;
+            }
+#if TELEMETRY
+            eventTask.Activity?.Dispose();
+#endif
+        }
+
+        sequentialTaskList.Clear();
+    }
+
+    private static async UniTask TryWrap(List<InProgressEventTask> sequentialTaskList, int i)
+    {
+        InProgressEventTask task = sequentialTaskList[i];
+        try
+        {
+            await task.Task;
+        }
+        catch (Exception ex)
+        {
+            task.Exception = ex;
+            sequentialTaskList[i] = task;
         }
     }
 
@@ -995,10 +1154,10 @@ public partial class EventDispatcher : IHostedService, IDisposable
         // insert an event listener from a IEventListenerProvider that has already been filled
         //  this avoids resorting the entire lisst
 
-        EventListenerResult[] underlying = eventListeners.GetUnderlyingArray();
-        for (int i = 0; i < underlying.Length; ++i)
+        for (int i = 0; i < eventListeners.Count; i++)
         {
-            if (CompareEventListenerResults(ref underlying[i], ref result) <= 0)
+            EventListenerResult r = eventListeners[i];
+            if (CompareEventListenerResults(in r, in result) <= 0)
             {
                 continue;
             }
@@ -1010,7 +1169,7 @@ public partial class EventDispatcher : IHostedService, IDisposable
         eventListeners.Add(result);
     }
 
-    private readonly Dictionary<TypePair, Type[]> _interfaceCache = new Dictionary<TypePair, Type[]>(32);
+    private readonly Dictionary<TypePair, CachedInterfaceInfo[]> _interfaceCache = new Dictionary<TypePair, CachedInterfaceInfo[]>(32);
 
     private struct TypePair : IEquatable<TypePair>
     {
@@ -1035,20 +1194,20 @@ public partial class EventDispatcher : IHostedService, IDisposable
 
     // adds results from IEventListenerProvider services to the working eventListeners list and initializes them
     //  if any returned listener has more than one applicable interface, it is added multiple times, in order of reverse hierarchy ('object', 'IPlayerEvent', 'PlayerJoined')
-    private void AddProviderResults(object eventListener, List<EventListenerResult> eventListeners, bool isAsync, Type argType)
+    private void AddProviderResults(object eventListener, List<EventListenerResult> eventListeners, Type argType)
     {
-        byte flag = (byte)((isAsync ? 1 : 0) * BitIsAsync);
         Type listenerType = eventListener.GetType();
 
         TypePair tp = default;
         tp.Listener = listenerType;
         tp.Model = argType;
 
-        if (_interfaceCache.TryGetValue(tp, out Type[] interfaces))
+        if (_interfaceCache.TryGetValue(tp, out CachedInterfaceInfo[] interfaces))
         {
             for (int i = 0; i < interfaces.Length; ++i)
             {
-                EventListenerResult newResult = new EventListenerResult { Listener = eventListener, Flags = flag, Model = interfaces[i] };
+                ref CachedInterfaceInfo info = ref interfaces[i];
+                EventListenerResult newResult = new EventListenerResult { Listener = eventListener, Flags = info.Flag, Model = info.Model };
                 FillResults(ref newResult);
                 InsertEventListener(ref newResult, eventListeners);
             }
@@ -1057,6 +1216,8 @@ public partial class EventDispatcher : IHostedService, IDisposable
         }
 
         Type?[] typeInterfaces = eventListener.GetType().GetInterfaces();
+        CachedInterfaceInfo[]? cachedInfo = null;
+        bool firstIsAsync = false;
         int ct = 0, index = -1;
         for (int i = 0; i < typeInterfaces.Length; ++i)
         {
@@ -1067,33 +1228,51 @@ public partial class EventDispatcher : IHostedService, IDisposable
                 continue;
             }
 
+            Type genDef = intx.GetGenericTypeDefinition();
+
             Type argTypeIntx = intx.GetGenericArguments()[0];
-            if (!argTypeIntx.IsAssignableFrom(argType))
+            bool isAsync = genDef == typeof(IAsyncEventListener<>);
+            if (!argTypeIntx.IsAssignableFrom(argType) || !isAsync && genDef != typeof(IEventListener<>))
             {
                 typeInterfaces[i] = null;
                 continue;
             }
 
             typeInterfaces[i] = argTypeIntx;
+            if (ct == 1)
+            {
+                cachedInfo = new CachedInterfaceInfo[typeInterfaces.Length];
+                cachedInfo[index].Model = typeInterfaces[index]!;
+                cachedInfo[index].Flag = (byte)((firstIsAsync ? 1 : 0) * BitIsAsync);
+            }
+            if (ct > 0)
+            {
+                cachedInfo![i].Model = argTypeIntx;
+                cachedInfo[i].Flag = (byte)((isAsync ? 1 : 0) * BitIsAsync);
+            }
             ++ct;
             index = i;
+            firstIsAsync = isAsync;
         }
 
         // interfaces now contains all listening arg types that are assignable from argType
 
         if (ct == 1)
         {
-            if (typeInterfaces.Length != 1)
-                typeInterfaces = [ typeInterfaces[index] ];
-            _interfaceCache.Add(tp, typeInterfaces!);
+            CachedInterfaceInfo info = default;
+            info.Model = typeInterfaces[index]!;
+            info.Flag = (byte)((firstIsAsync ? 1 : 0) * BitIsAsync);
+
+            CachedInterfaceInfo[] cache = [ info ];
+            _interfaceCache.Add(tp, cache);
             // take a shortcut if only one is found
-            EventListenerResult newResult = new EventListenerResult { Listener = eventListener, Flags = flag, Model = typeInterfaces[0]! };
+            EventListenerResult newResult = new EventListenerResult { Listener = eventListener, Flags = info.Flag, Model = info.Model };
             FillResults(ref newResult);
             InsertEventListener(ref newResult, eventListeners);
             return;
         }
 
-        Type[] outputArray = new Type[ct];
+        CachedInterfaceInfo[] outputArray = new CachedInterfaceInfo[ct];
 
         // continuously remove the 'lowest' type argument in the class hierarchy, ordering them in order of class hierarchy
         for (int c = 0; c < ct; ++c)
@@ -1119,9 +1298,10 @@ public partial class EventDispatcher : IHostedService, IDisposable
                 break;
             }
 
-            outputArray[c] = lowestType!;
+            ref CachedInterfaceInfo info = ref cachedInfo![lowestTypeIndex];
+            outputArray[c] = info;
             typeInterfaces[lowestTypeIndex] = null;
-            EventListenerResult newResult = new EventListenerResult { Listener = eventListener, Flags = flag, Model = lowestType! };
+            EventListenerResult newResult = new EventListenerResult { Listener = eventListener, Flags = info.Flag, Model = lowestType! };
             FillResults(ref newResult);
             InsertEventListener(ref newResult, eventListeners);
         }
@@ -1236,7 +1416,7 @@ public partial class EventDispatcher : IHostedService, IDisposable
         }
     }
 
-    private static int CompareEventListenerResults(ref EventListenerResult a, ref EventListenerResult b)
+    private static int CompareEventListenerResults(in EventListenerResult a, in EventListenerResult b)
     {
         // handle MustRunLast
         if ((a.Flags & BitMustRunLast) != 0)
@@ -1260,18 +1440,21 @@ public partial class EventDispatcher : IHostedService, IDisposable
                 return cmp;
         }
 
+        // main thread and not in same class, main thread comes first
+        if ((a.Flags & BitEnsureMainThread) != (b.Flags & BitEnsureMainThread))
+            return (b.Flags & BitEnsureMainThread) != 0 ? 1 : -1;
 
-        if (a.Model is not null && b.Model is not null && a.Model != b.Model)
+        // require next frame and not in same class, main thread comes first
+        if ((a.Flags & BitRequireNextFrame) != (b.Flags & BitRequireNextFrame))
+            return (b.Flags & BitRequireNextFrame) != 0 ? 1 : -1;
+
+        if (a.Model != b.Model)
         {
             // IEventListener<IPlayerEvent> comes before IEventListener<PlayerXxxArgs : PlayerEvent>
             int cmp = !b.Model.IsAssignableFrom(a.Model) ? -(a.Model.IsAssignableFrom(b.Model) ? 1 : 0) : 1;
             if (cmp != 0)
                 return cmp;
         }
-
-        // main thread and not in same class, main thread comes first
-        if ((a.Flags & BitEnsureMainThread) != (b.Flags & BitEnsureMainThread))
-            return (b.Flags & BitEnsureMainThread) != 0 ? 1 : -1;
 
         return 0;
     }
@@ -1291,6 +1474,21 @@ public partial class EventDispatcher : IHostedService, IDisposable
         public bool RequireNextFrame;
         public bool MustRunLast;
         public MethodInfo Method;
+    }
+    private struct CachedInterfaceInfo
+    {
+        public Type Model;
+        public byte Flag;
+    }
+
+    private struct InProgressEventTask
+    {
+        public int Index;
+        public UniTask Task;
+        public Exception? Exception;
+#if TELEMETRY
+        public Activity? Activity;
+#endif
     }
 
     private struct EventListenerResult

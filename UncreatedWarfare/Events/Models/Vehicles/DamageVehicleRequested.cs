@@ -6,7 +6,6 @@ namespace Uncreated.Warfare.Events.Models.Vehicles;
 /// Event listener args which handles a patch listening for when a vehicle is requested to be damaged.
 /// Can be cancelled to disallow damage from being done.
 /// </summary>
-/// 
 public class DamageVehicleRequested : CancellableEvent
 {
     public required WarfareVehicle Vehicle { get; init; }

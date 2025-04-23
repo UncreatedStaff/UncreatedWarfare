@@ -9,6 +9,7 @@ namespace Uncreated.Warfare.Events.Models.Barricades;
 /// <summary>
 /// Event listener args which handles a patch after trap triggered.
 /// </summary>
+[EventModel(EventSynchronizationContext.Pure)]
 public class TrapTriggered : IActionLoggableEvent
 {
     /// <summary>

@@ -5,6 +5,7 @@ namespace Uncreated.Warfare.Events.Models.Items;
 /// <summary>
 /// Invoked when a player swaps their clothes to another item or remove clothes completely.
 /// </summary>
+[EventModel(EventSynchronizationContext.Pure)]
 public class ClothingSwapped : PlayerEvent
 {
     /// <summary>

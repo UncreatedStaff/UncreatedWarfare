@@ -1,10 +1,11 @@
-﻿using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Events.Models.Items;
 
 /// <summary>
 /// Invoked by <see cref="ItemManager.onServerSpawningItemDrop"/>.
 /// </summary>
+[EventModel(EventSynchronizationContext.Pure)]
 public class ItemSpawning : CancellableEvent
 {
     /// <summary>

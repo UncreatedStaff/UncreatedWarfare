@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using Uncreated.Warfare.Commands;
+using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Events.Models.Squads;
@@ -29,26 +30,29 @@ public class MapMarkerTweaks : IEventListener<PlayerDropMarkerRequested>, IEvent
         e.MarkerDisplayText = e.Player.GetSquad()!.Name;
     }
 
+    [EventListener(MustRunInstantly = true)]
+    public void HandleEvent(SquadLeaderUpdated e, IServiceProvider serviceProvider)
+    {
+        if (!e.OldLeader.IsOnline
+            || !e.OldLeader.UnturnedPlayer.quests.isMarkerPlaced
+            || e.OldLeader.UnturnedPlayer.quests.markerTextOverride == null)
+        {
+            return;
+        }
+
+        // transition old marker to new leader
+        Vector3 oldMarker = e.OldLeader.UnturnedPlayer.quests.markerPosition;
+        e.OldLeader.UnturnedPlayer.quests.replicateSetMarker(false, Vector3.zero);
+        e.NewLeader.UnturnedPlayer.quests.replicateSetMarker(true, oldMarker, e.Squad.Name);
+    }
+
+    [EventListener(MustRunInstantly = true)]
     public void HandleEvent(SquadMemberLeft e, IServiceProvider serviceProvider)
     {
+        // remove marker from old leader
         if (e.Player.IsOnline && e.Player.UnturnedPlayer.quests.isMarkerPlaced && e.Player.UnturnedPlayer.quests.markerTextOverride != null)
         {
             e.Player.UnturnedPlayer.quests.replicateSetMarker(false, Vector3.zero);
         }
-    }
-
-    public void HandleEvent(SquadLeaderUpdated e, IServiceProvider serviceProvider)
-    {
-        Vector3 oldMarker = default;
-        bool hasOldMarker = false;
-        if (e.OldLeader.IsOnline && e.OldLeader.UnturnedPlayer.quests.isMarkerPlaced && e.OldLeader.UnturnedPlayer.quests.markerTextOverride != null)
-        {
-            hasOldMarker = true;
-            oldMarker = e.OldLeader.UnturnedPlayer.quests.markerPosition;
-            e.OldLeader.UnturnedPlayer.quests.replicateSetMarker(false, Vector3.zero);
-        }
-
-        if (hasOldMarker)
-            e.NewLeader.UnturnedPlayer.quests.replicateSetMarker(true, oldMarker, e.Squad.Name);
     }
 }

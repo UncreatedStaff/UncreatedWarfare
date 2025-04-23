@@ -9,6 +9,7 @@ namespace Uncreated.Warfare.Events.Models.Flags;
 /// Event listener args which fires after a Team's (or global if <see cref="Team"/> is <see langword="null"/>)
 /// objective changes <see cref="FlagObjective"/>.
 /// </summary>
+[EventModel(EventSynchronizationContext.Pure)]
 public class FlagObjectiveChanged : IActionLoggableEvent
 {
     /// <summary>

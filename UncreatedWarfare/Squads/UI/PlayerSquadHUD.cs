@@ -3,6 +3,7 @@ using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Patterns;
 using Uncreated.Framework.UI.Reflection;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Kits;
 using Uncreated.Warfare.Events.Models.Squads;
@@ -34,20 +35,28 @@ public class PlayerSquadHUD : UnturnedUI,
     {
         _playerService = playerService;
     }
+
+    [EventListener(MustRunInstantly = true, RequireActiveLayout = true)]
     public void HandleEvent(SquadMemberJoined e, IServiceProvider serviceProvider)
     {
         SendToPlayer(e.Player.Connection);
         UpdateForSquad(e.Squad);
     }
+
+    [EventListener(MustRunInstantly = true, RequireActiveLayout = true)]
     public void HandleEvent(SquadMemberLeft e, IServiceProvider serviceProvider)
     {
         ClearFromPlayer(e.Player.Connection);
         UpdateForSquad(e.Squad);
     }
+
+    [EventListener(MustRunInstantly = true, RequireActiveLayout = true)]
     public void HandleEvent(SquadLeaderUpdated e, IServiceProvider serviceProvider)
     {
         UpdateForSquad(e.Squad);
     }
+
+    [EventListener(MustRunInstantly = true, RequireActiveLayout = true)]
     public void HandleEvent(PlayerKitChanged e, IServiceProvider serviceProvider)
     {
         Squad? squad = e.Player.GetSquad();

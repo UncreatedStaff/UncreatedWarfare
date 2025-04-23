@@ -6,7 +6,7 @@ namespace Uncreated.Warfare.Events.Models.Squads;
 /// <summary>
 /// Event listener args which fires after a <see cref="Squad"/> is disbanded.
 /// </summary>
-[EventModel(EventSynchronizationContext.Global, SynchronizedModelTags = [ "squads" ])]
+[EventModel(EventSynchronizationContext.Pure)]
 public class SquadDisbanded : SquadUpdated
 {
     public required WarfarePlayer PreviousOwner { get; init; }

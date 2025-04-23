@@ -8,6 +8,7 @@ namespace Uncreated.Warfare.Events.Models.Kits;
 /// <summary>
 /// Handles when a player's kit is changed, re-equipped, or dequiped.
 /// </summary>
+[EventModel(EventSynchronizationContext.Pure)]
 public class PlayerKitChanged : PlayerEvent, IActionLoggableEvent
 {
     /// <summary>

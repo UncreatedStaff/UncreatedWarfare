@@ -7,6 +7,7 @@ using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Events.Models.Barricades;
 
+[EventModel(EventSynchronizationContext.Pure)]
 public class BarricadeTransformed : IBuildableTransformedEvent
 {
     public required IBuildable Buildable { get; init; }

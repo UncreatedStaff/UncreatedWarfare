@@ -101,9 +101,10 @@ public class EventSynchronizer : IDisposable
 
     public bool IsCleared()
     {
-        GameThread.AssertCurrent();
-
-        return _globalGroup.IsCleared() && _playerGroups.Values.All(x => x.IsCleared());
+        lock (_playerGroups)
+        {
+            return _globalGroup.IsCleared() && _playerGroups.Values.All(x => x.IsCleared());
+        }
     }
 
     /*
@@ -208,7 +209,10 @@ public class EventSynchronizer : IDisposable
             group.EnterEvent(entry, now, _logger, _toContinueBuffer);
         }
 
-        _playerGroups.Add(player, group);
+        lock (_playerGroups)
+        {
+            _playerGroups.Add(player, group);
+        }
         return group;
     }
 
@@ -253,9 +257,15 @@ public class EventSynchronizer : IDisposable
                 }
 
                 // remove empty groups from players that are offline
-                foreach (ulong s64 in _toRemoveBuffer)
+                if (_toRemoveBuffer.Count > 0)
                 {
-                    _playerGroups.Remove(s64);
+                    lock (_playerGroups)
+                    {
+                        foreach (ulong s64 in _toRemoveBuffer)
+                        {
+                            _playerGroups.Remove(s64);
+                        }
+                    }
                 }
 
                 _globalPlayerEntries.Remove(entry);
@@ -274,7 +284,10 @@ public class EventSynchronizer : IDisposable
 
                 if (grp.ExitEvent(args, _logger, _toContinueBuffer))
                 {
-                    _playerGroups.Remove(player);
+                    lock (_playerGroups)
+                    {
+                        _playerGroups.Remove(player);
+                    }
                 }
 
                 break;

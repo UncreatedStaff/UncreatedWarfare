@@ -8,6 +8,7 @@ namespace Uncreated.Warfare.Events.Models.Vehicles;
 /// <summary>
 /// Event listener args which fire just before an InteractableVehicle is destroyed.
 /// </summary>
+[EventModel(EventSynchronizationContext.Pure)]
 public class VehicleDespawned : IActionLoggableEvent
 {
     /// <summary>

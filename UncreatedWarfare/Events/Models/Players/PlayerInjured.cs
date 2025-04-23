@@ -8,6 +8,7 @@ namespace Uncreated.Warfare.Events.Models.Players;
 /// <summary>
 /// Handles a player being injured.
 /// </summary>
+[EventModel(EventSynchronizationContext.Pure)]
 public class PlayerInjured : PlayerEvent, IActionLoggableEvent
 {
     private readonly DamagePlayerParameters _parameters;

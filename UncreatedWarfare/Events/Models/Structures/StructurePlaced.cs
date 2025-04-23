@@ -10,6 +10,7 @@ namespace Uncreated.Warfare.Events.Models.Structures;
 /// <summary>
 /// Event listener args which handles <see cref="StructureManager.onStructureSpawned"/>.
 /// </summary>
+[EventModel(EventSynchronizationContext.Pure)]
 public class StructurePlaced : IBuildablePlacedEvent
 {
     protected IBuildable? BuildableCache;

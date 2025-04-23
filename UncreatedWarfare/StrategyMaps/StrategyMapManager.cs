@@ -89,8 +89,17 @@ public class StrategyMapManager :
     {
         return UniTask.CompletedTask;
     }
-    public IEnumerable<IAsyncEventListener<TEventArgs>> EnumerateAsyncListeners<TEventArgs>(TEventArgs args) where TEventArgs : class => _strategyMaps.OfType<IAsyncEventListener<TEventArgs>>();
-    public IEnumerable<IEventListener<TEventArgs>> EnumerateNormalListeners<TEventArgs>(TEventArgs args) where TEventArgs : class => _strategyMaps.OfType<IEventListener<TEventArgs>>();
+
+    void IEventListenerProvider.AppendListeners<TEventArgs>(TEventArgs args, List<object> listeners)
+    {
+        foreach (StrategyMap map in _strategyMaps)
+        {
+            if (map is IEventListener<TEventArgs> el)
+                listeners.Add(el);
+            if (map is IAsyncEventListener<TEventArgs> ael)
+                listeners.Add(ael);
+        }
+    }
 
     private void RegisterExistingStrategyMaps()
     {

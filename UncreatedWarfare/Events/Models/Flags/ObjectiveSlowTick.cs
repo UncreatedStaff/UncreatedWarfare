@@ -5,6 +5,7 @@ namespace Uncreated.Warfare.Events.Models.Flags;
 /// <summary>
 /// Event listener args which fires at a slow interval for all <see cref="FlagObjective"/>s in the current layout that are at least one team's objective and have players.
 /// </summary>
+[EventModel(EventSynchronizationContext.Pure)]
 public class ObjectiveSlowTick
 {
     /// <summary>

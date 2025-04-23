@@ -117,7 +117,8 @@ public class NearbySupplyCrates
                 continue;
 
             bpf.ChangeSupplies(type, amountDelta);
-            FobSuppliesChanged args = new FobSuppliesChanged {
+            FobSuppliesChanged args = new FobSuppliesChanged
+            {
                 Fob = bpf,
                 AmountDelta = amountDelta,
                 SupplyType = type,

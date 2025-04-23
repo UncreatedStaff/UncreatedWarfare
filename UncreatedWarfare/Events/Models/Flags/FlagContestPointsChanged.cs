@@ -7,6 +7,7 @@ namespace Uncreated.Warfare.Events.Models.Flags;
 /// <summary>
 /// Event listener args which fires after a flag's <see cref="FlagObjective.Contest"/>'s points change are altered.
 /// </summary>
+[EventModel(EventSynchronizationContext.Pure)]
 public class FlagContestPointsChanged : IActionLoggableEvent
 {
     /// <summary>

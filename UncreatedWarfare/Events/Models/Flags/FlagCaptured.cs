@@ -9,6 +9,7 @@ namespace Uncreated.Warfare.Events.Models.Flags;
 /// Event listener args which fires after a <see cref="FlagObjective"/> is captured. "Captured" means that a flag's <see cref="FlagObjective.Owner"/> changed to
 /// a winning <see cref="Team"/> after they won the flag contest of a neutral flag.
 /// </summary>
+[EventModel(EventSynchronizationContext.Pure)]
 public class FlagCaptured : IActionLoggableEvent
 {
     /// <summary>

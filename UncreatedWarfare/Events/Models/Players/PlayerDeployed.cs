@@ -4,6 +4,7 @@ using Uncreated.Warfare.FOBs.Deployment;
 
 namespace Uncreated.Warfare.Events.Models.Players;
 
+[EventModel(EventSynchronizationContext.Pure)]
 public class PlayerDeployed : PlayerEvent, IActionLoggableEvent
 {
     /// <summary>

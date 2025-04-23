@@ -7,6 +7,7 @@ namespace Uncreated.Warfare.Events.Models.Players;
 /// <summary>
 /// Invoked after a player melee's.
 /// </summary>
+[EventModel(EventSynchronizationContext.Pure)]
 public class PlayerMeleed : PlayerEvent, IActionLoggableEvent
 {
     /// <summary>

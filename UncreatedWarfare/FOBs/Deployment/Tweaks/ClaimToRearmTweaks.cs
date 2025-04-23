@@ -117,7 +117,7 @@ public class ClaimToRearmTweaks : // todo: move this class out of this namespace
         e.Player.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastLoseAmmo.Translate(rearmCost, e.Player)));
         _chatService.Send(e.Player, _translations.AmmoResuppliedKit, rearmCost, ammoStorage.AmmoCount);
         
-        _ = WarfareModule.EventDispatcher.DispatchEventAsync(new PlayerRearmedKit()
+        _ = WarfareModule.EventDispatcher.DispatchEventAsync(new PlayerRearmedKit
         {
             Player = e.Player,
             AmmoConsumed = rearmCost,

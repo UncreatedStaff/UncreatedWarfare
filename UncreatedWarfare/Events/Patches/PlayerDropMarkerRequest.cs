@@ -58,16 +58,15 @@ internal sealed class PlayerDropMarkerRequest : IHarmonyPatch
         
         WarfarePlayer warfarePlayer = serviceProvider.Resolve<IPlayerService>().GetOnlinePlayer(__instance.player);
         
-        PlayerDropMarkerRequested args = new()
+        PlayerDropMarkerRequested args = new PlayerDropMarkerRequested
         {
             Player = warfarePlayer,
             MarkerWorldPosition = newMarkerPosition,
             IsNewMarkerBeingPlaced = newIsMarkerPlaced,
             MarkerDisplayText = newMarkerTextOverride
-            
         };
         
-        bool shouldAllow = WarfareModule.EventDispatcher.DispatchEventAsync(args).GetAwaiter().GetResult();
+        bool shouldAllow = WarfareModule.EventDispatcher.DispatchEventAsync(args, allowAsync: false).GetAwaiter().GetResult();
         
         newIsMarkerPlaced = args.IsNewMarkerBeingPlaced;
         newMarkerPosition = args.MarkerWorldPosition;

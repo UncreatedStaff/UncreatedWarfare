@@ -1,13 +1,13 @@
 using System;
 using Uncreated.Warfare.Events.Logging;
 using Uncreated.Warfare.Fobs;
-using Uncreated.Warfare.FOBs;
 
 namespace Uncreated.Warfare.Events.Models.Fobs;
 
 /// <summary>
 /// Event listener args which fires after <see cref="ResourceFob"/> becomes proxied by enemies or spawnable again.
 /// </summary>
+[EventModel(EventSynchronizationContext.Pure)]
 public class FobProxyChanged : IActionLoggableEvent
 {
     /// <summary>

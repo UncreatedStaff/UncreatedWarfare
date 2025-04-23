@@ -10,6 +10,7 @@ namespace Uncreated.Warfare.Events.Models.Barricades;
 /// <summary>
 /// Event listener args which handles <see cref="BarricadeManager.onBarricadeSpawned"/>.
 /// </summary>
+[EventModel(EventSynchronizationContext.Pure)]
 public class BarricadePlaced : IBuildablePlacedEvent
 {
     /// <summary>

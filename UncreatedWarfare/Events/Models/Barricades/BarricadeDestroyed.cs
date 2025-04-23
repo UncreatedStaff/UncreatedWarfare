@@ -12,6 +12,7 @@ namespace Uncreated.Warfare.Events.Models.Barricades;
 /// <summary>
 /// Event listener args which handles a patch on <see cref="BarricadeManager.destroyBarricade(BarricadeDrop, byte, byte, ushort)"/>.
 /// </summary>
+[EventModel(EventSynchronizationContext.Pure)]
 public class BarricadeDestroyed : IBuildableDestroyedEvent
 {
     protected IBuildable? BuildableCache;

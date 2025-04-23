@@ -1040,6 +1040,7 @@ public struct DailyQuestRegenerateResult
     public DailyQuestDay[] Days;
 }
 
+[EventModel(EventSynchronizationContext.Pure)]
 public sealed class DailyQuestsUpdated
 {
     public required DailyQuestDay Day { get; init; }

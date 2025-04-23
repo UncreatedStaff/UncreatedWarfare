@@ -184,6 +184,7 @@ public class HomebaseConnector : IHostedService
     }
 }
 
+[EventModel(EventSynchronizationContext.Pure)]
 public class HomebaseConnected
 {
     public required IRpcConnectionLifetime ConnectionLifetime { get; init; }

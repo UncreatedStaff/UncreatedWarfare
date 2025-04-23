@@ -53,11 +53,11 @@ internal sealed class PlayerLeaveGroupRequest : IHarmonyPatch
         
         WarfarePlayer warfarePlayer = serviceProvider.Resolve<IPlayerService>().GetOnlinePlayer(player);
         
-        PlayerLeaveGroupRequested args = new()
+        PlayerLeaveGroupRequested args = new PlayerLeaveGroupRequested
         {
             Player = warfarePlayer,
         };
 
-        return WarfareModule.EventDispatcher.DispatchEventAsync(args).GetAwaiter().GetResult();
+        return WarfareModule.EventDispatcher.DispatchEventAsync(args, allowAsync: false).GetAwaiter().GetResult();
     }
 }

@@ -8,6 +8,7 @@ namespace Uncreated.Warfare.Events.Models.Items;
 /// <summary>
 /// Invoked by <see cref="PlayerInventory.ReceiveDropItem"/>.
 /// </summary>
+[EventModel(EventSynchronizationContext.Pure)]
 public class ItemDropped : PlayerEvent, IActionLoggableEvent
 {
     /// <summary>

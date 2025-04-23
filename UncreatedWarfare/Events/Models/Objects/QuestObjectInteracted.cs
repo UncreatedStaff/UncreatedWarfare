@@ -3,6 +3,7 @@ namespace Uncreated.Warfare.Events.Models.Objects;
 /// <summary>
 /// Triggers after a <see cref="InteractableObjectQuest"/> or <see cref="InteractableObjectNote"/> gets interacted with.
 /// </summary>
+[EventModel(EventSynchronizationContext.Pure)]
 public class QuestObjectInteracted : PlayerEvent
 {
     /// <summary>

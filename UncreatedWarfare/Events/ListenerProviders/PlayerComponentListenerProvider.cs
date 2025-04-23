@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
@@ -19,28 +18,34 @@ public class PlayerComponentListenerProvider : IEventListenerProvider
         _playerService = playerService;
     }
 
-    public IEnumerable<IAsyncEventListener<TEventArgs>> EnumerateAsyncListeners<TEventArgs>(TEventArgs args) where TEventArgs : class
+    public void AppendListeners<TEventArgs>(TEventArgs args, List<object> listeners) where TEventArgs : class
     {
         if (args is IPlayerEvent playerEvent)
         {
-            return _playerService.OnlinePlayers
-                .Where(x => x.Equals(playerEvent.Player))
-                .SelectMany(x => x.Components.OfType<IAsyncEventListener<TEventArgs>>());
+            WarfarePlayer player = playerEvent.Player;
+            if (!player.IsOnline)
+                return;
+
+            foreach (IPlayerComponent component in player.Components)
+            {
+                if (component is IEventListener<TEventArgs> el)
+                    listeners.Add(el);
+                if (component is IAsyncEventListener<TEventArgs> ael)
+                    listeners.Add(ael);
+            }
+
+            return;
         }
 
-        return _playerService.OnlinePlayers
-            .SelectMany(x => x.Components.OfType<IAsyncEventListener<TEventArgs>>());
-    }
-
-    public IEnumerable<IEventListener<TEventArgs>> EnumerateNormalListeners<TEventArgs>(TEventArgs args) where TEventArgs : class
-    {
-        if (args is IPlayerEvent playerEvent)
+        foreach (WarfarePlayer player in _playerService.OnlinePlayers)
         {
-            return _playerService.OnlinePlayers
-                .Where(x => x.Equals(playerEvent.Player))
-                .SelectMany(x => x.Components.OfType<IEventListener<TEventArgs>>());
+            foreach (IPlayerComponent component in player.Components)
+            {
+                if (component is IEventListener<TEventArgs> el)
+                    listeners.Add(el);
+                if (component is IAsyncEventListener<TEventArgs> ael)
+                    listeners.Add(ael);
+            }
         }
-
-        return _playerService.OnlinePlayers.SelectMany(x => x.Components.OfType<IEventListener<TEventArgs>>());
     }
 }

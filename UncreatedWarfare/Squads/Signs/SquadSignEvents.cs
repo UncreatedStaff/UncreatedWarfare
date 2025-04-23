@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Squads;
 using Uncreated.Warfare.Interaction.Requests;
@@ -60,26 +61,31 @@ public class SquadSignEvents :
         return Task.FromResult(true);
     }
 
+    [EventListener(MustRunInstantly = true, RequireActiveLayout = true)]
     public void HandleEvent(SquadCreated e, IServiceProvider serviceProvider)
     {
         UpdateSignsForRelevantTeam(e.Squad.Team);
     }
 
+    [EventListener(MustRunInstantly = true, RequireActiveLayout = true)]
     public void HandleEvent(SquadDisbanded e, IServiceProvider serviceProvider)
     {
         UpdateSignsForRelevantTeam(e.Squad.Team);
     }
 
+    [EventListener(MustRunInstantly = true, RequireActiveLayout = true)]
     public void HandleEvent(SquadMemberJoined e, IServiceProvider serviceProvider)
     {
         UpdateSignsForRelevantSquad(e.Squad);
     }
 
+    [EventListener(MustRunInstantly = true, RequireActiveLayout = true)]
     public void HandleEvent(SquadMemberLeft e, IServiceProvider serviceProvider)
     {
         UpdateSignsForRelevantSquad(e.Squad);
     }
-    
+
+    [EventListener(MustRunInstantly = true, RequireActiveLayout = true)]
     public void HandleEvent(SquadLeaderUpdated e, IServiceProvider serviceProvider)
     {
         UpdateSignsForRelevantSquad(e.Squad);

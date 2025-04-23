@@ -7,6 +7,7 @@ namespace Uncreated.Warfare.Events.Models.Players;
 /// <summary>
 /// Invoked after a player takes damage, including the hit that kills them.
 /// </summary>
+[EventModel(EventSynchronizationContext.Pure)]
 public class PlayerDamaged : PlayerEvent, IActionLoggableEvent
 {
     private readonly DamagePlayerParameters _parameters;

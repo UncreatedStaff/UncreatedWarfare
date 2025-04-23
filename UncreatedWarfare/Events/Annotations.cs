@@ -65,12 +65,6 @@ public class EventModelAttribute : Attribute
     public EventSynchronizationContext SynchronizationContext { get; set; }
 
     /// <summary>
-    /// If this is an 'OnSomethingHappened' event, this type should be the model of the 'HappenSomethingRequested' event.
-    /// </summary>
-    /// <remarks>If this model is synchronized, the <see cref="RequestModel"/> event will also wait for this event to finish.</remarks>
-    public Type? RequestModel { get; set; }
-
-    /// <summary>
     /// List of tags that this model is synchronized with. Other models must also share at least one of these tags to be synchronized.
     /// </summary>
     public string[]? SynchronizedModelTags { get; set; }
@@ -99,5 +93,11 @@ public enum EventSynchronizationContext
     /// <summary>
     /// Events are synchronized per-event.
     /// </summary>
-    Global
+    Global,
+
+    /// <summary>
+    /// Events are grouped by priority and each group is ran simultaneously (for async handlers).
+    /// This should be used on events where the handlers for this event wouldn't effect each other.
+    /// </summary>
+    Pure
 }

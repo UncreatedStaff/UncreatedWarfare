@@ -9,6 +9,7 @@ namespace Uncreated.Warfare.Events.Models.Fobs;
 /// <summary>
 /// Event listener args which fires after a <see cref="BunkerFob"/> is built up.
 /// </summary>
+[EventModel(EventSynchronizationContext.Pure)]
 public class FobBuilt : IActionLoggableEvent
 {
     /// <summary>

@@ -8,6 +8,7 @@ namespace Uncreated.Warfare.Events.Models.Flags;
 /// <summary>
 /// Event listener args which fires after <see cref="WarfarePlayer"/> exits the region of a <see cref="FlagObjective"/>.
 /// </summary>
+[EventModel(EventSynchronizationContext.Pure)]
 public class PlayerExitedFlagRegion : PlayerEvent, IActionLoggableEvent
 {
     /// <summary>

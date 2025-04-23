@@ -60,7 +60,9 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
         ChatManager.onCheckPermissions += OnChatProcessing;
         CommandWindow.onCommandWindowInputted += OnCommandInput;
 
+#if TELEMETRY
         _activitySource = WarfareModule.CreateActivitySource();
+#endif
     }
 
     internal static List<CommandInfo> DiscoverAssemblyCommands(ILogger logger, WarfarePluginLoader? pluginLoader)
@@ -522,7 +524,7 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
     {
 #if TELEMETRY
         Activity.Current = null;
-        using Activity? activity = _activitySource.StartActivity($"Invoke {Accessor.Formatter.Format(commandInfo.GetType())}");
+        using Activity? activity = _activitySource.StartActivity($"Invoke {Accessor.Formatter.Format(commandInfo.Type)}");
         activity?.SetTag("command", Accessor.Formatter.Format(commandInfo.Type));
         activity?.SetTag("command-name", commandInfo.CompositeName);
         activity?.SetTag("user", user.Steam64.m_SteamID);

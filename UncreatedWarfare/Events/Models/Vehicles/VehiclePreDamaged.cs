@@ -5,6 +5,7 @@ namespace Uncreated.Warfare.Events.Models.Vehicles;
 /// <summary>
 /// Event listener args which handles a patch listening just before a vehicle is damage (before the InteractableVehicle's health is changed).
 /// </summary>
+[EventModel(EventSynchronizationContext.Pure)]
 public class VehiclePreDamaged
 {
     public required WarfareVehicle Vehicle { get; init; }

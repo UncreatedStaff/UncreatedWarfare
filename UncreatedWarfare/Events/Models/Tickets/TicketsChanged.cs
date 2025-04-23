@@ -6,6 +6,7 @@ namespace Uncreated.Warfare.Events.Models.Tickets;
 /// <summary>
 /// Event listener args which fires after a a certain <see cref="Layouts.Teams.Team"/> gains or loses tickets.
 /// </summary>
+[EventModel(EventSynchronizationContext.Pure)]
 public class TicketsChanged
 {
     /// <summary>

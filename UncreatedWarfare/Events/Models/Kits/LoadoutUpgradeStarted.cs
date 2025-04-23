@@ -3,6 +3,7 @@ namespace Uncreated.Warfare.Events.Models.Kits;
 /// <summary>
 /// Invoked after a loadout upgrade is started.
 /// </summary>
+[EventModel(EventSynchronizationContext.Pure)]
 public class LoadoutUpgradeStarted : KitUpdated
 {
     /// <summary>

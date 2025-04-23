@@ -6,6 +6,7 @@ namespace Uncreated.Warfare.Events.Models.Players;
 /// <summary>
 /// Handles <see cref="PlayerEquipment.OnPunch_Global"/>.
 /// </summary>
+[EventModel(EventSynchronizationContext.Pure)]
 public class PlayerPunched : PlayerEvent, IActionLoggableEvent
 {
     public required EPlayerPunch PunchType { get; init; }

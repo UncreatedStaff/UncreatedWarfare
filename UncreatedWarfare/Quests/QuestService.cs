@@ -402,14 +402,15 @@ public class QuestService : ILayoutHostedService, IEventListenerProvider, IDispo
         player.UnturnedPlayer.quests.ServerAddQuest(quest);
     }
 
-    IEnumerable<IAsyncEventListener<TEventArgs>> IEventListenerProvider.EnumerateAsyncListeners<TEventArgs>(TEventArgs args)
+    void IEventListenerProvider.AppendListeners<TEventArgs>(TEventArgs args, List<object> listeners)
     {
-        return _activeTrackers.OfType<IAsyncEventListener<TEventArgs>>();
-    }
-
-    IEnumerable<IEventListener<TEventArgs>> IEventListenerProvider.EnumerateNormalListeners<TEventArgs>(TEventArgs args)
-    {
-        return _activeTrackers.OfType<IEventListener<TEventArgs>>();
+        foreach (QuestTracker tracker in _activeTrackers)
+        {
+            if (tracker is IEventListener<TEventArgs> el)
+                listeners.Add(el);
+            if (tracker is IAsyncEventListener<TEventArgs> ael)
+                listeners.Add(ael);
+        }
     }
 
     [EventListener(MustRunInstantly = true)]

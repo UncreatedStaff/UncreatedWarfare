@@ -9,6 +9,7 @@ namespace Uncreated.Warfare.Events.Models.Barricades;
 /// <summary>
 /// Event listener args which handles a patch on <see cref="InteractableSign.updateText"/>.
 /// </summary>
+[EventModel(EventSynchronizationContext.Pure)]
 public class SignTextChanged : IActionLoggableEvent
 {
     private IBuildable? _cachedBuildable;
