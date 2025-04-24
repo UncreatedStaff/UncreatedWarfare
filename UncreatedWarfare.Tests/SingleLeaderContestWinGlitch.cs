@@ -18,11 +18,13 @@ internal class SingleLeaderContestWinGlitch
     {
         Id = 1,
         Faction = new FactionInfo { FactionId = "caf", Name = "Canada" },
+        GroupId = new CSteamID(1)
     };
     private static readonly Team Team2 = new Team
     {
         Id = 1,
         Faction = new FactionInfo { FactionId = "ru", Name = "Russia" },
+        GroupId = new CSteamID(2)
     };
 
     [Test]
@@ -46,32 +48,34 @@ internal class SingleLeaderContestWinGlitch
             Console.WriteLine($"{t} restarted.");
         };
 
+        contest.AwardPoints(Team2, 64);
+
+        contest.AwardPoints(Team1, 64);
+
         contest.AwardPoints(Team1, 64);
 
         Assert.That(contest.IsWon, Is.True);
         Assert.That(contest.Leader, Is.EqualTo(Team1));
-        Assert.That(winCt, Is.EqualTo(1));
-        contest.AwardPoints(Team1, 64);
-        Assert.That(winCt, Is.EqualTo(1));
+        Assert.That(winCt, Is.EqualTo(2));
 
-        contest.AwardPoints(Team2, 5);
-        Assert.That(winCt, Is.EqualTo(1));
+        contest.AwardPoints(Team2, 50);
+        Assert.That(winCt, Is.EqualTo(2));
 
         Assert.That(contest.IsWon, Is.True);
         Assert.That(contest.Leader, Is.EqualTo(Team1));
-        Assert.That(winCt, Is.EqualTo(1));
+        Assert.That(winCt, Is.EqualTo(2));
 
 
         contest.AwardPoints(Team1, 1);
-        Assert.That(winCt, Is.EqualTo(1));
+        Assert.That(winCt, Is.EqualTo(2));
         contest.AwardPoints(Team1, 1);
-        Assert.That(winCt, Is.EqualTo(1));
+        Assert.That(winCt, Is.EqualTo(2));
         contest.AwardPoints(Team1, 1);
-        Assert.That(winCt, Is.EqualTo(1));
+        Assert.That(winCt, Is.EqualTo(2));
         contest.AwardPoints(Team1, 1);
-        Assert.That(winCt, Is.EqualTo(1));
+        Assert.That(winCt, Is.EqualTo(2));
         contest.AwardPoints(Team1, 1);
-        Assert.That(winCt, Is.EqualTo(1));
+        Assert.That(winCt, Is.EqualTo(2));
 
         Assert.That(contest.Leader, Is.EqualTo(Team1));
     }

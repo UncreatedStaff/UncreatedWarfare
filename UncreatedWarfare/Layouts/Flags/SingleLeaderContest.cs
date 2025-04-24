@@ -106,12 +106,14 @@ public class SingleLeaderContest
         {
             if (oldPoints == 0)
                 Leader = team;
-            if (LeaderPoints == MaxPossiblePoints)
+
+            bool justWon = LeaderPoints == MaxPossiblePoints;
+            if (justWon)
                 IsWon = true;
 
             OnPointsChanged?.Invoke(change);
 
-            if (IsWon)
+            if (justWon)
                 OnWon?.Invoke(Leader);
         }
         else if (change < 0)

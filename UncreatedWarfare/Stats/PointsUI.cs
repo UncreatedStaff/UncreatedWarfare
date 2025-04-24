@@ -291,7 +291,12 @@ public class PointsUI : UnturnedUI,
         {
             data.LastExperienceValue = displayedXp;
             _xpBar.SetProgress(player.Connection, (float)rank.GetProgress(player.CachedPoints.XP));
-            _xpBar.Label.SetText(player.Connection, displayedPartialXp.ToString(player.Locale.CultureInfo) + "/" + rank.Experience.ToString(player.Locale.CultureInfo));
+
+            string label = displayedPartialXp.ToString(player.Locale.CultureInfo);
+            if (rank.Experience != 0)
+                label += "/" + rank.Experience.ToString(player.Locale.CultureInfo);
+
+            _xpBar.Label.SetText(player.Connection, label);
         }
 
         if (data.LastRank != rank.RankIndex)
