@@ -537,13 +537,15 @@ public class WhitelistService :
 
         if (e.SwappingJar != null)
         {
-            if (e.NewPage == Page.Storage ^ e.OldPage == Page.Storage)
+            // not moving into or out of storage
+            if (!(e.NewPage == Page.Storage ^ e.OldPage == Page.Storage))
             {
                 return;
             }
         }
         else
         {
+            // not moving into storage
             if (e.NewPage != Page.Storage)
             {
                 return;

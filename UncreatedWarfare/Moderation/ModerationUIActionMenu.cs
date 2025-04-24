@@ -872,10 +872,10 @@ partial class ModerationUI
                          data.PrimaryEditingEntry.Message!.IndexOf("dnub", StringComparison.InvariantCultureIgnoreCase) == -1 && // Do Not UnBan
                          data.PrimaryEditingEntry.Message!.IndexOf("do not appeal", StringComparison.InvariantCultureIgnoreCase) == -1)
                 {
-                    if (!data.PrimaryEditingEntry.Message.EndsWith(". "))
+                    data.PrimaryEditingEntry.Message = data.PrimaryEditingEntry.Message.Trim();
+                    if (data.PrimaryEditingEntry.Message.EndsWith('.'))
                     {
-                        if (data.PrimaryEditingEntry.Message.EndsWith('.'))
-                            data.PrimaryEditingEntry.Message += " Appeal at 'discord.gg/" + _discordInviteCode + "'.";
+                        data.PrimaryEditingEntry.Message += " Appeal at 'discord.gg/" + _discordInviteCode + "'.";
                     }
                     else
                     {
