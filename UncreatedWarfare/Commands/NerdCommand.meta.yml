@@ -1,3 +1,20 @@
-﻿# ModerateCommand
-Description: "swaps a player's image is replaced with a nerd emoji in chat"
-Aliases: [nred]
+# NerdCommand
+Description: Configures whether or not a player's image in chat shows as a nerd icon.
+Alias: nred
+Parameters:
+  - Name: add
+    Aliases: [ nerd, set ]
+    Type: Verbatim
+    Description: "Add a <param 'player'/> as a nerd."
+    Parameters:
+      - Name: player
+        Type: Uncreated.Warfare.Players.IPlayer
+        Remainder: true
+  - Name: remove
+    Aliases: [ cancel, reset ]
+    Type: Verbatim
+    Description: "Remove a <param 'player'/> as a nerd."
+    Parameters:
+      - Name: player
+        Type: Uncreated.Warfare.Players.IPlayer
+        Remainder: true
