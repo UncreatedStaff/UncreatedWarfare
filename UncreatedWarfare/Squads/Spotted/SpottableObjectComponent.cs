@@ -45,23 +45,23 @@ public class SpottableObjectComponent : MonoBehaviour, IManualOnDestroy
     private static readonly SpotterTypeStats[] TypeStats =
     [
         // vehicles (try to keep in order of VehicleType)
-        new SpotterTypeStats(SpottedType.LightVehicle, VehicleType.Humvee,          30f,  0.5f, "Effects:Spotted:Humvee",        Vector3.zero),
-        new SpotterTypeStats(SpottedType.LightVehicle, VehicleType.TransportGround, 30f,  0.5f, "Effects:Spotted:Truck",         Vector3.zero),
-        new SpotterTypeStats(SpottedType.LightVehicle, VehicleType.ScoutCar,        30f,  0.5f, "Effects:Spotted:ScoutCar",      Vector3.zero),
-        new SpotterTypeStats(SpottedType.LightVehicle, VehicleType.LogisticsGround, 30f,  0.5f, "Effects:Spotted:Truck",         Vector3.zero),
-        new SpotterTypeStats(SpottedType.Armor,        VehicleType.APC,             30f,  0.5f, "Effects:Spotted:APC",           Vector3.zero),
-        new SpotterTypeStats(SpottedType.Armor,        VehicleType.IFV,             30f,  0.5f, "Effects:Spotted:IFV",           Vector3.zero),
-        new SpotterTypeStats(SpottedType.Armor,        VehicleType.MBT,             30f,  0.5f, "Effects:Spotted:MBT",           Vector3.zero),
-        new SpotterTypeStats(SpottedType.Aircraft,     VehicleType.TransportHeli,   15f,  0.5f, "Effects:Spotted:TransportHeli", Vector3.zero),
-        new SpotterTypeStats(SpottedType.Aircraft,     VehicleType.AttackHeli,      15f,  0.5f, "Effects:Spotted:AttackHeli",    Vector3.zero),
-        new SpotterTypeStats(SpottedType.Aircraft,     VehicleType.Jet,             10f,  0.5f, "Effects:Spotted:Jet",           Vector3.zero),
+        new SpotterTypeStats(SpottedType.LightVehicle, VehicleType.Humvee,          60f,  0.5f, "Effects:Spotted:Humvee",        Vector3.zero),
+        new SpotterTypeStats(SpottedType.LightVehicle, VehicleType.TransportGround, 60f,  0.5f, "Effects:Spotted:Truck",         Vector3.zero),
+        new SpotterTypeStats(SpottedType.LightVehicle, VehicleType.ScoutCar,        60f,  0.5f, "Effects:Spotted:ScoutCar",      Vector3.zero),
+        new SpotterTypeStats(SpottedType.LightVehicle, VehicleType.LogisticsGround, 60f,  0.5f, "Effects:Spotted:Truck",         Vector3.zero),
+        new SpotterTypeStats(SpottedType.Armor,        VehicleType.APC,             60f,  0.5f, "Effects:Spotted:APC",           Vector3.zero),
+        new SpotterTypeStats(SpottedType.Armor,        VehicleType.IFV,             60f,  0.5f, "Effects:Spotted:IFV",           Vector3.zero),
+        new SpotterTypeStats(SpottedType.Armor,        VehicleType.MBT,             60f,  0.5f, "Effects:Spotted:MBT",           Vector3.zero),
+        new SpotterTypeStats(SpottedType.Aircraft,     VehicleType.TransportHeli,   25f,  0.5f, "Effects:Spotted:TransportHeli", Vector3.zero),
+        new SpotterTypeStats(SpottedType.Aircraft,     VehicleType.AttackHeli,      25f,  0.5f, "Effects:Spotted:AttackHeli",    Vector3.zero),
+        new SpotterTypeStats(SpottedType.Aircraft,     VehicleType.Jet,             20f,  0.5f, "Effects:Spotted:Jet",           Vector3.zero),
         new SpotterTypeStats(SpottedType.Emplacement,  VehicleType.AA,              240f, 1.0f, "Effects:Spotted:AA",            Vector3.zero),
         new SpotterTypeStats(SpottedType.Emplacement,  VehicleType.HMG,             240f, 1.0f, "Effects:Spotted:HMG",           Vector3.zero),
         new SpotterTypeStats(SpottedType.Emplacement,  VehicleType.ATGM,            240f, 1.0f, "Effects:Spotted:ATGM",          Vector3.zero),
         new SpotterTypeStats(SpottedType.Emplacement,  VehicleType.Mortar,          240f, 1.0f, "Effects:Spotted:Mortar",        Vector3.zero),
 
         // other
-        new SpotterTypeStats(SpottedType.Infantry,     VehicleType.None,            12f,  0.5f, "Effects:Spotted:Infantry",      new Vector3(0f, 1.5f, 0f)),
+        new SpotterTypeStats(SpottedType.Infantry,     VehicleType.None,            25f,  0.5f, "Effects:Spotted:Infantry",      new Vector3(0f, 1.5f, 0f)),
         new SpotterTypeStats(SpottedType.FOB,          VehicleType.None,            240f, 1.0f, "Effects:Spotted:FOB",           Vector3.zero)
     ];
 
