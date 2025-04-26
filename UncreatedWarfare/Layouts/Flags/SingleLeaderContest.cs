@@ -107,6 +107,7 @@ public class SingleLeaderContest
             if (oldPoints == 0)
                 Leader = team;
 
+            // need this to prevent winning every tick when clearing a point
             bool justWon = LeaderPoints == MaxPossiblePoints;
             if (justWon)
                 IsWon = true;

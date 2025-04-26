@@ -880,11 +880,12 @@ public partial class EventDispatcher : IHostedService, IDisposable
             List<EventListenerResult> eventListeners = ListPool<EventListenerResult>.claim();
 
             // find all services assignable from ILayoutPhaseListener<phase.GetType()>
-            FindServices<TEventArgs>(scope, eventListeners);
+            bool isCacheEligable = FindServices<TEventArgs>(scope, eventListeners);
 
             cache.Results = eventListeners;
 
-            _listenerCaches.Add(type, cache);
+            if (isCacheEligable)
+                _listenerCaches.Add(type, cache);
         }
 
         return cache;
@@ -1043,12 +1044,15 @@ public partial class EventDispatcher : IHostedService, IDisposable
     }
 
     // find and instantiate all handler services for this event model. This does not include handlers returned by IEventListenerProvider services
-    private void FindServices<TEventArgs>(ILifetimeScope scope, List<EventListenerResult> eventListeners) where TEventArgs : class
+
+    /// <returns><see langword="true"/> if the result can be cached.</returns>
+    private bool FindServices<TEventArgs>(ILifetimeScope scope, List<EventListenerResult> eventListeners) where TEventArgs : class
     {
         IEnumerable<Parameter> parameters = Array.Empty<Parameter>();
 
         Type? noOpType = typeof(ILifetimeScope).Assembly.GetType("Autofac.Core.Registration.ExternalComponentRegistration+NoOpActivator");
 
+        bool cacheEligable = true;
         List<ILifetimeScope> scopes = GetScopes(scope);
         for (int j = 0; j < scopes.Count; ++j)
         {
@@ -1134,6 +1138,7 @@ public partial class EventDispatcher : IHostedService, IDisposable
                         }
                         catch (Exception ex)
                         {
+                            cacheEligable = false;
                             _logger.LogWarning(ex, "Error resolving service {0} for event args {1}.", serviceRegistration.Activator, typeof(TEventArgs));
                             continue;
                         }
@@ -1147,6 +1152,8 @@ public partial class EventDispatcher : IHostedService, IDisposable
         }
 
         ListPool<ILifetimeScope>.release(scopes);
+
+        return cacheEligable;
     }
 
     private static void InsertEventListener(ref EventListenerResult result, List<EventListenerResult> eventListeners)

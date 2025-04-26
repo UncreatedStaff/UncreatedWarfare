@@ -4,7 +4,9 @@ using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Components;
+using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
+using Uncreated.Warfare.Events.Models.Vehicles;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Injures;
 using Uncreated.Warfare.Kits;
@@ -16,7 +18,7 @@ using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.Deaths;
-public class DeathTracker : IHostedService
+public class DeathTracker : IHostedService//, IEventListener<VehicleExploded>
 {
     private readonly ILogger<DeathTracker> _logger;
     private readonly DeathMessageResolver _deathMessageResolver;
@@ -886,4 +888,10 @@ public class DeathTracker : IHostedService
 
         comp.BleedOutInfo = e;
     }
+
+    ///// <inheritdoc />
+    //public void HandleEvent(VehicleExploded e, IServiceProvider serviceProvider)
+    //{
+    //    e.
+    //}
 }

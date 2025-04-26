@@ -4,13 +4,12 @@ using System;
 using Uncreated.Warfare.Layouts.Flags;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Teams;
-using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Tests;
 
 /*
  * Bug reported by Hamza where players capturing flags
- * would infintely gain the Flag Captured XP point
+ * would gain the Flag Captured XP point every tick while owned by the other team
  */
 internal class SingleLeaderContestWinGlitch
 {
