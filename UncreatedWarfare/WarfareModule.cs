@@ -16,11 +16,6 @@ using Microsoft.Extensions.FileProviders.Physical;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 using MySqlConnector;
-using OpenTelemetry;
-using OpenTelemetry.Logs;
-using OpenTelemetry.Metrics;
-using OpenTelemetry.Resources;
-using OpenTelemetry.Trace;
 using SDG.Framework.Modules;
 using StackCleaner;
 using Stripe;
@@ -109,6 +104,13 @@ using Uncreated.Warfare.Vehicles.UI;
 using Uncreated.Warfare.Vehicles.WarfareVehicles;
 using Uncreated.Warfare.Zones;
 using Module = SDG.Framework.Modules.Module;
+#if TELEMETRY
+using OpenTelemetry;
+using OpenTelemetry.Logs;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
+#endif
 
 namespace Uncreated.Warfare;
 public sealed class WarfareModule

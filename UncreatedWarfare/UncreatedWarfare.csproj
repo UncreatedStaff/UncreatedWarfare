@@ -8,8 +8,9 @@
   <PropertyGroup>
 
     <Version>4.0.3</Version>
-		
-	  <DefineConstants>$(DefineConstants);TELEMETRY</DefineConstants>
+
+		<!-- Enable this for telemetry tracking -->
+	  <!--<DefineConstants>$(DefineConstants);TELEMETRY</DefineConstants>-->
 
   </PropertyGroup>
 
