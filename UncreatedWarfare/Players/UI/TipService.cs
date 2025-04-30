@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
@@ -10,6 +10,14 @@ namespace Uncreated.Warfare.Players.UI;
 public class TipService : ILayoutHostedService, IEventListener<PlayerLeft>
 {
     private readonly List<Tip> _tips = new List<Tip>(64);
+
+    public TipTranslations Translations { get; }
+
+    public TipService(TranslationInjection<TipTranslations> translations)
+    {
+        Translations = translations.Value;
+    }
+
     UniTask ILayoutHostedService.StartAsync(CancellationToken token)
     {
         return UniTask.CompletedTask;

@@ -1,12 +1,11 @@
 # VehicleCommand
 Description: "Manage spawned vehicles, or spawn vehicles when used as an admin."
 Aliases: [ "v", "veh" ]
-Parmaeters:
+Parameters:
   - Name: give
     Type: Verbatim
     Aliases: [ transfer, g ]
     Description: "Transfer ownership of your <param 'vehicle'/> to another <param 'teammate'/>."
-    Optional: true
     Parameters:
       - Name: vehicle
         Type: Look/SDG.Unturned.InteractableVehicle
@@ -20,7 +19,6 @@ Parmaeters:
     Type: Verbatim
     Aliases: [ remove, k ]
     Description: "Remove your <param 'teammate'/> from their seat in your <param 'vehicle'/>."
-    Optional: true
     Parameters:
       - Name: vehicle
         Type: Look/SDG.Unturned.InteractableVehicle
@@ -28,11 +26,21 @@ Parmaeters:
         Parameters:
           - Name: teammate
             Type: Uncreated.Warfare.Players.IPlayer
-            Optional: true
             Remainder: true
+          - Name: driver
+            Aliases: [ drive, pilot ]
+            Type: Verbatim
+          - Name: seat{n}
+            Alias: position{n}
+            Type: Verbatim
+          - Name: gun{n}
+            Aliases: [ "gunner{n}", "turret{n}" ]
+            Type: Verbatim
+          - Name: seat
+            Type: byte
     Flags:
-      - Name: r
-        Aliases: [ k, remove, kick ]
+      - Name: k
+        Aliases: [ r, remove, kick ]
         Description: "Completely remove the player from the vehicle instead of changing seats. This may not be available in some situations."
   - Name: vehicle
     Type: SDG.Unturned.VehicleAsset

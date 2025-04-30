@@ -34,7 +34,7 @@ internal sealed class LandmineExplosionRestrictions(ITeamManager<Team> teamManag
     [EventListener(Priority = 1)]
     void IEventListener<PlaceBarricadeRequested>.HandleEvent(PlaceBarricadeRequested e, IServiceProvider serviceProvider)
     {
-        if (e.Barricade.asset is not ItemTrapAsset)
+        if (e.OriginalPlacer.IsOnDuty || e.Barricade.asset is not ItemTrapAsset)
         {
             return;
         }

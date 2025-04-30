@@ -267,6 +267,7 @@ public class LobbyZoneManager :
         if (component.IsJoining || !_behavior.CanJoinTeam(teamIndex, -1))
         {
             _logger.LogWarning("{0} tried to join a team ({1}) they can't.", player, teamIndex);
+            UpdateAllFlags(player);
             return;
         }
 

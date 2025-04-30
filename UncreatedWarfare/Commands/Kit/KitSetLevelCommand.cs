@@ -3,7 +3,6 @@ using System.Text.Json;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Translations;

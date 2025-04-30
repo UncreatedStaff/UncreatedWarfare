@@ -9,6 +9,7 @@ namespace Uncreated.Warfare.Events.Models.Barricades;
 /// <summary>
 /// Event listener args which handles a patch after trap triggered.
 /// </summary>
+/// <remarks>Note this includes both explosive traps like landmines and non-explosive traps like razorwire.</remarks>
 [EventModel(EventSynchronizationContext.Pure)]
 public class TrapTriggered : IActionLoggableEvent
 {

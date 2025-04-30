@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using SDG.NetTransport;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -24,7 +25,7 @@ using Uncreated.Warfare.Util.Inventory;
 using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.FOBs.Deployment.Tweaks;
-public class ClaimToRearmTweaks : // todo: move this class out of this namespace
+public class ClaimToRearmTweaks :
     IAsyncEventListener<ClaimBedRequested>,
     IAsyncEventListener<PlayerEnteredZone>,
     IAsyncEventListener<PlayerExitedZone>

@@ -7,7 +7,7 @@
 
   <PropertyGroup>
 
-    <Version>4.0.3</Version>
+    <Version>4.0.4</Version>
 
 		<!-- Enable this for telemetry tracking -->
 	  <!--<DefineConstants>$(DefineConstants);TELEMETRY</DefineConstants>-->
@@ -225,8 +225,6 @@
     <EmbeddedResource Include="Commands\OptionsCommand.meta.yml" />
 
     <EmbeddedResource Include="Commands\ModerateCommand.meta.yml" />
-
-    <EmbeddedResource Include="Commands\LoadCommand.meta.yml" />
 
     <EmbeddedResource Include="Commands\IPWhitelistCommand.meta.yml" />
 

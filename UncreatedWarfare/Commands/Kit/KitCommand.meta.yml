@@ -171,6 +171,16 @@ Parameters:
                   - Name: display-text
                     Type: string
                     Remainder: true
+      - Name: level
+        Type: Verbatim
+        Description: "Sets the primary unlock level of the <param 'kit'/> to <param 'value'/>."
+        Parameters:
+          - Name: kit
+            Type: Uncreated.Warfare.Models.Kits.Kit
+            Parameters:
+              - Name: value
+                Type: int
+                Remainder: true
       - Name: property
         Type: string
         Parameters:

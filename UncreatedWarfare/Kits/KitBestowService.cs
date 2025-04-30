@@ -108,10 +108,50 @@ public class KitBestowService
 
         IKitItem[] items = kit.Items;
 
+        ItemJar? heldItem = player.GetHeldItem(out _);
+
         ItemTrackingPlayerComponent? itemTracker = player.ComponentOrNull<ItemTrackingPlayerComponent>();
+
+        // is holding empty gun? We need to force reload the gun if it's empty
+        // because players can use this to skip the reload animation (LAT spam)
+        //  - when guns set allowMagazineChange to false, we dequip then requip them instead
+
+        PlayerEquipment equipment = player.UnturnedPlayer.equipment;
+        UseableGun? useable = null;
+        bool needsToReloadAfter = heldItem?.item.GetAsset() is ItemGunAsset && equipment.state[10] == 0;
+        bool needsToRequip = false;
+        byte requipX = 255, requipY = 255, requipPage = 255;
+        if (needsToReloadAfter)
+        {
+            useable = equipment.useable as UseableGun;
+            if (useable is { equippedGunAsset.allowMagazineChange: false })
+            {
+                needsToRequip = true;
+                requipX = equipment.equipped_x;
+                requipY = equipment.equipped_y;
+                requipPage = equipment.equippedPage;
+                equipment.dequip();
+            }
+        }
 
         using BestowKitGiveItemsState state = new BestowKitGiveItemsState(new KitBestowData(kit, itemTracker?.KitLayoutTransformations) { RestockOnly = true, ResupplyAmmoBags = resupplyAmmoBags }, player);
         _itemDistributionService.RestockItems(items, player, state);
+
+        if (!needsToReloadAfter)
+            return;
+
+        if (!needsToRequip)
+        {
+            if (equipment.useable == useable)
+                useable.ServerPlayReload(true);
+            return;
+        }
+
+        ItemJar? currentItem = player.UnturnedPlayer.inventory.GetItemAt((Page)requipPage, requipX, requipY);
+        if (currentItem != heldItem)
+            return;
+
+        equipment.ServerEquip(requipPage, requipX, requipY);
     }
 
     private struct BestowKitGiveItemsState : IItemDistributionState, IDisposable

@@ -1,7 +1,5 @@
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Layouts.Teams;
-using Uncreated.Warfare.Players.Permissions;
-using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Commands;
@@ -11,17 +9,12 @@ internal sealed class GroupCommand : IExecutableCommand
 {
     private readonly GroupCommandTranslations _translations;
     private readonly ITeamManager<Team> _teamManager;
-    private readonly IFactionDataStore _factionDataStore;
-
-    private static readonly PermissionLeaf PermissionJoin = new PermissionLeaf("commands.group.join", unturned: false, warfare: true);
-
     /// <inheritdoc />
     public required CommandContext Context { get; init; }
 
-    public GroupCommand(TranslationInjection<GroupCommandTranslations> translations, ITeamManager<Team> teamManager, IFactionDataStore factionDataStore)
+    public GroupCommand(TranslationInjection<GroupCommandTranslations> translations, ITeamManager<Team> teamManager)
     {
         _teamManager = teamManager;
-        _factionDataStore = factionDataStore;
         _translations = translations.Value;
     }
 

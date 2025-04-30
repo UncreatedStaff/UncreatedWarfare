@@ -19,6 +19,8 @@ namespace Uncreated.Warfare.Buildables;
 [Priority(11 /* before MainBaseBuildables */)]
 public class BuildableAttributesDataStore : IHostedService, ILevelHostedService, IEventListener<IBuildableDestroyedEvent>
 {
+    private static int _hasSaveSub;
+
     private readonly ILogger<BuildableAttributesDataStore> _logger;
     private readonly Dictionary<uint, BuildableAttributes> _barricadeAttributes = new Dictionary<uint, BuildableAttributes>();
     private readonly Dictionary<uint, BuildableAttributes> _structureAttributes = new Dictionary<uint, BuildableAttributes>();
@@ -107,7 +109,12 @@ public class BuildableAttributesDataStore : IHostedService, ILevelHostedService,
     UniTask IHostedService.StartAsync(CancellationToken token)
     {
         ReadFromSave();
-        SaveManager.onPreSave += OnSavingWorld;
+        if (Interlocked.Exchange(ref _hasSaveSub, 1) == 0)
+        {
+            // note: we don't really want to un-subscribe this since save will run after
+            //       the service container disposes. its a little hacky but it works
+            SaveManager.onPreSave += OnSavingWorld;
+        }
         return UniTask.CompletedTask;
     }
 

@@ -1,8 +1,8 @@
 using System;
 using System.Linq;
 using Uncreated.Warfare.Buildables;
-using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.Fobs.Entities;
+using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Util;
 

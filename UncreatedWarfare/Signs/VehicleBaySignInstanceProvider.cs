@@ -5,7 +5,6 @@ using Uncreated.Warfare.Interaction.Requests;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
-using Uncreated.Warfare.Players.Costs;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Addons;

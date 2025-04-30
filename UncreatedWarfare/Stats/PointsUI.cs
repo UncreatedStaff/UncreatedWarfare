@@ -188,19 +188,16 @@ public class PointsUI : UnturnedUI,
     [EventListener(MustRunInstantly = true)]
     void IEventListener<PlayerUseableEquipped>.HandleEvent(PlayerUseableEquipped e, IServiceProvider serviceProvider)
     {
-        UpdatePointsUI(e.Player);
+        if (e.Useable is UseableGun)
+            DoubleUpdate(e.Player);
+        else
+            UpdatePointsUI(e.Player);
     }
 
     [EventListener(MustRunInstantly = true)]
     void IEventListener<VehicleSwappedSeat>.HandleEvent(VehicleSwappedSeat e, IServiceProvider serviceProvider)
     {
-        UpdatePointsUI(e.Player);
-        UniTask.Create(async () =>
-        {
-            await UniTask.NextFrame(e.Player.DisconnectToken);
-            if (e.Player.IsOnline)
-                UpdatePointsUI(e.Player);
-        });
+        DoubleUpdate(e.Player);
     }
     
     [EventListener(MustRunInstantly = true)]
@@ -353,6 +350,17 @@ public class PointsUI : UnturnedUI,
             data.Stat = null;
             data.StatValue = 0;
         }
+    }
+
+    private void DoubleUpdate(WarfarePlayer player)
+    {
+        UpdatePointsUI(player);
+        UniTask.Create(async () =>
+        {
+            await UniTask.NextFrame();
+            if (player.IsOnline)
+                UpdatePointsUI(player);
+        });
     }
 
     /// <inheritdoc />

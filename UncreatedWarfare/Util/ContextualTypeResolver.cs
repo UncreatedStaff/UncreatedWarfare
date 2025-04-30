@@ -14,7 +14,7 @@ internal static class ContextualTypeResolver
     private static string[]? _allTypesFullNamesCache;
     private static string[]? _allTypesNamesCache;
 
-    public static string TypeToString(Type type, Type? expectedBaseType = null)
+    public static string? TryGetTypeKeyword(Type type)
     {
         if (type.IsPrimitive)
         {
@@ -97,6 +97,20 @@ internal static class ContextualTypeResolver
                 return "void";
             }
         }
+
+        return null;
+    }
+
+    public static string TypeToKeywordOrAssemblyQualifiedString(Type type)
+    {
+        return TryGetTypeKeyword(type) ?? (type.Assembly == typeof(object).Assembly ? type.FullName! : type.AssemblyQualifiedName!);
+    }
+
+    public static string TypeToString(Type type, Type? expectedBaseType = null)
+    {
+        string? keyword = TryGetTypeKeyword(type);
+        if (keyword != null)
+            return keyword;
 
         if (expectedBaseType == null || !expectedBaseType.IsAssignableFrom(type))
             return type.Assembly == ThisAssembly ? type.FullName! : type.AssemblyQualifiedName!;

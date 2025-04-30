@@ -33,6 +33,43 @@ Parameters:
         Type: Verbatim
         Description: "Open the squad UI."
         
+  # /warfaredev dumpcmd <command>
+  - Name: dumpcmd
+    Type: Verbatim
+    Description: "Dump information about a command to console."
+    Parameters:
+      - Name: command
+        Type: string
+        
+  # /warfaredev quickcap
+  - Name: quickcap
+    Type: Verbatim
+    Description: "Captures all flags up to the flag the <caller /> is currently standing in for the <caller />'s team."
+        
+  # /warfaredev buildables <savestate> [faction|apply]
+  - Name: buildables
+    Type: Verbatim
+    Alias: bl
+    Description: "Buildable debugging tools."
+    Parameters:
+      - Name: savestate
+        Type: Verbatim
+        Description: "Saves the state of the given <param 'barricade'/> so it will have this state every time it's placed, optionally specific to a <param 'faction'/>."
+        Parameters:
+          - Name: barricade
+            Type: Look/SDG.Unturned.ItemBarricadeAsset
+            Parameters:
+              - Name: faction
+                Type: Uncreated.Warfare.Teams.FactionInfo
+                Optional: true
+                Description: "Faction ID of the faction to load this state on."
+          - Name: apply
+            Type: Verbatim
+            Description: "Updates the state of <param 'barriacde'/> to the currently saved state for the <caller />'s current faction."
+            Parameters:
+              - Name: barricade
+                Type: Look/SDG.Unturned.ItemBarricadeAsset
+        
   # /warfaredev reload
   - Name: reload
     Type: Verbatim

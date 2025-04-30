@@ -170,9 +170,9 @@ public class WorldIconManager : ILayoutHostedService, IEventListener<PlayerLeft>
     /// <summary>
     /// Removes a single icon.
     /// </summary>
-    #nullable disable
+#nullable disable
     public void RemoveIcon(WorldIconInfo icon)
-    #nullable restore
+#nullable restore
     {
         if (icon == null)
             return;
@@ -207,6 +207,7 @@ public class WorldIconManager : ILayoutHostedService, IEventListener<PlayerLeft>
         bool needsRecheck = _greatestTickSpeed <= icon.TickSpeed || icon.TickSpeed >= _lowestTickSpeed;
         if (!icon.NeedsToBeCleared(rt))
         {
+            icon.Manager = null;
             icon.Dispose();
             return needsRecheck;
         }
@@ -221,6 +222,7 @@ public class WorldIconManager : ILayoutHostedService, IEventListener<PlayerLeft>
         else if (singlePlayer != null)
             EffectManager.ClearEffectByGuid(guid, singlePlayer);
 
+        icon.Manager = null;
         icon.Dispose();
         return needsRecheck;
     }

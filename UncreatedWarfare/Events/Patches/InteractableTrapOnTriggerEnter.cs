@@ -213,19 +213,21 @@ internal sealed class InteractableTrapOnTriggerEnter : IHarmonyPatch
         trapComponent = __instance.gameObject.GetOrAddComponent<TrapTrackingComponent>();
         trapComponent.Triggers.Add(args.TriggerObject);
 
+        TriggerTrapRequested args2 = args;
+        UniTask<bool> task2 = task;
         UniTask.Create(async () =>
         {
-            bool isCancelled = await task;
+            bool isCancelled = await task2;
 
             await UniTask.SwitchToMainThread();
 
-            if (args.Trap.gameObject.TryGetComponent(out TrapTrackingComponent trapComponent))
-                trapComponent.Triggers.Remove(args.TriggerObject);
+            if (args2.Trap.gameObject.TryGetComponent(out TrapTrackingComponent trapComponent))
+                trapComponent.Triggers.Remove(args2.TriggerObject);
 
-            if (isCancelled || args.ServersideData.barricade.isDead)
+            if (isCancelled || args2.ServersideData.barricade.isDead)
                 return;
 
-            TriggerTrap(args);
+            TriggerTrap(args2);
         });
 
         return false;
@@ -307,6 +309,11 @@ internal sealed class InteractableTrapOnTriggerEnter : IHarmonyPatch
                 {
                     instigator = args.Trap
                 }, out _, out _);
+            }
+            else if (args.TriggeringThrowable != null)
+            {
+                // not having this was causing players to get damaged by razorwire when they threw a grenade at it
+                return;
             }
             else if (args.TriggeringPlayer is { IsOnline: true })
             {

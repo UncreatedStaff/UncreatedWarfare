@@ -1,4 +1,3 @@
-using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Layouts.Teams;

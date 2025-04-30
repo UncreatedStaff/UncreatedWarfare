@@ -34,7 +34,7 @@ internal sealed class TransformBuildablePatches : IHarmonyPatch
         if (_barricadeTarget != null)
         {
             patcher.Patch(_barricadeTarget, postfix: Accessor.GetMethod(BarricadePostfix));
-            logger.LogDebug("Patched {0} for transform barricade event.");
+            logger.LogDebug("Patched {0} for transform barricade event.", _barricadeTarget);
         }
         else
         {
@@ -53,7 +53,7 @@ internal sealed class TransformBuildablePatches : IHarmonyPatch
         if (_structureTarget != null)
         {
             patcher.Patch(_structureTarget, postfix: Accessor.GetMethod(StructurePostfix));
-            logger.LogDebug("Patched {0} for transform structure event.");
+            logger.LogDebug("Patched {0} for transform structure event.", _structureTarget);
         }
         else
         {

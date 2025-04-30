@@ -223,6 +223,8 @@ public class DeathTracker : IHostedService//, IEventListener<VehicleExploded>
         e.MessageCause = cause;
         e.Point = dead.Position;
         e.Session = dead.CurrentSession;
+
+
         if (e.Session != null)
             Interlocked.Increment(ref e.Session.EventCount);
         e.TimeDeployed = (float)(dead.ComponentOrNull<DeploymentComponent>()?.GetTimeDeployed().TotalSeconds ?? 0d);

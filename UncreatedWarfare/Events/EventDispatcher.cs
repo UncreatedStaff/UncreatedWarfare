@@ -291,7 +291,7 @@ public partial class EventDispatcher : IHostedService, IDisposable
                 c.Cancel();
             }
 
-            _logger.LogWarning($"Event {typeof(EventArgs)} dispatched after shutdown has started.");
+            _logger.LogWarning($"Event {typeof(TEventArgs)} dispatched after shutdown has started.");
 
             return false;
         }

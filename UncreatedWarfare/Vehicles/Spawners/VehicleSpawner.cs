@@ -32,6 +32,7 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
     private readonly IPlayerService _playerService;
     private readonly ITeamManager<Team> _teamManager;
     private readonly VehicleService _vehicleService;
+    private readonly VehicleSpawnerService _vehicleSpawnerService;
     private readonly VehicleSpawnerLayoutConfigurer? _vehicleSpawnerSelector;
     private readonly ZoneStore _zoneStore;
 
@@ -85,6 +86,7 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
         _teamManager = layoutServiceProvider.GetRequiredService<ITeamManager<Team>>();
         _zoneStore = layoutServiceProvider.GetRequiredService<ZoneStore>();
         _vehicleService = layoutServiceProvider.GetRequiredService<VehicleService>();
+        _vehicleSpawnerService = layoutServiceProvider.GetRequiredService<VehicleSpawnerService>();
         Layout = layoutServiceProvider.GetService<Layout>();
         _vehicleSpawnerSelector = layoutServiceProvider.GetService<VehicleSpawnerLayoutConfigurer>();
         _updateTicker = updateTicker;
@@ -166,14 +168,16 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
     private void ResolveSigns(VehicleSpawnInfo spawnerInfo)
     {
         Signs.Clear();
+        List<uint>? toRemove = null;
         foreach (uint signInstanceId in spawnerInfo.SignInstanceIds)
         {
             BarricadeInfo signInfo = BarricadeUtility.FindBarricade(signInstanceId);
             if (signInfo.Drop == null)
             {
                 _logger.LogWarning("Missing sign barricade for linked vehicle spawner '{0}' (Sign Instance ID: {1}). " +
-                                   "This sign may be removed from config, or fixed by editing the Instance ID.",
-                    spawnerInfo.UniqueName, signInstanceId, spawnerInfo.VehicleAsset);
+                                   "This sign has been removed from config.",
+                    spawnerInfo.UniqueName, signInstanceId);
+                (toRemove ??= new List<uint>()).Add(signInstanceId);
             }
             else
             {
@@ -183,6 +187,16 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
                 BarricadeUtility.SetServersideSignText(signInfo.Drop, ServerSignText);
             }
         }
+
+        if (toRemove == null)
+            return;
+
+        foreach (uint id in toRemove)
+        {
+            spawnerInfo.SignInstanceIds.Remove(id);
+        }
+
+        _ = _vehicleSpawnerService.SpawnerStore.SaveAsync(CancellationToken.None);
     }
 
     /// <summary>

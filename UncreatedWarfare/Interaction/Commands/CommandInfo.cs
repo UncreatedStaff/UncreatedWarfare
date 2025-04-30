@@ -65,7 +65,6 @@ public class CommandInfo : ICommandDescriptor
     /// <summary>
     /// Information about how to display the command in /help.
     /// </summary>
-    [JsonIgnore]
     public CommandMetadata Metadata { get; }
 
     /// <summary>
@@ -208,9 +207,11 @@ public class CommandInfo : ICommandDescriptor
         HideFromHelp = parent is { HideFromHelp: true } || classType.IsDefinedSafe<HideFromHelpAttribute>();
 
         bool isFileMetadata = false;
+        bool shouldHaveMetadata = false;
         if (!HideFromHelp)
         {
             Metadata = ReadHelpMetadata(classType, logger, false)!;
+            shouldHaveMetadata = true;
 
             // get metadata from parent's parameters
             if (Metadata == null && parent?.Metadata != null)
@@ -218,10 +219,10 @@ public class CommandInfo : ICommandDescriptor
                 for (int i = 0; i < parent.Metadata.Parameters.Length; ++i)
                 {
                     CommandMetadata paramMeta = parent.Metadata.Parameters[i];
-                    if (!paramMeta.Name.Equals(CommandName, StringComparison.InvariantCultureIgnoreCase))
+                    if (!CommandMetadata.IsParameterMatchOrLookAtMatch(paramMeta, CommandName, null, out CommandMetadata? actualMeta))
                         continue;
 
-                    Metadata = paramMeta;
+                    Metadata = actualMeta;
                     break;
                 }
             }
@@ -230,13 +231,13 @@ public class CommandInfo : ICommandDescriptor
         }
         else if (parent is { HideFromHelp: false })
         {
+            CommandMetadata repl = new CommandMetadata();
             for (int i = 0; i < parent.Metadata.Parameters.Length; ++i)
             {
                 CommandMetadata paramMeta = parent.Metadata.Parameters[i];
-                if (!paramMeta.Name.Equals(CommandName, StringComparison.InvariantCultureIgnoreCase))
+                if (!CommandMetadata.IsParameterMatchOrLookAtMatch(paramMeta, CommandName, repl, out _))
                     continue;
 
-                parent.Metadata.Parameters = CollectionUtility.RemoveFromArray(parent.Metadata.Parameters, i);
                 logger.LogWarning("Removed metadata for subcommand {0} in parent command {1} because it's hidden from help.", classType, parent.Type);
                 break;
             }
@@ -244,6 +245,10 @@ public class CommandInfo : ICommandDescriptor
 
         if (Metadata == null)
         {
+            if (shouldHaveMetadata)
+            {
+                logger.LogWarning("Metadata not found for {0}.", classType);
+            }
             Metadata = DefaultMetadata(CommandName, null, false);
         }
         else if (Metadata.Name == null)
@@ -259,20 +264,16 @@ public class CommandInfo : ICommandDescriptor
         Metadata.Aliases = Aliases;
 
         // add metadata to parent's parameters
-        if (parent != null)
+        if (parent is { HideFromHelp: false })
         {
             bool foundAny = false;
             for (int i = 0; i < parent.Metadata.Parameters.Length; ++i)
             {
                 CommandMetadata paramMeta = parent.Metadata.Parameters[i];
-                if (!paramMeta.Name.Equals(CommandName, StringComparison.InvariantCultureIgnoreCase))
+                bool isMatch = CommandMetadata.IsParameterMatchOrLookAtMatch(paramMeta, CommandName, isFileMetadata ? Metadata : null, out _);
+                if (!isMatch)
                     continue;
 
-                if (isFileMetadata)
-                {
-                    parent.Metadata.Parameters[i] = Metadata;
-                    logger.LogWarning("Duplicate metadata file found in subcommand {0} replacing metadata in parent command {1}.", classType, parent.Type);
-                }
                 foundAny = true;
                 break;
             }
@@ -283,6 +284,7 @@ public class CommandInfo : ICommandDescriptor
                 Array.Resize(ref parentMeta, parentMeta.Length + 1);
                 parentMeta[^1] = Metadata;
                 parent.Metadata.Parameters = parentMeta;
+                logger.LogWarning("Metadata for {0} missing from parent.", classType);
             }
         }
 

@@ -31,14 +31,18 @@ public abstract class BaseTicketTracker : ILayoutHostedService, ITicketTracker
         if (tickets < 0)
             throw new ArgumentException("Cannot set tickets to a negative number.", nameof(tickets));
 
+        _ticketMap.TryGetValue(team, out int oldTickets);
         _ticketMap[team] = tickets;
-        _ = WarfareModule.EventDispatcher.DispatchEventAsync(new TicketsChanged
-        { 
+
+        TicketsChanged args = new TicketsChanged
+        {
             NewNumber = tickets,
-            Change = tickets,
+            Change = tickets - oldTickets,
             Team = team,
             TicketTracker = this
-        });
+        };
+
+        _ = WarfareModule.EventDispatcher.DispatchEventAsync(args, default);
     }
     public void IncrementTickets(Team team, int tickets)
     {

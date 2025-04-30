@@ -96,7 +96,7 @@ internal sealed class TeleportCommand : IExecutableCommand
                     if (veh != null && !veh.isExploded && !veh.isDead)
                     {
                         if (VehicleManager.ServerForcePassengerIntoVehicle(Context.Player.UnturnedPlayer, veh))
-                            throw Context.Reply(_translations.TeleportSelfSuccessVehicle, onlinePlayer, veh);
+                            throw Context.Reply(_translations.TeleportSelfSuccessVehicle, onlinePlayer, veh.asset);
                         pos.y += 5f;
                     }
 
@@ -169,8 +169,8 @@ internal sealed class TeleportCommand : IExecutableCommand
                     {
                         if (VehicleManager.ServerForcePassengerIntoVehicle(target.UnturnedPlayer, veh))
                         {
-                            _chatService.Send(target, _translations.TeleportSelfSuccessVehicle, onlinePlayer, veh);
-                            throw Context.Reply(_translations.TeleportOtherSuccessVehicle, target, onlinePlayer, veh);
+                            _chatService.Send(target, _translations.TeleportSelfSuccessVehicle, onlinePlayer, veh.asset);
+                            throw Context.Reply(_translations.TeleportOtherSuccessVehicle, target, onlinePlayer, veh.asset);
                         }
                         pos.y += 5f;
                     }
@@ -307,7 +307,7 @@ public class TeleportCommandTranslations : PropertiesTranslationCollection
     public readonly Translation<IPlayer> TeleportTargetDead = new Translation<IPlayer>("<#8f9494>{0} is not alive.", arg0Fmt: WarfarePlayer.FormatColoredCharacterName);
 
     [TranslationData]
-    public readonly Translation<IPlayer, InteractableVehicle> TeleportSelfSuccessVehicle = new Translation<IPlayer, InteractableVehicle>("<#bfb9ac>You were put in {0}'s {1}.", arg0Fmt: WarfarePlayer.FormatColoredCharacterName, arg1Fmt: RarityColorAddon.Instance);
+    public readonly Translation<IPlayer, VehicleAsset> TeleportSelfSuccessVehicle = new Translation<IPlayer, VehicleAsset>("<#bfb9ac>You were put in {0}'s {1}.", arg0Fmt: WarfarePlayer.FormatColoredCharacterName, arg1Fmt: RarityColorAddon.Instance);
 
     [TranslationData]
     public readonly Translation<IPlayer> TeleportSelfSuccessPlayer = new Translation<IPlayer>("<#bfb9ac>You were teleported to {0}.", arg0Fmt: WarfarePlayer.FormatColoredCharacterName);
@@ -361,7 +361,7 @@ public class TeleportCommandTranslations : PropertiesTranslationCollection
     public readonly Translation<IPlayer, GridLocation> TeleportOtherGridLocationObstructed = new Translation<IPlayer, GridLocation>("<#8f9494>Failed to teleport {0} to <#ddd>{1}</color>, it's position is obstructed.");
 
     [TranslationData(IsPriorityTranslation = false)]
-    public readonly Translation<IPlayer, IPlayer, InteractableVehicle> TeleportOtherSuccessVehicle = new Translation<IPlayer, IPlayer, InteractableVehicle>("<#bfb9ac>{0} was put in {1}'s {2}.", arg0Fmt: WarfarePlayer.FormatColoredCharacterName, arg1Fmt: WarfarePlayer.FormatColoredCharacterName, arg2Fmt: RarityColorAddon.Instance);
+    public readonly Translation<IPlayer, IPlayer, VehicleAsset> TeleportOtherSuccessVehicle = new Translation<IPlayer, IPlayer, VehicleAsset>("<#bfb9ac>{0} was put in {1}'s {2}.", arg0Fmt: WarfarePlayer.FormatColoredCharacterName, arg1Fmt: WarfarePlayer.FormatColoredCharacterName, arg2Fmt: RarityColorAddon.Instance);
 
     [TranslationData(IsPriorityTranslation = false)]
     public readonly Translation<IPlayer, IPlayer> TeleportOtherSuccessPlayer = new Translation<IPlayer, IPlayer>("<#bfb9ac>{0} was teleported to {1}.", arg0Fmt: WarfarePlayer.FormatColoredCharacterName, arg1Fmt: WarfarePlayer.FormatColoredCharacterName);

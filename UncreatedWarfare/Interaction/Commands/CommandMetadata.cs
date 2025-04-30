@@ -1,7 +1,8 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Text.Json.Serialization;
 using Uncreated.Warfare.Interaction.Commands.Syntax;
 using Uncreated.Warfare.Players.Permissions;
 using Uncreated.Warfare.Util;
@@ -13,6 +14,7 @@ namespace Uncreated.Warfare.Interaction.Commands;
 /// </summary>
 public class CommandMetadata : ICommandParameterDescriptor
 {
+    [JsonIgnore]
     private CommandMetadata? _parent;
 
 #nullable disable
@@ -252,6 +254,99 @@ public class CommandMetadata : ICommandParameterDescriptor
         return ContextualTypeResolver.ResolveType(typeName);
     }
 
+    internal static bool IsParameterMatchOrLookAtMatch(CommandMetadata paramMeta, string commandName, CommandMetadata? updateMetadata, [MaybeNullWhen(false)] out CommandMetadata actualMatch)
+    {
+        if (paramMeta.Name.Equals(commandName, StringComparison.InvariantCultureIgnoreCase))
+        {
+            if (updateMetadata != null)
+            {
+                int index = paramMeta._parent == null ? -1 : Array.IndexOf(paramMeta._parent.Parameters, paramMeta);
+                if (index != -1)
+                {
+                    if (updateMetadata.Name == null)
+                        paramMeta._parent!.Parameters = CollectionUtility.RemoveFromArray(paramMeta._parent!.Parameters, index);
+                    else
+                        paramMeta._parent!.Parameters[index] = updateMetadata;
+                }
+            }
+            actualMatch = paramMeta;
+            return true;
+        }
+
+        actualMatch = null;
+        if (paramMeta.Parameters.Length <= 0)
+            return false;
+
+        bool anyLooks = false;
+        foreach (Type type in paramMeta.ResolvedTypes)
+        {
+            if (type.IsConstructedGenericType && type.GetGenericTypeDefinition() == typeof(LookAtInteractionParameterType<>))
+            {
+                anyLooks = true;
+                break;
+            }
+        }
+
+        if (!anyLooks)
+        {
+            return false;
+        }
+        
+        for (int i = 0; i < paramMeta.Parameters.Length; ++i)
+        {
+            if (IsParameterMatchOrLookAtMatch(paramMeta.Parameters[i], commandName, updateMetadata, out actualMatch))
+                return true;
+        }
+
+        return false;
+    }
+    internal static bool IsParameterMatchOrLookAtMatch(ICommandParameterDescriptor paramMeta, string commandName, [MaybeNullWhen(false)] out ICommandParameterDescriptor actualMatch, bool aliases)
+    {
+        if (paramMeta.Name.Equals(commandName, StringComparison.InvariantCultureIgnoreCase))
+        {
+            actualMatch = paramMeta;
+            return true;
+        }
+
+        if (aliases)
+        {
+            for (int i = 0; i < paramMeta.Aliases.Count; ++i)
+            {
+                if (paramMeta.Aliases[i].Equals(commandName, StringComparison.InvariantCultureIgnoreCase))
+                {
+                    actualMatch = paramMeta;
+                    return true;
+                }
+            }
+        }
+
+        actualMatch = null;
+        if (paramMeta.Parameters.Count <= 0)
+            return false;
+
+        bool anyLooks = false;
+        foreach (Type type in paramMeta.Types)
+        {
+            if (type.IsConstructedGenericType && type.GetGenericTypeDefinition() == typeof(LookAtInteractionParameterType<>))
+            {
+                anyLooks = true;
+                break;
+            }
+        }
+
+        if (!anyLooks)
+        {
+            return false;
+        }
+        
+        for (int i = 0; i < paramMeta.Parameters.Count; ++i)
+        {
+            if (IsParameterMatchOrLookAtMatch(paramMeta.Parameters[i], commandName, out actualMatch, aliases))
+                return true;
+        }
+
+        return false;
+    }
     ICommandParameterDescriptor? ICommandParameterDescriptor.Parent => _parent;
     IReadOnlyList<string> ICommandParameterDescriptor.Aliases => Aliases;
     IReadOnlyList<Type> ICommandParameterDescriptor.Types => ResolvedTypes;

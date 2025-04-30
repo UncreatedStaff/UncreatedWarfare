@@ -1,12 +1,7 @@
-using DanielWillett.ReflectionTools;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Interaction.Commands;
-using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.Layouts.Flags;
-using Uncreated.Warfare.Layouts.Phases;
-using Uncreated.Warfare.Layouts.Teams;
-using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Commands;
 

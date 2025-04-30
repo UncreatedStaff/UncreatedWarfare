@@ -1,8 +1,6 @@
-using System.Globalization;
 using System.Linq;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Layouts.Teams;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
 

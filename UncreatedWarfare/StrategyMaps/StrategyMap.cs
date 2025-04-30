@@ -170,8 +170,7 @@ public class StrategyMap : IDisposable, IEventListener<ClaimBedRequested>
         deploymentService.TryStartDeployment(e.Player, d.Deployable,
             new DeploySettings
             {
-                // allow nearby enemies on non-fobs since the main bases should always be deployable
-                AllowNearbyEnemies = d.Deployable is not IFob,
+                // AllowNearbyEnemies is for the location the player is teleporting from, NOT to.
                 YawOverride = rotation.eulerAngles.y
             }
         );

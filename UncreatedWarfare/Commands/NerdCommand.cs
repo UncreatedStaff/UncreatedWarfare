@@ -32,6 +32,8 @@ internal sealed class NerdCommand : IExecutableCommand
     /// <inheritdoc />
     public async UniTask ExecuteAsync(CancellationToken token)
     {
+        Context.AssertArgs(2);
+
         (CSteamID? steam64, _) = await Context.TryGetPlayer(1, remainder: true).ConfigureAwait(false);
         if (!steam64.HasValue)
         {

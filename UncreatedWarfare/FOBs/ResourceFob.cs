@@ -15,6 +15,7 @@ using Uncreated.Warfare.Interaction.Icons;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Proximity;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
@@ -32,6 +33,7 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable
     private readonly IPlayerService _playerService;
     private readonly AssetConfiguration _assetConfiguration;
     private readonly WorldIconManager? _worldIconManager;
+    private readonly TipService? _tipService;
     protected readonly FobManager FobManager;
     private readonly ILoopTicker _loopTicker;
     private readonly Func<WarfarePlayer, float> _getProxyScore;
@@ -80,6 +82,7 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable
         FobManager = serviceProvider.GetRequiredService<FobManager>();
         _assetConfiguration = serviceProvider.GetRequiredService<AssetConfiguration>();
         _worldIconManager = serviceProvider.GetService<WorldIconManager>();
+        _tipService = serviceProvider.GetService<TipService>();
 
         FriendlyProximity = new SphereProximity(Position, EffectiveRadius);
 
@@ -173,6 +176,19 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable
         _worldIconManager.CreateIcon(Icon);
     }
 
+    void IDeployable.OnDeployTo(WarfarePlayer player, in DeploySettings settings)
+    {
+        // send a reminder to rearm if on low ammo
+        if (!player.Save.WasKitLowAmmo || _tipService == null)
+            return;
+
+        if (FobManager.Entities
+            .OfType<SupplyCrate>()
+            .Any(x => x.Type == SupplyType.Ammo && x.IsWithinRadius(Buildable.Position)))
+        {
+            _tipService?.TryGiveTip(player, 0, _tipService.Translations.KitGiveLowAmmo);
+        }
+    }
 
     public bool IsVibileToPlayer(WarfarePlayer player) => player.IsOnline && player.Team == Team;
 

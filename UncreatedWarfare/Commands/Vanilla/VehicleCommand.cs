@@ -5,7 +5,7 @@ using Uncreated.Warfare.Players.Permissions;
 
 namespace Uncreated.Warfare.Commands;
 
-[Command("vehicle", "v", "veh"), Priority(1), HideFromHelp]
+[Command("vehicle", "v", "veh"), Priority(1), MetadataFile]
 internal sealed class VehicleCommand : IExecutableCommand
 {
     private static readonly PermissionLeaf SpawnPermission = new PermissionLeaf("warfare::commands.vehicle.spawn");

@@ -1,9 +1,8 @@
 using DanielWillett.ReflectionTools;
 using System;
-using Uncreated.Warfare.Configuration;
+using System.Globalization;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Util;
@@ -85,7 +84,7 @@ internal sealed class GiveCommand : IExecutableCommand
         }
         if (Context.HasArgsExact(1)) // if there is only one argument, we only have to check a single word
         {
-            if (Context.TryGet(0, out RedirectType type))
+            if (Context.TryGet(0, out RedirectType type) && !Context.TryGet(0, out byte _))
             {
                 FactionInfo? kitFaction = (await Context.Player.Component<KitPlayerComponent>().GetActiveKitAsync(KitInclude.Base, token))?.Faction;
 
@@ -127,7 +126,7 @@ internal sealed class GiveCommand : IExecutableCommand
                     amount = 1;
                     amountWasValid = false;
                 }
-                if (Context.TryGet(0, out RedirectType type))
+                if (Context.TryGet(0, out RedirectType type) && !Context.TryGet(0, out byte _))
                 {
                     FactionInfo? kitFaction = (await Context.Player.Component<KitPlayerComponent>().GetActiveKitAsync(KitInclude.Base, token))?.Faction;
 
@@ -158,7 +157,7 @@ internal sealed class GiveCommand : IExecutableCommand
             if (Context.TryGet(Context.ArgumentCount - 1, out amount) && amount is <= MaxItems and > 0) // if this runs, then the last ID is treated as an amount
             {
                 itemName = Context.GetRange(0, Context.ArgumentCount - 1)!;
-                if (Enum.TryParse(itemName, true, out RedirectType type))
+                if (Enum.TryParse(itemName, true, out RedirectType type) && !byte.TryParse(itemName, NumberStyles.Any, CultureInfo.InvariantCulture, out byte _))
                 {
                     FactionInfo? kitFaction = (await Context.Player.Component<KitPlayerComponent>().GetActiveKitAsync(KitInclude.Base, token))?.Faction;
 
@@ -180,7 +179,7 @@ internal sealed class GiveCommand : IExecutableCommand
             {
                 amount = 1;
                 itemName = Context.GetRange(0)!;
-                if (Enum.TryParse(itemName, true, out RedirectType type))
+                if (Enum.TryParse(itemName, true, out RedirectType type) && !byte.TryParse(itemName, NumberStyles.Any, CultureInfo.InvariantCulture, out byte _))
                 {
                     FactionInfo? kitFaction = (await Context.Player.Component<KitPlayerComponent>().GetActiveKitAsync(KitInclude.Base, token))?.Faction;
 
@@ -199,16 +198,16 @@ internal sealed class GiveCommand : IExecutableCommand
                     throw Context.ReplyString($"No item found by the name or ID of '<color=#cca69d>{itemName}</color>'", "8f9494");
             }
         }
+        foundItem:
+
         if (asset == null)
             throw Context.ReplyString("No item found.", "8f9494");
-
-        foundItem:
 
         amount = Math.Min(amount, 250);
 
         for (int i = 0; i < amount; i++)
         {
-            Item itemInstance = new Item(asset!.id, itemAmt is <= 0 or > byte.MaxValue ? asset.amount : (byte)itemAmt, 100, itemSt ?? asset.getState(true));
+            Item itemInstance = new Item(asset.id, itemAmt is <= 0 or > byte.MaxValue ? asset.amount : (byte)itemAmt, 100, itemSt ?? asset.getState(true));
             if (!Context.Player.UnturnedPlayer.inventory.tryAddItem(itemInstance, true))
                 ItemManager.dropItem(itemInstance, Context.Player.Position, true, true, true);
         }

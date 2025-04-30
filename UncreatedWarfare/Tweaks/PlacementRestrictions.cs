@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
@@ -112,38 +112,6 @@ internal class PlacementRestrictions : IEventListener<PlaceBarricadeRequested>, 
             return false;
         }
 
-#if false
-        if (_fobManager != null)
-        {
-            // todo non-static
-            return !FobManager.IsPointInFOB(point, out _);
-        }
-#endif
-
         return true;
     }
-
-    /* todo
-    public ZoneFlags GetNoBuildingZoneFlags(ItemAsset asset)
-    {
-        if (asset is ItemBarricadeAsset barricade)
-        {
-            if (RallyManager.IsRally(barricade))
-                return ZoneFlags.NoRallies | ZoneFlags.NoBuilding;
-
-            if (barricade.build is EBuild.SPIKE or EBuild.WIRE)
-                return ZoneFlags.NoTraps | ZoneFlags.NoBuilding;
-        }
-
-        if (Gamemode.Config.FOBRadios.Value.HasGuid(asset.GUID))
-            return ZoneFlags.NoRadios | ZoneFlags.NoBuilding;
-
-        if (Gamemode.Config.BarricadeFOBBunkerBase.MatchGuid(asset.GUID))
-            return ZoneFlags.NoBunkers | ZoneFlags.NoBuilding;
-
-        if (FOBManager.FindBuildable(asset) is not null)
-            return ZoneFlags.NoFOBBuilding | ZoneFlags.NoBuilding;
-
-        return ZoneFlags.NoBuilding;
-    } */
 }

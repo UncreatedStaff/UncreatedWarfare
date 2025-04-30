@@ -1,2 +1,9 @@
-﻿# GroupCommand
-Description: "Displays the <caller />'s current group or allows them to join a different one."
+# GroupCommand
+Description: "Displays the <caller />'s current group or allows them to join a different one as an admin."
+Parameters:
+  - Name: join
+    Description: Join another <param 'group'/>.
+    Parameters:
+      - Name: group
+        Types: [ ulong, Uncreated.Warfare.Teams.FactionInfo ]
+        

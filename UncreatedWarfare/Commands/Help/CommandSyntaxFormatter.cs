@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
+using Uncreated.Framework.UI;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Permissions;
@@ -488,30 +490,13 @@ public class CommandSyntaxFormatter : IDisposable
 
         for (; p < meta.Parameters.Count; ++p)
         {
-            if (!string.Equals(meta.Parameters[p].Name, arg, StringComparison.InvariantCultureIgnoreCase))
-                continue;
-
-            found = true;
-            break;
-        }
-
-        if (!found)
-        {
-            for (p = 0; p < meta.Parameters.Count; ++p)
+            if (!CommandMetadata.IsParameterMatchOrLookAtMatch(meta.Parameters[p], arg, out ICommandParameterDescriptor? actualMatch, true))
             {
-                ICommandParameterDescriptor parameter = meta.Parameters[p];
-                for (int a = 0; a < parameter.Aliases.Count; ++a)
-                {
-                    if (!string.Equals(parameter.Aliases[a], arg, StringComparison.InvariantCultureIgnoreCase))
-                        continue;
-
-                    found = true;
-                    break;
-                }
-
-                if (found)
-                    break;
+                continue;
             }
+
+            meta = actualMatch;
+            return true;
         }
 
         if (!found)
@@ -554,7 +539,7 @@ public class CommandSyntaxFormatter : IDisposable
 
     private static bool CheckParameterValue(string arg, Type type, CultureInfo culture)
     {
-        if (typeof(Asset).IsAssignableFrom(type))
+        if (typeof(Asset).IsAssignableFrom(type) || typeof(IAssetContainer).IsAssignableFrom(type))
         {
             return Guid.TryParse(arg, out _) || ushort.TryParse(arg, NumberStyles.Number, culture, out _);
         }

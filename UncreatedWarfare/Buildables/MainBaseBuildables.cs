@@ -6,11 +6,12 @@ using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Buildables;
 
-[Priority(10 /* after MainBaseBuildables, before most things */)]
-public class MainBaseBuildables : ILevelHostedService, ILayoutHostedService
+[Priority(10 /* after BuildableAttributesDataStore, before most things */)]
+public class MainBaseBuildables : ILayoutHostedService
 {
     private readonly BuildableAttributesDataStore _attributes;
     private readonly ZoneStore _zoneStore;
+    private readonly ILogger<MainBaseBuildables> _logger;
 
     /// <summary>
     /// Indicates that a barricade in main or the war room will still be wiped.
@@ -22,10 +23,11 @@ public class MainBaseBuildables : ILevelHostedService, ILayoutHostedService
     /// </summary>
     public const string PermanentAttribute = "permanent";
 
-    public MainBaseBuildables(BuildableAttributesDataStore attributes, ZoneStore zoneStore)
+    public MainBaseBuildables(BuildableAttributesDataStore attributes, ZoneStore zoneStore, ILogger<MainBaseBuildables> logger)
     {
         _attributes = attributes;
         _zoneStore = zoneStore;
+        _logger = logger;
     }
 
     public void ClearOtherBuildables()
@@ -52,6 +54,7 @@ public class MainBaseBuildables : ILevelHostedService, ILayoutHostedService
 
             BarricadeUtility.PreventItemDrops(barricade.Drop);
             BuildableExtensions.SetSalvageInfo(barricade.Drop.model, EDamageOrigin.Unknown, CSteamID.Nil, false, null);
+            _logger.LogConditional($"Destroying unsaved barricade {barricade.Drop.asset}.");
             BarricadeManager.destroyBarricade(barricade.Drop, barricade.Coord.x, barricade.Coord.y, barricade.Plant);
         }
 
@@ -69,21 +72,16 @@ public class MainBaseBuildables : ILevelHostedService, ILayoutHostedService
             }
 
             BuildableExtensions.SetSalvageInfo(structure.Drop.model, EDamageOrigin.Unknown, CSteamID.Nil, false, null);
+            _logger.LogConditional($"Destroying unsaved structure {structure.Drop.asset}.");
             StructureManager.destroyStructure(structure.Drop, structure.Coord.x, structure.Coord.y, Vector3.zero);
         }
-    }
-
-    /// <inheritdoc />
-    public UniTask LoadLevelAsync(CancellationToken token)
-    {
-        ClearOtherBuildables();
-        return UniTask.CompletedTask;
     }
 
     /// <inheritdoc />
     public UniTask StartAsync(CancellationToken token)
     {
         ClearOtherBuildables();
+        ItemUtility.DestroyAllDroppedItems(true);
         return UniTask.CompletedTask;
     }
 

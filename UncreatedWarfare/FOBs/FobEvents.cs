@@ -39,25 +39,36 @@ public partial class FobManager :
     IEventListener<TriggerTrapRequested>,
     IEventListener<IDamageBuildableRequestedEvent>
 {
-    private bool IsTrapTooNearFobSpawn(in Vector3 pos)
-    {
-        const float maxDistance = 10;
-
-        foreach (BunkerFob fob in Fobs.OfType<BunkerFob>())
-        {
-            if (MathUtility.WithinRange2D(in pos, fob.SpawnPosition, maxDistance))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
     void IEventListener<PlaceBarricadeRequested>.HandleEvent(PlaceBarricadeRequested e, IServiceProvider serviceProvider)
     {
-        // dont allow placing traps near spawner
-        if (e.Asset is not ItemTrapAsset || !IsTrapTooNearFobSpawn(e.Position))
+        if (e.Asset is not ItemTrapAsset trap)
+        {
+            ShovelableInfo? shovelable = Configuration.Shovelables.FirstOrDefault(x => x.Foundation.MatchAsset(e.Asset));
+            if (shovelable == null
+                || !shovelable.CompletedStructure.TryGetAsset(out ItemPlaceableAsset? placeable)
+                || placeable is not ItemTrapAsset t)
+            {
+                return;
+            }
+
+            trap = t;
+        }
+
+        // dont allow placing traps near FOBs
+        bool tooNear = false;
+        Vector3 pos = e.Position;
+        float baseDistance = !trap.isExplosive ? 7 : 3;
+        foreach (IBuildableFob fob in Fobs.OfType<IBuildableFob>())
+        {
+            bool isFriendly = fob.Team.IsFriendly(e.OriginalPlacer.Team);
+            if (!MathUtility.WithinRange2D(in pos, fob.SpawnPosition, !isFriendly ? baseDistance + 5 : baseDistance))
+                continue;
+
+            tooNear = true;
+            break;
+        }
+
+        if (!tooNear)
             return;
 
         _chatService.Send(e.OriginalPlacer, _translations.TrapNotAllowed);
@@ -67,9 +78,27 @@ public partial class FobManager :
 
     void IEventListener<TriggerTrapRequested>.HandleEvent(TriggerTrapRequested e, IServiceProvider serviceProvider)
     {
-        Vector3 pos = e.Barricade.GetServersideData().point;
-        if (IsTrapTooNearFobSpawn(in pos))
+        ItemTrapAsset asset = (ItemTrapAsset)e.Barricade.asset;
+        Vector3 pos = asset.isExplosive
+            ? e.Barricade.GetServersideData().point
+            : e.TriggerCollider.transform.position;
+
+        bool tooNear = false;
+        float baseDistance = asset.isExplosive ? 3 : 7;
+        foreach (IBuildableFob fob in Fobs.OfType<IBuildableFob>())
+        {
+            bool isFriendly = fob.Team.IsFriendly(new CSteamID(e.Barricade.GetServersideData().group));
+            if (!MathUtility.WithinRange2D(in pos, fob.SpawnPosition, isFriendly ? baseDistance + 5 : baseDistance))
+                continue;
+
+            tooNear = true;
+            break;
+        }
+
+        if (tooNear)
+        {
             e.Cancel();
+        }
     }
 
     [EventListener(RequireNextFrame = true)]

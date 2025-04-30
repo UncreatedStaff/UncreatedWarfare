@@ -80,6 +80,31 @@ internal sealed class PlayerDatabaseStatsEventHandlers :
 
         PlayerDied args = _tempPlayerDiedArgs;
 
+        args.ActiveVehicle = null;
+        args.DriverAssist = null;
+        args.PrimaryAsset = null;
+        args.SecondaryAsset = null;
+        args.ThirdParty = null;
+        args.ThirdPartySession = null;
+        args.ThirdPartyAtFault = false;
+        args.ThirdPartyId = null;
+        args.ThirdPartyPoint = default;
+        args.ThirdPartyTeam = null;
+        args.Killer = null;
+        args.KillerSession = null;
+        args.KillerBranch = null;
+        args.KillerClass = null;
+        args.KillerKitName = null;
+        args.KillerPoint = default;
+        args.KillerTeam = null;
+        args.DefaultMessage = null;
+        args.IsGuaranteedCheaterKill = false;
+        args.PlayerKitName = null;
+        args.MessageKey = null;
+        args.TurretVehicleOwner = null;
+        args.WasBleedout = false;
+        args.WillBan = false;
+        args.TimeDeployed = 0f;
         _deathTracker.FillArgs(e.Player, e.Parameters.cause, e.Parameters.limb, e.Parameters.killer, args);
 
         bool isSuicide = args.WasSuicide;

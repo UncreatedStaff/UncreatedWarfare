@@ -410,7 +410,8 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
         }
 
         // handle input like: "/clear inventory help" and redirect to help command
-        if (command.Type != typeof(HelpCommand) && offset < args.Length && (string.Equals(args[offset], "help", StringComparison.InvariantCultureIgnoreCase)
+        if (command.Type != typeof(HelpCommand) && !command.AutoHelpDisabled
+                                                && offset < args.Length && (string.Equals(args[offset], "help", StringComparison.InvariantCultureIgnoreCase)
                                                                             || string.Equals(args[offset], "hlep", StringComparison.InvariantCultureIgnoreCase)
                                                                             || string.Equals(args[offset], "?", StringComparison.InvariantCultureIgnoreCase)))
         {

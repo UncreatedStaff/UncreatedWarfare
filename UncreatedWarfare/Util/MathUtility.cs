@@ -94,6 +94,45 @@ public static class MathUtility
     /// Find square distance and optionally ignore the Y axis.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static float SquaredDistance(in Vector3 pos1, in Vector3 pos2)
+    {
+        float dx = pos1.x - pos2.x,
+              dz = pos1.z - pos2.z;
+
+        float dy = pos1.y - pos2.y;
+        return dx * dx + dy * dy + dz * dz;
+    }
+
+    /// <summary>
+    /// Find square distance and optionally ignore the Y axis.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static float SquaredDistance(Vector3 pos1, in Vector3 pos2)
+    {
+        float dx = pos1.x - pos2.x,
+              dz = pos1.z - pos2.z;
+
+        float dy = pos1.y - pos2.y;
+        return dx * dx + dy * dy + dz * dz;
+    }
+
+    /// <summary>
+    /// Find square distance and optionally ignore the Y axis.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static float SquaredDistance(in Vector3 pos1, Vector3 pos2)
+    {
+        float dx = pos1.x - pos2.x,
+              dz = pos1.z - pos2.z;
+
+        float dy = pos1.y - pos2.y;
+        return dx * dx + dy * dy + dz * dz;
+    }
+
+    /// <summary>
+    /// Find square distance and optionally ignore the Y axis.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static float SquaredDistance(in Vector3 pos1, in Vector3 pos2, bool horizontalDistanceOnly)
     {
         float dx = pos1.x - pos2.x,

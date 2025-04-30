@@ -81,7 +81,7 @@ public class FobTranslations : PropertiesTranslationCollection
     public readonly Translation BuildableNotAllowed = new Translation("<#ffa238>You are not allowed to place this buildable.");
     
     [TranslationData("Indicates that a player isn't able to place traps in a FOB.")]
-    public readonly Translation TrapNotAllowed = new Translation("<#ffa238>Traps can not be placed inside FOBs.");
+    public readonly Translation TrapNotAllowed = new Translation("<#ffa238>Traps can not be placed this close to FOBs.");
     
     [TranslationData("Indicates that a player cannot place a rally point because there are enemies nearby.")]
     public readonly Translation PlaceRallyPointNearbyEnemies = new Translation("<#ffaa42>Rally point unavailable - there are enemies nearby.");
