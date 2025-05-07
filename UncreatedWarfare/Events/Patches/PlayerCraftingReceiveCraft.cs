@@ -1,6 +1,7 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
 using HarmonyLib;
+using System;
 using System.Reflection;
 using Uncreated.Warfare.Patches;
 
@@ -12,8 +13,14 @@ internal sealed class PlayerCraftingReceiveCraft : IHarmonyPatch
     private static MethodInfo? _target;
     void IHarmonyPatch.Patch(ILogger logger, Harmony patcher)
     {
-        _target = typeof(PlayerCrafting).GetMethod(nameof(PlayerCrafting.ReceiveCraft),
-            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+        _target = typeof(PlayerCrafting).GetMethod(
+            nameof(PlayerCrafting.ReceiveCraft),
+            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance,
+            null,
+            CallingConventions.Any,
+            [ typeof(ServerInvocationContext).MakeByRefType(), typeof(Guid), typeof(byte), typeof(bool) ],
+            null
+        );
 
         if (_target != null)
         {
@@ -26,9 +33,9 @@ internal sealed class PlayerCraftingReceiveCraft : IHarmonyPatch
             new MethodDefinition(nameof(PlayerCrafting.ReceiveCraft))
                 .DeclaredIn<PlayerCrafting>(isStatic: false)
                 .WithParameter<ServerInvocationContext>("context", ByRefTypeMode.In)
-                .WithParameter<ushort>("id")
+                .WithParameter<Guid>("assetGuid")
                 .WithParameter<byte>("index")
-                .WithParameter<bool>("force")
+                .WithParameter<bool>("asManyAsPossible")
                 .ReturningVoid()
         );
     }
@@ -47,10 +54,10 @@ internal sealed class PlayerCraftingReceiveCraft : IHarmonyPatch
 
     // SDG.Unturned.StructureManager
     /// <summary>
-    /// Prefix for <see cref="PlayerCrafting.ReceiveCraft"/> to save the last value of <paramref name="force"/> (craft all).
+    /// Prefix for <see cref="PlayerCrafting.ReceiveCraft"/> to save the last value of <paramref name="asManyAsPossible"/> (craft all).
     /// </summary>
-    private static void Prefix(in ServerInvocationContext context, ushort id, byte index, bool force)
+    private static void Prefix(in ServerInvocationContext context, Guid assetGuid, byte index, bool asManyAsPossible)
     {
-        LastCraftAll = force;
+        LastCraftAll = asManyAsPossible;
     }
 }

@@ -18,7 +18,7 @@ public sealed class VehicleTweaksTranslations : PropertiesTranslationCollection
     public readonly Translation SwapSeatCannotAbandonDriver = new Translation("You cannot abandon the driver's seat on the battlefield.");
 
     [TranslationData("Send when a player tries to exit an aircraft but it's too high off the ground.")]
-    public readonly Translation ExitVehicleAircraftToHigh = new Translation("You cannot leave this aircraft seat because it is flying too high!.");
+    public readonly Translation ExitVehicleAircraftTooHigh = new Translation("You cannot leave this aircraft seat because it is flying too high!.");
 
     [TranslationData("Send when a player tries to enter a crew seat but the vehicle is already being operated by the max number of allowed crew.")]
     public readonly Translation<int> VehicleMaxAllowedCrewReached = new Translation<int>("The vehicle is already being operated by a crew of {0}.");

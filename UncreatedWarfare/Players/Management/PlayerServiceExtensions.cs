@@ -416,8 +416,7 @@ public static class PlayerServiceExtensions
         {
             PlayerNameType.CharacterName => [ PlayerNameType.CharacterName, PlayerNameType.NickName, PlayerNameType.PlayerName ],
             PlayerNameType.NickName => [ PlayerNameType.NickName, PlayerNameType.CharacterName, PlayerNameType.PlayerName ],
-            PlayerNameType.PlayerName => [ PlayerNameType.PlayerName, PlayerNameType.CharacterName, PlayerNameType.NickName ],
-            _ => default
+            _ => [ PlayerNameType.PlayerName, PlayerNameType.CharacterName, PlayerNameType.NickName ]
         };
 
         const int levels = 6;

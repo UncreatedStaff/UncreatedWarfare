@@ -1,6 +1,5 @@
 using Autofac.Builder;
 using DanielWillett.ReflectionTools;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.FileSystemGlobbing;
 using Microsoft.Extensions.FileSystemGlobbing.Abstractions;
@@ -23,6 +22,7 @@ using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Plugins;
 using Uncreated.Warfare.Services;
+using Uncreated.Warfare.Sessions;
 using Uncreated.Warfare.Util;
 using UnityEngine.SceneManagement;
 
@@ -36,10 +36,12 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
     private readonly IGameDataDbContext _dbContext;
     private readonly MapScheduler _mapScheduler;
     private readonly IPlayerService _playerService;
+    private readonly SessionManager _sessionService;
     private readonly byte _region;
     private UniTask _setupTask;
 
     private bool _hasPlayerLock = true;
+    private bool _hasSessionLock;
 
     public bool IsLoading
     {
@@ -71,7 +73,8 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
         IGameDataDbContext dbContext,
         MapScheduler mapScheduler,
         IConfiguration systemConfig,
-        IPlayerService playerService)
+        IPlayerService playerService,
+        SessionManager sessionService)
     {
         _warfare = warfare;
         _logger = logger;
@@ -79,6 +82,7 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
         _dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
         _mapScheduler = mapScheduler;
         _playerService = playerService;
+        _sessionService = sessionService;
         _region = systemConfig.GetValue<byte>("region");
         IsLoading = true;
     }
@@ -230,6 +234,13 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
                     _hasPlayerLock = true;
                 }
 
+                if (!_hasSessionLock)
+                {
+                    await _sessionService.WaitAsync();
+                    await UniTask.SwitchToMainThread(token);
+                    _hasSessionLock = true;
+                }
+
                 Layout oldLayout = _warfare.GetActiveLayout();
                 if (oldLayout.IsActive)
                 {
@@ -250,6 +261,10 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
         }
         catch (Exception ex)
         {
+            if (_hasSessionLock)
+            {
+                _sessionService.Release();
+            }
             IsLoading = false;
             if (playerJoinLockTaken)
             {
@@ -313,6 +328,11 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error updating layout record.");
+        }
+
+        if (_hasSessionLock)
+        {
+            _sessionService.Release();
         }
 
         await UniTask.SwitchToMainThread(CancellationToken.None);

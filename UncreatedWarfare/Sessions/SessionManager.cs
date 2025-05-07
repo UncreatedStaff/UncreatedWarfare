@@ -70,6 +70,9 @@ public class SessionManager :
         _module = module;
     }
 
+    public Task WaitAsync() => _semaphore.WaitAsync();
+    public void Release() => _semaphore.Release();
+
     async UniTask IHostedService.StartAsync(CancellationToken token)
     {
         await CheckForTerminatedSessions(token).ConfigureAwait(false);
@@ -149,7 +152,7 @@ public class SessionManager :
 
             _dbContext.Add(record);
             FixupSession(_dbContext, record);
-            
+
             player.CurrentSession = record;
 
             await _dbContext.SaveChangesAsync(token).ConfigureAwait(false);

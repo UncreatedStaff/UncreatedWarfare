@@ -3,7 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
@@ -432,9 +431,10 @@ internal class PointsRewardsEvents :
 
         await _points.ApplyEvent(
             fobCreator.Steam64,
-            fobCreator.Team.Faction.PrimaryKey,
-            @event.Resolve().WithTranslation(translation, fobCreator), token)
-            .ConfigureAwait(false);
+            buildableFob.Team.Faction.PrimaryKey,
+            @event.Resolve().WithTranslation(translation, fobCreator),
+            token
+        ).ConfigureAwait(false);
     }
 
     public async UniTask HandleEventAsync(ExitVehicle e, IServiceProvider serviceProvider, CancellationToken token = default)

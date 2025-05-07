@@ -89,7 +89,7 @@ partial class EventDispatcher
     }
 
     private static bool _shouldIgnorePlayerCraftingCraftBlueprintRequested;
-    private void PlayerCraftingCraftBlueprintRequested(PlayerCrafting crafting, ref ushort itemId, ref byte blueprintIndex, ref bool shouldAllow)
+    private void PlayerCraftingCraftBlueprintRequested(PlayerCrafting crafting, ref Blueprint blueprint, ref bool shouldAllow)
     {
         if (_shouldIgnorePlayerCraftingCraftBlueprintRequested)
             return;
@@ -97,27 +97,13 @@ partial class EventDispatcher
         bool forceAll = PlayerCraftingReceiveCraft.LastCraftAll;
         WarfarePlayer player = _playerService.GetOnlinePlayer(crafting);
 
-        ItemAsset? item = (ItemAsset?)Assets.find(EAssetType.ITEM, itemId);
-        if (item == null)
+        CraftItemRequested args = new CraftItemRequested
         {
-            GetLogger(typeof(PlayerCrafting), nameof(PlayerCrafting.onCraftBlueprintRequested))
-                .LogWarning("Unknown item {0} from player {1}.", itemId, player);
-            shouldAllow = false;
-            return;
-        }
-
-        if (blueprintIndex >= item.blueprints.Count || item.blueprints[blueprintIndex] == null)
-        {
-            GetLogger(typeof(PlayerCrafting), nameof(PlayerCrafting.onCraftBlueprintRequested))
-                .LogWarning("Invalid blueprint index {0} in item {1} from player {2}.", blueprintIndex, item.itemName, player);
-            shouldAllow = false;
-            return;
-        }
-
-        CraftItemRequested args = new CraftItemRequested(item, blueprintIndex)
-        {
+            Blueprint = blueprint,
+            OriginalBlueprint = blueprint,
             Player = player,
-            CraftAll = forceAll
+            CraftAll = forceAll,
+            OriginalCraftAll = forceAll
         };
 
         // DroppedItemTracker handles the ItemDestroyed invocation.
@@ -128,8 +114,8 @@ partial class EventDispatcher
             {
                 args.Player.UnturnedPlayer.crafting.ReceiveCraft(
                     in args.Player.CreateServerInvocationContext(),
-                    args.ItemId,
-                    args.BlueprintIndex,
+                    args.Blueprint.GetOwnerAsset().GUID,
+                    args.Blueprint.Index,
                     args.CraftAll
                 );
             }
@@ -139,6 +125,6 @@ partial class EventDispatcher
             }
 
                             // check if CraftAll was changed
-        }, needsToContinue: forceAll ? args => !args.CraftAll : args => args.CraftAll);
+        }, needsToContinue: args => args.OriginalCraftAll != args.CraftAll || args.Blueprint != args.OriginalBlueprint);
     }
 }

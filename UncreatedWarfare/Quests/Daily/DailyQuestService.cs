@@ -567,7 +567,14 @@ public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoin
             {
                 string name = "DailyQuest" + i.ToString("D2", CultureInfo.InvariantCulture);
                 string path = Path.Combine(parent, name, name + ".dat");
-                AssetUtility.LoadAsset(path, origin);
+                List<string>? errors = AssetUtility.LoadAsset(path, origin);
+                if (errors == null)
+                    continue;
+
+                foreach (string error in errors)
+                {
+                    _logger.LogError($"Error loading asset {name}: \"{error}\".");
+                }
             }
 
             AssetUtility.SyncAssetsFromOrigin(origin);

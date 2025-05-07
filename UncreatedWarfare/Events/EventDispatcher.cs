@@ -161,7 +161,7 @@ public partial class EventDispatcher : IHostedService, IDisposable
 
         /* Items */
         ItemManager.onTakeItemRequested += ItemManagerOnTakeItemRequested;
-        PlayerCrafting.onCraftBlueprintRequested += PlayerCraftingCraftBlueprintRequested;
+        PlayerCrafting.OnCraftBlueprintRequestedV2 += PlayerCraftingCraftBlueprintRequested;
 
         /* Players */
         DamageTool.damagePlayerRequested += DamageToolOnPlayerDamageRequested;
@@ -219,7 +219,7 @@ public partial class EventDispatcher : IHostedService, IDisposable
 
         /* Items */
         ItemManager.onTakeItemRequested -= ItemManagerOnTakeItemRequested;
-        PlayerCrafting.onCraftBlueprintRequested -= PlayerCraftingCraftBlueprintRequested;
+        PlayerCrafting.OnCraftBlueprintRequestedV2 -= PlayerCraftingCraftBlueprintRequested;
 
         /* Players */
         DamageTool.damagePlayerRequested -= DamageToolOnPlayerDamageRequested;

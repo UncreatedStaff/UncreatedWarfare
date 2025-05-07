@@ -1,3 +1,5 @@
+using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools.Emit;
 using DanielWillett.SpeedBytes;
 using SDG.Framework.Utilities;
 using System;
@@ -459,13 +461,21 @@ public static class AssetUtility
     }
 #endif
     public static void SyncAssetsFromOrigin(AssetOrigin origin) => SyncAssetsFromOriginMethod?.Invoke(origin);
-    public static void LoadAsset(string filePath, AssetOrigin origin)
+
+    /// <summary>
+    /// Synchronously loads an asset file.
+    /// </summary>
+    /// <returns>A list of all errors.</returns>
+    /// <exception cref="MemberAccessException">Reflection failure.</exception>
+    public static List<string>? LoadAsset(string filePath, AssetOrigin origin)
     {
-        (LoadFile ?? throw new MemberAccessException("LoadFile not created."))(filePath, origin);
+        List<string> errors = new List<string>();
+        (LoadFile ?? throw new MemberAccessException("LoadFile not created."))(filePath, origin, errors);
+        return errors.Count == 0 ? null : errors;
     }
 
     private static readonly DatParser _parser = new DatParser();
-    private static void GetData(string filePath, out DatDictionary assetData, out string? assetError, out byte[] hash, out DatDictionary? translationData, out DatDictionary? fallbackTranslationData)
+    private static void GetData(string filePath, out IDatDictionary assetData, List<string>? assetErrors, out byte[] hash, out IDatDictionary? translationData, out IDatDictionary? fallbackTranslationData)
     {
         GameThread.AssertCurrent();
 
@@ -475,7 +485,11 @@ public static class AssetUtility
         using StreamReader input = new StreamReader(sha1Fs);
 
         assetData = _parser.Parse(input);
-        assetError = _parser.ErrorMessage;
+        if (_parser.ErrorMessages is { Count: > 0 } && assetErrors != null)
+        {
+            assetErrors.AddRange(_parser.ErrorMessages);
+        }
+
         hash = sha1Fs.Hash;
         string localLang = Path.Combine(directoryName, Provider.language + ".dat");
         string englishLang = Path.Combine(directoryName, "English.dat");
@@ -490,7 +504,7 @@ public static class AssetUtility
         else if (File.Exists(englishLang))
             translationData = ReadFileWithoutHash(englishLang);
     }
-    public static DatDictionary ReadFileWithoutHash(string path)
+    public static IDatDictionary ReadFileWithoutHash(string path)
     {
         GameThread.AssertCurrent();
 
@@ -499,7 +513,7 @@ public static class AssetUtility
         return _parser.Parse(inputReader);
     }
 
-    private static readonly Action<string, AssetOrigin>? LoadFile;
+    private static readonly Action<string, AssetOrigin, List<string>>? LoadFile;
     private static readonly Action<AssetOrigin>? SyncAssetsFromOriginMethod;
     static AssetUtility()
     {
@@ -512,7 +526,6 @@ public static class AssetUtility
             return;
         }
 
-        MethodInfo method = typeof(AssetUtility).GetMethod(nameof(GetData), BindingFlags.Static | BindingFlags.NonPublic)!;
         Type? assetInfo = typeof(Assets).Assembly.GetType("SDG.Unturned.AssetsWorker+AssetDefinition", false, false);
         if (assetInfo == null)
         {
@@ -532,68 +545,72 @@ public static class AssetUtility
         FieldInfo? assetDataField = assetInfo.GetField("assetData", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
         FieldInfo? translationDataField = assetInfo.GetField("translationData", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
         FieldInfo? fallbackTranslationDataField = assetInfo.GetField("fallbackTranslationData", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-        FieldInfo? assetErrorField = assetInfo.GetField("assetError", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        FieldInfo? assetErrorsField = assetInfo.GetField("assetErrors", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
         FieldInfo? originField = assetInfo.GetField("origin", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-        if (pathField == null || hashField == null || assetDataField == null || translationDataField == null || fallbackTranslationDataField == null || assetErrorField == null || originField == null)
+        if (pathField == null || hashField == null || assetDataField == null || translationDataField == null || fallbackTranslationDataField == null || assetErrorsField == null || originField == null)
         {
             WarfareModule.Singleton.GlobalLogger.LogError("Missing field in AssetsWorker.AssetDefinition.");
             return;
         }
 
-        DynamicMethod dm = new DynamicMethod("LoadAsset", typeof(void), new Type[] { typeof(string), typeof(AssetOrigin) }, typeof(AssetUtility).Module, true);
-        ILGenerator generator = dm.GetILGenerator();
-        dm.DefineParameter(0, ParameterAttributes.None, "path");
-        dm.DefineParameter(1, ParameterAttributes.None, "assetOrigin");
-        generator.DeclareLocal(typeof(DatDictionary));
+        DynamicMethodInfo<Action<string, AssetOrigin, List<string>>> dynMethod = DynamicMethodHelper.Create<Action<string, AssetOrigin, List<string>>>("LoadAsset", typeof(AssetUtility), initLocals: false);
 
-        generator.DeclareLocal(typeof(string));
-        generator.DeclareLocal(typeof(byte[]));
-        generator.DeclareLocal(typeof(DatDictionary));
-        generator.DeclareLocal(typeof(DatDictionary));
-        generator.DeclareLocal(assetInfo);
+#if DEBUG
+        IOpCodeEmitter emit = dynMethod.GetEmitter(debuggable: true);
+#else
+        IOpCodeEmitter emit = dynMethod.GetEmitter(debuggable: false);
+#endif
+        dynMethod.DefineParameter(0, ParameterAttributes.None, "path");
+        dynMethod.DefineParameter(1, ParameterAttributes.None, "assetOrigin");
 
-        generator.Emit(OpCodes.Ldarg_0);
-        generator.Emit(OpCodes.Ldloca_S, 0);
-        generator.Emit(OpCodes.Ldloca_S, 1);
-        generator.Emit(OpCodes.Ldloca_S, 2);
-        generator.Emit(OpCodes.Ldloca_S, 3);
-        generator.Emit(OpCodes.Ldloca_S, 4);
-        generator.Emit(OpCodes.Call, method);
+        LocalBuilder lclData = emit.DeclareLocal(typeof(IDatDictionary));
 
-        generator.Emit(OpCodes.Ldloca_S, 5);
-        generator.Emit(OpCodes.Ldarg_0);
-        generator.Emit(OpCodes.Stfld, pathField);
+        LocalBuilder lclHash = emit.DeclareLocal(typeof(byte[]));
+        LocalBuilder lclTranslationData = emit.DeclareLocal(typeof(IDatDictionary));
+        LocalBuilder lclFallbackTranslationData = emit.DeclareLocal(typeof(IDatDictionary));
+        LocalBuilder lclAssetInfo = emit.DeclareLocal(assetInfo);
 
-        generator.Emit(OpCodes.Ldloca_S, 5);
-        generator.Emit(OpCodes.Ldloc_2);
-        generator.Emit(OpCodes.Stfld, hashField);
+        emit.LoadArgument(0)
+            .LoadLocalAddress(lclData)
+            .LoadArgument(2)
+            .LoadLocalAddress(lclHash)
+            .LoadLocalAddress(lclTranslationData)
+            .LoadLocalAddress(lclFallbackTranslationData)
+            .Invoke(Accessor.GetMethod(GetData)!);
 
-        generator.Emit(OpCodes.Ldloca_S, 5);
-        generator.Emit(OpCodes.Ldloc_0);
-        generator.Emit(OpCodes.Stfld, assetDataField);
+        emit.LoadLocalAddress(lclAssetInfo)
+            .LoadArgument(0)
+            .SetInstanceFieldValue(pathField);
 
-        generator.Emit(OpCodes.Ldloca_S, 5);
-        generator.Emit(OpCodes.Ldloc_3);
-        generator.Emit(OpCodes.Stfld, translationDataField);
+        emit.LoadLocalAddress(lclAssetInfo)
+            .LoadLocalValue(lclHash)
+            .SetInstanceFieldValue(hashField);
 
-        generator.Emit(OpCodes.Ldloca_S, 5);
-        generator.Emit(OpCodes.Ldloc_S, 4);
-        generator.Emit(OpCodes.Stfld, fallbackTranslationDataField);
+        emit.LoadLocalAddress(lclAssetInfo)
+            .LoadLocalValue(lclData)
+            .SetInstanceFieldValue(assetDataField);
 
-        generator.Emit(OpCodes.Ldloca_S, 5);
-        generator.Emit(OpCodes.Ldloc_1);
-        generator.Emit(OpCodes.Stfld, assetErrorField);
+        emit.LoadLocalAddress(lclAssetInfo)
+            .LoadLocalValue(lclTranslationData)
+            .SetInstanceFieldValue(translationDataField);
 
-        generator.Emit(OpCodes.Ldloca_S, 5);
-        generator.Emit(OpCodes.Ldarg_1);
-        generator.Emit(OpCodes.Stfld, originField);
+        emit.LoadLocalAddress(lclAssetInfo)
+            .LoadLocalValue(lclFallbackTranslationData)
+            .SetInstanceFieldValue(fallbackTranslationDataField);
 
-        generator.Emit(OpCodes.Ldloc_S, 5);
-        generator.Emit(OpCodes.Call, loadFileMethod);
+        emit.LoadLocalAddress(lclAssetInfo)
+            .LoadArgument(2)
+            .SetInstanceFieldValue(assetErrorsField);
 
-        generator.Emit(OpCodes.Ret);
+        emit.LoadLocalAddress(lclAssetInfo)
+            .LoadArgument(1)
+            .SetInstanceFieldValue(originField);
 
-        LoadFile = (Action<string, AssetOrigin>)dm.CreateDelegate(typeof(Action<string, AssetOrigin>));
+        emit.LoadLocalValue(lclAssetInfo)
+            .Invoke(loadFileMethod)
+            .Return();
+
+        LoadFile = dynMethod.CreateDelegate();
     }
     private static class GetAssetCategoryCache<TAsset> where TAsset : Asset
     {

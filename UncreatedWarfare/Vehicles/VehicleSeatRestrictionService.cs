@@ -272,7 +272,7 @@ public class VehicleSeatRestrictionService :
                 break;
 
             case ChangeSeatsResult.AbandonMidAir:
-                _chatService.Send(e.Player, _translations.ExitVehicleAircraftToHigh);
+                _chatService.Send(e.Player, _translations.ExitVehicleAircraftTooHigh);
                 e.Cancel();
                 break;
 
@@ -296,7 +296,7 @@ public class VehicleSeatRestrictionService :
         switch (result)
         {
             case ChangeSeatsResult.AbandonMidAir:
-                _chatService.Send(e.Player, _translations.ExitVehicleAircraftToHigh);
+                _chatService.Send(e.Player, _translations.ExitVehicleAircraftTooHigh);
                 e.Cancel();
                 break;
 

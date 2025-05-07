@@ -163,7 +163,7 @@ public class AudioRecordManager : IHostedService
                                    .GetMethod(nameof(NetPakReader.ReadBytesPtr), BindingFlags.Instance | BindingFlags.Public);
         if (readbytesPtr == null)
         {
-            WarfareModule.Singleton.GlobalLogger.LogWarning("{0} - Failed to find NetPakReader.ReadBytesPtr(int, out byte[], out int).", method);
+            WarfareModule.Singleton.GlobalLogger.LogWarning($"{method} - Failed to find NetPakReader.ReadBytesPtr(int, out byte[], out int).");
             return instructions;
         }
 
@@ -171,100 +171,66 @@ public class AudioRecordManager : IHostedService
                                          .GetConstructor(BindingFlags.Instance | BindingFlags.Public, null, [ typeof(byte[]), typeof(int), typeof(int) ], null);
         if (arrSegmentCtor == null)
         {
-            WarfareModule.Singleton.GlobalLogger.LogWarning("{0} - Failed to find ArraySegment<byte>(byte[], int, int).", method);
+            WarfareModule.Singleton.GlobalLogger.LogWarning($"{method} - Failed to find ArraySegment<byte>(byte[], int, int).");
             return instructions;
         }
 
         FieldInfo? rpcField = typeof(PlayerVoice).GetField("SendPlayVoiceChat", BindingFlags.NonPublic | BindingFlags.Static);
         if (readbytesPtr == null)
         {
-            WarfareModule.Singleton.GlobalLogger.LogWarning("{0} - Failed to find PlayerVoice.SendPlayVoiceChat.", method);
+            WarfareModule.Singleton.GlobalLogger.LogWarning($"{method} - Failed to find PlayerVoice.SendPlayVoiceChat.");
             return instructions;
         }
+
+        Type? parameterType = Type.GetType("SDG.Unturned.PlayerVoice+SendPlayVoiceChatWriteParameters, Assembly-CSharp");
+        if (parameterType == null)
+        {
+            WarfareModule.Singleton.GlobalLogger.LogWarning($"{method} - Failed to find type SDG.Unturned.PlayerVoice.SendPlayVoiceChatWriteParameters.");
+            return instructions;
+        }
+
+        FieldInfo? byteArrayField = parameterType.GetField("source", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+        FieldInfo? compressedSizeField = parameterType.GetField("compressedSize", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+        FieldInfo? sourceOffsetField = parameterType.GetField("sourceOffset", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+        if (byteArrayField == null)
+            WarfareModule.Singleton.GlobalLogger.LogWarning($"{method} - Failed to find SendPlayVoiceChatWriteParameters.source.");
+        if (compressedSizeField == null)
+            WarfareModule.Singleton.GlobalLogger.LogWarning($"{method} - Failed to find SendPlayVoiceChatWriteParameters.compressedSize.");
+        if (sourceOffsetField == null)
+            WarfareModule.Singleton.GlobalLogger.LogWarning( $"{method} - Failed to find SendPlayVoiceChatWriteParameters.sourceOffset.");
+        if (byteArrayField == null || compressedSizeField == null || sourceOffsetField == null)
+        {
+            return instructions;
+        }
+
 
         MethodInfo invokeTarget = new Action<PlayerVoice, ArraySegment<byte>>(OnVoiceActivity).Method;
 
         List<CodeInstruction> ins = [ ..instructions ];
 
-        int readCallPos = -1;
+        LocalBuilder? parametersLocal = null;
+
         bool success = false;
         for (int i = 0; i < ins.Count; ++i)
         {
             CodeInstruction opcode = ins[i];
-            // find ReadBytesPtr call
-            if (readCallPos == -1 && opcode.Calls(readbytesPtr))
+            // find local of parameters struct
+            if (i > 0 && opcode.opcode == OpCodes.Initobj && opcode.operand is Type t && t == parameterType)
             {
-                readCallPos = i;
-                if (i == ins.Count - 1)
-                    break;
+                // last instruction should be a ldloca[.s] <LocalBuilder>
+                // there are no ldloca immidiate instructions
+                parametersLocal = ins[i - 1].operand as LocalBuilder;
             }
-            // find target of branch statement
-            else if (readCallPos != -1 && opcode.LoadsField(rpcField))
+            // find RPC call
+            else if (parametersLocal != null && opcode.LoadsField(rpcField))
             {
-                // locals are stored in display class since they're used in a lambda function.
-
-                // this can either be int or LocalBuilder
-                object? displayClassLocal = null;
-
-                FieldInfo? byteArrLocal = null,
-                           offsetLocal = null,
-                           lengthLocal = null;
-
-                // find display class local and fields in the display class
-                for (int j = readCallPos - 6; j < readCallPos; ++j)
-                {
-                    CodeInstruction backtrackOpcode = ins[j];
-                    if (backtrackOpcode.IsLdloc())
-                    {
-                        if (backtrackOpcode.opcode == OpCodes.Ldloc_0)
-                            displayClassLocal = 0;
-                        else if (backtrackOpcode.opcode == OpCodes.Ldloc_1)
-                            displayClassLocal = 1;
-                        else if (backtrackOpcode.opcode == OpCodes.Ldloc_2)
-                            displayClassLocal = 2;
-                        else if (backtrackOpcode.opcode == OpCodes.Ldloc_3)
-                            displayClassLocal = 3;
-                        else
-                            displayClassLocal = (LocalBuilder)backtrackOpcode.operand;
-                    }
-                    else if (backtrackOpcode.opcode == OpCodes.Ldfld || backtrackOpcode.opcode == OpCodes.Ldflda)
-                    {
-                        FieldInfo loadedField = (FieldInfo)backtrackOpcode.operand;
-                        if (lengthLocal == null)
-                            lengthLocal = loadedField;
-                        else if (byteArrLocal == null)
-                            byteArrLocal = loadedField;
-                        else if (offsetLocal == null)
-                            offsetLocal = loadedField;
-                    }
-                }
-
-                if (displayClassLocal == null || byteArrLocal == null || offsetLocal == null || lengthLocal == null)
-                {
-                    WarfareModule.Singleton.GlobalLogger.LogWarning("{0} - Failed to discover local fields or display class local. disp class: {1}, byte arr: {2}, offset: {3}, length: {4}.",
-                        method, displayClassLocal != null, byteArrLocal != null, offsetLocal != null, lengthLocal != null);
-                    break;
-                }
-
-                CodeInstruction startInstruction = new CodeInstruction(
-                    displayClassLocal switch
-                    {
-                        int index => index switch
-                        {
-                            0 => OpCodes.Ldloc_0,
-                            1 => OpCodes.Ldloc_1,
-                            2 => OpCodes.Ldloc_2,
-                            _ => OpCodes.Ldloc_3
-                        },
-                        _ => OpCodes.Ldloc
-                    }, displayClassLocal is LocalBuilder ? displayClassLocal : null);
                 ins.Insert(i, new CodeInstruction(OpCodes.Ldarg_0));
-                ins.Insert(i + 1, startInstruction);
-                ins.Insert(i + 2, new CodeInstruction(OpCodes.Ldfld, byteArrLocal));
-                ins.Insert(i + 3, new CodeInstruction(startInstruction.opcode, startInstruction.operand));
-                ins.Insert(i + 4, new CodeInstruction(OpCodes.Ldfld, offsetLocal));
-                ins.Insert(i + 5, new CodeInstruction(startInstruction.opcode, startInstruction.operand));
-                ins.Insert(i + 6, new CodeInstruction(OpCodes.Ldfld, lengthLocal));
+                ins.Insert(i + 1, new CodeInstruction(OpCodes.Ldloca, parametersLocal));
+                ins.Insert(i + 2, new CodeInstruction(OpCodes.Ldfld, byteArrayField));
+                ins.Insert(i + 3, new CodeInstruction(OpCodes.Ldloca, parametersLocal));
+                ins.Insert(i + 4, new CodeInstruction(OpCodes.Ldfld, sourceOffsetField));
+                ins.Insert(i + 5, new CodeInstruction(OpCodes.Ldloca, parametersLocal));
+                ins.Insert(i + 6, new CodeInstruction(OpCodes.Ldfld, compressedSizeField));
 
                 ins.Insert(i + 7, new CodeInstruction(OpCodes.Newobj, arrSegmentCtor));
                 ins.Insert(i + 8, new CodeInstruction(OpCodes.Call, invokeTarget));
@@ -274,12 +240,12 @@ public class AudioRecordManager : IHostedService
             }
         }
 
-        WarfareModule.Singleton.GlobalLogger.LogInformation("{0} - Patched incoming voice data.", method);
+        WarfareModule.Singleton.GlobalLogger.LogInformation($"{method} - Patched incoming voice data.");
 
         if (success)
             return ins;
 
-        WarfareModule.Singleton.GlobalLogger.LogWarning("{0} - Failed to patch voice to copy voice data for recording.", method);
+        WarfareModule.Singleton.GlobalLogger.LogWarning($"{method} - Failed to patch voice to copy voice data for recording.");
         return ins;
     }
 }
