@@ -234,6 +234,12 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
                     _hasPlayerLock = true;
                 }
 
+                Layout oldLayout = _warfare.GetActiveLayout();
+                if (oldLayout.IsActive)
+                {
+                    await oldLayout.EndLayoutAsync(CancellationToken.None);
+                }
+
                 if (!_hasSessionLock)
                 {
                     await _sessionService.WaitAsync();
@@ -241,15 +247,10 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
                     _hasSessionLock = true;
                 }
 
-                Layout oldLayout = _warfare.GetActiveLayout();
-                if (oldLayout.IsActive)
-                {
-                    await oldLayout.EndLayoutAsync(CancellationToken.None);
-                }
-
                 oldLayout.Dispose();
                 await UniTask.SwitchToMainThread(CancellationToken.None);
                 _warfare.SetActiveLayout(null);
+                _logger.LogDebug($"Unloaded previous layout {oldLayout.LayoutInfo.DisplayName}.");
             }
             else
             {
@@ -758,6 +759,7 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
             {
                 token.ThrowIfCancellationRequested();
                 await UniTask.SwitchToMainThread(token);
+                _logger.LogTrace($"Hosting {hostedServices[i].GetType()}.");
                 await hostedServices[i].StartAsync(token);
                 continue;
             }
@@ -808,7 +810,8 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
                 ILayoutHostedService hostedService = hostedServices[i];
                 try
                 {
-                    tasks[i] = hostedService.StopAsync(CancellationToken.None);
+                    _logger.LogTrace($"Unhosting {hostedServices[i].GetType()}.");
+                    tasks[i] = hostedService.StopAsync(CancellationToken.None).Preserve();
                 }
                 catch (Exception ex)
                 {
@@ -871,7 +874,8 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
         {
             try
             {
-                tasks[i] = hostedServices[i].StopAsync(CancellationToken.None);
+                _logger.LogTrace($"Unhosting {hostedServices[i].GetType()}.");
+                tasks[i] = hostedServices[i].StopAsync(CancellationToken.None).Preserve();
             }
             catch (Exception ex)
             {
@@ -883,13 +887,21 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
 
         try
         {
-            await UniTask.WhenAll(tasks);
+            Task waitTask = UniTask.WhenAll(tasks).AsTask();
+            await Task.WhenAny(waitTask, Task.Delay(15000));
+            if (!waitTask.IsCompleted)
+            {
+            _logger.LogError("15 second timeout reached while ending layout {0}:", layout);
+                FormattingUtility.PrintTaskErrors(_logger, tasks, hostedServices);
+            }
         }
         catch
         {
             _logger.LogError("Errors encountered while ending layout {0}:", layout);
             FormattingUtility.PrintTaskErrors(_logger, tasks, hostedServices);
         }
+
+        _logger.LogDebug("Unhosted layout.");
     }
 
     void IEventListener<PlayerJoined>.HandleEvent(PlayerJoined e, IServiceProvider serviceProvider)

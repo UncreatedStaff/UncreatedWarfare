@@ -141,7 +141,8 @@ public static class FormattingUtility
     /// Converts a timespan to a string in the form '3d 4hr 21min etc'. Will be 'perm[anent]' if <paramref name="timeSpan"/> is <see cref="Timeout.InfiniteTimeSpan"/> (or any negative <see cref="TimeSpan"/>).
     /// </summary>
     public static string ToTimeString(TimeSpan timeSpan, int figures = -1, bool space = false)
-    { if (timeSpan.Ticks < 0L)
+    {
+        if (timeSpan.Ticks < 0L)
             return "permanent";
         
         if (timeSpan.Ticks == 0)
@@ -705,8 +706,15 @@ public static class FormattingUtility
     {
         for (int i = 0; i < tasks.Length; ++i)
         {
-            if (tasks[i].Status is not UniTaskStatus.Faulted and not UniTaskStatus.Canceled)
+            UniTaskStatus status = tasks[i].Status;
+            if (status is not UniTaskStatus.Faulted and not UniTaskStatus.Canceled)
+            {
+                if (status == UniTaskStatus.Pending)
+                {
+                    logger.LogWarning(Accessor.Formatter.Format(hostedServices[i].GetType()) + " - not completed");
+                }
                 continue;
+            }
 
             if (tasks[i].AsTask().Exception is { } ex)
             {

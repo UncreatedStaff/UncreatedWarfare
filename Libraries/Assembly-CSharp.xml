@@ -5038,6 +5038,12 @@
             Asset providing tags. For example, a barricade item.
             </summary>
         </member>
+        <member name="M:SDG.Unturned.ICraftingTagProvider.HasAnyCraftingTagsConfigured">
+            <summary>
+            True if GetAvailableTags can ever add any tags.
+            Used to skip unnecessary line-of-sight tests against (for example) ordinary structures and the like.
+            </summary>
+        </member>
         <member name="P:SDG.Unturned.CraftingTagProviderGetAvailableTagsParameters.ResultTags">
             <summary>
             All tags added by this crafting tag provider.
@@ -9430,6 +9436,11 @@
             Applied if greater than zero. Defaults to 128.
             </summary>
         </member>
+        <member name="P:SDG.Unturned.SleekTagButton.TooltipAppendedText">
+            <summary>
+            Extra text added to tooltip.
+            </summary>
+        </member>
         <member name="T:SDG.Unturned.MenuSurvivorsClothingBoxUI.BoxEntry">
             <summary>
             Internal struct menu uses to sort items in box.
@@ -12415,6 +12426,16 @@
             For example, two workbenches providing the same tags shouldn't show two UI listings.
             </summary>
         </member>
+        <member name="F:SDG.Unturned.EBlueprintPreferences.Ignored">
+            <summary>
+            Player does not want to see this blueprint.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.EBlueprintPreferences.Favorited">
+            <summary>
+            Player wants to save this blueprint in a special category.
+            </summary>
+        </member>
         <member name="M:SDG.Unturned.PlayerCrafting.UpdateAvailableCraftingTags">
             <summary>
             Find nearby crafting tag providers and query their tags.
@@ -12455,15 +12476,16 @@
             If updating behavior here please remember to update <see cref="M:SDG.Unturned.PlayerCrafting.UpdateBlueprintInputItemStatus(SDG.Unturned.UpdateBlueprintStatusParameters@,SDG.Unturned.BlueprintSupply,SDG.Unturned.BlueprintInputItemStatus,SDG.Unturned.ItemJar)"/>.
             </summary>
         </member>
-        <member name="M:SDG.Unturned.PlayerCrafting.getIgnoringBlueprint(SDG.Unturned.Blueprint)">
+        <member name="M:SDG.Unturned.PlayerCrafting.GetBlueprintPreferences(SDG.Unturned.Blueprint)">
             <summary>
-            Get whether this player is ignoring a blueprint.
+            Get local player's per-blueprint preferences.
             </summary>
         </member>
-        <member name="M:SDG.Unturned.PlayerCrafting.setIgnoringBlueprint(SDG.Unturned.Blueprint,System.Boolean)">
+        <member name="M:SDG.Unturned.PlayerCrafting.SetBlueprintPreferences(SDG.Unturned.Blueprint,SDG.Unturned.EBlueprintPreferences)">
             <summary>
-            Set whether this player is ignoring a blueprint.
-            This is a kludge to help with accidentally crafting items like blindfolds.
+            Set local player's per-blueprint preferences.
+            This is helpful both to prevent accidentally crafting certain blueprints (like blindfolds) when click to
+            craft is enabled, and to save frequently used blueprints.
             </summary>
         </member>
         <member name="F:SDG.Unturned.PlayerCrafting.nearbyCraftingTags">
