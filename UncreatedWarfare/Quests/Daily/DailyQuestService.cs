@@ -18,6 +18,7 @@ using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Quests.Daily.Workshop;
 using Uncreated.Warfare.Services;
+using Uncreated.Warfare.Steam;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Timing;
@@ -40,7 +41,7 @@ public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoin
     // basic JSON storage for the generated daily quest file which stored the randomly generated quests for the next 2 weeks
     private readonly DailyQuestConfiguration _config;
 
-    // handles waiting for warnings before regneration then finally the regeneration itself.
+    // handles waiting for warnings before regeneration then finally the regeneration itself.
     // didnt want to use a coroutine here because i think system timers are more effecient for longer running tasks (maybe idk)
     private Timer? _tickTimer;
 
@@ -60,6 +61,7 @@ public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoin
     private bool _enabled;
     private readonly bool _modEnabled;
     private readonly string? _steamcmdPath;
+    private readonly string? _modName;
     private readonly string? _modIconPath;
     private readonly string? _steamcmdLoginUsername;
     private readonly string? _steamcmdLoginPassword;
@@ -142,14 +144,10 @@ public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoin
 
         _workshopId = section.GetValue<ulong>("workshop_id");
 
-        if (_workshopId == 0)
-        {
-            _workshopId = _uploader.ReadModIdFromFile(_uploader.GetVdfPath(GetModFolder()));
-        }
-
         _enabled = section.GetValue<bool>("enabled");
         _steamcmdPath = section["steamcmd"];
         _modIconPath = section["mod_icon"];
+        _modName = section["mod_name"];
         _steamcmdLoginUsername = section["steam_username"];
 
         try
@@ -406,24 +404,14 @@ public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoin
         if (!uploadMod)
             return false;
 
-        /*
-         *  WorkshopUploader uses the SteamCMD CLI to upload the mod to the workshop using predefined credentials in the config.
-         *
-         *  This uses a library called Pty.Net which acts as a virtual terminal tricking SteamCMD into thinking its displaying on a console window.
-         *  Windows recently added support for 'ConPTY' which is what the library uses on Windows. On Linux and OSX it just uses the built-in PTY implementation.
-         *
-         *  Usually you could just use the Process API but SteamCMD is written in a way that makes it impossible to read from the output buffer normally,
-         *  Pty.Net is a workaround.
-         *
-         */
-
         string iconPath = string.IsNullOrWhiteSpace(_modIconPath)
             ? Path.GetFullPath(_modIconPath, _module.HomeDirectory)
             : string.Empty;
 
+        Console.WriteLine("1");
         ulong? modId = await _uploader.UploadMod(new WorkshopUploadParameters
         {
-            Title = "Uncreated Daily Quests",
+            Title = _modName ?? "Uncreated Daily Quests",
             ChangeNote = "Added this week's quests.",
             ContentFolder = GetModFolder(),
             Description = "Automatically generated workshop item that is filled with automatically generated daily quests for the next week.",
@@ -446,7 +434,7 @@ public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoin
             return true;
         }
 
-        _logger.LogInformation("Mod upload failed.");
+        _logger.LogWarning("Mod upload failed.");
         return false;
     }
 

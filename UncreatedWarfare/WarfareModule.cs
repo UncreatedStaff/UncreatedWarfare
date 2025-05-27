@@ -4,7 +4,6 @@ using DanielWillett.ModularRpcs.Reflection;
 using DanielWillett.ModularRpcs.Routing;
 using DanielWillett.ModularRpcs.Serialization;
 using DanielWillett.ReflectionTools;
-using DanielWillett.ReflectionTools.Formatting;
 using DanielWillett.ReflectionTools.IoC;
 using HarmonyLib;
 using Microsoft.EntityFrameworkCore;
@@ -21,7 +20,6 @@ using StackCleaner;
 using Stripe;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -274,6 +272,7 @@ public sealed class WarfareModule
     }
 #endif
 
+    [MethodImpl(MethodImplOptions.NoInlining)]
     private void Init()
     {
         Singleton = this;

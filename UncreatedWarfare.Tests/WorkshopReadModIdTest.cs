@@ -1,5 +1,5 @@
 using NUnit.Framework;
-using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Steam;
 
 namespace Uncreated.Warfare.Tests;
 public class WorkshopReadModIdTest

@@ -1,0 +1,23 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+
+    <RootNamespace>Uncreated.Warfare.Steam</RootNamespace>
+
+  </PropertyGroup>
+
+  <ItemGroup>
+
+    <Reference Include="Pty.Net">
+      <HintPath>../Libraries/Pty.Net/Pty.Net.dll</HintPath>
+    </Reference>
+
+  </ItemGroup>
+
+</Project>

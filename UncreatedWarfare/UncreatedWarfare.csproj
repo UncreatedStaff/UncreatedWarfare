@@ -336,11 +336,6 @@
       <Private>!$(CopyToModule)</Private>
     </Reference>
 
-    <Reference Include="Pty.Net">
-      <HintPath>../Libraries/Pty.Net/Pty.Net.dll</HintPath>
-      <Private>!$(CopyToModule)</Private>
-    </Reference>
-
   </ItemGroup>
 
   <ItemGroup>
