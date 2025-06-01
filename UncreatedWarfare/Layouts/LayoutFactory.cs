@@ -265,6 +265,7 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
             if (_hasSessionLock)
             {
                 _sessionService.Release();
+                _hasSessionLock = false;
             }
             IsLoading = false;
             if (playerJoinLockTaken)
@@ -334,6 +335,7 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
         if (_hasSessionLock)
         {
             _sessionService.Release();
+            _hasSessionLock = false;
         }
 
         await UniTask.SwitchToMainThread(CancellationToken.None);

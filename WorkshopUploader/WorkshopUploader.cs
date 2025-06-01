@@ -169,33 +169,15 @@ public static class WorkshopUploader
 
                 Thread readerThread = new Thread(_ =>
                 {
+                    byte[] numArray = new byte[1024];
                     try
                     {
-                        byte[] numArray = new byte[1024];
-                        try
-                        {
-                            int count;
-                            while (_connection?.ReaderStream != null && (count = _connection.ReaderStream.Read(numArray, 0, numArray.Length)) != 0)
-                                outStream.Write(numArray.AsSpan(0, count));
-                        }
-                        catch { /* stream ended */ }
+                        int count;
+                        while (_connection?.ReaderStream != null && (count = _connection.ReaderStream.Read(numArray, 0, numArray.Length)) != 0)
+                            outStream.Write(numArray.AsSpan(0, count));
                     }
                     catch (ThreadAbortException) { throw; }
-                    // ReSharper disable once AccessToDisposedClosure
-                    catch (OperationCanceledException) when (cts.IsCancellationRequested) { }
-                    catch (ObjectDisposedException)
-                    {
-
-                    }
-                    catch (IOException ex)
-                    {
-                        // file can throw IOException after process exits
-                        if (!exitCode.HasValue)
-                        {
-                            Console.WriteLine("Exception reading SteamCMD output.");
-                            Console.WriteLine(ex);
-                        }
-                    }
+                    catch { /* stream ended */ }
                 });
 
                 readerThread.Start();
