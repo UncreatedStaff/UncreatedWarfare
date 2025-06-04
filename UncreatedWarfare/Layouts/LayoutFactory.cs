@@ -890,10 +890,10 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
         try
         {
             Task waitTask = UniTask.WhenAll(tasks).AsTask();
-            await Task.WhenAny(waitTask, Task.Delay(15000));
+            await Task.WhenAny(waitTask, Task.Delay(15000, token));
             if (!waitTask.IsCompleted)
             {
-            _logger.LogError("15 second timeout reached while ending layout {0}:", layout);
+                _logger.LogError("15 second timeout reached while ending layout {0}:", layout);
                 FormattingUtility.PrintTaskErrors(_logger, tasks, hostedServices);
             }
         }

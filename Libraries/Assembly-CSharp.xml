@@ -8765,16 +8765,6 @@
             At low framerate deltaTime can be so high the spring explodes unless we use a fixed timestep.
             </summary>
         </member>
-        <member name="F:SDG.Unturned.AirdropAsset.barricadeRef">
-            <summary>
-            Interactable storage barricade to spawn at the drop position.
-            </summary>
-        </member>
-        <member name="F:SDG.Unturned.AirdropAsset.model">
-            <summary>
-            Prefab to spawn falling from the aircraft.
-            </summary>
-        </member>
         <member name="T:SDG.Unturned.HousingEdge">
             <summary>
             Initially these were structs so that they would be adjacent in memory and therefore faster to iterate lots of them,
@@ -9032,6 +9022,16 @@
         <member name="T:SDG.Unturned.OncePerFrameGuard">
             <summary>
             True once per frame, false otherwise.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.AirdropAsset.barricadeRef">
+            <summary>
+            Interactable storage barricade to spawn at the drop position.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.AirdropAsset.model">
+            <summary>
+            Prefab to spawn falling from the aircraft.
             </summary>
         </member>
         <member name="F:SDG.Unturned.Carepackage.barricadeID">
