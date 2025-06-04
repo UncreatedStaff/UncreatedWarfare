@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <!-- Set this to false for migrations -->
   <PropertyGroup>
@@ -345,10 +345,6 @@
     <Compile Update="Commands\Whitelist\WhitelistAddCommand.cs">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </Compile>
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Migrations\" />
   </ItemGroup>
 
   <!-- Copy unturned files from U3DS to ~/Libraries -->

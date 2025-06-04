@@ -2,6 +2,7 @@ using DanielWillett.ModularRpcs.Serialization;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Translations.ValueFormatters;
@@ -44,12 +45,12 @@ public class WarfareRank : ITranslationArgument, IRpcSerializable
     /// <summary>
     /// A reference to the next rank.
     /// </summary>
-    public WarfareRank? Next { get; private set; }
+    public WarfareRank? Next { get; [EditorBrowsable(EditorBrowsableState.Never)] set; }
 
     /// <summary>
     /// A reference to the previous rank.
     /// </summary>
-    public WarfareRank? Previous { get; private set; }
+    public WarfareRank? Previous { get; [EditorBrowsable(EditorBrowsableState.Never)] set; }
 
     // for serialization
     public WarfareRank()

@@ -7,24 +7,21 @@ using System.Text.RegularExpressions;
 
 namespace Uncreated.Warfare.Steam;
 
-public struct WorkshopUploadParameters
+public class WorkshopUploadParameters
 {
-    [JsonInclude]
-    public ulong ModId;
-    [JsonInclude]
-    public string SteamCmdPath;
-    [JsonInclude]
-    public string Username, Password;
-    [JsonInclude]
-    public string ContentFolder;
-    [JsonInclude]
-    public string ImageFile;
-    [JsonInclude, JsonConverter(typeof(JsonStringEnumConverter<ESteamWorkshopVisibility>))]
-    public ESteamWorkshopVisibility Visibility;
-    [JsonInclude]
-    public string Title, Description, ChangeNote;
-    [JsonInclude]
-    public string LogFileOutput;
+    public required ulong ModId { get; set; }
+    public required string SteamCmdPath { get; set; }
+    public required string Username { get; set; }
+    public required string Password { get; set; }
+    public required string ContentFolder { get; set; }
+    public required string ImageFile { get; set; }
+
+    [JsonConverter(typeof(JsonStringEnumConverter<ESteamWorkshopVisibility>))]
+    public required ESteamWorkshopVisibility Visibility { get; set; }
+    public required string Title { get; set; }
+    public required string Description { get; set; }
+    public required string ChangeNote { get; set; }
+    public string? LogFileOutput { get; set; }
 }
 
 public enum ESteamWorkshopVisibility : byte

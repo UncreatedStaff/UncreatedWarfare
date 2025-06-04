@@ -419,7 +419,8 @@ public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoin
             Username = _steamcmdLoginUsername!,
             Password = _steamcmdLoginPassword!,
             ModId = _workshopId,
-            ImageFile = iconPath
+            ImageFile = iconPath,
+            Visibility = ESteamWorkshopVisibility.Public
         }, _logger, token);
 
         if (modId.HasValue)

@@ -143,7 +143,7 @@ public class WarfareDbContext : DbContext, IUserDataDbContext, ILanguageDbContex
         //            Array.Empty<bool>(), typeof(double), new DoubleTypeMapping("double", DbType.Double)));
         //    });
         //}
-
+        
         /* Adds preset value converters */
         WarfareDatabaseReflection.ApplyValueConverterConfig(modelBuilder, _logger);
 

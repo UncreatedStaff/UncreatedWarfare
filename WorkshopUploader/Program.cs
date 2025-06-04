@@ -16,11 +16,12 @@ internal static class Program
     
     private static async Task<int> Main(string[] args)
     {
-        WorkshopUploadParameters parameters = (WorkshopUploadParameters)JsonSerializer.Deserialize(
-            Convert.FromBase64String(args[0]),
-            typeof(WorkshopUploadParameters),
-            WorkshopUploadParametersContext.Default
-        )!;
+        WorkshopUploadParameters parameters;
+        
+        using (FileStream fs = new FileStream(string.Join(' ', args), FileMode.Open, FileAccess.Read, FileShare.Read, 1024, FileOptions.SequentialScan))
+        {
+            parameters = (WorkshopUploadParameters)JsonSerializer.Deserialize(fs, typeof(WorkshopUploadParameters), WorkshopUploadParametersContext.Default)!;
+        }
 
         _cancelToken = new CancellationTokenSource();
 

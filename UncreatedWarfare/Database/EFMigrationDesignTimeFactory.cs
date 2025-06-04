@@ -1,4 +1,4 @@
-﻿#if DEBUG && NETCOREAPP
+﻿#if NETCOREAPP
 using DanielWillett.ReflectionTools;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;

@@ -10,33 +10,28 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using Uncreated.Warfare.Util;
-using Exception = System.Exception;
 
 namespace Uncreated.Warfare.Steam;
 
-public struct WorkshopUploadParameters
+public class WorkshopUploadParameters
 {
-    [JsonInclude]
-    public ulong ModId;
-    [JsonInclude]
-    public string SteamCmdPath;
-    [JsonInclude]
-    public string Username, Password;
-    [JsonInclude]
-    public string ContentFolder;
-    [JsonInclude]
-    public string ImageFile;
-    [JsonInclude, JsonConverter(typeof(JsonStringEnumConverter<ESteamWorkshopVisibility>))]
-    public ESteamWorkshopVisibility Visibility;
-    [JsonInclude]
-    public string Title, Description, ChangeNote;
-    [JsonInclude]
-    public string LogFileOutput;
+    public required ulong ModId { get; set; }
+    public required string SteamCmdPath { get; set; }
+    public required string Username { get; set; }
+    public required string Password { get; set; }
+    public required string ContentFolder { get; set; }
+    public required string ImageFile { get; set; }
+
+    [JsonConverter(typeof(JsonStringEnumConverter<ESteamWorkshopVisibility>))]
+    public required ESteamWorkshopVisibility Visibility { get; set; }
+    public required string Title { get; set; }
+    public required string Description { get; set; }
+    public required string ChangeNote { get; set; }
+    public string? LogFileOutput { get; set; }
 }
 
 public enum ESteamWorkshopVisibility : byte
@@ -63,15 +58,17 @@ internal partial class WorkshopUploadParametersContext : JsonSerializerContext;
 public class WorkshopUploader
 {
     private readonly ILogger<WorkshopUploader> _logger;
+    private readonly WarfareModule _module;
     private readonly SemaphoreSlim _sempahore = new SemaphoreSlim(1, 1);
 
     internal static string? SteamCode;
 
     private ulong? _modId;
 
-    public WorkshopUploader(ILogger<WorkshopUploader> logger)
+    public WorkshopUploader(ILogger<WorkshopUploader> logger, WarfareModule module)
     {
         _logger = logger;
+        _module = module;
     }
 
     /// <summary>
@@ -152,16 +149,20 @@ public class WorkshopUploader
             {
                 parameters.LogFileOutput = Path.Combine(UnturnedPaths.RootDirectory.FullName, "Logs", "steamcmd.ansi");
 
-                MemoryStream arg = new MemoryStream();
-                JsonSerializer.Serialize(arg, parameters, typeof(WorkshopUploadParameters), WorkshopUploadParametersContext.Default);
-
-                arg.TryGetBuffer(out ArraySegment<byte> utf8);
+                string parametersFile = Path.Combine(_module.HomeDirectory, "Quests", "mod_upload_params.json");
+                using (FileStream fs = new FileStream(parametersFile, FileMode.Create, FileAccess.Write, FileShare.Read))
+                {
+                    JsonSerializer.Serialize(fs, parameters, typeof(WorkshopUploadParameters), WorkshopUploadParametersContext.Default);
+                }
 
                 Console.WriteLine("3");
-                ProcessStartInfo startInfo = new ProcessStartInfo(dllPath, Convert.ToBase64String(utf8))
+                ProcessStartInfo startInfo = new ProcessStartInfo(dllPath, $"\"{parametersFile}\"")
                 {
                     // needed for Pty.NET on Ubuntu (see https://github.com/microsoft/vs-pty.net/issues/32) on .NET 7+
-                    Environment = { { "DOTNET_EnableWriteXorExecute", "0" } },
+                    Environment =
+                    {
+                        { "DOTNET_EnableWriteXorExecute", "0" }
+                    },
                     CreateNoWindow = true,
                     ErrorDialog = false,
                     UseShellExecute = false,
@@ -173,7 +174,7 @@ public class WorkshopUploader
                 process = Process.Start(startInfo);
                 if (process == null)
                 {
-                    logger.LogError($"Failed to start process {dllPath} {Encoding.UTF8.GetString(utf8)}.");
+                    logger.LogError($"Failed to start process {dllPath}.");
                     return null;
                 }
 
@@ -355,7 +356,7 @@ public class WorkshopUploader
         Match match = regex.Match(text);
         if (match.Success)
         {
-            Group? grp = match.Groups.LastOrDefault();
+            Group? grp = match.Groups.AsEnumerable<Group>().LastOrDefault();
             if (grp is { Value: { Length: > 0 } modIdStr } && ulong.TryParse(modIdStr, NumberStyles.Number, CultureInfo.InvariantCulture, out ulong modId))
                 return modId;
         }
