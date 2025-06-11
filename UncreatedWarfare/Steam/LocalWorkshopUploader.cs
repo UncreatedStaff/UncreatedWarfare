@@ -8,77 +8,70 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Steam;
 
-public class WorkshopUploadParameters
-{
-    public required ulong ModId { get; set; }
-    public required string SteamCmdPath { get; set; }
-    public required string Username { get; set; }
-    public required string Password { get; set; }
-    public required string ContentFolder { get; set; }
-    public required string ImageFile { get; set; }
-
-    [JsonConverter(typeof(JsonStringEnumConverter<ESteamWorkshopVisibility>))]
-    public required ESteamWorkshopVisibility Visibility { get; set; }
-    public required string Title { get; set; }
-    public required string Description { get; set; }
-    public required string ChangeNote { get; set; }
-    public string? LogFileOutput { get; set; }
-}
-
-public enum ESteamWorkshopVisibility : byte
-{
-    Public = 0,
-    FriendsOnly = 1,
-    Hidden = 2,
-    Unlisted = 3
-}
-
-[JsonSerializable(typeof(ESteamWorkshopVisibility), GenerationMode = JsonSourceGenerationMode.Serialization | JsonSourceGenerationMode.Metadata)]
-[JsonSerializable(typeof(WorkshopUploadParameters), GenerationMode = JsonSourceGenerationMode.Serialization | JsonSourceGenerationMode.Metadata)]
-internal partial class WorkshopUploadParametersContext : JsonSerializerContext;
-
 /// <summary>
-/// Handles programmatically uploading workshop files.
+/// Uploads workshop content using a process started locally.
 /// </summary>
-/// <remarks>
-/// <para>
-/// This uses the SteamCMD CLI to upload the mod to the workshop using predefined credentials in the config.
-/// </para>
-///</remarks>
 [Priority(100)]
-public class WorkshopUploader
+public class LocalWorkshopUploader : IWorkshopUploader
 {
-    private readonly ILogger<WorkshopUploader> _logger;
+    private readonly ILogger<LocalWorkshopUploader> _logger;
     private readonly WarfareModule _module;
     private readonly SemaphoreSlim _sempahore = new SemaphoreSlim(1, 1);
 
-    internal static string? SteamCode;
+    /// <inheritdoc />
+    public string? SteamCode
+    {
+        get => _steamCode;
+        set
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                value = null;
+
+            _steamCode = value;
+            if (value == null)
+                return;
+
+            try
+            {
+                SteamCodeReceived?.Invoke(value);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error invoking SteamCodeReceived.");
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    public event Action<string?>? SteamCodeReceived;
 
     private ulong? _modId;
+    private string? _steamCode;
 
-    public WorkshopUploader(ILogger<WorkshopUploader> logger, WarfareModule module)
+    public LocalWorkshopUploader(ILogger<LocalWorkshopUploader> logger, WarfareModule module)
     {
         _logger = logger;
         _module = module;
     }
 
+    private class UploadState
+    {
+        public bool WasExitFailure;
+    }
+
     /// <summary>
     /// Uploads a mod to the Steam Workshop using SteamCMD.
     /// </summary>
-    public async Task<ulong?> UploadMod(WorkshopUploadParameters parameters, ILogger? logger, CancellationToken token = default)
+    public async Task<ulong?> UploadMod(WorkshopUploadParameters parameters, CancellationToken token = default)
     {
-        logger ??= _logger;
-
-        using IDisposable? scope = logger.BeginScope("Upload");
+        using IDisposable? scope = _logger.BeginScope("Upload");
 
         parameters.SteamCmdPath = Path.GetFullPath(parameters.SteamCmdPath);
 
@@ -106,7 +99,6 @@ public class WorkshopUploader
             return null;
         }
 
-        Console.WriteLine("2");
         await _sempahore.WaitAsync(token);
         try
         {
@@ -138,13 +130,13 @@ public class WorkshopUploader
                     }
                     catch (Exception ex)
                     {
-                        logger.LogWarning(ex, "Failed to kill process after cancel.");
+                        _logger.LogWarning(ex, "Failed to kill process after cancel.");
                     }
                 }, CancellationToken.None);
                 // ReSharper restore AccessToDisposedClosure
             });
 
-            StrongBox<bool> wasExitFailure = new StrongBox<bool>();
+            UploadState state = new UploadState();
             try
             {
                 parameters.LogFileOutput = Path.Combine(UnturnedPaths.RootDirectory.FullName, "Logs", "steamcmd.ansi");
@@ -155,7 +147,6 @@ public class WorkshopUploader
                     JsonSerializer.Serialize(fs, parameters, typeof(WorkshopUploadParameters), WorkshopUploadParametersContext.Default);
                 }
 
-                Console.WriteLine("3");
                 ProcessStartInfo startInfo = new ProcessStartInfo(dllPath, $"\"{parametersFile}\"")
                 {
                     // needed for Pty.NET on Ubuntu (see https://github.com/microsoft/vs-pty.net/issues/32) on .NET 7+
@@ -170,42 +161,39 @@ public class WorkshopUploader
                     RedirectStandardInput = true
                 };
 
-                Console.WriteLine("4");
                 process = Process.Start(startInfo);
                 if (process == null)
                 {
-                    logger.LogError($"Failed to start process {dllPath}.");
+                    _logger.LogError($"Failed to start process {dllPath}.");
                     return null;
                 }
 
-                Console.WriteLine("5");
                 process.EnableRaisingEvents = true;
-                logger.LogTrace($"Started process: {process.Id}.");
+                _logger.LogTrace($"Started process: {process.Id}.");
 
                 TaskCompletionSource<int> exitCodeSrc = new TaskCompletionSource<int>();
 
                 process.BeginOutputReadLine();
                 process.OutputDataReceived += (sender, args) =>
                 {
-                    logger.LogDebug("Output: \"" + args.Data.Replace("\e", "[ESC]") + "\"");
-                    ProcessLineOutput(args.Data, (Process)sender, logger, wasExitFailure);
+                    _logger.LogDebug("Output: \"" + args.Data.Replace("\e", "[ESC]") + "\"");
+                    ProcessLineOutput(args.Data, (Process)sender, state);
                 };
 
                 process.Exited += (_, _) =>
                 {
-                    logger.LogTrace("Process exited.");
+                    _logger.LogTrace("Process exited.");
                     // ReSharper disable AccessToDisposedClosure
                     if (process == null)
                         return;
 
                     int exitCode = process.ExitCode;
-                    logger.LogTrace($"Process exited: {exitCode}.");
+                    _logger.LogTrace($"Process exited: {exitCode}.");
                     cts.Cancel();
                     exitCodeSrc.TrySetResult(exitCode);
                     // ReSharper restore AccessToDisposedClosure
                 };
 
-                Console.WriteLine("6");
                 await Task.WhenAny(Task.Delay(TimeSpan.FromMinutes(15), token), exitCodeSrc.Task);
 
                 if (!exitCodeSrc.Task.IsCompleted)
@@ -215,9 +203,9 @@ public class WorkshopUploader
 
                 exitCode = exitCodeSrc.Task.Result;
 
-                logger.LogTrace("Waiting for exit... ({0})", exitCode);
+                _logger.LogTrace("Waiting for exit... ({0})", exitCode);
                 process.WaitForExit();
-                logger.LogTrace("WorkshopUploader exited: {0}.", exitCode);
+                _logger.LogTrace("WorkshopUploader exited: {0}.", exitCode);
                 process.Dispose();
                 process = null;
             }
@@ -231,11 +219,11 @@ public class WorkshopUploader
                 catch { /* ignored */ }
 
                 if (exitCode == -1)
-                    logger.LogError(ex, "Unable to upload mod. Unknown exit code.");
+                    _logger.LogError(ex, "Unable to upload mod. Unknown exit code.");
                 else
-                    logger.LogError(ex, "Unable to upload mod. Exit code: {0}.", exitCode);
+                    _logger.LogError(ex, "Unable to upload mod. Exit code: {0}.", exitCode);
 
-                wasExitFailure.Value = true;
+                state.WasExitFailure = true;
             }
             finally
             {
@@ -244,7 +232,7 @@ public class WorkshopUploader
                 reg.Dispose();
             }
 
-            return exitCode == 0 && !wasExitFailure.Value ? _modId : null;
+            return exitCode == 0 && !state.WasExitFailure ? _modId : null;
         }
         finally
         {
@@ -255,33 +243,41 @@ public class WorkshopUploader
     /// <summary>
     /// Invoked with output from the WorkshopUploader program.
     /// </summary>
-    private void ProcessLineOutput(string text, Process process, ILogger logger, StrongBox<bool> wasExitFailure)
+    private void ProcessLineOutput(string text, Process process, UploadState state)
     {
         if (text.Equals("Waiting for steam guard code...", StringComparison.Ordinal))
         {
-            WaitForSteamGuardCode(process, logger, wasExitFailure);
+            WaitForSteamGuardCode(process, _logger, state);
         }
         else if (text.Equals("Login failed: invalid credentials.", StringComparison.Ordinal))
         {
-            logger.LogError("SteamCMD encountered an error logging into a Steam account.");
+            _logger.LogError("SteamCMD encountered an error logging into a Steam account.");
         }
         else if (text.Equals("Received steam guard code.", StringComparison.Ordinal))
         {
-            logger.LogInformation("Supplied Steam Guard code to SteamCMD.");
+            _logger.LogInformation("Supplied Steam Guard code to SteamCMD.");
         }
         else if (text.Equals("Steam Guard Code expired.", StringComparison.Ordinal))
         {
-            logger.LogError("Failed to supply a Steam Guard code to SteamCMD in time.");
+            _logger.LogError("Failed to supply a Steam Guard code to SteamCMD in time.");
         }
         else if (text.StartsWith("Complete. Mod ID: ", StringComparison.Ordinal)
                  && ulong.TryParse(text.AsSpan(18), NumberStyles.Number, CultureInfo.InvariantCulture, out ulong modId))
         {
-            logger.LogDebug($"Mod upload completed. ID: {modId}.");
+            _logger.LogDebug($"Mod upload completed. ID: {modId}.");
             _modId = modId;
         }
     }
 
-    private void WaitForSteamGuardCode(Process process, ILogger logger, StrongBox<bool> wasExitFailure)
+    private class SteamCodeListener(CancellationTokenSource cancellationTokenSource)
+    {
+        public void OnReceived(string? steamCode)
+        {
+            cancellationTokenSource.Cancel();
+        }
+    }
+
+    private void WaitForSteamGuardCode(Process process, ILogger logger, UploadState state)
     {
         Task.Factory.StartNew(async () =>
         {
@@ -295,14 +291,20 @@ public class WorkshopUploader
 
             // default timeout is pretty high to give time for me to see the message
             TimeSpan delay = TimeSpan.FromMinutes(15d);
-
-            DateTime start = DateTime.UtcNow;
-
-            SteamCode = null;
-            do
+            
+            CancellationTokenSource src = new CancellationTokenSource(delay);
+            SteamCodeListener listener = new SteamCodeListener(src);
+            SteamCodeReceived += listener.OnReceived;
+            try
             {
-                await Task.Delay(250);
-            } while (DateTime.UtcNow - start < delay && SteamCode == null);
+                await Task.Delay(delay, src.Token);
+            }
+            catch (OperationCanceledException) { }
+            finally
+            {
+                SteamCodeReceived -= listener.OnReceived;
+                src.Dispose();
+            }
 
             lock (process)
             {
@@ -319,7 +321,7 @@ public class WorkshopUploader
 
                         // this is equivalent to pressing Ctrl + C in console.
                         process.StandardInput.Write("\x3");
-                        wasExitFailure.Value = true;
+                        state.WasExitFailure = true;
                     }
                 }
                 catch (ObjectDisposedException)

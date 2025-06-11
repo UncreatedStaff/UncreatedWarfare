@@ -24,6 +24,6 @@ public class WorkshopReadModIdTest
                             }
                             """;
 
-        Assert.That(WorkshopUploader.ReadModId(fileContents), Is.EqualTo(modId));
+        Assert.That(LocalWorkshopUploader.ReadModId(fileContents), Is.EqualTo(modId));
     }
 }

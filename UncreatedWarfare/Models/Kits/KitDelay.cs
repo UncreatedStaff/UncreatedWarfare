@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Diagnostics.CodeAnalysis;
 using Uncreated.Warfare.Models.Base;
 
 namespace Uncreated.Warfare.Models.Kits;
@@ -14,6 +15,7 @@ public class KitDelay : BaseDelay
 
     public KitDelay() { }
 
+    [SetsRequiredMembers]
     public KitDelay(KitDelay other) : base(other)
     {
         KitId = other.KitId;

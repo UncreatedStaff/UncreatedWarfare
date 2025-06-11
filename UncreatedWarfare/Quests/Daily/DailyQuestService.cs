@@ -14,6 +14,7 @@ using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Interaction;
+using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Quests.Daily.Workshop;
@@ -26,14 +27,14 @@ using Uncreated.Warfare.Util.Timing;
 namespace Uncreated.Warfare.Quests.Daily;
 
 [Priority(-1 /* after QuestService */)]
-public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoined>, IEventListener<PlayerLeft>
+public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoined>, IEventListener<PlayerLeft>, IEventListener<HomebaseConnected>
 {
 
     private readonly WarfareModule _module;
     private readonly ChatService _chatService;
     private readonly ILogger<DailyQuestService> _logger;
     private readonly QuestService _questService;
-    private readonly WorkshopUploader _uploader;
+    private readonly IWorkshopUploader _uploader;
     private readonly QuestTranslations _translations;
     private readonly IPlayerService _playerService;
     private readonly EventDispatcher _eventDispatcher;
@@ -68,6 +69,8 @@ public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoin
 
     private ILoopTicker? _nextDailyQuestUploadTicker;
     private bool _isClosing;
+    private bool _needsToUploadMod;
+    private bool _hasStartedUp;
 
     // if -1, no data available. regenerate asap
     private int _index = -1;
@@ -124,7 +127,7 @@ public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoin
         ILogger<DailyQuestService> logger,
         ILogger<DailyQuestConfiguration> configLogger,
         QuestService questService,
-        WorkshopUploader uploader,
+        IWorkshopUploader uploader,
         TranslationInjection<QuestTranslations> translations,
         IPlayerService playerService,
         EventDispatcher eventDispatcher)
@@ -230,6 +233,7 @@ public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoin
 
     async UniTask ILayoutHostedService.StartAsync(CancellationToken token)
     {
+        _hasStartedUp = true;
         if (!_enabled)
         {
             return;
@@ -420,8 +424,8 @@ public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoin
             Password = _steamcmdLoginPassword!,
             ModId = _workshopId,
             ImageFile = iconPath,
-            Visibility = ESteamWorkshopVisibility.Public
-        }, _logger, token);
+            Visibility = SteamWorkshopVisibility.Public
+        }, token);
 
         if (modId.HasValue)
         {
@@ -432,6 +436,7 @@ public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoin
             }
             _logger.LogInformation("Mod upload complete. ID: {0}.", modId.Value);
             _workshopId = modId.Value;
+            _needsToUploadMod = false;
             return true;
         }
 
@@ -447,6 +452,7 @@ public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoin
         if (_isClosing)
             return;
 
+        _needsToUploadMod = false;
         CancellationTokenSource newSrc = new CancellationTokenSource();
         if (Interlocked.Exchange(ref _regenerationTokenSource, newSrc) is { } tokenSrc)
         {
@@ -469,10 +475,7 @@ public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoin
                 CancellationToken token = newSrc.Token;
                 token.ThrowIfCancellationRequested();
 
-                if (_modEnabled)
-                {
-                    await ReuploadMod(true, result.Days, token);
-                }
+                _needsToUploadMod = _modEnabled && !await ReuploadMod(true, result.Days, token);
 
                 _config.Days = result.Days;
                 _config.HasData = true;
@@ -1027,6 +1030,15 @@ public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoin
         if (_index is >= 0 and < DayLength && _config.Days != null && _config.Days.Length > _index && _config.Days[_index] is { Presets: not null } day && day.Presets.All(x => x != null))
         {
             SaveTrackers(e.Player, day);
+        }
+    }
+
+    /// <inheritdoc />
+    void IEventListener<HomebaseConnected>.HandleEvent(HomebaseConnected e, IServiceProvider serviceProvider)
+    {
+        if (_needsToUploadMod && _uploader is RemoteWorkshopUploader && Days != null && _hasStartedUp)
+        {
+            StartDailyQuestUpload(new DailyQuestRegenerateResult { Days = Days });
         }
     }
 }

@@ -238,22 +238,6 @@
             Defaults to true.
             </summary>
         </member>
-        <member name="P:SDG.Unturned.OptionsSettings.ShouldAnonymizeMultiplayerDetails">
-             <summary>
-             If true, hide identifiable details of other multiplayer clients like avatars, player names, number of
-             players online, server name, etc. Live streamers may find this useful to help prevent stream sniping.
-            
-             Separated from the older "streamer mode" option.
-             </summary>
-        </member>
-        <member name="P:SDG.Unturned.OptionsSettings.ShouldHideRichPresence">
-             <summary>
-             If true, don't share details like "editing map X" or "join" with Steam. Useful for anyone who might be
-             targeted / followed into servers, or who has a project to keep secret.
-            
-             Separated from the older "streamer mode" option.
-             </summary>
-        </member>
         <member name="F:SDG.Unturned.OptionsSettings.hitmarkerStyle">
             <summary>
             Controls whether hitmarkers are animated outward (newer) or just a static image ("classic"). 
@@ -1792,26 +1776,6 @@
             Only gold servers pass the filter.
             </summary>
         </member>
-        <member name="T:SDG.Unturned.NpcGlobalEventHook">
-            <summary>
-            Can be added to any GameObject to listen for the Event NPC reward type.
-            </summary>
-        </member>
-        <member name="F:SDG.Unturned.NpcGlobalEventHook.EventId">
-            <summary>
-            *_ID configured in NPC rewards list.
-            </summary>
-        </member>
-        <member name="F:SDG.Unturned.NpcGlobalEventHook.AuthorityOnly">
-            <summary>
-            If true the event will only be invoked in offline mode and on the server.
-            </summary>
-        </member>
-        <member name="F:SDG.Unturned.NpcGlobalEventHook.OnTriggered">
-            <summary>
-            Invoked when NPC global event matching EventId is processed.
-            </summary>
-        </member>
         <member name="F:SDG.Unturned.TimerEventHook.OnTimerTriggered">
             <summary>
             Invoked when timer expires.
@@ -1835,6 +1799,26 @@
         <member name="F:SDG.Unturned.TimerEventHook.coroutine">
             <summary>
             Handle to stop the coroutine.
+            </summary>
+        </member>
+        <member name="T:SDG.Unturned.NpcGlobalEventHook">
+            <summary>
+            Can be added to any GameObject to listen for the Event NPC reward type.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.NpcGlobalEventHook.EventId">
+            <summary>
+            *_ID configured in NPC rewards list.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.NpcGlobalEventHook.AuthorityOnly">
+            <summary>
+            If true the event will only be invoked in offline mode and on the server.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.NpcGlobalEventHook.OnTriggered">
+            <summary>
+            Invoked when NPC global event matching EventId is processed.
             </summary>
         </member>
         <member name="T:SDG.Unturned.VehicleTurretEventHook">
@@ -4278,23 +4262,6 @@
             For example a value of 1 means the client will be kicked the first time they call the method off-cooldown. (not recommended)
             </summary>
         </member>
-        <member name="F:SDG.Unturned.ServerConfigData.Max_Clients_With_Same_IP_Address">
-             <summary>
-             Only applicable when Fake IP is off. When a client is connecting, if their connection would push the number
-             of simultaneous connections from the same IP address past this number, they are prevented from joining.
-            
-             May be useful to prevent against fake join requests coming from a single source IP. (public issue #5001)
-             
-             Defaults to a high value because some regions will have many more clients with the same IPv4 address than
-             others. For example, due to Carrier-grade NAT (CGNAT).
-             </summary>
-        </member>
-        <member name="F:SDG.Unturned.ServerConfigData.Max_Clients_With_Same_IP_Address_Log_Warnings">
-            <summary>
-            Whether rejections for Max_Clients_With_Same_IP_Address should log to command output. Useful for checking
-            if the limit is appropriate.
-            </summary>
-        </member>
         <member name="F:SDG.Unturned.ServerConfigData.Fake_Lag_Threshold_Seconds">
             <summary>
             Ordinarily the server should be receiving multiple input packets per second from a client. If more than this
@@ -4923,12 +4890,6 @@
             Same as CUSTOM, but shows the "verify game files" prompt.
             </summary>
         </member>
-        <member name="F:SDG.Unturned.ESteamConnectionFailureInfo.TOO_MANY_CLIENTS_WITH_SAME_IP_ADDRESS">
-            <summary>
-            Server limits how many clients are joining from the same IP address.
-            (public issue #5001)
-            </summary>
-        </member>
         <member name="F:SDG.Unturned.SleekChatEntryV2.shouldFadeOutWithAge">
             <summary>
             Does this label fade out as the chat message gets older?
@@ -5036,12 +4997,6 @@
         <member name="M:SDG.Unturned.ICraftingTagProvider.GetTagProviderAsset">
             <summary>
             Asset providing tags. For example, a barricade item.
-            </summary>
-        </member>
-        <member name="M:SDG.Unturned.ICraftingTagProvider.HasAnyCraftingTagsConfigured">
-            <summary>
-            True if GetAvailableTags can ever add any tags.
-            Used to skip unnecessary line-of-sight tests against (for example) ordinary structures and the like.
             </summary>
         </member>
         <member name="P:SDG.Unturned.CraftingTagProviderGetAvailableTagsParameters.ResultTags">
@@ -7047,11 +7002,6 @@
             If both the queue and connected slots are full then incoming connections are ignored.
             </summary>
         </member>
-        <member name="M:SDG.Unturned.Provider.IsBlockedByMaxClientsWithSameIpAddressRule(SDG.NetTransport.ITransportConnection,System.Boolean)">
-            <summary>
-            includeQueuedPlayers ensures player won't be kicked because someone on the same IP joined after them.
-            </summary>
-        </member>
         <member name="M:SDG.Unturned.Provider.findPendingPlayer(SDG.NetTransport.ITransportConnection)">
             <summary>
             Find player in the queue associated with a client connection.
@@ -7199,6 +7149,18 @@
         <member name="M:SDG.Unturned.Provider.sendToClient(SDG.NetTransport.ITransportConnection,SDG.Unturned.ESteamPacket,System.Byte[],System.Int32)">
             <summary>
             Send to a connected client.
+            </summary>
+        </member>
+        <member name="T:SDG.Unturned.Provider.WorkshopRequestLog">
+            <summary>
+            Workshop info is requested prior to authenticating so that it can be downloaded before joining,
+            but cheat devs are abusing this to spam the server with workshop requests. This class keeps
+            track of who and when requested that information.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.Provider.WorkshopRequestLog.sender">
+            <summary>
+            Hash code of remote connection.
             </summary>
         </member>
         <member name="T:SDG.Unturned.Provider.CachedWorkshopResponse">
@@ -8060,11 +8022,6 @@
             Vehicle doesn't support spray paints.
             </summary>
         </member>
-        <member name="F:SDG.Unturned.EPlayerMessage.TUTORIAL_WORKSTATION">
-            <summary>
-            Explaining that some blueprints require workstations.
-            </summary>
-        </member>
         <member name="T:SDG.Unturned.GunStatsExporter">
             <summary>
             Nelson 2024-11-29: Curious to put all the gun stats in one place for easier comparison. Rather rudimentary at
@@ -8765,6 +8722,16 @@
             At low framerate deltaTime can be so high the spring explodes unless we use a fixed timestep.
             </summary>
         </member>
+        <member name="F:SDG.Unturned.AirdropAsset.barricadeRef">
+            <summary>
+            Interactable storage barricade to spawn at the drop position.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.AirdropAsset.model">
+            <summary>
+            Prefab to spawn falling from the aircraft.
+            </summary>
+        </member>
         <member name="T:SDG.Unturned.HousingEdge">
             <summary>
             Initially these were structs so that they would be adjacent in memory and therefore faster to iterate lots of them,
@@ -9022,16 +8989,6 @@
         <member name="T:SDG.Unturned.OncePerFrameGuard">
             <summary>
             True once per frame, false otherwise.
-            </summary>
-        </member>
-        <member name="F:SDG.Unturned.AirdropAsset.barricadeRef">
-            <summary>
-            Interactable storage barricade to spawn at the drop position.
-            </summary>
-        </member>
-        <member name="F:SDG.Unturned.AirdropAsset.model">
-            <summary>
-            Prefab to spawn falling from the aircraft.
             </summary>
         </member>
         <member name="F:SDG.Unturned.Carepackage.barricadeID">
@@ -9436,11 +9393,6 @@
             Applied if greater than zero. Defaults to 128.
             </summary>
         </member>
-        <member name="P:SDG.Unturned.SleekTagButton.TooltipAppendedText">
-            <summary>
-            Extra text added to tooltip.
-            </summary>
-        </member>
         <member name="T:SDG.Unturned.MenuSurvivorsClothingBoxUI.BoxEntry">
             <summary>
             Internal struct menu uses to sort items in box.
@@ -9671,12 +9623,6 @@
         <member name="T:SDG.Unturned.DefaultEngineSoundControllerBase">
             <summary>
             Code common to <see cref="T:SDG.Unturned.DefaultEngineSoundController"/> and <see cref="T:SDG.Unturned.RpmEngineSoundController"/>.
-            </summary>
-        </member>
-        <member name="F:SDG.Unturned.ServerMessageHandler_GetWorkshopFiles.rateLimiter">
-            <summary>
-            Nelson 2025-05-13: replacing the "workshop request log" which used transport connection hash code with this
-            more recent IP address and Steam ID rate limiter.
             </summary>
         </member>
         <member name="F:SDG.Unturned.ELevelObjectPlacementOrigin.MANUAL">
@@ -10306,12 +10252,6 @@
             Get brush strength multiplier where strength decreases past falloff. Use this method so that different falloffs e.g. linear, curved can be added.
             </summary>
             <param name="normalizedDistance">Percentage of <see cref="P:SDG.Unturned.TerrainEditor.brushRadius"/>.</param>
-        </member>
-        <member name="F:SDG.Unturned.SleekList`1.OnRemoveElement">
-            <summary>
-            Allows pooling elements.
-            If set, this is called rather than removing element from scroll view.
-            </summary>
         </member>
         <member name="P:SDG.Unturned.SleekList`1.IndexOfCreateElementItem">
             <summary>
@@ -11143,11 +11083,6 @@
         <member name="F:SDG.Unturned.BlueprintStatus.normalizedCraftability">
             <summary>
             Used to sort blueprints from "most craftable" (1) to "least craftable" (0).
-            </summary>
-        </member>
-        <member name="M:SDG.Unturned.BlueprintStatus.ResetDynamicStatus">
-            <summary>
-            Reset values set by PlayerCrafting.UpdateBlueprintDynamicStatus.
             </summary>
         </member>
         <member name="F:SDG.Unturned.BlueprintInputItemStatus.requiredAmountOverride">
@@ -12426,16 +12361,6 @@
             For example, two workbenches providing the same tags shouldn't show two UI listings.
             </summary>
         </member>
-        <member name="F:SDG.Unturned.EBlueprintPreferences.Ignored">
-            <summary>
-            Player does not want to see this blueprint.
-            </summary>
-        </member>
-        <member name="F:SDG.Unturned.EBlueprintPreferences.Favorited">
-            <summary>
-            Player wants to save this blueprint in a special category.
-            </summary>
-        </member>
         <member name="M:SDG.Unturned.PlayerCrafting.UpdateAvailableCraftingTags">
             <summary>
             Find nearby crafting tag providers and query their tags.
@@ -12476,16 +12401,15 @@
             If updating behavior here please remember to update <see cref="M:SDG.Unturned.PlayerCrafting.UpdateBlueprintInputItemStatus(SDG.Unturned.UpdateBlueprintStatusParameters@,SDG.Unturned.BlueprintSupply,SDG.Unturned.BlueprintInputItemStatus,SDG.Unturned.ItemJar)"/>.
             </summary>
         </member>
-        <member name="M:SDG.Unturned.PlayerCrafting.GetBlueprintPreferences(SDG.Unturned.Blueprint)">
+        <member name="M:SDG.Unturned.PlayerCrafting.getIgnoringBlueprint(SDG.Unturned.Blueprint)">
             <summary>
-            Get local player's per-blueprint preferences.
+            Get whether this player is ignoring a blueprint.
             </summary>
         </member>
-        <member name="M:SDG.Unturned.PlayerCrafting.SetBlueprintPreferences(SDG.Unturned.Blueprint,SDG.Unturned.EBlueprintPreferences)">
+        <member name="M:SDG.Unturned.PlayerCrafting.setIgnoringBlueprint(SDG.Unturned.Blueprint,System.Boolean)">
             <summary>
-            Set local player's per-blueprint preferences.
-            This is helpful both to prevent accidentally crafting certain blueprints (like blindfolds) when click to
-            craft is enabled, and to save frequently used blueprints.
+            Set whether this player is ignoring a blueprint.
+            This is a kludge to help with accidentally crafting items like blindfolds.
             </summary>
         </member>
         <member name="F:SDG.Unturned.PlayerCrafting.nearbyCraftingTags">
@@ -13714,9 +13638,6 @@
             Caches uint16 ID to ID redirects.
             </summary>
         </member>
-        <member name="T:SDG.Unturned.VehicleIconReady">
-            <param name="handle">Matches handle returned by request, or -1 if cached.</param>
-        </member>
         <member name="M:SDG.Unturned.ResourceManager.askClearRegionResources(System.Byte,System.Byte)">
             <summary>
             Revive all trees in a specific region.
@@ -13988,9 +13909,6 @@
             <summary>
             True while fading in or out.
             </summary>
-        </member>
-        <member name="T:SDG.Unturned.ItemIconReady">
-            <param name="handle">Matches handle returned by request, or -1 if cached.</param>
         </member>
         <member name="T:SDG.Unturned.ConsoleInputOutput">
             <summary>
@@ -15191,12 +15109,6 @@
         <member name="F:SDG.Unturned.ESteamRejection.BAD_PACKET_RATE_LIMITING">
             <summary>
             Received too many invalid messages from connection in a short window.
-            </summary>
-        </member>
-        <member name="F:SDG.Unturned.ESteamRejection.TOO_MANY_CLIENTS_WITH_SAME_IP_ADDRESS">
-            <summary>
-            Server limits how many clients are joining from the same IP address.
-            (public issue #5001)
             </summary>
         </member>
         <member name="M:SDG.Unturned.NetId.IsNull">
