@@ -15,19 +15,27 @@ public interface IFob : IDeployable
     string Name { get; }
 
     /// <summary>
-    /// The display color of this FOB on the FOB list.
-    /// </summary>
-    Color32 Color { get; }
-
-    /// <summary>
     /// The team that owns the FOB.
     /// </summary>
     Team Team { get; }
 
     /// <summary>
+    /// Gets the text displayed on the UI for a specific team, defaulting to <see cref="Name"/>.
+    /// </summary>
+    string GetUIDisplay(Team viewingTeam)
+    {
+        return string.Empty;
+    }
+
+    /// <summary>
+    /// Gets the display color of this FOB on the FOB list.
+    /// </summary>
+    Color32 GetColor(Team viewingTeam);
+
+    /// <summary>
     /// Whether the specified player should be able to see this fob on their FOB HUD.
     /// </summary>
-    bool IsVibileToPlayer(WarfarePlayer player);
+    bool IsVisibleToPlayer(WarfarePlayer player);
 
     /// <summary>
     /// Called when the <see cref="FobConfiguration"/> is updated.

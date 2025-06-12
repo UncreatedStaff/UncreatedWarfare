@@ -185,6 +185,10 @@
     <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="5.0.4" />
     <PackageReference Include="Zack.EFCore.Batch" Version="1.5.0" />
     <PackageReference Include="Zack.EFCore.Batch.MySQL.Pomelo" Version="1.5.0" />
+    <PackageReference Include="PolySharp" Version="1.15.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
   <!-- ReSharper restore VulnerablePackage -->
 

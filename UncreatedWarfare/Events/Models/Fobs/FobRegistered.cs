@@ -8,7 +8,7 @@ namespace Uncreated.Warfare.Events.Models.Fobs;
 /// Event listener args which fires after an <see cref="IFob"/> is registered. Includes other types of fobs (including Rally Points)
 /// </summary>
 [EventModel(EventSynchronizationContext.Pure)]
-public class FobRegistered : IActionLoggableEvent
+public class FobRegistered : IActionLoggableEvent, IFobNeedsUIUpdateEvent
 {
     /// <summary>
     /// The FOB that was registered.

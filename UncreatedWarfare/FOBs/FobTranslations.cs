@@ -92,21 +92,6 @@ public class FobTranslations : PropertiesTranslationCollection
     [TranslationData(IsPriorityTranslation = false)]
     public readonly Translation<IDeployable, GridLocation, string> FOBUI = new Translation<IDeployable, GridLocation, string>("{0}  <color=#d6d2c7>{1}</color>  {2}", TranslationOptions.UnityUI, arg0Fmt: Flags.ColorNameFormat);
 
-    [TranslationData("Shows on the HUD when a cache has been destroyed and the player is on attack.")]
-    public readonly Translation CacheDestroyedAttack = new Translation("<#e8d1a7>WEAPONS CACHE HAS BEEN ELIMINATED", TranslationOptions.TMProUI);
-
-    [TranslationData("Shows on the HUD when a cache has been destroyed and the player is on defense.")]
-    public readonly Translation CacheDestroyedDefense = new Translation("<#deadad>WEAPONS CACHE HAS BEEN DESTROYED", TranslationOptions.TMProUI);
-
-    [TranslationData("Shows on the HUD when a cache has been discovered and the player is on attack.", "The closest location name to the cache.")]
-    public readonly Translation<string> CacheDiscoveredAttack = new Translation<string>("<color=#e8d1a7>NEW WEAPONS CACHE DISCOVERED NEAR <color=#e3c59a>{0}</color></color>", TranslationOptions.TMProUI, arg0Fmt: UppercaseAddon.Instance);
-
-    [TranslationData("Shows on the HUD when a cache has been discovered and the player is on defense.")]
-    public readonly Translation CacheDiscoveredDefense = new Translation("<#d9b9a7>WEAPONS CACHE HAS BEEN COMPROMISED, DEFEND IT", TranslationOptions.TMProUI);
-
-    [TranslationData("Shows on the HUD when a new cache spawns and the player is on defense.")]
-    public readonly Translation CacheSpawnedDefense = new Translation("<#a8e0a4>NEW WEAPONS CACHE IS NOW ACTIVE", TranslationOptions.TMProUI);
-    
     [TranslationData(IsPriorityTranslation = false)]
     public Translation<float> ToastGainBuild = new Translation<float>("<color=#f3ce82>+{0} BUILD</color>", TranslationOptions.TMProUI);
 

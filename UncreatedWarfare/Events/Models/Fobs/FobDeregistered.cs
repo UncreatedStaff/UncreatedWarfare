@@ -8,7 +8,7 @@ namespace Uncreated.Warfare.Events.Models.Fobs;
 /// Event listener args which fires after a FOB is deregistered.
 /// </summary>
 [EventModel(EventSynchronizationContext.Pure)]
-public class FobDeregistered : IActionLoggableEvent
+public class FobDeregistered : IActionLoggableEvent, IFobNeedsUIUpdateEvent
 {
     /// <summary>
     /// The FOB that was deregistered.
@@ -23,4 +23,6 @@ public class FobDeregistered : IActionLoggableEvent
             0
         );
     }
+
+    IFob IFobNeedsUIUpdateEvent.Fob => Fob;
 }

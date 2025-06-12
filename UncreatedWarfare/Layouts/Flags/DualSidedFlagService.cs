@@ -200,9 +200,7 @@ public abstract class DualSidedFlagService :
 
     protected void TriggerVictory(Team winner)
     {
-        Layout.Data[KnownLayoutDataKeys.WinnerTeam] = winner;
-
-        _ = Layout.MoveToNextPhase(token: CancellationToken.None);
+        _ = Layout.TriggerVictoryAsync(winner);
     }
 
     private void OnTick(ILoopTicker ticker, TimeSpan timeSinceStart, TimeSpan deltaTime)

@@ -42,7 +42,7 @@ internal class SingleLeaderContestWinGlitch
         {
             Console.WriteLine($"{n} pts changed.");
         };
-        contest.OnRestarted += t =>
+        contest.OnRestarted += (t, _) =>
         {
             Console.WriteLine($"{t} restarted.");
         };
