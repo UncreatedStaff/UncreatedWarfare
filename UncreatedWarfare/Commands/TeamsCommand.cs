@@ -47,7 +47,7 @@ internal sealed class TeamsCommand : IExecutableCommand
             throw Context.Reply(_translations.TeamsCooldown, cooldown);
         }
 
-        if (!_zoneStore.IsInMainBase(Context.Player, Context.Player.Team.Faction) || _zoneStore.IsInWarRoom(Context.Player, Context.Player.Team.Faction))
+        if (!_zoneStore.IsInMainBase(Context.Player, Context.Player.Team.Faction) && !_zoneStore.IsInWarRoom(Context.Player, Context.Player.Team.Faction))
         {
             throw Context.Reply(Context.CommonTranslations.NotInMain);
         }

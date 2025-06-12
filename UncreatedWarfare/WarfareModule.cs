@@ -4,7 +4,6 @@ using DanielWillett.ModularRpcs.Reflection;
 using DanielWillett.ModularRpcs.Routing;
 using DanielWillett.ModularRpcs.Serialization;
 using DanielWillett.ReflectionTools;
-using DanielWillett.ReflectionTools.Formatting;
 using DanielWillett.ReflectionTools.IoC;
 using HarmonyLib;
 using Microsoft.EntityFrameworkCore;
@@ -21,7 +20,6 @@ using StackCleaner;
 using Stripe;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -274,6 +272,7 @@ public sealed class WarfareModule
     }
 #endif
 
+    [MethodImpl(MethodImplOptions.NoInlining)]
     private void Init()
     {
         Singleton = this;
@@ -580,7 +579,7 @@ public sealed class WarfareModule
             .As<ILoopTickerFactory>();
 
         // homebase
-        bldr.RegisterType<HomebaseConnector>()
+        bldr.RegisterRpcType<HomebaseConnector>()
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
 
@@ -645,9 +644,15 @@ public sealed class WarfareModule
             .AsImplementedInterfaces().AsSelf()
             .SingleInstance();
 
-        bldr.RegisterRpcType<WorkshopUploader>()
+#if REMOTE_WORKSHOP_UPLOAD
+        bldr.RegisterRpcType<RemoteWorkshopUploader>()
+            .AsImplementedInterfaces()
+            .SingleInstance();
+#else
+        bldr.RegisterRpcType<LocalWorkshopUploader>()
             .AsImplementedInterfaces().AsSelf()
             .SingleInstance();
+#endif
 
         bldr.RegisterType<TimeZoneRegionalDatabase>()
             .AsImplementedInterfaces().AsSelf()

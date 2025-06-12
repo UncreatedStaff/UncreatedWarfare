@@ -14,10 +14,12 @@ using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Interaction;
+using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Quests.Daily.Workshop;
 using Uncreated.Warfare.Services;
+using Uncreated.Warfare.Steam;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Timing;
@@ -25,14 +27,14 @@ using Uncreated.Warfare.Util.Timing;
 namespace Uncreated.Warfare.Quests.Daily;
 
 [Priority(-1 /* after QuestService */)]
-public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoined>, IEventListener<PlayerLeft>
+public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoined>, IEventListener<PlayerLeft>, IEventListener<HomebaseConnected>
 {
 
     private readonly WarfareModule _module;
     private readonly ChatService _chatService;
     private readonly ILogger<DailyQuestService> _logger;
     private readonly QuestService _questService;
-    private readonly WorkshopUploader _uploader;
+    private readonly IWorkshopUploader _uploader;
     private readonly QuestTranslations _translations;
     private readonly IPlayerService _playerService;
     private readonly EventDispatcher _eventDispatcher;
@@ -40,7 +42,7 @@ public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoin
     // basic JSON storage for the generated daily quest file which stored the randomly generated quests for the next 2 weeks
     private readonly DailyQuestConfiguration _config;
 
-    // handles waiting for warnings before regneration then finally the regeneration itself.
+    // handles waiting for warnings before regeneration then finally the regeneration itself.
     // didnt want to use a coroutine here because i think system timers are more effecient for longer running tasks (maybe idk)
     private Timer? _tickTimer;
 
@@ -60,12 +62,15 @@ public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoin
     private bool _enabled;
     private readonly bool _modEnabled;
     private readonly string? _steamcmdPath;
+    private readonly string? _modName;
     private readonly string? _modIconPath;
     private readonly string? _steamcmdLoginUsername;
     private readonly string? _steamcmdLoginPassword;
 
     private ILoopTicker? _nextDailyQuestUploadTicker;
     private bool _isClosing;
+    private bool _needsToUploadMod;
+    private bool _hasStartedUp;
 
     // if -1, no data available. regenerate asap
     private int _index = -1;
@@ -122,7 +127,7 @@ public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoin
         ILogger<DailyQuestService> logger,
         ILogger<DailyQuestConfiguration> configLogger,
         QuestService questService,
-        WorkshopUploader uploader,
+        IWorkshopUploader uploader,
         TranslationInjection<QuestTranslations> translations,
         IPlayerService playerService,
         EventDispatcher eventDispatcher)
@@ -142,14 +147,10 @@ public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoin
 
         _workshopId = section.GetValue<ulong>("workshop_id");
 
-        if (_workshopId == 0)
-        {
-            _workshopId = _uploader.ReadModIdFromFile(_uploader.GetVdfPath(GetModFolder()));
-        }
-
         _enabled = section.GetValue<bool>("enabled");
         _steamcmdPath = section["steamcmd"];
         _modIconPath = section["mod_icon"];
+        _modName = section["mod_name"];
         _steamcmdLoginUsername = section["steam_username"];
 
         try
@@ -232,6 +233,7 @@ public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoin
 
     async UniTask ILayoutHostedService.StartAsync(CancellationToken token)
     {
+        _hasStartedUp = true;
         if (!_enabled)
         {
             return;
@@ -406,24 +408,14 @@ public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoin
         if (!uploadMod)
             return false;
 
-        /*
-         *  WorkshopUploader uses the SteamCMD CLI to upload the mod to the workshop using predefined credentials in the config.
-         *
-         *  This uses a library called Pty.Net which acts as a virtual terminal tricking SteamCMD into thinking its displaying on a console window.
-         *  Windows recently added support for 'ConPTY' which is what the library uses on Windows. On Linux and OSX it just uses the built-in PTY implementation.
-         *
-         *  Usually you could just use the Process API but SteamCMD is written in a way that makes it impossible to read from the output buffer normally,
-         *  Pty.Net is a workaround.
-         *
-         */
-
         string iconPath = string.IsNullOrWhiteSpace(_modIconPath)
             ? Path.GetFullPath(_modIconPath, _module.HomeDirectory)
             : string.Empty;
 
+        Console.WriteLine("1");
         ulong? modId = await _uploader.UploadMod(new WorkshopUploadParameters
         {
-            Title = "Uncreated Daily Quests",
+            Title = _modName ?? "Uncreated Daily Quests",
             ChangeNote = "Added this week's quests.",
             ContentFolder = GetModFolder(),
             Description = "Automatically generated workshop item that is filled with automatically generated daily quests for the next week.",
@@ -431,8 +423,9 @@ public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoin
             Username = _steamcmdLoginUsername!,
             Password = _steamcmdLoginPassword!,
             ModId = _workshopId,
-            ImageFile = iconPath
-        }, _logger, token);
+            ImageFile = iconPath,
+            Visibility = SteamWorkshopVisibility.Public
+        }, token);
 
         if (modId.HasValue)
         {
@@ -443,10 +436,11 @@ public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoin
             }
             _logger.LogInformation("Mod upload complete. ID: {0}.", modId.Value);
             _workshopId = modId.Value;
+            _needsToUploadMod = false;
             return true;
         }
 
-        _logger.LogInformation("Mod upload failed.");
+        _logger.LogWarning("Mod upload failed.");
         return false;
     }
 
@@ -458,6 +452,7 @@ public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoin
         if (_isClosing)
             return;
 
+        _needsToUploadMod = false;
         CancellationTokenSource newSrc = new CancellationTokenSource();
         if (Interlocked.Exchange(ref _regenerationTokenSource, newSrc) is { } tokenSrc)
         {
@@ -480,10 +475,7 @@ public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoin
                 CancellationToken token = newSrc.Token;
                 token.ThrowIfCancellationRequested();
 
-                if (_modEnabled)
-                {
-                    await ReuploadMod(true, result.Days, token);
-                }
+                _needsToUploadMod = _modEnabled && !await ReuploadMod(true, result.Days, token);
 
                 _config.Days = result.Days;
                 _config.HasData = true;
@@ -1038,6 +1030,15 @@ public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoin
         if (_index is >= 0 and < DayLength && _config.Days != null && _config.Days.Length > _index && _config.Days[_index] is { Presets: not null } day && day.Presets.All(x => x != null))
         {
             SaveTrackers(e.Player, day);
+        }
+    }
+
+    /// <inheritdoc />
+    void IEventListener<HomebaseConnected>.HandleEvent(HomebaseConnected e, IServiceProvider serviceProvider)
+    {
+        if (_needsToUploadMod && _uploader is RemoteWorkshopUploader && Days != null && _hasStartedUp)
+        {
+            StartDailyQuestUpload(new DailyQuestRegenerateResult { Days = Days });
         }
     }
 }

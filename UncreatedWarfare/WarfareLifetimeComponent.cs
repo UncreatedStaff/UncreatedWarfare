@@ -21,6 +21,7 @@ public class WarfareLifetimeComponent : MonoBehaviour
     private WarfareModule _module = null!;
     private ShutdownTranslations? _shutdownTranslations;
     private ChatService _chatService = null!;
+    private ILogger<WarfareLifetimeComponent> _logger = null!;
     private float _shutdownTime = -1f;
     private float _lastLayoutShutdownWarning;
     private int _shutdownStep = -1;
@@ -47,6 +48,7 @@ public class WarfareLifetimeComponent : MonoBehaviour
                 return;
 
             _chatService = _module.ServiceProvider.Resolve<ChatService>();
+            _logger = _module.ServiceProvider.Resolve<ILogger<WarfareLifetimeComponent>>();
         }
 
         if (_shutdownTime < 0)
@@ -203,14 +205,7 @@ public class WarfareLifetimeComponent : MonoBehaviour
     {
         if (QueuedShutdownType != ShutdownMode.None && string.Equals(ShutdownReason, reason))
         {
-            try
-            {
-                await SendShutdownUpdate(GetShutdownReason(), true);
-            }
-            catch
-            {
-                /* ignored */
-            }
+            await TrySendShutdownUpdate(true);
             return;
         }
 
@@ -219,14 +214,7 @@ public class WarfareLifetimeComponent : MonoBehaviour
         ShutdownTime = default;
         _shutdownTime = -1;
         _shutdownStep = -1;
-        try
-        {
-            await SendShutdownUpdate(GetShutdownReason(), true);
-        }
-        catch
-        {
-            /* ignored */
-        }
+        await TrySendShutdownUpdate(true);
     }
 
     internal void UpdateShutdownState()
@@ -238,6 +226,18 @@ public class WarfareLifetimeComponent : MonoBehaviour
         catch
         {
             /* ignored */
+        }
+    }
+
+    private async Task TrySendShutdownUpdate(bool isNow)
+    {
+        try
+        {
+            await SendShutdownUpdate(GetShutdownReason(), isNow).IgnoreNoConnections();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Error sending shutdown update.");
         }
     }
 

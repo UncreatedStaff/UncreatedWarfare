@@ -1,36 +1,46 @@
-using System;
 using Uncreated.Warfare.Layouts.Teams;
 
 namespace Uncreated.Warfare.Layouts.Flags;
+
 public class SingleLeaderContest
 {
+    public delegate void PointsChanged(int changeInPoints);
+    public delegate void Won(Team winner);
+    public delegate void Restarted(Team neutralizer, Team oldLeader);
+
     public int MaxPossiblePoints { get; }
+
     /// <summary>
     /// The <see cref="Team"/> currently leading the contest.
     /// </summary>
     public Team Leader { get; private set; }
+
     /// <summary>
     /// The current points the <see cref="Leader"/> of the contest has.
     /// </summary>
     public int LeaderPoints { get; private set; }
+
     /// <summary>
-    /// Whether the compeition is won by the <see cref="Leader"/>.
+    /// Whether the competition is won by the <see cref="Leader"/>.
     /// The value will become <see langword="true"/> when the Leader manages to reach max number of points possible.
     /// It will then remain <see langword="true"/> until the <see cref="LeaderPoints"/> is reduced to zero by other competing teams.
     /// </summary>
     public bool IsWon { get; private set; }
+
     /// <summary>
-    /// Invoked when the compeition is one by a particular team.
+    /// Invoked when the competition is one by a particular team.
     /// </summary>
-    public event Action<int>? OnPointsChanged;
+    public event PointsChanged? OnPointsChanged;
+
     /// <summary>
-    /// Invoked when the compeition is one by a particular team.
+    /// Invoked when the competition is one by a particular team.
     /// </summary>
-    public event Action<Team>? OnWon;
+    public event Won? OnWon;
+
     /// <summary>
-    /// Invoked when the compeition is restarted after being won, i.e. when a particular team is awarded points causing <see cref="LeaderPoints"/> reach zero and <see cref="IsWon"/> is already <see langword="true"/>.
+    /// Invoked when the competition is restarted after being won, i.e. when a particular team is awarded points causing <see cref="LeaderPoints"/> reach zero and <see cref="IsWon"/> is already <see langword="true"/>.
     /// </summary>
-    public event Action<Team>? OnRestarted;
+    public event Restarted? OnRestarted;
     public SingleLeaderContest(int maxPossiblePoints)
     {
         Leader = Team.NoTeam;
@@ -79,28 +89,6 @@ public class SingleLeaderContest
         else
             IncrementPointsClamp(-points);
 
-        //int change = Mathf.Abs(LeaderPoints - oldPoints);
-        //if (change >= 0)
-        //{
-        //    // if Points become zero
-        //    if (LeaderPoints == 0)
-        //    {
-        //        Leader = Team.NoTeam;
-        //        IsWon = false;
-        //        OnRestarted?.Invoke(team);
-        //    }
-        //    else if (Leader == Team.NoTeam)
-        //        Leader = team;
-        //
-        //    if (LeaderPoints == MaxPossiblePoints)
-        //        IsWon = true;
-        //
-        //    OnPointsChanged?.Invoke(LeaderPoints - oldPoints);
-        //
-        //    if (IsWon)
-        //        OnWon?.Invoke(Leader);
-        //}
-
         int change = LeaderPoints - oldPoints;
         if (change > 0)
         {
@@ -119,12 +107,13 @@ public class SingleLeaderContest
         }
         else if (change < 0)
         {
+            Team oldLeader = Leader;
             // if Points become zero, contest is neutral again
             if (LeaderPoints == 0)
             {
                 Leader = Team.NoTeam;
                 IsWon = false;
-                OnRestarted?.Invoke(team);
+                OnRestarted?.Invoke(team, oldLeader);
             }
             // otherwise, if there is no leader yet, set the new leader
             else if (Leader == Team.NoTeam)

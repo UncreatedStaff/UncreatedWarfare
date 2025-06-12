@@ -1,5 +1,6 @@
 using DanielWillett.ModularRpcs.Abstractions;
-using DanielWillett.ModularRpcs.Protocol;
+using DanielWillett.ModularRpcs.Annotations;
+using DanielWillett.ModularRpcs.Async;
 using DanielWillett.ModularRpcs.Routing;
 using DanielWillett.ModularRpcs.WebSockets;
 using DanielWillett.ReflectionTools;
@@ -44,6 +45,32 @@ public class HomebaseConnector : IHostedService
         _connectEndpoint = string.IsNullOrWhiteSpace(connectEndpoint) ? null : new Uri(connectEndpoint);
 
         _reconnectCts = new CancellationTokenSource();
+    }
+
+    [RpcSend("Uncreated.Web.Unturned.RpcConnectionService, uncreated-web", "ReceivePing"), RpcTimeout(Timeouts.Seconds * 3)]
+    protected virtual RpcTask SendPing(CancellationToken token) => RpcTask.NotImplemented;
+
+    [RpcReceive]
+    private void ReceivePing()
+    {
+        _logger.LogTrace("Pinged by homebase.");
+    }
+
+    /// <summary>
+    /// Attempts a handshake with a remote connection.
+    /// </summary>
+    public async Task<bool> PingAsync(CancellationToken token = default)
+    {
+        try
+        {
+            await SendPing(token);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Failed to ping homebase.");
+            return false;
+        }
     }
 
     public async UniTask StartAsync(CancellationToken token)

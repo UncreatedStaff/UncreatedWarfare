@@ -4,10 +4,8 @@ using HarmonyLib;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 using System.Reflection;
 using Uncreated.Warfare.Events.Models.Players;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Patches;
 using Uncreated.Warfare.Players.Management;
@@ -80,8 +78,6 @@ internal sealed class ProviderPlayerJoiningEvents : IHarmonyPatch
 
         if (_isSendVerifyPacketContinuation)
             return true;
-
-        // ulong s64 = __instance.playerID.steamID.m_SteamID;
 
         CancellationTokenSource src = new CancellationTokenSource();
 

@@ -1,29 +1,27 @@
-using DanielWillett.ModularRpcs.Annotations;
-using DanielWillett.ModularRpcs.Async;
-using DanielWillett.ModularRpcs.Exceptions;
-using DanielWillett.ReflectionTools;
 using Pty.Net;
-using System;
 using System.Globalization;
-using System.IO;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
-using Uncreated.Warfare.Services;
 
-namespace Uncreated.Warfare.Util;
+namespace Uncreated.Warfare.Steam;
 
-public struct WorkshopUploadParameters
+public class WorkshopUploadParameters
 {
-    public ulong ModId;
-    public string SteamCmdPath;
-    public string Username, Password;
-    public string ContentFolder;
-    public string ImageFile;
-    public ESteamWorkshopVisibility Visibility;
-    public string Title, Description, ChangeNote;
+    public required ulong ModId { get; set; }
+    public required string SteamCmdPath { get; set; }
+    public required string Username { get; set; }
+    public required string Password { get; set; }
+    public required string ContentFolder { get; set; }
+    public required string ImageFile { get; set; }
+
+    [JsonConverter(typeof(JsonStringEnumConverter<ESteamWorkshopVisibility>))]
+    public required ESteamWorkshopVisibility Visibility { get; set; }
+    public required string Title { get; set; }
+    public required string Description { get; set; }
+    public required string ChangeNote { get; set; }
+    public string? LogFileOutput { get; set; }
 }
 
 public enum ESteamWorkshopVisibility : byte
@@ -55,46 +53,12 @@ public enum ESteamWorkshopVisibility : byte
 /// using Steamworks API to notice when it finishes updating. Only downside is this doesn't look for the steam guard code.
 /// </para>
 ///</remarks>
-[Priority(100)]
-public class WorkshopUploader : IHostedService
+public static class WorkshopUploader
 {
-    private readonly ILogger<WorkshopUploader> _logger;
-    private readonly SemaphoreSlim _sempahore = new SemaphoreSlim(1, 1);
-    private IPtyConnection? _connection;
+    private static IPtyConnection? _connection;
 
     internal static string? SteamCode;
-
-    public WorkshopUploader(ILogger<WorkshopUploader> logger)
-    {
-        _logger = logger;
-    }
-
-    /// <inheritdoc />
-    public UniTask StartAsync(CancellationToken token)
-    {
-        return UniTask.CompletedTask;
-    }
-
-    /// <inheritdoc />
-    public UniTask StopAsync(CancellationToken token)
-    {
-        try
-        {
-            _connection?.Kill();
-            _connection?.Dispose();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error closing connection.");
-        }
-        finally
-        {
-            _connection = null;
-        }
-
-        return UniTask.CompletedTask;
-    }
-
+    
     // Steam format for uploading workshop items. If 'publishedfileid' is 0, a new mod is created, otherwise it will upload to whatever mod ID you put there
     private const string WorkshopItemVcfFormat = """
                                                  "workshopitem"
@@ -113,12 +77,12 @@ public class WorkshopUploader : IHostedService
     /// <summary>
     /// Returns the path to the .vdf file relating to content.
     /// </summary>
-    public string GetVdfPath(string contentFolder)
+    public static string GetVdfPath(string contentFolder)
     {
         return Path.GetFullPath(Path.Combine(contentFolder, "..", "mod_" + Path.GetFileName(contentFolder) + ".vdf"));
     }
 
-    public ulong ReadModIdFromFile(string fileName)
+    public static ulong ReadModIdFromFile(string fileName)
     {
         return File.Exists(fileName) ? ReadModId(File.ReadAllText(fileName)) : 0ul;
     }
@@ -126,17 +90,8 @@ public class WorkshopUploader : IHostedService
     /// <summary>
     /// Uploads a mod to the Steam Workshop using SteamCMD.
     /// </summary>
-    public async Task<ulong?> UploadMod(WorkshopUploadParameters parameters, ILogger? logger, CancellationToken token = default)
+    public static async Task<ulong?> UploadMod(WorkshopUploadParameters parameters, CancellationToken token = default)
     {
-        logger ??= _logger;
-        if (GameThread.IsCurrent)
-        {
-            await UniTask.SwitchToThreadPool();
-        }
-
-        long startUnixTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-
-        await _sempahore.WaitAsync(token);
         try
         {
             string vdfPath = GetVdfPath(parameters.ContentFolder);
@@ -144,10 +99,7 @@ public class WorkshopUploader : IHostedService
             if (parameters.ModId == 0)
             {
                 // read mod id from file to be sure.
-                if (File.Exists(vdfPath))
-                {
-                    parameters.ModId = ReadModId(File.ReadAllText(vdfPath));
-                }
+                parameters.ModId = ReadModIdFromFile(vdfPath);
             }
 
             File.WriteAllText(vdfPath, string.Format(CultureInfo.InvariantCulture, WorkshopItemVcfFormat,
@@ -171,17 +123,11 @@ public class WorkshopUploader : IHostedService
 
                 string app = parameters.SteamCmdPath;
 
-                string[] cl = [ app, $"+login {parameters.Username} {parameters.Password}", $"+workshop_build_item \"{vdfPath}\"", "+quit" ];
-                int offset = 1;
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-                {
-                    app = "/bin/bash";
-                    offset = 0;
-                }
+                string[] cl = [ $"+login {parameters.Username} {parameters.Password}", $"+workshop_build_item \"{vdfPath}\"", "+quit" ];
 
-                string commandLine = app + " " + string.Join(' ', cl, offset, cl.Length - offset);
+                string commandLine = app + " " + string.Join(' ', cl);
 
-                logger.LogInformation("Starting SteamCMD. Command line: {0}.", commandLine.Replace(parameters.Password, "[redacted]"));
+                Console.WriteLine("Starting SteamCMD. Command line: {0}.", commandLine.Replace(parameters.Password, "[redacted]"));
 
                 _connection = await PtyProvider.SpawnAsync(new PtyOptions
                 {
@@ -192,7 +138,7 @@ public class WorkshopUploader : IHostedService
                     CommandLine = cl
                 }, cts.Token);
 
-                logger.LogInformation("SteamCMD started. PID: {0}.", _connection.Pid);
+                Console.WriteLine("SteamCMD started. PID: {0}.", _connection.Pid);
 
                 _connection.ProcessExited += (_, e) =>
                 {
@@ -209,161 +155,64 @@ public class WorkshopUploader : IHostedService
                     _connection = null;
                 };
 
-                string fileLogPath = Path.Combine(UnturnedPaths.RootDirectory.FullName, "Logs", "steamcmd.ansi");
+                string fileLogPath = parameters.LogFileOutput;
 
                 Directory.CreateDirectory(Path.GetDirectoryName(fileLogPath)!);
 
                 using FileStream fileLog = new FileStream(fileLogPath, FileMode.Create, FileAccess.Write, FileShare.Read, 1024, FileOptions.SequentialScan);
 
                 LoggingEventStream outStream = new LoggingEventStream(fileLog);
-                outStream.OutputReady += text => ProcessLineOutput(text, _connection, logger, wasExitFailure);
+                outStream.OutputReady += text => ProcessLineOutput(text, _connection, wasExitFailure);
 
                 Thread readerThread = new Thread(_ =>
                 {
+                    byte[] numArray = new byte[1024];
                     try
                     {
-                        byte[] numArray = new byte[1024];
                         int count;
                         while (_connection?.ReaderStream != null && (count = _connection.ReaderStream.Read(numArray, 0, numArray.Length)) != 0)
                             outStream.Write(numArray.AsSpan(0, count));
                     }
                     catch (ThreadAbortException) { throw; }
-                    catch (OperationCanceledException) when (cts.IsCancellationRequested) { }
-                    catch (ObjectDisposedException)
-                    {
-
-                    }
-                    catch (IOException ex)
-                    {
-                        // file can throw IOException after process exits
-                        if (!exitCode.HasValue)
-                            logger.LogError(ex, "Exception reading SteamCMD output.");
-                    }
+                    catch { /* stream ended */ }
                 });
 
                 readerThread.Start();
 
-                try
-                {
-                    await exitCodeSrc.Task;
-                }
-                finally
-                {
-                    readerThread.Abort();
-                }
+                await exitCodeSrc.Task;
 
-                logger.LogInformation("SteamCMD exited: {0}.", exitCode);
+                Console.WriteLine("SteamCMD exited: {0}.", exitCode);
             }
             catch (IOException ex)
             {
-                logger.LogError(ex, "IOException uploading a mod. Exit code: {0}.", exitCode);
+                Console.WriteLine("IOException uploading a mod. Exit code: {0}.", exitCode);
+                Console.WriteLine(ex);
                 wasExitFailure.Value = true;
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Unable to upload mod. Exit code: {0}.", exitCode);
+                Console.WriteLine("Unable to upload mod. Exit code: {0}.", exitCode);
+                Console.WriteLine(ex);
                 wasExitFailure.Value = true;
             }
             finally
             {
-                //_connection?.Dispose();
-                _connection = null;
+                try
+                {
+                    _connection?.Dispose();
+                }
+                catch (InvalidOperationException)
+                {
+                    // already disposed (thrown on linux)
+                }
+                finally
+                {
+                    _connection = null;
+                }
                 cts.Dispose();
             }
-
-            bool didModUpdate = false;
-            // check if it still worked even if Pty.Net failed to read the incoming stream
-            if (wasExitFailure.Value)
-            {
-                using CancellationTokenSource cts2 = new CancellationTokenSource();
-
-                Task t1 = Task.Run(async () =>
-                {
-                    while (true)
-                    {
-                        await Task.Delay(5000, CancellationToken.None).ConfigureAwait(false);
-                        _logger.LogDebug("Checking if mod updated...");
-
-                        await UniTask.SwitchToMainThread(token);
-
-                        TaskCompletionSource<SteamUGCQueryCompleted_t> completionSource = new TaskCompletionSource<SteamUGCQueryCompleted_t>();
-
-                        using CallResult<SteamUGCQueryCompleted_t> queryCompleted = CallResult<SteamUGCQueryCompleted_t>.Create((t, failure) =>
-                        {
-                            completionSource.TrySetResult(failure
-                                ? new SteamUGCQueryCompleted_t { m_eResult = (EResult)(-1) }
-                                : t);
-                        });
-
-                        UGCQueryHandle_t handle = SteamGameServerUGC.CreateQueryUGCDetailsRequest([ new PublishedFileId_t(parameters.ModId) ], 1);
-
-                        queryCompleted.Set(SteamGameServerUGC.SendQueryUGCRequest(handle));
-
-                        SteamUGCQueryCompleted_t result = await completionSource.Task.ConfigureAwait(false);
-                        try
-                        {
-                            if (result.m_handle != handle)
-                            {
-                                _logger.LogWarning("Handle mismatch.");
-                                continue;
-                            }
-
-                            if (result.m_eResult == (EResult)(-1))
-                            {
-                                _logger.LogWarning("Invalid check response.");
-                                continue;
-                            }
-                            else if (result.m_eResult != EResult.k_EResultOK)
-                            {
-                                _logger.LogWarning($"Invalid check response: {result.m_eResult}.");
-                                continue;
-                            }
-
-                            await UniTask.SwitchToMainThread(token);
-                            if (SteamGameServerUGC.GetQueryUGCResult(result.m_handle, 0, out SteamUGCDetails_t pDetails))
-                            {
-                                didModUpdate = pDetails.m_rtimeUpdated > startUnixTimestamp;
-                                if (didModUpdate)
-                                {
-                                    _logger.LogInformation($"Detected update: {DateTimeOffset.FromUnixTimeSeconds(pDetails.m_rtimeUpdated)}.");
-                                    // ReSharper disable once AccessToDisposedClosure
-                                    cts2.Cancel();
-                                    break;
-                                }
-                                else
-                                    _logger.LogDebug("Mod not updated yet.");
-                            }
-                            else
-                            {
-                                _logger.LogWarning("Could not get query UGC result 0.");
-                            }
-                        }
-                        finally
-                        {
-                            SteamGameServerUGC.ReleaseQueryUGCRequest(handle);
-                        }
-                    }
-                }, CancellationToken.None);
-
-                Task delay = Task.Delay(TimeSpan.FromMinutes(5d), cts2.Token);
-
-                await Task.WhenAny(delay, t1).ConfigureAwait(false);
-
-                if (!t1.IsCompleted)
-                {
-                    logger.LogError("Failed upload timeout reached.");
-                }
-                else if (didModUpdate)
-                {
-                    logger.LogInformation("Mod update detected successful.");
-                }
-                else
-                {
-                    logger.LogWarning("The mod did not update in time.");
-                }
-            }
-
-            if (didModUpdate || exitCode == 0 && !wasExitFailure.Value)
+            
+            if (exitCode == 0 && !wasExitFailure.Value)
             {
                 return ReadModId(File.ReadAllText(vdfPath));
             }
@@ -373,26 +222,25 @@ public class WorkshopUploader : IHostedService
         finally
         {
             _connection = null;
-            _sempahore.Release();
         }
     }
 
     /// <summary>
     /// Invoked with output from SteamCMD.
     /// </summary>
-    private void ProcessLineOutput(string text, IPtyConnection connection, ILogger logger, StrongBox<bool> wasExitFailure)
+    private static void ProcessLineOutput(string text, IPtyConnection connection, StrongBox<bool> wasExitFailure)
     {
-        //Console.Write(text);
+        Console.Write(text);
 
         // SteamCMD may ask for a Steam Guard code which will have to be provided by me. I have the discord bot set up to DM me when this happens.
         if (text.Contains("Steam Guard code:", StringComparison.Ordinal))
         {
-            WaitForSteamGuardCode(connection, logger, wasExitFailure);
+            WaitForSteamGuardCode(connection, wasExitFailure);
         }
         // This usually occurs when the login details are incorrect.
         else if (text.Contains("to Steam Public...FAILED", StringComparison.Ordinal))
         {
-            logger.LogError("SteamCMD login failed: invalid credentials.");
+            Console.WriteLine("Login failed: invalid credentials.");
 
             // this is equivalent to pressing Ctrl + C in console.
             connection.WriterStream.Write("\x3"u8);
@@ -401,41 +249,25 @@ public class WorkshopUploader : IHostedService
         }
     }
 
-    private void WaitForSteamGuardCode(IPtyConnection connection, ILogger logger, StrongBox<bool> wasExitFailure)
+    private static void WaitForSteamGuardCode(IPtyConnection connection, StrongBox<bool> wasExitFailure)
     {
-        Task.Factory.StartNew(async () =>
+        Task.Factory.StartNew(() =>
         {
-            try
-            {
-                SendSteamGuardRequired();
-            }
-            catch (RpcException) { }
-
-            logger.LogWarning("SteamCMD requires the Steam Guard code for the user uploading a mod. Run \"/wdev steamguard <code>\" to supply a code.");
-
-            // default timeout is pretty high to give time for me to see the message
-            TimeSpan delay = TimeSpan.FromMinutes(15d);
-
-            Console.WriteLine("Waiting for steam guard code");
+            Console.WriteLine("SteamCMD requires the Steam Guard code for the user uploading a mod. Run \"/wdev steamguard <code>\" to supply a code.");
+            Console.WriteLine("Waiting for steam guard code...");
             
-            DateTime start = DateTime.UtcNow;
-
-            SteamCode = null;
-            do
-            {
-                await Task.Delay(250);
-            } while (DateTime.UtcNow - start < delay && SteamCode == null);
+            SteamCode = Console.ReadLine();
 
             try
             {
                 if (SteamCode != null)
                 {
-                    logger.LogInformation("Received steam guard code.");
+                    Console.WriteLine("Received steam guard code.");
                     connection.WriterStream.Write(Encoding.ASCII.GetBytes(SteamCode + Environment.NewLine));
                 }
                 else
                 {
-                    logger.LogInformation("Steam Guard Code expired.");
+                    Console.WriteLine("Steam Guard Code expired.");
                     // this is equivalent to pressing Ctrl + C in console.
                     connection.WriterStream.Write("\x3"u8);
                     wasExitFailure.Value = true;
@@ -443,7 +275,7 @@ public class WorkshopUploader : IHostedService
             }
             catch (ObjectDisposedException)
             {
-                logger.LogInformation("Already exited.");
+                Console.WriteLine("Already exited.");
             }
 
             connection.WriterStream.Flush();
@@ -451,16 +283,6 @@ public class WorkshopUploader : IHostedService
             SteamCode = null;
 
         }, TaskCreationOptions.LongRunning);
-    }
-
-    [RpcSend]
-    protected virtual void SendSteamGuardRequired() => _ = RpcTask.NotImplemented;
-
-    [RpcReceive]
-    protected bool ReceiveSteamGuardRequired(string code)
-    {
-        SteamCode = code;
-        return true;
     }
 
     /// <summary>

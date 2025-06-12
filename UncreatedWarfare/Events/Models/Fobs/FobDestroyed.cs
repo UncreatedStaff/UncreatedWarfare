@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using Uncreated.Warfare.Events.Logging;
 using Uncreated.Warfare.Events.Models.Buildables;
+using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.FOBs;
 
 namespace Uncreated.Warfare.Events.Models.Fobs;
@@ -10,7 +11,7 @@ namespace Uncreated.Warfare.Events.Models.Fobs;
 /// Event listener args which fires after the main structure of any <see cref="IBuildableFob"/> subclass is destroyed.
 /// </summary>
 [EventModel(EventSynchronizationContext.Pure)]
-public class FobDestroyed : IActionLoggableEvent
+public class FobDestroyed : IActionLoggableEvent, IFobNeedsUIUpdateEvent
 {
     /// <summary>
     /// The <see cref="IBuildableFob"/> that was destroyed.
@@ -31,4 +32,6 @@ public class FobDestroyed : IActionLoggableEvent
             Event.InstigatorId
         );
     }
+
+    IFob IFobNeedsUIUpdateEvent.Fob => Fob;
 }

@@ -162,6 +162,15 @@ public class Layout : IDisposable
     }
 
     /// <summary>
+    /// Sets the winner of the game and moves to the next phase.
+    /// </summary>
+    public UniTask TriggerVictoryAsync(Team winner)
+    {
+        Data[KnownLayoutDataKeys.WinnerTeam] = winner;
+        return MoveToNextPhase(CancellationToken.None);
+    }
+
+    /// <summary>
     /// Invoked when a change is made to <see cref="LayoutConfiguration"/>.
     /// </summary>
     protected virtual UniTask ApplyLayoutConfigurationUpdateAsync(CancellationToken token = default) => default;

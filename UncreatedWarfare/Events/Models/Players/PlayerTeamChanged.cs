@@ -1,11 +1,12 @@
 using System;
 using Uncreated.Warfare.Events.Logging;
+using Uncreated.Warfare.Events.Models.Fobs;
 using Uncreated.Warfare.Layouts.Teams;
 
 namespace Uncreated.Warfare.Events.Models.Players;
 
 [EventModel(EventSynchronizationContext.Pure)]
-public class PlayerTeamChanged : PlayerEvent, IActionLoggableEvent
+public class PlayerTeamChanged : PlayerEvent, IActionLoggableEvent, IPlayerNeedsFobUIUpdateEvent
 {
     public required CSteamID GroupId { get; init; }
     public required Team Team { get; init; }

@@ -1,5 +1,6 @@
 using System;
 using Uncreated.Warfare.Events.Logging;
+using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Players;
@@ -11,7 +12,7 @@ namespace Uncreated.Warfare.Events.Models.Fobs;
 /// Event listener args which fires after supplies are added or removed from a <see cref="IResourceFob"/>.
 /// </summary>
 [EventModel(EventSynchronizationContext.Pure)]
-public class FobSuppliesChanged : IActionLoggableEvent
+public class FobSuppliesChanged : IActionLoggableEvent, IFobNeedsUIUpdateEvent
 {
     /// <summary>
     /// The <see cref="IResourceFob"/> where supplies were added or removed.
@@ -44,4 +45,6 @@ public class FobSuppliesChanged : IActionLoggableEvent
             Resupplier
         );
     }
+
+    IFob IFobNeedsUIUpdateEvent.Fob => Fob;
 }

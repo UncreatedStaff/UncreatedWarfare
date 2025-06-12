@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using Uncreated.Warfare.Events.Models.Flags;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.List;
 using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Layouts.Flags;
-public class FlagObjective : IDisposable
+
+public class FlagObjective : IDisposable, IObjective
 {
     private readonly HashSet<Team> _previousOwners;
 
@@ -20,6 +22,10 @@ public class FlagObjective : IDisposable
     public int Index { get; }
     public ReadOnlyTrackingList<WarfarePlayer> Players => Region.Players;
     public Team Owner => Contest.IsWon ? Contest.Leader : Team.NoTeam;
+
+    /// <inheritdoc />
+    public bool IsActive { get; private set; } = true;
+
     public SingleLeaderContest Contest { get; }
     public bool IsContested { get; private set; }
 
@@ -123,13 +129,14 @@ public class FlagObjective : IDisposable
         _ = WarfareModule.EventDispatcher?.DispatchEventAsync(new FlagCaptured { Flag = this, Capturer = team });
     }
 
-    private void OnNeutralizedIntl(Team team)
+    private void OnNeutralizedIntl(Team team, Team oldTeam)
     {
-        _ = WarfareModule.EventDispatcher?.DispatchEventAsync(new FlagNeutralized { Flag = this, Neutralizer = team });
+        _ = WarfareModule.EventDispatcher?.DispatchEventAsync(new FlagNeutralized { Flag = this, Neutralizer = team, TakenFrom = oldTeam.IsValid ? oldTeam : null });
     }
 
     public void Dispose()
     {
+        IsActive = false;
         Region.OnPlayerEntered -= OnPlayerEnteredIntl;
         Region.OnPlayerExited -= OnPlayerExitedIntl;
         // important to dispose the zone region to get rid of colliders and stuff
@@ -160,5 +167,28 @@ public class FlagObjective : IDisposable
     public override int GetHashCode()
     {
         return HashCode.Combine(Name);
+    }
+
+
+    bool ITransformObject.Alive => IsActive;
+
+    Vector3 ITransformObject.Position
+    {
+        get => Region.Primary.Zone.Spawn;
+        set => throw new NotSupportedException();
+    }
+    Quaternion ITransformObject.Rotation
+    {
+        get => Quaternion.Euler(0f, Region.Primary.Zone.SpawnYaw, 0f);
+        set => throw new NotSupportedException();
+    }
+    Vector3 ITransformObject.Scale
+    {
+        get => Vector3.one;
+        set => throw new NotSupportedException();
+    }
+    void ITransformObject.SetPositionAndRotation(Vector3 position, Quaternion rotation)
+    {
+        throw new NotSupportedException();
     }
 }

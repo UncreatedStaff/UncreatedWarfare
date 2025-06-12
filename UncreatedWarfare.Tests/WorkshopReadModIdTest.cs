@@ -1,5 +1,5 @@
 using NUnit.Framework;
-using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Steam;
 
 namespace Uncreated.Warfare.Tests;
 public class WorkshopReadModIdTest
@@ -24,6 +24,6 @@ public class WorkshopReadModIdTest
                             }
                             """;
 
-        Assert.That(WorkshopUploader.ReadModId(fileContents), Is.EqualTo(modId));
+        Assert.That(LocalWorkshopUploader.ReadModId(fileContents), Is.EqualTo(modId));
     }
 }
