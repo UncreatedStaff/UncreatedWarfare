@@ -9,6 +9,7 @@ using Uncreated.Framework.UI.Patterns;
 using Uncreated.Framework.UI.Presets;
 using Uncreated.Framework.UI.Reflection;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Interaction;
@@ -47,6 +48,7 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
     [Ignore] private readonly IPlayerService _playerService;
     [Ignore] private readonly SquadManager _squadManager;
     [Ignore] private readonly PointsService _pointsService;
+    [Ignore] private readonly LayoutFactory _layoutFactory;
     [Ignore] private readonly ITranslationService _translationService;
     [Ignore] private readonly WarfareLifetimeComponent _appLifetime;
     [Ignore] private readonly Func<CSteamID, DualSidedLeaderboardPlayerData> _createData;
@@ -102,8 +104,12 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
         _translationService = translationService;
         _appLifetime = appLifetime;
 
+        VoteClearButton.OnClicked += OnClearVotes;
+
         ElementPatterns.SubscribeAll(Leaderboards[0].StatHeaders, Team1ButtonPressed);
         ElementPatterns.SubscribeAll(Leaderboards[1].StatHeaders, Team2ButtonPressed);
+
+        ElementPatterns.SubscribeAll(VoteButtons, b => b.Button, OnVoteButtonChosen);
     }
 
     private void Team1ButtonPressed(UnturnedButton button, Player player)
@@ -131,6 +137,9 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
         if (IsActive)
             return;
 
+        if (sets.Length != 2)
+            throw new ArgumentException("DualSidedLeaderboardUI only accepts two teams.", nameof(sets));
+
         LeaderboardPhaseStatInfo? defaultSortStat = phase.PlayerStats.FirstOrDefault(s => s.DefaultLeaderboardSort != null);
 
         if (defaultSortStat == null)
@@ -147,9 +156,6 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
         }
 
         _startTimestamp = DateTime.UtcNow;
-
-        if (sets.Length != 2)
-            throw new ArgumentException("DualSidedLeaderboardUI only accepts two teams.", nameof(sets));
 
         foreach (WarfarePlayer player in _playerService.OnlinePlayers)
         {
@@ -174,11 +180,22 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
         _valuablePlayers = ComputeValuablePlayers();
         _globalStatSums = ComputeGlobalStats();
         _topSquads = ComputeTopSquads();
+        _voteLayouts = ComputeCandidateLayouts();
+        _layoutVotes = new int[_voteLayouts.Length];
 
+        IsVotingPeriodOpen = _voteLayouts.Length > 0 && _layoutFactory.NextLayout == null;
         SendToAllPlayers();
         foreach (LanguageSet set in _translationService.SetOf.AllPlayers())
         {
             SendToPlayers(set);
+            if (!IsVotingPeriodOpen)
+            {
+                while (set.MoveNext())
+                {
+                    CloseVotes(set.Next.Connection);
+                    
+                }
+            }
         }
 
         OpenChat();
@@ -199,6 +216,11 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
 
         if (!IsActive)
             return;
+
+        if (IsVotingPeriodOpen)
+        {
+            EndVotingPeriod();
+        }
 
         IsActive = false;
         ClearFromAllPlayers();
@@ -231,6 +253,7 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
         SendTopSquads(set);
         SendValuablePlayers(set);
         SendGlobalStats(set);
+        SendVotes(set);
 
         if (winningTeam != null)
         {
@@ -693,6 +716,7 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
         UpdateChat(e.Player);
     }
 
+    [EventListener(MustRunInstantly = true)]
     void IEventListener<PlayerLeft>.HandleEvent(PlayerLeft e, IServiceProvider serviceProvider)
     {
         if (!IsActive)
@@ -701,6 +725,11 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
         if (e.Player.ComponentOrNull<AudioRecordPlayerComponent>() is { } comp)
         {
             comp.VoiceChatStateUpdated -= CompOnVoiceChatStateUpdated;
+        }
+
+        if (IsVotingPeriodOpen)
+        {
+            ClearPlayerVote(e.Player);
         }
     }
 

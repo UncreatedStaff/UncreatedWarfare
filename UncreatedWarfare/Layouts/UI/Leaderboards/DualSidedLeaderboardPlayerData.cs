@@ -10,6 +10,7 @@ internal class DualSidedLeaderboardPlayerData : IUnturnedUIData
     public RingBuffer<DualSidedLeaderboardUI.ChatMessageInfo> VisibleChats;
     public LeaderboardSortColumn[] SortColumns;
     public ModalHandle Modal;
+    public int Vote;
 
     public CSteamID Player { get; }
 

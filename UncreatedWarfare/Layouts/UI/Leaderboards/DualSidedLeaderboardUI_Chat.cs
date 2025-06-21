@@ -12,6 +12,7 @@ using Uncreated.Warfare.Translations.Util;
 
 namespace Uncreated.Warfare.Layouts.UI.Leaderboards;
 
+// code for the chat window
 partial class DualSidedLeaderboardUI :
     IEventListener<PlayerChatRequested>,
     IEventListener<PlayerChatSent>
