@@ -286,6 +286,9 @@
     <Using Include="System.Action">
       <Alias>Action</Alias>
     </Using>
+    <Using Include="Uncreated.Warfare.Vehicles.Spawners.VehicleSpawner">
+      <Alias>VehicleSpawner</Alias>
+    </Using>
     <Using Include="Microsoft.Extensions.Logging" />
     <Using Include="Microsoft.Extensions.Logging.ILogger">
       <Alias>ILogger</Alias>
