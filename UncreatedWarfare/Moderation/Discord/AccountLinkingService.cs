@@ -11,8 +11,8 @@ using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Moderation.Discord;
 
-[RpcClass]
-public class AccountLinkingService
+[GenerateRpcSource]
+public partial class AccountLinkingService
 {
     private static System.Random? _randomGenerator;
     private readonly IUserDataService _userDataService;
@@ -328,10 +328,7 @@ public class AccountLinkingService
     /// Check if a player is currently in the Discord server by their Discord user ID.
     /// </summary>
     [RpcSend]
-    protected virtual RpcTask<GuildStatusResult> SendIsInGuild(ulong discordId)
-    {
-        return RpcTask<GuildStatusResult>.NotImplemented;
-    }
+    protected partial RpcTask<GuildStatusResult> SendIsInGuild(ulong discordId);
 
     private void InvokeLinkUpdated(ulong steam64)
     {
@@ -350,10 +347,7 @@ public class AccountLinkingService
     /// Invoke the 'link updated' method on the remote side.
     /// </summary>
     [RpcSend(nameof(ReceiveLinkUpdated)), RpcFireAndForget]
-    protected virtual void SendLinkUpdated(ulong steam64)
-    {
-        _ = RpcTask.NotImplemented;
-    }
+    protected partial void SendLinkUpdated(ulong steam64);
 
     [RpcReceive]
     private void ReceiveLinkUpdated(ulong steam64)
@@ -367,8 +361,6 @@ public class AccountLinkingService
             _logger.LogError(ex, "Error on OnLinkUpdated.");
         }
     }
-
-
 
 
     private static readonly char[] Dashes = ['-', '‐', '‑', '‒', '–', '—', '―', '⸺', '⸻', '﹘'];

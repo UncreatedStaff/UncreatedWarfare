@@ -32,8 +32,8 @@ using UnityEngine.Networking;
 
 namespace Uncreated.Warfare.Moderation;
 
-[RpcClass]
-public class DatabaseInterface : IHostedService
+[GenerateRpcSource]
+public partial class DatabaseInterface : IHostedService
 {
     private readonly object _cacheSync = new object();
     public readonly TimeSpan DefaultInvalidateDuration = TimeSpan.FromSeconds(3);
@@ -1703,7 +1703,7 @@ public class DatabaseInterface : IHostedService
     }
 
     [RpcSend]
-    protected virtual RpcTask SendSuspectedCheater(ulong steam64, uint ucsBanId) => RpcTask.NotImplemented;
+    protected partial RpcTask SendSuspectedCheater(ulong steam64, uint ucsBanId);
 
     private static readonly string GetIPAddressesQuery = $"SELECT {MySqlSnippets.ColumnList(ColumnIPAddressesPrimaryKey,
         ColumnIPAddressesSteam64, ColumnIPAddressesPackedIP, ColumnIPAddressesLoginCount,
@@ -1866,7 +1866,7 @@ public class DatabaseInterface : IHostedService
     }
 
     [RpcSend("ReceiveModerationEntryUpdated")]
-    protected virtual void SendModerationEntryUpdated(uint entryId, bool isNew) { _ = RpcTask.NotImplemented; }
+    protected partial void SendModerationEntryUpdated(uint entryId, bool isNew);
 
     [RpcReceive("SendModerationEntryUpdated")]
     private void ReceiveModerationEntryUpdated(uint entryId, bool isNew)

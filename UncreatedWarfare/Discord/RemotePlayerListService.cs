@@ -21,8 +21,8 @@ namespace Uncreated.Warfare.Discord;
 /// Handles replicating the server's player list and startup state (shutdown, startup, etc.)
 /// </summary>
 /// <remarks>This class is meant to be used on both the server and the discord bot.</remarks>
-[RpcClass]
-public class RemotePlayerListService :
+[GenerateRpcSource]
+public partial class RemotePlayerListService :
     IHostedService,
     ILayoutHostedService,
     IEventListener<PlayerJoined>,
@@ -172,10 +172,7 @@ public class RemotePlayerListService :
     /// Requests a player list from the remote party (the server).
     /// </summary>
     [RpcSend(nameof(SendCurrentPlayerList)), RpcFireAndForget]
-    public virtual void SendPlayerListRequest(IModularRpcRemoteConnection connection)
-    {
-        _ = RpcTask.NotImplemented;
-    }
+    public partial void SendPlayerListRequest(IModularRpcRemoteConnection connection);
 
     [RpcReceive]
     private void ReceivePlayerConnected(ReplicatedPlayerListEntry player, IModularRpcRemoteConnection connection)
@@ -204,10 +201,7 @@ public class RemotePlayerListService :
     }
 
     [RpcSend(nameof(ReceivePlayerList)), RpcTimeout(Timeouts.Seconds * 5)]
-    protected virtual RpcTask SendPlayerList(ReplicatedServerState state, ReplicatedPlayerListEntry[] playerList)
-    {
-        return RpcTask.NotImplemented;
-    }
+    protected partial RpcTask SendPlayerList(ReplicatedServerState state, ReplicatedPlayerListEntry[] playerList);
 
     [RpcReceive]
     private void ReceivePlayerList(ReplicatedServerState state, ReplicatedPlayerListEntry[] playerList, IModularRpcRemoteConnection connection)
@@ -231,13 +225,13 @@ public class RemotePlayerListService :
     }
 
     [RpcSend(nameof(ReceiveServerState)), RpcTimeout(Timeouts.Seconds * 3)]
-    protected virtual RpcTask SendServerStateUpdated(ReplicatedServerState state) => RpcTask.NotImplemented;
+    protected partial RpcTask SendServerStateUpdated(ReplicatedServerState state);
 
     [RpcSend(nameof(ReceivePlayerConnected)), RpcTimeout(Timeouts.Seconds * 3)]
-    protected virtual RpcTask SendPlayerConnected(ReplicatedPlayerListEntry player) => RpcTask.NotImplemented;
+    protected partial RpcTask SendPlayerConnected(ReplicatedPlayerListEntry player);
 
     [RpcSend(nameof(ReceivePlayerDisconnected)), RpcTimeout(Timeouts.Seconds * 3)]
-    protected virtual RpcTask SendPlayerDisconnected(ReplicatedPlayerListEntry player) => RpcTask.NotImplemented;
+    protected partial RpcTask SendPlayerDisconnected(ReplicatedPlayerListEntry player);
 
 
     private void UpdatePlayer(WarfarePlayer player)

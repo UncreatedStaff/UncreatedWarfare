@@ -19,8 +19,8 @@ using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Players.Permissions;
 
-[RpcClass]
-public class UserPermissionStore : IAsyncDisposable, IHostedService, IEventListener<PlayerLeft>
+[GenerateRpcSource]
+public partial class UserPermissionStore : IAsyncDisposable, IHostedService, IEventListener<PlayerLeft>
 {
     private readonly ConcurrentDictionary<ulong, ReadOnlyCollection<PermissionBranch>> _individualPermissionCache = new ConcurrentDictionary<ulong, ReadOnlyCollection<PermissionBranch>>();
     private readonly ConcurrentDictionary<ulong, ReadOnlyCollection<PermissionGroup>> _permissionGroupCache = new ConcurrentDictionary<ulong, ReadOnlyCollection<PermissionGroup>>();

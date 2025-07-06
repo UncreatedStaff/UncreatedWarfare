@@ -22,8 +22,8 @@ using Uncreated.Warfare.Stats;
 
 namespace Uncreated.Warfare.Discord;
 
-[RpcClass]
-public class WarfareGameStateService :
+[GenerateRpcSource]
+public partial class WarfareGameStateService :
     IEventListener<SquadUpdated>,
     IEventListener<DailyQuestsUpdated>,
     IEventListener<HomebaseConnected>,
@@ -170,7 +170,7 @@ public class WarfareGameStateService :
     }
 
     [RpcSend(nameof(ReceiveFullGameState))]
-    protected virtual RpcTask SendFullStateRpc(
+    private partial RpcTask SendFullStateRpc(
         ulong gameId,
         string? publicIP,
         ushort port,
@@ -181,10 +181,7 @@ public class WarfareGameStateService :
         DateTime layoutStartTime,
         WarfareRank[]? ranks,
         DailyQuestDay?[]? dailyQuests,
-        SquadInfo[]? squads)
-    {
-        return RpcTask.NotImplemented;
-    }
+        SquadInfo[]? squads);
 
     [RpcReceive]
     private void ReceiveFullGameState(
@@ -251,20 +248,19 @@ public class WarfareGameStateService :
     }
 
     [RpcSend(nameof(ReceiveGameInfoRequest))]
-    protected virtual void RequestGameInfo(IModularRpcRemoteConnection connection) => _ = RpcTask.NotImplemented;
-
+    private partial void RequestGameInfo(IModularRpcRemoteConnection connection);
 
     [RpcSend(nameof(ReceiveSquadUpdate))]
-    protected virtual void SendSquadUpdate(ulong gameId, string name, uint faction, int id, bool isLocked, ulong[] members) => _ = RpcTask.NotImplemented;
+    private partial void SendSquadUpdate(ulong gameId, string name, uint faction, int id, bool isLocked, ulong[] members);
 
     [RpcSend(nameof(ReceiveRemoveSquad))]
-    protected virtual void SendRemoveSquad(ulong gameId, uint faction, int id) => _ = RpcTask.NotImplemented;
+    private partial void SendRemoveSquad(ulong gameId, uint faction, int id);
 
     [RpcSend(nameof(ReceivePhaseUpdated))]
-    protected virtual void SendPhaseUpdated(ulong gameId, string? phase) => _ = RpcTask.NotImplemented;
+    private partial void SendPhaseUpdated(ulong gameId, string? phase);
 
     [RpcSend(nameof(ReceiveDailyQuests))]
-    protected virtual void SendDailyQuests(ulong gameId, DailyQuestDay?[]? quests) => _ = RpcTask.NotImplemented;
+    private partial void SendDailyQuests(ulong gameId, DailyQuestDay?[]? quests);
 
     [RpcReceive]
     private void ReceiveSquadUpdate(ulong gameId, string name, uint faction, int id, bool isLocked, ulong[] members)
