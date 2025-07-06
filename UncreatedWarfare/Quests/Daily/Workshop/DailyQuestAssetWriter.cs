@@ -53,12 +53,15 @@ internal static class DailyQuestAssetWriter
                 datWriter.WriteDictionaryStart("Asset");
                 datWriter.WriteKeyValue("ID", day.Id);
                 datWriter.WriteEmptyLine();
-                datWriter.WriteKeyValue("Conditions", day.Presets.Length);
+                datWriter.WriteKey("Conditions");
+
+                datWriter.WriteListStart();
+
                 for (int presetIndex = 0; presetIndex < day.Presets.Length; presetIndex++)
                 {
-                    DailyQuestPreset preset = day.Presets[presetIndex]!;
+                    datWriter.WriteDictionaryStart();
 
-                    string prefix = "Condition_" + presetIndex.ToString(CultureInfo.InvariantCulture);
+                    DailyQuestPreset preset = day.Presets[presetIndex]!;
 
                     QuestParameterValue<int> flagValueParameter = preset.State.FlagValue;
 
@@ -66,12 +69,14 @@ internal static class DailyQuestAssetWriter
                         ? (short)flagValueParameter.GetSingleValue()
                         : (short)0;
 
-                    datWriter.WriteEmptyLine();
-                    datWriter.WriteKeyValue(prefix + "_Type", "FLAG_SHORT");
-                    datWriter.WriteKeyValue(prefix + "_ID", preset.Flag);
-                    datWriter.WriteKeyValue(prefix + "_Value", flagValue);
-                    datWriter.WriteKeyValue(prefix + "_Logic", "GREATER_THAN_OR_EQUAL_TO");
-                    datWriter.WriteKeyValue(prefix + "_Preset", preset.Key);
+                    datWriter.WriteKeyValue("Type", nameof(ENPCConditionType.FLAG_SHORT));
+                    datWriter.WriteKeyValue("ID", preset.Flag);
+                    datWriter.WriteKeyValue("Value", flagValue);
+                    datWriter.WriteKeyValue("Logic", nameof(ENPCLogicType.GREATER_THAN_OR_EQUAL_TO));
+                    datWriter.WriteKeyValue("TextId", $"Condition_{presetIndex.ToString(CultureInfo.InvariantCulture)}");
+                    datWriter.WriteKeyValue("Preset", preset.Key);
+
+                    datWriter.WriteDictionaryEnd();
 
                     if (preset.RewardOverrides == null)
                         continue;
@@ -87,6 +92,8 @@ internal static class DailyQuestAssetWriter
                     if (reputation != null)
                         repSum += reputation.Reputation;
                 }
+
+                datWriter.WriteListEnd();
             }
 
             using (StreamWriter writer = new StreamWriter(Path.Combine(dayDir, "English.dat")))

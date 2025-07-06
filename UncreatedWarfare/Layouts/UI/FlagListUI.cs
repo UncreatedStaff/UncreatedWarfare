@@ -74,13 +74,15 @@ public class FlagListUI : UnturnedUI
         FactionInfo faction = set.Team.Faction;
         int tickets = ticketTracker.GetTickets(set.Team);
 
-        TicketBleedSeverity bleed = ticketTracker.GetBleedSeverity(set.Team);
+        ICustomUITicketTracker? customUiTracker = ticketTracker as ICustomUITicketTracker;
 
-        string ticketsStr = tickets.ToString(set.Culture);
+        bool playerSpecific = customUiTracker is { PlayerSpecific: true };
 
-        string bleedMessage = _translations.GetBleedMessage(bleed).Translate(set);
-        if (!string.IsNullOrEmpty(bleedMessage))
-            ticketsStr += "  " + bleedMessage;
+        bool hasTicketInfo = false;
+        string? ticketsStr = null;
+        TicketBleedSeverity bleed = 0;
+        FactionInfo? ticketFaction = null;
+
 
         while (set.MoveNext())
         {
@@ -93,6 +95,7 @@ public class FlagListUI : UnturnedUI
                 SendToPlayer(connection);
                 data.HasUI = true;
                 data.Tickets = int.MinValue;
+                data.CustomTicket = null;
                 data.Bleed = TicketBleedSeverity.None;
                 data.TicketsFlag = null;
                 data.Rows = 1;
@@ -100,22 +103,69 @@ public class FlagListUI : UnturnedUI
                 ticketsOnlyForThisPlayer = false;
             }
 
-            if (data.Tickets != tickets || data.Bleed != bleed)
+            // update ticket text
+            bool fallback = true;
+            if (customUiTracker != null)
             {
-                TicketCount.SetText(connection, ticketsStr);
-                data.Tickets = tickets;
-                data.Bleed = bleed;
+                if (playerSpecific || !hasTicketInfo)
+                {
+                    (ticketsStr, ticketFaction) = customUiTracker.GetTicketText(playerSpecific ? new LanguageSet(player) : set, out fallback);
+                    if (fallback)
+                    {
+                        if (!playerSpecific)
+                            customUiTracker = null;
+                        hasTicketInfo = false;
+                    }
+                    else
+                    {
+                        hasTicketInfo = true;
+                    }
+                }
+
+                if (!fallback)
+                {
+                    if (!string.Equals(data.CustomTicket, ticketsStr, StringComparison.Ordinal))
+                        TicketCount.SetText(player.Connection, ticketsStr!);
+                    data.CustomTicket = ticketsStr;
+                }
             }
 
-            if (!Equals(data.TicketsFlag, faction))
+            // fallback to default tickets
+            if (fallback)
             {
-                TicketsFlagIcon.SetText(connection, faction.Sprite);
-                data.TicketsFlag = faction;
+                if (!hasTicketInfo)
+                {
+                    bleed = ticketTracker.GetBleedSeverity(set.Team);
+
+                    ticketsStr = tickets.ToString(set.Culture);
+
+                    string bleedMessage = _translations.GetBleedMessage(bleed).Translate(set);
+                    if (!string.IsNullOrEmpty(bleedMessage))
+                        ticketsStr += "  " + bleedMessage;
+
+                    ticketFaction = faction;
+                    hasTicketInfo = true;
+                }
+
+                if (data.Tickets != tickets || data.Bleed != bleed || data.CustomTicket != null)
+                {
+                    TicketCount.SetText(connection, ticketsStr!);
+                    data.Tickets = tickets;
+                    data.Bleed = bleed;
+                    data.CustomTicket = null;
+                }
+            }
+
+            if (!Equals(data.TicketsFlag, ticketFaction))
+            {
+                TicketsFlagIcon.SetText(connection, ticketFaction!.Sprite);
+                data.TicketsFlag = ticketFaction;
             }
 
             if (ticketsOnlyForThisPlayer)
                 continue;
 
+            // update flags
             int index = 0;
             foreach (FlagListUIEntry entry in flagProvider.EnumerateFlagListEntries(set))
             {
@@ -165,6 +215,7 @@ public class FlagListUI : UnturnedUI
         public int Tickets { get; set; }
         public TicketBleedSeverity Bleed { get; set; }
         public int Rows { get; set; }
+        public string? CustomTicket { get; set; }
         public FlagListUIData(CSteamID player, UnturnedUI owner)
         {
             Player = player;

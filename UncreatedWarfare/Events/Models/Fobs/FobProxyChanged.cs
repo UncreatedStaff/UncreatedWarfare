@@ -8,12 +8,13 @@ namespace Uncreated.Warfare.Events.Models.Fobs;
 /// Event listener args which fires after <see cref="ResourceFob"/> becomes proxied by enemies or spawnable again.
 /// </summary>
 [EventModel(EventSynchronizationContext.Pure)]
-public class FobProxyChanged : IActionLoggableEvent
+public class FobProxyChanged : IActionLoggableEvent, IFobNeedsUIUpdateEvent
 {
     /// <summary>
     /// The <see cref="ResourceFob"/> that was proxied or unproxied by enemies.
     /// </summary>
     public required ResourceFob Fob { get; init; }
+
     /// <summary>
     /// The new proxy state of the Fob.
     /// </summary>
@@ -28,4 +29,6 @@ public class FobProxyChanged : IActionLoggableEvent
             0
         );
     }
+
+    IFob IFobNeedsUIUpdateEvent.Fob => Fob;
 }

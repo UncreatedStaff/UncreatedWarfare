@@ -4,6 +4,7 @@ using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Interaction;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Util.DamageTracking;
 
@@ -14,16 +15,6 @@ public class BunkerFob : ResourceFob, IDeployable
     public bool HasBeenRebuilt { get; private set; }
     public DamageTracker DamageTracker { get; }
     public CSteamID Creator => Buildable.Owner;
-    public override Color32 Color
-    {
-        get
-        {
-            if (!IsBuilt)
-                return UnityEngine.Color.gray;
-
-            return base.Color;
-        }
-    }
 
     public BunkerFob(IServiceProvider serviceProvider, string name, IBuildable buildable) : base(serviceProvider, name, buildable)
     {
@@ -34,6 +25,11 @@ public class BunkerFob : ResourceFob, IDeployable
         // show shovelable icon instead
         if (Icon != null)
             Icon.IsVisible = false;
+    }
+
+    public override Color32 GetColor(Team viewer)
+    {
+        return !IsBuilt ? Color.gray : base.GetColor(viewer);
     }
 
     public void MarkBuilt(IBuildable newBuildable)

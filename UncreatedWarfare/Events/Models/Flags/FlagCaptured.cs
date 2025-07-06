@@ -1,5 +1,7 @@
 using System;
 using Uncreated.Warfare.Events.Logging;
+using Uncreated.Warfare.Events.Models.Objectives;
+using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.Layouts.Flags;
 using Uncreated.Warfare.Layouts.Teams;
 
@@ -10,12 +12,13 @@ namespace Uncreated.Warfare.Events.Models.Flags;
 /// a winning <see cref="Team"/> after they won the flag contest of a neutral flag.
 /// </summary>
 [EventModel(EventSynchronizationContext.Pure)]
-public class FlagCaptured : IActionLoggableEvent
+public class FlagCaptured : IActionLoggableEvent, IObjectiveTaken
 {
     /// <summary>
     /// The flag that was captured.
     /// </summary>
     public required FlagObjective Flag { get; init; }
+
     /// <summary>
     /// The team that captured the flag by means of leading the flag contest.
     /// </summary>
@@ -29,4 +32,7 @@ public class FlagCaptured : IActionLoggableEvent
             0
         );
     }
+
+    Team IObjectiveTaken.Team => Capturer;
+    IObjective IObjectiveTaken.Objective => Flag;
 }

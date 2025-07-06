@@ -8,7 +8,6 @@ using Uncreated.Framework.UI.Reflection;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Fobs;
-using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
@@ -20,13 +19,8 @@ namespace Uncreated.Warfare.Fobs.UI;
 [UnturnedUI(BasePath = "FobList")]
 public class FobHUD : 
     UnturnedUI,
-    IEventListener<FobRegistered>,
-    IEventListener<FobDeregistered>,
-    IEventListener<FobBuilt>,
-    IEventListener<PlayerTeamChanged>,
-    IEventListener<FobDestroyed>,
-    IEventListener<FobProxyChanged>,
-    IEventListener<FobSuppliesChanged>,
+    IEventListener<IPlayerNeedsFobUIUpdateEvent>,
+    IEventListener<IFobNeedsUIUpdateEvent>,
     IHudUIListener
 {
     private readonly FobManager _fobManager;
@@ -71,14 +65,6 @@ public class FobHUD :
         }
     }
 
-    private void UpdateRelevantPlayers(IFob fob)
-    {
-        foreach (WarfarePlayer player in _playerService.OnlinePlayers.Where(fob.IsVibileToPlayer))
-        {
-            UpdateForPlayer(player);
-        }
-    }
-
     private void UpdateForPlayer(WarfarePlayer player)
     {
         if (_isHidden)
@@ -89,7 +75,7 @@ public class FobHUD :
 
         SendToPlayer(player.Connection);
 
-        using IEnumerator<IFob> enumerator = _fobManager.Fobs.Where(f => f.IsVibileToPlayer(player)).GetEnumerator();
+        using IEnumerator<IFob> enumerator = _fobManager.Fobs.Where(f => f.IsVisibleToPlayer(player)).GetEnumerator();
         bool isDone = false;
         for (int i = 0; i < Fobs.Length; i++)
         {
@@ -103,7 +89,11 @@ public class FobHUD :
 
             IFob fob = enumerator.Current!;
 
-            string fobName = TranslationFormattingUtility.Colorize(fob.Name.ToUpper(), fob.Color);
+            string fobName = fob.GetUIDisplay(player.Team);
+            if (string.IsNullOrEmpty(fobName))
+            {
+                fobName = TranslationFormattingUtility.Colorize(fob.Name.ToUpper(), fob.GetColor(player.Team));
+            }
 
             element.Root.Show(player);
             element.FobName.SetText(player, fobName);
@@ -124,39 +114,21 @@ public class FobHUD :
         }
     }
 
-    public void HandleEvent(PlayerTeamChanged e, IServiceProvider serviceProvider)
+    public void HandleEvent(IPlayerNeedsFobUIUpdateEvent e, IServiceProvider serviceProvider)
     {
-        UpdateForPlayer(e.Player);
+        if (e.Player != null)
+            UpdateForPlayer(e.Player);
     }
 
-    public void HandleEvent(FobRegistered e, IServiceProvider serviceProvider)
+    public void HandleEvent(IFobNeedsUIUpdateEvent e, IServiceProvider serviceProvider)
     {
-        UpdateRelevantPlayers(e.Fob);
-    }
+        if (e.Fob == null)
+            return;
 
-    public void HandleEvent(FobDeregistered e, IServiceProvider serviceProvider)
-    {
-        UpdateRelevantPlayers(e.Fob);
-    }
-
-    public void HandleEvent(FobBuilt e, IServiceProvider serviceProvider)
-    {
-        UpdateRelevantPlayers(e.Fob);
-    }
-
-    public void HandleEvent(FobDestroyed e, IServiceProvider serviceProvider)
-    {
-        UpdateRelevantPlayers(e.Fob);
-    }
-
-    public void HandleEvent(FobProxyChanged e, IServiceProvider serviceProvider)
-    {
-        UpdateRelevantPlayers(e.Fob);
-    }
-
-    public void HandleEvent(FobSuppliesChanged e, IServiceProvider serviceProvider)
-    {
-        UpdateRelevantPlayers(e.Fob);
+        foreach (WarfarePlayer player in _playerService.OnlinePlayers.Where(e.Fob.IsVisibleToPlayer))
+        {
+            UpdateForPlayer(player);
+        }
     }
 
 #nullable disable

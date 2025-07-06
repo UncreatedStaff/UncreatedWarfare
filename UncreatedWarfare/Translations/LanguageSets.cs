@@ -29,6 +29,9 @@ public class LanguageSets
     public LanguageSetEnumerator AllPlayersExcept(params IPlayer[] players) => PlayersWhere(pl => Array.FindIndex(players, pl2 => pl.Steam64.m_SteamID == pl2.Steam64.m_SteamID) == -1);
     // ReSharper restore InconsistentNaming
 
+    public LanguageSetEnumerator Friendlies(Team team) => PlayersWhere(pl => pl.Team.IsFriendly(team));
+    public LanguageSetEnumerator Opponents(Team team) => PlayersWhere(pl => pl.Team.IsOpponent(team));
+
     public LanguageSetEnumerator PlayersOnTeam(Team team) => PlayersWhere(pl => pl.Team == team);
 
     public LanguageSetEnumerator PlayersOnTeam() => PlayersWhere(pl => pl.Team.IsValid);

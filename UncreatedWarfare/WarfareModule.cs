@@ -579,7 +579,7 @@ public sealed class WarfareModule
             .As<ILoopTickerFactory>();
 
         // homebase
-        bldr.RegisterType<HomebaseConnector>()
+        bldr.RegisterRpcType<HomebaseConnector>()
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
 
@@ -605,7 +605,6 @@ public sealed class WarfareModule
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
 
         bldr.RegisterType<PopupUI>().SingleInstance();
-        bldr.RegisterType<ConventionalLeaderboardUI>().SingleInstance();
         bldr.RegisterType<StagingUI>().SingleInstance();
         bldr.RegisterType<WinToastUI>().SingleInstance();
 
@@ -613,7 +612,6 @@ public sealed class WarfareModule
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
 
-        bldr.RegisterType<TeamSelectorUI>().SingleInstance();
         bldr.RegisterType<VehicleHUD>().SingleInstance();
         bldr.RegisterType<FlagListUI>().SingleInstance();
         bldr.RegisterType<CaptureUI>().AsSelf().AsImplementedInterfaces().SingleInstance();
@@ -644,9 +642,15 @@ public sealed class WarfareModule
             .AsImplementedInterfaces().AsSelf()
             .SingleInstance();
 
-        bldr.RegisterRpcType<WorkshopUploader>()
+#if REMOTE_WORKSHOP_UPLOAD
+        bldr.RegisterRpcType<RemoteWorkshopUploader>()
+            .AsImplementedInterfaces()
+            .SingleInstance();
+#else
+        bldr.RegisterRpcType<LocalWorkshopUploader>()
             .AsImplementedInterfaces().AsSelf()
             .SingleInstance();
+#endif
 
         bldr.RegisterType<TimeZoneRegionalDatabase>()
             .AsImplementedInterfaces().AsSelf()

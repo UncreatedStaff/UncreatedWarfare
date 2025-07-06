@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using Uncreated.Warfare.Events.Logging;
+using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.FOBs.Construction;
 
@@ -10,7 +11,7 @@ namespace Uncreated.Warfare.Events.Models.Fobs;
 /// Event listener args which fires after a <see cref="BunkerFob"/> is built up.
 /// </summary>
 [EventModel(EventSynchronizationContext.Pure)]
-public class FobBuilt : IActionLoggableEvent
+public class FobBuilt : IActionLoggableEvent, IFobNeedsUIUpdateEvent
 {
     /// <summary>
     /// The <see cref="BunkerFob"/> that was built up.
@@ -32,4 +33,6 @@ public class FobBuilt : IActionLoggableEvent
             Fob.Creator
         );
     }
+
+    IFob IFobNeedsUIUpdateEvent.Fob => Fob;
 }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Security;
 using UnityEngine.PlayerLoop;
@@ -211,5 +212,115 @@ public static class RandomUtility
         }
 
         return list.Count - 1;
+    }
+
+    /// <summary>
+    /// Thread-safe function to get a set number of random values with no repeats from <paramref name="list"/>. If more than are in list are requested, less will be returned.
+    /// </summary>
+    public static T[] GetRandomValues<T>(IReadOnlyList<T> list, Func<T, float> weightSelector, int amount)
+    {
+        if (list == null || list.Count == 0 || amount == 0)
+        {
+            return Array.Empty<T>();
+        }
+
+        if (amount < 0)
+            amount = list.Count;
+
+        if (amount == 1)
+        {
+            return [ list[GetIndex(list, weightSelector)] ];
+        }
+
+        List<T> copy = list.ToList();
+
+        float totalWeight = 0;
+        for (int i = 0; i < list.Count; ++i)
+        {
+            totalWeight += weightSelector(list[i]);
+        }
+
+        amount = Math.Min(amount, list.Count);
+        
+        T[] results = new T[amount];
+
+        for (int c = 0; c < amount; ++c)
+        {
+            float pick = GetFloat(0, totalWeight);
+            float weightProgress = 0;
+            int index = list.Count - 1;
+            for (int i = 0; i < copy.Count; ++i)
+            {
+                weightProgress += weightSelector(copy[i]);
+                if (pick >= weightProgress)
+                    continue;
+
+                index = i;
+                break;
+            }
+
+            T result = copy[index];
+            results[c] = result;
+            copy.RemoveAt(index);
+
+            totalWeight -= weightSelector(result);
+        }
+
+        return results;
+    }
+
+    /// <summary>
+    /// Thread-safe function to get a set number of random values with no repeats from <paramref name="list"/>. If more than are in list are requested, less will be returned.
+    /// </summary>
+    public static T[] GetRandomValues<T>(IReadOnlyList<T> list, Func<T, double> weightSelector, int amount)
+    {
+        if (list == null || list.Count == 0 || amount == 0)
+        {
+            return Array.Empty<T>();
+        }
+
+        if (amount < 0)
+            amount = list.Count;
+
+        if (amount == 1)
+        {
+            return [ list[GetIndex(list, weightSelector)] ];
+        }
+
+        List<T> copy = list.ToList();
+
+        double totalWeight = 0;
+        for (int i = 0; i < list.Count; ++i)
+        {
+            totalWeight += weightSelector(list[i]);
+        }
+
+        amount = Math.Min(amount, list.Count);
+        
+        T[] results = new T[amount];
+
+        for (int c = 0; c < amount; ++c)
+        {
+            double pick = GetDouble(0, totalWeight);
+            double weightProgress = 0;
+            int index = list.Count - 1;
+            for (int i = 0; i < copy.Count; ++i)
+            {
+                weightProgress += weightSelector(copy[i]);
+                if (pick >= weightProgress)
+                    continue;
+
+                index = i;
+                break;
+            }
+
+            T result = copy[index];
+            results[c] = result;
+            copy.RemoveAt(index);
+
+            totalWeight -= weightSelector(result);
+        }
+
+        return results;
     }
 }

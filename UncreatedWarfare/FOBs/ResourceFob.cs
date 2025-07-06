@@ -29,7 +29,7 @@ namespace Uncreated.Warfare.Fobs;
 /// </summary>
 public class ResourceFob : IBuildableFob, IResourceFob, IDisposable
 {
-    // ReSharper disable once PrivateFieldCanBeConvertedToLocalVariable
+    // ReSharper disable PrivateFieldCanBeConvertedToLocalVariable
     private readonly IPlayerService _playerService;
     private readonly AssetConfiguration _assetConfiguration;
     private readonly WorldIconManager? _worldIconManager;
@@ -37,6 +37,7 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable
     protected readonly FobManager FobManager;
     private readonly ILoopTicker _loopTicker;
     private readonly Func<WarfarePlayer, float> _getProxyScore;
+    // ReSharper restore PrivateFieldCanBeConvertedToLocalVariable
 
     public IBuildable Buildable { get; protected set; }
 
@@ -49,26 +50,37 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable
     public string Name { get; private set; }
 
     /// <inheritdoc />
-    public virtual Color32 Color
-    {
-        get
-        {
-            if (IsProxied)
-                return UnityEngine.Color.red;
+    public Team Team { get; private set; }
 
-            return UnityEngine.Color.cyan;
+    /// <inheritdoc />
+    public Vector3 Position
+    {
+        get => Buildable.Position;
+        set
+        {
+            Buildable.Position = value;
+            if (Icon != null)
+                _worldIconManager?.UpdateIcon(Icon.Effect);
         }
     }
 
     /// <inheritdoc />
-    public Team Team { get; private set; }
+    public Quaternion Rotation
+    {
+        get => Buildable.Rotation;
+        set
+        {
+            Buildable.Rotation = value;
+            if (Icon != null)
+                _worldIconManager?.UpdateIcon(Icon.Effect);
+        }
+    }
 
-    public Vector3 Position => Buildable.Position;
     public float EffectiveRadius => 70f;
     public bool IsProxied { get; private set; }
-    public ISphereProximity FriendlyProximity { get; private set; }
-    public ProximityCollector<WarfarePlayer> NearbyFriendlies { get; private set; }
-    public ProximityCollector<WarfarePlayer> NearbyEnemies { get; private set; }
+    public ISphereProximity FriendlyProximity { get; }
+    public ProximityCollector<WarfarePlayer> NearbyFriendlies { get; }
+    public ProximityCollector<WarfarePlayer> NearbyEnemies { get; }
     public IEnumerable<IFobEntity> EnumerateEntities() => FobManager.Entities.Where(e => MathUtility.WithinRange(Position, e.Position, EffectiveRadius));
 
     public WorldIconInfo? Icon { get; private set; }
@@ -123,6 +135,12 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable
         ChangeSupplies(SupplyType.Ammo, supplyCrates.AmmoCount);
 
         UpdateIcon();
+    }
+
+    /// <inheritdoc />
+    public virtual Color32 GetColor(Team viewingTeam)
+    {
+        return IsProxied ? Color.red : Color.cyan;
     }
 
     public virtual void UpdateConfiguration(FobConfiguration configuration)
@@ -190,7 +208,7 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable
         }
     }
 
-    public bool IsVibileToPlayer(WarfarePlayer player) => player.IsOnline && player.Team == Team;
+    public virtual bool IsVisibleToPlayer(WarfarePlayer player) => player.IsOnline && player.Team == Team;
 
     private float GetProxyScore(WarfarePlayer enemy)
     {
@@ -267,10 +285,10 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable
 
     public string Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
     {
-        return formatter.Colorize(Name, Color, parameters.Options);
+        return formatter.Colorize(Name, GetColor(parameters.Team ?? Team.NoTeam), parameters.Options);
     }
 
-    public void Dispose()
+    protected virtual void Dispose(bool isDisposing)
     {
         NearbyFriendlies.Dispose();
         NearbyEnemies.Dispose();
@@ -280,9 +298,28 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable
         Icon = null;
     }
 
-    public int CompareTo(IFob other)
+    public void Dispose()
     {
-        return ReferenceEquals(other, this) ? 0 : -1;
+        Dispose(true);
     }
+
     bool IDeployable.IsSafeZone => false;
+
+    /// <inheritdoc />
+    Vector3 ITransformObject.Scale
+    {
+        get => Vector3.one;
+        set => throw new NotSupportedException();
+    }
+
+    /// <inheritdoc />
+    void ITransformObject.SetPositionAndRotation(Vector3 position, Quaternion rotation)
+    {
+        Buildable.SetPositionAndRotation(position, rotation);
+        if (Icon != null)
+            _worldIconManager?.UpdateIcon(Icon.Effect);
+    }
+
+    /// <inheritdoc />
+    bool ITransformObject.Alive => Buildable.Alive;
 }

@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using System;
 
 namespace Uncreated.Warfare.Layouts;
@@ -32,6 +32,21 @@ public class LayoutInfo : IDisposable
     /// Display name of the layout. Defaults to the file name.
     /// </summary>
     public required string DisplayName { get; init; }
+
+    /// <summary>
+    /// Display name of the gamemode.
+    /// </summary>
+    public string? GamemodeName { get; init; }
+
+    /// <summary>
+    /// Display name of the layout, not including the gamemode.
+    /// </summary>
+    public string? LayoutName { get; init; }
+
+    /// <summary>
+    /// URL to the image for this gamemode.
+    /// </summary>
+    public string? Image { get; init; }
 
     /// <inheritdoc />
     public void Dispose()

@@ -14,6 +14,7 @@ using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Timing;
 
 namespace Uncreated.Warfare.FOBs.Rallypoints;
+
 public class RallyPoint : IBuildableFob, IDisposable
 {
     private const int BurnRadius = 20;
@@ -24,14 +25,12 @@ public class RallyPoint : IBuildableFob, IDisposable
 
     public IBuildable Buildable { get; protected set; }
     public string Name { get; }
-    public Color32 Color { get; }
     public Team Team { get; }
     public Squad Squad { get; }
     public Vector3 SpawnPosition => new Vector3(Buildable.Position.x, Buildable.Position.y + 1, Buildable.Position.z);
     public float Yaw => 0f;
     public bool IsBurned { get; private set; }
     public bool IsDeploying => (DateTime.Now - _deploymentStarted).TotalSeconds <= DeployTimer; // rally points commbine player deployments so that they all teleport at the same time.
-    
 
     public RallyPoint(IBuildable buildable, Squad squad, IServiceProvider serviceProvider)
     {
@@ -43,10 +42,12 @@ public class RallyPoint : IBuildableFob, IDisposable
         _deploymentStarted = DateTime.MinValue;
         
         IsBurned = false;
-
-        Color = HexStringHelper.ParseColor32("#67ff85", throwOnError: false);
-
         _loopTicker = serviceProvider.GetRequiredService<ILoopTickerFactory>().CreateTicker(TimeSpan.FromSeconds(1f), false, true, OnTick);
+    }
+
+    public Color32 GetColor(Team viewingTeam)
+    {
+        return new Color32(103, 255, 133, 255);
     }
 
     private void OnTick(ILoopTicker ticker, TimeSpan timeSinceStart, TimeSpan deltaTime)
@@ -63,7 +64,7 @@ public class RallyPoint : IBuildableFob, IDisposable
     {
         return playerService.OnlinePlayers.Any(p => p.Team != team && MathUtility.WithinRange(p.Position, rallyPointPosition, BurnRadius));
     }
-    public bool IsVibileToPlayer(WarfarePlayer player) => Squad.ContainsPlayer(player);
+    public bool IsVisibleToPlayer(WarfarePlayer player) => Squad.ContainsPlayer(player);
 
     public virtual void UpdateConfiguration(FobConfiguration configuration) { }
 
@@ -114,7 +115,7 @@ public class RallyPoint : IBuildableFob, IDisposable
 
     public string Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
     {
-        return formatter.Colorize(Name, Color, parameters.Options);
+        return formatter.Colorize(Name, GetColor(parameters.Team ?? Team.NoTeam), parameters.Options);
     }
 
     bool IDeployable.IsSafeZone => false;
@@ -124,4 +125,39 @@ public class RallyPoint : IBuildableFob, IDisposable
     {
         _loopTicker.Dispose();
     }
+
+    /// <inheritdoc />
+    public Vector3 Position
+    {
+        get => Buildable.Position;
+        set
+        {
+            Buildable.Position = value;
+            OnTick(_loopTicker, TimeSpan.Zero, TimeSpan.Zero);
+        }
+    }
+
+    /// <inheritdoc />
+    public Quaternion Rotation
+    {
+        get => Buildable.Rotation;
+        set => Buildable.Rotation = value;
+    }
+
+    /// <inheritdoc />
+    Vector3 ITransformObject.Scale
+    {
+        get => Vector3.one;
+        set => throw new NotSupportedException();
+    }
+
+    /// <inheritdoc />
+    void ITransformObject.SetPositionAndRotation(Vector3 position, Quaternion rotation)
+    {
+        Buildable.SetPositionAndRotation(position, rotation);
+        OnTick(_loopTicker, TimeSpan.Zero, TimeSpan.Zero);
+    }
+
+    /// <inheritdoc />
+    bool ITransformObject.Alive => Buildable.Alive;
 }
