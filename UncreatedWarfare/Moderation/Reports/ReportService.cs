@@ -21,9 +21,9 @@ using Uncreated.Warfare.Util.Timing;
 
 namespace Uncreated.Warfare.Moderation.Reports;
 
-[RpcClass(DefaultTypeName = "Uncreated.Web.Bot.Services.DiscordReportService, uncreated-web")]
+[GenerateRpcSource, RpcDefaultTargetType("Uncreated.Web.Bot.Services.DiscordReportService, uncreated-web")]
 [Priority(-100)]
-public class ReportService : IDisposable, IHostedService, IEventListener<PlayerLeft>, IEventListener<PlayerChatSent>, IEventListener<PlayerUseableEquipped>
+public partial class ReportService : IDisposable, IHostedService, IEventListener<PlayerLeft>, IEventListener<PlayerChatSent>, IEventListener<PlayerUseableEquipped>
 {
     private delegate float GetBulletDamageMultiplierHandler(UseableGun gun, ref BulletInfo bullet);
 
@@ -357,7 +357,7 @@ public class ReportService : IDisposable, IHostedService, IEventListener<PlayerL
     }
 
     [RpcSend]
-    public virtual RpcTask<string?> SendReport(uint reportId) => RpcTask<string?>.NotImplemented;
+    public partial RpcTask<string?> SendReport(uint reportId);
 
     [RpcReceive]
     public async Task<ArraySegment<byte>> RequestShots(uint reportId, CancellationToken token = default)

@@ -10,7 +10,6 @@ using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Exceptions;
 using Uncreated.Warfare.Interaction;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.UI;
@@ -22,7 +21,8 @@ using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Players.Permissions;
 
-public class DutyService : IAsyncEventListener<PlayerLeft>
+[GenerateRpcSource]
+public partial class DutyService : IAsyncEventListener<PlayerLeft>
 {
     private readonly SignInstancer _signs;
     private readonly ChatService _chatService;
@@ -75,7 +75,7 @@ public class DutyService : IAsyncEventListener<PlayerLeft>
     }
 
     [RpcSend]
-    protected virtual RpcTask SendDutyChanged(ulong steam64, DutyLevel level, bool isOnDuty) => RpcTask.NotImplemented;
+    protected partial RpcTask SendDutyChanged(ulong steam64, DutyLevel level, bool isOnDuty);
 
     /// <summary>
     /// Switch the player's duty state to whatever it isn't currently.

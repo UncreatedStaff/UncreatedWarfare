@@ -13,7 +13,8 @@ namespace Uncreated.Warfare.Steam;
 /// <summary>
 /// Uploads workshop items using homebase.
 /// </summary>
-public class RemoteWorkshopUploader : IWorkshopUploader
+[GenerateRpcSource]
+public partial class RemoteWorkshopUploader : IWorkshopUploader
 {
     private readonly ILogger<RemoteWorkshopUploader> _logger;
     private readonly IRpcConnectionLifetime _connectionLifetime;
@@ -61,7 +62,7 @@ public class RemoteWorkshopUploader : IWorkshopUploader
     }
 
     [RpcSend(nameof(ReceiveSteamCode))]
-    protected void SendSteamCode(string? code) => throw new NotSupportedException();
+    protected partial void SendSteamCode(string? code);
 
     [RpcReceive]
     private void ReceiveSteamCode(string? code)
@@ -81,7 +82,7 @@ public class RemoteWorkshopUploader : IWorkshopUploader
     }
 
     [RpcSend(nameof(ReceiveUploadMod)), RpcTimeout(Timeouts.Minutes * 15)]
-    protected virtual RpcTask<ulong?> RemoteUploadMod(
+    protected partial RpcTask<ulong?> RemoteUploadMod(
         ulong modId,
         SteamWorkshopVisibility visibility,
         string title,
@@ -91,10 +92,7 @@ public class RemoteWorkshopUploader : IWorkshopUploader
         string? imageExt,
         byte[] zipData,
         CancellationToken token
-    )
-    {
-        return RpcTask<ulong?>.NotImplemented;
-    }
+    );
 
     /// <inheritdoc />
     public async Task<ulong?> UploadMod(WorkshopUploadParameters parameters, CancellationToken token = default)

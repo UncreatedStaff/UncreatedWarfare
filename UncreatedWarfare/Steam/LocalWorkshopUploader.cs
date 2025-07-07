@@ -1,5 +1,4 @@
 using DanielWillett.ModularRpcs.Annotations;
-using DanielWillett.ModularRpcs.Async;
 using DanielWillett.ModularRpcs.Exceptions;
 using DanielWillett.ReflectionTools;
 using System;
@@ -19,7 +18,8 @@ namespace Uncreated.Warfare.Steam;
 /// Uploads workshop content using a process started locally.
 /// </summary>
 [Priority(100)]
-public class LocalWorkshopUploader : IWorkshopUploader
+[GenerateRpcSource]
+public partial class LocalWorkshopUploader : IWorkshopUploader
 {
     private readonly ILogger<LocalWorkshopUploader> _logger;
     private readonly WarfareModule _module;
@@ -338,7 +338,7 @@ public class LocalWorkshopUploader : IWorkshopUploader
     }
 
     [RpcSend]
-    protected virtual void SendSteamGuardRequired() => _ = RpcTask.NotImplemented;
+    protected partial void SendSteamGuardRequired();
 
     [RpcReceive]
     protected bool ReceiveSteamGuardRequired(string code)

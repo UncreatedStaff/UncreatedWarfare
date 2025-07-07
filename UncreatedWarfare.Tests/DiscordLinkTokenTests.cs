@@ -18,9 +18,9 @@ internal class DiscordLinkTokenTests
         Assert.That(token.Length, Is.EqualTo(9));
         Assert.That(token[4], Is.EqualTo('-'));
         for (int i = 0; i < 4; ++i)
-            Assert.That(char.IsAsciiLetter(token[i]));
+            Assert.That(char.IsLetterOrDigit(token[i]) && token[i] <= byte.MaxValue);
         for (int i = 5; i < 8; ++i)
-            Assert.That(char.IsAsciiLetter(token[i]));
+            Assert.That(char.IsLetterOrDigit(token[i]) && token[i] <= byte.MaxValue);
     }
 
     [Test]

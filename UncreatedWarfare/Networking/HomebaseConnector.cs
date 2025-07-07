@@ -12,8 +12,9 @@ using UnityEngine.Networking;
 
 namespace Uncreated.Warfare.Networking;
 
+[GenerateRpcSource]
 [Priority(100)]
-public class HomebaseConnector : IHostedService
+public partial class HomebaseConnector : IHostedService
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<HomebaseConnector> _logger;
@@ -48,7 +49,7 @@ public class HomebaseConnector : IHostedService
     }
 
     [RpcSend("Uncreated.Web.Unturned.RpcConnectionService, uncreated-web", "ReceivePing"), RpcTimeout(Timeouts.Seconds * 3)]
-    protected virtual RpcTask SendPing(CancellationToken token) => RpcTask.NotImplemented;
+    protected partial RpcTask SendPing(CancellationToken token);
 
     [RpcReceive]
     private void ReceivePing()

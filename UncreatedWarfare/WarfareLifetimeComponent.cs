@@ -11,7 +11,8 @@ namespace Uncreated.Warfare;
 /// A component that is alive as long as the plugin is active.
 /// </summary>
 /// <remarks>Can be used as the target for coroutines, UniTask functions, etc.</remarks>
-public class WarfareLifetimeComponent : MonoBehaviour
+[GenerateRpcSource]
+public partial class WarfareLifetimeComponent : MonoBehaviour
 {
     // seconds
     private readonly float[] _shutdownSteps = [ 1, 2, 3, 4, 5, 15, 30, 60, 300, 900 ];
@@ -93,7 +94,7 @@ public class WarfareLifetimeComponent : MonoBehaviour
     }
 
     [RpcSend]
-    protected virtual RpcTask SendShutdownUpdate(string str, bool isShuttingDownNow) => RpcTask.NotImplemented;
+    protected partial RpcTask SendShutdownUpdate(string str, bool isShuttingDownNow);
 
     [RpcReceive]
     public string GetShutdownReason()

@@ -67,7 +67,8 @@ public interface IKitAccessService
 
 public delegate void KitAccessUpdatedHandler(CSteamID steam64, uint kitPrimaryKey, KitAccessType? access);
 
-public class MySqlKitAccessService : IKitAccessService, IDisposable
+[GenerateRpcSource]
+public partial class MySqlKitAccessService : IKitAccessService, IDisposable
 {
     private string? _updateQuery;
     private string? _bulkUpdateQueryStart;
@@ -656,26 +657,14 @@ public class MySqlKitAccessService : IKitAccessService, IDisposable
     }
 
     [RpcSend(nameof(ReceiveUpdateAccess))]
-    protected virtual RpcTask<bool> SendUpdateAccess(IModularRpcRemoteConnection connection, ulong player, uint primaryKey, KitAccessType? newAccess, CancellationToken token = default)
-    {
-        return RpcTask<bool>.NotImplemented;
-    }
+    protected partial RpcTask<bool> SendUpdateAccess(IModularRpcRemoteConnection connection, ulong player, uint primaryKey, KitAccessType? newAccess, CancellationToken token = default);
 
     [RpcSend(nameof(ReceiveUpdateAccessBulk)), RpcTimeout(1 * Timeouts.Minutes)]
-    protected virtual RpcTask<bool[]> SendUpdateAccessBulk(IModularRpcRemoteConnection connection, ulong player, uint[] primaryKeys, KitAccessType? newAccess, CancellationToken token = default)
-    {
-        return RpcTask<bool[]>.NotImplemented;
-    }
+    protected partial RpcTask<bool[]> SendUpdateAccessBulk(IModularRpcRemoteConnection connection, ulong player, uint[] primaryKeys, KitAccessType? newAccess, CancellationToken token = default);
 
     [RpcSend(nameof(ReceiveAccessUpdated)), RpcTimeout(3 * Timeouts.Seconds), RpcFireAndForget]
-    protected virtual RpcTask SendAccessUpdated(ulong player, uint primaryKey, ulong instigator, KitAccessType? newAccess)
-    {
-        return RpcTask.NotImplemented;
-    }
+    protected partial RpcTask SendAccessUpdated(ulong player, uint primaryKey, ulong instigator, KitAccessType? newAccess);
 
     [RpcSend(nameof(ReceiveAccessUpdatedBulk)), RpcTimeout(5 * Timeouts.Seconds), RpcFireAndForget]
-    protected virtual RpcTask SendAccessUpdatedBulk(ulong player, uint[] primaryKeys, ulong instigator, KitAccessType? newAccess)
-    {
-        return RpcTask.NotImplemented;
-    }
+    protected partial RpcTask SendAccessUpdatedBulk(ulong player, uint[] primaryKeys, ulong instigator, KitAccessType? newAccess);
 }

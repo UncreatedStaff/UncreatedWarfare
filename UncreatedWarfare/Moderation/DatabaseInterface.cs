@@ -13,7 +13,6 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Framework.UI;
 using Uncreated.Warfare.Database.Manual;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Moderation.Appeals;
 using Uncreated.Warfare.Moderation.Commendation;
 using Uncreated.Warfare.Moderation.Punishments;
@@ -1865,10 +1864,10 @@ public partial class DatabaseInterface : IHostedService
         }
     }
 
-    [RpcSend("ReceiveModerationEntryUpdated")]
+    [RpcSend(nameof(ReceiveModerationEntryUpdated))]
     protected partial void SendModerationEntryUpdated(uint entryId, bool isNew);
 
-    [RpcReceive("SendModerationEntryUpdated")]
+    [RpcReceive(nameof(SendModerationEntryUpdated))]
     private void ReceiveModerationEntryUpdated(uint entryId, bool isNew)
     {
         Task.Run(async () =>

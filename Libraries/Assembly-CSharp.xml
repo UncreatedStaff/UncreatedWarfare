@@ -299,6 +299,11 @@
             [0, 1] Intensity of FOV boost while sprinting.
             </summary>
         </member>
+        <member name="F:SDG.Unturned.OptionsSettings.viewmodelBobScale">
+            <summary>
+            [0, 1] Intensity of first-person motion caused by walking.
+            </summary>
+        </member>
         <member name="E:SDG.Unturned.OptionsSettings.OnCustomColorsChanged">
             <summary>
             Invoked when custom UI colors are set.
@@ -1105,6 +1110,14 @@
             Converts Steam BBcode tokens into widgets displayable using Glazier UI.
             </summary>
         </member>
+        <member name="P:SDG.Unturned.BbCodeWidgetConverter.InferLineBreaks">
+            <summary>
+            If false, expect LineBreak tokens in input. (default false)
+            If true, insert line breaks where appropriate.
+            Steam's new visual editor doesn't emit newlines, instead inferring line breaks from paragraph blocks. To
+            make life easier we will do the same for the main menu announcement feed.
+            </summary>
+        </member>
         <member name="F:SDG.Unturned.Skill.max">
             <summary>
             Vanilla maximum level.
@@ -1509,6 +1522,11 @@
         <member name="F:SDG.Unturned.ItemSightAsset.shouldZoomUsingEyes">
             <summary>
             Whether main camera field of view should zoom without scope camera / scope overlay.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ItemSightAsset.shouldOffsetScopeOverlayByOneTexel">
+            <summary>
+            If true, scale scope overly by 1 texel to keep "middle" pixel centered.
             </summary>
         </member>
         <member name="P:SDG.Unturned.ItemSightAsset.AimAlignmentTransformOwner">
@@ -3263,6 +3281,11 @@
             x = pitch, y = roll
             </summary>
         </member>
+        <member name="F:SDG.Unturned.PlayerAnimator.landedSpring">
+            <summary>
+            Offset when player lands.
+            </summary>
+        </member>
         <member name="F:SDG.Unturned.PlayerAnimator.lastFramePitchInput">
             <summary>
             Used to measure change in pitch between frames.
@@ -4766,6 +4789,22 @@
             functions identically to the cooking-skill-also-requires-heat behavior from before.
             </summary>
         </member>
+        <member name="F:SDG.Unturned.GameplayConfigData.Disable_Motion_Sickness_Options">
+            <summary>
+            If true, client-side options like damage flinch, explosion camera shake, viewmodel bob are ignored.
+            Defaults to false.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.GameplayConfigData.Use_2D_Scope_Overlay">
+            <summary>
+            If true, hide viewmodel while aiming a dual-render scope and show a 2D overlay instead.
+            
+            Nelson 2025-07-04: adding this option for backwards compatibility with modded scopes that have a small
+            enough dual-render surface to zoom-*out* when aiming in.
+            
+            Defaults to false.
+            </summary>
+        </member>
         <member name="F:SDG.Unturned.GameplayConfigData.Explosion_Launch_Speed_Multiplier">
             <summary>
             Scales velocity added to players by explosion knock-back.
@@ -4781,6 +4820,21 @@
             Scales midair decrease in speed while faster than max walk speed.
             </summary>
         </member>
+        <member name="F:SDG.Unturned.GameplayConfigData.FirstPerson_RecoilMultiplier">
+            <summary>
+            Scales magnitude of recoil while using first-person perspective.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.GameplayConfigData.FirstPerson_AimingRecoilMultiplier">
+            <summary>
+            Scales magnitude of recoil while aiming in first-person perspective.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.GameplayConfigData.FirstPerson_AimingZoomRecoilReduction">
+            <summary>
+            Scales magnitude of recoil inversely with zoom level while aiming in first-person perspective.
+            </summary>
+        </member>
         <member name="F:SDG.Unturned.GameplayConfigData.ThirdPerson_RecoilMultiplier">
             <summary>
             Scales magnitude of recoil while using third-person perspective.
@@ -4789,6 +4843,16 @@
         <member name="F:SDG.Unturned.GameplayConfigData.ThirdPerson_SpreadMultiplier">
             <summary>
             Scales magnitude of bullet inaccuracy while using third-person perspective.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.GameplayConfigData.Viewmodel_AimingJumpLandMultiplier">
+            <summary>
+            [0, 1] Scales how much the first-person move up and down while jumping/landing.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.GameplayConfigData.Viewmodel_AimingMisalignmentMultiplier">
+            <summary>
+            [0, 1] Scales how much the first-person arms move while ADS.
             </summary>
         </member>
         <member name="M:SDG.Unturned.HumanClothes.centerHeadEffect(UnityEngine.Transform,UnityEngine.Transform)">
@@ -7159,6 +7223,11 @@
             Defaults to false. If true, blueprint can become visible in the crafting list even when NPC conditions
             are not met. This should typically only be enabled if all conditions are configured to be visible in the
             details panel. Otherwise, the default "conditions unmet" label isn't very informative for players.
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.Blueprint.DoesOutputCreateItem(SDG.Unturned.ItemAsset)">
+            <summary>
+            Search output items (excluding target item) for specific item.
             </summary>
         </member>
         <member name="P:SDG.Unturned.Provider.APP_VERSION_PACKED">
@@ -9594,13 +9663,6 @@
             Remove fuel from target.
             </summary>
         </member>
-        <member name="P:SDG.Unturned.PlayerManager.CulledPosition">
-            <summary>
-            Position to place players outside visible range.
-            Defaults to as far away as supported by default clamped Vector3 precision.
-            Doesn't use world origin because that would potentially increase rendering cost for clients near the origin.
-            </summary>
-        </member>
         <member name="P:SDG.Unturned.PlayerManager.IsClientUnderFakeLagPenalty">
             <summary>
             Whether local client is currently penalized for potentially using a lag switch. Server has an equivalent check which reduces
@@ -10024,6 +10086,11 @@
             Print red message.
             </summary>
         </member>
+        <member name="F:SDG.Unturned.ENPCHoliday.UNTURNED_ANNIVERSARY">
+            <summary>
+            July 7th!
+            </summary>
+        </member>
         <member name="M:SDG.Unturned.ConsoleWriterProxy.Write(System.Char)">
             <summary>
             This is the only /required/ override of text writer.
@@ -10413,7 +10480,7 @@
             Used to disable animating out if disabled.
             </summary>
         </member>
-        <member name="T:SDG.Unturned.BarricadeDestroyer">
+        <member name="T:SDG.Unturned.BarricadeDestroyerComponent">
             <summary>
             Allow Unity events to forcefully remove any barricades inside a sphere.
             </summary>
@@ -11567,7 +11634,7 @@
             Doesn't work with NPC conditions / rewards.
             </summary>
         </member>
-        <member name="M:SDG.Unturned.BlueprintStatus.EstimateFirstOutputMaxAmount">
+        <member name="M:SDG.Unturned.BlueprintStatus.EstimateOutputMaxAmount(System.Int32)">
             <summary>
             Currently only used by housing planner.
             Doesn't work with NPC conditions / rewards.
@@ -12537,12 +12604,18 @@
             Update status of all relevant blueprints.
             </summary>
         </member>
+        <member name="M:SDG.Unturned.UseableHousingPlanner.RefreshCraftableBlueprint(SDG.Unturned.ItemStructureAsset)">
+            <summary>
+            Currently saved craftableBlueprint for asset may have become uncraftable,
+            in which case we try finding a craftable replacement.
+            </summary>
+        </member>
         <member name="M:SDG.Unturned.UseableHousingPlanner.CreateBlueprintStatus">
             <summary>
             Get a blank status from the pool or construct a new one.
             </summary>
         </member>
-        <member name="M:SDG.Unturned.UseableHousingPlanner.RefreshAvailableItems">
+        <member name="M:SDG.Unturned.UseableHousingPlanner.RefreshAvailableItemsAndSelectedBlueprint">
             <summary>
             Search inventory for housing items, count the quantity of each, and remove
             duplicate entries from the list because it is used for the UI.
@@ -12799,6 +12872,11 @@
         <member name="M:SDG.Unturned.DamageTool.getResourceRootTransform(UnityEngine.Transform)">
             <summary>
             Was necessary when trees were children of ground transform.
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.DamageTool.TryFindOwnership(UnityEngine.Transform,System.UInt64@,System.UInt64@)">
+            <summary>
+            Somewhat hacked-together to find owner of a vehicle, barricade, or structure descendant.
             </summary>
         </member>
         <member name="M:SDG.Unturned.DamageTool.getPlayerExplosionArmor(SDG.Unturned.Player)">
@@ -14275,6 +14353,12 @@
             Unintuitively (to say the least), a pitch of 0 is up, 90 is forward, and 180 is down.
             </summary>
         </member>
+        <member name="M:SDG.Unturned.PlayerLook.ConvertScopeSwayToInputRotation">
+            <summary>
+            Nelson 2025-06-27: previously, stopping aim cancelled the sway offset immediately. When
+            experimenting with removing the dual-render scope blur this felt jarring.
+            </summary>
+        </member>
         <member name="F:SDG.Unturned.PlayerLook.freecamVerticalFieldOfView">
             <summary>
             Reset to actual fov when first used.
@@ -14545,6 +14629,11 @@
             Entry in the MenuPlayServerBookmarksUI list.
             </summary>
         </member>
+        <member name="F:SDG.Unturned.EBbCodeTokenType.Invalid">
+            <summary>
+            Null token.
+            </summary>
+        </member>
         <member name="F:SDG.Unturned.EBbCodeTokenType.String">
             <summary>
             Text between tags.
@@ -14590,9 +14679,17 @@
             [/olist]
             </summary>
         </member>
-        <member name="F:SDG.Unturned.EBbCodeTokenType.ListItem">
+        <member name="F:SDG.Unturned.EBbCodeTokenType.ListItemOpen">
             <summary>
             [*] value
+            Nelson 2025-07-02: manually written lists typically don't have a ListItemClose token.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.EBbCodeTokenType.ListItemClose">
+            <summary>
+            [/*]
+            Nelson 2025-07-02: Steam's new visual editor adds closing tokens to list items, but
+            manually-written list items typically don't have them.
             </summary>
         </member>
         <member name="F:SDG.Unturned.EBbCodeTokenType.H1Open">
@@ -14670,9 +14767,43 @@
             [/quote]
             </summary>
         </member>
+        <member name="F:SDG.Unturned.EBbCodeTokenType.ParagraphOpen">
+            <summary>
+            [p]
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.EBbCodeTokenType.ParagraphClose">
+            <summary>
+            [/p]
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.EBbCodeTokenType.UnderlineOpen">
+            <summary>
+            [u]
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.EBbCodeTokenType.UnderlineClose">
+            <summary>
+            [/u]
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.BbCodeToken.GetUnquotedValue">
+            <summary>
+            Steam's new visual editor quotes value in [url=x] tag. If value is not quoted, this method returns as-is.
+            If it IS quoted, this methods returns without quotation marks.
+            </summary>
+        </member>
         <member name="T:SDG.Unturned.BbCodeTokenizer">
             <summary>
             Breaks down Steam's version of BBcode into tokens like, "[b]", "[i]", "actual text", etc.
+            </summary>
+        </member>
+        <member name="P:SDG.Unturned.BbCodeTokenizer.ParseLineBreaks">
+            <summary>
+            If true, parse newlines in the input as LineBreak tokens. (default true)
+            If false, exclude LineBreak tokens from output.
+            Steam's new visual editor doesn't emit newlines, instead inferring line breaks from paragraph blocks. To
+            make life easier we will do the same for the main menu announcement feed.
             </summary>
         </member>
         <member name="F:SDG.Unturned.PlayerLifeUI.repeatChatIndex">
@@ -17820,6 +17951,11 @@
             Returns true if calibers list contains any of the provided caliber IDs.
             </summary>
         </member>
+        <member name="F:SDG.Unturned.BarricadeData.rotation">
+            <summary>
+            Note: If barricade is attached to a vehicle this is the local rotation.
+            </summary>
+        </member>
         <member name="T:SDG.Unturned.PhysicsEx">
             <summary>
             Extensions to the built-in Physics class.
@@ -17861,11 +17997,6 @@
         <member name="T:SDG.Unturned.SleekEditorLevel">
             <summary>
             Button in the list of levels for the map editor.
-            </summary>
-        </member>
-        <member name="F:SDG.Unturned.BarricadeData.rotation">
-            <summary>
-            Note: If barricade is attached to a vehicle this is the local rotation.
             </summary>
         </member>
         <member name="T:SDG.Unturned.GlazierElementBase_IMGUI">

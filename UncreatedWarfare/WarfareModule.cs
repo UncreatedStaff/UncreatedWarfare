@@ -542,8 +542,7 @@ public sealed class WarfareModule
                 (_, configuration, parsers, _) =>
                 {
                     parsers.RegisterParserAttributes(configuration, relevantAssemblies);
-                },
-                searchedAssemblies: relevantAssemblies
+                }
             );
         });
 

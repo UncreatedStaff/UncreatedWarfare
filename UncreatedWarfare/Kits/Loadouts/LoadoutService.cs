@@ -23,7 +23,8 @@ using Uncreated.Warfare.Util.Inventory;
 
 namespace Uncreated.Warfare.Kits.Loadouts;
 
-public class LoadoutService
+[GenerateRpcSource]
+public partial class LoadoutService
 {
     private readonly IKitDataStore _kitSql;
     private readonly IConfiguration _systemConfig;
@@ -656,25 +657,25 @@ public class LoadoutService
     }
 
     [RpcSend(nameof(CreateLoadoutRpc)), RpcTimeout(Timeouts.Seconds * 5)]
-    protected virtual RpcTask<uint> SendCreateLoadout(IModularRpcRemoteConnection connection, CSteamID forPlayer, CSteamID creator, Class @class, string? displayName, CancellationToken token = default) => RpcTask<uint>.NotImplemented;
+    protected partial RpcTask<uint> SendCreateLoadout(IModularRpcRemoteConnection connection, CSteamID forPlayer, CSteamID creator, Class @class, string? displayName, CancellationToken token = default);
 
     [RpcSend(nameof(UpgradeLoadoutRpc)), RpcTimeout(Timeouts.Seconds * 5)]
-    protected virtual RpcTask<bool> SendUpgradeLoadout(IModularRpcRemoteConnection connection, CSteamID forPlayer, CSteamID admin, Class @class, uint kitPk, CancellationToken token = default) => RpcTask<bool>.NotImplemented;
+    protected partial RpcTask<bool> SendUpgradeLoadout(IModularRpcRemoteConnection connection, CSteamID forPlayer, CSteamID admin, Class @class, uint kitPk, CancellationToken token = default);
 
     [RpcSend(nameof(UnlockLoadoutRpc)), RpcTimeout(Timeouts.Seconds * 5)]
-    protected virtual RpcTask<bool> SendUnlockLoadout(IModularRpcRemoteConnection connection, CSteamID instigator, uint primaryKey, CancellationToken token = default) => RpcTask<bool>.NotImplemented;
+    protected partial RpcTask<bool> SendUnlockLoadout(IModularRpcRemoteConnection connection, CSteamID instigator, uint primaryKey, CancellationToken token = default);
 
     [RpcSend(nameof(LockLoadoutRpc)), RpcTimeout(Timeouts.Seconds * 5)]
-    protected virtual RpcTask<bool> SendLockLoadout(IModularRpcRemoteConnection connection, CSteamID instigator, uint primaryKey, CancellationToken token = default) => RpcTask<bool>.NotImplemented;
+    protected partial RpcTask<bool> SendLockLoadout(IModularRpcRemoteConnection connection, CSteamID instigator, uint primaryKey, CancellationToken token = default);
 
     [RpcSend(nameof(ReceiveInvokeLoadoutCreated)), RpcFireAndForget]
-    protected virtual void SendInvokeLoadoutCreated(CSteamID forPlayer, int loadoutId, uint kitPrimaryKey) => _ = RpcTask.NotImplemented;
+    protected partial void SendInvokeLoadoutCreated(CSteamID forPlayer, int loadoutId, uint kitPrimaryKey);
 
     [RpcSend(nameof(ReceiveInvokeLoadoutUpgradeStarted)), RpcFireAndForget]
-    protected virtual void SendInvokeLoadoutUpgradeStarted(CSteamID forPlayer, Class oldClass, string? oldFaction, bool accessAdded, uint kitPrimaryKey) => _ = RpcTask.NotImplemented;
+    protected partial void SendInvokeLoadoutUpgradeStarted(CSteamID forPlayer, Class oldClass, string? oldFaction, bool accessAdded, uint kitPrimaryKey);
 
     [RpcSend(nameof(ReceiveInvokeLockStateUpdated)), RpcFireAndForget]
-    protected virtual void SendInvokeLoadoutLockStateUpdated(uint kitPrimaryKey, bool expectedLockState) => _ = RpcTask.NotImplemented;
+    protected partial void SendInvokeLoadoutLockStateUpdated(uint kitPrimaryKey, bool expectedLockState);
     public enum OpenUpgradeTicketResult : byte
     {
         Success,
