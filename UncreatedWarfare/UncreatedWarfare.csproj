@@ -7,7 +7,7 @@
 
   <PropertyGroup>
 
-    <Version>4.0.5</Version>
+    <Version>4.0.9</Version>
 
 		<!-- Enable this for telemetry tracking -->
 	  <!--<DefineConstants>$(DefineConstants);TELEMETRY</DefineConstants>-->
