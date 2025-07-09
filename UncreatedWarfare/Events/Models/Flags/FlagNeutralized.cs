@@ -4,6 +4,7 @@ using Uncreated.Warfare.Events.Models.Objectives;
 using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.Layouts.Flags;
 using Uncreated.Warfare.Layouts.Teams;
+using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Events.Models.Flags;
 
@@ -13,7 +14,7 @@ namespace Uncreated.Warfare.Events.Models.Flags;
 /// causing <see cref="FlagObjective.Owner"/> to become neutral (<see cref="Team.NoTeam"/>).
 /// </summary>
 [EventModel(EventSynchronizationContext.Pure)]
-public class FlagNeutralized : IActionLoggableEvent, IObjectiveLost
+public class FlagNeutralized : IActionLoggableEvent, IObjectiveLost, IFlagsNeedUIUpdateEvent
 {
     /// <summary>
     /// The flag that was neutralized.
@@ -42,4 +43,8 @@ public class FlagNeutralized : IActionLoggableEvent, IObjectiveLost
 
     Team? IObjectiveLost.Team => TakenFrom;
     IObjective IObjectiveLost.Objective => Flag;
+    LanguageSetEnumerator IFlagsNeedUIUpdateEvent.EnumerateApplicableSets(ITranslationService translationService, ref bool ticketsOnly)
+    {
+        return translationService.SetOf.PlayersOnTeam();
+    }
 }

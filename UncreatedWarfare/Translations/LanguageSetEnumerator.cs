@@ -1,5 +1,5 @@
-using System;
 using SDG.Framework.Utilities;
+using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Players;
 
@@ -10,22 +10,39 @@ public ref struct LanguageSetEnumerator : IEnumerator<LanguageSet>
     private readonly bool _pooled;
     private List<LanguageSet>? _list;
     private List<WarfarePlayer>? _players;
-    private int _index;
-    private int _isInitial;
+    private int _index; // -2 means Set is single
     public LanguageSet Set;
     public LanguageSet Current => Set;
     readonly object IEnumerator.Current => Set;
+    internal LanguageSetEnumerator(LanguageSet single)
+    {
+        Set = single;
+        _index = -2;
+    }
+    internal LanguageSetEnumerator(WarfarePlayer player)
+    {
+        Set = new LanguageSet(player);
+        _index = -2;
+    }
     internal LanguageSetEnumerator(List<LanguageSet> pooledList, List<WarfarePlayer> players, bool pooled)
     {
         _list = pooledList;
         _players = players;
         _pooled = pooled;
         _index = -1;
-        _isInitial = 1;
     }
 
     public bool MoveNext()
     {
+        if (_index < -1)
+        {
+            if (_index == -3)
+                return false;
+
+            _index = -3;
+            return true;
+        }
+
         ++_index;
         if (_list == null || _index >= _list.Count)
             return false;
@@ -36,8 +53,13 @@ public ref struct LanguageSetEnumerator : IEnumerator<LanguageSet>
 
     public void Reset()
     {
+        if (_index < -1)
+        {
+            _index = -2;
+            return;
+        }
+
         _index = -1;
-        _isInitial = 1;
     }
     
     public void Dispose()
@@ -64,18 +86,16 @@ public ref struct LanguageSetEnumerator : IEnumerator<LanguageSet>
 
     public LanguageSetEnumerator GetEnumerator()
     {
-        if (Interlocked.Exchange(ref _isInitial, 0) == 1)
-        {
-            return this;
-        }
-
-        LanguageSetEnumerator e = this;
-        e.Reset();
-        return e;
+        return this;
     }
     public readonly struct Cache : IEnumerable<LanguageSet>
     {
         public readonly LanguageSet[]? Sets;
+        internal Cache(LanguageSet single)
+        {
+            Sets = [ single ];
+        }
+
         internal Cache(in LanguageSetEnumerator enumerator)
         {
             Sets = enumerator._list?.ToArray();

@@ -1,5 +1,7 @@
+using Uncreated.Warfare.Events.Models.Flags;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Layouts.Tickets;
+using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Events.Models.Tickets;
 
@@ -7,7 +9,7 @@ namespace Uncreated.Warfare.Events.Models.Tickets;
 /// Event listener args which fires after a a certain <see cref="Layouts.Teams.Team"/> gains or loses tickets.
 /// </summary>
 [EventModel(EventSynchronizationContext.Pure)]
-public class TicketsChanged
+public class TicketsChanged : IFlagsNeedUIUpdateEvent
 {
     /// <summary>
     /// The new number of tickets belong to <see cref="Team"/>.
@@ -28,4 +30,11 @@ public class TicketsChanged
     /// The instance of <see cref="ITicketTracker"/> that was resonsible for orchestrating this change. 
     /// </summary>
     public required ITicketTracker TicketTracker { get; init; }
+
+    /// <inheritdoc />
+    LanguageSetEnumerator IFlagsNeedUIUpdateEvent.EnumerateApplicableSets(ITranslationService translationService, ref bool ticketsOnly)
+    {
+        ticketsOnly = true;
+        return translationService.SetOf.PlayersOnTeam(Team);
+    }
 }

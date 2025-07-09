@@ -40,7 +40,7 @@ partial class DualSidedLeaderboardUI
     {
         List<LayoutInfo> layouts = _layoutFactory.GetBaseLayoutFiles()
             .Select(x => _layoutFactory.ReadLayoutInfo(x.FullName, false))
-            .Where(x => x != null && !x.FilePath.Equals(_layout.LayoutInfo.FilePath))
+            .Where(x => x != null && !string.Equals(x.FilePath, _layout.LayoutInfo.FilePath))
             .ToList()!;
 
         return RandomUtility.GetRandomValues(layouts, x =>

@@ -1,8 +1,6 @@
 using System;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Flags;
-using Uncreated.Warfare.Events.Models.Players;
-using Uncreated.Warfare.Events.Models.Tickets;
 using Uncreated.Warfare.Layouts.Tickets;
 using Uncreated.Warfare.Layouts.UI;
 using Uncreated.Warfare.Players;
@@ -18,10 +16,7 @@ namespace Uncreated.Warfare.Layouts.Flags;
 /// </summary>
 public class DefaultFlagListUIEvents :
     ILayoutStartingListener,
-    IEventListener<PlayerTeamChanged>,
-    IEventListener<FlagCaptured>,
-    IEventListener<FlagNeutralized>,
-    IEventListener<TicketsChanged>,
+    IEventListener<IFlagsNeedUIUpdateEvent>,
     IHudUIListener
 {
     private readonly FlagListUI _ui;
@@ -77,31 +72,19 @@ public class DefaultFlagListUIEvents :
             UpdateFlagList(set, ticketsOnly: false);
         }
     }
+
     public UniTask HandleLayoutStartingAsync(Layout layout, CancellationToken token = default)
     {
         UpdateFlagListForAllPlayers();
         return UniTask.CompletedTask;
     }
-    void IEventListener<PlayerTeamChanged>.HandleEvent(PlayerTeamChanged e, IServiceProvider serviceProvider)
-    {
-        UpdateFlagList(new LanguageSet(e.Player), ticketsOnly: false);
-    }
 
-    void IEventListener<FlagCaptured>.HandleEvent(FlagCaptured e, IServiceProvider serviceProvider)
+    void IEventListener<IFlagsNeedUIUpdateEvent>.HandleEvent(IFlagsNeedUIUpdateEvent e, IServiceProvider serviceProvider)
     {
-        UpdateFlagListForAllPlayers();
-    }
-
-    void IEventListener<FlagNeutralized>.HandleEvent(FlagNeutralized e, IServiceProvider serviceProvider)
-    {
-        UpdateFlagListForAllPlayers();
-    }
-
-    void IEventListener<TicketsChanged>.HandleEvent(TicketsChanged e, IServiceProvider serviceProvider)
-    {
-        foreach (LanguageSet set in _translationService.SetOf.PlayersOnTeam(e.Team))
+        bool ticketsOnly = false;
+        foreach (LanguageSet set in e.EnumerateApplicableSets(_translationService, ref ticketsOnly))
         {
-            UpdateFlagList(set, ticketsOnly: true);
+            UpdateFlagList(set, ticketsOnly);
         }
     }
 }

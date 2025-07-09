@@ -1,7 +1,8 @@
-﻿using Autofac.Builder;
+using Autofac.Builder;
 using Autofac.Extensions.DependencyInjection;
 using DanielWillett.ModularRpcs.Exceptions;
 using DanielWillett.ModularRpcs.Reflection;
+using DanielWillett.ModularRpcs.Routing;
 using DanielWillett.ReflectionTools.Formatting;
 using Microsoft.Extensions.DependencyInjection;
 using System;
@@ -59,10 +60,25 @@ internal static class AutofacContainerExtensions
     public static IRegistrationBuilder<TImplementedType, ConcreteReflectionActivatorData, SingleRegistrationStyle> RegisterRpcType<TImplementedType, TServiceType>(
         this ContainerBuilder bldr) where TImplementedType : class, TServiceType where TServiceType : notnull
     {
+        Type proxyType = ProxyGenerator.Instance.GetProxyType<TImplementedType>();
+
+        if (proxyType == typeof(TImplementedType))
+        {
+            // generated proxy type
+
+            return bldr.RegisterType<TImplementedType>()
+                       .OnActivating(static args =>
+                       {
+                           if (!args.Context.TryResolve(out IRpcRouter? router))
+                               throw new InvalidOperationException("Missing service: IRpcRouter.");
+                           
+                           ProxyGenerator.Instance.SetupGeneratedProxyInfo((IRpcGeneratedProxyType)args.Instance, new GeneratedProxyTypeInfo(router, ProxyGenerator.Instance));
+                       })
+                       .As<TServiceType>();
+        }
+
         if (_regGenMtd == null)
             CheckRegisterMethod();
-
-        Type proxyType = ProxyGenerator.Instance.GetProxyType<TImplementedType>();
 
         MethodInfo definedMtd = _regGenMtd!.MakeGenericMethod(proxyType);
 

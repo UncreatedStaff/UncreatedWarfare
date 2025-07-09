@@ -155,7 +155,7 @@ public class CaptureUI : UnturnedUI, IHudUIListener
     public void Restore(WarfarePlayer? player)
     {
         Layout layout = _module.GetActiveLayout();
-        IFlagRotationService rot = layout.ServiceProvider.Resolve<IFlagRotationService>();
+        IFlagRotationService? rot = layout.ServiceProvider.ResolveOptional<IFlagRotationService>();
         DefaultCaptureUIFlagEvents? uiEvents = layout.ServiceProvider.ResolveOptional<DefaultCaptureUIFlagEvents>();
 
         if (layout.ActivePhase is not ActionPhase)
@@ -166,7 +166,7 @@ public class CaptureUI : UnturnedUI, IHudUIListener
 
         if (player != null)
         {
-            FlagObjective? flag = rot.ActiveFlags.FirstOrDefault(f => f.Players.Contains(player));
+            FlagObjective? flag = rot?.ActiveFlags.FirstOrDefault(f => f.Players.Contains(player));
             if (flag != null && uiEvents != null)
             {
                 CaptureUIState state = uiEvents.EvaluateCaptureUI(flag, new LanguageSet(player));
@@ -176,7 +176,7 @@ public class CaptureUI : UnturnedUI, IHudUIListener
         }
 
         _isHidden = false;
-        if (uiEvents == null)
+        if (uiEvents == null || rot == null)
             return;
 
         foreach (FlagObjective flag in rot.ActiveFlags)

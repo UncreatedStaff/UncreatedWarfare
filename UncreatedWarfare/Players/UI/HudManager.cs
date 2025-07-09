@@ -9,12 +9,14 @@ public class HudManager
 {
     private readonly WarfareModule _module;
     private readonly IPlayerService _playerService;
+    private readonly ILogger<HudManager> _logger;
     private int _handleCount;
 
-    public HudManager(WarfareModule module, IPlayerService playerService)
+    public HudManager(WarfareModule module, IPlayerService playerService, ILogger<HudManager> logger)
     {
         _module = module;
         _playerService = playerService;
+        _logger = logger;
     }
 
     private void ClearHud()
@@ -23,27 +25,60 @@ public class HudManager
 
         foreach (IHudUIListener listener in scope.Resolve<IEnumerable<IHudUIListener>>())
         {
-            listener.Hide(null);
+            try
+            {
+                listener.Hide(null);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error hiding HUD: {listener.GetType()}.");
+            }
         }
 
         foreach (WarfarePlayer player in _playerService.OnlinePlayers)
         {
-            player.UnturnedPlayer.disablePluginWidgetFlag(EPluginWidgetFlags.Default);
+            try
+            {
+                player.UnturnedPlayer.disablePluginWidgetFlag(EPluginWidgetFlags.Default);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error hiding PlayerLife HUD for player: {player}.");
+            }
         }
     }
 
     private void ShowHud()
     {
-        ILifetimeScope scope = _module.ScopedProvider;
-
-        foreach (IHudUIListener listener in scope.Resolve<IEnumerable<IHudUIListener>>())
+        try
         {
-            listener.Restore(null);
+            ILifetimeScope scope = _module.ScopedProvider;
+
+            foreach (IHudUIListener listener in scope.Resolve<IEnumerable<IHudUIListener>>())
+            {
+                try
+                {
+                    listener.Restore(null);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, $"Error showing HUD: {listener.GetType()}.");
+                }
+            }
         }
-
-        foreach (WarfarePlayer player in _playerService.OnlinePlayers)
+        finally
         {
-            player.UnturnedPlayer.enablePluginWidgetFlag(EPluginWidgetFlags.Default);
+            foreach (WarfarePlayer player in _playerService.OnlinePlayers)
+            {
+                try
+                {
+                    player.UnturnedPlayer.enablePluginWidgetFlag(EPluginWidgetFlags.Default);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, $"Error showing PlayerLife HUD for player: {player}.");
+                }
+            }
         }
     }
 

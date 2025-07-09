@@ -90,6 +90,7 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
         ChatService chatService,
         IPlayerService playerService,
         SquadManager squadManager,
+        LayoutFactory layoutFactory,
         PointsService pointsService,
         ITranslationService translationService,
         WarfareLifetimeComponent appLifetime)
@@ -103,6 +104,7 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
         _pointsService = pointsService;
         _translationService = translationService;
         _appLifetime = appLifetime;
+        _layoutFactory = layoutFactory;
 
         VoteClearButton.OnClicked += OnClearVotes;
 

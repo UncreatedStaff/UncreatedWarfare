@@ -4,6 +4,7 @@ using Uncreated.Warfare.Events.Models.Objectives;
 using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.Layouts.Flags;
 using Uncreated.Warfare.Layouts.Teams;
+using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Events.Models.Flags;
 
@@ -12,7 +13,7 @@ namespace Uncreated.Warfare.Events.Models.Flags;
 /// a winning <see cref="Team"/> after they won the flag contest of a neutral flag.
 /// </summary>
 [EventModel(EventSynchronizationContext.Pure)]
-public class FlagCaptured : IActionLoggableEvent, IObjectiveTaken
+public class FlagCaptured : IActionLoggableEvent, IObjectiveTaken, IFlagsNeedUIUpdateEvent
 {
     /// <summary>
     /// The flag that was captured.
@@ -35,4 +36,8 @@ public class FlagCaptured : IActionLoggableEvent, IObjectiveTaken
 
     Team IObjectiveTaken.Team => Capturer;
     IObjective IObjectiveTaken.Objective => Flag;
+    LanguageSetEnumerator IFlagsNeedUIUpdateEvent.EnumerateApplicableSets(ITranslationService translationService, ref bool ticketsOnly)
+    {
+        return translationService.SetOf.PlayersOnTeam();
+    }
 }
