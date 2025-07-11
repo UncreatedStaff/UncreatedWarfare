@@ -64,16 +64,16 @@ partial class DualSidedLeaderboardUI
             VoteButton ui = VoteButtons[i];
             LayoutInfo layout = _voteLayouts[i];
 
-            string name = string.IsNullOrWhiteSpace(layout.GamemodeName) || string.IsNullOrWhiteSpace(layout.LayoutName)
+            string name = string.IsNullOrWhiteSpace(layout.Configuration.GamemodeName) || string.IsNullOrWhiteSpace(layout.Configuration.LayoutName)
                 ? layout.DisplayName
-                : $"{layout.GamemodeName}\n<#bbb>{layout.LayoutName}</color>";
+                : $"{layout.Configuration.GamemodeName}\n<#bbb>{layout.Configuration.LayoutName}</color>";
 
             string votes = _layoutVotes[i].ToString(set.Culture);
 
             while (set.MoveNext())
             {
                 ui.Button.SetText(set.Next.Connection, name);
-                ui.Image.SetImage(set.Next.Connection, layout.Image ?? string.Empty);
+                ui.Image.SetImage(set.Next.Connection, layout.Configuration.Image ?? string.Empty);
                 ui.Votes.SetText(set.Next.Connection, votes);
                 ui.Root.Show(set.Next.Connection);
             }
@@ -93,7 +93,7 @@ partial class DualSidedLeaderboardUI
 
     public void OpenVotes(ITransportConnection connection)
     {
-        LogicOpenVote.SetVisibility(connection, true);
+        LogicOpenVote.SetVisibility(connection, _doVote);
     }
 
     public void CloseVotes(ITransportConnection connection)
@@ -105,6 +105,7 @@ partial class DualSidedLeaderboardUI
     {
         WarfarePlayer player = _playerService.GetOnlinePlayer(unturnedPlayer);
 
+        ClearPlayerVote(player);
     }
 
     public void ClearPlayerVote(WarfarePlayer player)

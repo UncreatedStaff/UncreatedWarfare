@@ -69,7 +69,7 @@ public class SignTranslations : PropertiesTranslationCollection
 
     public readonly SignTranslation SignBundleCanada = new SignTranslation("bundle_caf", "<#fff>Canadian Bundle");
 
-    public readonly SignTranslation SignBundleAfrica = new SignTranslation("bundle_afr", "<#fff>Africa Bundle.");
+    public readonly SignTranslation SignBundleAfrica = new SignTranslation("bundle_afr", "<#fff>Africa Bundle");
 
     public readonly SignTranslation SignBundleSpecial = new SignTranslation("bundle_special", "<#fff>Special Kits");
 
@@ -143,8 +143,8 @@ public class SignTranslations : PropertiesTranslationCollection
                                                                                   """);
 
     public readonly SignTranslation SignFAQ3Question = new SignTranslation("faq3_Q", """
-                                                                                  <#2df332>Q: Help! How do I deploy to the battlefield?
-                                                                                  """);
+                                                                                     <#2df332>Q: Help! How do I deploy to the battlefield?
+                                                                                     """);
 
     public readonly SignTranslation SignFAQ3Answer = new SignTranslation("faq3_A", """
                                                                                   <#fa6122>A: You can deploy to a friendly <#2df332>FOB</color> by pressing <#2df332>F</color> on the <#2df332>Map Tacks</color> that show up on the strategy map In HQ.

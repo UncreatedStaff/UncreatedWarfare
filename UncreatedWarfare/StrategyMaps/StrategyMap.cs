@@ -5,14 +5,12 @@ using System.Linq;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Barricades;
-using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.FOBs.Deployment;
+using Uncreated.Warfare.FOBs.Rallypoints;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.StrategyMaps.MapTacks;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
-using Uncreated.Warfare.Util.List;
-using RallyPoint = Uncreated.Warfare.FOBs.Rallypoints.RallyPoint;
 
 namespace Uncreated.Warfare.StrategyMaps;
 
@@ -20,7 +18,7 @@ public class StrategyMap : IDisposable, IEventListener<ClaimBedRequested>
 {
     private readonly MapTableInfo _tableInfo;
     private readonly BuildableAttributesDataStore _attributeStore;
-    private readonly TrackingList<MapTack> _activeMapTacks;
+    private readonly List<MapTackInfo> _activeMapTacks;
 
     public IBuildable MapTable { get; set; }
 
@@ -29,32 +27,21 @@ public class StrategyMap : IDisposable, IEventListener<ClaimBedRequested>
         _tableInfo = tableInfo;
         _attributeStore = attributeStore;
         MapTable = buildable;
-        _activeMapTacks = new TrackingList<MapTack>();
-    }
-
-    public void RepopulateMapTacks(IEnumerable<MapTack> newMapTacks)
-    {
-        GameThread.AssertCurrent();
-
-        ClearMapTacks();
-        foreach (MapTack mapTack in newMapTacks)
-        {
-            AddMapTack(mapTack);
-        }
+        _activeMapTacks = new List<MapTackInfo>();
     }
 
     public void ClearMapTacks()
     {
         GameThread.AssertCurrent();
 
-        foreach (MapTack tack in _activeMapTacks)
+        foreach (MapTackInfo tack in _activeMapTacks)
         {
-            tack.Dispose();
+            tack.Tack.Dispose();
         }
         _activeMapTacks.Clear();
     }
 
-    public void AddMapTack(MapTack newMapTack)
+    public void AddMapTack(MapTack newMapTack, object owner)
     {
         GameThread.AssertCurrent();
 
@@ -63,33 +50,61 @@ public class StrategyMap : IDisposable, IEventListener<ClaimBedRequested>
         newMapTack.DropMarker(worldCoordsOnMapTable, MapTable.Rotation);
         _attributeStore.UpdateAttributes(newMapTack.Marker).Add(MainBaseBuildables.TransientAttribute, null);
 
-        _activeMapTacks.Add(newMapTack);
+        _activeMapTacks.Add(new MapTackInfo(newMapTack, owner));
     }
 
     public bool RemoveMapTack(MapTack newMapTack)
     {
         GameThread.AssertCurrent();
 
-        if (!_activeMapTacks.Remove(newMapTack))
-            return false;
-        
-        newMapTack.Dispose();
-        return true;
-    }
-
-    public void RemoveMapTacks(Func<MapTack, bool> filter)
-    {
-        GameThread.AssertCurrent();
-
-        for (int i = _activeMapTacks.Count - 1; i >= 0; --i)
+        for (int i = 0; i < _activeMapTacks.Count; ++i)
         {
-            MapTack tack = _activeMapTacks[i];
-            if (!filter(tack))
+            if (_activeMapTacks[i].Tack != newMapTack)
                 continue;
 
             _activeMapTacks.RemoveAt(i);
-            tack.Dispose();
+            newMapTack.Dispose();
+            return true;
         }
+
+        return false;
+    }
+
+    public int RemoveMapTacks(Func<MapTack, bool> filter)
+    {
+        GameThread.AssertCurrent();
+
+        int ct = 0;
+        for (int i = _activeMapTacks.Count - 1; i >= 0; --i)
+        {
+            MapTackInfo tack = _activeMapTacks[i];
+            if (!filter(tack.Tack))
+                continue;
+
+            _activeMapTacks.RemoveAt(i);
+            tack.Tack.Dispose();
+            ++ct;
+        }
+
+        return ct;
+    }
+    public int RemoveMapTacks(Func<MapTack, object, bool> filter)
+    {
+        GameThread.AssertCurrent();
+
+        int ct = 0;
+        for (int i = _activeMapTacks.Count - 1; i >= 0; --i)
+        {
+            MapTackInfo tack = _activeMapTacks[i];
+            if (!filter(tack.Tack, tack.Owner))
+                continue;
+
+            _activeMapTacks.RemoveAt(i);
+            tack.Tack.Dispose();
+            ++ct;
+        }
+
+        return ct;
     }
 
     public Vector3 TranslateWorldPointOntoMap(Vector3 featureWorldPosition)
@@ -130,14 +145,14 @@ public class StrategyMap : IDisposable, IEventListener<ClaimBedRequested>
 
     void IEventListener<ClaimBedRequested>.HandleEvent(ClaimBedRequested e, IServiceProvider serviceProvider)
     {
-        MapTack? mapTack = _activeMapTacks.FirstOrDefault(t => t.Marker.Equals(e.Barricade));
-        if (mapTack == null)
+        MapTackInfo mapTack = _activeMapTacks.FirstOrDefault(t => t.Tack.Marker.Equals(e.Barricade));
+        if (mapTack.Tack == null)
         {
             // we can't cancel action here because this will run for both strategy maps
             return;
         }
 
-        if (mapTack is not DeployableMapTack d)
+        if (mapTack.Tack is not DeployableMapTack d)
         {
             e.Cancel();
             return;
@@ -187,4 +202,6 @@ public class StrategyMap : IDisposable, IEventListener<ClaimBedRequested>
     {
         return $"StrategyMap[MapTable: [{MapTable}] MapTacks: {string.Join(", ", _activeMapTacks)}]";
     }
+
+    private record struct MapTackInfo(MapTack Tack, object Owner);
 }

@@ -1,6 +1,9 @@
 using DanielWillett.ModularRpcs.Abstractions;
 using DanielWillett.ModularRpcs.Annotations;
 using DanielWillett.ModularRpcs.Async;
+#if DEBUG
+using DanielWillett.ModularRpcs.Protocol;
+#endif
 using DanielWillett.ModularRpcs.Routing;
 using DanielWillett.ModularRpcs.WebSockets;
 using DanielWillett.ReflectionTools;

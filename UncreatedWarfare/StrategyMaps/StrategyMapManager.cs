@@ -1,5 +1,4 @@
 using DanielWillett.ReflectionTools;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
@@ -9,11 +8,6 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Events.Models.Flags;
-using Uncreated.Warfare.Events.Models.Fobs;
-using Uncreated.Warfare.Fobs;
-using Uncreated.Warfare.FOBs;
-using Uncreated.Warfare.FOBs.Deployment;
-using Uncreated.Warfare.FOBs.Rallypoints;
 using Uncreated.Warfare.Layouts.Flags;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Services;
@@ -30,15 +24,9 @@ public class StrategyMapManager :
     IEventListenerProvider,
     IEventListener<BarricadePlaced>,
     IEventListener<BarricadeDestroyed>,
-    IEventListener<FobRegistered>,
-    IEventListener<FobDeregistered>, 
-    IEventListener<FobBuilt>, 
-    IEventListener<FobDestroyed>, 
-    IEventListener<FobProxyChanged>,
     IEventListener<FlagsSetUp>,
     IEventListener<FlagCaptured>,
-    IEventListener<FlagNeutralized>,
-    IDisposable
+    IEventListener<FlagNeutralized>
 {
     private readonly TrackingList<StrategyMap> _strategyMaps;
     private readonly ILogger<StrategyMapManager> _logger;
@@ -47,12 +35,7 @@ public class StrategyMapManager :
     private readonly AssetConfiguration _assetConfiguration;
     private readonly BuildableAttributesDataStore _attributeStore;
 
-    private Dictionary<int, IAssetLink<ItemBarricadeAsset>> _rallyPoints = null!;
-    private IAssetLink<ItemBarricadeAsset> _fobUnbuilt = null!;
-    private IAssetLink<ItemBarricadeAsset> _fobBuilt = null!;
-    private IAssetLink<ItemBarricadeAsset> _fobProxied = null!;
-    private IAssetLink<ItemBarricadeAsset> _mainBase = null!;
-    private IAssetLink<ItemBarricadeAsset> _neutralFlag = null!;
+    public ReadOnlyTrackingList<StrategyMap> StrategyMaps { get; }
 
     public StrategyMapManager(ILogger<StrategyMapManager> logger, IServiceProvider serviceProvider)
     {
@@ -64,21 +47,9 @@ public class StrategyMapManager :
         _assetConfiguration = serviceProvider.GetRequiredService<AssetConfiguration>();
         _attributeStore = serviceProvider.GetRequiredService<BuildableAttributesDataStore>();
 
-        OnAssetConfigurationChange(_assetConfiguration);
+        StrategyMaps = _strategyMaps.AsReadOnly();
 
         _logger.LogInformation("Configured Strategy MapTables: " + (_configuration.MapTables?.Count.ToString() ?? "config not found"));
-    }
-
-    private void OnAssetConfigurationChange(IConfiguration obj)
-    {
-        _rallyPoints = _assetConfiguration.GetSection("Buildables:MapTacks:Rallypoints")
-            .Get<Dictionary<int, IAssetLink<ItemBarricadeAsset>>>() ?? new Dictionary<int, IAssetLink<ItemBarricadeAsset>>();
-
-        _fobUnbuilt = _assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:MapTacks:FobUnbuilt");
-        _fobBuilt = _assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:MapTacks:Fob");
-        _fobProxied = _assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:MapTacks:FobProxied");
-        _mainBase = _assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:MapTacks:MainBase");
-        _neutralFlag = _assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:MapTacks:NeutralFlag");
     }
 
     public UniTask StartAsync(CancellationToken token)
@@ -126,15 +97,22 @@ public class StrategyMapManager :
         }
 
         StrategyMap map = new StrategyMap(buildable, tableInfo, _attributeStore);
-        _strategyMaps.AddIfNotExists(map);
+        _strategyMaps.Add(map);
 
-        DualSidedFlagService? flagService = _serviceProvider.GetService<DualSidedFlagService>();
-        FobManager? fobManager = _serviceProvider.GetService<FobManager>();
+        IFlagRotationService? flagService = _serviceProvider.GetService<IFlagRotationService>();
+
+        ITeamManager<Team>? teamManager = _serviceProvider.GetService<ITeamManager<Team>>();
+        ZoneStore? globalZoneStore = _serviceProvider.GetService<ZoneStore>();
+
+        foreach (IStrategyMapProvider stratMapProvider in _serviceProvider.GetServices<IStrategyMapProvider>())
+        {
+            stratMapProvider.RepopulateStrategyMap(map, _assetConfiguration, _serviceProvider);
+        }
 
         if (flagService != null)
             RepopulateFlagTacks(map, flagService);
-        if (fobManager != null)
-            RepopulateDeployableFobTacks(map, fobManager);
+        if (teamManager != null && globalZoneStore != null)
+            RepopulateMainBaseFobTacks(map, teamManager, globalZoneStore);
 
         _logger.LogDebug($"Registered new StrategyMap: {map}");
     }
@@ -148,7 +126,9 @@ public class StrategyMapManager :
         map.Dispose();
         _logger.LogDebug($"Deregistered StrategyMap: {map}");
     }
+
     public IEnumerable<StrategyMap> StrategyMapsOfTeam(Team team) => _strategyMaps.Where(s => s.MapTable.Group == team.GroupId);
+   
     public StrategyMap? GetStrategyMap(uint buildableInstanceId) => _strategyMaps.FirstOrDefault(m => m.MapTable.InstanceId == buildableInstanceId);
 
     public void HandleEvent(BarricadePlaced e, IServiceProvider serviceProvider)
@@ -161,6 +141,7 @@ public class StrategyMapManager :
 
         RegisterStrategyMap(e.Buildable, mapTableInfo);
     }
+
     public void HandleEvent(BarricadeDestroyed e, IServiceProvider serviceProvider)
     {
         bool isMapTableBuildable = _configuration.MapTables
@@ -172,78 +153,6 @@ public class StrategyMapManager :
         DeregisterStrategyMap(e.Buildable);
     }
 
-    public void HandleEvent(FobRegistered e, IServiceProvider serviceProvider)
-    {
-        MapTack? newTack = null;
-        if (e.Fob is BunkerFob)
-            newTack = new DeployableMapTack(_fobUnbuilt, e.Fob);
-        else if (e.Fob is RallyPoint rallypoint)
-        {
-            if (_rallyPoints.TryGetValue(rallypoint.Squad.TeamIdentificationNumber, out IAssetLink<ItemBarricadeAsset> rallyPointMapTack))
-                newTack = new DeployableMapTack(rallyPointMapTack, rallypoint);
-        }
-        
-        if (newTack == null)
-            return;
-
-        foreach (StrategyMap map in StrategyMapsOfTeam(e.Fob.Team))
-        {
-            map.AddMapTack(newTack);
-        }
-    }
-
-    public void HandleEvent(FobDeregistered e, IServiceProvider serviceProvider)
-    {
-        foreach (StrategyMap map in StrategyMapsOfTeam(e.Fob.Team))
-        {
-            map.RemoveMapTacks(m => m is DeployableMapTack fm && fm.Deployable == e.Fob);
-        }
-    }
-
-    public void HandleEvent(FobBuilt e, IServiceProvider serviceProvider)
-    {
-        MapTack newTack;
-        if (e.Fob != null)
-            newTack = new DeployableMapTack(_fobBuilt, e.Fob);
-        else
-            return;
-
-        foreach (StrategyMap map in StrategyMapsOfTeam(e.Fob.Team))
-        {
-            map.RemoveMapTacks(m => m is DeployableMapTack fm && fm.Deployable == e.Fob);
-            map.AddMapTack(newTack);
-        }
-    }
-
-    public void HandleEvent(FobDestroyed e, IServiceProvider serviceProvider)
-    {
-        MapTack newTack;
-        if (e.Fob is BunkerFob)
-            newTack = new DeployableMapTack(_fobUnbuilt, e.Fob);
-        else
-            return;
-
-        foreach (StrategyMap map in StrategyMapsOfTeam(e.Fob.Team))
-        {
-            map.RemoveMapTacks(m => m is DeployableMapTack fm && fm.Deployable == e.Fob);
-            map.AddMapTack(newTack);
-        }
-    }
-
-    public void HandleEvent(FobProxyChanged e, IServiceProvider serviceProvider)
-    {
-        MapTack newTack;
-        if (e.Fob is BunkerFob bf && bf.IsBuilt)
-            newTack = new DeployableMapTack(e.IsProxied ? _fobProxied : _fobBuilt, e.Fob);
-        else
-            return;
-
-        foreach (StrategyMap map in StrategyMapsOfTeam(e.Fob.Team))
-        {
-            map.RemoveMapTacks(m => m is DeployableMapTack fm && fm.Deployable == e.Fob);
-            map.AddMapTack(newTack);
-        }
-    }
     public void HandleEvent(FlagsSetUp e, IServiceProvider serviceProvider)
     {
         foreach (StrategyMap map in _strategyMaps)
@@ -251,80 +160,59 @@ public class StrategyMapManager :
             RepopulateFlagTacks(map, e.FlagService);
         }
     }
-    public void HandleEvent(FlagCaptured e, IServiceProvider serviceProvider) // todo: move flag and fob stuff into a partial class maybe?
+
+    public void HandleEvent(FlagCaptured e, IServiceProvider serviceProvider)
     {
         foreach (StrategyMap map in _strategyMaps)
         {
-            map.RemoveMapTacks(m => m is FlagMapTack fm && fm.Flag == e.Flag);
-            map.AddMapTack(CreateFlagTack(e.Flag));
+            map.RemoveMapTacks((_, owner) => owner == e.Flag);
+            map.AddMapTack(CreateFlagTack(e.Flag), e.Flag);
         }
     }
+
     public void HandleEvent(FlagNeutralized e, IServiceProvider serviceProvider)
     {
         foreach (StrategyMap map in _strategyMaps)
         {
-            map.RemoveMapTacks(m => m is FlagMapTack fm && fm.Flag == e.Flag);
-            map.AddMapTack(CreateFlagTack(e.Flag));
+            map.RemoveMapTacks((_, owner) => owner == e.Flag);
+            map.AddMapTack(CreateFlagTack(e.Flag), e.Flag);
         }
     }
-    private void RepopulateFlagTacks(StrategyMap map, DualSidedFlagService flagService)
+
+    private void RepopulateFlagTacks(StrategyMap map, IFlagRotationService flagService)
     {
         map.RemoveMapTacks(m => m is FlagMapTack or DeployableMapTack { Deployable: Zone { Type: ZoneType.MainBase } });
 
-        foreach (var flag in flagService.ActiveFlags)
+        foreach (FlagObjective flag in flagService.ActiveFlags)
         {
-            map.AddMapTack(CreateFlagTack(flag));
+            map.AddMapTack(CreateFlagTack(flag), flag);
         }
-        if (map.MapTable.Group.m_SteamID == flagService.StartingTeam.GroupId.m_SteamID)
-            map.AddMapTack(CreateMainBaseTack(flagService.StartingTeamRegion.Primary.Zone));
-        if (map.MapTable.Group.m_SteamID == flagService.EndingTeam.GroupId.m_SteamID)
-            map.AddMapTack(CreateMainBaseTack(flagService.EndingTeamRegion.Primary.Zone));
     }
-    private void RepopulateDeployableFobTacks(StrategyMap map, FobManager fobManager)
-    {
-        map.RemoveMapTacks(m => m is DeployableMapTack { Deployable: BunkerFob or RallyPoint });
 
-        foreach (var fob in fobManager.Fobs)
+    private void RepopulateMainBaseFobTacks(StrategyMap map, ITeamManager<Team> teamManager, ZoneStore globalZoneStore)
+    {
+        map.RemoveMapTacks((_, owner) => owner is Team);
+
+        foreach (Team team in teamManager.AllTeams)
         {
-            if (fob.Team.GroupId != map.MapTable.Group)
+            Zone? teamMain = globalZoneStore.SearchZone(ZoneType.MainBase, team.Faction);
+            if (teamMain == null)
                 continue;
 
-            if (fob is BunkerFob bf)
-            {
-                map.AddMapTack(CreateBunkerFobTack(bf));
-            }
-            else if (fob is RallyPoint rp)
-            {
-                if (_rallyPoints.TryGetValue(rp.Squad.TeamIdentificationNumber, out IAssetLink<ItemBarricadeAsset> tack))
-                    map.AddMapTack(new DeployableMapTack(tack, fob));
-            }
+            map.AddMapTack(CreateMainBaseTack(teamMain), team);
         }
     }
 
-    private DeployableMapTack CreateBunkerFobTack(BunkerFob fob)
+    private DeployableMapTack CreateMainBaseTack(Zone mainBase)
     {
-        if (fob.IsBuilt)
-            return new DeployableMapTack(fob.IsProxied ? _fobProxied : _fobBuilt, fob);
-        else
-            return new DeployableMapTack(_fobUnbuilt, fob);
-    }
-
-    private DeployableMapTack CreateMainBaseTack(IDeployable mainBase)
-    {
-        return new DeployableMapTack(_mainBase, mainBase);
+        return new DeployableMapTack(_assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:MapTacks:MainBase"), mainBase);
     }
 
     private FlagMapTack CreateFlagTack(FlagObjective flag)
     {
         if (flag.Owner == Team.NoTeam || flag.Owner.Faction.MapTackFlag == null)
-            return new FlagMapTack(_neutralFlag, flag);
+            return new FlagMapTack(_assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:MapTacks:NeutralFlag"), flag);
         else
             return new FlagMapTack(flag.Owner.Faction.MapTackFlag, flag);
-    }
-
-    /// <inheritdoc />
-    public void Dispose()
-    {
-        _assetConfiguration.OnChange -= OnAssetConfigurationChange;
     }
 }

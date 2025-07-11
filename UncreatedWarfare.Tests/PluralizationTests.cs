@@ -1,6 +1,7 @@
 using NUnit.Framework;
 using System;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Tests.Utility;
 using Uncreated.Warfare.Translations;
@@ -41,7 +42,8 @@ public class PluralizationTests
         string output = TranslationPluralizations.ApplyPluralizers(in args, spans, offset, 2, index => index switch
         {
             0 => "location",
-            1 => 1
+            1 => 1,
+            _ => throw new SwitchExpressionException()
         }).ToString();
 
         Assert.That(output.Contains("second"), Is.True);
@@ -66,7 +68,8 @@ public class PluralizationTests
         string output = TranslationPluralizations.ApplyPluralizers(in args, spans, offset, 2, index => index switch
         {
             0 => "location",
-            1 => 2
+            1 => 2,
+            _ => throw new SwitchExpressionException()
         }).ToString();
 
         Assert.That(output.Contains("seconds"), Is.True);

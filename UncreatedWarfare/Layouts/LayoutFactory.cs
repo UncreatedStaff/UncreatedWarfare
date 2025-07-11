@@ -85,6 +85,14 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
         _sessionService = sessionService;
         _region = systemConfig.GetValue<byte>("region");
         IsLoading = true;
+
+        if (systemConfig["tests:startup_layout"] is not { Length: > 0 } startupLayout)
+            return;
+
+        string path = Path.Combine(warfare.HomeDirectory, "Layouts", startupLayout);
+
+        if (File.Exists(path))
+            NextLayout = new FileInfo(path);
     }
 
     /// <inheritdoc />
@@ -602,7 +610,7 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
         if (variations)
             ApplyVariation(ref configuration, displayName, file);
 
-        return new LayoutInfo
+        LayoutInfo layoutInfo = new LayoutInfo
         {
             LayoutType = layoutType,
             Layout = (IConfigurationRoot)configuration,
@@ -610,6 +618,10 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
             DisplayName = displayName,
             FilePath = file
         };
+
+        configuration.Bind(layoutInfo.Configuration);
+
+        return layoutInfo;
     }
 
     /// <summary>
@@ -731,13 +743,47 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
                     if (files.Length == 0)
                         break;
 
-                    // find file with least periods in it's name to get which one doesn't have a map-specific config.
-                    baseLayoutConfigs.Add(files.Aggregate((least, next) => next.Name.Count(x => x == '.') < least.Name.Count(x => x == '.') ? next : least));
+                    Array.Sort(files, FileNameLengthComparer.Instance);
+
+                    // include base files like: 'AAS Mechanized Infantry.yml' but don't include files like: 'AAS Mechanized Infantry.Yellowknife.yml'
+                    string? baseFile = null;
+                    for (int i = 0; i < files.Length; ++i)
+                    {
+                        FileInfo file = files[i];
+                        if (baseFile != null && file.FullName.StartsWith(baseFile, StringComparison.Ordinal) && file.FullName.Length > baseFile.Length + 5 && file.FullName[baseFile.Length] == '.')
+                            continue;
+
+                        baseFile = file.FullName[..^4];
+                        baseLayoutConfigs.Add(file);
+                    }
+
                     break;
             }
         }
 
         return baseLayoutConfigs;
+    }
+
+    private sealed class FileNameLengthComparer : IComparer<FileInfo>
+    {
+        public static readonly FileNameLengthComparer Instance = new FileNameLengthComparer();
+        static FileNameLengthComparer() { }
+        private FileNameLengthComparer() { }
+
+        /// <inheritdoc />
+        public int Compare(FileInfo x, FileInfo y)
+        {
+            if (x == y)
+                return 0;
+
+            if (x == null)
+                return -1;
+
+            if (y == null)
+                return 1;
+
+            return x.FullName.Length.CompareTo(y.FullName.Length);
+        }
     }
 
     /// <summary>

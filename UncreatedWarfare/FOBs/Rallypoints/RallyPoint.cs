@@ -1,7 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Globalization;
 using System.Linq;
 using Uncreated.Warfare.Buildables;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Interaction;
@@ -9,13 +11,15 @@ using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Squads;
+using Uncreated.Warfare.StrategyMaps;
+using Uncreated.Warfare.StrategyMaps.MapTacks;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Timing;
 
 namespace Uncreated.Warfare.FOBs.Rallypoints;
 
-public class RallyPoint : IBuildableFob, IDisposable
+public class RallyPoint : IBuildableFob, IDisposable, IFobStrategyMapTackHandler
 {
     private const int BurnRadius = 20;
     private const int DeployTimer = 20;
@@ -160,4 +164,14 @@ public class RallyPoint : IBuildableFob, IDisposable
 
     /// <inheritdoc />
     bool ITransformObject.Alive => Buildable.Alive;
+
+    /// <inheritdoc />
+    MapTack? IFobStrategyMapTackHandler.CreateMapTack(StrategyMap map, AssetConfiguration assetConfiguration)
+    {
+        if (Buildable.IsDead || !Team.IsFriendly(map.MapTable.Group))
+            return null;
+
+        string path = $"Buildables:MapTacks:Rallypoints:{Squad.TeamIdentificationNumber.ToString(CultureInfo.InvariantCulture)}";
+        return new DeployableMapTack(assetConfiguration.GetAssetLink<ItemBarricadeAsset>(path), this);
+    }
 }

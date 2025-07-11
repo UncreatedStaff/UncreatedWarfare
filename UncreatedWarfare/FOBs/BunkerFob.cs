@@ -1,15 +1,18 @@
 using Microsoft.Extensions.Configuration;
 using System;
 using Uncreated.Warfare.Buildables;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.StrategyMaps;
+using Uncreated.Warfare.StrategyMaps.MapTacks;
 using Uncreated.Warfare.Util.DamageTracking;
 
 namespace Uncreated.Warfare.FOBs;
-public class BunkerFob : ResourceFob, IDeployable
+public class BunkerFob : ResourceFob, IDeployable, IFobStrategyMapTackHandler
 {
     public bool IsBuilt { get; private set; }
     public bool HasBeenRebuilt { get; private set; }
@@ -67,5 +70,27 @@ public class BunkerFob : ResourceFob, IDeployable
     public override TimeSpan GetDelay(WarfarePlayer player)
     {
         return TimeSpan.FromSeconds(FobManager.Configuration.GetValue("FobDeployDelay", 10));
+    }
+
+    protected virtual MapTack? CreateMapTack(StrategyMap map, AssetConfiguration assetConfig)
+    {
+        if (Buildable.IsDead || !Team.IsFriendly(map.MapTable.Group))
+            return null;
+
+        IAssetLink<ItemBarricadeAsset> barricade;
+        if (!IsBuilt)
+            barricade = assetConfig.GetAssetLink<ItemBarricadeAsset>("Buildables:MapTacks:FobUnbuilt");
+        else if (IsProxied)
+            barricade = assetConfig.GetAssetLink<ItemBarricadeAsset>("Buildables:MapTacks:FobProxied");
+        else
+            barricade = assetConfig.GetAssetLink<ItemBarricadeAsset>("Buildables:MapTacks:Fob");
+
+        return new DeployableMapTack(barricade, this);
+    }
+
+    /// <inheritdoc />
+    MapTack? IFobStrategyMapTackHandler.CreateMapTack(StrategyMap map, AssetConfiguration assetConfig)
+    {
+        return CreateMapTack(map, assetConfig);
     }
 }

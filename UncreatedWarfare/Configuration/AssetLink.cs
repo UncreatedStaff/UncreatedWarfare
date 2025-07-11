@@ -238,7 +238,7 @@ public static class AssetLink
     public static IAssetLink<TAsset> Parse<TAsset>(string? value) where TAsset : Asset
     {
         if (string.IsNullOrEmpty(value))
-            return new AssetLinkImpl<TAsset>(0);
+            return AssetLinkImpl<TAsset>.Empty;
 
         if (Guid.TryParse(value, out Guid guid))
             return new AssetLinkImpl<TAsset>(guid);
@@ -292,7 +292,7 @@ public static class AssetLink
     {
         if (string.IsNullOrEmpty(value))
         {
-            asset = new AssetLinkImpl<TAsset>(0);
+            asset = AssetLinkImpl<TAsset>.Empty;
             return true;
         }
 
@@ -643,7 +643,7 @@ public static class AssetLink
     /// </summary>
     public static IAssetLink<TAsset> GetAssetLink<TAsset>(this IConfiguration configuration) where TAsset : Asset
     {
-        return configuration.Get<IAssetLink<TAsset>>() ?? new AssetLinkImpl<TAsset>(0);
+        return configuration.Get<IAssetLink<TAsset>>() ?? AssetLinkImpl<TAsset>.Empty;
     }
 
     /// <summary>
@@ -651,7 +651,10 @@ public static class AssetLink
     /// </summary>
     public static IAssetLink<TAsset> GetAssetLink<TAsset>(this IConfiguration configuration, string key) where TAsset : Asset
     {
-        return configuration.GetValue<IAssetLink<TAsset>>(key) ?? new AssetLinkImpl<TAsset>(0);
+        if (configuration is AssetConfiguration assetConfig)
+            return assetConfig.TryGetAssetLinkCached<TAsset>(key, out IAssetLink<TAsset>? link) ? link : AssetLinkImpl<TAsset>.Empty;
+
+        return configuration.GetValue<IAssetLink<TAsset>>(key) ?? AssetLinkImpl<TAsset>.Empty;
     }
 
     /// <summary>

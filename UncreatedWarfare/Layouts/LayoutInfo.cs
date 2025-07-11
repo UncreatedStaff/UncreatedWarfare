@@ -34,19 +34,9 @@ public class LayoutInfo : IDisposable
     public required string DisplayName { get; init; }
 
     /// <summary>
-    /// Display name of the gamemode.
+    /// Binded configuration.
     /// </summary>
-    public string? GamemodeName { get; init; }
-
-    /// <summary>
-    /// Display name of the layout, not including the gamemode.
-    /// </summary>
-    public string? LayoutName { get; init; }
-
-    /// <summary>
-    /// URL to the image for this gamemode.
-    /// </summary>
-    public string? Image { get; init; }
+    public LayoutInfoConfiguration Configuration { get; } = new LayoutInfoConfiguration();
 
     /// <inheritdoc />
     public void Dispose()
@@ -54,4 +44,26 @@ public class LayoutInfo : IDisposable
         if (Layout is IDisposable disposable)
             disposable.Dispose();
     }
+}
+
+/// <summary>
+/// Binded configuration in <see cref="LayoutInfo"/>.
+/// </summary>
+public class LayoutInfoConfiguration
+{
+    /// <summary>
+    /// Display name of the gamemode.
+    /// </summary>
+    public string? GamemodeName { get; set; }
+
+    /// <summary>
+    /// Display name of the layout, not including the gamemode.
+    /// </summary>
+    public string? LayoutName { get; set; }
+
+    /// <summary>
+    /// URL to the image for this gamemode.
+    /// </summary>
+    public string? Image { get; set; }
+
 }

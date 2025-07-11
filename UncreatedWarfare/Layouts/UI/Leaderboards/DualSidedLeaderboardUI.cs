@@ -1,4 +1,5 @@
 using DanielWillett.ReflectionTools;
+using Microsoft.Extensions.Configuration;
 using SDG.NetTransport;
 using System;
 using System.Collections.Generic;
@@ -55,7 +56,10 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
 
     // visible column index
     [Ignore] internal int DefaultSortColumn;
+    // Descending = true
     [Ignore] internal bool DefaultSortMode;
+
+    [Ignore] private readonly bool _doVote;
 
     public readonly UnturnedUIElement TopSquadsParent = new UnturnedUIElement("GameInfo/Squads");
     public readonly TopSquad[] TopSquads = ElementPatterns.CreateArray<TopSquad>("GameInfo/Squads/Squad_T{0}", 1, to: 2);
@@ -93,6 +97,7 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
         LayoutFactory layoutFactory,
         PointsService pointsService,
         ITranslationService translationService,
+        IConfiguration config,
         WarfareLifetimeComponent appLifetime)
         : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:DualSidedLeaderboardUI"), staticKey: true, debugLogging: false)
     {
@@ -106,12 +111,17 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
         _appLifetime = appLifetime;
         _layoutFactory = layoutFactory;
 
-        VoteClearButton.OnClicked += OnClearVotes;
+        _doVote = !config.GetValue<bool>("tests:disable_vote");
+
+        if (_doVote)
+        {
+            VoteClearButton.OnClicked += OnClearVotes;
+
+            ElementPatterns.SubscribeAll(VoteButtons, b => b.Button, OnVoteButtonChosen);
+        }
 
         ElementPatterns.SubscribeAll(Leaderboards[0].StatHeaders, Team1ButtonPressed);
         ElementPatterns.SubscribeAll(Leaderboards[1].StatHeaders, Team2ButtonPressed);
-
-        ElementPatterns.SubscribeAll(VoteButtons, b => b.Button, OnVoteButtonChosen);
     }
 
     private void Team1ButtonPressed(UnturnedButton button, Player player)
@@ -182,21 +192,28 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
         _valuablePlayers = ComputeValuablePlayers();
         _globalStatSums = ComputeGlobalStats();
         _topSquads = ComputeTopSquads();
-        _voteLayouts = ComputeCandidateLayouts();
-        _layoutVotes = new int[_voteLayouts.Length];
+        if (_doVote)
+        {
+            _voteLayouts = ComputeCandidateLayouts();
+            _layoutVotes = new int[_voteLayouts.Length];
 
-        IsVotingPeriodOpen = _voteLayouts.Length > 0 && _layoutFactory.NextLayout == null;
+            IsVotingPeriodOpen = _voteLayouts.Length > 0 && _layoutFactory.NextLayout == null;
+        }
+        else
+        {
+            IsVotingPeriodOpen = false;
+        }
+
         SendToAllPlayers();
         foreach (LanguageSet set in _translationService.SetOf.AllPlayers())
         {
             SendToPlayers(set);
-            if (!IsVotingPeriodOpen)
+            if (IsVotingPeriodOpen)
+                continue;
+
+            while (set.MoveNext())
             {
-                while (set.MoveNext())
-                {
-                    CloseVotes(set.Next.Connection);
-                    
-                }
+                CloseVotes(set.Next.Connection);
             }
         }
 
@@ -255,7 +272,9 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
         SendTopSquads(set);
         SendValuablePlayers(set);
         SendGlobalStats(set);
-        SendVotes(set);
+
+        if (_doVote)
+            SendVotes(set);
 
         if (winningTeam != null)
         {
