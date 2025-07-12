@@ -425,7 +425,7 @@ public class WorldIconInfo : ITransformObject, IDisposable
         bool hasMutablePlayerSelector = distanceLimited || PlayerSelector != null;
 
         Vector3 pos;
-        if (updatePosition)
+        if (updatePosition || LastPositionUpdateRealtime == 0)
         {
             if (!TryGetSpawnPosition(out pos))
             {

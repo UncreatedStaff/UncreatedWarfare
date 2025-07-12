@@ -438,7 +438,7 @@ public class WorldIconManager : ILayoutHostedService, IEventListener<PlayerLeft>
             foreach (WorldIconInfo icon in iconSets)
             {
                 Vector3 pos = icon.LastSpawnPosition;
-                if (icon.IsDistanceLimited)
+                if (icon.IsDistanceLimited || icon.LastPositionUpdateRealtime == 0)
                     icon.TryGetSpawnPosition(out pos);
                 if (!icon.ShouldPlayerSeeIcon(player, in pos))
                     continue;
