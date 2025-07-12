@@ -1,8 +1,6 @@
-using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Buildables;
-using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
@@ -14,7 +12,6 @@ using Uncreated.Warfare.Models.Stats;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Players.Management;
-using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Stats.EventHandlers;
 internal sealed class PlayerDatabaseStatsEventHandlers :

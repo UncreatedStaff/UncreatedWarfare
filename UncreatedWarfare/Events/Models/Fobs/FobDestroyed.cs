@@ -28,7 +28,7 @@ public class FobDestroyed : IActionLoggableEvent, IFobNeedsUIUpdateEvent
     {
         return new ActionLogEntry(ActionLogTypes.FobDestroyed,
             $"FOB \"{Fob.Name}\" for team {Fob.Team} # {Fob.Buildable.InstanceId} @ {Fob.Buildable.Position:F2}, {Fob.Buildable.Rotation:F2}, " +
-            $"Damagers: [ {(Fob is BunkerFob f ? string.Join(", ", f.DamageTracker.Contributors.Select(x => $"{x.m_SteamID} - {f.DamageTracker.GetDamageContributionPercentage(x):P2}")) : "?")} ]",
+            $"Damagers: [ {(Fob is IDamageableFob f ? string.Join(", ", f.DamageTracker.Contributors.Select(x => $"{x.m_SteamID} - {f.DamageTracker.GetDamageContributionPercentage(x):P2}")) : "?")} ]",
             Event.InstigatorId
         );
     }

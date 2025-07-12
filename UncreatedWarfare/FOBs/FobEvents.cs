@@ -359,11 +359,11 @@ public partial class FobManager :
     [EventListener(MustRunLast = true)]
     void IEventListener<IDamageBuildableRequestedEvent>.HandleEvent(IDamageBuildableRequestedEvent e, IServiceProvider serviceProvider)
     {
-        BunkerFob? correspondingFob = FindBuildableFob<BunkerFob>(e.Buildable);
+        IDamageableFob? correspondingFob = FindBuildableFob<IDamageableFob>(e.Buildable);
         if (correspondingFob == null)
             return;
 
-        if (!correspondingFob.IsBuilt) // only record damage on built fobs
+        if (!correspondingFob.CanRecordDamage) // only record damage on built fobs
             return;
 
         if (e.InstigatorId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)

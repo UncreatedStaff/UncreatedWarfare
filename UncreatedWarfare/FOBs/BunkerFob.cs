@@ -12,12 +12,14 @@ using Uncreated.Warfare.StrategyMaps.MapTacks;
 using Uncreated.Warfare.Util.DamageTracking;
 
 namespace Uncreated.Warfare.FOBs;
-public class BunkerFob : ResourceFob, IFobStrategyMapTackHandler
+public class BunkerFob : ResourceFob, IFobStrategyMapTackHandler, IDamageableFob
 {
     public bool IsBuilt { get; private set; }
     public bool HasBeenRebuilt { get; private set; }
     public DamageTracker DamageTracker { get; }
     public CSteamID Creator => Buildable.Owner;
+
+    bool IDamageableFob.CanRecordDamage => IsBuilt;
 
     public BunkerFob(IServiceProvider serviceProvider, string name, IBuildable buildable) : base(serviceProvider, name, buildable)
     {
