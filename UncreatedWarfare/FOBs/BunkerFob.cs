@@ -12,7 +12,7 @@ using Uncreated.Warfare.StrategyMaps.MapTacks;
 using Uncreated.Warfare.Util.DamageTracking;
 
 namespace Uncreated.Warfare.FOBs;
-public class BunkerFob : ResourceFob, IDeployable, IFobStrategyMapTackHandler
+public class BunkerFob : ResourceFob, IFobStrategyMapTackHandler
 {
     public bool IsBuilt { get; private set; }
     public bool HasBeenRebuilt { get; private set; }
@@ -49,9 +49,11 @@ public class BunkerFob : ResourceFob, IDeployable, IFobStrategyMapTackHandler
         UpdateIcon();
     }
 
-    void IDeployable.OnDeployTo(WarfarePlayer player, in DeploySettings settings)
+    /// <inheritdoc />
+    protected override void OnDeployTo(WarfarePlayer player, in DeploySettings settings)
     {
         player.Component<FobDeploymentInvulnerabilityCooldown>().StartCooldown();
+        base.OnDeployTo(player, in settings);
     }
 
     public override bool CheckDeployableToTick(WarfarePlayer player, ChatService chatService, DeploymentTranslations translations, in DeploySettings settings)

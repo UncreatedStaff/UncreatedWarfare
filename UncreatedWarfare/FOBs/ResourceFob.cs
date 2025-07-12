@@ -76,7 +76,7 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable
         }
     }
 
-    public float EffectiveRadius => 70f;
+    public virtual float EffectiveRadius => 70f;
     public bool IsProxied { get; private set; }
     public ISphereProximity FriendlyProximity { get; }
     public ProximityCollector<WarfarePlayer> NearbyFriendlies { get; }
@@ -194,7 +194,7 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable
         _worldIconManager.CreateIcon(Icon);
     }
 
-    void IDeployable.OnDeployTo(WarfarePlayer player, in DeploySettings settings)
+    protected virtual void OnDeployTo(WarfarePlayer player, in DeploySettings settings)
     {
         // send a reminder to rearm if on low ammo
         if (!player.Save.WasKitLowAmmo || _tipService == null)
@@ -206,6 +206,11 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable
         {
             _tipService?.TryGiveTip(player, 0, _tipService.Translations.KitGiveLowAmmo);
         }
+    }
+
+    void IDeployable.OnDeployTo(WarfarePlayer player, in DeploySettings settings)
+    {
+        OnDeployTo(player, in settings);
     }
 
     public virtual bool IsVisibleToPlayer(WarfarePlayer player) => player.IsOnline && player.Team == Team;
