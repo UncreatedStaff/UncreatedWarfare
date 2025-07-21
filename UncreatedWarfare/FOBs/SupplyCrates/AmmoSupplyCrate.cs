@@ -23,7 +23,7 @@ public class AmmoSupplyCrate : IAmmoStorage
     }
     public void SubtractAmmo(float ammoCount)
     {
-        _nearbySupplyCrates.SubstractSupplies(ammoCount, SupplyType.Ammo, SupplyChangeReason.ConsumeGeneral);
+        _nearbySupplyCrates.SubtractSupplies(ammoCount, SupplyType.Ammo, SupplyChangeReason.ConsumeGeneral);
     }
 
     /// <inheritdoc />

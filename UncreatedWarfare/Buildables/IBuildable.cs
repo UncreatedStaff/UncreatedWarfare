@@ -35,6 +35,16 @@ public interface IBuildable :
     bool IsOnVehicle { get; }
 
     /// <summary>
+    /// The health of this buildable.
+    /// </summary>
+    ushort Health { get; }
+
+    /// <summary>
+    /// The maximum amount of health this buildable could have.
+    /// </summary>
+    ushort MaxHealth { get; }
+
+    /// <summary>
     /// The vehicle this barricade is attached to, if any.
     /// </summary>
     InteractableVehicle? VehicleParent { get; }
@@ -121,6 +131,8 @@ public class BuildableBarricade : IBuildable
     public bool IsOnVehicle { get; }
     public InteractableVehicle? VehicleParent { get; }
     public bool IsDead => Data.barricade.isDead;
+    public ushort Health => Data.barricade.health;
+    public ushort MaxHealth => Drop.asset.health;
     public ItemPlaceableAsset Asset => Drop.asset;
     public Transform Model => Drop.model == null || Drop.GetNetId().id == 0 ? null! : Drop.model; // so you can use ? on it
     public CSteamID Owner => Unsafe.As<ulong, CSteamID>(ref Data.owner);
@@ -201,6 +213,8 @@ public class BuildableStructure : IBuildable
     public bool IsStructure => true;
     public bool IsDead => Data.structure.isDead;
     public ItemPlaceableAsset Asset => Drop.asset;
+    public ushort Health => Data.structure.health;
+    public ushort MaxHealth => Drop.asset.health;
     public Transform Model => Drop.model == null || Drop.GetNetId().id == 0 ? null! : Drop.model; // so you can use ? on it
     public CSteamID Owner => Unsafe.As<ulong, CSteamID>(ref Data.owner);
     public CSteamID Group => Unsafe.As<ulong, CSteamID>(ref Data.group);

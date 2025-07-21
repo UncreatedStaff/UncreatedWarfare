@@ -62,7 +62,7 @@ public class RepairStation : RestockableBuildableFobEntity<ShovelableInfo>
                 if (zoneStore != null && !zoneStore.IsInMainBase(vehicle.Position))
                 {
                     if (supplyCrateGroup.BuildCount > 0)
-                        supplyCrateGroup.SubstractSupplies(fobManager.Configuration.RepairStationBuildConsumedPerTick, SupplyType.Build, SupplyChangeReason.ConsumeRepairVehicle);
+                        supplyCrateGroup.SubtractSupplies(fobManager.Configuration.RepairStationBuildConsumedPerTick, SupplyType.Build, SupplyChangeReason.ConsumeRepairVehicle);
                     else
                         continue;
                 }

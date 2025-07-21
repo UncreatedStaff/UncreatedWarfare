@@ -1,4 +1,4 @@
-//#define DAMAGE_LOGGING
+#define DAMAGE_LOGGING
 using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Players;
@@ -84,6 +84,7 @@ public class DamageTracker
 #endif
     }
 
+    public float TotalWorkDone => _damageContributors.TotalWorkDone;
     public void UpdateLatestInstigatorWeapon(Asset? asset) // todo: need to call this method places, otherwise advanced damage won't work properly
     {
         LatestInstigatorWeapon = asset;

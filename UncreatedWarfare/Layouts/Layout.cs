@@ -223,11 +223,11 @@ public class Layout : IDisposable
 
         await ReadTeamInfoAsync(token);
 
+        await TeamManager.InitializeAsync(token);
+
         await ReadPhasesAsync(token);
 
         CheckEmptyPhases();
-
-        await TeamManager.InitializeAsync(token);
 
         foreach (ILayoutPhase phase in PhaseList)
         {

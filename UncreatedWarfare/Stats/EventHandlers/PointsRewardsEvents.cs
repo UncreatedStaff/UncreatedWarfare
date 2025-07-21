@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
@@ -30,7 +31,7 @@ internal class PointsRewardsEvents :
     IAsyncEventListener<FlagCaptured>,
     IAsyncEventListener<FlagNeutralized>,
     IAsyncEventListener<ObjectiveSlowTick>,
-    IAsyncEventListener<FobDeregistered>,
+    IAsyncEventListener<FobDestroyed>,
     IAsyncEventListener<FobSuppliesChanged>,
     IAsyncEventListener<ShovelableBuilt>,
     IAsyncEventListener<PlayerRevived>,
@@ -257,7 +258,7 @@ internal class PointsRewardsEvents :
     }
 
     [EventListener(RequireActiveLayout = true)]
-    public async UniTask HandleEventAsync(FobDeregistered e, IServiceProvider serviceProvider, CancellationToken token = default)
+    public async UniTask HandleEventAsync(FobDestroyed e, IServiceProvider serviceProvider, CancellationToken token = default)
     {
         if (e.Fob is not BunkerFob buildableFob)
             return;
@@ -276,10 +277,12 @@ internal class PointsRewardsEvents :
 
         EventInfo @event;
         Translation translation;
-        if (instigator.Team == buildableFob.Team)
+        if (instigator.Team.IsFriendly(buildableFob.Team))
         {
-            if (buildableFob.DamageTracker.GetDamageContributionPercentage(instigator.Steam64) < 0.50f)
+            float friendlyDamage = e.Event.Buildable.MaxHealth - buildableFob.DamageTracker.TotalWorkDone;
+            if (friendlyDamage / e.Event.Buildable.MaxHealth < 0.35f)
             {
+                Console.WriteLine($"Not enough, dmg: {friendlyDamage}");
                 return;
             }
             @event = _points.GetEvent("FriendlyFobDestroyed");
@@ -288,9 +291,7 @@ internal class PointsRewardsEvents :
         else
         {
             if (buildableFob.DamageTracker.GetDamageContributionPercentage(instigator.Steam64) < 0.10f)
-            {
                 return;
-            }
             @event = _points.GetEvent("EnemyFobDestroyed");
             translation = _translations.XPToastFOBDestroyed;
         }
@@ -298,8 +299,9 @@ internal class PointsRewardsEvents :
         await _points.ApplyEvent(
             instigator.Steam64,
             instigator.Team.Faction.PrimaryKey,
-            @event.Resolve().WithTranslation(translation, instigator), token)
-            .ConfigureAwait(false);
+            @event.Resolve().WithTranslation(translation, instigator),
+            token
+        ).ConfigureAwait(false);
     }
 
 

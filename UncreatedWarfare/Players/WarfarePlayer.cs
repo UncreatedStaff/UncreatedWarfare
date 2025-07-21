@@ -499,7 +499,7 @@ public class WarfarePlayer :
         UnturnedPlayer.teleportToLocationUnsafe(position, rotation.eulerAngles.y);
     }
 
-    bool ITransformObject.Alive => IsOnline;
+    bool ITransformObject.Alive => IsOnline && UnturnedPlayer.life.IsAlive;
 
     bool IModerationActor.Async => false;
 

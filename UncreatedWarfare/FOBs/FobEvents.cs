@@ -196,7 +196,7 @@ public partial class FobManager :
         if (nearestFriendlyFob != null && shouldConsumeSupplies)
         {
             NearbySupplyCrates supplyCrates = NearbySupplyCrates.FindNearbyCrates(nearestFriendlyFob.Position, nearestFriendlyFob.Team.GroupId, this);
-            supplyCrates.SubstractSupplies(shovelableInfo.SupplyCost, SupplyType.Build, SupplyChangeReason.ConsumeShovelablePlaced);
+            supplyCrates.SubtractSupplies(shovelableInfo.SupplyCost, SupplyType.Build, SupplyChangeReason.ConsumeShovelablePlaced);
             
             placer?.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastLoseBuild.Translate(shovelableInfo.SupplyCost, placer)));
         }
@@ -363,6 +363,7 @@ public partial class FobManager :
         if (correspondingFob == null)
             return;
 
+        _logger.LogTrace($"Recording damage: {e.PendingDamage} {e.DamageOrigin}");
         if (!correspondingFob.CanRecordDamage) // only record damage on built fobs
             return;
 

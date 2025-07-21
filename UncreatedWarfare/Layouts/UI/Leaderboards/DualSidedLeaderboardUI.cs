@@ -99,7 +99,7 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
         ITranslationService translationService,
         IConfiguration config,
         WarfareLifetimeComponent appLifetime)
-        : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:DualSidedLeaderboardUI"), staticKey: true, debugLogging: true)
+        : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:DualSidedLeaderboardUI"), staticKey: true, debugLogging: false)
     {
         _createData = CreateData;
         _layout = layout;

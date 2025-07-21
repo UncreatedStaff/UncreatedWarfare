@@ -279,6 +279,8 @@ public static class BuildableExtensions
         if (StructureManager.regions == null)
             throw new InvalidOperationException("StructureManager not loaded.");
 
+        IBuildable newBuildable;
+
         // planted barricade
         if (buildable.IsOnVehicle && asset is ItemBarricadeAsset barricadeAsset)
         {
@@ -326,17 +328,34 @@ public static class BuildableExtensions
                     throw new Exception("Failed to find added planted barricade. This shouldn't happen.");
                 }
 
+                newBuildable = new BuildableBarricade(drop);
+
+                try
+                {
+                    BuildableContainer container = BuildableContainer.Get(buildable);
+                    container.Transfer(newBuildable);
+                }
+                catch (NullReferenceException) { }
+
                 if (destroyOld && buildable.Alive)
                 {
                     buildable.Destroy();
                 }
 
-                return new BuildableBarricade(drop);
+                return newBuildable;
 
             }
         }
 
-        IBuildable newBuildable = DropBuildable(asset, buildable.Position, buildable.Rotation, buildable.Owner, buildable.Group, health, state);
+        newBuildable = DropBuildable(asset, buildable.Position, buildable.Rotation, buildable.Owner, buildable.Group, health, state);
+
+        try
+        {
+            BuildableContainer container = BuildableContainer.Get(buildable);
+            container.Transfer(newBuildable);
+        }
+        catch (NullReferenceException) { }
+
         if (destroyOld && buildable.Alive)
         {
             buildable.Destroy();

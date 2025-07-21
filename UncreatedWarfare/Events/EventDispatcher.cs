@@ -24,6 +24,9 @@ using Uncreated.Warfare.Vehicles;
 using Service = Autofac.Core.Service;
 #if TELEMETRY
 using System.Diagnostics;
+using System.Globalization;
+using System.Text;
+using System.Text.Json;
 #endif
 
 namespace Uncreated.Warfare.Events;
@@ -305,12 +308,55 @@ public partial class EventDispatcher : IHostedService, IDisposable
 #if TELEMETRY
         Activity.Current = null;
         using Activity? activity = _activitySource.StartActivity($"Invoke {Accessor.Formatter.Format(typeof(TEventArgs))}.");
-        activity?.SetTag("model-type", Accessor.Formatter.Format(typeof(TEventArgs)));
-        activity?.SetTag("cancellable", eventArgs is ICancellable);
-        activity?.SetTag("player", eventArgs is IPlayerEvent playerArgs ? playerArgs.Steam64.m_SteamID : 0ul);
-        activity?.AddTag("allow-async", allowAsync);
-        activity?.AddTag("has-cancellation-token", token.CanBeCanceled);
-        activity?.AddTag("source", stackTrace);
+        if (activity != null)
+        {
+            activity.SetTag("model-type", Accessor.Formatter.Format(typeof(TEventArgs)));
+            activity.SetTag("cancellable", eventArgs is ICancellable);
+            activity.SetTag("player", eventArgs is IPlayerEvent playerArgs ? playerArgs.Steam64.m_SteamID : 0ul);
+            activity.AddTag("allow-async", allowAsync);
+            activity.AddTag("has-cancellation-token", token.CanBeCanceled);
+            activity.AddTag("source", stackTrace);
+            StringBuilder model = new StringBuilder();
+            model.Append("{");
+            bool isFirst = true;
+            foreach (PropertyInfo property in typeof(TEventArgs).GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(x => x.CanRead))
+            {
+                try
+                {
+                    if (property.GetMethod.ReturnType.IsByRef)
+                        continue;
+                    object? value = property.GetValue(eventArgs);
+                    if (isFirst)
+                        isFirst = false;
+                    else
+                        model.Append(',');
+                    model.Append("\n    ").Append('"').Append(property.Name).Append("\": ");
+                    Type propType = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
+                    if (value == null)
+                        model.Append("null");
+                    else if (propType == typeof(bool))
+                    {
+                        model.Append(((bool)value) ? "true" : "false");
+                    }
+                    else if (propType.IsPrimitive && propType != typeof(char))
+                    {
+                        model.Append(((IFormattable)value).ToString(null, CultureInfo.InvariantCulture));
+                    }
+                    else
+                    {
+                        model.Append('"').Append(value.ToString().Replace("\"", "\\\"")).Append('"');
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, $"Error getting property {property.Name}.");
+                }
+            }
+
+            model.Append("\n}");
+
+            activity.SetTag("args", model.ToString());
+        }
 #endif
 
         Type type = typeof(TEventArgs);

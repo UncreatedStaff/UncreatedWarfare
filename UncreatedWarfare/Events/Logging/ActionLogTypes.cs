@@ -52,7 +52,8 @@ public static class ActionLogTypes
     public static ActionLogType PlayerInjured           { get; } = new ActionLogType("Player injured",                      "INJURED",                      41);
     public static ActionLogType Melee                   { get; } = new ActionLogType("Player meleed",                       "MELEE",                        42);
 
-    // 50-60 reserved for Insurgency
+    // 50-59 reserved for Insurgency
+    // 60-69 reserved for Invasion
 
     private static readonly ActionLogType?[] TypesById;
 

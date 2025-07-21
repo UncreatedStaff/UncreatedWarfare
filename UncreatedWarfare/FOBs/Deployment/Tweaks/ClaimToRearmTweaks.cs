@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using SDG.NetTransport;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -25,6 +24,7 @@ using Uncreated.Warfare.Util.Inventory;
 using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.FOBs.Deployment.Tweaks;
+
 public class ClaimToRearmTweaks :
     IAsyncEventListener<ClaimBedRequested>,
     IAsyncEventListener<PlayerEnteredZone>,
@@ -35,12 +35,10 @@ public class ClaimToRearmTweaks :
     private readonly KitWeaponTextService? _kitWeaponTextService;
     private readonly ChatService _chatService;
     private readonly AmmoTranslations _translations;
-    private readonly ILogger _logger;
     private readonly ZoneStore? _zoneStore;
     private readonly AssetConfiguration _assetConfiguration;
 
-
-    public ClaimToRearmTweaks(IServiceProvider serviceProvider, ILogger<ClaimToRearmTweaks> logger)
+    public ClaimToRearmTweaks(IServiceProvider serviceProvider)
     {
         _assetConfiguration = serviceProvider.GetRequiredService<AssetConfiguration>();
         _fobManager = serviceProvider.GetRequiredService<FobManager>();
@@ -49,27 +47,23 @@ public class ClaimToRearmTweaks :
         _chatService = serviceProvider.GetRequiredService<ChatService>();
         _translations = serviceProvider.GetRequiredService<TranslationInjection<AmmoTranslations>>().Value;
         _zoneStore = serviceProvider.GetService<ZoneStore>();
-        _logger = logger;
     }
 
     [EventListener(RequireActiveLayout = true)]
     public async UniTask HandleEventAsync(ClaimBedRequested e, IServiceProvider serviceProvider, CancellationToken token = default)
     {
-        IAmmoStorage? ammoStorage = null;
-        if (e.Buildable.Model.TryGetComponent(out PlacedAmmoBagComponent ammoBag))
-        {
-            ammoStorage = ammoBag;
-        }
-        else
+        IAmmoStorage? ammoStorage = ContainerHelper.FindComponent<IAmmoStorage>(e.Buildable.Model);
+        if (ammoStorage == null)
         {
             SupplyCrate? ammoCrate = _fobManager.Entities.OfType<SupplyCrate>().FirstOrDefault(s =>
                 s.Type == SupplyType.Ammo &&
                 s.Buildable.Alive &&
                 s.Buildable.Equals(e.Buildable)
             );
-            
-            if (ammoCrate != null)
-                ammoStorage = AmmoSupplyCrate.FromSupplyCrate(ammoCrate, _fobManager);
+
+            ammoStorage = ammoCrate != null
+                ? AmmoSupplyCrate.FromSupplyCrate(ammoCrate, _fobManager)
+                : null;
         }
         
         if (ammoStorage == null)
@@ -152,15 +146,12 @@ public class ClaimToRearmTweaks :
 
             if (fullmags >= requiredMags)
             {
-                //_logger.LogDebug($"Weapon '{gun.FriendlyName}' ({firearmClass}) already has {fullmags}/{requiredMags} full mags, and does not need to be resupplied.");
                 continue;
             }
 
             int magsThatNeedRefilling = requiredMags - fullmags;
             
             float magazinesRefillCost = GetMagazineCost(firearmClass) * magsThatNeedRefilling;
-
-            //_logger.LogDebug($"Weapon '{gun.FriendlyName}' ({firearmClass}) has {magsThatNeedRefilling} that need refilling ({fullmags}/{requiredMags} full mags). The resupply cost will be {magazinesRefillCost}.");
 
             totalRearmCost += magazinesRefillCost;
         }
@@ -174,13 +165,10 @@ public class ClaimToRearmTweaks :
 
             if (countInInventory >= requiredCount)
             {
-                //_logger.LogDebug($"Equipment type '{equipmentAsset.FriendlyName}' already has {countInInventory}/{requiredCount} units, and does not need to be resupplied.");
                 continue;
             }
             int numberToResupply = requiredCount - countInInventory;
             float equipmentResupplyCost = GetEquipmentCost(equipmentAsset) * numberToResupply;
-
-            //_logger.LogDebug($"Equipment type '{equipmentAsset.FriendlyName}' is missing {numberToResupply} units ({countInInventory}/{requiredCount} required). The resupply cost will be {equipmentResupplyCost}.");
 
             totalRearmCost += equipmentResupplyCost;
         }

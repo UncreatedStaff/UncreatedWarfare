@@ -301,7 +301,7 @@ public class KillEnemies : QuestTemplate<KillEnemies, KillEnemies.Tracker, KillE
             // objectives
             if (_needsDefense || _needsAttack || _needsObjective)
             {
-                if (serviceProvider.GetService<Layout>() is { ActivePhase: ActionPhase } && serviceProvider.GetService<IAttackDefenceDecider>() is { } decider)
+                if (serviceProvider.GetService<Layout>() is { ActivePhase: ActionPhase } && serviceProvider.GetService<IAttackDefenseDecider>() is { } decider)
                 {
                     bool atk = decider.IsAttacking(Player) || decider.IsDefending(e.Player);
                     bool def = decider.IsDefending(Player) || decider.IsAttacking(e.Player);

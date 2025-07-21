@@ -136,6 +136,14 @@ public class FlagObjective : IDisposable, IObjective
 
     public void Dispose()
     {
+        Dispose(true);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!disposing)
+            return;
+
         IsActive = false;
         Region.OnPlayerEntered -= OnPlayerEnteredIntl;
         Region.OnPlayerExited -= OnPlayerExitedIntl;

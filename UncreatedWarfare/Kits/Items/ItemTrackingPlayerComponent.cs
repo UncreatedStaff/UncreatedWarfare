@@ -8,6 +8,7 @@ using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.ItemTracking;
 using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Kits.Items;
 
@@ -101,11 +102,11 @@ public class ItemTrackingPlayerComponent : IPlayerComponent, IEventListener<Item
         origX = x;
         origY = y;
 
-        byte index = Player.UnturnedPlayer.inventory.getIndex((byte)page, x, y);
-        if (index == byte.MaxValue)
+        ItemJar? jar = Player.UnturnedPlayer.inventory.GetItemAt(page, x, y);
+        if (jar == null)
             return;
 
-        Item item = Player.UnturnedPlayer.inventory.getItem((byte)page, index).item;
+        Item item = jar.item;
 
         for (int i = 0; i < ItemTransformations.Count; ++i)
         {

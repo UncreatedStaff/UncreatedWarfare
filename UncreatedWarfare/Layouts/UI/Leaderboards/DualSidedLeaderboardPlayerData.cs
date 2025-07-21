@@ -30,6 +30,8 @@ internal class DualSidedLeaderboardPlayerData : IUnturnedUIData
         col.ColumnIndex = ((DualSidedLeaderboardUI)owner).DefaultSortColumn;
         col.Descending = ((DualSidedLeaderboardUI)owner).DefaultSortMode;
         SortColumns[1] = col;
+
+        Vote = -1;
     }
 }
 

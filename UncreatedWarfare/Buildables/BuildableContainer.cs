@@ -33,6 +33,31 @@ public class BuildableContainer : MonoBehaviour, IComponentContainer<IBuildableC
         CreateTime = DateTime.UtcNow;
     }
 
+    public BuildableContainer? Transfer(IBuildable newBuildable)
+    {
+        GameThread.AssertCurrent();
+
+        BuildableContainer? container = newBuildable.Model.GetComponent<BuildableContainer>();
+        lock (_components)
+        {
+            foreach (IBuildableComponent comp in _components)
+            {
+                if (comp is not IReplaceableBuildableComponent repl || repl.TryTransfer(newBuildable) is not { } newComponent)
+                    continue;
+
+                if (container is null)
+                {
+                    container = newBuildable.Model.gameObject.AddComponent<BuildableContainer>();
+                    container.Init(newBuildable);
+                }
+
+                container._components.Add(newComponent);
+            }
+        }
+
+        return container;
+    }
+
     public static BuildableContainer Get(IBuildable buildable)
     {
         GameThread.AssertCurrent();
@@ -41,7 +66,10 @@ public class BuildableContainer : MonoBehaviour, IComponentContainer<IBuildableC
             throw new InvalidOperationException("Buildable is dead.");
 
         if (!buildable.Model.TryGetComponent(out BuildableContainer container))
+        {
             container = buildable.Model.gameObject.AddComponent<BuildableContainer>();
+            container.Init(buildable);
+        }
 
         return container;
     }
@@ -54,7 +82,10 @@ public class BuildableContainer : MonoBehaviour, IComponentContainer<IBuildableC
             throw new InvalidOperationException("Barricade is dead.");
 
         if (!barricade.model.TryGetComponent(out BuildableContainer container))
+        {
             container = barricade.model.gameObject.AddComponent<BuildableContainer>();
+            container.Init(new BuildableBarricade(barricade));
+        }
 
         return container;
     }
@@ -67,7 +98,10 @@ public class BuildableContainer : MonoBehaviour, IComponentContainer<IBuildableC
             throw new InvalidOperationException("Structure is dead.");
 
         if (!structure.model.TryGetComponent(out BuildableContainer container))
+        {
             container = structure.model.gameObject.AddComponent<BuildableContainer>();
+            container.Init(new BuildableStructure(structure));
+        }
 
         return container;
     }

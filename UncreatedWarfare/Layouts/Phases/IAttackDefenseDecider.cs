@@ -2,7 +2,7 @@ using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Layouts.Phases;
 
-public interface IAttackDefenceDecider
+public interface IAttackDefenseDecider
 {
     /// <summary>
     /// If the player is actively attacking the objective.

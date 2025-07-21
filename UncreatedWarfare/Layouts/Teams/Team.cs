@@ -103,7 +103,7 @@ public class Team : IEquatable<Team>
         return !ReferenceEquals(this, other) && _opponents != null && _opponents.Contains(other);
     }
 
-    public bool IsOpponent(CSteamID otherGroupId)
+    public virtual bool IsOpponent(CSteamID otherGroupId)
     {
         if (otherGroupId.m_SteamID == GroupId.m_SteamID || _opponents == null)
         {
@@ -119,17 +119,17 @@ public class Team : IEquatable<Team>
         return false;
     }
 
-    public bool IsFriendly(Team other)
+    public virtual bool IsFriendly(Team other)
     {
         return other.Equals(this);
     }
 
-    public bool IsFriendly(CSteamID otherGroupId)
+    public virtual bool IsFriendly(CSteamID otherGroupId)
     {
         return otherGroupId.m_SteamID == GroupId.m_SteamID;
     }
 
-    public bool Equals(Team? other)
+    public virtual bool Equals(Team? other)
     {
         return other is not null && GroupId.m_SteamID == other.GroupId.m_SteamID;
     }

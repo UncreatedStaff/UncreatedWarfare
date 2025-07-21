@@ -105,10 +105,10 @@ using Uncreated.Warfare.Zones;
 using Module = SDG.Framework.Modules.Module;
 #if TELEMETRY
 using OpenTelemetry;
-using OpenTelemetry.Logs;
-using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+using System.Diagnostics;
+using DanielWillett.ReflectionTools.Formatting;
 #endif
 
 namespace Uncreated.Warfare;

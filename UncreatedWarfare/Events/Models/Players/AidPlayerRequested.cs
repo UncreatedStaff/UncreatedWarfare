@@ -6,6 +6,7 @@ namespace Uncreated.Warfare.Events.Models.Players;
 /// <summary>
 /// Invoked when a player tries to use a consumable item on another player.
 /// </summary>
+[EventModel(EventSynchronizationContext.PerPlayer, SynchronizedModelTags = [ "modify_inventory", "modify_useable" ])]
 public sealed class AidPlayerRequested : CancellablePlayerEvent
 {
     /// <summary>

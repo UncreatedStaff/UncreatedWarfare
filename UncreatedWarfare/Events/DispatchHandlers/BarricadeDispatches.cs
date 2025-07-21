@@ -407,6 +407,9 @@ partial class EventDispatcher
             _ignoreBarricadeManagerOnDamageBarricadeRequested = true;
             try
             {
+                BuildableExtensions.SetDestroyInfo(args.Transform, args, null);
+                BuildableExtensions.SetSalvageInfo(args.Transform, args.DamageOrigin, null, false, null);
+                DestroyerComponent.AddOrUpdate(args.Transform.gameObject, args.InstigatorId.m_SteamID, false, args.DamageOrigin);
                 BarricadeManager.damage(args.Transform, (ushort)Math.Clamp(args.PendingDamage, 0f, ushort.MaxValue), 1, false, args.InstigatorId, args.DamageOrigin);
             }
             finally
@@ -415,7 +418,12 @@ partial class EventDispatcher
             }
         });
 
-        if (shouldAllow)
-            pendingTotalDamage = (ushort)Math.Clamp(args.PendingDamage, 0f, ushort.MaxValue);
+        if (!shouldAllow)
+            return;
+
+        pendingTotalDamage = (ushort)Math.Clamp(args.PendingDamage, 0f, ushort.MaxValue);
+        BuildableExtensions.SetDestroyInfo(args.Transform, args, null);
+        BuildableExtensions.SetSalvageInfo(args.Transform, args.DamageOrigin, null, false, null);
+        DestroyerComponent.AddOrUpdate(args.Transform.gameObject, args.InstigatorId.m_SteamID, false, args.DamageOrigin);
     }
 }

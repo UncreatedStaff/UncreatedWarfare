@@ -10,7 +10,7 @@
     <Version>4.0.12</Version>
 
 		<!-- Enable this for telemetry tracking -->
-	  <!--<DefineConstants>$(DefineConstants);TELEMETRY</DefineConstants>-->
+	  <DefineConstants>$(DefineConstants);TELEMETRY</DefineConstants>
 
   </PropertyGroup>
 

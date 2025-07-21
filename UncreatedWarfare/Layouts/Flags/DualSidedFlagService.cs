@@ -22,7 +22,7 @@ using Uncreated.Warfare.Zones.Pathing;
 
 namespace Uncreated.Warfare.Layouts.Flags;
 public abstract class DualSidedFlagService :
-    IAttackDefenceDecider,
+    IAttackDefenseDecider,
     ILayoutHostedService,
     IFlagRotationService,
     IEventListener<FlagCaptured>,
@@ -147,6 +147,11 @@ public abstract class DualSidedFlagService :
         Logger.LogInformation("Zone path: {{{0}}}.", string.Join(" -> ", PathingResult.Skip(1).SkipLast(1).Select(zone => zone.Name)));
     }
 
+    protected virtual FlagObjective CreateFlagObjective(ZoneRegion region, int index, Team teamOwner)
+    {
+        return new FlagObjective(region, index, teamOwner);
+    }
+
     private void SetupFlags()
     {
         if (PathingResult == null || ZoneStore == null)
@@ -167,7 +172,7 @@ public abstract class DualSidedFlagService :
                 .ToArray();
 
             ZoneRegion region = new ZoneRegion(zones, TeamManager);
-            flagList.Add(new FlagObjective(region, flagIndex++, Team.NoTeam));
+            flagList.Add(CreateFlagObjective(region, flagIndex++, Team.NoTeam));
         }
 
         _flags = flagList.ToArrayFast();

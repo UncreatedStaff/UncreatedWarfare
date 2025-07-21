@@ -12,6 +12,7 @@ using Uncreated.Warfare.Models.Stats;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Stats.EventHandlers;
 internal sealed class PlayerDatabaseStatsEventHandlers :
@@ -236,7 +237,7 @@ internal sealed class PlayerDatabaseStatsEventHandlers :
         if (fobRecordContainer == null)
             return;
 
-        bool hasInstigator = e.Event.InstigatorId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual;
+        bool hasInstigator = e.Event.InstigatorId.IsIndividual();
 
         FobRecord record = fobRecordContainer.Record;
         
@@ -259,7 +260,7 @@ internal sealed class PlayerDatabaseStatsEventHandlers :
         _buffer.Enqueue(record);
     }
 
-    private class FobRecordBuildableComponent : IBuildableComponent
+    internal class FobRecordBuildableComponent : IReplaceableBuildableComponent
     {
         public readonly FobRecord Record;
 
@@ -269,6 +270,11 @@ internal sealed class PlayerDatabaseStatsEventHandlers :
         {
             Buildable = buildable;
             Record = record;
+        }
+
+        public IBuildableComponent TryTransfer(IBuildable newBuildable)
+        {
+            return new FobRecordBuildableComponent(newBuildable, Record);
         }
 
         void IDisposable.Dispose() { }

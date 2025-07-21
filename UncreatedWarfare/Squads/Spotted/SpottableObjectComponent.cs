@@ -1,5 +1,5 @@
 #if DEBUG
-#define SPOTTER_DEBUG_LOG
+//#define SPOTTER_DEBUG_LOG
 #endif
 using System;
 using System.Collections.Generic;

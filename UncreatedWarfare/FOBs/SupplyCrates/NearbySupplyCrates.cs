@@ -60,7 +60,7 @@ public class NearbySupplyCrates
         NotifyChanged(type, amount, changeReason);
     }
 
-    public void SubstractSupplies(float amount, SupplyType type, SupplyChangeReason changeReason)
+    public void SubtractSupplies(float amount, SupplyType type, SupplyChangeReason changeReason)
     {
         float originalAmount = amount;
 

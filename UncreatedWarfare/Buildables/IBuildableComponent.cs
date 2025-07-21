@@ -9,3 +9,11 @@ public interface IBuildableComponent : IDisposable
 {
     IBuildable Buildable { get; }
 }
+
+/// <summary>
+/// Component that will be transfered when the buildable is replaced.
+/// </summary>
+public interface IReplaceableBuildableComponent : IBuildableComponent
+{
+    IBuildableComponent? TryTransfer(IBuildable newBuildable);
+}
