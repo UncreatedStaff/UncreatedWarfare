@@ -11,6 +11,8 @@ public class AmmoTranslations : PropertiesTranslationCollection
     
     public readonly Translation<float, float> AmmoResuppliedKit = new Translation<float, float>("<#d1bda7>Resupplied kit. Consumed: <#e25d5d>{0} AMMO</color> <#948f8a>({1} left)</color>.", arg0Fmt: "0.#", arg1Fmt: "0.#");
     
+    public readonly Translation AmmoResuppliedKitInfinite = new Translation("<#d1bda7>Resupplied kit.");
+    
     public readonly Translation<int> AmmoResuppliedKitMain = new Translation<int>("<#d1bda7>Resupplied kit. Consumed: <#e25d5d>{0} AMMO</color>.", arg0Fmt: "0.#");
     
     public readonly Translation VehicleAutoSupply = new Translation("<#b3a6a2>Vehicle has been <#ebbda9>AUTO RESUPPLIED</color>.");

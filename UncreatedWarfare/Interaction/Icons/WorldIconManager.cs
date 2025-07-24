@@ -90,7 +90,8 @@ public class WorldIconManager : ILayoutHostedService, IEventListener<PlayerLeft>
             bool any = false;
             foreach (WorldIconInfo icon in listPair.Value)
             {
-                Log("{0} | Checking icon... ({1}): {2}", rt.ToString("000.000", CultureInfo.InvariantCulture), rt - icon.LastSpawnRealtime, icon);
+                if (icon.DebugLogging)
+                    Log("{0} | Checking icon... ({1}): {2}", rt.ToString("000.000", CultureInfo.InvariantCulture), rt - icon.LastSpawnRealtime, icon);
                 if (rt - icon.LastSpawnRealtime + TimeTolerance < icon.TickSpeed)
                     continue;
 
@@ -203,7 +204,8 @@ public class WorldIconManager : ILayoutHostedService, IEventListener<PlayerLeft>
         }
 
         float rt = Time.realtimeSinceStartup;
-        Log("{0} | Removed icon {1}", rt.ToString("000.000", CultureInfo.InvariantCulture), icon);
+        if (icon.DebugLogging)
+            Log("{0} | Removed icon {1}", rt.ToString("000.000", CultureInfo.InvariantCulture), icon);
         bool needsRecheck = _greatestTickSpeed <= icon.TickSpeed || icon.TickSpeed >= _lowestTickSpeed;
         if (!icon.NeedsToBeCleared(rt))
         {
@@ -249,18 +251,23 @@ public class WorldIconManager : ILayoutHostedService, IEventListener<PlayerLeft>
         ClearEffectsByGuid(guid, list);
 
         float rt = Time.realtimeSinceStartup;
-        Log("{0} | Updating {1}", rt.ToString("000.000", CultureInfo.InvariantCulture), list[0].Effect);
+#if ICONS_DEBUG_LOGGING
+        if (list.Exists(x => x.DebugLogging))
+            Log("{0} | Updating {1}", rt.ToString("000.000", CultureInfo.InvariantCulture), list[0].Effect);
+#endif
 
         foreach (WorldIconInfo info in list)
         {
             if (IsInactive(info, rt))
             {
-                Log("        | Removing inactive {0}", info);
+                if (info.DebugLogging)
+                    Log("        | Removing inactive {0}", info);
                 IconWorkingSet.Add(info);
             }
             else
             {
-                Log("        | Updating {0}", info);
+                if (info.DebugLogging)
+                    Log("        | Updating {0}", info);
                 info.SpawnEffect(_playerService, rt, rt - info.LastPositionUpdateRealtime + TimeTolerance > info.TickSpeed);
             }
         }
@@ -280,25 +287,29 @@ public class WorldIconManager : ILayoutHostedService, IEventListener<PlayerLeft>
     {
         if (!info.Alive)
         {
-            Log("        | Inactive - not alive: {0}", info);
+            if (info.DebugLogging)
+                Log("        | Inactive - not alive: {0}", info);
             return true;
         }
 
         if (info.TransformableObject is { Alive: false })
         {
-            Log("        | Inactive - transformable not alive: {0}", info);
+            if (info.DebugLogging)
+                Log("        | Inactive - transformable not alive: {0}", info);
             return true;
         }
 
         if (info.UnityObject is not null && info.UnityObject == null)
         {
-            Log("        | Inactive - unity object not alive: {0}", info);
+            if (info.DebugLogging)
+                Log("        | Inactive - unity object not alive: {0}", info);
             return true;
         }
 
         if (info.FirstSpawnRealtime > 0 && info.FirstSpawnRealtime + info.LifetimeSeconds < rt)
         {
-            Log("        | Inactive - lifetime expired: {0} ({1} + {2})", info, info.FirstSpawnRealtime, info.LifetimeSeconds);
+            if (info.DebugLogging)
+                Log("        | Inactive - lifetime expired: {0} ({1} + {2})", info, info.FirstSpawnRealtime, info.LifetimeSeconds);
             return true;
         }
 
@@ -323,7 +334,8 @@ public class WorldIconManager : ILayoutHostedService, IEventListener<PlayerLeft>
         if (IsInactive(icon, rt))
         {
             icon.Alive = false;
-            Log("{0} | Creating but not adding inactive {1}", rt.ToString("000.000", CultureInfo.InvariantCulture), icon);
+            if (icon.DebugLogging)
+                Log("{0} | Creating but not adding inactive {1}", rt.ToString("000.000", CultureInfo.InvariantCulture), icon);
             return;
         }
 
@@ -340,7 +352,8 @@ public class WorldIconManager : ILayoutHostedService, IEventListener<PlayerLeft>
         icon.Manager = this;
         _allIcons.Add(icon);
 
-        Log("{0} | Creating {1}", rt.ToString("000.000", CultureInfo.InvariantCulture), icon);
+        if (icon.DebugLogging)
+            Log("{0} | Creating {1}", rt.ToString("000.000", CultureInfo.InvariantCulture), icon);
         icon.SpawnEffect(_playerService, rt, true);
 
         if (_allIcons.Count == 1)
@@ -367,6 +380,10 @@ public class WorldIconManager : ILayoutHostedService, IEventListener<PlayerLeft>
         bool anyNeedToBeCleared = false;
         ITransportConnection? singlePlayer = null;
         PooledTransportConnectionList? pooledList = null;
+
+#if ICONS_DEBUG_LOGGING
+        bool needsDebugLogging = list.Exists(x => x.DebugLogging);
+#endif
         foreach (WorldIconInfo info in list)
         {
             info.UpdateRelevantPlayers(_playerService, ref pooledList, ref singlePlayer, in info.LastSpawnPosition, WorkingConnectionHashSet);
@@ -376,17 +393,24 @@ public class WorldIconManager : ILayoutHostedService, IEventListener<PlayerLeft>
 
         WorkingConnectionHashSet.Clear();
 
+
         if (!anyNeedToBeCleared)
             return;
 
         if (pooledList != null)
         {
-            Log("{0} | Cleared {1} for {2} players.", rt.ToString("000.000", CultureInfo.InvariantCulture), list[0].Effect, pooledList.Count);
+#if ICONS_DEBUG_LOGGING
+            if (needsDebugLogging)
+                Log("{0} | Cleared {1} for {2} players.", rt.ToString("000.000", CultureInfo.InvariantCulture), list[0].Effect, pooledList.Count);
+#endif
             ClearEffectsByGuidMultiplePlayers(guid, pooledList);
         }
         else if (singlePlayer != null)
         {
-            Log("{0} | Cleared {1} for {2}.", rt.ToString("000.000", CultureInfo.InvariantCulture), list[0].Effect, singlePlayer.TryGetSteamId(out ulong cs) ? new CSteamID(cs) : singlePlayer);
+#if ICONS_DEBUG_LOGGING
+            if (needsDebugLogging)
+                Log("{0} | Cleared {1} for {2}.", rt.ToString("000.000", CultureInfo.InvariantCulture), list[0].Effect, singlePlayer.TryGetSteamId(out ulong cs) ? new CSteamID(cs) : singlePlayer);
+#endif
             EffectManager.ClearEffectByGuid(guid, singlePlayer);
         }
         foreach (WorldIconInfo info in list)
@@ -445,7 +469,8 @@ public class WorldIconManager : ILayoutHostedService, IEventListener<PlayerLeft>
 
                 if (!hasCleared)
                 {
-                    Log("{0} | Cleared {1} for {2} when updating for player.", rt.ToString("000.000", CultureInfo.InvariantCulture), icon.Effect, player);
+                    if (icon.DebugLogging)
+                        Log("{0} | Cleared {1} for {2} when updating for player.", rt.ToString("000.000", CultureInfo.InvariantCulture), icon.Effect, player);
                     EffectManager.ClearEffectByGuid(icon.Effect.Guid, player.Connection);
                     hasCleared = true;
                 }
@@ -453,12 +478,14 @@ public class WorldIconManager : ILayoutHostedService, IEventListener<PlayerLeft>
                 icon.OnCleared();
                 if (IsInactive(icon, rt))
                 {
-                    Log("{0} | Removing inactive when updating for player {1} {2}", rt.ToString("000.000", CultureInfo.InvariantCulture), player, icon);
+                    if (icon.DebugLogging)
+                        Log("{0} | Removing inactive when updating for player {1} {2}", rt.ToString("000.000", CultureInfo.InvariantCulture), player, icon);
                     IconWorkingSet.Add(icon);
                 }
                 else
                 {
-                    Log("{0} | Respawning for player {1} {2}", rt.ToString("000.000", CultureInfo.InvariantCulture), player, icon);
+                    if (icon.DebugLogging)
+                        Log("{0} | Respawning for player {1} {2}", rt.ToString("000.000", CultureInfo.InvariantCulture), player, icon);
                     icon.SpawnEffect(_playerService, rt, false, player);
                 }
             }
@@ -497,7 +524,8 @@ public class WorldIconManager : ILayoutHostedService, IEventListener<PlayerLeft>
                 if (!player.Equals(icon.TargetPlayer) || team is null || icon.TargetTeam != team)
                     continue;
 
-                Log("{0} | Removing player specific for {1} {2} - {3}", rt.ToString("000.000", CultureInfo.InvariantCulture), player, team, icon);
+                if (icon.DebugLogging)
+                    Log("{0} | Removing player specific for {1} {2} - {3}", rt.ToString("000.000", CultureInfo.InvariantCulture), player, team, icon);
                 list.RemoveAt(i);
                 if (list.Count == 0)
                 {

@@ -1,4 +1,4 @@
-﻿using Uncreated.Warfare.Layouts.Tickets;
+using Uncreated.Warfare.Layouts.Tickets;
 using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Layouts.UI;
@@ -51,6 +51,9 @@ public sealed class FlagUITranslations : PropertiesTranslationCollection
 
     [TranslationData("Shown on the flag list when ticket bleed is Catastrophic.")]
     public readonly Translation TicketBleedCatastrophic = new Translation("<#e88e8e>-60 per minute</color>", TranslationOptions.TMProUI);
+
+    [TranslationData("Shown on the flag list when the flag's actual location is unknown.")]
+    public readonly Translation UndiscoveredFlag = new Translation("<#696969>unknown</color>", TranslationOptions.TMProUI);
 
     public Translation GetBleedMessage(TicketBleedSeverity bleedSeverity)
     {

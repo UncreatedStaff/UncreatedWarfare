@@ -27,7 +27,7 @@ internal class LongestShotValuablePlayerProvider : IValuablePlayerProvider
                 LongestShot p1Value = p1.Player.Component<PlayerGameStatsComponent>().LongestShot;
                 LongestShot p2Value = p2.Player.Component<PlayerGameStatsComponent>().LongestShot;
 
-                return p2Value.Gun is not { isValid: true } || p1Value.SquaredDistance >= p2Value.SquaredDistance ? p1 : p2;
+                return p2Value.Gun is not { Exists: true } || p1Value.SquaredDistance >= p2Value.SquaredDistance ? p1 : p2;
             });
 
             LongestShot localExtremeValue = localExtreme.Player.Component<PlayerGameStatsComponent>().LongestShot;

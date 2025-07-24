@@ -284,7 +284,7 @@ public class CommandInfo : ICommandDescriptor
                 Array.Resize(ref parentMeta, parentMeta.Length + 1);
                 parentMeta[^1] = Metadata;
                 parent.Metadata.Parameters = parentMeta;
-                logger.LogWarning("Metadata for {0} missing from parent.", classType);
+                logger.LogDebug("Metadata for {0} missing from parent.", classType);
             }
         }
 
@@ -447,7 +447,11 @@ public class CommandInfo : ICommandDescriptor
 
             string relativePath = path.Substring(index + sectionLength + 1);
 
-            resource = typeof(WarfareModule).Namespace + "." + relativePath.Replace('\\', '.').Replace('/', '.').Replace(".cs", ".meta.yml");
+            string baseNamespace = classType.Assembly == typeof(WarfareModule).Assembly
+                ? typeof(WarfareModule).Namespace!
+                : classType.Assembly.GetName().Name!;
+
+            resource = baseNamespace + "." + relativePath.Replace('\\', '.').Replace('/', '.').Replace(".cs", ".meta.yml");
 
             stream = asm.GetManifestResourceStream(resource);
 

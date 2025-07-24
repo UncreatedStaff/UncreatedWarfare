@@ -59,7 +59,7 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
     // Descending = true
     [Ignore] internal bool DefaultSortMode;
 
-    [Ignore] private readonly bool _doVote;
+    [Ignore] private bool _doVote;
 
     public readonly UnturnedUIElement TopSquadsParent = new UnturnedUIElement("GameInfo/Squads");
     public readonly TopSquad[] TopSquads = ElementPatterns.CreateArray<TopSquad>("GameInfo/Squads/Squad_T{0}", 1, to: 2);
@@ -151,6 +151,11 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
 
         if (sets.Length != 2)
             throw new ArgumentException("DualSidedLeaderboardUI only accepts two teams.", nameof(sets));
+        
+        if (_doVote)
+        {
+            _doVote = _layoutFactory.NextLayout == null;
+        }
 
         LeaderboardPhaseStatInfo? defaultSortStat = phase.PlayerStats.FirstOrDefault(s => s.DefaultLeaderboardSort != null);
 

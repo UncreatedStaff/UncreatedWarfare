@@ -20,14 +20,12 @@ public class WorldIconInfo : ITransformObject, IDisposable
     internal float LastPositionUpdateRealtime;
     internal float FirstSpawnRealtime;
     private int _disposed;
+    private bool _wasInvisible = true;
 
     internal WorldIconManager? Manager;
 
     // used when distance is specified to clear from players who have left the area
     private List<WarfarePlayer>? _previousPlayers;
-
-    // used to check if its necessary to resend
-    private List<ulong>? _previousViewers;
 
     private Vector3 _position;
 
@@ -62,6 +60,11 @@ public class WorldIconInfo : ITransformObject, IDisposable
     public IAssetLink<EffectAsset> Effect { get; }
 
     /// <summary>
+    /// Enables debug logging for this icon.
+    /// </summary>
+    public bool DebugLogging { get; init; }
+
+    /// <summary>
     /// The source of the effect's position. Interchangable with <see cref="UnityObject"/> or <see cref="Position"/>.
     /// </summary>
     /// <remarks>This can be changed at any time.</remarks>
@@ -76,6 +79,7 @@ public class WorldIconInfo : ITransformObject, IDisposable
                 UnityObject = null;
                 _position = default;
             }
+            LastPositionUpdateRealtime = 0;
         }
     }
 
@@ -94,6 +98,7 @@ public class WorldIconInfo : ITransformObject, IDisposable
                 TransformableObject = null;
                 _position = default;
             }
+            LastPositionUpdateRealtime = 0;
         }
     }
 
@@ -107,6 +112,8 @@ public class WorldIconInfo : ITransformObject, IDisposable
         set
         {
             _position = value;
+            if (TransformableObject is not null || UnityObject is not null)
+                LastPositionUpdateRealtime = 0;
             TransformableObject = null;
             UnityObject = null;
         }
@@ -115,7 +122,15 @@ public class WorldIconInfo : ITransformObject, IDisposable
     /// <summary>
     /// The world-position offset of the effect from the original transform object.
     /// </summary>
-    public Vector3 Offset { get; set; }
+    public Vector3 Offset
+    {
+        get;
+        set
+        {
+            field = value;
+            LastPositionUpdateRealtime = 0;
+        }
+    }
 
     /// <summary>
     /// If the effect should be sent reliably.
@@ -425,7 +440,7 @@ public class WorldIconInfo : ITransformObject, IDisposable
         bool hasMutablePlayerSelector = distanceLimited || PlayerSelector != null;
 
         Vector3 pos;
-        if (updatePosition || LastPositionUpdateRealtime == 0)
+        if (updatePosition || LastPositionUpdateRealtime == 0 || IsVisible && _wasInvisible)
         {
             if (!TryGetSpawnPosition(out pos))
             {
@@ -437,7 +452,8 @@ public class WorldIconInfo : ITransformObject, IDisposable
                 return;
             }
 
-            LastPositionUpdateRealtime = rt;
+            if (IsVisible)
+                LastPositionUpdateRealtime = rt;
         }
         else
         {
@@ -445,7 +461,12 @@ public class WorldIconInfo : ITransformObject, IDisposable
         }
 
         if (!IsVisible)
+        {
+            _wasInvisible = true;
             return;
+        }
+
+        _wasInvisible = false;
 
         TriggerEffectParameters parameters = new TriggerEffectParameters(effect);
 

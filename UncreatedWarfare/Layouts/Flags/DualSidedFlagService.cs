@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Org.BouncyCastle.Crypto.Engines;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -11,6 +12,7 @@ using Uncreated.Warfare.Exceptions;
 using Uncreated.Warfare.Layouts.Phases;
 using Uncreated.Warfare.Layouts.Phases.Flags;
 using Uncreated.Warfare.Layouts.Teams;
+using Uncreated.Warfare.Layouts.UI;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Translations;
@@ -33,6 +35,8 @@ public abstract class DualSidedFlagService :
     private const double TickInternalSeconds = 4;
     private readonly ILoopTickerFactory _loopTickerFactory;
     private ILoopTicker? _evaluationTicker;
+
+    protected readonly FlagUITranslations FlagTranslations;
     protected readonly ILogger Logger;
     protected readonly IServiceProvider ServiceProvider;
     protected readonly ITeamManager<Team> TeamManager;
@@ -56,7 +60,7 @@ public abstract class DualSidedFlagService :
 #nullable restore
 
     /// <summary>
-    /// Array of all zones in order *including the main bases* at the beginning and end of the list.
+    /// Array of all zones in order *not including the main bases* at the beginning and end of the list.
     /// </summary>
     private FlagObjective[]? _flags;
 
@@ -70,6 +74,11 @@ public abstract class DualSidedFlagService :
     /// <inheritdoc />
     public virtual ElectricalGridBehaivor GridBehaivor => ElectricalGridBehaivor.EnabledWhenInRotation;
 
+    /// <summary>
+    /// Distance from any owned flags that are discovered.
+    /// </summary>
+    protected virtual int DiscoverDistance => 0;
+
     protected DualSidedFlagService(IServiceProvider serviceProvider, IConfiguration config)
     {
         _loopTickerFactory = serviceProvider.GetRequiredService<ILoopTickerFactory>();
@@ -77,8 +86,54 @@ public abstract class DualSidedFlagService :
         ServiceProvider = serviceProvider;
         Layout = serviceProvider.GetRequiredService<Layout>();
         TeamManager = serviceProvider.GetRequiredService<ITeamManager<Team>>();
+
+        FlagTranslations = serviceProvider.GetRequiredService<TranslationInjection<FlagUITranslations>>().Value;
+
         FlagSettings = new FlagPhaseSettings();
         Configuration = config;
+    }
+
+    /// <summary>
+    /// Discover the first n flags for a team from any owned flags.
+    /// </summary>
+    protected virtual void Discover(Team team, int amount, bool noRaise = false)
+    {
+        if (amount <= 0)
+            return;
+
+        if (team.IsOpponent(EndingTeam))
+        {
+            int maxCt = ActiveFlags.Count;
+            for (int i = 0; i < maxCt; ++i)
+            {
+                FlagObjective flag = ActiveFlags[i];
+                if (flag.Owner.IsFriendly(team))
+                    continue;
+
+                if (noRaise)
+                    flag.DiscoverNoRaise(team);
+                else
+                    flag.Discover(team);
+                if (--amount == 0)
+                    return;
+            }
+        }
+        else if (team.IsOpponent(StartingTeam))
+        {
+            for (int i = ActiveFlags.Count - 1; i >= 0; --i)
+            {
+                FlagObjective flag = ActiveFlags[i];
+                if (flag.Owner.IsFriendly(team))
+                    continue;
+
+                if (noRaise)
+                    flag.DiscoverNoRaise(team);
+                else
+                    flag.Discover(team);
+                if (--amount == 0)
+                    return;
+            }
+        }
     }
 
     public virtual async UniTask StartAsync(CancellationToken token)
@@ -200,6 +255,24 @@ public abstract class DualSidedFlagService :
         
         IsActive = true;
 
+        if (DiscoverDistance <= 0)
+        {
+            foreach (Team team in TeamManager.AllTeams)
+            {
+                foreach (FlagObjective flag in _flags)
+                {
+                    flag.DiscoverNoRaise(team);
+                }
+            }
+        }
+        else
+        {
+            foreach (Team team in TeamManager.AllTeams)
+            {
+                Discover(team, DiscoverDistance, noRaise: true);
+            }
+        }
+
         _ = WarfareModule.EventDispatcher.DispatchEventAsync(new FlagsSetUp { ActiveFlags = ActiveFlags, FlagService = this });
     }
 
@@ -208,7 +281,7 @@ public abstract class DualSidedFlagService :
         _ = Layout.TriggerVictoryAsync(winner);
     }
 
-    private void OnTick(ILoopTicker ticker, TimeSpan timeSinceStart, TimeSpan deltaTime)
+    protected virtual void OnTick(ILoopTicker ticker, TimeSpan timeSinceStart, TimeSpan deltaTime)
     {
         foreach (FlagObjective flag in ActiveFlags)
         {
@@ -276,7 +349,7 @@ public abstract class DualSidedFlagService :
         return false;
     }
 
-    private void SlowTickObjective(FlagObjective flag, FlagContestState contestState)
+    protected virtual void SlowTickObjective(FlagObjective flag, FlagContestState contestState)
     {
         ObjectiveSlowTick args = new ObjectiveSlowTick
         {
@@ -310,13 +383,19 @@ public abstract class DualSidedFlagService :
 
         foreach (Team team in Layout.TeamManager.AllTeams)
         {
-            if (ActiveFlags.All(f => f.Owner == team))
+            if (ActiveFlags.All(f => f.Region.Primary.Zone.Type != ZoneType.Flag || f.Owner == team))
             {
                 TriggerVictory(team);
                 return;
             }
         }
+
+        if (DiscoverDistance > 0)
+        {
+            Discover(e.Capturer, DiscoverDistance);
+        }
     }
+
     protected abstract void RecalculateObjectives();
 
     /// <summary>
@@ -367,28 +446,31 @@ public abstract class DualSidedFlagService :
             {
                 FlagObjective flag = ActiveFlags[i];
                 
-                yield return GetEntry(flag, set.Team, objective);
+                yield return GetFlagListEntry(flag, in set, objective);
             }
         }
         else
         {
             foreach (FlagObjective flag in ActiveFlags)
             {
-                yield return GetEntry(flag, set.Team, objective);
+                yield return GetFlagListEntry(flag, in set, objective);
             }
         }
+    }
 
-        yield break;
-
-        FlagListUIEntry GetEntry(FlagObjective flag, Team displayTeam, FlagObjective? displayTeamObjective)
+    protected virtual FlagListUIEntry GetFlagListEntry(FlagObjective flag, in LanguageSet set, FlagObjective? displayTeamObjective)
+    {
+        if (!flag.IsDiscovered(set.Team))
         {
-            FlagIcon flagIcon = FlagIcon.None;
-            if (ReferenceEquals(flag, displayTeamObjective))
-                flagIcon =  FlagIcon.Attack;
-            else if (IsDefenseObjective(flag, displayTeam))
-                flagIcon = FlagIcon.Defend;
-            
-            return new FlagListUIEntry(TranslationFormattingUtility.Colorize(flag.Name, flag.Owner.Faction.Color), flagIcon);
+            return new FlagListUIEntry(FlagTranslations.UndiscoveredFlag.Translate(in set), FlagIcon.None);
         }
+
+        FlagIcon flagIcon = FlagIcon.None;
+        if (ReferenceEquals(flag, displayTeamObjective))
+            flagIcon = flag.IsPastOwner(set.Team) && Layout.TeamManager.GetLayoutRole(set.Team) == LayoutRole.Blufor ? FlagIcon.Defend : FlagIcon.Attack;
+        else if (IsDefenseObjective(flag, set.Team))
+            flagIcon = FlagIcon.Defend;
+
+        return new FlagListUIEntry(TranslationFormattingUtility.Colorize(flag.Name, flag.Owner.Faction.Color), flagIcon);
     }
 }

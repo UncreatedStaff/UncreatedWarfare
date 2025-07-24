@@ -26,7 +26,8 @@ public class StrategyMapManager :
     IEventListener<BarricadeDestroyed>,
     IEventListener<FlagsSetUp>,
     IEventListener<FlagCaptured>,
-    IEventListener<FlagNeutralized>
+    IEventListener<FlagNeutralized>,
+    IEventListener<FlagDiscovered>
 {
     private readonly TrackingList<StrategyMap> _strategyMaps;
     private readonly ILogger<StrategyMapManager> _logger;
@@ -170,6 +171,14 @@ public class StrategyMapManager :
         }
     }
 
+    void IEventListener<FlagDiscovered>.HandleEvent(FlagDiscovered e, IServiceProvider serviceProvider)
+    {
+        foreach (StrategyMap map in StrategyMapsOfTeam(e.Team))
+        {
+            map.AddMapTack(CreateFlagTack(e.Flag), e.Flag);
+        }
+    }
+
     public void HandleEvent(FlagNeutralized e, IServiceProvider serviceProvider)
     {
         foreach (StrategyMap map in _strategyMaps)
@@ -185,7 +194,10 @@ public class StrategyMapManager :
 
         foreach (FlagObjective flag in flagService.ActiveFlags)
         {
-            map.AddMapTack(CreateFlagTack(flag), flag);
+            if (flag.IsDiscovered(map.MapTable.Group))
+            {
+                map.AddMapTack(CreateFlagTack(flag), flag);
+            }
         }
     }
 

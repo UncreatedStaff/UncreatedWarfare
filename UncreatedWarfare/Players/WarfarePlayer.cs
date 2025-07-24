@@ -187,6 +187,13 @@ public class WarfarePlayer :
     /// </summary>
     public CancellationToken DisconnectToken => _disconnectTokenSource.Token;
 
+    public bool CanInfluenceObjective =>
+#if DEBUG
+        true;
+#else
+        !IsOnDuty;
+#endif
+
     internal WarfarePlayer(PlayerService playerService, Player player, in PlayerService.PlayerTaskData taskData, PlayerPending pendingEvent, ILogger logger, IPlayerComponent[] components, IServiceProvider serviceProvider)
     {
         /*

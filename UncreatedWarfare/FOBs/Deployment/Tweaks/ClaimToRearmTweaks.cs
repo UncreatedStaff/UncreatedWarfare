@@ -110,8 +110,17 @@ public class ClaimToRearmTweaks :
         ammoStorage.SubtractAmmo(rearmCost);
 
         e.Player.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastLoseAmmo.Translate(rearmCost, e.Player)));
-        _chatService.Send(e.Player, _translations.AmmoResuppliedKit, rearmCost, ammoStorage.AmmoCount);
-        
+
+        float ammoLeft = ammoStorage.AmmoCount;
+        if (float.IsFinite(ammoLeft))
+        {
+            _chatService.Send(e.Player, _translations.AmmoResuppliedKit, rearmCost, ammoStorage.AmmoCount);
+        }
+        else
+        {
+            _chatService.Send(e.Player, _translations.AmmoResuppliedKitInfinite);
+        }
+
         _ = WarfareModule.EventDispatcher.DispatchEventAsync(new PlayerRearmedKit
         {
             Player = e.Player,

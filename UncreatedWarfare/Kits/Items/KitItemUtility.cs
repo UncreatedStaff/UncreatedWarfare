@@ -174,7 +174,7 @@ public static class KitItemUtility
                 redirectVariant = null;
         }
 
-        if (isConcrete && !item!.isValid)
+        if (isConcrete && !item!.Exists)
             return null;
 
         if (isClothing)

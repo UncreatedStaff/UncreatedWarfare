@@ -52,8 +52,7 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
         Parser = new CommandParser(this);
 
         // discover commands
-        List<CommandInfo> parentCommands =
-            DiscoverAssemblyCommands(_logger, serviceProvider.GetRequiredService<WarfarePluginLoader>());
+        List<CommandInfo> parentCommands = DiscoverAssemblyCommands(_logger, serviceProvider.GetService<WarfarePluginLoader>());
 
         Commands = new ReadOnlyCollection<CommandInfo>(parentCommands);
 
@@ -69,21 +68,11 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
     {
         Assembly warfareAssembly = Assembly.GetExecutingAssembly();
 
-        List<Assembly> assemblies = [warfareAssembly];
+        List<Assembly> assemblies = [ warfareAssembly ];
 
         if (pluginLoader != null)
-            assemblies.AddRange(pluginLoader.Plugins.Select(x => x.LoadedAssembly));
-
-        foreach (AssemblyName referencedAssembly in warfareAssembly.GetReferencedAssemblies())
         {
-            try
-            {
-                assemblies.Add(Assembly.Load(referencedAssembly));
-            }
-            catch
-            {
-                logger.LogDebug("Unable to load referenced assembly {0}.", referencedAssembly);
-            }
+            assemblies.AddRange(pluginLoader.Plugins.Select(x => x.LoadedAssembly));
         }
 
         List<Type> types = Accessor.GetTypesSafe(assemblies, removeIgnored: true)

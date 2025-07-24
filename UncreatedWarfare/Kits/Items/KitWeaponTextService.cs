@@ -33,7 +33,7 @@ public sealed class KitWeaponTextService : BaseAlternateConfigurationFile
             foreach (IConfigurationSection section in UnderlyingConfiguration.GetSection("Weapons").GetChildren())
             {
                 IAssetLink<ItemGunAsset> gun = section.GetAssetLink<ItemGunAsset>();
-                if (gun.isValid)
+                if (gun.Exists)
                     _blacklist.Add(gun);
             }
         }

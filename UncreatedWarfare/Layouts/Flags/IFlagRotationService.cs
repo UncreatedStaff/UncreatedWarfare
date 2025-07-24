@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Translations;
 
@@ -27,8 +27,14 @@ public readonly struct FlagListUIEntry
         {
             FlagIcon.Attack => "<#ff8963>µ</color>",
             FlagIcon.Defend => "<#a962ff>´</color>",
+            FlagIcon.Locked => "<#c2c2c2>²</color>",
             _ => ""
         };
+    }
+    public FlagListUIEntry(string text, string icon)
+    {
+        Text = text;
+        Icon = icon;
     }
 }
 
@@ -36,7 +42,8 @@ public enum FlagIcon : byte
 {
     None,
     Attack,
-    Defend
+    Defend,
+    Locked
 }
 
 public enum ElectricalGridBehaivor : byte

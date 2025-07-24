@@ -56,7 +56,39 @@ public class FlagObjective : IDisposable, IObjective
     /// </summary>
     public bool IsDiscovered(Team team)
     {
-        return team.IsValid && _discoveredTeams.Contains(team);
+        if (!team.IsValid)
+            return false;
+
+        lock (_discoveredTeams)
+        {
+            for (int i = 0; i < _discoveredTeams.Count; ++i)
+            {
+                if (_discoveredTeams[i].IsFriendly(team))
+                    return true;
+            }
+
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Check if a team has discovered the flag.
+    /// </summary>
+    public bool IsDiscovered(CSteamID groupId)
+    {
+        if (groupId.m_SteamID == 0)
+            return false;
+
+        lock (_discoveredTeams)
+        {
+            for (int i = 0; i < _discoveredTeams.Count; ++i)
+            {
+                if (_discoveredTeams[i].IsFriendly(groupId))
+                    return true;
+            }
+
+            return false;
+        }
     }
 
     /// <summary>
@@ -65,13 +97,34 @@ public class FlagObjective : IDisposable, IObjective
     /// <returns><see langword="true"/> if the team is valid and didn't already discover this flag, otherwise <see langword="false"/>.</returns>
     public bool Discover(Team team)
     {
+        if (!DiscoverNoRaise(team))
+            return false;
+
+        _ = WarfareModule.EventDispatcher.DispatchEventAsync(new FlagDiscovered
+        {
+            Flag = this,
+            Team = team
+        });
+        return true;
+    }
+
+    /// <summary>
+    /// Add a team to the list of teams who have discovered this flag, without raising the event.
+    /// </summary>
+    /// <returns><see langword="true"/> if the team is valid and didn't already discover this flag, otherwise <see langword="false"/>.</returns>
+    internal bool DiscoverNoRaise(Team team)
+    {
         if (!team.IsValid)
             return false;
 
-        if (_discoveredTeams.Contains(team))
-            return false;
+        lock (_discoveredTeams)
+        {
+            if (_discoveredTeams.Contains(team))
+                return false;
 
-        _discoveredTeams.Add(team);
+            _discoveredTeams.Add(team);
+        }
+
         return true;
     }
 

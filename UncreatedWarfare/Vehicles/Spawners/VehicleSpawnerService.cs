@@ -135,10 +135,10 @@ public class VehicleSpawnerService : ILayoutHostedService, IDisposable
         // if each record has a corresponding spawner, reload it, otherwise add a new spawner
         foreach (var record in records)
         {
-            WarfareVehicleInfo? vehicleInfo = _vehicleStore.GetVehicleInfo(record.VehicleAsset.GUID);
+            WarfareVehicleInfo? vehicleInfo = _vehicleStore.GetVehicleInfo(record.VehicleAsset.Guid);
             if (vehicleInfo == null)
             {
-                _logger.LogWarning($"Spawner '{record.UniqueName}' was saved with Vehicle asset {record.VehicleAsset.GUID} which no longer has registered info. This spawner will not be registered");
+                _logger.LogWarning($"Spawner '{record.UniqueName}' was saved with Vehicle asset {record.VehicleAsset.Guid} which no longer has registered info. This spawner will not be registered");
                 return;
             }
 

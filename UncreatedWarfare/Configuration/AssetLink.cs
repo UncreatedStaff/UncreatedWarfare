@@ -28,7 +28,7 @@ namespace Uncreated.Warfare.Configuration;
 /// <typeparam name="TAsset">The type of asset to reference.</typeparam>
 [CannotApplyEqualityOperator]
 [TypeConverter(typeof(AssetLinkTypeConverter))]
-public interface IAssetLink<out TAsset> : IAssetContainer, IEquatable<IAssetLink<Asset>>, IAssetReference, ICloneable, ITranslationArgument where TAsset : Asset
+public interface IAssetLink<out TAsset> : IAssetContainer, IEquatable<IAssetLink<Asset>>, ICloneable, ITranslationArgument where TAsset : Asset
 {
     /// <summary>
     /// Guid of the asset, if known.
@@ -39,6 +39,11 @@ public interface IAssetLink<out TAsset> : IAssetContainer, IEquatable<IAssetLink
     /// Short ID of the asset, if known.
     /// </summary>
     new ushort Id { get; }
+
+    /// <summary>
+    /// Checks to see if the asset exists.
+    /// </summary>
+    bool Exists { get; }
 
     /// <summary>
     /// Get the actual asset from the stored info.
@@ -860,6 +865,17 @@ public static class AssetLink
             }
         }
 
+        public bool Exists
+        {
+            get
+            {
+                if (_cachedAsset == null)
+                    GetAsset();
+
+                return _cachedAsset != null;
+            }
+        }
+
         public TAsset? GetAsset()
         {
             if (_cachedAsset != null)
@@ -1070,9 +1086,6 @@ public static class AssetLink
         {
             return new AssetLinkImpl<TAsset>(this);
         }
-
-        Guid IAssetReference.GUID { get => Guid; set => throw new NotSupportedException(); }
-        bool IAssetReference.isValid => _guid != Guid.Empty || _id != 0 || _cachedAsset != null;
     }
 }
 

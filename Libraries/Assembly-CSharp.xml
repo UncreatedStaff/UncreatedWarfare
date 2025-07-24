@@ -8927,6 +8927,16 @@
             If false, clouds are removed from the skybox.
             </summary>
         </member>
+        <member name="P:SDG.Unturned.LevelAsset.CloudOverridePrefab">
+            <summary>
+            If set, instantiate this particle system and set its material color to cloud color.
+            </summary>
+        </member>
+        <member name="P:SDG.Unturned.LevelAsset.CloudOverrideParticleSystemsPath.RateOverTimeScale">
+            <summary>
+            Multiplier for CloudOverrideParticlesPrefab emission rate according to level's clouds intensity.
+            </summary>
+        </member>
         <member name="F:SDG.Unturned.LevelAsset.terrainColorRules">
             <summary>
             Players are kicked from multiplayer if their skin color is within threshold of any of these rules.
@@ -11331,6 +11341,11 @@
             the disconnection rather than an error.
             </summary>
         </member>
+        <member name="M:SDG.Unturned.UnturnedNexus.initialize">
+            <summary>
+            Register all built-in asset and useable types.
+            </summary>
+        </member>
         <member name="F:SDG.Unturned.PlayerContinuousIntegrationReport.ExitCode">
             <summary>
             Error code that the server exited with.
@@ -11341,11 +11356,6 @@
             <summary>
             Empty if successful,
             otherwise an explanation of the first error encountered.
-            </summary>
-        </member>
-        <member name="M:SDG.Unturned.UnturnedNexus.initialize">
-            <summary>
-            Register all built-in asset and useable types.
             </summary>
         </member>
         <member name="T:SDG.Unturned.CustomWeatherEventHook">
@@ -13161,53 +13171,6 @@
             there aren't very many physics materials.
             </summary>
         </member>
-        <member name="T:SDG.Unturned.GlazierElementBase_uGUI">
-            <summary>
-            Base class for uGUI implementations of primitive building block widgets.
-            </summary>
-        </member>
-        <member name="M:SDG.Unturned.GlazierElementBase_uGUI.ConstructNew">
-            <summary>
-            Called after constructor when not populating from component pool.
-            </summary>
-        </member>
-        <member name="M:SDG.Unturned.GlazierElementBase_uGUI.ConstructFromPool(SDG.Unturned.GlazierElementBase_uGUI.PoolData)">
-            <summary>
-            Called after constructor when re-using components from pool.
-            </summary>
-        </member>
-        <member name="M:SDG.Unturned.GlazierElementBase_uGUI.SynchronizeColors">
-            <summary>
-            Synchronize uGUI component colors with background/text/image etc. colors.
-            Called when custom UI colors are changed, and after constructor.
-            </summary>
-        </member>
-        <member name="M:SDG.Unturned.GlazierElementBase_uGUI.SynchronizeTheme">
-            <summary>
-            Synchronize uGUI component sprites with theme sprites.
-            Called when custom UI theme is changed, and after constructor.
-            </summary>
-        </member>
-        <member name="M:SDG.Unturned.GlazierElementBase_uGUI.ReleaseIntoPool">
-            <returns>False if element couldn't be released into pool and should be destroyed.</returns>
-        </member>
-        <member name="M:SDG.Unturned.GlazierElementBase_uGUI.EnableComponents">
-            <summary>
-            Unity recommends enabling components after parenting into the destination hierarchy.
-            </summary>
-        </member>
-        <member name="P:SDG.Unturned.GlazierElementBase_uGUI.AttachmentTransform">
-            <summary>
-            RectTransform children should be attached to. Overridden by ScrollView content panel.
-            </summary>
-        </member>
-        <member name="P:SDG.Unturned.GlazierElementBase_uGUI.ShouldHaveLayoutElementComponent">
-            <summary>
-            This helper property's purpose is to:
-            - Ensure other properties don't accidentally remove LayoutElement if others need it.
-            - Ensure LayoutElement is destroyed before returning to pool.
-            </summary>
-        </member>
         <member name="T:SDG.Unturned.ServerConnectParameters">
              <summary>
              Parameters for connecting to a game server.
@@ -13293,6 +13256,53 @@
         <member name="M:SDG.Unturned.RegionIncrementalVisibilityTracker.SetCoordIsInsideMask(UnityEngine.Vector2Int,System.Boolean)">
             <summary>
             Reset region's progress counter and change inside/outside status.
+            </summary>
+        </member>
+        <member name="T:SDG.Unturned.GlazierElementBase_uGUI">
+            <summary>
+            Base class for uGUI implementations of primitive building block widgets.
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.GlazierElementBase_uGUI.ConstructNew">
+            <summary>
+            Called after constructor when not populating from component pool.
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.GlazierElementBase_uGUI.ConstructFromPool(SDG.Unturned.GlazierElementBase_uGUI.PoolData)">
+            <summary>
+            Called after constructor when re-using components from pool.
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.GlazierElementBase_uGUI.SynchronizeColors">
+            <summary>
+            Synchronize uGUI component colors with background/text/image etc. colors.
+            Called when custom UI colors are changed, and after constructor.
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.GlazierElementBase_uGUI.SynchronizeTheme">
+            <summary>
+            Synchronize uGUI component sprites with theme sprites.
+            Called when custom UI theme is changed, and after constructor.
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.GlazierElementBase_uGUI.ReleaseIntoPool">
+            <returns>False if element couldn't be released into pool and should be destroyed.</returns>
+        </member>
+        <member name="M:SDG.Unturned.GlazierElementBase_uGUI.EnableComponents">
+            <summary>
+            Unity recommends enabling components after parenting into the destination hierarchy.
+            </summary>
+        </member>
+        <member name="P:SDG.Unturned.GlazierElementBase_uGUI.AttachmentTransform">
+            <summary>
+            RectTransform children should be attached to. Overridden by ScrollView content panel.
+            </summary>
+        </member>
+        <member name="P:SDG.Unturned.GlazierElementBase_uGUI.ShouldHaveLayoutElementComponent">
+            <summary>
+            This helper property's purpose is to:
+            - Ensure other properties don't accidentally remove LayoutElement if others need it.
+            - Ensure LayoutElement is destroyed before returning to pool.
             </summary>
         </member>
         <member name="T:SDG.Unturned.EffectSpawner">
@@ -15004,6 +15014,17 @@
             get through doorways, and short zombies (crawlers) could get underneath objects they shouldn't
             like gas tanks. Zombies were also stacking on top of eachother a bit too much.
             </summary>
+        </member>
+        <member name="M:SDG.Unturned.Zombie.PlayFootstepAudioClip(System.String)">
+            <summary>
+            Very similar to <see cref="M:SDG.Unturned.PlayerMovement.PlayFootstepAudioClip"/>.
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.Zombie.PlayLandAudioClip(System.String)">
+            <summary>
+            Very similar to <see cref="M:SDG.Unturned.PlayerMovement.PlayLandAudioClip"/>.
+            </summary>
+            <returns>True if sound played.</returns>
         </member>
         <member name="P:SDG.Unturned.Item.durability">
             <summary>

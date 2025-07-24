@@ -52,7 +52,7 @@ partial class DualSidedLeaderboardUI
                 LevenshteinOptions.IgnoreWhitespace);
             levDistance = Math.Max(0.05, Math.Pow(Math.Abs(levDistance), 1d / 3d));
 
-            return x.Weight * levDistance;
+            return x.Weight * levDistance * (string.Equals(x.Configuration.GamemodeName, _layout.LayoutInfo.Configuration.GamemodeName, StringComparison.OrdinalIgnoreCase) ? 0.2 : 1);
         }, VoteButtons.Length);
     }
 
