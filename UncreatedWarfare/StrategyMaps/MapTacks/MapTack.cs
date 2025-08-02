@@ -18,7 +18,7 @@ public class MapTack : IDisposable, ITransformObject
         FeatureWorldPosition = featureWorldPosition;
     }
 
-    public void DropMarker(Vector3 worldCoordinatesOnTable, Quaternion rotation)
+    public virtual void DropMarker(Vector3 worldCoordinatesOnTable, Quaternion rotation)
     {
         if (Marker != null)
             throw new InvalidOperationException("Map tack's marker has already been dropped. Map tack markers should not be dropped more than once.");

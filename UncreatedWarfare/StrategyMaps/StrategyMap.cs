@@ -45,7 +45,9 @@ public class StrategyMap : IDisposable, IEventListener<ClaimBedRequested>
     {
         GameThread.AssertCurrent();
 
-        Vector3 worldCoordsOnMapTable = TranslateWorldPointOntoMap(newMapTack.FeatureWorldPosition);
+        Vector3 pos = newMapTack.FeatureWorldPosition;
+        
+        Vector3 worldCoordsOnMapTable = TranslateWorldPointOntoMap(pos);
 
         newMapTack.DropMarker(worldCoordsOnMapTable, MapTable.Rotation);
         _attributeStore.UpdateAttributes(newMapTack.Marker).Add(MainBaseBuildables.TransientAttribute, null);

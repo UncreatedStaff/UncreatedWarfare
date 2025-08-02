@@ -241,11 +241,7 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
         if (!IsActive)
             return;
 
-        if (IsVotingPeriodOpen)
-        {
-            EndVotingPeriod();
-        }
-
+        EndVotingPeriod();
         IsActive = false;
         ClearFromAllPlayers();
         foreach (WarfarePlayer player in _playerService.OnlinePlayers)

@@ -379,6 +379,11 @@ public abstract class DualSidedFlagService :
     
     void IEventListener<FlagCaptured>.HandleEvent(FlagCaptured e, IServiceProvider serviceProvider)
     {
+        OnFlagCaptured(e);
+    }
+
+    protected virtual void OnFlagCaptured(FlagCaptured e)
+    {
         RecalculateObjectives();
 
         foreach (Team team in Layout.TeamManager.AllTeams)

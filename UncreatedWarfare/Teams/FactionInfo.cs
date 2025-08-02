@@ -94,7 +94,7 @@ public class FactionInfo : ICloneable, ITranslationArgument, IEquatable<FactionI
     public IAssetLink<ItemBarricadeAsset>? FOBRadio { get; set; }
 
     [JsonPropertyName("maptackflag")]
-    public IAssetLink<ItemBarricadeAsset>? MapTackFlag { get; set; }
+    public IAssetLink<ItemPlaceableAsset>? MapTackFlag { get; set; }
 
     [JsonPropertyName("backpacks")]
     public AssetVariantDictionary<ItemBackpackAsset> Backpacks { get; set; }
@@ -532,7 +532,7 @@ public class FactionInfo : ICloneable, ITranslationArgument, IEquatable<FactionI
         Build       = FindAsset(model, RedirectType.BuildSupply) ?.Asset.GetAssetLink<ItemAsset>();
         RallyPoint  = FindAsset(model, RedirectType.RallyPoint)  ?.Asset.GetAssetLink<ItemBarricadeAsset>();
         FOBRadio    = FindAsset(model, RedirectType.Radio)       ?.Asset.GetAssetLink<ItemBarricadeAsset>();
-        MapTackFlag = FindAsset(model, RedirectType.MapTackFlag) ?.Asset.GetAssetLink<ItemBarricadeAsset>();
+        MapTackFlag = FindAsset(model, RedirectType.MapTackFlag) ?.Asset.GetAssetLink<ItemPlaceableAsset>();
 
         foreach (FactionAsset asset in model.Assets)
         {
@@ -663,7 +663,7 @@ public class FactionInfo : ICloneable, ITranslationArgument, IEquatable<FactionI
             Build = Build?.Clone() as IAssetLink<ItemAsset>,
             RallyPoint = RallyPoint?.Clone() as IAssetLink<ItemBarricadeAsset>,
             FOBRadio = FOBRadio?.Clone() as IAssetLink<ItemBarricadeAsset>,
-            MapTackFlag = MapTackFlag?.Clone() as IAssetLink<ItemBarricadeAsset>,
+            MapTackFlag = MapTackFlag?.Clone() as IAssetLink<ItemPlaceableAsset>,
             Backpacks = Backpacks.Clone(),
             Shirts = Shirts.Clone(),
             Pants = Pants.Clone(),

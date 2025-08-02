@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using System;
+using System.IO;
 
 namespace Uncreated.Warfare.Layouts;
 
@@ -43,6 +44,14 @@ public class LayoutInfo : IDisposable
     {
         if (Layout is IDisposable disposable)
             disposable.Dispose();
+    }
+
+    /// <summary>
+    /// Resolves a possibly relative path to this layout.
+    /// </summary>
+    public string ResolveRelativePath(string path)
+    {
+        return Path.IsPathRooted(path) ? path : Path.GetFullPath(path, Path.GetDirectoryName(FilePath));
     }
 }
 

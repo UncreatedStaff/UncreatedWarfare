@@ -120,11 +120,6 @@
             Alpha is 0.0 outside volume and 1.0 inside inner volume.
             </summary>
         </member>
-        <member name="M:SDG.Unturned.LevelVolume`2.GetClosestWorldPosition(UnityEngine.Vector3)">
-            <summary>
-            Given a point in world space, find the closest point within the total volume in world space.
-            </summary>
-        </member>
         <member name="M:SDG.Unturned.LevelVolume`2.GetBoxSize">
             <summary>
             World space size of the box.
@@ -8927,16 +8922,6 @@
             If false, clouds are removed from the skybox.
             </summary>
         </member>
-        <member name="P:SDG.Unturned.LevelAsset.CloudOverridePrefab">
-            <summary>
-            If set, instantiate this particle system and set its material color to cloud color.
-            </summary>
-        </member>
-        <member name="P:SDG.Unturned.LevelAsset.CloudOverrideParticleSystemsPath.RateOverTimeScale">
-            <summary>
-            Multiplier for CloudOverrideParticlesPrefab emission rate according to level's clouds intensity.
-            </summary>
-        </member>
         <member name="F:SDG.Unturned.LevelAsset.terrainColorRules">
             <summary>
             Players are kicked from multiplayer if their skin color is within threshold of any of these rules.
@@ -9213,16 +9198,6 @@
             At low framerate deltaTime can be so high the spring explodes unless we use a fixed timestep.
             </summary>
         </member>
-        <member name="F:SDG.Unturned.AirdropAsset.barricadeRef">
-            <summary>
-            Interactable storage barricade to spawn at the drop position.
-            </summary>
-        </member>
-        <member name="F:SDG.Unturned.AirdropAsset.model">
-            <summary>
-            Prefab to spawn falling from the aircraft.
-            </summary>
-        </member>
         <member name="T:SDG.Unturned.HousingEdge">
             <summary>
             Initially these were structs so that they would be adjacent in memory and therefore faster to iterate lots of them,
@@ -9475,6 +9450,16 @@
             <summary>
             Reflected attribute that was used to find this method.
             Contains extra information about how to call it.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.AirdropAsset.barricadeRef">
+            <summary>
+            Interactable storage barricade to spawn at the drop position.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.AirdropAsset.model">
+            <summary>
+            Prefab to spawn falling from the aircraft.
             </summary>
         </member>
         <member name="T:SDG.Unturned.OncePerFrameGuard">
@@ -11221,12 +11206,6 @@
             LevelBatching is currently only enabled if map creator has verified it works properly.
             </summary>
         </member>
-        <member name="F:SDG.Unturned.LevelInfoConfigData.Batching_Max_Texture_Size">
-            <summary>
-            Overrides maximum size of textures included in LevelBatching atlas.
-            When using this, be mindful the combined texture doesn't exceed some reasonable size (~4k?)
-            </summary>
-        </member>
         <member name="F:SDG.Unturned.LevelInfoConfigData.Enable_Clutter_Option">
             <summary>
             If true, map creator has verified the clutter option works as-expected.
@@ -11341,11 +11320,6 @@
             the disconnection rather than an error.
             </summary>
         </member>
-        <member name="M:SDG.Unturned.UnturnedNexus.initialize">
-            <summary>
-            Register all built-in asset and useable types.
-            </summary>
-        </member>
         <member name="F:SDG.Unturned.PlayerContinuousIntegrationReport.ExitCode">
             <summary>
             Error code that the server exited with.
@@ -11356,6 +11330,11 @@
             <summary>
             Empty if successful,
             otherwise an explanation of the first error encountered.
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.UnturnedNexus.initialize">
+            <summary>
+            Register all built-in asset and useable types.
             </summary>
         </member>
         <member name="T:SDG.Unturned.CustomWeatherEventHook">
@@ -13171,6 +13150,53 @@
             there aren't very many physics materials.
             </summary>
         </member>
+        <member name="T:SDG.Unturned.GlazierElementBase_uGUI">
+            <summary>
+            Base class for uGUI implementations of primitive building block widgets.
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.GlazierElementBase_uGUI.ConstructNew">
+            <summary>
+            Called after constructor when not populating from component pool.
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.GlazierElementBase_uGUI.ConstructFromPool(SDG.Unturned.GlazierElementBase_uGUI.PoolData)">
+            <summary>
+            Called after constructor when re-using components from pool.
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.GlazierElementBase_uGUI.SynchronizeColors">
+            <summary>
+            Synchronize uGUI component colors with background/text/image etc. colors.
+            Called when custom UI colors are changed, and after constructor.
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.GlazierElementBase_uGUI.SynchronizeTheme">
+            <summary>
+            Synchronize uGUI component sprites with theme sprites.
+            Called when custom UI theme is changed, and after constructor.
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.GlazierElementBase_uGUI.ReleaseIntoPool">
+            <returns>False if element couldn't be released into pool and should be destroyed.</returns>
+        </member>
+        <member name="M:SDG.Unturned.GlazierElementBase_uGUI.EnableComponents">
+            <summary>
+            Unity recommends enabling components after parenting into the destination hierarchy.
+            </summary>
+        </member>
+        <member name="P:SDG.Unturned.GlazierElementBase_uGUI.AttachmentTransform">
+            <summary>
+            RectTransform children should be attached to. Overridden by ScrollView content panel.
+            </summary>
+        </member>
+        <member name="P:SDG.Unturned.GlazierElementBase_uGUI.ShouldHaveLayoutElementComponent">
+            <summary>
+            This helper property's purpose is to:
+            - Ensure other properties don't accidentally remove LayoutElement if others need it.
+            - Ensure LayoutElement is destroyed before returning to pool.
+            </summary>
+        </member>
         <member name="T:SDG.Unturned.ServerConnectParameters">
              <summary>
              Parameters for connecting to a game server.
@@ -13256,53 +13282,6 @@
         <member name="M:SDG.Unturned.RegionIncrementalVisibilityTracker.SetCoordIsInsideMask(UnityEngine.Vector2Int,System.Boolean)">
             <summary>
             Reset region's progress counter and change inside/outside status.
-            </summary>
-        </member>
-        <member name="T:SDG.Unturned.GlazierElementBase_uGUI">
-            <summary>
-            Base class for uGUI implementations of primitive building block widgets.
-            </summary>
-        </member>
-        <member name="M:SDG.Unturned.GlazierElementBase_uGUI.ConstructNew">
-            <summary>
-            Called after constructor when not populating from component pool.
-            </summary>
-        </member>
-        <member name="M:SDG.Unturned.GlazierElementBase_uGUI.ConstructFromPool(SDG.Unturned.GlazierElementBase_uGUI.PoolData)">
-            <summary>
-            Called after constructor when re-using components from pool.
-            </summary>
-        </member>
-        <member name="M:SDG.Unturned.GlazierElementBase_uGUI.SynchronizeColors">
-            <summary>
-            Synchronize uGUI component colors with background/text/image etc. colors.
-            Called when custom UI colors are changed, and after constructor.
-            </summary>
-        </member>
-        <member name="M:SDG.Unturned.GlazierElementBase_uGUI.SynchronizeTheme">
-            <summary>
-            Synchronize uGUI component sprites with theme sprites.
-            Called when custom UI theme is changed, and after constructor.
-            </summary>
-        </member>
-        <member name="M:SDG.Unturned.GlazierElementBase_uGUI.ReleaseIntoPool">
-            <returns>False if element couldn't be released into pool and should be destroyed.</returns>
-        </member>
-        <member name="M:SDG.Unturned.GlazierElementBase_uGUI.EnableComponents">
-            <summary>
-            Unity recommends enabling components after parenting into the destination hierarchy.
-            </summary>
-        </member>
-        <member name="P:SDG.Unturned.GlazierElementBase_uGUI.AttachmentTransform">
-            <summary>
-            RectTransform children should be attached to. Overridden by ScrollView content panel.
-            </summary>
-        </member>
-        <member name="P:SDG.Unturned.GlazierElementBase_uGUI.ShouldHaveLayoutElementComponent">
-            <summary>
-            This helper property's purpose is to:
-            - Ensure other properties don't accidentally remove LayoutElement if others need it.
-            - Ensure LayoutElement is destroyed before returning to pool.
             </summary>
         </member>
         <member name="T:SDG.Unturned.EffectSpawner">
@@ -15014,17 +14993,6 @@
             get through doorways, and short zombies (crawlers) could get underneath objects they shouldn't
             like gas tanks. Zombies were also stacking on top of eachother a bit too much.
             </summary>
-        </member>
-        <member name="M:SDG.Unturned.Zombie.PlayFootstepAudioClip(System.String)">
-            <summary>
-            Very similar to <see cref="M:SDG.Unturned.PlayerMovement.PlayFootstepAudioClip"/>.
-            </summary>
-        </member>
-        <member name="M:SDG.Unturned.Zombie.PlayLandAudioClip(System.String)">
-            <summary>
-            Very similar to <see cref="M:SDG.Unturned.PlayerMovement.PlayLandAudioClip"/>.
-            </summary>
-            <returns>True if sound played.</returns>
         </member>
         <member name="P:SDG.Unturned.Item.durability">
             <summary>
@@ -18945,12 +18913,11 @@
         <member name="F:SDG.Framework.Foliage.FoliageSystem.batches">
             <summary>
             Nelson 2025-04-22: instanced foliage rendering is a decent chunk of CPU time. In retrospect this seems like
-            an obvious optimization: Graphics.DrawMeshInstanced accepts up to 1023* instances per call. Each tile
-            groups instances in lists of up to 1023*, but often isn't that high. Now, we collect instances until we
-            hit the 1023* limit. This is particularly useful for sparse variants like colored flowers.
+            an obvious optimization: Graphics.DrawMeshInstanced accepts up to 1023 instances per call. Each tile
+            groups instances in lists of up to 1023, but often isn't that high. Now, we collect instances until we
+            hit the 1023 limit. This is particularly useful for sparse variants like colored flowers.
             With a consistent camera transform ("/copycameratransform") on an upcoming map remaster I went from between
             0.72-0.8 ms on my PC to 0.55-0.6 ms!
-            *Nelson 2025-07-14: refer to NON_UNIFORM_SCALE_INSTANCES_PER_BATCH.
             </summary>
         </member>
         <member name="F:SDG.Framework.Foliage.FoliageSystem.DRAW_OFFSETS">
@@ -18961,13 +18928,6 @@
             </summary>
         </member>
         <!-- Badly formed XML comment ignored for member "M:SDG.Framework.Foliage.FoliageSystem.FastMatrixCopy(System.Collections.Generic.List{UnityEngine.Matrix4x4},System.Int32,UnityEngine.Matrix4x4[],System.Int32,System.Int32)" -->
-        <member name="F:SDG.Framework.Foliage.FoliageSystem.NON_UNIFORM_SCALE_INSTANCES_PER_BATCH">
-            <summary>
-            Nelson 2025-07-14: although Graphics.DrawMeshInstanced accepts 1023 instances, it will split them into max
-            batches of [1, 511, 511] if shader does not have: #pragma instancing_options assumeuniformscaling
-            So, we might as well do our own splitting of batches to avoid batches of 1.
-            </summary>
-        </member>
         <member name="M:SDG.Framework.Foliage.FoliageSystem.DrawInstances(SDG.Framework.Foliage.FoliageInstancingBatchConfig@,UnityEngine.Matrix4x4[],System.Int32,UnityEngine.Camera)">
             <param name="matrixCount">Must be within [0, MAX_MATRICES_PER_BATCH] range.</param>
         </member>

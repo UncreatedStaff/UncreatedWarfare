@@ -30,7 +30,7 @@ public class UpstreamZonePathingProvider : IZonePathingProvider
             Fail();
         }
 
-        const int maxZoneCount = 10;
+        const int maxZoneCount = 8;
         const int maxTries = 10;
         List<Zone> outputList = new List<Zone>(8);
         for (int i = 0; i < maxTries; ++i)
@@ -60,7 +60,7 @@ public class UpstreamZonePathingProvider : IZonePathingProvider
 
             outputList.Add(_zones.Zones[nextIndex]);
 
-            if (outputList[^1] == outputList[0])
+            if (ReferenceEquals(outputList[^1], outputList[0]))
             {
                 _logger.LogError("Zone path started and ended at the same main base from the following path: {{{0}}}.", string.Join(" -> ", outputList.Select(zone => zone.Name)));
                 Fail();
@@ -72,7 +72,7 @@ public class UpstreamZonePathingProvider : IZonePathingProvider
                 continue;
             }
             
-            if (outputList.Count > maxZoneCount + 2) // 10 + start and end bases
+            if (outputList.Count > maxZoneCount + 2) // count + start and end bases
             {
                 _logger.LogInformation("Zone path created a path longer than 10 zones in the following path: {{{0}}}. Retrying {1}/{2}.", string.Join(" -> ", outputList.Select(zone => zone.Name)), i + 1, maxTries);
                 continue;

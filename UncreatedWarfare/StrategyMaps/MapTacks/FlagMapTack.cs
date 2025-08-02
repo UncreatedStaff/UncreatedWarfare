@@ -8,7 +8,7 @@ public class FlagMapTack : MapTack
     public FlagObjective Flag { get; }
     public override Vector3 FeatureWorldPosition => Flag.Center;
 
-    public FlagMapTack(IAssetLink<ItemBarricadeAsset> markerAsset, FlagObjective flag)
+    public FlagMapTack(IAssetLink<ItemPlaceableAsset> markerAsset, FlagObjective flag)
         : base(markerAsset, flag.Center)
     {
         Flag = flag;

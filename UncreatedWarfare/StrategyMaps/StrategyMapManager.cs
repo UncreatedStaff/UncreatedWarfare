@@ -211,19 +211,21 @@ public class StrategyMapManager :
             if (teamMain == null)
                 continue;
 
-            map.AddMapTack(CreateMainBaseTack(teamMain), team);
+            map.AddMapTack(CreateMainBaseTack(team, map, teamMain), team);
         }
     }
 
-    private DeployableMapTack CreateMainBaseTack(Zone mainBase)
+    private MapTack CreateMainBaseTack(Team team, StrategyMap map, Zone mainBase)
     {
-        return new DeployableMapTack(_assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:MapTacks:MainBase"), mainBase);
+        return team.IsFriendly(map.MapTable.Group)
+            ? new DeployableMapTack(_assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:MapTacks:MainBase"), mainBase)
+            : new MapTack(_assetConfiguration.GetAssetLink<ItemPlaceableAsset>("Buildables:MapTacks:EnemyMainBase"), mainBase.Spawn);
     }
 
     private FlagMapTack CreateFlagTack(FlagObjective flag)
     {
         if (flag.Owner == Team.NoTeam || flag.Owner.Faction.MapTackFlag == null)
-            return new FlagMapTack(_assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:MapTacks:NeutralFlag"), flag);
+            return new FlagMapTack(_assetConfiguration.GetAssetLink<ItemPlaceableAsset>("Buildables:MapTacks:NeutralFlag"), flag);
         else
             return new FlagMapTack(flag.Owner.Faction.MapTackFlag, flag);
     }

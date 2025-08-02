@@ -66,9 +66,7 @@ public class LeaderboardPhase : BasePhase<PhaseTeamSettings>, IDisposable, IEven
         // read from file if specified
         if (PlayerStatsPath is { Length: > 0 } path)
         {
-            if (!Path.IsPathRooted(path))
-                path = Path.GetFullPath(path, Path.GetDirectoryName(_session.LayoutInfo.FilePath));
-
+            path = _session.LayoutInfo.ResolveRelativePath(path);
             IConfigurationRoot statsConfig = new ConfigurationBuilder()
                 .AddYamlFile(path, optional: false, reloadOnChange: false)
                 .Build();
