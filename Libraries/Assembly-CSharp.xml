@@ -120,6 +120,11 @@
             Alpha is 0.0 outside volume and 1.0 inside inner volume.
             </summary>
         </member>
+        <member name="M:SDG.Unturned.LevelVolume`2.GetClosestWorldPosition(UnityEngine.Vector3)">
+            <summary>
+            Given a point in world space, find the closest point within the total volume in world space.
+            </summary>
+        </member>
         <member name="M:SDG.Unturned.LevelVolume`2.GetBoxSize">
             <summary>
             World space size of the box.
@@ -4407,9 +4412,35 @@
             Was called `MythicLocker` with a paired `MythicLockee` prior to 2024-06-11.
             </summary>
         </member>
+        <member name="F:SDG.Unturned.BrowserConfigData.Icon">
+            <summary>
+            URL of a 64x64 image shown in the upper-left of the server lobby menu.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.BrowserConfigData.Thumbnail">
+            <summary>
+            URL of a 32x32 image shown in the server list.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.BrowserConfigData.Desc_Hint">
+            <summary>
+            Short description underneath the server name in the server lobby menu.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.BrowserConfigData.Desc_Full">
+            <summary>
+            Long description in the lower-right of the server lobby menu.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.BrowserConfigData.Desc_Server_List">
+            <summary>
+            Short description underneath the server name in the server list.
+            </summary>
+        </member>
         <member name="F:SDG.Unturned.BrowserConfigData.Login_Token">
             <summary>
-            https://steamcommunity.com/dev/managegameservers
+            Documentation: https://docs.smartlydressedgames.com/en/stable/servers/game-server-login-tokens.html
+            To generate a new token visit: https://steamcommunity.com/dev/managegameservers
             </summary>
         </member>
         <member name="F:SDG.Unturned.BrowserConfigData.BookmarkHost">
@@ -4423,12 +4454,60 @@
              Servers using Fake IP are assigned random ports at startup, but can implement a web API endpoint to return
              the IP and port. Clients perform a GET request if this string starts with http:// or https://. The returned
              text can be an IP address or DNS name with optional query port override. (e.g., "127.0.0.1:27015")
+            
+             Documentation: https://docs.smartlydressedgames.com/en/stable/servers/bookmark-host.html
              </summary>
         </member>
         <member name="F:SDG.Unturned.BrowserConfigData.Is_Using_Anycast_Proxy">
             <summary>
-            If true, the server lobby warns that in-game ping may be higher than shown. BUT it's shown in the default
-            UI color rather than the "bad" color when flagged by moderation.
+            If true, the server lobby warns that in-game ping may be higher than shown.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.BrowserConfigData.Monetization">
+            <summary>
+            How the server is monetized (if at all).
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.BrowserConfigData.Link.Equals(System.Object)">
+            <summary>
+            Used to find overrides in json file.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.BrowserConfigData.Links">
+            <summary>
+            Buttons shown in the server lobby menu. For example:
+            ` Links
+            ` [
+            `     {
+            `         Message Visit our website!
+            `         URL https://smartlydressedgames.com/
+            `     }
+            ` ]
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ServerConfigData.VAC_Secure">
+            <summary>
+            Whether to enable Valve Anti-Cheat.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ServerConfigData.BattlEye_Secure">
+            <summary>
+            Whether to enable BattlEye Anti-Cheat.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ServerConfigData.Max_Ping_Milliseconds">
+            <summary>
+            Players with a ping higher than this are kicked.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ServerConfigData.Timeout_Queue_Seconds">
+            <summary>
+            Players in the pre-join queue we haven't heard from in this past number of seconds are kicked.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ServerConfigData.Timeout_Game_Seconds">
+            <summary>
+            Players in the server we haven't heard from in this past number of seconds are kicked.
             </summary>
         </member>
         <member name="F:SDG.Unturned.ServerConfigData.Join_Rate_Limit_Window_Seconds">
@@ -4477,7 +4556,6 @@
             Ordinarily the server should be receiving multiple input packets per second from a client. If more than this
             amount of time passes between input packets we flag the client as potentially using a lag switch, and modify
             their stats (e.g. reduce player damage) for a corresponding duration.
-            Minimum value is PlayerInput.MIN_FAKE_LAG_THRESHOLD_SECONDS.
             </summary>
         </member>
         <member name="F:SDG.Unturned.ServerConfigData.Fake_Lag_Log_Warnings">
@@ -4514,6 +4592,12 @@
         <member name="F:SDG.Unturned.ServerConfigData.Scheduled_Shutdown_Warnings">
             <summary>
             Broadcast "shutting down for scheduled maintenance" warnings at these intervals.
+            Format is a list of hours:minutes:seconds, for example to warn only 5 seconds before:
+            ` Scheduled_Shutdown_Warnings
+            ` [
+            `     00:00:05
+            ` ]
+            Default starts at 30 minutes and counts down.
             </summary>
         </member>
         <member name="F:SDG.Unturned.ServerConfigData.Enable_Update_Shutdown">
@@ -4523,12 +4607,15 @@
         </member>
         <member name="F:SDG.Unturned.ServerConfigData.Update_Steam_Beta_Name">
             <summary>
-            Unfortunately the server does not have a way to automatically determine the current beta branch.
+            If Enable_Update_Shutdown is true, we check for updates to this branch of the game.
+            (Unfortunately the server does not have a way to automatically determine the current beta branch.)
             </summary>
         </member>
         <member name="F:SDG.Unturned.ServerConfigData.Update_Shutdown_Warnings">
             <summary>
             Broadcast "shutting down for update" warnings at these intervals.
+            Refer to Scheduled_Shutdown_Warnings for an explanation of the format.
+            Default starts at 3 minutes and counts down.
             </summary>
         </member>
         <member name="F:SDG.Unturned.ServerConfigData.Chat_Always_Use_Rich_Text">
@@ -4545,8 +4632,7 @@
         </member>
         <member name="F:SDG.Unturned.ServerConfigData.Use_FakeIP">
             <summary>
-            If true, opt-in to SteamNetworkingSockets "FakeIP" system.
-            https://partner.steamgames.com/doc/api/ISteamNetworkingSockets#1
+            Documentation: https://docs.smartlydressedgames.com/en/stable/servers/fake-ip.html
             </summary>
         </member>
         <member name="F:SDG.Unturned.ServerConfigData.Reset_Vehicles_Outside_Horizontal_Distance">
@@ -4568,48 +4654,114 @@
             rather than just "client disconnected."
             </summary>
         </member>
+        <member name="F:SDG.Unturned.ItemsConfigData.Spawn_Chance">
+            <summary>
+            Percentage [0 to 1] of item spawns to use.
+            For example, if set to 0.2 and level has 100 item spawns, max 20 items will spawn at a time.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ItemsConfigData.Despawn_Dropped_Time">
+            <summary>
+            How long (in seconds) before an item dropped by a player is despawned.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ItemsConfigData.Despawn_Natural_Time">
+            <summary>
+            How long (in seconds) before a spawned item is despawned.
+            (For example, an item nobody wants to pick up.)
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ItemsConfigData.Respawn_Time">
+            <summary>
+            When less than the target amount of items are dropped (determined by Spawn_Chance), a new
+            item is spawned approximately this often (in seconds).
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ItemsConfigData.Quality_Full_Chance">
+            <summary>
+            Percentage [0 to 1] probability of item spawning at max quality.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ItemsConfigData.Quality_Multiplier">
+            <summary>
+            When an item spawns without max quality, the random quality is scaled by this factor.
+            For example, 0.5 halves the initial quality.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ItemsConfigData.Gun_Bullets_Full_Chance">
+            <summary>
+            Percentage [0 to 1] probability of gun spawning with full ammo.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ItemsConfigData.Gun_Bullets_Multiplier">
+            <summary>
+            When a gun spawns without full ammo, the random amount is scaled by this factor.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ItemsConfigData.Magazine_Bullets_Full_Chance">
+            <summary>
+            Percentage [0 to 1] probability of magazines spawning with full ammo.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ItemsConfigData.Magazine_Bullets_Multiplier">
+            <summary>
+            When a magazine spawns without full ammo, the random amount is scaled by this factor.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ItemsConfigData.Crate_Bullets_Full_Chance">
+            <summary>
+            Percentage [0 to 1] probability of non-magazines spawning with full amount.
+            (E.g., ammo boxes.)
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ItemsConfigData.Crate_Bullets_Multiplier">
+            <summary>
+            When a non-magazine spawns without full amount, the random amount is scaled by this factor.
+            (E.g., ammo boxes.)
+            </summary>
+        </member>
         <member name="F:SDG.Unturned.ItemsConfigData.Has_Durability">
             <summary>
-            Original option for disabling item quality. Defaults to true. If false, items spawn at 100% quality and
-            their quality doesn't decrease. For backwards compatibility, the newer per-item-type durability options
-            are ignored if this is off.
+            Original option for disabling item quality. If false, items spawn at 100% quality and
+            their quality doesn't decrease. For backwards compatibility, the newer per-item-type
+            durability options are ignored if this is off.
             </summary>
         </member>
         <member name="F:SDG.Unturned.ItemsConfigData.Food_Spawns_At_Full_Quality">
             <summary>
-            Food-specific replacement for <see cref="F:SDG.Unturned.ItemsConfigData.Has_Durability"/>. Defaults to false. If true, food spawns at 100% quality.
+            Food-specific replacement for Has_Durability. If true, food spawns at 100% quality.
             </summary>
         </member>
         <member name="F:SDG.Unturned.ItemsConfigData.Water_Spawns_At_Full_Quality">
             <summary>
-            Water-specific replacement for <see cref="F:SDG.Unturned.ItemsConfigData.Has_Durability"/>. Defaults to false. If true, water spawns at 100% quality.
+            Water-specific replacement for Has_Durability. If true, water spawns at 100% quality.
             </summary>
         </member>
         <member name="F:SDG.Unturned.ItemsConfigData.Clothing_Spawns_At_Full_Quality">
             <summary>
-            Clothing-specific replacement for <see cref="F:SDG.Unturned.ItemsConfigData.Has_Durability"/>. Defaults to false. If true, clothing spawns at 100% quality.
+            Clothing-specific replacement for Has_Durability. If true, clothing spawns at 100% quality.
             </summary>
         </member>
         <member name="F:SDG.Unturned.ItemsConfigData.Weapons_Spawn_At_Full_Quality">
             <summary>
-            Weapon-specific replacement for <see cref="F:SDG.Unturned.ItemsConfigData.Has_Durability"/>. Defaults to false. If true, weapons spawns at 100% quality.
+            Weapon-specific replacement for Has_Durability. If true, weapons spawns at 100% quality.
             </summary>
         </member>
         <member name="F:SDG.Unturned.ItemsConfigData.Default_Spawns_At_Full_Quality">
             <summary>
             Fallback used when spawning an item that doesn't fit into one of the other quality/durability settings.
-            Defaults to false. If true, items spawn at 100% quality.
+            If true, items spawn at 100% quality.
             </summary>
         </member>
         <member name="F:SDG.Unturned.ItemsConfigData.Clothing_Has_Durability">
             <summary>
-            Clothing-specific replacement for <see cref="F:SDG.Unturned.ItemsConfigData.Has_Durability"/>. Defaults to true. If false, clothing quality
+            Clothing-specific replacement for Has_Durability. If false, clothing quality
             doesn't decrease when damaged.
             </summary>
         </member>
         <member name="F:SDG.Unturned.ItemsConfigData.Weapons_Have_Durability">
             <summary>
-            Melee and gun replacement for <see cref="F:SDG.Unturned.ItemsConfigData.Has_Durability"/>. Defaults to true. If false, weapons quality
+            Melee and gun replacement for Has_Durability. If false, weapons quality
             doesn't decrease when used.
             </summary>
         </member>
@@ -4623,12 +4775,195 @@
             After vehicle has been neglected for more than Decay_Time seconds it will begin taking this much damage per second.
             </summary>
         </member>
+        <member name="F:SDG.Unturned.VehiclesConfigData.Has_Battery_Chance">
+            <summary>
+            Percentage [0 to 1] probability of spawning with a battery.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.VehiclesConfigData.Min_Battery_Charge">
+            <summary>
+            Percentage [0 to 1] minimum initial charge if spawning with a battery.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.VehiclesConfigData.Max_Battery_Charge">
+            <summary>
+            Percentage [0 to 1] maximum initial charge if spawning with a battery.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.VehiclesConfigData.Has_Tire_Chance">
+            <summary>
+            Percentage [0 to 1] probability of spawning with a tire per-wheel.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.VehiclesConfigData.Respawn_Time">
+            <summary>
+            How long (in seconds) after vehicle explodes or gets stuck underwater before it despawns.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.VehiclesConfigData.Unlocked_After_Seconds_In_Safezone">
+            <summary>
+            How long (in seconds) a locked vehicle can sit empty in the safezone before it is
+            automatically unlocked.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.VehiclesConfigData.Armor_Multiplier">
+            <summary>
+            Scales the amount of damage taken by vehicles.
+            For example, 0.5 halves the amount of damage dealt to vehicles.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.VehiclesConfigData.Child_Explosion_Armor_Multiplier">
+            <summary>
+            Scales damage to the vehicle when an attached barricade obstructions an explosion.
+            For example, 0.5 halves the explosion damage when blocked by a barricade.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.VehiclesConfigData.Gun_Lowcal_Damage_Multiplier">
+            <summary>
+            Scales the amount of damage taken by vehicles from non-"Heavy Weapon" guns.
+            For example, 2.0 doubles the amount of damage dealt to vehicles by non-"Heavy Weapon" guns.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.VehiclesConfigData.Gun_Highcal_Damage_Multiplier">
+            <summary>
+            Scales the amount of damage taken by vehicles from "Heavy Weapon" guns.
+            For example, 2.0 doubles the amount of damage dealt to vehicles by "Heavy Weapon" guns.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.VehiclesConfigData.Melee_Damage_Multiplier">
+            <summary>
+            Scales the amount of damage taken by vehicles from melee weapons and fists.
+            For example, 2.0 doubles the amount of damage dealt to vehicles by melee.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.VehiclesConfigData.Melee_Repair_Multiplier">
+            <summary>
+            Scales the amount of HP restored by melee items like the Blowtorch.
+            For example, 2.0 doubles the amount of health restored by melee items.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.VehiclesConfigData.Max_Instances_Tiny">
+            <summary>
+            Maximum number of naturally-spawned vehicles on "Tiny" size levels.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.VehiclesConfigData.Max_Instances_Small">
+            <summary>
+            Maximum number of naturally-spawned vehicles on "Small" size levels.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.VehiclesConfigData.Max_Instances_Medium">
+            <summary>
+            Maximum number of naturally-spawned vehicles on "Medium" size levels.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.VehiclesConfigData.Max_Instances_Large">
+            <summary>
+            Maximum number of naturally-spawned vehicles on "Large" size levels.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.VehiclesConfigData.Max_Instances_Insane">
+            <summary>
+            Maximum number of naturally-spawned vehicles on "Insane" size levels.
+            </summary>
+        </member>
         <member name="F:SDG.Unturned.VehiclesConfigData.Min_Natural_Vehicles">
             <summary>
             Vehicles are considered "natural" if they were spawned by the level as opposed to players or vendors.
             If less than this many natural vehicles exist in the level, more will be spawned. The minimum of this or
-            Max_Instances is used. (i.e., if this value is higher than max instances the max instances value is used
+            Max_Instances is used. (I.e., if this value is higher than max instances the max instances value is used
             instead.)
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ZombiesConfigData.Spawn_Chance">
+            <summary>
+            Percentage [0 to 1] of zombie spawns to use.
+            For example, if set to 0.2 and an area has 100 zombie spawns, max 20 zombies will spawn at a time.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ZombiesConfigData.Loot_Chance">
+            <summary>
+            Percentage [0 to 1] chance of zombie dropping an item except when dropping more than one item.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ZombiesConfigData.Crawler_Chance">
+            <summary>
+            Percentage [0 to 1] chance of zombie spawning as a crawler.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ZombiesConfigData.Sprinter_Chance">
+            <summary>
+            Percentage [0 to 1] chance of zombie spawning as a sprinter.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ZombiesConfigData.Flanker_Chance">
+            <summary>
+            Percentage [0 to 1] chance of zombie spawning as a flanker.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ZombiesConfigData.Burner_Chance">
+            <summary>
+            Percentage [0 to 1] chance of zombie spawning as a burner.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ZombiesConfigData.Acid_Chance">
+            <summary>
+            Percentage [0 to 1] chance of zombie spawning as an acid spitter.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ZombiesConfigData.Boss_Electric_Chance">
+            <summary>
+            Percentage [0 to 1] chance of zombie spawning as an electric boss.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ZombiesConfigData.Boss_Wind_Chance">
+            <summary>
+            Percentage [0 to 1] chance of zombie spawning as a ground-pounding boss.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ZombiesConfigData.Boss_Fire_Chance">
+            <summary>
+            Percentage [0 to 1] chance of zombie spawning as a fire-breathing boss.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ZombiesConfigData.Spirit_Chance">
+            <summary>
+            Percentage [0 to 1] chance of zombie spawning as a ghost.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ZombiesConfigData.DL_Red_Volatile_Chance">
+            <summary>
+            Percentage [0 to 1] chance of zombie spawning as a Dying Light Volatile (crossover).
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ZombiesConfigData.DL_Blue_Volatile_Chance">
+            <summary>
+            Percentage [0 to 1] chance of zombie spawning as a Dying Light Volatile (crossover).
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ZombiesConfigData.Boss_Elver_Stomper_Chance">
+            <summary>
+            Percentage [0 to 1] chance of zombie spawning as the Elver final boss.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ZombiesConfigData.Boss_Kuwait_Chance">
+            <summary>
+            Percentage [0 to 1] chance of zombie spawning as the Kuwait final boss.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ZombiesConfigData.Respawn_Day_Time">
+            <summary>
+            How long (in seconds) before a dead zombie respawns by default.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ZombiesConfigData.Respawn_Night_Time">
+            <summary>
+            How long (in seconds) before a dead zombie respawns during a full moon.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ZombiesConfigData.Respawn_Beacon_Time">
+            <summary>
+            How long (in seconds) before a dead zombie respawns during a horde beacon.
             </summary>
         </member>
         <member name="F:SDG.Unturned.ZombiesConfigData.Quest_Boss_Respawn_Interval">
@@ -4637,9 +4972,217 @@
             Players were abusing the spawns to farm boss tier loot.
             </summary>
         </member>
+        <member name="F:SDG.Unturned.ZombiesConfigData.Damage_Multiplier">
+            <summary>
+            Scales the amount of damage dealt by zombies.
+            For example, 2.0 doubles the amount of damage from zombie attacks.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ZombiesConfigData.Armor_Multiplier">
+            <summary>
+            Scales the amount of damage taken by zombies.
+            For example, 0.5 halves the amount of damage dealt to zombies.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ZombiesConfigData.Backstab_Multiplier">
+            <summary>
+            Scales the amount of damage taken by zombies when attacked from behind.
+            Only certain weapons quality for this modifier.
+            </summary>
+        </member>
         <member name="F:SDG.Unturned.ZombiesConfigData.NonHeadshot_Armor_Multiplier">
             <summary>
             Weapon damage multiplier against body, arms, legs. Useful for headshot-only mode.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ZombiesConfigData.Beacon_Experience_Multiplier">
+            <summary>
+            Scales amount of XP gained for killing a zombie during a horde beacon.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ZombiesConfigData.Full_Moon_Experience_Multiplier">
+            <summary>
+            Scales amount of XP gained for killing a zombie during the full moon.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ZombiesConfigData.Min_Drops">
+            <summary>
+            Minimum number of loot drops from non-mega non-boss zombies.
+            Loot_Chance applies if the rolled number of drops between [min, max] is one.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ZombiesConfigData.Max_Drops">
+            <summary>
+            Maximum number of loot drops from non-mega non-boss zombies.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ZombiesConfigData.Min_Mega_Drops">
+            <summary>
+            Minimum number of loot drops from non-boss mega zombies.
+            Loot_Chance applies if the rolled number of drops between [min, max] is one.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ZombiesConfigData.Max_Mega_Drops">
+            <summary>
+            Maximum number of loot drops from non-boss mega zombies.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ZombiesConfigData.Min_Boss_Drops">
+            <summary>
+            Minimum number of loot drops from boss zombies.
+            Loot_Chance applies if the rolled number of drops between [min, max] is one.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ZombiesConfigData.Max_Boss_Drops">
+            <summary>
+            Maximum number of loot drops from boss zombies.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ZombiesConfigData.Slow_Movement">
+            <summary>
+            If true, all zombies are a bit slower, making it easier to escape them.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ZombiesConfigData.Can_Stun">
+            <summary>
+            If false, nothing can stun zombies, making combat harder.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ZombiesConfigData.Only_Critical_Stuns">
+            <summary>
+            If true, only certain weapons and attacks can stun zombie (e.g., backstabs).
+            Not applicable if Can_Stun is false.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ZombiesConfigData.Weapons_Use_Player_Damage">
+            <summary>
+            If true, attacking a zombie uses the weapon's PvP damage values rather than zombie-specific damage.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ZombiesConfigData.Can_Target_Barricades">
+            <summary>
+            If true, zombies will attack barricades obstructing their movement.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ZombiesConfigData.Can_Target_Structures">
+            <summary>
+            If true, zombies will attack structures obstructing their movement.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ZombiesConfigData.Can_Target_Vehicles">
+            <summary>
+            If true, zombies will attack vehicles obstructing their movement.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ZombiesConfigData.Can_Target_Objects">
+            <summary>
+            If true, zombies will attack level objects (e.g., fences) obstructing their movement.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ZombiesConfigData.Beacon_Max_Rewards">
+            <summary>
+            If greater than zero, maximum number of items a horde beacon can drop.
+            Useful to clamp the number of drops when a large number of players participate.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ZombiesConfigData.Beacon_Max_Participants">
+            <summary>
+            If greater than zero, maximum player count for horde beacon loot scaling.
+            Useful to clamp the number of drops when a large number of players participate.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ZombiesConfigData.Beacon_Rewards_Multiplier">
+            <summary>
+            Scales total number of horde beacon loot drops, applied before Beacon_Max_Rewards.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.AnimalsConfigData.Respawn_Time">
+            <summary>
+            How long (in seconds) before a dead animal respawns.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.AnimalsConfigData.Damage_Multiplier">
+            <summary>
+            Scales the amount of damage dealt by animals.
+            For example, 2.0 doubles the amount of damage from animal attacks.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.AnimalsConfigData.Armor_Multiplier">
+            <summary>
+            Scales the amount of damage taken by animals.
+            For example, 0.5 halves the amount of damage dealt to animals.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.AnimalsConfigData.Max_Instances_Tiny">
+            <summary>
+            Maximum number of animals on "Tiny" size levels.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.AnimalsConfigData.Max_Instances_Small">
+            <summary>
+            Maximum number of animals on "Small" size levels.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.AnimalsConfigData.Max_Instances_Medium">
+            <summary>
+            Maximum number of animals on "Medium" size levels.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.AnimalsConfigData.Max_Instances_Large">
+            <summary>
+            Maximum number of animals on "Large" size levels.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.AnimalsConfigData.Max_Instances_Insane">
+            <summary>
+            Maximum number of animals on "Insane" size levels.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.AnimalsConfigData.Weapons_Use_Player_Damage">
+            <summary>
+            If true, attacking an animal uses the weapon's PvP damage values rather than animal-specific damage.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.BarricadesConfigData.Decay_Time">
+            <summary>
+            How long (in seconds) since the barricade owner/group last played before the barricade won't be saved.
+            If the server is offline for more than half the Decay_Time, all decay timers are reset.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.BarricadesConfigData.Armor_Lowtier_Multiplier">
+            <summary>
+            Scales the amount of damage taken by "Armor Tier: Low" barricades.
+            For example, 0.5 halves the amount of damage dealt to barricades.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.BarricadesConfigData.Armor_Hightier_Multiplier">
+            <summary>
+            Scales the amount of damage taken by "Armor Tier: High" barricades.
+            For example, 0.5 halves the amount of damage dealt to barricades.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.BarricadesConfigData.Gun_Lowcal_Damage_Multiplier">
+            <summary>
+            Scales the amount of damage taken by barricades from non-"Heavy Weapon" guns.
+            For example, 2.0 doubles the amount of damage dealt to barricades by non-"Heavy Weapon" guns.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.BarricadesConfigData.Gun_Highcal_Damage_Multiplier">
+            <summary>
+            Scales the amount of damage taken by barricades from "Heavy Weapon" guns.
+            For example, 2.0 doubles the amount of damage dealt to barricades by "Heavy Weapon" guns.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.BarricadesConfigData.Melee_Damage_Multiplier">
+            <summary>
+            Scales the amount of damage taken by barricades from melee weapons and fists.
+            For example, 2.0 doubles the amount of damage dealt to barricades by melee.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.BarricadesConfigData.Melee_Repair_Multiplier">
+            <summary>
+            Scales the amount of HP restored by melee items like the Blowtorch.
+            For example, 2.0 doubles the amount of health restored by melee items.
             </summary>
         </member>
         <member name="F:SDG.Unturned.BarricadesConfigData.Allow_Item_Placement_On_Vehicle">
@@ -4662,34 +5205,268 @@
             Furthest away from colliders a player can build a trap (e.g. barbed wire) onto their vehicle.
             </summary>
         </member>
+        <member name="F:SDG.Unturned.StructuresConfigData.Decay_Time">
+            <summary>
+            How long (in seconds) since the structure owner/group last played before the structure won't be saved.
+            If the server is offline for more than half the Decay_Time, all decay timers are reset.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.StructuresConfigData.Armor_Lowtier_Multiplier">
+            <summary>
+            Scales the amount of damage taken by "Armor Tier: Low" structures.
+            For example, 0.5 halves the amount of damage dealt to structures.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.StructuresConfigData.Armor_Hightier_Multiplier">
+            <summary>
+            Scales the amount of damage taken by "Armor Tier: High" structures.
+            For example, 0.5 halves the amount of damage dealt to structures.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.StructuresConfigData.Gun_Lowcal_Damage_Multiplier">
+            <summary>
+            Scales the amount of damage taken by structures from non-"Heavy Weapon" guns.
+            For example, 2.0 doubles the amount of damage dealt to structures by non-"Heavy Weapon" guns.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.StructuresConfigData.Gun_Highcal_Damage_Multiplier">
+            <summary>
+            Scales the amount of damage taken by structures from "Heavy Weapon" guns.
+            For example, 2.0 doubles the amount of damage dealt to structures by "Heavy Weapon" guns.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.StructuresConfigData.Melee_Damage_Multiplier">
+            <summary>
+            Scales the amount of damage taken by structures from melee weapons and fists.
+            For example, 2.0 doubles the amount of damage dealt to structures by melee.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.StructuresConfigData.Melee_Repair_Multiplier">
+            <summary>
+            Scales the amount of HP restored by melee items like the Blowtorch.
+            For example, 2.0 doubles the amount of health restored by melee items.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.PlayersConfigData.Health_Default">
+            <summary>
+            Amount of health players spawn with. [0 to 100]
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.PlayersConfigData.Health_Regen_Min_Food">
+            <summary>
+            Player must have more than this amount of food to begin regenerating health.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.PlayersConfigData.Health_Regen_Min_Water">
+            <summary>
+            Player must have more than this amount of water to begin regenerating health.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.PlayersConfigData.Health_Regen_Ticks">
+            <summary>
+            How quickly players health regenerates with sufficient food and water.
+            Lower values regenerate health faster, higher values regenerate health slower.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.PlayersConfigData.Food_Default">
+            <summary>
+            Amount of food players spawn with. [0 to 100]
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.PlayersConfigData.Food_Use_Ticks">
+            <summary>
+            How quickly players food meter depletes.
+            Lower values burn food faster, higher values burn food slower.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.PlayersConfigData.Food_Damage_Ticks">
+            <summary>
+            How quickly players starve to death.
+            Lower values kill the player faster, higher values kill the player slower.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.PlayersConfigData.Water_Default">
+            <summary>
+            Amount of water players spawn with. [0 to 100]
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.PlayersConfigData.Water_Use_Ticks">
+            <summary>
+            How quickly players water meter depletes.
+            Lower values lose water faster, higher values lose water slower.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.PlayersConfigData.Water_Damage_Ticks">
+            <summary>
+            How quickly players dehydrate to death.
+            Lower values kill the player faster, higher values kill the player slower.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.PlayersConfigData.Virus_Default">
+            <summary>
+            Amount of immunity players spawn with. [0 to 100]
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.PlayersConfigData.Virus_Infect">
+            <summary>
+            When immunity is below this amount it will gradually begin depleting.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.PlayersConfigData.Virus_Use_Ticks">
+            <summary>
+            How quickly players immunity depletes when below Virus_Infect.
+            Lower values deplete faster, higher values deplete slower.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.PlayersConfigData.Virus_Damage_Ticks">
+            <summary>
+            How quickly players die at zero immunity.
+            Lower values kill the player faster, higher values kill the player slower.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.PlayersConfigData.Leg_Regen_Ticks">
+            <summary>
+            How quickly broken legs heal automatically.
+            Depends on Can_Fix_Legs.
+            Lower values heal faster, higher values heal slower.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.PlayersConfigData.Bleed_Damage_Ticks">
+            <summary>
+            How frequently players lose health while bleeding.
+            Lower values kill the player faster, higher values kill the player slower.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.PlayersConfigData.Bleed_Regen_Ticks">
+            <summary>
+            How quickly bleeding heals automatically.
+            Depends on Can_Stop_Bleeding.
+            Lower values heal faster, higher values heal slower.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.PlayersConfigData.Armor_Multiplier">
+            <summary>
+            Scales the amount of damage taken by players.
+            For example, 0.5 halves the amount of damage dealt to players.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.PlayersConfigData.Experience_Multiplier">
+            <summary>
+            Scales the amount of XP gained from all activities.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.PlayersConfigData.Detect_Radius_Multiplier">
+            <summary>
+            Scales the radius within zombies and animals will detect the player.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.PlayersConfigData.Ray_Aggressor_Distance">
+            <summary>
+            How close an attack is to a player to be considered aggressive.
+            For example, when a bullet passes within this distance of a player the shooter is
+            considered the aggressor.
+            </summary>
+        </member>
         <member name="F:SDG.Unturned.PlayersConfigData.Lose_Skills_PvP">
             <summary>
-            [0, 1] percentage of skill levels to retain after death.
+            Percentage [0 to 1] of skill levels to retain when killed by another player.
             </summary>
         </member>
         <member name="F:SDG.Unturned.PlayersConfigData.Lose_Skills_PvE">
             <summary>
-            [0, 1] percentage of skill levels to retain after death.
+            Percentage [0 to 1] of skill levels to retain when killed by the environment (e.g., zombies).
             </summary>
         </member>
         <member name="F:SDG.Unturned.PlayersConfigData.Lose_Skill_Levels_PvP">
             <summary>
-            Number of skill levels to remove after death.
+            Number of skill levels to remove when killed by another player.
             </summary>
         </member>
         <member name="F:SDG.Unturned.PlayersConfigData.Lose_Skill_Levels_PvE">
             <summary>
-            Number of skill levels to remove after death.
+            Number of skill levels to remove when killed by the environment (e.g., zombies).
             </summary>
         </member>
         <member name="F:SDG.Unturned.PlayersConfigData.Lose_Experience_PvP">
             <summary>
-            [0, 1] percentage of experience points to retain after death.
+            Percentage [0 to 1] of XP to retain when killed by another player.
             </summary>
         </member>
         <member name="F:SDG.Unturned.PlayersConfigData.Lose_Experience_PvE">
             <summary>
-            [0, 1] percentage of experience points to retain after death.
+            Percentage [0 to 1] of XP to retain when killed by the environment (e.g., zombies).
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.PlayersConfigData.Lose_Items_PvP">
+            <summary>
+            Percentage [0 to 1] chance to lose each inventory item when killed by another player.
+            Depends on Lose_Clothes_PvP because losing storage will drop contained items.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.PlayersConfigData.Lose_Items_PvE">
+            <summary>
+            Percentage [0 to 1] chance to lose each inventory item when killed by the environment (e.g., zombies).
+            Depends on Lose_Clothes_PvE because losing storage will drop contained items.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.PlayersConfigData.Lose_Clothes_PvP">
+            <summary>
+            If true, drop all clothing items when killed by another player.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.PlayersConfigData.Lose_Clothes_PvE">
+            <summary>
+            If true, drop all clothing items when killed by the environment (e.g., zombies).
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.PlayersConfigData.Lose_Weapons_PvP">
+            <summary>
+            If true, drop primary and secondary weapon when killed by another player.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.PlayersConfigData.Lose_Weapons_PvE">
+            <summary>
+            If true, drop primary and secondary weapon when killed by the environment (e.g., zombies).
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.PlayersConfigData.Can_Hurt_Legs">
+            <summary>
+            If false, players have no health loss from falling long distances.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.PlayersConfigData.Can_Break_Legs">
+            <summary>
+            If false, players cannot break their leg when falling long distances.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.PlayersConfigData.Can_Fix_Legs">
+            <summary>
+            If false, broken legs cannot automatically heal themselves after Leg_Regen_Ticks.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.PlayersConfigData.Can_Start_Bleeding">
+            <summary>
+            If false, damage cannot cause players to bleed.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.PlayersConfigData.Can_Stop_Bleeding">
+            <summary>
+            If false, bleeding cannot automatically heal itself after Bleed_Regen_Ticks.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.PlayersConfigData.Spawn_With_Max_Skills">
+            <summary>
+            Should all skills default to max level?
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.PlayersConfigData.Spawn_With_Stamina_Skills">
+            <summary>
+            Should cardio, diving, exercise, and parkour default to max level?
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.PlayersConfigData.Allow_Instakill_Headshots">
+            <summary>
+            Should guns with Instakill Headshots (snipers) bypass armor?
             </summary>
         </member>
         <member name="F:SDG.Unturned.PlayersConfigData.Allow_Per_Character_Saves">
@@ -4702,14 +5479,217 @@
             If true, players will be kicked if their skin color is too similar to one of the level's terrain colors.
             </summary>
         </member>
-        <member name="F:SDG.Unturned.EventsConfigData.Weather_Frequency_Multiplier">
+        <member name="F:SDG.Unturned.ObjectConfigData.Binary_State_Reset_Multiplier">
             <summary>
-            Each per-level custom weather frequency is multiplied by this value.
+            Scales how long before interactables like fridges automatically close.
             </summary>
+        </member>
+        <member name="F:SDG.Unturned.ObjectConfigData.Fuel_Reset_Multiplier">
+            <summary>
+            Scales how long before sources of fuel in the world are automatically partially refilled.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ObjectConfigData.Water_Reset_Multiplier">
+            <summary>
+            Scales how long before sources of water in the world are automatically partially refilled.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ObjectConfigData.Resource_Reset_Multiplier">
+            <summary>
+            Scales how long before trees, rocks, and bushes in the world grow back.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ObjectConfigData.Resource_Drops_Multiplier">
+            <summary>
+            Scales number of items dropped by resources like trees and rocks.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ObjectConfigData.Rubble_Reset_Multiplier">
+            <summary>
+            Scales how long before destructible objects (e.g., fences) automatically repair.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ObjectConfigData.Allow_Holiday_Drops">
+            <summary>
+            Should holiday-specific objects be able to drop special items?
+            For example, whether christmas presents contain guns.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.ObjectConfigData.Items_Obstruct_Tree_Respawns">
+            <summary>
+            Should barricades placed on tree stumps prevent the tree from growing back
+            while the server is running?
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.EventsConfigData.Rain_Frequency_Min">
+            <summary>
+            Minimum number of in-game days between legacy rain events. 
+            Only applicable for backwards compatibility with levels using the legacy weather features.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.EventsConfigData.Rain_Frequency_Max">
+            <summary>
+            Maximum number of in-game days between legacy rain events. 
+            Only applicable for backwards compatibility with levels using the legacy weather features.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.EventsConfigData.Rain_Duration_Min">
+            <summary>
+            Minimum number of in-game days a legacy rain event lasts. Zero turns off legacy rain.
+            Only applicable for backwards compatibility with levels using the legacy weather features.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.EventsConfigData.Rain_Duration_Max">
+            <summary>
+            Maximum number of in-game days a legacy rain event lasts. Zero turns off legacy rain.
+            Only applicable for backwards compatibility with levels using the legacy weather features.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.EventsConfigData.Snow_Frequency_Min">
+            <summary>
+            Minimum number of in-game days between legacy snow events. 
+            Only applicable for backwards compatibility with levels using the legacy weather features.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.EventsConfigData.Snow_Frequency_Max">
+            <summary>
+            Maximum number of in-game days between legacy snow events. 
+            Only applicable for backwards compatibility with levels using the legacy weather features.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.EventsConfigData.Snow_Duration_Min">
+            <summary>
+            Minimum number of in-game days a legacy snow event lasts. Zero turns off legacy snow.
+            Only applicable for backwards compatibility with levels using the legacy weather features.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.EventsConfigData.Snow_Duration_Max">
+            <summary>
+            Maximum number of in-game days a legacy snow event lasts. Zero turns off legacy snow.
+            Only applicable for backwards compatibility with levels using the legacy weather features.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.EventsConfigData.Weather_Frequency_Multiplier">
+             <summary>
+             Scales number of in-game days between weather events. (Levels using the newer weather
+             features can have multiple weather types with different frequencies.) If this was
+             accidentally set to a high value you can use the "/weather 0" command to reschedule
+             the next weather event.
+            
+             Lower values cause more frequent weather, higher values cause less frequent weather.
+             (Misnomer, sorry!)
+             </summary>
         </member>
         <member name="F:SDG.Unturned.EventsConfigData.Weather_Duration_Multiplier">
             <summary>
-            Each per-level custom weather duration is multiplied by this value.
+            Scales number of in-game days a weather event lasts. (Levels using the newer weather
+            features can have multiple weather types with different durations.)
+            Zero turns off weather entirely.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.EventsConfigData.Airdrop_Frequency_Min">
+            <summary>
+            Minimum number of in-game days between airdrops. Depends on Use_Airdrops.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.EventsConfigData.Airdrop_Frequency_Max">
+            <summary>
+            Maximum number of in-game days between airdrops. Depends on Use_Airdrops.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.EventsConfigData.Airdrop_Speed">
+            <summary>
+            How fast (in meters per second) the airdrop plane flies across the level.
+            Lower values give players more time to react and chase the airplane.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.EventsConfigData.Airdrop_Force">
+            <summary>
+            Amount of upward force applied to the carepackage, resisting gravity.
+            Higher values require players to wait longer for the carepackage.
+            (This isn't intuitive, sorry!)
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.EventsConfigData.Arena_Min_Players">
+            <summary>
+            Minimum number of teams needed to start an arena match.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.EventsConfigData.Arena_Compactor_Damage">
+            <summary>
+            Base damage per second while standing outside the arena field.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.EventsConfigData.Arena_Compactor_Extra_Damage_Per_Second">
+            <summary>
+            Accumulating additional damage per second while standing outside the arena field.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.EventsConfigData.Arena_Clear_Timer">
+            <summary>
+            How long (in seconds) between match ready and teleporting players into the arena.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.EventsConfigData.Arena_Finale_Timer">
+            <summary>
+            How long (in seconds) after a winner is announced to wait before restarting.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.EventsConfigData.Arena_Restart_Timer">
+            <summary>
+            How long (in seconds) to wait in intermission before starting the next match.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.EventsConfigData.Arena_Compactor_Delay_Timer">
+            <summary>
+            How long (in seconds) before first arena circle starts shrinking.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.EventsConfigData.Arena_Compactor_Pause_Timer">
+            <summary>
+            How long (in seconds) after arena circle finishes shrinking to start shrinking again.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.EventsConfigData.Use_Airdrops">
+            <summary>
+            Should airplanes fly over the level dropping carepackages?
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.EventsConfigData.Arena_Use_Compactor_Pause">
+            <summary>
+            If true, arena selects multiple smaller circles within the initial circle.
+            Otherwise, arena cricle shrinks toward its initial center.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.EventsConfigData.Arena_Compactor_Speed_Tiny">
+            <summary>
+            How quickly (in meters per second) the arena radius shrinks on "Tiny" size levels.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.EventsConfigData.Arena_Compactor_Speed_Small">
+            <summary>
+            How quickly (in meters per second) the arena radius shrinks on "Small" size levels.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.EventsConfigData.Arena_Compactor_Speed_Medium">
+            <summary>
+            How quickly (in meters per second) the arena radius shrinks on "Medium" size levels.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.EventsConfigData.Arena_Compactor_Speed_Large">
+            <summary>
+            How quickly (in meters per second) the arena radius shrinks on "Large" size levels.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.EventsConfigData.Arena_Compactor_Speed_Insane">
+            <summary>
+            How quickly (in meters per second) the arena radius shrinks on "Insane" size levels.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.EventsConfigData.Arena_Compactor_Shrink_Factor">
+            <summary>
+            Percentage [0 to 1] of arena circle radius retained when selecting next smaller circle.
+            Depends on Arena_Use_Compactor_Pause.
             </summary>
         </member>
         <member name="F:SDG.Unturned.UnityEventConfigData.Allow_Server_Messages">
@@ -4732,9 +5712,68 @@
             Should ClientTextChatMessenger be allowed to execute commands?
             </summary>
         </member>
+        <member name="F:SDG.Unturned.GameplayConfigData.Repair_Level_Max">
+            <summary>
+            Blueprints requiring a repair skill level higher than this cannot be crafted.
+            Restricts players from repairing higher-tier items.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.GameplayConfigData.Hitmarkers">
+            <summary>
+            Should a hit confirmation be shown when players deal damage?
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.GameplayConfigData.Crosshair">
+            <summary>
+            Should a crosshair be visible while holding a gun?
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.GameplayConfigData.Ballistics">
+            <summary>
+            Should bullets be affected by gravity and travel time?
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.GameplayConfigData.Chart">
+            <summary>
+            Should the player have permanent access to a "paper" map of the level even when they
+            don't have the associated in-game item?
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.GameplayConfigData.Satellite">
+            <summary>
+            Should the player have permanent access to a GPS map of the level even when they
+            don't have the associated in-game item?
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.GameplayConfigData.Compass">
+            <summary>
+            Should the player have permanent access to their compass heading HUD even when they
+            don't have the associated in-game item?
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.GameplayConfigData.Group_Map">
+            <summary>
+            Should group members and similar info be visible on the in-game map?
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.GameplayConfigData.Group_HUD">
+            <summary>
+            Should group member names be visible through walls?
+            </summary>
+        </member>
         <member name="F:SDG.Unturned.GameplayConfigData.Group_Player_List">
             <summary>
             Should group connections be shown on player list?
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.GameplayConfigData.Allow_Static_Groups">
+            <summary>
+            Should Steam clans/groups be enables as in-game groups?
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.GameplayConfigData.Allow_Dynamic_Groups">
+            <summary>
+            Should players be allowed to create in-game groups and invite members of the server?
             </summary>
         </member>
         <member name="F:SDG.Unturned.GameplayConfigData.Allow_Lobby_Groups">
@@ -4743,9 +5782,20 @@
             Requires Allow_Dynamic_Groups to be enabled as well.
             </summary>
         </member>
+        <member name="F:SDG.Unturned.GameplayConfigData.Allow_Shoulder_Camera">
+            <summary>
+            Should the third-person camera extend out to the side?
+            If false, the third-person camera is centered over your character.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.GameplayConfigData.Can_Suicide">
+            <summary>
+            Should players be allowed to kill themselves from the pause menu?
+            </summary>
+        </member>
         <member name="F:SDG.Unturned.GameplayConfigData.Friendly_Fire">
             <summary>
-            Is friendly-fire allowed?
+            Is friendly-fire within groups allowed?
             </summary>
         </member>
         <member name="F:SDG.Unturned.GameplayConfigData.Bypass_Buildable_Mobility">
@@ -4761,30 +5811,26 @@
         <member name="F:SDG.Unturned.GameplayConfigData.Allow_Freeform_Buildables">
             <summary>
             Can "freeform" barricades be placed in the world?
-            Defaults to true.
             </summary>
         </member>
         <member name="F:SDG.Unturned.GameplayConfigData.Allow_Freeform_Buildables_On_Vehicles">
             <summary>
             Can "freeform" barricades be placed on vehicles?
-            Defaults to true.
             </summary>
         </member>
         <member name="F:SDG.Unturned.GameplayConfigData.Enable_Damage_Flinch">
             <summary>
             If true, aim flinches away from center when damaged.
-            Defaults to true.
             </summary>
         </member>
         <member name="F:SDG.Unturned.GameplayConfigData.Enable_Explosion_Camera_Shake">
             <summary>
             If true, camera will shake near explosions. Can also be toned down client-side in Options menu.
-            Defaults to true.
             </summary>
         </member>
         <member name="F:SDG.Unturned.GameplayConfigData.Enable_Workstation_Requirements">
             <summary>
-            If true, crafting blueprints can require nearby workstations. Defaults to true.
+            If true, crafting blueprints can require nearby workstations.
             If false, only the backwards-compatibility "Heat Source" vanilla crafting tag can be required. This
             functions identically to the cooking-skill-also-requires-heat behavior from before.
             </summary>
@@ -4792,17 +5838,40 @@
         <member name="F:SDG.Unturned.GameplayConfigData.Disable_Motion_Sickness_Options">
             <summary>
             If true, client-side options like damage flinch, explosion camera shake, viewmodel bob are ignored.
-            Defaults to false.
             </summary>
         </member>
         <member name="F:SDG.Unturned.GameplayConfigData.Use_2D_Scope_Overlay">
             <summary>
             If true, hide viewmodel while aiming a dual-render scope and show a 2D overlay instead.
-            
-            Nelson 2025-07-04: adding this option for backwards compatibility with modded scopes that have a small
-            enough dual-render surface to zoom-*out* when aiming in.
-            
-            Defaults to false.
+            Useful for backwards compatibility with modded scopes that have a small enough
+            dual-render surface to zoom-*out* when aiming in.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.GameplayConfigData.Timer_Exit">
+            <summary>
+            How long (in seconds) before a player can leave the server through the pause menu.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.GameplayConfigData.Timer_Respawn">
+            <summary>
+            How long (in seconds) after death before a player can respawn.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.GameplayConfigData.Timer_Home">
+            <summary>
+            How long (in seconds) after death before a player can respawn at their bed.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.GameplayConfigData.Timer_Leave_Group">
+            <summary>
+            How long (in seconds) after a player requests to leave an in-game "dynamic" group
+            before they are actually removed. Gives group members time to take cover.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.GameplayConfigData.Max_Group_Members">
+            <summary>
+            Maximum number of players invitable to an in-game "dynamic" group.
+            Depends on Allow_Dynamic_Groups.
             </summary>
         </member>
         <member name="F:SDG.Unturned.GameplayConfigData.Explosion_Launch_Speed_Multiplier">
@@ -4847,12 +5916,106 @@
         </member>
         <member name="F:SDG.Unturned.GameplayConfigData.Viewmodel_AimingJumpLandMultiplier">
             <summary>
-            [0, 1] Scales how much the first-person move up and down while jumping/landing.
+            [0 to 1] Scales how much the first-person move up and down while jumping/landing.
             </summary>
         </member>
         <member name="F:SDG.Unturned.GameplayConfigData.Viewmodel_AimingMisalignmentMultiplier">
             <summary>
-            [0, 1] Scales how much the first-person arms move while ADS.
+            [0 to 1] Scales how much the first-person arms move while ADS.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.PlayConfigUtils.COMMENT_PREFIX">
+            <summary>
+            Each generated comment line is prefixed with this string.
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.PlayConfigUtils.GetSingleplayerConfigPathV2(System.Int32,SDG.Unturned.EGameMode)">
+            <summary>
+            Format absolute path to newer txt (UnturnedDat) config file.
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.PlayConfigUtils.GetSingleplayerConfigPathV1(System.Int32)">
+            <summary>
+            Format absolute path to older json serialized config file.
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.PlayConfigUtils.GetServerConfigPathV2(System.String)">
+            <summary>
+            Config path used for new servers.
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.PlayConfigUtils.GetServerConfigPathV2(System.String,SDG.Unturned.EGameMode)">
+            <summary>
+            Config path used for conversion from Config.json.
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.PlayConfigUtils.ParseServerConfig(SDG.Unturned.IDatDictionary,SDG.Unturned.ConfigData)">
+            <summary>
+            Fill server-related sections of config from dat file.
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.PlayConfigUtils.ParseModeConfig(SDG.Unturned.IDatDictionary,SDG.Unturned.ModeConfigData,System.Collections.Generic.Dictionary{System.Reflection.FieldInfo,System.Object})">
+            <summary>
+            Fill mode-related sections of config from dat file and gather overrides.
+            (for servers and singleplayer)
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.PlayConfigUtils.ParseCategory(SDG.Unturned.IDatDictionary,System.Object,System.Collections.Generic.Dictionary{System.Reflection.FieldInfo,System.Object})">
+            <summary>
+            Parses dictionary keys according to reflected fields in targetObject.
+            If overrides is valid, gathers which values were set. (used for mode config)
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.PlayConfigUtils.TryParseValueField(System.Reflection.FieldInfo,SDG.Unturned.IDatValue,System.Object@)">
+            <summary>
+            Attempt to parse user-supplied value from dat file according to field's reflected type.
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.PlayConfigUtils.TryParseArrayField(System.Reflection.FieldInfo,SDG.Unturned.IDatList,System.Array@)">
+            <summary>
+            Attempt to parse user-supplied list from dat file according to field's reflected type.
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.PlayConfigUtils.PopulateConfigFilePropertiesAndComments(SDG.Unturned.IEditableDatDictionary)">
+            <summary>
+            WARNING: This is called on a worker thread.
+            
+            Add empty dat values (if not yet added), and include code documentation
+            in their comments prefixed with COMMENT_PREFIX. User-supplied comments are preserved.
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.PlayConfigUtils.PopulateConfigFilePropertiesAndComments(SDG.Unturned.UnturnedCodeDocsHelper,SDG.Unturned.IEditableDatDictionary,System.Type,System.Object,System.Object,System.Object)">
+            <summary>
+            Add empty dat values for every field in category (if not yet added), and include code documentation
+            in their comments prefixed with COMMENT_PREFIX. User-supplied comments are preserved.
+            
+            In categories without easy/normal/hard split (server config), only normalObject is set.
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.PlayConfigUtils.ApplyServerConfigOverrides(SDG.Unturned.IEditableDatDictionary,System.Collections.Generic.Dictionary{System.Reflection.FieldInfo,System.Object})">
+            <summary>
+            For conversion from json file. Server-only.
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.PlayConfigUtils.ApplyModeConfigOverrides(SDG.Unturned.IEditableDatDictionary,System.Collections.Generic.Dictionary{System.Reflection.FieldInfo,System.Object})">
+            <summary>
+            For conversion from json file.
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.PlayConfigUtils.ApplyOverridesInCategory(SDG.Unturned.IEditableDatDictionary,System.Type,System.Collections.Generic.Dictionary{System.Reflection.FieldInfo,System.Object})">
+            <summary>
+            Set dat values for every field in category that has an override specified.
+            (Will not add values if not overridden.)
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.PlayConfigUtils.GatherServerModifiedFields(SDG.Unturned.ConfigData,SDG.Unturned.ConfigData,System.Collections.Generic.Dictionary{System.Reflection.FieldInfo,System.Object})">
+            <summary>
+            For conversion from json file. Find fields different from default in the server-related categories.
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.PlayConfigUtils.GatherModifiedFields(SDG.Unturned.ModeConfigData,SDG.Unturned.ModeConfigData,System.Collections.Generic.Dictionary{System.Reflection.FieldInfo,System.Object})">
+            <summary>
+            For conversion from json file. Find fields different from defaults in one of easy/normal/hard mode.
             </summary>
         </member>
         <member name="M:SDG.Unturned.HumanClothes.centerHeadEffect(UnityEngine.Transform,UnityEngine.Transform)">
@@ -7425,6 +8588,21 @@
             Once level is loaded the connect packet is sent to the server.
             </summary>
         </member>
+        <member name="F:SDG.Unturned.Provider.clUseLegacyJsonConfig">
+            <summary>
+            Anticipating some hosts will prefer the old format.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.Provider.clGameplayConfigNoEmptyValues">
+            <summary>
+            Remove empty strings, dictionaries, and lists.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.Provider.clGameplayConfigNoGeneratedComments">
+            <summary>
+            Remove generated comments.
+            </summary>
+        </member>
         <member name="E:SDG.Unturned.Provider.onCommenceShutdown">
             <summary>
             Event for plugins prior to kicking players during shutdown.
@@ -7612,9 +8790,9 @@
             If hosting a server, get the game traffic port.
             </summary>
         </member>
-        <member name="M:SDG.Unturned.Provider.resetConfig">
+        <member name="F:SDG.Unturned.Provider._modeConfigDataOverrides">
             <summary>
-            Called while running
+            Populated when parsing modeConfigData. Level overrides check whether a property is overridden here before applying.
             </summary>
         </member>
         <member name="M:SDG.Unturned.Provider.WriteConnectedMessage(SDG.NetPak.NetPakWriter,SDG.Unturned.SteamPlayer,SDG.Unturned.SteamPlayer)">
@@ -8922,6 +10100,16 @@
             If false, clouds are removed from the skybox.
             </summary>
         </member>
+        <member name="P:SDG.Unturned.LevelAsset.CloudOverridePrefab">
+            <summary>
+            If set, instantiate this particle system and set its material color to cloud color.
+            </summary>
+        </member>
+        <member name="P:SDG.Unturned.LevelAsset.CloudOverrideParticleSystemsPath.RateOverTimeScale">
+            <summary>
+            Multiplier for CloudOverrideParticlesPrefab emission rate according to level's clouds intensity.
+            </summary>
+        </member>
         <member name="F:SDG.Unturned.LevelAsset.terrainColorRules">
             <summary>
             Players are kicked from multiplayer if their skin color is within threshold of any of these rules.
@@ -9198,6 +10386,16 @@
             At low framerate deltaTime can be so high the spring explodes unless we use a fixed timestep.
             </summary>
         </member>
+        <member name="F:SDG.Unturned.AirdropAsset.barricadeRef">
+            <summary>
+            Interactable storage barricade to spawn at the drop position.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.AirdropAsset.model">
+            <summary>
+            Prefab to spawn falling from the aircraft.
+            </summary>
+        </member>
         <member name="T:SDG.Unturned.HousingEdge">
             <summary>
             Initially these were structs so that they would be adjacent in memory and therefore faster to iterate lots of them,
@@ -9450,16 +10648,6 @@
             <summary>
             Reflected attribute that was used to find this method.
             Contains extra information about how to call it.
-            </summary>
-        </member>
-        <member name="F:SDG.Unturned.AirdropAsset.barricadeRef">
-            <summary>
-            Interactable storage barricade to spawn at the drop position.
-            </summary>
-        </member>
-        <member name="F:SDG.Unturned.AirdropAsset.model">
-            <summary>
-            Prefab to spawn falling from the aircraft.
             </summary>
         </member>
         <member name="T:SDG.Unturned.OncePerFrameGuard">
@@ -11206,6 +12394,12 @@
             LevelBatching is currently only enabled if map creator has verified it works properly.
             </summary>
         </member>
+        <member name="F:SDG.Unturned.LevelInfoConfigData.Batching_Max_Texture_Size">
+            <summary>
+            Overrides maximum size of textures included in LevelBatching atlas.
+            When using this, be mindful the combined texture doesn't exceed some reasonable size (~4k?)
+            </summary>
+        </member>
         <member name="F:SDG.Unturned.LevelInfoConfigData.Enable_Clutter_Option">
             <summary>
             If true, map creator has verified the clutter option works as-expected.
@@ -12815,6 +14009,11 @@
         <member name="F:SDG.Unturned.PhysicsMaterialNetTable.idBitCount">
             <summary>
             Number of bits needed to replicate PhysicsMaterialNetId.
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.MenuPlayConfigUI.CreatePropertyWidgets">
+            <summary>
+            Creating all these elements is a bit slow, so we only do it once the menu is first opened.
             </summary>
         </member>
         <member name="T:SDG.Unturned.IExplosionDamageable">
@@ -14993,6 +16192,17 @@
             get through doorways, and short zombies (crawlers) could get underneath objects they shouldn't
             like gas tanks. Zombies were also stacking on top of eachother a bit too much.
             </summary>
+        </member>
+        <member name="M:SDG.Unturned.Zombie.PlayFootstepAudioClip(System.String)">
+            <summary>
+            Very similar to <see cref="M:SDG.Unturned.PlayerMovement.PlayFootstepAudioClip"/>.
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.Zombie.PlayLandAudioClip(System.String)">
+            <summary>
+            Very similar to <see cref="M:SDG.Unturned.PlayerMovement.PlayLandAudioClip"/>.
+            </summary>
+            <returns>True if sound played.</returns>
         </member>
         <member name="P:SDG.Unturned.Item.durability">
             <summary>
@@ -18913,11 +20123,12 @@
         <member name="F:SDG.Framework.Foliage.FoliageSystem.batches">
             <summary>
             Nelson 2025-04-22: instanced foliage rendering is a decent chunk of CPU time. In retrospect this seems like
-            an obvious optimization: Graphics.DrawMeshInstanced accepts up to 1023 instances per call. Each tile
-            groups instances in lists of up to 1023, but often isn't that high. Now, we collect instances until we
-            hit the 1023 limit. This is particularly useful for sparse variants like colored flowers.
+            an obvious optimization: Graphics.DrawMeshInstanced accepts up to 1023* instances per call. Each tile
+            groups instances in lists of up to 1023*, but often isn't that high. Now, we collect instances until we
+            hit the 1023* limit. This is particularly useful for sparse variants like colored flowers.
             With a consistent camera transform ("/copycameratransform") on an upcoming map remaster I went from between
             0.72-0.8 ms on my PC to 0.55-0.6 ms!
+            *Nelson 2025-07-14: refer to NON_UNIFORM_SCALE_INSTANCES_PER_BATCH.
             </summary>
         </member>
         <member name="F:SDG.Framework.Foliage.FoliageSystem.DRAW_OFFSETS">
@@ -18928,6 +20139,13 @@
             </summary>
         </member>
         <!-- Badly formed XML comment ignored for member "M:SDG.Framework.Foliage.FoliageSystem.FastMatrixCopy(System.Collections.Generic.List{UnityEngine.Matrix4x4},System.Int32,UnityEngine.Matrix4x4[],System.Int32,System.Int32)" -->
+        <member name="F:SDG.Framework.Foliage.FoliageSystem.NON_UNIFORM_SCALE_INSTANCES_PER_BATCH">
+            <summary>
+            Nelson 2025-07-14: although Graphics.DrawMeshInstanced accepts 1023 instances, it will split them into max
+            batches of [1, 511, 511] if shader does not have: #pragma instancing_options assumeuniformscaling
+            So, we might as well do our own splitting of batches to avoid batches of 1.
+            </summary>
+        </member>
         <member name="M:SDG.Framework.Foliage.FoliageSystem.DrawInstances(SDG.Framework.Foliage.FoliageInstancingBatchConfig@,UnityEngine.Matrix4x4[],System.Int32,UnityEngine.Camera)">
             <param name="matrixCount">Must be within [0, MAX_MATRICES_PER_BATCH] range.</param>
         </member>

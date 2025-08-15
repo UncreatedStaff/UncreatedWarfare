@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.ExceptionServices;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database.Abstractions;
@@ -398,6 +399,80 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
         }
     }
 
+    private void RegisterDefaultServices(ContainerBuilder bldr, LayoutInfo layoutInfo)
+    {
+        // Layout
+        IRegistrationBuilder<Layout, SimpleActivatorData, SingleRegistrationStyle> layoutRegistration
+            = bldr.Register<WarfareModule, Layout>(wf => wf.GetActiveLayout());
+
+        if (layoutInfo.LayoutType != typeof(Layout))
+        {
+            // child layout types
+            layoutInfo.LayoutType.ForEachBaseType((t, _) =>
+            {
+                if (t.IsAssignableFrom(typeof(Layout)))
+                    return false;
+
+                layoutRegistration.As(t);
+                return true;
+            });
+        }
+
+        layoutRegistration
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance()
+            .ExternallyOwned();
+
+        // ITeamManager
+        bldr.Register<WarfareModule, ITeamManager<Team>>(wf => wf.GetActiveLayout().TeamManager)
+            .SingleInstance();
+
+        Type[]? argTypes = null;
+        object[]? args = null;
+
+        // invoke LayoutConfigureServicesCallbackAttribute methods
+        layoutInfo.LayoutType.ForEachBaseType((t, _) =>
+        {
+            Array attributes = t.GetCustomAttributes(typeof(LayoutConfigureServicesCallbackAttribute), inherit: false);
+            for (int i = 0; i < attributes.Length; i++)
+            {
+                LayoutConfigureServicesCallbackAttribute attr = (LayoutConfigureServicesCallbackAttribute)attributes.GetValue(i);
+                if (string.IsNullOrEmpty(attr.MethodName))
+                    continue;
+
+                argTypes ??= [ typeof(ContainerBuilder), typeof(LayoutInfo) ];
+                MethodInfo? method = t.GetMethod(
+                    attr.MethodName,
+                    BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly,
+                    null,
+                    CallingConventions.Any,
+                    argTypes,
+                    null
+                );
+                if (method == null)
+                {
+                    _logger.LogWarning($"Unknown method \"{attr.MethodName}\" from LayoutConfigureServicesCallback attribute on layout type {t.FullName}.");
+                    continue;
+                }
+
+                args ??= [ bldr, layoutInfo ];
+
+                try
+                {
+                    method.Invoke(null, args);
+                }
+                catch (TargetInvocationException invEx) when (invEx.InnerException != null)
+                {
+                    _logger.LogError(invEx.InnerException, $"Error thrown by {attr.MethodName} callback on layout type {t.FullName}.");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, $"Error invoking {attr.MethodName} callback on layout type {t.FullName}.");
+                }
+            }
+        });
+    }
+
     /// <summary>
     /// Loads all instances of <see cref="ILayoutServiceConfigurer"/> from the 'Services' list in the config and creates a lifetime scope builder using them.
     /// </summary>
@@ -448,6 +523,8 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
         return bldr =>
         {
             IServiceProvider serviceProvider = _warfare.ServiceProvider.Resolve<IServiceProvider>();
+
+            RegisterDefaultServices(bldr, layoutInfo);
 
             // register components
             for (int i = 0; i < componentTypes.Count; i++)

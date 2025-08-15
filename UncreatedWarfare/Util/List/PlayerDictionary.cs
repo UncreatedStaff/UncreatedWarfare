@@ -61,6 +61,11 @@ public class PlayerDictionary<TValue> :
         _dictionary = new Dictionary<ulong, TValue>(capacity);
     }
 
+    public PlayerDictionary(IDictionary<ulong, TValue> dictionary)
+    {
+        _dictionary = new Dictionary<ulong, TValue>(dictionary);
+    }
+
     /// <summary>
     /// Get the value associated with the given player.
     /// </summary>
@@ -329,8 +334,10 @@ public class PlayerDictionary<TValue> :
 
     #region IDictionary stuff
 
+    public Dictionary<ulong, TValue>.Enumerator GetEnumerator() => _dictionary.GetEnumerator();
+
     /// <inheritdoc />
-    public IEnumerator<KeyValuePair<ulong, TValue>> GetEnumerator() => _dictionary.GetEnumerator();
+    IEnumerator<KeyValuePair<ulong, TValue>> IEnumerable<KeyValuePair<ulong, TValue>>.GetEnumerator() => _dictionary.GetEnumerator();
 
     /// <summary>Not supported</summary>
     /// <exception cref="NotSupportedException"/>

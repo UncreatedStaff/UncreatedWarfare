@@ -916,17 +916,9 @@ public sealed class WarfareModule
         bldr.RegisterRpcType<DiscordUserService>()
             .SingleInstance();
 
-        // Layouts
-        bldr.Register(_ => GetActiveLayout())
-            .AsSelf()
-            .ExternallyOwned();
-
         bldr.RegisterType<LayoutPhaseEventListenerProvider>()
             .As<IEventListenerProvider>()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
-
-        // Active ILayoutPhase
-        bldr.Register(_ => GetActiveLayout().ActivePhase ?? throw new InvalidOperationException("There is not a phase currently loaded."));
 
         // FOBs
         bldr.RegisterType<DeploymentService>()
@@ -988,10 +980,6 @@ public sealed class WarfareModule
         bldr.RegisterType<ProjectileSolver>()
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
-
-        // Active ITeamManager
-        bldr.Register(_ => GetActiveLayout().TeamManager)
-            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
 
         // Tweaks
         bldr.RegisterType<FobPlacementTweaks>()
