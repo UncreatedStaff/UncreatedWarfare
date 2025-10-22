@@ -166,26 +166,30 @@ public class UnityLoopTicker<TState> : ILoopTicker<TState>
     {
         _isDisposed = true;
 
+        Coroutine? coroutine = _coroutine;
+        MonoBehaviour? component = _component;
+        if (coroutine != null && component is not null)
+        {
+            _component = null;
+            _coroutine = null;
+        }
         if (GameThread.IsCurrent)
         {
-            if (_coroutine != null && _component != null)
-                _component.StopCoroutine(_coroutine);
-
-            _coroutine = null;
-            _component = null;
+            if (coroutine != null && component != null)
+                component.StopCoroutine(coroutine);
         }
         else
         {
-            UniTask.Create(async () =>
+            if (coroutine != null && component is not null)
             {
-                await UniTask.SwitchToMainThread();
+                UniTask.Create(async () =>
+                {
+                    await UniTask.SwitchToMainThread();
 
-                if (_coroutine != null && _component != null)
-                    _component.StopCoroutine(_coroutine);
-
-                _coroutine = null;
-                _component = null;
-            });
+                    if (coroutine != null && component != null)
+                        component.StopCoroutine(coroutine);
+                });
+            }
         }
 
         if (disposing)

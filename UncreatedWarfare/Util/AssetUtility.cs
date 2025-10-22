@@ -460,21 +460,40 @@ public static class AssetUtility
         }
     }
 #endif
-    public static void SyncAssetsFromOrigin(AssetOrigin origin) => SyncAssetsFromOriginMethod?.Invoke(origin);
+    public static void SyncAssetsFromOrigin(AssetOrigin origin)
+    {
+        //Assets.AddAssetsFromOriginToCurrentMapping(origin);
+    }
 
     /// <summary>
     /// Synchronously loads an asset file.
     /// </summary>
-    /// <returns>A list of all errors.</returns>
-    /// <exception cref="MemberAccessException">Reflection failure.</exception>
-    public static List<string>? LoadAsset(string filePath, AssetOrigin origin)
+    /// <returns>A list of all errors.</returns>=
+    public static string[]? LoadAsset(string filePath, AssetOrigin origin)
     {
-        List<string> errors = new List<string>();
-        (LoadFile ?? throw new MemberAccessException("LoadFile not created."))(filePath, origin, errors);
-        return errors.Count == 0 ? null : errors;
+        string[]? errorRtn = null;
+        List<string> errors = ListPool<string>.claim();
+        try
+        {
+            //AssetsWorker.AssetDefinition def;
+            //def.path = filePath;
+            //def.origin = origin;
+            //def.assetErrors = errors;
+            //GetData(filePath, out def.assetData, errors, out def.hash, out def.translationData, out def.fallbackTranslationData);
+            //Assets.LoadFile(def);
+            //if (errors.Count > 0)
+            //    errorRtn = errors.ToArray();
+        }
+        finally
+        {
+            ListPool<string>.release(errors);
+        }
+
+        return errorRtn;
     }
 
-    private static readonly DatParser _parser = new DatParser();
+    private static readonly DatParser Parser = new DatParser();
+
     private static void GetData(string filePath, out IDatDictionary assetData, List<string>? assetErrors, out byte[] hash, out IDatDictionary? translationData, out IDatDictionary? fallbackTranslationData)
     {
         GameThread.AssertCurrent();
@@ -484,10 +503,10 @@ public static class AssetUtility
         using SHA1Stream sha1Fs = new SHA1Stream(fs);
         using StreamReader input = new StreamReader(sha1Fs);
 
-        assetData = _parser.Parse(input);
-        if (_parser.ErrorMessages is { Count: > 0 } && assetErrors != null)
+        assetData = Parser.Parse(input);
+        if (Parser.ErrorMessages is { Count: > 0 } && assetErrors != null)
         {
-            assetErrors.AddRange(_parser.ErrorMessages);
+            assetErrors.AddRange(Parser.ErrorMessages);
         }
 
         hash = sha1Fs.Hash;
@@ -510,108 +529,9 @@ public static class AssetUtility
 
         using FileStream fileStream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
         using StreamReader inputReader = new StreamReader(fileStream);
-        return _parser.Parse(inputReader);
+        return Parser.Parse(inputReader);
     }
 
-    private static readonly Action<string, AssetOrigin, List<string>>? LoadFile;
-    private static readonly Action<AssetOrigin>? SyncAssetsFromOriginMethod;
-    static AssetUtility()
-    {
-        SyncAssetsFromOriginMethod = (Action<AssetOrigin>)typeof(Assets)
-            .GetMethod("AddAssetsFromOriginToCurrentMapping", BindingFlags.Static | BindingFlags.NonPublic)?
-            .CreateDelegate(typeof(Action<AssetOrigin>))!;
-        if (SyncAssetsFromOriginMethod == null)
-        {
-            WarfareModule.Singleton.GlobalLogger.LogError("Assets.AddAssetsFromOriginToCurrentMapping not found or arguments changed.");
-            return;
-        }
-
-        Type? assetInfo = typeof(Assets).Assembly.GetType("SDG.Unturned.AssetsWorker+AssetDefinition", false, false);
-        if (assetInfo == null)
-        {
-            WarfareModule.Singleton.GlobalLogger.LogError("AssetsWorker.AssetDefinition not found.");
-            return;
-        }
-
-        MethodInfo? loadFileMethod = typeof(Assets).GetMethod("LoadFile", BindingFlags.NonPublic | BindingFlags.Static);
-        if (loadFileMethod == null)
-        {
-            WarfareModule.Singleton.GlobalLogger.LogError("Assets.LoadFile not found.");
-            return;
-        }
-
-        FieldInfo? pathField = assetInfo.GetField("path", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-        FieldInfo? hashField = assetInfo.GetField("hash", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-        FieldInfo? assetDataField = assetInfo.GetField("assetData", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-        FieldInfo? translationDataField = assetInfo.GetField("translationData", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-        FieldInfo? fallbackTranslationDataField = assetInfo.GetField("fallbackTranslationData", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-        FieldInfo? assetErrorsField = assetInfo.GetField("assetErrors", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-        FieldInfo? originField = assetInfo.GetField("origin", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-        if (pathField == null || hashField == null || assetDataField == null || translationDataField == null || fallbackTranslationDataField == null || assetErrorsField == null || originField == null)
-        {
-            WarfareModule.Singleton.GlobalLogger.LogError("Missing field in AssetsWorker.AssetDefinition.");
-            return;
-        }
-
-        DynamicMethodInfo<Action<string, AssetOrigin, List<string>>> dynMethod = DynamicMethodHelper.Create<Action<string, AssetOrigin, List<string>>>("LoadAsset", typeof(AssetUtility), initLocals: false);
-
-#if DEBUG
-        IOpCodeEmitter emit = dynMethod.GetEmitter(debuggable: true);
-#else
-        IOpCodeEmitter emit = dynMethod.GetEmitter(debuggable: false);
-#endif
-        dynMethod.DefineParameter(0, ParameterAttributes.None, "path");
-        dynMethod.DefineParameter(1, ParameterAttributes.None, "assetOrigin");
-
-        LocalBuilder lclData = emit.DeclareLocal(typeof(IDatDictionary));
-
-        LocalBuilder lclHash = emit.DeclareLocal(typeof(byte[]));
-        LocalBuilder lclTranslationData = emit.DeclareLocal(typeof(IDatDictionary));
-        LocalBuilder lclFallbackTranslationData = emit.DeclareLocal(typeof(IDatDictionary));
-        LocalBuilder lclAssetInfo = emit.DeclareLocal(assetInfo);
-
-        emit.LoadArgument(0)
-            .LoadLocalAddress(lclData)
-            .LoadArgument(2)
-            .LoadLocalAddress(lclHash)
-            .LoadLocalAddress(lclTranslationData)
-            .LoadLocalAddress(lclFallbackTranslationData)
-            .Invoke(Accessor.GetMethod(GetData)!);
-
-        emit.LoadLocalAddress(lclAssetInfo)
-            .LoadArgument(0)
-            .SetInstanceFieldValue(pathField);
-
-        emit.LoadLocalAddress(lclAssetInfo)
-            .LoadLocalValue(lclHash)
-            .SetInstanceFieldValue(hashField);
-
-        emit.LoadLocalAddress(lclAssetInfo)
-            .LoadLocalValue(lclData)
-            .SetInstanceFieldValue(assetDataField);
-
-        emit.LoadLocalAddress(lclAssetInfo)
-            .LoadLocalValue(lclTranslationData)
-            .SetInstanceFieldValue(translationDataField);
-
-        emit.LoadLocalAddress(lclAssetInfo)
-            .LoadLocalValue(lclFallbackTranslationData)
-            .SetInstanceFieldValue(fallbackTranslationDataField);
-
-        emit.LoadLocalAddress(lclAssetInfo)
-            .LoadArgument(2)
-            .SetInstanceFieldValue(assetErrorsField);
-
-        emit.LoadLocalAddress(lclAssetInfo)
-            .LoadArgument(1)
-            .SetInstanceFieldValue(originField);
-
-        emit.LoadLocalValue(lclAssetInfo)
-            .Invoke(loadFileMethod)
-            .Return();
-
-        LoadFile = dynMethod.CreateDelegate();
-    }
     private static class GetAssetCategoryCache<TAsset> where TAsset : Asset
     {
         public static readonly EAssetType Category = GetAssetCategory(typeof(TAsset));

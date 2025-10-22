@@ -1,4 +1,4 @@
-﻿using DanielWillett.ReflectionTools;
+using DanielWillett.ReflectionTools;
 using SDG.NetTransport;
 using System;
 using System.Globalization;
@@ -36,7 +36,9 @@ public class ImageProgressBar : ILabel
     }
 
     public ImageProgressBar(string rootPath)
-        : this(rootPath, "./Background", "./Foreground", "./Label", "./", DefaultGetLogicName) { }
+        : this(rootPath, DefaultGetLogicName) { }
+    public ImageProgressBar(string rootPath, Func<float, ImageProgressBar, string> logicNameAccessor)
+        : this(rootPath, "./Background", "./Foreground", "./Label", "./", logicNameAccessor) { }
     public ImageProgressBar(string rootPath, string? backgroundPath, string? foregroundPath, string? labelPath, string? logicBasePath)
         : this(rootPath, backgroundPath, foregroundPath, labelPath, logicBasePath, DefaultGetLogicName) { }
     public ImageProgressBar(string rootPath, string? backgroundPath, string? foregroundPath, string? labelPath, string? logicBasePath, Func<float, ImageProgressBar, string> logicNameAccessor)

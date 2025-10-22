@@ -16,18 +16,18 @@
     <PackageReference Include="NUnit.Analyzers" Version="4.7.0" />
     <PackageReference Include="NUnit3TestAdapter" Version="5.0.0" />
     <PackageReference Include="coverlet.collector" Version="6.0.4" />
-    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="4.7.1" NoWarn="NU1605" />
+    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.0.0" NoWarn="NU1605" />
 
-    <PackageReference Include="Autofac" Version="8.1.1" />
+    <PackageReference Include="Autofac" Version="8.4.0" />
     <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="10.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="8.0.2" />
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="9.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.10" />
     <PackageReference Include="DanielWillett.StackCleaner" Version="1.5.1" />
-    <PackageReference Include="DanielWillett.ModularRpcs" Version="1.0.0-prerelease21" />
+    <PackageReference Include="DanielWillett.ModularRpcs" Version="1.0.0-prerelease22" />
     <PackageReference Include="NetEscapades.Configuration.Yaml" Version="3.1.0" />
-    <PackageReference Include="System.Text.Json" Version="8.0.5" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.1" />
+    <PackageReference Include="System.Text.Json" Version="9.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.10" />
 
     <PackageReference Include="JetBrains.Annotations" Version="2018.2.1" Aliases="JetBrains" />
 
@@ -35,7 +35,7 @@
 	    <HintPath>$(SolutionDir)Libraries/UniTask.NetCore/UniTask.dll</HintPath>
     </Reference>
 
-    <PackageReference Include="Uncreated.UI" Version="[1.3.4,)" />
+    <PackageReference Include="Uncreated.UI" Version="[1.3.5,)" />
   </ItemGroup>
 
   <ItemGroup>

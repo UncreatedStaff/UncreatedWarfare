@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace Uncreated.Warfare.Players;
@@ -47,6 +47,12 @@ public interface IPlayerVoteManager
     /// </summary>
     /// <exception cref="InvalidOperationException">Not voting.</exception>
     PlayerVoteState GetVoteState(CSteamID player);
+
+    /// <summary>
+    /// Gets the number of votes in a certain state.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Not voting.</exception>
+    int GetVoteCount(PlayerVoteState vote);
 
     /// <summary>
     /// Registers a player's vote with the system, overriding their current vote if they've already voted.

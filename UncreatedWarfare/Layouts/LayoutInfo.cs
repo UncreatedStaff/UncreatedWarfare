@@ -9,6 +9,7 @@ namespace Uncreated.Warfare.Layouts;
 /// </summary>
 public class LayoutInfo : IDisposable
 {
+    private int _disposed;
     /// <summary>
     /// Type of <see cref="Layouts.Layout"/> to create.
     /// </summary>
@@ -35,6 +36,12 @@ public class LayoutInfo : IDisposable
     public required string DisplayName { get; init; }
 
     /// <summary>
+    /// If this layout is a special seeding layout, which can be activated and deactivated randomly when player count changes.
+    /// </summary>
+    /// <remarks>By default, all layouts in the <c>~/Seeding/**</c> folder are seeding layouts.</remarks>
+    public required bool IsSeeding { get; init; }
+
+    /// <summary>
     /// Binded configuration.
     /// </summary>
     public LayoutInfoConfiguration Configuration { get; } = new LayoutInfoConfiguration();
@@ -42,6 +49,9 @@ public class LayoutInfo : IDisposable
     /// <inheritdoc />
     public void Dispose()
     {
+        if (Interlocked.Exchange(ref _disposed, 1) == 1)
+            return;
+
         if (Layout is IDisposable disposable)
             disposable.Dispose();
     }

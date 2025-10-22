@@ -12,6 +12,55 @@ public class HudManager
     private readonly ILogger<HudManager> _logger;
     private int _handleCount;
 
+    // ReSharper disable once ClassNeverInstantiated.Local
+    [PlayerComponent]
+    private sealed class PluginVotingPlayerComponent : IPlayerComponent
+    {
+        public bool IsPluginVoting;
+        
+        /// <inheritdoc />
+        public WarfarePlayer Player { get; set; } = null!;
+
+        /// <inheritdoc />
+        public void Init(IServiceProvider serviceProvider, bool isOnJoin)
+        {
+            if (isOnJoin)
+                IsPluginVoting = false;
+        }
+    }
+
+    public void SetIsPluginVoting(WarfarePlayer player, bool value)
+    {
+        PluginVotingPlayerComponent comp = player.Component<PluginVotingPlayerComponent>();
+        if (comp.IsPluginVoting == value)
+            return;
+
+        comp.IsPluginVoting = value;
+        try
+        {
+            OnPluginVotingUpdated?.Invoke(player, value);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error invoking OnPluginVotingUpdated.");
+        }
+    }
+
+    public void SetAllIsPluginVoting(bool value)
+    {
+        foreach (WarfarePlayer player in _playerService.OnlinePlayers)
+        {
+            SetIsPluginVoting(player, value);
+        }
+    }
+
+    public bool GetIsPluginVoting(WarfarePlayer player)
+    {
+        return player.Component<PluginVotingPlayerComponent>().IsPluginVoting;
+    }
+
+    public event Action<WarfarePlayer, bool>? OnPluginVotingUpdated;
+
     public HudManager(WarfareModule module, IPlayerService playerService, ILogger<HudManager> logger)
     {
         _module = module;

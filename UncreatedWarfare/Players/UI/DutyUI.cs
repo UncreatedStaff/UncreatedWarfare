@@ -1,17 +1,18 @@
 using DanielWillett.ReflectionTools;
 using SDG.Framework.Utilities;
-using System;
 using Uncreated.Framework.UI;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Players.UI;
 
 public class DutyUI : UnturnedUI, IHudUIListener
 {
     private readonly IPlayerService _playerService;
+    private readonly HudManager _hudManager;
     private readonly ModerationTranslations _translations;
     private bool _subbedUpdate;
 
@@ -23,15 +24,39 @@ public class DutyUI : UnturnedUI, IHudUIListener
 
     private readonly UnturnedUIElement _positionVote = new UnturnedUIElement("LogicPositionVote");
 
-    public DutyUI(AssetConfiguration assetConfig,
+    private bool IsPluginVoting
+    {
+        get;
+        set
+        {
+            field = value;
+            if (GameThread.IsCurrent)
+            {
+                OnUpdate();
+            }
+            else
+            {
+                UniTask.Create(async () =>
+                {
+                    await UniTask.SwitchToMainThread();
+                    OnUpdate();
+                });
+            }
+        }
+    }
+
+    public DutyUI(
+        AssetConfiguration assetConfig,
         ILoggerFactory loggerFactory,
         IPlayerService playerService,
-        TranslationInjection<ModerationTranslations> translations
-        )
-        : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:DutyUI"), staticKey: true)
+        TranslationInjection<ModerationTranslations> translations,
+        HudManager hudManager
+    ) : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:DutyUI"), staticKey: true)
     {
         _playerService = playerService;
+        _hudManager = hudManager;
         _translations = translations.Value;
+        _hudManager.OnPluginVotingUpdated += PluginVotingUpdated;
         if (ChatManager.voteAllowed)
         {
             _getIsVoting ??= Accessor.GenerateStaticGetter<ChatManager, bool>("isVoting", throwOnError: false);
@@ -42,6 +67,7 @@ public class DutyUI : UnturnedUI, IHudUIListener
 
     protected override void OnDisposing()
     {
+        _hudManager.OnPluginVotingUpdated -= PluginVotingUpdated;
         if (_subbedUpdate)
         {
             TimeUtility.updated -= OnUpdate;
@@ -49,9 +75,14 @@ public class DutyUI : UnturnedUI, IHudUIListener
         }
     }
 
+    private void PluginVotingUpdated(WarfarePlayer player, bool isPluginVoting)
+    {
+        IsPluginVoting = isPluginVoting;
+    }
+
     private void OnUpdate()
     {
-        if (_getIsVoting == null || !_getIsVoting())
+        if (!IsPluginVoting && (_getIsVoting == null || !_getIsVoting()))
         {
             if (!_votePosition)
                 return;

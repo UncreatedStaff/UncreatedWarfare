@@ -2,7 +2,6 @@ using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
@@ -1097,15 +1096,15 @@ public class AssetLinkTypeConverter : TypeConverter
         _type = type;
     }
 
-    public override bool CanConvertTo(ITypeDescriptorContext context, Type destinationType)
+    public override bool CanConvertTo(ITypeDescriptorContext? context, Type? destinationType)
     {
         return destinationType == typeof(string)
                || destinationType == typeof(ushort)
                || destinationType == typeof(Guid)
-               || destinationType.IsGenericType && destinationType.GetGenericTypeDefinition() == typeof(IAssetLink<>);
+               || destinationType != null && destinationType.IsGenericType && destinationType.GetGenericTypeDefinition() == typeof(IAssetLink<>);
     }
 
-    public override bool CanConvertFrom(ITypeDescriptorContext context, Type sourceType)
+    public override bool CanConvertFrom(ITypeDescriptorContext? context, Type sourceType)
     {
         return sourceType == typeof(string)
                || sourceType == typeof(ushort)
@@ -1114,7 +1113,7 @@ public class AssetLinkTypeConverter : TypeConverter
                || base.CanConvertFrom(context, sourceType);
     }
 
-    public override bool IsValid(ITypeDescriptorContext context, object value)
+    public override bool IsValid(ITypeDescriptorContext? context, object? value)
     {
         if (value is string str)
             return AssetLink.TryParse<Asset>(str, out _);
@@ -1122,7 +1121,7 @@ public class AssetLinkTypeConverter : TypeConverter
         return value is Guid or IAssetLink<Asset> or ushort;
     }
 
-    public override object ConvertFrom(ITypeDescriptorContext context, CultureInfo culture, object? value)
+    public override object ConvertFrom(ITypeDescriptorContext? context, CultureInfo? culture, object value)
     {
         Type? assetType = _type.IsConstructedGenericType ? _type.GetGenericArguments()[0] : null;
 
@@ -1143,14 +1142,14 @@ public class AssetLinkTypeConverter : TypeConverter
         };
     }
 
-    public override object ConvertTo(ITypeDescriptorContext context, CultureInfo culture, object value, Type destinationType)
+    public override object ConvertTo(ITypeDescriptorContext? context, CultureInfo? culture, object? value, Type destinationType)
     {
         if (value is not IAssetLink<Asset> asset)
             throw GetConvertToException(value, destinationType);
 
         if (destinationType == typeof(string))
         {
-            return asset.ToString();
+            return asset.ToString()!;
         }
 
         if (destinationType == typeof(Guid))
@@ -1189,7 +1188,7 @@ public class AssetLinkJsonFactory : JsonConverterFactory
                 if (genTypes.Length == 0)
                     return new AssetLinkJsonConverter<Asset>();
 
-                return (JsonConverter)Activator.CreateInstance(typeof(AssetLinkJsonConverter<>).MakeGenericType());
+                return (JsonConverter?)Activator.CreateInstance(typeof(AssetLinkJsonConverter<>).MakeGenericType())!;
             }
         );
     }

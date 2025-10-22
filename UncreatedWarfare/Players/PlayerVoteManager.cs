@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using Uncreated.Warfare.Events;
@@ -15,6 +15,12 @@ public class PlayerVoteManager : IPlayerVoteManager, IDisposable, IEventListener
     private readonly ILoopTickerFactory _loopTickerFactory;
     private readonly ILogger<PlayerVoteManager> _logger;
     private readonly object _voteSync;
+
+    private bool _disposed;
+
+    private int _noVotes;
+    private int _yesVotes;
+    private int _votes;
 
     private CurrentVoteInfo _voteInfo;
 
@@ -61,7 +67,11 @@ public class PlayerVoteManager : IPlayerVoteManager, IDisposable, IEventListener
 
     public async UniTask StartVoteAsync(VoteSettings settings, Action<IVoteResult>? callback, CancellationToken startCancellationToken = default)
     {
+        AssertNotDisposed();
+
         await UniTask.SwitchToMainThread(startCancellationToken);
+
+        AssertNotDisposed();
 
         lock (_voteSync)
         {
@@ -106,7 +116,9 @@ public class PlayerVoteManager : IPlayerVoteManager, IDisposable, IEventListener
                         UniTask.Create(async () =>
                         {
                             await UniTask.SwitchToMainThread();
-                            ((PlayerVoteManager)state).CancelVote();
+                            PlayerVoteManager me = (PlayerVoteManager)state;
+                            if (!me._disposed)
+                                me.CancelVote();
                         });
                     }, this);
                 }
@@ -135,7 +147,11 @@ public class PlayerVoteManager : IPlayerVoteManager, IDisposable, IEventListener
 
     public async UniTask EndVoteAsync(CancellationToken token = default, bool cancelled = false)
     {
+        AssertNotDisposed();
+
         await UniTask.SwitchToMainThread(token);
+
+        AssertNotDisposed();
 
         if (cancelled)
         {
@@ -149,6 +165,12 @@ public class PlayerVoteManager : IPlayerVoteManager, IDisposable, IEventListener
                 EndVoteIntl();
             }
         }
+    }
+
+    private void AssertNotDisposed()
+    {
+        if (_disposed)
+            throw new ObjectDisposedException(nameof(PlayerVoteManager));
     }
 
     private void EndVoteIntl()
@@ -223,6 +245,10 @@ public class PlayerVoteManager : IPlayerVoteManager, IDisposable, IEventListener
         VoteStart = DateTime.MinValue;
         VoteEnd = DateTime.MinValue;
 
+        _votes = 0;
+        _noVotes = 0;
+        _yesVotes = 0;
+
         Interlocked.Exchange(ref _voteInfo.Timer, null)?.Dispose();
         if (_voteInfo.Container.SettingsIntl is { OwnsDisplay: true, Display: IDisposable disposable })
         {
@@ -239,8 +265,11 @@ public class PlayerVoteManager : IPlayerVoteManager, IDisposable, IEventListener
         _voteInfo = default;
     }
 
+    /// <inheritdoc />
     public PlayerVoteState GetVoteState(CSteamID player)
     {
+        AssertNotDisposed();
+
         ConcurrentDictionary<ulong, PlayerVoteState>? states = _voteInfo.PendingVotes;
         if (states == null || !IsVoting)
         {
@@ -250,7 +279,59 @@ public class PlayerVoteManager : IPlayerVoteManager, IDisposable, IEventListener
         return states.GetValueOrDefault(player.m_SteamID, PlayerVoteState.Unanswered);
     }
 
+    /// <inheritdoc />
+    public int GetVoteCount(PlayerVoteState vote)
+    {
+        AssertNotDisposed();
+        AssertVoting();
+        return vote switch
+        {
+            PlayerVoteState.Unanswered => Provider.clients.Count - _votes,
+            PlayerVoteState.No => _noVotes,
+            PlayerVoteState.Yes => _yesVotes,
+            _ => 0
+        };
+    }
+
+    /// <inheritdoc />
     public PlayerVoteState RegisterVote(CSteamID player, PlayerVoteState vote)
+    {
+        AssertNotDisposed();
+
+        PlayerVoteState old = UpdatePlayerVote(player, vote);
+        if (old == vote)
+            return old;
+
+        switch (old)
+        {
+            case PlayerVoteState.Yes:
+                Interlocked.Decrement(ref _yesVotes);
+                break;
+            case PlayerVoteState.No:
+                Interlocked.Decrement(ref _noVotes);
+                break;
+            case PlayerVoteState.Unanswered:
+                Interlocked.Increment(ref _votes);
+                break;
+        }
+
+        switch (vote)
+        {
+            case PlayerVoteState.Yes:
+                Interlocked.Increment(ref _yesVotes);
+                break;
+            case PlayerVoteState.No:
+                Interlocked.Increment(ref _noVotes);
+                break;
+            case PlayerVoteState.Unanswered:
+                Interlocked.Decrement(ref _votes);
+                break;
+        }
+
+        return old;
+    }
+
+    private PlayerVoteState UpdatePlayerVote(CSteamID player, PlayerVoteState vote)
     {
         ConcurrentDictionary<ulong, PlayerVoteState>? states = _voteInfo.PendingVotes;
         IVoteDisplay? voteDisplay = _voteInfo.Container?.SettingsIntl.Display;
@@ -265,23 +346,9 @@ public class PlayerVoteManager : IPlayerVoteManager, IDisposable, IEventListener
             if (!states.TryRemove(player.m_SteamID, out old))
                 old = PlayerVoteState.Unanswered;
         }
-        else
+        else if (!states.AddOrUpdate(player.m_SteamID, vote, out old))
         {
-            PlayerVoteState other = vote switch
-            {
-                PlayerVoteState.Yes => PlayerVoteState.No,
-                PlayerVoteState.No => PlayerVoteState.Yes,
-                _ => throw new ArgumentOutOfRangeException(nameof(vote))
-            };
-
-            if (!states.TryUpdate(player.m_SteamID, vote, other))
-            {
-                old = states.TryAdd(player.m_SteamID, vote) ? PlayerVoteState.Unanswered : vote;
-            }
-            else
-            {
-                old = other;
-            }
+            old = PlayerVoteState.Unanswered;
         }
 
         if (voteDisplay == null || old == vote)
@@ -420,6 +487,7 @@ public class PlayerVoteManager : IPlayerVoteManager, IDisposable, IEventListener
 
     public void Dispose()
     {
+        _disposed = true;
         lock (_voteSync)
         {
             CleanupVote();

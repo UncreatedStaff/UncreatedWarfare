@@ -92,16 +92,70 @@
             helper of create add UniTaskVoid to delegate.
             </summary>
         </member>
+        <member name="M:Cysharp.Threading.Tasks.UniTask.Action``1(``0,System.Func{``0,Cysharp.Threading.Tasks.UniTaskVoid})">
+            <summary>
+            helper of create add UniTaskVoid to delegate.
+            </summary>
+        </member>
         <member name="M:Cysharp.Threading.Tasks.UniTask.UnityAction(System.Func{Cysharp.Threading.Tasks.UniTaskVoid})">
             <summary>
             Create async void(UniTaskVoid) UnityAction.
-            For exampe: onClick.AddListener(UniTask.UnityAction(async () => { /* */ } ))
+            For example: onClick.AddListener(UniTask.UnityAction(async () => { /* */ } ))
             </summary>
         </member>
         <member name="M:Cysharp.Threading.Tasks.UniTask.UnityAction(System.Func{System.Threading.CancellationToken,Cysharp.Threading.Tasks.UniTaskVoid},System.Threading.CancellationToken)">
             <summary>
             Create async void(UniTaskVoid) UnityAction.
-            For exampe: onClick.AddListener(UniTask.UnityAction(FooAsync, this.GetCancellationTokenOnDestroy()))
+            For example: onClick.AddListener(UniTask.UnityAction(FooAsync, this.GetCancellationTokenOnDestroy()))
+            </summary>
+        </member>
+        <member name="M:Cysharp.Threading.Tasks.UniTask.UnityAction``1(``0,System.Func{``0,Cysharp.Threading.Tasks.UniTaskVoid})">
+            <summary>
+            Create async void(UniTaskVoid) UnityAction.
+            For example: onClick.AddListener(UniTask.UnityAction(FooAsync, Argument))
+            </summary>
+        </member>
+        <member name="M:Cysharp.Threading.Tasks.UniTask.UnityAction``1(System.Func{``0,Cysharp.Threading.Tasks.UniTaskVoid})">
+            <summary>
+            Create async void(UniTaskVoid) UnityAction.
+            For example: onClick.AddListener(UniTask.UnityAction(async (T arg) => { /* */ } ))
+            </summary>
+        </member>
+        <member name="M:Cysharp.Threading.Tasks.UniTask.UnityAction``2(System.Func{``0,``1,Cysharp.Threading.Tasks.UniTaskVoid})">
+            <summary>
+            Create async void(UniTaskVoid) UnityAction.
+            For example: onClick.AddListener(UniTask.UnityAction(async (T0 arg0, T1 arg1) => { /* */ } ))
+            </summary>
+        </member>
+        <member name="M:Cysharp.Threading.Tasks.UniTask.UnityAction``3(System.Func{``0,``1,``2,Cysharp.Threading.Tasks.UniTaskVoid})">
+            <summary>
+            Create async void(UniTaskVoid) UnityAction.
+            For example: onClick.AddListener(UniTask.UnityAction(async (T0 arg0, T1 arg1, T2 arg2) => { /* */ } ))
+            </summary>
+        </member>
+        <member name="M:Cysharp.Threading.Tasks.UniTask.UnityAction``4(System.Func{``0,``1,``2,``3,Cysharp.Threading.Tasks.UniTaskVoid})">
+            <summary>
+            Create async void(UniTaskVoid) UnityAction.
+            For example: onClick.AddListener(UniTask.UnityAction(async (T0 arg0, T1 arg1, T2 arg2, T3 arg3) => { /* */ } ))
+            </summary>
+        </member>
+        <!-- Badly formed XML comment ignored for member "M:Cysharp.Threading.Tasks.UniTask.UnityAction``1(System.Func{``0,System.Threading.CancellationToken,Cysharp.Threading.Tasks.UniTaskVoid},System.Threading.CancellationToken)" -->
+        <member name="M:Cysharp.Threading.Tasks.UniTask.UnityAction``2(System.Func{``0,``1,System.Threading.CancellationToken,Cysharp.Threading.Tasks.UniTaskVoid},System.Threading.CancellationToken)">
+            <summary>
+            Create async void(UniTaskVoid) UnityAction.
+            For example: onClick.AddListener(UniTask.UnityAction(async (T0 arg0, T1 arg1, CancellationToken cancellationToken) => { /* */ } ))
+            </summary>
+        </member>
+        <member name="M:Cysharp.Threading.Tasks.UniTask.UnityAction``3(System.Func{``0,``1,``2,System.Threading.CancellationToken,Cysharp.Threading.Tasks.UniTaskVoid},System.Threading.CancellationToken)">
+            <summary>
+            Create async void(UniTaskVoid) UnityAction.
+            For example: onClick.AddListener(UniTask.UnityAction(async (T0 arg0, T1 arg1, T2 arg2, CancellationToken cancellationToken) => { /* */ } ))
+            </summary>
+        </member>
+        <member name="M:Cysharp.Threading.Tasks.UniTask.UnityAction``4(System.Func{``0,``1,``2,``3,System.Threading.CancellationToken,Cysharp.Threading.Tasks.UniTaskVoid},System.Threading.CancellationToken)">
+            <summary>
+            Create async void(UniTaskVoid) UnityAction.
+            For example: onClick.AddListener(UniTask.UnityAction(async (T0 arg0, T1 arg1, T2 arg2, T3 arg3, CancellationToken cancellationToken) => { /* */ } ))
             </summary>
         </member>
         <member name="M:Cysharp.Threading.Tasks.UniTask.Defer(System.Func{Cysharp.Threading.Tasks.UniTask})">
@@ -110,6 +164,16 @@
             </summary>
         </member>
         <member name="M:Cysharp.Threading.Tasks.UniTask.Defer``1(System.Func{Cysharp.Threading.Tasks.UniTask{``0}})">
+            <summary>
+            Defer the task creation just before call await.
+            </summary>
+        </member>
+        <member name="M:Cysharp.Threading.Tasks.UniTask.Defer``1(``0,System.Func{``0,Cysharp.Threading.Tasks.UniTask})">
+            <summary>
+            Defer the task creation just before call await.
+            </summary>
+        </member>
+        <member name="M:Cysharp.Threading.Tasks.UniTask.Defer``2(``0,System.Func{``0,Cysharp.Threading.Tasks.UniTask{``1}})">
             <summary>
             Defer the task creation just before call await.
             </summary>
@@ -268,6 +332,9 @@
         <member name="M:Cysharp.Threading.Tasks.Triggers.AsyncTriggerExtensions.OnDestroyAsync(UnityEngine.Component)">
             <summary>This function is called when the MonoBehaviour will be destroyed.</summary>
         </member>
+        <member name="M:Cysharp.Threading.Tasks.UniTaskCancellationExtensions.GetCancellationTokenOnDestroy(UnityEngine.MonoBehaviour)">
+            <summary>This CancellationToken is canceled when the MonoBehaviour will be destroyed.</summary>
+        </member>
         <member name="M:Cysharp.Threading.Tasks.UniTaskCancellationExtensions.GetCancellationTokenOnDestroy(UnityEngine.GameObject)">
             <summary>This CancellationToken is canceled when the MonoBehaviour will be destroyed.</summary>
         </member>
@@ -353,7 +420,7 @@
         </member>
         <member name="M:Cysharp.Threading.Tasks.UniTaskExtensions.TimeoutWithoutException(Cysharp.Threading.Tasks.UniTask,System.TimeSpan,Cysharp.Threading.Tasks.DelayType,Cysharp.Threading.Tasks.PlayerLoopTiming,System.Threading.CancellationTokenSource)">
             <summary>
-            Timeout with suppress OperationCanceledException. Returns (bool, IsCacneled).
+            Timeout with suppress OperationCanceledException. Returns (bool, IsCanceled).
             </summary>
         </member>
         <member name="M:Cysharp.Threading.Tasks.UniTaskExtensions.TimeoutWithoutException``1(Cysharp.Threading.Tasks.UniTask{``0},System.TimeSpan,Cysharp.Threading.Tasks.DelayType,Cysharp.Threading.Tasks.PlayerLoopTiming,System.Threading.CancellationTokenSource)">

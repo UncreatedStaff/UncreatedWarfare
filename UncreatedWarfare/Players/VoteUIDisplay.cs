@@ -1,72 +1,56 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Data;
-using Uncreated.Framework.UI.Reflection;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Players;
 
-[UnturnedUI(BasePath = "Canvas")]
-public abstract class VoteUIDisplay : UnturnedUI, IVoteDisplay
+public abstract class VoteUIDisplay<TData> : UnturnedUI, IVoteDisplay where TData : VoteUIDisplayData
 {
-    private readonly IPlayerVoteManager _voteManager;
-    private readonly ITranslationService _translationService;
-    private VoteSettings _voteSettings;
-    private bool _hasVote;
+    protected readonly IPlayerVoteManager VoteManager;
+    protected readonly ITranslationService TranslationService;
 
-    private readonly Func<CSteamID, Data> _getData;
+    private Func<WarfarePlayer, bool>? _playerSelector;
+    protected VoteSettings VoteSettings;
 
-    public UnturnedLabel TitleLabel { get; } = new UnturnedLabel("Title");
+    protected bool HasVote { get; private set; }
 
-    protected VoteUIDisplay(IServiceProvider serviceProvider, IPlayerVoteManager voteManager)
+    private readonly Func<CSteamID, TData> _getData;
+
+    protected VoteUIDisplay(IServiceProvider serviceProvider, IPlayerVoteManager voteManager, string uiConfig)
         : base(
             serviceProvider.GetRequiredService<ILoggerFactory>(),
-            serviceProvider.GetRequiredService<AssetConfiguration>().GetAssetLink<EffectAsset>("UI:VoteUI"),
+            serviceProvider.GetRequiredService<AssetConfiguration>().GetAssetLink<EffectAsset>(uiConfig),
             staticKey: true
         )
     {
-        _voteManager = voteManager;
+        VoteManager = voteManager;
 
-        _translationService = serviceProvider.GetRequiredService<ITranslationService>();
+        TranslationService = serviceProvider.GetRequiredService<ITranslationService>();
 
-        _getData = id => new Data(id, this);
+        _getData = CreateData;
     }
 
-    protected abstract string TranslateTitle(in LanguageSet langSet);
+    protected abstract TData CreateData(CSteamID arg);
 
-    protected virtual void SendToPlayers(LanguageSet set)
-    {
-        string label = TranslateTitle(in set);
-        
-        while (set.MoveNext())
-        {
-            Data data = GetOrAddData(set.Next.Steam64);
-            if (!data.HasVoteUI)
-            {
-                SendToPlayer(set.Next.Connection, label);
-                data.HasVoteUI = true;
-            }
-            else
-            {
-                TitleLabel.SetText(set.Next, label);
-            }
-        }
-    }
+    protected abstract void SendToPlayers(LanguageSet set);
 
-    protected Data GetOrAddData(CSteamID id)
+    protected virtual void OnCleared(WarfarePlayer player, TData data) { }
+
+    protected TData GetOrAddData(CSteamID id)
     {
         return GetOrAddData(id, _getData);
     }
 
     public void VoteStarted(in VoteSettings settings, Func<WarfarePlayer, bool>? playerSelector)
     {
-        _hasVote = true;
-        _voteSettings = settings;
+        HasVote = true;
+        VoteSettings = settings;
+        _playerSelector = playerSelector;
 
-        foreach (LanguageSet set in _translationService.SetOf.PlayersWhere(playerSelector))
+        foreach (LanguageSet set in TranslationService.SetOf.PlayersWhere(playerSelector))
         {
             SendToPlayers(set);
         }
@@ -74,40 +58,81 @@ public abstract class VoteUIDisplay : UnturnedUI, IVoteDisplay
 
     public void VoteFinished(IVoteResult result)
     {
-        _hasVote = false;
+        HasVote = false;
+        foreach (LanguageSet set in TranslationService.SetOf.PlayersWhere(PlayerIsVoting()))
+        {
+            while (set.MoveNext())
+            {
+                ClearFromPlayer(set.Next.Connection);
+                if (GetData<TData>(set.Next.Steam64) is { } data)
+                    data.HasVoteUI = false;
+            }
+        }
     }
 
     public void PlayerJoinedVote(WarfarePlayer player)
     {
+        if (_playerSelector != null && !_playerSelector(player))
+            throw new InvalidOperationException("Player does not meet player selector requirements.");
+
         SendToPlayers(new LanguageSet(player));
     }
 
     public void PlayerLeftVote(WarfarePlayer player)
     {
-        if (GetData<Data>(player.Steam64) is not { HasVoteUI: true } data)
+        if (GetData<TData>(player.Steam64) is not { HasVoteUI: true } data)
             return;
         
-        ClearFromPlayer(player.Connection);
         data.HasVoteUI = false;
+        if (player.IsDisconnecting || !player.IsOnline)
+            return;
+
+        OnCleared(player, data);
+        ClearFromPlayer(player.Connection);
     }
 
     public void PlayerVoteUpdated(CSteamID playerId, PlayerVoteState newVote, PlayerVoteState oldVote)
     {
-        
-    }
-
-    protected class Data : IUnturnedUIData
-    {
-        public bool HasVoteUI { get; set; }
-
-        public CSteamID Player { get; }
-        public UnturnedUI Owner { get; }
-        UnturnedUIElement? IUnturnedUIData.Element => null;
-
-        public Data(CSteamID player, UnturnedUI owner)
+        foreach (LanguageSet set in TranslationService.SetOf.PlayersWhere(PlayerIsVoting()))
         {
-            Player = player;
-            Owner = owner;
+            SendToPlayers(set);
         }
     }
+
+    protected Func<WarfarePlayer, bool> PlayerIsVoting()
+    {
+        Func<WarfarePlayer, bool> playerSelector;
+        if (_playerSelector != null)
+        {
+            playerSelector = player =>
+            {
+                if (!_playerSelector(player))
+                    return false;
+
+                return GetData<TData>(player.Steam64) is { HasVoteUI: true };
+            };
+        }
+        else
+        {
+            playerSelector = player => GetData<TData>(player.Steam64) is { HasVoteUI: true };
+        }
+
+        return playerSelector;
+    }
+}
+
+public class VoteUIDisplayData : IUnturnedUIData
+{
+    public bool HasVoteUI { get; set; }
+
+    public CSteamID Player { get; }
+    public UnturnedUI Owner { get; }
+
+    public VoteUIDisplayData(CSteamID player, UnturnedUI owner)
+    {
+        Player = player;
+        Owner = owner;
+    }
+
+    UnturnedUIElement? IUnturnedUIData.Element => null;
 }

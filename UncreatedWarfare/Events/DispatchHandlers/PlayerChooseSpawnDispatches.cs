@@ -9,7 +9,7 @@ partial class EventDispatcher
 {
     private void OnPlayerChooseSpawnAfterLogin(SteamPlayerID playerID, ref Vector3 point, ref float yaw, ref EPlayerStance initialStance, ref bool needsNewSpawnpoint)
     {
-        Layout? currentLayout = WarfareModule.Singleton.ServiceProvider.Resolve<Layout>();
+        Layout? currentLayout = WarfareModule.Singleton.IsLayoutActive() ? WarfareModule.Singleton.GetActiveLayout() : null;
 
         BinaryPlayerSave playerSave = new BinaryPlayerSave(playerID.steamID, _logger);
         playerSave.Load();

@@ -1,5 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+using System;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Uncreated.Warfare.Models.Factions;
@@ -20,6 +20,9 @@ public class GameRecord
 
     [Required]
     public string Gamemode { get; set; }
+
+    [DefaultValue(false)]
+    public bool IsSeeding { get; set; }
 
     [ForeignKey(nameof(WinnerFaction))]
     [Column("Winner")]

@@ -1,6 +1,8 @@
 using DanielWillett.ReflectionTools;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
 
@@ -489,6 +491,50 @@ public static class CollectionUtility
     public static ReadOnlySpan<TElement> AsSpan<TElement>(this List<TElement> list)
     {
         return list.GetUnderlyingArrayOrCopy().AsSpan(0, list.Count);
+    }
+
+    /// <summary>
+    /// Updates the value in a <see cref="ConcurrentDictionary{TKey,TValue}"/> and returns the old value.
+    /// </summary>
+    /// <returns>Whether or not the value was already in the dictionary.</returns>
+    public static bool AddOrUpdate<TKey, TValue>(
+        this ConcurrentDictionary<TKey, TValue> dict,
+        TKey key,
+        TValue newValue,
+        [MaybeNullWhen(false)] out TValue oldValue)
+    {
+        if (dict == null)
+            throw new ArgumentNullException(nameof(dict));
+
+        AddOrUpdater<TValue> updater = new AddOrUpdater<TValue>(newValue);
+
+        dict.AddOrUpdate(
+            key,
+            static (_, updater) =>
+            {
+                updater.OldValue = default;
+                updater.HadValue = false;
+                return updater.NewValue;
+            },
+            static (_, oldValue, updater) =>
+            {
+                updater.OldValue = oldValue;
+                updater.HadValue = true;
+                return updater.NewValue;
+            },
+            updater
+        );
+
+        oldValue = updater.OldValue;
+        return updater.HadValue;
+    }
+
+    private class AddOrUpdater<TValue>(TValue value)
+    {
+        public readonly TValue NewValue = value;
+
+        public TValue? OldValue;
+        public bool HadValue;
     }
 }
 

@@ -4,7 +4,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.FileSystemGlobbing;
 using Microsoft.Extensions.FileSystemGlobbing.Abstractions;
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -40,6 +39,8 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
     private readonly SessionManager _sessionService;
     private readonly byte _region;
     private UniTask _setupTask;
+
+    private readonly string _layoutDir;
 
     private bool _hasPlayerLock = true;
     private bool _hasSessionLock;
@@ -87,10 +88,13 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
         _region = systemConfig.GetValue<byte>("region");
         IsLoading = true;
 
+        _layoutDir = Path.Combine(warfare.HomeDirectory, "Layouts");
+        Directory.CreateDirectory(_layoutDir);
+
         if (systemConfig["tests:startup_layout"] is not { Length: > 0 } startupLayout)
             return;
 
-        string path = Path.Combine(warfare.HomeDirectory, "Layouts", startupLayout);
+        string path = Path.Combine(_layoutDir, startupLayout);
 
         if (File.Exists(path))
             NextLayout = new FileInfo(path);
@@ -586,8 +590,7 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
     public LayoutInfo? SelectLayoutByName(string layoutName)
     {
         LayoutInfo? layout = ReadLayoutInfo(Path.Combine(
-            _warfare.HomeDirectory,
-            "Layouts",
+            _layoutDir,
             !layoutName.EndsWith(".yml", StringComparison.OrdinalIgnoreCase) ? layoutName + ".yml" : layoutName),
             false
         );
@@ -621,10 +624,10 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
     /// </summary>
     /// <remarks>Reading them each time keeps us from having to reload config.</remarks>
     /// <exception cref="InvalidOperationException">No layouts are configured.</exception>
-    public LayoutInfo SelectRandomLayout()
+    public LayoutInfo SelectRandomLayout(bool seeding = false)
     {
         List<LayoutInfo> layouts = GetBaseLayoutFiles()
-            .Select(x => ReadLayoutInfo(x.FullName, false))
+            .Select(x => ReadLayoutInfo(x.FullName, false, expectedSeedingState: seeding))
             .Where(x => x != null)
             .ToList()!;
 
@@ -647,58 +650,80 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
     /// <summary>
     /// Read a <see cref="LayoutInfo"/> from the given file and open a configuration root for the file.
     /// </summary>
-    public LayoutInfo? ReadLayoutInfo(string file, bool variations)
+    public LayoutInfo? ReadLayoutInfo(string file, bool variations, bool? expectedSeedingState = null, bool reloadOnChange = false)
     {
         if (!File.Exists(file))
             return null;
 
         ConfigurationBuilder configBuilder = new ConfigurationBuilder();
-        ConfigurationHelper.AddSourceWithMapOverride(configBuilder, _warfare.FileProvider, file);
+        ConfigurationHelper.AddSourceWithMapOverride(configBuilder, _warfare.FileProvider, file, reloadOnChange: reloadOnChange);
         IConfigurationRoot root = configBuilder.Build();
 
-        // read the full type name from the config file
-        string? layoutTypeName = root["Type"];
-        if (layoutTypeName == null)
+        try
         {
-            _logger.LogDebug("Layout config file missing \"Type\" config value in \"{0}\".", file);
-            return null;
+            // if this layout is a seeding layout, by default all layouts in the ~/Seeding/** folder are seeding layouts
+            bool seeding = Path.GetRelativePath(_layoutDir, file)
+                .StartsWith("Seeding", StringComparison.OrdinalIgnoreCase);
+
+            seeding = root.GetValue("IsSeeding", seeding);
+            if (expectedSeedingState.HasValue && seeding != expectedSeedingState.Value)
+            {
+                if (root is IDisposable disp)
+                    disp.Dispose();
+                return null;
+            }
+
+            // read the full type name from the config file
+            string? layoutTypeName = root["Type"];
+            if (layoutTypeName == null)
+            {
+                _logger.LogDebug("Layout config file missing \"Type\" config value in \"{0}\".", file);
+                return null;
+            }
+
+            Type? layoutType = ContextualTypeResolver.ResolveType(layoutTypeName, typeof(Layout));
+            if (layoutType == null)
+            {
+                _logger.LogError("Unknown layout type \"{0}\" in layout config \"{1}\".", layoutTypeName, file);
+                return null;
+            }
+
+            // read the selection weight from the config file
+            if (!double.TryParse(root["Weight"], NumberStyles.Number, CultureInfo.InvariantCulture, out double weight))
+            {
+                weight = 1;
+            }
+
+            // read display name
+            if (root["Name"] is not { Length: > 0 } displayName)
+            {
+                displayName = Path.GetFileNameWithoutExtension(file);
+            }
+
+            IConfiguration configuration = root;
+            if (variations)
+                ApplyVariation(ref configuration, displayName, file);
+
+            LayoutInfo layoutInfo = new LayoutInfo
+            {
+                LayoutType = layoutType,
+                Layout = (IConfigurationRoot)configuration,
+                Weight = weight,
+                DisplayName = displayName,
+                FilePath = file,
+                IsSeeding = seeding
+            };
+
+            configuration.Bind(layoutInfo.Configuration);
+
+            return layoutInfo;
         }
-
-        Type? layoutType = ContextualTypeResolver.ResolveType(layoutTypeName, typeof(Layout));
-        if (layoutType == null)
+        catch
         {
-            _logger.LogError("Unknown layout type \"{0}\" in layout config \"{1}\".", layoutTypeName, file);
-            return null;
+            if (root is IDisposable disp)
+                disp.Dispose();
+            throw;
         }
-
-        // read the selection weight from the config file
-        if (!double.TryParse(root["Weight"], NumberStyles.Number, CultureInfo.InvariantCulture, out double weight))
-        {
-            weight = 1;
-        }
-
-        // read display name
-        if (root["Name"] is not { Length: > 0 } displayName)
-        {
-            displayName = Path.GetFileNameWithoutExtension(file);
-        }
-
-        IConfiguration configuration = root;
-        if (variations)
-            ApplyVariation(ref configuration, displayName, file);
-
-        LayoutInfo layoutInfo = new LayoutInfo
-        {
-            LayoutType = layoutType,
-            Layout = (IConfigurationRoot)configuration,
-            Weight = weight,
-            DisplayName = displayName,
-            FilePath = file
-        };
-
-        configuration.Bind(layoutInfo.Configuration);
-
-        return layoutInfo;
     }
 
     /// <summary>
@@ -796,7 +821,7 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
     /// </summary>
     public List<FileInfo> GetBaseLayoutFiles()
     {
-        DirectoryInfo layoutDirectory = new DirectoryInfo(Path.Join(_warfare.HomeDirectory, "Layouts"));
+        DirectoryInfo layoutDirectory = new DirectoryInfo(_layoutDir);
 
         // get all folders or yaml files.
         List<FileSystemInfo> layouts = layoutDirectory

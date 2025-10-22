@@ -9,8 +9,8 @@
 
     <Version>4.0.12</Version>
 
-		<!-- Enable this for telemetry tracking -->
-	  <DefineConstants>$(DefineConstants);TELEMETRY</DefineConstants>
+        <!-- Enable this for telemetry tracking -->
+      <DefineConstants>$(DefineConstants);TELEMETRY</DefineConstants>
 
   </PropertyGroup>
 
@@ -20,6 +20,8 @@
     <AssemblyName>Uncreated.Warfare</AssemblyName>
     <Title>Uncreated.Warfare</Title>
     <Product>Uncreated.Warfare</Product>
+
+    <UnityVersion>2022.3.62f2</UnityVersion>
 
     <Authors>DanielWillett;benvalkin</Authors>
     <Company>Uncreated</Company>
@@ -52,8 +54,8 @@
     <GenerateRuntimeConfigurationFiles>True</GenerateRuntimeConfigurationFiles>
 
     <NoWarn>NU1701;NU1803;NU1903;NU1904;1702,1591,1587,1711,1735,1573,1574,1570,1584,1658</NoWarn>
-		<MSBuildWarningsAsMessages>$(MSBuildWarningsAsMessages);MSB3030</MSBuildWarningsAsMessages>
-		<DefineConstants>$(DefineConstants);JETBRAINS_ANNOTATIONS;REMOTE_WORKSHOP_UPLOAD</DefineConstants>
+        <MSBuildWarningsAsMessages>$(MSBuildWarningsAsMessages);MSB3030</MSBuildWarningsAsMessages>
+        <DefineConstants>$(DefineConstants);JETBRAINS_ANNOTATIONS;REMOTE_WORKSHOP_UPLOAD</DefineConstants>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -68,6 +70,10 @@
     <Title>Uncreated Warfare</Title>
     <IsPublishable>False</IsPublishable>
     <NoWin32Manifest>true</NoWin32Manifest>
+
+      <CopyUnturnedReferencesToProject>True</CopyUnturnedReferencesToProject>
+	  <CopyUnturnedReferencesToOutput>!$(CopyToModule)</CopyUnturnedReferencesToOutput>
+      <DeleteUnusedUnturnedReferences>True</DeleteUnusedUnturnedReferences>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -141,45 +147,45 @@
     <PackageReference Include="DanielWillett.ReflectionTools.Harmony" Version="4.0.0" />
     <PackageReference Include="DanielWillett.SpeedBytes" Version="1.1.2" />
     <PackageReference Include="DanielWillett.SpeedBytes.Unity" Version="1.1.1" />
-    <PackageReference Include="DanielWillett.JavaPropertiesParser" Version="1.0.0" />
-    <PackageReference Include="DanielWillett.ModularRPCs" Version="[1.0.0-prerelease21, 2)" />
-    <PackageReference Include="DanielWillett.ModularRPCs.SourceGeneration" Version="[1.0.0-prerelease22, 2)" />
-    <PackageReference Include="DanielWillett.ModularRPCs.Unity" Version="[1.0.0-prerelease16, 2)" />
-    <PackageReference Include="DanielWillett.ModularRPCs.WebSockets" Version="[1.0.0-prerelease15, 2)" />
-    <PackageReference Include="Uncreated.UI" Version="1.3.4" />
+    <PackageReference Include="DanielWillett.JavaPropertiesParser" Version="1.1.1" />
+    <PackageReference Include="DanielWillett.ModularRPCs" Version="[1.0.0-prerelease22, 2)" />
+    <PackageReference Include="DanielWillett.ModularRPCs.Unity" Version="[1.0.0-prerelease22, 2)" />
+    <PackageReference Include="DanielWillett.ModularRPCs.WebSockets" Version="[1.0.0-prerelease22, 2)" />
+    <PackageReference Include="Uncreated.UI" Version="1.3.5" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="Stripe.net" Version="43.4.0" />
+    <PackageReference Include="Stripe.net" Version="49.0.0" />
     <PackageReference Include="JetBrains.Annotations" Version="2018.2.1" Aliases="JetBrains" />
 
-    <PackageReference Include="UniTask" Version="2.5.0" ExcludeAssets="compile" />
+    <PackageReference Include="UniTask" Version="2.5.10" ExcludeAssets="compile" />
 
-    <PackageReference Include="Autofac" Version="8.1.1" />
+    <PackageReference Include="Autofac" Version="8.4.0" />
     <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="10.0.0" />
 
-    <PackageReference Include="SSH.NET" Version="2024.2.0" />
+    <PackageReference Include="SSH.NET" Version="2025.0.0" />
 
     <PackageReference Include="System.Data.Common" Version="4.3.0" />
-    <PackageReference Include="System.Runtime.Caching" Version="8.0.1" />
+    <PackageReference Include="System.Runtime.Caching" Version="9.0.10" />
 
-    <PackageReference Include="System.Text.Json" Version="8.0.5" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="8.0.0" />
+    <PackageReference Include="System.Text.Json" Version="9.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="9.0.10" />
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="8.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="9.0.10" />
     <PackageReference Include="NetEscapades.Configuration.Yaml" Version="3.1.0" />
-    <PackageReference Include="YamlDotNet" Version="16.1.3" />
+    <PackageReference Include="YamlDotNet" Version="16.3.0" />
 
-    <PackageReference Include="MySqlConnector" Version="2.3.7" />
+    <PackageReference Include="MySqlConnector" Version="2.4.0" />
     <PackageReference Include="Microsoft.Bcl.HashCode" Version="1.1.1" />
-    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="8.0.0" />
-    <PackageReference Include="System.Diagnostics.DiagnosticSource" Version="8.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Options" Version="8.0.2" />
-    <PackageReference Include="Microsoft.Extensions.Primitives" Version="8.0.0" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.2" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.2" />
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="9.0.10" />
+    <PackageReference Include="System.Diagnostics.DiagnosticSource" Version="9.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="9.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Primitives" Version="9.0.10" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.10" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.10" />
     <PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />
+    <PackageReference Include="System.Collections.Immutable" Version="9.0.10" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="5.0.17" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="5.0.17" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="5.0.17" Private="true" />
@@ -190,13 +196,21 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Unturned.MSBuild" Version="1.0.0-test6">
+        <PrivateAssets>all</PrivateAssets>
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Krafs.Publicizer" Version="2.3.0">
+        <PrivateAssets>all</PrivateAssets>
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
   <!-- ReSharper restore VulnerablePackage -->
 
   <ItemGroup Condition="$(DefineConstants.Contains('TELEMETRY'))">
 
-	  <PackageReference Include="OpenTelemetry" Version="1.9.0" />
-	  <PackageReference Include="OpenTelemetry.Exporter.Zipkin" Version="1.9.0" />
+      <PackageReference Include="OpenTelemetry" Version="1.13.1" />
+      <PackageReference Include="OpenTelemetry.Exporter.Zipkin" Version="1.9.0" />
 
   </ItemGroup>
 
@@ -313,59 +327,37 @@
   <!-- Unturned Files -->
   <ItemGroup>
 
-	  <UnturnedLibrary Include="Assembly-CSharp" />
-	  <UnturnedLibrary Include="SDG.NetTransport" />
-	  <UnturnedLibrary Include="Unity.TextMeshPro" />
-	  <UnturnedLibrary Include="SDG.NetPak.Runtime" />
-	  <UnturnedLibrary Include="UnturnedDat" />
-	  <UnturnedLibrary Include="UnityEx" />
-	  <UnturnedLibrary Include="com.rlabrecque.steamworks.net" />
-	  <UnturnedLibrary Include="UnityEngine" />
-	  <UnturnedLibrary Include="UnityEngine.CoreModule" />
-	  <UnturnedLibrary Include="UnityEngine.UI" />
-	  <UnturnedLibrary Include="UnityEngine.UIModule" />
-	  <UnturnedLibrary Include="UnityEngine.PhysicsModule" />
-	  <UnturnedLibrary Include="UnityEngine.ImageConversionModule" />
-	  <UnturnedLibrary Include="UnityEngine.UnityWebRequestModule" />
-	  <UnturnedLibrary Include="UnityEngine.AssetBundleModule" />
+    <UnturnedReference Include="Assembly-CSharp" />
+    <UnturnedReference Include="SDG.NetTransport" />
+    <UnturnedReference Include="Unity.TextMeshPro" />
+    <UnturnedReference Include="SDG.NetPak.Runtime" />
+    <UnturnedReference Include="UnturnedDat" />
+    <UnturnedReference Include="UnityEx" />
+    <UnturnedReference Include="com.rlabrecque.steamworks.net" />
+    <UnturnedReference Include="UnityEngine" />
+    <UnturnedReference Include="UnityEngine.CoreModule" />
+    <UnturnedReference Include="UnityEngine.UI" />
+    <UnturnedReference Include="UnityEngine.UIModule" />
+    <UnturnedReference Include="UnityEngine.PhysicsModule" />
+    <UnturnedReference Include="UnityEngine.ImageConversionModule" />
+    <UnturnedReference Include="UnityEngine.UnityWebRequestModule" />
+    <UnturnedReference Include="UnityEngine.AssetBundleModule" />
 
-  </ItemGroup>
 
-  <!-- Reference all unturned in ~/Libraries -->
-  <ItemGroup>
-	  <Reference Include="@(UnturnedLibrary->'%(Identity)')" HintPath="$(UnturnedDllPath)\%(Identity).dll" Private="!$(CopyToModule)" />
+    <Publicize Include="Assembly-CSharp:SDG.Unturned.AssetsWorker" />
+    <Publicize Include="Assembly-CSharp:SDG.Unturned.AssetsWorker.AssetDefinition" />
+    <Publicize Include="Assembly-CSharp:SDG.Unturned.Assets.LoadFile" />
+    <Publicize Include="Assembly-CSharp:SDG.Unturned.Assets.AddAssetsFromOriginToCurrentMapping" />
+
   </ItemGroup>
 
   <ItemGroup>
     
-	  <!-- Third Party -->
+      <!-- Third Party -->
     <Reference Include="UniTask">
       <HintPath>../Libraries/UniTask.dll</HintPath>
       <Private>!$(CopyToModule)</Private>
     </Reference>
 
   </ItemGroup>
-
-  <ItemGroup>
-    <Compile Update="Commands\ReportCommand.cs">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </Compile>
-    <Compile Update="Commands\Whitelist\WhitelistAddCommand.cs">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </Compile>
-  </ItemGroup>
-
-  <!-- Copy unturned files from U3DS to ~/Libraries -->
-  <Target Name="PreBuild" BeforeTargets="PreBuildEvent" Condition="exists('$(ServerPath)/Unturned_Data/Managed/Assembly-CSharp.dll')">
-	  <Copy SourceFiles="$(UnturnedDllPath)/%(UnturnedLibrary.Identity).dll" DestinationFolder="..\Libraries" />
-	  <Copy SourceFiles="$(UnturnedDllPath)/%(UnturnedLibrary.Identity).xml" DestinationFolder="..\Libraries" ContinueOnError="true" />
-  </Target>
-  <!-- Copy xml docs for unity files to U3DS -->
-  <Target Name="PreBuildXml2Unturned" BeforeTargets="PreBuildEvent" Condition="exists('$(ServerPath)/Unturned_Data/Managed/Assembly-CSharp.dll') And exists('C:\Program Files\Unity\Hub\Editor\2021.3.29f1\Editor\Data\Managed\UnityEngine')">
-	  <Copy SourceFiles="C:\Program Files\Unity\Hub\Editor\2021.3.29f1\Editor\Data\Managed\UnityEngine\%(UnturnedLibrary.Identity).xml" DestinationFolder="$(ServerPath)/Unturned_Data/Managed" ContinueOnError="true" />
-  </Target>
-  <!-- Copy xml docs for unity files to ~/Libraries -->
-  <Target Name="PreBuildXml2Libraries" BeforeTargets="PreBuildEvent" Condition="exists('C:\Program Files\Unity\Hub\Editor\2021.3.29f1\Editor\Data\Managed\UnityEngine')">
-	  <Copy SourceFiles="C:\Program Files\Unity\Hub\Editor\2021.3.29f1\Editor\Data\Managed\UnityEngine\%(UnturnedLibrary.Identity).xml" DestinationFolder="..\Libraries" ContinueOnError="true" />
-  </Target>
 </Project>

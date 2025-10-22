@@ -559,7 +559,7 @@ public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoin
             {
                 string name = "DailyQuest" + i.ToString("D2", CultureInfo.InvariantCulture);
                 string path = Path.Combine(parent, name, name + ".dat");
-                List<string>? errors = AssetUtility.LoadAsset(path, origin);
+                string[]? errors = AssetUtility.LoadAsset(path, origin);
                 if (errors == null)
                     continue;
 
@@ -572,13 +572,13 @@ public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoin
             AssetUtility.SyncAssetsFromOrigin(origin);
             _logger.LogInformation("Daily Quest assets loaded.");
 
-            #if DEBUG
+#if DEBUG
             using IDisposable? disp = _logger.BeginScope("Assets");
             foreach (Asset asset in origin.GetAssets())
             {
                 _logger.LogDebug("Asset: {0}.", AssetLink.Create(asset));
             }
-            #endif
+#endif
         }
     }
 

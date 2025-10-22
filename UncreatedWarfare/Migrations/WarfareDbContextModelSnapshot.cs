@@ -182,6 +182,9 @@ namespace Uncreated.Warfare.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    b.Property<bool>("IsSeeding")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<int>("Map")
                         .HasColumnType("int");
 
