@@ -91,17 +91,17 @@ public interface IVoteResult
 /// </summary>
 public readonly struct VoteSettings
 {
-    /// <summary>
-    /// Number of votes that must be reached for a Yes result.
-    /// </summary>
-    /// <remarks>If less than one this is the percentage of the current amount of players, otherwise it's a number of players.</remarks>
-    public required double RequiredYes { get; init; }
-
-    /// <summary>
-    /// Number of votes that must be reached for a No result.
-    /// </summary>
-    /// <remarks>If less than one this is the percentage of the current amount of players, otherwise it's a number of players.</remarks>
-    public required double RequiredNo { get; init; }
+    ///// <summary>
+    ///// Number of votes that must be reached for a Yes result.
+    ///// </summary>
+    ///// <remarks>If less than one this is the percentage of the current amount of players, otherwise it's a number of players.</remarks>
+    //public required double RequiredYes { get; init; }
+    //
+    ///// <summary>
+    ///// Number of votes that must be reached for a No result.
+    ///// </summary>
+    ///// <remarks>If less than one this is the percentage of the current amount of players, otherwise it's a number of players.</remarks>
+    //public required double RequiredNo { get; init; }
 
     /// <summary>
     /// Total duration of the vote.

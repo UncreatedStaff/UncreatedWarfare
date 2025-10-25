@@ -1,0 +1,52 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<!-- Basic properties -->
+	<PropertyGroup>
+
+		<TargetFramework>netstandard2.1</TargetFramework>
+		<Nullable>enable</Nullable>
+		<LangVersion>preview</LangVersion>
+		<NoWarn>NU1701;NU1803;NU1903;NU1904;1702,1591,1587,1711,1735,1573,1574,1570,1584,1658</NoWarn>
+		<RootNamespace>Uncreated.Warfare.FreeTeamDeathmatch</RootNamespace>
+
+	</PropertyGroup>
+
+	<!-- Installation -->
+	<PropertyGroup>
+
+		<U3DSPath>C:/SteamCMD/steamapps/common/U3DS</U3DSPath>
+		<ServerId>UncreatedSeason4</ServerId>
+
+	</PropertyGroup>
+
+	<!-- References -->
+	<ItemGroup>
+
+		<!-- Third-party plugins would use a PackageReference instead of a ProjectReference -->
+		<!--<PackageReference Include="Uncreated.Warfare" Version="4.0.13" />-->
+		<ProjectReference Include="../UncreatedWarfare/UncreatedWarfare.csproj"/>
+
+		<PackageReference Include="PolySharp" Version="1.15.0">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+		</PackageReference>
+
+		<PackageReference Include="Unturned.MSBuild" Version="1.0.0-test6">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+		</PackageReference>
+
+	</ItemGroup>
+
+	<!-- Copy to Plugins directory on build -->
+	<Target Name="__CopyToOutDir" AfterTargets="Build" Condition="exists('$(U3DSPath)/Servers/$(ServerId)/Warfare/Plugins')">
+		<Copy SourceFiles="$(OutDir)/$(AssemblyName).dll" DestinationFiles="$(U3DSPath)/Servers/$(ServerId)/Warfare/Plugins/$(AssemblyName).dll" />
+	</Target>
+
+	<ItemGroup>
+		<None Update="README.md">
+			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
+
+</Project>

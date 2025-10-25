@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Layouts.Seeding;
@@ -14,9 +13,6 @@ public class SeedingLayout : Layout
 
     private static void ConfigureServices(ContainerBuilder bldr, LayoutInfo layoutInfo)
     {
-        bldr.RegisterType<SeedingPlayerCountMonitor>()
-            .AsSelf().AsImplementedInterfaces()
-            .SingleInstance();
     }
 
     public SeedingLayout(ILifetimeScope serviceProvider, LayoutInfo layoutInfo, List<IDisposable> disposableConfigs)

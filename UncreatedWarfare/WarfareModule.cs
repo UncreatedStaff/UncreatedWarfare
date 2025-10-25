@@ -55,6 +55,7 @@ using Uncreated.Warfare.Kits.Requests;
 using Uncreated.Warfare.Kits.Tweaks;
 using Uncreated.Warfare.Kits.Whitelists;
 using Uncreated.Warfare.Layouts;
+using Uncreated.Warfare.Layouts.Seeding;
 using Uncreated.Warfare.Layouts.UI;
 using Uncreated.Warfare.Lobby;
 using Uncreated.Warfare.Logging;
@@ -666,6 +667,10 @@ public sealed class WarfareModule
 
         bldr.RegisterType<LayoutFactory>()
             .AsImplementedInterfaces().AsSelf()
+            .SingleInstance();
+
+        bldr.RegisterType<SeedingPlayerCountMonitor>()
+            .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
 
         bldr.RegisterType<EventSynchronizer>();

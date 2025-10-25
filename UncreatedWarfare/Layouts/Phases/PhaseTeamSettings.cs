@@ -15,7 +15,7 @@ public class PhaseTeamSettings
     public Team? TeamInfo { get; internal set; }
 
     /// <summary>
-    /// Can be (in order of priority) A faction name, a team ID, 'attack', or 'defense'.
+    /// Can be (in order of priority) A faction name, a team ID, 'opfor', or 'blufor'.
     /// </summary>
     [UsedImplicitly]
     public string? Team { get; set; }

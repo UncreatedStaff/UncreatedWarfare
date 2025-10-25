@@ -62,6 +62,9 @@ internal class SeedingPlayerCountMonitor : IEventListener<PlayerJoined>, IEventL
 
     private SeedingPlayHud? _playHud;
 
+    /// <summary>
+    /// The approximate time at which the game should start.
+    /// </summary>
     public DateTime AwaitDoneTime { get; private set; }
 
     // for UI
@@ -75,6 +78,8 @@ internal class SeedingPlayerCountMonitor : IEventListener<PlayerJoined>, IEventL
 
     public bool IsSeeding { get; private set; }
     public bool IsAwaitingStart => _awaitStartTicker != null;
+
+    public event Action<SeedingRules>? RulesUpdated;
 
     public SeedingPlayerCountMonitor(
         IConfiguration systemConfig,
@@ -116,6 +121,7 @@ internal class SeedingPlayerCountMonitor : IEventListener<PlayerJoined>, IEventL
         Rules.StartPlayerThreshold = _systemConfig.GetValue("seeding:start_game_players", 20);
         Rules.StartCountdownLength = _systemConfig.GetValue("seeding:countdown_time", TimeSpan.FromSeconds(30));
         Rules.VoteLength = _systemConfig.GetValue("seeding:vote_time", TimeSpan.FromMinutes(1));
+        RulesUpdated?.Invoke(Rules);
     }
 
     UniTask IHostedService.StartAsync(CancellationToken token)
@@ -130,7 +136,7 @@ internal class SeedingPlayerCountMonitor : IEventListener<PlayerJoined>, IEventL
         {
             using LayoutInfo initialSeedingLayout = _layoutFactory.SelectRandomLayout(seeding: true);
             _layoutFactory.NextLayout = new FileInfo(initialSeedingLayout.FilePath);
-            _logger.LogWarning($"Selected startup seeding layout: {initialSeedingLayout.DisplayName}.");
+            _logger.LogInformation($"Selected startup seeding layout: {initialSeedingLayout.DisplayName}.");
             IsSeeding = true;
         }
         catch (InvalidOperationException)
@@ -213,8 +219,8 @@ internal class SeedingPlayerCountMonitor : IEventListener<PlayerJoined>, IEventL
                 await VoteManager.StartVoteAsync(new VoteSettings
                 {
                     Duration = Rules.VoteLength,
-                    RequiredYes = 0.5,
-                    RequiredNo = 0.75,
+                    //RequiredYes = 0.5,
+                    //RequiredNo = 0.75,
                     DefaultResult = VoteResult.Yes,
                     Display = VoteHud,
                     OwnsDisplay = false,
@@ -236,6 +242,7 @@ internal class SeedingPlayerCountMonitor : IEventListener<PlayerJoined>, IEventL
 
     private void AwaitStartCompleted(ILoopTicker ticker, TimeSpan timeSinceStart, TimeSpan deltaTime)
     {
+        // assume on game thread
         if (DateTime.UtcNow >= AwaitDoneTime)
         {
             ticker.Dispose();
@@ -251,13 +258,21 @@ internal class SeedingPlayerCountMonitor : IEventListener<PlayerJoined>, IEventL
     }
 
 
-    private void EndSeeding()
-    {
-    }
-
     private void DelayVote()
     {
         _nextVotePlayerThreshold = (int)Math.Ceiling(_nextVotePlayerThreshold / 1.5);
+    }
+
+    private void EndSeeding()
+    {
+        // assume on game thread
+        if (!IsSeeding)
+            return;
+
+        IsSeeding = false;
+        _playHud?.UpdateStage();
+
+        _ = _layoutFactory.StartNextLayout();
     }
 
     private void StartSeeding()

@@ -11,8 +11,9 @@ internal class LongestShotValuablePlayerProvider : IValuablePlayerProvider
 {
     public ValuablePlayerMatch AggregateMostValuable(IEnumerable<LeaderboardSet> sets, IConfiguration statConfiguration, ILogger logger)
     {
-        string? minimum = statConfiguration["Minimum"];
+        string? minimum = statConfiguration["MinimumDistance"];
         double.TryParse(minimum, NumberStyles.Number, CultureInfo.InvariantCulture, out double minValue);
+        minValue *= minValue;
 
         LongestShot extremeValue = default;
         LeaderboardPlayer? extremePlayer = null;

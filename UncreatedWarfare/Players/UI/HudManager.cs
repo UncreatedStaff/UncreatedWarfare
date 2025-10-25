@@ -1,11 +1,10 @@
 using System;
-using System.Collections.Generic;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Players.UI;
 
-public class HudManager
+public sealed class HudManager
 {
     private readonly WarfareModule _module;
     private readonly IPlayerService _playerService;
@@ -24,8 +23,10 @@ public class HudManager
         /// <inheritdoc />
         public void Init(IServiceProvider serviceProvider, bool isOnJoin)
         {
-            if (isOnJoin)
-                IsPluginVoting = false;
+            if (!isOnJoin)
+                return;
+            
+            IsPluginVoting = false;
         }
     }
 
@@ -58,7 +59,11 @@ public class HudManager
     {
         return player.Component<PluginVotingPlayerComponent>().IsPluginVoting;
     }
-
+    
+    /// <summary>
+    /// Invoked when a player's plugin voting status changes.
+    /// </summary>
+    /// <remarks>Used by the Duty UI to lower it when a vote is happening.</remarks>
     public event Action<WarfarePlayer, bool>? OnPluginVotingUpdated;
 
     public HudManager(WarfareModule module, IPlayerService playerService, ILogger<HudManager> logger)

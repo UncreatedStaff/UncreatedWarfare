@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
@@ -10,6 +9,9 @@ using Uncreated.Warfare.Util.Timing;
 
 namespace Uncreated.Warfare.Players;
 
+/// <summary>
+/// Manages a generic vote operation for all players. Displayed by <see cref="VoteUIDisplay{TData}"/>.
+/// </summary>
 public class PlayerVoteManager : IPlayerVoteManager, IDisposable, IEventListener<PlayerJoined>, IEventListener<PlayerLeft>
 {
     private readonly ILoopTickerFactory _loopTickerFactory;
@@ -302,6 +304,30 @@ public class PlayerVoteManager : IPlayerVoteManager, IDisposable, IEventListener
         if (old == vote)
             return old;
 
+        IVoteDisplay? voteDisplay = _voteInfo.Container?.SettingsIntl.Display;
+        if (voteDisplay != null)
+        {
+            // invoke update
+            if (GameThread.IsCurrent)
+            {
+                InvokePlayerVoteUpdated(voteDisplay, player, vote, old);
+            }
+            else
+            {
+                PlayerVoteState vote2 = vote, old2 = old;
+                CSteamID pid = player;
+                IVoteDisplay disp = voteDisplay;
+                UniTask.Create(async () =>
+                {
+                    await UniTask.SwitchToMainThread();
+                    if (ReferenceEquals(_voteInfo.Container?.SettingsIntl.Display, disp))
+                    {
+                        InvokePlayerVoteUpdated(disp, pid, vote2, old2);
+                    }
+                });
+            }
+        }
+
         switch (old)
         {
             case PlayerVoteState.Yes:
@@ -334,7 +360,6 @@ public class PlayerVoteManager : IPlayerVoteManager, IDisposable, IEventListener
     private PlayerVoteState UpdatePlayerVote(CSteamID player, PlayerVoteState vote)
     {
         ConcurrentDictionary<ulong, PlayerVoteState>? states = _voteInfo.PendingVotes;
-        IVoteDisplay? voteDisplay = _voteInfo.Container?.SettingsIntl.Display;
         if (states == null || !IsVoting)
         {
             throw new InvalidOperationException("Not voting.");
@@ -349,29 +374,6 @@ public class PlayerVoteManager : IPlayerVoteManager, IDisposable, IEventListener
         else if (!states.AddOrUpdate(player.m_SteamID, vote, out old))
         {
             old = PlayerVoteState.Unanswered;
-        }
-
-        if (voteDisplay == null || old == vote)
-            return old;
-
-        // invoke update
-        if (GameThread.IsCurrent)
-        {
-            InvokePlayerVoteUpdated(voteDisplay, player, vote, old);
-        }
-        else
-        {
-            PlayerVoteState vote2 = vote, old2 = old;
-            CSteamID pid = player;
-            IVoteDisplay disp = voteDisplay;
-            UniTask.Create(async () =>
-            {
-                await UniTask.SwitchToMainThread();
-                if (ReferenceEquals(_voteInfo.Container?.SettingsIntl.Display, disp))
-                {
-                    InvokePlayerVoteUpdated(disp, pid, vote2, old2);
-                }
-            });
         }
 
         return old;
@@ -464,17 +466,19 @@ public class PlayerVoteManager : IPlayerVoteManager, IDisposable, IEventListener
             return;
 
         IVoteDisplay? disp = _voteInfo.Container?.SettingsIntl.Display;
-        if (disp == null)
-            return;
+        if (disp != null)
+        {
+            try
+            {
+                disp.PlayerLeftVote(e.Player);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error invoking PlayerLeftVote callback.");
+            }
+        }
 
-        try
-        {
-            disp.PlayerLeftVote(e.Player);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error invoking PlayerLeftVote callback.");
-        }
+        RegisterVote(e.Steam64, PlayerVoteState.Unanswered);
     }
 
     private struct CurrentVoteInfo

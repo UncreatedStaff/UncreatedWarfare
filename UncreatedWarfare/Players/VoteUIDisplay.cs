@@ -7,6 +7,10 @@ using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Players;
 
+/// <summary>
+/// A UI implementation of <see cref="IVoteDisplay"/>.
+/// </summary>
+/// <typeparam name="TData">Player-specific UI data type inheriting <see cref="VoteUIDisplayData"/>.</typeparam>
 public abstract class VoteUIDisplay<TData> : UnturnedUI, IVoteDisplay where TData : VoteUIDisplayData
 {
     protected readonly IPlayerVoteManager VoteManager;
@@ -49,6 +53,7 @@ public abstract class VoteUIDisplay<TData> : UnturnedUI, IVoteDisplay where TDat
         HasVote = true;
         VoteSettings = settings;
         _playerSelector = playerSelector;
+        _playerIsVotingCache = null;
 
         foreach (LanguageSet set in TranslationService.SetOf.PlayersWhere(playerSelector))
         {
@@ -99,8 +104,14 @@ public abstract class VoteUIDisplay<TData> : UnturnedUI, IVoteDisplay where TDat
         }
     }
 
+    private Func<WarfarePlayer, bool>? _playerIsVotingCache;
+
     protected Func<WarfarePlayer, bool> PlayerIsVoting()
     {
+        Func<WarfarePlayer, bool>? cachedDelegate = _playerIsVotingCache;
+        if (cachedDelegate != null)
+            return cachedDelegate;
+
         Func<WarfarePlayer, bool> playerSelector;
         if (_playerSelector != null)
         {
@@ -117,6 +128,7 @@ public abstract class VoteUIDisplay<TData> : UnturnedUI, IVoteDisplay where TDat
             playerSelector = player => GetData<TData>(player.Steam64) is { HasVoteUI: true };
         }
 
+        _playerIsVotingCache = playerSelector;
         return playerSelector;
     }
 }

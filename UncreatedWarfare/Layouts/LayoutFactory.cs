@@ -35,6 +35,7 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
     private readonly ILogger<LayoutFactory> _logger;
     private readonly IGameDataDbContext _dbContext;
     private readonly MapScheduler _mapScheduler;
+    private readonly IConfiguration _systemConfig;
     private readonly IPlayerService _playerService;
     private readonly SessionManager _sessionService;
     private readonly byte _region;
@@ -83,6 +84,7 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
         _dbContext = dbContext;
         _dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
         _mapScheduler = mapScheduler;
+        _systemConfig = systemConfig;
         _playerService = playerService;
         _sessionService = sessionService;
         _region = systemConfig.GetValue<byte>("region");
