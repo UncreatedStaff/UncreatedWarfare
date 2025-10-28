@@ -1,363 +1,363 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- Set this to false for migrations -->
-  <PropertyGroup>
-    <CopyToModule>True</CopyToModule>
-  </PropertyGroup>
+    <!-- Set this to false for migrations -->
+    <PropertyGroup>
+        <CopyToModule>True</CopyToModule>
+    </PropertyGroup>
 
-  <PropertyGroup>
+    <PropertyGroup>
 
-    <Version>4.0.12</Version>
+        <Version>4.0.14</Version>
 
         <!-- Enable this for telemetry tracking -->
-      <DefineConstants>$(DefineConstants);TELEMETRY</DefineConstants>
+        <DefineConstants>$(DefineConstants);TELEMETRY</DefineConstants>
 
-  </PropertyGroup>
+    </PropertyGroup>
 
-  <PropertyGroup>
-    <TargetFramework>netstandard2.1</TargetFramework>
-    <AssemblyTitle>Uncreated.Warfare</AssemblyTitle>
-    <AssemblyName>Uncreated.Warfare</AssemblyName>
-    <Title>Uncreated.Warfare</Title>
-    <Product>Uncreated.Warfare</Product>
+    <PropertyGroup>
+        <TargetFramework>netstandard2.1</TargetFramework>
+        <AssemblyTitle>Uncreated.Warfare</AssemblyTitle>
+        <AssemblyName>Uncreated.Warfare</AssemblyName>
+        <Title>Uncreated.Warfare</Title>
+        <Product>Uncreated.Warfare</Product>
 
-    <UnityVersion>2022.3.62f2</UnityVersion>
+        <UnityVersion>2022.3.62f2</UnityVersion>
 
-    <Authors>DanielWillett;benvalkin</Authors>
-    <Company>Uncreated</Company>
-    <Description>Main framework for the Uncreated Warfare Military Simulation server based off of the military game Squad.</Description>
+        <Authors>DanielWillett;benvalkin</Authors>
+        <Company>Uncreated</Company>
+        <Description>Main framework for the Uncreated Warfare Military Simulation server based off of the military game Squad.</Description>
 
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <EnablePreviewFeatures>true</EnablePreviewFeatures>
-    <DoNotCopyLocalIfInGac>true</DoNotCopyLocalIfInGac>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <EnablePreviewFeatures>true</EnablePreviewFeatures>
+        <DoNotCopyLocalIfInGac>true</DoNotCopyLocalIfInGac>
 
-    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
-    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+        <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+        <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
 
-    <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
-    <PackageIcon>icon.png</PackageIcon>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
+        <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
+        <PackageIcon>icon.png</PackageIcon>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
 
-    <PackageProjectUrl>https://uncreated.network/</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/UncreatedStaff/UncreatedWarfare.git</RepositoryUrl>
+        <PackageProjectUrl>https://uncreated.network/</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/UncreatedStaff/UncreatedWarfare.git</RepositoryUrl>
 
-    <PackageTags>Unturned;Uncreated;Warfare;UncreatedWarfare</PackageTags>
-    <NeutralLanguage>en-US</NeutralLanguage>
-    <RootNamespace>Uncreated.Warfare</RootNamespace>
+        <PackageTags>Unturned;Uncreated;Warfare;UncreatedWarfare</PackageTags>
+        <NeutralLanguage>en-US</NeutralLanguage>
+        <RootNamespace>Uncreated.Warfare</RootNamespace>
 
-    <AssemblyVersion>$(Version).0</AssemblyVersion>
-    <FileVersion>$(Version).0</FileVersion>
+        <AssemblyVersion>$(Version).0</AssemblyVersion>
+        <FileVersion>$(Version).0</FileVersion>
 
-    <BaseIntermediateOutputPath></BaseIntermediateOutputPath>
-    <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
-    <ProduceReferenceAssembly>False</ProduceReferenceAssembly>
-    <GenerateRuntimeConfigurationFiles>True</GenerateRuntimeConfigurationFiles>
+        <BaseIntermediateOutputPath></BaseIntermediateOutputPath>
+        <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
+        <ProduceReferenceAssembly>False</ProduceReferenceAssembly>
+        <GenerateRuntimeConfigurationFiles>True</GenerateRuntimeConfigurationFiles>
 
-    <NoWarn>NU1701;NU1803;NU1903;NU1904;1702,1591,1587,1711,1735,1573,1574,1570,1584,1658</NoWarn>
+        <NoWarn>NU1701;NU1803;NU1903;NU1904;1702,1591,1587,1711,1735,1573,1574,1570,1584,1658</NoWarn>
         <MSBuildWarningsAsMessages>$(MSBuildWarningsAsMessages);MSB3030</MSBuildWarningsAsMessages>
         <DefineConstants>$(DefineConstants);JETBRAINS_ANNOTATIONS;REMOTE_WORKSHOP_UPLOAD</DefineConstants>
-  </PropertyGroup>
+    </PropertyGroup>
 
-  <PropertyGroup>
-    <LangVersion>preview</LangVersion>
-    <Nullable>enable</Nullable>
-    <GenerateDocumentationFile>True</GenerateDocumentationFile>
+    <PropertyGroup>
+        <LangVersion>preview</LangVersion>
+        <Nullable>enable</Nullable>
+        <GenerateDocumentationFile>True</GenerateDocumentationFile>
 
-    <IncludeSymbols>true</IncludeSymbols>
-    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-    <GeneratePackageOnBuild>$(CopyToModule)</GeneratePackageOnBuild>
+        <IncludeSymbols>true</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+        <GeneratePackageOnBuild>$(CopyToModule)</GeneratePackageOnBuild>
 
-    <Title>Uncreated Warfare</Title>
-    <IsPublishable>False</IsPublishable>
-    <NoWin32Manifest>true</NoWin32Manifest>
+        <Title>Uncreated Warfare</Title>
+        <IsPublishable>False</IsPublishable>
+        <NoWin32Manifest>true</NoWin32Manifest>
 
-      <CopyUnturnedReferencesToProject>True</CopyUnturnedReferencesToProject>
-	  <CopyUnturnedReferencesToOutput>!$(CopyToModule)</CopyUnturnedReferencesToOutput>
-      <DeleteUnusedUnturnedReferences>True</DeleteUnusedUnturnedReferences>
-  </PropertyGroup>
+        <CopyUnturnedReferencesToProject>True</CopyUnturnedReferencesToProject>
+        <CopyUnturnedReferencesToOutput>!$(CopyToModule)</CopyUnturnedReferencesToOutput>
+        <DeleteUnusedUnturnedReferences>True</DeleteUnusedUnturnedReferences>
+    </PropertyGroup>
 
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <DebugType>portable</DebugType>
-    <WarningLevel>5</WarningLevel>
-    <DefineConstants>$(DefineConstants);TRACE;UNITY_ASSERTIONS</DefineConstants>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <DebugType>portable</DebugType>
-    <DefineConstants>$(DefineConstants);TRACE</DefineConstants>
-  </PropertyGroup>
-  
-  <ItemGroup>
-    <Compile Remove="Commands\_BlankCommand.cs" />
-  </ItemGroup>
-  
-  <ItemGroup>
-    <None Remove="Commands\AmmoCommand.meta.yml" />
-    <None Remove="Commands\AttachCommand.meta.yml" />
-    <None Remove="Commands\BuyCommand.meta.yml" />
-    <None Remove="Commands\DeployCommand.meta.yml" />
-    <None Remove="Commands\Kit\KitCommand.meta.yml" />
-    <None Remove="Commands\Request\RequestCommand.meta.yml" />
-    <None Remove="Commands\VehicleBay\VehicleBayCommand.meta.yml" />
-    <None Remove="Commands\WarfareDev\WarfareDevCommand.meta.yml" />
-    <None Remove="Commands\Zone\ZoneCommand.meta.yml" />
-  </ItemGroup>
+    <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+        <DebugType>portable</DebugType>
+        <WarningLevel>5</WarningLevel>
+        <DefineConstants>$(DefineConstants);TRACE;UNITY_ASSERTIONS</DefineConstants>
+    </PropertyGroup>
+    <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+        <DebugType>portable</DebugType>
+        <DefineConstants>$(DefineConstants);TRACE</DefineConstants>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <None Include="..\icon.png" Pack="true" PackagePath="\" />
-    <None Include="..\README.md" Pack="true" PackagePath="\" />
-    <None Include="..\LICENSE.md" Pack="true" PackagePath="\" />
-  </ItemGroup>
+    <ItemGroup>
+        <Compile Remove="Commands\_BlankCommand.cs" />
+    </ItemGroup>
 
-  <!-- Base U3DS installation -->
-  <PropertyGroup>
-    <ServerPath>C:\SteamCMD\steamapps\common\U3DS</ServerPath>
-  </PropertyGroup>
+    <ItemGroup>
+        <None Remove="Commands\AmmoCommand.meta.yml" />
+        <None Remove="Commands\AttachCommand.meta.yml" />
+        <None Remove="Commands\BuyCommand.meta.yml" />
+        <None Remove="Commands\DeployCommand.meta.yml" />
+        <None Remove="Commands\Kit\KitCommand.meta.yml" />
+        <None Remove="Commands\Request\RequestCommand.meta.yml" />
+        <None Remove="Commands\VehicleBay\VehicleBayCommand.meta.yml" />
+        <None Remove="Commands\WarfareDev\WarfareDevCommand.meta.yml" />
+        <None Remove="Commands\Zone\ZoneCommand.meta.yml" />
+    </ItemGroup>
 
-  <!-- Build to module dir if it exists -->
-  <PropertyGroup Condition="'$(CopyToModule)' != 'False' And exists('$(ServerPath)\Modules\Uncreated.Warfare\Bin')">
-    <OutDir>$(ServerPath)\Modules\Uncreated.Warfare\Bin</OutDir>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(CopyToModule)' == 'False'">
-    <TargetFramework>net8.0</TargetFramework>
-  </PropertyGroup>
+    <ItemGroup>
+        <None Include="..\icon.png" Pack="true" PackagePath="\" />
+        <None Include="..\README.md" Pack="true" PackagePath="\" />
+        <None Include="..\LICENSE.md" Pack="true" PackagePath="\" />
+    </ItemGroup>
 
-  <!-- Prevent libraries from being copied -->
-  <ItemDefinitionGroup Condition="'$(CopyToModule)' != 'False'">
-    <PackageReference ExcludeAssets="runtime" />
-  </ItemDefinitionGroup>
+    <!-- Base U3DS installation -->
+    <PropertyGroup>
+        <ServerPath>C:\SteamCMD\steamapps\common\U3DS</ServerPath>
+    </PropertyGroup>
 
-  <ItemDefinitionGroup Condition="'$(CopyToModule)' != 'False'">
-    <Reference Private="false" />
-  </ItemDefinitionGroup>
+    <!-- Build to module dir if it exists -->
+    <PropertyGroup Condition="'$(CopyToModule)' != 'False' And exists('$(ServerPath)\Modules\Uncreated.Warfare\Bin')">
+        <OutDir>$(ServerPath)\Modules\Uncreated.Warfare\Bin</OutDir>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(CopyToModule)' == 'False'">
+        <TargetFramework>net8.0</TargetFramework>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <None Include="Commands\_BlankCommand.cs" />
-  </ItemGroup>
+    <!-- Prevent libraries from being copied -->
+    <ItemDefinitionGroup Condition="'$(CopyToModule)' != 'False'">
+        <PackageReference ExcludeAssets="runtime" />
+    </ItemDefinitionGroup>
 
+    <ItemDefinitionGroup Condition="'$(CopyToModule)' != 'False'">
+        <Reference Private="false" />
+    </ItemDefinitionGroup>
 
-  <ItemGroup>
-    <None Include="..\.editorconfig" Link=".editorconfig" />
-    <None Include="Stats\EventHandlers\PointsRewardsEvents.cs" />
-  </ItemGroup>
-
-  <!-- ReSharper disable VulnerablePackage (using older versions of EF and STJ) -->
-  <ItemGroup>
-    <PackageReference Include="DanielWillett.StackCleaner" Version="1.5.1" />
-    <PackageReference Include="DanielWillett.ReflectionTools" Version="4.0.0" />
-    <PackageReference Include="DanielWillett.ReflectionTools.Harmony" Version="4.0.0" />
-    <PackageReference Include="DanielWillett.SpeedBytes" Version="1.1.2" />
-    <PackageReference Include="DanielWillett.SpeedBytes.Unity" Version="1.1.1" />
-    <PackageReference Include="DanielWillett.JavaPropertiesParser" Version="1.1.1" />
-    <PackageReference Include="DanielWillett.ModularRPCs" Version="[1.0.0-prerelease22, 2)" />
-    <PackageReference Include="DanielWillett.ModularRPCs.Unity" Version="[1.0.0-prerelease22, 2)" />
-    <PackageReference Include="DanielWillett.ModularRPCs.WebSockets" Version="[1.0.0-prerelease22, 2)" />
-    <PackageReference Include="Uncreated.UI" Version="1.3.5" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="Stripe.net" Version="49.0.0" />
-    <PackageReference Include="JetBrains.Annotations" Version="2018.2.1" Aliases="JetBrains" />
-
-    <PackageReference Include="UniTask" Version="2.5.10" ExcludeAssets="compile" />
-
-    <PackageReference Include="Autofac" Version="8.4.0" />
-    <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="10.0.0" />
-
-    <PackageReference Include="SSH.NET" Version="2025.0.0" />
-
-    <PackageReference Include="System.Data.Common" Version="4.3.0" />
-    <PackageReference Include="System.Runtime.Caching" Version="9.0.10" />
-
-    <PackageReference Include="System.Text.Json" Version="9.0.10" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="9.0.10" />
-    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.10" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.10" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="9.0.10" />
-    <PackageReference Include="NetEscapades.Configuration.Yaml" Version="3.1.0" />
-    <PackageReference Include="YamlDotNet" Version="16.3.0" />
-
-    <PackageReference Include="MySqlConnector" Version="2.4.0" />
-    <PackageReference Include="Microsoft.Bcl.HashCode" Version="1.1.1" />
-    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="9.0.10" />
-    <PackageReference Include="System.Diagnostics.DiagnosticSource" Version="9.0.10" />
-    <PackageReference Include="Microsoft.Extensions.Options" Version="9.0.10" />
-    <PackageReference Include="Microsoft.Extensions.Primitives" Version="9.0.10" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.10" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.10" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.10" />
-    <PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />
-    <PackageReference Include="System.Collections.Immutable" Version="9.0.10" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="5.0.17" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="5.0.17" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="5.0.17" Private="true" />
-    <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="5.0.4" />
-    <PackageReference Include="Zack.EFCore.Batch" Version="1.5.0" />
-    <PackageReference Include="Zack.EFCore.Batch.MySQL.Pomelo" Version="1.5.0" />
-    <PackageReference Include="PolySharp" Version="1.15.0">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="Unturned.MSBuild" Version="1.0.0-test6">
-        <PrivateAssets>all</PrivateAssets>
-        <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="Krafs.Publicizer" Version="2.3.0">
-        <PrivateAssets>all</PrivateAssets>
-        <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
-    </PackageReference>
-  </ItemGroup>
-  <!-- ReSharper restore VulnerablePackage -->
-
-  <ItemGroup Condition="$(DefineConstants.Contains('TELEMETRY'))">
-
-      <PackageReference Include="OpenTelemetry" Version="1.13.1" />
-      <PackageReference Include="OpenTelemetry.Exporter.Zipkin" Version="1.9.0" />
-
-  </ItemGroup>
-
-  <!-- Embedded Files -->
-  <ItemGroup>
-
-    <EmbeddedResource Include="..\Translation README.md" />
-
-    <EmbeddedResource Include="Commands\LinkCommand.meta.yml" />
-
-    <EmbeddedResource Include="Commands\NerdCommand.meta.yml" />
-
-    <EmbeddedResource Include="Commands\Permission\PermissionCommand.meta.yml" />
-
-    <EmbeddedResource Include="Commands\ReportCommand.meta.yml" />
-
-    <EmbeddedResource Include="Commands\SquadsCommand.meta.yml" />
-
-    <EmbeddedResource Include="Commands\Vanilla\ShutdownCommand.meta.yml" />
-
-    <EmbeddedResource Include="Commands\Vanilla\VehicleCommand.meta.yml" />
-
-    <EmbeddedResource Include="Commands\Whitelist\WhitelistCommand.meta.yml" />
-
-    <EmbeddedResource Include="Commands\TeamsCommand.meta.yml" />
-
-    <EmbeddedResource Include="Commands\SaveVoiceBufferCommand.meta.yml" />
-
-    <EmbeddedResource Include="Commands\RangeCommand.meta.yml" />
-
-    <EmbeddedResource Include="Commands\OptionsCommand.meta.yml" />
-
-    <EmbeddedResource Include="Commands\ModerateCommand.meta.yml" />
-
-    <EmbeddedResource Include="Commands\IPWhitelistCommand.meta.yml" />
-
-    <EmbeddedResource Include="Commands\Holiday\HolidayCommand.meta.yml" />
-
-    <EmbeddedResource Include="Commands\Group\GroupCommand.meta.yml" />
-
-    <EmbeddedResource Include="Commands\DutyCommand.meta.yml" />
-
-    <EmbeddedResource Include="Commands\DiscordCommand.meta.yml" />
-    <EmbeddedResource Include="Commands\DeployCommand.meta.yml" />
-    <EmbeddedResource Include="Commands\BuyCommand.meta.yml" />
-    <EmbeddedResource Include="Commands\AttachCommand.meta.yml" />
-    <EmbeddedResource Include="Commands\Clear\ClearCommand.meta.yml" />
-    <EmbeddedResource Include="Commands\AbandonVehicleCommand.meta.yml" />
-    <EmbeddedResource Include="Commands\Kit\KitCommand.meta.yml" />
-    <EmbeddedResource Include="Commands\Points\PointsCommand.meta.yml" />
-    <EmbeddedResource Include="Commands\Request\RequestCommand.meta.yml" />
-    <EmbeddedResource Include="Commands\Structure\StructureCommand.meta.yml" />
-    <EmbeddedResource Include="Commands\Vanilla\VanishCommand.meta.yml" />
-    <EmbeddedResource Include="Commands\Vanilla\TeleportCommand.meta.yml" />
-    <EmbeddedResource Include="Commands\Vanilla\HealCommand.meta.yml" />
-    <EmbeddedResource Include="Commands\Vanilla\GodCommand.meta.yml" />
-    <EmbeddedResource Include="Commands\Vanilla\GiveCommand.meta.yml" />
-    <EmbeddedResource Include="Commands\VehicleBay\VehicleBayCommand.meta.yml" />
-    <EmbeddedResource Include="Commands\WarfareDev\WarfareDevCommand.meta.yml" />
-    <EmbeddedResource Include="Commands\Zone\ZoneCommand.meta.yml" />
-
-  </ItemGroup>
-
-  <!-- Global Usings (JetBrains annotations imports are in Properties/JetBrains.Annotations.cs) -->
-  <ItemGroup>
-    <Using Remove="System.Net.Http" />
-    <Using Remove="System.Text" />
-    <Using Include="JetBrains.Annotations" />
-    <Using Include="SDG.Unturned" />
-    <Using Include="Autofac" />
-    <Using Include="Steamworks" />
-    <Using Include="System.Collections" />
-    <Using Include="UnityEngine" />
-    <Using Include="Steamworks" />
-    <Using Include="System.Threading" />
-    <Using Include="System.Threading.Tasks" />
-    <Using Include="Cysharp.Threading.Tasks" />
-    <Using Include="UnityEngine.Object">
-      <Alias>Object</Alias>
-    </Using>
-    <Using Include="System.Diagnostics.Contracts" />
-    <Using Include="System.Diagnostics.Contracts.PureAttribute">
-      <Alias>PureAttribute</Alias>
-    </Using>
-    <Using Include="System.Version">
-      <Alias>Version</Alias>
-    </Using>
-    <Using Include="System.Action">
-      <Alias>Action</Alias>
-    </Using>
-    <Using Include="Uncreated.Warfare.Vehicles.Spawners.VehicleSpawner">
-      <Alias>VehicleSpawner</Alias>
-    </Using>
-    <Using Include="Microsoft.Extensions.Logging" />
-    <Using Include="Microsoft.Extensions.Logging.ILogger">
-      <Alias>ILogger</Alias>
-    </Using>
-  </ItemGroup>
-
-  <!-- Unturned Files -->
-  <Choose>
-    <When Condition="exists('$(ServerPath)/Unturned_Data/Managed/Assembly-CSharp.dll')">
-      <PropertyGroup>
-        <UnturnedDllPath>$(ServerPath)/Unturned_Data/Managed</UnturnedDllPath>
-      </PropertyGroup>
-    </When>
-    <Otherwise>
-      <PropertyGroup>
-        <UnturnedDllPath>../Libraries</UnturnedDllPath>
-      </PropertyGroup>
-    </Otherwise>
-  </Choose>
-
-  <!-- Unturned Files -->
-  <ItemGroup>
-
-    <UnturnedReference Include="Assembly-CSharp" />
-    <UnturnedReference Include="SDG.NetTransport" />
-    <UnturnedReference Include="Unity.TextMeshPro" />
-    <UnturnedReference Include="SDG.NetPak.Runtime" />
-    <UnturnedReference Include="UnturnedDat" />
-    <UnturnedReference Include="UnityEx" />
-    <UnturnedReference Include="com.rlabrecque.steamworks.net" />
-    <UnturnedReference Include="UnityEngine" />
-    <UnturnedReference Include="UnityEngine.CoreModule" />
-    <UnturnedReference Include="UnityEngine.UI" />
-    <UnturnedReference Include="UnityEngine.UIModule" />
-    <UnturnedReference Include="UnityEngine.PhysicsModule" />
-    <UnturnedReference Include="UnityEngine.ImageConversionModule" />
-    <UnturnedReference Include="UnityEngine.UnityWebRequestModule" />
-    <UnturnedReference Include="UnityEngine.AssetBundleModule" />
+    <ItemGroup>
+        <None Include="Commands\_BlankCommand.cs" />
+    </ItemGroup>
 
 
-    <Publicize Include="Assembly-CSharp:SDG.Unturned.AssetsWorker" />
-    <Publicize Include="Assembly-CSharp:SDG.Unturned.AssetsWorker.AssetDefinition" />
-    <Publicize Include="Assembly-CSharp:SDG.Unturned.Assets.LoadFile" />
-    <Publicize Include="Assembly-CSharp:SDG.Unturned.Assets.AddAssetsFromOriginToCurrentMapping" />
+    <ItemGroup>
+        <None Include="..\.editorconfig" Link=".editorconfig" />
+        <None Include="Stats\EventHandlers\PointsRewardsEvents.cs" />
+    </ItemGroup>
 
-  </ItemGroup>
+    <!-- ReSharper disable VulnerablePackage (using older versions of EF and STJ) -->
+    <ItemGroup>
+        <PackageReference Include="DanielWillett.StackCleaner" Version="1.5.1" />
+        <PackageReference Include="DanielWillett.ReflectionTools" Version="4.0.0" />
+        <PackageReference Include="DanielWillett.ReflectionTools.Harmony" Version="4.0.0" />
+        <PackageReference Include="DanielWillett.SpeedBytes" Version="1.1.2" />
+        <PackageReference Include="DanielWillett.SpeedBytes.Unity" Version="1.1.1" />
+        <PackageReference Include="DanielWillett.JavaPropertiesParser" Version="1.1.1" />
+        <PackageReference Include="DanielWillett.ModularRPCs" Version="[1.0.0-prerelease22, 2)" />
+        <PackageReference Include="DanielWillett.ModularRPCs.Unity" Version="[1.0.0-prerelease22, 2)" />
+        <PackageReference Include="DanielWillett.ModularRPCs.WebSockets" Version="[1.0.0-prerelease22, 2)" />
+        <PackageReference Include="Uncreated.UI" Version="1.3.5" />
+        <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+        <PackageReference Include="Stripe.net" Version="49.0.0" />
+        <PackageReference Include="JetBrains.Annotations" Version="2018.2.1" Aliases="JetBrains" />
 
-  <ItemGroup>
-    
-      <!-- Third Party -->
-    <Reference Include="UniTask">
-      <HintPath>../Libraries/UniTask.dll</HintPath>
-      <Private>!$(CopyToModule)</Private>
-    </Reference>
+        <PackageReference Include="UniTask" Version="2.5.10" ExcludeAssets="compile" />
 
-  </ItemGroup>
+        <PackageReference Include="Autofac" Version="8.4.0" />
+        <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="10.0.0" />
+
+        <PackageReference Include="SSH.NET" Version="2025.0.0" />
+
+        <PackageReference Include="System.Data.Common" Version="4.3.0" />
+        <PackageReference Include="System.Runtime.Caching" Version="9.0.10" />
+
+        <PackageReference Include="System.Text.Json" Version="9.0.10" />
+        <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="9.0.10" />
+        <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.0.0" />
+        <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.10" />
+        <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.10" />
+        <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="9.0.10" />
+        <PackageReference Include="NetEscapades.Configuration.Yaml" Version="3.1.0" />
+        <PackageReference Include="YamlDotNet" Version="16.3.0" />
+
+        <PackageReference Include="MySqlConnector" Version="2.4.0" />
+        <PackageReference Include="Microsoft.Bcl.HashCode" Version="1.1.1" />
+        <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="9.0.10" />
+        <PackageReference Include="System.Diagnostics.DiagnosticSource" Version="9.0.10" />
+        <PackageReference Include="Microsoft.Extensions.Options" Version="9.0.10" />
+        <PackageReference Include="Microsoft.Extensions.Primitives" Version="9.0.10" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.10" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.10" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.10" />
+        <PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />
+        <PackageReference Include="System.Collections.Immutable" Version="9.0.10" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="5.0.17" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="5.0.17" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="5.0.17" Private="true" />
+        <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="5.0.4" />
+        <PackageReference Include="Zack.EFCore.Batch" Version="1.5.0" />
+        <PackageReference Include="Zack.EFCore.Batch.MySQL.Pomelo" Version="1.5.0" />
+        <PackageReference Include="PolySharp" Version="1.15.0">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="Unturned.MSBuild" Version="1.0.0-test6">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="Krafs.Publicizer" Version="2.3.0">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+        </PackageReference>
+    </ItemGroup>
+    <!-- ReSharper restore VulnerablePackage -->
+
+    <ItemGroup Condition="$(DefineConstants.Contains('TELEMETRY'))">
+
+        <PackageReference Include="OpenTelemetry" Version="1.13.1" />
+        <PackageReference Include="OpenTelemetry.Exporter.Zipkin" Version="1.9.0" />
+
+    </ItemGroup>
+
+    <!-- Embedded Files -->
+    <ItemGroup>
+
+        <EmbeddedResource Include="..\Translation README.md" />
+
+        <EmbeddedResource Include="Commands\LinkCommand.meta.yml" />
+
+        <EmbeddedResource Include="Commands\NerdCommand.meta.yml" />
+
+        <EmbeddedResource Include="Commands\Permission\PermissionCommand.meta.yml" />
+
+        <EmbeddedResource Include="Commands\ReportCommand.meta.yml" />
+
+        <EmbeddedResource Include="Commands\SquadsCommand.meta.yml" />
+
+        <EmbeddedResource Include="Commands\Vanilla\ShutdownCommand.meta.yml" />
+
+        <EmbeddedResource Include="Commands\Vanilla\VehicleCommand.meta.yml" />
+
+        <EmbeddedResource Include="Commands\Whitelist\WhitelistCommand.meta.yml" />
+
+        <EmbeddedResource Include="Commands\TeamsCommand.meta.yml" />
+
+        <EmbeddedResource Include="Commands\SaveVoiceBufferCommand.meta.yml" />
+
+        <EmbeddedResource Include="Commands\RangeCommand.meta.yml" />
+
+        <EmbeddedResource Include="Commands\OptionsCommand.meta.yml" />
+
+        <EmbeddedResource Include="Commands\ModerateCommand.meta.yml" />
+
+        <EmbeddedResource Include="Commands\IPWhitelistCommand.meta.yml" />
+
+        <EmbeddedResource Include="Commands\Holiday\HolidayCommand.meta.yml" />
+
+        <EmbeddedResource Include="Commands\Group\GroupCommand.meta.yml" />
+
+        <EmbeddedResource Include="Commands\DutyCommand.meta.yml" />
+
+        <EmbeddedResource Include="Commands\DiscordCommand.meta.yml" />
+        <EmbeddedResource Include="Commands\DeployCommand.meta.yml" />
+        <EmbeddedResource Include="Commands\BuyCommand.meta.yml" />
+        <EmbeddedResource Include="Commands\AttachCommand.meta.yml" />
+        <EmbeddedResource Include="Commands\Clear\ClearCommand.meta.yml" />
+        <EmbeddedResource Include="Commands\AbandonVehicleCommand.meta.yml" />
+        <EmbeddedResource Include="Commands\Kit\KitCommand.meta.yml" />
+        <EmbeddedResource Include="Commands\Points\PointsCommand.meta.yml" />
+        <EmbeddedResource Include="Commands\Request\RequestCommand.meta.yml" />
+        <EmbeddedResource Include="Commands\Structure\StructureCommand.meta.yml" />
+        <EmbeddedResource Include="Commands\Vanilla\VanishCommand.meta.yml" />
+        <EmbeddedResource Include="Commands\Vanilla\TeleportCommand.meta.yml" />
+        <EmbeddedResource Include="Commands\Vanilla\HealCommand.meta.yml" />
+        <EmbeddedResource Include="Commands\Vanilla\GodCommand.meta.yml" />
+        <EmbeddedResource Include="Commands\Vanilla\GiveCommand.meta.yml" />
+        <EmbeddedResource Include="Commands\VehicleBay\VehicleBayCommand.meta.yml" />
+        <EmbeddedResource Include="Commands\WarfareDev\WarfareDevCommand.meta.yml" />
+        <EmbeddedResource Include="Commands\Zone\ZoneCommand.meta.yml" />
+
+    </ItemGroup>
+
+    <!-- Global Usings (JetBrains annotations imports are in Properties/JetBrains.Annotations.cs) -->
+    <ItemGroup>
+        <Using Remove="System.Net.Http" />
+        <Using Remove="System.Text" />
+        <Using Include="JetBrains.Annotations" />
+        <Using Include="SDG.Unturned" />
+        <Using Include="Autofac" />
+        <Using Include="Steamworks" />
+        <Using Include="System.Collections" />
+        <Using Include="UnityEngine" />
+        <Using Include="Steamworks" />
+        <Using Include="System.Threading" />
+        <Using Include="System.Threading.Tasks" />
+        <Using Include="Cysharp.Threading.Tasks" />
+        <Using Include="UnityEngine.Object">
+            <Alias>Object</Alias>
+        </Using>
+        <Using Include="System.Diagnostics.Contracts" />
+        <Using Include="System.Diagnostics.Contracts.PureAttribute">
+            <Alias>PureAttribute</Alias>
+        </Using>
+        <Using Include="System.Version">
+            <Alias>Version</Alias>
+        </Using>
+        <Using Include="System.Action">
+            <Alias>Action</Alias>
+        </Using>
+        <Using Include="Uncreated.Warfare.Vehicles.Spawners.VehicleSpawner">
+            <Alias>VehicleSpawner</Alias>
+        </Using>
+        <Using Include="Microsoft.Extensions.Logging" />
+        <Using Include="Microsoft.Extensions.Logging.ILogger">
+            <Alias>ILogger</Alias>
+        </Using>
+    </ItemGroup>
+
+    <!-- Unturned Files -->
+    <Choose>
+        <When Condition="exists('$(ServerPath)/Unturned_Data/Managed/Assembly-CSharp.dll')">
+            <PropertyGroup>
+                <UnturnedDllPath>$(ServerPath)/Unturned_Data/Managed</UnturnedDllPath>
+            </PropertyGroup>
+        </When>
+        <Otherwise>
+            <PropertyGroup>
+                <UnturnedDllPath>../Libraries</UnturnedDllPath>
+            </PropertyGroup>
+        </Otherwise>
+    </Choose>
+
+    <!-- Unturned Files -->
+    <ItemGroup>
+
+        <UnturnedReference Include="Assembly-CSharp" />
+        <UnturnedReference Include="SDG.NetTransport" />
+        <UnturnedReference Include="Unity.TextMeshPro" />
+        <UnturnedReference Include="SDG.NetPak.Runtime" />
+        <UnturnedReference Include="UnturnedDat" />
+        <UnturnedReference Include="UnityEx" />
+        <UnturnedReference Include="com.rlabrecque.steamworks.net" />
+        <UnturnedReference Include="UnityEngine" />
+        <UnturnedReference Include="UnityEngine.CoreModule" />
+        <UnturnedReference Include="UnityEngine.UI" />
+        <UnturnedReference Include="UnityEngine.UIModule" />
+        <UnturnedReference Include="UnityEngine.PhysicsModule" />
+        <UnturnedReference Include="UnityEngine.ImageConversionModule" />
+        <UnturnedReference Include="UnityEngine.UnityWebRequestModule" />
+        <UnturnedReference Include="UnityEngine.AssetBundleModule" />
+
+
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.AssetsWorker" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.AssetsWorker.AssetDefinition" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.Assets.LoadFile" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.Assets.AddAssetsFromOriginToCurrentMapping" />
+
+    </ItemGroup>
+
+    <ItemGroup>
+
+        <!-- Third Party -->
+        <Reference Include="UniTask">
+            <HintPath>../Libraries/UniTask.dll</HintPath>
+            <Private>!$(CopyToModule)</Private>
+        </Reference>
+
+    </ItemGroup>
 </Project>

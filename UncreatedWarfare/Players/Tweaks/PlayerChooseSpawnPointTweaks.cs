@@ -38,17 +38,22 @@ public class PlayerChooseSpawnPointTweaks :
         bool shouldSpawnAtMain = lastPlayedTeam != Team.NoTeam && !e.JoiningIntoNewRound && e.NeedsNewSpawnPoint;
         if (shouldSpawnAtMain)
         {
-            Zone? warRoom = _zoneStore.SearchZone(ZoneType.WarRoom, lastPlayedTeam.Faction);
-            if (warRoom == null) // ignore if we don't know what the player's war room is
-                return;
+            Vector4? teamManagerSpawn = _layout.TeamManager.GetSpawnPointWhenRespawningAtMain(
+                                            new OfflinePlayer(e.PlayerID.steamID, lastPlayedTeam),
+                                            lastPlayedTeam,
+                                            _zoneStore
+                                        );
 
-            e.SpawnPoint = warRoom.Spawn;
-            e.Yaw = warRoom.SpawnYaw;
-            return;
+            if (teamManagerSpawn.HasValue) // ignore if we don't know what the player's war room is
+            {
+                e.SpawnPoint = teamManagerSpawn.Value;
+                e.Yaw = teamManagerSpawn.Value.w;
+                return;
+            }
         }
 
         // spawn at main if it's the player's first time joining the server or if they're joining into a new round
-        bool shouldSpawnInLobby = e.FirstTimeJoiningServer || e.JoiningIntoNewRound;
+        bool shouldSpawnInLobby = shouldSpawnAtMain || e.FirstTimeJoiningServer || e.JoiningIntoNewRound;
         if (shouldSpawnInLobby)
         {
             Zone? lobby = _zoneStore.SearchZone(ZoneType.Lobby);
@@ -66,26 +71,24 @@ public class PlayerChooseSpawnPointTweaks :
         // respawn in main if the player has a team
         if (e.Player.Team != Team.NoTeam)
         {
-            Zone? warRoom = _zoneStore.SearchZone(ZoneType.WarRoom, e.Player.Team.Faction);
-            if (warRoom == null) // ignore if we don't know what the player's main base is
+            Vector4? teamManagerSpawn = _layout.TeamManager.GetSpawnPointWhenRespawningAtMain(
+                e.Player, e.Player.Team, _zoneStore
+            );
+            if (teamManagerSpawn.HasValue) // ignore if we don't know what the player's war room is
+            {
+                e.SpawnPoint = teamManagerSpawn.Value;
+                e.Yaw = teamManagerSpawn.Value.w;
                 return;
-
-            e.SpawnPoint = warRoom.Spawn;
-            e.Yaw = warRoom.SpawnYaw;
-            return;
+            }
         }
-        else
-        {
-            // otherwise, respawn in lobby
 
-            Zone? lobby = _zoneStore.SearchZone(ZoneType.Lobby);
-            if (lobby == null) // ignore if there is no apparent lobby
-                return;
+        // otherwise, respawn in lobby
 
-            e.SpawnPoint = lobby.Spawn;
-            e.Yaw = lobby.SpawnYaw;
+        Zone? lobby = _zoneStore.SearchZone(ZoneType.Lobby);
+        if (lobby == null) // ignore if there is no apparent lobby
             return;
-        }
-        
+
+        e.SpawnPoint = lobby.Spawn;
+        e.Yaw = lobby.SpawnYaw;
     }
 }

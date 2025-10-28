@@ -140,15 +140,15 @@ public class PlayerLobbyComponent : IPlayerComponent, IDisposable
 
         // teleport to war room
         await UniTask.SwitchToMainThread(Player.DisconnectToken);
-        Zone? warRoom = _zoneStore.SearchZone(ZoneType.WarRoom, joiningTeam.Faction);
 
-        if (warRoom == null)
+        Vector4? pos = _teamManager.GetSpawnPointWhenRespawningAtMain(Player, joiningTeam, _zoneStore);
+        if (!pos.HasValue)
         {
-            _logger.LogWarning("Unable to find war room to teleport player {0} to for team {1}.", Player, joiningTeam.Faction.Name);
+            _logger.LogWarning("Unable to find spawn point to teleport player {0} to for team {1}.", Player, joiningTeam.Faction.Name);
         }
         else
         {
-            Player.UnturnedPlayer.teleportToLocationUnsafe(warRoom.Spawn, warRoom.SpawnYaw);
+            Player.UnturnedPlayer.teleportToLocationUnsafe(pos.Value, pos.Value.w);
         }
 
         if (Player.UnturnedPlayer.movement.pluginSpeedMultiplier < 1f)

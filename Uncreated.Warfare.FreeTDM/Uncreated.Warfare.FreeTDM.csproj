@@ -24,7 +24,7 @@
 
 		<!-- Third-party plugins would use a PackageReference instead of a ProjectReference -->
 		<!--<PackageReference Include="Uncreated.Warfare" Version="4.0.13" />-->
-		<ProjectReference Include="../UncreatedWarfare/UncreatedWarfare.csproj"/>
+		<ProjectReference Include="../UncreatedWarfare/UncreatedWarfare.csproj" />
 
 		<PackageReference Include="PolySharp" Version="1.15.0">
 			<PrivateAssets>all</PrivateAssets>
@@ -35,6 +35,15 @@
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
 		</PackageReference>
+		<!-- Third Party -->
+		<Reference Include="UniTask">
+			<HintPath>../Libraries/UniTask.dll</HintPath>
+		</Reference>
+
+		<UnturnedReference Include="Assembly-CSharp" />
+		<UnturnedReference Include="UnityEngine" />
+		<UnturnedReference Include="UnityEngine.CoreModule" />
+		<UnturnedReference Include="com.rlabrecque.steamworks.net" />
 
 	</ItemGroup>
 
@@ -47,6 +56,10 @@
 		<None Update="README.md">
 			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
 		</None>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Tweaks\" />
 	</ItemGroup>
 
 </Project>

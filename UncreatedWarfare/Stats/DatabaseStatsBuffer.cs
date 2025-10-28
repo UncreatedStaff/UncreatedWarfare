@@ -3,7 +3,6 @@ using System;
 using System.Collections.Concurrent;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Models.Stats;
-using Uncreated.Warfare.Patches;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util.Timing;
 
@@ -25,14 +24,12 @@ public class DatabaseStatsBuffer : IDisposable, IHostedService, ILayoutHostedSer
     private readonly ILoopTickerFactory _loopTickerFactory;
     private ILoopTicker? _loopTicker;
 
-    public DatabaseStatsBuffer(IStatsDbContext dbContext, HarmonyPatchService patcher, ILogger<DatabaseStatsBuffer> logger, ILoopTickerFactory loopTickerFactory)
+    public DatabaseStatsBuffer(IStatsDbContext dbContext, ILogger<DatabaseStatsBuffer> logger, ILoopTickerFactory loopTickerFactory)
     {
         _dbContext = dbContext;
         _dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
         _logger = logger;
         _loopTickerFactory = loopTickerFactory;
-
-        //PatchUtil.AddFunctionStepthrough(patcher.Patcher, typeof(InternalEntityEntry).GetMethod(nameof(InternalEntityEntry.SetEntityState)!));
     }
 
     public void Enqueue(DamageRecord dmg)

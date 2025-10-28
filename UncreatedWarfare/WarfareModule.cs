@@ -617,6 +617,7 @@ public sealed class WarfareModule
         bldr.RegisterType<FlagListUI>().SingleInstance();
         bldr.RegisterType<CaptureUI>().AsSelf().AsImplementedInterfaces().SingleInstance();
         bldr.RegisterType<OptionsUI>().SingleInstance();
+        bldr.RegisterType<SeedingPlayHud>().SingleInstance();
 
         bldr.RegisterType<TipService>()
             .AsImplementedInterfaces().AsSelf()

@@ -20,8 +20,8 @@ public class ColliderProximity : MonoBehaviour, ITrackingProximity<WarfarePlayer
     private Func<WarfarePlayer, bool>? _validationCheck;
     public IProximity Proximity => _proximity;
 
-    public event Action<WarfarePlayer>? OnObjectEntered;
-    public event Action<WarfarePlayer>? OnObjectExited;
+    public event Action<IEventBasedProximity<WarfarePlayer>, WarfarePlayer>? OnObjectEntered;
+    public event Action<IEventBasedProximity<WarfarePlayer>, WarfarePlayer>? OnObjectExited;
 
     public IReadOnlyList<WarfarePlayer> ActiveObjects { get; }
 
@@ -173,13 +173,13 @@ public class ColliderProximity : MonoBehaviour, ITrackingProximity<WarfarePlayer
     {
         WarfarePlayer player = _players[index];
         _players.RemoveAt(index);
-        OnObjectExited?.Invoke(player);
+        OnObjectExited?.Invoke(this, player);
     }
 
     private void AddObject(WarfarePlayer value)
     {
         _players.Add(value);
-        OnObjectEntered?.Invoke(value);
+        OnObjectEntered?.Invoke(this, value);
     }
 
     [UsedImplicitly]

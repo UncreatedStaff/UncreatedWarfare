@@ -21,6 +21,9 @@ public class PunchToRequestTweaks : IAsyncEventListener<PlayerPunched>
     
     public async UniTask HandleEventAsync(PlayerPunched e, IServiceProvider serviceProvider, CancellationToken token = default)
     {
+        if (e.InputInfo == null)
+            return;
+
         // ignore punches if outside main
         IRequestable<object>? requestable = null;
 

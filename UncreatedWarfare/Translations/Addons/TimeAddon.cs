@@ -205,7 +205,10 @@ public sealed class TimeAddon : IArgumentAddon
 
     public static implicit operator ArgumentFormat(TimeAddon addon) => ReferenceEquals(addon, Instance) ? new ArgumentFormat(InstanceArray) : new ArgumentFormat(addon);
 
-    internal static string ToLongTimeString(TimeTranslations timeTranslations, int seconds, LanguageInfo language)
+    /// <summary>
+    /// Converts to a string in the form of '1 hour and 10 minutes', etc. It will provide up to two figures.
+    /// </summary>
+    public static string ToLongTimeString(TimeTranslations timeTranslations, int seconds, LanguageInfo language)
     {
         // tested 09/13/2024
         int high, low;

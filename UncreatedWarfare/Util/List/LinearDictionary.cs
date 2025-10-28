@@ -354,6 +354,45 @@ public class LinearDictionary<TKey, TValue> : IDictionary<TKey, TValue>, IReadOn
         ++_version;
     }
 
+    /// <summary>
+    /// Gets a key that passes a <paramref name="predicate"/>.
+    /// </summary>
+    public bool TryGetKey(Func<TValue, bool> predicate, [MaybeNullWhen(false)] out TKey key)
+    {
+        for (int i = 0; i < _items.Length; ++i)
+        {
+            ref KeyValuePair<TKey, TValue> kvp = ref _items[i];
+            if (predicate(kvp.Value))
+            {
+                key = kvp.Key;
+                return true;
+            }
+        }
+
+        key = default;
+        return false;
+    }
+
+    /// <summary>
+    /// Gets a key that has a value equal to <paramref name="value"/>.
+    /// </summary>
+    public bool TryGetKey(TValue value, [MaybeNullWhen(false)] out TKey key)
+    {
+        IEqualityComparer<TValue> equalityComparer = EqualityComparer<TValue>.Default;
+        for (int i = 0; i < _items.Length; ++i)
+        {
+            ref KeyValuePair<TKey, TValue> kvp = ref _items[i];
+            if (equalityComparer.Equals(value, kvp.Value))
+            {
+                key = kvp.Key;
+                return true;
+            }
+        }
+
+        key = default;
+        return false;
+    }
+
     /// <inheritdoc />
     bool ICollection.IsSynchronized => false;
 

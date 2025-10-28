@@ -1,6 +1,5 @@
 using SDG.Framework.Landscapes;
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
@@ -126,7 +125,7 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService, IDisposable
             {
                 ITrackingProximity<WarfarePlayer> colliderForZone = CreateColliderForZone(zone);
 
-                colliderForZone.OnObjectEntered += (player) =>
+                colliderForZone.OnObjectEntered += (__, player) =>
                 {
                     PlayerEnteredZone args = new PlayerEnteredZone
                     {
@@ -136,7 +135,7 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService, IDisposable
 
                     _ = _eventDispatcher.DispatchEventAsync(args, CancellationToken.None);
                 };
-                colliderForZone.OnObjectExited += (player) =>
+                colliderForZone.OnObjectExited += (__, player) =>
                 {
                     PlayerExitedZone args = new PlayerExitedZone
                     {

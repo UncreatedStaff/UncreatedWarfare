@@ -73,20 +73,29 @@ public class FobHUD :
             return;
         }
 
+        using IEnumerator<IFob> enumerator = _fobManager.Fobs.Where(f => f.IsVisibleToPlayer(player)).GetEnumerator();
+        if (!enumerator.MoveNext())
+        {
+            ClearFromPlayer(player.Connection);
+            return;
+        }
+
         SendToPlayer(player.Connection);
 
-        using IEnumerator<IFob> enumerator = _fobManager.Fobs.Where(f => f.IsVisibleToPlayer(player)).GetEnumerator();
         bool isDone = false;
+        bool isFirst = true;
         for (int i = 0; i < Fobs.Length; i++)
         {
             FobElement element = Fobs[i];
-            if (isDone || !enumerator.MoveNext())
+            if (isDone || !(isFirst || enumerator.MoveNext()))
             {
+                isFirst = false;
                 isDone = true;
                 element.Root.Hide(player);
                 continue;
             }
 
+            isFirst = false;
             IFob fob = enumerator.Current!;
 
             string fobName = fob.GetUIDisplay(player.Team);

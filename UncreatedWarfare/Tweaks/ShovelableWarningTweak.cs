@@ -102,7 +102,7 @@ internal class ShovelableWarningTweak : IEventListener<ProjectileSpawned>
             _friendlyTeam = friendlyTeam;
         }
 
-        public void PlayerEntered(WarfarePlayer player)
+        public void PlayerEntered(IEventBasedProximity<WarfarePlayer> prox, WarfarePlayer player)
         {
             LandingZonesComponent zones = player.Component<LandingZonesComponent>();
 
@@ -116,7 +116,7 @@ internal class ShovelableWarningTweak : IEventListener<ProjectileSpawned>
             }
         }
 
-        public void PlayerExited(WarfarePlayer player)
+        public void PlayerExited(IEventBasedProximity<WarfarePlayer> prox, WarfarePlayer player)
         {
             LandingZonesComponent zones = player.Component<LandingZonesComponent>();
 

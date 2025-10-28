@@ -134,56 +134,55 @@ public class BinaryPlayerSave : ISaveableState
         if (!File.Exists(path))
             return;
 
-        byte[] bytes;
         try
         {
-            bytes = File.ReadAllBytes(path);
+            byte[] bytes = File.ReadAllBytes(path);
+
+            Reader.LoadNew(bytes);
+
+            // version
+            byte v = Reader.ReadUInt8();
+
+            TeamId = Reader.ReadUInt64();
+            KitId = Reader.ReadUInt32();
+            SquadTeamIdentificationNumber = Reader.ReadUInt8();
+            LastGameId = Reader.ReadUInt64();
+            MainCampTime = v > 1 ? Reader.ReadDateTime() : default;
+
+            bool[] flags = Reader.ReadBoolArray();
+            if (flags.Length < FlagLength)
+                Array.Resize(ref flags, FlagLength);
+
+            if (Reader.HasFailed)
+            {
+                _logger.LogWarning("Corrupted player save: {0}.", Steam64);
+                TeamId = 0;
+                KitId = 0;
+                SquadTeamIdentificationNumber = 0;
+                LastGameId = 0;
+                Save();
+                return;
+            }
+
+            HasQueueSkip = flags[0];
+            ShouldRespawnOnJoin = flags[1];
+            IsFirstLife = flags[2];
+            IMGUI = flags[3];
+            WasNitroBoosting = flags[4];
+            TrackQuests = flags[5];
+            IsNerd = flags[6];
+            HasSeenVoiceChatNotice = flags[7];
+            WasKitLowAmmo = flags[8];
+            NeedsNewKitOnSpawn = flags[9];
+
+            WasReadFromFile = true;
+
+            Save();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to read {0}'s BinaryPlayerSave because an exception was thrown.", Steam64);
-            return;
         }
 
-        Reader.LoadNew(bytes);
-
-        // version
-        byte v = Reader.ReadUInt8();
-
-        TeamId = Reader.ReadUInt64();
-        KitId = Reader.ReadUInt32();
-        SquadTeamIdentificationNumber = Reader.ReadUInt8();
-        LastGameId = Reader.ReadUInt64();
-        MainCampTime = v > 1 ? Reader.ReadDateTime() : default;
-
-        bool[] flags = Reader.ReadBoolArray();
-        if (flags.Length < FlagLength)
-            Array.Resize(ref flags, FlagLength);
-
-        if (Reader.HasFailed)
-        {
-            _logger.LogWarning("Corrupted player save: {0}.", Steam64);
-            TeamId = 0;
-            KitId = 0;
-            SquadTeamIdentificationNumber = 0;
-            LastGameId = 0;
-            Save();
-            return;
-        }
-
-        HasQueueSkip = flags[0];
-        ShouldRespawnOnJoin = flags[1];
-        IsFirstLife = flags[2];
-        IMGUI = flags[3];
-        WasNitroBoosting = flags[4];
-        TrackQuests = flags[5];
-        IsNerd = flags[6];
-        HasSeenVoiceChatNotice = flags[7];
-        WasKitLowAmmo = flags[8];
-        NeedsNewKitOnSpawn = flags[9];
-
-        WasReadFromFile = true;
-
-        Save();
     }
 }

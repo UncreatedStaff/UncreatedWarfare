@@ -663,11 +663,7 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
 
         try
         {
-            // if this layout is a seeding layout, by default all layouts in the ~/Seeding/** folder are seeding layouts
-            bool seeding = Path.GetRelativePath(_layoutDir, file)
-                .StartsWith("Seeding", StringComparison.OrdinalIgnoreCase);
-
-            seeding = root.GetValue("IsSeeding", seeding);
+            bool seeding = root.GetValue("IsSeeding", false);
             if (expectedSeedingState.HasValue && seeding != expectedSeedingState.Value)
             {
                 if (root is IDisposable disp)

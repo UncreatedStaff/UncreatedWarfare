@@ -188,3 +188,36 @@ LeaderboardPhase phase = /* etc */;
 phase.AddToOfflineStat(phase.GetStatIndex(killStat), 1d, player, team);
 ```
 If the stat isn't registered then the method silently fails
+
+### Variations
+Variations allow you to choose random options from a glob filter and apply them at the root, Component, or Phase level.
+
+Files can be included in the variation pool using `IncludedVariations` then a subset of files can be excluded using `ExcludedVariations`.
+
+A random file from the pool will be chosen and applied to this config level.
+
+Example layout file
+```yml
+# ...
+Components:
+  - Type: "Uncreated.Warfare.SomeGamemode.SGFlagService, Uncreated.Warfare.SomeGamemode"
+    # Include all yaml files in "../FlagVariations"
+    IncludedVariations: "../FlagVariations/*.yml"
+# ...
+```
+Example variation file
+```yml
+Map: Yellowknife
+FlagPool: MapZoneProvider
+Pathing: Uncreated.Warfare.Zones.Pathing.ManualZonePathingProvider
+PathingData:
+  Zones:
+    - Russia Frontline Base
+    - Papa Three
+    - Dock
+    - Discovery
+    - Lighthouse
+    - Old Town Yellowknife
+    - Depot
+    - Canada Deployment Area
+```

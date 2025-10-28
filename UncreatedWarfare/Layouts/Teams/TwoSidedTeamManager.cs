@@ -18,6 +18,7 @@ using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Layouts.Teams;
 
@@ -37,6 +38,11 @@ public class TwoSidedTeamManager : ITeamManager<Team>
 
     /// <inheritdoc />
     public IReadOnlyList<Team> AllTeams { get; }
+
+    /// <summary>
+    /// Whether or not players should spawn at the war room over the main base.
+    /// </summary>
+    public bool SpawnAtWarRoom { get; set; } = true;
 
     /// <inheritdoc />
     public CSteamID AdminGroupId { get; } = new CSteamID(3);
@@ -154,7 +160,7 @@ public class TwoSidedTeamManager : ITeamManager<Team>
     }
 
     /// <inheritdoc />
-    public async UniTask InitializeAsync(CancellationToken token = default)
+    public virtual async UniTask InitializeAsync(CancellationToken token = default)
     {
         if (Teams is not { Count: 2 })
             throw new LayoutConfigurationException(this, "Expected exactly 2 team infos in the 'Teams' section.");
@@ -174,6 +180,8 @@ public class TwoSidedTeamManager : ITeamManager<Team>
         }
 
         Configuration ??= ConfigurationHelper.EmptySection;
+
+        SpawnAtWarRoom = Configuration.GetValue("SpawnAtWarRoom", true);
 
         _teams[0] = new Team
         {
@@ -206,6 +214,21 @@ public class TwoSidedTeamManager : ITeamManager<Team>
             _opfor = 1;
 
         _logger.LogInformation("Teams: {0} (Role: {1}) vs {2} (Role: {3})", _teams[0].Faction.Name, team1Role, _teams[1].Faction.Name, team2Role);
+    }
+
+    /// <inheritdoc />
+    public virtual Vector4? GetSpawnPointWhenRespawningAtMain(IPlayer player, Team team, ZoneStore globalZoneStore)
+    {
+        Zone? zone = SpawnAtWarRoom ? globalZoneStore.SearchZone(ZoneType.WarRoom, team.Faction) : null;
+        if (zone == null)
+        {
+            zone = globalZoneStore.SearchZone(ZoneType.MainBase, team.Faction);
+            if (zone == null) // ignore if we don't know what the player's war room or main base is
+                return null;
+        }
+
+        Vector3 spawn = zone.Spawn;
+        return new Vector4(spawn.x, spawn.y, spawn.z, zone.SpawnYaw);
     }
 
     /// <inheritdoc />

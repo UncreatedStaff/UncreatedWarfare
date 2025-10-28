@@ -38,7 +38,6 @@ public class LayoutInfo : IDisposable
     /// <summary>
     /// If this layout is a special seeding layout, which can be activated and deactivated randomly when player count changes.
     /// </summary>
-    /// <remarks>By default, all layouts in the <c>~/Seeding/**</c> folder are seeding layouts.</remarks>
     public required bool IsSeeding { get; init; }
 
     /// <summary>

@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using System;
-using System.Collections.Generic;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Layouts.Teams;
 
@@ -38,5 +38,11 @@ public class NullTeamManager : ITeamManager<Team>
     public UniTask JoinTeamAsync(WarfarePlayer player, Team team, bool wasByAdminCommand, CancellationToken token = default)
     {
         throw new NotSupportedException();
+    }
+
+    /// <inheritdoc />
+    public Vector4? GetSpawnPointWhenRespawningAtMain(IPlayer player, Team team, ZoneStore globalZoneStore)
+    {
+        return null;
     }
 }

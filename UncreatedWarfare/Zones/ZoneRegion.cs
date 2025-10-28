@@ -177,7 +177,7 @@ public class ZoneRegion : IDisposable
         }
     }
 
-    private void OnObjectExitedAnyZone(WarfarePlayer player)
+    private void OnObjectExitedAnyZone(IEventBasedProximity<WarfarePlayer> prox, WarfarePlayer player)
     {
         // check to make sure they're not already in another part of the cluster
         if (_zones.Length > 0)
@@ -211,7 +211,7 @@ public class ZoneRegion : IDisposable
         UpdateTeamCounts();
     }
 
-    private void OnObjectEnteredAnyZone(WarfarePlayer player)
+    private void OnObjectEnteredAnyZone(IEventBasedProximity<WarfarePlayer> prox, WarfarePlayer player)
     {
 
         if (!_players.AddIfNotExists(player))

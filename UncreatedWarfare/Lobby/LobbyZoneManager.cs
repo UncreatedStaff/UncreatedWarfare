@@ -430,14 +430,14 @@ public class LobbyZoneManager :
         player.Component<PlayerLobbyComponent>().UpdatePositionalData(closestLookIndex, closestPosIndex);
     }
 
-    private void OnObjectEnteredLobby(WarfarePlayer player)
+    private void OnObjectEnteredLobby(IEventBasedProximity<WarfarePlayer> prox, WarfarePlayer player)
     {
         UpdatePlayerPositionalData(player);
         player.Component<PlayerLobbyComponent>().EnterLobby();
         UpdateAllFlags(player);
     }
 
-    private void OnObjectExitedLobby(WarfarePlayer player)
+    private void OnObjectExitedLobby(IEventBasedProximity<WarfarePlayer> prox, WarfarePlayer player)
     {
         player.Component<PlayerLobbyComponent>().ExitLobby();
     }

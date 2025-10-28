@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using SDG.NetTransport;
 using System;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Data;
@@ -32,13 +31,13 @@ internal class SeedingPlayHud : UnturnedUI, IEventListener<PlayerJoined>, IEvent
 
     public UnturnedLabel Title { get; } = new UnturnedLabel("Title");
     public UnturnedLabel Info { get; } = new UnturnedLabel("Info");
-    public ImageProgressBar Progress { get; }
+    public ImageProgressBar Progress { get; } = new ImageProgressBar("Progress") { NeedsToSetLabel = false };
 
     public SeedingPlayHudStage Stage
     {
         get
         {
-            if (!_playerCountMonitor.IsSeeding)
+            if (_playerCountMonitor is not { IsSeeding: true })
                 return SeedingPlayHudStage.NotSeeding;
             
             return _playerCountMonitor.IsAwaitingStart
@@ -56,8 +55,7 @@ internal class SeedingPlayHud : UnturnedUI, IEventListener<PlayerJoined>, IEvent
         WarfareModule module)
         : base(
             serviceProvider.GetRequiredService<ILoggerFactory>(),
-            serviceProvider.GetRequiredService<AssetConfiguration>().GetAssetLink<EffectAsset>("UI:SeedingPlayHUD"),
-            staticKey: true
+            serviceProvider.GetRequiredService<AssetConfiguration>().GetAssetLink<EffectAsset>("UI:SeedingPlayHUD")
         )
     {
         _playerCountMonitor = playerCountMonitor;
@@ -65,24 +63,19 @@ internal class SeedingPlayHud : UnturnedUI, IEventListener<PlayerJoined>, IEvent
         _module = module;
         _hudManager = serviceProvider.GetService<HudManager>();
         _translations = translations.Value;
-
-        Progress = new ImageProgressBar("Progress")
-        {
-            NeedsToSetLabel = false
-        };
-
-        LateRegisterElement(Progress);
     }
 
     public void UpdateStage()
     {
         GameThread.AssertCurrent();
+        GetLogger().LogInformation("Sending to all players...");
 
         if (_isHidden)
             return;
 
         string desc;
         SeedingPlayHudStage stage = Stage;
+        GetLogger().LogInformation($"Stage: {stage}");
         switch (stage)
         {
             case SeedingPlayHudStage.WaitingForPlayers:
@@ -153,6 +146,41 @@ internal class SeedingPlayHud : UnturnedUI, IEventListener<PlayerJoined>, IEvent
         }
 
         UpdateProgress();
+    }
+
+    public void SendToPlayer(WarfarePlayer player)
+    {
+        GetLogger().LogInformation("Sending to player...");
+        if (_isHidden || IsHidden(player))
+            return;
+
+        SeedingPlayHudStage stage = Stage;
+        GetLogger().LogInformation($"Stage: {stage}.");
+        Console.WriteLine(stage);
+        string desc;
+        switch (stage)
+        {
+            case SeedingPlayHudStage.WaitingForPlayers:
+                desc = _translations.SeedingDescriptionWaitingForPlayers.Translate(player.Locale.LanguageInfo);
+                break;
+
+            case SeedingPlayHudStage.WaitingForTimer:
+                desc = _translations.SeedingDescriptionWaitingForCooldown.Translate(player.Locale.LanguageInfo);
+                break;
+
+            default:
+                ClearFromPlayer(player.Connection);
+                _hudManager?.SetIsPluginVoting(player, false);
+                return;
+        }
+
+        string layoutName = _module.GetActiveLayout().LayoutInfo.DisplayName;
+        SendToPlayer(player.Connection, layoutName, desc);
+
+        float p = GetProgressValue();
+        string label = GetProgressLabel(player.Locale.CultureInfo);
+        Progress.SetProgress(player.Connection, p);
+        Progress.Label.SetText(player.Connection, label);
     }
 
     public void UpdateProgress()

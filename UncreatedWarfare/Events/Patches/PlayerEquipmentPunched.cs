@@ -57,6 +57,10 @@ internal sealed class PlayerEquipmentPunched : IHarmonyPatch
             BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null,
             [ typeof(bool), typeof(ERaycastInfoUsage) ], null);
 
+        MethodInfo? hasInputs = typeof(PlayerInput).GetMethod(nameof(PlayerInput.hasInputs),
+            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null,
+            Type.EmptyTypes, null);
+
         if (getInput == null)
         {
             return ctx.Fail(new MethodDefinition(nameof(PlayerInput.getInput))
@@ -65,10 +69,30 @@ internal sealed class PlayerEquipmentPunched : IHarmonyPatch
                 .WithParameter<ERaycastInfoUsage>("usage")
                 .Returning<InputInfo>());
         }
+        if (hasInputs == null)
+        {
+            return ctx.Fail(new MethodDefinition(nameof(PlayerInput.hasInputs))
+                .DeclaredIn<PlayerInput>(isStatic: false)
+                .WithNoParameters()
+                .Returning<bool>());
+        }
 
         bool patched = false;
         while (ctx.MoveNext())
         {
+            if (ctx.Instruction.Calls(hasInputs) && ctx.MoveNext() && ctx.Instruction.opcode.IsBr(brtrue: true) && ctx.MoveNext())
+            {
+                // emit a null call above if (!player.input.hasInputs()) { return; }
+                ctx.EmitAbove(emit =>
+                {
+                    emit.LoadNullValue()
+                        .LoadArgument(0)
+                        .LoadArgument(1)
+                        .Invoke(Accessor.GetMethod(InvokePunch)!);
+                });
+                continue;
+            }
+
             // find call to getInput
             if (!ctx.Instruction.Calls(getInput))
                 continue;
@@ -80,22 +104,6 @@ internal sealed class PlayerEquipmentPunched : IHarmonyPatch
                    ) ;
 
             LocalReference lcl = PatchUtil.GetLocal(ctx.Instruction, false);
-            ctx.MoveNext();
-            if (ctx.Instruction.opcode.IsBr(brtrue: true))
-            {
-                // if brtrue, skip to where the label leads
-                Label label = (Label)ctx.Instruction.operand;
-                int lbl = PatchUtility.FindLabelDestinationIndex(ctx, label);
-                if (lbl == -1)
-                    break;
-
-                ctx.CaretIndex = lbl;
-            }
-            else if (ctx.Instruction.opcode.IsBrAny())
-            {
-                if (!ctx.MoveNext())
-                    break;
-            }
 
             ctx.EmitAbove(emit =>
             {
@@ -115,7 +123,7 @@ internal sealed class PlayerEquipmentPunched : IHarmonyPatch
             : ctx;
     }
 
-    private static void InvokePunch(InputInfo input, PlayerEquipment playerCaller, EPlayerPunch punch)
+    private static void InvokePunch(InputInfo? input, PlayerEquipment playerCaller, EPlayerPunch punch)
     {
         IPlayerService playerService = WarfareModule.Singleton.ServiceProvider.Resolve<IPlayerService>();
 

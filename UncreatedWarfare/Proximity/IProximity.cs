@@ -39,12 +39,12 @@ public interface IEventBasedProximity<out T> : IProximity
     /// <summary>
     /// Invoked when an object goes in proximity.
     /// </summary>
-    event Action<T> OnObjectEntered;
+    event Action<IEventBasedProximity<T>, T> OnObjectEntered;
 
     /// <summary>
     /// Invoked when an object leaves proximity.
     /// </summary>
-    event Action<T> OnObjectExited;
+    event Action<IEventBasedProximity<T>, T> OnObjectExited;
 }
 
 /// <summary>

@@ -161,7 +161,7 @@ public class WarfarePlayer :
     /// <summary>
     /// If the player this object represents is currently in the process of disconnecting.
     /// </summary>
-    public bool IsDisconnecting { get; private set; } = true;
+    public bool IsDisconnecting { get; private set; }
 
     /// <summary>
     /// List of auto-added components.

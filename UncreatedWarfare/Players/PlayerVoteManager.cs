@@ -252,7 +252,7 @@ public class PlayerVoteManager : IPlayerVoteManager, IDisposable, IEventListener
         _yesVotes = 0;
 
         Interlocked.Exchange(ref _voteInfo.Timer, null)?.Dispose();
-        if (_voteInfo.Container.SettingsIntl is { OwnsDisplay: true, Display: IDisposable disposable })
+        if (_voteInfo.Container?.SettingsIntl is { OwnsDisplay: true, Display: IDisposable disposable })
         {
             try
             {
