@@ -55,7 +55,8 @@ internal class SeedingPlayHud : UnturnedUI, IEventListener<PlayerJoined>, IEvent
         WarfareModule module)
         : base(
             serviceProvider.GetRequiredService<ILoggerFactory>(),
-            serviceProvider.GetRequiredService<AssetConfiguration>().GetAssetLink<EffectAsset>("UI:SeedingPlayHUD")
+            serviceProvider.GetRequiredService<AssetConfiguration>().GetAssetLink<EffectAsset>("UI:SeedingPlayHUD"),
+            debugLogging: true
         )
     {
         _playerCountMonitor = playerCountMonitor;
@@ -194,9 +195,6 @@ internal class SeedingPlayHud : UnturnedUI, IEventListener<PlayerJoined>, IEvent
 
         foreach (LanguageSet set in _translationService.SetOf.AllPlayers())
         {
-            if (set.Language.IsDefault)
-                continue;
-
             string label = GetProgressLabel(set.Culture);
             while (set.MoveNext())
             {

@@ -11,6 +11,7 @@ using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Logging;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Kits.Loadouts;
@@ -43,6 +44,21 @@ public interface IKitDataStore
     /// If the cache is being kept up to date.
     /// </summary>
     bool CacheEnabled { get; }
+
+    /// <summary>
+    /// Invoked when a kit's properties are updated.
+    /// </summary>
+    event Action<Kit>? KitUpdated;
+
+    /// <summary>
+    /// Invoked when a kit is fully deleted.
+    /// </summary>
+    event Action<KitModel>? KitRemoved;
+
+    /// <summary>
+    /// Invoked when a new kit is added.
+    /// </summary>
+    event Action<Kit>? KitAdded;
 
     /// <summary>
     /// Create a new kit with the given ID and basic information.
@@ -253,6 +269,7 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
     private readonly ILogger<MySqlKitsDataStore> _logger;
     private readonly IPlayerService? _playerService;
     private readonly KitSignService? _kitSigns;
+    private readonly ActionLoggerService? _actionLog;
     private bool _isInUpdate;
     private bool _isInAdd;
 
@@ -271,6 +288,15 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
 
     public bool CacheEnabled { get; }
 
+    /// <inheritdoc />
+    public event Action<Kit>? KitUpdated;
+
+    /// <inheritdoc />
+    public event Action<KitModel>? KitRemoved;
+
+    /// <inheritdoc />
+    public event Action<Kit>? KitAdded;
+
     public MySqlKitsDataStore(IServiceProvider serviceProvider, ILogger<MySqlKitsDataStore> logger)
     {
         _dbContext = serviceProvider.GetRequiredService<IKitsDbContext>();
@@ -284,6 +310,7 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
         if (WarfareModule.IsActive)
         {
             _kitSigns = serviceProvider.GetService<KitSignService>();
+            _actionLog = serviceProvider.GetService<ActionLoggerService>();
             CacheEnabled = true;
         }
 
@@ -406,6 +433,15 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
             {
                 ApplyCreateKitModuleActive(kit, model.Creator);
             }
+
+            try
+            {
+                KitAdded?.Invoke(kit);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error invoking KitAdded for kit {kit.Id}.");
+            }
         }
         finally
         {
@@ -456,6 +492,15 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
             if (WarfareModule.IsActive)
             {
                 ApplyCreateKitModuleActive(kit, model.Creator);
+            }
+
+            try
+            {
+                KitAdded?.Invoke(kit);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error invoking KitAdded for kit {kit.Id}.");
             }
         }
         finally
@@ -512,23 +557,39 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
 
         return new ValueTask<KitModel>(model);
         
-        static async ValueTask<KitModel> LanguageFallback(KitModel model, ILanguageDataStore dataStore, string displayName, CancellationToken token)
+        static ValueTask<KitModel> LanguageFallback(KitModel model, ILanguageDataStore dataStore, string displayName, CancellationToken token)
         {
-            LanguageInfo? lang = await dataStore.GetInfo(1, true, token).ConfigureAwait(false);
+            Task<LanguageInfo?> infoTask = dataStore.GetInfo(1, true, token);
+            if (!infoTask.IsCompleted)
+            {
+                return new ValueTask<KitModel>(CoreAsync(infoTask, model, displayName));
+            }
 
+            LanguageInfo? lang = infoTask.Result;
             if (lang is { Key: not 0 })
             {
                 model.Translations.Add(new KitTranslation { Value = displayName, LanguageId = lang.Key });
             }
 
-            return model;
+            return new ValueTask<KitModel>(model);
+
+            static async Task<KitModel> CoreAsync(Task<LanguageInfo?> infoTask, KitModel model, string displayName)
+            {
+                LanguageInfo? lang = await infoTask;
+                if (lang is { Key: not 0 })
+                {
+                    model.Translations.Add(new KitTranslation { Value = displayName, LanguageId = lang.Key });
+                }
+
+                return model;
+            }
         }
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     private void ApplyCreateKitModuleActive(Kit kit, ulong creatingPlayer)
     {
-        // todo: ActionLog.Add(ActionLogType.CreateKit, kit.Id, creatingPlayer);
+        _actionLog?.AddAction(new ActionLogEntry(ActionLogTypes.CreatedKit, kit.Id + " " + kit.Key.ToString(CultureInfo.InvariantCulture), creatingPlayer));
 
         if (kit.Type == KitType.Loadout && LoadoutIdHelper.Parse(kit.Id, out CSteamID player) >= 0)
         {
@@ -546,21 +607,19 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
     [MethodImpl(MethodImplOptions.NoInlining)]
     private void UpdateSigns(string kitId, WarfarePlayer? player)
     {
-        KitSignService? service = _kitSigns;
         if (player != null)
-            service?.UpdateSigns(kitId, player);
+            _kitSigns?.UpdateSigns(kitId, player);
         else
-            service?.UpdateSigns(kitId);
+            _kitSigns?.UpdateSigns(kitId);
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     private void UpdateLoadouts(WarfarePlayer? player)
     {
-        KitSignService? service = _kitSigns;
         if (player != null)
-            service?.UpdateLoadoutSigns(player);
+            _kitSigns?.UpdateLoadoutSigns(player);
         else
-            service?.UpdateLoadoutSigns();
+            _kitSigns?.UpdateLoadoutSigns();
     }
 
     public async Task<KitModel?> DeleteKitAsync(uint primaryKey, KitInclude include = KitInclude.Base, CancellationToken token = default)
@@ -599,6 +658,15 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
                 }
 
                 UpdateSigns(kit.Id, null);
+            }
+
+            try
+            {
+                KitRemoved?.Invoke(kit);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error invoking KitRemoved for kit {kit.Id}.");
             }
         }
         finally
@@ -660,6 +728,15 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
             createdKit = GetOrCreateKit(kit, include);
 
             OnKitUpdatePostSave(createdKit, kit, include, oldType, oldId);
+
+            try
+            {
+                KitUpdated?.Invoke(createdKit);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error invoking KitUpdated for kit {kit.Id}.");
+            }
         }
         finally
         {
@@ -720,6 +797,15 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
             createdKit = GetOrCreateKit(kit, include);
 
             OnKitUpdatePostSave(createdKit, kit, include, oldType, oldId);
+
+            try
+            {
+                KitUpdated?.Invoke(createdKit);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error invoking KitUpdated for kit {kit.Id}.");
+            }
         }
         finally
         {

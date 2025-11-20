@@ -76,7 +76,7 @@ public partial class WarfareGameStateService :
         Layout layout = _warfare.GetActiveLayout();
         GameId = layout.LayoutId;
         LayoutName = layout.LayoutInfo.DisplayName;
-        LayoutStartTime = layout.LayoutStats.StartTimestamp.UtcDateTime;
+        LayoutStartTime = layout.LayoutStats?.StartTimestamp.UtcDateTime ?? DateTime.MinValue;
 
         Phase = layout.ActivePhase?.Name;
 

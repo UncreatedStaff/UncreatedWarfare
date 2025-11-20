@@ -34,14 +34,6 @@ public class DutyUI : UnturnedUI, IHudUIListener
             {
                 OnUpdate();
             }
-            else
-            {
-                UniTask.Create(async () =>
-                {
-                    await UniTask.SwitchToMainThread();
-                    OnUpdate();
-                });
-            }
         }
     }
 
@@ -60,9 +52,10 @@ public class DutyUI : UnturnedUI, IHudUIListener
         if (ChatManager.voteAllowed)
         {
             _getIsVoting ??= Accessor.GenerateStaticGetter<ChatManager, bool>("isVoting", throwOnError: false);
-            TimeUtility.updated += OnUpdate;
-            _subbedUpdate = true;
         }
+
+        TimeUtility.updated += OnUpdate;
+        _subbedUpdate = true;
     }
 
     protected override void OnDisposing()
@@ -97,10 +90,11 @@ public class DutyUI : UnturnedUI, IHudUIListener
             _votePosition = true;
         }
 
+        UnturnedUIElement voteLogicElement = _votePosition ? _positionVote : _positionNoVote;
         foreach (WarfarePlayer player in _playerService.OnlinePlayers)
         {
             if (player.IsOnDuty)
-                (_votePosition ? _positionVote : _positionNoVote).SetVisibility(player.Connection, true);
+                voteLogicElement.SetVisibility(player.Connection, true);
         }
     }
 

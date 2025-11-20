@@ -2,12 +2,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using SDG.Framework.Utilities;
-using Steamworks;
 using System;
-using Uncreated.Warfare.Configuration.JsonConverters;
-using Uncreated.Warfare.Events;
-using Uncreated.Warfare.Events.Models;
-using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Exceptions;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits;
@@ -29,7 +24,7 @@ using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.FreeTeamDeathmatch;
 
-internal class FtdmService : ILayoutPhaseListener<ActionPhase>
+internal class FtdmService : ILayoutPhaseListener<ActionPhase>, IDisposable, ILayoutHostedService
 {
     private const float OutOfBoundsWarningTime = 7.5f;
 
@@ -321,6 +316,27 @@ internal class FtdmService : ILayoutPhaseListener<ActionPhase>
 
     UniTask ILayoutPhaseListener<ActionPhase>.OnPhaseEnded(ActionPhase phase, CancellationToken token)
     {
+        Dispose();
+        return UniTask.CompletedTask;
+    }
+
+    UniTask ILayoutHostedService.StartAsync(CancellationToken token)
+    {
+        return UniTask.CompletedTask;
+    }
+
+    UniTask ILayoutHostedService.StopAsync(CancellationToken token)
+    {
+        Dispose();
+        foreach (WarfarePlayer player in _playerService.OnlinePlayers)
+        {
+            player.Component<ToastManager>().SkipExpiration(ToastMessageStyle.FlashingWarning);
+        }
+        return UniTask.CompletedTask;
+    }
+
+    public void Dispose()
+    {
         if (_friendlyZoneColliders != null)
         {
             foreach (IEventBasedProximity<WarfarePlayer> prox in _friendlyZoneColliders.Values)
@@ -350,7 +366,5 @@ internal class FtdmService : ILayoutPhaseListener<ActionPhase>
         }
 
         Interlocked.Exchange(ref _onChange, null)?.Dispose();
-
-        return UniTask.CompletedTask;
     }
 }

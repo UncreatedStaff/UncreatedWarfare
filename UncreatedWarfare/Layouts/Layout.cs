@@ -443,6 +443,14 @@ public class Layout : IDisposable
         {
             Logger.LogError(ex, "Error(s) while canceling layout cancellation token source in layout {0}.", LayoutInfo.DisplayName);
         }
+        catch (ObjectDisposedException)
+        {
+            return;
+        }
+        finally
+        {
+            _cancellationTokenSource.Dispose();
+        }
 
         await UniTask.SwitchToMainThread(token);
         if (!IsActive)

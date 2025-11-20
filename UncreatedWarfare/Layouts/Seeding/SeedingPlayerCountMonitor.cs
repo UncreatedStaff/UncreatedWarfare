@@ -159,7 +159,7 @@ internal class SeedingPlayerCountMonitor :
             return UniTask.CompletedTask;
         }
 
-        if (updateUi)
+        if (updateUi || IsAwaitingStart)
         {
             _playHud?.UpdateStage();
         }
@@ -169,12 +169,7 @@ internal class SeedingPlayerCountMonitor :
 
     UniTask ILayoutHostedService.StopAsync(CancellationToken token)
     {
-        if (IsSeeding)
-        {
-            IsSeeding = false;
-            Interlocked.Exchange(ref _awaitStartTicker, null)?.Dispose();
-        }
-        else if (VoteManager.IsVoting)
+        if (!IsSeeding && VoteManager.IsVoting)
         {
             return VoteManager.EndVoteAsync(token, cancelled: true);
         }
@@ -214,7 +209,7 @@ internal class SeedingPlayerCountMonitor :
         if (IsSeeding)
         {
             _logger.LogInformation($"Sending UI to {e.Player}.");
-            _playHud?.SendToPlayer(e.Player);
+            _playHud?.UpdateStage();
         }
     }
 
@@ -225,7 +220,7 @@ internal class SeedingPlayerCountMonitor :
             return;
         }
 
-        if (Provider.clients.Count <= Rules.StartPlayerThreshold)
+        if (Provider.clients.Count < Rules.StartPlayerThreshold)
             return;
 
         _logger.LogDebug($"Awaiting start, enough players {Provider.clients.Count} joined.");
@@ -342,6 +337,7 @@ internal class SeedingPlayerCountMonitor :
         IsSeeding = false;
         _playHud?.UpdateStage();
 
+        _logger.LogInformation("Ending seeding.");
         _ = _layoutFactory.StartNextLayout();
     }
 
@@ -370,6 +366,7 @@ internal class SeedingPlayerCountMonitor :
 
         if (!delayStart)
         {
+            _logger.LogInformation("Starting seeding layout explicitly.");
             _ = _layoutFactory.StartNextLayout(CancellationToken.None);
         }
     }

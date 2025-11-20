@@ -9,7 +9,7 @@ public class SignTranslations : PropertiesTranslationCollection
 
     // Kit Classes
 
-    public readonly SignTranslation SignClassDescriptionSquadleader = new SignTranslation("class_desc_squadleader", "\n\n<#cecece>Help your squad by supplying them with <#f0a31c>rally points</color> and placing <#f0a31c>FOB radios</color>.</color>\n<#f01f1c>\\/s");
+    public readonly SignTranslation SignClassDescriptionSquadleader = new SignTranslation("class_desc_squadleader", "\n\n<#cecece>Help your squad by supplying them with <#f0a31c>rally points</color> and placing <#f0a31c>FOB radios</color>.</color>\n<#f01f1c>\\/");
 
     public readonly SignTranslation SignClassDescriptionRifleman = new SignTranslation("class_desc_rifleman", "\n\n<#cecece>Resupply your teammates in the field with an <#f0a31c>Ammo Bag</color>.</color>\n<#f01f1c>\\/");
 
@@ -35,9 +35,9 @@ public class SignTranslations : PropertiesTranslationCollection
 
     public readonly SignTranslation SignClassDescriptionEngineer = new SignTranslation("class_desc_engineer", "\n\n<#cecece>Features 200% <#f0a31c>build speed</color> and are equipped with <#f0a31c>fortifications</color> and traps to help defend their team's FOBs.</color>\n<#f01f1c>\\/");
 
-    public readonly SignTranslation SignClassDescriptionCrewman = new SignTranslation("class_desc_crewman", "\n\n<#cecece>The only kits than can man <#f0a31c>armored vehicles</color>.</color>\n<#f01f1c>\\/");
+    public readonly SignTranslation SignClassDescriptionCrewman = new SignTranslation("class_desc_crewman", "\n\n<#cecece>Gives users the ability to operate <#f0a31c>armored vehicles</color>.</color>\n<#f01f1c>\\/");
 
-    public readonly SignTranslation SignClassDescriptionPilot = new SignTranslation("class_desc_pilot", "\n\n<#cecece>The only kits that can fly <#f0a31c>aircraft</color>.</color>\n<#f01f1c>\\/");
+    public readonly SignTranslation SignClassDescriptionPilot = new SignTranslation("class_desc_pilot", "\n\n<#cecece>Gives users the ability to fly <#f0a31c>aircraft</color>.</color>\n<#f01f1c>\\/");
 
     public readonly SignTranslation SignClassDescriptionSpecOps = new SignTranslation("class_desc_specops", "\n\n<#cecece>Equipped with <#f0a31c>night-vision</color> to help see at night.</color>\n<#f01f1c>\\/");
 
