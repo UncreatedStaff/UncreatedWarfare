@@ -1,8 +1,9 @@
 using System;
-using System.Collections.Generic;
+using System.Collections.Immutable;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Interaction.Requests;
 using Uncreated.Warfare.Kits.Items;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Kits.Bundles;
 using Uncreated.Warfare.Models.Localization;
@@ -13,10 +14,28 @@ using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Languages;
 using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Translations.ValueFormatters;
+using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Util.Inventory;
+using Uncreated.Warfare.Util.List;
 using Uncreated.Warfare.Vehicles.Spawners.Delays;
 
 namespace Uncreated.Warfare.Kits;
 
+/// <summary>
+/// A collection of items and skills that can be given to players.
+/// <para>
+/// Kits can be one of the following types:
+/// <list type="bullet">
+///     <item>Public: Available for free or for credits.</item>
+///     <item>Elite: Pre-made kit available for purchase.</item>
+///     <item>Loadout: Custom-made kit for one player available for purchase.</item>
+///     <item>Special: Other kits that players don't usually have access to, such as event kits or 'gift' kits like the translator kit.</item>
+/// </list>
+/// </para>
+/// <para>
+/// Elite kits can also be in bundles.
+/// </para>
+/// </summary>
 public class Kit : IRequestable<Kit>, ITranslationArgument
 {
     private IKitItem[]? _items;
@@ -29,6 +48,44 @@ public class Kit : IRequestable<Kit>, ITranslationArgument
     private KitAccessRow[]? _access;
     private CSteamID[]? _favorites;
     private TranslationList? _translations;
+
+    private LinearDictionary<Team, ImmutableArray<ItemDescriptor>>? _itemDescriptors;
+
+    /// <summary>
+    /// Gets cached item descriptors for this kit.
+    /// </summary>
+    /// <exception cref="GameThreadException"/>
+    public ImmutableArray<ItemDescriptor> GetItemDescriptors(
+        Team team,
+        IKitItemResolver kitItemResolver,
+        ItemIconProvider itemIconProvider)
+    {
+        GameThread.AssertCurrent();
+        
+        if (_itemDescriptors == null)
+        {
+            _itemDescriptors = new LinearDictionary<Team, ImmutableArray<ItemDescriptor>>(2);
+        }
+        else if (_itemDescriptors.TryGetValue(team, out ImmutableArray<ItemDescriptor> descriptors))
+        {
+            return descriptors;
+        }
+
+        IKitItem[]? items = _items;
+        if (items == null)
+            throw new NotIncludedException("Kit.Items");
+
+        ImmutableArray<ItemDescriptor> itemDescriptors = ItemDescriptor.Gather(
+            this,
+            team,
+            items,
+            kitItemResolver,
+            itemIconProvider
+        );
+        _itemDescriptors.Add(team, itemDescriptors);
+        return itemDescriptors;
+    }
+
 
     /// <summary>
     /// Primary key of the kit in the database.
@@ -312,6 +369,7 @@ public class Kit : IRequestable<Kit>, ITranslationArgument
         }
 
         _items = array;
+        _itemDescriptors?.Clear();
     }
 
     private void UpdateSkillsetsFromModel(List<KitSkillset> skillsets)

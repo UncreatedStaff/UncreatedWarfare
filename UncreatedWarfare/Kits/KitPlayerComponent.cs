@@ -1,9 +1,9 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Kits.Loadouts;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
@@ -19,6 +19,7 @@ public class KitPlayerComponent : IPlayerComponent
 
     private IKitDataStore _kitDataStore = null!;
     private KitSignService _kitSignService = null!;
+    private LoadoutService _loadoutService = null!;
 
 #nullable disable
 
@@ -77,6 +78,7 @@ public class KitPlayerComponent : IPlayerComponent
     {
         _kitDataStore = serviceProvider.GetRequiredService<IKitDataStore>();
         _kitSignService = serviceProvider.GetRequiredService<KitSignService>();
+        _loadoutService = serviceProvider.GetRequiredService<LoadoutService>();
     }
 
     /// <summary>
@@ -89,6 +91,47 @@ public class KitPlayerComponent : IPlayerComponent
             return Task.FromResult<Kit?>(null);
 
         return _kitDataStore.QueryKitAsync(kit.Value, include, token);
+    }
+
+    /// <summary>
+    /// Reloads all caches for this player.
+    /// </summary>
+    internal async Task ReloadCacheAsync(IKitsDbContext dbContext, CancellationToken token = default)
+    {
+        ulong s64 = Player.Steam64.m_SteamID;
+        Task<List<uint>> favoritesTask = dbContext.KitFavorites
+            .Where(x => x.Steam64 == s64)
+            .Select(x => x.KitId)
+            .ToListAsync(token);
+
+        Task<List<uint>> accessTask = dbContext.KitAccess
+            .Where(x => x.Steam64 == s64)
+            .Select(x => x.KitId)
+            .ToListAsync(token);
+
+        IReadOnlyList<Kit> loadouts = await _loadoutService.GetLoadouts(Player.Steam64, KitInclude.Cached, token)
+            .ConfigureAwait(false);
+
+        List<uint> favorites = await favoritesTask.ConfigureAwait(false);
+        List<uint> access = await accessTask.ConfigureAwait(false);
+
+        await UniTask.SwitchToMainThread(token);
+
+        UpdateLoadouts(loadouts);
+
+        lock (_accessibleKits)
+        {
+            _accessibleKits.Clear();
+            foreach (uint kit in access)
+                _accessibleKits.Add(kit);
+        }
+
+        lock (_favoritedKits)
+        {
+            _favoritedKits.Clear();
+            foreach (uint kit in favorites)
+                _favoritedKits.Add(kit);
+        }
     }
 
     internal void RemoveLoadout(uint pk)

@@ -1,18 +1,24 @@
-﻿using Humanizer;
-using Stripe;
-using System;
+﻿using System;
+using System.Collections.Immutable;
 using System.Linq;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Data;
 using Uncreated.Framework.UI.Patterns;
 using Uncreated.Framework.UI.Presets;
 using Uncreated.Framework.UI.Reflection;
+using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Database;
+using Uncreated.Warfare.Database.Abstractions;
+using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.UI;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.Addons;
 using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Util.Inventory;
 
 namespace Uncreated.Warfare.Kits.UI;
 
@@ -22,6 +28,20 @@ public sealed class KitSelectionUI : UnturnedUI, IHudUIListener
     private readonly IKitDataStore _kitDataStore;
     private readonly IKitAccessService _kitAccessService;
     private readonly IPlayerService _playerService;
+    private readonly IKitItemResolver _kitItemResolver;
+    private readonly ItemIconProvider _iconProvider;
+    private readonly IKitsDbContext _kitsDbContext;
+    private readonly SemaphoreSlim _dbSemaphore;
+
+    // maps AttachmentType -> UI array index
+    private readonly int[] _attachmentMap =
+    [
+        1, -1,
+        4, -1,
+        3, -1,
+        2, -1,
+        0
+    ];
 
     private Kit[]? _cachedPublicKits;
     private readonly Func<CSteamID, KitSelectionUIData> _getDataFunc;
@@ -52,7 +72,10 @@ public sealed class KitSelectionUI : UnturnedUI, IHudUIListener
         AssetConfiguration assetConfig,
         IKitDataStore kitDataStore,
         IKitAccessService kitAccessService,
-        IPlayerService playerService
+        IPlayerService playerService,
+        IKitItemResolver kitItemResolver,
+        ItemIconProvider iconProvider,
+        IKitsDbContext kitsDbContext
     )
         : base(
             loggerFactory,
@@ -60,9 +83,14 @@ public sealed class KitSelectionUI : UnturnedUI, IHudUIListener
             staticKey: true
         )
     {
+        _kitsDbContext = kitsDbContext;
+        _dbSemaphore = new SemaphoreSlim(1, 1);
+
         _kitDataStore = kitDataStore;
         _kitAccessService = kitAccessService;
         _playerService = playerService;
+        _kitItemResolver = kitItemResolver;
+        _iconProvider = iconProvider;
         kitDataStore.KitUpdated += KitUpdated;
         kitDataStore.KitAdded += KitUpdated;
         kitDataStore.KitRemoved += KitModelUpdated;
@@ -117,6 +145,19 @@ public sealed class KitSelectionUI : UnturnedUI, IHudUIListener
         if (factionId == 0)
             factionId = player.Team.Faction.PrimaryKey;
 
+        await _dbSemaphore.WaitAsync(token);
+        try
+        {
+            await player
+                .Component<KitPlayerComponent>()
+                .ReloadCacheAsync(_kitsDbContext, token)
+                .ConfigureAwait(false);
+        }
+        finally
+        {
+            _dbSemaphore.Release();
+        }
+
         Kit[] publicKits = _cachedPublicKits ??= await _kitDataStore
             .QueryKitsAsync(
                 KitInclude.UI,
@@ -147,6 +188,7 @@ public sealed class KitSelectionUI : UnturnedUI, IHudUIListener
             Kit kit = publicKits[i];
             if (kit.Class != prevClass)
             {
+                // only send 3 classes per frame
                 if ((int)prevClass % 3 == 0)
                 {
                     await UniTask.NextFrame();
@@ -166,24 +208,24 @@ public sealed class KitSelectionUI : UnturnedUI, IHudUIListener
                 continue;
 
             KitInfo info = panel.Kits[kitIndex];
-            SendKitInfo(info, player, kit, kitComp, fresh: true);
+            SendKitInfo(info, player, kit, kitComp, fromDefaultValues: true);
         }
     }
 
-    private void SendKitInfo(KitInfo ui, WarfarePlayer player, Kit kit, KitPlayerComponent kitAccessComp, bool fresh)
+    private void SendKitInfo(KitInfo ui, WarfarePlayer player, Kit kit, KitPlayerComponent kitAccessComp, bool fromDefaultValues)
     {
         ITransportConnection c = player.Connection;
         ui.Flag.SetText(c, kit.Faction.Sprite);
         ui.Class.SetText(c, kit.Class.GetIconString());
         ui.Name.SetText(c, kit.GetDisplayName(player.Locale.LanguageInfo, useIdFallback: true));
-        ui.Playtime.SetText(c, "Playtime: 0hr"); // todo
+        ui.Playtime.SetText(c, "Playtime: ..."); // todo
         
         if (kitAccessComp.IsKitAccessible(kit.Key))
         {
             ui.PreviewButton.Hide(c);
             ui.RequestButton.Show(c);
         }
-        else if (!fresh)
+        else if (!fromDefaultValues)
         {
             ui.RequestButton.Hide(c);
             ui.PreviewButton.Show(c);
@@ -194,13 +236,109 @@ public sealed class KitSelectionUI : UnturnedUI, IHudUIListener
             ui.FavoriteButton.Hide(c);
             ui.UnfavoriteButton.Show(c);
         }
-        else if (!fresh)
+        else if (!fromDefaultValues)
         {
             ui.UnfavoriteButton.Hide(c);
             ui.FavoriteButton.Show(c);
         }
 
-        //kit.Items
+        ImmutableArray<ItemDescriptor> itemDescriptors = kit.GetItemDescriptors(player.Team, _kitItemResolver, _iconProvider);
+        int i = 0;
+        int itemCt = Math.Min(itemDescriptors.Length, ui.IncludeLabels.Length);
+        for (; i < itemCt; ++i)
+        {
+            ItemDescriptor desc = itemDescriptors[i];
+            CountIncludeLabel lbl = ui.IncludeLabels[i];
+
+            lbl.Name.SetText(c, desc.ItemName);
+            if (desc.Amount > 1)
+            {
+                lbl.Count.SetText(c, desc.Amount.ToString(player.Locale.CultureInfo));
+                lbl.Count.Show(c);
+            }
+            else if (!fromDefaultValues)
+            {
+                lbl.Count.Hide(c);
+            }
+
+            lbl.Icon.SetText(c, desc.Icon);
+            lbl.Show(c);
+            ImmutableArray<ItemDescriptorAttachment> attachments = desc.Attachments;
+            if (i < 3)
+            {
+                IncludeLabel[] attachmentLabels = i switch
+                {
+                    0 => ui.PrimaryAttachments,
+                    1 => ui.SecondaryAttachments,
+                    _ => ui.TertiaryAttachments,
+                };
+                int attachmentCt = attachments.IsDefaultOrEmpty ? 0 : attachments.Length;
+                int mask = 0;
+                for (int j = 0; j < attachmentCt; ++j)
+                {
+                    ItemDescriptorAttachment attachment = attachments[j];
+                    IncludeLabel attachmentLabel = attachmentLabels[_attachmentMap[(int)attachment.AttachmentType]];
+
+                    mask |= 1 << ((int)attachment.AttachmentType / 2);
+
+                    if (attachment.Icon != null)
+                    {
+                        attachmentLabel.Icon.SetText(c, attachment.Icon);
+                    }
+                    else if (!fromDefaultValues)
+                    {
+                        attachmentLabel.Icon.SetText(c, GetAttachmentIcon(j));
+                    }
+
+                    attachmentLabel.Name.SetText(c, attachment.ItemName);
+                    attachmentLabel.Show(c);
+                }
+
+                if (!fromDefaultValues)
+                {
+                    for (int j = 0; j < 5; ++j)
+                    {
+                        if ((mask & (1 << j)) != 0)
+                            continue;
+
+                        attachmentLabels[j].Hide(c);
+                    }
+                }
+            }
+        }
+
+        if (!fromDefaultValues)
+        {
+            for (; i < ui.IncludeLabels.Length; ++i)
+            {
+                ui.IncludeLabels[i].Hide(c);
+            }
+        }
+
+        if (!kitAccessComp.IsKitAccessible(kit.Key))
+        {
+
+        }
+
+
+        ui.StatusLabel.SetText(c, "");
+    }
+
+    private string GetAttachmentIcon(AttachmentType attachmentType)
+    {
+        return GetAttachmentIcon(_attachmentMap[(int)attachmentType]);
+    }
+
+    private static string GetAttachmentIcon(int attachmentRowIndex)
+    {
+        return attachmentRowIndex switch
+        {
+            0 => "ˊ",
+            1 => "ˆ",
+            2 => "ˉ",
+            3 => "ˈ",
+            _ => "ˇ"
+        };
     }
 
     private void OnKitFilterUpdated(UnturnedTextBox textBox, Player player, string text)
@@ -296,7 +434,7 @@ public sealed class KitSelectionUI : UnturnedUI, IHudUIListener
         public KitInfo[] Kits { get; set; }
     }
 
-    private class KitInfo
+    private class KitInfo : PatternRoot
     {
         [Pattern("Flag")]
         public UnturnedLabel Flag { get; set; }
@@ -327,16 +465,16 @@ public sealed class KitSelectionUI : UnturnedUI, IHudUIListener
         public CountIncludeLabel[] IncludeLabels { get; set; }
 
         [Pattern("Include_1_{0}")]
-        [ArrayPattern(1, To = 4)]
-        public UnturnedLabel[] PrimaryAttachments { get; set; }
+        [ArrayPattern(1, To = 5)]
+        public IncludeLabel[] PrimaryAttachments { get; set; }
 
         [Pattern("Include_2_{0}")]
-        [ArrayPattern(1, To = 4)]
-        public UnturnedLabel[] SecondaryAttachments { get; set; }
+        [ArrayPattern(1, To = 5)]
+        public IncludeLabel[] SecondaryAttachments { get; set; }
 
         [Pattern("Include_3_{0}")]
-        [ArrayPattern(1, To = 4)]
-        public UnturnedLabel[] TertiaryAttachments { get; set; }
+        [ArrayPattern(1, To = 5)]
+        public IncludeLabel[] TertiaryAttachments { get; set; }
 
         [Pattern("Status")]
         public UnturnedLabel StatusLabel { get; set; }
@@ -345,7 +483,7 @@ public sealed class KitSelectionUI : UnturnedUI, IHudUIListener
         public UnturnedUIElement UnlockButton { get; set; }
     }
 
-    private class IncludeLabel
+    private class IncludeLabel : PatternRoot
     {
         [Pattern("Icon")]
         public UnturnedLabel Icon { get; set; }
@@ -361,4 +499,145 @@ public sealed class KitSelectionUI : UnturnedUI, IHudUIListener
     }
 
 #nullable restore
+}
+
+internal sealed class KitSelectionUITranslations : PropertiesTranslationCollection
+{
+    protected override string FileName => "UI/Kit Selection";
+
+    [TranslationData("Label for the page with all the public kits.")]
+    public readonly Translation PublicKitsLabel = new Translation("Public Kits", TranslationOptions.TMProUI);
+
+    [TranslationData("Default label for the page with kit search results.")]
+    public readonly Translation SearchResultsLabel = new Translation("Search Results", TranslationOptions.TMProUI);
+
+    [TranslationData("Default label for the page with kit search results when sorting by class.", "The class being filtered by.")]
+    public readonly Translation<Class> SearchResultsByClassLabel = new Translation<Class>("Search Results - {0} kits", TranslationOptions.TMProUI);
+
+    [TranslationData("Label for the class list on the left panel.")]
+    public readonly Translation ClassesLabel = new Translation("Classes", TranslationOptions.TMProUI);
+
+    [TranslationData("Label for the favorite kits list on the left panel.")]
+    public readonly Translation FavoritesLabel = new Translation("Favorites", TranslationOptions.TMProUI);
+
+    [TranslationData("Label for the included items list on each kit.")]
+    public readonly Translation IncludedItemsLabel = new Translation("Includes", TranslationOptions.TMProUI);
+
+    [TranslationData("Label for the playtime on each kit.", "Total playtime duration.")]
+    public readonly Translation<TimeSpan> PlayTimeLabel = new Translation<TimeSpan>("Playtime: {0}", TranslationOptions.TMProUI, TimeAddon.Create(TimeSpanFormatType.Short));
+
+    [TranslationData("Placeholder text for the kit search text box.")]
+    public readonly Translation KitNameFilterPlaceholder = new Translation("Kit Name Filter", TranslationOptions.TMProUI);
+
+    [TranslationData("Label for the search button used in conjunction with the kit name filter.")]
+    public readonly Translation SearchButtonLabel = new Translation("Search", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label for the button which switches from search results back to the main public kit page.")]
+    public readonly Translation ToPublicButtonLabel = new Translation("Return to Public Kits", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label for when the kit needs to be bought with credits or real money.")]
+    public readonly Translation StatusNotPurchased = new Translation("Not Purchased", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label for the purchase button shown when the kit needs to be bought with credits.")]
+    public readonly Translation PurchaseButtonCredits = new Translation("Buy for <#b8ffc1>C</color> <#fff>0</color>\n<#b8ffc1>C</color> <#fff>0</color> - <#b8ffc1>C</color> <#fff>0</color> = <#b8ffc1>C</color> <#fff>0</color>", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label for the purchase button shown when the kit needs to be bought with credits.")]
+    public readonly Translation PurchaseButtonCurrency = new Translation("Buy for <#b8ffc1>C</color> <#fff>0</color>\n<#b8ffc1>C</color> <#fff>0</color> - <#b8ffc1>C</color> <#fff>0</color> = <#b8ffc1>C</color> <#fff>0</color>", TranslationOptions.TMProUI);
+
+    
+    [TranslationData("Description of the Squadleader class.")]
+    public readonly Translation DescriptionSquadleader = new Translation(
+        "Help your squad by supplying them with <#f0a31c>rally points</color> and placing <#f0a31c>FOB radios</color>.",
+        TranslationOptions.TMProUI
+    );
+    
+    [TranslationData("Description of the Rifleman class.")]
+    public readonly Translation DescriptionRifleman = new Translation(
+        "Resupply your teammates in the field with an <#f0a31c>Ammo Bag</color>.",
+        TranslationOptions.TMProUI
+    );
+    
+    [TranslationData("Description of the Medic class.")]
+    public readonly Translation DescriptionMedic = new Translation(
+        "<#f0a31c>Revive</color> your teammates after they've been injured.",
+        TranslationOptions.TMProUI
+    );
+    
+    [TranslationData("Description of the Breacher class.")]
+    public readonly Translation DescriptionBreacher = new Translation(
+        "Use <#f0a31c>high-powered explosives</color> to take out <#f01f1c>enemy FOBs</color>.",
+        TranslationOptions.TMProUI
+    );
+    
+    [TranslationData("Description of the Automatic Rifleman class.")]
+    public readonly Translation DescriptionAutoRifleman = new Translation(
+        "Equipped with a high-capacity and powerful <#f0a31c>LMG</color> to spray-and-pray your enemies.",
+        TranslationOptions.TMProUI
+    );
+    
+    [TranslationData("Description of the Grenadier class.")]
+    public readonly Translation DescriptionGrenadier = new Translation(
+        "Equipped with a <#f0a31c>grenade launcher</color> to take out enemies behind cover or in light-armored vehicles.",
+        TranslationOptions.TMProUI
+    );
+    
+    [TranslationData("Description of the Machine Gunner class.")]
+    public readonly Translation DescriptionMachineGunner = new Translation(
+        "Equipped with a powerful <#f0a31c>Machine Gun</color> to shred the enemy team in combat.",
+        TranslationOptions.TMProUI
+    );
+    
+    [TranslationData("Description of the Light Anti-Tank class.")]
+    public readonly Translation DescriptionLAT = new Translation(
+        "A balance between an anti-tank and combat loadout, used to conveniently destroy <#f01f1c>armored enemy vehicles</color>.",
+        TranslationOptions.TMProUI
+    );
+    
+    [TranslationData("Description of the Heavy Anti-Tank class.")]
+    public readonly Translation DescriptionHAT = new Translation(
+        "Equipped with multiple powerful <#f0a31c>anti-tank shells</color> to take out any vehicles.",
+        TranslationOptions.TMProUI
+    );
+    
+    [TranslationData("Description of the Marksman class.")]
+    public readonly Translation DescriptionMarksman = new Translation(
+        "Equipped with a <#f0a31c>marksman rifle</color> to take out enemies from medium to high distances.",
+        TranslationOptions.TMProUI
+    );
+    
+    [TranslationData("Description of the Sniper class.")]
+    public readonly Translation DescriptionSniper = new Translation(
+        "Equipped with a high-powered <#f0a31c>sniper rifle</color> to take out enemies from great distances.",
+        TranslationOptions.TMProUI
+    );
+    
+    [TranslationData("Description of the Anti-Personnel Rifleman class.")]
+    public readonly Translation DescriptionAPRifleman = new Translation(
+        "Equipped with <#f0a31c>explosive traps</color> to cover entry-points and entrap enemy vehicles.",
+        TranslationOptions.TMProUI
+    );
+    
+    [TranslationData("Description of the Combat Engineer class.")]
+    public readonly Translation DescriptionCombatEngineer = new Translation(
+        "Features 200% <#f0a31c>build speed</color> and are equipped with <#f0a31c>fortifications</color> and traps to help defend their team's FOBs.",
+        TranslationOptions.TMProUI
+    );
+    
+    [TranslationData("Description of the Crewman class.")]
+    public readonly Translation DescriptionCrewman = new Translation(
+        "Gives users the ability to operate <#f0a31c>armored vehicles</color>.",
+        TranslationOptions.TMProUI
+    );
+    
+    [TranslationData("Description of the Pilot class.")]
+    public readonly Translation DescriptionPilot = new Translation(
+        "Gives users the ability to fly <#f0a31c>aircraft</color>.",
+        TranslationOptions.TMProUI
+    );
+    
+    [TranslationData("Description of the Special Ops class.")]
+    public readonly Translation DescriptionSpecOps = new Translation(
+        "Equipped with <#f0a31c>night-vision</color> to help see at night.",
+        TranslationOptions.TMProUI
+    );
 }
