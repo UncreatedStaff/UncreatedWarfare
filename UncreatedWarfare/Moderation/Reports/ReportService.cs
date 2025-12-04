@@ -4,7 +4,6 @@ using DanielWillett.ReflectionTools;
 using DanielWillett.SpeedBytes;
 using SDG.Framework.Utilities;
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -133,6 +132,16 @@ public partial class ReportService : IDisposable, IHostedService, IEventListener
 
             InteractableObjectRubble? rubbleObject = hit.type == ERaycastInfoType.OBJECT ? hit.transform.GetComponentInParent<InteractableObjectRubble>() : null;
 
+            if (hit.type == ERaycastInfoType.RESOURCE)
+            {
+                Vector2Int c = Regions.GetCoordinateVector2Int(hit.transform.position);
+                List<ResourceSpawnpoint>? region = LevelGround.GetTreesOrNullInRegion(c);
+                if (region == null)
+                    break;
+
+                resxSpawnpoint = region.Find(x => x.model == hit.transform || x.stump == hit.transform);
+            }
+
             Asset? hitAsset = hit.type switch
             {
                 ERaycastInfoType.ANIMAL => hit.animal.asset,
@@ -140,7 +149,7 @@ public partial class ReportService : IDisposable, IHostedService, IEventListener
                 ERaycastInfoType.ZOMBIE => hit.zombie.difficulty,
                 ERaycastInfoType.BARRICADE => BarricadeManager.FindBarricadeByRootTransform(hit.transform)?.asset,
                 ERaycastInfoType.STRUCTURE => StructureManager.FindStructureByRootTransform(hit.transform)?.asset,
-                ERaycastInfoType.RESOURCE => ResourceManager.tryGetRegion(hit.transform, out byte x, out byte y, out ushort index) ? (resxSpawnpoint = LevelGround.trees[x, y][index]).asset : null,
+                ERaycastInfoType.RESOURCE => resxSpawnpoint?.asset,
                 ERaycastInfoType.OBJECT => rubbleObject?.asset,
                 _ => null
             };

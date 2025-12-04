@@ -290,7 +290,7 @@ public class KitBestowService
         {
             switch (result.Asset)
             {
-                case ItemMagazineAsset { deleteEmpty: true }:
+                case ItemMagazineAsset { ShouldDeleteAtZeroAmount: true }:
                     // low ammo does not spawn any 'deleteEmpty' magazines
                     result.Asset = null;
                     break;

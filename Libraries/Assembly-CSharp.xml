@@ -1103,6 +1103,12 @@
             This value is confusing because in the level editor it is the normalized radius, but in-game it is the square radius.
             </summary>
         </member>
+        <member name="F:SDG.Unturned.SafezoneNode.noBuildables">
+            <summary>
+            Please check CurrentlyAllowsBuilding.
+            Bypassed by LevelAsset's ShouldAllowBuildingInSafezonesInSingleplayer option.
+            </summary>
+        </member>
         <member name="M:SDG.Unturned.ItemToolAsset.canBeUsedInSafezone(SDG.Unturned.SafezoneNode,System.Boolean)">
             <summary>
             Tools like carjacks and tires can be used in safezone by admins for maintenance.
@@ -3762,7 +3768,7 @@
         <member name="P:SDG.Unturned.Logs.ShouldRedactLogs">
             <summary>
             If true, information like IP addresses and login tokens should be censored in vanilla logs.
-            Nelson 2024-11-11: Special thanks to Jdance and asineth0 in public issue #4740!
+            (public issue #4740)
             </summary>
         </member>
         <member name="P:SDG.Unturned.Logs.RedactionReplacement">
@@ -6049,17 +6055,6 @@
             Absolute path to the map folder.
             </summary>
         </member>
-        <member name="P:SDG.Unturned.LevelInfo.canAnalyticsTrack">
-            <summary>
-            Whether unity analytics should track this map's name. Don't want to burn all the analysis points!
-            </summary>
-        </member>
-        <member name="P:SDG.Unturned.LevelInfo.isSpecial">
-            <summary>
-            Maps included with the game only, separate from category because arena maps are misc.
-            Category is set as part of the config file. This is only mainly used to enable unity analytics tracking for map name.
-            </summary>
-        </member>
         <member name="P:SDG.Unturned.LevelInfo.isFromWorkshop">
             <summary>
             Only used for play menu categories at the moment.
@@ -7381,6 +7376,12 @@
             Note: this is the list as-configured. It has not been filtered according to gameplay config.
             </summary>
         </member>
+        <member name="P:SDG.Unturned.Blueprint.RequiresStaticTags">
+            <summary>
+            Not shown in the UI. These tags are checked once per-level-startup.
+            For example, used to check for "singleplayer" tag or a map-specific tag.
+            </summary>
+        </member>
         <member name="F:SDG.Unturned.Blueprint.withoutAttachments">
             <summary>
             If true, and transferState is enabled, delete attached items.
@@ -7398,9 +7399,7 @@
         </member>
         <member name="F:SDG.Unturned.Blueprint.canBeVisibleWhenSearchedWithoutRequiredItems">
             <summary>
-            2023-05-27: requested by Renaxon because some Arid blueprints are debug-only and
-            should not be visible when players search by name. (the 3.23.7.0 update made
-            non-craftable blueprints searchable for Buak)
+            Useful for hiding developer/debug internal blueprints that should not be visible when players search by name.
             </summary>
         </member>
         <member name="P:SDG.Unturned.Blueprint.CanBeVisibleWithUnmetConditions">
@@ -10523,7 +10522,7 @@
         <member name="F:SDG.Unturned.ReceivedChatMessage.useRichTextFormatting">
             <summary>
             Whether this entry should enable rich text formatting.
-            False by default because players abuse font size and ugly colors.
+            False by default to prevent players including markup themselves.
             </summary>
         </member>
         <member name="F:SDG.Unturned.ReceivedChatMessage.contents">
@@ -12576,6 +12575,27 @@
             OR use the nearly drop-in replacements FindFirstItemByAsset or HasItemByAsset.
             </summary>
         </member>
+        <member name="M:SDG.Unturned.ListExtension.GetRandomIndex``1(System.Collections.Generic.List{``0})">
+            <summary>
+            Get index within bounds assuming list is not empty.
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.ListExtension.AddDefaulted``1(System.Collections.Generic.List{``0})">
+            <summary>
+            Add a new item using its default constructor.
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.SteamBBCodeUtils.removeYouTubePreviews(System.String@)">
+            <summary>
+            In-game rich text does not support embedded YouTube videos, but they look great in the web browser,
+            so we simply remove them from the in-game text.
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.SteamBBCodeUtils.removeCodeFormatting(System.String@)">
+            <summary>
+            Unfortunately in-game rich text does not have code formatting yet, so remove the tags while preserving text.
+            </summary>
+        </member>
         <member name="P:SDG.Unturned.ItemClothingAsset.armor">
             <summary>
             Multiplier to incoming damage. Defaults to 1.0.
@@ -12644,27 +12664,6 @@
             If true, the real item is shown rather than the cosmetic item. If false, the cosmetic item can be seen.
             </summary>
         </member>
-        <member name="M:SDG.Unturned.SteamBBCodeUtils.removeYouTubePreviews(System.String@)">
-            <summary>
-            In-game rich text does not support embedded YouTube videos, but they look great in the web browser,
-            so we simply remove them from the in-game text.
-            </summary>
-        </member>
-        <member name="M:SDG.Unturned.SteamBBCodeUtils.removeCodeFormatting(System.String@)">
-            <summary>
-            Unfortunately in-game rich text does not have code formatting yet, so remove the tags while preserving text.
-            </summary>
-        </member>
-        <member name="M:SDG.Unturned.ListExtension.GetRandomIndex``1(System.Collections.Generic.List{``0})">
-            <summary>
-            Get index within bounds assuming list is not empty.
-            </summary>
-        </member>
-        <member name="M:SDG.Unturned.ListExtension.AddDefaulted``1(System.Collections.Generic.List{``0})">
-            <summary>
-            Add a new item using its default constructor.
-            </summary>
-        </member>
         <member name="T:SDG.Unturned.DamageZombieParameters">
             <summary>
             Payload for the DamageTool.damageZombie function.
@@ -12688,6 +12687,39 @@
         <member name="P:SDG.Unturned.DamageZombieParameters.AlertPosition">
             <summary>
             If not null and damage is applied, <see cref="M:SDG.Unturned.Zombie.alert(SDG.Unturned.Player)"/> is called with this position (startle: true).
+            </summary>
+        </member>
+        <member name="T:SDG.Unturned.IArmorFalloff">
+            <summary>
+            Implemented by assets which gun supports checking for damage falloff.
+            When implemented, PopulateAsset should call PopulateArmorFalloff.
+            </summary>
+        </member>
+        <member name="P:SDG.Unturned.IArmorFalloff.ArmorFalloffMaxRange">
+            <summary>
+            Ranged damage (guns) from greater than this distance finishes decreasing toward falloff multiplier.
+            Defaults to -1, in which case armor falloff is ignored.
+            </summary>
+        </member>
+        <member name="P:SDG.Unturned.IArmorFalloff.ArmorFalloffRange">
+            <summary>
+            Ranged damage (guns) from greater than this distance begins decreasing toward falloff multiplier.
+            Defaults to ArmorFalloffMaxRange.
+            </summary>
+        </member>
+        <member name="P:SDG.Unturned.IArmorFalloff.ArmorFalloffMultiplier">
+            <summary>
+            [0, 1] normalized percentage of incoming damage to apply past IncomingDamageFalloffMaxRange.
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.IArmorFalloffEx.DoesArmorFalloffShowHitmarker(SDG.Unturned.IArmorFalloff,System.Single)">
+            <summary>
+            Should hitmarker be shown client-side for a given range?
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.IArmorFalloffEx.GetArmorFalloffMultiplier(SDG.Unturned.IArmorFalloff,System.Single)">
+            <summary>
+            Amount to multiply damage by at a given range.
             </summary>
         </member>
         <member name="P:SDG.Unturned.SleekButtonState.UseContentTooltip">
@@ -14494,6 +14526,16 @@
         <member name="F:SDG.Unturned.LevelAsset.terrainColorRules">
             <summary>
             Players are kicked from multiplayer if their skin color is within threshold of any of these rules.
+            </summary>
+        </member>
+        <member name="P:SDG.Unturned.LevelAsset.ShouldAllowBuildingInSafezonesInSingleplayer">
+            <summary>
+            If true, bypasses SafezoneNode no-buildables mode in singleplayer.
+            </summary>
+        </member>
+        <member name="P:SDG.Unturned.LevelAsset.Tags">
+            <summary>
+            Blueprints can test for these tags. (Future extension here?)
             </summary>
         </member>
         <member name="T:SDG.Unturned.EAimAlignmentTransformOwner">
@@ -17060,6 +17102,11 @@
         <member name="F:SDG.Unturned.InteractableVehicle.decayLastUpdatePosition">
             <summary>
             transform.position used to test whether vehicle is moving.
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.InteractableVehicle.NotifyFirstSpawned">
+            <summary>
+            Should be called AFTER replication (if applicable) so that events can call methods relying on replication.
             </summary>
         </member>
         <member name="F:SDG.Unturned.PlayerNPCDialogueUI.hasNextDialogue">
@@ -19934,9 +19981,6 @@
             Maps region coord to a list of sub-road renderers in that region.
             Unlike older "region" features, coord can be outside of the old bounds.
             Not used in the editor or the dedicated server.
-            
-            Nelson 2025-03-28: experimenting with this to see whether it reduces time spent culling far-away road
-            renderers on Rio de Janeiro Remastered. (Lots of roads on this map.)
             </summary>
         </member>
         <member name="P:SDG.Unturned.LevelRoads.RoadMaxDistance">
@@ -20276,6 +20320,11 @@
             <summary>
             Notify menus that levels list has changed.
             Used when creating/deleting levels, as well as following workshop changes.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.Level.cachedStaticTags">
+            <summary>
+            Initialized along with level asset.
             </summary>
         </member>
         <member name="M:SDG.Unturned.Level.getAsset">

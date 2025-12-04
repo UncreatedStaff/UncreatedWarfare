@@ -372,12 +372,18 @@ public sealed class ActionLoggerService : IEventListener<IActionLoggableEvent>, 
                        $"Hit Position: {info.point:F2}, Direction: {info.direction:F2}.";
 
             case ERaycastInfoType.RESOURCE:
-                if (!ResourceManager.tryGetRegion(info.transform, out byte x, out byte y, out ushort index))
+                Vector2Int c = Regions.GetCoordinateVector2Int(info.transform.position);
+                List<ResourceSpawnpoint>? region = LevelGround.GetTreesOrNullInRegion(c);
+                if (region == null)
                     break;
 
-                ResourceSpawnpoint tree = LevelGround.trees[x, y][index];
+                int index = region.FindIndex(x => x.model == info.transform || x.stump == info.transform);
+                ResourceSpawnpoint? tree = region[index];
+                if (tree == null)
+                    break;
+
                 return $"Hit resource: {AssetLink.ToDisplayString(tree.asset)}, " +
-                       $"Instance ID: ({x}, {y}, # {index}) @ {tree.point:F2}, {tree.angle:F2}, " +
+                       $"Instance ID: ({c.x}, {c.y}, # {index}) @ {tree.point:F2}, {tree.angle:F2}, " +
                        $"Collider: {info.colliderTransform?.name}, " +
                        $"Hit Position: {info.point:F2}, Direction: {info.direction:F2}.";
         }

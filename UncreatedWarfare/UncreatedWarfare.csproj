@@ -55,7 +55,8 @@
 
         <NoWarn>NU1701;NU1803;NU1903;NU1904;1702,1591,1587,1711,1735,1573,1574,1570,1584,1658</NoWarn>
         <MSBuildWarningsAsMessages>$(MSBuildWarningsAsMessages);MSB3030</MSBuildWarningsAsMessages>
-        <DefineConstants>$(DefineConstants);JETBRAINS_ANNOTATIONS;REMOTE_WORKSHOP_UPLOAD</DefineConstants>
+        <DefineConstants>$(DefineConstants);JETBRAINS_ANNOTATIONS</DefineConstants>
+        <!--<DefineConstants>$(DefineConstants);REMOTE_WORKSHOP_UPLOAD</DefineConstants>-->
     </PropertyGroup>
 
     <PropertyGroup>

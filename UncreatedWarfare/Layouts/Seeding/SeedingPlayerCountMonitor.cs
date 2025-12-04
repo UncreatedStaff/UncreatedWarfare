@@ -84,6 +84,9 @@ internal class SeedingPlayerCountMonitor :
     public bool IsSeeding { get; private set; }
     public bool IsAwaitingStart => _awaitStartTicker != null;
 
+    /// <summary>
+    /// Invoked when config is updated. May not be invoked on the main thread.
+    /// </summary>
     public event Action<SeedingRules>? RulesUpdated;
 
     public SeedingPlayerCountMonitor(
@@ -102,11 +105,11 @@ internal class SeedingPlayerCountMonitor :
         _logger = loggerFactory.CreateLogger<SeedingPlayerCountMonitor>();
         Rules = new SeedingRules();
 
-        ReloadRules();
+        ReloadRules(true);
 
         _changeToken = ChangeToken.OnChange(
             systemConfig.GetReloadToken,
-            me => me.ReloadRules(),
+            me => me.ReloadRules(false),
             this
         );
 
@@ -118,7 +121,7 @@ internal class SeedingPlayerCountMonitor :
         _nextVotePlayerThreshold = Rules.VotePlayerThreshold;
     }
 
-    private void ReloadRules()
+    private void ReloadRules(bool startup)
     {
         Rules.Enabled = _systemConfig.GetValue<bool>("seeding:enabled");
         Rules.VotePlayerThreshold = _systemConfig.GetValue("seeding:start_vote_players", 15);
@@ -126,6 +129,29 @@ internal class SeedingPlayerCountMonitor :
         Rules.StartCountdownLength = _systemConfig.GetValue("seeding:countdown_time", TimeSpan.FromSeconds(30));
         Rules.VoteLength = _systemConfig.GetValue("seeding:vote_time", TimeSpan.FromMinutes(1));
         RulesUpdated?.Invoke(Rules);
+
+        if (startup)
+            return;
+
+        if (Rules.Enabled)
+        {
+            UniTask.Create(async () =>
+            {
+                await UniTask.SwitchToMainThread();
+                CheckShouldStartVote();
+                if (!VoteManager.IsVoting && !IsSeeding)
+                    CheckShouldAwaitStart();
+            });
+            return;
+        }
+
+        Interlocked.Exchange(ref _awaitStartTicker, null)?.Dispose();
+        try
+        {
+            if (VoteManager.IsVoting)
+                _ = VoteManager.EndVoteAsync(cancelled: true);
+        }
+        catch (ObjectDisposedException) { }
     }
 
     UniTask ILayoutHostedService.StartAsync(CancellationToken token)
@@ -205,6 +231,9 @@ internal class SeedingPlayerCountMonitor :
     [EventListener(MustRunInstantly = true)]
     void IEventListener<PlayerJoined>.HandleEvent(PlayerJoined e, IServiceProvider serviceProvider)
     {
+        if (!Rules.Enabled)
+            return;
+
         CheckShouldAwaitStart();
         if (IsSeeding)
         {
@@ -267,6 +296,9 @@ internal class SeedingPlayerCountMonitor :
     [EventListener(MustRunInstantly = true)]
     void IEventListener<PlayerLeft>.HandleEvent(PlayerLeft e, IServiceProvider serviceProvider)
     {
+        if (!Rules.Enabled)
+            return;
+
         CheckShouldStartVote();
     }
 

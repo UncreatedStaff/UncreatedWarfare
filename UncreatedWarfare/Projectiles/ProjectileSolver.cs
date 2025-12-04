@@ -4,11 +4,12 @@
 
 #endif
 
+extern alias JetBrains;
+
 using DanielWillett.ReflectionTools;
 using SDG.Framework.Landscapes;
 using SDG.Framework.Utilities;
 using System;
-using System.Collections.Generic;
 using System.Reflection;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
@@ -72,7 +73,7 @@ public class ProjectileSolver : ILevelHostedService, IDisposable
 
         if (Interlocked.Exchange(ref _isSetUp, 1) == 0)
         {
-            Physics.autoSimulation = false;
+            Physics.simulationMode = SimulationMode.Script;
             TimeUtility.physicsUpdated += FixedUpdate;
         }
         
@@ -147,7 +148,7 @@ public class ProjectileSolver : ILevelHostedService, IDisposable
         if (Interlocked.Exchange(ref _isSetUp, 0) == 0)
             return;
 
-        Physics.autoSimulation = true;
+        Physics.simulationMode = SimulationMode.FixedUpdate;
         TimeUtility.physicsUpdated -= FixedUpdate;
     }
 
@@ -171,7 +172,7 @@ public class ProjectileSolver : ILevelHostedService, IDisposable
             if (transform.TryGetComponent(out Rigidbody body))
             {
                 float force = component.Ammo?.projectileLaunchForceMultiplier ?? 1f;
-                body.AddForce(component.Direction * component.Asset.ballisticForce * force);
+                body.AddForce(component.Direction * (component.Asset.ballisticForce * force));
                 body.collisionDetectionMode = CollisionDetectionMode.Continuous;
             }
 
@@ -235,7 +236,7 @@ public class ProjectileSolver : ILevelHostedService, IDisposable
         SceneManager.UnloadSceneAsync(_simScene);
         _simScene = default;
         _physxScene = default;
-        Physics.autoSimulation = true;
+        Physics.simulationMode = SimulationMode.Script;
     }
 
     private class DetectComponent : MonoBehaviour

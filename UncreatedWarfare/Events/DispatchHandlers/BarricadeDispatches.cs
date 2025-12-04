@@ -10,6 +10,8 @@ using Uncreated.Warfare.Util;
 namespace Uncreated.Warfare.Events;
 partial class EventDispatcher
 {
+    private static readonly List<PlayerInventorySearchResultV2> InventorySearchResults = new List<PlayerInventorySearchResultV2>(1);
+
     /// <summary>
     /// Invoked by <see cref="BarricadeManager.onDeployBarricadeRequested"/> when a player tries to place a barricade. Can be cancelled.
     /// </summary>
@@ -88,7 +90,8 @@ partial class EventDispatcher
                 return;
 
             // check if the item hasn't been moved in invetory for some reason
-            ItemJar newEquippedJar = args.OriginalPlacer.UnturnedPlayer.inventory.getItem(equippedPage, equippedIndex);
+            PlayerInventory inventory = args.OriginalPlacer.UnturnedPlayer.inventory;
+            ItemJar newEquippedJar = inventory.getItem(equippedPage, equippedIndex);
             if (newEquippedJar == null || oldEquippedJar != newEquippedJar)
                 return;
 
@@ -113,14 +116,35 @@ partial class EventDispatcher
             
             // since shouldAllow is immediately set to false when the contiuation runs, the item doesn't get consumed in the player's hands.
             // so we need to manually remove it
-            args.OriginalPlacer.UnturnedPlayer.inventory.removeItem(equippedPage, equippedIndex);
+            inventory.removeItem(equippedPage, equippedIndex);
 
             // if there is another item of the same type, try to equip it
-            InventorySearch inventorySearch = args.OriginalPlacer.UnturnedPlayer.inventory.has(newEquippedJar.item.id);
-            if (inventorySearch == null)
-                return;
-            
-            args.OriginalPlacer.UnturnedPlayer.inventory.ReceiveDragItem(inventorySearch.page, inventorySearch.jar.x, inventorySearch.jar.y, equippedPage, equippedX, equippedY, newEquippedJar.rot);
+
+            PlayerInventorySearchParameters parameters = new PlayerInventorySearchParameters
+            {
+                IncludeEquipmentSlots = true,
+                IncludeActiveStorageContainer = false,
+                MaxResultsCount = 1,
+                AssetRef = newEquippedJar.item.GetAsset(),
+                IncludeEmpty = false,
+                Results = InventorySearchResults
+            };
+
+            try
+            {
+                inventory.SearchContents(in parameters);
+
+                if (InventorySearchResults.Count == 0)
+                    return;
+                PlayerInventorySearchResultV2 result = InventorySearchResults[0];
+
+                inventory.ReceiveDragItem(result.Page, result.Jar.x, result.Jar.y, equippedPage, equippedX, equippedY, newEquippedJar.rot);
+            }
+            finally
+            {
+                InventorySearchResults.Clear();
+            }
+
             args.OriginalPlacer.UnturnedPlayer.equipment.ServerEquip(equippedPage, equippedX, equippedY);
         });
 
