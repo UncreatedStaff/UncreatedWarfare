@@ -1,0 +1,34 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="ARM" />
+    <Platform Name="ARM64" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/Solution Items/">
+    <File Path=".gitignore" />
+    <File Path="netcalls.xlsx" />
+  </Folder>
+  <Project Path="C:/SteamCMD/steamapps/common/U3DS/Unturned.exe">
+    <BuildType Project="Release" />
+    <Platform Project="x64" />
+    <Properties Name="DebuggerProjectSystem">
+      <Property Name="Arguments" Value="-batchmode -nographics +insecureserver/UncreatedSeason4" />
+      <Property Name="AttachLaunchAction" Value="No" />
+      <Property Name="Environment" Value="Default" />
+      <Property Name="Executable" Value="C:\SteamCMD\steamapps\common\U3DS\Unturned.exe" />
+      <Property Name="IORedirection" Value="Disable" />
+      <Property Name="LaunchingEngine" Value="00000000-0000-0000-0000-000000000000" />
+      <Property Name="LaunchSQLEngine" Value="No" />
+      <Property Name="PortSupplier" Value="00000000-0000-0000-0000-000000000000" />
+      <Property Name="RemoteMachine" />
+      <Property Name="StartingDirectory" Value="C:\SteamCMD\steamapps\common\U3DS" />
+      <Property Name="UseLegacyDebugEngines" Value="No" />
+    </Properties>
+  </Project>
+  <Project Path="Uncreated.Warfare.FreeTDM/Uncreated.Warfare.FreeTDM.csproj" />
+  <Project Path="UncreatedWarfare.Tests/UncreatedWarfare.Tests.csproj" />
+  <Project Path="UncreatedWarfare/UncreatedWarfare.csproj" />
+  <Project Path="WorkshopUploader/WorkshopUploader.csproj" />
+</Solution>

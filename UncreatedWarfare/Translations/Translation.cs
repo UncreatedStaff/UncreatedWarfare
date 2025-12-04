@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Translations.Languages;
@@ -14,15 +13,60 @@ namespace Uncreated.Warfare.Translations;
 public class Translation : IDisposable
 {
     private readonly string _defaultText;
+
+    /// <summary>
+    /// If the default language is using the same value as the original translation from code.
+    /// </summary>
+    public bool HasDefaultValue { get; private set; }
+
+    /// <summary>
+    /// The original value specified in code.
+    /// </summary>
     public TranslationValue Original { get; private set; } = null!;
+
+    /// <summary>
+    /// The translation key, usually equal to the field/property name.
+    /// </summary>
     public string Key { get; private set; }
+
+    /// <summary>
+    /// Information about the translation specified in the <see cref="TranslationDataAttribute"/>.
+    /// </summary>
     public TranslationData Data { get; private set; }
+
+    /// <summary>
+    /// The collection this translation is a member of.
+    /// </summary>
     public TranslationCollection Collection { get; private set; } = null!;
+
+    /// <summary>
+    /// Translation value table storing different language implementations for this translation.
+    /// </summary>
     public SharedTranslationDictionary Table { get; private set; } = null!;
+
+    /// <summary>
+    /// Whether or not the translation has been loaded from it's storage.
+    /// </summary>
     public bool IsInitialized { get; private set; }
+
+    /// <summary>
+    /// Formatting options when translating this translation.
+    /// </summary>
     public TranslationOptions Options { get; }
+
+    /// <summary>
+    /// The number of {n} arguments in this translation.
+    /// </summary>
     public virtual int ArgumentCount => 0;
+    
+    /// <summary>
+    /// Linked implementation of <see cref="ITranslationService"/>.
+    /// </summary>
     public ITranslationService TranslationService { get; private set; } = null!;
+
+    /// <summary>
+    /// Linked instance of <see cref="Uncreated.Warfare.Translations.Languages.LanguageService"/>.
+    /// </summary>
     public LanguageService LanguageService { get; private set; } = null!;
 
     public Translation(string defaultValue, TranslationOptions options = default)
@@ -30,6 +74,7 @@ public class Translation : IDisposable
         _defaultText = defaultValue;
         Key = string.Empty;
         Options = options;
+        HasDefaultValue = true;
     }
 
     // for tests
@@ -40,6 +85,7 @@ public class Translation : IDisposable
         Options = options;
         Collection = collection;
         TranslationService = translationService;
+        HasDefaultValue = true;
     }
 
     /// <summary>
@@ -79,6 +125,8 @@ public class Translation : IDisposable
         Original = new TranslationValue(languageService.GetDefaultLanguage(), _defaultText, this);
         Collection = collection;
         Table = new SharedTranslationDictionary(this, underlyingTable);
+        HasDefaultValue = Table.TryGetValue(languageService.DefaultLanguageCode, out TranslationValue value)
+                          && string.Equals(value.RawValue, _defaultText, StringComparison.Ordinal);
         IsInitialized = true;
         Table[languageService.DefaultCultureCode] = Original;
     }
@@ -207,8 +255,14 @@ public class Translation : IDisposable
     }
 }
 
+/// <summary>
+/// A translation that can be referenced by placed signs.
+/// </summary>
 public class SignTranslation : Translation
 {
+    /// <summary>
+    /// Unique ID which is typed into the sign text (sign_[SignId]) and will be replaced by the value of this translation when being sent to clients.
+    /// </summary>
     public string SignId { get; }
     public SignTranslation(string signId, string defaultValue) : base(defaultValue, TranslationOptions.TMProSign)
     {
