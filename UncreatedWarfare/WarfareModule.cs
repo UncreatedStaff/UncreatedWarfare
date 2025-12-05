@@ -857,6 +857,9 @@ public sealed class WarfareModule
         bldr.RegisterType<KitRequestService>()
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+
+        bldr.RegisterType<KitRequirementManager>()
+            .AsSelf().InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
         
         bldr.RegisterType<PunchToRequestTweaks>()
             .AsSelf().AsImplementedInterfaces();

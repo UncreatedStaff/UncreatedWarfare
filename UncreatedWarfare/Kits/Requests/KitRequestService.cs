@@ -1,7 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database.Abstractions;
@@ -12,8 +10,6 @@ using Uncreated.Warfare.Interaction.Requests;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Kits.Loadouts;
 using Uncreated.Warfare.Layouts.Teams;
-using Uncreated.Warfare.Logging;
-using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Cooldowns;
@@ -40,9 +36,7 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
     private readonly IKitDataStore _kitDataStore;
     private readonly ITranslationValueFormatter _valueFormatter;
     private readonly LoadoutService _loadoutService;
-    private readonly MapScheduler _mapScheduler;
     private readonly CooldownManager _cooldownManager;
-    private readonly PlayerNitroBoostService _boostService;
     private readonly IKitAccessService _kitAccessService;
     private readonly KitBestowService _kitBestowService;
     private readonly IKitsDbContext _kitDbContext;
@@ -52,44 +46,39 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
     private readonly AssetRedirectService _assetRedirectService;
     private readonly PointsService _pointsService;
     private readonly SquadMenuUI _squadMenuUI;
-    private readonly SquadConfiguration _squadConfiguration;
     private readonly RequestKitsTranslations _kitReqTranslations;
-    private readonly IPlayerService _playerService;
     private readonly ChatService _chatService;
     private readonly ILogger<KitRequestService> _logger;
+    private readonly KitRequirementManager _kitRequirements;
     private readonly ZoneStore _zoneStore;
 
     private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
 
+    private readonly KitRequirementVisitor _requestRequirementVisitor;
+
     public KitRequestService(
         IKitDataStore kitDataStore,
         ITranslationValueFormatter valueFormatter,
-        IPlayerService playerService,
         LoadoutService loadoutService,
         TranslationInjection<RequestKitsTranslations> translations,
-        MapScheduler mapScheduler,
         CooldownManager cooldownManager,
-        PlayerNitroBoostService boostService,
         IKitAccessService kitAccessService,
         KitBestowService kitBestowService,
         IKitsDbContext kitDbContext,
         IKitItemResolver kitItemResolver,
         EventDispatcher eventDispatcher,
         DroppedItemTracker droppedItemTracker,
-        SquadConfiguration squadConfiguration,
         AssetRedirectService assetRedirectService,
         PointsService pointsService,
         SquadMenuUI squadMenuUI,
         ChatService chatService,
         ZoneStore zoneStore,
-        ILogger<KitRequestService> logger)
+        ILogger<KitRequestService> logger,
+        KitRequirementManager kitRequirements)
     {
         _kitDataStore = kitDataStore;
         _loadoutService = loadoutService;
-        _playerService = playerService;
-        _mapScheduler = mapScheduler;
         _cooldownManager = cooldownManager;
-        _boostService = boostService;
         _kitAccessService = kitAccessService;
         _kitBestowService = kitBestowService;
         _kitDbContext = kitDbContext;
@@ -97,7 +86,6 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         _kitDbContext.ChangeTracker.AutoDetectChangesEnabled = false;
         _eventDispatcher = eventDispatcher;
         _droppedItemTracker = droppedItemTracker;
-        _squadConfiguration = squadConfiguration;
         _assetRedirectService = assetRedirectService;
         _pointsService = pointsService;
         _squadMenuUI = squadMenuUI;
@@ -106,6 +94,9 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         _chatService = chatService;
         _zoneStore = zoneStore;
         _logger = logger;
+        _kitRequirements = kitRequirements;
+
+        _requestRequirementVisitor = new KitRequirementVisitor(this);
     }
 
     /// <inheritdoc />
@@ -127,6 +118,11 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         return await RequestAsync(player, loadout, resultHandler, token).ConfigureAwait(false);
     }
 
+    private struct RequestState
+    {
+        public IRequestResultHandler Handler;
+    }
+
     /// <inheritdoc />
     public async Task<bool> RequestAsync(WarfarePlayer player, [NotNullWhen(true)] Kit? kit, IRequestResultHandler resultHandler, CancellationToken token = default)
     {
@@ -140,202 +136,31 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
+            Kit? activeKit = await player.Component<KitPlayerComponent>().GetActiveKitAsync(KitInclude.Default, token).ConfigureAwait(false);
+
             await UniTask.SwitchToMainThread(token);
 
             Team team = player.Team;
 
             // already requested
-            uint? activeKit = player.Component<KitPlayerComponent>().ActiveKitKey;
-            if (activeKit.HasValue && activeKit.Value == kit.Key)
+            if (activeKit != null && activeKit.Key == kit.Key)
             {
                 resultHandler.MissingRequirement(player, kit, _kitReqTranslations.AlreadyEquipped.Translate(player));
                 return false;
             }
 
-            if (kit.Type == KitType.Loadout && kit.Season < WarfareModule.Season)
-            {
-                resultHandler.MissingRequirement(player, kit, _kitReqTranslations.NeedsUpgrade.Translate(player));
-                return false;
-            }
+            KitPlayerComponent component = player.Component<KitPlayerComponent>();
 
-            if (kit is { Type: KitType.Loadout, IsLocked: true })
-            {
-                resultHandler.MissingRequirement(player, kit, _kitReqTranslations.NeedsSetup.Translate(player));
-                return false;
-            }
+            RequestState state;
+            state.Handler = resultHandler;
 
-            // outdated kit
-            if (kit.IsLocked || kit.Season != WarfareModule.Season && kit.Season > 0)
-            {
-                resultHandler.MissingRequirement(player, kit, _kitReqTranslations.KitDisabled.Translate(player));
-                return false;
-            }
+            KitRequirementResolutionContext<RequestState> context = new KitRequirementResolutionContext<RequestState>(player, team, kit, activeKit, component, state);
 
-            if (!IsCurrentMapAllowed(kit))
+            foreach (IKitRequirement requirement in _kitRequirements.Request)
             {
-                resultHandler.MissingRequirement(player, kit, _kitReqTranslations.KitMapNotAllowed.Translate(player));
-                return false;
-            }
-
-            if (!IsCurrentFactionAllowed(kit, team))
-            {
-                resultHandler.MissingRequirement(player, kit, _kitReqTranslations.KitTeamNotAllowed.Translate(player));
-                return false;
-            }
-
-            // kit is purchasable and player does not own yet
-            if (kit is { Type: KitType.Public, CreditCost: > 0 } && !player.Component<KitPlayerComponent>().IsKitAccessible(kit.Key))
-            {
-                // check enough credits
-                if (player.CachedPoints.Credits < kit.CreditCost)
-                {
-                    resultHandler.MissingCreditsOwnership(player, kit, kit.CreditCost);
+                KitRequirementResult result = await requirement.AcceptAsync(_requestRequirementVisitor, in context, token);
+                if (result == KitRequirementResult.No)
                     return false;
-                }
-
-                // get the position the player is looking at to play the effect at
-                Physics.Raycast(player.UnturnedPlayer.look.aim.position, player.UnturnedPlayer.look.aim.forward, out RaycastHit hit, 4f,
-                    RayMasks.PLAYER_INTERACT & ~RayMasks.ENEMY, QueryTriggerInteraction.Ignore);
-
-                if (hit.transform == null || hit.transform.gameObject.layer != LayerMasks.BARRICADE)
-                    hit = default;
-                
-                // confirm purchase kit modal
-                ToastMessage message = ToastMessage.Popup(
-                    _kitReqTranslations.ModalConfirmPurchaseKitHeading.Translate(player),
-                    _kitReqTranslations.ModalConfirmPurchaseKitDescription.Translate(kit, kit.CreditCost, player),
-                    _kitReqTranslations.ModalConfirmPurchaseKitAcceptButton.Translate(player),
-                    _kitReqTranslations.ModalConfirmPurchaseKitCancelButton.Translate(player),
-                    callbacks: new PopupCallbacks((WarfarePlayer player, int _, in ToastMessage _, ref bool _, ref bool _) =>
-                    {
-                        _ = BuyKitAsync(player, kit, hit.transform?.position, player.DisconnectToken);
-                    }, null)
-                );
-                
-
-                player.SendToast(message);
-                return false;
-            }
-
-            // elite access
-            if (kit is { Type: not KitType.Public, RequiresServerBoost: false } && !player.Component<KitPlayerComponent>().IsKitAccessible(kit.Key))
-            {
-                if (kit.PremiumCost > 0)
-                    resultHandler.MissingDonorOwnership(player, kit, kit.PremiumCost);
-                else
-                    resultHandler.MissingExclusiveOwnership(player, kit);
-                return false;
-            }
-
-            // kit user limits
-            if (kit.RequiresSquad)
-            {
-                Squad? squad = player.GetSquad();
-                if (squad == null)
-                {
-                    _squadMenuUI.OpenUI(player);
-                    return false;
-                }
-                if (kit.Class == Class.Squadleader && !player.IsSquadLeader())
-                {
-                    resultHandler.MissingRequirement(player, kit, _kitReqTranslations.RequestKitNotSquadleader.Translate(player)
-                    );
-                    return false;
-                }
-                if (IsKitAlreadyTakenInSquad(kit, squad))
-                {
-                    resultHandler.MissingRequirement(player, kit, _kitReqTranslations.RequestKitTakenInSquad.Translate(player)
-                    );
-                    return false;
-                }
-                if (!SquadHasEnoughPlayersForKit(kit, squad))
-                {
-                    resultHandler.MissingRequirement(player, kit, _kitReqTranslations.RequestKitNotEnoughSquadMembers.Translate(kit.MinRequiredSquadMembers ?? -1, player)
-                    );
-                    return false;
-                }
-            }
-
-            int allowedPerXUsers = _squadConfiguration.KitClassesAllowedPerXTeammates.GetValueOrDefault(kit.Class);
-            if (allowedPerXUsers > 0 && IsKitLimitedForClass(kit.Class, player.Team, allowedPerXUsers, out int currentUsers, out _, out _))
-            {
-                resultHandler.MissingRequirement(player, kit, _kitReqTranslations.RequestKitClassLimited.Translate(currentUsers, kit.Class, player)
-                );
-                return false;
-            }
-
-            // cooldowns
-            if (!player.IsOnDuty && _cooldownManager.HasCooldown(player, KnownCooldowns.RequestKit, out Cooldown requestCooldown) && kit.Class is not Class.Crewman and not Class.Pilot)
-            {
-                resultHandler.MissingRequirement(player, kit, _kitReqTranslations.OnGlobalCooldown.Translate(requestCooldown, player));
-                return false;
-            }
-
-            if (!player.IsOnDuty && kit is { IsPaid: true, RequestCooldown.Ticks: > 0 } && _cooldownManager.HasCooldown(player, KnownCooldowns.RequestPremiumKit, out Cooldown premiumCooldown, kit.Id))
-            {
-                resultHandler.MissingRequirement(player, kit, _kitReqTranslations.OnCooldown.Translate(premiumCooldown, player));
-                return false;
-            }
-
-            // unlock requirements
-            if (kit.UnlockRequirements != null)
-            {
-                for (int i = 0; i < kit.UnlockRequirements.Length; i++)
-                {
-                    UnlockRequirement req = kit.UnlockRequirements[i];
-                    await UniTask.SwitchToMainThread(token);
-                    if (req == null || await req.CanAccessAsync(player, token))
-                        continue;
-
-                    await UniTask.SwitchToMainThread(token);
-                    resultHandler.MissingUnlockRequirement(player, kit, req);
-                    return false;
-                }
-
-                await UniTask.SwitchToMainThread(token);
-            }
-
-            if (kit is not { CreditCost: 0, Type: KitType.Public })
-            {
-                // double check access against database
-                bool hasAccess = await _kitAccessService.HasAccessAsync(player.Steam64, kit.Key, token).ConfigureAwait(false);
-                await UniTask.SwitchToMainThread(token);
-                if (!hasAccess)
-                {
-                    // check nitro boost status
-                    if (kit.RequiresServerBoost)
-                    {
-                        bool nitroBoosting;
-                        try
-                        {
-                            nitroBoosting = await _boostService.IsBoosting(player.Steam64, true, token).ConfigureAwait(false);
-                            await UniTask.SwitchToMainThread(token);
-                        }
-                        catch
-                        {
-                            nitroBoosting = player.Save.WasNitroBoosting;
-                        }
-
-                        if (!nitroBoosting)
-                        {
-                            resultHandler.MissingRequirement(player, kit, _kitReqTranslations.RequiresNitroBoost.Translate(player));
-                            return false;
-                        }
-                    }
-                    else if (kit.IsPaid)
-                    {
-                        if (kit.PremiumCost > 0)
-                            resultHandler.MissingDonorOwnership(player, kit, kit.PremiumCost);
-                        else
-                            resultHandler.MissingExclusiveOwnership(player, kit);
-                        return false;
-                    }
-                    else
-                    {
-                        resultHandler.MissingCreditsOwnership(player, kit, kit.CreditCost);
-                        return false;
-                    }
-                }
             }
 
             if (!player.IsOnline)
@@ -769,82 +594,154 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         }
     }
 
-    internal bool IsKitAlreadyTakenInSquad(Kit kit, Squad squad)
-    {
-        if (kit.MinRequiredSquadMembers == null)
-            return false;
-
-        foreach (WarfarePlayer player in squad.Members)
-        {
-            if (player.Component<KitPlayerComponent>().ActiveKitKey is { } pk && pk == kit.Key)
-                return true;
-        }
-
-        return false;
-    }
-
-    internal bool SquadHasEnoughPlayersForKit(Kit kit, Squad squad)
-    {
-        if (kit.MinRequiredSquadMembers == null)
-            return true;
-        
-        return squad.Members.Count >= kit.MinRequiredSquadMembers;
-    }
-
-    internal bool IsKitLimitedForClass(Class @class,  Team team, int allowedPerXUsers, out int currentUsers, out int kitsAllowed, out int teammates)
-    {
-        currentUsers = 0;
-        teammates = 0;
-        foreach (WarfarePlayer player in _playerService.OnlinePlayersOnTeam(team))
-        {
-            teammates++;
-            if (player.Component<KitPlayerComponent>().ActiveClass == @class)
-                currentUsers++;
-        }
-
-        kitsAllowed = teammates / allowedPerXUsers + 1;
-        return currentUsers + 1 > kitsAllowed;
-    }
-
-    private bool IsCurrentMapAllowed(Kit kit)
-    {
-        if (kit.MapFilter.IsNullOrEmpty())
-            return true;
-        int map = _mapScheduler.Current;
-        if (map != -1)
-        {
-            for (int i = 0; i < kit.MapFilter.Length; ++i)
-            {
-                if (kit.MapFilter[i] == map)
-                    return kit.MapFilterIsWhitelist;
-            }
-        }
-
-        return !kit.MapFilterIsWhitelist;
-    }
-
-    private static bool IsCurrentFactionAllowed(Kit kit, Team team)
-    {
-        if (!kit.Faction.IsDefaultFaction)
-        {
-            if (team.Opponents.Any(x => x.Faction.Equals(kit.Faction)))
-                return false;
-        }
-
-        if (kit.FactionFilter.IsNullOrEmpty())
-            return true;
-
-        for (int i = 0; i < kit.FactionFilter.Length; ++i)
-        {
-            if (kit.FactionFilter[i].Equals(team.Faction))
-                return kit.FactionFilterIsWhitelist;
-        }
-
-        return !kit.FactionFilterIsWhitelist;
-    }
-
     void IDisposable.Dispose()
     {
         _semaphore.Dispose();
     }
+
+    /// <summary>
+    /// Translation layer between <see cref="IKitRequirementVisitor{TState}"/> and <see cref="IRequestResultHandler"/>.
+    /// </summary>
+    private class KitRequirementVisitor : IKitRequirementVisitor<RequestState>
+    {
+        private readonly KitRequestService _this;
+
+        public KitRequirementVisitor(KitRequestService @this)
+        {
+            _this = @this;
+        }
+
+        public void AcceptGenericRequirementNotMet(in KitRequirementResolutionContext<RequestState> ctx, string message)
+        {
+            ctx.State.Handler.MissingRequirement(ctx.Player, ctx.Kit, message);
+        }
+
+        public void AcceptPremiumCostNotMet(in KitRequirementResolutionContext<RequestState> ctx, decimal cost)
+        {
+            ctx.State.Handler.MissingDonorOwnership(ctx.Player, ctx.Kit, cost);
+        }
+
+        public void AcceptCreditCostNotMet(in KitRequirementResolutionContext<RequestState> ctx, double cost, double current)
+        {
+            WarfarePlayer player = ctx.Player;
+
+            // check enough credits
+            if (current < cost)
+            {
+                ctx.State.Handler.MissingCreditsOwnership(player, ctx.Kit, cost);
+                return;
+            }
+
+            // get the position the player is looking at to play the effect at
+            Physics.Raycast(player.UnturnedPlayer.look.aim.position, player.UnturnedPlayer.look.aim.forward, out RaycastHit hit, 4f,
+                RayMasks.PLAYER_INTERACT & ~RayMasks.ENEMY, QueryTriggerInteraction.Ignore);
+
+            if (hit.transform == null || hit.transform.gameObject.layer != LayerMasks.BARRICADE)
+                hit = default;
+
+            Kit kit = ctx.Kit;
+            // confirm purchase kit modal
+            ToastMessage message = ToastMessage.Popup(
+                _this._kitReqTranslations.ModalConfirmPurchaseKitHeading.Translate(player),
+                _this._kitReqTranslations.ModalConfirmPurchaseKitDescription.Translate(kit, (int)Math.Ceiling(cost), player),
+                _this._kitReqTranslations.ModalConfirmPurchaseKitAcceptButton.Translate(player),
+                _this._kitReqTranslations.ModalConfirmPurchaseKitCancelButton.Translate(player),
+                callbacks: new PopupCallbacks((WarfarePlayer player, int _, in ToastMessage _, ref bool _, ref bool _) =>
+                {
+                    _ = _this.BuyKitAsync(player, kit, hit.transform?.position, player.DisconnectToken);
+                }, null)
+            );
+
+
+            player.SendToast(message);
+        }
+
+        public void AcceptExclusiveKitNotMet(in KitRequirementResolutionContext<RequestState> ctx)
+        {
+            ctx.State.Handler.MissingExclusiveOwnership(ctx.Player, ctx.Kit);
+        }
+
+        public void AcceptLoadoutLockedNotMet(in KitRequirementResolutionContext<RequestState> ctx)
+        {
+            ctx.State.Handler.MissingRequirement(ctx.Player, ctx.Kit, _this._kitReqTranslations.NeedsSetup.Translate(ctx.Player));
+        }
+
+        public void AcceptLoadoutOutOfDateNotMet(in KitRequirementResolutionContext<RequestState> ctx, int season)
+        {
+            ctx.State.Handler.MissingRequirement(ctx.Player, ctx.Kit, _this._kitReqTranslations.NeedsUpgrade.Translate(ctx.Player));
+        }
+
+        public void AcceptDisabledNotMet(in KitRequirementResolutionContext<RequestState> ctx)
+        {
+            ctx.State.Handler.MissingRequirement(ctx.Player, ctx.Kit, _this._kitReqTranslations.KitDisabled.Translate(ctx.Player));
+        }
+
+        public void AcceptNitroBoostRequirementNotMet(in KitRequirementResolutionContext<RequestState> ctx)
+        {
+            ctx.State.Handler.MissingRequirement(ctx.Player, ctx.Kit, _this._kitReqTranslations.RequiresNitroBoost.Translate(ctx.Player));
+        }
+
+        public void AcceptMapFilterNotMet(in KitRequirementResolutionContext<RequestState> ctx)
+        {
+            ctx.State.Handler.MissingRequirement(ctx.Player, ctx.Kit, _this._kitReqTranslations.KitMapNotAllowed.Translate(ctx.Player));
+        }
+
+        public void AcceptFactionFilterNotMet(in KitRequirementResolutionContext<RequestState> ctx, FactionInfo faction)
+        {
+            ctx.State.Handler.MissingRequirement(ctx.Player, ctx.Kit, _this._kitReqTranslations.KitTeamNotAllowed.Translate(ctx.Player));
+        }
+
+        public void AcceptRequiresSquadNotMet(in KitRequirementResolutionContext<RequestState> ctx, bool needsSquadLead)
+        {
+            if (!ctx.Player.IsInSquad())
+            {
+                UniTask.Create(ctx.Player, async player =>
+                {
+                    await UniTask.SwitchToMainThread();
+                    _this._squadMenuUI.OpenUI(player);
+                });
+                return;
+            }
+
+            if (needsSquadLead)
+            {
+                ctx.State.Handler.MissingRequirement(ctx.Player, ctx.Kit, _this._kitReqTranslations.RequestKitNotSquadleader.Translate(ctx.Player));
+            }
+        }
+
+        public void AcceptMinRequiredSquadMembersNotMet(in KitRequirementResolutionContext<RequestState> ctx,
+            WarfarePlayer? playerTakingKit, int squadMemberCount, int minimumSquadMembers)
+        {
+            if (playerTakingKit != null)
+            {
+                ctx.State.Handler.MissingRequirement(ctx.Player, ctx.Kit, _this._kitReqTranslations.RequestKitTakenInSquad.Translate(ctx.Player));
+            }
+            else
+            {
+                ctx.State.Handler.MissingRequirement(ctx.Player, ctx.Kit, _this._kitReqTranslations.RequestKitNotEnoughSquadMembers.Translate(minimumSquadMembers, ctx.Player));
+            }
+        }
+
+        public void AcceptClassesAllowedPerXTeammatesRequirementNotMet(in KitRequirementResolutionContext<RequestState> ctx,
+            int allowedPerXUsers, int currentUsers, int teammates, int kitsAllowed)
+        {
+            ctx.State.Handler.MissingRequirement(ctx.Player, ctx.Kit, _this._kitReqTranslations.RequestKitClassLimited.Translate(currentUsers, ctx.Kit.Class, ctx.Player));
+        }
+
+        public void AcceptGlobalCooldownNotMet(in KitRequirementResolutionContext<RequestState> ctx, in Cooldown requestCooldown)
+        {
+            ctx.State.Handler.MissingRequirement(ctx.Player, ctx.Kit, _this._kitReqTranslations.OnGlobalCooldown.Translate(requestCooldown, ctx.Player));
+        }
+
+        public void AcceptPremiumCooldownNotMet(in KitRequirementResolutionContext<RequestState> ctx, in Cooldown requestCooldown)
+        {
+            ctx.State.Handler.MissingRequirement(ctx.Player, ctx.Kit, _this._kitReqTranslations.OnCooldown.Translate(requestCooldown, ctx.Player));
+        }
+
+        public void AcceptKitSpecificUnlockRequirementNotMet(in KitRequirementResolutionContext<RequestState> ctx, UnlockRequirement requirement)
+        {
+            ctx.State.Handler.MissingUnlockRequirement(ctx.Player, ctx.Kit, requirement);
+        }
+    }
+
 }

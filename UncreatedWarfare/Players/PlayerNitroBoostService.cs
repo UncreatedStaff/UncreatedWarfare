@@ -99,6 +99,7 @@ public partial class PlayerNitroBoostService : IEventListener<PlayerJoined>
             _logger.LogError(ex, "Error checking for nitro boosting.");
         }
 
+        await UniTask.SwitchToMainThread(token);
         BinaryPlayerSave save = new BinaryPlayerSave(steam64, _logger);
 
         save.Load();

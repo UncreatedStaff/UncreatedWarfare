@@ -74,6 +74,7 @@
 
         <CopyUnturnedReferencesToProject>True</CopyUnturnedReferencesToProject>
         <CopyUnturnedReferencesToOutput>!$(CopyToModule)</CopyUnturnedReferencesToOutput>
+        <UnturnedReferencesCopyOutput>../Libraries</UnturnedReferencesCopyOutput>
         <DeleteUnusedUnturnedReferences>True</DeleteUnusedUnturnedReferences>
     </PropertyGroup>
 

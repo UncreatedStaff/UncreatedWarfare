@@ -260,7 +260,9 @@ public class Kit : IRequestable<Kit>, ITranslationArgument
 
     public bool IsPaid => Type is KitType.Elite or KitType.Loadout;
 
- #pragma warning disable CS8618
+    public bool BypassGlobalCooldown => Class is Class.Crewman or Class.Pilot;
+
+#pragma warning disable CS8618
     internal Kit(KitModel model, IFactionDataStore factionDataStore, ICachableLanguageDataStore languageDataStore)
     {
         Key = model.PrimaryKey;

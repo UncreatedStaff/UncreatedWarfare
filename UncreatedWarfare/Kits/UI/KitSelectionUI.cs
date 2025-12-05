@@ -1,4 +1,5 @@
-﻿using System;
+﻿using DanielWillett.ReflectionTools;
+using System;
 using System.Collections.Immutable;
 using System.Linq;
 using Uncreated.Framework.UI;
@@ -31,7 +32,9 @@ public sealed class KitSelectionUI : UnturnedUI, IHudUIListener
     private readonly IKitItemResolver _kitItemResolver;
     private readonly ItemIconProvider _iconProvider;
     private readonly IKitsDbContext _kitsDbContext;
+    private readonly ITranslationService _translationService;
     private readonly SemaphoreSlim _dbSemaphore;
+    private readonly KitSelectionUITranslations _translations;
 
     // maps AttachmentType -> UI array index
     private readonly int[] _attachmentMap =
@@ -49,10 +52,13 @@ public sealed class KitSelectionUI : UnturnedUI, IHudUIListener
     private bool _isHidden;
 
     private readonly UnturnedUIElement _root = new UnturnedUIElement("~/Background");
-    private readonly UnturnedUIElement _switchToListLogic = new UnturnedUIElement("~/Logic_SwitchToList");
-    private readonly UnturnedUIElement _switchToPanelLogic = new UnturnedUIElement("~/Logic_SwitchToPanel");
 
-    private readonly PlaceholderTextBox _kitNameFilter = new PlaceholderTextBox("Filters/Viewport/Content/Kit_Search");
+    // Filter Pane
+
+    private readonly PlaceholderTextBox _kitNameFilter = new PlaceholderTextBox("Filters/Viewport/Content/Kit_Search", "./Viewport/Placeholder");
+    private readonly UnturnedLabel _kitNameFilterSearchLabel = new UnturnedLabel("Filters/Viewport/Content/Search/Label");
+
+    private readonly UnturnedLabel _classFilterLabel = new UnturnedLabel("Filters/Viewport/Content/Label_Classes");
 
     private readonly UnturnedButton[] _classButtons = ElementPatterns.CreateArray<UnturnedButton>(
         i => new UnturnedButton($"Filters/Viewport/Content/Classes_Grid/Kits_Class_{EnumUtility.GetName((Class)i)}"),
@@ -60,12 +66,31 @@ public sealed class KitSelectionUI : UnturnedUI, IHudUIListener
         to: (int)Class.SpecOps
     );
 
-    private readonly UnturnedButton _switchBackToPanel = new UnturnedButton("Kits_Back_To_Panel");
-    private readonly UnturnedButton _close = new UnturnedButton("Kits_Close");
+    private readonly UnturnedLabel _favoritesLabel = new UnturnedLabel("Filters/Viewport/Content/Label_Favorites");
 
+    private readonly UnturnedUIElement _switchToListLogic = new UnturnedUIElement("~/Logic_SwitchToList");
+    private readonly UnturnedUIElement _switchToPanelLogic = new UnturnedUIElement("~/Logic_SwitchToPanel");
+
+    // Public Kits
+
+    private readonly LabeledButton _switchBackToPanel = new LabeledButton("Kits_Back_To_Panel", "./Label");
+    private readonly LabeledButton _close = new LabeledButton("Kits_Close", "./Label");
+    private readonly UnturnedLabel _publicKitsTitle = new UnturnedLabel("Public_Kit_Layout/Title_Public_Kits/Label");
     private readonly KitPanel[] _panels = ElementPatterns.CreateArray<KitPanel>(
         "Public_Kit_Layout/Viewport/Content/Kit_Panel_{0}", (int)Class.Squadleader, to: (int)Class.SpecOps
     );
+
+    // Kit Search
+
+    private readonly UnturnedLabel _searchResultsTitle = new UnturnedLabel("Kit_Info/List/Title_Searched_Kits/Label");
+
+    private readonly UnturnedUIElement _listNoResult = new UnturnedUIElement("Kit_Info/List/Viewport/Content/Kit_NoResults");
+    private readonly UnturnedLabel _listNoResultLabel = new UnturnedLabel("Kit_Info/List/Viewport/Content/Kit_NoResults/BoxText");
+
+    private readonly LabeledStateButton _listPreviousPage = new LabeledStateButton("Kit_Info/List/Pages/Kits_Info_Page_Previous", "./Label", "./ButtonState");
+    private readonly LabeledStateButton _listNextPage = new LabeledStateButton("Kit_Info/List/Pages/Kits_Info_Page_Next", "./Label", "./ButtonState");
+    private readonly StatePlaceholderTextBox _listPage = new StatePlaceholderTextBox("Kit_Info/List/Pages/Kits_Info_Page", "./Viewport/Placeholder", "./InputFieldState");
+
 
     public KitSelectionUI(
         ILoggerFactory loggerFactory,
@@ -75,15 +100,18 @@ public sealed class KitSelectionUI : UnturnedUI, IHudUIListener
         IPlayerService playerService,
         IKitItemResolver kitItemResolver,
         ItemIconProvider iconProvider,
-        IKitsDbContext kitsDbContext
-    )
+        IKitsDbContext kitsDbContext,
+        TranslationInjection<KitSelectionUITranslations> translations,
+        ITranslationService translationService)
         : base(
             loggerFactory,
             assetConfig.GetAssetLink<EffectAsset>("UI:KitSelectionUI"),
             staticKey: true
         )
     {
+        _translations = translations.Value;
         _kitsDbContext = kitsDbContext;
+        _translationService = translationService;
         _dbSemaphore = new SemaphoreSlim(1, 1);
 
         _kitDataStore = kitDataStore;
@@ -140,9 +168,13 @@ public sealed class KitSelectionUI : UnturnedUI, IHudUIListener
         _cachedPublicKits = null;
     }
 
+    public Task OpenAsync(WarfarePlayer player, CancellationToken token = default)
+    {
+        return OpenAsync(player, 0u, token);
+    }
     public async Task OpenAsync(WarfarePlayer player, uint factionId, CancellationToken token = default)
     {
-        if (factionId == 0)
+        if (factionId == 0u)
             factionId = player.Team.Faction.PrimaryKey;
 
         await _dbSemaphore.WaitAsync(token);
@@ -177,6 +209,64 @@ public sealed class KitSelectionUI : UnturnedUI, IHudUIListener
         {
             data.HasUI = true;
             SendToPlayer(player.SteamPlayer);
+        }
+
+        bool isDefaultLang = player.Locale.IsDefaultLanguage;
+
+        ITransportConnection c = player.Connection;
+
+        if (!isDefaultLang || !_translations.PublicKitsLabel.HasDefaultValue)
+            _publicKitsTitle.SetText(c, _translations.PublicKitsLabel.Translate(player));
+
+        if (!isDefaultLang || !_translations.KitNameFilterPlaceholder.HasDefaultValue)
+            _kitNameFilter.SetPlaceholder(c, _translations.KitNameFilterPlaceholder.Translate(player));
+
+        if (!isDefaultLang || !_translations.SearchButtonLabel.HasDefaultValue)
+            _kitNameFilterSearchLabel.SetText(c, _translations.SearchButtonLabel.Translate(player));
+
+        if (!isDefaultLang || !_translations.ClassesLabel.HasDefaultValue)
+            _classFilterLabel.SetText(c, _translations.ClassesLabel.Translate(player));
+
+        if (!isDefaultLang || !_translations.FavoritesLabel.HasDefaultValue)
+            _favoritesLabel.SetText(c, _translations.FavoritesLabel.Translate(player));
+
+        if (!isDefaultLang || !_translations.SearchResultsLabel.HasDefaultValue)
+            _searchResultsTitle.SetText(c, _translations.SearchResultsLabel.Translate(player));
+
+        if (!isDefaultLang || !_translations.SearchResultsNoResults.HasDefaultValue)
+            _listNoResultLabel.SetText(c, _translations.SearchResultsNoResults.Translate(player));
+
+        if (!isDefaultLang || !_translations.SearchResultsPreviousPage.HasDefaultValue)
+            _listPreviousPage.SetText(c, _translations.SearchResultsPreviousPage.Translate(player));
+
+        if (!isDefaultLang || !_translations.SearchResultsNextPage.HasDefaultValue)
+            _listNextPage.SetText(c, _translations.SearchResultsNextPage.Translate(player));
+
+        if (!isDefaultLang || !_translations.SearchResultsPageInputPlaceholder.HasDefaultValue)
+            _listPage.SetPlaceholder(c, _translations.SearchResultsPageInputPlaceholder.Translate(player));
+
+        if (!isDefaultLang || !_translations.ToPublicButtonLabel.HasDefaultValue)
+            _switchBackToPanel.SetText(c, _translations.ToPublicButtonLabel.Translate(player));
+
+        if (!isDefaultLang || !_translations.ToPublicButtonLabel.HasDefaultValue)
+            _close.SetText(c, _translations.ToPublicButtonLabel.Translate(player));
+
+        for (Class cl = Class.Squadleader; cl <= Class.SpecOps; ++cl)
+        {
+            Translation t = _translations.DescriptionOfClass(cl)!;
+            if (!isDefaultLang || !t.HasDefaultValue)
+                _panels[(int)cl - (int)Class.Squadleader].Description.SetText(c, t.Translate(player));
+
+            if (isDefaultLang)
+                continue;
+
+            string className = _translationService.ValueFormatter.FormatEnum(cl, player.Locale.LanguageInfo);
+            _panels[(int)cl - (int)Class.Squadleader].Title.SetText(c, className);
+        }
+
+        if (!isDefaultLang)
+        {
+            await UniTask.NextFrame();
         }
 
         Class prevClass = Class.Unarmed;
@@ -317,7 +407,38 @@ public sealed class KitSelectionUI : UnturnedUI, IHudUIListener
 
         if (!kitAccessComp.IsKitAccessible(kit.Key))
         {
+            if (kit.PremiumCost > 0)
+            {
+                ui.StatusLabel.SetText(c, _translations.StatusNotPurchased.Translate(player));
+                ui.UnlockButton.SetText(c, _translations.PurchaseButtonCurrency.Translate(kit.PremiumCost, player));
+                ui.UnlockSection.Show(c);
+            }
+            else if (kit.CreditCost > 0)
+            {
+                if (kit.CreditCost > player.CachedPoints.Credits)
+                {
+                    ui.StatusLabel.SetText(c, _translations.StatusCreditsCantAfford.Translate(kit.CreditCost - player.CachedPoints.Credits, player));
+                    if (!fromDefaultValues)
+                        ui.UnlockSection.Hide(c);
+                }
+                else
+                {
+                    ui.StatusLabel.SetText(c, _translations.StatusNotPurchased.Translate(player));
+                    ui.UnlockButton.SetText(c, _translations.PurchaseButtonCredits.Translate(kit.CreditCost, player.CachedPoints.Credits, player.CachedPoints.Credits - kit.CreditCost, player));
+                    ui.UnlockSection.Show(c);
+                }
+            }
+            else if (kit.IsLocked)
+            {
+                if (kit.Type == KitType.Loadout)
+                {
+                    ui.StatusLabel.SetText(c, _translations.StatusLoadoutLocked.Translate(player));
+                }
+                else
+                {
 
+                }
+            }
         }
 
 
@@ -480,7 +601,10 @@ public sealed class KitSelectionUI : UnturnedUI, IHudUIListener
         public UnturnedLabel StatusLabel { get; set; }
 
         [Pattern("Unlock")]
-        public UnturnedUIElement UnlockButton { get; set; }
+        public UnturnedUIElement UnlockSection { get; set; }
+
+        [Pattern("Kit_Panel_2_Kit_1_Purchase", AdditionalPath = "Unlock", PresetPaths = [ "./Label" ])]
+        public LabeledButton UnlockButton { get; set; }
     }
 
     private class IncludeLabel : PatternRoot
@@ -501,7 +625,7 @@ public sealed class KitSelectionUI : UnturnedUI, IHudUIListener
 #nullable restore
 }
 
-internal sealed class KitSelectionUITranslations : PropertiesTranslationCollection
+public sealed class KitSelectionUITranslations : PropertiesTranslationCollection
 {
     protected override string FileName => "UI/Kit Selection";
 
@@ -511,8 +635,20 @@ internal sealed class KitSelectionUITranslations : PropertiesTranslationCollecti
     [TranslationData("Default label for the page with kit search results.")]
     public readonly Translation SearchResultsLabel = new Translation("Search Results", TranslationOptions.TMProUI);
 
-    [TranslationData("Default label for the page with kit search results when sorting by class.", "The class being filtered by.")]
+    [TranslationData("Default label for the page with kit search results when sorting by class.", "The class being filtered by")]
     public readonly Translation<Class> SearchResultsByClassLabel = new Translation<Class>("Search Results - {0} kits", TranslationOptions.TMProUI);
+
+    [TranslationData("Text shown when there were no search results.")]
+    public readonly Translation SearchResultsNoResults = new Translation("No results\n<#b4b4b4>Try adjusting your search parameters.</color>", TranslationOptions.TMProUI);
+
+    [TranslationData("Previous page button text.")]
+    public readonly Translation SearchResultsPreviousPage = new Translation("Previous", TranslationOptions.TMProUI);
+
+    [TranslationData("Next page button text.")]
+    public readonly Translation SearchResultsNextPage = new Translation("Next", TranslationOptions.TMProUI);
+
+    [TranslationData("Page text box placeholder text.")]
+    public readonly Translation SearchResultsPageInputPlaceholder = new Translation("Page", TranslationOptions.TMProUI);
 
     [TranslationData("Label for the class list on the left panel.")]
     public readonly Translation ClassesLabel = new Translation("Classes", TranslationOptions.TMProUI);
@@ -536,13 +672,72 @@ internal sealed class KitSelectionUITranslations : PropertiesTranslationCollecti
     public readonly Translation ToPublicButtonLabel = new Translation("Return to Public Kits", TranslationOptions.TMProUI);
     
     [TranslationData("Label for when the kit needs to be bought with credits or real money.")]
-    public readonly Translation StatusNotPurchased = new Translation("Not Purchased", TranslationOptions.TMProUI);
+    public readonly Translation StatusNotPurchased = new Translation("<#c2603e>Not Owned</color>", TranslationOptions.TMProUI);
+
+    [TranslationData("Label for when the kit needs to be bought with credits or real money and the player doesn't have enough.", "Difference between kit cost and current balance in C")]
+    public readonly Translation<double> StatusCreditsCantAfford = new Translation<double>("<#c2603e>Too Expensive – Missing <#b8ffc1>C</color> <#fff>{0}</color></color>", TranslationOptions.TMProUI, "F0");
+
+    [TranslationData("Label for when the kit is a locked loadout, meaning its pending set up by staff.")]
+    public readonly Translation StatusLoadoutLocked = new Translation("<#3399ff>Pending Setup</color>", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label for when the kit is already equipped by the player.")]
+    public readonly Translation StatusEquipped = new Translation("<#827d6d>Equipped</color>", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label for when the kit is disabled, usually because of some exploit or bug.")]
+    public readonly Translation StatusDisabled = new Translation("Temporarily Disabled", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label for when the kit is able to be requested.")]
+    public readonly Translation StatusUnlocked = new Translation("<#96ffb2>Unlocked</color>", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label for when the kit requires the player to be a squad leader.")]
+    public readonly Translation StatusSquadLeaderRequired = new Translation("<#c2603e>Squad Leader Required</color>", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label for when the kit requires the player to be in a squad.")]
+    public readonly Translation StatusSquadMemberRequired = new Translation("<#c2603e>Squad Required</color>", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label for when the kit requires the player to be in a squad.", "Current squad member count", "Required squad member count")]
+    public readonly Translation<int, int> StatusSquadMembersRequired = new Translation<int, int>("<#c2603e>{0} / {1} Squad Members</color>", TranslationOptions.TMProUI);
+
+    [TranslationData("Label for the purchase button shown when the kit needs to be bought with credits.", "Cost in C", "Current balance in C", "Current balance - Cost")]
+    public readonly Translation<double, double, double> PurchaseButtonCredits = new Translation<double, double, double>(
+        "Buy for <#b8ffc1>C</color> <#fff>{0}</color>\n<#b8ffc1>C</color> <#fff>{1}</color> - <#b8ffc1>C</color> <#fff>{0}</color> = <#b8ffc1>C</color> <#fff>{2}</color>",
+        TranslationOptions.TMProUI, "F0", "F0", "F0"
+    );
     
     [TranslationData("Label for the purchase button shown when the kit needs to be bought with credits.")]
-    public readonly Translation PurchaseButtonCredits = new Translation("Buy for <#b8ffc1>C</color> <#fff>0</color>\n<#b8ffc1>C</color> <#fff>0</color> - <#b8ffc1>C</color> <#fff>0</color> = <#b8ffc1>C</color> <#fff>0</color>", TranslationOptions.TMProUI);
+    public readonly Translation<decimal> PurchaseButtonCurrency = new Translation<decimal>("Purchase for <#7878ff>$ {0}</color>\non our website.", TranslationOptions.TMProUI, arg0Fmt: "F2");
     
-    [TranslationData("Label for the purchase button shown when the kit needs to be bought with credits.")]
-    public readonly Translation PurchaseButtonCurrency = new Translation("Buy for <#b8ffc1>C</color> <#fff>0</color>\n<#b8ffc1>C</color> <#fff>0</color> - <#b8ffc1>C</color> <#fff>0</color> = <#b8ffc1>C</color> <#fff>0</color>", TranslationOptions.TMProUI);
+    [TranslationData("Label for the purchase button shown when the player needs to be a squad leader for the kit.")]
+    public readonly Translation PurchaseButtonCreateSquad = new Translation("Create a <#f0a31c>Squad</color> to Equip", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label for the purchase button shown when the player needs to be in a squad for the kit.")]
+    public readonly Translation PurchaseButtonJoinSquad = new Translation("Join a <#f0a31c>Squad</color> to Equip", TranslationOptions.TMProUI);
+
+
+
+    public Translation? DescriptionOfClass(Class c)
+    {
+        return c switch
+        {
+            Class.Squadleader => DescriptionSquadleader,
+            Class.Rifleman => DescriptionRifleman,
+            Class.Medic => DescriptionMedic,
+            Class.Breacher => DescriptionBreacher,
+            Class.AutomaticRifleman => DescriptionAutoRifleman,
+            Class.Grenadier => DescriptionGrenadier,
+            Class.MachineGunner => DescriptionMachineGunner,
+            Class.LAT => DescriptionLAT,
+            Class.HAT => DescriptionHAT,
+            Class.Marksman => DescriptionMarksman,
+            Class.Sniper => DescriptionSniper,
+            Class.APRifleman => DescriptionAPRifleman,
+            Class.CombatEngineer => DescriptionCombatEngineer,
+            Class.Crewman => DescriptionCrewman,
+            Class.Pilot => DescriptionPilot,
+            Class.SpecOps => DescriptionSpecOps,
+            _ => null
+        };
+    }
 
     
     [TranslationData("Description of the Squadleader class.")]
