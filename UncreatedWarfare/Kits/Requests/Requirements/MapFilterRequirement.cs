@@ -31,7 +31,7 @@ public sealed class MapFilterRequirement(MapScheduler mapScheduler) : IKitRequir
         if (IsCurrentMapAllowed(ctx.Kit))
             return KitRequirementResult.Yes;
 
-        visitor.AcceptMapFilterNotMet(in ctx);
+        visitor.AcceptMapFilterNotMet(in ctx, mapScheduler.GetMapName(mapScheduler.Current));
         return KitRequirementResult.No;
     }
 

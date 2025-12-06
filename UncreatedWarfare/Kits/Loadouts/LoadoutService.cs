@@ -105,7 +105,7 @@ public partial class LoadoutService
             kits.Where(x => x.Type == KitType.Loadout && x.Access.Any(a => a.Steam64 == s64))
                 .OrderByDescending(x => x.Favorites.Any(f => f.Steam64 == s64))
                 .ThenBy(x => x.Id)
-            , token
+            , token: token
         ).ConfigureAwait(false);
 
         if (!WarfareModule.IsActive || (include & KitInclude.Cached) != KitInclude.Cached)
@@ -128,7 +128,7 @@ public partial class LoadoutService
             kits.Where(x => x.Type == KitType.Loadout && x.Access.Any(a => a.Steam64 == s64))
                 .OrderByDescending(x => x.Favorites.Any(f => f.Steam64 == s64))
                 .ThenBy(x => x.Id)
-            , token
+            , token: token
         ).ConfigureAwait(false);
 
         if (!WarfareModule.IsActive || (include & KitInclude.Cached) != KitInclude.Cached)

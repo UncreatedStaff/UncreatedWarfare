@@ -27,7 +27,7 @@ public enum KitInclude
     /// <summary>
     /// Minimum information to cache a kit.
     /// </summary>
-    Cached = Default | UnlockRequirements | Delays,
+    Cached = Verifiable,
 
     /// <summary>
     /// Able to be given to a player.

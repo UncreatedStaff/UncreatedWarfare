@@ -20,7 +20,20 @@ public partial class AccountLinkingService
     private readonly SemaphoreSlim _semaphore;
     private readonly ILogger<AccountLinkingService> _logger;
 
-    public event Action<CSteamID>? OnLinkUpdated;
+    /// <summary>
+    /// Invoked when either a discord or steam link is updated. Will be invoked twice during an unlink (once for the discord accont and once for the steam account).
+    /// <para>
+    /// If DiscordID == 0 then a steam account was unlinked.
+    /// If Steam64ID == 0 then a discord account was unlinked.
+    /// Else an account was linked.
+    /// </para>
+    /// </summary>
+    public event Action<CSteamID, ulong>? OnLinkUpdated;
+
+    /// <summary>
+    /// Invoked when a linked user joins or leaves the guild. Only invoked when the bot is connected.
+    /// </summary>
+    public event Action<CSteamID, ulong, GuildStatusResult>? OnGuildStatusUpdated;
 
     public AccountLinkingService(IUserDataService userDataService, IUserDataDbContext dbContext, ILogger<AccountLinkingService> logger)
     {
@@ -260,13 +273,31 @@ public partial class AccountLinkingService
             .ConfigureAwait(false);
 
         // remove other Steam IDs linked to a discord ID
+        List<WarfareUserData>? toClear = discordId == 0 ? null : await _dbContext.UserData
+            .Where(x => x.DiscordId == discordId && x.Steam64 != steam64)
+            .AsNoTracking()
+            .ToListAsync(token);
+
         int numUpdated = discordId == 0 ? 0 : await _dbContext.UserData.BatchUpdate((DbContext)_dbContext)
             .Set(x => x.DiscordId, _ => 0ul)
             .Where(x => x.DiscordId == discordId && x.Steam64 != steam64)
             .ExecuteAsync(cancellationToken: token)
             .ConfigureAwait(false);
 
-        InvokeLinkUpdated(steam64);
+        if (oldDiscordId != 0)
+        {
+            InvokeLinkUpdated(steam64, oldDiscordId, isUnlink: true);
+        }
+
+        if (numUpdated > 0 && toClear != null)
+        {
+            foreach (WarfareUserData data in toClear)
+            {
+                InvokeLinkUpdated(data.Steam64, 0ul, isUnlink: false);
+            }
+        }
+
+        InvokeLinkUpdated(steam64, discordId, isUnlink: false);
 
         if (oldDiscordId != 0)
         {
@@ -325,17 +356,36 @@ public partial class AccountLinkingService
     }
 
     /// <summary>
+    /// Invoked by the bot to tell the server to invoke <see cref="OnGuildStatusUpdated"/>.
+    /// </summary>
+    [RpcSend(nameof(ReceiveGuildUpdate)), RpcFireAndForget]
+    protected partial void SendGuildUpdate(ulong discordId, ulong steam64Id, GuildStatusResult result);
+
+    [RpcReceive]
+    private void ReceiveGuildUpdate(ulong discordId, ulong steam64Id, GuildStatusResult result)
+    {
+        try
+        {
+            OnGuildStatusUpdated?.Invoke(new CSteamID(steam64Id), discordId, result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error on OnGuildStatusUpdated.");
+        }
+    }
+
+    /// <summary>
     /// Check if a player is currently in the Discord server by their Discord user ID.
     /// </summary>
     [RpcSend]
     protected partial RpcTask<GuildStatusResult> SendIsInGuild(ulong discordId);
 
-    private void InvokeLinkUpdated(ulong steam64)
+    private void InvokeLinkUpdated(ulong steam64, ulong discordId, bool isUnlink)
     {
-        ReceiveLinkUpdated(steam64);
+        ReceiveLinkUpdated(steam64, discordId, isUnlink);
         try
         {
-            SendLinkUpdated(steam64);
+            SendLinkUpdated(steam64, discordId, isUnlink);
         }
         catch (Exception ex)
         {
@@ -347,14 +397,22 @@ public partial class AccountLinkingService
     /// Invoke the 'link updated' method on the remote side.
     /// </summary>
     [RpcSend(nameof(ReceiveLinkUpdated)), RpcFireAndForget]
-    protected partial void SendLinkUpdated(ulong steam64);
+    protected partial void SendLinkUpdated(ulong steam64, ulong discordId, bool isUnlink);
 
     [RpcReceive]
-    private void ReceiveLinkUpdated(ulong steam64)
+    private void ReceiveLinkUpdated(ulong steam64, ulong discordId, bool isUnlink)
     {
         try
         {
-            OnLinkUpdated?.Invoke(new CSteamID(steam64));
+            if (isUnlink)
+            {
+                OnLinkUpdated?.Invoke(CSteamID.Nil, discordId);
+                OnLinkUpdated?.Invoke(new CSteamID(steam64), 0ul);
+            }
+            else
+            {
+                OnLinkUpdated?.Invoke(new CSteamID(steam64), discordId);
+            }
         }
         catch (Exception ex)
         {
@@ -363,7 +421,7 @@ public partial class AccountLinkingService
     }
 
 
-    private static readonly char[] Dashes = ['-', '‐', '‑', '‒', '–', '—', '―', '⸺', '⸻', '﹘'];
+    private static readonly char[] Dashes = [ '-', '‐', '‑', '‒', '–', '—', '―', '⸺', '⸻', '﹘' ];
     private static bool IsLatinChar(char c) => c is >= 'a' and <= 'z' or >= 'A' and <= 'Z';
 
     // tested (DiscordLinkTokenTests)

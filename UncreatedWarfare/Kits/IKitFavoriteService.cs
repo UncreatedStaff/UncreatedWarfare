@@ -1,3 +1,5 @@
+using DanielWillett.ModularRpcs.Annotations;
+using DanielWillett.ModularRpcs.Exceptions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using MySqlConnector;
@@ -11,6 +13,11 @@ namespace Uncreated.Warfare.Kits;
 
 public interface IKitFavoriteService
 {
+    /// <summary>
+    /// Invoked when a kit's favorite status is updated for a player.
+    /// </summary>
+    event Action<CSteamID, uint, bool>? OnFavoriteStatusUpdated;
+
     /// <summary>
     /// Check if a kit is favorited.
     /// </summary>
@@ -27,16 +34,21 @@ public interface IKitFavoriteService
     Task<bool> RemoveFavorite(CSteamID player, uint kitPrimaryKey, CancellationToken token = default);
 }
 
-public class MySqlKitFavoriteService : IKitFavoriteService, IDisposable
+[GenerateRpcSource]
+public partial class MySqlKitFavoriteService : IKitFavoriteService, IDisposable
 {
     private readonly IKitsDbContext _dbContext;
     private readonly IKitDataStore? _kitDataStore;
     private readonly IPlayerService? _playerService;
     private readonly SemaphoreSlim _semaphore;
     private readonly KitSignService? _kitSignService;
+    private readonly ILogger<MySqlKitFavoriteService> _logger;
 
-    public MySqlKitFavoriteService(IServiceProvider serviceProvider)
+    public event Action<CSteamID, uint, bool>? OnFavoriteStatusUpdated;
+
+    public MySqlKitFavoriteService(IServiceProvider serviceProvider, ILogger<MySqlKitFavoriteService> logger)
     {
+        _logger = logger;
         _dbContext = serviceProvider.GetRequiredService<IKitsDbContext>();
 
         if (WarfareModule.IsActive)
@@ -67,14 +79,22 @@ public class MySqlKitFavoriteService : IKitFavoriteService, IDisposable
             {
                 if (_playerService?.GetOnlinePlayerThreadSafe(player) is { } onlinePlayer)
                 {
-                    onlinePlayer.ComponentOrNull<KitPlayerComponent>()?.AddFavoriteKit(kitPrimaryKey);
+                    KitPlayerComponent? comp = onlinePlayer.ComponentOrNull<KitPlayerComponent>();
+                    if (comp != null && comp.AddFavoriteKit(kitPrimaryKey))
+                    {
+                        InvokeFavoriteUpdatedAndFireRemote(player.m_SteamID, kitPrimaryKey, isFavorited: true);
+                    }
                 }
 
                 return true;
             }
             else if (_playerService?.GetOnlinePlayerThreadSafe(player) is { } onlinePlayer)
             {
-                onlinePlayer.ComponentOrNull<KitPlayerComponent>()?.RemoveFavoriteKit(kitPrimaryKey);
+                KitPlayerComponent? comp = onlinePlayer.ComponentOrNull<KitPlayerComponent>();
+                if (comp != null && comp.RemoveFavoriteKit(kitPrimaryKey))
+                {
+                    InvokeFavoriteUpdatedAndFireRemote(player.m_SteamID, kitPrimaryKey, isFavorited: false);
+                }
             }
 
             return false;
@@ -115,20 +135,7 @@ public class MySqlKitFavoriteService : IKitFavoriteService, IDisposable
                 _dbContext.ChangeTracker.Clear();
             }
 
-            if (WarfareModule.IsActive && _playerService?.GetOnlinePlayerThreadSafe(player) is { } onlinePlayer)
-            {
-                KitPlayerComponent component = onlinePlayer.Component<KitPlayerComponent>();
-                component.AddFavoriteKit(kitPrimaryKey);
-                if (_kitSignService != null && _kitDataStore != null && _kitDataStore.CachedKitsByKey.TryGetValue(kitPrimaryKey, out Kit? value))
-                {
-                    if (value.Type == KitType.Loadout)
-                    {
-                        component.UpdateLoadout(value);
-                    }
-                    
-                    _kitSignService.UpdateSigns(value, onlinePlayer);
-                }
-            }
+            InvokeFavoriteUpdatedAndFireRemote(player.m_SteamID, kitPrimaryKey, isFavorited: true);
 
             return success;
         }
@@ -151,24 +158,58 @@ public class MySqlKitFavoriteService : IKitFavoriteService, IDisposable
 
             await _dbContext.SaveChangesAsync(token).ConfigureAwait(false);
 
-            if (WarfareModule.IsActive && _playerService?.GetOnlinePlayerThreadSafe(player) is { } onlinePlayer)
-            {
-                KitPlayerComponent component = onlinePlayer.Component<KitPlayerComponent>();
-                component.RemoveFavoriteKit(kitPrimaryKey);
-                if (_kitSignService != null && _kitDataStore != null && _kitDataStore.CachedKitsByKey.TryGetValue(kitPrimaryKey, out Kit? value))
-                {
-                    if (value.Type == KitType.Loadout)
-                        component.UpdateLoadout(value);
-
-                    _kitSignService.UpdateSigns(value, onlinePlayer);
-                }
-            }
+            InvokeFavoriteUpdatedAndFireRemote(player.m_SteamID, kitPrimaryKey, isFavorited: false);
 
             return change > 0;
         }
         finally
         {
             _semaphore.Release();
+        }
+    }
+
+    [RpcSend(nameof(InvokeFavoriteUpdated)), RpcFireAndForget]
+    private partial void RemoteInvokeFavoriteUpdated(ulong steam64, uint kit, bool isFavorited);
+
+    [RpcReceive]
+    private void InvokeFavoriteUpdated(ulong player, uint kitPrimaryKey, bool isFavorited)
+    {
+        try
+        {
+            OnFavoriteStatusUpdated?.Invoke(new CSteamID(player), kitPrimaryKey, isFavorited);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error invoking OnFavoriteStatusUpdated.");
+        }
+
+        if (!WarfareModule.IsActive || _playerService?.GetOnlinePlayerThreadSafe(player) is not { } onlinePlayer)
+            return;
+        
+        KitPlayerComponent component = onlinePlayer.Component<KitPlayerComponent>();
+        component.AddFavoriteKit(kitPrimaryKey);
+        if (_kitSignService == null || _kitDataStore == null || !_kitDataStore.CachedKitsByKey.TryGetValue(kitPrimaryKey, out Kit? value))
+            return;
+
+        if (value.Type == KitType.Loadout)
+        {
+            component.UpdateLoadout(value);
+        }
+
+        _kitSignService.UpdateSigns(value, onlinePlayer);
+    }
+
+    private void InvokeFavoriteUpdatedAndFireRemote(ulong steam64, uint kit, bool isFavorited)
+    {
+        InvokeFavoriteUpdated(steam64, kit, isFavorited);
+        try
+        {
+            RemoteInvokeFavoriteUpdated(steam64, kit, isFavorited);
+        }
+        catch (RpcNoConnectionsException) { }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error replicating favorite update to remote.");
         }
     }
 

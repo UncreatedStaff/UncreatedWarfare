@@ -15,6 +15,11 @@ public interface ITeamManager<out TTeam> where TTeam : Team
     IReadOnlyList<TTeam> AllTeams { get; }
 
     /// <summary>
+    /// Array of all active factions without duplicates, used for kit queries.
+    /// </summary>
+    IReadOnlyList<uint> Factions { get; }
+
+    /// <summary>
     /// Find a team from a string value, such as from config.
     /// </summary>
     /// <param name="teamSearch">Can be (in order of priority) A faction name, a team ID, 'blufor', or 'opfor'.</param>

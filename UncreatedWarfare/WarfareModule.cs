@@ -53,6 +53,7 @@ using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Kits.Loadouts;
 using Uncreated.Warfare.Kits.Requests;
 using Uncreated.Warfare.Kits.Tweaks;
+using Uncreated.Warfare.Kits.UI;
 using Uncreated.Warfare.Kits.Whitelists;
 using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.Layouts.Seeding;
@@ -602,6 +603,10 @@ public sealed class WarfareModule
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
         
         bldr.RegisterType<FobHUD>()
+            .AsSelf().AsImplementedInterfaces()
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+        
+        bldr.RegisterType<KitSelectionUI>()
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
 

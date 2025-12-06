@@ -681,7 +681,7 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
             ctx.State.Handler.MissingRequirement(ctx.Player, ctx.Kit, _this._kitReqTranslations.RequiresNitroBoost.Translate(ctx.Player));
         }
 
-        public void AcceptMapFilterNotMet(in KitRequirementResolutionContext<RequestState> ctx)
+        public void AcceptMapFilterNotMet(in KitRequirementResolutionContext<RequestState> ctx, string mapName)
         {
             ctx.State.Handler.MissingRequirement(ctx.Player, ctx.Kit, _this._kitReqTranslations.KitMapNotAllowed.Translate(ctx.Player));
         }

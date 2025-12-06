@@ -77,6 +77,18 @@ public class SquadManager :
         return squadsCount >= maxSquads;
     }
 
+    /// <summary>
+    /// Checks if there's enough room for a new squad on <paramref name="team"/>.
+    /// </summary>
+    public bool CanCreateNewSquad(Team team)
+    {
+        int numberOfExistingSquads = Squads.Count(s => s.Team == team);
+        int numberOfTeammates = _playerService.OnlinePlayers.Count(p => p.Team == team);
+
+        int maxAllowedSquads = Mathf.CeilToInt((float)numberOfTeammates / Squad.MaxMembers) + 1;
+        return numberOfExistingSquads <= maxAllowedSquads;
+    }
+
     public Squad CreateSquad(WarfarePlayer squadLeader, string squadName)
     {
         // this limit is for the SQL database column

@@ -14,6 +14,9 @@ public class NullTeamManager : ITeamManager<Team>
     public IReadOnlyList<Team> AllTeams { get; } = Array.Empty<Team>();
 
     /// <inheritdoc />
+    public IReadOnlyList<uint> Factions => Array.Empty<uint>();
+
+    /// <inheritdoc />
     public Team? FindTeam(string? teamSearch) => null;
 
     /// <inheritdoc />

@@ -173,7 +173,7 @@ public interface IKitRequirementVisitor<TState>
     /// <summary>
     /// Invoked by <see cref="MapFilterRequirement"/>.
     /// </summary>
-    void AcceptMapFilterNotMet(in KitRequirementResolutionContext<TState> ctx);
+    void AcceptMapFilterNotMet(in KitRequirementResolutionContext<TState> ctx, string mapName);
 
     /// <summary>
     /// Invoked by <see cref="FactionFilterRequirement"/>.

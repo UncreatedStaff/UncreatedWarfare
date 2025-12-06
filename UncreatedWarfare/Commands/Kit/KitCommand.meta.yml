@@ -268,4 +268,7 @@ Parameters:
             Parameters:
               - Name: skill
                 Type: Uncreated.Warfare.Players.Skillsets.Skillset
-  
+  # /kit ui
+  - Name: ui
+    Type: Verbatim
+    Description: "Opens the kit UI from anywhere."

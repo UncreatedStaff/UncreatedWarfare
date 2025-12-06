@@ -53,6 +53,11 @@ public class TwoSidedTeamManager : ITeamManager<Team>
     public IReadOnlyList<TwoSidedTeamInfo>? Teams { get; set; }
 
     /// <summary>
+    /// ID of all active factions.
+    /// </summary>
+    public IReadOnlyList<uint> Factions { get; set; }
+
+    /// <summary>
     /// Team manager extra configuration from config file.
     /// </summary>
     public IConfiguration? Configuration { get; set; }
@@ -83,6 +88,7 @@ public class TwoSidedTeamManager : ITeamManager<Team>
 
         _eventDispatcher = serviceProvider.GetRequiredService<EventDispatcher>();
         _pointsSql = serviceProvider.GetRequiredService<IPointsStore>();
+        Factions = Array.Empty<uint>();
     }
 
     /// <inheritdoc />
@@ -198,6 +204,8 @@ public class TwoSidedTeamManager : ITeamManager<Team>
             GroupId = new CSteamID(2),
             Configuration = Configuration.GetSection("Teams:1")
         };
+
+        Factions = new uint[] { factionInfo1.PrimaryKey, factionInfo2.PrimaryKey };
 
         Team.DeclareEnemies(_teams);
 

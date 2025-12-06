@@ -187,11 +187,7 @@ public class SquadMenuUI :
             return;
         }
         
-        int numberOfExistingSquads = _squadManager.Squads.Count(s => s.Team == squadleader.Team);
-        int numberOfTeammates = _playerService.OnlinePlayers.Count(p => p.Team == squadleader.Team);
-        
-        int maxAllowedSquads = Mathf.CeilToInt((float)numberOfTeammates / Squad.MaxMembers) + 1;
-        if (numberOfExistingSquads > maxAllowedSquads)
+        if (!_squadManager.CanCreateNewSquad(squadleader.Team))
         {
             CreateSquadFeedback.SetText(squadleader, _translations.SquadLimitReached.Translate(squadleader));
             return;

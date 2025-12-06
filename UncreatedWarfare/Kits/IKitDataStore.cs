@@ -231,33 +231,63 @@ public interface IKitDataStore
     /// <param name="output">List to output matching kits to. It will not be cleared, only appended to.</param>
     /// <param name="include">What type of data to be included in the return value.</param>
     /// <param name="predicate">Filter applied using the where filter.</param>
+    /// <param name="pageInfo">Defines how results will be paginated using offsets. One extra result will be returned so the caller knows if there's more data.</param>
     /// <returns>The number of matching kits.</returns>
-    Task<int> QueryKitsAsync(KitInclude include, IList<Kit> output, Expression<Func<KitModel, bool>> predicate, CancellationToken token = default);
-    
+    Task<int> QueryKitsAsync(KitInclude include, IList<Kit> output, Expression<Func<KitModel, bool>> predicate, PaginationInfo pageInfo = default, CancellationToken token = default);
+
     /// <summary>
     /// Find kits by a custom queryable filter.
     /// </summary>
     /// <param name="output">List to output matching kits to. It will not be cleared, only appended to.</param>
     /// <param name="include">What type of data to be included in the return value.</param>
     /// <param name="query">Action against the <see cref="KitModel"/> <see cref="DbSet{TEntity}"/>.</param>
+    /// <param name="pageInfo">Defines how results will be paginated using offsets. One extra result will be returned so the caller knows if there's more data.</param>
     /// <returns>The number of matching kits.</returns>
-    Task<int> QueryKitsAsync(KitInclude include, IList<Kit> output, Func<IQueryable<KitModel>, IQueryable<KitModel>> query, CancellationToken token = default);
+    Task<int> QueryKitsAsync(KitInclude include, IList<Kit> output, Func<IQueryable<KitModel>, IQueryable<KitModel>> query, PaginationInfo pageInfo = default, CancellationToken token = default);
 
     /// <summary>
     /// Find kits by a custom where filter.
     /// </summary>
     /// <param name="include">What type of data to be included in the return value.</param>
     /// <param name="predicate">Filter applied using the where filter.</param>
+    /// <param name="pageInfo">Defines how results will be paginated using offsets. One extra result will be returned so the caller knows if there's more data.</param>
     /// <returns>An array of all matching kits.</returns>
-    Task<Kit[]> QueryKitsAsync(KitInclude include, Expression<Func<KitModel, bool>> predicate, CancellationToken token = default);
+    Task<Kit[]> QueryKitsAsync(KitInclude include, Expression<Func<KitModel, bool>> predicate, PaginationInfo pageInfo = default, CancellationToken token = default);
 
     /// <summary>
     /// Find kits by a custom queryable filter.
     /// </summary>
     /// <param name="include">What type of data to be included in the return value.</param>
     /// <param name="query">Action against the <see cref="KitModel"/> <see cref="DbSet{TEntity}"/>.</param>
+    /// <param name="pageInfo">Defines how results will be paginated using offsets. One extra result will be returned so the caller knows if there's more data.</param>
     /// <returns>An array of all matching kits.</returns>
-    Task<Kit[]> QueryKitsAsync(KitInclude include, Func<IQueryable<KitModel>, IQueryable<KitModel>> query, CancellationToken token = default);
+    Task<Kit[]> QueryKitsAsync(KitInclude include, Func<IQueryable<KitModel>, IQueryable<KitModel>> query, PaginationInfo pageInfo = default, CancellationToken token = default);
+}
+
+public readonly struct PaginationInfo(int pageNumber, int pageSize) : IEquatable<PaginationInfo>
+{
+    public readonly int PageNumber = pageNumber;
+    public readonly int PageSize = pageSize;
+
+    public override bool Equals(object? obj)
+    {
+        return obj is PaginationInfo info && info.PageNumber == PageNumber && info.PageSize == PageSize;
+    }
+
+    public override int GetHashCode()
+    {
+        return PageSize ^ ((PageNumber << 16) | (PageNumber >> 16));
+    }
+
+    public bool Equals(PaginationInfo info)
+    {
+        return info.PageNumber == PageNumber && info.PageSize == PageSize;
+    }
+
+    public override string ToString()
+    {
+        return $"#{PageNumber} (n={PageSize})";
+    }
 }
 
 public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAsyncEventListener<PlayerPending>, IHostedService
@@ -1065,13 +1095,13 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
     }
 
     /// <inheritdoc />
-    public async Task<int> QueryKitsAsync(KitInclude include, IList<Kit> output, Expression<Func<KitModel, bool>> predicate, CancellationToken token = default)
+    public async Task<int> QueryKitsAsync(KitInclude include, IList<Kit> output, Expression<Func<KitModel, bool>> predicate, PaginationInfo pageInfo = default, CancellationToken token = default)
     {
         int ct = 0;
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            await foreach (KitModel model in ApplyIncludes(include, _dbContext.Kits, false).Where(predicate).AsAsyncEnumerable().WithCancellation(token))
+            await foreach (KitModel model in ApplyPagination(ApplyIncludes(include, _dbContext.Kits, false).Where(predicate), pageInfo).AsAsyncEnumerable().WithCancellation(token))
             {
                 ++ct;
                 output.Add(GetOrCreateKit(model, include));
@@ -1086,13 +1116,13 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
     }
 
     /// <inheritdoc />
-    public async Task<int> QueryKitsAsync(KitInclude include, IList<Kit> output, Func<IQueryable<KitModel>, IQueryable<KitModel>> query, CancellationToken token = default)
+    public async Task<int> QueryKitsAsync(KitInclude include, IList<Kit> output, Func<IQueryable<KitModel>, IQueryable<KitModel>> query, PaginationInfo pageInfo = default, CancellationToken token = default)
     {
         int ct = 0;
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            await foreach (KitModel model in query(ApplyIncludes(include, _dbContext.Kits, false)).AsAsyncEnumerable().WithCancellation(token))
+            await foreach (KitModel model in ApplyPagination(query(ApplyIncludes(include, _dbContext.Kits, false)), pageInfo).AsAsyncEnumerable().WithCancellation(token))
             {
                 ++ct;
                 output.Add(GetOrCreateKit(model!, include));
@@ -1107,12 +1137,12 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
     }
 
     /// <inheritdoc />
-    public async Task<Kit[]> QueryKitsAsync(KitInclude include, Expression<Func<KitModel, bool>> predicate, CancellationToken token = default)
+    public async Task<Kit[]> QueryKitsAsync(KitInclude include, Expression<Func<KitModel, bool>> predicate, PaginationInfo pageInfo = default, CancellationToken token = default)
     {
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            List<KitModel> models = await ApplyIncludes(include, _dbContext.Kits, false).Where(predicate).ToListAsync(token);
+            List<KitModel> models = await ApplyPagination(ApplyIncludes(include, _dbContext.Kits, false).Where(predicate), pageInfo).ToListAsync(token);
             Kit[] kits = new Kit[models.Count];
             for (int i = 0; i < models.Count; ++i)
             {
@@ -1128,12 +1158,12 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
     }
 
     /// <inheritdoc />
-    public async Task<Kit[]> QueryKitsAsync(KitInclude include, Func<IQueryable<KitModel>, IQueryable<KitModel>> query, CancellationToken token = default)
+    public async Task<Kit[]> QueryKitsAsync(KitInclude include, Func<IQueryable<KitModel>, IQueryable<KitModel>> query, PaginationInfo pageInfo = default, CancellationToken token = default)
     {
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            List<KitModel> models = await query(ApplyIncludes(include, _dbContext.Kits, false)).ToListAsync(token);
+            List<KitModel> models = await ApplyPagination(query(ApplyIncludes(include, _dbContext.Kits, false)), pageInfo).ToListAsync(token);
             Kit[] kits = new Kit[models.Count];
             for (int i = 0; i < models.Count; ++i)
             {
@@ -1211,6 +1241,18 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
         }
 
         return mdl;
+    }
+
+    internal static IQueryable<KitModel> ApplyPagination(IQueryable<KitModel> model, PaginationInfo pagination)
+    {
+        if (pagination.PageSize <= 0)
+            return model;
+
+        if (pagination.PageNumber <= 0)
+            return model.Take(pagination.PageSize + 1);
+
+        return model.Skip(pagination.PageNumber * pagination.PageSize)
+                    .Take(pagination.PageSize + 1);
     }
 
     internal static IQueryable<KitModel> ApplyIncludes(KitInclude include, IQueryable<KitModel> model, bool track)

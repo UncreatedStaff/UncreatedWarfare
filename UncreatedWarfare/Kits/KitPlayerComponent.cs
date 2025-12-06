@@ -104,16 +104,15 @@ public class KitPlayerComponent : IPlayerComponent
             .Select(x => x.KitId)
             .ToListAsync(token);
 
-        Task<List<uint>> accessTask = dbContext.KitAccess
-            .Where(x => x.Steam64 == s64)
-            .Select(x => x.KitId)
-            .ToListAsync(token);
-
         IReadOnlyList<Kit> loadouts = await _loadoutService.GetLoadouts(Player.Steam64, KitInclude.Cached, token)
             .ConfigureAwait(false);
 
         List<uint> favorites = await favoritesTask.ConfigureAwait(false);
-        List<uint> access = await accessTask.ConfigureAwait(false);
+
+        List<uint> access = await dbContext.KitAccess
+            .Where(x => x.Steam64 == s64)
+            .Select(x => x.KitId)
+            .ToListAsync(token).ConfigureAwait(false);
 
         await UniTask.SwitchToMainThread(token);
 
@@ -237,35 +236,35 @@ public class KitPlayerComponent : IPlayerComponent
         }
     }
 
-    internal void AddAccessibleKit(uint kitPk)
+    internal bool AddAccessibleKit(uint kitPk)
     {
         lock (_accessibleKits)
         {
-            _accessibleKits.Add(kitPk);
+            return _accessibleKits.Add(kitPk);
         }
     }
 
-    internal void RemoveAccessibleKit(uint kitPk)
+    internal bool RemoveAccessibleKit(uint kitPk)
     {
         lock (_accessibleKits)
         {
-            _accessibleKits.Remove(kitPk);
+            return _accessibleKits.Remove(kitPk);
         }
     }
 
-    internal void AddFavoriteKit(uint kitPk)
+    internal bool AddFavoriteKit(uint kitPk)
     {
         lock (_favoritedKits)
         {
-            _favoritedKits.Add(kitPk);
+            return _favoritedKits.Add(kitPk);
         }
     }
 
-    internal void RemoveFavoriteKit(uint kitPk)
+    internal bool RemoveFavoriteKit(uint kitPk)
     {
         lock (_favoritedKits)
         {
-            _favoritedKits.Remove(kitPk);
+            return _favoritedKits.Remove(kitPk);
         }
     }
 
