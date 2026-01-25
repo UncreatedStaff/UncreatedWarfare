@@ -16,6 +16,8 @@ using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Proximity;
 using Uncreated.Warfare.Services;
+using Uncreated.Warfare.Stats;
+using Uncreated.Warfare.Stats.EventHandlers;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Addons;
 using Uncreated.Warfare.Util;

@@ -24,37 +24,45 @@ public class DatabaseStatsBuffer : IDisposable, IHostedService, ILayoutHostedSer
     private readonly ILoopTickerFactory _loopTickerFactory;
     private ILoopTicker? _loopTicker;
 
+    public bool TrackStats { get; set; }
+
     public DatabaseStatsBuffer(IStatsDbContext dbContext, ILogger<DatabaseStatsBuffer> logger, ILoopTickerFactory loopTickerFactory)
     {
         _dbContext = dbContext;
         _dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
         _logger = logger;
         _loopTickerFactory = loopTickerFactory;
+        TrackStats = true;
     }
 
     public void Enqueue(DamageRecord dmg)
     {
-        _statEntries.Enqueue(dmg);
+        if (TrackStats)
+            _statEntries.Enqueue(dmg);
     }
 
     public void Enqueue(DeathRecord death)
     {
-        _statEntries.Enqueue(death);
+        if (TrackStats)
+            _statEntries.Enqueue(death);
     }
 
     public void Enqueue(AidRecord aid)
     {
-        _statEntries.Enqueue(aid);
+        if (TrackStats)
+            _statEntries.Enqueue(aid);
     }
 
     public void Enqueue(FobRecord fob)
     {
-        _statEntries.Enqueue(fob);
+        if (TrackStats)
+            _statEntries.Enqueue(fob);
     }
 
     public void Enqueue(FobItemRecord fobItem)
     {
-        _statEntries.Enqueue(fobItem);
+        if (TrackStats)
+            _statEntries.Enqueue(fobItem);
     }
 
     public async Task FlushAsync(CancellationToken token = default)

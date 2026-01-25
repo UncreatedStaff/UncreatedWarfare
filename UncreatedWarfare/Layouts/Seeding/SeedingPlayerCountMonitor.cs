@@ -8,6 +8,8 @@ using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Services;
+using Uncreated.Warfare.Stats;
+using Uncreated.Warfare.Stats.EventHandlers;
 using Uncreated.Warfare.Util.Timing;
 
 namespace Uncreated.Warfare.Layouts.Seeding;
@@ -50,6 +52,16 @@ internal class SeedingPlayerCountMonitor :
         /// </summary>
         /// <remarks>seeding:vote_time</remarks>
         public TimeSpan VoteLength { get; set; }
+
+        /// <summary>
+        /// Whether or not to add to global stats during a seeding gamemode.
+        /// </summary>
+        public bool TrackStats { get; set; }
+
+        /// <summary>
+        /// Whether or not to add to XP and credits during a seeding gamemode.
+        /// </summary>
+        public bool TrackPoints { get; set; }
     }
 
 
@@ -57,6 +69,8 @@ internal class SeedingPlayerCountMonitor :
     private readonly WarfareModule _layoutHost;
     private readonly LayoutFactory _layoutFactory;
     private readonly ILoopTickerFactory _loopTickerFactory;
+    private readonly PointsRewardsEvents _pointsRewards;
+    private readonly DatabaseStatsBuffer _databaseStats;
     private readonly ILogger<SeedingPlayerCountMonitor> _logger;
     private readonly IDisposable _changeToken;
 
@@ -95,12 +109,16 @@ internal class SeedingPlayerCountMonitor :
         LayoutFactory layoutFactory,
         ILoggerFactory loggerFactory,
         ILoopTickerFactory loopTickerFactory,
+        PointsRewardsEvents pointsRewards,
+        DatabaseStatsBuffer databaseStats,
         IServiceProvider serviceProvider)
     {
         _systemConfig = systemConfig;
         _layoutHost = layoutHost;
         _layoutFactory = layoutFactory;
         _loopTickerFactory = loopTickerFactory;
+        _pointsRewards = pointsRewards;
+        _databaseStats = databaseStats;
         _serviceProvider = serviceProvider;
         _logger = loggerFactory.CreateLogger<SeedingPlayerCountMonitor>();
         Rules = new SeedingRules();
@@ -174,6 +192,7 @@ internal class SeedingPlayerCountMonitor :
             IsSeeding = false;
             _nextVotePlayerThreshold = Rules.VotePlayerThreshold;
             CheckShouldStartVote();
+            UpdateGlobals(false);
         }
         else
         {
@@ -186,6 +205,20 @@ internal class SeedingPlayerCountMonitor :
         }
 
         return UniTask.CompletedTask;
+    }
+
+    private void UpdateGlobals(bool isSeeding)
+    {
+        if (isSeeding)
+        {
+            _pointsRewards.TrackPoints = Rules.TrackPoints;
+            _databaseStats.TrackStats = Rules.TrackStats;
+        }
+        else
+        {
+            _pointsRewards.TrackPoints = true;
+            _databaseStats.TrackStats = true;
+        }
     }
 
     UniTask ILayoutHostedService.StopAsync(CancellationToken token)
@@ -202,7 +235,11 @@ internal class SeedingPlayerCountMonitor :
     {
         if (!Rules.Enabled || _layoutFactory.NextLayout != null)
         {
-            IsSeeding = false;
+            if (IsSeeding)
+            {
+                IsSeeding = false;
+                UpdateGlobals(false);
+            }
             return UniTask.CompletedTask;
         }
         
@@ -362,6 +399,7 @@ internal class SeedingPlayerCountMonitor :
             return;
 
         IsSeeding = false;
+        UpdateGlobals(false);
         _playHud?.UpdateStage();
 
         _logger.LogInformation("Ending seeding.");
@@ -374,6 +412,7 @@ internal class SeedingPlayerCountMonitor :
             return;
 
         _logger.LogInformation("Starting seeding for PC.");
+        UpdateGlobals(true);
         _nextVotePlayerThreshold = Rules.VotePlayerThreshold;
 
         _playHud ??= _serviceProvider.GetRequiredService<SeedingPlayHud>();

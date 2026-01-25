@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Events;
@@ -37,6 +36,9 @@ internal sealed class PlayerDatabaseStatsEventHandlers :
     [EventListener(MustRunInstantly = true, RequireActiveLayout = true)]
     void IEventListener<PlayerAided>.HandleEvent(PlayerAided e, IServiceProvider serviceProvider)
     {
+        if (!_buffer.TrackStats)
+            return;
+
         bool hasInstigator = !e.Medic.Equals(e.Player);
 
         e.Medic.CurrentSession?.MarkDirty();
@@ -68,6 +70,9 @@ internal sealed class PlayerDatabaseStatsEventHandlers :
     [EventListener(MustRunInstantly = true, RequireActiveLayout = true)]
     void IEventListener<PlayerDamaged>.HandleEvent(PlayerDamaged e, IServiceProvider serviceProvider)
     {
+        if (!_buffer.TrackStats)
+            return;
+
         bool injured = e.Player.IsInjured();
         
         // dont count injure ticks
@@ -153,6 +158,9 @@ internal sealed class PlayerDatabaseStatsEventHandlers :
     [EventListener(MustRunInstantly = true, RequireActiveLayout = true)]
     void IEventListener<PlayerDied>.HandleEvent(PlayerDied e, IServiceProvider serviceProvider)
     {
+        if (!_buffer.TrackStats)
+            return;
+
         PlayerDied args = _tempPlayerDiedArgs;
 
         bool hasKiller = !args.WasSuicide && args.Instigator.GetEAccountType() == EAccountType.k_EAccountTypeIndividual;
@@ -200,6 +208,9 @@ internal sealed class PlayerDatabaseStatsEventHandlers :
     [EventListener(MustRunInstantly = true, RequireActiveLayout = true)]
     void IEventListener<FobRegistered>.HandleEvent(FobRegistered e, IServiceProvider serviceProvider)
     {
+        if (!_buffer.TrackStats)
+            return;
+
         if (e.Fob is not BunkerFob normalFob)
             return;
 
@@ -230,6 +241,9 @@ internal sealed class PlayerDatabaseStatsEventHandlers :
     [EventListener(MustRunInstantly = true, RequireActiveLayout = true)]
     void IEventListener<FobDestroyed>.HandleEvent(FobDestroyed e, IServiceProvider serviceProvider)
     {
+        if (!_buffer.TrackStats)
+            return;
+
         if (e.Fob is not BunkerFob normalFob)
             return;
 

@@ -783,7 +783,8 @@ public sealed class WarfareModule
 
         // Stats
         bldr.RegisterType<PointsRewardsEvents>()
-            .AsImplementedInterfaces();
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
 
         bldr.RegisterType<DatabaseStatsBuffer>()
             .AsSelf().AsImplementedInterfaces()
