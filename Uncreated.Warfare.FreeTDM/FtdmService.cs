@@ -48,6 +48,7 @@ internal class FtdmService : ILayoutPhaseListener<ActionPhase>, IDisposable, ILa
     private LinearDictionary<Team, IEventBasedProximity<WarfarePlayer>>? _friendlyZoneColliders;
 
     public bool IsInActionPhase { get; private set; }
+    public bool AllowReenterSpwan { get; private set; }
 
     public FtdmService(
         Layout layout,
@@ -89,6 +90,8 @@ internal class FtdmService : ILayoutPhaseListener<ActionPhase>, IDisposable, ILa
 
     private void OnConfigUpdate()
     {
+        AllowReenterSpwan = _configuration.GetValue<bool>("AllowReenterSpwan");
+
         LinearDictionary<Team, string[]> dict = new LinearDictionary<Team, string[]>(_teamManager.AllTeams.Count);
         foreach (IConfigurationSection section in _configuration.GetSection("Kits").GetChildren())
         {
@@ -119,11 +122,11 @@ internal class FtdmService : ILayoutPhaseListener<ActionPhase>, IDisposable, ILa
         float time = Time.realtimeSinceStartup;
         foreach (WarfarePlayer player in _playerService.OnlinePlayers)
         {
-            if (player.IsOnDuty || player.IsDisconnecting || player.UnturnedPlayer.life.isDead)
+            if (player.IsOnDuty || player.IsDisconnecting || player.UnturnedPlayer.life.isDead || !_lobbyManager.Disabled && _zoneStore.IsInLobby(player))
                 continue;
 
             FtdmPlayerComponent comp = player.Component<FtdmPlayerComponent>();
-            if (_playAreaCollider.Contains(player) || !_lobbyManager.Disabled && _zoneStore.IsInLobby(player))
+            if (_playAreaCollider.Contains(player))
             {
                 if (comp.HasExitedSpawnSinceRespawned
                     && _friendlyZoneColliders.TryGetValue(player.Team, out IEventBasedProximity<WarfarePlayer>? prox)
@@ -133,8 +136,11 @@ internal class FtdmService : ILayoutPhaseListener<ActionPhase>, IDisposable, ILa
                         comp.LastInFriendlySpawn = time;
                     else if (time - comp.LastInFriendlySpawn > 1f)
                     {
-                        // this shouldn't really happen
-                        player.UnturnedPlayer.life.askDamage(101, Vector3.up, EDeathCause.ARENA, ELimb.SPINE, CSteamID.Nil, out _);
+                        if (!AllowReenterSpwan)
+                        {
+                            // this shouldn't really happen
+                            player.UnturnedPlayer.life.askDamage(101, Vector3.up, EDeathCause.ARENA, ELimb.SPINE, CSteamID.Nil, out _);
+                        }
                     }
                     else if (time - comp.LastInFriendlySpawn > 0.25f)
                     {
@@ -145,6 +151,11 @@ internal class FtdmService : ILayoutPhaseListener<ActionPhase>, IDisposable, ILa
                     comp.LastInFriendlySpawn = float.NaN;
 
                 comp.LastInPlayArea = time;
+                if (!float.IsNaN(comp.LastOutOfBoundsUIUpdate))
+                {
+                    player.Component<ToastManager>().SkipExpiration(ToastMessageStyle.FlashingWarning);
+                    comp.LastOutOfBoundsUIUpdate = float.NaN;
+                }
                 continue;
             }
 
@@ -159,6 +170,8 @@ internal class FtdmService : ILayoutPhaseListener<ActionPhase>, IDisposable, ILa
                 if (timeLeft > OutOfBoundsWarningTime)
                 {
                     player.UnturnedPlayer.life.askDamage(101, Vector3.up, EDeathCause.ARENA, ELimb.SPINE, CSteamID.Nil, out _);
+                    comp.LastInPlayArea = float.NaN;
+                    player.Component<ToastManager>().SkipExpiration(ToastMessageStyle.FlashingWarning);
                 }
                 else if (float.IsNaN(comp.LastOutOfBoundsUIUpdate) || time - comp.LastOutOfBoundsUIUpdate > 1f)
                 {
@@ -166,12 +179,12 @@ internal class FtdmService : ILayoutPhaseListener<ActionPhase>, IDisposable, ILa
                     ToastMessage toast = new ToastMessage(
                         ToastMessageStyle.FlashingWarning,
                         _translations.EnteredEnemyTerritory.Translate(
-                            TimeAddon.ToLongTimeString(_timeTranslations, Mathf.RoundToInt(OutOfBoundsWarningTime), player.Locale.LanguageInfo),
+                            TimeAddon.ToLongTimeString(_timeTranslations, Mathf.RoundToInt(OutOfBoundsWarningTime - timeLeft), player.Locale.LanguageInfo),
                             player
                         )
                     )
                     {
-                        OverrideDuration = OutOfBoundsWarningTime
+                        OverrideDuration = OutOfBoundsWarningTime - timeLeft
                     };
 
                     player.Component<ToastManager>().SkipExpiration(ToastMessageStyle.FlashingWarning);
@@ -183,6 +196,11 @@ internal class FtdmService : ILayoutPhaseListener<ActionPhase>, IDisposable, ILa
 
     private void HandlePlayerEntersEnemySpawnOrTriesToReenterSpawn(WarfarePlayer player, Team enemySpawnTeam, IProximity spawn)
     {
+        bool isFriendly = enemySpawnTeam.IsFriendly(player.Team);
+
+        if (isFriendly && AllowReenterSpwan || player.IsOnDuty)
+            return;
+
         // turns the player around and teleports them a small distance away from the zone in the direction they came from.
         Vector3 playerPos = player.Position;
         Vector3 closestPoint = spawn.GetNearestPointOnBorder(in playerPos);
@@ -193,7 +211,7 @@ internal class FtdmService : ILayoutPhaseListener<ActionPhase>, IDisposable, ILa
         newPosition.y = TerrainUtility.GetHighestPoint(in newPosition, float.NaN) + 0.125f;
         player.UnturnedPlayer.teleportToLocation(newPosition, Quaternion.LookRotation(vector).eulerAngles.y);
 
-        if (enemySpawnTeam.IsFriendly(player.Team))
+        if (isFriendly)
         {
             _chatService.Send(player, _translations.ReenteredSpawn);
         }
@@ -220,7 +238,7 @@ internal class FtdmService : ILayoutPhaseListener<ActionPhase>, IDisposable, ILa
 
     private void PlayerEnteredSpawnZone(IEventBasedProximity<WarfarePlayer> prox, WarfarePlayer obj)
     {
-        if (_friendlyZoneColliders == null || obj.IsOnDuty || obj.IsDisconnecting)
+        if (_friendlyZoneColliders == null || obj.IsDisconnecting)
             return;
 
         if (!_friendlyZoneColliders.TryGetKey(prox, out Team? team))

@@ -276,6 +276,8 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
 
         if (_doVote)
             SendVotes(set);
+        else
+            SendNoVotes(set);
 
         if (winningTeam != null)
         {

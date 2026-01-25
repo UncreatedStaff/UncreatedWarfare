@@ -282,10 +282,10 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
         data.ResetCache();
         player.UnturnedPlayer.enablePluginWidgetFlag(EPluginWidgetFlags.Default);
 
+        data.ModalHandle.Dispose();
         if (instant)
         {
             ClearFromPlayer(player.Connection);
-            data.ModalHandle.Dispose();
         }
         else
         {
@@ -298,7 +298,6 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
             {
                 ClearFromPlayer(player.Connection);
                 data.IsClosing = false;
-                data.ModalHandle.Dispose();
             }
         }
     }

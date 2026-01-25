@@ -56,7 +56,7 @@ internal class SeedingPlayHud : UnturnedUI, IEventListener<PlayerJoined>, IEvent
         : base(
             serviceProvider.GetRequiredService<ILoggerFactory>(),
             serviceProvider.GetRequiredService<AssetConfiguration>().GetAssetLink<EffectAsset>("UI:SeedingPlayHUD"),
-            debugLogging: true
+            debugLogging: false
         )
     {
         _playerCountMonitor = playerCountMonitor;

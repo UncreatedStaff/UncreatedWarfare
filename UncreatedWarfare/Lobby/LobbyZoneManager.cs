@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using SDG.Framework.Utilities;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
@@ -32,7 +31,8 @@ public class LobbyZoneManager :
     IEventListener<QuestObjectInteracted>,
     ILayoutStartingListener,
     IEventListener<PlayerTeamChanged>,
-    IEventListener<PlayerLeft>
+    IEventListener<PlayerLeft>,
+    IDisposable
 {
     private const short FlagJoining = -1;
     private const short FlagFull = 0;
@@ -48,6 +48,7 @@ public class LobbyZoneManager :
     private ITrackingProximity<WarfarePlayer>? _zoneCollider;
     private Zone? _lobbyZone;
     private Guid _settingsFlagGuid;
+    private HashSet<WarfarePlayer> _lockedPlayers;
 
     /// <summary>
     /// If the lobby is disabled.
@@ -85,6 +86,8 @@ public class LobbyZoneManager :
         _module = module;
         _behavior = behavior;
         _playerService = playerService;
+        _lockedPlayers = new HashSet<WarfarePlayer>(Provider.maxPlayers);
+
         _layoutFactory.LoadingStateUpdated += LoadingStateUpdated;
     }
 
@@ -98,16 +101,21 @@ public class LobbyZoneManager :
             foreach (WarfarePlayer player in _zoneCollider.ActiveObjects)
             {
                 if (player.UnturnedPlayer.movement.pluginSpeedMultiplier != 0f)
+                {
                     player.UnturnedPlayer.movement.sendPluginSpeedMultiplier(0f);
+                    _lockedPlayers.Add(player);
+                }
             }
         }
         else
         {
-            foreach (WarfarePlayer player in _zoneCollider.ActiveObjects)
+            foreach (WarfarePlayer player in _lockedPlayers)
             {
                 if (player.UnturnedPlayer.movement.pluginSpeedMultiplier < 1f)
                     player.UnturnedPlayer.movement.sendPluginSpeedMultiplier(1f);
             }
+
+            _lockedPlayers.Clear();
         }
     }
 
@@ -210,7 +218,10 @@ public class LobbyZoneManager :
         if (_layoutFactory.IsLoading)
         {
             if (player.UnturnedPlayer.movement.pluginSpeedMultiplier != 0f)
+            {
                 player.UnturnedPlayer.movement.sendPluginSpeedMultiplier(0f);
+                _lockedPlayers.Add(player);
+            }
         }
         else
         {
@@ -445,6 +456,7 @@ public class LobbyZoneManager :
     [EventListener(MustRunInstantly = true)]
     void IEventListener<PlayerLeft>.HandleEvent(PlayerLeft e, IServiceProvider serviceProvider)
     {
+        _lockedPlayers.Remove(e.Player);
         UpdateTeamCounts();
     }
 
@@ -583,6 +595,12 @@ public class LobbyZoneManager :
         }
 
         return UniTask.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        _layoutFactory.LoadingStateUpdated -= LoadingStateUpdated;
     }
 
     public struct FlagInfo

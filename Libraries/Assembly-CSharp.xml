@@ -2610,6 +2610,19 @@
             If true, the server will replicate the event to clients.
             </summary>
         </member>
+        <member name="P:SDG.Unturned.ItemStorageAsset.CanPlayersOpen">
+            <summary>
+            If true, players can interact with the barricade to open storage.
+            Defaults to true.
+            Useful for pre-placed sentries to prevent stealing their guns.
+            </summary>
+        </member>
+        <member name="P:SDG.Unturned.ItemStorageAsset.ShouldDeleteContainedItemsOnDestroy">
+            <summary>
+            If true, any stored items are despawned rather than dropped when destroyed.
+            Defaults to false.
+            </summary>
+        </member>
         <member name="T:SDG.Unturned.NPCWeatherBlendAlphaCondition">
             <summary>
             Compares weather intensity to value.
@@ -3053,7 +3066,7 @@
         <member name="F:SDG.Unturned.Asset.ignoreNPOT">
             <summary>
             Should texture non-power-of-two warnings be ignored?
-            Unfortunately some third party assets have odd setups.
+            Unfortunately some already-included third-party assets have NPOT textures.
             </summary>
         </member>
         <member name="P:SDG.Unturned.Asset.ignoreTextureReadable">
@@ -3584,31 +3597,6 @@
             Is the Ctrl-C or Ctrl-Break signal being handled?
             </summary>
         </member>
-        <member name="T:SDG.Unturned.DamagePlayerParameters">
-            <summary>
-            Payload for the DamageTool.damagePlayer function.
-            </summary>
-        </member>
-        <member name="F:SDG.Unturned.DamagePlayerParameters.respectArmor">
-            <summary>
-            Should armor worn on matching limb be factored in?
-            </summary>
-        </member>
-        <member name="F:SDG.Unturned.DamagePlayerParameters.applyGlobalArmorMultiplier">
-            <summary>
-            Should game mode config damage multiplier be factored in?
-            </summary>
-        </member>
-        <member name="F:SDG.Unturned.DamagePlayerParameters.trackKill">
-            <summary>
-            If player dies should it count towards quests?
-            </summary>
-        </member>
-        <member name="F:SDG.Unturned.DamagePlayerParameters.ragdollEffect">
-            <summary>
-            Effect to apply to ragdoll if dead.
-            </summary>
-        </member>
         <member name="F:SDG.Unturned.ELoadingTip.MAX">
             <summary>
             Marker for counting number of tips.
@@ -3634,6 +3622,31 @@
         <member name="M:SDG.Unturned.LoadingUI.PickNonLevelBackgroundImage">
             <summary>
             Select a loading image while on the startup screen or a level without any images.
+            </summary>
+        </member>
+        <member name="T:SDG.Unturned.DamagePlayerParameters">
+            <summary>
+            Payload for the DamageTool.damagePlayer function.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.DamagePlayerParameters.respectArmor">
+            <summary>
+            Should armor worn on matching limb be factored in?
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.DamagePlayerParameters.applyGlobalArmorMultiplier">
+            <summary>
+            Should game mode config damage multiplier be factored in?
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.DamagePlayerParameters.trackKill">
+            <summary>
+            If player dies should it count towards quests?
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.DamagePlayerParameters.ragdollEffect">
+            <summary>
+            Effect to apply to ragdoll if dead.
             </summary>
         </member>
         <member name="F:SDG.Unturned.ESteamCallValidation.ONLY_FROM_SERVER">
@@ -6461,7 +6474,7 @@
         </member>
         <member name="M:SDG.Unturned.ServerMessageHandler_ReadyToConnect.IsNameBlockedByNelsonFilter(System.String)">
             <summary>
-            Kick players maybe trying to impersonate me. I guess nobody else named Nelson is allowed in the game!
+            Kick players maybe trying to impersonate devs. (Reports of sad/bad experiences with pretenders, unfortunately.)
             2023-09-19: relaxed this a bit by trimming names and using Equals/Starts/Ends rather than Contains
             because there was a player with Nelson in their username.
             </summary>
@@ -11774,6 +11787,22 @@
             Maximum number of items to recover when salvaged.
             </summary>
         </member>
+        <member name="P:SDG.Unturned.ItemPlaceableAsset.SalvageItemFullHealthRef">
+            <summary>
+            Item or spawn table recovered when picked up at 100% health.
+            Defaults to self.
+            </summary>
+        </member>
+        <member name="P:SDG.Unturned.ItemPlaceableAsset.MinItemsRecoveredOnSalvageFullHealth">
+            <summary>
+            Minimum number of items to recover when salvaged at full health.
+            </summary>
+        </member>
+        <member name="P:SDG.Unturned.ItemPlaceableAsset.MaxItemsRecoveredOnSalvageFullHealth">
+            <summary>
+            Maximum number of items to recover when salvaged at full health.
+            </summary>
+        </member>
         <member name="P:SDG.Unturned.ItemPlaceableAsset.minItemsDroppedOnDestroy">
             <summary>
             Minimum number of items to drop when destroyed.
@@ -16606,6 +16635,13 @@
             transform's localRotation when the vehicle was instantiated.
             </summary>
         </member>
+        <member name="F:SDG.Unturned.TrainCar.objectsToRoot">
+            <summary>
+            Objects transform relative to Root.
+            Identity in vanilla, but may be otherwise in mods.
+            Necessary for fix interpolation issue with front/back transform.
+            </summary>
+        </member>
         <member name="F:SDG.Unturned.TrainCar.rootRigidbody">
             <summary>
             Rigidbody component on the root game object.
@@ -17807,7 +17843,7 @@
         <member name="P:SDG.Unturned.ItemWeaponAsset.allowFleshFx">
             <summary>
             Should player/animal/zombie surface be nulled on hit?
-            Requested by spyjack for a chainsaw-style shield that was overboard with the blood.
+            May be useful for weapons going overboard with the blood splatters.
             </summary>
         </member>
         <member name="P:SDG.Unturned.ItemWeaponAsset.bypassAllowedToDamagePlayer">
@@ -18596,7 +18632,8 @@
         </member>
         <member name="P:SDG.Unturned.AnimalAsset.shouldPlayAnimsOnDedicatedServer">
             <summary>
-            Temporary until something better makes sense? For Spyjack.
+            Temporary until something better makes sense?
+            Originally added for modded animals triggering damage from animations.
             </summary>
         </member>
         <member name="P:SDG.Unturned.AnimalAsset.ShouldPreventMoveDuringStartle">
@@ -19578,7 +19615,7 @@
         <member name="F:SDG.Unturned.ItemGunAsset.requiresNonZeroAttachmentCaliber">
             <summary>
             Defaults to false. If true, attachments must specify at least one non-zero caliber.
-            Requested by Great Hero J to block vanilla attachments in VGR.
+            Useful for blocking vanilla attachments.
             </summary>
         </member>
         <member name="P:SDG.Unturned.ItemGunAsset.RechamberAfterMagazineAttached">

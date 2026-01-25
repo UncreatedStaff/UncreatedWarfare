@@ -19,9 +19,10 @@ public sealed class RequiresSquadRequirement(SquadManager? squadManager = null) 
         if (squad == null || needsSquadLead && !squad.IsLeader(ctx.Player))
         {
             visitor.AcceptRequiresSquadNotMet(in ctx, needsSquadLead);
+            return KitRequirementResult.No;
         }
 
-        return KitRequirementResult.No;
+        return KitRequirementResult.Yes;
     }
 
     public ValueTask<KitRequirementResult> AcceptAsync<TState>(IKitRequirementVisitor<TState> visitor, in KitRequirementResolutionContext<TState> ctx, CancellationToken token = default)

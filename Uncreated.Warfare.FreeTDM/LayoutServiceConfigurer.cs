@@ -1,13 +1,14 @@
 ﻿using Autofac;
+using Uncreated.Warfare.FreeTeamDeathmatch.Tweaks;
 using Uncreated.Warfare.Plugins;
 
-namespace Uncreated.Warfare.FreeTeamDeathmatch
+namespace Uncreated.Warfare.FreeTeamDeathmatch;
+
+public class LayoutServiceConfigurer : ILayoutServiceConfigurer
 {
-    public class LayoutServiceConfigurer : ILayoutServiceConfigurer
+    public void ConfigureServices(ContainerBuilder bldr)
     {
-        public void ConfigureServices(ContainerBuilder bldr)
-        {
-            
-        }
+        bldr.RegisterType<FtdmNoInjuresTweak>()
+            .AsImplementedInterfaces();
     }
 }

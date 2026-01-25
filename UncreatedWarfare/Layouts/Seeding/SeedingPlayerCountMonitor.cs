@@ -156,17 +156,14 @@ internal class SeedingPlayerCountMonitor :
 
     UniTask ILayoutHostedService.StartAsync(CancellationToken token)
     {
-        _logger.LogInformation("Hosted SPCM.");
         if (!_layoutHost.IsLayoutActive())
             return UniTask.CompletedTask;
 
         bool updateUi = true;
         if (_layoutHost.GetActiveLayout().LayoutInfo.IsSeeding)
         {
-            _logger.LogInformation("seeding layout.");
             if (!IsSeeding)
             {
-                _logger.LogInformation("Starting seeding.");
                 updateUi = false;
                 StartSeeding();
                 CheckShouldAwaitStart();
@@ -174,14 +171,12 @@ internal class SeedingPlayerCountMonitor :
         }
         else if (IsSeeding)
         {
-            _logger.LogInformation("Stopping seeding.");
             IsSeeding = false;
             _nextVotePlayerThreshold = Rules.VotePlayerThreshold;
             CheckShouldStartVote();
         }
         else
         {
-            _logger.LogInformation("Seeding state correct.");
             return UniTask.CompletedTask;
         }
 
@@ -389,11 +384,16 @@ internal class SeedingPlayerCountMonitor :
             _playHud.UpdateStage();
         }
 
-        using (LayoutInfo newLayout = _pendingLayout ?? _layoutFactory.SelectRandomLayout(seeding: true))
+        if (_layoutFactory.NextLayout == null)
         {
+            using LayoutInfo newLayout = _pendingLayout ?? _layoutFactory.SelectRandomLayout(seeding: true);
             Interlocked.CompareExchange(ref _pendingLayout, null, newLayout);
             _layoutFactory.NextLayout = new FileInfo(newLayout.FilePath);
             _logger.LogInformation($"Selected seeding layout: {newLayout.DisplayName}.");
+        }
+        else
+        {
+            _logger.LogInformation($"Using specified next layout: {_layoutFactory.NextLayout.Name}.");
         }
 
         if (!delayStart)

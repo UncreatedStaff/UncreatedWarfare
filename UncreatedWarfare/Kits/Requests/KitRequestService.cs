@@ -160,7 +160,10 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
             {
                 KitRequirementResult result = await requirement.AcceptAsync(_requestRequirementVisitor, in context, token);
                 if (result == KitRequirementResult.No)
+                {
+                    _logger.LogDebug($"Kit request failed for {player.Steam64}: {requirement.GetType()}.");
                     return false;
+                }
             }
 
             if (!player.IsOnline)
