@@ -23,7 +23,7 @@ public class NullTeamManager : ITeamManager<Team>
     public Team GetTeam(CSteamID groupId) => Team.NoTeam;
 
     /// <inheritdoc />
-    public UniTask InitializeAsync(CancellationToken token = default) => UniTask.CompletedTask;
+    public UniTask InitializeAsync(IServiceProvider serviceProvider, CancellationToken token = default) => UniTask.CompletedTask;
 
     /// <inheritdoc />
     public UniTask BeginAsync(CancellationToken token = default) => UniTask.CompletedTask;

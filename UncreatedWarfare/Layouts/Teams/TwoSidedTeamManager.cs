@@ -1,12 +1,10 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
-using System.Text.RegularExpressions;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Events;
@@ -28,13 +26,15 @@ namespace Uncreated.Warfare.Layouts.Teams;
 public class TwoSidedTeamManager : ITeamManager<Team>
 {
     private readonly ILogger<TwoSidedTeamManager> _logger;
-    private readonly PointsService _points;
-    private readonly IServiceProvider _serviceProvider;
     private readonly Team[] _teams = new Team[2];
-    private readonly EventDispatcher _eventDispatcher;
-    private readonly IPointsStore _pointsSql;
     private int _blufor;
     private int _opfor;
+
+#nullable disable
+    private PointsService _points;
+    private IPointsStore _pointsSql;
+    private EventDispatcher _eventDispatcher;
+#nullable restore
 
     /// <inheritdoc />
     public IReadOnlyList<Team> AllTeams { get; }
@@ -79,15 +79,11 @@ public class TwoSidedTeamManager : ITeamManager<Team>
     /// <exception cref="InvalidOperationException">There is no Opfor team.</exception>
     public Team Opfor => _opfor == -1 ? throw new InvalidOperationException("This layout does not have an Opfor team.") : _teams[_opfor];
 
-    public TwoSidedTeamManager(ILogger<TwoSidedTeamManager> logger, PointsService points, IServiceProvider serviceProvider)
+    public TwoSidedTeamManager(ILogger<TwoSidedTeamManager> logger)
     {
         _logger = logger;
-        _points = points;
-        _serviceProvider = serviceProvider;
         AllTeams = new ReadOnlyCollection<Team>(_teams);
-
-        _eventDispatcher = serviceProvider.GetRequiredService<EventDispatcher>();
-        _pointsSql = serviceProvider.GetRequiredService<IPointsStore>();
+        
         Factions = Array.Empty<uint>();
     }
 
@@ -166,16 +162,21 @@ public class TwoSidedTeamManager : ITeamManager<Team>
     }
 
     /// <inheritdoc />
-    public virtual async UniTask InitializeAsync(CancellationToken token = default)
+    public virtual async UniTask InitializeAsync(IServiceProvider serviceProvider, CancellationToken token = default)
     {
         if (Teams is not { Count: 2 })
             throw new LayoutConfigurationException(this, "Expected exactly 2 team infos in the 'Teams' section.");
 
         FactionInfo? factionInfo1, factionInfo2;
-        IFactionDataStore factionDataStore = _serviceProvider.GetRequiredService<IFactionDataStore>();
-        MapScheduler mapScheduler = _serviceProvider.GetRequiredService<MapScheduler>();
 
-        using (IServiceScope scope = _serviceProvider.CreateScope())
+        _eventDispatcher = serviceProvider.GetRequiredService<EventDispatcher>();
+        _pointsSql = serviceProvider.GetRequiredService<IPointsStore>();
+        _points = serviceProvider.GetRequiredService<PointsService>();
+
+        IFactionDataStore factionDataStore = serviceProvider.GetRequiredService<IFactionDataStore>();
+        MapScheduler mapScheduler = serviceProvider.GetRequiredService<MapScheduler>();
+
+        using (IServiceScope scope = serviceProvider.CreateScope())
         await using (IGameDataDbContext dbContext = scope.ServiceProvider.GetRequiredService<IGameDataDbContext>())
         {
             Faction f1 = await TeamUtility.ResolveTeamFactionHint(Teams[0].Faction, dbContext, this, mapScheduler, token);

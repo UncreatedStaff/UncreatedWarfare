@@ -142,6 +142,8 @@ internal class SeedingPlayerCountMonitor :
     private void ReloadRules(bool startup)
     {
         Rules.Enabled = _systemConfig.GetValue<bool>("seeding:enabled");
+        Rules.TrackPoints = _systemConfig.GetValue<bool>("seeding:track_points");
+        Rules.TrackStats = _systemConfig.GetValue<bool>("seeding:track_stats");
         Rules.VotePlayerThreshold = _systemConfig.GetValue("seeding:start_vote_players", 15);
         Rules.StartPlayerThreshold = _systemConfig.GetValue("seeding:start_game_players", 20);
         Rules.StartCountdownLength = _systemConfig.GetValue("seeding:countdown_time", TimeSpan.FromSeconds(30));
@@ -150,6 +152,8 @@ internal class SeedingPlayerCountMonitor :
 
         if (startup)
             return;
+
+        UpdateGlobals(IsSeeding);
 
         if (Rules.Enabled)
         {

@@ -8,7 +8,6 @@ using Uncreated.Warfare.Exceptions;
 using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
-using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.List;
 using Uncreated.Warfare.Zones;
@@ -20,9 +19,12 @@ namespace Uncreated.Warfare.FreeTeamDeathmatch;
 /// </summary>
 internal sealed class FtdmDualSidedTeamManager : TwoSidedTeamManager
 {
-    private readonly Layout _layout;
-    private readonly WarfareModule _warfareModule;
     private readonly ILogger<FtdmDualSidedTeamManager> _logger;
+
+#nullable disable
+    private Layout _layout;
+    private WarfareModule _warfareModule;
+#nullable restore
 
     /// <summary>
     /// The location used for the game.
@@ -36,13 +38,9 @@ internal sealed class FtdmDualSidedTeamManager : TwoSidedTeamManager
     public IReadOnlyDictionary<Team, FtdmLocationSpawn> Spawns { get; private set; }
 
     /// <inheritdoc />
-    public FtdmDualSidedTeamManager(
-        ILogger<FtdmDualSidedTeamManager> logger, PointsService points, IServiceProvider serviceProvider)
-        : base(logger, points, serviceProvider)
+    public FtdmDualSidedTeamManager(ILogger<FtdmDualSidedTeamManager> logger) : base(logger)
     {
         _logger = logger;
-        _layout = serviceProvider.GetRequiredService<Layout>();
-        _warfareModule = serviceProvider.GetRequiredService<WarfareModule>();
         Spawns = new LinearDictionary<Team, FtdmLocationSpawn>();
         Location = new FtdmLocation();
         SpawnAtWarRoom = false;
@@ -64,9 +62,12 @@ internal sealed class FtdmDualSidedTeamManager : TwoSidedTeamManager
     }
 
     /// <inheritdoc />
-    public override async UniTask InitializeAsync(CancellationToken token = default)
+    public override async UniTask InitializeAsync(IServiceProvider serviceProvider, CancellationToken token = default)
     {
-        await base.InitializeAsync(token);
+        _layout = serviceProvider.GetRequiredService<Layout>();
+        _warfareModule = serviceProvider.GetRequiredService<WarfareModule>();
+
+        await base.InitializeAsync(serviceProvider, token);
 
         string fileName = _layout.LayoutInfo.FilePath;
         string? chosenLocationName = null;
