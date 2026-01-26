@@ -273,7 +273,6 @@ internal class SeedingPlayerCountMonitor :
         CheckShouldAwaitStart();
         if (IsSeeding)
         {
-            _logger.LogInformation($"Sending UI to {e.Player}.");
             _playHud?.UpdateStage();
         }
     }
@@ -336,6 +335,10 @@ internal class SeedingPlayerCountMonitor :
             return;
 
         CheckShouldStartVote();
+        if (IsSeeding)
+        {
+            _playHud?.UpdateStage();
+        }
     }
 
     private void StartVote()
