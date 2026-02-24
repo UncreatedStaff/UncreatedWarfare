@@ -686,7 +686,7 @@
         </member>
         <member name="F:SDG.Framework.Modules.ModuleAssembly.Load_As_Byte_Array">
             <summary>
-            Requested by Trojaner. LoadFile locks the file while in use which prevents OpenMod from updating itself.
+            Useful as a workaround enabling plugin frameworks to self-update, otherwise LoadFile locks the file while in use.
             </summary>
         </member>
         <member name="T:SDG.Framework.Modules.IModuleNexus">
@@ -3370,7 +3370,7 @@
         <member name="F:SDG.Unturned.ItemBarricadeAsset.shouldBypassPickupOwnership">
             <summary>
             Defaults to false, except for explosive charges which bypass claims.
-            Requested by Renaxon for collectible barricades that raiders can steal without destroying.
+            Useful for collectible barricades that raiders can steal without destroying.
             </summary>
         </member>
         <member name="P:SDG.Unturned.ItemBarricadeAsset.AllowPlacementInsideClipVolumes">
@@ -3382,7 +3382,7 @@
         <member name="P:SDG.Unturned.ItemBarricadeAsset.allowCollisionWhileAnimating">
             <summary>
             Should door colliders remain active while animation is playing?
-            Enabled by modders trying to make stuff like elevators.
+            Useful in special cases such as modded elevators, but prone to physics exploits.
             </summary>
         </member>
         <member name="F:SDG.Unturned.ItemBarricadeAsset.placementPreviewRef">
@@ -11096,9 +11096,9 @@
             <summary>
             Name to use when instantiating attachment prefab.
             By default the asset guid is used, but it can be overridden because some
-            modders rely on the name for Unity's legacy animation component. For example
-            in Toothy Deerryte's case there were a lot of duplicate animations to work
-            around the guid naming, simplified by overriding name.
+            modders rely on the name for Unity's legacy animation component. Some maps
+            had a lot of duplicate animations to work around the guid naming, in which
+            case overriding the name simplified animation.
             </summary>
         </member>
         <member name="M:SDG.Unturned.ItemCaliberAsset.CalibersContainId(System.UInt16)">
@@ -16235,9 +16235,9 @@
             <summary>
             Name to use when instantiating item prefab.
             By default the asset legacy id is used, but it can be overridden because some
-            modders rely on the name for Unity's legacy animation component. For example
-            in Toothy Deerryte's case there were a lot of duplicate animations to work
-            around the id naming, simplified by overriding name.
+            modders rely on the name for Unity's legacy animation component. Some maps
+            had a lot of duplicate animations to work around the id naming, in which
+            case overriding the name simplified animation.
             </summary>
         </member>
         <member name="F:SDG.Unturned.ItemAsset.equipableMovementSpeedMultiplier">
@@ -17017,6 +17017,14 @@
         <member name="M:SDG.Unturned.InteractableVehicle.simulate(System.UInt32,System.Int32,System.Int32,System.Int32,System.Single,System.Single,System.Boolean,System.Boolean,System.Single)">
             <summary>
             Client simulate driving input.
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.InteractableVehicle.TeleportTrainCars(System.Boolean)">
+            <summary>
+            2026-01-30: adding forceSetTransform to work around an issue with newly-spawned trains:
+            It seems after Unity 2022 LTS or 3.26.1.0 the position passed to Instantiate takes
+            priority over the call to rigidbody SetPosition, and new trains default to zero. This
+            prevents players from entering the train.
             </summary>
         </member>
         <member name="F:SDG.Unturned.InteractableVehicle.hasUnityCalledStart">
@@ -19301,7 +19309,7 @@
         </member>
         <member name="T:SDG.Unturned.GunStatsExporter">
             <summary>
-            Nelson 2024-11-29: Curious to put all the gun stats in one place for easier comparison. Rather rudimentary at
+            Curious to put all the gun stats in one place for easier comparison. Rather rudimentary at
             the moment so not including in the update.
             </summary>
         </member>

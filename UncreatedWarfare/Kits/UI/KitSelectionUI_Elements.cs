@@ -71,16 +71,16 @@ partial class KitSelectionUI
 
     private class PanelKitInfo : KitInfo
     {
-        [Pattern("Kit_Panel_{1}_Kit_{0}_Favorite", AdditionalPath = "Buttons")]
+        [Pattern("Kit_Panel_{1}_Kit_{0}_Favorite", AdditionalPath = "Buttons/Favorite")]
         public override UnturnedButton FavoriteButton { get; set; }
 
-        [Pattern("Kit_Panel_{1}_Kit_{0}_Unfavorite", AdditionalPath = "Buttons")]
+        [Pattern("Kit_Panel_{1}_Kit_{0}_Unfavorite", AdditionalPath = "Buttons/Unfavorite")]
         public override UnturnedButton UnfavoriteButton { get; set; }
 
-        [Pattern("Kit_Panel_{1}_Kit_{0}_Request", AdditionalPath = "Buttons")]
+        [Pattern("Kit_Panel_{1}_Kit_{0}_Request", AdditionalPath = "Buttons/Request")]
         public override UnturnedButton RequestButton { get; set; }
 
-        [Pattern("Kit_Panel_{1}_Kit_{0}_Preview", AdditionalPath = "Buttons")]
+        [Pattern("Kit_Panel_{1}_Kit_{0}_Preview", AdditionalPath = "Buttons/Preview")]
         public override UnturnedButton PreviewButton { get; set; }
 
         [Pattern("Kit_Panel_{1}_Kit_{0}_Purchase", AdditionalPath = "Unlock", PresetPaths = [ "./Label" ])]
@@ -89,16 +89,16 @@ partial class KitSelectionUI
 
     private class ListKitInfo : KitInfo
     {
-        [Pattern("Kit_List_{0}_Favorite", AdditionalPath = "Buttons")]
+        [Pattern("Kit_List_{0}_Favorite", AdditionalPath = "Buttons/Favorite")]
         public override UnturnedButton FavoriteButton { get; set; }
 
-        [Pattern("Kit_List_{0}_Unfavorite", AdditionalPath = "Buttons")]
+        [Pattern("Kit_List_{0}_Unfavorite", AdditionalPath = "Buttons/Unfavorite")]
         public override UnturnedButton UnfavoriteButton { get; set; }
 
-        [Pattern("Kit_List_{0}_Request", AdditionalPath = "Buttons")]
+        [Pattern("Kit_List_{0}_Request", AdditionalPath = "Buttons/Request")]
         public override UnturnedButton RequestButton { get; set; }
 
-        [Pattern("Kit_List_{0}_Preview", AdditionalPath = "Buttons")]
+        [Pattern("Kit_List_{0}_Preview", AdditionalPath = "Buttons/Preview")]
         public override UnturnedButton PreviewButton { get; set; }
 
         [Pattern("Kit_List_{0}_Purchase", AdditionalPath = "Unlock", PresetPaths = [ "./Label" ])]
@@ -125,8 +125,20 @@ partial class KitSelectionUI
         [Ignore] public abstract UnturnedButton RequestButton { get; set; }
         [Ignore] public abstract UnturnedButton PreviewButton { get; set; }
 
+        [Pattern("Favorite", AdditionalPath = "Buttons")]
+        public UnturnedUIElement FavoriteButtonParent { get; set; }
+
+        [Pattern("Unfavorite", AdditionalPath = "Buttons")]
+        public UnturnedUIElement UnfavoriteButtonParent { get; set; }
+
+        [Pattern("Request", AdditionalPath = "Buttons")]
+        public UnturnedUIElement RequestButtonParent { get; set; }
+
+        [Pattern("Preview", AdditionalPath = "Buttons")]
+        public UnturnedUIElement PreviewButtonParent { get; set; }
+
         [Pattern("Include_{0}")]
-        [ArrayPattern(1, To = 15)]
+        [ArrayPattern(1, To = 20)]
         public CountIncludeLabel[] IncludeLabels { get; set; }
 
         [Pattern("Include_1_{0}")]

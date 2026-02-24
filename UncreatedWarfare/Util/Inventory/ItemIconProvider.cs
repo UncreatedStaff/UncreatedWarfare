@@ -11,7 +11,7 @@ namespace Uncreated.Warfare.Util.Inventory;
 /// </summary>
 public class ItemIconProvider
 {
-    private const int WhiteColor = unchecked((int)0xFFFFFFFF);
+    private const int WhiteColor = unchecked( (int)0xFFFFFFFF );
     internal readonly ItemIconData[] Defaults =
     [
         New(RedirectType.LaserDesignator,           "阚"),
@@ -33,10 +33,11 @@ public class ItemIconProvider
         New(RedirectType.Vest,                      "ɞ"),
         New(RedirectType.Pants,                     "ɟ"),
         New(RedirectType.Shirt,                     "ɠ"),
-        New(RedirectType.StandardAmmoIcon,          "ɡ"),
-        New(RedirectType.StandardMeleeIcon,         "↔"),
+        New(RedirectType.StandardAmmoIcon,          "ˊ"), // ɡ (larger)
+        New(RedirectType.StandardMeleeIcon,         "ˏ"),
         New(RedirectType.StandardGrenadeIcon,       "↖"),
         New(RedirectType.StandardSmokeGrenadeIcon,  "ɢ"),
+        New(RedirectType.StandardBuildable,         "ˎ"),
 
         New("78fefdd23def4ab6ac8301adfcc3b2d4", "ʰ", "6b563c"),   // Canned Beans
         New("ce28bcc951c645eebae98a881e329316", "ʰ", "a54749"),   // Canned Tomato Soup
@@ -80,7 +81,33 @@ public class ItemIconProvider
         New("5e1d521ecb7f4075aaebd344e838c2ca", "ˁ", "a73537"),   // Bloodbag
         New("7f65a4dcb5dc4bc2b96fe85e6e415808", "˂", "a83538"),   // Suturekit
         New("79271d9bcdd549028fa4b3038b54cb4b", "˃", "a83538"),   // Heatstim
-
+        New("f260c581cf504098956f424d62345982", "ˋ"),             // Binoculars
+        New("1f80a9e0c86047d38b72e08e267885f6", "ˌ", "cd2222"),   // Carjack
+        New("d5b9f19e2f2a4ee2ab4dc666f32f7df3", "ˍ", "c72121"),   // Portable Gas Can
+        New("6c0962c45f874fec9373765cf8c29976", "ˍ", "2f682f"),   // Industrial Gas Can
+        New("7d11aa2b07e641cb8362e207327937ec", "ˍ", "634b30"),   // Maple Jerrycan
+        New("52e635dbf3b641069759247cdf8336ad", "ˍ", "4c3d2a"),   // Pine Jerrycan
+        New("0078ced43dc1454b98c4d0246a4c18ab", "ˍ", "bcbcbc"),   // Birch Jerrycan
+        New("47097f72d56c4bfb83bb8947e66396d5", "ˏ"),             // Military Knife
+        New("8d80a12a6f564850ab2478927648dd7a", "ː"),             // Detonator
+        New("cca8301927e049149fcee2b157a59da1", "↠"),             // Military Nightvision
+        New("8c81fbb134aa42e38b7eda8ebede5463", "↠"),             // Civilian Nightvision
+        
+        New("92df865d6d534bc1b20b7885fddb8af3", "粞"),            // Anti-Tank Mine
+        New("830ba3616d434914b682007b7f309d68", "粢"),            // Tripwire Claymore
+        New("784bb6878b654d20a6ba48184c997b2f", "竴"),            // Frag Grenade Trap
+        New("b01e414db03747509e87ebc515744216", "竳"),            // Frag Grenade
+        // New("a2a8a01a58454816a6c9a047df0558ad", "闖"),         // Razorwire (prefer generic buildable icon for now)
+        New("010de9d7d1fd49d897dc41249a22d436", "閽"),            // Laser Rangefinder
+        New("3879d9014aca4a17b3ed749cf7a9283e", "阚"),            // Laser Designator
+        New("ffcf0144431542a0b41c0b5202ce9d17", "笙"),            // Combat Knife
+        New("618d0402c0724f1582fffd69f4cc0868", "粬"),            // Detonator (C4_Detonator)
+        New("21cbdcec7a8a4c7d93b578d596fc623c", "粠"),            // Cellphone
+        New("12baf44a3f154c86a1b320cbfcc7e2d7", "粧"),            // C-4 1-Pack Charge
+        New("84c211711ee74f6e90a02c59edf39328", "粨"),            // C-4 2-Pack Charge
+        New("85bcbd5ee63d49c19c3c86b4e0d115d6", "粩"),            // C-4 4-Pack Charge
+        New("5dcdd5293e31475a9d9207a792fdc3e8", "粪"),            // C-4 8-Pack Charge
+        
         New("7bf622df8cfe4d8c8b740fae3e95b957", "ɢ", "9ea2a2"),   // White Smoke Grenade
         New("7bdd473ac66d43e4b5146c3c74020680", "ɢ", "54a36e"),   // Green Smoke Grenade
         New("c9fadfc1008e477ebb9aeaaf0ad9afb9", "ɢ", "b74f51"),   // Red Smoke Grenade
@@ -184,7 +211,6 @@ public class ItemIconProvider
         New("55a7c42a0e16469484509b14bf37bdf1", "繒"),            // MP-443 Grach
         New("4e51ad861de844688d5634258fec758d", "閱"),            // M72 LAW
         New("3ac5dee6ea2a4cc198396facc482ea50", "閳"),            // RPG-26
-        New("010de9d7d1fd49d897dc41249a22d436", "閽"),            // Laser Rangefinder
         New("1477d875bedb476daa6ffb2bb5d75c74", "间"),            // M3 MAAWS
         New("1fb0d8134b524c25abf1a4c41d75ec49", "闷"),            // RPG-28
         New("04cf59190c0d4b2184d201631786c174", "闽"),            // RPG-7V2
@@ -196,7 +222,6 @@ public class ItemIconProvider
         New("a03780e22f204cad827fc4da23f40551", "阒"),            // AK-101
         New("782de1244a7a468a8daf23c0b23c6911", "阔"),            // G3SG/1
         New("2ff03ce7320040f39356bc059e4f387d", "阘"),            // HK21
-        New("3879d9014aca4a17b3ed749cf7a9283e", "阚"),            // Laser Designator
         New("0e15d6ea7fbd4261a1955814244a218c", "队"),            // G36
         New("665a355174ff41ea8181d007ee52fe4c", "阢"),            // G36K
         New("d8bdb80c9f744061a16de20448390ba1", "阤"),            // QBZ-95

@@ -58,7 +58,8 @@ public class Kit : IRequestable<Kit>, ITranslationArgument
     public ImmutableArray<ItemDescriptor> GetItemDescriptors(
         Team team,
         IKitItemResolver kitItemResolver,
-        ItemIconProvider itemIconProvider)
+        ItemIconProvider itemIconProvider,
+        KitWeaponTextService weaponTextService)
     {
         GameThread.AssertCurrent();
         
@@ -80,7 +81,8 @@ public class Kit : IRequestable<Kit>, ITranslationArgument
             team,
             items,
             kitItemResolver,
-            itemIconProvider
+            itemIconProvider,
+            weaponTextService
         );
         _itemDescriptors.Add(team, itemDescriptors);
         return itemDescriptors;

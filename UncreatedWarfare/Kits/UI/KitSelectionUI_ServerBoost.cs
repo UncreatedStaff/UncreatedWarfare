@@ -47,7 +47,7 @@ partial class KitSelectionUI
         {
             for (Class @class = Class.Squadleader; @class < Class.SpecOps; ++@class)
             {
-                KitPanel panel = _panels[@class - Class.Squadleader];
+                KitPanel panel = _panels[GetClassPanelIndex(@class)];
                 for (int i = 0; i < panel.Kits.Length; ++i)
                 {
                     UpdateKit(guildStatus, data, i, isNitroBoosting, @class, panel.Kits[i], player);

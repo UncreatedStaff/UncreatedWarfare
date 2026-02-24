@@ -19,7 +19,6 @@ using SDG.Framework.Modules;
 using StackCleaner;
 using Stripe;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -826,7 +825,7 @@ public sealed class WarfareModule
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
 
-        bldr.RegisterType<MySqlKitFavoriteService>()
+        bldr.RegisterRpcType<MySqlKitFavoriteService>()
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
 

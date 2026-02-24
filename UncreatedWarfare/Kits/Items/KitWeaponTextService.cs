@@ -1,3 +1,4 @@
+using System;
 using Microsoft.Extensions.Configuration;
 using System.Collections.Generic;
 using System.IO;
@@ -17,6 +18,14 @@ public sealed class KitWeaponTextService : BaseAlternateConfigurationFile
     }
 
     public bool IsBlacklisted(IAssetLink<Asset> asset)
+    {
+        lock (_blacklist)
+        {
+            return _blacklist.ContainsAsset(asset);
+        }
+    }
+
+    public bool IsBlacklisted(ItemGunAsset asset)
     {
         lock (_blacklist)
         {

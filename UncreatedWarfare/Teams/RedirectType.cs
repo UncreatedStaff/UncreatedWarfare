@@ -63,4 +63,6 @@ public enum RedirectType : byte
     StandardGrenadeIcon,
     [Translatable("Generic Smoke Grenade", IsPrioritizedTranslation = false)]
     StandardSmokeGrenadeIcon,
+    [Translatable("Generic Buildable", IsPrioritizedTranslation = false)]
+    StandardBuildable
 }

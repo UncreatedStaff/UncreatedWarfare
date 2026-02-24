@@ -2,6 +2,7 @@
 using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
 using Uncreated.Warfare.Commands;
+using Uncreated.Warfare.Kits.UI;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Util;
@@ -36,6 +37,7 @@ public struct ItemDescriptor
         IKitItem[] items,
         IKitItemResolver kitItemResolver,
         ItemIconProvider iconProvider,
+        KitWeaponTextService weaponTextService,
         bool rich = true,
         bool tmpro = true)
     {
@@ -70,7 +72,7 @@ public struct ItemDescriptor
                 ItemDescriptorType type = ItemDescriptorType.Other;
                 ImmutableArray<ItemDescriptorAttachment> attachments;
 
-                if (resolved.Asset is ItemGunAsset gun)
+                if (resolved.Asset is ItemGunAsset gun && !weaponTextService.IsBlacklisted(gun))
                 {
                     if (item is IPageItem pageItem)
                     {
@@ -178,7 +180,7 @@ public struct ItemDescriptor
                     if (found)
                         continue;
 
-                    attachments = default;
+                    attachments = ImmutableArray<ItemDescriptorAttachment>.Empty;
                 }
 
                 string? icon;
@@ -227,16 +229,40 @@ public struct ItemDescriptor
                     default:
                         switch (resolved.Asset.type)
                         {
+                            // dequipped clothing
+                            case EItemType.SHIRT:
+                            case EItemType.PANTS:
+                            case EItemType.VEST:
+                            case EItemType.MASK:
+                            case EItemType.HAT:
+                            case EItemType.BACKPACK:
+                            // maybe nightvision
+                            case EItemType.GLASSES:
+                                icon ??= iconProvider.GetIcon(resolved.Asset.type switch
+                                {
+                                    EItemType.SHIRT => RedirectType.Shirt,
+                                    EItemType.PANTS => RedirectType.Pants,
+                                    EItemType.VEST => RedirectType.Vest,
+                                    EItemType.MASK => RedirectType.Mask,
+                                    EItemType.HAT => RedirectType.Hat,
+                                    EItemType.BACKPACK => RedirectType.Backpack,
+                                    _ => RedirectType.Glasses
+                                }, rich, tmpro);
+                                goto case EItemType.FOOD;
+
+                            case EItemType.BARRICADE:
+                            case EItemType.STRUCTURE:
+                                icon ??= iconProvider.GetIcon(RedirectType.StandardBuildable, rich, tmpro);
+                                goto case EItemType.FOOD;
+
                             case EItemType.FOOD:
                             case EItemType.WATER:
                             case EItemType.MEDICAL:
                             case EItemType.MELEE:
                             case EItemType.FUEL:
                             case EItemType.TOOL:
-                            case EItemType.BARRICADE:
                             case EItemType.STORAGE:
                             case EItemType.THROWABLE:
-                            case EItemType.STRUCTURE:
                             case EItemType.TRAP:
                             case EItemType.OPTIC:
                             case EItemType.REFILL:
@@ -246,9 +272,10 @@ public struct ItemDescriptor
                             case EItemType.VEHICLE_REPAIR_TOOL:
                             case EItemType.VEHICLE_LOCKPICK_TOOL:
                             case EItemType.TIRE:
-                            // maybe nightvision
-                            case EItemType.GLASSES:
-                                type = ItemDescriptorType.Utility;
+                            // blacklisted weapons (laser rangefinder/designator)
+                            case EItemType.GUN:
+                                if (type == ItemDescriptorType.Other)
+                                    type = ItemDescriptorType.Utility;
                                 break;
 
                             case EItemType.SIGHT:
@@ -256,7 +283,16 @@ public struct ItemDescriptor
                             case EItemType.GRIP:
                             case EItemType.BARREL:
                             case EItemType.MAGAZINE:
-                                type = ItemDescriptorType.Ammunition;
+                                icon ??= KitSelectionUI.GetAttachmentIcon(resolved.Asset.type switch
+                                {
+                                    EItemType.SIGHT => AttachmentType.Sight,
+                                    EItemType.TACTICAL => AttachmentType.Tactical,
+                                    EItemType.GRIP => AttachmentType.Grip,
+                                    EItemType.BARREL => AttachmentType.Barrel,
+                                    _ => AttachmentType.Magazine
+                                });
+                                if (type == ItemDescriptorType.Other)
+                                    type = ItemDescriptorType.Ammunition;
                                 break;
                         }
 
@@ -307,7 +343,7 @@ public struct ItemDescriptor
             int worth = type switch
             {
                 ClothingType.Shirt or ClothingType.Pants => 3,
-                ClothingType.Backpack or ClothingType.Vest => 2,
+                /* ClothingType.Backpack (filtered above) or */ ClothingType.Vest => 2,
                 _ => 1
             };
             int mask = 1 << i;
@@ -332,6 +368,14 @@ public struct ItemDescriptor
             if (!found)
             {
                 ref WorkingArmorSet set = ref sets[setNameCount];
+                ReadOnlySpan<char> localizedName = asset.itemName.AsSpan();
+                int caseCorrectedName = localizedName.IndexOf(setName);
+                if (caseCorrectedName >= 0)
+                {
+                    // get casing from localized name (Cadpat -> CADPAT).
+                    setName = localizedName.Slice(caseCorrectedName, setName.Length);
+                }
+
                 set.Name = setName.ToString();
                 set.Worth = worth;
                 set.Mask = mask;
@@ -350,7 +394,7 @@ public struct ItemDescriptor
                 mostAmount = set.Amount;
                 mostAmountIndex = i;
             }
-            if (set.Worth > mostWorth)
+            if (set.Worth > mostWorth || set.Worth == mostWorth && set.Amount > sets[mostWorthIndex].Amount)
             {
                 mostWorth = set.Worth;
                 mostWorthIndex = i;
@@ -376,11 +420,14 @@ public struct ItemDescriptor
                 ClothingType iconType = (ClothingType)255;
                 for (int i = 0; i < 7; ++i)
                 {
-                    if ((set.Mask & (1 << i)) != 0)
-                        clothing[i] = null;
+                    if ((set.Mask & (1 << i)) == 0)
+                        continue;
+
                     // dont show a shirt if the shirt isn't part of the set
-                    else if (iconType == (ClothingType)255)
+                    if (iconType == (ClothingType)255)
                         iconType = (ClothingType)i;
+                    
+                    clothing[i] = null;
                 }
 
                 list[listIndex] = new ItemDescriptor
@@ -419,7 +466,22 @@ public struct ItemDescriptor
         return ImmutableArray.Create(list, 0, listIndex);
     }
 
-    private static readonly IComparer<ItemDescriptor> DescriptorComparer = Comparer<ItemDescriptor>.Create((a, b) => ((int)a.Type).CompareTo((int)b.Type));
+    private static readonly IComparer<ItemDescriptor> DescriptorComparer = Comparer<ItemDescriptor>.Create((a, b) =>
+    {
+        int c = ((int)a.Type).CompareTo((int)b.Type);
+        if (c != 0)
+            return c;
+
+        if (a.Asset == null)
+        {
+            return b.Asset == null ? 0 : -1;
+        }
+
+        if (b.Asset == null)
+            return 1;
+
+        return ((int)a.Asset.type).CompareTo((int)b.Asset.type);
+    });
 
     private struct WorkingArmorSet
     {
