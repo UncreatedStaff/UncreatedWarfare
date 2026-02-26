@@ -10,7 +10,7 @@ public class BinaryPlayerSave : ISaveableState
 {
     private const byte DataVersion = 2;
 
-    private const int FlagLength = 10;
+    private const int FlagLength = 11;
 
     private static readonly ByteReader Reader = new ByteReader();
     private static readonly ByteWriter Writer = new ByteWriter(64);
@@ -37,6 +37,12 @@ public class BinaryPlayerSave : ISaveableState
     public bool HasSeenVoiceChatNotice { get; set; }
     public bool WasNitroBoosting { get; set; }
     public bool NeedsNewKitOnSpawn { get; set; }
+
+    /// <summary>
+    /// The (inverted cause default needs to be false) last value of the option in the squad menu that controls whether or not the
+    /// requested kit is automatically given when they join/create a squad.
+    /// </summary>
+    public bool ShouldLeaveSquadMenuOpenAfterRequestingKit { get; set; }
 
     /// <summary>
     /// If quests (mainly daily quests) are auto-tracked.
@@ -89,6 +95,7 @@ public class BinaryPlayerSave : ISaveableState
         flags[7] = HasSeenVoiceChatNotice;
         flags[8] = WasKitLowAmmo;
         flags[9] = NeedsNewKitOnSpawn;
+        flags[10] = ShouldLeaveSquadMenuOpenAfterRequestingKit;
 
         Writer.Write(DataVersion);
 
@@ -174,6 +181,7 @@ public class BinaryPlayerSave : ISaveableState
             HasSeenVoiceChatNotice = flags[7];
             WasKitLowAmmo = flags[8];
             NeedsNewKitOnSpawn = flags[9];
+            ShouldLeaveSquadMenuOpenAfterRequestingKit = flags[10];
 
             WasReadFromFile = true;
 

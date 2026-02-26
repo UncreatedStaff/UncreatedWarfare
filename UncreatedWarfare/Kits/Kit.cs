@@ -491,6 +491,8 @@ public class Kit : IRequestable<Kit>, ITranslationArgument
 
     public static readonly SpecialFormat FormatClass = new SpecialFormat("Class", "c");
 
+    public static readonly SpecialFormat FormatRichWithSpriteAndClass = new SpecialFormat("Rich (Flag Class Name)", "r");
+
     string ITranslationArgument.Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
     {
         if (FormatId.Match(in parameters))
@@ -498,6 +500,16 @@ public class Kit : IRequestable<Kit>, ITranslationArgument
 
         if (FormatClass.Match(in parameters))
             return formatter.FormatEnum(Class, parameters.Language);
+
+        if (FormatRichWithSpriteAndClass.Match(in parameters))
+        {
+            // [FL] [CL] [Name]
+            // <sprite index=12> ¡ Rifleman 1
+            string displayName = GetDisplayName(parameters.Language, true);
+            return Faction.TMProSpriteIndex.HasValue
+                ? $"{Faction.Sprite} {Class.GetIconString()} {displayName}"
+                : $"{Class.GetIconString()} {displayName}";
+        }
 
         return GetDisplayName(parameters.Language, true);
     }

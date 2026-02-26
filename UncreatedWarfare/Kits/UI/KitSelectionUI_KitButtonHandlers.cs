@@ -110,14 +110,8 @@ partial class KitSelectionUI
         {
             try
             {
-                if (!await _kitFavoriteService.RemoveFavorite(player.Steam64, favKit.Key))
-                {
-                    return;
-                }
-
-                await UniTask.SwitchToMainThread();
-                UpdateFavoriteList(player, data, await GetFavoriteKits(player, player.DisconnectToken), false);
-                await UpdateKitAsync(favKit, player, player.DisconnectToken);
+                // RemoveFavorite will invoke OnFavoriteUpdated to update UI
+                await _kitFavoriteService.RemoveFavorite(player.Steam64, favKit.Key);
             }
             catch (Exception ex)
             {
@@ -133,7 +127,7 @@ partial class KitSelectionUI
     // click the Favorite button on a full-sized kit
     private void HandleButtonFavoriteKitClicked(UnturnedButton button, Player unturnedPlayer)
     {
-        if (!TryGetTargetKit(x => x.FavoriteButton, button, out Class @class, out int kitIndex, out KitInfo? kitInfo))
+        if (!TryGetTargetKit(x => x.FavoriteButton, button, out Class @class, out int kitIndex, out _))
         {
             return;
         }
@@ -154,14 +148,8 @@ partial class KitSelectionUI
         {
             try
             {
-                if (!await _kitFavoriteService.AddFavorite(player.Steam64, kit.Key))
-                {
-                    return;
-                }
-
-                await UniTask.SwitchToMainThread();
-                UpdateFavoriteList(player, data, await GetFavoriteKits(player, player.DisconnectToken), false);
-                SendKitInfo(kitInfo, player, kit, player.Component<KitPlayerComponent>(), data, false, kitIndex, @class);
+                // AddFavorite will invoke OnFavoriteUpdated to update UI
+                await _kitFavoriteService.AddFavorite(player.Steam64, kit.Key);
             }
             catch (Exception ex)
             {
@@ -177,7 +165,7 @@ partial class KitSelectionUI
     // click the Unfavorite button on a full-sized kit
     private void HandleButtonUnfavoriteKitClicked(UnturnedButton button, Player unturnedPlayer)
     {
-        if (!TryGetTargetKit(x => x.UnfavoriteButton, button, out Class @class, out int kitIndex, out KitInfo? kitInfo))
+        if (!TryGetTargetKit(x => x.UnfavoriteButton, button, out Class @class, out int kitIndex, out _))
         {
             return;
         }
@@ -199,14 +187,8 @@ partial class KitSelectionUI
         {
             try
             {
-                if (!await _kitFavoriteService.RemoveFavorite(player.Steam64, kit.Key))
-                {
-                    return;
-                }
-
-                await UniTask.SwitchToMainThread();
-                UpdateFavoriteList(player, data, await GetFavoriteKits(player, player.DisconnectToken), false);
-                SendKitInfo(kitInfo, player, kit, player.Component<KitPlayerComponent>(), data, false, kitIndex, @class);
+                // RemoveFavorite will invoke OnFavoriteUpdated to update UI
+                await _kitFavoriteService.RemoveFavorite(player.Steam64, kit.Key);
             }
             catch (Exception ex)
             {
@@ -311,8 +293,9 @@ partial class KitSelectionUI
     private bool TryGetTargetKit(Func<KitInfo, UnturnedButton> selector, UnturnedButton button, out Class @class, out int kitIndex, [NotNullWhen(true)] out KitInfo? kitInfo)
     {
         ReadOnlySpan<char> name = button.Name.Span;
-        if (name.Length >= 12 && name[4] == 'P') // Kit_Panel_#_Kit_#
+        if (name.Length >= 12 && name[4] == 'P')
         {
+            // parse numbers from Kit_Panel_#_Kit_#
             int panelIndex;
             if (char.IsDigit(name[11]))
             {
@@ -324,11 +307,12 @@ partial class KitSelectionUI
             }
 
             int startIndex = panelIndex >= 10 ? 17 : 16;
-            if (name.Length > startIndex && panelIndex < _panels.Length && char.IsDigit(name[startIndex]))
+            if (panelIndex >= 0 && name.Length > startIndex && panelIndex < _panels.Length && char.IsDigit(name[startIndex]))
             {
-                int index = name[startIndex] - '0';
+                int index = name[startIndex] - '1';
+                panelIndex = GetClassPanelIndex((Class)panelIndex);
                 PanelKitInfo[] info = _panels[panelIndex].Kits;
-                if (index < info.Length && (object)selector(info[index]) == button)
+                if (index >= 0 && index < info.Length && (object)selector(info[index]) == button)
                 {
                     kitInfo = info[index];
                     @class = GetPanelClass(panelIndex);
@@ -337,19 +321,20 @@ partial class KitSelectionUI
                 }
             }
         }
-        else if (name.Length >= 11 && name[4] == 'L') // Kit_List_#
+        else if (name.Length >= 11 && name[4] == 'L')
         {
+            // parse numbers from Kit_List_#
             int listIndex;
             if (char.IsDigit(name[11]))
             {
-                listIndex = (name[9] - '0') * 10 + (name[10] - '0');
+                listIndex = (name[9] - '0') * 10 + (name[10] - '0') - 1;
             }
             else
             {
-                listIndex = name[9] - '0';
+                listIndex = name[9] - '1';
             }
 
-            if (listIndex < _listResults.Length && (object)selector(_listResults[listIndex]) == button)
+            if (listIndex >= 0 && listIndex < _listResults.Length && (object)selector(_listResults[listIndex]) == button)
             {
                 kitInfo = _listResults[listIndex];
                 @class = Class.None;

@@ -698,10 +698,11 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         {
             if (!ctx.Player.IsInSquad())
             {
+                Kit kit = ctx.Kit;
                 UniTask.Create(ctx.Player, async player =>
                 {
                     await UniTask.SwitchToMainThread();
-                    _this._squadMenuUI.OpenUI(player);
+                    _this._squadMenuUI.OpenUI(player, kit);
                 });
                 return;
             }

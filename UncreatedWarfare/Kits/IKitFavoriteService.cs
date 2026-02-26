@@ -174,6 +174,29 @@ public partial class MySqlKitFavoriteService : IKitFavoriteService, IDisposable
     [RpcReceive]
     private void InvokeFavoriteUpdated(ulong player, uint kitPrimaryKey, bool isFavorited)
     {
+        if (WarfareModule.IsActive && _playerService?.GetOnlinePlayerThreadSafe(player) is { } onlinePlayer)
+        {
+            KitPlayerComponent component = onlinePlayer.Component<KitPlayerComponent>();
+            if (isFavorited)
+            {
+                component.AddFavoriteKit(kitPrimaryKey);
+            }
+            else
+            {
+                component.RemoveFavoriteKit(kitPrimaryKey);
+            }
+
+            if (_kitSignService == null || _kitDataStore == null || !_kitDataStore.CachedKitsByKey.TryGetValue(kitPrimaryKey, out Kit? value))
+                return;
+
+            if (value.Type == KitType.Loadout)
+            {
+                component.UpdateLoadout(value);
+            }
+
+            _kitSignService.UpdateSigns(value, onlinePlayer);
+        }
+
         try
         {
             OnFavoriteStatusUpdated?.Invoke(new CSteamID(player), kitPrimaryKey, isFavorited);
@@ -182,21 +205,6 @@ public partial class MySqlKitFavoriteService : IKitFavoriteService, IDisposable
         {
             _logger.LogError(ex, "Error invoking OnFavoriteStatusUpdated.");
         }
-
-        if (!WarfareModule.IsActive || _playerService?.GetOnlinePlayerThreadSafe(player) is not { } onlinePlayer)
-            return;
-        
-        KitPlayerComponent component = onlinePlayer.Component<KitPlayerComponent>();
-        component.AddFavoriteKit(kitPrimaryKey);
-        if (_kitSignService == null || _kitDataStore == null || !_kitDataStore.CachedKitsByKey.TryGetValue(kitPrimaryKey, out Kit? value))
-            return;
-
-        if (value.Type == KitType.Loadout)
-        {
-            component.UpdateLoadout(value);
-        }
-
-        _kitSignService.UpdateSigns(value, onlinePlayer);
     }
 
     private void InvokeFavoriteUpdatedAndFireRemote(ulong steam64, uint kit, bool isFavorited)

@@ -16,6 +16,7 @@ using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits.Items;
+using Uncreated.Warfare.Kits.Loadouts;
 using Uncreated.Warfare.Kits.Requests;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Models.Kits;
@@ -131,7 +132,6 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
             _acountLinkingService.OnGuildStatusUpdated += HandleGuildStatusUpdated;
         }
 
-        
         _dbSemaphore = new SemaphoreSlim(1, 1);
 
         _kitDataStore = kitDataStore;
@@ -175,6 +175,11 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
             ElementPatterns.SubscribeAll(panel.Kits, k => k.PreviewButton, HandleButtonPreviewKitClicked);
         }
 
+        ElementPatterns.SubscribeAll(_listResults, k => k.FavoriteButton, HandleButtonFavoriteKitClicked);
+        ElementPatterns.SubscribeAll(_listResults, k => k.UnfavoriteButton, HandleButtonUnfavoriteKitClicked);
+        ElementPatterns.SubscribeAll(_listResults, k => k.RequestButton, HandleButtonRequestKitClicked);
+        ElementPatterns.SubscribeAll(_listResults, k => k.PreviewButton, HandleButtonPreviewKitClicked);
+
         _kitRequirementVisitor = new KitRequirementVisitor(this);
     }
 
@@ -198,6 +203,8 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
             Kit? fullKit = await _kitDataStore.QueryKitAsync(kit.Key, KitInclude.UI, token);
             if (fullKit == null)
                 return;
+
+            kit = fullKit;
         }
 
         if (player == null)
@@ -362,12 +369,17 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
                 if (!data.HasUI)
                     return;
 
-                Kit[] favoriteKits = await GetFavoriteKits(player, CancellationToken.None).ConfigureAwait(false);
+                Kit? kit = await _kitDataStore.QueryKitAsync(kitPk, KitInclude.UI, player.DisconnectToken);
+                if (kit == null)
+                    return;
+
+                Kit[] favoriteKits = await GetFavoriteKits(player, player.DisconnectToken).ConfigureAwait(false);
                 await UniTask.SwitchToMainThread();
                 if (!player.IsOnline || !data.HasUI)
                     return;
 
                 UpdateFavoriteList(player, data, favoriteKits, false);
+                await UpdateKitAsync(kit, player, player.DisconnectToken);
             }
             catch (Exception ex)
             {
@@ -939,7 +951,18 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
         ui.Flag.SetText(c, kit.Faction.Sprite);
         ui.Class.SetText(c, kit.Class.GetIconString());
         ui.Name.SetText(c, kit.GetDisplayName(player.Locale.LanguageInfo, useIdFallback: true));
-        ui.Id.SetText(c, kit.Id); // todo
+
+        string id = kit.Id;
+        if (kit.Type == KitType.Loadout)
+        {
+            int loadoutId = LoadoutIdHelper.Parse(id, out CSteamID steam64);
+            if (loadoutId >= 0 && player.Equals(steam64))
+            {
+                id = _translations.LoadoutIdLabel.Translate(LoadoutIdHelper.GetLoadoutLetter(loadoutId).ToUpperInvariant());
+            }
+        }
+
+        ui.Id.SetText(c, id);
         
         if (kitAccessComp.IsKitAccessible(kit.Key))
         {
@@ -1684,6 +1707,9 @@ public sealed class KitSelectionUITranslations : PropertiesTranslationCollection
     
     [TranslationData("Label for the purchase button shown when the player is linked to discord but not in the guild.")]
     public readonly Translation PurchaseButtonNotBoostingJoinDiscord = new Translation("Join Discord Server", TranslationOptions.TMProUI);
+    
+    [TranslationData("Shown in the ID section for loadouts owned by the viewing player.", "The letter (ex. 'A', 'AF', 'BC', 'F') of the loadout, formatted like an Excel column.")]
+    public readonly Translation<string> LoadoutIdLabel = new Translation<string>("Loadout {0}", TranslationOptions.TMProUI | TranslationOptions.NoRichText);
 
 
     public Translation? DescriptionOfClass(Class c)
