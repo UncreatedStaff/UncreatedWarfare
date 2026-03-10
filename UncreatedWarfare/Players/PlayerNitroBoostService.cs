@@ -162,7 +162,7 @@ public partial class PlayerNitroBoostService : IEventListener<PlayerJoined>
                 }
 
                 _kitSigns?.UpdateSigns(pl);
-                if (!isNitroBoosting && _module != null && _module.IsLayoutActive() && pl.Component<KitPlayerComponent>().CachedKit is { RequiresServerBoost: true })
+                if (!isNitroBoosting && _module != null && _module.IsLayoutActive() && pl.Component<KitPlayerComponent>() is { ActiveKit.CachedKit.RequiresServerBoost: true })
                 {
                     await _module.ScopedProvider.Resolve<KitRequestService>().GiveAvailableFreeKitAsync(pl).ConfigureAwait(false);
                 }

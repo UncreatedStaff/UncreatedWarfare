@@ -25,12 +25,14 @@ using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Cooldowns;
 using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Addons;
 using Uncreated.Warfare.Translations.Util;
+using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Inventory;
 
 namespace Uncreated.Warfare.Kits.UI;
@@ -41,6 +43,7 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
     private readonly IKitDataStore _kitDataStore;
     private readonly IKitItemResolver _kitItemResolver;
     private readonly IKitFavoriteService _kitFavoriteService;
+    private readonly IKitStatisticService _kitStatisticService;
     private readonly ItemIconProvider _iconProvider;
     private readonly KitWeaponTextService _weaponTextService;
     private readonly KitRequestService _kitRequestService;
@@ -51,6 +54,7 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
     private readonly ITranslationService _translationService;
     private readonly KitRequirementManager _kitRequirements;
     private readonly ITeamManager<Team> _teamManager;
+    private readonly HudManager _hudManager;
     private readonly SquadManager? _squadManager;
     private readonly PlayerNitroBoostService? _nitroBoostService;
     private readonly AccountLinkingService? _acountLinkingService;
@@ -87,6 +91,7 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
         IKitDataStore kitDataStore,
         IKitItemResolver kitItemResolver,
         IKitFavoriteService kitFavoriteService,
+        IKitStatisticService kitStatisticService,
         ItemIconProvider iconProvider,
         IKitsDbContext kitsDbContext,
         IPlayerService playerService,
@@ -98,6 +103,7 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
         KitWeaponTextService weaponTextService,
         KitRequestService kitRequestService,
         ITeamManager<Team> teamManager,
+        HudManager hudManager,
         SquadManager? squadManager = null,
         PlayerNitroBoostService? nitroBoostService = null,
         AccountLinkingService? acountLinkingService = null)
@@ -115,6 +121,7 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
         _translationService = translationService;
         _kitRequirements = kitRequirements;
         _teamManager = teamManager;
+        _hudManager = hudManager;
         _squadManager = squadManager;
         _nitroBoostService = nitroBoostService;
         _weaponTextService = weaponTextService;
@@ -137,6 +144,7 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
         _kitDataStore = kitDataStore;
         _kitItemResolver = kitItemResolver;
         _kitFavoriteService = kitFavoriteService;
+        _kitStatisticService = kitStatisticService;
         _kitFavoriteService.OnFavoriteStatusUpdated += HandleFavoriteStatusUpdated;
         _iconProvider = iconProvider;
         kitDataStore.KitUpdated += KitUpdated;
@@ -146,6 +154,7 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
         _getDataFunc = id => new KitSelectionUIData(id, this);
 
         _kitNameFilter.OnTextUpdated += HandleKitFilterUpdated;
+        _kitNameFilterSearchLabel.OnClicked += HandleSearchClicked;
 
         _close.OnClicked += HandleCloseUI;
         _listNextPage.OnClicked += HandleNextPage;
@@ -155,10 +164,7 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
         _switchBackToPanel.OnClicked += (_, player) =>
         {
             KitSelectionUIData data = GetOrAddData(player.channel.owner.playerID.steamID);
-            if (data.Page == KitPage.Public)
-                return;
-
-            data.Page = KitPage.Public;
+            data.IsListOpen = false;
             _switchToPanelLogic.Show(player);
         };
 
@@ -169,12 +175,14 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
 
         foreach (KitPanel panel in _panels)
         {
+            ElementPatterns.SubscribeAll(panel.Kits, HandleClickKitBackground);
             ElementPatterns.SubscribeAll(panel.Kits, k => k.FavoriteButton, HandleButtonFavoriteKitClicked);
             ElementPatterns.SubscribeAll(panel.Kits, k => k.UnfavoriteButton, HandleButtonUnfavoriteKitClicked);
             ElementPatterns.SubscribeAll(panel.Kits, k => k.RequestButton, HandleButtonRequestKitClicked);
             ElementPatterns.SubscribeAll(panel.Kits, k => k.PreviewButton, HandleButtonPreviewKitClicked);
         }
 
+        ElementPatterns.SubscribeAll(_listResults, HandleClickKitBackground);
         ElementPatterns.SubscribeAll(_listResults, k => k.FavoriteButton, HandleButtonFavoriteKitClicked);
         ElementPatterns.SubscribeAll(_listResults, k => k.UnfavoriteButton, HandleButtonUnfavoriteKitClicked);
         ElementPatterns.SubscribeAll(_listResults, k => k.RequestButton, HandleButtonRequestKitClicked);
@@ -248,7 +256,7 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
             }
         }
 
-        if (data.Page == KitPage.List)
+        if (data.IsListOpen)
         {
             // search list
             for (int kitIndex = 0; kitIndex < _listResults.Length; ++kitIndex)
@@ -288,7 +296,7 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
         WarfarePlayer player = _playerService.GetOnlinePlayer(unturnedPlayer);
         KitSelectionUIData data = GetOrAddData(player);
 
-        if (data.Page != KitPage.List)
+        if (!data.IsListOpen)
             return;
 
         UpdatePage(player, data, data.SearchPage + 1);
@@ -299,7 +307,7 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
         WarfarePlayer player = _playerService.GetOnlinePlayer(unturnedPlayer);
         KitSelectionUIData data = GetOrAddData(player);
 
-        if (data.Page != KitPage.List)
+        if (!data.IsListOpen)
             return;
 
         if (!int.TryParse(text, NumberStyles.AllowLeadingWhite | NumberStyles.AllowTrailingWhite | NumberStyles.AllowThousands, player.Locale.ParseFormat, out int pageNumber)
@@ -317,7 +325,7 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
         WarfarePlayer player = _playerService.GetOnlinePlayer(unturnedPlayer);
         KitSelectionUIData data = GetOrAddData(player);
 
-        if (data.Page != KitPage.List || data.SearchPage <= 0)
+        if (!data.IsListOpen || data.SearchPage <= 0)
             return;
 
         UpdatePage(player, data, data.SearchPage - 1);
@@ -328,11 +336,37 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
         _ = CloseAsync(_playerService.GetOnlinePlayer(player));
     }
 
+    private void HandleSearchClicked(UnturnedButton button, Player unturnedPlayer)
+    {
+        WarfarePlayer player = _playerService.GetOnlinePlayer(unturnedPlayer);
+        KitSelectionUIData data = GetOrAddData(player);
+        float time = Time.realtimeSinceStartup;
+        if (time - data.LastSearchTick < 0.15)
+            return;
+
+        data.LastSearchTick = time;
+        Task.Run(async () =>
+        {
+            try
+            {
+                await UpdateSearchAsync(player, data).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                GetLogger().LogError(ex, "Error updating search after filter change.");
+            }
+        });
+    }
+
     private void HandleKitFilterUpdated(UnturnedTextBox textBox, Player unturnedPlayer, string text)
     {
         WarfarePlayer player = _playerService.GetOnlinePlayer(unturnedPlayer);
         KitSelectionUIData data = GetOrAddData(player);
+        float time = Time.realtimeSinceStartup;
+        if (time - data.LastSearchTick < 0.15)
+            return;
 
+        data.LastSearchTick = time;
         UpdateKitFilter(player, data, null, text);
     }
 
@@ -444,6 +478,9 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
     {
         await UniTask.SwitchToMainThread(token);
 
+        if (!player.IsOnline)
+            return;
+
         KitSelectionUIData? data = GetData<KitSelectionUIData>(player.Steam64);
         if (data == null || data.IsClosing || !data.HasUI)
             return;
@@ -451,9 +488,10 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
         data.IsClosing = !instant;
         data.HasUI = false;
         data.ResetCache();
-        player.UnturnedPlayer.enablePluginWidgetFlag(EPluginWidgetFlags.Default);
 
         data.ModalHandle.Dispose();
+        Interlocked.Exchange(ref data.HudHandle, null)?.Dispose();
+
         if (instant)
         {
             ClearFromPlayer(player.Connection);
@@ -526,9 +564,9 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
         KitSelectionUIData data = GetOrAddData(player);
 
         ModalHandle.TryGetModalHandle(player, ref data.ModalHandle);
-        player.UnturnedPlayer.disablePluginWidgetFlag(EPluginWidgetFlags.Default);
+        data.HudHandle = _hudManager.HideHud(player);
         data.Team = team;
-        data.Page = KitPage.Public;
+        data.IsListOpen = false;
         data.SearchMaxSize = null;
 
         if (!data.HasUI)
@@ -551,6 +589,10 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
             token.ThrowIfCancellationRequested();
             await UniTask.Yield();
         }
+
+        UpdateFavoriteList(player, data, favoriteKits, true);
+
+        await UniTask.NextFrame();
 
         Class prevClass = Class.Unarmed;
         int panelIndex = -1;
@@ -639,10 +681,6 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
         }
 
         token.ThrowIfCancellationRequested();
-        await UniTask.NextFrame();
-
-        UpdateFavoriteList(player, data, favoriteKits, true);
-
         // check if linked and whether or not the player is in the guild to show the right server boost button
         if (needsNitroBoostRequest && _acountLinkingService != null)
         {
@@ -751,10 +789,10 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
             data.NameFilter = search;
         }
 
-        if (data.Page != KitPage.List)
+        if (!data.IsListOpen)
         {
             _switchToListLogic.Show(player);
-            data.Page = KitPage.List;
+            data.IsListOpen = true;
         }
 
         Task.Run(async () =>
@@ -952,6 +990,27 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
         ui.Class.SetText(c, kit.Class.GetIconString());
         ui.Name.SetText(c, kit.GetDisplayName(player.Locale.LanguageInfo, useIdFallback: true));
 
+        if (fromDefaultValues)
+        {
+            bool defaultLang = player.Locale.IsDefaultLanguage && data.HasDefaultText;
+            if (!defaultLang || !_translations.StatisticPlaytime.HasDefaultValue)
+                ui.Stat1Name.SetText(c, _translations.StatisticPlaytime.Translate(player));
+            if (!defaultLang || !_translations.StatisticKDR.HasDefaultValue)
+                ui.Stat2Name.SetText(c, _translations.StatisticKDR.Translate(player));
+        }
+
+        if (kitAccessComp.TryGetBasicStatsFor(kit.Key, out BasicKitStats? statInfo))
+        {
+            ui.Stat1Value.SetText(c, FormattingUtility.ToTimeString(TimeSpan.FromSeconds(statInfo.PlaytimeSeconds), figures: 2));
+            double kdr = (double)statInfo.Kills / Math.Max(statInfo.Deaths, 1);
+            ui.Stat2Value.SetText(c, kdr.ToString("F2", player.Locale.CultureInfo));
+        }
+        else if (!fromDefaultValues)
+        {
+            ui.Stat1Value.SetText(c, "-");
+            ui.Stat2Value.SetText(c, "-");
+        }
+
         string id = kit.Id;
         if (kit.Type == KitType.Loadout)
         {
@@ -986,79 +1045,51 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
             ui.FavoriteButtonParent.Show(c);
         }
 
-        ImmutableArray<ItemDescriptor> itemDescriptors = kit.GetItemDescriptors(data.Team ?? Team.NoTeam, _kitItemResolver, _iconProvider, _weaponTextService);
-        int i = 0;
-        int itemCt = Math.Min(itemDescriptors.Length, ui.IncludeLabels.Length);
-        for (; i < itemCt; ++i)
+        ImmutableArray<ItemDescriptor> descriptors = kit.GetItemDescriptors(
+            data.Team ?? Team.NoTeam,
+            _kitItemResolver,
+            _iconProvider,
+            _weaponTextService
+        );
+
+        ItemDescriptor primary = default, secondary = default;
+        int itemCt = descriptors.Length;
+        for (int i = 0; i < itemCt; ++i)
         {
-            ItemDescriptor desc = itemDescriptors[i];
-         
-            CountIncludeLabel lbl = ui.IncludeLabels[i];
-
-            lbl.Name.SetText(c, desc.ItemName);
-            if (desc.Amount > 1)
+            ItemDescriptor d = descriptors[i];
+            if (d.Type == ItemDescriptorType.PrimaryGun)
             {
-                lbl.Count.SetText(c, desc.Amount.ToString(player.Locale.CultureInfo));
-                lbl.Count.Show(c);
+                primary = d;
+                if (secondary.Type == ItemDescriptorType.SecondaryGun)
+                    break;
             }
-            else if (!fromDefaultValues)
+            else if (d.Type is ItemDescriptorType.SecondaryGun or ItemDescriptorType.TertiaryGun)
             {
-                lbl.Count.Hide(c);
-            }
-
-            lbl.Icon.SetText(c, desc.Icon);
-            lbl.Show(c);
-            ImmutableArray<ItemDescriptorAttachment> attachments = desc.Attachments;
-            if (i < 3)
-            {
-                IncludeLabel[] attachmentLabels = i switch
-                {
-                    0 => ui.PrimaryAttachments,
-                    1 => ui.SecondaryAttachments,
-                    _ => ui.TertiaryAttachments,
-                };
-                int attachmentCt = attachments.IsDefaultOrEmpty ? 0 : attachments.Length;
-                int mask = 0;
-                for (int j = 0; j < attachmentCt; ++j)
-                {
-                    ItemDescriptorAttachment attachment = attachments[j];
-                    IncludeLabel attachmentLabel = attachmentLabels[_attachmentMap[(int)attachment.AttachmentType]];
-
-                    mask |= 1 << ((int)attachment.AttachmentType / 2);
-
-                    if (attachment.Icon != null)
-                    {
-                        attachmentLabel.Icon.SetText(c, attachment.Icon);
-                    }
-                    else if (!fromDefaultValues)
-                    {
-                        attachmentLabel.Icon.SetText(c, GetAttachmentIcon(j));
-                    }
-
-                    attachmentLabel.Name.SetText(c, attachment.ItemName);
-                    attachmentLabel.Show(c);
-                }
-
-                if (!fromDefaultValues)
-                {
-                    for (int j = 0; j < 5; ++j)
-                    {
-                        if ((mask & (1 << ((int)_inverseAttachmentMap[j] / 2))) != 0)
-                            continue;
-
-                        attachmentLabels[j].Hide(c);
-                    }
-                }
+                secondary = d;
+                if (primary.ItemName != null && d.Type == ItemDescriptorType.SecondaryGun)
+                    break;
             }
         }
 
-        if (!fromDefaultValues)
+        string itemStr;
+        if (primary.ItemName != null && secondary.ItemName != null)
         {
-            for (; i < ui.IncludeLabels.Length; ++i)
-            {
-                ui.IncludeLabels[i].Hide(c);
-            }
+            itemStr = $"{primary.Icon} {primary.ItemName}<pos=50%>{secondary.Icon} {secondary.ItemName}";
         }
+        else if (primary.ItemName != null)
+        {
+            itemStr = $"{primary.Icon} {primary.ItemName}";
+        }
+        else if (secondary.ItemName != null)
+        {
+            itemStr = $"{secondary.Icon} {secondary.ItemName}";
+        }
+        else
+        {
+            itemStr = string.Empty;
+        }
+
+        ui.Weapons.SetText(c, itemStr);
 
         ref KitCacheInformation cachedInfo = ref data.GetCachedState(@class, index);
         cachedInfo.Kit = kit;
@@ -1076,7 +1107,8 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
         state.Class = @class;
         state.Index = index;
 
-        if (kitAccessComp.ActiveKitKey == kit.Key)
+        CurrentKitState? activeKit = kitAccessComp.ActiveKit;
+        if (activeKit != null && activeKit.Key == kit.Key)
         {
             ui.StatusLabel.SetText(c, _translations.StatusEquipped.Translate(player));
             if (!fromDefaultValues)
@@ -1086,7 +1118,15 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
             return;
         }
 
-        KitRequirementResolutionContext<KitRequirementsState> ctx = new KitRequirementResolutionContext<KitRequirementsState>(player, data.Team ?? Team.NoTeam, kit, kitAccessComp.CachedKit, kitAccessComp, state);
+        KitRequirementResolutionContext<KitRequirementsState> ctx
+            = new KitRequirementResolutionContext<KitRequirementsState>(
+                player,
+                data.Team ?? Team.NoTeam,
+                kit,
+                activeKit?.CachedKit,
+                kitAccessComp,
+                state
+            );
 
         bool anyNo = false;
         foreach (IKitRequirement requirement in _kitRequirements.Request)
@@ -1130,15 +1170,15 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
         };
     }
 
-    internal static string GetAttachmentIcon(int attachmentRowIndex)
+    private static string GetAttachmentIcon(int attachmentRowIndex)
     {
         return attachmentRowIndex switch
         {
-            0 => "ˊ",
-            1 => "ˆ",
-            2 => "ˉ",
-            3 => "ˈ",
-            _ => "ˇ"
+            0 => "ˊ", // Magazine
+            1 => "ˆ", // Sight
+            2 => "ˉ", // Barrel
+            3 => "ˈ", // Grip
+            _ => "ˇ"  // Tactical
         };
     }
 
@@ -1149,6 +1189,12 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
 
         if (!isDefaultLang || !_translations.PublicKitsLabel.HasDefaultValue)
             _publicKitsTitle.SetText(c, _translations.PublicKitsLabel.Translate(player));
+
+        if (!isDefaultLang || !_translations.DetailsLabel.HasDefaultValue)
+            _detailTitle.SetText(c, _translations.DetailsLabel.Translate(player));
+
+        if (!isDefaultLang || !_translations.DetailsPlaceholder.HasDefaultValue)
+            _detailPlaceholderLabel.SetText(c, _translations.DetailsPlaceholder.Translate(player));
 
         if (!isDefaultLang || !_translations.KitNameFilterPlaceholder.HasDefaultValue)
             _kitNameFilter.SetPlaceholder(c, _translations.KitNameFilterPlaceholder.Translate(player));
@@ -1161,6 +1207,15 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
 
         if (!isDefaultLang || !_translations.FavoritesLabel.HasDefaultValue)
             _favoritesLabel.SetText(c, _translations.FavoritesLabel.Translate(player));
+
+        if (!isDefaultLang || !_translations.DetailsStatisticsLabel.HasDefaultValue)
+            _detailPanelStatisticsTitle.SetText(c, _translations.DetailsStatisticsLabel.Translate(player));
+
+        if (!isDefaultLang || !_translations.DetailsIncludedItemsLabel.HasDefaultValue)
+            _detailIncludeTitle.SetText(c, _translations.DetailsIncludedItemsLabel.Translate(player));
+
+        if (!isDefaultLang || !_translations.DetailsAccuracyLabel.HasDefaultValue)
+            _detailHeatmap.Title.SetText(c, _translations.DetailsAccuracyLabel.Translate(player));
 
         if (data.ClassFilter == Class.None)
         {
@@ -1206,21 +1261,16 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
         data.HasDefaultText = isDefaultLang;
     }
 
-    private enum KitPage
-    {
-        Public,
-        List
-    }
-
     private class KitSelectionUIData : IUnturnedUIData
     {
         internal bool HasUI;
         internal bool HasDefaultText;
         internal bool IsClosing;
         internal Team? Team;
-        internal KitPage Page;
-        internal IDisposable? HudHandler;
+        internal bool IsListOpen;
+        internal IDisposable? HudHandle;
         internal int Operations;
+        internal float LastSearchTick;
 
         internal Class ClassFilter
         {
@@ -1254,6 +1304,11 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
         private KitCacheInformation[] _publicKitCache;
         private KitCacheInformation[] _listKitCache;
         public ModalHandle ModalHandle;
+        public Kit? SelectedKit;
+        public int SelectedKitVersion;
+        public bool HasDetailPanel;
+        public int ActiveStatCount = 2;
+        public int ActiveItemDescriptorCount = 0;
 
         public void SetCacheState(in KitRequirementsState state, PurchaseButtonState buttonState, StatusState labelState)
         {
@@ -1577,35 +1632,47 @@ public sealed class KitSelectionUITranslations : PropertiesTranslationCollection
 {
     protected override string FileName => "UI/Kit Selection";
 
-    [TranslationData("Label for the page with all the public kits.")]
-    public readonly Translation PublicKitsLabel = new Translation("Public Kits", TranslationOptions.TMProUI);
+    [TranslationData("Label for the panel with all the public kits.")]
+    public readonly Translation PublicKitsLabel = new Translation("Public Kits", TranslationOptions.TMProUI | TranslationOptions.NoRichText);
 
-    [TranslationData("Default label for the page with kit search results.")]
-    public readonly Translation SearchResultsLabel = new Translation("Search Results", TranslationOptions.TMProUI);
+    [TranslationData("Default label for the panel with kit search results.")]
+    public readonly Translation SearchResultsLabel = new Translation("Search Results", TranslationOptions.TMProUI | TranslationOptions.NoRichText);
+
+    [TranslationData("Label for the panel which shows statistics and a list of items in the kit.")]
+    public readonly Translation DetailsLabel = new Translation("Kit Details", TranslationOptions.TMProUI | TranslationOptions.NoRichText);
+
+    [TranslationData("Text shown when no kit is selected in the detail panel.")]
+    public readonly Translation DetailsPlaceholder = new Translation("Select a kit to view details.", TranslationOptions.TMProUI | TranslationOptions.NoRichText);
 
     [TranslationData("Default label for the page with kit search results when sorting by class.", "The class being filtered by")]
-    public readonly Translation<Class> SearchResultsByClassLabel = new Translation<Class>("Search Results - {0} kits", TranslationOptions.TMProUI);
+    public readonly Translation<Class> SearchResultsByClassLabel = new Translation<Class>("Search Results - {0} kits", TranslationOptions.TMProUI | TranslationOptions.NoRichText);
 
     [TranslationData("Text shown when there were no search results.")]
     public readonly Translation SearchResultsNoResults = new Translation("No results\n<#b4b4b4>Try adjusting your search parameters.</color>", TranslationOptions.TMProUI);
 
     [TranslationData("Previous page button text.")]
-    public readonly Translation SearchResultsPreviousPage = new Translation("Previous", TranslationOptions.TMProUI);
+    public readonly Translation SearchResultsPreviousPage = new Translation("Previous", TranslationOptions.TMProUI | TranslationOptions.NoRichText);
 
     [TranslationData("Next page button text.")]
-    public readonly Translation SearchResultsNextPage = new Translation("Next", TranslationOptions.TMProUI);
+    public readonly Translation SearchResultsNextPage = new Translation("Next", TranslationOptions.TMProUI | TranslationOptions.NoRichText);
 
     [TranslationData("Page text box placeholder text.")]
-    public readonly Translation SearchResultsPageInputPlaceholder = new Translation("Page", TranslationOptions.TMProUI);
+    public readonly Translation SearchResultsPageInputPlaceholder = new Translation("Page", TranslationOptions.TMProUI | TranslationOptions.NoRichText);
 
     [TranslationData("Label for the class list on the left panel.")]
-    public readonly Translation ClassesLabel = new Translation("Classes", TranslationOptions.TMProUI);
+    public readonly Translation ClassesLabel = new Translation("Classes", TranslationOptions.TMProUI | TranslationOptions.NoRichText);
 
     [TranslationData("Label for the favorite kits list on the left panel.")]
-    public readonly Translation FavoritesLabel = new Translation("Favorites", TranslationOptions.TMProUI);
+    public readonly Translation FavoritesLabel = new Translation("Favorites", TranslationOptions.TMProUI | TranslationOptions.NoRichText);
 
-    [TranslationData("Label for the included items list on each kit.")]
-    public readonly Translation IncludedItemsLabel = new Translation("Includes", TranslationOptions.TMProUI);
+    [TranslationData("Label for the statistics section in the kit details panel.")]
+    public readonly Translation DetailsStatisticsLabel = new Translation("Statistics", TranslationOptions.TMProUI | TranslationOptions.NoRichText);
+
+    [TranslationData("Label for the included items list in the kit details panel.")]
+    public readonly Translation DetailsIncludedItemsLabel = new Translation("Included Items", TranslationOptions.TMProUI | TranslationOptions.NoRichText);
+
+    [TranslationData("Label for the accuracy heatmap (showing the limb accuracy of gunshots) in the kit details panel.")]
+    public readonly Translation DetailsAccuracyLabel = new Translation("Accuracy", TranslationOptions.TMProUI | TranslationOptions.NoRichText);
 
     [TranslationData("Label for the playtime on each kit.", "Total playtime duration.")]
     public readonly Translation<TimeSpan> PlayTimeLabel = new Translation<TimeSpan>("Playtime: {0}", TranslationOptions.TMProUI, TimeAddon.Create(TimeSpanFormatType.Short));
@@ -1617,7 +1684,7 @@ public sealed class KitSelectionUITranslations : PropertiesTranslationCollection
     public readonly Translation SearchButtonLabel = new Translation("Search", TranslationOptions.TMProUI);
     
     [TranslationData("Label for the button which switches from search results back to the main public kit page.")]
-    public readonly Translation ToPublicButtonLabel = new Translation("Return to Public Kits", TranslationOptions.TMProUI);
+    public readonly Translation ToPublicButtonLabel = new Translation("Close Search Results", TranslationOptions.TMProUI);
     
     [TranslationData("Label for the button which closes the UI.")]
     public readonly Translation CloseButtonLabel = new Translation("Cancel", TranslationOptions.TMProUI);
@@ -1711,6 +1778,48 @@ public sealed class KitSelectionUITranslations : PropertiesTranslationCollection
     [TranslationData("Shown in the ID section for loadouts owned by the viewing player.", "The letter (ex. 'A', 'AF', 'BC', 'F') of the loadout, formatted like an Excel column.")]
     public readonly Translation<string> LoadoutIdLabel = new Translation<string>("Loadout {0}", TranslationOptions.TMProUI | TranslationOptions.NoRichText);
 
+
+    [TranslationData("Title for the KDR (kill-death ratio) statistic.")]
+    public readonly Translation StatisticKDR = new Translation("KDR", TranslationOptions.TMProUI | TranslationOptions.NoRichText);
+
+    [TranslationData("Title for the playtime statistic.")]
+    public readonly Translation StatisticPlaytime = new Translation("Playtime", TranslationOptions.TMProUI | TranslationOptions.NoRichText);
+
+    [TranslationData("Title for the total teamkills statistic.")]
+    public readonly Translation StatisticTeamkills = new Translation("Teamkills", TranslationOptions.TMProUI | TranslationOptions.NoRichText);
+
+    [TranslationData("Title for the total damage dealt statistic.")]
+    public readonly Translation StatisticDamageDealt = new Translation("Damage Dealt", TranslationOptions.TMProUI | TranslationOptions.NoRichText);
+
+    [TranslationData("Title for the total vehicle kills statistic.")]
+    public readonly Translation StatisticVehiclesDestroyed = new Translation("Vehicles Destroyed", TranslationOptions.TMProUI | TranslationOptions.NoRichText);
+
+    [TranslationData("Title for the total FOBs destroyed statistic.")]
+    public readonly Translation StatisticFOBsDestroyed = new Translation("FOBs Destroyed", TranslationOptions.TMProUI | TranslationOptions.NoRichText);
+
+    [TranslationData("Title for the total FOBs built statistic.")]
+    public readonly Translation StatisticFOBsBuilt = new Translation("FOBs Built", TranslationOptions.TMProUI | TranslationOptions.NoRichText);
+
+    [TranslationData("Title for the total revives statistic.")]
+    public readonly Translation StatisticRevives = new Translation("Revives", TranslationOptions.TMProUI | TranslationOptions.NoRichText);
+
+    [TranslationData("Title for the total melee kills statistic.")]
+    public readonly Translation StatisticMeleeKills = new Translation("Melee Kills", TranslationOptions.TMProUI | TranslationOptions.NoRichText);
+
+    [TranslationData("Title for the average gunshot hit distance statistic.")]
+    public readonly Translation StatisticAverageKillDistance = new Translation("Average Kill Distance", TranslationOptions.TMProUI | TranslationOptions.NoRichText);
+
+    [TranslationData("Title for the maximum gunshot hit distance statistic.")]
+    public readonly Translation StatisticHighestKillDistance = new Translation("Furthest Kill Distance", TranslationOptions.TMProUI | TranslationOptions.NoRichText);
+
+    [TranslationData("Title for the total suicides statistic.")]
+    public readonly Translation StatisticSuicides = new Translation("Suicides", TranslationOptions.TMProUI | TranslationOptions.NoRichText);
+
+    [TranslationData("Title for the total healed health of teammates statistic.")]
+    public readonly Translation StatisticHealthAided = new Translation("Healed Health", TranslationOptions.TMProUI | TranslationOptions.NoRichText);
+
+    [TranslationData("Title for the total kills using a vehicle (including roadkill, turrets, vehicle explosions, etc) statistic.")]
+    public readonly Translation StatisticKillsWithVehicle = new Translation("Kills With Vehicles", TranslationOptions.TMProUI | TranslationOptions.NoRichText);
 
     public Translation? DescriptionOfClass(Class c)
     {
@@ -1832,4 +1941,8 @@ public sealed class KitSelectionUITranslations : PropertiesTranslationCollection
         "Equipped with <#f0a31c>night-vision</color> to help see at night.",
         TranslationOptions.TMProUI
     );
+
+    
+    [TranslationData("Chat message sent after previewing a kit.")]
+    public readonly Translation<Kit> ChatPreviewingKit = new Translation<Kit>("<#a0ad8e>You are previewing <#fff>{0}</color>.");
 }

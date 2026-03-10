@@ -833,6 +833,10 @@ public sealed class WarfareModule
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
 
+        bldr.RegisterType<KitStatisticService>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
+
         bldr.RegisterType<KitLayoutService>()
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();

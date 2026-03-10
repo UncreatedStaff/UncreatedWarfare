@@ -1,64 +1,29 @@
 using System;
+using Uncreated.Warfare.Events.Models;
+using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Players.UI;
 
-public sealed class HudManager
+/// <summary>
+/// Allows hiding and re-showing the entire HUD when needed, tracking overlapping requests if needed.
+/// </summary>
+/// <remarks>Also contains the logic for tracking plugin voting.</remarks>
+public sealed class HudManager : IEventListener<PlayerLeft>
 {
     private readonly WarfareModule _module;
     private readonly IPlayerService _playerService;
     private readonly ILogger<HudManager> _logger;
-    private int _handleCount;
 
-    // ReSharper disable once ClassNeverInstantiated.Local
-    [PlayerComponent]
-    private sealed class PluginVotingPlayerComponent : IPlayerComponent
-    {
-        public bool IsPluginVoting;
-        
-        /// <inheritdoc />
-        public WarfarePlayer Player { get; set; } = null!;
+    private int _cachedIsHiddenForAnyVersion;
+    private int _isHiddenForAnyVersion;
+    private bool _isHiddenForAny;
 
-        /// <inheritdoc />
-        public void Init(IServiceProvider serviceProvider, bool isOnJoin)
-        {
-            if (!isOnJoin)
-                return;
-            
-            IsPluginVoting = false;
-        }
-    }
-
-    public void SetIsPluginVoting(WarfarePlayer player, bool value)
-    {
-        PluginVotingPlayerComponent comp = player.Component<PluginVotingPlayerComponent>();
-        if (comp.IsPluginVoting == value)
-            return;
-
-        comp.IsPluginVoting = value;
-        try
-        {
-            OnPluginVotingUpdated?.Invoke(player, value);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error invoking OnPluginVotingUpdated.");
-        }
-    }
-
-    public void SetAllIsPluginVoting(bool value)
-    {
-        foreach (WarfarePlayer player in _playerService.OnlinePlayers)
-        {
-            SetIsPluginVoting(player, value);
-        }
-    }
-
-    public bool GetIsPluginVoting(WarfarePlayer player)
-    {
-        return player.Component<PluginVotingPlayerComponent>().IsPluginVoting;
-    }
+    /// <summary>
+    /// Incremented when the HUD needs to be hidden for all players, then decremented when that request gets disposed.
+    /// </summary>
+    private int _globalHandleCount;
     
     /// <summary>
     /// Invoked when a player's plugin voting status changes.
@@ -73,36 +38,187 @@ public sealed class HudManager
         _logger = logger;
     }
 
-    private void ClearHud()
+    /// <summary>
+    /// Whether or not HUD elements are hidden for all players. Note that some may be hidden for only specific players.
+    /// </summary>
+    /// <exception cref="GameThreadException"/>
+    public bool IsHiddenForAllPlayers
     {
-        ILifetimeScope scope = _module.ScopedProvider;
-
-        foreach (IHudUIListener listener in scope.Resolve<IEnumerable<IHudUIListener>>())
+        get
         {
-            try
-            {
-                listener.Hide(null);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error hiding HUD: {listener.GetType()}.");
-            }
-        }
-
-        foreach (WarfarePlayer player in _playerService.OnlinePlayers)
-        {
-            try
-            {
-                player.UnturnedPlayer.disablePluginWidgetFlag(EPluginWidgetFlags.Default);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error hiding PlayerLife HUD for player: {player}.");
-            }
+            GameThread.AssertCurrent();
+            return _globalHandleCount > 0;
         }
     }
 
-    private void ShowHud()
+    /// <summary>
+    /// Whether or not HUD elements are hidden for at least one online player (or all players).
+    /// </summary>
+    /// <exception cref="GameThreadException"/>
+    public bool IsHiddenForAnyPlayers
+    {
+        get
+        {
+            GameThread.AssertCurrent();
+            if (_globalHandleCount > 0)
+                return true;
+
+            if (_isHiddenForAnyVersion != _cachedIsHiddenForAnyVersion)
+            {
+                RecalcIsHidden();
+            }
+
+            return _isHiddenForAny;
+        }
+    }
+
+    private void RecalcIsHidden()
+    {
+        bool isHidden = false;
+        foreach (WarfarePlayer player in _playerService.OnlinePlayers)
+        {
+            if (player.Component<HudPlayerComponent>().HandleCount <= 0)
+                continue;
+
+            isHidden = true;
+            break;
+        }
+
+        _isHiddenForAny = isHidden;
+        _cachedIsHiddenForAnyVersion = _isHiddenForAnyVersion;
+    }
+
+    /// <summary>
+    /// Whether or not HUD elements are hidden for the given player.
+    /// </summary>
+    /// <exception cref="GameThreadException"/>
+    public bool IsHidden(WarfarePlayer player)
+    {
+        GameThread.AssertCurrent();
+
+        if (!player.IsOnline)
+            return true;
+
+        return _globalHandleCount > 0 || player.Component<HudPlayerComponent>().HandleCount > 0;
+    }
+
+    /// <summary>
+    /// Sets whether or not a player is currently voting with a plugin-controlled vote HUD.
+    /// </summary>
+    public void SetIsPluginVoting(WarfarePlayer player, bool value)
+    {
+        HudPlayerComponent comp = player.Component<HudPlayerComponent>();
+        if (comp.IsPluginVoting == value)
+            return;
+
+        comp.IsPluginVoting = value;
+        try
+        {
+            OnPluginVotingUpdated?.Invoke(player, value);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error invoking OnPluginVotingUpdated.");
+        }
+    }
+
+    /// <summary>
+    /// Sets whether or not all players are currently voting with a plugin-controlled vote HUD.
+    /// </summary>
+    public void SetAllIsPluginVoting(bool value)
+    {
+        foreach (WarfarePlayer player in _playerService.OnlinePlayers)
+        {
+            SetIsPluginVoting(player, value);
+        }
+    }
+
+    /// <summary>
+    /// Gets whether or not a player is currently voting with a plugin-controlled vote HUD.
+    /// </summary>
+    public bool GetIsPluginVoting(WarfarePlayer player)
+    {
+        return player.Component<HudPlayerComponent>().IsPluginVoting;
+    }
+
+    /// <summary>
+    /// Hides the HUD for all players until the returned <see cref="IDisposable"/> is disposed.
+    /// </summary>
+    /// <remarks>Thread-safe</remarks>
+    public IDisposable HideHud()
+    {
+        return new HudHandle(this, null);
+    }
+
+    /// <summary>
+    /// Hides the HUD for <paramref name="player"/> until the returned <see cref="IDisposable"/> is disposed.
+    /// </summary>
+    /// <remarks>Thread-safe</remarks>
+    public IDisposable HideHud(WarfarePlayer player)
+    {
+        return new HudHandle(this, player);
+    }
+
+    private void IncrementHandleCount(HudPlayerComponent? player)
+    {
+        if (!GameThread.IsCurrent)
+        {
+            UniTask.Create((@this: this, player), static async args =>
+            {
+                await UniTask.SwitchToMainThread();
+                args.@this.IncrementHandleCount(args.player);
+            });
+            return;
+        }
+
+        if (player == null)
+        {
+            ++_globalHandleCount;
+            if (_globalHandleCount != 1)
+                return;
+        }
+        else
+        {
+            ++player.HandleCount;
+            if (player.HandleCount != 1 || _globalHandleCount > 0 || !player.Player.IsOnline)
+                return;
+            _isHiddenForAny = true;
+            _cachedIsHiddenForAnyVersion = _isHiddenForAnyVersion;
+        }
+
+        ClearHud(player);
+    }
+
+    private void DecrementHandleCount(HudPlayerComponent? player)
+    {
+        if (!GameThread.IsCurrent)
+        {
+            UniTask.Create((@this: this, player), static async args =>
+            {
+                await UniTask.SwitchToMainThread();
+                args.@this.DecrementHandleCount(args.player);
+            });
+            return;
+        }
+
+        if (player == null)
+        {
+            --_globalHandleCount;
+            if (_globalHandleCount != 0)
+                return;
+        }
+        else
+        {
+            --player.HandleCount;
+            if (player.HandleCount != 0 || _globalHandleCount != 0 || !player.Player.IsOnline)
+                return;
+            ++_isHiddenForAnyVersion;
+        }
+
+        ShowHud(player);
+    }
+
+    private void ClearHud(HudPlayerComponent? comp)
     {
         try
         {
@@ -112,7 +228,45 @@ public sealed class HudManager
             {
                 try
                 {
-                    listener.Restore(null);
+                    listener.Hide(comp?.Player);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, $"Error hiding HUD: {listener.GetType()}.");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error resolving HUD listeners.");
+        }
+        finally
+        {
+            if (comp != null)
+            {
+                TrySetVanillaHud(comp.Player, false);
+            }
+            else foreach (WarfarePlayer player in _playerService.OnlinePlayers)
+            {
+                TrySetVanillaHud(player, false);
+            }
+        }
+    }
+
+    private void ShowHud(HudPlayerComponent? comp)
+    {
+        try
+        {
+            ILifetimeScope scope = _module.ScopedProvider;
+
+            foreach (IHudUIListener listener in scope.Resolve<IEnumerable<IHudUIListener>>())
+            {
+                if (comp is { HandleCount: > 0 })
+                    continue;
+
+                try
+                {
+                    listener.Restore(comp?.Player);
                 }
                 catch (Exception ex)
                 {
@@ -120,77 +274,89 @@ public sealed class HudManager
                 }
             }
         }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error resolving HUD listeners.");
+        }
         finally
         {
-            foreach (WarfarePlayer player in _playerService.OnlinePlayers)
+            if (comp != null)
             {
-                try
-                {
-                    player.UnturnedPlayer.enablePluginWidgetFlag(EPluginWidgetFlags.Default);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, $"Error showing PlayerLife HUD for player: {player}.");
-                }
+                TrySetVanillaHud(comp.Player, true);
+            }
+            else foreach (WarfarePlayer player in _playerService.OnlinePlayers)
+            {
+                if (player.Component<HudPlayerComponent>() is { HandleCount: > 0 })
+                    continue;
+
+                TrySetVanillaHud(player, true);
             }
         }
     }
 
-    public IDisposable HideHud()
+    private void TrySetVanillaHud(WarfarePlayer player, bool isVisible)
     {
-        return new HudHandle(this);
+        try
+        {
+            if (isVisible)
+                player.UnturnedPlayer.enablePluginWidgetFlag(EPluginWidgetFlags.Default);
+            else
+                player.UnturnedPlayer.disablePluginWidgetFlag(EPluginWidgetFlags.Default);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error {(isVisible ? "showing" : "hiding")} PlayerLife HUD for player: {player}.");
+        }
     }
 
-    private void Increment()
+    void IEventListener<PlayerLeft>.HandleEvent(PlayerLeft e, IServiceProvider serviceProvider)
     {
-        int value = Interlocked.Increment(ref _handleCount);
-        if (value != 1)
-            return;
-        if (GameThread.IsCurrent)
-        {
-            ClearHud();
-            return;
-        }
-
-        UniTask.Create(async () =>
-        {
-            await UniTask.SwitchToMainThread();
-            ClearHud();
-        });
+        if (e.Player.Component<HudPlayerComponent>().HandleCount > 0)
+            ++_isHiddenForAnyVersion;
     }
 
-    private void Decrement()
+    // ReSharper disable once ClassNeverInstantiated.Local
+    [PlayerComponent]
+    private sealed class HudPlayerComponent : IPlayerComponent
     {
-        int value = Interlocked.Decrement(ref _handleCount);
-        if (value != 0)
-            return;
+        // note: may look unused but used through OnPluginVotingUpdated event
+        public bool IsPluginVoting;
 
-        if (GameThread.IsCurrent)
+        /// <summary>
+        /// Incremented when the HUD needs to be hidden for this player, then decremented when that request gets disposed.
+        /// </summary>
+        public int HandleCount;
+
+        /// <inheritdoc />
+        public WarfarePlayer Player { get; set; } = null!;
+
+        /// <inheritdoc />
+        public void Init(IServiceProvider serviceProvider, bool isOnJoin)
         {
-            ShowHud();
-            return;
+            if (!isOnJoin)
+                return;
+
+            IsPluginVoting = false;
         }
-
-        UniTask.Create(async () =>
-        {
-            await UniTask.SwitchToMainThread();
-            ShowHud();
-        });
     }
 
     private class HudHandle : IDisposable
     {
-        private readonly HudManager _manager;
+        private HudManager? _manager;
+        private readonly HudPlayerComponent? _playerComponent;
 
-        public HudHandle(HudManager manager)
+        public HudHandle(HudManager manager, WarfarePlayer? player)
         {
             _manager = manager;
-            _manager.Increment();
+            if (player != null)
+                _playerComponent = player.Component<HudPlayerComponent>();
+
+            _manager.IncrementHandleCount(_playerComponent);
         }
 
         public void Dispose()
         {
-            _manager.Decrement();
+            Interlocked.Exchange(ref _manager, null)?.DecrementHandleCount(_playerComponent);
         }
     }
 }

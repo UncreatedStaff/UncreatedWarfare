@@ -16,7 +16,7 @@ public static class ChatFilterHelper
         if (!match.Success || match.Length <= 0)
             return null;
 
-        string matchValue = match.Value.TrimEnd().TrimEnd(TrimChars);
+        ReadOnlySpan<char> matchValue = match.Value.AsSpan().TrimEnd().TrimEnd(TrimChars);
         int len1 = matchValue.Length;
         matchValue = matchValue.TrimStart().TrimStart(TrimChars);
 
@@ -59,7 +59,7 @@ public static class ChatFilterHelper
             return null;
         }
 
-        return matchValue;
+        return matchValue.Length == match.Value.Length ? match.Value : matchValue.ToString();
     }
 
     private static bool IsPunctuation(char c)

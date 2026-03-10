@@ -62,11 +62,6 @@ internal sealed class PlayerDatabaseStatsEventHandlers :
         _buffer.Enqueue(record);
     }
 
-    private readonly PlayerDied _tempPlayerDiedArgs = new PlayerDied(new DamagePlayerParameters(null))
-    {
-        Player = null!
-    };
-
     [EventListener(MustRunInstantly = true, RequireActiveLayout = true)]
     void IEventListener<PlayerDamaged>.HandleEvent(PlayerDamaged e, IServiceProvider serviceProvider)
     {
@@ -81,33 +76,11 @@ internal sealed class PlayerDatabaseStatsEventHandlers :
             return;
         }
 
-        PlayerDied args = _tempPlayerDiedArgs;
+        PlayerDied args = new PlayerDied(in e.Parameters)
+        {
+            Player = e.Player
+        };
 
-        args.ActiveVehicle = null;
-        args.DriverAssist = null;
-        args.PrimaryAsset = null;
-        args.SecondaryAsset = null;
-        args.ThirdParty = null;
-        args.ThirdPartySession = null;
-        args.ThirdPartyAtFault = false;
-        args.ThirdPartyId = null;
-        args.ThirdPartyPoint = default;
-        args.ThirdPartyTeam = null;
-        args.Killer = null;
-        args.KillerSession = null;
-        args.KillerBranch = null;
-        args.KillerClass = null;
-        args.KillerKitName = null;
-        args.KillerPoint = default;
-        args.KillerTeam = null;
-        args.DefaultMessage = null;
-        args.IsGuaranteedCheaterKill = false;
-        args.PlayerKitName = null;
-        args.MessageKey = null;
-        args.TurretVehicleOwner = null;
-        args.WasBleedout = false;
-        args.WillBan = false;
-        args.TimeDeployed = 0f;
         _deathTracker.FillArgs(e.Player, e.Parameters.cause, e.Parameters.limb, e.Parameters.killer, args);
 
         bool isSuicide = args.WasSuicide;
@@ -150,8 +123,10 @@ internal sealed class PlayerDatabaseStatsEventHandlers :
         };
 
         if (e.IsDeath)
+        {
             e.Player.Data["KillShot"] = record;
-
+            e.Player.Data["LastDamageArgs"] = args;
+        }
         _buffer.Enqueue(record);
     }
 
@@ -161,7 +136,12 @@ internal sealed class PlayerDatabaseStatsEventHandlers :
         if (!_buffer.TrackStats)
             return;
 
-        PlayerDied args = _tempPlayerDiedArgs;
+        if (!e.Player.Data.TryRemove("LastDamageArgs", out object? argsBox)
+            || argsBox is not PlayerDied args)
+        {
+            args = new PlayerDied(in e.Parameters) { Player = e.Player };
+            _deathTracker.FillArgs(e.Player, e.Parameters.cause, e.Parameters.limb, e.Parameters.killer, args);
+        }
 
         bool hasKiller = !args.WasSuicide && args.Instigator.GetEAccountType() == EAccountType.k_EAccountTypeIndividual;
         bool hasThirdParty = args.ThirdPartyId.HasValue && args.ThirdPartyId.Value.GetEAccountType() == EAccountType.k_EAccountTypeIndividual;

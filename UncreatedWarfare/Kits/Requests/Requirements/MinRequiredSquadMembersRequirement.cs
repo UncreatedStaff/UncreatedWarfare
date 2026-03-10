@@ -22,7 +22,7 @@ public sealed class MinRequiredSquadMembersRequirement(SquadManager? squadManage
 
         foreach (WarfarePlayer player in squad.Members)
         {
-            if (player.Component<KitPlayerComponent>().ActiveKitKey is { } pk && pk == ctx.Kit.Key)
+            if (player.Component<KitPlayerComponent>().IsKit(ctx.Kit.Key))
             {
                 visitor.AcceptMinRequiredSquadMembersNotMet(in ctx, player, squad.Members.Count, min);
                 return KitRequirementResult.No;

@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
@@ -63,14 +62,14 @@ internal class ShovelableTweaks :
         IAssetLink<ItemPlaceableAsset> buildableAsset = AssetLink.Create(e.Asset);
 
         bool buildableInKit = false;
-        Kit? cachedKit = kitComponent.CachedKit;
+        Kit? cachedKit = kitComponent.ActiveKit?.CachedKit;
         if (cachedKit != null)
         {
             int maxAllowedInKit = _kitItemResolver.CountItems(cachedKit, buildableAsset, e.OriginalPlacer.Team);
             buildableInKit = maxAllowedInKit > 0;
         }
 
-        bool placerIsCombatEngineer = kitComponent.ActiveClass == Class.CombatEngineer;
+        bool placerIsCombatEngineer = kitComponent.IsClass(Class.CombatEngineer);
 
         // removed because this is handled by WhitelistService already
         //List<IBuildableFobEntity> similarPlacedByPlayer = _fobManager.Entities
@@ -147,6 +146,6 @@ internal class ShovelableTweaks :
             return;
         }
         
-        shovelable?.Shovel(e.Player, e.InputInfo.point);
+        shovelable.Shovel(e.Player, e.InputInfo.point);
     }
 }

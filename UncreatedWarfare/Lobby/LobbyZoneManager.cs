@@ -187,6 +187,11 @@ public class LobbyZoneManager :
 
         _zoneCollider = _zoneStore.CreateColliderForZone(_lobbyZone);
 
+        foreach (WarfarePlayer player in _zoneCollider.ActiveObjects)
+        {
+            UpdateAllFlags(player);
+        }
+
         _zoneCollider.OnObjectEntered += OnObjectEnteredLobby;
         _zoneCollider.OnObjectExited += OnObjectExitedLobby;
 

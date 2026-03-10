@@ -167,13 +167,22 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>,
     private void AppendAvailability(StringBuilder bldr, WarfarePlayer player, Kit kit)
     {
         KitPlayerComponent kitPlayerComponent = player.Component<KitPlayerComponent>();
-        if (kitPlayerComponent.ActiveKitId == kit.Id)
+        CurrentKitState? activeKit = kitPlayerComponent.ActiveKit;
+        if (activeKit != null && activeKit.Key == kit.Key)
         {
             bldr.Append(_translations.KitCurrentlyUsing.Translate(player));
             return;
         }
 
-        KitRequirementResolutionContext<StringBuilder> ctx = new KitRequirementResolutionContext<StringBuilder>(player, player.Team, kit, kitPlayerComponent.CachedKit, kitPlayerComponent, bldr);
+        KitRequirementResolutionContext<StringBuilder> ctx
+            = new KitRequirementResolutionContext<StringBuilder>(
+                player,
+                player.Team,
+                kit,
+                activeKit?.CachedKit,
+                kitPlayerComponent,
+                bldr
+            );
 
         int l = bldr.Length;
         foreach (IKitRequirement requirement in _kitRequirements.Request)

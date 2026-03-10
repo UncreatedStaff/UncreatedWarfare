@@ -60,8 +60,8 @@ public sealed class KitCommandTranslations : PropertiesTranslationCollection
     [TranslationData("Sent to a player when they lose access to a kit.")]
     public readonly Translation<Kit> KitAccessRevokedDm = new Translation<Kit>("<#a0ad8e>Your access to <#fff>{0}</color> was revoked.", arg0Fmt: Kit.FormatId);
 
-    [TranslationData("Sent when a player requests the default loadout for a given class.", "The class of the loadout they requested", IsPriorityTranslation = false)]
-    public readonly Translation<Class> RequestDefaultLoadoutGiven = new Translation<Class>("<#a8918a>Given default items for a <#cedcde>{0}</color> loadout.", arg0Fmt: UppercaseAddon.Instance);
+    [TranslationData("Sent when a player requests the default loadout for a given class.", "The class of the loadout they requested", "The command to return to their old items", IsPriorityTranslation = false)]
+    public readonly Translation<Class, CommandInfo?> RequestDefaultLoadoutGiven = new Translation<Class, CommandInfo?>("<#a8918a>Given default items for a <#cedcde>{0}</color> loadout. '{1}' to return.", arg0Fmt: UppercaseAddon.Instance);
 
     [TranslationData("Sent to a player when they try to bind a hotkey without holding an item.")]
     public readonly Translation KitHotkeyNotHoldingItem = new Translation("<#ff8c69>You must be holding an item from your kit to set a hotkey.");
@@ -206,4 +206,16 @@ public sealed class KitCommandTranslations : PropertiesTranslationCollection
 
     [TranslationData("Sent when a skillset is added.", "Skill set", "Kit target", IsPriorityTranslation = false)]
     public readonly Translation<Skillset, Kit> KitSkillsetAdded = new Translation<Skillset, Kit>("<#a0ad8e>\"<#ddd>{0}</color>\" was added to <#fff>{1}</color>.", arg1Fmt: Kit.FormatDisplayName);
+    
+    [TranslationData("Sent when a /kit back is used but the player isn't previewing a kit.")]
+    public readonly Translation KitBackNotPreviewing = new Translation("<#ff8c69>You are not previewing a kit.");
+    
+    [TranslationData("Sent when a /kit back is used but the system lost track of which kit they should go back to.")]
+    public readonly Translation KitBackPreviewingUnknownKit = new Translation("<#ff8c69>We are unsure which kit to go back to. This shouldn't really happen so let a dev know if it does.");
+    
+    [TranslationData("Sent when a /kit back is used when the player was previewing a kit and their inventory has been restored.")]
+    public readonly Translation<Kit> KitBackEndedPreview = new Translation<Kit>("<#a0ad8e>Finished previewing <#fff>{0}</color>, inventory restored.", arg0Fmt: Kit.FormatDisplayName);
+    
+    [TranslationData("Sent when a /kit back is used when the player was previewing a loadout preset and their inventory has been restored.", IsPriorityTranslation = false)]
+    public readonly Translation KitBackEndedPreviewLoadout = new Translation("<#a0ad8e>Inventory restored.");
 }

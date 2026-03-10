@@ -114,7 +114,7 @@ public class WarTableDoorTweak :
             // already deploying
             player.SetFlag(_flagId, Flags.Deploying);
         }
-        else if (player.Component<KitPlayerComponent>().ActiveClass <= Class.Unarmed)
+        else if (player.Component<KitPlayerComponent>().ActiveKit is not { Class: > Class.Unarmed })
         {
             // invalid kit
             player.SetFlag(_flagId, Flags.NoKit);

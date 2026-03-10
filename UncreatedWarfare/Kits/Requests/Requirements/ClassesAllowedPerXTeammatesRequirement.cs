@@ -26,7 +26,7 @@ public sealed class ClassesAllowedPerXTeammatesRequirement(IPlayerService player
                 continue;
 
             teammates++;
-            if (player.Component<KitPlayerComponent>().ActiveClass == ctx.Kit.Class)
+            if (player.Component<KitPlayerComponent>().IsClass(ctx.Kit.Class))
                 currentUsers++;
         }
 

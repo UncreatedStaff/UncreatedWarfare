@@ -39,11 +39,10 @@ public class KitBestowService
 
         _itemDistributionService.ClearInventory(player);
 
-        player.Save.KitId = 0;
-        player.Save.Save();
+        player.Save.KitState = null;
 
         player.Component<SkillsetPlayerComponent>().EnsureSkillsets(Array.Empty<Skillset>());
-        player.Component<KitPlayerComponent>().UpdateKit(null, false);
+        player.Component<KitPlayerComponent>().UpdateKit(null);
         player.Component<ItemTrackingPlayerComponent>().KitLayoutTransformations = null;
     }
 
@@ -68,12 +67,22 @@ public class KitBestowService
             _itemDistributionService.GiveItems(items, player, state);
         }
 
-        player.Save.KitId = kit.Key;
-        player.Save.WasKitLowAmmo = data.IsLowAmmo;
+        KitPlayerComponent kitComp = player.Component<KitPlayerComponent>();
+
+        CurrentKitState? fallback = null;
+
+        if (data.IsPreview)
+        {
+            fallback = kitComp.GetUnderlyingPreviewFallback();
+            fallback?.ItemsFallback = ItemUtility.ItemsFromInventory(player).ToArray();
+        }
+
+        CurrentKitState kitState = new CurrentKitState(kit, data.IsPreview, data.IsLowAmmo, fallback);
+        player.Save.KitState = kitState;
         player.Save.Save();
 
         player.Component<SkillsetPlayerComponent>().EnsureSkillsets(skillsets);
-        player.Component<KitPlayerComponent>().UpdateKit(kit, data.IsLowAmmo);
+        kitComp.UpdateKit(kitState);
         player.Component<ItemTrackingPlayerComponent>().KitLayoutTransformations = data.Layouts;
 
         if (data.IsLowAmmo)
@@ -102,7 +111,7 @@ public class KitBestowService
         if (!player.IsOnline)
             throw new ArgumentException("Player offline.", nameof(player));
 
-        Kit? kit = player.Component<KitPlayerComponent>().CachedKit;
+        Kit? kit = player.Component<KitPlayerComponent>().ActiveKit?.CachedKit;
         if (kit == null)
             return;
 
@@ -184,6 +193,9 @@ public class KitBestowService
                 _options |= BestowKitOptions.Silent;
             if (data.RestockOnly)
                 _options |= BestowKitOptions.IsRestock;
+            if (data.IsPreview)
+                _options |= BestowKitOptions.NoAmmo;
+
             ResupplyAmmoBags = data.ResupplyAmmoBags;
             _layoutTransformations = data.Layouts ?? Array.Empty<KitLayoutTransformation>();
             _itemCountsTable = (_options & BestowKitOptions.LowAmmo) != 0 ? new List<KeyValuePair<Guid, int>>(16) : null;
@@ -241,6 +253,11 @@ public class KitBestowService
                 UpdateItemCountsTable(in resolvedItem);
             }
 
+            if ((_options & BestowKitOptions.NoAmmo) != 0)
+            {
+                ApplyNoAmmoChanges(ref resolvedItem);
+            }
+
             if (page is not Page.Primary and not Page.Secondary && (_options & BestowKitOptions.LowAmmo) != 0)
             {
                 ApplyLowAmmoChanges(ref resolvedItem);
@@ -284,6 +301,21 @@ public class KitBestowService
             }
 
             _itemCountsTable.Add(new KeyValuePair<Guid, int>(guid, 1));
+        }
+
+        private static void ApplyNoAmmoChanges(ref KitItemResolutionResult result)
+        {
+            switch (result.Asset)
+            {
+                case ItemMagazineAsset { ShouldDeleteAtZeroAmount: false }:
+                    result.Amount = 0;
+                    break;
+
+                case ItemGunAsset:
+                    // low ammo causes extra guns to spawn empty
+                    result.State[10] = 0;
+                    break;
+            }
         }
 
         private readonly void ApplyLowAmmoChanges(ref KitItemResolutionResult result)
@@ -332,7 +364,8 @@ public class KitBestowService
     {
         LowAmmo = 1,
         Silent = 1 << 1,
-        IsRestock = 1 << 2
+        IsRestock = 1 << 2,
+        NoAmmo = 1 << 3
     }
 }
 
@@ -344,6 +377,7 @@ public readonly struct KitBestowData
     public Kit Kit { get; }
     public IReadOnlyList<KitLayoutTransformation>? Layouts { get; }
     public bool IsLowAmmo { get; init; }
+    public bool IsPreview { get; init; }
     public bool Silent { get; init; }
     public bool ResupplyAmmoBags { get; init; } = true;
     internal bool RestockOnly { get; init; }
@@ -361,7 +395,8 @@ public readonly struct KitBestowData
             IsLowAmmo = IsLowAmmo,
             Silent = Silent,
             RestockOnly = RestockOnly,
-            ResupplyAmmoBags = ResupplyAmmoBags
+            ResupplyAmmoBags = ResupplyAmmoBags,
+            IsPreview = IsPreview
         };
     }
 }

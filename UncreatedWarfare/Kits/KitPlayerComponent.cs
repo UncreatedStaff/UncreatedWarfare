@@ -15,11 +15,13 @@ public class KitPlayerComponent : IPlayerComponent
 {
     private readonly HashSet<uint> _accessibleKits = new HashSet<uint>(16);
     private readonly HashSet<uint> _favoritedKits = new HashSet<uint>(16);
+    private IDictionary<uint, BasicKitStats>? _cachedKitStats;
 
 
     private IKitDataStore _kitDataStore = null!;
     private KitSignService _kitSignService = null!;
     private LoadoutService _loadoutService = null!;
+    private IKitStatisticService _kitStatService = null!;
 
 #nullable disable
 
@@ -34,40 +36,14 @@ public class KitPlayerComponent : IPlayerComponent
     public IComparer<Kit?> LoadoutComparer => field ??= new LoadoutComparerImpl(this);
 
     /// <summary>
-    /// The primary key of the player's current kit.
+    /// The player's current kit parameters.
     /// </summary>
-    public uint? ActiveKitKey { get; private set; }
-
-    /// <summary>
-    /// The internal name of the player's current kit.
-    /// </summary>
-    public string? ActiveKitId { get; private set; }
-
-    /// <summary>
-    /// The class of the player's current kit.
-    /// </summary>
-    public Class ActiveClass { get; private set; }
-
-    /// <summary>
-    /// The branch of the player's current kit.
-    /// </summary>
-    public Branch ActiveBranch { get; private set; }
+    public CurrentKitState? ActiveKit { get; private set; }
 
     /// <summary>
     /// If the player has a kit equipped.
     /// </summary>
-    public bool HasKit => ActiveKitKey.HasValue;
-
-    /// <summary>
-    /// If the player's current kit was equipped with low ammo.
-    /// </summary>
-    public bool HasLowAmmo { get; private set; }
-
-    /// <summary>
-    /// Get a copy of the kit from the kit cache if it's added. Use <see cref="GetActiveKitAsync"/> to get an up-to-date copy.
-    /// </summary>
-    /// <remarks>Guaranteed to have <see cref="KitInclude.Giveable"/> data.</remarks>
-    public Kit? CachedKit { get; internal set; }
+    public bool HasKit => ActiveKit != null;
 
     /// <summary>
     /// Ordered list of all loadouts including the <see cref="KitInclude.Cached"/> include level.
@@ -79,6 +55,73 @@ public class KitPlayerComponent : IPlayerComponent
         _kitDataStore = serviceProvider.GetRequiredService<IKitDataStore>();
         _kitSignService = serviceProvider.GetRequiredService<KitSignService>();
         _loadoutService = serviceProvider.GetRequiredService<LoadoutService>();
+        _kitStatService = serviceProvider.GetRequiredService<IKitStatisticService>();
+    }
+
+    /// <summary>
+    /// Check whether or not this player is using a kit with the given <paramref name="class"/>.
+    /// </summary>
+    public bool IsClass(Class @class)
+    {
+        CurrentKitState? ac = ActiveKit;
+        if (@class == Class.None)
+        {
+            return ac == null || ac.Class == Class.None;
+        }
+
+        return ac != null && ac.Class == @class;
+    }
+
+    /// <summary>
+    /// Check whether or not this player is using the kit with the given primary key.
+    /// </summary>
+    public bool IsKit(uint kitPk)
+    {
+        CurrentKitState? ac = ActiveKit;
+        return kitPk != 0 && ac != null && ac.Key == kitPk;
+    }
+
+    /// <summary>
+    /// Check whether or not this player is using the kit with the given primary key.
+    /// </summary>
+    public bool IsKit(uint? kitPk)
+    {
+        CurrentKitState? ac = ActiveKit;
+        if (kitPk is null or 0)
+            return ac == null;
+        
+        return ac != null && ac.Key == kitPk.Value;
+    }
+
+    /// <summary>
+    /// Check whether or not this player is using the given kit.
+    /// </summary>
+    public bool IsKit(Kit? kit)
+    {
+        CurrentKitState? ac = ActiveKit;
+        if (kit == null)
+            return ac == null;
+        return ac != null && ac.Key == kit.Key;
+    }
+
+    /// <summary>
+    /// Check whether or not this player is using the kit with the given ID.
+    /// </summary>
+    public bool IsKit(string? kitId)
+    {
+        CurrentKitState? ac = ActiveKit;
+        if (string.IsNullOrEmpty(kitId))
+            return ac == null;
+        return ac != null && ac.Id == kitId;
+    }
+
+    internal CurrentKitState? GetUnderlyingPreviewFallback()
+    {
+        CurrentKitState? previewFallback = ActiveKit;
+        while (previewFallback is { IsPreview: true })
+            previewFallback = previewFallback.PreviewFallback;
+
+        return previewFallback;
     }
 
     /// <summary>
@@ -86,11 +129,11 @@ public class KitPlayerComponent : IPlayerComponent
     /// </summary>
     public Task<Kit?> GetActiveKitAsync(KitInclude include, CancellationToken token = default)
     {
-        uint? kit = ActiveKitKey;
-        if (!kit.HasValue)
+        CurrentKitState? state = ActiveKit;
+        if (state == null)
             return Task.FromResult<Kit?>(null);
 
-        return _kitDataStore.QueryKitAsync(kit.Value, include, token);
+        return _kitDataStore.QueryKitAsync(state.Key, include, token);
     }
 
     /// <summary>
@@ -104,6 +147,9 @@ public class KitPlayerComponent : IPlayerComponent
             .Select(x => x.KitId)
             .ToListAsync(token);
 
+        Task<IDictionary<uint, BasicKitStats>> statsTask = _kitStatService
+            .QueryAllBasicKitStats(Player.Steam64, token: token);
+
         IReadOnlyList<Kit> loadouts = await _loadoutService.GetLoadouts(Player.Steam64, KitInclude.Cached, token)
             .ConfigureAwait(false);
 
@@ -114,7 +160,11 @@ public class KitPlayerComponent : IPlayerComponent
             .Select(x => x.KitId)
             .ToListAsync(token).ConfigureAwait(false);
 
+        IDictionary<uint, BasicKitStats> cachedKitStats = await statsTask.ConfigureAwait(false);
+
         await UniTask.SwitchToMainThread(token);
+
+        _cachedKitStats = cachedKitStats;
 
         UpdateLoadouts(loadouts);
 
@@ -197,27 +247,42 @@ public class KitPlayerComponent : IPlayerComponent
     /// <summary>
     /// Set the current kit, or <see langword="null"/> for no kit.
     /// </summary>
-    internal void UpdateKit(Kit? kit, bool isLowAmmo)
+    internal void UpdateKit(CurrentKitState? kit)
     {
-        if (kit != null)
+        ActiveKit = kit;
+    }
+
+    public bool TryGetBasicStatsFor(uint kitPk, [NotNullWhen(true)] out BasicKitStats? kitStats)
+    {
+        IDictionary<uint, BasicKitStats>? stats = _cachedKitStats;
+        if (stats == null || kitPk == 0)
         {
-            _ = kit.Items;
-            ActiveKitKey = kit.Key;
-            ActiveKitId = kit.Id;
-            ActiveClass = kit.Class;
-            ActiveBranch = kit.Branch;
-            CachedKit = kit;
-        }
-        else
-        {
-            CachedKit = null;
-            ActiveKitKey = null;
-            ActiveKitId = null;
-            ActiveClass = Class.None;
-            ActiveBranch = Branch.Default;
+            kitStats = null;
+            return false;
         }
 
-        HasLowAmmo = isLowAmmo;
+        lock (stats)
+        {
+            return stats.TryGetValue(kitPk, out kitStats);
+        }
+    }
+
+    public void UpdateBasicStats(uint kitPk, Action<BasicKitStats> action)
+    {
+        IDictionary<uint, BasicKitStats>? stats = _cachedKitStats;
+        if (stats == null || kitPk == 0)
+            return;
+
+        lock (stats)
+        {
+            if (!stats.TryGetValue(kitPk, out BasicKitStats s))
+            {
+                s = new BasicKitStats(kitPk);
+                stats.Add(kitPk, s);
+            }
+
+            action(s);
+        }
     }
 
     public bool IsKitAccessible(uint kitPk)

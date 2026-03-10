@@ -16,6 +16,7 @@ using Uncreated.Warfare.Moderation.Punishments;
 using Uncreated.Warfare.Moderation.Punishments.Presets;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
@@ -32,6 +33,7 @@ public partial class ModerationUI : UnturnedUI
     private readonly DatabaseInterface _moderationSql;
     private readonly IPointsStore _pointsStore;
     private readonly ItemIconProvider _itemIconProvider;
+    private readonly HudManager _hudManager;
 
     private readonly string? _discordInviteCode;
 
@@ -198,6 +200,7 @@ public partial class ModerationUI : UnturnedUI
         _userDataService = serviceProvider.GetRequiredService<IUserDataService>();
         _moderationSql = serviceProvider.GetRequiredService<DatabaseInterface>();
         _itemIconProvider = serviceProvider.GetRequiredService<ItemIconProvider>();
+        _hudManager = serviceProvider.GetRequiredService<HudManager>();
 
         IConfiguration systemConfig = serviceProvider.GetRequiredService<IConfiguration>();
         _discordInviteCode = systemConfig["discord_invite_code"];
@@ -542,6 +545,7 @@ public partial class ModerationUI : UnturnedUI
 
         ModerationData data = GetOrAddModerationData(player);
         ModalHandle.TryGetModalHandle(player, ref data.Modal);
+        data.HudHandle = _hudManager.HideHud(player);
 
         player.UnturnedPlayer.disablePluginWidgetFlag(EPluginWidgetFlags.Default);
 
@@ -564,6 +568,7 @@ public partial class ModerationUI : UnturnedUI
         ModerationData data = GetOrAddModerationData(player);
 
         data.Modal.Dispose();
+        Interlocked.Exchange(ref data.HudHandle, null)?.Dispose();
 
         player.UnturnedPlayer.enablePluginWidgetFlag(EPluginWidgetFlags.Default);
         ClearFromPlayer(player.Connection);
@@ -1585,6 +1590,7 @@ public partial class ModerationUI : UnturnedUI
         internal int EvidenceVersion;
         internal bool HasModerationUI;
         internal ModalHandle Modal;
+        internal IDisposable? HudHandle;
         public CSteamID Player { get; }
         public ModerationUI Owner { get; }
         UnturnedUI IUnturnedUIData.Owner => Owner;

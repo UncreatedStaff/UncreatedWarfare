@@ -18,7 +18,6 @@ using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Signs;
-using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Squads.UI;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Teams;
@@ -338,15 +337,15 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         if (!player.IsOnline)
             return false;
 
-        KitPlayerComponent comp = player.Component<KitPlayerComponent>();
+        CurrentKitState? activeKit = player.Component<KitPlayerComponent>().ActiveKit;
         if (kit != null)
         {
-            if (comp.ActiveKitKey != kit.Key)
+            if (activeKit != null && activeKit.Key != kit.Key)
                 await GiveKitIntlAsync(player, new KitBestowData(kit) { Silent = silent }, false, token).ConfigureAwait(false);
             return true;
         }
 
-        if (comp.ActiveKitKey.HasValue)
+        if (activeKit != null)
             await RemoveKitAsync(player, token);
         return false;
     }
@@ -365,7 +364,8 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
 
             Kit? kit = await kitComp.GetActiveKitAsync(KitInclude.Giveable, token);
             await UniTask.SwitchToMainThread(token);
-            kitComp.CachedKit = kit;
+            if (kit != null)
+                kitComp.ActiveKit?.UpdateCachedKit(kit);
             if (kit != null && resupplyAmmoBags && NeedsToFullRestock(player, kit))
             {
                 await GiveKitIntlAsync(player, new KitBestowData(kit) { Silent = true }, false, token);
@@ -384,7 +384,7 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
 
     private bool NeedsToFullRestock(WarfarePlayer player, Kit kit)
     {
-        if (player.Component<KitPlayerComponent>().HasLowAmmo)
+        if (player.Component<KitPlayerComponent>().ActiveKit is { IsLowAmmo: true })
             return true;
 
         // check if any clothes are missing or the wrong item
@@ -444,10 +444,7 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
             new PlayerKitChanged
             {
                 Player = player,
-                Class = Class.None,
-                Kit = null,
-                KitId = 0,
-                KitName = null,
+                State = null,
                 WasRequested = false
             }, CancellationToken.None);
     }
@@ -499,15 +496,16 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         // update hotkey list
         GiveKitMainThread(player, kitBestowData, layouts, hotkeys, false);
 
-        Kit kit = kitBestowData.Kit;
+        CurrentKitState? kit = player.Component<KitPlayerComponent>().ActiveKit;
+
+        if (kit == null || kit.Key != kitBestowData.Kit.Key)
+            return;
+
         await _eventDispatcher.DispatchEventAsync(
             new PlayerKitChanged
             {
                 Player = player,
-                Class = kit.Class,
-                Kit = kit,
-                KitId = kit.Key,
-                KitName = kit.Id,
+                State = kit,
                 WasRequested = isRequest
             }, CancellationToken.None);
     }
@@ -526,7 +524,6 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         if (!player.IsOnline)
             throw new OperationCanceledException("Player disconnected.");
 
-        Kit kit = kitBestowData.Kit;
         HotkeyPlayerComponent hotkeyComponent = player.Component<HotkeyPlayerComponent>();
         hotkeyComponent.HotkeyBindings = null;
 
@@ -535,16 +532,14 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         hotkeyComponent.HotkeyBindings = hotkeys;
         ApplyHotkeys(player);
 
-        if (!invokeEvent)
+        CurrentKitState? kit = player.Component<KitPlayerComponent>().ActiveKit;
+        if (!invokeEvent && kit != null && kit.Key == kitBestowData.Kit.Key)
         {
             _ = _eventDispatcher.DispatchEventAsync(
                 new PlayerKitChanged
                 {
                     Player = player,
-                    Class = kit.Class,
-                    Kit = kit,
-                    KitId = kit.Key,
-                    KitName = kit.Id,
+                    State = kit,
                     WasRequested = false
                 }, CancellationToken.None);
         }
@@ -649,7 +644,7 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
                 _this._kitReqTranslations.ModalConfirmPurchaseKitDescription.Translate(kit, (int)Math.Ceiling(cost), player),
                 _this._kitReqTranslations.ModalConfirmPurchaseKitAcceptButton.Translate(player),
                 _this._kitReqTranslations.ModalConfirmPurchaseKitCancelButton.Translate(player),
-                callbacks: new PopupCallbacks((WarfarePlayer player, int _, in ToastMessage _, ref bool _, ref bool _) =>
+                callbacks: new PopupCallbacks((player, _, in _, ref _, ref _) =>
                 {
                     _ = _this.BuyKitAsync(player, kit, hit.transform?.position, player.DisconnectToken);
                 }, null)
@@ -698,11 +693,15 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         {
             if (!ctx.Player.IsInSquad())
             {
-                Kit kit = ctx.Kit;
-                UniTask.Create(ctx.Player, async player =>
+                UniTask.Create(ctx, async ctx =>
                 {
                     await UniTask.SwitchToMainThread();
-                    _this._squadMenuUI.OpenUI(player, kit);
+                    bool openSquadUi = true;
+                    ctx.State.Handler.MissingSquad(ctx.Player, ctx.Kit, ref openSquadUi);
+                    if (openSquadUi)
+                    {
+                        _this._squadMenuUI.OpenUI(ctx.Player, new SquadMenuUI.KitRequestState(ctx.Kit, ctx.State.Handler));
+                    }
                 });
                 return;
             }

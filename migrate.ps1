@@ -1,2 +1,2 @@
 $name=$args[0]
-Add-Migration $name -Project UncreatedWarfare -StartupProject UncreatedWarfare
+dotnet ef migrations add $name --project UncreatedWarfare --startup-project UncreatedWarfare

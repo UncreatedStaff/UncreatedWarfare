@@ -2,7 +2,6 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
@@ -126,8 +125,7 @@ internal sealed class KitSkillsetsCommand : IExecutableCommand
         // update skills for all players
         foreach (WarfarePlayer player in _playerService.OnlinePlayers)
         {
-            uint? activeKit = player.Component<KitPlayerComponent>().ActiveKitKey;
-            if (!activeKit.HasValue || activeKit.Value != kit.Key)
+            if (!player.Component<KitPlayerComponent>().IsKit(kit.Key))
                 continue;
 
             if (add)

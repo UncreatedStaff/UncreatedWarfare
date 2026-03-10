@@ -3,6 +3,7 @@ using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Interaction.Requests;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Cooldowns;
+using Uncreated.Warfare.Players.Costs;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Teams;

@@ -36,7 +36,7 @@ partial class KitSelectionUI
                 await UniTask.SwitchToMainThread();
 
                 _listNoResult.Hide(player.Connection);
-                SendKitInfo(_listResults[0], player, favoritedKit, player.Component<KitPlayerComponent>(), data, false, index: 0);
+                SendKitInfo(_listResults[0], player, fullKit, player.Component<KitPlayerComponent>(), data, false, index: 0);
 
                 for (int i = 1; i < _listResults.Length; ++i)
                 {
@@ -48,7 +48,13 @@ partial class KitSelectionUI
                     _listResults[i].Hide(player.Connection);
                 }
 
-                _ = UpdateSearchAsync(player, data);
+                if (!data.IsListOpen)
+                {
+                    _switchToListLogic.Show(player);
+                    data.IsListOpen = true;
+                }
+
+                await SendKitDetailsAsync(player, fullKit, CancellationToken.None);
             }
             catch (Exception ex)
             {
@@ -259,7 +265,7 @@ partial class KitSelectionUI
         if (data.Operations > 0)
             return;
 
-        // todo: Interlocked.Increment(ref data.Operations);
+        Interlocked.Increment(ref data.Operations);
 
         ref KitCacheInformation cache = ref data.GetCachedState(@class, kitIndex);
 
@@ -267,27 +273,37 @@ partial class KitSelectionUI
         if (kit == null)
             return;
 
-        //Task.Run(async () =>
-        //{
-        //    try
-        //    {
-        //        if (!await _kitFavoriteService.AddFavorite(player.Steam64, kit.Key))
-        //        {
-        //            return;
-        //        }
-        //
-        //        await UniTask.SwitchToMainThread();
-        //        UpdateFavoriteList(player, data, await GetFavoriteKits(player, player.DisconnectToken), false);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        GetLogger().LogError(ex, $"Error adding favorite to ({@class}, {kitIndex}: {kit.Id}) for {player}.");
-        //    }
-        //    finally
-        //    {
-        //        Interlocked.Decrement(ref data.Operations);
-        //    }
-        //});
+        Task.Run(async () =>
+        {
+            try
+            {
+                if ((KitInclude.UI & KitInclude.Giveable) != KitInclude.Giveable)
+                {
+                    kit = await _kitDataStore.QueryKitAsync(kit.Key, KitInclude.Giveable, player.DisconnectToken);
+                    if (kit == null)
+                        return;
+                }
+
+                await _kitRequestService.GiveKitAsync(player, new KitBestowData(kit)
+                {
+                    IsPreview = true,
+                    IsLowAmmo = false,
+                    Silent = true
+                });
+
+                await CloseAsync(player);
+
+                _chatService.Send(player, _translations.ChatPreviewingKit, kit);
+            }
+            catch (Exception ex)
+            {
+                GetLogger().LogError(ex, $"Error previewing ({@class}, {kitIndex}: {kit?.Id}) for {player}.");
+            }
+            finally
+            {
+                Interlocked.Decrement(ref data.Operations);
+            }
+        });
     }
 
     private bool TryGetTargetKit(Func<KitInfo, UnturnedButton> selector, UnturnedButton button, out Class @class, out int kitIndex, [NotNullWhen(true)] out KitInfo? kitInfo)
@@ -321,11 +337,11 @@ partial class KitSelectionUI
                 }
             }
         }
-        else if (name.Length >= 11 && name[4] == 'L')
+        else if (name.Length >= 10 && name[4] == 'L')
         {
             // parse numbers from Kit_List_#
             int listIndex;
-            if (char.IsDigit(name[11]))
+            if (name.Length > 10 && char.IsDigit(name[10]))
             {
                 listIndex = (name[9] - '0') * 10 + (name[10] - '0') - 1;
             }

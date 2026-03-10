@@ -1,7 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using Uncreated.Framework.UI;
-using Uncreated.Framework.UI.Data;
 using Uncreated.Framework.UI.Reflection;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
@@ -16,18 +15,15 @@ using Uncreated.Warfare.Util;
 namespace Uncreated.Warfare.Layouts.Seeding;
 
 [UnturnedUI(BasePath = "Container/Box")]
-internal class SeedingPlayHud : UnturnedUI, IEventListener<PlayerJoined>, IEventListener<PlayerLeft>, IHudUIListener
+internal class SeedingPlayHud : UnturnedUI, IEventListener<PlayerJoined>, IHudUIListener
 {
     private readonly SeedingPlayerCountMonitor _playerCountMonitor;
     private readonly ITranslationService _translationService;
     private readonly WarfareModule _module;
     private readonly SeedingTranslations _translations;
-    private readonly HudManager? _hudManager;
+    private readonly HudManager _hudManager;
 
     private bool _isEnabled;
-    private bool _isHidden;
-
-    private int _hiddenPlayers;
 
     public UnturnedLabel Title { get; } = new UnturnedLabel("Title");
     public UnturnedLabel Info { get; } = new UnturnedLabel("Info");
@@ -52,7 +48,8 @@ internal class SeedingPlayHud : UnturnedUI, IEventListener<PlayerJoined>, IEvent
         SeedingPlayerCountMonitor playerCountMonitor,
         ITranslationService translationService,
         TranslationInjection<SeedingTranslations> translations,
-        WarfareModule module)
+        WarfareModule module,
+        HudManager hudManager)
         : base(
             serviceProvider.GetRequiredService<ILoggerFactory>(),
             serviceProvider.GetRequiredService<AssetConfiguration>().GetAssetLink<EffectAsset>("UI:SeedingPlayHUD"),
@@ -62,7 +59,7 @@ internal class SeedingPlayHud : UnturnedUI, IEventListener<PlayerJoined>, IEvent
         _playerCountMonitor = playerCountMonitor;
         _translationService = translationService;
         _module = module;
-        _hudManager = serviceProvider.GetService<HudManager>();
+        _hudManager = hudManager;
         _translations = translations.Value;
     }
 
@@ -70,9 +67,6 @@ internal class SeedingPlayHud : UnturnedUI, IEventListener<PlayerJoined>, IEvent
     {
         GameThread.AssertCurrent();
         GetLogger().LogInformation("Sending to all players...");
-
-        if (_isHidden)
-            return;
 
         string desc;
         SeedingPlayHudStage stage = Stage;
@@ -100,7 +94,7 @@ internal class SeedingPlayHud : UnturnedUI, IEventListener<PlayerJoined>, IEvent
         // must send separately if a player has HUD hidden
         string layoutName = _module.GetActiveLayout().LayoutInfo.DisplayName;
         LanguageSetEnumerator enumerator;
-        bool sendToAll = _hiddenPlayers == 0;
+        bool sendToAll = !_hudManager.IsHiddenForAnyPlayers;
         if (sendToAll)
         {
             SendToAllPlayers(layoutName, desc);
@@ -108,7 +102,7 @@ internal class SeedingPlayHud : UnturnedUI, IEventListener<PlayerJoined>, IEvent
         }
         else
         {
-            enumerator = _translationService.SetOf.PlayersWhere(p => !IsHidden(p));
+            enumerator = _translationService.SetOf.PlayersWhere(p => !_hudManager.IsHidden(p));
         }
 
         _isEnabled = true;
@@ -134,9 +128,6 @@ internal class SeedingPlayHud : UnturnedUI, IEventListener<PlayerJoined>, IEvent
             {
                 if (!sendToAll)
                 {
-                    if (IsHidden(set.Next))
-                        continue;
-
                     SendToPlayer(set.Next.Connection, layoutName, desc2);
                 }
                 else
@@ -152,7 +143,7 @@ internal class SeedingPlayHud : UnturnedUI, IEventListener<PlayerJoined>, IEvent
     public void SendToPlayer(WarfarePlayer player)
     {
         GetLogger().LogInformation("Sending to player...");
-        if (_isHidden || IsHidden(player))
+        if (_hudManager.IsHidden(player))
             return;
 
         SeedingPlayHudStage stage = Stage;
@@ -188,7 +179,7 @@ internal class SeedingPlayHud : UnturnedUI, IEventListener<PlayerJoined>, IEvent
     {
         GameThread.AssertCurrent();
 
-        if (!_isEnabled || _isHidden)
+        if (!_isEnabled || _hudManager.IsHiddenForAllPlayers)
             return;
 
         float p = GetProgressValue();
@@ -198,7 +189,7 @@ internal class SeedingPlayHud : UnturnedUI, IEventListener<PlayerJoined>, IEvent
             string label = GetProgressLabel(set.Culture);
             while (set.MoveNext())
             {
-                if (IsHidden(set.Next))
+                if (_hudManager.IsHidden(set.Next))
                     continue;
 
                 Progress.SetProgress(set.Next.Connection, p);
@@ -249,7 +240,7 @@ internal class SeedingPlayHud : UnturnedUI, IEventListener<PlayerJoined>, IEvent
 
     private void SendFullToPlayer(WarfarePlayer player)
     {
-        if (!_isEnabled || _isHidden || IsHidden(player))
+        if (!_isEnabled || _hudManager.IsHidden(player))
             return;
 
         string desc = (Stage == SeedingPlayHudStage.WaitingForPlayers
@@ -278,43 +269,17 @@ internal class SeedingPlayHud : UnturnedUI, IEventListener<PlayerJoined>, IEvent
             SendFullToPlayer(e.Player);
     }
 
-    [EventListener(MustRunInstantly = true, Priority = -1)]
-    void IEventListener<PlayerLeft>.HandleEvent(PlayerLeft e, IServiceProvider serviceProvider)
-    {
-        if (IsHidden(e.Player))
-            Interlocked.Decrement(ref _hiddenPlayers);
-    }
-
-    private bool IsHidden(WarfarePlayer player)
-    {
-        return GetData<SeedingPlayUIData>(player.Steam64) is { IsHidden: true };
-    }
-
-    private void SetHidden(WarfarePlayer player, bool isHidden)
-    {
-        if (IsHidden(player) == isHidden)
-            return;
-
-        GetOrAddData(player.Steam64, id => new SeedingPlayUIData(id, this)).IsHidden = isHidden;
-        if (isHidden)
-            Interlocked.Increment(ref _hiddenPlayers);
-        else
-            Interlocked.Decrement(ref _hiddenPlayers);
-    }
-
     /// <inheritdoc />
     public void Hide(WarfarePlayer? player)
     {
         if (player != null)
         {
-            SetHidden(player, true);
-            if (_isEnabled && !_isHidden)
+            if (_isEnabled)
                 ClearFromPlayer(player.Connection);
             return;
         }
 
         ClearFromAllPlayers();
-        _isHidden = true;
     }
 
     /// <inheritdoc />
@@ -322,22 +287,11 @@ internal class SeedingPlayHud : UnturnedUI, IEventListener<PlayerJoined>, IEvent
     {
         if (player != null)
         {
-            SetHidden(player, false);
             SendFullToPlayer(player);
             return;
         }
 
-        _isHidden = false;
         UpdateStage();
         UpdateProgress();
-    }
-    public class SeedingPlayUIData(CSteamID player, UnturnedUI owner) : IUnturnedUIData
-    {
-        public bool IsHidden { get; set; }
-
-        public CSteamID Player { get; } = player;
-        public UnturnedUI Owner { get; } = owner;
-
-        UnturnedUIElement? IUnturnedUIData.Element => null;
     }
 }

@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Kits.Items;
@@ -57,7 +56,7 @@ public class KitLayoutService
     {
         await UniTask.SwitchToMainThread(token);
 
-        uint? kit = player.Component<KitPlayerComponent>().ActiveKitKey;
+        uint? kit = player.Component<KitPlayerComponent>().ActiveKit?.Key;
         if (!kit.HasValue)
             return false;
 

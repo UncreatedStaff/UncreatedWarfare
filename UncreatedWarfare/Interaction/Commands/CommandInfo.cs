@@ -1,18 +1,21 @@
 using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json.Serialization;
+using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Interaction.Commands.Syntax;
 using Uncreated.Warfare.Players.Permissions;
+using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Translations.ValueFormatters;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Interaction.Commands;
-public class CommandInfo : ICommandDescriptor
+public class CommandInfo : ICommandDescriptor, ITranslationArgument
 {
     internal readonly List<CommandWaitTask> WaitTasks = new List<CommandWaitTask>(0);
     internal Action<IExecutableCommand, CommandContext>? ContextSetter;
@@ -495,4 +498,22 @@ public class CommandInfo : ICommandDescriptor
     ICommandParameterDescriptor ICommandDescriptor.Metadata => Metadata;
     IReadOnlyList<ICommandDescriptor> ICommandDescriptor.SubCommands => SubCommands;
     IReadOnlyList<PermissionLeaf> ICommandDescriptor.OtherPermissions => OtherPermissions;
+
+    public string Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
+    {
+        ISyntaxWriter writer = parameters.CreateSyntaxWrier(formatter.TranslationService, true);
+
+        using CommandSyntaxFormatter cmdFormatter = new CommandSyntaxFormatter(writer, null, null);
+
+        ValueTask<CommandSyntaxFormatter.SyntaxStringInfo> task
+            = cmdFormatter.GetSyntaxString(this, Array.Empty<string>(), null, parameters.Player);
+
+        if (task.IsCompleted)
+        {
+            CommandSyntaxFormatter.SyntaxStringInfo info = task.Result;
+            return info.Syntax;
+        }
+
+        return CompositeName;
+    }
 }

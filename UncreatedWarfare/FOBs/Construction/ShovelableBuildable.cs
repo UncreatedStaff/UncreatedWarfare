@@ -119,7 +119,7 @@ public class ShovelableBuildable : BuildableFobEntity<ShovelableInfo>
         if (IsCompleted)
             return false;
 
-        if (shoveler.Component<KitPlayerComponent>().ActiveClass == Class.CombatEngineer)
+        if (shoveler.Component<KitPlayerComponent>().IsClass(Class.CombatEngineer))
             HitsRemaining -= 2;
         else
             HitsRemaining--;

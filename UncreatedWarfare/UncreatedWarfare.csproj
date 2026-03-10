@@ -293,6 +293,7 @@
         <Using Include="UnityEngine.Object">
             <Alias>Object</Alias>
         </Using>
+        <Using Include="System.Diagnostics.CodeAnalysis" />
         <Using Include="System.Diagnostics.Contracts" />
         <Using Include="System.Diagnostics.Contracts.PureAttribute">
             <Alias>PureAttribute</Alias>

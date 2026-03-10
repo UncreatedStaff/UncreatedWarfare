@@ -12,6 +12,7 @@ using Uncreated.Warfare.FOBs.Entities;
 using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Interaction.Icons;
+using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
@@ -197,14 +198,16 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable
     protected virtual void OnDeployTo(WarfarePlayer player, in DeploySettings settings)
     {
         // send a reminder to rearm if on low ammo
-        if (!player.Save.WasKitLowAmmo || _tipService == null)
+        KitPlayerComponent kitComp = player.Component<KitPlayerComponent>();
+
+        if (_tipService == null || kitComp.ActiveKit is { IsLowAmmo: false })
             return;
 
         if (FobManager.Entities
             .OfType<SupplyCrate>()
             .Any(x => x.Type == SupplyType.Ammo && x.IsWithinRadius(Buildable.Position)))
         {
-            _tipService?.TryGiveTip(player, 0, _tipService.Translations.KitGiveLowAmmo);
+            _tipService.TryGiveTip(player, 0, _tipService.Translations.KitGiveLowAmmo);
         }
     }
 

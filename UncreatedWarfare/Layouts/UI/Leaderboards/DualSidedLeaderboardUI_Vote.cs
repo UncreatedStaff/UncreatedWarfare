@@ -30,7 +30,7 @@ partial class DualSidedLeaderboardUI
     public readonly UnturnedUIElement LogicCloseVote = new UnturnedUIElement("~/Logic_CloseVote");
 
     private LayoutInfo[] _voteLayouts = Array.Empty<LayoutInfo>();
-    private int[] _layoutVotes;
+    private int[] _layoutVotes = Array.Empty<int>();
 
     public bool IsVotingPeriodOpen { get; set; }
 

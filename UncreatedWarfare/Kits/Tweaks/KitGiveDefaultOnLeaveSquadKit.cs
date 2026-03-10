@@ -22,12 +22,13 @@ internal sealed class KitGiveDefaultOnLeaveSquadKit : IEventListener<SquadMember
 
     public void HandleEvent(SquadMemberLeft e, IServiceProvider serviceProvider)
     {
-        if (e.Player.Team == Team.NoTeam)
-            return;
-        
         KitPlayerComponent kitPlayerComponent = e.Player.Component<KitPlayerComponent>();
-        if (!kitPlayerComponent.HasKit || kitPlayerComponent.ActiveClass == Class.Unarmed)
+        if (e.Player.Team == Team.NoTeam
+            || !kitPlayerComponent.HasKit
+            || kitPlayerComponent.IsClass(Class.Unarmed))
+        {
             return;
+        }
 
         bool isLowAmmo = false;
         if (_zoneStore.IsInMainBase(e.Player) || (isLowAmmo = _zoneStore.IsInWarRoom(e.Player)))

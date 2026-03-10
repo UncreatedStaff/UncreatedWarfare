@@ -188,8 +188,14 @@ public class CommandSyntaxFormatter : IDisposable
     /// Creates a syntax string that describes the requires arguments from the meta file.
     /// </summary>
     /// <exception cref="ArgumentNullException"/>
-    public async ValueTask<SyntaxStringInfo> GetSyntaxString(ICommandDescriptor command, IReadOnlyList<string> args, string? flag,
-        ICommandUser? user, string? aliasOverride = null, CancellationToken token = default)
+    public async ValueTask<SyntaxStringInfo> GetSyntaxString(
+        ICommandDescriptor command,
+        IReadOnlyList<string> args,
+        string? flag,
+        ICommandUser? user,
+        string? aliasOverride = null,
+        CancellationToken token = default
+    )
     {
         if (command == null)
             throw new ArgumentNullException(nameof(command));
