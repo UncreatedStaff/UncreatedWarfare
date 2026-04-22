@@ -120,7 +120,7 @@ namespace Uncreated.Warfare.Migrations
 
                     b.Property<string>("Redirect")
                         .IsRequired()
-                        .HasColumnType("enum('Shirt','Pants','Vest','Hat','Mask','Backpack','Glasses','AmmoSupply','BuildSupply','RallyPoint','Radio','AmmoBag','AmmoCrate','RepairStation','Bunker','VehicleBay','EntrenchingTool','UAV','RepairStationBuilt','AmmoCrateBuilt','BunkerBuilt','Cache','RadioDamaged','LaserDesignator','MapTackFlag')");
+                        .HasColumnType("enum('Shirt','Pants','Vest','Hat','Mask','Backpack','Glasses','AmmoSupply','BuildSupply','RallyPoint','Radio','AmmoBag','AmmoCrate','RepairStation','Bunker','VehicleBay','EntrenchingTool','UAV','RepairStationBuilt','AmmoCrateBuilt','BunkerBuilt','Cache','RadioDamaged','LaserDesignator','MapTackFlag','StandardBuildable')");
 
                     b.Property<string>("VariantKey")
                         .HasMaxLength(32)
@@ -505,7 +505,7 @@ namespace Uncreated.Warfare.Migrations
                         .HasColumnType("enum('Primary','Secondary','Hands','Backpack','Vest','Shirt','Pants','Storage','Area')");
 
                     b.Property<string>("Redirect")
-                        .HasColumnType("enum('Shirt','Pants','Vest','Hat','Mask','Backpack','Glasses','AmmoSupply','BuildSupply','RallyPoint','Radio','AmmoBag','AmmoCrate','RepairStation','Bunker','VehicleBay','EntrenchingTool','UAV','RepairStationBuilt','AmmoCrateBuilt','BunkerBuilt','Cache','RadioDamaged','LaserDesignator','MapTackFlag')");
+                        .HasColumnType("enum('Shirt','Pants','Vest','Hat','Mask','Backpack','Glasses','AmmoSupply','BuildSupply','RallyPoint','Radio','AmmoBag','AmmoCrate','RepairStation','Bunker','VehicleBay','EntrenchingTool','UAV','RepairStationBuilt','AmmoCrateBuilt','BunkerBuilt','Cache','RadioDamaged','LaserDesignator','MapTackFlag','StandardBuildable')");
 
                     b.Property<byte>("X")
                         .HasColumnType("tinyint unsigned");
@@ -548,7 +548,7 @@ namespace Uncreated.Warfare.Migrations
                         .HasColumnType("enum('Primary','Secondary','Hands','Backpack','Vest','Shirt','Pants','Storage','Area')");
 
                     b.Property<string>("Redirect")
-                        .HasColumnType("enum('Shirt','Pants','Vest','Hat','Mask','Backpack','Glasses','AmmoSupply','BuildSupply','RallyPoint','Radio','AmmoBag','AmmoCrate','RepairStation','Bunker','VehicleBay','EntrenchingTool','UAV','RepairStationBuilt','AmmoCrateBuilt','BunkerBuilt','Cache','RadioDamaged','LaserDesignator','MapTackFlag')");
+                        .HasColumnType("enum('Shirt','Pants','Vest','Hat','Mask','Backpack','Glasses','AmmoSupply','BuildSupply','RallyPoint','Radio','AmmoBag','AmmoCrate','RepairStation','Bunker','VehicleBay','EntrenchingTool','UAV','RepairStationBuilt','AmmoCrateBuilt','BunkerBuilt','Cache','RadioDamaged','LaserDesignator','MapTackFlag','StandardBuildable')");
 
                     b.Property<string>("RedirectVariant")
                         .HasMaxLength(36)

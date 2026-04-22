@@ -686,7 +686,7 @@
         </member>
         <member name="F:SDG.Framework.Modules.ModuleAssembly.Load_As_Byte_Array">
             <summary>
-            Requested by Trojaner. LoadFile locks the file while in use which prevents OpenMod from updating itself.
+            Useful as a workaround enabling plugin frameworks to self-update, otherwise LoadFile locks the file while in use.
             </summary>
         </member>
         <member name="T:SDG.Framework.Modules.IModuleNexus">
@@ -1101,6 +1101,12 @@
         <member name="P:SDG.Unturned.SafezoneNode.radius">
             <summary>
             This value is confusing because in the level editor it is the normalized radius, but in-game it is the square radius.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.SafezoneNode.noBuildables">
+            <summary>
+            Please check CurrentlyAllowsBuilding.
+            Bypassed by LevelAsset's ShouldAllowBuildingInSafezonesInSingleplayer option.
             </summary>
         </member>
         <member name="M:SDG.Unturned.ItemToolAsset.canBeUsedInSafezone(SDG.Unturned.SafezoneNode,System.Boolean)">
@@ -2604,6 +2610,19 @@
             If true, the server will replicate the event to clients.
             </summary>
         </member>
+        <member name="P:SDG.Unturned.ItemStorageAsset.CanPlayersOpen">
+            <summary>
+            If true, players can interact with the barricade to open storage.
+            Defaults to true.
+            Useful for pre-placed sentries to prevent stealing their guns.
+            </summary>
+        </member>
+        <member name="P:SDG.Unturned.ItemStorageAsset.ShouldDeleteContainedItemsOnDestroy">
+            <summary>
+            If true, any stored items are despawned rather than dropped when destroyed.
+            Defaults to false.
+            </summary>
+        </member>
         <member name="T:SDG.Unturned.NPCWeatherBlendAlphaCondition">
             <summary>
             Compares weather intensity to value.
@@ -3047,7 +3066,7 @@
         <member name="F:SDG.Unturned.Asset.ignoreNPOT">
             <summary>
             Should texture non-power-of-two warnings be ignored?
-            Unfortunately some third party assets have odd setups.
+            Unfortunately some already-included third-party assets have NPOT textures.
             </summary>
         </member>
         <member name="P:SDG.Unturned.Asset.ignoreTextureReadable">
@@ -3351,7 +3370,7 @@
         <member name="F:SDG.Unturned.ItemBarricadeAsset.shouldBypassPickupOwnership">
             <summary>
             Defaults to false, except for explosive charges which bypass claims.
-            Requested by Renaxon for collectible barricades that raiders can steal without destroying.
+            Useful for collectible barricades that raiders can steal without destroying.
             </summary>
         </member>
         <member name="P:SDG.Unturned.ItemBarricadeAsset.AllowPlacementInsideClipVolumes">
@@ -3363,7 +3382,7 @@
         <member name="P:SDG.Unturned.ItemBarricadeAsset.allowCollisionWhileAnimating">
             <summary>
             Should door colliders remain active while animation is playing?
-            Enabled by modders trying to make stuff like elevators.
+            Useful in special cases such as modded elevators, but prone to physics exploits.
             </summary>
         </member>
         <member name="F:SDG.Unturned.ItemBarricadeAsset.placementPreviewRef">
@@ -3578,31 +3597,6 @@
             Is the Ctrl-C or Ctrl-Break signal being handled?
             </summary>
         </member>
-        <member name="T:SDG.Unturned.DamagePlayerParameters">
-            <summary>
-            Payload for the DamageTool.damagePlayer function.
-            </summary>
-        </member>
-        <member name="F:SDG.Unturned.DamagePlayerParameters.respectArmor">
-            <summary>
-            Should armor worn on matching limb be factored in?
-            </summary>
-        </member>
-        <member name="F:SDG.Unturned.DamagePlayerParameters.applyGlobalArmorMultiplier">
-            <summary>
-            Should game mode config damage multiplier be factored in?
-            </summary>
-        </member>
-        <member name="F:SDG.Unturned.DamagePlayerParameters.trackKill">
-            <summary>
-            If player dies should it count towards quests?
-            </summary>
-        </member>
-        <member name="F:SDG.Unturned.DamagePlayerParameters.ragdollEffect">
-            <summary>
-            Effect to apply to ragdoll if dead.
-            </summary>
-        </member>
         <member name="F:SDG.Unturned.ELoadingTip.MAX">
             <summary>
             Marker for counting number of tips.
@@ -3628,6 +3622,31 @@
         <member name="M:SDG.Unturned.LoadingUI.PickNonLevelBackgroundImage">
             <summary>
             Select a loading image while on the startup screen or a level without any images.
+            </summary>
+        </member>
+        <member name="T:SDG.Unturned.DamagePlayerParameters">
+            <summary>
+            Payload for the DamageTool.damagePlayer function.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.DamagePlayerParameters.respectArmor">
+            <summary>
+            Should armor worn on matching limb be factored in?
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.DamagePlayerParameters.applyGlobalArmorMultiplier">
+            <summary>
+            Should game mode config damage multiplier be factored in?
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.DamagePlayerParameters.trackKill">
+            <summary>
+            If player dies should it count towards quests?
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.DamagePlayerParameters.ragdollEffect">
+            <summary>
+            Effect to apply to ragdoll if dead.
             </summary>
         </member>
         <member name="F:SDG.Unturned.ESteamCallValidation.ONLY_FROM_SERVER">
@@ -3762,7 +3781,7 @@
         <member name="P:SDG.Unturned.Logs.ShouldRedactLogs">
             <summary>
             If true, information like IP addresses and login tokens should be censored in vanilla logs.
-            Nelson 2024-11-11: Special thanks to Jdance and asineth0 in public issue #4740!
+            (public issue #4740)
             </summary>
         </member>
         <member name="P:SDG.Unturned.Logs.RedactionReplacement">
@@ -6049,17 +6068,6 @@
             Absolute path to the map folder.
             </summary>
         </member>
-        <member name="P:SDG.Unturned.LevelInfo.canAnalyticsTrack">
-            <summary>
-            Whether unity analytics should track this map's name. Don't want to burn all the analysis points!
-            </summary>
-        </member>
-        <member name="P:SDG.Unturned.LevelInfo.isSpecial">
-            <summary>
-            Maps included with the game only, separate from category because arena maps are misc.
-            Category is set as part of the config file. This is only mainly used to enable unity analytics tracking for map name.
-            </summary>
-        </member>
         <member name="P:SDG.Unturned.LevelInfo.isFromWorkshop">
             <summary>
             Only used for play menu categories at the moment.
@@ -6466,7 +6474,7 @@
         </member>
         <member name="M:SDG.Unturned.ServerMessageHandler_ReadyToConnect.IsNameBlockedByNelsonFilter(System.String)">
             <summary>
-            Kick players maybe trying to impersonate me. I guess nobody else named Nelson is allowed in the game!
+            Kick players maybe trying to impersonate devs. (Reports of sad/bad experiences with pretenders, unfortunately.)
             2023-09-19: relaxed this a bit by trimming names and using Equals/Starts/Ends rather than Contains
             because there was a player with Nelson in their username.
             </summary>
@@ -7381,6 +7389,12 @@
             Note: this is the list as-configured. It has not been filtered according to gameplay config.
             </summary>
         </member>
+        <member name="P:SDG.Unturned.Blueprint.RequiresStaticTags">
+            <summary>
+            Not shown in the UI. These tags are checked once per-level-startup.
+            For example, used to check for "singleplayer" tag or a map-specific tag.
+            </summary>
+        </member>
         <member name="F:SDG.Unturned.Blueprint.withoutAttachments">
             <summary>
             If true, and transferState is enabled, delete attached items.
@@ -7398,9 +7412,7 @@
         </member>
         <member name="F:SDG.Unturned.Blueprint.canBeVisibleWhenSearchedWithoutRequiredItems">
             <summary>
-            2023-05-27: requested by Renaxon because some Arid blueprints are debug-only and
-            should not be visible when players search by name. (the 3.23.7.0 update made
-            non-craftable blueprints searchable for Buak)
+            Useful for hiding developer/debug internal blueprints that should not be visible when players search by name.
             </summary>
         </member>
         <member name="P:SDG.Unturned.Blueprint.CanBeVisibleWithUnmetConditions">
@@ -10523,7 +10535,7 @@
         <member name="F:SDG.Unturned.ReceivedChatMessage.useRichTextFormatting">
             <summary>
             Whether this entry should enable rich text formatting.
-            False by default because players abuse font size and ugly colors.
+            False by default to prevent players including markup themselves.
             </summary>
         </member>
         <member name="F:SDG.Unturned.ReceivedChatMessage.contents">
@@ -11084,9 +11096,9 @@
             <summary>
             Name to use when instantiating attachment prefab.
             By default the asset guid is used, but it can be overridden because some
-            modders rely on the name for Unity's legacy animation component. For example
-            in Toothy Deerryte's case there were a lot of duplicate animations to work
-            around the guid naming, simplified by overriding name.
+            modders rely on the name for Unity's legacy animation component. Some maps
+            had a lot of duplicate animations to work around the guid naming, in which
+            case overriding the name simplified animation.
             </summary>
         </member>
         <member name="M:SDG.Unturned.ItemCaliberAsset.CalibersContainId(System.UInt16)">
@@ -11773,6 +11785,22 @@
         <member name="P:SDG.Unturned.ItemPlaceableAsset.MaxItemsRecoveredOnSalvage">
             <summary>
             Maximum number of items to recover when salvaged.
+            </summary>
+        </member>
+        <member name="P:SDG.Unturned.ItemPlaceableAsset.SalvageItemFullHealthRef">
+            <summary>
+            Item or spawn table recovered when picked up at 100% health.
+            Defaults to self.
+            </summary>
+        </member>
+        <member name="P:SDG.Unturned.ItemPlaceableAsset.MinItemsRecoveredOnSalvageFullHealth">
+            <summary>
+            Minimum number of items to recover when salvaged at full health.
+            </summary>
+        </member>
+        <member name="P:SDG.Unturned.ItemPlaceableAsset.MaxItemsRecoveredOnSalvageFullHealth">
+            <summary>
+            Maximum number of items to recover when salvaged at full health.
             </summary>
         </member>
         <member name="P:SDG.Unturned.ItemPlaceableAsset.minItemsDroppedOnDestroy">
@@ -12576,6 +12604,17 @@
             OR use the nearly drop-in replacements FindFirstItemByAsset or HasItemByAsset.
             </summary>
         </member>
+        <member name="M:SDG.Unturned.SteamBBCodeUtils.removeYouTubePreviews(System.String@)">
+            <summary>
+            In-game rich text does not support embedded YouTube videos, but they look great in the web browser,
+            so we simply remove them from the in-game text.
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.SteamBBCodeUtils.removeCodeFormatting(System.String@)">
+            <summary>
+            Unfortunately in-game rich text does not have code formatting yet, so remove the tags while preserving text.
+            </summary>
+        </member>
         <member name="P:SDG.Unturned.ItemClothingAsset.armor">
             <summary>
             Multiplier to incoming damage. Defaults to 1.0.
@@ -12644,17 +12683,6 @@
             If true, the real item is shown rather than the cosmetic item. If false, the cosmetic item can be seen.
             </summary>
         </member>
-        <member name="M:SDG.Unturned.SteamBBCodeUtils.removeYouTubePreviews(System.String@)">
-            <summary>
-            In-game rich text does not support embedded YouTube videos, but they look great in the web browser,
-            so we simply remove them from the in-game text.
-            </summary>
-        </member>
-        <member name="M:SDG.Unturned.SteamBBCodeUtils.removeCodeFormatting(System.String@)">
-            <summary>
-            Unfortunately in-game rich text does not have code formatting yet, so remove the tags while preserving text.
-            </summary>
-        </member>
         <member name="M:SDG.Unturned.ListExtension.GetRandomIndex``1(System.Collections.Generic.List{``0})">
             <summary>
             Get index within bounds assuming list is not empty.
@@ -12688,6 +12716,39 @@
         <member name="P:SDG.Unturned.DamageZombieParameters.AlertPosition">
             <summary>
             If not null and damage is applied, <see cref="M:SDG.Unturned.Zombie.alert(SDG.Unturned.Player)"/> is called with this position (startle: true).
+            </summary>
+        </member>
+        <member name="T:SDG.Unturned.IArmorFalloff">
+            <summary>
+            Implemented by assets which gun supports checking for damage falloff.
+            When implemented, PopulateAsset should call PopulateArmorFalloff.
+            </summary>
+        </member>
+        <member name="P:SDG.Unturned.IArmorFalloff.ArmorFalloffMaxRange">
+            <summary>
+            Ranged damage (guns) from greater than this distance finishes decreasing toward falloff multiplier.
+            Defaults to -1, in which case armor falloff is ignored.
+            </summary>
+        </member>
+        <member name="P:SDG.Unturned.IArmorFalloff.ArmorFalloffRange">
+            <summary>
+            Ranged damage (guns) from greater than this distance begins decreasing toward falloff multiplier.
+            Defaults to ArmorFalloffMaxRange.
+            </summary>
+        </member>
+        <member name="P:SDG.Unturned.IArmorFalloff.ArmorFalloffMultiplier">
+            <summary>
+            [0, 1] normalized percentage of incoming damage to apply past IncomingDamageFalloffMaxRange.
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.IArmorFalloffEx.DoesArmorFalloffShowHitmarker(SDG.Unturned.IArmorFalloff,System.Single)">
+            <summary>
+            Should hitmarker be shown client-side for a given range?
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.IArmorFalloffEx.GetArmorFalloffMultiplier(SDG.Unturned.IArmorFalloff,System.Single)">
+            <summary>
+            Amount to multiply damage by at a given range.
             </summary>
         </member>
         <member name="P:SDG.Unturned.SleekButtonState.UseContentTooltip">
@@ -14496,6 +14557,16 @@
             Players are kicked from multiplayer if their skin color is within threshold of any of these rules.
             </summary>
         </member>
+        <member name="P:SDG.Unturned.LevelAsset.ShouldAllowBuildingInSafezonesInSingleplayer">
+            <summary>
+            If true, bypasses SafezoneNode no-buildables mode in singleplayer.
+            </summary>
+        </member>
+        <member name="P:SDG.Unturned.LevelAsset.Tags">
+            <summary>
+            Blueprints can test for these tags. (Future extension here?)
+            </summary>
+        </member>
         <member name="T:SDG.Unturned.EAimAlignmentTransformOwner">
             <summary>
             Controls where attachments looks for ADS alignment transform.
@@ -16164,9 +16235,9 @@
             <summary>
             Name to use when instantiating item prefab.
             By default the asset legacy id is used, but it can be overridden because some
-            modders rely on the name for Unity's legacy animation component. For example
-            in Toothy Deerryte's case there were a lot of duplicate animations to work
-            around the id naming, simplified by overriding name.
+            modders rely on the name for Unity's legacy animation component. Some maps
+            had a lot of duplicate animations to work around the id naming, in which
+            case overriding the name simplified animation.
             </summary>
         </member>
         <member name="F:SDG.Unturned.ItemAsset.equipableMovementSpeedMultiplier">
@@ -16564,6 +16635,13 @@
             transform's localRotation when the vehicle was instantiated.
             </summary>
         </member>
+        <member name="F:SDG.Unturned.TrainCar.objectsToRoot">
+            <summary>
+            Objects transform relative to Root.
+            Identity in vanilla, but may be otherwise in mods.
+            Necessary for fix interpolation issue with front/back transform.
+            </summary>
+        </member>
         <member name="F:SDG.Unturned.TrainCar.rootRigidbody">
             <summary>
             Rigidbody component on the root game object.
@@ -16941,6 +17019,14 @@
             Client simulate driving input.
             </summary>
         </member>
+        <member name="M:SDG.Unturned.InteractableVehicle.TeleportTrainCars(System.Boolean)">
+            <summary>
+            2026-01-30: adding forceSetTransform to work around an issue with newly-spawned trains:
+            It seems after Unity 2022 LTS or 3.26.1.0 the position passed to Instantiate takes
+            priority over the call to rigidbody SetPosition, and new trains default to zero. This
+            prevents players from entering the train.
+            </summary>
+        </member>
         <member name="F:SDG.Unturned.InteractableVehicle.hasUnityCalledStart">
             <summary>
             Nelson 2025-05-05: ran into a bug where our manual OnUpdate is called before Unity calls Start!
@@ -17060,6 +17146,11 @@
         <member name="F:SDG.Unturned.InteractableVehicle.decayLastUpdatePosition">
             <summary>
             transform.position used to test whether vehicle is moving.
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.InteractableVehicle.NotifyFirstSpawned">
+            <summary>
+            Should be called AFTER replication (if applicable) so that events can call methods relying on replication.
             </summary>
         </member>
         <member name="F:SDG.Unturned.PlayerNPCDialogueUI.hasNextDialogue">
@@ -17760,7 +17851,7 @@
         <member name="P:SDG.Unturned.ItemWeaponAsset.allowFleshFx">
             <summary>
             Should player/animal/zombie surface be nulled on hit?
-            Requested by spyjack for a chainsaw-style shield that was overboard with the blood.
+            May be useful for weapons going overboard with the blood splatters.
             </summary>
         </member>
         <member name="P:SDG.Unturned.ItemWeaponAsset.bypassAllowedToDamagePlayer">
@@ -18549,7 +18640,8 @@
         </member>
         <member name="P:SDG.Unturned.AnimalAsset.shouldPlayAnimsOnDedicatedServer">
             <summary>
-            Temporary until something better makes sense? For Spyjack.
+            Temporary until something better makes sense?
+            Originally added for modded animals triggering damage from animations.
             </summary>
         </member>
         <member name="P:SDG.Unturned.AnimalAsset.ShouldPreventMoveDuringStartle">
@@ -19217,7 +19309,7 @@
         </member>
         <member name="T:SDG.Unturned.GunStatsExporter">
             <summary>
-            Nelson 2024-11-29: Curious to put all the gun stats in one place for easier comparison. Rather rudimentary at
+            Curious to put all the gun stats in one place for easier comparison. Rather rudimentary at
             the moment so not including in the update.
             </summary>
         </member>
@@ -19531,7 +19623,7 @@
         <member name="F:SDG.Unturned.ItemGunAsset.requiresNonZeroAttachmentCaliber">
             <summary>
             Defaults to false. If true, attachments must specify at least one non-zero caliber.
-            Requested by Great Hero J to block vanilla attachments in VGR.
+            Useful for blocking vanilla attachments.
             </summary>
         </member>
         <member name="P:SDG.Unturned.ItemGunAsset.RechamberAfterMagazineAttached">
@@ -19934,9 +20026,6 @@
             Maps region coord to a list of sub-road renderers in that region.
             Unlike older "region" features, coord can be outside of the old bounds.
             Not used in the editor or the dedicated server.
-            
-            Nelson 2025-03-28: experimenting with this to see whether it reduces time spent culling far-away road
-            renderers on Rio de Janeiro Remastered. (Lots of roads on this map.)
             </summary>
         </member>
         <member name="P:SDG.Unturned.LevelRoads.RoadMaxDistance">
@@ -20276,6 +20365,11 @@
             <summary>
             Notify menus that levels list has changed.
             Used when creating/deleting levels, as well as following workshop changes.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.Level.cachedStaticTags">
+            <summary>
+            Initialized along with level asset.
             </summary>
         </member>
         <member name="M:SDG.Unturned.Level.getAsset">

@@ -19,7 +19,6 @@ using SDG.Framework.Modules;
 using StackCleaner;
 using Stripe;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -53,6 +52,7 @@ using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Kits.Loadouts;
 using Uncreated.Warfare.Kits.Requests;
 using Uncreated.Warfare.Kits.Tweaks;
+using Uncreated.Warfare.Kits.UI;
 using Uncreated.Warfare.Kits.Whitelists;
 using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.Layouts.Seeding;
@@ -604,6 +604,10 @@ public sealed class WarfareModule
         bldr.RegisterType<FobHUD>()
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+        
+        bldr.RegisterType<KitSelectionUI>()
+            .AsSelf().AsImplementedInterfaces()
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
 
         bldr.RegisterType<PopupUI>().SingleInstance();
         bldr.RegisterType<StagingUI>().SingleInstance();
@@ -778,7 +782,8 @@ public sealed class WarfareModule
 
         // Stats
         bldr.RegisterType<PointsRewardsEvents>()
-            .AsImplementedInterfaces();
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
 
         bldr.RegisterType<DatabaseStatsBuffer>()
             .AsSelf().AsImplementedInterfaces()
@@ -820,11 +825,15 @@ public sealed class WarfareModule
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
 
-        bldr.RegisterType<MySqlKitFavoriteService>()
+        bldr.RegisterRpcType<MySqlKitFavoriteService>()
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
 
         bldr.RegisterRpcType<MySqlKitAccessService>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
+
+        bldr.RegisterType<KitStatisticService>()
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
 
@@ -857,6 +866,9 @@ public sealed class WarfareModule
         bldr.RegisterType<KitRequestService>()
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+
+        bldr.RegisterType<KitRequirementManager>()
+            .AsSelf().InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
         
         bldr.RegisterType<PunchToRequestTweaks>()
             .AsSelf().AsImplementedInterfaces();

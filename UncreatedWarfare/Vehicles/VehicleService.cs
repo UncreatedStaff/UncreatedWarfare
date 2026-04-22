@@ -32,7 +32,9 @@ public class VehicleService :
     private readonly VehicleSeatRestrictionService _seatRestrictions;
     private EventDispatcher? _eventDispatcher;
 
+    // NOTE: If changing this, the zone editor also needs updated to reflect the changes at VehicleBayDevkitNodeSystem.VehicleSpawnOffset
     public const float VehicleSpawnOffset = 5f;
+
     public const ushort MaxBatteryCharge = 10000;
 
     public IReadOnlyList<WarfareVehicle> Vehicles { get; }

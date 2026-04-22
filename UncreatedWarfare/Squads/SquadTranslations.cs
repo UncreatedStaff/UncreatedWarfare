@@ -1,3 +1,4 @@
+using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Squads;
@@ -25,4 +26,5 @@ public class SquadTranslations : PropertiesTranslationCollection
     public readonly Translation SquadLockedDescription = new Translation("except friends and group members", TranslationOptions.TMProUI);
     public readonly Translation<string> SquadLeader = new Translation<string>("Leader: {0}", TranslationOptions.TMProUI);
     public readonly Translation SquadSquadNamePlaceholder = new Translation("Squad name", TranslationOptions.TMProUI);
+    public readonly Translation<Kit> SquadKitOptionLabel = new Translation<Kit>("Give <#fff>{0}</color>", TranslationOptions.TMProUI, Kit.FormatRichWithSpriteAndClass);
 }

@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Configuration;
+using System;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Zones;
 
@@ -13,6 +14,11 @@ public interface ITeamManager<out TTeam> where TTeam : Team
     /// List of all teams currently active.
     /// </summary>
     IReadOnlyList<TTeam> AllTeams { get; }
+
+    /// <summary>
+    /// Array of all active factions without duplicates, used for kit queries.
+    /// </summary>
+    IReadOnlyList<uint> Factions { get; }
 
     /// <summary>
     /// Find a team from a string value, such as from config.
@@ -33,7 +39,7 @@ public interface ITeamManager<out TTeam> where TTeam : Team
     /// <summary>
     /// Used to initialize team info from the layout and map configuration.
     /// </summary>
-    UniTask InitializeAsync(CancellationToken token = default);
+    UniTask InitializeAsync(IServiceProvider serviceProvider, CancellationToken token = default);
 
     /// <summary>
     /// Activates the team manager. This happens just before the first phase is activated.

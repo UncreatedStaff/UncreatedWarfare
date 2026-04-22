@@ -69,7 +69,7 @@ public class SignInstancer : ILayoutHostedService, IEventListener<BarricadePlace
 
     UniTask ILayoutHostedService.StopAsync(CancellationToken token)
     {
-        ResetAllSigns();
+        ResetAllSigns(changeText: false);
         _serviceProvider = null;
         return UniTask.CompletedTask;
     }
@@ -343,7 +343,7 @@ public class SignInstancer : ILayoutHostedService, IEventListener<BarricadePlace
         }
     }
 
-    private void ResetAllSigns()
+    private void ResetAllSigns(bool changeText = true)
     {
         GameThread.AssertCurrent();
 
@@ -355,7 +355,8 @@ public class SignInstancer : ILayoutHostedService, IEventListener<BarricadePlace
             if (!_signProviders.ContainsKey(barricade.Drop.instanceID))
                 continue;
 
-            SendChangeText.Invoke(sign.GetNetId(), ENetReliability.Unreliable, BarricadeManager.GatherClientConnections(barricade.Coord.x, barricade.Coord.y, barricade.Plant), sign.text);
+            if (changeText)
+                SendChangeText.Invoke(sign.GetNetId(), ENetReliability.Unreliable, BarricadeManager.GatherClientConnections(barricade.Coord.x, barricade.Coord.y, barricade.Plant), sign.text);
         }
 
         _signProviders.Clear();

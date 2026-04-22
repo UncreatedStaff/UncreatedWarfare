@@ -1,9 +1,6 @@
 using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.Configuration;
-using SDG.NetTransport;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Patterns;
@@ -276,6 +273,8 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
 
         if (_doVote)
             SendVotes(set);
+        else
+            SendNoVotes(set);
 
         if (winningTeam != null)
         {
@@ -426,7 +425,7 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
                     
                     WarfarePlayer member = topSquad.Members[m];
                     UnturnedLabel memberElement = squadElement.Members[m];
-                    string classIcon = member.Component<KitPlayerComponent>().ActiveClass.GetIconString();
+                    string classIcon = member.Component<KitPlayerComponent>().ActiveKit?.Class.GetIconString() ?? Class.None.GetIconString();
                     string rank = _pointsService.GetRankFromExperience(member.CachedPoints.XP).Abbreviation;
                     string memberName = $"{rank} {member.Names.CharacterName}";
                     if (member.IsSquadLeader())

@@ -182,7 +182,7 @@ public abstract class BasePhase<TTeamSettings> : ILayoutPhase,
     void IEventListener<PlayerExitedZone>.HandleEvent(PlayerExitedZone e, IServiceProvider serviceProvider)
     {
         // code for PhaseTeamSettings.Grounded
-        if (!IsActive || e.Player.IsDisconnecting || !e.Player.IsOnline)
+        if (!IsActive || e.Player.IsDisconnecting || !e.Player.IsOnline || e.Zone.Type != ZoneType.MainBase)
             return;
 
         if (e.Player.IsOnDuty || !e.Player.Team.IsValid)

@@ -8,6 +8,8 @@ using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Services;
+using Uncreated.Warfare.Stats;
+using Uncreated.Warfare.Stats.EventHandlers;
 using Uncreated.Warfare.Util.Timing;
 
 namespace Uncreated.Warfare.Layouts.Seeding;
@@ -50,6 +52,16 @@ internal class SeedingPlayerCountMonitor :
         /// </summary>
         /// <remarks>seeding:vote_time</remarks>
         public TimeSpan VoteLength { get; set; }
+
+        /// <summary>
+        /// Whether or not to add to global stats during a seeding gamemode.
+        /// </summary>
+        public bool TrackStats { get; set; }
+
+        /// <summary>
+        /// Whether or not to add to XP and credits during a seeding gamemode.
+        /// </summary>
+        public bool TrackPoints { get; set; }
     }
 
 
@@ -57,6 +69,8 @@ internal class SeedingPlayerCountMonitor :
     private readonly WarfareModule _layoutHost;
     private readonly LayoutFactory _layoutFactory;
     private readonly ILoopTickerFactory _loopTickerFactory;
+    private readonly PointsRewardsEvents _pointsRewards;
+    private readonly DatabaseStatsBuffer _databaseStats;
     private readonly ILogger<SeedingPlayerCountMonitor> _logger;
     private readonly IDisposable _changeToken;
 
@@ -84,6 +98,9 @@ internal class SeedingPlayerCountMonitor :
     public bool IsSeeding { get; private set; }
     public bool IsAwaitingStart => _awaitStartTicker != null;
 
+    /// <summary>
+    /// Invoked when config is updated. May not be invoked on the main thread.
+    /// </summary>
     public event Action<SeedingRules>? RulesUpdated;
 
     public SeedingPlayerCountMonitor(
@@ -92,21 +109,25 @@ internal class SeedingPlayerCountMonitor :
         LayoutFactory layoutFactory,
         ILoggerFactory loggerFactory,
         ILoopTickerFactory loopTickerFactory,
+        PointsRewardsEvents pointsRewards,
+        DatabaseStatsBuffer databaseStats,
         IServiceProvider serviceProvider)
     {
         _systemConfig = systemConfig;
         _layoutHost = layoutHost;
         _layoutFactory = layoutFactory;
         _loopTickerFactory = loopTickerFactory;
+        _pointsRewards = pointsRewards;
+        _databaseStats = databaseStats;
         _serviceProvider = serviceProvider;
         _logger = loggerFactory.CreateLogger<SeedingPlayerCountMonitor>();
         Rules = new SeedingRules();
 
-        ReloadRules();
+        ReloadRules(true);
 
         _changeToken = ChangeToken.OnChange(
             systemConfig.GetReloadToken,
-            me => me.ReloadRules(),
+            me => me.ReloadRules(false),
             this
         );
 
@@ -118,29 +139,53 @@ internal class SeedingPlayerCountMonitor :
         _nextVotePlayerThreshold = Rules.VotePlayerThreshold;
     }
 
-    private void ReloadRules()
+    private void ReloadRules(bool startup)
     {
         Rules.Enabled = _systemConfig.GetValue<bool>("seeding:enabled");
+        Rules.TrackPoints = _systemConfig.GetValue<bool>("seeding:track_points");
+        Rules.TrackStats = _systemConfig.GetValue<bool>("seeding:track_stats");
         Rules.VotePlayerThreshold = _systemConfig.GetValue("seeding:start_vote_players", 15);
         Rules.StartPlayerThreshold = _systemConfig.GetValue("seeding:start_game_players", 20);
         Rules.StartCountdownLength = _systemConfig.GetValue("seeding:countdown_time", TimeSpan.FromSeconds(30));
         Rules.VoteLength = _systemConfig.GetValue("seeding:vote_time", TimeSpan.FromMinutes(1));
         RulesUpdated?.Invoke(Rules);
+
+        if (startup)
+            return;
+
+        UpdateGlobals(IsSeeding);
+
+        if (Rules.Enabled)
+        {
+            UniTask.Create(async () =>
+            {
+                await UniTask.SwitchToMainThread();
+                CheckShouldStartVote();
+                if (!VoteManager.IsVoting && !IsSeeding)
+                    CheckShouldAwaitStart();
+            });
+            return;
+        }
+
+        Interlocked.Exchange(ref _awaitStartTicker, null)?.Dispose();
+        try
+        {
+            if (VoteManager.IsVoting)
+                _ = VoteManager.EndVoteAsync(cancelled: true);
+        }
+        catch (ObjectDisposedException) { }
     }
 
     UniTask ILayoutHostedService.StartAsync(CancellationToken token)
     {
-        _logger.LogInformation("Hosted SPCM.");
         if (!_layoutHost.IsLayoutActive())
             return UniTask.CompletedTask;
 
         bool updateUi = true;
         if (_layoutHost.GetActiveLayout().LayoutInfo.IsSeeding)
         {
-            _logger.LogInformation("seeding layout.");
             if (!IsSeeding)
             {
-                _logger.LogInformation("Starting seeding.");
                 updateUi = false;
                 StartSeeding();
                 CheckShouldAwaitStart();
@@ -148,14 +193,13 @@ internal class SeedingPlayerCountMonitor :
         }
         else if (IsSeeding)
         {
-            _logger.LogInformation("Stopping seeding.");
             IsSeeding = false;
             _nextVotePlayerThreshold = Rules.VotePlayerThreshold;
             CheckShouldStartVote();
+            UpdateGlobals(false);
         }
         else
         {
-            _logger.LogInformation("Seeding state correct.");
             return UniTask.CompletedTask;
         }
 
@@ -165,6 +209,20 @@ internal class SeedingPlayerCountMonitor :
         }
 
         return UniTask.CompletedTask;
+    }
+
+    private void UpdateGlobals(bool isSeeding)
+    {
+        if (isSeeding)
+        {
+            _pointsRewards.TrackPoints = Rules.TrackPoints;
+            _databaseStats.TrackStats = Rules.TrackStats;
+        }
+        else
+        {
+            _pointsRewards.TrackPoints = true;
+            _databaseStats.TrackStats = true;
+        }
     }
 
     UniTask ILayoutHostedService.StopAsync(CancellationToken token)
@@ -181,7 +239,11 @@ internal class SeedingPlayerCountMonitor :
     {
         if (!Rules.Enabled || _layoutFactory.NextLayout != null)
         {
-            IsSeeding = false;
+            if (IsSeeding)
+            {
+                IsSeeding = false;
+                UpdateGlobals(false);
+            }
             return UniTask.CompletedTask;
         }
         
@@ -205,10 +267,12 @@ internal class SeedingPlayerCountMonitor :
     [EventListener(MustRunInstantly = true)]
     void IEventListener<PlayerJoined>.HandleEvent(PlayerJoined e, IServiceProvider serviceProvider)
     {
+        if (!Rules.Enabled)
+            return;
+
         CheckShouldAwaitStart();
         if (IsSeeding)
         {
-            _logger.LogInformation($"Sending UI to {e.Player}.");
             _playHud?.UpdateStage();
         }
     }
@@ -267,7 +331,14 @@ internal class SeedingPlayerCountMonitor :
     [EventListener(MustRunInstantly = true)]
     void IEventListener<PlayerLeft>.HandleEvent(PlayerLeft e, IServiceProvider serviceProvider)
     {
+        if (!Rules.Enabled)
+            return;
+
         CheckShouldStartVote();
+        if (IsSeeding)
+        {
+            _playHud?.UpdateStage();
+        }
     }
 
     private void StartVote()
@@ -335,6 +406,7 @@ internal class SeedingPlayerCountMonitor :
             return;
 
         IsSeeding = false;
+        UpdateGlobals(false);
         _playHud?.UpdateStage();
 
         _logger.LogInformation("Ending seeding.");
@@ -347,6 +419,7 @@ internal class SeedingPlayerCountMonitor :
             return;
 
         _logger.LogInformation("Starting seeding for PC.");
+        UpdateGlobals(true);
         _nextVotePlayerThreshold = Rules.VotePlayerThreshold;
 
         _playHud ??= _serviceProvider.GetRequiredService<SeedingPlayHud>();
@@ -357,11 +430,16 @@ internal class SeedingPlayerCountMonitor :
             _playHud.UpdateStage();
         }
 
-        using (LayoutInfo newLayout = _pendingLayout ?? _layoutFactory.SelectRandomLayout(seeding: true))
+        if (_layoutFactory.NextLayout == null)
         {
+            using LayoutInfo newLayout = _pendingLayout ?? _layoutFactory.SelectRandomLayout(seeding: true);
             Interlocked.CompareExchange(ref _pendingLayout, null, newLayout);
             _layoutFactory.NextLayout = new FileInfo(newLayout.FilePath);
             _logger.LogInformation($"Selected seeding layout: {newLayout.DisplayName}.");
+        }
+        else
+        {
+            _logger.LogInformation($"Using specified next layout: {_layoutFactory.NextLayout.Name}.");
         }
 
         if (!delayStart)

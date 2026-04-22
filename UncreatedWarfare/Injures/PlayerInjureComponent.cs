@@ -74,7 +74,7 @@ public class PlayerInjureComponent : MonoBehaviour,
     private static bool CanRevive(WarfarePlayer medic)
     {
         return !medic.IsInjured()
-               && medic.Component<KitPlayerComponent>().ActiveClass == Class.Medic;
+               && medic.Component<KitPlayerComponent>().IsClass(Class.Medic);
     }
 
     /// <summary>
@@ -450,7 +450,7 @@ public class PlayerInjureComponent : MonoBehaviour,
             {
                 if (player.IsInjured()
                     || (player.Position - position).sqrMagnitude > MarkerRenderDistance * MarkerRenderDistance
-                    || player.Component<KitPlayerComponent>().ActiveClass != Class.Medic
+                    || !player.Component<KitPlayerComponent>().IsClass(Class.Medic)
                     || player.UnturnedPlayer.life.isDead
                     || player.Team != Player.Team)
                 {

@@ -29,6 +29,11 @@ public partial class PlayerNitroBoostService : IEventListener<PlayerJoined>
     private readonly ChatService? _chatService;
     private readonly PlayersTranslations? _translations;
 
+    /// <summary>
+    /// Invoked on the server when a player's status is updated, whether or not they're online.
+    /// </summary>
+    public event Action<WarfarePlayer?, CSteamID, bool>? OnNitroBoostStatusUpdated;
+
     public PlayerNitroBoostService(IServiceProvider serviceProvider, ILogger<PlayerNitroBoostService> logger)
     {
         _logger = logger;
@@ -99,6 +104,7 @@ public partial class PlayerNitroBoostService : IEventListener<PlayerJoined>
             _logger.LogError(ex, "Error checking for nitro boosting.");
         }
 
+        await UniTask.SwitchToMainThread(token);
         BinaryPlayerSave save = new BinaryPlayerSave(steam64, _logger);
 
         save.Load();
@@ -156,9 +162,18 @@ public partial class PlayerNitroBoostService : IEventListener<PlayerJoined>
                 }
 
                 _kitSigns?.UpdateSigns(pl);
-                if (!isNitroBoosting && _module != null && _module.IsLayoutActive() && pl.Component<KitPlayerComponent>().CachedKit is { RequiresServerBoost: true })
+                if (!isNitroBoosting && _module != null && _module.IsLayoutActive() && pl.Component<KitPlayerComponent>() is { ActiveKit.CachedKit.RequiresServerBoost: true })
                 {
                     await _module.ScopedProvider.Resolve<KitRequestService>().GiveAvailableFreeKitAsync(pl).ConfigureAwait(false);
+                }
+
+                try
+                {
+                    OnNitroBoostStatusUpdated?.Invoke(pl, steam64, isNitroBoosting);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error invoking OnNitroBoostStatusUpdated.");
                 }
                 return;
             }
@@ -166,9 +181,21 @@ public partial class PlayerNitroBoostService : IEventListener<PlayerJoined>
             BinaryPlayerSave save = new BinaryPlayerSave(steam64, _logger);
             
             save.Load();
-            save.WasNitroBoosting = isNitroBoosting;
             _logger.LogDebug($"Nitro boost status updated for {steam64}: {(save.WasNitroBoosting ? "Boosting" : "Not Boosting")} -> {(isNitroBoosting ? "Boosting" : "Not Boosting")}.");
+            if (save.WasNitroBoosting == isNitroBoosting)
+                return;
+
+            save.WasNitroBoosting = isNitroBoosting;
             save.Save();
+
+            try
+            {
+                OnNitroBoostStatusUpdated?.Invoke(null, steam64, isNitroBoosting);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error invoking OnNitroBoostStatusUpdated.");
+            }
         });
     }
 

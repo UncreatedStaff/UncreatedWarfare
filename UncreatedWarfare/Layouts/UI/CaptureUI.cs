@@ -20,19 +20,27 @@ namespace Uncreated.Warfare.Layouts.UI;
 public class CaptureUI : UnturnedUI, IHudUIListener
 {
     private readonly Func<CSteamID, CaptureUIData> _getCaptureUIData;
-    private readonly IPlayerService _playerService;
     private readonly WarfareModule _module;
     private readonly ITranslationService _translationService;
-    private bool _isHidden;
+    private readonly HudManager _hudManager;
 
     public UnturnedLabel Title { get; } = new UnturnedLabel("TitleLabel");
     public ImageProgressBar CaptureProgress { get; } = new ImageProgressBar("CaptureProgress");
-    public CaptureUI(AssetConfiguration assetConfig, ILoggerFactory loggerFactory, IPlayerService playerService, WarfareModule module, ITranslationService translationService)
-        : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:CaptureHUD"), reliable: false)
+    public CaptureUI(
+        AssetConfiguration assetConfig,
+        ILoggerFactory loggerFactory,
+        WarfareModule module,
+        ITranslationService translationService,
+        HudManager hudManager)
+        : base(
+            loggerFactory,
+            assetConfig.GetAssetLink<EffectAsset>("UI:CaptureHUD"),
+            reliable: false
+        )
     {
-        _playerService = playerService;
         _module = module;
         _translationService = translationService;
+        _hudManager = hudManager;
         IsSendReliable = true;
         _getCaptureUIData = GetCaptureUIData;
     }
@@ -52,7 +60,7 @@ public class CaptureUI : UnturnedUI, IHudUIListener
         {
             WarfarePlayer player = set.Next;
             CaptureUIData data = GetOrAddData(player);
-            if (_isHidden)
+            if (_hudManager.IsHidden(set.Next))
             {
                 if (!data.HasUI)
                     continue;
@@ -139,15 +147,14 @@ public class CaptureUI : UnturnedUI, IHudUIListener
         if (player != null)
         {
             ClearFromPlayer(player.Connection);
-            GetOrAddData(player).HasUI = false;
+            GetData<CaptureUIData>(player.Steam64)?.HasUI = false;
             return;
         }
 
-        _isHidden = true;
         ClearFromAllPlayers();
-        foreach (WarfarePlayer pl in _playerService.OnlinePlayers)
+        foreach (CaptureUIData data in UnturnedUIDataSource.EnumerateData(this).OfType<CaptureUIData>())
         {
-            GetOrAddData(pl).HasUI = false;
+            data.HasUI = false;
         }
     }
 
@@ -160,7 +167,6 @@ public class CaptureUI : UnturnedUI, IHudUIListener
 
         if (layout.ActivePhase is not ActionPhase)
         {
-            _isHidden = false;
             return;
         }
 
@@ -175,7 +181,6 @@ public class CaptureUI : UnturnedUI, IHudUIListener
             return;
         }
 
-        _isHidden = false;
         if (uiEvents == null || rot == null)
             return;
 

@@ -24,16 +24,24 @@ public class PlayerSquadHUD : UnturnedUI,
     IHudUIListener
 {
     private readonly IPlayerService _playerService;
+    private readonly HudManager _hudManager;
     public UnturnedLabel SquadName { get; } = new UnturnedLabel("PlayerSquadName");
     public UnturnedLabel SquadNumber { get; } = new UnturnedLabel("PlayerSquadName/PlayerSquadNumber");
     public UnturnedLabel[] SquadMembers { get; } = ElementPatterns.CreateArray<UnturnedLabel>("PlayerSquadMember_{0}", 1, to: 6);
 
-    private bool _isHidden;
-
-    public PlayerSquadHUD(AssetConfiguration assetConfig, ILoggerFactory loggerFactory, IPlayerService playerService)
-        : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:PlayerSquadHUD"), staticKey: true)
+    public PlayerSquadHUD(
+        AssetConfiguration assetConfig,
+        ILoggerFactory loggerFactory,
+        IPlayerService playerService,
+        HudManager hudManager)
+        : base(
+            loggerFactory,
+            assetConfig.GetAssetLink<EffectAsset>("UI:PlayerSquadHUD"),
+            staticKey: true
+        )
     {
         _playerService = playerService;
+        _hudManager = hudManager;
     }
 
     [EventListener(MustRunInstantly = true, RequireActiveLayout = true)]
@@ -75,7 +83,7 @@ public class PlayerSquadHUD : UnturnedUI,
         if (!player.IsOnline)
             return;
 
-        if (_isHidden)
+        if (_hudManager.IsHidden(player))
         {
             ClearFromPlayer(player.Connection);
             return;
@@ -89,7 +97,7 @@ public class PlayerSquadHUD : UnturnedUI,
             if (i < squad.Members.Count)
             {
                 WarfarePlayer member = squad.Members[i];
-                Class kitClass = member.Component<KitPlayerComponent>().ActiveClass;
+                Class kitClass = member.Component<KitPlayerComponent>().ActiveKit?.Class ?? Class.None;
                 string memberName = $"<mspace=20>{kitClass.GetIconString()}</mspace>  {member.Names.PlayerName}";
 
                 element.Show(player);
@@ -105,11 +113,11 @@ public class PlayerSquadHUD : UnturnedUI,
     {
         if (player != null)
         {
-            ClearFromPlayer(player.Connection);
+            if (player.IsInSquad())
+                ClearFromPlayer(player.Connection);
             return;
         }
 
-        _isHidden = true;
         ClearFromAllPlayers();
     }
 
@@ -126,7 +134,6 @@ public class PlayerSquadHUD : UnturnedUI,
             return;
         }
 
-        _isHidden = false;
         foreach (WarfarePlayer pl in _playerService.OnlinePlayers)
         {
             Restore(pl);

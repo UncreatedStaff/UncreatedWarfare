@@ -1,9 +1,7 @@
 using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -79,13 +77,11 @@ public class CommandContext : ControlException
         }
     }
 
-#nullable disable
     /// <summary>
     /// Player that called the command. Will be <see langword="null"/> if the command was called from console or some other source, but not marked as nullable for ease of use.
     /// </summary>
     /// <remarks>Always call <see cref="AssertRanByPlayer"/> before using this property.</remarks>
-    public WarfarePlayer Player { get; }
-#nullable restore
+    public WarfarePlayer? Player { get; }
 
     /// <summary>
     /// User that called the command. Will never be <see langword="null"/>.
@@ -1820,7 +1816,7 @@ public class CommandContext : ControlException
     /// </summary>
     public void AssertCommandNotOnIsolatedCooldown()
     {
-        if (!OnIsolatedCooldown || _cooldownManager == null)
+        if (!OnIsolatedCooldown || _cooldownManager == null || Player == null)
             return;
 
         if (Command is ICompoundingCooldownCommand compounding)
@@ -1840,6 +1836,7 @@ public class CommandContext : ControlException
     }
 
     /// <exception cref="CommandContext"/>
+    [MemberNotNull(nameof(Player))]
     public void AssertRanByPlayer()
     {
         if (Player == null || !Player.IsOnline)

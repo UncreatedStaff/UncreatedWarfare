@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using Uncreated.Warfare.Database.Abstractions;
@@ -42,6 +41,7 @@ public class SessionManager :
 {
     private readonly IPlayerService _playerService;
     private readonly IGameDataDbContext _dbContext;
+    private readonly EventDispatcher _eventDispatcher;
     private readonly ServerHeartbeatTimer _heartbeatTimer;
     private readonly ConcurrentDictionary<ulong, SessionRecord> _sessions = new ConcurrentDictionary<ulong, SessionRecord>();
     private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
@@ -57,11 +57,13 @@ public class SessionManager :
         ServerHeartbeatTimer heartbeatTimer,
         IConfiguration systemConfig,
         IGameDataDbContext dbContext,
+        EventDispatcher eventDispatcher,
         WarfareModule module)
     {
         _mapScheduler = mapScheduler;
         _logger = logger;
         _dbContext = dbContext;
+        _eventDispatcher = eventDispatcher;
         _dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
         _dbContext.ChangeTracker.QueryTrackingBehavior = QueryTrackingBehavior.NoTracking;
         _playerService = playerService;
@@ -83,10 +85,11 @@ public class SessionManager :
         // end all sessions
 
         DateTimeOffset now = DateTimeOffset.UtcNow;
+        KeyValuePair<ulong, SessionRecord>[] sessions;
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            KeyValuePair<ulong, SessionRecord>[] sessions = _sessions.ToArray();
+            sessions = _sessions.ToArray();
             _sessions.Clear();
 
             _logger.LogInformation("Finalizing session(s): {0}.", sessions.Length);
@@ -98,6 +101,17 @@ public class SessionManager :
         finally
         {
             _semaphore.Release();
+        }
+
+        foreach (KeyValuePair<ulong, SessionRecord> session in sessions)
+        {
+            if (_playerService.GetOnlinePlayerOrNullThreadSafe(session.Key) is { } player)
+            {
+                await _eventDispatcher.DispatchEventAsync(
+                    new SessionEnded { Player = player, Session = session.Value, WasPruned = false },
+                    token
+                );
+            }
         }
     }
 
@@ -144,11 +158,13 @@ public class SessionManager :
     /// <param name="startedGame">If the player was there at the start of the game.</param>
     public async Task<SessionRecord> StartNewSession(WarfarePlayer player, bool startedGame, CancellationToken token = default)
     {
+        SessionRecord record;
+
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
             await UniTask.SwitchToMainThread(token);
-            SessionRecord record = StartCreatingSession(player, startedGame, out SessionRecord? previousSession);
+            record = StartCreatingSession(player, startedGame, out SessionRecord? previousSession);
 
             _dbContext.Add(record);
             FixupSession(_dbContext, record);
@@ -160,21 +176,42 @@ public class SessionManager :
             if (previousSession != null)
             {
                 bool removeAndResave = EndPreviousSessionIntl(previousSession, record, record.Steam64);
+
+                await _eventDispatcher.DispatchEventAsync(
+                    new SessionEnded
+                    {
+                        Player = player,
+                        Session = previousSession,
+                        NextSession = record,
+                        WasPruned = removeAndResave
+                    },
+                    token,
+                    allowAsync: false
+                );
+
                 await _dbContext.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
                 if (removeAndResave)
                 {
                     _dbContext.Remove(previousSession);
                     await _dbContext.SaveChangesAsync(CancellationToken.None);
+                    previousSession = null;
                 }
             }
 
             _logger.LogConditional("Created session {0} for: {1}.", record.SessionId, player);
-            return record;
+
+            await _eventDispatcher.DispatchEventAsync(
+                new SessionCreated { Player = player, Session = record, PreviousSession = previousSession },
+                token,
+                allowAsync: false
+            );
         }
         finally
         {
             _semaphore.Release();
         }
+
+        return record;
     }
 
     public async Task StartNewSessionForAllPlayers(bool startedGame, CancellationToken token = default)
@@ -231,9 +268,42 @@ public class SessionManager :
 
                     await _dbContext.SaveChangesAsync(CancellationToken.None);
                 }
+
+                for (int i = 0; i < onlinePlayers.Length; ++i)
+                {
+                    SessionRecord? r = sessionData[i].Previous;
+                    if (r == null)
+                        continue;
+
+                    await _eventDispatcher.DispatchEventAsync(
+                        new SessionEnded
+                        {
+                            Player = onlinePlayers[i],
+                            Session = r,
+                            NextSession = sessionData[i].Current,
+                            WasPruned = previousToRemove != null && previousToRemove.Contains(r)
+                        },
+                        token,
+                        allowAsync: false
+                    );
+                }
             }
 
             _logger.LogConditional("Created sessions for all players.");
+
+            for (int i = 0; i < onlinePlayers.Length; ++i)
+            {
+                await _eventDispatcher.DispatchEventAsync(
+                    new SessionCreated
+                    {
+                        Player = onlinePlayers[i],
+                        Session = sessionData[i].Current,
+                        PreviousSession = sessionData[i].Previous
+                    },
+                    token,
+                    allowAsync: false
+                );
+            }
         }
         catch (Exception ex)
         {
@@ -243,10 +313,13 @@ public class SessionManager :
             await UniTask.SwitchToMainThread(token);
 
             WarfarePlayer[] onlinePlayers = _playerService.OnlinePlayers.ToArray();
-            foreach (WarfarePlayer player in onlinePlayers)
+            SessionRecordPair[] sessionData = new SessionRecordPair[onlinePlayers.Length];
+            for (int i = 0; i < onlinePlayers.Length; i++)
             {
-                SessionRecord record = StartCreatingSession(player, startedGame, out SessionRecord? previousSession);
+                WarfarePlayer player = onlinePlayers[i];
+                SessionRecord record = StartCreatingSession(player, startedGame, out SessionRecord? prev);
                 player.CurrentSession = record;
+                sessionData[i] = (record, prev);
             }
 
             try
@@ -259,9 +332,9 @@ public class SessionManager :
                 _dbContext.ChangeTracker.Clear();
             }
 
-            foreach (WarfarePlayer player in onlinePlayers)
+            foreach ((SessionRecord record, _) in sessionData)
             {
-                _dbContext.Add(player.CurrentSession);
+                _dbContext.Add(record);
             }
 
             try
@@ -272,6 +345,39 @@ public class SessionManager :
             {
                 _logger.LogError(ex2, "Error saving new sessions.");
                 _dbContext.ChangeTracker.Clear();
+            }
+
+            for (int i = 0; i < onlinePlayers.Length; ++i)
+            {
+                SessionRecord? r = sessionData[i].Previous;
+                if (r == null)
+                    continue;
+
+                await _eventDispatcher.DispatchEventAsync(
+                    new SessionEnded
+                    {
+                        Player = onlinePlayers[i],
+                        Session = r,
+                        NextSession = sessionData[i].Current,
+                        WasPruned = false
+                    },
+                    token,
+                    allowAsync: false
+                );
+            }
+
+            for (int i = 0; i < onlinePlayers.Length; ++i)
+            {
+                await _eventDispatcher.DispatchEventAsync(
+                    new SessionCreated
+                    {
+                        Player = onlinePlayers[i],
+                        Session = sessionData[i].Current,
+                        PreviousSession = sessionData[i].Previous
+                    },
+                    token,
+                    allowAsync: false
+                );
             }
         }
         finally
@@ -351,6 +457,7 @@ public class SessionManager :
         KitPlayerComponent kitComp = player.Component<KitPlayerComponent>();
 
         Squad? squad = player.GetSquad();
+        CurrentKitState? kit = kitComp.ActiveKit;
         SessionRecord record = new SessionRecord
         {
             Steam64 = player.Steam64.m_SteamID,
@@ -358,8 +465,8 @@ public class SessionManager :
             FactionId = player.Team.IsValid ? player.Team.Faction.PrimaryKey : null,
             GameId = _module.GetActiveLayout().LayoutId,
             StartedGame = startedGame,
-            KitId = kitComp.ActiveKitKey,
-            KitName = kitComp.ActiveKitId,
+            KitId = kit?.Key,
+            KitName = kit?.Id,
             MapId = _mapScheduler.Current,
             SeasonId = WarfareModule.Season,
             SquadName = squad?.Name,
@@ -467,7 +574,7 @@ public class SessionManager :
         if (currentSession == null)
             return player.IsOnline;
 
-        if (player.Component<KitPlayerComponent>().ActiveKitKey != currentSession.KitId)
+        if (player.Component<KitPlayerComponent>().IsKit(currentSession.KitId))
             return true;
 
         FactionInfo? faction = player.Team.Faction;

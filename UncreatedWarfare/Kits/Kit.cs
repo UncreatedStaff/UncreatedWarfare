@@ -58,7 +58,8 @@ public class Kit : IRequestable<Kit>, ITranslationArgument
     public ImmutableArray<ItemDescriptor> GetItemDescriptors(
         Team team,
         IKitItemResolver kitItemResolver,
-        ItemIconProvider itemIconProvider)
+        ItemIconProvider itemIconProvider,
+        KitWeaponTextService weaponTextService)
     {
         GameThread.AssertCurrent();
         
@@ -80,7 +81,8 @@ public class Kit : IRequestable<Kit>, ITranslationArgument
             team,
             items,
             kitItemResolver,
-            itemIconProvider
+            itemIconProvider,
+            weaponTextService
         );
         _itemDescriptors.Add(team, itemDescriptors);
         return itemDescriptors;
@@ -260,7 +262,9 @@ public class Kit : IRequestable<Kit>, ITranslationArgument
 
     public bool IsPaid => Type is KitType.Elite or KitType.Loadout;
 
- #pragma warning disable CS8618
+    public bool BypassGlobalCooldown => Class is Class.Crewman or Class.Pilot;
+
+#pragma warning disable CS8618
     internal Kit(KitModel model, IFactionDataStore factionDataStore, ICachableLanguageDataStore languageDataStore)
     {
         Key = model.PrimaryKey;
@@ -487,6 +491,8 @@ public class Kit : IRequestable<Kit>, ITranslationArgument
 
     public static readonly SpecialFormat FormatClass = new SpecialFormat("Class", "c");
 
+    public static readonly SpecialFormat FormatRichWithSpriteAndClass = new SpecialFormat("Rich (Flag Class Name)", "r");
+
     string ITranslationArgument.Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
     {
         if (FormatId.Match(in parameters))
@@ -494,6 +500,16 @@ public class Kit : IRequestable<Kit>, ITranslationArgument
 
         if (FormatClass.Match(in parameters))
             return formatter.FormatEnum(Class, parameters.Language);
+
+        if (FormatRichWithSpriteAndClass.Match(in parameters))
+        {
+            // [FL] [CL] [Name]
+            // <sprite index=12> ¡ Rifleman 1
+            string displayName = GetDisplayName(parameters.Language, true);
+            return Faction.TMProSpriteIndex.HasValue
+                ? $"{Faction.Sprite} {Class.GetIconString()} {displayName}"
+                : $"{Class.GetIconString()} {displayName}";
+        }
 
         return GetDisplayName(parameters.Language, true);
     }

@@ -60,20 +60,22 @@ internal class SeedingVoteHud : VoteUIDisplay<VoteUIDisplayData>
             else
                 voteNoThisPlayer = voteNoUnselected ??= _translations.SeedingVoteNo.Translate($"<#ababab>{yesVotes}</color>", in set);
 
+            ITransportConnection c = set.Next.Connection;
             if (!data.HasVoteUI)
             {
-                SendToPlayer(set.Next.Connection, title, _layout, voteYesThisPlayer, voteNoThisPlayer);
+                SendToPlayer(c, title, _layout, voteYesThisPlayer, voteNoThisPlayer);
                 data.HasVoteUI = true;
                 _hudManager?.SetIsPluginVoting(set.Next, true);
             }
             else
             {
-                ITransportConnection c = set.Next.Connection;
                 Title.SetText(c, title);
                 Info.SetText(c, _layout);
-                Yes.SetText(c, voteYesThisPlayer);
-                No.SetText(c, voteNoThisPlayer);
             }
+
+            // have to resend since they have plugin keys...
+            Yes.SetText(c, voteYesThisPlayer);
+            No.SetText(c, voteNoThisPlayer);
         }
     }
 

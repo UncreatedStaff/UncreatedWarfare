@@ -81,7 +81,7 @@ public class VehicleSeatRestrictionService :
             preferredSeat = nextAvailableGunnerSeat;
         }
 
-        Class playerKitClass = player.Component<KitPlayerComponent>().ActiveClass;
+        Class playerKitClass = player.Component<KitPlayerComponent>().ActiveKit?.Class ?? Class.None;
 
         // if the player is trying to enter a crew seat
         if (vehicle.Info.IsCrewSeat(seat))
@@ -131,7 +131,7 @@ public class VehicleSeatRestrictionService :
         if (fromSeat == byte.MaxValue)
             fromSeat = player.UnturnedPlayer.movement.getSeat();
 
-        Class playerKitClass = player.Component<KitPlayerComponent>().ActiveClass;
+        Class playerKitClass = player.Component<KitPlayerComponent>().ActiveKit?.Class ?? Class.None;
 
         // prevent entering the driver's seat of an emplacement
         if (vehicle.Info.Type.IsEmplacement())

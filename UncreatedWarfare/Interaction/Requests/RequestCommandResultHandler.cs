@@ -53,15 +53,19 @@ public class RequestCommandResultHandler : IRequestResultHandler
 
     public void MissingUnlockCost(WarfarePlayer player, IRequestable<object> value, UnlockCost unlockCost)
     {
-        throw new NotImplementedException();
+        _chatService.Send(player, _translations.RequestError, unlockCost.ToString());
     }
 
     public void MissingUnlockRequirement(WarfarePlayer player, IRequestable<object> value, UnlockRequirement unlockRequirement)
     {
-        throw new NotImplementedException();
+        _chatService.Send(player, _translations.RequestError, unlockRequirement.ToString());
     }
+
     public void VehicleDelayed(WarfarePlayer player, IRequestable<object> value, TimeSpan timeLeft)
     {
         _chatService.Send(player, _translations.RequestVehicleTimeDelay, timeLeft);
     }
+
+    /// <inheritdoc />
+    public void MissingSquad(WarfarePlayer player, IRequestable<object> value, ref bool openSquadMenu) { }
 }

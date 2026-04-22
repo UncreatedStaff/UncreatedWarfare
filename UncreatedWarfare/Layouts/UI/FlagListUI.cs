@@ -24,8 +24,6 @@ public class FlagListUI : UnturnedUI
     public readonly UnturnedLabel GamemodeTitle = new UnturnedLabel("HeaderFlags");
     public readonly FlagElement[] Rows = ElementPatterns.CreateArray<FlagElement>("Flag_{0}/Flag{1}_{0}", 1, to: 10);
 
-    public bool IsHidden { get; set; }
-    
     public FlagListUI(TranslationInjection<FlagUITranslations> translations, AssetConfiguration assetConfig, ILoggerFactory loggerFactory)
         : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:FlagHUD"), reliable: false)
     {
@@ -55,7 +53,7 @@ public class FlagListUI : UnturnedUI
     public void UpdateFlagList(IFlagListUIProvider flagProvider, ITicketTracker ticketTracker, string layoutName, LanguageSet set, bool ticketsOnly = false)
     {
         // hide UI for invalid teams
-        if (!set.Team.IsValid || IsHidden)
+        if (!set.Team.IsValid)
         {
             while (set.MoveNext())
             {
@@ -206,7 +204,7 @@ public class FlagListUI : UnturnedUI
 
 #nullable restore
 
-    private class FlagListUIData : IUnturnedUIData
+    internal class FlagListUIData : IUnturnedUIData
     {
         public CSteamID Player { get; }
         public UnturnedUI Owner { get; }

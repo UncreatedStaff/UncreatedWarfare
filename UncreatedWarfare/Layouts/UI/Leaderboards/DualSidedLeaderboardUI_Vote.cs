@@ -1,6 +1,4 @@
-using SDG.NetTransport;
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -32,7 +30,7 @@ partial class DualSidedLeaderboardUI
     public readonly UnturnedUIElement LogicCloseVote = new UnturnedUIElement("~/Logic_CloseVote");
 
     private LayoutInfo[] _voteLayouts = Array.Empty<LayoutInfo>();
-    private int[] _layoutVotes;
+    private int[] _layoutVotes = Array.Empty<int>();
 
     public bool IsVotingPeriodOpen { get; set; }
 
@@ -54,6 +52,15 @@ partial class DualSidedLeaderboardUI
 
             return x.Weight * levDistance * (string.Equals(x.Configuration.GamemodeName, _layout.LayoutInfo.Configuration.GamemodeName, StringComparison.OrdinalIgnoreCase) ? 0.2 : 1);
         }, VoteButtons.Length);
+    }
+
+    private void SendNoVotes(LanguageSet set)
+    {
+        // disables the vote button.
+        while (set.MoveNext())
+        {
+            VoteOpenButton.Hide(set.Next);
+        }
     }
 
     private void SendVotes(LanguageSet set)

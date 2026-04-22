@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
@@ -77,7 +76,7 @@ public class ClaimToRearmTweaks :
         }
 
         Kit? kit = null;
-        if (e.Player.TryGetFromContainer(out KitPlayerComponent? kitComponent) && kitComponent.ActiveKitKey.HasValue)
+        if (e.Player.TryGetFromContainer(out KitPlayerComponent? kitComponent) && kitComponent.HasKit)
         {
             kit = await kitComponent.GetActiveKitAsync(KitInclude.Giveable, token).ConfigureAwait(false);
             await UniTask.SwitchToMainThread(token);

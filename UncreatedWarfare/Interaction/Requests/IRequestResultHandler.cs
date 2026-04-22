@@ -62,7 +62,12 @@ public interface IRequestResultHandler
     void MissingUnlockRequirement(WarfarePlayer player, IRequestable<object> value, UnlockRequirement unlockRequirement);
 
     /// <summary>
-    /// Called when the player tries to request a vehicle that's currently delayed.
+    /// Called when the player tries to request an object that's currently delayed.
     /// </summary>
     void VehicleDelayed(WarfarePlayer player, IRequestable<object> value, TimeSpan timeLeft);
+
+    /// <summary>
+    /// Called when the player needs to be in a squad to request.
+    /// </summary>
+    void MissingSquad(WarfarePlayer player, IRequestable<object> value, ref bool openSquadMenu);
 }

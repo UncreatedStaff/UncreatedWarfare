@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Configuration;
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
@@ -10,30 +9,29 @@ using Uncreated.Warfare.Kits.Loadouts;
 using Uncreated.Warfare.Kits.Requests;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Cooldowns;
 using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Squads;
-using Uncreated.Warfare.Stats;
+using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Addons;
 using Uncreated.Warfare.Translations.Util;
-using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Signs;
 
 [SignPrefix("kit_")]
 [SignPrefix("loadout_")]
-public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>
+public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>, IKitRequirementVisitor<StringBuilder>
 {
     private static readonly StringBuilder KitSignBuffer = new StringBuilder(230);
 
-    private readonly KitRequestService _kitRequestService;
     private readonly IKitDataStore _kitDataStore;
     private readonly PlayerNitroBoostService _nitroBoostService;
-    private readonly SquadConfiguration _squadConfiguration;
     private readonly IConfiguration _systemConfig;
     private readonly KitSignTranslations _translations;
     private readonly TextMeasurementService _measurementService;
+    private readonly KitRequirementManager _kitRequirements;
     private SignMetrics _signMetrics;
 
     private static readonly Color32 ColorKitFavoritedName = new Color32(255, 255, 153, 255);
@@ -47,21 +45,19 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>
     public string KitId { get; private set; }
     public int LoadoutNumber { get; private set; }
     public KitSignInstanceProvider(
-        KitRequestService kitRequestService,
         IKitDataStore kitDataStore,
         TranslationInjection<KitSignTranslations> translations,
         PlayerNitroBoostService nitroBoostService,
-        SquadConfiguration squadConfiguration,
         IConfiguration systemConfig,
-        TextMeasurementService measurementService)
+        TextMeasurementService measurementService,
+        KitRequirementManager kitRequirements)
     {
-        _kitRequestService = kitRequestService;
         _kitDataStore = kitDataStore;
         _nitroBoostService = nitroBoostService;
-        _squadConfiguration = squadConfiguration;
         _systemConfig = systemConfig;
         _translations = translations.Value;
         _measurementService = measurementService;
+        _kitRequirements = kitRequirements;
         LoadoutNumber = -1;
         KitId = null!;
     }
@@ -164,53 +160,38 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>
         if (hasWeaponText)
             bldr.AppendColorized(kit.WeaponText!.ToUpper(culture), new Color32(255, 255, 255, 255)).Append('\n');
 
-        AppendAvailability(bldr, player, kit, language, culture);
+        if (player != null)
+            AppendAvailability(bldr, player, kit);
     }
 
-    private void AppendAvailability(StringBuilder bldr, WarfarePlayer? player, Kit kit, LanguageInfo language, CultureInfo culture)
+    private void AppendAvailability(StringBuilder bldr, WarfarePlayer player, Kit kit)
     {
-        if (player == null)
+        KitPlayerComponent kitPlayerComponent = player.Component<KitPlayerComponent>();
+        CurrentKitState? activeKit = kitPlayerComponent.ActiveKit;
+        if (activeKit != null && activeKit.Key == kit.Key)
+        {
+            bldr.Append(_translations.KitCurrentlyUsing.Translate(player));
             return;
+        }
 
-        if (player.Component<KitPlayerComponent>().ActiveKitId == kit.Id)
+        KitRequirementResolutionContext<StringBuilder> ctx
+            = new KitRequirementResolutionContext<StringBuilder>(
+                player,
+                player.Team,
+                kit,
+                activeKit?.CachedKit,
+                kitPlayerComponent,
+                bldr
+            );
+
+        int l = bldr.Length;
+        foreach (IKitRequirement requirement in _kitRequirements.Request)
         {
-            bldr.Append(_translations.KitCurrentlyUsing.Translate(language));
-            return;
+            if (requirement.AcceptCached(this, in ctx) == KitRequirementResult.No && bldr.Length > l)
+                return;
         }
 
-        if (kit.RequiresSquad)
-        {
-            Squad? squad = player.GetSquad();
-            if (squad == null)
-            {
-                bldr.Append(_translations.KitRequiresJoinSquad.Translate(language));
-                return;
-            }
-            if (kit.Class == Class.Squadleader && !player.IsSquadLeader())
-            {
-                bldr.Append(_translations.KitRequiresSquadLeader.Translate(language));
-                return;
-            }
-            if (_kitRequestService.IsKitAlreadyTakenInSquad(kit, squad))
-            {
-                bldr.Append(_translations.KitAlreadyTakenBySquadMember.Translate(language));
-                return;
-            }
-            if (!_kitRequestService.SquadHasEnoughPlayersForKit(kit, squad))
-            {
-                bldr.Append(_translations.KitNotEnoughPlayersInSquad.Translate(squad.Members.Count, kit.MinRequiredSquadMembers ?? 0, language, culture, TimeZoneInfo.Utc));
-                return;
-            }
-        }
-        
-        int allowedPerXUsers = _squadConfiguration.KitClassesAllowedPerXTeammates.GetValueOrDefault(kit.Class);
-        if (allowedPerXUsers > 0 && _kitRequestService.IsKitLimitedForClass(kit.Class, player.Team, allowedPerXUsers, out int currentUsers, out int kitsAllowed, out _))
-        {
-            bldr.Append(_translations.KitTeamClassLimitReached.Translate(currentUsers, kitsAllowed, language, culture, TimeZoneInfo.Utc));
-            return;
-        }
-        
-        bldr.Append(_translations.KitAvailable.Translate(language));
+        bldr.Append(_translations.KitAvailable.Translate(player));
     }
 
     private void AppendCost(StringBuilder bldr, Kit kit, LanguageInfo language, CultureInfo culture, WarfarePlayer? player)
@@ -328,8 +309,8 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>
                 bldr.AppendColorized(kit.WeaponText!.ToUpper(culture), new Color32(255, 255, 255, 255)).Append('\n');
         }
 
-        if (!kit.IsLocked && !needsUpgrade)
-            AppendAvailability(bldr, player, kit, language, culture);
+        if (!kit.IsLocked && !needsUpgrade && player != null)
+            AppendAvailability(bldr, player, kit);
     }
 
     private void AppendName(string kitName, Color32 color, out bool hasExtraLine)
@@ -355,6 +336,54 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>
 
         KitSignBuffer.Append("</color>");
     }
+
+
+    void IKitRequirementVisitor<StringBuilder>.AcceptGenericRequirementNotMet(in KitRequirementResolutionContext<StringBuilder> ctx, string message)
+    {
+        ctx.State.Append(message);
+    }
+
+    void IKitRequirementVisitor<StringBuilder>.AcceptRequiresSquadNotMet(in KitRequirementResolutionContext<StringBuilder> ctx, bool needsSquadLead)
+    {
+        Squad? squad = ctx.Player.GetSquad();
+        if (squad == null)
+        {
+            ctx.State.Append(_translations.KitRequiresJoinSquad.Translate(ctx.Player));
+        }
+        else if (needsSquadLead)
+        {
+            ctx.State.Append(_translations.KitRequiresSquadLeader.Translate(ctx.Player));
+        }
+    }
+
+    void IKitRequirementVisitor<StringBuilder>.AcceptMinRequiredSquadMembersNotMet(in KitRequirementResolutionContext<StringBuilder> ctx, WarfarePlayer? playerTakingKit,
+        int squadMemberCount, int minimumSquadMembers)
+    {
+        ctx.State.Append(playerTakingKit != null
+            ? _translations.KitAlreadyTakenBySquadMember.Translate(ctx.Player)
+            : _translations.KitNotEnoughPlayersInSquad.Translate(squadMemberCount, minimumSquadMembers, ctx.Player)
+        );
+    }
+
+    void IKitRequirementVisitor<StringBuilder>.AcceptClassesAllowedPerXTeammatesRequirementNotMet(in KitRequirementResolutionContext<StringBuilder> ctx, int allowedPerXUsers,
+        int currentUsers, int teammates, int kitsAllowed)
+    {
+        ctx.State.Append(_translations.KitTeamClassLimitReached.Translate(currentUsers, kitsAllowed, ctx.Player));
+    }
+
+    void IKitRequirementVisitor<StringBuilder>.AcceptPremiumCostNotMet(in KitRequirementResolutionContext<StringBuilder> ctx, decimal cost) { }
+    void IKitRequirementVisitor<StringBuilder>.AcceptCreditCostNotMet(in KitRequirementResolutionContext<StringBuilder> ctx, double cost, double current) { }
+    void IKitRequirementVisitor<StringBuilder>.AcceptExclusiveKitNotMet(in KitRequirementResolutionContext<StringBuilder> ctx) { }
+    void IKitRequirementVisitor<StringBuilder>.AcceptLoadoutLockedNotMet(in KitRequirementResolutionContext<StringBuilder> ctx) { }
+    void IKitRequirementVisitor<StringBuilder>.AcceptLoadoutOutOfDateNotMet(in KitRequirementResolutionContext<StringBuilder> ctx, int season) { }
+    void IKitRequirementVisitor<StringBuilder>.AcceptDisabledNotMet(in KitRequirementResolutionContext<StringBuilder> ctx) { }
+    void IKitRequirementVisitor<StringBuilder>.AcceptNitroBoostRequirementNotMet(in KitRequirementResolutionContext<StringBuilder> ctx) { }
+    void IKitRequirementVisitor<StringBuilder>.AcceptMapFilterNotMet(
+        in KitRequirementResolutionContext<StringBuilder> ctx, string mapName) { }
+    void IKitRequirementVisitor<StringBuilder>.AcceptFactionFilterNotMet(in KitRequirementResolutionContext<StringBuilder> ctx, FactionInfo faction) { }
+    void IKitRequirementVisitor<StringBuilder>.AcceptGlobalCooldownNotMet(in KitRequirementResolutionContext<StringBuilder> ctx, in Cooldown requestCooldown) { }
+    void IKitRequirementVisitor<StringBuilder>.AcceptPremiumCooldownNotMet(in KitRequirementResolutionContext<StringBuilder> ctx, in Cooldown requestCooldown) { }
+    void IKitRequirementVisitor<StringBuilder>.AcceptKitSpecificUnlockRequirementNotMet(in KitRequirementResolutionContext<StringBuilder> ctx, UnlockRequirement requirement) { }
 }
 
 public class KitSignTranslations : PropertiesTranslationCollection
@@ -376,18 +405,6 @@ public class KitSignTranslations : PropertiesTranslationCollection
     [TranslationData(IsPriorityTranslation = false)]
     public readonly Translation<decimal> KitPremiumCost = new Translation<decimal>("<#7878ff>$ {0}</color>", TranslationOptions.TMProSign, arg0Fmt: "N2");
 
-    [TranslationData("Shown on a kit sign when the player isn't high enough rank to access it.", Parameters = [ "Rank", "Color depending on player's current rank." ])]
-    public readonly Translation<WarfareRank, Color> KitRequiredRank = new Translation<WarfareRank, Color>("<#{1}>Rank: {0}</color>", TranslationOptions.TMProSign);
-
-    [TranslationData("Shown on a kit sign when the player needs to complete a quest to access it.", Parameters = [ "Quest", "Color depending on whether the player has completed the quest." ])]
-    public readonly Translation<QuestAsset, Color> KitRequiredQuest = new Translation<QuestAsset, Color>("<#{1}>Quest: <#fff>{0}</color></color>", TranslationOptions.TMProSign);
-
-    [TranslationData("Shown on a kit sign when the player needs to complete multiple quests to access it.", Parameters = [ "Number of quests needed.", "Color depending on whether the player has completed the quest(s).", "s if {0} != 1" ])]
-    public readonly Translation<int, Color> KitRequiredQuestsMultiple = new Translation<int, Color>("<#{1}>Finish <#fff>{0}</color> quests.</color>", TranslationOptions.TMProSign);
-
-    [TranslationData("Shown on a kit sign when the player has completed all required quests to unlock the kit.")]
-    public readonly Translation KitRequiredQuestsComplete = new Translation("<#ff974d>UNLOCKED</color>", TranslationOptions.TMProSign);
-
     [TranslationData("Shown on a kit sign when the player has purchased the kit (with credits).")]
     public readonly Translation KitPublicOwned = new Translation("<#769fb5>UNLOCKED</color>", TranslationOptions.TMProSign);
     
@@ -403,30 +420,27 @@ public class KitSignTranslations : PropertiesTranslationCollection
     [TranslationData("Shown on a used loadout sign so players can see what loadout letter each kit is.", "The letter of the loadout sign.")]
     public readonly Translation<string> LoadoutLetter = new Translation<string>("<sub><#7878ff>LOADOUT {0}</color></sub>", TranslationOptions.TMProSign, arg0Fmt: UppercaseAddon.Instance);
     
-    [TranslationData(IsPriorityTranslation = false)]
+    [TranslationData("Shown on a kit sign when the player is already using this kit.")]
     public readonly Translation KitCurrentlyUsing = new Translation("<#827d6d>Selected</color>", TranslationOptions.TMProSign);
-    
-    [TranslationData(IsPriorityTranslation = false)]
+
+    [TranslationData("Shown on a kit sign when the kit can only be requested by a squad leader and the player isn't one.")]
     public readonly Translation KitRequiresSquadLeader = new Translation("<#a69870>Squad Leader only</color>", TranslationOptions.TMProSign);
 
-    [TranslationData(IsPriorityTranslation = false)]
+    [TranslationData("Shown on a kit sign when the kit can only be requested by players in a squad and the player isn't one.")]
     public readonly Translation KitRequiresJoinSquad = new Translation("<#a69870>Join a Squad</color>", TranslationOptions.TMProSign);
-    
-    [TranslationData(IsPriorityTranslation = false)]
+
+    [TranslationData("Shown on a kit sign when there are already too many people using this kit class in the player's squad.")]
     public readonly Translation KitAlreadyTakenBySquadMember = new Translation("<#c2603e>Taken</color>", TranslationOptions.TMProSign);
-    
-    [TranslationData(IsPriorityTranslation = false)]
+
+    [TranslationData("Shown on a kit sign when there needs to be a certain amount of players in their squad to use the kit.")]
     public readonly Translation<int, int> KitNotEnoughPlayersInSquad = new Translation<int, int>("<#c2846e>Squad: {0}/{1}</color>", TranslationOptions.TMProSign);
-    
-    [TranslationData(IsPriorityTranslation = false)]
+
+    [TranslationData("Shown on a kit sign when there are too many players in the player's squad using this kit type.")]
     public readonly Translation<int, int> KitTeamClassLimitReached = new Translation<int, int>("<#c2846e>{0}/{1} on team</color>", TranslationOptions.TMProSign);
-    
-    [TranslationData(IsPriorityTranslation = false)]
+
+    [TranslationData("Shown on a kit sign when a kit can be requested.")]
     public readonly Translation KitAvailable = new Translation("<#96ffb2>Available</color>", TranslationOptions.TMProSign);
     
-    [TranslationData("Shown on a kit sign when there is no limit to how many other players can be using the kit.")]
-    public readonly Translation KitAvailableUnlimited = new Translation("<#111111>Available</color>", TranslationOptions.TMProSign);
-
     [TranslationData(IsPriorityTranslation = false)]
     public readonly Translation KitLoadoutUpgrade = new Translation("<#33cc33>/req upgrade</color>", TranslationOptions.TMProSign);
 

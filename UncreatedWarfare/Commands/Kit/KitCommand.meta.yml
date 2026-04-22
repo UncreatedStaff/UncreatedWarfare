@@ -268,4 +268,13 @@ Parameters:
             Parameters:
               - Name: skill
                 Type: Uncreated.Warfare.Players.Skillsets.Skillset
-  
+  # /kit ui
+  - Name: ui
+    Type: Verbatim
+    Description: "Opens the kit UI from anywhere."
+    
+  # /kit back
+  - Name: back
+    Aliases: [ endpreview, stoppreview, stop ]
+    Type: Verbatim
+    Description: "When previewing a kit, goes back to your old inventory."

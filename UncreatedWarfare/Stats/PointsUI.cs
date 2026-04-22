@@ -37,12 +37,12 @@ public class PointsUI : UnturnedUI,
     private readonly Func<CSteamID, PointsUIData> _createData;
 
     private readonly IPlayerService _playerService;
+    private readonly HudManager _hudManager;
     private readonly WarfareModule _module;
     private PointsService? _pointsService;
 
     private ILoopTicker? _loopTicker;
     private int _currentStatIndex;
-    private bool _isHidden;
     private LeaderboardPhaseStatInfo? _currentStat;
 
     private readonly UnturnedUIElement[] _positionElements =
@@ -71,12 +71,24 @@ public class PointsUI : UnturnedUI,
 
     private static readonly Color32 StatColor = new Color32(255, 153, 102, 255);
 
-    public PointsUI(PointsConfiguration config, AssetConfiguration assetConfig, ILoggerFactory loggerFactory, ILoopTickerFactory loopTickerFactory, IPlayerService playerService, WarfareModule module)
-        : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:Points"), staticKey: true, debugLogging: false)
+    public PointsUI(
+        PointsConfiguration config,
+        AssetConfiguration assetConfig,
+        ILoggerFactory loggerFactory,
+        ILoopTickerFactory loopTickerFactory,
+        IPlayerService playerService,
+        HudManager hudManager,
+        WarfareModule module)
+        : base(
+            loggerFactory,
+            assetConfig.GetAssetLink<EffectAsset>("UI:Points"),
+            staticKey: true
+        )
     {
         _config = config;
 
         _playerService = playerService;
+        _hudManager = hudManager;
         _module = module;
         _loopTicker = loopTickerFactory.CreateTicker(TimeSpan.FromMinutes(1d), false, true, (_, _, _) => ChooseNewCycledStat());
 
@@ -137,7 +149,6 @@ public class PointsUI : UnturnedUI,
             return;
         }
 
-        _isHidden = true;
         ClearFromAllPlayers();
         foreach (WarfarePlayer pl in _playerService.OnlinePlayers)
         {
@@ -154,7 +165,6 @@ public class PointsUI : UnturnedUI,
             return;
         }
 
-        _isHidden = false;
         foreach (WarfarePlayer pl in _playerService.OnlinePlayers)
         {
             UpdatePointsUI(pl);
@@ -256,7 +266,7 @@ public class PointsUI : UnturnedUI,
 
         PointsUIData data = GetUIData(player.Steam64);
 
-        if (!player.Team.IsValid || _isHidden)
+        if (!player.Team.IsValid || _hudManager.IsHidden(player))
         {
             if (!data.HasUI)
                 return;
@@ -355,11 +365,11 @@ public class PointsUI : UnturnedUI,
     private void DoubleUpdate(WarfarePlayer player)
     {
         UpdatePointsUI(player);
-        UniTask.Create(async () =>
+        UniTask.Create((@this: this, player), static async args =>
         {
             await UniTask.NextFrame();
-            if (player.IsOnline)
-                UpdatePointsUI(player);
+            if (args.player.IsOnline)
+                args.@this.UpdatePointsUI(args.player);
         });
     }
 

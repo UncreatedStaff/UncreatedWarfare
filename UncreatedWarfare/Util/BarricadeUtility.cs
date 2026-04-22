@@ -779,7 +779,7 @@ public static class BarricadeUtility
                 if (oldSt.Length < sizeof(ulong) * 2)
                     oldSt = new byte[sizeof(ulong) * 2];
                 BitConverter.TryWriteBytes(oldSt, o);
-                BitConverter.TryWriteBytes(oldSt.AsSpan(sizeof(ulong)), o);
+                BitConverter.TryWriteBytes(oldSt.AsSpan(sizeof(ulong)), g);
                 BarricadeManager.updateState(drop.model, oldSt, oldSt.Length);
                 drop.ReceiveUpdateState(oldSt);
 
@@ -796,7 +796,7 @@ public static class BarricadeUtility
                 if (oldSt.Length < sizeof(ulong) * 2 + 1)
                     oldSt = new byte[sizeof(ulong) * 2 + 1];
                 BitConverter.TryWriteBytes(oldSt, o);
-                BitConverter.TryWriteBytes(oldSt.AsSpan(sizeof(ulong)), o);
+                BitConverter.TryWriteBytes(oldSt.AsSpan(sizeof(ulong)), g);
                 if (signs == null
                     || !signs.IsInstanced(drop)
                     || SendUpdateState == null
@@ -851,7 +851,7 @@ public static class BarricadeUtility
             case EBuild.HATCH:
                 state = new byte[17];
                 BitConverter.TryWriteBytes(state, o);
-                BitConverter.TryWriteBytes(state.AsSpan(sizeof(ulong)), o);
+                BitConverter.TryWriteBytes(state.AsSpan(sizeof(ulong)), g);
                 state[16] = (byte)(oldSt[16] > 0 ? 1 : 0);
                 break;
 
@@ -871,7 +871,7 @@ public static class BarricadeUtility
                     ? new byte[sizeof(ulong) * 2]
                     : oldSt.CloneBytes();
                 BitConverter.TryWriteBytes(state, o);
-                BitConverter.TryWriteBytes(state.AsSpan(sizeof(ulong)), o);
+                BitConverter.TryWriteBytes(state.AsSpan(sizeof(ulong)), g);
                 break;
 
             case EBuild.SPIKE:

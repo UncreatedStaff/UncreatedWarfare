@@ -152,12 +152,13 @@ public class SafezoneTweaks :
 
             // give safezone kit if they dont have one
             KitPlayerComponent component = e.Player.Component<KitPlayerComponent>();
+            CurrentKitState? state = component.ActiveKit;
             if (!e.Player.IsOnDuty
-                && (!component.ActiveKitKey.HasValue
-                || component.ActiveClass == Class.None
-                || component.ActiveClass == Class.Unarmed && e.Player.Team.Faction.UnarmedKit != component.ActiveKitKey.Value
-                // equipped with enemy team kit
-                || component.CachedKit is { Faction.IsDefaultFaction: false } kit
+                && (state == null
+                    || state.Class == Class.None
+                    || state.Class == Class.Unarmed && e.Player.Team.Faction.UnarmedKit != state.Key
+                    // equipped with enemy team kit
+                    || state.CachedKit is { Faction.IsDefaultFaction: false } kit
                     && serviceProvider.GetService<ITeamManager<Team>>()?.AllTeams.FirstOrDefault(x => x.Faction.Equals(kit.Faction)) is { } team
                     && team.IsOpponent(e.Player.Team)))
             {

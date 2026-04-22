@@ -53,9 +53,10 @@
         <ProduceReferenceAssembly>False</ProduceReferenceAssembly>
         <GenerateRuntimeConfigurationFiles>True</GenerateRuntimeConfigurationFiles>
 
-        <NoWarn>NU1701;NU1803;NU1903;NU1904;1702,1591,1587,1711,1735,1573,1574,1570,1584,1658</NoWarn>
+        <NoWarn>NU1701;NU1803;NU1903;NU1904;1702,1591,1587,1711,1735,1573,1574,1570,1584,1658;EF1001;CS0419</NoWarn>
         <MSBuildWarningsAsMessages>$(MSBuildWarningsAsMessages);MSB3030</MSBuildWarningsAsMessages>
-        <DefineConstants>$(DefineConstants);JETBRAINS_ANNOTATIONS;REMOTE_WORKSHOP_UPLOAD</DefineConstants>
+        <DefineConstants>$(DefineConstants);JETBRAINS_ANNOTATIONS</DefineConstants>
+        <!--<DefineConstants>$(DefineConstants);REMOTE_WORKSHOP_UPLOAD</DefineConstants>-->
     </PropertyGroup>
 
     <PropertyGroup>
@@ -73,6 +74,7 @@
 
         <CopyUnturnedReferencesToProject>True</CopyUnturnedReferencesToProject>
         <CopyUnturnedReferencesToOutput>!$(CopyToModule)</CopyUnturnedReferencesToOutput>
+        <UnturnedReferencesCopyOutput>../Libraries</UnturnedReferencesCopyOutput>
         <DeleteUnusedUnturnedReferences>True</DeleteUnusedUnturnedReferences>
     </PropertyGroup>
 
@@ -151,7 +153,7 @@
         <PackageReference Include="DanielWillett.ModularRPCs" Version="[1.0.0-prerelease22, 2)" />
         <PackageReference Include="DanielWillett.ModularRPCs.Unity" Version="[1.0.0-prerelease22, 2)" />
         <PackageReference Include="DanielWillett.ModularRPCs.WebSockets" Version="[1.0.0-prerelease22, 2)" />
-        <PackageReference Include="Uncreated.UI" Version="1.3.5" />
+        <PackageReference Include="Uncreated.UI" Version="1.4.0" />
         <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
         <PackageReference Include="Stripe.net" Version="49.0.0" />
         <PackageReference Include="JetBrains.Annotations" Version="2018.2.1" Aliases="JetBrains" />
@@ -291,6 +293,7 @@
         <Using Include="UnityEngine.Object">
             <Alias>Object</Alias>
         </Using>
+        <Using Include="System.Diagnostics.CodeAnalysis" />
         <Using Include="System.Diagnostics.Contracts" />
         <Using Include="System.Diagnostics.Contracts.PureAttribute">
             <Alias>PureAttribute</Alias>

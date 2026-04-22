@@ -41,6 +41,9 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
     private readonly byte _region;
     private UniTask _setupTask;
 
+    private readonly SemaphoreSlim _loadoutStartSemaphore;
+    private bool _isFirstLoadout;
+
     private readonly string _layoutDir;
 
     private bool _hasPlayerLock = true;
@@ -90,6 +93,9 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
         _region = systemConfig.GetValue<byte>("region");
         IsLoading = true;
 
+        _isFirstLoadout = true;
+        _loadoutStartSemaphore = new SemaphoreSlim(0, 1);
+
         _layoutDir = Path.Combine(warfare.HomeDirectory, "Layouts");
         Directory.CreateDirectory(_layoutDir);
 
@@ -129,6 +135,8 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
     {
         SceneManager.sceneLoaded -= OnSceneLoded;
         Level.onPostLevelLoaded -= OnLevelLoaded;
+
+        _loadoutStartSemaphore.Dispose();
 
         if (!_warfare.IsLayoutActive())
             return;
@@ -192,7 +200,6 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
 
                 // invoke ILevelHostedService
                 await _warfare.InvokeLevelLoaded(CancellationToken.None);
-
                 await StartPendingLayoutAsync(hasPlayerConnectionLock);
                 hasPlayerConnectionLock = false;
             }
@@ -203,6 +210,11 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
             }
             finally
             {
+                if (_loadoutStartSemaphore.CurrentCount == 0)
+                {
+                    _loadoutStartSemaphore.Release();
+                }
+
                 if (hasPlayerConnectionLock)
                 {
                     _playerService?.ReleasePlayerConnectionLock();
@@ -233,68 +245,78 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
 
         newLayout ??= SelectRandomLayout();
 
-        await UniTask.SwitchToMainThread(token);
-
         // stops players from joining both before the first layout starts and between layouts.
-        bool playerJoinLockTaken = _hasPlayerLock;
-        IsLoading = true;
+        if (!_isFirstLoadout)
+            await _loadoutStartSemaphore.WaitAsync(token);
         try
         {
-            if (_warfare.IsLayoutActive())
+            await UniTask.SwitchToMainThread(token);
+            bool playerJoinLockTaken = _hasPlayerLock;
+            IsLoading = true;
+            try
             {
-                if (!playerJoinLockTaken)
+                if (_warfare.IsLayoutActive())
                 {
-                    await _playerService.TakePlayerConnectionLock(token);
+                    if (!playerJoinLockTaken)
+                    {
+                        await _playerService.TakePlayerConnectionLock(token);
+                        playerJoinLockTaken = true;
+                        _hasPlayerLock = true;
+                    }
+
+                    Layout oldLayout = _warfare.GetActiveLayout();
+                    if (oldLayout.IsActive)
+                    {
+                        await oldLayout.EndLayoutAsync(CancellationToken.None);
+                    }
+
+                    if (!_hasSessionLock)
+                    {
+                        await _sessionService.WaitAsync();
+                        await UniTask.SwitchToMainThread(token);
+                        _hasSessionLock = true;
+                    }
+
+                    oldLayout.Dispose();
+                    await UniTask.SwitchToMainThread(CancellationToken.None);
+                    _warfare.SetActiveLayout(null);
+                    _logger.LogDebug($"Unloaded previous layout {oldLayout.LayoutInfo.DisplayName}.");
+                }
+                else
+                {
+                    // lock is on by default on startup.
                     playerJoinLockTaken = true;
-                    _hasPlayerLock = true;
                 }
 
-                Layout oldLayout = _warfare.GetActiveLayout();
-                if (oldLayout.IsActive)
-                {
-                    await oldLayout.EndLayoutAsync(CancellationToken.None);
-                }
-
-                if (!_hasSessionLock)
-                {
-                    await _sessionService.WaitAsync();
-                    await UniTask.SwitchToMainThread(token);
-                    _hasSessionLock = true;
-                }
-
-                oldLayout.Dispose();
-                await UniTask.SwitchToMainThread(CancellationToken.None);
-                _warfare.SetActiveLayout(null);
-                _logger.LogDebug($"Unloaded previous layout {oldLayout.LayoutInfo.DisplayName}.");
+                await CreateLayoutAsync(newLayout, playerJoinLockTaken, CancellationToken.None);
             }
-            else
+            catch (Exception ex)
             {
-                // lock is on by default on startup.
-                playerJoinLockTaken = true;
-            }
+                if (_hasSessionLock)
+                {
+                    _sessionService.Release();
+                    _hasSessionLock = false;
+                }
+                IsLoading = false;
+                if (playerJoinLockTaken)
+                {
+                    _playerService.ReleasePlayerConnectionLock();
+                    _hasPlayerLock = false;
+                }
 
-            await CreateLayoutAsync(newLayout, playerJoinLockTaken, CancellationToken.None);
+                _logger.LogError(ex, "Error creating layout {0}.", newLayout.FilePath);
+                _ = UniTask.Create(async () =>
+                {
+                    await UniTask.NextFrame();
+                    await StartNextLayout(token);
+                });
+            }
         }
-        catch (Exception ex)
+        finally
         {
-            if (_hasSessionLock)
-            {
-                _sessionService.Release();
-                _hasSessionLock = false;
-            }
-            IsLoading = false;
-            if (playerJoinLockTaken)
-            {
-                _playerService.ReleasePlayerConnectionLock();
-                _hasPlayerLock = false; 
-            }
-
-            _logger.LogError(ex, "Error creating layout {0}.", newLayout.FilePath);
-            _ = UniTask.Create(async () =>
-            {
-                await UniTask.NextFrame();
-                await StartNextLayout(token);
-            });
+            _isFirstLoadout = false;
+            if (!IsLoading)
+                _loadoutStartSemaphore.Release();
         }
     }
 
@@ -315,7 +337,7 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
             layoutInfo.Layout.GetSection("Services"),
             layoutInfo.Layout.GetSection("Components"),
             stuffThatNeedsDisposedLater
-            );
+        );
 
         ILifetimeScope scopedProvider = await _warfare.CreateScopeAsync(lifetimeAction, token);
         await UniTask.SwitchToMainThread(token);
@@ -430,8 +452,9 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
             .ExternallyOwned();
 
         // ITeamManager
-        bldr.Register<WarfareModule, ITeamManager<Team>>(wf => wf.GetActiveLayout().TeamManager)
-            .SingleInstance();
+        bldr.Register<WarfareModule, ITeamManager<Team>>(wf => wf.GetActiveLayout().TeamManager ?? throw new InvalidOperationException("TeamManager not yet created."))
+            .SingleInstance()
+            .ExternallyOwned();
 
         Type[]? argTypes = null;
         object[]? args = null;

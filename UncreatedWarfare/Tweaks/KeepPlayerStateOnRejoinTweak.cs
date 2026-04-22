@@ -50,28 +50,45 @@ internal sealed class KeepPlayerStateOnRejoinTweak : IAsyncEventListener<PlayerJ
             e.Player.UnturnedPlayer.quests.leaveGroup(true);
         }
 
-        if (e.SaveData.KitId != 0)
+        CurrentKitState? kitState = e.SaveData.KitState;
+        if (kitState != null)
         {
-            Kit? kit = await _kitDataStore.QueryKitAsync(e.SaveData.KitId, KitInclude.Giveable, token);
+            Kit? kit = await _kitDataStore.QueryKitAsync(kitState.Key, KitInclude.Giveable, token);
+            if (kitState.PreviewFallback != null)
+            {
+                Kit? fallbackKit = await _kitDataStore.QueryKitAsync(kitState.PreviewFallback.Key, KitInclude.Giveable, token);
+                if (fallbackKit == null)
+                    kitState.PreviewFallback = null;
+                else
+                    kitState.PreviewFallback.CachedKit = fallbackKit;
+            }
 
-            e.Player.Component<KitPlayerComponent>().UpdateKit(kit, e.SaveData.WasKitLowAmmo);
+            KitPlayerComponent component = e.Player.Component<KitPlayerComponent>();
+            if (kit == null)
+            {
+                kitState = null;
+                e.SaveData.KitState = null;
+                component.UpdateKit(null);
+            }
+            else
+            {
+                kitState.UpdateCachedKit(kit);
+                component.UpdateKit(kitState);
+            }
 
             if (kit != null)
             {
                 _ = _eventDispatcher.DispatchEventAsync(new PlayerKitChanged
                 {
                     Player = e.Player,
-                    KitId = e.SaveData.KitId,
-                    Class = kit.Class,
-                    Kit = kit,
-                    KitName = kit.Id,
+                    State = kitState,
                     WasRequested = false
                 }, CancellationToken.None);
             }
         }
         else
         {
-            e.Player.Component<KitPlayerComponent>().UpdateKit(null, false);
+            e.Player.Component<KitPlayerComponent>().UpdateKit(null);
         }
     }
 }

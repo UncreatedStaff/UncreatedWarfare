@@ -1,3 +1,4 @@
+using DanielWillett.SpeedBytes;
 using Microsoft.Extensions.Configuration;
 using System;
 using Uncreated.Warfare.Configuration;
@@ -187,6 +188,157 @@ public static class KitItemUtility
         return isConcrete
             ? new ConcretePageItem(x, y, page, rot, item!, state, amount, quality)
             : new RedirectedPageItem(x, y, page, rot, redirect, redirectVariant);
+    }
+
+    /// <summary>
+    /// Read an item from a binary stream.
+    /// </summary>
+    public static IItem? ReadItem(ByteReader reader)
+    {
+        byte type = reader.ReadUInt8();
+        byte x = 0, y = 0, rot = 0;
+        Page page = Page.Primary;
+        ClothingType clothing;
+        bool isClothing;
+        switch (type)
+        {
+            case 0:
+            case 2:
+                clothing = (ClothingType)reader.ReadUInt8();
+                isClothing = true;
+                break;
+
+            case 1:
+            case 3:
+                x = reader.ReadUInt8();
+                y = reader.ReadUInt8();
+                page = (Page)reader.ReadUInt8();
+                rot = reader.ReadUInt8();
+                isClothing = false;
+                clothing = (ClothingType)255;
+                break;
+
+            default:
+                return null;
+        }
+
+        RedirectType redirect;
+        string? redirectVariant;
+        bool isConcrete;
+        IAssetLink<ItemAsset>? item = null;
+        byte quality = 0, amount = 0;
+        byte[]? state = null;
+        switch (type)
+        {
+            case 0:
+            case 1:
+                item = AssetLink.Create<ItemAsset>(reader.ReadGuid());
+                quality = reader.ReadUInt8();
+                amount = reader.ReadUInt8();
+                state = reader.ReadNullableUInt8Array();
+                isConcrete = true;
+                redirect = RedirectType.None;
+                redirectVariant = null;
+                break;
+
+            default: // 2, 3
+                redirect = (RedirectType)reader.ReadInt32();
+                redirectVariant = reader.ReadNullableString();
+                if (string.IsNullOrWhiteSpace(redirectVariant))
+                    redirectVariant = null;
+                isConcrete = false;
+                break;
+        }
+
+        if (isConcrete && !item!.Exists)
+            return null;
+
+        if (!isConcrete && !EnumUtility.ValidateValidField(redirect))
+            return null;
+
+        if (isClothing)
+        {
+            if (!EnumUtility.ValidateValidField(clothing))
+                return null;
+
+            return isConcrete
+                ? new ConcreteClothingItem(clothing, item!.Cast<ItemAsset, ItemClothingAsset>(), state, amount, quality)
+                : new RedirectedClothingItem(clothing, redirect, redirectVariant);
+        }
+
+        if (!EnumUtility.ValidateValidField(page) || rot >= 4 || quality > 100)
+            return null;
+
+        return isConcrete
+            ? new ConcretePageItem(x, y, page, rot, item!, state, amount, quality)
+            : new RedirectedPageItem(x, y, page, rot, redirect, redirectVariant);
+    }
+
+    /// <summary>
+    /// Write an item to a binary stream.
+    /// </summary>
+    public static void WriteItem(IItem item, ByteWriter writer)
+    {
+        if (item is IClothingItem clothingItem)
+        {
+            switch (item)
+            {
+                case IRedirectedItem redirectItem:
+                    writer.Write((byte)2);
+                    writer.Write((byte)clothingItem.ClothingType);
+                    writer.Write((int)redirectItem.Item);
+                    writer.WriteNullable(redirectItem.Variant);
+                    return;
+
+                case IConcreteItem concreteItem:
+                    writer.Write((byte)0);
+                    writer.Write((byte)clothingItem.ClothingType);
+                    writer.Write(concreteItem.Item.Guid);
+                    writer.Write(concreteItem.Quality);
+                    writer.Write(concreteItem.Amount);
+                    writer.WriteNullable(concreteItem.State);
+                    return;
+
+                default:
+                    writer.Write((byte)4);
+                    return;
+            }
+        }
+
+        if (item is not IPageItem pageItem)
+        {
+            writer.Write((byte)4);
+            return;
+        }
+
+        switch (item)
+        {
+            case IRedirectedItem redirectItem:
+                writer.Write((byte)3);
+                writer.Write(pageItem.X);
+                writer.Write(pageItem.Y);
+                writer.Write((byte)pageItem.Page);
+                writer.Write(pageItem.Rotation);
+                writer.Write((int)redirectItem.Item);
+                writer.WriteNullable(redirectItem.Variant);
+                return;
+
+            case IConcreteItem concreteItem:
+                writer.Write((byte)1);
+                writer.Write(pageItem.X);
+                writer.Write(pageItem.Y);
+                writer.Write((byte)pageItem.Page);
+                writer.Write(pageItem.Rotation);
+                writer.Write(concreteItem.Item.Guid);
+                writer.Write(concreteItem.Quality);
+                writer.Write(concreteItem.Amount);
+                writer.WriteNullable(concreteItem.State);
+                return;
+
+            default:
+                writer.Write((byte)4);
+                return;
+        }
     }
 
     /// <summary>

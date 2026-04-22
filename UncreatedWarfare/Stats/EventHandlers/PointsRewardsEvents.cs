@@ -1,9 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
@@ -19,13 +16,14 @@ using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.Layouts.Phases;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.Stats.EventHandlers;
 
-internal class PointsRewardsEvents :
+public class PointsRewardsEvents :
     IAsyncEventListener<PlayerDied>,
     IAsyncEventListener<VehicleExploded>,
     IAsyncEventListener<FlagCaptured>,
@@ -44,16 +42,42 @@ internal class PointsRewardsEvents :
     private readonly PointsService _points;
     private readonly PointsTranslations _translations;
 
+    public bool TrackPoints { get; set; }
+
     public PointsRewardsEvents(PointsService points, TranslationInjection<PointsTranslations> translations)
     {
         _points = points;
         _translations = translations.Value;
+        TrackPoints = true;
     }
 
     public async UniTask HandleEventAsync(PlayerDied e, IServiceProvider serviceProvider, CancellationToken token = default)
     {
         if (e.Killer == null)
             return;
+
+        if (!TrackPoints)
+        {
+            if (!e.Killer.IsOnline)
+                return;
+            
+            string msg;
+            if (e.WasSuicide)
+            {
+                msg = _translations.XPToastSuicide.Translate(e.Killer);
+            }
+            else if (e.WasTeamkill)
+            {
+                msg = _translations.XPToastFriendlyKilled.Translate(e.Killer);
+            }
+            else
+            {
+                msg = _translations.XPToastEnemyKilled.Translate(e.Killer);
+            }
+            e.Killer.SendToast(new ToastMessage(ToastMessageStyle.Mini, msg));
+
+            return;
+        }
 
         ResolvedEventInfo resolveEvent;
         Translation translation;
@@ -112,7 +136,7 @@ internal class PointsRewardsEvents :
     [EventListener(Priority = int.MinValue)]
     public async UniTask HandleEventAsync(VehicleExploded e, IServiceProvider serviceProvider, CancellationToken token = default)
     {
-        if (!e.InstigatorId.IsIndividual())
+        if (!e.InstigatorId.IsIndividual() || !TrackPoints)
             return;
         
         uint faction = e.InstigatorTeam?.Faction.PrimaryKey ?? 0;
@@ -184,6 +208,9 @@ internal class PointsRewardsEvents :
 
     public async UniTask HandleEventAsync(FlagCaptured e, IServiceProvider serviceProvider, CancellationToken token = default)
     {
+        if (!TrackPoints)
+            return;
+
         EventInfo @event = _points.GetEvent("FlagCaptured");
         Translation translation = _translations.XPToastFlagCaptured;
 
@@ -205,6 +232,9 @@ internal class PointsRewardsEvents :
 
     public async UniTask HandleEventAsync(FlagNeutralized e, IServiceProvider serviceProvider, CancellationToken token = default)
     {
+        if (!TrackPoints)
+            return;
+
         EventInfo @event = _points.GetEvent("FlagNeutralized");
         Translation translation = _translations.XPToastFlagNeutralized;
 
@@ -226,6 +256,9 @@ internal class PointsRewardsEvents :
 
     public async UniTask HandleEventAsync(ObjectiveSlowTick e, IServiceProvider serviceProvider, CancellationToken token = default)
     {
+        if (!TrackPoints)
+            return;
+
         EventInfo attackFlagEvent = _points.GetEvent("FlagTickAttack");
         Translation attackFlagTranslation = _translations.XPToastFlagTickAttack;
         EventInfo defendFlagEvent = _points.GetEvent("FlagTickDefend");
@@ -260,7 +293,7 @@ internal class PointsRewardsEvents :
     [EventListener(RequireActiveLayout = true)]
     public async UniTask HandleEventAsync(FobDestroyed e, IServiceProvider serviceProvider, CancellationToken token = default)
     {
-        if (e.Fob is not BunkerFob buildableFob)
+        if (e.Fob is not BunkerFob buildableFob || !TrackPoints)
             return;
 
         Layout? layout = serviceProvider.GetService<Layout>();
@@ -307,7 +340,7 @@ internal class PointsRewardsEvents :
 
     public async UniTask HandleEventAsync(FobSuppliesChanged e, IServiceProvider serviceProvider, CancellationToken token = default)
     {
-        if (e.Resupplier == null || e.AmountDelta <= 0)
+        if (e.Resupplier == null || e.AmountDelta <= 0 || !TrackPoints)
             return;
 
         if (e.SupplyType == SupplyType.Build && e.Fob.BuildCount >= 120)
@@ -333,7 +366,7 @@ internal class PointsRewardsEvents :
     public async UniTask HandleEventAsync(ShovelableBuilt e, IServiceProvider serviceProvider, CancellationToken token = default)
     {
         AssetConfiguration? assetConfiguration = serviceProvider.GetService<AssetConfiguration>();
-        if (assetConfiguration == null)
+        if (assetConfiguration == null || !TrackPoints)
             return;
 
         IPlayerService? playerService = serviceProvider.GetService<IPlayerService>();
@@ -384,7 +417,7 @@ internal class PointsRewardsEvents :
     }
     public async UniTask HandleEventAsync(PlayerRevived e, IServiceProvider serviceProvider, CancellationToken token = default)
     {
-        if (e.Medic == null)
+        if (e.Medic == null || !TrackPoints)
             return;
 
         EventInfo @event = _points.GetEvent("RevivedTeammate");
@@ -399,7 +432,7 @@ internal class PointsRewardsEvents :
 
     public async UniTask HandleEventAsync(PlayerAided e, IServiceProvider serviceProvider, CancellationToken token = default)
     {
-        if (e.Medic == null)
+        if (e.Medic == null || !TrackPoints)
             return;
 
         if (e.Player.UnturnedPlayer.life.health >= 100) // do not award XP for healing players who are already full health
@@ -417,7 +450,7 @@ internal class PointsRewardsEvents :
 
     public async UniTask HandleEventAsync(PlayerDeployed e, IServiceProvider serviceProvider, CancellationToken token = default)
     {
-        if (e.Destination is not BunkerFob buildableFob)
+        if (e.Destination is not BunkerFob buildableFob || !TrackPoints)
             return;
 
         IPlayerService? playerService = serviceProvider.GetService<IPlayerService>();
@@ -443,7 +476,7 @@ internal class PointsRewardsEvents :
     {
         float distanceTransported = e.Vehicle.TranportTracker.RecordPlayerExit(e.Player.Steam64.m_SteamID, e.Vehicle.Vehicle.transform.position);
 
-        if (e.PassengerIndex == 0 || e.Vehicle.Info.IsCrewSeat(e.PassengerIndex))
+        if (e.PassengerIndex == 0 || e.Vehicle.Info.IsCrewSeat(e.PassengerIndex) || !TrackPoints)
             return;
 
         WarfarePlayer? driver = serviceProvider.GetService<IPlayerService>()?.GetOnlinePlayerOrNull(e.Vehicle.Vehicle.passengers[0].player);
@@ -469,7 +502,7 @@ internal class PointsRewardsEvents :
     public async UniTask HandleEventAsync(PlayerRearmedKit e, IServiceProvider serviceProvider, CancellationToken token = default)
     {
         IPlayerService? playerService = serviceProvider.GetService<IPlayerService>();
-        if (playerService == null)
+        if (playerService == null || !TrackPoints)
             return;
         
         WarfarePlayer? ammoBagOwner = playerService.GetOnlinePlayerOrNull(e.AmmoStorage.Owner);

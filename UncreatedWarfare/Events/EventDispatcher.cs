@@ -448,13 +448,6 @@ public partial class EventDispatcher : IHostedService, IDisposable
             }
 #endif
         }
-        else if (cache.ModelInfo is { SynchronizationContext: EventSynchronizationContext.Global or EventSynchronizationContext.PerPlayer })
-        {
-#if TELEMETRY
-            activity?.SetStatus(ActivityStatusCode.Error, "SynchronizationContext not supported.");
-#endif
-            throw new InvalidOperationException($"SynchronizationContext not supported for event model {Accessor.ExceptionFormatter.Format<TEventArgs>()} when allowAsync = false.");
-        }
 #if TELEMETRY
         else
         {

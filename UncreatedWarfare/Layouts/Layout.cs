@@ -4,7 +4,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Primitives;
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reflection;
@@ -223,7 +222,7 @@ public class Layout : IDisposable
 
         await ReadTeamInfoAsync(token);
 
-        await TeamManager.InitializeAsync(token);
+        await TeamManager.InitializeAsync(ServiceProvider.Resolve<IServiceProvider>(), token);
 
         await ReadPhasesAsync(token);
 

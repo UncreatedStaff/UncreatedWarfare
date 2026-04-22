@@ -2,15 +2,16 @@ using DanielWillett.SpeedBytes;
 using System;
 using System.IO;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Players.Saves;
 
 public class BinaryPlayerSave : ISaveableState
 {
-    private const byte DataVersion = 2;
+    private const byte DataVersion = 3;
 
-    private const int FlagLength = 10;
+    private const int FlagLength = 11;
 
     private static readonly ByteReader Reader = new ByteReader();
     private static readonly ByteWriter Writer = new ByteWriter(64);
@@ -20,7 +21,7 @@ public class BinaryPlayerSave : ISaveableState
 
     public CSteamID Steam64 { get; }
     public ulong TeamId { get; set; }
-    public uint KitId { get; set; }
+    public CurrentKitState? KitState { get; set; }
     public byte SquadTeamIdentificationNumber { get; set; }
 
     // todo: not used
@@ -33,10 +34,15 @@ public class BinaryPlayerSave : ISaveableState
     /// </summary>
     public bool IsFirstLife { get; set; }
     public bool IMGUI { get; set; }
-    public bool WasKitLowAmmo { get; set; }
     public bool HasSeenVoiceChatNotice { get; set; }
     public bool WasNitroBoosting { get; set; }
     public bool NeedsNewKitOnSpawn { get; set; }
+
+    /// <summary>
+    /// The (inverted cause default needs to be false) last value of the option in the squad menu that controls whether or not the
+    /// requested kit is automatically given when they join/create a squad.
+    /// </summary>
+    public bool ShouldLeaveSquadMenuOpenAfterRequestingKit { get; set; }
 
     /// <summary>
     /// If quests (mainly daily quests) are auto-tracked.
@@ -63,7 +69,7 @@ public class BinaryPlayerSave : ISaveableState
 
     public void ResetOnGameStart()
     {
-        KitId = 0;
+        KitState = null;
         SquadTeamIdentificationNumber = 0;
         ShouldRespawnOnJoin = false;
         NeedsNewKitOnSpawn = false;
@@ -87,18 +93,20 @@ public class BinaryPlayerSave : ISaveableState
         flags[5] = TrackQuests;
         flags[6] = IsNerd;
         flags[7] = HasSeenVoiceChatNotice;
-        flags[8] = WasKitLowAmmo;
+        // reserved: flags[8] = WasKitLowAmmo;
         flags[9] = NeedsNewKitOnSpawn;
+        flags[10] = ShouldLeaveSquadMenuOpenAfterRequestingKit;
 
         Writer.Write(DataVersion);
 
         Writer.Write(TeamId);
-        Writer.Write(KitId);
         Writer.Write(SquadTeamIdentificationNumber);
         Writer.Write(LastGameId);
         Writer.Write(MainCampTime);
 
         Writer.Write(flags);
+
+        CurrentKitState.ToWriter(KitState, Writer);
 
         Thread.BeginCriticalRegion();
         try
@@ -144,7 +152,11 @@ public class BinaryPlayerSave : ISaveableState
             byte v = Reader.ReadUInt8();
 
             TeamId = Reader.ReadUInt64();
-            KitId = Reader.ReadUInt32();
+            uint kitId = 0;
+            if (v <= 2)
+            {
+                kitId = Reader.ReadUInt32();
+            }
             SquadTeamIdentificationNumber = Reader.ReadUInt8();
             LastGameId = Reader.ReadUInt64();
             MainCampTime = v > 1 ? Reader.ReadDateTime() : default;
@@ -153,11 +165,15 @@ public class BinaryPlayerSave : ISaveableState
             if (flags.Length < FlagLength)
                 Array.Resize(ref flags, FlagLength);
 
+            KitState = v > 2
+                ? CurrentKitState.FromReader(Reader)
+                : new CurrentKitState(kitId, flags[8]);
+
             if (Reader.HasFailed)
             {
                 _logger.LogWarning("Corrupted player save: {0}.", Steam64);
                 TeamId = 0;
-                KitId = 0;
+                KitState = null;
                 SquadTeamIdentificationNumber = 0;
                 LastGameId = 0;
                 Save();
@@ -172,8 +188,9 @@ public class BinaryPlayerSave : ISaveableState
             TrackQuests = flags[5];
             IsNerd = flags[6];
             HasSeenVoiceChatNotice = flags[7];
-            WasKitLowAmmo = flags[8];
+            // reserved if v > 2
             NeedsNewKitOnSpawn = flags[9];
+            ShouldLeaveSquadMenuOpenAfterRequestingKit = flags[10];
 
             WasReadFromFile = true;
 

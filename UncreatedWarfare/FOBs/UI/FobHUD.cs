@@ -23,14 +23,19 @@ public class FobHUD :
     IEventListener<IFobNeedsUIUpdateEvent>,
     IHudUIListener
 {
+    private readonly HudManager _hudManager;
     private readonly FobManager _fobManager;
     private readonly IPlayerService _playerService;
-    private bool _isHidden;
     public FobElement[] Fobs { get; } = ElementPatterns.CreateArray<FobElement>("Fob_{0}/Fob{1}_{0}", 1, to: 12);
 
-    public FobHUD(IServiceProvider serviceProvider, AssetConfiguration assetConfig, ILoggerFactory loggerFactory)
+    public FobHUD(
+        IServiceProvider serviceProvider,
+        AssetConfiguration assetConfig,
+        ILoggerFactory loggerFactory,
+        HudManager hudManager)
         : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:FobHUD"), debugLogging: false, staticKey: true)
     {
+        _hudManager = hudManager;
         _fobManager = serviceProvider.GetRequiredService<FobManager>();
         _playerService = serviceProvider.GetRequiredService<IPlayerService>();
     }
@@ -38,7 +43,6 @@ public class FobHUD :
     /// <inheritdoc />
     public void Hide(WarfarePlayer? player)
     {
-        _isHidden = true;
         if (player != null)
         {
             ClearFromPlayer(player.Connection);
@@ -57,8 +61,6 @@ public class FobHUD :
             return;
         }
 
-        _isHidden = false;
-
         foreach (WarfarePlayer pl in _playerService.OnlinePlayers)
         {
             UpdateForPlayer(pl);
@@ -67,7 +69,7 @@ public class FobHUD :
 
     private void UpdateForPlayer(WarfarePlayer player)
     {
-        if (_isHidden)
+        if (_hudManager.IsHidden(player))
         {
             ClearFromPlayer(player.Connection);
             return;

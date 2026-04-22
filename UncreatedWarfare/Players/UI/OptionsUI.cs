@@ -34,6 +34,7 @@ public class OptionsUI : UnturnedUI
     private readonly LanguageService _languageService;
     private readonly TimeZoneRegionalDatabase _timeZoneDb;
     private readonly ILoopTickerFactory _loopTickerFactory;
+    private readonly HudManager _hudManager;
     private readonly ICachableLanguageDataStore _languageDataStore;
 
     private readonly OptionsUITranslations _translations;
@@ -80,13 +81,15 @@ public class OptionsUI : UnturnedUI
         LanguageService languageService,
         ILanguageDataStore languageDataStore,
         TimeZoneRegionalDatabase timeZoneDb,
-        ILoopTickerFactory loopTickerFactory)
+        ILoopTickerFactory loopTickerFactory,
+        HudManager hudManager)
         : base(loggerFactory, assetConfiguration.GetAssetLink<EffectAsset>("UI:Options"), staticKey: true, reliable: true)
     {
         _playerService = playerService;
         _languageService = languageService;
         _timeZoneDb = timeZoneDb;
         _loopTickerFactory = loopTickerFactory;
+        _hudManager = hudManager;
         _languageDataStore = languageDataStore as ICachableLanguageDataStore ?? throw new InvalidOperationException("Expected cachable language data store.");
         _translations = translations.Value;
         _allTimeZones = TimeZoneInfo.GetSystemTimeZones();
@@ -274,12 +277,12 @@ public class OptionsUI : UnturnedUI
     public void Close(WarfarePlayer player)
     {
         OptionsUIData data = GetOrCreateData(player.Steam64);
-        data.Modal.Dispose();
         if (data.IsSaving)
             return;
 
         data.HasUI = false;
-
+        data.Modal.Dispose();
+        Interlocked.Exchange(ref data.HudHandle, null)?.Dispose();
         ClearFromPlayer(player.Connection);
     }
 
@@ -297,6 +300,7 @@ public class OptionsUI : UnturnedUI
         }
 
         ModalHandle.TryGetModalHandle(player, ref data.Modal);
+        data.HudHandle = _hudManager.HideHud(player);
 
         if (!player.Locale.LanguageInfo.IsDefault)
             UpdateText(player);
@@ -952,6 +956,7 @@ public class OptionsUI : UnturnedUI
     private class OptionsUIData : IUnturnedUIData
     {
         internal ModalHandle Modal;
+        internal IDisposable? HudHandle;
         public CSteamID Player { get; }
         public UnturnedUI Owner { get; }
         UnturnedUIElement? IUnturnedUIData.Element => null;

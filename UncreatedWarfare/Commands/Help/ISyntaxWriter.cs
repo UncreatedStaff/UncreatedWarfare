@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text;
+using Uncreated.Warfare.Translations;
 
 // ReSharper disable once CheckNamespace
 namespace Uncreated.Warfare.Interaction.Commands.Syntax;
@@ -79,4 +80,28 @@ public enum SyntaxStringType
 {
     SyntaxString,
     RichDescription
+}
+
+public static class SyntaxWriterExtensions
+{
+    public static ISyntaxWriter CreateSyntaxWrier(
+        this in ValueFormatParameters parameters,
+        ITranslationService translationService,
+        bool closeTags
+    )
+    {
+        if ((parameters.Options & TranslationOptions.TranslateWithTerminalRichText) == TranslationOptions.TranslateWithTerminalRichText)
+        {
+            return new TerminalSyntaxWriter(closeTags, parameters.Culture, translationService.TerminalColoring);
+        }
+
+        if ((parameters.Options & TranslationOptions.NoRichText) == TranslationOptions.NoRichText)
+        {
+            return new PlainTextSyntaxWriter(parameters.Culture);
+        }
+
+        return (parameters.Options & TranslationOptions.TranslateWithUnityRichText) == TranslationOptions.TranslateWithUnityRichText
+            ? new IMGUISyntaxWriter(parameters.Culture)
+            : new TMProSyntaxWriter(closeTags, parameters.Culture);
+    }
 }

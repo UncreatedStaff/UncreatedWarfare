@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Data;
@@ -14,7 +13,9 @@ using Uncreated.Warfare.Events.Models.Kits;
 using Uncreated.Warfare.Events.Models.Objects;
 using Uncreated.Warfare.Events.Models.Squads;
 using Uncreated.Warfare.Interaction;
+using Uncreated.Warfare.Interaction.Requests;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Kits.Requests;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Extensions;
@@ -40,9 +41,13 @@ public class SquadMenuUI :
     private readonly IPlayerService _playerService;
     private readonly SquadTranslations _translations;
     private readonly ChatService _chatService;
+    private readonly Lazy<KitRequestService>? _kitRequestService;
     private readonly Func<CSteamID, SquadMenuUIPlayerData> _getData;
 
-    public LabeledButton CloseMenuButton { get; } = new LabeledButton("SquadMenuCloseButton");
+    public LabeledButton CloseMenuButton { get; } = new LabeledButton("CloseBox/SquadMenuCloseButton", "./Label");
+    public UnturnedUIElement KitOptionBoxRoot { get; } = new UnturnedUIElement("CloseBox/Kit");
+    public UnturnedToggle KitOptionToggle { get; } = new UnturnedToggle(true, "CloseBox/Kit/SquadMenuRequestKitToggle", "./ToggleState");
+    public UnturnedLabel KitOptionLabel { get; } = new UnturnedLabel("CloseBox/Kit/Label");
     public LabeledStateButton CreateSquadButton { get; } = new LabeledStateButton("CreateSquadButton", "./Label", "./ButtonState");
     public PlaceholderTextBox CreateSquadInput { get; } = new PlaceholderTextBox("CreateSquadInput", "./Viewport/Placeholder") { UseData = true };
     public UnturnedTextBox CreateSquadFeedback { get; } = new UnturnedTextBox("CreateSquadFeedback");
@@ -57,8 +62,11 @@ public class SquadMenuUI :
         _translations = serviceProvider.GetRequiredService<TranslationInjection<SquadTranslations>>().Value;
         _playerService = serviceProvider.GetRequiredService<IPlayerService>();
         _chatService = serviceProvider.GetRequiredService<ChatService>();
+        _kitRequestService = serviceProvider.GetService<Lazy<KitRequestService>>();
         CreateSquadButton.OnClicked += SquadButtonClicked;
         CloseMenuButton.OnClicked += CloseButtonClicked;
+
+        KitOptionToggle.OnToggleUpdated += HandleKitOptionToggleUpdated;
 
         _getData = steam64 => new SquadMenuUIPlayerData
         {
@@ -162,9 +170,13 @@ public class SquadMenuUI :
             return;
 
         if (squad.ContainsPlayer(warfarePlayer))
+        {
             squad.RemoveMember(warfarePlayer);
-        else
-            squad.TryAddMember(warfarePlayer);
+        }
+        else if (squad.TryAddMember(warfarePlayer))
+        {
+            GiveKitAndClose(warfarePlayer);
+        }
     }
 
     private void CloseButtonClicked(UnturnedButton button, Player player)
@@ -187,11 +199,7 @@ public class SquadMenuUI :
             return;
         }
         
-        int numberOfExistingSquads = _squadManager.Squads.Count(s => s.Team == squadleader.Team);
-        int numberOfTeammates = _playerService.OnlinePlayers.Count(p => p.Team == squadleader.Team);
-        
-        int maxAllowedSquads = Mathf.CeilToInt((float)numberOfTeammates / Squad.MaxMembers) + 1;
-        if (numberOfExistingSquads > maxAllowedSquads)
+        if (!_squadManager.CanCreateNewSquad(squadleader.Team))
         {
             CreateSquadFeedback.SetText(squadleader, _translations.SquadLimitReached.Translate(squadleader));
             return;
@@ -201,6 +209,41 @@ public class SquadMenuUI :
 
         _squadManager.CreateSquad(squadleader, squadName);
         CreateSquadFeedback.SetText(player, string.Empty);
+
+        GiveKitAndClose(squadleader);
+    }
+
+    private void GiveKitAndClose(WarfarePlayer player)
+    {
+        if (_kitRequestService == null)
+            return;
+
+        SquadMenuUIPlayerData data = GetOrAddData(player);
+        if (!data.ShouldGiveRequestingKitOnClose
+            || data.KitRequest == null)
+        {
+            return;
+        }
+
+        KitRequestService kitRequests = _kitRequestService.Value;
+        KitRequestState? kit = data.KitRequest;
+
+        Task.Run(async () =>
+        {
+            if (player.IsDisconnected)
+                return;
+
+            try
+            {
+                await kitRequests.RequestAsync(player, kit.Kit, kit.ResultHandler, player.DisconnectToken);
+                await UniTask.SwitchToMainThread();
+                CloseUI(player);
+            }
+            catch (Exception ex)
+            {
+                GetLogger().LogError(ex, "Error requesting kit and closing UI.");
+            }
+        });
     }
 
     private static bool PassesSquadNameFilter(string squadName)
@@ -275,20 +318,35 @@ public class SquadMenuUI :
         e.Consume();
     }
 
-    [EventListener(MustRunInstantly = true, RequireActiveLayout = true)]
     public IEnumerable<WarfarePlayer> ViewingPlayersOnTeam(Team team) => _playerService.OnlinePlayers.Where(p => GetOrAddData(p).IsViewing && p.Team == team);
+
+    public bool IsSquadMenuOpen(WarfarePlayer player)
+    {
+        GameThread.AssertCurrent();
+
+        return GetData<SquadMenuUIPlayerData>(player.Steam64) is { IsViewing: true };
+    }
 
     private SquadMenuUIPlayerData GetOrAddData(WarfarePlayer player)
     {
         return GetOrAddData(player.Steam64, _getData);
     }
 
-    public void OpenUI(WarfarePlayer player)
+    public void OpenUI(WarfarePlayer player, KitRequestState? forRequest = null)
     {
         SquadMenuUIPlayerData data = GetOrAddData(player);
-        if (!data.IsViewing)
+        KitRequestService? kitReqSvc = _kitRequestService?.Value;
+        if (kitReqSvc == null)
         {
-            data.IsViewing = true;
+            forRequest = null;
+        }
+
+        data.KitRequest = forRequest;
+        data.ShouldGiveRequestingKitOnClose = forRequest != null && !player.Save.ShouldLeaveSquadMenuOpenAfterRequestingKit;
+        bool wasViewing = data.IsViewing;
+        if (!wasViewing)
+        {
+            data.IsViewing = true; 
             SendToPlayer(player.Connection);
             CreateSquadInput.SetPlaceholder(player, _translations.SquadSquadNamePlaceholder.Translate(player));
             CreateSquadInput.TextBox.UpdateFromData(player.UnturnedPlayer);
@@ -298,13 +356,28 @@ public class SquadMenuUI :
             ModalHandle.TryGetModalHandle(player, ref data.Modal);
         }
 
-        UpdateForPlayer(player);
+        UpdateForPlayer(player, data);
+        if (forRequest != null)
+        {
+            if (wasViewing || !data.ShouldGiveRequestingKitOnClose)
+                KitOptionToggle.Set(player.UnturnedPlayer, data.ShouldGiveRequestingKitOnClose);
+
+            KitOptionLabel.SetText(player, _translations.SquadKitOptionLabel.Translate(forRequest.Kit, player));
+
+            KitOptionBoxRoot.Show(player);
+        }
+        else if (wasViewing)
+        {
+            KitOptionBoxRoot.Hide(player);
+        }
     }
 
     public void CloseUI(WarfarePlayer player)
     {
         SquadMenuUIPlayerData data = GetOrAddData(player);
         data.IsViewing = false;
+        data.KitRequest = null;
+        data.ShouldGiveRequestingKitOnClose = false;
         ClearFromPlayer(player.Connection);
         data.Modal.Dispose();
     }
@@ -348,6 +421,10 @@ public class SquadMenuUI :
     }
 
     private void UpdateForPlayer(WarfarePlayer player)
+    {
+        UpdateForPlayer(player, GetOrAddData(player));
+    }
+    private void UpdateForPlayer(WarfarePlayer player, SquadMenuUIPlayerData data)
     {
         List<Squad> friendlySquads = GetVisibleSquadList(player).ToList();
 
@@ -393,7 +470,7 @@ public class SquadMenuUI :
             WarfarePlayer member = squad.Members[i];
             ui.Show(player);
 
-            Class cl = member.Component<KitPlayerComponent>().ActiveClass;
+            Class cl = member.Component<KitPlayerComponent>().ActiveKit?.Class ?? Class.None;
             ui.Name.SetText(player, $"<mspace=20>{cl.GetIconString()}</mspace>  {member.Names.CharacterName}");
             ui.Avatar.SetImage(player, member.SteamSummary.AvatarUrlSmall);
         }
@@ -430,7 +507,7 @@ public class SquadMenuUI :
             if (j < squad.Members.Count)
             {
                 WarfarePlayer member = squad.Members[j];
-                Class kitClass = member.Component<KitPlayerComponent>().ActiveClass;
+                Class kitClass = member.Component<KitPlayerComponent>().ActiveKit?.Class ?? Class.None;
                 string memberName = $"<mspace=20>{kitClass.GetIconString()}</mspace> {member.Names.PlayerName}";
                 if (j == 0)
                     memberName = _translations.SquadLeader.Translate(memberName, player);
@@ -444,6 +521,18 @@ public class SquadMenuUI :
 
         element.Root.Show(player);
     }
+
+    private void HandleKitOptionToggleUpdated(UnturnedToggle toggle, Player unturnedPlayer, bool value)
+    {
+        WarfarePlayer player = _playerService.GetOnlinePlayer(unturnedPlayer);
+
+        SquadMenuUIPlayerData data = GetOrAddData(player);
+
+        data.ShouldGiveRequestingKitOnClose = value;
+
+        player.Save.ShouldLeaveSquadMenuOpenAfterRequestingKit = !value;
+    }
+
 #nullable disable
 
     public class MySquadMenu
@@ -503,5 +592,15 @@ public class SquadMenuUI :
 
         public UnturnedUIElement Element => null;
         public bool IsViewing { get; set; }
+        
+        [MaybeNull]
+        public KitRequestState KitRequest { get; set; }
+        public bool ShouldGiveRequestingKitOnClose { get; set; }
+    }
+
+    public class KitRequestState(Kit kit, IRequestResultHandler resultHandler)
+    {
+        public Kit Kit { get; set; } = kit;
+        public IRequestResultHandler ResultHandler { get; set; } = resultHandler;
     }
 }

@@ -1,12 +1,9 @@
 using DanielWillett.ReflectionTools;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Components;
-using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
-using Uncreated.Warfare.Events.Models.Vehicles;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Injures;
 using Uncreated.Warfare.Kits;
@@ -273,9 +270,19 @@ public class DeathTracker : IHostedService//, IEventListener<VehicleExploded>
                 Interlocked.Increment(ref e.KillerSession.EventCount);
             e.KillerPoint = killer.Position;
             KitPlayerComponent killerKitComp = killer.Component<KitPlayerComponent>();
-            e.KillerKitName = killerKitComp.ActiveKitId;
-            e.KillerClass = killerKitComp.ActiveClass;
-            e.KillerBranch = killerKitComp.ActiveBranch;
+            CurrentKitState? killerActiveKit = killerKitComp.ActiveKit;
+            if (killerActiveKit == null)
+            {
+                e.KillerKitName = null;
+                e.KillerClass = Class.None;
+                e.KillerBranch = Branch.Default;
+            }
+            else
+            {
+                e.KillerKitName = killerActiveKit.Id;
+                e.KillerClass = killerActiveKit.Class;
+                e.KillerBranch = killerActiveKit.Branch;
+            }
         }
         else
         {
