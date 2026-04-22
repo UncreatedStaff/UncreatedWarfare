@@ -5,7 +5,6 @@ using DanielWillett.ModularRpcs.Serialization;
 using System;
 using System.Buffers.Binary;
 using System.IO;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -17,22 +16,16 @@ namespace Uncreated.Warfare.Networking.Parsers;
 [RpcParser(typeof(CSteamID))]
 public class CSteamIDSerializer : BinaryTypeParser<CSteamID>
 {
-    // todo replace with setter
-    private static readonly MethodInfo SetErrorCodeOvf = typeof(RpcOverflowException)
-        .GetProperty(nameof(RpcOverflowException.ErrorCode), BindingFlags.Public | BindingFlags.Instance)!
-        .GetSetMethod(true);
-    private static readonly MethodInfo SetErrorCodeParse = typeof(RpcParseException)
-        .GetProperty(nameof(RpcParseException.ErrorCode), BindingFlags.Public | BindingFlags.Instance)!
-        .GetSetMethod(true);
-
     public override bool IsVariableSize => false;
     public override int MinimumSize => 8;
     public override unsafe int WriteObject(CSteamID value, byte* bytes, uint maxSize)
     {
         if (maxSize < 8)
         {
-            RpcOverflowException ex = new RpcOverflowException("The buffer overflowed while writing from the binary type parser: 'CSteamIDSerializer'.");
-            SetErrorCodeOvf.Invoke(ex, [ 1 ]);
+            RpcOverflowException ex = new RpcOverflowException("The buffer overflowed while writing from the binary type parser: 'CSteamIDSerializer'.")
+            {
+                ErrorCode = 1
+            };
             throw ex;
         }
 
@@ -59,6 +52,7 @@ public class CSteamIDSerializer : BinaryTypeParser<CSteamID>
             Span<byte> span = stackalloc byte[8];
             ulong rev = BinaryPrimitives.ReverseEndianness(value.m_SteamID);
             MemoryMarshal.Write(span, ref rev);
+            stream.Write(span);
         }
 
         return 8;
@@ -68,8 +62,10 @@ public class CSteamIDSerializer : BinaryTypeParser<CSteamID>
     {
         if (maxSize < 8)
         {
-            RpcParseException ex = new RpcParseException("The RpcOverhead failed to parse a message because the buffer was too short while reading from the binary type parser: 'CSteamIDSerializer'.");
-            SetErrorCodeParse.Invoke(ex, [ 1 ]);
+            RpcParseException ex = new RpcParseException("The RpcOverhead failed to parse a message because the buffer was too short while reading from the binary type parser: 'CSteamIDSerializer'.")
+            {
+                ErrorCode = 1
+            };
             throw ex;
         }
 
@@ -89,8 +85,10 @@ public class CSteamIDSerializer : BinaryTypeParser<CSteamID>
         bytesRead = ct;
         if (ct != 8)
         {
-            RpcParseException ex = new RpcParseException("The RpcOverhead failed to parse a message because the stream ended too early while reading from the binary type parser: 'CSteamIDSerializer'.");
-            SetErrorCodeParse.Invoke(ex, [ 2 ]);
+            RpcParseException ex = new RpcParseException("The RpcOverhead failed to parse a message because the stream ended too early while reading from the binary type parser: 'CSteamIDSerializer'.")
+            {
+                ErrorCode = 2
+            };
             throw ex;
         }
 
