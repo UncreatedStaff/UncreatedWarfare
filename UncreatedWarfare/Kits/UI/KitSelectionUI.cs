@@ -13,7 +13,9 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Events.Models;
+using Uncreated.Warfare.Events.Models.Kits;
 using Uncreated.Warfare.Events.Models.Players;
+using Uncreated.Warfare.Events.Models.Squads;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Kits.Loadouts;
@@ -28,6 +30,7 @@ using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Squads;
+using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Addons;
@@ -38,7 +41,11 @@ using Uncreated.Warfare.Util.Inventory;
 namespace Uncreated.Warfare.Kits.UI;
 
 [UnturnedUI(BasePath = "Background")]
-public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLocaleUpdated>
+public sealed partial class KitSelectionUI : UnturnedUI,
+    IEventListener<PlayerLocaleUpdated>,
+    IEventListener<PlayerKitChanged>,
+    IEventListener<SquadUpdated>,
+    IEventListener<SquadMemberLeft>
 {
     private readonly IKitDataStore _kitDataStore;
     private readonly IKitItemResolver _kitItemResolver;
@@ -54,12 +61,17 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
     private readonly ITranslationService _translationService;
     private readonly KitRequirementManager _kitRequirements;
     private readonly ITeamManager<Team> _teamManager;
+    private readonly PointsService _pointsService;
     private readonly HudManager _hudManager;
     private readonly SquadManager? _squadManager;
     private readonly PlayerNitroBoostService? _nitroBoostService;
     private readonly AccountLinkingService? _acountLinkingService;
     private readonly SemaphoreSlim _dbSemaphore;
     private readonly KitSelectionUITranslations _translations;
+
+    private static readonly short FrameKey = UnturnedUIKeyPool.Claim();
+
+    private readonly IAssetLink<EffectAsset> _frameEffect;
 
     // maps AttachmentType -> UI array index
     private readonly int[] _attachmentMap =
@@ -103,6 +115,7 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
         KitWeaponTextService weaponTextService,
         KitRequestService kitRequestService,
         ITeamManager<Team> teamManager,
+        PointsService pointsService,
         HudManager hudManager,
         SquadManager? squadManager = null,
         PlayerNitroBoostService? nitroBoostService = null,
@@ -116,11 +129,16 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
         _translations = translations.Value;
         _kitsDbContext = kitsDbContext;
         _playerService = playerService;
+
+        _frameEffect = assetConfig.GetAssetLink<EffectAsset>("UI:KitSelectionUI_Frame");
+
         _requestTranslations = requestTranslations;
         _chatService = chatService;
         _translationService = translationService;
         _kitRequirements = kitRequirements;
         _teamManager = teamManager;
+        _pointsService = pointsService;
+        _pointsService.PointsChanged += OnPointsChanged;
         _hudManager = hudManager;
         _squadManager = squadManager;
         _nitroBoostService = nitroBoostService;
@@ -161,11 +179,11 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
         _listPreviousPage.OnClicked += HandlePreviousPage;
         _listPage.OnTextUpdated += HandlePageTyped;
 
-        _switchBackToPanel.OnClicked += (_, player) =>
+        _switchBackToPanel.OnClicked += (_, unturnedPlayer) =>
         {
-            KitSelectionUIData data = GetOrAddData(player.channel.owner.playerID.steamID);
-            data.IsListOpen = false;
-            _switchToPanelLogic.Show(player);
+            WarfarePlayer player = _playerService.GetOnlinePlayer(unturnedPlayer);
+            KitSelectionUIData data = GetOrAddData(player);
+            SetListOpened(data, player, false);
         };
 
         ElementPatterns.SubscribeAll(_classButtons, HandleClassFilterChosen);
@@ -437,6 +455,7 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
         _kitDataStore.KitUpdated -= KitUpdated;
         _kitDataStore.KitAdded -= KitUpdated;
         _kitDataStore.KitRemoved -= KitRemoved;
+        _pointsService.PointsChanged -= OnPointsChanged;
 
         if (_nitroBoostService != null)
         {
@@ -470,6 +489,77 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
         UpdateConstantText(e.Language.IsDefault, e.Connection, data, e.Player);
     }
 
+    void IEventListener<PlayerKitChanged>.HandleEvent(PlayerKitChanged e, IServiceProvider serviceProvider)
+    {
+        UpdateAllKitsStatus(e.Player, false);
+    }
+
+    void IEventListener<SquadUpdated>.HandleEvent(SquadUpdated e, IServiceProvider serviceProvider)
+    {
+        foreach (WarfarePlayer player in e.Squad.Members)
+        {
+            UpdateAllKitsStatus(player, false);
+        }
+    }
+
+    void IEventListener<SquadMemberLeft>.HandleEvent(SquadMemberLeft e, IServiceProvider serviceProvider)
+    {
+        UpdateAllKitsStatus(e.Player, false);
+    }
+
+    private void OnPointsChanged(WarfarePlayer player, double deltaXp, double deltaCredits, double deltaReputation)
+    {
+        if (deltaCredits == 0 && deltaXp == 0)
+            return;
+
+        UpdateAllKitsStatus(
+            player,
+            true,
+            (in info) => info.LabelState is StatusState.CreditCost || info.ButtonState == PurchaseButtonState.CreditCost
+        );
+    }
+
+    private delegate bool ShouldUpdateKit(in KitCacheInformation info);
+    private void UpdateAllKitsStatus(WarfarePlayer player, bool force, ShouldUpdateKit? filter = null)
+    {
+        KitSelectionUIData data = GetOrAddData(player);
+        if (!data.HasUI)
+            return;
+
+        KitPlayerComponent kpc = player.Component<KitPlayerComponent>();
+        for (int i = 0; i < _panels.Length; ++i)
+        {
+            KitPanel panel = _panels[i];
+            for (int j = 0; j < panel.Kits.Length; ++j)
+            {
+                Class @class = GetPanelClass(i);
+                ref KitCacheInformation info = ref data.GetCachedState(@class, j);
+                if (info.Kit == null)
+                    break;
+
+                if (filter != null && !filter(in info))
+                    continue;
+                
+                UpdateStatusLabels(panel.Kits[j], false, data, @class, j, player, info.Kit, kpc, force);
+            }
+        }
+
+        if (!data.IsListOpen)
+            return;
+
+        for (int i = 0; i < _listResults.Length; ++i)
+        {
+            ref KitCacheInformation info = ref data.GetCachedState(i);
+            if (info.Kit == null)
+                break;
+
+            if (filter != null && !filter(in info))
+                continue;
+
+            UpdateStatusLabels(_listResults[i], false, data, Class.None, i, player, info.Kit, kpc, force);
+        }
+    }
+
     /// <summary>
     /// Close the UI for a player, waiting until it fully closes.
     /// </summary>
@@ -487,6 +577,10 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
 
         data.IsClosing = !instant;
         data.HasUI = false;
+        if (_frameEffect.TryGetGuid(out Guid guid))
+        {
+            EffectManager.ClearEffectByGuid(guid, player.Connection);
+        }
         data.ResetCache();
 
         data.ModalHandle.Dispose();
@@ -499,6 +593,13 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
         else
         {
             _startCloseAnimationLogic.Show(player);
+            EffectManager.sendUIEffectVisibility(
+                FrameKey,
+                player.Connection,
+                true,
+                _startCloseAnimationLogic.Path,
+                true
+            );
 
             // animation is actually 0.5 but add a little extra time to account for ping
             await UniTask.Delay(TimeSpan.FromSeconds(0.6), cancellationToken: token);
@@ -573,9 +674,14 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
         {
             data.HasUI = true;
             data.IsClosing = false;
-            data.ResetCache();
             SendToPlayer(player.SteamPlayer);
+            if (_frameEffect.TryGetAsset(out EffectAsset? asset))
+            {
+                EffectManager.SendUIEffect(asset, FrameKey, player.Connection, true);
+            }
         }
+
+        data.ResetCache();
 
         bool isDefaultLang = player.Locale.IsDefaultLanguage;
         data.HasDefaultText = isDefaultLang;
@@ -778,9 +884,14 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
         if (@class.HasValue)
         {
             data.ClassFilter = @class.Value;
-            _searchResultsTitle.SetText(player.Connection, data.ClassFilter == Class.None
-                ? _translations.SearchResultsLabel.Translate(player)
-                : _translations.SearchResultsByClassLabel.Translate(data.ClassFilter, player)
+            EffectManager.sendUIEffectText(
+                FrameKey,
+                player.Connection,
+                true,
+                _searchResultsTitle.Path,
+                data.ClassFilter == Class.None
+                    ? _translations.SearchResultsLabel.Translate(player)
+                    : _translations.SearchResultsByClassLabel.Translate(data.ClassFilter, player)
             );
         }
 
@@ -791,8 +902,7 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
 
         if (!data.IsListOpen)
         {
-            _switchToListLogic.Show(player);
-            data.IsListOpen = true;
+            SetListOpened(data, player, true);
         }
 
         Task.Run(async () =>
@@ -807,7 +917,26 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
             }
         });
     }
-    
+
+    private void SetListOpened(KitSelectionUIData data, WarfarePlayer player, bool isList)
+    {
+        if (data.IsListOpen == isList)
+            return;
+
+        UnturnedUIElement element = isList ? _switchToListLogic : _switchToPanelLogic;
+
+        element.Show(player);
+
+        EffectManager.sendUIEffectVisibility(
+            FrameKey,
+            player.Connection,
+            true,
+            element.Path,
+            true
+        );
+        data.IsListOpen = isList;
+    }
+
     private void UpdatePage(WarfarePlayer player, KitSelectionUIData data, int page)
     {
         data.SearchPage = Math.Max(0, page);
@@ -1094,11 +1223,13 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
         ref KitCacheInformation cachedInfo = ref data.GetCachedState(@class, index);
         cachedInfo.Kit = kit;
 
-        UpdateStatusLabels(ui, c, fromDefaultValues, data, @class, index, player, kit, kitAccessComp);
+        UpdateStatusLabels(ui, fromDefaultValues, data, @class, index, player, kit, kitAccessComp);
     }
 
-    private void UpdateStatusLabels(KitInfo ui, ITransportConnection c, bool fromDefaultValues, KitSelectionUIData data, Class @class, int index, WarfarePlayer player, Kit kit, KitPlayerComponent kitAccessComp)
+    private void UpdateStatusLabels(KitInfo ui, bool fromDefaultValues, KitSelectionUIData data, Class @class, int index, WarfarePlayer player, Kit kit, KitPlayerComponent kitAccessComp, bool force = true)
     {
+        ITransportConnection c = player.Connection;
+
         KitRequirementsState state;
         state.UI = ui;
         state.Connection = c;
@@ -1107,14 +1238,17 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
         state.Class = @class;
         state.Index = index;
 
-        CurrentKitState? activeKit = kitAccessComp.ActiveKit;
+        CurrentKitState? activeKit = kitAccessComp.GetActiveEffectiveKit();
         if (activeKit != null && activeKit.Key == kit.Key)
         {
-            ui.StatusLabel.SetText(c, _translations.StatusEquipped.Translate(player));
-            if (!fromDefaultValues)
-                ui.UnlockSection.Hide(c);
+            if (force || !data.Matches(in state, PurchaseButtonState.None, StatusState.Equipped))
+            {
+                ui.StatusLabel.SetText(c, _translations.StatusEquipped.Translate(player));
+                if (!fromDefaultValues)
+                    ui.UnlockSection.Hide(c);
+            }
 
-            data.SetCacheState(in state, PurchaseButtonState.None, StatusState.Available);
+            data.SetCacheState(in state, PurchaseButtonState.None, StatusState.Equipped);
             return;
         }
 
@@ -1129,6 +1263,11 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
             );
 
         bool anyNo = false;
+
+        ref KitCacheInformation info = ref data.GetCachedState(in state);
+        PurchaseButtonState btnState = info.ButtonState;
+        StatusState lblState = info.LabelState;
+
         foreach (IKitRequirement requirement in _kitRequirements.Request)
         {
             if (requirement.AcceptCached(_kitRequirementVisitor, in ctx) == KitRequirementResult.No)
@@ -1138,7 +1277,7 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
             }
         }
 
-        if (!anyNo)
+        if (!anyNo && (force || info.LabelState != lblState || info.ButtonState != btnState))
         {
             ui.StatusLabel.SetText(c, _translations.StatusUnlocked.Translate(player));
             if (!fromDefaultValues)
@@ -1188,10 +1327,26 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
             isDefaultLang = false;
 
         if (!isDefaultLang || !_translations.PublicKitsLabel.HasDefaultValue)
-            _publicKitsTitle.SetText(c, _translations.PublicKitsLabel.Translate(player));
+        {
+            EffectManager.sendUIEffectText(
+                FrameKey,
+                player.Connection,
+                false,
+                _publicKitsTitle.Path,
+                _translations.PublicKitsLabel.Translate(player)
+            );
+        }
 
         if (!isDefaultLang || !_translations.DetailsLabel.HasDefaultValue)
-            _detailTitle.SetText(c, _translations.DetailsLabel.Translate(player));
+        {
+            EffectManager.sendUIEffectText(
+                FrameKey,
+                player.Connection,
+                false,
+                _detailTitle.Path,
+                _translations.DetailsLabel.Translate(player)
+            );
+        }
 
         if (!isDefaultLang || !_translations.DetailsPlaceholder.HasDefaultValue)
             _detailPlaceholderLabel.SetText(c, _translations.DetailsPlaceholder.Translate(player));
@@ -1220,11 +1375,25 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
         if (data.ClassFilter == Class.None)
         {
             if (!isDefaultLang || !_translations.SearchResultsLabel.HasDefaultValue)
-                _searchResultsTitle.SetText(c, _translations.SearchResultsLabel.Translate(player));
+            {
+                EffectManager.sendUIEffectText(
+                    FrameKey,
+                    player.Connection,
+                    false,
+                    _searchResultsTitle.Path,
+                    _translations.SearchResultsLabel.Translate(player)
+                );
+            }
         }
         else
         {
-            _searchResultsTitle.SetText(c, _translations.SearchResultsByClassLabel.Translate(data.ClassFilter, player));
+            EffectManager.sendUIEffectText(
+                FrameKey,
+                player.Connection,
+                false,
+                _searchResultsTitle.Path,
+                _translations.SearchResultsByClassLabel.Translate(data.ClassFilter, player)
+            );
         }
 
         if (!isDefaultLang || !_translations.SearchResultsNoResults.HasDefaultValue)
@@ -1309,6 +1478,12 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
         public bool HasDetailPanel;
         public int ActiveStatCount = 2;
         public int ActiveItemDescriptorCount = 0;
+
+        public bool Matches(in KitRequirementsState state, PurchaseButtonState buttonState, StatusState labelState)
+        {
+            ref KitCacheInformation info = ref GetCachedState(in state);
+            return info.ButtonState == buttonState && info.LabelState == labelState;
+        }
 
         public void SetCacheState(in KitRequirementsState state, PurchaseButtonState buttonState, StatusState labelState)
         {
@@ -1397,6 +1572,7 @@ public sealed partial class KitSelectionUI : UnturnedUI, IEventListener<PlayerLo
     private enum StatusState
     {
         Loading,
+        Equipped,
         Generic,
         PremiumCost,
         CreditCost,

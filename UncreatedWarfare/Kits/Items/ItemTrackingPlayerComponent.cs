@@ -16,10 +16,17 @@ namespace Uncreated.Warfare.Kits.Items;
 /// Helps keep up with where items have been moved to track held item's back to their original kit item.
 /// </summary>
 [PlayerComponent]
-public class ItemTrackingPlayerComponent : IPlayerComponent, IEventListener<ItemDropped>, IEventListener<ItemMoved>, IEventListener<ItemDestroyed>, IEventListener<ItemPickupRequested>
+public class ItemTrackingPlayerComponent :
+    IPlayerComponent,
+    IEventListener<ItemDropped>,
+    IEventListener<ItemMoved>,
+    IEventListener<ItemDestroyed>,
+    IEventListener<ItemPickupRequested>
 {
     internal List<ItemTransformation> ItemTransformations = new List<ItemTransformation>(16);
     internal List<ItemDropTransformation> ItemDropTransformations = new List<ItemDropTransformation>(16);
+
+    internal bool IsPossiblyCorrupted;
 
     /// <summary>
     /// Cached transformations of the current kit.
@@ -41,10 +48,21 @@ public class ItemTrackingPlayerComponent : IPlayerComponent, IEventListener<Item
     {
         ItemTransformations.Clear();
         ItemDropTransformations.Clear();
+        IsPossiblyCorrupted = false;
     }
 
-    public bool TryGetCurrentItemPosition(Page origPage, byte origX, byte origY, out Page page, out byte x, out byte y, out bool isDropped, [MaybeNullWhen(false)] out Item item)
+    public bool TryGetCurrentItemPosition(Page origPage, byte origX, byte origY, out Page page, out byte x, out byte y, out bool isDropped, [NotNullWhen(true)] out Item? item)
     {
+        if (IsPossiblyCorrupted)
+        {
+            page = (Page)byte.MaxValue;
+            x = byte.MaxValue;
+            y = byte.MaxValue;
+            item = null;
+            isDropped = false;
+            return false;
+        }
+
         for (int i = 0; i < ItemDropTransformations.Count; ++i)
         {
             ItemDropTransformation t = ItemDropTransformations[i];
@@ -123,6 +141,14 @@ public class ItemTrackingPlayerComponent : IPlayerComponent, IEventListener<Item
     
     public bool TryGetOriginalItemPosition(Item item, out Page origPage, out byte origX, out byte origY)
     {
+        if (IsPossiblyCorrupted)
+        {
+            origPage = (Page)byte.MaxValue;
+            origX = byte.MaxValue;
+            origY = byte.MaxValue;
+            return false;
+        }
+
         for (int i = 0; i < ItemDropTransformations.Count; ++i)
         {
             ItemDropTransformation t = ItemDropTransformations[i];
@@ -155,7 +181,7 @@ public class ItemTrackingPlayerComponent : IPlayerComponent, IEventListener<Item
 
     void IEventListener<ItemDropped>.HandleEvent(ItemDropped e, IServiceProvider serviceProvider)
     {
-        if (e.Item == null)
+        if (e.Item == null || IsPossiblyCorrupted)
             return;
         
         for (int i = 0; i < ItemTransformations.Count; ++i)
@@ -175,7 +201,7 @@ public class ItemTrackingPlayerComponent : IPlayerComponent, IEventListener<Item
     [EventListener(Priority = int.MinValue)]
     void IEventListener<ItemPickupRequested>.HandleEvent(ItemPickupRequested e, IServiceProvider serviceProvider)
     {
-        if (!e.AutoFindFreeSpace)
+        if (!e.AutoFindFreeSpace || IsPossiblyCorrupted)
             return;
 
         // replace item from where it was dropped if possible
@@ -200,7 +226,7 @@ public class ItemTrackingPlayerComponent : IPlayerComponent, IEventListener<Item
 
     void IEventListener<ItemMoved>.HandleEvent(ItemMoved e, IServiceProvider serviceProvider)
     {
-        if (e.IsSecondaryExecution || e.NewX == e.OldX && e.NewY == e.OldY && e.NewPage == e.OldPage)
+        if (e.IsSecondaryExecution || e.NewX == e.OldX && e.NewY == e.OldY && e.NewPage == e.OldPage || IsPossiblyCorrupted)
             return;
 
         byte origX = byte.MaxValue, origY = byte.MaxValue;

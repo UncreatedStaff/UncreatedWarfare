@@ -70,7 +70,7 @@ public class Int32ParameterTemplate : QuestParameterTemplate<int>, IEquatable<In
     /// <summary>
     /// Read a saved value of this <see cref="Int32ParameterTemplate"/> from a string.
     /// </summary>
-    public static bool TryParseValue(ReadOnlySpan<char> str, [MaybeNullWhen(false)] out QuestParameterValue<int> value)
+    public static bool TryParseValue(ReadOnlySpan<char> str, [NotNullWhen(true)] out QuestParameterValue<int>? value)
     {
         return Int32ParameterValue.TryParse(str, out value);
     }
@@ -78,7 +78,7 @@ public class Int32ParameterTemplate : QuestParameterTemplate<int>, IEquatable<In
     /// <summary>
     /// Read an <see cref="Int32ParameterTemplate"/> from a string.
     /// </summary>
-    public static bool TryParse(ReadOnlySpan<char> str, [MaybeNullWhen(false)] out Int32ParameterTemplate template)
+    public static bool TryParse(ReadOnlySpan<char> str, [NotNullWhen(true)] out Int32ParameterTemplate? template)
     {
         Int32ParameterTemplate val = new Int32ParameterTemplate();
         if (val.TryParseFrom(str))
@@ -505,7 +505,7 @@ public class Int32ParameterTemplate : QuestParameterTemplate<int>, IEquatable<In
                     }
                     else if (list.Values.Length > 0)
                     {
-                        _value = list.Values[RandomUtility.GetIndex((ICollection)list.Values)];
+                        _value = list.Values[RandomUtility.GetIndex(list.Values)];
                     }
                     else
                     {
@@ -515,7 +515,7 @@ public class Int32ParameterTemplate : QuestParameterTemplate<int>, IEquatable<In
                     break;
             }
         }
-        public static bool TryParse(ReadOnlySpan<char> str, [MaybeNullWhen(false)] out QuestParameterValue<int> value)
+        public static bool TryParse(ReadOnlySpan<char> str, [NotNullWhen(true)] out QuestParameterValue<int>? value)
         {
             if (!TryParseIntl(str, out ParameterSelectionType selType, out ParameterValueType valType, out int constant,
                     out int minValue, out int maxValue, out bool minValInf, out bool maxValInf, out int round,
@@ -570,7 +570,7 @@ public class Int32ParameterTemplate : QuestParameterTemplate<int>, IEquatable<In
                     }
                     else if (list!.Length > 0)
                     {
-                        val._value = list[RandomUtility.GetIndex((ICollection)list)];
+                        val._value = list[RandomUtility.GetIndex(list)];
                     }
                     else
                     {

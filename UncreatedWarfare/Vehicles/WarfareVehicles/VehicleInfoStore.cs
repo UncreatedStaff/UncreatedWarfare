@@ -3,7 +3,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Primitives;
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
@@ -15,7 +14,8 @@ using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Vehicles.WarfareVehicles;
-[Priority(-1 /* run before VehicleSpawnerStore */)]
+
+[Priority(-1 /* run before VehicleSpawnerService */)]
 public class VehicleInfoStore : IHostedService, IDisposable, IUnlockRequirementProvider, IWhitelistExceptionProvider
 {
     private readonly WarfareModule _warfare;
@@ -122,7 +122,7 @@ public class VehicleInfoStore : IHostedService, IDisposable, IUnlockRequirementP
             _logger.LogDebug("Found vehicle info in file: {0}.", file);
         }
 
-        _vehicles.ForEach(WarfareVehicleInfo.EnsureInitialized);
+        _vehicles.ForEach(v => v.EnsureInitialized());
 
         IDisposable changeTokenRegistration = ChangeToken.OnChange(() => _fileProvider.Watch("./*.yml"), ReloadUnwatchedFiles);
 
@@ -171,7 +171,7 @@ public class VehicleInfoStore : IHostedService, IDisposable, IUnlockRequirementP
                         continue;
                     }
 
-                    WarfareVehicleInfo.EnsureInitialized(vehicle);
+                    vehicle.EnsureInitialized();
 
                     if (!_watchedFiles.Add(file))
                     {
@@ -244,7 +244,7 @@ public class VehicleInfoStore : IHostedService, IDisposable, IUnlockRequirementP
         if (newVehicle?.VehicleAsset == null)
             return;
 
-        WarfareVehicleInfo.EnsureInitialized(newVehicle);
+        newVehicle.EnsureInitialized();
 
         if (newVehicle.VehicleAsset.Equals(state.VehicleAsset))
         {

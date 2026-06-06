@@ -1,5 +1,6 @@
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Commands;
@@ -22,6 +23,11 @@ internal sealed class KitLayoutSaveCommand : IExecutableCommand
     public async UniTask ExecuteAsync(CancellationToken token)
     {
         Context.AssertRanByPlayer();
+
+        if (Context.Player.Component<ItemTrackingPlayerComponent>().IsPossiblyCorrupted)
+        {
+            throw Context.Reply(_translations.KitLayoutPossiblyCorrupted);
+        }
 
         if (!await _layoutService.SaveLayoutAsync(Context.Player, token).ConfigureAwait(false))
         {

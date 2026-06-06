@@ -70,13 +70,13 @@ internal sealed class VehicleManagerAddVehicle : IHarmonyPatch
             return;
 
         patcher.Unpatch(_target, Accessor.GetMethod(Postfix));
-        logger.LogDebug("Unpatched {0} for destroy structure event.", _target);
+        logger.LogDebug("Unpatched {0} for vehicle spawned event.", _target);
         _target = null;
     }
 
     // SDG.Unturned.VehicleManager.addVehicle
     /// <summary>
-    /// Postfix of <see cref="VehicleManager.addVehicle(Guid,ushort,ushort,float,Vector3,Quaternion,bool,bool,bool,bool,ushort,bool,ushort,ushort,CSteamID,CSteamID,bool,CSteamID[],byte[][],uint,byte,NetId,Color32)"/> to invoke <see cref="VehicleSpawned"/>.
+    /// Postfix of <see cref="M:VehicleManager.addVehicle(Guid,ushort,ushort,float,Vector3,Quaternion,bool,bool,bool,bool,ushort,bool,ushort,ushort,CSteamID,CSteamID,bool,CSteamID[],byte[][],uint,byte,NetId,Color32)"/> to invoke <see cref="VehicleSpawned"/>.
     /// </summary>
     private static void Postfix(Guid assetGuid, ushort skinID, ushort mythicID, float roadPosition, Vector3 point, Quaternion angle,
         bool sirens, bool blimp, bool headlights, bool taillights, ushort fuel, bool isExploded, ushort health, ushort batteryCharge, CSteamID owner,

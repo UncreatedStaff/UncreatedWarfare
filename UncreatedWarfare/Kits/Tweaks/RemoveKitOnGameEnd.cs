@@ -30,7 +30,7 @@ internal class RemoveKitOnGameEnd : ILayoutHostedService
 
         foreach (WarfarePlayer player in _playerService.OnlinePlayers)
         {
-            if (player.Component<KitPlayerComponent>().IsKit(KitRequestService.DefaultKitId))
+            if (!player.Component<KitPlayerComponent>().IsKit(KitRequestService.DefaultKitId))
                 _kitRequestService.GiveKitMainThread(player, new KitBestowData(defaultKit));
         }
     }

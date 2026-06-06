@@ -41,6 +41,22 @@ public class KitPlayerComponent : IPlayerComponent
     public CurrentKitState? ActiveKit { get; private set; }
 
     /// <summary>
+    /// Gets the player's equipped kit, skipping their current kit if they're previewing a kit.
+    /// </summary>
+    /// <remarks>
+    /// This should be used over <see cref="ActiveKit"/> for game logic
+    /// so the preview kit doesn't affect gameplay.
+    /// </remarks>
+    public CurrentKitState? GetActiveEffectiveKit()
+    {
+        CurrentKitState? previewFallback = ActiveKit;
+        while (previewFallback is { IsPreview: true })
+            previewFallback = previewFallback.PreviewFallback;
+
+        return previewFallback;
+    }
+
+    /// <summary>
     /// If the player has a kit equipped.
     /// </summary>
     public bool HasKit => ActiveKit != null;
@@ -61,9 +77,9 @@ public class KitPlayerComponent : IPlayerComponent
     /// <summary>
     /// Check whether or not this player is using a kit with the given <paramref name="class"/>.
     /// </summary>
-    public bool IsClass(Class @class)
+    public bool IsClass(Class @class, bool useEffectiveKit = true)
     {
-        CurrentKitState? ac = ActiveKit;
+        CurrentKitState? ac = useEffectiveKit ? GetActiveEffectiveKit() : ActiveKit;
         if (@class == Class.None)
         {
             return ac == null || ac.Class == Class.None;
@@ -75,18 +91,18 @@ public class KitPlayerComponent : IPlayerComponent
     /// <summary>
     /// Check whether or not this player is using the kit with the given primary key.
     /// </summary>
-    public bool IsKit(uint kitPk)
+    public bool IsKit(uint kitPk, bool useEffectiveKit = true)
     {
-        CurrentKitState? ac = ActiveKit;
+        CurrentKitState? ac = useEffectiveKit ? GetActiveEffectiveKit() : ActiveKit;
         return kitPk != 0 && ac != null && ac.Key == kitPk;
     }
 
     /// <summary>
     /// Check whether or not this player is using the kit with the given primary key.
     /// </summary>
-    public bool IsKit(uint? kitPk)
+    public bool IsKit(uint? kitPk, bool useEffectiveKit = true)
     {
-        CurrentKitState? ac = ActiveKit;
+        CurrentKitState? ac = useEffectiveKit ? GetActiveEffectiveKit() : ActiveKit;
         if (kitPk is null or 0)
             return ac == null;
         
@@ -96,9 +112,9 @@ public class KitPlayerComponent : IPlayerComponent
     /// <summary>
     /// Check whether or not this player is using the given kit.
     /// </summary>
-    public bool IsKit(Kit? kit)
+    public bool IsKit(Kit? kit, bool useEffectiveKit = true)
     {
-        CurrentKitState? ac = ActiveKit;
+        CurrentKitState? ac = useEffectiveKit ? GetActiveEffectiveKit() : ActiveKit;
         if (kit == null)
             return ac == null;
         return ac != null && ac.Key == kit.Key;
@@ -107,21 +123,12 @@ public class KitPlayerComponent : IPlayerComponent
     /// <summary>
     /// Check whether or not this player is using the kit with the given ID.
     /// </summary>
-    public bool IsKit(string? kitId)
+    public bool IsKit(string? kitId, bool useEffectiveKit = true)
     {
-        CurrentKitState? ac = ActiveKit;
+        CurrentKitState? ac = useEffectiveKit ? GetActiveEffectiveKit() : ActiveKit;
         if (string.IsNullOrEmpty(kitId))
             return ac == null;
         return ac != null && ac.Id == kitId;
-    }
-
-    internal CurrentKitState? GetUnderlyingPreviewFallback()
-    {
-        CurrentKitState? previewFallback = ActiveKit;
-        while (previewFallback is { IsPreview: true })
-            previewFallback = previewFallback.PreviewFallback;
-
-        return previewFallback;
     }
 
     /// <summary>
@@ -130,6 +137,18 @@ public class KitPlayerComponent : IPlayerComponent
     public Task<Kit?> GetActiveKitAsync(KitInclude include, CancellationToken token = default)
     {
         CurrentKitState? state = ActiveKit;
+        if (state == null)
+            return Task.FromResult<Kit?>(null);
+
+        return _kitDataStore.QueryKitAsync(state.Key, include, token);
+    }
+
+    /// <summary>
+    /// Get an up-to-date copy of the actively equipped kit.
+    /// </summary>
+    public Task<Kit?> GetActiveEffectiveKitAsync(KitInclude include, CancellationToken token = default)
+    {
+        CurrentKitState? state = GetActiveEffectiveKit();
         if (state == null)
             return Task.FromResult<Kit?>(null);
 

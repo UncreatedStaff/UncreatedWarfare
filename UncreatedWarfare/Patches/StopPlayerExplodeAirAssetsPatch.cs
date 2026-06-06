@@ -2,7 +2,6 @@ using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Emit;
 using DanielWillett.ReflectionTools.Formatting;
 using HarmonyLib;
-using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
 using Uncreated.Warfare.Configuration;

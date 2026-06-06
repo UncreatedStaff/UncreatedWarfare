@@ -1,14 +1,11 @@
-﻿using Org.BouncyCastle.Asn1.Ocsp;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using Uncreated.Warfare.Vehicles.WarfareVehicles;
+﻿using System;
 
 namespace Uncreated.Warfare.Util.Containers;
 
 public static class ContainerHelper
 {
     private static readonly List<IComponentContainer> TempContainers = new List<IComponentContainer>(16);
+    private static readonly List<MonoBehaviour> TempComponents = new List<MonoBehaviour>(16);
 
     /// <summary>
     /// Find a component on an object or in any containers on the object.
@@ -17,11 +14,20 @@ public static class ContainerHelper
     {
         GameThread.AssertCurrent();
 
-        foreach (var child in transform.GetComponents<MonoBehaviour>()) // tryGetComponent doesn't work with interfaces
+        transform.GetComponents(TempComponents);
+        try
         {
-            if (child is T t)
-                return t;
+            foreach (MonoBehaviour child in TempComponents) // TryGetComponent doesn't work with interfaces
+            {
+                if (child is T t)
+                    return t;
+            }
         }
+        finally
+        {
+            TempComponents.Clear();
+        }
+
 
         try
         {

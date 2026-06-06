@@ -1,8 +1,6 @@
 using DanielWillett.ReflectionTools;
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Configuration;
@@ -76,7 +74,7 @@ public class AssetParameterTemplate<TAsset> : QuestParameterTemplate<Guid>, IEqu
     /// <summary>
     /// Read a saved value of this <see cref="AssetParameterTemplate{TAsset}"/> from a string.
     /// </summary>
-    public static bool TryParseValue(ReadOnlySpan<char> str, [MaybeNullWhen(false)] out QuestParameterValue<Guid> value)
+    public static bool TryParseValue(ReadOnlySpan<char> str, [NotNullWhen(true)] out QuestParameterValue<Guid>? value)
     {
         return AssetParameterValue.TryParse(str, out value);
     }
@@ -84,7 +82,7 @@ public class AssetParameterTemplate<TAsset> : QuestParameterTemplate<Guid>, IEqu
     /// <summary>
     /// Read a <see cref="AssetParameterTemplate{TAsset}"/> from a string.
     /// </summary>
-    public static bool TryParse(ReadOnlySpan<char> str, [MaybeNullWhen(false)] out AssetParameterTemplate<TAsset> template)
+    public static bool TryParse(ReadOnlySpan<char> str, [NotNullWhen(true)] out AssetParameterTemplate<TAsset>? template)
     {
         AssetParameterTemplate<TAsset> val = new AssetParameterTemplate<TAsset>();
         if (val.TryParseFrom(str))
@@ -331,7 +329,7 @@ public class AssetParameterTemplate<TAsset> : QuestParameterTemplate<Guid>, IEqu
                     try
                     {
                         Assets.find(_mainWorkingThreadList);
-                        _value = _mainWorkingThreadList[RandomUtility.GetIndex((ICollection)_mainWorkingThreadList)].GUID;
+                        _value = _mainWorkingThreadList[RandomUtility.GetIndex(_mainWorkingThreadList)].GUID;
                     }
                     finally
                     {
@@ -351,7 +349,7 @@ public class AssetParameterTemplate<TAsset> : QuestParameterTemplate<Guid>, IEqu
                     }
                     else if (list.Values.Length > 0)
                     {
-                        _value = list.Values[RandomUtility.GetIndex((ICollection)list.Values)];
+                        _value = list.Values[RandomUtility.GetIndex(list.Values)];
                     }
                     else
                     {
@@ -362,7 +360,7 @@ public class AssetParameterTemplate<TAsset> : QuestParameterTemplate<Guid>, IEqu
             }
         }
 
-        public static bool TryParse(ReadOnlySpan<char> str, [MaybeNullWhen(false)] out QuestParameterValue<Guid> value)
+        public static bool TryParse(ReadOnlySpan<char> str, [NotNullWhen(true)] out QuestParameterValue<Guid>? value)
         {
             if (!TryParseIntl(str, out ParameterSelectionType selType, out ParameterValueType valType, out Guid constant,
                     out Guid[]? list))
@@ -390,7 +388,7 @@ public class AssetParameterTemplate<TAsset> : QuestParameterTemplate<Guid>, IEqu
                         try
                         {
                             Assets.find(_mainWorkingThreadList);
-                            val._value = _mainWorkingThreadList[RandomUtility.GetIndex((ICollection)_mainWorkingThreadList)].GUID;
+                            val._value = _mainWorkingThreadList[RandomUtility.GetIndex(_mainWorkingThreadList)].GUID;
                         }
                         finally
                         {
@@ -401,7 +399,7 @@ public class AssetParameterTemplate<TAsset> : QuestParameterTemplate<Guid>, IEqu
                     {
                         List<TAsset> assetList = new List<TAsset>(16);
                         Assets.find(assetList);
-                        val._value = assetList[RandomUtility.GetIndex((ICollection)assetList)].GUID;
+                        val._value = assetList[RandomUtility.GetIndex(assetList)].GUID;
                     }
                     break;
 
@@ -412,7 +410,7 @@ public class AssetParameterTemplate<TAsset> : QuestParameterTemplate<Guid>, IEqu
                     }
                     else if (list!.Length > 0)
                     {
-                        val._value = list[RandomUtility.GetIndex((ICollection)list)];
+                        val._value = list[RandomUtility.GetIndex(list)];
                     }
                     else
                     {

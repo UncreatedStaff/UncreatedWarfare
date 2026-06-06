@@ -12,7 +12,7 @@ public static class VehicleUtility
     /// Find the vehicle who's trunk storage is backed by <paramref name="trunk"/>. Used to identify the vehicle from item events.
     /// </summary>
     /// <exception cref="NotSupportedException">Not on main thread.</exception>
-    public static bool TryGetVehicleFromTrunkStorage([NotNullWhen(true)] Items? trunk, [MaybeNullWhen(false)] out InteractableVehicle vehicle)
+    public static bool TryGetVehicleFromTrunkStorage([NotNullWhen(true)] Items? trunk, [NotNullWhen(true)] out InteractableVehicle? vehicle)
     {
         GameThread.AssertCurrent();
 

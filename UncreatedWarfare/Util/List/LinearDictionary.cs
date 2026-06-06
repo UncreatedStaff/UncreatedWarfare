@@ -11,6 +11,7 @@ namespace Uncreated.Warfare.Util.List;
 /// <typeparam name="TKey">Unique key in the dictionary.</typeparam>
 /// <typeparam name="TValue">Non-uniuqe value in the dictionary.</typeparam>
 public class LinearDictionary<TKey, TValue> : IDictionary<TKey, TValue>, IReadOnlyDictionary<TKey, TValue>, IDictionary
+    where TKey : notnull
 {
     private readonly bool _readOnly;
     private readonly IEqualityComparer<TKey> _comparer;
@@ -357,7 +358,7 @@ public class LinearDictionary<TKey, TValue> : IDictionary<TKey, TValue>, IReadOn
     /// <summary>
     /// Gets a key that passes a <paramref name="predicate"/>.
     /// </summary>
-    public bool TryGetKey(Func<TValue, bool> predicate, [MaybeNullWhen(false)] out TKey key)
+    public bool TryGetKey(Func<TValue, bool> predicate, [NotNullWhen(true)] out TKey? key)
     {
         for (int i = 0; i < _items.Length; ++i)
         {
@@ -376,7 +377,7 @@ public class LinearDictionary<TKey, TValue> : IDictionary<TKey, TValue>, IReadOn
     /// <summary>
     /// Gets a key that has a value equal to <paramref name="value"/>.
     /// </summary>
-    public bool TryGetKey(TValue value, [MaybeNullWhen(false)] out TKey key)
+    public bool TryGetKey(TValue value, [NotNullWhen(true)] out TKey? key)
     {
         IEqualityComparer<TValue> equalityComparer = EqualityComparer<TValue>.Default;
         for (int i = 0; i < _items.Length; ++i)

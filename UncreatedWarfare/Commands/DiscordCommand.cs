@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Configuration;
+using System;
 using Uncreated.Warfare.Interaction.Commands;
 
 namespace Uncreated.Warfare.Commands;
@@ -19,18 +20,27 @@ internal sealed class DiscordCommand : IExecutableCommand
     /// <inheritdoc />
     public UniTask ExecuteAsync(CancellationToken token)
     {
-        if (_discordInviteCode == null)
+        string url;
+        if (string.IsNullOrEmpty(_discordInviteCode))
         {
-            throw Context.SendNotImplemented();
+            url = "https://uncreated.network/discord";
+        }
+        else if (_discordInviteCode.StartsWith("http", StringComparison.Ordinal))
+        {
+            url = _discordInviteCode;
+        }
+        else
+        {
+            url = "https://discord.gg/" + _discordInviteCode;
         }
 
         if (Context.Player != null)
         {
-            Context.ReplyUrl("Join our Discord Server", "https://discord.gg/" + _discordInviteCode);
+            Context.ReplyUrl("Join our Discord Server", url);
         }
         else
         {
-            Context.ReplyString("https://discord.gg/" + _discordInviteCode);
+            Context.ReplyString(url);
         }
 
         return UniTask.CompletedTask;

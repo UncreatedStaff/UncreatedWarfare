@@ -1,5 +1,6 @@
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Commands;
@@ -24,6 +25,11 @@ internal sealed class KitLayoutResetCommand : IExecutableCommand
 
         Kit? kit = await Context.Player.Component<KitPlayerComponent>().GetActiveKitAsync(KitInclude.Items | KitInclude.Translations, token).ConfigureAwait(false);
         await UniTask.SwitchToMainThread(token);
+
+        if (Context.Player.Component<ItemTrackingPlayerComponent>().IsPossiblyCorrupted)
+        {
+            throw Context.Reply(_translations.KitLayoutPossiblyCorrupted);
+        }
 
         if (kit == null)
         {

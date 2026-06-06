@@ -4,8 +4,6 @@
 
 #endif
 
-extern alias JetBrains;
-
 using DanielWillett.ReflectionTools;
 using SDG.Framework.Landscapes;
 using SDG.Framework.Utilities;

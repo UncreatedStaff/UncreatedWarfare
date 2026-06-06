@@ -43,7 +43,7 @@ public class VehicleBayCommandTranslations : PropertiesTranslationCollection
     public readonly Translation<VehicleAsset> VehicleBayForceSuccess = new Translation<VehicleAsset>("<#a0ad8e>Skipped timer for {0}.", arg0Fmt: RarityColorAddon.Instance);
 
     [TranslationData("Sent to simply see what vehicle is registered on a spawner.", IsPriorityTranslation = false)]
-    public readonly Translation<string, uint, VehicleAsset, Guid> VehicleBayCheck = new Translation<string, uint, VehicleAsset, Guid>("<#a0ad8e>This spawn '{0}' (<#8ce4ff>{1}</color>) is registered with vehicle: {2} <#fff>({3})</color>.", arg2Fmt: RarityColorAddon.Instance, arg3Fmt: "N");
+    public readonly Translation<string, VehicleAsset, Guid> VehicleBayCheck = new Translation<string, VehicleAsset, Guid>("<#a0ad8e>This spawn '{0}' is registered with vehicle: {1} <#fff>({2})</color>.", arg1Fmt: RarityColorAddon.Instance, arg2Fmt: "N");
 
     [TranslationData("Sent to a player after they start linking a sign and spawner.", IsPriorityTranslation = false)]
     public readonly Translation VehicleBayLinkStarted = new Translation("<#a0ad8e>Started linking, do <#ddd>/vb link</color> on the sign now.");

@@ -1,3 +1,4 @@
+using System;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Steam;
@@ -21,6 +22,12 @@ public class SteamApiFriendsListTask : IPlayerPendingTask
 
     async Task<bool> IPlayerPendingTask.RunAsync(PlayerPending e, CancellationToken token)
     {
+        if (!_apiService.IsEnabled)
+        {
+            _friends = Array.Empty<ulong>();
+            return true;
+        }
+
         PlayerFriendsList friendsList = await _apiService.GetPlayerFriendsAsync(e.Steam64.m_SteamID, token);
 
         friendsList.Friends.Sort((a, b) => a.FriendsSince.CompareTo(b.FriendsSince));

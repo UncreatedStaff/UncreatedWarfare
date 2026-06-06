@@ -61,7 +61,7 @@ public class AssetConfiguration : IConfiguration, IDisposable
             disp.Dispose();
     }
 
-    internal bool TryGetAssetLinkCached<TAsset>(string key, [MaybeNullWhen(false)] out IAssetLink<TAsset> link) where TAsset : Asset
+    internal bool TryGetAssetLinkCached<TAsset>(string key, [NotNullWhen(true)] out IAssetLink<TAsset>? link) where TAsset : Asset
     {
         IAssetContainer? container = _cache.GetOrAdd(
             key,

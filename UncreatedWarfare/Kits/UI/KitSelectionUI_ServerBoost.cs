@@ -76,7 +76,7 @@ partial class KitSelectionUI
                 if (cacheInfo.LabelState != StatusState.ServerBoostRequired)
                     return;
 
-                UpdateStatusLabels(ui, c, false, data, @class, index, player, cacheInfo.Kit, player.Component<KitPlayerComponent>());
+                UpdateStatusLabels(ui, false, data, @class, index, player, cacheInfo.Kit, player.Component<KitPlayerComponent>());
                 return;
             }
 

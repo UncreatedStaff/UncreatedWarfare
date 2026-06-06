@@ -31,7 +31,7 @@
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
 		</PackageReference>
 
-		<PackageReference Include="Unturned.MSBuild" Version="1.0.0-test6">
+		<PackageReference Include="Unturned.MSBuild" Version="1.0.0-test7">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
 		</PackageReference>

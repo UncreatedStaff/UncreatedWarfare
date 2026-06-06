@@ -22,6 +22,11 @@ public static class SteamApiServiceExtensions
     /// <exception cref="SteamApiRequestException">Failed to fetch the data for some reason.</exception>
     public static async Task<PlayerFriendsList> GetPlayerFriendsAsync(this ISteamApiService service, ulong player, CancellationToken token = default)
     {
+        if (!service.IsEnabled)
+        {
+            ThrowServiceNotEnabled();
+        }
+
         // create string "&steamid=76500"
         string queryString = string.Create(26, player, static (span, state) =>
         {
@@ -50,6 +55,11 @@ public static class SteamApiServiceExtensions
     /// <exception cref="SteamApiRequestException">Failed to fetch the data for some reason.</exception>
     public static async Task<PlayerSummary> GetPlayerSummaryAsync(this ISteamApiService service, ulong player, CancellationToken token = default)
     {
+        if (!service.IsEnabled)
+        {
+            ThrowServiceNotEnabled();
+        }
+
         // create string "&steamids=76500"
         string queryString = string.Create(27, player, static (span, state) =>
         {
@@ -80,6 +90,11 @@ public static class SteamApiServiceExtensions
             length = players.Count - index;
         if (index + length > players.Count)
             throw new ArgumentOutOfRangeException(nameof(length));
+
+        if (!service.IsEnabled)
+        {
+            ThrowServiceNotEnabled();
+        }
 
         CreatePlayerSummariesStringState state = default;
         state.Players = players;
@@ -126,5 +141,12 @@ public static class SteamApiServiceExtensions
     public static Task<PlayerSummary[]> GetPlayerSummariesAsync(this ISteamApiService service, IReadOnlyList<ulong> players, CancellationToken token = default)
     {
         return service.GetPlayerSummariesAsync(players, 0, players.Count, token);
+    }
+
+    /// <exception cref="InvalidOperationException"/>
+    [DoesNotReturn]
+    internal static void ThrowServiceNotEnabled()
+    {
+        throw new InvalidOperationException("Steam API service is not enabled.");
     }
 }

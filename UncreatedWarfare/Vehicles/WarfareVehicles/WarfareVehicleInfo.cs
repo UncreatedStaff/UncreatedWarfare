@@ -1,9 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using System;
-using System.Collections.Generic;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Players.Costs;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Util;
@@ -18,13 +16,13 @@ public class WarfareVehicleInfo : IEquatable<WarfareVehicleInfo>, ITranslationAr
     /// Since info objects are re-created when they're updated, the old objects still need to stay updated.
     /// </summary>
     internal WeakReference<WarfareVehicleInfo>? DependantInfo;
-    public IConfigurationRoot Configuration { get; internal set; }
+    public required IConfigurationRoot Configuration { get; set; }
 
-    public IAssetLink<VehicleAsset> VehicleAsset { get; set; }
+    public required IAssetLink<VehicleAsset> VehicleAsset { get; init; }
     public VehicleType Type { get; set; }
     public Branch Branch { get; set; } = Branch.Default;
     public Class Class { get; set; } = Class.None;
-    public int TicketCost { get; set; } = 0;
+    public int TicketCost { get; set; }
     public TimeSpan RespawnTime { get; set; } = TimeSpan.Zero;
     public TimeSpan Cooldown { get; set; } = TimeSpan.Zero;
     public Color32 PaintColor { get; set; }
@@ -44,21 +42,24 @@ public class WarfareVehicleInfo : IEquatable<WarfareVehicleInfo>, ITranslationAr
     public IReadOnlyList<TrunkItem> Trunk { get; set; } = Array.Empty<TrunkItem>();
     public IReadOnlyList<IAssetLink<ItemAsset>> StartingItems { get; set; } = Array.Empty<IAssetLink<ItemAsset>>();
 
-    public static void EnsureInitialized(WarfareVehicleInfo v)
+
+    [MemberNotNull(
+        nameof(Crew), nameof(Abandon), nameof(Rearm),
+        nameof(UnlockRequirements), nameof(Trunk),
+        nameof(StartingItems)
+    )]
+    public void EnsureInitialized()
     {
-        v.VehicleAsset ??= AssetLink.Empty<VehicleAsset>();
-        v.Configuration ??= new ConfigurationBuilder().Build();
-
-        v.Crew ??= new CrewInfo();
-        v.Abandon ??= new AbandonInfo();
-        v.Rearm ??= new RearmInfo();
-
-        v.UnlockRequirements ??= Array.Empty<UnlockRequirement>();
-        v.Trunk ??= Array.Empty<TrunkItem>();
-
-        v.Crew.Seats ??= Array.Empty<int>();
-        v.Rearm.Items ??= Array.Empty<IAssetLink<ItemAsset>>();
-        v.StartingItems ??= Array.Empty<IAssetLink<ItemAsset>>();
+        Crew ??= new CrewInfo();
+        Abandon ??= new AbandonInfo();
+        Rearm ??= new RearmInfo();
+        
+        UnlockRequirements ??= Array.Empty<UnlockRequirement>();
+        Trunk ??= Array.Empty<TrunkItem>();
+        
+        Crew.Seats ??= Array.Empty<int>();
+        Rearm.Items ??= Array.Empty<IAssetLink<ItemAsset>>();
+        StartingItems ??= Array.Empty<IAssetLink<ItemAsset>>();
     }
 
     public class CrewInfo

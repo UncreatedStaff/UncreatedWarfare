@@ -166,6 +166,33 @@ public static class CollectionUtility
     }
 
     /// <summary>
+    /// Finds the index of the first matching element in an <paramref name="source"/>.
+    /// </summary>
+    /// <param name="source">The enumerable to search for a matching element in.</param>
+    /// <param name="index">Found index of the element, or <c>-1</c> if none is found.</param>
+    /// <param name="selector"></param>
+    /// <returns>The first element that matches the <paramref name="selector"/>.</returns>
+    public static T? FirstOrDefault<T>(this IEnumerable<T> source, out int index, Func<T, bool> selector)
+    {
+        if (source == null)
+            throw new ArgumentNullException(nameof(source));
+
+        int i = 0;
+        foreach (T val in source)
+        {
+            if (selector(val))
+            {
+                index = i;
+                return val;
+            }
+            ++i;
+        }
+
+        index = -1;
+        return default;
+    }
+
+    /// <summary>
     /// Search through a list for the first index of an object matching searched text.
     /// </summary>
     /// <param name="equalsOnly">Text must match exactly to be returned.</param>

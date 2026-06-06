@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Models.Kits;
@@ -73,7 +72,7 @@ public class KitBestowService
 
         if (data.IsPreview)
         {
-            fallback = kitComp.GetUnderlyingPreviewFallback();
+            fallback = kitComp.GetActiveEffectiveKit();
             fallback?.ItemsFallback = ItemUtility.ItemsFromInventory(player).ToArray();
         }
 

@@ -75,7 +75,7 @@ public static class ActionLogTypes
         return TypesById[id];
     }
 
-    public static bool TryParse(ReadOnlySpan<char> span, [MaybeNullWhen(false)] out ActionLogType type)
+    public static bool TryParse(ReadOnlySpan<char> span, [NotNullWhen(true)] out ActionLogType? type)
     {
         if (span.IsEmpty)
         {

@@ -1,7 +1,6 @@
 ﻿using DanielWillett.SpeedBytes;
 using System;
 using Uncreated.Warfare.Kits.Items;
-using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Util.Inventory;
 
 namespace Uncreated.Warfare.Kits;

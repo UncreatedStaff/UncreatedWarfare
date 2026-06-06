@@ -66,7 +66,7 @@ public class EnumParameterTemplate<TEnum> : QuestParameterTemplate<TEnum>, IEqua
     /// <summary>
     /// Read a saved value of this <see cref="StringParameterTemplate"/> from a string.
     /// </summary>
-    public static bool TryParseValue(ReadOnlySpan<char> str, [MaybeNullWhen(false)] out QuestParameterValue<TEnum> value)
+    public static bool TryParseValue(ReadOnlySpan<char> str, [NotNullWhen(true)] out QuestParameterValue<TEnum>? value)
     {
         return EnumParameterValue.TryParse(str, out value);
     }
@@ -74,7 +74,7 @@ public class EnumParameterTemplate<TEnum> : QuestParameterTemplate<TEnum>, IEqua
     /// <summary>
     /// Read a <see cref="StringParameterTemplate"/> from a string.
     /// </summary>
-    public static bool TryParse(ReadOnlySpan<char> str, [MaybeNullWhen(false)] out EnumParameterTemplate<TEnum> template)
+    public static bool TryParse(ReadOnlySpan<char> str, [NotNullWhen(true)] out EnumParameterTemplate<TEnum>? template)
     {
         EnumParameterTemplate<TEnum> val = new EnumParameterTemplate<TEnum>();
         if (val.TryParseFrom(str))
@@ -401,7 +401,7 @@ public class EnumParameterTemplate<TEnum> : QuestParameterTemplate<TEnum>, IEqua
                     }
                     else if (list.Values.Length > 0)
                     {
-                        _value = list.Values[RandomUtility.GetIndex((ICollection)list.Values)];
+                        _value = list.Values[RandomUtility.GetIndex(list.Values)];
                     }
                     else
                     {
@@ -413,7 +413,7 @@ public class EnumParameterTemplate<TEnum> : QuestParameterTemplate<TEnum>, IEqua
                 case ParameterValueType.Wildcard when selType == ParameterSelectionType.Selective:
                     CheckValueList();
                     values = _valueList!;
-                    _value = values[RandomUtility.GetIndex((ICollection)values)];
+                    _value = values[RandomUtility.GetIndex(values)];
                     break;
             }
         }
@@ -428,7 +428,7 @@ public class EnumParameterTemplate<TEnum> : QuestParameterTemplate<TEnum>, IEqua
             _valueList = values;
         }
 
-        public static bool TryParse(ReadOnlySpan<char> str, [MaybeNullWhen(false)] out QuestParameterValue<TEnum> value)
+        public static bool TryParse(ReadOnlySpan<char> str, [NotNullWhen(true)] out QuestParameterValue<TEnum>? value)
         {
             if (!TryParseIntl(str, out ParameterSelectionType selType, out ParameterValueType valType, out TEnum constant, out TEnum minValue, out TEnum maxValue, out bool minValInf, out bool maxValInf, out TEnum[]? list))
             {
@@ -493,7 +493,7 @@ public class EnumParameterTemplate<TEnum> : QuestParameterTemplate<TEnum>, IEqua
                     }
                     else if (list!.Length > 0)
                     {
-                        val._value = list[RandomUtility.GetIndex((ICollection)list)];
+                        val._value = list[RandomUtility.GetIndex(list)];
                     }
                     else
                     {
@@ -505,7 +505,7 @@ public class EnumParameterTemplate<TEnum> : QuestParameterTemplate<TEnum>, IEqua
                 case ParameterValueType.Wildcard when selType == ParameterSelectionType.Selective:
                     CheckValueList();
                     values = _valueList!;
-                    val._value = values[RandomUtility.GetIndex((ICollection)values)];
+                    val._value = values[RandomUtility.GetIndex(values)];
                     break;
             }
 

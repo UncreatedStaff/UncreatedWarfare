@@ -18,14 +18,11 @@ internal class GlobalBanPendingTask : IPlayerPendingTask
 {
     private readonly IServiceProvider _serviceProvider;
 
-    private readonly string? _discordInvite;
-
     public bool CanReject => true;
 
     public GlobalBanPendingTask(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;
-        _discordInvite = _serviceProvider.GetRequiredService<IConfiguration>()["discord_invite_code"];
     }
 
     public async Task<bool> RunAsync(PlayerPending e, CancellationToken token = default)
@@ -88,7 +85,6 @@ internal class GlobalBanPendingTask : IPlayerPendingTask
             e.RejectReason = translations.RejectGloballyBanned.Translate(
                 newestBanInfo.BanSystemName ?? "Unknown",
                 newestBanInfo.BanTimestamp.UtcDateTime,
-                _discordInvite ?? string.Empty,
                 newestBanInfo.BanID, 
                 e.LanguageInfo,
                 e.CultureInfo,
@@ -100,7 +96,6 @@ internal class GlobalBanPendingTask : IPlayerPendingTask
             e.RejectReason = translations.RejectGloballyLinkedBanned.Translate(
                 newestBanInfo.BanSystemName ?? "Unknown",
                 newestBanInfo.BanTimestamp.UtcDateTime,
-                _discordInvite ?? string.Empty,
                 newestBanInfo.BannedPlayer,
                 newestBanInfo.BannedPlayerName ?? newestBanInfo.BannedPlayer.ToString("D17", CultureInfo.InvariantCulture),
                 newestBanInfo.BanID,

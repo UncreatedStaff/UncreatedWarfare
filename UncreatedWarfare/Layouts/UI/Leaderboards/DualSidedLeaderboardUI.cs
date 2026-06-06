@@ -425,7 +425,7 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
                     
                     WarfarePlayer member = topSquad.Members[m];
                     UnturnedLabel memberElement = squadElement.Members[m];
-                    string classIcon = member.Component<KitPlayerComponent>().ActiveKit?.Class.GetIconString() ?? Class.None.GetIconString();
+                    string classIcon = member.Component<KitPlayerComponent>().GetActiveEffectiveKit()?.Class.GetIconString() ?? Class.None.GetIconString();
                     string rank = _pointsService.GetRankFromExperience(member.CachedPoints.XP).Abbreviation;
                     string memberName = $"{rank} {member.Names.CharacterName}";
                     if (member.IsSquadLeader())
@@ -674,7 +674,7 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
         }
     }
 
-    private bool TryMapRowToUIRow(int set, int row, DualSidedLeaderboardPlayerData data, [MaybeNullWhen(false)] out LeaderboardPlayerRow uiRow)
+    private bool TryMapRowToUIRow(int set, int row, DualSidedLeaderboardPlayerData data, [NotNullWhen(true)] out LeaderboardPlayerRow? uiRow)
     {
         // gets the sorted row UI position for a row index from the original data table for a player
         ref LeaderboardSortColumn sort = ref data.SortColumns[set];

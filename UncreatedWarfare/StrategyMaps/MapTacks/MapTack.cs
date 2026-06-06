@@ -54,5 +54,5 @@ public class MapTack : IDisposable, ITransformObject
         Marker.SetPositionAndRotation(position, rotation);
     }
 
-    public bool Alive => !Marker.IsDead;
+    public bool Alive => Marker.IsAlive;
 }

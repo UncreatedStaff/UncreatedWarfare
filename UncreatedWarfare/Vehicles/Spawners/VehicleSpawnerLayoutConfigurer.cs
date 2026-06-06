@@ -1,8 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Primitives;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Layouts;
@@ -81,15 +79,15 @@ public class VehicleSpawnerLayoutConfigurer : ILayoutHostedService, IDisposable
                      .Get<List<VehicleSpawnerLayoutConfiguration>>() ?? throw new Exception("Invalid EnabledVehicleSpawners config");
     }
 
-    public bool IsEnabledInLayout(VehicleSpawnInfo vehicleSpawnInfo)
+    public bool IsEnabledInLayout(VehicleSpawnerInfo vehicleSpawnInfo)
     {
         return EnabledSpawnerLayouts.Exists(s =>
-            vehicleSpawnInfo.UniqueName.Equals(s.SpawnerName, StringComparison.OrdinalIgnoreCase));
+            vehicleSpawnInfo.Id.Equals(s.SpawnerName, StringComparison.OrdinalIgnoreCase));
     }
 
-    public bool TryGetSpawnerConfiguration(VehicleSpawnInfo vehicleSpawnInfo, [NotNullWhen(true)] out VehicleSpawnerLayoutConfiguration? configuration)
+    public bool TryGetSpawnerConfiguration(VehicleSpawnerInfo vehicleSpawnInfo, [NotNullWhen(true)] out VehicleSpawnerLayoutConfiguration? configuration)
     {
-        configuration = EnabledSpawnerLayouts.FirstOrDefault(s => vehicleSpawnInfo.UniqueName.Equals(s.SpawnerName, StringComparison.OrdinalIgnoreCase));
+        configuration = EnabledSpawnerLayouts.FirstOrDefault(s => vehicleSpawnInfo.Id.Equals(s.SpawnerName, StringComparison.OrdinalIgnoreCase));
         return configuration != null;
     }
 

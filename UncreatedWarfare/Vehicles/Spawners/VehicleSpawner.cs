@@ -1,10 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
+using System.Collections.Immutable;
 using System.Globalization;
 using System.Linq;
 using Uncreated.Warfare.Buildables;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Interaction.Requests;
 using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.Layouts.Teams;
@@ -19,6 +19,7 @@ using Uncreated.Warfare.Util.Timing;
 using Uncreated.Warfare.Vehicles.Spawners.Delays;
 using Uncreated.Warfare.Vehicles.WarfareVehicles;
 using Uncreated.Warfare.Zones;
+// ReSharper disable InconsistentlySynchronizedField
 
 namespace Uncreated.Warfare.Vehicles.Spawners;
 
@@ -35,28 +36,30 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
     private readonly VehicleSpawnerService _vehicleSpawnerService;
     private readonly VehicleSpawnerLayoutConfigurer? _vehicleSpawnerSelector;
     private readonly ZoneStore _zoneStore;
+    private readonly IServiceProvider _serviceProvider;
+    private VehicleSpawnerInfo _spawnInfo;
 
     private DateTime _timeDestroyed;
     private DateTime _timeStartedIdle;
     private Zone? _lastLocation;
     private Vector2 _lastZoneCheckPos;
-    private VehicleSpawnerState _state = VehicleSpawnerState.AwaitingRespawn;
+    private VehicleSpawnerState _state;
     private bool _isSpawningVehicle;
 
     private readonly ILoopTicker _updateTicker;
 
-    public Layout? Layout { get; private set; }
-    public VehicleSpawnInfo SpawnInfo { get; private set; }
+    public Layout? Layout { get; }
+    public VehicleSpawnerInfo SpawnInfo => _spawnInfo;
     public WarfareVehicleInfo VehicleInfo { get; private set; }
     /// <summary>
     /// A vehicle that has been spawned from this spawn.
     /// </summary>
     public InteractableVehicle? LinkedVehicle { get; private set; }
-    public Team Team { get; private set; }
+    public Team Team { get; }
     public IBuildable? Buildable { get; private set; }
-    public List<IBuildable> Signs { get; }
+    public ImmutableArray<IBuildable> Signs { get; private set; }
     public DateTime RequestTime { get; private set; }
-    public string ServerSignText => "vbs_" + SpawnInfo.VehicleAsset.Guid.ToString("N", CultureInfo.InvariantCulture);
+    public string ServerSignText => "vbs_" + SpawnInfo.VehicleId.ToString("N", CultureInfo.InvariantCulture);
 
     public VehicleSpawnerState State
     {
@@ -76,10 +79,16 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
         }
     }
 
-    public LayoutRole TeamLayoutRole { get; private set; }
+    public LayoutRole TeamLayoutRole { get; }
 
-    public VehicleSpawner(VehicleSpawnInfo spawnerInfo, WarfareVehicleInfo vehicleInfo, ILoopTicker updateTicker, IServiceProvider layoutServiceProvider)
+    /// <exception cref="GameThreadException"/>
+    public VehicleSpawner(
+        VehicleSpawnerInfo spawnerInfo,
+        ILoopTicker updateTicker,
+        IServiceProvider layoutServiceProvider)
     {
+        GameThread.AssertCurrent();
+
         _logger = layoutServiceProvider.GetRequiredService<ILogger<VehicleSpawner>>();
         _signInstancer = layoutServiceProvider.GetRequiredService<SignInstancer>();
         _playerService = layoutServiceProvider.GetRequiredService<IPlayerService>();
@@ -89,114 +98,278 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
         _vehicleSpawnerService = layoutServiceProvider.GetRequiredService<VehicleSpawnerService>();
         Layout = layoutServiceProvider.GetService<Layout>();
         _vehicleSpawnerSelector = layoutServiceProvider.GetService<VehicleSpawnerLayoutConfigurer>();
+        _serviceProvider = layoutServiceProvider;
         _updateTicker = updateTicker;
         updateTicker.OnTick += Update;
 
-        Signs = new List<IBuildable>();
+        _spawnInfo = spawnerInfo;
+        LoadVehicleInfo();
 
-        SpawnInfo = spawnerInfo;
-        VehicleInfo = vehicleInfo;
+        _state = IsEnabledInLayout() ? VehicleSpawnerState.AwaitingRespawn : VehicleSpawnerState.LayoutDisabled;
 
-        State = IsEnabledInLayout() ? VehicleSpawnerState.AwaitingRespawn : VehicleSpawnerState.LayoutDisabled;
-
-        // set by ResolveBuildable
-        Team = Team.NoTeam;
-
-        ResolveBuildable(spawnerInfo);
-        ResolveSigns(spawnerInfo);
-
-        _logger.LogDebug($"Initialized spawner: {SpawnInfo.UniqueName}");
-    }
-    public void SoftReload(VehicleSpawnInfo newSpawnerInfo, WarfareVehicleInfo newWarfareVehicle)
-    {
-        SpawnInfo = newSpawnerInfo;
-        VehicleInfo = newWarfareVehicle;
-
-        ResolveBuildable(newSpawnerInfo);
-        ResolveSigns(newSpawnerInfo);
-
-        UpdateLinkedSigns();
-    }
-    private void ResolveBuildable(VehicleSpawnInfo spawnerInfo)
-    {
-        if (spawnerInfo.IsStructure)
+        Team? team = _teamManager.FindTeam(_spawnInfo.Faction);
+        if (team == null)
         {
-            StructureInfo buildableInfo = StructureUtility.FindStructure(spawnerInfo.BuildableInstanceId);
-            if (buildableInfo.Drop == null)
-            {
-                _logger.LogWarning("Missing spawner structure for vehicle spawner '{0}' (Instance ID: {1} Vehicle Asset: {2}. " +
-                                   "This spawner may be removed from config, or fixed by editing the Instance ID.",
-                    spawnerInfo.UniqueName, spawnerInfo.BuildableInstanceId, spawnerInfo.VehicleAsset);
-            }
-            else
-            {
-                Buildable = new BuildableStructure(buildableInfo.Drop);
-            }
+            _logger.LogWarning($"Unknown team with faction {_spawnInfo.Faction}.");
+            team = Team.NoTeam;
         }
+
+        Team = team;
+
+        if (_teamManager is TwoSidedTeamManager ts)
+            TeamLayoutRole = ts.GetLayoutRole(Team);
         else
-        {
-            BarricadeInfo buildableInfo = BarricadeUtility.FindBarricade(spawnerInfo.BuildableInstanceId);
-            if (buildableInfo.Drop == null)
-            {
-                _logger.LogWarning("Missing spawner barricade for vehicle spawner '{0}' (Instance ID: {1} Vehicle Asset: {2}. " +
-                                   "This spawner may be removed from config, or fixed by editing the Instance ID.",
-                    spawnerInfo.UniqueName, spawnerInfo.BuildableInstanceId, spawnerInfo.VehicleAsset);
-            }
-            else
-            {
-                Buildable = new BuildableBarricade(buildableInfo.Drop);
-            }
-        }
-
-            
-        if (Buildable != null)
-        {
-            Team = _teamManager.GetTeam(Buildable.Group);
-
-            if (_teamManager is TwoSidedTeamManager ts)
-                TeamLayoutRole = ts.GetLayoutRole(Team);
-            else
-                TeamLayoutRole = LayoutRole.NotApplicable;
-
-        }
-        else
-        {
             TeamLayoutRole = LayoutRole.NotApplicable;
-            Team = Team.NoTeam;
-        }
+
+        ResolveBuildable();
+        ResolveSigns();
+
+        _logger.LogTrace($"Initialized spawner: {SpawnInfo.Id}");
     }
-    private void ResolveSigns(VehicleSpawnInfo spawnerInfo)
+
+    /// <summary>
+    /// Update the spawn data for this spawner.
+    /// </summary>
+    /// <exception cref="ArgumentNullException"/>
+    /// <exception cref="AssetNotFoundException">Vehicle asset not found.</exception>
+    public void UpdateSpawnInfo(VehicleSpawnerInfo newInfo)
     {
-        Signs.Clear();
-        List<uint>? toRemove = null;
-        foreach (uint signInstanceId in spawnerInfo.SignInstanceIds)
+        GameThread.AssertCurrent();
+
+        if (newInfo == null)
+            throw new ArgumentNullException(nameof(newInfo));
+
+        if (!VehicleInfo.VehicleAsset.MatchGuid(newInfo.VehicleId))
         {
-            BarricadeInfo signInfo = BarricadeUtility.FindBarricade(signInstanceId);
-            if (signInfo.Drop == null)
+            LoadVehicleInfo();
+        }
+
+        _spawnInfo = newInfo;
+
+        ResolveBuildable();
+        ResolveSigns();
+
+        UpdateLinkedSignsOnMainThread();
+    }
+
+    [MemberNotNull(nameof(VehicleInfo))]
+    private void LoadVehicleInfo()
+    {
+        VehicleAsset? vehicleAsset = Assets.find<VehicleAsset>(SpawnInfo.VehicleId);
+        if (vehicleAsset == null)
+        {
+            throw new AssetNotFoundException(
+                AssetLink.Create<VehicleAsset>(SpawnInfo.VehicleId),
+                nameof(VehicleSpawnerInfo.VehicleId)
+            );
+        }
+
+        WarfareVehicleInfo? info = _vehicleService.Info.GetVehicleInfo(vehicleAsset);
+        if (info == null)
+        {
+            _logger.LogWarning($"Vehicle info not found for vehicle {vehicleAsset}, falling back to default data.");
+            info = WarfareVehicleInfo.CreateDefault(vehicleAsset);
+        }
+
+        if (VehicleInfo != null && !VehicleInfo.VehicleAsset.MatchGuid(SpawnInfo.VehicleId))
+        {
+            _logger.LogWarning($"Updated vehicle of spawner {SpawnInfo.Id}: {VehicleInfo.VehicleAsset} -> {info.VehicleAsset}.");
+        }
+
+        VehicleInfo = info;
+    }
+
+    private void ResolveBuildable()
+    {
+        IBuildable? buildable = null;
+
+        AssetConfiguration config = _serviceProvider.GetRequiredService<AssetConfiguration>();
+        IAssetLink<ItemPlaceableAsset> bay = config.GetAssetLink<ItemPlaceableAsset>(
+            "Buildables:Gameplay:VehicleSpawner"
+        );
+
+        if (!bay.TryGetAsset(out ItemPlaceableAsset? asset))
+        {
+            _logger.LogError("Vehicle bay not found in configuration.");
+            return;
+        }
+
+
+        lock (_vehicleSpawnerService.SpawnerBuildableMap)
+        {
+            Buildable = null;
+
+            if (_vehicleSpawnerService.SpawnerBuildableMap.TryGetValue(SpawnInfo.Id, out VehicleSpawnerService.SpawnerBuildables buildables))
             {
-                _logger.LogWarning("Missing sign barricade for linked vehicle spawner '{0}' (Sign Instance ID: {1}). " +
-                                   "This sign has been removed from config.",
-                    spawnerInfo.UniqueName, signInstanceId);
-                (toRemove ??= new List<uint>()).Add(signInstanceId);
+                if (!buildables.Bay.TryGetBuildable(out buildable))
+                {
+                    _logger.LogWarning($"Missing cached buildable {buildables.Bay} for vehicle spawner {SpawnInfo.Id}.");
+                }
+            }
+
+            Vector3 spawnPos = SpawnInfo.Position;
+            Vector3 spawnRot = new Vector3(SpawnInfo.RotationX, SpawnInfo.RotationY, SpawnInfo.RotationZ);
+            Quaternion offsetSpawnRot = Quaternion.Euler(spawnRot) * BarricadeUtility.DefaultBarricadeRotation;
+            if (buildable is not { IsAlive: true })
+            {
+                buildable = BuildableExtensions.DropBuildable(asset, spawnPos, offsetSpawnRot, CSteamID.Nil, Team.GroupId);
+                _logger.LogInformation($"Placed missing buildable for spawner {SpawnInfo.Id}.");
+            }
+            else if (!bay.MatchAsset(buildable.Asset))
+            {
+                _logger.LogInformation($"Replaced buildable for spawner {SpawnInfo.Id} because the asset changed. Update: {buildable.Asset} -> {bay}.");
+                buildable.Destroy();
+                buildable = BuildableExtensions.DropBuildable(asset, spawnPos, offsetSpawnRot, CSteamID.Nil, Team.GroupId);
             }
             else
             {
-                Signs.Add(new BuildableBarricade(signInfo.Drop));
+                Vector3 pos = buildable.Position;
+                Vector3 euler = (buildable.Rotation * BarricadeUtility.InverseDefaultBarricadeRotation).eulerAngles;
+                if (buildable.Group != Team.GroupId)
+                {
+                    _logger.LogInformation($"Updated out-of-date group ID of spawner {SpawnInfo.Id}. Update: {buildable.Group} -> {Team.GroupId}.");
+                    buildable.SetOwnerOrGroup(_serviceProvider, group: Team.GroupId);
+                }
 
-                // updates sign instance via the SignTextChanged event
-                BarricadeUtility.SetServersideSignText(signInfo.Drop, ServerSignText);
+                if (!pos.IsNearlyEqual(spawnPos, 0.1f) || !spawnRot.IsNearlyEqual(euler, 1.5f))
+                {
+                    _logger.LogInformation(
+                        $"Updated out-of-date transform of spawner {SpawnInfo.Id}. Update: {pos} -> {spawnPos}, {euler} -> {spawnRot}."
+                    );
+                    buildable.SetPositionAndRotation(spawnPos, offsetSpawnRot);
+                }
             }
+
+            buildables.Bay = new BuildableDescriptor(buildable);
+
+            _vehicleSpawnerService.SpawnerBuildableMap[SpawnInfo.Id] = buildables;
+            _vehicleSpawnerService.SpawnerBuildableMapIsDirty = true;
         }
 
-        if (toRemove == null)
-            return;
+        Buildable = buildable;
+    }
+    private void ResolveSigns()
+    {
+        AssetConfiguration config = _serviceProvider.GetRequiredService<AssetConfiguration>();
+        IAssetLink<ItemBarricadeAsset> bay = config.GetAssetLink<ItemBarricadeAsset>(
+            "Buildables:Gameplay:VehicleSpawnerSign"
+        );
 
-        foreach (uint id in toRemove)
+        if (!bay.TryGetAsset(out ItemBarricadeAsset? asset))
         {
-            spawnerInfo.SignInstanceIds.Remove(id);
+            _logger.LogError("Vehicle bay sign not found in configuration.");
+            Signs = ImmutableArray<IBuildable>.Empty;
+            return;
         }
 
-        _ = _vehicleSpawnerService.SpawnerStore.SaveAsync(CancellationToken.None);
+        lock (_vehicleSpawnerService.SpawnerBuildableMap)
+        {
+            BuildableDescriptor[] descriptors;
+            if (_vehicleSpawnerService.SpawnerBuildableMap.TryGetValue(SpawnInfo.Id, out VehicleSpawnerService.SpawnerBuildables buildables))
+                descriptors = buildables.Signs ?? Array.Empty<BuildableDescriptor>();
+            else
+            {
+                descriptors = Array.Empty<BuildableDescriptor>();
+                if (Buildable != null)
+                    buildables.Bay = new BuildableDescriptor(Buildable);
+            }
+
+            BuildableDescriptor[] outDescriptors = descriptors;
+            if (outDescriptors.Length < SpawnInfo.Signs.Length)
+            {
+                outDescriptors = new BuildableDescriptor[SpawnInfo.Signs.Length];
+                for (int i = 0; i < descriptors.Length; ++i)
+                    outDescriptors[i] = descriptors[i];
+            }
+
+            IBuildable[] signs = new IBuildable[SpawnInfo.Signs.Length];
+
+            Span<char> expectedSignText = stackalloc char[36];
+            expectedSignText[0] = 'v';
+            expectedSignText[1] = 'b';
+            expectedSignText[2] = 's';
+            expectedSignText[3] = '_';
+
+            for (int i = 0; i < SpawnInfo.Signs.Length; i++)
+            {
+                VehicleSpawnerSignInfo sign = SpawnInfo.Signs[i];
+
+                IBuildable? buildable = null;
+                if (i < descriptors.Length)
+                {
+                    BuildableDescriptor desc = descriptors[i];
+                    if (desc.IsStructure || !desc.TryGetBuildable(out buildable))
+                    {
+                        _logger.LogWarning($"Missing cached sign {desc} for vehicle spawner {SpawnInfo.Id} sign {i}.");
+                    }
+                }
+
+                Vector3 spawnPos = sign.Position;
+                Vector3 spawnRot = new Vector3(sign.RotationX, sign.RotationY, sign.RotationZ);
+                Quaternion offsetSpawnRot = Quaternion.Euler(spawnRot) * BarricadeUtility.DefaultBarricadeRotation;
+                bool justPlaced = false;
+                if (buildable is not { IsAlive: true })
+                {
+                    justPlaced = true;
+                    buildable = BuildableExtensions.DropBuildable(asset, spawnPos, offsetSpawnRot, CSteamID.Nil, Team.GroupId);
+                    _logger.LogInformation($"Placed missing buildable for spawner {SpawnInfo.Id} sign {i}.");
+                }
+                else if (!bay.MatchAsset(buildable.Asset))
+                {
+                    justPlaced = true;
+                    _logger.LogInformation($"Replaced buildable for spawner {SpawnInfo.Id} sign {i} because the asset changed. Update: {buildable.Asset} -> {bay}.");
+                    buildable.Destroy();
+                    buildable = BuildableExtensions.DropBuildable(asset, spawnPos, offsetSpawnRot, CSteamID.Nil, Team.GroupId);
+                }
+                else
+                {
+                    Vector3 pos = buildable.Position;
+                    Vector3 euler = (buildable.Rotation * BarricadeUtility.InverseDefaultBarricadeRotation).eulerAngles;
+                    if (buildable.Group != Team.GroupId)
+                    {
+                        _logger.LogInformation($"Updated out-of-date group ID of spawner {SpawnInfo.Id} sign {i}. Update: {buildable.Group} -> {Team.GroupId}.");
+                        buildable.SetOwnerOrGroup(_serviceProvider, group: Team.GroupId);
+                    }
+
+                    if (!pos.IsNearlyEqual(spawnPos, 0.1f) || !spawnRot.IsNearlyEqual(euler, 1.5f))
+                    {
+                        _logger.LogInformation($"Updated out-of-date transform of spawner {SpawnInfo.Id} sign {i}. Update: {pos} -> {spawnPos}, {euler} -> {spawnRot}.");
+                        buildable.SetPositionAndRotation(spawnPos, offsetSpawnRot);
+                    }
+
+                    SpawnInfo.VehicleId.TryFormat(expectedSignText.Slice(4), out _, "N");
+                }
+
+                BarricadeDrop drop = buildable.GetDrop<BarricadeDrop>();
+                if (drop.interactable is InteractableSign signInfo && !expectedSignText.Equals(signInfo.text, StringComparison.Ordinal))
+                {
+                    if (!justPlaced)
+                    {
+                        _logger.LogInformation($"Updated out-of-date sign text of spawner {SpawnInfo.Id} sign {i}. Update: {signInfo.text} -> {expectedSignText}.");
+                    }
+                    BarricadeUtility.SetServersideSignText(drop, expectedSignText);
+                    _signInstancer.UpdateSign(drop);
+                }
+
+                outDescriptors[i] = new BuildableDescriptor(buildable);
+                signs[i] = buildable;
+            }
+
+            buildables.Signs = outDescriptors;
+            _vehicleSpawnerService.SpawnerBuildableMap[SpawnInfo.Id] = buildables;
+            _vehicleSpawnerService.SpawnerBuildableMapIsDirty = true;
+
+            for (int i = outDescriptors.Length; i < descriptors.Length; ++i)
+            {
+                if (!descriptors[i].TryGetBuildable(out IBuildable? buildable))
+                    continue;
+
+                buildable.Destroy();
+                _logger.LogInformation($"Removed extra vehicle sign {i} on spawner {SpawnInfo.Id}.");
+            }
+
+            Signs = ImmutableArray.Create(signs);
+        }
     }
 
     /// <summary>
@@ -251,12 +424,12 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
         if (!IsEnabledInLayout())
         {
             State = VehicleSpawnerState.LayoutDisabled;
-            UpdateLinkedSigns();
+            UpdateLinkedSignsOnMainThread();
         }
         else if (State == VehicleSpawnerState.LayoutDisabled)
         {
             State = VehicleSpawnerState.AwaitingRespawn;
-            UpdateLinkedSigns();
+            UpdateLinkedSignsOnMainThread();
         }
 
         if (State == VehicleSpawnerState.LayoutDisabled)
@@ -278,7 +451,7 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
                 _lastLocation = null;
                 _timeStartedIdle = DateTime.MaxValue;
                 _timeDestroyed = DateTime.MaxValue;
-                UpdateLinkedSigns();
+                UpdateLinkedSignsOnMainThread();
             }
         }
         // Destroyed
@@ -293,7 +466,7 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
             }
 
             CheckRespawn();
-            UpdateLinkedSigns();
+            UpdateLinkedSignsOnMainThread();
         }
         // Delayed in Layout configuration
         else if (IsDelayed(out _))
@@ -305,7 +478,7 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
             _lastLocation = null;
             _timeStartedIdle = DateTime.MaxValue;
             _timeDestroyed = DateTime.MaxValue;
-            UpdateLinkedSigns();
+            UpdateLinkedSignsOnMainThread();
         }
         // Ready
         else if (LinkedVehicle.lockedOwner.m_SteamID == 0 && LinkedVehicle.isLocked)
@@ -316,7 +489,7 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
                 _lastLocation = null;
                 _timeStartedIdle = DateTime.MaxValue;
                 _timeDestroyed = DateTime.MaxValue;
-                UpdateLinkedSigns();
+                UpdateLinkedSignsOnMainThread();
             }
         }
         // Idle
@@ -331,7 +504,7 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
             }
 
             CheckRespawn();
-            UpdateLinkedSigns();
+            UpdateLinkedSignsOnMainThread();
         }
         // Deployed
         else
@@ -339,7 +512,7 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
             if (State != VehicleSpawnerState.Deployed)
             {
                 State = VehicleSpawnerState.Deployed;
-                UpdateLinkedSigns();
+                UpdateLinkedSignsOnMainThread();
             }
 
             Vector3 vehiclePos = LinkedVehicle.transform.position;
@@ -353,7 +526,7 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
                 if (!ReferenceEquals(zone, _lastLocation))
                 {
                     _lastLocation = zone;
-                    UpdateLinkedSigns();
+                    UpdateLinkedSignsOnMainThread();
                 }
             }
         }
@@ -392,7 +565,8 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
             try
             {
                 await _vehicleService.SpawnVehicleAsync(this, CancellationToken.None);
-                UpdateLinkedSigns();
+                await UniTask.SwitchToMainThread();
+                UpdateLinkedSignsOnMainThread();
             }
             catch (Exception ex)
             {
@@ -405,16 +579,51 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
             }
         });
     }
+
+    /// <remarks>Thread-safe</remarks>
     public void TryDestroyLinkedVehicle()
     {
-        if (LinkedVehicle != null && !(LinkedVehicle.isExploded || LinkedVehicle.isDead))
+        if (GameThread.IsCurrent)
         {
-            VehicleManager.askVehicleDestroy(LinkedVehicle);
-            UnlinkVehicle();
+            TryDestroyLinkedVehicleOnMainThread();
+        }
+        else
+        {
+            UniTask.Create(async () =>
+            {
+                await UniTask.SwitchToMainThread();
+                TryDestroyLinkedVehicleOnMainThread();
+            });
         }
     }
 
+    private void TryDestroyLinkedVehicleOnMainThread()
+    {
+        if (LinkedVehicle == null || LinkedVehicle.isExploded || LinkedVehicle.isDead)
+            return;
+
+        VehicleManager.askVehicleDestroy(LinkedVehicle);
+        UnlinkVehicle();
+    }
+
+    /// <remarks>Thread-safe</remarks>
     private void UpdateLinkedSigns()
+    {
+        if (GameThread.IsCurrent)
+        {
+            UpdateLinkedSignsOnMainThread();
+        }
+        else
+        {
+            UniTask.Create(async () =>
+            {
+                await UniTask.SwitchToMainThread();
+                UpdateLinkedSignsOnMainThread();
+            });
+        }
+    }
+
+    private void UpdateLinkedSignsOnMainThread()
     {
         if (Provider.clients.Count == 0)
             return;
@@ -449,33 +658,33 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
     /// <summary>
     /// Link this spawn to a vehicle.
     /// </summary>
-    internal void LinkVehicle(InteractableVehicle vehicle) // todo: replace with WarfareVehicle
+    internal void LinkVehicle(WarfareVehicle vehicle)
     {
         GameThread.AssertCurrent();
 
-        if (vehicle == LinkedVehicle)
+        if (vehicle.Vehicle == LinkedVehicle)
             return;
 
         InteractableVehicle? oldVehicle = LinkedVehicle;
-        LinkedVehicle = vehicle;
+        LinkedVehicle = vehicle.Vehicle;
         if (oldVehicle != null && oldVehicle.TryGetComponent(out WarfareVehicleComponent oldVehicleComponent) && oldVehicleComponent.WarfareVehicle.Spawn == this)
         {
             oldVehicleComponent.WarfareVehicle.UnlinkFromSpawn(this);
         }
 
-        if (vehicle.TryGetComponent(out WarfareVehicleComponent newVehicleComponent))
+        if (vehicle.Vehicle.TryGetComponent(out WarfareVehicleComponent newVehicleComponent))
         {
             newVehicleComponent.WarfareVehicle.LinkToSpawn(this);
         }
 
-        UpdateLinkedSigns();
+        UpdateLinkedSignsOnMainThread();
     }
 
 
     /// <summary>
     /// Unlink this spawn from it's <see cref="LinkedVehicle"/>.
     /// </summary>
-    internal void UnlinkVehicle()
+    internal void UnlinkVehicle(bool holdSignLink = false)
     {
         GameThread.AssertCurrent();
 
@@ -484,7 +693,8 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
             return;
         LinkedVehicle = null;
 
-        UpdateLinkedSigns();
+        if (!holdSignLink)
+            UpdateLinkedSignsOnMainThread();
 
         if (oldVehicle == null || !oldVehicle.TryGetComponent(out WarfareVehicleComponent oldVehicleComponent))
         {
@@ -541,7 +751,7 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
         else
             buildableType = $"Barricade: {Buildable.InstanceId}";
 
-        return $"'{SpawnInfo.UniqueName}' [{buildableType} - {VehicleInfo.VehicleAsset.ToDisplayString()}]";
+        return $"'{SpawnInfo.Id}' [{buildableType} - {VehicleInfo.VehicleAsset.ToDisplayString()}]";
     }
 
     /// <inheritdoc />

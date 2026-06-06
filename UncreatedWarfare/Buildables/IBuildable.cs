@@ -138,6 +138,7 @@ public class BuildableBarricade : IBuildable
     public CSteamID Owner => Unsafe.As<ulong, CSteamID>(ref Data.owner);
     public CSteamID Group => Unsafe.As<ulong, CSteamID>(ref Data.group);
     public NetId NetId => Drop.GetNetId();
+
     public Vector3 Position
     {
         get => Data.point;

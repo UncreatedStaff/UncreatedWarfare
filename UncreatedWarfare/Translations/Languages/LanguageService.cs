@@ -87,7 +87,7 @@ public class LanguageService : IHostedService
         if (_defaultCulture != null)
             return _defaultCulture;
 
-        if (!TryGetCultureInfo(DefaultCultureCode, out CultureInfo culture))
+        if (!TryGetCultureInfo(DefaultCultureCode, out CultureInfo? culture))
             culture = CultureInfo.CurrentCulture;
 
         _defaultCulture = culture;
@@ -126,7 +126,7 @@ public class LanguageService : IHostedService
     /// <summary>
     /// Attempts to find an existing culture from the given culture code.
     /// </summary>
-    public bool TryGetCultureInfo(string? code, [MaybeNullWhen(false)] out CultureInfo cultureInfo)
+    public bool TryGetCultureInfo(string? code, [NotNullWhen(true)] out CultureInfo? cultureInfo)
     {
         if (code == null)
         {
@@ -162,7 +162,7 @@ public class LanguageService : IHostedService
     /// <summary>
     /// Figures out the best default settings for a player with the given language, preferences, and steam profile.
     /// </summary>
-    public void GetDefaultLocaleSettings(string steamLanguage, LanguagePreferences preferences, PlayerSummary summary, out LanguageInfo language, out CultureInfo culture, out TimeZoneInfo timeZone)
+    public void GetDefaultLocaleSettings(string steamLanguage, LanguagePreferences preferences, PlayerSummary? summary, out LanguageInfo language, out CultureInfo culture, out TimeZoneInfo timeZone)
     {
         if (_languageDataStoreCache == null)
             throw new NotSupportedException();
@@ -180,7 +180,7 @@ public class LanguageService : IHostedService
 
         if (!TryGetCultureInfo(preferences.Culture, out CultureInfo? c))
         {
-            if (summary.CountryCode != null && lang.Code.Length > 2 && lang.Code[2] == '-')
+            if (summary?.CountryCode != null && lang.Code.Length > 2 && lang.Code[2] == '-')
             {
                 // try composite language id with country code (ex. en-US)
                 string cultureName = lang.Code[..3] + summary.CountryCode;
@@ -205,7 +205,7 @@ public class LanguageService : IHostedService
             }
         }
 
-        if (tz == null && !string.IsNullOrWhiteSpace(summary.CountryCode))
+        if (tz == null && !string.IsNullOrWhiteSpace(summary?.CountryCode))
         {
             _tzDatabase.DefaultTimeZones.TryGetValue(summary.CountryCode, out tz);
         }

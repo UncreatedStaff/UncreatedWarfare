@@ -109,12 +109,13 @@ public class WarTableDoorTweak :
 
     private void UpdateFlag(WarfarePlayer player)
     {
+        KitPlayerComponent kpc = player.Component<KitPlayerComponent>();
         if (player.Component<DeploymentComponent>().CurrentDeployment is Zone { Type: ZoneType.MainBase })
         {
             // already deploying
             player.SetFlag(_flagId, Flags.Deploying);
         }
-        else if (player.Component<KitPlayerComponent>().ActiveKit is not { Class: > Class.Unarmed })
+        else if (kpc.GetActiveEffectiveKit() is not { Class: > Class.Unarmed })
         {
             // invalid kit
             player.SetFlag(_flagId, Flags.NoKit);

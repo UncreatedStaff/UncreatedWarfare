@@ -200,7 +200,7 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable
         // send a reminder to rearm if on low ammo
         KitPlayerComponent kitComp = player.Component<KitPlayerComponent>();
 
-        if (_tipService == null || kitComp.ActiveKit is { IsLowAmmo: false })
+        if (_tipService == null || kitComp.GetActiveEffectiveKit() is { IsLowAmmo: false })
             return;
 
         if (FobManager.Entities

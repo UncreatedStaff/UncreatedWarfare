@@ -13,7 +13,7 @@ public readonly struct UnturnedAssetReference
     public string? GetFriendlyName()
     {
         // multi-threaded access may become a problem here but assets aren't updated during play so it should be okay.
-        if (Provider.isInitialized && !SDG.Unturned.Assets.isLoading)
+        if (WarfareModule.IsActive && !SDG.Unturned.Assets.isLoading)
             return GetAsset<Asset>()?.FriendlyName;
 
         return null;

@@ -1,6 +1,5 @@
 using DanielWillett.ModularRpcs.Abstractions;
 using DanielWillett.ModularRpcs.Exceptions;
-using System.Diagnostics.CodeAnalysis;
 
 
 namespace Uncreated.Warfare.Networking;
@@ -22,7 +21,7 @@ public interface IRpcConnectionService
     /// <summary>
     /// Get the connection for Warfare.
     /// </summary>
-    bool TryGetWarfareConnection([MaybeNullWhen(false)] out IModularRpcRemoteConnection connection);
+    bool TryGetWarfareConnection([NotNullWhen(true)] out IModularRpcRemoteConnection? connection);
 
     /// <summary>
     /// Get the identity string of a connection.
@@ -45,7 +44,7 @@ public class NullRpcConnectionService : IRpcConnectionService
     }
 
     /// <inheritdoc />
-    public bool TryGetWarfareConnection([MaybeNullWhen(false)] out IModularRpcRemoteConnection connection)
+    public bool TryGetWarfareConnection([NotNullWhen(true)] out IModularRpcRemoteConnection? connection)
     {
         connection = null;
         return false;

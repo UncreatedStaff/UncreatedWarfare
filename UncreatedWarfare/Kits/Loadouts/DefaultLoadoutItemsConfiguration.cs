@@ -69,7 +69,7 @@ public sealed class DefaultLoadoutItemsConfiguration : BaseAlternateConfiguratio
 
         for (int i = 0; i < _configuration.Length; ++i)
         {
-            ref IReadOnlyList<IItem>? items = ref _configuration[i];
+            ref IReadOnlyList<IItem> items = ref _configuration[i];
 
             Class @class = (Class)((int)MinimumClass + i);
 

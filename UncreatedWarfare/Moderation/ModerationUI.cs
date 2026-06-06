@@ -1,8 +1,5 @@
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using SDG.NetTransport;
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using Uncreated.Framework.UI;
@@ -34,8 +31,6 @@ public partial class ModerationUI : UnturnedUI
     private readonly IPointsStore _pointsStore;
     private readonly ItemIconProvider _itemIconProvider;
     private readonly HudManager _hudManager;
-
-    private readonly string? _discordInviteCode;
 
     public const int ModerationHistoryLength = 30;
     public const string PositiveReputationColor = "00cc00";
@@ -201,9 +196,6 @@ public partial class ModerationUI : UnturnedUI
         _moderationSql = serviceProvider.GetRequiredService<DatabaseInterface>();
         _itemIconProvider = serviceProvider.GetRequiredService<ItemIconProvider>();
         _hudManager = serviceProvider.GetRequiredService<HudManager>();
-
-        IConfiguration systemConfig = serviceProvider.GetRequiredService<IConfiguration>();
-        _discordInviteCode = systemConfig["discord_invite_code"];
 
         ModerationHistorySearchTypeButton = new UnturnedEnumButton<ModerationHistorySearchMode>(ModerationHistorySearchMode.Message, "ModerationButtonToggleSearchMode",
             "./ModerationButtonToggleSearchModeLabel", null, "./ModerationButtonToggleSearchModeRightClickListener")
@@ -1384,7 +1376,7 @@ public partial class ModerationUI : UnturnedUI
                 usernamesAndPicturesToCache.Add(actor.Actor);
         }
 
-        UniTask.Create(async () =>
+        _ = UniTask.Create(async () =>
         {
             ulong[] steam64Ids = await _moderationSql.GetActorSteam64IDs(usernamesAndPicturesToCache, player.DisconnectToken);
 

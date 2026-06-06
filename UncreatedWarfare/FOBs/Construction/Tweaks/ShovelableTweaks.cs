@@ -62,7 +62,7 @@ internal class ShovelableTweaks :
         IAssetLink<ItemPlaceableAsset> buildableAsset = AssetLink.Create(e.Asset);
 
         bool buildableInKit = false;
-        Kit? cachedKit = kitComponent.ActiveKit?.CachedKit;
+        Kit? cachedKit = kitComponent.GetActiveEffectiveKit()?.CachedKit;
         if (cachedKit != null)
         {
             int maxAllowedInKit = _kitItemResolver.CountItems(cachedKit, buildableAsset, e.OriginalPlacer.Team);

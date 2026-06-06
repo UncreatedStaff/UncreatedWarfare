@@ -1,8 +1,11 @@
 ﻿using DanielWillett.SpeedBytes;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Steam;
 using Uncreated.Warfare.Steam.Models;
 
@@ -63,30 +66,50 @@ public class PlayerActor : IModerationActor
     public override string ToString() => Id.ToString(CultureInfo.InvariantCulture);
     public virtual async ValueTask<string> GetDisplayName(DatabaseInterface database, CancellationToken token = default)
     {
-        return (await database.GetUsernames(new CSteamID(Id), true, token)).GetDisplayNameOrPlayerName();
+        IPlayerService? playerService = database.GlobalServices.GetService<IPlayerService>();
+
+        if (playerService?.GetOnlinePlayerOrNullThreadSafe(Id) is { } player)
+        {
+            return player.Names.GetDisplayNameOrPlayerName();
+        }
+
+        PlayerNames names = await database
+            .GetUsernames(new CSteamID(Id), true, token)
+            .ConfigureAwait(false);
+
+        return names.GetDisplayNameOrPlayerName();
     }
     public virtual async ValueTask<string?> GetProfilePictureURL(DatabaseInterface database, AvatarSize size, CancellationToken token = default)
     {
         if (database.TryGetAvatar(Id, size, out string url))
             return url;
 
-        if (!Provider.isInitialized)
-            return null;
+        IPlayerService? playerService = database.GlobalServices.GetService<IPlayerService>();
 
-        // todo if (UCPlayer.FromID(Id.m_SteamID) is { } pl)
-        //    return await (pl as IModerationActor).GetProfilePictureURL(database, size, token).ConfigureAwait(false);
+        if (playerService?.GetOnlinePlayerOrNullThreadSafe(Id) is { } player)
+        {
+            return await (player as IModerationActor)
+                .GetProfilePictureURL(database, size, token)
+                .ConfigureAwait(false);
+        }
+
+        if (!database.SteamAPI.IsEnabled)
+            return null;
 
         PlayerSummary? summary = await database.SteamAPI.GetPlayerSummaryAsync(Id, token);
         if (summary == null)
             return null;
+
         url = size switch
         {
             AvatarSize.Full => summary.AvatarUrlFull,
             AvatarSize.Medium => summary.AvatarUrlMedium,
             _ => summary.AvatarUrlSmall
         };
+
         if (url != null)
             database.UpdateAvatar(Id, size, url);
+
         return url;
     }
 }
@@ -105,43 +128,74 @@ public class DiscordActor : IModerationActor
         if (GetDiscordDisplayNameOverride != null)
             return await GetDiscordDisplayNameOverride(Id, token).ConfigureAwait(false);
 
-        // todo ulong steam64 = await database.Sql.GetSteam64(Id, token).ConfigureAwait(false);
-        ulong steam64 = 0;
-        if (steam64 != 0)
-            return (await database.GetUsernames(new CSteamID(steam64), true, token).ConfigureAwait(false)).GetDisplayNameOrPlayerName();
+        IUserDataService? dataService = database.GlobalServices.GetService<IUserDataService>();
+        if (dataService == null)
+            return ToString();
 
-        return "<@" + Id + ">";
+        ulong steam64 = await dataService.GetSteam64Async(Id, token).ConfigureAwait(false);
+        if (steam64 != 0)
+        {
+            IPlayerService? playerService = database.GlobalServices.GetService<IPlayerService>();
+
+            if (playerService?.GetOnlinePlayerOrNullThreadSafe(steam64) is { } player)
+            {
+                return player.Names.GetDisplayNameOrPlayerName();
+            }
+
+            PlayerNames names = await database
+                .GetUsernames(new CSteamID(steam64), true, token)
+                .ConfigureAwait(false);
+
+            return names.GetDisplayNameOrPlayerName();
+        }
+
+        return ToString();
     }
     public virtual async ValueTask<string?> GetProfilePictureURL(DatabaseInterface database, AvatarSize size, CancellationToken token = default)
     {
         if (GetDiscordProfilePictureOverride != null)
             return await GetDiscordProfilePictureOverride(Id, token).ConfigureAwait(false);
 
-        // todo ulong steam64 = await database.Sql.GetSteam64(Id, token).ConfigureAwait(false);
-        ulong steam64 = 0;
-        if (steam64 == 0) return null;
+        IUserDataService? dataService = database.GlobalServices.GetService<IUserDataService>();
+        if (dataService == null)
+            return null;
+
+        ulong steam64 = await dataService.GetSteam64Async(Id, token).ConfigureAwait(false);
+        if (steam64 == 0)
+            return null;
+
         if (database.TryGetAvatar(steam64, size, out string url))
             return url;
-        if (Provider.isInitialized)
-        {
-            // todo if (UCPlayer.FromID(steam64) is { } pl)
-            // todo     return await (pl as IModerationActor).GetProfilePictureURL(database, size, token).ConfigureAwait(false);
 
-            PlayerSummary? summary = await database.SteamAPI.GetPlayerSummaryAsync(steam64, token);
-            if (summary == null)
-                return null;
-            url = size switch
-            {
-                AvatarSize.Full => summary.AvatarUrlFull,
-                AvatarSize.Medium => summary.AvatarUrlMedium,
-                _ => summary.AvatarUrlSmall
-            };
-            if (url != null)
-                database.UpdateAvatar(steam64, size, url);
-            return url;
+        IPlayerService? playerService = database.GlobalServices.GetService<IPlayerService>();
+
+        if (playerService?.GetOnlinePlayerOrNullThreadSafe(steam64) is { } player)
+        {
+            return await (player as IModerationActor)
+                .GetProfilePictureURL(database, size, token)
+                .ConfigureAwait(false);
         }
 
-        return null;
+        if (!database.SteamAPI.IsEnabled)
+        {
+            return null;
+        }
+
+        PlayerSummary? summary = await database.SteamAPI.GetPlayerSummaryAsync(steam64, token);
+        if (summary == null)
+            return null;
+
+        url = size switch
+        {
+            AvatarSize.Full => summary.AvatarUrlFull,
+            AvatarSize.Medium => summary.AvatarUrlMedium,
+            _ => summary.AvatarUrlSmall
+        };
+
+        if (url != null)
+            database.UpdateAvatar(steam64, size, url);
+
+        return url;
     }
 }
 
@@ -154,8 +208,12 @@ public class ConsoleActor : IModerationActor
     private ConsoleActor() { }
     public override string ToString() => "Console";
     public ValueTask<string> GetDisplayName(DatabaseInterface database, CancellationToken token = default) => new ValueTask<string>("Console");
-    public ValueTask<string?> GetProfilePictureURL(DatabaseInterface database, AvatarSize size, CancellationToken token = default)
-        => new ValueTask<string?>(Provider.isInitialized ? "https://i.imgur.com/f2axLoQ.png" /* this image has rounded corners */ : "https://i.imgur.com/NRZFfKN.png");
+    public ValueTask<string?> GetProfilePictureURL(
+        DatabaseInterface database,
+        AvatarSize size,
+        CancellationToken token = default
+    )
+        => new ValueTask<string?>(WarfareModule.IsActive ? "https://i.imgur.com/f2axLoQ.png" /* this image has rounded corners */ : "https://i.imgur.com/NRZFfKN.png");
 }
 
 [JsonConverter(typeof(ActorConverter))]

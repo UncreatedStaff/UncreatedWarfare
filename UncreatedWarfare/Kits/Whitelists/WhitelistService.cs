@@ -299,7 +299,7 @@ public class WhitelistService :
         }
 
         await UniTask.SwitchToMainThread(token);
-        Kit? kit = e.Player.Component<KitPlayerComponent>().ActiveKit?.CachedKit;
+        Kit? kit = e.Player.Component<KitPlayerComponent>().GetActiveEffectiveKit()?.CachedKit;
 
         IAssetLink<ItemAsset> asset = AssetLink.Create(e.Buildable.Asset);
         if (kit != null && _kitItemResolver.ContainsItem(kit, asset, e.Player.Team))
@@ -328,7 +328,7 @@ public class WhitelistService :
 
         await UniTask.SwitchToMainThread(token);
 
-        Kit? kit = e.Player.Component<KitPlayerComponent>().ActiveKit?.CachedKit;
+        Kit? kit = e.Player.Component<KitPlayerComponent>().GetActiveEffectiveKit()?.CachedKit;
 
         IAssetLink<ItemAsset> asset = AssetLink.Create(e.Buildable.Asset);
         if (kit != null && _kitItemResolver.ContainsItem(kit, asset, e.Player.Team))
@@ -375,7 +375,7 @@ public class WhitelistService :
 
         await UniTask.SwitchToMainThread(token);
 
-        Kit? equippedKit = e.OriginalPlacer.Component<KitPlayerComponent>().ActiveKit?.CachedKit;
+        Kit? equippedKit = e.OriginalPlacer.Component<KitPlayerComponent>().GetActiveEffectiveKit()?.CachedKit;
 
         if (equippedKit == null && whitelistAmount == 0)
         {
@@ -495,7 +495,7 @@ public class WhitelistService :
 
         await UniTask.SwitchToMainThread(token);
 
-        Kit? equippedKit = e.Player.Component<KitPlayerComponent>().ActiveKit?.CachedKit;
+        Kit? equippedKit = e.Player.Component<KitPlayerComponent>().GetActiveEffectiveKit()?.CachedKit;
 
         if (equippedKit == null && whitelistAmount == 0)
         {

@@ -109,13 +109,21 @@ public partial class DatabaseInterface : IHostedService
     public event Action<ModerationEntry>? OnModerationEntryUpdated;
     public ModerationCache Cache { get; } = new ModerationCache();
     internal ISteamApiService SteamAPI { get; }
-    public DatabaseInterface(IManualMySqlProvider mySqlProvider, ILogger<DatabaseInterface> logger, ISteamApiService steamApi, IUserDataService userDataService, IPlayerService playerService)
+    internal IServiceProvider GlobalServices { get; }
+    public DatabaseInterface(
+        IManualMySqlProvider mySqlProvider,
+        ILogger<DatabaseInterface> logger,
+        ISteamApiService steamApi,
+        IUserDataService userDataService,
+        IPlayerService playerService,
+        IServiceProvider serviceProvider)
     {
         SteamAPI = steamApi;
         Sql = mySqlProvider;
         _logger = logger;
         _userDataService = userDataService;
         _playerService = playerService;
+        GlobalServices = serviceProvider;
     }
     /// <inheritdoc />
     async UniTask IHostedService.StartAsync(CancellationToken token)
@@ -242,16 +250,21 @@ public partial class DatabaseInterface : IHostedService
             _usernameCache[steam64.m_SteamID] = names;
     }
 
-    public ValueTask<string> GetAvatarAsync(CSteamID steam64, AvatarSize size, bool allowCache = true, CancellationToken token = default)
+    public ValueTask<string?> GetAvatarAsync(CSteamID steam64, AvatarSize size, bool allowCache = true, CancellationToken token = default)
     {
         if (allowCache && TryGetAvatar(steam64.m_SteamID, size, out string avatar))
         {
-            return new ValueTask<string>(avatar);
+            return new ValueTask<string?>(avatar);
+        }
+
+        if (!SteamAPI.IsEnabled)
+        {
+            return new ValueTask<string?>((string?)null);
         }
 
         return Core(this, steam64.m_SteamID, size, token);
 
-        static async ValueTask<string> Core(DatabaseInterface t, ulong steam64, AvatarSize size, CancellationToken token)
+        static async ValueTask<string?> Core(DatabaseInterface t, ulong steam64, AvatarSize size, CancellationToken token)
         {
             PlayerSummary summary = await t.SteamAPI.GetPlayerSummaryAsync(steam64, token).ConfigureAwait(false);
             lock (t._cacheSync)
@@ -272,6 +285,11 @@ public partial class DatabaseInterface : IHostedService
 
     public async Task CacheAvatarsAsync(IEnumerable<ulong> steamIds, AvatarSize size, CancellationToken token = default)
     {
+        if (!SteamAPI.IsEnabled)
+        {
+            return;
+        }
+
         List<ulong> s64 = steamIds.ToList();
 
         Dictionary<ulong, string> dict = size switch
@@ -314,6 +332,23 @@ public partial class DatabaseInterface : IHostedService
         names = await _userDataService.GetUsernamesAsync(id.m_SteamID, token).ConfigureAwait(false);
         if (names.WasFound)
             UpdateUsernames(id, names);
+        else if (SteamAPI.IsEnabled)
+        {
+            PlayerSummary? summary = await SteamAPI.GetPlayerSummaryAsync(id.m_SteamID, token);
+            if (!string.IsNullOrEmpty(summary?.PlayerName))
+            {
+                names = new PlayerNames
+                {
+                    WasFound = true,
+                    PlayerName = summary.PlayerName,
+                    CharacterName = summary.PlayerName,
+                    NickName = summary.PlayerName,
+                    Steam64 = id
+                };
+                UpdateUsernames(id, names);
+            }
+        }
+
         return names;
     }
 
@@ -1573,7 +1608,7 @@ public partial class DatabaseInterface : IHostedService
 
         if (WarfareModule.IsActive)
         {
-            UniTask.Create(async () =>
+            _ = UniTask.Create(async () =>
             {
                 await UniTask.SwitchToMainThread(CancellationToken.None);
 
@@ -1838,7 +1873,7 @@ public partial class DatabaseInterface : IHostedService
                 return false;
         }
 
-        if (Provider.isInitialized)
+        if (WarfareModule.IsActive)
         {
             // todo: ActionLog.Add(ActionLogType.IPWhitelist, $"IP {(add ? "WHITELIST" : "BLACKLIST")} {targetId.m_SteamID.ToString(CultureInfo.InvariantCulture)} FOR {range}.", callerId);
         }

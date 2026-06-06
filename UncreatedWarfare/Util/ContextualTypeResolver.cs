@@ -165,7 +165,7 @@ internal static class ContextualTypeResolver
     /// Attempt to resolve a type based on a type name input.
     /// </summary>
     /// <param name="expectedBaseType">Any found types must be assignable to this type.</param>
-    public static bool TryResolveType([NotNullWhen(true)] string? typeName, [MaybeNullWhen(false)] out Type type, Type? expectedBaseType = null)
+    public static bool TryResolveType([NotNullWhen(true)] string? typeName, [NotNullWhen(true)] out Type? type, Type? expectedBaseType = null)
     {
         
         type = null;

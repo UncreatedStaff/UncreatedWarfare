@@ -2,6 +2,7 @@ using DanielWillett.ModularRpcs.Annotations;
 using DanielWillett.ModularRpcs.Async;
 using DanielWillett.ModularRpcs.Exceptions;
 using Microsoft.Extensions.DependencyInjection;
+using Org.BouncyCastle.Crypto.Parameters;
 using System;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
@@ -162,7 +163,11 @@ public partial class PlayerNitroBoostService : IEventListener<PlayerJoined>
                 }
 
                 _kitSigns?.UpdateSigns(pl);
-                if (!isNitroBoosting && _module != null && _module.IsLayoutActive() && pl.Component<KitPlayerComponent>() is { ActiveKit.CachedKit.RequiresServerBoost: true })
+                if (!isNitroBoosting
+                    && _module != null
+                    && _module.IsLayoutActive()
+                    && pl.Component<KitPlayerComponent>() is { } kpc
+                    && kpc.GetActiveEffectiveKit() is { CachedKit.RequiresServerBoost: true })
                 {
                     await _module.ScopedProvider.Resolve<KitRequestService>().GiveAvailableFreeKitAsync(pl).ConfigureAwait(false);
                 }

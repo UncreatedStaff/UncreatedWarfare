@@ -152,7 +152,7 @@ public class SafezoneTweaks :
 
             // give safezone kit if they dont have one
             KitPlayerComponent component = e.Player.Component<KitPlayerComponent>();
-            CurrentKitState? state = component.ActiveKit;
+            CurrentKitState? state = component.GetActiveEffectiveKit();
             if (!e.Player.IsOnDuty
                 && (state == null
                     || state.Class == Class.None
@@ -192,6 +192,32 @@ public class SafezoneTweaks :
 
     public void HandleEvent(PlayerExitedZone e, IServiceProvider serviceProvider)
     {
+        if (e.Zone.Type is ZoneType.WarRoom && !_zoneStore.IsInWarRoom(e.Player))
+        {
+            if (e.Player.Component<KitPlayerComponent>().ActiveKit is { IsPreview: true })
+            {
+                // remove preview kit
+                Task.Run(async () =>
+                {
+                    try
+                    {
+                        KitRequestService.RevertResult res
+                            = await _kitRequestService.RevertPreviewAsync(e.Player);
+
+                        if (res > 0)
+                        {
+                            _logger.LogError($"Failed to reset preview kit when {e.Player} exited the warzone: {res}.");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, $"Error resetting preview kit when {e.Player} exited the warzone.");
+                    }
+                });
+            }
+            return;
+        }
+
         if (e.Zone.Type is not ZoneType.MainBase || _zoneStore.IsInMainBase(e.Player))
             return;
         

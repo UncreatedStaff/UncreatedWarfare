@@ -34,8 +34,8 @@ using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.ListenerProviders;
 using Uncreated.Warfare.Events.Logging;
 using Uncreated.Warfare.Fobs;
-using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Fobs.UI;
+using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.FOBs.Construction.Tweaks;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.FOBs.Deployment.Tweaks;
@@ -107,6 +107,7 @@ using Module = SDG.Framework.Modules.Module;
 #if TELEMETRY
 using OpenTelemetry;
 using OpenTelemetry.Resources;
+using OpenTelemetry.Exporter;
 using OpenTelemetry.Trace;
 using System.Diagnostics;
 using DanielWillett.ReflectionTools.Formatting;
@@ -210,8 +211,6 @@ public sealed class WarfareModule
     {
         IsActive = true;
 
-        AppDomain.CurrentDomain.AssemblyResolve += HandleAssemblyResolve;
-        
         // will setup the main thread in GameThread before asserting
         GameThread.Setup();
         GameThread.AssertCurrent();
@@ -357,10 +356,12 @@ public sealed class WarfareModule
             collection.Configure<LoggerFactoryOptions>(_ => { });
             collection.AddLogging(l =>
             {
+#if TELEMETRY
                 //l.AddOpenTelemetry(ot =>
                 //{
                 //    ot.AddConsoleExporter();
                 //});
+#endif
             });
         });
 
@@ -438,8 +439,6 @@ public sealed class WarfareModule
 
     internal void Shutdown()
     {
-        AppDomain.CurrentDomain.AssemblyResolve -= HandleAssemblyResolve;
-
         if (Singleton == this)
             Singleton = null;
 
@@ -484,6 +483,19 @@ public sealed class WarfareModule
         {
             _logger.LogError(ex, "Error while removing patches.");
         }
+
+#if TELEMETRY
+        try
+        {
+            _logger.LogTrace("Flushing telemetry...");
+            ServiceProvider.Resolve<TracerProvider>().ForceFlush(2000);
+            ServiceProvider.Resolve<TracerProvider>().Shutdown(2000);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error shutting down tracer provider.");
+        }
+#endif
 
         _logger.LogInformation("Cleaning up container...");
         ServiceProvider.Dispose();
@@ -719,11 +731,11 @@ public sealed class WarfareModule
             .AsImplementedInterfaces().AsSelf()
             .SingleInstance();
 
-        bldr.RegisterType<VehicleRequestService>()
-            .AsImplementedInterfaces().AsSelf()
-            .SingleInstance();
+        bldr.RegisterType<MapVehicleSpawnerDataStore>()
+            .As<IVehicleSpawnerDataStore>()
+            .ExternallyOwned();
 
-        bldr.RegisterType<VehicleSpawnerStore>()
+        bldr.RegisterType<VehicleRequestService>()
             .AsImplementedInterfaces().AsSelf()
             .SingleInstance();
 
@@ -1179,18 +1191,22 @@ public sealed class WarfareModule
                     serviceVersion: Assembly.GetExecutingAssembly().GetName().Version.ToString()
                 )
             )
-            .AddZipkinExporter(zipkin =>
+            // run Zipkin with:
+            // docker run -p 9411:9411 --name zipkin-uncreated ghcr.io/openzipkin-contrib/zipkin-otel
+            .AddOtlpExporter(zipkin =>
             {
                 zipkin.Endpoint = new Uri(
-                    new Uri(Configuration.GetValue("zipkin_uri", "http://localhost:9411/")!),
-                    new Uri("api/v2/spans", UriKind.Relative)
+                    new Uri(Configuration.GetValue("zipkin_uri", "http://localhost:9411/")),
+                    new Uri("v1/traces", UriKind.Relative)
                 );
+                zipkin.Protocol = OtlpExportProtocol.HttpProtobuf;
                 zipkin.ExportProcessorType = ExportProcessorType.Batch;
                 zipkin.BatchExportProcessorOptions = new BatchExportProcessorOptions<Activity>
                 {
                     ExporterTimeoutMilliseconds = 10000,
                     ScheduledDelayMilliseconds = 1000
                 };
+                zipkin.UserAgentProductIdentifier = "Uncreated.Warfare";
             })
             .Build();
 
@@ -1244,8 +1260,11 @@ public sealed class WarfareModule
 
         while (true)
         {
-            await UniTask.Delay(1000, cancellationToken: CancellationToken.None);
+            // wait for shutdown
+            await UniTask.NextFrame();
         }
+
+        // ReSharper disable once FunctionNeverReturns
     }
 
     /// <summary>
@@ -1291,7 +1310,7 @@ public sealed class WarfareModule
             await using IDbContext dbContext = scope.Resolve<IDbContext>();
             const double timeoutSec = 10;
 
-            // check connection before migrating with a 2.5 second timeout
+            // check connection before migrating with a 10 second timeout
             await Task.WhenAny(Task.Run(async () =>
             {
                 try
@@ -1664,21 +1683,6 @@ public sealed class WarfareModule
         ServiceProvider.Resolve<Module>().isEnabled = false;
     }
 
-    private static Assembly? HandleAssemblyResolve(object sender, ResolveEventArgs args)
-    {
-        // UnityEngine.CoreModule includes JetBrains annotations for some reason, may as well use them.
-        const string jetbrains = "JetBrains.Annotations, ";
-        if (args.Name.StartsWith(jetbrains, StringComparison.Ordinal))
-        {
-            return typeof(Vector3).Assembly;
-        }
-
-        const string compUnsafe = "System.Runtime.CompilerServices.Unsafe";
-        if (args.Name.StartsWith(compUnsafe, StringComparison.Ordinal))
-            return typeof(System.Runtime.CompilerServices.Unsafe).Assembly;
-
-        return null;
-    }
     private void InitializeUniTask()
     {
         if (PlayerLoopHelper.IsInjectedUniTaskPlayerLoop())

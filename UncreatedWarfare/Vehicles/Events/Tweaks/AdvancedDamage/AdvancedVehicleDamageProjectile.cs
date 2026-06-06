@@ -6,9 +6,12 @@ namespace Uncreated.Warfare.Vehicles.Events.Tweaks.AdvancedDamage;
 public class AdvancedVehicleDamageProjectile : MonoBehaviour
 {
     private bool _hitOccured;
-    
+
+#nullable disable
     public Rocket RocketComponent { get; private set; }
-    public ItemGunAsset FiringGunAsset {get; private set;}
+    public ItemGunAsset FiringGunAsset { get; private set; }
+#nullable restore
+
     public AdvancedVehicleDamageProjectile Init(Rocket rocketComponent, ItemGunAsset firingGunAsset)
     {
         RocketComponent = rocketComponent;

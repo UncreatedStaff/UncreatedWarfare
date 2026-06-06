@@ -521,7 +521,7 @@ public class CommandContext : ControlException
     /// Gets a range of parameters from a given <paramref name="start"/> index along a given <paramref name="length"/> (joined by spaces), or returns <see langword="false"/> if out of range.
     /// </summary>
     /// <remarks>Zero based indexing.</remarks>
-    public bool TryGetRange(int start, [MaybeNullWhen(false)] out string value, int length = -1)
+    public bool TryGetRange(int start, [NotNullWhen(true)] out string? value, int length = -1)
     {
         value = GetRange(start, length);
         return value is not null;
@@ -531,7 +531,7 @@ public class CommandContext : ControlException
     /// Gets a <paramref name="parameter"/> at a given index, or returns <see langword="false"/> if out of range.
     /// </summary>
     /// <remarks>Zero based indexing.</remarks>
-    public bool TryGet(int parameter, [MaybeNullWhen(false)] out string value)
+    public bool TryGet(int parameter, [NotNullWhen(true)] out string? value)
     {
         parameter += _argumentOffset;
         if (parameter < 0 || parameter >= _argumentCount)
@@ -1140,7 +1140,7 @@ public class CommandContext : ControlException
     /// <param name="mask">Raycast mask, could also use <see cref="ERayMask"/>. Defaults to <see cref="RayMasks.PLAYER_INTERACT"/>.</param>
     /// <param name="distance">Default distance is 4m.</param>
     /// <exception cref="GameThreadException">Not on main thread.</exception>
-    public bool TryGetTargetRootTransform([MaybeNullWhen(false)] out Transform transform, int mask = 0, float distance = 4)
+    public bool TryGetTargetRootTransform([NotNullWhen(true)] out Transform? transform, int mask = 0, float distance = 4)
     {
         GameThread.AssertCurrent();
 
@@ -1168,7 +1168,7 @@ public class CommandContext : ControlException
     /// <param name="mask">Raycast mask, could also use <see cref="ERayMask"/>.</param>
     /// <param name="distance">Default distance is 4m.</param>
     /// <exception cref="GameThreadException">Not on main thread.</exception>
-    public bool TryGetTargetInfo([MaybeNullWhen(false)] out RaycastInfo info, int mask = 0, float distance = 4)
+    public bool TryGetTargetInfo([NotNullWhen(true)] out RaycastInfo? info, int mask = 0, float distance = 4)
     {
         GameThread.AssertCurrent();
 
@@ -1189,7 +1189,7 @@ public class CommandContext : ControlException
     /// <param name="mask">Raycast mask, could also use <see cref="ERayMask"/>. Defaults to <see cref="RayMasks.PLAYER_INTERACT"/>.</param>
     /// <param name="distance">Default distance is 4m.</param>
     /// <exception cref="GameThreadException">Not on main thread.</exception>
-    public bool TryGetInteractableTarget<TInteractable>([MaybeNullWhen(false)] out TInteractable interactable, int mask = 0, float distance = 4f) where TInteractable : Interactable
+    public bool TryGetInteractableTarget<TInteractable>([NotNullWhen(true)] out TInteractable? interactable, int mask = 0, float distance = 4f) where TInteractable : Interactable
     {
         GameThread.AssertCurrent();
 
@@ -1239,7 +1239,7 @@ public class CommandContext : ControlException
     /// </summary>
     /// <param name="distance">Default distance is 4m.</param>
     /// <exception cref="GameThreadException">Not on main thread.</exception>
-    public bool TryGetBarricadeTarget([MaybeNullWhen(false)] out BarricadeDrop drop, float distance = 4f)
+    public bool TryGetBarricadeTarget([NotNullWhen(true)] out BarricadeDrop? drop, float distance = 4f)
     {
         GameThread.AssertCurrent();
 
@@ -1266,7 +1266,7 @@ public class CommandContext : ControlException
     /// </summary>
     /// <param name="distance">Default distance is 4m.</param>
     /// <exception cref="GameThreadException">Not on main thread.</exception>
-    public bool TryGetStructureTarget([MaybeNullWhen(false)] out StructureDrop drop, float distance = 4f)
+    public bool TryGetStructureTarget([NotNullWhen(true)] out StructureDrop? drop, float distance = 4f)
     {
         GameThread.AssertCurrent();
 
@@ -1293,7 +1293,7 @@ public class CommandContext : ControlException
     /// </summary>
     /// <param name="distance">Default distance is 4m.</param>
     /// <exception cref="GameThreadException">Not on main thread.</exception>
-    public bool TryGetBuildableTarget([MaybeNullWhen(false)] out IBuildable drop, float distance = 4f)
+    public bool TryGetBuildableTarget([NotNullWhen(true)] out IBuildable? drop, float distance = 4f)
     {
         GameThread.AssertCurrent();
 
@@ -1334,7 +1334,7 @@ public class CommandContext : ControlException
     /// </summary>
     /// <param name="distance">Default distance is 4m.</param>
     /// <exception cref="GameThreadException">Not on main thread.</exception>
-    public bool TryGetVehicleTarget([MaybeNullWhen(false)] out InteractableVehicle vehicle, float distance = 4f, bool tryCallersVehicleFirst = true, bool allowDead = false)
+    public bool TryGetVehicleTarget([NotNullWhen(true)] out InteractableVehicle? vehicle, float distance = 4f, bool tryCallersVehicleFirst = true, bool allowDead = false)
     {
         GameThread.AssertCurrent();
 
@@ -1370,7 +1370,7 @@ public class CommandContext : ControlException
     /// </summary>
     /// <param name="distance">Default distance is 4m.</param>
     /// <exception cref="GameThreadException">Not on main thread.</exception>
-    public bool TryGetPlayerTarget([MaybeNullWhen(false)] out WarfarePlayer player, float distance = 4f)
+    public bool TryGetPlayerTarget([NotNullWhen(true)] out WarfarePlayer? player, float distance = 4f)
     {
         GameThread.AssertCurrent();
 

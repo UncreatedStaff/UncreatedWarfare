@@ -90,7 +90,7 @@ public sealed class TranslationList : List<KeyValuePair<string, string>>, IClone
     public TranslationList Clone() => new TranslationList(this);
     object ICloneable.Clone() => Clone();
 
-    internal bool TryGetValue(string code, [MaybeNullWhen(false)] out string value)
+    internal bool TryGetValue(string code, [NotNullWhen(true)] out string? value)
     {
         for (int i = 0; i < Count; ++i)
         {

@@ -102,7 +102,7 @@ public class Vector4TypeConverter : TypeConverter
         return v4;
     }
 
-    private static bool TryParseVector4(string str, [MaybeNullWhen(false)] out object obj, bool create)
+    private static bool TryParseVector4(string str, [NotNullWhen(true)] out object? obj, bool create)
     {
         obj = null;
         ReadOnlySpan<char> parsableString = str.AsSpan().Trim();

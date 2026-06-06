@@ -88,13 +88,23 @@ internal sealed class ProviderPlayerJoiningEvents : IHarmonyPatch
             IPlayerService playerService = serviceProvider.Resolve<IPlayerService>();
             try
             {
-                Task<PlayerSummary> summaryTask = serviceProvider.Resolve<ISteamApiService>()
-                    .GetPlayerSummaryAsync(__instance.playerID.steamID.m_SteamID, src.Token);
+                ISteamApiService steamApiService = serviceProvider.Resolve<ISteamApiService>();
+                
+                Task<PlayerSummary>? summaryTask = steamApiService.IsEnabled
+                    ? steamApiService.GetPlayerSummaryAsync(__instance.playerID.steamID.m_SteamID, src.Token)
+                    : null;
 
                 ICachableLanguageDataStore dataStore = serviceProvider.Resolve<ICachableLanguageDataStore>();
                 LanguagePreferences prefs = await dataStore.GetLanguagePreferences(__instance.playerID.steamID.m_SteamID, src.Token);
 
-                PlayerSummary summary = await summaryTask;
+                PlayerSummary? summary = summaryTask == null ? null : await summaryTask;
+
+                summary ??= new PlayerSummary
+                {
+                    Steam64 = __instance.playerID.steamID.m_SteamID,
+                    PlayerName = __instance.playerID.playerName,
+                    ProfileUrl = $"https://steamcommunity.com/profiles/{__instance.playerID.steamID.m_SteamID}"
+                };
 
                 await UniTask.SwitchToMainThread(src.Token);
 

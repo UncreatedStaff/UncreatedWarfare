@@ -50,8 +50,7 @@ partial class KitSelectionUI
 
                 if (!data.IsListOpen)
                 {
-                    _switchToListLogic.Show(player);
-                    data.IsListOpen = true;
+                    SetListOpened(data, player, true);
                 }
 
                 await SendKitDetailsAsync(player, fullKit, CancellationToken.None);

@@ -97,7 +97,7 @@ public class PlayerSquadHUD : UnturnedUI,
             if (i < squad.Members.Count)
             {
                 WarfarePlayer member = squad.Members[i];
-                Class kitClass = member.Component<KitPlayerComponent>().ActiveKit?.Class ?? Class.None;
+                Class kitClass = member.Component<KitPlayerComponent>().GetActiveEffectiveKit()?.Class ?? Class.None;
                 string memberName = $"<mspace=20>{kitClass.GetIconString()}</mspace>  {member.Names.PlayerName}";
 
                 element.Show(player);
@@ -130,7 +130,10 @@ public class PlayerSquadHUD : UnturnedUI,
             if (squad == null)
                 ClearFromPlayer(player.Connection);
             else
+            {
+                SendToPlayer(player.Connection);
                 UpdateForPlayer(player, squad);
+            }
             return;
         }
 

@@ -1,8 +1,6 @@
 using System;
-using System.Collections.Generic;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Events.Components;
-using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Events.Models.Buildables;
 
 namespace Uncreated.Warfare.Util;
@@ -10,6 +8,14 @@ public static class BuildableExtensions
 {
     private static readonly Dictionary<Guid, Bounds> CachedBarricadeBounds = new Dictionary<Guid, Bounds>();
     private static readonly List<Collider> WorkingColliders = new List<Collider>();
+
+    extension(IBuildable buildable)
+    {
+        /// <summary>
+        /// Whether or not this buildable exists in the world. Not the same as <c>!<see cref="IBuildable.IsDead"/></c>.
+        /// </summary>
+        public bool IsAlive => !buildable.NetId.IsNull();
+    }
 
     /// <summary>
     /// Destroy the structure or barricade.

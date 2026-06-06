@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Configuration;
+using Stripe;
 using System;
 using System.Collections.ObjectModel;
 using System.Globalization;
@@ -22,6 +23,8 @@ namespace Uncreated.Warfare.Stats;
 
 public class PointsService : IEventListener<PlayerTeamChanged> // todo player equipment changed
 {
+    public delegate void HandlePointsChanged(WarfarePlayer player, double deltaXp, double deltaCredits, double deltaReputation);
+
     private readonly PointsConfiguration _configuration;
     private readonly WarfareModule _module;
     private readonly IPointsStore _pointsSql;
@@ -51,6 +54,11 @@ public class PointsService : IEventListener<PlayerTeamChanged> // todo player eq
     /// Ordered list of all configured ranks.
     /// </summary>
     public IReadOnlyList<WarfareRank> Ranks { get; }
+
+    /// <summary>
+    /// Invoked when an online player's XP, Credits, and/or Reputation is changed.
+    /// </summary>
+    public event HandlePointsChanged? PointsChanged;
 
     public PointsService(
         PointsConfiguration configuration,
@@ -354,7 +362,14 @@ public class PointsService : IEventListener<PlayerTeamChanged> // todo player eq
                 player.SetReputation((int)Math.Round(newRep));
 
             if (xp != 0 || credits != 0)
+            {
                 _ui.UpdatePointsUI(player);
+                PointsChanged?.Invoke(player, xp, credits, rep);
+            }
+            else if (rep != 0 && !double.IsNaN(newRep))
+            {
+                PointsChanged?.Invoke(player, 0, 0, rep);
+            }
 
             if (!@event.ExcludeFromLeaderboard)
             {

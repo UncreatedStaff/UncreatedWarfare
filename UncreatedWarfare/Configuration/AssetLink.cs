@@ -292,7 +292,7 @@ public static class AssetLink
     /// Create an asset link from a string.
     /// </summary>
     /// <returns><see langword="true"/> if parsing was successful or the string was null/empty (outputting an empty asset), otherwise <see langword="false"/>.</returns>s
-    public static bool TryParse<TAsset>(string? value, [MaybeNullWhen(false)] out IAssetLink<TAsset> asset) where TAsset : Asset
+    public static bool TryParse<TAsset>(string? value, [NotNullWhen(true)] out IAssetLink<TAsset>? asset) where TAsset : Asset
     {
         if (string.IsNullOrEmpty(value))
         {
@@ -327,7 +327,7 @@ public static class AssetLink
     /// Create an asset link from a string.
     /// </summary>
     /// <returns><see langword="true"/> if parsing was successful or the string was null/empty (outputting an empty asset), otherwise <see langword="false"/>.</returns>
-    public static bool TryParse(string? value, Type assetType, [MaybeNullWhen(false)] out IAssetLink<Asset> asset)
+    public static bool TryParse(string? value, Type assetType, [NotNullWhen(true)] out IAssetLink<Asset>? asset)
     {
         if (string.IsNullOrEmpty(value))
         {

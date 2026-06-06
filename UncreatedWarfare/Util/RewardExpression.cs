@@ -1,11 +1,11 @@
 using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Emit;
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
+#pragma warning disable CS0162 // Unreachable code detected
 
 namespace Uncreated.Warfare.Util;
 

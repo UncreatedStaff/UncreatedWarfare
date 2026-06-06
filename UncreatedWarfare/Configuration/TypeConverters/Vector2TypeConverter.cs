@@ -81,7 +81,7 @@ public class Vector2TypeConverter : TypeConverter
         return v2;
     }
 
-    private static bool TryParseVector2(string str, [MaybeNullWhen(false)] out object obj, bool create)
+    private static bool TryParseVector2(string str, [NotNullWhen(true)] out object? obj, bool create)
     {
         obj = null;
         ReadOnlySpan<char> parsableString = str.AsSpan().Trim();

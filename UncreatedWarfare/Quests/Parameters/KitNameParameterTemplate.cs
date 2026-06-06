@@ -87,7 +87,7 @@ public class KitNameParameterTemplate : StringParameterTemplate
     /// <summary>
     /// Read a <see cref="KitNameParameterTemplate"/> from a string.
     /// </summary>
-    public static bool TryParse(ReadOnlySpan<char> str, [MaybeNullWhen(false)] out KitNameParameterTemplate template)
+    public static bool TryParse(ReadOnlySpan<char> str, [NotNullWhen(true)] out KitNameParameterTemplate? template)
     {
         KitNameParameterTemplate val = new KitNameParameterTemplate();
         if (val.TryParseFrom(str))
@@ -135,7 +135,7 @@ public class KitNameParameterTemplate : StringParameterTemplate
                 break;
 
             case ParameterValueType.List:
-                value = list!.Length == 0 ? null : list[RandomUtility.GetIndex((ICollection)list)];
+                value = list!.Length == 0 ? null : list[RandomUtility.GetIndex(list)];
                 if (value != null && kitDataStore.CachedKitsById.TryGetValue(value, out kit))
                 {
                     display = kit?.GetDisplayName(null, true, removeNewLine: true);
@@ -226,6 +226,6 @@ public class KitNameParameterTemplate : StringParameterTemplate
 
         kits.RemoveAll(x => x.Season != WarfareModule.Season || x.CreditCost > 0 || x.PremiumCost > 0 || x.RequiresServerBoost || x.SquadLevel != SquadLevel.Member);
 
-        return kits.Count == 0 ? null : kits[RandomUtility.GetIndex((ICollection)kits)];
+        return kits.Count == 0 ? null : kits[RandomUtility.GetIndex(kits)];
     }
 }

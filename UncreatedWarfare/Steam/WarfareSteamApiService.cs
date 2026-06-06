@@ -16,6 +16,8 @@ internal class WarfareSteamApiService : ISteamApiService
     private const int TryCount = 5;
     private const float RetryDelay = 1.0f;
 
+    public bool IsEnabled => !string.IsNullOrEmpty(_steamApiKey);
+
     public WarfareSteamApiService(IConfiguration systemConfig, ILogger<WarfareSteamApiService> logger)
     {
         _logger = logger;

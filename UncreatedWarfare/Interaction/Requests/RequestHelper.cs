@@ -86,7 +86,7 @@ public static class RequestHelper
             .First(x => x.IsGenericType && x.GetGenericTypeDefinition() == typeof(IRequestable<>))
             .GetGenericArguments()[0];
 
-        //                           \/ requestSourceType     \/ requestValueType
+        //                          \/ requestSourceType     \/ requestValueType
         // example: IRequestHandler<KitSignInstanceProvider, Kit>
         Type requestType = typeof(IRequestHandler<,>).MakeGenericType(requestSourceType, requestValueType);
 

@@ -1,8 +1,6 @@
 using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.DependencyInjection;
-using SDG.NetTransport;
 using System;
-using System.Collections.Generic;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
@@ -10,12 +8,11 @@ using Uncreated.Warfare.Events.Models.Vehicles;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
-using Uncreated.Warfare.Vehicles.Spawners;
 using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.Vehicles;
 
-[Priority(-3 /* run after vehicle storage services (specifically VehicleSpawnerStore and VehicleInfoStore) */)]
+[Priority(-2 /* run after vehicle storage services (VehicleInfoStore) */)]
 public class VehicleService : 
     ILayoutHostedService,
     IEventListener<VehicleDespawned>
@@ -28,7 +25,6 @@ public class VehicleService :
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<VehicleService> _logger;
     private readonly VehicleInfoStore _vehicleInfoStore;
-    private readonly VehicleSpawnerStore _vehicleSpawnerStore;
     private readonly VehicleSeatRestrictionService _seatRestrictions;
     private EventDispatcher? _eventDispatcher;
 
@@ -39,10 +35,14 @@ public class VehicleService :
 
     public IReadOnlyList<WarfareVehicle> Vehicles { get; }
 
+    /// <summary>
+    /// Provides access to <see cref="WarfareVehicleInfo"/> data.
+    /// </summary>
+    public VehicleInfoStore Info => _vehicleInfoStore;
+
     public VehicleService(IServiceProvider serviceProvider,
         ILogger<VehicleService> logger,
         VehicleInfoStore vehicleInfoStore,
-        VehicleSpawnerStore vehicleSpawnerStore,
         VehicleSeatRestrictionService vehicleSeatRestrictionService)
     {
         _vehicles = new List<WarfareVehicle>(64);
@@ -51,17 +51,12 @@ public class VehicleService :
         _logger = logger;
         _serviceProvider = serviceProvider;
         _vehicleInfoStore = vehicleInfoStore;
-        _vehicleSpawnerStore = vehicleSpawnerStore;
         _seatRestrictions = vehicleSeatRestrictionService;
     }
 
     async UniTask ILayoutHostedService.StartAsync(CancellationToken token)
     {
         await DeleteAllVehiclesAsync(token);
-
-        await UniTask.SwitchToMainThread(token);
-
-        _vehicleSpawnerStore.ReloadSpawners();
     }
 
     UniTask ILayoutHostedService.StopAsync(CancellationToken token)
@@ -218,11 +213,11 @@ public class VehicleService :
     /// <summary>
     /// Spawn a vehicle at a given vehicle spawner.
     /// </summary>
-    /// <returns></returns>
+    /// <returns>The new vehicle.</returns>
     /// <exception cref="AssetNotFoundException">Unable to find the vehicle asset.</exception>
     /// <exception cref="NotSupportedException">There's already a linked vehicle to the spawner.</exception>
     /// <exception cref="RecordsNotFoundException">Unable to find any <see cref="WarfareVehicleInfo"/> for the vehicle.</exception>
-    /// <exception cref="InvalidOperationException">The spawner buildable doesn't exist. -OR- Failed to unlink or link the vehicle to it's spawn.</exception>
+    /// <exception cref="InvalidOperationException">Failed to unlink or link the vehicle to it's spawn.</exception>
     /// <exception cref="Exception">Game failed to spawn the vehicle.</exception>
     public async UniTask<WarfareVehicle> SpawnVehicleAsync(VehicleSpawner spawner, CancellationToken token = default)
     {
@@ -233,23 +228,25 @@ public class VehicleService :
             throw new NotSupportedException($"There can only be one vehicle per spawn, and this spawn already has a vehicle: {spawner.ToDisplayString()}.");
         }
 
-        spawner.UnlinkVehicle();
+        spawner.UnlinkVehicle(holdSignLink: true);
 
-        if (spawner.Buildable == null || !spawner.Buildable.Alive)
-        {
-            throw new InvalidOperationException("Spawner buildable no longer exists.");
-        }
+        Quaternion spawnRotation = spawner.SpawnInfo.Rotation;
 
-        Quaternion spawnRotation = spawner.Buildable.Rotation * BarricadeUtility.InverseDefaultBarricadeRotation;
+        Vector3 spawnPosition = spawner.SpawnInfo.Position + Vector3.up * VehicleSpawnOffset;
 
-        Vector3 spawnPosition = spawner.Buildable.Position + Vector3.up * VehicleSpawnOffset;
+        WarfareVehicle warfareVehicle = await SpawnVehicleAsync(
+            spawner.VehicleInfo.VehicleAsset,
+            spawnPosition,
+            spawnRotation,
+            paintColor: spawner.VehicleInfo.PaintColor,
+            token: token
+        );
 
-        WarfareVehicle warfareVehicle = await SpawnVehicleAsync(spawner.VehicleInfo.VehicleAsset, spawnPosition, spawnRotation, paintColor: spawner.VehicleInfo.PaintColor, token: token);
         await UniTask.SwitchToMainThread(token);
 
-        spawner.LinkVehicle(warfareVehicle.Vehicle);
+        spawner.LinkVehicle(warfareVehicle);
 
-        _logger.LogDebug("Spawned new {0} at {1}.", spawner.VehicleInfo.VehicleAsset.ToDisplayString(), spawnPosition);
+        _logger.LogTrace("Spawned new {0} at {1}.", spawner.VehicleInfo.VehicleAsset.ToDisplayString(), spawnPosition);
         return warfareVehicle;
     }
 

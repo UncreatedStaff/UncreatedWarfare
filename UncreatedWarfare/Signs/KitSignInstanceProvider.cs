@@ -167,7 +167,7 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>,
     private void AppendAvailability(StringBuilder bldr, WarfarePlayer player, Kit kit)
     {
         KitPlayerComponent kitPlayerComponent = player.Component<KitPlayerComponent>();
-        CurrentKitState? activeKit = kitPlayerComponent.ActiveKit;
+        CurrentKitState? activeKit = kitPlayerComponent.GetActiveEffectiveKit();
         if (activeKit != null && activeKit.Key == kit.Key)
         {
             bldr.Append(_translations.KitCurrentlyUsing.Translate(player));

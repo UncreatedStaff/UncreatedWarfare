@@ -29,7 +29,7 @@ internal sealed class DebugInjureCommand : IExecutableCommand
             times = 1f,
             applyGlobalArmorMultiplier = false,
             trackKill = false,
-            ragdollEffect = ERagdollEffect.NONE,
+            ragdollEffect = ERagdollEffect.None,
             respectArmor = false
         }, out _);
 

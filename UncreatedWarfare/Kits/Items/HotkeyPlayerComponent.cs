@@ -85,7 +85,7 @@ public class HotkeyPlayerComponent : IPlayerComponent, IEventListener<ItemDroppe
     internal void HandleItemPickedUpAfterTransformed(ItemDestroyed e, byte origX, byte origY, Page origPage)
     {
         // resend hotkeys from picked up item
-        if (!Player.Equals(e.PickUpPlayer) || !Provider.isInitialized || HotkeyBindings == null || origX >= byte.MaxValue)
+        if (!Player.Equals(e.PickUpPlayer) || HotkeyBindings == null || origX >= byte.MaxValue)
             return;
 
         ItemAsset asset = e.Item.GetAsset();

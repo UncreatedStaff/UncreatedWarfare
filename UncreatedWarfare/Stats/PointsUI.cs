@@ -146,6 +146,7 @@ public class PointsUI : UnturnedUI,
         if (player != null)
         {
             ClearFromPlayer(player.Connection);
+            GetUIData(player.Steam64).HasUI = false;
             return;
         }
 

@@ -176,7 +176,7 @@ public class Teamkill : ModerationEntry
         if (Item.HasValue)
         {
             string name;
-            if (Provider.isInitialized && Assets.find(Item.Value) is ItemAsset item)
+            if (WarfareModule.IsActive && Assets.find(Item.Value) is ItemAsset item)
             {
                 name = item.FriendlyName ?? item.name;
                 if (item.id > 0)

@@ -21,20 +21,20 @@ public class PunchToRequestTweaks : IAsyncEventListener<PlayerPunched>
     
     public async UniTask HandleEventAsync(PlayerPunched e, IServiceProvider serviceProvider, CancellationToken token = default)
     {
-        if (e.InputInfo == null)
+        if (e.InputInfo == null || e.InputInfo.transform == null)
             return;
 
         // ignore punches if outside main
+        Vector3 pos = e.InputInfo.transform.position;
+        if (!_zoneStore.IsInMainBase(pos) && !_zoneStore.IsInWarRoom(pos))
+            return;
+
         IRequestable<object>? requestable = null;
 
         if (e.InputInfo.type is ERaycastInfoType.BARRICADE or ERaycastInfoType.STRUCTURE or ERaycastInfoType.VEHICLE or ERaycastInfoType.OBJECT)
             requestable = RequestHelper.GetRequestable(e.InputInfo.transform, _signInstancer);
 
         if (requestable == null)
-            return;
-
-        Vector3 pos = e.InputInfo.transform.position;
-        if (!_zoneStore.IsInMainBase(pos) && !_zoneStore.IsInWarRoom(pos))
             return;
 
         await RequestHelper.RequestAsync(

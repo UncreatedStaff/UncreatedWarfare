@@ -470,7 +470,7 @@ public class SquadMenuUI :
             WarfarePlayer member = squad.Members[i];
             ui.Show(player);
 
-            Class cl = member.Component<KitPlayerComponent>().ActiveKit?.Class ?? Class.None;
+            Class cl = member.Component<KitPlayerComponent>().GetActiveEffectiveKit()?.Class ?? Class.None;
             ui.Name.SetText(player, $"<mspace=20>{cl.GetIconString()}</mspace>  {member.Names.CharacterName}");
             ui.Avatar.SetImage(player, member.SteamSummary.AvatarUrlSmall);
         }
@@ -507,7 +507,7 @@ public class SquadMenuUI :
             if (j < squad.Members.Count)
             {
                 WarfarePlayer member = squad.Members[j];
-                Class kitClass = member.Component<KitPlayerComponent>().ActiveKit?.Class ?? Class.None;
+                Class kitClass = member.Component<KitPlayerComponent>().GetActiveEffectiveKit()?.Class ?? Class.None;
                 string memberName = $"<mspace=20>{kitClass.GetIconString()}</mspace> {member.Names.PlayerName}";
                 if (j == 0)
                     memberName = _translations.SquadLeader.Translate(memberName, player);

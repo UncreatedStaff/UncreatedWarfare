@@ -1,5 +1,4 @@
 using SDG.Framework.Utilities;
-using SDG.NetTransport;
 using System;
 using System.Globalization;
 using System.Linq;
@@ -7,7 +6,6 @@ using System.Text;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Presets;
 using Uncreated.Warfare.Database.Manual;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Moderation.Punishments;
 using Uncreated.Warfare.Moderation.Punishments.Presets;
 using Uncreated.Warfare.Moderation.Records;
@@ -857,30 +855,29 @@ partial class ModerationUI
 
         if (data.PrimaryEditingEntry.IsAppealable)
         {
-            if (!string.IsNullOrEmpty(_discordInviteCode))
+            if (string.IsNullOrWhiteSpace(data.PrimaryEditingEntry.Message))
             {
-                if (string.IsNullOrWhiteSpace(data.PrimaryEditingEntry.Message))
+                data.PrimaryEditingEntry.Message = "Appeal at 'https://uncreated.network/discord'.";
+            }
+            else if (data.PrimaryEditingEntry.Message!.IndexOf("discord.gg/", StringComparison.InvariantCultureIgnoreCase) == -1 &&
+                     data.PrimaryEditingEntry.Message!.IndexOf("uncreated.network/discord", StringComparison.InvariantCultureIgnoreCase) == -1 &&
+                     data.PrimaryEditingEntry.Message!.IndexOf("unappealable", StringComparison.InvariantCultureIgnoreCase) == -1 &&
+                     data.PrimaryEditingEntry.Message!.IndexOf("un-appealable", StringComparison.InvariantCultureIgnoreCase) == -1 &&
+                     data.PrimaryEditingEntry.Message!.IndexOf("no appeal", StringComparison.InvariantCultureIgnoreCase) == -1 &&
+                     data.PrimaryEditingEntry.Message!.IndexOf("noappeal", StringComparison.InvariantCultureIgnoreCase) == -1 &&
+                     data.PrimaryEditingEntry.Message!.IndexOf("no-appeal", StringComparison.InvariantCultureIgnoreCase) == -1 &&
+                     data.PrimaryEditingEntry.Message!.IndexOf("dnub", StringComparison.InvariantCultureIgnoreCase) == -1 && // Do Not UnBan
+                     data.PrimaryEditingEntry.Message!.IndexOf("do not unban", StringComparison.InvariantCultureIgnoreCase) == -1 &&
+                     data.PrimaryEditingEntry.Message!.IndexOf("do not appeal", StringComparison.InvariantCultureIgnoreCase) == -1)
+            {
+                data.PrimaryEditingEntry.Message = data.PrimaryEditingEntry.Message.Trim();
+                if (data.PrimaryEditingEntry.Message.EndsWith('.'))
                 {
-                    data.PrimaryEditingEntry.Message = "Appeal at 'discord.gg/" + _discordInviteCode + "'.";
+                    data.PrimaryEditingEntry.Message += " Appeal at 'https://uncreated.network/discord'.";
                 }
-                else if (data.PrimaryEditingEntry.Message!.IndexOf(".gg/" + _discordInviteCode, StringComparison.InvariantCultureIgnoreCase) == -1 &&
-                         data.PrimaryEditingEntry.Message!.IndexOf("unappealable", StringComparison.InvariantCultureIgnoreCase) == -1 &&
-                         data.PrimaryEditingEntry.Message!.IndexOf("un-appealable", StringComparison.InvariantCultureIgnoreCase) == -1 &&
-                         data.PrimaryEditingEntry.Message!.IndexOf("no appeal", StringComparison.InvariantCultureIgnoreCase) == -1 &&
-                         data.PrimaryEditingEntry.Message!.IndexOf("noappeal", StringComparison.InvariantCultureIgnoreCase) == -1 &&
-                         data.PrimaryEditingEntry.Message!.IndexOf("no-appeal", StringComparison.InvariantCultureIgnoreCase) == -1 &&
-                         data.PrimaryEditingEntry.Message!.IndexOf("dnub", StringComparison.InvariantCultureIgnoreCase) == -1 && // Do Not UnBan
-                         data.PrimaryEditingEntry.Message!.IndexOf("do not appeal", StringComparison.InvariantCultureIgnoreCase) == -1)
+                else
                 {
-                    data.PrimaryEditingEntry.Message = data.PrimaryEditingEntry.Message.Trim();
-                    if (data.PrimaryEditingEntry.Message.EndsWith('.'))
-                    {
-                        data.PrimaryEditingEntry.Message += " Appeal at 'discord.gg/" + _discordInviteCode + "'.";
-                    }
-                    else
-                    {
-                        data.PrimaryEditingEntry.Message += ". Appeal at 'discord.gg/" + _discordInviteCode + "'.";
-                    }
+                    data.PrimaryEditingEntry.Message += ". Appeal at 'https://uncreated.network/discord'.";
                 }
             }
 

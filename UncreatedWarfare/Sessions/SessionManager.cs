@@ -574,7 +574,7 @@ public class SessionManager :
         if (currentSession == null)
             return player.IsOnline;
 
-        if (player.Component<KitPlayerComponent>().IsKit(currentSession.KitId))
+        if (!player.Component<KitPlayerComponent>().IsKit(currentSession.KitId))
             return true;
 
         FactionInfo? faction = player.Team.Faction;

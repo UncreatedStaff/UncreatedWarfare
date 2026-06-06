@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using System;
 using System.Linq;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models.Kits;
@@ -15,6 +16,7 @@ using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Cooldowns;
 using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Players.Skillsets;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Signs;
@@ -34,6 +36,7 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
 
     private readonly IKitDataStore _kitDataStore;
     private readonly ITranslationValueFormatter _valueFormatter;
+    private readonly IItemDistributionService _itemDistributionService;
     private readonly LoadoutService _loadoutService;
     private readonly CooldownManager _cooldownManager;
     private readonly IKitAccessService _kitAccessService;
@@ -58,6 +61,7 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
     public KitRequestService(
         IKitDataStore kitDataStore,
         ITranslationValueFormatter valueFormatter,
+        IItemDistributionService itemDistributionService,
         LoadoutService loadoutService,
         TranslationInjection<RequestKitsTranslations> translations,
         CooldownManager cooldownManager,
@@ -89,6 +93,7 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         _pointsService = pointsService;
         _squadMenuUI = squadMenuUI;
         _valueFormatter = valueFormatter;
+        _itemDistributionService = itemDistributionService;
         _kitReqTranslations = translations.Value;
         _chatService = chatService;
         _zoneStore = zoneStore;
@@ -96,6 +101,55 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         _kitRequirements = kitRequirements;
 
         _requestRequirementVisitor = new KitRequirementVisitor(this);
+    }
+
+    public enum RevertResult
+    {
+        RevertedPreview,
+        UnknownFallbackKit = 1,
+        NotPreviewing = 2,
+        RevertedLoadoutPreview = -1,
+        RevertedPreviewWithDefaultItems = -2,
+    }
+
+    public async Task<RevertResult> RevertPreviewAsync(WarfarePlayer player, CancellationToken token = default)
+    {
+        KitPlayerComponent playerComponent = player.Component<KitPlayerComponent>();
+
+        CurrentKitState? activeKit = playerComponent.ActiveKit;
+        if (activeKit is not { IsPreview: true })
+        {
+            return RevertResult.NotPreviewing;
+        }
+
+        CurrentKitState? fallback = activeKit.PreviewFallback;
+        if (fallback == null || fallback.IsPreview)
+        {
+            _logger.LogInformation($"Tried to leave preview of {activeKit.Id}, fallback was: {fallback?.Id}.");
+            return RevertResult.UnknownFallbackKit;
+        }
+
+        if (fallback.ItemsFallback != null)
+        {
+            _logger.LogTrace($"Giving exact items back for {fallback.Id}.");
+            _itemDistributionService.GiveItems(fallback.ItemsFallback, player);
+            Kit kit = fallback.CachedKit;
+            player.Component<SkillsetPlayerComponent>().EnsureSkillsets(kit.Skillsets);
+            // todo: save and restore transformations
+            ItemTrackingPlayerComponent tracker = player.Component<ItemTrackingPlayerComponent>();
+            tracker.Reset();
+            tracker.IsPossiblyCorrupted = true;
+            playerComponent.UpdateKit(fallback);
+            if (!string.Equals(activeKit.Id, DefaultKitId, StringComparison.OrdinalIgnoreCase))
+                return RevertResult.RevertedPreview;
+
+            _logger.LogTrace("| Was default kit, meaning a loadout preview.");
+            return RevertResult.RevertedLoadoutPreview;
+        }
+
+        _logger.LogTrace($"Giving default items back for {fallback.Id}.");
+        await GiveKitAsync(player, fallback.CreateBestowData(), token);
+        return RevertResult.RevertedPreviewWithDefaultItems;
     }
 
     /// <inheritdoc />
@@ -129,6 +183,28 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         {
             resultHandler.NotFoundOrRegistered(player);
             return false;
+        }
+
+        try
+        {
+            _ = kit.MapFilter;
+            _ = kit.FactionFilter;
+            _ = kit.Skillsets;
+            _ = kit.UnlockRequirements;
+            _ = kit.Items;
+            _ = kit.Translations;
+            _ = kit.Delays;
+        }
+        catch (NotIncludedException)
+        {
+            Kit? kit2 = await _kitDataStore.QueryKitAsync(kit.Key, KitInclude.Giveable | KitInclude.Verifiable, token).ConfigureAwait(false);
+            if (kit2 == null)
+            {
+                resultHandler.NotFoundOrRegistered(player);
+                return false;
+            }
+
+            kit = kit2;
         }
 
         // one player can request a kit at a time.
@@ -384,7 +460,8 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
 
     private bool NeedsToFullRestock(WarfarePlayer player, Kit kit)
     {
-        if (player.Component<KitPlayerComponent>().ActiveKit is { IsLowAmmo: true })
+        KitPlayerComponent playerComponent = player.Component<KitPlayerComponent>();
+        if (playerComponent.ActiveKit is { IsLowAmmo: true })
             return true;
 
         // check if any clothes are missing or the wrong item

@@ -1,6 +1,5 @@
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Kits.Loadouts;
 using Uncreated.Warfare.Kits.Requests;
 using Uncreated.Warfare.Players;
@@ -68,7 +67,7 @@ internal sealed class KitGiveLoadoutCommand : IExecutableCommand
         {
             // trick the system into thinking the player is previewing
             // the default kit so they can go back to their old kit afterwards
-            CurrentKitState? fallback = component.GetUnderlyingPreviewFallback();
+            CurrentKitState? fallback = component.GetActiveEffectiveKit();
             fallback?.ItemsFallback = ItemUtility.ItemsFromInventory(player).ToArray();
 
             CurrentKitState newState = new CurrentKitState(defaultKit, true, false, fallback);

@@ -60,7 +60,7 @@ public class StringParameterTemplate : QuestParameterTemplate<string>
     /// <summary>
     /// Read a saved value of this <see cref="StringParameterTemplate"/> from a string.
     /// </summary>
-    public static bool TryParseValue(ReadOnlySpan<char> str, [MaybeNullWhen(false)] out QuestParameterValue<string> value)
+    public static bool TryParseValue(ReadOnlySpan<char> str, [NotNullWhen(true)] out QuestParameterValue<string>? value)
     {
         return StringParameterValue.TryParse(str, out value);
     }
@@ -68,7 +68,7 @@ public class StringParameterTemplate : QuestParameterTemplate<string>
     /// <summary>
     /// Read a <see cref="StringParameterTemplate"/> from a string.
     /// </summary>
-    public static bool TryParse(ReadOnlySpan<char> str, [MaybeNullWhen(false)] out StringParameterTemplate template)
+    public static bool TryParse(ReadOnlySpan<char> str, [NotNullWhen(true)] out StringParameterTemplate? template)
     {
         StringParameterTemplate val = new StringParameterTemplate();
         if (val.TryParseFrom(str))
@@ -367,7 +367,7 @@ public class StringParameterTemplate : QuestParameterTemplate<string>
                     }
                     else if (list.Values.Length > 0)
                     {
-                        _value = list.Values[RandomUtility.GetIndex((ICollection)list.Values)];
+                        _value = list.Values[RandomUtility.GetIndex(list.Values)];
                     }
                     else
                     {
@@ -429,7 +429,7 @@ public class StringParameterTemplate : QuestParameterTemplate<string>
             }
         }
 
-        public static bool TryParse(ReadOnlySpan<char> str, [MaybeNullWhen(false)] out QuestParameterValue<string> value)
+        public static bool TryParse(ReadOnlySpan<char> str, [NotNullWhen(true)] out QuestParameterValue<string>? value)
         {
             if (!TryParseIntl(str, out ParameterSelectionType selType, out ParameterValueType valType, out string? constant,
                     out string[]? list, true))
@@ -463,7 +463,7 @@ public class StringParameterTemplate : QuestParameterTemplate<string>
                     }
                     else if (list!.Length > 0)
                     {
-                        val._value = list[RandomUtility.GetIndex((ICollection)list)];
+                        val._value = list[RandomUtility.GetIndex(list)];
                     }
                     else
                     {

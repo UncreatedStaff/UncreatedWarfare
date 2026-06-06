@@ -1,6 +1,5 @@
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Interaction.Commands;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Vehicles;
 using Uncreated.Warfare.Vehicles.Spawners;
@@ -52,6 +51,6 @@ internal sealed class VehicleBayRespawnCommand : IExecutableCommand
 
         await _vehicleService.SpawnVehicleAsync(spawner, token);
         // todo: Context.LogAction(ActionLogType.VehicleBayForceSpawn, spawner.ToDisplayString());
-        Context.Reply(_translations.VehicleBayForceSuccess!, spawner.SpawnInfo.VehicleAsset.GetAsset());
+        Context.Reply(_translations.VehicleBayForceSuccess!, spawner.VehicleInfo.VehicleAsset.GetAsset());
     }
 }

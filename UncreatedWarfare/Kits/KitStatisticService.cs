@@ -15,7 +15,7 @@ namespace Uncreated.Warfare.Kits;
 public interface IKitStatisticService
 {
     /// <summary>
-    /// Gets the total damage done to each limb by a player with a gun while <paramref name="kit"/> was equipped.
+    /// Gets the total damage done to each limb by a player with a gun while the given kit was equipped.
     /// </summary>
     /// <param name="player">The player who's data to search for.</param>
     /// <param name="kitId">The kit to search for. If <c>0</c>, factors in all kit's data.</param>

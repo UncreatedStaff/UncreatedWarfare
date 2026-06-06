@@ -225,7 +225,7 @@ public class AssetBan : DurationPunishment
             {
                 List<VehicleType> list;
                 bool pooled = false;
-                if (Provider.isInitialized && GameThread.IsCurrent)
+                if (WarfareModule.IsActive && GameThread.IsCurrent)
                 {
                     pooled = true;
                     list = ListPool<VehicleType>.claim();

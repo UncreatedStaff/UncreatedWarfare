@@ -1,11 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Globalization;
 using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Events.Models.Zones;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Translations;
@@ -154,7 +152,7 @@ internal class PlayerEnemyTerritoryWarningComponent : IPlayerComponent,
             Player.Steam64,
             out _,
             trackKill: false,
-            ERagdollEffect.NONE,
+            ERagdollEffect.None,
             canCauseBleeding: false,
             bypassSafezone: true
         );

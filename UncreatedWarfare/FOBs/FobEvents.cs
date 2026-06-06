@@ -174,7 +174,7 @@ public partial class FobManager :
         }
     }
 
-    private bool TryCreateShoveable(IBuildable buildable, Team team, WarfarePlayer? placer, [MaybeNullWhen(false)] out ShovelableBuildable shovelable, bool shouldConsumeSupplies = true)
+    private bool TryCreateShoveable(IBuildable buildable, Team team, WarfarePlayer? placer, [NotNullWhen(true)] out ShovelableBuildable? shovelable, bool shouldConsumeSupplies = true)
     {
         shovelable = null;
 

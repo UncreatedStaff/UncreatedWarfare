@@ -1,117 +1,170 @@
 using DanielWillett.ReflectionTools;
+using DanielWillett.SpeedBytes;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
+using System.Collections.Immutable;
+using System.IO;
 using System.Linq;
 using Uncreated.Warfare.Buildables;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.Services;
-using Uncreated.Warfare.Util.List;
+using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Timing;
-using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.Vehicles.Spawners;
 
-[Priority(-2 /* run after vehicle storage services (specifically VehicleSpawnerStore and VehicleInfoStore) */)]
+[Priority(-3 /* run after vehicle storage services (VehicleInfoStore) */)]
 public class VehicleSpawnerService : ILayoutHostedService, IDisposable
 {
-    private readonly TrackingList<VehicleSpawner> _spawns;
-    private readonly VehicleSpawnerStore _spawnerStore;
-    private readonly VehicleInfoStore _vehicleStore;
+    private ImmutableArray<VehicleSpawner> _spawners;
+    private readonly IVehicleSpawnerDataStore _spawnerStore;
     private readonly WarfareModule _module;
     private readonly ILogger<VehicleSpawnerService> _logger;
     private readonly ILoopTicker _updateTicker;
+    private readonly string _spawnerBuildableMapFile;
 
-    public VehicleSpawnerStore SpawnerStore => _spawnerStore;
-    public ReadOnlyTrackingList<VehicleSpawner> Spawners { get; }
+    internal readonly Dictionary<string, SpawnerBuildables> SpawnerBuildableMap;
+    internal bool SpawnerBuildableMapIsDirty;
 
-    public VehicleSpawnerService(VehicleSpawnerStore spawnerStore,
-        VehicleInfoStore vehicleStore,
+    private bool _disposed;
+    private bool _loaded;
+
+    /// <summary>
+    /// List of all active vehicle spawners.
+    /// </summary>
+    public ImmutableArray<VehicleSpawner> Spawners => _spawners;
+
+    public VehicleSpawnerService(IVehicleSpawnerDataStore spawnerStore,
         ILoopTickerFactory loopTickerFactory,
         ILogger<VehicleSpawnerService> logger,
         WarfareModule module)
     {
-        _spawns = new TrackingList<VehicleSpawner>();
+        _spawners = ImmutableArray<VehicleSpawner>.Empty;
+        SpawnerBuildableMap = new Dictionary<string, SpawnerBuildables>(0);
+        _spawnerBuildableMapFile = Path.Combine(
+            UnturnedPaths.RootDirectory.FullName,
+            ServerSavedata.directoryName,
+            Provider.serverID,
+            "Level",
+            Provider.map,
+            "Spawner Buildables.bin"
+        );
+
+        try
+        {
+            ReadSpawnerBuildableMap();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error reading spawner buildable map.");
+        }
+
         _spawnerStore = spawnerStore;
-        _spawnerStore.OnSpawnsReloaded += () => ReloadSpawners(_spawnerStore.Spawns);
-        _vehicleStore = vehicleStore;
+        _spawnerStore.OnDataUpdated += OnReloadSpawnersNeeded;
+
         _logger = logger;
         _module = module;
         _updateTicker = loopTickerFactory.CreateTicker(TimeSpan.FromSeconds(1), false, true);
-
-        Spawners = new ReadOnlyTrackingList<VehicleSpawner>(_spawns);
     }
 
     /// <inheritdoc />
     public void Dispose()
     {
+        _disposed = true;
+
+        _spawnerStore.OnDataUpdated -= OnReloadSpawnersNeeded;
+        if (_spawnerStore is IDisposable disp)
+            disp.Dispose();
+
         _updateTicker.Dispose();
+
+        foreach (VehicleSpawner spawner in _spawners)
+        {
+            spawner.Dispose();
+        }
+
+        _spawners = ImmutableArray<VehicleSpawner>.Empty;
+
+        if (SpawnerBuildableMapIsDirty)
+        {
+            WriteSpawnerBuildableMap();
+        }
     }
 
-    UniTask ILayoutHostedService.StartAsync(CancellationToken token)
+    async UniTask ILayoutHostedService.StartAsync(CancellationToken token)
     {
-        return UniTask.CompletedTask;
+        await UniTask.SwitchToMainThread(token);
+        
+        IReadOnlyList<VehicleSpawnerInfo> info = await _spawnerStore.ReadSpawnersAsync(token);
+        
+        await UniTask.SwitchToMainThread(token);
+
+        ReloadSpawners(info);
+        _loaded = true;
     }
 
-    UniTask ILayoutHostedService.StopAsync(CancellationToken token)
+    async UniTask ILayoutHostedService.StopAsync(CancellationToken token)
     {
-        return UniTask.CompletedTask;
+        await UniTask.SwitchToMainThread(token);
+
+        foreach (VehicleSpawner spawner in _spawners)
+        {
+            spawner.Dispose();
+        }
+
+        _spawners = ImmutableArray<VehicleSpawner>.Empty;
     }
 
     public bool TryGetSpawner(uint signInstanceId, [NotNullWhen(true)] out VehicleSpawner? spawner)
     {
-        spawner = _spawns.FirstOrDefault(x => x.Signs.Any(x => x.InstanceId == signInstanceId));
+        spawner = _spawners.FirstOrDefault(x => x.Signs.Any(x => x.InstanceId == signInstanceId));
         return spawner != null;
     }
 
     public bool TryGetSpawner(IBuildable spawnerBuildable, [NotNullWhen(true)] out VehicleSpawner? spawner)
     {
-        spawner = _spawns.FirstOrDefault(x => x.Buildable != null && x.Buildable.Equals(spawnerBuildable));
+        spawner = _spawners.FirstOrDefault(x => x.Buildable != null && x.Buildable.Equals(spawnerBuildable));
         return spawner != null;
     }
 
     public bool TryGetSpawner(string uniqueName, [NotNullWhen(true)] out VehicleSpawner? spawner)
     {
-        spawner = _spawns.FirstOrDefault(x => x.SpawnInfo.UniqueName.Equals(uniqueName, StringComparison.OrdinalIgnoreCase));
+        spawner = _spawners.FirstOrDefault(x => string.Equals(x.SpawnInfo.Id, uniqueName, StringComparison.OrdinalIgnoreCase));
         return spawner != null;
     }
 
     public VehicleSpawner? GetSpawner(uint signInstanceId)
     {
-        return _spawns.FirstOrDefault(x => x.Signs.Any(x => x.InstanceId == signInstanceId));
+        return _spawners.FirstOrDefault(x => x.Signs.Any(x => x.InstanceId == signInstanceId));
     }
 
-    public async UniTask<VehicleSpawner?> RegisterNewSpawner(IBuildable spawnerBuildable, WarfareVehicleInfo vehicleInfo, string uniqueName, CancellationToken token = default)
+    private void OnReloadSpawnersNeeded()
     {
-        if (!_module.IsLayoutActive())
-            return null;
+        if (!_loaded || _disposed)
+            return;
 
-        IServiceProvider layoutServiceProvider = _module.ScopedProvider.Resolve<IServiceProvider>();
-
-        VehicleSpawnInfo spawnerInfo = new VehicleSpawnInfo
+        UniTask.Create(async () =>
         {
-            UniqueName = uniqueName,
-            BuildableInstanceId = spawnerBuildable.InstanceId,
-            VehicleAsset = vehicleInfo.VehicleAsset,
-            SignInstanceIds = new List<uint>(),
-            IsStructure = spawnerBuildable.IsStructure
-        };
-
-        await _spawnerStore.AddOrUpdateSpawnAsync(spawnerInfo, token); // todo: clean up async stuff
-        VehicleSpawner spawner = new VehicleSpawner(spawnerInfo, vehicleInfo, _updateTicker, layoutServiceProvider);
-        _spawns.Add(spawner);
-        return spawner;
+            await UniTask.SwitchToMainThread();
+            if (_disposed)
+                return;
+            try
+            {
+                IReadOnlyList<VehicleSpawnerInfo> spawners = await _spawnerStore.ReadSpawnersAsync();
+                await UniTask.SwitchToMainThread();
+                ReloadSpawners(spawners);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error reloading vehicle spawners.");
+            }
+        });
     }
 
-    public async UniTask DeregisterSpawner(VehicleSpawner existingSpawner, CancellationToken token = default)
+    public void ReloadSpawners(IReadOnlyList<VehicleSpawnerInfo> records)
     {
-        existingSpawner.Dispose();
-        await _spawnerStore.RemoveSpawnAsync(existingSpawner.SpawnInfo, token); // todo: clean up async stuff
-        _spawns.RemoveAll(s => s.SpawnInfo.BuildableInstanceId == existingSpawner.SpawnInfo.BuildableInstanceId);
-    }
+        GameThread.AssertCurrent();
 
-    public void ReloadSpawners(IReadOnlyList<VehicleSpawnInfo> records)
-    {
         if (!_module.IsLayoutActive())
         {
             _logger.LogWarning("Could not get current Layout. Vehicle spawners will not be reloaded.");
@@ -123,48 +176,207 @@ public class VehicleSpawnerService : ILayoutHostedService, IDisposable
         IServiceProvider layoutServiceProvider = currentLayout.ServiceProvider.Resolve<IServiceProvider>();
 
         _logger.LogDebug($"Reloading spawns from {records.Count} records...");
+
+        List<VehicleSpawner> newSpawners = [ with(_spawners.Length) ];
+        List<VehicleSpawner> oldSpawners = [ with(_spawners.Length) ];
+
+        BitArray useMask = new BitArray(records.Count);
+        foreach (VehicleSpawner existingSpawner in _spawners)
+        {
+            VehicleSpawnerInfo? info = records.FirstOrDefault(
+                out int index,
+                r => string.Equals(r.Id, existingSpawner.SpawnInfo.Id)
+            );
+
+            if (info == null || existingSpawner.Layout != currentLayout)
+            {
+                oldSpawners.Add(existingSpawner);
+                continue;
+            }
+
+            useMask[index] = true;
+            try
+            {
+                existingSpawner.UpdateSpawnInfo(info);
+            }
+            catch (AssetNotFoundException)
+            {
+                _logger.LogWarning($"Vehicle asset not found for vehicle spawner with GUID {info.VehicleId}.");
+                oldSpawners.Add(existingSpawner);
+                continue;
+            }
+
+            newSpawners.Add(existingSpawner);
+        }
+
         // remove all spawners which are no longer saved
-        var toRemove = _spawns.Where(s => !records.Any(r => r.BuildableInstanceId == s.Buildable?.InstanceId && r.IsStructure == s.Buildable.IsStructure)).ToList();
-        foreach (VehicleSpawner spawner in toRemove)
+        foreach (VehicleSpawner spawner in oldSpawners)
         {
             spawner.Dispose();
-            _spawns.Remove(spawner);
         }
-        _logger.LogDebug($"Removed {toRemove.Count} spawns");
+
+        _logger.LogDebug($"Removed {oldSpawners.Count} spawns");
 
         // if each record has a corresponding spawner, reload it, otherwise add a new spawner
-        foreach (var record in records)
+        for (int i = 0; i < records.Count; i++)
         {
-            WarfareVehicleInfo? vehicleInfo = _vehicleStore.GetVehicleInfo(record.VehicleAsset.Guid);
-            if (vehicleInfo == null)
+            if (useMask[i])
             {
-                _logger.LogWarning($"Spawner '{record.UniqueName}' was saved with Vehicle asset {record.VehicleAsset.Guid} which no longer has registered info. This spawner will not be registered");
-                return;
+                // already reloaded
+                continue;
             }
 
-            VehicleSpawner? existing = _spawns.FirstOrDefault(s => s.Buildable?.InstanceId == record.BuildableInstanceId && s.Buildable.IsStructure == record.IsStructure);
-            if (existing != null)
-            {
-                if (existing.Layout == currentLayout)
-                {
-                    existing.SoftReload(record, vehicleInfo);
-                    _logger.LogDebug($"Soft reloaded existing spawn: {vehicleInfo.VehicleAsset}");
-                    continue;
-                }
+            VehicleSpawnerInfo? record = records[i];
 
-                existing.Dispose();
-                _spawns.Remove(existing);
-                _logger.LogDebug($"Replacing existing spawn: {vehicleInfo.VehicleAsset}");
-            }
-            else
+            VehicleSpawner newSpawner;
+            try
             {
-                _logger.LogDebug($"Adding new spawn: {vehicleInfo.VehicleAsset}");
+                newSpawner = new VehicleSpawner(record, _updateTicker, layoutServiceProvider);
+            }
+            catch (AssetNotFoundException)
+            {
+                _logger.LogWarning($"Vehicle asset not found for vehicle spawner with GUID {record.VehicleId}.");
+                continue;
             }
 
-            VehicleSpawner newSpawner = new VehicleSpawner(record, vehicleInfo, _updateTicker, layoutServiceProvider);
-            _spawns.Add(newSpawner);
+            newSpawners.Add(newSpawner);
         }
 
-        _logger.LogDebug($"Successfully loaded {_spawns.Count} spawns");
+        _spawners = newSpawners.ToImmutableArray();
+
+        if (SpawnerBuildableMapIsDirty)
+        {
+            WriteSpawnerBuildableMap();
+        }
+
+        _logger.LogDebug($"Successfully loaded {newSpawners.Count} vehicle spawn(s).");
+    }
+
+    private void ReadSpawnerBuildableMap()
+    {
+        lock (SpawnerBuildableMap)
+        {
+            SpawnerBuildableMap.Clear();
+
+            try
+            {
+                using FileStream fs = new FileStream(_spawnerBuildableMapFile, FileMode.Open, FileAccess.Read, FileShare.Read, 512, FileOptions.SequentialScan);
+                ByteReader reader = new ByteReader
+                {
+                    ThrowOnError = true,
+                    LogOnError = false
+                };
+
+                reader.LoadNew(fs);
+
+                reader.ReadUInt8();
+
+                Span<byte> buffer = stackalloc byte[8];
+
+                int count = checked ( (int)reader.ReadUInt32() );
+
+                SpawnerBuildableMap.EnsureCapacity(count);
+
+                for (int i = 0; i < count; ++i)
+                {
+                    string key = reader.ReadString();
+
+                    SpawnerBuildables buildables;
+                    reader.ReadBlockTo(buffer);
+                    buildables.Bay = new BuildableDescriptor(buffer);
+
+                    byte ctHdr = reader.ReadUInt8();
+                    uint ct = (ctHdr & 128) != 0 ? (uint)(ctHdr & 127) : reader.ReadUInt32();
+
+                    BuildableDescriptor[] signs = new BuildableDescriptor[ct];
+                    for (uint j = 0; j < ct; ++j)
+                    {
+                        reader.ReadBlockTo(buffer);
+                        signs[j] = new BuildableDescriptor(buffer);
+                    }
+
+                    buildables.Signs = signs;
+
+                    SpawnerBuildableMap[key] = buildables;
+                }
+            }
+            catch (FileNotFoundException) { }
+            catch (ByteBufferOverflowException)
+            {
+                _logger.LogWarning("Invalid file format of vehicle spawner buildable map file.");
+            }
+            catch (OverflowException)
+            {
+                _logger.LogWarning("Invalid data in vehicle spawner buildable map file.");
+            }
+        }
+    }
+
+    private void WriteSpawnerBuildableMap()
+    {
+        lock (SpawnerBuildableMap)
+        {
+            string? dir = Path.GetDirectoryName(_spawnerBuildableMapFile);
+            if (dir != null)
+            {
+                Directory.CreateDirectory(dir);
+            }
+
+            Thread.BeginCriticalRegion();
+            try
+            {
+                using FileStream fs = new FileStream(_spawnerBuildableMapFile, FileMode.Create, FileAccess.Write, FileShare.Read, 512, FileOptions.SequentialScan);
+                ByteWriter writer = new ByteWriter
+                {
+                    Stream = fs
+                };
+
+                writer.Write((byte)0);
+                Span<byte> buffer = stackalloc byte[8];
+                writer.Write((uint)SpawnerBuildableMap.Count);
+                foreach ((string key, SpawnerBuildables buildables) in SpawnerBuildableMap)
+                {
+                    writer.Write(key);
+
+                    buildables.Bay.TryWriteBytes(buffer, out _);
+                    writer.WriteBlock(buffer);
+                    if (buildables.Signs == null)
+                    {
+                        writer.Write((byte)128);
+                        continue;
+                    }
+                    
+                    if (buildables.Signs.Length < 128)
+                    {
+                        writer.Write((byte)(buildables.Signs.Length | 128));
+                    }
+                    else
+                    {
+                        writer.Write((byte)0);
+                        writer.Write((uint)buildables.Signs.Length);
+                    }
+
+                    for (int i = 0; i < buildables.Signs.Length; ++i)
+                    {
+                        buildables.Signs[i].TryWriteBytes(buffer, out _);
+                        writer.WriteBlock(buffer);
+                    }
+                }
+
+                writer.Flush();
+                writer.Stream = null;
+                SpawnerBuildableMapIsDirty = false;
+            }
+            finally
+            {
+                Thread.EndCriticalRegion();
+            }
+        }
+    }
+
+    internal struct SpawnerBuildables
+    {
+        public BuildableDescriptor Bay;
+        public BuildableDescriptor[] Signs;
     }
 }

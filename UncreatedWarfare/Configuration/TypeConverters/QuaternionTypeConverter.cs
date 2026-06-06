@@ -1,6 +1,5 @@
 ﻿using System;
 using System.ComponentModel;
-using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using Uncreated.Warfare.Util;
 
@@ -102,7 +101,7 @@ public class QuaternionTypeConverter : TypeConverter
         return q;
     }
 
-    private static bool TryParseQuaternion(string str, [MaybeNullWhen(false)] out object obj, bool create)
+    private static bool TryParseQuaternion(string str, [NotNullWhen(true)] out object? obj, bool create)
     {
         obj = null;
         ReadOnlySpan<char> parsableString = str.AsSpan().Trim();

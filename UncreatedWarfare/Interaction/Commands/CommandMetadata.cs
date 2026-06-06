@@ -254,7 +254,7 @@ public class CommandMetadata : ICommandParameterDescriptor
         return ContextualTypeResolver.ResolveType(typeName);
     }
 
-    internal static bool IsParameterMatchOrLookAtMatch(CommandMetadata paramMeta, string commandName, CommandMetadata? updateMetadata, [MaybeNullWhen(false)] out CommandMetadata actualMatch)
+    internal static bool IsParameterMatchOrLookAtMatch(CommandMetadata paramMeta, string commandName, CommandMetadata? updateMetadata, [NotNullWhen(true)] out CommandMetadata? actualMatch)
     {
         if (paramMeta.Name.Equals(commandName, StringComparison.InvariantCultureIgnoreCase))
         {
@@ -300,7 +300,7 @@ public class CommandMetadata : ICommandParameterDescriptor
 
         return false;
     }
-    internal static bool IsParameterMatchOrLookAtMatch(ICommandParameterDescriptor paramMeta, string commandName, [MaybeNullWhen(false)] out ICommandParameterDescriptor actualMatch, bool aliases)
+    internal static bool IsParameterMatchOrLookAtMatch(ICommandParameterDescriptor paramMeta, string commandName, [NotNullWhen(true)] out ICommandParameterDescriptor? actualMatch, bool aliases)
     {
         if (paramMeta.Name.Equals(commandName, StringComparison.InvariantCultureIgnoreCase))
         {

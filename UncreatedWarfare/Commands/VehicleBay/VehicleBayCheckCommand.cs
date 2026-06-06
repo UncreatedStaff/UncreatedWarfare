@@ -1,8 +1,6 @@
-﻿using System.Linq;
-using Uncreated.Warfare.Buildables;
+﻿using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Translations;
-using Uncreated.Warfare.Vehicles;
 using Uncreated.Warfare.Vehicles.Spawners;
 
 namespace Uncreated.Warfare.Commands;
@@ -41,6 +39,6 @@ internal sealed class VehicleBayCheckCommand : IExecutableCommand
             throw Context.Reply(_translations.SpawnNotRegistered);
         }
 
-        Context.Reply(_translations.VehicleBayCheck, spawner.SpawnInfo.UniqueName, spawner.SpawnInfo.BuildableInstanceId, spawner.SpawnInfo.VehicleAsset.GetAsset()!, spawner.SpawnInfo.VehicleAsset.Guid);
+        Context.Reply(_translations.VehicleBayCheck, spawner.SpawnInfo.Id, spawner.VehicleInfo.VehicleAsset.GetAsset()!, spawner.SpawnInfo.VehicleId);
     }
 }

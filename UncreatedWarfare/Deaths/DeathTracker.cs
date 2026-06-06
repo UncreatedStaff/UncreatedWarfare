@@ -270,7 +270,7 @@ public class DeathTracker : IHostedService//, IEventListener<VehicleExploded>
                 Interlocked.Increment(ref e.KillerSession.EventCount);
             e.KillerPoint = killer.Position;
             KitPlayerComponent killerKitComp = killer.Component<KitPlayerComponent>();
-            CurrentKitState? killerActiveKit = killerKitComp.ActiveKit;
+            CurrentKitState? killerActiveKit = killerKitComp.GetActiveEffectiveKit();
             if (killerActiveKit == null)
             {
                 e.KillerKitName = null;

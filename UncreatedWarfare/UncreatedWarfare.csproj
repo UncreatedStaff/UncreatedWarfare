@@ -10,7 +10,7 @@
         <Version>4.0.14</Version>
 
         <!-- Enable this for telemetry tracking -->
-        <DefineConstants>$(DefineConstants);TELEMETRY</DefineConstants>
+        <!--<DefineConstants>$(DefineConstants);TELEMETRY</DefineConstants>-->
 
     </PropertyGroup>
 
@@ -142,63 +142,66 @@
         <None Include="Stats\EventHandlers\PointsRewardsEvents.cs" />
     </ItemGroup>
 
-    <!-- ReSharper disable VulnerablePackage (using older versions of EF and STJ) -->
     <ItemGroup>
+        <PackageReference Include="Lib.Harmony" Version="2.4.2" />
         <PackageReference Include="DanielWillett.StackCleaner" Version="1.5.1" />
-        <PackageReference Include="DanielWillett.ReflectionTools" Version="4.0.0" />
-        <PackageReference Include="DanielWillett.ReflectionTools.Harmony" Version="4.0.0" />
+        <PackageReference Include="DanielWillett.ReflectionTools" Version="4.1.0" />
+        <PackageReference Include="DanielWillett.ReflectionTools.Harmony" Version="4.1.0" />
         <PackageReference Include="DanielWillett.SpeedBytes" Version="1.1.2" />
         <PackageReference Include="DanielWillett.SpeedBytes.Unity" Version="1.1.1" />
         <PackageReference Include="DanielWillett.JavaPropertiesParser" Version="1.1.1" />
-        <PackageReference Include="DanielWillett.ModularRPCs" Version="[1.0.0-prerelease22, 2)" />
-        <PackageReference Include="DanielWillett.ModularRPCs.Unity" Version="[1.0.0-prerelease22, 2)" />
-        <PackageReference Include="DanielWillett.ModularRPCs.WebSockets" Version="[1.0.0-prerelease22, 2)" />
+        <PackageReference Include="DanielWillett.ModularRPCs" Version="[1.0.0-prerelease31, 2)" />
+        <PackageReference Include="DanielWillett.ModularRPCs.Unity" Version="[1.0.0-prerelease29, 2)" />
+        <PackageReference Include="DanielWillett.ModularRPCs.WebSockets" Version="[1.0.0-prerelease31, 2)" />
         <PackageReference Include="Uncreated.UI" Version="1.4.0" />
         <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-        <PackageReference Include="Stripe.net" Version="49.0.0" />
-        <PackageReference Include="JetBrains.Annotations" Version="2018.2.1" Aliases="JetBrains" />
+        <PackageReference Include="Stripe.net" Version="51.0.0" />
+        <PackageReference Include="JetBrains.Annotations" Version="2018.2.1" ExcludeAssets="compile" />
 
         <PackageReference Include="UniTask" Version="2.5.10" ExcludeAssets="compile" />
 
-        <PackageReference Include="Autofac" Version="8.4.0" />
-        <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="10.0.0" />
+        <PackageReference Include="Autofac" Version="9.1.0" />
+        <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="11.0.0" />
 
-        <PackageReference Include="SSH.NET" Version="2025.0.0" />
+        <PackageReference Include="SSH.NET" Version="2025.1.0" />
 
-        <PackageReference Include="System.Data.Common" Version="4.3.0" />
-        <PackageReference Include="System.Runtime.Caching" Version="9.0.10" />
+        <PackageReference Include="System.Runtime.Caching" Version="10.0.8" />
+        <PackageReference Include="System.Memory" Version="4.6.3" />
+        <PackageReference Include="System.Buffers" Version="4.6.1" />
+        <PackageReference Include="System.Numerics.Vectors" Version="4.6.1" />
+        <PackageReference Include="System.Threading.Tasks.Extensions" Version="4.6.3" />
 
-        <PackageReference Include="System.Text.Json" Version="9.0.10" />
-        <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="9.0.10" />
-        <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.0.0" />
-        <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.10" />
-        <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.10" />
-        <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="9.0.10" />
+        <PackageReference Include="System.Text.Json" Version="10.0.8" />
+        <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />
+        <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.8" />
+        <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.8" />
+        <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.8" />
+        <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.8" />
         <PackageReference Include="NetEscapades.Configuration.Yaml" Version="3.1.0" />
-        <PackageReference Include="YamlDotNet" Version="16.3.0" />
+        <PackageReference Include="YamlDotNet" Version="18.0.0" />
 
-        <PackageReference Include="MySqlConnector" Version="2.4.0" />
-        <PackageReference Include="Microsoft.Bcl.HashCode" Version="1.1.1" />
-        <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="9.0.10" />
-        <PackageReference Include="System.Diagnostics.DiagnosticSource" Version="9.0.10" />
-        <PackageReference Include="Microsoft.Extensions.Options" Version="9.0.10" />
-        <PackageReference Include="Microsoft.Extensions.Primitives" Version="9.0.10" />
-        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.10" />
-        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.10" />
-        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.10" />
+        <PackageReference Include="MySqlConnector" Version="2.6.0" />
+        <PackageReference Include="Microsoft.Bcl.HashCode" Version="6.0.0" />
+        <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="10.0.8" />
+        <PackageReference Include="System.Diagnostics.DiagnosticSource" Version="10.0.8" />
+        <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.8" />
+        <PackageReference Include="Microsoft.Extensions.Primitives" Version="10.0.8" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.8" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.8" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.8" />
         <PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />
-        <PackageReference Include="System.Collections.Immutable" Version="9.0.10" />
+        <PackageReference Include="System.Collections.Immutable" Version="10.0.8" />
         <PackageReference Include="Microsoft.EntityFrameworkCore" Version="5.0.17" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="5.0.17" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="5.0.17" Private="true" />
         <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="5.0.4" />
         <PackageReference Include="Zack.EFCore.Batch" Version="1.5.0" />
         <PackageReference Include="Zack.EFCore.Batch.MySQL.Pomelo" Version="1.5.0" />
-        <PackageReference Include="PolySharp" Version="1.15.0">
+        <PackageReference Include="PolySharp" Version="1.16.0">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="Unturned.MSBuild" Version="1.0.0-test6">
+        <PackageReference Include="Unturned.MSBuild" Version="1.0.0-test7">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
         </PackageReference>
@@ -207,12 +210,11 @@
             <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
         </PackageReference>
     </ItemGroup>
-    <!-- ReSharper restore VulnerablePackage -->
 
     <ItemGroup Condition="$(DefineConstants.Contains('TELEMETRY'))">
 
-        <PackageReference Include="OpenTelemetry" Version="1.13.1" />
-        <PackageReference Include="OpenTelemetry.Exporter.Zipkin" Version="1.9.0" />
+        <PackageReference Include="OpenTelemetry" Version="1.15.3" />
+        <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.15.3" />
 
     </ItemGroup>
 

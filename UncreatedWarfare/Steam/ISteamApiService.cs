@@ -5,6 +5,11 @@ using Uncreated.Warfare.Util;
 namespace Uncreated.Warfare.Steam;
 public interface ISteamApiService
 {
+    /// <summary>
+    /// Whether or not the service is enabled. Usually this corresponds to the presence of a Steam API key.
+    /// </summary>
+    bool IsEnabled { get; }
+
     /// <exception cref="SteamApiRequestException"/>
     Task<TResponse> ExecuteQueryAsync<TResponse>(SteamApiQuery query, CancellationToken token) where TResponse : notnull;
 }

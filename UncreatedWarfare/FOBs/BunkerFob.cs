@@ -9,6 +9,7 @@ using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.StrategyMaps;
 using Uncreated.Warfare.StrategyMaps.MapTacks;
+using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.DamageTracking;
 
 namespace Uncreated.Warfare.FOBs;
@@ -78,7 +79,7 @@ public class BunkerFob : ResourceFob, IFobStrategyMapTackHandler, IDamageableFob
 
     protected virtual MapTack? CreateMapTack(StrategyMap map, AssetConfiguration assetConfig)
     {
-        if (Buildable.IsDead || !Team.IsFriendly(map.MapTable.Group))
+        if (!Buildable.IsAlive || !Team.IsFriendly(map.MapTable.Group))
             return null;
 
         IAssetLink<ItemBarricadeAsset> barricade;

@@ -90,6 +90,9 @@ public sealed class KitCommandTranslations : PropertiesTranslationCollection
     [TranslationData("Sent to a player when they try to save a layout without a kit equipped.")]
     public readonly Translation KitLayoutNoKit = new Translation("<#ff8c69>You can not save your kit's item layout unless you have a kit equipped.");
 
+    [TranslationData("Sent to a player when they try to save a layout after previewing a kit.")]
+    public readonly Translation KitLayoutPossiblyCorrupted = new Translation("<#ff8c69>Tracking item changes after previewing a kit is not supported. Re-equip your kit from scratch to modify your default kit layout.");
+
     [TranslationData("Sent to a player when they save a custom layout (where their items go) for their kit.")]
     public readonly Translation<Kit> KitLayoutSaved = new Translation<Kit>("<#a0ad8e>Custom layout for <#fff>{0}</color> saved.", arg0Fmt: Kit.FormatDisplayName);
 

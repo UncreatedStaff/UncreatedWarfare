@@ -28,10 +28,10 @@ public class ModerationTranslations : PropertiesTranslationCollection
     public readonly Translation<string, IPlayer, IPlayer> RejectPermanentLinkedBanned = new Translation<string, IPlayer, IPlayer>("{2} ({1}) is permanently banned: \"{0}\".", TranslationOptions.UnityUI | TranslationOptions.NoRichText, arg1Fmt: WarfarePlayer.FormatSteam64, arg2Fmt: WarfarePlayer.FormatPlayerName);
 
     [TranslationData("Gets sent to a player who is globally banned in a known ban database (like UCS).", "Name of the global ban system.", "Ban date.", "Our discord join code.")]
-    public readonly Translation<string, DateTime, string, uint> RejectGloballyBanned = new Translation<string, DateTime, string, uint>("You were globally banned in the {0} global ban system {1} (ban ID {3}). Join our Discord (discord.gg/{2}) for help.", arg1Fmt: TimeAddon.Create(DateTimeFormatType.RelativeLong));
+    public readonly Translation<string, DateTime, uint> RejectGloballyBanned = new Translation<string, DateTime, uint>("You were globally banned in the {0} global ban system {1} (ban ID {2}). Join our Discord (https://uncreated.network/discord) for help.", arg1Fmt: TimeAddon.Create(DateTimeFormatType.RelativeLong));
 
     [TranslationData("Gets sent to a player if someone else sharing an IP or HWID is banned in a known ban database (like UCS).", "Name of the global ban system.", "Ban date.", "Our discord join code.", "The banned player's Steam64 ID.", "The banned player's name.")]
-    public readonly Translation<string, DateTime, string, ulong, string, uint> RejectGloballyLinkedBanned = new Translation<string, DateTime, string, ulong, string, uint>("{4} ({3}) is globally banned in the {0} global ban system {1} (ban ID {5}). Join our Discord (discord.gg/{2}) for help.", arg1Fmt: TimeAddon.Create(DateTimeFormatType.RelativeLong));
+    public readonly Translation<string, DateTime, ulong, string, uint> RejectGloballyLinkedBanned = new Translation<string, DateTime, ulong, string, uint>("{3} ({2}) is globally banned in the {0} global ban system {1} (ban ID {4}). Join our Discord (https://uncreated.network/discord) for help.", arg1Fmt: TimeAddon.Create(DateTimeFormatType.RelativeLong));
 
     [TranslationData("Gets sent to a player when they're kicked.", "The reason they're kicked")]
     public readonly Translation<string> RejectKicked = new Translation<string>("You were kicked for \"{0}\".", TranslationOptions.UnityUI | TranslationOptions.NoRichText);
