@@ -14,7 +14,9 @@ public class RequestCommandResultHandler : IRequestResultHandler
 {
     private readonly ChatService _chatService;
     private readonly RequestTranslations _translations;
+
     public bool CanUseIMGUI => true;
+    
     public RequestCommandResultHandler(ChatService chatService, TranslationInjection<RequestTranslations> translations)
     {
         _chatService = chatService;
@@ -23,7 +25,7 @@ public class RequestCommandResultHandler : IRequestResultHandler
 
     public void NotFoundOrRegistered(WarfarePlayer player)
     {
-        _chatService.Send(player, _translations.RequestNoTarget);
+        _chatService.Send(player, _translations.RequestNotRegistered);
     }
 
     public void MissingRequirement(WarfarePlayer player, IRequestable<object> value, string localizedRequirement)
@@ -66,6 +68,9 @@ public class RequestCommandResultHandler : IRequestResultHandler
         _chatService.Send(player, _translations.RequestVehicleTimeDelay, timeLeft);
     }
 
-    /// <inheritdoc />
-    public void MissingSquad(WarfarePlayer player, IRequestable<object> value, ref bool openSquadMenu) { }
+    public void MissingSquad(WarfarePlayer player, IRequestable<object> value, ref bool openSquadMenu)
+    {
+        if (!openSquadMenu)
+            _chatService.Send(player, _translations.RequestNotInSquad);
+    }
 }

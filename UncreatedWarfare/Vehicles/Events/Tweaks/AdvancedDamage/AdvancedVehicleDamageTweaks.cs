@@ -94,14 +94,23 @@ public class AdvancedVehicleDamageTweaks :
 
     public void HandleEvent(VehiclePreDamaged e, IServiceProvider serviceProvider)
     {
+        if (e.InstantaneousDamageOrigin
+            is not EDamageOrigin.Useable_Gun
+            and not EDamageOrigin.Bullet_Explosion
+            and not EDamageOrigin.Rocket_Explosion)
+        {
+            // this is what was causing landmines and C4's not to do the correct amount of damage
+            return;
+        }
+
         float finalMultiplier = 1;
-        
+
         Asset? latestInstigatorWeapon = e.Vehicle.DamageTracker.LatestInstigatorWeapon;
-        
+
         AdvancedVehicleDamageApplier.AdvancedDamagePending? directHit = e.Vehicle.AdvancedDamageApplier.ApplyLatestPendingDirectHit();
-        
+
         bool misusedDirectHitWeapon = false;
-        
+
         if (directHit.HasValue) // direct hit
             finalMultiplier = directHit.Value.Multiplier;
         else if (!_fullDamageOnIndirectHitWeapons.ContainsAsset(latestInstigatorWeapon)) // indirect hit
@@ -109,14 +118,14 @@ public class AdvancedVehicleDamageTweaks :
             misusedDirectHitWeapon = true;
 
         bool misusedGroundAttackWeapon = e.Vehicle.Info.Type.IsAircraft() &&
-                                       _groundAttackOnlyWeapons.ContainsAsset(latestInstigatorWeapon);
+                                         _groundAttackOnlyWeapons.ContainsAsset(latestInstigatorWeapon);
         bool misusedAntiAirWeapon = !e.Vehicle.Info.Type.IsAircraft() &&
                                     _antiAirOnlyWeapons.ContainsAsset(latestInstigatorWeapon);
-        
+
         if (misusedGroundAttackWeapon || misusedAntiAirWeapon || misusedDirectHitWeapon)
             finalMultiplier = 0.1f;
-        
-        ushort newDamage = (ushort) Mathf.RoundToInt(e.PendingDamage * finalMultiplier);
+
+        ushort newDamage = (ushort)Mathf.RoundToInt(e.PendingDamage * finalMultiplier);
         //_logger.LogDebug(
         //    $"Final damage multiplier of {finalMultiplier} " +
         //    $"(caused by weapon: {latestInstigatorWeapon?.FriendlyName ?? "unknown"}) " +
@@ -128,7 +137,7 @@ public class AdvancedVehicleDamageTweaks :
         //    $"Misused Direct Hit Weapon: {misusedDirectHitWeapon} - " +
         //    $"Misused Ground Attack: {misusedGroundAttackWeapon} - " +
         //    $"Misused Anti Air: {misusedAntiAirWeapon}");
-        
+
         e.PendingDamage = newDamage;
     }
 

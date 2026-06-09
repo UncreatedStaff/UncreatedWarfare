@@ -60,6 +60,12 @@ public class RequestTranslations : PropertiesTranslationCollection
     [TranslationData("Sent when a player tries to request something but isn't looking at a sign or vehicle.")]
     public readonly Translation RequestNoTarget = new Translation("<#a4baa9>You must be looking at a request sign or vehicle.");
 
+    [TranslationData("Sent when a player tries to request something but isn't looking at a sign or vehicle.")]
+    public readonly Translation RequestNotRegistered = new Translation("<#a4baa9>That is not requestable.");
+
+    [TranslationData("Sent when a player tries to request something but they have to be in a Squad.")]
+    public readonly Translation RequestNotInSquad = new Translation("<#b3ab9f>You must be <#cedcde>IN A SQUAD</color> in order to request this.");
+
     [TranslationData("Sent when a player buys a kit using /buy.", "Number of credits spent")]
     public readonly Translation<int> RequestKitBought = new Translation<int>("<#c4a36a>Kit bought for <#b8ffc1>C </color><#ffffff>{0}</color>. Request it with '<#b3b0ab>/request</color>'.");
 
@@ -107,9 +113,6 @@ public class RequestTranslations : PropertiesTranslationCollection
 
     [TranslationData("Sent when a player tries to request a vehicle but they have to be a Squad Leader.")]
     public readonly Translation RequestVehicleNotSquadLeader = new Translation("<#b3ab9f>You must be a <#cedcde>SQUAD LEADER</color> in order to request this vehicle.");
-
-    [TranslationData("Sent when a player tries to request a vehicle but they have to be in a Squad.")]
-    public readonly Translation RequestVehicleNotInSquad = new Translation("<#b3ab9f>You must be <#cedcde>IN A SQUAD</color> in order to request this vehicle.");
 
     [TranslationData("Sent when a player tries to request a vehicle but they don't have a kit equipped.")]
     public readonly Translation RequestVehicleNoKit = new Translation("<#a8918a>Get a kit before you request vehicles.");
