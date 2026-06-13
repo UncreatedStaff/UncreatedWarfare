@@ -33,7 +33,7 @@ public static class ChatFilterHelper
             }
         }
         // .. can i be .. or .. can i go ..
-        if (matchIndex - 2 >= 0 && input.Substring(matchIndex - 2, 2) is { } sub &&
+        if (matchIndex - 2 >= 0 && input.AsSpan(matchIndex - 2, 2) is { } sub &&
             (sub.Equals("ca", StringComparison.InvariantCultureIgnoreCase) || sub.Equals("ma", StringComparison.InvariantCultureIgnoreCase)))
         {
             if ((matchIndex + matchValue.Length >= input.Length || char.IsWhiteSpace(input[matchIndex + matchValue.Length]) || IsPunctuation(input[matchIndex + matchValue.Length]))
@@ -44,7 +44,7 @@ public static class ChatFilterHelper
                 && matchValue.Equals("n i g", StringComparison.InvariantCultureIgnoreCase))
                 return null;
         }
-        else if (matchIndex - 2 > 0 && input.Substring(matchIndex - 1, 1).Equals("o", StringComparison.InvariantCultureIgnoreCase)
+        else if (matchIndex - 2 > 0 && input.AsSpan(matchIndex - 1, 1).Equals("o", StringComparison.InvariantCultureIgnoreCase)
                  && !(matchIndex + matchValue.Length >= input.Length || char.IsWhiteSpace(input[matchIndex + matchValue.Length + 1]) || IsPunctuation(input[matchIndex + matchValue.Length])))
         {
             // .. of a g___
@@ -53,8 +53,16 @@ public static class ChatFilterHelper
         }
         // .. an igla ..
         else if (matchValue.Equals("n ig", StringComparison.InvariantCultureIgnoreCase) && matchIndex > 0 &&
-                 input[matchIndex - 1].ToString().Equals("a", StringComparison.InvariantCultureIgnoreCase) &&
-                 matchIndex < input.Length - 2 && input.Substring(matchIndex + matchValue.Length, 2).Equals("la", StringComparison.InvariantCultureIgnoreCase))
+                 input.AsSpan(matchIndex - 1, 1).Equals("a", StringComparison.InvariantCultureIgnoreCase) &&
+                 matchIndex < input.Length - matchValue.Length && input.AsSpan(matchIndex + matchValue.Length, 2).Equals("la", StringComparison.InvariantCultureIgnoreCase))
+        {
+            return null;
+        }
+        // faq#... or faq #...
+        else if (matchValue.Equals("faq", StringComparison.InvariantCultureIgnoreCase)
+                 && (matchIndex + matchValue.Length < input.Length && char.IsDigit(input[matchIndex + matchValue.Length])
+                 || matchIndex + matchValue.Length + 1 < input.Length && char.IsWhiteSpace(input[matchIndex + matchValue.Length]) && char.IsDigit(input[matchIndex + matchValue.Length + 1])
+                 ))
         {
             return null;
         }

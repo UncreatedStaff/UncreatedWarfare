@@ -231,7 +231,7 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
                     buildable.SetOwnerOrGroup(_serviceProvider, group: Team.GroupId);
                 }
 
-                if (!pos.IsNearlyEqual(spawnPos, 0.1f) || !spawnRot.IsNearlyEqual(euler, 1.5f))
+                if (!pos.IsNearlyEqual(spawnPos, 0.1f) || !MathUtility.IsRotationNearlyEqual(spawnRot, euler, 1.5f))
                 {
                     _logger.LogInformation(
                         $"Updated out-of-date transform of spawner {SpawnInfo.Id}. Update: {pos} -> {spawnPos}, {euler} -> {spawnRot}."
@@ -331,7 +331,7 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
                         buildable.SetOwnerOrGroup(_serviceProvider, group: Team.GroupId);
                     }
 
-                    if (!pos.IsNearlyEqual(spawnPos, 0.1f) || !spawnRot.IsNearlyEqual(euler, 1.5f))
+                    if (!pos.IsNearlyEqual(spawnPos, 0.1f) || !MathUtility.IsRotationNearlyEqual(spawnRot, euler, 1.5f))
                     {
                         _logger.LogInformation($"Updated out-of-date transform of spawner {SpawnInfo.Id} sign {i}. Update: {pos} -> {spawnPos}, {euler} -> {spawnRot}.");
                         buildable.SetPositionAndRotation(spawnPos, offsetSpawnRot);

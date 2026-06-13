@@ -225,4 +225,23 @@ public static class MathUtility
         return value != 0 ? 1 + (int)Math.Log10(value) : 1;
     }
 
+    public static bool IsRotationNearlyEqual(Vector3 r1, Vector3 r2, float tolerance)
+    {
+        return IsAngleNearlyEqual(r1.x, r2.x, tolerance) && IsAngleNearlyEqual(r1.y, r2.y, tolerance) && IsAngleNearlyEqual(r1.z, r2.z, tolerance);
+    }
+
+    public static bool IsAngleNearlyEqual(float a1, float a2, float tolerance)
+    {
+        a1 %= 360f;
+        a2 %= 360f;
+
+        float a1Dx360 = Math.Min(360f - a1, a1);
+        float a2Dx360 = Math.Min(360f - a2, a2);
+        if (a1Dx360 + a2Dx360 <= tolerance)
+        {
+            return true;
+        }
+
+        return Math.Abs(a1 - a2) <= tolerance;
+    }
 }
