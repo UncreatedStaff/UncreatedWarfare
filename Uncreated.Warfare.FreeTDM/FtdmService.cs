@@ -16,8 +16,6 @@ using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Proximity;
 using Uncreated.Warfare.Services;
-using Uncreated.Warfare.Stats;
-using Uncreated.Warfare.Stats.EventHandlers;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Addons;
 using Uncreated.Warfare.Util;
@@ -118,6 +116,9 @@ internal class FtdmService : ILayoutPhaseListener<ActionPhase>, IDisposable, ILa
 
     private void OnUpdate()
     {
+        if (TestStopCheckingCommand.StopChecking)
+            return;
+
         if (!IsInActionPhase || _playAreaCollider == null || _friendlyZoneColliders == null)
             return;
 
@@ -223,7 +224,7 @@ internal class FtdmService : ILayoutPhaseListener<ActionPhase>, IDisposable, ILa
         }
     }
 
-    private void HandlePlayerExitsFriendlySpawn(WarfarePlayer player)
+    private static void HandlePlayerExitsFriendlySpawn(WarfarePlayer player)
     {
         FtdmPlayerComponent comp = player.Component<FtdmPlayerComponent>();
         comp.HasExitedSpawnSinceRespawned = true;
@@ -304,6 +305,16 @@ internal class FtdmService : ILayoutPhaseListener<ActionPhase>, IDisposable, ILa
             _playAreaCollider = _zoneStore.CreateColliderForZone(playArea);
             //_playAreaCollider.OnObjectExited += HandlePlayerExitsPlayArea;
             _playAreaCollider.OnObjectEntered += HandlePlayerEntersPlayArea;
+
+            Vector3 center = playArea.Center;
+            foreach (uint instanceId in playArea.GridObjects)
+            {
+                ObjectInfo obj = LevelObjectUtility.FindObject(instanceId, center);
+                if (!obj.HasValue)
+                    continue;
+
+
+            }
         }
 
         _friendlyZoneColliders = new LinearDictionary<Team, IEventBasedProximity<WarfarePlayer>>(_teamManager.Spawns.Count);

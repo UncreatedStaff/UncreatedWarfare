@@ -345,7 +345,7 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService, IDisposable
     /// </summary>
     public string GetClosestLocationName(Vector3 position, bool shortName = false)
     {
-        Zone? zone = GetClosestZone(position, ZoneType.Flag);
+        Zone? zone = GetClosestZone(position, null, null, isForLocation: true);
         if (zone != null)
         {
             return shortName && !string.IsNullOrWhiteSpace(zone.ShortName) ? zone.ShortName : zone.Name;
@@ -354,10 +354,21 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService, IDisposable
         return LocationHelper.GetClosestLocationName(position);
     }
 
+    private static bool IsValidNearbyLocationType(ZoneType type)
+    {
+        // Flag or MainBase
+        return type <= ZoneType.MainBase;
+    }
+
     /// <summary>
     /// Find the zone which is closest to a point.
     /// </summary>
     public Zone? GetClosestZone(Vector3 position, ZoneType? type = null, FactionInfo? faction = null)
+    {
+        return GetClosestZone(position, type, faction, false);
+    }
+
+    internal Zone? GetClosestZone(Vector3 position, ZoneType? type, FactionInfo? faction, bool isForLocation)
     {
         Zone? closest = null;
         float closestSqrDist = 0;
@@ -367,7 +378,7 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService, IDisposable
             foreach (ZoneProximity prox in ProximityZones)
             {
                 Zone zone = prox.Zone;
-                if (type.HasValue && zone.Type != type.Value || faction != null && !string.Equals(zone.Faction, faction.FactionId, StringComparison.Ordinal))
+                if (isForLocation && !IsValidNearbyLocationType(zone.Type) || type.HasValue && zone.Type != type.Value || faction != null && !string.Equals(zone.Faction, faction.FactionId, StringComparison.Ordinal))
                     continue;
 
                 Vector3 nearestPoint = prox.Proximity.GetNearestPointOnBorder(in position);
@@ -384,7 +395,7 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService, IDisposable
             // based on center point
             foreach (Zone zone in Zones)
             {
-                if (type.HasValue && zone.Type != type.Value || faction != null && !string.Equals(zone.Faction, faction.FactionId, StringComparison.Ordinal))
+                if (isForLocation && !IsValidNearbyLocationType(zone.Type) || type.HasValue && zone.Type != type.Value || faction != null && !string.Equals(zone.Faction, faction.FactionId, StringComparison.Ordinal))
                     continue;
 
                 Vector3 c = zone.Center;

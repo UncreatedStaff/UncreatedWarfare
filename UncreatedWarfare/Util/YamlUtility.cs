@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -31,7 +30,8 @@ public static class YamlUtility
 
             weight = 1;
 
-            if (stream.Documents.FirstOrDefault()?.RootNode is not YamlMappingNode yaml)
+            YamlNode? yamlRoot = stream.Documents.FirstOrDefault()?.RootNode;
+            if (yamlRoot is not YamlMappingNode yaml)
             {
                 return true;
             }

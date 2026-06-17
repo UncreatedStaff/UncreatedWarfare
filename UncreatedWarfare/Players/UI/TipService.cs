@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Services;
@@ -51,6 +50,29 @@ public class TipService : ILayoutHostedService, IEventListener<PlayerLeft>
         => TryGiveTip(player, cooldown, translation, translation.Translate(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, player));
     public void TryGiveTip<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(WarfarePlayer player, int cooldown, Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10)
         => TryGiveTip(player, cooldown, translation, translation.Translate(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, player));
+
+    public void TryGiveTip(WarfarePlayer player, int cooldown, Func<TipTranslations, Translation> translation)
+        => TryGiveTip(player, cooldown, translation(Translations));
+    public void TryGiveTip<T>(WarfarePlayer player, int cooldown, Func<TipTranslations, Translation<T>> translation, T arg)
+        => TryGiveTip(player, cooldown, translation(Translations), arg);
+    public void TryGiveTip<T1, T2>(WarfarePlayer player, int cooldown, Func<TipTranslations, Translation<T1, T2>> translation, T1 arg1, T2 arg2)
+        => TryGiveTip(player, cooldown, translation(Translations), arg1, arg2);
+    public void TryGiveTip<T1, T2, T3>(WarfarePlayer player, int cooldown, Func<TipTranslations, Translation<T1, T2, T3>> translation, T1 arg1, T2 arg2, T3 arg3)
+        => TryGiveTip(player, cooldown, translation(Translations), arg1, arg2, arg3);
+    public void TryGiveTip<T1, T2, T3, T4>(WarfarePlayer player, int cooldown, Func<TipTranslations, Translation<T1, T2, T3, T4>> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
+        => TryGiveTip(player, cooldown, translation(Translations), arg1, arg2, arg3, arg4);
+    public void TryGiveTip<T1, T2, T3, T4, T5>(WarfarePlayer player, int cooldown, Func<TipTranslations, Translation<T1, T2, T3, T4, T5>> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
+        => TryGiveTip(player, cooldown, translation(Translations), arg1, arg2, arg3, arg4, arg5);
+    public void TryGiveTip<T1, T2, T3, T4, T5, T6>(WarfarePlayer player, int cooldown, Func<TipTranslations, Translation<T1, T2, T3, T4, T5, T6>> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
+        => TryGiveTip(player, cooldown, translation(Translations), arg1, arg2, arg3, arg4, arg5, arg6);
+    public void TryGiveTip<T1, T2, T3, T4, T5, T6, T7>(WarfarePlayer player, int cooldown, Func<TipTranslations, Translation<T1, T2, T3, T4, T5, T6, T7>> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
+        => TryGiveTip(player, cooldown, translation(Translations), arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+    public void TryGiveTip<T1, T2, T3, T4, T5, T6, T7, T8>(WarfarePlayer player, int cooldown, Func<TipTranslations, Translation<T1, T2, T3, T4, T5, T6, T7, T8>> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
+        => TryGiveTip(player, cooldown, translation(Translations), arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+    public void TryGiveTip<T1, T2, T3, T4, T5, T6, T7, T8, T9>(WarfarePlayer player, int cooldown, Func<TipTranslations, Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9>> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
+        => TryGiveTip(player, cooldown, translation(Translations), arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+    public void TryGiveTip<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(WarfarePlayer player, int cooldown, Func<TipTranslations, Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10)
+        => TryGiveTip(player, cooldown, translation(Translations), arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
     private void TryGiveTip(WarfarePlayer player, int cooldown, Translation translation, string text)
     {
         Tip tip = _tips.Find(t => t.Steam64 == player.Steam64.m_SteamID && t.Translation == translation);

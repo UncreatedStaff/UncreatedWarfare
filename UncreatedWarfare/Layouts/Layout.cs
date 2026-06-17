@@ -5,6 +5,7 @@ using Microsoft.Extensions.Primitives;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using Uncreated.Warfare.Configuration;
@@ -324,6 +325,16 @@ public class Layout : IDisposable
         do
         {
             await UniTask.SwitchToMainThread(token);
+
+            try
+            {
+                ServiceProvider.Resolve<Layout>();
+            }
+            catch (ObjectDisposedException)
+            {
+                Logger.LogCritical("MoveToNextPhase called after layout was disposed. Stack trace below." + Environment.NewLine + new StackTrace());
+                return;
+            }
 
             bool isEnd = _activePhase >= Phases.Count - 1;
 

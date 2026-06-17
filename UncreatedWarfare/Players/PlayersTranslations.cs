@@ -74,7 +74,7 @@ public sealed class PlayersTranslations : PropertiesTranslationCollection
     public readonly Translation InjuredUIHeader = new Translation("You are injured", TranslationOptions.TMProUI);
 
     [TranslationData("Sent on the injure UI telling the player how to give up")]
-    public readonly Translation InjuredUIGiveUp = new Translation("Press <color=#cecece><b><plugin_2/></b></color> to give up.", TranslationOptions.TMProUI);
+    public readonly Translation InjuredUIGiveUp = new Translation("Press <color=#cecece><b><plugin_3/></b></color> to give up.", TranslationOptions.TMProUI);
 
     [TranslationData("Sent in chat to tell the player how to give up.")]
     public readonly Translation InjuredUIGiveUpChat = new Translation("<#ff8c69>You were injured, press <color=#cedcde><plugin_2/></color> to give up.");

@@ -18,6 +18,8 @@ public class PlayerVoteManager : IPlayerVoteManager, IDisposable, IEventListener
     private readonly ILogger<PlayerVoteManager> _logger;
     private readonly object _voteSync;
 
+    private CancellationTokenRegistration _currentVoteCancellationRegistration;
+
     private bool _disposed;
 
     private int _noVotes;
@@ -113,7 +115,7 @@ public class PlayerVoteManager : IPlayerVoteManager, IDisposable, IEventListener
             {
                 if (ct.CanBeCanceled)
                 {
-                    ct.Register(static state =>
+                    _currentVoteCancellationRegistration = ct.Register(static state =>
                     {
                         UniTask.Create(async () =>
                         {
@@ -179,6 +181,9 @@ public class PlayerVoteManager : IPlayerVoteManager, IDisposable, IEventListener
     {
         // assume: game thread, locked _voteSync
         AssertVoting();
+
+        _currentVoteCancellationRegistration.Dispose();
+        _currentVoteCancellationRegistration = default;
 
         VoteResultContainer results = _voteInfo.Container;
 

@@ -3,6 +3,7 @@ using System;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Data;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Players;
@@ -55,15 +56,32 @@ public abstract class VoteUIDisplay<TData> : UnturnedUI, IVoteDisplay where TDat
         _playerSelector = playerSelector;
         _playerIsVotingCache = null;
 
+        PlayerKeys.PressedPluginKey1 += OnVotedYes;
+        PlayerKeys.PressedPluginKey4 += OnVotedNo;
+
         foreach (LanguageSet set in TranslationService.SetOf.PlayersWhere(playerSelector))
         {
             SendToPlayers(set);
         }
     }
 
+    private void OnVotedYes(WarfarePlayer player, ref bool handled)
+    {
+        VoteManager.RegisterVote(player.Steam64, PlayerVoteState.Yes);
+    }
+
+    private void OnVotedNo(WarfarePlayer player, ref bool handled)
+    {
+        VoteManager.RegisterVote(player.Steam64, PlayerVoteState.No);
+    }
+
     public void VoteFinished(IVoteResult result)
     {
         HasVote = false;
+
+        PlayerKeys.PressedPluginKey1 -= OnVotedYes;
+        PlayerKeys.PressedPluginKey4 -= OnVotedNo;
+
         foreach (LanguageSet set in TranslationService.SetOf.PlayersWhere(PlayerIsVoting()))
         {
             while (set.MoveNext())
@@ -130,6 +148,14 @@ public abstract class VoteUIDisplay<TData> : UnturnedUI, IVoteDisplay where TDat
 
         _playerIsVotingCache = playerSelector;
         return playerSelector;
+    }
+
+    /// <inheritdoc />
+    protected override void OnDisposing()
+    {
+        PlayerKeys.PressedPluginKey1 -= OnVotedYes;
+        PlayerKeys.PressedPluginKey4 -= OnVotedNo;
+        HasVote = false;
     }
 }
 

@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Models.Users;
 
@@ -9,7 +10,7 @@ namespace Uncreated.Warfare.Models.Kits;
 [Table("kits_access")]
 public class KitAccess
 {
-    [Required]
+    [Required, JsonIgnore]
     public KitModel Kit { get; set; }
 
     [Required]
@@ -22,7 +23,7 @@ public class KitAccess
     [Column("Steam64")]
     public ulong Steam64 { get; set; }
 
-    [Required]
+    [Required, JsonIgnore]
     public WarfareUserData PlayerData { get; set; }
     public KitAccessType AccessType { get; set; }
 

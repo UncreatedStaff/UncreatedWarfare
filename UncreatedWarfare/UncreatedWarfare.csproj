@@ -7,7 +7,7 @@
 
     <PropertyGroup>
 
-        <Version>4.0.14</Version>
+        <Version>4.0.16</Version>
 
         <!-- Enable this for telemetry tracking -->
         <!--<DefineConstants>$(DefineConstants);TELEMETRY</DefineConstants>-->
@@ -353,6 +353,7 @@
         <Publicize Include="Assembly-CSharp:SDG.Unturned.AssetsWorker.AssetDefinition" />
         <Publicize Include="Assembly-CSharp:SDG.Unturned.Assets.LoadFile" />
         <Publicize Include="Assembly-CSharp:SDG.Unturned.Assets.AddAssetsFromOriginToCurrentMapping" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.CommandLogMemoryUsage.OnExecuted" />
 
     </ItemGroup>
 

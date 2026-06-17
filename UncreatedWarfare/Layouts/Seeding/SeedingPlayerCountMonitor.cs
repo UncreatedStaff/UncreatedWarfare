@@ -344,7 +344,16 @@ internal class SeedingPlayerCountMonitor :
     private void StartVote()
     {
         _pendingLayout?.Dispose();
-        _pendingLayout = _layoutFactory.SelectRandomLayout(seeding: true);
+        try
+        {
+            _pendingLayout = _layoutFactory.SelectRandomLayout(seeding: true);
+        }
+        catch (InvalidOperationException)
+        {
+            // no layouts configured
+            return;
+        }
+
         VoteHud ??= ActivatorUtilities.CreateInstance<SeedingVoteHud>(_serviceProvider, VoteManager, _pendingLayout.DisplayName);
 
         _isStartingVote = true;
@@ -432,10 +441,24 @@ internal class SeedingPlayerCountMonitor :
 
         if (_layoutFactory.NextLayout == null)
         {
-            using LayoutInfo newLayout = _pendingLayout ?? _layoutFactory.SelectRandomLayout(seeding: true);
-            Interlocked.CompareExchange(ref _pendingLayout, null, newLayout);
-            _layoutFactory.NextLayout = new FileInfo(newLayout.FilePath);
-            _logger.LogInformation($"Selected seeding layout: {newLayout.DisplayName}.");
+            try
+            {
+                using LayoutInfo newLayout = _pendingLayout ?? _layoutFactory.SelectRandomLayout(seeding: true);
+                Interlocked.CompareExchange(ref _pendingLayout, null, newLayout);
+                _layoutFactory.NextLayout = new FileInfo(newLayout.FilePath);
+                _logger.LogInformation($"Selected seeding layout: {newLayout.DisplayName}.");
+            }
+            catch (InvalidOperationException)
+            {
+                IsSeeding = false;
+                _logger.LogInformation("Staging layout not available.");
+                if (_layoutHost.IsLayoutActive())
+                {
+                    _playHud.UpdateStage();
+                }
+
+                return;
+            }
         }
         else
         {

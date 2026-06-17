@@ -20,9 +20,6 @@ public class FobTranslations : PropertiesTranslationCollection
     [TranslationData("Indicates that a buildable can only be placed within a FOB's active radius, which is currently reduced because it doesn't have a bunker.", "Maximum radius")]
     public readonly Translation<float> BuildSmallRadius = new Translation<float>("<#ffab87>This can only be placed within {0}m of this FOB Radio right now. Expand this range by building a <#cedcde>FOB BUNKER</color>.", arg0Fmt: "N0");
 
-    [TranslationData("Sent to the player when they do /build.")]
-    public readonly Translation BuildLegacyExplanation = new Translation("<#ffab87>Hit the foundation with your Entrenching Tool to build it.");
-
     [TranslationData("Sent to the player when they try to take a supply crate from a trunk.")]
     public readonly Translation CantTakeSupplyCrate = new Translation("<#ffab87>Drop the supply crate from the trunk directly to restock a FOB.");
 

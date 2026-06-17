@@ -1,11 +1,9 @@
 using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
 using HarmonyLib;
-using System.Collections.Generic;
 using System.Reflection;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Layouts;
-using Uncreated.Warfare.Layouts.Flags;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Translations;
@@ -100,27 +98,14 @@ internal sealed class ElectricalGridCalculationPatches : IHarmonyPatch
             return true;
         }
 
-        Layout layout = WarfareModule.Singleton.GetActiveLayout();
+        ILifetimeScope serviceProvider = WarfareModule.Singleton.GetActiveLayout().ServiceProvider;
 
-        ILifetimeScope serviceProvider = layout.ServiceProvider;
+        IElectricalGridHandler handler = serviceProvider.Resolve<IElectricalGridHandler>();
 
         serviceProvider.Resolve<ILogger<ElectricalGridService>>()
             .LogConditional("Received request from {0} for obj {1} @ {2} to state: {3}.", player, obj.asset.FriendlyName, obj.transform.position, isUsed);
 
-        ElectricalGridService gridService = serviceProvider.Resolve<ElectricalGridService>();
-        if (!gridService.Enabled)
-        {
-            return true;
-        }
-
-        IFlagRotationService? flagRotation = layout.ServiceProvider.ResolveOptional<IFlagRotationService>();
-
-        if (flagRotation == null || flagRotation.GridBehaivor is ElectricalGridBehaivor.Disabled or > ElectricalGridBehaivor.EnabledWhenInRotation)
-        {
-            return true;
-        }
-
-        if (obj.interactable != null && gridService.IsInteractableEnabled(flagRotation, obj.interactable))
+        if (!handler.IsEnabled || handler.IsPowered(obj))
         {
             return true;
         }
@@ -139,23 +124,15 @@ internal sealed class ElectricalGridCalculationPatches : IHarmonyPatch
         }
 
         Layout layout = WarfareModule.Singleton.GetActiveLayout();
-        
-        ILifetimeScope serviceProvider = layout.ServiceProvider;
 
-        ElectricalGridService gridService = serviceProvider.Resolve<ElectricalGridService>();
-        if (!gridService.Enabled)
+        IElectricalGridHandler handler = layout.ServiceProvider.Resolve<IElectricalGridHandler>();
+
+        if (!handler.IsEnabled)
         {
             return true;
         }
 
-        IFlagRotationService? flagRotation = layout.ServiceProvider.ResolveOptional<IFlagRotationService>();
-
-        if (flagRotation == null || flagRotation.GridBehaivor > ElectricalGridBehaivor.EnabledWhenInRotation)
-        {
-            return true;
-        }
-
-        __result = gridService.IsInteractableEnabled(flagRotation, __instance);
+        __result = handler.IsPowered(__instance);
         return false;
     }
 }

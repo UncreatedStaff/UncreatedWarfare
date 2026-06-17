@@ -65,7 +65,7 @@ public class VehicleHUD : UnturnedUI
                 continue;
             
             MissileWarningDriver.SetVisibility(passenger.player.transportConnection, isEnabled);
-            MissileWarningDriver.SetText(passenger.player.transportConnection, "PRESS '<b><color=#ffffff><plugin_1/></color></b>' FOR FLARES");
+            MissileWarningDriver.SetText(passenger.player.transportConnection, "PRESS '<b><color=#ffffff><plugin_3/></color></b>' FOR FLARES");
         }
     }
 }

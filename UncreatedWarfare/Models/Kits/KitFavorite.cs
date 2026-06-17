@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 using Uncreated.Warfare.Models.Users;
 
 namespace Uncreated.Warfare.Models.Kits;
@@ -8,7 +9,7 @@ namespace Uncreated.Warfare.Models.Kits;
 public class KitFavorite
 {
 
-    [Required]
+    [Required, JsonIgnore]
     public KitModel Kit { get; set; }
 
     [Required]
@@ -21,6 +22,6 @@ public class KitFavorite
     [Column("Steam64")]
     public ulong Steam64 { get; set; }
 
-    [Required]
+    [Required, JsonIgnore]
     public WarfareUserData PlayerData { get; set; }
 }

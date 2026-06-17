@@ -509,25 +509,31 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
         // Deployed
         else
         {
+            bool update = false;
             if (State != VehicleSpawnerState.Deployed)
             {
                 State = VehicleSpawnerState.Deployed;
-                UpdateLinkedSignsOnMainThread();
+                update = true;
             }
 
             Vector3 vehiclePos = LinkedVehicle.transform.position;
 
             // every 2.5 meters moved horizontally re-check closest zone to update sign's in-use location
-            if (_lastLocation == null || MathUtility.SquaredDistance(in vehiclePos, in _lastZoneCheckPos) > 2.5 * 2.5)
+            if (update || _lastLocation == null || MathUtility.SquaredDistance(in vehiclePos, in _lastZoneCheckPos) > 2.5 * 2.5)
             {
                 _lastZoneCheckPos.x = vehiclePos.x;
                 _lastZoneCheckPos.y = vehiclePos.z;
-                Zone? zone = _zoneStore.FindClosestZone(vehiclePos);
+                Zone? zone = _zoneStore.GetClosestZone(vehiclePos, null, null, isForLocation: true);
                 if (!ReferenceEquals(zone, _lastLocation))
                 {
                     _lastLocation = zone;
-                    UpdateLinkedSignsOnMainThread();
+                    update = true;
                 }
+            }
+
+            if (update)
+            {
+                UpdateLinkedSignsOnMainThread();
             }
         }
     }

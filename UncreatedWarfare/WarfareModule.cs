@@ -320,6 +320,8 @@ public sealed class WarfareModule
         Provider.modeConfigData.Barricades.Decay_Time = 0;
         Provider.modeConfigData.Structures.Decay_Time = 0;
 
+        CommandLogMemoryUsage.OnExecuted += LogMemoryUsage;
+
         HomeDirectory = Path.Combine(UnturnedPaths.RootDirectory.FullName, "Servers", Provider.serverID, "Warfare");
         Directory.CreateDirectory(HomeDirectory);
 
@@ -432,6 +434,13 @@ public sealed class WarfareModule
         });
     }
 
+    private static void LogMemoryUsage(List<string> obj)
+    {
+        long mem = GC.GetTotalMemory(true);
+
+        obj.Add($"Heap memory size: {mem / 1_073_741_824m:F4} GiB");
+    }
+
     private void HandleSystemConfigUpdated()
     {
         ServiceProvider.Resolve<ILoggerFactory>();
@@ -446,6 +455,8 @@ public sealed class WarfareModule
 
         _systemConfigChangeToken?.Dispose();
         _systemConfigChangeToken = null;
+
+        CommandLogMemoryUsage.OnExecuted -= LogMemoryUsage;
 
         if (Configuration is IDisposable disposableConfig)
             disposableConfig.Dispose();

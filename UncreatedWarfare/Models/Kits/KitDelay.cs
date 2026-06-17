@@ -1,6 +1,5 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Diagnostics.CodeAnalysis;
 using Uncreated.Warfare.Models.Base;
 
 namespace Uncreated.Warfare.Models.Kits;

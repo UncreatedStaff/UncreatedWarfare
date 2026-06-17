@@ -127,6 +127,7 @@ public class PlayerInjureComponent : MonoBehaviour,
     private CooldownManager _cooldownManager;
     private ILogger<PlayerInjureComponent> _logger;
     private PlayersTranslations _playerTranslations;
+    private TipService _tipService;
     public WarfarePlayer Player { get; private set; }
 #nullable restore
 
@@ -171,6 +172,7 @@ public class PlayerInjureComponent : MonoBehaviour,
         _logger = serviceProvider.GetRequiredService<ILogger<PlayerInjureComponent>>();
         _xpTranslations = serviceProvider.GetRequiredService<TranslationInjection<PointsTranslations>>().Value;
         _playerTranslations = serviceProvider.GetRequiredService<TranslationInjection<PlayersTranslations>>().Value;
+        _tipService = serviceProvider.GetRequiredService<TipService>();
 
         _giveUpUi = _assetConfiguration.GetAssetLink<EffectAsset>("UI:GiveUp").GetAsset();
         _medicEffect = _assetConfiguration.GetAssetLink<EffectAsset>("Effects:Medic").GetAsset();
@@ -307,6 +309,8 @@ public class PlayerInjureComponent : MonoBehaviour,
         };
 
         _ = _eventDispatcher.DispatchEventAsync(args, CancellationToken.None);
+
+        _tipService.TryGiveTip(player, 5 * 60, t => t.CallMedic);
     }
 
     /// <summary>

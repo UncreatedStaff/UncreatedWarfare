@@ -37,9 +37,18 @@ partial class DualSidedLeaderboardUI
     private LayoutInfo[] ComputeCandidateLayouts()
     {
         List<LayoutInfo> layouts = _layoutFactory.GetBaseLayoutFiles()
-            .Select(x => _layoutFactory.ReadLayoutInfo(x.FullName, false))
-            .Where(x => x is { IsSeeding: false } && !string.Equals(x.FilePath, _layout.LayoutInfo.FilePath))
-            .ToList()!;
+            .Select(x => _layoutFactory.ReadLayoutInfo(x.FullName, false)!)
+            .ToList();
+
+        for (int i = layouts.Count - 1; i >= 0; --i)
+        {
+            LayoutInfo? info = layouts[i];
+            if (info is { IsSeeding: false } && !string.Equals(info.FilePath, _layout.LayoutInfo.FilePath))
+                continue;
+
+            layouts.RemoveAt(i);
+            info?.Dispose();
+        }
 
         return RandomUtility.GetRandomValues(layouts, x =>
         {

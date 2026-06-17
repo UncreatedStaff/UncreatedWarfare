@@ -873,6 +873,9 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
                     for (int i = 0; i < files.Length; ++i)
                     {
                         FileInfo file = files[i];
+                        if (!YamlUtility.CheckMatchesMapFilter(file.FullName))
+                            continue;
+
                         if (baseFile != null && file.FullName.StartsWith(baseFile, StringComparison.Ordinal) && file.FullName.Length > baseFile.Length + 5 && file.FullName[baseFile.Length] == '.')
                             continue;
 
