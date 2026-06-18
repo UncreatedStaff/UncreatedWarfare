@@ -1273,8 +1273,10 @@ public sealed class WarfareModule
 
     public async UniTask ShutdownAsync(string reason, CancellationToken token = default)
     {
+#if TELEMETRY
         Activity.Current = null;
         using (Activity? activity = _activitySource.StartActivity("Shutdown"))
+#endif
         {
             await ServiceProvider.Resolve<WarfareLifetimeComponent>().NotifyShutdownNow(reason);
 
@@ -1698,12 +1700,13 @@ public sealed class WarfareModule
 
         if (_unloadedHostedServices)
             return;
-
+#if TELEMETRY
         using Activity? activity = _activitySource.StartActivity(
             "Unhost",
             ActivityKind.Internal,
             parentActivity?.Context ?? default
         );
+#endif
 
         List<IHostedService> hostedServices = ServiceProvider
             .Resolve<IEnumerable<IHostedService>>()
