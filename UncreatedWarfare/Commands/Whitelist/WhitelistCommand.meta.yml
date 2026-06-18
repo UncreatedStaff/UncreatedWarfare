@@ -35,6 +35,7 @@ Parameters:
       - Name: maxamount
         Type: Verbatim
         Aliases: [ amount, amt ]
+        Description: "Sets the maximum number of an item a player can have in their inventory. Set to -1 for an unlimited amount."
         Parameters:
           - Name: item
             Type: SDG.Unturned.ItemAsset

@@ -100,12 +100,12 @@ internal sealed class ElectricalGridCalculationPatches : IHarmonyPatch
 
         ILifetimeScope serviceProvider = WarfareModule.Singleton.GetActiveLayout().ServiceProvider;
 
-        IElectricalGridHandler handler = serviceProvider.Resolve<IElectricalGridHandler>();
+        ElectricalGridService? service = serviceProvider.ResolveOptional<ElectricalGridService>();
 
         serviceProvider.Resolve<ILogger<ElectricalGridService>>()
             .LogConditional("Received request from {0} for obj {1} @ {2} to state: {3}.", player, obj.asset.FriendlyName, obj.transform.position, isUsed);
 
-        if (!handler.IsEnabled || handler.IsPowered(obj))
+        if (service == null || service.IsPowered(obj))
         {
             return true;
         }
@@ -118,16 +118,9 @@ internal sealed class ElectricalGridCalculationPatches : IHarmonyPatch
 
     private static bool CalculateIsConnectedToPowerPrefix(InteractablePower __instance, ref bool __result)
     {
-        if (!WarfareModule.Singleton.IsLayoutActive())
-        {
-            return true;
-        }
+        ElectricalGridService? handler = WarfareModule.Singleton.ServiceProvider.ResolveOptional<ElectricalGridService>();
 
-        Layout layout = WarfareModule.Singleton.GetActiveLayout();
-
-        IElectricalGridHandler handler = layout.ServiceProvider.Resolve<IElectricalGridHandler>();
-
-        if (!handler.IsEnabled)
+        if (handler is not { Enabled: true })
         {
             return true;
         }

@@ -1,6 +1,7 @@
 using DanielWillett.ReflectionTools;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
@@ -702,27 +703,41 @@ public static class FormattingUtility
         for (int i = 0; i < length; ++i)
             arr[i + index] = data[i];
     }
-    internal static void PrintTaskErrors(ILogger logger, UniTask[] tasks, IReadOnlyList<object> hostedServices)
+    internal static void PrintTaskErrors(ILogger logger, UnhostingTask[] tasks, IReadOnlyList<object> hostedServices)
     {
         for (int i = 0; i < tasks.Length; ++i)
         {
-            UniTaskStatus status = tasks[i].Status;
+            ref UnhostingTask task = ref tasks[i];
+            UniTaskStatus status = task.Task.Status;
             if (status is not UniTaskStatus.Faulted and not UniTaskStatus.Canceled)
             {
                 if (status == UniTaskStatus.Pending)
                 {
                     logger.LogWarning(Accessor.Formatter.Format(hostedServices[i].GetType()) + " - not completed");
+#if TELEMETRY
+                    task.Activity?.SetStatus(ActivityStatusCode.Error, "Pending...");
+#endif
+                    continue;
                 }
+#if TELEMETRY
+                task.Activity?.SetStatus(ActivityStatusCode.Ok);
+#endif
                 continue;
             }
 
-            if (tasks[i].AsTask().Exception is { } ex)
+            if (task.Task.AsTask().Exception is { } ex)
             {
                 logger.LogError(ex, Accessor.Formatter.Format(hostedServices[i].GetType()));
+#if TELEMETRY
+                WarfareModule.RecordActivityException(task.Activity, ex);
+#endif
             }
             else
             {
                 logger.LogError(Accessor.Formatter.Format(hostedServices[i].GetType()));
+#if TELEMETRY
+                task.Activity?.SetStatus(ActivityStatusCode.Error, "Errored (no exception).");
+#endif
             }
 
             logger.LogError(string.Empty);

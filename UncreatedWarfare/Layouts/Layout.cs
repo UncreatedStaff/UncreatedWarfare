@@ -2,6 +2,7 @@ using Autofac.Core;
 using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Primitives;
+using Stripe;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
@@ -32,6 +33,7 @@ public class Layout : IDisposable
     protected ILogger<Layout> Logger;
 
     private readonly LayoutFactory _factory;
+    private BitArray? _phaseDisposedMask;
 
     /// <summary>
     /// Data that can be accessed and updated over the lifetime of the layout.
@@ -216,21 +218,58 @@ public class Layout : IDisposable
     /// <summary>
     /// Invoked just before <see cref="BeginLayoutAsync"/> as a chance for values to be initialized from <see cref="LayoutConfiguration"/>.
     /// </summary>
-    protected internal virtual async UniTask InitializeLayoutAsync(GameRecord stats, CancellationToken token = default)
+    protected internal virtual async UniTask InitializeLayoutAsync(GameRecord stats, CancellationToken token
+#if TELEMETRY
+        , Activity? activity
+#endif
+    )
     {
         LayoutId = stats.GameId;
         LayoutStats = stats;
 
-        await ReadTeamInfoAsync(token);
+        {
+#if TELEMETRY
+            using Activity? tempActivity = _factory.ActivitySource.StartActivity(
+                "Read team info",
+                ActivityKind.Internal,
+                activity?.Context ?? default
+            );
+#endif
+            await ReadTeamInfoAsync(token);
+        }
 
-        await TeamManager.InitializeAsync(ServiceProvider.Resolve<IServiceProvider>(), token);
+        {
+#if TELEMETRY
+            using Activity? tempActivity = _factory.ActivitySource.StartActivity(
+                "Initialize ITeamManager",
+                ActivityKind.Internal,
+                activity?.Context ?? default
+            );
+#endif
+            await TeamManager.InitializeAsync(ServiceProvider.Resolve<IServiceProvider>(), token);
+        }
 
-        await ReadPhasesAsync(token);
-
-        CheckEmptyPhases();
+        {
+#if TELEMETRY
+            using Activity? tempActivity = _factory.ActivitySource.StartActivity(
+                "Read phases",
+                ActivityKind.Internal,
+                activity?.Context ?? default
+            );
+#endif
+            await ReadPhasesAsync(token);
+            CheckEmptyPhases();
+        }
 
         foreach (ILayoutPhase phase in PhaseList)
         {
+#if TELEMETRY
+            using Activity? tempActivity = _factory.ActivitySource.StartActivity(
+                $"Initialize {Accessor.ExceptionFormatter.Format(phase.GetType())} phase",
+                ActivityKind.Internal,
+                activity?.Context ?? default
+            );
+#endif
             await phase.InitializePhaseAsync(token);
         }
 
@@ -241,9 +280,24 @@ public class Layout : IDisposable
     /// <summary>
     /// Invoked when the layout first begins.
     /// </summary>
-    protected internal virtual async UniTask BeginLayoutAsync(CancellationToken token = default)
+    protected internal virtual async UniTask BeginLayoutAsync(CancellationToken token
+#if TELEMETRY
+        , Activity? activity
+#endif
+    )
     {
+#if TELEMETRY
+        {
+            using Activity? tempActivity = _factory.ActivitySource.StartActivity(
+                "Host layout",
+                ActivityKind.Internal,
+                activity?.Context ?? default
+            );
+            await _factory.HostLayoutAsync(this, token, tempActivity);
+        }
+#else
         await _factory.HostLayoutAsync(this, token);
+#endif
 
         await UniTask.SwitchToMainThread(token);
         IsActive = true;
@@ -251,13 +305,47 @@ public class Layout : IDisposable
         CheckEmptyPhases();
         _activePhase = -1;
 
-        await TeamManager.BeginAsync(token);
+        {
+#if TELEMETRY
+            using Activity? tempActivity = _factory.ActivitySource.StartActivity(
+                "Begin TeamManager",
+                ActivityKind.Internal,
+                activity?.Context ?? default
+            );
+#endif
 
+            await TeamManager.BeginAsync(token);
+        }
+
+#if TELEMETRY
+        {
+            using Activity? tempActivity = _factory.ActivitySource.StartActivity(
+                "Begin first phase",
+                ActivityKind.Internal,
+                activity?.Context ?? default
+            );
+            await MoveToNextPhase(token, tempActivity);
+        }
+#else
         await MoveToNextPhase(token);
+#endif
     }
 
-    private async UniTask InvokePhaseListenerAction(ILayoutPhase phase, bool end, CancellationToken token)
+    private async UniTask InvokePhaseListenerAction(ILayoutPhase phase, bool end, CancellationToken token
+#if TELEMETRY
+        , Activity? parentActivity
+#endif
+    )
     {
+#if TELEMETRY
+        Activity.Current = null;
+        using Activity? activity = _factory.ActivitySource.StartActivity(
+            $"InvokePhaseListenerAction for phase {Accessor.ExceptionFormatter.Format(phase.GetType())} {(end ? "ending" : "starting")}.",
+            ActivityKind.Internal,
+            parentActivity?.Context ?? default
+        );
+#endif
+
         Type intxType = typeof(ILayoutPhaseListener<>).MakeGenericType(phase.GetType());
 
         // find all services assignable from ILayoutPhaseListener<phase.GetType()>
@@ -265,6 +353,13 @@ public class Layout : IDisposable
 
         try
         {
+#if TELEMETRY
+            using Activity? tempActivity = _factory.ActivitySource.CreateActivity(
+                "Gather services.",
+                ActivityKind.Internal,
+                activity?.Context ?? default
+            );
+#endif
             listeners = ServiceProvider.ComponentRegistry.Registrations
                 .SelectMany(x => x.Services)
                 .OfType<IServiceWithType>()
@@ -285,12 +380,19 @@ public class Layout : IDisposable
         foreach (object service in listeners)
         {
             Type type = service.GetType();
+#if TELEMETRY
+            using Activity? hostActivity = _factory.ActivitySource.CreateActivity(
+                $"Invoke ILayoutPhaseListener for phase {Accessor.ExceptionFormatter.Format(type)}.",
+                ActivityKind.Internal,
+                activity?.Context ?? default
+            );
+#endif
             Type implIntxType = type.GetInterfaces().First(x => x.IsConstructedGenericType && x.GetGenericTypeDefinition() == typeof(ILayoutPhaseListener<>) && intxType.IsAssignableFrom(x));
 
             // invoke method from an unknown generic interface type
             MethodInfo implementation = implIntxType.GetMethod(
-                end ? nameof(ILayoutPhaseListener<PreparationPhase>.OnPhaseEnded)
-                    : nameof(ILayoutPhaseListener<PreparationPhase>.OnPhaseStarted),
+                end ? nameof(ILayoutPhaseListener<>.OnPhaseEnded)
+                    : nameof(ILayoutPhaseListener<>.OnPhaseStarted),
                 BindingFlags.Public | BindingFlags.Instance) ?? throw new Exception("Unable to find phase listener method.");
 
             implementation = Accessor.GetImplementedMethod(type, implementation) ?? throw new Exception("Unable to find phase listener implemented method.");
@@ -301,10 +403,20 @@ public class Layout : IDisposable
                     Logger.LogDebug("Ending phase {0} for ILayoutPhaseListener {1}.", phase.GetType(), type);
                 else
                     Logger.LogDebug("Starting phase {0} for ILayoutPhaseListener {1}.", phase.GetType(), type);
+#if TELEMETRY
+                hostActivity?.Start();
+#endif
                 await (UniTask)implementation.Invoke(service, [ phase, token ]);
+#if TELEMETRY
+                hostActivity?.Stop();
+                hostActivity?.SetStatus(ActivityStatusCode.Ok);
+#endif
             }
             catch (TargetInvocationException ex)
             {
+#if TELEMETRY
+                WarfareModule.RecordActivityException(hostActivity, ex.InnerException ?? ex);
+#endif
                 if (end)
                 {
                     Logger.LogError(ex.InnerException, "Failed to end phase {0}. Listener {1} failed.", phase.GetType(), type);
@@ -318,7 +430,11 @@ public class Layout : IDisposable
         }
     }
 
-    public virtual async UniTask MoveToNextPhase(CancellationToken token = default)
+    public virtual async UniTask MoveToNextPhase(CancellationToken token = default
+#if TELEMETRY
+        , Activity? activity = null
+#endif
+    )
     {
         // keep moving to the next phase until one is activated by BeginPhase.
         ILayoutPhase? newPhase;
@@ -328,6 +444,7 @@ public class Layout : IDisposable
 
             try
             {
+                // test to see if SP is disposed
                 ServiceProvider.Resolve<Layout>();
             }
             catch (ObjectDisposedException)
@@ -339,6 +456,7 @@ public class Layout : IDisposable
             bool isEnd = _activePhase >= Phases.Count - 1;
 
             ILayoutPhase? oldPhase = ActivePhase;
+            int oldPhaseIndex = _activePhase;
 
             if (!isEnd)
                 _activePhase = Math.Max(0, _activePhase + 1);
@@ -351,6 +469,13 @@ public class Layout : IDisposable
                 Logger.LogDebug("Ending phase: {0}.", oldPhaseType);
                 try
                 {
+#if TELEMETRY
+                    using Activity? tempActivity = _factory.ActivitySource.StartActivity(
+                        $"End phase {Accessor.ExceptionFormatter.Format(oldPhase.GetType())}",
+                        ActivityKind.Internal,
+                        activity?.Context ?? default
+                    );
+#endif
                     await oldPhase.EndPhaseAsync(token);
                 }
                 catch (Exception ex)
@@ -372,32 +497,25 @@ public class Layout : IDisposable
                     throw new OperationCanceledException();
                 }
 
-                await InvokePhaseListenerAction(oldPhase, end: true, CancellationToken.None);
 
+                await InvokePhaseListenerAction(oldPhase, end: true, CancellationToken.None
+#if TELEMETRY
+                    , activity
+#endif
+                );
+                
+                await DisposePhase(oldPhaseIndex);
                 await UniTask.SwitchToMainThread(CancellationToken.None);
-                try
-                {
-                    if (oldPhase is IAsyncDisposable asyncDisposable)
-                    {
-                        await asyncDisposable.DisposeAsync();
-                        await UniTask.SwitchToMainThread(CancellationToken.None);
-                    }
-                    else if (oldPhase is IDisposable disposable)
-                    {
-                        disposable.Dispose();
-                    }
-                }
-                catch (Exception ex)
-                {
-                    await UniTask.SwitchToMainThread(CancellationToken.None);
-                    Logger.LogError(ex, "Error disposing phase {0}.", oldPhase);
-                }
             }
 
             if (isEnd)
             {
                 Logger.LogDebug("Ending layout: {0}.", LayoutInfo.FilePath);
-                await _factory.StartNextLayout(CancellationToken.None);
+                await _factory.StartNextLayout(CancellationToken.None
+    #if TELEMETRY
+                    , activity
+    #endif
+                );
                 throw new OperationCanceledException();
             }
 
@@ -405,6 +523,13 @@ public class Layout : IDisposable
 
             try
             {
+#if TELEMETRY
+                using Activity? tempActivity = _factory.ActivitySource.StartActivity(
+                    $"Begin phase {Accessor.ExceptionFormatter.Format(newPhase.GetType())}",
+                    ActivityKind.Internal,
+                    activity?.Context ?? default
+                );
+#endif
                 await newPhase.BeginPhaseAsync(CancellationToken.None);
             }
             catch (Exception ex)
@@ -424,7 +549,11 @@ public class Layout : IDisposable
                 Logger.LogWarning("Skipping phase {0} because it didn't activate.", newPhase.GetType());
             }
 
-            await InvokePhaseListenerAction(newPhase, end: false, CancellationToken.None);
+            await InvokePhaseListenerAction(newPhase, end: false, CancellationToken.None
+#if TELEMETRY
+                , activity
+#endif
+            );
         }
         while (!newPhase.IsActive);
     }
@@ -441,7 +570,11 @@ public class Layout : IDisposable
     /// <summary>
     /// Invoked when the layout ends. Try not to use <see cref="UniTask.SwitchToMainThread"/> here.
     /// </summary>
-    protected internal virtual async UniTask EndLayoutAsync(CancellationToken token = default)
+    protected internal virtual async UniTask EndLayoutAsync(CancellationToken token
+#if TELEMETRY
+        , Activity? activity = null
+#endif
+    )
     {
         _configListener.Dispose();
 
@@ -463,18 +596,85 @@ public class Layout : IDisposable
         }
 
         await UniTask.SwitchToMainThread(token);
+
+        if (_activePhase >= 0 && _activePhase < PhaseList.Count)
+        {
+            ILayoutPhase phase = PhaseList[_activePhase];
+            try
+            {
+#if TELEMETRY
+                using Activity? tempActivity = _factory.ActivitySource.StartActivity(
+                    $"End phase {Accessor.ExceptionFormatter.Format(phase.GetType())} abruptly",
+                    ActivityKind.Internal,
+                    activity?.Context ?? default
+                );
+#endif
+                await phase.EndPhaseAsync(token);
+
+                if (phase.IsActive)
+                {
+                    Logger.LogError($"Failed to end phase {phase.GetType()}.");
+                }
+            }
+            catch (Exception ex)
+            {
+                if (phase.IsActive)
+                {
+                    Logger.LogError(ex, $"Error ending phase {phase.GetType()}.");
+                }
+                else
+                {
+                    Logger.LogWarning(ex, $"Error ending phase {phase.GetType()}.");
+                }
+            }
+        }
+
+        for (int i = 0; i < PhaseList.Count; i++)
+        {
+            await DisposePhase(i);
+        }
+
         if (!IsActive)
             return;
 
         IsActive = false;
 
-        await TeamManager.EndAsync(token);
+        {
+#if TELEMETRY
+            using Activity? tempActivity = _factory.ActivitySource.StartActivity(
+                "End ITeamManager",
+                ActivityKind.Internal,
+                activity?.Context ?? default
+            );
+#endif
+            await TeamManager.EndAsync(token);
+        }
 
+#if TELEMETRY
+        {
+            using Activity? tempActivity = _factory.ActivitySource.StartActivity(
+                "Unhost",
+                ActivityKind.Internal,
+                activity?.Context ?? default
+            );
+            await _factory.UnhostLayoutAsync(this, token, tempActivity);
+        }
+#else
         await _factory.UnhostLayoutAsync(this, token);
+#endif
 
         (LayoutInfo.Layout as IDisposable)?.Dispose();
 
-        await _appLifetime.NotifyLayoutEnding(CancellationToken.None);
+        {
+#if TELEMETRY
+            using Activity? tempActivity = _factory.ActivitySource.StartActivity(
+                "Update homebase",
+                ActivityKind.Internal,
+                activity?.Context ?? default
+            );
+#endif
+            await _appLifetime.NotifyLayoutEnding(CancellationToken.None);
+        }
     }
 
     /// <summary>
@@ -552,6 +752,43 @@ public class Layout : IDisposable
             {
                 Logger.LogWarning("Failed to read phase at index {0} in layout \"{1}\".", index, LayoutInfo.DisplayName);
             }
+        }
+
+        _phaseDisposedMask = new BitArray(PhaseList.Count);
+    }
+
+    private async UniTask DisposePhase(int index)
+    {
+        if (index < 0 || index >= PhaseList.Count)
+        {
+            return;
+        }
+
+        await UniTask.SwitchToMainThread(CancellationToken.None);
+
+        if (_phaseDisposedMask != null && _phaseDisposedMask[index])
+        {
+            // already disposed
+            return;
+        }
+
+        ILayoutPhase phase = PhaseList[index];
+        _phaseDisposedMask ??= new BitArray(PhaseList.Count);
+        _phaseDisposedMask[index] = true;
+        try
+        {
+            if (phase is IAsyncDisposable asyncDisposable)
+            {
+                await asyncDisposable.DisposeAsync();
+            }
+            else if (phase is IDisposable disp)
+            {
+                disp.Dispose();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, $"Error disposing phase {phase.GetType()}.");
         }
     }
 

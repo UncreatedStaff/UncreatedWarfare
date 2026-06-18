@@ -744,7 +744,7 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
         _updateTicker.OnTick -= Update;
         TryDestroyLinkedVehicle();
         State = VehicleSpawnerState.Disposed;
-        UpdateLinkedSigns();
+        //UpdateLinkedSigns();
     }
 
     public string ToDisplayString()

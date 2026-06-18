@@ -42,6 +42,7 @@ public class PreparationPhase : BasePhase<PhaseTeamSettings>, IDisposable
         _stagingUi.ClearFromAllPlayers();
         UnturnedUIDataSource.RemoveOwner(_stagingUi);
         _ticker?.Dispose();
+        _ticker = null;
 
         return base.EndPhaseAsync(token);
     }

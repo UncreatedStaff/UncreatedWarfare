@@ -56,8 +56,7 @@ public class DamageTracker
         LatestDamageInstigator = onlineInstigator.Steam64;
         LastKnownDamageInstigator = onlineInstigator.Steam64;
         LatestDamageCause = cause;
-        if (!isFriendly)
-            _damageContributors.RecordWork(onlineInstigator.Steam64, damage, TimeLastDamaged);
+        _damageContributors.RecordWork(onlineInstigator.Steam64, isFriendly, damage, TimeLastDamaged);
 #if DAMAGE_LOGGING
         WarfareModule.Singleton.GlobalLogger.LogDebug($"RecordDamage called for {_context}: Inst: {onlineInstigator}, dmg: {damage}, cause: {cause}, friendly: {isFriendly}.");
 #endif
@@ -68,8 +67,7 @@ public class DamageTracker
         LatestDamageInstigator = playerId;
         LastKnownDamageInstigator = playerId;
         LatestDamageCause = cause;
-        if (!isFriendly)
-            _damageContributors.RecordWork(playerId, damage, TimeLastDamaged);
+        _damageContributors.RecordWork(playerId, isFriendly, damage, TimeLastDamaged);
 #if DAMAGE_LOGGING
         WarfareModule.Singleton.GlobalLogger.LogDebug($"RecordDamage called for {_context}: Inst: {playerId}, dmg: {damage}, cause: {cause}, friendly: {isFriendly}.");
 #endif
@@ -89,10 +87,10 @@ public class DamageTracker
     {
         LatestInstigatorWeapon = asset;
     }
-    public float GetDamageContribution(CSteamID playerId, out float total) => _damageContributors.GetContribution(playerId, out total);
-    public float GetDamageContribution(CSteamID playerId, DateTime after, out float total) => _damageContributors.GetContribution(playerId, after, out total);
-    public float GetDamageContributionPercentage(CSteamID playerId) => _damageContributors.GetContributionPercentage(playerId);
-    public float GetDamageContributionPercentage(CSteamID playerId, DateTime after) => _damageContributors.GetContributionPercentage(playerId, after);
+    public float GetDamageContribution(CSteamID playerId, bool isFriendly, out float total) => _damageContributors.GetContribution(playerId, isFriendly, out total);
+    public float GetDamageContribution(CSteamID playerId, bool isFriendly, DateTime after, out float total) => _damageContributors.GetContribution(playerId, isFriendly, after, out total);
+    public float GetDamageContributionPercentage(CSteamID playerId, bool isFriendly) => _damageContributors.GetContributionPercentage(playerId, isFriendly);
+    public float GetDamageContributionPercentage(CSteamID playerId, bool isFriendly, DateTime after) => _damageContributors.GetContributionPercentage(playerId, isFriendly, after);
     public PlayerContributionTracker.ContributorEnumerator Contributors => _damageContributors.Contributors;
 
     /// <inheritdoc />

@@ -5,7 +5,6 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Translations;
-using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Players.UI;
 
@@ -16,26 +15,13 @@ public class DutyUI : UnturnedUI, IHudUIListener
     private readonly ModerationTranslations _translations;
     private bool _subbedUpdate;
 
-    private bool _votePosition;
+    private bool _wasVoting;
 
     private static StaticGetter<bool>? _getIsVoting;
 
     private readonly UnturnedUIElement _positionNoVote = new UnturnedUIElement("LogicPositionNoVote");
 
     private readonly UnturnedUIElement _positionVote = new UnturnedUIElement("LogicPositionVote");
-
-    private bool IsPluginVoting
-    {
-        get;
-        set
-        {
-            field = value;
-            if (GameThread.IsCurrent)
-            {
-                OnUpdate();
-            }
-        }
-    }
 
     public DutyUI(
         AssetConfiguration assetConfig,
@@ -54,7 +40,7 @@ public class DutyUI : UnturnedUI, IHudUIListener
             _getIsVoting ??= Accessor.GenerateStaticGetter<ChatManager, bool>("isVoting", throwOnError: false);
         }
 
-        TimeUtility.updated += OnUpdate;
+        TimeUtility.updated += UpdateVotePosition;
         _subbedUpdate = true;
     }
 
@@ -63,46 +49,48 @@ public class DutyUI : UnturnedUI, IHudUIListener
         _hudManager.OnPluginVotingUpdated -= PluginVotingUpdated;
         if (_subbedUpdate)
         {
-            TimeUtility.updated -= OnUpdate;
+            TimeUtility.updated -= UpdateVotePosition;
             _subbedUpdate = false;
         }
     }
 
     private void PluginVotingUpdated(WarfarePlayer player, bool isPluginVoting)
     {
-        IsPluginVoting = isPluginVoting;
+        if (!player.IsOnDuty)
+            return;
+
+        UpdateVotePosition();
+        UnturnedUIElement voteLogicElement = isPluginVoting || _wasVoting ? _positionVote : _positionNoVote;
+        voteLogicElement.Show(player);
     }
 
-    private void OnUpdate()
+    private void UpdateVotePosition()
     {
-        if (!IsPluginVoting && (_getIsVoting == null || !_getIsVoting()))
-        {
-            if (!_votePosition)
-                return;
+        bool isVoting = _getIsVoting != null && _getIsVoting();
+        if (_wasVoting == isVoting)
+            return;
 
-            _votePosition = false;
-        }
-        else
-        {
-            if (_votePosition)
-                return;
-
-            _votePosition = true;
-        }
-
-        UnturnedUIElement voteLogicElement = _votePosition ? _positionVote : _positionNoVote;
+        _wasVoting = isVoting;
         foreach (WarfarePlayer player in _playerService.OnlinePlayers)
         {
-            if (player.IsOnDuty)
-                voteLogicElement.SetVisibility(player.Connection, true);
+            if (!player.IsOnDuty)
+                continue;
+
+            bool isPluginVoting = _hudManager.GetIsPluginVoting(player);
+
+            UnturnedUIElement voteLogicElement = isPluginVoting || isVoting ? _positionVote : _positionNoVote;
+            voteLogicElement.Show(player);
         }
     }
 
     public void SendToPlayer(WarfarePlayer player)
     {
         SendToPlayer(player.Connection, _translations.OnDutyUI.Translate(player));
-        if (_votePosition)
-            _positionVote.SetVisibility(player, true);
+        UpdateVotePosition();
+        if (_wasVoting || _hudManager.GetIsPluginVoting(player))
+        {
+            _positionVote.Show(player);
+        }
     }
 
     public void Hide(WarfarePlayer? player)
@@ -120,8 +108,6 @@ public class DutyUI : UnturnedUI, IHudUIListener
             if (player.IsOnDuty)
             {
                 SendToPlayer(player);
-                if (_votePosition)
-                    _positionVote.SetVisibility(player.Connection, true);
             }
             
             return;
@@ -133,8 +119,6 @@ public class DutyUI : UnturnedUI, IHudUIListener
                 continue;
 
             SendToPlayer(pl);
-            if (_votePosition)
-                _positionVote.SetVisibility(pl.Connection, true);
         }
     }
 }

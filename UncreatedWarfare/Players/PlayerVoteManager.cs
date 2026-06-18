@@ -309,30 +309,6 @@ public class PlayerVoteManager : IPlayerVoteManager, IDisposable, IEventListener
         if (old == vote)
             return old;
 
-        IVoteDisplay? voteDisplay = _voteInfo.Container?.SettingsIntl.Display;
-        if (voteDisplay != null)
-        {
-            // invoke update
-            if (GameThread.IsCurrent)
-            {
-                InvokePlayerVoteUpdated(voteDisplay, player, vote, old);
-            }
-            else
-            {
-                PlayerVoteState vote2 = vote, old2 = old;
-                CSteamID pid = player;
-                IVoteDisplay disp = voteDisplay;
-                UniTask.Create(async () =>
-                {
-                    await UniTask.SwitchToMainThread();
-                    if (ReferenceEquals(_voteInfo.Container?.SettingsIntl.Display, disp))
-                    {
-                        InvokePlayerVoteUpdated(disp, pid, vote2, old2);
-                    }
-                });
-            }
-        }
-
         switch (old)
         {
             case PlayerVoteState.Yes:
@@ -357,6 +333,30 @@ public class PlayerVoteManager : IPlayerVoteManager, IDisposable, IEventListener
             case PlayerVoteState.Unanswered:
                 Interlocked.Decrement(ref _votes);
                 break;
+        }
+
+        IVoteDisplay? voteDisplay = _voteInfo.Container?.SettingsIntl.Display;
+        if (voteDisplay != null)
+        {
+            // invoke update
+            if (GameThread.IsCurrent)
+            {
+                InvokePlayerVoteUpdated(voteDisplay, player, vote, old);
+            }
+            else
+            {
+                PlayerVoteState vote2 = vote, old2 = old;
+                CSteamID pid = player;
+                IVoteDisplay disp = voteDisplay;
+                UniTask.Create(async () =>
+                {
+                    await UniTask.SwitchToMainThread();
+                    if (ReferenceEquals(_voteInfo.Container?.SettingsIntl.Display, disp))
+                    {
+                        InvokePlayerVoteUpdated(disp, pid, vote2, old2);
+                    }
+                });
+            }
         }
 
         return old;

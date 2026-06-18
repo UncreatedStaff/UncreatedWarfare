@@ -125,7 +125,7 @@ public class ShovelableBuildable : BuildableFobEntity<ShovelableInfo>
             HitsRemaining--;
         
         if (shoveler.CurrentSession != null)
-            Builders.RecordWork(shoveler.Steam64, 1);
+            Builders.RecordWork(shoveler.Steam64, true, 1);
 
         if (IsCompleted)
         {

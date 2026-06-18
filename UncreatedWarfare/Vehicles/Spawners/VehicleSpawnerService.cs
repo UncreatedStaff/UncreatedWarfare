@@ -107,6 +107,8 @@ public class VehicleSpawnerService : ILayoutHostedService, IDisposable
     {
         await UniTask.SwitchToMainThread(token);
 
+        VehicleManager.askVehicleDestroyAll();
+
         foreach (VehicleSpawner spawner in _spawners)
         {
             spawner.Dispose();

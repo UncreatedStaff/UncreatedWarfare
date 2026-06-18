@@ -50,8 +50,15 @@ public class HeatSeekingMissileComponent : MonoBehaviour
                     if (hardpoint != null)
                         projectile.transform.position = hardpoint.position;
                     projectile.transform.forward = passenger.turretAim.forward;
+                    break;
                 }
             }
+        }
+
+        if (_controller == null)
+        {
+            Destroy(this);
+            return;
         }
 
         _projectile = projectile;
@@ -78,7 +85,7 @@ public class HeatSeekingMissileComponent : MonoBehaviour
     private void OnDestroy()
     {
         //L.LogDebug("Missile destroyed. In flight: " + _controller.MissilesInFlight.Count);
-        _controller.MissilesInFlight.Remove(this);
+        _controller?.MissilesInFlight.Remove(this);
     }
 
     private float _timeOfLastLoop;

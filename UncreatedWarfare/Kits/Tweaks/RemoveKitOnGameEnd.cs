@@ -22,6 +22,9 @@ internal class RemoveKitOnGameEnd : ILayoutHostedService
 
     private async UniTask GrantDefaultKits(CancellationToken token)
     {
+        if (_playerService.IsEmpty)
+            return;
+
         Kit? defaultKit = await _kitDataStore.QueryKitAsync(KitRequestService.DefaultKitId, KitInclude.Giveable, token);
         if (defaultKit == null)
             return;

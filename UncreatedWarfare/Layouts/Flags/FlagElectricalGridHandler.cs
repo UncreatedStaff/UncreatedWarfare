@@ -12,7 +12,7 @@ public class FlagElectricalGridHandler : IElectricalGridHandler, IEventListener<
     private readonly Layout _layout;
     private readonly ElectricalGridService _electricalGridService;
     private readonly ZoneStore _zoneStore;
-    private readonly IFlagRotationService _flagRotationService;
+    private readonly IFlagRotationService? _flagRotationService;
     private readonly ILogger<FlagElectricalGridHandler> _logger;
 
     private bool _hasIsEnabled;
@@ -21,8 +21,8 @@ public class FlagElectricalGridHandler : IElectricalGridHandler, IEventListener<
         Layout layout,
         ElectricalGridService electricalGridService,
         ZoneStore zoneStore,
-        IFlagRotationService flagRotationService,
-        ILogger<FlagElectricalGridHandler> logger)
+        ILogger<FlagElectricalGridHandler> logger,
+        IFlagRotationService? flagRotationService = null)
     {
         _layout = layout;
         _electricalGridService = electricalGridService;
@@ -38,7 +38,7 @@ public class FlagElectricalGridHandler : IElectricalGridHandler, IEventListener<
             if (_hasIsEnabled)
                 return field;
 
-            field = _flagRotationService.GridBehaivor is not (ElectricalGridBehaivor.Disabled or > ElectricalGridBehaivor.EnabledWhenInRotation);
+            field = _flagRotationService is not { GridBehaivor: ElectricalGridBehaivor.Disabled or > ElectricalGridBehaivor.EnabledWhenInRotation };
             _hasIsEnabled = true;
             return true;
         }
@@ -56,25 +56,22 @@ public class FlagElectricalGridHandler : IElectricalGridHandler, IEventListener<
             _electricalGridService.SetPowerForZoneObjects(zone, true, true);
         }
 
-        IFlagRotationService? rotationService = _layout.ServiceProvider.ResolveOptional<IFlagRotationService>();
-
         foreach (Zone zone in _zoneStore.Zones.Where(x => x.Type == ZoneType.Flag && x.IsPrimary))
         {
             bool isEnabled = false;
-            if (rotationService != null)
+            if (_flagRotationService != null)
             {
-                isEnabled = rotationService.GridBehaivor switch
+                isEnabled = _flagRotationService.GridBehaivor switch
                 {
                     ElectricalGridBehaivor.AllEnabled => true,
-                    ElectricalGridBehaivor.EnabledWhenInRotation => rotationService.ActiveFlags.Any(x => x.Region.Primary.Zone.Equals(zone)),
-                    ElectricalGridBehaivor.EnabledWhenObjective => rotationService.EnumerateObjectives().Any(x => x.Region.Primary.Zone.Equals(zone)),
+                    ElectricalGridBehaivor.EnabledWhenInRotation => _flagRotationService.ActiveFlags.Any(x => x.Region.Primary.Zone.Equals(zone)),
+                    ElectricalGridBehaivor.EnabledWhenObjective => _flagRotationService.EnumerateObjectives().Any(x => x.Region.Primary.Zone.Equals(zone)),
                     _ => false
                 };
             }
 
             _electricalGridService.SetPowerForZoneObjects(zone, isEnabled, isEnabled);
         }
-
     }
 
     /// <inheritdoc />
@@ -85,10 +82,11 @@ public class FlagElectricalGridHandler : IElectricalGridHandler, IEventListener<
 
     public bool IsPowered(LevelObject @object)
     {
-        if (_flagRotationService.GridBehaivor == ElectricalGridBehaivor.AllEnabled)
+        ElectricalGridBehaivor behaivor = _flagRotationService?.GridBehaivor ?? ElectricalGridBehaivor.EnabledWhenInRotation;
+        if (behaivor == ElectricalGridBehaivor.AllEnabled)
             return true;
 
-        if (_flagRotationService.GridBehaivor != ElectricalGridBehaivor.Disabled)
+        if (behaivor != ElectricalGridBehaivor.Disabled)
         {
             // rotation
             if (IsRegisteredGridObject(@object.instanceID))
@@ -118,11 +116,12 @@ public class FlagElectricalGridHandler : IElectricalGridHandler, IEventListener<
 
     public bool IsPowered(InteractablePower otherInteractable)
     {
-        if (_flagRotationService.GridBehaivor == ElectricalGridBehaivor.AllEnabled)
+        ElectricalGridBehaivor behaivor = _flagRotationService?.GridBehaivor ?? ElectricalGridBehaivor.EnabledWhenInRotation;
+        if (behaivor == ElectricalGridBehaivor.AllEnabled)
             return true;
 
         Vector3 point = otherInteractable.transform.position;
-        if (_flagRotationService.GridBehaivor != ElectricalGridBehaivor.Disabled)
+        if (behaivor != ElectricalGridBehaivor.Disabled)
         {
             // rotation
             if (IsPointInRotation(point))
@@ -175,6 +174,9 @@ public class FlagElectricalGridHandler : IElectricalGridHandler, IEventListener<
 
     private bool IsRegisteredGridObject(uint instId)
     {
+        if (_flagRotationService == null)
+            return false;
+
         IEnumerable<FlagObjective> rotation = _flagRotationService.GridBehaivor == ElectricalGridBehaivor.EnabledWhenObjective
             ? _flagRotationService.EnumerateObjectives()
             : _flagRotationService.ActiveFlags;
@@ -192,6 +194,9 @@ public class FlagElectricalGridHandler : IElectricalGridHandler, IEventListener<
 
     private bool IsPointInRotation(Vector3 position)
     {
+        if (_flagRotationService == null)
+            return false;
+
         IEnumerable<FlagObjective> rotation = _flagRotationService.GridBehaivor == ElectricalGridBehaivor.EnabledWhenObjective
             ? _flagRotationService.EnumerateObjectives()
             : _flagRotationService.ActiveFlags;

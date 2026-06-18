@@ -34,14 +34,14 @@ public class FlareEmitter : MonoBehaviour
         _flareAsset = assetConfiguration.GetAssetLink<VehicleAsset>("Vehicles:Countermeasure").GetAssetOrFail();
         _dropFlaresSound = assetConfiguration.GetAssetLink<EffectAsset>("Effects:CountermeasuresDeploy").GetAssetOrFail();
         ReloadFlares();
-        PlayerKeys.PressedPluginKey3 += OnFlareKeyPressed;
+        PlayerKeys.PressedPluginKey2 += OnFlareKeyPressed;
         return this;
     }
 
     [UsedImplicitly]
     private void OnDestroy()
     {
-        PlayerKeys.PressedPluginKey3 -= OnFlareKeyPressed;
+        PlayerKeys.PressedPluginKey2 -= OnFlareKeyPressed;
     }
 
     private void OnFlareKeyPressed(WarfarePlayer player, ref bool handled)

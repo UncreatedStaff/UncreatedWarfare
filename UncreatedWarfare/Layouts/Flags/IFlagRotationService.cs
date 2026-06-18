@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Translations;
 

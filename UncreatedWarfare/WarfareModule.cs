@@ -250,7 +250,39 @@ public sealed class WarfareModule
         UseFullTypeNames = true
     };
 
+#nullable disable
+    private ActivitySource _activitySource;
+#nullable restore
+
     private static readonly string Version = typeof(WarfareModule).Assembly.GetName().Version.ToString();
+
+    internal static void RecordActivityException(Activity? activity, Exception ex, bool stop = true)
+    {
+        if (activity == null)
+            return;
+
+        activity.AddEvent(new ActivityEvent("Exception thrown"));
+
+        if (stop && !activity.IsStopped)
+            activity.Stop();
+        
+        activity.AddTag("exception", Accessor.Formatter.Format(ex.GetType()));
+        activity.AddTag("exception-info", ex.ToString());
+        activity.SetStatus(ActivityStatusCode.Error, "Error thrown.");
+    }
+
+    internal static void RecordActivityCancelled(Activity? activity, bool stop = true)
+    {
+        if (activity == null)
+            return;
+
+        activity.AddEvent(new ActivityEvent("Cancelled."));
+
+        if (stop && !activity.IsStopped)
+            activity.Stop();
+        
+        activity.SetStatus(ActivityStatusCode.Error);
+    }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     public static ActivitySource CreateActivitySource()
@@ -268,7 +300,7 @@ public sealed class WarfareModule
             // ignored
         }
 
-        Singleton.GlobalLogger.LogInformation($"Created activity source: {source}.");
+        //Singleton.GlobalLogger.LogInformation($"Created activity source: {source}."); ( throws error on init )
         return new ActivitySource(source, Version);
     }
 #endif
@@ -397,6 +429,10 @@ public sealed class WarfareModule
             }
         }
 
+#if TELEMETRY
+        _activitySource = CreateActivitySource();
+#endif
+
         ConfigureServices(bldr);
 
         _pluginLoader.ConfigureServices(bldr);
@@ -483,7 +519,7 @@ public sealed class WarfareModule
 
         if (!_unloadedHostedServices)
         {
-            Unhost();
+            UnhostServices();
         }
 
         try
@@ -1194,7 +1230,9 @@ public sealed class WarfareModule
         TracerProvider tracerProvider = Sdk.CreateTracerProviderBuilder()
             .AddSource(
                 "Uncreated.Warfare.Events.EventDispatcher",
-                "Uncreated.Warfare.Interaction.Commands.CommandDispatcher"
+                "Uncreated.Warfare.Interaction.Commands.CommandDispatcher",
+                "Uncreated.Warfare.WarfareModule",
+                "Uncreated.Warfare.Layouts.LayoutFactory"
             )
             .ConfigureResource(resource =>
                 resource.AddService(
@@ -1235,35 +1273,45 @@ public sealed class WarfareModule
 
     public async UniTask ShutdownAsync(string reason, CancellationToken token = default)
     {
-        await ServiceProvider.Resolve<WarfareLifetimeComponent>().NotifyShutdownNow(reason);
-
-        await UniTask.SwitchToMainThread(token);
-
-        // prevent players from joining after shutdown start
-        IPlayerService? playerService = ServiceProvider.ResolveOptional<IPlayerService>();
-        playerService?.TakePlayerConnectionLock(token);
-
-        RemotePlayerListService? remoteStateManager = ServiceProvider.ResolveOptional<RemotePlayerListService>();
-        if (remoteStateManager != null)
+        Activity.Current = null;
+        using (Activity? activity = _activitySource.StartActivity("Shutdown"))
         {
-            await remoteStateManager.UpdateReplicatedServerState(ServerStateType.Shutdown, reason);
+            await ServiceProvider.Resolve<WarfareLifetimeComponent>().NotifyShutdownNow(reason);
+
+            await UniTask.SwitchToMainThread(token);
+
+            // prevent players from joining after shutdown start
+            IPlayerService? playerService = ServiceProvider.ResolveOptional<IPlayerService>();
+            playerService?.TakePlayerConnectionLock(token);
+
+            RemotePlayerListService? remoteStateManager = ServiceProvider.ResolveOptional<RemotePlayerListService>();
+            if (remoteStateManager != null)
+            {
+                await remoteStateManager.UpdateReplicatedServerState(ServerStateType.Shutdown, reason);
+            }
+
+            // kick all players
+            await UniTask.SwitchToMainThread(token);
+            for (int i = Provider.clients.Count - 1; i >= 0; --i)
+            {
+                Provider.kick(Provider.clients[i].playerID.steamID, !string.IsNullOrWhiteSpace(reason) ? "Shutting down: \"" + reason + "\"." : "Shutting down.");
+            }
+
+            await EventDispatcher.WaitForEvents();
+
+            Object.Destroy(_gameObjectHost);
+            _gameObjectHost = null!;
+
+            if (!_unloadedHostedServices)
+            {
+                await UnhostAsync(token
+#if TELEMETRY
+                    , activity
+#endif
+                );
+            }
         }
 
-        // kick all players
-        for (int i = Provider.clients.Count - 1; i >= 0; --i)
-        {
-            Provider.kick(Provider.clients[i].playerID.steamID, !string.IsNullOrWhiteSpace(reason) ? "Shutting down: \"" + reason + "\"." : "Shutting down.");
-        }
-
-        await EventDispatcher.WaitForEvents();
-
-        Object.Destroy(_gameObjectHost);
-        _gameObjectHost = null!;
-
-        if (!_unloadedHostedServices)
-        {
-            await UnhostAsync(token);
-        }
 
         await UniTask.SwitchToMainThread(CancellationToken.None);
         UnloadModule();
@@ -1285,6 +1333,11 @@ public sealed class WarfareModule
     {
         GameThread.AssertCurrent();
 
+#if TELEMETRY
+        Activity.Current = null;
+        using Activity? activity = _activitySource.StartActivity("Host Module");
+#endif
+
         // set up level measurements as early as possible
         Level.onPrePreLevelLoaded += CartographyUtility.Init;
 
@@ -1296,12 +1349,28 @@ public sealed class WarfareModule
         // this too
         HarmonyPatchService patchService = ServiceProvider.Resolve<HarmonyPatchService>();
 
-        patchService.ApplyAllPatches();
+        {
+#if TELEMETRY
+            using Activity? childActivity = _activitySource.StartActivity(
+                "Harmony patches",
+                ActivityKind.Internal,
+                parentContext: activity?.Context ?? default
+            );
+#endif
+            patchService.ApplyAllPatches();
+        }
 
         bool connected = false;
 
         try
         {
+#if TELEMETRY
+            using Activity? sshActivity = _activitySource.StartActivity(
+                "SSH Authentication",
+                ActivityKind.Internal,
+                parentContext: activity?.Context ?? default
+            );
+#endif
             await SshTunnelHelper.OpenIfAvailableAsync(ServiceProvider, token);
         }
         catch (Exception ex)
@@ -1310,13 +1379,27 @@ public sealed class WarfareModule
             _logger.LogError(ex, "Unable to connect to SSH tunnel for MySQL database. Please reconfigure and restart.");
             UnloadModule();
             Provider.shutdown();
+#if TELEMETRY
+            activity?.SetStatus(ActivityStatusCode.Error, "SSH connection failed.");
+#endif
             return;
         }
+
+#if TELEMETRY
+        Activity.Current = null;
+#endif
 
         // migrate database before loading services
         _logger.LogDebug("Migrating database...");
         try
         {
+#if TELEMETRY
+            using Activity? dbActivity = _activitySource.StartActivity(
+                "Connect/Migrate database",
+                ActivityKind.Internal,
+                parentContext: activity?.Context ?? default
+            );
+#endif
             await using ILifetimeScope scope = ServiceProvider.BeginLifetimeScope();
             await using IDbContext dbContext = scope.Resolve<IDbContext>();
             const double timeoutSec = 10;
@@ -1354,10 +1437,13 @@ public sealed class WarfareModule
         {
             // todo: use error code instead of Contains as soon as i figure out what it is
             await UniTask.SwitchToMainThread();
-            Console.WriteLine("TODO: Error code: " + mySqlException.ErrorCode);
+            _logger.LogError("TODO: Error code: " + mySqlException.ErrorCode);
             _logger.LogError("Timed out connecting to SQL database.");
             UnloadModule();
             Provider.shutdown();
+#if TELEMETRY
+            activity?.SetStatus(ActivityStatusCode.Error, "Database connection timed out.");
+#endif
             return;
         }
 
@@ -1367,15 +1453,27 @@ public sealed class WarfareModule
             _logger.LogError("Unable to connect to MySQL database. Please reconfigure and restart.");
             UnloadModule();
             Provider.shutdown();
+#if TELEMETRY
+            activity?.SetStatus(ActivityStatusCode.Error, "Database failed to connect.");
+#endif
             return;
         }
 
         // this needs to run before hosted services start requesting translations
-        ICachableLanguageDataStore? dataStore = ServiceProvider.ResolveOptional<ICachableLanguageDataStore>();
-        if (dataStore != null)
-            await dataStore.ReloadCache(token);
+        {
+#if TELEMETRY
+            using Activity? langActivity = _activitySource.StartActivity(
+                "Cache languages",
+                ActivityKind.Internal,
+                parentContext: activity?.Context ?? default
+            );
+#endif
+            ICachableLanguageDataStore? dataStore = ServiceProvider.ResolveOptional<ICachableLanguageDataStore>();
+            if (dataStore != null)
+                await dataStore.ReloadCache(token);
 
-        await UniTask.SwitchToMainThread(token);
+            await UniTask.SwitchToMainThread(token);
+        }
 
         List<IHostedService> hostedServices = ServiceProvider
             .Resolve<IEnumerable<IHostedService>>()
@@ -1388,69 +1486,78 @@ public sealed class WarfareModule
         for (int i = 0; i < hostedServices.Count; i++)
         {
             IHostedService hostedService = hostedServices[i];
+#if TELEMETRY
+            using Activity? hostActivity = _activitySource.CreateActivity(
+                $"Host {Accessor.ExceptionFormatter.Format(hostedService.GetType())}",
+                ActivityKind.Internal,
+                parentContext: activity?.Context ?? default
+            );
+#endif
             try
             {
                 if (!GameThread.IsCurrent)
+                {
+#if TELEMETRY
+                    hostActivity?.AddEvent(new ActivityEvent("Switch to main thread."));
+#endif
                     await UniTask.SwitchToMainThread(token);
+                }
+
+#if TELEMETRY
+                hostActivity?.Start();
+                Activity.Current = hostActivity;
+#endif
                 _logger.LogDebug("Hosting {0}.", hostedService.GetType());
                 await hostedService.StartAsync(token);
+#if TELEMETRY
+                hostActivity?.Stop();
+                hostActivity?.SetStatus(ActivityStatusCode.Ok);
+#endif
             }
             catch (OperationCanceledException) when (token.IsCancellationRequested)
             {
+#if TELEMETRY
+                RecordActivityCancelled(hostActivity);
+#endif
                 break;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Error hosting service {hostedService.GetType()}.");
                 errIndex = i;
+#if TELEMETRY
+                RecordActivityException(hostActivity, ex);
+#endif
                 break;
             }
         }
 
+#if TELEMETRY
+        activity?.Stop();
+#endif
+
         // one of the hosted services errored, unhost all that were hosted and shut down.
         if (errIndex == -1)
         {
+#if TELEMETRY
+            activity?.SetStatus(ActivityStatusCode.Ok);
+#endif
             return;
         }
 
+#if TELEMETRY
+        activity?.SetStatus(ActivityStatusCode.Error, "A service failed to host.");
+#endif
         await UniTask.SwitchToMainThread(token);
 
         if (_unloadedHostedServices)
             return;
 
-        _unloadedHostedServices = true;
-        UniTask[] tasks = new UniTask[errIndex];
-        _logger.LogDebug("Unhosting {0} services and shutting down.", tasks.Length);
-        for (int i = errIndex - 1; i >= 0; --i)
-        {
-            IHostedService hostedService = hostedServices[i];
-            try
-            {
-                _logger.LogDebug("Unhosting {0}.", hostedService.GetType());
-                tasks[i] = hostedService.StopAsync(token).Preserve();
-            }
-            catch (OperationCanceledException) when (token.IsCancellationRequested)
-            {
-                break;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error stopping service {hostedService.GetType()}.");
-            }
-        }
-
-        _unloadedHostedServices = true;
-
-        try
-        {
-            await UniTask.WhenAll(tasks);
-        }
-        catch
-        {
-            await UniTask.SwitchToMainThread();
-            _logger.LogError("Errors encountered while unhosting:");
-            FormattingUtility.PrintTaskErrors(_logger, tasks, hostedServices);
-        }
+        await UnhostServices(hostedServices, errIndex - 1, token
+#if TELEMETRY
+            , activity
+#endif
+        );
 
         await UniTask.SwitchToMainThread(CancellationToken.None);
         UnloadModule();
@@ -1459,6 +1566,9 @@ public sealed class WarfareModule
 
     internal async UniTask InvokeLevelLoaded(CancellationToken token)
     {
+#if TELEMETRY
+        using Activity? activity = _activitySource.StartActivity("InvokeLevelLoaded");
+#endif
         List<ILevelHostedService> hostedServices = GetActiveLayout().ServiceProvider
             .Resolve<IEnumerable<ILevelHostedService>>()
             .OrderByDescending(x => x.GetType().GetPriority())
@@ -1470,20 +1580,47 @@ public sealed class WarfareModule
         for (int i = 0; i < hostedServices.Count; i++)
         {
             ILevelHostedService hostedService = hostedServices[i];
+#if TELEMETRY
+            using Activity? hostActivity = _activitySource.CreateActivity(
+                $"Host {Accessor.ExceptionFormatter.Format(hostedService.GetType())}",
+                ActivityKind.Internal,
+                parentContext: activity?.Context ?? default
+            );
+#endif
             try
             {
                 if (!GameThread.IsCurrent)
+                {
+#if TELEMETRY
+                    hostActivity?.AddEvent(new ActivityEvent("Switch to main thread."));
+#endif
                     await UniTask.SwitchToMainThread(token);
+                }
+
+#if TELEMETRY
+                hostActivity?.Start();
+                Activity.Current = hostActivity;
+#endif
                 _logger.LogDebug("Hosting {0} on level load.", hostedService.GetType());
                 await hostedService.LoadLevelAsync(token);
+#if TELEMETRY
+                hostActivity?.Stop();
+                hostActivity?.SetStatus(ActivityStatusCode.Ok);
+#endif
             }
             catch (OperationCanceledException) when (token.IsCancellationRequested)
             {
+#if TELEMETRY
+                RecordActivityCancelled(hostActivity);
+#endif
                 break;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Error hosting service {hostedService.GetType()} on level load.");
+#if TELEMETRY
+                RecordActivityException(hostActivity, ex);
+#endif
                 break;
             }
         }
@@ -1491,6 +1628,9 @@ public sealed class WarfareModule
 
     internal async UniTask InvokeEarlyLevelLoaded(CancellationToken token)
     {
+#if TELEMETRY
+        using Activity? activity = _activitySource.StartActivity("InvokeEarlyLevelLoaded");
+#endif
         List<IEarlyLevelHostedService> hostedServices = ServiceProvider
             .Resolve<IEnumerable<IEarlyLevelHostedService>>()
             .OrderByDescending(x => x.GetType().GetPriority())
@@ -1502,31 +1642,68 @@ public sealed class WarfareModule
         for (int i = 0; i < hostedServices.Count; i++)
         {
             IEarlyLevelHostedService hostedService = hostedServices[i];
+#if TELEMETRY
+            using Activity? hostActivity = _activitySource.CreateActivity(
+                $"Host {Accessor.ExceptionFormatter.Format(hostedService.GetType())}",
+                ActivityKind.Internal,
+                parentContext: activity?.Context ?? default
+            );
+#endif
             try
             {
                 if (!GameThread.IsCurrent)
+                {
+#if TELEMETRY
+                    hostActivity?.AddEvent(new ActivityEvent("Switch to main thread."));
+#endif
                     await UniTask.SwitchToMainThread(token);
+                }
+
+#if TELEMETRY
+                hostActivity?.Start();
+                Activity.Current = hostActivity;
+#endif
                 _logger.LogDebug("Hosting {0} on early level load.", hostedService.GetType());
                 await hostedService.EarlyLoadLevelAsync(token);
+#if TELEMETRY
+                hostActivity?.Stop();
+                hostActivity?.SetStatus(ActivityStatusCode.Ok);
+#endif
             }
             catch (OperationCanceledException) when (token.IsCancellationRequested)
             {
+#if TELEMETRY
+                RecordActivityCancelled(hostActivity);
+#endif
                 break;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Error hosting service {hostedService.GetType()} on early level load.");
+#if TELEMETRY
+                RecordActivityException(hostActivity, ex);
+#endif
                 break;
             }
         }
     }
 
-    private async UniTask UnhostAsync(CancellationToken token = default)
+    private async UniTask UnhostAsync(CancellationToken token
+#if TELEMETRY
+        , Activity? parentActivity
+#endif
+    )
     {
         await UniTask.SwitchToMainThread(token);
 
         if (_unloadedHostedServices)
             return;
+
+        using Activity? activity = _activitySource.StartActivity(
+            "Unhost",
+            ActivityKind.Internal,
+            parentActivity?.Context ?? default
+        );
 
         List<IHostedService> hostedServices = ServiceProvider
             .Resolve<IEnumerable<IHostedService>>()
@@ -1534,39 +1711,90 @@ public sealed class WarfareModule
             .ToList();
 
         _logger.LogDebug("Unhosting {0} services.", hostedServices.Count);
-        UniTask[] tasks = new UniTask[hostedServices.Count];
-        for (int i = 0; i < hostedServices.Count; ++i)
+
+        await UnhostServices(hostedServices, hostedServices.Count - 1, token
+#if TELEMETRY
+            , activity
+#endif
+        );
+    }
+
+    private UnhostingTask[] StartUnhostingServices(List<IHostedService> hostedServices, int startIndex, CancellationToken token
+#if TELEMETRY
+        , Activity? activity = null
+#endif
+    )
+    {
+        _unloadedHostedServices = true;
+
+        UnhostingTask[] tasks = new UnhostingTask[startIndex + 1];
+        for (int i = startIndex; i >= 0; --i)
         {
+            IHostedService hostedService = hostedServices[i];
+#if TELEMETRY
+            Activity? tempActivity = _activitySource.StartActivity(
+                $"Unhost {Accessor.ExceptionFormatter.Format(hostedService.GetType())}",
+                ActivityKind.Internal,
+                activity?.Context ?? default
+            );
+#endif
             try
             {
-                IHostedService hostedService = hostedServices[i];
-                _logger.LogDebug("Unhosting {0}.", hostedService.GetType());
-                tasks[i] = hostedService.StopAsync(CancellationToken.None).Preserve();
+                _logger.LogTrace($"Unhosting {hostedService.GetType()}.");
+                tasks[i] = hostedService.StopAsync(CancellationToken.None).Preserve()
+#if TELEMETRY
+                        .ContinueWith(() =>
+                        {
+                            tempActivity?.Stop();
+                        })
+#endif
+                    ;
             }
             catch (Exception ex)
             {
                 tasks[i] = UniTask.FromException(ex);
             }
+#if TELEMETRY
+            tasks[i].Activity = tempActivity;
+#endif
         }
 
-        _unloadedHostedServices = true;
+        return tasks;
+    }
 
+    private async UniTask UnhostServices(List<IHostedService> hostedServices, int startIndex, CancellationToken token
+#if TELEMETRY
+        , Activity? activity
+#endif
+    )
+    {
+        UnhostingTask[] tasks = StartUnhostingServices(hostedServices, startIndex, token
+#if TELEMETRY
+            , activity
+#endif
+        );
         try
         {
-            await UniTask.WhenAll(tasks);
+            await UniTask.WhenAll(tasks.Select(x => x.Task));
         }
         catch
         {
-            await UniTask.SwitchToMainThread();
             _logger.LogError("Errors encountered while unhosting:");
             FormattingUtility.PrintTaskErrors(_logger, tasks, hostedServices);
+        }
+        finally
+        {
+            for (int i = 0; i < tasks.Length; ++i)
+            {
+                tasks[i].Dispose();
+            }
         }
     }
 
     /// <summary>
     /// Synchronously unhost so <see cref="IModuleNexus.shutdown"/> can wait on unhost.
     /// </summary>
-    private void Unhost()
+    private void UnhostServices()
     {
         _unloadedHostedServices = true;
         using CancellationTokenSource timeoutSource = new CancellationTokenSource(TimeSpan.FromSeconds(3d));
@@ -1577,25 +1805,12 @@ public sealed class WarfareModule
             .ToList();
 
         _logger.LogDebug("Unhosting {0} services synchronously.", hostedServices.Count);
-        UniTask[] tasks = new UniTask[hostedServices.Count];
-        for (int i = 0; i < hostedServices.Count; ++i)
-        {
-            try
-            {
-                IHostedService hostedService = hostedServices[i];
-                _logger.LogDebug("Unhosting {0}.", hostedService.GetType());
-                tasks[i] = hostedService.StopAsync(timeoutSource.Token).Preserve();
-            }
-            catch (Exception ex)
-            {
-                tasks[i] = UniTask.FromException(ex);
-            }
-        }
+        UnhostingTask[] tasks = StartUnhostingServices(hostedServices, hostedServices.Count - 1, CancellationToken.None);
 
         bool canceled = false;
         try
         {
-            UniTask.WhenAll(tasks).AsTask().Wait(timeoutSource.Token);
+            UniTask.WhenAll(tasks.Select(x => x.Task)).AsTask().Wait(timeoutSource.Token);
         }
         catch (OperationCanceledException) when (timeoutSource.IsCancellationRequested)
         {
@@ -1615,10 +1830,10 @@ public sealed class WarfareModule
         _logger.LogError("Unloading timed out:");
         for (int i = 0; i < tasks.Length; ++i)
         {
-            if (tasks[i].Status is not UniTaskStatus.Canceled and not UniTaskStatus.Pending)
+            if (tasks[i].Task.Status is not UniTaskStatus.Canceled and not UniTaskStatus.Pending)
                 continue;
 
-            _logger.LogError(hostedServices[i].GetType() + $" - {tasks[i].Status}.");
+            _logger.LogError(hostedServices[i].GetType() + $" - {tasks[i].Task.Status}.");
         }
         Thread.Sleep(500);
     }
@@ -1692,6 +1907,10 @@ public sealed class WarfareModule
     {
         // calls IModuleNexus.shutdown()
         ServiceProvider.Resolve<Module>().isEnabled = false;
+
+#if TELEMETRY
+        Interlocked.Exchange(ref _activitySource, null)?.Dispose();
+#endif
     }
 
     private void InitializeUniTask()
@@ -1771,5 +1990,25 @@ public class WarfareModuleNexus : IModuleNexus
         WarfareModule mod = new WarfareModule();
         _module = mod;
         mod.Initialize();
+    }
+}
+
+internal struct UnhostingTask : IDisposable
+{
+    public UniTask Task;
+#if TELEMETRY
+    public Activity? Activity;
+#endif
+
+    public void Dispose()
+    {
+#if TELEMETRY
+        Activity?.Dispose();
+#endif
+    }
+
+    public static implicit operator UnhostingTask(UniTask task)
+    {
+        return new UnhostingTask { Task = task };
     }
 }

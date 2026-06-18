@@ -216,7 +216,27 @@ public static class PlayerKeys
     }
 
     /// <summary>
-    /// Invoked when 'plugin key 1' is pressed down.
+    /// Invoked when 'plugin key #1' is pressed down.
+    /// </summary>
+    /// <exception cref="GameThreadException"/>
+    public static event KeyDown PressedPluginKey0
+    {
+        add => PlayerKeyComponent.AddKeyDownHandler(PlayerKey.PluginKey0, value);
+        remove => PlayerKeyComponent.RemoveKeyDownHandler(PlayerKey.PluginKey0, value);
+    }
+
+    /// <summary>
+    /// Invoked when 'plugin key #1' is released.
+    /// </summary>
+    /// <exception cref="GameThreadException"/>
+    public static event KeyUp ReleasedPluginKey0
+    {
+        add => PlayerKeyComponent.AddKeyUpHandler(PlayerKey.PluginKey0, value);
+        remove => PlayerKeyComponent.RemoveKeyUpHandler(PlayerKey.PluginKey0, value);
+    }
+
+    /// <summary>
+    /// Invoked when 'plugin key #2' is pressed down.
     /// </summary>
     /// <exception cref="GameThreadException"/>
     public static event KeyDown PressedPluginKey1
@@ -226,7 +246,7 @@ public static class PlayerKeys
     }
 
     /// <summary>
-    /// Invoked when 'plugin key 1' is released.
+    /// Invoked when 'plugin key #2' is released.
     /// </summary>
     /// <exception cref="GameThreadException"/>
     public static event KeyUp ReleasedPluginKey1
@@ -236,7 +256,7 @@ public static class PlayerKeys
     }
 
     /// <summary>
-    /// Invoked when 'plugin key 2' is pressed down.
+    /// Invoked when 'plugin key #3' is pressed down.
     /// </summary>
     /// <exception cref="GameThreadException"/>
     public static event KeyDown PressedPluginKey2
@@ -246,7 +266,7 @@ public static class PlayerKeys
     }
 
     /// <summary>
-    /// Invoked when 'plugin key 2' is released.
+    /// Invoked when 'plugin key #3' is released.
     /// </summary>
     /// <exception cref="GameThreadException"/>
     public static event KeyUp ReleasedPluginKey2
@@ -256,7 +276,7 @@ public static class PlayerKeys
     }
 
     /// <summary>
-    /// Invoked when 'plugin key 3' is pressed down.
+    /// Invoked when 'plugin key #4' is pressed down.
     /// </summary>
     /// <exception cref="GameThreadException"/>
     public static event KeyDown PressedPluginKey3
@@ -266,7 +286,7 @@ public static class PlayerKeys
     }
 
     /// <summary>
-    /// Invoked when 'plugin key 3' is released.
+    /// Invoked when 'plugin key #4' is released.
     /// </summary>
     /// <exception cref="GameThreadException"/>
     public static event KeyUp ReleasedPluginKey3
@@ -276,7 +296,7 @@ public static class PlayerKeys
     }
 
     /// <summary>
-    /// Invoked when 'plugin key 4' is pressed down.
+    /// Invoked when 'plugin key #5' is pressed down.
     /// </summary>
     /// <exception cref="GameThreadException"/>
     public static event KeyDown PressedPluginKey4
@@ -286,33 +306,13 @@ public static class PlayerKeys
     }
 
     /// <summary>
-    /// Invoked when 'plugin key 4' is released.
+    /// Invoked when 'plugin key #5' is released.
     /// </summary>
     /// <exception cref="GameThreadException"/>
     public static event KeyUp ReleasedPluginKey4
     {
         add => PlayerKeyComponent.AddKeyUpHandler(PlayerKey.PluginKey4, value);
         remove => PlayerKeyComponent.RemoveKeyUpHandler(PlayerKey.PluginKey4, value);
-    }
-
-    /// <summary>
-    /// Invoked when 'plugin key 5' is pressed down.
-    /// </summary>
-    /// <exception cref="GameThreadException"/>
-    public static event KeyDown PressedPluginKey5
-    {
-        add => PlayerKeyComponent.AddKeyDownHandler(PlayerKey.PluginKey5, value);
-        remove => PlayerKeyComponent.RemoveKeyDownHandler(PlayerKey.PluginKey5, value);
-    }
-
-    /// <summary>
-    /// Invoked when 'plugin key 5' is released.
-    /// </summary>
-    /// <exception cref="GameThreadException"/>
-    public static event KeyUp ReleasedPluginKey5
-    {
-        add => PlayerKeyComponent.AddKeyUpHandler(PlayerKey.PluginKey5, value);
-        remove => PlayerKeyComponent.RemoveKeyUpHandler(PlayerKey.PluginKey5, value);
     }
 }
 
@@ -334,11 +334,11 @@ public enum PlayerKey
     [Obsolete("This is not in use right now.", true), EditorBrowsable(EditorBrowsableState.Never)]
     Reserved = 8,
     SteadyAim = 9,
-    PluginKey1 = 10,
-    PluginKey2 = 11,
-    PluginKey3 = 12,
-    PluginKey4 = 13,
-    PluginKey5 = 14
+    PluginKey0 = 10,
+    PluginKey1 = 11,
+    PluginKey2 = 12,
+    PluginKey3 = 13,
+    PluginKey4 = 14
 }
 
 /// <summary>

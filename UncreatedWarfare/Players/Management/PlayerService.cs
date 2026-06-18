@@ -54,6 +54,9 @@ public class PlayerService : IPlayerService
     internal readonly List<PlayerTaskData> PendingTasks = new List<PlayerTaskData>(4);
 
     /// <inheritdoc />
+    public bool IsEmpty => Provider.clients.Count == 0;
+
+    /// <inheritdoc />
     public ReadOnlyTrackingList<WarfarePlayer> OnlinePlayers
     {
         get

@@ -37,6 +37,7 @@ internal class FtdmService : ILayoutPhaseListener<ActionPhase>, IDisposable, ILa
     private readonly IConfiguration _configuration;
     private readonly ChatService _chatService;
     private readonly KitRequestService _kitRequestService;
+    private readonly ElectricalGridService _electricalGridService;
     private readonly IKitDataStore _kitDataStore;
     private readonly FtdmTranslations _translations;
     private readonly FtdmDualSidedTeamManager _teamManager;
@@ -50,6 +51,8 @@ internal class FtdmService : ILayoutPhaseListener<ActionPhase>, IDisposable, ILa
     public bool IsInActionPhase { get; private set; }
     public bool AllowReenterSpwan { get; private set; }
 
+    public ZoneProximity? PlayArea { get; private set; }
+
     public FtdmService(
         Layout layout,
         ZoneStore zoneStore,
@@ -61,6 +64,7 @@ internal class FtdmService : ILayoutPhaseListener<ActionPhase>, IDisposable, ILa
         IConfiguration configuration,
         ChatService chatService,
         KitRequestService kitRequestService,
+        ElectricalGridService electricalGridService,
         IKitDataStore kitDataStore)
     {
         _layout = layout;
@@ -72,6 +76,7 @@ internal class FtdmService : ILayoutPhaseListener<ActionPhase>, IDisposable, ILa
         _configuration = configuration;
         _chatService = chatService;
         _kitRequestService = kitRequestService;
+        _electricalGridService = electricalGridService;
         _kitDataStore = kitDataStore;
         _translations = translations.Value;
         _teamManager = layout.TeamManager as FtdmDualSidedTeamManager
@@ -299,22 +304,16 @@ internal class FtdmService : ILayoutPhaseListener<ActionPhase>, IDisposable, ILa
         {
             _logger.LogWarning($"Play area zone not found: {_teamManager.Location.PlayArea}.");
             _playAreaCollider = null;
+            PlayArea = null;
         }
         else
         {
+
             _playAreaCollider = _zoneStore.CreateColliderForZone(playArea);
-            //_playAreaCollider.OnObjectExited += HandlePlayerExitsPlayArea;
             _playAreaCollider.OnObjectEntered += HandlePlayerEntersPlayArea;
 
-            Vector3 center = playArea.Center;
-            foreach (uint instanceId in playArea.GridObjects)
-            {
-                ObjectInfo obj = LevelObjectUtility.FindObject(instanceId, center);
-                if (!obj.HasValue)
-                    continue;
-
-
-            }
+            PlayArea = new ZoneProximity(_playAreaCollider, playArea);
+            _electricalGridService.SetPowerForZoneObjects(playArea, true, true);
         }
 
         _friendlyZoneColliders = new LinearDictionary<Team, IEventBasedProximity<WarfarePlayer>>(_teamManager.Spawns.Count);
@@ -384,7 +383,6 @@ internal class FtdmService : ILayoutPhaseListener<ActionPhase>, IDisposable, ILa
         if (_playAreaCollider != null)
         {
             _playAreaCollider.OnObjectEntered -= HandlePlayerEntersPlayArea;
-            //_playAreaCollider.OnObjectExited -= HandlePlayerExitsPlayArea;
             if (_playAreaCollider is IDisposable playAreaDisposable)
                 playAreaDisposable.Dispose();
             _playAreaCollider = null;

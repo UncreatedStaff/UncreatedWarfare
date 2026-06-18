@@ -10,10 +10,10 @@ public sealed class SeedingTranslations : PropertiesTranslationCollection
     public readonly Translation SeedingVoteTitle = new Translation("The server is low on players! Switch to seeding mode?", TranslationOptions.TMProUI);
 
     [TranslationData("The text of the 'yes' vote.", "Number of votes, green if it's the current player's vote.")]
-    public readonly Translation<string> SeedingVoteYes = new Translation<string>("Yes [<plugin_1/>] votes: {0}", TranslationOptions.TMProUI);
+    public readonly Translation<string> SeedingVoteYes = new Translation<string>("Yes [<plugin_0/>] votes: {0}", TranslationOptions.TMProUI);
 
     [TranslationData("The text of the 'no' vote.", "Number of votes, green if it's the current player's vote.")]
-    public readonly Translation<string> SeedingVoteNo = new Translation<string>("Ask again later [<plugin_4/>] votes: {0}", TranslationOptions.TMProUI);
+    public readonly Translation<string> SeedingVoteNo = new Translation<string>("Ask again later [<plugin_3/>] votes: {0}", TranslationOptions.TMProUI);
 
     [TranslationData("Description of whats happening when waiting for players to join.")]
     public readonly Translation SeedingDescriptionWaitingForPlayers = new Translation("Waiting for more players...", TranslationOptions.TMProUI);

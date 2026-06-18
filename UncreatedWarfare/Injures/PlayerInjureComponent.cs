@@ -189,8 +189,8 @@ public class PlayerInjureComponent : MonoBehaviour,
             return;
 
 
-        PlayerKeys.PressedPluginKey3 += OnPressedGiveUp;
-        PlayerKeys.PressedPluginKey2 += OnPressedReviveSelf;
+        PlayerKeys.PressedPluginKey2 += OnPressedGiveUp;
+        PlayerKeys.PressedPluginKey1 += OnPressedReviveSelf;
 
         _isInjured = false;
         _injureStart = 0f;
@@ -211,8 +211,8 @@ public class PlayerInjureComponent : MonoBehaviour,
         Player.UnturnedPlayer.stance.onStanceUpdated -= OnStanceUpdated;
         Player.UnturnedPlayer.equipment.onEquipRequested -= OnEquipRequested;
 
-        PlayerKeys.PressedPluginKey3 -= OnPressedGiveUp;
-        PlayerKeys.PressedPluginKey2 -= OnPressedReviveSelf;
+        PlayerKeys.PressedPluginKey2 -= OnPressedGiveUp;
+        PlayerKeys.PressedPluginKey1 -= OnPressedReviveSelf;
 
         if (!_isInjured)
             return;

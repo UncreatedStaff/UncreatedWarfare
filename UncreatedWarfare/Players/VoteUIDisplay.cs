@@ -42,12 +42,14 @@ public abstract class VoteUIDisplay<TData> : UnturnedUI, IVoteDisplay where TDat
 
     protected abstract void SendToPlayers(LanguageSet set);
 
-    protected virtual void OnCleared(WarfarePlayer player, TData data) { }
+    protected virtual void OnCleared(WarfarePlayer player, TData? data) { }
 
     protected TData GetOrAddData(CSteamID id)
     {
         return GetOrAddData(id, _getData);
     }
+
+    private bool _subscribedToEvents;
 
     public void VoteStarted(in VoteSettings settings, Func<WarfarePlayer, bool>? playerSelector)
     {
@@ -56,8 +58,12 @@ public abstract class VoteUIDisplay<TData> : UnturnedUI, IVoteDisplay where TDat
         _playerSelector = playerSelector;
         _playerIsVotingCache = null;
 
-        PlayerKeys.PressedPluginKey1 += OnVotedYes;
-        PlayerKeys.PressedPluginKey4 += OnVotedNo;
+        if (!_subscribedToEvents)
+        {
+            _subscribedToEvents = true;
+            PlayerKeys.PressedPluginKey0 += OnVotedYes;
+            PlayerKeys.PressedPluginKey3 += OnVotedNo;
+        }
 
         foreach (LanguageSet set in TranslationService.SetOf.PlayersWhere(playerSelector))
         {
@@ -79,16 +85,27 @@ public abstract class VoteUIDisplay<TData> : UnturnedUI, IVoteDisplay where TDat
     {
         HasVote = false;
 
-        PlayerKeys.PressedPluginKey1 -= OnVotedYes;
-        PlayerKeys.PressedPluginKey4 -= OnVotedNo;
-
+        if (_subscribedToEvents)
+        {
+            _subscribedToEvents = false;
+            PlayerKeys.PressedPluginKey0 -= OnVotedYes;
+            PlayerKeys.PressedPluginKey3 -= OnVotedNo;
+        }
         foreach (LanguageSet set in TranslationService.SetOf.PlayersWhere(PlayerIsVoting()))
         {
             while (set.MoveNext())
             {
                 ClearFromPlayer(set.Next.Connection);
                 if (GetData<TData>(set.Next.Steam64) is { } data)
+                {
                     data.HasVoteUI = false;
+                }
+                else
+                {
+                    data = null;
+                }
+
+                OnCleared(set.Next, data);
             }
         }
     }
@@ -153,8 +170,12 @@ public abstract class VoteUIDisplay<TData> : UnturnedUI, IVoteDisplay where TDat
     /// <inheritdoc />
     protected override void OnDisposing()
     {
-        PlayerKeys.PressedPluginKey1 -= OnVotedYes;
-        PlayerKeys.PressedPluginKey4 -= OnVotedNo;
+        if (_subscribedToEvents)
+        {
+            _subscribedToEvents = false;
+            PlayerKeys.PressedPluginKey0 -= OnVotedYes;
+            PlayerKeys.PressedPluginKey3 -= OnVotedNo;
+        }
         HasVote = false;
     }
 }

@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Configuration;
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text.Json;
@@ -120,9 +119,10 @@ public class UcsGlobalBanService : IGlobalBanService, IEventListener<PlayerDied>
         if (ban == null)
             return default;
 
-        // don't auto-kick for auto bans since Infected kinda spammed their entire ban list
+        // optionally don't auto-kick for auto bans since Infected kinda spammed their entire ban list
         if (ban.TimeBanned <= AutomatedBanIgnoreThreshold
-            && ban.BanReason?.Contains("Take with grain of salt. Automated", StringComparison.Ordinal) is true)
+            && ban.BanReason?.Contains("Take with grain of salt. Automated", StringComparison.Ordinal) is true
+            && _systemConfig.GetValue<bool>("ucs:ignore_infected_auto_cheater_bans"))
         {
             _moderationSql.SendSuspectedCheaterMessage(steam64, ban.Id);
             return default;

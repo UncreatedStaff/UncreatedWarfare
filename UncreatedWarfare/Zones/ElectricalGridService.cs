@@ -35,6 +35,38 @@ public class ElectricalGridService : ILevelHostedService, ILayoutHostedService
         _module = module;
     }
 
+    /// <summary>
+    /// Defines whether or not an object should be powered.
+    /// </summary>
+    /// <exception cref="GameThreadException"/>
+    public bool IsPowered(LevelObject @object)
+    {
+        GameThread.AssertCurrent();
+
+        if (_handler is { IsEnabled: true })
+        {
+            return _handler.IsPowered(@object);
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Defines whether or not a barricade should be powered.
+    /// </summary>
+    /// <exception cref="GameThreadException"/>
+    public bool IsPowered(InteractablePower otherInteractable)
+    {
+        GameThread.AssertCurrent();
+
+        if (_handler is { IsEnabled: true })
+        {
+            return _handler.IsPowered(otherInteractable);
+        }
+
+        return true;
+    }
+
     /// <inheritdoc />
     public UniTask LoadLevelAsync(CancellationToken token)
     {
@@ -57,7 +89,7 @@ public class ElectricalGridService : ILevelHostedService, ILayoutHostedService
         return UniTask.CompletedTask;
     }
 
-    internal void CheckPowerForAllBarricades()
+    public void CheckPowerForAllBarricades()
     {
         if (RefreshIsConnectedToPower == null)
             return;
@@ -69,7 +101,7 @@ public class ElectricalGridService : ILevelHostedService, ILayoutHostedService
         }
     }
 
-    internal void SetPowerForZoneObjects(Zone zone, bool state, bool addHandles)
+    public void SetPowerForZoneObjects(Zone zone, bool state, bool addHandles)
     {
 #if DEBUG
         _logger.LogConditional("Setting all objects in {0} to state {1}.", zone.Name, state);

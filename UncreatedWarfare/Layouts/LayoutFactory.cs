@@ -25,6 +25,9 @@ using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Sessions;
 using Uncreated.Warfare.Util;
 using UnityEngine.SceneManagement;
+#if TELEMETRY
+using System.Diagnostics;
+#endif
 
 namespace Uncreated.Warfare.Layouts;
 
@@ -48,6 +51,11 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
 
     private bool _hasPlayerLock = true;
     private bool _hasSessionLock;
+
+#if TELEMETRY
+    private readonly ActivitySource _activitySource;
+    internal ActivitySource ActivitySource => _activitySource;
+#endif
 
     public bool IsLoading
     {
@@ -99,6 +107,10 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
         _layoutDir = Path.Combine(warfare.HomeDirectory, "Layouts");
         Directory.CreateDirectory(_layoutDir);
 
+#if TELEMETRY
+        _activitySource = WarfareModule.CreateActivitySource();
+#endif
+
         if (systemConfig["tests:startup_layout"] is not { Length: > 0 } startupLayout)
             return;
 
@@ -138,27 +150,31 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
 
         _loadoutStartSemaphore.Dispose();
 
-        if (!_warfare.IsLayoutActive())
-            return;
-        
-        Layout layout = _warfare.GetActiveLayout();
-        IsLoading = true;
-        try
+        if (_warfare.IsLayoutActive())
         {
-            if (layout.IsActive)
+            Layout layout = _warfare.GetActiveLayout();
+            IsLoading = true;
+            try
             {
-                await layout.EndLayoutAsync(CancellationToken.None);
+                if (layout.IsActive)
+                {
+                    await layout.EndLayoutAsync(CancellationToken.None);
+                }
+
+                layout.Dispose();
+
+                await UniTask.SwitchToMainThread(CancellationToken.None);
+                _warfare.SetActiveLayout(null);
             }
-
-            layout.Dispose();
-
-            await UniTask.SwitchToMainThread(CancellationToken.None);
-            _warfare.SetActiveLayout(null);
+            finally
+            {
+                IsLoading = false;
+            }
         }
-        finally
-        {
-            IsLoading = false;
-        }
+
+#if TELEMETRY
+        _activitySource.Dispose();
+#endif
     }
 
     private void OnSceneLoded(Scene scene, LoadSceneMode mode)
@@ -168,11 +184,23 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
 
         _setupTask = UniTask.Create(async () =>
         {
+#if TELEMETRY
+            Activity.Current = null;
+            using Activity? activity = _activitySource.StartActivity("Level loading started.");
+#endif
             try
             {
+#if TELEMETRY
+                activity?.AddEvent(new ActivityEvent("Invoking early level loaded."));
+                Activity.Current = activity;
+#endif
                 // invoke IEarlyLevelHostedService
                 await _warfare.InvokeEarlyLevelLoaded(_warfare.UnloadToken);
 
+#if TELEMETRY
+                activity?.AddEvent(new ActivityEvent("Initializing next layout."));
+                Activity.Current = activity;
+#endif
                 await StartNextLayout(_warfare.UnloadToken);
             }
             catch (Exception ex)
@@ -190,21 +218,51 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
 
         UniTask.Create(async () =>
         {
+#if TELEMETRY
+            Activity.Current = null;
+            using Activity? activity = _activitySource.StartActivity("Level loading finished (almost).");
+#endif
             bool hasPlayerConnectionLock = _hasPlayerLock;
             try
             {
                 if (_setupTask.Status == UniTaskStatus.Pending)
                 {
+#if TELEMETRY
+                    activity?.AddEvent(new ActivityEvent("Waiting for setup task to finish."));
+#endif
                     await _setupTask;
+#if TELEMETRY
+                    activity?.AddEvent(new ActivityEvent("Setup task finished."));
+#endif
                 }
 
+#if TELEMETRY
+                activity?.AddEvent(new ActivityEvent("Invoking level loaded."));
+                Activity.Current = activity;
+#endif
                 // invoke ILevelHostedService
                 await _warfare.InvokeLevelLoaded(CancellationToken.None);
-                await StartPendingLayoutAsync(hasPlayerConnectionLock);
+
+#if TELEMETRY
+                activity?.AddEvent(new ActivityEvent("Starting pending layout."));
+                Activity.Current = activity;
+#endif
+                await StartPendingLayoutAsync(hasPlayerConnectionLock
+#if TELEMETRY
+                    , activity
+#endif
+                );
                 hasPlayerConnectionLock = false;
+
+#if TELEMETRY
+                activity?.SetStatus(ActivityStatusCode.Ok);
+#endif
             }
             catch (Exception ex)
             {
+#if TELEMETRY
+                WarfareModule.RecordActivityException(activity, ex);
+#endif
                 _logger.LogError(ex, "Error finishing loading layout.");
                 _ = _warfare.ShutdownAsync($"Error finishing loading layout - {Accessor.Formatter.Format(ex.GetType())}");
             }
@@ -227,10 +285,23 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
     /// <summary>
     /// Forcibly end the current layout and create a new random layout from the config files.
     /// </summary>
-    public async UniTask StartNextLayout(CancellationToken token = default)
+    public async UniTask StartNextLayout(CancellationToken token = default
+#if TELEMETRY
+        , Activity? parentActivity = null
+#endif
+    )
     {
         await UniTask.SwitchToThreadPool();
-        
+#if TELEMETRY
+        Activity.Current = null;
+        using Activity? activity = _activitySource.StartActivity(
+            "StartNextLayout",
+            ActivityKind.Internal,
+            parentActivity?.Context ?? default
+        );
+
+        activity?.AddTag("source", new StackTrace(1).ToString());
+#endif
 
         LayoutInfo? newLayout = null;
         if (NextLayout != null)
@@ -241,9 +312,19 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
             else
                 _logger.LogInformation($"Loading preferred next layout {NextLayout.Name} ({newLayout.DisplayName}).");
             NextLayout = null;
+
+#if TELEMETRY
+            if (newLayout != null)
+            {
+                activity?.AddTag("layout-is-explicit", true);
+            }
+#endif
         }
 
         newLayout ??= SelectRandomLayout();
+#if TELEMETRY
+        activity?.AddTag("layout", Path.GetRelativePath(_layoutDir, newLayout.FilePath));
+#endif
 
         // stops players from joining both before the first layout starts and between layouts.
         if (!_isFirstLoadout)
@@ -257,6 +338,14 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
             {
                 if (_warfare.IsLayoutActive())
                 {
+#if TELEMETRY
+                    using Activity? endActivity = _activitySource.StartActivity(
+                        $"End previous layout ({_warfare.GetActiveLayout().LayoutInfo.DisplayName})",
+                        ActivityKind.Internal,
+                        parentContext: activity?.Context ?? default
+                    );
+#endif
+
                     if (!playerJoinLockTaken)
                     {
                         await _playerService.TakePlayerConnectionLock(token);
@@ -267,6 +356,9 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
                     Layout oldLayout = _warfare.GetActiveLayout();
                     if (oldLayout.IsActive)
                     {
+#if TELEMETRY
+                        Activity.Current = endActivity;
+#endif
                         await oldLayout.EndLayoutAsync(CancellationToken.None);
                     }
 
@@ -281,6 +373,9 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
                     await UniTask.SwitchToMainThread(CancellationToken.None);
                     _warfare.SetActiveLayout(null);
                     _logger.LogDebug($"Unloaded previous layout {oldLayout.LayoutInfo.DisplayName}.");
+#if TELEMETRY
+                    endActivity?.SetStatus(ActivityStatusCode.Ok);
+#endif
                 }
                 else
                 {
@@ -288,10 +383,17 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
                     playerJoinLockTaken = true;
                 }
 
-                await CreateLayoutAsync(newLayout, playerJoinLockTaken, CancellationToken.None);
+                await CreateLayoutAsync(newLayout, playerJoinLockTaken, CancellationToken.None
+#if TELEMETRY
+                    , activity
+#endif
+                );
             }
             catch (Exception ex)
             {
+#if TELEMETRY
+                WarfareModule.RecordActivityException(activity, ex);
+#endif
                 if (_hasSessionLock)
                 {
                     _sessionService.Release();
@@ -323,8 +425,21 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
     /// <summary>
     /// Actually creates a new layout with <paramref name="layoutInfo"/> as it's startup args.
     /// </summary>
-    private async UniTask CreateLayoutAsync(LayoutInfo layoutInfo, bool playerJoinLockTaken, CancellationToken token = default)
+    private async UniTask CreateLayoutAsync(LayoutInfo layoutInfo, bool playerJoinLockTaken, CancellationToken token
+#if TELEMETRY
+        , Activity? parentActivity
+#endif
+    )
     {
+#if TELEMETRY
+        Activity.Current = null;
+        using Activity? activity = _activitySource.StartActivity(
+            "CreateLayoutAsync",
+            ActivityKind.Internal,
+            parentActivity?.Context ?? default
+        );
+#endif
+
         if (!typeof(Layout).IsAssignableFrom(layoutInfo.LayoutType))
         {
             throw new ArgumentException($"Type {Accessor.ExceptionFormatter.Format(layoutInfo.LayoutType)} is not assignable to Layout.", nameof(layoutInfo));
@@ -339,14 +454,35 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
             stuffThatNeedsDisposedLater
         );
 
-        ILifetimeScope scopedProvider = await _warfare.CreateScopeAsync(lifetimeAction, token);
+        ILifetimeScope scopedProvider;
+        {
+#if TELEMETRY
+            using Activity? scopeActivity = _activitySource.StartActivity(
+                "Create scope",
+                ActivityKind.Internal,
+                activity?.Context ?? default
+            );
+#endif
+            scopedProvider = await _warfare.CreateScopeAsync(lifetimeAction, token);
+        }
+
         await UniTask.SwitchToMainThread(token);
 
-        // active layout is set in Layout default constructor
-        Layout layout = (Layout)Activator.CreateInstance(layoutInfo.LayoutType, [ scopedProvider, layoutInfo, stuffThatNeedsDisposedLater ])!;
-        if (_warfare.GetActiveLayout() != layout)
+        Layout layout;
         {
-            _warfare.SetActiveLayout(layout);
+#if TELEMETRY
+            using Activity? layoutActivity = _activitySource.StartActivity(
+                "Create layout",
+                ActivityKind.Internal,
+                activity?.Context ?? default
+            );
+#endif
+            // active layout is set in Layout default constructor
+            layout = (Layout)Activator.CreateInstance(layoutInfo.LayoutType, [scopedProvider, layoutInfo, stuffThatNeedsDisposedLater])!;
+            if (_warfare.GetActiveLayout() != layout)
+            {
+                _warfare.SetActiveLayout(layout);
+            }
         }
 
         GameRecord record = new GameRecord
@@ -358,15 +494,28 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
             Region = _region
         };
 
-        try
         {
-            _dbContext.Games.Add(record);
+#if TELEMETRY
+            using Activity? dbActivity = _activitySource.StartActivity(
+                "Create game record in database",
+                ActivityKind.Internal,
+                activity?.Context ?? default
+            );
+#endif
 
-            await _dbContext.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error updating layout record.");
+            try
+            {
+                _dbContext.Games.Add(record);
+
+                await _dbContext.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating layout record.");
+#if TELEMETRY
+                WarfareModule.RecordActivityException(dbActivity, ex);
+#endif
+            }
         }
 
         if (_hasSessionLock)
@@ -376,7 +525,22 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
         }
 
         await UniTask.SwitchToMainThread(CancellationToken.None);
-        await layout.InitializeLayoutAsync(record, CancellationToken.None);
+
+        {
+#if TELEMETRY
+            using Activity? initActivity = _activitySource.StartActivity(
+                "InitializeLayoutAsync",
+                ActivityKind.Internal,
+                activity?.Context ?? default
+            );
+#endif
+
+            await layout.InitializeLayoutAsync(record, CancellationToken.None
+#if TELEMETRY
+                , initActivity
+#endif
+            );
+        }
 
         if (_playerService is PlayerService playerServiceImpl)
         {
@@ -385,11 +549,19 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
 
         if (Level.isLoaded)
         {
-            await StartPendingLayoutAsync(playerJoinLockTaken);
+            await StartPendingLayoutAsync(playerJoinLockTaken
+#if TELEMETRY
+                , activity
+#endif
+            );
         }
     }
 
-    private async Task StartPendingLayoutAsync(bool playerJoinLockTaken)
+    private async Task StartPendingLayoutAsync(bool playerJoinLockTaken
+#if TELEMETRY
+        , Activity? activity
+#endif
+    )
     {
         Layout layout = _warfare.GetActiveLayout();
         try
@@ -399,20 +571,47 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
 
             foreach (ILayoutStartingListener listener in listeners)
             {
+#if TELEMETRY
+                using Activity? hostActivity = _activitySource.CreateActivity(
+                    $"Invoke ILayoutStartingListener for {Accessor.ExceptionFormatter.Format(listener.GetType())}",
+                    ActivityKind.Internal,
+                    parentContext: activity?.Context ?? default
+                );
+#endif
                 try
                 {
                     if (!GameThread.IsCurrent)
-                        await UniTask.SwitchToMainThread(CancellationToken.None);
+                    {
+#if TELEMETRY
+                        hostActivity?.AddEvent(new ActivityEvent("Switch to main thread."));
+#endif
+                        await UniTask.SwitchToMainThread();
+                    }
 
+#if TELEMETRY
+                    hostActivity?.Start();
+                    Activity.Current = hostActivity;
+#endif
                     await listener.HandleLayoutStartingAsync(layout, CancellationToken.None);
+#if TELEMETRY
+                    hostActivity?.Stop();
+                    hostActivity?.SetStatus(ActivityStatusCode.Ok);
+#endif
                 }
                 catch (Exception ex)
                 {
+#if TELEMETRY
+                    WarfareModule.RecordActivityException(hostActivity, ex);
+#endif
                     _logger.LogError(ex, "Error hosting ILayoutStartingListener {0} for layout {1}.", listener.GetType(), layout);
                 }
             }
 
-            await layout.BeginLayoutAsync(CancellationToken.None);
+            await layout.BeginLayoutAsync(CancellationToken.None
+#if TELEMETRY
+                , activity
+#endif
+            );
 
             if (playerJoinLockTaken && _hasPlayerLock)
             {
@@ -917,7 +1116,11 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
     /// </summary>
     /// <exception cref="OperationCanceledException"/>
     /// <exception cref="Exception"/>
-    internal async UniTask HostLayoutAsync(Layout layout, CancellationToken token)
+    internal async UniTask HostLayoutAsync(Layout layout, CancellationToken token
+#if TELEMETRY
+        , Activity? activity
+#endif
+    )
     {
         // start any services implementing ILayoutHostedService
         List<ILayoutHostedService> hostedServices = layout.ServiceProvider
@@ -929,12 +1132,36 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
         int errIndex = -1;
         for (int i = 0; i < hostedServices.Count; ++i)
         {
+            ILayoutHostedService hostedService = hostedServices[i];
+
+#if TELEMETRY
+            using Activity? hostActivity = _activitySource.CreateActivity(
+                $"Host {Accessor.ExceptionFormatter.Format(hostedService.GetType())}",
+                ActivityKind.Internal,
+                parentContext: activity?.Context ?? default
+            );
+#endif
             try
             {
                 token.ThrowIfCancellationRequested();
-                await UniTask.SwitchToMainThread(token);
-                _logger.LogTrace($"Hosting {hostedServices[i].GetType()}.");
-                await hostedServices[i].StartAsync(token);
+                if (!GameThread.IsCurrent)
+                {
+#if TELEMETRY
+                    hostActivity?.AddEvent(new ActivityEvent("Switch to main thread."));
+#endif
+                    await UniTask.SwitchToMainThread(token);
+                }
+
+#if TELEMETRY
+                hostActivity?.Start();
+                Activity.Current = hostActivity;
+#endif
+                _logger.LogTrace($"Hosting {hostedService.GetType()}.");
+                await hostedService.StartAsync(token);
+#if TELEMETRY
+                hostActivity?.Stop();
+                hostActivity?.SetStatus(ActivityStatusCode.Ok);
+#endif
                 continue;
             }
             catch (OperationCanceledException ex) when (token.IsCancellationRequested)
@@ -942,12 +1169,18 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
                 _logger.LogWarning("Layout {0} canceled.", layout);
                 errIndex = i;
                 thrownException = ex;
+#if TELEMETRY
+                WarfareModule.RecordActivityCancelled(hostActivity);
+#endif
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error hosting service {0} in layout {1}.", hostedServices[i].GetType(), layout);
+                _logger.LogError(ex, "Error hosting service {0} in layout {1}.", hostedService.GetType(), layout);
                 errIndex = i;
                 thrownException = ex;
+#if TELEMETRY
+                WarfareModule.RecordActivityException(hostActivity, ex);
+#endif
             }
 
             break;
@@ -957,8 +1190,17 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
         if (errIndex == -1)
         {
             layout.LayoutStats.StartTimestamp = DateTimeOffset.UtcNow;
-            _dbContext.Update(layout.LayoutStats);
-            await _dbContext.SaveChangesAsync(CancellationToken.None);
+            {
+#if TELEMETRY
+                using Activity? tempActivity = _activitySource.CreateActivity(
+                    "Update game record",
+                    ActivityKind.Internal,
+                    parentContext: activity?.Context ?? default
+                );
+#endif
+                _dbContext.Update(layout.LayoutStats);
+                await _dbContext.SaveChangesAsync(CancellationToken.None);
+            }
 
             await UniTask.SwitchToMainThread(token);
 
@@ -971,46 +1213,39 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
             }
 
             _logger.LogDebug("Layout {0} hosted.", layout);
+#if TELEMETRY
+            activity?.SetStatus(ActivityStatusCode.Ok);
+            activity?.Stop();
+#endif
             return;
         }
         
         await UniTask.SwitchToMainThread();
 
+#if TELEMETRY
+        activity?.SetStatus(ActivityStatusCode.Error, "A service failed to host.");
+#endif
         if (!layout.UnloadedHostedServices)
         {
-            UniTask[] tasks = new UniTask[errIndex];
-            for (int i = errIndex - 1; i >= 0; --i)
-            {
-                ILayoutHostedService hostedService = hostedServices[i];
-                try
-                {
-                    _logger.LogTrace($"Unhosting {hostedServices[i].GetType()}.");
-                    tasks[i] = hostedService.StopAsync(CancellationToken.None).Preserve();
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error stopping service {0} in layout {1}.", hostedServices[i].GetType(), layout);
-                }
-            }
-
-            layout.UnloadedHostedServices = true;
-
-            try
-            {
-                await UniTask.WhenAll(tasks);
-            }
-            catch
-            {
-                await UniTask.SwitchToMainThread();
-                _logger.LogError("Errors encountered while ending layout {0}:", layout);
-                FormattingUtility.PrintTaskErrors(_logger, tasks, hostedServices);
-            }
+            await UnhostServices(hostedServices, layout, errIndex - 1, token
+#if TELEMETRY
+                , activity
+#endif
+            );
         }
 
-        await layout.EndLayoutAsync(CancellationToken.None);
+        await layout.EndLayoutAsync(CancellationToken.None
+#if TELEMETRY
+            , activity
+#endif
+        );
 
         if (thrownException is OperationCanceledException && token.IsCancellationRequested)
             ExceptionDispatchInfo.Capture(thrownException).Throw();
+
+#if TELEMETRY
+        activity?.Stop();
+#endif
 
         throw new Exception($"Failed to load layout {layout}.", thrownException);
     }
@@ -1018,10 +1253,21 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
     /// <summary>
     /// Stop hosting a layout, stopping all <see cref="ILayoutHostedService"/> services. Should only be called from <see cref="Layout.EndLayoutAsync"/>.
     /// </summary>
-    internal async UniTask UnhostLayoutAsync(Layout layout, CancellationToken token)
+    internal async UniTask UnhostLayoutAsync(Layout layout, CancellationToken token
+#if TELEMETRY
+        , Activity? activity
+#endif
+    )
     {
         if (layout.WasStarted)
         {
+#if TELEMETRY
+            using Activity? tempActivity = _activitySource.StartActivity(
+                "Save layout stats",
+                ActivityKind.Internal,
+                activity?.Context ?? default
+            );
+#endif
             layout.LayoutStats.EndTimestamp ??= DateTimeOffset.UtcNow;
             if (layout.Data.TryGetValue(KnownLayoutDataKeys.WinnerTeam, out object winner) && winner is Team team)
             {
@@ -1043,25 +1289,58 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
             .OrderBy(x => x.GetType().GetPriority())
             .ToList();
 
-        UniTask[] tasks = new UniTask[hostedServices.Count];
-        for (int i = 0; i < tasks.Length; ++i)
+        await UnhostServices(hostedServices, layout, hostedServices.Count - 1, token
+#if TELEMETRY
+            , activity
+#endif
+        );
+
+        _logger.LogDebug("Unhosted layout.");
+    }
+
+    private async UniTask UnhostServices(List<ILayoutHostedService> hostedServices, Layout layout, int startIndex, CancellationToken token
+#if TELEMETRY
+        , Activity? activity
+#endif
+    )
+    {
+        UnhostingTask[] tasks = new UnhostingTask[startIndex + 1];
+        for (int i = startIndex; i >= 0; --i)
         {
+            ILayoutHostedService hostedService = hostedServices[i];
+#if TELEMETRY
+            Activity? tempActivity = _activitySource.StartActivity(
+                $"Unhost {Accessor.ExceptionFormatter.Format(hostedService.GetType())}",
+                ActivityKind.Internal,
+                activity?.Context ?? default
+            );
+#endif
             try
             {
-                _logger.LogTrace($"Unhosting {hostedServices[i].GetType()}.");
-                tasks[i] = hostedServices[i].StopAsync(CancellationToken.None).Preserve();
+                _logger.LogTrace($"Unhosting {hostedService.GetType()}.");
+                tasks[i] = hostedService.StopAsync(CancellationToken.None).Preserve()
+#if TELEMETRY
+                        .ContinueWith(() =>
+                        {
+                            tempActivity?.Stop();
+                        })
+#endif
+                    ;
             }
             catch (Exception ex)
             {
                 tasks[i] = UniTask.FromException(ex);
             }
+#if TELEMETRY
+            tasks[i].Activity = tempActivity;
+#endif
         }
 
         layout.UnloadedHostedServices = true;
 
         try
         {
-            Task waitTask = UniTask.WhenAll(tasks).AsTask();
+            Task waitTask = UniTask.WhenAll(tasks.Select(x => x.Task)).AsTask();
             await Task.WhenAny(waitTask, Task.Delay(15000, token));
             if (!waitTask.IsCompleted)
             {
@@ -1074,8 +1353,13 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
             _logger.LogError("Errors encountered while ending layout {0}:", layout);
             FormattingUtility.PrintTaskErrors(_logger, tasks, hostedServices);
         }
-
-        _logger.LogDebug("Unhosted layout.");
+        finally
+        {
+            for (int i = 0; i < tasks.Length; ++i)
+            {
+                tasks[i].Dispose();
+            }
+        }
     }
 
     void IEventListener<PlayerJoined>.HandleEvent(PlayerJoined e, IServiceProvider serviceProvider)

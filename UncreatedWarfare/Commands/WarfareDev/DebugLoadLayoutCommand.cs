@@ -6,13 +6,13 @@ using Uncreated.Warfare.Layouts;
 namespace Uncreated.Warfare.Commands;
 
 [Command("layout", "gamemode"), SubCommandOf(typeof(WarfareDevCommand))]
-internal sealed class DebugLoadLayout : IExecutableCommand
+internal sealed class DebugLoadLayoutCommand : IExecutableCommand
 {
     private readonly LayoutFactory _layoutFactory;
 
     public required CommandContext Context { get; init; }
 
-    public DebugLoadLayout(LayoutFactory layoutFactory)
+    public DebugLoadLayoutCommand(LayoutFactory layoutFactory)
     {
         _layoutFactory = layoutFactory;
     }

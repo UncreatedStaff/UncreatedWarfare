@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.List;
 
@@ -11,10 +10,15 @@ namespace Uncreated.Warfare.Players.Management;
 public interface IPlayerService
 {
     /// <summary>
+    /// Whether or not the server has <c>0</c> players. Threadsafe (kinda).
+    /// </summary>
+    bool IsEmpty { get; }
+
+    /// <summary>
     /// List of all online players. Not to be accessed from any thread other than the game thread.
     /// </summary>
     /// <exception cref="GameThreadException"/>
-    ReadOnlyTrackingList<WarfarePlayer> OnlinePlayers { get; }
+    ReadOnlyTrackingList <WarfarePlayer> OnlinePlayers { get; }
 
     /// <summary>
     /// Create an <see cref="IPlayer"/> instance from a possibly offline player and fetch their usernames for display.

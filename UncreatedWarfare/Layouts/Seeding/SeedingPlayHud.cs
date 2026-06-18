@@ -87,9 +87,11 @@ internal class SeedingPlayHud : UnturnedUI, IEventListener<PlayerJoined>, IHudUI
 
                 ClearFromAllPlayers();
                 _isEnabled = false;
-                _hudManager?.SetAllIsPluginVoting(false);
+                _hudManager.SetAllIsPluginVoting(false);
                 return;
         }
+
+        _hudManager.SetAllIsPluginVoting(true);
 
         // must send separately if a player has HUD hidden
         string layoutName = _module.GetActiveLayout().LayoutInfo.DisplayName;
@@ -162,10 +164,11 @@ internal class SeedingPlayHud : UnturnedUI, IEventListener<PlayerJoined>, IHudUI
 
             default:
                 ClearFromPlayer(player.Connection);
-                _hudManager?.SetIsPluginVoting(player, false);
+                _hudManager.SetIsPluginVoting(player, false);
                 return;
         }
 
+        _hudManager.SetIsPluginVoting(player, true);
         string layoutName = _module.GetActiveLayout().LayoutInfo.DisplayName;
         SendToPlayer(player.Connection, layoutName, desc);
 

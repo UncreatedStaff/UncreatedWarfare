@@ -186,21 +186,32 @@ internal class SeedingPlayerCountMonitor :
         {
             if (!IsSeeding)
             {
+                _logger.LogTrace("Current layout is a seeding layout. Starting seeding...");
                 updateUi = false;
-                StartSeeding();
+                MoveToSeedingState();
                 CheckShouldAwaitStart();
             }
-        }
-        else if (IsSeeding)
-        {
-            IsSeeding = false;
-            _nextVotePlayerThreshold = Rules.VotePlayerThreshold;
-            CheckShouldStartVote();
-            UpdateGlobals(false);
+            else
+            {
+                _logger.LogTrace("Current layout is a seeding layout. Seeding already started.");
+            }
         }
         else
         {
-            return UniTask.CompletedTask;
+            _nextVotePlayerThreshold = Rules.VotePlayerThreshold;
+            if (IsSeeding)
+            {
+                _logger.LogTrace("Current layout is not a seeding layout. Ending seeding...");
+                IsSeeding = false;
+                UpdateGlobals(false);
+            }
+            else
+            {
+                _logger.LogTrace("Current layout is a seeding layout. Seeding already ended.");
+                updateUi = false;
+            }
+            
+            CheckShouldStartVote();
         }
 
         if (updateUi || IsAwaitingStart)
@@ -301,11 +312,13 @@ internal class SeedingPlayerCountMonitor :
         AwaitDoneTime = DateTime.UtcNow + countdown;
     }
 
-    private void CheckShouldStartVote()
+    private void CheckShouldStartVote(bool playerLeaving = false)
     {
+        int playerCount = Provider.clients.Count - (playerLeaving ? 1 : 0);
+
         if (IsSeeding)
         {
-            if (IsAwaitingStart && Provider.clients.Count < Rules.StartPlayerThreshold - 1)
+            if (IsAwaitingStart && playerCount < Rules.StartPlayerThreshold - 1)
             {
                 Interlocked.Exchange(ref _awaitStartTicker, null)?.Dispose();
             }
@@ -313,8 +326,9 @@ internal class SeedingPlayerCountMonitor :
             return;
         }
 
-        if (Provider.clients.Count <= 1)
+        if (playerCount == 0)
         {
+            _logger.LogTrace("Server is empty, reverting to seeding mode.");
             if (VoteManager.IsVoting)
                 _ = VoteManager.EndVoteAsync(cancelled: true);
 
@@ -322,8 +336,9 @@ internal class SeedingPlayerCountMonitor :
             return;
         }
 
-        if (!(_isStartingVote || VoteManager.IsVoting) && Provider.clients.Count < _nextVotePlayerThreshold)
+        if (!(_isStartingVote || VoteManager.IsVoting) && playerCount <= _nextVotePlayerThreshold)
         {
+            _logger.LogTrace("Server has too few players, starting vote.");
             StartVote();
         }
     }
@@ -334,7 +349,7 @@ internal class SeedingPlayerCountMonitor :
         if (!Rules.Enabled)
             return;
 
-        CheckShouldStartVote();
+        CheckShouldStartVote(playerLeaving: true);
         if (IsSeeding)
         {
             _playHud?.UpdateStage();
@@ -422,10 +437,11 @@ internal class SeedingPlayerCountMonitor :
         _ = _layoutFactory.StartNextLayout();
     }
 
-    private void StartSeeding(bool delayStart = false)
+    [MemberNotNull(nameof(_playHud))]
+    private void MoveToSeedingState()
     {
         if (IsSeeding)
-            return;
+            throw new InvalidOperationException("Already seeding.");
 
         _logger.LogInformation("Starting seeding for PC.");
         UpdateGlobals(true);
@@ -438,6 +454,14 @@ internal class SeedingPlayerCountMonitor :
         {
             _playHud.UpdateStage();
         }
+    }
+
+    private void StartSeeding(bool delayStart = false)
+    {
+        if (IsSeeding)
+            return;
+
+        MoveToSeedingState();
 
         if (_layoutFactory.NextLayout == null)
         {

@@ -51,21 +51,20 @@ internal class SeedingVoteHud : VoteUIDisplay<VoteUIDisplayData>
             string voteNoThisPlayer, voteYesThisPlayer;
 
             if (voteState == PlayerVoteState.Yes)
-                voteYesThisPlayer = voteYesSelected ??= _translations.SeedingVoteYes.Translate($"<#ccff99>{noVotes}</color>", in set);
+                voteYesThisPlayer = voteYesSelected ??= _translations.SeedingVoteYes.Translate($"<#ccff99>{yesVotes}</color>", in set);
             else
-                voteYesThisPlayer = voteYesUnselected ??= _translations.SeedingVoteYes.Translate($"<#ababab>{noVotes}</color>", in set);
+                voteYesThisPlayer = voteYesUnselected ??= _translations.SeedingVoteYes.Translate($"<#ababab>{yesVotes}</color>", in set);
 
             if (voteState == PlayerVoteState.No)
-                voteNoThisPlayer = voteNoSelected ??= _translations.SeedingVoteNo.Translate($"<#ccff99>{yesVotes}</color>", in set);
+                voteNoThisPlayer = voteNoSelected ??= _translations.SeedingVoteNo.Translate($"<#ccff99>{noVotes}</color>", in set);
             else
-                voteNoThisPlayer = voteNoUnselected ??= _translations.SeedingVoteNo.Translate($"<#ababab>{yesVotes}</color>", in set);
+                voteNoThisPlayer = voteNoUnselected ??= _translations.SeedingVoteNo.Translate($"<#ababab>{noVotes}</color>", in set);
 
             ITransportConnection c = set.Next.Connection;
             if (!data.HasVoteUI)
             {
                 SendToPlayer(c, title, _layout, voteYesThisPlayer, voteNoThisPlayer);
                 data.HasVoteUI = true;
-                _hudManager?.SetIsPluginVoting(set.Next, true);
             }
             else
             {
@@ -76,11 +75,13 @@ internal class SeedingVoteHud : VoteUIDisplay<VoteUIDisplayData>
             // have to resend since they have plugin keys...
             Yes.SetText(c, voteYesThisPlayer);
             No.SetText(c, voteNoThisPlayer);
+
+            _hudManager?.SetIsPluginVoting(set.Next, true);
         }
     }
 
     /// <inheritdoc />
-    protected override void OnCleared(WarfarePlayer player, VoteUIDisplayData data)
+    protected override void OnCleared(WarfarePlayer player, VoteUIDisplayData? data)
     {
         _hudManager?.SetIsPluginVoting(player, false);
     }

@@ -1,11 +1,10 @@
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
-using Uncreated.Warfare.Translations.ValueFormatters;
 
 namespace Uncreated.Warfare.Commands;
 
-internal sealed class VehicleTranslations : PropertiesTranslationCollection
+public sealed class VehicleTranslations : PropertiesTranslationCollection
 {
     protected override string FileName => "Commands/Vehicle";
 
@@ -38,4 +37,13 @@ internal sealed class VehicleTranslations : PropertiesTranslationCollection
 
     [TranslationData("Sent to the calling player when a player is kicked from a vehicle.")]
     public readonly Translation<VehicleAsset, IPlayer, int> VehicleKickedPlayer = new Translation<VehicleAsset, IPlayer, int>("<#d1bda7>Kicked {1} out of seat <#ddd>#{2}</color> in your <#ccc>{0}</color>.", arg1Fmt: WarfarePlayer.FormatColoredNickName);
+
+    [TranslationData("Line on the vehicle HUD showing how many countermeasures (flares) the vehicle has left.")]
+    public readonly Translation<int> VehicleHUDFlareCount = new Translation<int>("FLARES: {0}", TranslationOptions.UnityUI);
+
+    [TranslationData("Line on the vehicle HUD that is shown when a missile is locked onto the current aircraft. Shown for all players.")]
+    public readonly Translation VehicleHUDLockedOnWarning = new Translation("LASER WARNING", TranslationOptions.UnityUI);
+
+    [TranslationData("Line on the vehicle HUD that is shown when a missile is locked onto the current aircraft in addition to the general warning. Shown only for the driver.")]
+    public readonly Translation VehicleHUDLockedOnWarningDriver = new Translation("PRESS '<b><color=#ffffff><plugin_2/></color></b>' FOR FLARES", TranslationOptions.UnityUI);
 }

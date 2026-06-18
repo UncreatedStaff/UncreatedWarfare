@@ -168,40 +168,48 @@ public class PointsRewardsEvents :
 
             PlayerContributionTracker.ContributorEnumerator contributers = e.Vehicle.DamageTracker.Contributors;
             List<Task> tasks = new List<Task>(contributers.Count);
-            foreach (CSteamID playerId in contributers)
+            using (PlayerContributionTracker.ContributorEnumerator enumerator = contributers.GetEnumerator())
             {
-                float contributionPercentage = e.Vehicle.DamageTracker.GetDamageContributionPercentage(playerId, DateTime.Now.Subtract(TimeSpan.FromMinutes(3)));
-                
-                WarfarePlayer? contributor = playerService.GetOnlinePlayerOrNull(playerId);
-                if (contributor == null)
-                    continue;
-
-                ResolvedEventInfo resolvedEvent;
-
-                if (contributor.Equals(e.Instigator))
+                while (enumerator.MoveNext())
                 {
-                    if (ShouldAwardDriverAssist(e.Instigator, serviceProvider, out WarfarePlayer? driver))
+                    if (enumerator.CurrentIsFriendly)
+                        continue;
+
+                    CSteamID playerId = enumerator.Current;
+                    float contributionPercentage = e.Vehicle.DamageTracker.GetDamageContributionPercentage(playerId, false, DateTime.Now.Subtract(TimeSpan.FromMinutes(3)));
+
+                    WarfarePlayer? contributor = playerService.GetOnlinePlayerOrNull(playerId);
+                    if (contributor == null)
+                        continue;
+
+                    ResolvedEventInfo resolvedEvent;
+
+                    if (contributor.Equals(e.Instigator))
                     {
-                        ResolvedEventInfo driverAssistEvent = new ResolvedEventInfo(@event, contributionPercentage * DriverAssistScaleFactor);
+                        if (ShouldAwardDriverAssist(e.Instigator, serviceProvider, out WarfarePlayer? driver))
+                        {
+                            ResolvedEventInfo driverAssistEvent = new ResolvedEventInfo(@event, contributionPercentage * DriverAssistScaleFactor);
 
-                        Task driverAssistTask = _points.ApplyEvent(
-                            driver.Steam64,
-                            driver.Team.Faction.PrimaryKey,
-                            driverAssistEvent.WithTranslation(_translations.XPToastKillDriverAssist, driver), token);
-                        tasks.Add(driverAssistTask);
+                            Task driverAssistTask = _points.ApplyEvent(
+                                driver.Steam64,
+                                driver.Team.Faction.PrimaryKey,
+                                driverAssistEvent.WithTranslation(_translations.XPToastKillDriverAssist, driver), token);
+                            tasks.Add(driverAssistTask);
+                        }
+                        resolvedEvent = new ResolvedEventInfo(@event, contributionPercentage);
                     }
-                    resolvedEvent = new ResolvedEventInfo(@event, contributionPercentage);
-                }
-                else if (contributionPercentage >= 0.15)
-                {
-                    resolvedEvent = new ResolvedEventInfo(@event, contributionPercentage);
-                }
-                else
-                    continue;
+                    else if (contributionPercentage >= 0.15)
+                    {
+                        resolvedEvent = new ResolvedEventInfo(@event, contributionPercentage);
+                    }
+                    else
+                        continue;
 
-                Task task = _points.ApplyEvent(contributor.Steam64, faction, resolvedEvent.WithTranslation(translation, e.Vehicle.Info.Type, contributor), token);
-                tasks.Add(task);
+                    Task task = _points.ApplyEvent(contributor.Steam64, faction, resolvedEvent.WithTranslation(translation, e.Vehicle.Info.Type, contributor), token);
+                    tasks.Add(task);
+                }
             }
+
             await Task.WhenAll(tasks);
         }
     }
@@ -315,16 +323,17 @@ public class PointsRewardsEvents :
             float friendlyDamage = e.Event.Buildable.MaxHealth - buildableFob.DamageTracker.TotalWorkDone;
             if (friendlyDamage / e.Event.Buildable.MaxHealth < 0.35f)
             {
-                Console.WriteLine($"Not enough, dmg: {friendlyDamage}");
                 return;
             }
+
             @event = _points.GetEvent("FriendlyFobDestroyed");
             translation = _translations.XPToastFriendlyFOBDestroyed;
         }
         else
         {
-            if (buildableFob.DamageTracker.GetDamageContributionPercentage(instigator.Steam64) < 0.10f)
+            if (buildableFob.DamageTracker.GetDamageContributionPercentage(instigator.Steam64, false) < 0.10f)
                 return;
+
             @event = _points.GetEvent("EnemyFobDestroyed");
             translation = _translations.XPToastFOBDestroyed;
         }
@@ -403,7 +412,7 @@ public class PointsRewardsEvents :
             if (player == null)
                 continue;
 
-            float scaleFactor = e.Shovelable.Builders.GetContributionPercentage(player.Steam64);
+            float scaleFactor = e.Shovelable.Builders.GetContributionPercentage(player.Steam64, true);
 
             ResolvedEventInfo reward = new ResolvedEventInfo(@event, scaleFactor);
 

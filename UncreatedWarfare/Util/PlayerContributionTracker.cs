@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 
 namespace Uncreated.Warfare.Util;
 
@@ -35,28 +34,28 @@ public class PlayerContributionTracker : IEnumerable<PlayerWork>
     }
 
     /// <returns>The percentage of the work <paramref name="player"/> has done (from 0 to 1).</returns>
-    public float GetContributionPercentage(CSteamID player)
+    public float GetContributionPercentage(CSteamID player, bool isFriendly)
     {
-        float contribution = GetContribution(player, out float total);
+        float contribution = GetContribution(player, isFriendly, out float total);
         return total != 0 ? contribution / total : 0;
     }
 
-    public float GetContributionPercentage(CSteamID player, DateTime after)
+    public float GetContributionPercentage(CSteamID player, bool isFriendly, DateTime after)
     {
-        float contribution = GetContribution(player, after, out float total);
+        float contribution = GetContribution(player, isFriendly, after, out float total);
         return total != 0 ? contribution / total : 0;
     }
 
     /// <returns>
     /// A <see cref="PlayerWork"/> indicating how much work the player <paramref name="player"/> has contributed.
     /// </returns>
-    public float GetContribution(CSteamID player, out float total)
+    public float GetContribution(CSteamID player, bool isFriendly, out float total)
     {
         total = _totalWorkDone;
         for (int i = 0; i < _workCount; ++i)
         {
             ref PlayerWork w = ref _work[i];
-            if (w.PlayerId.m_SteamID != player.m_SteamID)
+            if (w.PlayerId.m_SteamID != player.m_SteamID && w.IsFriendly == isFriendly)
                 continue;
             
             lock (_work)
@@ -71,7 +70,7 @@ public class PlayerContributionTracker : IEnumerable<PlayerWork>
     /// <returns>
     /// A <see cref="PlayerWork"/> indicating how much work the player <paramref name="player"/> has contributed.
     /// </returns>
-    public float GetContribution(CSteamID player, DateTime after, out float total)
+    public float GetContribution(CSteamID player, bool isFriendly, DateTime after, out float total)
     {
         after = after.ToUniversalTime();
         float totalPoints = 0;
@@ -85,7 +84,7 @@ public class PlayerContributionTracker : IEnumerable<PlayerWork>
                     continue;
 
                 totalPoints += w.WorkPoints;
-                if (w.PlayerId.m_SteamID == player.m_SteamID)
+                if (w.PlayerId.m_SteamID == player.m_SteamID && w.IsFriendly == isFriendly)
                     points = w.WorkPoints;
                 break;
             }
@@ -98,7 +97,7 @@ public class PlayerContributionTracker : IEnumerable<PlayerWork>
     /// <summary>
     /// Increment a player's work points by <paramref name="workPoints"/>.
     /// </summary>
-    public void RecordWork(CSteamID player, float workPoints, DateTime? timePerformed = null)
+    public void RecordWork(CSteamID player, bool isFriendly, float workPoints, DateTime? timePerformed = null)
     {
         DateTime time = timePerformed?.ToUniversalTime() ?? DateTime.UtcNow;
         lock (_work)
@@ -108,7 +107,7 @@ public class PlayerContributionTracker : IEnumerable<PlayerWork>
             for (int i = 0; i < _workCount; ++i)
             {
                 ref PlayerWork w = ref _work[i];
-                if (w.PlayerId.m_SteamID != player.m_SteamID)
+                if (w.PlayerId.m_SteamID != player.m_SteamID && w.IsFriendly == isFriendly)
                     continue;
 
                 w.WorkPoints += workPoints;
@@ -122,13 +121,13 @@ public class PlayerContributionTracker : IEnumerable<PlayerWork>
                 lock (newWork)
                 {
                     _work = newWork;
-                    _work[_workCount] = new PlayerWork(player, workPoints, time);
+                    _work[_workCount] = new PlayerWork(player, isFriendly, workPoints, time);
                     ++_workCount;
                     return;
                 }
             }
 
-            _work[_workCount] = new PlayerWork(player, workPoints, time);
+            _work[_workCount] = new PlayerWork(player, isFriendly, workPoints, time);
             ++_workCount;
         }
     }
@@ -149,6 +148,8 @@ public class PlayerContributionTracker : IEnumerable<PlayerWork>
         /// <inheritdoc />
         public CSteamID Current { get; private set; }
 
+        public bool CurrentIsFriendly { get; private set; }
+
         public ContributorEnumerator(PlayerContributionTracker tracker)
         {
             _tracker = tracker;
@@ -167,6 +168,7 @@ public class PlayerContributionTracker : IEnumerable<PlayerWork>
             } while (work.PlayerId.m_SteamID == 0);
 
             Current = work.PlayerId;
+            CurrentIsFriendly = work.IsFriendly;
             return true;
         }
 
@@ -231,18 +233,21 @@ public class PlayerContributionTracker : IEnumerable<PlayerWork>
 public struct PlayerWork
 {
     public readonly CSteamID PlayerId;
+    public readonly bool IsFriendly;
     public float WorkPoints;
     public DateTime LastUpdated;
-    public PlayerWork(CSteamID playerId, float ticks)
+    public PlayerWork(CSteamID playerId, bool isFriendly, float ticks)
     {
         PlayerId = playerId;
         WorkPoints = ticks;
-        LastUpdated = DateTime.Now;
+        LastUpdated = DateTime.UtcNow;
+        IsFriendly = isFriendly;
     }
-    public PlayerWork(CSteamID steam64, float workPoints, DateTime lastUpdated)
+    public PlayerWork(CSteamID steam64, bool isFriendly, float workPoints, DateTime lastUpdated)
     {
         PlayerId = steam64;
         WorkPoints = workPoints;
         LastUpdated = lastUpdated;
+        IsFriendly = isFriendly;
     }
 }
