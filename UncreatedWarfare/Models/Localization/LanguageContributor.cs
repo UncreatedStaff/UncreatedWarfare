@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 using Uncreated.Warfare.Models.Users;
 
 namespace Uncreated.Warfare.Models.Localization;
@@ -12,7 +13,7 @@ public class LanguageContributor
     [Column("pk")]
     public uint Id { get; set; }
 
-    [Required]
+    [Required, JsonIgnore]
     public LanguageInfo Language { get; set; } = null!;
 
     [Required]
@@ -25,6 +26,6 @@ public class LanguageContributor
     [Column("Contributor")]
     public ulong Contributor { get; set; }
 
-    [Required]
+    [Required, JsonIgnore]
     public WarfareUserData ContributorData { get; set; }
 }

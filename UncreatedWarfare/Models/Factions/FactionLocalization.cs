@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace Uncreated.Warfare.Models.Factions;
 
@@ -11,7 +12,7 @@ public class FactionLocalization
     [Column("pk")]
     public uint Id { get; set; }
 
-    [Required]
+    [Required, JsonIgnore]
     public Faction Faction { get; set; } = null!;
 
     [Required]
@@ -19,7 +20,7 @@ public class FactionLocalization
     [ForeignKey(nameof(Faction))]
     public uint FactionId { get; set; }
 
-    [Required]
+    [Required, JsonIgnore]
     public Localization.LanguageInfo Language { get; set; } = null!;
 
     [Required]

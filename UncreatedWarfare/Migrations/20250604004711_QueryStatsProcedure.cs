@@ -72,7 +72,7 @@ namespace Uncreated.Warfare.Migrations
                 	# Suicides
                 	`Suicides` = (
                 		SELECT COUNT(*) FROM stats_deaths k
-                		LEFT JOIN stats_sessions s ON `k`.`InstigatorSession` = `s`.`SessionId`
+                		LEFT JOIN stats_sessions s ON `k`.`Session` = `s`.`SessionId`
                 		WHERE `IsSuicide` = 1 AND `s`.`Steam64` = player AND `s`.`Season` = season AND `s`.`Faction` <=> `o`.`Faction`
                 	),
                 	# Revives

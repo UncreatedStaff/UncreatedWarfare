@@ -18,7 +18,7 @@ public class KitModel
     [Column("pk")]
     public uint PrimaryKey { get; set; }
 
-    [JsonIgnore]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Faction? Faction { get; set; }
 
     [ForeignKey(nameof(Faction))]

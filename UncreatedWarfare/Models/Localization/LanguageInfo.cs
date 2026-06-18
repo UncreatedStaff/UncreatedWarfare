@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Globalization;
@@ -30,10 +29,10 @@ public class LanguageInfo : ITranslationArgument, IEquatable<LanguageInfo>
     [MaxLength(64)]
     public string DisplayName { get; set; } = null!;
 
-    [MaxLength(64)]
+    [MaxLength(64), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? NativeName { get; set; }
 
-    [MaxLength(16)]
+    [MaxLength(16), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? DefaultCultureCode { get; set; }
 
     public bool HasTranslationSupport { get; set; }
@@ -42,10 +41,10 @@ public class LanguageInfo : ITranslationArgument, IEquatable<LanguageInfo>
 
     public bool RequiresIMGUI { get; set; }
 
-    [Column(TypeName = "char(5)")]
+    [Column(TypeName = "char(5)"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? FallbackTranslationLanguageCode { get; set; }
 
-    [MaxLength(32)]
+    [MaxLength(32), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? SteamLanguageName { get; set; }
 
     public IList<LanguageAlias> Aliases { get; set; } = null!;

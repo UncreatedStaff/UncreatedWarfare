@@ -1,10 +1,14 @@
 using System;
 using System.Globalization;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Uncreated.Framework.UI;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Models.Assets;
+
+[JsonConverter(typeof(UnturnedAssetReferenceJsonConverter))]
 public readonly struct UnturnedAssetReference
 {
     public Guid Guid { get; }
@@ -163,5 +167,50 @@ public readonly struct UnturnedAssetReference
     public override string ToString()
     {
         return Id != 0 ? Id.ToString(CultureInfo.InvariantCulture) : Guid.ToString("N", CultureInfo.InvariantCulture);
+    }
+}
+
+public sealed class UnturnedAssetReferenceJsonConverter : JsonConverter<UnturnedAssetReference>
+{
+    public override UnturnedAssetReference Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        switch (reader.TokenType)
+        {
+            case JsonTokenType.Number:
+                ushort id = reader.GetUInt16();
+                return new UnturnedAssetReference(id);
+
+            case JsonTokenType.Null:
+                return new UnturnedAssetReference(0);
+
+            case JsonTokenType.String:
+                if (reader.TryGetGuid(out Guid guid))
+                {
+                    return new UnturnedAssetReference(guid);
+                }
+
+                string str = reader.GetString()!;
+                if (UnturnedAssetReference.TryParse(str, out UnturnedAssetReference aref))
+                {
+                    return aref;
+                }
+
+                throw new JsonException("Couldn't parse UnturnedAssetReference.");
+
+            default:
+                throw new JsonException($"Unexpected token {reader.TokenType} parsing UnturnedAssetReference.");
+        }
+    }
+
+    public override void Write(Utf8JsonWriter writer, UnturnedAssetReference value, JsonSerializerOptions options)
+    {
+        if (value.Guid == Guid.Empty)
+        {
+            writer.WriteNumberValue(value.Id);
+        }
+        else
+        {
+            writer.WriteStringValue(value.Guid);
+        }
     }
 }

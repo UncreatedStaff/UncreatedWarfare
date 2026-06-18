@@ -1,6 +1,6 @@
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 using Uncreated.Warfare.Models.Kits;
 
 namespace Uncreated.Warfare.Models.Factions;
@@ -37,6 +37,7 @@ public class Faction
     [Required]
     public string HexColor { get; set; }
 
+    [JsonIgnore]
     public KitModel? UnarmedKit { get; set; }
 
     [ForeignKey(nameof(UnarmedKit))]

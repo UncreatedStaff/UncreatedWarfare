@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace Uncreated.Warfare.Models.Localization;
 
@@ -11,7 +12,7 @@ public class LanguageCulture
     [Column("pk")]
     public uint Id { get; set; }
 
-    [Required]
+    [Required, JsonIgnore]
     public LanguageInfo Language { get; set; } = null!;
 
     [Required]
