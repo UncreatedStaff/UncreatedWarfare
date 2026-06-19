@@ -23,20 +23,26 @@ jobs:
         ref: 'master'
         
     - name: SetupDotNet
-      uses: actions/setup-dotnet@v4
+      uses: actions/setup-dotnet@v5
       with:
-        dotnet-version: '9.x.x'
+        dotnet-version: '10'
         
     - name: Build
       run: dotnet build "./UncreatedWarfare/UncreatedWarfare.csproj" --configuration Release "/p:Version=${{ inputs.version }};PackageReleaseNotes=${{ inputs.change_notes }};IsInGitHubActions=True"
     
     - name: Pack
       run: dotnet pack "./UncreatedWarfare/UncreatedWarfare.csproj" --configuration Release "/p:Version=${{ inputs.version }};PackageReleaseNotes=${{ inputs.change_notes }};IsInGitHubActions=True" --no-build --output .
+
+    - name: Login to NuGet
+      uses: NuGet/login@v1
+      id: login
+      with:
+        user: ${{ secrets.NUGET_TP_USER }}
     
-    - name: Push Packages
+    - name: Push NuGet Package
       run: dotnet nuget push *.nupkg --source https://api.nuget.org/v3/index.json --api-key ${NUGET_TOKEN}
       env:
-        NUGET_TOKEN: ${{ secrets.UNCREATED_ORG_NUGET }}
+        NUGET_TOKEN: ${{ steps.login.outputs.NUGET_API_KEY }}
         
   create_tag:
     runs-on: ubuntu-latest
