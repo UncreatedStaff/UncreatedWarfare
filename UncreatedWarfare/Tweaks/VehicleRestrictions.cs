@@ -8,21 +8,16 @@ using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Cooldowns;
 using Uncreated.Warfare.Translations;
-using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.Tweaks;
 
 internal sealed class VehicleRestrictions :
     IEventListener<EquipUseableRequested>,
-    IEventListener<ExitVehicleRequested>,
     IEventListener<EnterVehicleRequested>,
     IEventListener<VehicleSwapSeatRequested>,
     IEventListener<VehicleDespawned>
 {
-    private const float MaxHeightToExitVehicleDriver = 30f;
-    private const float MaxHeightToExitVehiclePassenger = 50f;
-
     private readonly IAssetLink<ItemGunAsset>[]? _whitelistedGuns;
     private readonly ChatService _chatService;
     private readonly PlayersTranslations _translations;
@@ -52,24 +47,6 @@ internal sealed class VehicleRestrictions :
             return;
 
         _chatService.Send(e.Player, _translations.ProhibitedEquipLauncherInVehicle);
-        e.Cancel();
-    }
-
-    /// <summary>
-    /// Prevent players from jumping out of aircrafts too high in the air.
-    /// </summary>
-    public void HandleEvent(ExitVehicleRequested e, IServiceProvider serviceProvider)
-    {
-        InteractableVehicle? vehicle = e.Player.UnturnedPlayer.movement.getVehicle();
-        if (vehicle == null || !vehicle.asset.engine.IsFlyingEngine())
-            return;
-
-        bool isDriving = e.Player.UnturnedPlayer.movement.getSeat() == 0;
-
-        if (TerrainUtility.GetDistanceToGround(e.Vehicle.Position) <= (isDriving ? MaxHeightToExitVehicleDriver : MaxHeightToExitVehiclePassenger))
-            return;
-
-        _chatService.Send(e.Player, _translations.VehicleTooHigh);
         e.Cancel();
     }
 

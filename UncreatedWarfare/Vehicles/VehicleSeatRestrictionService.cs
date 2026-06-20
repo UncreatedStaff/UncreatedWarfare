@@ -23,7 +23,8 @@ public class VehicleSeatRestrictionService :
     IEventListener<ExitVehicleRequested>
 {
 
-    public const float MaxAllowedHeightToExitVehicle = 10;
+    private const float MaxHeightToExitVehicleDriver = 30f;
+    private const float MaxHeightToExitVehiclePassenger = 50f;
 
     private readonly ChatService _chatService;
     private readonly VehicleTweaksTranslations _translations;
@@ -156,7 +157,7 @@ public class VehicleSeatRestrictionService :
         }
 
         // prevent abandoning driver's seat midair
-        if (fromSeat == 0 && !CanExitAircraftMidair(vehicle.Vehicle, vehicle.Info))
+        if (fromSeat == 0 && !CanExitAircraftMidair(vehicle.Vehicle, vehicle.Info, isDriver: true))
         {
             return new VehicleChangeSeatsResult(null, ChangeSeatsResult.AbandonMidAir);
         }
@@ -183,7 +184,7 @@ public class VehicleSeatRestrictionService :
             fromSeat = player.UnturnedPlayer.movement.getSeat();
 
         // prevent exiting aircraft midair
-        if (!CanExitAircraftMidair(vehicle.Vehicle, vehicle.Info))
+        if (!CanExitAircraftMidair(vehicle.Vehicle, vehicle.Info, isDriver: fromSeat == 0))
         {
             return ChangeSeatsResult.AbandonMidAir;
         }
@@ -411,12 +412,10 @@ public class VehicleSeatRestrictionService :
         return true;
     }
 
-    private static bool CanExitAircraftMidair(InteractableVehicle vehicle, WarfareVehicleInfo info)
+    private static bool CanExitAircraftMidair(InteractableVehicle vehicle, WarfareVehicleInfo info, bool isDriver)
     {
-        if (info.Type.IsAircraft() && TerrainUtility.GetDistanceToGround(vehicle.transform.position) > MaxAllowedHeightToExitVehicle)
-            return false;
-
-        return true;
+        float maxHeight = isDriver ? MaxHeightToExitVehicleDriver : MaxHeightToExitVehiclePassenger;
+        return !info.Type.IsAircraft() || TerrainUtility.GetDistanceToGround(vehicle.transform.position) <= maxHeight;
     }
 
     private static bool MaxAllowedCrewReached(InteractableVehicle vehicle, WarfareVehicleInfo info)

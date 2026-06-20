@@ -17,6 +17,9 @@ internal class TestPlayerService : IPlayerService, IDisposable
     public Dictionary<ulong, WarfarePlayer> Players { get; set; } = new Dictionary<ulong, WarfarePlayer>();
 
     /// <inheritdoc />
+    public bool IsEmpty => Players.Count == 0;
+
+    /// <inheritdoc />
     public ReadOnlyTrackingList<WarfarePlayer> OnlinePlayers => Players.Values.ToReadOnlyTrackingList();
 
     /// <inheritdoc />
