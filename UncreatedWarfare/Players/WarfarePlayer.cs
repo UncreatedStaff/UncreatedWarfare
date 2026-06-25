@@ -1,9 +1,7 @@
-using SDG.NetTransport;
+using DanielWillett.ReflectionTools;
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Diagnostics.CodeAnalysis;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Layouts.Teams;
@@ -31,7 +29,7 @@ namespace Uncreated.Warfare.Players;
 /// </summary>
 public interface IPlayer : ITranslationArgument
 {
-    public CSteamID Steam64 { get; }
+    CSteamID Steam64 { get; }
 }
 
 [CannotApplyEqualityOperator]
@@ -44,6 +42,12 @@ public class WarfarePlayer :
     IEquatable<WarfarePlayer>,
     ISpotter
 {
+    private static readonly InstanceSetter<IPlayerComponent, WarfarePlayer> SetPlayerComponentAction
+        = Accessor.GenerateInstancePropertySetter<IPlayerComponent, WarfarePlayer>(
+            nameof(IPlayerComponent.Player),
+            throwOnError: true
+        )!;
+
     private int _modalHandles;
     private readonly CancellationTokenSource _disconnectTokenSource;
     private readonly ILogger _logger;
@@ -108,7 +112,13 @@ public class WarfarePlayer :
     public BinaryPlayerSave Save { get; }
     public WarfarePlayerLocale Locale { get; }
     public PlayerSummary SteamSummary { get; }
+
+#nullable disable
+
     public SessionRecord CurrentSession { get; internal set; }
+
+#nullable restore
+
     public ref PlayerPoints CachedPoints => ref _cachedPoints;
     public double CachedReputation { get; internal set; } = double.NaN;
     public bool IsFirstTimePlaying { get; }
@@ -118,7 +128,7 @@ public class WarfarePlayer :
     /// List of steam IDs of this player's friends, if theyre public.
     /// </summary>
     /// <remarks>Private profiles will just have an empty array here.</remarks>
-    public ulong[] SteamFriends { get; internal set; }
+    public ulong[] SteamFriends { get; internal set; } = Array.Empty<ulong>();
 
     /// <inheritdoc />
     public Vector3 Position
@@ -224,7 +234,8 @@ public class WarfarePlayer :
 
         for (int i = 0; i < components.Length; ++i)
         {
-            components[i].Player = this;
+            // components[i].Player = this; (its init-only so have to use reflection)
+            SetPlayerComponentAction(components[i], this);
         }
 
         IsFirstTimePlaying = !Save.WasReadFromFile;

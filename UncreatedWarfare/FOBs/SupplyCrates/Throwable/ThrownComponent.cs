@@ -2,7 +2,7 @@
 
 public class ThrownComponent : MonoBehaviour
 {
-    public Action OnThrowableDestroyed;
+    public Action? OnThrowableDestroyed;
 
     private void OnDestroy()
     {

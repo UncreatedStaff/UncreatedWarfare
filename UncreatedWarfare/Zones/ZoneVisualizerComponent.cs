@@ -1,6 +1,4 @@
-﻿using SDG.NetTransport;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Util;
@@ -16,7 +14,7 @@ public class ZoneVisualizerComponent : IPlayerComponent
     private readonly List<SpawnRoundInfo> _spawns = new List<SpawnRoundInfo>(0);
 
 #nullable disable
-    public WarfarePlayer Player { get; private set; }
+    public required WarfarePlayer Player { get; init; }
 
     private class SpawnRoundInfo
     {
@@ -173,8 +171,6 @@ public class ZoneVisualizerComponent : IPlayerComponent
             EffectUtility.TriggerEffect(info.AirdropEffect!, channel, centerPos, true);
         }
     }
-
-    WarfarePlayer IPlayerComponent.Player { get => Player; set => Player = value; }
 
     public void GetParticleSpawnPoints(Zone zone, out Vector2[] sidePoints, out Vector2[] corners, out Vector2 center)
     {

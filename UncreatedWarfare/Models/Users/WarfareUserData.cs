@@ -1,11 +1,12 @@
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Uncreated.Warfare.Moderation;
 
 namespace Uncreated.Warfare.Models.Users;
+
+#nullable disable
 
 [Table(DatabaseInterface.TableUserData)]
 public class WarfareUserData
@@ -31,9 +32,13 @@ public class WarfareUserData
     [Column(DatabaseInterface.ColumnUserDataNickName)]
     public string NickName { get; set; } = null!;
 
+#nullable restore
+
     [MaxLength(40)]
     [Column(DatabaseInterface.ColumnUserDataDisplayName)]
     public string? DisplayName { get; set; }
+
+#nullable disable
 
     /// <remarks>UTC</remarks>
     [Column(DatabaseInterface.ColumnUserDataFirstJoined)]

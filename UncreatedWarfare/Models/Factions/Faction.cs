@@ -20,22 +20,22 @@ public class Faction
 
     [MaxLength(32)]
     [Required]
-    public string Name { get; set; }
+    public required string Name { get; set; }
 
     [MaxLength(8)]
     [Required]
-    public string KitPrefix { get; set; }
+    public required string KitPrefix { get; set; }
 
     [MaxLength(24)]
     public string? ShortName { get; set; }
 
     [MaxLength(8)]
     [Required]
-    public string Abbreviation { get; set; }
+    public required string Abbreviation { get; set; }
 
     [Column(TypeName = "char(6)")]
     [Required]
-    public string HexColor { get; set; }
+    public required string HexColor { get; set; }
 
     [JsonIgnore]
     public KitModel? UnarmedKit { get; set; }
@@ -46,7 +46,7 @@ public class Faction
 
     [MaxLength(128)]
     [Required]
-    public string FlagImageUrl { get; set; }
+    public required string FlagImageUrl { get; set; }
 
     public int? SpriteIndex { get; set; }
 

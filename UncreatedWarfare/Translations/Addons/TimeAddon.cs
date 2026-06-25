@@ -48,31 +48,47 @@ public sealed class TimeAddon : IArgumentAddon
     {
         TimeSpan ts;
 
-        if (__reftype(value) == typeof(TimeSpan))
+        if (__reftype(value) == typeof(object))
+        {
+            object obj = __refvalue(value, object);
+            switch (obj)
+            {
+                case TimeSpan ts2:
+                    ts = ts2;
+                    break;
+
+                case DateTime dt:
+                    return FormatDt(dt, formatter, in args);
+
+                case DateTimeOffset dto:
+                    return FormatDt(dto.UtcDateTime, formatter, in args);
+
+                case IConvertible conv:
+                    try
+                    {
+                        ts = TimeSpan.FromSeconds(conv.ToDouble(CultureInfo.InvariantCulture));
+                    }
+                    catch (InvalidCastException)
+                    {
+                        return text;
+                    }
+                    break;
+
+                default:
+                    return text;
+            }
+        }
+        else if (__reftype(value) == typeof(TimeSpan))
         {
             ts = __refvalue(value, TimeSpan);
         }
         else if (__reftype(value) == typeof(DateTime))
         {
-            DateTime dt = __refvalue(value, DateTime);
-            if (dt.Kind == DateTimeKind.Local)
-                dt = dt.ToUniversalTime();
-            return args.Format.Format switch
-            {
-                "rels" => FormatDateTimeRelative(false, dt, formatter.ServiceProvider.GetRequiredService<TranslationInjection<TimeTranslations>>().Value, args.Language, args.Culture),
-                "rell" => FormatDateTimeRelative(true, dt, formatter.ServiceProvider.GetRequiredService<TranslationInjection<TimeTranslations>>().Value, args.Language, args.Culture),
-                _ => TryFormatDateTime(dt, args.Format.Format, args.Culture, args.TimeZone)
-            };
+            return FormatDt(__refvalue(value, DateTime), formatter, in args);
         }
         else if (__reftype(value) == typeof(DateTimeOffset))
         {
-            DateTime dt = __refvalue(value, DateTimeOffset).UtcDateTime;
-            return args.Format.Format switch
-            {
-                "rels" => FormatDateTimeRelative(false, dt, formatter.ServiceProvider.GetRequiredService<TranslationInjection<TimeTranslations>>().Value, args.Language, args.Culture),
-                "rell" => FormatDateTimeRelative(true, dt, formatter.ServiceProvider.GetRequiredService<TranslationInjection<TimeTranslations>>().Value, args.Language, args.Culture),
-                _ => TryFormatDateTime(dt, args.Format.Format, args.Culture, args.TimeZone)
-            };
+            return FormatDt(__refvalue(value, DateTimeOffset).UtcDateTime, formatter, in args);
         }
         else if (TypedReference.ToObject(value) is IConvertible c)
         {
@@ -103,6 +119,18 @@ public sealed class TimeAddon : IArgumentAddon
                 ? formatter.ServiceProvider.GetRequiredService<TranslationInjection<TimeTranslations>>().Value.TimePermanent.Translate(args.Language)
                 : FormattingUtility.ToTimeString(ts, space: true)
         };
+
+        static string FormatDt(DateTime dt, ITranslationValueFormatter formatter, in ValueFormatParameters args)
+        {
+            if (dt.Kind == DateTimeKind.Local)
+                dt = dt.ToUniversalTime();
+            return args.Format.Format switch
+            {
+                "rels" => FormatDateTimeRelative(false, dt, formatter.ServiceProvider.GetRequiredService<TranslationInjection<TimeTranslations>>().Value, args.Language, args.Culture),
+                "rell" => FormatDateTimeRelative(true, dt, formatter.ServiceProvider.GetRequiredService<TranslationInjection<TimeTranslations>>().Value, args.Language, args.Culture),
+                _ => TryFormatDateTime(dt, args.Format.Format, args.Culture, args.TimeZone)
+            };
+        }
     }
 
     private static string TryFormatDateTime(DateTime dateTime, string? format, CultureInfo culture, TimeZoneInfo timeZone)

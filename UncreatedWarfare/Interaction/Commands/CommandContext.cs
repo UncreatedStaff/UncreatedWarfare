@@ -1140,6 +1140,7 @@ public class CommandContext : ControlException
     /// <param name="mask">Raycast mask, could also use <see cref="ERayMask"/>. Defaults to <see cref="RayMasks.PLAYER_INTERACT"/>.</param>
     /// <param name="distance">Default distance is 4m.</param>
     /// <exception cref="GameThreadException">Not on main thread.</exception>
+    [MemberNotNullWhen(true, nameof(Player))]
     public bool TryGetTargetRootTransform([NotNullWhen(true)] out Transform? transform, int mask = 0, float distance = 4)
     {
         GameThread.AssertCurrent();
@@ -1168,6 +1169,7 @@ public class CommandContext : ControlException
     /// <param name="mask">Raycast mask, could also use <see cref="ERayMask"/>.</param>
     /// <param name="distance">Default distance is 4m.</param>
     /// <exception cref="GameThreadException">Not on main thread.</exception>
+    [MemberNotNullWhen(true, nameof(Player))]
     public bool TryGetTargetInfo([NotNullWhen(true)] out RaycastInfo? info, int mask = 0, float distance = 4)
     {
         GameThread.AssertCurrent();
@@ -1189,6 +1191,7 @@ public class CommandContext : ControlException
     /// <param name="mask">Raycast mask, could also use <see cref="ERayMask"/>. Defaults to <see cref="RayMasks.PLAYER_INTERACT"/>.</param>
     /// <param name="distance">Default distance is 4m.</param>
     /// <exception cref="GameThreadException">Not on main thread.</exception>
+    [MemberNotNullWhen(true, nameof(Player))]
     public bool TryGetInteractableTarget<TInteractable>([NotNullWhen(true)] out TInteractable? interactable, int mask = 0, float distance = 4f) where TInteractable : Interactable
     {
         GameThread.AssertCurrent();
@@ -1239,6 +1242,7 @@ public class CommandContext : ControlException
     /// </summary>
     /// <param name="distance">Default distance is 4m.</param>
     /// <exception cref="GameThreadException">Not on main thread.</exception>
+    [MemberNotNullWhen(true, nameof(Player))]
     public bool TryGetBarricadeTarget([NotNullWhen(true)] out BarricadeDrop? drop, float distance = 4f)
     {
         GameThread.AssertCurrent();
@@ -1266,6 +1270,7 @@ public class CommandContext : ControlException
     /// </summary>
     /// <param name="distance">Default distance is 4m.</param>
     /// <exception cref="GameThreadException">Not on main thread.</exception>
+    [MemberNotNullWhen(true, nameof(Player))]
     public bool TryGetStructureTarget([NotNullWhen(true)] out StructureDrop? drop, float distance = 4f)
     {
         GameThread.AssertCurrent();
@@ -1293,6 +1298,7 @@ public class CommandContext : ControlException
     /// </summary>
     /// <param name="distance">Default distance is 4m.</param>
     /// <exception cref="GameThreadException">Not on main thread.</exception>
+    [MemberNotNullWhen(true, nameof(Player))]
     public bool TryGetBuildableTarget([NotNullWhen(true)] out IBuildable? drop, float distance = 4f)
     {
         GameThread.AssertCurrent();
@@ -1334,6 +1340,7 @@ public class CommandContext : ControlException
     /// </summary>
     /// <param name="distance">Default distance is 4m.</param>
     /// <exception cref="GameThreadException">Not on main thread.</exception>
+    [MemberNotNullWhen(true, nameof(Player))]
     public bool TryGetVehicleTarget([NotNullWhen(true)] out InteractableVehicle? vehicle, float distance = 4f, bool tryCallersVehicleFirst = true, bool allowDead = false)
     {
         GameThread.AssertCurrent();
@@ -1370,6 +1377,7 @@ public class CommandContext : ControlException
     /// </summary>
     /// <param name="distance">Default distance is 4m.</param>
     /// <exception cref="GameThreadException">Not on main thread.</exception>
+    [MemberNotNullWhen(true, nameof(Player))]
     public bool TryGetPlayerTarget([NotNullWhen(true)] out WarfarePlayer? player, float distance = 4f)
     {
         GameThread.AssertCurrent();
@@ -1837,7 +1845,7 @@ public class CommandContext : ControlException
 
     /// <exception cref="CommandContext"/>
     [MemberNotNull(nameof(Player))]
-    public void AssertRanByPlayer()
+    public WarfarePlayer AssertRanByPlayer()
     {
         if (Player == null || !Player.IsOnline)
         {
@@ -1846,10 +1854,12 @@ public class CommandContext : ControlException
 #endif
             throw SendPlayerOnlyError();
         }
+
+        return Player;
     }
 
     /// <exception cref="CommandContext"/>
-    public void AssertRanByTerminal()
+    public ICommandUser AssertRanByTerminal()
     {
         if (!Caller.IsTerminal)
         {
@@ -1858,18 +1868,22 @@ public class CommandContext : ControlException
 #endif
             throw SendConsoleOnlyError();
         }
+
+        return Caller;
     }
 
     /// <exception cref="CommandContext"/>
-    public void AssertRanBy<TUser>() where TUser : ICommandUser
+    public TUser AssertRanBy<TUser>() where TUser : ICommandUser
     {
-        if (Caller is not TUser)
+        if (Caller is not TUser user)
         {
 #if TELEMETRY
             _activity?.AddEvent(new ActivityEvent($"Not ran by {Accessor.Formatter.Format(typeof(TUser))}"));
 #endif
             throw SendConsoleOnlyError();
         }
+
+        return user;
     }
 
     /// <exception cref="CommandContext"/>

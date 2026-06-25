@@ -1,7 +1,6 @@
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Requests;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Translations;
 
@@ -57,7 +56,11 @@ internal sealed class KitGiveCommand : IExecutableCommand
         }
 
         Kit kit = kitArg.Kit;
-        await _kitRequestService.GiveKitAsync(player ?? Context.Player, new KitBestowData(kit), token).ConfigureAwait(false);
+        await _kitRequestService.GiveKitAsync(
+            player ?? Context.AssertRanByPlayer(),
+            new KitBestowData(kit),
+            token
+        ).ConfigureAwait(false);
 
         // todo: Context.LogAction(ActionLogType.GiveKit, kit.Id);
 

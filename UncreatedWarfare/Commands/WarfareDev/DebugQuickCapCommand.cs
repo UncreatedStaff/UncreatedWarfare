@@ -18,6 +18,8 @@ internal sealed class DebugQuickCapCommand : IExecutableCommand
 
     public async UniTask ExecuteAsync(CancellationToken token)
     {
+        Context.AssertRanByPlayer();
+
         if (!Context.Player.Team.IsValid)
         {
             throw Context.ReplyString("Not on a team.");

@@ -9,6 +9,8 @@ using Uncreated.Warfare.Models.Users;
 
 namespace Uncreated.Warfare.Models.GameData;
 
+#nullable disable
+
 [Table("stats_sessions")]
 public class SessionRecord
 {
@@ -61,6 +63,8 @@ public class SessionRecord
         // ReSharper disable once ValueParameterNotUsed
         set { }
     }
+
+#nullable restore
 
     [Column("SquadName")]
     [StringLength(32)]

@@ -22,7 +22,7 @@ public class GodPlayerComponent : IPlayerComponent, IEventListener<DamagePlayerR
 
     public bool IsActive => _isAdminActive || _isGameplayActive;
 
-    public WarfarePlayer Player { get; private set; }
+    public required WarfarePlayer Player { get; init; }
 
     public void Init(IServiceProvider serviceProvider, bool isOnJoin)
     {
@@ -52,6 +52,4 @@ public class GodPlayerComponent : IPlayerComponent, IEventListener<DamagePlayerR
         if (IsActive)
             e.Cancel();
     }
-
-    WarfarePlayer IPlayerComponent.Player { get => Player; set => Player = value; }
 }

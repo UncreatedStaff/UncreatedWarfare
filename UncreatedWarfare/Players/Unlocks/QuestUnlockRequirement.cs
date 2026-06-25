@@ -36,7 +36,7 @@ public class QuestUnlockRequirement : UnlockRequirement, IEquatable<QuestUnlockR
     /// <inheritdoc />
     public override string GetSignText(WarfarePlayer? player, LanguageInfo language, CultureInfo culture)
     {
-        bool access = CanAccessFast(player);
+        bool access = player != null && CanAccessFast(player);
         //if (access)
         //    return T.KitRequiredQuestsComplete.Translate(player);
         // if (Assets.find(QuestId) is QuestAsset quest)
@@ -66,7 +66,7 @@ public class QuestUnlockRequirement : UnlockRequirement, IEquatable<QuestUnlockR
         {
             if (!reader.TryGetGuid(out Guid questID))
             {
-                logger.LogError("Failed to convert {0} with value \"{1}\" to a GUID in quest unlock requirement.", property, (reader.GetString() ?? "null"));
+                logger?.LogError("Failed to convert {0} with value \"{1}\" to a GUID in quest unlock requirement.", property, (reader.GetString() ?? "null"));
             }
             else
             {

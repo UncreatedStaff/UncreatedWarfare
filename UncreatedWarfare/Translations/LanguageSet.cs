@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Models.Localization;
@@ -12,15 +11,18 @@ public struct LanguageSet : IEnumerable<WarfarePlayer>, IEnumerator<WarfarePlaye
 {
     private ArraySegment<WarfarePlayer> _players;
     private int _index;
+
     private bool _isSinglePlayer;
     internal int StartIndex;
     internal int Count;
 
-    public WarfarePlayer Next;
+    public WarfarePlayer? Next;
 
     public readonly ArraySegment<WarfarePlayer> Players => _players;
+#nullable disable
     public readonly WarfarePlayer Current => Next;
     readonly object IEnumerator.Current => Next;
+#nullable restore
     public LanguageInfo Language { get; }
     public CultureInfo Culture { get; }
     public TimeZoneInfo TimeZone { get; }
@@ -91,7 +93,7 @@ public struct LanguageSet : IEnumerable<WarfarePlayer>, IEnumerator<WarfarePlaye
     public readonly bool Includes(WarfarePlayer player)
     {
         if (_isSinglePlayer)
-            return Next.Equals(player);
+            return Next!.Equals(player);
 
         return player.Save.IMGUI == IMGUI
                && player.Locale.LanguageInfo.Equals(Language)
@@ -105,7 +107,7 @@ public struct LanguageSet : IEnumerable<WarfarePlayer>, IEnumerator<WarfarePlaye
         if (_isSinglePlayer)
         {
             PooledTransportConnectionList list = TransportConnectionPoolHelper.Claim(1);
-            if (Next.IsOnline)
+            if (Next!.IsOnline)
                 list.Add(Next.Connection);
             return list;
         }
@@ -131,7 +133,7 @@ public struct LanguageSet : IEnumerable<WarfarePlayer>, IEnumerator<WarfarePlaye
         if (_isSinglePlayer)
         {
             PooledTransportConnectionList list = TransportConnectionPoolHelper.Claim(1);
-            PlayerMovement movement = Next.UnturnedPlayer.movement;
+            PlayerMovement movement = Next!.UnturnedPlayer.movement;
             if (Next.IsOnline && Regions.checkArea(movement.region_x, movement.region_y, x, y, area))
                 list.Add(Next.Connection);
             return list;
@@ -159,6 +161,7 @@ public struct LanguageSet : IEnumerable<WarfarePlayer>, IEnumerator<WarfarePlaye
         _index = -1;
     }
 
+    [MemberNotNullWhen(true, nameof(Next))]
     public bool MoveNext()
     {
         if (_isSinglePlayer)
@@ -167,7 +170,9 @@ public struct LanguageSet : IEnumerable<WarfarePlayer>, IEnumerator<WarfarePlaye
                 return false;
 
             _index = 0;
+#pragma warning disable CS8775
             return true;
+#pragma warning restore CS8775
 
         }
 

@@ -13,10 +13,10 @@ public class HomebaseAuthenticationKey
 
     [Required]
     [Column(TypeName = "char(32)")]
-    public string AuthKey { get; set; }
+    public required string AuthKey { get; set; }
 
     [StringLength(16)]
-    public string Identity { get; set; }
+    public required string Identity { get; set; }
     public byte Region { get; set; }
     public DateTimeOffset LastConnectTime { get; set; }
 }

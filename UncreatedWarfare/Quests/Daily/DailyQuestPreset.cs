@@ -16,18 +16,22 @@ public class DailyQuestPreset : IAssetQuestPreset, IRpcSerializable
 
     public ushort Flag { get; set; }
 
+#nullable disable
+    // ReSharper disable once NotNullOrRequiredMemberIsNotInitialized
     [JsonIgnore]
     public IQuestState State { get; private set; }
+
+    [JsonIgnore]
+    public DailyQuestDay Day { get; set; }
+#nullable restore
 
     [JsonIgnore]
     public IQuestReward[]? RewardOverrides { get; set; }
 
     [JsonIgnore]
-    public DailyQuestDay Day { get; set; }
-
-    [JsonIgnore]
     public string? ReadDescriptiveText { get; set; }
 
+    [MemberNotNull(nameof(State))]
     public void UpdateState(IQuestState state)
     {
         State = state;

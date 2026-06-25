@@ -1,7 +1,5 @@
 using DanielWillett.ModularRpcs.Serialization;
-using Humanizer;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -85,7 +83,10 @@ public class DailyQuestConfiguration
         if (days == null)
         {
             HasData = false;
-            Array.Clear(Days, 0, Days.Length);
+            if (Days != null)
+            {
+                Array.Clear(Days, 0, Days.Length);
+            }
             return;
         }
 
@@ -158,59 +159,62 @@ public class DailyQuestConfiguration
         
         Utf8JsonWriter writer = new Utf8JsonWriter(fs, ConfigurationSettings.JsonWriterOptions);
         writer.WriteStartArray();
-        foreach (DailyQuestDay? day in Days)
+        if (Days != null)
         {
-            if (day == null)
-                continue;
-
-            writer.WriteStartObject();
-
-            writer.WriteString("Asset", day.Asset);
-            writer.WriteNumber("Id", day.Id);
-            writer.WriteString("StartTime", day.StartTime);
-            writer.WritePropertyName("Presets");
-            writer.WriteStartArray();
-
-            if (day.Presets != null)
+            foreach (DailyQuestDay? day in Days)
             {
-                foreach (DailyQuestPreset? preset in day.Presets)
+                if (day == null)
+                    continue;
+
+                writer.WriteStartObject();
+
+                writer.WriteString("Asset", day.Asset);
+                writer.WriteNumber("Id", day.Id);
+                writer.WriteString("StartTime", day.StartTime);
+                writer.WritePropertyName("Presets");
+                writer.WriteStartArray();
+
+                if (day.Presets != null)
                 {
-                    if (preset == null)
-                        continue;
-
-                    writer.WriteStartObject();
-
-                    writer.WriteString("TemplateName", preset.TemplateName);
-                    writer.WriteString("Key", preset.Key);
-                    writer.WriteNumber("Flag", preset.Flag);
-
-                    writer.WritePropertyName("State");
-                    IQuestState state = preset.State;
-                    JsonSerializer.Serialize(writer, state, state.GetType(), ConfigurationSettings.JsonSerializerSettingsQuests);
-
-                    if (preset.RewardOverrides == null)
-                        continue;
-
-                    writer.WritePropertyName("RewardOverrides");
-                    writer.WriteStartArray();
-
-                    foreach (IQuestReward reward in preset.RewardOverrides)
+                    foreach (DailyQuestPreset? preset in day.Presets)
                     {
+                        if (preset == null)
+                            continue;
+
                         writer.WriteStartObject();
-                        writer.WriteString("Type", reward.GetType().AssemblyQualifiedName);
-                        reward.WriteToJson(writer);
+
+                        writer.WriteString("TemplateName", preset.TemplateName);
+                        writer.WriteString("Key", preset.Key);
+                        writer.WriteNumber("Flag", preset.Flag);
+
+                        writer.WritePropertyName("State");
+                        IQuestState state = preset.State;
+                        JsonSerializer.Serialize(writer, state, state.GetType(), ConfigurationSettings.JsonSerializerSettingsQuests);
+
+                        if (preset.RewardOverrides == null)
+                            continue;
+
+                        writer.WritePropertyName("RewardOverrides");
+                        writer.WriteStartArray();
+
+                        foreach (IQuestReward reward in preset.RewardOverrides)
+                        {
+                            writer.WriteStartObject();
+                            writer.WriteString("Type", reward.GetType().AssemblyQualifiedName);
+                            reward.WriteToJson(writer);
+                            writer.WriteEndObject();
+                        }
+
+                        writer.WriteEndArray();
+
                         writer.WriteEndObject();
                     }
-
-                    writer.WriteEndArray();
-
-                    writer.WriteEndObject();
                 }
+
+                writer.WriteEndArray();
+
+                writer.WriteEndObject();
             }
-
-            writer.WriteEndArray();
-
-            writer.WriteEndObject();
         }
         writer.WriteEndArray();
 

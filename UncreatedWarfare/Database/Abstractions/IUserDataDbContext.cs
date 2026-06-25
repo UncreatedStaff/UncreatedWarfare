@@ -3,6 +3,9 @@ using Uncreated.Warfare.Models.Users;
 using Uncreated.Warfare.Moderation;
 
 namespace Uncreated.Warfare.Database.Abstractions;
+
+#nullable disable
+
 public interface IUserDataDbContext : IDbContext
 {
     DbSet<WarfareUserData> UserData { get; }
@@ -12,7 +15,7 @@ public interface IUserDataDbContext : IDbContext
     DbSet<Permission> Permissions { get; }
     DbSet<SteamDiscordPendingLink> PendingLinks { get; }
 
-    public static void ConfigureModels(ModelBuilder modelBuilder)
+    static void ConfigureModels(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<WarfareUserData>()
             .HasMany(x => x.IPAddresses)

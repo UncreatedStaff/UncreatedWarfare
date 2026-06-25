@@ -2,11 +2,14 @@
 using Uncreated.Warfare.Models.Seasons;
 
 namespace Uncreated.Warfare.Database.Abstractions;
+
+#nullable disable
+
 public interface ISeasonsDbContext : IDbContext
 {
     DbSet<MapData> Maps { get; }
     DbSet<SeasonData> Seasons { get; }
-    public static void ConfigureModels(ModelBuilder modelBuilder)
+    static void ConfigureModels(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<MapData>()
             .HasMany(x => x.Dependencies)

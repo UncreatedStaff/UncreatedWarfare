@@ -5,6 +5,8 @@ using Uncreated.Warfare.Models.Users;
 
 namespace Uncreated.Warfare.Models.Localization;
 
+#nullable disable
+
 [Table("lang_preferences")]
 public class LanguagePreferences
 {
@@ -24,6 +26,8 @@ public class LanguagePreferences
 
     [Required]
     public WarfareUserData PlayerData { get; set; }
+
+#nullable restore
 
     [MaxLength(16)]
     public string? Culture { get; set; }

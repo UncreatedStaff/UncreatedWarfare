@@ -3,6 +3,8 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Uncreated.Warfare.Models.Stats;
 
+#nullable disable
+
 [Table("stats_fob_items_builders")]
 public class FobItemBuilderRecord : BasePlayerRecord
 {

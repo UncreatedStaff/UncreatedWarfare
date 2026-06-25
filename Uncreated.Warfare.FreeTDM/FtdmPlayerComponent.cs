@@ -9,15 +9,12 @@ namespace Uncreated.Warfare.FreeTeamDeathmatch;
 [PlayerComponent]
 internal sealed class FtdmPlayerComponent : IPlayerComponent, IEventListener<PlayerDied>
 {
+    public required WarfarePlayer Player { get; init; }
+
     public float LastInPlayArea { get; internal set; }
     public float LastInFriendlySpawn { get; internal set; }
     public float LastOutOfBoundsUIUpdate { get; internal set; }
     public bool HasExitedSpawnSinceRespawned { get; internal set; }
-#nullable disable
-
-    public WarfarePlayer Player { get; private set; }
-
-#nullable restore
 
     void IPlayerComponent.Init(IServiceProvider serviceProvider, bool isOnJoin)
     {
@@ -32,8 +29,6 @@ internal sealed class FtdmPlayerComponent : IPlayerComponent, IEventListener<Pla
         LastOutOfBoundsUIUpdate = float.NaN;
         LastInFriendlySpawn = float.NaN;
     }
-
-    WarfarePlayer IPlayerComponent.Player { get => Player; set => Player = value; }
 
     void IEventListener<PlayerDied>.HandleEvent(PlayerDied e, IServiceProvider serviceProvider)
     {

@@ -15,14 +15,14 @@ public class PlayerGameStatsComponent : IPlayerComponent, IDisposable, ILeaderbo
 {
     private LeaderboardPhase? _phase;
     private PointsUI? _pointsUi;
-    private IAssetLink<ItemGunAsset> _laserDesignator;
+    private IAssetLink<ItemGunAsset>? _laserDesignator;
 
 #nullable disable
 
 #if DEBUG
     private ILogger<PlayerGameStatsComponent> _logger;
 #endif
-    public WarfarePlayer Player { get; private set; }
+    public required WarfarePlayer Player { get; init; }
 
 #nullable restore
 
@@ -134,8 +134,6 @@ public class PlayerGameStatsComponent : IPlayerComponent, IDisposable, ILeaderbo
             _pointsUi.UpdatePointsUI(Player);
         }
     }
-
-    WarfarePlayer IPlayerComponent.Player { get => Player; set => Player = value; }
 
     void IDisposable.Dispose()
     {

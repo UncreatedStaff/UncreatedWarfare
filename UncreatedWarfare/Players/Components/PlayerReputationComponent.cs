@@ -9,8 +9,7 @@ namespace Uncreated.Warfare.Players.Components;
 public class PlayerReputationComponent : IPlayerComponent, IDisposable
 {
     private int _pendingReputation;
-    public WarfarePlayer Player { get; private set; }
-    WarfarePlayer IPlayerComponent.Player { get => Player; set => Player = value; }
+    public required WarfarePlayer Player { get; init; }
 
     void IPlayerComponent.Init(IServiceProvider serviceProvider, bool isOnJoin)
     {

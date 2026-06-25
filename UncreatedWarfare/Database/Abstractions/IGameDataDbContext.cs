@@ -3,11 +3,14 @@ using Uncreated.Warfare.Models.GameData;
 using Uncreated.Warfare.Models.Users;
 
 namespace Uncreated.Warfare.Database.Abstractions;
+
+#nullable disable
+
 public interface IGameDataDbContext : IFactionDbContext, ISeasonsDbContext
 {
     DbSet<GameRecord> Games { get; }
     DbSet<SessionRecord> Sessions { get; }
-    public new static void ConfigureModels(ModelBuilder modelBuilder)
+    static new void ConfigureModels(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<WarfareUserData>()
             .HasMany<SessionRecord>()

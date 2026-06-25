@@ -17,17 +17,16 @@ public class KitPlayerComponent : IPlayerComponent
     private readonly HashSet<uint> _favoritedKits = new HashSet<uint>(16);
     private IDictionary<uint, BasicKitStats>? _cachedKitStats;
 
-
-    private IKitDataStore _kitDataStore = null!;
-    private KitSignService _kitSignService = null!;
-    private LoadoutService _loadoutService = null!;
-    private IKitStatisticService _kitStatService = null!;
-
 #nullable disable
 
-    public WarfarePlayer Player { get; private set; }
+    private IKitDataStore _kitDataStore;
+    private KitSignService _kitSignService;
+    private LoadoutService _loadoutService;
+    private IKitStatisticService _kitStatService;
 
 #nullable restore
+
+    public required WarfarePlayer Player { get; init; }
 
     /// <summary>
     /// Comparer used to sort cached loadouts.
@@ -351,8 +350,6 @@ public class KitPlayerComponent : IPlayerComponent
             return _favoritedKits.Remove(kitPk);
         }
     }
-
-    WarfarePlayer IPlayerComponent.Player { get => Player; set => Player = value; }
 
     private class LoadoutComparerImpl : IComparer<Kit?>
     {

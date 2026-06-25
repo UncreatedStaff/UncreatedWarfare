@@ -19,6 +19,8 @@ using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
+#pragma warning disable CS8618
+
 namespace Uncreated.Warfare.Quests.Templates;
 public class KillEnemies : QuestTemplate<KillEnemies, KillEnemies.Tracker, KillEnemies.State>
 {
@@ -334,7 +336,7 @@ public class KillEnemies : QuestTemplate<KillEnemies, KillEnemies.Tracker, KillE
 
         public override void ReadProgress(ref Utf8JsonReader reader)
         {
-            JsonUtility.ReadTopLevelProperties(ref reader, (ref Utf8JsonReader reader, string property, ref object? _) =>
+            JsonUtility.ReadTopLevelProperties(ref reader, (ref reader, property, ref _) =>
             {
                 if (property.Equals("Kills", StringComparison.Ordinal))
                 {

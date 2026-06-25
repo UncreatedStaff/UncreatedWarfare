@@ -2,6 +2,9 @@ using Microsoft.EntityFrameworkCore;
 using Uncreated.Warfare.Models.Stats;
 
 namespace Uncreated.Warfare.Database.Abstractions;
+
+#nullable disable
+
 public interface IStatsDbContext : IDbContext
 {
     DbSet<DeathRecord> DeathRecords { get; }
@@ -9,7 +12,8 @@ public interface IStatsDbContext : IDbContext
     DbSet<AidRecord> AidRecords { get; }
     DbSet<FobRecord> FobRecords { get; }
     DbSet<FobItemRecord> FobItemRecords { get; }
-    public static void ConfigureModels(ModelBuilder modelBuilder)
+
+    static void ConfigureModels(ModelBuilder modelBuilder)
     {
         RelatedPlayerRecord.Map<DeathRecord>(modelBuilder);
 
@@ -33,8 +37,8 @@ public interface IStatsDbContext : IDbContext
             .WithOne(x => x.FobItem)
             .OnDelete(DeleteBehavior.Cascade);
 
-        modelBuilder.Entity<DeathRecord?>()
-            .HasOne(x => x!.KillShot)
+        modelBuilder.Entity<DeathRecord>()
+            .HasOne(x => x.KillShot)
             .WithOne();
     }
 }

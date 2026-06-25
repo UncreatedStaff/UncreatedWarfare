@@ -3,6 +3,8 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Uncreated.Warfare.Models.Seasons;
 
+#nullable disable
+
 [Table("maps_dependencies")]
 public class MapWorkshopDependency
 {

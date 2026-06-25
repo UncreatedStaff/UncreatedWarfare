@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections.Generic;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Items;
 using Uncreated.Warfare.Models.Kits;
@@ -16,10 +15,10 @@ public class HotkeyPlayerComponent : IPlayerComponent, IEventListener<ItemDroppe
 #nullable disable
     
     private ILogger<HotkeyPlayerComponent> _logger;
-    
-    public WarfarePlayer Player { get; private set; }
 
 #nullable restore
+
+    public required WarfarePlayer Player { get; init; }
 
     // updated when the player's kit is changed, only contains bindings for current kit
     internal List<KitHotkey>? HotkeyBindings;
@@ -148,6 +147,4 @@ public class HotkeyPlayerComponent : IPlayerComponent, IEventListener<ItemDroppe
                 break;
         }
     }
-
-    WarfarePlayer IPlayerComponent.Player { get => Player; set => Player = value; }
 }

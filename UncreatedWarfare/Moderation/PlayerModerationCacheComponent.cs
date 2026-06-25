@@ -10,10 +10,14 @@ namespace Uncreated.Warfare.Moderation;
 [PlayerComponent]
 public class PlayerModerationCacheComponent : IPlayerComponent
 {
-    private DatabaseInterface _moderationSql = null!;
     private Coroutine? _unmuteCoroutine;
-    private ILogger<PlayerModerationCacheComponent> _logger = null!;
-    public WarfarePlayer Player { get; private set; } = null!;
+
+#nullable disable
+    private DatabaseInterface _moderationSql;
+    private ILogger<PlayerModerationCacheComponent> _logger;
+#nullable restore
+    
+    public required WarfarePlayer Player { get; init; }
 
     public string? TextMuteReason { get; private set; }
     public MuteType TextMuteType { get; private set; }
@@ -163,6 +167,4 @@ public class PlayerModerationCacheComponent : IPlayerComponent
         });
         _unmuteCoroutine = null;
     }
-
-    WarfarePlayer IPlayerComponent.Player { get => Player; set => Player = value; }
 }

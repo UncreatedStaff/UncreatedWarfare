@@ -21,10 +21,11 @@ public class VanishPlayerComponent : IPlayerComponent
         get => !Player.UnturnedPlayer.movement.canAddSimulationResultsToUpdates;
         set
         {
-            Player.UnturnedPlayer.movement.canAddSimulationResultsToUpdates = !value;
+            PlayerMovement movement = Player.UnturnedPlayer.movement;
+            movement.canAddSimulationResultsToUpdates = !value;
             if (!value)
             {
-                Player.UnturnedPlayer.movement.updates.Add(new PlayerStateUpdate(Player.Position, Player.UnturnedPlayer.look.angle, Player.UnturnedPlayer.look.rot));
+                movement.updates.Add(new PlayerStateUpdate(Player.Position, Player.UnturnedPlayer.look.angle, Player.UnturnedPlayer.look.rot));
                 return;
             }
 
@@ -32,21 +33,19 @@ public class VanishPlayerComponent : IPlayerComponent
 
             if (lobbyZone == null)
             {
-                Player.UnturnedPlayer.movement.updates.Add(new PlayerStateUpdate(Vector3.zero, 0, 0));
+                movement.updates.Add(new PlayerStateUpdate(Vector3.zero, 0, 0));
                 return;
             }
 
             Vector3 pos = lobbyZone.Spawn;
             float angle = lobbyZone.SpawnYaw;
-            Player.UnturnedPlayer.movement.updates.Add(new PlayerStateUpdate(pos, 0, MeasurementTool.angleToByte(angle)));
+            movement.updates.Add(new PlayerStateUpdate(pos, 0, MeasurementTool.angleToByte(angle)));
         }
     }
 
-    public WarfarePlayer Player { get; private set; }
+    public required WarfarePlayer Player { get; init; }
     public void Init(IServiceProvider serviceProvider, bool isOnJoin)
     {
         _zoneStore = serviceProvider.GetRequiredService<ZoneStore>();
     }
-
-    WarfarePlayer IPlayerComponent.Player { get => Player; set => Player = value; }
 }

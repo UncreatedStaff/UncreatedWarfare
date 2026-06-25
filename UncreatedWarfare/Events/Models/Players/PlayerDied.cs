@@ -78,6 +78,7 @@ public class PlayerDied : PlayerEvent, IActionLoggableEvent
 
     public PlayerDied(in DamagePlayerParameters parameters)
     {
+        DeadTeam = Team.NoTeam;
         _parameters = parameters;
     }
 

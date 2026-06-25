@@ -5,6 +5,8 @@ using Uncreated.Warfare.Models.Users;
 
 namespace Uncreated.Warfare.Models.Kits;
 
+#nullable disable
+
 [Table("kits_favorites")]
 public class KitFavorite
 {

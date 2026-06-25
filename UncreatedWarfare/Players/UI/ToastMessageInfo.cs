@@ -34,7 +34,7 @@ public sealed class ToastMessageInfo
     /// <summary>
     /// The effect to send to the player.
     /// </summary>
-    public IAssetLink<EffectAsset> Asset { get; private set; }
+    public IAssetLink<EffectAsset>? Asset { get; private set; }
     
     /// <summary>
     /// If this toast should inturrupt whatever toast is currently playing instead of queueing after it plays.
@@ -129,6 +129,8 @@ public sealed class ToastMessageInfo
         RequiresResend = requiresResend && canResend;
         Key = requiresClearing || canResend ? UnturnedUIKeyPool.Claim() : (short)-1;
     }
+
+    [MemberNotNull(nameof(Asset))]
     public void UpdateAsset(IAssetLink<EffectAsset> assetContainer)
     {
         Asset = assetContainer;

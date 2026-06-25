@@ -133,7 +133,7 @@ public class TranslationValueFormatter : ITranslationValueFormatter
     
     private string FormatIntl(object? value, in ValueFormatParameters parameters, Type? formatType)
     {
-        if (Equals(value, null))
+        if (Equals(value, null) || value == DBNull.Value)
         {
             return FormatNull(in parameters);
         }

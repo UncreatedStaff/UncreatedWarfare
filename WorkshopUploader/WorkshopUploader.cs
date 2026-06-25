@@ -155,29 +155,31 @@ public static class WorkshopUploader
                     _connection = null;
                 };
 
-                string fileLogPath = parameters.LogFileOutput;
-
-                Directory.CreateDirectory(Path.GetDirectoryName(fileLogPath)!);
-
-                using FileStream fileLog = new FileStream(fileLogPath, FileMode.Create, FileAccess.Write, FileShare.Read, 1024, FileOptions.SequentialScan);
-
-                LoggingEventStream outStream = new LoggingEventStream(fileLog);
-                outStream.OutputReady += text => ProcessLineOutput(text, _connection, wasExitFailure);
-
-                Thread readerThread = new Thread(_ =>
+                string? fileLogPath = parameters.LogFileOutput;
+                if (!string.IsNullOrEmpty(fileLogPath))
                 {
-                    byte[] numArray = new byte[1024];
-                    try
-                    {
-                        int count;
-                        while (_connection?.ReaderStream != null && (count = _connection.ReaderStream.Read(numArray, 0, numArray.Length)) != 0)
-                            outStream.Write(numArray.AsSpan(0, count));
-                    }
-                    catch (ThreadAbortException) { throw; }
-                    catch { /* stream ended */ }
-                });
+                    Directory.CreateDirectory(Path.GetDirectoryName(fileLogPath)!);
 
-                readerThread.Start();
+                    using FileStream fileLog = new FileStream(fileLogPath, FileMode.Create, FileAccess.Write, FileShare.Read, 1024, FileOptions.SequentialScan);
+
+                    LoggingEventStream outStream = new LoggingEventStream(fileLog);
+                    outStream.OutputReady += text => ProcessLineOutput(text, _connection, wasExitFailure);
+
+                    Thread readerThread = new Thread(_ =>
+                    {
+                        byte[] numArray = new byte[1024];
+                        try
+                        {
+                            int count;
+                            while (_connection?.ReaderStream != null && (count = _connection.ReaderStream.Read(numArray, 0, numArray.Length)) != 0)
+                                outStream.Write(numArray.AsSpan(0, count));
+                        }
+                        catch (ThreadAbortException) { throw; }
+                        catch { /* stream ended */ }
+                    });
+
+                    readerThread.Start();
+                }
 
                 await exitCodeSrc.Task;
 

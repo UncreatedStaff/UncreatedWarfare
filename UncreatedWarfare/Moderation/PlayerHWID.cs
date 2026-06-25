@@ -9,6 +9,8 @@ using Uncreated.Warfare.Models.Users;
 
 namespace Uncreated.Warfare.Moderation;
 
+#nullable disable
+
 [Table(DatabaseInterface.TableHWIDs), Index(nameof(HWID))]
 public class PlayerHWID
 {

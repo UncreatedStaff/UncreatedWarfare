@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Models.Localization;
@@ -30,7 +29,6 @@ public interface ICachableLanguageDataStore : ILanguageDataStore
 
 public class MySqlLanguageDataStore : ICachableLanguageDataStore
 {
-    private LanguageService? _languageService;
     private static readonly char[] SpaceSplit = [ ' ' ];
 
     private readonly IServiceProvider _serviceProvider;
@@ -38,10 +36,11 @@ public class MySqlLanguageDataStore : ICachableLanguageDataStore
     private Dictionary<string, LanguageInfo>? _codes;
     private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
 
-    private LanguageService? LanguageService => _languageService ??= _serviceProvider.GetService<LanguageService>();
+    private LanguageService? LanguageService => field ??= _serviceProvider.GetService<LanguageService>();
 
     public MySqlLanguageDataStore(IServiceProvider serviceProvider)
     {
+        Languages = Array.Empty<LanguageInfo>();
         _serviceProvider = serviceProvider;
     }
 

@@ -5,6 +5,8 @@ using Uncreated.Warfare.Models.Users;
 
 namespace Uncreated.Warfare.Models.Localization;
 
+#nullable disable
+
 [Table("lang_credits")]
 public class LanguageContributor
 {
@@ -14,7 +16,7 @@ public class LanguageContributor
     public uint Id { get; set; }
 
     [Required, JsonIgnore]
-    public LanguageInfo Language { get; set; } = null!;
+    public LanguageInfo Language { get; set; }
 
     [Required]
     [Column("Language")]

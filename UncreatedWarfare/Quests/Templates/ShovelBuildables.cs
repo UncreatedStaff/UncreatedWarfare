@@ -10,6 +10,8 @@ using Uncreated.Warfare.Quests.Parameters;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 
+#pragma warning disable CS8618
+
 namespace Uncreated.Warfare.Quests.Templates;
 
 public class ShovelBuildables : QuestTemplate<ShovelBuildables, ShovelBuildables.Tracker, ShovelBuildables.State>
@@ -124,7 +126,7 @@ public class ShovelBuildables : QuestTemplate<ShovelBuildables, ShovelBuildables
 
         public override void ReadProgress(ref Utf8JsonReader reader)
         {
-            JsonUtility.ReadTopLevelProperties(ref reader, (ref Utf8JsonReader reader, string property, ref object? _) =>
+            JsonUtility.ReadTopLevelProperties(ref reader, (ref reader, property, ref _) =>
             {
                 if (property.Equals("BuildablesBuilt", StringComparison.Ordinal))
                 {

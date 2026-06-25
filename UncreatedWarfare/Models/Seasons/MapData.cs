@@ -1,9 +1,10 @@
-﻿using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Uncreated.Warfare.Models.Factions;
 
 namespace Uncreated.Warfare.Models.Seasons;
+
+#nullable disable
 
 [Table("maps")]
 public class MapData

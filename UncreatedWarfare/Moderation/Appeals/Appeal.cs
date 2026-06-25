@@ -1,6 +1,5 @@
 ﻿using DanielWillett.SpeedBytes;
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
@@ -98,9 +97,9 @@ public class Appeal : ModerationEntry
         if (propertyName.Equals("ticket_guid", StringComparison.InvariantCultureIgnoreCase))
             TicketId = reader.GetGuid();
         else if (propertyName.Equals("appeal_state", StringComparison.InvariantCultureIgnoreCase))
-            AppealState = reader.TokenType == JsonTokenType.Null ? new bool?() : reader.GetBoolean();
+            AppealState = reader.TokenType == JsonTokenType.Null ? null : reader.GetBoolean();
         else if (propertyName.Equals("discord_user_id", StringComparison.InvariantCultureIgnoreCase))
-            DiscordUserId = reader.TokenType == JsonTokenType.Null ? new ulong?() : reader.GetUInt64();
+            DiscordUserId = reader.TokenType == JsonTokenType.Null ? null : reader.GetUInt64();
         else if (propertyName.Equals("punishments_detail", StringComparison.InvariantCultureIgnoreCase))
             Punishments = JsonSerializer.Deserialize<Punishment?[]>(ref reader, options) ?? Array.Empty<Punishment>();
         else if (propertyName.Equals("punishments", StringComparison.InvariantCultureIgnoreCase))
@@ -199,8 +198,8 @@ public class Appeal : ModerationEntry
             {
                 ref AppealResponse response = ref Responses[i];
                 MySqlSnippets.AppendPropertyList(builder, args.Count, 2, i, 1);
-                args.Add(response.Question.Truncate(255) ?? string.Empty);
-                args.Add(response.Response.Truncate(1024) ?? string.Empty);
+                args.Add(response.Question.Truncate(255));
+                args.Add(response.Response.Truncate(1024));
             }
 
             builder.Append(';');
@@ -213,12 +212,14 @@ public class Appeal : ModerationEntry
 public readonly struct AppealResponse
 {
     [JsonPropertyName("question")]
-    public string Question { get; }
+    public required string Question { get; init; }
 
     [JsonPropertyName("response")]
-    public string Response { get; }
+    public required string Response { get; init; }
 
     public AppealResponse() { }
+
+    [SetsRequiredMembers]
     public AppealResponse(string question, string response)
     {
         Question = question;

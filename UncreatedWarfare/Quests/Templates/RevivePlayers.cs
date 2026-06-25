@@ -13,6 +13,9 @@ using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Quests.Templates;
+
+#pragma warning disable CS8618
+
 public class RevivePlayers : QuestTemplate<RevivePlayers, RevivePlayers.Tracker, RevivePlayers.State>
 {
     public Int32ParameterTemplate Revives { get; set; }
@@ -123,7 +126,7 @@ public class RevivePlayers : QuestTemplate<RevivePlayers, RevivePlayers.Tracker,
 
         public override void ReadProgress(ref Utf8JsonReader reader)
         {
-            JsonUtility.ReadTopLevelProperties(ref reader, (ref Utf8JsonReader reader, string property, ref object? _) =>
+            JsonUtility.ReadTopLevelProperties(ref reader, (ref reader, property, ref _) =>
             {
                 if (property.Equals("Revives", StringComparison.Ordinal))
                 {

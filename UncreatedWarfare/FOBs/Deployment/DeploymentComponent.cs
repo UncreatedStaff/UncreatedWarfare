@@ -6,7 +6,6 @@ using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Layouts.Teams;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Cooldowns;
 using Uncreated.Warfare.Players.Extensions;
@@ -29,13 +28,13 @@ public class DeploymentComponent : MonoBehaviour, IPlayerComponent, IEventListen
     private CooldownManager? _cooldownManager;
     private FobManager? _fobManager;
 
+    public required WarfarePlayer Player { get; init; }
+
 #nullable disable
 
     private ZoneStore _zoneStore;
     private IPlayerService _playerService;
     private ChatService _chatService;
-
-    public WarfarePlayer Player { get; private set; }
 
 #nullable restore
 
@@ -44,7 +43,6 @@ public class DeploymentComponent : MonoBehaviour, IPlayerComponent, IEventListen
 
     public IDeployable? CurrentDeployment { get; private set; }
     public TimeSpan DeploymentTimeLeft => _deploymentTimeStarted == 0 ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(Time.realtimeSinceStartup - _deploymentTimeStarted);
-    WarfarePlayer IPlayerComponent.Player { get => Player; set => Player = value; }
 
     public void Init(IServiceProvider serviceProvider, bool isOnJoin)
     {

@@ -1,11 +1,12 @@
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Uncreated.Warfare.Models.Assets;
 
 namespace Uncreated.Warfare.Models.Stats;
+
+#nullable disable
 
 [Table("stats_fobs")]
 public class FobRecord : InstigatedPlayerRecord

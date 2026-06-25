@@ -1,6 +1,5 @@
 ﻿using DanielWillett.SpeedBytes;
 using System;
-using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -8,6 +7,7 @@ using Uncreated.Warfare.Database.Manual;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Moderation.Reports;
+
 [ModerationEntry(ModerationEntryType.ChatAbuseReport)]
 [JsonConverter(typeof(ModerationEntryConverter))]
 public class ChatAbuseReport : Report
@@ -77,7 +77,7 @@ public class ChatAbuseReport : Report
                 MySqlSnippets.AppendPropertyList(builder, args.Count, 3, i, 1);
                 args.Add(record.Timestamp.UtcDateTime);
                 args.Add(i);
-                args.Add(record.Message.Truncate(512) ?? string.Empty);
+                args.Add(record.Message.Truncate(512));
             }
 
             builder.Append(';');
@@ -90,21 +90,27 @@ public class ChatAbuseReport : Report
 public struct AbusiveChatRecord
 {
     [JsonPropertyName("timestamp")]
-    public DateTimeOffset Timestamp { get; set; }
+    public required DateTimeOffset Timestamp { get; set; }
+
     [JsonPropertyName("message")]
-    public string Message { get; set; }
+    public required string Message { get; set; }
 
     public AbusiveChatRecord() { }
+
+    [SetsRequiredMembers]
     public AbusiveChatRecord(string message, DateTimeOffset timestamp)
     {
         Timestamp = timestamp;
         Message = message;
     }
+
+    [SetsRequiredMembers]
     public AbusiveChatRecord(ByteReader reader)
     {
         Timestamp = reader.ReadDateTimeOffset();
         Message = reader.ReadString();
     }
+
     public void Write(ByteWriter writer)
     {
         writer.Write(Timestamp);

@@ -108,6 +108,8 @@ internal static class VehicleTargetCommandHelper
             return vehicle;
         }
 
+        ctx.AssertRanByPlayer();
+
         Vector3 playerPosition = ctx.Player.Position;
         bool playerInMain = zoneStore.IsInMainBase(playerPosition);
 

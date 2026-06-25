@@ -3,12 +3,15 @@ using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Models.Users;
 
 namespace Uncreated.Warfare.Database.Abstractions;
+
+#nullable disable
+
 public interface ILanguageDbContext : IDbContext
 {
     DbSet<LanguageInfo> Languages { get; }
     DbSet<LanguagePreferences> LanguagePreferences { get; }
 
-    public static void ConfigureModels(ModelBuilder modelBuilder)
+    static void ConfigureModels(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<LanguageInfo>()
             .Property(x => x.HasTranslationSupport)

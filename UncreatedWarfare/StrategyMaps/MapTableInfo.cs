@@ -1,12 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Uncreated.Warfare.Configuration;
+﻿using Uncreated.Warfare.Configuration;
 
 namespace Uncreated.Warfare.StrategyMaps;
+
 public class MapTableInfo
 {
-    public IAssetLink<ItemBarricadeAsset> BuildableAsset { get; set; }
-    public float MapTableSquareWidth { get; set; }
-    public float VerticalSurfaceOffset { get; set; }
+    public required IAssetLink<ItemBarricadeAsset> BuildableAsset { get; set; }
+    public required float MapTableSquareWidth { get; set; }
+    public required float VerticalSurfaceOffset { get; set; }
 }

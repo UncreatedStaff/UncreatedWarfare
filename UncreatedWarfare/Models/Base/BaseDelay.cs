@@ -18,10 +18,10 @@ public abstract class BaseDelay : ICloneable
     public uint Id { get; set; }
 
     [Required, StringLength(512)]
-    public string Data { get; set; }
+    public required string Data { get; set; }
 
     [Required, StringLength(128)]
-    public string Type { get; set; }
+    public required string Type { get; set; }
 
     protected BaseDelay() { }
 

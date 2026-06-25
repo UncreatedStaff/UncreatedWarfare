@@ -11,11 +11,15 @@ using Uncreated.Warfare.Networking;
 
 namespace Uncreated.Warfare.Moderation;
 
+#nullable disable
+
 [Table(DatabaseInterface.TableIPAddresses), Index(nameof(PackedIP))]
 public class PlayerIPAddress
 {
     private uint _packedIP;
+#nullable restore
     private IPAddress? _ip;
+#nullable disable
 
     [Key]
     [JsonPropertyName("id")]
@@ -62,6 +66,8 @@ public class PlayerIPAddress
         }
     }
     
+#nullable restore
+
     [JsonPropertyName("ip")]
     [DontAddPackedColumn]
     [Column(DatabaseInterface.ColumnIPAddressesUnpackedIP)]
@@ -77,6 +83,9 @@ public class PlayerIPAddress
             RemotePlay = null;
         }
     }
+
+#nullable disable
+
     public PlayerIPAddress() { }
     public PlayerIPAddress(uint id, ulong steam64, uint packedIp, int loginCount, DateTimeOffset? firstLogin, DateTimeOffset lastLogin)
     {

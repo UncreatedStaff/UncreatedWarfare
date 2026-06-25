@@ -9,7 +9,7 @@ namespace Uncreated.Warfare.Players;
 /// <remarks>Player components can receive events, but any <see cref="IPlayerEvent"/> args will only be received if they're about the player that owns the component.</remarks>
 public interface IPlayerComponent
 {
-    WarfarePlayer Player { get; set; }
+    WarfarePlayer Player { get; init; }
     
     /// <summary>
     /// This function is called on player join and after every layout starts (to re-initialize scoped services).

@@ -1,6 +1,5 @@
 using SDG.Framework.Utilities;
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
@@ -25,10 +24,12 @@ public class ColliderProximity : MonoBehaviour, ITrackingProximity<WarfarePlayer
 
     public IReadOnlyList<WarfarePlayer> ActiveObjects { get; }
 
+#pragma warning disable CS8618
     public ColliderProximity()
     {
         ActiveObjects = new ReadOnlyCollection<WarfarePlayer>(_players);
     }
+#pragma warning restore CS8618
 
     public void Initialize(IProximity proximity,
         IPlayerService playerService,
@@ -144,7 +145,6 @@ public class ColliderProximity : MonoBehaviour, ITrackingProximity<WarfarePlayer
             if (pl != null)
                 OnPlayerStay(pl);
         }
-        return;
     }
 
     private void OnPlayerStay(WarfarePlayer player)

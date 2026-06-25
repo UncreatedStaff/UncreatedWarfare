@@ -11,7 +11,8 @@ namespace Uncreated.Warfare.Players.Components;
 public class FirstLifeComponent : IPlayerComponent,
     IEventListener<PlayerDied>
 {
-    public WarfarePlayer Player { get; set; }
+    public required WarfarePlayer Player { get; init; }
+
     public void Init(IServiceProvider serviceProvider, bool isOnJoin)
     {
         if (!isOnJoin)

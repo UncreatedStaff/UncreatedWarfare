@@ -7,7 +7,7 @@ namespace Uncreated.Warfare.Squads;
 [PlayerComponent]
 internal class SquadPlayerComponent : IPlayerComponent
 {
-    public WarfarePlayer Player { get; private set; }
+    public required WarfarePlayer Player { get; init; }
     public Squad? Squad { get; private set; }
     public void ChangeSquad(Squad newSquad)
     {
@@ -19,5 +19,4 @@ internal class SquadPlayerComponent : IPlayerComponent
     }
 
     void IPlayerComponent.Init(IServiceProvider serviceProvider, bool isOnJoin) { }
-    WarfarePlayer IPlayerComponent.Player { get => Player; set => Player = value; }
 }

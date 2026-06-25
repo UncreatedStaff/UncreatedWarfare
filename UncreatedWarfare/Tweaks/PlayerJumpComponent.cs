@@ -22,9 +22,9 @@ public class PlayerJumpComponent : IPlayerComponent, IAsyncEventListener<PlayerP
 
 #nullable disable
     private ChatService _chatService;
-    public bool IsActive { get; set; }
-    public WarfarePlayer Player { get; private set; }
 #nullable restore
+    public bool IsActive { get; set; }
+    public required WarfarePlayer Player { get; init; }
 
     public void Init(IServiceProvider serviceProvider, bool isOnJoin)
     {
@@ -35,8 +35,6 @@ public class PlayerJumpComponent : IPlayerComponent, IAsyncEventListener<PlayerP
 
         IsActive = false;
     }
-
-    WarfarePlayer IPlayerComponent.Player { get => Player; set => Player = value; }
 
     async UniTask IAsyncEventListener<PlayerPunched>.HandleEventAsync(PlayerPunched e, IServiceProvider serviceProvider, CancellationToken token)
     {

@@ -5,6 +5,8 @@ using Uncreated.Warfare.Models.Factions;
 
 namespace Uncreated.Warfare.Models.Kits.Bundles;
 
+#nullable disable
+
 [Table("kits_bundles")]
 public class EliteBundle
 {
@@ -25,12 +27,15 @@ public class EliteBundle
     [StringLength(255)]
     public string Description { get; set; }
 
+#nullable restore
+
     [ForeignKey(nameof(Faction))]
     [Column("Faction")]
     public uint? FactionId { get; set; }
-    
+
     public Faction? Faction { get; set; }
 
+#nullable disable
     /// <summary>
     /// In US dollars.
     /// </summary>

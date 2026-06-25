@@ -2,7 +2,6 @@ using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
 using StackCleaner;
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.Reflection;
 using System.Text;
@@ -20,7 +19,7 @@ using ColorSetting = (int ExtendedColor, ConsoleColor BasicColor);
 internal struct WarfareFormattedLogValues
 {
     [ThreadStatic]
-    private static char[] _formatBuffer;
+    private static char[]? _formatBuffer;
 
     internal static readonly Color32 NumberColor = new Color32(181, 206, 168, 255);
     internal static readonly Color32 StructColor = new Color32(134, 198, 145, 255);
@@ -152,7 +151,7 @@ internal struct WarfareFormattedLogValues
         int index = 0;
         for (int i = 0; i < Parameters.Count; ++i)
         {
-            object? value = Parameters[i];
+            object value = Parameters[i];
             int prefixSize, suffixSize, argb;
             string fmtStr;
 

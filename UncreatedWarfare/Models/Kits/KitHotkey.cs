@@ -7,6 +7,8 @@ using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Models.Kits;
 
+#nullable disable
+
 [Table("kits_hotkeys")]
 public class KitHotkey
 {

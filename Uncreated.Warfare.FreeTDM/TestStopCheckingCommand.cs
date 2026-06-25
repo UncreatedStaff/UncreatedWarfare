@@ -13,7 +13,7 @@ internal sealed class TestStopCheckingCommand : IExecutableCommand
     public UniTask ExecuteAsync(CancellationToken token)
     {
         StopChecking = !StopChecking;
-        Context.ReplyString(StopChecking ? "Checking now" : "Not checking anymore.");
+        Context.ReplyString(StopChecking ? "Not checking anymore" : "Checking now.");
 
         return UniTask.CompletedTask;
     }

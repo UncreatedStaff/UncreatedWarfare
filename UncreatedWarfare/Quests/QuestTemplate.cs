@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text.Json.Serialization;
@@ -288,11 +287,15 @@ public abstract class QuestTemplate : ITranslationArgument
 
     protected internal class TemplatePreset : IQuestPreset
     {
+#pragma warning disable CS8618
         public Guid Key { get; set; }
         public ushort Flag { get; set; }
         public IQuestState State { get; private set; }
         public IQuestReward[]? RewardOverrides { get; set; }
 
+        [MemberNotNull(nameof(State))]
         public void UpdateState(IQuestState state) => State = state;
+
+#pragma warning restore CS8618
     }
 }

@@ -1,6 +1,5 @@
 ﻿using DanielWillett.SpeedBytes;
 using System;
-using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -137,7 +136,7 @@ public class GriefingReport : Report
                 MySqlSnippets.AppendPropertyList(builder, args.Count, 9, i, 1);
 
                 args.Add(record.Structure.ToString("N"));
-                args.Add(record.Name.Truncate(48) ?? string.Empty);
+                args.Add(record.Name.Truncate(48));
                 args.Add(record.Owner);
                 args.Add(record.IsStructure);
                 args.Add(record.Origin.ToString());
@@ -216,7 +215,7 @@ public class GriefingReport : Report
                 MySqlSnippets.AppendPropertyList(builder, args.Count, 6, i, 1);
 
                 args.Add(record.Vehicle.ToString("N"));
-                args.Add(record.Name.Truncate(48) ?? string.Empty);
+                args.Add(record.Name.Truncate(48));
                 args.Add(record.Origin.ToString());
                 args.Add(record.Timestamp.UtcDateTime);
                 args.Add(record.Destroyed.HasValue ? record.Destroyed.Value.UtcDateTime : DBNull.Value);
@@ -233,35 +232,37 @@ public class GriefingReport : Report
 public struct StructureDamageRecord
 {
     [JsonPropertyName("structure")]
-    public Guid Structure { get; set; }
+    public required Guid Structure { get; set; }
 
     [JsonPropertyName("name")]
-    public string Name { get; set; }
+    public required string Name { get; set; }
 
     [JsonPropertyName("owner")]
-    public ulong Owner { get; set; }
+    public required ulong Owner { get; set; }
 
     [JsonPropertyName("origin")]
     [JsonConverter(typeof(JsonStringEnumConverter))]
-    public EDamageOrigin Origin { get; set; }
+    public required EDamageOrigin Origin { get; set; }
 
     [JsonPropertyName("type")]
     [JsonConverter(typeof(JsonStringEnumConverter))]
-    public bool IsStructure { get; set; }
+    public required bool IsStructure { get; set; }
 
     [JsonPropertyName("id")]
-    public uint ID { get; set; }
+    public required uint ID { get; set; }
 
     [JsonPropertyName("damage")]
-    public int Damage { get; set; }
+    public required int Damage { get; set; }
 
     [JsonPropertyName("destroyed")]
-    public bool Destroyed { get; set; }
+    public required bool Destroyed { get; set; }
 
     [JsonPropertyName("timestamp")]
-    public DateTimeOffset Timestamp { get; set; }
+    public required DateTimeOffset Timestamp { get; set; }
     
     public StructureDamageRecord() { }
+
+    [SetsRequiredMembers]
     public StructureDamageRecord(Guid structure, string name, ulong owner, EDamageOrigin origin, bool isStructure, uint id, int damage, bool destroyed, DateTimeOffset timestamp)
     {
         Structure = structure;
@@ -274,6 +275,8 @@ public struct StructureDamageRecord
         Destroyed = destroyed;
         Timestamp = timestamp;
     }
+
+    [SetsRequiredMembers]
     public StructureDamageRecord(ByteReader reader)
     {
         Structure = reader.ReadGuid();
@@ -302,14 +305,14 @@ public struct StructureDamageRecord
 public struct TeamkillRecord
 {
     [JsonPropertyName("teamkill")]
-    public uint Teamkill { get; set; }
+    public required uint Teamkill { get; set; }
 
     [JsonPropertyName("victim")]
-    public ulong Victim { get; set; }
+    public required ulong Victim { get; set; }
 
     [JsonPropertyName("cause")]
     [JsonConverter(typeof(JsonStringEnumConverter))]
-    public EDeathCause Cause { get; set; }
+    public required EDeathCause Cause { get; set; }
 
     [JsonPropertyName("message")]
     public string? Message { get; set; }
@@ -318,9 +321,11 @@ public struct TeamkillRecord
     public bool? Intentional { get; set; }
 
     [JsonPropertyName("timestamp")]
-    public DateTimeOffset Timestamp { get; set; }
+    public required DateTimeOffset Timestamp { get; set; }
 
     public TeamkillRecord() { }
+
+    [SetsRequiredMembers]
     public TeamkillRecord(uint teamkill, ulong victim, EDeathCause cause, string message, bool? intentional, DateTimeOffset timestamp)
     {
         Teamkill = teamkill;
@@ -330,6 +335,8 @@ public struct TeamkillRecord
         Intentional = intentional;
         Timestamp = timestamp;
     }
+
+    [SetsRequiredMembers]
     public TeamkillRecord(ByteReader reader)
     {
         Teamkill = reader.ReadUInt32();
@@ -352,22 +359,24 @@ public struct TeamkillRecord
 public struct VehicleTeamkillRecord
 {
     [JsonPropertyName("teamkill")]
-    public uint Teamkill { get; set; }
+    public required uint Teamkill { get; set; }
 
     [JsonPropertyName("victim")]
-    public ulong Victim { get; set; }
+    public required ulong Victim { get; set; }
 
     [JsonPropertyName("origin")]
     [JsonConverter(typeof(JsonStringEnumConverter))]
-    public EDamageOrigin Origin { get; set; }
+    public required EDamageOrigin Origin { get; set; }
 
     [JsonPropertyName("message")]
     public string? Message { get; set; }
 
     [JsonPropertyName("timestamp")]
-    public DateTimeOffset Timestamp { get; set; }
+    public required DateTimeOffset Timestamp { get; set; }
 
     public VehicleTeamkillRecord() { }
+
+    [SetsRequiredMembers]
     public VehicleTeamkillRecord(uint teamkill, ulong victim, EDamageOrigin origin, string? message, DateTimeOffset timestamp)
     {
         Teamkill = teamkill;
@@ -376,6 +385,8 @@ public struct VehicleTeamkillRecord
         Message = message;
         Timestamp = timestamp;
     }
+
+    [SetsRequiredMembers]
     public VehicleTeamkillRecord(ByteReader reader)
     {
         Teamkill = reader.ReadUInt32();
@@ -384,6 +395,7 @@ public struct VehicleTeamkillRecord
         Message = reader.ReadNullableString();
         Timestamp = reader.ReadDateTimeOffset();
     }
+
     public void Write(ByteWriter writer)
     {
         writer.Write(Teamkill);
@@ -396,27 +408,30 @@ public struct VehicleTeamkillRecord
 public struct VehicleRequestRecord
 {
     [JsonPropertyName("vehicle")]
-    public Guid Vehicle { get; set; }
+    public required Guid Vehicle { get; set; }
 
     [JsonPropertyName("vehicle_bay_id")]
-    public uint Asset { get; set; }
+    public required uint Asset { get; set; }
 
     [JsonPropertyName("name")]
-    public string Name { get; set; }
+    public required string Name { get; set; }
 
     [JsonPropertyName("timestamp")]
-    public DateTimeOffset Timestamp { get; set; }
+    public required DateTimeOffset Timestamp { get; set; }
 
     [JsonPropertyName("destroyed")]
     public DateTimeOffset? Destroyed { get; set; }
 
     [JsonPropertyName("origin")]
     [JsonConverter(typeof(JsonStringEnumConverter))]
-    public EDamageOrigin Origin { get; set; }
+    public required EDamageOrigin Origin { get; set; }
 
     [JsonPropertyName("instigator")]
-    public ulong Instigator { get; set; }
+    public required ulong Instigator { get; set; }
+
     public VehicleRequestRecord() { }
+
+    [SetsRequiredMembers]
     public VehicleRequestRecord(Guid vehicle, uint asset, string name, DateTimeOffset timestamp, DateTimeOffset? destroyed, EDamageOrigin origin, ulong instigator)
     {
         Vehicle = vehicle;
@@ -427,6 +442,8 @@ public struct VehicleRequestRecord
         Origin = origin;
         Instigator = instigator;
     }
+
+    [SetsRequiredMembers]
     public VehicleRequestRecord(ByteReader reader)
     {
         Vehicle = reader.ReadGuid();
@@ -436,6 +453,7 @@ public struct VehicleRequestRecord
         Origin = (EDamageOrigin)reader.ReadUInt16();
         Instigator = reader.ReadUInt64();
     }
+
     public void Write(ByteWriter writer)
     {
         writer.Write(Vehicle);

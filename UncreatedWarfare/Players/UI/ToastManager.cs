@@ -1,9 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SDG.Framework.Utilities;
-using SDG.NetTransport;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Uncreated.Warfare.Configuration;
@@ -35,7 +33,7 @@ public sealed class ToastManager : IPlayerComponent, IDisposable
     /// </summary>
     public ToastMessageChannel[] Channels { get; private set; } = null!;
 
-    public WarfarePlayer Player { get; private set; } = null!;
+    public required WarfarePlayer Player { get; init; }
 
     public bool HasToasts { get; private set; }
 
@@ -294,13 +292,12 @@ public sealed class ToastManager : IPlayerComponent, IDisposable
     {
         HasToasts = true;
         channel.UpdateInfo(in message, info);
-        EffectAsset? asset = info.Asset.GetAsset();
         if (info.UI != null)
         {
             info.UI.SendToPlayer(Player.Connection);
             info.SendCallback?.Invoke(Player, in message, info, info.UI, _serviceProvider);
         }
-        else if (asset != null)
+        else if (info.Asset.TryGetAsset(out EffectAsset? asset))
         {
             if (message.Argument != null)
             {
@@ -464,7 +461,6 @@ public sealed class ToastManager : IPlayerComponent, IDisposable
         }
     }
 
-    WarfarePlayer IPlayerComponent.Player { get => Player; set => Player = value; }
     public sealed class ToastMessageChannel
     {
         public ToastManager Manager { get; }

@@ -85,7 +85,7 @@ internal class ShovelableWarningTweak : IEventListener<ProjectileSpawned>
     private class LandingZonesComponent : IPlayerComponent
     {
         public int NumLandingZones;
-        public required WarfarePlayer Player { get; set; }
+        public required WarfarePlayer Player { get; init; }
         public void Init(IServiceProvider serviceProvider, bool isOnJoin) { }
     }
 

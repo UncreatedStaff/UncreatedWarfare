@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text.Json.Serialization;
@@ -18,8 +17,6 @@ namespace Uncreated.Warfare.Teams;
 [CannotApplyEqualityOperator]
 public class FactionInfo : ICloneable, ITranslationArgument, IEquatable<FactionInfo>
 {
-    private string? _spriteText;
-
     public const string UnknownTeamImgURL = "https://i.imgur.com/z0HE5P3.png";
     public const int FactionIDMaxCharLimit = 16;
     public const int FactionNameMaxCharLimit = 32;
@@ -127,20 +124,24 @@ public class FactionInfo : ICloneable, ITranslationArgument, IEquatable<FactionI
     public uint PrimaryKey { get; set; }
 
     [JsonIgnore]
-    public string Sprite => _spriteText ??= ("<sprite index=" + (TMProSpriteIndex.HasValue ? TMProSpriteIndex.Value.ToString(CultureInfo.InvariantCulture) : "0") + ">");
+    public string Sprite => field ??= ("<sprite index=" + (TMProSpriteIndex.HasValue ? TMProSpriteIndex.Value.ToString(CultureInfo.InvariantCulture) : "0") + ">");
 
     [JsonPropertyName("factionId")]
     public string FactionId
     {
         get => _factionId;
+        [MemberNotNull(nameof(_factionId))]
         set
         {
+            if (value == null)
+                throw new ArgumentNullException(nameof(value));
             if (value.Length > FactionIDMaxCharLimit)
                 throw new ArgumentException("Faction ID must be less than " + FactionIDMaxCharLimit + " characters.", "factionId");
             _factionId = value;
         }
     }
 
+#pragma warning disable CS8618
     public FactionInfo()
     {
         Backpacks = new AssetVariantDictionary<ItemBackpackAsset>(1);
@@ -155,6 +156,7 @@ public class FactionInfo : ICloneable, ITranslationArgument, IEquatable<FactionI
         ShortNameTranslations = new TranslationList(4);
         AbbreviationTranslations = new TranslationList(4);
     }
+#pragma warning restore CS8618
 
     public FactionInfo(string factionId, string name, string abbreviation, string? shortName, Color color, uint? unarmedKit, string kitPrefix, string flagImage = UnknownTeamImgURL)
         : this()
@@ -584,7 +586,7 @@ public class FactionInfo : ICloneable, ITranslationArgument, IEquatable<FactionI
     /// <inheritdoc />
     public bool Equals(FactionInfo? faction)
     {
-        return faction != null && faction.PrimaryKey == PrimaryKey || string.Equals(faction.FactionId, FactionId, StringComparison.Ordinal);
+        return faction != null && (faction.PrimaryKey == PrimaryKey || string.Equals(faction.FactionId, FactionId, StringComparison.Ordinal));
     }
 
     /// <inheritdoc />
@@ -648,7 +650,7 @@ public class FactionInfo : ICloneable, ITranslationArgument, IEquatable<FactionI
 
     public string GetAbbreviation(LanguageInfo? language)
     {
-        if (language is null || language.IsDefault || AbbreviationTranslations is null || !AbbreviationTranslations.TryGetValue(language.Code, out string val))
+        if (language is null || language.IsDefault || AbbreviationTranslations is null || !AbbreviationTranslations.TryGetValue(language.Code, out string? val))
             return Abbreviation;
         return val;
     }

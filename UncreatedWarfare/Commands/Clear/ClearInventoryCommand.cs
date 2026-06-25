@@ -1,6 +1,4 @@
-using System.Globalization;
 using Uncreated.Warfare.Interaction.Commands;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
@@ -36,16 +34,14 @@ internal sealed class ClearInventoryCommand : IExecutableCommand
             // todo: Context.LogAction(ActionLogType.ClearInventory, "CLEARED INVENTORY OF " + pl.Steam64.m_SteamID.ToString(CultureInfo.InvariantCulture));
             Context.Reply(_translations.ClearInventoryOther, pl);
         }
-        else if (!Context.Caller.IsTerminal)
+        else
         {
+            Context.AssertRanByPlayer();
+
             // clear inv
             ItemUtility.ClearInventoryAndSlots(Context.Player);
             // todo: Context.LogAction(ActionLogType.ClearInventory, "CLEARED PERSONAL INVENTORY");
             Context.Reply(_translations.ClearInventorySelf);
-        }
-        else
-        {
-            throw Context.Reply(_translations.ClearNoPlayerConsole);
         }
     }
 }

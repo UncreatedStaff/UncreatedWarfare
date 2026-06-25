@@ -328,7 +328,7 @@ public sealed class HudManager : IEventListener<PlayerLeft>
         public int HandleCount;
 
         /// <inheritdoc />
-        public WarfarePlayer Player { get; set; } = null!;
+        public required WarfarePlayer Player { get; init; }
 
         /// <inheritdoc />
         public void Init(IServiceProvider serviceProvider, bool isOnJoin)

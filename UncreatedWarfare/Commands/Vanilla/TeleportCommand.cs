@@ -128,6 +128,7 @@ internal sealed class TeleportCommand : IExecutableCommand
 
                 if (Context.MatchParameter(1, "wp", "wayport", "marker"))
                 {
+                    Context.AssertRanByPlayer();
                     if (!Context.Player.UnturnedPlayer.quests.isMarkerPlaced)
                         throw Context.Reply(_translations.TeleportWaypointNotFound);
                     Vector3 waypoint = Context.Player.UnturnedPlayer.quests.markerPosition;
@@ -217,7 +218,7 @@ internal sealed class TeleportCommand : IExecutableCommand
                 if (target.UnturnedPlayer.life.isDead)
                     throw Context.Reply(_translations.TeleportTargetDead, target);
 
-                pos = ParseCoordiantes(1, Context.Player.Position);
+                pos = ParseCoordiantes(1, Context.Player?.Position);
                 if (float.IsNaN(pos.y))
                     pos.y = TerrainUtility.GetHighestPoint(in pos, float.NaN) + heightOffset;
 
@@ -234,7 +235,7 @@ internal sealed class TeleportCommand : IExecutableCommand
         }
     }
 
-    private Vector3 ParseCoordiantes(int offset, Vector3 pos)
+    private Vector3 ParseCoordiantes(int offset, Vector3? pos)
     {
         Vector3 v3 = default;
 
@@ -253,16 +254,16 @@ internal sealed class TeleportCommand : IExecutableCommand
 
         if (!float.TryParse(xStr, NumberStyles.Number, CultureInfo.InvariantCulture, out v3.x))
         {
-            if (xStr != null && xStr.StartsWith("~", StringComparison.Ordinal))
-                v3.x = pos.x + GetOffset(xStr);
+            if (pos.HasValue && xStr != null && xStr.StartsWith("~", StringComparison.Ordinal))
+                v3.x = pos.Value.x + GetOffset(xStr);
             else
                 throw Context.Reply(_translations.TeleportInvalidCoordinates);
         }
 
         if (!float.TryParse(yStr, NumberStyles.Number, CultureInfo.InvariantCulture, out v3.y))
         {
-            if (yStr != null && yStr.StartsWith("~", StringComparison.Ordinal))
-                v3.y = pos.y + GetOffset(yStr);
+            if (pos.HasValue && yStr != null && yStr.StartsWith("~", StringComparison.Ordinal))
+                v3.y = pos.Value.y + GetOffset(yStr);
             else if (yStr == "-")
                 v3.y = float.NaN;
             else
@@ -271,8 +272,8 @@ internal sealed class TeleportCommand : IExecutableCommand
 
         if (!float.TryParse(zStr, NumberStyles.Number, CultureInfo.InvariantCulture, out v3.z))
         {
-            if (zStr != null && zStr.StartsWith("~", StringComparison.Ordinal))
-                v3.z = pos.z + GetOffset(zStr);
+            if (pos.HasValue && zStr != null && zStr.StartsWith("~", StringComparison.Ordinal))
+                v3.z = pos.Value.z + GetOffset(zStr);
             else
                 throw Context.Reply(_translations.TeleportInvalidCoordinates);
         }

@@ -2,7 +2,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
@@ -16,10 +15,12 @@ public class WarfarePluginLoader
     private readonly WarfareModule _warfare;
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<WarfarePluginLoader> _logger;
-    private Assembly[]? _allAssemblies;
+
     public IReadOnlyList<WarfarePlugin> Plugins { get; private set; }
+
     public WarfarePluginLoader(WarfareModule warfare, ILoggerFactory loggerFactory)
     {
+        Plugins = Array.Empty<WarfarePlugin>();
         _warfare = warfare;
         _loggerFactory = loggerFactory;
         _logger = _loggerFactory.CreateLogger<WarfarePluginLoader>();
@@ -33,8 +34,8 @@ public class WarfarePluginLoader
         [MethodImpl(MethodImplOptions.NoInlining)]
         get
         {
-            if (_allAssemblies != null)
-                return _allAssemblies;
+            if (field != null)
+                return field;
 
             Assembly[] arr = new Assembly[Plugins.Count + 1];
             arr[0] = Assembly.GetExecutingAssembly();
@@ -43,7 +44,7 @@ public class WarfarePluginLoader
                 arr[i + 1] = Plugins[i].LoadedAssembly;
             }
 
-            _allAssemblies = arr;
+            field = arr;
             return arr;
         }
     }

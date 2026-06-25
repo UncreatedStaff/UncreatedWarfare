@@ -109,7 +109,7 @@ internal struct StringParameterList
         if (_isArray) return (object?[])Parameter1!;
         return Count switch
         {
-            0 => Array.Empty<object>(),
+            0 => Array.Empty<object?>(),
             1 => [ Parameter1 ],
             2 => [ Parameter1, Parameter2 ],
             3 => [ Parameter1, Parameter2, Parameter3 ],

@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Util;
@@ -11,8 +10,8 @@ namespace Uncreated.Warfare.Players.Skillsets;
 public class SkillsetPlayerComponent : IPlayerComponent
 {
     private ILogger<SkillsetPlayerComponent> _logger = null!;
-    public WarfarePlayer Player { get; private set; }
-    WarfarePlayer IPlayerComponent.Player { get => Player; set => Player = value; }
+
+    public required WarfarePlayer Player { get; init; }
 
     void IPlayerComponent.Init(IServiceProvider serviceProvider, bool isOnJoin)
     {

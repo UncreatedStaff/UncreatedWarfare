@@ -37,7 +37,6 @@ public class PlayerInjureComponent : MonoBehaviour,
     IEventListener<EnterVehicleRequested>,
     IEventListener<EquipUseableRequested>
 {
-
     /// <summary>
     /// Number of seconds after a player is injured before they can take damage.
     /// </summary>
@@ -128,10 +127,8 @@ public class PlayerInjureComponent : MonoBehaviour,
     private ILogger<PlayerInjureComponent> _logger;
     private PlayersTranslations _playerTranslations;
     private TipService _tipService;
-    public WarfarePlayer Player { get; private set; }
 #nullable restore
-
-    WarfarePlayer IPlayerComponent.Player { get => Player; set => Player = value; }
+    public required WarfarePlayer Player { get; init; }
 
     /// <summary>
     /// The player's state (injured/not injured).

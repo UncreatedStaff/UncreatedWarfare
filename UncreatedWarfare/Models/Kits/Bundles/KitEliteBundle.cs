@@ -4,6 +4,8 @@ using System.Text.Json.Serialization;
 
 namespace Uncreated.Warfare.Models.Kits.Bundles;
 
+#nullable disable
+
 [Table("kits_bundle_items")]
 public class KitEliteBundle
 {

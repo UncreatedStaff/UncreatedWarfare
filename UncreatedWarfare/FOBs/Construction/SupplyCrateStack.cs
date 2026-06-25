@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Util;
@@ -359,7 +358,11 @@ public class SupplyCrateStack : IDisposable
 
 internal class SupplyStackComponent : MonoBehaviour
 {
+#nullable disable
+
     public SupplyCrateStack Stack { get; private set; }
+
+#nullable restore
 
     internal void Init(SupplyCrateStack stack)
     {

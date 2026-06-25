@@ -3,7 +3,6 @@ using DanielWillett.ReflectionTools.Emit;
 using DanielWillett.ReflectionTools.Formatting;
 using HarmonyLib;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -170,8 +169,7 @@ internal sealed class PlayerInventoryReceiveDragOrSwapItem : IHarmonyPatch
                         CodeInstruction? setter = ctx.Where((x, index) => x.IsStloc() && index > 0 && ctx[index - 1].Calls(_getItemMtd)).FirstOrDefault();
                         if (setter != null)
                         {
-                            LocalBuilder? lcl = PatchUtility.GetLocal(setter, out int index, true);
-                            emit.LoadLocalValue(lcl == null ? new LocalReference(index) : new LocalReference(lcl))
+                            emit.LoadLocalValue(setter.ToLocalReference())
                                 .LoadFieldValue((ItemJar j) => j.rot)
                                 .SetLocalValue(lclRotation);
                             setLclRotation = true;

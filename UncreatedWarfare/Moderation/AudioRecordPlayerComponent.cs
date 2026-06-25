@@ -2,7 +2,6 @@ using DanielWillett.SpeedBytes;
 using Microsoft.Extensions.DependencyInjection;
 using SDG.Framework.Utilities;
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
@@ -21,7 +20,10 @@ public class AudioRecordPlayerComponent : IPlayerComponent, IDisposable
 {
     private static readonly ByteWriter MetaWriter = new ByteWriter(capacity: 0);
     private const ushort DataVersion = 1;
-    private AudioRecordManager _audioListenService = null!;
+
+#nullable disable
+    private AudioRecordManager _audioListenService;
+#nullable restore
 
     private byte[]? _voiceBuffer;
     private List<PacketInfo>? _packets;
@@ -34,7 +36,7 @@ public class AudioRecordPlayerComponent : IPlayerComponent, IDisposable
     public event Action<WarfarePlayer, bool>? VoiceChatStateUpdated;
 
     internal bool HasPressedDeny { get; set; }
-    public required WarfarePlayer Player { get; set; }
+    public required WarfarePlayer Player { get; init; }
     public int PacketCount => _packets?.Count ?? 0;
     public ArraySegment<byte> RingSectionOne => _voiceBuffer == null
         ? default

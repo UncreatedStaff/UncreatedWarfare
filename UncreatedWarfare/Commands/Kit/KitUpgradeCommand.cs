@@ -28,6 +28,8 @@ internal sealed class KitUpgradeCommand : IExecutableCommand
 
     public async UniTask ExecuteAsync(CancellationToken token)
     {
+        Context.AssertRanByPlayer();
+
         if (!Context.TryGet(0, out string? kitName))
         {
             throw Context.SendHelp();

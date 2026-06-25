@@ -11,6 +11,8 @@ using Uncreated.Warfare.Quests.Parameters;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 
+#pragma warning disable CS8618
+
 namespace Uncreated.Warfare.Quests.Templates;
 public class KillStreak : QuestTemplate<KillStreak, KillStreak.Tracker, KillStreak.State>
 {
@@ -109,7 +111,7 @@ public class KillStreak : QuestTemplate<KillStreak, KillStreak.Tracker, KillStre
 
         public override void ReadProgress(ref Utf8JsonReader reader)
         {
-            JsonUtility.ReadTopLevelProperties(ref reader, (ref Utf8JsonReader reader, string property, ref object? _) =>
+            JsonUtility.ReadTopLevelProperties(ref reader, (ref reader, property, ref _) =>
             {
                 if (property.Equals("CurrentStreakProgress", StringComparison.Ordinal))
                 {

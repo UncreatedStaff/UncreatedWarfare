@@ -31,7 +31,7 @@ internal class PlayerEnemyTerritoryWarningComponent : IPlayerComponent,
     private bool _isMainCamping;
     private Coroutine? _mainCampCoroutine;
 
-    public required WarfarePlayer Player { get; set; }
+    public required WarfarePlayer Player { get; init; }
 
     public bool IsMainCamping => _isMainCamping && !Player.UnturnedPlayer.life.isDead;
 

@@ -20,9 +20,9 @@ public class PlayerKeyComponent : IPlayerComponent
     private bool[] _lastKeys;
     private float[] _keyDownTimes;
 
-    public WarfarePlayer Player { get; private set; }
-
 #nullable restore
+
+    public required WarfarePlayer Player { get; init; }
 
     void IPlayerComponent.Init(IServiceProvider serviceProvider, bool isOnJoin)
     {
@@ -189,6 +189,4 @@ public class PlayerKeyComponent : IPlayerComponent
                 break;
         }
     }
-
-    WarfarePlayer IPlayerComponent.Player { get => Player; set => Player = value; }
 }

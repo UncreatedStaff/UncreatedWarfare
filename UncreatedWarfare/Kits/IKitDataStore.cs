@@ -3,7 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using MySqlConnector;
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
@@ -15,7 +14,6 @@ using Uncreated.Warfare.Events.Logging;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Kits.Loadouts;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Factions;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Kits.Bundles;
@@ -1049,7 +1047,7 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
 
     private ConfiguredTaskAwaitable<KitModel> GetKitModel(uint primaryKey, KitInclude include, CancellationToken token, bool track)
     {
-        return ApplyIncludes(include, _dbContext.Kits, track).FirstOrDefaultAsync(kit => kit!.PrimaryKey == primaryKey, token).ConfigureAwait(false);
+        return ApplyIncludes(include, _dbContext.Kits, track).FirstOrDefaultAsync(kit => kit.PrimaryKey == primaryKey, token).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -1190,43 +1188,43 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
                 mdl = mdl.Include(x => x.Kits).ThenInclude(x => x.Kit);
                 if ((kitListInclude & KitInclude.Items) != 0)
                 {
-                    mdl = mdl.Include(x => x.Kits).ThenInclude(x => x.Kit).ThenInclude(x => x.Items);
+                    mdl = mdl.Include(x => x.Kits).ThenInclude(x => x.Kit!).ThenInclude(x => x.Items);
                 }
                 if ((kitListInclude & KitInclude.UnlockRequirements) != 0)
                 {
-                    mdl = mdl.Include(x => x.Kits).ThenInclude(x => x.Kit).ThenInclude(x => x.UnlockRequirements);
+                    mdl = mdl.Include(x => x.Kits).ThenInclude(x => x.Kit!).ThenInclude(x => x.UnlockRequirements);
                 }
                 if ((kitListInclude & KitInclude.FactionFilter) != 0)
                 {
-                    mdl = mdl.Include(x => x.Kits).ThenInclude(x => x.Kit).ThenInclude(x => x.FactionFilter);
+                    mdl = mdl.Include(x => x.Kits).ThenInclude(x => x.Kit!).ThenInclude(x => x.FactionFilter);
                 }
                 if ((kitListInclude & KitInclude.MapFilter) != 0)
                 {
-                    mdl = mdl.Include(x => x.Kits).ThenInclude(x => x.Kit).ThenInclude(x => x.MapFilter);
+                    mdl = mdl.Include(x => x.Kits).ThenInclude(x => x.Kit!).ThenInclude(x => x.MapFilter);
                 }
                 if ((kitListInclude & KitInclude.Translations) != 0)
                 {
-                    mdl = mdl.Include(x => x.Kits).ThenInclude(x => x.Kit).ThenInclude(x => x.Translations);
+                    mdl = mdl.Include(x => x.Kits).ThenInclude(x => x.Kit!).ThenInclude(x => x.Translations);
                 }
                 if ((kitListInclude & KitInclude.Skillsets) != 0)
                 {
-                    mdl = mdl.Include(x => x.Kits).ThenInclude(x => x.Kit).ThenInclude(x => x.Skillsets);
+                    mdl = mdl.Include(x => x.Kits).ThenInclude(x => x.Kit!).ThenInclude(x => x.Skillsets);
                 }
                 if ((kitListInclude & KitInclude.Bundles) != 0)
                 {
-                    mdl = mdl.Include(x => x.Kits).ThenInclude(x => x.Kit).ThenInclude(x => x.Bundles).ThenInclude(x => x.Bundle);
+                    mdl = mdl.Include(x => x.Kits).ThenInclude(x => x.Kit!).ThenInclude(x => x.Bundles).ThenInclude(x => x.Bundle);
                 }
                 if ((kitListInclude & KitInclude.Access) != 0)
                 {
-                    mdl = mdl.Include(x => x.Kits).ThenInclude(x => x.Kit).ThenInclude(x => x.Access);
+                    mdl = mdl.Include(x => x.Kits).ThenInclude(x => x.Kit!).ThenInclude(x => x.Access);
                 }
                 if ((kitListInclude & KitInclude.Delays) != 0)
                 {
-                    mdl = mdl.Include(x => x.Kits).ThenInclude(x => x.Kit).ThenInclude(x => x.Delays);
+                    mdl = mdl.Include(x => x.Kits).ThenInclude(x => x.Kit!).ThenInclude(x => x.Delays);
                 }
                 if ((kitListInclude & (KitInclude)(1 << 10)) != 0)
                 {
-                    mdl = mdl.Include(x => x.Kits).ThenInclude(x => x.Kit).ThenInclude(x => x.Faction);
+                    mdl = mdl.Include(x => x.Kits).ThenInclude(x => x.Kit!).ThenInclude(x => x.Faction);
                 }
             }
             else

@@ -13,9 +13,7 @@ internal class PlayerEventDispatcher : IPlayerComponent, IDisposable
 {
     private DroppedItemTracker? _droppedItemTracker;
 
-#nullable disable
-    public WarfarePlayer Player { get; private set; }
-#nullable restore
+    public required WarfarePlayer Player { get; init; }
 
     void IPlayerComponent.Init(IServiceProvider serviceProvider, bool isOnJoin)
     {
@@ -37,6 +35,4 @@ internal class PlayerEventDispatcher : IPlayerComponent, IDisposable
         Player.UnturnedPlayer.inventory.onDropItemRequested -= _droppedItemTracker.InvokeDropItemRequested;
         _droppedItemTracker = null;
     }
-
-    WarfarePlayer IPlayerComponent.Player { get => Player; set => Player = value; }
 }

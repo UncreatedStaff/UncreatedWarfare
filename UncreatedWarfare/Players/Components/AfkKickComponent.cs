@@ -23,14 +23,14 @@ internal sealed class AfkKickComponent : IPlayerComponent, IDisposable
 
     private float _lastAfk;
 
+    public required WarfarePlayer Player { get; init; }
+
 #nullable disable
 
     private UserPermissionStore _userPermissionStore;
     private PlayersTranslations _translations;
     private ChatService _chatService;
     private ILogger<AfkKickComponent> _logger;
-
-    public WarfarePlayer Player { get; private set; }
 
 #nullable restore
 
@@ -93,6 +93,4 @@ internal sealed class AfkKickComponent : IPlayerComponent, IDisposable
     {
         TimeUtility.updated -= OnUpdate;
     }
-
-    WarfarePlayer IPlayerComponent.Player { get => Player; set => Player = value; }
 }

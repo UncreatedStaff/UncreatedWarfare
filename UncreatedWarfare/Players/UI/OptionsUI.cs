@@ -1,6 +1,4 @@
-using SDG.NetTransport;
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using Uncreated.Framework.UI;
@@ -646,11 +644,11 @@ public class OptionsUI : UnturnedUI
             using IEnumerator<LanguageInfo> langs = _languageDataStore.Languages.GetEnumerator();
             for (int uiCount = _languageSearch.Count; uiCount < _languageResults.Length && langs.MoveNext();)
             {
-                if (_languageSearch.Contains(langs.Current))
+                if (_languageSearch.Contains(langs.Current!))
                     continue;
 
                 ++uiCount;
-                _languageSearch.Add(langs.Current);
+                _languageSearch.Add(langs.Current!);
             }
 
             return _languageSearch.ToArray();

@@ -9,7 +9,7 @@ public struct Evidence : IEquatable<Evidence>
     public uint Id { get; set; }
 
     [JsonPropertyName("url")]
-    public string URL { get; set; }
+    public required string URL { get; set; }
 
     [JsonPropertyName("saved_location")]
     public string? SavedLocation { get; set; }
@@ -22,15 +22,18 @@ public struct Evidence : IEquatable<Evidence>
 
     [JsonPropertyName("actor")]
     [JsonConverter(typeof(ActorConverter))]
-    public IModerationActor Actor { get; set; }
+    public required IModerationActor Actor { get; set; }
 
     [JsonPropertyName("timestamp_utc")]
     public DateTimeOffset Timestamp { get; set; }
 
     public Evidence() { }
+
+    [SetsRequiredMembers]
     public Evidence(string url, string? message, string? savedLocation, bool image, IModerationActor actor, DateTimeOffset timestamp)
         : this(0u, url, message, savedLocation, image, actor, timestamp) { }
-    
+
+    [SetsRequiredMembers]
     public Evidence(uint id, string url, string? message, string? savedLocation, bool image, IModerationActor actor, DateTimeOffset timestamp)
     {
         Id = id;
@@ -41,6 +44,9 @@ public struct Evidence : IEquatable<Evidence>
         Actor = actor;
         Timestamp = timestamp;
     }
+
+    [SetsRequiredMembers]
+    // ReSharper disable once UnusedParameter.Local
     public Evidence(ByteReader reader, ushort version)
     {
         Id = reader.ReadUInt32();

@@ -4,6 +4,8 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Uncreated.Warfare.Models.Users;
 
+#nullable disable
+
 [Table("user_permissions"), Index(nameof(Steam64))]
 public class Permission
 {

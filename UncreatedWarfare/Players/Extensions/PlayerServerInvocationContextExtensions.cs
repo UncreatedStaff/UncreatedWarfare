@@ -46,7 +46,7 @@ public static class PlayerServerInvocationContextExtensions
         internal ServerInvocationContext InvocationContext;
         internal bool Failed;
 
-        public required WarfarePlayer Player { get; set; }
+        public required WarfarePlayer Player { get; init; }
 
         public void Init(IServiceProvider serviceProvider, bool isOnJoin)
         {

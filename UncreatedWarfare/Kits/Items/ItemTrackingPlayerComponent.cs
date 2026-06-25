@@ -1,6 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Items;
@@ -33,11 +31,7 @@ public class ItemTrackingPlayerComponent :
     /// </summary>
     internal IReadOnlyList<KitLayoutTransformation>? KitLayoutTransformations;
 
-#nullable disable
-
-    public WarfarePlayer Player { get; private set; }
-
-#nullable restore
+    public required WarfarePlayer Player { get; init; }
 
     void IPlayerComponent.Init(IServiceProvider serviceProvider, bool isOnJoin) { }
 
@@ -345,6 +339,4 @@ public class ItemTrackingPlayerComponent :
 
         Player.Component<HotkeyPlayerComponent>().HandleItemPickedUpAfterTransformed(e, origX, origY, origPage);
     }
-
-    WarfarePlayer IPlayerComponent.Player { get => Player; set => Player = value; }
 }

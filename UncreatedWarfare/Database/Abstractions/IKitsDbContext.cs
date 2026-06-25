@@ -6,6 +6,9 @@ using Uncreated.Warfare.Models.Users;
 using Uncreated.Warfare.Players.Skillsets;
 
 namespace Uncreated.Warfare.Database.Abstractions;
+
+#nullable disable
+
 public interface IKitsDbContext : IDbContext
 {
     DbSet<KitModel> Kits { get; }
@@ -14,7 +17,8 @@ public interface IKitsDbContext : IDbContext
     DbSet<KitLayoutTransformation> KitLayoutTransformations { get; }
     DbSet<KitFavorite> KitFavorites { get; }
     DbSet<EliteBundle> EliteBundles { get; }
-    public static void ConfigureModels(ModelBuilder modelBuilder)
+
+    static void ConfigureModels(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<KitModel>()
             .HasKey(x => x.PrimaryKey);
@@ -121,7 +125,7 @@ public interface IKitsDbContext : IDbContext
 
         modelBuilder.Entity<Faction>()
             .HasMany<KitModel>()
-            .WithOne(x => x.Faction!)
+            .WithOne(x => x.Faction)
             .IsRequired(false)
             .OnDelete(DeleteBehavior.SetNull);
 

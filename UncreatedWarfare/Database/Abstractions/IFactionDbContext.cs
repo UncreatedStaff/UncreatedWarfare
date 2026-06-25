@@ -3,11 +3,14 @@ using Uncreated.Warfare.Models.Factions;
 using Uncreated.Warfare.Models.Localization;
 
 namespace Uncreated.Warfare.Database.Abstractions;
+
+#nullable disable
+
 public interface IFactionDbContext : IDbContext
 {
     DbSet<Faction> Factions { get; }
 
-    public static void ConfigureModels(ModelBuilder modelBuilder)
+    static void ConfigureModels(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Faction>()
             .HasMany(x => x.Assets)
@@ -25,7 +28,7 @@ public interface IFactionDbContext : IDbContext
             .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<Faction>()
-            .HasOne(x => x.UnarmedKit!)
+            .HasOne(x => x.UnarmedKit)
             .WithMany()
             .OnDelete(DeleteBehavior.SetNull);
     }

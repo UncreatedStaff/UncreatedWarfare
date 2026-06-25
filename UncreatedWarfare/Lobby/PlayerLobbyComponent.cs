@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using SDG.Framework.Utilities;
-using SDG.NetTransport;
 using StackCleaner;
 using System;
 using Uncreated.Framework.UI;
@@ -25,6 +24,7 @@ public class PlayerLobbyComponent : IPlayerComponent, IDisposable
     private uint _simCount = uint.MaxValue;
 
 #nullable disable
+
     private LobbyZoneManager _lobbyManager;
     private LobbyHudUI _ui;
     private WarfareModule _module;
@@ -35,9 +35,9 @@ public class PlayerLobbyComponent : IPlayerComponent, IDisposable
     private ILogger<PlayerLobbyComponent> _logger;
     private SquadManager _squadManager;
 
-    public WarfarePlayer Player { get; private set; }
-
 #nullable restore
+
+    public required WarfarePlayer Player { get; init; }
 
     private int _joiningTeam = -1;
     private int _lookingTeam = -1;
@@ -362,8 +362,6 @@ public class PlayerLobbyComponent : IPlayerComponent, IDisposable
             ++index;
         }
     }
-
-    WarfarePlayer IPlayerComponent.Player { get => Player; set => Player = value; }
 
     public bool TryTrackQuest(QuestAsset quest)
     {

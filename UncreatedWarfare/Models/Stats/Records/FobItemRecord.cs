@@ -17,7 +17,7 @@ public class FobItemRecord : InstigatedPlayerRecord
     [Column("Fob")]
     public ulong? FobId { get; set; }
 
-    public FobRecord Fob { get; set; }
+    public FobRecord? Fob { get; set; }
 
     public ShovelableType Type { get; set; }
 
@@ -97,5 +97,9 @@ public class FobItemRecord : InstigatedPlayerRecord
         set => _fobItemAngle.z = value;
     }
 
+#pragma warning disable CS8618
+
     public IList<FobItemBuilderRecord> Builders { get; set; }
+
+#pragma warning restore CS8618
 }

@@ -7,6 +7,8 @@ using Uncreated.Warfare.Models.Assets;
 
 namespace Uncreated.Warfare.Models.Stats;
 
+#nullable disable
+
 [Table("stats_deaths")]
 public class DeathRecord : RelatedPlayerRecord
 {
@@ -35,8 +37,9 @@ public class DeathRecord : RelatedPlayerRecord
     [ForeignKey(nameof(KillShot))]
     [Column("KillShot")]
     public ulong? KillShotId { get; set; }
-
+#nullable restore
     public DamageRecord? KillShot { get; set; }
+#nullable disable
 
     [DefaultValue(null)]
     public UnturnedAssetReference? PrimaryAsset { get; set; }

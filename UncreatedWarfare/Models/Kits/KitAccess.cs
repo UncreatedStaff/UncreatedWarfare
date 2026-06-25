@@ -7,6 +7,8 @@ using Uncreated.Warfare.Models.Users;
 
 namespace Uncreated.Warfare.Models.Kits;
 
+#nullable disable
+
 [Table("kits_access")]
 public class KitAccess
 {

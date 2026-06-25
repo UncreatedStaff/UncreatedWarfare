@@ -2,9 +2,12 @@
 using Uncreated.Warfare.Models;
 
 namespace Uncreated.Warfare.Database.Abstractions;
+
+#nullable disable
+
 public interface IWhitelistDbContext : IDbContext
 {
     DbSet<ItemWhitelist> Whitelists { get; }
 
-    public static void ConfigureModels(ModelBuilder modelBuilder) { }
+    static void ConfigureModels(ModelBuilder modelBuilder) { }
 }
