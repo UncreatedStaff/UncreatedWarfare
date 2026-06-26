@@ -2,10 +2,7 @@
 _layout: landing
 ---
 
-# This is the **HOMEPAGE**.
+# Uncreated Warfare
 
-Refer to [Markdown](http://daringfireball.net/projects/markdown/) for how to write markdown files.
+Refer to the Documentation at the top of the page to get started with setting up a test server and creating a gamemode.
 
-## Quick Start Notes:
-
-1. Add images to the *images* folder if the file is referencing an image.

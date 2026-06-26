@@ -654,19 +654,19 @@ public sealed class WarfareModule
             .SingleInstance();
         bldr.RegisterType<SquadMenuUI>()
             .AsSelf().AsImplementedInterfaces()
-            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Layout);
 
         bldr.RegisterType<PlayerSquadHUD>()
             .AsSelf().AsImplementedInterfaces()
-            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Layout);
         
         bldr.RegisterType<FobHUD>()
             .AsSelf().AsImplementedInterfaces()
-            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Layout);
         
         bldr.RegisterType<KitSelectionUI>()
             .AsSelf().AsImplementedInterfaces()
-            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Layout);
 
         bldr.RegisterType<PopupUI>().SingleInstance();
         bldr.RegisterType<StagingUI>().SingleInstance();
@@ -684,7 +684,7 @@ public sealed class WarfareModule
 
         bldr.RegisterType<TipService>()
             .AsImplementedInterfaces().AsSelf()
-            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Layout);
         
         bldr.RegisterType<SendChatMutedEventHandler>()
             .AsImplementedInterfaces();
@@ -723,11 +723,11 @@ public sealed class WarfareModule
 
         bldr.RegisterType<QuestService>()
             .AsImplementedInterfaces().AsSelf()
-            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Layout);
 
         bldr.RegisterType<DailyQuestService>()
             .AsImplementedInterfaces().AsSelf()
-            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Layout);
 
         bldr.RegisterType<LayoutFactory>()
             .AsImplementedInterfaces().AsSelf()
@@ -764,7 +764,7 @@ public sealed class WarfareModule
 
         bldr.RegisterType<MainBaseBuildables>()
             .AsImplementedInterfaces().AsSelf()
-            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Layout);
 
         bldr.RegisterType<VehicleInfoStore>()
             .AsImplementedInterfaces().AsSelf()
@@ -772,7 +772,7 @@ public sealed class WarfareModule
 
         bldr.RegisterType<AbandonService>()
             .AsImplementedInterfaces().AsSelf()
-            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Layout);
 
         bldr.RegisterType<VehicleService>()
             .AsImplementedInterfaces().AsSelf()
@@ -917,17 +917,17 @@ public sealed class WarfareModule
 
         bldr.RegisterType<KitBestowService>()
             .AsSelf().AsImplementedInterfaces()
-            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Layout);
 
         bldr.RegisterType<KitWeaponTextService>()
             .AsSelf().SingleInstance();
 
         bldr.RegisterType<KitRequestService>()
             .AsSelf().AsImplementedInterfaces()
-            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Layout);
 
         bldr.RegisterType<KitRequirementManager>()
-            .AsSelf().InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+            .AsSelf().InstancePerMatchingLifetimeScope(LifetimeScopeTags.Layout);
         
         bldr.RegisterType<PunchToRequestTweaks>()
             .AsSelf().AsImplementedInterfaces();
@@ -948,11 +948,11 @@ public sealed class WarfareModule
             HolidayUtil.isHolidayActive(ENPCHoliday.APRIL_FOOLS)
                 ? ActivatorUtilities.CreateInstance<DootpressorKitItemResolver>(serviceProvider)
                 : ActivatorUtilities.CreateInstance<BaseKitItemResolver>(serviceProvider)
-        ).InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+        ).InstancePerMatchingLifetimeScope(LifetimeScopeTags.Layout);
 
         bldr.RegisterType<AssetRedirectService>()
             .AsSelf().AsImplementedInterfaces()
-            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Layout);
 
         bldr.RegisterType<DroppedItemTracker>()
             .AsSelf().AsImplementedInterfaces()
@@ -960,7 +960,7 @@ public sealed class WarfareModule
 
         bldr.RegisterType<WhitelistService>()
             .AsSelf().AsImplementedInterfaces()
-            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Layout);
 
         bldr.RegisterType<SignInstancer>()
             .AsSelf().AsImplementedInterfaces()
@@ -995,20 +995,20 @@ public sealed class WarfareModule
 
         bldr.RegisterType<LayoutPhaseEventListenerProvider>()
             .As<IEventListenerProvider>()
-            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Layout);
 
         // FOBs
         bldr.RegisterType<DeploymentService>()
             .AsSelf().AsImplementedInterfaces()
-            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Layout);
 
         bldr.RegisterType<FobManager>()
             .AsSelf().AsImplementedInterfaces()
-            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Layout);
         
         bldr.RegisterType<FobStrategyMapHandler>()
             .AsSelf().AsImplementedInterfaces()
-            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Layout);
         
         bldr.RegisterType<ThrowableSupplyCrateTweaks>()
             .AsSelf().AsImplementedInterfaces()
@@ -1031,7 +1031,7 @@ public sealed class WarfareModule
         // Strategy Tables
         bldr.RegisterType<StrategyMapManager>()
             .AsSelf().AsImplementedInterfaces()
-            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Layout);
 
         bldr.RegisterType<StrategyMapsConfiguration>()
             .SingleInstance();
@@ -1039,14 +1039,14 @@ public sealed class WarfareModule
         // Squads
         bldr.RegisterType<SquadManager>()
             .AsSelf().AsImplementedInterfaces()
-            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Layout);
 
         bldr.RegisterType<SquadConfiguration>()
             .SingleInstance();
         
         bldr.RegisterType<SquadSignEvents>()
             .AsSelf().AsImplementedInterfaces()
-            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Layout);
 
         // Spotting
         bldr.RegisterType<SpottedService>()
@@ -1061,10 +1061,10 @@ public sealed class WarfareModule
         // Tweaks
         bldr.RegisterType<FobPlacementTweaks>()
             .AsSelf().AsImplementedInterfaces()
-            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Layout);
         bldr.RegisterType<ShovelableTweaks>()
             .AsSelf().AsImplementedInterfaces()
-            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Layout);
         bldr.RegisterType<VehicleLockRequestedHandler>()
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
@@ -1073,13 +1073,13 @@ public sealed class WarfareModule
             .SingleInstance();
         bldr.RegisterType<ClaimToRearmTweaks>()
             .AsSelf().AsImplementedInterfaces()
-            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Layout);
         bldr.RegisterType<GuidedMissileLaunchTweaks>()
             .AsSelf().AsImplementedInterfaces()
-            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Layout);
         bldr.RegisterType<FlareTweaks>()
             .AsSelf().AsImplementedInterfaces()
-            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Layout);
         bldr.RegisterType<QueueShutdownOnUnturnedUpdate>()
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
@@ -1088,35 +1088,35 @@ public sealed class WarfareModule
             .SingleInstance();
         bldr.RegisterType<RemoveKitOnGameEnd>()
             .AsSelf().AsImplementedInterfaces()
-            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Layout);
         bldr.RegisterType<VehicleRestrictions>()
             .AsSelf().AsImplementedInterfaces()
-            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Layout);
         bldr.RegisterType<BattlEyeBanEventHandler>()
             .AsSelf().AsImplementedInterfaces();
         bldr.RegisterType<VehicleTrunkTweaks>()
             .AsSelf().AsImplementedInterfaces()
-            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Layout);
         bldr.RegisterType<PlayerChooseSpawnPointTweaks>()
             .AsSelf().AsImplementedInterfaces()
-            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Layout);
         bldr.RegisterType<KeepPlayerStateOnRejoinTweak>()
             .AsSelf().AsImplementedInterfaces()
-            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Layout);
         bldr.RegisterType<KeepItemsAndStatsOnDeathTweak>()
             .AsImplementedInterfaces();
         bldr.RegisterType<DisallowGroupsTweak>()
             .AsImplementedInterfaces();
         bldr.RegisterType<ShovelableWarningTweak>()
             .AsSelf().AsImplementedInterfaces()
-            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Layout);
         bldr.RegisterType<DisallowPickUpSupplyCrate>()
             .AsSelf().AsImplementedInterfaces()
-            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Layout);
 
         bldr.RegisterType<WarTableDoorTweak>()
             .AsSelf().AsImplementedInterfaces()
-            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Layout);
 
         bldr.RegisterType<NoCraftingTweak>()
             .AsSelf().AsImplementedInterfaces()
@@ -1129,13 +1129,13 @@ public sealed class WarfareModule
             .SingleInstance();
         bldr.RegisterType<LandmineExplosionRestrictions>()
             .AsSelf().AsImplementedInterfaces()
-            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Layout);
         bldr.RegisterType<PreventLeaveGroupTweak>()
             .AsSelf().AsImplementedInterfaces()
-            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Layout);
         bldr.RegisterType<SafezoneTweaks>()
             .AsSelf().AsImplementedInterfaces()
-            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Session);        
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Layout);        
         bldr.RegisterType<MapMarkerTweaks>()
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
@@ -1852,8 +1852,8 @@ public sealed class WarfareModule
         _activeLayout = null;
 
         ILifetimeScope newScope = builder == null
-            ? ServiceProvider.BeginLifetimeScope(LifetimeScopeTags.Session)
-            : ServiceProvider.BeginLifetimeScope(LifetimeScopeTags.Session, builder);
+            ? ServiceProvider.BeginLifetimeScope(LifetimeScopeTags.Layout)
+            : ServiceProvider.BeginLifetimeScope(LifetimeScopeTags.Layout, builder);
 
 
         ILifetimeScope? oldScope = Interlocked.Exchange(ref _activeScope, newScope);

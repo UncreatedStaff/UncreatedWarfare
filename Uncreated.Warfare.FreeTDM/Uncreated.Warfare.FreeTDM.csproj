@@ -48,7 +48,7 @@
 	</ItemGroup>
 
 	<!-- Copy to Plugins directory on build -->
-	<Target Name="__CopyToOutDir" AfterTargets="Build" Condition="exists('$(U3DSPath)/Servers/$(ServerId)/Warfare/Plugins')">
+	<Target Name="__CopyToOutDir" AfterTargets="Build" Condition="exists('$(U3DSPath)/Servers/$(ServerId)')">
 		<Copy SourceFiles="$(OutDir)/$(AssemblyName).dll" DestinationFiles="$(U3DSPath)/Servers/$(ServerId)/Warfare/Plugins/$(AssemblyName).dll" />
 	</Target>
 

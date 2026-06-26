@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
@@ -10,11 +11,13 @@ using System.Runtime.CompilerServices;
 using Uncreated.Warfare.Configuration;
 
 namespace Uncreated.Warfare.Plugins;
+
 public class WarfarePluginLoader
 {
     private readonly WarfareModule _warfare;
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<WarfarePluginLoader> _logger;
+    private ImmutableArray<Assembly> _allAssemblies;
 
     public IReadOnlyList<WarfarePlugin> Plugins { get; private set; }
 
@@ -29,23 +32,23 @@ public class WarfarePluginLoader
     /// <summary>
     /// List of all assemblies including this assembly and all plugin assemblies.
     /// </summary>
-    internal Assembly[] AllAssemblies
+    internal ImmutableArray<Assembly> AllAssemblies
     {
         [MethodImpl(MethodImplOptions.NoInlining)]
         get
         {
-            if (field != null)
-                return field;
+            if (!_allAssemblies.IsDefault)
+                return _allAssemblies;
 
-            Assembly[] arr = new Assembly[Plugins.Count + 1];
-            arr[0] = Assembly.GetExecutingAssembly();
+            ImmutableArray<Assembly>.Builder bldr = ImmutableArray.CreateBuilder<Assembly>(Plugins.Count + 1);
+            bldr.Add(Assembly.GetExecutingAssembly());
             for (int i = 0; i < Plugins.Count; ++i)
             {
-                arr[i + 1] = Plugins[i].LoadedAssembly;
+                bldr.Add(Plugins[i].LoadedAssembly);
             }
 
-            field = arr;
-            return arr;
+            _allAssemblies = bldr.MoveToImmutable();
+            return _allAssemblies;
         }
     }
 
@@ -56,6 +59,9 @@ public class WarfarePluginLoader
         Directory.CreateDirectory(pluginDir);
 
         List<WarfarePlugin> plugins = new List<WarfarePlugin>();
+
+        IReadOnlyList<WarfarePlugin> existingPlugins = Plugins;
+
         foreach (string file in Directory.EnumerateFiles(pluginDir, "*.dll", SearchOption.TopDirectoryOnly))
         {
             AssemblyName name;
@@ -69,7 +75,18 @@ public class WarfarePluginLoader
                 continue;
             }
 
-            _logger.LogInformation("Loading plugin: {0} v{1}.", name.Name, name.Version);
+            WarfarePlugin? existingPlugin = existingPlugins.FirstOrDefault(
+                x => string.Equals(x.AssemblyLocation, file, StringComparison.Ordinal)
+            );
+
+            if (existingPlugin != null)
+            {
+                plugins.Add(existingPlugin);
+                _logger.LogDebug($"Skipping loading plugin {name.Name}, already loaded.");
+                continue;
+            }
+
+            _logger.LogInformation($"Loading plugin: {name.Name} v{name.Version}.");
             
             Assembly assembly = Assembly.LoadFrom(file);
 
@@ -78,7 +95,8 @@ public class WarfarePluginLoader
         }
 
         Plugins = new ReadOnlyCollection<WarfarePlugin>(plugins.ToArray());
-        _logger.LogInformation("Loaded {0} plugin(s).", plugins.Count);
+        _allAssemblies = default;
+        _logger.LogInformation($"Loaded {plugins.Count} plugin(s).");
     }
 
     internal void ConfigureServices(ContainerBuilder bldr)
@@ -89,6 +107,9 @@ public class WarfarePluginLoader
 
         foreach (WarfarePlugin plugin in Plugins)
         {
+            if (plugin.ConfiguredGlobalServices)
+                continue;
+
             List<Type> allTypes = Accessor.GetTypesSafe(plugin.LoadedAssembly);
 
             bool configuredConfig = false;
@@ -116,6 +137,7 @@ public class WarfarePluginLoader
                 try
                 {
                     configurer.ConfigureServices(bldr);
+                    plugin.ConfiguredGlobalServices = true;
                 }
                 catch (Exception ex)
                 {

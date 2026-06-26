@@ -10,7 +10,8 @@ public class ValuablePlayerInfo
 {
     internal IConfiguration? Configuration;
 
-    #nullable disable
+#nullable disable
+
     [UsedImplicitly]
     public string Name { get; set; }
 
@@ -19,7 +20,8 @@ public class ValuablePlayerInfo
 
     [UsedImplicitly]
     public float Chance { get; set; } = 1f;
-    #nullable restore
+
+#nullable restore
 
     /// <summary>
     /// Chooses a player which is best fit for this role.

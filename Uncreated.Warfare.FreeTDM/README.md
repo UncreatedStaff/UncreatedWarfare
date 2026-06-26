@@ -123,6 +123,7 @@ Phases:
 ```
 
 Most phases can define the following properties:
+
 | Property | Type | Description | Default |
 | -- | -- | -- | -- |
 | Duration | time span | Time before the phase automatically ends. | Infinite |
@@ -132,6 +133,7 @@ Most phases can define the following properties:
 
 \
 *PhaseTeamSettings*
+
 | Property | Type | Description | Default |
 | -- | -- | -- | -- |
 | Team | string | The team to apply these options to. Either faction internal ID ('caf'), 'blufor', 'opfor', or a team index | required |
@@ -142,6 +144,7 @@ Most phases can define the following properties:
 \
 \
 LeaderboardPhase has some specific properties for the leaderboard UI and statistics functionality
+
 | Property | Type | Description | Default |
 | -- | -- | -- | -- |
 | PlayerStatsPath | relative path | Path to a file containing the other properties. | null |
@@ -150,6 +153,7 @@ LeaderboardPhase has some specific properties for the leaderboard UI and statist
 
 \
 *LeaderboardPhaseStatInfo*
+
 | Property | Type | Description | Default |
 | -- | -- | -- | -- |
 | Name | string | Unique internal name of this stat. | required |
@@ -165,6 +169,7 @@ LeaderboardPhase has some specific properties for the leaderboard UI and statist
 
 \
 *ValuablePlayerInfo*
+
 | Property | Type | Description | Default |
 | -- | -- | -- | -- |
 | Name | string | Unique internal name of this role. | required |

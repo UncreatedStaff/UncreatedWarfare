@@ -49,7 +49,7 @@ internal class FtdmService : ILayoutPhaseListener<ActionPhase>, IDisposable, ILa
     private LinearDictionary<Team, IEventBasedProximity<WarfarePlayer>>? _friendlyZoneColliders;
 
     public bool IsInActionPhase { get; private set; }
-    public bool AllowReenterSpwan { get; private set; }
+    public bool AllowReenterSpawn { get; private set; }
 
     public ZoneProximity? PlayArea { get; private set; }
 
@@ -95,7 +95,7 @@ internal class FtdmService : ILayoutPhaseListener<ActionPhase>, IDisposable, ILa
 
     private void OnConfigUpdate()
     {
-        AllowReenterSpwan = _configuration.GetValue<bool>("AllowReenterSpwan");
+        AllowReenterSpawn = _configuration.GetValue<bool>("AllowReenterSpawn");
 
         LinearDictionary<Team, string[]> dict = new LinearDictionary<Team, string[]>(_teamManager.AllTeams.Count);
         foreach (IConfigurationSection section in _configuration.GetSection("Kits").GetChildren())
@@ -144,7 +144,7 @@ internal class FtdmService : ILayoutPhaseListener<ActionPhase>, IDisposable, ILa
                         comp.LastInFriendlySpawn = time;
                     else if (time - comp.LastInFriendlySpawn > 1f)
                     {
-                        if (!AllowReenterSpwan)
+                        if (!AllowReenterSpawn)
                         {
                             // this shouldn't really happen
                             player.UnturnedPlayer.life.askDamage(101, Vector3.up, EDeathCause.ARENA, ELimb.SPINE, CSteamID.Nil, out _);
@@ -206,7 +206,7 @@ internal class FtdmService : ILayoutPhaseListener<ActionPhase>, IDisposable, ILa
     {
         bool isFriendly = enemySpawnTeam.IsFriendly(player.Team);
 
-        if (isFriendly && AllowReenterSpwan || player.IsOnDuty)
+        if (isFriendly && AllowReenterSpawn || player.IsOnDuty)
             return;
 
         // turns the player around and teleports them a small distance away from the zone in the direction they came from.

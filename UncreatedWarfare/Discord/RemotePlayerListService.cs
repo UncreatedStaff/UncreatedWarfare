@@ -4,7 +4,6 @@ using DanielWillett.ModularRpcs.Async;
 using DanielWillett.ModularRpcs.Serialization;
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
@@ -267,7 +266,7 @@ public partial class RemotePlayerListService :
     [EventListener(RequiresMainThread = false)]
     void IEventListener<PlayerLeft>.HandleEvent(PlayerLeft e, IServiceProvider serviceProvider)
     {
-        Task.Run(async () =>
+        _ = Task.Run(async () =>
         {
             try
             {
@@ -287,7 +286,7 @@ public partial class RemotePlayerListService :
     [EventListener(RequiresMainThread = false)]
     void IEventListener<HomebaseConnected>.HandleEvent(HomebaseConnected e, IServiceProvider serviceProvider)
     {
-        Task.Run(async () =>
+        _ = Task.Run(async () =>
         {
             try
             {

@@ -8,6 +8,9 @@ public class WarfarePlugin
     public string AssemblyLocation { get; }
     public Assembly LoadedAssembly { get; }
     public IConfigurationRoot? Configuration { get; internal set; }
+
+    public bool ConfiguredGlobalServices { get; set; }
+
     public WarfarePlugin(AssemblyName assemblyName, string assemblyLocation, Assembly loadedAssembly)
     {
         AssemblyName = assemblyName;

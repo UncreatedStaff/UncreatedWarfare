@@ -1,4 +1,19 @@
-- name: Introduction
-  href: introduction.md
-- name: Getting Started
-  href: getting-started.md
+items:
+  - name: Introduction
+    href: introduction.md
+  - name: Getting Started
+    href: getting-started.md
+  - name: Layouts
+    href: layouts.md
+    expanded: true
+    items:
+      - name: Leaderboard Stats
+        href: stats.md
+  - name: Plugins
+    href: plugins.md
+    expanded: true
+    items:
+      - name: Events
+        href: events.md
+      - name: Commands
+        href: commands.md

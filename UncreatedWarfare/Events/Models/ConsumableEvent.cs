@@ -1,6 +1,10 @@
 using System;
 
 namespace Uncreated.Warfare.Events.Models;
+
+/// <summary>
+/// A type of event that can stop other event listeners from running but doesn't exactly 'cancel' the event.
+/// </summary>
 public class ConsumableEvent : ICancellable
 {
     public ConsumableEvent() { }
