@@ -50,38 +50,44 @@ public class AnnouncementTranslations : PropertiesTranslationCollection
     protected override string FileName => "Announcements";
 
     [TranslationData("Announcement telling people to join the discord by typing /discord.")]
-    public readonly Translation AnnouncementDiscord = new Translation("<#b3b3b3>Have you joined our <#7483c4>Discord</color> server yet? Type <#7483c4>/discord</color> to join.");
+    public readonly Translation AnnouncementDiscord = new Translation("<#9da6a6>Have you joined our <#7483c4>Discord</color> server yet? Type <#7483c4>/discord</color> to join.");
 
     [TranslationData("Announcement telling people the best ways to earn XP.")]
     public readonly Translation AnnouncementRankUp = new Translation("<#92a692>Capture <#ffffff>flags</color> and build <#ffffff>FOBs</color> to rank up and earn respect amongst your team.");
 
     [TranslationData("Announcement telling people not to waste assets.")]
-    public readonly Translation AnnouncementDontWasteAssets = new Translation("<#c79675>Do not waste vehicles, ammo, build, or other assets! You may risk punishment if you're reported or caught.");
+    public readonly Translation AnnouncementDontWasteAssets = new Translation("<#a2a7ba>Do not waste <#ffffff>vehicles, ammo, build, or other assets!</color> You may risk punishment if you're reported or caught.");
 
     [TranslationData("Announcement telling people to communicate.")]
-    public readonly Translation AnnouncementListenToSuperiors = new Translation("<#a2a7ba>Winning requires coordination and teamwork. Listen to each other and communicate!");
+    public readonly Translation AnnouncementListenToSuperiors = new Translation("<#a2a7ba>Winning requires <#ffffff>coordination and teamwork</color>. Listen to each other and <#ffffff>communicate!</color>");
 
     [TranslationData("Announcement telling people to build FOBs to help their team.")]
     public readonly Translation AnnouncementBuildFOBs = new Translation("<#9da6a6>Building <color=#54e3ff>FOBs</color> is vital for advancing operations. Grab a logistics truck and go build one!");
-
+    
+    [TranslationData("Announcement telling people how to request a kit.")]
+    public readonly Translation AnnouncementKits = new Translation("<#9da6a6>If you are having trouble trying to request a kit, you can request a kit by <#ffffff>punching the sign</color> of the kit you wish to request.");
+    
     [TranslationData("Announcement telling people to grab ammo.")]
     public readonly Translation AnnouncementAmmo = new Translation("<#9da6a6> If you need help restocking your kit you can refill any empty magazines, medical supplies and extra equipment by grabing ammo off of <color=#54e3ff>FOBs</color> or deploying to main base.");
 
     [TranslationData("Announcement telling people to join or create a squad.")]
-    public readonly Translation AnnouncementSquads = new Translation("<#c2b7a5>Join or create a squad by talking to the <#ffffff>Squads NPC</color> or use <#ffffff>/squads</color> to earn extra XP among other benefits.");
+    public readonly Translation AnnouncementSquads = new Translation("<#9da6a6>Join or create a squad by talking to the <#ffffff>Squads NPC</color> or use <#ffffff>/squads</color> to earn extra XP among other benefits.");
 
-    [TranslationData("Announcement telling people to place Rallys to help their team.")]
+    [TranslationData("Announcement telling people to place rally points to help their team.")]
     public readonly Translation AnnouncementPlaceRallys = new Translation("<#9da6a6>Placing <color=#54e3ff>Rally Points</color> can be used as a strong tool for advancing operations. Ask your Squad Leader to place one!");
 
     [TranslationData("Announcement telling people about the different way our chat works.")]
     public readonly Translation AnnouncementChatChanges = new Translation("<#a2a7ba>Use area chat while in a squad to communicate with only them or group chat to communicate with your entire <#54e3ff>team</color>.");
 
     [TranslationData("Announcement telling people about the abandon command.")]
-    public readonly Translation AnnouncementAbandon = new Translation("<#b3b3b3>Done with your vehicle? Type <#ffffff>/abandon</color> while in main base to get some credits back and free up the vehicle for your team.");
+    public readonly Translation AnnouncementAbandon = new Translation("<#9da6a6>Done with your vehicle? Type <#ffffff>/abandon</color> while in main base to get some credits back and free up the vehicle for your team.");
 
     [TranslationData("Announcement telling people about soloing.")]
-    public readonly Translation AnnouncementSoloing = new Translation("<#c79675>Any vehicle requiring a Crewman or Pilot kit must have 2 people operating the vehicle.");
+    public readonly Translation AnnouncementSoloing = new Translation("<#9da6a6>Any vehicle requiring a <#ffffff>Crewman or Pilot kit</color> must have 2 people operating the vehicle.");
+
+    [TranslationData("Announcement telling people about the armor zones.")]
+    public readonly Translation AnnouncementArmorZones = new Translation("<#9da6a6>Vehicles on this server use <color=#54e3ff>armor zones</color>, so they take <color=#54e3ff>more or less damage</color> depending on where they're hit. For <color=#ffffff>anti-tank roles</color>, aim for the rear, because frontal armor is much stronger. For <color=#ffffff>crewman roles</color>, position yourself such that the front of the vehicle faces the enemy. <color=#ffffff>Don't get flanked.</color>");
 
     [TranslationData("Announcement telling people about reporting with /report.")]
-    public readonly Translation AnnouncementReport = new Translation("<#c2b7a5>See someone breaking rules? Use the <#ffffff>/report</color> command to help admins see context about the report.</color>");
+    public readonly Translation AnnouncementReport = new Translation("<#9da6a6>See someone breaking rules? Use the <#ffffff>/report</color> command to help admins see context about the report.</color>");
 }
