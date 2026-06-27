@@ -15,4 +15,7 @@ public class TipTranslations : PropertiesTranslationCollection
     
     [TranslationData("Sent to tell a player how to call for a medic.")]
     public readonly Translation CallMedic = new Translation("You've been hurt, but a <#e25d5d>MEDIC</color> can revive you.", TranslationOptions.TMProUI);
+    
+    [TranslationData("Sent to the driver of a vehicle when they're near a repair station that doesn't have enough build supplies.")]
+    public readonly Translation RepairStationVehicleNoBuild = new Translation("<#ffab87>NO BUILD", TranslationOptions.TMProUI);
 }

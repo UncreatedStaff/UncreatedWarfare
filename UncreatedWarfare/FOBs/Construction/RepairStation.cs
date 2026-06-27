@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
@@ -8,6 +7,9 @@ using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.Fobs.Entities;
 using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Layouts.Teams;
+using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Timing;
 using Uncreated.Warfare.Vehicles;
@@ -17,8 +19,12 @@ using Uncreated.Warfare.Zones;
 namespace Uncreated.Warfare.FOBs.Construction;
 public class RepairStation : RestockableBuildableFobEntity<ShovelableInfo>
 {
-    private readonly FobConfiguration _fobConfiguration;
     private readonly AssetConfiguration _assetConfiguration;
+    private readonly FobManager _fobManager;
+    private readonly VehicleService _vehicleService;
+    private readonly ZoneStore? _zoneStore;
+    private readonly IPlayerService? _playerService;
+    private readonly TipService? _tipService;
     private readonly ILoopTicker _repairTicker;
 
     public RepairStation(
@@ -29,48 +35,75 @@ public class RepairStation : RestockableBuildableFobEntity<ShovelableInfo>
         IServiceProvider serviceProvider)
         : base(buildable, serviceProvider, true, info, team)
     {
-        _fobConfiguration = fobManager.Configuration;
+        _fobManager = fobManager;
+
         _assetConfiguration = serviceProvider.GetRequiredService<AssetConfiguration>();
-        _repairTicker = serviceProvider.GetRequiredService<ILoopTickerFactory>().CreateTicker(TimeSpan.FromSeconds(4), false, true);
+        _vehicleService = serviceProvider.GetRequiredService<VehicleService>();
 
-        VehicleService vehicleService = serviceProvider.GetRequiredService<VehicleService>();
-        ZoneStore? zoneStore = serviceProvider.GetService<ZoneStore>();
-        _repairTicker.OnTick += (_, _, _) =>
+        _zoneStore = serviceProvider.GetService<ZoneStore>();
+        _playerService = serviceProvider.GetService<IPlayerService>();
+        _tipService = serviceProvider.GetService<TipService>();
+
+        ILoopTickerFactory loopTickerFactory = serviceProvider.GetRequiredService<ILoopTickerFactory>();
+
+        _repairTicker = loopTickerFactory.CreateTicker(TimeSpan.FromSeconds(4), false, true, RepairTick);
+    }
+
+    private void RepairTick(ILoopTicker ticker, TimeSpan timeSinceStart, TimeSpan deltaTime)
+    {
+        NearbySupplyCrates supplyCrateGroup = NearbySupplyCrates.FindNearbyCrates(Buildable.Position, Team.GroupId, _fobManager);
+
+        float maxRadius = Math.Max(
+            _fobManager.Configuration.RepairStationAircraftRepairRadius,
+            _fobManager.Configuration.RepairStationGroundVehicleRepairRadius
+        );
+        IEnumerable<WarfareVehicle> nearbyVehicles = _vehicleService.Vehicles.Where(v =>
+            !v.Vehicle.isDead
+            && Team.IsFriendly(v.Vehicle.lockedGroup)
+            && v.Vehicle.ReplicatedSpeed < 3
+            && !v.Info.Type.IsEmplacement()
+            && MathUtility.WithinRange(Buildable.Position, v.Position, maxRadius));
+
+        foreach (WarfareVehicle vehicle in nearbyVehicles)
         {
-            NearbySupplyCrates supplyCrateGroup = NearbySupplyCrates.FindNearbyCrates(Buildable.Position, Team.GroupId, fobManager);
+            // planes and helis get a larger repair radius
+            if (vehicle.Info.Type.IsGroundVehicle() && !MathUtility.WithinRange(vehicle.Position, Buildable.Position, _fobManager.Configuration.RepairStationGroundVehicleRepairRadius))
+                continue;
 
-            float maxRadius = Math.Max(
-                _fobConfiguration.RepairStationAircraftRepairRadius,
-                _fobConfiguration.RepairStationGroundVehicleRepairRadius
-            );
-            IEnumerable<WarfareVehicle> nearbyVehicles = vehicleService.Vehicles.Where(v =>
-                !v.Vehicle.isDead
-                && Team.IsFriendly(v.Vehicle.lockedGroup)
-                && v.Vehicle.ReplicatedSpeed < 3
-                && !v.Info.Type.IsEmplacement()
-                && MathUtility.WithinRange(Buildable.Position, v.Position, maxRadius));
+            if (vehicle.Info.Type.IsAircraft() && !MathUtility.WithinRange(vehicle.Position, Buildable.Position, _fobManager.Configuration.RepairStationAircraftRepairRadius))
+                continue;
             
-            foreach (WarfareVehicle vehicle in nearbyVehicles)
+            if (_zoneStore != null && !_zoneStore.IsInMainBase(vehicle.Position))
             {
-                // planes and helis get a larger repair radius
-                if (vehicle.Info.Type.IsGroundVehicle() && !MathUtility.WithinRange(vehicle.Position, Buildable.Position, _fobConfiguration.RepairStationGroundVehicleRepairRadius))
-                    continue;
-                
-                if (vehicle.Info.Type.IsAircraft() && !MathUtility.WithinRange(vehicle.Position, Buildable.Position, _fobConfiguration.RepairStationAircraftRepairRadius))
-                    continue;
-                
-                if (zoneStore != null && !zoneStore.IsInMainBase(vehicle.Position))
+                if (supplyCrateGroup.BuildCount > 0)
                 {
-                    if (supplyCrateGroup.BuildCount > 0)
-                        supplyCrateGroup.SubtractSupplies(fobManager.Configuration.RepairStationBuildConsumedPerTick, SupplyType.Build, SupplyChangeReason.ConsumeRepairVehicle);
-                    else
-                        continue;
+                    supplyCrateGroup.SubtractSupplies(_fobManager.Configuration.RepairStationBuildConsumedPerTick, SupplyType.Build, SupplyChangeReason.ConsumeRepairVehicle);
                 }
-
-                Repair(vehicle);
-                Refuel(vehicle);
+                else
+                {
+                    TryTipDriverNoBuild(vehicle);
+                    continue;
+                }
             }
-        };
+
+            Repair(vehicle);
+            Refuel(vehicle);
+        }
+    }
+
+    private void TryTipDriverNoBuild(WarfareVehicle vehicle)
+    {
+        if (_playerService == null || _tipService == null)
+            return;
+
+        SteamPlayer? steamPlayer = vehicle.Vehicle.GetDriverClient();
+        if (steamPlayer == null)
+        {
+            return;
+        }
+
+        WarfarePlayer driver = _playerService.GetOnlinePlayer(steamPlayer);
+        _tipService.TryGiveTip(driver, cooldown: 15, t => t.RepairStationVehicleNoBuild);
     }
 
     private void Refuel(WarfareVehicle vehicle)
@@ -78,7 +111,7 @@ public class RepairStation : RestockableBuildableFobEntity<ShovelableInfo>
         if (vehicle.Vehicle.fuel >= vehicle.Vehicle.asset.fuel)
             return;
         
-        vehicle.Vehicle.askFillFuel(_fobConfiguration.RepairStationFuelPerTick);
+        vehicle.Vehicle.askFillFuel(_fobManager.Configuration.RepairStationFuelPerTick);
 
         EffectUtility.TriggerEffect(
             _assetConfiguration.GetAssetLink<EffectAsset>("Effects:RepairStation:RefuelSound").GetAssetOrFail(),
@@ -92,7 +125,7 @@ public class RepairStation : RestockableBuildableFobEntity<ShovelableInfo>
 
     private void Repair(WarfareVehicle vehicle)
     {
-        ushort newHealth = (ushort)Math.Clamp(vehicle.Vehicle.health + _fobConfiguration.RepairStationHealthPerTick, 0, vehicle.Vehicle.asset.health);
+        ushort newHealth = (ushort)Math.Clamp(vehicle.Vehicle.health + _fobManager.Configuration.RepairStationHealthPerTick, 0, vehicle.Vehicle.asset.health);
         if (newHealth >= vehicle.Vehicle.asset.health)
         {
             if (vehicle.Vehicle.transform.TryGetComponent(out WarfareVehicleComponent c))
