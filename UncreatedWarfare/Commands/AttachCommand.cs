@@ -1,6 +1,5 @@
 using System;
 using Uncreated.Warfare.Interaction.Commands;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Addons;
 using Uncreated.Warfare.Util;
@@ -70,10 +69,10 @@ internal sealed class AttachCommand : IExecutableCommand
             BitConverter.TryWriteBytes(stateSpan[(int)type..], 0);
 
             // durability
-            stateSpan[(int)type / 2 + 13] = 100;
+            stateSpan[(int)type / 2 + GunStateIndices.SIGHT_QUALITY] = 100;
             if (type == AttachmentType.Magazine)
             {
-                stateSpan[10] = 0; // ammo count
+                stateSpan[GunStateIndices.AMMO] = 0; // ammo count
             }
 
             Context.Player.UnturnedPlayer.equipment.sendUpdateState();
@@ -85,8 +84,8 @@ internal sealed class AttachCommand : IExecutableCommand
 
         if (Context.MatchParameter(0, "ammo", "ammoct", "setammo") && Context.TryGet(1, out byte amt))
         {
-            byte prevAmt = state[10];
-            state[10] = amt;
+            // byte prevAmt = state[GunStateIndices.AMMO];
+            state[GunStateIndices.AMMO] = amt;
             Context.Player.UnturnedPlayer.equipment.sendUpdateState();
             if (_firemodeEffect != null)
                 EffectUtility.TriggerEffect(_firemodeEffect, EffectManager.SMALL, Context.Player.Position, true);
@@ -96,8 +95,8 @@ internal sealed class AttachCommand : IExecutableCommand
 
         if (Context.MatchParameter(0, "firerate", "firemode", "mode") && Context.TryGet(1, out string? firemodeStr) && TryGetFiremode(firemodeStr, out EFiremode mode))
         {
-            EFiremode prevMode = (EFiremode)state[11];
-            state[11] = (byte)mode;
+            // EFiremode prevMode = (EFiremode)state[GunStateIndices.FIREMODE];
+            state[GunStateIndices.FIREMODE] = (byte)mode;
             Context.Player.UnturnedPlayer.equipment.sendUpdateState();
             if (_firemodeEffect != null)
                 EffectUtility.TriggerEffect(_firemodeEffect, EffectManager.SMALL, Context.Player.Position, true);
@@ -115,19 +114,19 @@ internal sealed class AttachCommand : IExecutableCommand
             throw Context.Reply(_translations.AttachCaliberNotFound, Context.Get(0)!);
         }
 
-        oldItem = BitConverter.ToUInt16(state, (int)type);
+        // oldItem = BitConverter.ToUInt16(state, (int)type);
         stateSpan = state.AsSpan();
 
         // attachment id
         BitConverter.TryWriteBytes(stateSpan[(int)type..], asset.id);
 
         // durability
-        stateSpan[(int)type / 2 + 13] = 100;
+        stateSpan[(int)type / 2 + GunStateIndices.SIGHT_QUALITY] = 100;
 
         // ammo count
         if (type == AttachmentType.Magazine)
         {
-            stateSpan[10] = asset.amount;
+            stateSpan[GunStateIndices.AMMO] = asset.amount;
         }
 
         Context.Player.UnturnedPlayer.equipment.sendUpdateState();
@@ -173,11 +172,11 @@ internal sealed class AttachCommand : IExecutableCommand
 public enum AttachmentType : byte
 {
     None = 255,
-    Sight = 0,
-    Tactical = 2,
-    Grip = 4,
-    Barrel = 6,
-    Magazine = 8
+    Sight = GunStateIndices.SIGHT_ID,
+    Tactical = GunStateIndices.TACTICAL_ID,
+    Grip = GunStateIndices.GRIP_ID,
+    Barrel = GunStateIndices.BARREL_ID,
+    Magazine = GunStateIndices.MAGAZINE_ID
 }
 
 public class AttachTranslations : PropertiesTranslationCollection

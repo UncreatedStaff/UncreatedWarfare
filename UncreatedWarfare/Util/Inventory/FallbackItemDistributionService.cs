@@ -2,10 +2,8 @@
 //#define DEBUG_LOGGING
 #endif
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Layouts.Teams;
@@ -631,15 +629,15 @@ public class FallbackItemDistributionService : IItemDistributionService
         if (result.Asset is ItemGunAsset)
         {
             // refill ammo
-            if (Assets.find(EAssetType.ITEM, BitConverter.ToUInt16(jar.item.state, (int)AttachmentType.Magazine)) is ItemMagazineAsset mag)
-                jar.item.state[10] = mag.amount;
+            if (Assets.find(EAssetType.ITEM, BitConverter.ToUInt16(jar.item.state, GunStateIndices.MAGAZINE_ID)) is ItemMagazineAsset mag)
+                jar.item.state[GunStateIndices.AMMO] = mag.amount;
 
             // attachment durabilities
-            jar.item.state[13] = 100;
-            jar.item.state[14] = 100;
-            jar.item.state[15] = 100;
-            jar.item.state[16] = 100;
-            jar.item.state[17] = 100;
+            jar.item.state[GunStateIndices.SIGHT_QUALITY]    = 100;
+            jar.item.state[GunStateIndices.TACTICAL_QUALITY] = 100;
+            jar.item.state[GunStateIndices.GRIP_QUALITY]     = 100;
+            jar.item.state[GunStateIndices.BARREL_QUALITY]   = 100;
+            jar.item.state[GunStateIndices.MAGAZINE_QUALITY] = 100;
         }
         else
         {

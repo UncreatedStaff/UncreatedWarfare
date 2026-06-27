@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using Uncreated.Warfare.Events.Models.Flags;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
@@ -46,6 +45,7 @@ public class FlagObjective : IDisposable, IObjective
 
         Contest.OnPointsChanged += OnPointsChangedIntl;
         Contest.OnWon += OnCapturedIntl;
+        Contest.OnCleared += OnClearedIntl;
         Contest.OnRestarted += OnNeutralizedIntl;
         Region.OnPlayerEntered += OnPlayerEnteredIntl;
         Region.OnPlayerExited += OnPlayerExitedIntl;
@@ -180,6 +180,11 @@ public class FlagObjective : IDisposable, IObjective
     {
         _previousOwners.Add(team);
         _ = WarfareModule.EventDispatcher?.DispatchEventAsync(new FlagCaptured { Flag = this, Capturer = team });
+    }
+
+    private void OnClearedIntl(Team team, int clearedPoints)
+    {
+        _ = WarfareModule.EventDispatcher?.DispatchEventAsync(new FlagRecaptured { Flag = this, Owner = team, Amount = clearedPoints });
     }
 
     private void OnNeutralizedIntl(Team team, Team oldTeam)

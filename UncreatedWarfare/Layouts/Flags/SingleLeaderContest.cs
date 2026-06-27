@@ -1,3 +1,4 @@
+using System;
 using Uncreated.Warfare.Layouts.Teams;
 
 namespace Uncreated.Warfare.Layouts.Flags;
@@ -6,7 +7,14 @@ public class SingleLeaderContest
 {
     public delegate void PointsChanged(int changeInPoints);
     public delegate void Won(Team winner);
+
+    /// <param name="winner">The team in the lead.</param>
+    /// <param name="pointsCleared">Number of points that this team made up.</param>
+    public delegate void Cleared(Team winner, int pointsCleared);
     public delegate void Restarted(Team neutralizer, Team oldLeader);
+
+    private bool _hasWonSinceLeaderChange;
+    private int _minPoints;
 
     public int MaxPossiblePoints { get; }
 
@@ -38,6 +46,11 @@ public class SingleLeaderContest
     public event Won? OnWon;
 
     /// <summary>
+    /// Invoked when the leader re-takes their points from another team's clearing effort.
+    /// </summary>
+    public event Cleared? OnCleared;
+
+    /// <summary>
     /// Invoked when the competition is restarted after being won, i.e. when a particular team is awarded points causing <see cref="LeaderPoints"/> reach zero and <see cref="IsWon"/> is already <see langword="true"/>.
     /// </summary>
     public event Restarted? OnRestarted;
@@ -65,7 +78,10 @@ public class SingleLeaderContest
     }
     private void IncrementPointsClamp(int points)
     {
-        LeaderPoints = Mathf.Clamp(LeaderPoints + points, 0, MaxPossiblePoints);
+        int newPts = Mathf.Clamp(LeaderPoints + points, 0, MaxPossiblePoints);
+
+        _minPoints = Math.Min(newPts, _minPoints);
+        LeaderPoints = newPts;
     }
 
     /// <summary>
@@ -103,7 +119,19 @@ public class SingleLeaderContest
             OnPointsChanged?.Invoke(change);
 
             if (justWon)
-                OnWon?.Invoke(Leader);
+            {
+                if (!_hasWonSinceLeaderChange)
+                {
+                    OnWon?.Invoke(Leader);
+                    _hasWonSinceLeaderChange = true;
+                }
+                else
+                {
+                    OnCleared?.Invoke(Leader, MaxPossiblePoints - _minPoints);
+                }
+
+                _minPoints = MaxPossiblePoints;
+            }
         }
         else if (change < 0)
         {
@@ -111,17 +139,22 @@ public class SingleLeaderContest
             // if Points become zero, contest is neutral again
             if (LeaderPoints == 0)
             {
+                _hasWonSinceLeaderChange = false;
                 Leader = Team.NoTeam;
                 IsWon = false;
                 OnRestarted?.Invoke(team, oldLeader);
             }
             // otherwise, if there is no leader yet, set the new leader
             else if (Leader == Team.NoTeam)
+            {
                 Leader = team;
+                _hasWonSinceLeaderChange = false;
+            }
 
             OnPointsChanged?.Invoke(change);
         }
     }
+
     public override string ToString()
     {
         return $"SingleLeaderContest: " +
@@ -129,5 +162,4 @@ public class SingleLeaderContest
                $"LeaderPoints = {LeaderPoints}/{MaxPossiblePoints}, " +
                $"IsWon = {IsWon}";
     }
-
 }
