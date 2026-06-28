@@ -7,7 +7,7 @@ using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Tests;
 
-internal class SingleLeaderContestWinGlitch
+internal class SingleLeaderContestTests
 {
     private static readonly Team Team1 = new Team
     {

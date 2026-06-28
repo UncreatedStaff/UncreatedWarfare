@@ -15,10 +15,10 @@ namespace Uncreated.Warfare.Fobs;
 /// </summary>
 public sealed class FobConfiguration : BaseAlternateConfigurationFile
 {
-    public IReadOnlyList<SupplyCrateInfo> SupplyCrates { get; private set; } = null!;
-    public IReadOnlyList<ThrownAmmoBagInfo> ThrowableAmmoBags { get; private set; } = null!;
-    public IReadOnlyList<ThrownVehicleCrateInfo> ThrowableVehicleSupplyCrates { get; private set; } = null!;
-    public IReadOnlyList<ShovelableInfo> Shovelables { get; private set; } = null!;
+    public IReadOnlyList<SupplyCrateInfo> SupplyCrates { get; private set; }
+    public IReadOnlyList<ThrownAmmoBagInfo> ThrowableAmmoBags { get; private set; }
+    public IReadOnlyList<ThrownVehicleCrateInfo> ThrowableVehicleSupplyCrates { get; private set; }
+    public IReadOnlyList<ShovelableInfo> Shovelables { get; private set; }
     public float RepairStationGroundVehicleRepairRadius { get; private set; }
     public float RepairStationAircraftRepairRadius { get; private set; }
     public float RepairStationBuildConsumedPerTick { get; private set; }
@@ -34,6 +34,10 @@ public sealed class FobConfiguration : BaseAlternateConfigurationFile
     }
 
     /// <inheritdoc />
+    [MemberNotNull(nameof(SupplyCrates))]
+    [MemberNotNull(nameof(ThrowableVehicleSupplyCrates))]
+    [MemberNotNull(nameof(ThrowableAmmoBags))]
+    [MemberNotNull(nameof(Shovelables))]
     protected override void HandleChange()
     {
         List<SupplyCrateInfo>? supplyCrates = UnderlyingConfiguration.GetSection("SupplyCrates").Get<List<SupplyCrateInfo>>();

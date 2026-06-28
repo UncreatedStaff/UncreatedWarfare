@@ -1,11 +1,16 @@
 using System;
+using System.Linq;
+using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Flags;
+using Uncreated.Warfare.Events.Models.Vehicles;
 using Uncreated.Warfare.Layouts.Phases;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Layouts.UI;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Translations;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Layouts.Flags;
 
@@ -14,6 +19,8 @@ public class DefaultCaptureUIFlagEvents :
     IEventListener<FlagContestStateChanged>,
     IEventListener<PlayerEnteredFlagRegion>,
     IEventListener<PlayerExitedFlagRegion>,
+    IEventListener<EnterVehicle>,
+    IEventListener<ExitVehicle>,
     ILayoutPhaseListener<ActionPhase>
 {
     private readonly CaptureUI _ui;
@@ -105,6 +112,38 @@ public class DefaultCaptureUIFlagEvents :
         }
 
         return CaptureUIState.Ineffective(_translations, location);
+    }
+
+    [EventListener(MustRunInstantly = true)]
+    void IEventListener<EnterVehicle>.HandleEvent(EnterVehicle e, IServiceProvider serviceProvider)
+    {
+        UpdateFlagByPlayer(e.Player);
+    }
+
+    [EventListener(MustRunInstantly = true)]
+    void IEventListener<ExitVehicle>.HandleEvent(ExitVehicle e, IServiceProvider serviceProvider)
+    {
+        UpdateFlagByPlayer(e.Player);
+    }
+
+    private void UpdateFlagByPlayer(WarfarePlayer player)
+    {
+        if (_layout.ActivePhase is not ActionPhase)
+            return;
+
+        IFlagRotationService? flagRotationService = _layout.ServiceProvider.ResolveOptional<IFlagRotationService>();
+        if (flagRotationService == null)
+        {
+            return;
+        }
+
+        FlagObjective? objective = flagRotationService.ActiveFlags.FirstOrDefault(x => x.Region.Players.Contains(player));
+        if (objective == null)
+        {
+            return;
+        }
+
+        UpdateUIForPlayers(objective);
     }
 
     void IEventListener<FlagContestPointsChanged>.HandleEvent(FlagContestPointsChanged e, IServiceProvider serviceProvider)

@@ -18,7 +18,7 @@ internal sealed class InvinciblePassengersTweak(VehicleService vehicleService) :
             return;
 
         InteractableVehicle? vehicle = e.Player.UnturnedPlayer.movement.getVehicle();
-        if (vehicle is null)
+        if (vehicle is null || vehicle.isExploded || vehicle.isDrowned || vehicle.isDead)
             return;
 
         WarfareVehicle? vehicleInfo = vehicleService.GetVehicle(vehicle);

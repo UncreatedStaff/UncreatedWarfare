@@ -207,7 +207,7 @@ internal class SeedingPlayerCountMonitor :
             }
             else
             {
-                _logger.LogTrace("Current layout is a seeding layout. Seeding already ended.");
+                _logger.LogTrace("Current layout is not a seeding layout. Seeding already ended.");
                 updateUi = false;
             }
             
@@ -323,6 +323,11 @@ internal class SeedingPlayerCountMonitor :
                 Interlocked.Exchange(ref _awaitStartTicker, null)?.Dispose();
             }
 
+            return;
+        }
+
+        if (!Rules.Enabled)
+        {
             return;
         }
 

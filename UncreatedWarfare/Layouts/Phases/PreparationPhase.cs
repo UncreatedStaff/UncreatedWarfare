@@ -83,6 +83,8 @@ public class PreparationPhase : BasePhase<PhaseTeamSettings>, IDisposable
         if (Duration.Ticks <= 0)
             return;
 
+        _ticker?.Dispose();
+
         // tick down the UI timer                                 (this is 0.5 because sometimes it would tick by 2 seconds)
         _ticker = _tickerFactory.CreateTicker(TimeSpan.FromSeconds(0.5d), invokeImmediately: false, state: (this, Name: globalTranslationList), queueOnGameThread: true, static (ticker, timeSinceStart, _) =>
         {

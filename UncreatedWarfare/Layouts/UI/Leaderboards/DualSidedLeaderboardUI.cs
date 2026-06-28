@@ -227,6 +227,10 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
     {
         SendToPlayer(player.Connection);
         SendToPlayers(new LanguageSet(player));
+        if (!IsVotingPeriodOpen)
+        {
+            CloseVotes(player.Connection);
+        }
 
         OpenChatLate(player);
     }
@@ -253,7 +257,12 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
 
     private void SendToPlayers(LanguageSet set)
     {
-        Team? winningTeam = _layout.Data[KnownLayoutDataKeys.WinnerTeam] as Team;
+        Team? winningTeam = null;
+        if (_layout.Data.TryGetValue(KnownLayoutDataKeys.WinnerTeam, out object? teamBox))
+        {
+            winningTeam = teamBox as Team;
+        }
+
         string layoutName = _layout.LayoutInfo.DisplayName;
         if (_appLifetime.QueuedShutdownType == ShutdownMode.OnLayoutEnd)
         {
