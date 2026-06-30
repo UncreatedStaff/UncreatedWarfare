@@ -809,23 +809,29 @@ public enum ModerationEntryType : ushort
     Kick,
     Ban,
     Mute,
+    [TranslatableValue("Asset Ban")]
     AssetBan,
     Teamkill,
+    [TranslatableValue("Vehicle Teamkill")]
     VehicleTeamkill,
-    [Translatable("BattlEye Kick")]
+    [TranslatableValue("BattlEye Kick")]
     BattlEyeKick,
     Appeal,
-    [Translatable("Custom Report")]
+    [TranslatableValue("Custom Report")]
     Report,
+    [TranslatableValue("Griefing Report")]
     GriefingReport,
+    [TranslatableValue("Chat Abuse Report")]
     ChatAbuseReport,
+    [TranslatableValue("Cheating Report")]
     CheatingReport,
     Note,
     Commendation,
-    [Translatable("Accepted Bug Report")]
+    [TranslatableValue("Bug Report Accepted")]
     BugReportAccepted,
-    [Translatable("Accepted Player Report")]
+    [TranslatableValue("Player Report Accepted")]
     PlayerReportAccepted,
+    [TranslatableValue("Voice Chat Abuse Report")]
     VoiceChatAbuseReport
 
     // update ModerationEntry.MaxEntry when adding

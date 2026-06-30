@@ -3,7 +3,6 @@ using DanielWillett.ModularRpcs.Async;
 using DanielWillett.ModularRpcs.Exceptions;
 using Microsoft.Extensions.Configuration;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Events.Models;
@@ -395,10 +394,12 @@ public partial class DutyService : IAsyncEventListener<PlayerLeft>
     }
 }
 
+[Translatable("Duty Level", IsPrioritizedTranslation = false)]
 public enum DutyLevel : byte
 {
     Member,
     Staff,
+    [TranslatableValue("Trial Admin")]
     TrialAdmin,
     Admin,
     Owner

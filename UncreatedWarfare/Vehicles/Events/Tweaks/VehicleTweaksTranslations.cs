@@ -4,9 +4,9 @@ using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Vehicles.Events.Tweaks;
 
-public sealed class VehicleTweaksTranslations : PropertiesTranslationCollection
+public sealed class VehicleTweaksTranslations : TranslationCollection
 {
-    protected override string FileName => "Tweaks/Vehicles";
+    public override string Name => "Tweaks/Vehicles";
 
     [TranslationData("Send when a player tries to enter a crewed vehicle but does not have the required crew kit.")]
     public readonly Translation<Class> EnterVehicleWrongKit = new Translation<Class>("There are no free passenger seats in this vehicle. To enter the crew's seats, you need a <#cedcde>{0}</color> kit.");

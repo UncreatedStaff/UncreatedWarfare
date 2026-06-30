@@ -1,48 +1,44 @@
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using StackCleaner;
 using System;
 using System.Collections.Concurrent;
-using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Translations.Addons;
 using Uncreated.Warfare.Translations.Languages;
 using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Translations.ValueFormatters;
-using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Translations;
-public class TranslationValueFormatter : ITranslationValueFormatter
-{
-    private readonly IServiceProvider _serviceProvider;
-    private readonly Type _enumFormatter;
 
+public class TranslationValueFormatter : ITranslationValueFormatter, IDisposable
+{
     private const string NullNoColor = "null";
     private const string NullColorUnity = "<color=#569cd6><b>null</b></color>";
     private const string NullColorTMPro = "<#569cd6><b>null</b></color>";
     private const string NullANSI = "\e[94mnull\e[39m";
     private const string NullExtendedANSI = "\e[38;2;86;156;214mnull\e[39m";
 
-    [field: MaybeNull]
-    public LanguageService LanguageService => field ??= _serviceProvider.GetRequiredService<LanguageService>();
-
-    [field: MaybeNull]
-    public ITranslationService TranslationService => field ??= _serviceProvider.GetRequiredService<ITranslationService>();
-
-    public IServiceProvider ServiceProvider => _serviceProvider;
-
+    private readonly Lazy<LanguageService> _languageService;
+    private readonly Lazy<ITranslationService> _translationService;
 
     private readonly ConcurrentDictionary<Type, object> _valueFormatters = new ConcurrentDictionary<Type, object>();
-    public TranslationValueFormatter(IServiceProvider serviceProvider, IConfiguration systemConfig)
-    {
-        _enumFormatter = ContextualTypeResolver.ResolveType(systemConfig["translations:enum_formatter_type"], typeof(IEnumFormatter))
-            ?? throw new InvalidOperationException("No enum formatter configured in 'enum_formatter_type'.");
 
-        _serviceProvider = serviceProvider;
+    [field: MaybeNull]
+    public LanguageService LanguageService => field ??= _languageService.Value;
+
+    [field: MaybeNull]
+    public ITranslationService TranslationService => field ??= _translationService.Value;
+
+    public TranslationValueFormatter(
+        Lazy<LanguageService> languageService,
+        Lazy<ITranslationService> translationService)
+    {
+        _languageService = languageService;
+        _translationService = translationService;
     }
 
-    // in order of priority. can either be a type or the object itself for singletons
-    // types with one open generic argument are filled by the type being formatted
+    // In order of priority. can either be a type or the object itself for singletons.
+    // Types with one open generic argument are filled by the type being formatted.
     private readonly object[] _valueFormatterTypes =
     {
         new ColorValueFormatter(),
@@ -52,9 +48,6 @@ public class TranslationValueFormatter : ITranslationValueFormatter
         new ToStringValueFormatter()
     };
 
-
-
-    /// <inheritdoc />
     public string Format<T>(T? value, in ValueFormatParameters parameters)
     {
         string formattedValue = FormatIntl(value, in parameters);
@@ -72,7 +65,6 @@ public class TranslationValueFormatter : ITranslationValueFormatter
         return formattedValue;
     }
 
-    /// <inheritdoc />
     public string Format(object? value, in ValueFormatParameters parameters, Type? formatType = null)
     {
         string formattedValue = FormatIntl(value, in parameters, formatType);
@@ -101,21 +93,15 @@ public class TranslationValueFormatter : ITranslationValueFormatter
         return ((IEnumFormatter)GetValueFormatter(enumType)).GetValue(value, language ?? LanguageService.GetDefaultLanguage());
     }
 
-    public string FormatEnumName<TEnum>(LanguageInfo? language) where TEnum : unmanaged, Enum
-    {
-        return ((IEnumFormatter<TEnum>)GetValueFormatter<TEnum>()).GetName(language ?? LanguageService.GetDefaultLanguage());
-    }
-
-    public string FormatEnumName(Type enumType, LanguageInfo? language)
-    {
-        return ((IEnumFormatter)GetValueFormatter(enumType)).GetName(language ?? LanguageService.GetDefaultLanguage());
-    }
-
     private string FormatIntl<T>(T? value, in ValueFormatParameters parameters)
     {
-        if (Equals(value, null))
+        if (!typeof(T).IsValueType)
         {
-            return FormatNull(in parameters);
+            object? valBox = value;
+            if (Equals(valBox, null) || valBox == DBNull.Value)
+            {
+                return FormatNull(in parameters);
+            }
         }
 
         if (value is ITranslationArgument preDefined)
@@ -126,9 +112,9 @@ public class TranslationValueFormatter : ITranslationValueFormatter
         IValueFormatter valueFormatter = GetValueFormatter<T>();
 
         if (valueFormatter is IValueFormatter<T> v)
-            return v.Format(this, value, in parameters);
+            return v.Format(this, value!, in parameters);
 
-        return valueFormatter.Format(this, value, in parameters);
+        return valueFormatter.Format(this, value!, in parameters);
     }
     
     private string FormatIntl(object? value, in ValueFormatParameters parameters, Type? formatType)
@@ -149,14 +135,20 @@ public class TranslationValueFormatter : ITranslationValueFormatter
         return valueFormatter.Format(this, value, in parameters);
     }
 
-    private IValueFormatter GetValueFormatter<T>() => GetValueFormatter(typeof(T));
-    private IValueFormatter GetValueFormatter(Type type)
+    private IValueFormatter GetValueFormatter<T>()
+    {
+        return GetValueFormatter(typeof(T));
+    }
+
+    public IValueFormatter GetValueFormatter(Type type)
     {
         return (IValueFormatter)_valueFormatters.GetOrAdd(type, static (type, vf) =>
         {
             if (type.IsEnum)
             {
-                return ActivatorUtilities.CreateInstance(vf._serviceProvider, vf._enumFormatter.IsGenericTypeDefinition ? vf._enumFormatter.MakeGenericType(type) : vf._enumFormatter);
+                Type formatterType = typeof(EnumValueFormatter<>).MakeGenericType(type);
+                IEnumFormatter formatter = (IEnumFormatter)vf.CreateInstance(formatterType);
+                return formatter;
             }
 
             Type lookingForFormatterType = typeof(IValueFormatter<>).MakeGenericType(type);
@@ -190,17 +182,30 @@ public class TranslationValueFormatter : ITranslationValueFormatter
                 if (!lookingForFormatterType.IsAssignableFrom(actualType))
                     continue;
 
-                return ActivatorUtilities.CreateInstance(vf._serviceProvider, actualType);
+                object formatter = vf.CreateInstance(actualType);
+                return formatter;
             }
 
             return new ToStringValueFormatter();
         }, this);
     }
 
+    private object CreateInstance(Type type)
+    {
+        ConstructorInfo? ctor1 = type.GetConstructor([ typeof(ITranslationService) ]);
+        if (ctor1 != null)
+        {
+            return ctor1.Invoke([ TranslationService ]);
+        }
+
+        return Activator.CreateInstance(type);
+    }
+
     public string Colorize(ReadOnlySpan<char> text, Color32 color, TranslationOptions options)
     {
         return TranslationFormattingUtility.Colorize(text, color, options, TranslationService.TerminalColoring);
     }
+
     public string Colorize(string text, Color32 color, TranslationOptions options)
     {
         return TranslationFormattingUtility.Colorize(text, color, options, TranslationService.TerminalColoring);
@@ -224,5 +229,19 @@ public class TranslationValueFormatter : ITranslationValueFormatter
         }
 
         return (parameters.Options & TranslationOptions.TranslateWithUnityRichText) != 0 ? NullColorUnity : NullColorTMPro;
+    }
+
+    public void Dispose()
+    {
+        do
+        {
+            foreach (Type type in _valueFormatters.Keys)
+            {
+                if (_valueFormatters.TryRemove(type, out object val) && val is IDisposable disp)
+                {
+                    disp.Dispose();
+                }
+            }
+        } while (_valueFormatters.Count > 0);
     }
 }

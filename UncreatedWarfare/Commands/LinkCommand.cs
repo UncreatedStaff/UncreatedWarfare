@@ -104,9 +104,9 @@ internal sealed class LinkCommand : IExecutableCommand
     }
 }
 
-public sealed class LinkCommandTranslations : PropertiesTranslationCollection
+public sealed class LinkCommandTranslations : TranslationCollection
 {
-    protected override string FileName => "Commands/Link";
+    public override string Name => "Commands/Link";
 
     [TranslationData("Sent when a player tries to link their Discord and Steam accounts but uses an unknown token.", "The linking token")]
     public readonly Translation<string> TokenNotRecognized = new Translation<string>("<#ffab87>Unknown linking token: <#fff>{0}</color>. Note that tokens are case-sensitive.");

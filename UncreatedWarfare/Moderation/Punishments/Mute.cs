@@ -93,21 +93,19 @@ public class Mute : DurationPunishment
 }
 
 
-[Translatable("Mute Severity")]
+[Translatable("Mute Category")]
 [Flags]
 public enum MuteType : byte
 {
+    [TranslatableValue(IsPrioritizedTranslation = false)]
     None = 0,
 
-    [Translatable(Languages.ChineseSimplified, "语音交流")]
-    [Translatable("Voice Chat")]
+    [TranslatableValue("Voice Chat")]
     Voice = 1,
 
-    [Translatable(Languages.ChineseSimplified, "文字交流")]
-    [Translatable("Text Chat")]
+    [TranslatableValue("Text Chat")]
     Text = 2,
 
-    [Translatable(Languages.ChineseSimplified, "语音和文字交流")]
-    [Translatable("Voice and Text Chat")]
+    [TranslatableValue("Voice and Text Chat")]
     Both = Voice | Text
 }

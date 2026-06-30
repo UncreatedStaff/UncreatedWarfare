@@ -3,9 +3,9 @@ namespace Uncreated.Warfare.Translations.Collections;
 /// <summary>
 /// All translations meant for signs must go in here and be of type <see cref="SignTranslation"/>.
 /// </summary>
-public class SignTranslations : PropertiesTranslationCollection
+public class SignTranslations : TranslationCollection
 {
-    protected override string FileName => "Signs";
+    public override string Name => "Signs";
 
     // Kit Classes
 

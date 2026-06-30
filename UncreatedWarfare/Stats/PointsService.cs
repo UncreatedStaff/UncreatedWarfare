@@ -556,9 +556,9 @@ public readonly struct EventInfo
     }
 }
 
-public class PointsTranslations : PropertiesTranslationCollection
+public class PointsTranslations : TranslationCollection
 {
-    protected override string FileName => "Points";
+    public override string Name => "Points";
 
     [TranslationData(IsPriorityTranslation = false)]
     public readonly Translation<double> XPToastGainXP = new Translation<double>("+{0} XP", TranslationOptions.TMProUI, "F0");

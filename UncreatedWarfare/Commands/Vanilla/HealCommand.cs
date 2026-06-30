@@ -55,9 +55,9 @@ internal sealed class HealCommand : IExecutableCommand
     }
 }
 
-public class HealCommandTranslations : PropertiesTranslationCollection
+public class HealCommandTranslations : TranslationCollection
 {
-    protected override string FileName => "Commands/Heal";
+    public override string Name => "Commands/Heal";
 
     [TranslationData(IsPriorityTranslation = false)]
     public readonly Translation<IPlayer> HealPlayer = new Translation<IPlayer>("<#ff9966>You healed {0}.", arg0Fmt: WarfarePlayer.FormatColoredCharacterName);

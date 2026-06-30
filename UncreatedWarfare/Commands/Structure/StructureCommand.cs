@@ -9,9 +9,9 @@ namespace Uncreated.Warfare.Commands;
 [Command("structure", "struct"), MetadataFile]
 internal sealed class StructureCommand : ICommand;
 
-public sealed class StructureTranslations : PropertiesTranslationCollection
+public sealed class StructureTranslations : TranslationCollection
 {
-    protected override string FileName => "Commands/Structure";
+    public override string Name => "Commands/Structure";
 
     [TranslationData]
     public readonly Translation StructureNoTarget = new Translation("<#ff8c69>You must be looking at a barricade, structure, or vehicle.");

@@ -106,9 +106,9 @@ internal sealed class PermissionCommand : IExecutableCommand
     }
 }
 
-public sealed class PermissionsTranslations : PropertiesTranslationCollection
+public sealed class PermissionsTranslations : TranslationCollection
 {
-    protected override string FileName => "Commands/Permissions";
+    public override string Name => "Commands/Permissions";
 
     public readonly Translation<PermissionGroup> SinglePermGroup = new Translation<PermissionGroup>("<#ff99cc>You are in the {0} group.");
     

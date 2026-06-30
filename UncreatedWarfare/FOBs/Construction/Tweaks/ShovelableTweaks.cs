@@ -112,7 +112,7 @@ internal class ShovelableTweaks :
 
         IEnumerable<IFobEntity> fobEntities = nearestFob.EnumerateEntities();
 
-        int similarEntitiesCount = fobEntities.Count(en => en.IdentifyingAsset.MatchAsset(buildableAsset));
+        int similarEntitiesCount = fobEntities.Count(en => en.IdentifyingAsset.MatchAsset(buildableAsset) && en.IsAlive);
         if (similarEntitiesCount >= shovelableInfo.MaxAllowedPerFob.Value)
         {
             _chatService.Send(e.OriginalPlacer, _translations.BuildLimitReached, shovelableInfo.MaxAllowedPerFob.Value, shovelableInfo);

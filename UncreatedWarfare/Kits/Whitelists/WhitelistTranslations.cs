@@ -3,9 +3,9 @@ using Uncreated.Warfare.Translations.Addons;
 using Uncreated.Warfare.Translations.Util;
 
 namespace Uncreated.Warfare.Kits.Whitelists;
-public class WhitelistTranslations : PropertiesTranslationCollection
+public class WhitelistTranslations : TranslationCollection
 {
-    protected override string FileName => "Item Restrictions";
+    public override string Name => "Item Restrictions";
 
     [TranslationData("Sent to an admin after they whitelist an item.", IsPriorityTranslation = false)]
     public readonly Translation<ItemAsset> WhitelistAdded = new Translation<ItemAsset>("<#a0ad8e>Whitelisted item: {0}.",

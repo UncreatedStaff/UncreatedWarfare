@@ -3,9 +3,9 @@ using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Layouts.UI;
 
-public sealed class FlagUITranslations : PropertiesTranslationCollection
+public sealed class FlagUITranslations : TranslationCollection
 {
-    protected override string FileName => "UI/Flags";
+    public override string Name => "UI/Flags";
 
     [TranslationData("Shown when your team is capturing the flag.")]
     public readonly Translation<string> Capturing = new Translation<string>("Capturing {0}", TranslationOptions.TMProUI);

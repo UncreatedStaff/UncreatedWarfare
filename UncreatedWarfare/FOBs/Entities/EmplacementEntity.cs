@@ -15,6 +15,7 @@ public class EmplacementEntity : IFobEntity
     public Vector3 Position { get => Vehicle.Position; set => SetPosition(value); }
     public Quaternion Rotation { get => Vehicle.Rotation; set => SetRotation(value); }
     public IAssetLink<Asset> IdentifyingAsset { get; }
+    public bool IsAlive => Vehicle is { Alive: true, Vehicle.isUnderwater: false };
 
     public Team Team { get; }
 

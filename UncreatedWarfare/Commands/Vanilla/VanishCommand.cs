@@ -41,9 +41,9 @@ internal sealed class VanishCommand : IExecutableCommand
     }
 }
 
-public class VanishCommandTranslations : PropertiesTranslationCollection
+public class VanishCommandTranslations : TranslationCollection
 {
-    protected override string FileName => "Commands/Vanish";
+    public override string Name => "Commands/Vanish";
 
     [TranslationData(IsPriorityTranslation = false)]
     public readonly Translation VanishModeEnabled = new Translation("<#bfb9ac>Vanish mode <#99ff66>enabled</color>.");

@@ -5,9 +5,9 @@ using Uncreated.Warfare.Translations.Addons;
 
 namespace Uncreated.Warfare.Translations.Collections;
 
-public class CommonTranslations : PropertiesTranslationCollection
+public class CommonTranslations : TranslationCollection
 {
-    protected override string FileName => "Common";
+    public override string Name => "Common";
 
     [TranslationData("Sent when a command is not used correctly.", "Command usage.")]
     public readonly Translation<string> CorrectUsage = new Translation<string>("<#ff8c69>Correct usage: {0}.");

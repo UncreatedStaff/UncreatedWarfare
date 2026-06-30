@@ -115,7 +115,7 @@ public class StrategyMapManager :
         if (teamManager != null && globalZoneStore != null)
             RepopulateMainBaseFobTacks(map, teamManager, globalZoneStore);
 
-        _logger.LogDebug($"Registered new StrategyMap: {map}");
+        _logger.LogDebug($"Registered new StrategyMap: {map.MapTable.Asset}");
     }
 
     public void DeregisterStrategyMap(IBuildable buildable)
@@ -125,7 +125,7 @@ public class StrategyMapManager :
             return;
 
         map.Dispose();
-        _logger.LogDebug($"Deregistered StrategyMap: {map}");
+        _logger.LogDebug($"Deregistered StrategyMap: {map.MapTable.Asset}");
     }
 
     public IEnumerable<StrategyMap> StrategyMapsOfTeam(Team team) => _strategyMaps.Where(s => s.MapTable.Group == team.GroupId);

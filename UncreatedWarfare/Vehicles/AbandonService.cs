@@ -157,9 +157,9 @@ public class AbandonService
     }
 }
 
-public class AbandonTranslations : PropertiesTranslationCollection
+public class AbandonTranslations : TranslationCollection
 {
-    protected override string FileName => "Commands/Abandon";
+    public override string Name => "Commands/Abandon";
 
     [TranslationData(Description = "Sent when a player isn't looking at a vehicle when doing /abandon.")]
     public readonly Translation AbandonNoTarget = new Translation("<#ff8c69>You must be looking at a vehicle.");

@@ -5,9 +5,9 @@ using Uncreated.Warfare.Translations.Addons;
 using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.FOBs.Deployment;
-public class DeploymentTranslations : PropertiesTranslationCollection
+public class DeploymentTranslations : TranslationCollection
 {
-    protected override string FileName => "Deployment";
+    public override string Name => "Deployment";
 
     [TranslationData("Sent to a player after they deploy to a location.", "The location name.")]
     public readonly Translation<IDeployable> DeploySuccess = new Translation<IDeployable>("<#fae69c>You have arrived at {0}.", arg0Fmt: Flags.ColorNameFormat);

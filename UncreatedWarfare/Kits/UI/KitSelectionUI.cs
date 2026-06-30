@@ -1804,9 +1804,9 @@ public sealed partial class KitSelectionUI : UnturnedUI,
     }
 }
 
-public sealed class KitSelectionUITranslations : PropertiesTranslationCollection
+public sealed class KitSelectionUITranslations : TranslationCollection
 {
-    protected override string FileName => "UI/Kit Selection";
+    public override string Name => "UI/Kit Selection";
 
     [TranslationData("Label for the panel with all the public kits.")]
     public readonly Translation PublicKitsLabel = new Translation("Public Kits", TranslationOptions.TMProUI | TranslationOptions.NoRichText);

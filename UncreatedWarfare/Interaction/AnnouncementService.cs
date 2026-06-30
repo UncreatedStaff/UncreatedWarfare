@@ -45,9 +45,9 @@ public class AnnouncementService : IHostedService, IDisposable
     UniTask IHostedService.StopAsync(CancellationToken token) => UniTask.CompletedTask;
 }
 
-public class AnnouncementTranslations : PropertiesTranslationCollection
+public class AnnouncementTranslations : TranslationCollection
 {
-    protected override string FileName => "Announcements";
+    public override string Name => "Announcements";
 
     [TranslationData("Announcement telling people to join the discord by typing /discord.")]
     public readonly Translation AnnouncementDiscord = new Translation("<#b3b3b3>Have you joined our <#7483c4>Discord</color> server yet? Type <#7483c4>/discord</color> to join.");

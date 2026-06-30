@@ -1,7 +1,6 @@
 using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reflection;
@@ -9,9 +8,14 @@ using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Translations.Languages;
 using Uncreated.Warfare.Translations.Storage;
 
+// ReSharper disable InconsistentlySynchronizedField
+
 namespace Uncreated.Warfare.Translations;
 
-public abstract class TranslationCollection
+/// <summary>
+/// Base class for all translation collections.
+/// </summary>
+public abstract class TranslationCollection : IDisposable
 {
 #nullable disable
     private ILogger _logger;
@@ -19,12 +23,18 @@ public abstract class TranslationCollection
     private Dictionary<string, Translation> _translations;
     private Dictionary<TranslationLanguageKey, TranslationValue> _valueTable;
     private ICachableLanguageDataStore _languageDataStore;
+    private ITranslationStorage _storage;
 
-    public abstract ITranslationStorage Storage { get; }
+    public ITranslationStorage Storage => _storage;
     public ITranslationService TranslationService { get; private set; }
     public LanguageService LanguageService { get; private set; }
     public IReadOnlyDictionary<string, Translation> Translations { get; private set; }
 #nullable restore
+
+    /// <summary>
+    /// Name of the translation file without an extension. Categories can be made using forward slashes (ex. "Commands/Kit").
+    /// </summary>
+    public abstract string Name { get; }
 
     /// <summary>
     /// Initialize if it hasn't already.
@@ -57,11 +67,7 @@ public abstract class TranslationCollection
 
         _languageDataStore = serviceProvider.GetRequiredService<ICachableLanguageDataStore>();
 
-        // get logger for parent collection type
-        _logger = (ILogger)serviceProvider
-            .GetRequiredService(typeof(ILogger<>)
-                .MakeGenericType(GetType())
-            );
+        _logger = serviceProvider.GetRequiredService<ILogger<TranslationCollection>>();
 
         List<Translation> translations = FindTranslationsInMembers();
 
@@ -71,16 +77,28 @@ public abstract class TranslationCollection
             _translations.Add(translation.Key, translation);
         }
 
+        _storage = serviceProvider.GetRequiredService<ITranslationStorageFactory>().Create(this);
+        _storage.OnNeedsUpdating += HandleStorageUpdated;
+
         Reload();
 
         // save default language
-        Storage.Save(Translations.Values);
+        _storage.Save(Translations.Values, options: WriteTranslationsOptions.WriteMissingValues);
+    }
+
+    private void HandleStorageUpdated(IReadOnlyDictionary<TranslationLanguageKey, string> translations)
+    {
+        LoadFromTranslations(translations);
     }
 
     public void Reload()
     {
-        IReadOnlyDictionary<TranslationLanguageKey, string> translationData = Storage.Load();
+        IReadOnlyDictionary<TranslationLanguageKey, string> translationData = _storage.Load();
+        LoadFromTranslations(translationData);
+    }
 
+    private void LoadFromTranslations(IReadOnlyDictionary<TranslationLanguageKey, string> translationData)
+    {
         lock (_translations)
         {
             foreach (KeyValuePair<TranslationLanguageKey, string> translation in translationData)
@@ -131,7 +149,7 @@ public abstract class TranslationCollection
 
             if (translation == null)
             {
-                _logger.LogError($"Translation '{key}' in collection '{type.Name}' is null.");
+                _logger.LogError($"Translation '{key}' in collection '{type}' is null.");
                 continue;
             }
 
@@ -153,5 +171,19 @@ public abstract class TranslationCollection
         return discoveredTranslations;
     }
 
-    public override string ToString() => Storage.ToString();
+    public override string ToString() => _storage.ToString();
+
+    public void Dispose()
+    {
+        ITranslationStorage? storage = Interlocked.Exchange(ref _storage, null);
+        if (storage == null)
+            return;
+
+        storage.OnNeedsUpdating -= HandleStorageUpdated;
+
+        if (storage is IDisposable disp)
+        {
+            disp.Dispose();
+        }
+    }
 }

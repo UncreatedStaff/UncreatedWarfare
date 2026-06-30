@@ -115,7 +115,9 @@ public enum ReportType
 {
     Custom,
     Griefing,
+    [TranslatableValue("Chat Abuse")]
     ChatAbuse,
+    [TranslatableValue("Voice Chat Abuse")]
     VoiceChatAbuse,
     Cheating
 }

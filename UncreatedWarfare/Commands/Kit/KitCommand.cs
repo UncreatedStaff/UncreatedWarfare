@@ -11,9 +11,9 @@ namespace Uncreated.Warfare.Commands;
 
 [Command("kit", "k", "whale"), MetadataFile]
 internal sealed class KitCommand : ICommand;
-public sealed class KitCommandTranslations : PropertiesTranslationCollection
+public sealed class KitCommandTranslations : TranslationCollection
 {
-    protected override string FileName => "Commands/Kit";
+    public override string Name => "Commands/Kit";
 
     [TranslationData("Sent when a player tries to give themselves or someone else a kit but isn't looking at a sign.")]
     public readonly Translation KitOperationNoTarget = new Translation("<#a4baa9>You must be looking at a request sign or enter a kit ID.");

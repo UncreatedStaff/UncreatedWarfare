@@ -300,9 +300,9 @@ internal sealed class TeleportCommand : IExecutableCommand
     }
 }
 
-public class TeleportCommandTranslations : PropertiesTranslationCollection
+public class TeleportCommandTranslations : TranslationCollection
 {
-    protected override string FileName => "Commands/Teleport";
+    public override string Name => "Commands/Teleport";
 
     [TranslationData(IsPriorityTranslation = false)]
     public readonly Translation<IPlayer> TeleportTargetDead = new Translation<IPlayer>("<#8f9494>{0} is not alive.", arg0Fmt: WarfarePlayer.FormatColoredCharacterName);

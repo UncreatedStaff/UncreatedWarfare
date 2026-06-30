@@ -1,7 +1,7 @@
 using DanielWillett.ReflectionTools;
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 
 namespace Uncreated.Warfare.Util;
@@ -99,11 +99,20 @@ public static class EnumUtility
     /// <exception cref="InvalidOperationException">Invalid enum type.</exception>
     public static string? GetName<TEnum>(TEnum value) where TEnum : unmanaged, Enum
     {
-        TEnum[] values = EnumDataCache<TEnum>.Values ??= (TEnum[])Enum.GetValues(typeof(TEnum));
+        string? name = GetNameIntl(value);
+        if (name != null)
+            return name;
 
+        return IsFlag<TEnum>() ? value.ToString() : null;
+    }
+
+    private static string? GetNameIntl<TEnum>(TEnum value) where TEnum : unmanaged, Enum
+    {
         EnumDataCache<TEnum>.EnumNameRecord[]? records = EnumDataCache<TEnum>.Names;
         if (records == null)
         {
+            TEnum[] values = EnumDataCache<TEnum>.Values ??= (TEnum[])Enum.GetValues(typeof(TEnum));
+
             Interlocked.CompareExchange(ref EnumDataCache<TEnum>.Names, new EnumDataCache<TEnum>.EnumNameRecord[values.Length], null);
             records = EnumDataCache<TEnum>.Names;
 
@@ -128,7 +137,7 @@ public static class EnumUtility
         if (ind != -1)
             return records[ind].Name;
 
-        return IsFlag<TEnum>() ? value.ToString() : null;
+        return null;
     }
 
     private static int FindName<TEnum>(TEnum value, EnumDataCache<TEnum>.EnumNameRecord[] records) where TEnum : unmanaged, Enum
@@ -188,7 +197,7 @@ public static class EnumUtility
     /// <exception cref="InvalidOperationException">Invalid enum type.</exception>
     public static IReadOnlyList<TEnum> GetEnumValues<TEnum>() where TEnum : unmanaged, Enum
     {
-        return EnumDataCache<TEnum>.ValuesReadOnly ??= new ReadOnlyCollection<TEnum>(EnumDataCache<TEnum>.Values ??= (TEnum[])Enum.GetValues(typeof(TEnum)));
+        return EnumDataCache<TEnum>.ValuesReadOnly ??= new ReadOnlyCollection<TEnum>(GetEnumValuesArray<TEnum>());
     }
 
     /// <summary>
@@ -628,6 +637,21 @@ public static class EnumUtility
 
         minimum = Unsafe.As<nuint, TEnum>(ref min);
         maximum = Unsafe.As<nuint, TEnum>(ref max);
+    }
+
+    /// <summary>
+    /// Get the field of an enum value.
+    /// </summary>
+    /// <returns><see langword="null"/> if the enum doesn't map to a field, otherwise the field.</returns>
+    public static FieldInfo? GetField<TEnum>(TEnum enumValue) where TEnum : unmanaged, Enum
+    {
+        string? enumName = GetNameIntl(enumValue);
+        if (enumName == null)
+        {
+            return null;
+        }
+
+        return typeof(TEnum).GetField(enumName, BindingFlags.Static | BindingFlags.Public);
     }
 
     private static class EnumDataCache<TEnum> where TEnum : unmanaged, Enum

@@ -73,7 +73,7 @@ public class LanguageInfo : ITranslationArgument, IEquatable<LanguageInfo>
 
     internal void UpdateIsDefault(LanguageService langService)
     {
-        IsDefault = langService.DefaultLanguageCode.Equals(Code, StringComparison.OrdinalIgnoreCase);
+        IsDefault = langService == null || langService.DefaultLanguageCode.Equals(Code, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <inheritdoc />

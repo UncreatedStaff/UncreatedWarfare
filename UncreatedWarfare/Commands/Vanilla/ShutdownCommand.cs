@@ -77,10 +77,10 @@ internal sealed class ShutdownCommand : IExecutableCommand
     }
 }
 
-internal sealed class ShutdownTranslations : PropertiesTranslationCollection
+internal sealed class ShutdownTranslations : TranslationCollection
 {
     /// <inheritdoc />
-    protected override string FileName => "Shutdowns";
+    public override string Name => "Shutdowns";
 
     [TranslationData("Sent when the a shutdown is scheduled after the current game ends.")]
     public readonly Translation<string, TimeSpan> ShutdownBroadcastAfterGame = new Translation<string, TimeSpan>("<#00ffcc>A shutdown has been scheduled after this game because: \"<#6699ff>{0}</color>\". Time left: <#ddd>{1}</color>.", arg1Fmt: TimeAddon.Create(TimeSpanFormatType.CountdownMinutesSeconds));

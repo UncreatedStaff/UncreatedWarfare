@@ -1,4 +1,3 @@
-using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Globalization;
 using Uncreated.Warfare.Models.Localization;
@@ -105,7 +104,7 @@ public sealed class TimeAddon : IArgumentAddon
 
         return args.Format.Format switch
         {
-            "lt" => ToLongTimeString(formatter.ServiceProvider.GetRequiredService<TranslationInjection<TimeTranslations>>().Value, (int)ts.TotalSeconds, args.Language),
+            "lt" => ToLongTimeString(formatter.TranslationService.Get<TimeTranslations>(), (int)ts.TotalSeconds, args.Language),
             "s" => ((int)ts.TotalSeconds).ToString(args.Culture),
             "m" => ((int)ts.TotalMinutes).ToString(args.Culture),
             "h" => ((int)ts.TotalHours).ToString(args.Culture),
@@ -116,7 +115,7 @@ public sealed class TimeAddon : IArgumentAddon
             "c1" => FormattingUtility.ToCountdownString((int)ts.TotalSeconds, false),
             "c2" => FormattingUtility.ToCountdownString((int)ts.TotalSeconds, true),
             _ => ts.Ticks < 0
-                ? formatter.ServiceProvider.GetRequiredService<TranslationInjection<TimeTranslations>>().Value.TimePermanent.Translate(args.Language)
+                ? formatter.TranslationService.Get<TimeTranslations>().TimePermanent.Translate(args.Language)
                 : FormattingUtility.ToTimeString(ts, space: true)
         };
 
@@ -126,8 +125,8 @@ public sealed class TimeAddon : IArgumentAddon
                 dt = dt.ToUniversalTime();
             return args.Format.Format switch
             {
-                "rels" => FormatDateTimeRelative(false, dt, formatter.ServiceProvider.GetRequiredService<TranslationInjection<TimeTranslations>>().Value, args.Language, args.Culture),
-                "rell" => FormatDateTimeRelative(true, dt, formatter.ServiceProvider.GetRequiredService<TranslationInjection<TimeTranslations>>().Value, args.Language, args.Culture),
+                "rels" => FormatDateTimeRelative(false, dt, formatter.TranslationService.Get<TimeTranslations>(), args.Language, args.Culture),
+                "rell" => FormatDateTimeRelative(true, dt, formatter.TranslationService.Get<TimeTranslations>(), args.Language, args.Culture),
                 _ => TryFormatDateTime(dt, args.Format.Format, args.Culture, args.TimeZone)
             };
         }
@@ -462,9 +461,9 @@ public enum TimeSpanFormatType
     CountdownHoursMinutesSeconds
 }
 
-public sealed class TimeTranslations : PropertiesTranslationCollection
+public sealed class TimeTranslations : TranslationCollection
 {
-    protected override string FileName => "Time";
+    public override string Name => "Time";
 
     [TranslationData("Permanent time, lasts forever.")]
     public readonly Translation TimePermanent = new Translation("permanent", TranslationOptions.UnityUINoReplace);

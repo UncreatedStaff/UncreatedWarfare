@@ -148,9 +148,9 @@ public class VehicleBaySignInstanceProvider : ISignInstanceProvider, IRequestabl
     }
 }
 
-public class VehicleBaySignTranslations : PropertiesTranslationCollection
+public class VehicleBaySignTranslations : TranslationCollection
 {
-    protected override string FileName => "Vehicle Bay Signs";
+    public override string Name => "Vehicle Bay Signs";
 
     [TranslationData("Displays the ticket cost on a vehicle bay sign.")]
     public readonly Translation<int> VBSTickets = new Translation<int>("<#ffffff>{0}</color> <#f0f0f0>Tickets</color>", TranslationOptions.TMProSign);

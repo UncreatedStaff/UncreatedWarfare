@@ -8,7 +8,7 @@ namespace Uncreated.Warfare.Teams;
 [ExcludedEnum(StandardGrenadeIcon)]
 [ExcludedEnum(StandardMeleeIcon)]
 [ExcludedEnum(StandardSmokeGrenadeIcon)]
-[Translatable(Description = "Common items represented by a redirect Id.")]
+[Translatable("Item Redirect Type", Description = "Common special items that can change depending on your current faction.")]
 public enum RedirectType : byte
 {
     None = 255,
@@ -19,50 +19,50 @@ public enum RedirectType : byte
     Mask,
     Backpack,
     Glasses,
-    [Translatable("Ammo Supplies")]
+    [TranslatableValue("Ammo Supplies")]
     AmmoSupply,
-    [Translatable("Building Supplies")]
+    [TranslatableValue("Building Supplies")]
     BuildSupply,
-    [Translatable("Rally Point")]
+    [TranslatableValue("Rally Point")]
     RallyPoint,
-    [Translatable("FOB Radio")]
+    [TranslatableValue("FOB Radio")]
     Radio,
-    [Translatable("Ammo Bag")]
+    [TranslatableValue("Ammo Bag")]
     AmmoBag,
-    [Translatable("Ammo Crate")]
+    [TranslatableValue("Ammo Crate")]
     AmmoCrate,
-    [Translatable("Repair Station")]
+    [TranslatableValue("Repair Station")]
     RepairStation,
-    [Translatable("FOB Bunker")]
+    [TranslatableValue("FOB Bunker")]
     Bunker,
-    [Translatable("Vehicle Bay")]
+    [TranslatableValue("Vehicle Bay")]
     VehicleBay,
-    [Translatable("Entrenching Tool")]
+    [TranslatableValue("Entrenching Tool")]
     EntrenchingTool,
-    [Translatable("UAV", Description = "Unmanned Aerial Vehicle")]
+    [TranslatableValue("UAV", Description = "Unmanned Aerial Vehicle")]
     UAV,
-    [Translatable("Built Repair Station")]
+    [TranslatableValue("Built Repair Station")]
     RepairStationBuilt,
-    [Translatable("Built Ammo Crate")]
+    [TranslatableValue("Built Ammo Crate")]
     AmmoCrateBuilt,
-    [Translatable("Built FOB Bunker")]
+    [TranslatableValue("Built FOB Bunker")]
     BunkerBuilt,
-    [Translatable("Insurgency Cache")]
+    [TranslatableValue("Insurgency Cache")]
     Cache,
-    [Translatable("Damaged Radio")]
+    [TranslatableValue("Damaged Radio")]
     RadioDamaged,
-    [Translatable("Laser Designator")]
+    [TranslatableValue("Laser Designator")]
     LaserDesignator,
-    [Translatable("Map Tack Flag")]
+    [TranslatableValue("Map Tack Flag")]
     MapTackFlag,
-    [Translatable("Generic Ammo", IsPrioritizedTranslation = false)]
+    [TranslatableValue("Generic Ammo", IsPrioritizedTranslation = false)]
     StandardAmmoIcon,
-    [Translatable("Generic Knife", IsPrioritizedTranslation = false)]
+    [TranslatableValue("Generic Knife", IsPrioritizedTranslation = false)]
     StandardMeleeIcon,
-    [Translatable("Generic Grenade", IsPrioritizedTranslation = false)]
+    [TranslatableValue("Generic Grenade", IsPrioritizedTranslation = false)]
     StandardGrenadeIcon,
-    [Translatable("Generic Smoke Grenade", IsPrioritizedTranslation = false)]
+    [TranslatableValue("Generic Smoke Grenade", IsPrioritizedTranslation = false)]
     StandardSmokeGrenadeIcon,
-    [Translatable("Generic Buildable", IsPrioritizedTranslation = false)]
+    [TranslatableValue("Generic Buildable", IsPrioritizedTranslation = false)]
     StandardBuildable
 }

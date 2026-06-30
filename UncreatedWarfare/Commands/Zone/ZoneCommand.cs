@@ -8,9 +8,9 @@ namespace Uncreated.Warfare.Commands;
 [Command("zone", "zones"), MetadataFile]
 internal sealed class ZoneCommand : ICommand;
 
-public class ZoneCommandTranslations : PropertiesTranslationCollection
+public class ZoneCommandTranslations : TranslationCollection
 {
-    protected override string FileName => "Commands/Zone";
+    public override string Name => "Commands/Zone";
 
     [TranslationData("Send the caller's location and angle.", Parameters = ["X (m)", "Y (m)", "Z (m)", "Yaw (°)"])]
     public readonly Translation<float, float, float, float> ZoneUtilLocation = new Translation<float, float, float, float>("<#e6e3d5>Location: {0}, {1}, {2} | Yaw: {3}°.", arg0Fmt: "0.##", arg1Fmt: "0.##", arg2Fmt: "0.##", arg3Fmt: "0.##");

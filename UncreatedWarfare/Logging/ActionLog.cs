@@ -691,212 +691,212 @@ public class ActionLog : MonoBehaviour
 [Translatable(IsPrioritizedTranslation = false)]
 public enum ActionLogTypeOld : byte
 {
-    [Translatable("DISCONNECT")]
+    [TranslatableValue("DISCONNECT")]
     Disconnect,
-    [Translatable("GIVE_ITEM")]
+    [TranslatableValue("GIVE_ITEM")]
     GiveItem,
-    [Translatable("CHANGE_LANGUAGE")]
+    [TranslatableValue("CHANGE_LANGUAGE")]
     ChangeLanguage,
-    [Translatable("LOAD_SUPPLIES")]
+    [TranslatableValue("LOAD_SUPPLIES")]
     LoadSupplies,
-    [Translatable("LOAD_OLD_BANS")]
+    [TranslatableValue("LOAD_OLD_BANS")]
     LoadOldBans,
-    [Translatable("MUTE_PLAYER")]
+    [TranslatableValue("MUTE_PLAYER")]
     MutePlayer,
-    [Translatable("UNMUTE_PLAYER")]
+    [TranslatableValue("UNMUTE_PLAYER")]
     UnmutePlayer,
-    [Translatable("RELOAD_COMPONENT")]
+    [TranslatableValue("RELOAD_COMPONENT")]
     ReloadComponent,
-    [Translatable("REQUEST_KIT")]
+    [TranslatableValue("REQUEST_KIT")]
     RequestKit,
-    [Translatable("REQUEST_VEHICLE")]
+    [TranslatableValue("REQUEST_VEHICLE")]
     RequestVehicle,
-    [Translatable("SHUTDOWN_SERVER")]
+    [TranslatableValue("SHUTDOWN_SERVER")]
     ShutdownServer,
-    [Translatable("POP_STRUCTURE")]
+    [TranslatableValue("POP_STRUCTURE")]
     PopStructure,
-    [Translatable("SAVE_STRUCTURE")]
+    [TranslatableValue("SAVE_STRUCTURE")]
     SaveStructure,
-    [Translatable("UNSAVE_STRUCTURE")]
+    [TranslatableValue("UNSAVE_STRUCTURE")]
     UnsaveStructure,
-    [Translatable("SAVE_REQUEST_SIGN")]
+    [TranslatableValue("SAVE_REQUEST_SIGN")]
     SaveRequestSign,
-    [Translatable("UNSAVE_REQUEST_SIGN")]
+    [TranslatableValue("UNSAVE_REQUEST_SIGN")]
     UnsaveRequestSign,
-    [Translatable("ADD_WHITELIST")]
+    [TranslatableValue("ADD_WHITELIST")]
     AddWhitelist,
-    [Translatable("REMOVE_WHITELIST")]
+    [TranslatableValue("REMOVE_WHITELIST")]
     RemoveWhitelist,
-    [Translatable("SET_WHITELIST_MAX_AMOUNT")]
+    [TranslatableValue("SET_WHITELIST_MAX_AMOUNT")]
     SetWhitelistMaxAmount,
-    [Translatable("DESTROY_BARRICADE")]
+    [TranslatableValue("DESTROY_BARRICADE")]
     DestroyBarricade,
-    [Translatable("DESTROY_STRUCTURE")]
+    [TranslatableValue("DESTROY_STRUCTURE")]
     DestroyStructure,
-    [Translatable("PLACE_BARRICADE")]
+    [TranslatableValue("PLACE_BARRICADE")]
     PlaceBarricade,
-    [Translatable("PLACE_STRUCTURE")]
+    [TranslatableValue("PLACE_STRUCTURE")]
     PlaceStructure,
-    [Translatable("ENTER_VEHICLE_SEAT")]
+    [TranslatableValue("ENTER_VEHICLE_SEAT")]
     EnterVehicleSeat,
-    [Translatable("LEAVE_VEHICLE_SEAT")]
+    [TranslatableValue("LEAVE_VEHICLE_SEAT")]
     LeaveVehicleSeat,
-    [Translatable("HELP_BUILD_BUILDABLE")]
+    [TranslatableValue("HELP_BUILD_BUILDABLE")]
     HelpBuildBuildable,
-    [Translatable("DEPLOY_TO_LOCATION")]
+    [TranslatableValue("DEPLOY_TO_LOCATION")]
     DeployToLocation,
-    [Translatable("TELEPORT")]
+    [TranslatableValue("TELEPORT")]
     Teleport,
-    [Translatable("CHANGE_GAMEMODE_COMMAND")]
+    [TranslatableValue("CHANGE_GAMEMODE_COMMAND")]
     ChangeGamemodeCommand,
-    [Translatable("GAMEMODE_CHANGED_AUTO")]
+    [TranslatableValue("GAMEMODE_CHANGED_AUTO")]
     GamemodeChangedAuto,
-    [Translatable("TEAM_WON")]
+    [TranslatableValue("TEAM_WON")]
     TeamWon,
-    [Translatable("TEAM_CAPTURED_OBJECTIVE")]
+    [TranslatableValue("TEAM_CAPTURED_OBJECTIVE")]
     TeamCapturedObjective,
-    [Translatable("BUILD_ZONE_MAP")]
+    [TranslatableValue("BUILD_ZONE_MAP")]
     BuildZoneMap,
-    [Translatable("DISCHARGE_OFFICER")]
+    [TranslatableValue("DISCHARGE_OFFICER")]
     DischargeOfficer,
-    [Translatable("SET_OFFICER_RANK")]
+    [TranslatableValue("SET_OFFICER_RANK")]
     SetOfficerRank,
-    [Translatable("INJURED")]
+    [TranslatableValue("INJURED")]
     Injured,
-    [Translatable("REVIVED_PLAYER")]
+    [TranslatableValue("REVIVED_PLAYER")]
     RevivedPlayer,
-    [Translatable("DEATH")]
+    [TranslatableValue("DEATH")]
     Death,
-    [Translatable("START_QUEST")]
+    [TranslatableValue("START_QUEST")]
     StartQuest,
-    [Translatable("MAKE_QUEST_PROGRESS")]
+    [TranslatableValue("MAKE_QUEST_PROGRESS")]
     MakeQuestProgress,
-    [Translatable("COMPLETE_QUEST")]
+    [TranslatableValue("COMPLETE_QUEST")]
     CompleteQuest,
-    [Translatable("XP_CHANGED")]
+    [TranslatableValue("XP_CHANGED")]
     XPChanged,
-    [Translatable("CREDITS_CHANGED")]
+    [TranslatableValue("CREDITS_CHANGED")]
     CreditsChanged,
-    [Translatable("CREATED_SQUAD")]
+    [TranslatableValue("CREATED_SQUAD")]
     CreatedSquad,
-    [Translatable("JOINED_SQUAD")]
+    [TranslatableValue("JOINED_SQUAD")]
     JoinedSquad,
-    [Translatable("LEFT_SQUAD")]
+    [TranslatableValue("LEFT_SQUAD")]
     LeftSquad,
-    [Translatable("DISBANDED_SQUAD")]
+    [TranslatableValue("DISBANDED_SQUAD")]
     DisbandedSquad,
-    [Translatable("LOCKED_SQUAD")]
+    [TranslatableValue("LOCKED_SQUAD")]
     LockedSquad,
-    [Translatable("UNLOCKED_SQUAD")]
+    [TranslatableValue("UNLOCKED_SQUAD")]
     UnlockedSquad,
-    [Translatable("PLACED_RALLY")]
+    [TranslatableValue("PLACED_RALLY")]
     PlacedRally,
-    [Translatable("TELEPORTED_TO_RALLY")]
+    [TranslatableValue("TELEPORTED_TO_RALLY")]
     TeleportedToRally,
-    [Translatable("CREATED_ORDER")]
+    [TranslatableValue("CREATED_ORDER")]
     CreatedOrder,
-    [Translatable("FUFILLED_ORDER")]
+    [TranslatableValue("FUFILLED_ORDER")]
     FufilledOrder,
-    [Translatable("OWNED_VEHICLE_DIED")]
+    [TranslatableValue("OWNED_VEHICLE_DIED")]
     OwnedVehicleDied,
-    [Translatable("SERVER_STARTUP")]
+    [TranslatableValue("SERVER_STARTUP")]
     ServerStartup,
-    [Translatable("CREATE_KIT")]
+    [TranslatableValue("CREATE_KIT")]
     CreateKit,
-    [Translatable("DELETE_KIT")]
+    [TranslatableValue("DELETE_KIT")]
     DeleteKit,
-    [Translatable("GIVE_KIT")]
+    [TranslatableValue("GIVE_KIT")]
     GiveKit,
-    [Translatable("CHANGE_KIT_ACCESS")]
+    [TranslatableValue("CHANGE_KIT_ACCESS")]
     ChangeKitAccess,
-    [Translatable("EDIT_KIT")]
+    [TranslatableValue("EDIT_KIT")]
     EditKit,
-    [Translatable("SET_KIT_PROPERTY")]
+    [TranslatableValue("SET_KIT_PROPERTY")]
     SetKitProperty,
-    [Translatable("CREATE_VEHICLE_DATA")]
+    [TranslatableValue("CREATE_VEHICLE_DATA")]
     CreateVehicleData,
-    [Translatable("DELETE_VEHICLE_DATA")]
+    [TranslatableValue("DELETE_VEHICLE_DATA")]
     DeleteVehicleData,
-    [Translatable("REGISTERED_SPAWN")]
+    [TranslatableValue("REGISTERED_SPAWN")]
     RegisteredSpawn,
-    [Translatable("DEREGISTERED_SPAWN")]
+    [TranslatableValue("DEREGISTERED_SPAWN")]
     DeregisteredSpawn,
-    [Translatable("LINKED_VEHICLE_BAY_SIGN")]
+    [TranslatableValue("LINKED_VEHICLE_BAY_SIGN")]
     LinkedVehicleBaySign,
-    [Translatable("UNLINKED_VEHICLE_BAY_SIGN")]
+    [TranslatableValue("UNLINKED_VEHICLE_BAY_SIGN")]
     UnlinkedVehicleBaySign,
-    [Translatable("SET_VEHICLE_DATA_PROPERTY")]
+    [TranslatableValue("SET_VEHICLE_DATA_PROPERTY")]
     SetVehicleDataProperty,
-    [Translatable("VEHICLE_BAY_FORCE_SPAWN")]
+    [TranslatableValue("VEHICLE_BAY_FORCE_SPAWN")]
     VehicleBayForceSpawn,
-    [Translatable("PERMISSION_LEVEL_CHANGED")]
+    [TranslatableValue("PERMISSION_LEVEL_CHANGED")]
     PermissionLevelChanged,
-    [Translatable("CHAT_FILTER_VIOLATION")]
+    [TranslatableValue("CHAT_FILTER_VIOLATION")]
     ChatFilterViolation,
-    [Translatable("KICKED_BY_BATTLEYE")]
+    [TranslatableValue("KICKED_BY_BATTLEYE")]
     KickedByBattlEye,
-    [Translatable("TEAMKILL")]
+    [TranslatableValue("TEAMKILL")]
     Teamkill,
-    [Translatable("KILL")]
+    [TranslatableValue("KILL")]
     Kill,
-    [Translatable("REQUEST_TRAIT")]
+    [TranslatableValue("REQUEST_TRAIT")]
     RequestTrait,
-    [Translatable("SET_SAVED_STRUCTURE_PROPERTY")]
+    [TranslatableValue("SET_SAVED_STRUCTURE_PROPERTY")]
     SetSavedStructureProperty,
-    [Translatable("SET_TRAIT_PROPERTY")]
+    [TranslatableValue("SET_TRAIT_PROPERTY")]
     SetTraitProperty,
-    [Translatable("GIVE_TRAIT")]
+    [TranslatableValue("GIVE_TRAIT")]
     GiveTrait,
-    [Translatable("REVOKE_TRAIT")]
+    [TranslatableValue("REVOKE_TRAIT")]
     RevokeTrait,
-    [Translatable("CLEAR_TRAITS")]
+    [TranslatableValue("CLEAR_TRAITS")]
     ClearTraits,
-    [Translatable("MAIN_CAMP_ATTEMPT")]
+    [TranslatableValue("MAIN_CAMP_ATTEMPT")]
     MainCampAttempt,
-    [Translatable("LEFT_MAIN")]
+    [TranslatableValue("LEFT_MAIN")]
     LeftMain,
-    [Translatable("POSSIBLE_SOLO")]
+    [TranslatableValue("POSSIBLE_SOLO")]
     PossibleSolo,
-    [Translatable("SOLO_RTB")]
+    [TranslatableValue("SOLO_RTB")]
     SoloRTB,
-    [Translatable("ENTER_MAIN")]
+    [TranslatableValue("ENTER_MAIN")]
     EnterMain,
-    [Translatable("ATTACH")]
+    [TranslatableValue("ATTACH")]
     Attach,
-    [Translatable("DETACH")]
+    [TranslatableValue("DETACH")]
     Detach,
-    [Translatable("SET_AMMO")]
+    [TranslatableValue("SET_AMMO")]
     SetAmmo,
-    [Translatable("SET_FIREMODE")]
+    [TranslatableValue("SET_FIREMODE")]
     SetFiremode,
-    [Translatable("ADD_SKILLSET")]
+    [TranslatableValue("ADD_SKILLSET")]
     AddSkillset,
-    [Translatable("REMOVE_SKILLSET")]
+    [TranslatableValue("REMOVE_SKILLSET")]
     RemoveSkillset,
-    [Translatable("NITRO_BOOST_STATE_UPDATED")]
+    [TranslatableValue("NITRO_BOOST_STATE_UPDATED")]
     NitroBoostStateUpdated,
-    [Translatable("UPGRADE_LOADOUT")]
+    [TranslatableValue("UPGRADE_LOADOUT")]
     UpgradeLoadout,
-    [Translatable("UNLOCK_LOADOUT")]
+    [TranslatableValue("UNLOCK_LOADOUT")]
     UnlockLoadout,
-    [Translatable("IP_WHITELIST")]
+    [TranslatableValue("IP_WHITELIST")]
     IPWhitelist,
-    [Translatable("CHANGE_CULTURE")]
+    [TranslatableValue("CHANGE_CULTURE")]
     ChangeCulture,
-    [Translatable("FORGIVE_MOD_ENTRY")]
+    [TranslatableValue("FORGIVE_MOD_ENTRY")]
     ForgiveModerationEntry,
-    [Translatable("EDIT_MOD_ENTRY")]
+    [TranslatableValue("EDIT_MOD_ENTRY")]
     EditModerationEntry,
-    [Translatable("CREATE_MOD_ENTRY")]
+    [TranslatableValue("CREATE_MOD_ENTRY")]
     CreateModerationEntry,
-    [Translatable("REMOVE_MOD_ENTRY")]
+    [TranslatableValue("REMOVE_MOD_ENTRY")]
     RemoveModerationEntry,
-    [Translatable("LOCK_LOADOUT")]
+    [TranslatableValue("LOCK_LOADOUT")]
     LockLoadout,
-    [Translatable("REPUTATION_CHANGED")]
+    [TranslatableValue("REPUTATION_CHANGED")]
     ReputationChanged,
 
-    [Translatable(IsPrioritizedTranslation = false)]
+    [TranslatableValue(IsPrioritizedTranslation = false)]
     [Obsolete("Don't use this.")]
     [Ignore]
     Max = ReputationChanged

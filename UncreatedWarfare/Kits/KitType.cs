@@ -1,24 +1,18 @@
-using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Translations;
-using Uncreated.Warfare.Translations.Languages;
 
 namespace Uncreated.Warfare.Kits;
 
-[Translatable("Kit Type", Description = "Determines kit request behavior.")]
+[Translatable("Kit Type", Description = "Kit categories, determining how they are requested and whether or not they cost real money.")]
 public enum KitType : byte
 {
-    [Translatable("Public", Description = "Free kits or kits bought with in-game credits.")]
-    [Translatable(Languages.ChineseSimplified, "公用")]
+    [TranslatableValue(Description = "Free kits or kits bought with in-game credits.")]
     Public,
-    [Translatable("Elite", Description = "Pre-made kits bought with real money.")]
-    [Translatable(Languages.ChineseSimplified, "精英")]
+    [TranslatableValue(Description = "Pre-made kits bought with real money.")]
     Elite,
-    [Translatable("Special", Description = "Exclusive kits won through events or other means.")]
-    [Translatable(Languages.ChineseSimplified, "特别")]
+    [TranslatableValue(Description = "Exclusive kits won through events or other means.")]
     Special,
-    [Translatable("Loadout", Description = "Custom kits bought with real money.")]
-    [Translatable(Languages.ChineseSimplified, "套装")]
+    [TranslatableValue(Description = "Custom kits bought with real money.")]
     Loadout,
-    [Translatable("Template", Description = "Kits meant to act as templates for creating other kits.")]
+    [TranslatableValue(Description = "Kits meant to act as templates for creating other kits.")]
     Template
 }

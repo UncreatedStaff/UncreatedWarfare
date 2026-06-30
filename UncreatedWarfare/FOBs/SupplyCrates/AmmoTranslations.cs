@@ -3,9 +3,9 @@ using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Fobs.SupplyCrates;
 
-public class AmmoTranslations : PropertiesTranslationCollection
+public class AmmoTranslations : TranslationCollection
 {
-    protected override string FileName => "Commands/Ammo";
+    public override string Name => "Commands/Ammo";
 
     public readonly Translation AmmoNoTarget = new Translation("<#ffab87>Look at an <#cedcde>AMMO CRATE</color>, <#cedcde>AMMO BAG</color> or <#cedcde>VEHICLE</color> in order to resupply.");
     

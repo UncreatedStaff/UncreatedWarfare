@@ -8,9 +8,9 @@ namespace Uncreated.Warfare.Commands;
 
 [Command("vehiclebay", "vb"), MetadataFile]
 internal sealed class VehicleBayCommand : ICommand;
-public class VehicleBayCommandTranslations : PropertiesTranslationCollection
+public class VehicleBayCommandTranslations : TranslationCollection
 {
-    protected override string FileName => "Commands/Vehicle Bay";
+    public override string Name => "Commands/Vehicle Bay";
 
     [TranslationData("Sent when a vehicle indentifier is invalid.", IsPriorityTranslation = false)]
     public readonly Translation<string> InvalidVehicleAsset = new Translation<string>("<#ff8c69><#fff>{0}</color> is not a valid vehicle asset.");

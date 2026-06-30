@@ -17,6 +17,12 @@ public interface IFobEntity : ITransformObject
     IAssetLink<Asset> IdentifyingAsset { get; }
 
     /// <summary>
+    /// Whether or not this entity is alive, effectively whether or not it counts towards the total count for this type of entity.
+    /// </summary>
+    /// <remarks>Mostly used for emplacements.</remarks>
+    bool IsAlive { get; }
+
+    /// <summary>
     /// The team this buildable belongs to.
     /// </summary>
     Team Team { get; }

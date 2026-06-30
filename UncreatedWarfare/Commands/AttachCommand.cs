@@ -169,6 +169,7 @@ internal sealed class AttachCommand : IExecutableCommand
     }
 }
 
+[Translatable("Attachment Type", Description = "Gun attachment slot.", IsPrioritizedTranslation = false)]
 public enum AttachmentType : byte
 {
     None = 255,
@@ -179,9 +180,9 @@ public enum AttachmentType : byte
     Magazine = GunStateIndices.MAGAZINE_ID
 }
 
-public class AttachTranslations : PropertiesTranslationCollection
+public class AttachTranslations : TranslationCollection
 {
-    protected override string FileName => "Commands/Attach";
+    public override string Name => "Commands/Attach";
 
     [TranslationData("Sent when a player tries to use /attach without holding a gun.", IsPriorityTranslation = false)]
     public readonly Translation AttachNoGunHeld = new Translation("<#ff8c69>You must be holding a gun to attach an attachment.");

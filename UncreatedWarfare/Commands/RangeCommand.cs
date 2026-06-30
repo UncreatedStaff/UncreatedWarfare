@@ -46,9 +46,9 @@ internal sealed class RangeCommand : IExecutableCommand
     }
 }
 
-public class RangeCommandTranslations : PropertiesTranslationCollection
+public class RangeCommandTranslations : TranslationCollection
 {
-    protected override string FileName => "Commands/Range";
+    public override string Name => "Commands/Range";
 
     [TranslationData("Displays the distance from the caller's position to their squad's waypoint.", "Distance in meters")]
     public readonly Translation<float> RangeOutput = new Translation<float>("<#9e9c99>The range to your squad's marker is: <#8aff9f>{0}m</color>.", arg0Fmt: "N0");

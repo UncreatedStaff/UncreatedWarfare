@@ -113,10 +113,10 @@ public class WinnerPopupPhase : BasePhase<PhaseTeamSettings>
     }
 }
 
-public class GameOverUITranslations : PropertiesTranslationCollection
+public class GameOverUITranslations : TranslationCollection
 {
     /// <inheritdoc />
-    protected override string FileName => "UI/Game Over";
+    public override string Name => "UI/Game Over";
 
     [TranslationData("Shows at the end of a game to show who won the game.")]
     public readonly Translation<FactionInfo> Title = new Translation<FactionInfo>("{0}\r\nhas won the battle!", TranslationOptions.UnityUI, FactionInfo.FormatColorDisplayName);

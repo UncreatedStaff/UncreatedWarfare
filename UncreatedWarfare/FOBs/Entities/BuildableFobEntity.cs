@@ -44,7 +44,6 @@ public class BuildableFobEntity<TInfo> : IBuildableFobEntity, IDisposable where 
     
     public Quaternion Rotation => Buildable.Rotation;
 
-    /// <inheritdoc />
     public virtual IAssetLink<Asset> IdentifyingAsset { get; }
 
     public IBuildable Buildable { get; }

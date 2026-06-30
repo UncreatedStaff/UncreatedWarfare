@@ -57,9 +57,9 @@ internal sealed class NerdCommand : IExecutableCommand
     }
 }
 
-public sealed class NerdTranslations : PropertiesTranslationCollection
+public sealed class NerdTranslations : TranslationCollection
 {
-    protected override string FileName => "Commands/Nerd";
+    public override string Name => "Commands/Nerd";
 
     [TranslationData("Sent when a player tries to nerd someone that's already a nerd.", IsPriorityTranslation = false)]
     public Translation<IPlayer> AlreadyNerd = new Translation<IPlayer>("{0} is already a nerd.", arg0Fmt: WarfarePlayer.FormatColoredDisplayOrPlayerName);

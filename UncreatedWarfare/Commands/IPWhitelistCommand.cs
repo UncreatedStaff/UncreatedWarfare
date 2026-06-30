@@ -55,9 +55,9 @@ internal sealed class IPWhitelistCommand : IExecutableCommand
     }
 }
 
-public class IPWhitelistCommandTranslations : PropertiesTranslationCollection
+public class IPWhitelistCommandTranslations : TranslationCollection
 {
-    protected override string FileName => "Commands/IP Whitelist";
+    public override string Name => "Commands/IP Whitelist";
 
     [TranslationData(IsPriorityTranslation = false)]
     public readonly Translation<IPlayer, IPv4Range> IPWhitelistSuccess = new Translation<IPlayer, IPv4Range>("<#00ffff>Whitelisted the IP range: <#9cffb3>{1}</color> for {0}.");

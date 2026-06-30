@@ -1,11 +1,8 @@
-﻿using Uncreated.Warfare.Translations;
-
-namespace Uncreated.Warfare.Interaction.Commands;
+﻿namespace Uncreated.Warfare.Interaction.Commands;
 
 /// <summary>
 /// A command that can be executed.
 /// </summary>
-[Translatable("Command")]
 public interface ICommand;
 
 /// <summary>

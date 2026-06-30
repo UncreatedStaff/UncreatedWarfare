@@ -13,9 +13,9 @@ using Uncreated.Warfare.Vehicles.WarfareVehicles;
 using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Kits.Requests;
-public class RequestTranslations : PropertiesTranslationCollection
+public class RequestTranslations : TranslationCollection
 {
-    protected override string FileName => "Requests/Common";
+    public override string Name => "Requests/Common";
 
     [TranslationData("Sends a generic request error that's used to abstract requests a bit more.")]
     public readonly Translation<string> RequestError = new Translation<string>("<#ff8c69>Unable to fufill request: <#ffffff>{0}</color>.");
@@ -242,9 +242,9 @@ public class RequestTranslations : PropertiesTranslationCollection
     #endregion
 }
 
-public class RequestKitsTranslations : PropertiesTranslationCollection
+public class RequestKitsTranslations : TranslationCollection
 {
-    protected override string FileName => "Requests/Kits";
+    public override string Name => "Requests/Kits";
 
     [TranslationData("Sent when a player tries to request a kit that needs upgraded from a previous season.")]
     public readonly Translation NeedsUpgrade = new Translation("Upgrade required");
@@ -302,9 +302,9 @@ public class RequestKitsTranslations : PropertiesTranslationCollection
     public readonly Translation ModalConfirmPurchaseKitCancelButton = new Translation("Cancel");
 }
 
-public class RequestVehicleTranslations : PropertiesTranslationCollection
+public class RequestVehicleTranslations : TranslationCollection
 {
-    protected override string FileName => "Requests/Vehicles";
+    public override string Name => "Requests/Vehicles";
 
 
     [TranslationData("Sent when a player tries to request a vehicle that isn't spawned.")]

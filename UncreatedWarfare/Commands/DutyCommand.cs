@@ -32,9 +32,9 @@ internal sealed class DutyCommand : IExecutableCommand
     }
 }
 
-public class DutyCommandTranslations : PropertiesTranslationCollection
+public class DutyCommandTranslations : TranslationCollection
 {
-    protected override string FileName => "Commands/Duty";
+    public override string Name => "Commands/Duty";
 
     [TranslationData("Sent to a player when they go on duty.", IsPriorityTranslation = false)]
     public readonly Translation DutyOnFeedback = new Translation("<#c6d4b8>You are now <#95ff4a>on duty</color>.");

@@ -5,9 +5,9 @@ using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Addons;
 
 namespace Uncreated.Warfare.Moderation;
-public class ModerationTranslations : PropertiesTranslationCollection
+public class ModerationTranslations : TranslationCollection
 {
-    protected override string FileName => "Moderation";
+    public override string Name => "Moderation";
 
     [TranslationData("Gets sent to a player when their message gets blocked by the chat filter.", "Section of the message that matched the chat filter.")]
     public readonly Translation<string> ChatFilterFeedback = new Translation<string>("<#ff8c69>Our chat filter flagged <#fdfdfd>{0}</color>, so the message wasn't sent.");

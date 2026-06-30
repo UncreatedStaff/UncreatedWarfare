@@ -7,9 +7,9 @@ using Uncreated.Warfare.Translations.Addons;
 using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.FOBs;
-public class FobTranslations : PropertiesTranslationCollection
+public class FobTranslations : TranslationCollection
 {
-    protected override string FileName => "FOBs";
+    public override string Name => "FOBs";
 
     [TranslationData("Indicates that a buildable can only be placed within a FOB's active radius.")]
     public readonly Translation BuildNotInRadius = new Translation("<#ffab87>This can only be placed inside a <#cedcde>FOB RADIUS</color>.");

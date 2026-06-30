@@ -153,7 +153,7 @@
         <PackageReference Include="DanielWillett.ModularRPCs" Version="[1.0.0-prerelease31, 2)" />
         <PackageReference Include="DanielWillett.ModularRPCs.Unity" Version="[1.0.0-prerelease29, 2)" />
         <PackageReference Include="DanielWillett.ModularRPCs.WebSockets" Version="[1.0.0-prerelease31, 2)" />
-        <PackageReference Include="Uncreated.UI" Version="1.4.0" />
+        <PackageReference Include="Uncreated.UI" Version="1.4.1" />
         <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
         <PackageReference Include="Stripe.net" Version="51.0.0" />
         <PackageReference Include="JetBrains.Annotations" Version="2018.2.1" ExcludeAssets="compile" />
@@ -216,6 +216,13 @@
         <PackageReference Include="OpenTelemetry" Version="1.15.3" />
         <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.15.3" />
 
+    </ItemGroup>
+
+    <!-- Documentation -->
+    <ItemGroup>
+        <None Include="../Documentation/**">
+          <Link>%(RecursiveDir)/Documentation/%(Filename)%(Extension)</Link>
+        </None>
     </ItemGroup>
 
     <!-- Embedded Files -->

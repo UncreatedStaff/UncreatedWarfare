@@ -1,9 +1,11 @@
 using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.ComponentModel;
 using Uncreated.Warfare.Exceptions;
 
 namespace Uncreated.Warfare.Util;
+
 public static class ReflectionUtility
 {
     /// <summary>
@@ -69,5 +71,22 @@ public static class ReflectionUtility
         {
             return ActivatorUtilities.CreateInstance<TInstanceType>(serviceProvider, Array.Empty<object>());
         }
+    }
+
+    /// <summary>
+    /// Gets an attribute of type <typeparamref name="TAttribute"/> from the type's <see cref="TypeDescriptor"/>.
+    /// </summary>
+    /// <typeparam name="TAttribute">Type of attribute to get.</typeparam>
+    /// <param name="type">The type to look for attributes on.</param>
+    /// <returns>The found attribute, or <see langword="null"/>.</returns>
+    internal static TAttribute? GetTypeDescriptorAttribute<TAttribute>(Type type) where TAttribute : Attribute
+    {
+        foreach (Attribute attr in TypeDescriptor.GetAttributes(type))
+        {
+            if (attr is TAttribute attribute)
+                return attribute;
+        }
+
+        return null;
     }
 }

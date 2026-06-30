@@ -6,9 +6,9 @@ namespace Uncreated.Warfare.Commands;
 
 [Command("clear", "clr"), MetadataFile]
 internal sealed class ClearCommand : ICommand;
-public sealed class ClearTranslations : PropertiesTranslationCollection
+public sealed class ClearTranslations : TranslationCollection
 {
-    protected override string FileName => "Commands/Clear";
+    public override string Name => "Commands/Clear";
 
     [TranslationData("Sent when a user tries to clear from console and doesn't provide a player name.", IsPriorityTranslation = false)]
     public readonly Translation ClearNoPlayerConsole = new Translation("Specify a player name when clearing from console.");

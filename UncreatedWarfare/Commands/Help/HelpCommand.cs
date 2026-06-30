@@ -98,9 +98,9 @@ public sealed class HelpCommand : IExecutableCommand
     }
 }
 
-public class HelpCommandTranslations : PropertiesTranslationCollection
+public class HelpCommandTranslations : TranslationCollection
 {
-    protected override string FileName => "Commands/Help";
+    public override string Name => "Commands/Help";
 
     [TranslationData("Output from help describing how to use /discord.")]
     public readonly Translation HelpOutputDiscord = new Translation("<#b3ffb3>For more info, join our <#7483c4>Discord</color> server: <#fff>/discord</color>.");

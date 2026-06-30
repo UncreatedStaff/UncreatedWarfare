@@ -983,9 +983,9 @@ public class OptionsUI : UnturnedUI
     }
 }
 
-public class OptionsUITranslations : PropertiesTranslationCollection
+public class OptionsUITranslations : TranslationCollection
 {
-    protected override string FileName => "UI/Options";
+    public override string Name => "UI/Options";
 
     [TranslationData("Window title.")]
     public readonly Translation Title = new Translation("Options", TranslationOptions.TMProUI);

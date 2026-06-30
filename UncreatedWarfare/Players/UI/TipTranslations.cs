@@ -3,9 +3,9 @@ using Uncreated.Warfare.Translations.Addons;
 using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.Players.UI;
-public class TipTranslations : PropertiesTranslationCollection
+public class TipTranslations : TranslationCollection
 {
-    protected override string FileName => "Tips";
+    public override string Name => "Tips";
 
     [TranslationData("Sent to tell a player that their vehicle was resupplied.")]
     public readonly Translation<VehicleType> LogisticsVehicleResupplied = new Translation<VehicleType>("Your <#009933>{0}</color> has been auto resupplied.", TranslationOptions.TMProUI, UppercaseAddon.Instance);

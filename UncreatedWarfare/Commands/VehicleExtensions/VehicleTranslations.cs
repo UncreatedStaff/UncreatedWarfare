@@ -4,9 +4,9 @@ using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Commands;
 
-public sealed class VehicleTranslations : PropertiesTranslationCollection
+public sealed class VehicleTranslations : TranslationCollection
 {
-    protected override string FileName => "Commands/Vehicle";
+    public override string Name => "Commands/Vehicle";
 
     [TranslationData("Sent to the player when they try to use a vehicle command without looking at a vehicle (and they have more than one nearby vehicle).")]
     public readonly Translation VehicleMustBeLookingAtLinkedVehicle = new Translation("<#ff8c69>You must be looking at a vehicle or own only one nearby.");

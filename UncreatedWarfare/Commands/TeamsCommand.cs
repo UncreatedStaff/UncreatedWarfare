@@ -63,9 +63,9 @@ internal sealed class TeamsCommand : IExecutableCommand
     }
 }
 
-public class TeamsCommandTranslations : PropertiesTranslationCollection
+public class TeamsCommandTranslations : TranslationCollection
 {
-    protected override string FileName => "Teams Command";
+    public override string Name => "Commands/Teams";
 
     [TranslationData("Sent when changing teams is on cooldown", "Amount of time left on cooldown")]
     public readonly Translation<Cooldown> TeamsCooldown = new Translation<Cooldown>("<#ff8c69>You can't use /teams for another {0}.", arg0Fmt: Cooldown.FormatTimeLong);

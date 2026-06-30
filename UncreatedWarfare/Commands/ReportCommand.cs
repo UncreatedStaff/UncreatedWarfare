@@ -241,9 +241,9 @@ internal sealed class ReportCommand : IExecutableCommand
     }
 }
 
-public class ReportTranslations : PropertiesTranslationCollection
+public class ReportTranslations : TranslationCollection
 {
-    protected override string FileName => "Commands/Report";
+    public override string Name => "Commands/Report";
 
     [TranslationData("Possible report arguments, do not translate the reasons.")]
     public readonly Translation ReportReasons = new Translation("<#9cffb3>Report reasons: -none-, \"griefing\", \"chat abuse\", \"cheating\", \"voice chat abuse\".");

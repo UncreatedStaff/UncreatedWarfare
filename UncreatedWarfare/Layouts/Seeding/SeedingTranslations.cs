@@ -2,9 +2,9 @@ using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Layouts.Seeding;
 
-public sealed class SeedingTranslations : PropertiesTranslationCollection
+public sealed class SeedingTranslations : TranslationCollection
 {
-    protected override string FileName => "Seeding";
+    public override string Name => "Seeding";
 
     [TranslationData("The title of the vote UI to start the seeding mode.")]
     public readonly Translation SeedingVoteTitle = new Translation("The server is low on players! Switch to seeding mode?", TranslationOptions.TMProUI);

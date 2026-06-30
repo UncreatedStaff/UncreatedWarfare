@@ -1,9 +1,9 @@
 using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Squads.Spotted;
-internal sealed class SpottedTranslations : PropertiesTranslationCollection
+internal sealed class SpottedTranslations : TranslationCollection
 {
-    protected override string FileName => "Spotted";
+    public override string Name => "Spotted";
 
     [TranslationData]
     public readonly Translation SpottedToast = new Translation("<#b9ffaa>SPOTTED", TranslationOptions.TMProUI);

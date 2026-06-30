@@ -91,6 +91,7 @@ using Uncreated.Warfare.StrategyMaps;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Languages;
+using Uncreated.Warfare.Translations.Storage;
 using Uncreated.Warfare.Tweaks;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Inventory;
@@ -1159,6 +1160,10 @@ public sealed class WarfareModule
             .SingleInstance();
 
         // Translations
+        bldr.RegisterType<PropertiesTranslationStorageFactory>()
+            .As<ITranslationStorageFactory>()
+            .SingleInstance();
+
         bldr.RegisterType<TranslationValueFormatter>()
             .As<ITranslationValueFormatter>()
             .SingleInstance();
@@ -1167,7 +1172,7 @@ public sealed class WarfareModule
             .SingleInstance();
 
         bldr.RegisterType<TranslationService>()
-            .As<ITranslationService>()
+            .AsImplementedInterfaces()
             .SingleInstance();
 
         bldr.RegisterType<ItemIconProvider>()

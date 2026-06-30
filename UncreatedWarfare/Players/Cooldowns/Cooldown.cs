@@ -1,4 +1,3 @@
-using Microsoft.Extensions.DependencyInjection;
 using System;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Addons;
@@ -172,7 +171,7 @@ public readonly struct Cooldown : ITranslationArgument, IEquatable<Cooldown>, IC
         if (FormatTimeLong.Match(in parameters))
         {
             return TimeAddon.ToLongTimeString(
-                formatter.ServiceProvider.GetRequiredService<TranslationInjection<TimeTranslations>>().Value,
+                formatter.TranslationService.Get<TimeTranslations>(),
                 (int)Math.Ceiling(GetTimeLeft().TotalSeconds),
                 parameters.Language
             );

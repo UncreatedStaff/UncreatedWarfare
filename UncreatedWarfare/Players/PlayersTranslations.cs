@@ -7,11 +7,11 @@ using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Players;
-public sealed class PlayersTranslations : PropertiesTranslationCollection
+public sealed class PlayersTranslations : TranslationCollection
 {
     // todo: some of these are unused
 
-    protected override string FileName => "Players";
+    public override string Name => "Players";
 
     [TranslationData("Kick message for a player that suffers from a rare bug which will cause GameObject.get_transform() to throw a NullReferenceException (not return null). They are kicked if this happens.", "Discord Join Code")]
     public readonly Translation<string> NullTransformKickMessage = new Translation<string>("Your character is bugged, which messes up our zone plugin. Rejoin or contact a Director if this continues. (discord.gg/{0}).");

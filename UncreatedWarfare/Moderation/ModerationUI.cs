@@ -1617,11 +1617,14 @@ public partial class ModerationUI : UnturnedUI
         }
     }
 
+    [Translatable("Moderation Player Search Mode", IsPrioritizedTranslation = false)]
     public enum PlayerSearchMode
     {
         Any,
         Online
     }
+
+    [Translatable("Moderation History Search Mode", IsPrioritizedTranslation = false)]
     public enum ModerationHistorySearchMode
     {
         Admin,
@@ -1630,13 +1633,15 @@ public partial class ModerationUI : UnturnedUI
         Before,
         After
     }
+
+    [Translatable("Moderation History Sort Mode", IsPrioritizedTranslation = false)]
     public enum ModerationHistorySortMode
     {
         Latest,
         Oldest,
-        [Translatable("Rep (H)")]
+        [TranslatableValue("Rep (H)")]
         HighestReputation,
-        [Translatable("Rep (L)")]
+        [TranslatableValue("Rep (L)")]
         LowestReputation,
         Type
     }

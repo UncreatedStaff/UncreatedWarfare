@@ -266,3 +266,11 @@ Parameters:
                 Type: string
                 Remainder: true
                 Optional: true
+  # /warfaredev langpack
+  - Name: langpack
+    Type: Verbatim
+    Description: "Export a 'lang-pack' (translation pack) for a language."
+    Parameters:
+      - Name: language
+        Type: Uncreated.Warfare.Models.Localization.LanguageInfo
+        Remainder: true

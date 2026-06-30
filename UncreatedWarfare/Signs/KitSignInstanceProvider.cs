@@ -386,9 +386,9 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>,
     void IKitRequirementVisitor<StringBuilder>.AcceptKitSpecificUnlockRequirementNotMet(in KitRequirementResolutionContext<StringBuilder> ctx, UnlockRequirement requirement) { }
 }
 
-public class KitSignTranslations : PropertiesTranslationCollection
+public class KitSignTranslations : TranslationCollection
 {
-    protected override string FileName => "Kit Signs";
+    public override string Name => "Kit Signs";
 
     [TranslationData("Shown on a kit sign when a kit is available without purchase (in-game or monetary).")]
     public readonly Translation KitFree = new Translation("<#66ffcc>FREE</color>", TranslationOptions.TMProSign);

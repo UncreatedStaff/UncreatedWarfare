@@ -48,9 +48,9 @@ internal sealed class GodCommand : IExecutableCommand
     }
 }
 
-public class GodCommandTranslations : PropertiesTranslationCollection
+public class GodCommandTranslations : TranslationCollection
 {
-    protected override string FileName => "Commands/God";
+    public override string Name => "Commands/God";
 
     [TranslationData(IsPriorityTranslation = false)]
     public readonly Translation GodModeEnabled = new Translation("<#bfb9ac>God mode <#99ff66>enabled</color>.");

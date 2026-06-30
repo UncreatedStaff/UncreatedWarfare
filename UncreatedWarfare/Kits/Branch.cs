@@ -10,7 +10,9 @@ public enum Branch : byte
     Default,
     Infantry,
     Armor,
+    [TranslatableValue("Air Force")]
     Airforce,
+    [TranslatableValue("Special Forces")]
     SpecOps,
     Navy
 }

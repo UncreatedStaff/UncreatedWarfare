@@ -3,9 +3,9 @@ using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.FreeTeamDeathmatch;
 
-internal sealed class FtdmTranslations : PropertiesTranslationCollection
+internal sealed class FtdmTranslations : TranslationCollection
 {
-    protected override string FileName => "FreeTDM";
+    public override string Name => "FreeTDM";
 
     [TranslationData("Sent when a player tries to enter enemy spawn during an FTDM match.", "The team that owns the spawn they're entering.")]
     public readonly Translation<FactionInfo> EnteredTeamSpawn = new Translation<FactionInfo>("You are not permitted to enter {0}'s spawn.", arg0Fmt: FactionInfo.FormatColorShortName);

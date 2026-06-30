@@ -4,9 +4,9 @@ using Uncreated.Warfare.Translations.Addons;
 
 namespace Uncreated.Warfare.Quests;
 
-public sealed class QuestTranslations : PropertiesTranslationCollection
+public sealed class QuestTranslations : TranslationCollection
 {
-    protected override string FileName => "Quests";
+    public override string Name => "Quests";
 
     [TranslationData("Sent as a warning before daily quests regenerate. Usually one is sent 1 hour before and 10 minutes before they regenerate.")]
     public readonly Translation<TimeSpan> DailyQuestNextDayWarning = new Translation<TimeSpan>("<#99bacc>Daily Missions will expire in <#eef4f6>{0}</color>.", arg0Fmt: TimeAddon.Create(TimeSpanFormatType.Long));

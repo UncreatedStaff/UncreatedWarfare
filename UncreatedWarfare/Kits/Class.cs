@@ -12,29 +12,30 @@ namespace Uncreated.Warfare.Kits;
 [ExcludedEnum(None)]
 public enum Class : byte
 {
+    [TranslatableValue(IsPrioritizedTranslation = false)]
     None = 0,
     Unarmed = 1,
-    [Translatable("Squad Leader")]
+    [TranslatableValue("Squad Leader")]
     Squadleader = 2,
     Rifleman = 3,
     Medic = 4,
     Breacher = 5,
-    [Translatable("Automatic Rifleman")]
+    [TranslatableValue("Automatic Rifleman")]
     AutomaticRifleman = 6,
     Grenadier = 7,
-    [Translatable("Machine Gunner")]
+    [TranslatableValue("Machine Gunner")]
     MachineGunner = 8,
     LAT = 9,
     HAT = 10,
     Marksman = 11,
     Sniper = 12,
-    [Translatable("Anti-personnel Rifleman")]
+    [TranslatableValue("Anti-personnel Rifleman")]
     APRifleman = 13,
-    [Translatable("Combat Engineer")]
+    [TranslatableValue("Combat Engineer")]
     CombatEngineer = 14,
     Crewman = 15,
     Pilot = 16,
-    [Translatable("Special Ops")]
+    [TranslatableValue("Special Ops")]
     SpecOps = 17
 }
 

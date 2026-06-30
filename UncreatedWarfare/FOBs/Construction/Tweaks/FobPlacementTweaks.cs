@@ -10,7 +10,6 @@ using Uncreated.Warfare.Events.Models.Buildables;
 using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Interaction;
-using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Kits.Whitelists;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Permissions;
@@ -29,15 +28,18 @@ public class FobPlacementTweaks :
     private readonly IPlayerService _playerService;
     private readonly UserPermissionStore _userPermissionStore;
     private readonly FobTranslations _translations;
-    private readonly IKitItemResolver _kitItemResolver;
 
-    public FobPlacementTweaks(AssetConfiguration assetConfiguration, TranslationInjection<FobTranslations> translations, FobManager fobManager, IPlayerService playerService, UserPermissionStore userPermissionStore, IKitItemResolver kitItemResolver)
+    public FobPlacementTweaks(
+        AssetConfiguration assetConfiguration,
+        TranslationInjection<FobTranslations> translations,
+        FobManager fobManager,
+        IPlayerService playerService,
+        UserPermissionStore userPermissionStore)
     {
         _assetConfiguration = assetConfiguration;
         _fobManager = fobManager;
         _playerService = playerService;
         _userPermissionStore = userPermissionStore;
-        _kitItemResolver = kitItemResolver;
         _translations = translations.Value;
     }
 
