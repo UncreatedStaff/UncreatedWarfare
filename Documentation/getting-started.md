@@ -14,7 +14,7 @@ To set up a test server, you need the following things
 * [Git](https://git-scm.com/install/windows)
 * [Visual Studio](https://visualstudio.microsoft.com/vs/community/) (not VS Code) or the [.NET 10 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/10.0) if you're comfortable with using the command line.
     * If you're installing Visual Studio, ensure you've selected the `.NET desktop development` workload.
-* A working database: MySQL >= 8.0 or MariaDB >= 10.6.
+* A working MySQL database, at least v8.0.
     * Databases can be made available either through a forwarded port via SSH or directly via an IP address.
     * [Installation guide for MySQL Community](https://dev.mysql.com/doc/refman/8.4/en/windows-installation.html)
     * Create a database for the module to use.
@@ -273,10 +273,12 @@ The following tables will need sample data:
 If you want to use the configuration from the live server, the following SQL script will work to import necessary information.
 
 ```sql
+SET SESSION sql_mode='NO_AUTO_VALUE_ON_ZERO';
+
 INSERT INTO `factions` (`pk`, `Id`, `Name`, `ShortName`, `Abbreviation`, `HexColor`, `FlagImageUrl`, `SpriteIndex`, `Emoji`, `UnarmedKitId`, `KitPrefix`) VALUES
 	(1, 'admins', 'Admins', 'Admins', 'ADMIN', '0099ff', 'https://i.imgur.com/z0HE5P3.png', 0, NULL, NULL, ''),
 	(2, 'usa', 'United States', 'USA', 'USA', '78b2ff', 'https://i.imgur.com/P4JgkHB.png', 1, '🇺🇸', NULL, 'us'),
-	(3, 'russia', 'Russia', 'Russia', 'RU', 'f53b3b', 'https://i.imgur.com/YMWSUZC.png', 2, '🇷🇺', 710, 'ru'),
+	(3, 'russia', 'Russia', 'Russia', 'RU', 'f53b3b', 'https://i.imgur.com/YMWSUZC.png', 2, '🇷🇺', NULL, 'ru'),
 	(4, 'mec', 'Middle Eastern Coalition', 'MEC', 'MEC', 'ffcd8c', 'https://i.imgur.com/rPmpNzz.png', 3, '938653900913901598|938654469518950410', NULL, 'me'),
 	(5, 'germany', 'Germany', 'Germany', 'DE', 'ffcc00', 'https://i.imgur.com/91Apxc5.png', 4, '🇩🇪', NULL, 'ge'),
 	(6, 'china', 'China', 'China', 'CN', 'ee1c25', 'https://i.imgur.com/Yns89Yk.png', 5, '🇨🇳', NULL, 'ch'),
@@ -286,7 +288,7 @@ INSERT INTO `factions` (`pk`, `Id`, `Name`, `ShortName`, `Abbreviation`, `HexCol
 	(10, 'militia', 'Militia', 'Militia', 'MIL', '526257', 'https://i.imgur.com/z0HE5P3.png', 9, NULL, NULL, 'mi'),
 	(11, 'israel', 'Israel Defense Forces', 'IDF', 'IDF', '005eb8', 'https://i.imgur.com/Wzdspd3.png', 10, '🇮🇱', NULL, 'idf'),
 	(12, 'france', 'France', 'France', 'FR', '002654', 'https://i.imgur.com/TYY0kwp.png', 11, '🇫🇷', NULL, 'fr'),
-	(13, 'canada', 'Canadian Armed Forces', 'Canada', 'CAF', '80aaff', 'https://i.imgur.com/zs81UMe.png', 12, '🇨🇦', 2048, 'caf'),
+	(13, 'canada', 'Canadian Armed Forces', 'Canada', 'CAF', '80aaff', 'https://i.imgur.com/zs81UMe.png', 12, '🇨🇦', NULL, 'caf'),
 	(14, 'southafrica', 'South Africa', 'S. Africa', 'ZA', '007749', 'https://i.imgur.com/2orfzTh.png', 13, '🇿🇦', NULL, 'sa'),
 	(15, 'mozambique', 'Mozambique', 'Mozambique', 'MZ', 'ffd100', 'https://i.imgur.com/9nXhlMH.png', 14, '🇲🇿', NULL, 'mz');
 
@@ -466,6 +468,13 @@ INSERT INTO `lang_info` (`pk`, `Code`, `DisplayName`, `NativeName`, `DefaultCult
 	(16, 'ro-ro', 'Romanian', 'Română', 'ro-RO', 1, 0, NULL, 'romanian', 0),
 	(18, 'ar-sa', 'Arabic', 'العربية', 'ar-SA', 1, 1, NULL, 'arabic', 0);
 
+INSERT INTO `seasons` (`Id`, `ReleaseTimestampUTC`) VALUES
+	(0, '2021-02-28 05:00:00'),
+	(1, '2021-08-08 22:30:00'),
+	(2, '2023-03-14 02:00:00'),
+	(3, '2023-05-04 21:00:00'),
+	(4, '2025-01-01 00:00:00');
+
 INSERT INTO `maps` (`Id`, `DisplayName`, `WorkshopId`, `SeasonReleased`, `Team1Faction`, `Team2Faction`) VALUES
 	(0, 'Fool\'s Road', 2407566267, 0, 2, 3),
 	(1, 'Goose Bay', 2301006771, 1, 2, 3),
@@ -482,12 +491,7 @@ INSERT INTO `maps_dependencies` (`WorkshopId`, `Map`, `IsRemoved`) VALUES
 	(2407740920, 3, 0),
 	(2407740920, 4, 0);
 
-INSERT INTO `seasons` (`Id`, `ReleaseTimestampUTC`) VALUES
-	(0, '2021-02-28 05:00:00'),
-	(1, '2021-08-08 22:30:00'),
-	(2, '2023-03-14 02:00:00'),
-	(3, '2023-05-04 21:00:00'),
-	(4, '2025-01-01 00:00:00');
+SET SESSION sql_mode='';
 ```
 
 ## Finishing Up

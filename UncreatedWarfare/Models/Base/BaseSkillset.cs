@@ -2,6 +2,7 @@ using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Uncreated.Warfare.Players.Skillsets;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Models.Base;
 public abstract class BaseSkillset : ICloneable
@@ -20,9 +21,9 @@ public abstract class BaseSkillset : ICloneable
     {
         get => Skillset.Speciality switch
         {
-            EPlayerSpeciality.OFFENSE => Skillset.Offense.ToString(),
-            EPlayerSpeciality.DEFENSE => Skillset.Defense.ToString(),
-            EPlayerSpeciality.SUPPORT => Skillset.Support.ToString(),
+            EPlayerSpeciality.OFFENSE => EnumUtility.GetNameSafe(Skillset.Offense),
+            EPlayerSpeciality.DEFENSE => EnumUtility.GetNameSafe(Skillset.Defense),
+            EPlayerSpeciality.SUPPORT => EnumUtility.GetNameSafe(Skillset.Support),
             _ => throw new InvalidOperationException($"Invalid speciality: {Skillset.Speciality}.")
         };
         set

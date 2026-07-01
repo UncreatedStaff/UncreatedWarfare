@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 using System;
 using Uncreated.Warfare.Moderation;
+using Uncreated.Warfare.Stats;
 
 namespace Uncreated.Warfare.Migrations
 {
@@ -2800,10 +2801,61 @@ namespace Uncreated.Warfare.Migrations
                 table: DatabaseInterface.TableVoiceChatReports,
                 column: DatabaseInterface.ColumnExternalPrimaryKey
             );
+
+            migrationBuilder.CreateTable(
+                name: MySqlPointsStore.TablePoints,
+                columns: table => new
+                {
+                    Steam64 = table.Column<ulong>(name: MySqlPointsStore.ColumnPointsSteam64, nullable: false),
+                    Faction = table.Column<uint>(name: MySqlPointsStore.ColumnPointsFaction, type: "int unsigned", nullable: false),
+                    Season = table.Column<int>(name: MySqlPointsStore.ColumnPointsSeason, nullable: false),
+                    XP = table.Column<double>(name: MySqlPointsStore.ColumnPointsXP, nullable: false, defaultValue: 0d),
+                    Credits = table.Column<double>(name: MySqlPointsStore.ColumnPointsCredits, nullable: false, defaultValue: 0d),
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_user_points", x => new { x.Steam64, x.Faction, x.Season });
+                    table.ForeignKey(
+                        name: "FK_user_points_factions_Faction",
+                        column: x => x.Faction,
+                        principalTable: "factions",
+                        principalColumn: "pk",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_user_points_seasons_Season",
+                        column: x => x.Season,
+                        principalTable: "seasons",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_user_points_Steam64",
+                table: MySqlPointsStore.TablePoints,
+                column: MySqlPointsStore.ColumnPointsSteam64
+            );
+
+            migrationBuilder.CreateTable(
+                name: MySqlPointsStore.TableReputation,
+                columns: table => new
+                {
+                    Steam64 = table.Column<ulong>(name: MySqlPointsStore.ColumnReputationSteam64, nullable: false),
+                    Reputation = table.Column<double>(name: MySqlPointsStore.ColumnReputationValue, nullable: false, defaultValue: 0d),
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_user_reputation", x => x.Steam64);
+                });
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropTable(
+                name: MySqlPointsStore.TableReputation);
+            
+            migrationBuilder.DropTable(
+                name: MySqlPointsStore.TablePoints);
+
             migrationBuilder.DropForeignKey(
                 name: "FK_kits_factions_Faction",
                 table: "kits");
