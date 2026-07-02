@@ -214,7 +214,7 @@ public sealed class KitCommandTranslations : TranslationCollection
     public readonly Translation KitBackNotPreviewing = new Translation("<#ff8c69>You are not previewing a kit.");
     
     [TranslationData("Sent when a /kit back is used but the system lost track of which kit they should go back to.")]
-    public readonly Translation KitBackPreviewingUnknownKit = new Translation("<#ff8c69>We are unsure which kit to go back to. This shouldn't really happen so let a dev know if it does.");
+    public readonly Translation<Kit> KitBackPreviewingUnknownKit = new Translation<Kit>("<#a0ad8e>Finished previewing <#fff>{0}</color>. You didn't have a kit when you started previewing.");
     
     [TranslationData("Sent when a /kit back is used when the player was previewing a kit and their inventory has been restored.")]
     public readonly Translation<Kit> KitBackEndedPreview = new Translation<Kit>("<#a0ad8e>Finished previewing <#fff>{0}</color>, inventory restored.", arg0Fmt: Kit.FormatDisplayName);

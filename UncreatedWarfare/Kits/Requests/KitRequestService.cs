@@ -116,6 +116,8 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
     {
         KitPlayerComponent playerComponent = player.Component<KitPlayerComponent>();
 
+        await UniTask.SwitchToMainThread(token);
+
         CurrentKitState? activeKit = playerComponent.ActiveKit;
         if (activeKit is not { IsPreview: true })
         {
@@ -125,7 +127,8 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         CurrentKitState? fallback = activeKit.PreviewFallback;
         if (fallback == null || fallback.IsPreview)
         {
-            _logger.LogInformation($"Tried to leave preview of {activeKit.Id}, fallback was: {fallback?.Id}.");
+            await GiveUnarmedKitAsync(player, token: token);
+            _logger.LogTrace($"Tried to leave preview of {activeKit.Id}, fallback was: {fallback?.Id}.");
             return RevertResult.UnknownFallbackKit;
         }
 
@@ -140,6 +143,12 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
             tracker.Reset();
             tracker.IsPossiblyCorrupted = true;
             playerComponent.UpdateKit(fallback);
+
+            if (_zoneStore.IsInMainBase(player) && !_zoneStore.IsInWarRoom(player))
+            {
+                await RestockKitAsync(player, resupplyAmmoBags: true, token);
+            }
+
             if (!string.Equals(activeKit.Id, DefaultKitId, StringComparison.OrdinalIgnoreCase))
                 return RevertResult.RevertedPreview;
 
@@ -217,14 +226,14 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
 
             Team team = player.Team;
 
+            KitPlayerComponent component = player.Component<KitPlayerComponent>();
+
             // already requested
-            if (activeKit != null && activeKit.Key == kit.Key)
+            if (activeKit != null && component.IsKit(kit))
             {
                 resultHandler.MissingRequirement(player, kit, _kitReqTranslations.AlreadyEquipped.Translate(player));
                 return false;
             }
-
-            KitPlayerComponent component = player.Component<KitPlayerComponent>();
 
             RequestState state;
             state.Handler = resultHandler;

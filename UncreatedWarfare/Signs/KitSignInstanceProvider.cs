@@ -228,7 +228,7 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>,
         }
         else
         {
-            if (kit.CreditCost <= 0)
+            if (kit.IsFree)
             {
                 cost = _translations.KitFree.Translate(language);
             }

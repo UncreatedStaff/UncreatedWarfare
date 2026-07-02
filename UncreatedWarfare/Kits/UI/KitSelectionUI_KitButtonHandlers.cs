@@ -1,6 +1,7 @@
 ﻿using System;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Presets;
+using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Interaction.Requests;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
@@ -292,7 +293,12 @@ partial class KitSelectionUI
 
                 await CloseAsync(player);
 
-                _chatService.Send(player, _translations.ChatPreviewingKit, kit);
+                _chatService.Send(
+                    player,
+                    _translations.ChatPreviewingKit,
+                    kit,
+                    _commandDispatcher?.FindCommand(typeof(KitBackCommand))!
+                );
             }
             catch (Exception ex)
             {
@@ -322,10 +328,10 @@ partial class KitSelectionUI
             }
 
             int startIndex = panelIndex >= 10 ? 17 : 16;
+            panelIndex = GetClassPanelIndex((Class)panelIndex);
             if (panelIndex >= 0 && name.Length > startIndex && panelIndex < _panels.Length && char.IsDigit(name[startIndex]))
             {
                 int index = name[startIndex] - '1';
-                panelIndex = GetClassPanelIndex((Class)panelIndex);
                 PanelKitInfo[] info = _panels[panelIndex].Kits;
                 if (index >= 0 && index < info.Length && (object)selector(info[index]) == button)
                 {

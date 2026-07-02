@@ -55,6 +55,9 @@ public sealed class CurrentKitState
     /// </summary>
     public CurrentKitState? PreviewFallback { get; internal set; }
 
+    /// <summary>
+    /// Copy of the items the player had before previewing a kit.
+    /// </summary>
     internal IItem[]? ItemsFallback { get; set; }
 
     internal string ParameterString => $"IsLowAmmo: {(IsLowAmmo ? "Y" : "N")}, IsPreview: {(IsPreview ? "Y" : "N")}";

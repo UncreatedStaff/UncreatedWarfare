@@ -260,6 +260,14 @@ public class Kit : IRequestable<Kit>, ITranslationArgument
     /// <exception cref="NotIncludedException"/>
     public CSteamID[] Favorites => _favorites ?? throw new NotIncludedException("KitModel.Favorites");
 
+    /// <summary>
+    /// Whether or not this kit can be used by all players.
+    /// </summary>
+    public bool IsFree => Type == KitType.Public && !RequiresServerBoost && CreditCost <= 0;
+
+    /// <summary>
+    /// Whether or not this kit is a premium kit that can be bought (elite or loadout kits).
+    /// </summary>
     public bool IsPaid => Type is KitType.Elite or KitType.Loadout;
 
     public bool BypassGlobalCooldown => Class is Class.Crewman or Class.Pilot;

@@ -291,7 +291,7 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
     }
 
     /// <summary>
-    /// Find information about a command by name.
+    /// Find information about a command by it's type.
     /// </summary>
     public CommandInfo? FindCommand(Type commandType)
     {
@@ -303,8 +303,82 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
             }
         }
 
+        /* 
+        not sure which one is faster tbh
+        Stack<Type> types = new Stack<Type>(4);
+        
+        for (Type? type = commandType; type != null;)
+        {
+            SubCommandOfAttribute? subCommand = commandType.GetAttributeSafe<SubCommandOfAttribute>(inherit: true);
+            if (subCommand?.ParentType == null)
+                break;
+        
+            types.Push(subCommand.ParentType);
+            type = subCommand.ParentType;
+        }
+        
+        if (!types.TryPop(out Type? parentType))
+            return null;
+        
+        CommandInfo? parentCommand = null;
+        
+        foreach (CommandInfo command in Commands)
+        {
+            if (command.Type != parentType)
+            {
+                continue;
+            }
+        
+            parentCommand = command;
+            break;
+        }
+        
+        if (parentCommand == null)
+        {
+            return null;
+        }
+        
+        while (types.TryPop(out Type next))
+        {
+            bool found = false;
+            foreach (CommandInfo command in parentCommand.SubCommands)
+            {
+                if (command.Type != next)
+                {
+                    continue;
+                }
+        
+                parentCommand = command;
+                found = true;
+                break;
+            }
+        
+            if (!found)
+                return null;
+        }
+        */
+        
+        // BFS for command type
+        Queue<CommandInfo> queue = new Queue<CommandInfo>(64);
+        foreach (CommandInfo command in Commands)
+        {
+            queue.Enqueue(command);
+        }
+
+        while (queue.TryDequeue(out CommandInfo next))
+        {
+            foreach (CommandInfo subCommand in next.SubCommands)
+            {
+                if (subCommand.Type == commandType)
+                    return subCommand;
+
+                queue.Enqueue(subCommand);
+            }
+        }
+
         return null;
     }
+
 
     /// <summary>
     /// Start executing a parsed command.

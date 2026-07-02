@@ -70,7 +70,7 @@ partial class KitSelectionUI
     private readonly UnturnedLabel _detailPanelStatisticsTitle = new UnturnedLabel("Kit_Detail/Panel/Viewport/Content/Stat_Header");
     private readonly KitDetailStatistic[] _detailPanelStatistics = ElementPatterns.CreateArray<KitDetailStatistic>("Kit_Detail/Panel/Viewport/Content/Stat_{0}", 1, to: 8);
 
-    private readonly UnturnedUIElement _detailHeatmapSpacer = new UnturnedUIElement("Kit_Detail/Panel/Viewport/Content/Spacer");
+    //private readonly UnturnedUIElement _detailHeatmapSpacer = new UnturnedUIElement("Kit_Detail/Panel/Viewport/Content/Spacer");
     private readonly KitDetailHeatmap _detailHeatmap = new KitDetailHeatmap();
     private readonly UnturnedUIElement _detailResetHeatmapLogic = new UnturnedUIElement("~/Logic_ResetHeatmap");
 

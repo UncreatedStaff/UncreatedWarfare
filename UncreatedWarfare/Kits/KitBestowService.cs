@@ -61,11 +61,6 @@ public class KitBestowService
         IKitItem[] items = kit.Items;
         Skillset[] skillsets = kit.Skillsets;
 
-        using (BestowKitGiveItemsState state = new BestowKitGiveItemsState(data, player))
-        {
-            _itemDistributionService.GiveItems(items, player, state);
-        }
-
         KitPlayerComponent kitComp = player.Component<KitPlayerComponent>();
 
         CurrentKitState? fallback = null;
@@ -74,6 +69,11 @@ public class KitBestowService
         {
             fallback = kitComp.GetActiveEffectiveKit();
             fallback?.ItemsFallback = ItemUtility.ItemsFromInventory(player).ToArray();
+        }
+
+        using (BestowKitGiveItemsState state = new BestowKitGiveItemsState(data, player))
+        {
+            _itemDistributionService.GiveItems(items, player, state);
         }
 
         CurrentKitState kitState = new CurrentKitState(kit, data.IsPreview, data.IsLowAmmo, fallback);

@@ -17,6 +17,7 @@ using Uncreated.Warfare.Events.Models.Kits;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Events.Models.Squads;
 using Uncreated.Warfare.Interaction;
+using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Kits.Loadouts;
 using Uncreated.Warfare.Kits.Requests;
@@ -63,6 +64,7 @@ public sealed partial class KitSelectionUI : UnturnedUI,
     private readonly ITeamManager<Team> _teamManager;
     private readonly PointsService _pointsService;
     private readonly HudManager _hudManager;
+    private readonly CommandDispatcher? _commandDispatcher;
     private readonly SquadManager? _squadManager;
     private readonly PlayerNitroBoostService? _nitroBoostService;
     private readonly AccountLinkingService? _acountLinkingService;
@@ -77,18 +79,18 @@ public sealed partial class KitSelectionUI : UnturnedUI,
     private readonly int[] _attachmentMap =
     [
         1, -1,
+        2, -1,
         4, -1,
         3, -1,
-        2, -1,
         0
     ];
     private readonly AttachmentType[] _inverseAttachmentMap =
     [
         AttachmentType.Magazine,
         AttachmentType.Sight,
+        AttachmentType.Tactical,
         AttachmentType.Barrel,
-        AttachmentType.Grip,
-        AttachmentType.Tactical
+        AttachmentType.Grip
     ];
 
     private Kit[]? _cachedPublicKits;
@@ -117,6 +119,7 @@ public sealed partial class KitSelectionUI : UnturnedUI,
         ITeamManager<Team> teamManager,
         PointsService pointsService,
         HudManager hudManager,
+        CommandDispatcher? commandDispatcher = null,
         SquadManager? squadManager = null,
         PlayerNitroBoostService? nitroBoostService = null,
         AccountLinkingService? acountLinkingService = null)
@@ -140,6 +143,7 @@ public sealed partial class KitSelectionUI : UnturnedUI,
         _pointsService = pointsService;
         _pointsService.PointsChanged += OnPointsChanged;
         _hudManager = hudManager;
+        _commandDispatcher = commandDispatcher;
         _squadManager = squadManager;
         _nitroBoostService = nitroBoostService;
         _weaponTextService = weaponTextService;
@@ -577,10 +581,7 @@ public sealed partial class KitSelectionUI : UnturnedUI,
 
         data.IsClosing = !instant;
         data.HasUI = false;
-        if (_frameEffect.TryGetGuid(out Guid guid))
-        {
-            EffectManager.ClearEffectByGuid(guid, player.Connection);
-        }
+        data.ResetState();
         data.ResetCache();
 
         data.ModalHandle.Dispose();
@@ -589,6 +590,10 @@ public sealed partial class KitSelectionUI : UnturnedUI,
         if (instant)
         {
             ClearFromPlayer(player.Connection);
+            if (_frameEffect.TryGetGuid(out Guid guid))
+            {
+                EffectManager.ClearEffectByGuid(guid, player.Connection);
+            }
         }
         else
         {
@@ -607,6 +612,10 @@ public sealed partial class KitSelectionUI : UnturnedUI,
             if (player.IsOnline && data.IsClosing)
             {
                 ClearFromPlayer(player.Connection);
+                if (_frameEffect.TryGetGuid(out Guid guid))
+                {
+                    EffectManager.ClearEffectByGuid(guid, player.Connection);
+                }
                 data.IsClosing = false;
             }
         }
@@ -667,8 +676,7 @@ public sealed partial class KitSelectionUI : UnturnedUI,
         ModalHandle.TryGetModalHandle(player, ref data.ModalHandle);
         data.HudHandle = _hudManager.HideHud(player);
         data.Team = team;
-        data.IsListOpen = false;
-        data.SearchMaxSize = null;
+        data.ResetState();
 
         if (!data.HasUI)
         {
@@ -1152,7 +1160,7 @@ public sealed partial class KitSelectionUI : UnturnedUI,
 
         ui.Id.SetText(c, id);
         
-        if (kitAccessComp.IsKitAccessible(kit.Key))
+        if (kit.IsFree || kitAccessComp.IsKitAccessible(kit.Key))
         {
             ui.PreviewButtonParent.Hide(c);
             ui.RequestButtonParent.Show(c);
@@ -1476,6 +1484,7 @@ public sealed partial class KitSelectionUI : UnturnedUI,
         public Kit? SelectedKit;
         public int SelectedKitVersion;
         public bool HasDetailPanel;
+        // note: change ResetState also if changing the default value of this
         public int ActiveStatCount = 2;
         public int ActiveItemDescriptorCount = 0;
 
@@ -1537,6 +1546,15 @@ public sealed partial class KitSelectionUI : UnturnedUI,
             _publicKitCache = new KitCacheInformation[owner._panels.Length * owner._panels[0].Kits.Length];
             _listKitCache = new KitCacheInformation[owner._listResults.Length];
             FavoriteKitsCache = new Kit[owner._favoriteKits.Length];
+        }
+
+        public void ResetState()
+        {
+            ActiveStatCount = 2;
+            HasDetailPanel = false;
+            HasDefaultText = false;
+            LastSearchTick = 0;
+            IsListOpen = false;
         }
 
         public void ResetCache()
@@ -2120,5 +2138,5 @@ public sealed class KitSelectionUITranslations : TranslationCollection
 
     
     [TranslationData("Chat message sent after previewing a kit.")]
-    public readonly Translation<Kit> ChatPreviewingKit = new Translation<Kit>("<#a0ad8e>You are previewing <#fff>{0}</color>.");
+    public readonly Translation<Kit, CommandInfo> ChatPreviewingKit = new Translation<Kit, CommandInfo>("<#a0ad8e>You are previewing <#fff>{0}</color>. Use {1} to go back to your old kit.");
 }

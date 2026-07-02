@@ -62,7 +62,7 @@ public class AnnouncementTranslations : TranslationCollection
     public readonly Translation AnnouncementListenToSuperiors = new Translation("<#a2a7ba>Winning requires <#fff>coordination and teamwork</color>. Listen to each other and <#fff>communicate</color>!");
 
     [TranslationData("Announcement telling people to build FOBs to help their team.")]
-    public readonly Translation AnnouncementBuildFOBs = new Translation("<#9da6a6>Building <54e3ff>FOBs</color> is vital for advancing operations. Grab a logistics truck and go build one!");
+    public readonly Translation AnnouncementBuildFOBs = new Translation("<#9da6a6>Building <#54e3ff>FOBs</color> is vital for advancing operations. Grab a logistics truck and go build one!");
     
     [TranslationData("Announcement telling people how to request a kit.")]
     public readonly Translation AnnouncementKits = new Translation("<#9da6a6>If you are having trouble trying to request a kit, try <#fff>punching the sign</color> of the kit you wish to request.");

@@ -503,7 +503,7 @@ public class CommandInfo : ICommandDescriptor, ITranslationArgument
     {
         ISyntaxWriter writer = parameters.CreateSyntaxWrier(formatter.TranslationService, true);
 
-        using CommandSyntaxFormatter cmdFormatter = new CommandSyntaxFormatter(writer, null, null);
+        using CommandSyntaxFormatter cmdFormatter = new CommandSyntaxFormatter(writer, null, "/", leaveOpen: false);
 
         ValueTask<CommandSyntaxFormatter.SyntaxStringInfo> task
             = cmdFormatter.GetSyntaxString(this, Array.Empty<string>(), null, parameters.Player);

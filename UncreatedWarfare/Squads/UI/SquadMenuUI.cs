@@ -541,7 +541,7 @@ public class SquadMenuUI :
         public UnturnedLabel Number { get; } = new UnturnedLabel("ScrollView/Viewport/Content/MySquad/Number");
         public UnturnedLabel Name { get; } = new UnturnedLabel("ScrollView/Viewport/Content/MySquad/Name");
         public UnturnedLabel MemberCount { get; } = new UnturnedLabel("ScrollView/Viewport/Content/MySquad/MemberCount");
-        public LabeledButton LeaveButton { get; } = new LabeledButton("ScrollView/Viewport/Content/MySquad/SquadMenuHUD_LeaveMySquadButton");
+        public LabeledButton LeaveButton { get; } = new LabeledButton("ScrollView/Viewport/Content/MySquad/SquadMenuHUD_LeaveMySquadButton", "./Label");
         public LabeledUnturnedToggle ToggleLockedButton { get; } = new LabeledUnturnedToggle(true, "ScrollView/Viewport/Content/MySquad/SquadMenuHUD_ToggleLockedMySquadButton", "./ToggleState", "./LockLabel", null);
         public UnturnedLabel LockButtonDescription { get; } = new UnturnedLabel("ScrollView/Viewport/Content/MySquad/SquadMenuHUD_ToggleLockedMySquadButton/LockLabelDescription");
         public MySquadMember[] Members { get; } = ElementPatterns.CreateArray<MySquadMember>("ScrollView/Viewport/Content/MySquad/SquadMember_{0}", 1, to: Squad.MaxMembers);

@@ -34,13 +34,14 @@ internal sealed class KitBackCommand : IExecutableCommand
         switch (result)
         {
             case KitRequestService.RevertResult.RevertedPreview:
+            case KitRequestService.RevertResult.RevertedPreviewWithDefaultItems:
                 throw Context.Reply(_translations.KitBackEndedPreview, activeKit?.CachedKit!);
 
             case KitRequestService.RevertResult.RevertedLoadoutPreview:
                 throw Context.Reply(_translations.KitBackEndedPreviewLoadout);
 
             case KitRequestService.RevertResult.UnknownFallbackKit:
-                throw Context.Reply(_translations.KitBackPreviewingUnknownKit);
+                throw Context.Reply(_translations.KitBackPreviewingUnknownKit, activeKit?.CachedKit!);
 
             // case NotPreviewing:
             default:

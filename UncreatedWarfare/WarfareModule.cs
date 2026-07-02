@@ -1114,6 +1114,9 @@ public sealed class WarfareModule
         bldr.RegisterType<DisallowPickUpSupplyCrate>()
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Layout);
+        bldr.RegisterType<PreviewKitTweaks>()
+            .AsSelf().AsImplementedInterfaces()
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Layout);
 
         bldr.RegisterType<WarTableDoorTweak>()
             .AsSelf().AsImplementedInterfaces()

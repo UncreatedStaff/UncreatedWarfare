@@ -68,6 +68,9 @@ public class ClaimToRearmTweaks :
         if (ammoStorage == null)
             return;
 
+        // just in case they somehow got a preview kit out of main
+        await _kitRequestService.RevertPreviewAsync(e.Player, token);
+
         if (e.Player.Team.GroupId != e.Buildable.Group)
         {
             _chatService.Send(e.Player, _translations.AmmoWrongTeam);
@@ -207,7 +210,7 @@ public class ClaimToRearmTweaks :
         return guns;
     }
 
-    private Dictionary<ItemAsset, int> GetEquipmentCountsInKit(Kit kit)
+    private static Dictionary<ItemAsset, int> GetEquipmentCountsInKit(Kit kit)
     {
         Dictionary<ItemAsset, int> equipment = new Dictionary<ItemAsset, int>();
         foreach (IKitItem item in kit.Items)
@@ -227,7 +230,7 @@ public class ClaimToRearmTweaks :
         return equipment;
     }
 
-    private int CountFullMags(PlayerInventory inventory, ItemGunAsset gun, HashSet<Item> alreadyCounted)
+    private static int CountFullMags(PlayerInventory inventory, ItemGunAsset gun, HashSet<Item> alreadyCounted)
     {
         int count = 0;
         for (int p = 0; p < PlayerInventory.STORAGE; ++p)
@@ -263,7 +266,7 @@ public class ClaimToRearmTweaks :
         return count;
     }
 
-    private int CountMagsInKit(Kit kit, ItemGunAsset correspondingGun)
+    private static int CountMagsInKit(Kit kit, ItemGunAsset correspondingGun)
     {
         int count = 0;
         foreach (IKitItem item in kit.Items)
@@ -286,7 +289,7 @@ public class ClaimToRearmTweaks :
         return count;
     }
 
-    private int CountItemsInInventory(PlayerInventory inventory, ItemAsset matchingItem)
+    private static int CountItemsInInventory(PlayerInventory inventory, ItemAsset matchingItem)
     {
         int count = 0;
         for (int p = 0; p < PlayerInventory.STORAGE; ++p)
@@ -302,7 +305,7 @@ public class ClaimToRearmTweaks :
         return count;
     }
 
-    private float GetMagazineCost(FirearmClass firearmClass)
+    private static float GetMagazineCost(FirearmClass firearmClass)
     {
         switch (firearmClass)
         {
@@ -343,7 +346,7 @@ public class ClaimToRearmTweaks :
         }
     }
 
-    private float GetEquipmentCost(ItemAsset equipment)
+    private static float GetEquipmentCost(ItemAsset equipment)
     {
         switch (equipment)
         {
@@ -389,7 +392,7 @@ public class ClaimToRearmTweaks :
         if (e.Zone.Type is not ZoneType.MainBase)
             return;
 
-        if (_zoneStore == null || _zoneStore.IsInWarRoom(e.Player))
+        if (_zoneStore == null || _zoneStore.IsInWarRoom(e.Player) || e.Player.Component<KitPlayerComponent>().HasPreviewKit)
             return;
 
         await _kitRequestService.RestockKitAsync(e.Player, true, token);
@@ -404,11 +407,19 @@ public class ClaimToRearmTweaks :
         if (_zoneStore == null)
             return;
 
+        KitPlayerComponent component = e.Player.Component<KitPlayerComponent>();
         if (!_zoneStore.IsInMainBase(e.Player) || _zoneStore.IsInWarRoom(e.Player))
             return;
 
-        Kit? kit = await e.Player.Component<KitPlayerComponent>().GetActiveKitAsync(KitInclude.Giveable, token);
-        if (kit is { Class: > Class.Unarmed })
-            await _kitRequestService.RestockKitAsync(e.Player, true, token);
+        switch (component.ActiveKit)
+        {
+            case { IsPreview: true }:
+                await _kitRequestService.RevertPreviewAsync(e.Player, token);
+                return;
+
+            case { Class: > Class.Unarmed }:
+                await _kitRequestService.RestockKitAsync(e.Player, true, token);
+                break;
+        }
     }
 }

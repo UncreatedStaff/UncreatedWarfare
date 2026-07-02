@@ -218,6 +218,21 @@ public class CommandSyntaxFormatter : IDisposable
             writer.WritePrefixCharacter(bldr, _prefix);
         }
 
+        if (command.ParentCommand != null)
+        {
+            Stack<ICommandDescriptor> parents = new Stack<ICommandDescriptor>(4);
+            for (ICommandDescriptor? parent = command.ParentCommand; parent != null; parent = parent.ParentCommand)
+            {
+                parents.Push(parent);
+            }
+
+            while (parents.TryPop(out ICommandDescriptor parent))
+            {
+                writer.WriteCommandName(bldr, parent.CommandName, isAlias: false);
+                writer.WriteParameterSeparator(bldr);
+            }
+        }
+
         string commandName = string.IsNullOrEmpty(aliasOverride) ? command.CommandName : aliasOverride;
         writer.WriteCommandName(bldr, commandName, !string.Equals(commandName, command.CommandName));
 

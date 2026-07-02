@@ -61,6 +61,11 @@ public class KitPlayerComponent : IPlayerComponent
     public bool HasKit => ActiveKit != null;
 
     /// <summary>
+    /// If the player has a preview kit equipped.
+    /// </summary>
+    public bool HasPreviewKit => ActiveKit is { IsPreview: true };
+
+    /// <summary>
     /// Ordered list of all loadouts including the <see cref="KitInclude.Cached"/> include level.
     /// </summary>
     public IReadOnlyList<Kit> Loadouts { get; private set; } = Array.Empty<Kit>();
