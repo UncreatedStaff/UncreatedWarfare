@@ -1,20 +1,24 @@
 using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.DependencyInjection;
+using SDG.Framework.Utilities;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Events.Models.Flags;
+using Uncreated.Warfare.Events.Models.Zones;
 using Uncreated.Warfare.Layouts.Flags;
 using Uncreated.Warfare.Layouts.Teams;
+using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Proximity;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.StrategyMaps.MapTacks;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.List;
 using Uncreated.Warfare.Zones;
+using MathUtility = Uncreated.Warfare.Util.MathUtility;
 
 namespace Uncreated.Warfare.StrategyMaps;
 
@@ -27,26 +31,32 @@ public class StrategyMapManager :
     IEventListener<FlagsSetUp>,
     IEventListener<FlagCaptured>,
     IEventListener<FlagNeutralized>,
-    IEventListener<FlagDiscovered>
+    IEventListener<FlagDiscovered>,
+    IEventListener<PlayerExitedZone>
 {
     private readonly TrackingList<StrategyMap> _strategyMaps;
     private readonly ILogger<StrategyMapManager> _logger;
+    private readonly ZoneStore? _zoneStore;
     private readonly IServiceProvider _serviceProvider;
     private readonly StrategyMapsConfiguration _configuration;
     private readonly AssetConfiguration _assetConfiguration;
     private readonly BuildableAttributesDataStore _attributeStore;
 
+    private readonly MapTackInfoUI? _tackInfoUi;
+
     public ReadOnlyTrackingList<StrategyMap> StrategyMaps { get; }
 
-    public StrategyMapManager(ILogger<StrategyMapManager> logger, IServiceProvider serviceProvider)
+    public StrategyMapManager(ILogger<StrategyMapManager> logger, IServiceProvider serviceProvider, ZoneStore? zoneStore = null)
     {
         _strategyMaps = new TrackingList<StrategyMap>();
         _logger = logger;
+        _zoneStore = zoneStore;
 
         _serviceProvider = serviceProvider;
         _configuration = serviceProvider.GetRequiredService<StrategyMapsConfiguration>();
         _assetConfiguration = serviceProvider.GetRequiredService<AssetConfiguration>();
         _attributeStore = serviceProvider.GetRequiredService<BuildableAttributesDataStore>();
+        _tackInfoUi = serviceProvider.GetService<MapTackInfoUI>();
 
         StrategyMaps = _strategyMaps.AsReadOnly();
 
@@ -56,11 +66,20 @@ public class StrategyMapManager :
     public UniTask StartAsync(CancellationToken token)
     {
         RegisterExistingStrategyMaps();
+
+        if (_zoneStore is { IsGlobal: true } && _tackInfoUi != null)
+        {
+            TimeUtility.updated += OnUpdated;
+        }
         return UniTask.CompletedTask;
     }
 
     public UniTask StopAsync(CancellationToken token)
     {
+        if (_zoneStore is { IsGlobal: true } && _tackInfoUi != null)
+        {
+            TimeUtility.updated -= OnUpdated;
+        }
         return UniTask.CompletedTask;
     }
 
@@ -98,6 +117,19 @@ public class StrategyMapManager :
         }
 
         StrategyMap map = new StrategyMap(buildable, tableInfo, _attributeStore);
+
+        if (_zoneStore is { IsGlobal: true })
+        {
+            Vector3 position = buildable.Position;
+            foreach (ZoneProximity proximity in _zoneStore.ProximityZones)
+            {
+                if (!proximity.Proximity.TestPoint(in position))
+                    continue;
+
+                map.Zones.Add(proximity.Zone);
+            }
+        }
+
         _strategyMaps.Add(map);
 
         IFlagRotationService? flagService = _serviceProvider.GetService<IFlagRotationService>();
@@ -229,4 +261,65 @@ public class StrategyMapManager :
         else
             return new FlagMapTack(flag.Owner.Faction.MapTackFlag, flag);
     }
+
+    #region UI Stuff
+
+    private void OnUpdated()
+    {
+        foreach (ZoneProximity x in _zoneStore!.ProximityZones!)
+        {
+            if (x.Zone.Type != ZoneType.WarRoom || x.Proximity is not ITrackingProximity<WarfarePlayer> trackingProximity)
+                continue;
+
+            foreach (WarfarePlayer player in trackingProximity.ActiveObjects)
+            {
+                MapTack? tack = null;
+                Vector3 playerPos = player.Position;
+                foreach (StrategyMap map in StrategyMaps)
+                {
+                    if (!map.Zones.Contains(x.Zone))
+                        continue;
+
+                    Vector3 pos = map.Position;
+
+                    // check if nearby strategy map before checking each tack
+                    // radius of the smallest circle that can fit a square of width map.Size
+                    float circleRadius = map.Size * 1.41421356237f /* sqrt(2) */;
+                    if (!MathUtility.WithinRange(in pos, in playerPos, circleRadius + 4f))
+                    {
+                        continue;
+                    }
+
+                    tack = map.TickMapTackLook(player, in pos);
+                    if (tack != null)
+                        break;
+                }
+
+                if (tack == null)
+                {
+                    _tackInfoUi!.TryClose(player);
+                }
+                else
+                {
+                    MapTackInfoUI.Data data = _tackInfoUi!.GetOrAddData(player.Steam64);
+                    if (!data.HasUI)
+                    {
+                        _tackInfoUi.Open(player, tack.UIHandler!);
+                    }
+                }
+            }
+        }
+    }
+
+    void IEventListener<PlayerExitedZone>.HandleEvent(PlayerExitedZone e, IServiceProvider serviceProvider)
+    {
+        if (_zoneStore == null || e.Zone.Type != ZoneType.WarRoom || _zoneStore.IsInWarRoom(e.Player))
+        {
+            return;
+        }
+
+
+    }
+
+    #endregion
 }

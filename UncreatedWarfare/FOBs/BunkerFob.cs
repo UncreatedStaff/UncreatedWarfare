@@ -29,8 +29,7 @@ public class BunkerFob : ResourceFob, IFobStrategyMapTackHandler, IDamageableFob
         DamageTracker = new DamageTracker(name);
 
         // show shovelable icon instead
-        if (Icon != null)
-            Icon.IsVisible = false;
+        Icon?.IsVisible = false;
     }
 
     public override Color32 GetColor(Team viewer)
@@ -44,13 +43,19 @@ public class BunkerFob : ResourceFob, IFobStrategyMapTackHandler, IDamageableFob
         HasBeenRebuilt = true;
         Buildable = newBuildable;
         UpdateIcon();
+        InvokeHealthUpdated();
+        InvokeAttributesUpdated();
     }
     public void MarkUnbuilt(IBuildable newBuildable)
     {
         IsBuilt = false;
         Buildable = newBuildable;
         UpdateIcon();
+        InvokeHealthUpdated();
+        InvokeAttributesUpdated();
     }
+
+    #region Deployment
 
     /// <inheritdoc />
     protected override void OnDeployTo(WarfarePlayer player, in DeploySettings settings)
@@ -59,9 +64,9 @@ public class BunkerFob : ResourceFob, IFobStrategyMapTackHandler, IDamageableFob
         base.OnDeployTo(player, in settings);
     }
 
-    public override bool CheckDeployableToTick(WarfarePlayer player, ChatService chatService, DeploymentTranslations translations, in DeploySettings settings)
+    public override bool CheckDeployableTo(WarfarePlayer player, ChatService chatService, DeploymentTranslations translations, in DeploySettings settings)
     {
-        if (!base.CheckDeployableTo(player, chatService, translations, settings))
+        if (!base.CheckDeployableTo(player, chatService, translations, in settings))
             return false;
 
         if (!IsBuilt)
@@ -72,10 +77,58 @@ public class BunkerFob : ResourceFob, IFobStrategyMapTackHandler, IDamageableFob
 
         return true;
     }
+
+    public override bool CheckDeployableFrom(WarfarePlayer player, ChatService chatService, DeploymentTranslations translations, in DeploySettings settings, IDeployable deployingTo)
+    {
+        if (!base.CheckDeployableFrom(player, chatService, translations, in settings, deployingTo))
+            return false;
+
+        if (!IsBuilt)
+        {
+            chatService.Send(player, translations.DeployDestroyed, this);
+            return false;
+        }
+
+        return true;
+    }
+
+    public override bool CheckDeployableFromTick(WarfarePlayer player, ChatService chatService, DeploymentTranslations translations, in DeploySettings settings, IDeployable deployingTo)
+    {
+        if (!base.CheckDeployableFromTick(player, chatService, translations, in settings, deployingTo))
+            return false;
+
+        if (!IsBuilt)
+        {
+            chatService.Send(player, translations.DeployDestroyed, this);
+            return false;
+        }
+
+        return true;
+    }
+
+    public override bool CheckDeployableToTick(WarfarePlayer player, ChatService chatService, DeploymentTranslations translations, in DeploySettings settings)
+    {
+        if (!base.CheckDeployableToTick(player, chatService, translations, in settings))
+            return false;
+
+        if (!IsBuilt)
+        {
+            chatService.Send(player, translations.DeployDestroyedTick, this);
+            return false;
+        }
+
+        return true;
+    }
     public override TimeSpan GetDelay(WarfarePlayer player)
     {
         return TimeSpan.FromSeconds(FobManager.Configuration.GetValue("FobDeployDelay", 10));
     }
+
+    #endregion
+
+
+
+    #region Map Tacks
 
     protected virtual MapTack? CreateMapTack(StrategyMap map, AssetConfiguration assetConfig)
     {
@@ -98,4 +151,24 @@ public class BunkerFob : ResourceFob, IFobStrategyMapTackHandler, IDamageableFob
     {
         return CreateMapTack(map, assetConfig);
     }
+
+    public override double? GetHealth()
+    {
+        if (!IsBuilt)
+            return null;
+
+        return base.GetHealth();
+    }
+
+    /// <inheritdoc />
+    public override MapTackAttributes GetAttributes()
+    {
+        MapTackAttributes attributes = base.GetAttributes();
+        if (!IsBuilt)
+            attributes |= MapTackAttributes.Destroyed;
+
+        return attributes;
+    }
+
+    #endregion
 }

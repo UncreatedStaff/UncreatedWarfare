@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using Uncreated.Warfare.Events.Models.Fobs;
 using Uncreated.Warfare.Fobs;
+using Uncreated.Warfare.FOBs.Entities;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.List;
@@ -28,6 +29,40 @@ public class NearbySupplyCrates
         _team = team;
     }
 
+    /// <summary>
+    /// Checks to see if there are nearby crates of each type of buildable without allocating a list for them.
+    /// </summary>
+    public static bool HasNearbySupplyCrates(Vector3 supplyPoint, CSteamID team, FobManager fobManager, out bool hasAmmoCrates, out bool hasBuildCrates)
+    {
+        hasAmmoCrates = false;
+        hasBuildCrates = false;
+
+        bool hasAny = false;
+        foreach (IFobEntity entity in fobManager.Entities)
+        {
+            if (entity is not SupplyCrate crate || crate.Buildable.Group != team || !crate.IsWithinRadius(supplyPoint))
+                continue;
+
+            hasAny = true;
+
+            if (crate.Type == SupplyType.Build)
+            {
+                hasBuildCrates = true;
+                if (hasAmmoCrates) return true;
+            }
+            else if (crate.Type == SupplyType.Ammo)
+            {
+                hasAmmoCrates = true;
+                if (hasBuildCrates) return true;
+            }
+        }
+
+        return hasAny;
+    }
+
+    /// <summary>
+    /// Compiles a list of all nearby supply crates.
+    /// </summary>
     public static NearbySupplyCrates FindNearbyCrates(Vector3 supplyPoint, CSteamID team, FobManager fobManager)
     {
         var supplyCrates = fobManager.Entities
@@ -116,17 +151,7 @@ public class NearbySupplyCrates
             if (fob is not ResourceFob bpf || bpf.Team.GroupId != _team || !bpf.IsWithinRadius(_requiredSupplyPoint))
                 continue;
 
-            bpf.ChangeSupplies(type, amountDelta);
-            FobSuppliesChanged args = new FobSuppliesChanged
-            {
-                Fob = bpf,
-                AmountDelta = amountDelta,
-                SupplyType = type,
-                ChangeReason = reason,
-                Resupplier = resupplier
-            };
-
-            _ = WarfareModule.EventDispatcher.DispatchEventAsync(args);
+            bpf.ChangeSupplies(type, amountDelta, reason, resupplier);
         }
     }
 }

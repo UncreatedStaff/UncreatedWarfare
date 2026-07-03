@@ -2,6 +2,7 @@ using System;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Models.Barricades;
+using Uncreated.Warfare.Events.Patches;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
@@ -434,7 +435,12 @@ partial class EventDispatcher
                 BuildableExtensions.SetDestroyInfo(args.Transform, args, null);
                 BuildableExtensions.SetSalvageInfo(args.Transform, args.DamageOrigin, null, false, null);
                 DestroyerComponent.AddOrUpdate(args.Transform.gameObject, args.InstigatorId.m_SteamID, false, args.DamageOrigin);
-                BarricadeManager.damage(args.Transform, (ushort)Math.Clamp(args.PendingDamage, 0f, ushort.MaxValue), 1, false, args.InstigatorId, args.DamageOrigin);
+                BarricadeManagerSendHealthChanged.LastDamageRequestedEvent = args;
+                BarricadeManager.damage(args.Transform, args.PendingDamage, 1, false, args.InstigatorId, args.DamageOrigin);
+                if (args.ServersideData.barricade.isDead && BarricadeManagerSendHealthChanged.LastDamageRequestedEvent == args)
+                {
+                    BarricadeManagerSendHealthChanged.LastDamageRequestedEvent = null;
+                }
             }
             finally
             {
@@ -445,9 +451,10 @@ partial class EventDispatcher
         if (!shouldAllow)
             return;
 
-        pendingTotalDamage = (ushort)Math.Clamp(args.PendingDamage, 0f, ushort.MaxValue);
+        pendingTotalDamage = args.PendingDamage;
         BuildableExtensions.SetDestroyInfo(args.Transform, args, null);
         BuildableExtensions.SetSalvageInfo(args.Transform, args.DamageOrigin, null, false, null);
         DestroyerComponent.AddOrUpdate(args.Transform.gameObject, args.InstigatorId.m_SteamID, false, args.DamageOrigin);
+        BarricadeManagerSendHealthChanged.LastDamageRequestedEvent = args;
     }
 }

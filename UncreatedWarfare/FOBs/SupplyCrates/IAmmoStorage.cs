@@ -1,6 +1,4 @@
-﻿using Uncreated.Warfare.Players;
-
-namespace Uncreated.Warfare.FOBs.SupplyCrates;
+﻿namespace Uncreated.Warfare.FOBs.SupplyCrates;
 
 public interface IAmmoStorage
 {

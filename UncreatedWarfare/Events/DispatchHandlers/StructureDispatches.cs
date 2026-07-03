@@ -1,7 +1,5 @@
-using System;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Events.Components;
-using Uncreated.Warfare.Events.Models.Buildables;
 using Uncreated.Warfare.Events.Models.Structures;
 using Uncreated.Warfare.Events.Patches;
 using Uncreated.Warfare.Layouts.Teams;
@@ -291,7 +289,12 @@ partial class EventDispatcher
                 BuildableExtensions.SetDestroyInfo(args.Transform, args, null);
                 BuildableExtensions.SetSalvageInfo(args.Transform, args.DamageOrigin, null, false, null);
                 DestroyerComponent.AddOrUpdate(args.Transform.gameObject, args.InstigatorId.m_SteamID, false, args.DamageOrigin);
-                StructureManager.damage(args.Transform, args.Direction, (ushort)Math.Clamp(args.PendingDamage, 0f, ushort.MaxValue), 1, false, args.InstigatorId, args.DamageOrigin);
+                StructureManagerSendHealthChanged.LastDamageRequestedEvent = args;
+                StructureManager.damage(args.Transform, args.Direction, args.PendingDamage, 1, false, args.InstigatorId, args.DamageOrigin);
+                if (args.ServersideData.structure.isDead && StructureManagerSendHealthChanged.LastDamageRequestedEvent == args)
+                {
+                    StructureManagerSendHealthChanged.LastDamageRequestedEvent = null;
+                }
             }
             finally
             {
@@ -302,9 +305,10 @@ partial class EventDispatcher
         if (!shouldAllow)
             return;
         
-        pendingTotalDamage = (ushort)Math.Clamp(args.PendingDamage, 0f, ushort.MaxValue);
+        pendingTotalDamage = args.PendingDamage;
         BuildableExtensions.SetDestroyInfo(args.Transform, args, null);
         BuildableExtensions.SetSalvageInfo(args.Transform, args.DamageOrigin, null, false, null);
         DestroyerComponent.AddOrUpdate(args.Transform.gameObject, args.InstigatorId.m_SteamID, false, args.DamageOrigin);
+        StructureManagerSendHealthChanged.LastDamageRequestedEvent = args;
     }
 }

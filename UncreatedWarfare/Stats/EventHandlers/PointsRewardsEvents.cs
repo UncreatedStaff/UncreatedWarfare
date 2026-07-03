@@ -349,7 +349,7 @@ public class PointsRewardsEvents :
 
     public async UniTask HandleEventAsync(FobSuppliesChanged e, IServiceProvider serviceProvider, CancellationToken token = default)
     {
-        if (e.Resupplier == null || e.AmountDelta <= 0 || !TrackPoints)
+        if (e.Instigator == null || e.AmountDelta <= 0 || !TrackPoints)
             return;
 
         if (e.SupplyType == SupplyType.Build && e.Fob.BuildCount >= 120)
@@ -366,9 +366,9 @@ public class PointsRewardsEvents :
         ResolvedEventInfo scaledEvent = new ResolvedEventInfo(@event, e.AmountDelta / nominalResupplyAmount);
 
         await _points.ApplyEvent(
-            e.Resupplier.Steam64,
-            e.Resupplier.Team.Faction.PrimaryKey,
-            scaledEvent.WithTranslation(translation, e.Resupplier), token)
+            e.Instigator.Steam64,
+            e.Instigator.Team.Faction.PrimaryKey,
+            scaledEvent.WithTranslation(translation, e.Instigator), token)
             .ConfigureAwait(false);
     }
 

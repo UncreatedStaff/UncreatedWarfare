@@ -10,6 +10,7 @@ Parameters:
       - Name: vehicle
         Type: Look/SDG.Unturned.InteractableVehicle
         Optional: true
+        Permission: warfare::commands.vehicle.spawn
         Parameters:
           - Name: teammate
             Type: Uncreated.Warfare.Players.IPlayer

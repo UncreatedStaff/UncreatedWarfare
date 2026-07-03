@@ -8,8 +8,9 @@ public class DeployableMapTack : MapTack
     public IDeployable Deployable { get; }
     public override Vector3 FeatureWorldPosition => Deployable.SpawnPosition;
 
-    public DeployableMapTack(IAssetLink<ItemBarricadeAsset> markerAsset, IDeployable deployable)
-        : base(markerAsset, deployable.SpawnPosition)
+    public DeployableMapTack(IAssetLink<ItemBarricadeAsset> markerAsset, IDeployable deployable) : this(markerAsset, deployable, deployable as IMapTackUIHandler) { }
+    public DeployableMapTack(IAssetLink<ItemBarricadeAsset> markerAsset, IDeployable deployable, IMapTackUIHandler? uiHandler)
+        : base(markerAsset, deployable.SpawnPosition, uiHandler)
     {
         Deployable = deployable;
     }

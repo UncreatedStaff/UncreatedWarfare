@@ -2,7 +2,6 @@ using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
 using HarmonyLib;
 using System;
-using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
 using Uncreated.Warfare.Events.Components;
@@ -95,6 +94,11 @@ internal sealed class StructureManagerDestroyStructure : IHarmonyPatch
     {
         if (structure == null)
             return;
+
+        if (StructureManagerSendHealthChanged.LastDamageRequestedEvent != null && StructureManagerSendHealthChanged.LastDamageRequestedEvent.Structure == structure)
+        {
+            StructureManagerSendHealthChanged.LastDamageRequestedEvent = null;
+        }
 
         if (!Regions.checkSafe(x, y))
             return;

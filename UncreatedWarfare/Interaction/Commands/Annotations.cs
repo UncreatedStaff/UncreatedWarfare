@@ -134,11 +134,18 @@ public sealed class SynchronizedCommandAttribute : Attribute;
 /// </summary>
 [AttributeUsage(AttributeTargets.Class)]
 [BaseTypeRequired(typeof(ICommand))]
-sealed class HideFromHelpAttribute : Attribute;
+public sealed class HideFromHelpAttribute : Attribute;
+
+/// <summary>
+/// Indicates that the command should be hidden from command lists but not /help.
+/// </summary>
+[AttributeUsage(AttributeTargets.Class)]
+[BaseTypeRequired(typeof(ICommand))]
+public sealed class HideFromCommandListAttribute : Attribute;
 
 /// <summary>
 /// Indicates that typing '/command help' should run the command normally instead of switching to /help.
 /// </summary>
 [AttributeUsage(AttributeTargets.Class)]
 [BaseTypeRequired(typeof(ICommand))]
-sealed class DisableAutoHelpAttribute : Attribute;
+public sealed class DisableAutoHelpAttribute : Attribute;

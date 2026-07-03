@@ -24,6 +24,9 @@ public sealed class FobConfiguration : BaseAlternateConfigurationFile
     public float RepairStationBuildConsumedPerTick { get; private set; }
     public ushort RepairStationHealthPerTick { get; private set; }
     public ushort RepairStationFuelPerTick { get; private set; }
+    public float MaximumDistanceFromFobToDeployToMain { get; private set; }
+    public float MaximumDistanceFromEnemiesToDeployToMain { get; private set; }
+    public TimeSpan DeployFobToMainDelay { get; private set; }
 
     /// <summary>
     /// Home for storing FOB and buildable data.
@@ -87,5 +90,14 @@ public sealed class FobConfiguration : BaseAlternateConfigurationFile
         
         RepairStationBuildConsumedPerTick =
             UnderlyingConfiguration.GetValue("RepairStation:BuildConsumedPerTick", 0.25f);
+
+        MaximumDistanceFromFobToDeployToMain =
+            UnderlyingConfiguration.GetValue("RepairStation:MaximumDistanceFromFobToDeployToMain", 8f);
+
+        MaximumDistanceFromEnemiesToDeployToMain =
+            UnderlyingConfiguration.GetValue("RepairStation:MaximumDistanceFromEnemiesToDeployToMain", 100f);
+
+        DeployFobToMainDelay =
+            UnderlyingConfiguration.GetValue("RepairStation:DeployFobToMainDelay", TimeSpan.FromSeconds(7));
     }
 }

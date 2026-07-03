@@ -1,7 +1,12 @@
 # DeployCommand
-Description: "Deploy to a point of interest such as a main base, FOB, VCP, or cache."
+Description: "Manage your current deployment."
 Aliases: [ dep, warp, warps, tpa, go, goto, fob, deployfob, df, dp ]
 Parameters:
   - Name: cancel
     Aliases: [ stop ]
+    Description: "Stop deploying."
+    Type: Verbatim
+  - Name: main
+    Aliases: [ base, home, mainbase, homebase, spawn ]
+    Description: "Teleports the <caller /> to their main base. Must be on a FOB to do so."
     Type: Verbatim

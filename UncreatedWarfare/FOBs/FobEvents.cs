@@ -37,7 +37,8 @@ public partial class FobManager :
     IEventListener<VehicleSpawned>,
     IEventListener<VehicleDespawned>,
     IEventListener<TriggerTrapRequested>,
-    IEventListener<IDamageBuildableRequestedEvent>
+    IEventListener<IDamageBuildableRequestedEvent>,
+    IEventListener<IBuildableDamagedEvent>
 {
     void IEventListener<PlaceBarricadeRequested>.HandleEvent(PlaceBarricadeRequested e, IServiceProvider serviceProvider)
     {
@@ -359,6 +360,8 @@ public partial class FobManager :
     [EventListener(MustRunLast = true)]
     void IEventListener<IDamageBuildableRequestedEvent>.HandleEvent(IDamageBuildableRequestedEvent e, IServiceProvider serviceProvider)
     {
+        // note this shouldn't run in IBuildableDamagedEvent because that doesn't run if the buildable is destroyed
+
         IDamageableFob? correspondingFob = FindBuildableFob<IDamageableFob>(e.Buildable);
         if (correspondingFob == null)
             return;
@@ -371,6 +374,12 @@ public partial class FobManager :
             correspondingFob.DamageTracker.RecordDamage(e.InstigatorId, e.PendingDamage, e.DamageOrigin, e.InstigatorTeam.IsFriendly(e.Buildable.Group));
         else
             correspondingFob.DamageTracker.RecordDamage(e.DamageOrigin);
+    }
+
+    void IEventListener<IBuildableDamagedEvent>.HandleEvent(IBuildableDamagedEvent e, IServiceProvider serviceProvider)
+    {
+        ResourceFob? correspondingFob = FindBuildableFob<ResourceFob>(e.Buildable);
+        correspondingFob?.InvokeHealthUpdated();
     }
 
     private const float MaxBoxRadius = 1.5f;

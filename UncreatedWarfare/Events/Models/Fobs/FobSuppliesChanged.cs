@@ -31,9 +31,9 @@ public class FobSuppliesChanged : IActionLoggableEvent, IFobNeedsUIUpdateEvent
     /// </summary>
     public required SupplyChangeReason ChangeReason { get; init; }
     /// <summary>
-    /// The player who resupplied this fob, if this event was invoked due to resupplying a fob.
+    /// The player who caused the supply change, if known.
     /// </summary>
-    public required WarfarePlayer? Resupplier { get; init; }
+    public required WarfarePlayer? Instigator { get; init; }
 
     /// <inheritdoc />
     public ActionLogEntry GetActionLogEntry(IServiceProvider serviceProvider, ref ActionLogEntry[]? multipleEntries)
@@ -42,7 +42,7 @@ public class FobSuppliesChanged : IActionLoggableEvent, IFobNeedsUIUpdateEvent
             $"FOB \"{Fob.Name}\" for team {Fob.Team}, " +
             $"{EnumUtility.GetNameSafe(SupplyType)} supply updated because {EnumUtility.GetNameSafe(ChangeReason)} by " +
             $"{AmountDelta:0.##} to {(SupplyType == SupplyType.Ammo ? Fob.AmmoCount : Fob.BuildCount):0.##} supplies. ",
-            Resupplier
+            Instigator
         );
     }
 

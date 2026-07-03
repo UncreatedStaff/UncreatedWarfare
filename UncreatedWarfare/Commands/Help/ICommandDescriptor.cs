@@ -32,6 +32,11 @@ public interface ICommandDescriptor
     bool HideFromHelp { get; }
 
     /// <summary>
+    /// If this command is hid from command lists by a <see cref="HideFromCommandListAttribute"/>.
+    /// </summary>
+    bool HideFromCommandList { get; set; }
+
+    /// <summary>
     /// Typing '/command help' will not switch to /help if this is <see langword="true"/>, which can be set using the <see cref="DisableAutoHelpAttribute"/>.
     /// </summary>
     /// <remarks>This is not propagated to sub-commands.</remarks>

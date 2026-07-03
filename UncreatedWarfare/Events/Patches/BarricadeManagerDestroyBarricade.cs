@@ -2,7 +2,6 @@ using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Formatting;
 using HarmonyLib;
 using System;
-using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
 using Uncreated.Warfare.Events.Components;
@@ -92,6 +91,11 @@ internal sealed class BarricadeManagerDestroyBarricade : IHarmonyPatch
     {
         if (barricade == null)
             return;
+
+        if (BarricadeManagerSendHealthChanged.LastDamageRequestedEvent != null && BarricadeManagerSendHealthChanged.LastDamageRequestedEvent.Barricade == barricade)
+        {
+            BarricadeManagerSendHealthChanged.LastDamageRequestedEvent = null;
+        }
 
         BarricadeRegion region;
         if (plant == ushort.MaxValue)

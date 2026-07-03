@@ -478,7 +478,7 @@ public class CommandContext : ControlException
     /// <summary>
     /// Checks to see if a flag with the given <paramref name="letter"/> and <paramref name="word"/> is matched, where <paramref name="word"/> is case-insensitive.
     /// </summary>
-    /// <remarks>Example: <c>('e', "enter")</c></remarks>
+    /// <remarks>Example: <c>('e', "enter")</c><br/><c>/v --enter</c> or <c>/v -e</c></remarks>
     public bool MatchFlag(char letter, string word)
     {
         return CheckFlag(word, true) || CheckFlag(MemoryMarshal.CreateSpan(ref letter, 1), false);

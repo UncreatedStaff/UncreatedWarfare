@@ -42,6 +42,7 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService, IDisposable
     /// <summary>
     /// If this instance of <see cref="ZoneStore"/> is the global instance, not the one created for flag layouts.
     /// </summary>
+    [MemberNotNullWhen(true, nameof(ProximityZones))]
     public bool IsGlobal { get; }
 
     public ZoneStore(IEnumerable<IZoneProvider> zoneProviders, IPlayerService playerService, ILogger<ZoneStore> logger, bool isGlobal, WarfareModule warfare, EventDispatcher eventDispatcher)
@@ -54,6 +55,10 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService, IDisposable
         IsGlobal = isGlobal;
 
         Zones = Array.Empty<Zone>();
+        if (isGlobal)
+        {
+            ProximityZones = Array.Empty<ZoneProximity>();
+        }
     }
 
     async UniTask IHostedService.StartAsync(CancellationToken token)
@@ -76,7 +81,7 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService, IDisposable
                 disp.Dispose();
         }
 
-        ProximityZones = null;
+        ProximityZones = Array.Empty<ZoneProximity>();
     }
 
     UniTask IHostedService.StopAsync(CancellationToken token)
@@ -120,34 +125,35 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService, IDisposable
         foreach (Zone zone in zones)
         {
             if (zone.Type is ZoneType.Flag)
-                proxZones.Add(new ZoneProximity(CreateProximityForZone(zone), zone));
-            else
             {
-                ITrackingProximity<WarfarePlayer> colliderForZone = CreateColliderForZone(zone);
-
-                colliderForZone.OnObjectEntered += (__, player) =>
-                {
-                    PlayerEnteredZone args = new PlayerEnteredZone
-                    {
-                        Player = player,
-                        Zone = zone
-                    };
-
-                    _ = _eventDispatcher.DispatchEventAsync(args, CancellationToken.None);
-                };
-                colliderForZone.OnObjectExited += (__, player) =>
-                {
-                    PlayerExitedZone args = new PlayerExitedZone
-                    {
-                        Player = player,
-                        Zone = zone
-                    };
-
-                    _ = _eventDispatcher.DispatchEventAsync(args, CancellationToken.None);
-                };
-                
-                proxZones.Add(new ZoneProximity(colliderForZone, zone));
+                proxZones.Add(new ZoneProximity(CreateProximityForZone(zone), zone));
+                continue;
             }
+
+            ITrackingProximity<WarfarePlayer> colliderForZone = CreateColliderForZone(zone);
+
+            colliderForZone.OnObjectEntered += (__, player) =>
+            {
+                PlayerEnteredZone args = new PlayerEnteredZone
+                {
+                    Player = player,
+                    Zone = zone
+                };
+
+                _ = _eventDispatcher.DispatchEventAsync(args, CancellationToken.None);
+            };
+            colliderForZone.OnObjectExited += (__, player) =>
+            {
+                PlayerExitedZone args = new PlayerExitedZone
+                {
+                    Player = player,
+                    Zone = zone
+                };
+
+                _ = _eventDispatcher.DispatchEventAsync(args, CancellationToken.None);
+            };
+
+            proxZones.Add(new ZoneProximity(colliderForZone, zone));
         }
 
         ProximityZones = proxZones.AsReadOnly();

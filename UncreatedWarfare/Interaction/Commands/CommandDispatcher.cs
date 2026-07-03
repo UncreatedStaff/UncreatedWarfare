@@ -10,6 +10,7 @@ using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
+using Uncreated.Warfare.Interaction.Commands.Syntax;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Cooldowns;
 using Uncreated.Warfare.Players.Management;
@@ -377,6 +378,57 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Checks whether a player has permission to run a command.
+    /// </summary>
+    /// <param name="command">The command being ran.</param>
+    /// <param name="user">The user running the command.</param>
+    /// <param name="token">Cancellation token.</param>
+    /// <returns><see langword="true"/> if the user can run the command, otherwise <see langword="false"/>.</returns>
+    public ValueTask<bool> HasPermissionForCommand(ICommandDescriptor command, ICommandUser user, CancellationToken token = default)
+    {
+        if (user.IsSuperUser)
+        {
+            return new ValueTask<bool>(true);
+        }
+
+        return Core(command, user, token);
+
+        async ValueTask<bool> Core(ICommandDescriptor command, ICommandUser user, CancellationToken token)
+        {
+            if (command.OtherPermissionsAreAnd)
+            {
+                if (command.DefaultPermission.Valid)
+                {
+                    if (!await _permissions.HasPermissionAsync(user, command.DefaultPermission, token))
+                        return false;
+                }
+
+                foreach (PermissionLeaf leaf in command.OtherPermissions)
+                {
+                    if (!await _permissions.HasPermissionAsync(user, leaf, token))
+                        return false;
+                }
+
+                return true;
+            }
+
+            if (command.DefaultPermission.Valid)
+            {
+                if (await _permissions.HasPermissionAsync(user, command.DefaultPermission, token))
+                    return true;
+            }
+
+            foreach (PermissionLeaf leaf in command.OtherPermissions)
+            {
+                if (await _permissions.HasPermissionAsync(user, leaf, token))
+                    return true;
+            }
+
+            return false;
+        }
     }
 
 
@@ -1038,7 +1090,8 @@ public class CommandDispatcher : IDisposable, IHostedService, IEventListener<Pla
             _logger.LogError(ex, "Error executing player command: \"{0}\".", text);
         }
     }
-    
+
+    [UsedImplicitly]
     private bool TryRunCommand(ICommandUser user, ReadOnlySpan<char> textSpan, ref bool shouldList, bool requirePrefix)
     {
         ParsedCommandInfo info = Parser.ParseCommandInput(textSpan, requirePrefix);

@@ -44,7 +44,7 @@ public interface IDeployable : ITranslationArgument
     /// <summary>
     /// Periodic checks over time to see if a player can deploy from this location. This also runs just before the teleport.
     /// </summary>
-    bool CheckDeployableFromTick(WarfarePlayer player, DeploymentTranslations translations, in DeploySettings settings, IDeployable deployingTo) => false;
+    bool CheckDeployableFromTick(WarfarePlayer player, ChatService chatService, DeploymentTranslations translations, in DeploySettings settings, IDeployable deployingTo) => false;
 
     /// <summary>
     /// Invoked after deployment to this location.

@@ -76,6 +76,11 @@ public class CommandInfo : ICommandDescriptor, ITranslationArgument
     public bool HideFromHelp { get; set; }
 
     /// <summary>
+    /// If this command is hid from command lists by a <see cref="HideFromCommandListAttribute"/>.
+    /// </summary>
+    public bool HideFromCommandList { get; set; }
+
+    /// <summary>
     /// Typing '/command help' will not switch to /help if this is <see langword="true"/>, which can be set using the <see cref="DisableAutoHelpAttribute"/>.
     /// </summary>
     /// <remarks>This is not propagated to sub-commands.</remarks>
@@ -133,16 +138,17 @@ public class CommandInfo : ICommandDescriptor, ITranslationArgument
     {
         Type = vanillaCommand.GetType();
         VanillaCommand = vanillaCommand;
-        CommandName = vanillaCommand.command;
+        CommandName = vanillaCommand.command.ToLowerInvariant();
         CompositeName = ContainsWhiteSpace(CommandName) ? "\"" + CommandName + "\"" : CommandName;
         Aliases = Array.Empty<string>();
-        Metadata = DefaultMetadata(vanillaCommand.command, vanillaCommand.info, true);
+        Metadata = DefaultMetadata(vanillaCommand.command, vanillaCommand.help, true);
         OtherPermissionsAreAnd = true;
         OtherPermissions = Array.Empty<PermissionLeaf>();
         DefaultPermission = new PermissionLeaf("commands." + CommandName, unturned: true, warfare: false);
         _subCommands = new List<CommandInfo>(0);
         SubCommands = Array.Empty<CommandInfo>();
         IsExecutable = true;
+        HideFromCommandList = CommandName is not ("spy" or "day" or "night" or "weather" or "time" or "say" or "experience");
     }
 
     /// <summary>
@@ -208,6 +214,7 @@ public class CommandInfo : ICommandDescriptor, ITranslationArgument
 
         AutoHelpDisabled = classType.IsDefinedSafe<DisableAutoHelpAttribute>();
         HideFromHelp = parent is { HideFromHelp: true } || classType.IsDefinedSafe<HideFromHelpAttribute>();
+        HideFromCommandList = parent is { HideFromCommandList: true } || classType.IsDefinedSafe<HideFromCommandListAttribute>();
 
         bool isFileMetadata = false;
         bool shouldHaveMetadata = false;
@@ -350,6 +357,7 @@ public class CommandInfo : ICommandDescriptor, ITranslationArgument
         {
             OtherPermissionsAreAnd = true;
             OtherPermissions = Array.Empty<PermissionLeaf>();
+            Metadata.Permission = DefaultPermission;
         }
     }
 
@@ -369,7 +377,7 @@ public class CommandInfo : ICommandDescriptor, ITranslationArgument
         return new CommandMetadata
         {
             Name = name,
-            Description = desc == null ? null : new TranslationList(desc),
+            Description = string.IsNullOrWhiteSpace(desc) ? null : new TranslationList(desc),
             Type = CommandSyntaxFormatter.Verbatim,
             Types = [ CommandSyntaxFormatter.Verbatim ],
             ResolvedTypes = [ typeof(VerbatimParameterType) ],

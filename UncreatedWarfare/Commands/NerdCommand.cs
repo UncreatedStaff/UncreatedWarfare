@@ -6,7 +6,7 @@ using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Commands;
 
-[Command("nerd", "nred"), MetadataFile]
+[Command("nerd", "nred"), MetadataFile, HideFromCommandList]
 internal sealed class NerdCommand : IExecutableCommand
 {
     private readonly NerdService _nerdService;

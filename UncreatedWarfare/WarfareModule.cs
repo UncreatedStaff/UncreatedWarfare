@@ -88,6 +88,7 @@ using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Stats.EventHandlers;
 using Uncreated.Warfare.Steam;
 using Uncreated.Warfare.StrategyMaps;
+using Uncreated.Warfare.StrategyMaps.MapTacks;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Languages;
@@ -329,7 +330,7 @@ public sealed class WarfareModule
 
         // adds the plugin to the server lobby screen and sets the plugin framework type to 'Unknown'.
         IPluginAdvertising pluginAdvService = PluginAdvertising.Get();
-        pluginAdvService.AddPlugin("Uncreated Warfare");
+        pluginAdvService.AddPlugin($"Uncreated Warfare v{Assembly.GetExecutingAssembly().GetName().Version.ToString(3)}");
         pluginAdvService
             .GetType()
             .GetProperty("PluginFrameworkTag", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.FlattenHierarchy)
@@ -668,6 +669,10 @@ public sealed class WarfareModule
         bldr.RegisterType<KitSelectionUI>()
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Layout);
+        
+        bldr.RegisterType<MapTackInfoUI>()
+            .AsSelf().AsImplementedInterfaces()
+            .SingleInstance();
 
         bldr.RegisterType<PopupUI>().SingleInstance();
         bldr.RegisterType<StagingUI>().SingleInstance();

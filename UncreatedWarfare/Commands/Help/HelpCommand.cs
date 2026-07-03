@@ -1,5 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
+using System;
 using System.Linq;
+using System.Text;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Interaction.Commands.Syntax;
 using Uncreated.Warfare.Players.Permissions;
@@ -11,14 +13,19 @@ namespace Uncreated.Warfare.Commands;
 public sealed class HelpCommand : IExecutableCommand
 {
     private readonly CommandDispatcher _commandDispatcher;
+    private readonly UserPermissionStore _permissionStore;
     private readonly HelpCommandTranslations _translations;
 
     /// <inheritdoc />
     public required CommandContext Context { get; init; }
 
-    public HelpCommand(TranslationInjection<HelpCommandTranslations> translations, CommandDispatcher commandDispatcher)
+    public HelpCommand(
+        TranslationInjection<HelpCommandTranslations> translations,
+        CommandDispatcher commandDispatcher,
+        UserPermissionStore permissionStore)
     {
         _commandDispatcher = commandDispatcher;
+        _permissionStore = permissionStore;
         _translations = translations.Value;
     }
 
@@ -27,7 +34,7 @@ public sealed class HelpCommand : IExecutableCommand
     {
         if (!Context.TryGet(0, out string? commandName))
         {
-            SendDefaultHelp();
+            await SendDefaultHelp();
             return;
         }
 
@@ -35,12 +42,12 @@ public sealed class HelpCommand : IExecutableCommand
 
         if (foundCommand == null)
         {
-            SendDefaultHelp();
+            await SendDefaultHelp();
             return;
         }
 
         ISyntaxWriter writer = CreateSyntaxWriter(false);
-        CommandSyntaxFormatter formatter = new CommandSyntaxFormatter(writer, Context.ServiceProvider.GetRequiredService<UserPermissionStore>());
+        CommandSyntaxFormatter formatter = new CommandSyntaxFormatter(writer, _permissionStore);
 
         CommandSyntaxFormatter.SyntaxStringInfo syntaxInfo = await formatter.GetSyntaxString(
             foundCommand,
@@ -83,8 +90,62 @@ public sealed class HelpCommand : IExecutableCommand
         return new PlainTextSyntaxWriter(Context.Culture);
     }
 
-    private void SendDefaultHelp()
+    private async Task SendDefaultHelp()
     {
+        Color richTextColor = new Color(0.7f, 0.7f, 0.7f, 1f);
+
+        if (Context.Player is { IsOnDuty: true } || Context.Caller.IsTerminal || Context.MatchFlag('c', "commands"))
+        {
+            if (Context.IMGUI)
+            {
+                Context.ReplyString("Not supported in IMGUI mode, switch to uGUI or UIToolkit instead in /options.");
+                return;
+            }
+
+            StringBuilder bldr = new StringBuilder();
+
+            foreach (CommandInfo command in _commandDispatcher.Commands)
+            {
+                if (command.HideFromHelp || command.HideFromCommandList)
+                    continue;
+
+                if (!await _commandDispatcher.HasPermissionForCommand(command, Context.Caller, Context.Token))
+                    continue;
+
+                if (bldr.Length > 0 && !Context.Caller.IsTerminal)
+                {
+                    bldr.AppendLine();
+                }
+
+                ISyntaxWriter writer = CreateSyntaxWriter(true);
+                CommandSyntaxFormatter formatter = new CommandSyntaxFormatter(writer, _permissionStore);
+
+                CommandSyntaxFormatter.SyntaxStringInfo str = await formatter.GetSyntaxString(command, Array.Empty<string>(), null, Context.Caller, token: Context.Token);
+
+                if (Context.Caller.IsTerminal)
+                    bldr.AppendLine();
+
+                bldr.AppendLine(str.Syntax);
+
+                writer = CreateSyntaxWriter(true);
+                string? description = formatter.GetRichDescription(command.Metadata, null, writer, Context.Language);
+                if (!string.IsNullOrEmpty(description))
+                    bldr.AppendLine(description);
+
+                if (bldr.Length > 1024)
+                {
+                    Context.ReplyString(bldr.ToString(), richTextColor);
+                    bldr.Clear();
+                }
+            }
+
+            if (bldr.Length > 0)
+            {
+                Context.ReplyString(bldr.ToString(), richTextColor);
+            }
+            return;
+        }
+
         if (_translations.HelpOutputCombined.HasLanguage(Context.Language) && !Context.IMGUI)
         {
             Context.Reply(_translations.HelpOutputCombined);
@@ -92,8 +153,8 @@ public sealed class HelpCommand : IExecutableCommand
         else
         {
             Context.Reply(_translations.HelpOutputDiscord);
-            Context.Reply(_translations.HelpOutputDeploy);
-            Context.Reply(_translations.HelpOutputRequest);
+            Context.Reply(_translations.HelpOutputCommands);
+            Context.Reply(_translations.HelpOutputInfo);
         }
     }
 }
@@ -105,13 +166,13 @@ public class HelpCommandTranslations : TranslationCollection
     [TranslationData("Output from help describing how to use /discord.")]
     public readonly Translation HelpOutputDiscord = new Translation("<#b3ffb3>For more info, join our <#7483c4>Discord</color> server: <#fff>/discord</color>.");
 
-    [TranslationData("Output from help describing how to use /request.")]
-    public readonly Translation HelpOutputRequest = new Translation("<#b3ffb3>To get gear, look at a sign in the barracks and type <#fff>/request</color> (or <#fff>/req</color>).");
+    [TranslationData("Output from help describing how to use /deploy.")]
+    public readonly Translation HelpOutputCommands = new Translation("<#b3ffb3>Type <#fff>/help -c</color> to see all available commands.");
 
     [TranslationData("Output from help describing how to use /deploy.")]
-    public readonly Translation HelpOutputDeploy = new Translation("<#b3ffb3>To deploy to battle, type <#fff>/deploy <location></color>. The locations are on the left side of your screen.");
+    public readonly Translation HelpOutputInfo = new Translation("<#b3ffb3>Talk to the NPCs around spawn to get started.");
 
     [TranslationData("Output from help describing common things in one message for non-IMGUI users.")]
-    public readonly Translation HelpOutputCombined = new Translation("<#b3ffb3>To get gear, look at a sign in the barracks and type <#fff>/request</color> (or <#fff>/req</color>). To deploy to battle, type <#fff>/deploy <location></color> with any of the FOBs listed on the left of your screen. For more info, join our <#7483c4>Discord</color> server: <#fff>/discord</color>.");
+    public readonly Translation HelpOutputCombined = new Translation("<#b3ffb3>Talk to the NPCs around spawn to get started. Type <#fff>/help -c</color> to see all available commands. For more info, join our <#7483c4>Discord</color> server: <#fff>/discord</color>.");
 
 }

@@ -319,7 +319,7 @@ public class DeploymentComponent : MonoBehaviour, IPlayerComponent, IEventListen
             return false;
         }
 
-        if (startState.DeployFrom != null && !startState.DeployFrom.CheckDeployableFromTick(Player, _translations, in settings, deployable))
+        if (startState.DeployFrom != null && !startState.DeployFrom.CheckDeployableFromTick(Player, _chatService, _translations, in settings, deployable))
         {
             return false;
         }

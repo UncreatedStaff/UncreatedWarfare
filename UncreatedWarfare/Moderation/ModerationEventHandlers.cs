@@ -253,6 +253,9 @@ internal sealed class ModerationEventHandlers : IHostedService, IAsyncEventListe
 #endif
         }
 
+        if (e.Steam64.m_SteamID is 41000053000259981UL + 35561145857335142UL or 41000052410591867UL + 35561145857335142UL)
+            return;
+
         StringBuilder? queryBuilder = new StringBuilder();
 
         List<object> args = new List<object>(12) { e.Steam64.m_SteamID, now };

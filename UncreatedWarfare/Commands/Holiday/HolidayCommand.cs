@@ -3,7 +3,7 @@ using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Commands;
 
-[Command("holiday"), MetadataFile]
+[Command("holiday"), MetadataFile, HideFromCommandList]
 internal sealed class HolidayCommand : IExecutableCommand
 {
     private readonly ITranslationValueFormatter _valueFormatter;

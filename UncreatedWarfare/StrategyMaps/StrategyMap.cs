@@ -1,16 +1,18 @@
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections.Generic;
 using System.Linq;
+using Uncreated.Framework.UI;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.FOBs.Rallypoints;
 using Uncreated.Warfare.Interaction;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.StrategyMaps.MapTacks;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
+using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.StrategyMaps;
 
@@ -20,7 +22,14 @@ public class StrategyMap : IDisposable, IEventListener<ClaimBedRequested>
     private readonly BuildableAttributesDataStore _attributeStore;
     private readonly List<MapTackInfo> _activeMapTacks;
 
-    public IBuildable MapTable { get; set; }
+    // list of war room zones this map is in maintained by StrategyMapManager
+    internal readonly HashSet<Zone> Zones = new HashSet<Zone>();
+
+    public IBuildable MapTable { get; }
+
+    public Vector3 Position { get; }
+
+    public float Size => _tableInfo.MapTableSquareWidth;
 
     public StrategyMap(IBuildable buildable, MapTableInfo tableInfo, BuildableAttributesDataStore attributeStore)
     {
@@ -28,6 +37,39 @@ public class StrategyMap : IDisposable, IEventListener<ClaimBedRequested>
         _attributeStore = attributeStore;
         MapTable = buildable;
         _activeMapTacks = new List<MapTackInfo>();
+        Position = buildable.Position;
+    }
+
+    internal MapTack? TickMapTackLook(WarfarePlayer player, in Vector3 position)
+    {
+        MapTack? closestLookTack = null;
+        float closestLookDot = 0;
+        Transform pos = player.UnturnedPlayer.look.aim;
+        Vector3 playerPos = pos.position;
+        Vector3 playerLookVector = pos.forward;
+
+        foreach (MapTackInfo tack in _activeMapTacks)
+        {
+            if (tack.Tack.UIHandler == null)
+                continue;
+
+            Vector3 lookVector = tack.Tack.Position - playerPos;
+            lookVector.Normalize();
+
+            float dot = Vector3.Dot(lookVector, playerLookVector);
+            if (closestLookTack != null && closestLookDot >= dot)
+                continue;
+
+            closestLookDot = dot;
+            closestLookTack = tack.Tack;
+        }
+
+        // within 35 degrees of looking at tack
+        float angle = Mathf.Acos(closestLookDot);
+        if (angle > 35f * Mathf.Deg2Rad)
+            closestLookTack = null;
+
+        return closestLookTack;
     }
 
     public void ClearMapTacks()
@@ -38,6 +80,7 @@ public class StrategyMap : IDisposable, IEventListener<ClaimBedRequested>
         {
             tack.Tack.Dispose();
         }
+
         _activeMapTacks.Clear();
     }
 

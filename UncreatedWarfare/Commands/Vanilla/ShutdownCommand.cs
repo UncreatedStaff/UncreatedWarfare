@@ -7,7 +7,7 @@ using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Commands;
 
-[Command("shutdown"), Priority(1), MetadataFile]
+[Command("shutdown"), Priority(1), MetadataFile, HideFromCommandList]
 internal sealed class ShutdownCommand : IExecutableCommand
 {
     private readonly WarfareLifetimeComponent _appLifetime;

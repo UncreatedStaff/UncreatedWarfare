@@ -74,7 +74,7 @@ public class ThrownVehicleCrate : ThrownSupplyCrate
                 return;
             }
             
-            nearestFob.ChangeSupplies(SupplyType.Ammo, -requiredAmmoCount);
+            nearestFob.ChangeSupplies(SupplyType.Ammo, -requiredAmmoCount, SupplyChangeReason.ConsumeRearmVehicle, Thrower);
             Thrower.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastLoseAmmo.Translate(requiredAmmoCount, Thrower)));
         }
         

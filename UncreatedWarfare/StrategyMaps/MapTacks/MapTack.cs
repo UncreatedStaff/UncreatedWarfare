@@ -9,13 +9,18 @@ public class MapTack : IDisposable, ITransformObject
 {
     public IAssetLink<ItemPlaceableAsset> MarkerAsset { get; }
     public IBuildable Marker { get; private set; }
+
+    public IMapTackUIHandler? UIHandler { get; private set; }
+
     public virtual Vector3 FeatureWorldPosition { get; }
 
-    public MapTack(IAssetLink<ItemPlaceableAsset> markerAsset, Vector3 featureWorldPosition)
+    public MapTack(IAssetLink<ItemPlaceableAsset> markerAsset, Vector3 featureWorldPosition) : this(markerAsset, featureWorldPosition, null) { }
+    public MapTack(IAssetLink<ItemPlaceableAsset> markerAsset, Vector3 featureWorldPosition, IMapTackUIHandler? uiHandler)
     {
         Marker = null!;
         MarkerAsset = markerAsset;
         FeatureWorldPosition = featureWorldPosition;
+        UIHandler = uiHandler;
     }
 
     public virtual void DropMarker(Vector3 worldCoordinatesOnTable, Quaternion rotation)
