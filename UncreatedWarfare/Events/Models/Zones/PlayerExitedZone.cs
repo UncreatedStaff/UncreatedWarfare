@@ -17,6 +17,11 @@ public class PlayerExitedZone : PlayerEvent, IActionLoggableEvent
     /// </summary>
     public required Zone Zone { get; init; }
 
+    /// <summary>
+    /// Whether or not the player left the zone because they were disconnecting.
+    /// </summary>
+    public required bool IsDisconnecting { get; init; }
+
     /// <inheritdoc />
     public ActionLogEntry GetActionLogEntry(IServiceProvider serviceProvider, ref ActionLogEntry[]? multipleEntries)
     {

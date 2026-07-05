@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SDG.Framework.Utilities;
 using System;
@@ -23,6 +24,8 @@ internal sealed class AfkKickComponent : IPlayerComponent, IDisposable
 
     private float _lastAfk;
 
+    private bool _enabled;
+
     public required WarfarePlayer Player { get; init; }
 
 #nullable disable
@@ -37,6 +40,11 @@ internal sealed class AfkKickComponent : IPlayerComponent, IDisposable
 
     public void Init(IServiceProvider serviceProvider, bool isOnJoin)
     {
+        bool wasEnabled = _enabled;
+        _enabled = !serviceProvider.GetRequiredService<IConfiguration>().GetValue<bool>("tests:no_afk_kick");
+        if (wasEnabled && !_enabled)
+            TimeUtility.updated -= OnUpdate;
+
         _userPermissionStore = serviceProvider.GetRequiredService<UserPermissionStore>();
         _chatService = serviceProvider.GetRequiredService<ChatService>();
         _lastPos = Player.Position;
@@ -46,7 +54,7 @@ internal sealed class AfkKickComponent : IPlayerComponent, IDisposable
         _translations = serviceProvider.GetRequiredService<TranslationInjection<PlayersTranslations>>().Value;
         _logger = serviceProvider.GetRequiredService<ILogger<AfkKickComponent>>();
 
-        if (isOnJoin)
+        if (isOnJoin && _enabled)
             TimeUtility.updated += OnUpdate;
     }
 
@@ -91,6 +99,7 @@ internal sealed class AfkKickComponent : IPlayerComponent, IDisposable
 
     void IDisposable.Dispose()
     {
-        TimeUtility.updated -= OnUpdate;
+        if (_enabled)
+            TimeUtility.updated -= OnUpdate;
     }
 }

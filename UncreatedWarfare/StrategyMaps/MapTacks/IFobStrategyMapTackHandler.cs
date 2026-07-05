@@ -7,5 +7,5 @@ namespace Uncreated.Warfare.StrategyMaps.MapTacks;
 /// </summary>
 public interface IFobStrategyMapTackHandler
 {
-    MapTack? CreateMapTack(StrategyMap map, AssetConfiguration assetConfiguration);
+    MapTack? CreateMapTack(StrategyMapManager manager, StrategyMap map, AssetConfiguration assetConfiguration);
 }

@@ -134,6 +134,8 @@ public partial class FobManager :
                     unbuiltFob.MarkBuilt(completedBuildable!);
                     _ = WarfareModule.EventDispatcher.DispatchEventAsync(new FobBuilt { Fob = unbuiltFob, Shovelable = shovelable }, CancellationToken.None);
                 };
+
+                unbuiltFob.Shovelable = shovelable;
             }
             return;
         }

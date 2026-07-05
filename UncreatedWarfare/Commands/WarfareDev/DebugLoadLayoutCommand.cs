@@ -20,7 +20,8 @@ internal sealed class DebugLoadLayoutCommand : IExecutableCommand
     /// <inheritdoc />
     public UniTask ExecuteAsync(CancellationToken token)
     {
-        if (!Context.TryGet(0, out string? layoutName))
+        string? layoutName = Context.GetRange(0);
+        if (layoutName == null)
         {
             throw Context.SendHelp();
         }

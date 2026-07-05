@@ -23,7 +23,7 @@ public delegate void VehicleUpdated(MapTackVehicleType type, int amount);
 /// Handles the <see cref="IMapTackUIHandler.OnHealthUpdated"/> event.
 /// </summary>
 /// <param name="health">Percentage of the current health (0 to 1).</param>
-public delegate void HealthUpdated(double health);
+public delegate void HealthUpdated(double? health);
 
 /// <summary>
 /// Handles the <see cref="IMapTackUIHandler.OnAttributesUpdated"/> event.
@@ -116,7 +116,12 @@ public enum MapTackAttributes
     /// <summary>
     /// A FOB or CACHE is low on ammo supplies.
     /// </summary>
-    LowAmmo = 8
+    LowAmmo = 8,
+
+    /// <summary>
+    /// A FOB has yet to be shoveled.
+    /// </summary>
+    NotBuilt = 16
 }
 
 /// <summary>

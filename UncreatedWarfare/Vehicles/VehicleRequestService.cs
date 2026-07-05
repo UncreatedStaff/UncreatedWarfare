@@ -155,7 +155,13 @@ public class VehicleRequestService :
 
         KitPlayerComponent comp = player.Component<KitPlayerComponent>();
 
-        if (vehicleInfo.Class > Class.Unarmed && !comp.IsClass(vehicleInfo.Class) || vehicleInfo.Class == Class.Squadleader && !player.IsSquadLeader())
+        if (vehicleInfo.Class == Class.Squadleader && !player.IsSquadLeader())
+        {
+            resultHandler.MissingRequirement(player, spawn, _reqTranslations.NotSquadLeader.Translate(player));
+            return false;
+        }
+
+        if (vehicleInfo.Class > Class.Unarmed && !comp.IsClass(vehicleInfo.Class))
         {
             resultHandler.MissingRequirement(player, spawn, _reqTranslations.IncorrectKitClass.Translate(vehicleInfo.Class, player));
             return false;

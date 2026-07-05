@@ -1356,6 +1356,10 @@ public sealed class WarfareModule
         // set up level measurements as early as possible
         Level.onPrePreLevelLoaded += CartographyUtility.Init;
 
+#if DEBUG
+        Level.onPostLevelLoaded += DisableAssetValidation;
+#endif
+
         CancellationToken token = UnloadToken;
 
         // this needs to happen almost instantly, can't wait for migration
@@ -1578,6 +1582,20 @@ public sealed class WarfareModule
         UnloadModule();
         Provider.shutdown();
     }
+
+#if DEBUG
+    private static void DisableAssetValidation(int level)
+    {
+        Level.onPostLevelLoaded -= DisableAssetValidation;
+
+        List<Asset> allAssets = new List<Asset>(4096);
+        Assets.find(allAssets);
+        foreach (Guid guid in allAssets.Select(x => x.GUID).Where(x => x != Guid.Empty))
+        {
+            ClientAssetIntegrity.serverKnownMissingGuids.Add(guid);
+        }
+    }
+#endif
 
     internal async UniTask InvokeLevelLoaded(CancellationToken token)
     {

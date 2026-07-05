@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
@@ -45,6 +44,7 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable, IMapTackUIH
     private readonly ZoneStore _zoneStore;
     private readonly VehicleInfoStore _vehicleInfoStore;
     private readonly Func<WarfarePlayer, float> _getProxyScore;
+
     // ReSharper restore PrivateFieldCanBeConvertedToLocalVariable
 
     public IBuildable Buildable { get; protected set; }
@@ -132,7 +132,7 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable, IMapTackUIH
                 PositionFunction = p => p.Position,
                 OnItemAdded = p =>
                 {
-                    
+                    InvokeVehicleUpdated(MapTackVehicleType.Infantry, NearbyFriendlies!.Collection.Count);
                 }
             }
         );
@@ -238,6 +238,8 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable, IMapTackUIH
         {
             _tipService.TryGiveTip(player, 0, _tipService.Translations.KitGiveLowAmmo);
         }
+
+        InvokeVehicleUpdated(MapTackVehicleType.Infantry, NearbyFriendlies.Collection.Count + (!NearbyFriendlies.Collection.Contains(player) ? 1 : 0));
     }
 
     void IDeployable.OnDeployTo(WarfarePlayer player, in DeploySettings settings)
@@ -410,10 +412,7 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable, IMapTackUIH
     protected internal void InvokeHealthUpdated()
     {
         double? health = GetHealth();
-        if (health.HasValue)
-        {
-            OnHealthUpdated?.Invoke(health.Value);
-        }
+        OnHealthUpdated?.Invoke(health);
     }
 
     protected internal void InvokeAttributesUpdated() => OnAttributesUpdated?.Invoke(GetAttributes());
@@ -452,7 +451,7 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable, IMapTackUIH
 
         NearbySupplyCrates.HasNearbySupplyCrates(Position, Team.GroupId, FobManager, out bool hasAmmo, out bool hasBuild);
 
-        if (!hasAmmo || AmmoCount < 3)
+        if (!hasAmmo || AmmoCount < 5)
             attributes |= MapTackAttributes.LowAmmo;
 
         if (!hasBuild || BuildCount < 7)
@@ -479,7 +478,8 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable, IMapTackUIH
 
         try
         {
-            VehicleManager.getVehiclesInRadius(Position, EffectiveRadius, WorkingNearbyVehicles);
+            float r = EffectiveRadius;
+            VehicleManager.getVehiclesInRadius(Position, r * r, WorkingNearbyVehicles);
 
             foreach (InteractableVehicle vehicle in WorkingNearbyVehicles)
             {

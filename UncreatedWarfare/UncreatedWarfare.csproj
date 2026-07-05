@@ -361,6 +361,8 @@
         <Publicize Include="Assembly-CSharp:SDG.Unturned.Assets.LoadFile" />
         <Publicize Include="Assembly-CSharp:SDG.Unturned.Assets.AddAssetsFromOriginToCurrentMapping" />
         <Publicize Include="Assembly-CSharp:SDG.Unturned.CommandLogMemoryUsage.OnExecuted" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.ClientAssetIntegrity" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.ClientAssetIntegrity.serverKnownMissingGuids" />
 
     </ItemGroup>
 

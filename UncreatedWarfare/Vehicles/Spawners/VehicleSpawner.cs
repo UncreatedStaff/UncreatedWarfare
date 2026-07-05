@@ -74,10 +74,21 @@ public class VehicleSpawner : IRequestable<VehicleSpawner>, IDisposable, ITransl
                 RequestTime = default;
             }
 
-            _logger.LogConditional("Vehicle Spawner {0} state updated. {1} -> {2}.", ToDisplayString(), _state, value);
+            _logger.LogConditional($"Vehicle Spawner {ToDisplayString()} state updated. {_state} -> {value}.");
             _state = value;
+
+            try
+            {
+                VehicleStateUpdated?.Invoke(this, value);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error invoking VehicleStateUpdated for {ToDisplayString()}.");
+            }
         }
     }
+
+    public event Action<VehicleSpawner, VehicleSpawnerState>? VehicleStateUpdated;
 
     public LayoutRole TeamLayoutRole { get; }
 

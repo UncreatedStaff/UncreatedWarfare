@@ -39,6 +39,7 @@ public class ShovelableBuildable : BuildableFobEntity<ShovelableInfo>
     public new ShovelableInfo Info => base.Info!;
 
     public event Action<IBuildable?>? OnComplete;
+    public event Action? OnProgressUpdated;
 
     public ShovelableBuildable(Team team, ShovelableInfo info, IBuildable foundation, IServiceProvider serviceProvider, IAssetLink<EffectAsset>? shovelEffect = null)
         : base(info ?? throw new ArgumentNullException(nameof(info)), foundation, team, serviceProvider, "Effects:Fobs:Shovel")
@@ -138,6 +139,15 @@ public class ShovelableBuildable : BuildableFobEntity<ShovelableInfo>
         }
 
         SendProgressToast(shoveler);
+
+        try
+        {
+            OnProgressUpdated?.Invoke();
+        }
+        catch (Exception ex)
+        {
+            _serviceProvider.GetRequiredService<ILogger<ShovelableBuildable>>().LogError(ex, "Error invoking OnProgressUpdated.");
+        }
 
         return true;
     }

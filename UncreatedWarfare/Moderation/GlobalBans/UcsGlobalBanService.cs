@@ -44,13 +44,13 @@ public class UcsGlobalBanService : IGlobalBanService, IEventListener<PlayerDied>
     }
 
     private const string QueryUrl = "/globalbans" +
-                                    "?version=2" +
+                                    "?version=4" +
                                     "&steamid={0}" +
                                     "&ip={1}" +
                                     "&hwid={2}";
 
     private const string QueryUrlNoIP = "/globalbans" +
-                                        "?version=2" +
+                                        "?version=4" +
                                         "&steamid={0}" +
                                         "&hwid={1}";
 
@@ -158,7 +158,7 @@ public class UcsGlobalBanService : IGlobalBanService, IEventListener<PlayerDied>
         return new GlobalBan(DateTime.SpecifyKind(ban.TimeBanned, DateTimeKind.Utc), ban.BanReason, "UCS", ban.Id, bannedPlayerSteam64, bannedPlayerName);
     }
 
-    private const string PostUrl = "/globalbans?version=2";
+    private const string PostUrl = "/globalbans?version=4";
 
     public async UniTask<UcsGlobalBan?> PostBanAsync(
         CSteamID steam64,
@@ -168,6 +168,7 @@ public class UcsGlobalBanService : IGlobalBanService, IEventListener<PlayerDied>
         string reason,
         string moderator,
         DateTimeOffset timestamp,
+        ModerationFlags options,
         CancellationToken token = default
     )
     {
@@ -293,7 +294,16 @@ public class UcsGlobalBanService : IGlobalBanService, IEventListener<PlayerDied>
         {
             try
             {
-                await PostBanAsync(steam64, ip, hwids, names, "Guaranteed cheater (ask @danielwillett for more info).", "AUTOMATED", DateTimeOffset.UtcNow);
+                await PostBanAsync(
+                    steam64,
+                    ip,
+                    hwids,
+                    names,
+                    "Guaranteed cheater (ask @danielwillett for more info).",
+                    "AUTOMATED",
+                    DateTimeOffset.UtcNow,
+                    ModerationFlags.AutomatedAntiCheat | ModerationFlags.HighConfidence
+                );
             }
             catch (Exception ex)
             {
@@ -301,6 +311,17 @@ public class UcsGlobalBanService : IGlobalBanService, IEventListener<PlayerDied>
             }
         });
     }
+}
+
+[Flags]
+public enum ModerationFlags
+{
+    None = 0,
+    AutomatedAntiCheat = 1,
+    AutomatedMigration = 2,
+    Manual = 4,
+    HighConfidence = 8,
+    LowConfidence = 16
 }
 
 public class UcsGlobalBansResponse
@@ -348,6 +369,11 @@ public class UcsPostedBan
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string Moderator { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    [JsonConverter(typeof(JsonNumberEnumConverter<ModerationFlags>))]
+    public ModerationFlags ModerationFlags { get; set; }
+
     public string Server => "Warfare";
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -364,6 +390,9 @@ public class UcsGlobalBan
     public string? ServersBannedOn { get; set; }
     public string? KnownNames { get; set; }
     public string? Moderators { get; set; }
+
+    [JsonConverter(typeof(JsonNumberEnumConverter<ModerationFlags>))]
+    public ModerationFlags ModerationFlags { get; set; }
     public DateTime TimeBanned
     {
         get;

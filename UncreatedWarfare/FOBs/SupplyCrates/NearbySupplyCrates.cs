@@ -40,7 +40,7 @@ public class NearbySupplyCrates
         bool hasAny = false;
         foreach (IFobEntity entity in fobManager.Entities)
         {
-            if (entity is not SupplyCrate crate || crate.Buildable.Group != team || !crate.IsWithinRadius(supplyPoint))
+            if (entity is not SupplyCrate crate || crate.Buildable.Group != team || !crate.Buildable.IsAlive || !crate.IsWithinRadius(supplyPoint))
                 continue;
 
             hasAny = true;
@@ -79,7 +79,7 @@ public class NearbySupplyCrates
         return new NearbySupplyCrates(new TrackingList<SupplyCrate>(1) { existing }, existing.Buildable.Position, existing.Buildable.Group, fobManager);
     }
 
-    private void ChangeSupplies(float amount, SupplyType type, SupplyChangeReason changeReason)
+    private void ChangeSupplies(float amount, SupplyType type, SupplyChangeReason changeReason, WarfarePlayer? instigator = null)
     {
         if (type == SupplyType.Ammo)
         {
@@ -92,10 +92,10 @@ public class NearbySupplyCrates
             BuildCount += amount;
         }
 
-        NotifyChanged(type, amount, changeReason);
+        NotifyChanged(type, amount, changeReason, instigator);
     }
 
-    public void SubtractSupplies(float amount, SupplyType type, SupplyChangeReason changeReason)
+    public void SubtractSupplies(float amount, SupplyType type, SupplyChangeReason changeReason, WarfarePlayer? instigator = null)
     {
         float originalAmount = amount;
 
@@ -121,7 +121,7 @@ public class NearbySupplyCrates
                 break;
         }
 
-        ChangeSupplies(-originalAmount, type, changeReason);
+        ChangeSupplies(-originalAmount, type, changeReason, instigator);
     }
 
     public void RefundSupplies(float amount, SupplyType type)
@@ -144,14 +144,14 @@ public class NearbySupplyCrates
         ChangeSupplies(amount, type, SupplyChangeReason.ResupplyShoveableSalvaged);
     }
 
-    public void NotifyChanged(SupplyType type, float amountDelta, SupplyChangeReason reason, WarfarePlayer? resupplier = null)
+    public void NotifyChanged(SupplyType type, float amountDelta, SupplyChangeReason reason, WarfarePlayer? instigator = null)
     {
         foreach (var fob in _fobManager.Fobs)
         {
             if (fob is not ResourceFob bpf || bpf.Team.GroupId != _team || !bpf.IsWithinRadius(_requiredSupplyPoint))
                 continue;
 
-            bpf.ChangeSupplies(type, amountDelta, reason, resupplier);
+            bpf.ChangeSupplies(type, amountDelta, reason, instigator);
         }
     }
 }

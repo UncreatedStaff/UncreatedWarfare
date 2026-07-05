@@ -166,12 +166,12 @@ public class RallyPoint : IBuildableFob, IDisposable, IFobStrategyMapTackHandler
     bool ITransformObject.Alive => Buildable.Alive;
 
     /// <inheritdoc />
-    MapTack? IFobStrategyMapTackHandler.CreateMapTack(StrategyMap map, AssetConfiguration assetConfiguration)
+    MapTack? IFobStrategyMapTackHandler.CreateMapTack(StrategyMapManager manager, StrategyMap map, AssetConfiguration assetConfiguration)
     {
         if (!Buildable.IsAlive || !Team.IsFriendly(map.MapTable.Group))
             return null;
 
         string path = $"Buildables:MapTacks:Rallypoints:{Squad.TeamIdentificationNumber.ToString(CultureInfo.InvariantCulture)}";
-        return new DeployableMapTack(assetConfiguration.GetAssetLink<ItemBarricadeAsset>(path), this);
+        return new DeployableMapTack(manager, map, assetConfiguration.GetAssetLink<ItemBarricadeAsset>(path), this);
     }
 }

@@ -27,7 +27,7 @@ internal class GlobalBanPendingTask : IPlayerPendingTask
 
     public async Task<bool> RunAsync(PlayerPending e, CancellationToken token = default)
     {
-        IGlobalBanService[] services = _serviceProvider.GetServices<IGlobalBanService>().ToArrayFast();
+        IEnumerable<IGlobalBanService> services = _serviceProvider.GetServices<IGlobalBanService>();
 
         CSteamID steam64 = e.Steam64;
         IPv4Range ip = e.PendingPlayer.transportConnection.TryGetIPv4Address(out uint ipPacked)

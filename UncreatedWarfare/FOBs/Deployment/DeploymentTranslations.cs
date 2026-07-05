@@ -15,6 +15,9 @@ public class DeploymentTranslations : TranslationCollection
     [TranslationData("Sent to a player after they request deployment to a location and pass initial checks.", "The location name", "Seconds left")]
     public readonly Translation<IDeployable, int> DeployStandby = new Translation<IDeployable, int>("<#fae69c>Now deploying to {0}. You will arrive in <#eee>{1} ${p:1:second}</color>.", arg0Fmt: Flags.ColorNameFormat);
 
+    [TranslationData("Sent to a player while after they request deployment to/from a location that is still being built.", "The location name")]
+    public readonly Translation<IDeployable> DeployNotBuilt = new Translation<IDeployable>("<#ffa238>{0} is still under construction.", arg0Fmt: Flags.ColorNameFormat);
+
     [TranslationData("Sent to a player while after they request deployment to/from a location that is destroyed.", "The location name")]
     public readonly Translation<IDeployable> DeployDestroyed = new Translation<IDeployable>("<#ffa238>{0} is destroyed.", arg0Fmt: Flags.ColorNameFormat);
 

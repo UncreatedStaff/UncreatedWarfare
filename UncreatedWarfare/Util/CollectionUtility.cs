@@ -1,12 +1,11 @@
 using DanielWillett.ReflectionTools;
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
 
 namespace Uncreated.Warfare.Util;
+
 public static class CollectionUtility
 {
     /// <summary>

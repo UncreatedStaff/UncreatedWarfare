@@ -1,6 +1,5 @@
 using DanielWillett.ReflectionTools;
 using System;
-using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Uncreated.Warfare.Events.Models;
@@ -33,6 +32,32 @@ internal sealed class ModerationEventHandlers : IHostedService, IAsyncEventListe
     private readonly ChatService _chatService;
     private readonly ModerationTranslations _translations;
     private readonly IPointsStore _pointsStore;
+
+    internal static readonly string[] RandomCheatMessages = 
+    [
+        "Cheats.",
+        "Cheating.",
+        "auto-aim.",
+        "autoaim.",
+        "cheats.",
+        "silentaim.",
+        "silent aim.",
+        "Cheats (SAIM).",
+        "cheating.",
+        "SAIM cheats.",
+        "get a life (cheating)."
+    ];
+
+    internal static string ProcessPublicBanMessage(string message)
+    {
+        const string antiCheatHeader = "Auto-ban by anti-cheat.";
+        if (message.StartsWith(antiCheatHeader, StringComparison.Ordinal))
+        {
+            message = message.Replace(antiCheatHeader, RandomCheatMessages[RandomUtility.GetIndex(RandomCheatMessages)]);
+        }
+
+        return message;
+    }
 
     public ModerationEventHandlers(
         DatabaseInterface moderationSql,
@@ -116,7 +141,8 @@ internal sealed class ModerationEventHandlers : IHostedService, IAsyncEventListe
         switch (entry)
         {
             case Ban ban when ban.ResolvedTimestamp.HasValue && ban.IsApplied(true):
-                string message = ban.Message ?? "<no message>";
+                string message = ban.Message == null ? "<no message>" : ProcessPublicBanMessage(ban.Message);
+
                 string rejectMessage = ban.IsPermanent
                     ? _translations.RejectPermanentBanned.Translate(message)
                     : _translations.RejectBanned.Translate(message, ban.GetTimeUntilExpiry(false));
@@ -426,7 +452,7 @@ internal sealed class ModerationEventHandlers : IHostedService, IAsyncEventListe
 
         Ban worstBan = bans[0];
 
-        string message = worstBan.Message ?? "<no message>";
+        string message = worstBan.Message == null ? "<no message>" : ProcessPublicBanMessage(worstBan.Message);
 
         if (worstBan.Player == e.Steam64.m_SteamID)
         {

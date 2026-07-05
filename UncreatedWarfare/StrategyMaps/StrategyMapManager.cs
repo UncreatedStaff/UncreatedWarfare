@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using SDG.Framework.Utilities;
 using System;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models;
@@ -42,7 +43,7 @@ public class StrategyMapManager :
     private readonly AssetConfiguration _assetConfiguration;
     private readonly BuildableAttributesDataStore _attributeStore;
 
-    private readonly MapTackInfoUI? _tackInfoUi;
+    internal readonly MapTackInfoUI? UI;
 
     public ReadOnlyTrackingList<StrategyMap> StrategyMaps { get; }
 
@@ -56,7 +57,7 @@ public class StrategyMapManager :
         _configuration = serviceProvider.GetRequiredService<StrategyMapsConfiguration>();
         _assetConfiguration = serviceProvider.GetRequiredService<AssetConfiguration>();
         _attributeStore = serviceProvider.GetRequiredService<BuildableAttributesDataStore>();
-        _tackInfoUi = serviceProvider.GetService<MapTackInfoUI>();
+        UI = serviceProvider.GetService<MapTackInfoUI>();
 
         StrategyMaps = _strategyMaps.AsReadOnly();
 
@@ -67,7 +68,7 @@ public class StrategyMapManager :
     {
         RegisterExistingStrategyMaps();
 
-        if (_zoneStore is { IsGlobal: true } && _tackInfoUi != null)
+        if (_zoneStore is { IsGlobal: true } && UI != null)
         {
             TimeUtility.updated += OnUpdated;
         }
@@ -76,7 +77,7 @@ public class StrategyMapManager :
 
     public UniTask StopAsync(CancellationToken token)
     {
-        if (_zoneStore is { IsGlobal: true } && _tackInfoUi != null)
+        if (_zoneStore is { IsGlobal: true } && UI != null)
         {
             TimeUtility.updated -= OnUpdated;
         }
@@ -87,10 +88,17 @@ public class StrategyMapManager :
     {
         foreach (StrategyMap map in _strategyMaps)
         {
-            if (map is IEventListener<TEventArgs> el)
-                listeners.Add(el);
-            if (map is IAsyncEventListener<TEventArgs> ael)
-                listeners.Add(ael);
+            if (map is IEventListener<TEventArgs> or IAsyncEventListener<TEventArgs>)
+                listeners.Add(map);
+
+            foreach (StrategyMap.MapTackInfo tack in map.ActiveMapTacks)
+            {
+                if (tack.Tack is IEventListener<TEventArgs> or IAsyncEventListener<TEventArgs>)
+                    listeners.Add(tack.Tack);
+
+                if (tack.Tack.UIHandler is IEventListener<TEventArgs> or IAsyncEventListener<TEventArgs>)
+                    listeners.Add(tack.Tack.UIHandler);
+            }
         }
     }
 
@@ -199,7 +207,7 @@ public class StrategyMapManager :
         foreach (StrategyMap map in _strategyMaps)
         {
             map.RemoveMapTacks((_, owner) => owner == e.Flag);
-            map.AddMapTack(CreateFlagTack(e.Flag), e.Flag);
+            map.AddMapTack(CreateFlagTack(e.Flag, map), e.Flag);
         }
     }
 
@@ -207,7 +215,7 @@ public class StrategyMapManager :
     {
         foreach (StrategyMap map in StrategyMapsOfTeam(e.Team))
         {
-            map.AddMapTack(CreateFlagTack(e.Flag), e.Flag);
+            map.AddMapTack(CreateFlagTack(e.Flag, map), e.Flag);
         }
     }
 
@@ -216,7 +224,7 @@ public class StrategyMapManager :
         foreach (StrategyMap map in _strategyMaps)
         {
             map.RemoveMapTacks((_, owner) => owner == e.Flag);
-            map.AddMapTack(CreateFlagTack(e.Flag), e.Flag);
+            map.AddMapTack(CreateFlagTack(e.Flag, map), e.Flag);
         }
     }
 
@@ -228,7 +236,7 @@ public class StrategyMapManager :
         {
             if (flag.IsDiscovered(map.MapTable.Group))
             {
-                map.AddMapTack(CreateFlagTack(flag), flag);
+                map.AddMapTack(CreateFlagTack(flag, map), flag);
             }
         }
     }
@@ -249,17 +257,19 @@ public class StrategyMapManager :
 
     private MapTack CreateMainBaseTack(Team team, StrategyMap map, Zone mainBase)
     {
-        return team.IsFriendly(map.MapTable.Group)
-            ? new DeployableMapTack(_assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:MapTacks:MainBase"), mainBase)
-            : new MapTack(_assetConfiguration.GetAssetLink<ItemPlaceableAsset>("Buildables:MapTacks:EnemyMainBase"), mainBase.Spawn);
+        if (!team.IsFriendly(map.MapTable.Group))
+            return new MapTack(this, map, _assetConfiguration.GetAssetLink<ItemPlaceableAsset>("Buildables:MapTacks:EnemyMainBase"), mainBase.Spawn);
+
+        MainBaseMapTackUIHandler uiHandler = ReflectionUtility.CreateInstanceFixed<MainBaseMapTackUIHandler>(_serviceProvider, [ mainBase, team ]);
+        return new DeployableMapTack(this, map, _assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:MapTacks:MainBase"), mainBase, uiHandler);
     }
 
-    private FlagMapTack CreateFlagTack(FlagObjective flag)
+    private FlagMapTack CreateFlagTack(FlagObjective flag, StrategyMap map)
     {
         if (flag.Owner == Team.NoTeam || flag.Owner.Faction.MapTackFlag == null)
-            return new FlagMapTack(_assetConfiguration.GetAssetLink<ItemPlaceableAsset>("Buildables:MapTacks:NeutralFlag"), flag);
+            return new FlagMapTack(this, map, _assetConfiguration.GetAssetLink<ItemPlaceableAsset>("Buildables:MapTacks:NeutralFlag"), flag);
         else
-            return new FlagMapTack(flag.Owner.Faction.MapTackFlag, flag);
+            return new FlagMapTack(this, map, flag.Owner.Faction.MapTackFlag, flag);
     }
 
     #region UI Stuff
@@ -275,6 +285,11 @@ public class StrategyMapManager :
             {
                 MapTack? tack = null;
                 Vector3 playerPos = player.Position;
+                Transform aim = player.UnturnedPlayer.look.aim;
+
+                bool hasRaycasted = false;
+                Unsafe.SkipInit(out RaycastHit info);
+
                 foreach (StrategyMap map in StrategyMaps)
                 {
                     if (!map.Zones.Contains(x.Zone))
@@ -284,27 +299,45 @@ public class StrategyMapManager :
 
                     // check if nearby strategy map before checking each tack
                     // radius of the smallest circle that can fit a square of width map.Size
-                    float circleRadius = map.Size * 1.41421356237f /* sqrt(2) */;
+                    float circleRadius = map.Size / 2f * 1.41421356237f /* sqrt(2) */;
                     if (!MathUtility.WithinRange(in pos, in playerPos, circleRadius + 4f))
                     {
                         continue;
                     }
 
-                    tack = map.TickMapTackLook(player, in pos);
+                    if (!hasRaycasted)
+                    {
+                        if (!Physics.Raycast(new Ray(aim.position, aim.forward), out info, 4f, RayMasks.PLAYER_INTERACT, QueryTriggerInteraction.Ignore))
+                        {
+                            break;
+                        }
+
+                        hasRaycasted = true;
+                    }
+
+                    foreach (StrategyMap.MapTackInfo t in map.ActiveMapTacks)
+                    {
+                        if ((object)t.Tack.Marker.Model != info.transform)
+                            continue;
+
+                        tack = t.Tack;
+                        break;
+                    }
+
                     if (tack != null)
                         break;
                 }
 
-                if (tack == null)
+                if (tack?.UIHandler == null)
                 {
-                    _tackInfoUi!.TryClose(player);
+                    UI!.TryClose(player);
                 }
                 else
                 {
-                    MapTackInfoUI.Data data = _tackInfoUi!.GetOrAddData(player.Steam64);
-                    if (!data.HasUI)
+                    MapTackInfoUI.Data data = UI!.GetOrAddData(player.Steam64);
+                    if (!data.HasUI || data.CurrentMapTack != tack)
                     {
-                        _tackInfoUi.Open(player, tack.UIHandler!);
+                        UI.Open(player, tack);
                     }
                 }
             }
@@ -318,7 +351,7 @@ public class StrategyMapManager :
             return;
         }
 
-
+        UI!.TryClose(e.Player);
     }
 
     #endregion

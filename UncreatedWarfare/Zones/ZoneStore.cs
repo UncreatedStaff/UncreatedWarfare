@@ -147,7 +147,8 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService, IDisposable
                 PlayerExitedZone args = new PlayerExitedZone
                 {
                     Player = player,
-                    Zone = zone
+                    Zone = zone,
+                    IsDisconnecting = !player.IsOnline || player.IsDisconnecting
                 };
 
                 _ = _eventDispatcher.DispatchEventAsync(args, CancellationToken.None);

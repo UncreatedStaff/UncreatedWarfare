@@ -20,6 +20,7 @@ internal sealed class KitGiveDefaultOnLeaveSquadKit : IEventListener<SquadMember
         _zoneStore = zoneStore;
     }
 
+    [EventListener(MustRunInstantly = true)]
     public void HandleEvent(SquadMemberLeft e, IServiceProvider serviceProvider)
     {
         KitPlayerComponent kitPlayerComponent = e.Player.Component<KitPlayerComponent>();
@@ -31,7 +32,7 @@ internal sealed class KitGiveDefaultOnLeaveSquadKit : IEventListener<SquadMember
         }
 
         bool isLowAmmo = false;
-        if (_zoneStore.IsInMainBase(e.Player) || (isLowAmmo = _zoneStore.IsInWarRoom(e.Player)))
+        if (!e.Player.IsDisconnecting || _zoneStore.IsInMainBase(e.Player) || (isLowAmmo = _zoneStore.IsInWarRoom(e.Player)))
         {
             _ = Task.Run(async () =>
             {

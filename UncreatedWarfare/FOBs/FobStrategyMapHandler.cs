@@ -49,7 +49,7 @@ internal class FobStrategyMapHandler :
                 map.RemoveMapTacks((_, owner) => owner == fob);
             }
 
-            MapTack? tack = handler.CreateMapTack(map, _assetConfiguration);
+            MapTack? tack = handler.CreateMapTack(_strategyMapManager, map, _assetConfiguration);
             if (tack == null)
                 continue;
 

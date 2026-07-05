@@ -73,8 +73,10 @@ public class ThrownVehicleCrate : ThrownSupplyCrate
                 Thrower.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastInsufficientAmmo.Translate(nearestFob.AmmoCount, requiredAmmoCount, Thrower)));
                 return;
             }
-            
-            nearestFob.ChangeSupplies(SupplyType.Ammo, -requiredAmmoCount, SupplyChangeReason.ConsumeRearmVehicle, Thrower);
+
+            // note: this used to directly subtract from the FOB but led to mismatches between FOB ammo and crate ammo.
+            NearbySupplyCrates crates = NearbySupplyCrates.FindNearbyCrates(nearestFob.Position, nearestFob.Team.GroupId, _fobManager);
+            crates.SubtractSupplies(requiredAmmoCount, SupplyType.Ammo, SupplyChangeReason.ConsumeRearmVehicle);
             Thrower.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastLoseAmmo.Translate(requiredAmmoCount, Thrower)));
         }
         

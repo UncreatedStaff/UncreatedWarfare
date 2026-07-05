@@ -5,30 +5,39 @@ using Uncreated.Framework.UI.Patterns;
 using Uncreated.Framework.UI.Presets;
 using Uncreated.Framework.UI.Reflection;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Models;
+using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.StrategyMaps.MapTacks;
 
 [UnturnedUI(BasePath = "UI")]
-internal sealed class MapTackInfoUI : UnturnedUI
+internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>
 {
     private static readonly List<KeyValuePair<MapTackVehicleType, int>> WorkingVehicleCounts = new List<KeyValuePair<MapTackVehicleType, int>>();
 
     private readonly MapTackInfoUITranslations _translations;
 
+    public UnturnedUIElement LogicClose { get; } = new UnturnedUIElement("~/Logic_Close");
+    public UnturnedUIElement LogicOpen { get; } = new UnturnedUIElement("~/Logic_Open");
+    
     public UnturnedLabel Title { get; } = new UnturnedLabel("Hdr");
     public UnturnedLabel Location { get; } = new UnturnedLabel("Loc");
 
     public UnturnedLabel DestroyedAttribute { get; } = new UnturnedLabel("Attributes/Destroyed");
     public UnturnedLabel ProxiedAttribute { get; } = new UnturnedLabel("Attributes/Proxied");
+    public UnturnedLabel NotBuiltAttribute { get; } = new UnturnedLabel("Attributes/NotBuilt");
     public UnturnedLabel LowBuildAttribute { get; } = new UnturnedLabel("Attributes/LowBuild");
     public UnturnedLabel LowAmmoAttribute { get; } = new UnturnedLabel("Attributes/LowAmmo");
 
     public UnturnedUIElement HealthBarRoot { get; } = new UnturnedUIElement("HP");
     public UnturnedLabel HealthBar { get; } = new UnturnedLabel("HP/Bar/Foreground");
+    public UnturnedLabel HealthBarIcon { get; } = new UnturnedLabel("HP/Icon");
 
     public VehicleCount[] Counts { get; } =
     [
@@ -49,6 +58,7 @@ internal sealed class MapTackInfoUI : UnturnedUI
         ElementPatterns.Create<VehicleCount>("Ground/Truck")
     ];
 
+    public UnturnedUIElement SuppliesRoot { get; } = new UnturnedUIElement("Supplies");
     public UnturnedLabel BuildSupply { get; } = new UnturnedLabel("Supplies/Bld");
     public UnturnedLabel AmmoSupply { get; } = new UnturnedLabel("Supplies/Ammo");
 
@@ -74,23 +84,62 @@ internal sealed class MapTackInfoUI : UnturnedUI
         return GetOrAddData(player, _addData);
     }
 
-    public void TryClose(WarfarePlayer player)
+    public void TryClose(WarfarePlayer player, bool instant = false)
     {
         GameThread.AssertCurrent();
 
         Data? data = GetData<Data>(player.Steam64);
-        if (data == null || !data.HasUI)
+        if (data is not { HasUI: true })
         {
             return;
         }
 
-        data.HasUI = false;
-        ClearFromPlayer(player.SteamPlayer);
+        if (data.CurrentMapTack != null)
+        {
+            data.CurrentMapTack?.RemoveUIUpdateListener(player);
+            data.CurrentMapTack = null;
+        }
+
+        if (data.IsClosing && !instant)
+            return;
+
+        if (instant)
+        {
+            data.HasUI = false;
+            data.IsClosing = false;
+            ClearFromPlayer(player.SteamPlayer);
+        }
+        else
+        {
+            LogicClose.Show(player);
+            data.IsClosing = true;
+            UniTask.Create(async () =>
+            {
+                await UniTask.Delay(TimeSpan.FromSeconds(0.15d));
+
+                if (!data.IsClosing || !player.IsOnline)
+                    return;
+                
+                data.IsClosing = false;
+                if (!data.HasUI)
+                    return;
+
+                data.HasUI = false;
+                ClearFromPlayer(player.SteamPlayer);
+            });
+        }
     }
 
-    public void Open(WarfarePlayer player, IMapTackUIHandler uiHandler)
+    public void Open(WarfarePlayer player, MapTack tack)
     {
         GameThread.AssertCurrent();
+
+        IMapTackUIHandler? uiHandler = tack.UIHandler;
+        if (uiHandler == null)
+        {
+            TryClose(player);
+            return;
+        }
 
         Data data = GetOrAddData(player.Steam64);
         LanguageSet set = new LanguageSet(player);
@@ -105,12 +154,22 @@ internal sealed class MapTackInfoUI : UnturnedUI
         {
             SendToPlayer(c, title);
             isDefaultState = true;
+            data.HasUI = true;
         }
         else
         {
-            Title.SetText(c, title);
+            if (data.IsClosing)
+            {
+                LogicOpen.Show(c);
+            }
+            if (data.CurrentMapTack != tack)
+            {
+                Title.SetText(c, title);
+            }
             isDefaultState = false;
         }
+
+        data.IsClosing = false;
 
         string? location = uiHandler.GetLocation(in set);
         if (!string.IsNullOrEmpty(location))
@@ -133,6 +192,17 @@ internal sealed class MapTackInfoUI : UnturnedUI
         else if (!isDefaultState)
             DestroyedAttribute.Hide(c);
 
+        if ((attributes & MapTackAttributes.NotBuilt) != 0)
+        {
+            HealthBarIcon.SetText(c, "ˎ");
+            //NotBuiltAttribute.Show(c);
+        }
+        else if (!isDefaultState)
+        {
+            HealthBarIcon.SetText(c, "¢");
+            // NotBuiltAttribute.Hide(c);
+        }
+
         if ((attributes & MapTackAttributes.Proxied) != 0)
             ProxiedAttribute.Show(c);
         else if (!isDefaultState)
@@ -148,14 +218,16 @@ internal sealed class MapTackInfoUI : UnturnedUI
         else if (!isDefaultState)
             LowAmmoAttribute.Hide(c);
 
+        data.Attributes = attributes;
+
         uiHandler.CountVehicles(WorkingVehicleCounts);
         try
         {
             int vehicleMask = 0;
-            foreach ((MapTackVehicleType tack, int count) in WorkingVehicleCounts)
+            foreach ((MapTackVehicleType type, int count) in WorkingVehicleCounts)
             {
-                VehicleCount ui = GetCount(tack);
-                int mask = 1 << (int)tack;
+                VehicleCount ui = GetCount(type);
+                int mask = 1 << (int)type;
                 bool hasUi = !isDefaultState && (data.VehicleMask & mask) != 0;
                 if (count > 0)
                 {
@@ -192,11 +264,13 @@ internal sealed class MapTackInfoUI : UnturnedUI
                 if (!isDefaultState)
                 {
                     HealthBarRoot.Show(c);
+                    data.HasHealthBar = true;
                 }
             }
             else
             {
                 HealthBarRoot.Hide(c);
+                data.HasHealthBar = false;
             }
 
         }
@@ -209,13 +283,21 @@ internal sealed class MapTackInfoUI : UnturnedUI
         {
             data.HasBuildSupply = true;
             data.HasAmmoSupply = true;
+            data.HasSupplies = true;
         }
 
         UpdateSupply(player, SupplyType.Build, uiHandler, data);
         UpdateSupply(player, SupplyType.Ammo, uiHandler, data);
+
+        if (data.CurrentMapTack != tack)
+        {
+            data.CurrentMapTack?.RemoveUIUpdateListener(player);
+            data.CurrentMapTack = tack;
+            tack.AddUIUpdateListener(player);
+        }
     }
 
-    private void UpdateSupply(WarfarePlayer player, SupplyType type, IMapTackUIHandler uiHandler, Data data)
+    private void UpdateSupply(WarfarePlayer player, SupplyType type, IMapTackUIHandler uiHandler, Data data, int? amount = null)
     {
         UnturnedLabel label;
         ref bool has = ref data.HasBuildSupply;
@@ -233,7 +315,7 @@ internal sealed class MapTackInfoUI : UnturnedUI
             translation = _translations.AmmoSupplies;
         }
 
-        int? supply = uiHandler.GetSupplyCount(type);
+        int? supply = amount ?? uiHandler.GetSupplyCount(type);
 
         if (supply.HasValue)
         {
@@ -248,6 +330,20 @@ internal sealed class MapTackInfoUI : UnturnedUI
         {
             label.Hide(player);
             has = false;
+        }
+
+        if (!data.HasAmmoSupply && !data.HasBuildSupply)
+        {
+            if (data.HasSupplies)
+            {
+                SuppliesRoot.Hide(player);
+                data.HasSupplies = false;
+            }
+        }
+        else if (!data.HasSupplies)
+        {
+            SuppliesRoot.Show(player);
+            data.HasSupplies = true;
         }
     }
 
@@ -311,6 +407,103 @@ internal sealed class MapTackInfoUI : UnturnedUI
         return (int)Math.Round(charactersPerPixelRatio * barWidth);
     }
 
+    public void HandleVehicleUpdated(MapTack tack, MapTackVehicleType type, int amount)
+    {
+        int mask = 1 << (int)type;
+
+        using List<WarfarePlayer>.Enumerator enumerator = tack.EnumerateWatchers();
+        while (enumerator.MoveNext())
+        {
+            WarfarePlayer player = enumerator.Current!;
+            Data data = GetOrAddData(player.Steam64);
+            ITransportConnection c = player.Connection;
+            VehicleCount ui = GetCount(type);
+            bool hidden = amount <= 0;
+            if (!hidden)
+            {
+                if ((data.VehicleMask & mask) == 0)
+                {
+                    ui.Show(c);
+                    data.VehicleMask |= mask;
+                }
+
+                ui.Count.SetText(c, amount.ToString(player.Locale.CultureInfo));
+            }
+            else if ((data.VehicleMask & mask) != 0)
+            {
+                ui.Hide(c);
+                data.VehicleMask &= ~mask;
+            }
+        }
+    }
+
+    public void HandleSuppliesUpdated(MapTack tack, SupplyType type, int amount)
+    {
+        int? amt = amount;
+
+        using List<WarfarePlayer>.Enumerator enumerator = tack.EnumerateWatchers();
+        while (enumerator.MoveNext())
+        {
+            Data data = GetOrAddData(enumerator.Current!.Steam64);
+            UpdateSupply(enumerator.Current!, type, tack.UIHandler!, data, amt);
+        }
+    }
+
+    public void HandleHealthUpdated(MapTack tack, double? health)
+    {
+        using List<WarfarePlayer>.Enumerator enumerator = tack.EnumerateWatchers();
+        while (enumerator.MoveNext())
+        {
+            WarfarePlayer player = enumerator.Current!;
+            Data data = GetOrAddData(player.Steam64);
+            if (health.HasValue)
+            {
+                if (!data.HasHealthBar)
+                {
+                    HealthBarRoot.Show(player);
+                }
+                SetHealth(player.Connection, health.Value, data.VehicleMask);
+            }
+            else if (data.HasHealthBar)
+            {
+                HealthBarRoot.Hide(player);
+            }
+        }
+    }
+
+    public void HandleAttributesUpdated(MapTack tack, MapTackAttributes attributes)
+    {
+        using List<WarfarePlayer>.Enumerator enumerator = tack.EnumerateWatchers();
+        while (enumerator.MoveNext())
+        {
+            WarfarePlayer player = enumerator.Current!;
+            Data data = GetOrAddData(player.Steam64);
+
+            MapTackAttributes updateMask = data.Attributes ^ attributes;
+            ITransportConnection c = player.Connection;
+
+            if ((updateMask & MapTackAttributes.Destroyed) != 0)
+                DestroyedAttribute.SetVisibility(c, (attributes & MapTackAttributes.Destroyed) != 0);
+
+            if ((updateMask & MapTackAttributes.Proxied) != 0)
+                ProxiedAttribute.SetVisibility(c, (attributes & MapTackAttributes.Proxied) != 0);
+
+            if ((updateMask & MapTackAttributes.LowBuild) != 0)
+                LowBuildAttribute.SetVisibility(c, (attributes & MapTackAttributes.LowBuild) != 0);
+
+            if ((updateMask & MapTackAttributes.LowAmmo) != 0)
+                LowAmmoAttribute.SetVisibility(c, (attributes & MapTackAttributes.LowAmmo) != 0);
+
+            if ((updateMask & MapTackAttributes.NotBuilt) != 0)
+            {
+                HealthBarIcon.SetText(c, (attributes & MapTackAttributes.NotBuilt) != 0 ? "ˎ" : "¢");
+                // LowAmmoAttribute.SetVisibility(c, (attributes & MapTackAttributes.NotBuilt) != 0);
+            }
+
+            data.Attributes = attributes;
+        }
+    }
+
     public class Data : IUnturnedUIData
     {
         public CSteamID Player { get; }
@@ -318,15 +511,40 @@ internal sealed class MapTackInfoUI : UnturnedUI
         UnturnedUIElement? IUnturnedUIData.Element => null;
 
         public bool HasUI;
+        public bool IsClosing;
+
         public int VehicleMask;
         public bool HasBuildSupply;
         public bool HasAmmoSupply;
+        public bool HasSupplies;
+        public bool HasHealthBar;
+        public MapTackAttributes Attributes;
+        public bool HasShovelIcon;
+
+        public MapTack? CurrentMapTack;
 
         public Data(CSteamID player, MapTackInfoUI owner)
         {
             Player = player;
             Owner = owner;
         }
+    }
+
+    [EventListener(MustRunInstantly = true)]
+    void IEventListener<PlayerLeft>.HandleEvent(PlayerLeft e, IServiceProvider serviceProvider)
+    {
+        if (GetData<Data>(e.Player.Steam64) is not { } data)
+        {
+            return;
+        }
+
+        if (data.CurrentMapTack != null)
+        {
+            data.CurrentMapTack?.RemoveUIUpdateListener(e.Player);
+            data.CurrentMapTack = null;
+        }
+
+        data.HasUI = false;
     }
 }
 
@@ -339,4 +557,7 @@ internal sealed class MapTackInfoUITranslations : TranslationCollection
 
     [TranslationData("Translation for the \"# AMMO\" part of the map tack UI.", "Ammo supply count.")]
     public readonly Translation<int> AmmoSupplies = new Translation<int>("{0} AMMO", options: TranslationOptions.TMProUI | TranslationOptions.NoRichText);
+
+    [TranslationData("Title for the main base popup.", "Ammo supply count.")]
+    public readonly Translation<FactionInfo> MainBaseTitle = new Translation<FactionInfo>("{0} Main Base", options: TranslationOptions.TMProUI | TranslationOptions.NoRichText, arg0Fmt: FactionInfo.FormatAbbreviation);
 }

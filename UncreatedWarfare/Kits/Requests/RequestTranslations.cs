@@ -319,6 +319,9 @@ public class RequestVehicleTranslations : TranslationCollection
     [TranslationData("Sent when a player tries to request a vehicle that requires a specific class.")]
     public readonly Translation<Class> IncorrectKitClass = new Translation<Class>("You need a <#cedcde>{0}</color> kit in order to request this vehicle", arg0Fmt: UppercaseAddon.Instance);
 
+    [TranslationData("Sent when a player tries to request a vehicle that requires a squad leader and they're not in a squad.")]
+    public readonly Translation NotSquadLeader = new Translation("You need to be the owner of a <#cedcde>Squad</color> in order to request this vehicle");
+
     [TranslationData("Sent when a player tries to request a vehicle but already owns one nearby.")]
     public readonly Translation<VehicleAsset> AnotherVehicleAlreadyOwned = new Translation<VehicleAsset>("<#cedcde>{0}</color> already requested", arg0Fmt: RarityColorAddon.Instance);
 

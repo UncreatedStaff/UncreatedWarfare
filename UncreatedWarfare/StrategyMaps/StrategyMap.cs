@@ -1,7 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Linq;
-using Uncreated.Framework.UI;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Barricades;
@@ -20,7 +19,7 @@ public class StrategyMap : IDisposable, IEventListener<ClaimBedRequested>
 {
     private readonly MapTableInfo _tableInfo;
     private readonly BuildableAttributesDataStore _attributeStore;
-    private readonly List<MapTackInfo> _activeMapTacks;
+    internal readonly List<MapTackInfo> ActiveMapTacks;
 
     // list of war room zones this map is in maintained by StrategyMapManager
     internal readonly HashSet<Zone> Zones = new HashSet<Zone>();
@@ -36,52 +35,20 @@ public class StrategyMap : IDisposable, IEventListener<ClaimBedRequested>
         _tableInfo = tableInfo;
         _attributeStore = attributeStore;
         MapTable = buildable;
-        _activeMapTacks = new List<MapTackInfo>();
+        ActiveMapTacks = new List<MapTackInfo>();
         Position = buildable.Position;
-    }
-
-    internal MapTack? TickMapTackLook(WarfarePlayer player, in Vector3 position)
-    {
-        MapTack? closestLookTack = null;
-        float closestLookDot = 0;
-        Transform pos = player.UnturnedPlayer.look.aim;
-        Vector3 playerPos = pos.position;
-        Vector3 playerLookVector = pos.forward;
-
-        foreach (MapTackInfo tack in _activeMapTacks)
-        {
-            if (tack.Tack.UIHandler == null)
-                continue;
-
-            Vector3 lookVector = tack.Tack.Position - playerPos;
-            lookVector.Normalize();
-
-            float dot = Vector3.Dot(lookVector, playerLookVector);
-            if (closestLookTack != null && closestLookDot >= dot)
-                continue;
-
-            closestLookDot = dot;
-            closestLookTack = tack.Tack;
-        }
-
-        // within 35 degrees of looking at tack
-        float angle = Mathf.Acos(closestLookDot);
-        if (angle > 35f * Mathf.Deg2Rad)
-            closestLookTack = null;
-
-        return closestLookTack;
     }
 
     public void ClearMapTacks()
     {
         GameThread.AssertCurrent();
 
-        foreach (MapTackInfo tack in _activeMapTacks)
+        foreach (MapTackInfo tack in ActiveMapTacks)
         {
             tack.Tack.Dispose();
         }
 
-        _activeMapTacks.Clear();
+        ActiveMapTacks.Clear();
     }
 
     public void AddMapTack(MapTack newMapTack, object owner)
@@ -95,19 +62,19 @@ public class StrategyMap : IDisposable, IEventListener<ClaimBedRequested>
         newMapTack.DropMarker(worldCoordsOnMapTable, MapTable.Rotation);
         _attributeStore.UpdateAttributes(newMapTack.Marker).Add(MainBaseBuildables.TransientAttribute, null);
 
-        _activeMapTacks.Add(new MapTackInfo(newMapTack, owner));
+        ActiveMapTacks.Add(new MapTackInfo(newMapTack, owner));
     }
 
     public bool RemoveMapTack(MapTack newMapTack)
     {
         GameThread.AssertCurrent();
 
-        for (int i = 0; i < _activeMapTacks.Count; ++i)
+        for (int i = 0; i < ActiveMapTacks.Count; ++i)
         {
-            if (_activeMapTacks[i].Tack != newMapTack)
+            if (ActiveMapTacks[i].Tack != newMapTack)
                 continue;
 
-            _activeMapTacks.RemoveAt(i);
+            ActiveMapTacks.RemoveAt(i);
             newMapTack.Dispose();
             return true;
         }
@@ -120,13 +87,13 @@ public class StrategyMap : IDisposable, IEventListener<ClaimBedRequested>
         GameThread.AssertCurrent();
 
         int ct = 0;
-        for (int i = _activeMapTacks.Count - 1; i >= 0; --i)
+        for (int i = ActiveMapTacks.Count - 1; i >= 0; --i)
         {
-            MapTackInfo tack = _activeMapTacks[i];
+            MapTackInfo tack = ActiveMapTacks[i];
             if (!filter(tack.Tack))
                 continue;
 
-            _activeMapTacks.RemoveAt(i);
+            ActiveMapTacks.RemoveAt(i);
             tack.Tack.Dispose();
             ++ct;
         }
@@ -138,13 +105,13 @@ public class StrategyMap : IDisposable, IEventListener<ClaimBedRequested>
         GameThread.AssertCurrent();
 
         int ct = 0;
-        for (int i = _activeMapTacks.Count - 1; i >= 0; --i)
+        for (int i = ActiveMapTacks.Count - 1; i >= 0; --i)
         {
-            MapTackInfo tack = _activeMapTacks[i];
+            MapTackInfo tack = ActiveMapTacks[i];
             if (!filter(tack.Tack, tack.Owner))
                 continue;
 
-            _activeMapTacks.RemoveAt(i);
+            ActiveMapTacks.RemoveAt(i);
             tack.Tack.Dispose();
             ++ct;
         }
@@ -190,7 +157,7 @@ public class StrategyMap : IDisposable, IEventListener<ClaimBedRequested>
 
     void IEventListener<ClaimBedRequested>.HandleEvent(ClaimBedRequested e, IServiceProvider serviceProvider)
     {
-        MapTackInfo mapTack = _activeMapTacks.FirstOrDefault(t => t.Tack.Marker.Equals(e.Barricade));
+        MapTackInfo mapTack = ActiveMapTacks.FirstOrDefault(t => t.Tack.Marker.Equals(e.Barricade));
         if (mapTack.Tack == null)
         {
             // we can't cancel action here because this will run for both strategy maps
@@ -245,8 +212,8 @@ public class StrategyMap : IDisposable, IEventListener<ClaimBedRequested>
 
     public override string ToString()
     {
-        return $"StrategyMap[MapTable: [{MapTable}] MapTacks: {string.Join(", ", _activeMapTacks)}]";
+        return $"StrategyMap[MapTable: [{MapTable}] MapTacks: {string.Join(", ", ActiveMapTacks)}]";
     }
 
-    private record struct MapTackInfo(MapTack Tack, object Owner);
+    internal record struct MapTackInfo(MapTack Tack, object Owner);
 }

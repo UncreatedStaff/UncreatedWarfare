@@ -10,7 +10,7 @@ using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Commands;
 
-[Command("main", "base", "home", "mainbase", "homebase", "spawn"), MetadataFile]
+[Command("main", "base", "home", "mainbase", "homebase", "spawn"), SubCommandOf(typeof(DeployCommand)), MetadataFile]
 internal sealed class DeployMainCommand : IExecutableCommand
 {
     private readonly DeploymentTranslations _translations;
@@ -82,7 +82,7 @@ internal sealed class DeployMainCommand : IExecutableCommand
             BunkerFob? nearestFob = _fobManager.FindNearestBunkerFob(Context.Player.Team, Context.Player.Position, includeUnbuilt: false);
 
             if (nearestFob == null
-                || MathUtility.WithinRange(
+                || !MathUtility.WithinRange(
                         nearestFob.SpawnPosition,
                         Context.Player.Position,
                         Math.Min(nearestFob.EffectiveRadius, _fobConfig.MaximumDistanceFromFobToDeployToMain
@@ -102,7 +102,8 @@ internal sealed class DeployMainCommand : IExecutableCommand
             AllowNearbyEnemies = false,
             NearbyEnemyRange = _fobConfig.MaximumDistanceFromEnemiesToDeployToMain,
             // dont really need a cooldown since it'd be hard to get from a FOB to main and back
-            DisableCheckingForCooldown = true
+            DisableCheckingForCooldown = true,
+            Delay = _fobConfig.DeployFobToMainDelay
         };
 
         _deploymentService.TryStartDeployment(Context.Player, mainBase, in parameters);

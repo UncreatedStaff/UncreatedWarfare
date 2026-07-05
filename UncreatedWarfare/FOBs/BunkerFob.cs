@@ -1,8 +1,10 @@
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Fobs;
+using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Layouts.Teams;
@@ -13,8 +15,11 @@ using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.DamageTracking;
 
 namespace Uncreated.Warfare.FOBs;
+
 public class BunkerFob : ResourceFob, IFobStrategyMapTackHandler, IDamageableFob
 {
+    private ShovelableBuildable? _shovelable;
+
     public bool IsBuilt { get; private set; }
     public bool HasBeenRebuilt { get; private set; }
     public DamageTracker DamageTracker { get; }
@@ -22,14 +27,43 @@ public class BunkerFob : ResourceFob, IFobStrategyMapTackHandler, IDamageableFob
 
     bool IDamageableFob.CanRecordDamage => IsBuilt;
 
+    public ShovelableBuildable? Shovelable
+    {
+        get => _shovelable;
+        internal set
+        {
+            ShovelableBuildable? old = Interlocked.Exchange(ref _shovelable, value);
+            if (ReferenceEquals(old, value))
+                return;
+
+            if (old != null)
+                old.OnProgressUpdated -= OnShovelableProgressUpdated;
+            if (value != null)
+                value.OnProgressUpdated -= OnShovelableProgressUpdated;
+        }
+    }
+
     public BunkerFob(IServiceProvider serviceProvider, string name, IBuildable buildable) : base(serviceProvider, name, buildable)
     {
+        _shovelable = FobManager.GetBuildableFobEntity<ShovelableBuildable>(buildable);
+
+        if (_shovelable != null)
+        {
+            _shovelable.OnProgressUpdated += OnShovelableProgressUpdated;
+        }
+        serviceProvider.GetRequiredService<ILogger<BunkerFob>>().LogConditional($"Shovelable found: {_shovelable != null}");
+
         IsBuilt = false;
         HasBeenRebuilt = false;
         DamageTracker = new DamageTracker(name);
 
         // show shovelable icon instead
         Icon?.IsVisible = false;
+    }
+
+    private void OnShovelableProgressUpdated()
+    {
+        InvokeHealthUpdated();
     }
 
     public override Color32 GetColor(Team viewer)
@@ -71,7 +105,7 @@ public class BunkerFob : ResourceFob, IFobStrategyMapTackHandler, IDamageableFob
 
         if (!IsBuilt)
         {
-            chatService.Send(player, translations.DeployDestroyed, this);
+            chatService.Send(player, HasBeenRebuilt ? translations.DeployDestroyed : translations.DeployNotBuilt, this);
             return false;
         }
 
@@ -85,7 +119,7 @@ public class BunkerFob : ResourceFob, IFobStrategyMapTackHandler, IDamageableFob
 
         if (!IsBuilt)
         {
-            chatService.Send(player, translations.DeployDestroyed, this);
+            chatService.Send(player, HasBeenRebuilt ? translations.DeployDestroyed : translations.DeployNotBuilt, this);
             return false;
         }
 
@@ -99,7 +133,7 @@ public class BunkerFob : ResourceFob, IFobStrategyMapTackHandler, IDamageableFob
 
         if (!IsBuilt)
         {
-            chatService.Send(player, translations.DeployDestroyed, this);
+            chatService.Send(player, translations.DeployDestroyedTick, this);
             return false;
         }
 
@@ -130,7 +164,7 @@ public class BunkerFob : ResourceFob, IFobStrategyMapTackHandler, IDamageableFob
 
     #region Map Tacks
 
-    protected virtual MapTack? CreateMapTack(StrategyMap map, AssetConfiguration assetConfig)
+    protected virtual MapTack? CreateMapTack(StrategyMapManager manager, StrategyMap map, AssetConfiguration assetConfig)
     {
         if (!Buildable.IsAlive || !Team.IsFriendly(map.MapTable.Group))
             return null;
@@ -143,27 +177,38 @@ public class BunkerFob : ResourceFob, IFobStrategyMapTackHandler, IDamageableFob
         else
             barricade = assetConfig.GetAssetLink<ItemBarricadeAsset>("Buildables:MapTacks:Fob");
 
-        return new DeployableMapTack(barricade, this);
+        return new DeployableMapTack(manager, map, barricade, this);
     }
 
     /// <inheritdoc />
-    MapTack? IFobStrategyMapTackHandler.CreateMapTack(StrategyMap map, AssetConfiguration assetConfig)
+    MapTack? IFobStrategyMapTackHandler.CreateMapTack(StrategyMapManager manager, StrategyMap map, AssetConfiguration assetConfig)
     {
-        return CreateMapTack(map, assetConfig);
+        return CreateMapTack(manager, map, assetConfig);
     }
 
     public override double? GetHealth()
     {
-        if (!IsBuilt)
+        if (IsBuilt)
+        {
+            return base.GetHealth();
+        }
+
+        if (_shovelable == null)
             return null;
 
-        return base.GetHealth();
+        return 1d - (double)_shovelable.HitsRemaining / _shovelable.Info.RequiredShovelHits;
     }
 
     /// <inheritdoc />
     public override MapTackAttributes GetAttributes()
     {
+        if (!IsBuilt && !HasBeenRebuilt)
+        {
+            return MapTackAttributes.NotBuilt;
+        }
+
         MapTackAttributes attributes = base.GetAttributes();
+        
         if (!IsBuilt)
             attributes |= MapTackAttributes.Destroyed;
 
@@ -171,4 +216,12 @@ public class BunkerFob : ResourceFob, IFobStrategyMapTackHandler, IDamageableFob
     }
 
     #endregion
+
+    /// <inheritdoc />
+    protected override void Dispose(bool isDisposing)
+    {
+        base.Dispose(isDisposing);
+
+        Shovelable = null;
+    }
 }
