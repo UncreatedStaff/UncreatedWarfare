@@ -62,6 +62,11 @@ internal class PlayerDeathTrackingComponent : MonoBehaviour
     internal IAssetLink<ItemGunAsset>? LastRocketShot { get; set; }
 
     /// <summary>
+    /// The position from where the last projectiles this player shot was shot from.
+    /// </summary>
+    internal Vector3 LastRocketShotPosition { get; set; }
+
+    /// <summary>
     /// The vehicle from which <see cref="LastRocketShot"/> was shot (only if it's a turret).
     /// </summary>
     internal InteractableVehicle? LastRocketShotFromVehicle { get; set; }

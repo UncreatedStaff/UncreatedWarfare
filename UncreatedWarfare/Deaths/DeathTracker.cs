@@ -99,6 +99,7 @@ public class DeathTracker : IHostedService//, IEventListener<VehicleExploded>
         ItemGunAsset gun = sender.equippedGunAsset;
 
         deathTrackingComponent.LastRocketShot = AssetLink.Create(gun);
+        deathTrackingComponent.LastRocketShotPosition = sender.player.transform.position;
 
         InteractableVehicle? vehicle = sender.player.movement.getVehicle();
         if (vehicle is null)
@@ -552,6 +553,7 @@ public class DeathTracker : IHostedService//, IEventListener<VehicleExploded>
                 if (killerData != null && killerData.LastRocketShot?.GetAsset() is { } lastRocketShot)
                 {
                     e.PrimaryAsset = AssetLink.Create(lastRocketShot);
+                    e.KillDistance = (killerData.LastRocketShotPosition - dead.Position).magnitude;
                     e.MessageFlags |= DeathFlags.Item;
                     InteractableVehicle? turretOwner = killerData.LastRocketShotFromVehicle;
 

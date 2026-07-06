@@ -2,6 +2,7 @@ using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Emit;
 using DanielWillett.ReflectionTools.Formatting;
 using HarmonyLib;
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -82,6 +83,13 @@ internal sealed class ProjectilePreExplodePatch : IHarmonyPatch
 
             ctx.MarkLabel(lbl);
             ctx.ApplyBlocksAndLabels();
+
+            ctx.EmitBelow(emit =>
+            {
+                emit.LoadArgument(0)
+                    .LoadArgument(1)
+                    .Invoke(new Action<Rocket, Collider>(OnExploded).Method);
+            });
             break;
         }
 
@@ -93,9 +101,17 @@ internal sealed class ProjectilePreExplodePatch : IHarmonyPatch
         return ctx;
     }
 
+    private static void OnExploded(Rocket rocket, Collider other)
+    {
+        if (rocket.TryGetComponent(out WarfareProjectile projectile) && WarfareProjectile.ExplodingProjectile == projectile)
+        {
+            WarfareProjectile.ExplodingProjectile = null;
+        }
+    }
+
     private static bool InvokeExploding(ExplosionParameters parameters, Rocket rocket, Collider other)
     {
-        if (rocket.gameObject.TryGetComponent(out WarfareProjectile projectile))
+        if (rocket.gameObject.TryGetComponent(out WarfareProjectile projectile) && !projectile.HasExploded)
         {
             return projectile.InvokeExploding(other, parameters);
         }

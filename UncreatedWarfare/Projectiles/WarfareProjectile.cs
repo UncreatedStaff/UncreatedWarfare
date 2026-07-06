@@ -115,6 +115,8 @@ public class WarfareProjectile : MonoBehaviour
         FireTime = DateTime.UtcNow;
     }
 
+    internal static WarfareProjectile? ExplodingProjectile;
+
     internal bool InvokeExploding(Collider other, ExplosionParameters parameters)
     {
         // cant use OnTriggerEnter like we originally did because we can't know it'll occur before the explosion
@@ -144,12 +146,34 @@ public class WarfareProjectile : MonoBehaviour
             FiredTime = FireTime
         };
 
-        EventContinuations.Dispatch(args, _eventDispatcher, CancellationToken.None, out bool shouldAllow,
-            continuation: static args =>
+        bool shouldAllow;
+        if (ExplodeMethod != null)
+        {
+            EventContinuations.Dispatch(args, _eventDispatcher, CancellationToken.None, out shouldAllow,
+                continuation: static args =>
+                {
+                    ExplodingProjectile = args.Projectile;
+                    ExplodeMethod.Invoke(args.RocketComponent, args.HitCollider);
+                    if (ExplodingProjectile == args.Projectile)
+                        ExplodingProjectile = null;
+                }
+            );
+
+            if (!shouldAllow)
             {
-                ExplodeMethod?.Invoke(args.RocketComponent, args.HitCollider);
+                // freeze projectile until it blows up
+                Rigidbody rb = args.RocketComponent.GetComponent<Rigidbody>();
+                rb.velocity = Vector3.zero;
+                rb.isKinematic = false;
             }
-        );
+        }
+        else
+        {
+            shouldAllow = _eventDispatcher.DispatchEventAsync(args, CancellationToken.None, allowAsync: false).GetAwaiter().GetResult();;
+        }
+
+        if (shouldAllow)
+            ExplodingProjectile = args.Projectile;
 
         return shouldAllow;
     }

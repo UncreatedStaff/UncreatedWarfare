@@ -303,6 +303,7 @@ public class VehicleSpawnerService : ILayoutHostedService, IDisposable
                 }
             }
             catch (FileNotFoundException) { }
+            catch (DirectoryNotFoundException) { }
             catch (ByteBufferOverflowException)
             {
                 _logger.LogWarning("Invalid file format of vehicle spawner buildable map file.");

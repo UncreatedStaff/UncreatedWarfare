@@ -217,6 +217,12 @@ public class BuildableAttributesDataStore : IHostedService, ILevelHostedService,
         Thread.BeginCriticalRegion();
         try
         {
+            string dir = Path.GetDirectoryName(path)!;
+            if (!Directory.Exists(dir))
+            {
+                Directory.CreateDirectory(dir);
+            }
+
             using FileStream fs = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read, 4096, FileOptions.SequentialScan);
             ByteWriter writer = new ByteWriter { Stream = fs };
 

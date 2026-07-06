@@ -4,10 +4,11 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using Uncreated.Warfare.Configuration;
 
 namespace Uncreated.Warfare.Maps;
 
-public class MapScheduler
+public class MapScheduler : BaseAlternateConfigurationFile
 {
     private readonly ILogger<MapScheduler> _logger;
     private readonly int _configuredMap;
@@ -16,30 +17,43 @@ public class MapScheduler
     private List<ulong>? _originalMods;
     private List<ulong>? _originalIgnoreChildren;
 
-    // todo add to config
-    private static readonly MapData[] MapRotation =
+    private readonly MapConfiguration[] _maps;
+
+    // these are just fallback values so the file isn't required to boot.
+    private static readonly MapConfiguration[] DefaultMapRotation =
     [
-        new MapData("Fool's Road",      [ 2407566267, 2407740920 ], removeChildren: [ 2407566267 ]),
-        new MapData("Goose Bay",        [ 2301006771, 2407740920 ]),
-        new MapData("Nuijamaa",         [ 2557112412, 2407740920 ]),
-        new MapData("Gulf of Aqaba",    [ 2726964335, 2407740920 ]),
-        new MapData("Changbai Shan",    [ 2943688379, 2407740920 ]),
-        new MapData("Yellowknife",      [ 3456355722, 2407740920 ])
+        new MapConfiguration { Name = "Fool's Road",   WorkshopId = 2407566267, RequiredDependencies = [ 2407740920 ] },
+        new MapConfiguration { Name = "Goose Bay",     WorkshopId = 2301006771, RequiredDependencies = [ 2407740920 ] },
+        new MapConfiguration { Name = "Nuijamaa",      WorkshopId = 2557112412, RequiredDependencies = [ 2407740920 ] },
+        new MapConfiguration { Name = "Gulf of Aqaba", WorkshopId = 2726964335, RequiredDependencies = [ 2407740920 ] },
+        new MapConfiguration { Name = "Changbai Shan", WorkshopId = 2943688379, RequiredDependencies = [ 2407740920 ] },
+        new MapConfiguration { Name = "Yellowknife",   WorkshopId = 3456355722, RequiredDependencies = [ 2407740920 ] }
     ];
 
     /// <summary>
-    /// The index of the current map in <see cref="MapRotation"/>. Lines up with the primary key in the season info database.
+    /// The index of the current map in <see cref="DefaultMapRotation"/>. Lines up with the primary key in the season info database.
     /// </summary>
     public int Current { get; private set; } = -1;
 
     /// <summary>
     /// Number of maps in rotation.
     /// </summary>
-    public static int MapCount => MapRotation.Length;
+    public static int MapCount => DefaultMapRotation.Length;
 
-    public MapScheduler(IConfiguration systemConfiguration, ILogger<MapScheduler> logger)
+    public MapScheduler(IConfiguration systemConfiguration, ILogger<MapScheduler> logger) : base("Maps.yml", reload: false)
     {
         _logger = logger;
+
+        IConfigurationSection section = GetSection("Maps");
+
+        MapConfiguration[]? maps = section.Get<MapConfiguration[]>();
+
+        if (maps == null || maps.Length == 0)
+        {
+            maps = DefaultMapRotation;
+        }
+
+        _maps = maps;
 
         string? mapName = systemConfiguration["map"];
 
@@ -74,14 +88,9 @@ public class MapScheduler
         if (string.IsNullOrWhiteSpace(mapName))
             return -1;
 
-        if (int.TryParse(mapName, NumberStyles.Number, CultureInfo.InvariantCulture, out int mapNumber) && mapNumber >= 0 && mapNumber < MapRotation.Length)
+        for (int i = 0; i < DefaultMapRotation.Length; ++i)
         {
-            return mapNumber;
-        }
-
-        for (int i = 0; i < MapRotation.Length; ++i)
-        {
-            ref MapData map = ref MapRotation[i];
+            MapConfiguration map = DefaultMapRotation[i];
             if (map.Name.Equals(mapName, StringComparison.OrdinalIgnoreCase))
             {
                 return i;
@@ -97,14 +106,14 @@ public class MapScheduler
     /// <exception cref="ArgumentOutOfRangeException"/>
     public string GetMapName(int index)
     {
-        return index < 0 || index >= MapRotation.Length
+        return index < 0 || index >= DefaultMapRotation.Length
             ? throw new ArgumentOutOfRangeException(nameof(index))
-            : MapRotation[index].Name;
+            : DefaultMapRotation[index].Name;
     }
 
     private void LoadMap(int index)
     {
-        ref MapData map = ref MapRotation[index];
+        MapConfiguration map = _maps[index];
         if (Level.info != null)
         {
             throw new InvalidOperationException("Map has already been loaded, too late to change maps.");
@@ -116,38 +125,20 @@ public class MapScheduler
         config.File_IDs = _originalMods?.ToList() ?? new List<ulong>();
         config.Ignore_Children_File_IDs = _originalIgnoreChildren?.ToList() ?? new List<ulong>();
 
-        for (int i = 0; i < map.AddMods.Length; ++i)
+        if (map.RequiredDependencies != null)
         {
-            ulong mod = map.AddMods[i];
-            for (int j = 0; j < config.File_IDs.Count; ++j)
+            for (int i = 0; i < map.RequiredDependencies.Length; ++i)
             {
-                if (config.File_IDs[j] == mod) goto c;
-            }
-
-            _logger.LogInformation("Added {0} to the workshop queue.", mod);
-            config.File_IDs.Add(mod);
-            c:;
-        }
-
-        if (map.RemoveMods is not null)
-        {
-            for (int i = 0; i < map.RemoveMods.Length; ++i)
-            {
-                ulong mod = map.RemoveMods[i];
-                for (int j = config.File_IDs.Count - 1; j >= 0; --j)
+                ulong mod = map.RequiredDependencies[i];
+                for (int j = 0; j < config.File_IDs.Count; ++j)
                 {
-                    if (config.File_IDs[j] != mod)
-                        continue;
-
-                    config.File_IDs.RemoveAt(j);
-                    _logger.LogInformation("Removed {0} from the workshop queue.", mod);
+                    if (config.File_IDs[j] == mod) goto c;
                 }
-            }
-        }
 
-        if (map.RemoveChildren is not null)
-        {
-            config.Ignore_Children_File_IDs.AddRange(map.RemoveChildren);
+                _logger.LogInformation("Added {0} to the workshop queue.", mod);
+                config.File_IDs.Add(mod);
+                c:;
+            }
         }
 
         Current = index;
@@ -181,28 +172,6 @@ public class MapScheduler
             {
                 _logger.LogWarning(ex, "Unable to delete unused mod folder {0} from workshop directory: \"{1}\".", mod, displayPath);
             }
-        }
-    }
-
-    private readonly struct MapData
-    {
-        /// <summary>Should the map be used in rotation?</summary>
-        public readonly bool InRotation;
-        /// <summary>Technical name of the map.</summary>
-        public readonly string Name;
-        /// <summary>Mods to add to the server.</summary>
-        public readonly ulong[] AddMods;
-        /// <summary>Mods to remove from the server (or null if there are none to remove).</summary>
-        public readonly ulong[]? RemoveMods;
-        /// <summary>Mods to remove from the server (or null if there are none to remove).</summary>
-        public readonly ulong[]? RemoveChildren;
-        public MapData(string name, ulong[] addMods, bool inRotation = true, ulong[]? removeMods = null, ulong[]? removeChildren = null)
-        {
-            Name = name;
-            AddMods = addMods;
-            InRotation = inRotation;
-            RemoveMods = removeMods;
-            RemoveChildren = removeChildren;
         }
     }
 }

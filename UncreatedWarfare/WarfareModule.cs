@@ -1448,7 +1448,7 @@ public sealed class WarfareModule
             else
             {
                 _logger.LogDebug($"Migrating database process: {dbContext.GetType()}");
-                await dbContext.Database.MigrateAsync(token).ConfigureAwait(false);
+                await dbContext.Database.MigrateAsync(token);
                 _logger.LogInformation("Migration completed.");
             }
         }

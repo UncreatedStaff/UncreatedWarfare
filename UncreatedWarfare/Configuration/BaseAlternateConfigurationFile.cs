@@ -2,7 +2,6 @@ using DanielWillett.ReflectionTools;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Primitives;
 using System;
-using System.Collections.Generic;
 using System.IO;
 
 namespace Uncreated.Warfare.Configuration;
@@ -13,7 +12,7 @@ namespace Uncreated.Warfare.Configuration;
 public abstract class BaseAlternateConfigurationFile : IConfiguration, IDisposable
 {
     private readonly IConfiguration _configuration;
-    private readonly IDisposable _reloadToken;
+    private IDisposable? _reloadToken;
 
     /// <summary>
     /// Full path to the configuratin file.
@@ -34,7 +33,7 @@ public abstract class BaseAlternateConfigurationFile : IConfiguration, IDisposab
     /// Create a new configuration file reference.
     /// </summary>
     /// <param name="mapSpecific">Will go in a "Maps/[map name]/" folder.</param>
-    protected BaseAlternateConfigurationFile(string fileName, bool mapSpecific = false)
+    protected BaseAlternateConfigurationFile(string fileName, bool mapSpecific = false, bool optional = false, bool reload = true)
     {
         string homeDir = WarfareModule.Singleton.HomeDirectory;
 
@@ -46,27 +45,30 @@ public abstract class BaseAlternateConfigurationFile : IConfiguration, IDisposab
 
         FilePath = Path.Combine(homeDir, fileName);
 
-        if (!File.Exists(FilePath))
+        if (!optional && !File.Exists(FilePath))
         {
             throw new FileNotFoundException($"Missing required configuration file for {Accessor.ExceptionFormatter.Format(GetType())}: \"{FilePath}\".");
         }
 
         ConfigurationBuilder builder = new ConfigurationBuilder();
-        ConfigurationHelper.AddSourceWithMapOverride(builder, WarfareModule.Singleton.FileProvider, FilePath);
+        ConfigurationHelper.AddSourceWithMapOverride(builder, WarfareModule.Singleton.FileProvider, FilePath, optional: optional, reloadOnChange: reload);
         _configuration = builder.Build();
 
-        _reloadToken = ChangeToken.OnChange(
-            _configuration.GetReloadToken,
-            () =>
-            {
-                UniTask.Create(async () =>
+        if (reload)
+        {
+            _reloadToken = ChangeToken.OnChange(
+                _configuration.GetReloadToken,
+                () =>
                 {
-                    await UniTask.SwitchToMainThread();
-                    WarfareModule.Singleton.GlobalLogger.LogInformation($"Configuration file reloaded: {Path.GetFileName(FilePath)}");
-                    HandleChange();
-                    OnChange?.Invoke(this);
+                    UniTask.Create(async () =>
+                    {
+                        await UniTask.SwitchToMainThread();
+                        WarfareModule.Singleton.GlobalLogger.LogInformation($"Configuration file reloaded: {Path.GetFileName(FilePath)}");
+                        HandleChange();
+                        OnChange?.Invoke(this);
+                    });
                 });
-            });
+        }
 
         UnderlyingConfiguration = _configuration;
     }
@@ -91,7 +93,7 @@ public abstract class BaseAlternateConfigurationFile : IConfiguration, IDisposab
     /// <inheritdoc />
     void IDisposable.Dispose()
     {
-        _reloadToken.Dispose();
+        Interlocked.Exchange(ref _reloadToken, null)?.Dispose();
         if (_configuration is IDisposable disp)
             disp.Dispose();
     }
