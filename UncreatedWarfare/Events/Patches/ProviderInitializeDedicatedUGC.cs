@@ -44,12 +44,17 @@ internal sealed class ProviderInitializeDedicatedUGC : IHarmonyPatch
         _target = null;
     }
 
+    private static bool _ignore;
+
     // SDG.Unturned.Provider.initializeDedicatedUGC
     /// <summary>
     /// Allows us to pause workshop downloads until after an event processes.
     /// </summary>
     private static bool Prefix(SteamPending __instance)
     {
+        if (_ignore)
+            return true;
+
         WorkshopDownloadConfig config = WorkshopDownloadConfig.getOrLoad();
 
         ServerWorkshopLoading args = new ServerWorkshopLoading
@@ -67,8 +72,16 @@ internal sealed class ProviderInitializeDedicatedUGC : IHarmonyPatch
             {
                 Apply(args);
 
-                // Provider.initializeDedicatedUGC();
-                _target!.Invoke(null, Array.Empty<object>());
+                _ignore = true;
+                try
+                {
+                    // Provider.initializeDedicatedUGC();
+                    _target!.Invoke(null, Array.Empty<object>());
+                }
+                finally
+                {
+                    _ignore = false;
+                }
             }
         );
 
