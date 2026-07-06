@@ -40,7 +40,7 @@ public class MapScheduler : BaseAlternateConfigurationFile
     /// </summary>
     public static int MapCount => DefaultMapRotation.Length;
 
-    public MapScheduler(IConfiguration systemConfiguration, ILogger<MapScheduler> logger) : base("Maps.yml", reload: false)
+    public MapScheduler(IConfiguration systemConfiguration, ILogger<MapScheduler> logger) : base("Maps.yml", reload: false, optional: true)
     {
         _logger = logger;
 
@@ -124,6 +124,8 @@ public class MapScheduler : BaseAlternateConfigurationFile
 
         config.File_IDs = _originalMods?.ToList() ?? new List<ulong>();
         config.Ignore_Children_File_IDs = _originalIgnoreChildren?.ToList() ?? new List<ulong>();
+
+        config.File_IDs.Add(map.WorkshopId);
 
         if (map.RequiredDependencies != null)
         {
