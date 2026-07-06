@@ -38,7 +38,7 @@ public static class TeamUtility
             return factionObj;
         }
 
-        int currentMapId = mapScheduler.Current;
+        int currentMapId = mapScheduler.Current!.Id;
 
         MapData? map = await dbContext.Maps
             .Include(x => x.Team1Faction)

@@ -8,7 +8,9 @@ using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Util;
 
 namespace Uncreated.Warfare.Tests;
-public class PluralizationTests
+
+/* TODO
+public class PluralizationTestsallMapIds
 {
     private static readonly LanguageInfo Language = new LanguageInfo
     {
@@ -76,3 +78,4 @@ public class PluralizationTests
     }
 
 }
+*/

@@ -467,7 +467,7 @@ public class SessionManager :
             StartedGame = startedGame,
             KitId = kit?.Key,
             KitName = kit?.Id,
-            MapId = _mapScheduler.Current,
+            MapId = _mapScheduler.Current!.Id,
             SeasonId = WarfareModule.Season,
             SquadName = squad?.Name,
             SquadLeader = squad?.Leader?.Steam64.m_SteamID,

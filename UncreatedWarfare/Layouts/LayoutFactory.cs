@@ -490,7 +490,7 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
             Season = WarfareModule.Season,
             StartTimestamp = DateTimeOffset.UtcNow,
             Gamemode = layoutInfo.DisplayName,
-            Map = _mapScheduler.Current,
+            Map = _mapScheduler.Current!.Id,
             Region = _region
         };
 

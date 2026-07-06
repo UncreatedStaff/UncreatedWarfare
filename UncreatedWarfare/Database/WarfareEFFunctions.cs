@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using System;
 
 namespace Uncreated.Warfare.Database;
@@ -8,7 +9,7 @@ internal static class WarfareEFFunctions
     /// Maps to the RAND() function in MySQL. This is available starting in EFCore 6+ but needs to be added for use in EFCore 5.
     /// </summary>
     // needs uncommented in WarfareDbContext if used
-    public static double Random()
+    public static double Random(this DbFunctions functions)
     {
         throw new NotSupportedException("Expected invocation in EF query context only.");
     }

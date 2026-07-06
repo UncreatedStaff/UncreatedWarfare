@@ -3,7 +3,7 @@ using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.Events.Models.Structures;
 using Uncreated.Warfare.Layouts.Teams;
 
-namespace Uncreated.Warfare.Events.Models;
+namespace Uncreated.Warfare.Events.Models.Buildables;
 
 /// <summary>
 /// Base class for <see cref="SalvageBarricadeRequested"/> and <see cref="SalvageStructureRequested"/>.

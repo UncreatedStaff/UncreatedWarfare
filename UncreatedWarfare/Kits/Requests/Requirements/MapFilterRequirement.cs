@@ -1,4 +1,5 @@
 ﻿using Uncreated.Warfare.Maps;
+using Uncreated.Warfare.Models.Seasons;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Kits.Requests.Requirements;
@@ -10,17 +11,14 @@ public sealed class MapFilterRequirement(MapScheduler mapScheduler) : IKitRequir
 {
     private bool IsCurrentMapAllowed(Kit kit)
     {
-        if (kit.MapFilter.IsNullOrEmpty())
+        if (kit.MapFilter.IsNullOrEmpty() || !mapScheduler.HasSelectedMap)
             return true;
 
-        int map = mapScheduler.Current;
-        if (map != -1)
+        MapData map = mapScheduler.Current;
+        for (int i = 0; i < kit.MapFilter.Length; ++i)
         {
-            for (int i = 0; i < kit.MapFilter.Length; ++i)
-            {
-                if (kit.MapFilter[i] == map)
-                    return kit.MapFilterIsWhitelist;
-            }
+            if (kit.MapFilter[i] == map.Id)
+                return kit.MapFilterIsWhitelist;
         }
 
         return !kit.MapFilterIsWhitelist;
@@ -28,10 +26,10 @@ public sealed class MapFilterRequirement(MapScheduler mapScheduler) : IKitRequir
 
     public KitRequirementResult AcceptCached<TState>(IKitRequirementVisitor<TState> visitor, in KitRequirementResolutionContext<TState> ctx)
     {
-        if (IsCurrentMapAllowed(ctx.Kit))
+        if (IsCurrentMapAllowed(ctx.Kit) || !mapScheduler.HasSelectedMap)
             return KitRequirementResult.Yes;
 
-        visitor.AcceptMapFilterNotMet(in ctx, mapScheduler.GetMapName(mapScheduler.Current));
+        visitor.AcceptMapFilterNotMet(in ctx, mapScheduler.Current.DisplayName);
         return KitRequirementResult.No;
     }
 

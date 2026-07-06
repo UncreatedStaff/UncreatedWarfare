@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Stripe;
 using System;
 using System.Linq;
 using Uncreated.Warfare.Configuration;
@@ -86,6 +87,32 @@ public class PlayerGameStatsComponent : IPlayerComponent, IDisposable, ILeaderbo
         float sqrDistance = MathUtility.SquaredDistance(in hit.point, in gunPoint, false);
         if (LongestShot.SquaredDistance < sqrDistance)
             LongestShot = new LongestShot(sqrDistance, AssetLink.Create(gun.equippedGunAsset));
+    }
+
+    public bool TryGetStatValue(string? statName, out int value)
+    {
+        if (!TryGetStatValue(statName, out double vDbl))
+        {
+            value = 0;
+            return false;
+        }
+
+        value = (int)Math.Round(vDbl);
+        return true;
+    }
+
+    public bool TryGetStatValue(string? statName, out double value)
+    {
+        value = 0;
+        if (_phase == null)
+            return false;
+
+        int index = _phase.GetStatIndex(statName);
+        if (index < 0)
+            return false;
+
+        value = GetStatValue(_phase.PlayerStats[index]);
+        return true;
     }
 
     public double GetStatValue(LeaderboardPhaseStatInfo stat)

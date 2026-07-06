@@ -35,7 +35,7 @@
 	    <HintPath>$(SolutionDir)Libraries/UniTask.NetCore/UniTask.dll</HintPath>
     </Reference>
 
-    <PackageReference Include="Uncreated.UI" Version="[1.4.0,)" />
+    <PackageReference Include="Uncreated.UI" Version="[1.4.1,)" />
   </ItemGroup>
 
   <ItemGroup>

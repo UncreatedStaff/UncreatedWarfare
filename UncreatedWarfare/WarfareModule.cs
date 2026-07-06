@@ -1363,7 +1363,7 @@ public sealed class WarfareModule
         CancellationToken token = UnloadToken;
 
         // this needs to happen almost instantly, can't wait for migration
-        ServiceProvider.Resolve<MapScheduler>().ApplyMapSetting();
+        // ServiceProvider.Resolve<MapScheduler>().ApplyMapSetting();
 
         // this too
         HarmonyPatchService patchService = ServiceProvider.Resolve<HarmonyPatchService>();
