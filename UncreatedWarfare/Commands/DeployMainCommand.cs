@@ -10,7 +10,7 @@ using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Commands;
 
-[Command("main", "base", "home", "mainbase", "homebase", "spawn"), SubCommandOf(typeof(DeployCommand)), MetadataFile]
+[Command("main", "base", "home", "mainbase", "homebase", "spawn"), SubCommandOf(typeof(DeployCommand))]
 internal sealed class DeployMainCommand : IExecutableCommand
 {
     private readonly DeploymentTranslations _translations;

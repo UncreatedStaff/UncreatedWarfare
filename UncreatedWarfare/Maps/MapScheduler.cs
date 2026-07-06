@@ -85,7 +85,7 @@ public class MapScheduler : IAsyncEventListener<ServerWorkshopLoading>
         
         if (map == null)
         {
-            map = await maps.OrderBy(x => EF.Functions.Random()).FirstOrDefaultAsync(token);
+            map = await maps.OrderBy(x => WarfareEFFunctions.Random()).FirstOrDefaultAsync(token);
             if (map == null)
             {
                 _logger.LogError($"No maps configured: {specificMapName}");
