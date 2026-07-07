@@ -3,6 +3,9 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using SDG.Framework.Utilities;
 using System;
+using System.Linq;
+using Uncreated.Warfare.Events.Models;
+using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Exceptions;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits;
@@ -16,15 +19,17 @@ using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Proximity;
 using Uncreated.Warfare.Services;
+using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Addons;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.List;
 using Uncreated.Warfare.Zones;
 
+
 namespace Uncreated.Warfare.FreeTeamDeathmatch;
 
-internal class FtdmService : ILayoutPhaseListener<ActionPhase>, IDisposable, ILayoutHostedService
+internal class FtdmService : ILayoutPhaseListener<ActionPhase>, IDisposable, ILayoutHostedService, IAsyncEventListener<PlayerDied>
 {
     private const float OutOfBoundsWarningTime = 7.5f;
 
@@ -47,6 +52,9 @@ internal class FtdmService : ILayoutPhaseListener<ActionPhase>, IDisposable, ILa
     private LinearDictionary<Team, string[]>? _allowedKits;
 
     private LinearDictionary<Team, IEventBasedProximity<WarfarePlayer>>? _friendlyZoneColliders;
+
+    //hamza maybe
+    private PlayerDictionary<int> _playerkills;
 
     public bool IsInActionPhase { get; private set; }
     public bool AllowReenterSpawn { get; private set; }
@@ -81,6 +89,8 @@ internal class FtdmService : ILayoutPhaseListener<ActionPhase>, IDisposable, ILa
         _translations = translations.Value;
         _teamManager = layout.TeamManager as FtdmDualSidedTeamManager
                        ?? throw new GameConfigurationException("Expected FtdmDualSidedTeamManager.");
+        //no clue
+        _playerkills = new PlayerDictionary<int>();
 
         _onChange = ChangeToken.OnChange(
             () => _configuration.GetReloadToken(),
@@ -252,39 +262,41 @@ internal class FtdmService : ILayoutPhaseListener<ActionPhase>, IDisposable, ILa
         if (!_friendlyZoneColliders.TryGetKey(prox, out Team? team))
             return;
 
+        
         if (!team.IsFriendly(obj.Team) || obj.Component<FtdmPlayerComponent>().HasExitedSpawnSinceRespawned)
         {
             HandlePlayerEntersEnemySpawnOrTriesToReenterSpawn(obj, team, prox);
         }
-        else if (_allowedKits?.TryGetValue(obj.Team, out string[]? allowedKits) is true)
+        else
         {
-            if (allowedKits is not { Length: > 0 })
-                return;
-
-            // give the player a random kit when they spawn
-            string kitId = allowedKits[RandomUtility.GetIndex(allowedKits)];
-            WarfarePlayer player = obj;
+            // give the player the next kit thing
             Task.Run(async () =>
             {
+                
                 try
                 {
-                    Kit? kit = await _kitDataStore.QueryKitAsync(kitId, KitInclude.Giveable);
-                    if (kit == null)
+                    if (obj.Component<KitPlayerComponent>().HasKit)
                     {
-                        _logger.LogWarning($"Unknown kit: {kitId}.");
+                        await _kitRequestService.RestockKitAsync(obj);
                     }
                     else
                     {
-                        await _kitRequestService.GiveKitAsync(player, new KitBestowData(kit) { Silent = true }, CancellationToken.None);
+                        string[] allowedkits = _allowedKits?[obj.Team];
+                        string kitId = allowedkits[0];
+                        Kit kit = await _kitDataStore.QueryKitAsync(kitId, KitInclude.Giveable, obj.DisconnectToken);
+                        await _kitRequestService.GiveKitAsync(obj, new KitBestowData(kit), obj.DisconnectToken);
                     }
                 }
-                catch (Exception ex)
+                catch(Exception ex)
                 {
-                    _logger.LogError(ex, $"Error giving kit {kitId}.");
+                    _logger.LogError(ex, "Failed to restock player kit.");
                 }
-            });
+            }
+            );
+
         }
     }
+    
 
     private void PlayerExitedSpawnZone(IEventBasedProximity<WarfarePlayer> prox, WarfarePlayer obj)
     {
@@ -396,4 +408,29 @@ internal class FtdmService : ILayoutPhaseListener<ActionPhase>, IDisposable, ILa
 
         Interlocked.Exchange(ref _onChange, null)?.Dispose();
     }
+
+    async UniTask IAsyncEventListener<PlayerDied>.HandleEventAsync(PlayerDied e, IServiceProvider serviceProvider, CancellationToken token)
+    {
+        //effective kill checks if it was like not a suicide or teamkill and checking that the killer isnt null why would killer be null tho no clue
+        if (!e.WasEffectiveKill || e.Killer == null)
+        {
+            return;
+        }
+        if(_playerkills.TryGetValue(e.Killer, out int kills))
+        {
+            kills++;
+        }
+        else // if the value isnt already created make it and set it to 1
+        {
+            kills = 1;
+        }
+        _playerkills[e.Killer] = kills; // basically this.kills = kills
+        string[] allowedkits = _allowedKits?[e.KillerTeam];
+        int kitIndex = Math.Min(kills, allowedkits.Length - 1);
+        string kitId = allowedkits[kitIndex];
+        Kit kit = await _kitDataStore.QueryKitAsync(kitId, KitInclude.Giveable, token);
+        await _kitRequestService.GiveKitAsync(e.Killer, new KitBestowData(kit), token);
+    }
+
+
 }
