@@ -110,14 +110,6 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
 #if TELEMETRY
         _activitySource = WarfareModule.CreateActivitySource();
 #endif
-
-        if (systemConfig["tests:startup_layout"] is not { Length: > 0 } startupLayout)
-            return;
-
-        string path = Path.Combine(_layoutDir, startupLayout);
-
-        if (File.Exists(path))
-            NextLayout = new FileInfo(path);
     }
 
     /// <inheritdoc />
@@ -291,6 +283,11 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
 #endif
     )
     {
+        if (!_mapScheduler.HasSelectedMap)
+        {
+            throw new InvalidOperationException("Not yet selected a map.");
+        }
+
         await UniTask.SwitchToThreadPool();
 #if TELEMETRY
         Activity.Current = null;
@@ -302,6 +299,11 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
 
         activity?.AddTag("source", new StackTrace(1).ToString());
 #endif
+
+        if (_isFirstLoadout)
+        {
+            NextLayout = TryResolveStartupLayout();
+        }
 
         LayoutInfo? newLayout = null;
         if (NextLayout != null)
@@ -420,6 +422,85 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
             if (!IsLoading)
                 _loadoutStartSemaphore.Release();
         }
+    }
+
+    private FileInfo? TryResolveStartupLayout()
+    {
+        string? startupLayout = _systemConfig["tests:startup_layout"];
+        if (string.IsNullOrWhiteSpace(startupLayout))
+        {
+            return null;
+        }
+
+        _logger.LogTrace($"Attempting to resolve startup layout from config: \"{startupLayout}\".");
+
+        string path = Path.Combine(_layoutDir, startupLayout);
+
+        if (File.Exists(path))
+        {
+            if (YamlUtility.CheckMatchesMapFilter(path))
+            {
+                _logger.LogInformation($"Found startup layout {startupLayout}.");
+                return new FileInfo(path);
+            }
+
+            _logger.LogWarning($"Startup layout {startupLayout} not for the current map.");
+            return null;
+        }
+        
+        if (Path.GetExtension(path.AsSpan()).Equals(".yml", StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogWarning($"Startup layout {startupLayout} not found.");
+            return null;
+        }
+
+        List<LayoutInfo?> files = GetBaseLayoutFiles()
+            .Select(x => ReadLayoutInfo(x.FullName, false))
+            .ToList();
+
+        try
+        {
+            // not a path, supply a gamemode instead.
+            // ex. "Invasion:Armored Assault I" or just "Invasion"
+            // (GamemodeName[:LayoutName])
+            ReadOnlySpan<char> gamemodeName = startupLayout;
+            int separator = gamemodeName.IndexOf(':');
+            ReadOnlySpan<char> layoutName = ReadOnlySpan<char>.Empty;
+            if (separator > 0 && separator + 1 < gamemodeName.Length)
+            {
+                layoutName = gamemodeName.Slice(separator + 1);
+                gamemodeName = gamemodeName.Slice(0, separator);
+            }
+
+            foreach (LayoutInfo? file in files)
+            {
+                if (file == null)
+                    continue;
+
+                if (!gamemodeName.Equals(file.Configuration.GamemodeName, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                if (!layoutName.IsEmpty && !layoutName.Equals(file.Configuration.LayoutName, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                _logger.LogInformation($"Selected matching startup layout: {Path.GetRelativePath(_layoutDir, file.FilePath)}.");
+                return new FileInfo(file.FilePath);
+            }
+
+            if (layoutName.IsEmpty)
+                _logger.LogWarning($"No matching layouts found for gamemode: {gamemodeName}.");
+            else
+                _logger.LogWarning($"No matching layouts found for gamemode: {gamemodeName} on layout {layoutName}.");
+        }
+        finally
+        {
+            foreach (LayoutInfo? file in files)
+            {
+                file?.Dispose();
+            }
+        }
+
+        return null;
     }
 
     /// <summary>
@@ -897,14 +978,16 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
             string? layoutTypeName = root["Type"];
             if (layoutTypeName == null)
             {
-                _logger.LogDebug("Layout config file missing \"Type\" config value in \"{0}\".", file);
+                _logger.LogTrace($"Possible layout config file missing \"Type\" config value in \"{file}\".");
                 return null;
             }
 
-            Type? layoutType = ContextualTypeResolver.ResolveType(layoutTypeName, typeof(Layout));
+            Type? layoutType = string.Equals(layoutTypeName, "Layout", StringComparison.OrdinalIgnoreCase)
+                ? typeof(Layout)
+                : ContextualTypeResolver.ResolveType(layoutTypeName, typeof(Layout));
             if (layoutType == null)
             {
-                _logger.LogError("Unknown layout type \"{0}\" in layout config \"{1}\".", layoutTypeName, file);
+                _logger.LogError($"Unknown layout type \"{layoutTypeName}\" in layout config \"{file}\".");
                 return null;
             }
 
@@ -1016,7 +1099,7 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
                 string path = Path.GetFullPath(variationFile.Path, baseDir);
                 if (!YamlUtility.CheckMatchesMapFilterAndReadWeight(path, out double weight))
                 {
-                    _logger.LogDebug($"Variations - {context} skipped variation {variationFile.Stem ?? path}.");
+                    _logger.LogTrace($"Variations - {context} skipped variation {variationFile.Stem ?? path}.");
                     continue;
                 }
 
@@ -1025,7 +1108,7 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
                 variation.FileName = path;
 
                 variationFiles.Add(variation);
-                _logger.LogDebug($"Variations - {context} matched variation {variationFile.Stem ?? path}.");
+                _logger.LogTrace($"Variations - {context} matched variation {variationFile.Stem ?? path}.");
             }
         }
 

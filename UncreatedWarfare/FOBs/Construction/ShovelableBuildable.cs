@@ -24,13 +24,7 @@ public class ShovelableBuildable : BuildableFobEntity<ShovelableInfo>
     public int HitsRemaining
     {
         get;
-        set
-        {
-            if (value < 0)
-                field = 0;
-            else
-                field = value;
-        }
+        set => field = Math.Max(0, value);
     }
 
     public bool IsCompleted => HitsRemaining <= 0;

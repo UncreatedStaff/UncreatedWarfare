@@ -23,7 +23,7 @@ using MathUtility = Uncreated.Warfare.Util.MathUtility;
 
 namespace Uncreated.Warfare.StrategyMaps;
 
-[Priority(-1) /* after FlagService */]
+[Priority(-4) /* after FlagService and VehicleSpawnerService */]
 public class StrategyMapManager :
     ILayoutHostedService,
     IEventListenerProvider,

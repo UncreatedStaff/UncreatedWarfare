@@ -4,6 +4,7 @@ using DanielWillett.SpeedBytes.Unity;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Buildables;
@@ -17,7 +18,7 @@ namespace Uncreated.Warfare.Buildables;
 /// Stores a key-value-pair dictionary for each barricade and structure.
 /// </summary>
 [Priority(11 /* before MainBaseBuildables */)]
-public class BuildableAttributesDataStore : IHostedService, ILevelHostedService, IEventListener<IBuildableDestroyedEvent>
+public class BuildableAttributesDataStore : IHostedService, ILevelHostedService, IEarlyLevelHostedService, IEventListener<IBuildableDestroyedEvent>
 {
     private static int _hasSaveSub;
 
@@ -108,7 +109,6 @@ public class BuildableAttributesDataStore : IHostedService, ILevelHostedService,
 
     UniTask IHostedService.StartAsync(CancellationToken token)
     {
-        ReadFromSave();
         if (Interlocked.Exchange(ref _hasSaveSub, 1) == 0)
         {
             // note: we don't really want to un-subscribe this since save will run after
@@ -120,6 +120,12 @@ public class BuildableAttributesDataStore : IHostedService, ILevelHostedService,
 
     UniTask IHostedService.StopAsync(CancellationToken token)
     {
+        return UniTask.CompletedTask;
+    }
+
+    UniTask IEarlyLevelHostedService.EarlyLoadLevelAsync(CancellationToken token)
+    {
+        ReadFromSave();
         return UniTask.CompletedTask;
     }
 
@@ -227,6 +233,23 @@ public class BuildableAttributesDataStore : IHostedService, ILevelHostedService,
             ByteWriter writer = new ByteWriter { Stream = fs };
 
             writer.Write((byte)0);
+
+            foreach (KeyValuePair<uint, BuildableAttributes> barricade in _barricadeAttributes.ToList())
+            {
+                if (barricade.Value.Attributes.Count == 0)
+                {
+                    _barricadeAttributes.Remove(barricade.Key);
+                }
+            }
+
+            foreach (KeyValuePair<uint, BuildableAttributes> structure in _structureAttributes.ToList())
+            {
+                if (structure.Value.Attributes.Count == 0)
+                {
+                    _structureAttributes.Remove(structure.Key);
+                }
+            }
+
             writer.Write(_barricadeAttributes.Count);
             writer.Write(_structureAttributes.Count);
 

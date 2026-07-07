@@ -22,6 +22,8 @@ internal class MainBaseMapTackUIHandler : IMapTackUIHandler, IDisposable,
     private readonly ZoneStore _zoneStore;
     private readonly MapTackInfoUITranslations _translations;
 
+    private float _lastVehicleCount;
+
     private bool _isDisposed;
 
     private readonly int[] _vehicleCounts;
@@ -65,7 +67,8 @@ internal class MainBaseMapTackUIHandler : IMapTackUIHandler, IDisposable,
             return;
         }
 
-        UpdateVehicleCounts(true, MapTackVehicleType.FromVehicleType(spawner.VehicleInfo.Type));
+        MapTackVehicleType type = MapTackVehicleType.FromVehicleType(spawner.VehicleInfo.Type);
+        UpdateVehicleCounts(true, type);
     }
 
     private void UpdateVehicleCounts(bool notify, MapTackVehicleType type = MapTackVehicleType.Other)
@@ -93,30 +96,30 @@ internal class MainBaseMapTackUIHandler : IMapTackUIHandler, IDisposable,
                 Vector3 center = prox.Zone.Center;
                 Vector2 center2 = new Vector2(center.x, center.z);
 
-                if (_zoneStore.IsInsideZone(center2, ZoneType.WarRoom, _team.Faction))
+                if (!prox.Zone.IsPrimary && _zoneStore.IsInsideZone(center2, ZoneType.WarRoom, _team.Faction))
                     continue;
 
-                _vehicleCounts[(int)MapTackVehicleType.Infantry - 1] += trackingProximity.ActiveObjects.Count;
+                int playerCount = trackingProximity.ActiveObjects.Count;
+
+                _vehicleCounts[(int)MapTackVehicleType.Infantry - 1] += playerCount;
             }
         }
 
-        if (type == MapTackVehicleType.Infantry)
+        if (type != MapTackVehicleType.Infantry)
         {
-            return;
-        }
-
-        foreach (VehicleSpawner spawner in _spawnerService.Spawners)
-        {
-            if (!spawner.Team.IsFriendly(_team))
-                continue;
-
-            MapTackVehicleType t = MapTackVehicleType.FromVehicleType(spawner.VehicleInfo.Type);
-            if (type != MapTackVehicleType.Other && t != type)
-                continue;
-
-            if (spawner.State == VehicleSpawnerState.Ready)
+            foreach (VehicleSpawner spawner in _spawnerService.Spawners)
             {
-                ++_vehicleCounts[(int)t - 1];
+                if (!spawner.Team.IsFriendly(_team))
+                    continue;
+
+                MapTackVehicleType t = MapTackVehicleType.FromVehicleType(spawner.VehicleInfo.Type);
+                if (type != MapTackVehicleType.Other && t != type)
+                    continue;
+
+                if (spawner.State == VehicleSpawnerState.Ready)
+                {
+                    ++_vehicleCounts[(int)t - 1];
+                }
             }
         }
 
@@ -173,7 +176,11 @@ internal class MainBaseMapTackUIHandler : IMapTackUIHandler, IDisposable,
     /// <inheritdoc />
     public void CountVehicles(IList<KeyValuePair<MapTackVehicleType, int>> vehicleCounts)
     {
-        UpdateVehicleCounts(notify: false);
+        if (_lastVehicleCount == 0 || Time.realtimeSinceStartup - _lastVehicleCount >= 30f)
+        {
+            UpdateVehicleCounts(notify: false);
+        }
+
         for (MapTackVehicleType type = (MapTackVehicleType)MapTackVehicleType.Count - 1; type >= MapTackVehicleType.Infantry; --type)
         {
             int ct = _vehicleCounts[(int)type - 1];
@@ -200,12 +207,20 @@ internal class MainBaseMapTackUIHandler : IMapTackUIHandler, IDisposable,
     {
         // if the map tack is removed for some reason this could theoretically still be called by the event dispatched
         if (_isDisposed) return;
+        
+        if (e.Zone.Type != ZoneType.MainBase)
+            return;
+
         UpdateVehicleCounts(true, MapTackVehicleType.Infantry);
     }
 
     void IEventListener<PlayerExitedZone>.HandleEvent(PlayerExitedZone e, IServiceProvider serviceProvider)
     {
         if (_isDisposed) return;
+
+        if (e.Zone.Type != ZoneType.MainBase)
+            return;
+
         UpdateVehicleCounts(true, MapTackVehicleType.Infantry);
     }
 }

@@ -125,11 +125,6 @@ public class MapTack : IDisposable, ITransformObject
         _strategyMapManager.UI?.HandleAttributesUpdated(this, attributes);
     }
 
-    internal ref int GetUIVehicleMask()
-    {
-        return ref _uiVehicleMask;
-    }
-
     internal List<WarfarePlayer>.Enumerator EnumerateWatchers()
     {
         GameThread.AssertCurrent();

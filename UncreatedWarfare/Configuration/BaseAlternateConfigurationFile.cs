@@ -14,7 +14,6 @@ namespace Uncreated.Warfare.Configuration;
 /// </summary>
 public abstract class BaseAlternateConfigurationFile : IConfiguration, IDisposable
 {
-    private readonly IServiceProvider _serviceProvider;
     private readonly MapScheduler? _mapScheduler;
 
     private IConfiguration _configuration;
@@ -46,7 +45,6 @@ public abstract class BaseAlternateConfigurationFile : IConfiguration, IDisposab
     /// <param name="mapSpecific">Will go in a "Maps/[map name]/" folder.</param>
     protected BaseAlternateConfigurationFile(IServiceProvider serviceProvider, string fileName, bool mapSpecific = false, bool optional = false, bool reload = true)
     {
-        _serviceProvider = serviceProvider;
         _module = serviceProvider.GetRequiredService<WarfareModule>();
         _fileName = fileName;
         _optional = optional;
