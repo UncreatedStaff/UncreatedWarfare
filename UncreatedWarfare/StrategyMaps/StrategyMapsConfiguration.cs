@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Configuration;
-using System.Collections.Generic;
+using System;
 using System.Collections.ObjectModel;
 using Uncreated.Warfare.Configuration;
 
@@ -9,7 +9,7 @@ public sealed class StrategyMapsConfiguration : BaseAlternateConfigurationFile
 {
     public IReadOnlyList<MapTableInfo> MapTables { get; private set; } = null!;
 
-    public StrategyMapsConfiguration() : base("StrategyMaps.yml")
+    public StrategyMapsConfiguration(IServiceProvider serviceProvider) : base(serviceProvider, "StrategyMaps.yml")
     {
         HandleChange();
     }

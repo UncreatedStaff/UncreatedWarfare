@@ -148,6 +148,11 @@ internal struct WarfareFormattedLogValues
 
         bool extended = color == StackColorFormatType.ExtendedANSIColor;
 
+        ConsoleColor clr = WarfareLogger.GetLogColor(EffectiveLogLevel);
+        int len = TerminalColorHelper.GetTerminalColorSequenceLength(clr);
+        Span<char> resetColorSpan = stackalloc char[len];
+        TerminalColorHelper.WriteTerminalColorSequence(resetColorSpan, clr);
+
         int index = 0;
         for (int i = 0; i < Parameters.Count; ++i)
         {
@@ -199,7 +204,9 @@ internal struct WarfareFormattedLogValues
                     sb.Append(punctuationColor);
                 sb.Append(" ]");
                 if (useColor)
-                    sb.Append(TerminalColorHelper.ForegroundResetSequence);
+                {
+                    sb.Append(resetColorSpan);
+                }
 
                 fmtStr = sb.ToString();
                 prefixSize = 0;
@@ -245,7 +252,7 @@ internal struct WarfareFormattedLogValues
             if (prefixSize > 0)
             {
                 TerminalColorHelper.WriteTerminalColorSequence(format[..prefixSize], argb, false);
-                TerminalColorHelper.ForegroundResetSequence.AsSpan().CopyTo(format.Slice(prefixSize + formatted.Length, suffixSize));
+                resetColorSpan.CopyTo(format.Slice(prefixSize + formatted.Length, suffixSize));
             }
 
             if (index != 0)

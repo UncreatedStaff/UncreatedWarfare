@@ -1,6 +1,5 @@
-using System;
 using Microsoft.Extensions.Configuration;
-using System.Collections.Generic;
+using System;
 using System.IO;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Util.Inventory;
@@ -11,7 +10,7 @@ public sealed class KitWeaponTextService : BaseAlternateConfigurationFile
 {
     private readonly List<IAssetLink<ItemGunAsset>> _blacklist;
 
-    public KitWeaponTextService() : base(Path.Combine("Kits", "Ignored Weapons.yml"))
+    public KitWeaponTextService(IServiceProvider serviceProvider) : base(serviceProvider, Path.Combine("Kits", "Ignored Weapons.yml"))
     {
         _blacklist = new List<IAssetLink<ItemGunAsset>>(2);
         HandleChange();

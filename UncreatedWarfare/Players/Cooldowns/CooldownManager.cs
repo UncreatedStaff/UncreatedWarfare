@@ -31,7 +31,7 @@ public sealed class CooldownManager : BaseAlternateConfigurationFile, ILayoutHos
     /// </summary>
     public IReadOnlyList<CooldownTypeConfiguration> Cooldowns { get; private set; }
 
-    public CooldownManager(IPlayerService playerService) : base(Path.Combine("Cooldowns", "Cooldowns.yml"))
+    public CooldownManager(IServiceProvider serviceProvider, IPlayerService playerService) : base(serviceProvider, Path.Combine("Cooldowns", "Cooldowns.yml"))
     {
         _playerService = playerService;
 
