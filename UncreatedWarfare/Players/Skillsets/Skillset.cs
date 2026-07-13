@@ -19,10 +19,11 @@ public readonly struct Skillset : IEquatable<Skillset>, ITranslationArgument
         new Skillset(EPlayerOffense.OVERKILL, 7),
         new Skillset(EPlayerOffense.SHARPSHOOTER, 7),
         new Skillset(EPlayerOffense.PARKOUR, 2),
-        new Skillset(EPlayerOffense.EXERCISE, 2),
+        new Skillset(EPlayerOffense.EXERCISE, 3),
         new Skillset(EPlayerOffense.CARDIO, 5),
-        new Skillset(EPlayerOffense.DIVING, 2),
+        new Skillset(EPlayerOffense.DIVING, 5),
         new Skillset(EPlayerDefense.VITALITY, 5),
+        new Skillset(EPlayerDefense.TOUGHNESS, 5)
         new Skillset(EPlayerSupport.HEALING, 2),
     };
 
