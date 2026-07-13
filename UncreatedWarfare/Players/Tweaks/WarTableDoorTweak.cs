@@ -49,6 +49,12 @@ public class WarTableDoorTweak :
         if (!_teleportDoors.ContainsAsset(e.Object.asset))
             return;
 
+        if (!e.Player.Component<KitPlayerComponent>().IsArmed)
+        {
+            UpdateFlag(e.Player);
+            return;
+        }
+
         if (!_zoneStore.IsInsideZone(e.Player.Position, ZoneType.WarRoom, e.Player.Team.Faction))
         {
             UpdateFlag(e.Player);
@@ -115,7 +121,7 @@ public class WarTableDoorTweak :
             // already deploying
             player.SetFlag(_flagId, Flags.Deploying);
         }
-        else if (kpc.GetActiveEffectiveKit() is not { Class: > Class.Unarmed })
+        else if (!kpc.IsArmed)
         {
             // invalid kit
             player.SetFlag(_flagId, Flags.NoKit);

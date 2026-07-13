@@ -181,7 +181,7 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService, IDisposable
 
         GameObject obj = new GameObject(zone.Name)
         {
-            layer = LayerMasks.CLIP
+            layer = LayerMasks.TRAP
         };
 
         ColliderProximity prox = obj.AddComponent<ColliderProximity>();

@@ -334,10 +334,15 @@ public enum PlayerKey
     [Obsolete("This is not in use right now.", true), EditorBrowsable(EditorBrowsableState.Never)]
     Reserved = 8,
     SteadyAim = 9,
+    /// <summary>Plugin Key #1</summary>
     PluginKey0 = 10,
+    /// <summary>Plugin Key #2</summary>
     PluginKey1 = 11,
+    /// <summary>Plugin Key #3</summary>
     PluginKey2 = 12,
+    /// <summary>Plugin Key #4</summary>
     PluginKey3 = 13,
+    /// <summary>Plugin Key #5</summary>
     PluginKey4 = 14
 }
 

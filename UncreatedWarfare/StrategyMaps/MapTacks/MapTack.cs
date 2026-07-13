@@ -11,7 +11,6 @@ namespace Uncreated.Warfare.StrategyMaps.MapTacks;
 public class MapTack : IDisposable, ITransformObject
 {
     private List<WarfarePlayer>? _uiUpdateListeners;
-    private int _uiVehicleMask;
 
     private readonly StrategyMapManager _strategyMapManager;
     private readonly bool _leaveUiHandlerOpen;

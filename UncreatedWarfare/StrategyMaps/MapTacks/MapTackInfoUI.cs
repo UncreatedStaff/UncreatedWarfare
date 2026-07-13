@@ -543,6 +543,7 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>
         public bool HasShovelIcon;
         public int HealthBarCount;
         public double StoredHealth;
+        public float LastLookAwayTime;
 
         public MapTack? CurrentMapTack;
 

@@ -3,7 +3,7 @@ using Uncreated.Warfare.Squads.UI;
 
 namespace Uncreated.Warfare.Commands;
 
-[Command("squads", "sq"), MetadataFile]
+[Command("squads", "sq", "squad", "sqaud", "sqauds"), MetadataFile]
 internal sealed class SquadsCommand : IExecutableCommand
 {
     private readonly SquadMenuUI _ui;

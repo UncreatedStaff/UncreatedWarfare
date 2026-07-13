@@ -101,4 +101,16 @@ public class PlayerDied : PlayerEvent, IActionLoggableEvent
         ];
         return default;
     }
+
+    internal void ClearKiller()
+    {
+        Killer = null;
+        KillerBranch = null;
+        KillerClass = null;
+        KillerKitName = null;
+        KillerPoint = default;
+        KillerSession = null;
+        KillerTeam = null;
+        WasTeamkill = false;
+    }
 }

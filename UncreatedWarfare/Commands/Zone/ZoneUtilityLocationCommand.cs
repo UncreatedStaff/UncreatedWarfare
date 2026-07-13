@@ -23,6 +23,7 @@ internal sealed class ZoneUtilityLocationCommand : IExecutableCommand
 
         Vector3 p = Context.Player.Position;
         Context.Reply(_translations.ZoneUtilLocation, p.x, p.y, p.z, Context.Player.Yaw);
+        Context.ReplyString($"Reported pitch: {Context.Player.UnturnedPlayer.look.pitch}, yaw: {Context.Player.UnturnedPlayer.look.yaw}");
 
         return UniTask.CompletedTask;
     }

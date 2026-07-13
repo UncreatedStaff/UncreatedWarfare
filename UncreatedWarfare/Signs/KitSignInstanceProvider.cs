@@ -29,6 +29,7 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>,
     private readonly IKitDataStore _kitDataStore;
     private readonly PlayerNitroBoostService _nitroBoostService;
     private readonly IConfiguration _systemConfig;
+    private readonly IKitAccessService _kitAccessService;
     private readonly KitSignTranslations _translations;
     private readonly TextMeasurementService _measurementService;
     private readonly KitRequirementManager _kitRequirements;
@@ -49,12 +50,14 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>,
         TranslationInjection<KitSignTranslations> translations,
         PlayerNitroBoostService nitroBoostService,
         IConfiguration systemConfig,
+        IKitAccessService kitAccessService,
         TextMeasurementService measurementService,
         KitRequirementManager kitRequirements)
     {
         _kitDataStore = kitDataStore;
         _nitroBoostService = nitroBoostService;
         _systemConfig = systemConfig;
+        _kitAccessService = kitAccessService;
         _translations = translations.Value;
         _measurementService = measurementService;
         _kitRequirements = kitRequirements;
@@ -228,7 +231,7 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>,
         }
         else
         {
-            if (kit.IsFree)
+            if (kit.IsFree || _kitAccessService.ArePrimaryKitsGloballyAccessible)
             {
                 cost = _translations.KitFree.Translate(language);
             }

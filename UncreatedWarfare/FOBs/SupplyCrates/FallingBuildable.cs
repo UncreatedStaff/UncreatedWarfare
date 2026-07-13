@@ -42,7 +42,9 @@ public class FallingBuildable : FallingItem
                 break;
 
             position += Quaternion.Euler(0, placementYaw, 0) * new Vector3(0, 0, distanceBetweenAdjacentCrateCenters);
-            position.y = TerrainUtility.GetHighestPoint(position, 0);
+            //position.y = TerrainUtility.GetNextOpenPoint(position, distanceBetweenAdjacentCrateCenters / 2f, RayMasks.LARGE | RayMasks.MEDIUM | RayMasks.BARRICADE | RayMasks.STRUCTURE | RayMasks.GROUND | RayMasks.ENVIRONMENT | RayMasks.WATER);
+            position.y = TerrainUtility.GetHighestPoint(in position, 0f);
+            // TODO, keep trying to fix the issue where boxes land on the roof if dropped in a hangar
         }
 
         rotation = Quaternion.Euler(-90f, placementYaw, 0f);

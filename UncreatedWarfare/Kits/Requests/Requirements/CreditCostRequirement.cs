@@ -7,7 +7,7 @@ public sealed class CreditCostRequirement(IKitAccessService kitAccessService) : 
 {
     public KitRequirementResult AcceptCached<TState>(IKitRequirementVisitor<TState> visitor, in KitRequirementResolutionContext<TState> ctx)
     {
-        if (ctx.Kit.CreditCost <= 0 || ctx.Component.IsKitAccessible(ctx.Kit.Key))
+        if (ctx.Kit.CreditCost <= 0 || kitAccessService.ArePrimaryKitsGloballyAccessible || ctx.Component.IsKitAccessible(ctx.Kit.Key))
             return KitRequirementResult.Yes;
 
         visitor.AcceptCreditCostNotMet(in ctx, ctx.Kit.CreditCost, ctx.Player.CachedPoints.Credits);
@@ -20,7 +20,7 @@ public sealed class CreditCostRequirement(IKitAccessService kitAccessService) : 
 
         async Task<KitRequirementResult> Core(IKitRequirementVisitor<TState> visitor, KitRequirementResolutionContext<TState> ctx, CancellationToken token)
         {
-            if (ctx.Kit.CreditCost <= 0 || await kitAccessService.HasAccessAsync(ctx.Player.Steam64, ctx.Kit.Key, token).ConfigureAwait(false))
+            if (ctx.Kit.CreditCost <= 0 || kitAccessService.ArePrimaryKitsGloballyAccessible || await kitAccessService.HasAccessAsync(ctx.Player.Steam64, ctx.Kit.Key, token).ConfigureAwait(false))
                 return KitRequirementResult.Yes;
 
             visitor.AcceptCreditCostNotMet(in ctx, ctx.Kit.CreditCost, ctx.Player.CachedPoints.Credits);

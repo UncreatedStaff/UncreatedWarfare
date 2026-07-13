@@ -1,7 +1,11 @@
+#define SESSION_TIMER_DEBUG
+
+using DanielWillett.ReflectionTools;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using Uncreated.Warfare.Database.Abstractions;
@@ -216,11 +220,19 @@ public class SessionManager :
 
     public async Task StartNewSessionForAllPlayers(bool startedGame, CancellationToken token = default)
     {
+
+#if SESSION_TIMER_DEBUG
+        Stopwatch sw = Stopwatch.StartNew();
+#endif
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
             await UniTask.SwitchToMainThread(token);
 
+#if SESSION_TIMER_DEBUG
+            sw.Stop();
+            _logger.LogInformation($"Stopwatch wait for enter: {sw.GetElapsedMilliseconds():F0} ms");
+#endif
             WarfarePlayer[] onlinePlayers = _playerService.OnlinePlayers.ToArray();
             SessionRecordPair[] sessionData = new SessionRecordPair[onlinePlayers.Length];
             bool anyPrev = false;
@@ -243,7 +255,16 @@ public class SessionManager :
                 FixupSession(_dbContext, record);
             }
 
+#if SESSION_TIMER_DEBUG
+            sw.Restart();
+#endif
+
             await _dbContext.SaveChangesAsync(token).ConfigureAwait(false);
+
+#if SESSION_TIMER_DEBUG
+            sw.Stop();
+            _logger.LogInformation($"Stopwatch save first: {sw.GetElapsedMilliseconds():F0} ms ({onlinePlayers.Length} player(s))");
+#endif
 
             if (anyPrev)
             {
@@ -259,15 +280,33 @@ public class SessionManager :
                     (previousToRemove ??= new List<SessionRecord>(4)).Add(previous);
                 }
 
+#if SESSION_TIMER_DEBUG
+                sw.Restart();
+#endif
+
                 await _dbContext.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
+
+#if SESSION_TIMER_DEBUG
+                sw.Stop();
+                _logger.LogInformation($"Stopwatch save previous: {sw.GetElapsedMilliseconds():F0} ms");
+#endif
 
                 if (previousToRemove != null)
                 {
                     foreach (SessionRecord r in previousToRemove)
                         _dbContext.Remove(r);
 
+                    sw.Restart();
+
                     await _dbContext.SaveChangesAsync(CancellationToken.None);
+
+                    sw.Stop();
+                    _logger.LogInformation($"Stopwatch save remove: {sw.GetElapsedMilliseconds():F0} ms");
                 }
+
+#if SESSION_TIMER_DEBUG
+                sw.Restart();
+#endif
 
                 for (int i = 0; i < onlinePlayers.Length; ++i)
                 {
@@ -287,9 +326,18 @@ public class SessionManager :
                         allowAsync: false
                     );
                 }
+
+#if SESSION_TIMER_DEBUG
+                sw.Stop();
+                _logger.LogInformation($"Stopwatch SessionEnded events: {sw.GetElapsedMilliseconds():F0} ms");
+#endif
             }
 
             _logger.LogConditional("Created sessions for all players.");
+
+#if SESSION_TIMER_DEBUG
+            sw.Restart();
+#endif
 
             for (int i = 0; i < onlinePlayers.Length; ++i)
             {
@@ -304,6 +352,11 @@ public class SessionManager :
                     allowAsync: false
                 );
             }
+
+#if SESSION_TIMER_DEBUG
+            sw.Stop();
+            _logger.LogInformation($"Stopwatch SessionCreated events: {sw.GetElapsedMilliseconds():F0} ms");
+#endif
         }
         catch (Exception ex)
         {
@@ -531,6 +584,7 @@ public class SessionManager :
                 await StartNewSession(player, false, player.DisconnectToken);
                 _logger.LogConditional("Started new session for player {0} (" + context + ").", player);
             }
+            catch (OperationCanceledException) when (!player.IsOnline) { }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error starting new session for player {0} (" + context + ").", player);

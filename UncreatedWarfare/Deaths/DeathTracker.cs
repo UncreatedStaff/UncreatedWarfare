@@ -543,7 +543,11 @@ public class DeathTracker : IHostedService//, IEventListener<VehicleExploded>
                     }
                 }
 
-                e.WasTeamkill = false;
+                if (e.WasTeamkill)
+                {
+                    e.ClearKiller();
+                    e.WasSuicide = true;
+                }
                 break;
             
             case EDeathCause.MISSILE:

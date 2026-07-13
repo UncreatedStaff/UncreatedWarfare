@@ -276,6 +276,7 @@ public class StrategyMapManager :
 
     private void OnUpdated()
     {
+        float time = Time.realtimeSinceStartup;
         foreach (ZoneProximity x in _zoneStore!.ProximityZones!)
         {
             if (x.Zone.Type != ZoneType.WarRoom || x.Proximity is not ITrackingProximity<WarfarePlayer> trackingProximity)
@@ -328,17 +329,40 @@ public class StrategyMapManager :
                         break;
                 }
 
-                if (tack?.UIHandler == null)
+                MapTackInfoUI.Data? data = UI!.GetData<MapTackInfoUI.Data>(player.Steam64);
+                if (tack == null)
                 {
+                    // not looking at a tack
+                    if (data != null && time - data.LastLookAwayTime > 0.65f)
+                    {
+                        UI!.TryClose(player);
+                    }
+                }
+                else if (tack.UIHandler == null)
+                {
+                    // tack doesn't have a UI
                     UI!.TryClose(player);
                 }
                 else
                 {
-                    MapTackInfoUI.Data data = UI!.GetOrAddData(player.Steam64);
-                    if (!data.HasUI || data.CurrentMapTack != tack)
+                    // is looking at a tack
+                    if (data == null || !data.HasUI)
                     {
                         UI.Open(player, tack);
                     }
+                    else if (data.CurrentMapTack != tack)
+                    {
+                        if (!data.IsClosing)
+                        {
+                            if (data.HasUI)
+                                UI.TryClose(player);
+                            else
+                                UI.Open(player, tack);
+                        }
+                    }
+                    
+                    data ??= UI!.GetOrAddData(player.Steam64);
+                    data.LastLookAwayTime = time;
                 }
             }
         }

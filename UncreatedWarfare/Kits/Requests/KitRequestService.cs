@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using System;
+using System.Collections.Immutable;
 using System.Linq;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Database;
@@ -19,6 +20,7 @@ using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Skillsets;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Players.Unlocks;
+using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Signs;
 using Uncreated.Warfare.Squads.UI;
 using Uncreated.Warfare.Stats;
@@ -26,13 +28,16 @@ using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Inventory;
+using Uncreated.Warfare.Util.List;
 using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Kits.Requests;
 
-public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, IRequestHandler<Kit, Kit>, IDisposable
+public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, ILayoutHostedService, IRequestHandler<Kit, Kit>, IDisposable
 {
     public const string DefaultKitId = "default";
+
+    private LinearDictionary<Team, Kit> _unarmedKitCache = new LinearDictionary<Team, Kit>(0);
 
     private readonly IKitDataStore _kitDataStore;
     private readonly ITranslationValueFormatter _valueFormatter;
@@ -52,11 +57,14 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
     private readonly ChatService _chatService;
     private readonly ILogger<KitRequestService> _logger;
     private readonly KitRequirementManager _kitRequirements;
+    private readonly ITeamManager<Team> _teamManager;
     private readonly ZoneStore _zoneStore;
 
     private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
 
     private readonly KitRequirementVisitor _requestRequirementVisitor;
+
+    private Kit? _cachedDefaultKit;
 
     public KitRequestService(
         IKitDataStore kitDataStore,
@@ -77,7 +85,8 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         ChatService chatService,
         ZoneStore zoneStore,
         ILogger<KitRequestService> logger,
-        KitRequirementManager kitRequirements)
+        KitRequirementManager kitRequirements,
+        ITeamManager<Team> teamManager)
     {
         _kitDataStore = kitDataStore;
         _loadoutService = loadoutService;
@@ -99,8 +108,42 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         _zoneStore = zoneStore;
         _logger = logger;
         _kitRequirements = kitRequirements;
+        _teamManager = teamManager;
 
         _requestRequirementVisitor = new KitRequirementVisitor(this);
+    }
+
+    async UniTask ILayoutHostedService.StartAsync(CancellationToken token)
+    {
+        _cachedDefaultKit = await _kitDataStore.QueryKitAsync(DefaultKitId, KitInclude.Giveable, token);
+
+        List<uint> kitIds = _teamManager.AllTeams
+            .Select(x => x.Faction.UnarmedKit.GetValueOrDefault())
+            .Where(x => x != 0)
+            .ToList();
+
+        LinearDictionary<Team, Kit> cachedKits = new LinearDictionary<Team, Kit>();
+
+        Kit[] kits = await _kitDataStore.QueryKitsAsync(KitInclude.Giveable, x => kitIds.Contains(x.PrimaryKey), token: token);
+        foreach (Team team in _teamManager.AllTeams)
+        {
+            if (!team.Faction.UnarmedKit.HasValue)
+                continue;
+
+            Kit? kit = Array.Find(kits, x => x.Key == team.Faction.UnarmedKit.Value);
+            if (kit == null)
+                continue;
+
+            cachedKits[team] = kit;
+        }
+
+        _unarmedKitCache = cachedKits;
+    }
+
+    UniTask ILayoutHostedService.StopAsync(CancellationToken token)
+    {
+        _unarmedKitCache = new LinearDictionary<Team, Kit>(0);
+        return UniTask.CompletedTask;
     }
 
     public enum RevertResult
@@ -375,7 +418,6 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
             List<uint> kits = await _kitDataStore.QueryListAsync(kits => kits
                 .OrderByDescending(x => x.Class == Class.Rifleman)
                 .Where(x => x.Type == KitType.Public
-                            && x.Season == WarfareModule.Season
                             && x.PremiumCost == 0
                             && !x.RequiresNitro
                             && x.Delays.Count == 0
@@ -410,14 +452,63 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         }
     }
 
+    internal bool TryGiveDefaultKitMainThread(WarfarePlayer player, bool silent = false)
+    {
+        GameThread.AssertCurrent();
+
+        Kit? kit = _cachedDefaultKit;
+        if (kit == null)
+        {
+            return false;
+        }
+
+        UniTask task = GiveKitWithInfoIntl(player, new KitBestowData(kit) { Silent = silent }, false, [ ], [ ]);
+        if (task.Status == UniTaskStatus.Pending)
+        {
+            UniTask t2 = task.Preserve();
+            UniTask.Create(async () =>
+            {
+                try
+                {
+                    await t2;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error giving kit.");
+                }
+            });
+        }
+
+        return true;
+    }
+
+    private async Task<Kit?> TryGetDefaultKit(Team team, KitInclude include, CancellationToken token = default)
+    {
+        Kit? kit;
+        if ((include & KitInclude.Giveable) == KitInclude.Giveable)
+        {
+            if (_unarmedKitCache.TryGetValue(team, out kit))
+            {
+                return kit;
+            }
+        }
+
+        uint unarmedKit = team.Faction.UnarmedKit.GetValueOrDefault();
+        if (unarmedKit != 0)
+        {
+            kit = await _kitDataStore.QueryKitAsync(unarmedKit, KitInclude.Giveable, token).ConfigureAwait(false);
+            if (kit != null)
+                return kit;
+        }
+
+        return _cachedDefaultKit;
+    }
+
     private async Task<bool> GiveUnarmedKitAsyncIntl(WarfarePlayer player, bool silent = false, CancellationToken token = default)
     {
-        Kit? kit = null;
-        uint unarmedKit = player.Team.Faction.UnarmedKit.GetValueOrDefault();
-        if (unarmedKit != 0)
-            kit = await _kitDataStore.QueryKitAsync(unarmedKit, KitInclude.Giveable, token).ConfigureAwait(false);
+        Team team = player.Team;
 
-        kit ??= await _kitDataStore.QueryKitAsync(DefaultKitId, KitInclude.Giveable, token).ConfigureAwait(false);
+        Kit? kit = await TryGetDefaultKit(team, KitInclude.Giveable, token);
 
         if (!player.IsOnline)
             return false;
@@ -431,7 +522,10 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         }
 
         if (activeKit != null)
+        {
             await RemoveKitAsync(player, token);
+        }
+
         return false;
     }
 
@@ -578,16 +672,21 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
             .ConfigureAwait(false);
 
         await UniTask.SwitchToMainThread(token);
+        await GiveKitWithInfoIntl(player, kitBestowData, isRequest, layouts, hotkeys);
+    }
 
-        // update hotkey list
+    private UniTask GiveKitWithInfoIntl(WarfarePlayer player, KitBestowData kitBestowData, bool isRequest, List<KitLayoutTransformation> layouts, List<KitHotkey> hotkeys)
+    {
+        GameThread.AssertCurrent();
+
         GiveKitMainThread(player, kitBestowData, layouts, hotkeys, false);
 
         CurrentKitState? kit = player.Component<KitPlayerComponent>().ActiveKit;
 
         if (kit == null || kit.Key != kitBestowData.Kit.Key)
-            return;
+            return UniTask.CompletedTask;
 
-        await _eventDispatcher.DispatchEventAsync(
+        return _eventDispatcher.DispatchEventAsync(
             new PlayerKitChanged
             {
                 Player = player,
@@ -602,6 +701,8 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
     /// </summary>
     public void GiveKitMainThread(WarfarePlayer player, KitBestowData kitBestowData)
     {
+        GameThread.AssertCurrent();
+
         GiveKitMainThread(player, kitBestowData, null, null, false);
     }
 
@@ -832,5 +933,4 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
             ctx.State.Handler.MissingUnlockRequirement(ctx.Player, ctx.Kit, requirement);
         }
     }
-
 }

@@ -61,6 +61,11 @@ public class KitPlayerComponent : IPlayerComponent
     public bool HasKit => ActiveKit != null;
 
     /// <summary>
+    /// If the player has either no kit equipped or an unarmed kit equipped.
+    /// </summary>
+    public bool IsArmed => !IsClass(Class.None) && !IsClass(Class.Unarmed);
+
+    /// <summary>
     /// If the player has a preview kit equipped.
     /// </summary>
     public bool HasPreviewKit => ActiveKit is { IsPreview: true };

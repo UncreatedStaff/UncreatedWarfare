@@ -4,9 +4,10 @@ using DanielWillett.ModularRpcs.Async;
 using DanielWillett.ModularRpcs.Exceptions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Primitives;
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
@@ -14,7 +15,6 @@ using System.Text;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Database.Manual;
 using Uncreated.Warfare.Kits.Loadouts;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Players.Management;
@@ -24,6 +24,11 @@ namespace Uncreated.Warfare.Kits;
 
 public interface IKitAccessService
 {
+    /// <summary>
+    /// Whether or not kit access should be ignored. Used for tests sometimes to give players access to all kits.
+    /// </summary>
+    bool ArePrimaryKitsGloballyAccessible { get; }
+
     /// <summary>
     /// Check if a player has access to a kit.
     /// </summary>
@@ -83,10 +88,16 @@ public partial class MySqlKitAccessService : IKitAccessService, IDisposable
     private readonly LoadoutService? _loadoutService;
     private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
 
+    private readonly IConfiguration? _configuration;
+    private IDisposable? _changeToken;
+
     /// <summary>
     /// Invoked when a player's kit access is updated remotely or locally.
     /// </summary>
     public event KitAccessUpdatedHandler? PlayerAccessUpdated;
+
+    /// <inheritdoc />
+    public bool ArePrimaryKitsGloballyAccessible { get; private set; }
 
     public MySqlKitAccessService(IServiceProvider serviceProvider, ILogger<MySqlKitAccessService> logger)
     {
@@ -99,6 +110,10 @@ public partial class MySqlKitAccessService : IKitAccessService, IDisposable
             _kitSignService = serviceProvider.GetRequiredService<KitSignService>();
             _kitDataStore = serviceProvider.GetRequiredService<IKitDataStore>();
             _loadoutService = serviceProvider.GetRequiredService<LoadoutService>();
+            _configuration = serviceProvider.GetRequiredService<IConfiguration>();
+
+            _changeToken = ChangeToken.OnChange(_configuration.GetReloadToken, OnConfigReloaded);
+            OnConfigReloaded();
         }
         else
         {
@@ -106,6 +121,11 @@ public partial class MySqlKitAccessService : IKitAccessService, IDisposable
         }
 
         _dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
+    }
+
+    private void OnConfigReloaded()
+    {
+        ArePrimaryKitsGloballyAccessible = _configuration != null && _configuration.GetValue<bool>("tests:full_kit_access");
     }
 
     /// <inheritdoc />
@@ -568,6 +588,7 @@ public partial class MySqlKitAccessService : IKitAccessService, IDisposable
     void IDisposable.Dispose()
     {
         _semaphore.Dispose();
+        Interlocked.Exchange(ref _changeToken, null)?.Dispose();
     }
 
     [RpcReceive]

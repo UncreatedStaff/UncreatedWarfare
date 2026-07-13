@@ -71,6 +71,7 @@ using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Cooldowns;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Permissions;
+using Uncreated.Warfare.Players.Skillsets;
 using Uncreated.Warfare.Players.Tweaks;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Plugins;
@@ -935,6 +936,9 @@ public sealed class WarfareModule
         bldr.RegisterType<KitRequirementManager>()
             .AsSelf().InstancePerMatchingLifetimeScope(LifetimeScopeTags.Layout);
         
+        bldr.RegisterType<DefaultSkillsetConfiguration>()
+            .SingleInstance();
+        
         bldr.RegisterType<PunchToRequestTweaks>()
             .AsSelf().AsImplementedInterfaces();
 
@@ -1146,6 +1150,9 @@ public sealed class WarfareModule
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Layout);        
         bldr.RegisterType<MapMarkerTweaks>()
+            .AsSelf().AsImplementedInterfaces()
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Layout);
+        bldr.RegisterType<JoinPermissionTweak>()
             .AsSelf().AsImplementedInterfaces()
             .SingleInstance();
 
