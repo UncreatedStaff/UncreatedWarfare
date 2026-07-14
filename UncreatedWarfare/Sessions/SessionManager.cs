@@ -571,7 +571,7 @@ public class SessionManager :
 
     private void TryStartCreateSessionForPlayerIfNeeded(WarfarePlayer player, string context)
     {
-        if (player.IsDisconnected || !IsSessionExpired(player))
+        if (player.IsDisconnected || !IsSessionExpired(player) || !_module.IsLayoutActive() || !_module.GetActiveLayout().IsActive)
         {
             _logger.LogConditional("Skipping new session for player {0} (" + context + ").", player);
             return;

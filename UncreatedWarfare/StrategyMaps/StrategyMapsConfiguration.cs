@@ -9,7 +9,7 @@ public sealed class StrategyMapsConfiguration : BaseAlternateConfigurationFile
 {
     public IReadOnlyList<MapTableInfo> MapTables { get; private set; } = null!;
 
-    public StrategyMapsConfiguration(IServiceProvider serviceProvider) : base(serviceProvider, "StrategyMaps.yml")
+    public StrategyMapsConfiguration(IServiceProvider serviceProvider) : base(serviceProvider, "StrategyMaps.yml", mapSpecific: false)
     {
         HandleChange();
     }

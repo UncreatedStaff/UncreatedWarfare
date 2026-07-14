@@ -926,7 +926,10 @@ public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoin
                         tracker.ReadProgress(ref reader);
                     }
 
-                    tracker.InvokeUpdate();
+                    if (_questService.TrackQuests)
+                    {
+                        tracker.InvokeUpdate();
+                    }
                 }
 
                 tracker.Updated += TrackerOnUpdated;

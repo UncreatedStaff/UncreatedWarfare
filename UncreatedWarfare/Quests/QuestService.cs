@@ -35,6 +35,23 @@ public class QuestService : ILayoutHostedService, IEventListenerProvider, IDispo
 
     public IReadOnlyList<QuestTracker> ActiveTrackers { get; }
 
+    public event Action<bool>? TrackQuestsUpdated;
+
+    public bool TrackQuests
+    {
+        get;
+        set
+        {
+            GameThread.AssertCurrent();
+
+            if (value == field)
+                return;
+
+            field = value;
+            TrackQuestsUpdated?.Invoke(value);
+        }
+    }
+
     public QuestService(IServiceProvider serviceProvider, ILogger<QuestService> logger)
     {
         _logger = logger;
@@ -403,6 +420,11 @@ public class QuestService : ILayoutHostedService, IEventListenerProvider, IDispo
 
     void IEventListenerProvider.AppendListeners<TEventArgs>(TEventArgs args, List<object> listeners)
     {
+        if (!TrackQuests)
+        {
+            return;
+        }
+
         foreach (QuestTracker tracker in _activeTrackers)
         {
             if (tracker is IEventListener<TEventArgs> el)

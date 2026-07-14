@@ -11,6 +11,7 @@ using Uncreated.Warfare.Events.Models.Fobs.Shovelables;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Events.Models.Vehicles;
 using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.FOBs.Construction;
 using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Layouts;
 using Uncreated.Warfare.Layouts.Phases;
@@ -389,7 +390,7 @@ public class PointsRewardsEvents :
             @event = _points.GetEvent("FobBuilt");
             translation = _translations.XPToastFOBBuilt;
         }
-        else if (assetConfiguration.GetAssetLink<ItemBarricadeAsset>("Buildables:Gameplay:RepairStation").MatchAsset(e.Shovelable.Info.CompletedStructure))
+        else if (e.Shovelable.Info.ConstuctionType == ShovelableType.RepairStation)
         {
             @event = _points.GetEvent("RepairStationBuilt");
             translation = _translations.XPToastRepairStationBuilt;

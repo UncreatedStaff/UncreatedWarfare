@@ -10,7 +10,7 @@ public sealed class KitWeaponTextService : BaseAlternateConfigurationFile
 {
     private readonly List<IAssetLink<ItemGunAsset>> _blacklist;
 
-    public KitWeaponTextService(IServiceProvider serviceProvider) : base(serviceProvider, Path.Combine("Kits", "Ignored Weapons.yml"))
+    public KitWeaponTextService(IServiceProvider serviceProvider) : base(serviceProvider, Path.Combine("Kits", "Ignored Weapons.yml"), mapSpecific: false)
     {
         _blacklist = new List<IAssetLink<ItemGunAsset>>(2);
         HandleChange();

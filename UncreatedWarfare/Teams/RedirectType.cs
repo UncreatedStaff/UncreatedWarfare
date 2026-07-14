@@ -1,3 +1,4 @@
+using System;
 using Uncreated.Warfare.Database.Automation;
 using Uncreated.Warfare.Translations;
 
@@ -25,11 +26,13 @@ public enum RedirectType : byte
     BuildSupply,
     [TranslatableValue("Rally Point")]
     RallyPoint,
-    [TranslatableValue("FOB Radio")]
+    [TranslatableValue("FOB Radio", IsPrioritizedTranslation = false)]
+    [Obsolete("Unused since season 4.")]
     Radio,
     [TranslatableValue("Ammo Bag")]
     AmmoBag,
-    [TranslatableValue("Ammo Crate")]
+    [TranslatableValue("Ammo Crate", IsPrioritizedTranslation = false)]
+    [Obsolete("Unused since season 4.")]
     AmmoCrate,
     [TranslatableValue("Repair Station")]
     RepairStation,
@@ -39,17 +42,20 @@ public enum RedirectType : byte
     VehicleBay,
     [TranslatableValue("Entrenching Tool")]
     EntrenchingTool,
-    [TranslatableValue("UAV", Description = "Unmanned Aerial Vehicle")]
+    [TranslatableValue("UAV", Description = "Unmanned Aerial Vehicle", IsPrioritizedTranslation = false)]
+    [Obsolete("Never added.")]
     UAV,
     [TranslatableValue("Built Repair Station")]
     RepairStationBuilt,
-    [TranslatableValue("Built Ammo Crate")]
+    [TranslatableValue("Built Ammo Crate", IsPrioritizedTranslation = false)]
+    [Obsolete("Unused since season 4.")]
     AmmoCrateBuilt,
     [TranslatableValue("Built FOB Bunker")]
     BunkerBuilt,
     [TranslatableValue("Insurgency Cache")]
     Cache,
-    [TranslatableValue("Damaged Radio")]
+    [TranslatableValue("Damaged Radio", IsPrioritizedTranslation = false)]
+    [Obsolete("Unused since season 4.")]
     RadioDamaged,
     [TranslatableValue("Laser Designator")]
     LaserDesignator,

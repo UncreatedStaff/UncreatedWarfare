@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections.Generic;
 using System.Text.Json;
 using Uncreated.Framework.UI;
 using Uncreated.Warfare.Players;

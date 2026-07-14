@@ -1,9 +1,10 @@
 using Microsoft.Extensions.Configuration;
-using Stripe;
+using Microsoft.Extensions.Primitives;
 using System;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Layouts;
@@ -13,6 +14,7 @@ using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.UI;
+using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Addons;
 using Uncreated.Warfare.Translations.Util;
@@ -21,7 +23,7 @@ using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.Stats;
 
-public class PointsService : IEventListener<PlayerTeamChanged> // todo player equipment changed
+public class PointsService : IEventListener<PlayerTeamChanged>, IEarlyLevelHostedService, IDisposable // todo player equipment changed
 {
     public delegate void HandlePointsChanged(WarfarePlayer player, double deltaXp, double deltaCredits, double deltaReputation);
 
@@ -30,30 +32,55 @@ public class PointsService : IEventListener<PlayerTeamChanged> // todo player eq
     private readonly IPointsStore _pointsSql;
     private readonly IPlayerService _playerService;
     private readonly ILogger<PointsService> _logger;
-    private readonly PointsUI _ui;
-    private readonly IConfigurationSection _event;
     private readonly PointsTranslations _translations;
-    private readonly WarfareRank _startingRank;
-    private readonly WarfareRank[] _ranks;
+    private PointsUI? _ui;
+    private IConfigurationSection _event;
+    private IDisposable? _changeToken;
+    private WarfareRank? _startingRank;
+    private WarfareRank[]? _ranks;
 
     private static readonly Color32 MessageColor = new Color32(173, 173, 173, 255);
 
     public double DefaultCredits => _configuration.GetValue<double>("DefaultCredits");
     public double GlobalMultiplier => _configuration.GetValue("GlobalPointMultiplier", 1d);
 
-    public Color32 CreditsColor => HexStringHelper.TryParseColor32(_configuration["CreditsColor"], CultureInfo.InvariantCulture, out Color32 color)
-                                       ? color with { a = 255 }
-                                       : new Color32(184, 255, 193, 255);
+    /// <summary>
+    /// Standard color of the credits symbol. Usually a light lime green.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Called before level started loading, config hasn't been loaded yet.</exception>
+    public Color32 CreditsColor
+    {
+        get
+        {
+            CheckLoaded();
 
-    public Color32 ExperienceColor => HexStringHelper.TryParseColor32(_configuration["ExperienceColor"], CultureInfo.InvariantCulture, out Color32 color)
-                                          ? color with { a = 255 }
-                                          : new Color32(244, 205, 87, 255);
+            return HexStringHelper.TryParseColor32(_configuration["CreditsColor"], CultureInfo.InvariantCulture, out Color32 color)
+                ? color with { a = 255 }
+                : new Color32(184, 255, 193, 255);
+        }
+    }
+
+    /// <summary>
+    /// Standard color of experience. Usually a light gold.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Called before level started loading, config hasn't been loaded yet.</exception>
+    public Color32 ExperienceColor
+    {
+        get
+        {
+            CheckLoaded();
+
+            return HexStringHelper.TryParseColor32(_configuration["ExperienceColor"], CultureInfo.InvariantCulture, out Color32 color)
+                ? color with { a = 255 }
+                : new Color32(244, 205, 87, 255);
+        }
+    }
 
 
     /// <summary>
     /// Ordered list of all configured ranks.
     /// </summary>
-    public IReadOnlyList<WarfareRank> Ranks { get; }
+    public IReadOnlyList<WarfareRank> Ranks { get; private set; }
 
     /// <summary>
     /// Invoked when an online player's XP, Credits, and/or Reputation is changed.
@@ -66,7 +93,6 @@ public class PointsService : IEventListener<PlayerTeamChanged> // todo player eq
         IPlayerService playerService,
         TranslationInjection<PointsTranslations> translations,
         ILogger<PointsService> logger,
-        PointsUI ui,
         WarfareModule module)
     {
         _translations = translations.Value;
@@ -74,39 +100,86 @@ public class PointsService : IEventListener<PlayerTeamChanged> // todo player eq
         _pointsSql = pointsSql;
         _playerService = playerService;
         _logger = logger;
-        _ui = ui;
         _module = module;
-        _event = configuration.GetSection("Events");
-        IConfigurationSection levelsSection = configuration.GetSection("Levels");
-
-        int ct = 0;
-        using (IEnumerator<IConfigurationSection> enumerator = levelsSection.GetChildren().GetEnumerator())
-        {
-            if (!enumerator.MoveNext())
-                throw new InvalidOperationException("There must be at least one level defined in config.");
-
-            // the value of Next is initialized in this constructor and it creates a linked list kind of structure of ranks
-            _startingRank = new WarfareRank(null, enumerator, 0, ref ct);
-        }
-
-        _ranks = new WarfareRank[ct];
-
-        ct = -1;
-        for (WarfareRank? rank = _startingRank; rank != null; rank = rank.Next)
-        {
-            _ranks[++ct] = rank;
-        }
-
-        Ranks = new ReadOnlyCollection<WarfareRank>(_ranks);
+        Ranks = new List<WarfareRank>(0);
+        _event = ConfigurationHelper.EmptySection;
     }
+
+    UniTask IEarlyLevelHostedService.EarlyLoadLevelAsync(CancellationToken token)
+    {
+        _ui = _module.ServiceProvider.ResolveOptional<PointsUI>();
+
+        _changeToken = ChangeToken.OnChange(_configuration.GetReloadToken, OnConfigUpdated);
+        OnConfigUpdated();
+
+        return UniTask.CompletedTask;
+    }
+
+    private void OnConfigUpdated()
+    {
+        lock (this)
+        {
+            _event = _configuration.GetSection("Events");
+            IConfigurationSection levelsSection = _configuration.GetSection("Levels");
+
+            int ct = 0;
+            WarfareRank startingRank;
+            using (IEnumerator<IConfigurationSection> enumerator = levelsSection.GetChildren().GetEnumerator())
+            {
+                if (!enumerator.MoveNext())
+                    throw new InvalidOperationException("There must be at least one level defined in config.");
+
+                // the value of Next is initialized in this constructor and it creates a linked list kind of structure of ranks
+                startingRank = new WarfareRank(null, enumerator, 0, ref ct);
+            }
+
+            WarfareRank[] ranks = new WarfareRank[ct];
+
+            ct = -1;
+            for (WarfareRank? rank = startingRank; rank != null; rank = rank.Next)
+            {
+                ranks[++ct] = rank;
+            }
+
+            _startingRank = startingRank;
+            _ranks = ranks;
+            Ranks = new ReadOnlyCollection<WarfareRank>(ranks);
+        }
+
+        if (!Level.isLoaded || _ui == null)
+            return;
+        
+        UniTask.Create(async () =>
+        {
+            await UniTask.SwitchToMainThread();
+            foreach (WarfarePlayer player in _playerService.OnlinePlayers)
+            {
+                _ui.UpdatePointsUI(player);
+            }
+        });
+    }
+
+#pragma warning disable CS8774 // not checked for null
+
+    [MemberNotNull(nameof(_ranks))]
+    [MemberNotNull(nameof(_startingRank))]
+    private void CheckLoaded()
+    {
+        if (_ranks == null)
+            throw new InvalidOperationException("Configuration not yet loaded.");
+    }
+
+#pragma warning restore CS8774
 
     /// <summary>
     /// Find rank info from a one-based level.
     /// </summary>
     /// <exception cref="ArgumentOutOfRangeException">Thrown if a value less than or equal to 0 is inputted for <paramref name="level"/>.</exception>
+    /// <exception cref="InvalidOperationException">Called before level started loading, config hasn't been loaded yet.</exception>
     public WarfareRank? GetRankFromLevel(int level)
     {
         --level;
+        CheckLoaded();
 
         if (level < 0)
             throw new ArgumentOutOfRangeException(nameof(level));
@@ -117,8 +190,11 @@ public class PointsService : IEventListener<PlayerTeamChanged> // todo player eq
     /// <summary>
     /// Find rank info from an experience value.
     /// </summary>
+    /// <exception cref="InvalidOperationException">Called before level started loading, config hasn't been loaded yet.</exception>
     public WarfareRank GetRankFromExperience(double experience)
     {
+        CheckLoaded();
+
         if (experience < 0)
             return _startingRank;
 
@@ -134,8 +210,11 @@ public class PointsService : IEventListener<PlayerTeamChanged> // todo player eq
     /// <summary>
     /// Find rank info from its name, then its abbreviation.
     /// </summary>
+    /// <exception cref="InvalidOperationException">Called before level started loading, config hasn't been loaded yet.</exception>
     public WarfareRank? GetRankByName(string name)
     {
+        CheckLoaded();
+
         for (WarfareRank? rank = _startingRank; rank != null; rank = rank.Next)
         {
             if (rank.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase))
@@ -155,8 +234,11 @@ public class PointsService : IEventListener<PlayerTeamChanged> // todo player eq
     /// <summary>
     /// Get an event meant for admin commands. Adds raw point values.
     /// </summary>
+    /// <exception cref="InvalidOperationException">Called before level started loading, config hasn't been loaded yet.</exception>
     public ResolvedEventInfo GetAdminEvent(in LanguageSet set, double? xp, double? credits, double? reputation)
     {
+        CheckLoaded();
+
         return new ResolvedEventInfo(default, xp, credits, reputation)
             .WithTranslation(_translations.XPToastFromOperator, set);
     }
@@ -165,6 +247,7 @@ public class PointsService : IEventListener<PlayerTeamChanged> // todo player eq
     /// Get an event meant for credit purchases.
     /// </summary>
     /// <param name="credits">The number of credits to remove. This should not be negative.</param>
+    /// <exception cref="InvalidOperationException">Called before level started loading, config hasn't been loaded yet.</exception>
     public ResolvedEventInfo GetPurchaseEvent(WarfarePlayer player, double credits)
     {
         EventInfo purchase = GetEvent("Purchase");
@@ -175,14 +258,18 @@ public class PointsService : IEventListener<PlayerTeamChanged> // todo player eq
     /// <summary>
     /// Get an event from settings.
     /// </summary>
+    /// <exception cref="InvalidOperationException">Called before level started loading, config hasn't been loaded yet.</exception>
     public EventInfo GetEvent(string eventId)
     {
+        CheckLoaded();
+
         return new EventInfo(_event.GetSection(eventId));
     }
 
     /// <summary>
     /// Apply an event and trigger updates for the necessary UI for the current season.
     /// </summary>
+    /// <exception cref="InvalidOperationException">Called before level started loading, config hasn't been loaded yet.</exception>
     public Task ApplyEvent(WarfarePlayer player, ResolvedEventInfo @event, CancellationToken token = default)
     {
         return ApplyEvent(player.Steam64, player.Team.Faction.PrimaryKey, WarfareModule.Season, @event, token);
@@ -191,6 +278,7 @@ public class PointsService : IEventListener<PlayerTeamChanged> // todo player eq
     /// <summary>
     /// Apply an event and trigger updates for the necessary UI for the current season.
     /// </summary>
+    /// <exception cref="InvalidOperationException">Called before level started loading, config hasn't been loaded yet.</exception>
     public Task ApplyEvent(CSteamID playerId, uint factionId, ResolvedEventInfo @event, CancellationToken token = default)
     {
         return ApplyEvent(playerId, factionId, WarfareModule.Season, @event, token);
@@ -199,9 +287,12 @@ public class PointsService : IEventListener<PlayerTeamChanged> // todo player eq
     /// <summary>
     /// Apply an event and trigger updates for the necessary UI.
     /// </summary>
+    /// <exception cref="InvalidOperationException">Called before level started loading, config hasn't been loaded yet.</exception>
     public async Task ApplyEvent(CSteamID playerId, uint factionId, int season, ResolvedEventInfo @event, CancellationToken token = default)
     {
         await UniTask.SwitchToMainThread(token);
+
+        CheckLoaded();
 
         bool hideToast = @event.HideToast || @event.Message == null;
 
@@ -363,7 +454,7 @@ public class PointsService : IEventListener<PlayerTeamChanged> // todo player eq
 
             if (xp != 0 || credits != 0)
             {
-                _ui.UpdatePointsUI(player);
+                _ui?.UpdatePointsUI(player);
                 PointsChanged?.Invoke(player, xp, credits, rep);
             }
             else if (rep != 0 && !double.IsNaN(newRep))
@@ -419,7 +510,12 @@ public class PointsService : IEventListener<PlayerTeamChanged> // todo player eq
 
     public void HandleEvent(PlayerTeamChanged e, IServiceProvider serviceProvider)
     {
-        _ui.UpdatePointsUI(e.Player);
+        _ui?.UpdatePointsUI(e.Player);
+    }
+
+    public void Dispose()
+    {
+        Interlocked.Exchange(ref _changeToken, null)?.Dispose();
     }
 }
 

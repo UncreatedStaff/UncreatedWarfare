@@ -38,7 +38,7 @@ public partial class ModerationUI : UnturnedUI
     public const string DateTimeFormat = "yyyy\\/MM\\/dd\\ hh\\:mm\\:ss\\ \\U\\T\\C\\-\\2\\4";
     public const string DateTimeFormatInput = "yyyy\\/MM\\/dd\\ hh\\:mm\\:ss";
 
-    private readonly List<WarfarePlayer> _tempPlayerSearchBuffer = new List<WarfarePlayer>(Provider.maxPlayers);
+    private readonly List<WarfarePlayer> _tempPlayerSearchBuffer = new List<WarfarePlayer>(64);
 
     /* HEADERS */
     public LabeledButton[] Headers { get; } =

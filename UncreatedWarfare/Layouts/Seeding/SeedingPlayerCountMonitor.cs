@@ -7,6 +7,7 @@ using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Stats.EventHandlers;
@@ -62,6 +63,11 @@ internal class SeedingPlayerCountMonitor :
         /// Whether or not to add to XP and credits during a seeding gamemode.
         /// </summary>
         public bool TrackPoints { get; set; }
+
+        /// <summary>
+        /// Whether or not to track quests during a seeding gamemode.
+        /// </summary>
+        public bool TrackQuests { get; set; }
     }
 
 
@@ -178,6 +184,8 @@ internal class SeedingPlayerCountMonitor :
 
     UniTask ILayoutHostedService.StartAsync(CancellationToken token)
     {
+        _playHud ??= _serviceProvider.GetRequiredService<SeedingPlayHud>();
+
         if (!_layoutHost.IsLayoutActive())
             return UniTask.CompletedTask;
 
@@ -228,11 +236,19 @@ internal class SeedingPlayerCountMonitor :
         {
             _pointsRewards.TrackPoints = Rules.TrackPoints;
             _databaseStats.TrackStats = Rules.TrackStats;
+            if (_layoutHost.IsLayoutActive())
+            {
+                _layoutHost.ScopedProvider.Resolve<QuestService>().TrackQuests = Rules.TrackQuests;
+            }
         }
         else
         {
             _pointsRewards.TrackPoints = true;
             _databaseStats.TrackStats = true;
+            if (_layoutHost.IsLayoutActive())
+            {
+                _layoutHost.ScopedProvider.Resolve<QuestService>().TrackQuests = true;
+            }
         }
     }
 
@@ -452,12 +468,11 @@ internal class SeedingPlayerCountMonitor :
         UpdateGlobals(true);
         _nextVotePlayerThreshold = Rules.VotePlayerThreshold;
 
-        _playHud ??= _serviceProvider.GetRequiredService<SeedingPlayHud>();
         IsSeeding = true;
 
         if (_layoutHost.IsLayoutActive())
         {
-            _playHud.UpdateStage();
+            _playHud?.UpdateStage();
         }
     }
 

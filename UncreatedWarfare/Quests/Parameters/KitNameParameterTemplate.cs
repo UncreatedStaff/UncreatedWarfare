@@ -6,6 +6,8 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text.Json;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Layouts;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Translations.Languages;
 using Uncreated.Warfare.Util;
@@ -65,7 +67,7 @@ public class KitNameParameterTemplate : StringParameterTemplate
 
                 case ParameterValueType.List:
                     ListSet list = (ListSet?)Set!;
-                    value = list.Values.Length == 0 ? null : list.Values[RandomUtility.GetIndex((ICollection)list.Values)];
+                    value = list.Values.Length == 0 ? null : list.Values[RandomUtility.GetIndex(list.Values)];
 
                     if (value != null && kitDataStore.CachedKitsById.TryGetValue(value, out kit))
                     {
@@ -74,7 +76,7 @@ public class KitNameParameterTemplate : StringParameterTemplate
                     break;
 
                 default:
-                    kit = GetRandomPublicKit(kitDataStore);
+                    kit = GetRandomPublicKit(kitDataStore, serviceProvider.GetRequiredService<WarfareModule>());
                     value = kit?.Id ?? "default";
                     display = kit?.GetDisplayName(null, true, removeNewLine: true);
                     break;
@@ -143,7 +145,7 @@ public class KitNameParameterTemplate : StringParameterTemplate
                 break;
 
             default:
-                kit = GetRandomPublicKit(kitDataStore);
+                kit = GetRandomPublicKit(kitDataStore, serviceProvider.GetRequiredService<WarfareModule>());
                 value = kit?.Id ?? "default";
                 display = kit?.GetDisplayName(null, true, removeNewLine: true);
                 break;
@@ -220,11 +222,13 @@ public class KitNameParameterTemplate : StringParameterTemplate
         }
     }
 
-    private static Kit? GetRandomPublicKit(IKitDataStore kitDataStore)
+    private static Kit? GetRandomPublicKit(IKitDataStore kitDataStore, WarfareModule module)
     {
         List<Kit> kits = kitDataStore.CachedKitsByKey.Values.Where(x => x is { Type: KitType.Public, IsLocked: false }).ToList();
 
-        kits.RemoveAll(x => x.Season != WarfareModule.Season || x.CreditCost > 0 || x.PremiumCost > 0 || x.RequiresServerBoost || x.SquadLevel != SquadLevel.Member);
+        ITeamManager<Team> teamManager = module.GetActiveLayout().TeamManager;
+
+        kits.RemoveAll(x => x.Season != WarfareModule.Season || !x.IsFree || x.SquadLevel != SquadLevel.Member || !teamManager.AllTeams.Any(t => t.Faction.Equals(x.Faction)));
 
         return kits.Count == 0 ? null : kits[RandomUtility.GetIndex(kits)];
     }

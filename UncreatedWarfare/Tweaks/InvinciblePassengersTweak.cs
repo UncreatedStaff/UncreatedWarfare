@@ -29,7 +29,26 @@ internal sealed class InvinciblePassengersTweak(VehicleService vehicleService) :
         WarfareVehicleInfo.CrewInfo crewInfo = vehicleInfo.Info.Crew;
 
         bool isCrew = crewInfo.Seats.Contains(seat);
-        if (isCrew ? crewInfo.Invincible : crewInfo.PassengersInvincible)
+        bool isInvincible = isCrew ? crewInfo.Invincible : crewInfo.PassengersInvincible;
+        if (seat != 0 && crewInfo.Except != null && crewInfo.Except.Contains(seat))
+            isInvincible = !isInvincible;
+
+        if (isInvincible && crewInfo.InvincibleForwardOnly)
+        {
+            // the dot product of two normalized v3's will be negative if one is facing the opposite direction from another,
+            // but since 'direction' is the direction the bullet is traveling not the hit normal, it should be positive
+            Vector3 dir = e.Parameters.direction;
+            Vector3 vehicleFwd = vehicle.transform.forward;
+
+            float dotPdt = Vector3.Dot(dir, vehicleFwd);
+
+            if (dotPdt > 0)
+            {
+                isInvincible = false;
+            }
+        }
+        
+        if (isInvincible)
         {
             e.Cancel();
         }

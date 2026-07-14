@@ -2,9 +2,7 @@ using DanielWillett.ReflectionTools.Emit;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
 using System.Reflection;
 using System.Reflection.Emit;
 using Uncreated.Warfare.Events.Models;
@@ -162,7 +160,7 @@ public class LeaderboardPhase : BasePhase<PhaseTeamSettings>, IDisposable, IEven
         // initialize LeaderboardPlayer objects for existing players
         for (int i = 0; i < _players.Length; ++i)
         {
-            _players[i] = new List<LeaderboardPlayer>(Provider.maxPlayers / Layout.TeamManager.AllTeams.Count + 6);
+            _players[i] = new List<LeaderboardPlayer>(64);
         }
 
         foreach (WarfarePlayer player in _playerService.OnlinePlayers)

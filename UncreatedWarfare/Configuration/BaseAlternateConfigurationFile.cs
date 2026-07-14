@@ -23,11 +23,19 @@ public abstract class BaseAlternateConfigurationFile : IConfiguration, IDisposab
 
     private readonly string _fileName;
     private readonly bool _optional, _reloadable;
+    private readonly bool? _mapSpecific;
+    private int _hasSceneLoaded;
 
     /// <summary>
     /// Full path to the configuratin file.
     /// </summary>
     public string? FilePath { get; private set; }
+
+    /// <summary>
+    /// Whether or not this config has been loaded. This happens just after the level starts loading.
+    /// </summary>
+    [MemberNotNullWhen(true, nameof(FilePath))]
+    public bool IsLoaded { get; private set; }
 
     /// <summary>
     /// The underlying configuration object.
@@ -43,13 +51,14 @@ public abstract class BaseAlternateConfigurationFile : IConfiguration, IDisposab
     /// Create a new configuration file reference.
     /// </summary>
     /// <param name="mapSpecific">Will go in a "Maps/[map name]/" folder.</param>
-    protected BaseAlternateConfigurationFile(IServiceProvider serviceProvider, string fileName, bool mapSpecific = false, bool optional = false, bool reload = true)
+    protected BaseAlternateConfigurationFile(IServiceProvider serviceProvider, string fileName, bool? mapSpecific = null, bool optional = false, bool reload = true)
     {
         _module = serviceProvider.GetRequiredService<WarfareModule>();
         _fileName = fileName;
         _optional = optional;
         _reloadable = reload;
-        _mapScheduler = mapSpecific ? serviceProvider.GetService<MapScheduler>() : null;
+        _mapScheduler = mapSpecific is not false ? serviceProvider.GetService<MapScheduler>() : null;
+        _mapSpecific = mapSpecific;
 
         _configuration = ConfigurationHelper.EmptySection;
         UnderlyingConfiguration = _configuration;
@@ -57,7 +66,7 @@ public abstract class BaseAlternateConfigurationFile : IConfiguration, IDisposab
         // flagData is the first thing to load when the scene is loaded
         if (_mapScheduler == null || LevelNavigation.flagData != null)
         {
-            TryInit(mapSpecific);
+            TryInit();
         }
         else
         {
@@ -75,25 +84,34 @@ public abstract class BaseAlternateConfigurationFile : IConfiguration, IDisposab
         {
             SceneManager.sceneLoaded -= OnSceneLoaded;
         }
-        TryInit(true);
+        TryInit();
     }
 
-    private bool TryInit(bool mapSpecific)
+    private bool TryInit()
     {
-        // for map-specific configs, this needs to happen after ServerWorkshopLoading executes (which is just before the scene loads)
-        if (_mapScheduler is { HasSelectedMap: false })
+        if (IsLoaded)
+            return true;
+
+        // for configs that are either map specific or could have map overrides
+        // this needs to happen after ServerWorkshopLoading executes (which is just before the scene loads)
+
+        // ex. Assets.yaml & Assets.Gulf of Aqaba.yml
+        //     Maps/Gulf of Aqaba/BuildableStates.yml
+
+        if (_mapSpecific is not false && _mapScheduler is { HasSelectedMap: false })
         {
+            WarfareModule.Singleton.GlobalLogger.LogWarning($"Tried to initialize config {_fileName} before map loaded.");
             return false;
         }
 
         lock (this)
         {
-            if (FilePath != null)
+            if (IsLoaded)
                 return true;
 
             string homeDir = _module.HomeDirectory;
             string path;
-            if (mapSpecific)
+            if (_mapSpecific is true)
             {
                 string mapName = ConfigurationHelper.CleanFileName(Provider.map);
                 path = Path.Combine(homeDir, "Maps", mapName);
@@ -132,15 +150,23 @@ public abstract class BaseAlternateConfigurationFile : IConfiguration, IDisposab
 
             UnderlyingConfiguration = _configuration;
             FilePath = filePath;
+            IsLoaded = true;
         }
 
+        HandleLoaded();
         return true;
     }
 
     /// <summary>
-    /// Invoked by the base class when a change occurs.
+    /// Invoked by the base class when a change occurs. No need to call base implementation.
     /// </summary>
     protected virtual void HandleChange() { }
+
+    /// <summary>
+    /// Invoked by the base class when the first load occurs. No need to call base implementation.
+    /// </summary>
+    /// <remarks>If <c>mapSpecific</c> was set to <see langword="false"/>, this may call before the constructor runs.</remarks>
+    protected virtual void HandleLoaded() { }
 
     /// <inheritdoc />
     public string? this[string key]
@@ -162,7 +188,7 @@ public abstract class BaseAlternateConfigurationFile : IConfiguration, IDisposab
         if (FilePath != null)
             return;
 
-        if (!TryInit(true))
+        if (!TryInit())
             throw new InvalidOperationException("Not initialized yet. Wait until after the level is selected by the MapScheduler.");
     }
 
@@ -187,9 +213,13 @@ public abstract class BaseAlternateConfigurationFile : IConfiguration, IDisposab
         return _configuration.GetReloadToken();
     }
 
-    /// <inheritdoc />
-    void IDisposable.Dispose()
+    protected virtual void Dispose(bool disposing)
     {
+        if (!disposing)
+        {
+            return;
+        }
+
         if (Interlocked.Exchange(ref _hasSceneLoaded, 0) == 1)
         {
             SceneManager.sceneLoaded -= OnSceneLoaded;
@@ -200,7 +230,18 @@ public abstract class BaseAlternateConfigurationFile : IConfiguration, IDisposab
         {
             disp.Dispose();
         }
+
+        IsLoaded = false;
+        GC.SuppressFinalize(this);
     }
 
-    private int _hasSceneLoaded;
+    ~BaseAlternateConfigurationFile()
+    {
+        Dispose(false);
+    }
+
+    public void Dispose()
+    {
+        Dispose(true);
+    }
 }

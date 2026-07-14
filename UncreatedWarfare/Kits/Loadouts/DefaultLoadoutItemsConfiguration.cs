@@ -20,7 +20,7 @@ public sealed class DefaultLoadoutItemsConfiguration : BaseAlternateConfiguratio
     private readonly IReadOnlyList<IItem>[] _configuration;
 
     public DefaultLoadoutItemsConfiguration(IServiceProvider serviceProvider, ILogger<DefaultLoadoutItemsConfiguration> logger)
-        : base(serviceProvider, Path.Combine("Kits", "Default Items.yml"))
+        : base(serviceProvider, Path.Combine("Kits", "Default Items.yml"), mapSpecific: false)
     {
         _logger = logger;
         _configuration = new IReadOnlyList<IItem>[EnumUtility.GetMaximumValue<Class>() - MinimumClass + 1];

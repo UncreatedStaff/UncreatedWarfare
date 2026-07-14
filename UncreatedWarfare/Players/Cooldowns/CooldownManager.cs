@@ -37,8 +37,12 @@ public sealed class CooldownManager : BaseAlternateConfigurationFile, ILayoutHos
 
         _activeCooldowns = new PlayerDictionary<PlayerCooldownList>();
 
-        Cooldowns = null!;
-        _cooldowns = null!;
+        _cooldowns ??= Array.Empty<CooldownTypeConfiguration>();
+        Cooldowns ??= Array.Empty<CooldownTypeConfiguration>();
+    }
+
+    protected override void HandleLoaded()
+    {
         HandleChange();
     }
 
