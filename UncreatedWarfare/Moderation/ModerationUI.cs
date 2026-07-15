@@ -539,14 +539,12 @@ public partial class ModerationUI : UnturnedUI
         ModalHandle.TryGetModalHandle(player, ref data.Modal);
         data.HudHandle = _hudManager.HideHud(player);
 
-        player.UnturnedPlayer.disablePluginWidgetFlag(EPluginWidgetFlags.Default);
-
-
         if (!data.HasModerationUI)
         {
             SendToPlayer(player.Connection);
             data.HasModerationUI = true;
         }
+
         data.HistoryCount = 0;
         data.PlayerCount = 0;
         data.InfoActorCount = 0;
@@ -562,7 +560,6 @@ public partial class ModerationUI : UnturnedUI
         data.Modal.Dispose();
         Interlocked.Exchange(ref data.HudHandle, null)?.Dispose();
 
-        player.UnturnedPlayer.enablePluginWidgetFlag(EPluginWidgetFlags.Default);
         ClearFromPlayer(player.Connection);
         data.HasModerationUI = false;
     }

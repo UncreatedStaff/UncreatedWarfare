@@ -846,6 +846,9 @@ public sealed class WarfareModule
         bldr.RegisterType<LobbyHudUI>()
             .SingleInstance();
 
+        bldr.RegisterType<PlayerReplicatedConfigManager>()
+            .SingleInstance();
+
         // Stats
         bldr.RegisterType<PointsRewardsEvents>()
             .AsSelf().AsImplementedInterfaces()

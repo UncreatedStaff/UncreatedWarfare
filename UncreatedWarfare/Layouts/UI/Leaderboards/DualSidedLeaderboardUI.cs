@@ -769,7 +769,7 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
             return UniTask.CompletedTask;
 
         _trackChat = true;
-        _chatService.OnSendingChatMessage += ChatServiceOnOnSendingChatMessage;
+        _chatService.OnSendingChatMessage += ChatServiceOnSendingChatMessage;
         return UniTask.CompletedTask;
     }
 
@@ -782,7 +782,7 @@ public partial class DualSidedLeaderboardUI : UnturnedUI, ILeaderboardUI, IEvent
     {
         if (_trackChat)
         {
-            _chatService.OnSendingChatMessage -= ChatServiceOnOnSendingChatMessage;
+            _chatService.OnSendingChatMessage -= ChatServiceOnSendingChatMessage;
             _trackChat = false;
         }
         Dispose();

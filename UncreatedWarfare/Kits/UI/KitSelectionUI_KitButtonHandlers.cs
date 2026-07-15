@@ -1,10 +1,15 @@
-﻿using System;
+﻿using Microsoft.Extensions.Configuration;
+using System;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Presets;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Interaction.Requests;
+using Uncreated.Warfare.Kits.Loadouts;
+using Uncreated.Warfare.Models.Users;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Players.UI;
+using Uncreated.Warfare.Squads.UI;
 
 namespace Uncreated.Warfare.Kits.UI;
 
@@ -37,7 +42,12 @@ partial class KitSelectionUI
                 await UniTask.SwitchToMainThread();
 
                 _listNoResult.Hide(player.Connection);
-                SendKitInfo(_listResults[0], player, fullKit, player.Component<KitPlayerComponent>(), data, false, index: 0);
+                ListKitInfo ui = _listResults[0];
+                SendKitInfo(ui, player, fullKit, player.Component<KitPlayerComponent>(), data, false, index: 0);
+
+                bool checkNitroBoostStatus = data.GetCachedState(0).LabelState == StatusState.ServerBoostRequired;
+
+                ui.Root.Show(player);
 
                 for (int i = 1; i < _listResults.Length; ++i)
                 {
@@ -54,7 +64,13 @@ partial class KitSelectionUI
                     SetListOpened(data, player, true);
                 }
 
-                await SendKitDetailsAsync(player, fullKit, CancellationToken.None);
+                UniTask sendDetails = SendKitDetailsAsync(player, fullKit, CancellationToken.None);
+                if (checkNitroBoostStatus)
+                {
+                    await CheckNitroBoostStatus(player, data, player.DisconnectToken, false, true);
+                }
+
+                await sendDetails;
             }
             catch (Exception ex)
             {
@@ -235,7 +251,12 @@ partial class KitSelectionUI
             bool requested = false;
             try
             {
+                Kit? oldKit = player.Component<KitPlayerComponent>().GetActiveEffectiveKit()?.CachedKit;
                 requested = await _kitRequestService.RequestAsync(player, kit, new RequestCommandResultHandler(_chatService, _requestTranslations), player.DisconnectToken);
+                if (oldKit != null)
+                {
+                    await UpdateKitAsync(oldKit, player, player.DisconnectToken);
+                }
             }
             catch (Exception ex)
             {
@@ -309,6 +330,179 @@ partial class KitSelectionUI
                 Interlocked.Decrement(ref data.Operations);
             }
         });
+    }
+
+    // click the buy/unlock button on a full-sized kit
+    private void HandleButtonUnlockKitClicked(UnturnedButton button, Player unturnedPlayer)
+    {
+        if (!TryGetTargetKit(x => x.UnlockButton.Button, button, out Class @class, out int kitIndex, out _))
+        {
+            return;
+        }
+
+        WarfarePlayer player = _playerService.GetOnlinePlayer(unturnedPlayer);
+        KitSelectionUIData data = GetOrAddData(player);
+        if (data.Operations > 0)
+            return;
+
+        Interlocked.Increment(ref data.Operations);
+
+        ref KitCacheInformation cache = ref data.GetCachedState(@class, kitIndex);
+
+        Kit? kit = cache.Kit;
+        if (kit == null)
+            return;
+
+        PurchaseButtonState buttonState = cache.ButtonState;
+
+        string domain = _configuration["domain"] ?? "https://uncreated.network";
+
+        bool done = true;
+
+        try
+        {
+            switch (buttonState)
+            {
+                case PurchaseButtonState.None:
+                    done = false;
+                    Task.Run(async () =>
+                    {
+                        bool requested = false;
+                        try
+                        {
+                            requested = await _kitRequestService.RequestAsync(player, kit, new RequestCommandResultHandler(_chatService, _requestTranslations), player.DisconnectToken);
+                        }
+                        catch (Exception ex)
+                        {
+                            GetLogger().LogError(ex, $"Error requesting kit {kit.Id} for {player} via button press.");
+                        }
+                        finally
+                        {
+                            Interlocked.Decrement(ref data.Operations);
+                            if (!requested)
+                                await UpdateKitAsync(kit, player, player.DisconnectToken);
+                            else
+                                await CloseAsync(player);
+                        }
+                    });
+                    break;
+
+                case PurchaseButtonState.PremiumCost:
+                    _ = CloseAsync(player);
+                    unturnedPlayer.sendBrowserRequest(_translations.PurchaseButtonCurrencyBrowserRequest.Translate(player, canUseIMGUI: true), domain + "/products/kits");
+                    break;
+
+                case PurchaseButtonState.CreditCost:
+                    _ = TempCloseAsync(player);
+
+                    // confirm purchase kit modal
+                    ToastMessage message = ToastMessage.Popup(
+                        _requestKitsTranslations.ModalConfirmPurchaseKitHeading.Translate(player),
+                        _requestKitsTranslations.ModalConfirmPurchaseKitDescription.Translate(kit, kit.CreditCost, player),
+                        _requestKitsTranslations.ModalConfirmPurchaseKitAcceptButton.Translate(player),
+                        _requestKitsTranslations.ModalConfirmPurchaseKitCancelButton.Translate(player),
+                        callbacks: new PopupCallbacks((player, _, in _, ref _, ref _) =>
+                        {
+                            Task.Run(async () =>
+                            {
+                                await _kitRequestService.BuyKitAsync(player, kit, player.UnturnedPlayer.look.aim.position + player.UnturnedPlayer.look.aim.forward * 0.3f, player.DisconnectToken);
+                                await TempUncloseAsync(player);
+                                await UpdateKitAsync(kit, player);
+                            });
+                        }, (player, _, in _, ref _, ref _) =>
+                        {
+                            _ = TempUncloseAsync(player);
+                        })
+                    );
+
+                    player.SendToast(message);
+                    break;
+
+                case PurchaseButtonState.ViewLoadoutTicket:
+                case PurchaseButtonState.OpenLoadoutTicket:
+                    int id = LoadoutIdHelper.Parse(kit.Id);
+                    if (id < 0)
+                        break;
+
+                    _ = CloseAsync(player);
+                    unturnedPlayer.sendBrowserRequest(
+                        _translations.PurchaseButtonViewLoadoutTicketRequest.Translate(player, canUseIMGUI: true),
+                        $"{domain}/loadouts/{player.Steam64.m_SteamID}/{LoadoutIdHelper.GetLoadoutLetter(id)}?adminmode=False"
+                    );
+                    break;
+
+                case PurchaseButtonState.JoinSquad:
+                case PurchaseButtonState.CreateSquad:
+                    if (_squadMenu == null)
+                        break;
+
+                    _ = CloseAsync(player);
+                    _squadMenu.OpenUI(player, new SquadMenuUI.KitRequestState(kit, new RequestCommandResultHandler(_chatService, _requestTranslations)));
+                    break;
+
+                case PurchaseButtonState.OpenDiscordForBoosts:
+                    ulong guildId = _configuration.GetValue<ulong>("discord_guild_id");
+                    if (guildId != 0)
+                    {
+                        _ = CloseAsync(player);
+
+                        unturnedPlayer.sendBrowserRequest(
+                            _translations.PurchaseButtonNotBoostingOpenDiscordRequest.Translate(player, canUseIMGUI: true),
+                            $"https://discord.com/channels/{guildId}/boosts"
+                        );
+                    }
+                    break;
+
+                case PurchaseButtonState.JoinDiscordGuild:
+                    string url = DiscordCommand.GetDiscordJoinUrl(_configuration);
+                    _ = CloseAsync(player);
+
+                    unturnedPlayer.sendBrowserRequest(
+                        _translations.PurchaseButtonNotBoostingOpenDiscordRequest.Translate(player, canUseIMGUI: true),
+                        url
+                    );
+                    break;
+
+                case PurchaseButtonState.BeginLinkDiscordAccount:
+                    if (_acountLinkingService == null)
+                        break;
+
+                    _ = CloseAsync(player);
+                    Task.Run(async () =>
+                    {
+                        try
+                        {
+                            SteamDiscordPendingLink link = await _acountLinkingService.BeginLinkFromSteamAsync(player.Steam64);
+                            await UniTask.SwitchToMainThread();
+                            string token = link.Token;
+                            string command = $"/link token:{token}";
+                            if (player.IsOnline)
+                            {
+                                unturnedPlayer.sendBrowserRequest(
+                                    _translations.PurchaseButtonNotBoostingLinkDiscordRequest.Translate(player, canUseIMGUI: true),
+                                    domain + "/copy-text?text=" + Uri.EscapeDataString(command)
+                                );
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            GetLogger().LogError(ex, "Error starting link for player.");
+                        }
+                    });
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            GetLogger().LogError(ex, $"Error unlocking ({@class}, {kitIndex}: {kit.Id}) for {player}.");
+        }
+        finally
+        {
+            if (done)
+            {
+                Interlocked.Decrement(ref data.Operations);
+            }
+        }
     }
 
     private bool TryGetTargetKit(Func<KitInfo, UnturnedButton> selector, UnturnedButton button, out Class @class, out int kitIndex, [NotNullWhen(true)] out KitInfo? kitInfo)

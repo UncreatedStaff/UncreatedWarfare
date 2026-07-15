@@ -10,7 +10,7 @@
         <Version>4.0.22</Version>
 
         <!-- Enable this for telemetry tracking -->
-        <DefineConstants>$(DefineConstants);TELEMETRY</DefineConstants>
+        <!--<DefineConstants>$(DefineConstants);TELEMETRY</DefineConstants>-->
 
     </PropertyGroup>
 
@@ -201,7 +201,7 @@
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="Unturned.MSBuild" Version="1.0.0-test7">
+        <PackageReference Include="Unturned.MSBuild" Version="1.0.0">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
         </PackageReference>
@@ -359,6 +359,7 @@
         <Publicize Include="Assembly-CSharp:SDG.Unturned.AssetsWorker.AssetDefinition" />
         <Publicize Include="Assembly-CSharp:SDG.Unturned.Assets.LoadFile" />
         <Publicize Include="Assembly-CSharp:SDG.Unturned.Assets.AddAssetsFromOriginToCurrentMapping" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.NetMessages" />
         <Publicize Include="Assembly-CSharp:SDG.Unturned.CommandLogMemoryUsage.OnExecuted" />
         <Publicize Include="Assembly-CSharp:SDG.Unturned.ClientAssetIntegrity" />
         <Publicize Include="Assembly-CSharp:SDG.Unturned.ClientAssetIntegrity.serverKnownMissingGuids" />

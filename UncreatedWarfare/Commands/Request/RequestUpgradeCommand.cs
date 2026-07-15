@@ -70,6 +70,6 @@ internal sealed class RequestUpgradeCommand : IExecutableCommand
         }
 
         Context.ReplyUrl(_requestTranslations.RequestUpgradeMessage.Translate(Context.Player),
-            $"{_domain}/loadouts/{Context.CallerId.m_SteamID}/{LoadoutIdHelper.GetLoadoutLetter(loadoutLetter)}");
+            $"{_domain}/loadouts/{Context.CallerId.m_SteamID}/{LoadoutIdHelper.GetLoadoutLetter(loadoutLetter)}?adminmode=False");
     }
 }

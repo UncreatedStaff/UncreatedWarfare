@@ -421,7 +421,10 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
                             && x.PremiumCost == 0
                             && !x.RequiresNitro
                             && x.Delays.Count == 0
+                            && !x.RequiresSquad
+                            && x.MinRequiredSquadMembers == null
                             && x.SquadLevel == SquadLevel.Member
+                            && x.Season == WarfareModule.Season
                             && !x.Disabled
                             && x.Class != Class.Unarmed
                             && x.FactionId == factionId

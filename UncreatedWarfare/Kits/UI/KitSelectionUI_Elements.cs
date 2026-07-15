@@ -30,6 +30,7 @@ partial class KitSelectionUI
     private readonly UnturnedUIElement _switchToListLogic = new UnturnedUIElement("~/Logic_SwitchToList");
     private readonly UnturnedUIElement _switchToPanelLogic = new UnturnedUIElement("~/Logic_SwitchToPanel");
     private readonly UnturnedUIElement _startCloseAnimationLogic = new UnturnedUIElement("~/Logic_Close");
+    private readonly UnturnedUIElement _startOpenAnimationLogic = new UnturnedUIElement("~/Logic_Open");
 
     // Public Kits
 
@@ -88,8 +89,9 @@ partial class KitSelectionUI
         [Pattern("Title", AdditionalPath = "Viewport/Content")]
         public UnturnedLabel Title { get; set; }
         
-        [Pattern("Icon", AdditionalPath = "Viewport/Content")]
-        public UnturnedLabel Icon { get; set; }
+        // already set in the prefab, no need to reset it
+        // [Pattern("Icon", AdditionalPath = "Viewport/Content")]
+        // public UnturnedLabel Icon { get; set; }
 
         [Pattern("Desc", AdditionalPath = "Viewport/Content")]
         public UnturnedLabel Description { get; set; }

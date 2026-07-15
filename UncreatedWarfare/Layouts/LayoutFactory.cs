@@ -572,7 +572,8 @@ public class LayoutFactory : IHostedService, IEventListener<PlayerJoined>
             StartTimestamp = DateTimeOffset.UtcNow,
             Gamemode = layoutInfo.DisplayName,
             Map = _mapScheduler.Current!.Id,
-            Region = _region
+            Region = _region,
+            IsSeeding = layoutInfo.IsSeeding
         };
 
         {
