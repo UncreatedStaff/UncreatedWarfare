@@ -34,8 +34,8 @@ public class AdvancedVehicleDamageProjectile : MonoBehaviour
         _hitOccured = true;
         
         WarfareVehicleComponent comp = other.GetComponentInParent<WarfareVehicleComponent>();
-
+        
         if (comp != null)
-            comp.WarfareVehicle.AdvancedDamageApplier.RegisterDirectHitDamageMultiplier(AdvancedVehicleDamageApplier.GetComponentDamageMultiplier(other.transform));
+            comp.WarfareVehicle.AdvancedDamageApplier.RegisterDirectHitDamageMultiplier(AdvancedVehicleDamageApplier.GetComponentDamageMultiplier(other.transform), RocketComponent.vehicleDamage);
     }
 }

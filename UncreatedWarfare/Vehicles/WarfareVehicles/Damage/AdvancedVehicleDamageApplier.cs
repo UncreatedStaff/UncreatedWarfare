@@ -15,10 +15,11 @@ public class AdvancedVehicleDamageApplier
         _damageQueue = new Queue<AdvancedDamagePending>();
     }
 
-    public void RegisterDirectHitDamageMultiplier(float damageMultiplier)
+    public void RegisterDirectHitDamageMultiplier(float damageMultiplier, float fundamentalBaseDamage)
     {
         _damageQueue.Enqueue(new AdvancedDamagePending
         {
+            FundamentalBaseDamage = fundamentalBaseDamage,
             Multiplier = damageMultiplier,
             Timestamp = DateTime.Now
         });
@@ -62,6 +63,11 @@ public class AdvancedVehicleDamageApplier
 
     public struct AdvancedDamagePending
     {
+        /// <summary>
+        /// The true base damage before the bullet/projectile/thing hits or explodes, specifically
+        /// before any distance-based damage falloff and/or plugin damage modifiers are applied.
+        /// </summary>
+        public required float FundamentalBaseDamage { get; init; }
         public required float Multiplier { get; init; }
         public required DateTime Timestamp { get; init; }
     }

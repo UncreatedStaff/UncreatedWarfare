@@ -78,13 +78,13 @@ public class AdvancedVehicleDamageTweaks :
             return;
 
         float dmgMult = AdvancedVehicleDamageApplier.GetComponentDamageMultiplier(e.HitCollider.transform);
-        comp.WarfareVehicle.AdvancedDamageApplier.RegisterDirectHitDamageMultiplier(dmgMult);
+        comp.WarfareVehicle.AdvancedDamageApplier.RegisterDirectHitDamageMultiplier(dmgMult, e.RocketComponent.vehicleDamage);
     }
 
     private void UseableGunOnBulletHit(UseableGun gun, BulletInfo bullet, InputInfo hit, ref bool shouldAllow)
     {
         if (hit.vehicle != null && hit.vehicle.TryGetComponent(out WarfareVehicleComponent comp))
-            comp.WarfareVehicle.AdvancedDamageApplier.RegisterDirectHitDamageMultiplier(AdvancedVehicleDamageApplier.GetComponentDamageMultiplier(hit));
+            comp.WarfareVehicle.AdvancedDamageApplier.RegisterDirectHitDamageMultiplier(AdvancedVehicleDamageApplier.GetComponentDamageMultiplier(hit), gun.equippedGunAsset.vehicleDamage * bullet.magazineAsset.ballisticDamageMultiplier * bullet.barrelAsset.ballisticDamageMultiplier);
     }
 
     public void HandleEvent(ProjectileSpawned e, IServiceProvider serviceProvider)
@@ -108,7 +108,7 @@ public class AdvancedVehicleDamageTweaks :
         Asset? latestInstigatorWeapon = e.Vehicle.DamageTracker.LatestInstigatorWeapon;
 
         AdvancedVehicleDamageApplier.AdvancedDamagePending? directHit = e.Vehicle.AdvancedDamageApplier.ApplyLatestPendingDirectHit();
-
+        
         bool misusedDirectHitWeapon = false;
 
         if (directHit.HasValue) // direct hit
@@ -125,7 +125,16 @@ public class AdvancedVehicleDamageTweaks :
         if (misusedGroundAttackWeapon || misusedAntiAirWeapon || misusedDirectHitWeapon)
             finalMultiplier = 0.1f;
 
-        ushort newDamage = (ushort)Mathf.RoundToInt(e.PendingDamage * finalMultiplier);
+
+        float pendingDamage;
+        if (directHit.HasValue && e.InstantaneousDamageOrigin == EDamageOrigin.Rocket_Explosion)
+            // when hitting a vehicle directly with a rocket, rocket explosion falloff doesn't makes sense, but is still applied by the game.
+            // so, we override the pending damage, which has been adjusted for falloff, with the true base damage of the rocket projectile 
+            pendingDamage = (ushort)Mathf.RoundToInt(directHit.Value.FundamentalBaseDamage);
+        else
+            pendingDamage = e.PendingDamage;
+
+        ushort newDamage = (ushort)Mathf.RoundToInt(pendingDamage * finalMultiplier);
         //_logger.LogDebug(
         //    $"Final damage multiplier of {finalMultiplier} " +
         //    $"(caused by weapon: {latestInstigatorWeapon?.FriendlyName ?? "unknown"}) " +
