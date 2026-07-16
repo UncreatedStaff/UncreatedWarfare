@@ -363,6 +363,7 @@
         <Publicize Include="Assembly-CSharp:SDG.Unturned.CommandLogMemoryUsage.OnExecuted" />
         <Publicize Include="Assembly-CSharp:SDG.Unturned.ClientAssetIntegrity" />
         <Publicize Include="Assembly-CSharp:SDG.Unturned.ClientAssetIntegrity.serverKnownMissingGuids" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.Rocket.secondLastPos" />
 
     </ItemGroup>
 

@@ -117,7 +117,7 @@ public class WarfareProjectile : MonoBehaviour
 
     internal static WarfareProjectile? ExplodingProjectile;
 
-    internal bool InvokeExploding(Collider other, ExplosionParameters parameters)
+    internal bool InvokeExploding(Collider other, ref ExplosionParameters parameters)
     {
         // cant use OnTriggerEnter like we originally did because we can't know it'll occur before the explosion
         HasExploded = true;
@@ -173,7 +173,10 @@ public class WarfareProjectile : MonoBehaviour
         }
 
         if (shouldAllow)
+        {
             ExplodingProjectile = args.Projectile;
+
+        }
 
         return shouldAllow;
     }

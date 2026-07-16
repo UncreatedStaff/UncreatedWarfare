@@ -1,6 +1,6 @@
 #if DEBUG
 
-#define PROJECTILE_TRACERS
+// #define PROJECTILE_TRACERS
 
 #endif
 

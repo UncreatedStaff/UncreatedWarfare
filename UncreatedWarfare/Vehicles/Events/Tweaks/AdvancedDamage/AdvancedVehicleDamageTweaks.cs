@@ -13,7 +13,6 @@ namespace Uncreated.Warfare.Vehicles.Events.Tweaks.AdvancedDamage;
 
 public class AdvancedVehicleDamageTweaks : 
     ILayoutHostedService,
-    IEventListener<ProjectileSpawned>,
     IEventListener<ProjectileExploding>,
     IEventListener<VehiclePreDamaged>,
     IDisposable
@@ -85,11 +84,6 @@ public class AdvancedVehicleDamageTweaks :
     {
         if (hit.vehicle != null && hit.vehicle.TryGetComponent(out WarfareVehicleComponent comp))
             comp.WarfareVehicle.AdvancedDamageApplier.RegisterDirectHitDamageMultiplier(AdvancedVehicleDamageApplier.GetComponentDamageMultiplier(hit));
-    }
-
-    public void HandleEvent(ProjectileSpawned e, IServiceProvider serviceProvider)
-    {
-        e.Object.gameObject.AddComponent<AdvancedVehicleDamageProjectile>().Init(e.RocketComponent, e.Asset);
     }
 
     public void HandleEvent(VehiclePreDamaged e, IServiceProvider serviceProvider)

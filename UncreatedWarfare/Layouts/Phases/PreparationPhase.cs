@@ -75,9 +75,9 @@ public class PreparationPhase : BasePhase<PhaseTeamSettings>, IDisposable
         if (globalTranslationList != null)
         {
             if (Duration.Ticks > 0)
-                _stagingUi.SendToAll(_translationService.SetOf.PlayersOnTeam(), globalTranslationList, Duration);
+                _stagingUi.SendToAll(_translationService.SetOf.AllPlayers(), globalTranslationList, Duration);
             else
-                _stagingUi.SendToAll(_translationService.SetOf.PlayersOnTeam(), globalTranslationList);
+                _stagingUi.SendToAll(_translationService.SetOf.AllPlayers(), globalTranslationList);
         }
 
         if (Duration.Ticks <= 0)
