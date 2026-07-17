@@ -44,7 +44,7 @@ internal class PlayerDeathTrackingComponent : MonoBehaviour
     /// <summary>
     /// The last barricade to 'shred' the player.
     /// </summary>
-    internal IAssetLink<ItemBarricadeAsset>? LastShreddedBy { get; set; }
+    internal BarricadeDrop? LastShreddedTrap { get; set; }
 
     /// <summary>
     /// The last charge barricade to be detonated by this player.

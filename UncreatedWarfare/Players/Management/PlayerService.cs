@@ -1,6 +1,5 @@
 using DanielWillett.ReflectionTools;
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -200,8 +199,6 @@ public class PlayerService : IPlayerService
         {
             sub.Apply(player);
         }
-
-        player.EndConnecting();
     }
 
     internal WarfarePlayer OnPlayerLeft(WarfarePlayer player)

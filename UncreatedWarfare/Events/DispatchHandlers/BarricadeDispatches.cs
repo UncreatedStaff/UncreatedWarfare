@@ -177,6 +177,11 @@ partial class EventDispatcher
             ? _playerService.GetOnlinePlayerOrNull(data.owner)
             : null;
 
+        if (owner is { IsOnDuty: true })
+        {
+            buildableContainer.PlacerWasOnDuty = true;
+        }
+
         Regions.tryGetCoordinate(data.point, out byte x, out byte y);
 
         ushort plant = ushort.MaxValue;

@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text.Json;
@@ -7,7 +6,6 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Interaction;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests.Parameters;
@@ -365,14 +363,18 @@ public class DeathMessageResolver
                 new DeathTranslation(DeathFlags.Item, "{0} was shredded by {3}."),
                 new DeathTranslation(DeathFlags.Killer, "{0} was shredded by {1}'s wire."),
                 new DeathTranslation(DeathFlags.Killer | DeathFlags.Item, "{0} was shredded by {1}'s {3}."),
-                new DeathTranslation(DeathFlags.Suicide, "{0} was shredded by their own wire."),
-                new DeathTranslation(DeathFlags.Suicide | DeathFlags.Item, "{0} was shredded by their own {3}."),
+                new DeathTranslation(DeathFlags.Suicide | DeathFlags.Player3, "{0} shredded themselves to death on {5}'s wire."),
+                new DeathTranslation(DeathFlags.Suicide | DeathFlags.Player3 | DeathFlags.Item, "{0} shredded themselves to death on {5}'s {3}."),
+                new DeathTranslation(DeathFlags.Suicide, "{0} shredded themselves to death on their own wire."),
+                new DeathTranslation(DeathFlags.Suicide | DeathFlags.Item, "{0} shredded themselves to death on their own {3}."),
                 new DeathTranslation(DeathFlags.Bleeding, "{0} bled out after being shredded by wire."),
                 new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Item, "{0} bled out after being shredded by {3}."),
                 new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Killer, "{0} bled out after being shredded by {1}'s wire."),
                 new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Killer | DeathFlags.Item, "{0} bled out after being shredded by {1}'s {3}."),
-                new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Suicide, "{0} bled out after being shredded by their own wire."),
-                new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Suicide | DeathFlags.Item, "{0} bled out after being shredded by their own {3}."),
+                new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Suicide | DeathFlags.Player3, "{0} bled out after shredding themselves to death on {5}'s wire."),
+                new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Suicide | DeathFlags.Player3 | DeathFlags.Item, "{0} bled out after shredding themselves to death on {5}'s {3}."),
+                new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Suicide, "{0} bled to death from shredding themselves on their own wire."),
+                new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Suicide | DeathFlags.Item, "{0} bled to death from shredding themselves on their own {3}."),
             ]
         },
         new CauseGroup(EDeathCause.SPARK)

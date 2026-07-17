@@ -64,7 +64,7 @@ internal sealed class UseableGunReceiveChangeFiremode : IHarmonyPatch
         ChangeFiremodeRequested args = new ChangeFiremodeRequested
         {
             Player = player,
-            CurrentFiremode = (EFiremode)item!.item.state[11],
+            CurrentFiremode = (EFiremode)item!.item.state[GunStateIndices.FIREMODE],
             Firemode = newFiremode,
             Asset = gun,
             Useable = __instance,
@@ -79,7 +79,7 @@ internal sealed class UseableGunReceiveChangeFiremode : IHarmonyPatch
                 return;
             }
 
-            EFiremode firemode = (EFiremode)args.Item.item.state[11];
+            EFiremode firemode = (EFiremode)args.Item.item.state[GunStateIndices.FIREMODE];
             if (firemode == args.Firemode)
                 return;
 

@@ -1,6 +1,7 @@
 using DanielWillett.ModularRpcs.Annotations;
 using DanielWillett.ModularRpcs.Async;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using MySqlConnector;
 using System;
 using System.Linq;
@@ -14,9 +15,8 @@ namespace Uncreated.Warfare.Moderation.Discord;
 [GenerateRpcSource]
 public partial class AccountLinkingService
 {
-    private static System.Random? _randomGenerator;
     private readonly IUserDataService _userDataService;
-    private readonly IUserDataDbContext _dbContext;
+    private readonly IServiceProvider _serviceProvider;
     private readonly SemaphoreSlim _semaphore;
     private readonly ILogger<AccountLinkingService> _logger;
 
@@ -25,7 +25,7 @@ public partial class AccountLinkingService
     /// <para>
     /// If DiscordID == 0 then a steam account was unlinked.
     /// If Steam64ID == 0 then a discord account was unlinked.
-    /// Else an account was linked.
+    /// Otherwise an account was linked.
     /// </para>
     /// </summary>
     public event Action<CSteamID, ulong>? OnLinkUpdated;
@@ -35,11 +35,10 @@ public partial class AccountLinkingService
     /// </summary>
     public event Action<CSteamID, ulong, GuildStatusResult>? OnGuildStatusUpdated;
 
-    public AccountLinkingService(IUserDataService userDataService, IUserDataDbContext dbContext, ILogger<AccountLinkingService> logger)
+    public AccountLinkingService(IUserDataService userDataService, IServiceProvider serviceProvider, ILogger<AccountLinkingService> logger)
     {
         _userDataService = userDataService;
-        _dbContext = dbContext;
-        _dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
+        _serviceProvider = serviceProvider;
         _logger = logger;
 
         _semaphore = new SemaphoreSlim(1, 1);
@@ -54,6 +53,10 @@ public partial class AccountLinkingService
         if (steamId.GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
             throw new ArgumentException("Invalid Steam64 ID.", nameof(steamId));
 
+        await using AsyncServiceScope scope = _serviceProvider.CreateAsyncScope();
+
+        IUserDataDbContext dbContext = scope.ServiceProvider.GetRequiredService<IUserDataDbContext>();
+
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
@@ -61,13 +64,13 @@ public partial class AccountLinkingService
 
             // remove pending links for either accounts, also expired links while we're at it
             DateTime now = DateTime.UtcNow.AddSeconds(30d);
-            await _dbContext.PendingLinks
-                .DeleteRangeAsync((DbContext)_dbContext, x => x.Steam64 == s64 || discordId != 0 && x.DiscordId == discordId || x.ExpiryTimestamp < now, cancellationToken: token)
+            await dbContext.PendingLinks
+                .DeleteRangeAsync((DbContext)dbContext, x => x.Steam64 == s64 || discordId != 0 && x.DiscordId == discordId || x.ExpiryTimestamp < now, cancellationToken: token)
                 .ConfigureAwait(false);
 
-            await LinkAccountsIntl(s64, discordId, token).ConfigureAwait(false);
-
-            _dbContext.ChangeTracker.Clear();
+            await LinkAccountsIntl(dbContext, s64, discordId, token).ConfigureAwait(false);
+            
+            dbContext.ChangeTracker.Clear();
         }
         finally
         {
@@ -84,10 +87,14 @@ public partial class AccountLinkingService
         if (expiry.Ticks <= 0)
             expiry = TimeSpan.FromHours(1);
 
+        await using AsyncServiceScope scope = _serviceProvider.CreateAsyncScope();
+
+        IUserDataDbContext dbContext = scope.ServiceProvider.GetRequiredService<IUserDataDbContext>();
+
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            return await BeginLinkIntl(steamId, 0ul, expiry, token).ConfigureAwait(false);
+            return await BeginLinkIntl(dbContext, steamId, 0ul, expiry, token).ConfigureAwait(false);
         }
         finally
         {
@@ -104,10 +111,14 @@ public partial class AccountLinkingService
         if (expiry.Ticks <= 0)
             expiry = TimeSpan.FromHours(1);
 
+        await using AsyncServiceScope scope = _serviceProvider.CreateAsyncScope();
+
+        IUserDataDbContext dbContext = scope.ServiceProvider.GetRequiredService<IUserDataDbContext>();
+
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            return await BeginLinkIntl(CSteamID.Nil, discordId, expiry, token).ConfigureAwait(false);
+            return await BeginLinkIntl(dbContext, CSteamID.Nil, discordId, expiry, token).ConfigureAwait(false);
         }
         finally
         {
@@ -121,10 +132,14 @@ public partial class AccountLinkingService
     /// <returns><see langword="true"/> if the link was successful, otherwise <see langword="false"/>, usually because the <paramref name="matchingToken"/> isn't recognized.</returns>
     public async Task<bool> ResolveLinkFromDiscordAsync(string matchingToken, ulong discordId, CancellationToken token = default)
     {
+        await using AsyncServiceScope scope = _serviceProvider.CreateAsyncScope();
+
+        IUserDataDbContext dbContext = scope.ServiceProvider.GetRequiredService<IUserDataDbContext>();
+
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            return await ResolveLinkIntl(matchingToken, CSteamID.Nil, discordId, token).ConfigureAwait(false);
+            return await ResolveLinkIntl(dbContext, matchingToken, CSteamID.Nil, discordId, token).ConfigureAwait(false);
         }
         finally
         {
@@ -138,10 +153,14 @@ public partial class AccountLinkingService
     /// <returns><see langword="true"/> if the link was successful, otherwise <see langword="false"/>, usually because the <paramref name="matchingToken"/> isn't recognized.</returns>
     public async Task<bool> ResolveLinkFromSteamAsync(string matchingToken, CSteamID steamId, CancellationToken token = default)
     {
+        await using AsyncServiceScope scope = _serviceProvider.CreateAsyncScope();
+
+        IUserDataDbContext dbContext = scope.ServiceProvider.GetRequiredService<IUserDataDbContext>();
+
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            return await ResolveLinkIntl(matchingToken, steamId, 0, token).ConfigureAwait(false);
+            return await ResolveLinkIntl(dbContext, matchingToken, steamId, 0, token).ConfigureAwait(false);
         }
         finally
         {
@@ -149,22 +168,20 @@ public partial class AccountLinkingService
         }
     }
 
-    private async Task<SteamDiscordPendingLink> BeginLinkIntl(CSteamID user, ulong discordId, TimeSpan expiry, CancellationToken token = default)
+    private async Task<SteamDiscordPendingLink> BeginLinkIntl(IUserDataDbContext dbContext, CSteamID user, ulong discordId, TimeSpan expiry, CancellationToken token = default)
     {
         DateTimeOffset startingTimestamp = DateTimeOffset.UtcNow;
         DateTimeOffset expireTimestamp = startingTimestamp + expiry;
 
-        await RemoveExpiredAsync(token).ConfigureAwait(false);
+        await RemoveExpiredAsync(dbContext, token).ConfigureAwait(false);
 
         ulong s64 = user.m_SteamID;
         SteamDiscordPendingLink? existing = await (s64 != 0
-            ? _dbContext.PendingLinks.FirstOrDefaultAsync(x => x.ExpiryTimestamp >= startingTimestamp && x.Steam64 == s64, token)
-            : _dbContext.PendingLinks.FirstOrDefaultAsync(x => x.ExpiryTimestamp >= startingTimestamp && x.DiscordId == discordId, token));
+            ? dbContext.PendingLinks.FirstOrDefaultAsync(x => x.ExpiryTimestamp >= startingTimestamp && x.Steam64 == s64, token)
+            : dbContext.PendingLinks.FirstOrDefaultAsync(x => x.ExpiryTimestamp >= startingTimestamp && x.DiscordId == discordId, token));
 
         if (existing != null)
         {
-            _dbContext.ChangeTracker.Clear();
-
             return existing;
         }
 
@@ -181,19 +198,19 @@ public partial class AccountLinkingService
                 Token = GenerateRandomToken()
             };
 
-            // duplicate token
             try
             {
-                _dbContext.PendingLinks.Add(newLink);
-                await _dbContext.SaveChangesAsync(token).ConfigureAwait(false);
+                dbContext.PendingLinks.Add(newLink);
+                await dbContext.SaveChangesAsync(token).ConfigureAwait(false);
             }
             catch (MySqlException ex) when (ex.ErrorCode == MySqlErrorCode.DuplicateKeyEntry)
             {
+                // duplicate token
                 continue;
             }
             finally
             {
-                _dbContext.ChangeTracker.Clear();
+                dbContext.ChangeTracker.Clear();
             }
 
             break;
@@ -209,7 +226,7 @@ public partial class AccountLinkingService
     {
         return string.Create<object?>(9, null, (span, _) =>
         {
-            System.Random r = _randomGenerator ??= new System.Random();
+            System.Random r = new System.Random();
             for (int i = 0; i < 8; ++i)
             {
                 // random capital or lowercase letter
@@ -221,7 +238,7 @@ public partial class AccountLinkingService
         });
     }
 
-    private async Task<bool> ResolveLinkIntl(string matchingToken, CSteamID steamId, ulong discordId, CancellationToken token = default)
+    private async Task<bool> ResolveLinkIntl(IUserDataDbContext dbContext, string matchingToken, CSteamID steamId, ulong discordId, CancellationToken token = default)
     {
         string? validToken = NormalizeToken(matchingToken);
         if (validToken == null)
@@ -230,11 +247,11 @@ public partial class AccountLinkingService
         DateTimeOffset now = DateTimeOffset.UtcNow;
         ulong s64 = steamId.m_SteamID;
 
-        await RemoveExpiredAsync(token).ConfigureAwait(false);
+        await RemoveExpiredAsync(dbContext, token).ConfigureAwait(false);
 
         SteamDiscordPendingLink? existing = await (s64 != 0
-            ? _dbContext.PendingLinks.FirstOrDefaultAsync(x => x.ExpiryTimestamp >= now && x.DiscordId.HasValue && x.Token == validToken, token)
-            : _dbContext.PendingLinks.FirstOrDefaultAsync(x => x.ExpiryTimestamp >= now && x.Steam64.HasValue && x.Token == validToken, token));
+            ? dbContext.PendingLinks.FirstOrDefaultAsync(x => x.ExpiryTimestamp >= now && x.DiscordId.HasValue && x.Token == validToken, token)
+            : dbContext.PendingLinks.FirstOrDefaultAsync(x => x.ExpiryTimestamp >= now && x.Steam64.HasValue && x.Token == validToken, token));
 
         if (existing == null)
             return false;
@@ -250,16 +267,14 @@ public partial class AccountLinkingService
         if (Unsafe.As<ulong, CSteamID>(ref steam64).GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
             return false;
 
-        await LinkAccountsIntl(steam64, discordId, token).ConfigureAwait(false);
+        await LinkAccountsIntl(dbContext, steam64, discordId, token).ConfigureAwait(false);
 
-        _dbContext.Remove(existing);
-        await _dbContext.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
-
-        _dbContext.ChangeTracker.Clear();
+        dbContext.Remove(existing);
+        await dbContext.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
         return true;
     }
 
-    private async Task LinkAccountsIntl(ulong steam64, ulong discordId, CancellationToken token)
+    private async Task LinkAccountsIntl(IUserDataDbContext dbContext, ulong steam64, ulong discordId, CancellationToken token)
     {
         ulong oldDiscordId = 0;
 
@@ -273,12 +288,12 @@ public partial class AccountLinkingService
             .ConfigureAwait(false);
 
         // remove other Steam IDs linked to a discord ID
-        List<WarfareUserData>? toClear = discordId == 0 ? null : await _dbContext.UserData
+        List<WarfareUserData>? toClear = discordId == 0 ? null : await dbContext.UserData
             .Where(x => x.DiscordId == discordId && x.Steam64 != steam64)
             .AsNoTracking()
             .ToListAsync(token);
 
-        int numUpdated = discordId == 0 ? 0 : await _dbContext.UserData.BatchUpdate((DbContext)_dbContext)
+        int numUpdated = discordId == 0 ? 0 : await dbContext.UserData.BatchUpdate((DbContext)dbContext)
             .Set(x => x.DiscordId, _ => 0ul)
             .Where(x => x.DiscordId == discordId && x.Steam64 != steam64)
             .ExecuteAsync(cancellationToken: token)
@@ -313,11 +328,11 @@ public partial class AccountLinkingService
         }
     }
 
-    private async Task RemoveExpiredAsync(CancellationToken token)
+    private async Task RemoveExpiredAsync(IUserDataDbContext dbContext, CancellationToken token)
     {
         DateTime now = DateTime.UtcNow.AddSeconds(30d);
-        int removed = await _dbContext.PendingLinks
-            .DeleteRangeAsync((DbContext)_dbContext, x => x.ExpiryTimestamp < now, cancellationToken: token)
+        int removed = await dbContext.PendingLinks
+            .DeleteRangeAsync((DbContext)dbContext, x => x.ExpiryTimestamp < now, cancellationToken: token)
             .ConfigureAwait(false);
 
         if (removed != 0)

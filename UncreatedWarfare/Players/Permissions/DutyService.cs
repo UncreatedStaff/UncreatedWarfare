@@ -21,7 +21,7 @@ using Uncreated.Warfare.Zones;
 namespace Uncreated.Warfare.Players.Permissions;
 
 [GenerateRpcSource]
-public partial class DutyService : IAsyncEventListener<PlayerLeft>
+public partial class DutyService : IAsyncEventListener<PlayerLeft>, IEventListener<PlayerDied>
 {
     private readonly SignInstancer _signs;
     private readonly ChatService _chatService;
@@ -34,6 +34,7 @@ public partial class DutyService : IAsyncEventListener<PlayerLeft>
 
     public static readonly PermissionLeaf PermissionFreecam = new PermissionLeaf("unturned::features.freecam");
     public static readonly PermissionLeaf PermissionWorkzone = new PermissionLeaf("unturned::features.workzone");
+    public static readonly PermissionLeaf PermissionViewDutyPlayers = new PermissionLeaf("warfare::features.dutynotification");
 
     public string StaffOffDuty { get; }
     public string TrialOffDuty { get; }
@@ -252,15 +253,17 @@ public partial class DutyService : IAsyncEventListener<PlayerLeft>
             ItemJar? heldItem = player.GetHeldItem(out _);
             if (heldItem != null && heldItem.GetAsset() is ItemGunAsset gun && (EFiremode)player.UnturnedPlayer.equipment.state[11] == EFiremode.SAFETY)
             {
-                player.UnturnedPlayer.equipment.state[11] = (byte)ItemUtility.GetDefaultFireMode(gun);
+                player.UnturnedPlayer.equipment.state[GunStateIndices.FIREMODE] = (byte)ItemUtility.GetDefaultFireMode(gun);
                 player.UnturnedPlayer.equipment.sendUpdateState();
             }
         }
 
+        Task? broadcastTask = null;
+
         if (!player.IsOnDuty)
         {
             _chatService.Send(player, _translations.DutyOnFeedback);
-            _chatService.Broadcast<IPlayer>(_translations.TranslationService.SetOf.AllPlayersExcept(player), _translations.DutyOnBroadcast, player);
+            broadcastTask = BroadcastDutyNotifications(_translations.DutyOnBroadcast, player, token);
 
             _logger.LogInformation("{0} ({1}) went on duty (owner: {2}, admin: {3}, trial admin: {4}, staff: {5}).",
                 player.Names.GetDisplayNameOrPlayerName(),
@@ -290,6 +293,11 @@ public partial class DutyService : IAsyncEventListener<PlayerLeft>
 
         await UniTask.SwitchToMainThread(token);
         _signs.UpdateSigns<KitSignInstanceProvider>(player);
+
+        if (broadcastTask != null)
+        {
+            await broadcastTask;
+        }
     }
 
     internal async UniTask ApplyOffDuty(WarfarePlayer player, DutyLevel level, CancellationToken token = default)
@@ -336,7 +344,7 @@ public partial class DutyService : IAsyncEventListener<PlayerLeft>
                 ItemAsset? heldAsset = heldItem?.GetAsset();
                 if (heldAsset is ItemGunAsset && (EFiremode)player.UnturnedPlayer.equipment.state[11] != EFiremode.SAFETY)
                 {
-                    player.UnturnedPlayer.equipment.state[11] = (byte)EFiremode.SAFETY;
+                    player.UnturnedPlayer.equipment.state[GunStateIndices.FIREMODE] = (byte)EFiremode.SAFETY;
                     player.UnturnedPlayer.equipment.sendUpdateState();
                 }
                 else if (heldAsset is ItemThrowableAsset)
@@ -352,10 +360,12 @@ public partial class DutyService : IAsyncEventListener<PlayerLeft>
 
         _signs.UpdateSigns<KitSignInstanceProvider>(player);
 
+        Task? broadcastTask = null;
+
         if (player.IsOnDuty)
         {
             _chatService.Send(player, _translations.DutyOffFeedback);
-            _chatService.Broadcast<IPlayer>(_translations.TranslationService.SetOf.AllPlayersExcept(player), _translations.DutyOffBroadcast, player);
+            broadcastTask = BroadcastDutyNotifications(_translations.DutyOffBroadcast, player, token);
 
             _logger.LogInformation("{0} ({1}) went off duty (owner: {2}, admin: {3}, trial admin: {4}, staff: {5}).",
                 player.Names.GetDisplayNameOrPlayerName(),
@@ -382,14 +392,51 @@ public partial class DutyService : IAsyncEventListener<PlayerLeft>
         {
             _logger.LogDebug(ex, "Failed to trigger SendDutyChanged.");
         }
+
+        if (broadcastTask != null)
+        {
+            await broadcastTask;
+        }
+    }
+
+    private async Task BroadcastDutyNotifications(Translation<IPlayer> translation, IPlayer dutyPlayer, CancellationToken token = default)
+    {
+        foreach (WarfarePlayer player in _playerService.GetThreadsafePlayerList())
+        {
+            if (!await _permissionStore.HasPermissionAsync(player, PermissionViewDutyPlayers, token))
+                continue;
+
+            _chatService.Send(player, translation.Translate(dutyPlayer, player, canUseIMGUI: true));
+        }
     }
 
     async UniTask IAsyncEventListener<PlayerLeft>.HandleEventAsync(PlayerLeft e, IServiceProvider serviceProvider, CancellationToken token)
     {
         if (await SetDutyStateAsync(e.Steam64, false, CancellationToken.None).ConfigureAwait(false))
         {
-            _chatService.Broadcast<IPlayer>(_translations.TranslationService.SetOf.AllPlayers(), _translations.DutyOffBroadcast, e.Player);
             _logger.LogInformation("{0} ({1}) went off duty from disconnecting.", e.Player.Names.GetDisplayNameOrPlayerName(), e.Player.Steam64);
+            await BroadcastDutyNotifications(_translations.DutyOffBroadcast, e.Player, token);
+        }
+    }
+
+    void IEventListener<PlayerDied>.HandleEvent(PlayerDied e, IServiceProvider serviceProvider)
+    {
+        if (e.Player.IsOnDuty || e.WasSuicide)
+            return;
+
+        // on-duty player kills an off-duty player
+        if (e.ThirdPartyAtFault)
+        {
+            if (e is { ThirdPartyWasOnDuty: true, ThirdParty: not null })
+            {
+                _chatService.Broadcast(_translations.KillWhileOnDutyBroadcast, e.ThirdParty, e.Player);
+                return;
+            }
+        }
+
+        if (e is { KillerWasOnDuty: true, Killer: not null })
+        {
+            _chatService.Broadcast(_translations.KillWhileOnDutyBroadcast, e.Killer, e.Player);
         }
     }
 }

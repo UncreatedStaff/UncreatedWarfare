@@ -391,6 +391,7 @@ public class WarfarePlayer :
         }
 
         IsConnecting = false;
+        _playerTaskData = default;
     }
 
     public override string ToString()

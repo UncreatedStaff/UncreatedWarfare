@@ -321,7 +321,7 @@ internal sealed class InteractableTrapOnTriggerEnter : IHarmonyPatch
                     return;
 
                 data = PlayerDeathTrackingComponent.GetOrAdd(args.TriggeringPlayer.UnturnedPlayer);
-                data.LastShreddedBy = AssetLink.Create(args.Barricade.asset);
+                data.LastShreddedTrap = args.Barricade;
 
                 DamageTool.damage(args.TriggeringPlayer.UnturnedPlayer, EDeathCause.SHRED, ELimb.SPINE, new CSteamID(args.ServersideData.owner), Vector3.up, args.PlayerDamage, 1f, out _, trackKill: true);
                 if (args.ShouldBreakLegs && !args.TriggeringPlayer.UnturnedPlayer.life.isDead)
@@ -342,7 +342,7 @@ internal sealed class InteractableTrapOnTriggerEnter : IHarmonyPatch
             }
 
             if (data != null)
-                data.LastShreddedBy = default;
+                data.LastShreddedTrap = null;
         }
 
         TrapTriggered finalArgs = new TrapTriggered

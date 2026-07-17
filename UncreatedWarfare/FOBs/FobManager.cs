@@ -25,7 +25,7 @@ namespace Uncreated.Warfare.Fobs;
 
 public partial class FobManager : IWhitelistExceptionProvider, ILayoutHostedService, IDisposable
 {
-    internal const float EmplacementSpawnOffset = 3f;
+    internal const float EmplacementSpawnOffset = 1.5f;
 
     private readonly FobTranslations _translations;
     private readonly AssetConfiguration _assetConfiguration;
