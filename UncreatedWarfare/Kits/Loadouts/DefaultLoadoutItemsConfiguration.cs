@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Configuration;
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using Uncreated.Warfare.Configuration;
@@ -20,8 +19,8 @@ public sealed class DefaultLoadoutItemsConfiguration : BaseAlternateConfiguratio
     private readonly ILogger<DefaultLoadoutItemsConfiguration> _logger;
     private readonly IReadOnlyList<IItem>[] _configuration;
 
-    public DefaultLoadoutItemsConfiguration(ILogger<DefaultLoadoutItemsConfiguration> logger)
-        : base(Path.Combine("Kits", "Default Items.yml"))
+    public DefaultLoadoutItemsConfiguration(IServiceProvider serviceProvider, ILogger<DefaultLoadoutItemsConfiguration> logger)
+        : base(serviceProvider, Path.Combine("Kits", "Default Items.yml"), mapSpecific: false)
     {
         _logger = logger;
         _configuration = new IReadOnlyList<IItem>[EnumUtility.GetMaximumValue<Class>() - MinimumClass + 1];

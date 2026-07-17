@@ -391,10 +391,10 @@ public class ClaimToRearmTweaks :
     {
         if (e.Zone.Type is not ZoneType.MainBase)
             return;
-
+        
         if (_zoneStore == null || _zoneStore.IsInWarRoom(e.Player) || e.Player.Component<KitPlayerComponent>().HasPreviewKit)
             return;
-
+        
         await _kitRequestService.RestockKitAsync(e.Player, true, token);
     }
 

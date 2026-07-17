@@ -1,3 +1,4 @@
+using System;
 using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.FOBs.Construction;
@@ -17,7 +18,7 @@ public enum ShovelableType
     /// <summary>
     /// A crate where players can refill their ammo and use Ammo Supplies.
     /// </summary>
-    [TranslatableValue("Ammo Crate")]
+    [TranslatableValue("Ammo Crate"), Obsolete]
     AmmoCrate,
 
     /// <summary>

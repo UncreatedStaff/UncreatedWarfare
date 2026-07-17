@@ -23,15 +23,15 @@ public class SignTranslations : TranslationCollection
 
     public readonly SignTranslation SignClassDescriptionLAT = new SignTranslation("class_desc_lat", "\n\n<#cecece>A balance between an anti-tank and combat loadout, used to conveniently destroy <#f01f1c>armored enemy vehicles</color>.</color>\n<#f01f1c>\\/");
 
-    public readonly SignTranslation SignClassDescriptionHAT = new SignTranslation("class_desc_hat", "\n\n<#cecece>Equipped with multiple powerful <#f0a31c>anti-tank shells</color> to take out any vehicles.</color>\n<#f01f1c>\\/");
+    public readonly SignTranslation SignClassDescriptionHAT = new SignTranslation("class_desc_hat", "<#f01f1c>/\\</color>\n\n<#cecece>Equipped with multiple powerful <#f0a31c>anti-tank shells</color> to take out any vehicles.</color>");
 
     public readonly SignTranslation SignClassDescriptionGrenadier = new SignTranslation("class_desc_grenadier", "\n\n<#cecece>Equipped with a <#f0a31c>grenade launcher</color> to take out enemies behind cover or in light-armored vehicles.</color>\n<#f01f1c>\\/");
 
     public readonly SignTranslation SignClassDescriptionMarksman = new SignTranslation("class_desc_marksman", "\n\n<#cecece>Equipped with a <#f0a31c>marksman rifle</color> to take out enemies from medium to high distances.</color>\n<#f01f1c>\\/");
 
-    public readonly SignTranslation SignClassDescriptionSniper = new SignTranslation("class_desc_sniper", "\n\n<#cecece>Equipped with a high-powered <#f0a31c>sniper rifle</color> to take out enemies from great distances.</color>\n<#f01f1c>\\/");
+    public readonly SignTranslation SignClassDescriptionSniper = new SignTranslation("class_desc_sniper", "<#f01f1c>/\\</color>\n\n<#cecece>Equipped with a high-powered <#f0a31c>sniper rifle</color> to take out enemies from great distances.</color>");
 
-    public readonly SignTranslation SignClassDescriptionAPRifleman = new SignTranslation("class_desc_aprifleman", "\n\n<#cecece>Equipped with <#f0a31c>explosive traps</color> to cover entry-points and entrap enemy vehicles.</color>\n<#f01f1c>\\/");
+    public readonly SignTranslation SignClassDescriptionAPRifleman = new SignTranslation("class_desc_aprifleman", "<#f01f1c>/\\</color>\n\n<#cecece>Equipped with <#f0a31c>explosive traps</color> to cover entry-points and entrap enemy vehicles.</color>");
 
     public readonly SignTranslation SignClassDescriptionEngineer = new SignTranslation("class_desc_engineer", "\n\n<#cecece>Features 200% <#f0a31c>build speed</color> and are equipped with <#f0a31c>fortifications</color> and traps to help defend their team's FOBs.</color>\n<#f01f1c>\\/");
 

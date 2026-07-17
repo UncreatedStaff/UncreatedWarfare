@@ -114,4 +114,51 @@ public static class TerrainUtility
 
         return Level.HEIGHT;
     }
+
+    /// <summary>
+    /// Finds an open section of Y values with the given radius starting at <paramref name="point"/>'s Y value and moving around until it finds one.
+    /// Will not go below the terrain. Falls back to the original value of <paramref name="point"/>'s Y value.
+    /// </summary>
+    public static float GetNextOpenPoint(Vector3 point, float radius, int? rayMask = null)
+    {
+        int mask = rayMask ?? RayMasks.BLOCK_COLLISION & ~(RayMasks.CLIP | RayMasks.VEHICLE | RayMasks.AGENT | RayMasks.PLAYER | RayMasks.ENEMY);
+
+        float minY = LevelGround.getHeight(point) + radius;
+        point.y = Math.Max(minY, point.y);
+        
+        bool below = false;
+        bool tailEnded = false;
+        float head = point.y + radius, tail = point.y - radius;
+        int maxIterations = Math.Min(64, (int)Math.Round(1024 / radius));
+        for (int i = 0; i < maxIterations; ++i)
+        {
+            float origin = below ? tail : head;
+            if (!Physics.SphereCast(new Vector3(point.x, origin, point.z), radius + 0.01f, Vector3.down, out RaycastHit hit, radius * 16f, mask, QueryTriggerInteraction.Ignore)
+                || hit.distance >= radius * 2f - 0.01f)
+            {
+                if (hit.point.y >= minY)
+                {
+                    return hit.point.y;
+                }
+                
+                if (below)
+                    tailEnded = true;
+            }
+
+            if (below)
+                tail -= radius * 2;
+            else
+                head += radius * 2;
+
+            if (tailEnded)
+            {
+                below = false;
+                continue;
+            }
+
+            below = !below;
+        }
+
+        return point.y;
+    }
 }

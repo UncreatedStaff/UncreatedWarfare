@@ -83,4 +83,7 @@ public class DeploymentTranslations : TranslationCollection
 
     [TranslationData("Sent to a player after they try to deploy to main while already in main.")]
     public readonly Translation DeployAlreadyInMain = new Translation("<#ffaa42>You are already at the main base.");
+
+    [TranslationData("Sent to a player trying to deploy from the war room without a kit.")]
+    public readonly Translation DeployNoKit = new Translation("<#ffaa42>You need items before deploying. Punch a kit sign to request a kit.");
 }

@@ -65,8 +65,27 @@ public class WarfareVehicleInfo : IEquatable<WarfareVehicleInfo>, ITranslationAr
     public class CrewInfo
     {
         public IReadOnlyList<int> Seats { get; set; } = Array.Empty<int>();
+
+        /// <summary>
+        /// Whether or not the driver is invincible to gun damage.
+        /// </summary>
         public bool Invincible { get; set; }
+
+        /// <summary>
+        /// Whether or not the passengers are invincible to gun damage.
+        /// </summary>
         public bool PassengersInvincible { get; set; }
+        
+
+        /// <summary>
+        /// Whether or not the passengers and driver are only hittable from the front hemisphere of the vehicle.
+        /// </summary>
+        public bool InvincibleForwardOnly { get; set; }
+        
+        /// <summary>
+        /// Seat index exceptions to <see cref="PassengersInvincible"/>. What this means depends on the value of <see cref="PassengersInvincible"/>.
+        /// </summary>
+        public IReadOnlyList<int> Except { get; set; } = Array.Empty<int>();
         public int? MaxAllowedCrew { get; set; }
     }
 

@@ -107,6 +107,8 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>
         {
             data.HasUI = false;
             data.IsClosing = false;
+            data.HealthBarCount = 0;
+            data.StoredHealth = 0;
             ClearFromPlayer(player.SteamPlayer);
         }
         else
@@ -125,6 +127,8 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>
                     return;
 
                 data.HasUI = false;
+                data.HealthBarCount = 0;
+                data.StoredHealth = 0;
                 ClearFromPlayer(player.SteamPlayer);
             });
         }
@@ -155,6 +159,8 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>
             SendToPlayer(c, title);
             isDefaultState = true;
             data.HasUI = true;
+            data.HealthBarCount = 0;
+            data.StoredHealth = 0;
         }
         else
         {
@@ -260,7 +266,7 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>
             double? health = uiHandler.GetHealth();
             if (health.HasValue)
             {
-                SetHealth(c, health.Value, vehicleMask);
+                SetHealth(c, health.Value, data);
                 if (!isDefaultState)
                 {
                     HealthBarRoot.Show(c);
@@ -355,13 +361,17 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>
         return Counts[(int)type - 1];
     }
 
-    private void SetHealth(ITransportConnection c, double health, int vehicleMask)
+    private void SetHealth(ITransportConnection c, double health, Data data)
     {
         health = Math.Clamp(health, 0d, 1d);
 
-        int amt = GetMaxHealthBarCount(vehicleMask);
-        string str = new string('█', (int)Math.Round(amt * health));
+        int amt = GetMaxHealthBarCount(data.VehicleMask);
+        data.StoredHealth = health;
+        if (data.HealthBarCount == amt)
+            return;
 
+        int charCt = (int)Math.Round(amt * health);
+        string str = new string('█', charCt);
         HealthBar.SetText(c, str);
     }
 
@@ -381,12 +391,12 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>
         //                 + (vehicleMask & (1 << (int)MapTackVehicleType.Jet))
         //                 + (vehicleMask & (1 << (int)MapTackVehicleType.TransportHeli));
 
-        int gndLength = (vehicleMask & (1 << (int)MapTackVehicleType.APC))
-                        + (vehicleMask & (1 << (int)MapTackVehicleType.Humvee))
-                        + (vehicleMask & (1 << (int)MapTackVehicleType.IFV))
-                        + (vehicleMask & (1 << (int)MapTackVehicleType.MBT))
-                        + (vehicleMask & (1 << (int)MapTackVehicleType.ScoutCar))
-                        + (vehicleMask & (1 << (int)MapTackVehicleType.Truck));
+        int gndLength = ((vehicleMask & (1 << (int)MapTackVehicleType.APC)) != 0 ? 1 : 0)
+                        + ((vehicleMask & (1 << (int)MapTackVehicleType.Humvee)) != 0 ? 1 : 0)
+                        + ((vehicleMask & (1 << (int)MapTackVehicleType.IFV)) != 0 ? 1 : 0)
+                        + ((vehicleMask & (1 << (int)MapTackVehicleType.MBT)) != 0 ? 1 : 0)
+                        + ((vehicleMask & (1 << (int)MapTackVehicleType.ScoutCar)) != 0 ? 1 : 0)
+                        + ((vehicleMask & (1 << (int)MapTackVehicleType.Truck)) != 0 ? 1 : 0);
 
         // int lenByEmpl = 20 + emplLength * 40;
         // int lenByAir = 20 + airLength * 48;
@@ -425,6 +435,7 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>
                 {
                     ui.Show(c);
                     data.VehicleMask |= mask;
+                    OnVehiclesResized(c, data);
                 }
 
                 ui.Count.SetText(c, amount.ToString(player.Locale.CultureInfo));
@@ -433,7 +444,17 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>
             {
                 ui.Hide(c);
                 data.VehicleMask &= ~mask;
+                OnVehiclesResized(c, data);
             }
+        }
+    }
+
+    private void OnVehiclesResized(ITransportConnection c, Data data)
+    {
+        if (data.HasHealthBar)
+        {
+            // health bar can resize when vehicles are added/removed
+            SetHealth(c, data.StoredHealth, data);
         }
     }
 
@@ -462,7 +483,7 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>
                 {
                     HealthBarRoot.Show(player);
                 }
-                SetHealth(player.Connection, health.Value, data.VehicleMask);
+                SetHealth(player.Connection, health.Value, data);
             }
             else if (data.HasHealthBar)
             {
@@ -520,6 +541,9 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>
         public bool HasHealthBar;
         public MapTackAttributes Attributes;
         public bool HasShovelIcon;
+        public int HealthBarCount;
+        public double StoredHealth;
+        public float LastLookAwayTime;
 
         public MapTack? CurrentMapTack;
 

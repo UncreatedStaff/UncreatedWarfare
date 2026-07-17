@@ -1,5 +1,6 @@
 ﻿using SDG.NetTransport;
 using System;
+using System.Diagnostics;
 using Uncreated.Warfare.Configuration;
 
 namespace Uncreated.Warfare.Util;
@@ -252,6 +253,43 @@ public static class EffectUtility
         parameters.reliable = reliable;
 
         EffectManager.triggerEffect(parameters);
+    }
+
+    private static EffectAsset? _debugEffect;
+
+    [Conditional("DEBUG")]
+    public static void TriggerDebugEffect(ITransportConnection connection, Vector3 position, Vector3 direction, Vector3 left, bool clear = true, float scale = 1f)
+    {
+        TriggerDebugEffect(connection, position, Quaternion.LookRotation(direction, Vector3.Cross(left, direction)), clear);
+    }
+
+    [Conditional("DEBUG")]
+    public static void TriggerDebugEffect(ITransportConnection connection, Vector3 position, Quaternion rotation, bool clear = true, float scale = 1f)
+    {
+        GameThread.AssertCurrent();
+
+        _debugEffect ??= Assets.find<EffectAsset>(new Guid("6093290a7ce049b8a418be7fd79e89a0"));
+
+        if (_debugEffect == null)
+            return;
+
+        if (clear)
+        {
+            EffectManager.ClearEffectByGuid(_debugEffect.GUID, connection);
+        }
+
+        TriggerEffectParameters p = new TriggerEffectParameters(_debugEffect)
+        {
+            position = position,
+            reliable = false
+        };
+        p.SetRotation(rotation);
+        p.SetRelevantPlayer(connection);
+        if (!Mathf.Approximately(scale, 1f))
+        {
+            p.SetUniformScale(scale);
+        }
+        EffectManager.triggerEffect(p);
     }
 
     private static void SetColorIntl(in Color color, ref TriggerEffectParameters parameters)

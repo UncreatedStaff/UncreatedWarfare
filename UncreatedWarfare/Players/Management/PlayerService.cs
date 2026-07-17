@@ -78,7 +78,7 @@ public class PlayerService : IPlayerService
         _serviceProvider = lifetimeScope.Resolve<IServiceProvider>();
         _onlinePlayers = new TrackingList<WarfarePlayer>();
         _threadsafeList = Array.Empty<WarfarePlayer>();
-        _onlinePlayersDictionary = new PlayerDictionary<WarfarePlayer>(Provider.maxPlayers);
+        _onlinePlayersDictionary = new PlayerDictionary<WarfarePlayer>(64);
         _readOnlyOnlinePlayers = _onlinePlayers.AsReadOnly();
         _loggerFactory = loggerFactory;
 

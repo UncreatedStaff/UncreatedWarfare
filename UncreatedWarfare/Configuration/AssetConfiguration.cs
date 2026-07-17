@@ -1,62 +1,27 @@
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Primitives;
 using System;
 using System.Collections.Concurrent;
-using System.IO;
 using Uncreated.Framework.UI;
 
 namespace Uncreated.Warfare.Configuration;
 
 /// <summary>
-/// Home for storing asset GUIDs, etc.
+/// Home for storing asset GUIDs used in gameplay features. Can be overridden for specific maps using map overrides (ex. Assets.Yellowknife.yml).
 /// </summary>
 /// <remarks>Use <see cref="AssetLink.GetAssetLink(IConfiguration,string)"/> or <see cref="ConfigurationBinder.GetValue{T}(IConfiguration,string)"/> with <see cref="IAssetLink{TAsset}"/> to get assets.</remarks>
-public class AssetConfiguration : IConfiguration, IDisposable
+public class AssetConfiguration : BaseAlternateConfigurationFile
 {
-    private readonly IConfiguration _configuration;
-    private readonly IDisposable _reloadToken;
     private readonly ConcurrentDictionary<string, IAssetContainer?> _cache = new ConcurrentDictionary<string, IAssetContainer?>(StringComparer.Ordinal);
 
-    public string FilePath { get; }
-    public IConfiguration UnderlyingConfiguration { get; }
-
-
-    public event Action<IConfiguration>? OnChange;
-    public AssetConfiguration(WarfareModule module)
+    public AssetConfiguration(IServiceProvider serviceProvider)
+        : base(serviceProvider, "Assets.yml")
     {
-        FilePath = Path.Combine(module.HomeDirectory, "Assets.yml");
 
-        ConfigurationBuilder builder = new ConfigurationBuilder();
-        ConfigurationHelper.AddSourceWithMapOverride(builder, module.FileProvider, FilePath);
-        _configuration = builder.Build();
-
-        UnderlyingConfiguration = _configuration;
-
-        _reloadToken = ChangeToken.OnChange(
-            _configuration.GetReloadToken,
-            static me =>
-            {
-                me._cache.Clear();
-                UniTask.Create(me.InvokeChange);
-            },
-            this);
     }
 
-    private async UniTask InvokeChange()
+    protected override void HandleChange()
     {
-        await UniTask.SwitchToMainThread();
-        OnChange?.Invoke(this);
-    }
-
-    public string? this[string key] { get => _configuration[key]; set => _configuration[key] = value; }
-    public IConfigurationSection GetSection(string key) => _configuration.GetSection(key);
-    public IEnumerable<IConfigurationSection> GetChildren() => _configuration.GetChildren();
-    public IChangeToken GetReloadToken() => _configuration.GetReloadToken();
-    public void Dispose()
-    {
-        _reloadToken.Dispose();
-        if (_configuration is IDisposable disp)
-            disp.Dispose();
+        _cache.Clear();
     }
 
     internal bool TryGetAssetLinkCached<TAsset>(string key, [NotNullWhen(true)] out IAssetLink<TAsset>? link) where TAsset : Asset

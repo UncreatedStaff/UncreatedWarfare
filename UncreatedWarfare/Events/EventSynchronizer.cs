@@ -27,7 +27,7 @@ public class EventSynchronizer : IDisposable
     private int _timeoutCheckIndex;
     private bool _hasUpdatedHandler;
 
-    public TimeSpan MaxTimeout { get; init; } = TimeSpan.FromSeconds(15);
+    public TimeSpan MaxTimeout { get; init; } = TimeSpan.FromSeconds(25);
 
     public EventSynchronizer(ILogger<EventSynchronizer> logger)
     {

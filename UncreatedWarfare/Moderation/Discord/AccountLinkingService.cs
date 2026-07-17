@@ -349,8 +349,9 @@ public partial class AccountLinkingService
             GuildStatusResult result = await SendIsInGuild(discordId);
             return result;
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogWarning(ex, $"Error checking if <@{discordId}> is in a guild.");
             return GuildStatusResult.Unknown;
         }
     }

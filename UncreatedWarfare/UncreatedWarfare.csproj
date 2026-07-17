@@ -201,7 +201,7 @@
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="Unturned.MSBuild" Version="1.0.0-test7">
+        <PackageReference Include="Unturned.MSBuild" Version="1.0.0">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
         </PackageReference>
@@ -295,7 +295,6 @@
         <Using Include="Steamworks" />
         <Using Include="System.Collections" />
         <Using Include="UnityEngine" />
-        <Using Include="Steamworks" />
         <Using Include="System.Threading" />
         <Using Include="System.Threading.Tasks" />
         <Using Include="Cysharp.Threading.Tasks" />
@@ -360,9 +359,11 @@
         <Publicize Include="Assembly-CSharp:SDG.Unturned.AssetsWorker.AssetDefinition" />
         <Publicize Include="Assembly-CSharp:SDG.Unturned.Assets.LoadFile" />
         <Publicize Include="Assembly-CSharp:SDG.Unturned.Assets.AddAssetsFromOriginToCurrentMapping" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.NetMessages" />
         <Publicize Include="Assembly-CSharp:SDG.Unturned.CommandLogMemoryUsage.OnExecuted" />
         <Publicize Include="Assembly-CSharp:SDG.Unturned.ClientAssetIntegrity" />
         <Publicize Include="Assembly-CSharp:SDG.Unturned.ClientAssetIntegrity.serverKnownMissingGuids" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.Rocket.secondLastPos" />
 
     </ItemGroup>
 

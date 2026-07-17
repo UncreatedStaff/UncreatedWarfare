@@ -1,5 +1,6 @@
 using SDG.NetTransport;
 using StackCleaner;
+using Stripe;
 using System;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Models.Localization;
@@ -1651,15 +1652,30 @@ public class ChatService
         if (!shouldAllow)
             return;
 
+        SteamPlayer? fp;
+        if (fromPlayer == null)
+        {
+            fp = null;
+        }
+        else if (!fromPlayer.IsOnline)
+        {
+            fp = null;
+            iconURL ??= fromPlayer.SteamSummary.AvatarUrlSmall;
+        }
+        else
+        {
+            fp = fromPlayer.SteamPlayer;
+        }
+
         if (_sendChatIndividual == null)
         {
-            ChatManager.serverSendMessage(text, color, fromPlayer?.SteamPlayer, recipient.SteamPlayer, mode, iconURL, richText);
+            ChatManager.serverSendMessage(text, color, fp, recipient.SteamPlayer, mode, iconURL, richText);
             return;
         }
 
         try
         {
-            ChatManager.onServerSendingMessage?.Invoke(ref text, ref color, fromPlayer?.SteamPlayer, recipient.SteamPlayer, mode, ref iconURL, ref richText);
+            ChatManager.onServerSendingMessage?.Invoke(ref text, ref color, fp, recipient.SteamPlayer, mode, ref iconURL, ref richText);
         }
         catch (Exception ex)
         {

@@ -7,32 +7,41 @@ namespace Uncreated.Warfare.Commands;
 [Command("discord", "dicsord"), MetadataFile]
 internal sealed class DiscordCommand : IExecutableCommand
 {
-    private readonly string? _discordInviteCode;
+    private readonly IConfiguration _configuration;
 
     /// <inheritdoc />
     public required CommandContext Context { get; init; }
 
     public DiscordCommand(IConfiguration configuration)
     {
-        _discordInviteCode = configuration["discord_invite_code"];
+        _configuration = configuration;
+    }
+
+    internal static string GetDiscordJoinUrl(IConfiguration configuration)
+    {
+        string? discordInviteCode = configuration["discord_invite_code"];
+
+        string url;
+        if (string.IsNullOrEmpty(discordInviteCode))
+        {
+            url = "https://uncreated.network/discord";
+        }
+        else if (discordInviteCode.StartsWith("http", StringComparison.Ordinal))
+        {
+            url = discordInviteCode;
+        }
+        else
+        {
+            url = "https://discord.gg/" + discordInviteCode;
+        }
+
+        return url;
     }
 
     /// <inheritdoc />
     public UniTask ExecuteAsync(CancellationToken token)
     {
-        string url;
-        if (string.IsNullOrEmpty(_discordInviteCode))
-        {
-            url = "https://uncreated.network/discord";
-        }
-        else if (_discordInviteCode.StartsWith("http", StringComparison.Ordinal))
-        {
-            url = _discordInviteCode;
-        }
-        else
-        {
-            url = "https://discord.gg/" + _discordInviteCode;
-        }
+        string url = GetDiscordJoinUrl(_configuration);
 
         if (Context.Player != null)
         {

@@ -39,20 +39,15 @@ public class BunkerFob : ResourceFob, IFobStrategyMapTackHandler, IDamageableFob
             if (old != null)
                 old.OnProgressUpdated -= OnShovelableProgressUpdated;
             if (value != null)
-                value.OnProgressUpdated -= OnShovelableProgressUpdated;
+                value.OnProgressUpdated += OnShovelableProgressUpdated;
+
+            WarfareModule.Singleton.GlobalLogger.LogInformation($"Shovelable found: {_shovelable != null}");
+            InvokeHealthUpdated();
         }
     }
 
     public BunkerFob(IServiceProvider serviceProvider, string name, IBuildable buildable) : base(serviceProvider, name, buildable)
     {
-        _shovelable = FobManager.GetBuildableFobEntity<ShovelableBuildable>(buildable);
-
-        if (_shovelable != null)
-        {
-            _shovelable.OnProgressUpdated += OnShovelableProgressUpdated;
-        }
-        serviceProvider.GetRequiredService<ILogger<BunkerFob>>().LogConditional($"Shovelable found: {_shovelable != null}");
-
         IsBuilt = false;
         HasBeenRebuilt = false;
         DamageTracker = new DamageTracker(name);
@@ -195,7 +190,7 @@ public class BunkerFob : ResourceFob, IFobStrategyMapTackHandler, IDamageableFob
 
         if (_shovelable == null)
             return null;
-
+        
         return 1d - (double)_shovelable.HitsRemaining / _shovelable.Info.RequiredShovelHits;
     }
 

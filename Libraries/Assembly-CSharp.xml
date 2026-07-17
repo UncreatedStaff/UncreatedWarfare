@@ -3668,6 +3668,31 @@
             Is the Ctrl-C or Ctrl-Break signal being handled?
             </summary>
         </member>
+        <member name="T:SDG.Unturned.DamagePlayerParameters">
+            <summary>
+            Payload for the DamageTool.damagePlayer function.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.DamagePlayerParameters.respectArmor">
+            <summary>
+            Should armor worn on matching limb be factored in?
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.DamagePlayerParameters.applyGlobalArmorMultiplier">
+            <summary>
+            Should game mode config damage multiplier be factored in?
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.DamagePlayerParameters.trackKill">
+            <summary>
+            If player dies should it count towards quests?
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.DamagePlayerParameters.ragdollEffect">
+            <summary>
+            Effect to apply to ragdoll if dead.
+            </summary>
+        </member>
         <member name="F:SDG.Unturned.ELoadingTip.MAX">
             <summary>
             Marker for counting number of tips.
@@ -3693,31 +3718,6 @@
         <member name="M:SDG.Unturned.LoadingUI.PickNonLevelBackgroundImage">
             <summary>
             Select a loading image while on the startup screen or a level without any images.
-            </summary>
-        </member>
-        <member name="T:SDG.Unturned.DamagePlayerParameters">
-            <summary>
-            Payload for the DamageTool.damagePlayer function.
-            </summary>
-        </member>
-        <member name="F:SDG.Unturned.DamagePlayerParameters.respectArmor">
-            <summary>
-            Should armor worn on matching limb be factored in?
-            </summary>
-        </member>
-        <member name="F:SDG.Unturned.DamagePlayerParameters.applyGlobalArmorMultiplier">
-            <summary>
-            Should game mode config damage multiplier be factored in?
-            </summary>
-        </member>
-        <member name="F:SDG.Unturned.DamagePlayerParameters.trackKill">
-            <summary>
-            If player dies should it count towards quests?
-            </summary>
-        </member>
-        <member name="F:SDG.Unturned.DamagePlayerParameters.ragdollEffect">
-            <summary>
-            Effect to apply to ragdoll if dead.
             </summary>
         </member>
         <member name="F:SDG.Unturned.ESteamCallValidation.ONLY_FROM_SERVER">
@@ -12214,6 +12214,11 @@
             Wireframe grid on the XZ plane.
             </summary>
         </member>
+        <member name="M:SDG.Unturned.RuntimeGizmos.RotationAxisAngle(UnityEngine.Vector3,UnityEngine.Vector3,System.Single,System.Single,UnityEngine.Color,System.Single,SDG.Unturned.EGizmoLayer)">
+            <summary>
+            Draw an arrow along circumference visualizing rotation of angleDegrees around axis.
+            </summary>
+        </member>
         <member name="F:SDG.Unturned.RuntimeGizmos.BoxData.localCenter">
             <summary>
             Center relative to matrix.
@@ -13112,16 +13117,6 @@
             Unfortunately in-game rich text does not have code formatting yet, so remove the tags while preserving text.
             </summary>
         </member>
-        <member name="M:SDG.Unturned.ListExtension.GetRandomIndex``1(System.Collections.Generic.List{``0})">
-            <summary>
-            Get index within bounds assuming list is not empty.
-            </summary>
-        </member>
-        <member name="M:SDG.Unturned.ListExtension.AddDefaulted``1(System.Collections.Generic.List{``0})">
-            <summary>
-            Add a new item using its default constructor.
-            </summary>
-        </member>
         <member name="P:SDG.Unturned.ItemClothingAsset.armor">
             <summary>
             Multiplier to incoming damage. Defaults to 1.0.
@@ -13188,6 +13183,16 @@
             The player can be wearing both a "real" in-game item and a cosmetic item in the same clothing slot.
             This is called on the real item if <see cref="F:SDG.Unturned.ItemClothingAsset.priorityOverCosmeticOverride"/> has not been set.
             If true, the real item is shown rather than the cosmetic item. If false, the cosmetic item can be seen.
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.ListExtension.GetRandomIndex``1(System.Collections.Generic.List{``0})">
+            <summary>
+            Get index within bounds assuming list is not empty.
+            </summary>
+        </member>
+        <member name="M:SDG.Unturned.ListExtension.AddDefaulted``1(System.Collections.Generic.List{``0})">
+            <summary>
+            Add a new item using its default constructor.
             </summary>
         </member>
         <member name="T:SDG.Unturned.DamageZombieParameters">
@@ -20563,6 +20568,11 @@
         <member name="F:SDG.Unturned.EClientMessage.InvokeMethod">
             <summary>
             Server calling an RPC.
+            </summary>
+        </member>
+        <member name="F:SDG.Unturned.EClientMessage.ReplicateConfig">
+            <summary>
+            Setup Provider.modeConfigData and set values the client needs to know.
             </summary>
         </member>
         <member name="M:SDG.Unturned.Glazier_uGUI.EnumerateLiveElements">

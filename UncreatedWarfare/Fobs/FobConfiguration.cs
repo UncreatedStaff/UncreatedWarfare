@@ -31,7 +31,7 @@ public sealed class FobConfiguration : BaseAlternateConfigurationFile
     /// <summary>
     /// Home for storing FOB and buildable data.
     /// </summary>
-    public FobConfiguration() : base("Fobs.yml")
+    public FobConfiguration(IServiceProvider serviceProvider) : base(serviceProvider, "Fobs.yml")
     {
         HandleChange();
     }

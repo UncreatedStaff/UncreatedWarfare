@@ -64,7 +64,7 @@ public class MapScheduler : IAsyncEventListener<ServerWorkshopLoading>
 
             HasSelectedMap = true;
             Current = map;
-            await ApplyMapSetting(e, dbContext);
+            ApplyMapSetting(e, dbContext);
             return;
         }
 
@@ -97,11 +97,12 @@ public class MapScheduler : IAsyncEventListener<ServerWorkshopLoading>
 
         HasSelectedMap = true;
         Current = map;
-        await ApplyMapSetting(e, dbContext);
+        ApplyMapSetting(e, dbContext);
     }
 
-    internal async Task ApplyMapSetting(ServerWorkshopLoading e, ISeasonsDbContext dbContext)
+    internal void ApplyMapSetting(ServerWorkshopLoading e, ISeasonsDbContext dbContext)
     {
+        _logger.LogInformation($"Map selected: {Current!.DisplayName}");
         if (Current!.WorkshopId.HasValue)
         {
             e.Items.Add(new PublishedFileId_t(Current.WorkshopId.Value));
@@ -122,13 +123,15 @@ public class MapScheduler : IAsyncEventListener<ServerWorkshopLoading>
 
         Provider.map = Current.DisplayName;
 
-        // delete unused mods
-        string baseGamePath = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
-        string expectedModPath = Path.Combine(baseGamePath, "Servers", Provider.serverID, "Workshop", "Steam", "content", Provider.APP_ID.m_AppId.ToString(CultureInfo.InvariantCulture));
+        // note: i dont think this is really needed. it corrupts the 304930 .acf file and probably isn't worth fixing
 
-        DirectoryInfo expectedModFolder = new DirectoryInfo(expectedModPath);
-        if (!expectedModFolder.Exists)
-            return;
+        // delete unused mods
+        // string baseGamePath = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
+        // string expectedModPath = Path.Combine(baseGamePath, "Servers", Provider.serverID, "Workshop", "Steam", "content", Provider.APP_ID.m_AppId.ToString(CultureInfo.InvariantCulture));
+        // 
+        // DirectoryInfo expectedModFolder = new DirectoryInfo(expectedModPath);
+        // if (!expectedModFolder.Exists)
+        //     return;
 
         // todo:
         /*
@@ -137,29 +140,29 @@ public class MapScheduler : IAsyncEventListener<ServerWorkshopLoading>
             .Select(x => x.WorkshopId!.Value)
             .ToListAsync();*/
 
-        foreach (DirectoryInfo modFolder in expectedModFolder.EnumerateDirectories("*", SearchOption.TopDirectoryOnly))
-        {
-            if (!ulong.TryParse(modFolder.Name, NumberStyles.Number, CultureInfo.InvariantCulture, out ulong mod))
-            {
-                continue;
-            }
-
-            PublishedFileId_t modId = new PublishedFileId_t(mod);
-            if (e.Items.Contains(modId) /* || _maps.Any(x => x.WorkshopId == mod || x.RequiredDependencies != null && Array.IndexOf(x.RequiredDependencies, mod) >= 0) */)
-            {
-                continue;
-            }
-
-            string displayPath = Path.GetRelativePath(baseGamePath, modFolder.FullName);
-            try
-            {
-                modFolder.Delete(true);
-                _logger.LogInformation("Deleted unused mod folder {0} from workshop directory: \"{1}\".", mod, displayPath);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Unable to delete unused mod folder {0} from workshop directory: \"{1}\".", mod, displayPath);
-            }
-        }
+        // foreach (DirectoryInfo modFolder in expectedModFolder.EnumerateDirectories("*", SearchOption.TopDirectoryOnly))
+        // {
+        //     if (!ulong.TryParse(modFolder.Name, NumberStyles.Number, CultureInfo.InvariantCulture, out ulong mod))
+        //     {
+        //         continue;
+        //     }
+        // 
+        //     PublishedFileId_t modId = new PublishedFileId_t(mod);
+        //     if (e.Items.Contains(modId) /* || _maps.Any(x => x.WorkshopId == mod || x.RequiredDependencies != null && Array.IndexOf(x.RequiredDependencies, mod) >= 0) */)
+        //     {
+        //         continue;
+        //     }
+        // 
+        //     string displayPath = Path.GetRelativePath(baseGamePath, modFolder.FullName);
+        //     try
+        //     {
+        //         modFolder.Delete(true);
+        //         _logger.LogInformation("Deleted unused mod folder {0} from workshop directory: \"{1}\".", mod, displayPath);
+        //     }
+        //     catch (Exception ex)
+        //     {
+        //         _logger.LogWarning(ex, "Unable to delete unused mod folder {0} from workshop directory: \"{1}\".", mod, displayPath);
+        //     }
+        // }
     }
 }

@@ -70,7 +70,7 @@ public partial class WarfareLifetimeComponent : MonoBehaviour
         {
             CheckTranslations();
             if (_shutdownTranslations != null)
-                _chatService.Broadcast(_shutdownTranslations.ShutdownBroadcastAfterGameReminder, ShutdownReason ?? DefaultShutdownReason, TimeSpan.FromSeconds(Math.Round((_shutdownTime - rt) / 5)) * 5);
+                _chatService.Broadcast(_shutdownTranslations.ShutdownBroadcastAfterGameReminder, ShutdownReason ?? DefaultShutdownReason, TimeSpan.FromSeconds(Math.Round((_shutdownTime - rt) / 5) * 5));
             _lastLayoutShutdownWarning = rt;
         }
     }

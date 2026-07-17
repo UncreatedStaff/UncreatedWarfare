@@ -60,7 +60,7 @@ internal sealed class ProviderInitializeDedicatedUGC : IHarmonyPatch
         ServerWorkshopLoading args = new ServerWorkshopLoading
         {
             Items = new HashSet<PublishedFileId_t>(config.File_IDs.Select(x => new PublishedFileId_t(x))),
-            IgnoredChildren = new HashSet<PublishedFileId_t>(config.File_IDs.Select(x => new PublishedFileId_t(x)))
+            IgnoredChildren = new HashSet<PublishedFileId_t>(config.Ignore_Children_File_IDs.Select(x => new PublishedFileId_t(x)))
         };
 
         EventContinuations.DispatchNoCancel(
@@ -96,6 +96,7 @@ internal sealed class ProviderInitializeDedicatedUGC : IHarmonyPatch
 
             config.File_IDs = [ ..args.Items.Select(x => x.m_PublishedFileId) ];
             config.Ignore_Children_File_IDs = [ ..args.IgnoredChildren.Select(x => x.m_PublishedFileId) ];
+            WarfareModule.Singleton.GlobalLogger.LogInformation($"Mods: {config.File_IDs}. IgnoredChildren: {config.Ignore_Children_File_IDs}.");
         }
     }
 }

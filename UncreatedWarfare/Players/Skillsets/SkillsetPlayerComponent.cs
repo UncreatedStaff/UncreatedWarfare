@@ -1,21 +1,41 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Collections.Immutable;
 using System.Linq;
+using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Players.Skillsets;
 
 [PlayerComponent]
-public class SkillsetPlayerComponent : IPlayerComponent
+public class SkillsetPlayerComponent : IPlayerComponent, IDisposable
 {
-    private ILogger<SkillsetPlayerComponent> _logger = null!;
+#nullable disable
+    private ILogger<SkillsetPlayerComponent> _logger;
+    private DefaultSkillsetConfiguration _config;
+#nullable restore
 
     public required WarfarePlayer Player { get; init; }
 
     void IPlayerComponent.Init(IServiceProvider serviceProvider, bool isOnJoin)
     {
         _logger = serviceProvider.GetRequiredService<ILogger<SkillsetPlayerComponent>>();
+
+        if (!isOnJoin)
+            return;
+
+        _config = serviceProvider.GetRequiredService<DefaultSkillsetConfiguration>();
+        _config.OnChange += OnDefaultSkillsChanged;
+    }
+
+    private void OnDefaultSkillsChanged(IConfiguration config)
+    {
+        KitPlayerComponent? kpc = Player.ComponentOrNull<KitPlayerComponent>();
+        Kit? currentKit = kpc?.ActiveKit?.CachedKit;
+
+        EnsureSkillsets(currentKit?.Skillsets ?? Array.Empty<Skillset>());
     }
 
     /// <summary>
@@ -37,7 +57,7 @@ public class SkillsetPlayerComponent : IPlayerComponent
             throw new ArgumentOutOfRangeException(nameof(skill), "Skill index is out of range.");
         
         Skill skillObj = skills[(int)speciality][skill];
-        Skillset[] def = Skillset.DefaultSkillsets;
+        ImmutableArray<Skillset> def = _config.DefaultSkillsets;
         for (int d = 0; d < def.Length; ++d)
         {
             Skillset s = def[d];
@@ -108,7 +128,7 @@ public class SkillsetPlayerComponent : IPlayerComponent
         if (!Player.IsOnline)
             return;
 
-        Skillset[] def = Skillset.DefaultSkillsets;
+        ImmutableArray<Skillset> def = _config.DefaultSkillsets;
         Skillset[] arr = skillsets as Skillset[] ?? skillsets.ToArray();
         Skill[][] skills = Player.UnturnedPlayer.skills.skills;
         for (int specIndex = 0; specIndex < skills.Length; ++specIndex)
@@ -135,7 +155,7 @@ public class SkillsetPlayerComponent : IPlayerComponent
 
                 for (int d = 0; d < def.Length; ++d)
                 {
-                    ref Skillset s = ref def[d];
+                    Skillset s = def[d];
                     if (s.SpecialityIndex != specIndex || s.SkillIndex != skillIndex)
                         continue;
 
@@ -186,12 +206,11 @@ public class SkillsetPlayerComponent : IPlayerComponent
             throw new ArgumentOutOfRangeException(nameof(skill), "Skill index is out of range.");
 
         int specIndex = (int)speciality;
-        if (Provider.modeConfigData.Players.Spawn_With_Max_Skills ||
-            specIndex == (int)EPlayerSpeciality.OFFENSE &&
-            (EPlayerOffense)skill is
-            EPlayerOffense.CARDIO or EPlayerOffense.EXERCISE or
-            EPlayerOffense.DIVING or EPlayerOffense.PARKOUR &&
-            Provider.modeConfigData.Players.Spawn_With_Stamina_Skills)
+        PlayersConfigData playerConfig = Provider.modeConfigData.Players;
+        if (playerConfig.Spawn_With_Max_Skills || (playerConfig.Spawn_With_Stamina_Skills
+                                                   && specIndex == (int)EPlayerSpeciality.OFFENSE
+                                                   && (EPlayerOffense)skill is EPlayerOffense.CARDIO or EPlayerOffense.EXERCISE or EPlayerOffense.DIVING or EPlayerOffense.PARKOUR)
+           )
         {
             return skills[(int)speciality][skill].max;
         }
@@ -204,5 +223,13 @@ public class SkillsetPlayerComponent : IPlayerComponent
             return (byte)rule.defaultLevel;
 
         return 0;
+    }
+
+    public void Dispose()
+    {
+        if (_config != null)
+        {
+            _config.OnChange -= OnDefaultSkillsChanged;
+        }
     }
 }

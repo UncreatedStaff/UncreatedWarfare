@@ -5,7 +5,7 @@ namespace Uncreated.Warfare.Events.Models.Projectiles;
 
 public class ProjectileExploding : CancellablePlayerEvent
 {
-    private readonly ExplosionParameters _parameters;
+    private ExplosionParameters _parameters;
 
     public required UseableGun Gun { get; init; }
     public required ItemGunAsset Asset { get; init; }
@@ -38,7 +38,7 @@ public class ProjectileExploding : CancellablePlayerEvent
     /// <summary>
     /// Parameters that will be used to create the explosion.
     /// </summary>
-    public ref readonly ExplosionParameters Explosion => ref _parameters;
+    public ref ExplosionParameters Explosion => ref _parameters;
 
     public ProjectileExploding(ExplosionParameters parameters)
     {

@@ -6,13 +6,23 @@ using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Events.Models.Squads;
 using Uncreated.Warfare.Interaction;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Extensions;
+using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Translations;
 
 namespace Uncreated.Warfare.Tweaks;
 
-public class MapMarkerTweaks : IEventListener<PlayerDropMarkerRequested>, IEventListener<SquadMemberLeft>, IEventListener<SquadLeaderUpdated>
+public class MapMarkerTweaks : IEventListener<PlayerDropMarkerRequested>, IEventListener<SquadMemberLeft>, IEventListener<SquadLeaderUpdated>, ILayoutHostedService
 {
+    private readonly IPlayerService _playerService;
+
+    public MapMarkerTweaks(IPlayerService playerService)
+    {
+        _playerService = playerService;
+    }
+
     public void HandleEvent(PlayerDropMarkerRequested e, IServiceProvider serviceProvider)
     {
         if (e.Player.IsOnDuty || !e.IsNewMarkerBeingPlaced)
@@ -54,5 +64,20 @@ public class MapMarkerTweaks : IEventListener<PlayerDropMarkerRequested>, IEvent
         {
             e.Player.UnturnedPlayer.quests.replicateSetMarker(false, Vector3.zero);
         }
+    }
+
+    UniTask ILayoutHostedService.StartAsync(CancellationToken token) => UniTask.CompletedTask;
+
+    UniTask ILayoutHostedService.StopAsync(CancellationToken token)
+    {
+        foreach (WarfarePlayer player in _playerService.OnlinePlayers)
+        {
+            if (player.UnturnedPlayer.quests.isMarkerPlaced)
+            {
+                player.UnturnedPlayer.quests.replicateSetMarker(false, Vector3.zero);
+            }
+        }
+
+        return UniTask.CompletedTask;
     }
 }

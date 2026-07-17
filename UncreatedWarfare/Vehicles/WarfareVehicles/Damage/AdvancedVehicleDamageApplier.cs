@@ -22,7 +22,7 @@ public class AdvancedVehicleDamageApplier
             Multiplier = damageMultiplier,
             Timestamp = DateTime.Now
         });
-        //_logger.LogDebug($"Registered direct hit damage multiplier of {damageMultiplier} for vehicle. Multipliers queued for this vehicle: {_damageQueue.Count}");
+        // _logger.LogConditional($"Registered direct hit damage multiplier of {damageMultiplier} for vehicle. Multipliers queued for this vehicle: {_damageQueue.Count}");
     }
 
     public AdvancedDamagePending? ApplyLatestPendingDirectHit()
@@ -33,8 +33,8 @@ public class AdvancedVehicleDamageApplier
             TimeSpan timeElapsedSinceDamageRegistered = DateTime.Now - pendingDamage.Timestamp;
             if (timeElapsedSinceDamageRegistered.TotalSeconds > 0.1f) // do not apply pending that's too old (older than a fraction of a second)
                 continue;
-            
-            //_logger.LogDebug($"Applying advanced vehicle damage multiplier of {pendingDamage.Multiplier}.");
+
+            // _logger.LogConditional($"Applying advanced vehicle damage multiplier of {pendingDamage.Multiplier}.");
             return pendingDamage;
         }
         
@@ -53,7 +53,7 @@ public class AdvancedVehicleDamageApplier
         if (!colliderTransform.name.StartsWith("damage_"))
             return 1;
 
-        if (!float.TryParse(colliderTransform.name.AsSpan(7), NumberStyles.Any,
+        if (!float.TryParse(colliderTransform.gameObject.name.AsSpan(7), NumberStyles.Any,
                 CultureInfo.InvariantCulture, out float multiplier))
             return 1;
 

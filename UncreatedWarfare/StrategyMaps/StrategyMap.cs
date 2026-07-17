@@ -7,6 +7,7 @@ using Uncreated.Warfare.Events.Models.Barricades;
 using Uncreated.Warfare.FOBs.Deployment;
 using Uncreated.Warfare.FOBs.Rallypoints;
 using Uncreated.Warfare.Interaction;
+using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.StrategyMaps.MapTacks;
 using Uncreated.Warfare.Translations;
@@ -170,9 +171,18 @@ public class StrategyMap : IDisposable, IEventListener<ClaimBedRequested>
             return;
         }
 
-        DeploymentService deploymentService = serviceProvider.GetRequiredService<DeploymentService>();
         ChatService chatService = serviceProvider.GetRequiredService<ChatService>();
         DeploymentTranslations translations = serviceProvider.GetRequiredService<TranslationInjection<DeploymentTranslations>>().Value;
+
+        KitPlayerComponent kitComp = e.Player.Component<KitPlayerComponent>();
+        if (!kitComp.IsArmed)
+        {
+            chatService.Send(e.Player, translations.DeployNoKit);
+            e.Cancel();
+            return;
+        }
+
+        DeploymentService deploymentService = serviceProvider.GetRequiredService<DeploymentService>();
 
         if (e.Player.Component<DeploymentComponent>().CurrentDeployment != null)
         {

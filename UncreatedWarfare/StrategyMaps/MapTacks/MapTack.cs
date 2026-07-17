@@ -11,7 +11,6 @@ namespace Uncreated.Warfare.StrategyMaps.MapTacks;
 public class MapTack : IDisposable, ITransformObject
 {
     private List<WarfarePlayer>? _uiUpdateListeners;
-    private int _uiVehicleMask;
 
     private readonly StrategyMapManager _strategyMapManager;
     private readonly bool _leaveUiHandlerOpen;
@@ -123,11 +122,6 @@ public class MapTack : IDisposable, ITransformObject
     {
         WarfareModule.Singleton.GlobalLogger.LogConditional($"Attributes updated in {MarkerAsset}: {attributes}.");
         _strategyMapManager.UI?.HandleAttributesUpdated(this, attributes);
-    }
-
-    internal ref int GetUIVehicleMask()
-    {
-        return ref _uiVehicleMask;
     }
 
     internal List<WarfarePlayer>.Enumerator EnumerateWatchers()

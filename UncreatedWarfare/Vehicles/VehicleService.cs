@@ -270,6 +270,8 @@ public class VehicleService :
 
         VehicleAsset asset = vehicle.GetAssetOrFail(nameof(vehicle));
 
+        ApplyUpwardsRotationOffset(asset, ref rotation);
+
         byte[][] turrets = new byte[asset.turrets.Length][];
 
         for (int i = 0; i < asset.turrets.Length; ++i)
@@ -297,6 +299,48 @@ public class VehicleService :
         RefillTrunkItems(warfareVehicle, warfareVehicle.Info.Trunk);
 
         return warfareVehicle;
+    }
+
+    private readonly Dictionary<Guid, Quaternion> _cachedOffsets = new Dictionary<Guid, Quaternion>();
+
+    internal void ApplyUpwardsRotationOffset(VehicleAsset asset, ref Quaternion rotation)
+    {
+        // most of our helicopters are rotated backwards slightly to make them fly forwards more when facing straight up
+        // This reverses that rotation so it doesn't spawn rotated
+
+        // This just grabs the 'Objects' object because it is usually rotated along with the vehicle
+        // but doesn't have the weird rotations that Model_0 can have cause Blender
+
+        if (!_cachedOffsets.TryGetValue(asset.GUID, out Quaternion rotationOffset))
+        {
+            GameObject model = asset.GetOrLoadModel();
+            if (model == null)
+                return;
+
+            Transform objectRoot = model.transform.Find("Objects");
+            if (objectRoot == null)
+                return;
+
+            float eulerX = objectRoot.localEulerAngles.x;
+            
+            // 0 - 360deg
+            eulerX = (eulerX % 360f + 360f) % 360f;
+
+            // -179.99 - 180deg
+            if (eulerX > 180f)
+                eulerX -= 360f;
+
+            float option1 = -90f - eulerX; // x ~= -120
+            float option2 = -eulerX;       // x ~= -30
+
+            float offset = Math.Max(option1, option2);
+            rotationOffset = Quaternion.Euler(offset, 0f, 0f);
+
+            _cachedOffsets[asset.GUID] = rotationOffset;
+        }
+
+        Quaternion newRotation = rotation * rotationOffset;
+        rotation = newRotation;
     }
 
     public void RefillTrunkItems(WarfareVehicle warfareVehicle, IReadOnlyCollection<WarfareVehicleInfo.TrunkItem> trunkItems, bool dropItemsOnGroundIfNoSpace = true)

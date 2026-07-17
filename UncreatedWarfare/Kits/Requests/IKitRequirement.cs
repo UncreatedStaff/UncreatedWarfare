@@ -69,9 +69,6 @@ public sealed class KitRequirementManager
         [
             ActivatorUtilities.CreateInstance<PremiumCostRequirement>(serviceProvider),
             ActivatorUtilities.CreateInstance<CreditCostRequirement>(serviceProvider),
-            ActivatorUtilities.CreateInstance<RequiresSquadRequirement>(serviceProvider),
-            ActivatorUtilities.CreateInstance<MinRequiredSquadMembersRequirement>(serviceProvider),
-            ActivatorUtilities.CreateInstance<ClassesAllowedPerXTeammatesRequirement>(serviceProvider),
             ActivatorUtilities.CreateInstance<MapFilterRequirement>(serviceProvider),
             ActivatorUtilities.CreateInstance<FactionFilterRequirement>(serviceProvider),
             ActivatorUtilities.CreateInstance<LoadoutLockedRequirement>(serviceProvider),
@@ -81,7 +78,10 @@ public sealed class KitRequirementManager
             ActivatorUtilities.CreateInstance<PremiumCooldownRequirement>(serviceProvider),
             ActivatorUtilities.CreateInstance<ExclusiveAccessRequirement>(serviceProvider),
             ActivatorUtilities.CreateInstance<KitSpecificUnlockRequirements>(serviceProvider),
-            ActivatorUtilities.CreateInstance<NitroBoostRequirement>(serviceProvider)
+            ActivatorUtilities.CreateInstance<NitroBoostRequirement>(serviceProvider),
+            ActivatorUtilities.CreateInstance<RequiresSquadRequirement>(serviceProvider),
+            ActivatorUtilities.CreateInstance<MinRequiredSquadMembersRequirement>(serviceProvider),
+            ActivatorUtilities.CreateInstance<ClassesAllowedPerXTeammatesRequirement>(serviceProvider)
         ];
     }
 

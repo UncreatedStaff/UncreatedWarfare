@@ -39,16 +39,19 @@ public class LobbyZoneManager :
     private const short FlagOpen = 1;
 
     private readonly ZoneStore _zoneStore;
-    private readonly OptionsUI _optionsUi;
     private readonly LobbyConfiguration _lobbyConfig;
     private readonly IFactionDataStore _factionDataStore;
     private readonly ILogger<LobbyZoneManager> _logger;
     private readonly WarfareModule _module;
     private readonly LayoutFactory _layoutFactory;
+
+    private OptionsUI? _optionsUi;
+
+    private readonly HashSet<WarfarePlayer> _lockedPlayers;
     private ITrackingProximity<WarfarePlayer>? _zoneCollider;
+    
     private Zone? _lobbyZone;
     private Guid _settingsFlagGuid;
-    private HashSet<WarfarePlayer> _lockedPlayers;
 
     /// <summary>
     /// If the lobby is disabled.
@@ -74,10 +77,8 @@ public class LobbyZoneManager :
         WarfareModule module,
         ITeamSelectorBehavior behavior,
         IPlayerService playerService,
-        OptionsUI optionsUi,
         LayoutFactory layoutFactory)
     {
-        _optionsUi = optionsUi;
         _layoutFactory = layoutFactory;
         _zoneStore = zoneStore;
         _lobbyConfig = lobbyConfig;
@@ -86,7 +87,7 @@ public class LobbyZoneManager :
         _module = module;
         _behavior = behavior;
         _playerService = playerService;
-        _lockedPlayers = new HashSet<WarfarePlayer>(Provider.maxPlayers);
+        _lockedPlayers = new HashSet<WarfarePlayer>(64);
 
         _layoutFactory.LoadingStateUpdated += LoadingStateUpdated;
     }
@@ -121,6 +122,8 @@ public class LobbyZoneManager :
 
     UniTask ILevelHostedService.LoadLevelAsync(CancellationToken token)
     {
+        _optionsUi = _module.ServiceProvider.Resolve<OptionsUI>();
+
         // find team flag objects
         List<FlagInfo> flags = new List<FlagInfo>(2);
 
@@ -482,7 +485,7 @@ public class LobbyZoneManager :
 
         if (e.Object.GUID == _settingsFlagGuid)
         {
-            _optionsUi.Open(e.Player);
+            _optionsUi?.Open(e.Player);
             return;
         }
 

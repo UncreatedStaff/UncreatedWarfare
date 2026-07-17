@@ -2,7 +2,9 @@ using System;
 using System.Globalization;
 using System.Reflection;
 using Uncreated.Warfare.Events.Logging;
+using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Models.Localization;
+using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Players.Saves;
 using Uncreated.Warfare.Steam.Models;
 using Uncreated.Warfare.Util;
@@ -12,7 +14,7 @@ namespace Uncreated.Warfare.Events.Models.Players;
 /// <summary>
 /// Event listener args which handles a patch on when the player gets put in the queue.
 /// </summary>
-public sealed class PlayerPending : CancellableEvent, IActionLoggableEvent
+public sealed class PlayerPending : CancellableEvent, IActionLoggableEvent, ICommandUser
 {
     internal readonly LanguagePreferences LanguagePreferences;
 
@@ -474,4 +476,11 @@ public sealed class PlayerPending : CancellableEvent, IActionLoggableEvent
             Steam64
         );
     }
+
+    bool ICommandUser.IsSuperUser => false;
+    bool ICommandUser.IsTerminal => false;
+    bool ICommandUser.IMGUI => false;
+    bool ICommandUser.IsDisconnected => true;
+    void ICommandUser.SendMessage(string message) { }
+    IModerationActor ICommandUser.GetModerationActor() => new PlayerActor(Steam64.m_SteamID);
 }

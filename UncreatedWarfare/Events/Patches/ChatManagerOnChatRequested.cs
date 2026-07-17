@@ -112,7 +112,7 @@ internal sealed class ChatManagerOnChatRequested : IHarmonyPatch
             text = text[..ChatManager.MAX_MESSAGE_LENGTH];
         }
 
-        text = text.Replace("noparse", string.Empty);
+        text = text.Replace("noparse", string.Empty, StringComparison.OrdinalIgnoreCase);
 
         CancellationToken token = player.DisconnectToken;
         UniTask.Create(async () =>

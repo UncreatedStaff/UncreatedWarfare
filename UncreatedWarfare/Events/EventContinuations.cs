@@ -213,6 +213,8 @@ public static class EventContinuations
 
         UniTask.Create(state, static async state =>
         {
+            await state.Task;
+
             await UniTask.SwitchToMainThread(state.Token);
 
             await state.Action(state.EventArgs, state.Token);
@@ -246,6 +248,8 @@ public static class EventContinuations
 
         UniTask.Create(state, static async state =>
         {
+            await state.Task;
+
             await UniTask.SwitchToMainThread(state.Token);
 
             state.Action(state.EventArgs);
@@ -278,11 +282,20 @@ public static class EventContinuations
         }
 
         // cancel and wait on continuation.
-        UniTask.Create(async () =>
+
+        EventContinuationState<TArgs, CancellableEventContinuationAsync<TArgs>> state;
+        state.EventArgs = eventArgs;
+        state.Action = continuation;
+        state.Task = task;
+        state.Token = token;
+
+        UniTask.Create(state, static async state =>
         {
+            await state.Task;
+
             await UniTask.SwitchToMainThread(WarfareModule.Singleton.UnloadToken);
 
-            await continuation(eventArgs, token);
+            await state.Action(state.EventArgs, state.Token);
         });
 
         shouldAllow = false;

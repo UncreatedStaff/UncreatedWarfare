@@ -15,9 +15,13 @@ partial class KitSelectionUI
 
         GuildStatusResult guildStatus = await _acountLinkingService.IsInGuild(player.Steam64, token).ConfigureAwait(false);
 
+        bool isNitroBoosting = guildStatus == GuildStatusResult.InGuild
+                               && _nitroBoostService != null
+                               && await _nitroBoostService.IsBoosting(player.Steam64, false, token);
+
         await UniTask.SwitchToMainThread(token);
 
-        UpdateNitroBoostKits(player, data, guildStatus, isNitroBoosting: false, publicKits, listKits);
+        UpdateNitroBoostKits(player, data, guildStatus, isNitroBoosting, publicKits, listKits);
     }
 
     private async Task UpdateNitroBoostKits(WarfarePlayer player, GuildStatusResult guildStatus, bool isNitroBoosting)
@@ -41,7 +45,7 @@ partial class KitSelectionUI
         if (!data.HasUI)
             return;
 
-        ITransportConnection c = player.Connection;
+        data.IsBoosting = isNitroBoosting;
 
         if (publicKits)
         {
@@ -55,7 +59,7 @@ partial class KitSelectionUI
             }
         }
 
-        if (listKits)
+        if (listKits && data.IsListOpen)
         {
             for (int i = 0; i < _listResults.Length; ++i)
             {
@@ -73,10 +77,8 @@ partial class KitSelectionUI
 
             if (isNitroBoosting)
             {
-                if (cacheInfo.LabelState != StatusState.ServerBoostRequired)
-                    return;
-
                 UpdateStatusLabels(ui, false, data, @class, index, player, cacheInfo.Kit, player.Component<KitPlayerComponent>());
+                UpdateActionButtons(cacheInfo.Kit, player, ui, data, index, @class);
                 return;
             }
 
@@ -91,6 +93,7 @@ partial class KitSelectionUI
                 };
             }
 
+            ui.StatusLabel.SetText(player.Connection, _translations.StatusServerBoostRequired.Translate(player));
             switch (guildStatus)
             {
                 case GuildStatusResult.InGuild:
@@ -107,7 +110,8 @@ partial class KitSelectionUI
                     break;
             }
 
-            ui.UnlockSection.Show(c);
+            ui.UnlockSection.Show(player.Connection);
+            UpdateActionButtons(cacheInfo.Kit, player, ui, data, index, @class);
         }
     }
 
@@ -121,7 +125,15 @@ partial class KitSelectionUI
         {
             try
             {
-                await UpdateNitroBoostKits(player, isNitroBoosting ? GuildStatusResult.InGuild : GuildStatusResult.Unknown, isNitroBoosting).ConfigureAwait(false);
+                GuildStatusResult guildStatus = GuildStatusResult.InGuild;
+                if (!isNitroBoosting)
+                {
+                    guildStatus = _acountLinkingService == null
+                        ? GuildStatusResult.Unknown
+                        : await _acountLinkingService.IsInGuild(player.Steam64, player.DisconnectToken);
+                }
+
+                await UpdateNitroBoostKits(player, guildStatus, isNitroBoosting);
             }
             catch (Exception ex)
             {

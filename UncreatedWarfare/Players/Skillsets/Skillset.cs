@@ -14,18 +14,6 @@ namespace Uncreated.Warfare.Players.Skillsets;
 [JsonConverter(typeof(SkillsetConverter))]
 public readonly struct Skillset : IEquatable<Skillset>, ITranslationArgument
 {
-    public static readonly Skillset[] DefaultSkillsets =
-    {
-        new Skillset(EPlayerOffense.OVERKILL, 7),
-        new Skillset(EPlayerOffense.SHARPSHOOTER, 7),
-        new Skillset(EPlayerOffense.PARKOUR, 2),
-        new Skillset(EPlayerOffense.EXERCISE, 2),
-        new Skillset(EPlayerOffense.CARDIO, 5),
-        new Skillset(EPlayerOffense.DIVING, 2),
-        new Skillset(EPlayerDefense.VITALITY, 5),
-        new Skillset(EPlayerSupport.HEALING, 2),
-    };
-
     public static readonly string SkillSqlEnumType = "enum('" + string.Join("','",
         typeof(EPlayerOffense).GetEnumNames().Concat(typeof(EPlayerDefense).GetEnumNames())
             .Concat(typeof(EPlayerSupport).GetEnumNames())) + "')";
@@ -43,24 +31,28 @@ public readonly struct Skillset : IEquatable<Skillset>, ITranslationArgument
         SkillIndex = (byte)skill;
         Level = level;
     }
+
     public Skillset(EPlayerDefense skill, byte level)
     {
         Speciality = EPlayerSpeciality.DEFENSE;
         SkillIndex = (byte)skill;
         Level = level;
     }
+
     public Skillset(EPlayerSupport skill, byte level)
     {
         Speciality = EPlayerSpeciality.SUPPORT;
         SkillIndex = (byte)skill;
         Level = level;
     }
+
     internal Skillset(EPlayerSpeciality specialty, byte skill, byte level)
     {
         Speciality = specialty;
         SkillIndex = skill;
         Level = level;
     }
+
     public static Skillset Read(ByteReader reader)
     {
         EPlayerSpeciality speciality = (EPlayerSpeciality)reader.ReadUInt8();
@@ -72,17 +64,37 @@ public readonly struct Skillset : IEquatable<Skillset>, ITranslationArgument
             _ => throw new Exception("Invalid value of specialty while reading skillset.")
         };
     }
+
     public static void Write(ByteWriter writer, Skillset skillset)
     {
         writer.Write((byte)skillset.Speciality);
         writer.Write(skillset.SkillIndex);
         writer.Write(skillset.Level);
     }
+
     public void ServerSet(WarfarePlayer player)
     {
         GameThread.AssertCurrent();
-        if (player.IsOnline)
+        if (!player.IsOnline)
+            return;
+
+        try
+        {
             player.UnturnedPlayer.skills.ServerSetSkillLevel(SpecialityIndex, SkillIndex, Level);
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            Skill[][] skills = player.UnturnedPlayer.skills.skills;
+            if (SpecialityIndex >= skills.Length)
+                WarfareModule.Singleton.GlobalLogger.LogWarning($"[Skillset.ServerSet] Speciality out of range: {SpecialityIndex}.");
+            else if (SkillIndex >= skills[SpecialityIndex].Length)
+                WarfareModule.Singleton.GlobalLogger.LogWarning($"[Skillset.ServerSet] Skill out of range: {Speciality}[{SkillIndex}].");
+            else
+            {
+                WarfareModule.Singleton.GlobalLogger.LogWarning($"Skill level out of range: {this}.");
+                player.UnturnedPlayer.skills.ServerSetSkillLevel(SpecialityIndex, SkillIndex, skills[SpecialityIndex][SkillIndex].max);
+            }
+        }
     }
 
     public static Skillset Read(ref Utf8JsonReader reader)
@@ -172,12 +184,15 @@ public readonly struct Skillset : IEquatable<Skillset>, ITranslationArgument
         writer.WriteNumber("level", skillset.Level);
         writer.WriteEndObject();
     }
+
     public override bool Equals(object? obj) => obj is Skillset skillset && EqualsHelper(in skillset, true);
+
     private bool EqualsHelper(in Skillset skillset, bool compareLevel)
     {
         if (compareLevel && skillset.Level != Level) return false;
         return skillset.Speciality == Speciality && skillset.SkillIndex == SkillIndex;
     }
+
     public override string ToString()
     {
         return Speciality switch
@@ -188,16 +203,14 @@ public readonly struct Skillset : IEquatable<Skillset>, ITranslationArgument
             _ => "Invalid speciality #" + SkillIndex.ToString(CultureInfo.InvariantCulture)
         } + " at level " + Level.ToString(CultureInfo.InvariantCulture) + ".";
     }
+
     public override int GetHashCode()
     {
-        int hashCode = 1232939970;
-        hashCode *= -1521134295 + Speciality.GetHashCode();
-        hashCode *= -1521134295 + Level.GetHashCode();
-        hashCode *= -1521134295 + SkillIndex;
-        return hashCode;
+        return HashCode.Combine(Speciality, Level, SkillIndex);
     }
 
     public static readonly SpecialFormat FormatNoLevel = new SpecialFormat("No Level", "nl");
+
     string ITranslationArgument.Translate(ITranslationValueFormatter formatter, in ValueFormatParameters parameters)
     {
         string? format = parameters.Format.Format;
@@ -214,7 +227,9 @@ public readonly struct Skillset : IEquatable<Skillset>, ITranslationArgument
     }
 
     public bool Equals(Skillset other) => EqualsHelper(in other, true);
+
     public bool TypeEquals(in Skillset skillset) => EqualsHelper(in skillset, false);
+
     /// <returns>-1 if parse failure.</returns>
     public static int GetSkillsetFromEnglishName(string name, out EPlayerSpeciality speciality)
     {

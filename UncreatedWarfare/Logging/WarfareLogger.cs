@@ -267,13 +267,7 @@ public class WarfareLogger : ILogger
 
         if (state.WriteMessageColor && state.ColorType != StackColorFormatType.None)
         {
-            ConsoleColor textColor = state.LogLevel switch
-            {
-                LogLevel.Information => ConsoleColor.DarkCyan,
-                LogLevel.Warning => ConsoleColor.Yellow,
-                LogLevel.Critical or LogLevel.Error => ConsoleColor.Red,
-                _ => ConsoleColor.DarkGray
-            };
+            ConsoleColor textColor = GetLogColor(state.LogLevel);
 
             if (textColor != ConsoleColor.DarkGray)
             {
@@ -286,7 +280,7 @@ public class WarfareLogger : ILogger
             // replace resets with the correct color
             while (true)
             {
-                int nextIndex = ((ReadOnlySpan<char>)message).IndexOf(TerminalColorHelper.ForegroundResetSequence, StringComparison.Ordinal);
+                int nextIndex = message.IndexOf(TerminalColorHelper.ForegroundResetSequence, StringComparison.Ordinal);
                 if (nextIndex == -1) break;
 
                 TerminalColorHelper.WriteTerminalColorSequence(message[nextIndex..], textColor);
@@ -297,6 +291,17 @@ public class WarfareLogger : ILogger
         {
             state.Message.AsSpan().CopyTo(span[index..]);
         }
+    }
+
+    internal static ConsoleColor GetLogColor(LogLevel logLevel)
+    {
+        return logLevel switch
+        {
+            LogLevel.Information => ConsoleColor.DarkCyan,
+            LogLevel.Warning => ConsoleColor.Yellow,
+            LogLevel.Critical or LogLevel.Error => ConsoleColor.Red,
+            _ => ConsoleColor.DarkGray
+        };
     }
 
     private struct CreateLogStringState

@@ -58,6 +58,14 @@ public class WarfarePlayer :
     private readonly SingleUseTypeDictionary<IPlayerComponent> _components;
     private readonly CSteamID _steam64;
 
+    /// <summary>
+    /// Whether or not this player has a UI open that captures the mouse.
+    /// </summary>
+    public bool IsInMenu => _modalHandles > 0;
+
+    /// <summary>
+    /// Requests that the player's mouse be visible on screen until the returned <see cref="ModalHandle"/> is disposed.
+    /// </summary>
     public ModalHandle GetModalHandle()
     {
         GameThread.AssertCurrent();

@@ -55,10 +55,10 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable, IMapTackUIH
     public float AmmoCount { get; private set; }
 
     /// <inheritdoc />
-    public string Name { get; private set; }
+    public string Name { get; }
 
     /// <inheritdoc />
-    public Team Team { get; private set; }
+    public Team Team { get; }
 
     /// <inheritdoc />
     public Vector3 Position

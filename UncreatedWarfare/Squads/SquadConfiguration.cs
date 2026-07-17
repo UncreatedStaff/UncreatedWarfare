@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Configuration;
-using System.Collections.Generic;
+using System;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Kits;
 
@@ -9,8 +9,8 @@ public sealed class SquadConfiguration : BaseAlternateConfigurationFile
 {
     public IReadOnlyDictionary<Class, int> KitClassesAllowedPerXTeammates = new Dictionary<Class, int>();
 
-    public SquadConfiguration()
-        : base("Squads.yml")
+    public SquadConfiguration(IServiceProvider serviceProvider)
+        : base(serviceProvider, "Squads.yml")
     {
         HandleChange();
     }

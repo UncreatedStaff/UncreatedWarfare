@@ -119,7 +119,7 @@ public enum MapTackAttributes
     LowAmmo = 8,
 
     /// <summary>
-    /// A FOB has yet to be shoveled.
+    /// A FOB has yet to be shoveled. Instead of showing an icon at the top, this replaces the health icon with a shovel.
     /// </summary>
     NotBuilt = 16
 }

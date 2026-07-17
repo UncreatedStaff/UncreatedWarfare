@@ -14,10 +14,11 @@ public class ItemIconProvider
     private const int WhiteColor = unchecked( (int)0xFFFFFFFF );
     internal readonly ItemIconData[] Defaults =
     [
+#pragma warning disable CS0612, CS0618 // Type or member is obsolete
         New(RedirectType.LaserDesignator,           "阚"),
         New(RedirectType.EntrenchingTool,           "ɐ"),
-        New(RedirectType.Bunker,                    "˅"), // new bunker
-        New(RedirectType.BunkerBuilt,               "˅"),
+        New(RedirectType.Bunker,                    "ɑ"), // S4 original bunker: ˅
+        New(RedirectType.BunkerBuilt,               "ɑ"),
         New(RedirectType.RepairStation,             "ɒ"),
         New(RedirectType.RepairStationBuilt,        "ɒ"),
         New(RedirectType.AmmoBag,                   "ɓ"),
@@ -38,6 +39,7 @@ public class ItemIconProvider
         New(RedirectType.StandardGrenadeIcon,       "↖"),
         New(RedirectType.StandardSmokeGrenadeIcon,  "ɢ"),
         New(RedirectType.StandardBuildable,         "ˎ"),
+#pragma warning restore CS0612, CS0618 // Type or member is obsolete
 
         New("78fefdd23def4ab6ac8301adfcc3b2d4", "ʰ", "6b563c"),   // Canned Beans
         New("ce28bcc951c645eebae98a881e329316", "ʰ", "a54749"),   // Canned Tomato Soup

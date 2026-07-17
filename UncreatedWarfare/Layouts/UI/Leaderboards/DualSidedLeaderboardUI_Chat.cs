@@ -126,13 +126,18 @@ partial class DualSidedLeaderboardUI :
         }
     }
 
-    private void ChatServiceOnOnSendingChatMessage(WarfarePlayer recipient, string text, Color color, EChatMode mode, string? iconUrl, bool richText, WarfarePlayer? fromPlayer, ref bool shouldReplicate)
+    private void ChatServiceOnSendingChatMessage(WarfarePlayer recipient, string text, Color color, EChatMode mode, string? iconUrl, bool richText, WarfarePlayer? fromPlayer, ref bool shouldReplicate)
     {
         if (!IsActive && !_trackChat || text.Length == 0)
             return;
 
         DualSidedLeaderboardPlayerData data = GetOrAddData(recipient.Steam64, _createData);
-        data.VisibleChats.Add(new ChatMessageInfo(string.IsNullOrWhiteSpace(iconUrl) ? fromPlayer?.SteamSummary.AvatarUrlSmall : iconUrl, color == Color.white ? text : TranslationFormattingUtility.Colorize(text, color, imgui: false)));
+        data.VisibleChats.Add(
+            new ChatMessageInfo(
+                string.IsNullOrWhiteSpace(iconUrl) ? fromPlayer?.SteamSummary.AvatarUrlSmall : iconUrl,
+                color == Color.white ? text : TranslationFormattingUtility.Colorize(text, color, imgui: false)
+            )
+        );
 
         shouldReplicate = false;
 
@@ -145,7 +150,7 @@ partial class DualSidedLeaderboardUI :
     [EventListener(Priority = int.MaxValue, RequiresMainThread = true)]
     void IEventListener<PlayerChatSent>.HandleEvent(PlayerChatSent e, IServiceProvider serviceProvider)
     {
-        if (!IsActive && !_trackChat)
+        if (!IsActive)
             return;
 
         foreach (WarfarePlayer onlinePlayer in e.TargetPlayers(e.Request))
@@ -153,8 +158,7 @@ partial class DualSidedLeaderboardUI :
             DualSidedLeaderboardPlayerData data = GetOrAddData(onlinePlayer.Steam64, _createData);
             data.VisibleChats.Add(new ChatMessageInfo(onlinePlayer, e));
 
-            if (IsActive)
-                UpdateChat(onlinePlayer);
+            UpdateChat(onlinePlayer);
         }
     }
 

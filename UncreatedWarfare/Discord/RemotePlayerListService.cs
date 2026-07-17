@@ -33,6 +33,8 @@ public partial class RemotePlayerListService :
     private readonly IUserDataService? _userDataService;
     private readonly WarfareModule? _warfare;
     private readonly ILogger<RemotePlayerListService> _logger;
+    private readonly byte _maxPlayers;
+
     private ReplicatedServerState _replicatedServerStateWarfareOnly;
 
     // these events are meant to be used from the discord bot
@@ -65,6 +67,8 @@ public partial class RemotePlayerListService :
             _playerService = serviceProvider.GetRequiredService<IPlayerService>();
             _userDataService = serviceProvider.GetRequiredService<IUserDataService>();
             _warfare = serviceProvider.GetRequiredService<WarfareModule>();
+
+            _maxPlayers = Provider.maxPlayers;
         }
 
         _logger = serviceProvider.GetRequiredService<ILogger<RemotePlayerListService>>();
@@ -103,7 +107,7 @@ public partial class RemotePlayerListService :
 
     internal async Task UpdateReplicatedServerState(ServerStateType type, string? description, bool send = true)
     {
-        ReplicatedServerState state = new ReplicatedServerState(type, description, DateTimeOffset.UtcNow, Provider.maxPlayers);
+        ReplicatedServerState state = new ReplicatedServerState(type, description, DateTimeOffset.UtcNow, _maxPlayers);
         _replicatedServerStateWarfareOnly = state;
         if (!send)
             return;

@@ -2,11 +2,13 @@ using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Emit;
 using DanielWillett.ReflectionTools.Formatting;
 using HarmonyLib;
+using Newtonsoft.Json.Serialization;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
 using Uncreated.Warfare.Projectiles;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Patches;
 
@@ -64,25 +66,34 @@ internal sealed class ProjectilePreExplodePatch : IHarmonyPatch
         bool patched = false;
         while (ctx.MoveNext())
         {
-            if (ctx.CaretIndex >= ctx.Count - 1 || !ctx[ctx.CaretIndex + 1].Calls(explode))
+            // ldloc ExplosionParameters
+            // ldloca List<EPlayerKill>&    <-- caret
+            // call DamageTool.explode
+            if (ctx.CaretIndex >= ctx.Count - 1 || !ctx[ctx.CaretIndex + 1].Calls(explode) || !ctx[ctx.CaretIndex - 1].opcode.IsLdLoc(either: true))
                 continue;
+
+            LocalReference lclRef = ctx[ctx.CaretIndex - 1].ToLocalReference();
 
             patched = true;
             Label lbl = default;
+
+            ctx.MoveBack();
+
             ctx.EmitAbove(emit =>
             {
-                emit.Duplicate()
+                emit.LoadLocalAddress(lclRef)
                     .LoadArgument(0)
                     .LoadArgument(1)
                     .Invoke(Accessor.GetMethod(InvokeExploding)!)
                     .AddLabel(out lbl)
                     .BranchIfTrue(lbl)
-                    .PopFromStack()
                     .Return();
             });
 
             ctx.MarkLabel(lbl);
             ctx.ApplyBlocksAndLabels();
+
+            while (!ctx.Instruction.Calls(explode) && ctx.MoveNext()) ;
 
             ctx.EmitBelow(emit =>
             {
@@ -109,11 +120,68 @@ internal sealed class ProjectilePreExplodePatch : IHarmonyPatch
         }
     }
 
-    private static bool InvokeExploding(ExplosionParameters parameters, Rocket rocket, Collider other)
+    private static readonly RaycastHit[] Hits = new RaycastHit[2];
+
+    private const int BlockTrap = RayMasks.PLAYER | RayMasks.DEBRIS | RayMasks.ITEM | RayMasks.RESOURCE |
+                                  RayMasks.LARGE | RayMasks.MEDIUM | RayMasks.ENVIRONMENT | RayMasks.GROUND |
+                                  RayMasks.AGENT | RayMasks.VEHICLE | RayMasks.BARRICADE | RayMasks.STRUCTURE |
+                                  RayMasks.TRAP;
+
+    private static bool InvokeExploding(ref ExplosionParameters parameters, Rocket rocket, Collider other)
     {
+        // handles rockets blowing up from their position during the previous frame
+        // also handles correcting for the distance between the rocket's origin and it's collider bounds (where it'll actually hit)
+        const float maxRocketSpeedMetersPerSec = 500;
+        float len = Time.deltaTime * maxRocketSpeedMetersPerSec;
+
+        Transform rocketTransform = rocket.transform;
+
+        Ray ray = new Ray(rocket.secondLastPos, rocketTransform.up);
+
+        int hits = Physics.RaycastNonAlloc(ray.origin, ray.direction, Hits, len, BlockTrap, QueryTriggerInteraction.Ignore);
+
+#if DEBUG
+        SteamPlayer owner = PlayerTool.getSteamPlayer(rocket.killer);
+        bool clear = true;
+#endif
+
+        bool found = false;
+        for (int i = 0; i < hits; ++i)
+        {
+            ref RaycastHit hit = ref Hits[i];
+            if (hit.transform.IsChildOf(rocketTransform))
+                continue;
+
+            found = true;
+            WarfareModule.Singleton.GlobalLogger.LogTrace($"Point updated | old point: {parameters.point:F1}");
+            parameters.point = hit.point;
+#if DEBUG
+            if (owner != null)
+            {
+                EffectUtility.TriggerDebugEffect(owner.transportConnection, hit.point, ray.direction, rocketTransform.forward, clear);
+                clear = false;
+            }
+#endif
+            break;
+        }
+
+        if (!found)
+        {
+            WarfareModule.Singleton.GlobalLogger.LogWarning($"Failed to find hit position for rocket shot by {rocket.killer}.");
+        }
+
+#if DEBUG
+        if (owner != null)
+        {
+            EffectUtility.TriggerDebugEffect(owner.transportConnection, parameters.point, ray.direction, rocketTransform.forward, clear);
+        }
+#endif
+
+        Array.Clear(Hits, 0, hits);
+
         if (rocket.gameObject.TryGetComponent(out WarfareProjectile projectile) && !projectile.HasExploded)
         {
-            return projectile.InvokeExploding(other, parameters);
+            return projectile.InvokeExploding(other, ref parameters);
         }
 
         return false;
