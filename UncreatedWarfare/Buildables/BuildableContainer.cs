@@ -68,7 +68,10 @@ public class BuildableContainer : MonoBehaviour, IComponentContainer<IBuildableC
         GameThread.AssertCurrent();
 
         if (!buildable.Alive)
-            throw new InvalidOperationException("Buildable is dead.");
+        {
+            container = null;
+            return false;
+        }
 
         return buildable.Model.TryGetComponent(out container);
     }
@@ -94,7 +97,10 @@ public class BuildableContainer : MonoBehaviour, IComponentContainer<IBuildableC
         GameThread.AssertCurrent();
 
         if (barricade.GetNetId().id == 0)
-            throw new InvalidOperationException("Buildable is dead.");
+        {
+            container = null;
+            return false;
+        }
 
         return barricade.model.TryGetComponent(out container);
     }
@@ -120,7 +126,10 @@ public class BuildableContainer : MonoBehaviour, IComponentContainer<IBuildableC
         GameThread.AssertCurrent();
 
         if (structure.GetNetId().id == 0)
-            throw new InvalidOperationException("Buildable is dead.");
+        {
+            container = null;
+            return false;
+        }
 
         return structure.model.TryGetComponent(out container);
     }

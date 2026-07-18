@@ -1,10 +1,15 @@
+#if DEBUG
+
+//#define PROJECTILE_DEBUG
+
+#endif
+
+
 using DanielWillett.ReflectionTools;
 using DanielWillett.ReflectionTools.Emit;
 using DanielWillett.ReflectionTools.Formatting;
 using HarmonyLib;
-using Newtonsoft.Json.Serialization;
 using System;
-using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
 using Uncreated.Warfare.Projectiles;
@@ -140,7 +145,7 @@ internal sealed class ProjectilePreExplodePatch : IHarmonyPatch
 
         int hits = Physics.RaycastNonAlloc(ray.origin, ray.direction, Hits, len, BlockTrap, QueryTriggerInteraction.Ignore);
 
-#if DEBUG
+#if PROJECTILE_DEBUG
         SteamPlayer owner = PlayerTool.getSteamPlayer(rocket.killer);
         bool clear = true;
 #endif
@@ -155,7 +160,7 @@ internal sealed class ProjectilePreExplodePatch : IHarmonyPatch
             found = true;
             WarfareModule.Singleton.GlobalLogger.LogTrace($"Point updated | old point: {parameters.point:F1}");
             parameters.point = hit.point;
-#if DEBUG
+#if PROJECTILE_DEBUG
             if (owner != null)
             {
                 EffectUtility.TriggerDebugEffect(owner.transportConnection, hit.point, ray.direction, rocketTransform.forward, clear);
@@ -170,7 +175,7 @@ internal sealed class ProjectilePreExplodePatch : IHarmonyPatch
             WarfareModule.Singleton.GlobalLogger.LogWarning($"Failed to find hit position for rocket shot by {rocket.killer}.");
         }
 
-#if DEBUG
+#if PROJECTILE_DEBUG
         if (owner != null)
         {
             EffectUtility.TriggerDebugEffect(owner.transportConnection, parameters.point, ray.direction, rocketTransform.forward, clear);
