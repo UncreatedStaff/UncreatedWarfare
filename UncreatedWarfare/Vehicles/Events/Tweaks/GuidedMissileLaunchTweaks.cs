@@ -72,7 +72,7 @@ internal sealed class GuidedMissileLaunchTweaks :
             if (Array.Exists(_groundAAMissiles, a => a.Id == passenger.turret.itemID))
             {
                 IAssetLink<EffectAsset> lockOnEffect = _assetConfiguration.GetAssetLink<EffectAsset>("Effects:Projectiles:GroundAALock");
-                passenger.turretAim.gameObject.AddComponent<HeatSeekingController>().Initialize(700, 1500, lockOnEffect, 0.7f, 14.6f, _logger);
+                passenger.turretAim.gameObject.AddComponent<HeatSeekingController>().Initialize(700, 700, lockOnEffect, 0.7f, 14.6f, _logger);
             }
             else if (Array.Exists(_airAAMissiles, a => a.Id == passenger.turret.itemID))
             {
