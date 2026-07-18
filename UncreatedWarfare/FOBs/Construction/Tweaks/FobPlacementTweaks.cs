@@ -57,7 +57,7 @@ public class FobPlacementTweaks :
                 e.Cancel();
             }
 
-            if (!e.OriginalPlacer.IsOnDuty && (e.IsOnVehicle || WaterUtility.isPointUnderwater(e.Position)))
+            if (!e.OriginalPlacer.IsOnDuty && e.IsOnVehicle)
             {
                 chatService.Send(e.OriginalPlacer, _translations.PlaceRallyPointInvalid);
                 e.Cancel();
