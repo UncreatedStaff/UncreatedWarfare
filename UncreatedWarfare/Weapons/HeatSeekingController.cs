@@ -15,9 +15,11 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
     private const float AquisitionAngle = 65f;
     private const float AquisitionFrequency = 0.25f;
 
+    // Yellowknife AA Range 
+    // horizontalRange 1000 verticalRange 1200
 
-    private float _horizontalRange = 1000;
-    private float? _verticalRange = 1500;
+    private float _horizontalRange = 700;
+    private float? _verticalRange = 700;
 #nullable disable
 
     private InteractableVehicle _vehicle;
