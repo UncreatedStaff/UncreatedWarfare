@@ -229,14 +229,14 @@ public partial class FobManager :
             else
             {
                 _logger.LogDebug("Buildable fob base was destroyed and will be deregistered.");
-                DeregisterFob(fob);
+                DeregisterFob(fob, e);
             }
         }
         else if (fob != null)
         {
             _logger.LogDebug("Attempting to destroy other buildable fob.");
             _ = WarfareModule.EventDispatcher.DispatchEventAsync(new FobDestroyed { Fob = fob, Event = e });
-            DeregisterFob(fob);
+            DeregisterFob(fob, e);
         }
 
         IBuildableFobEntity? entity = GetBuildableFobEntity<IBuildableFobEntity>(e.Buildable);
