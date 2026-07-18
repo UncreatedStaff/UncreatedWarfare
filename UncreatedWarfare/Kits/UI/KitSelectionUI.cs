@@ -76,10 +76,6 @@ public sealed partial class KitSelectionUI : UnturnedUI,
     private readonly SemaphoreSlim _dbSemaphore;
     private readonly KitSelectionUITranslations _translations;
 
-    private static readonly short FrameKey = UnturnedUIKeyPool.Claim();
-
-    private readonly IAssetLink<EffectAsset> _frameEffect;
-
     // maps AttachmentType -> UI array index
     private readonly int[] _attachmentMap =
     [
@@ -140,8 +136,6 @@ public sealed partial class KitSelectionUI : UnturnedUI,
         _translations = translations.Value;
         _kitsDbContext = kitsDbContext;
         _playerService = playerService;
-
-        _frameEffect = assetConfig.GetAssetLink<EffectAsset>("UI:KitSelectionUI_Frame");
 
         _requestTranslations = requestTranslations;
         _requestKitsTranslations = requestKitsTranslations.Value;
@@ -606,13 +600,6 @@ public sealed partial class KitSelectionUI : UnturnedUI,
         data.OpenHandles(player, _hudManager);
 
         _startOpenAnimationLogic.Show(player);
-        EffectManager.sendUIEffectVisibility(
-            FrameKey,
-            player.Connection,
-            true,
-            _startOpenAnimationLogic.Path,
-            true
-        );
     }
 
     private async UniTask TempCloseAsync(WarfarePlayer player, CancellationToken token = default)
@@ -631,13 +618,6 @@ public sealed partial class KitSelectionUI : UnturnedUI,
         data.DisposeHandles();
 
         _startCloseAnimationLogic.Show(player);
-        EffectManager.sendUIEffectVisibility(
-            FrameKey,
-            player.Connection,
-            true,
-            _startCloseAnimationLogic.Path,
-            true
-        );
     }
 
     /// <summary>
@@ -665,21 +645,10 @@ public sealed partial class KitSelectionUI : UnturnedUI,
         if (instant)
         {
             ClearFromPlayer(player.Connection);
-            if (_frameEffect.TryGetGuid(out Guid guid))
-            {
-                EffectManager.ClearEffectByGuid(guid, player.Connection);
-            }
         }
         else
         {
             _startCloseAnimationLogic.Show(player);
-            EffectManager.sendUIEffectVisibility(
-                FrameKey,
-                player.Connection,
-                true,
-                _startCloseAnimationLogic.Path,
-                true
-            );
 
             // animation is actually 0.5 but add a little extra time to account for ping
             await UniTask.Delay(TimeSpan.FromSeconds(0.6), cancellationToken: token);
@@ -687,10 +656,6 @@ public sealed partial class KitSelectionUI : UnturnedUI,
             if (player.IsOnline && data.IsClosing)
             {
                 ClearFromPlayer(player.Connection);
-                if (_frameEffect.TryGetGuid(out Guid guid))
-                {
-                    EffectManager.ClearEffectByGuid(guid, player.Connection);
-                }
                 data.IsClosing = false;
             }
         }
@@ -763,10 +728,6 @@ public sealed partial class KitSelectionUI : UnturnedUI,
             data.HasUI = true;
             data.IsClosing = false;
             SendToPlayer(player.SteamPlayer);
-            if (_frameEffect.TryGetAsset(out EffectAsset? asset))
-            {
-                EffectManager.SendUIEffect(asset, FrameKey, player.Connection, true);
-            }
         }
 
         data.ResetCache();
@@ -945,7 +906,21 @@ public sealed partial class KitSelectionUI : UnturnedUI,
         ui.Class.SetText(c, kit.Class.GetIconString());
         string displayName = kit.GetDisplayName(player.Locale.LanguageInfo, useIdFallback: true);
         ui.Name.SetText(c, displayName);
-        ui.Id.SetText(c, ReferenceEquals(displayName, kit.Id) ? string.Empty : kit.Id);
+        string id = kit.Id;
+        if (kit.Type == KitType.Loadout)
+        {
+            int loadoutId = LoadoutIdHelper.Parse(id, out CSteamID steam64);
+            if (loadoutId >= 0 && player.Equals(steam64))
+            {
+                id = _translations.LoadoutIdLabel.Translate(LoadoutIdHelper.GetLoadoutLetter(loadoutId).ToUpperInvariant());
+            }
+        }
+        else if (string.Equals(displayName, id, StringComparison.OrdinalIgnoreCase))
+        {
+            id = string.Empty;
+        }
+
+        ui.Id.SetText(c, id);
         ui.Root.Show(c);
         data.FavoriteKitsCache[index] = kit;
     }
@@ -972,14 +947,9 @@ public sealed partial class KitSelectionUI : UnturnedUI,
         if (@class.HasValue)
         {
             data.ClassFilter = @class.Value;
-            EffectManager.sendUIEffectText(
-                FrameKey,
-                player.Connection,
-                true,
-                _searchResultsTitle.Path,
-                data.ClassFilter == Class.None
-                    ? _translations.SearchResultsLabel.Translate(player)
-                    : _translations.SearchResultsByClassLabel.Translate(data.ClassFilter, player)
+            _searchResultsTitle.SetText(player.Connection, data.ClassFilter == Class.None
+                ? _translations.SearchResultsLabel.Translate(player)
+                : _translations.SearchResultsByClassLabel.Translate(data.ClassFilter, player)
             );
         }
 
@@ -1015,13 +985,6 @@ public sealed partial class KitSelectionUI : UnturnedUI,
 
         element.Show(player);
 
-        EffectManager.sendUIEffectVisibility(
-            FrameKey,
-            player.Connection,
-            true,
-            element.Path,
-            true
-        );
         data.IsListOpen = isList;
     }
 
@@ -1423,26 +1386,10 @@ public sealed partial class KitSelectionUI : UnturnedUI,
             isDefaultLang = false;
 
         if (!isDefaultLang || !_translations.PublicKitsLabel.HasDefaultValue)
-        {
-            EffectManager.sendUIEffectText(
-                FrameKey,
-                player.Connection,
-                false,
-                _publicKitsTitle.Path,
-                _translations.PublicKitsLabel.Translate(player)
-            );
-        }
+            _publicKitsTitle.SetText(player.Connection, _translations.PublicKitsLabel.Translate(player));
 
         if (!isDefaultLang || !_translations.DetailsLabel.HasDefaultValue)
-        {
-            EffectManager.sendUIEffectText(
-                FrameKey,
-                player.Connection,
-                false,
-                _detailTitle.Path,
-                _translations.DetailsLabel.Translate(player)
-            );
-        }
+            _detailTitle.SetText(player.Connection, _translations.DetailsLabel.Translate(player));
 
         if (!isDefaultLang || !_translations.DetailsPlaceholder.HasDefaultValue)
             _detailPlaceholderLabel.SetText(c, _translations.DetailsPlaceholder.Translate(player));
@@ -1471,26 +1418,11 @@ public sealed partial class KitSelectionUI : UnturnedUI,
         if (data.ClassFilter == Class.None)
         {
             if (!isDefaultLang || !_translations.SearchResultsLabel.HasDefaultValue)
-            {
-                EffectManager.sendUIEffectText(
-                    FrameKey,
-                    player.Connection,
-                    false,
-                    _searchResultsTitle.Path,
-                    _translations.SearchResultsLabel.Translate(player)
-                );
-            }
+                _searchResultsTitle.SetText(player.Connection, _translations.SearchResultsLabel.Translate(player));
         }
         else
-        {
-            EffectManager.sendUIEffectText(
-                FrameKey,
-                player.Connection,
-                false,
-                _searchResultsTitle.Path,
-                _translations.SearchResultsByClassLabel.Translate(data.ClassFilter, player)
-            );
-        }
+            _searchResultsTitle.SetText(player.Connection, _translations.SearchResultsByClassLabel.Translate(data.ClassFilter, player));
+        
 
         if (!isDefaultLang || !_translations.SearchResultsNoResults.HasDefaultValue)
             _listNoResultLabel.SetText(c, _translations.SearchResultsNoResults.Translate(player));
@@ -2078,10 +2010,10 @@ public sealed class KitSelectionUITranslations : TranslationCollection
     public readonly Translation PurchaseButtonCurrencyBrowserRequest = new Translation("Purchase on our website.", TranslationOptions.NoRichText);
     
     [TranslationData("Label for the purchase button shown when the player needs to be a squad leader for the kit.")]
-    public readonly Translation PurchaseButtonCreateSquad = new Translation("Create a <#f0a31c>Squad</color> to Equip", TranslationOptions.TMProUI);
+    public readonly Translation PurchaseButtonCreateSquad = new Translation("Create a <#f4bb57>Squad</color> to Equip", TranslationOptions.TMProUI);
     
     [TranslationData("Label for the purchase button shown when the player needs to be in a squad for the kit.")]
-    public readonly Translation PurchaseButtonJoinSquad = new Translation("Join a <#f0a31c>Squad</color> to Equip", TranslationOptions.TMProUI);
+    public readonly Translation PurchaseButtonJoinSquad = new Translation("Join a <#f4bb57>Squad</color> to Equip", TranslationOptions.TMProUI);
 
     // https://discord.com/channels/645743633202544643/boosts
     [TranslationData("Label for the purchase button shown when the player is linked to discord but is not boosting.")]
@@ -2100,7 +2032,7 @@ public sealed class KitSelectionUITranslations : TranslationCollection
     public readonly Translation PurchaseButtonNotBoostingOpenDiscordRequest = new Translation("Boost Uncreated Network.", TranslationOptions.NoRichText);
 
     [TranslationData("Label for the URL request when clicking the purchase button for a kit that requires a Discord Nitro boost and the player isn't in the server.")]
-    public readonly Translation PurchaseButtonJoinDiscordRequest = new Translation("Join Uncreated Network's Discord server.", TranslationOptions.NoRichText);
+    public readonly Translation PurchaseButtonJoinDiscordRequest = new Translation("Join the Discord server.", TranslationOptions.NoRichText);
 
     [TranslationData("Shown in the ID section for loadouts owned by the viewing player.", "The letter (ex. 'A', 'AF', 'BC', 'F') of the loadout, formatted like an Excel column.")]
     public readonly Translation<string> LoadoutIdLabel = new Translation<string>("Loadout {0}", TranslationOptions.TMProUI | TranslationOptions.NoRichText);
@@ -2175,97 +2107,97 @@ public sealed class KitSelectionUITranslations : TranslationCollection
     
     [TranslationData("Description of the Squadleader class.")]
     public readonly Translation DescriptionSquadleader = new Translation(
-        "Help your squad by supplying them with <#f0a31c>rally points</color> and placing <#f0a31c>FOB radios</color>.",
+        "Help your squad by supplying them with <#f4bb57>rally points</color> and placing <#f4bb57>FOB radios</color>.",
         TranslationOptions.TMProUI
     );
     
     [TranslationData("Description of the Rifleman class.")]
     public readonly Translation DescriptionRifleman = new Translation(
-        "Resupply your teammates in the field with an <#f0a31c>Ammo Bag</color>.",
+        "Resupply your teammates in the field with an <#f4bb57>Ammo Bag</color>.",
         TranslationOptions.TMProUI
     );
     
     [TranslationData("Description of the Medic class.")]
     public readonly Translation DescriptionMedic = new Translation(
-        "<#f0a31c>Revive</color> your teammates after they've been injured.",
+        "<#f4bb57>Revive</color> your teammates after they've been injured.",
         TranslationOptions.TMProUI
     );
     
     [TranslationData("Description of the Breacher class.")]
     public readonly Translation DescriptionBreacher = new Translation(
-        "Use <#f0a31c>high-powered explosives</color> to take out <#f01f1c>enemy FOBs</color>.",
+        "Use <#f4bb57>high-powered explosives</color> to take out <#f45a57>enemy FOBs</color>.",
         TranslationOptions.TMProUI
     );
     
     [TranslationData("Description of the Automatic Rifleman class.")]
     public readonly Translation DescriptionAutoRifleman = new Translation(
-        "Equipped with a high-capacity and powerful <#f0a31c>LMG</color> to spray-and-pray your enemies.",
+        "Equipped with a high-capacity and powerful <#f4bb57>LMG</color> to spray-and-pray your enemies.",
         TranslationOptions.TMProUI
     );
     
     [TranslationData("Description of the Grenadier class.")]
     public readonly Translation DescriptionGrenadier = new Translation(
-        "Equipped with a <#f0a31c>grenade launcher</color> to take out enemies behind cover or in light-armored vehicles.",
+        "Equipped with a <#f4bb57>grenade launcher</color> to take out enemies behind cover or in light-armored vehicles.",
         TranslationOptions.TMProUI
     );
     
     [TranslationData("Description of the Machine Gunner class.")]
     public readonly Translation DescriptionMachineGunner = new Translation(
-        "Equipped with a powerful <#f0a31c>Machine Gun</color> to shred the enemy team in combat.",
+        "Equipped with a powerful <#f4bb57>Machine Gun</color> to shred the enemy team in combat.",
         TranslationOptions.TMProUI
     );
     
     [TranslationData("Description of the Light Anti-Tank class.")]
     public readonly Translation DescriptionLAT = new Translation(
-        "A balance between an anti-tank and combat loadout, used to conveniently destroy <#f01f1c>armored enemy vehicles</color>.",
+        "A balance between an anti-tank and combat loadout, used to conveniently destroy <#f45a57>armored enemy vehicles</color>.",
         TranslationOptions.TMProUI
     );
     
     [TranslationData("Description of the Heavy Anti-Tank class.")]
     public readonly Translation DescriptionHAT = new Translation(
-        "Equipped with multiple powerful <#f0a31c>anti-tank shells</color> to take out any vehicles.",
+        "Equipped with multiple powerful <#f4bb57>anti-tank shells</color> to take out any vehicles.",
         TranslationOptions.TMProUI
     );
     
     [TranslationData("Description of the Marksman class.")]
     public readonly Translation DescriptionMarksman = new Translation(
-        "Equipped with a <#f0a31c>marksman rifle</color> to take out enemies from medium to high distances.",
+        "Equipped with a <#f4bb57>marksman rifle</color> to take out enemies from medium to high distances.",
         TranslationOptions.TMProUI
     );
     
     [TranslationData("Description of the Sniper class.")]
     public readonly Translation DescriptionSniper = new Translation(
-        "Equipped with a high-powered <#f0a31c>sniper rifle</color> to take out enemies from great distances.",
+        "Equipped with a high-powered <#f4bb57>sniper rifle</color> to take out enemies from great distances.",
         TranslationOptions.TMProUI
     );
     
     [TranslationData("Description of the Anti-Personnel Rifleman class.")]
     public readonly Translation DescriptionAPRifleman = new Translation(
-        "Equipped with <#f0a31c>explosive traps</color> to cover entry-points and entrap enemy vehicles.",
+        "Equipped with <#f4bb57>explosive traps</color> to cover entry-points and entrap enemy vehicles.",
         TranslationOptions.TMProUI
     );
     
     [TranslationData("Description of the Combat Engineer class.")]
     public readonly Translation DescriptionCombatEngineer = new Translation(
-        "Features 200% <#f0a31c>build speed</color> and are equipped with <#f0a31c>fortifications</color> and traps to help defend their team's FOBs.",
+        "Features 200% <#f4bb57>build speed</color> and are equipped with <#f4bb57>fortifications</color> and traps to help defend their team's FOBs.",
         TranslationOptions.TMProUI
     );
     
     [TranslationData("Description of the Crewman class.")]
     public readonly Translation DescriptionCrewman = new Translation(
-        "Gives users the ability to operate <#f0a31c>armored vehicles</color>.",
+        "Gives users the ability to operate <#f4bb57>armored vehicles</color>.",
         TranslationOptions.TMProUI
     );
     
     [TranslationData("Description of the Pilot class.")]
     public readonly Translation DescriptionPilot = new Translation(
-        "Gives users the ability to fly <#f0a31c>aircraft</color>.",
+        "Gives users the ability to fly <#f4bb57>aircraft</color>.",
         TranslationOptions.TMProUI
     );
     
     [TranslationData("Description of the Special Ops class.")]
     public readonly Translation DescriptionSpecOps = new Translation(
-        "Equipped with <#f0a31c>night-vision</color> to help see at night.",
+        "Equipped with <#f4bb57>night-vision</color> to help see at night.",
         TranslationOptions.TMProUI
     );
 
