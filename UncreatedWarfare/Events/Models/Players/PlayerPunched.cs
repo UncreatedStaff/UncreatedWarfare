@@ -1,5 +1,7 @@
 using System;
+using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Events.Logging;
+using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Events.Models.Players;
 
@@ -26,5 +28,36 @@ public class PlayerPunched : PlayerEvent, IActionLoggableEvent
             $"{(PunchType == EPlayerPunch.LEFT ? "Left hand" : "Right hand")} - {ActionLoggerService.DescribeInput(InputInfo)}",
             Player.Steam64.m_SteamID
         );
+    }
+    
+    /// <summary>
+    /// Attempts to get a reference to the buildable that the player punched, if they punched one. Works for barricades and structures.
+    /// </summary>
+    public bool TryGetTargetBuildable([NotNullWhen(true)] out IBuildable? buildable)
+    {
+        GameThread.AssertCurrent();
+
+        if (InputInfo == null || InputInfo.transform == null)
+        {
+            buildable = null;
+            return false;
+        }
+
+        BarricadeDrop? barricade = BarricadeManager.FindBarricadeByRootTransform(InputInfo.transform);
+        if (barricade != null)
+        {
+            buildable = new BuildableBarricade(barricade);
+            return true;
+        }
+
+        StructureDrop? structure = StructureManager.FindStructureByRootTransform(InputInfo.transform);
+        if (structure != null)
+        {
+            buildable = new BuildableStructure(structure);
+            return true;
+        }
+
+        buildable = null;
+        return false;
     }
 }

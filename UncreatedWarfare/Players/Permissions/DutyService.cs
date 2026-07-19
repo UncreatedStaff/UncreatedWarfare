@@ -403,7 +403,7 @@ public partial class DutyService : IAsyncEventListener<PlayerLeft>, IEventListen
     {
         foreach (WarfarePlayer player in _playerService.GetThreadsafePlayerList())
         {
-            if (!await _permissionStore.HasPermissionAsync(player, PermissionViewDutyPlayers, token))
+            if (player.Equals(dutyPlayer) || !await _permissionStore.HasPermissionAsync(player, PermissionViewDutyPlayers, token))
                 continue;
 
             _chatService.Send(player, translation.Translate(dutyPlayer, player, canUseIMGUI: true));

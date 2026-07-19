@@ -929,6 +929,10 @@ public sealed class WarfareModule
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Layout);
 
+        bldr.RegisterType<KitRearmService>()
+            .AsSelf()
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Layout);
+
         bldr.RegisterType<KitWeaponTextService>()
             .AsSelf().SingleInstance();
 
@@ -941,9 +945,6 @@ public sealed class WarfareModule
         
         bldr.RegisterType<DefaultSkillsetConfiguration>()
             .SingleInstance();
-        
-        bldr.RegisterType<PunchToRequestTweaks>()
-            .AsSelf().AsImplementedInterfaces();
 
         if (false && ItemUtility.SupportsFastKits)
         {
@@ -1133,6 +1134,11 @@ public sealed class WarfareModule
         bldr.RegisterType<WarTableDoorTweak>()
             .AsSelf().AsImplementedInterfaces()
             .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Layout);
+        bldr.RegisterType<KitArmoryTweaks>()
+            .AsSelf().AsImplementedInterfaces()
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Layout);
+        bldr.RegisterType<PunchToRequestTweaks>()
+            .AsSelf().AsImplementedInterfaces();
 
         bldr.RegisterType<NoCraftingTweak>()
             .AsSelf().AsImplementedInterfaces()

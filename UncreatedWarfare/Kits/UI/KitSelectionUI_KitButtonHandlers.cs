@@ -3,6 +3,7 @@ using System;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Presets;
 using Uncreated.Warfare.Commands;
+using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Interaction.Requests;
 using Uncreated.Warfare.Kits.Loadouts;
 using Uncreated.Warfare.Models.Users;
@@ -10,6 +11,7 @@ using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Squads.UI;
+using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Kits.UI;
 
@@ -111,7 +113,7 @@ partial class KitSelectionUI
                 if (!requested)
                     button.Show(player);
                 else
-                    await UpdateKitAsync(favKit, player, player.DisconnectToken);
+                    await CloseAsync(player);
             }
         });
     }
@@ -282,13 +284,20 @@ partial class KitSelectionUI
         }
 
         WarfarePlayer player = _playerService.GetOnlinePlayer(unturnedPlayer);
+
         KitSelectionUIData data = GetOrAddData(player);
         if (data.Operations > 0)
             return;
 
-        Interlocked.Increment(ref data.Operations);
-
         ref KitCacheInformation cache = ref data.GetCachedState(@class, kitIndex);
+        if (!_zoneStore.IsInMainBase(player))
+        {
+            if (cache.Kit != null)
+                UpdateActionButtons(cache.Kit, player, kitInfo, data, kitIndex, @class);
+            return;
+        }
+
+        Interlocked.Increment(ref data.Operations);
 
         Kit? kit = cache.Kit;
         if (kit == null)
@@ -335,7 +344,7 @@ partial class KitSelectionUI
     // click the buy/unlock button on a full-sized kit
     private void HandleButtonUnlockKitClicked(UnturnedButton button, Player unturnedPlayer)
     {
-        if (!TryGetTargetKit(x => x.UnlockButton.Button, button, out Class @class, out int kitIndex, out _))
+        if (!TryGetTargetKit(x => x.UnlockButton.Button, button, out Class @class, out int kitIndex, out KitInfo? kitInfo))
         {
             return;
         }
@@ -359,17 +368,28 @@ partial class KitSelectionUI
 
         bool done = true;
 
+        bool canRequest = CanPlayerRequestKit(data, player);
+
+        if (!canRequest && buttonState != PurchaseButtonState.Rearm)
+        {
+            UpdateStatusLabels(kitInfo, false, data, @class, kitIndex, player, kit, player.Component<KitPlayerComponent>());
+            UpdateActionButtons(kit, player, kitInfo, data, kitIndex, @class);
+            return;
+        }
+
         try
         {
             switch (buttonState)
             {
                 case PurchaseButtonState.None:
                     done = false;
+
                     Task.Run(async () =>
                     {
                         bool requested = false;
                         try
                         {
+                            // todo: remove ammo from data.AmmoSupply if != null and also this should show on the button
                             requested = await _kitRequestService.RequestAsync(player, kit, new RequestCommandResultHandler(_chatService, _requestTranslations), player.DisconnectToken);
                         }
                         catch (Exception ex)
@@ -478,6 +498,7 @@ partial class KitSelectionUI
                             string command = $"/link token:{token}";
                             if (player.IsOnline)
                             {
+                                // TODO: replace this with some kind of copy text UI
                                 unturnedPlayer.sendBrowserRequest(
                                     _translations.PurchaseButtonNotBoostingLinkDiscordRequest.Translate(player, canUseIMGUI: true),
                                     domain + "/copy-text?text=" + Uri.EscapeDataString(command)
@@ -487,6 +508,32 @@ partial class KitSelectionUI
                         catch (Exception ex)
                         {
                             GetLogger().LogError(ex, "Error starting link for player.");
+                        }
+                    });
+                    break;
+
+                case PurchaseButtonState.Rearm:
+                    IAmmoStorage? ammoStorage = data.AmmoStorage;
+                    if (ammoStorage == null
+                        || ammoStorage.AmmoCount == 0
+                        || !(data.AmmoStorage == null ? _zoneStore.IsInMainBase(player, player.Team.Faction) : IsWithinRangeOfAmmoStorage(data, player)))
+                    {
+                        UpdateStatusLabels(kitInfo, false, data, @class, kitIndex, player, kit, player.Component<KitPlayerComponent>());
+                        UpdateActionButtons(kit, player, kitInfo, data, kitIndex, @class);
+                        break;
+                    }
+
+                    _ = CloseAsync(player);
+                    Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await _rearmService.RearmAsync(player, ammoStorage, player.DisconnectToken);
+                        }
+                        catch (OperationCanceledException) when (!player.IsOnline) { }
+                        catch (Exception ex)
+                        {
+                            GetLogger().LogError(ex, "Error rearming player.");
                         }
                     });
                     break;

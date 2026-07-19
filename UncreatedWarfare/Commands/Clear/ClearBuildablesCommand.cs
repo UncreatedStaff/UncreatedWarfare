@@ -19,6 +19,11 @@ internal sealed class ClearBuildablesCommand : IExecutableCommand
 
     public UniTask ExecuteAsync(CancellationToken token)
     {
+        if (Context.HasArgs(1))
+        {
+            throw Context.SendHelp();
+        }
+
         _mainBaseBuildables.ClearOtherBuildables();
 
         // todo: Context.LogAction(ActionLogType.ClearStructures);

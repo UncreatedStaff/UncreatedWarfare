@@ -1,11 +1,11 @@
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Interaction.Icons;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Util;
-using Microsoft.Extensions.DependencyInjection;
-using Uncreated.Warfare.Layouts.Teams;
 
 namespace Uncreated.Warfare.FOBs.SupplyCrates.Throwable.AmmoBags;
 
@@ -16,6 +16,7 @@ public class PlacedAmmoBagComponent : MonoBehaviour, IAmmoStorage, IManualOnDest
     public float AmmoCount { get; private set; }
     public WorldIconInfo? Icon { get; private set; }
     public Team Team { get; private set; } = null!;
+    public event Action? AmmoCountUpdated;
     public void Init(WarfarePlayer warfarePlayer, IBuildable buildable, float startingAmmo, Team team, IServiceProvider serviceProvider)
     {
         AmmoCount = startingAmmo;
@@ -48,10 +49,10 @@ public class PlacedAmmoBagComponent : MonoBehaviour, IAmmoStorage, IManualOnDest
 
         worldIconManager.CreateIcon(Icon);
     }
+
     public void SubtractAmmo(float ammoCount)
     {
         AmmoCount -= ammoCount;
-        
         if (AmmoCount <= 0)
         {
             AmmoCount = 0;
@@ -62,6 +63,8 @@ public class PlacedAmmoBagComponent : MonoBehaviour, IAmmoStorage, IManualOnDest
                 _buildable.Destroy();
             });
         }
+
+        AmmoCountUpdated?.Invoke();
     }
 
     /// <inheritdoc />
@@ -81,4 +84,8 @@ public class PlacedAmmoBagComponent : MonoBehaviour, IAmmoStorage, IManualOnDest
         Icon?.Dispose();
         Icon = null;
     }
+
+    bool IAmmoStorage.CanChangeKit => false;
+    Vector3 IAmmoStorage.Point => _buildable.Position;
+    float IAmmoStorage.InteractRange => 6.5f;
 }

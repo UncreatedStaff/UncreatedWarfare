@@ -57,9 +57,9 @@ partial class DualSidedLeaderboardUI
                 CultureInfo.InvariantCulture,
                 LevenshteinOptions.IgnoreCase | LevenshteinOptions.IgnorePunctuation |
                 LevenshteinOptions.IgnoreWhitespace);
-            levDistance = Math.Max(0.05, Math.Pow(Math.Abs(levDistance), 1d / 3d));
+            levDistance = Math.Max(0.05, Math.Pow(Math.Abs(levDistance), 0.7f));
 
-            return x.Weight * levDistance * (string.Equals(x.Configuration.GamemodeName, _layout.LayoutInfo.Configuration.GamemodeName, StringComparison.OrdinalIgnoreCase) ? 0.2 : 1);
+            return x.Weight * levDistance * (string.Equals(x.Configuration.GamemodeName, _layout.LayoutInfo.Configuration.GamemodeName, StringComparison.OrdinalIgnoreCase) ? 0.1 : 1);
         }, VoteButtons.Length);
     }
 

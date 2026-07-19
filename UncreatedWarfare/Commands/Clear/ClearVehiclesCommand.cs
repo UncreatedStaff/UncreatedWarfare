@@ -1,5 +1,4 @@
 using Uncreated.Warfare.Interaction.Commands;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Vehicles;
 using Uncreated.Warfare.Vehicles.Spawners;
@@ -24,6 +23,11 @@ internal sealed class ClearVehiclesCommand : IExecutableCommand
 
     public async UniTask ExecuteAsync(CancellationToken token)
     {
+        if (Context.HasArgs(1))
+        {
+            throw Context.SendHelp();
+        }
+
         await _vehicleService.DeleteAllVehiclesAsync(token);
 
         foreach (VehicleSpawner spawner in _spawners.Spawners)

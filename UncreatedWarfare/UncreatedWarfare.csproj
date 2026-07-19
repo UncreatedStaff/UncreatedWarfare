@@ -201,7 +201,7 @@
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="Unturned.MSBuild" Version="1.0.0">
+        <PackageReference Include="Unturned.MSBuild" Version="1.0.1">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
         </PackageReference>
@@ -235,6 +235,8 @@
         <EmbeddedResource Include="Commands\NerdCommand.meta.yml" />
 
         <EmbeddedResource Include="Commands\Permission\PermissionCommand.meta.yml" />
+
+        <EmbeddedResource Include="Commands\KitsCommand.meta.yml" />
 
         <EmbeddedResource Include="Commands\ReportCommand.meta.yml" />
 
@@ -376,4 +378,13 @@
         </Reference>
 
     </ItemGroup>
+
+  <!-- Copy this build to the nuget packages folder to make it easier to edit plugins without publishing. -->
+  <Target Name="Uncreated_CopyToNugetPackage" AfterTargets="Build" Condition="'$(Configuration)' == 'Release' And exists('$(NuGetPackageRoot)/uncreated.warfare/$(Version)/lib/$(TargetFramework)')">
+    <Copy
+      SourceFiles="$(OutDir)/$(AssemblyName).dll;$(OutDir)/$(AssemblyName).pdb;$(OutDir)/$(AssemblyName).runtimeconfig.json;$(OutDir)/$(AssemblyName).xml"
+      DestinationFolder="$(NuGetPackageRoot)/uncreated.warfare/$(Version)/lib/$(TargetFramework)"
+      SkipUnchangedFiles="true"
+      OverwriteReadOnlyFiles="true" />
+  </Target>
 </Project>

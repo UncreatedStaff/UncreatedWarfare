@@ -1,5 +1,4 @@
 using Uncreated.Warfare.Interaction.Commands;
-using Uncreated.Warfare.Logging;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 
@@ -19,7 +18,7 @@ internal sealed class ClearItemsCommand : IExecutableCommand
 
     public UniTask ExecuteAsync(CancellationToken token)
     {
-        if (!Context.TryGet(1, out float range))
+        if (!Context.TryGet(0, out float range))
         {
             ItemUtility.DestroyAllDroppedItems(false);
             // todo: Context.LogAction(ActionLogType.ClearItems);

@@ -70,8 +70,7 @@ internal sealed class InteractableSignUpdateText : IHarmonyPatch
         IContainer serviceProvider = WarfareModule.Singleton.ServiceProvider;
 
         WarfarePlayer? instigator = null;
-        BuildableContainer container = BuildableContainer.Get(drop);
-        if (container.SignEditFrame.IsValid)
+        if (BuildableContainer.TryGet(drop, out BuildableContainer? container) && container.SignEditFrame.IsValid)
         {
             instigator = serviceProvider.Resolve<IPlayerService>().GetOnlinePlayerOrNull(container.SignEditor);
         }
