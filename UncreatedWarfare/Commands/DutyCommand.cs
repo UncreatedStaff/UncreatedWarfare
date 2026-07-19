@@ -47,4 +47,7 @@ public class DutyCommandTranslations : TranslationCollection
 
     [TranslationData("Sent to all players when a player goes off duty (loses permissions).")]
     public readonly Translation<IPlayer> DutyOffBroadcast = new Translation<IPlayer>("<#c6d4b8><#d9e882>{0}</color> is now <#ff8c4a>off duty</color>.", arg0Fmt: WarfarePlayer.FormatDisplayOrPlayerName);
+
+    [TranslationData("Sent to all players when an on-duty player kills someone.")]
+    public readonly Translation<IPlayer, IPlayer> KillWhileOnDutyBroadcast = new Translation<IPlayer, IPlayer>("<#ffb380><#d9e882>{0}</color> killed {1} while on duty!", arg0Fmt: WarfarePlayer.FormatDisplayOrPlayerName, arg1Fmt: WarfarePlayer.FormatColoredCharacterName);
 }

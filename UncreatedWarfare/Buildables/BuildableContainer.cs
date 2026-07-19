@@ -1,13 +1,12 @@
 using DanielWillett.ReflectionTools;
 using System;
-using System.Collections.Generic;
-using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Buildables;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Containers;
 using Uncreated.Warfare.Util.Timing;
 
 namespace Uncreated.Warfare.Buildables;
+
 public class BuildableContainer : MonoBehaviour, IComponentContainer<IBuildableComponent>, IManualOnDestroy
 {
     private readonly List<IBuildableComponent> _components = new List<IBuildableComponent>();
@@ -16,6 +15,7 @@ public class BuildableContainer : MonoBehaviour, IComponentContainer<IBuildableC
     public IBuildable Buildable { get; private set; }
     public DateTime CreateTime { get; private set; }
     public FrameHandle SignEditFrame { get; private set; }
+    public bool PlacerWasOnDuty { get; internal set; }
     public CSteamID SignEditor
     {
         get;
@@ -55,7 +55,25 @@ public class BuildableContainer : MonoBehaviour, IComponentContainer<IBuildableC
             }
         }
 
+        if (container != null)
+        {
+            container.PlacerWasOnDuty = PlacerWasOnDuty;
+        }
+
         return container;
+    }
+
+    public static bool TryGet(IBuildable buildable, [NotNullWhen(true)] out BuildableContainer? container)
+    {
+        GameThread.AssertCurrent();
+
+        if (!buildable.Alive)
+        {
+            container = null;
+            return false;
+        }
+
+        return buildable.Model.TryGetComponent(out container);
     }
 
     public static BuildableContainer Get(IBuildable buildable)
@@ -74,11 +92,24 @@ public class BuildableContainer : MonoBehaviour, IComponentContainer<IBuildableC
         return container;
     }
 
+    public static bool TryGet(BarricadeDrop barricade, [NotNullWhen(true)] out BuildableContainer? container)
+    {
+        GameThread.AssertCurrent();
+
+        if (barricade.GetNetId().id == 0)
+        {
+            container = null;
+            return false;
+        }
+
+        return barricade.model.TryGetComponent(out container);
+    }
+
     public static BuildableContainer Get(BarricadeDrop barricade)
     {
         GameThread.AssertCurrent();
 
-        if (barricade.GetServersideData().barricade.isDead)
+        if (barricade.GetNetId().id == 0)
             throw new InvalidOperationException("Barricade is dead.");
 
         if (!barricade.model.TryGetComponent(out BuildableContainer container))
@@ -90,11 +121,24 @@ public class BuildableContainer : MonoBehaviour, IComponentContainer<IBuildableC
         return container;
     }
 
+    public static bool TryGet(StructureDrop structure, [NotNullWhen(true)] out BuildableContainer? container)
+    {
+        GameThread.AssertCurrent();
+
+        if (structure.GetNetId().id == 0)
+        {
+            container = null;
+            return false;
+        }
+
+        return structure.model.TryGetComponent(out container);
+    }
+
     public static BuildableContainer Get(StructureDrop structure)
     {
         GameThread.AssertCurrent();
 
-        if (structure.GetServersideData().structure.isDead)
+        if (structure.GetNetId().id == 0)
             throw new InvalidOperationException("Structure is dead.");
 
         if (!structure.model.TryGetComponent(out BuildableContainer container))

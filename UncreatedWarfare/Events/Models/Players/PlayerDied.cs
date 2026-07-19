@@ -1,3 +1,4 @@
+using Humanizer;
 using System;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Deaths;
@@ -47,6 +48,7 @@ public class PlayerDied : PlayerEvent, IActionLoggableEvent
     public bool WasSuicide { get; internal set; }
     public bool WasBleedout { get; internal set; }
     public bool WasEffectiveKill => !WasSuicide && !WasTeamkill;
+    public bool KillerWasOnDuty { get; internal set; }
     public Team DeadTeam { get; internal set; }
     public Team? KillerTeam { get; internal set; }
     public Team? ThirdPartyTeam { get; internal set; }
@@ -64,6 +66,7 @@ public class PlayerDied : PlayerEvent, IActionLoggableEvent
     public WarfarePlayer? DriverAssist { get; internal set; }
     public WarfarePlayer? ThirdParty { get; internal set; }
     public CSteamID? ThirdPartyId { get; internal set; }
+    public bool ThirdPartyWasOnDuty { get; internal set; }
     public InteractableVehicle? ActiveVehicle { get; internal set; }
     public Vector3 Point { get; internal set; }
     public Vector3 KillerPoint { get; internal set; }
@@ -102,15 +105,30 @@ public class PlayerDied : PlayerEvent, IActionLoggableEvent
         return default;
     }
 
-    internal void ClearKiller()
+    internal void MoveKillerToThirdParty()
     {
+        ThirdParty = Killer;
         Killer = null;
+
         KillerBranch = null;
         KillerClass = null;
         KillerKitName = null;
+
+        ThirdPartyPoint = KillerPoint;
         KillerPoint = default;
+
+        ThirdPartySession = KillerSession;
         KillerSession = null;
+
+        ThirdPartyTeam = KillerTeam;
         KillerTeam = null;
-        WasTeamkill = false;
+
+        ThirdPartyWasOnDuty = KillerWasOnDuty;
+        KillerWasOnDuty = false;
+
+        ThirdPartyId = Instigator;
+        Instigator = CSteamID.Nil;
+
+        MessageFlags = (MessageFlags | DeathFlags.Player3) & ~DeathFlags.Killer;
     }
 }

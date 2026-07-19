@@ -93,9 +93,9 @@ public class SafezoneTweaks :
 
         // if the player is dequipping a gun in main, it's convenient to turn
         // safety off for them in to save them from having to do it themselves later
-        if (e.DequippedItem?.GetAsset() is ItemGunAsset dequippedGunAsset && (EFiremode)e.DequippedItem.item.state[11] == EFiremode.SAFETY)
+        if (e.DequippedItem?.GetAsset() is ItemGunAsset dequippedGunAsset && (EFiremode)e.DequippedItem.item.state[GunStateIndices.FIREMODE] == EFiremode.SAFETY)
         {
-            e.DequippedItem.item.state[11] = (byte)ItemUtility.GetDefaultFireMode(dequippedGunAsset);
+            e.DequippedItem.item.state[GunStateIndices.FIREMODE] = (byte)ItemUtility.GetDefaultFireMode(dequippedGunAsset);
             e.Inventory.sendUpdateInvState((byte)e.DequippedItemPage, e.DequippedItem.x, e.DequippedItem.y, e.DequippedItem.item.state);
         }
         else if (e.DequippedVehicle != null)
@@ -106,7 +106,7 @@ public class SafezoneTweaks :
             TurretInfo turret = passenger.turret;
             if (Assets.find(EAssetType.ITEM, turret.itemID) is ItemGunAsset gunAsset)
             {
-                passenger.state[11] = (byte)ItemUtility.GetDefaultFireMode(gunAsset);
+                passenger.state[GunStateIndices.FIREMODE] = (byte)ItemUtility.GetDefaultFireMode(gunAsset);
                 if (passenger.player != null)
                 {
                     PlayerEquipment eq = passenger.player.player.equipment;
@@ -119,7 +119,7 @@ public class SafezoneTweaks :
         if (e.Useable is not UseableGun || (e.Player.IsOnDuty && !e.Equipment.isTurret))
             return;
         
-        e.Equipment.state[11] = (byte) EFiremode.SAFETY;
+        e.Equipment.state[GunStateIndices.FIREMODE] = (byte) EFiremode.SAFETY;
         e.Equipment.sendUpdateState();
     }
 
@@ -186,7 +186,7 @@ public class SafezoneTweaks :
             return;
         
         // turn on safety for guns when entering main
-        e.Equipment.state[11] = (byte) EFiremode.SAFETY;
+        e.Equipment.state[GunStateIndices.FIREMODE] = (byte) EFiremode.SAFETY;
         e.Equipment.sendUpdateState();
     }
 
@@ -200,11 +200,11 @@ public class SafezoneTweaks :
         if (e.Zone.Type != ZoneType.MainBase || _zoneStore.IsInMainBase(e.Player))
             return;
         
-        if (e.Equipment.useable is not UseableGun gun || (EFiremode)e.Equipment.state[11] != EFiremode.SAFETY)
+        if (e.Equipment.useable is not UseableGun gun || (EFiremode)e.Equipment.state[GunStateIndices.FIREMODE] != EFiremode.SAFETY)
             return;
         
         // turn off safety for guns when leaving main to spare the player from having to do it themselves
-        e.Equipment.state[11] = (byte)ItemUtility.GetDefaultFireMode(gun.equippedGunAsset);
+        e.Equipment.state[GunStateIndices.FIREMODE] = (byte)ItemUtility.GetDefaultFireMode(gun.equippedGunAsset);
         e.Equipment.sendUpdateState();
     }
 

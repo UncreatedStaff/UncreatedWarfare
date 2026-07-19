@@ -178,7 +178,9 @@ Gameplay
     Timer_Home 0
     Timer_Leave_Group 0
     Explosion_Launch_Speed_Multiplier 0.02
-    Viewmodel_AimingMisalignmentMultiplier 1
+    Viewmodel_AimingMisalignmentMultiplier 0.3
+	Disable_Motion_Sickness_Options True
+	Disable_Foliage_Off true
 }
 ```
 (just replace the file it'll regenerate with comments on restart)

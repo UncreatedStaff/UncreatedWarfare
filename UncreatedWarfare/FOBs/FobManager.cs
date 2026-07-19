@@ -6,6 +6,7 @@ using System.Linq;
 using Uncreated.Framework.UI;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Events.Models.Buildables;
 using Uncreated.Warfare.Events.Models.Fobs;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.FOBs.Construction;
@@ -25,7 +26,7 @@ namespace Uncreated.Warfare.Fobs;
 
 public partial class FobManager : IWhitelistExceptionProvider, ILayoutHostedService, IDisposable
 {
-    internal const float EmplacementSpawnOffset = 3f;
+    internal const float EmplacementSpawnOffset = 1.5f;
 
     private readonly FobTranslations _translations;
     private readonly AssetConfiguration _assetConfiguration;
@@ -131,7 +132,7 @@ public partial class FobManager : IWhitelistExceptionProvider, ILayoutHostedServ
         RegisterFob(fob);
         return fob;
     }
-    public bool DeregisterFob(IFob fob)
+    public bool DeregisterFob(IFob fob, IBuildableDestroyedEvent? buildableDestroyedEvent = null)
     {
         IFob? existing = _fobs.FindAndRemove(f => f == fob);
         if (existing == null)
@@ -150,7 +151,7 @@ public partial class FobManager : IWhitelistExceptionProvider, ILayoutHostedServ
         }
 
         _logger.LogDebug("Deregistered FOB: " + fob);
-        _ = WarfareModule.EventDispatcher.DispatchEventAsync(new FobDeregistered { Fob = fob });
+        _ = WarfareModule.EventDispatcher.DispatchEventAsync(new FobDeregistered { Fob = fob, BuildableDestroyedEvent = buildableDestroyedEvent});
         return true;
     }
     public IFob RegisterFob(IFob fob)

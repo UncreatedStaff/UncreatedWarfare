@@ -48,9 +48,12 @@ public class ClaimToRearmTweaks :
         _zoneStore = serviceProvider.GetService<ZoneStore>();
     }
 
-    [EventListener(RequireActiveLayout = true)]
+    [EventListener(RequireActiveLayout = true, RequiresMainThread = true)]
     public async UniTask HandleEventAsync(ClaimBedRequested e, IServiceProvider serviceProvider, CancellationToken token = default)
     {
+        if (!e.Buildable.IsAlive)
+            return;
+
         IAmmoStorage? ammoStorage = ContainerHelper.FindComponent<IAmmoStorage>(e.Buildable.Model);
         if (ammoStorage == null)
         {

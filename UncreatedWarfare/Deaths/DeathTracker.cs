@@ -1,6 +1,7 @@
 using DanielWillett.ReflectionTools;
 using System;
 using System.Linq;
+using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Models.Players;
@@ -15,7 +16,7 @@ using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles.WarfareVehicles;
 
 namespace Uncreated.Warfare.Deaths;
-public class DeathTracker : IHostedService//, IEventListener<VehicleExploded>
+public class DeathTracker : IHostedService
 {
     private readonly ILogger<DeathTracker> _logger;
     private readonly DeathMessageResolver _deathMessageResolver;
@@ -189,7 +190,7 @@ public class DeathTracker : IHostedService//, IEventListener<VehicleExploded>
 
         comp.LastInfectionItemConsumed = null;
         comp.BleedOutInfo = null;
-        comp.LastShreddedBy = null;
+        comp.LastShreddedTrap = null;
         comp.LastRoadkillVehicle = null;
     }
 
@@ -221,7 +222,6 @@ public class DeathTracker : IHostedService//, IEventListener<VehicleExploded>
         e.MessageCause = cause;
         e.Point = dead.Position;
         e.Session = dead.CurrentSession;
-
 
         if (e.Session != null)
             Interlocked.Increment(ref e.Session.EventCount);
@@ -269,6 +269,8 @@ public class DeathTracker : IHostedService//, IEventListener<VehicleExploded>
             e.KillerSession = killer.CurrentSession;
             if (e.KillerSession != null)
                 Interlocked.Increment(ref e.KillerSession.EventCount);
+            if (killer.IsOnDuty)
+                e.KillerWasOnDuty = true;
             e.KillerPoint = killer.Position;
             KitPlayerComponent killerKitComp = killer.Component<KitPlayerComponent>();
             CurrentKitState? killerActiveKit = killerKitComp.GetActiveEffectiveKit();
@@ -289,6 +291,8 @@ public class DeathTracker : IHostedService//, IEventListener<VehicleExploded>
         {
             e.KillerPoint = e.Point;
         }
+
+        bool setKillerOnDuty = false;
 
         if (cause == EDeathCause.LANDMINE)
         {
@@ -341,7 +345,7 @@ public class DeathTracker : IHostedService//, IEventListener<VehicleExploded>
                     if (player.Equals(dead)
                         || !player.UnturnedPlayer.TryGetComponent(out PlayerDeathTrackingComponent triggererData)
                         || triggererData.TriggeredTrapExplosive == null
-                        || !((triggererData.TriggeredTrapExplosive.model.position - dead.Position).sqrMagnitude < 400f /* 20m */)
+                        || !((triggererData.TriggeredTrapExplosive.model.position - dead.Position).sqrMagnitude < 49f /* 7m */)
                        )
                     {
                         continue;
@@ -355,6 +359,9 @@ public class DeathTracker : IHostedService//, IEventListener<VehicleExploded>
                     break;
                 }
             }
+
+            e.KillerWasOnDuty = drop != null && BuildableContainer.TryGet(drop, out BuildableContainer? container) && container.PlacerWasOnDuty;
+            setKillerOnDuty = true;
 
             if (triggerer != null)
             {
@@ -373,6 +380,7 @@ public class DeathTracker : IHostedService//, IEventListener<VehicleExploded>
                     e.ThirdPartyId = triggerer.Steam64;
                     e.ThirdPartyPoint = triggerer.Position;
                     e.ThirdPartySession = triggerer.CurrentSession;
+                    e.ThirdPartyWasOnDuty = triggerer.IsOnDuty;
                     if (e.ThirdPartySession != null)
                         Interlocked.Increment(ref e.ThirdPartySession.EventCount);
                     e.ThirdPartyTeam = triggerer.Team;
@@ -456,6 +464,7 @@ public class DeathTracker : IHostedService//, IEventListener<VehicleExploded>
                         e.ThirdPartyPoint = e.DriverAssist.Position;
                         e.ThirdPartySession = e.DriverAssist.CurrentSession;
                         e.ThirdPartyTeam = e.DriverAssist.Team;
+                        e.ThirdPartyWasOnDuty = e.DriverAssist.IsOnDuty;
                         if (e.ThirdPartySession != null)
                             Interlocked.Increment(ref e.ThirdPartySession.EventCount);
                         e.MessageFlags |= DeathFlags.Player3;
@@ -533,20 +542,26 @@ public class DeathTracker : IHostedService//, IEventListener<VehicleExploded>
                 break;
 
             case EDeathCause.SHRED:
-                if (deadData != null && deadData.LastShreddedBy != null)
+                if (deadData != null && deadData.LastShreddedTrap != null)
                 {
-                    ItemBarricadeAsset? trap = deadData.LastShreddedBy.GetAsset();
+                    ItemBarricadeAsset? trap = deadData.LastShreddedTrap.asset;
                     if (trap != null)
                     {
                         e.MessageFlags |= DeathFlags.Item;
                         e.PrimaryAsset = AssetLink.Create(trap);
                     }
+
+                    if (!setKillerOnDuty && BuildableContainer.TryGet(deadData.LastShreddedTrap, out BuildableContainer? container))
+                    {
+                        e.KillerWasOnDuty = container.PlacerWasOnDuty;
+                    }
                 }
 
                 if (e.WasTeamkill)
                 {
-                    e.ClearKiller();
+                    e.MoveKillerToThirdParty();
                     e.WasSuicide = true;
+                    e.MessageFlags |= DeathFlags.Suicide;
                 }
                 break;
             
@@ -580,6 +595,7 @@ public class DeathTracker : IHostedService//, IEventListener<VehicleExploded>
                         e.ThirdPartyPoint = e.DriverAssist.Position;
                         e.ThirdPartySession = e.DriverAssist.CurrentSession;
                         e.ThirdPartyTeam = e.DriverAssist.Team;
+                        e.ThirdPartyWasOnDuty = e.DriverAssist.IsOnDuty;
                         if (e.ThirdPartySession != null)
                             Interlocked.Increment(ref e.ThirdPartySession.EventCount);
                         e.MessageFlags |= DeathFlags.Player3;
@@ -614,6 +630,7 @@ public class DeathTracker : IHostedService//, IEventListener<VehicleExploded>
                                 e.ThirdPartyPoint = e.DriverAssist.Position;
                                 e.ThirdPartySession = e.DriverAssist.CurrentSession;
                                 e.ThirdPartyTeam = e.DriverAssist.Team;
+                                e.ThirdPartyWasOnDuty = e.DriverAssist.IsOnDuty;
                                 if (e.ThirdPartySession != null)
                                     Interlocked.Increment(ref e.ThirdPartySession.EventCount);
                                 e.MessageFlags |= DeathFlags.Player3;
@@ -788,7 +805,8 @@ public class DeathTracker : IHostedService//, IEventListener<VehicleExploded>
                 break;
 
             case EDeathCause.SHRED:
-                item1 = deadData?.LastShreddedBy;
+                ItemBarricadeAsset? barricadeAsset = deadData?.LastShreddedTrap?.asset;
+                item1 = barricadeAsset != null ? AssetLink.Create(barricadeAsset) : null;
                 break;
 
             case EDeathCause.LANDMINE:
@@ -903,10 +921,4 @@ public class DeathTracker : IHostedService//, IEventListener<VehicleExploded>
 
         comp.BleedOutInfo = e;
     }
-
-    ///// <inheritdoc />
-    //public void HandleEvent(VehicleExploded e, IServiceProvider serviceProvider)
-    //{
-    //    e.
-    //}
 }

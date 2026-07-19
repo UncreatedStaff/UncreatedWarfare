@@ -195,6 +195,11 @@ public static class SteamIdHelper
     /// </summary>
     public static ValueTask<CSteamID?> TryParseSteamIdOrUrl(string str, CancellationToken token = default)
     {
+        if (string.IsNullOrWhiteSpace(str))
+            return default;
+
+        str = str.Trim();
+
         if (TryParseSteamId(str, out CSteamID steamId))
         {
             return steamId.IsIndividualRef() ? new ValueTask<CSteamID?>(steamId) : default;
@@ -219,7 +224,7 @@ public static class SteamIdHelper
             return default;
 
         string path = uri.GetComponents(UriComponents.Path, UriFormat.Unescaped);
-        if (path.StartsWith("id/", StringComparison.OrdinalIgnoreCase) && path.Length > 3)
+        if (path.StartsWith("id/", StringComparison.Ordinal) && path.Length > 3)
         {
             // custom URL
             ReadOnlySpan<char> customId = path.AsSpan(3);
@@ -230,7 +235,7 @@ public static class SteamIdHelper
             return new ValueTask<CSteamID?>(GetSteamIdFromCustomUrlId(customId, token));
         }
 
-        if (path.StartsWith("profiles/", StringComparison.OrdinalIgnoreCase) && path.Length > 9)
+        if (path.StartsWith("profiles/", StringComparison.Ordinal) && path.Length > 9)
         {
             // basic URL
             ReadOnlySpan<char> steam64Str = path.AsSpan(9);
