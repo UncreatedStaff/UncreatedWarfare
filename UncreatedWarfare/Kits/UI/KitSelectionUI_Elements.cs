@@ -166,8 +166,8 @@ partial class KitSelectionUI
         [Pattern("Unfavorite", AdditionalPath = "Buttons")]
         public UnturnedUIElement UnfavoriteButtonParent { get; set; }
 
-        [Pattern("Request", AdditionalPath = "Buttons")]
-        public UnturnedUIElement RequestButtonParent { get; set; }
+        // [Pattern("Request", AdditionalPath = "Buttons")]
+        // public UnturnedUIElement RequestButtonParent { get; set; }
 
         [Pattern("Preview", AdditionalPath = "Buttons")]
         public UnturnedUIElement PreviewButtonParent { get; set; }

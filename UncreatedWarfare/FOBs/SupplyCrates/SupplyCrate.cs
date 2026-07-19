@@ -11,12 +11,27 @@ namespace Uncreated.Warfare.FOBs.SupplyCrates;
 public class SupplyCrate : RestockableBuildableFobEntity<SupplyCrateInfo>
 {
     public SupplyType Type { get; }
-    public float SupplyCount { get; set; }
+
+    public float SupplyCount
+    {
+        get;
+        set
+        {
+            if (Mathf.Approximately(field, value))
+                return;
+
+            field = value;
+            OnSupplyCountUpdated?.Invoke();
+        }
+    }
+
     public float MaxSupplyCount { get; }
     public float SupplyRadius { get; set; }
     
     public SupplyCrateStack Stack { get; set; }
     public StackedSupplyCrate StackInfo { get; set; }
+
+    public event Action? OnSupplyCountUpdated;
 
     public SupplyCrate(SupplyCrateInfo info, IBuildable buildable, IServiceProvider serviceProvider, Team team, SupplyCrateStack? stack, int level, int index, bool enableAutoRestock = false)
         : base(buildable, serviceProvider, enableAutoRestock, info, team)

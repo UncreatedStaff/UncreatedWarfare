@@ -21,6 +21,7 @@ public class DeathTracker : IHostedService
     private readonly ILogger<DeathTracker> _logger;
     private readonly DeathMessageResolver _deathMessageResolver;
     private readonly IPlayerService _playerService;
+    private readonly VehicleInfoStore _vehicleInfoStore;
 
     public const EDeathCause MainCampDeathCauseOffset = (EDeathCause)100;
     public const EDeathCause InEnemyMainDeathCause = (EDeathCause)37;
@@ -28,10 +29,11 @@ public class DeathTracker : IHostedService
     private static readonly InstanceSetter<PlayerLife, bool>? PVPDeathField = Accessor.GenerateInstancePropertySetter<PlayerLife, bool>("wasPvPDeath");
     private static readonly InstanceGetter<InteractableSentry, Player>? SentryTargetPlayerField = Accessor.GenerateInstanceGetter<InteractableSentry, Player>("targetPlayer");
 
-    public DeathTracker(ILogger<DeathTracker> logger, DeathMessageResolver deathMessageResolver, IPlayerService playerService)
+    public DeathTracker(ILogger<DeathTracker> logger, DeathMessageResolver deathMessageResolver, IPlayerService playerService, VehicleInfoStore vehicleInfoStore)
     {
         _logger = logger;
         _playerService = playerService;
+        _vehicleInfoStore = vehicleInfoStore;
         _deathMessageResolver = deathMessageResolver;
     }
 
@@ -579,9 +581,13 @@ public class DeathTracker : IHostedService
                     if (turretOwner is null)
                         break;
 
-                    e.TurretVehicleOwner = AssetLink.Create(turretOwner.asset);
-                    e.SecondaryAsset = e.TurretVehicleOwner;
-                    e.MessageFlags |= DeathFlags.Item2;
+                    WarfareVehicleInfo? info = _vehicleInfoStore.GetVehicleInfo(turretOwner.asset);
+                    if (info == null || !info.Type.IsEmplacement())
+                    {
+                        e.TurretVehicleOwner = AssetLink.Create(turretOwner.asset);
+                        e.SecondaryAsset = e.TurretVehicleOwner;
+                        e.MessageFlags |= DeathFlags.Item2;
+                    }
 
                     CSteamID? driverAssist = killerData.LastRocketShotFromVehicleDriverAssist;
                     if (!driverAssist.HasValue || driverAssist.Value.GetEAccountType() != EAccountType.k_EAccountTypeIndividual)
@@ -616,9 +622,13 @@ public class DeathTracker : IHostedService
                         if (turretInfo == null || turretInfo.itemID != killer.UnturnedPlayer.equipment.asset.id)
                             continue;
 
-                        e.TurretVehicleOwner = AssetLink.Create(veh.asset);
-                        e.SecondaryAsset = e.TurretVehicleOwner;
-                        e.MessageFlags |= DeathFlags.Item2;
+                        WarfareVehicleInfo? info = _vehicleInfoStore.GetVehicleInfo(veh.asset);
+                        if (info == null || !info.Type.IsEmplacement())
+                        {
+                            e.TurretVehicleOwner = AssetLink.Create(veh.asset);
+                            e.SecondaryAsset = e.TurretVehicleOwner;
+                            e.MessageFlags |= DeathFlags.Item2;
+                        }
 
                         if (veh.passengers.Length > 0 && veh.passengers[0].player is { } sp && sp.player != null)
                         {

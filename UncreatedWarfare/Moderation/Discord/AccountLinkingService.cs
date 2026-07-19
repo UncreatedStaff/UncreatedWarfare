@@ -1,5 +1,6 @@
 using DanielWillett.ModularRpcs.Annotations;
 using DanielWillett.ModularRpcs.Async;
+using DanielWillett.ModularRpcs.Exceptions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using MySqlConnector;
@@ -363,6 +364,11 @@ public partial class AccountLinkingService
         {
             GuildStatusResult result = await SendIsInGuild(discordId);
             return result;
+        }
+        catch (RpcNoConnectionsException)
+        {
+            // not connected to homebase
+            return GuildStatusResult.Unknown;
         }
         catch (Exception ex)
         {

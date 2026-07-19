@@ -518,7 +518,7 @@ public class DeathMessageResolver
                 new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Killer, "{0} bled out after being blown up by {1}'s mortar from {4}m away."),
                 new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Killer | DeathFlags.Item, "{0} bled out after being blown up by {1}'s mortar from {4}m away."),
                 new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Suicide, "{0} bled out after blowing themselves up with a mortar shell."),
-                new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Suicide | DeathFlags.Item, "{0} bled out after blowing themselves up with a mortar shell."),
+                new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Suicide | DeathFlags.Item, "{0} bled out after blowing themselves up with a mortar shell.")
             ]
         }
     };

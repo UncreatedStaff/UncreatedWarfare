@@ -1,394 +1,148 @@
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Linq;
+using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Barricades;
-using Uncreated.Warfare.Events.Models.Fobs.Ammo;
+using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Events.Models.Zones;
 using Uncreated.Warfare.Fobs;
 using Uncreated.Warfare.Fobs.SupplyCrates;
 using Uncreated.Warfare.FOBs.SupplyCrates;
-using Uncreated.Warfare.FOBs.SupplyCrates.Throwable.AmmoBags;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Kits.Requests;
-using Uncreated.Warfare.Players.UI;
+using Uncreated.Warfare.Kits.UI;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Translations;
-using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Containers;
-using Uncreated.Warfare.Util.Inventory;
 using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.FOBs.Deployment.Tweaks;
 
 public class ClaimToRearmTweaks :
-    IAsyncEventListener<ClaimBedRequested>,
+    IAsyncEventListener<PlayerPunched>,
     IAsyncEventListener<PlayerEnteredZone>,
-    IAsyncEventListener<PlayerExitedZone>
+    IAsyncEventListener<PlayerExitedZone>,
+    IAsyncEventListener<ClaimBedRequested>
 {
     private readonly KitRequestService _kitRequestService;
     private readonly FobManager _fobManager;
-    private readonly KitWeaponTextService? _kitWeaponTextService;
+    private readonly KitRearmService _rearmService;
     private readonly ChatService _chatService;
     private readonly AmmoTranslations _translations;
     private readonly ZoneStore? _zoneStore;
     private readonly AssetConfiguration _assetConfiguration;
+    private readonly KitSelectionUI? _kitUi;
 
     public ClaimToRearmTweaks(IServiceProvider serviceProvider)
     {
         _assetConfiguration = serviceProvider.GetRequiredService<AssetConfiguration>();
         _fobManager = serviceProvider.GetRequiredService<FobManager>();
         _kitRequestService = serviceProvider.GetRequiredService<KitRequestService>();
-        _kitWeaponTextService = serviceProvider.GetService<KitWeaponTextService>();
+        _rearmService = serviceProvider.GetRequiredService<KitRearmService>();
         _chatService = serviceProvider.GetRequiredService<ChatService>();
         _translations = serviceProvider.GetRequiredService<TranslationInjection<AmmoTranslations>>().Value;
         _zoneStore = serviceProvider.GetService<ZoneStore>();
+        _kitUi = serviceProvider.GetService<KitSelectionUI>();
     }
 
     [EventListener(RequireActiveLayout = true, RequiresMainThread = true)]
-    public async UniTask HandleEventAsync(ClaimBedRequested e, IServiceProvider serviceProvider, CancellationToken token = default)
+    UniTask IAsyncEventListener<PlayerPunched>.HandleEventAsync(PlayerPunched e, IServiceProvider serviceProvider, CancellationToken token = default)
     {
-        if (!e.Buildable.IsAlive)
-            return;
+        if (!e.TryGetTargetBuildable(out IBuildable? buildable))
+        {
+            return UniTask.CompletedTask;
+        }
 
-        IAmmoStorage? ammoStorage = ContainerHelper.FindComponent<IAmmoStorage>(e.Buildable.Model);
+        IAmmoStorage? ammoStorage = TryGetRearmBarricade(e.Player, buildable);
+        if (ammoStorage == null)
+        {
+            return UniTask.CompletedTask;
+        }
+
+        return RearmKitFromSupplyCrate(e.Player, ammoStorage, e.Player.DisconnectToken);
+    }
+
+    [EventListener(RequireActiveLayout = true, RequiresMainThread = true)]
+    UniTask IAsyncEventListener<ClaimBedRequested>.HandleEventAsync(ClaimBedRequested e, IServiceProvider serviceProvider, CancellationToken token)
+    {
+        IAmmoStorage? ammoStorage = TryGetRearmBarricade(e.Player, e.Buildable);
+        if (ammoStorage == null)
+        {
+            return UniTask.CompletedTask;
+        }
+
+        e.Cancel();
+        if (!ammoStorage.CanChangeKit || _kitUi == null)
+        {
+            return RearmKitFromSupplyCrate(e.Player, ammoStorage, e.Player.DisconnectToken);
+        }
+
+        return OpenKitUIFromSupplyCrate(e.Player, ammoStorage, e.Player.DisconnectToken);
+    }
+
+    private IAmmoStorage? TryGetRearmBarricade(WarfarePlayer player, IBuildable buildable)
+    {
+        IAmmoStorage? ammoStorage = ContainerHelper.FindComponent<IAmmoStorage>(buildable.Model);
         if (ammoStorage == null)
         {
             SupplyCrate? ammoCrate = _fobManager.Entities.OfType<SupplyCrate>().FirstOrDefault(s =>
                 s.Type == SupplyType.Ammo &&
                 s.Buildable.Alive &&
-                s.Buildable.Equals(e.Buildable)
+                s.Buildable.Equals(buildable)
             );
 
             ammoStorage = ammoCrate != null
                 ? AmmoSupplyCrate.FromSupplyCrate(ammoCrate, _fobManager)
                 : null;
+
+            if (ammoStorage == null)
+                return null;
         }
+
+        if (player.Team.GroupId == buildable.Group)
+            return ammoStorage;
         
-        if (ammoStorage == null)
-            return;
+        _chatService.Send(player, _translations.AmmoWrongTeam);
+        return null;
 
-        // just in case they somehow got a preview kit out of main
-        await _kitRequestService.RevertPreviewAsync(e.Player, token);
-
-        if (e.Player.Team.GroupId != e.Buildable.Group)
-        {
-            _chatService.Send(e.Player, _translations.AmmoWrongTeam);
-            e.Cancel();
-            return;
-        }
-
-        Kit? kit = null;
-        if (e.Player.TryGetFromContainer(out KitPlayerComponent? kitComponent) && kitComponent.HasKit)
-        {
-            kit = await kitComponent.GetActiveKitAsync(KitInclude.Giveable, token).ConfigureAwait(false);
-            await UniTask.SwitchToMainThread(token);
-        }
-
-        if (kit == null)
-        {
-            _chatService.Send(e.Player, _translations.AmmoNoKit);
-            e.Cancel();
-            return;
-        }
-
-        float rearmCost = GetRearmCost(e.Player.UnturnedPlayer.inventory, kit);
-        if (rearmCost == 0)
-        {
-            _chatService.Send(e.Player, _translations.AmmoAlreadyFull);
-            e.Cancel();
-            return;
-        }
-
-        // if (rearmCost > ammoStorage.AmmoCount)
-        // {
-        //     _chatService.Send(e.Player, _translations.AmmoInsufficient, ammoStorage.AmmoCount, rearmCost);
-        //     e.Cancel();
-        //     return;
-        // }
-
-        Task task = _kitRequestService.RestockKitAsync(e.Player, resupplyAmmoBags: ammoStorage is not PlacedAmmoBagComponent, token);
-
-        ammoStorage.SubtractAmmo(rearmCost);
-
-        e.Player.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastLoseAmmo.Translate(rearmCost, e.Player)));
-
-        float ammoLeft = ammoStorage.AmmoCount;
-        if (float.IsFinite(ammoLeft))
-        {
-            _chatService.Send(e.Player, _translations.AmmoResuppliedKit, rearmCost, ammoStorage.AmmoCount);
-        }
-        else
-        {
-            _chatService.Send(e.Player, _translations.AmmoResuppliedKitInfinite);
-        }
-
-        _ = WarfareModule.EventDispatcher.DispatchEventAsync(new PlayerRearmedKit
-        {
-            Player = e.Player,
-            AmmoConsumed = rearmCost,
-            AmmoStorage = ammoStorage,
-            Kit = kit
-        }, CancellationToken.None);
-        
-        EffectUtility.TriggerEffect(
-            _assetConfiguration.GetAssetLink<EffectAsset>("Effects:Resupply").GetAssetOrFail(),
-            EffectManager.SMALL,
-            e.Player.Position,
-            true
-        );
-        
-        e.Cancel();
-
-        await task.ConfigureAwait(false);
     }
 
-    private float GetRearmCost(PlayerInventory inventory, Kit kit)
+    private async UniTask RearmKitFromSupplyCrate(WarfarePlayer player, IAmmoStorage ammoStorage, CancellationToken token)
     {
-        float totalRearmCost = 0;
-
-        HashSet<Item> magazinesAlreadyCounted = new HashSet<Item>();
-        foreach (ItemGunAsset gun in GetUniqueGunsInKit(kit))
+        try
         {
-            int fullmags = CountFullMags(inventory, gun, magazinesAlreadyCounted);
-            int requiredMags = CountMagsInKit(kit, gun);
-
-            FirearmClass firearmClass = ItemUtility.GetFirearmClass(gun);
-
-            if (fullmags >= requiredMags)
-            {
-                continue;
-            }
-
-            int magsThatNeedRefilling = requiredMags - fullmags;
-            
-            float magazinesRefillCost = GetMagazineCost(firearmClass) * magsThatNeedRefilling;
-
-            totalRearmCost += magazinesRefillCost;
+            await _rearmService.RearmAsync(player, ammoStorage, token);
         }
-
-        foreach (KeyValuePair<ItemAsset, int> count in GetEquipmentCountsInKit(kit))
+        finally
         {
-            ItemAsset equipmentAsset = count.Key;
-            int requiredCount = count.Value;
-
-            int countInInventory = CountItemsInInventory(inventory, equipmentAsset);
-
-            if (countInInventory >= requiredCount)
-            {
-                continue;
-            }
-            int numberToResupply = requiredCount - countInInventory;
-            float equipmentResupplyCost = GetEquipmentCost(equipmentAsset) * numberToResupply;
-
-            totalRearmCost += equipmentResupplyCost;
+            (ammoStorage as ITemporaryAmmoStorage)?.Dispose();
         }
-
-        return totalRearmCost;
     }
 
-    private List<ItemGunAsset> GetUniqueGunsInKit(Kit kit)
+    private async UniTask OpenKitUIFromSupplyCrate(WarfarePlayer player, IAmmoStorage ammoStorage, CancellationToken token)
     {
-        List<ItemGunAsset> guns = new List<ItemGunAsset>();
-        foreach (IKitItem item in kit.Items)
+        try
         {
-            if (item is not IConcreteItem concrete)
-                continue;
-
-            if (!concrete.Item.TryGetAsset(out ItemAsset? asset) || asset is not ItemGunAsset gunAsset)
-                continue;
-
-            if (guns.Contains(gunAsset)) // avoid having the same type of gun in the list, because it leads to duplicated ammo costs
-                continue;
-
-            // the kit weapon filter blacklists guns that aren't real guns like the laser designator
-            if (_kitWeaponTextService != null && _kitWeaponTextService.IsBlacklisted(concrete.Item))
-                continue;
-
-            guns.Add(gunAsset);
-        }
-        return guns;
-    }
-
-    private static Dictionary<ItemAsset, int> GetEquipmentCountsInKit(Kit kit)
-    {
-        Dictionary<ItemAsset, int> equipment = new Dictionary<ItemAsset, int>();
-        foreach (IKitItem item in kit.Items)
-        {
-            if (item is not IConcreteItem concrete)
-                continue;
-
-            if (!concrete.Item.TryGetAsset(out ItemAsset? asset))
-                continue;
-
-            if (GetEquipmentCost(asset) == 0)
-                continue;
-
-            if (!equipment.TryAdd(asset, 1))
-                equipment[asset]++;
-        }
-        return equipment;
-    }
-
-    private static int CountFullMags(PlayerInventory inventory, ItemGunAsset gun, HashSet<Item> alreadyCounted)
-    {
-        int count = 0;
-        for (int p = 0; p < PlayerInventory.STORAGE; ++p)
-        {
-            Items page = inventory.items[p];
-            foreach (ItemJar itemJar in page.items)
-            {
-                Item item = itemJar.item;
-
-                if (alreadyCounted.Contains(item))
-                    continue;
-
-                ItemAsset asset = item.GetAsset();
-
-                if (asset.GUID == gun.GUID && itemJar.item.state[10] == gun.ammoMax) // count the mag that's inside a matching gun as well
+            await _kitUi!.OpenAsync(
+                new KitSelectionUI.OpenParameters(player)
                 {
-                    count++;
-                    alreadyCounted.Add(item);
-                }
-                else if (asset is ItemMagazineAsset magazine)
-                {
-                    if (!gun.magazineCalibers.Any(c => magazine.calibers.Contains(c)))
-                        continue;
-
-                    if (item.amount == magazine.amount)
-                    {
-                        count++;
-                        alreadyCounted.Add(item);
-                    }
-                }
-            }
+                    AmmoStorage = ammoStorage,
+                    FactionId = ammoStorage.Team.Faction.PrimaryKey
+                },
+                token
+            );
         }
-        return count;
-    }
-
-    private static int CountMagsInKit(Kit kit, ItemGunAsset correspondingGun)
-    {
-        int count = 0;
-        foreach (IKitItem item in kit.Items)
+        catch
         {
-            if (item is not IConcreteItem concrete)
-                continue;
-
-            if (!concrete.Item.TryGetAsset(out ItemAsset? asset))
-                continue;
-
-            if (asset.GUID == correspondingGun.GUID)
-            {
-                count++;
-            }
-            else if (asset is ItemMagazineAsset magazine && correspondingGun.magazineCalibers.Any(c => magazine.calibers.Contains(c)))
-            {
-                count++;
-            }
-        }
-        return count;
-    }
-
-    private static int CountItemsInInventory(PlayerInventory inventory, ItemAsset matchingItem)
-    {
-        int count = 0;
-        for (int p = 0; p < PlayerInventory.STORAGE; ++p)
-        {
-            Items page = inventory.items[p];
-            foreach (ItemJar itemJar in page.items)
-            {
-                // todo: replace with GUID whenever nelson makes that happen
-                if (itemJar.item.id == matchingItem.id)
-                    count++;
-            }
-        }
-        return count;
-    }
-
-    private static float GetMagazineCost(FirearmClass firearmClass)
-    {
-        switch (firearmClass)
-        {
-            case FirearmClass.Pistol:
-                return 0.1f;
-            case FirearmClass.MachinePistol:
-                return 0.15f;
-            case FirearmClass.LargeMachinePistol:
-                return 0.15f;
-            case FirearmClass.MediumSidearm:
-                return 0.15f;
-            case FirearmClass.Shotgun:
-                return 0.15f;
-            case FirearmClass.SmallShotgun:
-                return 0.1f;
-            case FirearmClass.SubmachineGun:
-                return 0.2f;
-            case FirearmClass.Rifle:
-                return 0.2f;
-            case FirearmClass.BattleRifle:
-                return 0.25f;
-            case FirearmClass.LightMachineGun:
-                return 0.4f;
-            case FirearmClass.GeneralPurposeMachineGun:
-                return 0.5f;
-            case FirearmClass.DMR:
-                return 0.3f;
-            case FirearmClass.Sniper:
-                return 0.3f;
-            case FirearmClass.GrenadeLauncher:
-                return 0.2f;
-            case FirearmClass.LightAntiTank:
-                return 0.7f;
-            case FirearmClass.HeavyAntiTank:
-                return 0.7f;
-            default:
-                return 0.2f;
+            (ammoStorage as ITemporaryAmmoStorage)?.Dispose();
+            throw;
         }
     }
 
-    private static float GetEquipmentCost(ItemAsset equipment)
-    {
-        switch (equipment)
-        {
-            case ItemThrowableAsset throwable:
-                if (throwable.playerDamageMultiplier.damage > 0) // dangerous frag grenades
-                    return 0.3f;
-                return 0.1f; // could be a smoke grenade
-
-            case ItemMedicalAsset medical:
-                if (medical.health < 50)
-                    return 0.1f;
-                return 0.15f;
-
-            case ItemTrapAsset trap:
-                if (trap.vehicleDamage >= 500) // probably a powerful AT mine
-                    return 0.4f;
-                else if (trap.playerDamage >= 200) // probably a claymore or some anti-personnel IED
-                    return 0.2f;
-                return 0.15f;
-
-            case ItemChargeAsset charge:
-                if (charge.range2 < 9) // small explosive
-                    return 0.2f;
-                if (charge.range2 < 16) // medium explosive
-                    return 0.4f;
-                return 1; // beeg explosive
-
-            case ItemBarricadeAsset barricade:
-                float slotsTakeUp = barricade.size_x * barricade.size_y;
-
-                if (slotsTakeUp < 8)
-                    return 0.15f; // smol barricade
-
-                return 0.35f; // medium or large barricade
-            default:
-                return 0;
-        }
-    }
-    
     [EventListener(Priority = -1)]
     public async UniTask HandleEventAsync(PlayerEnteredZone e, IServiceProvider serviceProvider, CancellationToken token = default)
     {

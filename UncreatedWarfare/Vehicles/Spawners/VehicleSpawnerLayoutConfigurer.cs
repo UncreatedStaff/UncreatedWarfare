@@ -58,8 +58,13 @@ public class VehicleSpawnerLayoutConfigurer : ILayoutHostedService, IDisposable
     public List<VehicleSpawnerLayoutConfiguration> GetEnabledSpawnerNames()
     {
         IConfiguration config = _configuration;
+        List<VehicleSpawnerLayoutConfiguration>? enabled = null;
+        List<string>? disabled = null;
         if (_configuration.GetValue<string?>("Import", null) is { Length: > 0 } filePath)
         {
+            enabled = config.GetSection("EnabledVehicleSpawners").Get<List<VehicleSpawnerLayoutConfiguration>>();
+            disabled = config.GetSection("DisabledVehicleSpawners").Get<List<string>>();
+
             string relativePath = _layout.LayoutInfo.ResolveRelativePath(filePath);
             if (_importedConfig == null || !string.Equals(_importedConfigPath, relativePath, StringComparison.Ordinal))
             {
@@ -75,8 +80,35 @@ public class VehicleSpawnerLayoutConfigurer : ILayoutHostedService, IDisposable
             config = _importedConfig!;
         }
 
-        return config.GetRequiredSection("EnabledVehicleSpawners")
-                     .Get<List<VehicleSpawnerLayoutConfiguration>>() ?? throw new Exception("Invalid EnabledVehicleSpawners config");
+        List<VehicleSpawnerLayoutConfiguration> spawners = config.GetRequiredSection("EnabledVehicleSpawners").Get<List<VehicleSpawnerLayoutConfiguration>>()
+                                                           ?? throw new Exception("Invalid EnabledVehicleSpawners config");
+
+        if (enabled is { Count: > 0 })
+        {
+            foreach (VehicleSpawnerLayoutConfiguration vehicle in enabled)
+            {
+                int index = spawners.FindIndex(x => string.Equals(x.SpawnerName, vehicle.SpawnerName, StringComparison.Ordinal));
+                if (index < 0)
+                    spawners.Add(vehicle);
+                else
+                    spawners[index] = vehicle;
+            }
+        }
+
+        if (disabled is { Count: > 0 })
+        {
+            foreach (string spawnerName in disabled)
+            {
+                int index = spawners.FindIndex(x => string.Equals(x.SpawnerName, spawnerName, StringComparison.Ordinal));
+                if (index < 0)
+                    continue;
+                
+                spawners[index] = spawners[^1];
+                spawners.RemoveAt(spawners.Count - 1);
+            }
+        }
+
+        return spawners;
     }
 
     public bool IsEnabledInLayout(VehicleSpawnerInfo vehicleSpawnInfo)

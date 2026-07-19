@@ -17,6 +17,7 @@ using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Kits;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Events.Models.Squads;
+using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Kits.Items;
@@ -40,6 +41,7 @@ using Uncreated.Warfare.Translations.Addons;
 using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Inventory;
+using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.Kits.UI;
 
@@ -50,7 +52,8 @@ public sealed partial class KitSelectionUI : UnturnedUI,
     IEventListener<SquadUpdated>,
     IEventListener<SquadMemberLeft>,
     IAsyncEventListener<KitAccessUpdated>,
-    IAsyncEventListener<KitUpdated>
+    IAsyncEventListener<KitUpdated>,
+    IEventListener<PlayerLeft>
 {
     private readonly IKitDataStore _kitDataStore;
     private readonly IKitItemResolver _kitItemResolver;
@@ -62,6 +65,7 @@ public sealed partial class KitSelectionUI : UnturnedUI,
     private readonly KitRequestService _kitRequestService;
     private readonly IKitsDbContext _kitsDbContext;
     private readonly IPlayerService _playerService;
+    private readonly ZoneStore _zoneStore;
     private readonly TranslationInjection<RequestTranslations> _requestTranslations; // this is intentional
     private readonly RequestKitsTranslations _requestKitsTranslations;
     private readonly ChatService _chatService;
@@ -70,6 +74,7 @@ public sealed partial class KitSelectionUI : UnturnedUI,
     private readonly ITeamManager<Team> _teamManager;
     private readonly PointsService _pointsService;
     private readonly HudManager _hudManager;
+    private readonly KitRearmService _rearmService;
     private readonly CommandDispatcher? _commandDispatcher;
     private readonly SquadManager? _squadManager;
     private readonly SquadMenuUI? _squadMenu;
@@ -113,6 +118,7 @@ public sealed partial class KitSelectionUI : UnturnedUI,
         ItemIconProvider iconProvider,
         IKitsDbContext kitsDbContext,
         IPlayerService playerService,
+        ZoneStore zoneStore,
         TranslationInjection<KitSelectionUITranslations> translations,
         TranslationInjection<RequestTranslations> requestTranslations,
         TranslationInjection<RequestKitsTranslations> requestKitsTranslations,
@@ -124,6 +130,7 @@ public sealed partial class KitSelectionUI : UnturnedUI,
         ITeamManager<Team> teamManager,
         PointsService pointsService,
         HudManager hudManager,
+        KitRearmService rearmService,
         CommandDispatcher? commandDispatcher = null,
         SquadManager? squadManager = null,
         SquadMenuUI? squadMenu = null,
@@ -138,6 +145,7 @@ public sealed partial class KitSelectionUI : UnturnedUI,
         _translations = translations.Value;
         _kitsDbContext = kitsDbContext;
         _playerService = playerService;
+        _zoneStore = zoneStore;
 
         _requestTranslations = requestTranslations;
         _requestKitsTranslations = requestKitsTranslations.Value;
@@ -148,6 +156,7 @@ public sealed partial class KitSelectionUI : UnturnedUI,
         _pointsService = pointsService;
         _pointsService.PointsChanged += OnPointsChanged;
         _hudManager = hudManager;
+        _rearmService = rearmService;
         _commandDispatcher = commandDispatcher;
         _squadManager = squadManager;
         _squadMenu = squadMenu;
@@ -220,6 +229,52 @@ public sealed partial class KitSelectionUI : UnturnedUI,
         ElementPatterns.SubscribeAll(_listResults, k => k.UnlockButton, HandleButtonUnlockKitClicked);
 
         _kitRequirementVisitor = new KitRequirementVisitor(this);
+    }
+
+    private bool CanPlayerRequestKit(KitSelectionUIData data, WarfarePlayer player)
+    {
+        if (!CanRequestKit(data))
+            return false;
+
+        if (data.AmmoStorage == null)
+        {
+            return _zoneStore.IsInMainBase(player, player.Team.Faction);
+        }
+
+        return IsWithinRangeOfAmmoStorage(data, player);
+    }
+
+    private static bool IsWithinRangeOfAmmoStorage(KitSelectionUIData data, WarfarePlayer player)
+    {
+        if (data.AmmoStorage == null)
+            return false;
+
+        Vector3 playerPos = player.Position;
+        float range = data.AmmoStorage.InteractRange;
+        return !float.IsFinite(range) || MathUtility.WithinRange(playerPos, data.AmmoStorage.Point, range);
+    }
+
+    private static bool CanRequestKit(KitSelectionUIData data)
+    {
+        if (!data.HasUI)
+            return false;
+
+        if (data.AmmoStorage == null)
+            return true;
+
+        return data.AmmoStorage.CanChangeKit && data.AmmoStorage.AmmoCount > 0;
+    }
+
+    private void HandleAmmoCountUpdated(KitSelectionUIData data)
+    {
+        WarfarePlayer? player = _playerService.GetOnlinePlayerOrNull(data.Player);
+        if (player == null)
+        {
+            data.ResetState();
+            return;
+        }
+
+        UpdateAllKitsStatus(player, force: false);
     }
 
     /// <summary>
@@ -685,17 +740,51 @@ public sealed partial class KitSelectionUI : UnturnedUI,
     /// </summary>
     public Task OpenAsync(WarfarePlayer player, CancellationToken token = default)
     {
-        return OpenAsync(player, 0u, token);
+        return OpenAsync(new OpenParameters(player), token);
     }
 
     /// <summary>
     /// Open the UI for a player for a specific faction.
     /// </summary>
-    public async Task OpenAsync(WarfarePlayer player, uint factionId, CancellationToken token = default)
+    public async Task OpenAsync(OpenParameters parameters, CancellationToken token = default)
     {
+        await UniTask.SwitchToMainThread(token);
+
+        WarfarePlayer player = parameters.Player;
+        uint factionId = parameters.FactionId;
         Team team = player.Team;
         if (factionId == 0u)
             factionId = team.Faction.PrimaryKey;
+
+        KitSelectionUIData data = GetOrAddData(player);
+        if (data.IsClosing && data.HasUI)
+        {
+            await TempUncloseAsync(player, token);
+            await UniTask.SwitchToMainThread(token);
+        }
+
+        data.Team = team;
+        data.ResetState();
+
+        data.AmmoStorage = parameters.AmmoStorage;
+        if (data.AmmoStorage != null)
+        {
+            data.AmmoStorage.AmmoCountUpdated += data.HandleAmmoCountUpdated;
+        }
+
+        data.ResetCache();
+
+        bool isDefaultLang = player.Locale.IsDefaultLanguage;
+        data.HasDefaultText = isDefaultLang;
+
+        data.OpenHandles(player, _hudManager);
+
+        if (!data.HasUI)
+        {
+            data.HasUI = true;
+            data.IsClosing = false;
+            SendToPlayer(player.SteamPlayer);
+        }
 
         await _dbSemaphore.WaitAsync(token);
         try
@@ -730,31 +819,9 @@ public sealed partial class KitSelectionUI : UnturnedUI,
 
         await UniTask.SwitchToMainThread(token);
 
-        KitSelectionUIData data = GetOrAddData(player);
-        if (data.IsClosing && data.HasUI)
-        {
-            await TempUncloseAsync(player, token);
-            await UniTask.SwitchToMainThread(token);
-        }
-
-        data.OpenHandles(player, _hudManager);
-
-        data.Team = team;
-        data.ResetState();
-
-        if (!data.HasUI)
-        {
-            data.HasUI = true;
-            data.IsClosing = false;
-            SendToPlayer(player.SteamPlayer);
-        }
-
-        data.ResetCache();
-
-        bool isDefaultLang = player.Locale.IsDefaultLanguage;
-        data.HasDefaultText = isDefaultLang;
-
         ITransportConnection c = player.Connection;
+
+        data.IsInMainOrWarRoom = _zoneStore.IsInMainBase(player);
 
         UpdateConstantText(isDefaultLang, c, data, player);
 
@@ -1026,12 +1093,10 @@ public sealed partial class KitSelectionUI : UnturnedUI,
 
     private async Task UpdateSearchAsync(WarfarePlayer player, KitSelectionUIData data, CancellationToken token = default)
     {
-        GetLogger().LogTrace("Updating search...");
         string? match = string.IsNullOrEmpty(data.NameFilter) ? null : "%" + data.NameFilter + "%";
         Class classFilter = data.ClassFilter;
         if (string.IsNullOrEmpty(match) && classFilter < Class.Squadleader)
         {
-            GetLogger().LogTrace("Invalid search");
             await UniTask.SwitchToMainThread(token);
             _listNoResult.Show(player.Connection);
             HideKits(player, data);
@@ -1049,7 +1114,6 @@ public sealed partial class KitSelectionUI : UnturnedUI,
         }
 
         int maxPage = (int)Math.Ceiling((double)searchMaxSize.Value / _listResults.Length);
-        GetLogger().LogTrace($"Page: {data.SearchPage}, max page: {maxPage}.");
         data.SearchPage = Math.Min(data.SearchPage, maxPage);
             
         doSort = true;
@@ -1061,7 +1125,6 @@ public sealed partial class KitSelectionUI : UnturnedUI,
             if (output.Length != 0 || data.SearchPage <= 0)
                 break;
 
-            GetLogger().LogTrace($"No data on page {data.SearchPage}, moving down.");
             --data.SearchPage;
         }
 
@@ -1118,7 +1181,6 @@ public sealed partial class KitSelectionUI : UnturnedUI,
         ITransportConnection c = player.Connection;
         if (kits.Length == 0)
         {
-            GetLogger().LogTrace("No results");
             _listNoResult.Show(c);
             HideKits(player, data);
             _listPage.SetText(c, string.Empty);
@@ -1130,7 +1192,6 @@ public sealed partial class KitSelectionUI : UnturnedUI,
         _listNoResult.Hide(c);
 
         _listPage.SetText(c, (data.SearchPage + 1).ToString(player.Locale.CultureInfo));
-        GetLogger().LogTrace($"Setting button states for page {data.SearchPage} ({kits.Length}/{_listResults.Length}) results), moving down.");
         _listPreviousPage.SetState(c, data.SearchPage > 0);
         _listNextPage.SetState(c, kits.Length > _listResults.Length);
 
@@ -1280,14 +1341,17 @@ public sealed partial class KitSelectionUI : UnturnedUI,
     {
         ITransportConnection c = player.Connection;
         KitPlayerComponent kitAccessComp = player.Component<KitPlayerComponent>();
-        if (kit.IsFree || kitAccessComp.IsKitAccessible(kit.Key) || data.IsBoosting is true && data.GetCachedState(@class, index).LabelState == StatusState.ServerBoostRequired)
+
+        bool canPreview = data.IsInMainOrWarRoom;
+
+        if (!canPreview || kit.IsFree || kitAccessComp.IsKitAccessible(kit.Key) || data.IsBoosting is true && data.GetCachedState(@class, index).LabelState == StatusState.ServerBoostRequired)
         {
             ui.PreviewButtonParent.Hide(c);
-            ui.RequestButtonParent.Show(c);
+            //ui.RequestButtonParent.Show(c);
         }
         else if (!fromDefaultValues)
         {
-            ui.RequestButtonParent.Hide(c);
+            //ui.RequestButtonParent.Hide(c);
             ui.PreviewButtonParent.Show(c);
         }
 
@@ -1319,15 +1383,60 @@ public sealed partial class KitSelectionUI : UnturnedUI,
         CurrentKitState? activeKit = kitAccessComp.GetActiveEffectiveKit();
         if (activeKit != null && activeKit.Key == kit.Key)
         {
-            if (force || !data.Matches(in state, PurchaseButtonState.None, StatusState.Equipped))
+            bool doRearm = data.AmmoStorage is { AmmoCount: > 0 };
+            bool lowAmmo = activeKit.IsLowAmmo;
+
+            StatusState status = lowAmmo ? StatusState.EquippedLowAmmo : StatusState.Equipped;
+            PurchaseButtonState purchaseStatus = doRearm ? PurchaseButtonState.Rearm : PurchaseButtonState.None;
+            if (!force && data.Matches(in state, purchaseStatus, status))
+                return;
+            
+            ui.StatusLabel.SetText(c, (lowAmmo ? _translations.StatusEquippedLowAmmo : _translations.StatusEquipped).Translate(player));
+
+            if (doRearm)
             {
-                ui.StatusLabel.SetText(c, _translations.StatusEquipped.Translate(player));
-                if (!fromDefaultValues)
-                    ui.UnlockSection.Hide(c);
+                // infinite ammo (Cache)
+                if (!float.IsFinite(data.AmmoStorage!.AmmoCount))
+                {
+                    ui.UnlockButton.SetText(c, _translations.PurchaseButtonRestockInfiniteAmmo.Translate(player));
+                    ui.UnlockSection.Show(c);
+                }
+                else
+                {
+                    float rearmCost = 0f;
+                    if (doRearm)
+                        rearmCost = _rearmService.GetRearmCost(player);
+
+                    if (rearmCost > 0)
+                    {
+                        // rearm kit button
+                        float ammoLeft = Math.Max(0, MathF.Round(data.AmmoStorage!.AmmoCount - rearmCost, 1));
+
+                        ui.UnlockButton.SetText(c, _translations.PurchaseButtonRestockAmmo.Translate(MathF.Round(rearmCost, 1), ammoLeft, player));
+                        ui.UnlockSection.Show(c);
+                    }
+                    else if (!fromDefaultValues)
+                    {
+                        ui.UnlockSection.Hide(c);
+                    }
+                }
+            }
+            else if (!fromDefaultValues)
+            {
+                ui.UnlockSection.Hide(c);
             }
 
-            data.SetCacheState(in state, PurchaseButtonState.None, StatusState.Equipped);
+            data.SetCacheState(in state, purchaseStatus, status);
             return;
+        }
+
+        if (!CanRequestKit(data))
+        {
+            bool isOutOfAmmo = data.AmmoStorage is { AmmoCount: <= 0 };
+            ui.StatusLabel.SetText(c, (isOutOfAmmo ? _translations.StatusNoAmmo : _translations.StatusNoChangingKits).Translate(player));
+
+            if (!fromDefaultValues)
+                ui.UnlockSection.Hide(c);
         }
 
         KitRequirementResolutionContext<KitRequirementsState> ctx
@@ -1482,6 +1591,7 @@ public sealed partial class KitSelectionUI : UnturnedUI,
         internal bool HasUI;
         internal bool HasDefaultText;
         internal bool IsClosing;
+        internal bool IsInMainOrWarRoom;
         internal Team? Team;
         internal bool IsListOpen;
         internal IDisposable? HudHandle, BlockChatHandle;
@@ -1520,6 +1630,7 @@ public sealed partial class KitSelectionUI : UnturnedUI,
 
         private KitCacheInformation[] _publicKitCache;
         private KitCacheInformation[] _listKitCache;
+        public IAmmoStorage? AmmoStorage;
         public ModalHandle ModalHandle;
         public Kit? SelectedKit;
         public int SelectedKitVersion;
@@ -1593,7 +1704,14 @@ public sealed partial class KitSelectionUI : UnturnedUI,
             ActiveStatCount = 2;
             HasDetailPanel = false;
             HasDefaultText = false;
+            IsInMainOrWarRoom = false;
             LastSearchTick = 0;
+            if (AmmoStorage != null)
+            {
+                AmmoStorage.AmmoCountUpdated -= HandleAmmoCountUpdated;
+                (AmmoStorage as ITemporaryAmmoStorage)?.Dispose();
+                AmmoStorage = null;
+            }
             IsListOpen = false;
             IsBoosting = null;
         }
@@ -1608,6 +1726,7 @@ public sealed partial class KitSelectionUI : UnturnedUI,
 
         public void OpenHandles(WarfarePlayer player, HudManager hudManager)
         {
+            DisposeHandles();
             ModalHandle.TryGetModalHandle(player, ref ModalHandle);
             HudHandle = hudManager.HideHud(player);
             BlockChatHandle = hudManager.BlockChat(player);
@@ -1618,6 +1737,11 @@ public sealed partial class KitSelectionUI : UnturnedUI,
             ModalHandle.Dispose();
             Interlocked.Exchange(ref HudHandle, null)?.Dispose();
             Interlocked.Exchange(ref BlockChatHandle, null)?.Dispose();
+        }
+
+        internal void HandleAmmoCountUpdated()
+        {
+            ((KitSelectionUI)Owner).HandleAmmoCountUpdated(this);
         }
     }
 
@@ -1641,7 +1765,8 @@ public sealed partial class KitSelectionUI : UnturnedUI,
         CreateSquad,
         OpenDiscordForBoosts,
         JoinDiscordGuild,
-        BeginLinkDiscordAccount
+        BeginLinkDiscordAccount,
+        Rearm
     }
 
     private enum StatusState
@@ -1649,6 +1774,7 @@ public sealed partial class KitSelectionUI : UnturnedUI,
         [UsedImplicitly]
         Loading,
         Equipped,
+        EquippedLowAmmo,
         Generic,
         PremiumCost,
         CreditCost,
@@ -1892,6 +2018,31 @@ public sealed partial class KitSelectionUI : UnturnedUI,
             ctx.State.Data.SetCacheState(in ctx.State, PurchaseButtonState.None, StatusState.UnlockRequirement);
         }
     }
+
+    public readonly struct OpenParameters
+    {
+        public WarfarePlayer Player { get; }
+        
+        public uint FactionId { get; init; }
+
+        public IAmmoStorage? AmmoStorage { get; init; }
+
+        public OpenParameters(WarfarePlayer player)
+        {
+            Player = player;
+            FactionId = player.Team.Faction.PrimaryKey;
+        }
+    }
+
+    void IEventListener<PlayerLeft>.HandleEvent(PlayerLeft e, IServiceProvider serviceProvider)
+    {
+        if (GetData<KitSelectionUIData>(e.Player.Steam64) is not { } data)
+            return;
+
+        data.HasUI = false;
+        data.DisposeHandles();
+        data.ResetState();
+    }
 }
 
 public sealed class KitSelectionUITranslations : TranslationCollection
@@ -1976,6 +2127,15 @@ public sealed class KitSelectionUITranslations : TranslationCollection
     [TranslationData("Label for when the kit is already equipped by the player.")]
     public readonly Translation StatusEquipped = new Translation("<#827d6d>Equipped</color>", TranslationOptions.TMProUI);
     
+    [TranslationData("Label for when the kit is already equipped by the player but in 'low ammo' mode.")]
+    public readonly Translation StatusEquippedLowAmmo = new Translation("<#827d6d>Equipped</color> - <#999>Low Ammo</color>\n<#bbb>Restock at FOB or Main Base</color>", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label for when the ammo storage being interacted with doesn't have any ammo.")]
+    public readonly Translation StatusNoAmmo = new Translation("<#e25d5d>NO AMMO</color>", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label for when the ammo storage being interacted with doesn't support changing kits.")]
+    public readonly Translation StatusNoChangingKits = new Translation("<#e25d5d>Unable to change kit here</color>", TranslationOptions.TMProUI);
+    
     [TranslationData("Label for when the kit is disabled, usually because of some exploit or bug.")]
     public readonly Translation StatusDisabled = new Translation("Temporarily Disabled", TranslationOptions.TMProUI);
     
@@ -2015,6 +2175,12 @@ public sealed class KitSelectionUITranslations : TranslationCollection
 
     [TranslationData("Label for the purchase button shown when the kit can be requested.")]
     public readonly Translation PurchaseButtonRequest = new Translation("Equip Kit", TranslationOptions.TMProUI);
+
+    [TranslationData("Label for the purchase button shown when the kit can be restocked on an ammo storage.", "Ammo supplies to be used.", "Remaining supplies if the kit is restocked.")]
+    public readonly Translation<float, float> PurchaseButtonRestockAmmo = new Translation<float, float>("Restock\n<#e26a5d>{0} AMMO</color>   <#555>{1} LEFT</color>", TranslationOptions.TMProUI);
+
+    [TranslationData("Label for the purchase button shown when the kit can be restocked on an ammo storage that has infinite ammo supplies, like a cache.")]
+    public readonly Translation PurchaseButtonRestockInfiniteAmmo = new Translation("Restock", TranslationOptions.TMProUI);
 
     [TranslationData("Label for the purchase button shown when the kit needs to be bought with credits.", "Cost in C", "Current balance in C", "Current balance - Cost")]
     public readonly Translation<double, double, double> PurchaseButtonCredits = new Translation<double, double, double>(

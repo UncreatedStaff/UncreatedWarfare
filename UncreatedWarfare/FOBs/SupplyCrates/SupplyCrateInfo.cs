@@ -17,6 +17,7 @@ public class SupplyCrateInfo : IBuildableFobEntityInfo
     public SnapAxis StackAxis { get; set; } = SnapAxis.X;
     public int MaxStackHeight { get; set; } = 3;
     public int MaxStackWidth { get; set; } = 7;
+    public bool CanChangeKit { get; set; }
 
     IAssetLink<ItemPlaceableAsset> IBuildableFobEntityInfo.IdentifyingAsset => SupplyItemAsset;
 

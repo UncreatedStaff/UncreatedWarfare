@@ -777,7 +777,7 @@ public partial class ModerationUI : UnturnedUI
                     WarfarePlayer listPlayer = buffer[i];
                     PlayerListEntry entry = ModerationPlayerList[i];
                     entry.SteamId.SetText(connection, listPlayer.Steam64.m_SteamID.ToString(CultureInfo.InvariantCulture));
-                    entry.Name.SetText(connection, listPlayer.Names.GetDisplayNameOrPlayerName());
+                    entry.Name.SetText(connection, listPlayer.Names.GetDisplayNameOrCharacterName());
                     entry.ProfilePicture.SetImage(connection, listPlayer.SteamSummary.AvatarUrlSmall);
 
                     if (i >= data.InfoActorCount)
@@ -826,7 +826,7 @@ public partial class ModerationUI : UnturnedUI
                     PlayerNames name = names[i2];
                     PlayerListEntry entry = ModerationPlayerList[i2];
                     entry.SteamId.SetText(connection, name.Steam64.m_SteamID.ToString(CultureInfo.InvariantCulture));
-                    entry.Name.SetText(connection, name.GetDisplayNameOrPlayerName());
+                    entry.Name.SetText(connection, name.GetDisplayNameOrCharacterName());
                     if (_moderationSql.TryGetAvatar(name.Steam64.m_SteamID, AvatarSize.Small, out string avatarUrl))
                         entry.ProfilePicture.SetImage(connection, avatarUrl);
                     else
