@@ -41,7 +41,8 @@ public partial class FobManager :
     IEventListener<TriggerTrapRequested>,
     IEventListener<IDamageBuildableRequestedEvent>,
     IEventListener<IBuildableDamagedEvent>,
-    IEventListener<PlayerEnteredFriendlyFob>
+    IEventListener<PlayerEnteredFriendlyFob>,
+    IEventListener<PlayerExitedFriendlyFob>
 {
     void IEventListener<PlaceBarricadeRequested>.HandleEvent(PlaceBarricadeRequested e, IServiceProvider serviceProvider)
     {
