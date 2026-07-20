@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using Uncreated.Warfare.Events.Models.Tickets;
 using Uncreated.Warfare.Layouts.Phases;
 using Uncreated.Warfare.Layouts.Teams;

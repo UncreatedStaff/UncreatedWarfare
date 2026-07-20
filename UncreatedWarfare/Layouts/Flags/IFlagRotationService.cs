@@ -27,7 +27,7 @@ public readonly struct FlagListUIEntry
             FlagIcon.Attack => "<#ff8963>µ</color>",
             FlagIcon.Defend => "<#a962ff>´</color>",
             FlagIcon.Locked => "<#c2c2c2>²</color>",
-            _ => ""
+            _ => string.Empty
         };
     }
     public FlagListUIEntry(string text, string icon)

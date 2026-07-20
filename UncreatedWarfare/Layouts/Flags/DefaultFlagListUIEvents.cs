@@ -3,6 +3,7 @@ using System.Linq;
 using Uncreated.Framework.UI;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Flags;
+using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Layouts.Tickets;
 using Uncreated.Warfare.Layouts.UI;
 using Uncreated.Warfare.Players;
@@ -15,11 +16,12 @@ namespace Uncreated.Warfare.Layouts.Flags;
 
 /// <summary>
 /// Default UI listeners for common Flag events.
-/// This service should not be registered directly by the WarfareModule, but rather by each flag plugin.
+/// This service should not be registered directly by <see cref="WarfareModule"/>, but rather by each flag plugin.
 /// </summary>
 public class DefaultFlagListUIEvents :
     ILayoutStartingListener,
     IEventListener<IFlagsNeedUIUpdateEvent>,
+    IEventListener<PlayerLocaleUpdated>,
     IHudUIListener
 {
     private readonly FlagListUI _ui;
@@ -43,34 +45,6 @@ public class DefaultFlagListUIEvents :
         _translationService = translationService;
         _layout = layout;
         _hudManager = hudManager;
-    }
-
-    /// <inheritdoc />
-    public void Hide(WarfarePlayer? player)
-    {
-        if (player != null)
-        {
-            _ui.ClearFromPlayer(player);
-            return;
-        }
-
-        _ui.ClearFromAllPlayers();
-        foreach (FlagListUIData? data in UnturnedUIDataSource.Instance.EnumerateData(_ui).OfType<FlagListUIData>())
-        {
-            data.HasUI = false;
-        }
-    }
-
-    /// <inheritdoc />
-    public void Restore(WarfarePlayer? player)
-    {
-        if (player != null)
-        {
-            _ui.UpdateFlagList(_uiProvider, _ticketTracker, _layout.LayoutInfo.DisplayName, new LanguageSet(player));
-            return;
-        }
-
-        UpdateFlagListForAllPlayers();
     }
 
     private void UpdateFlagList(LanguageSet set, bool ticketsOnly)
@@ -111,7 +85,7 @@ public class DefaultFlagListUIEvents :
         }
     }
 
-    public UniTask HandleLayoutStartingAsync(Layout layout, CancellationToken token = default)
+    UniTask ILayoutStartingListener.HandleLayoutStartingAsync(Layout layout, CancellationToken token = default)
     {
         UpdateFlagListForAllPlayers();
         return UniTask.CompletedTask;
@@ -124,5 +98,36 @@ public class DefaultFlagListUIEvents :
         {
             UpdateFlagList(set, ticketsOnly);
         }
+    }
+
+    void IHudUIListener.Hide(WarfarePlayer? player)
+    {
+        if (player != null)
+        {
+            _ui.ClearFromPlayer(player);
+            return;
+        }
+
+        _ui.ClearFromAllPlayers();
+        foreach (FlagListUIData? data in UnturnedUIDataSource.Instance.EnumerateData(_ui).OfType<FlagListUIData>())
+        {
+            data.HasUI = false;
+        }
+    }
+
+    void IHudUIListener.Restore(WarfarePlayer? player)
+    {
+        if (player != null)
+        {
+            _ui.UpdateFlagList(_uiProvider, _ticketTracker, _layout.LayoutInfo.DisplayName, new LanguageSet(player));
+            return;
+        }
+
+        UpdateFlagListForAllPlayers();
+    }
+
+    void IEventListener<PlayerLocaleUpdated>.HandleEvent(PlayerLocaleUpdated e, IServiceProvider serviceProvider)
+    {
+        UpdateFlagList(new LanguageSet(e.Player), false);
     }
 }

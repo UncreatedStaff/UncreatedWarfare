@@ -9,9 +9,9 @@ namespace Uncreated.Warfare.Players.Saves;
 
 public class BinaryPlayerSave : ISaveableState
 {
-    private const byte DataVersion = 3;
+    private const byte DataVersion = 4;
 
-    private const int FlagLength = 11;
+    private const int FlagLength = 13;
 
     private static readonly ByteReader Reader = new ByteReader();
     private static readonly ByteWriter Writer = new ByteWriter(64);
@@ -37,6 +37,18 @@ public class BinaryPlayerSave : ISaveableState
     public bool HasSeenVoiceChatNotice { get; set; }
     public bool WasNitroBoosting { get; set; }
     public bool NeedsNewKitOnSpawn { get; set; }
+
+    /// <summary>
+    /// Whether or not the player can see the cosmetics of their enemies.
+    /// </summary>
+    /// <remarks>Defaults to <see langword="false"/>.</remarks>
+    public bool ViewEnemyCosmetics { get; set; }
+
+    /// <summary>
+    /// Whether or not the player can see the cosmetics of their teammates.
+    /// </summary>
+    /// <remarks>Defaults to <see langword="true"/>.</remarks>
+    public bool ViewFriendlyCosmetics { get; set; }
 
     /// <summary>
     /// The (inverted cause default needs to be false) last value of the option in the squad menu that controls whether or not the
@@ -65,6 +77,7 @@ public class BinaryPlayerSave : ISaveableState
         Steam64 = steam64;
         _logger = logger;
         SquadTeamIdentificationNumber = 0;
+        ViewFriendlyCosmetics = true;
     }
 
     public void ResetOnGameStart()
@@ -96,6 +109,8 @@ public class BinaryPlayerSave : ISaveableState
         // reserved: flags[8] = WasKitLowAmmo;
         flags[9] = NeedsNewKitOnSpawn;
         flags[10] = ShouldLeaveSquadMenuOpenAfterRequestingKit;
+        flags[11] = ViewEnemyCosmetics;
+        flags[12] = ViewFriendlyCosmetics;
 
         Writer.Write(DataVersion);
 
@@ -191,6 +206,8 @@ public class BinaryPlayerSave : ISaveableState
             // reserved if v > 2
             NeedsNewKitOnSpawn = flags[9];
             ShouldLeaveSquadMenuOpenAfterRequestingKit = flags[10];
+            ViewEnemyCosmetics = flags[11];
+            ViewFriendlyCosmetics = v < 4 || flags[12];
 
             WasReadFromFile = true;
 

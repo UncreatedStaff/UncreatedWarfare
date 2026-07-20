@@ -341,22 +341,21 @@ public class SquadMenuUI :
             forRequest = null;
         }
 
-        data.KitRequest = forRequest;
         data.ShouldGiveRequestingKitOnClose = forRequest != null && !player.Save.ShouldLeaveSquadMenuOpenAfterRequestingKit;
         bool wasViewing = data.IsViewing;
         if (!wasViewing)
         {
-            data.IsViewing = true; 
+            data.IsViewing = true;
+            player.Locale.LocaleUpdated += OnLocaleUpdated;
             SendToPlayer(player.Connection);
-            CreateSquadInput.SetPlaceholder(player, _translations.SquadSquadNamePlaceholder.Translate(player));
+            SendConstantText(player, false, data);
             CreateSquadInput.TextBox.UpdateFromData(player.UnturnedPlayer);
-            CreateSquadButton.SetText(player, _translations.SquadButtonCreate.Translate(player));
-            MySquad.LeaveButton.SetText(player, _translations.SquadButtonLeave.Translate(player));
-            SquadsTitle.SetText(player, _translations.SquadsTitle.Translate(player));
             ModalHandle.TryGetModalHandle(player, ref data.Modal);
         }
 
-        UpdateForPlayer(player, data);
+        // should go after SendConstantText
+        data.KitRequest = forRequest;
+        UpdateForPlayer(player);
         if (forRequest != null)
         {
             if (wasViewing || !data.ShouldGiveRequestingKitOnClose)
@@ -376,10 +375,52 @@ public class SquadMenuUI :
     {
         SquadMenuUIPlayerData data = GetOrAddData(player);
         data.IsViewing = false;
+        player.Locale.LocaleUpdated -= OnLocaleUpdated;
         data.KitRequest = null;
         data.ShouldGiveRequestingKitOnClose = false;
         ClearFromPlayer(player.Connection);
         data.Modal.Dispose();
+    }
+
+    private void OnLocaleUpdated(WarfarePlayerLocale locale)
+    {
+        SquadMenuUIPlayerData data = GetOrAddData(locale.Player);
+        if (!data.IsViewing)
+            return;
+
+        SendConstantText(locale.Player, true, data);
+        UpdateForPlayer(locale.Player);
+    }
+
+    private void SendConstantText(WarfarePlayer player, bool force, SquadMenuUIPlayerData data)
+    {
+        bool isDefaultLang = !force && player.Locale.IsDefaultLanguage;
+
+        if (!isDefaultLang || !_translations.SquadSquadNamePlaceholder.HasDefaultValue)
+            CreateSquadInput.SetPlaceholder(player, _translations.SquadSquadNamePlaceholder.Translate(player));
+
+        if (!isDefaultLang || !_translations.SquadButtonCreate.HasDefaultValue)
+            CreateSquadButton.SetText(player, _translations.SquadButtonCreate.Translate(player));
+
+        if (!isDefaultLang || !_translations.SquadButtonLeave.HasDefaultValue)
+            MySquad.LeaveButton.SetText(player, _translations.SquadButtonLeave.Translate(player));
+
+        if (!isDefaultLang || !_translations.SquadsTitle.HasDefaultValue)
+            SquadsTitle.SetText(player, _translations.SquadsTitle.Translate(player));
+
+        if (!isDefaultLang || !_translations.SquadButtonDone.HasDefaultValue)
+            CloseMenuButton.SetText(player, _translations.SquadButtonDone.Translate(player));
+
+        if (!isDefaultLang || !_translations.SquadLockedLabel.HasDefaultValue)
+            MySquad.ToggleLockedButton.SetText(player, _translations.SquadLockedLabel.Translate(player));
+
+        if (!isDefaultLang || !_translations.SquadLockedDescription.HasDefaultValue)
+            MySquad.LockButtonDescription.SetText(player, _translations.SquadLockedDescription.Translate(player));
+
+        if (data.KitRequest?.Kit == null)
+            return;
+
+        KitOptionLabel.SetText(player, _translations.SquadKitOptionLabel.Translate(data.KitRequest.Kit, player));
     }
 
     private void UpdateForViewingPlayers(Squad squad)
@@ -392,6 +433,7 @@ public class SquadMenuUI :
             UpdateForPlayer(player);
         }
     }
+
     private void UpdateForViewingPlayersExceptOwner(Squad squad)
     {
         if (squad.Members.Count == 0)
@@ -421,10 +463,6 @@ public class SquadMenuUI :
     }
 
     private void UpdateForPlayer(WarfarePlayer player)
-    {
-        UpdateForPlayer(player, GetOrAddData(player));
-    }
-    private void UpdateForPlayer(WarfarePlayer player, SquadMenuUIPlayerData data)
     {
         List<Squad> friendlySquads = GetVisibleSquadList(player).ToList();
 

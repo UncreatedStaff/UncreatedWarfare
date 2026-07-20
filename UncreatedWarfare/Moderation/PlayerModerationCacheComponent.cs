@@ -27,8 +27,6 @@ public class PlayerModerationCacheComponent : IPlayerComponent
     public MuteType VoiceMuteType { get; private set; }
     public DateTime VoiceMuteExpiryTime { get; private set; }
 
-    internal float LastMuteUI { get; set; } = -1f;
-
     void IPlayerComponent.Init(IServiceProvider serviceProvider, bool isOnJoin)
     {
         _moderationSql = serviceProvider.GetRequiredService<DatabaseInterface>();

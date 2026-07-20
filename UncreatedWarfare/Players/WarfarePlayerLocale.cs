@@ -13,7 +13,6 @@ public class WarfarePlayerLocale
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly EventDispatcher? _eventDispatcher;
-    public static event Action<WarfarePlayer>? OnLocaleUpdated;
 
     private readonly bool _init;
 
@@ -23,6 +22,12 @@ public class WarfarePlayerLocale
     internal bool PreferencesIsDirty { get; set; }
     public NumberFormatInfo ParseFormat { get; set; }
     public TimeZoneInfo TimeZone { get; set; }
+
+    /// <summary>
+    /// Invoked when this player's language, culture, or time zone is updated.
+    /// </summary>
+    /// <remarks>Always invoked on the main thread.</remarks>
+    public event Action<WarfarePlayerLocale>? LocaleUpdated;
 
     public LanguagePreferences Preferences
     {
@@ -35,9 +40,9 @@ public class WarfarePlayerLocale
             ILogger<WarfarePlayerLocale> logger = _serviceProvider.GetRequiredService<ILogger<WarfarePlayerLocale>>();
             bool updated = false;
 
-            LanguageInfo? language = null;
-            CultureInfo? culture = null;
-            TimeZoneInfo? timeZone = null;
+            LanguageInfo? language;
+            CultureInfo? culture;
+            TimeZoneInfo? timeZone;
 
             if (langService != null)
             {
@@ -134,7 +139,7 @@ public class WarfarePlayerLocale
         {
             try
             {
-                OnLocaleUpdated?.Invoke(Player);
+                LocaleUpdated?.Invoke(this);
             }
             catch (Exception ex)
             {
@@ -156,7 +161,7 @@ public class WarfarePlayerLocale
 
                 try
                 {
-                    OnLocaleUpdated?.Invoke(Player);
+                    LocaleUpdated?.Invoke(this);
                 }
                 catch (Exception ex)
                 {

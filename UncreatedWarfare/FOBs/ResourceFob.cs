@@ -41,9 +41,12 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable, IMapTackUIH
     private readonly TipService? _tipService;
     protected readonly FobManager FobManager;
     private readonly ILoopTicker _loopTicker;
-    private readonly ZoneStore _zoneStore;
+    private readonly ZoneStore? _zoneStore;
     private readonly VehicleInfoStore _vehicleInfoStore;
     private readonly Func<WarfarePlayer, float> _getProxyScore;
+    private string? _closestShortName, _closestLongName;
+    private bool _hasClosestShortName, _hasClosestLongName;
+
 
     // ReSharper restore PrivateFieldCanBeConvertedToLocalVariable
 
@@ -69,6 +72,8 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable, IMapTackUIH
             Buildable.Position = value;
             if (Icon != null)
                 _worldIconManager?.UpdateIcon(Icon.Effect);
+            _hasClosestLongName = false;
+            _hasClosestShortName = false;
         }
     }
 
@@ -93,19 +98,6 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable, IMapTackUIH
 
     public WorldIconInfo? Icon { get; private set; }
 
-    /// <summary>
-    /// The name of the closest location to this FOB.
-    /// </summary>
-    [field: MaybeNull]
-    public string ClosestLocation
-    {
-        get
-        {
-            field ??= _zoneStore.GetClosestLocationName(Position, true);
-            return field;
-        }
-    }
-
     public ResourceFob(IServiceProvider serviceProvider, string name, IBuildable buildable)
     {
         Name = name;
@@ -116,7 +108,7 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable, IMapTackUIH
         _assetConfiguration = serviceProvider.GetRequiredService<AssetConfiguration>();
         _worldIconManager = serviceProvider.GetService<WorldIconManager>();
         _tipService = serviceProvider.GetService<TipService>();
-        _zoneStore = serviceProvider.GetRequiredService<ZoneStore>();
+        _zoneStore = serviceProvider.GetService<ZoneStore>();
         _vehicleInfoStore = serviceProvider.GetRequiredService<VehicleInfoStore>();
 
         FriendlyProximity = new SphereProximity(Position, EffectiveRadius);
@@ -192,6 +184,27 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable, IMapTackUIH
     {
         UpdateIcon();
     }
+
+    public string? GetClosestLocation(bool shortName)
+    {
+        if (shortName)
+        {
+            if (_hasClosestShortName)
+                return _closestShortName;
+
+            _closestShortName = _zoneStore?.GetClosestLocationName(Position, true);
+            _hasClosestShortName = true;
+            return _closestShortName;
+        }
+
+        if (_hasClosestLongName)
+            return _closestLongName;
+
+        _closestLongName = _zoneStore?.GetClosestLocationName(Position, true);
+        _hasClosestLongName = true;
+        return _closestLongName;
+    }
+
 
     protected void UpdateIcon()
     {
@@ -410,6 +423,8 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable, IMapTackUIH
         Buildable.SetPositionAndRotation(position, rotation);
         if (Icon != null)
             _worldIconManager?.UpdateIcon(Icon.Effect);
+        _hasClosestLongName = false;
+        _hasClosestShortName = false;
     }
 
     /// <inheritdoc />
@@ -443,9 +458,9 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable, IMapTackUIH
         return Name;
     }
 
-    public virtual string GetLocation(in LanguageSet languageSet)
+    public virtual string? GetLocation(in LanguageSet languageSet)
     {
-        return ClosestLocation;
+        return GetClosestLocation(shortName: true);
     }
 
     public virtual int? GetSupplyCount(SupplyType type)

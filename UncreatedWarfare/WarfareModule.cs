@@ -48,6 +48,7 @@ using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Interaction.Icons;
 using Uncreated.Warfare.Interaction.Requests;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Kits.Cosmetics;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Kits.Loadouts;
 using Uncreated.Warfare.Kits.Requests;
@@ -984,6 +985,13 @@ public sealed class WarfareModule
         bldr.RegisterInstance(new TextMeasurementService())
             .OwnedByLifetimeScope()
             .SingleInstance();
+
+        bldr.RegisterType<CosmeticInstancer>()
+            .AsSelf().AsImplementedInterfaces()
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Layout);
+
+        bldr.RegisterType<PlayerOptionCosmeticItemProvider>()
+            .As<ICosmeticItemProvider>();
 
         // Stripe
         bldr.RegisterType<UnityWebRequestsHttpClient>()

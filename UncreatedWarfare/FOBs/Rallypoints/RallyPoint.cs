@@ -16,6 +16,7 @@ using Uncreated.Warfare.StrategyMaps.MapTacks;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.Timing;
+using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.FOBs.Rallypoints;
 
@@ -25,6 +26,11 @@ public class RallyPoint : IBuildableFob, IDisposable, IFobStrategyMapTackHandler
     private const int DeployTimer = 20;
     private readonly IPlayerService _playerService;
     private readonly ILoopTicker _loopTicker;
+    private readonly ZoneStore? _zoneStore;
+
+    private string? _closestShortName, _closestLongName;
+    private bool _hasClosestShortName, _hasClosestLongName;
+
     private DateTime _deploymentStarted;
 
     public IBuildable Buildable { get; protected set; }
@@ -47,6 +53,28 @@ public class RallyPoint : IBuildableFob, IDisposable, IFobStrategyMapTackHandler
         
         IsBurned = false;
         _loopTicker = serviceProvider.GetRequiredService<ILoopTickerFactory>().CreateTicker(TimeSpan.FromSeconds(1f), false, true, OnTick);
+
+        _zoneStore = serviceProvider.GetService<ZoneStore>();
+    }
+
+    public string? GetClosestLocation(bool shortName)
+    {
+        if (shortName)
+        {
+            if (_hasClosestShortName)
+                return _closestShortName;
+
+            _closestShortName = _zoneStore?.GetClosestLocationName(Position, true);
+            _hasClosestShortName = true;
+            return _closestShortName;
+        }
+
+        if (_hasClosestLongName)
+            return _closestLongName;
+
+        _closestLongName = _zoneStore?.GetClosestLocationName(Position, true);
+        _hasClosestLongName = true;
+        return _closestLongName;
     }
 
     public Color32 GetColor(Team viewingTeam)
@@ -138,6 +166,8 @@ public class RallyPoint : IBuildableFob, IDisposable, IFobStrategyMapTackHandler
         {
             Buildable.Position = value;
             OnTick(_loopTicker, TimeSpan.Zero, TimeSpan.Zero);
+            _hasClosestLongName = false;
+            _hasClosestShortName = false;
         }
     }
 
@@ -160,6 +190,8 @@ public class RallyPoint : IBuildableFob, IDisposable, IFobStrategyMapTackHandler
     {
         Buildable.SetPositionAndRotation(position, rotation);
         OnTick(_loopTicker, TimeSpan.Zero, TimeSpan.Zero);
+        _hasClosestLongName = false;
+        _hasClosestShortName = false;
     }
 
     /// <inheritdoc />

@@ -95,4 +95,7 @@ public class FobTranslations : TranslationCollection
     [TranslationData(IsPriorityTranslation = false)]
     public Translation<float> ToastLoseBuild = new Translation<float>("<color=#f3ce82>-{0} BUILD</color>", TranslationOptions.TMProUI);
 
+    [TranslationData("The title/header of the FOB list UI.")]
+    public Translation FobListTitle = new Translation("FOBs", TranslationOptions.TMProUI);
+
 }

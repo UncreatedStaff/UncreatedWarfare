@@ -68,44 +68,84 @@ public class PlayerSquadHUD : UnturnedUI,
     public void HandleEvent(PlayerKitChanged e, IServiceProvider serviceProvider)
     {
         Squad? squad = e.Player.GetSquad();
-        if (squad != null)
-            UpdateForSquad(squad);
+        if (squad == null)
+            return;
+
+        int index = squad.GetMemberIndex(e.Player);
+        if (index < 0 || index >= SquadMembers.Length)
+            return;
+
+        string memberName = GetMemberNameText(e.Player);
+        foreach (WarfarePlayer player in squad.Members)
+        {
+            SquadMembers[index].SetText(player, memberName);
+        }
     }
+
     private void UpdateForSquad(Squad squad)
     {
-        foreach (WarfarePlayer member in squad.Members)
+        UpdateForPlayers(squad);
+    }
+
+    private readonly string?[] _memberTextBuffer = new string?[Squad.MaxMembers];
+
+    private void UpdateForPlayer(Squad squad, WarfarePlayer player)
+    {
+        int index = squad.GetMemberIndex(player);
+        if (index < 0)
+            ClearFromPlayer(player.Connection);
+        else
+            UpdateForPlayers(squad, index);
+    }
+
+    private void UpdateForPlayers(Squad squad, int playerIndex = -1)
+    {
+        // update for one or more players at once.
+        // playerIndex = -1 means the whole squad, otherwise update for a specific player in the squad
+
+        WarfarePlayer? player = playerIndex < 0 ? null : squad.Members[playerIndex];
+        if (player != null ? _hudManager.IsHidden(player) : _hudManager.IsHiddenForAllPlayers)
+            return;
+
+        string squadName = $"{squad.Name}  {squad.Members.Count}/{Squad.MaxMembers}";
+        string idNumber = squad.TeamIdentificationNumber.ToString();
+        int member = 0;
+
+        for (; member < squad.Members.Count; ++member)
+            _memberTextBuffer[member] = GetMemberNameText(squad.Members[member]);
+
+        for (; member < _memberTextBuffer.Length; ++member)
+            _memberTextBuffer[member] = null;
+
+        int max = playerIndex >= 0 ? playerIndex + 1 : squad.Members.Count;
+        for (int m = Math.Max(0, playerIndex); m < max; ++m)
         {
-            UpdateForPlayer(member, squad);
+            player = squad.Members[m];
+
+            if (playerIndex < 0 && _hudManager.IsHidden(player))
+                continue;
+
+            SquadName.SetText(player, squadName);
+            SquadNumber.SetText(player, idNumber);
+            for (int i = 0; i < SquadMembers.Length; i++)
+            {
+                UnturnedLabel element = SquadMembers[i];
+                string? memberName = _memberTextBuffer[i];
+                if (memberName != null)
+                {
+                    element.Show(player);
+                    element.SetText(player, memberName);
+                }
+                else
+                    element.Hide(player);
+            }
         }
     }
-    private void UpdateForPlayer(WarfarePlayer player, Squad squad)
+
+    private static string GetMemberNameText(WarfarePlayer member)
     {
-        if (!player.IsOnline)
-            return;
-
-        if (_hudManager.IsHidden(player))
-        {
-            ClearFromPlayer(player.Connection);
-            return;
-        }
-
-        SquadName.SetText(player, $"{squad.Name}  {squad.Members.Count}/{Squad.MaxMembers}");
-        SquadNumber.SetText(player, squad.TeamIdentificationNumber.ToString());
-        for (int i = 0; i < SquadMembers.Length; i++)
-        {
-            UnturnedLabel element = SquadMembers[i];
-            if (i < squad.Members.Count)
-            {
-                WarfarePlayer member = squad.Members[i];
-                Class kitClass = member.Component<KitPlayerComponent>().GetActiveEffectiveKit()?.Class ?? Class.None;
-                string memberName = $"<mspace=20>{kitClass.GetIconString()}</mspace>  {member.Names.PlayerName}";
-
-                element.Show(player);
-                element.SetText(player, memberName);
-            }
-            else
-                element.Hide(player);
-        }
+        Class kitClass = member.Component<KitPlayerComponent>().GetActiveEffectiveKit()?.Class ?? Class.None;
+        return $"<mspace=20>{kitClass.GetIconString()}</mspace>  {member.Names.PlayerName}";
     }
 
     /// <inheritdoc />
@@ -132,7 +172,7 @@ public class PlayerSquadHUD : UnturnedUI,
             else
             {
                 SendToPlayer(player.Connection);
-                UpdateForPlayer(player, squad);
+                UpdateForPlayer(squad, player);
             }
             return;
         }

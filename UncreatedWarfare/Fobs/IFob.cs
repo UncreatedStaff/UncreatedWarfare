@@ -41,4 +41,11 @@ public interface IFob : IDeployable
     /// Called when the <see cref="FobConfiguration"/> is updated.
     /// </summary>
     void UpdateConfiguration(FobConfiguration configuration);
+
+    /// <summary>
+    /// Gets the name of the closest location to this FOB.
+    /// </summary>
+    /// <param name="shortName">Where possible, use the shorter version of the name.</param>
+    /// <returns>The name of the closest location, or <see langword="null"/> if it can't be calculated for some reason.</returns>
+    string? GetClosestLocation(bool shortName);
 }
