@@ -7,6 +7,7 @@ using System.Globalization;
 using System.Linq;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Barricades;
+using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Services;
@@ -18,7 +19,11 @@ namespace Uncreated.Warfare.Signs;
 /// <summary>
 /// Handles sending specific sign data to specific players.
 /// </summary>
-public class SignInstancer : ILayoutHostedService, IEventListener<BarricadePlaced>, IEventListener<BarricadeDestroyed>, IEventListener<SignTextChanged>
+public class SignInstancer : ILayoutHostedService,
+    IEventListener<BarricadePlaced>,
+    IEventListener<BarricadeDestroyed>,
+    IEventListener<SignTextChanged>,
+    IEventListener<PlayerLocaleUpdated>
 {
     private static readonly ClientInstanceMethod<string> SendChangeText = ReflectionUtility.FindRequiredRpc<InteractableSign, ClientInstanceMethod<string>>("SendChangeText");
 
@@ -436,7 +441,10 @@ public class SignInstancer : ILayoutHostedService, IEventListener<BarricadePlace
     {
         CheckBarricadeForInit(e.Barricade, remove: true);
     }
-
+    void IEventListener<PlayerLocaleUpdated>.HandleEvent(PlayerLocaleUpdated e, IServiceProvider serviceProvider)
+    {
+        UpdateSigns(e.Player);
+    }
     private void RemoveBarricade(BarricadeDrop barricade)
     {
         _signProviderTypeIndexes.Remove(barricade.instanceID);

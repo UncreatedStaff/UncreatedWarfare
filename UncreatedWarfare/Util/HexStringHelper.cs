@@ -443,4 +443,17 @@ public static class HexStringHelper
 
         return new Color(1f, 1f, 1f, 1f);
     }
+
+    extension(Color32)
+    {
+        public static unsafe bool operator ==(Color32 left, Color32 right)
+        {
+            return *(int*)&left == *(int*)&right;
+        }
+
+        public static unsafe bool operator !=(Color32 left, Color32 right)
+        {
+            return *(int*)&left != *(int*)&right;
+        }
+    }
 }

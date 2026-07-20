@@ -61,11 +61,14 @@ public class OptionsUI : UnturnedUI
     private readonly CultureResult[] _cultureResults = ElementPatterns.CreateArray<CultureResult>("Localization/Viewport/Content/I14N_{0}", 1, to: 25);
     private readonly TimeZoneResult[] _timeZoneResults = ElementPatterns.CreateArray<TimeZoneResult>("Localization/Viewport/Content/TZ_{0}", 1, to: 25);
 
+    private readonly LabeledUnturnedToggle _enemyCosmeticsOption = new LabeledUnturnedToggle(false, "Options/Viewport/Content/Btn_Cosmetics_Enemies_Toggle", "./ToggleState", "../Label_Cosmetics_Enemies", null);
+    private readonly LabeledUnturnedToggle _friendlyCosmeticsOption = new LabeledUnturnedToggle(false, "Options/Viewport/Content/Btn_Cosmetics_Friendlies_Toggle", "./ToggleState", "../Label_Cosmetics_Friendlies", null);
     private readonly LabeledUnturnedToggle _imguiOption = new LabeledUnturnedToggle(false, "Options/Viewport/Content/Btn_IMGUI_Toggle", "./ToggleState", "../Label_IMGUI", null);
     private readonly LabeledUnturnedToggle _trackQuestsOption = new LabeledUnturnedToggle(true, "Options/Viewport/Content/Btn_TrackQuests_Toggle", "./ToggleState", "../Label_TrackQuests", null);
     private readonly LabeledUnturnedToggle _useCultureForCommandInput = new LabeledUnturnedToggle(false, "Localization/Viewport/Content/SearchI14N/I14N_CustomInputToggle", "./State", "../CustomInputTitle", null);
     private readonly UnturnedLabel _useCultureForCommandInputDescription = new UnturnedLabel("Localization/Viewport/Content/SearchI14N/CultureDescription");
 
+    private readonly UnturnedLabel _cosmeticsDescription = new UnturnedLabel("Options/Viewport/Content/Description_Cosmetics");
     private readonly UnturnedLabel _imguiDescription = new UnturnedLabel("Options/Viewport/Content/Description_IMGUI");
     private readonly UnturnedLabel _trackQuestsDescription = new UnturnedLabel("Options/Viewport/Content/Description_TrackQuests");
 
@@ -149,9 +152,29 @@ public class OptionsUI : UnturnedUI
                     saveUpdated = true;
                 }
 
+                bool cosmeticsUpdated = false;
+                if (_enemyCosmeticsOption.TryGetValue(player.UnturnedPlayer, out value) && player.Save.ViewEnemyCosmetics != value)
+                {
+                    player.Save.ViewEnemyCosmetics = value;
+                    saveUpdated = true;
+                    cosmeticsUpdated = true;
+                }
+
+                if (_friendlyCosmeticsOption.TryGetValue(player.UnturnedPlayer, out value) && player.Save.ViewFriendlyCosmetics != value)
+                {
+                    player.Save.ViewFriendlyCosmetics = value;
+                    saveUpdated = true;
+                    cosmeticsUpdated = true;
+                }
+
                 if (saveUpdated)
                 {
                     player.Save.Save();
+                }
+
+                if (cosmeticsUpdated)
+                {
+                    await ApplyCosmeticChange(player);
                 }
 
                 bool localeUpdated = false;
@@ -191,6 +214,12 @@ public class OptionsUI : UnturnedUI
                 Close(player);
             }
         });
+    }
+
+    private UniTask ApplyCosmeticChange(WarfarePlayer player)
+    {
+        // TODO
+        return UniTask.CompletedTask;
     }
 
     protected override void OnDisposing()
@@ -281,6 +310,9 @@ public class OptionsUI : UnturnedUI
         data.HasUI = false;
         data.Modal.Dispose();
         Interlocked.Exchange(ref data.HudHandle, null)?.Dispose();
+
+        player.Locale.LocaleUpdated -= HandleLocaleUpdated;
+
         ClearFromPlayer(player.Connection);
     }
 
@@ -300,8 +332,9 @@ public class OptionsUI : UnturnedUI
         ModalHandle.TryGetModalHandle(player, ref data.Modal);
         data.HudHandle = _hudManager.HideHud(player);
 
-        if (!player.Locale.LanguageInfo.IsDefault)
-            UpdateText(player);
+        player.Locale.LocaleUpdated += HandleLocaleUpdated;
+
+        UpdateText(player);
 
         _imguiOption.Set(player.UnturnedPlayer, player.Save.IMGUI);
         _trackQuestsOption.Set(player.UnturnedPlayer, player.Save.TrackQuests);
@@ -326,37 +359,76 @@ public class OptionsUI : UnturnedUI
         SendTimeZoneList(player);
     }
 
+    private void HandleLocaleUpdated(WarfarePlayerLocale locale)
+    {
+        OptionsUIData data = GetOrCreateData(locale.Player.Steam64);
+        if (!data.HasUI || data.IsSaving /* no need to update everything if we're about to close */)
+            return;
+
+        UpdateText(locale.Player);
+    }
+
     public void UpdateText(WarfarePlayer player)
     {
         ITransportConnection c = player.Connection;
 
-        _optionsTitle.SetText(c, _translations.Title.Translate(player));
+        bool isDefaultLang = player.Locale.IsDefaultLanguage;
 
-        _imguiOption.SetText(c, _translations.IMGUIOptionLabel.Translate(player));
-        _imguiDescription.SetText(c, _translations.IMGUIDescription.Translate(player));
+        if (!isDefaultLang || !_translations.Title.HasDefaultValue)
+            _optionsTitle.SetText(c, _translations.Title.Translate(player));
 
-        _trackQuestsOption.SetText(c, _translations.TrackQuestsOptionLabel.Translate(player));
-        _trackQuestsDescription.SetText(c, _translations.TrackQuestsDescription.Translate(player));
+        if (!isDefaultLang || !_translations.EnemyCosmeticsOptionLabel.HasDefaultValue)
+            _enemyCosmeticsOption.SetText(c, _translations.EnemyCosmeticsOptionLabel.Translate(player));
+        if (!isDefaultLang || !_translations.FriendlyCosmeticsOptionLabel.HasDefaultValue)
+            _friendlyCosmeticsOption.SetText(c, _translations.FriendlyCosmeticsOptionLabel.Translate(player));
+        if (!isDefaultLang || !_translations.CosmeticsDescription.HasDefaultValue)
+            _cosmeticsDescription.SetText(c, _translations.CosmeticsDescription.Translate(player));
 
-        _internationalizationTitle.SetText(c, _translations.InternationalizationTitle.Translate(player));
+        if (!isDefaultLang || !_translations.IMGUIOptionLabel.HasDefaultValue)
+            _imguiOption.SetText(c, _translations.IMGUIOptionLabel.Translate(player));
+        if (!isDefaultLang || !_translations.IMGUIDescription.HasDefaultValue)
+            _imguiDescription.SetText(c, _translations.IMGUIDescription.Translate(player));
 
-        _searchLanguageBox.SetPlaceholder(c, _translations.PlaceholderLanguageName.Translate(player));
-        _searchCultureBox.SetPlaceholder(c, _translations.PlaceholderCulture.Translate(player));
-        _searchTimeZoneBox.SetPlaceholder(c, _translations.PlaceholderTimeZone.Translate(player));
+        if (!isDefaultLang || !_translations.TrackQuestsOptionLabel.HasDefaultValue)
+            _trackQuestsOption.SetText(c, _translations.TrackQuestsOptionLabel.Translate(player));
+        if (!isDefaultLang || !_translations.TrackQuestsDescription.HasDefaultValue)
+            _trackQuestsDescription.SetText(c, _translations.TrackQuestsDescription.Translate(player));
 
-        string search = _translations.ButtonSearch.Translate(player);
-        _searchLanguageButton.SetText(c, search);
-        _searchCultureButton.SetText(c, search);
-        _searchTimeZoneButton.SetText(c, search);
+        if (!isDefaultLang || !_translations.InternationalizationTitle.HasDefaultValue)
+            _internationalizationTitle.SetText(c, _translations.InternationalizationTitle.Translate(player));
 
-        _useCultureForCommandInputDescription.SetText(c, _translations.CultureDescription.Translate(player));
+        if (!isDefaultLang || !_translations.PlaceholderLanguageName.HasDefaultValue)
+            _searchLanguageBox.SetPlaceholder(c, _translations.PlaceholderLanguageName.Translate(player));
+        if (!isDefaultLang || !_translations.PlaceholderCulture.HasDefaultValue)
+            _searchCultureBox.SetPlaceholder(c, _translations.PlaceholderCulture.Translate(player));
+        if (!isDefaultLang || !_translations.PlaceholderTimeZone.HasDefaultValue)
+            _searchTimeZoneBox.SetPlaceholder(c, _translations.PlaceholderTimeZone.Translate(player));
 
-        _noLanguagesFound.SetText(c, _translations.NoResultsTimeZone.Translate(player));
-        _noCulturesFound.SetText(c, _translations.NoResultsTimeZone.Translate(player));
-        _noTimeZonesFound.SetText(c, _translations.NoResultsTimeZone.Translate(player));
+        if (!isDefaultLang || !_translations.ButtonSearch.HasDefaultValue)
+        {
+            string search = _translations.ButtonSearch.Translate(player);
+            _searchLanguageButton.SetText(c, search);
+            _searchCultureButton.SetText(c, search);
+            _searchTimeZoneButton.SetText(c, search);
+        }
 
-        _buttonSave.SetText(c, _translations.ButtonSave.Translate(player));
-        _buttonCancel.SetText(c, _translations.ButtonCancel.Translate(player));
+        if (!isDefaultLang || !_translations.CultureDescription.HasDefaultValue)
+            _useCultureForCommandInputDescription.SetText(c, _translations.CultureDescription.Translate(player));
+
+        if (!isDefaultLang || !_translations.NoResultsLanguage.HasDefaultValue)
+            _noLanguagesFound.SetText(c, _translations.NoResultsLanguage.Translate(player));
+        if (!isDefaultLang || !_translations.NoResultsCulture.HasDefaultValue)
+            _noCulturesFound.SetText(c, _translations.NoResultsCulture.Translate(player));
+        if (!isDefaultLang || !_translations.NoResultsTimeZone.HasDefaultValue)
+            _noTimeZonesFound.SetText(c, _translations.NoResultsTimeZone.Translate(player));
+
+        if (!isDefaultLang || !_translations.ButtonSave.HasDefaultValue)
+            _buttonSave.SetText(c, _translations.ButtonSave.Translate(player));
+        if (!isDefaultLang || !_translations.ButtonCancel.HasDefaultValue)
+            _buttonCancel.SetText(c, _translations.ButtonCancel.Translate(player));
+
+        if (isDefaultLang && _translations.ButtonApply.HasDefaultValue && _translations.LanguageContributorsTitle.HasDefaultValue)
+            return;
 
         string applyButton = _translations.ButtonApply.Translate(player);
         string contributorsTitle = _translations.LanguageContributorsTitle.Translate(player);
@@ -1055,6 +1127,17 @@ public class OptionsUITranslations : TranslationCollection
     public readonly Translation CultureDescription = new Translation("The selected international culture influences how numbers, dates, percentages, and other locale-specific text is displayed. " +
                                                                      "If 'Use culture for command input' is selected, your command input will be interpreted using your culture. " +
                                                                      "Example: commas instead of periods for decimals, correctly ordered months and days, etc.", TranslationOptions.TMProUI);
+
+    [TranslationData("Label for the Show Enemy Cosmetics option.")]
+    public readonly Translation EnemyCosmeticsOptionLabel = new Translation("Show Enemy Cosmetics", TranslationOptions.TMProUI);
+
+    [TranslationData("Label for the Show Friendly Cosmetics option.")]
+    public readonly Translation FriendlyCosmeticsOptionLabel = new Translation("Show Friendly Cosmetics", TranslationOptions.TMProUI);
+
+    [TranslationData("Description of what the Show Cosmetics options do.")]
+    public readonly Translation CosmeticsDescription = new Translation("If cosmetics are disabled for a player, you will only see their team's uniform. " +
+                                                                       "Clothing from elite kits or custom loadouts will not be visible. " +
+                                                                       "This doesn't apply to vanilla skins or mythicals, which are always hidden.", TranslationOptions.TMProUI);
 
     [TranslationData("Label for the IMGUI Mode option.")]
     public readonly Translation IMGUIOptionLabel = new Translation("IMGUI Mode", TranslationOptions.TMProUI);

@@ -4,7 +4,6 @@ using HarmonyLib;
 using Microsoft.Extensions.Configuration;
 using SDG.NetPak;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -46,7 +45,7 @@ public class AudioRecordManager : IHostedService
 
         _instance = this;
 
-        VoiceBufferSize = systemConfiguration.GetValue<int>("audio_recording:buffer_size");
+        VoiceBufferSize = systemConfiguration.GetValue("audio_recording:buffer_size", 1048576);
 
         try
         {

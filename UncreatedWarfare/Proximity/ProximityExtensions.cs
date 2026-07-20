@@ -1,6 +1,5 @@
 ﻿using DanielWillett.ReflectionTools;
 using System;
-using System.Collections.Generic;
 
 namespace Uncreated.Warfare.Proximity;
 public static class ProximityExtensions

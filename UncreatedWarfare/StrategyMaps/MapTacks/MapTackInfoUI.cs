@@ -109,6 +109,7 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>
             data.IsClosing = false;
             data.HealthBarCount = 0;
             data.StoredHealth = 0;
+            player.Locale.LocaleUpdated -= OnLocaleUpdated;
             ClearFromPlayer(player.SteamPlayer);
         }
         else
@@ -129,8 +130,33 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>
                 data.HasUI = false;
                 data.HealthBarCount = 0;
                 data.StoredHealth = 0;
+                player.Locale.LocaleUpdated -= OnLocaleUpdated;
                 ClearFromPlayer(player.SteamPlayer);
             });
+        }
+    }
+
+    private void OnLocaleUpdated(WarfarePlayerLocale locale)
+    {
+        Data data = GetOrAddData(locale.Player.Steam64);
+        if (!data.HasUI || data.CurrentMapTack?.UIHandler is not { } uiHandler)
+            return;
+
+        ITransportConnection c = locale.Player.Connection;
+        LanguageSet set = new LanguageSet(locale.Player);
+
+        string title = uiHandler.GetTitle(in set);
+        Title.SetText(c, title);
+
+        string? location = uiHandler.GetLocation(in set);
+        if (!string.IsNullOrEmpty(location))
+        {
+            Location.SetText(c, location);
+            Location.Show(c);
+        }
+        else
+        {
+            Location.Hide(c);
         }
     }
 
@@ -159,6 +185,7 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>
             SendToPlayer(c, title);
             isDefaultState = true;
             data.HasUI = true;
+            player.Locale.LocaleUpdated += OnLocaleUpdated;
             data.HealthBarCount = 0;
             data.StoredHealth = 0;
         }

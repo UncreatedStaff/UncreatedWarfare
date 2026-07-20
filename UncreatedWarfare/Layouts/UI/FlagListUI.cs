@@ -1,8 +1,8 @@
-using SDG.NetTransport;
 using System;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Data;
 using Uncreated.Framework.UI.Patterns;
+using Uncreated.Framework.UI.Presets;
 using Uncreated.Framework.UI.Reflection;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Layouts.Flags;
@@ -16,13 +16,18 @@ namespace Uncreated.Warfare.Layouts.UI;
 [UnturnedUI(BasePath = "FlagHUD")]
 public class FlagListUI : UnturnedUI
 {
+    /// <summary>
+    /// Maximum number of flags that can be displayed on the flag list.
+    /// </summary>
+    public static readonly int MaximumFlags = 12;
+
     private readonly FlagUITranslations _translations;
     private readonly Func<CSteamID, FlagListUIData> _getFlagListUIData;
 
     public readonly UnturnedLabel TicketCount = new UnturnedLabel("Tickets/TicketsNumber");
     public readonly UnturnedLabel TicketsFlagIcon = new UnturnedLabel("Tickets/FactionFlagIcon");
-    public readonly UnturnedLabel GamemodeTitle = new UnturnedLabel("HeaderFlags");
-    public readonly FlagElement[] Rows = ElementPatterns.CreateArray<FlagElement>("Flag_{0}/Flag{1}_{0}", 1, to: 10);
+    public readonly UnturnedLabel GamemodeTitle = new UnturnedLabel("GamemodeName");
+    public readonly FlagElement[] Rows = ElementPatterns.CreateArray<FlagElement>("Flag_{0}", 0, MaximumFlags);
 
     public FlagListUI(TranslationInjection<FlagUITranslations> translations, AssetConfiguration assetConfig, ILoggerFactory loggerFactory)
         : base(loggerFactory, assetConfig.GetAssetLink<EffectAsset>("UI:FlagHUD"), reliable: false)
@@ -40,7 +45,7 @@ public class FlagListUI : UnturnedUI
         GetOrAddData(player).HasUI = false;
     }
 
-    private FlagListUIData GetOrAddData(WarfarePlayer player)
+    internal FlagListUIData GetOrAddData(WarfarePlayer player)
     {
         return GetOrAddData(player.Steam64, _getFlagListUIData);
     }
@@ -137,7 +142,7 @@ public class FlagListUI : UnturnedUI
 
                     ticketsStr = tickets.ToString(set.Culture);
 
-                    string bleedMessage = _translations.GetBleedMessage(bleed).Translate(set);
+                    string bleedMessage = _translations.GetBleedMessage(bleed).Translate(in set);
                     if (!string.IsNullOrEmpty(bleedMessage))
                         ticketsStr += "  " + bleedMessage;
 
@@ -167,22 +172,30 @@ public class FlagListUI : UnturnedUI
             int index = 0;
             foreach (FlagListUIEntry entry in flagProvider.EnumerateFlagListEntries(set))
             {
-                if (index >= Rows.Length)
+                if (index >= MaximumFlags)
                     break;
 
                 FlagElement element = Rows[index];
                 ++index;
 
                 if (index >= data.Rows)
-                    element.Root.SetVisibility(connection, true);
+                    element.Show(connection);
 
                 element.Name.SetText(connection, entry.Text);
-                element.Icon.SetText(connection, entry.Icon);
+                if (string.IsNullOrEmpty(entry.Icon))
+                {
+                    element.Icon.Hide(connection);
+                }
+                else
+                {
+                    element.Icon.SetText(connection, entry.Text);
+                    element.Icon.Show(connection);
+                }
             }
 
             for (int j = index; j < data.Rows; ++j)
             {
-                Rows[j].Root.SetVisibility(connection, false);
+                Rows[j].Root.Hide(connection);
             }
             data.Rows = index;
         }
@@ -190,11 +203,8 @@ public class FlagListUI : UnturnedUI
 
 #nullable disable
 
-    public class FlagElement
+    public class FlagElement : PatternRoot
     {
-        [Pattern("", Root = true, CleanJoin = '_')]
-        public UnturnedUIElement Root { get; set; }
-
         [Pattern("Name", Mode = FormatMode.Format)]
         public UnturnedLabel Name { get; set; }
 
@@ -212,7 +222,7 @@ public class FlagListUI : UnturnedUI
         public FactionInfo? TicketsFlag { get; set; }
         public int Tickets { get; set; }
         public TicketBleedSeverity Bleed { get; set; }
-        public int Rows { get; set; }
+        public int Rows { get; set; } = 1;
         public string? CustomTicket { get; set; }
         public FlagListUIData(CSteamID player, UnturnedUI owner)
         {

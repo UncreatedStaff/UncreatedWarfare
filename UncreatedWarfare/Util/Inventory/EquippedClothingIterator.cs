@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Players;
@@ -7,7 +6,7 @@ using Uncreated.Warfare.Players;
 namespace Uncreated.Warfare.Util.Inventory;
 
 /// <summary>
-/// Enumerate through a player's clothes.
+/// Enumerate through a player's clothing slots. It does not skip empty slots.
 /// </summary>
 public struct EquippedClothingIterator : IEnumerable<ClothingItem>, IEnumerator<ClothingItem>
 {
@@ -64,9 +63,16 @@ public struct EquippedClothingIterator : IEnumerable<ClothingItem>, IEnumerator<
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }
 
-
+/// <summary>
+/// Helper that normalizes the different code paths for each clothing type into one structure.
+/// </summary>
 public struct ClothingItem
 {
+    /// <summary>
+    /// Total number of clothing types in Unturned.
+    /// </summary>
+    public const int Count = 7;
+
     private static readonly Page[] StorageTable =
     [
         Page.Shirt,
@@ -80,11 +86,23 @@ public struct ClothingItem
 
     private readonly PlayerClothing? _clothing;
 
+    /// <summary>
+    /// The type of clothing this helper is referencing.
+    /// </summary>
     public ClothingType Type;
 
-    public byte Flag => (byte)(1 << (int)Type);
+    /// <summary>
+    /// A bit-mask including only this clothing slot's bit.
+    /// </summary>
+    public readonly byte Flag => (byte)(1 << (int)Type);
 
-    public readonly ItemAsset? Asset =>
+    /// <summary>
+    /// The asset currently being worn by the player.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">
+    /// The player was not configured when this struct was created, or it was given an invalid enum value for the clothing type.
+    /// </exception>
+    public readonly ItemClothingAsset? Asset =>
         _clothing is null ? throw new InvalidOperationException("Clothing not set") : Type switch
         {
             ClothingType.Shirt => _clothing.shirtAsset,
@@ -97,6 +115,12 @@ public struct ClothingItem
             _ => throw new InvalidOperationException("Type out of range.")
         };
 
+    /// <summary>
+    /// The quality of the clothing being worn by the player.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">
+    /// The player was not configured when this struct was created, or it was given an invalid enum value for the clothing type.
+    /// </exception>
     public readonly byte Quality =>
         _clothing is null ? throw new InvalidOperationException("Clothing not set") : Type switch
         {
@@ -110,6 +134,12 @@ public struct ClothingItem
             _ => throw new InvalidOperationException("Type out of range.")
         };
 
+    /// <summary>
+    /// The state array of the clothing being worn by the player.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">
+    /// The player was not configured when this struct was created, or it was given an invalid enum value for the clothing type.
+    /// </exception>
     public readonly byte[] State =>
         _clothing is null ? throw new InvalidOperationException("Clothing not set") : Type switch
         {
@@ -126,12 +156,37 @@ public struct ClothingItem
     /// <summary>
     /// If this clothing type has storage.
     /// </summary>
+    /// <exception cref="IndexOutOfRangeException">
+    /// This struct was given an invalid enum value for the clothing type when it was created.
+    /// </exception>
     public readonly bool HasStorage => StorageTable[(int)Type] < Page.Storage;
 
     /// <summary>
     /// The page this clothing type is stored in.
     /// </summary>
+    /// <exception cref="IndexOutOfRangeException">
+    /// This struct was given an invalid enum value for the clothing type when it was created.
+    /// </exception>
     public readonly Page StoragePage => StorageTable[(int)Type];
+
+    /// <summary>
+    /// The acceptable base type for assets of this clothing type.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">
+    /// This struct was given an invalid enum value for the clothing type when it was created.
+    /// </exception>
+    public readonly Type AssetType =>
+        Type switch
+        {
+            ClothingType.Shirt => typeof(ItemShirtAsset),
+            ClothingType.Pants => typeof(ItemPantsAsset),
+            ClothingType.Vest => typeof(ItemVestAsset),
+            ClothingType.Hat => typeof(ItemHatAsset),
+            ClothingType.Mask => typeof(ItemMaskAsset),
+            ClothingType.Backpack => typeof(ItemBackpackAsset),
+            ClothingType.Glasses => typeof(ItemGlassesAsset),
+            _ => throw new InvalidOperationException("Type out of range.")
+        };
 
     public ClothingItem(ClothingType type)
     {
@@ -154,7 +209,13 @@ public struct ClothingItem
         Type = (ClothingType)byte.MaxValue;
     }
 
-    public readonly bool ValidAsset(ItemAsset? asset)
+    /// <summary>
+    /// Determines whether or not an <paramref name="asset"/> is the correct type to be worn in this clothing type.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">
+    /// This struct was given an invalid enum value for the clothing type when it was created.
+    /// </exception>
+    public readonly bool ValidAsset(Asset? asset)
     {
         return Type switch
         {
@@ -169,6 +230,9 @@ public struct ClothingItem
         };
     }
 
+    /// <exception cref="InvalidOperationException">
+    /// The player was not configured when this struct was created, or it was given an invalid enum value for the clothing type.
+    /// </exception>
     public readonly void AskWear(ItemAsset? asset, byte quality, byte[] state, bool playEffect)
     {
         GameThread.AssertCurrent();

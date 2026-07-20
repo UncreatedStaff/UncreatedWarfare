@@ -693,6 +693,7 @@ public sealed partial class KitSelectionUI : UnturnedUI,
             return;
 
         data.IsClosing = !instant;
+        player.Locale.LocaleUpdated -= OnLocaleUpdated;
         data.HasUI = false;
         data.ResetState();
         data.ResetCache();
@@ -767,6 +768,8 @@ public sealed partial class KitSelectionUI : UnturnedUI,
             data.HasUI = true;
             data.IsClosing = false;
             SendToPlayer(player.SteamPlayer);
+
+            player.Locale.LocaleUpdated += OnLocaleUpdated;
         }
 
         await _dbSemaphore.WaitAsync(token);
@@ -917,6 +920,29 @@ public sealed partial class KitSelectionUI : UnturnedUI,
             {
                 GetLogger().LogError(ex, $"Error fetching discord server boost status for {player}.");
             }
+        }
+    }
+
+    private void OnLocaleUpdated(WarfarePlayerLocale locale)
+    {
+        KitSelectionUIData data = GetOrAddData(locale.Player);
+        if (!data.HasUI || data.IsClosing)
+            return;
+
+        UpdateConstantText(locale.IsDefaultLanguage, locale.Player.Connection, data, locale.Player);
+        if (data.SelectedKit != null)
+        {
+            UniTask.Create(async () =>
+            {
+                try
+                {
+                    await SendKitDetailsAsync(locale.Player, data.SelectedKit, locale.Player.DisconnectToken);
+                }
+                catch (Exception ex)
+                {
+                    GetLogger().LogError(ex, $"Error updating kit details for {locale.Player} after locale update.");
+                }
+            });
         }
     }
 
@@ -2034,6 +2060,8 @@ public sealed partial class KitSelectionUI : UnturnedUI,
         data.HasUI = false;
         data.DisposeHandles();
         data.ResetState();
+        // not really necessary but eh whatever
+        e.Player.Locale.LocaleUpdated -= OnLocaleUpdated;
     }
 }
 

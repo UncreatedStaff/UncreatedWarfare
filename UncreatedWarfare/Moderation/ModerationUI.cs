@@ -60,7 +60,7 @@ public partial class ModerationUI : UnturnedUI
     };
     
     /* PLAYER LIST */
-    public PlayerListEntry[] ModerationPlayerList { get; } = ElementPatterns.CreateArray<PlayerListEntry>("ModerationPlayerList/Viewport/Content/ModerationPlayer_{0}", 1, to: 30);
+    public PlayerListEntry[] ModerationPlayerList { get; } = ElementPatterns.CreateArray<PlayerListEntry>("ModerationPlayerList/Viewport/Content/ModerationPlayer_{0}", 1, to: 100);
     public UnturnedTextBox ModerationPlayerSearch { get; } = new UnturnedTextBox("ModerationPlayersInputSearch")
     {
         UseData = true
@@ -739,11 +739,16 @@ public partial class ModerationUI : UnturnedUI
 
         data.HistoryCount = c;
     }
-    public void SendModerationPlayerList(WarfarePlayer player)
+
+    public async UniTask SendModerationPlayerList(WarfarePlayer player)
     {
-        GameThread.AssertCurrent();
+        CancellationToken token = player.DisconnectToken;
+
+        await UniTask.SwitchToMainThread(token);
 
         ITransportConnection connection = player.Connection;
+
+        const int playersPerTick = 10;
 
         if (!ModerationPlayerSearchModeButton.TryGetSelection(player.UnturnedPlayer, out PlayerSearchMode searchMode))
             searchMode = PlayerSearchMode.Online;
@@ -751,6 +756,7 @@ public partial class ModerationUI : UnturnedUI
         UnturnedTextBoxData? textBoxData = UnturnedUIDataSource.GetData<UnturnedTextBoxData>(player.Steam64, ModerationPlayerSearch);
         string searchText = textBoxData?.Text ?? string.Empty;
         data.PlayerList ??= new ulong[ModerationPlayerList.Length];
+        int version = Interlocked.Increment(ref data.SearchVersion);
         if (searchText.Length < 1 || searchMode == PlayerSearchMode.Online)
         {
             IReadOnlyList<WarfarePlayer> buffer;
@@ -774,6 +780,13 @@ public partial class ModerationUI : UnturnedUI
                 int i = 0;
                 for (; i < ct; ++i)
                 {
+                    if ((i - 1) % playersPerTick == 0)
+                    {
+                        await UniTask.NextFrame(token);
+                        if (data.SearchVersion != version)
+                            return;
+                    }
+
                     WarfarePlayer listPlayer = buffer[i];
                     PlayerListEntry entry = ModerationPlayerList[i];
                     entry.SteamId.SetText(connection, listPlayer.Steam64.m_SteamID.ToString(CultureInfo.InvariantCulture));
@@ -788,6 +801,13 @@ public partial class ModerationUI : UnturnedUI
 
                 for (; i < data.PlayerCount; ++i)
                 {
+                    if ((i - 1) % playersPerTick == 0)
+                    {
+                        await UniTask.NextFrame(token);
+                        if (data.SearchVersion != version)
+                            return;
+                    }
+
                     ModerationPlayerList[i].Root.SetVisibility(connection, false);
                     data.PlayerList[i] = 0;
                 }
@@ -802,64 +822,87 @@ public partial class ModerationUI : UnturnedUI
         }
         else
         {
-            UniTask.Create(async () =>
+            token.ThrowIfCancellationRequested();
+
+            List<PlayerNames> names = await _userDataService.SearchPlayersAsync(searchText, PlayerNameType.PlayerName, byLastJoined: true, ModerationPlayerList.Length, token);
+
+            token.ThrowIfCancellationRequested();
+
+            await UniTask.SwitchToMainThread(token);
+
+            if (data.SearchVersion != version)
+                return;
+
+            int ct = Math.Min(ModerationPlayerList.Length, names.Count);
+            int i2 = 0;
+            BitArray avatarMask = new BitArray(ct);
+            for (; i2 < ct; ++i2)
             {
-                CancellationToken token = player.DisconnectToken;
-                ITransportConnection connection = player.Connection;
-
-                token.ThrowIfCancellationRequested();
-
-                int version = Interlocked.Increment(ref data.SearchVersion);
-                List<PlayerNames> names = await _userDataService.SearchPlayersAsync(searchText, PlayerNameType.PlayerName, byLastJoined: true, ModerationPlayerList.Length, token);
-
-                if (data.SearchVersion != version)
-                    return;
-
-                token.ThrowIfCancellationRequested();
-
-                await UniTask.SwitchToMainThread(token);
-
-                int ct = Math.Min(ModerationPlayerList.Length, names.Count);
-                int i2 = 0;
-                for (; i2 < ct; ++i2)
+                if ((i2 - 1) % playersPerTick == 0)
                 {
-                    PlayerNames name = names[i2];
-                    PlayerListEntry entry = ModerationPlayerList[i2];
-                    entry.SteamId.SetText(connection, name.Steam64.m_SteamID.ToString(CultureInfo.InvariantCulture));
-                    entry.Name.SetText(connection, name.GetDisplayNameOrCharacterName());
-                    if (_moderationSql.TryGetAvatar(name.Steam64.m_SteamID, AvatarSize.Small, out string avatarUrl))
-                        entry.ProfilePicture.SetImage(connection, avatarUrl);
-                    else
-                        entry.ProfilePicture.SetImage(connection, string.Empty);
+                    await UniTask.NextFrame(token);
+                    if (data.SearchVersion != version)
+                        return;
+                }
 
+                PlayerNames name = names[i2];
+                PlayerListEntry entry = ModerationPlayerList[i2];
+                entry.SteamId.SetText(connection, name.Steam64.m_SteamID.ToString(CultureInfo.InvariantCulture));
+                entry.Name.SetText(connection, name.GetDisplayNameOrCharacterName());
+                if (_moderationSql.TryGetAvatar(name.Steam64.m_SteamID, AvatarSize.Small, out string avatarUrl))
+                {
+                    avatarMask[i2] = true;
+                    entry.ProfilePicture.SetImage(connection, avatarUrl);
+                }
+                else
+                    entry.ProfilePicture.SetImage(connection, string.Empty);
+
+                entry.Root.SetVisibility(player.Connection, true);
+                if (i2 >= data.InfoActorCount)
                     entry.Root.SetVisibility(player.Connection, true);
-                    if (i2 >= data.InfoActorCount)
-                        entry.Root.SetVisibility(player.Connection, true);
 
-                    data.PlayerList[i2] = name.Steam64.m_SteamID;
-                }
+                data.PlayerList[i2] = name.Steam64.m_SteamID;
+            }
 
-                for (; i2 < data.PlayerCount; ++i2)
+            for (; i2 < data.PlayerCount; ++i2)
+            {
+                if ((i2 - 1) % playersPerTick == 0)
                 {
-                    ModerationPlayerList[i2].Root.SetVisibility(connection, false);
-                    data.PlayerList[i2] = 0;
+                    await UniTask.NextFrame(token);
+                    if (data.SearchVersion != version)
+                        return;
                 }
 
-                data.PlayerCount = ct;
+                ModerationPlayerList[i2].Root.SetVisibility(connection, false);
+                data.PlayerList[i2] = 0;
+            }
 
-                await _moderationSql.CacheAvatarsAsync(names.Select(x => x.Steam64.m_SteamID), AvatarSize.Small, token);
+            data.PlayerCount = ct;
 
-                await UniTask.SwitchToMainThread(token);
-#if DEBUG
-                GameThread.AssertCurrent();
-#endif
-                for (int i = 0; i < ct; ++i)
+            await _moderationSql.CacheAvatarsAsync(names.Select(x => x.Steam64.m_SteamID), AvatarSize.Small, token);
+
+            await UniTask.SwitchToMainThread(token);
+
+            if (data.SearchVersion != version)
+                return;
+
+            int c = 0;
+            for (int i = 0; i < ct; ++i)
+            {
+                PlayerNames name = names[i];
+                if (avatarMask[i] || !_moderationSql.TryGetAvatar(name.Steam64.m_SteamID, AvatarSize.Small, out string avatarUrl))
+                    continue;
+
+                ++c;
+                if (c % playersPerTick == 0)
                 {
-                    PlayerNames name = names[i];
-                    if (_moderationSql.TryGetAvatar(name.Steam64.m_SteamID, AvatarSize.Small, out string avatarUrl))
-                        ModerationPlayerList[i].ProfilePicture.SetImage(connection, avatarUrl);
+                    await UniTask.NextFrame(token);
+                    if (data.SearchVersion != version)
+                        return;
                 }
-            });
+
+                ModerationPlayerList[i].ProfilePicture.SetImage(connection, avatarUrl);
+            }
         }
     }
     public void SelectEntry(WarfarePlayer player, ModerationEntry? entry)

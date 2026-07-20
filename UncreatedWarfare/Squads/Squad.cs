@@ -40,6 +40,11 @@ public class Squad : ITranslationArgument
         _squadManager = squadManager;
     }
 
+    internal int GetMemberIndex(WarfarePlayer player)
+    {
+        return _members.IndexOf(player);
+    }
+
     public bool Disband()
     {
         return _squadManager.DisbandSquad(this);
