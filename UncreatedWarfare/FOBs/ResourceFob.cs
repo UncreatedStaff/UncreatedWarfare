@@ -133,6 +133,11 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable, IMapTackUIH
                 OnItemAdded = p =>
                 {
                     InvokeVehicleUpdated(MapTackVehicleType.Infantry, NearbyFriendlies!.Collection.Count);
+                    _ = WarfareModule.EventDispatcher.DispatchEventAsync(new PlayerEnteredFriendlyFob() { Fob = this, Player = p });
+                },
+                OnItemRemoved = p =>
+                {
+                    _ = WarfareModule.EventDispatcher.DispatchEventAsync(new PlayerExitedFriendlyFob() { Fob = this, Player = p });
                 }
             }
         );
@@ -142,7 +147,15 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable, IMapTackUIH
                 Ticker = _loopTicker,
                 Proximity = FriendlyProximity,
                 ObjectsToCollect = () => _playerService.OnlinePlayers.Where(p => p.Team.IsOpponent(Team)),
-                PositionFunction = p => p.Position
+                PositionFunction = p => p.Position,
+                OnItemAdded = p =>
+                {
+                    _ = WarfareModule.EventDispatcher.DispatchEventAsync(new PlayerEnteredEnemyFob() { Fob = this, Player = p });
+                },
+                OnItemRemoved = p =>
+                {
+                    _ = WarfareModule.EventDispatcher.DispatchEventAsync(new PlayerExitedEnemyFob() { Fob = this, Player = p });
+                }
             }
         );
 
@@ -365,6 +378,8 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable, IMapTackUIH
 
     protected virtual void Dispose(bool isDisposing)
     {
+        NearbyFriendlies.RemoveAllCurrentItems();
+        NearbyEnemies.RemoveAllCurrentItems();
         NearbyFriendlies.Dispose();
         NearbyEnemies.Dispose();
 

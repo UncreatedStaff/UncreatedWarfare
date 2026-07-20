@@ -50,6 +50,17 @@ public abstract class LoopTickerCollector<T> : IDisposable
     protected abstract IEnumerable<T> ItemsToAdd(out bool pooled);
     protected abstract IEnumerable<T> ItemsToRemove(out bool pooled);
 
+    public void RemoveAllCurrentItems()
+    {
+        if (_onItemRemove != null)
+        {
+            foreach (T item in _collection)
+                _onItemRemove.Invoke(item); // note that here the event is invoked before removal, unlike adding/removing items. Make sure this doesn't cause annoying bugs for you.
+        }
+
+        _collection.Clear();
+    }
+
     /// <inheritdoc />
     public void Dispose()
     {
