@@ -153,7 +153,7 @@ public interface IKitRequirementVisitor<TState>
     /// <summary>
     /// Invoked by <see cref="LoadoutLockedRequirement"/>.
     /// </summary>
-    void AcceptLoadoutLockedNotMet(in KitRequirementResolutionContext<TState> ctx);
+    void AcceptLoadoutLockedNotMet(in KitRequirementResolutionContext<TState> ctx, bool isUnpaid);
 
     /// <summary>
     /// Invoked by <see cref="LoadoutOutOfDateRequirement"/>.

@@ -849,9 +849,18 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
             ctx.State.Handler.MissingExclusiveOwnership(ctx.Player, ctx.Kit);
         }
 
-        public void AcceptLoadoutLockedNotMet(in KitRequirementResolutionContext<RequestState> ctx)
+        public void AcceptLoadoutLockedNotMet(in KitRequirementResolutionContext<RequestState> ctx, bool isUnpaid)
         {
-            ctx.State.Handler.MissingRequirement(ctx.Player, ctx.Kit, _this._kitReqTranslations.NeedsSetup.Translate(ctx.Player));
+            ctx.State.Handler.MissingRequirement(ctx.Player, ctx.Kit, (isUnpaid ? _this._kitReqTranslations.Unpaid : _this._kitReqTranslations.NeedsSetup).Translate(ctx.Player));
+
+            if (!isUnpaid)
+                return;
+
+            UniTask.Create(async () =>
+            {
+                await UniTask.SwitchToMainThread();
+
+            });
         }
 
         public void AcceptLoadoutOutOfDateNotMet(in KitRequirementResolutionContext<RequestState> ctx, int season)

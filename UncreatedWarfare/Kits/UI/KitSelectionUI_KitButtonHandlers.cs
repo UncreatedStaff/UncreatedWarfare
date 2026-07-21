@@ -99,7 +99,7 @@ partial class KitSelectionUI
             bool requested = false;
             try
             {
-                requested = await _kitRequestService.RequestAsync(player, favKit, new RequestCommandResultHandler(_chatService, _requestTranslations), player.DisconnectToken);
+                requested = await _kitRequestService.RequestAsync(player, favKit, new RequestCommandResultHandler(_chatService, _configuration, _requestTranslations), player.DisconnectToken);
             }
             catch (Exception ex)
             {
@@ -252,7 +252,7 @@ partial class KitSelectionUI
             try
             {
                 Kit? oldKit = player.Component<KitPlayerComponent>().GetActiveEffectiveKit()?.CachedKit;
-                requested = await _kitRequestService.RequestAsync(player, kit, new RequestCommandResultHandler(_chatService, _requestTranslations), player.DisconnectToken);
+                requested = await _kitRequestService.RequestAsync(player, kit, new RequestCommandResultHandler(_chatService, _configuration, _requestTranslations), player.DisconnectToken);
                 if (oldKit != null)
                 {
                     await UpdateKitAsync(oldKit, player, player.DisconnectToken);
@@ -370,7 +370,7 @@ partial class KitSelectionUI
                         bool requested = false;
                         try
                         {
-                            requested = await _kitRequestService.RequestAsync(player, kit, new RequestCommandResultHandler(_chatService, _requestTranslations), player.DisconnectToken);
+                            requested = await _kitRequestService.RequestAsync(player, kit, new RequestCommandResultHandler(_chatService, _configuration, _requestTranslations), player.DisconnectToken);
                         }
                         catch (Exception ex)
                         {
@@ -437,7 +437,7 @@ partial class KitSelectionUI
                         break;
 
                     _ = CloseAsync(player);
-                    _squadMenu.OpenUI(player, new SquadMenuUI.KitRequestState(kit, new RequestCommandResultHandler(_chatService, _requestTranslations)));
+                    _squadMenu.OpenUI(player, new SquadMenuUI.KitRequestState(kit, new RequestCommandResultHandler(_chatService, _configuration, _requestTranslations)));
                     break;
 
                 case PurchaseButtonState.OpenDiscordForBoosts:

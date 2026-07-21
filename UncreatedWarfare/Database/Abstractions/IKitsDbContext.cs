@@ -3,6 +3,7 @@ using Uncreated.Warfare.Models.Factions;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Models.Kits.Bundles;
 using Uncreated.Warfare.Models.Users;
+using Uncreated.Warfare.Models.Web;
 using Uncreated.Warfare.Players.Skillsets;
 
 namespace Uncreated.Warfare.Database.Abstractions;
@@ -17,6 +18,7 @@ public interface IKitsDbContext : IDbContext
     DbSet<KitLayoutTransformation> KitLayoutTransformations { get; }
     DbSet<KitFavorite> KitFavorites { get; }
     DbSet<EliteBundle> EliteBundles { get; }
+    DbSet<LoadoutPurchase> Loadouts { get; }
 
     static void ConfigureModels(ModelBuilder modelBuilder)
     {

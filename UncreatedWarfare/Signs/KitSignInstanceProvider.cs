@@ -377,7 +377,8 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>,
     void IKitRequirementVisitor<StringBuilder>.AcceptPremiumCostNotMet(in KitRequirementResolutionContext<StringBuilder> ctx, decimal cost) { }
     void IKitRequirementVisitor<StringBuilder>.AcceptCreditCostNotMet(in KitRequirementResolutionContext<StringBuilder> ctx, double cost, double current) { }
     void IKitRequirementVisitor<StringBuilder>.AcceptExclusiveKitNotMet(in KitRequirementResolutionContext<StringBuilder> ctx) { }
-    void IKitRequirementVisitor<StringBuilder>.AcceptLoadoutLockedNotMet(in KitRequirementResolutionContext<StringBuilder> ctx) { }
+    void IKitRequirementVisitor<StringBuilder>.AcceptLoadoutLockedNotMet(
+        in KitRequirementResolutionContext<StringBuilder> ctx, bool isUnpaid) { }
     void IKitRequirementVisitor<StringBuilder>.AcceptLoadoutOutOfDateNotMet(in KitRequirementResolutionContext<StringBuilder> ctx, int season) { }
     void IKitRequirementVisitor<StringBuilder>.AcceptDisabledNotMet(in KitRequirementResolutionContext<StringBuilder> ctx) { }
     void IKitRequirementVisitor<StringBuilder>.AcceptNitroBoostRequirementNotMet(in KitRequirementResolutionContext<StringBuilder> ctx) { }

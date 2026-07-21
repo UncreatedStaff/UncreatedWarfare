@@ -1,5 +1,4 @@
-﻿using SDG.NetTransport;
-using Uncreated.Warfare.Players;
+﻿using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Events.Models;
 public class PlayerEvent : IPlayerEvent

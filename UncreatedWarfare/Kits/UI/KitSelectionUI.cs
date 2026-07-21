@@ -48,7 +48,9 @@ public sealed partial class KitSelectionUI : UnturnedUI,
     IEventListener<PlayerLocaleUpdated>,
     IEventListener<PlayerKitChanged>,
     IEventListener<SquadUpdated>,
-    IEventListener<SquadMemberLeft>
+    IEventListener<SquadMemberLeft>,
+    IAsyncEventListener<KitAccessUpdated>,
+    IAsyncEventListener<KitUpdated>
 {
     private readonly IKitDataStore _kitDataStore;
     private readonly IKitItemResolver _kitItemResolver;
@@ -521,6 +523,23 @@ public sealed partial class KitSelectionUI : UnturnedUI,
     void IEventListener<SquadMemberLeft>.HandleEvent(SquadMemberLeft e, IServiceProvider serviceProvider)
     {
         UpdateAllKitsStatus(e.Player, false);
+    }
+
+    UniTask IAsyncEventListener<KitAccessUpdated>.HandleEventAsync(KitAccessUpdated e, IServiceProvider serviceProvider, CancellationToken token)
+    {
+        if (_playerService.GetOnlinePlayerOrNull(e.PlayerId) is not { } player)
+            return UniTask.CompletedTask;
+
+        KitSelectionUIData? data = GetData<KitSelectionUIData>(e.PlayerId);
+        if (data is not { HasUI: true })
+            return UniTask.CompletedTask;
+
+        return UpdateKitAsync(e.Kit, player, token);
+    }
+
+    UniTask IAsyncEventListener<KitUpdated>.HandleEventAsync(KitUpdated e, IServiceProvider serviceProvider, CancellationToken token)
+    {
+        return UpdateKitAsync(e.Kit, token: token);
     }
 
     private void OnPointsChanged(WarfarePlayer player, double deltaXp, double deltaCredits, double deltaReputation)
@@ -1616,6 +1635,7 @@ public sealed partial class KitSelectionUI : UnturnedUI,
         PremiumCost,
         CreditCost,
         ViewLoadoutTicket,
+        ViewLoadoutCart,
         OpenLoadoutTicket,
         JoinSquad,
         CreateSquad,
@@ -1634,6 +1654,7 @@ public sealed partial class KitSelectionUI : UnturnedUI,
         CreditCost,
         Exclusive,
         LoadoutLocked,
+        LoadoutUnpaid,
         LoadoutOutOfDate,
         Disabled,
         ServerBoostRequired,
@@ -1711,13 +1732,17 @@ public sealed partial class KitSelectionUI : UnturnedUI,
             ctx.State.Data.SetCacheState(in ctx.State, PurchaseButtonState.None, StatusState.Exclusive);
         }
 
-        public void AcceptLoadoutLockedNotMet(in KitRequirementResolutionContext<KitRequirementsState> ctx)
+        public void AcceptLoadoutLockedNotMet(in KitRequirementResolutionContext<KitRequirementsState> ctx, bool isUnpaid)
         {
-            ctx.State.UI.StatusLabel.SetText(ctx.State.Connection, _this._translations.StatusLoadoutLocked.Translate(ctx.Player));
-            ctx.State.UI.UnlockButton.SetText(ctx.State.Connection, _this._translations.PurchaseButtonViewLoadoutTicket.Translate(ctx.Player));
+            ctx.State.UI.StatusLabel.SetText(ctx.State.Connection, (isUnpaid ? _this._translations.StatusLoadoutUnpaid : _this._translations.StatusLoadoutLocked).Translate(ctx.Player));
+            ctx.State.UI.UnlockButton.SetText(ctx.State.Connection, (isUnpaid ? _this._translations.PurchaseButtonLoadoutUnpaid : _this._translations.PurchaseButtonViewLoadoutTicket).Translate(ctx.Player));
             ctx.State.UI.UnlockSection.Show(ctx.State.Connection);
 
-            ctx.State.Data.SetCacheState(in ctx.State, PurchaseButtonState.ViewLoadoutTicket, StatusState.LoadoutLocked);
+            ctx.State.Data.SetCacheState(
+                in ctx.State,
+                isUnpaid ? PurchaseButtonState.ViewLoadoutCart : PurchaseButtonState.ViewLoadoutTicket,
+                isUnpaid ? StatusState.LoadoutUnpaid : StatusState.LoadoutLocked
+            );
         }
 
         public void AcceptLoadoutOutOfDateNotMet(in KitRequirementResolutionContext<KitRequirementsState> ctx, int season)
@@ -1942,6 +1967,9 @@ public sealed class KitSelectionUITranslations : TranslationCollection
     [TranslationData("Label for when the kit is a locked loadout, meaning its pending set up by staff.")]
     public readonly Translation StatusLoadoutLocked = new Translation("<#9cb6a4>Pending setup</color> by staff", TranslationOptions.TMProUI);
     
+    [TranslationData("Label for when the kit is a locked loadout, meaning its not been paid for.")]
+    public readonly Translation StatusLoadoutUnpaid = new Translation("<#d9d9d9>Unpaid</color>", TranslationOptions.TMProUI);
+    
     [TranslationData("Label for when the kit is an expired loadout.")]
     public readonly Translation<int> StatusLoadoutNeedsUpgraded = new Translation<int>("S{0} loadout <#9cb6a4>requires upgrade</color>", TranslationOptions.TMProUI);
     
@@ -1996,6 +2024,9 @@ public sealed class KitSelectionUITranslations : TranslationCollection
     
     [TranslationData("Label for the purchase button shown when the kit is a loadout currently waiting for an upgrade.")]
     public readonly Translation PurchaseButtonViewLoadoutTicket = new Translation("View <#9cb6a4>loadout ticket</color>", TranslationOptions.TMProUI);
+    
+    [TranslationData("Label for the purchase button shown when the kit is a loadout currently waiting for an upgrade.")]
+    public readonly Translation PurchaseButtonLoadoutUnpaid = new Translation("View <#9cb6a4>loadouts</color>", TranslationOptions.TMProUI);
     
     [TranslationData("Label for the URL request when clicking the purchase button for a custom loadout currently waiting for an upgrade.")]
     public readonly Translation PurchaseButtonViewLoadoutTicketRequest = new Translation("View loadout ticket", TranslationOptions.NoRichText);

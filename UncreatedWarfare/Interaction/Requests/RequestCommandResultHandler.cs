@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using System;
 using Uncreated.Warfare.Kits.Requests;
 using Uncreated.Warfare.Players;
@@ -13,13 +14,15 @@ namespace Uncreated.Warfare.Interaction.Requests;
 public class RequestCommandResultHandler : IRequestResultHandler
 {
     private readonly ChatService _chatService;
+    private readonly IConfiguration _systemConfig;
     private readonly RequestTranslations _translations;
 
     public bool CanUseIMGUI => true;
     
-    public RequestCommandResultHandler(ChatService chatService, TranslationInjection<RequestTranslations> translations)
+    public RequestCommandResultHandler(ChatService chatService, IConfiguration systemConfig, TranslationInjection<RequestTranslations> translations)
     {
         _chatService = chatService;
+        _systemConfig = systemConfig;
         _translations = translations.Value;
     }
 
@@ -46,6 +49,19 @@ public class RequestCommandResultHandler : IRequestResultHandler
     public void MissingDonorOwnership(WarfarePlayer player, IRequestable<object> value, decimal usdCost)
     {
         _chatService.Send(player, _translations.RequestNotOwnedDonor, $"$ {usdCost.ToString("N2", player.Locale.CultureInfo)} USD");
+
+        UniTask.Create(async () =>
+        {
+            await UniTask.SwitchToMainThread();
+            string domain = _systemConfig["domain"] ?? "https://uncreated.network";
+            if (!player.IsOnline)
+                return;
+
+            player.UnturnedPlayer.sendBrowserRequest(
+                _translations.RequestNotOwnedDonorWebRequest.Translate($"$ {usdCost.ToString("N2", player.Locale.CultureInfo)} USD"),
+                domain + "/products/kits"
+            );
+        });
     }
 
     public void MissingExclusiveOwnership(WarfarePlayer player, IRequestable<object> value)

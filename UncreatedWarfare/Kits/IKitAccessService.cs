@@ -14,6 +14,8 @@ using System.Reflection;
 using System.Text;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Database.Manual;
+using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Models.Kits;
 using Uncreated.Warfare.Kits.Loadouts;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Networking;
@@ -84,6 +86,7 @@ public partial class MySqlKitAccessService : IKitAccessService, IDisposable
     private readonly IKitDataStore? _kitDataStore;
     private readonly IPlayerService? _playerService;
     private readonly IRpcConnectionService? _rpcConnectionService;
+    private readonly Lazy<EventDispatcher>? _eventDispatcher;
     private readonly KitSignService? _kitSignService;
     private readonly LoadoutService? _loadoutService;
     private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
@@ -111,6 +114,7 @@ public partial class MySqlKitAccessService : IKitAccessService, IDisposable
             _kitDataStore = serviceProvider.GetRequiredService<IKitDataStore>();
             _loadoutService = serviceProvider.GetRequiredService<LoadoutService>();
             _configuration = serviceProvider.GetRequiredService<IConfiguration>();
+            _eventDispatcher = serviceProvider.GetRequiredService<Lazy<EventDispatcher>>();
 
             _changeToken = ChangeToken.OnChange(_configuration.GetReloadToken, OnConfigReloaded);
             OnConfigReloaded();
@@ -241,22 +245,8 @@ public partial class MySqlKitAccessService : IKitAccessService, IDisposable
                     updated = 0;
                 }
 
-                // update UI and cache
-                if (WarfareModule.IsActive && _playerService?.GetOnlinePlayerThreadSafe(steam64) is { } player)
-                {
-                    KitPlayerComponent kitPlayerComponent = player.Component<KitPlayerComponent>();
-                    kitPlayerComponent.AddAccessibleKit(primaryKey);
-
-                    if (_kitSignService != null && _kitDataStore != null && _kitDataStore.CachedKitsByKey.TryGetValue(primaryKey, out Kit? kit))
-                    {
-                        if (_loadoutService != null && kit.Type == KitType.Loadout)
-                            _ = await _loadoutService.GetLoadouts(steam64, KitInclude.Cached, CancellationToken.None).ConfigureAwait(false);
-                        _kitSignService.UpdateSigns(kit, player);
-                    }
-                }
-
                 // invoke local/remote events
-                ReceiveAccessUpdated(steam64.m_SteamID, primaryKey, instigator.m_SteamID, access);
+                await ReceiveAccessUpdated(steam64.m_SteamID, primaryKey, instigator.m_SteamID, access);
                 try
                 {
                     await SendAccessUpdated(steam64.m_SteamID, primaryKey, instigator.m_SteamID, access).IgnoreNoConnections();
@@ -290,7 +280,7 @@ public partial class MySqlKitAccessService : IKitAccessService, IDisposable
                 }
 
                 // invoke local/remote events
-                ReceiveAccessUpdated(steam64.m_SteamID, primaryKey, instigator.m_SteamID, null);
+                await ReceiveAccessUpdated(steam64.m_SteamID, primaryKey, instigator.m_SteamID, null);
                 try
                 {
                     await SendAccessUpdated(steam64.m_SteamID, primaryKey, instigator.m_SteamID, null).IgnoreNoConnections();
@@ -410,41 +400,8 @@ public partial class MySqlKitAccessService : IKitAccessService, IDisposable
                     }
                 }
 
-                // update UI and cache
-                if (WarfareModule.IsActive && _playerService?.GetOnlinePlayerThreadSafe(steam64) is { } player)
-                {
-                    KitPlayerComponent kitPlayerComponent = player.Component<KitPlayerComponent>();
-
-                    bool needsLoadoutUpdate = false;
-                    for (int i = 0; i < primaryKeys.Length; i++)
-                    {
-                        uint primaryKey = primaryKeys[i];
-                        if (!mask[i])
-                            continue;
-
-                        kitPlayerComponent.AddAccessibleKit(primaryKey);
-
-                        if (_kitSignService != null && _kitDataStore != null &&
-                            _kitDataStore.CachedKitsByKey.TryGetValue(primaryKey, out Kit? kit))
-                        {
-                            if (_loadoutService != null && kit.Type == KitType.Loadout)
-                                _ = await _loadoutService
-                                    .GetLoadouts(steam64, KitInclude.Cached, CancellationToken.None)
-                                    .ConfigureAwait(false);
-
-                            if (kit.Type == KitType.Loadout)
-                                needsLoadoutUpdate = true;
-                            else
-                                _kitSignService.UpdateSigns(kit, player);
-                        }
-                    }
-
-                    if (needsLoadoutUpdate)
-                        _kitSignService!.UpdateLoadoutSigns(player);
-                }
-
                 // invoke remote/local events
-                ReceiveAccessUpdatedBulk(steam64.m_SteamID, primaryKeys, instigator.m_SteamID, access);
+                await ReceiveAccessUpdatedBulk(steam64.m_SteamID, primaryKeys, instigator.m_SteamID, access);
                 try
                 {
                     await SendAccessUpdatedBulk(steam64.m_SteamID, primaryKeys, instigator.m_SteamID, access).IgnoreNoConnections();
@@ -507,7 +464,7 @@ public partial class MySqlKitAccessService : IKitAccessService, IDisposable
                 }
 
                 // invoke remote/local events
-                ReceiveAccessUpdatedBulk(steam64.m_SteamID, primaryKeys, instigator.m_SteamID, null);
+                await ReceiveAccessUpdatedBulk(steam64.m_SteamID, primaryKeys, instigator.m_SteamID, null);
                 try
                 {
                     await SendAccessUpdatedBulk(steam64.m_SteamID, primaryKeys, instigator.m_SteamID, null).IgnoreNoConnections();
@@ -592,7 +549,7 @@ public partial class MySqlKitAccessService : IKitAccessService, IDisposable
     }
 
     [RpcReceive]
-    public void ReceiveAccessUpdated(ulong player, uint primaryKey, ulong instigator, KitAccessType? newAccess)
+    public async Task ReceiveAccessUpdated(ulong player, uint primaryKey, ulong instigator, KitAccessType? newAccess)
     {
         _logger.LogDebug($"Kit access updated for {player} on kit {primaryKey}: \"{newAccess?.ToString() ?? "no access"}\".");
 
@@ -606,16 +563,21 @@ public partial class MySqlKitAccessService : IKitAccessService, IDisposable
             _logger.LogError(ex, "Error thrown while invoking PlayerAccessUpdated.");
         }
 
-        if (!WarfareModule.IsActive)
+        if (_eventDispatcher == null || _kitDataStore == null)
             return;
 
-        string kitId;
+        Kit? kit = await _kitDataStore.QueryKitAsync(primaryKey, KitInclude.Default);
+        if (kit == null)
+            return;
 
-        if (_kitDataStore != null && _kitDataStore.CachedKitsByKey.TryGetValue(primaryKey, out Kit kit))
-            kitId = kit.Id;
-        else
-            kitId = primaryKey.ToString(CultureInfo.InvariantCulture);
-
+        await _eventDispatcher.Value.DispatchEventAsync(new KitAccessUpdated
+        {
+            Kit = kit,
+            HasAccess = newAccess.HasValue,
+            AccessType = newAccess.GetValueOrDefault(),
+            PlayerId = steamId
+        });
+        
         //if (newAccess.HasValue)
         //    // todo: ActionLog.Add(ActionLogType.ChangeKitAccess, player.ToString(CultureInfo.InvariantCulture) + " GIVEN ACCESS TO " + kitId + ", REASON: " + newAccess.Value, instigator);
         //else
@@ -623,22 +585,31 @@ public partial class MySqlKitAccessService : IKitAccessService, IDisposable
     }
 
     [RpcReceive]
-    public void ReceiveAccessUpdatedBulk(ulong player, uint[] primaryKeys, ulong instigator, KitAccessType? newAccess)
+    public async Task ReceiveAccessUpdatedBulk(ulong player, uint[] primaryKeys, ulong instigator, KitAccessType? newAccess)
     {
         if (primaryKeys.Length == 0)
             return;
 
         if (primaryKeys.Length == 1)
         {
-            ReceiveAccessUpdated(player, primaryKeys[0], instigator, newAccess);
+            await ReceiveAccessUpdated(player, primaryKeys[0], instigator, newAccess);
             return;
         }
 
         _logger.LogDebug($"Kit access updated for {player} on kits {string.Join(", ", primaryKeys)}: \"{newAccess?.ToString() ?? "no access"}\".");
 
         CSteamID steamId = new CSteamID(player);
-        foreach (uint pk in primaryKeys)
+        UniTask[] tasks = new UniTask[primaryKeys.Length];
+
+        List<Kit> kits = new List<Kit>(primaryKeys.Length);
+        if (_kitDataStore != null)
         {
+            await _kitDataStore.QueryKitsAsync(KitInclude.Default, kits, x => primaryKeys.Contains(x.PrimaryKey));
+        }
+
+        for (int i = 0; i < primaryKeys.Length; i++)
+        {
+            uint pk = primaryKeys[i];
             try
             {
                 PlayerAccessUpdated?.Invoke(steamId, pk, newAccess);
@@ -648,20 +619,30 @@ public partial class MySqlKitAccessService : IKitAccessService, IDisposable
                 _logger.LogError(ex, "Error thrown while invoking PlayerAccessUpdated.");
             }
 
-            if (!WarfareModule.IsActive)
+            if (_eventDispatcher == null)
                 continue;
 
-            string kitId;
+            Kit kit = kits.Find(x => x.Key == pk);
+            if (kit == null)
+                return;
 
-            if (_kitDataStore != null && _kitDataStore.CachedKitsByKey.TryGetValue(pk, out Kit kit))
-                kitId = kit.Id;
-            else
-                kitId = pk.ToString(CultureInfo.InvariantCulture);
+            tasks[i] = _eventDispatcher.Value.DispatchEventAsync(new KitAccessUpdated
+            {
+                PlayerId = steamId,
+                HasAccess = newAccess.HasValue,
+                AccessType = newAccess.GetValueOrDefault(),
+                Kit = kit
+            });
 
             //if (newAccess.HasValue)
             //    // todo: ActionLog.Add(ActionLogType.ChangeKitAccess, player.ToString(CultureInfo.InvariantCulture) + " GIVEN ACCESS TO " + kitId + ", REASON: " + newAccess.Value, instigator);
             //else
             //    // todo: ActionLog.Add(ActionLogType.ChangeKitAccess, player.ToString(CultureInfo.InvariantCulture) + " DENIED ACCESS TO " + kitId, instigator);
+        }
+
+        if (WarfareModule.IsActive)
+        {
+            await UniTask.WhenAll(tasks);
         }
     }
 

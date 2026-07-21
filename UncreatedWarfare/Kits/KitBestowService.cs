@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Models.Kits;
@@ -373,6 +374,10 @@ public class KitBestowService
 /// </summary>
 public readonly struct KitBestowData
 {
+#if KIT_PROFILING
+    public readonly Stopwatch Stopwatch;
+#endif
+
     public Kit Kit { get; }
     public IReadOnlyList<KitLayoutTransformation>? Layouts { get; }
     public bool IsLowAmmo { get; init; }
@@ -383,6 +388,9 @@ public readonly struct KitBestowData
     public KitBestowData(Kit kit) : this(kit, null) { }
     internal KitBestowData(Kit kit, IReadOnlyList<KitLayoutTransformation>? layouts)
     {
+#if KIT_PROFILING
+        Stopwatch = new Stopwatch();
+#endif
         Kit = kit;
         Layouts = layouts;
     }

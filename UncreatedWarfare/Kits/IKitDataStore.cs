@@ -12,6 +12,7 @@ using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Logging;
 using Uncreated.Warfare.Events.Models;
+using Uncreated.Warfare.Events.Models.Kits;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Kits.Loadouts;
 using Uncreated.Warfare.Models.Factions;
@@ -288,7 +289,7 @@ public readonly struct PaginationInfo(int pageNumber, int pageSize) : IEquatable
     }
 }
 
-public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAsyncEventListener<PlayerPending>, IHostedService
+public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAsyncEventListener<PlayerPending>, IHostedService, IAsyncEventListener<KitUpdated>
 {
     private readonly IKitsDbContext _dbContext;
     private readonly IFactionDataStore _factionDataStore;
@@ -296,7 +297,7 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
     private readonly LanguageService? _languageService;
     private readonly ILogger<MySqlKitsDataStore> _logger;
     private readonly IPlayerService? _playerService;
-    private readonly KitSignService? _kitSigns;
+    private readonly Lazy<KitSignService>? _kitSigns;
     private readonly ActionLoggerService? _actionLog;
     private bool _isInUpdate;
     private bool _isInAdd;
@@ -337,7 +338,7 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
 
         if (WarfareModule.IsActive)
         {
-            _kitSigns = serviceProvider.GetService<KitSignService>();
+            _kitSigns = serviceProvider.GetService<Lazy<KitSignService>>();
             _actionLog = serviceProvider.GetService<ActionLoggerService>();
             CacheEnabled = true;
         }
@@ -417,6 +418,29 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
         }
 
         _logger.LogConditional($"Cached pending player's loadouts: {e.Steam64.m_SteamID}.");
+    }
+
+    async UniTask IAsyncEventListener<KitUpdated>.HandleEventAsync(KitUpdated e, IServiceProvider serviceProvider, CancellationToken token)
+    {
+        if (_idCache == null || _keyCache == null)
+            return;
+
+        Kit? newKit = await QueryKitAsync(e.Kit.Key, KitInclude.Cached, token);
+        if (newKit == null)
+        {
+            _idCache.TryRemove(e.Kit.Id, out _);
+            _keyCache.TryRemove(e.Kit.Key, out _);
+        }
+        else
+        {
+            if (!string.Equals(newKit.Id, e.Kit.Id, StringComparison.Ordinal))
+                _idCache.TryRemove(e.Kit.Id, out _);
+
+            _idCache[newKit.Id] = newKit;
+            _keyCache[newKit.Key] = newKit;
+        }
+
+        _logger.LogConditional($"Kit updated in cache: {e.Kit.Id}.");
     }
 
     /// <inheritdoc />
@@ -636,18 +660,18 @@ public class MySqlKitsDataStore : IKitDataStore, IEventListener<PlayerLeft>, IAs
     private void UpdateSigns(string kitId, WarfarePlayer? player)
     {
         if (player != null)
-            _kitSigns?.UpdateSigns(kitId, player);
+            _kitSigns?.Value.UpdateSigns(kitId, player);
         else
-            _kitSigns?.UpdateSigns(kitId);
+            _kitSigns?.Value.UpdateSigns(kitId);
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     private void UpdateLoadouts(WarfarePlayer? player)
     {
         if (player != null)
-            _kitSigns?.UpdateLoadoutSigns(player);
+            _kitSigns?.Value.UpdateLoadoutSigns(player);
         else
-            _kitSigns?.UpdateLoadoutSigns();
+            _kitSigns?.Value.UpdateLoadoutSigns();
     }
 
     public async Task<KitModel?> DeleteKitAsync(uint primaryKey, KitInclude include = KitInclude.Base, CancellationToken token = default)

@@ -27,7 +27,10 @@ public class RequestTranslations : TranslationCollection
     public readonly Translation<int, int> RequestNotOwnedCreditsCannotAfford = new Translation<int, int>("<#a8918a>You only have <#b8ffc1>C </color><#ffffff>{0}</color> / <#b8ffc1>C </color><#ffffff>{1}</color> needed to unlock this.");
 
     [TranslationData("Sent when a player tries to request something that costs real money.")]
-    public readonly Translation<string> RequestNotOwnedDonor = new Translation<string>("<#a8918a>You don't have access to this premium content. This is available for <#ffffff>{0}</color> and can be purchased in our <#7483c4>Discord</color>.");
+    public readonly Translation<string> RequestNotOwnedDonor = new Translation<string>("<#a8918a>You don't have access to this premium content. This is available for <#ffffff>{0}</color> and can be purchased on our website.");
+
+    [TranslationData("Sent when a player tries to request something that costs real money, on a URL popup.")]
+    public readonly Translation<string> RequestNotOwnedDonorWebRequest = new Translation<string>("You don't have access to this premium content. This is available for {0} and can be purchased on our website.");
 
     [TranslationData("Sent when a player tries to request something that they haven't been given access to, such as an exclusive kit.")]
     public readonly Translation RequestMissingAccess = new Translation("<#a8918a>You don't have access to this content.");
@@ -251,6 +254,9 @@ public class RequestKitsTranslations : TranslationCollection
 
     [TranslationData("Sent when a player tries to request a kit that needs to be set up by an admin, or is in the process of being set up.")]
     public readonly Translation NeedsSetup = new Translation("Set up required by admin");
+
+    [TranslationData("Sent when a player tries to request a kit that hasn't been paid for yet.")]
+    public readonly Translation Unpaid = new Translation("Still in cart");
 
     [TranslationData("Sent when a player tries to request a kit that is disabled or out of date.")]
     public readonly Translation KitDisabled = new Translation("Kit disabled");

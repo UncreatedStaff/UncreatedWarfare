@@ -127,7 +127,7 @@ public class Kit : IRequestable<Kit>, ITranslationArgument
     /// <summary>
     /// If the kit has been disabled.
     /// </summary>
-    /// <remarks>This also indicates that a loadout is locked while it's undergoing creation or maintenance.</remarks>
+    /// <remarks>This also indicates that a loadout is locked while it's undergoing creation or maintenance, or if it hasn't been paid for yet.</remarks>
     public bool IsLocked { get; private set; }
 
     /// <summary>

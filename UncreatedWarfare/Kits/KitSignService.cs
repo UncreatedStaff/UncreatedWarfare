@@ -15,15 +15,18 @@ public class KitSignService :
     IEventListener<PlayerKitChanged>,
     IEventListener<SquadMemberJoined>,
     IEventListener<SquadMemberLeft>,
+    IEventListener<KitAccessUpdated>,
     IEventListener<KitUpdated>
 {
     private readonly SignInstancer _signs;
     private readonly IPlayerService _playerService;
+    private readonly LoadoutService _loadoutService;
 
-    public KitSignService(SignInstancer signs, IPlayerService playerService)
+    public KitSignService(SignInstancer signs, IPlayerService playerService, LoadoutService loadoutService)
     {
         _signs = signs;
         _playerService = playerService;
+        _loadoutService = loadoutService;
     }
 
     /// <summary>
@@ -309,5 +312,46 @@ public class KitSignService :
     public void HandleEvent(KitCreated e, IServiceProvider serviceProvider)
     {
         UpdateSigns(e.Kit);
+    }
+
+    [EventListener(MustRunInstantly = true, RequireActiveLayout = true)]
+    public void HandleEvent(KitAccessUpdated e, IServiceProvider serviceProvider)
+    {
+        UpdateSigns(e.Kit);
+        WarfarePlayer? player = _playerService.GetOnlinePlayerOrNull(e.PlayerId);
+        if (player == null)
+            return;
+
+        KitPlayerComponent component = player.Component<KitPlayerComponent>();
+
+        if (e.HasAccess)
+            component.AddAccessibleKit(e.Kit.Key);
+        else
+            component.RemoveAccessibleKit(e.Kit.Key);
+
+        if (e.Kit.Type != KitType.Loadout)
+        {
+            UpdateSignsIntl(e.Kit, player);
+            return;
+        }
+
+        Task.Run(async () =>
+        {
+            try
+            {
+                // recache loadouts
+                _ = await _loadoutService.GetLoadouts(e.PlayerId, KitInclude.Cached, CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                WarfareModule.Singleton.GlobalLogger.LogError(ex, "Error updating loadouts after access was changed.");
+            }
+            finally
+            {
+                await UniTask.SwitchToMainThread();
+                if (player.IsOnline)
+                    UpdateLoadoutSignsIntl(player);
+            }
+        });
     }
 }
