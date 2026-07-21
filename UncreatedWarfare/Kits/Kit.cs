@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Immutable;
+using System.ComponentModel;
 using Uncreated.Warfare.Database;
 using Uncreated.Warfare.Interaction.Requests;
 using Uncreated.Warfare.Kits.Items;
@@ -38,6 +39,8 @@ namespace Uncreated.Warfare.Kits;
 /// </summary>
 public class Kit : IRequestable<Kit>, ITranslationArgument
 {
+    private KitItemClothingCache _clothingCache;
+
     private IKitItem[]? _items;
     private UnlockRequirement[]? _unlockRequirements;
     private Skillset[]? _skillsets;
@@ -272,6 +275,17 @@ public class Kit : IRequestable<Kit>, ITranslationArgument
 
     public bool BypassGlobalCooldown => Class is Class.Crewman or Class.Pilot;
 
+    /// <summary>
+    /// Gets the clothing item at the given slot. Returns <see langword="null"/> if nothing is equipped in that slot.
+    /// </summary>
+    /// <exception cref="NotIncludedException">Items are not included.</exception>
+    /// <exception cref="InvalidEnumArgumentException">Invalid value for <paramref name="type"/>.</exception>
+    public IClothingItem? GetClothingItem(ClothingType type)
+    {
+        _clothingCache.EnsureCreated(this);
+        return _clothingCache[type];
+    }
+
 #pragma warning disable CS8618
     internal Kit(KitModel model, IFactionDataStore factionDataStore, ICachableLanguageDataStore languageDataStore)
     {
@@ -373,15 +387,24 @@ public class Kit : IRequestable<Kit>, ITranslationArgument
 
     private void UpdateItemsFromModel(List<KitItemModel> items)
     {
-        IKitItem[] array = new IKitItem[items.Count];
-
-        for (int i = 0; i < array.Length; ++i)
+        if (items.Count == 0)
         {
-            array[i] = items[i].CreateRuntimeItem();
+            _items = Array.Empty<IKitItem>();
+        }
+        else
+        {
+            IKitItem[] array = new IKitItem[items.Count];
+
+            for (int i = 0; i < array.Length; ++i)
+            {
+                array[i] = items[i].CreateRuntimeItem();
+            }
+
+            _items = array;
         }
 
-        _items = array;
         _itemDescriptors?.Clear();
+        _clothingCache.Reset();
     }
 
     private void UpdateSkillsetsFromModel(List<KitSkillset> skillsets)
@@ -520,5 +543,85 @@ public class Kit : IRequestable<Kit>, ITranslationArgument
         }
 
         return GetDisplayName(parameters.Language, true);
+    }
+
+    internal struct KitItemClothingCache
+    {
+        internal bool Created;
+
+        public IClothingItem? Shirt;
+        public IClothingItem? Pants;
+        public IClothingItem? Vest;
+        public IClothingItem? Hat;
+        public IClothingItem? Mask;
+        public IClothingItem? Backpack;
+        public IClothingItem? Glasses;
+
+        public void EnsureCreated(Kit kit)
+        {
+            if (Created)
+                return;
+
+            IKitItem[] items = kit.Items;
+            foreach (IKitItem item in items)
+            {
+                if (item is not IClothingItem clothing)
+                    continue;
+
+                this[clothing.ClothingType] ??= clothing;
+            }
+
+            Created = true;
+        }
+
+        public void Reset()
+        {
+            Created = false; // better thread-safety
+            this = default;
+        }
+
+        public IClothingItem? this[ClothingType type]
+        {
+            readonly get => type switch
+            {
+                ClothingType.Shirt => Shirt,
+                ClothingType.Pants => Pants,
+                ClothingType.Vest => Vest,
+                ClothingType.Hat => Hat,
+                ClothingType.Mask => Mask,
+                ClothingType.Backpack => Backpack,
+                ClothingType.Glasses => Glasses,
+                _ => throw new InvalidEnumArgumentException(nameof(type), (int)type, typeof(ClothingType))
+            };
+            set
+            {
+                switch (type)
+                {
+                    case ClothingType.Shirt:
+                        Shirt = value; break;
+
+                    case ClothingType.Pants:
+                        Pants = value; break;
+
+                    case ClothingType.Vest:
+                        Vest = value; break;
+
+                    case ClothingType.Hat:
+                        Hat = value; break;
+
+                    case ClothingType.Mask:
+                        Mask = value; break;
+
+                    case ClothingType.Backpack:
+                        Backpack = value; break;
+
+                    case ClothingType.Glasses:
+                        Glasses = value; break;
+
+                    default:
+                        throw new InvalidEnumArgumentException(nameof(type), (int)type, typeof(ClothingType));
+                }
+            }
+        }
     }
 }

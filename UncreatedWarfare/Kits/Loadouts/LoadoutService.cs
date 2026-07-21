@@ -159,6 +159,7 @@ public partial class LoadoutService
                 Kit? remoteKit = await _kitSql.QueryKitAsync(primaryKey, include, token).ConfigureAwait(false);
                 return remoteKit;
             }
+            catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
             catch (RpcNoConnectionsException) { }
             catch (Exception ex)
             {
@@ -216,6 +217,7 @@ public partial class LoadoutService
                 Kit? remoteKit = await _kitSql.QueryKitAsync(primaryKey, include, token).ConfigureAwait(false);
                 return remoteKit;
             }
+            catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
             catch (RpcNoConnectionsException) { }
             catch (Exception ex)
             {
@@ -274,6 +276,7 @@ public partial class LoadoutService
                 
                 _logger.LogWarning($"Kit {pk} deleted before able to be used by local.");
             }
+            catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
             catch (RpcNoConnectionsException) { }
             catch (Exception ex)
             {
@@ -360,6 +363,7 @@ public partial class LoadoutService
                 Kit? remoteKit = await _kitSql.QueryKitAsync(kitPk, include, token).ConfigureAwait(false);
                 return remoteKit;
             }
+            catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
             catch (RpcNoConnectionsException) { }
             catch (Exception ex)
             {

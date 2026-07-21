@@ -74,6 +74,7 @@ partial class KitSelectionUI
 
                 await sendDetails;
             }
+            catch (OperationCanceledException) when (!player.IsOnline) { }
             catch (Exception ex)
             {
                 GetLogger().LogError(ex, $"Error isolating kit {favoritedKit.Id} for {player}.");
@@ -103,6 +104,7 @@ partial class KitSelectionUI
             {
                 requested = await _kitRequestService.RequestAsync(player, favKit, new RequestCommandResultHandler(_chatService, _configuration, _requestTranslations), player.DisconnectToken);
             }
+            catch (OperationCanceledException) when (!player.IsOnline) { }
             catch (Exception ex)
             {
                 GetLogger().LogError(ex, $"Error requesting kit {favKit.Id} for {player}.");
@@ -260,6 +262,7 @@ partial class KitSelectionUI
                     await UpdateKitAsync(oldKit, player, player.DisconnectToken);
                 }
             }
+            catch (OperationCanceledException) when (!player.IsOnline) { }
             catch (Exception ex)
             {
                 GetLogger().LogError(ex, $"Error requesting kit ({@class}, {kitIndex}: {kit.Id}) for {player}.");
@@ -330,6 +333,7 @@ partial class KitSelectionUI
                     _commandDispatcher?.FindCommand(typeof(KitBackCommand))!
                 );
             }
+            catch (OperationCanceledException) when (!player.IsOnline) { }
             catch (Exception ex)
             {
                 GetLogger().LogError(ex, $"Error previewing ({@class}, {kitIndex}: {kit?.Id}) for {player}.");
@@ -389,9 +393,22 @@ partial class KitSelectionUI
                         bool requested = false;
                         try
                         {
-                            // todo: remove ammo from data.AmmoSupply if != null and also this should show on the button
+                            float ammoCost = 0;
+                            if (data.AmmoStorage != null)
+                            {
+                                await UniTask.SwitchToMainThread();
+                                ammoCost = _rearmService.GetRearmCost(player, kit);
+                            }
+
                             requested = await _kitRequestService.RequestAsync(player, kit, new RequestCommandResultHandler(_chatService, _configuration, _requestTranslations), player.DisconnectToken);
+
+                            if (requested && data.AmmoStorage != null && ammoCost > 0)
+                            {
+                                await UniTask.SwitchToMainThread();
+                                _rearmService.ApplyRearm(player, ammoCost, data.AmmoStorage, kit);
+                            }
                         }
+                        catch (OperationCanceledException) when (!player.IsOnline) { }
                         catch (Exception ex)
                         {
                             GetLogger().LogError(ex, $"Error requesting kit {kit.Id} for {player} via button press.");
@@ -425,9 +442,17 @@ partial class KitSelectionUI
                         {
                             Task.Run(async () =>
                             {
-                                await _kitRequestService.BuyKitAsync(player, kit, player.UnturnedPlayer.look.aim.position + player.UnturnedPlayer.look.aim.forward * 0.3f, player.DisconnectToken);
-                                await TempUncloseAsync(player);
-                                await UpdateKitAsync(kit, player);
+                                try
+                                {
+                                    await _kitRequestService.BuyKitAsync(player, kit, player.UnturnedPlayer.look.aim.position + player.UnturnedPlayer.look.aim.forward * 0.3f, player.DisconnectToken);
+                                    await TempUncloseAsync(player);
+                                    await UpdateKitAsync(kit, player);
+                                }
+                                catch (OperationCanceledException) when (!player.IsOnline) { }
+                                catch (Exception ex)
+                                {
+                                    GetLogger().LogError(ex, "Error buying kit");
+                                }
                             });
                         }, (player, _, in _, ref _, ref _) =>
                         {
@@ -487,24 +512,49 @@ partial class KitSelectionUI
                     if (_acountLinkingService == null)
                         break;
 
-                    _ = CloseAsync(player);
+                    _ = TempCloseAsync(player);
+
                     Task.Run(async () =>
                     {
                         try
                         {
                             SteamDiscordPendingLink link = await _acountLinkingService.BeginLinkFromSteamAsync(player.Steam64);
                             await UniTask.SwitchToMainThread();
-                            string token = link.Token;
-                            string command = $"/link token:{token}";
-                            if (player.IsOnline)
-                            {
-                                // TODO: replace this with some kind of copy text UI
-                                unturnedPlayer.sendBrowserRequest(
-                                    _translations.PurchaseButtonNotBoostingLinkDiscordRequest.Translate(player, canUseIMGUI: true),
-                                    domain + "/copy-text?text=" + Uri.EscapeDataString(command)
-                                );
-                            }
+
+                            player.DisconnectToken.ThrowIfCancellationRequested();
+                            string command = $"/link token:{link.Token}";
+
+                            // confirm purchase kit modal
+                            url = DiscordCommand.GetDiscordJoinUrl(_configuration);
+                            message = ToastMessage.CopyPopup(
+                                command,
+                                _translations.ModalLinkDiscordKitHeading.Translate(player),
+                                _translations.ModalLinkDiscordKitDescription.Translate(url, player),
+                                _translations.ModalLinkDiscordCloseButton.Translate(player),
+                                callbacks: new CopyPopupCallbacks((player, in _, ref _, ref _) =>
+                                {
+                                    UniTask.Create(async () =>
+                                    {
+                                        await UniTask.SwitchToMainThread();
+                                        try
+                                        {
+                                            if (!player.IsOnline) return;
+                                            await TempUncloseAsync(player);
+                                            if (!player.IsOnline) return;
+                                            await UpdateKitAsync(kit, player);
+                                        }
+                                        catch (OperationCanceledException) when (!player.IsOnline) { }
+                                        catch (Exception ex)
+                                        {
+                                            GetLogger().LogError(ex, "Error ending link for player.");
+                                        }
+                                    });
+                                })
+                            );
+
+                            player.SendToast(message);
                         }
+                        catch (OperationCanceledException) when (!player.IsOnline) { }
                         catch (Exception ex)
                         {
                             GetLogger().LogError(ex, "Error starting link for player.");
@@ -539,6 +589,7 @@ partial class KitSelectionUI
                     break;
             }
         }
+        catch (OperationCanceledException) when (!player.IsOnline) { }
         catch (Exception ex)
         {
             GetLogger().LogError(ex, $"Error unlocking ({@class}, {kitIndex}: {kit.Id}) for {player}.");

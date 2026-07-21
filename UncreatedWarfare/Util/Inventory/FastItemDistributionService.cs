@@ -2,6 +2,7 @@ using SDG.NetTransport;
 using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Kits.Cosmetics;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
@@ -15,16 +16,18 @@ public class FastItemDistributionService : IItemDistributionService
 
     private readonly IKitItemResolver _itemResolver;
     private readonly DroppedItemTracker _droppedItemTracker;
+    private readonly CosmeticInstancer _cosmeticInstancer;
 
     private bool _isAutoClearing;
 
-    public FastItemDistributionService(IKitItemResolver itemResolver, DroppedItemTracker droppedItemTracker)
+    public FastItemDistributionService(IKitItemResolver itemResolver, DroppedItemTracker droppedItemTracker, CosmeticInstancer cosmeticInstancer)
     {
         if (!ItemUtility.SupportsFastKits)
             throw new NotSupportedException("Fast kits not supported.");
 
         _itemResolver = itemResolver;
         _droppedItemTracker = droppedItemTracker;
+        _cosmeticInstancer = cosmeticInstancer;
     }
 
     public int ClearInventory<TState>(WarfarePlayer player, TState state) where TState : IItemClearState
@@ -231,11 +234,11 @@ public class FastItemDistributionService : IItemDistributionService
                 KitItemResolutionResult result = _itemResolver.ResolveKitItem(clothingItem, stateKit, stateTeam);
 
                 EItemType clothingItemType = clothingItem.ClothingType.GetItemType();
-                if (result.Asset == null || result.Asset.type != clothingItemType || !state.ShouldGrantItem(clothingItem, ref result) || result.Asset == null || result.Asset.type != clothingItemType)
+                if (result.Asset == null || result.Asset.type != clothingItemType || !state.ShouldGrantItem(clothingItem, ref result) || result.Asset is not ItemClothingAsset clothingAsset || result.Asset.type != clothingItemType)
                     continue;
 
                 clothingFlag |= 1 << (int)clothingItem.ClothingType;
-                ItemUtility.SendWearClothing(nativePlayer, result.Asset, clothingItem.ClothingType, 100, result.State, !hasPlayedEffect);
+                _cosmeticInstancer.SetClothing(clothingItem.ClothingType, player, clothingAsset, 100, result.State, !hasPlayedEffect);
                 hasPlayedEffect = true;
                 ++ct;
             }

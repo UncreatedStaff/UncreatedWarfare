@@ -174,12 +174,15 @@ public class StrategyMap : IDisposable, IEventListener<ClaimBedRequested>
         ChatService chatService = serviceProvider.GetRequiredService<ChatService>();
         DeploymentTranslations translations = serviceProvider.GetRequiredService<TranslationInjection<DeploymentTranslations>>().Value;
 
-        KitPlayerComponent kitComp = e.Player.Component<KitPlayerComponent>();
-        if (!kitComp.IsArmed)
+        if (!d.Deployable.AllowUnarmedDeploy)
         {
-            chatService.Send(e.Player, translations.DeployNoKit);
-            e.Cancel();
-            return;
+            KitPlayerComponent kitComp = e.Player.Component<KitPlayerComponent>();
+            if (!kitComp.IsArmed)
+            {
+                chatService.Send(e.Player, translations.DeployNoKit);
+                e.Cancel();
+                return;
+            }
         }
 
         DeploymentService deploymentService = serviceProvider.GetRequiredService<DeploymentService>();

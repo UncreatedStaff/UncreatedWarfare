@@ -1,7 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
-using SDG.NetTransport;
 using System;
-using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Patterns;
@@ -162,9 +160,10 @@ public class PopupUI : UnturnedUI
                 callback?.Invoke(warfarePlayer, index, in message, ref consumed, ref closeWindow);
             }
 
-            if (!consumed && OnToastButtonPressed != null)
+            PopupButtonPressed? onToastButtonPressed = OnToastButtonPressed;
+            if (!consumed && onToastButtonPressed != null)
             {
-                foreach (ToastPopupButtonPressed action in OnToastButtonPressed.GetInvocationList().Cast<ToastPopupButtonPressed>())
+                foreach (ToastPopupButtonPressed action in onToastButtonPressed.GetInvocationList().Cast<ToastPopupButtonPressed>())
                 {
                     action.Invoke(warfarePlayer, index, in message, ref consumed, ref closeWindow);
                     if (consumed)
@@ -177,9 +176,10 @@ public class PopupUI : UnturnedUI
         }
         else
         {
-            if (OnButtonPressed != null)
+            PopupButtonPressed? onButtonPressed = OnButtonPressed;
+            if (onButtonPressed != null)
             {
-                foreach (PopupButtonPressed action in OnButtonPressed.GetInvocationList().Cast<PopupButtonPressed>())
+                foreach (PopupButtonPressed action in onButtonPressed.GetInvocationList().Cast<PopupButtonPressed>())
                 {
                     action.Invoke(warfarePlayer, index, ref consumed, ref closeWindow);
                     if (consumed)

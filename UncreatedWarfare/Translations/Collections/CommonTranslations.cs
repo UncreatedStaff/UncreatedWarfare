@@ -74,4 +74,7 @@ public class CommonTranslations : TranslationCollection
 
     [TranslationData("Cancel button in the popup UI.")]
     public readonly Translation PopupCancel = new Translation("Cancel", TranslationOptions.TMProUI);
+
+    [TranslationData("Copy text popup default header.")]
+    public readonly Translation PopupCopyText = new Translation("Copy Text", TranslationOptions.TMProUI);
 }

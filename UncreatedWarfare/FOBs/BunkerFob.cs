@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using System;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;

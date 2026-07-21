@@ -49,6 +49,7 @@ internal class WarfareSteamApiService : ISteamApiService
 
                 data = request.downloadHandler.text;
             }
+            catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
             catch (Exception ex)
             {
                 if (ex is UnityWebRequestException { ResponseCode: (long)HttpStatusCode.Unauthorized })

@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Data;
 using Uncreated.Framework.UI.Patterns;
@@ -24,8 +25,8 @@ public class FlagListUI : UnturnedUI
     private readonly FlagUITranslations _translations;
     private readonly Func<CSteamID, FlagListUIData> _getFlagListUIData;
 
-    public readonly UnturnedLabel TicketCount = new UnturnedLabel("Tickets/TicketsNumber");
-    public readonly UnturnedLabel TicketsFlagIcon = new UnturnedLabel("Tickets/FactionFlagIcon");
+    public readonly UnturnedLabel TicketCount = new UnturnedLabel("TicketsNumber");
+    public readonly UnturnedLabel TicketsFlagIcon = new UnturnedLabel("FactionFlagIcon");
     public readonly UnturnedLabel GamemodeTitle = new UnturnedLabel("GamemodeName");
     public readonly FlagElement[] Rows = ElementPatterns.CreateArray<FlagElement>("Flag_{0}", 0, MaximumFlags);
 
@@ -41,8 +42,20 @@ public class FlagListUI : UnturnedUI
 
     public void ClearFromPlayer(WarfarePlayer player)
     {
+        if (GetData<FlagListUIData>(player.Steam64) is not { HasUI: true } data)
+            return;
+        
+        ApplyClear(player, data);
         ClearFromPlayer(player.UnturnedPlayer);
-        GetOrAddData(player).HasUI = false;
+    }
+
+    internal void ApplyClear(WarfarePlayer player, FlagListUIData data)
+    {
+        if (!data.HasUI)
+            return;
+
+        data.HasUI = false;
+        data.ResetCache();
     }
 
     internal FlagListUIData GetOrAddData(WarfarePlayer player)
@@ -55,6 +68,7 @@ public class FlagListUI : UnturnedUI
         return new FlagListUIData(steam64, this);
     }
 
+    [SkipLocalsInit]
     public void UpdateFlagList(IFlagListUIProvider flagProvider, ITicketTracker ticketTracker, string layoutName, LanguageSet set, bool ticketsOnly = false)
     {
         // hide UI for invalid teams
@@ -68,7 +82,7 @@ public class FlagListUI : UnturnedUI
                     continue;
 
                 ClearFromPlayer(player.Connection);
-                data.HasUI = false;
+                ApplyClear(player, data);
             }
 
             return;
@@ -101,7 +115,7 @@ public class FlagListUI : UnturnedUI
                 data.CustomTicket = null;
                 data.Bleed = TicketBleedSeverity.None;
                 data.TicketsFlag = null;
-                data.Rows = 1;
+                data.ResetCache();
                 GamemodeTitle.SetText(player, layoutName);
                 ticketsOnlyForThisPlayer = false;
             }
@@ -175,29 +189,37 @@ public class FlagListUI : UnturnedUI
                 if (index >= MaximumFlags)
                     break;
 
+                ref FlagRowInfo info = ref data.Cache[index];
                 FlagElement element = Rows[index];
                 ++index;
 
-                if (index >= data.Rows)
-                    element.Show(connection);
+                FlagRowInfo newInfo;
+                newInfo.Text = entry.Text;
+                newInfo.Visible = true;
 
-                element.Name.SetText(connection, entry.Text);
                 if (string.IsNullOrEmpty(entry.Icon))
                 {
-                    element.Icon.Hide(connection);
+                    newInfo.IconVisible = false;
+                    newInfo.Icon = string.Empty;
                 }
                 else
                 {
-                    element.Icon.SetText(connection, entry.Text);
-                    element.Icon.Show(connection);
+                    newInfo.IconVisible = true;
+                    newInfo.Icon = entry.Icon;
                 }
+
+                info.UpdateDifferences(in newInfo, element, player);
             }
 
-            for (int j = index; j < data.Rows; ++j)
+            for (int j = index; j < MaximumFlags; ++j)
             {
-                Rows[j].Root.Hide(connection);
+                ref FlagRowInfo info = ref data.Cache[j];
+                if (!info.Visible)
+                    break;
+
+                info.Visible = false;
+                Rows[j].Hide(connection);
             }
-            data.Rows = index;
         }
     }
 
@@ -205,10 +227,10 @@ public class FlagListUI : UnturnedUI
 
     public class FlagElement : PatternRoot
     {
-        [Pattern("Name", Mode = FormatMode.Format)]
+        [Pattern("Name")]
         public UnturnedLabel Name { get; set; }
 
-        [Pattern("Icon", Mode = FormatMode.Format)]
+        [Pattern("Icon")]
         public UnturnedLabel Icon { get; set; }
     }
 
@@ -216,20 +238,79 @@ public class FlagListUI : UnturnedUI
 
     internal class FlagListUIData : IUnturnedUIData
     {
+        internal FlagRowInfo[] Cache = new FlagRowInfo[MaximumFlags];
+        internal int Tickets;
+        internal TicketBleedSeverity Bleed;
+        internal bool HasUI;
+        internal string? CustomTicket;
+        internal FactionInfo? TicketsFlag;
+
         public CSteamID Player { get; }
         public UnturnedUI Owner { get; }
-        public bool HasUI { get; set; }
-        public FactionInfo? TicketsFlag { get; set; }
-        public int Tickets { get; set; }
-        public TicketBleedSeverity Bleed { get; set; }
-        public int Rows { get; set; } = 1;
-        public string? CustomTicket { get; set; }
         public FlagListUIData(CSteamID player, UnturnedUI owner)
         {
             Player = player;
             Owner = owner;
         }
 
+        internal void ResetCache()
+        {
+            for (int i = 0; i < Cache.Length; ++i)
+                Cache[i].Reset(i);
+        }
         UnturnedUIElement? IUnturnedUIData.Element => null;
+    }
+
+    private const string DefaultFlagText = "<#696969>unknown</color>";
+
+    internal struct FlagRowInfo
+    {
+        public string Text;
+        public string Icon;
+        public bool IconVisible;
+        public bool Visible;
+
+        public void Reset(int index)
+        {
+            Text = DefaultFlagText;
+            Icon = string.Empty;
+            IconVisible = false;
+            Visible = index <= 0;
+        }
+
+        public void UpdateDifferences(in FlagRowInfo data, FlagElement ui, WarfarePlayer player)
+        {
+            if (!data.Visible)
+            {
+                if (Visible)
+                    ui.Hide(player);
+                Visible = false;
+                return;
+            }
+
+            if (!Visible)
+            {
+                ui.Show(player);
+                Visible = true;
+            }
+
+            if (data.IconVisible && !string.Equals(data.Icon, Icon, StringComparison.Ordinal))
+            {
+                Icon = data.Icon;
+                ui.Icon.SetText(player, data.Icon);
+            }
+
+            if (data.IconVisible != IconVisible)
+            {
+                IconVisible = data.IconVisible;
+                ui.Icon.SetVisibility(player, IconVisible);
+            }
+
+            if (!string.Equals(data.Text, Text, StringComparison.OrdinalIgnoreCase))
+            {
+                Text = data.Text;
+                ui.Name.SetText(player, Text);
+            }
+        }
     }
 }

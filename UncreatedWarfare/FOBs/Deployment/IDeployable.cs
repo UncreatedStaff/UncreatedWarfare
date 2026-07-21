@@ -22,6 +22,11 @@ public interface IDeployable : ITranslationArgument
     bool IsSafeZone { get; }
 
     /// <summary>
+    /// Determines whether or not unarmed players can deploy here.
+    /// </summary>
+    bool AllowUnarmedDeploy => false;
+
+    /// <summary>
     /// Get the deployment delay in seconds.
     /// </summary>
     TimeSpan GetDelay(WarfarePlayer player);

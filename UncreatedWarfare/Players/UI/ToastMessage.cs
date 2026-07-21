@@ -44,6 +44,18 @@ public struct ToastMessage
         State = state;
     }
 
+    /// <summary>
+    /// Create an instance of <see cref="PopupUI"/> as a toast.
+    /// </summary>
+    /// <param name="title">The text to display as the title.</param>
+    /// <param name="desc">The text to display in the description section.</param>
+    /// <param name="btn1">The text of the first button, or <see langword="null"/> to default to <see cref="PopupUI.Okay"/>.</param>
+    /// <param name="btn2">The text of the second button, or <see langword="null"/> to not display this button.</param>
+    /// <param name="btn3">The text of the third button, or <see langword="null"/> to not display this button.</param>
+    /// <param name="btn4">The text of the fourth button, or <see langword="null"/> to not display this button.</param>
+    /// <param name="imageUrl">The URL of the image to display in the top right corner.</param>
+    /// <param name="callbacks">Callbacks to run for each button.</param>
+    /// <returns>A message that can be sent using <see cref="ToastPlayerExtensions.SendToast"/>.</returns>
     public static ToastMessage Popup(
         string title,
         string? desc,
@@ -100,5 +112,39 @@ public struct ToastMessage
         }
 
         return new ToastMessage(state, ToastMessageStyle.Popup, args!);
+    }
+
+    /// <summary>
+    /// Create an instance of <see cref="CopyPopupUI"/> as a toast.
+    /// </summary>
+    /// <param name="copyText">The text to be copied. This will display in a read-only input box that the player can select and copy from.</param>
+    /// <param name="title">The text to display as the title.</param>
+    /// <param name="desc">The text to display in the description section. The value "<c>&lt;copy/&gt;</c>" will be replaced with the keybind for copy depending on the player's OS.</param>
+    /// <param name="btn">The text of the close button, or <see langword="null"/> to default to <see cref="PopupUI.Okay"/>.</param>
+    /// <param name="callbacks">Callbacks to run for each button.</param>
+    /// <returns>A message that can be sent using <see cref="ToastPlayerExtensions.SendToast"/>.</returns>
+    public static ToastMessage CopyPopup(
+        string copyText,
+        string? title,
+        string? desc,
+        [ValueProvider("Uncreated.Warfare.Players.UI.PopupUI")] string? btn = null,
+        CopyPopupCallbacks callbacks = default)
+    {
+        object? state = callbacks.Button != null
+                        || callbacks.Text != null
+            ? callbacks
+            : null;
+
+        string?[] args;
+        if (btn != null)
+            args = [ copyText, title, desc, btn ];
+        else if (desc != null)
+            args = [ copyText, title, desc ];
+        else if (title != null)
+            args = [ copyText, title ];
+        else
+            return new ToastMessage(state, ToastMessageStyle.CopyPopup, copyText);
+
+        return new ToastMessage(state, ToastMessageStyle.CopyPopup, args!);
     }
 }

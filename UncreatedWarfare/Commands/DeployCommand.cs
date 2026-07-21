@@ -29,7 +29,7 @@ internal sealed class DeployCommand : IExecutableCommand
             throw Context.Reply(_translations.DeployLobbyRemoved);
         }
 
-        if (Context.MatchParameter(0, "cancel", "stop"))
+        if (Context.MatchParameter(0, "cancel", "stop", "c"))
         {
             if (comp.CurrentDeployment == null)
                 throw Context.Reply(_translations.DeployCancelNotDeploying);

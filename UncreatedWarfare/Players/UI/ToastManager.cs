@@ -67,6 +67,13 @@ public sealed class ToastManager : IPlayerComponent, IDisposable
 
     private static void InitToastData(IServiceProvider serviceProvider)
     {
+        // each channel maintains a separate queue
+        const int chnlCenterToast = 0;
+        const int chnlMiniToast = 1;
+        const int chnlProgressBar = 2;
+        const int chnlPopup = 3;
+        const int chnlHazard = 4;
+        
         AssetConfiguration configuration = serviceProvider.GetRequiredService<AssetConfiguration>();
         ILogger logger = serviceProvider.GetRequiredService<ILogger<ToastManager>>();
 
@@ -76,46 +83,52 @@ public sealed class ToastManager : IPlayerComponent, IDisposable
         int len = vals.Length == 0 ? 0 : (int)vals.Max() + 1;
 
         ToastMessages = new ToastMessageInfo[len];
-        ToastMessages[(int)ToastMessageStyle.GameOver] = new ToastMessageInfo(ToastMessageStyle.GameOver, 0, serviceProvider.GetRequiredService<WinToastUI>(), WinToastUI.SendToastCallback, inturrupt: true)
+        ToastMessages[(int)ToastMessageStyle.GameOver] = new ToastMessageInfo(ToastMessageStyle.GameOver, chnlCenterToast, serviceProvider.GetRequiredService<WinToastUI>(), WinToastUI.SendToastCallback, inturrupt: true)
         {
             ResendNames = [ "Canvas/Content/Header", "Canvas/Content/Header/Team1Tickets", "Canvas/Content/Header/Team2Tickets", "Canvas/Content/Header/Team1Image", "Canvas/Content/Header/Team2Image" ],
             ClearableSlots = 3
         };
-        ToastMessages[(int)ToastMessageStyle.Large] = new ToastMessageInfo(ToastMessageStyle.Large, 0, configuration.GetAssetLink<EffectAsset>("UI:Toasts:Large"), canResend: true)
+        ToastMessages[(int)ToastMessageStyle.Large] = new ToastMessageInfo(ToastMessageStyle.Large, chnlCenterToast, configuration.GetAssetLink<EffectAsset>("UI:Toasts:Large"), canResend: true)
         {
             ResendNames = [ "Canvas/Content/Top", "Canvas/Content/Middle", "Canvas/Content/Bottom" ],
             ClearableSlots = 3
         };
-        ToastMessages[(int)ToastMessageStyle.Medium] = new ToastMessageInfo(ToastMessageStyle.Medium, 0, configuration.GetAssetLink<EffectAsset>("UI:Toasts:Medium"), canResend: true)
+        ToastMessages[(int)ToastMessageStyle.Medium] = new ToastMessageInfo(ToastMessageStyle.Medium, chnlCenterToast, configuration.GetAssetLink<EffectAsset>("UI:Toasts:Medium"), canResend: true)
         {
             ResendNames = [ "Canvas/Content/Middle" ],
             ClearableSlots = 1
         };
-        ToastMessages[(int)ToastMessageStyle.Mini] = new ToastMessageInfo(ToastMessageStyle.Mini, 1, configuration.GetAssetLink<EffectAsset>("UI:Toasts:Mini"), canResend: true)
+        ToastMessages[(int)ToastMessageStyle.Mini] = new ToastMessageInfo(ToastMessageStyle.Mini, chnlMiniToast, configuration.GetAssetLink<EffectAsset>("UI:Toasts:Mini"), canResend: true)
         {
             ResendNames = [ "Canvas/Content/Text" ],
             ClearableSlots = 1
         };
-        ToastMessages[(int)ToastMessageStyle.ProgressBar] = new ToastMessageInfo(ToastMessageStyle.ProgressBar, 2, configuration.GetAssetLink<EffectAsset>("UI:Toasts:Progress"), inturrupt: true, canResend: true)
+        ToastMessages[(int)ToastMessageStyle.ProgressBar] = new ToastMessageInfo(ToastMessageStyle.ProgressBar, chnlProgressBar, configuration.GetAssetLink<EffectAsset>("UI:Toasts:Progress"), inturrupt: true, canResend: true)
         {
             ResendNames = [ "Canvas/Content/Progress", "Canvas/Content/Bar" ],
             ClearableSlots = 1
         };
-        ToastMessages[(int)ToastMessageStyle.Tip] = new ToastMessageInfo(ToastMessageStyle.Tip, 0, configuration.GetAssetLink<EffectAsset>("UI:Toasts:Tip"), canResend: true)
+        ToastMessages[(int)ToastMessageStyle.Tip] = new ToastMessageInfo(ToastMessageStyle.Tip, chnlCenterToast, configuration.GetAssetLink<EffectAsset>("UI:Toasts:Tip"), canResend: true)
         {
             ResendNames = [ "Canvas/Content/Text" ],
             ClearableSlots = 1
         };
-        ToastMessages[(int)ToastMessageStyle.Popup] = new ToastMessageInfo(ToastMessageStyle.Popup, 3, serviceProvider.GetRequiredService<PopupUI>(), PopupUI.SendToastCallback, requiresClearing: true)
+        ToastMessages[(int)ToastMessageStyle.Popup] = new ToastMessageInfo(ToastMessageStyle.Popup, chnlPopup, serviceProvider.GetRequiredService<PopupUI>(), PopupUI.SendToastCallback, requiresClearing: true)
         {
             Duration = 300,
             DisableFlags = EPluginWidgetFlags.ShowCenterDot | EPluginWidgetFlags.ShowInteractWithEnemy,
             EnableFlags = EPluginWidgetFlags.ForceBlur | EPluginWidgetFlags.Modal
         };
-        ToastMessages[(int)ToastMessageStyle.FlashingWarning] = new ToastMessageInfo(ToastMessageStyle.FlashingWarning, 4, configuration.GetAssetLink<EffectAsset>("UI:Toasts:Alert"), requiresClearing: true, canResend: true)
+        ToastMessages[(int)ToastMessageStyle.FlashingWarning] = new ToastMessageInfo(ToastMessageStyle.FlashingWarning, chnlHazard, configuration.GetAssetLink<EffectAsset>("UI:Toasts:Alert"), requiresClearing: true, canResend: true)
         {
             ResendNames = [ "Canvas/Text" ],
             ClearableSlots = 1
+        };
+        ToastMessages[(int)ToastMessageStyle.CopyPopup] = new ToastMessageInfo(ToastMessageStyle.CopyPopup, chnlPopup, serviceProvider.GetRequiredService<CopyPopupUI>(), CopyPopupUI.SendToastCallback, requiresClearing: true)
+        {
+            Duration = 300,
+            DisableFlags = EPluginWidgetFlags.ShowCenterDot | EPluginWidgetFlags.ShowInteractWithEnemy,
+            EnableFlags = EPluginWidgetFlags.ForceBlur | EPluginWidgetFlags.Modal
         };
 
         int maxChannel = -1;
@@ -441,10 +454,12 @@ public sealed class ToastManager : IPlayerComponent, IDisposable
     {
         if (info.DisableFlags != EPluginWidgetFlags.None || info.EnableFlags != EPluginWidgetFlags.None)
         {
-            Player.UnturnedPlayer.setAllPluginWidgetFlags((Player.UnturnedPlayer.pluginWidgetFlags | info.EnableFlags) & ~info.DisableFlags);
+            EPluginWidgetFlags flags = (Player.UnturnedPlayer.pluginWidgetFlags | info.EnableFlags) & ~info.DisableFlags;
+            flags |= Player.UnturnedPlayer.pluginWidgetFlags & (EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur);
+            Player.UnturnedPlayer.setAllPluginWidgetFlags(flags);
             if ((info.EnableFlags & (EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur)) == (EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur))
             {
-                _modal = Player.GetModalHandle();
+                ModalHandle.TryGetModalHandle(Player, ref _modal);
             }
         }
     }
@@ -453,7 +468,9 @@ public sealed class ToastManager : IPlayerComponent, IDisposable
     {
         if (info.DisableFlags != EPluginWidgetFlags.None || info.EnableFlags != EPluginWidgetFlags.None)
         {
-            Player.UnturnedPlayer.setAllPluginWidgetFlags((Player.UnturnedPlayer.pluginWidgetFlags | info.DisableFlags) & ~info.EnableFlags);
+            EPluginWidgetFlags flags = (Player.UnturnedPlayer.pluginWidgetFlags | info.DisableFlags) & ~info.EnableFlags;
+            flags |= Player.UnturnedPlayer.pluginWidgetFlags & (EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur);
+            Player.UnturnedPlayer.setAllPluginWidgetFlags(flags);
             if ((info.EnableFlags & (EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur)) == (EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur))
             {
                 _modal.Dispose();

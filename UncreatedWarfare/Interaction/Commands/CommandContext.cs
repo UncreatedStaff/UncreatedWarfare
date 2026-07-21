@@ -1042,12 +1042,12 @@ public class CommandContext : ControlException
     /// <returns>The Steam64 ID if it is found, otehrwise <see langword="null"/>. If the player represented by the Steam64 ID is online, it will also be returned.</returns>
     public async ValueTask<(CSteamID? Steam64, WarfarePlayer? OnlinePlayer)> TryGetPlayer(int parameter, bool remainder = false, PlayerNameType searchType = PlayerNameType.CharacterName)
     {
-        parameter += _argumentOffset;
         if (CallerId.IsIndividual() && MatchParameter(parameter, "me"))
         {
             return (CallerId, Player);
         }
 
+        parameter += _argumentOffset;
         if (parameter < 0 || parameter >= _argumentCount)
         {
             return default;

@@ -296,16 +296,16 @@ public class RequestKitsTranslations : TranslationCollection
 
     
     [TranslationData("Modal heading for when a player is asked if they want to purchase a kit that they don't yet own.")]
-    public readonly Translation ModalConfirmPurchaseKitHeading = new Translation("Purchase Kit");
+    public readonly Translation ModalConfirmPurchaseKitHeading = new Translation("Purchase Kit", TranslationOptions.TMProUI);
 
     [TranslationData("Modal description for when a player is asked if they want to purchase a kit that they don't yet own.")]
-    public readonly Translation<Kit, int> ModalConfirmPurchaseKitDescription = new Translation<Kit, int>("Purchase kit <#ffffff>{0}</color> for <#b8ffc1>C</color> <#ffffff>{1}</color> credits?");
+    public readonly Translation<Kit, int> ModalConfirmPurchaseKitDescription = new Translation<Kit, int>("Purchase kit <#ffffff>{0}</color> for <#b8ffc1>C</color> <#ffffff>{1}</color> credits?", TranslationOptions.TMProUI);
 
     [TranslationData("Modal accept button text for when a player is asked if they want to purchase a kit that they don't yet own.")]
-    public readonly Translation ModalConfirmPurchaseKitAcceptButton = new Translation("Confirm Purchase");
+    public readonly Translation ModalConfirmPurchaseKitAcceptButton = new Translation("Confirm Purchase", TranslationOptions.TMProUI);
 
     [TranslationData("Modal cancel button text for when a player is asked if they want to purchase a kit that they don't yet own.")]
-    public readonly Translation ModalConfirmPurchaseKitCancelButton = new Translation("Cancel");
+    public readonly Translation ModalConfirmPurchaseKitCancelButton = new Translation("Cancel", TranslationOptions.TMProUI);
 }
 
 public class RequestVehicleTranslations : TranslationCollection

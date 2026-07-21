@@ -18,7 +18,7 @@ public interface IPlayerService
     /// List of all online players. Not to be accessed from any thread other than the game thread.
     /// </summary>
     /// <exception cref="GameThreadException"/>
-    ReadOnlyTrackingList <WarfarePlayer> OnlinePlayers { get; }
+    ReadOnlyTrackingList<WarfarePlayer> OnlinePlayers { get; }
 
     /// <summary>
     /// Create an <see cref="IPlayer"/> instance from a possibly offline player and fetch their usernames for display.

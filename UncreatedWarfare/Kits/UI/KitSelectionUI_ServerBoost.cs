@@ -135,6 +135,7 @@ partial class KitSelectionUI
 
                 await UpdateNitroBoostKits(player, guildStatus, isNitroBoosting);
             }
+            catch (OperationCanceledException) when (!player.IsOnline) { }
             catch (Exception ex)
             {
                 GetLogger().LogError(ex, $"Error handling nitro boost status update for {player}.");
@@ -164,6 +165,7 @@ partial class KitSelectionUI
 
                 await UpdateNitroBoostKits(player, status, player.Save.WasNitroBoosting).ConfigureAwait(false);
             }
+            catch (OperationCanceledException) when (!player.IsOnline) { }
             catch (Exception ex)
             {
                 GetLogger().LogError(ex, $"Error handling nitro boost status update for {player}.");
@@ -187,6 +189,7 @@ partial class KitSelectionUI
 
                 await UpdateNitroBoostKits(player, status, player.Save.WasNitroBoosting).ConfigureAwait(false);
             }
+            catch (OperationCanceledException) when (!player.IsOnline) { }
             catch (Exception ex)
             {
                 GetLogger().LogError(ex, $"Error handling nitro boost status update for {player}.");

@@ -139,6 +139,7 @@ partial class KitSelectionUI
             {
                 await args.@this.SendKitDetailsAsync(args.player, args.cachedKit);
             }
+            catch (OperationCanceledException) when (!args.player.IsOnline) { }
             catch (Exception ex)
             {
                 args.@this.GetLogger().LogError(

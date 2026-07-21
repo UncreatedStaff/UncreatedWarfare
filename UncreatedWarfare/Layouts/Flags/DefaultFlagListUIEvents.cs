@@ -1,16 +1,15 @@
 using System;
-using System.Linq;
-using Uncreated.Framework.UI;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Flags;
 using Uncreated.Warfare.Events.Models.Players;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Layouts.Tickets;
 using Uncreated.Warfare.Layouts.UI;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Translations;
-using static Uncreated.Warfare.Layouts.UI.FlagListUI;
 
 namespace Uncreated.Warfare.Layouts.Flags;
 
@@ -28,6 +27,8 @@ public class DefaultFlagListUIEvents :
     private readonly IFlagListUIProvider _uiProvider;
     private readonly ITicketTracker _ticketTracker;
     private readonly ITranslationService _translationService;
+    private readonly IPlayerService _playerService;
+    private readonly ITeamManager<Team> _teamManager;
     private readonly Layout _layout;
     private readonly HudManager _hudManager;
 
@@ -36,6 +37,8 @@ public class DefaultFlagListUIEvents :
         IFlagListUIProvider uiProvider,
         ITicketTracker ticketTracker,
         ITranslationService translationService,
+        IPlayerService playerService,
+        ITeamManager<Team> teamManager,
         Layout layout,
         HudManager hudManager)
     {
@@ -43,8 +46,25 @@ public class DefaultFlagListUIEvents :
         _uiProvider = uiProvider;
         _ticketTracker = ticketTracker;
         _translationService = translationService;
+        _playerService = playerService;
+        _teamManager = teamManager;
         _layout = layout;
         _hudManager = hudManager;
+    }
+
+    private string GetLayoutDisplayName(Team team)
+    {
+        string displayName = _layout.LayoutInfo.DisplayName;
+        if (!_layout.LayoutInfo.Configuration.DisplayRole || !team.IsValid)
+            return "   " + displayName + "   ";
+
+        LayoutRole role = _teamManager.GetLayoutRole(team);
+        return role switch
+        {
+            LayoutRole.Opfor => "   " + displayName + "  <#ddd>µ</color>   ",
+            LayoutRole.Blufor => "   " + displayName + "  <#ddd>´</color>   ",
+            _ => "   " + displayName + "   "
+        };
     }
 
     private void UpdateFlagList(LanguageSet set, bool ticketsOnly)
@@ -61,7 +81,7 @@ public class DefaultFlagListUIEvents :
                     _ui.UpdateFlagList(
                         _uiProvider,
                         _ticketTracker,
-                        _layout.LayoutInfo.DisplayName,
+                        GetLayoutDisplayName(set.Team),
                         new LanguageSet(set.Next),
                         ticketsOnly
                     );
@@ -70,7 +90,7 @@ public class DefaultFlagListUIEvents :
         }
         else
         {
-            _ui.UpdateFlagList(_uiProvider, _ticketTracker, _layout.LayoutInfo.DisplayName, set, ticketsOnly);
+            _ui.UpdateFlagList(_uiProvider, _ticketTracker, GetLayoutDisplayName(set.Team), set, ticketsOnly);
         }
     }
 
@@ -109,9 +129,10 @@ public class DefaultFlagListUIEvents :
         }
 
         _ui.ClearFromAllPlayers();
-        foreach (FlagListUIData? data in UnturnedUIDataSource.Instance.EnumerateData(_ui).OfType<FlagListUIData>())
+        foreach (WarfarePlayer p in _playerService.OnlinePlayers)
         {
-            data.HasUI = false;
+            if (_ui.GetOrAddData(p) is { HasUI: true } data)
+                _ui.ApplyClear(p, data);
         }
     }
 
@@ -119,7 +140,7 @@ public class DefaultFlagListUIEvents :
     {
         if (player != null)
         {
-            _ui.UpdateFlagList(_uiProvider, _ticketTracker, _layout.LayoutInfo.DisplayName, new LanguageSet(player));
+            _ui.UpdateFlagList(_uiProvider, _ticketTracker, GetLayoutDisplayName(player.Team), new LanguageSet(player));
             return;
         }
 

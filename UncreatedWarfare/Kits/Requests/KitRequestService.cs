@@ -475,6 +475,7 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
                 {
                     await t2;
                 }
+                catch (OperationCanceledException) when (!player.IsOnline) { }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Error giving kit.");

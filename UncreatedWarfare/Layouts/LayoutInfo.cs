@@ -72,16 +72,25 @@ public class LayoutInfoConfiguration
     /// <summary>
     /// Display name of the gamemode.
     /// </summary>
+    [UsedImplicitly]
     public string? GamemodeName { get; set; }
 
     /// <summary>
     /// Display name of the layout, not including the gamemode.
     /// </summary>
+    [UsedImplicitly]
     public string? LayoutName { get; set; }
 
     /// <summary>
     /// URL to the image for this gamemode.
     /// </summary>
+    [UsedImplicitly]
     public string? Image { get; set; }
+
+    /// <summary>
+    /// Whether or not the role should be displayed for this gamemode.
+    /// </summary>
+    [UsedImplicitly]
+    public bool DisplayRole { get; init; }
 
 }

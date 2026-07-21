@@ -209,6 +209,7 @@ public partial class LocalWorkshopUploader : IWorkshopUploader
                 process.Dispose();
                 process = null;
             }
+            catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
             catch (Exception ex)
             {
                 try

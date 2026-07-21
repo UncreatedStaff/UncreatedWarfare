@@ -7,6 +7,7 @@ using Uncreated.Framework.UI.Patterns;
 using Uncreated.Framework.UI.Presets;
 using Uncreated.Framework.UI.Reflection;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Kits.Cosmetics;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Steam;
@@ -32,6 +33,7 @@ public class OptionsUI : UnturnedUI
     private readonly LanguageService _languageService;
     private readonly TimeZoneRegionalDatabase _timeZoneDb;
     private readonly ILoopTickerFactory _loopTickerFactory;
+    private readonly WarfareModule _module;
     private readonly HudManager _hudManager;
     private readonly ICachableLanguageDataStore _languageDataStore;
 
@@ -83,6 +85,7 @@ public class OptionsUI : UnturnedUI
         ILanguageDataStore languageDataStore,
         TimeZoneRegionalDatabase timeZoneDb,
         ILoopTickerFactory loopTickerFactory,
+        WarfareModule module,
         HudManager hudManager)
         : base(loggerFactory, assetConfiguration.GetAssetLink<EffectAsset>("UI:Options"), staticKey: true, reliable: true)
     {
@@ -90,6 +93,7 @@ public class OptionsUI : UnturnedUI
         _languageService = languageService;
         _timeZoneDb = timeZoneDb;
         _loopTickerFactory = loopTickerFactory;
+        _module = module;
         _hudManager = hudManager;
         _languageDataStore = languageDataStore as ICachableLanguageDataStore ?? throw new InvalidOperationException("Expected cachable language data store.");
         _translations = translations.Value;
@@ -218,8 +222,14 @@ public class OptionsUI : UnturnedUI
 
     private UniTask ApplyCosmeticChange(WarfarePlayer player)
     {
-        // TODO
-        return UniTask.CompletedTask;
+        if (!_module.IsLayoutActive())
+            return UniTask.CompletedTask;
+
+        CosmeticInstancer? instancer = _module.ScopedProvider.ResolveOptional<CosmeticInstancer>();
+        if (instancer == null)
+            return UniTask.CompletedTask;
+
+        return instancer.UpdateAllClothesAsync(player);
     }
 
     protected override void OnDisposing()
@@ -336,6 +346,8 @@ public class OptionsUI : UnturnedUI
 
         UpdateText(player);
 
+        _enemyCosmeticsOption.Set(player.UnturnedPlayer, player.Save.ViewEnemyCosmetics);
+        _friendlyCosmeticsOption.Set(player.UnturnedPlayer, player.Save.ViewFriendlyCosmetics);
         _imguiOption.Set(player.UnturnedPlayer, player.Save.IMGUI);
         _trackQuestsOption.Set(player.UnturnedPlayer, player.Save.TrackQuests);
         _useCultureForCommandInput.Set(player.UnturnedPlayer, player.Locale.Preferences.UseCultureForCommandInput);

@@ -864,27 +864,63 @@ public static class ItemUtility
         player.UnturnedPlayer.equipment.sendSlot(1);
     }
 
+    internal static bool HasClothingRpc(ClothingType type)
+    {
+        if (SupportsFastKits)
+            return true;
+
+        return GetClothingRpc(type) != null;
+    }
+
+    internal static ClientInstanceMethod<Guid, byte, byte[], bool>? GetClothingRpc(ClothingType type)
+    {
+        return type switch
+        {
+            ClothingType.Shirt => SendWearShirt,
+            ClothingType.Pants => SendWearPants,
+            ClothingType.Hat => SendWearHat,
+            ClothingType.Backpack => SendWearBackpack,
+            ClothingType.Vest => SendWearVest,
+            ClothingType.Mask => SendWearMask,
+            ClothingType.Glasses => SendWearGlasses,
+            _ => throw new InvalidEnumArgumentException(nameof(type), (int)type, typeof(ClothingType))
+        };
+    }
+
     /// <summary>
     /// Sets and replicates the player's clothing at a given slot.
     /// </summary>
     /// <remarks>Requires <see cref="SupportsFastKits"/> to be <see langword="true"/>.</remarks>
-    public static void SendWearClothing(Player player, ItemAsset? asset, ClothingType type, byte quality, byte[] state, bool playEffect)
+    public static void SendWearClothing(Player player, List<ITransportConnection> players, bool loopback, ItemAsset? asset, ClothingType type, byte quality, byte[] state, bool playEffect)
     {
-        ClientInstanceMethod<Guid, byte, byte[], bool> inv =
-            (type switch
-            {
-                ClothingType.Shirt => SendWearShirt,
-                ClothingType.Pants => SendWearPants,
-                ClothingType.Hat => SendWearHat,
-                ClothingType.Backpack => SendWearBackpack,
-                ClothingType.Vest => SendWearVest,
-                ClothingType.Mask => SendWearMask,
-                ClothingType.Glasses => SendWearGlasses,
-                _ => null
-            })!;
+        ClientInstanceMethod<Guid, byte, byte[], bool>? inv = GetClothingRpc(type);
+        if (inv == null)
+            throw new InvalidOperationException($"Missing RPC for clothing type: {type}.");
 
-        inv.InvokeAndLoopback(player.clothing.GetNetId(), ENetReliability.Reliable, Provider.GatherRemoteClientConnections(), asset?.GUID ?? Guid.Empty, quality, state, playEffect);
+        inv.InvokeAndLoopback(player.clothing.GetNetId(), ENetReliability.Reliable, players, asset?.GUID ?? Guid.Empty, quality, state, playEffect);
     }
+
+    internal static bool RemoveAutoItem(Player nativePlayer, ItemAsset expectedAsset)
+    {
+        for (int pg = PlayerInventory.SLOTS; pg < PlayerInventory.STORAGE; ++pg)
+        {
+            Items page = nativePlayer.inventory.items[pg];
+
+            int itemCt = page.getItemCount();
+            if (itemCt == 0)
+                continue;
+
+            ItemJar jar = page.getItem((byte)(itemCt - 1));
+            if (jar?.item == null || jar.item.id != expectedAsset.id)
+                continue;
+
+            page.removeItem((byte)(itemCt - 1));
+            return true;
+        }
+
+        return false;
+    }
+
 
     /// <summary>
     /// Handles logic that needs ran with a player's inventory is cleared.

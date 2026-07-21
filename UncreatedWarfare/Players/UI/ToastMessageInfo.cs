@@ -12,7 +12,8 @@ public enum ToastMessageStyle
     ProgressBar,
     Tip,
     Popup,
-    FlashingWarning
+    FlashingWarning,
+    CopyPopup
 }
 
 public delegate void SendToastWithCustomUI(WarfarePlayer player, in ToastMessage message, ToastMessageInfo info, UnturnedUI ui, IServiceProvider serviceProvider);

@@ -505,10 +505,7 @@ public class DailyQuestService : ILayoutHostedService, IEventListener<PlayerJoin
                     UpdateTimers();
                 }
             }
-            catch (OperationCanceledException) when (newSrc.IsCancellationRequested)
-            {
-
-            }
+            catch (OperationCanceledException) when (newSrc.IsCancellationRequested) { }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error generating daily quest files.");

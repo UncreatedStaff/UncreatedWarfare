@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using System;
 using System.Linq;
 using Uncreated.Warfare.Commands;
+using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Exceptions;
@@ -29,6 +30,7 @@ public partial class DutyService : IAsyncEventListener<PlayerLeft>, IEventListen
     private readonly IPlayerService _playerService;
     private readonly DutyUI _dutyUi;
     private readonly ZoneStore _zoneStore;
+    private readonly EventDispatcher _eventDispatcher;
     private readonly UserPermissionStore _permissionStore;
     private readonly DutyCommandTranslations _translations;
 
@@ -53,7 +55,8 @@ public partial class DutyService : IAsyncEventListener<PlayerLeft>, IEventListen
         IConfiguration configuration,
         IPlayerService playerService,
         DutyUI dutyUi,
-        ZoneStore zoneStore)
+        ZoneStore zoneStore,
+        EventDispatcher eventDispatcher)
     {
         _signs = signs;
         _chatService = chatService;
@@ -62,6 +65,7 @@ public partial class DutyService : IAsyncEventListener<PlayerLeft>, IEventListen
         _playerService = playerService;
         _dutyUi = dutyUi;
         _zoneStore = zoneStore;
+        _eventDispatcher = eventDispatcher;
         _translations = translations.Value;
 
         IConfigurationSection permSection = configuration.GetSection("permissions");
@@ -298,6 +302,12 @@ public partial class DutyService : IAsyncEventListener<PlayerLeft>, IEventListen
         {
             await broadcastTask;
         }
+
+        await _eventDispatcher.DispatchEventAsync(new PlayerDutyStatusChanged
+        {
+            Player = player,
+            IsOnDuty = true
+        }, CancellationToken.None);
     }
 
     internal async UniTask ApplyOffDuty(WarfarePlayer player, DutyLevel level, CancellationToken token = default)
@@ -397,6 +407,12 @@ public partial class DutyService : IAsyncEventListener<PlayerLeft>, IEventListen
         {
             await broadcastTask;
         }
+
+        await _eventDispatcher.DispatchEventAsync(new PlayerDutyStatusChanged
+        {
+            Player = player,
+            IsOnDuty = false
+        }, CancellationToken.None);
     }
 
     private async Task BroadcastDutyNotifications(Translation<IPlayer> translation, IPlayer dutyPlayer, CancellationToken token = default)
