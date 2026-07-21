@@ -260,6 +260,7 @@ public class QuestService : ILayoutHostedService, IEventListenerProvider, IDispo
                 {
                     await UniTask.WhenAll(tasks);
                 }
+                catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Error applying reward(s) for quest {0} for player {1}.", tracker.Quest.Name, player);

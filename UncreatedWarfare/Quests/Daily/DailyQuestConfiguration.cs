@@ -43,6 +43,7 @@ public class DailyQuestConfiguration
         {
             await ReadIntl(token);
         }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Exception reading \"{0}\".", _filePath);

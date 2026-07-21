@@ -8,6 +8,7 @@ using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.FOBs.SupplyCrates.Throwable.AmmoBags;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits.Items;
+using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Translations;
@@ -24,6 +25,7 @@ public class KitRearmService : BaseAlternateConfigurationFile // WARNING: not re
 {
     private readonly KitWeaponTextService? _kitWeaponTextService;
     private readonly ILogger<KitRearmService> _logger;
+    private readonly IKitItemResolver _resolver;
     private readonly KitRequestService _kitRequestService;
     private readonly ChatService _chatService;
     private readonly AssetConfiguration _assetConfiguration;
@@ -49,6 +51,7 @@ public class KitRearmService : BaseAlternateConfigurationFile // WARNING: not re
     public KitRearmService(
         ILogger<KitRearmService> logger,
         IServiceProvider serviceProvider,
+        IKitItemResolver resolver,
         KitRequestService kitRequestService,
         TranslationInjection<AmmoTranslations> translations,
         ChatService chatService,
@@ -58,6 +61,7 @@ public class KitRearmService : BaseAlternateConfigurationFile // WARNING: not re
     {
         _kitWeaponTextService = kitWeaponTextService;
         _logger = logger;
+        _resolver = resolver;
         _kitRequestService = kitRequestService;
         _chatService = chatService;
         _assetConfiguration = assetConfiguration;
@@ -131,6 +135,23 @@ public class KitRearmService : BaseAlternateConfigurationFile // WARNING: not re
 
         Task task = _kitRequestService.RestockKitAsync(player, resupplyAmmoBags: ammoStorage is not PlacedAmmoBagComponent, token);
 
+        ApplyRearm(player, rearmCost, ammoStorage, kit, token);
+
+        await task.ConfigureAwait(false);
+
+        _ = WarfareModule.EventDispatcher.DispatchEventAsync(new PlayerRearmedKit
+        {
+            Player = player,
+            AmmoConsumed = rearmCost,
+            AmmoStorage = ammoStorage,
+            Kit = kit
+        }, CancellationToken.None);
+
+        return new RearmResult(RearmResultType.Rearmed, rearmCost, ammoStorage.AmmoCount);
+    }
+
+    public void ApplyRearm(WarfarePlayer player, float rearmCost, IAmmoStorage ammoStorage, Kit kit, CancellationToken token = default)
+    {
         ammoStorage.SubtractAmmo(rearmCost);
 
         player.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastLoseAmmo.Translate(rearmCost, player)));
@@ -151,18 +172,6 @@ public class KitRearmService : BaseAlternateConfigurationFile // WARNING: not re
             player.Position,
             true
         );
-
-        await task.ConfigureAwait(false);
-
-        _ = WarfareModule.EventDispatcher.DispatchEventAsync(new PlayerRearmedKit
-        {
-            Player = player,
-            AmmoConsumed = rearmCost,
-            AmmoStorage = ammoStorage,
-            Kit = kit
-        }, CancellationToken.None);
-
-        return new RearmResult(RearmResultType.Rearmed, ammoLeft, ammoStorage.AmmoCount);
     }
 
     public struct RearmResult
@@ -247,7 +256,7 @@ public class KitRearmService : BaseAlternateConfigurationFile // WARNING: not re
 
         _gunBuffer.Clear();
 
-        foreach (KeyValuePair<ItemAsset, int> count in GetEquipmentCountsInKit(kit))
+        foreach (KeyValuePair<ItemAsset, int> count in GetEquipmentCountsInKit(kit, player.Team))
         {
             ItemAsset equipmentAsset = count.Key;
             int requiredCount = count.Value;
@@ -289,22 +298,21 @@ public class KitRearmService : BaseAlternateConfigurationFile // WARNING: not re
         }
     }
 
-    private Dictionary<ItemAsset, int> GetEquipmentCountsInKit(Kit kit)
+    private Dictionary<ItemAsset, int> GetEquipmentCountsInKit(Kit kit, Team team)
     {
         Dictionary<ItemAsset, int> equipment = new Dictionary<ItemAsset, int>();
         foreach (IKitItem item in kit.Items)
         {
-            if (item is not IConcreteItem concrete)
+            KitItemResolutionResult result = _resolver.ResolveKitItem(item, kit, team);
+
+            if (result.Asset == null)
                 continue;
 
-            if (!concrete.Item.TryGetAsset(out ItemAsset? asset))
+            if (GetEquipmentCost(result.Asset) == 0)
                 continue;
 
-            if (GetEquipmentCost(asset) == 0)
-                continue;
-
-            if (!equipment.TryAdd(asset, 1))
-                equipment[asset]++;
+            if (!equipment.TryAdd(result.Asset, 1))
+                equipment[result.Asset]++;
         }
         return equipment;
     }

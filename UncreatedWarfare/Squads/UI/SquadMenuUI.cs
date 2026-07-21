@@ -239,6 +239,7 @@ public class SquadMenuUI :
                 await UniTask.SwitchToMainThread();
                 CloseUI(player);
             }
+            catch (OperationCanceledException) when (!player.IsOnline) { }
             catch (Exception ex)
             {
                 GetLogger().LogError(ex, "Error requesting kit and closing UI.");

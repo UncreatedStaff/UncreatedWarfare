@@ -168,6 +168,7 @@ public class SafezoneTweaks :
                     {
                         await _kitRequestService.GiveUnarmedKitAsync(e.Player, silent: true, e.Player.DisconnectToken);
                     }
+                    catch (OperationCanceledException) when (!e.Player.IsOnline) { }
                     catch (Exception ex)
                     {
                         _logger.LogError(ex, "Error giving safezone kit.");

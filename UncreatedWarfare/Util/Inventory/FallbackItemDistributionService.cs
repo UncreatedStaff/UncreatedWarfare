@@ -5,6 +5,7 @@ using System;
 using System.Diagnostics;
 using System.Linq;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Kits.Cosmetics;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
@@ -18,13 +19,14 @@ public class FallbackItemDistributionService : IItemDistributionService
 
     private readonly IKitItemResolver _itemResolver;
     private readonly DroppedItemTracker _droppedItemTracker;
+    private readonly CosmeticInstancer _cosmeticInstancer;
 #if DEBUG_LOGGING
     private readonly ILogger<FallbackItemDistributionService> _logger;
 #endif
 
     private bool _isAutoClearing;
 
-    public FallbackItemDistributionService(IKitItemResolver itemResolver, DroppedItemTracker droppedItemTracker
+    public FallbackItemDistributionService(IKitItemResolver itemResolver, DroppedItemTracker droppedItemTracker, CosmeticInstancer cosmeticInstancer
 #if DEBUG_LOGGING
         , ILogger<FallbackItemDistributionService> logger
 #endif
@@ -32,6 +34,7 @@ public class FallbackItemDistributionService : IItemDistributionService
     {
         _itemResolver = itemResolver;
         _droppedItemTracker = droppedItemTracker;
+        _cosmeticInstancer = cosmeticInstancer;
 #if DEBUG_LOGGING
         _logger = logger;
 #endif
@@ -98,8 +101,18 @@ public class FallbackItemDistributionService : IItemDistributionService
                 // items skipped that are still in this page will be added to a list and removed then re-added or dropped later
                 StoreSkippedItemsFromPage(nativePlayer, clothingItem.StoragePage, WorkingItemList);
             }
-            clothingItem.AskWear(null, 0, blank, !hasPlayedEffect);
-            RemoveAutoItem(nativePlayer, ref ct, old);
+
+            if (!ItemUtility.HasClothingRpc(clothingItem.Type))
+            {
+                // fallback in case nelson changes the RPC name or type
+                clothingItem.AskWear(null, 0, blank, !hasPlayedEffect);
+                RemoveAutoItem(nativePlayer, ref ct, old);
+            }
+            else
+            {
+                _cosmeticInstancer.SetClothing(clothingItem.Type, player, null, 0, blank, !hasPlayedEffect);
+            }
+
             hasPlayedEffect = true;
         }
 
@@ -153,22 +166,8 @@ public class FallbackItemDistributionService : IItemDistributionService
 
     private static void RemoveAutoItem(Player nativePlayer, ref int ct, ItemAsset expectedAsset)
     {
-        for (int pg = PlayerInventory.SLOTS; pg < PlayerInventory.STORAGE; ++pg)
-        {
-            Items page = nativePlayer.inventory.items[pg];
-
-            int itemCt = page.getItemCount();
-            if (itemCt == 0)
-                continue;
-
-            ItemJar jar = page.getItem((byte)(itemCt - 1));
-            if (jar?.item == null || jar.item.id != expectedAsset.id)
-                continue;
-
-            page.removeItem((byte)(itemCt - 1));
+        if (ItemUtility.RemoveAutoItem(nativePlayer, expectedAsset))
             ++ct;
-            break;
-        }
     }
 
     public int GiveItems<TState>(IEnumerable<IItem> items, WarfarePlayer player, TState state) where TState : IItemDistributionState
@@ -234,7 +233,14 @@ public class FallbackItemDistributionService : IItemDistributionService
                 }
 
                 alreadyEqupped |= clothingHelper.Flag;
-                clothingHelper.AskWear(result.Asset, result.Quality, result.State ?? result.Asset!.getState(true), !hasPlayedEffect);
+                if (_cosmeticInstancer.IsEnabled)
+                {
+                    _cosmeticInstancer.SetClothing(clothingHelper.Type, player, (ItemClothingAsset)result.Asset!, result.Quality, result.State ?? result.Asset!.getState(true), !hasPlayedEffect);
+                }
+                else
+                {
+                    clothingHelper.AskWear(result.Asset, result.Quality, result.State ?? result.Asset!.getState(true), !hasPlayedEffect);
+                }
                 ++ct;
                 hasPlayedEffect = true;
             }

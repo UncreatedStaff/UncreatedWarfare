@@ -190,6 +190,7 @@ public class DatabaseStatsBuffer : IDisposable, IHostedService, ILayoutHostedSer
                 {
                     await FlushAsync(token).ConfigureAwait(false);
                 }
+                catch (OperationCanceledException) when (token.IsCancellationRequested) { }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Error flushing stats.");

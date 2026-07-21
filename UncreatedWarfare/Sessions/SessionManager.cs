@@ -125,6 +125,7 @@ public class SessionManager :
         {
             await StartNewSessionForAllPlayers(true, token);
         }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Uncaught exception restarting new sessions.");
@@ -358,6 +359,7 @@ public class SessionManager :
             _logger.LogInformation($"Stopwatch SessionCreated events: {sw.GetElapsedMilliseconds():F0} ms");
 #endif
         }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error starting new sessions, hard clearing...");

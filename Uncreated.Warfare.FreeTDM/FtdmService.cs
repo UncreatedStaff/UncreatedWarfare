@@ -278,6 +278,7 @@ internal class FtdmService : ILayoutPhaseListener<ActionPhase>, IDisposable, ILa
                         await _kitRequestService.GiveKitAsync(player, new KitBestowData(kit) { Silent = true }, CancellationToken.None);
                     }
                 }
+                catch (OperationCanceledException) when (!player.IsOnline) { }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, $"Error giving kit {kitId}.");

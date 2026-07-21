@@ -51,6 +51,7 @@ internal sealed class PreviewKitTweaks : IEventListener<PlayerExitedZone>
             {
                 await RevertPreviewAndNotifyAsync(e.Player);
             }
+            catch (OperationCanceledException) when (!e.Player.IsOnline) { }
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Error reverting preview kit for {e.Player}.");

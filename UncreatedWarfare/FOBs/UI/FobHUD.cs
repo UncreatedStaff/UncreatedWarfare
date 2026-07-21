@@ -1,18 +1,22 @@
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Data;
 using Uncreated.Framework.UI.Patterns;
 using Uncreated.Framework.UI.Reflection;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Fobs;
+using Uncreated.Warfare.Events.Models.Squads;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.UI;
+using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Util;
 using Uncreated.Warfare.Util;
@@ -24,6 +28,8 @@ public class FobHUD :
     UnturnedUI,
     IEventListener<IPlayerNeedsFobUIUpdateEvent>,
     IEventListener<IFobNeedsUIUpdateEvent>,
+    IEventListener<SquadMemberJoined>,
+    IEventListener<SquadMemberLeft>,
     IHudUIListener
 {
     /// <summary>
@@ -37,8 +43,8 @@ public class FobHUD :
     private readonly IPlayerService _playerService;
     private readonly FobTranslations _translations;
     public UnturnedLabel Title { get; } = new UnturnedLabel("Title");
-    public FobElement[] Fobs { get; } = ElementPatterns.CreateArray<FobElement>("Fob_{0}/Fob{1}_{0}", 0, MaximumFOBs);
-    public UnturnedUIElement[] LogicSquadMemberPositions { get; } = ElementPatterns.CreateArray<UnturnedUIElement>("SquadMembers_{0}", 0, to: 6);
+    public FobElement[] Fobs { get; } = ElementPatterns.CreateArray<FobElement>("FOB_{0}", 0, MaximumFOBs);
+    public UnturnedUIElement[] LogicSquadMemberPositions { get; } = ElementPatterns.CreateArray<UnturnedUIElement>("~/SquadMembers_{0}", 0, to: 6);
 
     public FobHUD(
         IServiceProvider serviceProvider,
@@ -66,15 +72,17 @@ public class FobHUD :
     {
         if (player != null)
         {
-            ClearFromPlayer(player.Connection);
+            UIData? uiData = GetData<UIData>(player.Steam64);
+            if (uiData != null)
+                CloseUI(player, uiData);
             return;
         }
 
         ClearFromAllPlayers();
         foreach (WarfarePlayer p in _playerService.OnlinePlayers)
         {
-            if (GetData<UIData>(p.Steam64) is { } data)
-                data.HasUI = false;
+            if (GetData<UIData>(p.Steam64) is { HasUI: true } data)
+                ApplyClear(p, data);
         }
     }
 
@@ -98,9 +106,15 @@ public class FobHUD :
         if (!data.HasUI)
             return;
 
+        ApplyClear(player, data);
+        ClearFromPlayer(player.Connection);
+    }
+
+    private void ApplyClear(WarfarePlayer player, UIData data)
+    {
         data.HasUI = false;
         player.Locale.LocaleUpdated -= OnLocaleUpdated;
-        ClearFromPlayer(player.Connection);
+        data.ResetCache();
     }
 
     private void OnLocaleUpdated(WarfarePlayerLocale locale)
@@ -110,6 +124,7 @@ public class FobHUD :
             SendConstantText(locale.Player);
     }
 
+    [SkipLocalsInit]
     private void UpdateForPlayer(WarfarePlayer player)
     {
         GameThread.AssertCurrent();
@@ -133,6 +148,9 @@ public class FobHUD :
         {
             SendToPlayer(player.Connection);
             SendConstantText(player);
+            data.ResetCache();
+            data.HasUI = true;
+            SendSquadPosition(player);
             player.Locale.LocaleUpdated += OnLocaleUpdated;
         }
 
@@ -186,13 +204,30 @@ public class FobHUD :
             Title.SetText(player.Connection, _translations.FobListTitle.Translate(player));
     }
 
-    public void HandleEvent(IPlayerNeedsFobUIUpdateEvent e, IServiceProvider serviceProvider)
+    private void UpdateSquadPosition(WarfarePlayer player)
+    {
+        UIData? data = GetData<UIData>(player.Steam64);
+        if (data is not { HasUI: true })
+            return;
+
+        SendSquadPosition(player);
+    }
+
+    private void SendSquadPosition(WarfarePlayer player)
+    {
+        Squad? squad = player.GetSquad();
+        int index = squad == null ? 0 : Math.Clamp(squad.Members.Count, 0, LogicSquadMemberPositions.Length - 1);
+
+        LogicSquadMemberPositions[index].Show(player);
+    }
+
+    void IEventListener<IPlayerNeedsFobUIUpdateEvent>.HandleEvent(IPlayerNeedsFobUIUpdateEvent e, IServiceProvider serviceProvider)
     {
         if (e.Player != null)
             UpdateForPlayer(e.Player);
     }
 
-    public void HandleEvent(IFobNeedsUIUpdateEvent e, IServiceProvider serviceProvider)
+    void IEventListener<IFobNeedsUIUpdateEvent>.HandleEvent(IFobNeedsUIUpdateEvent e, IServiceProvider serviceProvider)
     {
         if (e.Fob == null)
             return;
@@ -201,6 +236,26 @@ public class FobHUD :
         {
             UpdateForPlayer(player);
         }
+    }
+
+    [EventListener(MustRunInstantly = true)]
+    void IEventListener<SquadMemberJoined>.HandleEvent(SquadMemberJoined e, IServiceProvider serviceProvider)
+    {
+        foreach (WarfarePlayer player in e.Squad.Members)
+        {
+            UpdateSquadPosition(player);
+        }
+    }
+
+    [EventListener(MustRunInstantly = true)]
+    void IEventListener<SquadMemberLeft>.HandleEvent(SquadMemberLeft e, IServiceProvider serviceProvider)
+    {
+        foreach (WarfarePlayer player in e.Squad.Members)
+        {
+            UpdateSquadPosition(player);
+        }
+
+        UpdateSquadPosition(e.Player);
     }
 
 #nullable disable
@@ -225,7 +280,14 @@ public class FobHUD :
 
         public required CSteamID Player { get; init; }
         public required UnturnedUI Owner { get; init; }
-        public UnturnedUIElement Element => null;
+
+        internal void ResetCache()
+        {
+            for (int i = 0; i < Cache.Length; ++i)
+                Cache[i].Reset(i);
+        }
+
+        UnturnedUIElement? IUnturnedUIData.Element => null;
     }
 
     private static readonly Color32 DefaultFobNameColor = new Color32(230, 230, 230, 255);

@@ -54,7 +54,7 @@ public class Squad : ITranslationArgument
     {
         _members.Add(player);
         player.Component<SquadPlayerComponent>().ChangeSquad(this);
-        player.Save.SquadTeamIdentificationNumber = (byte)TeamIdentificationNumber;
+        player.Save.SquadTeamIdentificationNumber = TeamIdentificationNumber;
     }
 
     public bool TryAddMember(WarfarePlayer player)

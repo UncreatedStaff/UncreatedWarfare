@@ -14,6 +14,7 @@ using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Players.Unlocks;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Signs;
+using Uncreated.Warfare.Squads.UI;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
@@ -38,6 +39,7 @@ public class VehicleRequestService :
     private readonly ZoneStore _globalZoneStore;
     private readonly PointsService _pointsService;
     private readonly DatabaseInterface _moderationSql;
+    private readonly SquadMenuUI? _squadUi;
 
     private const float MaxVehicleAbandonmentDistance = 300;
 
@@ -50,6 +52,7 @@ public class VehicleRequestService :
         _globalZoneStore = serviceProvider.GetRequiredService<ZoneStore>();
         _pointsService = serviceProvider.GetRequiredService<PointsService>();
         _moderationSql = serviceProvider.GetRequiredService<DatabaseInterface>();
+        _squadUi = serviceProvider.GetService<SquadMenuUI>();
         _reqTranslations = serviceProvider.GetRequiredService<TranslationInjection<RequestVehicleTranslations>>().Value;
     }
 
@@ -158,6 +161,9 @@ public class VehicleRequestService :
         if (vehicleInfo.Class == Class.Squadleader && !player.IsSquadLeader())
         {
             resultHandler.MissingRequirement(player, spawn, _reqTranslations.NotSquadLeader.Translate(player));
+            if (_squadUi != null && !player.IsInSquad())
+                _squadUi?.OpenUI(player);
+            
             return false;
         }
 

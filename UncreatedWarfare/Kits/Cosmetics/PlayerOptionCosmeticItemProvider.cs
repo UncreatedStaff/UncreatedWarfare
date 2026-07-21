@@ -1,15 +1,38 @@
 ﻿using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Util.Inventory;
 
 namespace Uncreated.Warfare.Kits.Cosmetics;
 
 internal class PlayerOptionCosmeticItemProvider : ICosmeticItemProvider
 {
-    bool ICosmeticItemProvider.IsEnabled => true;
+    private readonly AssetRedirectService _redirectService;
 
-    public ItemClothingAsset? DecideVisibleAsset(WarfarePlayer player, WarfarePlayer onPlayer, in ClothingItem slot, Kit kit)
+    bool ICosmeticItemProvider.IsEnabled => true;
+    bool ICosmeticItemProvider.PlayerAgnostic => false; // TODO set to true after testing
+
+    public PlayerOptionCosmeticItemProvider(AssetRedirectService redirectService)
     {
-        return slot.Asset;
+        _redirectService = redirectService;
+    }
+
+
+    public ItemClothingAsset? Resolve(WarfarePlayer? player, WarfarePlayer onPlayer, in ClothingItem slot, Kit kit, ref byte quality, ref byte[] state)
+    {
+        ClothingType type = slot.Type;
+        RedirectType redirect = (RedirectType)slot.Type;
+
+        IClothingItem? clothingItem = kit.GetClothingItem(type);
+
+        string? variant = null;
+        if (clothingItem is IRedirectedItem redir)
+        {
+            variant = redir.Variant;
+        }
+
+        ItemAsset? asset = _redirectService.ResolveRedirect(redirect, variant ?? string.Empty, onPlayer.Team.Faction, onPlayer.Team, out state, out _);
+        quality = 100;
+        return asset as ItemClothingAsset;
     }
 
     public bool ShouldKitCosmeticsBeInstanced(Kit kit)

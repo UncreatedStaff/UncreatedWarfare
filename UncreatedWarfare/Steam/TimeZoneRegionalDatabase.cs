@@ -104,7 +104,7 @@ public class TimeZoneRegionalDatabase : IHostedService
         {
             using UnityWebRequest req = new UnityWebRequest(SourceUrl, "GET", new DownloadHandlerBuffer(), null);
 
-            await req.SendWebRequest();
+            await req.SendWebRequest().WithCancellation(token);
 
             byte[] data = req.downloadHandler.data;
 
@@ -123,6 +123,7 @@ public class TimeZoneRegionalDatabase : IHostedService
                 }
             }
         }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error querying timezone data.");

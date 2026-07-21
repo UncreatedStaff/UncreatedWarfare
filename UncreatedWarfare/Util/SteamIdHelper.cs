@@ -354,6 +354,7 @@ public static class SteamIdHelper
 
                 data = request.downloadHandler.text;
             }
+            catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
             catch (Exception ex)
             {
                 if (request.responseCode == 304)

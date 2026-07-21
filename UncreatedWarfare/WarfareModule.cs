@@ -677,6 +677,7 @@ public sealed class WarfareModule
             .SingleInstance();
 
         bldr.RegisterType<PopupUI>().SingleInstance();
+        bldr.RegisterType<CopyPopupUI>().SingleInstance();
         bldr.RegisterType<StagingUI>().SingleInstance();
         bldr.RegisterType<WinToastUI>().SingleInstance();
 
@@ -1416,6 +1417,7 @@ public sealed class WarfareModule
 #endif
             await SshTunnelHelper.OpenIfAvailableAsync(ServiceProvider, token);
         }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
         catch (Exception ex)
         {
             await UniTask.SwitchToMainThread(token);
@@ -1455,6 +1457,7 @@ public sealed class WarfareModule
                     // ReSharper disable once AccessToDisposedClosure
                     connected = await ((IRelationalDatabaseCreator)((IDatabaseFacadeDependenciesAccessor)dbContext.Database).Dependencies.DatabaseCreator).ExistsAsync(token);
                 }
+                catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
                 catch (Exception ex)
                 {
                     if (token.IsCancellationRequested)
@@ -1476,6 +1479,7 @@ public sealed class WarfareModule
                 _logger.LogInformation("Migration completed.");
             }
         }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
         catch (Exception ex) when (ex.GetBaseException() is MySqlException mySqlException && ex.Message.Contains("timeout", StringComparison.InvariantCultureIgnoreCase))
         {
             // todo: use error code instead of Contains as soon as i figure out what it is

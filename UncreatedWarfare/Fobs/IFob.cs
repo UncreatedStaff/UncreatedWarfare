@@ -24,7 +24,7 @@ public interface IFob : IDeployable
     /// </summary>
     string GetUIDisplay(Team viewingTeam)
     {
-        return string.Empty;
+        return Name;
     }
 
     /// <summary>

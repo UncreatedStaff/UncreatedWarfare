@@ -1,6 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using Stripe;
 using System;
 using System.Collections.Immutable;
 using System.Globalization;
@@ -18,6 +17,7 @@ using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Kits;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Events.Models.Squads;
+using Uncreated.Warfare.Fobs.SupplyCrates;
 using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Interaction.Commands;
@@ -67,6 +67,7 @@ public sealed partial class KitSelectionUI : UnturnedUI,
     private readonly IPlayerService _playerService;
     private readonly ZoneStore _zoneStore;
     private readonly TranslationInjection<RequestTranslations> _requestTranslations; // this is intentional
+    private readonly AmmoTranslations _ammoTranslations;
     private readonly RequestKitsTranslations _requestKitsTranslations;
     private readonly ChatService _chatService;
     private readonly ITranslationService _translationService;
@@ -122,6 +123,7 @@ public sealed partial class KitSelectionUI : UnturnedUI,
         TranslationInjection<KitSelectionUITranslations> translations,
         TranslationInjection<RequestTranslations> requestTranslations,
         TranslationInjection<RequestKitsTranslations> requestKitsTranslations,
+        TranslationInjection<AmmoTranslations> ammoTranslations,
         ChatService chatService,
         ITranslationService translationService,
         KitRequirementManager kitRequirements,
@@ -149,6 +151,7 @@ public sealed partial class KitSelectionUI : UnturnedUI,
 
         _requestTranslations = requestTranslations;
         _requestKitsTranslations = requestKitsTranslations.Value;
+        _ammoTranslations = ammoTranslations.Value;
         _chatService = chatService;
         _translationService = translationService;
         _kitRequirements = kitRequirements;
@@ -447,6 +450,7 @@ public sealed partial class KitSelectionUI : UnturnedUI,
             {
                 await UpdateSearchAsync(player, data).ConfigureAwait(false);
             }
+            catch (OperationCanceledException) when (!player.IsOnline) { }
             catch (Exception ex)
             {
                 GetLogger().LogError(ex, "Error updating search after filter change.");
@@ -511,6 +515,7 @@ public sealed partial class KitSelectionUI : UnturnedUI,
                 UpdateFavoriteList(player, data, favoriteKits, false);
                 await UpdateKitAsync(kit, player, player.DisconnectToken);
             }
+            catch (OperationCanceledException) when (!player.IsOnline) { }
             catch (Exception ex)
             {
                 GetLogger().LogError(ex, "Error updating favorites for a player who's favoites changed.");
@@ -938,6 +943,7 @@ public sealed partial class KitSelectionUI : UnturnedUI,
                 {
                     await SendKitDetailsAsync(locale.Player, data.SelectedKit, locale.Player.DisconnectToken);
                 }
+                catch (OperationCanceledException) when (!locale.Player.IsOnline) { }
                 catch (Exception ex)
                 {
                     GetLogger().LogError(ex, $"Error updating kit details for {locale.Player} after locale update.");
@@ -1064,6 +1070,7 @@ public sealed partial class KitSelectionUI : UnturnedUI,
             {
                 await UpdateSearchAsync(player, data).ConfigureAwait(false);
             }
+            catch (OperationCanceledException) when (!player.IsOnline) { }
             catch (Exception ex)
             {
                 GetLogger().LogError(ex, "Error updating search after filter change.");
@@ -1093,6 +1100,7 @@ public sealed partial class KitSelectionUI : UnturnedUI,
             {
                 await UpdateSearchAsync(player, data).ConfigureAwait(false);
             }
+            catch (OperationCanceledException) when (!player.IsOnline) { }
             catch (Exception ex)
             {
                 GetLogger().LogError(ex, "Error updating search after page change.");
@@ -1220,6 +1228,7 @@ public sealed partial class KitSelectionUI : UnturnedUI,
                 needsNitroBoostRequest = true;
             }
             ui.Root.Show(c);
+            await UniTask.NextFrame();
         }
 
         // check if linked and whether or not the player is in the guild to show the right server boost button
@@ -1446,6 +1455,7 @@ public sealed partial class KitSelectionUI : UnturnedUI,
 
             if (!fromDefaultValues)
                 ui.UnlockSection.Hide(c);
+            return;
         }
 
         KitRequirementResolutionContext<KitRequirementsState> ctx
@@ -1476,7 +1486,26 @@ public sealed partial class KitSelectionUI : UnturnedUI,
         if (!anyNo && (force || info.LabelState != lblState || info.ButtonState != btnState))
         {
             ui.StatusLabel.SetText(c, _translations.StatusUnlocked.Translate(player));
-            ui.UnlockButton.SetText(c, _translations.PurchaseButtonRequest.Translate(player));
+
+            if (data.AmmoStorage != null)
+            {
+                try
+                {
+                    _ = kit.Items;
+                    float ammoCost = MathF.Round(_rearmService.GetRearmCost(player, kit), 1);
+                    float left = MathF.Round(Math.Max(0, data.AmmoStorage.AmmoCount - ammoCost), 1);
+                    ui.UnlockButton.SetText(c, _translations.PurchaseButtonRequestWithAmmoCost.Translate(ammoCost, left, player));
+                }
+                catch (NotIncludedException)
+                {
+                    ui.UnlockButton.SetText(c, _translations.PurchaseButtonRequest.Translate(player));
+                }
+            }
+            else
+            {
+                ui.UnlockButton.SetText(c, _translations.PurchaseButtonRequest.Translate(player));
+            }
+
             ui.UnlockSection.Show(c);
 
             data.SetCacheState(in state, PurchaseButtonState.None, StatusState.Available);
@@ -2193,6 +2222,9 @@ public sealed class KitSelectionUITranslations : TranslationCollection
     [TranslationData("Label for the purchase button shown when the kit can be requested.")]
     public readonly Translation PurchaseButtonRequest = new Translation("Equip Kit", TranslationOptions.TMProUI);
 
+    [TranslationData("Label for the purchase button shown when the kit can be requested on an ammo storage.", "Ammo supplies to be used.", "Remaining supplies if the kit is restocked.")]
+    public readonly Translation<float, float> PurchaseButtonRequestWithAmmoCost = new Translation<float, float>("Switch Kit\n<#e26a5d>{0} AMMO</color>   <#555>{1} LEFT</color>", TranslationOptions.TMProUI);
+
     [TranslationData("Label for the purchase button shown when the kit can be restocked on an ammo storage.", "Ammo supplies to be used.", "Remaining supplies if the kit is restocked.")]
     public readonly Translation<float, float> PurchaseButtonRestockAmmo = new Translation<float, float>("Restock\n<#e26a5d>{0} AMMO</color>   <#555>{1} LEFT</color>", TranslationOptions.TMProUI);
 
@@ -2226,7 +2258,6 @@ public sealed class KitSelectionUITranslations : TranslationCollection
     [TranslationData("Label for the purchase button shown when the player needs to be in a squad for the kit.")]
     public readonly Translation PurchaseButtonJoinSquad = new Translation("Join a <#f4bb57>Squad</color> to Equip", TranslationOptions.TMProUI);
 
-    // https://discord.com/channels/645743633202544643/boosts
     [TranslationData("Label for the purchase button shown when the player is linked to discord but is not boosting.")]
     public readonly Translation PurchaseButtonNotBoostingOpenDiscord = new Translation("Open Discord", TranslationOptions.TMProUI);
     
@@ -2236,17 +2267,21 @@ public sealed class KitSelectionUITranslations : TranslationCollection
     [TranslationData("Label for the purchase button shown when the player is linked to discord but not in the guild.")]
     public readonly Translation PurchaseButtonNotBoostingJoinDiscord = new Translation("Join Discord Server", TranslationOptions.TMProUI);
 
-    [TranslationData("Label for the URL request when clicking the purchase button for a kit that requires a Discord Nitro boost and the player doesn't have their account linked.")]
-    public readonly Translation PurchaseButtonNotBoostingLinkDiscordRequest = new Translation("Link Discord Account. Paste this command in any channel in our Discord server.", TranslationOptions.NoRichText);
-
     [TranslationData("Label for the URL request when clicking the purchase button for a kit that requires a Discord Nitro boost.")]
     public readonly Translation PurchaseButtonNotBoostingOpenDiscordRequest = new Translation("Boost Uncreated Network.", TranslationOptions.NoRichText);
 
-    [TranslationData("Label for the URL request when clicking the purchase button for a kit that requires a Discord Nitro boost and the player isn't in the server.")]
-    public readonly Translation PurchaseButtonJoinDiscordRequest = new Translation("Join the Discord server.", TranslationOptions.NoRichText);
-
     [TranslationData("Shown in the ID section for loadouts owned by the viewing player.", "The letter (ex. 'A', 'AF', 'BC', 'F') of the loadout, formatted like an Excel column.")]
     public readonly Translation<string> LoadoutIdLabel = new Translation<string>("Loadout {0}", TranslationOptions.TMProUI | TranslationOptions.NoRichText);
+
+
+    [TranslationData("Modal heading for when a player is asked to link their Discord account.")]
+    public readonly Translation ModalLinkDiscordKitHeading = new Translation("Link your Discord Account", TranslationOptions.TMProUI);
+
+    [TranslationData("Modal description for when a player is asked to link their Discord account.", "Discord join link")]
+    public readonly Translation<string> ModalLinkDiscordKitDescription = new Translation<string>("Copy (<copy/>) the text below and paste it in any channel in our Discord Server to link your accounts.\n\nJoin at <#bbf>{0}</color>.", TranslationOptions.TMProUI);
+
+    [TranslationData("Modal accept button text for when a player is asked to link their Discord account.")]
+    public readonly Translation ModalLinkDiscordCloseButton = new Translation("Done", TranslationOptions.TMProUI);
 
 
     [TranslationData("Title for the KDR (kill-death ratio) statistic.")]

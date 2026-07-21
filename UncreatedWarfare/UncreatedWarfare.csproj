@@ -366,6 +366,7 @@
         <Publicize Include="Assembly-CSharp:SDG.Unturned.ClientAssetIntegrity" />
         <Publicize Include="Assembly-CSharp:SDG.Unturned.ClientAssetIntegrity.serverKnownMissingGuids" />
         <Publicize Include="Assembly-CSharp:SDG.Unturned.Rocket.secondLastPos" />
+        <Publicize Include="Assembly-CSharp:SDG.Unturned.SteamPlayer.clientPlatform" />
 
     </ItemGroup>
 

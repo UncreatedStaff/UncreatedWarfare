@@ -260,7 +260,7 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable, IMapTackUIH
         OnDeployTo(player, in settings);
     }
 
-    public virtual bool IsVisibleToPlayer(WarfarePlayer player) => player.IsOnline && player.Team == Team;
+    public virtual bool IsVisibleToPlayer(WarfarePlayer player) => player.IsOnline && player.Team.IsFriendly(Team);
 
     private float GetProxyScore(WarfarePlayer enemy)
     {

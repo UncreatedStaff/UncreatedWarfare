@@ -119,8 +119,9 @@ public class Zone : IDeployable, IEquatable<Zone>
     [JsonIgnore]
     float IDeployable.Yaw => SpawnYaw;
 
-    /// <inheritdoc />
     bool IDeployable.IsSafeZone => true;
+
+    bool IDeployable.AllowUnarmedDeploy => true;
 
     /// <inheritdoc />
     public bool Equals(Zone other)

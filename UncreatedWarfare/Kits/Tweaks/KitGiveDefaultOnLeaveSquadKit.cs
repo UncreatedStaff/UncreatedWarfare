@@ -25,6 +25,7 @@ internal sealed class KitGiveDefaultOnLeaveSquadKit : IEventListener<SquadMember
     {
         KitPlayerComponent kitPlayerComponent = e.Player.Component<KitPlayerComponent>();
         if (e.Player.Team == Team.NoTeam
+            || e.Player.IsOnDuty
             || !kitPlayerComponent.HasKit
             || kitPlayerComponent.IsClass(Class.Unarmed))
         {
@@ -40,9 +41,10 @@ internal sealed class KitGiveDefaultOnLeaveSquadKit : IEventListener<SquadMember
                 {
                     await _kitRequestService.GiveAvailableFreeKitAsync(e.Player, silent: false, isLowAmmo: isLowAmmo, e.Player.DisconnectToken);
                 }
+                catch (OperationCanceledException) when (!e.Player.IsOnline) { }
                 catch (Exception ex)
                 {
-                    Console.WriteLine(ex);
+                    WarfareModule.Singleton.GlobalLogger.LogError(ex, "Error giving available free kit.");
                 }
             });
         }
@@ -55,6 +57,9 @@ internal sealed class KitGiveDefaultOnLeaveSquadKit : IEventListener<SquadMember
     [EventListener(RequiresMainThread = true)]
     public void HandleEvent(PlayerEnteredZone e, IServiceProvider serviceProvider)
     {
+        if (e.Player.IsOnDuty)
+            return;
+
         if (e.Zone.Type is not ZoneType.MainBase and not ZoneType.WarRoom || !string.Equals(e.Player.Team.Faction.FactionId, e.Zone.Faction, StringComparison.Ordinal))
             return;
 
@@ -69,9 +74,10 @@ internal sealed class KitGiveDefaultOnLeaveSquadKit : IEventListener<SquadMember
             {
                 await _kitRequestService.GiveAvailableFreeKitAsync(e.Player, silent: false, isLowAmmo: _zoneStore.IsInWarRoom(e.Player), e.Player.DisconnectToken).ConfigureAwait(false);
             }
+            catch (OperationCanceledException) when (!e.Player.IsOnline) { }
             catch (Exception ex)
             {
-                Console.WriteLine(ex);
+                WarfareModule.Singleton.GlobalLogger.LogError(ex, "Error giving available free kit.");
             }
         });
     }

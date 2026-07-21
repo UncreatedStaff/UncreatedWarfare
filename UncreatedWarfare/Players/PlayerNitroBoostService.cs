@@ -99,6 +99,7 @@ public partial class PlayerNitroBoostService : IEventListener<PlayerJoined>
 
             return isNitroBoosting.GetValueOrDefault();
         }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
         catch (RpcNoConnectionsException) { }
         catch (Exception ex)
         {
@@ -222,6 +223,7 @@ public partial class PlayerNitroBoostService : IEventListener<PlayerJoined>
                 if (isNitroBoosting.HasValue)
                     ReceiveNitroBoostStatusUpdate(e.Steam64, isNitroBoosting.Value);
             }
+            catch (OperationCanceledException) when (!e.Player.IsOnline) { }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error checking for nitro boost on join.");
