@@ -56,14 +56,14 @@ public class DefaultFlagListUIEvents :
     {
         string displayName = _layout.LayoutInfo.DisplayName;
         if (!_layout.LayoutInfo.Configuration.DisplayRole || !team.IsValid)
-            return "   " + displayName + "   ";
+            return displayName;
 
         LayoutRole role = _teamManager.GetLayoutRole(team);
         return role switch
         {
-            LayoutRole.Opfor => "   " + displayName + "  <#ddd>µ</color>   ",
-            LayoutRole.Blufor => "   " + displayName + "  <#ddd>´</color>   ",
-            _ => "   " + displayName + "   "
+            LayoutRole.Opfor => displayName + "  <#ddd>µ</color>",
+            LayoutRole.Blufor => displayName + "  <#ddd>´</color>",
+            _ => displayName
         };
     }
 

@@ -1,6 +1,4 @@
-﻿using Stripe;
-using System;
-using System.IO;
+﻿using System.IO;
 using Uncreated.Warfare.Interaction.Commands;
 using Uncreated.Warfare.Models.Localization;
 using Uncreated.Warfare.Translations;
