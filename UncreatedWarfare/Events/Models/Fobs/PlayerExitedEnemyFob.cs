@@ -6,7 +6,4 @@ namespace Uncreated.Warfare.Events.Models.Fobs;
 /// Event listener args which fires after a player enters the radius of a friendly <see cref="IResourceFob"/>.
 /// </summary>
 [EventModel(EventSynchronizationContext.Pure)]
-public class PlayerExitedEnemyFob : PlayerNearbyResourceFobEvent
-{
-
-}
+public class PlayerExitedEnemyFob : PlayerNearbyResourceFobEvent;

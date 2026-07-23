@@ -452,6 +452,8 @@ public sealed class WarfareModule
 
         _logger = ServiceProvider.Resolve<ILogger<WarfareModule>>();
 
+        Framework.UI.GlobalLogger.Instance = ServiceProvider.Resolve<ILoggerFactory>();
+
         GlobalLogger = ServiceProvider.Resolve<ILoggerFactory>().CreateLogger("Global");
 
         _logger.LogInformation($"Using {ServiceProvider.ComponentRegistry.Registrations.Count()} services from core and {_pluginLoader.Plugins.Count} plugin(s).");

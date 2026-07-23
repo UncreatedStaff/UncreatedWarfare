@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Uncreated.Warfare.Buildables;
 using Uncreated.Warfare.Configuration;
@@ -21,8 +20,6 @@ using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Extensions;
 using Uncreated.Warfare.Players.UI;
-using Uncreated.Warfare.StrategyMaps;
-using Uncreated.Warfare.StrategyMaps.MapTacks;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Vehicles.WarfareVehicles;
@@ -40,9 +37,7 @@ public partial class FobManager :
     IEventListener<VehicleDespawned>,
     IEventListener<TriggerTrapRequested>,
     IEventListener<IDamageBuildableRequestedEvent>,
-    IEventListener<IBuildableDamagedEvent>,
-    IEventListener<PlayerEnteredFriendlyFob>,
-    IEventListener<PlayerExitedFriendlyFob>
+    IEventListener<IBuildableDamagedEvent>
 {
     void IEventListener<PlaceBarricadeRequested>.HandleEvent(PlaceBarricadeRequested e, IServiceProvider serviceProvider)
     {
@@ -453,35 +448,5 @@ public partial class FobManager :
         }
 
         return origin + direction * (hitDistance - (MaxBoxRadius / 2 + 0.1f));
-    }
-
-    public void HandleEvent(PlayerEnteredFriendlyFob e, IServiceProvider serviceProvider)
-    {
-        StrategyMapManager? strategyMapManager = serviceProvider.GetService<StrategyMapManager>();
-        if (strategyMapManager == null)
-            return;
-        
-        if (strategyMapManager.UI == null)
-            return;
-
-        // todo: this is a lazy hack to make the map tack info UI show when entering/exiting FOBs. can we please refactor the map tack info UI to live in the FOBs namespace, it doesn't really belong in map tacks to begin with
-        StrategyMap.MapTackInfo? mapTackInfo = strategyMapManager.StrategyMapsOfTeam(e.Fob.Team).FirstOrDefault()?.ActiveMapTacks.Find(t => t.Tack is DeployableMapTack deployableMapTack && deployableMapTack.Deployable == e.Fob);
-        if (mapTackInfo == null)
-            return;
-        
-        strategyMapManager.UI.Open(e.Player, mapTackInfo.Value.Tack);
-    }
-    
-    public void HandleEvent(PlayerExitedFriendlyFob e, IServiceProvider serviceProvider)
-    {
-        StrategyMapManager? strategyMapManager = serviceProvider.GetService<StrategyMapManager>();
-        if (strategyMapManager == null)
-            return;
-        
-        if (strategyMapManager.UI == null)
-            return;
-
-        // todo: this is a lazy hack to make the map tack info UI show when entering/exiting FOBs. can we please refactor the map tack info UI to live in the FOBs namespace, it doesn't really belong in map tacks to begin with
-        strategyMapManager.UI.TryClose(e.Player);
     }
 }

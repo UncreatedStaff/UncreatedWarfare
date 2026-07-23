@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SDG.Framework.Utilities;
+using System;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Data;
 using Uncreated.Framework.UI.Patterns;
@@ -10,6 +11,7 @@ using Uncreated.Warfare.Events.Models;
 using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
@@ -19,9 +21,11 @@ namespace Uncreated.Warfare.StrategyMaps.MapTacks;
 [UnturnedUI(BasePath = "UI")]
 internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>
 {
+    private readonly IPlayerService _playerService;
     private static readonly List<KeyValuePair<MapTackVehicleType, int>> WorkingVehicleCounts = new List<KeyValuePair<MapTackVehicleType, int>>();
 
     private readonly MapTackInfoUITranslations _translations;
+    private bool _hasUpdatedEvent;
 
     public UnturnedUIElement LogicClose { get; } = new UnturnedUIElement("~/Logic_Close");
     public UnturnedUIElement LogicOpen { get; } = new UnturnedUIElement("~/Logic_Open");
@@ -72,11 +76,90 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>
 
     private readonly Func<CSteamID, Data> _addData;
 
-    public MapTackInfoUI(AssetConfiguration assetConfig, TranslationInjection<MapTackInfoUITranslations> translations)
-        : base(assetConfig.GetAssetLink<EffectAsset>("UI:MapTackInfoUI"), reliable: false)
+    public MapTackInfoUI(
+        AssetConfiguration assetConfig,
+        TranslationInjection<MapTackInfoUITranslations> translations,
+        IPlayerService playerService
+    ) : base(assetConfig.GetAssetLink<EffectAsset>("UI:MapTackInfoUI"), reliable: false)
     {
+        _playerService = playerService;
         _translations = translations.Value;
         _addData = id => new Data(id, this);
+    }
+
+    protected override void OnDisposing()
+    {
+        if (!_hasUpdatedEvent)
+            return;
+
+        TimeUtility.updated -= OnUpdated;
+        _hasUpdatedEvent = false;
+    }
+
+    private void OnUpdated()
+    {
+        foreach (IUnturnedUIData d in UnturnedUIDataSource.EnumerateData(this))
+        {
+            if (d is not Data data || data.AreaMapTacks.Count < 2)
+                continue;
+
+            WarfarePlayer? player = _playerService.GetOnlinePlayerOrNull(data.Player);
+            if (player == null)
+                continue;
+
+            UpdateClosestMapTack(player, data);
+        }
+    }
+
+    internal void HandleTackDestroyed(MapTack tack)
+    {
+        foreach (IUnturnedUIData d in UnturnedUIDataSource.EnumerateData(this))
+        {
+            if (d is not Data data)
+                continue;
+
+            data.AreaMapTacks.Remove(tack);
+
+            if (data.LookingMapTack == tack)
+                data.LookingMapTack = null;
+
+            if (data.CurrentMapTack != tack)
+                continue;
+
+            WarfarePlayer? player = _playerService.GetOnlinePlayerOrNull(data.Player);
+            if (player == null)
+                continue;
+
+            UpdateClosestMapTack(player, data);
+        }
+    }
+
+    internal void HandlePlayerEntered(MapTack tack, WarfarePlayer player)
+    {
+        Data data = GetOrAddData(player.Steam64);
+        if (data.AreaMapTacks.Contains(tack))
+            return;
+
+        data.AreaMapTacks.Add(tack);
+        if (data.LookingMapTack != null)
+            return;
+
+        UpdateClosestMapTack(player, data);
+    }
+
+    internal void HandlePlayerExited(MapTack tack, WarfarePlayer player)
+    {
+        Data data = GetOrAddData(player.Steam64);
+        if (!data.AreaMapTacks.Remove(tack) || !data.HasUI)
+            return;
+
+        if (data.AreaMapTacks.Count == 0)
+        {
+            TryClose(player);
+            return;
+        }
+
+        UpdateClosestMapTack(player, data);
     }
 
     internal Data GetOrAddData(CSteamID player)
@@ -84,7 +167,7 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>
         return GetOrAddData(player, _addData);
     }
 
-    public void TryClose(WarfarePlayer player, bool instant = false)
+    public void TryClose(WarfarePlayer player, bool fromLookingAtTack = false, bool instant = false)
     {
         GameThread.AssertCurrent();
 
@@ -94,22 +177,30 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>
             return;
         }
 
+        if (fromLookingAtTack && data.AreaMapTacks.Count > 0)
+        {
+            data.LookingMapTack = null;
+
+            // goes from looking at map tack to being in a radius somehow
+            UpdateClosestMapTack(player, data);
+            return;
+        }
+
         if (data.CurrentMapTack != null)
         {
-            data.CurrentMapTack?.RemoveUIUpdateListener(player);
+            data.CurrentMapTack.RemoveUIUpdateListener(player);
             data.CurrentMapTack = null;
         }
+
+        if (fromLookingAtTack)
+            data.LookingMapTack = null;
 
         if (data.IsClosing && !instant)
             return;
 
         if (instant)
         {
-            data.HasUI = false;
-            data.IsClosing = false;
-            data.HealthBarCount = 0;
-            data.StoredHealth = 0;
-            ClearFromPlayer(player.SteamPlayer);
+            Clear(data, player);
         }
         else
         {
@@ -126,15 +217,21 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>
                 if (!data.HasUI)
                     return;
 
-                data.HasUI = false;
-                data.HealthBarCount = 0;
-                data.StoredHealth = 0;
-                ClearFromPlayer(player.SteamPlayer);
+                Clear(data, player);
             });
         }
     }
 
-    public void Open(WarfarePlayer player, MapTack tack)
+    private void Clear(Data data, WarfarePlayer player)
+    {
+        data.HasUI = false;
+        data.IsClosing = false;
+        data.HealthBarCount = 0;
+        data.StoredHealth = 0;
+        ClearFromPlayer(player.SteamPlayer);
+    }
+
+    public void Open(WarfarePlayer player, MapTack tack, bool isLooking)
     {
         GameThread.AssertCurrent();
 
@@ -150,13 +247,16 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>
 
         ITransportConnection c = player.Connection;
 
-        string title = uiHandler.GetTitle(in set);
-
         bool isDefaultState;
+
+        if (data.IsClosing)
+        {
+            Clear(data, player);
+        }
 
         if (!data.HasUI)
         {
-            SendToPlayer(c, title);
+            SendToPlayer(c, uiHandler.GetTitle(in set));
             isDefaultState = true;
             data.HasUI = true;
             data.HealthBarCount = 0;
@@ -164,13 +264,9 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>
         }
         else
         {
-            if (data.IsClosing)
-            {
-                LogicOpen.Show(c);
-            }
             if (data.CurrentMapTack != tack)
             {
-                Title.SetText(c, title);
+                Title.SetText(c, uiHandler.GetTitle(in set));
             }
             isDefaultState = false;
         }
@@ -299,8 +395,57 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>
         {
             data.CurrentMapTack?.RemoveUIUpdateListener(player);
             data.CurrentMapTack = tack;
+            if (isLooking)
+                data.LookingMapTack = tack;
             tack.AddUIUpdateListener(player);
         }
+
+        if (!_hasUpdatedEvent && !isLooking)
+        {
+            TimeUtility.updated += OnUpdated;
+            _hasUpdatedEvent = true;
+        }
+    }
+
+    private void UpdateClosestMapTack(WarfarePlayer player, Data data)
+    {
+        if (data.AreaMapTacks.Count == 0)
+        {
+            TryClose(player);
+            return;
+        }
+
+        MapTack newClosest = GetClosestMapTack(player, data);
+        if (data.CurrentMapTack != newClosest)
+        {
+            Open(player, newClosest, isLooking: false);
+        }
+    }
+
+    private MapTack GetClosestMapTack(WarfarePlayer player, Data data)
+    {
+        // assume count > 0
+
+        if (data.AreaMapTacks.Count == 1)
+            return data.AreaMapTacks[0];
+
+        Vector3 playerPos = player.Position;
+
+        MapTack closest = data.AreaMapTacks[0];
+        float sqrDistance = (closest.FeatureWorldPosition - playerPos).sqrMagnitude;
+        for (int i = 1; i < data.AreaMapTacks.Count; i++)
+        {
+            MapTack tack = data.AreaMapTacks[i];
+            float d = (tack.FeatureWorldPosition - playerPos).sqrMagnitude;
+            if (d >= sqrDistance)
+                continue;
+
+            sqrDistance = d;
+            closest = tack;
+        }
+
+        //GetLogger().LogInformation($"Closest FOB: {closest}. FOBs: {data.AreaMapTacks}.");
+        return closest;
     }
 
     private void UpdateSupply(WarfarePlayer player, SupplyType type, IMapTackUIHandler uiHandler, Data data, int? amount = null)
@@ -525,35 +670,6 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>
         }
     }
 
-    public class Data : IUnturnedUIData
-    {
-        public CSteamID Player { get; }
-        public UnturnedUI Owner { get; }
-        UnturnedUIElement? IUnturnedUIData.Element => null;
-
-        public bool HasUI;
-        public bool IsClosing;
-
-        public int VehicleMask;
-        public bool HasBuildSupply;
-        public bool HasAmmoSupply;
-        public bool HasSupplies;
-        public bool HasHealthBar;
-        public MapTackAttributes Attributes;
-        public bool HasShovelIcon;
-        public int HealthBarCount;
-        public double StoredHealth;
-        public float LastLookAwayTime;
-
-        public MapTack? CurrentMapTack;
-
-        public Data(CSteamID player, MapTackInfoUI owner)
-        {
-            Player = player;
-            Owner = owner;
-        }
-    }
-
     [EventListener(MustRunInstantly = true)]
     void IEventListener<PlayerLeft>.HandleEvent(PlayerLeft e, IServiceProvider serviceProvider)
     {
@@ -569,6 +685,37 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>
         }
 
         data.HasUI = false;
+    }
+
+    public class Data : IUnturnedUIData
+    {
+        public CSteamID Player { get; }
+        public UnturnedUI Owner { get; }
+        UnturnedUIElement? IUnturnedUIData.Element => null;
+
+        public readonly List<MapTack> AreaMapTacks = new List<MapTack>();
+        public bool HasUI;
+        public bool IsClosing;
+
+        public int VehicleMask;
+        public bool HasBuildSupply;
+        public bool HasAmmoSupply;
+        public bool HasSupplies;
+        public bool HasHealthBar;
+        public MapTackAttributes Attributes;
+        public bool HasShovelIcon;
+        public int HealthBarCount;
+        public double StoredHealth;
+        public float LastLookAwayTime;
+
+        public MapTack? CurrentMapTack;
+        public MapTack? LookingMapTack;
+
+        public Data(CSteamID player, MapTackInfoUI owner)
+        {
+            Player = player;
+            Owner = owner;
+        }
     }
 }
 

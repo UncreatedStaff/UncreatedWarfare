@@ -2138,7 +2138,7 @@ public sealed class KitSelectionUITranslations : TranslationCollection
     
     [TranslationData("Description of the Squadleader class.")]
     public readonly Translation DescriptionSquadleader = new Translation(
-        "Help your squad by supplying them with <#f4bb57>rally points</color> and placing <#f4bb57>FOB radios</color>.",
+        "Help your squad by supplying them with <#f4bb57>rally points</color> and placing <#f4bb57>FOB bunkers</color>.",
         TranslationOptions.TMProUI
     );
     

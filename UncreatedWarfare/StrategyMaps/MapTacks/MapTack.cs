@@ -14,6 +14,7 @@ public class MapTack : IDisposable, ITransformObject
 
     private readonly StrategyMapManager _strategyMapManager;
     private readonly bool _leaveUiHandlerOpen;
+    private bool _hasShowInAreaEvents;
 
     public IAssetLink<ItemPlaceableAsset> MarkerAsset { get; }
     public IBuildable Marker { get; private set; }
@@ -33,6 +34,16 @@ public class MapTack : IDisposable, ITransformObject
         MarkerAsset = markerAsset;
         FeatureWorldPosition = featureWorldPosition;
         UIHandler = uiHandler;
+        if (uiHandler is not { ShouldShowInArea: true })
+            return;
+
+        uiHandler.OnPlayerEntered += HandlePlayerEntered;
+        uiHandler.OnPlayerExited += HandlePlayerExited;
+        _hasShowInAreaEvents = true;
+        foreach (WarfarePlayer player in uiHandler.Players)
+        {
+            HandlePlayerEntered(player);
+        }
     }
 
     public virtual void DropMarker(Vector3 worldCoordinatesOnTable, Quaternion rotation)
@@ -46,9 +57,22 @@ public class MapTack : IDisposable, ITransformObject
     public void Dispose()
     {
         UnsubscribeUIListeners();
+        WarfareModule.Singleton.GlobalLogger.LogConditional($"Map tack {MarkerAsset} destroyed.");
+        _strategyMapManager.UI?.HandleTackDestroyed(this);
         Marker.Destroy();
         if (!_leaveUiHandlerOpen && UIHandler is IDisposable disp)
             disp.Dispose();
+
+        if (!_hasShowInAreaEvents)
+            return;
+
+        _hasShowInAreaEvents = false;
+        UIHandler!.OnPlayerEntered -= HandlePlayerEntered;
+        UIHandler!.OnPlayerExited -= HandlePlayerExited;
+        foreach (WarfarePlayer player in UIHandler.Players)
+        {
+            HandlePlayerExited(player);
+        }
     }
 
     public Vector3 Position
@@ -98,6 +122,18 @@ public class MapTack : IDisposable, ITransformObject
         uiHandler.OnAttributesUpdated -= AttributesUpdated;
         uiHandler.OnHealthUpdated -= HealthUpdated;
         uiHandler.OnSuppliesUpdated -= SuppliesUpdated;
+    }
+
+    private void HandlePlayerEntered(WarfarePlayer player)
+    {
+        WarfareModule.Singleton.GlobalLogger.LogConditional($"Player entered {MarkerAsset}: {player}.");
+        _strategyMapManager.UI?.HandlePlayerEntered(this, player);
+    }
+
+    private void HandlePlayerExited(WarfarePlayer player)
+    {
+        WarfareModule.Singleton.GlobalLogger.LogConditional($"Player exited {MarkerAsset}: {player}.");
+        _strategyMapManager.UI?.HandlePlayerExited(this, player);
     }
 
     private void VehicleUpdated(MapTackVehicleType type, int amount)

@@ -120,14 +120,14 @@ public class FobPlacementTweaks :
             return;
         }
 
-        float minFobDistanceFromMain = _fobManager.Configuration.GetValue<float>("MinFobDistanceFromMain", 300);
+        float minFobDistanceFromMain = _fobManager.Configuration.GetValue<float>("MinFobDistanceFromMain", 120);
 
         ZoneStore? zoneStore = serviceProvider.GetService<ZoneStore>();
         if (zoneStore != null)
         {
-            Zone? mainBase = zoneStore.FindClosestZone(e.Position, ZoneType.MainBase);
+            Zone? mainBase = zoneStore.FindClosestZone(e.Position, ZoneType.MainBase, minFobDistanceFromMain);
 
-            if (mainBase != null && MathUtility.WithinRange(mainBase.Center, e.Position, minFobDistanceFromMain))
+            if (mainBase != null)
             {
                 chatService.Send(e.OriginalPlacer, _translations.BuildFOBTooCloseToMain);
                 e.Cancel();

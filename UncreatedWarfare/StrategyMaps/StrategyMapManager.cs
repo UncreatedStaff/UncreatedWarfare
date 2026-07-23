@@ -274,16 +274,29 @@ public class StrategyMapManager :
 
     #region UI Stuff
 
+    private int _playersRan;
+
     private void OnUpdated()
     {
         float time = Time.realtimeSinceStartup;
+
+        // run 1/groupPerFrame th of the players per frame
+        const int groupPerFrame = 6;
+        _playersRan = (_playersRan + 1) % groupPerFrame;
+
         foreach (ZoneProximity x in _zoneStore!.ProximityZones!)
         {
             if (x.Zone.Type != ZoneType.WarRoom || x.Proximity is not ITrackingProximity<WarfarePlayer> trackingProximity)
                 continue;
 
-            foreach (WarfarePlayer player in trackingProximity.ActiveObjects)
+            for (int i = 0; i < trackingProximity.ActiveObjects.Count; i++)
             {
+                WarfarePlayer player = trackingProximity.ActiveObjects[i];
+                if (i % groupPerFrame != _playersRan)
+                {
+                    continue;
+                }
+
                 MapTack? tack = null;
                 Vector3 playerPos = player.Position;
                 Transform aim = player.UnturnedPlayer.look.aim;
@@ -308,7 +321,8 @@ public class StrategyMapManager :
 
                     if (!hasRaycasted)
                     {
-                        if (!Physics.Raycast(new Ray(aim.position, aim.forward), out info, 4f, RayMasks.PLAYER_INTERACT, QueryTriggerInteraction.Ignore))
+                        if (!Physics.Raycast(new Ray(aim.position, aim.forward), out info, 4f, RayMasks.PLAYER_INTERACT,
+                                QueryTriggerInteraction.Ignore))
                         {
                             break;
                         }
@@ -333,34 +347,37 @@ public class StrategyMapManager :
                 if (tack == null)
                 {
                     // not looking at a tack
-                    if (data != null && time - data.LastLookAwayTime > 0.65f)
+                    if (data != null && time - data.LastLookAwayTime > 0.65f && data is { HasUI: true, IsClosing: false })
                     {
-                        UI!.TryClose(player);
+                        UI!.TryClose(player, fromLookingAtTack: true);
                     }
                 }
                 else if (tack.UIHandler == null)
                 {
-                    // tack doesn't have a UI
-                    UI!.TryClose(player);
+                    if (data is { HasUI: true, IsClosing: false })
+                    {
+                        // tack doesn't have a UI
+                        UI!.TryClose(player, fromLookingAtTack: true);
+                    }
                 }
                 else
                 {
                     // is looking at a tack
                     if (data == null || !data.HasUI)
                     {
-                        UI.Open(player, tack);
+                        UI.Open(player, tack, isLooking: true);
                     }
                     else if (data.CurrentMapTack != tack)
                     {
                         if (!data.IsClosing)
                         {
                             if (data.HasUI)
-                                UI.TryClose(player);
+                                UI.TryClose(player, fromLookingAtTack: true);
                             else
-                                UI.Open(player, tack);
+                                UI.Open(player, tack, isLooking: true);
                         }
                     }
-                    
+
                     data ??= UI!.GetOrAddData(player.Steam64);
                     data.LastLookAwayTime = time;
                 }
@@ -375,7 +392,7 @@ public class StrategyMapManager :
             return;
         }
 
-        UI!.TryClose(e.Player);
+        UI!.TryClose(e.Player, fromLookingAtTack: true);
     }
 
     #endregion

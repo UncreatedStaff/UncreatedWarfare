@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Linq;
 using Uncreated.Warfare.FOBs.SupplyCrates;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Vehicles.WarfareVehicles;
+// ReSharper disable ValueParameterNotUsed
 
 namespace Uncreated.Warfare.StrategyMaps.MapTacks;
 
@@ -55,6 +58,26 @@ public interface IMapTackUIHandler
     /// Invoked when this tack's buildable's attributes change.
     /// </summary>
     event AttributesUpdated? OnAttributesUpdated;
+
+    /// <summary>
+    /// Invoked when a player enters the area of this map tack.
+    /// </summary>
+    event Action<WarfarePlayer>? OnPlayerEntered { add { } remove { } }
+
+    /// <summary>
+    /// Invoked when a player leaves the area of this map tack.
+    /// </summary>
+    event Action<WarfarePlayer>? OnPlayerExited { add { } remove { } }
+
+    /// <summary>
+    /// Gets all players within the area of this map tack.
+    /// </summary>
+    IEnumerable<WarfarePlayer> Players => Enumerable.Empty<WarfarePlayer>();
+
+    /// <summary>
+    /// Whether or not this map tack should also show the UI when the player is within it's location's area.
+    /// </summary>
+    bool ShouldShowInArea => false;
 
     /// <summary>
     /// Gets the title for the given set of players.

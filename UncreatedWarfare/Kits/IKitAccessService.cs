@@ -210,7 +210,7 @@ public partial class MySqlKitAccessService : IKitAccessService, IDisposable
         {
             try
             {
-                return await SendUpdateAccess(connection, steam64.m_SteamID, primaryKey, access, token);
+                return await SendUpdateAccess(connection, steam64.m_SteamID, primaryKey, access, instigator.m_SteamID, token);
             }
             catch (RpcNoConnectionsException) { }
             catch (Exception ex)
@@ -311,7 +311,7 @@ public partial class MySqlKitAccessService : IKitAccessService, IDisposable
         {
             try
             {
-                return await SendUpdateAccessBulk(connection, steam64.m_SteamID, primaryKeys, access, token);
+                return await SendUpdateAccessBulk(connection, steam64.m_SteamID, primaryKeys, access, instigator.m_SteamID, token);
             }
             catch (RpcNoConnectionsException) { }
             catch (Exception ex)
@@ -659,10 +659,10 @@ public partial class MySqlKitAccessService : IKitAccessService, IDisposable
     }
 
     [RpcSend(nameof(ReceiveUpdateAccess))]
-    protected partial RpcTask<bool> SendUpdateAccess(IModularRpcRemoteConnection connection, ulong player, uint primaryKey, KitAccessType? newAccess, CancellationToken token = default);
+    protected partial RpcTask<bool> SendUpdateAccess(IModularRpcRemoteConnection connection, ulong player, uint primaryKey, KitAccessType? newAccess, ulong instigator, CancellationToken token = default);
 
     [RpcSend(nameof(ReceiveUpdateAccessBulk)), RpcTimeout(1 * Timeouts.Minutes)]
-    protected partial RpcTask<bool[]> SendUpdateAccessBulk(IModularRpcRemoteConnection connection, ulong player, uint[] primaryKeys, KitAccessType? newAccess, CancellationToken token = default);
+    protected partial RpcTask<bool[]> SendUpdateAccessBulk(IModularRpcRemoteConnection connection, ulong player, uint[] primaryKeys, KitAccessType? newAccess, ulong instigator, CancellationToken token = default);
 
     [RpcSend(nameof(ReceiveAccessUpdated)), RpcTimeout(3 * Timeouts.Seconds), RpcFireAndForget]
     protected partial RpcTask SendAccessUpdated(ulong player, uint primaryKey, ulong instigator, KitAccessType? newAccess);

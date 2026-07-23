@@ -132,12 +132,14 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable, IMapTackUIH
                 PositionFunction = p => p.Position,
                 OnItemAdded = p =>
                 {
+                    OnPlayerEntered?.Invoke(p);
                     InvokeVehicleUpdated(MapTackVehicleType.Infantry, NearbyFriendlies!.Collection.Count);
-                    _ = WarfareModule.EventDispatcher.DispatchEventAsync(new PlayerEnteredFriendlyFob() { Fob = this, Player = p });
+                    _ = WarfareModule.EventDispatcher.DispatchEventAsync(new PlayerEnteredFriendlyFob { Fob = this, Player = p });
                 },
                 OnItemRemoved = p =>
                 {
-                    _ = WarfareModule.EventDispatcher.DispatchEventAsync(new PlayerExitedFriendlyFob() { Fob = this, Player = p });
+                    OnPlayerExited?.Invoke(p);
+                    _ = WarfareModule.EventDispatcher.DispatchEventAsync(new PlayerExitedFriendlyFob { Fob = this, Player = p });
                 }
             }
         );
@@ -150,11 +152,11 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable, IMapTackUIH
                 PositionFunction = p => p.Position,
                 OnItemAdded = p =>
                 {
-                    _ = WarfareModule.EventDispatcher.DispatchEventAsync(new PlayerEnteredEnemyFob() { Fob = this, Player = p });
+                    _ = WarfareModule.EventDispatcher.DispatchEventAsync(new PlayerEnteredEnemyFob { Fob = this, Player = p });
                 },
                 OnItemRemoved = p =>
                 {
-                    _ = WarfareModule.EventDispatcher.DispatchEventAsync(new PlayerExitedEnemyFob() { Fob = this, Player = p });
+                    _ = WarfareModule.EventDispatcher.DispatchEventAsync(new PlayerExitedEnemyFob { Fob = this, Player = p });
                 }
             }
         );
@@ -415,10 +417,14 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable, IMapTackUIH
 
     #region Map Tacks
 
+    bool IMapTackUIHandler.ShouldShowInArea => true;
+
     public event SuppliesUpdated? OnSuppliesUpdated;
     public event VehicleUpdated? OnVehicleUpdated;
     public event HealthUpdated? OnHealthUpdated;
     public event AttributesUpdated? OnAttributesUpdated;
+    private event Action<WarfarePlayer>? OnPlayerEntered;
+    private event Action<WarfarePlayer>? OnPlayerExited;
 
     protected internal void InvokeSuppliesUpdated(SupplyType type, int amount) => OnSuppliesUpdated?.Invoke(type, amount);
 
@@ -554,6 +560,10 @@ public class ResourceFob : IBuildableFob, IResourceFob, IDisposable, IMapTackUIH
     {
         UpdateVehicleCounts(vehicleCounts);
     }
+
+    event Action<WarfarePlayer>? IMapTackUIHandler.OnPlayerEntered { add => OnPlayerEntered += value; remove => OnPlayerEntered -= value; }
+    event Action<WarfarePlayer>? IMapTackUIHandler.OnPlayerExited { add => OnPlayerExited += value; remove => OnPlayerExited -= value; }
+    IEnumerable<WarfarePlayer> IMapTackUIHandler.Players => NearbyFriendlies.Collection;
 
 
     #endregion

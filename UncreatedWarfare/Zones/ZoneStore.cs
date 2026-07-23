@@ -241,21 +241,24 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService, IDisposable
     /// <summary>
     /// Finds the closest zone to a point based on it's border.
     /// </summary>
-    public Zone? FindClosestZone(in Vector3 point, ZoneType? type = null)
+    public Zone? FindClosestZone(in Vector3 point, ZoneType? type = null, float maxRange = float.NaN)
     {
-        return FindClosestZone(in point, out _, type);
+        return FindClosestZone(in point, out _, type, maxRange);
     }
 
     /// <summary>
     /// Finds the closest zone to a point based on it's border. Zones with the point inside their borders will return the square distance from the border but negative.
     /// </summary>
-    public Zone? FindClosestZone(in Vector3 point, out float sqrDistance, ZoneType? type = null)
+    public Zone? FindClosestZone(in Vector3 point, out float sqrDistance, ZoneType? type = null, float maxRange = float.NaN)
     {
         if (ProximityZones == null)
         {
             sqrDistance = float.NaN;
             return null;
         }
+
+        if (float.IsFinite(maxRange))
+            maxRange *= maxRange;
 
         float minSqrDistance = float.NaN;
         Zone? minZone = null;
@@ -267,6 +270,8 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService, IDisposable
             Vector3 closestPoint = proximity.Proximity.GetNearestPointOnBorder(in point);
 
             float d = (point - closestPoint).sqrMagnitude * (proximity.Proximity.TestPoint(in point) ? -1 : 1);
+            if (float.IsFinite(maxRange) && d > maxRange)
+                continue;
 
             if (minZone != null && d >= minSqrDistance)
                 continue;
@@ -283,13 +288,16 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService, IDisposable
     /// <summary>
     /// Finds the closest zone to a point based on it's border. Zones with the point inside their borders will return the square distance from the border but negative.
     /// </summary>
-    public Zone? FindClosestZone(Vector2 point, out float sqrDistance, ZoneType? type = null)
+    public Zone? FindClosestZone(Vector2 point, out float sqrDistance, ZoneType? type = null, float maxRange = float.NaN)
     {
         if (ProximityZones == null)
         {
             sqrDistance = float.NaN;
             return null;
         }
+
+        if (float.IsFinite(maxRange))
+            maxRange *= maxRange;
 
         Vector3 p = new Vector3(point.x, 0f, point.y);
         float minSqrDistance = float.NaN;
@@ -301,6 +309,8 @@ public class ZoneStore : IHostedService, IEarlyLevelHostedService, IDisposable
                 continue;
 
             float d = MathUtility.SquaredDistance(in p, in closestPoint, true) * (proximity.Proximity.TestPoint(in point) ? -1 : 1);
+            if (float.IsFinite(maxRange) && d > maxRange)
+                continue;
 
             if (minZone != null && d >= minSqrDistance)
                 continue;

@@ -41,7 +41,6 @@ public class BunkerFob : ResourceFob, IFobStrategyMapTackHandler, IDamageableFob
             if (value != null)
                 value.OnProgressUpdated += OnShovelableProgressUpdated;
 
-            WarfareModule.Singleton.GlobalLogger.LogInformation($"Shovelable found: {_shovelable != null}");
             InvokeHealthUpdated();
         }
     }
