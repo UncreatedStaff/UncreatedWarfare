@@ -182,7 +182,7 @@ public partial class MySqlKitAccessService : IKitAccessService, IDisposable
                 break;
             }
 
-            if (WarfareModule.IsActive && _playerService?.GetOnlinePlayerThreadSafe(steam64) is { } player)
+            if (WarfareModule.IsActive && _playerService?.GetOnlinePlayerOrNullThreadSafe(steam64) is { } player)
             {
                 KitPlayerComponent? comp = player.ComponentOrNull<KitPlayerComponent>();
                 if (type.HasValue)
@@ -265,7 +265,7 @@ public partial class MySqlKitAccessService : IKitAccessService, IDisposable
                     .ConfigureAwait(false);
 
                 // update UI and cache
-                if (WarfareModule.IsActive && _playerService?.GetOnlinePlayerThreadSafe(steam64) is { } player)
+                if (WarfareModule.IsActive && _playerService?.GetOnlinePlayerOrNullThreadSafe(steam64) is { } player)
                 {
                     KitPlayerComponent component = player.Component<KitPlayerComponent>();
                     component.RemoveAccessibleKit(primaryKey);
@@ -439,7 +439,7 @@ public partial class MySqlKitAccessService : IKitAccessService, IDisposable
                     .ConfigureAwait(false);
 
                 // update UI and cache
-                if (WarfareModule.IsActive && _playerService?.GetOnlinePlayerThreadSafe(steam64) is { } player)
+                if (WarfareModule.IsActive && _playerService?.GetOnlinePlayerOrNullThreadSafe(steam64) is { } player)
                 {
                     KitPlayerComponent component = player.Component<KitPlayerComponent>();
                     bool needsLoadoutUpdate = false;
@@ -496,7 +496,7 @@ public partial class MySqlKitAccessService : IKitAccessService, IDisposable
                 .AnyAsync(token)
                 .ConfigureAwait(false);
 
-            if (WarfareModule.IsActive && _playerService?.GetOnlinePlayerThreadSafe(steam64) is { } player)
+            if (WarfareModule.IsActive && _playerService?.GetOnlinePlayerOrNullThreadSafe(steam64) is { } player)
             {
                 KitPlayerComponent? comp = player.ComponentOrNull<KitPlayerComponent>();
                 if (access)

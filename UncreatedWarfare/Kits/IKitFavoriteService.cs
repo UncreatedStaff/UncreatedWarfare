@@ -77,7 +77,7 @@ public partial class MySqlKitFavoriteService : IKitFavoriteService, IDisposable
                 .AnyAsync(token)
                 .ConfigureAwait(false))
             {
-                if (_playerService?.GetOnlinePlayerThreadSafe(player) is { } onlinePlayer)
+                if (_playerService?.GetOnlinePlayerOrNullThreadSafe(player) is { } onlinePlayer)
                 {
                     KitPlayerComponent? comp = onlinePlayer.ComponentOrNull<KitPlayerComponent>();
                     if (comp != null && comp.AddFavoriteKit(kitPrimaryKey))
@@ -88,7 +88,7 @@ public partial class MySqlKitFavoriteService : IKitFavoriteService, IDisposable
 
                 return true;
             }
-            else if (_playerService?.GetOnlinePlayerThreadSafe(player) is { } onlinePlayer)
+            else if (_playerService?.GetOnlinePlayerOrNullThreadSafe(player) is { } onlinePlayer)
             {
                 KitPlayerComponent? comp = onlinePlayer.ComponentOrNull<KitPlayerComponent>();
                 if (comp != null && comp.RemoveFavoriteKit(kitPrimaryKey))
