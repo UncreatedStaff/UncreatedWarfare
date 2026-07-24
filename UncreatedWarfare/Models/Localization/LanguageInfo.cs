@@ -13,6 +13,8 @@ namespace Uncreated.Warfare.Models.Localization;
 [Table("lang_info")]
 public class LanguageInfo : ITranslationArgument, IEquatable<LanguageInfo>
 {
+    internal int TranslationsAvailable;
+
     public static readonly SpecialFormat FormatDisplayName = new SpecialFormat("Display Name", "d");
     public static readonly SpecialFormat FormatCode = new SpecialFormat("Code", "c");
 
@@ -55,8 +57,7 @@ public class LanguageInfo : ITranslationArgument, IEquatable<LanguageInfo>
     public bool IsDefault { get; internal set; }
 
     [NotMapped]
-    // todo: better support calculation
-    public float Support { get => IsDefault ? 1 : 0; }
+    public float Support { get; set; }
 
     public LanguageInfo() { }
 
@@ -74,6 +75,8 @@ public class LanguageInfo : ITranslationArgument, IEquatable<LanguageInfo>
     internal void UpdateIsDefault(LanguageService langService)
     {
         IsDefault = langService == null || langService.DefaultLanguageCode.Equals(Code, StringComparison.OrdinalIgnoreCase);
+        if (IsDefault)
+            Support = 1f;
     }
 
     /// <inheritdoc />

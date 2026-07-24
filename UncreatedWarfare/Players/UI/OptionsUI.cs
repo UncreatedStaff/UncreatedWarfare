@@ -719,21 +719,29 @@ public class OptionsUI : UnturnedUI
         {
             _languageSearch.Add(_languageService.GetDefaultLanguage());
             string? steamLanguage = player.SteamPlayer.language;
+            int startIndex = 1;
             if (steamLanguage != null)
             {
                 LanguageInfo? match = _languageDataStore.Languages.FirstOrDefault(x => string.Equals(x.SteamLanguageName, steamLanguage, StringComparison.OrdinalIgnoreCase));
                 if (match != null && !match.IsDefault)
+                {
                     _languageSearch.Add(match);
+                    startIndex = 2;
+                }
             }
-            using IEnumerator<LanguageInfo> langs = _languageDataStore.Languages.GetEnumerator();
-            for (int uiCount = _languageSearch.Count; uiCount < _languageResults.Length && langs.MoveNext();)
+
+            foreach (LanguageInfo lang in _languageDataStore.Languages)
             {
-                if (_languageSearch.Contains(langs.Current!))
+                if (lang.Support == 0 || _languageSearch.Contains(lang))
                     continue;
 
-                ++uiCount;
-                _languageSearch.Add(langs.Current!);
+                _languageSearch.Add(lang);
             }
+
+            _languageSearch.Sort(startIndex, _languageSearch.Count - 1, LanguageDefaultUISortComparer.Instance);
+            
+            if (_languageSearch.Count > _languageResults.Length)
+                _languageSearch.RemoveRange(_languageResults.Length, _languageSearch.Count - _languageResults.Length);
 
             return _languageSearch.ToArray();
         }
@@ -1064,6 +1072,38 @@ public class OptionsUI : UnturnedUI
             Player = player;
             Owner = owner;
         }
+    }
+}
+
+file class LanguageDefaultUISortComparer : IComparer<LanguageInfo?>
+{
+    public static readonly LanguageDefaultUISortComparer Instance = new LanguageDefaultUISortComparer();
+
+    public int Compare(LanguageInfo? x, LanguageInfo? y)
+    {
+        if (x is null)
+        {
+            if (y is null)
+                return 0;
+            return -1;
+        }
+
+        if (y is null)
+            return 1;
+
+        if (x.IsDefault)
+        {
+            if (!y.IsDefault)
+                return 1;
+        }
+        else if (y.IsDefault)
+            return -1;
+
+        int cmp = x.Support.CompareTo(y.Support);
+        if (cmp != 0)
+            return -cmp;
+
+        return x.Code.CompareTo(y.Code, StringComparison.Ordinal);
     }
 }
 

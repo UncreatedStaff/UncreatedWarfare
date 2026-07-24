@@ -34,6 +34,8 @@ public class LanguageService : IHostedService
     /// </summary>
     public string DefaultCultureCode { get; }
 
+    public IReadOnlyList<LanguageInfo> Languages => _languageDataStoreCache?.Languages ?? Array.Empty<LanguageInfo>();
+
     public LanguageService(ILanguageDataStore languageDataStore, IConfiguration systemConfig, ILogger<LanguageService> logger, TimeZoneRegionalDatabase tzDatabase)
     {
         _languageDataStore = languageDataStore;
@@ -46,11 +48,6 @@ public class LanguageService : IHostedService
 
     async UniTask IHostedService.StartAsync(CancellationToken token)
     {
-        if (_languageDataStoreCache != null)
-        {
-            await _languageDataStoreCache.ReloadCache(token);
-        }
-
         _fallback = await _languageDataStore.GetInfo(DefaultLanguageCode, true, true, token);
         if (_fallback is null)
         {
@@ -222,6 +219,7 @@ public class LanguageService : IHostedService
         Code = DefaultLanguageCode,
         DisplayName = "English",
         IsDefault = true,
+        Support = 1f,
         Aliases =
         [
             new LanguageAlias { Alias = "English" },

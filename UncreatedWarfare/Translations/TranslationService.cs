@@ -10,6 +10,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -173,9 +174,14 @@ public class TranslationService : ITranslationService, IDisposable, IHostedServi
         // placeholder values
         LanguageInfo language = LanguageService.GetDefaultLanguage();
 
+        List<LanguageInfo> langs = LanguageService.Languages.ToList();
+        langs.ForEach(x => x.TranslationsAvailable = 0);
+
         ImmutableArray<Type>.Builder enumBuilder = ImmutableArray.CreateBuilder<Type>(64);
 
         enumBuilder.AddRange(_enumTypes);
+
+        int totalTranslations = 0;
 
         foreach (Assembly asm in assemblies)
         {
@@ -208,9 +214,32 @@ public class TranslationService : ITranslationService, IDisposable, IHostedServi
                     continue;
                 }
 
-                _ = GetCollectionFromType(type);
+                TranslationCollection collection = GetCollectionFromType(type);
+                foreach (Translation translation in collection.Translations.Values)
+                {
+                    if (!translation.Data.IsPriorityTranslation)
+                        continue;
+
+                    foreach (TranslationValue value in translation.Table.Values)
+                    {
+                        if (value.Language.IsDefault)
+                            continue;
+
+                        ++value.Language.TranslationsAvailable;
+                    }
+
+                    ++totalTranslations;
+                }
             }
         }
+
+        langs.ForEach(x =>
+        {
+            if (x.IsDefault)
+                return;
+
+            x.Support = (float)((double)x.TranslationsAvailable / totalTranslations);
+        });
 
         foreach (Type type in _enumTypes)
         {
