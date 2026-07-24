@@ -1,3 +1,4 @@
+using Cysharp.Threading.Tasks.Triggers;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using Uncreated.Warfare.Buildables;
@@ -109,18 +110,26 @@ public class ShovelableBuildable : BuildableFobEntity<ShovelableInfo>
         });
     }
 
-    public bool Shovel(WarfarePlayer shoveler, Vector3 point)
+    public bool Shovel(WarfarePlayer shoveler, Vector3 point, int amount = 0)
     {
         if (IsCompleted)
             return false;
 
-        if (shoveler.Component<KitPlayerComponent>().IsClass(Class.CombatEngineer))
-            HitsRemaining -= 2;
-        else
-            HitsRemaining--;
+        if (amount <= 0)
+        {
+            if (shoveler.Component<KitPlayerComponent>().IsClass(Class.CombatEngineer))
+                amount = 2;
+            else
+                amount = 1;
+        }
+
+        if (HitsRemaining - amount < 0)
+            amount = HitsRemaining;
+
+        HitsRemaining -= amount;
         
         if (shoveler.CurrentSession != null)
-            Builders.RecordWork(shoveler.Steam64, true, 1);
+            Builders.RecordWork(shoveler.Steam64, true, amount);
 
         if (IsCompleted)
         {

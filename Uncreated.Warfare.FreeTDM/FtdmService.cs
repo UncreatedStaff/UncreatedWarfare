@@ -275,7 +275,7 @@ internal class FtdmService : ILayoutPhaseListener<ActionPhase>, IDisposable, ILa
                     }
                     else
                     {
-                        await _kitRequestService.GiveKitAsync(player, new KitBestowData(kit) { Silent = true }, CancellationToken.None);
+                        await _kitRequestService.GiveKitAsync(player, new KitBestowData(kit, "PlayerEnteredSpawnZone") { Silent = true }, CancellationToken.None);
                     }
                 }
                 catch (Exception ex)

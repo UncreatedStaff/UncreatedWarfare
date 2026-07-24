@@ -89,6 +89,12 @@
         <DefineConstants>$(DefineConstants);TRACE</DefineConstants>
     </PropertyGroup>
 
+    <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+
+      <DefineConstants>$(DefineConstants);MAP_TACK_UI_DEBUG_LOGGING</DefineConstants>
+
+    </PropertyGroup>
+
     <ItemGroup>
         <Compile Remove="Commands\_BlankCommand.cs" />
     </ItemGroup>

@@ -13,6 +13,7 @@ using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Services;
 using Uncreated.Warfare.Util;
 using Uncreated.Warfare.Util.List;
+using Uncreated.Warfare.Util.Region;
 
 namespace Uncreated.Warfare.Players.Management;
 
@@ -144,6 +145,77 @@ public class DroppedItemTracker : IHostedService, IEventListener<PlayerLeft>
     public IEnumerable<uint> EnumerateDroppedItemInstanceIds(CSteamID player)
     {
         return _droppedItems.TryGetValue(player, out List<uint>? items) ? items : Enumerable.Empty<uint>();
+    }
+
+    /// <summary>
+    /// Simulates a player dropping an item (not from their inventory) and invokes the proper events.
+    /// </summary>
+    /// <remarks><see cref="DropItemRequested"/> will not be invoked.</remarks>
+    /// <param name="dropper">The player that dropped the item.</param>
+    /// <param name="item">The item to drop.</param>
+    /// <param name="position">Position to spawn the item. This will not necessarily be the spawn position due to a little variation in <see cref="ItemManager.dropItem"/>.</param>
+    /// <exception cref="InvalidOperationException"><see cref="ItemManager"/> not initialized yet.</exception>
+    /// <exception cref="ArgumentException">Position outside world bounds.</exception>
+    /// <exception cref="ArgumentNullException"/>
+    /// <exception cref="GameThreadException"/>
+    public void SimulateDroppingItem(WarfarePlayer dropper, Item item, Vector3 position)
+    {
+        GameThread.AssertCurrent();
+
+        if (ItemManager.regions == null)
+            throw new InvalidOperationException("ItemManager not initialized yet.");
+
+        if (!Regions.tryGetCoordinate(position, out byte x, out byte y))
+            throw new ArgumentException("Position outside world bounds.", nameof(position));
+
+        ItemManager.dropItem(
+            item ?? throw new ArgumentNullException(nameof(item)),
+            position,
+            playEffect: true,
+            isDropped: true,
+            wideSpread: false
+        );
+
+        ItemData? data = null;
+        ushort index = ushort.MaxValue;
+        RegionCoord region = new RegionCoord(x, y);
+        foreach (RegionCoord reg in RegionUtility.EnumerateRegions(position))
+        {
+            ItemRegion r = ItemManager.regions[reg.x, reg.y];
+            for (int i = Math.Min(r.items.Count - 1, ushort.MaxValue); i >= 0; --i)
+            {
+                if (!ReferenceEquals(r.items[i].item, item))
+                    continue;
+
+                data = r.items[i];
+                index = (ushort)i;
+                region = reg;
+                break;
+            }
+
+            if (data != null)
+                break;
+        }
+
+        ItemDropped args = new ItemDropped
+        {
+            Player = dropper,
+            Region = ItemManager.regions?[region.x, region.y],
+            RegionPosition = region,
+            Index = index,
+            Item = item,
+            Asset = item.GetAsset(),
+            DroppedItem = data,
+            LandingPoint = data?.point ?? Vector3.zero,
+            DropPoint = data?.point ?? Vector3.zero,
+            WasDroppedFromInventory = false,
+            OldPage = (Page)255,
+            OldX = 255,
+            OldY = 255,
+            OldRotation = 0
+        };
+
+        _ = WarfareModule.EventDispatcher.DispatchEventAsync(args, WarfareModule.Singleton.UnloadToken);
     }
 
     private void OnItemDestroyed(in ItemInfo itemInfo, bool despawned, bool pickedUp, CSteamID pickUpPlayer, Page pickupPage, byte pickupX, byte pickupY, byte pickupRot)
@@ -457,6 +529,7 @@ public class DroppedItemTracker : IHostedService, IEventListener<PlayerLeft>
                 OldPage = args.Page,
                 OldX = args.X,
                 OldY = args.Y,
+                WasDroppedFromInventory = true,
                 OldRotation = args.Rotation,
                 LandingPoint = point,
                 DropPoint = args.Position

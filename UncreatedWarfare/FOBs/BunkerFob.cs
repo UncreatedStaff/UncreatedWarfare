@@ -70,6 +70,7 @@ public class BunkerFob : ResourceFob, IFobStrategyMapTackHandler, IDamageableFob
         IsBuilt = true;
         HasBeenRebuilt = true;
         Buildable = newBuildable;
+        Shovelable = null;
         UpdateIcon();
         InvokeHealthUpdated();
         InvokeAttributesUpdated();

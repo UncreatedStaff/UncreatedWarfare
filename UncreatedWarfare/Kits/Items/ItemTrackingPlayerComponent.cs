@@ -175,7 +175,7 @@ public class ItemTrackingPlayerComponent :
 
     void IEventListener<ItemDropped>.HandleEvent(ItemDropped e, IServiceProvider serviceProvider)
     {
-        if (e.Item == null || IsPossiblyCorrupted)
+        if (e.Item == null || IsPossiblyCorrupted || !e.WasDroppedFromInventory)
             return;
         
         for (int i = 0; i < ItemTransformations.Count; ++i)

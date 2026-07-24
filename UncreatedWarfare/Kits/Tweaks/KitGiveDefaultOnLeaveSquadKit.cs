@@ -26,7 +26,8 @@ internal sealed class KitGiveDefaultOnLeaveSquadKit : IEventListener<SquadMember
         KitPlayerComponent kitPlayerComponent = e.Player.Component<KitPlayerComponent>();
         if (e.Player.Team == Team.NoTeam
             || !kitPlayerComponent.HasKit
-            || kitPlayerComponent.IsClass(Class.Unarmed))
+            || kitPlayerComponent.IsClass(Class.Unarmed)
+            || e.Player.IsOnDuty)
         {
             return;
         }

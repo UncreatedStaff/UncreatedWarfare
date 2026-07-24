@@ -34,45 +34,61 @@ public class MapTack : IDisposable, ITransformObject
         MarkerAsset = markerAsset;
         FeatureWorldPosition = featureWorldPosition;
         UIHandler = uiHandler;
-        if (uiHandler is not { ShouldShowInArea: true })
+    }
+
+    public virtual void DropMarker(Vector3 worldCoordinatesOnTable, Quaternion rotation)
+    {
+        GameThread.AssertCurrent();
+
+        if (Marker != null)
+            throw new InvalidOperationException("Map tack's marker has already been dropped. Map tack markers should not be dropped more than once.");
+
+        Marker = BuildableExtensions.DropBuildable(MarkerAsset.GetAssetOrFail(), worldCoordinatesOnTable, rotation);
+        InitUIHandler();
+    }
+
+    /// <summary>
+    /// Should be invoked in <see cref="DropMarker"/>.
+    /// </summary>
+    protected virtual void InitUIHandler()
+    {
+        // this CAN NOT run in the constructor.
+        // the parent constructor has to run before this.
+
+        if (UIHandler is not { ShouldShowInArea: true })
             return;
 
-        uiHandler.OnPlayerEntered += HandlePlayerEntered;
-        uiHandler.OnPlayerExited += HandlePlayerExited;
+        UIHandler.OnPlayerEntered += HandlePlayerEntered;
+        UIHandler.OnPlayerExited += HandlePlayerExited;
         _hasShowInAreaEvents = true;
-        foreach (WarfarePlayer player in uiHandler.Players)
+        foreach (WarfarePlayer player in UIHandler.Players)
         {
             HandlePlayerEntered(player);
         }
     }
 
-    public virtual void DropMarker(Vector3 worldCoordinatesOnTable, Quaternion rotation)
-    {
-        if (Marker != null)
-            throw new InvalidOperationException("Map tack's marker has already been dropped. Map tack markers should not be dropped more than once.");
-
-        Marker = BuildableExtensions.DropBuildable(MarkerAsset.GetAssetOrFail(), worldCoordinatesOnTable, rotation);
-    }
-
     public void Dispose()
     {
         UnsubscribeUIListeners();
+#if MAP_TACK_UI_DEBUG_LOGGING
         WarfareModule.Singleton.GlobalLogger.LogConditional($"Map tack {MarkerAsset} destroyed.");
-        _strategyMapManager.UI?.HandleTackDestroyed(this);
+#endif
         Marker.Destroy();
         if (!_leaveUiHandlerOpen && UIHandler is IDisposable disp)
             disp.Dispose();
 
-        if (!_hasShowInAreaEvents)
-            return;
-
-        _hasShowInAreaEvents = false;
-        UIHandler!.OnPlayerEntered -= HandlePlayerEntered;
-        UIHandler!.OnPlayerExited -= HandlePlayerExited;
-        foreach (WarfarePlayer player in UIHandler.Players)
+        if (_hasShowInAreaEvents)
         {
-            HandlePlayerExited(player);
+            _hasShowInAreaEvents = false;
+            UIHandler!.OnPlayerEntered -= HandlePlayerEntered;
+            UIHandler!.OnPlayerExited -= HandlePlayerExited;
+            foreach (WarfarePlayer player in UIHandler.Players)
+            {
+                HandlePlayerExited(player);
+            }
         }
+
+        _strategyMapManager.UI?.HandleTackDestroyed(this);
     }
 
     public Vector3 Position
@@ -126,37 +142,49 @@ public class MapTack : IDisposable, ITransformObject
 
     private void HandlePlayerEntered(WarfarePlayer player)
     {
+#if MAP_TACK_UI_DEBUG_LOGGING
         WarfareModule.Singleton.GlobalLogger.LogConditional($"Player entered {MarkerAsset}: {player}.");
+#endif
         _strategyMapManager.UI?.HandlePlayerEntered(this, player);
     }
 
     private void HandlePlayerExited(WarfarePlayer player)
     {
+#if MAP_TACK_UI_DEBUG_LOGGING
         WarfareModule.Singleton.GlobalLogger.LogConditional($"Player exited {MarkerAsset}: {player}.");
+#endif
         _strategyMapManager.UI?.HandlePlayerExited(this, player);
     }
 
     private void VehicleUpdated(MapTackVehicleType type, int amount)
     {
+#if MAP_TACK_UI_DEBUG_LOGGING
         WarfareModule.Singleton.GlobalLogger.LogConditional($"Vehicle updated in {MarkerAsset}: {type}={amount}.");
+#endif
         _strategyMapManager.UI?.HandleVehicleUpdated(this, type, amount);
     }
 
     private void SuppliesUpdated(SupplyType type, int amount)
     {
+#if MAP_TACK_UI_DEBUG_LOGGING
         WarfareModule.Singleton.GlobalLogger.LogConditional($"Supply updated in {MarkerAsset}: {type}={amount}.");
+#endif
         _strategyMapManager.UI?.HandleSuppliesUpdated(this, type, amount);
     }
 
     private void HealthUpdated(double? health)
     {
+#if MAP_TACK_UI_DEBUG_LOGGING
         WarfareModule.Singleton.GlobalLogger.LogConditional($"Health updated in {MarkerAsset}: {(health.HasValue ? health.Value.ToString(CultureInfo.InvariantCulture) : "HIDE HEALTH")}.");
+#endif
         _strategyMapManager.UI?.HandleHealthUpdated(this, health);
     }
 
     private void AttributesUpdated(MapTackAttributes attributes)
     {
+#if MAP_TACK_UI_DEBUG_LOGGING
         WarfareModule.Singleton.GlobalLogger.LogConditional($"Attributes updated in {MarkerAsset}: {attributes}.");
+#endif
         _strategyMapManager.UI?.HandleAttributesUpdated(this, attributes);
     }
 

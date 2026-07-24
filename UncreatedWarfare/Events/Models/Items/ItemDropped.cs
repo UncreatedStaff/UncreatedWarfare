@@ -70,6 +70,12 @@ public class ItemDropped : PlayerEvent, IActionLoggableEvent
     public required Page OldPage { get; init; }
 
     /// <summary>
+    /// If <see langword="false"/>, the item was dropped by the player without it actually being in their inventory.
+    /// This can usually only happen through plugin features.
+    /// </summary>
+    public required bool WasDroppedFromInventory { get; init; }
+
+    /// <summary>
     /// The X-position of the old item that was dropped before it was removed.
     /// </summary>
     public required byte OldX { get; init; }
@@ -87,6 +93,14 @@ public class ItemDropped : PlayerEvent, IActionLoggableEvent
     /// <inheritdoc />
     public ActionLogEntry GetActionLogEntry(IServiceProvider serviceProvider, ref ActionLogEntry[]? multipleEntries)
     {
+        if (!WasDroppedFromInventory)
+        {
+            return new ActionLogEntry(
+                ActionLogTypes.DroppedItem,
+                $"Item {AssetLink.ToDisplayString(Asset)} to # {InstanceId} @ {ServersidePoint}",
+                Player.Steam64.m_SteamID
+            );
+        }
         return new ActionLogEntry(ActionLogTypes.DroppedItem,
             $"Item {AssetLink.ToDisplayString(Asset)} from {OldPage} @ {OldX}, {OldY}, r{OldRotation} to # {InstanceId} @ {ServersidePoint}",
             Player.Steam64.m_SteamID

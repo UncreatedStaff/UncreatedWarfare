@@ -58,7 +58,7 @@ internal sealed class KitGiveCommand : IExecutableCommand
         Kit kit = kitArg.Kit;
         await _kitRequestService.GiveKitAsync(
             player ?? Context.AssertRanByPlayer(),
-            new KitBestowData(kit),
+            new KitBestowData(kit, "/kit give"),
             token
         ).ConfigureAwait(false);
 

@@ -274,3 +274,19 @@ Parameters:
       - Name: language
         Type: Uncreated.Warfare.Models.Localization.LanguageInfo
         Remainder: true
+  # /warfaredev fob
+  - Name: fob
+    Type: Verbatim
+    Description: "Build a FOB where the player is looking. Use -a and -b to add ammo, and -q to quick-build."
+    Flags:
+      - Name: "a"
+        Description: "Add initial ammo supplies."
+      - Name: "b"
+        Description: "Add initial build supplies."
+      - Name: "q"
+        Description: "Quick-build the FOB."
+  # /warfaredev quickbuild
+  - Name: quickbuild
+    Alias: qb
+    Type: Verbatim
+    Description: "Fully shovel the buildable the player is looking at."

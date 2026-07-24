@@ -185,6 +185,7 @@ internal sealed class PlayerInventoryReceiveDropItem : IHarmonyPatch
             OldPage = (Page)page,
             OldX = x,
             OldY = y,
+            WasDroppedFromInventory = true,
             OldRotation = rot
         };
 

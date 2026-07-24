@@ -32,7 +32,7 @@ public class HotkeyPlayerComponent : IPlayerComponent, IEventListener<ItemDroppe
 
     void IEventListener<ItemDropped>.HandleEvent(ItemDropped e, IServiceProvider serviceProvider)
     {
-        if (HotkeyBindings is not { Count: > 0 } || e.Item == null)
+        if (HotkeyBindings is not { Count: > 0 } || e.Item == null || !e.WasDroppedFromInventory)
             return;
 
         // move hotkey to a different item of the same type

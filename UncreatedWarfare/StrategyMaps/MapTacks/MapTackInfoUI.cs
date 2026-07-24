@@ -118,7 +118,18 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>
             if (d is not Data data)
                 continue;
 
+#if MAP_TACK_UI_DEBUG_LOGGING
+            if (data.AreaMapTacks.Remove(tack))
+            {
+                GetLogger().LogConditional($"Map tack {tack.MarkerAsset} removed from {d.Player}.");
+            }
+            else
+            {
+                GetLogger().LogConditional($"Player doesn't have map tack {tack.GetHashCode()}, only {System.Linq.Enumerable.Select(data.AreaMapTacks, x => x.GetHashCode())}.");
+            }
+#else
             data.AreaMapTacks.Remove(tack);
+#endif
 
             if (data.LookingMapTack == tack)
                 data.LookingMapTack = null;
@@ -128,7 +139,10 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>
 
             WarfarePlayer? player = _playerService.GetOnlinePlayerOrNull(data.Player);
             if (player == null)
+            {
+                data.CurrentMapTack = null;
                 continue;
+            }
 
             UpdateClosestMapTack(player, data);
         }
@@ -141,6 +155,9 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>
             return;
 
         data.AreaMapTacks.Add(tack);
+#if MAP_TACK_UI_DEBUG_LOGGING
+        GetLogger().LogTrace($"{tack.GetHashCode()} added to tacks ({tack.MarkerAsset}).");
+#endif
         if (data.LookingMapTack != null)
             return;
 
@@ -152,6 +169,10 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>
         Data data = GetOrAddData(player.Steam64);
         if (!data.AreaMapTacks.Remove(tack) || !data.HasUI)
             return;
+
+#if MAP_TACK_UI_DEBUG_LOGGING
+        GetLogger().LogTrace($"{tack.GetHashCode()} removed from tacks ({tack.MarkerAsset}).");
+#endif
 
         if (data.AreaMapTacks.Count == 0)
         {
@@ -422,7 +443,7 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>
         }
     }
 
-    private MapTack GetClosestMapTack(WarfarePlayer player, Data data)
+    private static MapTack GetClosestMapTack(WarfarePlayer player, Data data)
     {
         // assume count > 0
 
@@ -483,7 +504,7 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>
             has = false;
         }
 
-        if (!data.HasAmmoSupply && !data.HasBuildSupply)
+        if (data is { HasAmmoSupply: false, HasBuildSupply: false })
         {
             if (data.HasSupplies)
             {

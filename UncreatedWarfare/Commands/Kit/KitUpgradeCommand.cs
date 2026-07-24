@@ -62,6 +62,6 @@ internal sealed class KitUpgradeCommand : IExecutableCommand
         }
 
         Context.Reply(_translations.LoadoutUpgraded, kit, @class);
-        await _kitRequestService.GiveKitAsync(Context.Player, new KitBestowData(kit), token).ConfigureAwait(false);
+        await _kitRequestService.GiveKitAsync(Context.Player, new KitBestowData(kit, "/kit upgrade"), token).ConfigureAwait(false);
     }
 }
