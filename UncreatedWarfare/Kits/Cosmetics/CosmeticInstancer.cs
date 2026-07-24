@@ -19,6 +19,7 @@ public class CosmeticInstancer : IAsyncEventListener<PlayerDutyStatusChanged>, I
 {
     private readonly ICosmeticItemProvider _itemProvider;
     private readonly IPlayerService _playerService;
+    private readonly ILogger<CosmeticInstancer> _logger;
 
     private WarfarePlayer[] _remainingPlayersBuffer = new WarfarePlayer[64];
     private ClothingInfo[] _newAssetsBuffer = new ClothingInfo[64];
@@ -41,10 +42,11 @@ public class CosmeticInstancer : IAsyncEventListener<PlayerDutyStatusChanged>, I
 
     private bool _isEnabledIntl;
 
-    public CosmeticInstancer(ICosmeticItemProvider itemProvider, IPlayerService playerService)
+    public CosmeticInstancer(ICosmeticItemProvider itemProvider, IPlayerService playerService, ILogger<CosmeticInstancer> logger)
     {
         _itemProvider = itemProvider;
         _playerService = playerService;
+        _logger = logger;
         _isEnabledIntl = false;
     }
 
@@ -337,16 +339,18 @@ public class CosmeticInstancer : IAsyncEventListener<PlayerDutyStatusChanged>, I
         }
 
         // send the items to the clients
-        SendClothingToClientForPlayer(type, player, clothing, quality, state, playEffect);
+        SendClothingToClientForPlayer(type, player, clothing, quality, state, playEffect, true);
     }
 
     private void SendClothingToClientForPlayer(WarfarePlayer player, ClothingType type, bool playEffect)
     {
+        bool shouldInstance = ShouldInstance(type, player);
+
         ClothingItem item = new ClothingItem(player.UnturnedPlayer.clothing, type);
-        SendClothingToClientForPlayer(item.Type, player, item.Asset, item.Quality, item.State, playEffect);
+        SendClothingToClientForPlayer(item.Type, player, item.Asset, item.Quality, item.State, playEffect, shouldInstance);
     }
 
-    private void SendClothingToClientForPlayer(ClothingType type, WarfarePlayer player, ItemClothingAsset? clothing, byte quality, byte[] state, bool playEffect)
+    private void SendClothingToClientForPlayer(ClothingType type, WarfarePlayer player, ItemClothingAsset? clothing, byte quality, byte[] state, bool playEffect, bool shouldInstance)
     {
         Guid guid = clothing?.GUID ?? Guid.Empty;
 
@@ -365,7 +369,7 @@ public class CosmeticInstancer : IAsyncEventListener<PlayerDutyStatusChanged>, I
         int otherPlayerCount = 0;
         try
         {
-            if (kit == null)
+            if (kit == null || !shouldInstance)
             {
                 foreach (WarfarePlayer otherPlayer in _playerService.OnlinePlayers)
                 {
@@ -384,6 +388,7 @@ public class CosmeticInstancer : IAsyncEventListener<PlayerDutyStatusChanged>, I
                     if (!ShouldSeeInstancedClothes(player, otherPlayer))
                     {
                         clientPool.Add(otherPlayer.Connection);
+                        _logger.LogConditional($"REAL: {otherPlayer.Names.PlayerName}");
                     }
                     else
                     {
@@ -409,6 +414,7 @@ public class CosmeticInstancer : IAsyncEventListener<PlayerDutyStatusChanged>, I
             {
                 foreach (WarfarePlayer pl in _remainingPlayersBuffer)
                 {
+                    _logger.LogConditional($"INST: (no grp) {pl.Names.PlayerName}");
                     clientPool.Add(pl.Connection);
                 }
 
@@ -439,20 +445,27 @@ public class CosmeticInstancer : IAsyncEventListener<PlayerDutyStatusChanged>, I
 
                 ClothingInfo previous = default;
                 previous.Quality = 255; // so it doesn't equal by default
+                int index = 0;
                 for (int i = 0; i < otherPlayerCount; ++i)
                 {
                     WarfarePlayer otherPlayer = _remainingPlayersBuffer[i];
 
                     ref ClothingInfo other = ref _newAssetsBuffer[i];
-                    if (!other.Equals(ref previous))
+                    if (clientPool.Count == 0)
+                    {
+                        previous = other;
+                    }
+                    else if (!other.Equals(ref previous))
                     {
                         previous.State ??= previous.Asset?.getState(true) ?? Array.Empty<byte>();
                         rpc.Invoke(netId, SendReliability, clientPool, previous.Asset?.GUID ?? Guid.Empty, previous.Quality, previous.State, playEffect);
                         previous = other;
                         clientPool.Clear();
+                        ++index;
                     }
 
                     clientPool.Add(otherPlayer.Connection);
+                    _logger.LogConditional($"INST: (grp {index}) {otherPlayer.Names.PlayerName}");
                 }
 
                 if (clientPool.Count > 0)

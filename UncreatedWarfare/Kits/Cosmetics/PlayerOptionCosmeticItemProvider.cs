@@ -19,6 +19,11 @@ internal class PlayerOptionCosmeticItemProvider : ICosmeticItemProvider
 
     public ItemClothingAsset? Resolve(WarfarePlayer? player, WarfarePlayer onPlayer, in ClothingItem slot, Kit kit, ref byte quality, ref byte[] state)
     {
+        if (slot.Asset == null)
+        {
+            return null;
+        }
+
         ClothingType type = slot.Type;
         RedirectType redirect = (RedirectType)slot.Type;
 
