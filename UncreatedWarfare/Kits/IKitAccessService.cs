@@ -78,6 +78,9 @@ public delegate void KitAccessUpdatedHandler(CSteamID steam64, uint kitPrimaryKe
 public partial class MySqlKitAccessService : IKitAccessService, IDisposable
 {
     private string? _updateQuery;
+    private string? _deleteQuery;
+    private string? _bulkDeleteQueryStart;
+    private string? _bulkDeleteQueryEnd;
     private string? _bulkUpdateQueryStart;
     private string? _bulkUpdateQueryEnd;
 
@@ -229,13 +232,13 @@ public partial class MySqlKitAccessService : IKitAccessService, IDisposable
             if (access.HasValue)
             {
                 if (_updateQuery == null)
-                    GenerateUpdateQuery();
+                    GenerateRawQueries();
 
                 int updated;
                 try
                 {
                     updated = await _dbContext.Database
-                        .ExecuteSqlRawAsync(_updateQuery!, [ primaryKey, steam64.m_SteamID, EnumUtility.GetName(access.Value) ?? access.Value.ToString(), now ], token)
+                        .ExecuteSqlRawAsync(_updateQuery, [ primaryKey, s64, EnumUtility.GetName(access.Value) ?? access.Value.ToString(), now ], token)
                         .ConfigureAwait(false);
                 }
                 catch (Exception ex)
@@ -246,10 +249,10 @@ public partial class MySqlKitAccessService : IKitAccessService, IDisposable
                 }
 
                 // invoke local/remote events
-                await ReceiveAccessUpdated(steam64.m_SteamID, primaryKey, instigator.m_SteamID, access);
+                await ReceiveAccessUpdated(s64, primaryKey, instigator.m_SteamID, access);
                 try
                 {
-                    await SendAccessUpdated(steam64.m_SteamID, primaryKey, instigator.m_SteamID, access).IgnoreNoConnections();
+                    await SendAccessUpdated(s64, primaryKey, instigator.m_SteamID, access).IgnoreNoConnections();
                 }
                 catch (RpcException ex)
                 {
@@ -260,8 +263,11 @@ public partial class MySqlKitAccessService : IKitAccessService, IDisposable
             }
             else
             {
-                int updated = await _dbContext.KitAccess
-                    .DeleteRangeAsync((DbContext)_dbContext, x => x.Steam64 == s64 && x.KitId == primaryKey, cancellationToken: token)
+                if (_deleteQuery == null)
+                    GenerateRawQueries();
+
+                int updated = await _dbContext.Database
+                    .ExecuteSqlRawAsync(_deleteQuery, [ s64, primaryKey ], token)
                     .ConfigureAwait(false);
 
                 // update UI and cache
@@ -280,10 +286,10 @@ public partial class MySqlKitAccessService : IKitAccessService, IDisposable
                 }
 
                 // invoke local/remote events
-                await ReceiveAccessUpdated(steam64.m_SteamID, primaryKey, instigator.m_SteamID, null);
+                await ReceiveAccessUpdated(s64, primaryKey, instigator.m_SteamID, null);
                 try
                 {
-                    await SendAccessUpdated(steam64.m_SteamID, primaryKey, instigator.m_SteamID, null).IgnoreNoConnections();
+                    await SendAccessUpdated(s64, primaryKey, instigator.m_SteamID, null).IgnoreNoConnections();
                 }
                 catch (RpcException ex)
                 {
@@ -330,12 +336,12 @@ public partial class MySqlKitAccessService : IKitAccessService, IDisposable
             if (access.HasValue)
             {
                 if (_bulkUpdateQueryStart == null || _bulkUpdateQueryEnd == null)
-                    GenerateUpdateQuery();
+                    GenerateRawQueries();
 
                 // build bulk update query (INSERT ON DUPLICATE KEY UPDATE)
-                StringBuilder query = new StringBuilder(_bulkUpdateQueryStart!, _bulkUpdateQueryStart!.Length + _bulkUpdateQueryEnd!.Length + 19 * primaryKeys.Length);
+                StringBuilder query = new StringBuilder(_bulkUpdateQueryStart, _bulkUpdateQueryStart.Length + _bulkUpdateQueryEnd.Length + 19 * primaryKeys.Length);
                 object[] parameters = new object[primaryKeys.Length + 3];
-                parameters[0] = steam64.m_SteamID;
+                parameters[0] = s64;
                 parameters[1] = EnumUtility.GetName(access.Value) ?? access.Value.ToString();
                 parameters[2] = now;
                 for (int i = 0; i < primaryKeys.Length; ++i)
@@ -347,7 +353,7 @@ public partial class MySqlKitAccessService : IKitAccessService, IDisposable
                     parameters[i + 3] = primaryKeys[i];
                 }
 
-                query.Append(_bulkUpdateQueryEnd!);
+                query.Append(_bulkUpdateQueryEnd);
 
                 bool[] mask = new bool[primaryKeys.Length];
                 try
@@ -387,7 +393,7 @@ public partial class MySqlKitAccessService : IKitAccessService, IDisposable
                         try
                         {
                             int updated2 = await _dbContext.Database
-                                .ExecuteSqlRawAsync(_updateQuery!, [ primaryKeys[i], steam64.m_SteamID, EnumUtility.GetName(access.Value) ?? access.Value.ToString(), now ], token)
+                                .ExecuteSqlRawAsync(_updateQuery!, [ primaryKeys[i], s64, EnumUtility.GetName(access.Value) ?? access.Value.ToString(), now ], token)
                                 .ConfigureAwait(false);
 
                             mask[i] = updated2 > 0;
@@ -401,10 +407,10 @@ public partial class MySqlKitAccessService : IKitAccessService, IDisposable
                 }
 
                 // invoke remote/local events
-                await ReceiveAccessUpdatedBulk(steam64.m_SteamID, primaryKeys, instigator.m_SteamID, access);
+                await ReceiveAccessUpdatedBulk(s64, primaryKeys, instigator.m_SteamID, access);
                 try
                 {
-                    await SendAccessUpdatedBulk(steam64.m_SteamID, primaryKeys, instigator.m_SteamID, access).IgnoreNoConnections();
+                    await SendAccessUpdatedBulk(s64, primaryKeys, instigator.m_SteamID, access).IgnoreNoConnections();
                 }
                 catch (RpcException ex)
                 {
@@ -415,17 +421,20 @@ public partial class MySqlKitAccessService : IKitAccessService, IDisposable
             }
             else
             {
+                if (_bulkDeleteQueryStart == null || _bulkDeleteQueryEnd == null)
+                    GenerateRawQueries();
+
                 bool[] mask = new bool[primaryKeys.Length];
                 Array.Fill(mask, true);
-                await foreach (var row in _dbContext.KitAccess
+                await foreach (uint accessibleKit in _dbContext.KitAccess
                                    .AsNoTracking()
                                    .Where(x => x.Steam64 == s64 && primaryKeys.Contains(x.KitId))
-                                   .Select(x => new { x.AccessType, x.KitId })
+                                   .Select(x => x.KitId)
                                    .AsAsyncEnumerable()
                                    .WithCancellation(token)
                                    .ConfigureAwait(false))
                 {
-                    int index = Array.IndexOf(primaryKeys, row.KitId);
+                    int index = Array.IndexOf(primaryKeys, accessibleKit);
                     if (index != -1)
                         mask[index] = false;
                 }
@@ -433,9 +442,24 @@ public partial class MySqlKitAccessService : IKitAccessService, IDisposable
                 if (Array.IndexOf(mask, false) == -1)
                     return mask;
 
+                // build bulk delete query (DELETE FROM kits_access WHERE Steam64 = {0} AND Kit IN ({1}, {2}, ...);)
+                StringBuilder query = new StringBuilder(_bulkDeleteQueryStart, _bulkDeleteQueryStart.Length + _bulkDeleteQueryEnd.Length + 6 * primaryKeys.Length);
+                object[] parameters = new object[1 + primaryKeys.Length];
+                parameters[0] = s64;
+                for (int i = 0; i < primaryKeys.Length; ++i)
+                {
+                    if (i != 0)
+                        query.Append(',');
+
+                    query.Append('{').Append(i + 1).Append('}');
+                    parameters[i + 1] = primaryKeys[i];
+                }
+
+                query.Append(_bulkDeleteQueryEnd);
+
                 // mass delete
-                await _dbContext.KitAccess
-                    .DeleteRangeAsync((DbContext)_dbContext, x => x.Steam64 == s64 && primaryKeys.Contains(x.KitId), cancellationToken: token)
+                await _dbContext.Database
+                    .ExecuteSqlRawAsync(query.ToString(), parameters, token)
                     .ConfigureAwait(false);
 
                 // update UI and cache
@@ -464,10 +488,10 @@ public partial class MySqlKitAccessService : IKitAccessService, IDisposable
                 }
 
                 // invoke remote/local events
-                await ReceiveAccessUpdatedBulk(steam64.m_SteamID, primaryKeys, instigator.m_SteamID, null);
+                await ReceiveAccessUpdatedBulk(s64, primaryKeys, instigator.m_SteamID, null);
                 try
                 {
-                    await SendAccessUpdatedBulk(steam64.m_SteamID, primaryKeys, instigator.m_SteamID, null).IgnoreNoConnections();
+                    await SendAccessUpdatedBulk(s64, primaryKeys, instigator.m_SteamID, null).IgnoreNoConnections();
                 }
                 catch (RpcException ex)
                 {
@@ -517,7 +541,13 @@ public partial class MySqlKitAccessService : IKitAccessService, IDisposable
         }
     }
 
-    private void GenerateUpdateQuery()
+    [MemberNotNull(nameof(_updateQuery))]
+    [MemberNotNull(nameof(_bulkUpdateQueryStart))]
+    [MemberNotNull(nameof(_bulkUpdateQueryEnd))]
+    [MemberNotNull(nameof(_deleteQuery))]
+    [MemberNotNull(nameof(_bulkDeleteQueryStart))]
+    [MemberNotNull(nameof(_bulkDeleteQueryEnd))]
+    private void GenerateRawQueries()
     {
         IEntityType type = _dbContext.Model.FindEntityType(typeof(KitAccess));
 
@@ -540,6 +570,10 @@ public partial class MySqlKitAccessService : IKitAccessService, IDisposable
                        $"`{tableName}`.`{timestampColumn}` = `new`.`{timestampColumn}`;";
 
         _updateQuery = _bulkUpdateQueryStart + "({0}, {1}, {2}, {3})" + _bulkUpdateQueryEnd;
+
+        _deleteQuery = $"DELETE FROM `{tableName}` WHERE `{steam64Column}` = {{0}} AND `{kitIdColumn}` = {{1}};";
+        _bulkDeleteQueryStart = $"DELETE FROM `{tableName}` WHERE `{steam64Column}` = {{0}} AND `{kitIdColumn}` IN (";
+        _bulkDeleteQueryEnd = ");";
     }
 
     void IDisposable.Dispose()

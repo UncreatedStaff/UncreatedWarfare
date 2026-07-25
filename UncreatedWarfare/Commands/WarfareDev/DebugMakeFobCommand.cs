@@ -116,10 +116,9 @@ internal sealed class DebugMakeFobCommand : IExecutableCommand
         {
             await UniTask.Delay(500, cancellationToken: token);
 
-            Context.Logger.LogInformation("Quick-building FOB.");
             fob.Shovelable.Shovel(Context.Player, raycast.point, fob.Shovelable.HitsRemaining);
         }
 
-        Context.ReplyString($"Created FOB at <#ddd>{fob.ClosestLocation}</color>.");
+        Context.ReplyString($"Created FOB at <#ddd>{fob.GetClosestLocation(true)}</color>.");
     }
 }
