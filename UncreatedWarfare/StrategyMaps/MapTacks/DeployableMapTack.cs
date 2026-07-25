@@ -1,3 +1,4 @@
+using System;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.FOBs.Deployment;
 
@@ -12,6 +13,6 @@ public class DeployableMapTack : MapTack
     public DeployableMapTack(StrategyMapManager manager, StrategyMap map, IAssetLink<ItemBarricadeAsset> markerAsset, IDeployable deployable, IMapTackUIHandler? uiHandler, bool leaveUiHandlerOpen = false)
         : base(manager, map, markerAsset, deployable.SpawnPosition, uiHandler, leaveUiHandlerOpen)
     {
-        Deployable = deployable;
+        Deployable = deployable ?? throw new ArgumentNullException(nameof(deployable));
     }
 }

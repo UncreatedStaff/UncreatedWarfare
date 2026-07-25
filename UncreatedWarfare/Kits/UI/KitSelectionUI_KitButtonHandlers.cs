@@ -317,7 +317,7 @@ partial class KitSelectionUI
                         return;
                 }
 
-                await _kitRequestService.GiveKitAsync(player, new KitBestowData(kit)
+                await _kitRequestService.GiveKitAsync(player, new KitBestowData(kit, "HandleButtonPreviewKitClicked")
                 {
                     IsPreview = true,
                     IsLowAmmo = false,

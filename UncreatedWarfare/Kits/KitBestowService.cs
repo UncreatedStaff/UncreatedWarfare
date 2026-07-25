@@ -1,3 +1,4 @@
+using DanielWillett.ReflectionTools;
 using System;
 using System.Diagnostics;
 using Uncreated.Warfare.Kits.Items;
@@ -115,11 +116,18 @@ public class KitBestowService
         if (kit == null)
             return;
 
+        ItemTrackingPlayerComponent? itemTracker = player.ComponentOrNull<ItemTrackingPlayerComponent>();
+
+        KitBestowData data = new KitBestowData(kit, itemTracker?.KitLayoutTransformations, "RestockKit")
+        {
+            RestockOnly = true,
+            ResupplyAmmoBags = resupplyAmmoBags
+        };
+
+        data.Start();
         IKitItem[] items = kit.Items;
 
         ItemJar? heldItem = player.GetHeldItem(out _);
-
-        ItemTrackingPlayerComponent? itemTracker = player.ComponentOrNull<ItemTrackingPlayerComponent>();
 
         // is holding empty gun? We need to force reload the gun if it's empty
         // because players can use this to skip the reload animation (LAT spam)
@@ -143,7 +151,7 @@ public class KitBestowService
             }
         }
 
-        using BestowKitGiveItemsState state = new BestowKitGiveItemsState(new KitBestowData(kit, itemTracker?.KitLayoutTransformations) { RestockOnly = true, ResupplyAmmoBags = resupplyAmmoBags }, player);
+        using BestowKitGiveItemsState state = new BestowKitGiveItemsState(data, player);
         _itemDistributionService.RestockItems(items, player, state);
 
         if (!needsToReloadAfter)
@@ -161,6 +169,7 @@ public class KitBestowService
             return;
 
         equipment.ServerEquip(requipPage, requipX, requipY);
+        data.Stop();
     }
 
     private struct BestowKitGiveItemsState : IItemDistributionState, IDisposable
@@ -375,7 +384,7 @@ public class KitBestowService
 public readonly struct KitBestowData
 {
 #if KIT_PROFILING
-    public readonly Stopwatch Stopwatch;
+    internal readonly KitProfilingState Profiling;
 #endif
 
     public Kit Kit { get; }
@@ -385,11 +394,11 @@ public readonly struct KitBestowData
     public bool Silent { get; init; }
     public bool ResupplyAmmoBags { get; init; } = true;
     internal bool RestockOnly { get; init; }
-    public KitBestowData(Kit kit) : this(kit, null) { }
-    internal KitBestowData(Kit kit, IReadOnlyList<KitLayoutTransformation>? layouts)
+    public KitBestowData(Kit kit, string profilingContext) : this(kit, null, profilingContext) { }
+    internal KitBestowData(Kit kit, IReadOnlyList<KitLayoutTransformation>? layouts, string? profilingContext)
     {
 #if KIT_PROFILING
-        Stopwatch = new Stopwatch();
+        Profiling = new KitProfilingState { Context = profilingContext, Kit = kit };
 #endif
         Kit = kit;
         Layouts = layouts;
@@ -397,7 +406,12 @@ public readonly struct KitBestowData
 
     internal KitBestowData Copy(IReadOnlyList<KitLayoutTransformation>? layouts)
     {
-        return new KitBestowData(Kit, layouts)
+#if KIT_PROFILING
+        string? ctx = Profiling.Context;
+#else
+        const string? ctx = null;
+#endif
+        KitBestowData d = new KitBestowData(Kit, layouts, ctx)
         {
             IsLowAmmo = IsLowAmmo,
             Silent = Silent,
@@ -405,5 +419,72 @@ public readonly struct KitBestowData
             ResupplyAmmoBags = ResupplyAmmoBags,
             IsPreview = IsPreview
         };
+
+#if KIT_PROFILING
+        d.Profiling.Stopwatch = Profiling.Stopwatch;
+        d.Profiling.IsRunningStopwatch = Profiling.IsRunningStopwatch;
+        GC.SuppressFinalize(Profiling);
+#endif
+        return d;
+    }
+
+    [Conditional("KIT_PROFILING")]
+    internal void Start()
+    {
+#if KIT_PROFILING
+        Profiling.Start();
+#endif
+    }
+
+    [Conditional("KIT_PROFILING")]
+    internal void Stop()
+    {
+#if KIT_PROFILING
+        Profiling.Stop();
+#endif
+    }
+}
+
+internal class KitProfilingState
+{
+    public required string? Context;
+    public required Kit? Kit;
+    public Stopwatch? Stopwatch;
+    public int IsRunningStopwatch;
+
+    public void Start()
+    {
+        if (Interlocked.Increment(ref IsRunningStopwatch) != 1)
+            return;
+
+        Stopwatch ??= new Stopwatch();
+        Stopwatch.Start();
+    }
+
+    public void Stop(bool inFinalizer = false)
+    {
+        if (Interlocked.Decrement(ref IsRunningStopwatch) != 0)
+            return;
+
+        Stopwatch!.Stop();
+
+        if (inFinalizer)
+        {
+            WarfareModule.Singleton.GlobalLogger.LogWarning(
+                $"[Kit Profiling] Took {Stopwatch.GetElapsedMilliseconds():F2}ms to give kit {Kit}. Context: \"{Context}\". Did not get manually stopped, ran from finalizer."
+            );
+        }
+        else
+        {
+            WarfareModule.Singleton.GlobalLogger.LogInformation(
+                $"[Kit Profiling] Took {Stopwatch.GetElapsedMilliseconds():F2}ms to give kit {Kit}. Context: \"{Context}\"."
+            );
+        }
+        GC.SuppressFinalize(this);
+    }
+
+    ~KitProfilingState()
+    {
+        Stop(true);
     }
 }

@@ -111,9 +111,9 @@ public sealed class CurrentKitState
         HasFullState = true;
     }
 
-    internal KitBestowData CreateBestowData()
+    internal KitBestowData CreateBestowData(string profilingContext)
     {
-        return new KitBestowData(CachedKit)
+        return new KitBestowData(CachedKit, profilingContext)
         {
             IsPreview = IsPreview,
             IsLowAmmo = IsLowAmmo

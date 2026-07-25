@@ -207,7 +207,10 @@ public class StrategyMapManager :
         foreach (StrategyMap map in _strategyMaps)
         {
             map.RemoveMapTacks((_, owner) => owner == e.Flag);
-            map.AddMapTack(CreateFlagTack(e.Flag, map), e.Flag);
+            if (e.Flag.IsDiscovered(map.MapTable.Group))
+            {
+                map.AddMapTack(CreateFlagTack(e.Flag, map), e.Flag);
+            }
         }
     }
 
@@ -224,7 +227,10 @@ public class StrategyMapManager :
         foreach (StrategyMap map in _strategyMaps)
         {
             map.RemoveMapTacks((_, owner) => owner == e.Flag);
-            map.AddMapTack(CreateFlagTack(e.Flag, map), e.Flag);
+            if (e.Flag.IsDiscovered(map.MapTable.Group))
+            {
+                map.AddMapTack(CreateFlagTack(e.Flag, map), e.Flag);
+            }
         }
     }
 

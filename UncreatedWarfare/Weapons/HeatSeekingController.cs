@@ -145,9 +145,15 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
 
         float bestTarget = AquisitionAngle;
 
-        foreach (InteractableVehicle v in VehicleManager.vehicles)
+        for (int i = VehicleManager.vehicles.Count - 1; i >= 0; i--)
         {
-            if (v.asset.engine is EEngine.PLANE or EEngine.HELICOPTER && !v.isDead && v.lockedGroup != _vehicle.lockedGroup && v.isEngineOn && !(v.anySeatsOccupied && false /* todo && TeamManager.IsInAnyMain(v.transform.position) */))
+            InteractableVehicle v = VehicleManager.vehicles[i];
+            if (v.asset.engine is EEngine.PLANE or EEngine.HELICOPTER
+                && !v.isDead
+                && v != null
+                && v.lockedGroup != _vehicle.lockedGroup
+                && v.isEngineOn
+                && !(v.anySeatsOccupied && false /* todo && TeamManager.IsInAnyMain(v.transform.position) */))
             {
                 if (IsInRange(v.transform.position))
                 {
@@ -156,9 +162,11 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
 
                     float lockOnDistance = new Vector2(relativePos.x, relativePos.y).sqrMagnitude;
                     float angleBetween = Vector3.Angle(v.transform.position - transform.position, transform.forward);
-                    if (angleBetween < 90 && new Vector2(relativePos.x, relativePos.y).sqrMagnitude < Mathf.Pow(bestTarget, 2))
+                    if (angleBetween < 90 && new Vector2(relativePos.x, relativePos.y).sqrMagnitude <
+                        Mathf.Pow(bestTarget, 2))
                     {
-                        bool raySuccess = Physics.Linecast(transform.position, v.transform.position, out _, RayMasks.GROUND | RayMasks.LARGE | RayMasks.MEDIUM);
+                        bool raySuccess = Physics.Linecast(transform.position, v.transform.position, out _,
+                            RayMasks.GROUND | RayMasks.LARGE | RayMasks.MEDIUM);
                         if (!raySuccess)
                         {
                             bestTarget = lockOnDistance;
@@ -177,25 +185,38 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
 
         if (!lockedOntoCountermeassure)
         {
-            foreach (FlareCountermeasure c in FlareCountermeasure.ActiveCountermeasures)
+            Transform thisTransform = transform;
+            Vector3 thisPosition = thisTransform.position;
+            Vector3 thisForward = thisTransform.forward;
+            for (int i = FlareCountermeasure.ActiveCountermeasures.Count - 1; i >= 0; i--)
             {
+                FlareCountermeasure c = FlareCountermeasure.ActiveCountermeasures[i];
+                if (c.IsDestroyed)
+                {
+                    // somehow flares are making it into this list after being destroyed, not really sure how
+                    FlareCountermeasure.ActiveCountermeasures.RemoveAt(i);
+                    continue;
+                }
+
                 if (!c.Burning)
                     continue;
 
-                if (IsInRange(c.transform.position))
+                Transform flareTransform = c.transform;
+                Vector3 flarePos = flareTransform.position;
+                if (IsInRange(flarePos))
                 {
-                    Vector3 relativePos = transform.InverseTransformPoint(c.transform.position);
+                    Vector3 relativePos = thisTransform.InverseTransformPoint(flarePos);
                     relativePos = new Vector3(Mathf.Abs(relativePos.x), Mathf.Abs(relativePos.y), 0);
 
                     float lockOnDistance = new Vector2(relativePos.x, relativePos.y).sqrMagnitude;
-                    float angleBetween = Vector3.Angle(c.transform.position - transform.position, transform.forward);
+                    float angleBetween = Vector3.Angle(flarePos - thisPosition, thisForward);
                     if (angleBetween < 90 && new Vector2(relativePos.x, relativePos.y).sqrMagnitude < Mathf.Pow(bestTarget, 2))
                     {
-                        bool raySuccess = Physics.Linecast(transform.position, c.transform.position, out _, RayMasks.GROUND | RayMasks.LARGE | RayMasks.MEDIUM);
+                        bool raySuccess = Physics.Linecast(thisPosition, flarePos, out _, RayMasks.GROUND | RayMasks.LARGE | RayMasks.MEDIUM);
                         if (!raySuccess)
                         {
                             bestTarget = lockOnDistance;
-                            newTarget = c.transform;
+                            newTarget = flareTransform;
                         }
                     }
                 }
@@ -289,5 +310,14 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
         Idle,
         Acquiring,
         LockedOn
+    }
+
+    private void OnDestroy()
+    {
+        for (int i = MissilesInFlight.Count - 1; i >= 0; i--)
+        {
+            HeatSeekingMissileComponent missile = MissilesInFlight[i];
+            Destroy(missile.gameObject);
+        }
     }
 }

@@ -1,10 +1,10 @@
-using System.Collections.Generic;
-
 namespace Uncreated.Warfare.Vehicles.WarfareVehicles.Flares;
 
 internal class FlareCountermeasure : MonoBehaviour
 {
     public bool Burning { get; private set; }
+
+    public bool IsDestroyed { get; private set; }
 
     public static readonly List<FlareCountermeasure> ActiveCountermeasures = [];
 
@@ -21,15 +21,27 @@ internal class FlareCountermeasure : MonoBehaviour
         Burning = false;
 
         yield return new WaitForSeconds(5f);
+        IsDestroyed = true;
         if (_vehicle != null)
             VehicleManager.askVehicleDestroy(_vehicle);
         else
             Destroy(gameObject);
     }
 
+    private void OnDisable()
+    {
+        IsDestroyed = true;
+    }
+
+    private void OnEnable()
+    {
+        IsDestroyed = false;
+    }
+
     [UsedImplicitly]
     private void OnDestroy()
     {
         ActiveCountermeasures.Remove(this);
+        IsDestroyed = true;
     }
 }
