@@ -17,6 +17,7 @@
     <PackageReference Include="NUnit3TestAdapter" Version="5.0.0" />
     <PackageReference Include="coverlet.collector" Version="6.0.4" />
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" NoWarn="NU1605" />
+    <PackageReference Include="System.Collections.Immutable" Version="10.0.8" />
 
     <PackageReference Include="Autofac" Version="9.1.0" />
     <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="11.0.0" />

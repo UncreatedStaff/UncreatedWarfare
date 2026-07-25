@@ -15,6 +15,7 @@ using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Cooldowns;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.Permissions;
+using Uncreated.Warfare.Steam;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Collections;
 using Uncreated.Warfare.Translations.Languages;
@@ -1030,8 +1031,9 @@ public class CommandContext : ControlException
             return new ValueTask<CSteamID?>(CSteamID.Nil);
         }
 
+        ISteamApiService steamApiService = ServiceProvider.GetRequiredService<ISteamApiService>();
         string param = OriginalParameters[parameter];
-        return SteamIdHelper.TryParseSteamId(param, out CSteamID id) ? new ValueTask<CSteamID?>(id) : SteamIdHelper.TryParseSteamIdOrUrl(param, Token);
+        return SteamIdHelper.TryParseSteamId(param, out CSteamID id) ? new ValueTask<CSteamID?>(id) : SteamIdHelper.TryParsePlayerSteamIdOrUrl(param, steamApiService, Token);
     }
 
     /// <summary>
@@ -1056,7 +1058,8 @@ public class CommandContext : ControlException
         string? s = remainder ? GetRange(parameter - _argumentOffset) : OriginalParameters[parameter];
         if (s != null)
         {
-            CSteamID? steamId = await SteamIdHelper.TryParseSteamIdOrUrl(s, Token).ConfigureAwait(false);
+            ISteamApiService steamApiService = ServiceProvider.GetRequiredService<ISteamApiService>();
+            CSteamID? steamId = await SteamIdHelper.TryParseSteamIdOrUrl(s, steamApiService, Token).ConfigureAwait(false);
             if (steamId.HasValue)
             {
                 return (steamId, _playerService.GetOnlinePlayerOrNullThreadSafe(steamId.Value));
@@ -1097,7 +1100,8 @@ public class CommandContext : ControlException
             return null;
         }
 
-        CSteamID? steam64 = await SteamIdHelper.TryParseSteamIdOrUrl(s, Token).ConfigureAwait(false);
+        ISteamApiService steamApiService = ServiceProvider.GetRequiredService<ISteamApiService>();
+        CSteamID? steam64 = await SteamIdHelper.TryParseSteamIdOrUrl(s, steamApiService, Token).ConfigureAwait(false);
         if (steam64.HasValue && steam64.Value.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
         {
             ulong steamId = steam64.Value.m_SteamID;

@@ -20,6 +20,7 @@ public static class SteamApiServiceExtensions
     /// Get the <see cref="PlayerFriendsList"/> steam API object for a single player, which contains a list of their friends if their profile is public.
     /// </summary>
     /// <exception cref="SteamApiRequestException">Failed to fetch the data for some reason.</exception>
+    /// <exception cref="InvalidOperationException">Service not enabled.</exception>
     public static async Task<PlayerFriendsList> GetPlayerFriendsAsync(this ISteamApiService service, ulong player, CancellationToken token = default)
     {
         if (!service.IsEnabled)
@@ -53,6 +54,7 @@ public static class SteamApiServiceExtensions
     /// Get the <see cref="PlayerSummary"/> steam API object for a single player.
     /// </summary>
     /// <exception cref="SteamApiRequestException">Failed to fetch the data for some reason.</exception>
+    /// <exception cref="InvalidOperationException">Service not enabled.</exception>
     public static async Task<PlayerSummary> GetPlayerSummaryAsync(this ISteamApiService service, ulong player, CancellationToken token = default)
     {
         if (!service.IsEnabled)
@@ -78,6 +80,7 @@ public static class SteamApiServiceExtensions
     /// Get the <see cref="PlayerSummary"/> steam API object for multiple players.
     /// </summary>
     /// <exception cref="SteamApiRequestException">Failed to fetch the data for some reason.</exception>
+    /// <exception cref="InvalidOperationException">Service not enabled.</exception>
     public static async Task<PlayerSummary[]> GetPlayerSummariesAsync(this ISteamApiService service, IReadOnlyList<ulong> players, int index, int length, CancellationToken token = default)
     {
         if (length == 0)
@@ -143,10 +146,103 @@ public static class SteamApiServiceExtensions
         return service.GetPlayerSummariesAsync(players, 0, players.Count, token);
     }
 
+    /// <inheritdoc cref="ResolveVanityUrlAsync(ISteamApiService,ReadOnlySpan{char},VanityUrlType,CancellationToken)"/>
+    public static Task<CSteamID?> ResolveVanityUrlAsync(this ISteamApiService service, ReadOnlySpan<char> customUrlId, CancellationToken token = default)
+    {
+        return ResolveVanityUrlAsync(service, customUrlId, VanityUrlType.Individual, token);
+    }
+
+    /// <summary>
+    /// Get the Steam ID associated with the given vanity URL.
+    /// </summary>
+    /// <exception cref="OperationCanceledException"/>
+    /// <exception cref="SteamApiRequestException">Failed to fetch the data for some reason.</exception>
+    /// <exception cref="InvalidOperationException">Service not enabled.</exception>
+    public static Task<CSteamID?> ResolveVanityUrlAsync(this ISteamApiService service, ReadOnlySpan<char> customUrlId, VanityUrlType type, CancellationToken token = default)
+    {
+        if (!service.IsEnabled)
+        {
+            ThrowServiceNotEnabled();
+        }
+
+        token.ThrowIfCancellationRequested();
+
+        customUrlId = customUrlId.Trim();
+        if (customUrlId.IsEmpty)
+            return Task.FromResult<CSteamID?>(null);
+
+        // trim beginning of URL from the vanity name
+        // ex: "https://steamcommunity.com/id/my-vanity-url/" -> "my-vanity-url"
+        if (customUrlId.IndexOf('/') >= 0)
+        {
+            // trim trailing slash
+            if (customUrlId[^1] == '/')
+                customUrlId = customUrlId[..^1];
+
+            int lastSlash = customUrlId.LastIndexOf('/');
+            if (lastSlash == customUrlId.Length - 1)
+                return Task.FromResult<CSteamID?>(null);
+
+            if (lastSlash >= 0)
+            {
+                customUrlId = customUrlId.Slice(lastSlash + 1);
+
+                if (customUrlId.IsEmpty)
+                    return Task.FromResult<CSteamID?>(null);
+            }
+        }
+
+        return Core(service, new string(customUrlId), type, token);
+
+        static async Task<CSteamID?> Core(ISteamApiService service, string vanityUrl, VanityUrlType type, CancellationToken token)
+        {
+            SteamApiQuery query = new SteamApiQuery(
+                "ISteamUser",
+                "ResolveVanityURL",
+                version: 1,
+                type == VanityUrlType.Individual
+                    ? $"vanityurl={Uri.EscapeDataString(vanityUrl)}"
+                    : $"vanityurl={Uri.EscapeDataString(vanityUrl)}&type={type:D}"
+            );
+
+            ResolveVanityURLResponse response = await service.ExecuteQueryAsync<ResolveVanityURLResponse>(query, token);
+
+            if (response.Response is not { StatusCode: 1 }
+                || !ulong.TryParse(response.Response.SteamId, NumberStyles.Number, CultureInfo.InvariantCulture, out ulong id)
+                || id == 0)
+            {
+                return null;
+            }
+
+            return new CSteamID(id);
+        }
+    }
+
     /// <exception cref="InvalidOperationException"/>
     [DoesNotReturn]
     internal static void ThrowServiceNotEnabled()
     {
         throw new InvalidOperationException("Steam API service is not enabled.");
     }
+}
+
+/// <summary>
+/// Category of Steam vanity URLs.
+/// </summary>
+public enum VanityUrlType
+{
+    /// <summary>
+    /// A Steam user.<br/><c>https://steamcommunity.com/id/vanity-url</c>
+    /// </summary>
+    Individual = 1,
+
+    /// <summary>
+    /// A Steam group.<br/><c>https://steamcommunity.com/groups/vanity-url</c>
+    /// </summary>
+    Group = 2,
+
+    /// <summary>
+    /// A Steam Game Hub.<br/><c>https://steamcommunity.com/app/vanity-url</c>
+    /// </summary>
+    OfficialGameGroup = 3
 }

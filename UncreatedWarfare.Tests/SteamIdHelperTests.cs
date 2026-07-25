@@ -1,6 +1,11 @@
 using NUnit.Framework;
 using Steamworks;
+using Stripe;
+using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
+using Uncreated.Warfare.Steam;
+using Uncreated.Warfare.Tests.Utility;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Tests;
@@ -35,32 +40,43 @@ public class SteamIdHelperTests
     [TestCase("https://www.steamcommunity.com/profiles/76561198267927009/random/path?query=none")]
     [TestCase("http://www.steamcommunity.com/profiles/76561198267927009/random/path?query=none")]
     [TestCase("www.steamcommunity.com/profiles/76561198267927009/random/path?query=none")]
-    public async Task TestParseCSteamIDFromBasicUrl(string basicUrl)
-    {
-        CSteamID? steamId = await SteamIdHelper.TryParseSteamIdOrUrl(basicUrl);
-
-        Assert.That(steamId, Is.Not.Null);
-        Assert.That(steamId.Value.m_SteamID, Is.EqualTo(76561198267927009ul));
-    }
-
-    [Test]
     [TestCase("https://steamcommunity.com/id/blazingflamegames")]
     [TestCase("http://steamcommunity.com/id/blazingflamegames")]
     [TestCase("steamcommunity.com/id/blazingflamegames")]
     [TestCase("https://www.steamcommunity.com/id/blazingflamegames")]
     [TestCase("http://www.steamcommunity.com/id/blazingflamegames")]
-    [TestCase("www.steamcommunity.com/id/blazingflamegames/random/path?query=none")]
     [TestCase("https://steamcommunity.com/id/blazingflamegames/random/path?query=none")]
     [TestCase("http://steamcommunity.com/id/blazingflamegames/random/path?query=none")]
     [TestCase("steamcommunity.com/id/blazingflamegames/random/path?query=none")]
     [TestCase("https://www.steamcommunity.com/id/blazingflamegames/random/path?query=none")]
     [TestCase("http://www.steamcommunity.com/id/blazingflamegames/random/path?query=none")]
     [TestCase("www.steamcommunity.com/id/blazingflamegames/random/path?query=none")]
-    public async Task TestParseCSteamIDFromCustomUrl(string customUrl)
+    public async Task TestParseCSteamIDFromUrl(string basicUrl)
     {
-        CSteamID? steamId = await SteamIdHelper.TryParseSteamIdOrUrl(customUrl);
+        // no Steam API service
+        CSteamID? steamId = await SteamIdHelper.TryParseSteamIdOrUrl(basicUrl, null);
 
         Assert.That(steamId, Is.Not.Null);
         Assert.That(steamId.Value.m_SteamID, Is.EqualTo(76561198267927009ul));
+
+        const string configPath = @"C:\SteamCMD\steamapps\common\U3DS\Servers\UncreatedSeason4\Warfare\System Config.yml";
+        if (System.IO.File.Exists(configPath))
+        {
+            // with Steam API service
+            string fileContents = System.IO.File.ReadAllText(configPath);
+            Match match = Regex.Match(fileContents, @"steam_api_key\: ""([^""]*)""", RegexOptions.CultureInvariant);
+            string steamApiKey = match.Groups[1].Value;
+
+            ISteamApiService service = new TestSteamApiService(steamApiKey);
+
+            steamId = await SteamIdHelper.TryParseSteamIdOrUrl(basicUrl, service);
+
+            Assert.That(steamId, Is.Not.Null);
+            Assert.That(steamId.Value.m_SteamID, Is.EqualTo(76561198267927009ul));
+        }
+        else
+        {
+            Assert.Pass("Steam API key not found.");
+        }
     }
 }
