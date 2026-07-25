@@ -3,6 +3,9 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using SDG.Framework.Utilities;
 using System;
+using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Models;
+using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.Exceptions;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Kits;
@@ -24,11 +27,10 @@ using Uncreated.Warfare.Zones;
 
 namespace Uncreated.Warfare.FreeTeamDeathmatch;
 
-internal class FtdmService : ILayoutPhaseListener<ActionPhase>, IDisposable, ILayoutHostedService
+internal class FtdmService : ILayoutPhaseListener<ActionPhase>, IDisposable, ILayoutHostedService, IAsyncEventListener<PlayerRespawned>
 {
     private const float OutOfBoundsWarningTime = 7.5f;
 
-    private readonly Layout _layout;
     private readonly ZoneStore _zoneStore;
     private readonly ILogger<FtdmService> _logger;
     private readonly TimeTranslations _timeTranslations;
@@ -67,7 +69,6 @@ internal class FtdmService : ILayoutPhaseListener<ActionPhase>, IDisposable, ILa
         ElectricalGridService electricalGridService,
         IKitDataStore kitDataStore)
     {
-        _layout = layout;
         _zoneStore = zoneStore;
         _logger = logger;
         _timeTranslations = timeTranslations.Value;
@@ -256,33 +257,34 @@ internal class FtdmService : ILayoutPhaseListener<ActionPhase>, IDisposable, ILa
         {
             HandlePlayerEntersEnemySpawnOrTriesToReenterSpawn(obj, team, prox);
         }
-        else if (_allowedKits?.TryGetValue(obj.Team, out string[]? allowedKits) is true)
-        {
-            if (allowedKits is not { Length: > 0 })
-                return;
+    }
 
-            // give the player a random kit when they spawn
-            string kitId = allowedKits[RandomUtility.GetIndex(allowedKits)];
-            WarfarePlayer player = obj;
-            Task.Run(async () =>
-            {
-                try
-                {
-                    Kit? kit = await _kitDataStore.QueryKitAsync(kitId, KitInclude.Giveable);
-                    if (kit == null)
-                    {
-                        _logger.LogWarning($"Unknown kit: {kitId}.");
-                    }
-                    else
-                    {
-                        await _kitRequestService.GiveKitAsync(player, new KitBestowData(kit, "PlayerEnteredSpawnZone") { Silent = true }, CancellationToken.None);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, $"Error giving kit {kitId}.");
-                }
-            });
+    [EventListener(RequiresMainThread = true)]
+    UniTask IAsyncEventListener<PlayerRespawned>.HandleEventAsync(PlayerRespawned e, IServiceProvider serviceProvider, CancellationToken token)
+    {
+        return GiveRandomKit(e.Player);
+    }
+
+    private async UniTask GiveRandomKit(WarfarePlayer player)
+    {
+        await UniTask.SwitchToMainThread();
+
+        if (_allowedKits?.TryGetValue(player.Team, out string[]? allowedKits) is not true)
+            return;
+
+        if (allowedKits is not { Length: > 0 })
+            return;
+
+        // give the player a random kit when they spawn
+        string kitId = allowedKits[RandomUtility.GetIndex(allowedKits)];
+        Kit? kit = await _kitDataStore.QueryKitAsync(kitId, KitInclude.Giveable);
+        if (kit == null)
+        {
+            _logger.LogWarning($"Unknown kit: {kitId}.");
+        }
+        else
+        {
+            await _kitRequestService.GiveKitAsync(player, new KitBestowData(kit, "FtdmService.GiveRandomKit") { Silent = true }, CancellationToken.None);
         }
     }
 

@@ -125,7 +125,10 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
 
             foreach (WarfarePlayer player in _playerService.OnlinePlayers)
             {
-                TryGiveDefaultKitMainThread(player);
+                if (player.Component<KitPlayerComponent>().IsKit(obj.PrimaryKey))
+                {
+                    TryGiveDefaultKitMainThread(player);
+                }
             }
         });
     }
