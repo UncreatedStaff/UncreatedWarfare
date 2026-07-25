@@ -48,6 +48,7 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
     private readonly KitBestowService _kitBestowService;
     private readonly IKitsDbContext _kitDbContext;
     private readonly IKitItemResolver _kitItemResolver;
+    private readonly IPlayerService _playerService;
     private readonly EventDispatcher _eventDispatcher;
     private readonly DroppedItemTracker _droppedItemTracker;
     private readonly AssetRedirectService _assetRedirectService;
@@ -77,6 +78,7 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         KitBestowService kitBestowService,
         IKitsDbContext kitDbContext,
         IKitItemResolver kitItemResolver,
+        IPlayerService playerService,
         EventDispatcher eventDispatcher,
         DroppedItemTracker droppedItemTracker,
         AssetRedirectService assetRedirectService,
@@ -89,12 +91,14 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         ITeamManager<Team> teamManager)
     {
         _kitDataStore = kitDataStore;
+        _kitDataStore.KitRemoved += OnKitRemoved;
         _loadoutService = loadoutService;
         _cooldownManager = cooldownManager;
         _kitAccessService = kitAccessService;
         _kitBestowService = kitBestowService;
         _kitDbContext = kitDbContext;
         _kitItemResolver = kitItemResolver;
+        _playerService = playerService;
         _kitDbContext.ChangeTracker.AutoDetectChangesEnabled = false;
         _eventDispatcher = eventDispatcher;
         _droppedItemTracker = droppedItemTracker;
@@ -111,6 +115,19 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
         _teamManager = teamManager;
 
         _requestRequirementVisitor = new KitRequirementVisitor(this);
+    }
+
+    private void OnKitRemoved(KitModel obj)
+    {
+        UniTask.Create(async () =>
+        {
+            await UniTask.SwitchToMainThread();
+
+            foreach (WarfarePlayer player in _playerService.OnlinePlayers)
+            {
+                TryGiveDefaultKitMainThread(player);
+            }
+        });
     }
 
     async UniTask ILayoutHostedService.StartAsync(CancellationToken token)
@@ -807,6 +824,7 @@ public class KitRequestService : IRequestHandler<KitSignInstanceProvider, Kit>, 
     void IDisposable.Dispose()
     {
         _semaphore.Dispose();
+        _kitDataStore.KitRemoved -= OnKitRemoved;
     }
 
     /// <summary>

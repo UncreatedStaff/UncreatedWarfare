@@ -511,6 +511,10 @@ public class SessionManager :
 
         Squad? squad = player.GetSquad();
         CurrentKitState? kit = kitComp.ActiveKit;
+        uint? kitId = kit?.Key;
+        if (kitId is 0)
+            kitId = null;
+
         SessionRecord record = new SessionRecord
         {
             Steam64 = player.Steam64.m_SteamID,
@@ -518,7 +522,7 @@ public class SessionManager :
             FactionId = player.Team.IsValid ? player.Team.Faction.PrimaryKey : null,
             GameId = _module.GetActiveLayout().LayoutId,
             StartedGame = startedGame,
-            KitId = kit?.Key,
+            KitId = kitId,
             KitName = kit?.Id,
             MapId = _mapScheduler.Current!.Id,
             SeasonId = WarfareModule.Season,
