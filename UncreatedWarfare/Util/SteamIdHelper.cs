@@ -4,6 +4,8 @@ using System.Net;
 using System.Net.Http;
 using System.Runtime.CompilerServices;
 using System.Xml;
+using Uncreated.Warfare.Steam;
+using Uncreated.Warfare.Steam.Models;
 using UnityEngine.Networking;
 
 namespace Uncreated.Warfare.Util;
@@ -193,7 +195,31 @@ public static class SteamIdHelper
     /// <summary>
     /// Parse a player Steam ID in any form, or a steam profile URL. Custom URLs are allowed.
     /// </summary>
-    public static ValueTask<CSteamID?> TryParseSteamIdOrUrl(string str, CancellationToken token = default)
+    public static ValueTask<CSteamID?> TryParsePlayerSteamIdOrUrl(string str, ISteamApiService? steamApiService, CancellationToken token = default)
+    {
+        ValueTask<CSteamID?> task = TryParseSteamIdOrUrl(str, steamApiService, token);
+        if (task.IsCompleted)
+        {
+            CSteamID? result = task.Result;
+            if (result.HasValue && !result.Value.IsIndividual())
+                return new ValueTask<CSteamID?>(new CSteamID?());
+
+            return new ValueTask<CSteamID?>(result);
+        }
+
+        return new ValueTask<CSteamID?>(Core(task));
+
+        static async Task<CSteamID?> Core(ValueTask<CSteamID?> task)
+        {
+            CSteamID? result = await task;
+            return result.HasValue && !result.Value.IsIndividual() ? null : result;
+        }
+    }
+
+    /// <summary>
+    /// Parse a player Steam ID in any form, or a steam profile URL. Custom URLs are allowed.
+    /// </summary>
+    public static ValueTask<CSteamID?> TryParseSteamIdOrUrl(string str, ISteamApiService? steamApiService, CancellationToken token = default)
     {
         if (string.IsNullOrWhiteSpace(str))
             return default;
@@ -202,7 +228,7 @@ public static class SteamIdHelper
 
         if (TryParseSteamId(str, out CSteamID steamId))
         {
-            return steamId.IsIndividualRef() ? new ValueTask<CSteamID?>(steamId) : default;
+            return new ValueTask<CSteamID?>(steamId);
         }
 
         if (!str.Contains("steamcommunity.com", StringComparison.OrdinalIgnoreCase))
@@ -224,15 +250,42 @@ public static class SteamIdHelper
             return default;
 
         string path = uri.GetComponents(UriComponents.Path, UriFormat.Unescaped);
+        // custom URLs
         if (path.StartsWith("id/", StringComparison.Ordinal) && path.Length > 3)
         {
-            // custom URL
             ReadOnlySpan<char> customId = path.AsSpan(3);
             int pathEndIndex = customId.IndexOf('/');
             if (pathEndIndex != -1)
                 customId = customId.Slice(0, pathEndIndex);
 
-            return new ValueTask<CSteamID?>(GetSteamIdFromCustomUrlId(customId, token));
+            return new ValueTask<CSteamID?>(GetSteamIdFromCustomUrlId(customId, steamApiService, VanityUrlType.Individual, token));
+        }
+        if (path.StartsWith("groups/", StringComparison.Ordinal) && path.Length > 3)
+        {
+            ReadOnlySpan<char> customId = path.AsSpan(7);
+            int pathEndIndex = customId.IndexOf('/');
+            if (pathEndIndex != -1)
+                customId = customId.Slice(0, pathEndIndex);
+
+            return new ValueTask<CSteamID?>(GetSteamIdFromCustomUrlId(customId, steamApiService, VanityUrlType.Group, token));
+        }
+        if (path.StartsWith("app/", StringComparison.Ordinal) && path.Length > 3)
+        {
+            ReadOnlySpan<char> customId = path.AsSpan(4);
+            int pathEndIndex = customId.IndexOf('/');
+            if (pathEndIndex != -1)
+                customId = customId.Slice(0, pathEndIndex);
+
+            return new ValueTask<CSteamID?>(GetSteamIdFromCustomUrlId(customId, steamApiService, VanityUrlType.OfficialGameGroup, token));
+        }
+        if (path.StartsWith("games/", StringComparison.Ordinal) && path.Length > 3)
+        {
+            ReadOnlySpan<char> customId = path.AsSpan(6);
+            int pathEndIndex = customId.IndexOf('/');
+            if (pathEndIndex != -1)
+                customId = customId.Slice(0, pathEndIndex);
+
+            return new ValueTask<CSteamID?>(GetSteamIdFromCustomUrlId(customId, steamApiService, VanityUrlType.OfficialGameGroup, token));
         }
 
         if (path.StartsWith("profiles/", StringComparison.Ordinal) && path.Length > 9)
@@ -256,8 +309,15 @@ public static class SteamIdHelper
     /// Queries the steam profile endpoint to get the player's Steam ID.
     /// </summary>
     /// <param name="customUrlId">The ID that would be in a custom steam URL.</param>
-    public static unsafe Task<CSteamID?> GetSteamIdFromCustomUrlId(ReadOnlySpan<char> customUrlId, CancellationToken token = default)
+    public static unsafe Task<CSteamID?> GetSteamIdFromCustomUrlId(ReadOnlySpan<char> customUrlId, ISteamApiService? steamApiService, VanityUrlType urlType, CancellationToken token = default)
     {
+        if (steamApiService is { IsEnabled: true })
+        {
+            return steamApiService.ResolveVanityUrlAsync(customUrlId, urlType, token);
+        }
+
+        // fallback using ?xml=1 trick
+
         CreateUrlState state = default;
         state.CustomId = &customUrlId;
 

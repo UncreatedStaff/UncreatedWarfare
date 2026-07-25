@@ -6,6 +6,7 @@ using System.Linq;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Models.Users;
 using Uncreated.Warfare.Moderation;
+using Uncreated.Warfare.Steam;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Players;
@@ -80,11 +81,13 @@ public interface IUserDataService
 public class UserDataService : IUserDataService, IDisposable
 {
     private readonly IUserDataDbContext _dbContext;
+    private readonly ISteamApiService _steamApiService;
     private readonly SemaphoreSlim _semaphore;
  
-    public UserDataService(IUserDataDbContext dbContext)
+    public UserDataService(IUserDataDbContext dbContext, ISteamApiService steamApiService)
     {
         _dbContext = dbContext;
+        _steamApiService = steamApiService;
         _semaphore = new SemaphoreSlim(1, 1);
     }
 
@@ -345,7 +348,7 @@ public class UserDataService : IUserDataService, IDisposable
     /// <inheritdoc />
     public async Task<PlayerNames> SearchFirstPlayerAsync(string input, PlayerNameType prioritizedName, bool byLastJoined, CancellationToken token = default)
     {
-        CSteamID? steamId = await SteamIdHelper.TryParseSteamIdOrUrl(input, token).ConfigureAwait(false);
+        CSteamID? steamId = await SteamIdHelper.TryParseSteamIdOrUrl(input, _steamApiService, token).ConfigureAwait(false);
         if (steamId.HasValue && steamId.Value.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
         {
             return await GetUsernamesAsync(steamId.Value.m_SteamID, token).ConfigureAwait(false);
@@ -385,7 +388,7 @@ public class UserDataService : IUserDataService, IDisposable
             return 0;
         }
 
-        CSteamID? steamId = await SteamIdHelper.TryParseSteamIdOrUrl(input, token).ConfigureAwait(false);
+        CSteamID? steamId = await SteamIdHelper.TryParseSteamIdOrUrl(input, _steamApiService, token).ConfigureAwait(false);
         if (steamId.HasValue && steamId.Value.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
         {
             PlayerNames names = await GetUsernamesAsync(steamId.Value.m_SteamID, token).ConfigureAwait(false);

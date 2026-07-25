@@ -14,6 +14,7 @@ using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Steam;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Translations.Languages;
+using Uncreated.Warfare.Translations.Storage;
 using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Tests;
@@ -73,6 +74,10 @@ public class LoggingFormattingTests
             ]
         }).Build()).As<IConfiguration>();
 
+        bldr.RegisterType<PropertiesTranslationStorageFactory>()
+            .As<ITranslationStorageFactory>()
+            .SingleInstance();
+
         bldr.RegisterType<TranslationService>()
             .As<ITranslationService>()
             .SingleInstance();
@@ -131,7 +136,7 @@ public class LoggingFormattingTests
 
         string formatted = values.Format(true);
 
-        Assert.That(formatted, Is.EqualTo("7 \u001b[38;2;181;206;168m8\u001b[39m 9"));
+        Assert.That(formatted, Is.EqualTo("7 \u001b[38;2;181;206;168m8\u001b[36m 9"));
 
         formatted = values.Format(false);
 
@@ -150,7 +155,7 @@ public class LoggingFormattingTests
 
         string formatted = values.Format(true);
 
-        Assert.That(formatted, Is.EqualTo("\u001b[38;2;181;206;168m7\u001b[39m \u001b[38;2;181;206;168m8\u001b[39m 9"));
+        Assert.That(formatted, Is.EqualTo("\u001b[38;2;181;206;168m7\u001b[36m \u001b[38;2;181;206;168m8\u001b[36m 9"));
 
         formatted = values.Format(false);
 
@@ -169,7 +174,7 @@ public class LoggingFormattingTests
 
         string formatted = values.Format(true);
 
-        Assert.That(formatted, Is.EqualTo("\u001b[38;2;181;206;168m7\u001b[39m \u001b[38;2;181;206;168m8\u001b[39m \u001b[38;2;181;206;168m9\u001b[39m"));
+        Assert.That(formatted, Is.EqualTo("\u001b[38;2;181;206;168m7\u001b[36m \u001b[38;2;181;206;168m8\u001b[36m \u001b[38;2;181;206;168m9\u001b[36m"));
 
         formatted = values.Format(false);
 
@@ -189,7 +194,7 @@ public class LoggingFormattingTests
 
         string formatted = values.Format(true);
 
-        Assert.That(formatted, Is.EqualTo("\u001b[38;2;181;206;168m7\u001b[39m \u001b[38;2;181;206;168m8\u001b[39m \u001b[38;2;181;206;168m9\u001b[39m \u001b[38;2;214;157;133m:(\u001b[39m"));
+        Assert.That(formatted, Is.EqualTo("\u001b[38;2;181;206;168m7\u001b[36m \u001b[38;2;181;206;168m8\u001b[36m \u001b[38;2;181;206;168m9\u001b[36m \u001b[38;2;214;157;133m:(\u001b[36m"));
 
         formatted = values.Format(false);
 
@@ -209,7 +214,7 @@ public class LoggingFormattingTests
 
         string formatted = values.Format(true);
 
-        Assert.That(formatted, Is.EqualTo("\u001b[38;2;214;157;133m:)\u001b[39m \u001b[38;2;181;206;168m7\u001b[39m \u001b[38;2;181;206;168m8\u001b[39m \u001b[38;2;181;206;168m9\u001b[39m \u001b[38;2;214;157;133m:(\u001b[39m"));
+        Assert.That(formatted, Is.EqualTo("\u001b[38;2;214;157;133m:)\u001b[36m \u001b[38;2;181;206;168m7\u001b[36m \u001b[38;2;181;206;168m8\u001b[36m \u001b[38;2;181;206;168m9\u001b[36m \u001b[38;2;214;157;133m:(\u001b[36m"));
 
         formatted = values.Format(false);
 
