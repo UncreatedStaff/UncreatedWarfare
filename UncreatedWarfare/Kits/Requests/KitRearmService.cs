@@ -154,11 +154,11 @@ public class KitRearmService : BaseAlternateConfigurationFile // WARNING: not re
     {
         ammoStorage.SubtractAmmo(rearmCost);
 
-        player.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastLoseAmmo.Translate(rearmCost, player)));
-
         float ammoLeft = ammoStorage.AmmoCount;
         if (float.IsFinite(ammoLeft))
         {
+            player.SendToast(new ToastMessage(ToastMessageStyle.Tip, _translations.ToastLoseAmmo.Translate(rearmCost, player)));
+
             _chatService.Send(player, _translations.AmmoResuppliedKit, rearmCost, ammoStorage.AmmoCount);
         }
         else

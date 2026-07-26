@@ -3,8 +3,11 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Xml.Schema;
 using Uncreated.Warfare.Database.Abstractions;
 using Uncreated.Warfare.Kits.Loadouts;
+using Uncreated.Warfare.Layouts.Teams;
+using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
 
@@ -23,6 +26,7 @@ public class KitPlayerComponent : IPlayerComponent
     private KitSignService _kitSignService;
     private LoadoutService _loadoutService;
     private IKitStatisticService _kitStatService;
+    private ITeamManager<Team> _teamManager;
 
 #nullable restore
 
@@ -75,12 +79,19 @@ public class KitPlayerComponent : IPlayerComponent
     /// </summary>
     public IReadOnlyList<Kit> Loadouts { get; private set; } = Array.Empty<Kit>();
 
+    /// <summary>
+    /// Ordered list of all favorites including the <see cref="KitInclude.Cached"/> include level.
+    /// </summary>
+    public IReadOnlyList<Kit> Favorites { get; private set; } = Array.Empty<Kit>();
+
     void IPlayerComponent.Init(IServiceProvider serviceProvider, bool isOnJoin)
     {
         _kitDataStore = serviceProvider.GetRequiredService<IKitDataStore>();
         _kitSignService = serviceProvider.GetRequiredService<KitSignService>();
         _loadoutService = serviceProvider.GetRequiredService<LoadoutService>();
         _kitStatService = serviceProvider.GetRequiredService<IKitStatisticService>();
+
+        _teamManager = serviceProvider.GetRequiredService<ITeamManager<Team>>();
     }
 
     /// <summary>
@@ -183,10 +194,23 @@ public class KitPlayerComponent : IPlayerComponent
 
         List<uint> favorites = await favoritesTask.ConfigureAwait(false);
 
+        IReadOnlyList<uint> factions = _teamManager.Factions;
+        Task<Kit[]> favs = _kitDataStore.QueryKitsAsync(
+            KitInclude.Cached,
+            m => m.AsQueryable().Where(
+                k => k.Favorites.Any(f => f.Steam64 == s64)
+                     && (k.Type != KitType.Public
+                         || (!k.Disabled && k.Faction != null && factions.Contains(k.Faction.Key) && k.Season >= WarfareModule.Season))
+                ),
+            token: token
+        );
+
         List<uint> access = await dbContext.KitAccess
             .Where(x => x.Steam64 == s64)
             .Select(x => x.KitId)
             .ToListAsync(token).ConfigureAwait(false);
+
+        Kit[] favoriteKits = await favs;
 
         IDictionary<uint, BasicKitStats> cachedKitStats = await statsTask.ConfigureAwait(false);
 
@@ -195,6 +219,7 @@ public class KitPlayerComponent : IPlayerComponent
         _cachedKitStats = cachedKitStats;
 
         UpdateLoadouts(loadouts);
+        UpdateFavorites(favoriteKits);
 
         lock (_accessibleKits)
         {
@@ -248,6 +273,12 @@ public class KitPlayerComponent : IPlayerComponent
         // can be null in kit download pending player task
         _kitSignService?.UpdateLoadoutSigns(Player);
     }
+
+    private void UpdateFavorites(Kit[] kits)
+    {
+        Favorites = new ReadOnlyCollection<Kit>(kits);
+    }
+
 
     internal void UpdateLoadout(Kit loadout)
     {

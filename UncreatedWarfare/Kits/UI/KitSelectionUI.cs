@@ -21,9 +21,11 @@ using Uncreated.Warfare.Fobs.SupplyCrates;
 using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Interaction;
 using Uncreated.Warfare.Interaction.Commands;
+using Uncreated.Warfare.Interaction.Requests;
 using Uncreated.Warfare.Kits.Items;
 using Uncreated.Warfare.Kits.Loadouts;
 using Uncreated.Warfare.Kits.Requests;
+using Uncreated.Warfare.Kits.Requests.Requirements;
 using Uncreated.Warfare.Layouts.Teams;
 using Uncreated.Warfare.Models.Kits;
 using Uncreated.Warfare.Moderation.Discord;
@@ -68,7 +70,6 @@ public sealed partial class KitSelectionUI : UnturnedUI,
     private readonly IPlayerService _playerService;
     private readonly ZoneStore _zoneStore;
     private readonly TranslationInjection<RequestTranslations> _requestTranslations; // this is intentional
-    private readonly AmmoTranslations _ammoTranslations;
     private readonly RequestKitsTranslations _requestKitsTranslations;
     private readonly ChatService _chatService;
     private readonly ITranslationService _translationService;
@@ -79,11 +80,14 @@ public sealed partial class KitSelectionUI : UnturnedUI,
     private readonly KitRearmService _rearmService;
     private readonly CommandDispatcher? _commandDispatcher;
     private readonly SquadManager? _squadManager;
+    private readonly CooldownManager? _cooldownService;
     private readonly SquadMenuUI? _squadMenu;
     private readonly PlayerNitroBoostService? _nitroBoostService;
     private readonly AccountLinkingService? _acountLinkingService;
     private readonly SemaphoreSlim _dbSemaphore;
     private readonly KitSelectionUITranslations _translations;
+
+    public const string CooldownKitRequestInField = "RequestKitInField";
 
     // maps AttachmentType -> UI array index
     private readonly int[] _attachmentMap =
@@ -124,7 +128,6 @@ public sealed partial class KitSelectionUI : UnturnedUI,
         TranslationInjection<KitSelectionUITranslations> translations,
         TranslationInjection<RequestTranslations> requestTranslations,
         TranslationInjection<RequestKitsTranslations> requestKitsTranslations,
-        TranslationInjection<AmmoTranslations> ammoTranslations,
         ChatService chatService,
         ITranslationService translationService,
         KitRequirementManager kitRequirements,
@@ -136,6 +139,7 @@ public sealed partial class KitSelectionUI : UnturnedUI,
         KitRearmService rearmService,
         CommandDispatcher? commandDispatcher = null,
         SquadManager? squadManager = null,
+        CooldownManager? cooldownService = null,
         SquadMenuUI? squadMenu = null,
         PlayerNitroBoostService? nitroBoostService = null,
         AccountLinkingService? acountLinkingService = null)
@@ -152,7 +156,6 @@ public sealed partial class KitSelectionUI : UnturnedUI,
 
         _requestTranslations = requestTranslations;
         _requestKitsTranslations = requestKitsTranslations.Value;
-        _ammoTranslations = ammoTranslations.Value;
         _chatService = chatService;
         _translationService = translationService;
         _kitRequirements = kitRequirements;
@@ -163,6 +166,7 @@ public sealed partial class KitSelectionUI : UnturnedUI,
         _rearmService = rearmService;
         _commandDispatcher = commandDispatcher;
         _squadManager = squadManager;
+        _cooldownService = cooldownService;
         _squadMenu = squadMenu;
         _nitroBoostService = nitroBoostService;
         _weaponTextService = weaponTextService;
@@ -231,6 +235,8 @@ public sealed partial class KitSelectionUI : UnturnedUI,
         ElementPatterns.SubscribeAll(_listResults, k => k.RequestButton, HandleButtonRequestKitClicked);
         ElementPatterns.SubscribeAll(_listResults, k => k.PreviewButton, HandleButtonPreviewKitClicked);
         ElementPatterns.SubscribeAll(_listResults, k => k.UnlockButton, HandleButtonUnlockKitClicked);
+
+        _restockShortcutButton.OnClicked += OnClickedRestockShortcut;
 
         _kitRequirementVisitor = new KitRequirementVisitor(this);
     }
@@ -372,13 +378,13 @@ public sealed partial class KitSelectionUI : UnturnedUI,
             // kit favorites
             for (int i = 0; i < _favoriteKits.Length; ++i)
             {
-                Kit? fav = data.FavoriteKitsCache[i];
+                Kit? fav = data.FavoriteKitsCache[i].Kit;
                 if (fav == null)
                     break;
 
                 if (fav.Key == kit.Key)
                 {
-                    SendFavoriteKit(i, kit, player, data);
+                    SendFavoriteKit(i, kit, player, data, false);
                 }
             }
         }
@@ -389,6 +395,45 @@ public sealed partial class KitSelectionUI : UnturnedUI,
         }
 
         await CheckNitroBoostStatus(player, data, token, nitroCheckPanel, nitroCheckList);
+    }
+
+    private struct RequestKitResult
+    {
+        public bool Success;
+        public bool IsOnCooldown;
+    }
+
+    private async Task<RequestKitResult> RequestKitAsync(WarfarePlayer player, KitSelectionUIData data, Kit kit, int index, Class @class, bool isFavorite)
+    {
+        await UniTask.SwitchToMainThread();
+
+        if (data.AmmoStorage != null
+            && _cooldownService != null
+            && _cooldownService.HasCooldown(player, CooldownKitRequestInField, out Cooldown cooldown))
+        {
+            if (isFavorite)
+                StartFavoriteCooldown(cooldown, player, data, kit, index);
+            else
+                StartCooldownTimer(cooldown, player, data, kit, index, @class);
+            return new RequestKitResult { Success = false, IsOnCooldown = true };
+        }
+
+        float ammoCost = 0;
+        if (data.AmmoStorage != null)
+        {
+            ammoCost = _rearmService.GetRearmCost(player, kit);
+        }
+
+        bool requested = await _kitRequestService.RequestAsync(player, kit, new RequestCommandResultHandler(_chatService, _configuration, _requestTranslations), player.DisconnectToken);
+
+        if (requested && data.AmmoStorage != null && ammoCost > 0)
+        {
+            await UniTask.SwitchToMainThread();
+            _rearmService.ApplyRearm(player, ammoCost, data.AmmoStorage, kit);
+            _cooldownService?.StartCooldown(player, CooldownKitRequestInField);
+        }
+
+        return new RequestKitResult { Success = requested };
     }
 
     private void HandleNextPage(UnturnedButton button, Player unturnedPlayer)
@@ -795,6 +840,8 @@ public sealed partial class KitSelectionUI : UnturnedUI,
             player.Locale.LocaleUpdated += OnLocaleUpdated;
         }
 
+        UpdateRestockShortcut(data, player, null, true);
+
         await _dbSemaphore.WaitAsync(token);
         try
         {
@@ -946,6 +993,43 @@ public sealed partial class KitSelectionUI : UnturnedUI,
         }
     }
 
+    private void UpdateRestockShortcut(KitSelectionUIData data, WarfarePlayer player, float? currentRearmCost, bool fromDefaultValues)
+    {
+        Kit? kit = player.Component<KitPlayerComponent>()?.GetActiveEffectiveKit()?.CachedKit;
+        if (data.AmmoStorage == null || kit is not { Class: not Class.None and not Class.Unarmed })
+        {
+            if (!fromDefaultValues)
+                _restockShortcutRoot.Hide(player);
+        }
+        else
+        {
+            float rearmCost = currentRearmCost ?? _rearmService.GetRearmCost(player, kit);
+            float ammoCount = data.AmmoStorage.AmmoCount;
+            if (rearmCost <= 0)
+            {
+                _restockShortcutButton.Disable(player);
+                _restockShortcutButton.Label.SetText(player, _translations.RestockShortcutButtonNotNeeded.Translate(player));
+            }
+            else if (float.IsFinite(ammoCount))
+            {
+                // finite ammo (ammo crate)
+                float ammoLeft = Math.Max(0, MathF.Round(ammoCount - rearmCost, 1));
+                if (!fromDefaultValues)
+                    _restockShortcutButton.Enable(player);
+                _restockShortcutButton.Label.SetText(player, _translations.RestockShortcutButton.Translate(MathF.Round(rearmCost, 1), ammoLeft, player));
+            }
+            else
+            {
+                // infinite ammo (cache)
+                if (!fromDefaultValues)
+                    _restockShortcutButton.Enable(player);
+                _restockShortcutButton.Label.SetText(player, _translations.RestockShortcutButtonInfiniteAmmo.Translate(player));
+            }
+
+            _restockShortcutRoot.Show(player);
+        }
+    }
+
     private void OnLocaleUpdated(WarfarePlayerLocale locale)
     {
         KitSelectionUIData data = GetOrAddData(locale.Player);
@@ -975,7 +1059,7 @@ public sealed partial class KitSelectionUI : UnturnedUI,
         ulong s64 = player.Steam64.m_SteamID;
         IReadOnlyList<uint> factions = _teamManager.Factions;
         return _kitDataStore.QueryKitsAsync(
-            KitInclude.Default,
+            KitInclude.Default | KitInclude.Items,
             q => q
                 .Where(k => k.Favorites.Any(f => f.Steam64 == s64) && (k.Type != KitType.Public || (!k.Disabled && k.Faction != null && factions.Contains(k.Faction.Key) && k.Season >= WarfareModule.Season)))
                 .Take(_favoriteKits.Length),
@@ -1001,7 +1085,7 @@ public sealed partial class KitSelectionUI : UnturnedUI,
 
         for (; i < ct; ++i)
         {
-            SendFavoriteKit(i, kits[i], player, data);
+            SendFavoriteKit(i, kits[i], player, data, fromDefaults);
         }
 
         if (fromDefaults)
@@ -1009,15 +1093,16 @@ public sealed partial class KitSelectionUI : UnturnedUI,
 
         for (; i < _favoriteKits.Length; ++i)
         {
-            if (data.FavoriteKitsCache[i] == null)
+            ref FavoriteKitCacheInformation fav = ref data.FavoriteKitsCache[i];
+            if (fav.Kit == null)
                 continue;
 
-            data.FavoriteKitsCache[i] = null;
+            fav.Kit = null;
             _favoriteKits[i].Root.Hide(c);
         }
     }
 
-    private void SendFavoriteKit(int index, Kit kit, WarfarePlayer player, KitSelectionUIData data)
+    private void SendFavoriteKit(int index, Kit kit, WarfarePlayer player, KitSelectionUIData data, bool fromDefaults)
     {
         FavoriteKitInfo ui = _favoriteKits[index];
         ITransportConnection c = player.Connection;
@@ -1039,9 +1124,22 @@ public sealed partial class KitSelectionUI : UnturnedUI,
             id = string.Empty;
         }
 
+        if (_cooldownService != null && _cooldownService.HasCooldown(player, CooldownKitRequestInField, out Cooldown cooldown))
+        {
+            StartFavoriteCooldown(cooldown, player, data, kit, index);
+        }
+        else if (!CanRequestKit(data) || player.Component<KitPlayerComponent>().IsKit(kit))
+        {
+            ui.RequestButton.Hide(c);
+        }
+        else if (!fromDefaults)
+        {
+            ui.RequestButton.Show(c);
+        }
+
         ui.Id.SetText(c, id);
         ui.Root.Show(c);
-        data.FavoriteKitsCache[index] = kit;
+        data.FavoriteKitsCache[index].Kit = kit;
     }
 
     private void UpdateKitFilter(WarfarePlayer player, KitSelectionUIData data, Class? @class, string? search)
@@ -1404,6 +1502,15 @@ public sealed partial class KitSelectionUI : UnturnedUI,
 
     }
 
+    private KitInfo GetKitInfoUI(Class @class, int index)
+    {
+        int panelIndex = GetClassPanelIndex(@class);
+        if (panelIndex < 0)
+            return _listResults[index];
+
+        return _panels[panelIndex].Kits[index];
+    }
+
     private void UpdateStatusLabels(KitInfo ui, bool fromDefaultValues, KitSelectionUIData data, Class @class, int index, WarfarePlayer player, Kit kit, KitPlayerComponent kitAccessComp, bool force = true)
     {
         ITransportConnection c = player.Connection;
@@ -1431,30 +1538,32 @@ public sealed partial class KitSelectionUI : UnturnedUI,
 
             if (doRearm)
             {
-                // infinite ammo (Cache)
-                if (!float.IsFinite(data.AmmoStorage!.AmmoCount))
-                {
-                    ui.UnlockButton.SetText(c, _translations.PurchaseButtonRestockInfiniteAmmo.Translate(player));
-                    ui.UnlockSection.Show(c);
-                }
-                else
-                {
-                    float rearmCost = 0f;
-                    if (doRearm)
-                        rearmCost = _rearmService.GetRearmCost(player);
+                float rearmCost = 0f;
+                if (doRearm)
+                    rearmCost = _rearmService.GetRearmCost(player);
 
-                    if (rearmCost > 0)
+                if (rearmCost > 0)
+                {
+                    // rearm kit button
+                    if (!float.IsFinite(data.AmmoStorage!.AmmoCount))
                     {
-                        // rearm kit button
+                        // infinite ammo (cache)
+                        ui.UnlockButton.SetText(c, _translations.PurchaseButtonRestockInfiniteAmmo.Translate(player));
+                    }
+                    else
+                    {
+                        // finite ammo (supply crate)
                         float ammoLeft = Math.Max(0, MathF.Round(data.AmmoStorage!.AmmoCount - rearmCost, 1));
+                        UpdateRestockShortcut(data, player, rearmCost, false);
 
                         ui.UnlockButton.SetText(c, _translations.PurchaseButtonRestockAmmo.Translate(MathF.Round(rearmCost, 1), ammoLeft, player));
-                        ui.UnlockSection.Show(c);
                     }
-                    else if (!fromDefaultValues)
-                    {
-                        ui.UnlockSection.Hide(c);
-                    }
+
+                    ui.UnlockSection.Show(c);
+                }
+                else if (!fromDefaultValues)
+                {
+                    ui.UnlockSection.Hide(c);
                 }
             }
             else if (!fromDefaultValues)
@@ -1494,11 +1603,17 @@ public sealed partial class KitSelectionUI : UnturnedUI,
 
         foreach (IKitRequirement requirement in _kitRequirements.Request)
         {
-            if (requirement.AcceptCached(_kitRequirementVisitor, in ctx) == KitRequirementResult.No)
-            {
-                anyNo = true;
-                break;
-            }
+            if (requirement.AcceptCached(_kitRequirementVisitor, in ctx) != KitRequirementResult.No)
+                continue;
+
+            // kit cooldowns < 5 seconds are not displayed.
+            if (requirement is GlobalCooldownRequirement && data.GetCachedState(in state).LabelState != StatusState.GlobalCooldown)
+                continue;
+            if (requirement is PremiumCooldownRequirement && data.GetCachedState(in state).LabelState != StatusState.PremiumCooldown)
+                continue;
+
+            anyNo = true;
+            break;
         }
 
         if (!anyNo && (force || info.LabelState != lblState || info.ButtonState != btnState))
@@ -1507,16 +1622,32 @@ public sealed partial class KitSelectionUI : UnturnedUI,
 
             if (data.AmmoStorage != null)
             {
-                try
+                if (_cooldownService != null
+                    && _cooldownService.HasCooldown(player, CooldownKitRequestInField, out Cooldown cooldown))
                 {
-                    _ = kit.Items;
-                    float ammoCost = MathF.Round(_rearmService.GetRearmCost(player, kit), 1);
-                    float left = MathF.Round(Math.Max(0, data.AmmoStorage.AmmoCount - ammoCost), 1);
-                    ui.UnlockButton.SetText(c, _translations.PurchaseButtonRequestWithAmmoCost.Translate(ammoCost, left, player));
+                    StartCooldownTimer(cooldown, player, data, kit, index, @class);
                 }
-                catch (NotIncludedException)
+                else
                 {
-                    ui.UnlockButton.SetText(c, _translations.PurchaseButtonRequest.Translate(player));
+                    try
+                    {
+                        _ = kit.Items;
+                        float ammoCount = data.AmmoStorage.AmmoCount;
+                        if (float.IsFinite(ammoCount))
+                        {
+                            float ammoCost = MathF.Round(_rearmService.GetRearmCost(player, kit), 1);
+                            float left = MathF.Round(Math.Max(0, -ammoCost), 1);
+                            ui.UnlockButton.SetText(c, _translations.PurchaseButtonRequestWithAmmoCost.Translate(ammoCost, left, player));
+                        }
+                        else
+                        {
+                            ui.UnlockButton.SetText(c, _translations.PurchaseButtonRequest.Translate(player));
+                        }
+                    }
+                    catch (NotIncludedException)
+                    {
+                        ui.UnlockButton.SetText(c, _translations.PurchaseButtonRequest.Translate(player));
+                    }
                 }
             }
             else
@@ -1586,6 +1717,9 @@ public sealed partial class KitSelectionUI : UnturnedUI,
 
         if (!isDefaultLang || !_translations.ClassesLabel.HasDefaultValue)
             _classFilterLabel.SetText(c, _translations.ClassesLabel.Translate(player));
+
+        if (!isDefaultLang || !_translations.RestockShortcutTip.HasDefaultValue)
+            _restockShortcutTip.SetText(c, _translations.RestockShortcutTip.Translate(player));
 
         if (!isDefaultLang || !_translations.FavoritesLabel.HasDefaultValue)
             _favoritesLabel.SetText(c, _translations.FavoritesLabel.Translate(player));
@@ -1677,7 +1811,7 @@ public sealed partial class KitSelectionUI : UnturnedUI,
 
         internal int SearchPage;
         internal int? SearchMaxSize;
-        public readonly Kit?[] FavoriteKitsCache;
+        public readonly FavoriteKitCacheInformation[] FavoriteKitsCache;
 
         internal void HandleFilterUpdated()
         {
@@ -1752,7 +1886,7 @@ public sealed partial class KitSelectionUI : UnturnedUI,
 
             _publicKitCache = new KitCacheInformation[owner._panels.Length * owner._panels[0].Kits.Length];
             _listKitCache = new KitCacheInformation[owner._listResults.Length];
-            FavoriteKitsCache = new Kit[owner._favoriteKits.Length];
+            FavoriteKitsCache = new FavoriteKitCacheInformation[owner._favoriteKits.Length];
         }
 
         public void ResetState()
@@ -1776,6 +1910,7 @@ public sealed partial class KitSelectionUI : UnturnedUI,
         {
             Array.Clear(_listKitCache, 0, _listKitCache.Length);
             Array.Clear(_publicKitCache, 0, _publicKitCache.Length);
+            Array.Clear(FavoriteKitsCache, 0, FavoriteKitsCache.Length);
             SearchPage = 0;
             IsBoosting = null;
         }
@@ -1801,12 +1936,19 @@ public sealed partial class KitSelectionUI : UnturnedUI,
         }
     }
 
+    private struct FavoriteKitCacheInformation
+    {
+        public Kit? Kit;
+        public int CooldownVersion;
+    }
+
     private struct KitCacheInformation
     {
         public Kit? Kit;
 
         public PurchaseButtonState ButtonState;
         public StatusState LabelState;
+        public int CooldownVersion;
     }
 
     private enum PurchaseButtonState
@@ -2037,6 +2179,9 @@ public sealed partial class KitSelectionUI : UnturnedUI,
 
         public void AcceptGlobalCooldownNotMet(in KitRequirementResolutionContext<KitRequirementsState> ctx, in Cooldown requestCooldown)
         {
+            if (requestCooldown.GetTimeLeft() < TimeSpan.FromSeconds(5))
+                return;
+
             ctx.State.UI.StatusLabel.SetText(
                 ctx.State.Connection,
                 _this._translations.StatusRequestCooldown.Translate(requestCooldown.GetTimeLeft(), ctx.Player)
@@ -2050,6 +2195,9 @@ public sealed partial class KitSelectionUI : UnturnedUI,
 
         public void AcceptPremiumCooldownNotMet(in KitRequirementResolutionContext<KitRequirementsState> ctx, in Cooldown requestCooldown)
         {
+            if (requestCooldown.GetTimeLeft() < TimeSpan.FromSeconds(5))
+                return;
+
             ctx.State.UI.StatusLabel.SetText(
                 ctx.State.Connection,
                 _this._translations.StatusRequestCooldown.Translate(requestCooldown.GetTimeLeft(), ctx.Player)
@@ -2237,6 +2385,9 @@ public sealed class KitSelectionUITranslations : TranslationCollection
     [TranslationData("Label for the purchase button shown when the kit can be requested on an ammo storage.", "Ammo supplies to be used.", "Remaining supplies if the kit is restocked.")]
     public readonly Translation<float, float> PurchaseButtonRequestWithAmmoCost = new Translation<float, float>("Switch Kit\n<#e26a5d>{0} AMMO</color>   <#555>{1} LEFT</color>", TranslationOptions.TMProUI);
 
+    [TranslationData("Label for the purchase button shown when the kit can be requested on an ammo storage.", "Ammo supplies to be used.", "Remaining supplies if the kit is restocked.")]
+    public readonly Translation<TimeSpan> PurchaseButtonRequestWithCooldown = new Translation<TimeSpan>("On Cooldown\n<#555>{0}</color>", TranslationOptions.TMProUI, arg0Fmt: TimeAddon.Create(TimeSpanFormatType.CountdownMinutesSeconds));
+
     [TranslationData("Label for the purchase button shown when the kit can be restocked on an ammo storage.", "Ammo supplies to be used.", "Remaining supplies if the kit is restocked.")]
     public readonly Translation<float, float> PurchaseButtonRestockAmmo = new Translation<float, float>("Restock\n<#e26a5d>{0} AMMO</color>   <#555>{1} LEFT</color>", TranslationOptions.TMProUI);
 
@@ -2297,6 +2448,20 @@ public sealed class KitSelectionUITranslations : TranslationCollection
 
     [TranslationData("Modal accept button text for when a player is asked to link their Discord account.")]
     public readonly Translation ModalLinkDiscordCloseButton = new Translation("Done", TranslationOptions.TMProUI);
+
+
+    [TranslationData("Label for the restock shortcut button with an ammo storage.", "Ammo supplies to be used.", "Remaining supplies if the kit is restocked.")]
+    public readonly Translation<float, float> RestockShortcutButton = new Translation<float, float>("Restock Current Kit\n<#e26a5d>{0} AMMO</color>   <#555>{1} LEFT</color>", TranslationOptions.TMProUI);
+
+    [TranslationData("Label for the restock shortcut button with an infinite ammo storage, like a cache.")]
+    public readonly Translation RestockShortcutButtonInfiniteAmmo = new Translation("Restock Current Kit", TranslationOptions.TMProUI);
+
+    [TranslationData("Label for the restock shortcut button when the player's kit is already fully restocked.")]
+    public readonly Translation RestockShortcutButtonNotNeeded = new Translation("Kit Already Full", TranslationOptions.TMProUI);
+
+    [TranslationData("Label for the restock shortcut button when the player's kit is already fully restocked.")]
+    public readonly Translation RestockShortcutTip = new Translation("Tip: Punch the ammo crate to rearm your kit without using the UI.", TranslationOptions.TMProUI | TranslationOptions.NoRichText);
+
 
 
     [TranslationData("Title for the KDR (kill-death ratio) statistic.")]

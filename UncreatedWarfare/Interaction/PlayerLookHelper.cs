@@ -1,24 +1,20 @@
-﻿
-//#define CONSIDER_LEAN_OBSTRUCTION
-
-#if DEBUG
+﻿#if DEBUG
 #define SPAWN_LOOK_DEBUG_PARTICLE
 #endif
 
 using Microsoft.Extensions.DependencyInjection;
-using SDG.Framework.Utilities;
 using System;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
-using Uncreated.Warfare.Players.UI;
-using Uncreated.Warfare.Util;
 
 namespace Uncreated.Warfare.Interaction;
 
 /// <summary>
 /// Unified location for checking what the player is looking at so multiple services don't have to check at once.
 /// </summary>
-//[PlayerComponent]
+#if DEBUG // for now this is unused
+// [PlayerComponent]
+#endif
 public class PlayerLookComponent : MonoBehaviour, IPlayerComponent
 {
     private IPlayerService _playerService;
@@ -72,6 +68,7 @@ public class PlayerLookComponent : MonoBehaviour, IPlayerComponent
 #endif
 
     // todo: maybe try lateupdate or earlyupdate
+
     private void Update()
     {
         bool log = (++c % 50) == 0;
@@ -121,27 +118,11 @@ public class PlayerLookComponent : MonoBehaviour, IPlayerComponent
                 Vector3
 #endif
                     left = -gamePlayer.transform.right;
-#if CONSIDER_LEAN_OBSTRUCTION
-                retryAtZero:
-#endif
                 //if (_leanAlpha != 0)
                 //{
                     //Vector3 playerPos = gamePlayer.transform.position;
                     //Vector3 lclOffset = aim.position - playerPos;
 
-#if CONSIDER_LEAN_OBSTRUCTION
-                    ++_lastObstructionCheck;
-                    if (_lastObstructionCheck % obstructionCheckEveryTicks == 0)
-                    {
-                        CheckLeanHit(lean, playerPos, left);
-                    }
-
-                    if (IsLeanObstructed(lean))
-                    {
-                        _leanAlpha = 0;
-                        goto retryAtZero;
-                    }
-#endif
 
                     //Vector3 playerFwd = new Vector3(Mathf.Sin(yaw * Mathf.Deg2Rad), Mathf.Sin((90f - gamePlayer.look.pitch) * Mathf.Deg2Rad), Mathf.Cos(yaw * Mathf.Deg2Rad));
                     //
@@ -219,39 +200,17 @@ public class PlayerLookComponent : MonoBehaviour, IPlayerComponent
             p.SetUniformScale(0.25f);
             EffectManager.triggerEffect(p);
             _lastDebugParticleSpawned = Time.realtimeSinceStartup;
+            _hasDebugParticle = true;
+        }
+        else if (_hasDebugParticle)
+        {
+            EffectManager.ClearEffectByGuid(_debugParticleAsset!.GUID, Player.Connection);
+            _hasDebugParticle = false;
         }
 #endif
     }
 
-#if CONSIDER_LEAN_OBSTRUCTION
-    private bool IsLeanObstructed(int lean)
-    {
-        int mask = 1 << (lean != 1 ? 1 : 0);
-        return (_leanObstructionMask & mask) != 0;
-    }
-
-    private void CheckLeanHit(int lean, Vector3 playerPos, Vector3 leanDir)
-    {
-        if (lean < 0)
-            leanDir = -leanDir;
-
-        playerPos.y += Player.UnturnedPlayer.look.heightLook;
-        float testRadius = PlayerStance.RADIUS;
-        float testDistance = 1.2f - testRadius;
-        Vector3 endPosition = playerPos + leanDir * testDistance;
-        int hitCount = Physics.OverlapCapsuleNonAlloc(playerPos, endPosition, testRadius, WorkingLeanHits, RayMasks.BLOCK_LEAN);
-        int mask = 1 << (lean != 1 ? 1 : 0);
-        if (hitCount == 0)
-        {
-            _leanObstructionMask &= (byte)~mask;
-        }
-        else
-        {
-            _leanObstructionMask |= (byte)mask;
-            WorkingLeanHits[0] = null;
-        }
-    }
-#endif
+    private bool _hasDebugParticle;
 
     private void SetRay(Vector3 position, Vector3 forward)
     {

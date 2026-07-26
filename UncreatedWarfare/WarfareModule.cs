@@ -795,7 +795,7 @@ public sealed class WarfareModule
 
         bldr.RegisterType<VehicleRequestService>()
             .AsImplementedInterfaces().AsSelf()
-            .SingleInstance();
+            .InstancePerMatchingLifetimeScope(LifetimeScopeTags.Layout);
 
         bldr.RegisterType<VehicleSpawnerService>()
             .AsImplementedInterfaces().AsSelf()

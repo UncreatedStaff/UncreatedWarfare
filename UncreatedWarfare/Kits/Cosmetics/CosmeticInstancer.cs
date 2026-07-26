@@ -388,7 +388,6 @@ public class CosmeticInstancer : IAsyncEventListener<PlayerDutyStatusChanged>, I
                     if (!ShouldSeeInstancedClothes(player, otherPlayer))
                     {
                         clientPool.Add(otherPlayer.Connection);
-                        _logger.LogConditional($"REAL: {otherPlayer.Names.PlayerName}");
                     }
                     else
                     {
@@ -414,7 +413,6 @@ public class CosmeticInstancer : IAsyncEventListener<PlayerDutyStatusChanged>, I
             {
                 foreach (WarfarePlayer pl in _remainingPlayersBuffer)
                 {
-                    _logger.LogConditional($"INST: (no grp) {pl.Names.PlayerName}");
                     clientPool.Add(pl.Connection);
                 }
 
@@ -465,7 +463,6 @@ public class CosmeticInstancer : IAsyncEventListener<PlayerDutyStatusChanged>, I
                     }
 
                     clientPool.Add(otherPlayer.Connection);
-                    _logger.LogConditional($"INST: (grp {index}) {otherPlayer.Names.PlayerName}");
                 }
 
                 if (clientPool.Count > 0)

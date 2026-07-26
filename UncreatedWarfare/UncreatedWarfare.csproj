@@ -362,6 +362,7 @@
         <UnturnedReference Include="UnityEngine.ImageConversionModule" />
         <UnturnedReference Include="UnityEngine.UnityWebRequestModule" />
         <UnturnedReference Include="UnityEngine.AssetBundleModule" />
+        <UnturnedReference Include="UnityEngine.TextRenderingModule" />
 
 
         <Publicize Include="Assembly-CSharp:SDG.Unturned.AssetsWorker" />

@@ -121,5 +121,5 @@ public interface IDeployMainHandler
     /// <summary>
     /// Attempts to deploy to main.
     /// </summary>
-    UniTask<bool> CanDeployToMainAsync(Team team, Zone mainBase, CommandContext? context, CancellationToken token = default);
+    UniTask<bool> CanDeployToMainAsync(Team team, Zone mainBase, CommandContext context, CancellationToken token = default);
 }

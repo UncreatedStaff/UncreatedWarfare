@@ -23,6 +23,10 @@ partial class KitSelectionUI
         to: (int)Class.SpecOps
     );
 
+    private readonly UnturnedUIElement _restockShortcutRoot = new UnturnedUIElement("Filters/Viewport/Content/Restock");
+    private readonly LabeledStateButton _restockShortcutButton = new LabeledStateButton("Filters/Viewport/Content/Restock/Kits_Restock_Current_Kit", "./Label", "./ButtonState");
+    private readonly UnturnedLabel _restockShortcutTip = new UnturnedLabel("Filters/Viewport/Content/Restock/Tip");
+
     private readonly UnturnedLabel _favoritesLabel = new UnturnedLabel("Filters/Viewport/Content/Label_Favorites");
     
     private readonly FavoriteKitInfo[] _favoriteKits = ElementPatterns.CreateArray<FavoriteKitInfo>("Filters/Viewport/Content/Kits_Favorite_Kit_{0}", 1, to: 15);

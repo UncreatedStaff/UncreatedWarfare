@@ -22,6 +22,7 @@ namespace Uncreated.Warfare.Signs;
 
 [SignPrefix("kit_")]
 [SignPrefix("loadout_")]
+[SignPrefix("kitfav_")]
 public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>, IKitRequirementVisitor<StringBuilder>
 {
     private static readonly StringBuilder KitSignBuffer = new StringBuilder(230);
@@ -45,6 +46,7 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>,
     string ISignInstanceProvider.FallbackText => KitId ?? ("Loadout " + LoadoutNumber.ToString(CultureInfo.InvariantCulture));
     public string KitId { get; private set; }
     public int LoadoutNumber { get; private set; }
+    public int FavoriteIndex { get; private set; }
     public KitSignInstanceProvider(
         IKitDataStore kitDataStore,
         TranslationInjection<KitSignTranslations> translations,
@@ -69,21 +71,26 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>,
     {
         _signMetrics = _measurementService.GetSignMetrics(barricade.asset.GUID);
 
-        if (((InteractableSign)barricade.interactable).text.StartsWith("loadout_"))
+        InteractableSign sign = (InteractableSign)barricade.interactable;
+        FavoriteIndex = -1;
+        LoadoutNumber = -1;
+        if (sign.text.StartsWith("loadout_"))
         {
             if (int.TryParse(extraInfo, NumberStyles.Number, CultureInfo.InvariantCulture, out int id) && id >= 0)
             {
                 LoadoutNumber = id;
             }
-            else
+        }
+        else if (sign.text.StartsWith("kitfav_"))
+        {
+            if (int.TryParse(extraInfo, NumberStyles.Number, CultureInfo.InvariantCulture, out int id) && id >= 0)
             {
-                LoadoutNumber = -1;
+                FavoriteIndex = id;
             }
         }
         else
         {
             KitId = extraInfo;
-            LoadoutNumber = -1;
         }
     }
 
@@ -99,6 +106,19 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>,
             try
             {
                 TranslateLoadoutSign(KitSignBuffer, LoadoutNumber, language, culture, player);
+                return KitSignBuffer.ToString();
+            }
+            finally
+            {
+                KitSignBuffer.Clear();
+            }
+        }
+
+        if (FavoriteIndex >= 0)
+        {
+            try
+            {
+                TranslateFavoriteSign(KitSignBuffer, FavoriteIndex, language, culture, player);
                 return KitSignBuffer.ToString();
             }
             finally
@@ -271,10 +291,15 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>,
         {
             bldr.Append(_translations.LoadoutNumber.Translate(loadoutIndex, language, culture, TimeZoneInfo.Utc));
             bldr.Append('\n', 4);
-            bldr.Append(_translations.KitPremiumCost.Translate(_systemConfig.GetValue<decimal>("kits:loadout_cost_usd")));
+            bldr.Append(_translations.KitPremiumCost.Translate(_systemConfig.GetValue<decimal>("kits:loadout_cost_usd"), language, culture, TimeZoneInfo.Utc));
             return;
         }
 
+        TranslateLoadoutSign(bldr, kit, language, culture, player!, kitPlayerComponent!);
+    }
+
+    private void TranslateLoadoutSign(StringBuilder bldr, Kit kit, LanguageInfo language, CultureInfo culture, WarfarePlayer player, KitPlayerComponent kitPlayerComponent)
+    {
         string kitName = kit.GetDisplayName(language, true, removeNewLine: false);
 
         bool isFavorited = player != null && kitPlayerComponent!.IsKitFavorited(kit.Key);
@@ -314,6 +339,29 @@ public class KitSignInstanceProvider : ISignInstanceProvider, IRequestable<Kit>,
 
         if (!kit.IsLocked && !needsUpgrade && player != null)
             AppendAvailability(bldr, player, kit);
+    }
+
+    private void TranslateFavoriteSign(StringBuilder bldr, int favoriteIndex, LanguageInfo language, CultureInfo culture, WarfarePlayer? player)
+    {
+        KitPlayerComponent? kitPlayerComponent = player?.Component<KitPlayerComponent>();
+
+        Kit? kit = kitPlayerComponent?.Favorites.ElementAtOrDefault(favoriteIndex);
+
+        if (kit == null)
+        {
+            bldr.Append(_translations.FavoriteNumber.Translate(favoriteIndex + 1, language, culture, TimeZoneInfo.Utc));
+            bldr.Append('\n', 4);
+            bldr.Append(_translations.FavoriteCommandFooter.Translate(language));
+            return;
+        }
+
+        if (kit.Type == KitType.Loadout)
+        {
+            TranslateLoadoutSign(bldr, kit, language, culture, player!, kitPlayerComponent!);
+            return;
+        }
+
+        TranslateKitSign(bldr, kit, language, culture, player);
     }
 
     private void AppendName(string kitName, Color32 color, out bool hasExtraLine)
@@ -421,6 +469,12 @@ public class KitSignTranslations : TranslationCollection
     [TranslationData("Shown on an unused loadout sign.", "The number of the loadout sign.")]
     public readonly Translation<int> LoadoutNumber = new Translation<int>("<b><#7878ff>LOADOUT #{0}</color></b>", TranslationOptions.TMProSign);
     
+    [TranslationData("Shown on an unused favorite sign.", "The number of the favorite sign.")]
+    public readonly Translation<int> FavoriteNumber = new Translation<int>("<b><#7878ff>FAVORITE #{0}</color></b>", TranslationOptions.TMProSign);
+
+    [TranslationData(IsPriorityTranslation = false)]
+    public readonly Translation FavoriteCommandFooter = new Translation("<#7878ff>/kits</color>", TranslationOptions.TMProSign);
+
     [TranslationData("Shown on a used loadout sign so players can see what loadout letter each kit is.", "The letter of the loadout sign.")]
     public readonly Translation<string> LoadoutLetter = new Translation<string>("<sub><#7878ff>LOADOUT {0}</color></sub>", TranslationOptions.TMProSign, arg0Fmt: UppercaseAddon.Instance);
     

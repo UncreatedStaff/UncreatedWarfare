@@ -12,6 +12,7 @@ using Uncreated.Warfare.Events.Models.Players;
 using Uncreated.Warfare.FOBs.SupplyCrates;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Players.Management;
+using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Translations;
 using Uncreated.Warfare.Util;
@@ -19,16 +20,19 @@ using Uncreated.Warfare.Util;
 namespace Uncreated.Warfare.StrategyMaps.MapTacks;
 
 [UnturnedUI(BasePath = "UI")]
-internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>
+internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>, IHudUIListener
 {
     private readonly IPlayerService _playerService;
     private static readonly List<KeyValuePair<MapTackVehicleType, int>> WorkingVehicleCounts = new List<KeyValuePair<MapTackVehicleType, int>>();
+
+    private bool _isHudHidden;
 
     private readonly MapTackInfoUITranslations _translations;
     private bool _hasUpdatedEvent;
 
     public UnturnedUIElement LogicClose { get; } = new UnturnedUIElement("~/Logic_Close");
     public UnturnedUIElement LogicOpen { get; } = new UnturnedUIElement("~/Logic_Open");
+    public UnturnedUIElement Root { get; } = new UnturnedUIElement("~/UI");
     
     public UnturnedLabel Title { get; } = new UnturnedLabel("Hdr");
     public UnturnedLabel Location { get; } = new UnturnedLabel("Loc");
@@ -198,6 +202,9 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>
             return;
         }
 
+        if (_isHudHidden || data.IsHudHidden)
+            instant = true;
+
         if (fromLookingAtTack && data.AreaMapTacks.Count > 0)
         {
             data.LookingMapTack = null;
@@ -216,7 +223,7 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>
         if (fromLookingAtTack)
             data.LookingMapTack = null;
 
-        if (data.IsClosing && !instant)
+        if (data.IsClosing)
             return;
 
         if (instant)
@@ -243,14 +250,15 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>
         }
     }
 
-    private void Clear(Data data, WarfarePlayer player)
+    private void Clear(Data data, WarfarePlayer player, bool clearUI = true)
     {
         data.HasUI = false;
         data.IsClosing = false;
         data.HealthBarCount = 0;
         data.StoredHealth = 0;
         player.Locale.LocaleUpdated -= OnLocaleUpdated;
-        ClearFromPlayer(player.SteamPlayer);
+        if (clearUI)
+            ClearFromPlayer(player.SteamPlayer);
     }
 
     private void OnLocaleUpdated(WarfarePlayerLocale locale)
@@ -308,6 +316,10 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>
             player.Locale.LocaleUpdated += OnLocaleUpdated;
             data.HealthBarCount = 0;
             data.StoredHealth = 0;
+            if (_isHudHidden || data.IsHudHidden)
+            {
+                Root.Hide(c);
+            }
         }
         else
         {
@@ -734,6 +746,56 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>
         data.HasUI = false;
     }
 
+    public void Hide(WarfarePlayer? player)
+    {
+        if (player == null)
+        {
+            _isHudHidden = true;
+            foreach (WarfarePlayer pl in _playerService.OnlinePlayers)
+            {
+                Data? d = GetData<Data>(pl.Steam64);
+                if (d == null || !d.HasUI)
+                    continue;
+
+                if (!d.IsHudHidden)
+                {
+                    Root.Hide(pl.Connection);
+                }
+            }
+            return;
+        }
+
+        Data data = GetOrAddData(player.Steam64);
+        data.IsHudHidden = true;
+        if (data.HasUI && !_isHudHidden)
+            Root.Hide(player.Connection);
+    }
+
+    public void Restore(WarfarePlayer? player)
+    {
+        if (player == null)
+        {
+            _isHudHidden = false;
+            foreach (WarfarePlayer pl in _playerService.OnlinePlayers)
+            {
+                Data? d = GetData<Data>(pl.Steam64);
+                if (d == null || !d.HasUI)
+                    continue;
+
+                if (!d.IsHudHidden)
+                {
+                    Root.Show(pl.Connection);
+                }
+            }
+            return;
+        }
+
+        Data data = GetOrAddData(player.Steam64);
+        if (data.HasUI && !_isHudHidden)
+            Root.Show(player.Connection);
+        data.IsHudHidden = false;
+    }
+
     public class Data : IUnturnedUIData
     {
         public CSteamID Player { get; }
@@ -742,6 +804,7 @@ internal sealed class MapTackInfoUI : UnturnedUI, IEventListener<PlayerLeft>
 
         public readonly List<MapTack> AreaMapTacks = new List<MapTack>();
         public bool HasUI;
+        public bool IsHudHidden;
         public bool IsClosing;
 
         public int VehicleMask;

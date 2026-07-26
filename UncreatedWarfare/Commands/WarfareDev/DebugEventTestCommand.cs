@@ -8,7 +8,7 @@ using Uncreated.Warfare.Interaction.Commands;
 
 namespace Uncreated.Warfare.Commands;
 
-[Command("eventtest"), SubCommandOf(typeof(WarfareDevCommand))]
+[Command("eventtest"), SubCommandOf(typeof(WarfareDevCommand)), HideFromHelp]
 internal sealed class DebugEventTestCommand : IExecutableCommand
 {
     // uncomment service registrations for TestEventService1-7 in WarfareModule for full tests

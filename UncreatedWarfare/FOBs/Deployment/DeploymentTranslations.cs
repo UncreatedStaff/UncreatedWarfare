@@ -57,9 +57,6 @@ public class DeploymentTranslations : TranslationCollection
     [TranslationData("Sent to a player after they try to cancel deployment when they aren't deploying.")]
     public readonly Translation DeployCancelNotDeploying = new Translation("<#ffa238>You aren't deploying anywhere.");
 
-    [TranslationData("Sent to a player after they request deployment to a location if they're not near another FOB or in main (in the insurgency gamemode).")]
-    public readonly Translation DeployNotNearFOBInsurgency = new Translation("<#ffa238>You must be near a friendly <#cedcde>FOB</color> or <#e8d1a7>CACHE</color> in order to deploy.");
-
     [TranslationData("Sent to a player after they request deployment to a location if they're on cooldown.", "Time left")]
     public readonly Translation<Cooldown> DeployCooldown = new Translation<Cooldown>("<#ffa238>You can deploy again in: <#e3c27f>{0}</color>", arg0Fmt: Cooldown.FormatTimeLong);
 

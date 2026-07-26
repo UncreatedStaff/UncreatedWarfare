@@ -154,6 +154,7 @@ public class KitBestowService
         using BestowKitGiveItemsState state = new BestowKitGiveItemsState(data, player);
         _itemDistributionService.RestockItems(items, player, state);
 
+        data.Stop();
         if (!needsToReloadAfter)
             return;
 
@@ -169,7 +170,6 @@ public class KitBestowService
             return;
 
         equipment.ServerEquip(requipPage, requipX, requipY);
-        data.Stop();
     }
 
     private struct BestowKitGiveItemsState : IItemDistributionState, IDisposable

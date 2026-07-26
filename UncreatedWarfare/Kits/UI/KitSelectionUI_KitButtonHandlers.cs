@@ -8,6 +8,7 @@ using Uncreated.Warfare.Interaction.Requests;
 using Uncreated.Warfare.Kits.Loadouts;
 using Uncreated.Warfare.Models.Users;
 using Uncreated.Warfare.Players;
+using Uncreated.Warfare.Players.Cooldowns;
 using Uncreated.Warfare.Players.Management;
 using Uncreated.Warfare.Players.UI;
 using Uncreated.Warfare.Squads.UI;
@@ -24,7 +25,7 @@ partial class KitSelectionUI
         KitSelectionUIData data = GetOrAddData(player);
 
         int index = Array.FindIndex(_favoriteKits, x => (object)x.Root == button);
-        if (index < 0 || index >= data.FavoriteKitsCache.Length || data.FavoriteKitsCache[index] is not { } favoritedKit)
+        if (index < 0 || index >= data.FavoriteKitsCache.Length || data.FavoriteKitsCache[index].Kit is not { } favoritedKit)
             return;
 
         data.ClassFilter = Class.None;
@@ -90,8 +91,19 @@ partial class KitSelectionUI
 
         WarfarePlayer player = _playerService.GetOnlinePlayer(unturnedPlayer);
         KitSelectionUIData data = GetOrAddData(player);
-        if (data.Operations > 0 || favIndex < 0 || favIndex >= data.FavoriteKitsCache.Length || data.FavoriteKitsCache[favIndex] is not { } favKit)
+        if (data.Operations > 0
+            || favIndex < 0
+            || favIndex >= data.FavoriteKitsCache.Length
+            || data.FavoriteKitsCache[favIndex].Kit is not { } favKit)
+        {
             return;
+        }
+
+        if (!CanRequestKit(data))
+        {
+            SendFavoriteKit(favIndex, favKit, player, data, false);
+            return;
+        }
 
         Interlocked.Increment(ref data.Operations);
 
@@ -99,10 +111,10 @@ partial class KitSelectionUI
 
         Task.Run(async () =>
         {
-            bool requested = false;
+            RequestKitResult result = default;
             try
             {
-                requested = await _kitRequestService.RequestAsync(player, favKit, new RequestCommandResultHandler(_chatService, _configuration, _requestTranslations), player.DisconnectToken);
+                result = await RequestKitAsync(player, data, favKit, favIndex, Class.None, isFavorite: true);
             }
             catch (OperationCanceledException) when (!player.IsOnline) { }
             catch (Exception ex)
@@ -112,10 +124,10 @@ partial class KitSelectionUI
             finally
             {
                 Interlocked.Decrement(ref data.Operations);
-                if (!requested)
-                    button.Show(player);
-                else
+                if (result.Success)
                     await CloseAsync(player);
+                else if (!result.IsOnCooldown)    
+                    button.Show(player);
             }
         });
     }
@@ -127,8 +139,13 @@ partial class KitSelectionUI
 
         WarfarePlayer player = _playerService.GetOnlinePlayer(unturnedPlayer);
         KitSelectionUIData data = GetOrAddData(player);
-        if (data.Operations > 0 || favIndex < 0 || favIndex >= data.FavoriteKitsCache.Length || data.FavoriteKitsCache[favIndex] is not { } favKit)
+        if (data.Operations > 0
+            || favIndex < 0
+            || favIndex >= data.FavoriteKitsCache.Length
+            || data.FavoriteKitsCache[favIndex].Kit is not { } favKit)
+        {
             return;
+        }
 
         Interlocked.Increment(ref data.Operations);
 
@@ -237,7 +254,7 @@ partial class KitSelectionUI
 
         WarfarePlayer player = _playerService.GetOnlinePlayer(unturnedPlayer);
         KitSelectionUIData data = GetOrAddData(player);
-        if (data.Operations > 0)
+        if (data.AmmoStorage != null || data.Operations > 0)
             return;
 
         Interlocked.Increment(ref data.Operations);
@@ -289,7 +306,7 @@ partial class KitSelectionUI
         WarfarePlayer player = _playerService.GetOnlinePlayer(unturnedPlayer);
 
         KitSelectionUIData data = GetOrAddData(player);
-        if (data.Operations > 0)
+        if (data.AmmoStorage != null || data.Operations > 0)
             return;
 
         ref KitCacheInformation cache = ref data.GetCachedState(@class, kitIndex);
@@ -390,23 +407,10 @@ partial class KitSelectionUI
 
                     Task.Run(async () =>
                     {
-                        bool requested = false;
+                        RequestKitResult result = default;
                         try
                         {
-                            float ammoCost = 0;
-                            if (data.AmmoStorage != null)
-                            {
-                                await UniTask.SwitchToMainThread();
-                                ammoCost = _rearmService.GetRearmCost(player, kit);
-                            }
-
-                            requested = await _kitRequestService.RequestAsync(player, kit, new RequestCommandResultHandler(_chatService, _configuration, _requestTranslations), player.DisconnectToken);
-
-                            if (requested && data.AmmoStorage != null && ammoCost > 0)
-                            {
-                                await UniTask.SwitchToMainThread();
-                                _rearmService.ApplyRearm(player, ammoCost, data.AmmoStorage, kit);
-                            }
+                            result = await RequestKitAsync(player, data, kit, kitIndex, @class, false);
                         }
                         catch (OperationCanceledException) when (!player.IsOnline) { }
                         catch (Exception ex)
@@ -416,10 +420,10 @@ partial class KitSelectionUI
                         finally
                         {
                             Interlocked.Decrement(ref data.Operations);
-                            if (!requested)
-                                await UpdateKitAsync(kit, player, player.DisconnectToken);
-                            else
+                            if (result.Success)
                                 await CloseAsync(player);
+                            else if (!result.IsOnCooldown)
+                                await UpdateKitAsync(kit, player, player.DisconnectToken);
                         }
                     });
                     break;
@@ -563,29 +567,7 @@ partial class KitSelectionUI
                     break;
 
                 case PurchaseButtonState.Rearm:
-                    IAmmoStorage? ammoStorage = data.AmmoStorage;
-                    if (ammoStorage == null
-                        || ammoStorage.AmmoCount == 0
-                        || !(data.AmmoStorage == null ? _zoneStore.IsInMainBase(player, player.Team.Faction) : IsWithinRangeOfAmmoStorage(data, player)))
-                    {
-                        UpdateStatusLabels(kitInfo, false, data, @class, kitIndex, player, kit, player.Component<KitPlayerComponent>());
-                        UpdateActionButtons(kit, player, kitInfo, data, kitIndex, @class);
-                        break;
-                    }
-
-                    _ = CloseAsync(player);
-                    Task.Run(async () =>
-                    {
-                        try
-                        {
-                            await _rearmService.RearmAsync(player, ammoStorage, player.DisconnectToken);
-                        }
-                        catch (OperationCanceledException) when (!player.IsOnline) { }
-                        catch (Exception ex)
-                        {
-                            GetLogger().LogError(ex, "Error rearming player.");
-                        }
-                    });
+                    StartRestock(player, data, kit, @class, kitIndex);
                     break;
             }
         }
@@ -601,6 +583,49 @@ partial class KitSelectionUI
                 Interlocked.Decrement(ref data.Operations);
             }
         }
+    }
+
+    private void StartRestock(WarfarePlayer player, KitSelectionUIData data, Kit kit, Class @class = Class.None, int kitIndex = -1)
+    {
+        IAmmoStorage? ammoStorage = data.AmmoStorage;
+        if (ammoStorage == null
+            || ammoStorage.AmmoCount == 0
+            || !(data.AmmoStorage == null ? _zoneStore.IsInMainBase(player, player.Team.Faction) : IsWithinRangeOfAmmoStorage(data, player)))
+        {
+            if (kitIndex >= 0)
+            {
+                KitInfo info = GetKitInfoUI(@class, kitIndex);
+                UpdateStatusLabels(info, false, data, @class, kitIndex, player, kit, player.Component<KitPlayerComponent>());
+                UpdateActionButtons(kit, player, info, data, kitIndex, @class);
+            }
+            return;
+        }
+
+        _ = CloseAsync(player);
+        Task.Run(async () =>
+        {
+            try
+            {
+                await _rearmService.RearmAsync(player, ammoStorage, player.DisconnectToken);
+            }
+            catch (OperationCanceledException) when (!player.IsOnline) { }
+            catch (Exception ex)
+            {
+                GetLogger().LogError(ex, "Error rearming player.");
+            }
+        });
+    }
+
+    private void OnClickedRestockShortcut(UnturnedButton button, Player unturnedPlayer)
+    {
+        WarfarePlayer player = _playerService.GetOnlinePlayer(unturnedPlayer);
+        KitSelectionUIData data = GetOrAddData(player);
+
+        CurrentKitState? activeKit = player.Component<KitPlayerComponent>().GetActiveEffectiveKit();
+        if (activeKit?.CachedKit is not { } kit)
+            return;
+
+        StartRestock(player, data, kit);
     }
 
     private bool TryGetTargetKit(Func<KitInfo, UnturnedButton> selector, UnturnedButton button, out Class @class, out int kitIndex, [NotNullWhen(true)] out KitInfo? kitInfo)
@@ -688,5 +713,62 @@ partial class KitSelectionUI
         kitInfo = null;
         kitIndex = -1;
         return false;
+    }
+    
+    private void StartFavoriteCooldown(Cooldown cooldown, WarfarePlayer player, KitSelectionUIData data, Kit kit, int index)
+    {
+        _favoriteKits[index].RequestButton.Hide(player);
+        int v = Interlocked.Increment(ref data.FavoriteKitsCache[index].CooldownVersion);
+
+        TimeSpan delay = cooldown.GetTimeLeft();
+        _ = UniTask.Create(async () =>
+        {
+            await UniTask.Delay(delay);
+
+            ref FavoriteKitCacheInformation info = ref data.FavoriteKitsCache[index];
+            if (!player.IsOnline || !data.HasUI || v != info.CooldownVersion)
+                return;
+
+            Kit? favorite = info.Kit;
+            if (favorite != null && favorite.Key == kit.Key)
+                _favoriteKits[index].RequestButton.Show(player);
+        });
+    }
+
+    private void StartCooldownTimer(Cooldown cooldown, WarfarePlayer player, KitSelectionUIData data, Kit kit, int index, Class @class)
+    {
+        KitInfo ui = GetKitInfoUI(@class, index);
+        ui.UnlockButton.SetText(player, _translations.PurchaseButtonRequestWithCooldown.Translate(cooldown.GetTimeLeft(), player));
+        ref KitCacheInformation info = ref data.GetCachedState(@class, index);
+        int v = Interlocked.Increment(ref info.CooldownVersion);
+
+        _ = UniTask.Create(async () =>
+        {
+            TimeSpan delay = cooldown.GetTimeLeft();
+            DateTime start = DateTime.UtcNow;
+            while (true)
+            {
+                await UniTask.Delay(1000);
+
+                ref KitCacheInformation info = ref data.GetCachedState(@class, index);
+                if (!player.IsOnline || !data.HasUI || v != info.CooldownVersion)
+                    return;
+
+                if (info.ButtonState != PurchaseButtonState.None)
+                    return;
+
+                if (DateTime.UtcNow - start >= delay)
+                    break;
+
+                TimeSpan timeLeft = cooldown.GetTimeLeft();
+                ui.UnlockButton.SetText(player, _translations.PurchaseButtonRequestWithCooldown.Translate(timeLeft, player));
+            }
+
+            Kit? k = data.GetCachedState(@class, index).Kit;
+            if (k != null && k.Key == kit.Key)
+            {
+                UpdateStatusLabels(ui, false, data, @class, index, player, k, player.Component<KitPlayerComponent>());
+            }
+        });
     }
 }
